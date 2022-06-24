@@ -8,7 +8,6 @@ export const jsenvPluginAutoreload = ({
   scenario,
   clientFileChangeCallbackList,
   clientFilesPruneCallbackList,
-  debug,
 }) => {
   if (scenario === "build") {
     return []
@@ -21,7 +20,6 @@ export const jsenvPluginAutoreload = ({
       urlGraph,
       clientFileChangeCallbackList,
       clientFilesPruneCallbackList,
-      debug,
     }),
   ]
 }

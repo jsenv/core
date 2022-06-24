@@ -32,18 +32,18 @@ export const startDevServer = async ({
   privateKey,
   keepProcessAlive = true,
   rootDirectoryUrl,
-  devServerFiles = {
-    "./package.json": true,
-    "./jsenv.config.mjs": true,
-  },
-  devServerMainFile = getCallerPosition().url,
-  devServerAutoreload = true,
   clientFiles = {
     "./src/": true,
     "./tests/": true,
   },
-  cooldownBetweenFileEvents,
+  devServerFiles = {
+    "./package.json": true,
+    "./jsenv.config.mjs": true,
+  },
   clientAutoreload = true,
+  devServerAutoreload = false,
+  devServerMainFile = getCallerPosition().url,
+  cooldownBetweenFileEvents,
 
   sourcemaps = "inline",
   // default runtimeCompat assume dev server will be request by recent browsers
@@ -92,53 +92,57 @@ export const startDevServer = async ({
     port = await findFreePort(port, { signal: operation.signal })
   }
 
-  const reloadableWorker = createReloadableWorker(devServerMainFile)
-  if (devServerAutoreload && reloadableWorker.isPrimary) {
-    const devServerFileChangeCallback = ({ relativeUrl, event }) => {
-      const url = new URL(relativeUrl, rootDirectoryUrl).href
-      logger.info(`file ${event} ${url} -> restarting server...`)
-      reloadableWorker.reload()
-    }
-    const stopWatchingDevServerFiles = registerDirectoryLifecycle(
-      rootDirectoryUrl,
-      {
-        watchPatterns: {
-          [devServerMainFile]: true,
-          ...devServerFiles,
+  let reloadableWorker
+  if (devServerAutoreload) {
+    reloadableWorker = createReloadableWorker(devServerMainFile)
+    if (reloadableWorker.isPrimary) {
+      const devServerFileChangeCallback = ({ relativeUrl, event }) => {
+        const url = new URL(relativeUrl, rootDirectoryUrl).href
+        logger.info(`file ${event} ${url} -> restarting server...`)
+        reloadableWorker.reload()
+      }
+      const stopWatchingDevServerFiles = registerDirectoryLifecycle(
+        rootDirectoryUrl,
+        {
+          watchPatterns: {
+            ...devServerFiles.include,
+            [devServerMainFile]: true,
+            ".jsenv/": false,
+          },
+          cooldownBetweenFileEvents,
+          keepProcessAlive: false,
+          recursive: true,
+          added: ({ relativeUrl }) => {
+            devServerFileChangeCallback({ relativeUrl, event: "added" })
+          },
+          updated: ({ relativeUrl }) => {
+            devServerFileChangeCallback({ relativeUrl, event: "modified" })
+          },
+          removed: ({ relativeUrl }) => {
+            devServerFileChangeCallback({ relativeUrl, event: "removed" })
+          },
         },
-        cooldownBetweenFileEvents,
-        keepProcessAlive: false,
-        recursive: true,
-        added: ({ relativeUrl }) => {
-          devServerFileChangeCallback({ relativeUrl, event: "added" })
-        },
-        updated: ({ relativeUrl }) => {
-          devServerFileChangeCallback({ relativeUrl, event: "modified" })
-        },
-        removed: ({ relativeUrl }) => {
-          devServerFileChangeCallback({ relativeUrl, event: "removed" })
-        },
-      },
-    )
-    operation.addAbortCallback(() => {
-      stopWatchingDevServerFiles()
-      reloadableWorker.terminate()
-    })
-
-    const worker = await reloadableWorker.load()
-    const messagePromise = new Promise((resolve) => {
-      worker.once("message", resolve)
-    })
-    await messagePromise
-    // if (!keepProcessAlive) {
-    //   worker.unref()
-    // }
-    return {
-      origin: `${protocol}://127.0.0.1:${port}`,
-      stop: () => {
+      )
+      operation.addAbortCallback(() => {
         stopWatchingDevServerFiles()
         reloadableWorker.terminate()
-      },
+      })
+
+      const worker = await reloadableWorker.load()
+      const messagePromise = new Promise((resolve) => {
+        worker.once("message", resolve)
+      })
+      await messagePromise
+      // if (!keepProcessAlive) {
+      //   worker.unref()
+      // }
+      return {
+        origin: `${protocol}://127.0.0.1:${port}`,
+        stop: () => {
+          stopWatchingDevServerFiles()
+          reloadableWorker.terminate()
+        },
+      }
     }
   }
 
@@ -233,7 +237,7 @@ export const startDevServer = async ({
       kitchen.pluginController.callHooks("destroy", {})
     }
   })
-  if (reloadableWorker.isWorker) {
+  if (reloadableWorker && reloadableWorker.isWorker) {
     parentPort.postMessage(server.origin)
   }
   return {

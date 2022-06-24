@@ -16742,6 +16742,10 @@ const getCorePlugins = ({
     nodeEsmResolution = {};
   }
 
+  if (clientAutoreload === true) {
+    clientAutoreload = {};
+  }
+
   return [jsenvPluginUrlAnalysis({
     rootDirectoryUrl,
     ...urlAnalysis
@@ -16759,7 +16763,7 @@ const getCorePlugins = ({
     ...nodeEsmResolution
   }), jsenvPluginUrlResolution(), jsenvPluginUrlVersion(), jsenvPluginCommonJsGlobals(), jsenvPluginImportMetaScenarios(), jsenvPluginNodeRuntime({
     runtimeCompat
-  }), jsenvPluginBundling(bundling), jsenvPluginMinification(minification), jsenvPluginImportMetaHot(), ...(clientAutoreload ? [jsenvPluginAutoreload({
+  }), jsenvPluginBundling(bundling), jsenvPluginMinification(minification), jsenvPluginImportMetaHot(), ...(clientAutoreload ? [jsenvPluginAutoreload({ ...clientAutoreload,
     rootDirectoryUrl,
     urlGraph,
     scenario,
@@ -19268,18 +19272,18 @@ const startDevServer = async ({
   privateKey,
   keepProcessAlive = true,
   rootDirectoryUrl,
-  devServerFiles = {
-    "./package.json": true,
-    "./jsenv.config.mjs": true
-  },
-  devServerMainFile = getCallerPosition().url,
-  devServerAutoreload = true,
   clientFiles = {
     "./src/": true,
     "./tests/": true
   },
-  cooldownBetweenFileEvents,
+  devServerFiles = {
+    "./package.json": true,
+    "./jsenv.config.mjs": true
+  },
   clientAutoreload = true,
+  devServerAutoreload = false,
+  devServerMainFile = getCallerPosition().url,
+  cooldownBetweenFileEvents,
   sourcemaps = "inline",
   // default runtimeCompat assume dev server will be request by recent browsers
   // Used by "jsenv_plugin_node_runtime.js" to deactivate itself
@@ -19330,70 +19334,74 @@ const startDevServer = async ({
     });
   }
 
-  const reloadableWorker = createReloadableWorker(devServerMainFile);
+  let reloadableWorker;
 
-  if (devServerAutoreload && reloadableWorker.isPrimary) {
-    const devServerFileChangeCallback = ({
-      relativeUrl,
-      event
-    }) => {
-      const url = new URL(relativeUrl, rootDirectoryUrl).href;
-      logger.info(`file ${event} ${url} -> restarting server...`);
-      reloadableWorker.reload();
-    };
+  if (devServerAutoreload) {
+    reloadableWorker = createReloadableWorker(devServerMainFile);
 
-    const stopWatchingDevServerFiles = registerDirectoryLifecycle(rootDirectoryUrl, {
-      watchPatterns: {
-        [devServerMainFile]: true,
-        ...devServerFiles
-      },
-      cooldownBetweenFileEvents,
-      keepProcessAlive: false,
-      recursive: true,
-      added: ({
-        relativeUrl
+    if (reloadableWorker.isPrimary) {
+      const devServerFileChangeCallback = ({
+        relativeUrl,
+        event
       }) => {
-        devServerFileChangeCallback({
-          relativeUrl,
-          event: "added"
-        });
-      },
-      updated: ({
-        relativeUrl
-      }) => {
-        devServerFileChangeCallback({
-          relativeUrl,
-          event: "modified"
-        });
-      },
-      removed: ({
-        relativeUrl
-      }) => {
-        devServerFileChangeCallback({
-          relativeUrl,
-          event: "removed"
-        });
-      }
-    });
-    operation.addAbortCallback(() => {
-      stopWatchingDevServerFiles();
-      reloadableWorker.terminate();
-    });
-    const worker = await reloadableWorker.load();
-    const messagePromise = new Promise(resolve => {
-      worker.once("message", resolve);
-    });
-    await messagePromise; // if (!keepProcessAlive) {
-    //   worker.unref()
-    // }
+        const url = new URL(relativeUrl, rootDirectoryUrl).href;
+        logger.info(`file ${event} ${url} -> restarting server...`);
+        reloadableWorker.reload();
+      };
 
-    return {
-      origin: `${protocol}://127.0.0.1:${port}`,
-      stop: () => {
+      const stopWatchingDevServerFiles = registerDirectoryLifecycle(rootDirectoryUrl, {
+        watchPatterns: { ...devServerFiles.include,
+          [devServerMainFile]: true,
+          ".jsenv/": false
+        },
+        cooldownBetweenFileEvents,
+        keepProcessAlive: false,
+        recursive: true,
+        added: ({
+          relativeUrl
+        }) => {
+          devServerFileChangeCallback({
+            relativeUrl,
+            event: "added"
+          });
+        },
+        updated: ({
+          relativeUrl
+        }) => {
+          devServerFileChangeCallback({
+            relativeUrl,
+            event: "modified"
+          });
+        },
+        removed: ({
+          relativeUrl
+        }) => {
+          devServerFileChangeCallback({
+            relativeUrl,
+            event: "removed"
+          });
+        }
+      });
+      operation.addAbortCallback(() => {
         stopWatchingDevServerFiles();
         reloadableWorker.terminate();
-      }
-    };
+      });
+      const worker = await reloadableWorker.load();
+      const messagePromise = new Promise(resolve => {
+        worker.once("message", resolve);
+      });
+      await messagePromise; // if (!keepProcessAlive) {
+      //   worker.unref()
+      // }
+
+      return {
+        origin: `${protocol}://127.0.0.1:${port}`,
+        stop: () => {
+          stopWatchingDevServerFiles();
+          reloadableWorker.terminate();
+        }
+      };
+    }
   }
 
   const startDevServerTask = createTaskLog("start dev server", {
@@ -19504,7 +19512,7 @@ const startDevServer = async ({
     };
   });
 
-  if (reloadableWorker.isWorker) {
+  if (reloadableWorker && reloadableWorker.isWorker) {
     parentPort.postMessage(server.origin);
   }
 
@@ -24772,8 +24780,8 @@ const startBuildServer = async ({
     "./package.json": true,
     "./jsenv.config.mjs": true
   },
+  buildServerAutoreload = false,
   buildServerMainFile = getCallerPosition().url,
-  buildServerAutoreload = true,
   cooldownBetweenFileEvents
 }) => {
   const logger = createLogger({
@@ -24815,74 +24823,74 @@ const startBuildServer = async ({
     });
   }
 
-  const reloadableWorker = createReloadableWorker(buildServerMainFile);
+  let reloadableWorker;
 
-  if (buildServerAutoreload && reloadableWorker.isPrimary) {
-    const buildServerFileChangeCallback = ({
-      relativeUrl,
-      event
-    }) => {
-      const url = new URL(relativeUrl, rootDirectoryUrl).href;
+  if (buildServerAutoreload) {
+    reloadableWorker = createReloadableWorker(buildServerMainFile);
 
-      if (buildServerAutoreload) {
+    if (reloadableWorker.isPrimary) {
+      const buildServerFileChangeCallback = ({
+        relativeUrl,
+        event
+      }) => {
+        const url = new URL(relativeUrl, rootDirectoryUrl).href;
         logger.info(`file ${event} ${url} -> restarting server...`);
         reloadableWorker.reload();
-      }
-    };
+      };
 
-    const stopWatchingBuildServerFiles = registerDirectoryLifecycle(rootDirectoryUrl, {
-      watchPatterns: {
-        [buildServerMainFile]: true,
-        ...buildServerFiles,
-        ".jsenv/": false
-      },
-      cooldownBetweenFileEvents,
-      keepProcessAlive: false,
-      recursive: true,
-      added: ({
-        relativeUrl
-      }) => {
-        buildServerFileChangeCallback({
-          relativeUrl,
-          event: "added"
-        });
-      },
-      updated: ({
-        relativeUrl
-      }) => {
-        buildServerFileChangeCallback({
-          relativeUrl,
-          event: "modified"
-        });
-      },
-      removed: ({
-        relativeUrl
-      }) => {
-        buildServerFileChangeCallback({
-          relativeUrl,
-          event: "removed"
-        });
-      }
-    });
-    operation.addAbortCallback(() => {
-      stopWatchingBuildServerFiles();
-      reloadableWorker.terminate();
-    });
-    const worker = await reloadableWorker.load();
-    const messagePromise = new Promise(resolve => {
-      worker.once("message", resolve);
-    });
-    await messagePromise; // if (!keepProcessAlive) {
-    //   worker.unref()
-    // }
-
-    return {
-      origin: `${protocol}://127.0.0.1:${port}`,
-      stop: () => {
+      const stopWatchingBuildServerFiles = registerDirectoryLifecycle(rootDirectoryUrl, {
+        watchPatterns: { ...buildServerFiles,
+          [buildServerMainFile]: true,
+          ".jsenv/": false
+        },
+        cooldownBetweenFileEvents,
+        keepProcessAlive: false,
+        recursive: true,
+        added: ({
+          relativeUrl
+        }) => {
+          buildServerFileChangeCallback({
+            relativeUrl,
+            event: "added"
+          });
+        },
+        updated: ({
+          relativeUrl
+        }) => {
+          buildServerFileChangeCallback({
+            relativeUrl,
+            event: "modified"
+          });
+        },
+        removed: ({
+          relativeUrl
+        }) => {
+          buildServerFileChangeCallback({
+            relativeUrl,
+            event: "removed"
+          });
+        }
+      });
+      operation.addAbortCallback(() => {
         stopWatchingBuildServerFiles();
         reloadableWorker.terminate();
-      }
-    };
+      });
+      const worker = await reloadableWorker.load();
+      const messagePromise = new Promise(resolve => {
+        worker.once("message", resolve);
+      });
+      await messagePromise; // if (!keepProcessAlive) {
+      //   worker.unref()
+      // }
+
+      return {
+        origin: `${protocol}://127.0.0.1:${port}`,
+        stop: () => {
+          stopWatchingBuildServerFiles();
+          reloadableWorker.terminate();
+        }
+      };
+    }
   }
 
   const startBuildServerTask = createTaskLog("start build server", {
@@ -24931,7 +24939,7 @@ const startBuildServer = async ({
   });
   logger.info(``);
 
-  if (reloadableWorker.isWorker) {
+  if (reloadableWorker && reloadableWorker.isWorker) {
     parentPort.postMessage(server.origin);
   }
 

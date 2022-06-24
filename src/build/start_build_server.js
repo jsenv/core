@@ -56,8 +56,8 @@ export const startBuildServer = async ({
     "./package.json": true,
     "./jsenv.config.mjs": true,
   },
+  buildServerAutoreload = false,
   buildServerMainFile = getCallerPosition().url,
-  buildServerAutoreload = true,
   cooldownBetweenFileEvents,
 }) => {
   const logger = createLogger({ logLevel })
@@ -96,55 +96,56 @@ export const startBuildServer = async ({
     port = await findFreePort(port, { signal: operation.signal })
   }
 
-  const reloadableWorker = createReloadableWorker(buildServerMainFile)
-  if (buildServerAutoreload && reloadableWorker.isPrimary) {
-    const buildServerFileChangeCallback = ({ relativeUrl, event }) => {
-      const url = new URL(relativeUrl, rootDirectoryUrl).href
-      if (buildServerAutoreload) {
+  let reloadableWorker
+  if (buildServerAutoreload) {
+    reloadableWorker = createReloadableWorker(buildServerMainFile)
+    if (reloadableWorker.isPrimary) {
+      const buildServerFileChangeCallback = ({ relativeUrl, event }) => {
+        const url = new URL(relativeUrl, rootDirectoryUrl).href
         logger.info(`file ${event} ${url} -> restarting server...`)
         reloadableWorker.reload()
       }
-    }
-    const stopWatchingBuildServerFiles = registerDirectoryLifecycle(
-      rootDirectoryUrl,
-      {
-        watchPatterns: {
-          [buildServerMainFile]: true,
-          ...buildServerFiles,
-          ".jsenv/": false,
+      const stopWatchingBuildServerFiles = registerDirectoryLifecycle(
+        rootDirectoryUrl,
+        {
+          watchPatterns: {
+            ...buildServerFiles,
+            [buildServerMainFile]: true,
+            ".jsenv/": false,
+          },
+          cooldownBetweenFileEvents,
+          keepProcessAlive: false,
+          recursive: true,
+          added: ({ relativeUrl }) => {
+            buildServerFileChangeCallback({ relativeUrl, event: "added" })
+          },
+          updated: ({ relativeUrl }) => {
+            buildServerFileChangeCallback({ relativeUrl, event: "modified" })
+          },
+          removed: ({ relativeUrl }) => {
+            buildServerFileChangeCallback({ relativeUrl, event: "removed" })
+          },
         },
-        cooldownBetweenFileEvents,
-        keepProcessAlive: false,
-        recursive: true,
-        added: ({ relativeUrl }) => {
-          buildServerFileChangeCallback({ relativeUrl, event: "added" })
-        },
-        updated: ({ relativeUrl }) => {
-          buildServerFileChangeCallback({ relativeUrl, event: "modified" })
-        },
-        removed: ({ relativeUrl }) => {
-          buildServerFileChangeCallback({ relativeUrl, event: "removed" })
-        },
-      },
-    )
-    operation.addAbortCallback(() => {
-      stopWatchingBuildServerFiles()
-      reloadableWorker.terminate()
-    })
-    const worker = await reloadableWorker.load()
-    const messagePromise = new Promise((resolve) => {
-      worker.once("message", resolve)
-    })
-    await messagePromise
-    // if (!keepProcessAlive) {
-    //   worker.unref()
-    // }
-    return {
-      origin: `${protocol}://127.0.0.1:${port}`,
-      stop: () => {
+      )
+      operation.addAbortCallback(() => {
         stopWatchingBuildServerFiles()
         reloadableWorker.terminate()
-      },
+      })
+      const worker = await reloadableWorker.load()
+      const messagePromise = new Promise((resolve) => {
+        worker.once("message", resolve)
+      })
+      await messagePromise
+      // if (!keepProcessAlive) {
+      //   worker.unref()
+      // }
+      return {
+        origin: `${protocol}://127.0.0.1:${port}`,
+        stop: () => {
+          stopWatchingBuildServerFiles()
+          reloadableWorker.terminate()
+        },
+      }
     }
   }
 
@@ -196,7 +197,7 @@ export const startBuildServer = async ({
     logger.info(`- ${server.origins[key]}`)
   })
   logger.info(``)
-  if (reloadableWorker.isWorker) {
+  if (reloadableWorker && reloadableWorker.isWorker) {
     parentPort.postMessage(server.origin)
   }
   return {
