@@ -5,10 +5,12 @@ const { Root } = await import("./root.jsx")
 
 ReactDOM.createRoot(document.querySelector("#app")).render(
   <React.StrictMode>
-    <Root />
+    <Root
+      onRender={() => {
+        window.resolveResultPromise({
+          spanContent: document.querySelector("#app span").innerHTML,
+        })
+      }}
+    />
   </React.StrictMode>,
 )
-
-window.resolveResultPromise({
-  spanContent: document.querySelector("#app span").innerHTML,
-})
