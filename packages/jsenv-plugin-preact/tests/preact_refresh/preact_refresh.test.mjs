@@ -1,5 +1,5 @@
+import { readFileSync, writeFileSync } from "node:fs"
 import { chromium } from "playwright"
-import { readFile, writeFile } from "@jsenv/filesystem"
 import { assert } from "@jsenv/assert"
 
 import { startDevServer } from "@jsenv/core"
@@ -10,10 +10,10 @@ const countLabelJsxFileUrl = new URL(
   import.meta.url,
 )
 const countLabelJsxFileContent = {
-  beforeTest: await readFile(countLabelJsxFileUrl),
-  update: (content) => writeFile(countLabelJsxFileUrl, content),
+  beforeTest: readFileSync(countLabelJsxFileUrl),
+  update: (content) => writeFileSync(countLabelJsxFileUrl, content),
   restore: () =>
-    writeFile(countLabelJsxFileUrl, countLabelJsxFileContent.beforeTest),
+    writeFileSync(countLabelJsxFileUrl, countLabelJsxFileContent.beforeTest),
 }
 
 const devServer = await startDevServer({
@@ -41,9 +41,7 @@ try {
   const getCountLabelText = () => {
     return page.evaluate(
       /* eslint-disable no-undef */
-      () => {
-        return document.querySelector("#count_label").innerHTML
-      },
+      () => document.querySelector("#count_label").innerHTML,
       /* eslint-enable no-undef */
     )
   }
