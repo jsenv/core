@@ -111,6 +111,7 @@ export const startBuildServer = async ({
         watchPatterns: {
           [buildServerMainFile]: true,
           ...buildServerFiles,
+          ".jsenv/": false,
         },
         cooldownBetweenFileEvents,
         keepProcessAlive: false,

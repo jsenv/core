@@ -1,9 +1,13 @@
 import React from "react"
-import { render } from "react-dom"
+import ReactDOM from "react-dom/client"
 
 const { Root } = await import("./root.jsx")
 
-render(<Root />, document.querySelector("#app"))
+ReactDOM.createRoot(document.querySelector("#app")).render(
+  <React.StrictMode>
+    <Root />
+  </React.StrictMode>,
+)
 
 window.resolveResultPromise({
   spanContent: document.querySelector("#app span").innerHTML,

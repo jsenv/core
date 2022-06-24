@@ -24,7 +24,6 @@ const devServer = await startDevServer({
   plugins: [jsenvPluginPreact()],
   clientFiles: {
     "./**": true,
-    "./**/.*/": false,
   },
 })
 const browser = await chromium.launch({

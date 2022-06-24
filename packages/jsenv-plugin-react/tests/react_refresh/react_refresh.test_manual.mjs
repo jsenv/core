@@ -3,16 +3,15 @@ import { requestCertificateForLocalhost } from "@jsenv/https-local"
 import { startDevServer } from "@jsenv/core"
 import { jsenvPluginReact } from "@jsenv/plugin-react"
 
-const { serverCertificate, serverCertificatePrivateKey } =
-  await requestCertificateForLocalhost({
-    serverCertificateAltNames: ["local"],
-  })
+const { certificate, privateKey } = requestCertificateForLocalhost({
+  altNames: ["local"],
+})
 await startDevServer({
   port: 3589,
   protocol: "https",
   listenAnyIp: true,
-  certificate: serverCertificate,
-  privateKey: serverCertificatePrivateKey,
+  certificate,
+  privateKey,
   rootDirectoryUrl: new URL("./client/", import.meta.url),
   plugins: [jsenvPluginReact()],
   explorerGroups: {
@@ -20,7 +19,8 @@ await startDevServer({
       "./main.html": true,
     },
   },
-  autorestart: {
-    file: import.meta.url,
+  clientFiles: {
+    "./**": true,
+    "./.jsenv/": false,
   },
 })

@@ -155,7 +155,10 @@ export const startDevServer = async ({
     })
   }
   const stopWatchingClientFiles = registerDirectoryLifecycle(rootDirectoryUrl, {
-    watchPatterns: clientFiles,
+    watchPatterns: {
+      ...clientFiles,
+      ".jsenv/": false,
+    },
     cooldownBetweenFileEvents,
     keepProcessAlive: false,
     recursive: true,
