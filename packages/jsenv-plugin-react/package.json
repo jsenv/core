@@ -30,14 +30,14 @@
     "@jsenv/plugin-commonjs": "0.1.2",
     "@jsenv/sourcemap": "1.0.1",
     "@jsenv/url-meta": "7.0.0",
-    "react-refresh": "0.13.0"
+    "react-refresh": "0.14.0"
   },
   "peerDependencies": {
     "@jsenv/core": "*",
-    "react": "*"
+    "react": "18.2.0"
   },
   "devDependencies": {
-    "react": "17.0.2",
-    "react-dom": "17.0.2"
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
   }
 }
