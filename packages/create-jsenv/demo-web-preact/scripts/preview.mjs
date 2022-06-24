@@ -7,5 +7,4 @@ export const server = await startBuildServer({
   plugins,
   buildDirectoryUrl: new URL("./dist/", rootDirectoryUrl),
   port: 3501,
-  buildServerAutoreload: true,
 })

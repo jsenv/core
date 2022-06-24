@@ -43,5 +43,4 @@ await startDevServer({
     },
   },
   devServerMainFile: import.meta.url,
-  devServerAutoreload: true,
 })

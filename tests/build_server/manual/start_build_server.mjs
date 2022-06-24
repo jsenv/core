@@ -17,6 +17,4 @@ await startBuildServer({
   buildDirectoryUrl: new URL("./dist/", import.meta.url),
   // minification: false,
   // versioning: false,
-  buildServerAutoreload: true,
-  buildServerMainFile: import.meta.url,
 })
