@@ -14,7 +14,6 @@
     "@jsenv/core": "../../../",
     "@jsenv/eslint-config": "16.0.9",
     "@jsenv/eslint-import-resolver": "../../eslint-import-resolver/",
-    "@jsenv/performance-impact": "3.0.0",
     "eslint": "8.18.0",
     "eslint-plugin-import": "2.26.0",
     "prettier": "2.7.1"
