@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/server",
-  "version": "12.7.2",
+  "version": "12.7.3",
   "description": "Write your Node.js server using pure functions",
   "license": "MIT",
   "author": {
@@ -35,7 +35,7 @@
   },
   "dependencies": {
     "@jsenv/abort": "4.2.3",
-    "@jsenv/log": "2.0.1",
+    "@jsenv/log": "2.1.0",
     "@jsenv/url-meta": "7.0.0",
     "@jsenv/utils": "2.0.1"
   },
