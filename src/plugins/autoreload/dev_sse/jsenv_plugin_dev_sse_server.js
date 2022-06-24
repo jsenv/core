@@ -8,6 +8,7 @@ export const jsenvPluginDevSSEServer = ({
   urlGraph,
   clientFileChangeCallbackList,
   clientFilesPruneCallbackList,
+  debug = false,
 }) => {
   const serverEventCallbackList = createCallbackList()
   const sseService = createSSEService({ serverEventCallbackList })
@@ -121,12 +122,22 @@ export const jsenvPluginDevSSEServer = ({
     const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl)
     const hotUpdate = propagateUpdate(urlInfo)
     if (hotUpdate.declined) {
+      if (debug) {
+        console.log(
+          `hot update declined for "${relativeUrl}" (reason: ${hotUpdate.reason})`,
+        )
+      }
       notifyDeclined({
         cause: `${relativeUrl} ${event}`,
         reason: hotUpdate.reason,
         declinedBy: hotUpdate.declinedBy,
       })
     } else {
+      if (debug) {
+        console.log(
+          `hot update accepted for "${relativeUrl}" (reason: ${hotUpdate.reason})`,
+        )
+      }
       notifyAccepted({
         cause: `${relativeUrl} ${event}`,
         reason: hotUpdate.reason,

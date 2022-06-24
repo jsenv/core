@@ -8,6 +8,5 @@ startDevServer({
   sourcemaps: "file",
   clientFiles: {
     "./**": true,
-    "./**/.*/": false,
   },
 })

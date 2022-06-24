@@ -45,6 +45,9 @@ export const getCorePlugins = ({
   if (nodeEsmResolution === true) {
     nodeEsmResolution = {}
   }
+  if (clientAutoreload === true) {
+    clientAutoreload = {}
+  }
   return [
     jsenvPluginUrlAnalysis({ rootDirectoryUrl, ...urlAnalysis }),
     jsenvPluginTranspilation(transpilation),
@@ -78,6 +81,7 @@ export const getCorePlugins = ({
     ...(clientAutoreload
       ? [
           jsenvPluginAutoreload({
+            ...clientAutoreload,
             rootDirectoryUrl,
             urlGraph,
             scenario,
