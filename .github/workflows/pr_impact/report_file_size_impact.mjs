@@ -14,5 +14,8 @@ await reportFileSizeImpact({
   ...readGitHubWorkflowEnv(),
   logLevel: "debug",
   buildCommand: "npm run build",
-  fileSizeReportModulePath: "./scripts/file_size/file_size.mjs#fileSizeReport",
+  fileSizeReportUrl: new URL(
+    "../../../scripts/file_size/file_size.mjs#fileSizeReport",
+    import.meta.url,
+  ),
 })

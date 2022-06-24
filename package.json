@@ -99,7 +99,7 @@
     "@babel/plugin-syntax-import-assertions": "7.17.12",
     "@jsenv/assert": "2.6.0",
     "@jsenv/eslint-config": "16.0.9",
-    "@jsenv/file-size-impact": "12.1.13",
+    "@jsenv/file-size-impact": "13.0.0",
     "@jsenv/https-local": "2.1.0",
     "@jsenv/package-workspace": "0.2.1",
     "@jsenv/performance-impact": "3.0.0",
