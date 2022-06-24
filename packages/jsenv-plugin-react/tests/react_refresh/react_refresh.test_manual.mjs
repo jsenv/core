@@ -21,6 +21,5 @@ await startDevServer({
   },
   clientFiles: {
     "./**": true,
-    "./.jsenv/": false,
   },
 })

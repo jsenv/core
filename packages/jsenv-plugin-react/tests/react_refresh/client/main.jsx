@@ -8,6 +8,8 @@ ReactDOM.createRoot(document.getElementById("app")).render(
   </React.StrictMode>,
 )
 
+window.resolveReadyPromise()
+
 if (import.meta.hot) {
   import.meta.hot.accept()
 }

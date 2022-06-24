@@ -1,33 +1,33 @@
+import { readFileSync, writeFileSync } from "node:fs"
 import { chromium } from "playwright"
-import { readFile, writeFile } from "@jsenv/filesystem"
 import { assert } from "@jsenv/assert"
 
 import { startDevServer } from "@jsenv/core"
-import { jsenvPluginPreact } from "@jsenv/plugin-preact"
+import { jsenvPluginReact } from "@jsenv/plugin-react"
 
 const countLabelJsxFileUrl = new URL(
   "./client/count_label.jsx",
   import.meta.url,
 )
 const countLabelJsxFileContent = {
-  beforeTest: await readFile(countLabelJsxFileUrl),
-  update: (content) => writeFile(countLabelJsxFileUrl, content),
+  beforeTest: readFileSync(countLabelJsxFileUrl),
+  update: (content) => writeFileSync(countLabelJsxFileUrl, content),
   restore: () =>
-    writeFile(countLabelJsxFileUrl, countLabelJsxFileContent.beforeTest),
+    writeFileSync(countLabelJsxFileUrl, countLabelJsxFileContent.beforeTest),
 }
 
 const devServer = await startDevServer({
   logLevel: "warn",
   rootDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
-  cooldownBetweenFileEvents: 250,
-  plugins: [jsenvPluginPreact()],
+  plugins: [jsenvPluginReact()],
   clientFiles: {
     "./**": true,
   },
+  cooldownBetweenFileEvents: 250,
 })
 const browser = await chromium.launch({
-  headless: true,
+  headless: !true,
 })
 try {
   const page = await browser.newPage({ ignoreHTTPSErrors: true })
@@ -40,9 +40,7 @@ try {
   const getCountLabelText = () => {
     return page.evaluate(
       /* eslint-disable no-undef */
-      () => {
-        return document.querySelector("#count_label").innerHTML
-      },
+      () => document.querySelector("#count_label").innerHTML,
       /* eslint-enable no-undef */
     )
   }
@@ -50,6 +48,15 @@ try {
     return page.click("#button_increase")
   }
 
+  {
+    const actual = {
+      countLabelText: await getCountLabelText(),
+    }
+    const expected = {
+      countLabelText: "toto: 0",
+    }
+    assert({ actual, expected })
+  }
   {
     await increase()
     const actual = {
@@ -60,14 +67,14 @@ try {
     }
     assert({ actual, expected })
   }
-  await countLabelJsxFileContent.update(`
-export const CountLabel = ({ count }) => {
+  await countLabelJsxFileContent.update(`export const CountLabel = ({ count }) => {
   return (
-    <span id="count_label" style="color: black">
+    <span id="count_label" style={{ color: "black" }}>
       tata: {count}
     </span>
   )
-}`)
+}
+`)
   await new Promise((resolve) => setTimeout(resolve, 500))
   {
     const actual = {
