@@ -31,13 +31,12 @@ to generate a certificate dynamically.
 import { requestCertificateForLocalhost } from "@jsenv/https-local"
 import { startServer } from "@jsenv/server"
 
-const { serverCertificate, serverCertificatePrivateKey } =
-  await requestCertificateForLocalhost()
+const { certificate, privateKey } = requestCertificateForLocalhost()
 
 const server = await startServer({
   protocol: "https",
-  certificate: serverCertificate,
-  privateKey: serverCertificatePrivateKey,
+  certificate,
+  privateKey,
 })
 server.origin.startsWith("https://") // true
 ```
@@ -52,13 +51,12 @@ You can disable this behaviour using _redirectHttpToHttps_ parameter.
 import { requestCertificateForLocalhost } from "@jsenv/https-local"
 import { startServer } from "@jsenv/server"
 
-const { serverCertificate, serverCertificatePrivateKey } =
-  await requestCertificateForLocalhost()
+const { certificate, privateKey } = requestCertificateForLocalhost()
 
 await startServer({
   protocol: "https",
-  certificate: serverCertificate,
-  privateKey: serverCertificatePrivateKey,
+  certificate,
+  privateKey,
   redirectHttpToHttps: false,
 })
 ```
@@ -69,13 +67,12 @@ When "http to https redirection" is disabled, the server ignores http request. I
 import { requestCertificateForLocalhost } from "@jsenv/https-local"
 import { startServer } from "@jsenv/server"
 
-const { serverCertificate, serverCertificatePrivateKey } =
-  await requestCertificateForLocalhost()
+const { certificate, privateKey } = requestCertificateForLocalhost()
 
 await startServer({
   protocol: "https",
-  certificate: serverCertificate,
-  privateKey: serverCertificatePrivateKey,
+  certificate,
+  privateKey,
   redirectHttpToHttps: false,
   allowHttpRequestOnHttps: true,
   requestToResponse: (request) => {
@@ -100,13 +97,11 @@ You can enable http2 using _http2_ parameter
 import { requestCertificateForLocalhost } from "@jsenv/https-local"
 import { startServer } from "@jsenv/server"
 
-const { serverCertificate, serverCertificatePrivateKey } =
-  await requestCertificateForLocalhost()
-
+const { certificate, privateKey } = requestCertificateForLocalhost()
 await startServer({
   protocol: "https",
-  certificate: serverCertificate,
-  privateKey: serverCertificatePrivateKey,
+  certificate,
+  privateKey,
   http2: true,
 })
 ```
@@ -118,13 +113,12 @@ You can disable http1 fallback using _http1Allowed_ parameter.
 import { requestCertificateForLocalhost } from "@jsenv/https-local"
 import { startServer } from "@jsenv/server"
 
-const { serverCertificate, serverCertificatePrivateKey } =
-  await requestCertificateForLocalhost()
+const { certificate, privateKey } = requestCertificateForLocalhost()
 
 await startServer({
   protocol: "https",
-  certificate: serverCertificate,
-  privateKey: serverCertificatePrivateKey,
+  certificate,
+  privateKey,
   http2: true,
   http1Allowed: false,
 })

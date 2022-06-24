@@ -5,14 +5,13 @@ import { assert } from "@jsenv/assert"
 import { startServer, fetchFileSystem } from "@jsenv/server"
 
 if (process.platform !== "win32") {
-  const { serverCertificate, serverCertificatePrivateKey } =
-    await requestCertificateForLocalhost()
+  const { certificate, privateKey } = requestCertificateForLocalhost()
   const server = await startServer({
     logLevel: "warn",
     protocol: "https",
     http2: true,
-    privateKey: serverCertificatePrivateKey,
-    certificate: serverCertificate,
+    privateKey,
+    certificate,
     keepProcessAlive: false,
     requestToResponse: (request, { pushResponse }) => {
       if (request.ressource === "/main.html") {
@@ -67,7 +66,7 @@ if (process.platform !== "win32") {
   }
 
   const client1 = connect(server.origin, {
-    ca: serverCertificate,
+    ca: certificate,
     // Node.js won't trust my custom certificate
     // We could also do this: https://github.com/nodejs/node/issues/27079
     rejectUnauthorized: false,

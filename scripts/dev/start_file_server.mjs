@@ -1,19 +1,15 @@
 import { startServer, fetchFileSystem } from "@jsenv/server"
 import { requestCertificateForLocalhost } from "@jsenv/https-local"
-import { resolveUrl } from "@jsenv/urls"
 
-const { serverCertificate, serverCertificatePrivateKey } =
-  await requestCertificateForLocalhost({
-    serverCertificateAltNames: ["local"],
-  })
-
-const directoryUrl = resolveUrl("../../", import.meta.url)
-
+const { certificate, privateKey } = requestCertificateForLocalhost({
+  altNames: ["local"],
+})
+const directoryUrl = new URL("../../", import.meta.url).href
 await startServer({
   protocol: "https",
   port: 3689,
-  privateKey: serverCertificatePrivateKey,
-  certificate: serverCertificate,
+  privateKey,
+  certificate,
   requestToResponse: (request) => {
     return fetchFileSystem(new URL(request.ressource.slice(1), directoryUrl), {
       rootDirectoryUrl: directoryUrl,

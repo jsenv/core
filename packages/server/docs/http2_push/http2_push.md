@@ -83,16 +83,15 @@ _start_server.mjs:_
 import { requestCertificateForLocalhost } from "@jsenv/https-local"
 import { startServer, fetchFileSystem } from "@jsenv/server"
 
-const { serverCertificate, serverCertificatePrivateKey } =
-  await requestCertificateForLocalhost()
+const { certificate, privateKey } = requestCertificateForLocalhost()
 
 await startServer({
   logLevel: "info",
   protocol: "https",
   port: 3679,
   http2: true,
-  certificate: serverCertificate,
-  privateKey: serverCertificatePrivateKey,
+  certificate,
+  privateKey,
   requestToResponse: (request) => {
     return fetchFileSystem(
       new URL(request.ressource.slice(1), import.meta.url),
@@ -112,16 +111,15 @@ import { requestCertificateForLocalhost } from "@jsenv/https-local"
 
 import { startServer, fetchFileSystem } from "@jsenv/server"
 
-const { serverCertificate, serverCertificatePrivateKey } =
-  await requestCertificateForLocalhost()
+const { certificate, privateKey } = requestCertificateForLocalhost()
 
 await startServer({
   logLevel: "info",
   protocol: "https",
   port: 3679,
   http2: true,
-  certificate: serverCertificate,
-  privateKey: serverCertificatePrivateKey,
+  certificate,
+  privateKey,
   sendErrorDetails: true,
 - requestToResponse: (request) => {
 + requestToResponse: (request, { pushResponse }) => {

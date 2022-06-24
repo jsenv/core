@@ -2,16 +2,15 @@ import { requestCertificateForLocalhost } from "@jsenv/https-local"
 
 import { startDevServer } from "@jsenv/core"
 
-const { serverCertificate, serverCertificatePrivateKey } =
-  await requestCertificateForLocalhost({
-    serverCertificateAltNames: ["local"],
-  })
+const { certificate, privateKey } = requestCertificateForLocalhost({
+  altNames: ["local"],
+})
 await startDevServer({
   port: 3589,
   protocol: "https",
   listenAnyIp: true,
-  certificate: serverCertificate,
-  privateKey: serverCertificatePrivateKey,
+  certificate,
+  privateKey,
   rootDirectoryUrl: new URL("./", import.meta.url),
   plugins: [
     {

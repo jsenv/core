@@ -2,15 +2,14 @@ import { requestCertificateForLocalhost } from "@jsenv/https-local"
 
 import { startServer, fetchFileSystem } from "@jsenv/server"
 
-const { serverCertificate, serverCertificatePrivateKey } =
-  await requestCertificateForLocalhost()
+const { certificate, privateKey } = requestCertificateForLocalhost()
 await startServer({
   logLevel: "info",
   protocol: "https",
   port: 3679,
   http2: true,
-  privateKey: serverCertificatePrivateKey,
-  certificate: serverCertificate,
+  privateKey,
+  certificate,
   sendErrorDetails: true,
   requestToResponse: (request, { pushResponse }) => {
     if (request.ressource === "/main.html") {

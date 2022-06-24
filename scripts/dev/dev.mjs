@@ -3,18 +3,16 @@ import { requestCertificateForLocalhost } from "@jsenv/https-local"
 import { rootDirectoryUrl } from "@jsenv/core/jsenv.config.mjs"
 import { startDevServer } from "@jsenv/core"
 
-const { serverCertificate, serverCertificatePrivateKey } =
-  await requestCertificateForLocalhost({
-    serverCertificateAltNames: ["local"],
-  })
-
+const { certificate, privateKey } = requestCertificateForLocalhost({
+  altNames: ["local"],
+})
 await startDevServer({
   rootDirectoryUrl,
   // babelPluginMap: {},
   protocol: "https",
   http2: false,
-  certificate: serverCertificate,
-  privateKey: serverCertificatePrivateKey,
+  certificate,
+  privateKey,
   // importMapInWebWorkers: true,
   // livereloadLogLevel: "debug",
   // jsenvToolbar: false,

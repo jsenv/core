@@ -14,9 +14,7 @@ import { requestCertificateForLocalhost } from "@jsenv/https-local"
 import { urlToRelativeUrl, resolveUrl } from "@jsenv/urls"
 import { ensureEmptyDirectory } from "@jsenv/filesystem"
 
-const { serverCertificate, serverCertificatePrivateKey } =
-  await requestCertificateForLocalhost()
-
+const { certificate, privateKey } = requestCertificateForLocalhost()
 const projectDirectoryUrl = new URL("../../../", import.meta.url)
 const directoryRelativeUrl = urlToRelativeUrl(
   new URL("./", import.meta.url),
@@ -36,8 +34,8 @@ await startServer({
   protocol: "https",
   http2: true,
   // http2: false,
-  certificate: serverCertificate,
-  privateKey: serverCertificatePrivateKey,
+  certificate,
+  privateKey,
   port: 6789,
   sendServerTiming: true,
   requestToResponse: (request) => {
