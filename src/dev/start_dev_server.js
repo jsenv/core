@@ -1,3 +1,4 @@
+import { parentPort } from "node:worker_threads"
 import { findFreePort } from "@jsenv/server"
 import {
   assertAndNormalizeDirectoryUrl,
@@ -125,9 +126,13 @@ export const startDevServer = async ({
     })
 
     const worker = await reloadableWorker.load()
-    if (!keepProcessAlive) {
-      worker.unref()
-    }
+    const messagePromise = new Promise((resolve) => {
+      worker.once("message", resolve)
+    })
+    await messagePromise
+    // if (!keepProcessAlive) {
+    //   worker.unref()
+    // }
     return {
       origin: `${protocol}://127.0.0.1:${port}`,
       stop: () => {
@@ -225,6 +230,9 @@ export const startDevServer = async ({
       kitchen.pluginController.callHooks("destroy", {})
     }
   })
+  if (reloadableWorker.isWorker) {
+    parentPort.postMessage(server.origin)
+  }
   return {
     origin: server.origin,
     stop: () => {

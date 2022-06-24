@@ -30,15 +30,14 @@ export const createReloadableWorker = (workerFileUrl, options = {}) => {
         workerFilePath,
       },
     })
-
     worker.once("error", (error) => {
       console.error(error)
     })
-    await new Promise((resolve) => {
-      worker.once("online", resolve)
-    })
     worker.once("exit", () => {
       worker = null
+    })
+    await new Promise((resolve) => {
+      worker.once("online", resolve)
     })
     return worker
   }
@@ -50,6 +49,7 @@ export const createReloadableWorker = (workerFileUrl, options = {}) => {
 
   return {
     isPrimary,
+    isWorker: !isPrimary,
     load,
     reload,
     terminate,

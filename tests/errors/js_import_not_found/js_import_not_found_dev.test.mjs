@@ -17,6 +17,7 @@ try {
     rootDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
     htmlSupervisor: true,
+    devServerAutoreload: false,
   })
   const { returnValue, pageLogs, pageErrors } = await executeInChromium({
     url: `${devServer.origin}/main.html`,

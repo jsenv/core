@@ -13,6 +13,7 @@
  * we want to be in the user shoes and we should not alter build files.
  */
 
+import { parentPort } from "node:worker_threads"
 import {
   jsenvAccessControlAllowedHeaders,
   startServer,
@@ -130,12 +131,13 @@ export const startBuildServer = async ({
       reloadableWorker.terminate()
     })
     const worker = await reloadableWorker.load()
-    if (!keepProcessAlive) {
-      worker.unref()
-    }
-    await new Promise((resolve) => {
+    const messagePromise = new Promise((resolve) => {
       worker.once("message", resolve)
     })
+    await messagePromise
+    // if (!keepProcessAlive) {
+    //   worker.unref()
+    // }
     return {
       origin: `${protocol}://127.0.0.1:${port}`,
       stop: () => {
@@ -194,7 +196,7 @@ export const startBuildServer = async ({
   })
   logger.info(``)
   if (reloadableWorker.isWorker) {
-    reloadableWorker.worker.postMessage(server.origin)
+    parentPort.postMessage(server.origin)
   }
   return {
     origin: server.origin,
