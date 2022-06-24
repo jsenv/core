@@ -50,23 +50,34 @@ export const startBuildServer = async ({
 
   rootDirectoryUrl,
   buildDirectoryUrl,
-  mainBuildFileUrl = "/index.html",
+  buildIndexPath = "/index.html",
   buildServerFiles = {
     "./package.json": true,
     "./jsenv.config.mjs": true,
   },
   buildServerMainFile = getCallerPosition().url,
-  // force disable server autoreload when this code is executed:
-  // - inside a forked child process
-  // - debugged by vscode
-  // otherwise we get net:ERR_CONNECTION_REFUSED
-  buildServerAutoreload = typeof process.send !== "function" &&
-    !process.env.VSCODE_INSPECTOR_OPTIONS,
+  buildServerAutoreload = true,
   cooldownBetweenFileEvents,
 }) => {
   const logger = createLogger({ logLevel })
   rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
   buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl)
+  if (buildIndexPath) {
+    if (typeof buildIndexPath !== "string") {
+      throw new TypeError(
+        `buildIndexPath must be a string, got ${buildIndexPath}`,
+      )
+    }
+    if (buildIndexPath[0] !== "/") {
+      const buildIndexUrl = new URL(buildIndexPath, buildDirectoryUrl).href
+      if (!buildIndexUrl.startsWith(buildDirectoryUrl)) {
+        throw new Error(
+          `buildIndexPath must be relative, got ${buildIndexPath}`,
+        )
+      }
+      buildIndexPath = buildIndexUrl.slice(buildDirectoryUrl.length)
+    }
+  }
 
   const operation = Abort.startOperation()
   operation.addAbortSignal(signal)
@@ -122,6 +133,9 @@ export const startBuildServer = async ({
     if (!keepProcessAlive) {
       worker.unref()
     }
+    await new Promise((resolve) => {
+      worker.once("message", resolve)
+    })
     return {
       origin: `${protocol}://127.0.0.1:${port}`,
       stop: () => {
@@ -139,7 +153,8 @@ export const startBuildServer = async ({
     stopOnExit: false,
     stopOnSIGINT: false,
     stopOnInternalError: false,
-    keepProcessAlive: true,
+    // the worker should be kept alive by the parent otherwise
+    keepProcessAlive,
     logLevel: serverLogLevel,
     startLog: false,
 
@@ -168,7 +183,7 @@ export const startBuildServer = async ({
       ...services,
       build_files_service: createBuildFilesService({
         buildDirectoryUrl,
-        mainBuildFileUrl,
+        buildIndexPath,
       }),
     }),
   })
@@ -178,6 +193,9 @@ export const startBuildServer = async ({
     logger.info(`- ${server.origins[key]}`)
   })
   logger.info(``)
+  if (reloadableWorker.isWorker) {
+    reloadableWorker.worker.postMessage(server.origin)
+  }
   return {
     origin: server.origin,
     stop: () => {
@@ -186,16 +204,16 @@ export const startBuildServer = async ({
   }
 }
 
-const createBuildFilesService = ({ buildDirectoryUrl, mainBuildFileUrl }) => {
+const createBuildFilesService = ({ buildDirectoryUrl, buildIndexPath }) => {
   return (request) => {
     const urlIsVersioned = new URL(
       request.ressource,
       request.origin,
     ).searchParams.has("v")
-    if (mainBuildFileUrl && request.ressource === "/") {
+    if (buildIndexPath && request.ressource === "/") {
       request = {
         ...request,
-        ressource: mainBuildFileUrl,
+        ressource: `/${buildIndexPath}`,
       }
     }
     return fetchFileSystem(
