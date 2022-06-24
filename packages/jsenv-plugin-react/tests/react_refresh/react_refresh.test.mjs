@@ -27,7 +27,7 @@ const devServer = await startDevServer({
   cooldownBetweenFileEvents: 250,
 })
 const browser = await chromium.launch({
-  headless: !true,
+  headless: true,
 })
 try {
   const page = await browser.newPage({ ignoreHTTPSErrors: true })
