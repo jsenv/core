@@ -1,3 +1,4 @@
+import { workerData, Worker, parentPort } from "node:worker_threads";
 import http from "node:http";
 import cluster from "node:cluster";
 import process$1, { memoryUsage } from "node:process";
@@ -12,7 +13,6 @@ import { performance } from "node:perf_hooks";
 import { extname, dirname, basename } from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import crypto, { createHash } from "node:crypto";
-import { workerData, Worker } from "node:worker_threads";
 import { parseHtmlString, stringifyHtmlAst, visitHtmlNodes, getHtmlNodeAttribute, setHtmlNodeAttributes, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, applyPostCss, postCssPluginUrlVisitor, parseJsUrls, findHtmlNode, getHtmlNodeText, removeHtmlNode, setHtmlNodeText, analyzeScriptNode, applyBabelPlugins, injectScriptNodeAsEarlyAsPossible, createHtmlNode, removeHtmlNodeText, transpileWithParcel, injectJsImport, minifyWithParcel, analyzeLinkNode } from "@jsenv/ast";
 import { createMagicSource, composeTwoSourcemaps, sourcemapConverter, SOURCEMAP, generateSourcemapFileUrl, generateSourcemapDataUrl } from "@jsenv/sourcemap";
 import { createRequire } from "node:module";
@@ -562,8 +562,8 @@ const parseMs = ms => {
   };
 };
 
-const byteAsFileSize = metricValue => {
-  return formatBytes(metricValue);
+const byteAsFileSize = numberOfBytes => {
+  return formatBytes(numberOfBytes);
 };
 const byteAsMemoryUsage = metricValue => {
   return formatBytes(metricValue, {
@@ -581,13 +581,14 @@ const formatBytes = (number, {
   const exponent = Math.min(Math.floor(Math.log10(number) / 3), BYTE_UNITS.length - 1);
   const unitNumber = number / Math.pow(1000, exponent);
   const unitName = BYTE_UNITS[exponent];
-  const decimals = unitName === "B" ? 0 : 1;
+  const maxDecimals = unitNumber < 100 ? 1 : 0;
   const unitNumberRounded = setRoundedPrecision(unitNumber, {
-    decimals
+    decimals: maxDecimals,
+    decimalsWhenSmall: 1
   });
 
   if (fixedDecimals) {
-    return `${unitNumberRounded.toFixed(decimals)} ${unitName}`;
+    return `${unitNumberRounded.toFixed(maxDecimals)} ${unitName}`;
   }
 
   return `${unitNumberRounded} ${unitName}`;
@@ -8559,11 +8560,11 @@ const createReloadableWorker = (workerFileUrl, options = {}) => {
     worker.once("error", error => {
       console.error(error);
     });
-    await new Promise(resolve => {
-      worker.once("online", resolve);
-    });
     worker.once("exit", () => {
       worker = null;
+    });
+    await new Promise(resolve => {
+      worker.once("online", resolve);
     });
     return worker;
   };
@@ -8575,6 +8576,7 @@ const createReloadableWorker = (workerFileUrl, options = {}) => {
 
   return {
     isPrimary,
+    isWorker: !isPrimary,
     load,
     reload,
     terminate
@@ -19271,14 +19273,10 @@ const startDevServer = async ({
     "./jsenv.config.mjs": true
   },
   devServerMainFile = getCallerPosition().url,
-  // force disable server autoreload when this code is executed:
-  // - inside a forked child process
-  // - debugged by vscode
-  // otherwise we get net:ERR_CONNECTION_REFUSED
-  devServerAutoreload = typeof process.send !== "function" && !process.env.VSCODE_INSPECTOR_OPTIONS,
+  devServerAutoreload = true,
   clientFiles = {
     "./src/": true,
-    "./test/": true
+    "./tests/": true
   },
   cooldownBetweenFileEvents,
   clientAutoreload = true,
@@ -19305,7 +19303,7 @@ const startDevServer = async ({
       "./src/**/*.html": true
     },
     test: {
-      "./test/**/*.test.html": true
+      "./tests/**/*.test.html": true
     }
   },
   // toolbar = false,
@@ -19382,10 +19380,12 @@ const startDevServer = async ({
       reloadableWorker.terminate();
     });
     const worker = await reloadableWorker.load();
-
-    if (!keepProcessAlive) {
-      worker.unref();
-    }
+    const messagePromise = new Promise(resolve => {
+      worker.once("message", resolve);
+    });
+    await messagePromise; // if (!keepProcessAlive) {
+    //   worker.unref()
+    // }
 
     return {
       origin: `${protocol}://127.0.0.1:${port}`,
@@ -19501,6 +19501,11 @@ const startDevServer = async ({
       kitchen.pluginController.callHooks("destroy", {});
     };
   });
+
+  if (reloadableWorker.isWorker) {
+    parentPort.postMessage(server.origin);
+  }
+
   return {
     origin: server.origin,
     stop: () => {
@@ -20209,7 +20214,9 @@ const run = async ({
   const runOperation = Abort.startOperation();
   runOperation.addAbortSignal(signal);
 
-  if (typeof allocatedMs === "number" && allocatedMs !== Infinity) {
+  if ( // ideally we would rather log than the timeout is ignored
+  // when keepRunning is true
+  !keepRunning && typeof allocatedMs === "number" && allocatedMs !== Infinity) {
     const timeoutAbortSource = runOperation.timeout(allocatedMs);
     resultTransformer = composeTransformer$1(resultTransformer, result => {
       if (result.status === "errored" && Abort.isAbortError(result.error) && timeoutAbortSource.signal.aborted) {
@@ -21226,15 +21233,6 @@ const executeInParallel = async ({
   return executionResults;
 };
 
-const defaultCoverageConfig = {
-  "./index.js": true,
-  "./main.js": true,
-  "./src/**/*.js": true,
-  "./**/*.test.*": false,
-  // contains .test. -> nope
-  "./**/test/": false // inside a test folder -> nope,
-
-};
 /**
  * Execute a list of files and log how it goes
  * @param {Object} testPlanParameters
@@ -21278,7 +21276,15 @@ const executeTestPlan = async ({
   gcBetweenExecutions = logMemoryHeapUsage,
   coverage = process.argv.includes("--cover") || process.argv.includes("--coverage"),
   coverageTempDirectoryRelativeUrl = "./.coverage/tmp/",
-  coverageConfig = defaultCoverageConfig,
+  coverageConfig = {
+    "./src/**/*.js": true,
+    "./**/*.test.*": false,
+    // contains .test. -> no
+    "./**/test/": false,
+    // inside a test directory -> no
+    "./**/tests/": false // inside a tests directory -> no
+
+  },
   coverageIncludeMissing = true,
   coverageAndExecutionAllowed = false,
   coverageForceIstanbul = false,
@@ -21519,7 +21525,7 @@ const createRuntimeFromPlaywright = ({
     keepRunning,
     onConsole,
     executablePath,
-    headful = false,
+    headful = keepRunning,
     ignoreHTTPSErrors = true
   }) => {
     const cleanupCallbackList = createCallbackListNotifiedOnce();
@@ -24759,17 +24765,13 @@ const startBuildServer = async ({
   keepProcessAlive = true,
   rootDirectoryUrl,
   buildDirectoryUrl,
-  mainBuildFileUrl = "/index.html",
+  buildIndexPath = "/index.html",
   buildServerFiles = {
     "./package.json": true,
     "./jsenv.config.mjs": true
   },
   buildServerMainFile = getCallerPosition().url,
-  // force disable server autoreload when this code is executed:
-  // - inside a forked child process
-  // - debugged by vscode
-  // otherwise we get net:ERR_CONNECTION_REFUSED
-  buildServerAutoreload = typeof process.send !== "function" && !process.env.VSCODE_INSPECTOR_OPTIONS,
+  buildServerAutoreload = true,
   cooldownBetweenFileEvents
 }) => {
   const logger = createLogger({
@@ -24777,6 +24779,23 @@ const startBuildServer = async ({
   });
   rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl);
   buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl);
+
+  if (buildIndexPath) {
+    if (typeof buildIndexPath !== "string") {
+      throw new TypeError(`buildIndexPath must be a string, got ${buildIndexPath}`);
+    }
+
+    if (buildIndexPath[0] !== "/") {
+      const buildIndexUrl = new URL(buildIndexPath, buildDirectoryUrl).href;
+
+      if (!buildIndexUrl.startsWith(buildDirectoryUrl)) {
+        throw new Error(`buildIndexPath must be relative, got ${buildIndexPath}`);
+      }
+
+      buildIndexPath = buildIndexUrl.slice(buildDirectoryUrl.length);
+    }
+  }
+
   const operation = Abort.startOperation();
   operation.addAbortSignal(signal);
 
@@ -24847,10 +24866,12 @@ const startBuildServer = async ({
       reloadableWorker.terminate();
     });
     const worker = await reloadableWorker.load();
-
-    if (!keepProcessAlive) {
-      worker.unref();
-    }
+    const messagePromise = new Promise(resolve => {
+      worker.once("message", resolve);
+    });
+    await messagePromise; // if (!keepProcessAlive) {
+    //   worker.unref()
+    // }
 
     return {
       origin: `${protocol}://127.0.0.1:${port}`,
@@ -24869,7 +24890,8 @@ const startBuildServer = async ({
     stopOnExit: false,
     stopOnSIGINT: false,
     stopOnInternalError: false,
-    keepProcessAlive: true,
+    // the worker should be kept alive by the parent otherwise
+    keepProcessAlive,
     logLevel: serverLogLevel,
     startLog: false,
     protocol,
@@ -24895,7 +24917,7 @@ const startBuildServer = async ({
     requestToResponse: composeServices({ ...services,
       build_files_service: createBuildFilesService({
         buildDirectoryUrl,
-        mainBuildFileUrl
+        buildIndexPath
       })
     })
   });
@@ -24905,6 +24927,11 @@ const startBuildServer = async ({
     logger.info(`- ${server.origins[key]}`);
   });
   logger.info(``);
+
+  if (reloadableWorker.isWorker) {
+    parentPort.postMessage(server.origin);
+  }
+
   return {
     origin: server.origin,
     stop: () => {
@@ -24915,14 +24942,14 @@ const startBuildServer = async ({
 
 const createBuildFilesService = ({
   buildDirectoryUrl,
-  mainBuildFileUrl
+  buildIndexPath
 }) => {
   return request => {
     const urlIsVersioned = new URL(request.ressource, request.origin).searchParams.has("v");
 
-    if (mainBuildFileUrl && request.ressource === "/") {
+    if (buildIndexPath && request.ressource === "/") {
       request = { ...request,
-        ressource: mainBuildFileUrl
+        ressource: `/${buildIndexPath}`
       };
     }
 
@@ -25163,4 +25190,4 @@ const jsenvPluginInjectGlobals = urlAssociations => {
   };
 };
 
-export { build, chromium, chromiumIsolatedTab, defaultCoverageConfig, execute, executeTestPlan, firefox, firefoxIsolatedTab, jsenvPluginInjectGlobals, nodeProcess, startBuildServer, startDevServer, webkit, webkitIsolatedTab };
+export { build, chromium, chromiumIsolatedTab, execute, executeTestPlan, firefox, firefoxIsolatedTab, jsenvPluginInjectGlobals, nodeProcess, startBuildServer, startDevServer, webkit, webkitIsolatedTab };
