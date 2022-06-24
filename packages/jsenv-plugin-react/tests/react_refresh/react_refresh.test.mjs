@@ -25,6 +25,7 @@ const devServer = await startDevServer({
     "./**": true,
   },
   cooldownBetweenFileEvents: 250,
+  devServerAutoreload: false,
 })
 const browser = await chromium.launch({
   headless: true,

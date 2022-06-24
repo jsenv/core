@@ -20,11 +20,14 @@ const devServer = await startDevServer({
   logLevel: "warn",
   rootDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
-  cooldownBetweenFileEvents: 250,
+  devServerAutoreload: false,
   plugins: [jsenvPluginPreact()],
   clientFiles: {
     "./**": true,
-    "./**/.*/": false,
+  },
+  cooldownBetweenFileEvents: 250,
+  clientAutoreload: {
+    // debug: true,
   },
 })
 const browser = await chromium.launch({
@@ -50,6 +53,16 @@ try {
   }
 
   {
+    const actual = {
+      countLabelText: await getCountLabelText(),
+    }
+    const expected = {
+      countLabelText: "toto: 0",
+    }
+    assert({ actual, expected })
+  }
+
+  {
     await increase()
     const actual = {
       countLabelText: await getCountLabelText(),
@@ -59,14 +72,14 @@ try {
     }
     assert({ actual, expected })
   }
-  await countLabelJsxFileContent.update(`
-export const CountLabel = ({ count }) => {
+  countLabelJsxFileContent.update(`export const CountLabel = ({ count }) => {
   return (
     <span id="count_label" style="color: black">
       tata: {count}
     </span>
   )
-}`)
+}
+`)
   await new Promise((resolve) => setTimeout(resolve, 500))
   {
     const actual = {
