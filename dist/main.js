@@ -19416,7 +19416,9 @@ const startDevServer = async ({
   };
 
   const stopWatchingClientFiles = registerDirectoryLifecycle(rootDirectoryUrl, {
-    watchPatterns: clientFiles,
+    watchPatterns: { ...clientFiles,
+      ".jsenv/": false
+    },
     cooldownBetweenFileEvents,
     keepProcessAlive: false,
     recursive: true,
@@ -24831,7 +24833,8 @@ const startBuildServer = async ({
     const stopWatchingBuildServerFiles = registerDirectoryLifecycle(rootDirectoryUrl, {
       watchPatterns: {
         [buildServerMainFile]: true,
-        ...buildServerFiles
+        ...buildServerFiles,
+        ".jsenv/": false
       },
       cooldownBetweenFileEvents,
       keepProcessAlive: false,
