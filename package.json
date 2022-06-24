@@ -101,7 +101,7 @@
     "@jsenv/eslint-config": "16.0.9",
     "@jsenv/file-size-impact": "13.0.0",
     "@jsenv/https-local": "2.1.0",
-    "@jsenv/package-workspace": "0.2.1",
+    "@jsenv/package-workspace": "0.3.0",
     "@jsenv/performance-impact": "3.0.0",
     "eslint": "8.18.0",
     "eslint-plugin-html": "6.2.0",
