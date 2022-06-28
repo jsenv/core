@@ -2,7 +2,7 @@
 
 Jsenv was first created to write tests that could be executed in different runtimes. It has naturally evolved to cover the core needs of a JavaScript project.
 
-- :exploding_head: Can execute HTML during tests
+- :exploding_head: Directly execute HTML files as part of your tests
 - :relieved: Consistent and integral developer experience (dev + test + build)
 - :relieved: Same dev experience for source and test files
 - :ok_hand: Seamless integration with standard HTML, CSS and JS
