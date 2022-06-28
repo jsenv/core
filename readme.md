@@ -2,9 +2,10 @@
 
 Jsenv was first created to write tests that could be executed in different runtimes. It has naturally evolved to cover the core needs of a JavaScript project.
 
-- Seamless integration with standard HTML, CSS and JS
-- Consistent and integral developer experience (dev + test + build)
-- An encouragment to use standard and **simplest forms of coding**
+- Same dev experience for source and test files :relieved:
+- Consistent and integral developer experience (dev + test + build) :relieved:
+- any HTML file can become part of your tests :exploding_head:
+- Seamless integration with standard HTML, CSS and JS :ok_hand:
 
 # Demo
 
