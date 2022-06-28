@@ -9,13 +9,19 @@ await executeTestPlan({
     "tests/**/*.test.mjs": {
       node: {
         runtime: nodeProcess,
-        allocatedMs: 30 * 1000,
+        allocatedMs: 30_000,
       },
     },
     "tests/**/coverage_universal.test.mjs": {
       node: {
         runtime: nodeProcess,
-        allocatedMs: 60 * 1000,
+        allocatedMs: 60_000,
+      },
+    },
+    "tests/**/*_browsers.test.mjs": {
+      node: {
+        runtime: nodeProcess,
+        allocatedMs: 60_000,
       },
     },
   },
