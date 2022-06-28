@@ -52,13 +52,12 @@ No one wants to do that: the prefered syntax is "jsenv".
 
 The logo is composed by the name at the center and two circles orbiting around it. One of the circle is web browsers, the other is Node.js. It represents the two JavaScript environments supported by jsenv.
 
-![jsenv logo with legend](./docs/jsenv-logo-legend.png)
+![jsenv logo with legend](./docs/jsenv_logo_legend.png)
 
 # See also
 
 | Link                                                                                                                     | Description                                                  |
 | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ |
-| [@jsenv/template-pwa](https://github.com/jsenv/jsenv-template-pwa)                                                       | GitHub repository template for a progressive web application |
-| [@jsenv/template-node-package](https://github.com/jsenv/jsenv-template-node-package)                                     | GitHub repository template for a node package                |
 | [@jsenv/assert](https://github.com/jsenv/assert)                                                                         | NPM package to write assertions                              |
 | [I am too lazy for a test framework](https://medium.com/@DamienMaillard/i-am-too-lazy-for-a-test-framework-ca08d216ee05) | Article presenting a straightforward testing experience      |
+| [@jsenv/template-pwa](https://github.com/jsenv/jsenv-template-pwa)                                                       | GitHub repository template for a progressive web application |
