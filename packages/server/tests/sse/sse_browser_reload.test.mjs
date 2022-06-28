@@ -16,7 +16,6 @@ if (process.platform !== "win32") {
       if (accept.includes("text/event-stream")) {
         return room.join(request)
       }
-
       return fetchFileSystem(new URL("./main.html", import.meta.url))
     },
   })
@@ -54,6 +53,7 @@ if (process.platform !== "win32") {
     // eslint-disable-next-line no-undef
     window.location.reload(true)
   })
+  await new Promise((resolve) => setTimeout(resolve, 2000))
 
   {
     const actual = room.getRoomClientCount()
