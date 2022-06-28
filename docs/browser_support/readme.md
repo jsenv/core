@@ -1,49 +1,34 @@
 # Browser support
 
-When your code cannot be runned directly by one of the browser you want to support you need a babel configuration file.
-
-It's recommended to start with the following _babel.config.cjs_
-
-```console
-npm i --save-dev @jsenv/babel-preset
-```
-
-```js
-/*
- * This file configure the babel plugins required for this codebase
- *
- * Read more at https://github.com/jsenv/jsenv-core/tree/master/packages/babel-preset
- */
-
-module.exports = {
-  presets: ["@jsenv/babel-preset"],
-}
-```
-
-This babel configuration file enable babel plugins corresponding to web standards. You can enable more babel plugins as documented in [Using JSX](../config/react.md#Using-JSX) or [Using TypeScript](../config/typescript.md).
+When your code cannot be runned directly by one of the browser you want to support you need to configure a "runtimeCompat".
 
 ## Browser support during development
 
-If your code can run without modification, the dev server behaves like a file server for your source files. Otherwise it transforms source code applying as little modification as possible. Read more in [browser support indicator](../dev_server/readme.md#browser-support-indicator).
+Jsenv dev server transforms your source code according to the browser requesting it. In other words if you use a recent chrome during development, dev server will apply zero or very few transformations to your source code.
 
-Jsenv relies on web features [listed in the main documentation](../../readme.md#about). At the time of writing this, only Google chrome supports all of them. For this reason it is recommended to use it during development. Using an other browser means jsenv dev server applies more transformation to make your code compatible with this browser.
+If you use a very old browser to request the dev server, features like Hot Module reloading won't work. Internet explorer is not supported.
 
 ## Browser support during build
 
-During build jsenv applies all babel plugins and other transformations by default. It is also recommended to use systemjs as explained in [SystemJS format](../building/readme.md#SystemJS-format).
+By default jsenv assumes you want to generated code compatible with browsers having the following features:
 
-If you have a well known list of browsers that you want to support you can tell that to jsenv using "runtimeCompat". "runtimeCompat" will be used to know what needs to be done to make code compatible with these runtimes. For instance it is used to enable or disable some babel plugins.
+- `<script type="module"></script>`
+- dynamic import
+- `import.meta`
+
+This translates into the following [runtimeCompat](https://github.com/jsenv/jsenv-core/blob/b0eb801554ab4fce2fbe2eafbb7f726d7f3486e2/src/build/build.js#L91-L100)
+
+If you want to support older browsers you can provide your own "runtimeCompat".
 
 ```diff
-import { buildProject } from "@jsenv/core"
+import { build } from "@jsenv/core"
 
-await buildProject({
-  projectDirectoryUrl: new URL("./", import.meta.url),
-  buildDirectoryRelativeUrl: "dist",
+await build({
+  rootDirectoryUrl: new URL("../", import.meta.url),
+  buildDirectoryUrl:new URL("../dist/", import.meta.url),
   entryPoints: {
-    "./file.js": "file.js",
+    "./src/main.html": "index.html",
   },
-  format: "systemjs",
 +  runtimeCompat: {
 +    chrome: "55",
 +    edge: "15",
@@ -53,70 +38,7 @@ await buildProject({
 })
 ```
 
-_file.js:_
+If some browser in your runtimeCompat do not support `<script type="module"></script>` the JS will be converted to become compatible. Many other transformations are performed to ensure the code generated will be compatible.
 
-```js
-const value = await Promise.resolve(42)
-console.log(value)
-```
-
-_dist/file.js:_
-
-```js
-System.register([], function () {
-  "use strict"
-  return {
-    execute: async function () {
-      const value = await Promise.resolve(42)
-      console.log(value)
-    },
-  }
-})
-//# sourceMappingURL=file.js.map
-```
-
-<details>
-    <summary>See dist/file.js when "runtimeCompat" is undefined</summary>
-
-```js
-function _await(value, then, direct) {
-  if (direct) {
-    return then ? then(value) : value
-  }
-
-  if (!value || !value.then) {
-    value = Promise.resolve(value)
-  }
-
-  return then ? value.then(then) : value
-}
-
-function _async(f) {
-  return function () {
-    for (var args = [], i = 0; i < arguments.length; i++) {
-      args[i] = arguments[i]
-    }
-
-    try {
-      return Promise.resolve(f.apply(this, args))
-    } catch (e) {
-      return Promise.reject(e)
-    }
-  }
-}
-
-System.register([], function () {
-  "use strict"
-
-  return {
-    execute: _async(function () {
-      return _await(Promise.resolve(42), function (value) {
-        console.log(value)
-      })
-    }),
-  }
-})
-//# sourceMappingURL=file.js.map
-```
-
-</details>
+- Jsenv do not handle polyfills, you can use a service like https://polyfill.io
+- Internet Explorer is not supported

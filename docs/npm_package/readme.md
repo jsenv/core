@@ -22,8 +22,7 @@ Let's say you want to execute the following HTML using a package called "amazing
 You need to do the following:
 
 1. Check package exports
-2. Remap package with importmap
-3. Adapt to the module format
+2. Adapt to the module format
 
 ## 1. Check package exports
 
@@ -39,34 +38,13 @@ Check the files exported by the package, how they are written and deduce the mod
 
 If several format are available, choose the one you want to use.
 
-## 2. Remap package with importmap
-
-If browser executes the HTML file as it is, it would fail because "amazing-package" is not a file. This can be fixed using an importmap script to remap "amazing-package" to the file you want to use.
-
-```diff
-+ <script type="importmap">
-+  {
-+    "imports": {
-+      "amazing-package": "./index.js"
-+    }
-+  }
-+</script>
-```
-
-These mappings can be generated automatically using [@jsenv/node-module-import-map](https://github.com/jsenv/jsenv-node-module-import-map#node-module-import-map).
-
-Read more about importmap at https://github.com/WICG/import-maps#import-maps.
-
-## 3. Adapt to the module format
+## 2. Adapt to the module format
 
 According to module format deduced at step 1, do one of the following:
 
 - ESModule
 
   For most cases you're good to go.
-
-  But, if the NPM package contains import without file extensions, use [@jsenv/node-module-import-map](https://github.com/jsenv/jsenv-node-module-import-map#node-module-import-map)
-  with "magicExtensions" enabled.
 
 - CommonJS
 
@@ -75,11 +53,19 @@ According to module format deduced at step 1, do one of the following:
   In _jsenv.config.mjs_:
 
   ```js
-  import { commonJsToJsModule } from "@jsenv/core"
+  import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs"
 
-  export const customCompilers = {
-    "./node_modules/amazing-package/**/*.js": commonJsToJsModule,
-  }
+  export const plugins = [
+    jsenvPluginCommonJs({
+      include: {
+        "**/node_modules/amazing-package/": true,
+      },
+    }),
+  ]
+  ```
+
+  ```console
+  npm install --save-dev @jsenv/plugin-commonjs
   ```
 
 - Global

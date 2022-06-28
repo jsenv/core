@@ -34,7 +34,6 @@ _@jsenv/core_ is tested on Mac, Windows, Linux on Node.js 16.14.0. Other operati
 | [Web workers](./docs/web_workers/readme.md)            | How to use web workers                     |
 | [NPM package](./docs/npm_package/readme.md)            | How to use a NPM package                   |
 | [CDN](./docs/cdn/readme.md)                            | How to use ressources from CDN             |
-| [React](./docs/react/readme.md)                        | How to enable react (or preact) and JSX    |
 
 # Name
 

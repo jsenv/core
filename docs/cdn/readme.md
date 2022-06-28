@@ -30,7 +30,8 @@ Let's take HTML loading roboto font from google CDNs as an example:
 
 If we build this file with jsenv, the cross origin url is kept intact for files generated during the build.
 
-There is 2 circumstances where you might want to change this default behaviour:
+<!-- Part below commented until the jsenv plugin for http urls is done -->
+<!-- There is 2 circumstances where you might want to change this default behaviour:
 
 1. You want to remove dependency to external urls in your build files
 2. You want to transform code served by the CDN before it gets executed
@@ -91,4 +92,4 @@ await buildProject({
 })
 ```
 
-When you pass a custom "preservedUrls" to "buildProject" it's recommended to also pass it to "startDevServer" and "executeTestPlan".
+When you pass a custom "preservedUrls" to "buildProject" it's recommended to also pass it to "startDevServer" and "executeTestPlan". -->
