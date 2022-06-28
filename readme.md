@@ -56,8 +56,8 @@ The logo is composed by the name at the center and two circles orbiting around i
 
 # See also
 
-| Link                                                                                                                     | Description                                                  |
-| ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ |
-| [@jsenv/assert](https://github.com/jsenv/assert)                                                                         | NPM package to write assertions                              |
-| [I am too lazy for a test framework](https://medium.com/@DamienMaillard/i-am-too-lazy-for-a-test-framework-ca08d216ee05) | Article presenting a straightforward testing experience      |
-| [@jsenv/template-pwa](https://github.com/jsenv/jsenv-template-pwa)                                                       | GitHub repository template for a progressive web application |
+| Link                                                                                              | Description                                                  |
+| ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| [@jsenv/assert](https://github.com/jsenv/assert)                                                  | NPM package to write assertions                              |
+| [I am too lazy for a test framework](https://dev.to/dmail/i-am-too-lazy-for-a-test-framework-92f) | Article presenting a straightforward testing experience      |
+| [@jsenv/template-pwa](https://github.com/jsenv/jsenv-template-pwa)                                | GitHub repository template for a progressive web application |
