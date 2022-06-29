@@ -105,8 +105,8 @@ try {
     )
     utimesSync(
       new URL("./client/package.json", import.meta.url),
-      Date.now(),
-      Date.now(),
+      new Date(),
+      new Date(),
     )
     // await new Promise((resolve) => setTimeout(resolve, 500))
     await page.reload()
