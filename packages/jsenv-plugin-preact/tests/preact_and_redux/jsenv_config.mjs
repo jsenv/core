@@ -5,11 +5,11 @@ export const plugins = [
   jsenvPluginPreact(),
   jsenvPluginCommonJs({
     include: {
-      "**/node_modules/react-is/": true,
-      "**/node_modules/use-sync-external-store/": {
+      "/**/node_modules/react-is/": true,
+      "/**/node_modules/use-sync-external-store/": {
         external: ["react"],
       },
-      "**/node_modules/hoist-non-react-statics/": {
+      "/**/node_modules/hoist-non-react-statics/": {
         external: ["react-is"],
       },
     },

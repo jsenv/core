@@ -58,7 +58,7 @@ According to module format deduced at step 1, do one of the following:
   export const plugins = [
     jsenvPluginCommonJs({
       include: {
-        "**/node_modules/amazing-package/": true,
+        "/**/node_modules/amazing-package/": true,
       },
     }),
   ]
