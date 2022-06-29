@@ -61,7 +61,7 @@ const sheet = await import("./style.css", {
 document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet]
 ```
 
-It's also possible to reference the file by its url
+It's also possible to reference CSS file with a url
 
 ```js
 const cssFileUrl = new URL("./style.css", import.meta.url)
