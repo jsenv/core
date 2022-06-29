@@ -1001,7 +1001,10 @@ const startSpinner = ({
   }
 
   const stop = text => {
-    if (text) log.write(text);
+    if (log && text) {
+      log.write(text);
+    }
+
     cleanup();
     clearInterval(interval);
     interval = null;
@@ -11342,10 +11345,14 @@ const getExtensionsToTry = (magicExtensions, importer) => {
  */
 const jsenvPluginNodeEsmResolution = ({
   rootDirectoryUrl,
+  urlGraph,
   runtimeCompat,
   packageConditions,
   filesInvalidatingCache = ["package.json", "package-lock.json"]
 }) => {
+  const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node"); // https://nodejs.org/api/esm.html#resolver-algorithm-specification
+
+  packageConditions = packageConditions || [...readCustomConditionsFromProcessArgs(), nodeRuntimeEnabled ? "node" : "browser", "import"];
   const packageScopesCache = new Map();
 
   const lookupPackageScope = url => {
@@ -11373,45 +11380,38 @@ const jsenvPluginNodeEsmResolution = ({
     packageJsonsCache.set(url, packageJson);
     return packageJson;
   };
+
+  const unregisters = [];
+
+  const onFileChange = () => {
+    packageScopesCache.clear();
+    packageJsonsCache.clear();
+    Object.keys(urlGraph.urlInfos).forEach(url => {
+      const urlInfo = urlGraph.getUrlInfo(url);
+
+      if (urlInfo.dependsOnPackageJson) {
+        urlGraph.considerModified(urlInfo);
+      }
+    });
+  };
+
   filesInvalidatingCache.forEach(file => {
-    registerFileLifecycle(new URL(file, rootDirectoryUrl), {
+    const unregister = registerFileLifecycle(new URL(file, rootDirectoryUrl), {
       added: () => {
-        packageScopesCache.clear();
-        packageJsonsCache.clear();
+        onFileChange();
       },
       updated: () => {
-        packageScopesCache.clear();
-        packageJsonsCache.clear();
+        onFileChange();
       },
       removed: () => {
-        packageScopesCache.clear();
-        packageJsonsCache.clear();
+        onFileChange();
       },
       keepProcessAlive: false
     });
+    unregisters.push(unregister);
   });
-  return [jsenvPluginNodeEsmResolver({
-    runtimeCompat,
-    packageConditions,
-    lookupPackageScope,
-    readPackageJson
-  }), jsenvPluginNodeModulesVersionInUrls({
-    lookupPackageScope,
-    readPackageJson
-  })];
-};
-
-const jsenvPluginNodeEsmResolver = ({
-  runtimeCompat,
-  packageConditions,
-  lookupPackageScope,
-  readPackageJson
-}) => {
-  const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node"); // https://nodejs.org/api/esm.html#resolver-algorithm-specification
-
-  packageConditions = packageConditions || [...readCustomConditionsFromProcessArgs(), nodeRuntimeEnabled ? "node" : "browser", "import"];
   return {
-    name: "jsenv:node_esm_resolve",
+    name: "jsenv:node_esm_resolution",
     appliesDuring: "*",
     resolveUrl: {
       js_import_export: reference => {
@@ -11420,6 +11420,7 @@ const jsenvPluginNodeEsmResolver = ({
           specifier
         } = reference;
         const {
+          type,
           url
         } = applyNodeEsmResolution({
           conditions: packageConditions,
@@ -11427,6 +11428,21 @@ const jsenvPluginNodeEsmResolver = ({
           specifier,
           lookupPackageScope,
           readPackageJson
+        }); // this reference depend on package.json and node_modules
+        // to be resolved. Each file using this specifier
+        // must be invalidated when package.json or package_lock.json
+        // changes
+
+        const dependsOnPackageJson = type !== "relative_specifier" && type !== "absolute_specifier" && type !== "node_builtin_specifier";
+        const relatedUrlInfos = urlGraph.getRelatedUrlInfos(reference.parentUrl);
+        relatedUrlInfos.forEach(relatedUrlInfo => {
+          if (relatedUrlInfo.dependsOnPackageJson) {
+            // the url may depend due to an other reference
+            // in that case keep dependsOnPackageJson to true
+            return;
+          }
+
+          relatedUrlInfo.dependsOnPackageJson = dependsOnPackageJson;
         });
         return url;
       }
@@ -11441,21 +11457,12 @@ const jsenvPluginNodeEsmResolver = ({
       }
 
       return null;
-    }
-  };
-};
-
-const jsenvPluginNodeModulesVersionInUrls = ({
-  lookupPackageScope,
-  readPackageJson
-}) => {
-  return {
-    name: "jsenv:node_modules_version_in_urls",
-    appliesDuring: {
-      dev: true,
-      test: true
     },
     transformUrlSearchParams: (reference, context) => {
+      if (context.scenario === "build") {
+        return null;
+      }
+
       if (!reference.url.startsWith("file:")) {
         return null;
       } // without this check a file inside a project without package.json
@@ -11491,6 +11498,9 @@ const jsenvPluginNodeModulesVersionInUrls = ({
       return {
         v: packageVersion
       };
+    },
+    destroy: () => {
+      unregisters.forEach(unregister => unregister());
     }
   };
 };
@@ -16759,6 +16769,7 @@ const getCorePlugins = ({
   }), jsenvPluginHttpUrls(), jsenvPluginLeadingSlash(), // before url resolution to handle "js_import_export" resolution
   jsenvPluginNodeEsmResolution({
     rootDirectoryUrl,
+    urlGraph,
     runtimeCompat,
     ...nodeEsmResolution
   }), jsenvPluginUrlResolution(), jsenvPluginUrlVersion(), jsenvPluginCommonJsGlobals(), jsenvPluginImportMetaScenarios(), jsenvPluginNodeRuntime({
@@ -16985,42 +16996,57 @@ const createUrlGraph = ({
   };
 
   if (clientFileChangeCallbackList) {
-    const updateModifiedTimestamp = (urlInfo, modifiedTimestamp) => {
-      const seen = [];
-
-      const iterate = urlInfo => {
-        if (seen.includes(urlInfo.url)) {
-          return;
-        }
-
-        seen.push(urlInfo.url);
-        urlInfo.modifiedTimestamp = modifiedTimestamp;
-        urlInfo.dependents.forEach(dependentUrl => {
-          const dependentUrlInfo = urlInfos[dependentUrl];
-          const {
-            hotAcceptDependencies = []
-          } = dependentUrlInfo.data;
-
-          if (!hotAcceptDependencies.includes(urlInfo.url)) {
-            iterate(dependentUrlInfo);
-          }
-        });
-      };
-
-      iterate(urlInfo);
-    };
-
     clientFileChangeCallbackList.push(({
       url
     }) => {
       const urlInfo = urlInfos[url];
 
       if (urlInfo) {
-        updateModifiedTimestamp(urlInfo, Date.now());
-        urlInfo.contentEtag = null;
+        considerModified(urlInfo, Date.now());
       }
     });
   }
+
+  const considerModified = (urlInfo, modifiedTimestamp = Date.now()) => {
+    const seen = [];
+
+    const iterate = urlInfo => {
+      if (seen.includes(urlInfo.url)) {
+        return;
+      }
+
+      seen.push(urlInfo.url);
+      urlInfo.modifiedTimestamp = modifiedTimestamp;
+      urlInfo.contentEtag = undefined;
+      urlInfo.dependents.forEach(dependentUrl => {
+        const dependentUrlInfo = urlInfos[dependentUrl];
+        const {
+          hotAcceptDependencies = []
+        } = dependentUrlInfo.data;
+
+        if (!hotAcceptDependencies.includes(urlInfo.url)) {
+          iterate(dependentUrlInfo);
+        }
+      });
+    };
+
+    iterate(urlInfo);
+  };
+
+  const getRelatedUrlInfos = url => {
+    const urlInfosUntilNotInline = [];
+    const parentUrlInfo = getUrlInfo(url);
+
+    if (parentUrlInfo) {
+      urlInfosUntilNotInline.push(parentUrlInfo);
+
+      if (parentUrlInfo.inlineUrlSite) {
+        urlInfosUntilNotInline.push(...getRelatedUrlInfos(parentUrlInfo.inlineUrlSite.url));
+      }
+    }
+
+    return urlInfosUntilNotInline;
+  };
 
   return {
     urlInfos,
@@ -17030,6 +17056,8 @@ const createUrlGraph = ({
     inferReference,
     findDependent,
     updateReferences,
+    considerModified,
+    getRelatedUrlInfos,
     toJSON: rootDirectoryUrl => {
       const data = {};
       Object.keys(urlInfos).forEach(url => {
@@ -17048,6 +17076,9 @@ const createUrlGraph = ({
 const createUrlInfo = url => {
   return {
     modifiedTimestamp: 0,
+    contentEtag: null,
+    dependsOnPackageJson: false,
+    isValid,
     data: {},
     // plugins can put whatever they want here
     references: [],
@@ -17068,7 +17099,6 @@ const createUrlInfo = url => {
     shouldHandle: undefined,
     originalContent: undefined,
     content: undefined,
-    contentEtag: null,
     sourcemap: null,
     sourcemapReference: null,
     timing: {},
@@ -17076,10 +17106,12 @@ const createUrlInfo = url => {
   };
 };
 
+const isValid = () => true;
+
 const createPluginController = ({
   plugins,
   scenario,
-  hooks = ["resolveUrl", "redirectUrl", "fetchUrlContent", "transformUrlContent", "transformUrlSearchParams", "formatUrl", "finalizeUrlContent", "cooked", "destroy"]
+  hooks = ["init", "resolveUrl", "redirectUrl", "fetchUrlContent", "transformUrlContent", "transformUrlSearchParams", "formatUrl", "finalizeUrlContent", "cooked", "destroy"]
 }) => {
   plugins = flattenAndFilterPlugins(plugins, {
     scenario
@@ -17956,6 +17988,7 @@ const createKitchen = ({
       return RUNTIME_COMPAT.isSupported(runtimeCompat, feature);
     }
   };
+  pluginController.callHooks("init", kitchenContext);
 
   const createReference = ({
     data = {},
@@ -18928,7 +18961,9 @@ const createFileService = ({
     const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url);
     const ifNoneMatch = request.headers["if-none-match"];
 
-    if (ifNoneMatch && urlInfo.contentEtag === ifNoneMatch) {
+    if (ifNoneMatch && urlInfo.contentEtag === ifNoneMatch && // - isValid is true by default
+    // - isValid can be overriden by plugins such as cjs_to_esm
+    urlInfo.isValid()) {
       return {
         status: 304,
         headers: {
@@ -18947,6 +18982,7 @@ const createFileService = ({
         urlInfo.originalContent = null;
         urlInfo.type = null;
         urlInfo.subtype = null;
+        urlInfo.dependsOnPackageJson = false;
         urlInfo.timing = {};
       }
 
@@ -19271,6 +19307,7 @@ const startDevServer = async ({
   certificate,
   privateKey,
   keepProcessAlive = true,
+  serverPlugins,
   rootDirectoryUrl,
   clientFiles = {
     "./src/": true,
@@ -19498,7 +19535,8 @@ const startDevServer = async ({
     rootDirectoryUrl,
     urlGraph,
     kitchen,
-    scenario: "dev"
+    scenario: "dev",
+    serverPlugins
   });
   startDevServerTask.done();
   logger.info(``);
@@ -19528,15 +19566,10 @@ const startDevServer = async ({
 const generateCoverageJsonFile = async ({
   coverage,
   coverageJsonFileUrl,
-  coverageJsonFileLog,
   logger
 }) => {
   const coverageAsText = JSON.stringify(coverage, null, "  ");
-
-  if (coverageJsonFileLog) {
-    logger.info(`-> ${urlToFileSystemPath(coverageJsonFileUrl)} (${byteAsFileSize(Buffer.byteLength(coverageAsText))})`);
-  }
-
+  logger.info(`-> ${urlToFileSystemPath(coverageJsonFileUrl)} (${byteAsFileSize(Buffer.byteLength(coverageAsText))})`);
   await writeFile(coverageJsonFileUrl, coverageAsText);
 };
 
@@ -19557,29 +19590,27 @@ const istanbulCoverageMapFromCoverage = coverage => {
 const generateCoverageHtmlDirectory = async (coverage, {
   rootDirectoryUrl,
   coverageHtmlDirectoryRelativeUrl,
-  coverageSkipEmpty,
-  coverageSkipFull
+  coverageReportSkipEmpty,
+  coverageReportSkipFull
 }) => {
   const libReport = requireFromJsenv("istanbul-lib-report");
   const reports = requireFromJsenv("istanbul-reports");
   const context = libReport.createContext({
-    dir: urlToFileSystemPath(rootDirectoryUrl),
+    dir: fileURLToPath(rootDirectoryUrl),
     coverageMap: istanbulCoverageMapFromCoverage(coverage),
-    sourceFinder: path => {
-      return readFileSync$1(urlToFileSystemPath(resolveUrl$1(path, rootDirectoryUrl)), "utf8");
-    }
+    sourceFinder: path => readFileSync$1(new URL(path, rootDirectoryUrl), "utf8")
   });
   const report = reports.create("html", {
-    skipEmpty: coverageSkipEmpty,
-    skipFull: coverageSkipFull,
+    skipEmpty: coverageReportSkipEmpty,
+    skipFull: coverageReportSkipFull,
     subdir: coverageHtmlDirectoryRelativeUrl
   });
   report.execute(context);
 };
 
 const generateCoverageTextLog = (coverage, {
-  coverageSkipEmpty,
-  coverageSkipFull
+  coverageReportSkipEmpty,
+  coverageReportSkipFull
 }) => {
   const libReport = requireFromJsenv("istanbul-lib-report");
   const reports = requireFromJsenv("istanbul-reports");
@@ -19587,8 +19618,8 @@ const generateCoverageTextLog = (coverage, {
     coverageMap: istanbulCoverageMapFromCoverage(coverage)
   });
   const report = reports.create("text", {
-    skipEmpty: coverageSkipEmpty,
-    skipFull: coverageSkipFull
+    skipEmpty: coverageReportSkipEmpty,
+    skipFull: coverageReportSkipFull
   });
   report.execute(context);
 };
@@ -21287,29 +21318,19 @@ const executeTestPlan = async ({
   coverage = process.argv.includes("--cover") || process.argv.includes("--coverage"),
   coverageTempDirectoryRelativeUrl = "./.coverage/tmp/",
   coverageConfig = {
-    "./src/**/*.js": true,
-    "./**/*.test.*": false,
-    // contains .test. -> no
-    "./**/test/": false,
-    // inside a test directory -> no
-    "./**/tests/": false // inside a tests directory -> no
-
+    "./src/": true
   },
   coverageIncludeMissing = true,
   coverageAndExecutionAllowed = false,
   coverageForceIstanbul = false,
   coverageV8ConflictWarning = true,
-  coverageTextLog = true,
-  coverageJsonFile = Boolean(process.env.CI),
-  coverageJsonFileLog = true,
-  coverageJsonFileRelativeUrl = "./.coverage/coverage.json",
-  coverageHtmlDirectory = !process.env.CI,
-  coverageHtmlDirectoryRelativeUrl = "./.coverage/",
-  coverageHtmlDirectoryIndexLog = true,
-  // skip empty means empty files won't appear in the coverage reports (log and html)
-  coverageSkipEmpty = false,
-  // skip full means file with 100% coverage won't appear in coverage reports (log and html)
-  coverageSkipFull = false,
+  coverageReportTextLog = true,
+  coverageReportJsonFile = process.env.CI ? null : "./.coverage/coverage.json",
+  coverageReportHtmlDirectory = process.env.CI ? "./.coverage/" : null,
+  // skip empty means empty files won't appear in the coverage reports (json and html)
+  coverageReportSkipEmpty = false,
+  // skip full means file with 100% coverage won't appear in coverage reports (json and html)
+  coverageReportSkipFull = false,
   sourcemaps = "inline",
   plugins = [],
   nodeEsmResolution,
@@ -21413,35 +21434,37 @@ const executeTestPlan = async ({
     // and in case coverage json file gets written in the same directory
     // it must be done before
 
-    if (coverage && coverageHtmlDirectory) {
-      const coverageHtmlDirectoryUrl = resolveDirectoryUrl(coverageHtmlDirectoryRelativeUrl, rootDirectoryUrl);
-      await ensureEmptyDirectory(coverageHtmlDirectoryUrl);
+    if (coverage && coverageReportHtmlDirectory) {
+      const coverageHtmlDirectoryUrl = resolveDirectoryUrl(coverageReportHtmlDirectory, rootDirectoryUrl);
 
-      if (coverageHtmlDirectoryIndexLog) {
-        const htmlCoverageDirectoryIndexFileUrl = `${coverageHtmlDirectoryUrl}index.html`;
-        logger.info(`-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`);
+      if (!urlIsInsideOf(coverageHtmlDirectoryUrl, rootDirectoryUrl)) {
+        throw new Error(`coverageReportHtmlDirectory must be inside rootDirectoryUrl`);
       }
 
+      await ensureEmptyDirectory(coverageHtmlDirectoryUrl);
+      const htmlCoverageDirectoryIndexFileUrl = `${coverageHtmlDirectoryUrl}index.html`;
+      logger.info(`-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`);
       promises.push(generateCoverageHtmlDirectory(planCoverage, {
         rootDirectoryUrl,
-        coverageHtmlDirectoryRelativeUrl
+        coverageHtmlDirectoryRelativeUrl: urlToRelativeUrl(coverageHtmlDirectoryUrl, rootDirectoryUrl),
+        coverageReportSkipEmpty,
+        coverageReportSkipFull
       }));
     }
 
-    if (coverage && coverageJsonFile) {
-      const coverageJsonFileUrl = new URL(coverageJsonFileRelativeUrl, rootDirectoryUrl).href;
+    if (coverage && coverageReportJsonFile) {
+      const coverageJsonFileUrl = new URL(coverageReportJsonFile, rootDirectoryUrl).href;
       promises.push(generateCoverageJsonFile({
         coverage: result.planCoverage,
         coverageJsonFileUrl,
-        coverageJsonFileLog,
         logger
       }));
     }
 
-    if (coverage && coverageTextLog) {
+    if (coverage && coverageReportTextLog) {
       promises.push(generateCoverageTextLog(result.planCoverage, {
-        coverageSkipEmpty,
-        coverageSkipFull
+        coverageReportSkipEmpty,
+        coverageReportSkipFull
       }));
     }
 

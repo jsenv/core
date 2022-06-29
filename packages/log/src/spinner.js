@@ -39,7 +39,9 @@ export const startSpinner = ({
   }
 
   const stop = (text) => {
-    if (text) log.write(text)
+    if (log && text) {
+      log.write(text)
+    }
     cleanup()
     clearInterval(interval)
     interval = null
