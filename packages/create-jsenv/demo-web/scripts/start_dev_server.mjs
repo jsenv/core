@@ -1,13 +1,13 @@
 /*
- * This file uses "@jsenv/core" to start a development server.
- * https://github.com/jsenv/jsenv-core/tree/master/docs/dev_server#jsenv-dev-server
+ * Start a development server for files inside src/
+ * - npm run dev
  */
 
 import { startDevServer } from "@jsenv/core"
 
 import { rootDirectoryUrl } from "../jsenv.config.mjs"
 
-export const server = await startDevServer({
+await startDevServer({
   rootDirectoryUrl,
   port: 3400,
   explorerGroups: {
@@ -15,7 +15,7 @@ export const server = await startDevServer({
       "./src/main.html": true,
     },
     "unit tests": {
-      "test/**/*.test.html": true,
+      "tests/**/*.test.html": true,
     },
   },
 })

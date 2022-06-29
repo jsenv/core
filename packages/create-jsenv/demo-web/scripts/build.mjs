@@ -1,7 +1,7 @@
 /*
- * This file uses "@jsenv/core" to optimize source files and write them into "./dist/" directory.
- *
- * Read more at https://github.com/jsenv/jsenv-core/blob/master/docs/building/readme.md#jsenv-build
+ * Optimize source files and write them into "./dist/"
+ * - npm run build
+ * - npm run build:watch
  */
 
 import { build } from "@jsenv/core"

@@ -4,10 +4,12 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node ./scripts/dev.mjs",
+    "dev": "node ./scripts/start_dev_server.mjs",
     "test": "node ./scripts/test.mjs",
+    "test:coverage": "npm run test -- --coverage",
     "build": "node ./scripts/build.mjs",
-    "preview": "node ./scripts/preview.mjs"
+    "build:watch": "npm run build -- --watch",
+    "build:serve": "node ./scripts/start_build_server.mjs"
   },
   "dependencies": {
     "preact": "10.8.2"

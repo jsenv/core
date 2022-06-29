@@ -1,10 +1,7 @@
 /*
  * This file exports configuration reused by jsenv scripts such as
- *
- * scripts/test.mjs
- * scripts/build.mjs
- *
- * Read more at https://github.com/jsenv/jsenv-core#jsenvconfigmjs
+ * - scripts/test.mjs
+ * - scripts/build.mjs
  */
 
 import { jsenvPluginPreact } from "@jsenv/plugin-preact"

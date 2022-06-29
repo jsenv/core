@@ -1,6 +1,7 @@
 /*
- * This file uses "@jsenv/core" to execute all test files.
- * See https://github.com/jsenv/jsenv-core/blob/master/docs/testing/readme.md#jsenv-test-runner
+ * Execute all test files
+ * - npm test
+ * - npm test:coverage
  */
 
 import { executeTestPlan, chromium, firefox } from "@jsenv/core"

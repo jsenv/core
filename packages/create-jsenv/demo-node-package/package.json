@@ -8,7 +8,7 @@
   },
   "scripts": {
     "test": "node ./scripts/test.mjs",
-    "performance": "node --expose-gc ./scripts/performance.mjs --log"
+    "test:coverage": "npm run test -- --coverage"
   },
   "devDependencies": {
     "@jsenv/core": "../../../",

@@ -62,10 +62,7 @@ export const executeTestPlan = async ({
     process.argv.includes("--coverage"),
   coverageTempDirectoryRelativeUrl = "./.coverage/tmp/",
   coverageConfig = {
-    "./src/**/*.js": true,
-    "./**/*.test.*": false, // contains .test. -> no
-    "./**/test/": false, // inside a test directory -> no
-    "./**/tests/": false, // inside a tests directory -> no
+    "./src/": true,
   },
   coverageIncludeMissing = true,
   coverageAndExecutionAllowed = false,
