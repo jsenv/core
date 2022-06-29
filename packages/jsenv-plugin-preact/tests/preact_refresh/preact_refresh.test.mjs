@@ -1,8 +1,9 @@
 import { readFileSync, writeFileSync } from "node:fs"
 import { chromium } from "playwright"
 import { assert } from "@jsenv/assert"
-
 import { startDevServer } from "@jsenv/core"
+import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js"
+
 import { jsenvPluginPreact } from "@jsenv/plugin-preact"
 
 const countLabelJsxFileUrl = new URL(
@@ -34,7 +35,7 @@ const browser = await chromium.launch({
   headless: true,
 })
 try {
-  const page = await browser.newPage({ ignoreHTTPSErrors: true })
+  const page = await launchBrowserPage(browser)
   await page.goto(`${devServer.origin}/main.html`)
   await page.evaluate(
     /* eslint-disable no-undef */

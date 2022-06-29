@@ -3,6 +3,7 @@ import { chromium } from "playwright"
 import { assert } from "@jsenv/assert"
 
 import { startDevServer } from "@jsenv/core"
+import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js"
 
 const debug = false // true to have browser UI + keep it open after test
 const fooPackageFileUrl = new URL(
@@ -43,7 +44,7 @@ const browser = await chromium.launch({
   headless: !debug,
 })
 try {
-  const page = await browser.newPage({ ignoreHTTPSErrors: true })
+  const page = await launchBrowserPage(browser)
   await page.goto(`${devServer.origin}/src/main.html`)
   const getResult = async () => {
     const result = await page.evaluate(
