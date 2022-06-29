@@ -7,7 +7,7 @@ This documentation explains how jsenv behaves regarding urls declared in your fi
 
 ## Full path specifier
 
-When you would have to use `"../"` it's recommended to rather use the explicit url specifier starting with `/`.
+It's recommended to prefer url specifier with a leading slash (`/`) over `"../"`
 
 ```diff
 -  background-image: url(../../logo.png);
