@@ -58,7 +58,7 @@ export const jsenvPluginNodeEsmResolution = ({
     packageJsonsCache.clear()
     Object.keys(urlGraph.urlInfos).forEach((url) => {
       const urlInfo = urlGraph.getUrlInfo(url)
-      if (urlInfo.data.dependsOnPackageJson) {
+      if (urlInfo.dependsOnPackageJson) {
         urlGraph.considerModified(urlInfo)
       }
     })
@@ -103,7 +103,12 @@ export const jsenvPluginNodeEsmResolution = ({
           type !== "node_builtin_specifier"
         const relatedUrlInfos = urlGraph.getRelatedUrlInfos(reference.parentUrl)
         relatedUrlInfos.forEach((relatedUrlInfo) => {
-          relatedUrlInfo.data.dependsOnPackageJson = dependsOnPackageJson
+          if (relatedUrlInfo.dependsOnPackageJson) {
+            // the url may depend due to an other reference
+            // in that case keep dependsOnPackageJson to true
+            return
+          }
+          relatedUrlInfo.dependsOnPackageJson = dependsOnPackageJson
         })
         return url
       },

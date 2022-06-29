@@ -193,6 +193,8 @@ export const createUrlGraph = ({
 const createUrlInfo = (url) => {
   return {
     modifiedTimestamp: 0,
+    contentEtag: null,
+    dependsOnPackageJson: false,
     data: {}, // plugins can put whatever they want here
     references: [],
     dependencies: new Set(),
@@ -209,7 +211,7 @@ const createUrlInfo = (url) => {
     shouldHandle: undefined,
     originalContent: undefined,
     content: undefined,
-    contentEtag: null,
+
     sourcemap: null,
     sourcemapReference: null,
     timing: {},

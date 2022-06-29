@@ -83,6 +83,7 @@ export const createFileService = ({
         urlInfo.originalContent = null
         urlInfo.type = null
         urlInfo.subtype = null
+        urlInfo.dependsOnPackageJson = false
         urlInfo.timing = {}
       }
       const { runtimeName, runtimeVersion } = parseUserAgentHeader(
