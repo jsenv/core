@@ -121,31 +121,46 @@ export const createUrlGraph = ({
   }
 
   if (clientFileChangeCallbackList) {
-    const updateModifiedTimestamp = (urlInfo, modifiedTimestamp) => {
-      const seen = []
-      const iterate = (urlInfo) => {
-        if (seen.includes(urlInfo.url)) {
-          return
-        }
-        seen.push(urlInfo.url)
-        urlInfo.modifiedTimestamp = modifiedTimestamp
-        urlInfo.dependents.forEach((dependentUrl) => {
-          const dependentUrlInfo = urlInfos[dependentUrl]
-          const { hotAcceptDependencies = [] } = dependentUrlInfo.data
-          if (!hotAcceptDependencies.includes(urlInfo.url)) {
-            iterate(dependentUrlInfo)
-          }
-        })
-      }
-      iterate(urlInfo)
-    }
     clientFileChangeCallbackList.push(({ url }) => {
       const urlInfo = urlInfos[url]
       if (urlInfo) {
-        updateModifiedTimestamp(urlInfo, Date.now())
-        urlInfo.contentEtag = null
+        considerModified(urlInfo, Date.now())
       }
     })
+  }
+
+  const considerModified = (urlInfo, modifiedTimestamp = Date.now()) => {
+    const seen = []
+    const iterate = (urlInfo) => {
+      if (seen.includes(urlInfo.url)) {
+        return
+      }
+      seen.push(urlInfo.url)
+      urlInfo.modifiedTimestamp = modifiedTimestamp
+      urlInfo.contentEtag = undefined
+      urlInfo.dependents.forEach((dependentUrl) => {
+        const dependentUrlInfo = urlInfos[dependentUrl]
+        const { hotAcceptDependencies = [] } = dependentUrlInfo.data
+        if (!hotAcceptDependencies.includes(urlInfo.url)) {
+          iterate(dependentUrlInfo)
+        }
+      })
+    }
+    iterate(urlInfo)
+  }
+
+  const getRelatedUrlInfos = (url) => {
+    const urlInfosUntilNotInline = []
+    const parentUrlInfo = getUrlInfo(url)
+    if (parentUrlInfo) {
+      urlInfosUntilNotInline.push(parentUrlInfo)
+      if (parentUrlInfo.inlineUrlSite) {
+        urlInfosUntilNotInline.push(
+          ...getRelatedUrlInfos(parentUrlInfo.inlineUrlSite.url),
+        )
+      }
+    }
+    return urlInfosUntilNotInline
   }
 
   return {
@@ -156,6 +171,8 @@ export const createUrlGraph = ({
     inferReference,
     findDependent,
     updateReferences,
+    considerModified,
+    getRelatedUrlInfos,
 
     toJSON: (rootDirectoryUrl) => {
       const data = {}

@@ -1,9 +1,10 @@
-import { writeFileSync, readFileSync } from "node:fs"
+import { writeFileSync, readFileSync, utimesSync } from "node:fs"
 import { chromium } from "playwright"
 import { assert } from "@jsenv/assert"
 
 import { startDevServer } from "@jsenv/core"
 
+const debug = false // true to have browser UI + keep it open after test
 const fooPackageFileUrl = new URL(
   "./client/node_modules/foo/package.json",
   import.meta.url,
@@ -21,10 +22,8 @@ const fooMainFileUrl = new URL(
 const fooMainFileContent = {
   beforeTest: readFileSync(fooMainFileUrl),
   update: (content) => writeFileSync(fooMainFileUrl, content),
-  restore: () => writeFileSync(fooMainFileUrl, fooMainFileUrl.beforeTest),
+  restore: () => writeFileSync(fooMainFileUrl, fooMainFileContent.beforeTest),
 }
-
-const debug = false // true to have browser UI + keep it open after test
 const serverRequests = []
 const devServer = await startDevServer({
   logLevel: "warn",
@@ -38,6 +37,7 @@ const devServer = await startDevServer({
     },
   },
   clientAutoreload: false,
+  htmlSupervisor: false,
 })
 const browser = await chromium.launch({
   headless: !debug,
@@ -103,6 +103,12 @@ try {
         version: "1.0.1",
       }),
     )
+    utimesSync(
+      new URL("./client/package.json", import.meta.url),
+      Date.now(),
+      Date.now(),
+    )
+    // await new Promise((resolve) => setTimeout(resolve, 500))
     await page.reload()
 
     const actual = {

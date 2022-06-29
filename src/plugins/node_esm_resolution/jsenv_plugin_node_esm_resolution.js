@@ -18,10 +18,19 @@ import {
 
 export const jsenvPluginNodeEsmResolution = ({
   rootDirectoryUrl,
+  urlGraph,
   runtimeCompat,
   packageConditions,
   filesInvalidatingCache = ["package.json", "package-lock.json"],
 }) => {
+  const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node")
+  // https://nodejs.org/api/esm.html#resolver-algorithm-specification
+  packageConditions = packageConditions || [
+    ...readCustomConditionsFromProcessArgs(),
+    nodeRuntimeEnabled ? "node" : "browser",
+    "import",
+  ]
+
   const packageScopesCache = new Map()
   const lookupPackageScope = (url) => {
     const fromCache = packageScopesCache.get(url)
@@ -44,64 +53,57 @@ export const jsenvPluginNodeEsmResolution = ({
   }
 
   const unregisters = []
+  const onFileChange = () => {
+    packageScopesCache.clear()
+    packageJsonsCache.clear()
+    Object.keys(urlGraph.urlInfos).forEach((url) => {
+      const urlInfo = urlGraph.getUrlInfo(url)
+      if (urlInfo.data.dependsOnPackageJson) {
+        urlGraph.considerModified(urlInfo)
+      }
+    })
+  }
   filesInvalidatingCache.forEach((file) => {
     const unregister = registerFileLifecycle(new URL(file, rootDirectoryUrl), {
       added: () => {
-        packageScopesCache.clear()
-        packageJsonsCache.clear()
+        onFileChange()
       },
       updated: () => {
-        packageScopesCache.clear()
-        packageJsonsCache.clear()
+        onFileChange()
       },
       removed: () => {
-        packageScopesCache.clear()
-        packageJsonsCache.clear()
+        onFileChange()
       },
       keepProcessAlive: false,
     })
     unregisters.push(unregister)
   })
 
-  return [
-    jsenvPluginNodeEsmResolver({
-      runtimeCompat,
-      packageConditions,
-      lookupPackageScope,
-      readPackageJson,
-    }),
-    jsenvPluginNodeModulesVersionInUrls({
-      lookupPackageScope,
-      readPackageJson,
-    }),
-  ]
-}
-
-const jsenvPluginNodeEsmResolver = ({
-  runtimeCompat,
-  packageConditions,
-  lookupPackageScope,
-  readPackageJson,
-}) => {
-  const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node")
-  // https://nodejs.org/api/esm.html#resolver-algorithm-specification
-  packageConditions = packageConditions || [
-    ...readCustomConditionsFromProcessArgs(),
-    nodeRuntimeEnabled ? "node" : "browser",
-    "import",
-  ]
   return {
-    name: "jsenv:node_esm_resolve",
+    name: "jsenv:node_esm_resolution",
     appliesDuring: "*",
     resolveUrl: {
       js_import_export: (reference) => {
         const { parentUrl, specifier } = reference
-        const { url } = applyNodeEsmResolution({
+        const { type, url } = applyNodeEsmResolution({
           conditions: packageConditions,
           parentUrl,
           specifier,
           lookupPackageScope,
           readPackageJson,
+        })
+
+        // this reference depend on package.json and node_modules
+        // to be resolved. Each file using this specifier
+        // must be invalidated when package.json or package_lock.json
+        // changes
+        const dependsOnPackageJson =
+          type !== "relative_specifier" &&
+          type !== "absolute_specifier" &&
+          type !== "node_builtin_specifier"
+        const relatedUrlInfos = urlGraph.getRelatedUrlInfos(reference.parentUrl)
+        relatedUrlInfos.forEach((relatedUrlInfo) => {
+          relatedUrlInfo.data.dependsOnPackageJson = dependsOnPackageJson
         })
         return url
       },
@@ -116,20 +118,10 @@ const jsenvPluginNodeEsmResolver = ({
       }
       return null
     },
-  }
-}
-
-const jsenvPluginNodeModulesVersionInUrls = ({
-  lookupPackageScope,
-  readPackageJson,
-}) => {
-  return {
-    name: "jsenv:node_modules_version_in_urls",
-    appliesDuring: {
-      dev: true,
-      test: true,
-    },
     transformUrlSearchParams: (reference, context) => {
+      if (context.scenario === "build") {
+        return null
+      }
       if (!reference.url.startsWith("file:")) {
         return null
       }
@@ -157,6 +149,9 @@ const jsenvPluginNodeModulesVersionInUrls = ({
       return {
         v: packageVersion,
       }
+    },
+    destroy: () => {
+      unregisters.forEach((unregister) => unregister())
     },
   }
 }

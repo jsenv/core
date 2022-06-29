@@ -65,6 +65,7 @@ export const getCorePlugins = ({
     // before url resolution to handle "js_import_export" resolution
     jsenvPluginNodeEsmResolution({
       rootDirectoryUrl,
+      urlGraph,
       runtimeCompat,
       ...nodeEsmResolution,
     }),
