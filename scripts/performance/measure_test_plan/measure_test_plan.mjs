@@ -40,8 +40,8 @@ await executeTestPlan({
     "./animals.js": true,
   },
   coverageV8ConflictWarning: false,
-  coverageHtmlDirectory: false,
-  coverageTextLog: false,
+  coverageReportTextLog: false,
+  coverageReportHtmlDirectory: false,
 })
 
 const {

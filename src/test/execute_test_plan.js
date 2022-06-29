@@ -1,5 +1,10 @@
 import { URL_META } from "@jsenv/url-meta"
-import { urlToFileSystemPath, resolveDirectoryUrl } from "@jsenv/urls"
+import {
+  urlToFileSystemPath,
+  resolveDirectoryUrl,
+  urlIsInsideOf,
+  urlToRelativeUrl,
+} from "@jsenv/urls"
 import {
   ensureEmptyDirectory,
   assertAndNormalizeDirectoryUrl,
@@ -66,17 +71,13 @@ export const executeTestPlan = async ({
   coverageAndExecutionAllowed = false,
   coverageForceIstanbul = false,
   coverageV8ConflictWarning = true,
-  coverageTextLog = true,
-  coverageJsonFile = Boolean(process.env.CI),
-  coverageJsonFileLog = true,
-  coverageJsonFileRelativeUrl = "./.coverage/coverage.json",
-  coverageHtmlDirectory = !process.env.CI,
-  coverageHtmlDirectoryRelativeUrl = "./.coverage/",
-  coverageHtmlDirectoryIndexLog = true,
-  // skip empty means empty files won't appear in the coverage reports (log and html)
-  coverageSkipEmpty = false,
-  // skip full means file with 100% coverage won't appear in coverage reports (log and html)
-  coverageSkipFull = false,
+  coverageReportTextLog = true,
+  coverageReportJsonFile = process.env.CI ? null : "./.coverage/coverage.json",
+  coverageReportHtmlDirectory = process.env.CI ? "./.coverage/" : null,
+  // skip empty means empty files won't appear in the coverage reports (json and html)
+  coverageReportSkipEmpty = false,
+  // skip full means file with 100% coverage won't appear in coverage reports (json and html)
+  coverageReportSkipFull = false,
 
   sourcemaps = "inline",
   plugins = [],
@@ -187,44 +188,51 @@ export const executeTestPlan = async ({
     // keep this one first because it does ensureEmptyDirectory
     // and in case coverage json file gets written in the same directory
     // it must be done before
-    if (coverage && coverageHtmlDirectory) {
+    if (coverage && coverageReportHtmlDirectory) {
       const coverageHtmlDirectoryUrl = resolveDirectoryUrl(
-        coverageHtmlDirectoryRelativeUrl,
+        coverageReportHtmlDirectory,
         rootDirectoryUrl,
       )
-      await ensureEmptyDirectory(coverageHtmlDirectoryUrl)
-      if (coverageHtmlDirectoryIndexLog) {
-        const htmlCoverageDirectoryIndexFileUrl = `${coverageHtmlDirectoryUrl}index.html`
-        logger.info(
-          `-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`,
+      if (!urlIsInsideOf(coverageHtmlDirectoryUrl, rootDirectoryUrl)) {
+        throw new Error(
+          `coverageReportHtmlDirectory must be inside rootDirectoryUrl`,
         )
       }
+      await ensureEmptyDirectory(coverageHtmlDirectoryUrl)
+      const htmlCoverageDirectoryIndexFileUrl = `${coverageHtmlDirectoryUrl}index.html`
+      logger.info(
+        `-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`,
+      )
       promises.push(
         generateCoverageHtmlDirectory(planCoverage, {
           rootDirectoryUrl,
-          coverageHtmlDirectoryRelativeUrl,
+          coverageHtmlDirectoryRelativeUrl: urlToRelativeUrl(
+            coverageHtmlDirectoryUrl,
+            rootDirectoryUrl,
+          ),
+          coverageReportSkipEmpty,
+          coverageReportSkipFull,
         }),
       )
     }
-    if (coverage && coverageJsonFile) {
+    if (coverage && coverageReportJsonFile) {
       const coverageJsonFileUrl = new URL(
-        coverageJsonFileRelativeUrl,
+        coverageReportJsonFile,
         rootDirectoryUrl,
       ).href
       promises.push(
         generateCoverageJsonFile({
           coverage: result.planCoverage,
           coverageJsonFileUrl,
-          coverageJsonFileLog,
           logger,
         }),
       )
     }
-    if (coverage && coverageTextLog) {
+    if (coverage && coverageReportTextLog) {
       promises.push(
         generateCoverageTextLog(result.planCoverage, {
-          coverageSkipEmpty,
-          coverageSkipFull,
+          coverageReportSkipEmpty,
+          coverageReportSkipFull,
         }),
       )
     }

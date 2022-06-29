@@ -20,6 +20,5 @@ await executeTestPlan({
     },
   },
   coverage: process.argv.includes("--coverage"),
-  coverageJsonFileRelativeUrl: "coverage/coverage.json",
   coverageForceIstanbul: true,
 })

@@ -3,7 +3,7 @@ import { istanbulCoverageMapFromCoverage } from "./istanbul_coverage_map_from_co
 
 export const generateCoverageTextLog = (
   coverage,
-  { coverageSkipEmpty, coverageSkipFull },
+  { coverageReportSkipEmpty, coverageReportSkipFull },
 ) => {
   const libReport = requireFromJsenv("istanbul-lib-report")
   const reports = requireFromJsenv("istanbul-reports")
@@ -12,8 +12,8 @@ export const generateCoverageTextLog = (
     coverageMap: istanbulCoverageMapFromCoverage(coverage),
   })
   const report = reports.create("text", {
-    skipEmpty: coverageSkipEmpty,
-    skipFull: coverageSkipFull,
+    skipEmpty: coverageReportSkipEmpty,
+    skipFull: coverageReportSkipFull,
   })
   report.execute(context)
 }
