@@ -28,7 +28,7 @@ console.log(json)
 ```
 
 > **Note**
-> Jsenv transforms code if browser do not support import assertion
+> Code is transformed if browser do not support import assertion
 
 You can also use a dynamic import
 
@@ -49,7 +49,7 @@ document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet]
 ```
 
 > **Note**
-> Here againJsenv transforms code if browser do not support import assertion or `document.adoptedStyleSheets`.
+> Code is transformed if browser do not support import assertion or `document.adoptedStyleSheets`.
 
 You can also use a dynamic import
 
