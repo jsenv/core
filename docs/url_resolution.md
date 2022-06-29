@@ -1,13 +1,13 @@
 # Url resolution
 
-This documentation explains how jsenv behaves regarding urls declared in your files.
+This documentation explains jsenv behaviour regarding url resolution.
 
 - Short explanation: Like a browser would + a bit more for js modules
 - Long explanation: Rest of this document
 
 ## Full path specifier
 
-It's recommended to prefer url specifier with a leading slash (`/`) over `"../"`
+It's recommended to prefer leading slash url specifiers over `"../"`
 
 ```diff
 -  background-image: url(../../logo.png);
@@ -17,9 +17,9 @@ It's recommended to prefer url specifier with a leading slash (`/`) over `"../"`
 - :+1: create consistent specifiers
 - :+1: escape `"../../"` hell.
 
-## Url resolution outside js modules
+## Url resolution outside js module
 
-Outside js modules all urls are resolved by the standard url resolution: `new URL(specifier, baseUrl)`.
+Outside js module urls are resolved by the standard url resolution: `new URL(specifier, baseUrl)`.
 
 ```html
 <!DOCTYPE html>
@@ -43,7 +43,7 @@ Outside js modules all urls are resolved by the standard url resolution: `new UR
 
 ### Url resolution inside js modules
 
-Inside js modules url resolution is augmented with "Node ESM resolution algorithm" and "FileSystem magic resolution" explained below
+Inside js modules url resolution is augmented with [Node ESM resolution algorithm](#node-esm-resolution-algorithm) and [FileSystem magic resolution](#filesystem-magic-resolution)
 
 #### Node ESM resolution algorithm
 
@@ -59,7 +59,7 @@ It must be resolved and transformed into
 import "/node_modules/amazing-package/index.js"
 ```
 
-The entire Node ESM resolution applies meaning you can use the following:
+Jsenv implements the whole Node ESM resolution so the following logic can be used in your import specifiers:
 
 - [Self referencing a package using its name](https://nodejs.org/docs/latest-v18.x/api/packages.html#self-referencing-a-package-using-its-name)
 - [Subpath exports](https://nodejs.org/docs/latest-v18.x/api/packages.html#subpath-exports)

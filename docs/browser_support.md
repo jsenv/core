@@ -1,9 +1,6 @@
 # Browser support
 
-Jsenv browser support is split in 2:
-
-- during dev
-- after build
+Jsenv browser support splits into "during dev" and "after build".
 
 | Browser           | During dev | After build |
 | ----------------- | ---------- | ----------- |
