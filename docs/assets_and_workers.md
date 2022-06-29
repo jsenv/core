@@ -1,8 +1,8 @@
 # Assets and workers
 
-This documentation shows how to use files that are not js modules from a js module.
+Or how to use files that are not js modules within a js module.
 
-## Using web workers
+## Web workers
 
 ```js
 const worker = new Worker("/worker.js", { type: "module" })
@@ -19,7 +19,7 @@ const worker = new Worker("/worker.js")
 navigator.serviceWorker.register("/service_worker.js")
 ```
 
-## Using JSON
+## JSON
 
 ```js
 import json from "./data.json" assert { type: "json" }
@@ -37,7 +37,7 @@ const jsonModule = await import("./data.json", {
 console.log(jsonModule.default)
 ```
 
-## Using CSS
+## CSS
 
 ```js
 import sheet from "./style.css" assert { type: "css" }
@@ -66,7 +66,7 @@ link.href = cssFileUrl
 document.head.appendChild(link)
 ```
 
-## Using images (and everything else)
+## Images (and everything else)
 
 Any of your file can be referenced using `new URL() + import meta url`. It will give you an url for that ressource that can be used later.
 
@@ -78,9 +78,9 @@ img.src = imageUrl
 document.body.appendChild(img)
 ```
 
-## Using CDN
+## Content from CDN
 
-External urls are kept intact. In the following HTML file, the url to roboto font is kept intact during dev and after build.
+External urls are kept intact. In the following HTML, jsenv keep url to roboto font intact during dev and in the build files.
 
 ```html
 <!DOCTYPE html>
