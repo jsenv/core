@@ -31,6 +31,8 @@ export const startDevServer = async ({
   certificate,
   privateKey,
   keepProcessAlive = true,
+  serverPlugins,
+
   rootDirectoryUrl,
   clientFiles = {
     "./src/": true,
@@ -225,6 +227,7 @@ export const startDevServer = async ({
     urlGraph,
     kitchen,
     scenario: "dev",
+    serverPlugins,
   })
   startDevServerTask.done()
   logger.info(``)
