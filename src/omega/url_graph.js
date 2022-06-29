@@ -195,6 +195,7 @@ const createUrlInfo = (url) => {
     modifiedTimestamp: 0,
     contentEtag: null,
     dependsOnPackageJson: false,
+    isValid,
     data: {}, // plugins can put whatever they want here
     references: [],
     dependencies: new Set(),
@@ -218,3 +219,5 @@ const createUrlInfo = (url) => {
     headers: {},
   }
 }
+
+const isValid = () => true

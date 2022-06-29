@@ -70,15 +70,15 @@ ${filesRemoved.join(`\n`)}`)
       // was used at some point to ensure the compiled file matches browser etag
       // etag: bufferToEtag(Buffer.from(content)),
       assetInfos,
-      createdMs: Number(Date.now()),
-      lastModifiedMs: Number(Date.now()),
+      createdMs: Date.now(),
+      lastModifiedMs: Date.now(),
     }
   } else if (isUpdated) {
     latestCompileInfo = {
       // was used at some point to ensure the compiled file matches browser etag
       // etag: bufferToEtag(Buffer.from(content)),
       assetInfos,
-      lastModifiedMs: Number(Date.now()),
+      lastModifiedMs: Date.now(),
     }
   }
   logger.debug(

@@ -61,7 +61,13 @@ export const createFileService = ({
     const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url)
 
     const ifNoneMatch = request.headers["if-none-match"]
-    if (ifNoneMatch && urlInfo.contentEtag === ifNoneMatch) {
+    if (
+      ifNoneMatch &&
+      urlInfo.contentEtag === ifNoneMatch &&
+      // - isValid is true by default
+      // - isValid can be overriden by plugins such as cjs_to_esm
+      urlInfo.isValid()
+    ) {
       return {
         status: 304,
         headers: {

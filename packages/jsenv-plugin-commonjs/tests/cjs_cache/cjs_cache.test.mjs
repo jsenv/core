@@ -1,12 +1,16 @@
 import { writeFileSync, readFileSync } from "node:fs"
 import { chromium } from "playwright"
 import { assert } from "@jsenv/assert"
+import { ensureEmptyDirectory } from "@jsenv/filesystem"
 import { startDevServer } from "@jsenv/core"
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js"
 
 import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs"
 
 const debug = false // true to have browser UI + keep it open after test
+await ensureEmptyDirectory(
+  new URL("./client/.jsenv/cjs_to_esm", import.meta.url),
+)
 const cjsFileUrl = new URL("./client/dep.cjs", import.meta.url)
 const cjsFileContent = {
   beforeTest: readFileSync(cjsFileUrl),

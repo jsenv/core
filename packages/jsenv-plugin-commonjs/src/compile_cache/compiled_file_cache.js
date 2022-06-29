@@ -27,15 +27,20 @@ export const reuseOrCreateCompiledFile = async ({
     throw new TypeError(`compile must be a function, got ${compile}`)
   }
 
+  const getCacheValidity = () => {
+    const cacheValidity = validateCompileCache({
+      logger,
+      compiledFileUrl,
+      compileCacheStrategy,
+      compileCacheAssetsValidation,
+    })
+    return cacheValidity
+  }
+
   return startAsap(
     async () => {
       logger.debug(`check cache for ${compiledFileUrl}`)
-      const cacheValidity = validateCompileCache({
-        logger,
-        compiledFileUrl,
-        compileCacheStrategy,
-        compileCacheAssetsValidation,
-      })
+      const cacheValidity = getCacheValidity()
       if (cacheValidity.isValid) {
         logger.debug(`${UNICODE.OK} found a valid cache`)
         const compileInfo = cacheValidity.compileInfo.data
@@ -55,14 +60,8 @@ export const reuseOrCreateCompiledFile = async ({
             sourcemap = assetValidity.data.sourcemap
           }
         })
-        updateCompileCache({
-          logger,
-          compiledFileUrl,
-          content,
-          assets,
-          compileResultStatus: "cached",
-        })
         return {
+          isValid: () => getCacheValidity().isValid,
           content,
           sourcemap,
         }
@@ -96,6 +95,7 @@ export const reuseOrCreateCompiledFile = async ({
         compileResultStatus: compileInfoIsValid ? "updated" : "created",
       })
       return {
+        isValid: () => getCacheValidity().isValid,
         content,
         sourcemap,
       }

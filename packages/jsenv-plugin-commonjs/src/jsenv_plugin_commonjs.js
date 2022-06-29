@@ -48,7 +48,7 @@ export const jsenvPluginCommonJs = ({
       if (!originalUrlInfo) {
         return null
       }
-      const { content, sourcemap } = await commonJsToJsModule({
+      const { content, sourcemap, isValid } = await commonJsToJsModule({
         logLevel,
         rootDirectoryUrl: context.rootDirectoryUrl,
         sourceFileUrl: originalUrlInfo.url,
@@ -58,6 +58,9 @@ export const jsenvPluginCommonJs = ({
             : "production",
         ...urlInfo.data.commonjs,
       })
+      if (isValid) {
+        urlInfo.isValid = isValid
+      }
       return {
         content,
         contentType: "text/javascript",
