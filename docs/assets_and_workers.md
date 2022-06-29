@@ -27,6 +27,9 @@ import json from "./data.json" assert { type: "json" }
 console.log(json)
 ```
 
+> **Note**
+> Jsenv transforms code if browser do not support import assertion
+
 You can also use a dynamic import
 
 ```js
@@ -44,6 +47,9 @@ import sheet from "./style.css" assert { type: "css" }
 
 document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet]
 ```
+
+> **Note**
+> Here againJsenv transforms code if browser do not support import assertion or `document.adoptedStyleSheets`.
 
 You can also use a dynamic import
 
