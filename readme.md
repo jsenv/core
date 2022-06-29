@@ -27,11 +27,12 @@ _@jsenv/core_ is tested on Mac, Windows, Linux on Node.js 16.14.0. Other operati
 
 # Documentation
 
-| Link                                                | Description                                    |
-| --------------------------------------------------- | ---------------------------------------------- |
-| [Browser support](./docs/browser_support/readme.md) | Documentation around browser support           |
-| [Url handling](./docs/url_handling/readme.md)       | Url resolution, workers, assets and CDN        |
-| [NPM package](./docs/npm_package/readme.md)         | How to use a NPM package (especially commonjs) |
+| Link                                                     | Description                                    |
+| -------------------------------------------------------- | ---------------------------------------------- |
+| [Browser support](./docs/browser_support/readme.md)      | Documentation around browser support           |
+| [Url resolution](./docs/url_resolution/readme.md)        | Url resolution inside and outside js modules   |
+| [Asset and workers](./docs/assets_and_workers/readme.md) | How to use asset and workers                   |
+| [NPM package](./docs/npm_package/readme.md)              | How to use a NPM package (especially commonjs) |
 
 # Name
 
