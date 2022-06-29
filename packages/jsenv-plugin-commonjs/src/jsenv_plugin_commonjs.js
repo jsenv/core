@@ -8,16 +8,19 @@ export const jsenvPluginCommonJs = ({
   logLevel,
   include,
 }) => {
-  const associations = URL_META.resolveAssociations(
-    {
-      commonjs: include,
-    },
-    "file://",
-  )
+  let associations
 
   return {
     name,
     appliesDuring: "*",
+    init: ({ rootDirectoryUrl }) => {
+      associations = URL_META.resolveAssociations(
+        {
+          commonjs: include,
+        },
+        rootDirectoryUrl,
+      )
+    },
     redirectUrl: {
       js_import_export: (reference) => {
         const { commonjs } = URL_META.applyAssociations({

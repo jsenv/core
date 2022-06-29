@@ -64,6 +64,7 @@ export const createKitchen = ({
       return RUNTIME_COMPAT.isSupported(runtimeCompat, feature)
     },
   }
+  pluginController.callHooks("init", kitchenContext)
   const createReference = ({
     data = {},
     node,

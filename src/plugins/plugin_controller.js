@@ -4,6 +4,7 @@ export const createPluginController = ({
   plugins,
   scenario,
   hooks = [
+    "init",
     "resolveUrl",
     "redirectUrl",
     "fetchUrlContent",
