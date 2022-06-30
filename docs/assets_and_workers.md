@@ -1,23 +1,6 @@
 # Assets and workers
 
-Or how to use files that are not js modules within a js module.
-
-## Web workers
-
-```js
-const worker = new Worker("/worker.js", { type: "module" })
-```
-
-```js
-navigator.serviceWorker.register("/service_worker.js", { type: "module" })
-```
-
-You can also use the "non module" notation. Jsenv detect this during static analysis and knows the worker file format is "classic": a single file eventually using [self.importScripts](https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope/importScripts).
-
-```js
-const worker = new Worker("/worker.js")
-navigator.serviceWorker.register("/service_worker.js")
-```
+Or how to reference files and create web workers
 
 ## JSON
 
@@ -72,6 +55,17 @@ link.href = cssFileUrl
 document.head.appendChild(link)
 ```
 
+## Text
+
+```js
+import text from "./data.txt" assert { type: "text" }
+
+console.log(text)
+```
+
+> **Note**
+> Code is always transformed because "text" is not yet a standard import assertion
+
 ## Images (and everything else)
 
 Any of your file can be referenced using `new URL() + import meta url`. It will give you an url for that ressource that can be used later.
@@ -113,20 +107,20 @@ External urls are kept intact. In the following HTML, jsenv keep url to roboto f
 ```
 
 <!-- Part below commented until the jsenv plugin for http urls is done -->
-<!-- There is 2 circumstances where you might want to change this default behaviour:
+<!-- There is 2 circumstances where you might want to change the external url
 
 1. You want to remove dependency to external urls in your build files
 2. You want to transform code served by the CDN before it gets executed
 
-## Remove CDN urls during build
+### Remove CDN urls during build
 
-Pass "preservedUrls" to "buildProject".
+Pass "preservedUrls" to "build".
 
 ```diff
-import { buildProject } from "@jsenv/core"
+import { build } from "@jsenv/core"
 
-await buildProject({
-  projectDirectoryUrl: new URL("./", import.meta.url),
+await build({
+  rootDirectoryUrl: new URL("./", import.meta.url),
   buildDirectoryRelativeUrl: "dist",
   entryPoints: {
     "./main.html": "main.prod.html",
@@ -148,7 +142,7 @@ Each url associated to false using "preservedUrls" will be fetched and turned in
 />
 ```
 
-## Transform code served by CDN
+### Transform CDN content
 
 For this use case let's assume you want to execute JavaScript from a CDN but code served by the CDN cannot be executed as it is. For example if you need to support old browsers where import/export is not supported.
 
@@ -156,35 +150,47 @@ For this use case let's assume you want to execute JavaScript from a CDN but cod
 import { h, render } from "https://cdn.skypack.dev/preact@10.6.4"
 ```
 
-To make this happen, tell jsenv it can transform code behind "`https://cdn.skypack.dev/preact@10.6.4`" using "preservedUrls":
-
 ```diff
-import { buildProject } from "@jsenv/core"
+import { startDevServer } from "@jsenv/core"
 
-await buildProject({
-  projectDirectoryUrl: new URL("./", import.meta.url),
+await startDevServer({
+  rootDirectoryUrl: new URL("./", import.meta.url),
   buildDirectoryRelativeUrl: "dist",
   entryPoints: {
     "./main.html": "main.prod.html",
   },
   format: "esmodule",
 + preservedUrls: {
-+   "https://cdn.skypack.dev/preact@10.6.4": false
++   "https://cdn.skypack.dev/": false
 + }
 })
 ```
 
-When you pass a custom "preservedUrls" to "buildProject" it's recommended to also pass it to "startDevServer" and "executeTestPlan". -->
+> **Warning**
+> Be sure to pass "preservedUrls" to startDevServer, executeTestPlan and build
 
-<!-- ### With customCompilers
+--->
 
-You can import non-js ressources using static import as shown below
+## Worker
 
 ```js
-import text from "./data.txt"
-
-console.log(text)
+const worker = new Worker("/worker.js", { type: "module" })
 ```
 
-However this cannot run directly in the browser. It needs to be transformed to be executable by a browser.
-This can be achieved by associating `"**/*.txt"` with `textToJsModule` in [customCompilers](https://github.com/jsenv/jsenv-core/blob/master/docs/shared-parameters.md#customcompilers). -->
+You can also use the "non module" notation. Then the file must be written in "classic" worker format: a single file eventually using [self.importScripts](https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope/importScripts).
+
+```js
+const worker = new Worker("/worker.js")
+```
+
+## Service worker
+
+```js
+navigator.serviceWorker.register("/service_worker.js", { type: "module" })
+```
+
+You can also use the "non module" notation. Then the file must be written in "classic" worker format: a single file eventually using [self.importScripts](https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope/importScripts).
+
+```js
+navigator.serviceWorker.register("/service_worker.js")
+```
