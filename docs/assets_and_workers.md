@@ -1,6 +1,6 @@
 # Assets and workers
 
-Or how to reference files and create web workers
+Or how to reference files and create web workers.
 
 ## JSON
 
@@ -13,7 +13,7 @@ console.log(json)
 > **Note**
 > Code is transformed if browser do not support import assertion
 
-You can also use a dynamic import
+You can also use a dynamic import:
 
 ```js
 const jsonModule = await import("./data.json", {
@@ -34,7 +34,7 @@ document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet]
 > **Note**
 > Code is transformed if browser do not support import assertion or `document.adoptedStyleSheets`.
 
-You can also use a dynamic import
+You can also use a dynamic import:
 
 ```js
 const sheet = await import("./style.css", {
@@ -44,7 +44,7 @@ const sheet = await import("./style.css", {
 document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet]
 ```
 
-It's also possible to reference CSS file with a url
+It's also possible to reference CSS file with an url:
 
 ```js
 const cssFileUrl = new URL("./style.css", import.meta.url)
@@ -68,7 +68,8 @@ console.log(text)
 
 ## Images (and everything else)
 
-Any of your file can be referenced using `new URL() + import meta url`. It will give you an url for that ressource that can be used later.
+Any of your file can be referenced using `new URL() + import meta url`.
+It will give you an url for that ressource that can be used later.
 
 ```js
 const imageUrl = new URL("./img.png", import.meta.url)
@@ -80,7 +81,8 @@ document.body.appendChild(img)
 
 ## Content from CDN
 
-External urls are kept intact. In the following HTML, jsenv keep url to roboto font intact during dev and in the build files.
+External urls are kept intact.
+In the following HTML, jsenv keeps url to roboto font intact during dev and in the build files.
 
 ```html
 <!DOCTYPE html>
@@ -174,7 +176,9 @@ await startDevServer({
 ## Worker
 
 ```js
-const worker = new Worker("/worker.js", { type: "module" })
+const worker = new Worker("/worker.js", {
+  type: "module",
+})
 ```
 
 You can also use the "non module" notation. Then the file must be written in "classic" worker format: a single file eventually using [self.importScripts](https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope/importScripts).
@@ -186,7 +190,9 @@ const worker = new Worker("/worker.js")
 ## Service worker
 
 ```js
-navigator.serviceWorker.register("/service_worker.js", { type: "module" })
+navigator.serviceWorker.register("/service_worker.js", {
+  type: "module",
+})
 ```
 
 You can also use the "non module" notation. Then the file must be written in "classic" worker format: a single file eventually using [self.importScripts](https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope/importScripts).
