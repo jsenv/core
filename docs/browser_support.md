@@ -3,7 +3,7 @@
 Jsenv browser support splits into "during dev" and "after build".
 By default support after build is the same as during dev. 
 But support after build can be extended by configuration.
-The table below presents the largest support that can be obtain.
+The table below presents the largest support that can be obtained.
 
 | Browser           | During dev | After build |
 | ----------------- | ---------- | ----------- |
@@ -27,7 +27,7 @@ If you need to reproduce what happens for people using old browsers:
 
 # Browser support after build
 
-
+As said before, by default support after build is the same as during dev.
 If you need to support older browsers you must use a parameter called "runtimeCompat".
 
 ```diff
@@ -48,7 +48,7 @@ await build({
 })
 ```
 
-Many transformations are performed **if needed** to ensure the code generated will be compatible:
+Many transformations are performed to ensure the code generated will be compatible, **only if needed**:
 
 - Transforming `<script type="module"></script>` into `<script></script>`
 - Transforming `import` and `export`
@@ -57,6 +57,7 @@ Many transformations are performed **if needed** to ensure the code generated wi
 
 ## Polyfills
 
-Jsenv do not handle polyfills, you must handle that yourself.
+Jsenv do not handle polyfills.
 
-For example if you want to support browsers without Promise, you need to provide the Promise polyfill yourself. You can use a service like https://polyfill.io to do that
+For example to be compatible with browsers that do not support Promise,
+the Promise polyfill must be added (suggestion: using https://polyfill.io)
