@@ -1,6 +1,9 @@
 # Browser support
 
 Jsenv browser support splits into "during dev" and "after build".
+By default support after build is the same as during dev. 
+But support after build can be extended by configuration.
+The table below presents the largest support that can be obtain.
 
 | Browser           | During dev | After build |
 | ----------------- | ---------- | ----------- |
@@ -24,7 +27,6 @@ If you need to reproduce what happens for people using old browsers:
 
 # Browser support after build
 
-The default browser support after build is the same as browser support during dev.
 
 If you need to support older browsers you must use a parameter called "runtimeCompat".
 
