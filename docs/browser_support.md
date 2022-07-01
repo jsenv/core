@@ -22,7 +22,7 @@ If you need to reproduce what happens for people using old browsers:
 1. Generate a build first (usually `npm run build`)
 2. Start a server for build files (usually `npm run build:serve`)
 
-## Browser support during build
+# Browser support after build
 
 The default browser support after build is the same as browser support during dev.
 
