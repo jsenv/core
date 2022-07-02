@@ -5,19 +5,7 @@ This documentation explains jsenv behaviour regarding url resolution.
 - Short explanation: like a browser would + a bit more for js modules
 - Long explanation: the rest of this document
 
-## Full path specifier
-
-It's recommended to prefer leading slash url specifiers over `"../"`
-
-```diff
--  background-image: url(../../logo.png);
-+  background-image: url(/src/logo.png);
-```
-
-- :+1: create consistent specifiers
-- :+1: escape `"../../"` hell.
-
-## Url resolution outside js module
+## Outside js module
 
 Outside js module urls are resolved by the standard url resolution: `new URL(specifier, baseUrl)`.
 
@@ -41,11 +29,11 @@ Outside js module urls are resolved by the standard url resolution: `new URL(spe
 </html>
 ```
 
-### Url resolution inside js modules
+## Inside js modules
 
 Inside js modules url resolution is augmented with [Node ESM resolution algorithm](#node-esm-resolution-algorithm) and [FileSystem magic resolution](#filesystem-magic-resolution)
 
-#### Node ESM resolution algorithm
+### Node ESM resolution algorithm
 
 Without it, the code below would throw in a browser:
 
@@ -77,7 +65,7 @@ await startDevServer({
 })
 ```
 
-#### FileSystem magic resolution
+### FileSystem magic resolution
 
 The code below would throw 404 in a browser (assuming there is no "file" but "file.js")
 
@@ -104,3 +92,15 @@ await startDevServer({
 
 > **Warning**
 > File system magic resolution must be enabled if some dependencies are using import without extensions.
+
+## Recommended url specifier: leading slash
+
+It's recommended to prefer leading slash url specifiers over `"../"`
+
+```diff
+-  background-image: url(../../logo.png);
++  background-image: url(/src/logo.png);
+```
+
+- :+1: create consistent specifiers
+- :+1: escape `"../../"` hell.
