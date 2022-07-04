@@ -24,7 +24,7 @@ const devServer = await startDevServer({
   clientFiles: {
     "./**": true,
   },
-  cooldownBetweenFileEvents: 250,
+  cooldownBetweenFileEvents: 150,
   devServerAutoreload: false,
 })
 const browser = await chromium.launch({
@@ -68,7 +68,7 @@ try {
     }
     assert({ actual, expected })
   }
-  await countLabelJsxFileContent.update(`export const CountLabel = ({ count }) => {
+  countLabelJsxFileContent.update(`export const CountLabel = ({ count }) => {
   return (
     <span id="count_label" style={{ color: "black" }}>
       tata: {count}
