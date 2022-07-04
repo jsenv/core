@@ -368,14 +368,23 @@
         return existingLoad;
       }
 
+      var namespace = createNamespace();
       var load = {
-        url: url
+        url: url,
+        deps: [],
+        dependencyLoads: [],
+        instantiatePromise: null,
+        linkPromise: null,
+        executePromise: null,
+        completionPromise: null,
+        importerSetters: [],
+        setters: [],
+        execute: null,
+        error: null,
+        hoistedExports: false,
+        namespace: namespace
       };
       loadRegistry[url] = load;
-      var importerSetters = [];
-      load.importerSetters = importerSetters;
-      var namespace = createNamespace();
-      load.namespace = namespace;
       load.instantiatePromise = _async(function () {
         return _catch(function () {
           var registration = registerRegistry[url];
@@ -423,7 +432,7 @@
               }
 
               if (changed) {
-                importerSetters.forEach(function (importerSetter) {
+                load.importerSetters.forEach(function (importerSetter) {
                   if (importerSetter) {
                     importerSetter(namespace);
                   }
@@ -530,18 +539,8 @@
 
     var postOrderExec = _async(function (load, seen) {
       var _exit = false;
-
-      if (seen[load.url]) {
-        return;
-      }
-
-      seen[load.url] = true;
       return _invoke(function () {
-        if (!load.execute) {
-          if (load.error) {
-            throw load.error;
-          }
-
+        if (seen[load.url]) {
           return _invoke(function () {
             if (load.executePromise) {
               return _awaitIgnored(load.executePromise);
@@ -551,51 +550,72 @@
           });
         }
       }, function (_result3) {
-        if (_exit) return _result3; // deps execute first, unless circular
-
-        var depLoadPromises = [];
-        load.dependencyLoads.forEach(function (dependencyLoad) {
-          try {
-            var depLoadPromise = postOrderExec(dependencyLoad, seen);
-
-            if (depLoadPromise) {
-              depLoadPromises.push(depLoadPromise);
-            }
-          } catch (err) {
-            load.execute = null;
-            load.error = err;
-            throw err;
-          }
-        });
+        var _exit2 = false;
+        if (_exit) return _result3;
+        seen[load.url] = true;
         return _invoke(function () {
-          if (depLoadPromises.length) {
-            return _awaitIgnored(Promise.all(depLoadPromises));
-          }
-        }, function () {
-          try {
-            var executeReturnValue = load.execute.call(nullContext);
-
-            if (executeReturnValue) {
-              load.executePromise = executeReturnValue.then(function () {
-                load.executePromise = null;
-                load.completionPromise = load.namespace;
-              }, function (error) {
-                load.executePromise = null;
-                load.error = error;
-                throw error;
-              });
-              return;
+          if (!load.execute) {
+            if (load.error) {
+              throw load.error;
             }
 
-            load.instantiatePromise = null;
-            load.linkPromise = null;
-            load.completionPromise = load.namespace;
-          } catch (error) {
-            load.error = error;
-            throw error;
-          } finally {
-            load.execute = null;
+            return _invoke(function () {
+              if (load.executePromise) {
+                return _awaitIgnored(load.executePromise);
+              }
+            }, function () {
+              _exit2 = true;
+            });
           }
+        }, function (_result4) {
+          if (_exit2) return _result4; // deps execute first, unless circular
+
+          var depLoadPromises = [];
+          load.dependencyLoads.forEach(function (dependencyLoad) {
+            try {
+              var depLoadPromise = postOrderExec(dependencyLoad, seen);
+
+              if (depLoadPromise) {
+                depLoadPromises.push(depLoadPromise);
+              }
+            } catch (err) {
+              load.execute = null;
+              load.error = err;
+              throw err;
+            }
+          });
+          return _invoke(function () {
+            if (depLoadPromises.length) {
+              var allDepPromise = Promise.all(depLoadPromises);
+              load.executePromise = allDepPromise;
+              return _awaitIgnored(allDepPromise);
+            }
+          }, function () {
+            try {
+              var executeReturnValue = load.execute.call(nullContext);
+
+              if (executeReturnValue) {
+                load.executePromise = executeReturnValue.then(function () {
+                  load.executePromise = null;
+                  load.completionPromise = load.namespace;
+                }, function (error) {
+                  load.executePromise = null;
+                  load.error = error;
+                  throw error;
+                });
+                return;
+              }
+
+              load.instantiatePromise = null;
+              load.linkPromise = null;
+              load.completionPromise = load.namespace;
+            } catch (error) {
+              load.error = error;
+              throw error;
+            } finally {
+              load.execute = null;
+            }
+          });
         });
       });
     }); // the closest we can get to call(undefined)
