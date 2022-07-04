@@ -17,10 +17,11 @@ import { createMagicSource, composeTwoSourcemaps } from "@jsenv/sourcemap"
 import { applyBabelPlugins } from "@jsenv/ast"
 
 import { requireFromJsenv } from "@jsenv/core/src/require_from_jsenv.js"
-import { requireBabelPlugin } from "../babel/require_babel_plugin.js"
 import { babelPluginTransformImportMetaUrl } from "./helpers/babel_plugin_transform_import_meta_url.js"
 import { jsenvPluginAsJsClassicHtml } from "./jsenv_plugin_as_js_classic_html.js"
 import { jsenvPluginAsJsClassicWorkers } from "./jsenv_plugin_as_js_classic_workers.js"
+// because of https://github.com/rpetrich/babel-plugin-transform-async-to-promises/issues/84
+import customAsyncToPromises from "./async-to-promises.js"
 
 export const jsenvPluginAsJsClassic = ({ systemJsInjection }) => {
   const systemJsClientFileUrl = new URL(
@@ -168,17 +169,17 @@ const convertJsModuleToJsClassic = async ({
             // propposal-dynamic-import required with systemjs for babel8:
             // https://github.com/babel/babel/issues/10746
             requireFromJsenv("@babel/plugin-proposal-dynamic-import"),
+            requireFromJsenv("@babel/plugin-transform-modules-systemjs"),
             [
-              requireBabelPlugin("babel-plugin-transform-async-to-promises"),
+              customAsyncToPromises,
               {
                 topLevelAwait: "return",
               },
             ],
-            requireFromJsenv("@babel/plugin-transform-modules-systemjs"),
           ]
         : [
             [
-              requireBabelPlugin("babel-plugin-transform-async-to-promises"),
+              requireFromJsenv("babel-plugin-transform-async-to-promises"),
               {
                 topLevelAwait: "simple",
               },
