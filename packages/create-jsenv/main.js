@@ -8,8 +8,6 @@ import {
   mkdirSync,
   statSync,
   copyFileSync,
-  readFileSync,
-  writeFileSync,
 } from "node:fs"
 import { relative } from "node:path"
 import { pathToFileURL, fileURLToPath } from "node:url"
@@ -97,33 +95,6 @@ if (cancelled) {
       demoTargetDirectoryUrl,
     )
     copy(fromUrl, toUrl)
-    if (file === "package.json") {
-      const packageJsonFileContent = readFileSync(toUrl, { encoding: "utf8" })
-      const packageJsonObject = JSON.parse(packageJsonFileContent)
-      const visitPackageMappings = (packageMappings) => {
-        if (packageMappings) {
-          Object.keys(packageMappings).forEach((packageName) => {
-            const packageVersion = packageMappings[packageName]
-            if (packageVersion.startsWith("../")) {
-              // resolve it and put the exact version
-              const packageDirectoryUrl = new URL(packageVersion, fromUrl)
-              const packageFileUrl = new URL(
-                "package.json",
-                packageDirectoryUrl,
-              )
-              const packageObject = JSON.parse(
-                readFileSync(packageFileUrl, { encoding: "utf8" }),
-              )
-              packageMappings[packageName] = packageObject.version
-            }
-          })
-        }
-      }
-      visitPackageMappings(packageJsonObject.dependencies)
-      visitPackageMappings(packageJsonObject.devDependencies)
-      visitPackageMappings(packageJsonObject.peerDependencies)
-      writeFileSync(toUrl, JSON.stringify(packageJsonObject, null, "  "))
-    }
   }
   console.log(`\nDone.`)
 }

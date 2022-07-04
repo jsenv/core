@@ -18,15 +18,15 @@
     "@babel/eslint-parser": "7.18.2",
     "@babel/plugin-syntax-import-assertions": "7.17.12",
     "@babel/plugin-transform-react-jsx": "7.17.12",
-    "@jsenv/core": "../../../",
-    "@jsenv/plugin-preact": "../../jsenv-plugin-preact/",
+    "@jsenv/core": "27.0.0",
+    "@jsenv/plugin-preact": "0.2.2",
     "@jsenv/eslint-config": "16.0.9",
-    "@jsenv/eslint-import-resolver": "../../eslint-import-resolver/",
+    "@jsenv/eslint-import-resolver": "0.3.0",
     "eslint": "8.18.0",
     "eslint-plugin-html": "6.2.0",
     "eslint-plugin-import": "2.26.0",
     "eslint-plugin-react": "7.30.1",
-    "playwright": "1.22.2",
+    "playwright": "1.23.1",
     "prettier": "2.7.1"
   }
 }
