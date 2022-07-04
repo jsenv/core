@@ -61,7 +61,7 @@
   },
   "dependencies": {
     "@babel/plugin-proposal-dynamic-import": "7.16.7",
-    "@babel/plugin-transform-modules-systemjs": "7.18.5",
+    "@babel/plugin-transform-modules-systemjs": "7.18.6",
     "@babel/plugin-transform-modules-umd": "7.18.0",
     "@c88/v8-coverage": "0.1.1",
     "@financial-times/polyfill-useragent-normaliser": "2.0.1",

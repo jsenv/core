@@ -10,8 +10,7 @@
  * - no support for importmap because jsenv don't need it
  */
 
-// prettier-ignore
-(function () {
+;(function () {
   /* eslint-env browser */
   /* globals self */
 
@@ -358,6 +357,9 @@
 
   const postOrderExec = async (load, seen) => {
     if (seen[load.url]) {
+      if (load.executePromise) {
+        await load.executePromise
+      }
       return
     }
     seen[load.url] = true
@@ -386,7 +388,9 @@
       }
     })
     if (depLoadPromises.length) {
-      await Promise.all(depLoadPromises)
+      const allDepPromise = Promise.all(depLoadPromises)
+      load.executePromise = allDepPromise
+      await allDepPromise
     }
 
     try {

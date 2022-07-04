@@ -11,21 +11,23 @@ import { fetchUrl } from "@jsenv/fetch"
 
 import { startBuildServer } from "@jsenv/core"
 
-const buildServer = await startBuildServer({
-  logLevel: "warn",
-  rootDirectoryUrl: new URL("./client/", import.meta.url),
-  buildDirectoryUrl: new URL("./build/", import.meta.url),
-  buildIndexPath: "./main.html",
-  keepProcessAlive: false,
-  buildServerAutoreload: true,
-})
-const response = await fetchUrl(buildServer.origin)
-const actual = {
-  status: response.status,
-  contentType: response.headers.get("content-type"),
+if (process.platform !== "win32") {
+  const buildServer = await startBuildServer({
+    logLevel: "warn",
+    rootDirectoryUrl: new URL("./client/", import.meta.url),
+    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    buildIndexPath: "./main.html",
+    keepProcessAlive: false,
+    buildServerAutoreload: true,
+  })
+  const response = await fetchUrl(buildServer.origin)
+  const actual = {
+    status: response.status,
+    contentType: response.headers.get("content-type"),
+  }
+  const expected = {
+    status: 200,
+    contentType: "text/html",
+  }
+  assert({ actual, expected })
 }
-const expected = {
-  status: 200,
-  contentType: "text/html",
-}
-assert({ actual, expected })
