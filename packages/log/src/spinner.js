@@ -1,28 +1,34 @@
+import { ANSI } from "./ansi.js"
+
 export const startSpinner = ({
   log,
   frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"],
   fps = 20,
   keepProcessAlive = false,
   stopOnWriteFromOutside = true,
-  text = "",
-  update = (text) => text,
+  render = () => "",
   effect = () => {},
 }) => {
   let frameIndex = 0
   let interval
+  let running = true
 
   const spinner = {
-    text,
+    message: undefined,
   }
 
-  const render = () => {
-    spinner.text = update(spinner.text)
-    return `${frames[frameIndex]} ${spinner.text}`
+  const update = (message) => {
+    spinner.message = running ? `${frames[frameIndex]} ${message}` : message
+    return spinner.message
   }
+  spinner.update = update
 
-  const cleanup = effect() || (() => {})
-  log.write(render())
-  if (process.stdout.isTTY) {
+  let cleanup
+  if (ANSI.supported) {
+    running = true
+    cleanup = effect()
+    log.write(update(render()))
+
     interval = setInterval(() => {
       frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1
       log.dynamicWrite(({ outputFromOutside }) => {
@@ -30,24 +36,31 @@ export const startSpinner = ({
           stop()
           return ""
         }
-        return render()
+        return update(render())
       })
     }, 1000 / fps)
     if (!keepProcessAlive) {
       interval.unref()
     }
+  } else {
+    log.write(update(render()))
   }
 
-  const stop = (text) => {
-    if (log && text) {
-      log.write(text)
+  const stop = (message) => {
+    running = false
+    if (interval) {
+      clearInterval(interval)
+      interval = null
     }
-    cleanup()
-    clearInterval(interval)
-    interval = null
-    log = null
+    if (cleanup) {
+      cleanup()
+      cleanup = null
+    }
+    if (log && message) {
+      log.write(update(message))
+      log = null
+    }
   }
-
   spinner.stop = stop
 
   return spinner

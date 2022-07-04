@@ -961,26 +961,28 @@ const startSpinner = ({
   fps = 20,
   keepProcessAlive = false,
   stopOnWriteFromOutside = true,
-  text = "",
-  update = text => text,
+  render = () => "",
   effect = () => {}
 }) => {
   let frameIndex = 0;
   let interval;
+  let running = true;
   const spinner = {
-    text
+    message: undefined
   };
 
-  const render = () => {
-    spinner.text = update(spinner.text);
-    return `${frames[frameIndex]} ${spinner.text}`;
+  const update = message => {
+    spinner.message = running ? `${frames[frameIndex]} ${message}` : message;
+    return spinner.message;
   };
 
-  const cleanup = effect() || (() => {});
+  spinner.update = update;
+  let cleanup;
 
-  log.write(render());
-
-  if (process.stdout.isTTY) {
+  if (ANSI.supported) {
+    running = true;
+    cleanup = effect();
+    log.write(update(render()));
     interval = setInterval(() => {
       frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
       log.dynamicWrite(({
@@ -991,24 +993,34 @@ const startSpinner = ({
           return "";
         }
 
-        return render();
+        return update(render());
       });
     }, 1000 / fps);
 
     if (!keepProcessAlive) {
       interval.unref();
     }
+  } else {
+    log.write(update(render()));
   }
 
-  const stop = text => {
-    if (log && text) {
-      log.write(text);
+  const stop = message => {
+    running = false;
+
+    if (interval) {
+      clearInterval(interval);
+      interval = null;
     }
 
-    cleanup();
-    clearInterval(interval);
-    interval = null;
-    log = null;
+    if (cleanup) {
+      cleanup();
+      cleanup = null;
+    }
+
+    if (log && message) {
+      log.write(update(message));
+      log = null;
+    }
   };
 
   spinner.stop = stop;
@@ -1029,14 +1041,16 @@ const createTaskLog = (label, {
   }
 
   const startMs = Date.now();
+  const log = createLog();
+  let message = label;
   const taskSpinner = startSpinner({
-    log: createLog(),
-    text: label,
+    log,
+    render: () => message,
     stopOnWriteFromOutside
   });
   return {
     setRightText: value => {
-      taskSpinner.text = `${label} ${value}`;
+      message = `${label} ${value}`;
     },
     done: () => {
       const msEllapsed = Date.now() - startMs;
@@ -21011,20 +21025,19 @@ const executePlan = async (plan, {
         let spinner;
 
         if (executionSpinner) {
-          const renderSpinnerText = () => createExecutionLog(beforeExecutionInfo, {
-            counters,
-            ...(logTimeUsage ? {
-              timeEllapsed: Date.now() - startMs
-            } : {}),
-            ...(logMemoryHeapUsage ? {
-              memoryHeap: memoryUsage().heapUsed
-            } : {})
-          });
-
           spinner = startSpinner({
             log: executionLog,
-            text: renderSpinnerText(),
-            update: renderSpinnerText
+            render: () => {
+              return createExecutionLog(beforeExecutionInfo, {
+                counters,
+                ...(logTimeUsage ? {
+                  timeEllapsed: Date.now() - startMs
+                } : {}),
+                ...(logMemoryHeapUsage ? {
+                  memoryHeap: memoryUsage().heapUsed
+                } : {})
+              });
+            }
           });
         }
 

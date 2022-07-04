@@ -333,22 +333,21 @@ export const executePlan = async (
         }
         let spinner
         if (executionSpinner) {
-          const renderSpinnerText = () =>
-            createExecutionLog(beforeExecutionInfo, {
-              counters,
-              ...(logTimeUsage
-                ? {
-                    timeEllapsed: Date.now() - startMs,
-                  }
-                : {}),
-              ...(logMemoryHeapUsage
-                ? { memoryHeap: memoryUsage().heapUsed }
-                : {}),
-            })
           spinner = startSpinner({
             log: executionLog,
-            text: renderSpinnerText(),
-            update: renderSpinnerText,
+            render: () => {
+              return createExecutionLog(beforeExecutionInfo, {
+                counters,
+                ...(logTimeUsage
+                  ? {
+                      timeEllapsed: Date.now() - startMs,
+                    }
+                  : {}),
+                ...(logMemoryHeapUsage
+                  ? { memoryHeap: memoryUsage().heapUsed }
+                  : {}),
+              })
+            },
           })
         }
         beforeExecutionCallback(beforeExecutionInfo)

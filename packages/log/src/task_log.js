@@ -1,4 +1,7 @@
-import { createLog, startSpinner, UNICODE, msAsDuration } from "@jsenv/log"
+import { msAsDuration } from "./duration_log.js"
+import { UNICODE } from "./unicode.js"
+import { createLog } from "./log.js"
+import { startSpinner } from "./spinner.js"
 
 export const createTaskLog = (
   label,
@@ -13,14 +16,16 @@ export const createTaskLog = (
     }
   }
   const startMs = Date.now()
+  const log = createLog()
+  let message = label
   const taskSpinner = startSpinner({
-    log: createLog(),
-    text: label,
+    log,
+    render: () => message,
     stopOnWriteFromOutside,
   })
   return {
     setRightText: (value) => {
-      taskSpinner.text = `${label} ${value}`
+      message = `${label} ${value}`
     },
     done: () => {
       const msEllapsed = Date.now() - startMs

@@ -3,7 +3,7 @@ import { createLog, startSpinner } from "@jsenv/log"
 const log = createLog()
 const spinner = startSpinner({
   log,
-  text: "Loading and I would say event more",
+  render: () => "Loading and I would say event more",
   stopOnWriteFromOutside: true,
 })
 

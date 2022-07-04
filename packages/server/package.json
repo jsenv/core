@@ -35,7 +35,7 @@
   },
   "dependencies": {
     "@jsenv/abort": "4.2.3",
-    "@jsenv/log": "2.1.1",
+    "@jsenv/log": "3.0.0",
     "@jsenv/url-meta": "7.0.0",
     "@jsenv/utils": "2.0.1"
   },
