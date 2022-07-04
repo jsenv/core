@@ -10,7 +10,8 @@
  * - no support for importmap because jsenv don't need it
  */
 
-;(function () {
+// prettier-ignore
+(function () {
   /* eslint-env browser */
   /* globals self */
 
@@ -43,7 +44,9 @@
     }
     System.register = (deps, declare) => {
       if (!document.currentScript) {
-        throw new Error("unexpected call to System.register (document.currentScript is undefined)")
+        throw new Error(
+          "unexpected call to System.register (document.currentScript is undefined)",
+        )
       }
       if (document.currentScript.__s__) {
         registerRegistry[document.currentScript.src] = [deps, declare]
@@ -169,7 +172,9 @@
 
     System.register = async (deps, declare) => {
       System.register = () => {
-        throw new Error("unexpected call to System.register (called outside url instantiation)")
+        throw new Error(
+          "unexpected call to System.register (called outside url instantiation)",
+        )
       }
       const url = self.location.href
       registerRegistry[url] = [deps, declare]
@@ -212,17 +217,23 @@
       return existingLoad
     }
 
+    const namespace = createNamespace()
     const load = {
       url,
+      deps: [],
+      dependencyLoads: [],
+      instantiatePromise: null,
+      linkPromise: null,
+      executePromise: null,
+      completionPromise: null,
+      importerSetters: [],
+      setters: [],
+      execute: null,
+      error: null,
+      hoistedExports: false,
+      namespace,
     }
     loadRegistry[url] = load
-
-    const importerSetters = []
-    load.importerSetters = importerSetters
-
-    const namespace = createNamespace()
-    load.namespace = namespace
-
     load.instantiatePromise = (async () => {
       try {
         let registration = registerRegistry[url]
@@ -260,7 +271,7 @@
             }
           }
           if (changed) {
-            importerSetters.forEach((importerSetter) => {
+            load.importerSetters.forEach((importerSetter) => {
               if (importerSetter) {
                 importerSetter(namespace)
               }
@@ -281,7 +292,6 @@
         load.execute = null
       }
     })()
-
     load.linkPromise = (async () => {
       await load.instantiatePromise
       const dependencyLoads = await Promise.all(
