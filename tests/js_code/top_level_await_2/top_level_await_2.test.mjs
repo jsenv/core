@@ -53,3 +53,25 @@ await test({
   },
   bundling: false,
 })
+
+// support for <script type="module"> but not TLA
+// Considering that TLA + export on old runtimes is not recommended:
+// - TLA should be reserved to entry points where exports are not needed)
+// - It would be overkill to use systemjs only because code uses TLA + export
+// -> Jsenv throw an error when TLA + exports is used and systemjs is not
+// (ideally jsenv would throw a custom error explaining all this)
+try {
+  await test({
+    runtimeCompat: {
+      chrome: "65",
+    },
+    bundling: false,
+  })
+  throw new Error("should throw")
+} catch (e) {
+  const actual = e.message.includes(
+    'Cannot export after a top-level await when using topLevelAwait: "simple"!',
+  )
+  const expected = true
+  assert({ actual, expected })
+}

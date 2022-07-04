@@ -11,15 +11,6 @@ export const jsenvPluginTopLevelAwait = () => {
         if (context.isSupportedOnCurrentClients("top_level_await")) {
           return null
         }
-        // when we don't use systemjs AND runtime do not support TLA
-        // then async-to-promises will throw if there is TLA + exports
-        // if we use systemjs however it will work
-        // because we'll ignore it
-        // in practice TLA + export on old runtimes is unusual, TLA should be reserved
-        // to entry points where exports are not needed
-        // it would be too much work to use systemjs just to support TLA + export
-        // for now let async-to-promises throw in this case
-        // (ideally jsenv would throw an error explaining all this)
         const willTransformJsModules =
           !context.isSupportedOnCurrentClients("script_type_module") ||
           !context.isSupportedOnCurrentClients("import_dynamic") ||
