@@ -13,6 +13,10 @@ export const createLog = ({
 } = {}) => {
   const { columns = 80, rows = 24 } = stream
 
+  const log = {
+    onVerticalOverlflow: () => {},
+  }
+
   let lastOutput = ""
   let clearAttemptResult
   let streamOutputSpy = noopStreamSpy
@@ -40,6 +44,7 @@ export const createLog = ({
       // it means we would only clear the visible part of the log
       // better keep the log untouched
       clearAttemptResult = false
+      log.onVerticalOverlflow()
       return ""
     }
 
@@ -100,11 +105,12 @@ export const createLog = ({
     }
   }
 
-  return {
+  Object.assign(log, {
     write,
     dynamicWrite,
     destroy,
-  }
+  })
+  return log
 }
 
 const noopStreamSpy = () => ""

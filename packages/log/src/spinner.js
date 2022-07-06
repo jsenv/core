@@ -6,6 +6,7 @@ export const startSpinner = ({
   fps = 20,
   keepProcessAlive = false,
   stopOnWriteFromOutside = true,
+  stopOnVerticalOverflow = true,
   render = () => "",
   effect = () => {},
 }) => {
@@ -62,6 +63,10 @@ export const startSpinner = ({
     }
   }
   spinner.stop = stop
+
+  if (stopOnVerticalOverflow) {
+    log.onVerticalOverflow = stop
+  }
 
   return spinner
 }
