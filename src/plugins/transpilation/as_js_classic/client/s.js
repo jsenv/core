@@ -207,7 +207,17 @@
   const _import = (specifier, parentUrl) => {
     const url = resolveUrl(specifier, parentUrl)
     const load = getOrCreateLoad(url, parentUrl)
+    if (parentUrl) {
+      markAsImportedBy(load, parentUrl)
+    }
     return load.completionPromise || startExecution(load)
+  }
+
+  const markAsImportedBy = (load, importerUrl) => {
+    const importerLoad = loadRegistry[importerUrl]
+    if (load.importerLoads.indexOf(importerLoad) === -1) {
+      load.importerLoads.push(importerLoad)
+    }
   }
 
   const getOrCreateLoad = (url, firstParentUrl) => {
@@ -215,10 +225,10 @@
     if (existingLoad) {
       return existingLoad
     }
-
     const namespace = createNamespace()
     const load = {
       url,
+      importerLoads: [],
       deps: [],
       dependencyLoads: [],
       instantiatePromise: null,
@@ -298,6 +308,7 @@
           const setter = load.setters[index]
           const dependencyUrl = resolveUrl(dep, url)
           const dependencyLoad = getOrCreateLoad(dependencyUrl, url)
+          markAsImportedBy(dependencyLoad, url)
           if (dependencyLoad.instantiatePromise) {
             await dependencyLoad.instantiatePromise
           }
@@ -315,7 +326,6 @@
       )
       load.dependencyLoads = dependencyLoads
     })()
-
     return load
   }
 
@@ -355,9 +365,28 @@
     }
   }
 
-  const postOrderExec = async (load, seen) => {
+  const isCircularImport = (load) => {
+    const searchLoadInImporters = (selfOrImporterLoad) => {
+      const importerLoads = selfOrImporterLoad.importerLoads
+      let i = 0
+      while (i < importerLoads.length) {
+        const importerLoad = importerLoads[i]
+        i++
+        if (importerLoad === load) {
+          return true
+        }
+        if (searchLoadInImporters(importerLoad)) {
+          return true
+        }
+      }
+      return false
+    }
+    return searchLoadInImporters(load)
+  }
+
+  const postOrderExec = (load, seen) => {
     if (seen[load.url]) {
-      return
+      return undefined
     }
     seen[load.url] = true
     if (!load.execute) {
@@ -365,9 +394,17 @@
         throw load.error
       }
       if (load.executePromise) {
-        await load.executePromise
+        // "a" do a dynamic import to "b"
+        // and "b" declare "a" as part of its deps
+        // so it's when "b" kicks in, it should realize
+        // it was imported by "a" and not wait for its executePromise
+        // this fix is unsufficient, to be properly fixed with https://github.com/systemjs/systemjs/pull/2402
+        if (isCircularImport(load)) {
+          return undefined
+        }
+        return load.executePromise
       }
-      return
+      return undefined
     }
 
     // deps execute first, unless circular
@@ -384,36 +421,39 @@
         throw err
       }
     })
-    if (depLoadPromises.length) {
-      const allDepPromise = Promise.all(depLoadPromises)
-      await allDepPromise
-    }
 
-    try {
-      const executeReturnValue = load.execute.call(nullContext)
-      if (executeReturnValue) {
-        load.executePromise = executeReturnValue.then(
-          () => {
-            load.executePromise = null
-            load.completionPromise = load.namespace
-          },
-          (error) => {
-            load.executePromise = null
-            load.error = error
-            throw error
-          },
-        )
-        return
+    return (async () => {
+      if (depLoadPromises.length) {
+        const allDepPromise = Promise.all(depLoadPromises)
+        await allDepPromise
       }
-      load.instantiatePromise = null
-      load.linkPromise = null
-      load.completionPromise = load.namespace
-    } catch (error) {
-      load.error = error
-      throw error
-    } finally {
-      load.execute = null
-    }
+  
+      try {
+        const executeReturnValue = load.execute.call(nullContext)
+        if (executeReturnValue) {
+          load.executePromise = executeReturnValue.then(
+            () => {
+              load.executePromise = null
+              load.completionPromise = load.namespace
+            },
+            (error) => {
+              load.executePromise = null
+              load.error = error
+              throw error
+            },
+          )
+          return
+        }
+        load.instantiatePromise = null
+        load.linkPromise = null
+        load.completionPromise = load.namespace
+      } catch (error) {
+        load.error = error
+        throw error
+      } finally {
+        load.execute = null
+      }
+    })()
   }
 
   // the closest we can get to call(undefined)

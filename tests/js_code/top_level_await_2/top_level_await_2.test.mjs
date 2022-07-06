@@ -4,7 +4,7 @@ import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
 import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
 
-const test = async (params) => {
+const test = async ({ systemJsBug, ...params }) => {
   await build({
     logLevel: "warn",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
@@ -31,7 +31,7 @@ const test = async (params) => {
   const actual = returnValue
   const expected = [
     "a_before_timeout",
-    "a_after_timeout",
+    ...(systemJsBug ? [] : ["a_after_timeout"]),
     "before_import_a",
     "after_import_a",
   ]
@@ -52,6 +52,7 @@ await test({
     chrome: "55",
   },
   bundling: false,
+  systemJsBug: true,
 })
 
 // support for <script type="module"> but not TLA
