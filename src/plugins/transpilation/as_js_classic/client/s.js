@@ -2,7 +2,7 @@
  * This file is a modified version of https://github.com/systemjs/systemjs/blob/main/dist/s.js
  * with the following changes:
  *
- * - Code can use aync/await, const, ... because an es5 version of this file is generated
+ * - Code can use aync/await, const, etc because this file is compiled (see dist/s.js)
  * - Can use document.currentScript because we don't support IE
  * - auto import inline System.register
  * - auto import first System.register in web workers
