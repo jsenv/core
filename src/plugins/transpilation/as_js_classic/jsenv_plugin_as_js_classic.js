@@ -17,6 +17,7 @@ import { createMagicSource, composeTwoSourcemaps } from "@jsenv/sourcemap"
 import { applyBabelPlugins } from "@jsenv/ast"
 
 import { requireFromJsenv } from "@jsenv/core/src/require_from_jsenv.js"
+import { requireBabelPlugin } from "../babel/require_babel_plugin.js"
 import { babelPluginTransformImportMetaUrl } from "./helpers/babel_plugin_transform_import_meta_url.js"
 import { jsenvPluginAsJsClassicHtml } from "./jsenv_plugin_as_js_classic_html.js"
 import { jsenvPluginAsJsClassicWorkers } from "./jsenv_plugin_as_js_classic_workers.js"
@@ -179,7 +180,7 @@ const convertJsModuleToJsClassic = async ({
           ]
         : [
             [
-              requireFromJsenv("babel-plugin-transform-async-to-promises"),
+              requireBabelPlugin("babel-plugin-transform-async-to-promises"),
               {
                 topLevelAwait: "simple",
               },

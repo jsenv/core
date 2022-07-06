@@ -357,9 +357,6 @@
 
   const postOrderExec = async (load, seen) => {
     if (seen[load.url]) {
-      if (load.executePromise) {
-        await load.executePromise
-      }
       return
     }
     seen[load.url] = true
@@ -389,7 +386,6 @@
     })
     if (depLoadPromises.length) {
       const allDepPromise = Promise.all(depLoadPromises)
-      load.executePromise = allDepPromise
       await allDepPromise
     }
 
