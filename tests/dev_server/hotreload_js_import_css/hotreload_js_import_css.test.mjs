@@ -1,20 +1,20 @@
+import { readFileSync, writeFileSync } from "node:fs"
 import { chromium } from "playwright"
-import { readFile, writeFile } from "@jsenv/filesystem"
 import { assert } from "@jsenv/assert"
 
 import { startDevServer } from "@jsenv/core"
 
 const jsFileUrl = new URL("./client/main.js", import.meta.url)
 const jsFileContent = {
-  beforeTest: await readFile(jsFileUrl),
-  update: (content) => writeFile(jsFileUrl, content),
-  restore: () => writeFile(jsFileUrl, jsFileContent.beforeTest),
+  beforeTest: readFileSync(jsFileUrl),
+  update: (content) => writeFileSync(jsFileUrl, content),
+  restore: () => writeFileSync(jsFileUrl, jsFileContent.beforeTest),
 }
 const cssFileUrl = new URL("./client/style.css", import.meta.url)
 const cssFileContent = {
-  beforeTest: await readFile(cssFileUrl),
-  update: (content) => writeFile(cssFileUrl, content),
-  restore: () => writeFile(cssFileUrl, cssFileContent.beforeTest),
+  beforeTest: readFileSync(cssFileUrl),
+  update: (content) => writeFileSync(cssFileUrl, content),
+  restore: () => writeFileSync(cssFileUrl, cssFileContent.beforeTest),
 }
 
 const devServer = await startDevServer({
@@ -68,7 +68,7 @@ try {
     }
     assert({ actual, expected })
   }
-  await cssFileContent.update(`body { background: green; }`)
+  cssFileContent.update(`body { background: green; }`)
   await new Promise((resolve) => setTimeout(resolve, 500))
   {
     const actual = {
@@ -114,9 +114,7 @@ try {
     assert({ actual, expected })
   }
   // remove usage of the css file
-  await jsFileContent.update(
-    `if (import.meta.hot) { import.meta.hot.accept() }`,
-  )
+  jsFileContent.update(`if (import.meta.hot) { import.meta.hot.accept() }`)
   await new Promise((resolve) => setTimeout(resolve, 500))
   {
     const actual = {
@@ -182,7 +180,7 @@ try {
     assert({ actual, expected })
   }
   // restore deps on css file
-  await jsFileContent.update(`import "./file.js"
+  jsFileContent.update(`import "./file.js"
 
 if (import.meta.hot) {
   import.meta.hot.accept()
