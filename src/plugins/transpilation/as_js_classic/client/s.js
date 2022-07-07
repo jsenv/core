@@ -207,18 +207,8 @@
   const _import = (specifier, parentUrl) => {
     const url = resolveUrl(specifier, parentUrl)
     const load = getOrCreateLoad(url, parentUrl)
-    // if (parentUrl) {
-    //   markAsImportedBy(load, parentUrl)
-    // }
     return load.completionPromise || startExecution(load, parentUrl)
   }
-
-  // const markAsImportedBy = (load, importerUrl) => {
-  //   const importerLoad = loadRegistry[importerUrl]
-  //   if (load.importerLoads.indexOf(importerLoad) === -1) {
-  //     load.importerLoads.push(importerLoad)
-  //   }
-  // }
 
   const getOrCreateLoad = (url, firstParentUrl) => {
     const existingLoad = loadRegistry[url]
@@ -228,7 +218,6 @@
     const namespace = createNamespace()
     const load = {
       url,
-      // importerLoads: [],
       deps: [],
       dependencyLoads: [],
       instantiatePromise: null,
@@ -308,7 +297,6 @@
           const setter = load.setters[index]
           const dependencyUrl = resolveUrl(dep, url)
           const dependencyLoad = getOrCreateLoad(dependencyUrl, url)
-          // markAsImportedBy(dependencyLoad, url)
           if (dependencyLoad.instantiatePromise) {
             await dependencyLoad.instantiatePromise
           }
@@ -363,7 +351,7 @@
   }
 
   const postOrderExec = (load, importStack) => {
-    if (importStack.includes(load.url)) {
+    if (importStack.indexOf(load.url) > -1) {
       return undefined
     }
     if (!load.execute) {
@@ -380,7 +368,9 @@
     const depLoadPromises = []
     load.dependencyLoads.forEach((dependencyLoad) => {
       try {
-        const depLoadPromise = postOrderExec(dependencyLoad, [...importStack, load.url])
+        const depImportStack = importStack.slice()
+        depImportStack.push(load.url)
+        const depLoadPromise = postOrderExec(dependencyLoad, depImportStack)
         if (depLoadPromise) {
           depLoadPromises.push(depLoadPromise)
         }
