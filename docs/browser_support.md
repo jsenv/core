@@ -1,7 +1,7 @@
 # Browser support
 
 Jsenv browser support splits into "during dev" and "after build".
-By default support after build is the same as during dev. 
+By default support after build is the same as during dev.
 But support after build can be extended by configuration.
 The table below presents the largest support that can be obtained.
 
@@ -55,9 +55,36 @@ Many transformations are performed to ensure the code generated will be compatib
 - Transforming `async` and `await` into promises
 - And many more...
 
+## Single code path
+
+When `runtimeCompat` contains browsers not supporting `<script type="module"></script>` it is tempting to use [nomodule](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#attr-nomodule) script attribute and expect jsenv to generate the following HTML.
+
+```html
+<script type="module" src="/dist/main.js"></script>
+<script nomodule src="/dist/main.nomodule.js"></script>
+```
+
+But it was tried on big traffic and in the end performance and size impacts are **negligibles**. Moreover generating a second set of files has costs:
+
+- Manual tests must be runned also on old browsers
+- Automated tests as well
+- Finally it takes more time to generate the build
+
+For these reasons jsenv generates a single `<script>` tag.
+
+```html
+<script src="/dist/main.nomodule.js"></script>
+```
+
+> **Note**
+> It's still possible to obtain X set of files by calling `build` multiple times with their own `runtimeCompat` and `buildDirectoryUrl`.
+
 ## Polyfills
 
 Jsenv do not handle polyfills.
 
 For example to be compatible with browsers that do not support Promise,
 the Promise polyfill must be added (suggestion: using https://polyfill.io)
+
+[^perf_impact_footnote]: "main.js" and "main.nomodule.js" have comparable speed
+[^size_impact_footnote]: "main.js" and "main.nomodule.js" have comparable sizes. Even more when considering bundling, minification and compression.
