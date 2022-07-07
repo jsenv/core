@@ -147,7 +147,11 @@ const rollupPluginJsenv = ({
     outputOptions: (outputOptions) => {
       // const sourcemapFile = buildDirectoryUrl
       Object.assign(outputOptions, {
-        format: "esm",
+        format: jsModuleUrlInfos.some((jsModuleUrlInfo) =>
+          jsModuleUrlInfo.filename.endsWith(".cjs"),
+        )
+          ? "cjs"
+          : "esm",
         dir: fileUrlConverter.asFilePath(buildDirectoryUrl),
         sourcemap: sourcemaps === "file" || sourcemaps === "inline",
         // sourcemapFile,
