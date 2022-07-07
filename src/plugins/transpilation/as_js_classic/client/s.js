@@ -207,18 +207,18 @@
   const _import = (specifier, parentUrl) => {
     const url = resolveUrl(specifier, parentUrl)
     const load = getOrCreateLoad(url, parentUrl)
-    if (parentUrl) {
-      markAsImportedBy(load, parentUrl)
-    }
-    return load.completionPromise || startExecution(load)
+    // if (parentUrl) {
+    //   markAsImportedBy(load, parentUrl)
+    // }
+    return load.completionPromise || startExecution(load, parentUrl)
   }
 
-  const markAsImportedBy = (load, importerUrl) => {
-    const importerLoad = loadRegistry[importerUrl]
-    if (load.importerLoads.indexOf(importerLoad) === -1) {
-      load.importerLoads.push(importerLoad)
-    }
-  }
+  // const markAsImportedBy = (load, importerUrl) => {
+  //   const importerLoad = loadRegistry[importerUrl]
+  //   if (load.importerLoads.indexOf(importerLoad) === -1) {
+  //     load.importerLoads.push(importerLoad)
+  //   }
+  // }
 
   const getOrCreateLoad = (url, firstParentUrl) => {
     const existingLoad = loadRegistry[url]
@@ -228,7 +228,7 @@
     const namespace = createNamespace()
     const load = {
       url,
-      importerLoads: [],
+      // importerLoads: [],
       deps: [],
       dependencyLoads: [],
       instantiatePromise: null,
@@ -308,7 +308,7 @@
           const setter = load.setters[index]
           const dependencyUrl = resolveUrl(dep, url)
           const dependencyLoad = getOrCreateLoad(dependencyUrl, url)
-          markAsImportedBy(dependencyLoad, url)
+          // markAsImportedBy(dependencyLoad, url)
           if (dependencyLoad.instantiatePromise) {
             await dependencyLoad.instantiatePromise
           }
@@ -329,10 +329,10 @@
     return load
   }
 
-  const startExecution = async (load) => {
+  const startExecution = async (load, importerUrl) => {
     load.completionPromise = (async () => {
       await instantiateAll(load, load, {})
-      await postOrderExec(load, {})
+      await postOrderExec(load, importerUrl ? [importerUrl]: [])
       return load.namespace
     })()
     return load.completionPromise
@@ -348,9 +348,6 @@
         // load.linkPromise is null once instantiated
         await load.linkPromise
       }
-      // if (!load.parent || !load.parent.execute) {
-      //   load.parent = parent
-      // }
       await Promise.all(
         load.dependencyLoads.map((dependencyLoad) => {
           return instantiateAll(dependencyLoad, parent, loaded)
@@ -365,43 +362,15 @@
     }
   }
 
-  const isCircularImport = (load) => {
-    const searchLoadInImporters = (selfOrImporterLoad) => {
-      const importerLoads = selfOrImporterLoad.importerLoads
-      let i = 0
-      while (i < importerLoads.length) {
-        const importerLoad = importerLoads[i]
-        i++
-        if (importerLoad === load) {
-          return true
-        }
-        if (searchLoadInImporters(importerLoad)) {
-          return true
-        }
-      }
-      return false
-    }
-    return searchLoadInImporters(load)
-  }
-
-  const postOrderExec = (load, seen) => {
-    if (seen[load.url]) {
+  const postOrderExec = (load, importStack) => {
+    if (importStack.includes(load.url)) {
       return undefined
     }
-    seen[load.url] = true
     if (!load.execute) {
       if (load.error) {
         throw load.error
       }
       if (load.executePromise) {
-        // "a" do a dynamic import to "b"
-        // and "b" declare "a" as part of its deps
-        // so it's when "b" kicks in, it should realize
-        // it was imported by "a" and not wait for its executePromise
-        // this fix is unsufficient, to be properly fixed with https://github.com/systemjs/systemjs/pull/2402
-        if (isCircularImport(load)) {
-          return undefined
-        }
         return load.executePromise
       }
       return undefined
@@ -411,7 +380,7 @@
     const depLoadPromises = []
     load.dependencyLoads.forEach((dependencyLoad) => {
       try {
-        const depLoadPromise = postOrderExec(dependencyLoad, seen)
+        const depLoadPromise = postOrderExec(dependencyLoad, [...importStack, load.url])
         if (depLoadPromise) {
           depLoadPromises.push(depLoadPromise)
         }
