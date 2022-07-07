@@ -23,7 +23,7 @@
     "@jsenv/plugin-react": "0.2.3",
     "@jsenv/eslint-config": "16.0.9",
     "@jsenv/eslint-import-resolver": "0.3.0",
-    "eslint": "8.18.0",
+    "eslint": "8.19.0",
     "eslint-plugin-html": "6.2.0",
     "eslint-plugin-import": "2.26.0",
     "eslint-plugin-react": "7.30.1",
