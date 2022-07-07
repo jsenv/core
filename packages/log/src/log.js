@@ -14,7 +14,7 @@ export const createLog = ({
   const { columns = 80, rows = 24 } = stream
 
   const log = {
-    onVerticalOverlflow: () => {},
+    onVerticalOverflow: () => {},
   }
 
   let lastOutput = ""
@@ -44,7 +44,7 @@ export const createLog = ({
       // it means we would only clear the visible part of the log
       // better keep the log untouched
       clearAttemptResult = false
-      log.onVerticalOverlflow()
+      log.onVerticalOverflow()
       return ""
     }
 
