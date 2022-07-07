@@ -832,6 +832,9 @@ const createLog = ({
     columns = 80,
     rows = 24
   } = stream;
+  const log = {
+    onVerticalOverflow: () => {}
+  };
   let lastOutput = "";
   let clearAttemptResult;
   let streamOutputSpy = noopStreamSpy;
@@ -860,6 +863,7 @@ const createLog = ({
       // it means we would only clear the visible part of the log
       // better keep the log untouched
       clearAttemptResult = false;
+      log.onVerticalOverflow();
       return "";
     }
 
@@ -924,11 +928,12 @@ const createLog = ({
     }
   };
 
-  return {
+  Object.assign(log, {
     write,
     dynamicWrite,
     destroy
-  };
+  });
+  return log;
 };
 
 const noopStreamSpy = () => ""; // could be inlined but vscode do not correctly
@@ -961,6 +966,7 @@ const startSpinner = ({
   fps = 20,
   keepProcessAlive = false,
   stopOnWriteFromOutside = true,
+  stopOnVerticalOverflow = true,
   render = () => "",
   effect = () => {}
 }) => {
@@ -1024,6 +1030,11 @@ const startSpinner = ({
   };
 
   spinner.stop = stop;
+
+  if (stopOnVerticalOverflow) {
+    log.onVerticalOverflow = stop;
+  }
+
   return spinner;
 };
 
@@ -13251,6 +13262,10 @@ export default inlineContent.text`,
 
 const requireFromJsenv = createRequire(import.meta.url);
 
+const babelPluginPackagePath = requireFromJsenv.resolve("@jsenv/babel-plugins");
+const babelPluginPackageUrl = pathToFileURL(babelPluginPackagePath);
+const requireBabelPlugin = createRequire(babelPluginPackageUrl);
+
 const babelPluginTransformImportMetaUrl = babel => {
   return {
     name: "transform-import-meta-url",
@@ -18079,7 +18094,7 @@ const convertJsModuleToJsClassic = async ({
     // https://github.com/babel/babel/issues/10746
     requireFromJsenv("@babel/plugin-proposal-dynamic-import"), requireFromJsenv("@babel/plugin-transform-modules-systemjs"), [default_1, {
       topLevelAwait: "return"
-    }]] : [[requireFromJsenv("babel-plugin-transform-async-to-promises"), {
+    }]] : [[requireBabelPlugin("babel-plugin-transform-async-to-promises"), {
       topLevelAwait: "simple"
     }], babelPluginTransformImportMetaUrl, requireFromJsenv("@babel/plugin-transform-modules-umd")])],
     urlInfo
@@ -18426,10 +18441,6 @@ const babelHelperNameFromUrl = url => {
   const babelHelperName = afterBabelHelperDirectory.slice(0, afterBabelHelperDirectory.indexOf("/"));
   return babelHelperName;
 };
-
-const babelPluginPackagePath = requireFromJsenv.resolve("@jsenv/babel-plugins");
-const babelPluginPackageUrl = pathToFileURL(babelPluginPackagePath);
-const requireBabelPlugin = createRequire(babelPluginPackageUrl);
 
 /* eslint-disable camelcase */
 // copied from

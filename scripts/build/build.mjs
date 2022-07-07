@@ -56,7 +56,7 @@ await build({
 // old browsers
 await build({
   rootDirectoryUrl: jsenvRootDirectoryUrl,
-  buildDirectoryUrl: jsenvDistDirectoryUrl,
+  buildDirectoryUrl: new URL("js", jsenvDistDirectoryUrl),
   entryPoints: {
     "./src/plugins/transpilation/as_js_classic/client/s.js":
       "s.js?as_js_classic",
