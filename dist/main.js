@@ -19850,7 +19850,7 @@ const rollupPluginJsenv = ({
     outputOptions: outputOptions => {
       // const sourcemapFile = buildDirectoryUrl
       Object.assign(outputOptions, {
-        format: "esm",
+        format: jsModuleUrlInfos.some(jsModuleUrlInfo => jsModuleUrlInfo.filename.endsWith(".cjs")) ? "cjs" : "esm",
         dir: fileUrlConverter.asFilePath(buildDirectoryUrl),
         sourcemap: sourcemaps === "file" || sourcemaps === "inline",
         // sourcemapFile,
@@ -25478,6 +25478,7 @@ const executePlan = async (plan, {
     });
 
     if (!keepRunning) {
+      logger.debug("stopAfterAllSignal.notify()");
       await stopAfterAllSignal.notify();
     }
 
@@ -25888,7 +25889,7 @@ const createRuntimeFromPlaywright = ({
 
   runtime.run = async ({
     signal = new AbortController().signal,
-    // logger,
+    logger,
     rootDirectoryUrl,
     fileRelativeUrl,
     server,
@@ -25947,10 +25948,10 @@ const createRuntimeFromPlaywright = ({
         };
 
         browser.on("disconnected", disconnectedCallback);
-      }) : Promise.resolve(); // for some reason without this 100ms timeout
+      }) : Promise.resolve(); // for some reason without this 150ms timeout
       // browser.close() never resolves (playwright does not like something)
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 150));
 
       try {
         await browser.close();
@@ -26148,6 +26149,7 @@ const createRuntimeFromPlaywright = ({
             stopAfterAllSignal.notify = async () => {
               await notifyPrevious();
               browser.removeListener("disconnected", disconnectedCallback);
+              logger.debug(`stopAfterAllSignal notified -> closing ${browserName}`);
               await closeBrowser();
             };
           }
