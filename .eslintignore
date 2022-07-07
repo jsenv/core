@@ -16,6 +16,6 @@ node_modules/
 /tests/**/js_syntax_error.js
 /tests/**/inline_js_module_syntax_error/main.html
 
-/**/*.es5.js
+/**/*.nomodule.js
 /**/*.jsx
 !.eslintrc.js

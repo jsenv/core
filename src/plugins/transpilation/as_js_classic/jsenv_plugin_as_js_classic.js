@@ -145,7 +145,7 @@ const generateJsClassicFilename = (url) => {
   ) {
     extension = ".js"
   }
-  return `${basename}.es5${extension}`
+  return `${basename}.nomodule${extension}`
 }
 
 const splitFileExtension = (filename) => {

@@ -65,11 +65,11 @@ const test = async (params) => {
   const expected = {
     returnValue: {
       meta: {
-        url: `${server.origin}/js/main.es5.js`,
+        url: `${server.origin}/js/main.nomodule.js`,
         resolve: undefined,
       },
-      url: `${server.origin}/js/main.es5.js`,
-      urlDestructured: `${server.origin}/js/main.es5.js`,
+      url: `${server.origin}/js/main.nomodule.js`,
+      urlDestructured: `${server.origin}/js/main.nomodule.js`,
       importMetaDev: undefined,
       importMetaTest: undefined,
       importMetaBuild: true,

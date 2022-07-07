@@ -51,7 +51,7 @@ await test({
     chrome: "60",
   },
   versioning: false,
-  expectedUrl: "/js/main.es5.js",
+  expectedUrl: "/js/main.nomodule.js",
 })
 
 // no support + without bundling
@@ -61,5 +61,5 @@ await test({
   },
   bundling: false,
   versioning: false,
-  expectedUrl: `/js/main.es5.js`,
+  expectedUrl: `/js/main.nomodule.js`,
 })

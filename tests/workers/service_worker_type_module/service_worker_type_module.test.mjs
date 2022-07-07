@@ -39,9 +39,9 @@ if (process.platform === "darwin") {
     const expected = {
       order: [],
       serviceWorkerUrls: {
-        "/main.html": { versioned: false, version: "00df3d73" },
+        "/main.html": { versioned: false, version: "2628245b" },
         "/css/style.css?v=65c914e7": { versioned: true },
-        "/js/babel_helpers.es5.js?as_js_classic&v=10e40f65": {
+        "/js/babel_helpers.nomodule.js?as_js_classic&v=10e40f65": {
           versioned: true,
         },
       },
@@ -60,26 +60,26 @@ if (process.platform === "darwin") {
     const expected = {
       order: [],
       serviceWorkerUrls: {
-        "/main.html": { versioned: false, version: "00df3d73" },
+        "/main.html": { versioned: false, version: "2628245b" },
         "/css/style.css?v=65c914e7": { versioned: true },
-        "/js/slicedToArray.es5.js?as_js_classic&v=cbafb29d": {
+        "/js/slicedToArray.nomodule.js?as_js_classic&v=53e5516f": {
           versioned: true,
         },
-        "/js/a.es5.js?as_js_classic&v=f84d076c": { versioned: true },
-        "/js/arrayWithHoles.es5.js?as_js_classic&v=267e2ee6": {
+        "/js/a.nomodule.js?as_js_classic&v=217fbe28": { versioned: true },
+        "/js/arrayWithHoles.nomodule.js?as_js_classic&v=267e2ee6": {
           versioned: true,
         },
-        "/js/iterableToArrayLimit.es5.js?as_js_classic&v=1d093038": {
+        "/js/iterableToArrayLimit.nomodule.js?as_js_classic&v=1d093038": {
           versioned: true,
         },
-        "/js/unsupportedIterableToArray.es5.js?as_js_classic&v=baedc113": {
+        "/js/unsupportedIterableToArray.nomodule.js?as_js_classic&v=5b78d393": {
           versioned: true,
         },
-        "/js/nonIterableRest.es5.js?as_js_classic&v=bbc3b8e9": {
+        "/js/nonIterableRest.nomodule.js?as_js_classic&v=bbc3b8e9": {
           versioned: true,
         },
-        "/js/b.es5.js?as_js_classic&v=5d37f892": { versioned: true },
-        "/js/arrayLikeToArray.es5.js?as_js_classic&v=3ba77d54": {
+        "/js/b.nomodule.js?as_js_classic&v=5d37f892": { versioned: true },
+        "/js/arrayLikeToArray.nomodule.js?as_js_classic&v=3ba77d54": {
           versioned: true,
         },
       },

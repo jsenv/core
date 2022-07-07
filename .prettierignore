@@ -17,6 +17,6 @@ node_modules/
 /packages/server/tests/internal_error/
 /**/dist/**
 
-/**/*.es5.js
+/**/*.nomodule.js
 /jsconfig.json
 /package-lock.json

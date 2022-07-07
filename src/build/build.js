@@ -988,7 +988,7 @@ const applyUrlVersioning = async ({
       // - ignored files:
       //   we don't know their content
       // - unused files without reference
-      //   File updated such as style.css -> style.css.js or file.js->file.es5.js
+      //   File updated such as style.css -> style.css.js or file.js->file.nomodule.js
       //   Are used at some point just to be discarded later because they need to be converted
       //   There is no need to version them and we could not because the file have been ignored
       //   so their content is unknown
