@@ -55,16 +55,18 @@ Many transformations are performed to ensure the code generated will be compatib
 - Transforming `async` and `await` into promises
 - And many more...
 
-## Single code path
+## Same build for all browsers
 
-When `runtimeCompat` contains browsers not supporting `<script type="module"></script>` it is tempting to use [nomodule](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#attr-nomodule) script attribute and expect jsenv to generate the following HTML.
+When `runtimeCompat` contains browsers not supporting `<script type="module"></script>` it is tempting to think the good thing to do is to generate 2 builds and use [nomodule](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#attr-nomodule) script attribute.
 
 ```html
 <script type="module" src="/dist/main.js"></script>
 <script nomodule src="/dist/main.nomodule.js"></script>
 ```
 
-But it was tried on big traffic and in the end performance and size impacts are **negligibles**. Moreover generating a second set of files has costs:
+This has been tried on a big codebase served to a lot of users. 
+The result: there is no significant performance impact for users.
+Moreover generating a second set of files has costs:
 
 - Manual tests must be runned also on old browsers
 - Automated tests as well
