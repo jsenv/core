@@ -29162,7 +29162,9 @@ const startBuildServer = async ({
       throw new TypeError(`buildIndexPath must be a string, got ${buildIndexPath}`);
     }
 
-    if (buildIndexPath[0] !== "/") {
+    if (buildIndexPath[0] === "/") {
+      buildIndexPath = buildIndexPath.slice(1);
+    } else {
       const buildIndexUrl = new URL(buildIndexPath, buildDirectoryUrl).href;
 
       if (!buildIndexUrl.startsWith(buildDirectoryUrl)) {
