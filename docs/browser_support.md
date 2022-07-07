@@ -60,8 +60,15 @@ Many transformations are performed to ensure the code generated will be compatib
 When `runtimeCompat` contains browsers not supporting `<script type="module"></script>` it is tempting to think the good thing to do is to generate 2 builds and use [nomodule](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#attr-nomodule) script attribute.
 
 ```html
-<script type="module" src="/dist/main.js"></script>
-<script nomodule src="/dist/main.nomodule.js"></script>
+<!-- this is NOT what jsenv does -->
+<script
+  type="module"
+  src="/dist/main.js"
+></script>
+<script
+  nomodule
+  src="/dist/main.nomodule.js"
+></script>
 ```
 
 This has been tried on a big codebase served to a lot of users. 
@@ -75,6 +82,7 @@ Moreover generating a second set of files has costs:
 For these reasons jsenv generates a single `<script>` tag.
 
 ```html
+<!-- this is what jsenv does -->
 <script src="/dist/main.nomodule.js"></script>
 ```
 
