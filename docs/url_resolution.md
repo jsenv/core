@@ -9,26 +9,6 @@ This documentation explains jsenv behaviour regarding url resolution.
 
 Outside js module urls are resolved by the standard url resolution: `new URL(specifier, baseUrl)`.
 
-```html
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Title</title>
-    <meta charset="utf-8" />
-    <link rel="icon" href="./favicon.ico" />
-    <link rel="stylesheet" type="text/css" href="./main.css" />
-    <style>
-      body {
-        background-image: url(/src/logo.png);
-      }
-    </style>
-  </head>
-  <body>
-    Hello world
-  </body>
-</html>
-```
-
 ## Inside js modules
 
 Inside js modules url resolution is augmented with [Node ESM resolution algorithm](#node-esm-resolution-algorithm) and [FileSystem magic resolution](#filesystem-magic-resolution)
@@ -47,7 +27,7 @@ To be compatible with browsers, "amazing-package" must be resolved and transform
 import "/node_modules/amazing-package/index.js"
 ```
 
-Jsenv does this by default. 
+Jsenv does this by default.
 Moreover, the whole Node ESM resolution is implemented so the following logic can be used:
 
 - [Self referencing a package using its name](https://nodejs.org/docs/latest-v18.x/api/packages.html#self-referencing-a-package-using-its-name)
