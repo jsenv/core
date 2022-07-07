@@ -77,7 +77,7 @@
     "@jsenv/urls": "1.2.6",
     "@jsenv/utils": "2.0.1",
     "@jsenv/babel-plugins": "1.0.5",
-    "@jsenv/log": "3.0.0",
+    "@jsenv/log": "3.0.2",
     "@jsenv/sourcemap": "1.0.1",
     "acorn-import-assertions": "1.8.0",
     "cuid": "2.1.8",
