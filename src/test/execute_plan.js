@@ -457,6 +457,7 @@ export const executePlan = async (
       },
     })
     if (!keepRunning) {
+      logger.debug("stopAfterAllSignal.notify()")
       await stopAfterAllSignal.notify()
     }
 

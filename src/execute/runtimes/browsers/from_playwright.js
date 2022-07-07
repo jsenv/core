@@ -30,7 +30,7 @@ export const createRuntimeFromPlaywright = ({
   let browserAndContextPromise
   runtime.run = async ({
     signal = new AbortController().signal,
-    // logger,
+    logger,
     rootDirectoryUrl,
     fileRelativeUrl,
     server,
@@ -82,9 +82,9 @@ export const createRuntimeFromPlaywright = ({
             browser.on("disconnected", disconnectedCallback)
           })
         : Promise.resolve()
-      // for some reason without this 100ms timeout
+      // for some reason without this 150ms timeout
       // browser.close() never resolves (playwright does not like something)
-      await new Promise((resolve) => setTimeout(resolve, 100))
+      await new Promise((resolve) => setTimeout(resolve, 150))
       try {
         await browser.close()
       } catch (e) {
@@ -275,6 +275,9 @@ export const createRuntimeFromPlaywright = ({
               stopAfterAllSignal.notify = async () => {
                 await notifyPrevious()
                 browser.removeListener("disconnected", disconnectedCallback)
+                logger.debug(
+                  `stopAfterAllSignal notified -> closing ${browserName}`,
+                )
                 await closeBrowser()
               }
             }

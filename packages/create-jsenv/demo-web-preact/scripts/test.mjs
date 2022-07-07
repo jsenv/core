@@ -9,6 +9,7 @@ import { executeTestPlan, chromium, firefox } from "@jsenv/core"
 import { rootDirectoryUrl, plugins } from "../jsenv.config.mjs"
 
 await executeTestPlan({
+  logLevel: "debug",
   rootDirectoryUrl,
   plugins,
   testPlan: {
