@@ -28,5 +28,8 @@
     "rollup-plugin-node-globals": "1.4.0",
     "rollup-plugin-polyfill-node": "0.10.0",
     "vm2": "3.9.10"
+  },
+  "devDependencies": {
+    "@jsenv/core": "../../"
   }
 }
