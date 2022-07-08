@@ -1,6 +1,6 @@
 # 27.1.0
 
-- Add console repartition in logs (see #224)
+- Add console repartition in logs (see https://github.com/jsenv/jsenv-core/issues/224)
 
 # 27.0.3
 
