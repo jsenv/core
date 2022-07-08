@@ -1,6 +1,11 @@
 import { assert } from "@jsenv/assert"
 
-import { executeTestPlan, chromium, nodeChildProcess } from "@jsenv/core"
+import {
+  executeTestPlan,
+  chromium,
+  nodeChildProcess,
+  nodeWorkerThread,
+} from "@jsenv/core"
 
 const { testPlanCoverage } = await executeTestPlan({
   logLevel: "off",
@@ -12,8 +17,11 @@ const { testPlanCoverage } = await executeTestPlan({
       },
     },
     "./main.js": {
-      node: {
+      node_child_process: {
         runtime: nodeChildProcess,
+      },
+      node_worker_thread: {
+        runtime: nodeWorkerThread,
       },
     },
   },
