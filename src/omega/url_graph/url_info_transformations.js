@@ -117,7 +117,8 @@ export const createUrlInfoTransformer = ({
     if (!transformations) {
       return
     }
-    const { type, contentType, content, sourcemap } = transformations
+    const { type, contentType, content, sourcemap, sourcemapIsWrong } =
+      transformations
     if (type) {
       urlInfo.type = type
     }
@@ -138,6 +139,16 @@ export const createUrlInfoTransformer = ({
         finalSourcemap,
       )
       urlInfo.sourcemap = finalSourcemapNormalized
+      // A plugin is allowed to modify url content
+      // without returning a sourcemap
+      // This is the case for preact and react plugins.
+      // They are currently generating wrong source mappings
+      // when used.
+      // Generating the correct sourcemap in this situation
+      // is a nightmare no-one could solve in years so
+      // jsenv won't emit a warning and use the following strategy:
+      // "no sourcemap is better than wrong sourcemap"
+      urlInfo.sourcemapIsWrong = sourcemapIsWrong
     }
   }
 
@@ -162,19 +173,21 @@ export const createUrlInfoTransformer = ({
         })
       }
       sourcemapUrlInfo.content = JSON.stringify(sourcemap, null, "  ")
-      if (sourcemaps === "inline") {
-        sourcemapReference.generatedSpecifier =
-          generateSourcemapDataUrl(sourcemap)
-      }
-      if (sourcemaps === "file" || sourcemaps === "inline") {
-        urlInfo.content = SOURCEMAP.writeComment({
-          contentType: urlInfo.contentType,
-          content: urlInfo.content,
-          specifier:
-            sourcemaps === "file" && sourcemapsRelativeSources
-              ? urlToRelativeUrl(sourcemapReference.url, urlInfo.url)
-              : sourcemapReference.generatedSpecifier,
-        })
+      if (!urlInfo.sourcemapIsWrong) {
+        if (sourcemaps === "inline") {
+          sourcemapReference.generatedSpecifier =
+            generateSourcemapDataUrl(sourcemap)
+        }
+        if (sourcemaps === "file" || sourcemaps === "inline") {
+          urlInfo.content = SOURCEMAP.writeComment({
+            contentType: urlInfo.contentType,
+            content: urlInfo.content,
+            specifier:
+              sourcemaps === "file" && sourcemapsRelativeSources
+                ? urlToRelativeUrl(sourcemapReference.url, urlInfo.url)
+                : sourcemapReference.generatedSpecifier,
+          })
+        }
       }
     } else if (urlInfo.sourcemapReference) {
       // in the end we don't use the sourcemap placeholder

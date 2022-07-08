@@ -21446,6 +21446,7 @@ const createUrlInfo = url => {
     content: undefined,
     sourcemap: null,
     sourcemapReference: null,
+    sourcemapIsWrong: false,
     timing: {},
     headers: {}
   };
@@ -21891,7 +21892,8 @@ const createUrlInfoTransformer = ({
       type,
       contentType,
       content,
-      sourcemap
+      sourcemap,
+      sourcemapIsWrong
     } = transformations;
 
     if (type) {
@@ -21910,7 +21912,17 @@ const createUrlInfoTransformer = ({
       const sourcemapNormalized = normalizeSourcemap(urlInfo, sourcemap);
       const finalSourcemap = await composeTwoSourcemaps(urlInfo.sourcemap, sourcemapNormalized);
       const finalSourcemapNormalized = normalizeSourcemap(urlInfo, finalSourcemap);
-      urlInfo.sourcemap = finalSourcemapNormalized;
+      urlInfo.sourcemap = finalSourcemapNormalized; // A plugin is allowed to modify url content
+      // without returning a sourcemap
+      // This is the case for preact and react plugins.
+      // They are currently generating wrong source mappings
+      // when used.
+      // Generating the correct sourcemap in this situation
+      // is a nightmare no-one could solve in years so
+      // jsenv won't emit a warning and use the following strategy:
+      // "no sourcemap is better than wrong sourcemap"
+
+      urlInfo.sourcemapIsWrong = sourcemapIsWrong;
     }
   };
 
@@ -21939,16 +21951,18 @@ const createUrlInfoTransformer = ({
 
       sourcemapUrlInfo.content = JSON.stringify(sourcemap, null, "  ");
 
-      if (sourcemaps === "inline") {
-        sourcemapReference.generatedSpecifier = generateSourcemapDataUrl(sourcemap);
-      }
+      if (!urlInfo.sourcemapIsWrong) {
+        if (sourcemaps === "inline") {
+          sourcemapReference.generatedSpecifier = generateSourcemapDataUrl(sourcemap);
+        }
 
-      if (sourcemaps === "file" || sourcemaps === "inline") {
-        urlInfo.content = SOURCEMAP.writeComment({
-          contentType: urlInfo.contentType,
-          content: urlInfo.content,
-          specifier: sourcemaps === "file" && sourcemapsRelativeSources ? urlToRelativeUrl(sourcemapReference.url, urlInfo.url) : sourcemapReference.generatedSpecifier
-        });
+        if (sourcemaps === "file" || sourcemaps === "inline") {
+          urlInfo.content = SOURCEMAP.writeComment({
+            contentType: urlInfo.contentType,
+            content: urlInfo.content,
+            specifier: sourcemaps === "file" && sourcemapsRelativeSources ? urlToRelativeUrl(sourcemapReference.url, urlInfo.url) : sourcemapReference.generatedSpecifier
+          });
+        }
       }
     } else if (urlInfo.sourcemapReference) {
       // in the end we don't use the sourcemap placeholder

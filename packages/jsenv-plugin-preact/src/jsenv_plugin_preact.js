@@ -174,6 +174,10 @@ import.meta.hot.accept(__preact_refresh__.acceptCallback)`)
         return {
           content: result.content,
           sourcemap: await composeTwoSourcemaps(map, result.sourcemap),
+          // "no sourcemap is better than wrong sourcemap":
+          // I don't know exactly what is resulting in bad sourcemaps
+          // but I suspect hooknames or prefresh to be responsible
+          sourcemapIsWrong: jsxEnabled && refreshEnabled,
         }
       },
     },

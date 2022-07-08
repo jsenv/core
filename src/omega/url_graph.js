@@ -215,6 +215,7 @@ const createUrlInfo = (url) => {
 
     sourcemap: null,
     sourcemapReference: null,
+    sourcemapIsWrong: false,
     timing: {},
     headers: {},
   }
