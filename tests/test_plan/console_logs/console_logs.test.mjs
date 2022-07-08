@@ -2,6 +2,7 @@ import { assert } from "@jsenv/assert"
 
 import { execute, nodeProcess } from "@jsenv/core"
 
+process.env.FORCE_COLOR = "false"
 const getLogs = async (params) => {
   const result = await execute({
     logLevel: "warn",
