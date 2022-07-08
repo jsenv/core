@@ -46,7 +46,7 @@ file: client/main.html
 }
 
 // on node
-{
+if (process.platform !== "win32") {
   const actual = await getLogs({
     fileRelativeUrl: "./test_node.js",
   })
