@@ -5,7 +5,6 @@ import {
   raceCallbacks,
   createCallbackListNotifiedOnce,
 } from "@jsenv/abort"
-import { uneval } from "@jsenv/uneval"
 import { createDetailedMessage } from "@jsenv/log"
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js"
 
@@ -190,12 +189,15 @@ nodeChildProcess.run = async ({
     actionOperation.throwIfAborted()
     await childProcessReadyPromise
     actionOperation.throwIfAborted()
-    await sendToChildProcess(childProcess, "action", {
-      actionType: "execute-using-dynamic-import",
-      actionParams: {
-        fileUrl: new URL(fileRelativeUrl, rootDirectoryUrl).href,
-        collectPerformance,
-        exitAfterAction: true,
+    await sendToChildProcess(childProcess, {
+      type: "action",
+      data: {
+        actionType: "execute-using-dynamic-import",
+        actionParams: {
+          fileUrl: new URL(fileRelativeUrl, rootDirectoryUrl).href,
+          collectPerformance,
+          exitAfterAction: true,
+        },
       },
     })
     const winner = await winnerPromise
@@ -285,16 +287,22 @@ const STOP_SIGNAL = "SIGKILL"
 // but I'm not sure and it changes nothing so just use SIGKILL
 const GRACEFUL_STOP_FAILED_SIGNAL = "SIGKILL"
 
-const sendToChildProcess = async (childProcess, type, data) => {
-  const source = uneval(data, { functionAllowed: true })
+const sendToChildProcess = async (childProcess, { type, data }) => {
   return new Promise((resolve, reject) => {
-    childProcess.send({ type, data: source }, (error) => {
-      if (error) {
-        reject(error)
-      } else {
-        resolve()
-      }
-    })
+    childProcess.send(
+      {
+        jsenv: true,
+        type,
+        data,
+      },
+      (error) => {
+        if (error) {
+          reject(error)
+        } else {
+          resolve()
+        }
+      },
+    )
   })
 }
 

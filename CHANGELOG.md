@@ -1,3 +1,8 @@
+# 27.2.0
+
+- Rename nodeProcess to nodeChildProcess
+- Add nodeWorkerThread
+
 # 27.1.0
 
 - Add console repartition in logs (see https://github.com/jsenv/jsenv-core/issues/224)
