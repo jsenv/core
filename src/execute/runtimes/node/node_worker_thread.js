@@ -20,6 +20,7 @@ const CONTROLLABLE_WORKER_THREAD_URL = new URL(
 ).href
 
 export const nodeWorkerThread = {
+  type: "node",
   name: "node_worker_thread",
   version: process.version.slice(1),
 }

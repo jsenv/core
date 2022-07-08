@@ -19,6 +19,7 @@ const CONTROLLABLE_CHILD_PROCESS_URL = new URL(
 ).href
 
 export const nodeChildProcess = {
+  type: "node",
   name: "node_child_process",
   version: process.version.slice(1),
 }

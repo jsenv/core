@@ -82,6 +82,7 @@ export const executePlan = async (
   const stopAfterAllSignal = { notify: () => {} }
 
   let someNeedsServer = false
+  let someNodeRuntime = false
   const runtimes = {}
   Object.keys(plan).forEach((filePattern) => {
     const filePlan = plan[filePattern]
@@ -92,6 +93,9 @@ export const executePlan = async (
         runtimes[runtime.name] = runtime.version
         if (runtime.needsServer) {
           someNeedsServer = true
+        }
+        if (runtime.type === "node") {
+          someNodeRuntime = true
         }
       }
     })
@@ -252,7 +256,7 @@ export const executePlan = async (
       if (!process.env.NODE_V8_COVERAGE) {
         await ensureEmptyDirectory(coverageTempDirectoryUrl)
       }
-      if (runtimes.node) {
+      if (someNodeRuntime) {
         // v8 coverage is written in a directoy and auto propagate to subprocesses
         // through process.env.NODE_V8_COVERAGE.
         if (!coverageForceIstanbul && !process.env.NODE_V8_COVERAGE) {

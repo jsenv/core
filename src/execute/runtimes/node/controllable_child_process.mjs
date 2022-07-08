@@ -162,4 +162,6 @@ const removeActionRequestListener = onceParentMessage(
 // process.once("SIGTERM", removeActionRequestListener)
 // process.once("SIGINT", removeActionRequestListener)
 
-setTimeout(() => sendToParent("ready"))
+setTimeout(() => {
+  sendToParent("ready")
+})

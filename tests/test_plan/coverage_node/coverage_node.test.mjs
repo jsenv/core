@@ -6,12 +6,9 @@ const { testPlanCoverage } = await executeTestPlan({
   logLevel: "warn",
   rootDirectoryUrl: new URL("./", import.meta.url),
   testPlan: {
-    "./main.js": {
+    "./node_client/main.js": {
       node: {
         runtime: nodeChildProcess,
-        runtimeParams: {
-          // headful: true,
-        },
         collectConsole: false,
       },
     },
@@ -19,16 +16,16 @@ const { testPlanCoverage } = await executeTestPlan({
   // keepRunning: true,
   coverage: true,
   coverageConfig: {
-    "./file.js": true,
+    "./node_client/file.js": true,
   },
   coverageReportTextLog: false,
   coverageReportHtmlDirectory: false,
 })
 const actual = testPlanCoverage
 const expected = {
-  "./file.js": {
-    ...actual["./file.js"],
-    path: "./file.js",
+  "./node_client/file.js": {
+    ...actual["./node_client/file.js"],
+    path: "./node_client/file.js",
     s: {
       0: 1,
       1: 1,
