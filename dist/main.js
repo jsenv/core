@@ -332,23 +332,27 @@ const canUseUnicode = isUnicodeSupported();
 const COMMAND_RAW = canUseUnicode ? `❯` : `>`;
 const OK_RAW = canUseUnicode ? `✔` : `√`;
 const FAILURE_RAW = canUseUnicode ? `✖` : `×`;
+const DEBUG_RAW = canUseUnicode ? `◆` : `♦`;
 const INFO_RAW = canUseUnicode ? `ℹ` : `i`;
 const WARNING_RAW = canUseUnicode ? `⚠` : `‼`;
 const COMMAND = ANSI.color(COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
 
 const OK = ANSI.color(OK_RAW, ANSI.GREEN);
 const FAILURE = ANSI.color(FAILURE_RAW, ANSI.RED);
+const DEBUG = ANSI.color(DEBUG_RAW, ANSI.GREY);
 const INFO = ANSI.color(INFO_RAW, ANSI.BLUE);
 const WARNING = ANSI.color(WARNING_RAW, ANSI.YELLOW);
 const UNICODE = {
   COMMAND,
   OK,
   FAILURE,
+  DEBUG,
   INFO,
   WARNING,
   COMMAND_RAW,
   OK_RAW,
   FAILURE_RAW,
+  DEBUG_RAW,
   INFO_RAW,
   WARNING_RAW,
   supported: canUseUnicode
@@ -24853,6 +24857,8 @@ const createExecutionLog = ({
 }, {
   completedExecutionLogAbbreviation,
   counters,
+  logRuntime,
+  logEachDuration,
   timeEllapsed,
   memoryHeap
 }) => {
@@ -24885,8 +24891,12 @@ const createExecutionLog = ({
     label: `${description}${summary}`,
     details: {
       file: fileRelativeUrl,
-      runtime: `${runtimeName}/${runtimeVersion}`,
-      duration: status === "executing" ? msAsEllapsedTime(Date.now() - startMs) : msAsDuration(endMs - startMs),
+      ...(logRuntime ? {
+        runtime: `${runtimeName}/${runtimeVersion}`
+      } : {}),
+      ...(logEachDuration ? {
+        duration: status === "executing" ? msAsEllapsedTime(Date.now() - startMs) : msAsDuration(endMs - startMs)
+      } : {}),
       ...(error ? {
         error: error.stack || error.message || error
       } : {})
@@ -25040,20 +25050,91 @@ const descriptionFormatters = {
 };
 
 const formatConsoleCalls = consoleCalls => {
-  const consoleOutput = consoleCalls.reduce((previous, {
-    text
-  }) => {
-    return `${previous}${text}`;
-  }, "");
-  const consoleOutputTrimmed = consoleOutput.trim();
-
-  if (consoleOutputTrimmed === "") {
+  if (consoleCalls.length === 0) {
     return "";
   }
 
-  return `${ANSI.color(`-------- console output --------`, ANSI.GREY)}
-${consoleOutputTrimmed}
+  const repartition = {
+    debug: 0,
+    info: 0,
+    warning: 0,
+    error: 0,
+    log: 0
+  };
+  let consoleOutput = ``;
+  consoleCalls.forEach(consoleCall => {
+    repartition[consoleCall.type]++;
+    const text = consoleCall.text;
+    const textFormatted = prefixFirstAndIndentRemainingLines({
+      prefix: CONSOLE_ICONS[consoleCall.type],
+      text,
+      trimLastLine: consoleCall === consoleCalls[consoleCalls.length - 1]
+    });
+    consoleOutput += textFormatted;
+  });
+  return `${ANSI.color(`-------- ${formatConsoleSummary(repartition)} --------`, ANSI.GREY)}
+${consoleOutput}
 ${ANSI.color(`-------------------------`, ANSI.GREY)}`;
+};
+
+const CONSOLE_ICONS = {
+  debug: UNICODE.DEBUG,
+  info: UNICODE.INFO,
+  warning: UNICODE.WARNING,
+  error: UNICODE.FAILURE,
+  log: " "
+};
+
+const formatConsoleSummary = repartition => {
+  const {
+    debug,
+    info,
+    warning,
+    error
+  } = repartition;
+  const parts = [];
+
+  if (error) {
+    parts.push(`${CONSOLE_ICONS.error} ${error}`);
+  }
+
+  if (warning) {
+    parts.push(`${CONSOLE_ICONS.warning} ${warning}`);
+  }
+
+  if (info) {
+    parts.push(`${CONSOLE_ICONS.info} ${info}`);
+  }
+
+  if (debug) {
+    parts.push(`${CONSOLE_ICONS.debug} ${debug}`);
+  }
+
+  if (parts.length === 0) {
+    return `console`;
+  }
+
+  return `console (${parts.join(" ")})`;
+};
+
+const prefixFirstAndIndentRemainingLines = ({
+  prefix,
+  text,
+  trimLastLine
+}) => {
+  const lines = text.split(/\r?\n/);
+  const firstLine = lines.shift();
+  let result = `${prefix} ${firstLine}`;
+  let i = 0;
+  const indentation = `  `;
+
+  while (i < lines.length) {
+    const line = lines[i].trim();
+    i++;
+    result += line.length ? `\n${indentation}${line}` : trimLastLine && i === lines.length ? "" : `\n`;
+  }
+
+  return result;
 };
 
 const formatExecution = ({
@@ -25080,6 +25161,8 @@ const executePlan = async (plan, {
   signal,
   handleSIGINT,
   logger,
+  logRuntime,
+  logEachDuration,
   logSummary,
   logTimeUsage,
   logMemoryHeapUsage,
@@ -25375,6 +25458,8 @@ const executePlan = async (plan, {
             render: () => {
               return createExecutionLog(beforeExecutionInfo, {
                 counters,
+                logRuntime,
+                logEachDuration,
                 ...(logTimeUsage ? {
                   timeEllapsed: Date.now() - startMs
                 } : {}),
@@ -25448,6 +25533,8 @@ const executePlan = async (plan, {
           let log = createExecutionLog(afterExecutionInfo, {
             completedExecutionLogAbbreviation,
             counters,
+            logRuntime,
+            logEachDuration,
             ...(logTimeUsage ? {
               timeEllapsed: Date.now() - startMs
             } : {}),
@@ -25654,6 +25741,8 @@ const executeTestPlan = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
   logLevel = "info",
+  logRuntime = true,
+  logEachDuration = true,
   logSummary = true,
   logTimeUsage = false,
   logMemoryHeapUsage = false,
@@ -25751,6 +25840,8 @@ const executeTestPlan = async ({
     logger,
     logLevel,
     logSummary,
+    logRuntime,
+    logEachDuration,
     logTimeUsage,
     logMemoryHeapUsage,
     logFileRelativeUrl,

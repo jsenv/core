@@ -51,19 +51,19 @@ file: client/main.html
   })
   const expected = `
 ✔ execution 1 of 1 completed (all completed)
-file: client/main.html
--------- console (✖ 6) --------
+file: client/main.js
+-------- console (✖ 2) --------
 ✖ toto
 ✖ hey
-✖ hey
+  hey
+  test
+  multiline
   ho
   info
-✖ test
-multiline
   verbose log
   la
 -------------------------
-    
+  
 `
   assert({ actual, expected })
 }
