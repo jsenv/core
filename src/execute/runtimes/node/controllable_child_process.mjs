@@ -94,6 +94,7 @@ const sendToParent = (type, data) => {
   // It means node process may stay alive longer than expected
   // the time to send the data to the parent.
   process.send({
+    jsenv: true,
     type,
     data,
   })

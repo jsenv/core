@@ -1,16 +1,16 @@
-import { executeTestPlan, nodeProcess } from "@jsenv/core"
+import { executeTestPlan, nodeChildProcess } from "@jsenv/core"
 
 await executeTestPlan({
   rootDirectoryUrl: new URL("../", import.meta.url),
   testPlan: {
     "tests/**/*.test.mjs": {
       node: {
-        runtime: nodeProcess,
+        runtime: nodeChildProcess,
       },
     },
     "tests/**/with_signal_warnings.test.mjs": {
       node: {
-        runtime: nodeProcess,
+        runtime: nodeChildProcess,
         runtimeParams: {
           commandLineOptions: ["--no-warnings"],
         },

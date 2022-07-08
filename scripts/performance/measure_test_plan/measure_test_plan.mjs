@@ -6,7 +6,7 @@ const measures = startMeasures({
   filesystemUsage: true,
 })
 
-const { executeTestPlan, chromium, firefox, webkit, nodeProcess } =
+const { executeTestPlan, chromium, firefox, webkit, nodeChildProcess } =
   await import("@jsenv/core")
 
 await executeTestPlan({
@@ -28,7 +28,7 @@ await executeTestPlan({
     },
     "animals.test.js": {
       node: {
-        runtime: nodeProcess,
+        runtime: nodeChildProcess,
         captureConsole: false,
       },
     },

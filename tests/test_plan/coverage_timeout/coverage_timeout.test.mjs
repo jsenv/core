@@ -1,11 +1,11 @@
 import { assert } from "@jsenv/assert"
 
-import { executeTestPlan, nodeProcess } from "@jsenv/core"
+import { executeTestPlan, nodeChildProcess } from "@jsenv/core"
 
 const testPlan = {
   "main.js": {
     node: {
-      runtime: nodeProcess,
+      runtime: nodeChildProcess,
       runtimeParams: {
         env: { AWAIT_FOREVER: true },
       },

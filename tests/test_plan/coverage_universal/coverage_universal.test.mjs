@@ -2,7 +2,7 @@ import { assert } from "@jsenv/assert"
 
 import {
   executeTestPlan,
-  nodeProcess,
+  nodeChildProcess,
   chromium,
   firefox,
   webkit,
@@ -25,10 +25,10 @@ const { testPlanCoverage } = await executeTestPlan({
     },
     "./main.js": {
       node: {
-        runtime: nodeProcess,
+        runtime: nodeChildProcess,
       },
       node2: {
-        runtime: nodeProcess,
+        runtime: nodeChildProcess,
       },
     },
   },

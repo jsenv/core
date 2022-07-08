@@ -1,29 +1,30 @@
 import { fork } from "node:child_process"
+import { fileURLToPath } from "node:url"
 import {
   Abort,
   raceCallbacks,
   createCallbackListNotifiedOnce,
 } from "@jsenv/abort"
 import { uneval } from "@jsenv/uneval"
-import { urlToFileSystemPath } from "@jsenv/urls"
 import { createDetailedMessage } from "@jsenv/log"
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js"
 
 import { createChildExecOptions } from "./child_exec_options.js"
 import { ExecOptions } from "./exec_options.js"
 import { killProcessTree } from "./kill_process_tree.js"
+import { EXIT_CODES } from "./exit_codes.js"
 
-const NODE_CONTROLLABLE_FILE_URL = new URL(
-  "./controllable_file.mjs",
+const CONTROLLABLE_CHILD_PROCESS_URL = new URL(
+  "./controllable_child_process.mjs",
   import.meta.url,
 ).href
 
-export const nodeProcess = {
-  name: "node",
+export const nodeChildProcess = {
+  name: "node_child_process",
   version: process.version.slice(1),
 }
 
-nodeProcess.run = async ({
+nodeChildProcess.run = async ({
   signal = new AbortController().signal,
   logger,
   logProcessCommand = false,
@@ -39,10 +40,10 @@ nodeProcess.run = async ({
   coverageForceIstanbul,
   collectPerformance,
 
+  env,
   debugPort,
   debugMode,
   debugModeInheritBreak,
-  env,
   inheritProcessEnv = true,
   commandLineOptions = [],
   stdin = "pipe",
@@ -87,11 +88,11 @@ nodeProcess.run = async ({
     ...env,
   }
   logger[logProcessCommand ? "info" : "debug"](
-    `${process.argv[0]} ${execArgv.join(" ")} ${urlToFileSystemPath(
-      NODE_CONTROLLABLE_FILE_URL,
+    `${process.argv[0]} ${execArgv.join(" ")} ${fileURLToPath(
+      CONTROLLABLE_CHILD_PROCESS_URL,
     )}`,
   )
-  const childProcess = fork(urlToFileSystemPath(NODE_CONTROLLABLE_FILE_URL), {
+  const childProcess = fork(fileURLToPath(CONTROLLABLE_CHILD_PROCESS_URL), {
     execArgv,
     // silent: true
     stdio: ["pipe", "pipe", "pipe", "ipc"],
@@ -114,9 +115,9 @@ nodeProcess.run = async ({
     childProcess.stderr.pipe(stderr)
   }
   const childProcessReadyPromise = new Promise((resolve) => {
-    onceProcessMessage(childProcess, "ready", resolve)
+    onceChildProcessMessage(childProcess, "ready", resolve)
   })
-  const removeOutputListener = installProcessOutputListener(
+  const removeOutputListener = installChildProcessOutputListener(
     childProcess,
     ({ type, text }) => {
       onConsole({ type, text })
@@ -171,15 +172,15 @@ nodeProcess.run = async ({
         // },
         // https://nodejs.org/api/child_process.html#child_process_event_error
         error: (cb) => {
-          return onceProcessEvent(childProcess, "error", cb)
+          return onceChildProcessEvent(childProcess, "error", cb)
         },
         exit: (cb) => {
-          return onceProcessEvent(childProcess, "exit", (code, signal) => {
+          return onceChildProcessEvent(childProcess, "exit", (code, signal) => {
             cb({ code, signal })
           })
         },
         response: (cb) => {
-          onceProcessMessage(childProcess, "action-result", cb)
+          return onceChildProcessMessage(childProcess, "action-result", cb)
         },
       },
       resolve,
@@ -189,11 +190,12 @@ nodeProcess.run = async ({
     actionOperation.throwIfAborted()
     await childProcessReadyPromise
     actionOperation.throwIfAborted()
-    await sendToProcess(childProcess, "action", {
+    await sendToChildProcess(childProcess, "action", {
       actionType: "execute-using-dynamic-import",
       actionParams: {
         fileUrl: new URL(fileRelativeUrl, rootDirectoryUrl).href,
         collectPerformance,
+        exitAfterAction: true,
       },
     })
     const winner = await winnerPromise
@@ -224,9 +226,9 @@ nodeProcess.run = async ({
       if (
         code === null ||
         code === 0 ||
-        code === SIGINT_EXIT_CODE ||
-        code === SIGTERM_EXIT_CODE ||
-        code === SIGABORT_EXIT_CODE
+        code === EXIT_CODES.SIGINT ||
+        code === EXIT_CODES.SIGTERM ||
+        code === EXIT_CODES.SIGABORT
       ) {
         return {
           status: "errored",
@@ -275,13 +277,6 @@ nodeProcess.run = async ({
   return result
 }
 
-// https://nodejs.org/api/process.html#process_signal_events
-const SIGINT_SIGNAL_NUMBER = 2
-const SIGABORT_SIGNAL_NUMBER = 6
-const SIGTERM_SIGNAL_NUMBER = 15
-const SIGINT_EXIT_CODE = 128 + SIGINT_SIGNAL_NUMBER
-const SIGABORT_EXIT_CODE = 128 + SIGABORT_SIGNAL_NUMBER
-const SIGTERM_EXIT_CODE = 128 + SIGTERM_SIGNAL_NUMBER
 // http://man7.org/linux/man-pages/man7/signal.7.html
 // https:// github.com/nodejs/node/blob/1d9511127c419ec116b3ddf5fc7a59e8f0f1c1e4/lib/internal/child_process.js#L472
 const GRACEFUL_STOP_SIGNAL = "SIGTERM"
@@ -290,7 +285,7 @@ const STOP_SIGNAL = "SIGKILL"
 // but I'm not sure and it changes nothing so just use SIGKILL
 const GRACEFUL_STOP_FAILED_SIGNAL = "SIGKILL"
 
-const sendToProcess = async (childProcess, type, data) => {
+const sendToChildProcess = async (childProcess, type, data) => {
   const source = uneval(data, { functionAllowed: true })
   return new Promise((resolve, reject) => {
     childProcess.send({ type, data: source }, (error) => {
@@ -303,7 +298,7 @@ const sendToProcess = async (childProcess, type, data) => {
   })
 }
 
-const installProcessOutputListener = (childProcess, callback) => {
+const installChildProcessOutputListener = (childProcess, callback) => {
   // beware that we may receive ansi output here, should not be a problem but keep that in mind
   const stdoutDataCallback = (chunk) => {
     callback({ type: "log", text: String(chunk) })
@@ -319,9 +314,9 @@ const installProcessOutputListener = (childProcess, callback) => {
   }
 }
 
-const onceProcessMessage = (childProcess, type, callback) => {
+const onceChildProcessMessage = (childProcess, type, callback) => {
   const onmessage = (message) => {
-    if (message.type === type) {
+    if (message && message.jsenv && message.type === type) {
       childProcess.removeListener("message", onmessage)
       // eslint-disable-next-line no-eval
       callback(message.data ? eval(`(${message.data})`) : "")
@@ -333,7 +328,7 @@ const onceProcessMessage = (childProcess, type, callback) => {
   }
 }
 
-const onceProcessEvent = (childProcess, type, callback) => {
+const onceChildProcessEvent = (childProcess, type, callback) => {
   childProcess.once(type, callback)
   return () => {
     childProcess.removeListener(type, callback)

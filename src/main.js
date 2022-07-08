@@ -14,7 +14,7 @@ export {
   webkit,
   webkitIsolatedTab,
 } from "./execute/runtimes/browsers/webkit.js"
-export { nodeProcess } from "./execute/runtimes/node/node_process.js"
+export { nodeChildProcess } from "./execute/runtimes/node/node_child_process.js"
 // build
 export { build } from "./build/build.js"
 export { startBuildServer } from "./build/start_build_server.js"

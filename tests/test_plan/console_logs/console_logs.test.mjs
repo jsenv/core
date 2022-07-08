@@ -1,13 +1,13 @@
 import { assert } from "@jsenv/assert"
 
-import { execute, nodeProcess } from "@jsenv/core"
+import { execute, nodeChildProcess } from "@jsenv/core"
 
 process.env.FORCE_COLOR = "false"
 const getLogs = async (params) => {
   const result = await execute({
     logLevel: "warn",
     rootDirectoryUrl: new URL("./", import.meta.url),
-    runtime: nodeProcess,
+    runtime: nodeChildProcess,
     collectConsole: true,
     mirrorConsole: false,
     ...params,
