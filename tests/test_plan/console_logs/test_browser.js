@@ -1,15 +1,16 @@
-import { executeTestPlan, nodeProcess } from "@jsenv/core"
+import { executeTestPlan, chromium } from "@jsenv/core"
 
 await executeTestPlan({
   logLevel: "info",
+  logRuntime: false,
   logEachDuration: false,
   logSummary: false,
   rootDirectoryUrl: new URL("./", import.meta.url),
   testPlan: {
-    "./file.js": {
-      node: {
-        runtime: nodeProcess,
-        collectConsole: false,
+    "./client/main.html": {
+      chrome: {
+        runtime: chromium,
+        collectConsole: true,
       },
     },
   },

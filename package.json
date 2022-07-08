@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "27.0.3",
+  "version": "27.1.0",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "author": {
@@ -71,13 +71,13 @@
     "@jsenv/importmap": "1.2.1",
     "@jsenv/integrity": "0.0.1",
     "@jsenv/node-esm-resolution": "0.1.0",
-    "@jsenv/server": "12.7.4",
+    "@jsenv/server": "12.7.5",
     "@jsenv/uneval": "1.6.0",
     "@jsenv/url-meta": "7.0.0",
     "@jsenv/urls": "1.2.6",
     "@jsenv/utils": "2.0.1",
     "@jsenv/babel-plugins": "1.0.5",
-    "@jsenv/log": "3.0.2",
+    "@jsenv/log": "3.1.0",
     "@jsenv/sourcemap": "1.0.1",
     "acorn-import-assertions": "1.8.0",
     "cuid": "2.1.8",

@@ -37,6 +37,8 @@ export const executePlan = async (
     signal,
     handleSIGINT,
     logger,
+    logRuntime,
+    logEachDuration,
     logSummary,
     logTimeUsage,
     logMemoryHeapUsage,
@@ -338,6 +340,8 @@ export const executePlan = async (
             render: () => {
               return createExecutionLog(beforeExecutionInfo, {
                 counters,
+                logRuntime,
+                logEachDuration,
                 ...(logTimeUsage
                   ? {
                       timeEllapsed: Date.now() - startMs,
@@ -411,6 +415,8 @@ export const executePlan = async (
           let log = createExecutionLog(afterExecutionInfo, {
             completedExecutionLogAbbreviation,
             counters,
+            logRuntime,
+            logEachDuration,
             ...(logTimeUsage
               ? {
                   timeEllapsed: Date.now() - startMs,
