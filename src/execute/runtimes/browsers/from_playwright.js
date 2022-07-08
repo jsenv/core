@@ -23,6 +23,7 @@ export const createRuntimeFromPlaywright = ({
   isolatedTab = false,
 }) => {
   const runtime = {
+    type: "browser",
     name: browserName,
     version: browserVersion,
     needsServer: true,

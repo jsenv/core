@@ -1,4 +1,3 @@
-import v8 from "node:v8"
 import { uneval } from "@jsenv/uneval"
 import { startObservingPerformances } from "./node_execution_performance.js"
 
@@ -130,13 +129,6 @@ const removeActionRequestListener = onceParentMessage(
     } catch (e) {
       failed = true
       value = e
-    }
-
-    if (process.env.NODE_V8_COVERAGE) {
-      v8.takeCoverage()
-      // if (actionParams.stopCoverageAfterExecution) {
-      //   v8.stopCoverage()
-      // }
     }
 
     // setTimeout(() => {}, 100)

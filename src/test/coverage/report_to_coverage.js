@@ -1,4 +1,4 @@
-import { readFile } from "@jsenv/filesystem"
+import { readFileSync } from "node:fs"
 import { Abort } from "@jsenv/abort"
 
 import {
@@ -49,7 +49,7 @@ export const reportToCoverage = async (
       // that were suppose to be coverage but were not.
       if (
         executionResult.status === "completed" &&
-        executionResult.runtimeName !== "node" &&
+        executionResult.runtimeType !== "node" &&
         !process.env.NODE_V8_COVERAGE
       ) {
         logger.warn(
@@ -164,9 +164,9 @@ const getCoverageFromReport = async ({ signal, report, onMissing }) => {
             return
           }
 
-          const executionCoverage = await readFile(coverageFileUrl, {
-            as: "json",
-          })
+          const executionCoverage = JSON.parse(
+            String(readFileSync(coverageFileUrl)),
+          )
           if (isV8Coverage(executionCoverage)) {
             v8Coverage = v8Coverage
               ? composeTwoV8Coverages(v8Coverage, executionCoverage)

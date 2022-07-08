@@ -3,6 +3,7 @@
 // https://github.com/avajs/ava/blob/576f534b345259055c95fa0c2b33bef10847a2af/lib/worker/base.js
 import { Worker } from "node:worker_threads"
 import { fileURLToPath } from "node:url"
+import { takeCoverage } from "node:v8"
 import {
   Abort,
   createCallbackListNotifiedOnce,
@@ -61,17 +62,17 @@ nodeWorkerThread.run = async ({
     env.NODE_V8_COVERAGE = ""
   }
 
-  const childExecOptions = await createChildExecOptions({
+  const workerThreadExecOptions = await createChildExecOptions({
     signal,
     debugPort,
     debugMode,
     debugModeInheritBreak,
   })
-  const execArgv = ExecOptions.toExecArgv({
-    ...childExecOptions,
+  const execArgvForWorkerThread = ExecOptions.toExecArgv({
+    ...workerThreadExecOptions,
     ...ExecOptions.fromExecArgv(commandLineOptions),
   })
-  const envForWorker = {
+  const envForWorkerThread = {
     ...(inheritProcessEnv ? process.env : {}),
     ...env,
   }
@@ -86,8 +87,8 @@ nodeWorkerThread.run = async ({
   const workerThread = new Worker(
     fileURLToPath(CONTROLLABLE_WORKER_THREAD_URL),
     {
-      env: envForWorker,
-      execArgv,
+      env: envForWorkerThread,
+      execArgv: execArgvForWorkerThread,
       // workerData: { options },
       trackUnmanagedFds: true,
       stdin: true,
@@ -217,6 +218,10 @@ nodeWorkerThread.run = async ({
       error: e,
     }
   }
+  if (process.env.NODE_V8_COVERAGE) {
+    takeCoverage()
+  }
+
   if (keepRunning) {
     stopSignal.notify = stop
   } else {

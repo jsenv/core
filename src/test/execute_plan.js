@@ -237,7 +237,6 @@ export const executePlan = async (
       coverageTempDirectoryRelativeUrl,
       rootDirectoryUrl,
     ).href
-
     if (coverage) {
       const associations = URL_META.resolveAssociations(
         { cover: coverageConfig },
@@ -313,6 +312,7 @@ export const executePlan = async (
       start: async (paramsFromStep) => {
         const executionIndex = executionSteps.indexOf(paramsFromStep)
         const { executionName, fileRelativeUrl, runtime } = paramsFromStep
+        const runtimeType = runtime.type
         const runtimeName = runtime.name
         const runtimeVersion = runtime.version
         const executionParams = {
@@ -328,6 +328,7 @@ export const executePlan = async (
         }
         const beforeExecutionInfo = {
           fileRelativeUrl,
+          runtimeType,
           runtimeName,
           runtimeVersion,
           executionIndex,
