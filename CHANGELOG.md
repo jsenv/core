@@ -1,3 +1,7 @@
+# 27.3.0
+
+- Update node to 18.5.0 to get https://github.com/nodejs/node/commit/0fc1cf478f7a448241791f5cf2c25f2d45bfd5b5
+
 # 27.2.0
 
 - Rename nodeProcess to nodeChildProcess
