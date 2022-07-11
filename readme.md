@@ -23,7 +23,7 @@ npm create jsenv@latest
 npm install --save-dev @jsenv/core
 ```
 
-_@jsenv/core_ is tested on Mac, Windows, Linux on Node.js 16.14.0. Other operating systems and Node.js versions are not tested.
+_@jsenv/core_ is tested on Mac, Windows, Linux on Node.js 18.5.0. Other operating systems and Node.js versions are not tested.
 
 # Documentation
 
