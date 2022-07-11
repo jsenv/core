@@ -56,7 +56,7 @@ jobs:
       - name: Run ESLint
         run: npm run eslint
       - name: Run package tests
-        run: npm run test --workspaces --if-present -- --coverage
+        run: NODE_V8_COVERAGE=.coverage/node npm run test --workspaces --if-present -- --coverage
       - name: Run core tests
         run: npm run test:coverage
       - name: Upload coverage
