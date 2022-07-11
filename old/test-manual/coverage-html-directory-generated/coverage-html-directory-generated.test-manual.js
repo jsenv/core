@@ -23,7 +23,7 @@ executeTestPlan({
   logLevel: "info",
   jsenvDirectoryRelativeUrl,
   testPlan,
-  coverage: true,
+  coverageEnabled: true,
   coverageConfig: {
     [`./${testDirectoryRelativeUrl}file.js`]: true,
   },

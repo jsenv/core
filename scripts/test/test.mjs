@@ -29,7 +29,7 @@ await executeTestPlan({
   logMemoryHeapUsage: true,
   // completedExecutionLogMerging: true,
   // completedExecutionLogAbbreviation: false,
-  coverage: process.argv.includes("--coverage"),
+  coverageEnabled: process.argv.includes("--coverage"),
   coverageConfig: {
     "./index.js": true,
     "./src/**/*.js": true,

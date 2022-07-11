@@ -25,7 +25,7 @@ const { testPlanCoverage } = await executeTestPlan({
       },
     },
   },
-  coverage: true,
+  coverageEnabled: true,
   coverageConfig: {
     "./js_syntax_error.js": true,
   },

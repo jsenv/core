@@ -33,7 +33,7 @@ const { testPlanCoverage } = await executeTestPlan({
     },
   },
   // keepRunning: true,
-  coverage: true,
+  coverageEnabled: true,
   coverageConfig: {
     "./file.js": true,
   },

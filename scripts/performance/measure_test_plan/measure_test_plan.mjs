@@ -35,7 +35,7 @@ await executeTestPlan({
   },
   logLevel: "warn",
   protocol: "http",
-  coverage: true,
+  coverageEnabled: true,
   coverageConfig: {
     "./animals.js": true,
   },

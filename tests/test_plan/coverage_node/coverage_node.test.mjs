@@ -19,7 +19,7 @@ const test = async (params) => {
       },
     },
     // keepRunning: true,
-    coverage: true,
+    coverageEnabled: true,
     coverageConfig: {
       "./node_client/file.js": true,
     },

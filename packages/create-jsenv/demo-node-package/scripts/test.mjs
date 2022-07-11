@@ -15,5 +15,5 @@ await executeTestPlan({
       },
     },
   },
-  coverage: process.argv.includes("--coverage"),
+  coverageEnabled: process.argv.includes("--coverage"),
 })
