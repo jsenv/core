@@ -38,6 +38,6 @@
     "@jsenv/filesystem": "../filesystem/",
     "@jsenv/importmap": "1.2.1",
     "@jsenv/node-esm-resolution": "../node-esm-resolution/",
-    "rollup": "2.75.7"
+    "rollup": "2.76.0"
   }
 }
