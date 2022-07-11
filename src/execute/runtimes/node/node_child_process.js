@@ -1,6 +1,5 @@
 import { fork } from "node:child_process"
 import { fileURLToPath } from "node:url"
-import { takeCoverage } from "node:v8"
 import {
   Abort,
   raceCallbacks,
@@ -38,7 +37,7 @@ nodeChildProcess.run = async ({
   onConsole,
 
   collectCoverage = false,
-  coverageForceIstanbul,
+  coverageMethodForNodeJs,
   collectPerformance,
 
   env,
@@ -59,9 +58,7 @@ nodeChildProcess.run = async ({
     COVERAGE_ENABLED: collectCoverage,
     JSENV: true,
   }
-  if (coverageForceIstanbul) {
-    // if we want to force istanbul, we will set process.env.NODE_V8_COVERAGE = ''
-    // into the child_process
+  if (coverageMethodForNodeJs !== "NODE_V8_COVERAGE") {
     env.NODE_V8_COVERAGE = ""
   }
   commandLineOptions = [
@@ -269,9 +266,6 @@ nodeChildProcess.run = async ({
       status: "errored",
       error: e,
     }
-  }
-  if (process.env.NODE_V8_COVERAGE) {
-    takeCoverage()
   }
   if (keepRunning) {
     stopSignal.notify = stop

@@ -21,7 +21,7 @@ export const reportToCoverage = async (
     coverageConfig,
     coverageIncludeMissing,
     urlShouldBeCovered,
-    coverageForceIstanbul,
+    coverageMethodForNodeJs,
     coverageV8ConflictWarning,
   },
 ) => {
@@ -49,8 +49,8 @@ export const reportToCoverage = async (
       // that were suppose to be coverage but were not.
       if (
         executionResult.status === "completed" &&
-        executionResult.runtimeType !== "node" &&
-        !process.env.NODE_V8_COVERAGE
+        executionResult.type === "node" &&
+        coverageMethodForNodeJs !== "NODE_V8_COVERAGE"
       ) {
         logger.warn(
           `No execution.coverageFileUrl from execution named "${executionName}" of ${file}`,
@@ -59,7 +59,7 @@ export const reportToCoverage = async (
     },
   })
 
-  if (!coverageForceIstanbul && process.env.NODE_V8_COVERAGE) {
+  if (coverageMethodForNodeJs === "NODE_V8_COVERAGE") {
     await visitNodeV8Directory({
       logger,
       signal,

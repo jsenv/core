@@ -3,7 +3,6 @@
 // https://github.com/avajs/ava/blob/576f534b345259055c95fa0c2b33bef10847a2af/lib/worker/base.js
 import { Worker } from "node:worker_threads"
 import { fileURLToPath } from "node:url"
-import { takeCoverage } from "node:v8"
 import {
   Abort,
   createCallbackListNotifiedOnce,
@@ -38,7 +37,7 @@ nodeWorkerThread.run = async ({
   onConsole,
 
   collectCoverage = false,
-  coverageForceIstanbul,
+  coverageMethodForNodeJs,
   collectPerformance,
 
   env,
@@ -56,9 +55,7 @@ nodeWorkerThread.run = async ({
     COVERAGE_ENABLED: collectCoverage,
     JSENV: true,
   }
-  if (coverageForceIstanbul) {
-    // if we want to force istanbul, we will set process.env.NODE_V8_COVERAGE = ''
-    // into the worker_thread
+  if (coverageMethodForNodeJs !== "NODE_V8_COVERAGE") {
     env.NODE_V8_COVERAGE = ""
   }
 
@@ -217,9 +214,6 @@ nodeWorkerThread.run = async ({
       status: "errored",
       error: e,
     }
-  }
-  if (process.env.NODE_V8_COVERAGE) {
-    takeCoverage()
   }
 
   if (keepRunning) {

@@ -39,7 +39,7 @@ export const createRuntimeFromPlaywright = ({
     // measurePerformance,
     collectPerformance,
     collectCoverage = false,
-    coverageForceIstanbul,
+    coverageMethodForBrowsers,
     urlShouldBeCovered,
 
     stopAfterAllSignal,
@@ -110,7 +110,10 @@ export const createRuntimeFromPlaywright = ({
 
     let resultTransformer = (result) => result
     if (collectCoverage) {
-      if (coveragePlaywrightAPIAvailable && !coverageForceIstanbul) {
+      if (
+        coveragePlaywrightAPIAvailable &&
+        coverageMethodForBrowsers === "playwright_api"
+      ) {
         await page.coverage.startJSCoverage({
           // reportAnonymousScripts: true,
         })

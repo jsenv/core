@@ -62,21 +62,22 @@ export const executeTestPlan = async ({
 
   coverage = process.argv.includes("--cover") ||
     process.argv.includes("--coverage"),
-  coverageTempDirectoryRelativeUrl = "./.coverage/tmp/",
   coverageConfig = {
     "./src/": true,
   },
   coverageIncludeMissing = true,
   coverageAndExecutionAllowed = false,
-  coverageForceIstanbul = false,
+  coverageMethodForNodeJs = "NODE_V8_COVERAGE", // "Profiler" also accepted
+  coverageMethodForBrowsers = "playwright_api", // "istanbul" also accepted
   coverageV8ConflictWarning = true,
-  coverageReportTextLog = true,
-  coverageReportJsonFile = process.env.CI ? null : "./.coverage/coverage.json",
-  coverageReportHtmlDirectory = process.env.CI ? "./.coverage/" : null,
+  coverageTempDirectoryRelativeUrl = "./.coverage/tmp/",
   // skip empty means empty files won't appear in the coverage reports (json and html)
   coverageReportSkipEmpty = false,
   // skip full means file with 100% coverage won't appear in coverage reports (json and html)
   coverageReportSkipFull = false,
+  coverageReportTextLog = true,
+  coverageReportJsonFile = process.env.CI ? null : "./.coverage/coverage.json",
+  coverageReportHtmlDirectory = process.env.CI ? "./.coverage/" : null,
 
   sourcemaps = "inline",
   plugins = [],
@@ -159,7 +160,8 @@ export const executeTestPlan = async ({
     coverage,
     coverageConfig,
     coverageIncludeMissing,
-    coverageForceIstanbul,
+    coverageMethodForBrowsers,
+    coverageMethodForNodeJs,
     coverageV8ConflictWarning,
     coverageTempDirectoryRelativeUrl,
 

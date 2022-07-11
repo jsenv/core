@@ -1,8 +1,8 @@
 import { existsSync } from "node:fs"
 import { memoryUsage } from "node:process"
+import { takeCoverage } from "node:v8"
 import wrapAnsi from "wrap-ansi"
 import stripAnsi from "strip-ansi"
-import cuid from "cuid"
 
 import { URL_META } from "@jsenv/url-meta"
 import { urlToFileSystemPath } from "@jsenv/urls"
@@ -13,11 +13,7 @@ import {
   startSpinner,
 } from "@jsenv/log"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
-import {
-  writeDirectory,
-  ensureEmptyDirectory,
-  writeFileSync,
-} from "@jsenv/filesystem"
+import { ensureEmptyDirectory, writeFileSync } from "@jsenv/filesystem"
 
 import { babelPluginInstrument } from "./coverage/babel_plugin_instrument.js"
 import { reportToCoverage } from "./coverage/report_to_coverage.js"
@@ -55,9 +51,11 @@ export const executePlan = async (
     cooldownBetweenExecutions,
 
     coverage,
+    coverageMethod,
     coverageConfig,
     coverageIncludeMissing,
-    coverageForceIstanbul,
+    coverageMethodForBrowsers,
+    coverageMethodForNodeJs,
     coverageV8ConflictWarning,
     coverageTempDirectoryRelativeUrl,
 
@@ -129,7 +127,8 @@ export const executePlan = async (
     let runtimeParams = {
       rootDirectoryUrl,
       collectCoverage: coverage,
-      coverageForceIstanbul,
+      coverageMethodForBrowsers,
+      coverageMethodForNodeJs,
       stopAfterAllSignal,
     }
     if (someNeedsServer) {
@@ -237,7 +236,38 @@ export const executePlan = async (
       coverageTempDirectoryRelativeUrl,
       rootDirectoryUrl,
     ).href
+
+    if (someNodeRuntime && coverage) {
+      if (coverageMethod === "NODE_V8_COVERAGE") {
+        if (process.env.NODE_V8_COVERAGE) {
+          // when runned multiple times, we don't want to keep previous files in this directory
+          await ensureEmptyDirectory(process.env.NODE_V8_COVERAGE)
+        } else {
+          coverageMethod = "Profiler"
+          logger.warn(
+            createDetailedMessage(
+              `process.env.NODE_V8_COVERAGE is required to generate coverage for Node.js subprocesses`,
+              {
+                suggestion: `Preprend NODE_V8_COVERAGE=.coverage/node node ./execute_test_plan.js`,
+              },
+            ),
+          )
+        }
+      } else {
+        // TODO: instead rely on Profiler.startPreciseCoverage
+        // (see experiments/v8_*/main.js)
+        // (that must happen in the forked child_process/worker)
+        // and in that case the child_process/worker will return
+        // a coverage per execution instead of a global coverage
+        // but do log a warning that process.env.NODE_V8_COVERAGE
+        // should be used otherwise coverage of worker/child_process is ignored
+        // (except during tests)
+        coverage = false
+      }
+    }
     if (coverage) {
+      // when runned multiple times, we don't want to keep previous files in this directory
+      await ensureEmptyDirectory(coverageTempDirectoryUrl)
       const associations = URL_META.resolveAssociations(
         { cover: coverageConfig },
         rootDirectoryUrl,
@@ -251,36 +281,25 @@ export const executePlan = async (
       }
       runtimeParams.urlShouldBeCovered = urlShouldBeCovered
 
-      // in case runned multiple times, we don't want to keep writing lot of files in this directory
-      if (!process.env.NODE_V8_COVERAGE) {
-        await ensureEmptyDirectory(coverageTempDirectoryUrl)
-      }
-      if (someNodeRuntime) {
-        // v8 coverage is written in a directoy and auto propagate to subprocesses
-        // through process.env.NODE_V8_COVERAGE.
-        if (!coverageForceIstanbul && !process.env.NODE_V8_COVERAGE) {
-          const v8CoverageDirectory = new URL(
-            `./node_v8/${cuid()}`,
-            coverageTempDirectoryUrl,
-          ).href
-          await writeDirectory(v8CoverageDirectory, { allowUseless: true })
-          process.env.NODE_V8_COVERAGE =
-            urlToFileSystemPath(v8CoverageDirectory)
-        }
-      }
       transformReturnValue = async (value) => {
         if (multipleExecutionsOperation.signal.aborted) {
           // don't try to do the coverage stuff
           return value
         }
         try {
+          if (process.env.NODE_V8_COVERAGE) {
+            takeCoverage()
+            // conceptually we don't need coverage anymore so it would be
+            // good to call v8.stopCoverage()
+            // but it logs a strange message about "result is not an object"
+          }
           value.coverage = await reportToCoverage(value.report, {
             signal: multipleExecutionsOperation.signal,
             logger,
             rootDirectoryUrl,
             coverageConfig,
             coverageIncludeMissing,
-            coverageForceIstanbul,
+            coverageMethodForBrowsers,
             urlShouldBeCovered,
             coverageV8ConflictWarning,
           })

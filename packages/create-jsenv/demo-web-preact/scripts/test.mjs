@@ -23,5 +23,5 @@ await executeTestPlan({
     },
   },
   coverage: process.argv.includes("--coverage"),
-  coverageForceIstanbul: true,
+  coverageMethodForBrowsers: "istanbul",
 })
