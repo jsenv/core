@@ -26705,7 +26705,6 @@ nodeWorkerThread.run = async ({
   rootDirectoryUrl,
   fileRelativeUrl,
   keepRunning,
-  gracefulStopAllocatedMs = 4000,
   stopSignal,
   onConsole,
   coverageConfig,
@@ -26758,7 +26757,7 @@ nodeWorkerThread.run = async ({
     env: envForWorkerThread,
     execArgv: execArgvForWorkerThread,
     // workerData: { options },
-    trackUnmanagedFds: true,
+    // trackUnmanagedFds: true,
     stdin: true,
     stdout: true,
     stderr: true
@@ -26776,10 +26775,8 @@ nodeWorkerThread.run = async ({
     onceWorkerThreadMessage(workerThread, "ready", resolve);
   });
   const stop = memoize(async () => {
-    try {
-      await workerThreadReadyPromise;
-      await workerThread.terminate();
-    } catch (e) {}
+    await workerThreadReadyPromise;
+    await workerThread.terminate();
   });
   const winnerPromise = new Promise(resolve => {
     raceCallbacks({
@@ -26906,9 +26903,7 @@ nodeWorkerThread.run = async ({
   if (keepRunning) {
     stopSignal.notify = stop;
   } else {
-    await stop({
-      gracefulStopAllocatedMs
-    });
+    await stop();
   }
 
   await actionOperation.end();
