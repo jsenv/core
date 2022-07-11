@@ -1,4 +1,4 @@
-import { executeTestPlan, nodeChildProcess } from "@jsenv/core"
+import { executeTestPlan, nodeWorkerThread } from "@jsenv/core"
 
 await executeTestPlan({
   logLevel: "info",
@@ -9,7 +9,7 @@ await executeTestPlan({
   testPlan: {
     "./client/main.js": {
       node: {
-        runtime: nodeChildProcess,
+        runtime: nodeWorkerThread,
         collectConsole: true,
       },
     },

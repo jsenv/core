@@ -1,4 +1,4 @@
-import { executeTestPlan, nodeChildProcess } from "@jsenv/core"
+import { executeTestPlan, nodeWorkerThread } from "@jsenv/core"
 import { rootDirectoryUrl, runtimeCompat } from "@jsenv/core/jsenv.config.mjs"
 
 await executeTestPlan({
@@ -8,19 +8,19 @@ await executeTestPlan({
   testPlan: {
     "tests/**/*.test.mjs": {
       node: {
-        runtime: nodeChildProcess,
+        runtime: nodeWorkerThread,
         allocatedMs: 30_000,
       },
     },
     "tests/**/coverage_universal.test.mjs": {
       node: {
-        runtime: nodeChildProcess,
+        runtime: nodeWorkerThread,
         allocatedMs: 60_000,
       },
     },
     "tests/**/*_browsers.test.mjs": {
       node: {
-        runtime: nodeChildProcess,
+        runtime: nodeWorkerThread,
         allocatedMs: 60_000,
       },
     },

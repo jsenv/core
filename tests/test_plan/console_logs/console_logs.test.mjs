@@ -1,13 +1,13 @@
 import { assert } from "@jsenv/assert"
 
-import { execute, nodeChildProcess } from "@jsenv/core"
+import { execute, nodeWorkerThread } from "@jsenv/core"
 
 process.env.FORCE_COLOR = "false"
 const getLogs = async (params) => {
   const result = await execute({
     logLevel: "warn",
     rootDirectoryUrl: new URL("./", import.meta.url),
-    runtime: nodeChildProcess,
+    runtime: nodeWorkerThread,
     collectConsole: true,
     mirrorConsole: false,
     ...params,
@@ -53,16 +53,13 @@ if (process.platform !== "win32") {
   const expected = `
 ✔ execution 1 of 1 completed (all completed)
 file: client/main.js
--------- console (✖ 2) --------
+-------- console (✖ 4) --------
 ✖ toto
-✖ hey
-  hey
-  test
-  multiline
   ho
-  info
-  verbose log
-  la
+✖ hey
+✖ hey
+✖ test
+  multiline
 -------------------------
   
 `

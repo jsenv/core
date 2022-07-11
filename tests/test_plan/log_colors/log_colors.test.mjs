@@ -5,13 +5,13 @@
 
 import { assert } from "@jsenv/assert"
 
-import { execute, nodeChildProcess } from "@jsenv/core"
+import { execute, nodeWorkerThread } from "@jsenv/core"
 
 const getLogs = async () => {
   const result = await execute({
     logLevel: "warn",
     rootDirectoryUrl: new URL("./", import.meta.url),
-    runtime: nodeChildProcess,
+    runtime: nodeWorkerThread,
     fileRelativeUrl: "./project/execute_test_plan.js",
     collectConsole: true,
     mirrorConsole: false,
@@ -33,7 +33,7 @@ if (process.platform !== "win32") {
     const expected = `
 ✔ execution 1 of 1 completed (all completed)
 file: file.js
-runtime: node_child_process/${process.version.slice(1)}
+runtime: node_worker_thread/${process.version.slice(1)}
   
 `
     assert({ actual, expected })
@@ -46,7 +46,7 @@ runtime: node_child_process/${process.version.slice(1)}
     const expected = `
 [32m✔ execution 1 of 1 completed[0m (all [32mcompleted[0m)
 file: file.js
-runtime: node_child_process/${process.version.slice(1)}
+runtime: node_worker_thread/${process.version.slice(1)}
   
 `
     assert({ actual, expected })
