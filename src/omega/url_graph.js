@@ -207,6 +207,7 @@ const createUrlInfo = (url) => {
     originalUrl: undefined,
     generatedUrl: null,
     filename: "",
+    isEntryPoint: false,
     isInline: false,
     inlineUrlSite: null,
     shouldHandle: undefined,

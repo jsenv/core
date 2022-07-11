@@ -101,24 +101,24 @@ const jsenvPluginAsJsClassicConversion = ({
       if (!originalUrlInfo) {
         return null
       }
-      const isJsEntryPoint =
-        // in general html files are entry points
-        // but during build js can be sepcified as an entry point
-        // (meaning there is no html file where we can inject systemjs)
-        // in that case we need to inject systemjs in the js file
-        originalUrlInfo.data.isEntryPoint ||
-        // In thoose case we need to inject systemjs the worker js file
-        originalUrlInfo.data.isWebWorkerEntryPoint
-      // if it's an entry point without dependency (it does not use import)
-      // then we can use UMD, otherwise we have to use systemjs
-      // because it is imported by systemjs
       const jsClassicFormat =
-        isJsEntryPoint && !originalUrlInfo.data.usesImport ? "umd" : "system"
+        // in general html file are entry points, but js can be entry point when:
+        // - passed in entryPoints to build
+        // - is used by web worker
+        // - the reference contains ?entry_point
+        // When js is entry point there can be no HTML to inject systemjs
+        // and systemjs must be injected into the js file
+        originalUrlInfo.isEntryPoint &&
+        // if it's an entry point without dependency (it does not use import)
+        // then we can use UMD, otherwise we have to use systemjs
+        // because it is imported by systemjs
+        !originalUrlInfo.data.usesImport
+          ? "umd"
+          : "system"
       const { content, sourcemap } = await convertJsModuleToJsClassic({
         systemJsInjection,
         systemJsClientFileUrl,
         urlInfo: originalUrlInfo,
-        isJsEntryPoint,
         jsClassicFormat,
       })
       urlInfo.data.jsClassicFormat = jsClassicFormat
@@ -160,7 +160,6 @@ const convertJsModuleToJsClassic = async ({
   systemJsInjection,
   systemJsClientFileUrl,
   urlInfo,
-  isJsEntryPoint,
   jsClassicFormat,
 }) => {
   const { code, map } = await applyBabelPlugins({
@@ -193,7 +192,11 @@ const convertJsModuleToJsClassic = async ({
   })
   let sourcemap = urlInfo.sourcemap
   sourcemap = await composeTwoSourcemaps(sourcemap, map)
-  if (systemJsInjection && jsClassicFormat === "system" && isJsEntryPoint) {
+  if (
+    systemJsInjection &&
+    jsClassicFormat === "system" &&
+    urlInfo.isEntryPoint
+  ) {
     const magicSource = createMagicSource(code)
     const systemjsCode = readFileSync(systemJsClientFileUrl, { as: "string" })
     magicSource.prepend(`${systemjsCode}\n\n`)

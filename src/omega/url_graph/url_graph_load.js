@@ -56,7 +56,6 @@ export const loadUrlGraph = async ({
         type,
         specifier,
       })
-      entryUrlInfo.data.isEntryPoint = true
       cook(entryUrlInfo, { reference: entryReference })
       return [entryReference, entryUrlInfo]
     },

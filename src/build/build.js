@@ -287,7 +287,7 @@ build ${entryPointKeys.length} entry points`)
       }
     }
     GRAPH.forEach(rawGraph, (rawUrlInfo) => {
-      if (rawUrlInfo.data.isEntryPoint) {
+      if (rawUrlInfo.isEntryPoint) {
         addToBundlerIfAny(rawUrlInfo)
         if (rawUrlInfo.type === "html") {
           rawUrlInfo.dependencies.forEach((dependencyUrl) => {
@@ -370,6 +370,7 @@ build ${entryPointKeys.length} entry points`)
           const bundleUrlInfo = {
             type,
             subtype: rawUrlInfo ? rawUrlInfo.subtype : undefined,
+            isEntryPoint: rawUrlInfo ? rawUrlInfo.isEntryPoint : undefined,
             filename: rawUrlInfo ? rawUrlInfo.filename : undefined,
             originalUrl: rawUrlInfo ? rawUrlInfo.originalUrl : undefined,
             originalContent: rawUrlInfo
@@ -516,11 +517,10 @@ build ${entryPointKeys.length} entry points`)
               // Here we just want to reserve an url for that file
               const buildUrl = buildUrlsGenerator.generate(rawUrl, {
                 urlInfo: {
-                  data: {
-                    ...reference.data,
-                    isWebWorkerEntryPoint:
-                      isWebWorkerEntryPointReference(reference),
-                  },
+                  data: reference.data,
+                  isEntryPoint:
+                    reference.isEntryPoint ||
+                    isWebWorkerEntryPointReference(reference),
                   type: reference.expectedType,
                   subtype: reference.expectedSubtype,
                   filename: reference.filename,
@@ -801,7 +801,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`,
       // - versioning update inline content
       // - file converted for import assertion of js_classic conversion
       if (
-        !urlInfo.data.isEntryPoint &&
+        !urlInfo.isEntryPoint &&
         urlInfo.type !== "sourcemap" &&
         urlInfo.dependents.size === 0
       ) {
@@ -998,7 +998,7 @@ const applyUrlVersioning = async ({
       if (!urlInfo.shouldHandle) {
         return
       }
-      if (!urlInfo.data.isEntryPoint && urlInfo.dependents.size === 0) {
+      if (!urlInfo.isEntryPoint && urlInfo.dependents.size === 0) {
         return
       }
 
@@ -1255,14 +1255,11 @@ const assertEntryPoints = ({ entryPoints }) => {
 }
 
 const canUseVersionedUrl = (urlInfo) => {
-  if (urlInfo.data.isEntryPoint) {
+  if (urlInfo.isEntryPoint) {
     return false
   }
   if (urlInfo.type === "webmanifest") {
     return false
-  }
-  if (urlInfo.subtype === "service_worker") {
-    return !urlInfo.data.isWebWorkerEntryPoint
   }
   return true
 }

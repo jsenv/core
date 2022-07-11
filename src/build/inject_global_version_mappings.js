@@ -8,6 +8,7 @@ import {
   stringifyHtmlAst,
 } from "@jsenv/ast"
 
+import { isWebWorkerUrlInfo } from "@jsenv/core/src/omega/web_workers.js"
 import { GRAPH } from "./graph_utils.js"
 
 export const injectGlobalVersionMapping = async ({
@@ -17,7 +18,7 @@ export const injectGlobalVersionMapping = async ({
 }) => {
   await Promise.all(
     GRAPH.map(finalGraph, async (urlInfo) => {
-      if (urlInfo.data.isEntryPoint || urlInfo.data.isWebWorkerEntryPoint) {
+      if (urlInfo.isEntryPoint) {
         await injectVersionMappings({
           urlInfo,
           kitchen: finalGraphKitchen,
@@ -43,7 +44,7 @@ const jsInjector = (urlInfo, { versionMappings }) => {
   const magicSource = createMagicSource(urlInfo.content)
   magicSource.prepend(
     generateClientCodeForVersionMappings(versionMappings, {
-      globalName: urlInfo.data.isWebWorkerEntryPoint ? "self" : "window",
+      globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window",
     }),
   )
   return magicSource.toContentAndSourcemap()

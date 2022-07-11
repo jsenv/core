@@ -12,8 +12,7 @@ export const injectServiceWorkerUrls = async ({
     finalGraph,
     (finalUrlInfo) => {
       return (
-        finalUrlInfo.subtype === "service_worker" &&
-        finalUrlInfo.data.isWebWorkerEntryPoint
+        finalUrlInfo.subtype === "service_worker" && finalUrlInfo.isEntryPoint
       )
     },
   )

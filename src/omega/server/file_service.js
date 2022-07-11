@@ -50,10 +50,10 @@ export const createFileService = ({
       reference = urlGraph.inferReference(request.ressource, parentUrl)
     }
     if (!reference) {
-      const entryPoint = kitchen.prepareEntryPoint({
+      const entryPoint = kitchen.injectReference({
         trace: parentUrl || rootDirectoryUrl,
         parentUrl: parentUrl || rootDirectoryUrl,
-        type: "entry_point",
+        type: "http_request",
         specifier: request.ressource,
       })
       reference = entryPoint[0]
