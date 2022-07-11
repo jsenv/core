@@ -3,7 +3,7 @@ import { assert } from "@jsenv/assert"
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
 import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
-import { localServer } from "./local_server/serve.js"
+import "./local_server/serve.js"
 
 const test = async (params) => {
   await build({
@@ -29,7 +29,7 @@ const test = async (params) => {
   })
   const actual = returnValue
   const expected = {
-    url: `${localServer.origin}/constants.js?foo=bar`,
+    url: `http://127.0.0.1:9999/constants.js?foo=bar`,
   }
   assert({ actual, expected })
 }

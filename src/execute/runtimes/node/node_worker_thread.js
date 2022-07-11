@@ -102,6 +102,12 @@ nodeWorkerThread.run = async ({
   })
 
   const stop = memoize(async () => {
+    // read all stdout before terminating
+    // (no need for stderr because it's sync)
+    while (workerThread.stdout.read() !== null) {}
+    await new Promise((resolve) => {
+      setTimeout(resolve)
+    })
     await workerThread.terminate()
   })
 

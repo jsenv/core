@@ -40,7 +40,7 @@ try {
     error,
   }
   const expected = {
-    serverWarnOutput: `GET http://localhost:3456/foo.js
+    serverWarnOutput: `GET ${devServer.origin}/foo.js
   [33m404[0m Failed to fetch url content
   --- reason ---
   no entry on filesystem
