@@ -39,6 +39,7 @@ await executeTestPlan({
   coverageConfig: {
     "./animals.js": true,
   },
+  coverageMethodForNodeJs: "Profiler",
   coverageV8ConflictWarning: false,
   coverageReportTextLog: false,
   coverageReportHtmlDirectory: false,
