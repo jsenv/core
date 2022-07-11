@@ -1,16 +1,5 @@
-import {
-  executeTestPlan,
-  nodeChildProcess,
-  nodeWorkerThread,
-} from "@jsenv/core"
+import { executeTestPlan, nodeWorkerThread } from "@jsenv/core"
 import { rootDirectoryUrl, runtimeCompat } from "@jsenv/core/jsenv.config.mjs"
-
-const nodeRuntime =
-  // on windows using worker_thread often generates
-  // "FATAL ERROR: v8::FromJust Maybe value is Nothing"
-  // Which is a segmentation fault caused by too much memory/process usage (I guess)
-  // on windows it's better to use child_process until it gets fixed
-  process.platform === "win32" ? nodeChildProcess : nodeWorkerThread
 
 await executeTestPlan({
   rootDirectoryUrl,
@@ -19,19 +8,19 @@ await executeTestPlan({
   testPlan: {
     "tests/**/*.test.mjs": {
       node: {
-        runtime: nodeRuntime,
+        runtime: nodeWorkerThread,
         allocatedMs: 30_000,
       },
     },
     "tests/**/coverage_universal.test.mjs": {
       node: {
-        runtime: nodeRuntime,
+        runtime: nodeWorkerThread,
         allocatedMs: 60_000,
       },
     },
     "tests/**/*_browsers.test.mjs": {
       node: {
-        runtime: nodeRuntime,
+        runtime: nodeWorkerThread,
         allocatedMs: 60_000,
       },
     },
