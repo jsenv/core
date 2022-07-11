@@ -40,7 +40,7 @@ file: client/main.html
 ◆ verbose log
   la
 -------------------------
-
+  
 `
   assert({ actual, expected })
 }
