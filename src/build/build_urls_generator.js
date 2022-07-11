@@ -91,7 +91,7 @@ const determineDirectoryPath = ({
     })
     return parentDirectoryPath
   }
-  if (urlInfo.data.isEntryPoint || urlInfo.data.isWebWorkerEntryPoint) {
+  if (urlInfo.isEntryPoint) {
     return ""
   }
   if (urlInfo.type === "importmap") {

@@ -86,6 +86,7 @@ export const createKitchen = ({
     baseUrl,
     isOriginalPosition,
     shouldHandle,
+    isEntryPoint = false,
     isInline = false,
     injected = false,
     isRessourceHint = false,
@@ -122,6 +123,7 @@ export const createKitchen = ({
       baseUrl,
       isOriginalPosition,
       shouldHandle,
+      isEntryPoint,
       isInline,
       injected,
       isRessourceHint,
@@ -138,6 +140,7 @@ export const createKitchen = ({
     reference.next = newReference
     newReference.prev = reference
     newReference.original = reference.original || reference
+    //  newReference.isEntryPoint = reference.isEntryPoint
   }
   const resolveReference = (reference) => {
     try {
@@ -166,12 +169,16 @@ export const createKitchen = ({
         },
       )
 
-      const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url)
-      applyReferenceEffectsOnUrlInfo(reference, urlInfo, kitchenContext)
-
       const referenceUrlObject = new URL(reference.url)
       reference.searchParams = referenceUrlObject.searchParams
       reference.generatedUrl = reference.url
+      if (reference.searchParams.has("entry_point")) {
+        reference.isEntryPoint = true
+      }
+
+      const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url)
+      applyReferenceEffectsOnUrlInfo(reference, urlInfo, kitchenContext)
+
       // This hook must touch reference.generatedUrl, NOT reference.url
       // And this is because this hook inject query params used to:
       // - bypass browser cache (?v)
@@ -286,6 +293,7 @@ export const createKitchen = ({
         status = 200,
         headers = {},
         body,
+        isEntryPoint,
       } = fetchUrlContentReturnValue
       if (status !== 200) {
         throw new Error(`unexpected status, ${status}`)
@@ -318,6 +326,9 @@ export const createKitchen = ({
       urlInfo.sourcemap = sourcemap
       if (data) {
         Object.assign(urlInfo.data, data)
+      }
+      if (typeof isEntryPoint === "boolean") {
+        urlInfo.isEntryPoint = isEntryPoint
       }
       if (filename) {
         urlInfo.filename = filename
@@ -620,6 +631,7 @@ export const createKitchen = ({
 
   const prepareEntryPoint = (params) => {
     const entryReference = createReference(params)
+    entryReference.isEntryPoint = true
     const entryUrlInfo = resolveReference(entryReference)
     return [entryReference, entryUrlInfo]
   }
@@ -718,6 +730,10 @@ const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
   }
   urlInfo.originalUrl = urlInfo.originalUrl || reference.url
 
+  if (reference.isEntryPoint || isWebWorkerEntryPointReference(reference)) {
+    urlInfo.isEntryPoint = true
+  }
+
   Object.assign(urlInfo.data, reference.data)
   Object.assign(urlInfo.timing, reference.timing)
   if (reference.injected) {
@@ -745,9 +761,6 @@ const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
           : urlInfo.originalContent
         : reference.content
     urlInfo.content = reference.content
-  }
-  if (isWebWorkerEntryPointReference(reference)) {
-    urlInfo.data.isWebWorkerEntryPoint = true
   }
 }
 

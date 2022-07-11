@@ -56,6 +56,8 @@ jobs:
       - name: Run ESLint
         run: npm run eslint
       - name: Run package tests
+        env:
+          NODE_V8_COVERAGE: .coverage/node
         run: npm run test --workspaces --if-present -- --coverage
       - name: Run core tests
         run: npm run test:coverage

@@ -1,26 +1,29 @@
-import {
-  assertAndNormalizeDirectoryUrl,
-  readDirectory,
-  readFile,
-} from "@jsenv/filesystem"
-import { resolveUrl } from "@jsenv/urls"
+import { readFileSync, readdirSync } from "node:fs"
+import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/log"
 import { Abort } from "@jsenv/abort"
 
-export const visitNodeV8Directory = async ({
+export const readNodeV8CoverageDirectory = async ({
   logger,
   signal,
-  NODE_V8_COVERAGE,
   onV8Coverage,
   maxMsWaitingForNodeToWriteCoverageFile = 2000,
 }) => {
+  const NODE_V8_COVERAGE = process.env.NODE_V8_COVERAGE
   const operation = Abort.startOperation()
   operation.addAbortSignal(signal)
 
+  let timeSpentTrying = 0
   const tryReadDirectory = async () => {
-    const dirContent = await readDirectory(NODE_V8_COVERAGE)
+    const dirContent = readdirSync(NODE_V8_COVERAGE)
     if (dirContent.length > 0) {
       return dirContent
+    }
+    if (timeSpentTrying < maxMsWaitingForNodeToWriteCoverageFile) {
+      await new Promise((resolve) => setTimeout(resolve, 200))
+      timeSpentTrying += 200
+      logger.debug("retry to read coverage directory")
+      return tryReadDirectory()
     }
     logger.warn(`v8 coverage directory is empty at ${NODE_V8_COVERAGE}`)
     return dirContent
@@ -32,17 +35,19 @@ export const visitNodeV8Directory = async ({
 
     const coverageDirectoryUrl =
       assertAndNormalizeDirectoryUrl(NODE_V8_COVERAGE)
+
     await dirContent.reduce(async (previous, dirEntry) => {
       operation.throwIfAborted()
       await previous
 
-      const dirEntryUrl = resolveUrl(dirEntry, coverageDirectoryUrl)
-      const tryReadJsonFile = async (timeSpentTrying = 0) => {
-        const fileContent = await readFile(dirEntryUrl, { as: "string" })
+      const dirEntryUrl = new URL(dirEntry, coverageDirectoryUrl)
+      const tryReadJsonFile = async () => {
+        const fileContent = String(readFileSync(dirEntryUrl))
         if (fileContent === "") {
-          if (timeSpentTrying < 400) {
+          if (timeSpentTrying < maxMsWaitingForNodeToWriteCoverageFile) {
             await new Promise((resolve) => setTimeout(resolve, 200))
-            return tryReadJsonFile(timeSpentTrying + 200)
+            timeSpentTrying += 200
+            return tryReadJsonFile()
           }
           console.warn(`Coverage JSON file is empty at ${dirEntryUrl}`)
           return null
@@ -54,7 +59,8 @@ export const visitNodeV8Directory = async ({
         } catch (e) {
           if (timeSpentTrying < maxMsWaitingForNodeToWriteCoverageFile) {
             await new Promise((resolve) => setTimeout(resolve, 200))
-            return tryReadJsonFile(timeSpentTrying + 200)
+            timeSpentTrying += 200
+            return tryReadJsonFile()
           }
           console.warn(
             createDetailedMessage(`Error while reading coverage file`, {
@@ -68,20 +74,10 @@ export const visitNodeV8Directory = async ({
 
       const fileContent = await tryReadJsonFile()
       if (fileContent) {
-        onV8Coverage(fileContent)
+        await onV8Coverage(fileContent)
       }
     }, Promise.resolve())
   } finally {
     await operation.end()
   }
-}
-
-export const filterV8Coverage = (v8Coverage, { urlShouldBeCovered }) => {
-  const v8CoverageFiltered = {
-    ...v8Coverage,
-    result: v8Coverage.result.filter((fileReport) =>
-      urlShouldBeCovered(fileReport.url),
-    ),
-  }
-  return v8CoverageFiltered
 }

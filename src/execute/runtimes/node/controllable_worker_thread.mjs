@@ -1,25 +1,10 @@
+import { parentPort } from "node:worker_threads"
 import { uneval } from "@jsenv/uneval"
 
 import { executeUsingDynamicImport } from "./execute_using_dynamic_import.js"
 
 const ACTIONS_AVAILABLE = {
   "execute-using-dynamic-import": executeUsingDynamicImport,
-  "execute-using-require": async ({ fileUrl }) => {
-    const { createRequire } = await import("node:module")
-    const { fileURLToPath } = await import("node:url")
-    const filePath = fileURLToPath(fileUrl)
-    const require = createRequire(fileUrl)
-    // eslint-disable-next-line import/no-dynamic-require
-    const namespace = require(filePath)
-    const namespaceResolved = {}
-    await Promise.all(
-      Object.keys(namespace).map(async (key) => {
-        const value = await namespace[key]
-        namespaceResolved[key] = value
-      }),
-    )
-    return namespaceResolved
-  },
 }
 const ACTION_REQUEST_EVENT_NAME = "action"
 const ACTION_RESPONSE_EVENT_NAME = "action-result"
@@ -59,16 +44,11 @@ const sendActionCompleted = (value) => {
 }
 
 const sendToParent = (type, data) => {
-  // https://nodejs.org/api/process.html#process_process_connected
-  // not connected anymore, cannot communicate with parent
-  if (!process.connected) {
-    return
-  }
   // this can keep process alive longer than expected
   // when source is a long string.
   // It means node process may stay alive longer than expected
   // the time to send the data to the parent.
-  process.send({
+  parentPort.postMessage({
     jsenv: true,
     type,
     data,
@@ -78,14 +58,14 @@ const sendToParent = (type, data) => {
 const onceParentMessage = (type, callback) => {
   const listener = (message) => {
     if (message && message.jsenv && message.type === type) {
-      removeListener() // commenting this line keep this process alive
+      removeListener() // commenting this line keep this worker alive
       callback(message.data)
     }
   }
   const removeListener = () => {
-    process.removeListener("message", listener)
+    parentPort.removeListener("message", listener)
   }
-  process.on("message", listener)
+  parentPort.on("message", listener)
   return removeListener
 }
 
@@ -107,28 +87,16 @@ const removeActionRequestListener = onceParentMessage(
       value = e
     }
 
-    // setTimeout(() => {}, 100)
-
     if (failed) {
       sendActionFailed(value)
     } else {
       sendActionCompleted(value)
     }
-
-    // removeActionRequestListener()
     if (actionParams.exitAfterAction) {
       removeActionRequestListener()
-      // for some reason this fixes v8 coverage directory sometimes empty on Ubuntu
-      // process.exit()
     }
   },
 )
-
-// remove listener to process.on('message')
-// which is sufficient to let child process die
-// assuming nothing else keeps it alive
-// process.once("SIGTERM", removeActionRequestListener)
-// process.once("SIGINT", removeActionRequestListener)
 
 setTimeout(() => {
   sendToParent("ready")

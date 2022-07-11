@@ -5,3 +5,5 @@ performance.mark("a")
 1 === 1
 performance.mark("b")
 performance.measure("a to b", "a", "b")
+
+export const answer = 42

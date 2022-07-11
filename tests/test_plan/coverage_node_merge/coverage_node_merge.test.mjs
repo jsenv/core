@@ -5,7 +5,7 @@
 
 import { assert } from "@jsenv/assert"
 
-import { executeTestPlan, nodeChildProcess } from "@jsenv/core"
+import { executeTestPlan, nodeWorkerThread } from "@jsenv/core"
 
 const { testPlanCoverage } = await executeTestPlan({
   logLevel: "warn",
@@ -13,7 +13,7 @@ const { testPlanCoverage } = await executeTestPlan({
   testPlan: {
     "./main.js": {
       node: {
-        runtime: nodeChildProcess,
+        runtime: nodeWorkerThread,
         runtimeParams: {
           env: {
             FOO: true,
@@ -21,16 +21,17 @@ const { testPlanCoverage } = await executeTestPlan({
         },
       },
       node2: {
-        runtime: nodeChildProcess,
+        runtime: nodeWorkerThread,
         runtimeParams: {},
       },
     },
   },
   // keepRunning: true,
-  coverage: true,
+  coverageEnabled: true,
   coverageConfig: {
     "./file.js": true,
   },
+  coverageMethodForNodeJs: "Profiler",
   coverageReportTextLog: false,
   coverageReportHtmlDirectory: false,
 })

@@ -1,16 +1,16 @@
-import { executeTestPlan, nodeChildProcess } from "@jsenv/core"
+import { executeTestPlan, nodeWorkerThread } from "@jsenv/core"
 
 await executeTestPlan({
   rootDirectoryUrl: new URL("../", import.meta.url),
   testPlan: {
     "tests/**/*.test.mjs": {
       node: {
-        runtime: nodeChildProcess,
+        runtime: nodeWorkerThread,
       },
     },
     "tests/**/with_signal_warnings.test.mjs": {
       node: {
-        runtime: nodeChildProcess,
+        runtime: nodeWorkerThread,
         runtimeParams: {
           commandLineOptions: ["--no-warnings"],
         },
@@ -19,5 +19,5 @@ await executeTestPlan({
   },
   failFast: process.argv.includes("--workspace"),
   completedExecutionLogMerging: process.argv.includes("--workspace"),
-  coverage: process.argv.includes("--coverage"),
+  coverageEnabled: process.argv.includes("--coverage"),
 })

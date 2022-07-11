@@ -9,7 +9,8 @@ export const jsenvPluginUrlResolution = () => {
     name: "jsenv:url_resolution",
     appliesDuring: "*",
     resolveUrl: {
-      "entry_point": urlResolver,
+      "http_request": urlResolver, // during dev
+      "entry_point": urlResolver, // during build
       "link_href": urlResolver,
       "script_src": urlResolver,
       "a_href": urlResolver,

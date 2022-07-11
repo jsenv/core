@@ -1,21 +1,21 @@
-import { executeTestPlan, nodeChildProcess } from "@jsenv/core"
+import { executeTestPlan, nodeWorkerThread } from "@jsenv/core"
 
 await executeTestPlan({
   rootDirectoryUrl: new URL("../", import.meta.url),
   testPlan: {
     "tests/**/*.test.mjs": {
       node: {
-        runtime: nodeChildProcess,
+        runtime: nodeWorkerThread,
       },
     },
     "tests/**/react_build.test.mjs": {
       node: {
-        runtime: nodeChildProcess,
+        runtime: nodeWorkerThread,
         allocatedMs: 90_000,
       },
     },
   },
   failFast: process.argv.includes("--workspace"),
   completedExecutionLogMerging: process.argv.includes("--workspace"),
-  coverage: process.argv.includes("--coverage"),
+  coverageEnabled: process.argv.includes("--coverage"),
 })

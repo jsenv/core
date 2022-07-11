@@ -42,7 +42,7 @@ await startDevServer({
     "./**/.*/": false, // any folder starting with a dot is ignored (includes .git,.jsenv for instance)
     "./**/dist/": false,
     "./**/docs/": false,
-    "./**/experimental/": false,
+    "./**/experiments/": false,
     "./**/node_modules/": false,
     "./**/packages/": false,
   },

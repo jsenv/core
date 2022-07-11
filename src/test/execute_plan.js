@@ -1,10 +1,9 @@
 import { existsSync } from "node:fs"
 import { memoryUsage } from "node:process"
+import { takeCoverage } from "node:v8"
 import wrapAnsi from "wrap-ansi"
 import stripAnsi from "strip-ansi"
-import cuid from "cuid"
 
-import { URL_META } from "@jsenv/url-meta"
 import { urlToFileSystemPath } from "@jsenv/urls"
 import {
   createDetailedMessage,
@@ -13,11 +12,7 @@ import {
   startSpinner,
 } from "@jsenv/log"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
-import {
-  writeDirectory,
-  ensureEmptyDirectory,
-  writeFileSync,
-} from "@jsenv/filesystem"
+import { ensureEmptyDirectory, writeFileSync } from "@jsenv/filesystem"
 
 import { babelPluginInstrument } from "./coverage/babel_plugin_instrument.js"
 import { reportToCoverage } from "./coverage/report_to_coverage.js"
@@ -54,10 +49,11 @@ export const executePlan = async (
     gcBetweenExecutions,
     cooldownBetweenExecutions,
 
-    coverage,
+    coverageEnabled,
     coverageConfig,
     coverageIncludeMissing,
-    coverageForceIstanbul,
+    coverageMethodForBrowsers,
+    coverageMethodForNodeJs,
     coverageV8ConflictWarning,
     coverageTempDirectoryRelativeUrl,
 
@@ -79,9 +75,13 @@ export const executePlan = async (
     afterExecutionCallback = () => {},
   } = {},
 ) => {
+  const executePlanReturnValue = {}
+  const report = {}
+  const callbacks = []
   const stopAfterAllSignal = { notify: () => {} }
 
   let someNeedsServer = false
+  let someNodeRuntime = false
   const runtimes = {}
   Object.keys(plan).forEach((filePattern) => {
     const filePlan = plan[filePattern]
@@ -92,6 +92,9 @@ export const executePlan = async (
         runtimes[runtime.name] = runtime.version
         if (runtime.needsServer) {
           someNeedsServer = true
+        }
+        if (runtime.type === "node") {
+          someNodeRuntime = true
         }
       }
     })
@@ -122,10 +125,76 @@ export const executePlan = async (
   }
 
   try {
+    const coverageTempDirectoryUrl = new URL(
+      coverageTempDirectoryRelativeUrl,
+      rootDirectoryUrl,
+    ).href
+    if (
+      someNodeRuntime &&
+      coverageEnabled &&
+      coverageMethodForNodeJs === "NODE_V8_COVERAGE"
+    ) {
+      if (process.env.NODE_V8_COVERAGE) {
+        // when runned multiple times, we don't want to keep previous files in this directory
+        await ensureEmptyDirectory(process.env.NODE_V8_COVERAGE)
+      } else {
+        coverageMethodForNodeJs = "Profiler"
+        logger.warn(
+          createDetailedMessage(
+            `process.env.NODE_V8_COVERAGE is required to generate coverage for Node.js subprocesses`,
+            {
+              "suggestion": `Preprend NODE_V8_COVERAGE=.coverage/node to the command executing this process`,
+              "suggestion 2": `use coverageMethodForNodeJs: "Profiler". But it means coverage for child_process and worker_thread cannot be collected`,
+            },
+          ),
+        )
+      }
+    }
+
+    if (gcBetweenExecutions) {
+      ensureGlobalGc()
+    }
+
+    if (coverageEnabled) {
+      // when runned multiple times, we don't want to keep previous files in this directory
+      await ensureEmptyDirectory(coverageTempDirectoryUrl)
+      callbacks.push(async () => {
+        if (multipleExecutionsOperation.signal.aborted) {
+          // don't try to do the coverage stuff
+          return
+        }
+        try {
+          if (coverageMethodForNodeJs === "NODE_V8_COVERAGE") {
+            takeCoverage()
+            // conceptually we don't need coverage anymore so it would be
+            // good to call v8.stopCoverage()
+            // but it logs a strange message about "result is not an object"
+          }
+          const planCoverage = await reportToCoverage(report, {
+            signal: multipleExecutionsOperation.signal,
+            logger,
+            rootDirectoryUrl,
+            coverageConfig,
+            coverageIncludeMissing,
+            coverageMethodForBrowsers,
+            coverageV8ConflictWarning,
+          })
+          executePlanReturnValue.planCoverage = planCoverage
+        } catch (e) {
+          if (Abort.isAbortError(e)) {
+            return
+          }
+          throw e
+        }
+      })
+    }
+
     let runtimeParams = {
       rootDirectoryUrl,
-      collectCoverage: coverage,
-      coverageForceIstanbul,
+      coverageEnabled,
+      coverageConfig,
+      coverageMethodForBrowsers,
+      coverageMethodForNodeJs,
       stopAfterAllSignal,
     }
     if (someNeedsServer) {
@@ -154,7 +223,7 @@ export const executePlan = async (
               ...transpilation,
               getCustomBabelPlugins: ({ clientRuntimeCompat }) => {
                 if (
-                  coverage &&
+                  coverageEnabled &&
                   Object.keys(clientRuntimeCompat)[0] !== "chrome"
                 ) {
                   return {
@@ -221,75 +290,7 @@ export const executePlan = async (
       process.exitCode !== 1
 
     const startMs = Date.now()
-    const report = {}
     let rawOutput = ""
-
-    let transformReturnValue = (value) => value
-    if (gcBetweenExecutions) {
-      ensureGlobalGc()
-    }
-
-    const coverageTempDirectoryUrl = new URL(
-      coverageTempDirectoryRelativeUrl,
-      rootDirectoryUrl,
-    ).href
-
-    if (coverage) {
-      const associations = URL_META.resolveAssociations(
-        { cover: coverageConfig },
-        rootDirectoryUrl,
-      )
-      const urlShouldBeCovered = (url) => {
-        const { cover } = URL_META.applyAssociations({
-          url: new URL(url, rootDirectoryUrl).href,
-          associations,
-        })
-        return cover
-      }
-      runtimeParams.urlShouldBeCovered = urlShouldBeCovered
-
-      // in case runned multiple times, we don't want to keep writing lot of files in this directory
-      if (!process.env.NODE_V8_COVERAGE) {
-        await ensureEmptyDirectory(coverageTempDirectoryUrl)
-      }
-      if (runtimes.node) {
-        // v8 coverage is written in a directoy and auto propagate to subprocesses
-        // through process.env.NODE_V8_COVERAGE.
-        if (!coverageForceIstanbul && !process.env.NODE_V8_COVERAGE) {
-          const v8CoverageDirectory = new URL(
-            `./node_v8/${cuid()}`,
-            coverageTempDirectoryUrl,
-          ).href
-          await writeDirectory(v8CoverageDirectory, { allowUseless: true })
-          process.env.NODE_V8_COVERAGE =
-            urlToFileSystemPath(v8CoverageDirectory)
-        }
-      }
-      transformReturnValue = async (value) => {
-        if (multipleExecutionsOperation.signal.aborted) {
-          // don't try to do the coverage stuff
-          return value
-        }
-        try {
-          value.coverage = await reportToCoverage(value.report, {
-            signal: multipleExecutionsOperation.signal,
-            logger,
-            rootDirectoryUrl,
-            coverageConfig,
-            coverageIncludeMissing,
-            coverageForceIstanbul,
-            urlShouldBeCovered,
-            coverageV8ConflictWarning,
-          })
-        } catch (e) {
-          if (Abort.isAbortError(e)) {
-            return value
-          }
-          throw e
-        }
-        return value
-      }
-    }
 
     logger.info("")
     let executionLog = createLog({ newLine: "" })
@@ -309,6 +310,7 @@ export const executePlan = async (
       start: async (paramsFromStep) => {
         const executionIndex = executionSteps.indexOf(paramsFromStep)
         const { executionName, fileRelativeUrl, runtime } = paramsFromStep
+        const runtimeType = runtime.type
         const runtimeName = runtime.name
         const runtimeVersion = runtime.version
         const executionParams = {
@@ -324,6 +326,7 @@ export const executePlan = async (
         }
         const beforeExecutionInfo = {
           fileRelativeUrl,
+          runtimeType,
           runtimeName,
           runtimeVersion,
           executionIndex,
@@ -366,7 +369,7 @@ export const executePlan = async (
             keepRunning,
             mirrorConsole: false, // file are executed in parallel, log would be a mess to read
             collectConsole: executionParams.collectConsole,
-            collectCoverage: coverage,
+            coverageEnabled,
             coverageTempDirectoryUrl,
             runtime: executionParams.runtime,
             runtimeParams: {
@@ -483,16 +486,14 @@ export const executePlan = async (
       writeFileSync(logFileUrl, rawOutput)
       logger.info(`-> ${urlToFileSystemPath(logFileUrl)}`)
     }
-    const result = await transformReturnValue({
-      summary,
-      report,
-    })
-    return {
-      aborted: multipleExecutionsOperation.signal.aborted,
-      planSummary: result.summary,
-      planReport: result.report,
-      planCoverage: result.coverage,
-    }
+    executePlanReturnValue.aborted = multipleExecutionsOperation.signal.aborted
+    executePlanReturnValue.planSummary = summary
+    executePlanReturnValue.planReport = report
+    await callbacks.reduce(async (previous, callback) => {
+      await previous
+      await callback()
+    }, Promise.resolve())
+    return executePlanReturnValue
   } finally {
     await multipleExecutionsOperation.end()
   }

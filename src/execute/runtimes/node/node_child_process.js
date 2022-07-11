@@ -5,7 +5,6 @@ import {
   raceCallbacks,
   createCallbackListNotifiedOnce,
 } from "@jsenv/abort"
-import { uneval } from "@jsenv/uneval"
 import { createDetailedMessage } from "@jsenv/log"
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js"
 
@@ -15,11 +14,12 @@ import { killProcessTree } from "./kill_process_tree.js"
 import { EXIT_CODES } from "./exit_codes.js"
 
 const CONTROLLABLE_CHILD_PROCESS_URL = new URL(
-  "./controllable_child_process.mjs",
+  "./controllable_child_process.mjs?entry_point",
   import.meta.url,
 ).href
 
 export const nodeChildProcess = {
+  type: "node",
   name: "node_child_process",
   version: process.version.slice(1),
 }
@@ -36,8 +36,9 @@ nodeChildProcess.run = async ({
   stopSignal,
   onConsole,
 
-  collectCoverage = false,
-  coverageForceIstanbul,
+  coverageEnabled = false,
+  coverageConfig,
+  coverageMethodForNodeJs,
   collectPerformance,
 
   env,
@@ -55,12 +56,9 @@ nodeChildProcess.run = async ({
   }
   env = {
     ...env,
-    COVERAGE_ENABLED: collectCoverage,
     JSENV: true,
   }
-  if (coverageForceIstanbul) {
-    // if we want to force istanbul, we will set process.env.NODE_V8_COVERAGE = ''
-    // into the child_process
+  if (coverageMethodForNodeJs !== "NODE_V8_COVERAGE") {
     env.NODE_V8_COVERAGE = ""
   }
   commandLineOptions = [
@@ -190,12 +188,19 @@ nodeChildProcess.run = async ({
     actionOperation.throwIfAborted()
     await childProcessReadyPromise
     actionOperation.throwIfAborted()
-    await sendToChildProcess(childProcess, "action", {
-      actionType: "execute-using-dynamic-import",
-      actionParams: {
-        fileUrl: new URL(fileRelativeUrl, rootDirectoryUrl).href,
-        collectPerformance,
-        exitAfterAction: true,
+    await sendToChildProcess(childProcess, {
+      type: "action",
+      data: {
+        actionType: "execute-using-dynamic-import",
+        actionParams: {
+          rootDirectoryUrl,
+          fileUrl: new URL(fileRelativeUrl, rootDirectoryUrl).href,
+          collectPerformance,
+          coverageEnabled,
+          coverageConfig,
+          coverageMethodForNodeJs,
+          exitAfterAction: true,
+        },
       },
     })
     const winner = await winnerPromise
@@ -285,16 +290,22 @@ const STOP_SIGNAL = "SIGKILL"
 // but I'm not sure and it changes nothing so just use SIGKILL
 const GRACEFUL_STOP_FAILED_SIGNAL = "SIGKILL"
 
-const sendToChildProcess = async (childProcess, type, data) => {
-  const source = uneval(data, { functionAllowed: true })
+const sendToChildProcess = async (childProcess, { type, data }) => {
   return new Promise((resolve, reject) => {
-    childProcess.send({ type, data: source }, (error) => {
-      if (error) {
-        reject(error)
-      } else {
-        resolve()
-      }
-    })
+    childProcess.send(
+      {
+        jsenv: true,
+        type,
+        data,
+      },
+      (error) => {
+        if (error) {
+          reject(error)
+        } else {
+          resolve()
+        }
+      },
+    )
   })
 }
 

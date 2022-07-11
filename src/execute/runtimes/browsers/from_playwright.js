@@ -11,7 +11,7 @@ import { moveUrl } from "@jsenv/urls"
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js"
 import { escapeRegexpSpecialChars } from "@jsenv/utils/src/string/escape_regexp_special_chars.js"
 
-import { filterV8Coverage } from "@jsenv/core/src/test/coverage/v8_coverage_from_directory.js"
+import { filterV8Coverage } from "@jsenv/core/src/test/coverage/v8_coverage.js"
 import { composeTwoFileByFileIstanbulCoverages } from "@jsenv/core/src/test/coverage/istanbul_coverage_composition.js"
 
 export const createRuntimeFromPlaywright = ({
@@ -23,6 +23,7 @@ export const createRuntimeFromPlaywright = ({
   isolatedTab = false,
 }) => {
   const runtime = {
+    type: "browser",
     name: browserName,
     version: browserVersion,
     needsServer: true,
@@ -37,9 +38,9 @@ export const createRuntimeFromPlaywright = ({
 
     // measurePerformance,
     collectPerformance,
-    collectCoverage = false,
-    coverageForceIstanbul,
-    urlShouldBeCovered,
+    coverageEnabled = false,
+    coverageConfig,
+    coverageMethodForBrowsers,
 
     stopAfterAllSignal,
     stopSignal,
@@ -108,8 +109,11 @@ export const createRuntimeFromPlaywright = ({
     }
 
     let resultTransformer = (result) => result
-    if (collectCoverage) {
-      if (coveragePlaywrightAPIAvailable && !coverageForceIstanbul) {
+    if (coverageEnabled) {
+      if (
+        coveragePlaywrightAPIAvailable &&
+        coverageMethodForBrowsers === "playwright_api"
+      ) {
         await page.coverage.startJSCoverage({
           // reportAnonymousScripts: true,
         })
@@ -133,10 +137,11 @@ export const createRuntimeFromPlaywright = ({
                 }
               },
             )
-            const coverage = filterV8Coverage(
+            const coverage = await filterV8Coverage(
               { result: v8CoveragesWithFsUrls },
               {
-                urlShouldBeCovered,
+                rootDirectoryUrl,
+                coverageConfig,
               },
             )
             return {

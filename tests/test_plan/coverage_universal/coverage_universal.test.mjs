@@ -2,7 +2,7 @@ import { assert } from "@jsenv/assert"
 
 import {
   executeTestPlan,
-  nodeChildProcess,
+  nodeWorkerThread,
   chromium,
   firefox,
   webkit,
@@ -25,18 +25,19 @@ const { testPlanCoverage } = await executeTestPlan({
     },
     "./main.js": {
       node: {
-        runtime: nodeChildProcess,
+        runtime: nodeWorkerThread,
       },
       node2: {
-        runtime: nodeChildProcess,
+        runtime: nodeWorkerThread,
       },
     },
   },
   // keepRunning: true,
-  coverage: true,
+  coverageEnabled: true,
   coverageConfig: {
     "./file.js": true,
   },
+  coverageMethodForNodeJs: "Profiler",
   coverageReportTextLog: false,
   coverageReportHtmlDirectory: false,
   coverageV8ConflictWarning: false,

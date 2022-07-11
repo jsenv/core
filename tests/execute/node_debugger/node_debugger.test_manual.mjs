@@ -1,12 +1,12 @@
 import { assert } from "@jsenv/assert"
 
-import { execute, nodeChildProcess } from "@jsenv/core"
+import { execute, nodeWorkerThread } from "@jsenv/core"
 
 const result = await execute({
   rootDirectoryUrl: new URL("./", import.meta.url),
   fileRelativeUrl: `./file.js`,
   // logLevel: "debug",
-  runtime: nodeChildProcess,
+  runtime: nodeWorkerThread,
   mirrorConsole: false,
   keepRunning: true, // node will naturally exit
 })
