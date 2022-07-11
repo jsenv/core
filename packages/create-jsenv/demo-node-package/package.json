@@ -8,7 +8,7 @@
   },
   "scripts": {
     "test": "node ./scripts/test.mjs",
-    "test:coverage": "NODE_V8_COVERAGE=.coverage/node npm run test -- --coverage"
+    "test:coverage": "npm run test -- --coverage"
   },
   "devDependencies": {
     "@jsenv/assert": "2.6.0",
