@@ -37,6 +37,7 @@ const { testPlanCoverage } = await executeTestPlan({
   coverageConfig: {
     "./file.js": true,
   },
+  coverageMethodForNodeJs: "Profiler",
   coverageReportTextLog: false,
   coverageReportHtmlDirectory: false,
   coverageV8ConflictWarning: false,

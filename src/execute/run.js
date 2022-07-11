@@ -116,9 +116,13 @@ export const run = async ({
       runOperation.throwIfAborted()
     }
 
-    const { status, namespace, performance, coverage } = winner.data
+    const { status, namespace, error, performance, coverage } = winner.data
     result.status = status
-    result.namespace = namespace
+    if (status === "errored") {
+      result.error = error
+    } else {
+      result.namespace = namespace
+    }
     if (collectPerformance) {
       result.performance = performance
     }
