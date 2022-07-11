@@ -1,11 +1,11 @@
-import { executeTestPlan, nodeWorkerThread } from "@jsenv/core"
+import { executeTestPlan, nodeChildProcess } from "@jsenv/core"
 
 await executeTestPlan({
   rootDirectoryUrl: new URL("../", import.meta.url),
   testPlan: {
     "tests/**/*.test.mjs": {
       node: {
-        runtime: nodeWorkerThread,
+        runtime: nodeChildProcess,
       },
     },
   },
