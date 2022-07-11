@@ -26760,7 +26760,6 @@ nodeWorkerThread.run = async ({
     env: envForWorkerThread,
     execArgv: execArgvForWorkerThread,
     // workerData: { options },
-    // trackUnmanagedFds: true,
     stdin: true,
     stdout: true,
     stderr: true
@@ -26778,7 +26777,6 @@ nodeWorkerThread.run = async ({
     onceWorkerThreadMessage(workerThread, "ready", resolve);
   });
   const stop = memoize(async () => {
-    await workerThreadReadyPromise;
     await workerThread.terminate();
   });
   const winnerPromise = new Promise(resolve => {
@@ -26916,25 +26914,27 @@ nodeWorkerThread.run = async ({
 const installWorkerThreadOutputListener = (workerThread, callback) => {
   // beware that we may receive ansi output here, should not be a problem but keep that in mind
   const stdoutDataCallback = chunk => {
+    const text = String(chunk);
     callback({
       type: "log",
-      text: String(chunk)
+      text
     });
   };
 
   workerThread.stdout.on("data", stdoutDataCallback);
 
   const stdErrorDataCallback = chunk => {
+    const text = String(chunk);
     callback({
       type: "error",
-      text: String(chunk)
+      text
     });
   };
 
   workerThread.stderr.on("data", stdErrorDataCallback);
   return () => {
     workerThread.stdout.removeListener("data", stdoutDataCallback);
-    workerThread.stderr.removeListener("data", stdoutDataCallback);
+    workerThread.stderr.removeListener("data", stdErrorDataCallback);
   };
 };
 
