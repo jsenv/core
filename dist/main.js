@@ -2654,6 +2654,22 @@ const statusIsClientError = status => status >= 400 && status < 500;
 
 const statusIsServerError = status => status >= 500 && status < 600;
 
+const applyDnsResolution = async hostname => {
+  const dnsResolution = await new Promise((resolve, reject) => {
+    lookup(hostname, (error, address, family) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve({
+          address,
+          family
+        });
+      }
+    });
+  });
+  return dnsResolution;
+};
+
 const getServerOrigins = async ({
   protocol,
   ip,
@@ -2682,22 +2698,6 @@ const getServerOrigins = async ({
       port
     })
   };
-};
-
-const applyDnsResolution = async hostname => {
-  const dnsResolution = await new Promise((resolve, reject) => {
-    lookup(hostname, (error, address, family) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve({
-          address,
-          family
-        });
-      }
-    });
-  });
-  return dnsResolution;
 };
 
 const createServerOrigin = ({
@@ -26795,6 +26795,13 @@ nodeWorkerThread.run = async ({
     onceWorkerThreadMessage(workerThread, "ready", resolve);
   });
   const stop = memoize(async () => {
+    // read all stdout before terminating
+    // (no need for stderr because it's sync)
+    while (workerThread.stdout.read() !== null) {}
+
+    await new Promise(resolve => {
+      setTimeout(resolve);
+    });
     await workerThread.terminate();
   });
   const winnerPromise = new Promise(resolve => {

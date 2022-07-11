@@ -1,3 +1,8 @@
+# 27.3.2
+
+- Use "localhost" only if their is a mapping to 127.0.0.1 on the OS
+- Consume stdout before terminating node worker thread
+
 # 27.3.0
 
 - Update node to 18.5.0 to get https://github.com/nodejs/node/commit/0fc1cf478f7a448241791f5cf2c25f2d45bfd5b5
