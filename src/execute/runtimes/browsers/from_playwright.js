@@ -11,7 +11,7 @@ import { moveUrl } from "@jsenv/urls"
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js"
 import { escapeRegexpSpecialChars } from "@jsenv/utils/src/string/escape_regexp_special_chars.js"
 
-import { filterV8Coverage } from "@jsenv/core/src/test/coverage/v8_coverage_from_directory.js"
+import { filterV8Coverage } from "@jsenv/core/src/test/coverage/v8_coverage.js"
 import { composeTwoFileByFileIstanbulCoverages } from "@jsenv/core/src/test/coverage/istanbul_coverage_composition.js"
 
 export const createRuntimeFromPlaywright = ({
@@ -38,9 +38,9 @@ export const createRuntimeFromPlaywright = ({
 
     // measurePerformance,
     collectPerformance,
-    collectCoverage = false,
+    coverageEnabled = false,
+    coverageConfig,
     coverageMethodForBrowsers,
-    urlShouldBeCovered,
 
     stopAfterAllSignal,
     stopSignal,
@@ -109,7 +109,7 @@ export const createRuntimeFromPlaywright = ({
     }
 
     let resultTransformer = (result) => result
-    if (collectCoverage) {
+    if (coverageEnabled) {
       if (
         coveragePlaywrightAPIAvailable &&
         coverageMethodForBrowsers === "playwright_api"
@@ -137,10 +137,11 @@ export const createRuntimeFromPlaywright = ({
                 }
               },
             )
-            const coverage = filterV8Coverage(
+            const coverage = await filterV8Coverage(
               { result: v8CoveragesWithFsUrls },
               {
-                urlShouldBeCovered,
+                rootDirectoryUrl,
+                coverageConfig,
               },
             )
             return {

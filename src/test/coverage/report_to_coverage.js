@@ -1,10 +1,8 @@
 import { readFileSync } from "node:fs"
 import { Abort } from "@jsenv/abort"
 
-import {
-  visitNodeV8Directory,
-  filterV8Coverage,
-} from "./v8_coverage_from_directory.js"
+import { filterV8Coverage } from "./v8_coverage.js"
+import { readNodeV8CoverageDirectory } from "./v8_coverage_node_directory.js"
 import { composeTwoV8Coverages } from "./v8_coverage_composition.js"
 import { composeTwoFileByFileIstanbulCoverages } from "./istanbul_coverage_composition.js"
 import { v8CoverageToIstanbul } from "./v8_coverage_to_istanbul.js"
@@ -20,7 +18,6 @@ export const reportToCoverage = async (
     rootDirectoryUrl,
     coverageConfig,
     coverageIncludeMissing,
-    urlShouldBeCovered,
     coverageMethodForNodeJs,
     coverageV8ConflictWarning,
   },
@@ -53,20 +50,20 @@ export const reportToCoverage = async (
         coverageMethodForNodeJs !== "NODE_V8_COVERAGE"
       ) {
         logger.warn(
-          `No execution.coverageFileUrl from execution named "${executionName}" of ${file}`,
+          `No "coverageFileUrl" from execution named "${executionName}" of ${file}`,
         )
       }
     },
   })
 
   if (coverageMethodForNodeJs === "NODE_V8_COVERAGE") {
-    await visitNodeV8Directory({
+    await readNodeV8CoverageDirectory({
       logger,
       signal,
-      NODE_V8_COVERAGE: process.env.NODE_V8_COVERAGE,
-      onV8Coverage: (nodeV8Coverage) => {
-        const nodeV8CoverageLight = filterV8Coverage(nodeV8Coverage, {
-          urlShouldBeCovered,
+      onV8Coverage: async (nodeV8Coverage) => {
+        const nodeV8CoverageLight = await filterV8Coverage(nodeV8Coverage, {
+          rootDirectoryUrl,
+          coverageConfig,
         })
         v8Coverage = v8Coverage
           ? composeTwoV8Coverages(v8Coverage, nodeV8CoverageLight)

@@ -4,7 +4,6 @@ import { takeCoverage } from "node:v8"
 import wrapAnsi from "wrap-ansi"
 import stripAnsi from "strip-ansi"
 
-import { URL_META } from "@jsenv/url-meta"
 import { urlToFileSystemPath } from "@jsenv/urls"
 import {
   createDetailedMessage,
@@ -50,8 +49,7 @@ export const executePlan = async (
     gcBetweenExecutions,
     cooldownBetweenExecutions,
 
-    coverage,
-    coverageMethod,
+    coverageEnabled,
     coverageConfig,
     coverageIncludeMissing,
     coverageMethodForBrowsers,
@@ -126,7 +124,8 @@ export const executePlan = async (
   try {
     let runtimeParams = {
       rootDirectoryUrl,
-      collectCoverage: coverage,
+      coverageEnabled,
+      coverageConfig,
       coverageMethodForBrowsers,
       coverageMethodForNodeJs,
       stopAfterAllSignal,
@@ -157,7 +156,7 @@ export const executePlan = async (
               ...transpilation,
               getCustomBabelPlugins: ({ clientRuntimeCompat }) => {
                 if (
-                  coverage &&
+                  coverageEnabled &&
                   Object.keys(clientRuntimeCompat)[0] !== "chrome"
                 ) {
                   return {
@@ -236,50 +235,30 @@ export const executePlan = async (
       coverageTempDirectoryRelativeUrl,
       rootDirectoryUrl,
     ).href
-
-    if (someNodeRuntime && coverage) {
-      if (coverageMethod === "NODE_V8_COVERAGE") {
-        if (process.env.NODE_V8_COVERAGE) {
-          // when runned multiple times, we don't want to keep previous files in this directory
-          await ensureEmptyDirectory(process.env.NODE_V8_COVERAGE)
-        } else {
-          coverageMethod = "Profiler"
-          logger.warn(
-            createDetailedMessage(
-              `process.env.NODE_V8_COVERAGE is required to generate coverage for Node.js subprocesses`,
-              {
-                suggestion: `Preprend NODE_V8_COVERAGE=.coverage/node node ./execute_test_plan.js`,
-              },
-            ),
-          )
-        }
+    if (
+      someNodeRuntime &&
+      coverageEnabled &&
+      coverageMethodForNodeJs === "NODE_V8_COVERAGE"
+    ) {
+      if (process.env.NODE_V8_COVERAGE) {
+        // when runned multiple times, we don't want to keep previous files in this directory
+        await ensureEmptyDirectory(process.env.NODE_V8_COVERAGE)
       } else {
-        // TODO: instead rely on Profiler.startPreciseCoverage
-        // (see experiments/v8_*/main.js)
-        // (that must happen in the forked child_process/worker)
-        // and in that case the child_process/worker will return
-        // a coverage per execution instead of a global coverage
-        // but do log a warning that process.env.NODE_V8_COVERAGE
-        // should be used otherwise coverage of worker/child_process is ignored
-        // (except during tests)
-        coverage = false
+        coverageMethodForNodeJs = "Profiler"
+        logger.warn(
+          createDetailedMessage(
+            `process.env.NODE_V8_COVERAGE is required to generate coverage for Node.js subprocesses`,
+            {
+              "suggestion": `Preprend NODE_V8_COVERAGE=.coverage/node to the command executing this process`,
+              "suggestion 2": `use coverageMethodForNodeJs: "Profiler". But it means coverage for child_process and worker_thread cannot be collected`,
+            },
+          ),
+        )
       }
     }
-    if (coverage) {
+    if (coverageEnabled) {
       // when runned multiple times, we don't want to keep previous files in this directory
       await ensureEmptyDirectory(coverageTempDirectoryUrl)
-      const associations = URL_META.resolveAssociations(
-        { cover: coverageConfig },
-        rootDirectoryUrl,
-      )
-      const urlShouldBeCovered = (url) => {
-        const { cover } = URL_META.applyAssociations({
-          url: new URL(url, rootDirectoryUrl).href,
-          associations,
-        })
-        return cover
-      }
-      runtimeParams.urlShouldBeCovered = urlShouldBeCovered
 
       transformReturnValue = async (value) => {
         if (multipleExecutionsOperation.signal.aborted) {
@@ -287,7 +266,7 @@ export const executePlan = async (
           return value
         }
         try {
-          if (process.env.NODE_V8_COVERAGE) {
+          if (coverageMethodForNodeJs === "NODE_V8_COVERAGE") {
             takeCoverage()
             // conceptually we don't need coverage anymore so it would be
             // good to call v8.stopCoverage()
@@ -300,7 +279,6 @@ export const executePlan = async (
             coverageConfig,
             coverageIncludeMissing,
             coverageMethodForBrowsers,
-            urlShouldBeCovered,
             coverageV8ConflictWarning,
           })
         } catch (e) {
@@ -390,7 +368,7 @@ export const executePlan = async (
             keepRunning,
             mirrorConsole: false, // file are executed in parallel, log would be a mess to read
             collectConsole: executionParams.collectConsole,
-            collectCoverage: coverage,
+            coverageEnabled,
             coverageTempDirectoryUrl,
             runtime: executionParams.runtime,
             runtimeParams: {

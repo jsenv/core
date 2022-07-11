@@ -1,7 +1,7 @@
 import cuid from "cuid"
 import { Abort, raceCallbacks } from "@jsenv/abort"
 import { resolveUrl } from "@jsenv/urls"
-import { writeFile } from "@jsenv/filesystem"
+import { writeFileSync } from "@jsenv/filesystem"
 
 export const run = async ({
   signal = new AbortController().signal,
@@ -10,17 +10,18 @@ export const run = async ({
   keepRunning = false,
   mirrorConsole = false,
   collectConsole = false,
-  collectCoverage = false,
+  coverageEnabled = false,
   coverageTempDirectoryUrl,
   collectPerformance = false,
 
   runtime,
   runtimeParams,
 }) => {
+  let result = {}
+  const callbacks = []
+
   const onConsoleRef = { current: () => {} }
   const stopSignal = { notify: () => {} }
-
-  let resultTransformer = (result) => result
   const runtimeLabel = `${runtime.name}/${runtime.version}`
 
   const runOperation = Abort.startOperation()
@@ -33,22 +34,24 @@ export const run = async ({
     allocatedMs !== Infinity
   ) {
     const timeoutAbortSource = runOperation.timeout(allocatedMs)
-    resultTransformer = composeTransformer(resultTransformer, (result) => {
+    callbacks.push(() => {
       if (
         result.status === "errored" &&
         Abort.isAbortError(result.error) &&
         timeoutAbortSource.signal.aborted
       ) {
-        return createTimedoutResult()
+        result = {
+          status: "timedout",
+        }
       }
-      return result
     })
   }
-  resultTransformer = composeTransformer(resultTransformer, (result) => {
+  callbacks.push(() => {
     if (result.status === "errored" && Abort.isAbortError(result.error)) {
-      return createAbortedResult()
+      result = {
+        status: "aborted",
+      }
     }
-    return result
   })
   const consoleCalls = []
   onConsoleRef.current = ({ type, text }) => {
@@ -64,45 +67,14 @@ export const run = async ({
     }
   }
   if (collectConsole) {
-    resultTransformer = composeTransformer(resultTransformer, (result) => {
+    callbacks.push(() => {
       result.consoleCalls = consoleCalls
-      return result
-    })
-  }
-  if (collectCoverage) {
-    resultTransformer = composeTransformer(
-      resultTransformer,
-      async (result) => {
-        // we do not keep coverage in memory, it can grow very big
-        // instead we store it on the filesystem
-        // and they can be read later at "coverageFileUrl"
-        const { coverage } = result
-        if (coverage) {
-          const coverageFileUrl = resolveUrl(
-            `./${runtime.name}/${cuid()}`,
-            coverageTempDirectoryUrl,
-          )
-          await writeFile(coverageFileUrl, JSON.stringify(coverage, null, "  "))
-          result.coverageFileUrl = coverageFileUrl
-          delete result.coverage
-        }
-        return result
-      },
-    )
-  } else {
-    resultTransformer = composeTransformer(resultTransformer, (result) => {
-      // as collectCoverage is disabled
-      // executionResult.coverage is undefined or {}
-      // we delete it just to have a cleaner object
-      delete result.coverage
-      return result
     })
   }
 
   const startMs = Date.now()
-  resultTransformer = composeTransformer(resultTransformer, (result) => {
+  callbacks.push(() => {
     result.duration = Date.now() - startMs
-    return result
   })
 
   try {
@@ -119,7 +91,7 @@ export const run = async ({
           },
           runned: async (cb) => {
             try {
-              const result = await runtime.run({
+              const runResult = await runtime.run({
                 signal: runOperation.signal,
                 logger,
                 ...runtimeParams,
@@ -128,7 +100,7 @@ export const run = async ({
                 stopSignal,
                 onConsole: (log) => onConsoleRef.current(log),
               })
-              cb(result)
+              cb(runResult)
             } catch (e) {
               cb({
                 status: "errored",
@@ -144,35 +116,37 @@ export const run = async ({
     if (winner.name === "aborted") {
       runOperation.throwIfAborted()
     }
-    let result = winner.data
-    result = await resultTransformer(result)
+
+    const { namespace, performance, coverage } = winner.data
+    result.namespace = namespace
+    if (collectPerformance) {
+      result.performance = performance
+    }
+    if (coverageEnabled) {
+      // we do not keep coverage in memory, it can grow very big
+      // instead we store it on the filesystem
+      // and they can be read later at "coverageFileUrl"
+      const coverageFileUrl = resolveUrl(
+        `./${runtime.name}/${cuid()}`,
+        coverageTempDirectoryUrl,
+      )
+      writeFileSync(coverageFileUrl, JSON.stringify(coverage, null, "  "))
+      result.coverageFileUrl = coverageFileUrl
+    }
+    callbacks.forEach((callback) => {
+      callback()
+    })
     return result
   } catch (e) {
-    let result = {
+    result = {
       status: "errored",
       error: e,
     }
-    result = await resultTransformer(result)
+    callbacks.forEach((callback) => {
+      callback()
+    })
     return result
   } finally {
     await runOperation.end()
-  }
-}
-
-const composeTransformer = (previousTransformer, transformer) => {
-  return async (value) => {
-    const transformedValue = await previousTransformer(value)
-    return transformer(transformedValue)
-  }
-}
-
-const createAbortedResult = () => {
-  return {
-    status: "aborted",
-  }
-}
-const createTimedoutResult = () => {
-  return {
-    status: "timedout",
   }
 }

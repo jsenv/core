@@ -1,47 +1,22 @@
 import { uneval } from "@jsenv/uneval"
-import { startObservingPerformances } from "./node_execution_performance.js"
+import { executeUsingDynamicImport } from "./execute_using_dynamic_import.js"
 
 const ACTIONS_AVAILABLE = {
-  "execute-using-dynamic-import": async ({ fileUrl, collectPerformance }) => {
-    const getNamespace = async () => {
-      const namespace = await import(fileUrl)
-      const namespaceResolved = {}
-      await Promise.all([
-        ...Object.keys(namespace).map(async (key) => {
-          const value = await namespace[key]
-          namespaceResolved[key] = value
-        }),
-      ])
-      return namespaceResolved
-    }
-    if (collectPerformance) {
-      const getPerformance = startObservingPerformances()
-      const namespace = await getNamespace()
-      const performance = await getPerformance()
-      return {
-        namespace,
-        performance,
-      }
-    }
-    const namespace = await getNamespace()
-    return {
-      namespace,
-    }
-  },
+  "execute-using-dynamic-import": executeUsingDynamicImport,
   "execute-using-require": async ({ fileUrl }) => {
-    const { createRequire } = await import("module")
-    const { fileURLToPath } = await import("url")
+    const { createRequire } = await import("node:module")
+    const { fileURLToPath } = await import("node:url")
     const filePath = fileURLToPath(fileUrl)
     const require = createRequire(fileUrl)
     // eslint-disable-next-line import/no-dynamic-require
     const namespace = require(filePath)
     const namespaceResolved = {}
-    await Promise.all([
-      ...Object.keys(namespace).map(async (key) => {
+    await Promise.all(
+      Object.keys(namespace).map(async (key) => {
         const value = await namespace[key]
         namespaceResolved[key] = value
       }),
-    ])
+    )
     return namespaceResolved
   },
 }

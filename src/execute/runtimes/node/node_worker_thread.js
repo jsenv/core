@@ -36,8 +36,9 @@ nodeWorkerThread.run = async ({
   stopSignal,
   onConsole,
 
-  collectCoverage = false,
+  coverageConfig,
   coverageMethodForNodeJs,
+  coverageEnabled = false,
   collectPerformance,
 
   env,
@@ -52,7 +53,6 @@ nodeWorkerThread.run = async ({
   }
   env = {
     ...env,
-    COVERAGE_ENABLED: collectCoverage,
     JSENV: true,
   }
   if (coverageMethodForNodeJs !== "NODE_V8_COVERAGE") {
@@ -141,8 +141,12 @@ nodeWorkerThread.run = async ({
       data: {
         actionType: "execute-using-dynamic-import",
         actionParams: {
+          rootDirectoryUrl,
           fileUrl: new URL(fileRelativeUrl, rootDirectoryUrl).href,
           collectPerformance,
+          coverageEnabled,
+          coverageConfig,
+          coverageMethodForNodeJs,
           exitAfterAction: true,
         },
       },
@@ -200,9 +204,12 @@ nodeWorkerThread.run = async ({
         error: value,
       }
     }
+    const { namespace, performance, coverage } = value
     return {
       status: "completed",
-      ...value,
+      namespace,
+      performance,
+      coverage,
     }
   }
 

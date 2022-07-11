@@ -28,7 +28,7 @@ import { executePlan } from "./execute_plan.js"
  * @param {boolean} [testPlanParameters.failFast=false] Fails immediatly when a test execution fails
  * @param {number} [testPlanParameters.cooldownBetweenExecutions=0] Millisecond to wait between each execution
  * @param {boolean} [testPlanParameters.logMemoryHeapUsage=false] Add memory heap usage during logs
- * @param {boolean} [testPlanParameters.coverage=false] Controls if coverage is collected during files executions
+ * @param {boolean} [testPlanParameters.coverageEnabled=false] Controls if coverage is collected during files executions
  * @param {boolean} [testPlanParameters.coverageV8ConflictWarning=true] Warn when coverage from 2 executions cannot be merged
  * @return {Object} An object containing the result of all file executions
  */
@@ -60,7 +60,7 @@ export const executeTestPlan = async ({
   cooldownBetweenExecutions = 0,
   gcBetweenExecutions = logMemoryHeapUsage,
 
-  coverage = process.argv.includes("--cover") ||
+  coverageEnabled = process.argv.includes("--cover") ||
     process.argv.includes("--coverage"),
   coverageConfig = {
     "./src/": true,
@@ -96,7 +96,7 @@ export const executeTestPlan = async ({
   if (typeof testPlan !== "object") {
     throw new Error(`testPlan must be an object, got ${testPlan}`)
   }
-  if (coverage) {
+  if (coverageEnabled) {
     if (typeof coverageConfig !== "object") {
       throw new TypeError(
         `coverageConfig must be an object, got ${coverageConfig}`,
@@ -157,7 +157,7 @@ export const executeTestPlan = async ({
     cooldownBetweenExecutions,
     gcBetweenExecutions,
 
-    coverage,
+    coverageEnabled,
     coverageConfig,
     coverageIncludeMissing,
     coverageMethodForBrowsers,
@@ -191,7 +191,7 @@ export const executeTestPlan = async ({
     // keep this one first because it does ensureEmptyDirectory
     // and in case coverage json file gets written in the same directory
     // it must be done before
-    if (coverage && coverageReportHtmlDirectory) {
+    if (coverageEnabled && coverageReportHtmlDirectory) {
       const coverageHtmlDirectoryUrl = resolveDirectoryUrl(
         coverageReportHtmlDirectory,
         rootDirectoryUrl,
@@ -218,7 +218,7 @@ export const executeTestPlan = async ({
         }),
       )
     }
-    if (coverage && coverageReportJsonFile) {
+    if (coverageEnabled && coverageReportJsonFile) {
       const coverageJsonFileUrl = new URL(
         coverageReportJsonFile,
         rootDirectoryUrl,
@@ -231,7 +231,7 @@ export const executeTestPlan = async ({
         }),
       )
     }
-    if (coverage && coverageReportTextLog) {
+    if (coverageEnabled && coverageReportTextLog) {
       promises.push(
         generateCoverageTextLog(result.planCoverage, {
           coverageReportSkipEmpty,

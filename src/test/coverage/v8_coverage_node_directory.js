@@ -3,13 +3,13 @@ import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/log"
 import { Abort } from "@jsenv/abort"
 
-export const visitNodeV8Directory = async ({
+export const readNodeV8CoverageDirectory = async ({
   logger,
   signal,
-  NODE_V8_COVERAGE,
   onV8Coverage,
   maxMsWaitingForNodeToWriteCoverageFile = 2000,
 }) => {
+  const NODE_V8_COVERAGE = process.env.NODE_V8_COVERAGE
   const operation = Abort.startOperation()
   operation.addAbortSignal(signal)
 
@@ -74,20 +74,10 @@ export const visitNodeV8Directory = async ({
 
       const fileContent = await tryReadJsonFile()
       if (fileContent) {
-        onV8Coverage(fileContent)
+        await onV8Coverage(fileContent)
       }
     }, Promise.resolve())
   } finally {
     await operation.end()
   }
-}
-
-export const filterV8Coverage = (v8Coverage, { urlShouldBeCovered }) => {
-  const v8CoverageFiltered = {
-    ...v8Coverage,
-    result: v8Coverage.result.filter((fileReport) =>
-      urlShouldBeCovered(fileReport.url),
-    ),
-  }
-  return v8CoverageFiltered
 }
