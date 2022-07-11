@@ -14,7 +14,7 @@ node_modules/
 **/async-to-promises.js
 
 /tests/**/js_syntax_error.js
-/packages/server/tests/internal_error/
+/packages/server/tests/internal_error/snapshots/
 /**/dist/**
 
 /**/*.nomodule.js

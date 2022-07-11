@@ -208,7 +208,7 @@ export const startServer = async ({
   }
 
   status = "opened"
-  const serverOrigins = getServerOrigins({ protocol, ip, port })
+  const serverOrigins = await getServerOrigins({ protocol, ip, port })
   const serverOrigin = serverOrigins.internal
 
   const removeConnectionErrorListener = listenServerConnectionError(

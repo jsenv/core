@@ -1,10 +1,15 @@
 import { networkInterfaces } from "node:os"
+import { lookup } from "node:dns"
 
-export const getServerOrigins = ({ protocol, ip, port }) => {
+export const getServerOrigins = async ({ protocol, ip, port }) => {
   const isInternalIp = ip === "127.0.0.1"
+  const localhostDnsResolution = await applyDnsResolution("localhost")
   const internalOrigin = createServerOrigin({
     protocol,
-    hostname: "localhost",
+    hostname:
+      localhostDnsResolution.address === "127.0.0.1"
+        ? "localhost"
+        : "127.0.0.1",
     port,
   })
   if (isInternalIp) {
@@ -19,6 +24,19 @@ export const getServerOrigins = ({ protocol, ip, port }) => {
       port,
     }),
   }
+}
+
+const applyDnsResolution = async (hostname) => {
+  const dnsResolution = await new Promise((resolve, reject) => {
+    lookup(hostname, (error, address, family) => {
+      if (error) {
+        reject(error)
+      } else {
+        resolve({ address, family })
+      }
+    })
+  })
+  return dnsResolution
 }
 
 const createServerOrigin = ({ protocol, hostname, port }) => {

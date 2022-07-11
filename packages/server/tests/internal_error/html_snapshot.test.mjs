@@ -11,31 +11,28 @@ with a human eye verification before commiting anything that would change them.
 
 */
 
-import { readFile, readDirectory } from "@jsenv/filesystem"
+import { readFileSync, readdirSync } from "node:fs"
 import { assert } from "@jsenv/assert"
 
-const readHtmlFiles = async () => {
-  const htmlFilesDirectory = new URL("./snapshots/", import.meta.url).href
-  const htmlFilenames = await readDirectory(htmlFilesDirectory)
-
+const readHtmlFiles = () => {
+  const htmlFilesDirectoryUrl = new URL("./snapshots/", import.meta.url)
+  const htmlFilenames = readdirSync(htmlFilesDirectoryUrl)
   const htmlFiles = {}
   htmlFilenames.forEach((htmlFilename) => {
     // to ensure order is predictable
     htmlFiles[htmlFilename] = null
   })
-  await Promise.all(
-    htmlFilenames.map(async (htmlFilename) => {
-      const htmlFileUrl = new URL(htmlFilename, htmlFilesDirectory).href
-      htmlFiles[htmlFilename] = await readFile(htmlFileUrl)
-    }),
-  )
+  htmlFilenames.forEach((htmlFilename) => {
+    const htmlFileUrl = new URL(htmlFilename, htmlFilesDirectoryUrl)
+    htmlFiles[htmlFilename] = String(readFileSync(htmlFileUrl))
+  })
   return htmlFiles
 }
 
 // disable on windows because it would fails due to line endings (CRLF)
 if (process.platform !== "win32") {
-  const expected = await readHtmlFiles()
+  const expected = readHtmlFiles()
   await import("./generate_html_snapshot_files.mjs")
-  const actual = await readHtmlFiles()
+  const actual = readHtmlFiles()
   assert({ actual, expected })
 }

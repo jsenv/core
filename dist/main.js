@@ -9,6 +9,7 @@ import net, { createServer } from "node:net";
 import { Readable, Stream, Writable } from "node:stream";
 import { Http2ServerResponse } from "node:http2";
 import { createReadStream, readdirSync, statSync, readFile as readFile$1, chmod, stat, lstat, readdir, promises, unlink, openSync, closeSync, rmdir, readFileSync as readFileSync$1, watch, writeFile as writeFile$1, writeFileSync as writeFileSync$1, mkdirSync, existsSync, realpathSync } from "node:fs";
+import { lookup } from "node:dns";
 import { performance } from "node:perf_hooks";
 import { extname, dirname, basename } from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
@@ -2653,15 +2654,16 @@ const statusIsClientError = status => status >= 400 && status < 500;
 
 const statusIsServerError = status => status >= 500 && status < 600;
 
-const getServerOrigins = ({
+const getServerOrigins = async ({
   protocol,
   ip,
   port
 }) => {
   const isInternalIp = ip === "127.0.0.1";
+  const localhostDnsResolution = await applyDnsResolution("localhost");
   const internalOrigin = createServerOrigin({
     protocol,
-    hostname: "localhost",
+    hostname: localhostDnsResolution.address === "127.0.0.1" ? "localhost" : "127.0.0.1",
     port
   });
 
@@ -2680,6 +2682,22 @@ const getServerOrigins = ({
       port
     })
   };
+};
+
+const applyDnsResolution = async hostname => {
+  const dnsResolution = await new Promise((resolve, reject) => {
+    lookup(hostname, (error, address, family) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve({
+          address,
+          family
+        });
+      }
+    });
+  });
+  return dnsResolution;
 };
 
 const createServerOrigin = ({
@@ -3536,7 +3554,7 @@ const startServer = async ({
   };
 
   status = "opened";
-  const serverOrigins = getServerOrigins({
+  const serverOrigins = await getServerOrigins({
     protocol,
     ip,
     port
