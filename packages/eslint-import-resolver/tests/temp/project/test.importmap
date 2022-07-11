@@ -1,1 +1,5 @@
-{"imports":{"./file":"./file.js"}}
+{
+  "imports": {
+    "./file": "./file.js"
+  }
+}

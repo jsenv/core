@@ -4,7 +4,7 @@ dist/
 node_modules/
 
 /dev_exploring/
-/experimental/
+/experiments/
 /node_modules/
 /old/
 
@@ -18,5 +18,6 @@ node_modules/
 /**/dist/**
 
 /**/*.nomodule.js
+/**/*.es5.js
 /jsconfig.json
 /package-lock.json
