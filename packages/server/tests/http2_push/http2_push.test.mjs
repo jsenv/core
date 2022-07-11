@@ -6,8 +6,12 @@ import { assert } from "@jsenv/assert"
 import { readFile } from "@jsenv/filesystem"
 
 import { startServer, fetchFileSystem } from "@jsenv/server"
+import { applyDnsResolution } from "@jsenv/server/src/internal/dns_resolution.js"
 
 if (process.platform !== "win32") {
+  const localhostDns = await applyDnsResolution("localhost")
+  const expectedOrigin =
+    localhostDns.address === "127.0.0.1" ? "localhost" : "127.0.0.1"
   const { certificate, privateKey } = requestCertificateForLocalhost()
   const server = await startServer({
     logLevel: "warn",
@@ -91,13 +95,13 @@ if (process.platform !== "win32") {
       {
         ":path": "/script.js",
         ":method": "GET",
-        ":authority": "localhost:3679",
+        ":authority": `${expectedOrigin}:3679`,
         ":scheme": "https",
       },
       {
         ":path": "/style.css",
         ":method": "GET",
-        ":authority": "localhost:3679",
+        ":authority": `${expectedOrigin}:3679`,
         ":scheme": "https",
       },
     ],

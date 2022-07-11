@@ -2,8 +2,12 @@ import { assert } from "@jsenv/assert"
 import { fetchUrl } from "@jsenv/fetch"
 
 import { startServer } from "@jsenv/server"
+import { applyDnsResolution } from "@jsenv/server/src/internal/dns_resolution.js"
 import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js"
 
+const localhostDns = await applyDnsResolution("localhost")
+const expectedOrigin =
+  localhostDns.address === "127.0.0.1" ? "localhost" : "127.0.0.1"
 const { origin } = await startServer({
   logLevel: "warn",
   protocol: "http",
@@ -23,7 +27,7 @@ const { origin } = await startServer({
 
 {
   const actual = origin
-  const expected = "http://localhost:8998"
+  const expected = `http://${expectedOrigin}:8998`
   assert({ actual, expected })
 }
 {
@@ -36,7 +40,7 @@ const { origin } = await startServer({
     body: await response.text(),
   }
   const expected = {
-    url: `http://localhost:8998/`,
+    url: `http://${expectedOrigin}:8998/`,
     status: 200,
     statusText: "OK",
     headers: {
