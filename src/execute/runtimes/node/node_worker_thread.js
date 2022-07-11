@@ -32,7 +32,6 @@ nodeWorkerThread.run = async ({
   fileRelativeUrl,
 
   keepRunning,
-  gracefulStopAllocatedMs = 4000,
   stopSignal,
   onConsole,
 
@@ -87,7 +86,7 @@ nodeWorkerThread.run = async ({
       env: envForWorkerThread,
       execArgv: execArgvForWorkerThread,
       // workerData: { options },
-      trackUnmanagedFds: true,
+      // trackUnmanagedFds: true,
       stdin: true,
       stdout: true,
       stderr: true,
@@ -104,10 +103,8 @@ nodeWorkerThread.run = async ({
   })
 
   const stop = memoize(async () => {
-    try {
-      await workerThreadReadyPromise
-      await workerThread.terminate()
-    } catch (e) {}
+    await workerThreadReadyPromise
+    await workerThread.terminate()
   })
 
   const winnerPromise = new Promise((resolve) => {
@@ -226,9 +223,7 @@ nodeWorkerThread.run = async ({
   if (keepRunning) {
     stopSignal.notify = stop
   } else {
-    await stop({
-      gracefulStopAllocatedMs,
-    })
+    await stop()
   }
   await actionOperation.end()
   return result
