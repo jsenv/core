@@ -1,8 +1,9 @@
+import { URL_META } from "@jsenv/url-meta"
+
 export const filterV8Coverage = async (
   v8Coverage,
   { rootDirectoryUrl, coverageConfig },
 ) => {
-  const { URL_META } = await import("@jsenv/url-meta")
   const associations = URL_META.resolveAssociations(
     { cover: coverageConfig },
     rootDirectoryUrl,

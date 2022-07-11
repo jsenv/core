@@ -14,7 +14,7 @@ import { killProcessTree } from "./kill_process_tree.js"
 import { EXIT_CODES } from "./exit_codes.js"
 
 const CONTROLLABLE_CHILD_PROCESS_URL = new URL(
-  "./controllable_child_process.mjs",
+  "./controllable_child_process.mjs?entry_point",
   import.meta.url,
 ).href
 

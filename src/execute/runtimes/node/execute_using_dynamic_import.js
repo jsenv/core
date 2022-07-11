@@ -1,4 +1,3 @@
-import { filterV8Coverage } from "@jsenv/core/src/test/coverage/v8_coverage.js"
 import { startJsCoverage } from "./profiler_v8_coverage.js"
 import { startObservingPerformances } from "./node_execution_performance.js"
 
@@ -13,6 +12,9 @@ export const executeUsingDynamicImport = async ({
   let result = {}
   const afterImportCallbacks = []
   if (coverageEnabled && coverageMethodForNodeJs === "Profiler") {
+    const { filterV8Coverage } = await import(
+      "@jsenv/core/src/test/coverage/v8_coverage.js"
+    )
     const { stopJsCoverage } = await startJsCoverage()
     afterImportCallbacks.push(async () => {
       const coverage = await stopJsCoverage()

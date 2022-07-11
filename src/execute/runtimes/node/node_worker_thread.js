@@ -15,7 +15,7 @@ import { ExecOptions } from "./exec_options.js"
 import { EXIT_CODES } from "./exit_codes.js"
 
 const CONTROLLABLE_WORKER_THREAD_URL = new URL(
-  "./controllable_worker_thread.mjs",
+  "./controllable_worker_thread.mjs?entry_point",
   import.meta.url,
 ).href
 

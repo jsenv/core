@@ -13,17 +13,17 @@ import { performance } from "node:perf_hooks";
 import { extname, dirname, basename } from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import crypto, { createHash } from "node:crypto";
+import { U as URL_META, f as filterV8Coverage } from "./js/v8_coverage.js";
 import { parseHtmlString, stringifyHtmlAst, visitHtmlNodes, getHtmlNodeAttribute, setHtmlNodeAttributes, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, applyPostCss, postCssPluginUrlVisitor, parseJsUrls, findHtmlNode, getHtmlNodeText, removeHtmlNode, setHtmlNodeText, analyzeScriptNode, applyBabelPlugins, injectScriptNodeAsEarlyAsPossible, createHtmlNode, removeHtmlNodeText, transpileWithParcel, injectJsImport, minifyWithParcel, analyzeLinkNode } from "@jsenv/ast";
 import { createMagicSource, composeTwoSourcemaps, sourcemapConverter, SOURCEMAP, generateSourcemapFileUrl, generateSourcemapDataUrl } from "@jsenv/sourcemap";
 import { createRequire } from "node:module";
 import babelParser from "@babel/parser";
+import v8, { takeCoverage } from "node:v8";
 import wrapAnsi from "wrap-ansi";
 import stripAnsi from "strip-ansi";
 import cuid from "cuid";
-import v8 from "node:v8";
 import { runInNewContext, Script } from "node:vm";
 import { fork } from "node:child_process";
-import { u as uneval } from "./js/uneval.js";
 
 const LOG_LEVEL_OFF = "off";
 const LOG_LEVEL_DEBUG = "debug";
@@ -5742,515 +5742,6 @@ const createEventHistory = limit => {
   };
 };
 
-const assertUrlLike = (value, name = "url") => {
-  if (typeof value !== "string") {
-    throw new TypeError(`${name} must be a url string, got ${value}`);
-  }
-
-  if (isWindowsPathnameSpecifier(value)) {
-    throw new TypeError(`${name} must be a url but looks like a windows pathname, got ${value}`);
-  }
-
-  if (!hasScheme$1(value)) {
-    throw new TypeError(`${name} must be a url and no scheme found, got ${value}`);
-  }
-};
-const isPlainObject = value => {
-  if (value === null) {
-    return false;
-  }
-
-  if (typeof value === "object") {
-    if (Array.isArray(value)) {
-      return false;
-    }
-
-    return true;
-  }
-
-  return false;
-};
-
-const isWindowsPathnameSpecifier = specifier => {
-  const firstChar = specifier[0];
-  if (!/[a-zA-Z]/.test(firstChar)) return false;
-  const secondChar = specifier[1];
-  if (secondChar !== ":") return false;
-  const thirdChar = specifier[2];
-  return thirdChar === "/" || thirdChar === "\\";
-};
-
-const hasScheme$1 = specifier => /^[a-zA-Z]+:/.test(specifier);
-
-const resolveAssociations = (associations, baseUrl) => {
-  assertUrlLike(baseUrl, "baseUrl");
-  const associationsResolved = {};
-  Object.keys(associations).forEach(key => {
-    const valueMap = associations[key];
-    const valueMapResolved = {};
-    Object.keys(valueMap).forEach(pattern => {
-      const value = valueMap[pattern];
-      const patternResolved = normalizeUrlPattern(pattern, baseUrl);
-      valueMapResolved[patternResolved] = value;
-    });
-    associationsResolved[key] = valueMapResolved;
-  });
-  return associationsResolved;
-};
-
-const normalizeUrlPattern = (urlPattern, baseUrl) => {
-  // starts with a scheme
-  if (/^[a-zA-Z]{2,}:/.test(urlPattern)) {
-    return urlPattern;
-  }
-
-  return String(new URL(urlPattern, baseUrl));
-};
-
-const asFlatAssociations = associations => {
-  if (!isPlainObject(associations)) {
-    throw new TypeError(`associations must be a plain object, got ${associations}`);
-  }
-
-  const flatAssociations = {};
-  Object.keys(associations).forEach(key => {
-    const valueMap = associations[key];
-
-    if (!isPlainObject(valueMap)) {
-      throw new TypeError(`all associations value must be objects, found "${key}": ${valueMap}`);
-    }
-
-    Object.keys(valueMap).forEach(pattern => {
-      const value = valueMap[pattern];
-      const previousValue = flatAssociations[pattern];
-      flatAssociations[pattern] = previousValue ? { ...previousValue,
-        [key]: value
-      } : {
-        [key]: value
-      };
-    });
-  });
-  return flatAssociations;
-};
-
-/*
- * Link to things doing pattern matching:
- * https://git-scm.com/docs/gitignore
- * https://github.com/kaelzhang/node-ignore
- */
-/** @module jsenv_url_meta **/
-
-/**
- * An object representing the result of applying a pattern to an url
- * @typedef {Object} MatchResult
- * @property {boolean} matched Indicates if url matched pattern
- * @property {number} patternIndex Index where pattern stopped matching url, otherwise pattern.length
- * @property {number} urlIndex Index where url stopped matching pattern, otherwise url.length
- * @property {Array} matchGroups Array of strings captured during pattern matching
- */
-
-/**
- * Apply a pattern to an url
- * @param {Object} applyPatternMatchingParams
- * @param {string} applyPatternMatchingParams.pattern "*", "**" and trailing slash have special meaning
- * @param {string} applyPatternMatchingParams.url a string representing an url
- * @return {MatchResult}
- */
-
-const applyPatternMatching = ({
-  url,
-  pattern
-}) => {
-  assertUrlLike(pattern, "pattern");
-  assertUrlLike(url, "url");
-  const {
-    matched,
-    patternIndex,
-    index,
-    groups
-  } = applyMatching(pattern, url);
-  const matchGroups = [];
-  let groupIndex = 0;
-  groups.forEach(group => {
-    if (group.name) {
-      matchGroups[group.name] = group.string;
-    } else {
-      matchGroups[groupIndex] = group.string;
-      groupIndex++;
-    }
-  });
-  return {
-    matched,
-    patternIndex,
-    urlIndex: index,
-    matchGroups
-  };
-};
-
-const applyMatching = (pattern, string) => {
-  const groups = [];
-  let patternIndex = 0;
-  let index = 0;
-  let remainingPattern = pattern;
-  let remainingString = string;
-  let restoreIndexes = true;
-
-  const consumePattern = count => {
-    const subpattern = remainingPattern.slice(0, count);
-    remainingPattern = remainingPattern.slice(count);
-    patternIndex += count;
-    return subpattern;
-  };
-
-  const consumeString = count => {
-    const substring = remainingString.slice(0, count);
-    remainingString = remainingString.slice(count);
-    index += count;
-    return substring;
-  };
-
-  const consumeRemainingString = () => {
-    return consumeString(remainingString.length);
-  };
-
-  let matched;
-
-  const iterate = () => {
-    const patternIndexBefore = patternIndex;
-    const indexBefore = index;
-    matched = matchOne();
-
-    if (matched === undefined) {
-      consumePattern(1);
-      consumeString(1);
-      iterate();
-      return;
-    }
-
-    if (matched === false && restoreIndexes) {
-      patternIndex = patternIndexBefore;
-      index = indexBefore;
-    }
-  };
-
-  const matchOne = () => {
-    // pattern consumed and string consumed
-    if (remainingPattern === "" && remainingString === "") {
-      return true; // string fully matched pattern
-    } // pattern consumed, string not consumed
-
-
-    if (remainingPattern === "" && remainingString !== "") {
-      return false; // fails because string longer than expected
-    } // -- from this point pattern is not consumed --
-    // string consumed, pattern not consumed
-
-
-    if (remainingString === "") {
-      if (remainingPattern === "**") {
-        // trailing "**" is optional
-        consumePattern(2);
-        return true;
-      }
-
-      if (remainingPattern === "*") {
-        groups.push({
-          string: ""
-        });
-      }
-
-      return false; // fail because string shorter than expected
-    } // -- from this point pattern and string are not consumed --
-    // fast path trailing slash
-
-
-    if (remainingPattern === "/") {
-      if (remainingString[0] === "/") {
-        // trailing slash match remaining
-        consumePattern(1);
-        groups.push({
-          string: consumeRemainingString()
-        });
-        return true;
-      }
-
-      return false;
-    } // fast path trailing '**'
-
-
-    if (remainingPattern === "**") {
-      consumePattern(2);
-      consumeRemainingString();
-      return true;
-    } // pattern leading **
-
-
-    if (remainingPattern.slice(0, 2) === "**") {
-      consumePattern(2); // consumes "**"
-
-      if (remainingPattern[0] === "/") {
-        consumePattern(1); // consumes "/"
-      } // pattern ending with ** always match remaining string
-
-
-      if (remainingPattern === "") {
-        consumeRemainingString();
-        return true;
-      }
-
-      const skipResult = skipUntilMatch({
-        pattern: remainingPattern,
-        string: remainingString,
-        canSkipSlash: true
-      });
-      groups.push(...skipResult.groups);
-      consumePattern(skipResult.patternIndex);
-      consumeRemainingString();
-      restoreIndexes = false;
-      return skipResult.matched;
-    }
-
-    if (remainingPattern[0] === "*") {
-      consumePattern(1); // consumes "*"
-
-      if (remainingPattern === "") {
-        // matches everything except '/'
-        const slashIndex = remainingString.indexOf("/");
-
-        if (slashIndex === -1) {
-          groups.push({
-            string: consumeRemainingString()
-          });
-          return true;
-        }
-
-        groups.push({
-          string: consumeString(slashIndex)
-        });
-        return false;
-      } // the next char must not the one expected by remainingPattern[0]
-      // because * is greedy and expect to skip at least one char
-
-
-      if (remainingPattern[0] === remainingString[0]) {
-        groups.push({
-          string: ""
-        });
-        patternIndex = patternIndex - 1;
-        return false;
-      }
-
-      const skipResult = skipUntilMatch({
-        pattern: remainingPattern,
-        string: remainingString,
-        canSkipSlash: false
-      });
-      groups.push(skipResult.group, ...skipResult.groups);
-      consumePattern(skipResult.patternIndex);
-      consumeString(skipResult.index);
-      restoreIndexes = false;
-      return skipResult.matched;
-    }
-
-    if (remainingPattern[0] !== remainingString[0]) {
-      return false;
-    }
-
-    return undefined;
-  };
-
-  iterate();
-  return {
-    matched,
-    patternIndex,
-    index,
-    groups
-  };
-};
-
-const skipUntilMatch = ({
-  pattern,
-  string,
-  canSkipSlash
-}) => {
-  let index = 0;
-  let remainingString = string;
-  let longestMatchRange = null;
-
-  const tryToMatch = () => {
-    const matchAttempt = applyMatching(pattern, remainingString);
-
-    if (matchAttempt.matched) {
-      return {
-        matched: true,
-        patternIndex: matchAttempt.patternIndex,
-        index: index + matchAttempt.index,
-        groups: matchAttempt.groups,
-        group: {
-          string: remainingString === "" ? string : string.slice(0, -remainingString.length)
-        }
-      };
-    }
-
-    const matchAttemptIndex = matchAttempt.index;
-    const matchRange = {
-      patternIndex: matchAttempt.patternIndex,
-      index,
-      length: matchAttemptIndex,
-      groups: matchAttempt.groups
-    };
-
-    if (!longestMatchRange || longestMatchRange.length < matchRange.length) {
-      longestMatchRange = matchRange;
-    }
-
-    const nextIndex = matchAttemptIndex + 1;
-    const canSkip = nextIndex < remainingString.length && (canSkipSlash || remainingString[0] !== "/");
-
-    if (canSkip) {
-      // search against the next unattempted string
-      index += nextIndex;
-      remainingString = remainingString.slice(nextIndex);
-      return tryToMatch();
-    }
-
-    return {
-      matched: false,
-      patternIndex: longestMatchRange.patternIndex,
-      index: longestMatchRange.index + longestMatchRange.length,
-      groups: longestMatchRange.groups,
-      group: {
-        string: string.slice(0, longestMatchRange.index)
-      }
-    };
-  };
-
-  return tryToMatch();
-};
-
-const applyAssociations = ({
-  url,
-  associations
-}) => {
-  assertUrlLike(url);
-  const flatAssociations = asFlatAssociations(associations);
-  return Object.keys(flatAssociations).reduce((previousValue, pattern) => {
-    const {
-      matched
-    } = applyPatternMatching({
-      pattern,
-      url
-    });
-
-    if (matched) {
-      const value = flatAssociations[pattern];
-
-      if (isPlainObject(previousValue) && isPlainObject(value)) {
-        return { ...previousValue,
-          ...value
-        };
-      }
-
-      return value;
-    }
-
-    return previousValue;
-  }, {});
-};
-
-const applyAliases = ({
-  url,
-  aliases
-}) => {
-  let aliasFullMatchResult;
-  const aliasMatchingKey = Object.keys(aliases).find(key => {
-    const aliasMatchResult = applyPatternMatching({
-      pattern: key,
-      url
-    });
-
-    if (aliasMatchResult.matched) {
-      aliasFullMatchResult = aliasMatchResult;
-      return true;
-    }
-
-    return false;
-  });
-
-  if (!aliasMatchingKey) {
-    return url;
-  }
-
-  const {
-    matchGroups
-  } = aliasFullMatchResult;
-  const alias = aliases[aliasMatchingKey];
-  const parts = alias.split("*");
-  const newUrl = parts.reduce((previous, value, index) => {
-    return `${previous}${value}${index === parts.length - 1 ? "" : matchGroups[index]}`;
-  }, "");
-  return newUrl;
-};
-
-const urlChildMayMatch = ({
-  url,
-  associations,
-  predicate
-}) => {
-  assertUrlLike(url, "url"); // the function was meants to be used on url ending with '/'
-
-  if (!url.endsWith("/")) {
-    throw new Error(`url should end with /, got ${url}`);
-  }
-
-  if (typeof predicate !== "function") {
-    throw new TypeError(`predicate must be a function, got ${predicate}`);
-  }
-
-  const flatAssociations = asFlatAssociations(associations); // for full match we must create an object to allow pattern to override previous ones
-
-  let fullMatchMeta = {};
-  let someFullMatch = false; // for partial match, any meta satisfying predicate will be valid because
-  // we don't know for sure if pattern will still match for a file inside pathname
-
-  const partialMatchMetaArray = [];
-  Object.keys(flatAssociations).forEach(pattern => {
-    const value = flatAssociations[pattern];
-    const matchResult = applyPatternMatching({
-      pattern,
-      url
-    });
-
-    if (matchResult.matched) {
-      someFullMatch = true;
-
-      if (isPlainObject(fullMatchMeta) && isPlainObject(value)) {
-        fullMatchMeta = { ...fullMatchMeta,
-          ...value
-        };
-      } else {
-        fullMatchMeta = value;
-      }
-    } else if (someFullMatch === false && matchResult.urlIndex >= url.length) {
-      partialMatchMetaArray.push(value);
-    }
-  });
-
-  if (someFullMatch) {
-    return Boolean(predicate(fullMatchMeta));
-  }
-
-  return partialMatchMetaArray.some(partialMatchMeta => predicate(partialMatchMeta));
-};
-
-const URL_META = {
-  resolveAssociations,
-  applyAssociations,
-  urlChildMayMatch,
-  applyPatternMatching,
-  applyAliases
-};
-
 const pluginRequestWaitingCheck = ({
   requestWaitingMs = 20000,
   requestWaitingCallback = ({
@@ -10071,7 +9562,10 @@ const jsenvPluginUrlResolution = () => {
     name: "jsenv:url_resolution",
     appliesDuring: "*",
     resolveUrl: {
+      "http_request": urlResolver,
+      // during dev
       "entry_point": urlResolver,
+      // during build
       "link_href": urlResolver,
       "script_src": urlResolver,
       "a_href": urlResolver,
@@ -18026,16 +17520,16 @@ const jsenvPluginAsJsClassicConversion = ({
         return null;
       }
 
-      const isJsEntryPoint = // in general html files are entry points
-      // but during build js can be sepcified as an entry point
-      // (meaning there is no html file where we can inject systemjs)
-      // in that case we need to inject systemjs in the js file
-      originalUrlInfo.data.isEntryPoint || // In thoose case we need to inject systemjs the worker js file
-      originalUrlInfo.data.isWebWorkerEntryPoint; // if it's an entry point without dependency (it does not use import)
+      const jsClassicFormat = // in general html file are entry points, but js can be entry point when:
+      // - passed in entryPoints to build
+      // - is used by web worker
+      // - the reference contains ?entry_point
+      // When js is entry point there can be no HTML to inject systemjs
+      // and systemjs must be injected into the js file
+      originalUrlInfo.isEntryPoint && // if it's an entry point without dependency (it does not use import)
       // then we can use UMD, otherwise we have to use systemjs
       // because it is imported by systemjs
-
-      const jsClassicFormat = isJsEntryPoint && !originalUrlInfo.data.usesImport ? "umd" : "system";
+      !originalUrlInfo.data.usesImport ? "umd" : "system";
       const {
         content,
         sourcemap
@@ -18043,7 +17537,6 @@ const jsenvPluginAsJsClassicConversion = ({
         systemJsInjection,
         systemJsClientFileUrl,
         urlInfo: originalUrlInfo,
-        isJsEntryPoint,
         jsClassicFormat
       });
       urlInfo.data.jsClassicFormat = jsClassicFormat;
@@ -18087,7 +17580,6 @@ const convertJsModuleToJsClassic = async ({
   systemJsInjection,
   systemJsClientFileUrl,
   urlInfo,
-  isJsEntryPoint,
   jsClassicFormat
 }) => {
   const {
@@ -18106,7 +17598,7 @@ const convertJsModuleToJsClassic = async ({
   let sourcemap = urlInfo.sourcemap;
   sourcemap = await composeTwoSourcemaps(sourcemap, map);
 
-  if (systemJsInjection && jsClassicFormat === "system" && isJsEntryPoint) {
+  if (systemJsInjection && jsClassicFormat === "system" && urlInfo.isEntryPoint) {
     const magicSource = createMagicSource(code);
     const systemjsCode = readFileSync(systemJsClientFileUrl, {
       as: "string"
@@ -19800,7 +19292,7 @@ const rollupPluginJsenv = ({
       jsModuleUrlInfos.forEach(jsModuleUrlInfo => {
         const id = jsModuleUrlInfo.url;
 
-        if (jsModuleUrlInfo.data.isEntryPoint) {
+        if (jsModuleUrlInfo.isEntryPoint) {
           emitChunk({
             id
           });
@@ -20083,7 +19575,7 @@ const willBeInsideJsDirectory = ({
     return true;
   }
 
-  if (!jsModuleUrlInfo.data.isEntryPoint && !jsModuleUrlInfo.data.isWebWorkerEntryPoint) {
+  if (!jsModuleUrlInfo.isEntryPoint) {
     // not an entry point, jsenv will put it inside js/ directory
     return true;
   }
@@ -21443,6 +20935,7 @@ const createUrlInfo = url => {
     originalUrl: undefined,
     generatedUrl: null,
     filename: "",
+    isEntryPoint: false,
     isInline: false,
     inlineUrlSite: null,
     shouldHandle: undefined,
@@ -22374,6 +21867,7 @@ const createKitchen = ({
     baseUrl,
     isOriginalPosition,
     shouldHandle,
+    isEntryPoint = false,
     isInline = false,
     injected = false,
     isRessourceHint = false,
@@ -22411,6 +21905,7 @@ const createKitchen = ({
       baseUrl,
       isOriginalPosition,
       shouldHandle,
+      isEntryPoint,
       isInline,
       injected,
       isRessourceHint,
@@ -22427,7 +21922,7 @@ const createKitchen = ({
   const mutateReference = (reference, newReference) => {
     reference.next = newReference;
     newReference.prev = reference;
-    newReference.original = reference.original || reference;
+    newReference.original = reference.original || reference; //  newReference.isEntryPoint = reference.isEntryPoint
   };
 
   const resolveReference = reference => {
@@ -22452,11 +21947,16 @@ const createKitchen = ({
         reference.url = normalizedReturnValue;
         mutateReference(previousReference, reference);
       });
-      const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url);
-      applyReferenceEffectsOnUrlInfo(reference, urlInfo, kitchenContext);
       const referenceUrlObject = new URL(reference.url);
       reference.searchParams = referenceUrlObject.searchParams;
-      reference.generatedUrl = reference.url; // This hook must touch reference.generatedUrl, NOT reference.url
+      reference.generatedUrl = reference.url;
+
+      if (reference.searchParams.has("entry_point")) {
+        reference.isEntryPoint = true;
+      }
+
+      const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url);
+      applyReferenceEffectsOnUrlInfo(reference, urlInfo, kitchenContext); // This hook must touch reference.generatedUrl, NOT reference.url
       // And this is because this hook inject query params used to:
       // - bypass browser cache (?v)
       // - convey information (?hmr)
@@ -22557,7 +22057,8 @@ const createKitchen = ({
         filename,
         status = 200,
         headers = {},
-        body
+        body,
+        isEntryPoint
       } = fetchUrlContentReturnValue;
 
       if (status !== 200) {
@@ -22591,6 +22092,10 @@ const createKitchen = ({
 
       if (data) {
         Object.assign(urlInfo.data, data);
+      }
+
+      if (typeof isEntryPoint === "boolean") {
+        urlInfo.isEntryPoint = isEntryPoint;
       }
 
       if (filename) {
@@ -22895,6 +22400,7 @@ const createKitchen = ({
 
   const prepareEntryPoint = params => {
     const entryReference = createReference(params);
+    entryReference.isEntryPoint = true;
     const entryUrlInfo = resolveReference(entryReference);
     return [entryReference, entryUrlInfo];
   };
@@ -23002,6 +22508,11 @@ const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
   }
 
   urlInfo.originalUrl = urlInfo.originalUrl || reference.url;
+
+  if (reference.isEntryPoint || isWebWorkerEntryPointReference(reference)) {
+    urlInfo.isEntryPoint = true;
+  }
+
   Object.assign(urlInfo.data, reference.data);
   Object.assign(urlInfo.timing, reference.timing);
 
@@ -23025,10 +22536,6 @@ const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
     urlInfo.contentType = reference.contentType;
     urlInfo.originalContent = context === "build" ? urlInfo.originalContent === undefined ? reference.content : urlInfo.originalContent : reference.content;
     urlInfo.content = reference.content;
-  }
-
-  if (isWebWorkerEntryPointReference(reference)) {
-    urlInfo.data.isWebWorkerEntryPoint = true;
   }
 };
 
@@ -23312,10 +22819,10 @@ const createFileService = ({
     }
 
     if (!reference) {
-      const entryPoint = kitchen.prepareEntryPoint({
+      const entryPoint = kitchen.injectReference({
         trace: parentUrl || rootDirectoryUrl,
         parentUrl: parentUrl || rootDirectoryUrl,
-        type: "entry_point",
+        type: "http_request",
         specifier: request.ressource
       });
       reference = entryPoint[0];
@@ -24068,21 +23575,29 @@ const babelPluginInstrument = (api, {
   };
 };
 
-const visitNodeV8Directory = async ({
+const readNodeV8CoverageDirectory = async ({
   logger,
   signal,
-  NODE_V8_COVERAGE,
   onV8Coverage,
   maxMsWaitingForNodeToWriteCoverageFile = 2000
 }) => {
+  const NODE_V8_COVERAGE = process.env.NODE_V8_COVERAGE;
   const operation = Abort.startOperation();
   operation.addAbortSignal(signal);
+  let timeSpentTrying = 0;
 
   const tryReadDirectory = async () => {
-    const dirContent = await readDirectory(NODE_V8_COVERAGE);
+    const dirContent = readdirSync(NODE_V8_COVERAGE);
 
     if (dirContent.length > 0) {
       return dirContent;
+    }
+
+    if (timeSpentTrying < maxMsWaitingForNodeToWriteCoverageFile) {
+      await new Promise(resolve => setTimeout(resolve, 200));
+      timeSpentTrying += 200;
+      logger.debug("retry to read coverage directory");
+      return tryReadDirectory();
     }
 
     logger.warn(`v8 coverage directory is empty at ${NODE_V8_COVERAGE}`);
@@ -24096,17 +23611,16 @@ const visitNodeV8Directory = async ({
     await dirContent.reduce(async (previous, dirEntry) => {
       operation.throwIfAborted();
       await previous;
-      const dirEntryUrl = resolveUrl$1(dirEntry, coverageDirectoryUrl);
+      const dirEntryUrl = new URL(dirEntry, coverageDirectoryUrl);
 
-      const tryReadJsonFile = async (timeSpentTrying = 0) => {
-        const fileContent = await readFile(dirEntryUrl, {
-          as: "string"
-        });
+      const tryReadJsonFile = async () => {
+        const fileContent = String(readFileSync$1(dirEntryUrl));
 
         if (fileContent === "") {
-          if (timeSpentTrying < 400) {
+          if (timeSpentTrying < maxMsWaitingForNodeToWriteCoverageFile) {
             await new Promise(resolve => setTimeout(resolve, 200));
-            return tryReadJsonFile(timeSpentTrying + 200);
+            timeSpentTrying += 200;
+            return tryReadJsonFile();
           }
 
           console.warn(`Coverage JSON file is empty at ${dirEntryUrl}`);
@@ -24119,7 +23633,8 @@ const visitNodeV8Directory = async ({
         } catch (e) {
           if (timeSpentTrying < maxMsWaitingForNodeToWriteCoverageFile) {
             await new Promise(resolve => setTimeout(resolve, 200));
-            return tryReadJsonFile(timeSpentTrying + 200);
+            timeSpentTrying += 200;
+            return tryReadJsonFile();
           }
 
           console.warn(createDetailedMessage$1(`Error while reading coverage file`, {
@@ -24133,20 +23648,12 @@ const visitNodeV8Directory = async ({
       const fileContent = await tryReadJsonFile();
 
       if (fileContent) {
-        onV8Coverage(fileContent);
+        await onV8Coverage(fileContent);
       }
     }, Promise.resolve());
   } finally {
     await operation.end();
   }
-};
-const filterV8Coverage = (v8Coverage, {
-  urlShouldBeCovered
-}) => {
-  const v8CoverageFiltered = { ...v8Coverage,
-    result: v8Coverage.result.filter(fileReport => urlShouldBeCovered(fileReport.url))
-  };
-  return v8CoverageFiltered;
 };
 
 const composeTwoV8Coverages = (firstV8Coverage, secondV8Coverage) => {
@@ -24448,8 +23955,7 @@ const reportToCoverage = async (report, {
   rootDirectoryUrl,
   coverageConfig,
   coverageIncludeMissing,
-  urlShouldBeCovered,
-  coverageForceIstanbul,
+  coverageMethodForNodeJs,
   coverageV8ConflictWarning
 }) => {
   // collect v8 and istanbul coverage from executions
@@ -24478,20 +23984,20 @@ const reportToCoverage = async (report, {
       // in any scenario we are fine because
       // coverDescription will generate empty coverage for files
       // that were suppose to be coverage but were not.
-      if (executionResult.status === "completed" && executionResult.runtimeName !== "node" && !process.env.NODE_V8_COVERAGE) {
-        logger.warn(`No execution.coverageFileUrl from execution named "${executionName}" of ${file}`);
+      if (executionResult.status === "completed" && executionResult.type === "node" && coverageMethodForNodeJs !== "NODE_V8_COVERAGE") {
+        logger.warn(`No "coverageFileUrl" from execution named "${executionName}" of ${file}`);
       }
     }
   });
 
-  if (!coverageForceIstanbul && process.env.NODE_V8_COVERAGE) {
-    await visitNodeV8Directory({
+  if (coverageMethodForNodeJs === "NODE_V8_COVERAGE") {
+    await readNodeV8CoverageDirectory({
       logger,
       signal,
-      NODE_V8_COVERAGE: process.env.NODE_V8_COVERAGE,
-      onV8Coverage: nodeV8Coverage => {
-        const nodeV8CoverageLight = filterV8Coverage(nodeV8Coverage, {
-          urlShouldBeCovered
+      onV8Coverage: async nodeV8Coverage => {
+        const nodeV8CoverageLight = await filterV8Coverage(nodeV8Coverage, {
+          rootDirectoryUrl,
+          coverageConfig
         });
         v8Coverage = v8Coverage ? composeTwoV8Coverages(v8Coverage, nodeV8CoverageLight) : nodeV8CoverageLight;
       }
@@ -24570,9 +24076,7 @@ const getCoverageFromReport = async ({
           return;
         }
 
-        const executionCoverage = await readFile(coverageFileUrl, {
-          as: "json"
-        });
+        const executionCoverage = JSON.parse(String(readFileSync$1(new URL(coverageFileUrl))));
 
         if (isV8Coverage(executionCoverage)) {
           v8Coverage = v8Coverage ? composeTwoV8Coverages(v8Coverage, executionCoverage) : executionCoverage;
@@ -24599,21 +24103,20 @@ const run = async ({
   keepRunning = false,
   mirrorConsole = false,
   collectConsole = false,
-  collectCoverage = false,
+  coverageEnabled = false,
   coverageTempDirectoryUrl,
   collectPerformance = false,
   runtime,
   runtimeParams
 }) => {
+  let result = {};
+  const callbacks = [];
   const onConsoleRef = {
     current: () => {}
   };
   const stopSignal = {
     notify: () => {}
   };
-
-  let resultTransformer = result => result;
-
   const runtimeLabel = `${runtime.name}/${runtime.version}`;
   const runOperation = Abort.startOperation();
   runOperation.addAbortSignal(signal);
@@ -24622,21 +24125,21 @@ const run = async ({
   // when keepRunning is true
   !keepRunning && typeof allocatedMs === "number" && allocatedMs !== Infinity) {
     const timeoutAbortSource = runOperation.timeout(allocatedMs);
-    resultTransformer = composeTransformer$1(resultTransformer, result => {
+    callbacks.push(() => {
       if (result.status === "errored" && Abort.isAbortError(result.error) && timeoutAbortSource.signal.aborted) {
-        return createTimedoutResult();
+        result = {
+          status: "timedout"
+        };
       }
-
-      return result;
     });
   }
 
-  resultTransformer = composeTransformer$1(resultTransformer, result => {
+  callbacks.push(() => {
     if (result.status === "errored" && Abort.isAbortError(result.error)) {
-      return createAbortedResult();
+      result = {
+        status: "aborted"
+      };
     }
-
-    return result;
   });
   const consoleCalls = [];
 
@@ -24661,44 +24164,14 @@ const run = async ({
   };
 
   if (collectConsole) {
-    resultTransformer = composeTransformer$1(resultTransformer, result => {
+    callbacks.push(() => {
       result.consoleCalls = consoleCalls;
-      return result;
-    });
-  }
-
-  if (collectCoverage) {
-    resultTransformer = composeTransformer$1(resultTransformer, async result => {
-      // we do not keep coverage in memory, it can grow very big
-      // instead we store it on the filesystem
-      // and they can be read later at "coverageFileUrl"
-      const {
-        coverage
-      } = result;
-
-      if (coverage) {
-        const coverageFileUrl = resolveUrl$1(`./${runtime.name}/${cuid()}`, coverageTempDirectoryUrl);
-        await writeFile(coverageFileUrl, JSON.stringify(coverage, null, "  "));
-        result.coverageFileUrl = coverageFileUrl;
-        delete result.coverage;
-      }
-
-      return result;
-    });
-  } else {
-    resultTransformer = composeTransformer$1(resultTransformer, result => {
-      // as collectCoverage is disabled
-      // executionResult.coverage is undefined or {}
-      // we delete it just to have a cleaner object
-      delete result.coverage;
-      return result;
     });
   }
 
   const startMs = Date.now();
-  resultTransformer = composeTransformer$1(resultTransformer, result => {
+  callbacks.push(() => {
     result.duration = Date.now() - startMs;
-    return result;
   });
 
   try {
@@ -24714,7 +24187,7 @@ const run = async ({
         },
         runned: async cb => {
           try {
-            const result = await runtime.run({
+            const runResult = await runtime.run({
               signal: runOperation.signal,
               logger,
               ...runtimeParams,
@@ -24723,7 +24196,7 @@ const run = async ({
               stopSignal,
               onConsole: log => onConsoleRef.current(log)
             });
-            cb(result);
+            cb(runResult);
           } catch (e) {
             cb({
               status: "errored",
@@ -24739,38 +24212,53 @@ const run = async ({
       runOperation.throwIfAborted();
     }
 
-    let result = winner.data;
-    result = await resultTransformer(result);
+    const {
+      status,
+      namespace,
+      error,
+      performance,
+      coverage
+    } = winner.data;
+    result.status = status;
+
+    if (status === "errored") {
+      result.error = error;
+    } else {
+      result.namespace = namespace;
+    }
+
+    if (collectPerformance) {
+      result.performance = performance;
+    }
+
+    if (coverageEnabled) {
+      if (coverage) {
+        // we do not keep coverage in memory, it can grow very big
+        // instead we store it on the filesystem
+        // and they can be read later at "coverageFileUrl"
+        const coverageFileUrl = new URL(`./${runtime.name}/${cuid()}.json`, coverageTempDirectoryUrl);
+        writeFileSync(coverageFileUrl, JSON.stringify(coverage, null, "  "));
+        result.coverageFileUrl = coverageFileUrl.href;
+      } else {// will eventually log a warning in report_to_coverage.js
+      }
+    }
+
+    callbacks.forEach(callback => {
+      callback();
+    });
     return result;
   } catch (e) {
-    let result = {
+    result = {
       status: "errored",
       error: e
     };
-    result = await resultTransformer(result);
+    callbacks.forEach(callback => {
+      callback();
+    });
     return result;
   } finally {
     await runOperation.end();
   }
-};
-
-const composeTransformer$1 = (previousTransformer, transformer) => {
-  return async value => {
-    const transformedValue = await previousTransformer(value);
-    return transformer(transformedValue);
-  };
-};
-
-const createAbortedResult = () => {
-  return {
-    status: "aborted"
-  };
-};
-
-const createTimedoutResult = () => {
-  return {
-    status: "timedout"
-  };
 };
 
 const ensureGlobalGc = () => {
@@ -25176,10 +24664,11 @@ const executePlan = async (plan, {
   failFast,
   gcBetweenExecutions,
   cooldownBetweenExecutions,
-  coverage,
+  coverageEnabled,
   coverageConfig,
   coverageIncludeMissing,
-  coverageForceIstanbul,
+  coverageMethodForBrowsers,
+  coverageMethodForNodeJs,
   coverageV8ConflictWarning,
   coverageTempDirectoryRelativeUrl,
   scenario,
@@ -25197,10 +24686,14 @@ const executePlan = async (plan, {
   beforeExecutionCallback = () => {},
   afterExecutionCallback = () => {}
 } = {}) => {
+  const executePlanReturnValue = {};
+  const report = {};
+  const callbacks = [];
   const stopAfterAllSignal = {
     notify: () => {}
   };
   let someNeedsServer = false;
+  let someNodeRuntime = false;
   const runtimes = {};
   Object.keys(plan).forEach(filePattern => {
     const filePlan = plan[filePattern];
@@ -25215,6 +24708,10 @@ const executePlan = async (plan, {
 
         if (runtime.needsServer) {
           someNeedsServer = true;
+        }
+
+        if (runtime.type === "node") {
+          someNodeRuntime = true;
         }
       }
     });
@@ -25243,10 +24740,67 @@ const executePlan = async (plan, {
   }
 
   try {
+    const coverageTempDirectoryUrl = new URL(coverageTempDirectoryRelativeUrl, rootDirectoryUrl).href;
+
+    if (someNodeRuntime && coverageEnabled && coverageMethodForNodeJs === "NODE_V8_COVERAGE") {
+      if (process.env.NODE_V8_COVERAGE) {
+        // when runned multiple times, we don't want to keep previous files in this directory
+        await ensureEmptyDirectory(process.env.NODE_V8_COVERAGE);
+      } else {
+        coverageMethodForNodeJs = "Profiler";
+        logger.warn(createDetailedMessage$1(`process.env.NODE_V8_COVERAGE is required to generate coverage for Node.js subprocesses`, {
+          "suggestion": `Preprend NODE_V8_COVERAGE=.coverage/node to the command executing this process`,
+          "suggestion 2": `use coverageMethodForNodeJs: "Profiler". But it means coverage for child_process and worker_thread cannot be collected`
+        }));
+      }
+    }
+
+    if (gcBetweenExecutions) {
+      ensureGlobalGc();
+    }
+
+    if (coverageEnabled) {
+      // when runned multiple times, we don't want to keep previous files in this directory
+      await ensureEmptyDirectory(coverageTempDirectoryUrl);
+      callbacks.push(async () => {
+        if (multipleExecutionsOperation.signal.aborted) {
+          // don't try to do the coverage stuff
+          return;
+        }
+
+        try {
+          if (coverageMethodForNodeJs === "NODE_V8_COVERAGE") {
+            takeCoverage(); // conceptually we don't need coverage anymore so it would be
+            // good to call v8.stopCoverage()
+            // but it logs a strange message about "result is not an object"
+          }
+
+          const planCoverage = await reportToCoverage(report, {
+            signal: multipleExecutionsOperation.signal,
+            logger,
+            rootDirectoryUrl,
+            coverageConfig,
+            coverageIncludeMissing,
+            coverageMethodForBrowsers,
+            coverageV8ConflictWarning
+          });
+          executePlanReturnValue.planCoverage = planCoverage;
+        } catch (e) {
+          if (Abort.isAbortError(e)) {
+            return;
+          }
+
+          throw e;
+        }
+      });
+    }
+
     let runtimeParams = {
       rootDirectoryUrl,
-      collectCoverage: coverage,
-      coverageForceIstanbul,
+      coverageEnabled,
+      coverageConfig,
+      coverageMethodForBrowsers,
+      coverageMethodForNodeJs,
       stopAfterAllSignal
     };
 
@@ -25273,7 +24827,7 @@ const executePlan = async (plan, {
             getCustomBabelPlugins: ({
               clientRuntimeCompat
             }) => {
-              if (coverage && Object.keys(clientRuntimeCompat)[0] !== "chrome") {
+              if (coverageEnabled && Object.keys(clientRuntimeCompat)[0] !== "chrome") {
                 return {
                   "transform-instrument": [babelPluginInstrument, {
                     rootDirectoryUrl,
@@ -25329,79 +24883,7 @@ const executePlan = async (plan, {
     // so we enable spinner only when !process.exitCode (no error so far)
     process.exitCode !== 1;
     const startMs = Date.now();
-    const report = {};
     let rawOutput = "";
-
-    let transformReturnValue = value => value;
-
-    if (gcBetweenExecutions) {
-      ensureGlobalGc();
-    }
-
-    const coverageTempDirectoryUrl = new URL(coverageTempDirectoryRelativeUrl, rootDirectoryUrl).href;
-
-    if (coverage) {
-      const associations = URL_META.resolveAssociations({
-        cover: coverageConfig
-      }, rootDirectoryUrl);
-
-      const urlShouldBeCovered = url => {
-        const {
-          cover
-        } = URL_META.applyAssociations({
-          url: new URL(url, rootDirectoryUrl).href,
-          associations
-        });
-        return cover;
-      };
-
-      runtimeParams.urlShouldBeCovered = urlShouldBeCovered; // in case runned multiple times, we don't want to keep writing lot of files in this directory
-
-      if (!process.env.NODE_V8_COVERAGE) {
-        await ensureEmptyDirectory(coverageTempDirectoryUrl);
-      }
-
-      if (runtimes.node) {
-        // v8 coverage is written in a directoy and auto propagate to subprocesses
-        // through process.env.NODE_V8_COVERAGE.
-        if (!coverageForceIstanbul && !process.env.NODE_V8_COVERAGE) {
-          const v8CoverageDirectory = new URL(`./node_v8/${cuid()}`, coverageTempDirectoryUrl).href;
-          await writeDirectory(v8CoverageDirectory, {
-            allowUseless: true
-          });
-          process.env.NODE_V8_COVERAGE = urlToFileSystemPath(v8CoverageDirectory);
-        }
-      }
-
-      transformReturnValue = async value => {
-        if (multipleExecutionsOperation.signal.aborted) {
-          // don't try to do the coverage stuff
-          return value;
-        }
-
-        try {
-          value.coverage = await reportToCoverage(value.report, {
-            signal: multipleExecutionsOperation.signal,
-            logger,
-            rootDirectoryUrl,
-            coverageConfig,
-            coverageIncludeMissing,
-            coverageForceIstanbul,
-            urlShouldBeCovered,
-            coverageV8ConflictWarning
-          });
-        } catch (e) {
-          if (Abort.isAbortError(e)) {
-            return value;
-          }
-
-          throw e;
-        }
-
-        return value;
-      };
-    }
-
     logger.info("");
     let executionLog = createLog({
       newLine: ""
@@ -25426,6 +24908,7 @@ const executePlan = async (plan, {
           fileRelativeUrl,
           runtime
         } = paramsFromStep;
+        const runtimeType = runtime.type;
         const runtimeName = runtime.name;
         const runtimeVersion = runtime.version;
         const executionParams = {
@@ -25441,6 +24924,7 @@ const executePlan = async (plan, {
         };
         const beforeExecutionInfo = {
           fileRelativeUrl,
+          runtimeType,
           runtimeName,
           runtimeVersion,
           executionIndex,
@@ -25484,7 +24968,7 @@ const executePlan = async (plan, {
             mirrorConsole: false,
             // file are executed in parallel, log would be a mess to read
             collectConsole: executionParams.collectConsole,
-            collectCoverage: coverage,
+            coverageEnabled,
             coverageTempDirectoryUrl,
             runtime: executionParams.runtime,
             runtimeParams: { ...runtimeParams,
@@ -25602,16 +25086,14 @@ const executePlan = async (plan, {
       logger.info(`-> ${urlToFileSystemPath(logFileUrl)}`);
     }
 
-    const result = await transformReturnValue({
-      summary,
-      report
-    });
-    return {
-      aborted: multipleExecutionsOperation.signal.aborted,
-      planSummary: result.summary,
-      planReport: result.report,
-      planCoverage: result.coverage
-    };
+    executePlanReturnValue.aborted = multipleExecutionsOperation.signal.aborted;
+    executePlanReturnValue.planSummary = summary;
+    executePlanReturnValue.planReport = report;
+    await callbacks.reduce(async (previous, callback) => {
+      await previous;
+      await callback();
+    }, Promise.resolve());
+    return executePlanReturnValue;
   } finally {
     await multipleExecutionsOperation.end();
   }
@@ -25732,7 +25214,7 @@ const executeInParallel = async ({
  * @param {boolean} [testPlanParameters.failFast=false] Fails immediatly when a test execution fails
  * @param {number} [testPlanParameters.cooldownBetweenExecutions=0] Millisecond to wait between each execution
  * @param {boolean} [testPlanParameters.logMemoryHeapUsage=false] Add memory heap usage during logs
- * @param {boolean} [testPlanParameters.coverage=false] Controls if coverage is collected during files executions
+ * @param {boolean} [testPlanParameters.coverageEnabled=false] Controls if coverage is collected during files executions
  * @param {boolean} [testPlanParameters.coverageV8ConflictWarning=true] Warn when coverage from 2 executions cannot be merged
  * @return {Object} An object containing the result of all file executions
  */
@@ -25763,22 +25245,25 @@ const executeTestPlan = async ({
   keepRunning = false,
   cooldownBetweenExecutions = 0,
   gcBetweenExecutions = logMemoryHeapUsage,
-  coverage = process.argv.includes("--cover") || process.argv.includes("--coverage"),
-  coverageTempDirectoryRelativeUrl = "./.coverage/tmp/",
+  coverageEnabled = process.argv.includes("--cover") || process.argv.includes("--coverage"),
   coverageConfig = {
     "./src/": true
   },
   coverageIncludeMissing = true,
   coverageAndExecutionAllowed = false,
-  coverageForceIstanbul = false,
+  coverageMethodForNodeJs = "NODE_V8_COVERAGE",
+  // "Profiler" also accepted
+  coverageMethodForBrowsers = "playwright_api",
+  // "istanbul" also accepted
   coverageV8ConflictWarning = true,
-  coverageReportTextLog = true,
-  coverageReportJsonFile = process.env.CI ? null : "./.coverage/coverage.json",
-  coverageReportHtmlDirectory = process.env.CI ? "./.coverage/" : null,
+  coverageTempDirectoryRelativeUrl = "./.coverage/tmp/",
   // skip empty means empty files won't appear in the coverage reports (json and html)
   coverageReportSkipEmpty = false,
   // skip full means file with 100% coverage won't appear in coverage reports (json and html)
   coverageReportSkipFull = false,
+  coverageReportTextLog = true,
+  coverageReportJsonFile = process.env.CI ? null : "./.coverage/coverage.json",
+  coverageReportHtmlDirectory = process.env.CI ? "./.coverage/" : null,
   sourcemaps = "inline",
   plugins = [],
   nodeEsmResolution,
@@ -25799,7 +25284,7 @@ const executeTestPlan = async ({
     throw new Error(`testPlan must be an object, got ${testPlan}`);
   }
 
-  if (coverage) {
+  if (coverageEnabled) {
     if (typeof coverageConfig !== "object") {
       throw new TypeError(`coverageConfig must be an object, got ${coverageConfig}`);
     }
@@ -25854,10 +25339,11 @@ const executeTestPlan = async ({
     keepRunning,
     cooldownBetweenExecutions,
     gcBetweenExecutions,
-    coverage,
+    coverageEnabled,
     coverageConfig,
     coverageIncludeMissing,
-    coverageForceIstanbul,
+    coverageMethodForBrowsers,
+    coverageMethodForNodeJs,
     coverageV8ConflictWarning,
     coverageTempDirectoryRelativeUrl,
     scenario: "test",
@@ -25884,7 +25370,7 @@ const executeTestPlan = async ({
     // and in case coverage json file gets written in the same directory
     // it must be done before
 
-    if (coverage && coverageReportHtmlDirectory) {
+    if (coverageEnabled && coverageReportHtmlDirectory) {
       const coverageHtmlDirectoryUrl = resolveDirectoryUrl(coverageReportHtmlDirectory, rootDirectoryUrl);
 
       if (!urlIsInsideOf(coverageHtmlDirectoryUrl, rootDirectoryUrl)) {
@@ -25902,7 +25388,7 @@ const executeTestPlan = async ({
       }));
     }
 
-    if (coverage && coverageReportJsonFile) {
+    if (coverageEnabled && coverageReportJsonFile) {
       const coverageJsonFileUrl = new URL(coverageReportJsonFile, rootDirectoryUrl).href;
       promises.push(generateCoverageJsonFile({
         coverage: result.planCoverage,
@@ -25911,7 +25397,7 @@ const executeTestPlan = async ({
       }));
     }
 
-    if (coverage && coverageReportTextLog) {
+    if (coverageEnabled && coverageReportTextLog) {
       promises.push(generateCoverageTextLog(result.planCoverage, {
         coverageReportSkipEmpty,
         coverageReportSkipFull
@@ -25986,6 +25472,7 @@ const createRuntimeFromPlaywright = ({
   isolatedTab = false
 }) => {
   const runtime = {
+    type: "browser",
     name: browserName,
     version: browserVersion,
     needsServer: true
@@ -26000,9 +25487,9 @@ const createRuntimeFromPlaywright = ({
     server,
     // measurePerformance,
     collectPerformance,
-    collectCoverage = false,
-    coverageForceIstanbul,
-    urlShouldBeCovered,
+    coverageEnabled = false,
+    coverageConfig,
+    coverageMethodForBrowsers,
     stopAfterAllSignal,
     stopSignal,
     keepRunning,
@@ -26087,8 +25574,8 @@ const createRuntimeFromPlaywright = ({
 
     let resultTransformer = result => result;
 
-    if (collectCoverage) {
-      if (coveragePlaywrightAPIAvailable && !coverageForceIstanbul) {
+    if (coverageEnabled) {
+      if (coveragePlaywrightAPIAvailable && coverageMethodForBrowsers === "playwright_api") {
         await page.coverage.startJSCoverage({// reportAnonymousScripts: true,
         });
         resultTransformer = composeTransformer(resultTransformer, async result => {
@@ -26106,10 +25593,11 @@ const createRuntimeFromPlaywright = ({
               url: fsUrl
             };
           });
-          const coverage = filterV8Coverage({
+          const coverage = await filterV8Coverage({
             result: v8CoveragesWithFsUrls
           }, {
-            urlShouldBeCovered
+            rootDirectoryUrl,
+            coverageConfig
           });
           return { ...result,
             coverage
@@ -26846,13 +26334,24 @@ const killProcessTree = async (processId, {
   await check();
 };
 
-const NODE_CONTROLLABLE_FILE_URL = new URL("./js/controllable_file.mjs", import.meta.url).href;
-const nodeProcess = {
-  name: "node",
+// https://nodejs.org/api/process.html#process_signal_events
+const SIGINT_SIGNAL_NUMBER = 2;
+const SIGABORT_SIGNAL_NUMBER = 6;
+const SIGTERM_SIGNAL_NUMBER = 15;
+const EXIT_CODES = {
+  SIGINT: 128 + SIGINT_SIGNAL_NUMBER,
+  SIGABORT: 128 + SIGABORT_SIGNAL_NUMBER,
+  SIGTERM: 128 + SIGTERM_SIGNAL_NUMBER
+};
+
+const CONTROLLABLE_CHILD_PROCESS_URL = new URL("./controllable_child_process.mjs", import.meta.url).href;
+const nodeChildProcess = {
+  type: "node",
+  name: "node_child_process",
   version: process.version.slice(1)
 };
 
-nodeProcess.run = async ({
+nodeChildProcess.run = async ({
   signal = new AbortController().signal,
   logger,
   logProcessCommand = false,
@@ -26862,13 +26361,14 @@ nodeProcess.run = async ({
   gracefulStopAllocatedMs = 4000,
   stopSignal,
   onConsole,
-  collectCoverage = false,
-  coverageForceIstanbul,
+  coverageEnabled = false,
+  coverageConfig,
+  coverageMethodForNodeJs,
   collectPerformance,
+  env,
   debugPort,
   debugMode,
   debugModeInheritBreak,
-  env,
   inheritProcessEnv = true,
   commandLineOptions = [],
   stdin = "pipe",
@@ -26880,13 +26380,10 @@ nodeProcess.run = async ({
   }
 
   env = { ...env,
-    COVERAGE_ENABLED: collectCoverage,
     JSENV: true
   };
 
-  if (coverageForceIstanbul) {
-    // if we want to force istanbul, we will set process.env.NODE_V8_COVERAGE = ''
-    // into the child_process
+  if (coverageMethodForNodeJs !== "NODE_V8_COVERAGE") {
     env.NODE_V8_COVERAGE = "";
   }
 
@@ -26911,8 +26408,8 @@ nodeProcess.run = async ({
   const envForChildProcess = { ...(inheritProcessEnv ? process.env : {}),
     ...env
   };
-  logger[logProcessCommand ? "info" : "debug"](`${process.argv[0]} ${execArgv.join(" ")} ${urlToFileSystemPath(NODE_CONTROLLABLE_FILE_URL)}`);
-  const childProcess = fork(urlToFileSystemPath(NODE_CONTROLLABLE_FILE_URL), {
+  logger[logProcessCommand ? "info" : "debug"](`${process.argv[0]} ${execArgv.join(" ")} ${fileURLToPath(CONTROLLABLE_CHILD_PROCESS_URL)}`);
+  const childProcess = fork(fileURLToPath(CONTROLLABLE_CHILD_PROCESS_URL), {
     execArgv,
     // silent: true
     stdio: ["pipe", "pipe", "pipe", "ipc"],
@@ -26936,9 +26433,9 @@ nodeProcess.run = async ({
   }
 
   const childProcessReadyPromise = new Promise(resolve => {
-    onceProcessMessage(childProcess, "ready", resolve);
+    onceChildProcessMessage(childProcess, "ready", resolve);
   });
-  const removeOutputListener = installProcessOutputListener(childProcess, ({
+  const removeOutputListener = installChildProcessOutputListener(childProcess, ({
     type,
     text
   }) => {
@@ -26999,10 +26496,10 @@ nodeProcess.run = async ({
       // },
       // https://nodejs.org/api/child_process.html#child_process_event_error
       error: cb => {
-        return onceProcessEvent(childProcess, "error", cb);
+        return onceChildProcessEvent(childProcess, "error", cb);
       },
       exit: cb => {
-        return onceProcessEvent(childProcess, "exit", (code, signal) => {
+        return onceChildProcessEvent(childProcess, "exit", (code, signal) => {
           cb({
             code,
             signal
@@ -27010,7 +26507,7 @@ nodeProcess.run = async ({
         });
       },
       response: cb => {
-        onceProcessMessage(childProcess, "action-result", cb);
+        return onceChildProcessMessage(childProcess, "action-result", cb);
       }
     }, resolve);
   });
@@ -27019,11 +26516,19 @@ nodeProcess.run = async ({
     actionOperation.throwIfAborted();
     await childProcessReadyPromise;
     actionOperation.throwIfAborted();
-    await sendToProcess(childProcess, "action", {
-      actionType: "execute-using-dynamic-import",
-      actionParams: {
-        fileUrl: new URL(fileRelativeUrl, rootDirectoryUrl).href,
-        collectPerformance
+    await sendToChildProcess(childProcess, {
+      type: "action",
+      data: {
+        actionType: "execute-using-dynamic-import",
+        actionParams: {
+          rootDirectoryUrl,
+          fileUrl: new URL(fileRelativeUrl, rootDirectoryUrl).href,
+          collectPerformance,
+          coverageEnabled,
+          coverageConfig,
+          coverageMethodForNodeJs,
+          exitAfterAction: true
+        }
       }
     });
     const winner = await winnerPromise;
@@ -27056,7 +26561,7 @@ nodeProcess.run = async ({
         };
       }
 
-      if (code === null || code === 0 || code === SIGINT_EXIT_CODE || code === SIGTERM_EXIT_CODE || code === SIGABORT_EXIT_CODE) {
+      if (code === null || code === 0 || code === EXIT_CODES.SIGINT || code === EXIT_CODES.SIGTERM || code === EXIT_CODES.SIGABORT) {
         return {
           status: "errored",
           error: new Error(`node process exited during execution`)
@@ -27110,16 +26615,9 @@ nodeProcess.run = async ({
 
   await actionOperation.end();
   return result;
-}; // https://nodejs.org/api/process.html#process_signal_events
-
-
-const SIGINT_SIGNAL_NUMBER = 2;
-const SIGABORT_SIGNAL_NUMBER = 6;
-const SIGTERM_SIGNAL_NUMBER = 15;
-const SIGINT_EXIT_CODE = 128 + SIGINT_SIGNAL_NUMBER;
-const SIGABORT_EXIT_CODE = 128 + SIGABORT_SIGNAL_NUMBER;
-const SIGTERM_EXIT_CODE = 128 + SIGTERM_SIGNAL_NUMBER; // http://man7.org/linux/man-pages/man7/signal.7.html
+}; // http://man7.org/linux/man-pages/man7/signal.7.html
 // https:// github.com/nodejs/node/blob/1d9511127c419ec116b3ddf5fc7a59e8f0f1c1e4/lib/internal/child_process.js#L472
+
 
 const GRACEFUL_STOP_SIGNAL = "SIGTERM";
 const STOP_SIGNAL = "SIGKILL"; // it would be more correct if GRACEFUL_STOP_FAILED_SIGNAL was SIGHUP instead of SIGKILL.
@@ -27127,14 +26625,15 @@ const STOP_SIGNAL = "SIGKILL"; // it would be more correct if GRACEFUL_STOP_FAIL
 
 const GRACEFUL_STOP_FAILED_SIGNAL = "SIGKILL";
 
-const sendToProcess = async (childProcess, type, data) => {
-  const source = uneval(data, {
-    functionAllowed: true
-  });
+const sendToChildProcess = async (childProcess, {
+  type,
+  data
+}) => {
   return new Promise((resolve, reject) => {
     childProcess.send({
+      jsenv: true,
       type,
-      data: source
+      data
     }, error => {
       if (error) {
         reject(error);
@@ -27145,7 +26644,7 @@ const sendToProcess = async (childProcess, type, data) => {
   });
 };
 
-const installProcessOutputListener = (childProcess, callback) => {
+const installChildProcessOutputListener = (childProcess, callback) => {
   // beware that we may receive ansi output here, should not be a problem but keep that in mind
   const stdoutDataCallback = chunk => {
     callback({
@@ -27170,9 +26669,9 @@ const installProcessOutputListener = (childProcess, callback) => {
   };
 };
 
-const onceProcessMessage = (childProcess, type, callback) => {
+const onceChildProcessMessage = (childProcess, type, callback) => {
   const onmessage = message => {
-    if (message.type === type) {
+    if (message && message.jsenv && message.type === type) {
       childProcess.removeListener("message", onmessage); // eslint-disable-next-line no-eval
 
       callback(message.data ? eval(`(${message.data})`) : "");
@@ -27185,10 +26684,292 @@ const onceProcessMessage = (childProcess, type, callback) => {
   };
 };
 
-const onceProcessEvent = (childProcess, type, callback) => {
+const onceChildProcessEvent = (childProcess, type, callback) => {
   childProcess.once(type, callback);
   return () => {
     childProcess.removeListener(type, callback);
+  };
+};
+
+// https://github.com/avajs/ava/blob/576f534b345259055c95fa0c2b33bef10847a2af/lib/fork.js#L23
+const CONTROLLABLE_WORKER_THREAD_URL = new URL("./controllable_worker_thread.mjs", import.meta.url).href;
+const nodeWorkerThread = {
+  type: "node",
+  name: "node_worker_thread",
+  version: process.version.slice(1)
+};
+
+nodeWorkerThread.run = async ({
+  signal = new AbortController().signal,
+  // logger,
+  rootDirectoryUrl,
+  fileRelativeUrl,
+  keepRunning,
+  gracefulStopAllocatedMs = 4000,
+  stopSignal,
+  onConsole,
+  coverageConfig,
+  coverageMethodForNodeJs,
+  coverageEnabled = false,
+  collectPerformance,
+  env,
+  debugPort,
+  debugMode,
+  debugModeInheritBreak,
+  inheritProcessEnv = true,
+  commandLineOptions = []
+}) => {
+  if (env !== undefined && typeof env !== "object") {
+    throw new TypeError(`env must be an object, got ${env}`);
+  }
+
+  env = { ...env,
+    JSENV: true
+  };
+
+  if (coverageMethodForNodeJs !== "NODE_V8_COVERAGE") {
+    env.NODE_V8_COVERAGE = "";
+  }
+
+  const workerThreadExecOptions = await createChildExecOptions({
+    signal,
+    debugPort,
+    debugMode,
+    debugModeInheritBreak
+  });
+  const execArgvForWorkerThread = ExecOptions.toExecArgv({ ...workerThreadExecOptions,
+    ...ExecOptions.fromExecArgv(commandLineOptions)
+  });
+  const envForWorkerThread = { ...(inheritProcessEnv ? process.env : {}),
+    ...env
+  };
+  const cleanupCallbackList = createCallbackListNotifiedOnce();
+
+  const cleanup = async reason => {
+    await cleanupCallbackList.notify({
+      reason
+    });
+  };
+
+  const actionOperation = Abort.startOperation();
+  actionOperation.addAbortSignal(signal); // https://nodejs.org/api/worker_threads.html#new-workerfilename-options
+
+  const workerThread = new Worker(fileURLToPath(CONTROLLABLE_WORKER_THREAD_URL), {
+    env: envForWorkerThread,
+    execArgv: execArgvForWorkerThread,
+    // workerData: { options },
+    trackUnmanagedFds: true,
+    stdin: true,
+    stdout: true,
+    stderr: true
+  });
+  const removeOutputListener = installWorkerThreadOutputListener(workerThread, ({
+    type,
+    text
+  }) => {
+    onConsole({
+      type,
+      text
+    });
+  });
+  const workerThreadReadyPromise = new Promise(resolve => {
+    onceWorkerThreadMessage(workerThread, "ready", resolve);
+  });
+  const stop = memoize(async () => {
+    try {
+      await workerThreadReadyPromise;
+      await workerThread.terminate();
+    } catch (e) {}
+  });
+  const winnerPromise = new Promise(resolve => {
+    raceCallbacks({
+      aborted: cb => {
+        return actionOperation.addAbortCallback(cb);
+      },
+      error: cb => {
+        return onceWorkerThreadEvent(workerThread, "error", cb);
+      },
+      exit: cb => {
+        return onceWorkerThreadEvent(workerThread, "exit", (code, signal) => {
+          cb({
+            code,
+            signal
+          });
+        });
+      },
+      response: cb => {
+        return onceWorkerThreadMessage(workerThread, "action-result", cb);
+      }
+    }, resolve);
+  });
+
+  const getResult = async () => {
+    actionOperation.throwIfAborted();
+    await workerThreadReadyPromise;
+    actionOperation.throwIfAborted();
+    await sendToWorkerThread(workerThread, {
+      type: "action",
+      data: {
+        actionType: "execute-using-dynamic-import",
+        actionParams: {
+          rootDirectoryUrl,
+          fileUrl: new URL(fileRelativeUrl, rootDirectoryUrl).href,
+          collectPerformance,
+          coverageEnabled,
+          coverageConfig,
+          coverageMethodForNodeJs,
+          exitAfterAction: true
+        }
+      }
+    });
+    const winner = await winnerPromise;
+
+    if (winner.name === "aborted") {
+      return {
+        status: "aborted"
+      };
+    }
+
+    if (winner.name === "error") {
+      const error = winner.data;
+      removeOutputListener();
+      return {
+        status: "errored",
+        error
+      };
+    }
+
+    if (winner.name === "exit") {
+      const {
+        code
+      } = winner.data;
+      await cleanup("process exit");
+
+      if (code === 12) {
+        return {
+          status: "errored",
+          error: new Error(`node process exited with 12 (the forked child process wanted to use a non-available port for debug)`)
+        };
+      }
+
+      if (code === null || code === 0 || code === EXIT_CODES.SIGINT || code === EXIT_CODES.SIGTERM || code === EXIT_CODES.SIGABORT) {
+        return {
+          status: "errored",
+          error: new Error(`node worker thread exited during execution`)
+        };
+      } // process.exit(1) in child process or process.exitCode = 1 + process.exit()
+      // means there was an error even if we don't know exactly what.
+
+
+      return {
+        status: "errored",
+        error: new Error(`node worker thread exited with code ${code} during execution`)
+      };
+    }
+
+    const {
+      status,
+      value
+    } = winner.data;
+
+    if (status === "action-failed") {
+      return {
+        status: "errored",
+        error: value
+      };
+    }
+
+    const {
+      namespace,
+      performance,
+      coverage
+    } = value;
+    return {
+      status: "completed",
+      namespace,
+      performance,
+      coverage
+    };
+  };
+
+  let result;
+
+  try {
+    result = await getResult();
+  } catch (e) {
+    result = {
+      status: "errored",
+      error: e
+    };
+  }
+
+  if (keepRunning) {
+    stopSignal.notify = stop;
+  } else {
+    await stop({
+      gracefulStopAllocatedMs
+    });
+  }
+
+  await actionOperation.end();
+  return result;
+};
+
+const installWorkerThreadOutputListener = (workerThread, callback) => {
+  // beware that we may receive ansi output here, should not be a problem but keep that in mind
+  const stdoutDataCallback = chunk => {
+    callback({
+      type: "log",
+      text: String(chunk)
+    });
+  };
+
+  workerThread.stdout.on("data", stdoutDataCallback);
+
+  const stdErrorDataCallback = chunk => {
+    callback({
+      type: "error",
+      text: String(chunk)
+    });
+  };
+
+  workerThread.stderr.on("data", stdErrorDataCallback);
+  return () => {
+    workerThread.stdout.removeListener("data", stdoutDataCallback);
+    workerThread.stderr.removeListener("data", stdoutDataCallback);
+  };
+};
+
+const sendToWorkerThread = (worker, {
+  type,
+  data
+}) => {
+  worker.postMessage({
+    jsenv: true,
+    type,
+    data
+  });
+};
+
+const onceWorkerThreadMessage = (workerThread, type, callback) => {
+  const onmessage = message => {
+    if (message && message.jsenv && message.type === type) {
+      workerThread.removeListener("message", onmessage); // eslint-disable-next-line no-eval
+
+      callback(message.data ? eval(`(${message.data})`) : undefined);
+    }
+  };
+
+  workerThread.on("message", onmessage);
+  return () => {
+    workerThread.removeListener("message", onmessage);
+  };
+};
+
+const onceWorkerThreadEvent = (worker, type, callback) => {
+  worker.once(type, callback);
+  return () => {
+    worker.removeListener(type, callback);
   };
 };
 
@@ -27261,7 +27042,6 @@ const loadUrlGraph = async ({
       type,
       specifier
     });
-    entryUrlInfo.data.isEntryPoint = true;
     cook(entryUrlInfo, {
       reference: entryReference
     });
@@ -27635,7 +27415,7 @@ const determineDirectoryPath = ({
     return parentDirectoryPath;
   }
 
-  if (urlInfo.data.isEntryPoint || urlInfo.data.isWebWorkerEntryPoint) {
+  if (urlInfo.isEntryPoint) {
     return "";
   }
 
@@ -27669,7 +27449,7 @@ const injectGlobalVersionMapping = async ({
   versionMappings
 }) => {
   await Promise.all(GRAPH.map(finalGraph, async urlInfo => {
-    if (urlInfo.data.isEntryPoint || urlInfo.data.isWebWorkerEntryPoint) {
+    if (urlInfo.isEntryPoint) {
       await injectVersionMappings({
         urlInfo,
         kitchen: finalGraphKitchen,
@@ -27705,7 +27485,7 @@ const jsInjector = (urlInfo, {
 }) => {
   const magicSource = createMagicSource(urlInfo.content);
   magicSource.prepend(generateClientCodeForVersionMappings(versionMappings, {
-    globalName: urlInfo.data.isWebWorkerEntryPoint ? "self" : "window"
+    globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window"
   }));
   return magicSource.toContentAndSourcemap();
 };
@@ -27811,7 +27591,7 @@ const injectServiceWorkerUrls = async ({
   lineBreakNormalization
 }) => {
   const serviceWorkerEntryUrlInfos = GRAPH.filter(finalGraph, finalUrlInfo => {
-    return finalUrlInfo.subtype === "service_worker" && finalUrlInfo.data.isWebWorkerEntryPoint;
+    return finalUrlInfo.subtype === "service_worker" && finalUrlInfo.isEntryPoint;
   });
 
   if (serviceWorkerEntryUrlInfos.length === 0) {
@@ -28227,7 +28007,7 @@ build ${entryPointKeys.length} entry points`);
     };
 
     GRAPH.forEach(rawGraph, rawUrlInfo => {
-      if (rawUrlInfo.data.isEntryPoint) {
+      if (rawUrlInfo.isEntryPoint) {
         addToBundlerIfAny(rawUrlInfo);
 
         if (rawUrlInfo.type === "html") {
@@ -28305,6 +28085,7 @@ build ${entryPointKeys.length} entry points`);
           const bundleUrlInfo = {
             type,
             subtype: rawUrlInfo ? rawUrlInfo.subtype : undefined,
+            isEntryPoint: rawUrlInfo ? rawUrlInfo.isEntryPoint : undefined,
             filename: rawUrlInfo ? rawUrlInfo.filename : undefined,
             originalUrl: rawUrlInfo ? rawUrlInfo.originalUrl : undefined,
             originalContent: rawUrlInfo ? rawUrlInfo.originalContent : undefined,
@@ -28442,9 +28223,8 @@ build ${entryPointKeys.length} entry points`);
 
             const buildUrl = buildUrlsGenerator.generate(rawUrl, {
               urlInfo: {
-                data: { ...reference.data,
-                  isWebWorkerEntryPoint: isWebWorkerEntryPointReference(reference)
-                },
+                data: reference.data,
+                isEntryPoint: reference.isEntryPoint || isWebWorkerEntryPointReference(reference),
                 type: reference.expectedType,
                 subtype: reference.expectedSubtype,
                 filename: reference.filename
@@ -28736,7 +28516,7 @@ ${Object.keys(finalGraph.urlInfos).join("\n")}`);
       // nothing uses this url anymore
       // - versioning update inline content
       // - file converted for import assertion of js_classic conversion
-      if (!urlInfo.data.isEntryPoint && urlInfo.type !== "sourcemap" && urlInfo.dependents.size === 0) {
+      if (!urlInfo.isEntryPoint && urlInfo.type !== "sourcemap" && urlInfo.dependents.size === 0) {
         cleanupActions.push(() => {
           finalGraph.deleteUrlInfo(urlInfo.url);
         });
@@ -28958,7 +28738,7 @@ const applyUrlVersioning = async ({
         return;
       }
 
-      if (!urlInfo.data.isEntryPoint && urlInfo.dependents.size === 0) {
+      if (!urlInfo.isEntryPoint && urlInfo.dependents.size === 0) {
         return;
       }
 
@@ -29204,16 +28984,12 @@ const assertEntryPoints = ({
 };
 
 const canUseVersionedUrl = urlInfo => {
-  if (urlInfo.data.isEntryPoint) {
+  if (urlInfo.isEntryPoint) {
     return false;
   }
 
   if (urlInfo.type === "webmanifest") {
     return false;
-  }
-
-  if (urlInfo.subtype === "service_worker") {
-    return !urlInfo.data.isWebWorkerEntryPoint;
   }
 
   return true;
@@ -29677,4 +29453,4 @@ const jsenvPluginInjectGlobals = urlAssociations => {
   };
 };
 
-export { build, chromium, chromiumIsolatedTab, execute, executeTestPlan, firefox, firefoxIsolatedTab, jsenvPluginInjectGlobals, nodeProcess, startBuildServer, startDevServer, webkit, webkitIsolatedTab };
+export { build, chromium, chromiumIsolatedTab, execute, executeTestPlan, firefox, firefoxIsolatedTab, jsenvPluginInjectGlobals, nodeChildProcess, nodeWorkerThread, startBuildServer, startDevServer, webkit, webkitIsolatedTab };
