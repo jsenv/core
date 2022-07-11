@@ -26022,20 +26022,23 @@ const evalException = (exceptionSource, {
 
 const chromium = createRuntimeFromPlaywright({
   browserName: "chromium",
-  browserVersion: "97.0.4666.0",
+  browserVersion: "104.0.5112.20",
+  // to update, check https://github.com/microsoft/playwright/releases
   coveragePlaywrightAPIAvailable: true
 });
 const chromiumIsolatedTab = chromium.isolatedTab;
 
 const firefox = createRuntimeFromPlaywright({
   browserName: "firefox",
-  browserVersion: "93.0"
+  browserVersion: "100.0.2" // to update, check https://github.com/microsoft/playwright/releases
+
 });
 const firefoxIsolatedTab = firefox.isolatedTab;
 
 const webkit = createRuntimeFromPlaywright({
   browserName: "webkit",
   browserVersion: "15.4",
+  // to update, check https://github.com/microsoft/playwright/releases
   ignoreErrorHook: error => {
     // we catch error during execution but safari throw unhandled rejection
     // in a non-deterministic way.
