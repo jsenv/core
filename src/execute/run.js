@@ -1,6 +1,5 @@
 import cuid from "cuid"
 import { Abort, raceCallbacks } from "@jsenv/abort"
-import { resolveUrl } from "@jsenv/urls"
 import { writeFileSync } from "@jsenv/filesystem"
 
 export const run = async ({
@@ -117,21 +116,26 @@ export const run = async ({
       runOperation.throwIfAborted()
     }
 
-    const { namespace, performance, coverage } = winner.data
+    const { status, namespace, performance, coverage } = winner.data
+    result.status = status
     result.namespace = namespace
     if (collectPerformance) {
       result.performance = performance
     }
     if (coverageEnabled) {
-      // we do not keep coverage in memory, it can grow very big
-      // instead we store it on the filesystem
-      // and they can be read later at "coverageFileUrl"
-      const coverageFileUrl = resolveUrl(
-        `./${runtime.name}/${cuid()}`,
-        coverageTempDirectoryUrl,
-      )
-      writeFileSync(coverageFileUrl, JSON.stringify(coverage, null, "  "))
-      result.coverageFileUrl = coverageFileUrl
+      if (coverage) {
+        // we do not keep coverage in memory, it can grow very big
+        // instead we store it on the filesystem
+        // and they can be read later at "coverageFileUrl"
+        const coverageFileUrl = new URL(
+          `./${runtime.name}/${cuid()}.json`,
+          coverageTempDirectoryUrl,
+        )
+        writeFileSync(coverageFileUrl, JSON.stringify(coverage, null, "  "))
+        result.coverageFileUrl = coverageFileUrl.href
+      } else {
+        // will eventually log a warning in report_to_coverage.js
+      }
     }
     callbacks.forEach((callback) => {
       callback()

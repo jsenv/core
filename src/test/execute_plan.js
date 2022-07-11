@@ -75,6 +75,9 @@ export const executePlan = async (
     afterExecutionCallback = () => {},
   } = {},
 ) => {
+  const executePlanReturnValue = {}
+  const report = {}
+  const callbacks = []
   const stopAfterAllSignal = { notify: () => {} }
 
   let someNeedsServer = false
@@ -122,6 +125,70 @@ export const executePlan = async (
   }
 
   try {
+    const coverageTempDirectoryUrl = new URL(
+      coverageTempDirectoryRelativeUrl,
+      rootDirectoryUrl,
+    ).href
+    if (
+      someNodeRuntime &&
+      coverageEnabled &&
+      coverageMethodForNodeJs === "NODE_V8_COVERAGE"
+    ) {
+      if (process.env.NODE_V8_COVERAGE) {
+        // when runned multiple times, we don't want to keep previous files in this directory
+        await ensureEmptyDirectory(process.env.NODE_V8_COVERAGE)
+      } else {
+        coverageMethodForNodeJs = "Profiler"
+        logger.warn(
+          createDetailedMessage(
+            `process.env.NODE_V8_COVERAGE is required to generate coverage for Node.js subprocesses`,
+            {
+              "suggestion": `Preprend NODE_V8_COVERAGE=.coverage/node to the command executing this process`,
+              "suggestion 2": `use coverageMethodForNodeJs: "Profiler". But it means coverage for child_process and worker_thread cannot be collected`,
+            },
+          ),
+        )
+      }
+    }
+
+    if (gcBetweenExecutions) {
+      ensureGlobalGc()
+    }
+
+    if (coverageEnabled) {
+      // when runned multiple times, we don't want to keep previous files in this directory
+      await ensureEmptyDirectory(coverageTempDirectoryUrl)
+      callbacks.push(async () => {
+        if (multipleExecutionsOperation.signal.aborted) {
+          // don't try to do the coverage stuff
+          return
+        }
+        try {
+          if (coverageMethodForNodeJs === "NODE_V8_COVERAGE") {
+            takeCoverage()
+            // conceptually we don't need coverage anymore so it would be
+            // good to call v8.stopCoverage()
+            // but it logs a strange message about "result is not an object"
+          }
+          const planCoverage = await reportToCoverage(report, {
+            signal: multipleExecutionsOperation.signal,
+            logger,
+            rootDirectoryUrl,
+            coverageConfig,
+            coverageIncludeMissing,
+            coverageMethodForBrowsers,
+            coverageV8ConflictWarning,
+          })
+          executePlanReturnValue.planCoverage = planCoverage
+        } catch (e) {
+          if (Abort.isAbortError(e)) {
+            return
+          }
+          throw e
+        }
+      })
+    }
+
     let runtimeParams = {
       rootDirectoryUrl,
       coverageEnabled,
@@ -223,73 +290,7 @@ export const executePlan = async (
       process.exitCode !== 1
 
     const startMs = Date.now()
-    const report = {}
     let rawOutput = ""
-
-    let transformReturnValue = (value) => value
-    if (gcBetweenExecutions) {
-      ensureGlobalGc()
-    }
-
-    const coverageTempDirectoryUrl = new URL(
-      coverageTempDirectoryRelativeUrl,
-      rootDirectoryUrl,
-    ).href
-    if (
-      someNodeRuntime &&
-      coverageEnabled &&
-      coverageMethodForNodeJs === "NODE_V8_COVERAGE"
-    ) {
-      if (process.env.NODE_V8_COVERAGE) {
-        // when runned multiple times, we don't want to keep previous files in this directory
-        await ensureEmptyDirectory(process.env.NODE_V8_COVERAGE)
-      } else {
-        coverageMethodForNodeJs = "Profiler"
-        logger.warn(
-          createDetailedMessage(
-            `process.env.NODE_V8_COVERAGE is required to generate coverage for Node.js subprocesses`,
-            {
-              "suggestion": `Preprend NODE_V8_COVERAGE=.coverage/node to the command executing this process`,
-              "suggestion 2": `use coverageMethodForNodeJs: "Profiler". But it means coverage for child_process and worker_thread cannot be collected`,
-            },
-          ),
-        )
-      }
-    }
-    if (coverageEnabled) {
-      // when runned multiple times, we don't want to keep previous files in this directory
-      await ensureEmptyDirectory(coverageTempDirectoryUrl)
-
-      transformReturnValue = async (value) => {
-        if (multipleExecutionsOperation.signal.aborted) {
-          // don't try to do the coverage stuff
-          return value
-        }
-        try {
-          if (coverageMethodForNodeJs === "NODE_V8_COVERAGE") {
-            takeCoverage()
-            // conceptually we don't need coverage anymore so it would be
-            // good to call v8.stopCoverage()
-            // but it logs a strange message about "result is not an object"
-          }
-          value.coverage = await reportToCoverage(value.report, {
-            signal: multipleExecutionsOperation.signal,
-            logger,
-            rootDirectoryUrl,
-            coverageConfig,
-            coverageIncludeMissing,
-            coverageMethodForBrowsers,
-            coverageV8ConflictWarning,
-          })
-        } catch (e) {
-          if (Abort.isAbortError(e)) {
-            return value
-          }
-          throw e
-        }
-        return value
-      }
-    }
 
     logger.info("")
     let executionLog = createLog({ newLine: "" })
@@ -485,16 +486,14 @@ export const executePlan = async (
       writeFileSync(logFileUrl, rawOutput)
       logger.info(`-> ${urlToFileSystemPath(logFileUrl)}`)
     }
-    const result = await transformReturnValue({
-      summary,
-      report,
-    })
-    return {
-      aborted: multipleExecutionsOperation.signal.aborted,
-      planSummary: result.summary,
-      planReport: result.report,
-      planCoverage: result.coverage,
-    }
+    executePlanReturnValue.aborted = multipleExecutionsOperation.signal.aborted
+    executePlanReturnValue.planSummary = summary
+    executePlanReturnValue.planReport = report
+    await callbacks.reduce(async (previous, callback) => {
+      await previous
+      await callback()
+    }, Promise.resolve())
+    return executePlanReturnValue
   } finally {
     await multipleExecutionsOperation.end()
   }

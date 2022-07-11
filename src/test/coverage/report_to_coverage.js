@@ -162,7 +162,7 @@ const getCoverageFromReport = async ({ signal, report, onMissing }) => {
           }
 
           const executionCoverage = JSON.parse(
-            String(readFileSync(coverageFileUrl)),
+            String(readFileSync(new URL(coverageFileUrl))),
           )
           if (isV8Coverage(executionCoverage)) {
             v8Coverage = v8Coverage

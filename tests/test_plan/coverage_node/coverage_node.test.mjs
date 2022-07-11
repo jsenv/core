@@ -8,7 +8,7 @@ import {
 
 const test = async (params) => {
   const { testPlanCoverage } = await executeTestPlan({
-    logLevel: "debug",
+    logLevel: "warn",
     rootDirectoryUrl: new URL("./", import.meta.url),
     testPlan: {
       "./node_client/main.js": {
@@ -23,6 +23,7 @@ const test = async (params) => {
     coverageConfig: {
       "./node_client/file.js": true,
     },
+    coverageMethodForNodeJs: "Profiler",
     coverageIncludeMissing: false,
     coverageReportTextLog: false,
     coverageReportHtmlDirectory: false,
@@ -47,9 +48,9 @@ const test = async (params) => {
   assert({ actual, expected })
 }
 
-// await test({
-//   runtime: nodeChildProcess,
-// })
+await test({
+  runtime: nodeChildProcess,
+})
 await test({
   runtime: nodeWorkerThread,
 })
