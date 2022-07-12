@@ -24571,20 +24571,78 @@ const formatConsoleCalls = consoleCalls => {
     error: 0,
     log: 0
   };
-  let consoleOutput = ``;
   consoleCalls.forEach(consoleCall => {
     repartition[consoleCall.type]++;
-    const text = consoleCall.text;
-    const textFormatted = prefixFirstAndIndentRemainingLines({
-      prefix: CONSOLE_ICONS[consoleCall.type],
-      text,
-      trimLastLine: consoleCall === consoleCalls[consoleCalls.length - 1]
-    });
-    consoleOutput += textFormatted;
   });
+  const consoleOutput = formatConsoleOutput(consoleCalls);
   return `${ANSI.color(`-------- ${formatConsoleSummary(repartition)} --------`, ANSI.GREY)}
 ${consoleOutput}
 ${ANSI.color(`-------------------------`, ANSI.GREY)}`;
+};
+
+const formatConsoleOutput = consoleCalls => {
+  // inside Node.js you can do process.stdout.write()
+  // and in that case the consoleCall is not suffixed with "\n"
+  // we want to keep these calls together in the output
+  const regroupedCalls = [];
+  consoleCalls.forEach((consoleCall, index) => {
+    if (index === 0) {
+      regroupedCalls.push(consoleCall);
+      return;
+    }
+
+    const previousCall = consoleCalls[index - 1];
+
+    if (previousCall.type !== consoleCall.type) {
+      regroupedCalls.push(consoleCall);
+      return;
+    }
+
+    if (previousCall.text.endsWith("\n")) {
+      regroupedCalls.push(consoleCall);
+      return;
+    }
+
+    if (previousCall.text.endsWith("\r")) {
+      regroupedCalls.push(consoleCall);
+      return;
+    }
+
+    const previousRegroupedCallIndex = regroupedCalls.length - 1;
+    const previousRegroupedCall = regroupedCalls[previousRegroupedCallIndex];
+    previousRegroupedCall.text = `${previousRegroupedCall.text}${consoleCall.text}`;
+  });
+  let consoleOutput = ``;
+  regroupedCalls.forEach((regroupedCall, index) => {
+    const text = regroupedCall.text;
+    const textFormatted = prefixFirstAndIndentRemainingLines({
+      prefix: CONSOLE_ICONS[regroupedCall.type],
+      text,
+      trimLastLine: index === regroupedCalls.length - 1
+    });
+    consoleOutput += textFormatted;
+  });
+  return consoleOutput;
+};
+
+const prefixFirstAndIndentRemainingLines = ({
+  prefix,
+  text,
+  trimLastLine
+}) => {
+  const lines = text.split(/\r?\n/);
+  const firstLine = lines.shift();
+  let result = `${prefix} ${firstLine}`;
+  let i = 0;
+  const indentation = `  `;
+
+  while (i < lines.length) {
+    const line = lines[i].trim();
+    i++;
+    result += line.length ? `\n${indentation}${line}` : trimLastLine && i === lines.length ? "" : `\n`;
+  }
+
+  return result;
 };
 
 const CONSOLE_ICONS = {
@@ -24625,26 +24683,6 @@ const formatConsoleSummary = repartition => {
   }
 
   return `console (${parts.join(" ")})`;
-};
-
-const prefixFirstAndIndentRemainingLines = ({
-  prefix,
-  text,
-  trimLastLine
-}) => {
-  const lines = text.split(/\r?\n/);
-  const firstLine = lines.shift();
-  let result = `${prefix} ${firstLine}`;
-  let i = 0;
-  const indentation = `  `;
-
-  while (i < lines.length) {
-    const line = lines[i].trim();
-    i++;
-    result += line.length ? `\n${indentation}${line}` : trimLastLine && i === lines.length ? "" : `\n`;
-  }
-
-  return result;
 };
 
 const formatExecution = ({
