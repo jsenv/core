@@ -154,7 +154,8 @@ export const createRuntimeFromPlaywright = ({
         callbacks.push(() => {
           const scriptExecutionResults = result.namespace
           if (scriptExecutionResults) {
-            const coverage = generateCoverageForPage(scriptExecutionResults)
+            const coverage =
+              generateCoverageForPage(scriptExecutionResults) || {}
             writeFileSync(
               new URL(coverageFileUrl),
               JSON.stringify(coverage, null, "  "),

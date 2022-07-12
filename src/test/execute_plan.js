@@ -224,7 +224,8 @@ export const executePlan = async (
               getCustomBabelPlugins: ({ clientRuntimeCompat }) => {
                 if (
                   coverageEnabled &&
-                  Object.keys(clientRuntimeCompat)[0] !== "chrome"
+                  (coverageMethodForBrowsers !== "playwright_api" ||
+                    Object.keys(clientRuntimeCompat)[0] !== "chrome")
                 ) {
                   return {
                     "transform-instrument": [
