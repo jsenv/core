@@ -23994,7 +23994,7 @@ const reportToCoverage = async (report, {
       // coverDescription will generate empty coverage for files
       // that were suppose to be coverage but were not.
       if (executionResult.status === "completed" && executionResult.type === "node" && coverageMethodForNodeJs !== "NODE_V8_COVERAGE") {
-        logger.warn(`No "coverageFileUrl" from execution named "${executionName}" of ${file}`);
+        logger.warn(`"${executionName}" execution of ${file} did not properly write coverage into ${executionResult.coverageFileUrl}`);
       }
     }
   });
@@ -24075,17 +24075,22 @@ const getCoverageFromReport = async ({
         const {
           coverageFileUrl
         } = executionResultForFileOnRuntime;
+        let executionCoverage;
 
-        if (!coverageFileUrl) {
-          onMissing({
-            executionName,
-            file,
-            executionResult: executionResultForFileOnRuntime
-          });
-          return;
+        try {
+          executionCoverage = JSON.parse(String(readFileSync$1(new URL(coverageFileUrl))));
+        } catch (e) {
+          if (e.code === "ENOENT" || e.name === "SyntaxError") {
+            onMissing({
+              executionName,
+              file,
+              executionResult: executionResultForFileOnRuntime
+            });
+            return;
+          }
+
+          throw e;
         }
-
-        const executionCoverage = JSON.parse(String(readFileSync$1(new URL(coverageFileUrl))));
 
         if (isV8Coverage(executionCoverage)) {
           v8Coverage = v8Coverage ? composeTwoV8Coverages(v8Coverage, executionCoverage) : executionCoverage;
@@ -24118,7 +24123,7 @@ const run = async ({
   runtime,
   runtimeParams
 }) => {
-  let result = {};
+  const result = {};
   const callbacks = [];
   const onConsoleRef = {
     current: () => {}
@@ -24136,18 +24141,14 @@ const run = async ({
     const timeoutAbortSource = runOperation.timeout(allocatedMs);
     callbacks.push(() => {
       if (result.status === "errored" && Abort.isAbortError(result.error) && timeoutAbortSource.signal.aborted) {
-        result = {
-          status: "timedout"
-        };
+        result.status = "timedout";
       }
     });
   }
 
   callbacks.push(() => {
     if (result.status === "errored" && Abort.isAbortError(result.error)) {
-      result = {
-        status: "aborted"
-      };
+      result.status = "aborted";
     }
   });
   const consoleCalls = [];
@@ -24176,6 +24177,22 @@ const run = async ({
     callbacks.push(() => {
       result.consoleCalls = consoleCalls;
     });
+  } // we do not keep coverage in memory, it can grow very big
+  // instead we store it on the filesystem
+  // and they can be read later at "coverageFileUrl"
+
+
+  let coverageFileUrl;
+
+  if (coverageEnabled) {
+    coverageFileUrl = new URL(`./${runtime.name}/${cuid()}.json`, coverageTempDirectoryUrl).href;
+    await ensureParentDirectories(coverageFileUrl);
+
+    if (coverageEnabled) {
+      result.coverageFileUrl = coverageFileUrl; // written within the child_process/worker_thread or during runtime.run()
+      // for browsers
+      // (because it takes time to serialize and transfer the coverage object)
+    }
   }
 
   const startMs = Date.now();
@@ -24200,7 +24217,9 @@ const run = async ({
               signal: runOperation.signal,
               logger,
               ...runtimeParams,
+              collectConsole,
               collectPerformance,
+              coverageFileUrl,
               keepRunning,
               stopSignal,
               onConsole: log => onConsoleRef.current(log)
@@ -24225,8 +24244,7 @@ const run = async ({
       status,
       namespace,
       error,
-      performance,
-      coverage
+      performance
     } = winner.data;
     result.status = status;
 
@@ -24240,27 +24258,13 @@ const run = async ({
       result.performance = performance;
     }
 
-    if (coverageEnabled) {
-      if (coverage) {
-        // we do not keep coverage in memory, it can grow very big
-        // instead we store it on the filesystem
-        // and they can be read later at "coverageFileUrl"
-        const coverageFileUrl = new URL(`./${runtime.name}/${cuid()}.json`, coverageTempDirectoryUrl);
-        writeFileSync(coverageFileUrl, JSON.stringify(coverage, null, "  "));
-        result.coverageFileUrl = coverageFileUrl.href;
-      } else {// will eventually log a warning in report_to_coverage.js
-      }
-    }
-
     callbacks.forEach(callback => {
       callback();
     });
     return result;
   } catch (e) {
-    result = {
-      status: "errored",
-      error: e
-    };
+    result.status = "errored";
+    result.error = e;
     callbacks.forEach(callback => {
       callback();
     });
@@ -24758,7 +24762,7 @@ const executePlan = async (plan, {
       } else {
         coverageMethodForNodeJs = "Profiler";
         logger.warn(createDetailedMessage$1(`process.env.NODE_V8_COVERAGE is required to generate coverage for Node.js subprocesses`, {
-          "suggestion": `Preprend NODE_V8_COVERAGE=.coverage/node to the command executing this process`,
+          "suggestion": `set process.env.NODE_V8_COVERAGE`,
           "suggestion 2": `use coverageMethodForNodeJs: "Profiler". But it means coverage for child_process and worker_thread cannot be collected`
         }));
       }
@@ -25260,8 +25264,7 @@ const executeTestPlan = async ({
   },
   coverageIncludeMissing = true,
   coverageAndExecutionAllowed = false,
-  coverageMethodForNodeJs = "NODE_V8_COVERAGE",
-  // "Profiler" also accepted
+  coverageMethodForNodeJs = process.env.NODE_V8_COVERAGE ? "NODE_V8_COVERAGE" : "Profiler",
   coverageMethodForBrowsers = "playwright_api",
   // "istanbul" also accepted
   coverageV8ConflictWarning = true,
@@ -25499,6 +25502,7 @@ const createRuntimeFromPlaywright = ({
     coverageEnabled = false,
     coverageConfig,
     coverageMethodForBrowsers,
+    coverageFileUrl,
     stopAfterAllSignal,
     stopSignal,
     keepRunning,
@@ -25581,13 +25585,14 @@ const createRuntimeFromPlaywright = ({
       }
     };
 
-    let resultTransformer = result => result;
+    const result = {};
+    const callbacks = [];
 
     if (coverageEnabled) {
       if (coveragePlaywrightAPIAvailable && coverageMethodForBrowsers === "playwright_api") {
         await page.coverage.startJSCoverage({// reportAnonymousScripts: true,
         });
-        resultTransformer = composeTransformer(resultTransformer, async result => {
+        callbacks.push(async () => {
           const v8CoveragesWithWebUrls = await page.coverage.stopJSCoverage(); // we convert urls starting with http:// to file:// because we later
           // convert the url to filesystem path in istanbulCoverageFromV8Coverage function
 
@@ -25608,23 +25613,20 @@ const createRuntimeFromPlaywright = ({
             rootDirectoryUrl,
             coverageConfig
           });
-          return { ...result,
-            coverage
-          };
+          writeFileSync$1(new URL(coverageFileUrl), JSON.stringify(coverage, null, "  "));
         });
       } else {
-        resultTransformer = composeTransformer(resultTransformer, async result => {
+        callbacks.push(() => {
           const scriptExecutionResults = result.namespace;
 
           if (scriptExecutionResults) {
-            result.coverage = generateCoverageForPage(scriptExecutionResults);
+            const coverage = generateCoverageForPage(scriptExecutionResults);
+            writeFileSync$1(new URL(coverageFileUrl), JSON.stringify(coverage, null, "  "));
           }
-
-          return result;
         });
       }
     } else {
-      resultTransformer = composeTransformer(resultTransformer, result => {
+      callbacks.push(() => {
         const scriptExecutionResults = result.namespace;
 
         if (scriptExecutionResults) {
@@ -25632,13 +25634,11 @@ const createRuntimeFromPlaywright = ({
             delete scriptExecutionResults[fileRelativeUrl].coverage;
           });
         }
-
-        return result;
       });
     }
 
     if (collectPerformance) {
-      resultTransformer = composeTransformer(resultTransformer, async result => {
+      callbacks.push(async () => {
         const performance = await page.evaluate(
         /* eslint-disable no-undef */
 
@@ -25667,7 +25667,6 @@ const createRuntimeFromPlaywright = ({
         /* eslint-enable no-undef */
         );
         result.performance = performance;
-        return result;
       });
     }
 
@@ -25761,7 +25760,7 @@ const createRuntimeFromPlaywright = ({
             await page.goto(fileClientUrl, {
               timeout: 0
             });
-            const result = await page.evaluate(
+            const returnValue = await page.evaluate(
             /* eslint-disable no-undef */
 
             /* istanbul ignore next */
@@ -25777,12 +25776,12 @@ const createRuntimeFromPlaywright = ({
             const {
               status,
               scriptExecutionResults
-            } = result;
+            } = returnValue;
 
             if (status === "errored") {
               const {
                 exceptionSource
-              } = result;
+              } = returnValue;
               const error = evalException(exceptionSource, {
                 rootDirectoryUrl,
                 server,
@@ -25833,16 +25832,32 @@ const createRuntimeFromPlaywright = ({
       return winner.data;
     };
 
-    let result;
-
     try {
-      result = await getResult();
-      result = await resultTransformer(result);
+      const {
+        status,
+        error,
+        namespace,
+        performance
+      } = await getResult();
+      result.status = status;
+
+      if (status === "errored") {
+        result.error = error;
+      } else {
+        result.namespace = namespace;
+      }
+
+      if (collectPerformance) {
+        result.performance = performance;
+      }
+
+      await callbacks.reduce(async (previous, callback) => {
+        await previous;
+        await callback();
+      }, Promise.resolve());
     } catch (e) {
-      result = {
-        status: "errored",
-        error: e
-      };
+      result.status = "errored";
+      result.error = e;
     }
 
     if (keepRunning) {
@@ -25958,13 +25973,6 @@ const isTargetClosedError = error => {
   }
 
   return false;
-};
-
-const composeTransformer = (previousTransformer, transformer) => {
-  return async value => {
-    const transformedValue = await previousTransformer(value);
-    return transformer(transformedValue);
-  };
 };
 
 const extractTextFromConsoleMessage = consoleMessage => {
@@ -26376,6 +26384,7 @@ nodeChildProcess.run = async ({
   coverageEnabled = false,
   coverageConfig,
   coverageMethodForNodeJs,
+  coverageFileUrl,
   collectPerformance,
   env,
   debugPort,
@@ -26539,6 +26548,7 @@ nodeChildProcess.run = async ({
           coverageEnabled,
           coverageConfig,
           coverageMethodForNodeJs,
+          coverageFileUrl,
           exitAfterAction: true
         }
       }
@@ -26719,10 +26729,12 @@ nodeWorkerThread.run = async ({
   keepRunning,
   stopSignal,
   onConsole,
+  collectConsole = false,
+  collectPerformance,
+  coverageEnabled = false,
   coverageConfig,
   coverageMethodForNodeJs,
-  coverageEnabled = false,
-  collectPerformance,
+  coverageFileUrl,
   env,
   debugPort,
   debugMode,
@@ -26788,11 +26800,14 @@ nodeWorkerThread.run = async ({
   const stop = memoize(async () => {
     // read all stdout before terminating
     // (no need for stderr because it's sync)
-    while (workerThread.stdout.read() !== null) {}
+    if (collectConsole) {
+      while (workerThread.stdout.read() !== null) {}
 
-    await new Promise(resolve => {
-      setTimeout(resolve);
-    });
+      await new Promise(resolve => {
+        setTimeout(resolve, 50);
+      });
+    }
+
     await workerThread.terminate();
   });
   const winnerPromise = new Promise(resolve => {
@@ -26832,6 +26847,7 @@ nodeWorkerThread.run = async ({
           coverageEnabled,
           coverageConfig,
           coverageMethodForNodeJs,
+          coverageFileUrl,
           exitAfterAction: true
         }
       }

@@ -1,3 +1,4 @@
+import { writeFileSync } from "node:fs";
 import { Session } from "node:inspector";
 import { performance, PerformanceObserver } from "node:perf_hooks";
 
@@ -122,9 +123,10 @@ const executeUsingDynamicImport = async ({
   collectPerformance,
   coverageEnabled,
   coverageConfig,
-  coverageMethodForNodeJs
+  coverageMethodForNodeJs,
+  coverageFileUrl
 }) => {
-  let result = {};
+  const result = {};
   const afterImportCallbacks = [];
 
   if (coverageEnabled && coverageMethodForNodeJs === "Profiler") {
@@ -140,7 +142,7 @@ const executeUsingDynamicImport = async ({
         rootDirectoryUrl,
         coverageConfig
       });
-      result.coverage = coverageLight;
+      writeFileSync(new URL(coverageFileUrl), JSON.stringify(coverageLight, null, "  "));
     });
   }
 

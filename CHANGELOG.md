@@ -1,3 +1,7 @@
+# 27.3.3
+
+- coverageMethodForNodeJs default value becomes "Profiler"
+
 # 27.3.2
 
 - Use "localhost" only if their is a mapping to 127.0.0.1 on the OS

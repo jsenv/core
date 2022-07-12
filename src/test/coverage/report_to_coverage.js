@@ -50,7 +50,7 @@ export const reportToCoverage = async (
         coverageMethodForNodeJs !== "NODE_V8_COVERAGE"
       ) {
         logger.warn(
-          `No "coverageFileUrl" from execution named "${executionName}" of ${file}`,
+          `"${executionName}" execution of ${file} did not properly write coverage into ${executionResult.coverageFileUrl}`,
         )
       }
     },
@@ -152,18 +152,23 @@ const getCoverageFromReport = async ({ signal, report, onMissing }) => {
           const executionResultForFileOnRuntime =
             executionResultForFile[executionName]
           const { coverageFileUrl } = executionResultForFileOnRuntime
-          if (!coverageFileUrl) {
-            onMissing({
-              executionName,
-              file,
-              executionResult: executionResultForFileOnRuntime,
-            })
-            return
+          let executionCoverage
+          try {
+            executionCoverage = JSON.parse(
+              String(readFileSync(new URL(coverageFileUrl))),
+            )
+          } catch (e) {
+            if (e.code === "ENOENT" || e.name === "SyntaxError") {
+              onMissing({
+                executionName,
+                file,
+                executionResult: executionResultForFileOnRuntime,
+              })
+              return
+            }
+            throw e
           }
 
-          const executionCoverage = JSON.parse(
-            String(readFileSync(new URL(coverageFileUrl))),
-          )
           if (isV8Coverage(executionCoverage)) {
             v8Coverage = v8Coverage
               ? composeTwoV8Coverages(v8Coverage, executionCoverage)

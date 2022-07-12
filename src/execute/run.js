@@ -1,6 +1,6 @@
 import cuid from "cuid"
 import { Abort, raceCallbacks } from "@jsenv/abort"
-import { writeFileSync } from "@jsenv/filesystem"
+import { ensureParentDirectories } from "@jsenv/filesystem"
 
 export const run = async ({
   signal = new AbortController().signal,
@@ -16,7 +16,7 @@ export const run = async ({
   runtime,
   runtimeParams,
 }) => {
-  let result = {}
+  const result = {}
   const callbacks = []
 
   const onConsoleRef = { current: () => {} }
@@ -39,17 +39,13 @@ export const run = async ({
         Abort.isAbortError(result.error) &&
         timeoutAbortSource.signal.aborted
       ) {
-        result = {
-          status: "timedout",
-        }
+        result.status = "timedout"
       }
     })
   }
   callbacks.push(() => {
     if (result.status === "errored" && Abort.isAbortError(result.error)) {
-      result = {
-        status: "aborted",
-      }
+      result.status = "aborted"
     }
   })
   const consoleCalls = []
@@ -69,6 +65,24 @@ export const run = async ({
     callbacks.push(() => {
       result.consoleCalls = consoleCalls
     })
+  }
+
+  // we do not keep coverage in memory, it can grow very big
+  // instead we store it on the filesystem
+  // and they can be read later at "coverageFileUrl"
+  let coverageFileUrl
+  if (coverageEnabled) {
+    coverageFileUrl = new URL(
+      `./${runtime.name}/${cuid()}.json`,
+      coverageTempDirectoryUrl,
+    ).href
+    await ensureParentDirectories(coverageFileUrl)
+    if (coverageEnabled) {
+      result.coverageFileUrl = coverageFileUrl
+      // written within the child_process/worker_thread or during runtime.run()
+      // for browsers
+      // (because it takes time to serialize and transfer the coverage object)
+    }
   }
 
   const startMs = Date.now()
@@ -94,7 +108,9 @@ export const run = async ({
                 signal: runOperation.signal,
                 logger,
                 ...runtimeParams,
+                collectConsole,
                 collectPerformance,
+                coverageFileUrl,
                 keepRunning,
                 stopSignal,
                 onConsole: (log) => onConsoleRef.current(log),
@@ -116,7 +132,7 @@ export const run = async ({
       runOperation.throwIfAborted()
     }
 
-    const { status, namespace, error, performance, coverage } = winner.data
+    const { status, namespace, error, performance } = winner.data
     result.status = status
     if (status === "errored") {
       result.error = error
@@ -126,30 +142,13 @@ export const run = async ({
     if (collectPerformance) {
       result.performance = performance
     }
-    if (coverageEnabled) {
-      if (coverage) {
-        // we do not keep coverage in memory, it can grow very big
-        // instead we store it on the filesystem
-        // and they can be read later at "coverageFileUrl"
-        const coverageFileUrl = new URL(
-          `./${runtime.name}/${cuid()}.json`,
-          coverageTempDirectoryUrl,
-        )
-        writeFileSync(coverageFileUrl, JSON.stringify(coverage, null, "  "))
-        result.coverageFileUrl = coverageFileUrl.href
-      } else {
-        // will eventually log a warning in report_to_coverage.js
-      }
-    }
     callbacks.forEach((callback) => {
       callback()
     })
     return result
   } catch (e) {
-    result = {
-      status: "errored",
-      error: e,
-    }
+    result.status = "errored"
+    result.error = e
     callbacks.forEach((callback) => {
       callback()
     })

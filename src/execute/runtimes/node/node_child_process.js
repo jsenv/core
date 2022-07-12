@@ -39,6 +39,7 @@ nodeChildProcess.run = async ({
   coverageEnabled = false,
   coverageConfig,
   coverageMethodForNodeJs,
+  coverageFileUrl,
   collectPerformance,
 
   env,
@@ -199,6 +200,7 @@ nodeChildProcess.run = async ({
           coverageEnabled,
           coverageConfig,
           coverageMethodForNodeJs,
+          coverageFileUrl,
           exitAfterAction: true,
         },
       },

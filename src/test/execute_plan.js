@@ -143,7 +143,7 @@ export const executePlan = async (
           createDetailedMessage(
             `process.env.NODE_V8_COVERAGE is required to generate coverage for Node.js subprocesses`,
             {
-              "suggestion": `Preprend NODE_V8_COVERAGE=.coverage/node to the command executing this process`,
+              "suggestion": `set process.env.NODE_V8_COVERAGE`,
               "suggestion 2": `use coverageMethodForNodeJs: "Profiler". But it means coverage for child_process and worker_thread cannot be collected`,
             },
           ),

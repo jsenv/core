@@ -1,4 +1,5 @@
 import { Script } from "node:vm"
+import { writeFileSync } from "node:fs"
 
 import { createDetailedMessage } from "@jsenv/log"
 import {
@@ -41,6 +42,7 @@ export const createRuntimeFromPlaywright = ({
     coverageEnabled = false,
     coverageConfig,
     coverageMethodForBrowsers,
+    coverageFileUrl,
 
     stopAfterAllSignal,
     stopSignal,
@@ -108,7 +110,8 @@ export const createRuntimeFromPlaywright = ({
       }
     }
 
-    let resultTransformer = (result) => result
+    const result = {}
+    const callbacks = []
     if (coverageEnabled) {
       if (
         coveragePlaywrightAPIAvailable &&
@@ -117,93 +120,85 @@ export const createRuntimeFromPlaywright = ({
         await page.coverage.startJSCoverage({
           // reportAnonymousScripts: true,
         })
-        resultTransformer = composeTransformer(
-          resultTransformer,
-          async (result) => {
-            const v8CoveragesWithWebUrls = await page.coverage.stopJSCoverage()
-            // we convert urls starting with http:// to file:// because we later
-            // convert the url to filesystem path in istanbulCoverageFromV8Coverage function
-            const v8CoveragesWithFsUrls = v8CoveragesWithWebUrls.map(
-              (v8CoveragesWithWebUrl) => {
-                const fsUrl = moveUrl({
-                  url: v8CoveragesWithWebUrl.url,
-                  from: `${server.origin}/`,
-                  to: rootDirectoryUrl,
-                  preferAbsolute: true,
-                })
-                return {
-                  ...v8CoveragesWithWebUrl,
-                  url: fsUrl,
-                }
-              },
-            )
-            const coverage = await filterV8Coverage(
-              { result: v8CoveragesWithFsUrls },
-              {
-                rootDirectoryUrl,
-                coverageConfig,
-              },
-            )
-            return {
-              ...result,
-              coverage,
-            }
-          },
-        )
+        callbacks.push(async () => {
+          const v8CoveragesWithWebUrls = await page.coverage.stopJSCoverage()
+          // we convert urls starting with http:// to file:// because we later
+          // convert the url to filesystem path in istanbulCoverageFromV8Coverage function
+          const v8CoveragesWithFsUrls = v8CoveragesWithWebUrls.map(
+            (v8CoveragesWithWebUrl) => {
+              const fsUrl = moveUrl({
+                url: v8CoveragesWithWebUrl.url,
+                from: `${server.origin}/`,
+                to: rootDirectoryUrl,
+                preferAbsolute: true,
+              })
+              return {
+                ...v8CoveragesWithWebUrl,
+                url: fsUrl,
+              }
+            },
+          )
+          const coverage = await filterV8Coverage(
+            { result: v8CoveragesWithFsUrls },
+            {
+              rootDirectoryUrl,
+              coverageConfig,
+            },
+          )
+          writeFileSync(
+            new URL(coverageFileUrl),
+            JSON.stringify(coverage, null, "  "),
+          )
+        })
       } else {
-        resultTransformer = composeTransformer(
-          resultTransformer,
-          async (result) => {
-            const scriptExecutionResults = result.namespace
-            if (scriptExecutionResults) {
-              result.coverage = generateCoverageForPage(scriptExecutionResults)
-            }
-            return result
-          },
-        )
+        callbacks.push(() => {
+          const scriptExecutionResults = result.namespace
+          if (scriptExecutionResults) {
+            const coverage = generateCoverageForPage(scriptExecutionResults)
+            writeFileSync(
+              new URL(coverageFileUrl),
+              JSON.stringify(coverage, null, "  "),
+            )
+          }
+        })
       }
     } else {
-      resultTransformer = composeTransformer(resultTransformer, (result) => {
+      callbacks.push(() => {
         const scriptExecutionResults = result.namespace
         if (scriptExecutionResults) {
           Object.keys(scriptExecutionResults).forEach((fileRelativeUrl) => {
             delete scriptExecutionResults[fileRelativeUrl].coverage
           })
         }
-        return result
       })
     }
 
     if (collectPerformance) {
-      resultTransformer = composeTransformer(
-        resultTransformer,
-        async (result) => {
-          const performance = await page.evaluate(
-            /* eslint-disable no-undef */
-            /* istanbul ignore next */
-            () => {
-              const { performance } = window
-              if (!performance) {
-                return null
-              }
-              const measures = {}
-              const measurePerfEntries = performance.getEntriesByType("measure")
-              measurePerfEntries.forEach((measurePerfEntry) => {
-                measures[measurePerfEntry.name] = measurePerfEntry.duration
-              })
-              return {
-                timeOrigin: performance.timeOrigin,
-                timing: performance.timing.toJSON(),
-                navigation: performance.navigation.toJSON(),
-                measures,
-              }
-            },
-            /* eslint-enable no-undef */
-          )
-          result.performance = performance
-          return result
-        },
-      )
+      callbacks.push(async () => {
+        const performance = await page.evaluate(
+          /* eslint-disable no-undef */
+          /* istanbul ignore next */
+          () => {
+            const { performance } = window
+            if (!performance) {
+              return null
+            }
+            const measures = {}
+            const measurePerfEntries = performance.getEntriesByType("measure")
+            measurePerfEntries.forEach((measurePerfEntry) => {
+              measures[measurePerfEntry.name] = measurePerfEntry.duration
+            })
+            return {
+              timeOrigin: performance.timeOrigin,
+              timing: performance.timing.toJSON(),
+              navigation: performance.navigation.toJSON(),
+              measures,
+            }
+          },
+          /* eslint-enable no-undef */
+        )
+        result.performance = performance
+      })
     }
 
     const fileClientUrl = new URL(fileRelativeUrl, `${server.origin}/`).href
@@ -290,7 +285,7 @@ export const createRuntimeFromPlaywright = ({
           response: async (cb) => {
             try {
               await page.goto(fileClientUrl, { timeout: 0 })
-              const result = await page.evaluate(
+              const returnValue = await page.evaluate(
                 /* eslint-disable no-undef */
                 /* istanbul ignore next */
                 () => {
@@ -301,9 +296,9 @@ export const createRuntimeFromPlaywright = ({
                 },
                 /* eslint-enable no-undef */
               )
-              const { status, scriptExecutionResults } = result
+              const { status, scriptExecutionResults } = returnValue
               if (status === "errored") {
-                const { exceptionSource } = result
+                const { exceptionSource } = returnValue
                 const error = evalException(exceptionSource, {
                   rootDirectoryUrl,
                   server,
@@ -353,16 +348,25 @@ export const createRuntimeFromPlaywright = ({
       }
       return winner.data
     }
-    let result
 
     try {
-      result = await getResult()
-      result = await resultTransformer(result)
-    } catch (e) {
-      result = {
-        status: "errored",
-        error: e,
+      const { status, error, namespace, performance } = await getResult()
+      result.status = status
+      if (status === "errored") {
+        result.error = error
+      } else {
+        result.namespace = namespace
       }
+      if (collectPerformance) {
+        result.performance = performance
+      }
+      await callbacks.reduce(async (previous, callback) => {
+        await previous
+        await callback()
+      }, Promise.resolve())
+    } catch (e) {
+      result.status = "errored"
+      result.error = e
     }
     if (keepRunning) {
       stopSignal.notify = cleanup
@@ -476,13 +480,6 @@ const isTargetClosedError = (error) => {
     return true
   }
   return false
-}
-
-const composeTransformer = (previousTransformer, transformer) => {
-  return async (value) => {
-    const transformedValue = await previousTransformer(value)
-    return transformer(transformedValue)
-  }
 }
 
 const extractTextFromConsoleMessage = (consoleMessage) => {

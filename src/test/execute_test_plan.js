@@ -67,7 +67,9 @@ export const executeTestPlan = async ({
   },
   coverageIncludeMissing = true,
   coverageAndExecutionAllowed = false,
-  coverageMethodForNodeJs = "NODE_V8_COVERAGE", // "Profiler" also accepted
+  coverageMethodForNodeJs = process.env.NODE_V8_COVERAGE
+    ? "NODE_V8_COVERAGE"
+    : "Profiler",
   coverageMethodForBrowsers = "playwright_api", // "istanbul" also accepted
   coverageV8ConflictWarning = true,
   coverageTempDirectoryRelativeUrl = "./.coverage/tmp/",

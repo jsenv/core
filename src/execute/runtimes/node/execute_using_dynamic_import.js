@@ -1,3 +1,5 @@
+import { writeFileSync } from "node:fs"
+
 import { startJsCoverage } from "./profiler_v8_coverage.js"
 import { startObservingPerformances } from "./node_execution_performance.js"
 
@@ -8,8 +10,9 @@ export const executeUsingDynamicImport = async ({
   coverageEnabled,
   coverageConfig,
   coverageMethodForNodeJs,
+  coverageFileUrl,
 }) => {
-  let result = {}
+  const result = {}
   const afterImportCallbacks = []
   if (coverageEnabled && coverageMethodForNodeJs === "Profiler") {
     const { filterV8Coverage } = await import(
@@ -22,7 +25,10 @@ export const executeUsingDynamicImport = async ({
         rootDirectoryUrl,
         coverageConfig,
       })
-      result.coverage = coverageLight
+      writeFileSync(
+        new URL(coverageFileUrl),
+        JSON.stringify(coverageLight, null, "  "),
+      )
     })
   }
   if (collectPerformance) {

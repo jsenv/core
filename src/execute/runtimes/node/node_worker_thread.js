@@ -35,10 +35,12 @@ nodeWorkerThread.run = async ({
   stopSignal,
   onConsole,
 
+  collectConsole = false,
+  collectPerformance,
+  coverageEnabled = false,
   coverageConfig,
   coverageMethodForNodeJs,
-  coverageEnabled = false,
-  collectPerformance,
+  coverageFileUrl,
 
   env,
   debugPort,
@@ -104,10 +106,12 @@ nodeWorkerThread.run = async ({
   const stop = memoize(async () => {
     // read all stdout before terminating
     // (no need for stderr because it's sync)
-    while (workerThread.stdout.read() !== null) {}
-    await new Promise((resolve) => {
-      setTimeout(resolve)
-    })
+    if (collectConsole) {
+      while (workerThread.stdout.read() !== null) {}
+      await new Promise((resolve) => {
+        setTimeout(resolve, 50)
+      })
+    }
     await workerThread.terminate()
   })
 
@@ -148,6 +152,7 @@ nodeWorkerThread.run = async ({
           coverageEnabled,
           coverageConfig,
           coverageMethodForNodeJs,
+          coverageFileUrl,
           exitAfterAction: true,
         },
       },
