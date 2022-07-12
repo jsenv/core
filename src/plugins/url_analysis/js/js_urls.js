@@ -13,21 +13,12 @@ export const parseAndTransformJsUrls = async (urlInfo, context) => {
   const { rootDirectoryUrl, referenceUtils } = context
   const actions = []
   const magicSource = createMagicSource(urlInfo.content)
-  urlInfo.data.usesImport = false
-  urlInfo.data.usesExport = false
-  urlInfo.data.usesImportAssertion = false
   jsMentions.forEach((jsMention) => {
-    if (jsMention.assert) {
-      urlInfo.data.usesImportAssertion = true
-    }
     if (
       jsMention.subtype === "import_static" ||
       jsMention.subtype === "import_dynamic"
     ) {
       urlInfo.data.usesImport = true
-    }
-    if (jsMention.subtype === "export") {
-      urlInfo.data.usesExport = true
     }
     const [reference] = referenceUtils.found({
       type: jsMention.type,

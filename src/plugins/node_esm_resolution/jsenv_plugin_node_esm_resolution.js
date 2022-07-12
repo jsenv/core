@@ -56,8 +56,7 @@ export const jsenvPluginNodeEsmResolution = ({
   const onFileChange = () => {
     packageScopesCache.clear()
     packageJsonsCache.clear()
-    Object.keys(urlGraph.urlInfos).forEach((url) => {
-      const urlInfo = urlGraph.getUrlInfo(url)
+    urlGraph.urlInfoMap.forEach((urlInfo) => {
       if (urlInfo.dependsOnPackageJson) {
         urlGraph.considerModified(urlInfo)
       }

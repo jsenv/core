@@ -35,7 +35,6 @@ export const jsenvPluginDevSSEServer = ({
     })
   }
   const propagateUpdate = (firstUrlInfo) => {
-    const urlInfos = urlGraph.urlInfos
     const iterate = (urlInfo, trace) => {
       if (urlInfo.data.hotAcceptSelf) {
         return {
@@ -56,7 +55,7 @@ export const jsenvPluginDevSSEServer = ({
       const { dependents } = urlInfo
       const instructions = []
       for (const dependentUrl of dependents) {
-        const dependentUrlInfo = urlInfos[dependentUrl]
+        const dependentUrlInfo = urlGraph.getUrlInfo(dependentUrl)
         if (dependentUrlInfo.data.hotDecline) {
           return {
             declined: true,

@@ -8470,20 +8470,9 @@ const parseAndTransformJsUrls = async (urlInfo, context) => {
   } = context;
   const actions = [];
   const magicSource = createMagicSource(urlInfo.content);
-  urlInfo.data.usesImport = false;
-  urlInfo.data.usesExport = false;
-  urlInfo.data.usesImportAssertion = false;
   jsMentions.forEach(jsMention => {
-    if (jsMention.assert) {
-      urlInfo.data.usesImportAssertion = true;
-    }
-
     if (jsMention.subtype === "import_static" || jsMention.subtype === "import_dynamic") {
       urlInfo.data.usesImport = true;
-    }
-
-    if (jsMention.subtype === "export") {
-      urlInfo.data.usesExport = true;
     }
 
     const [reference] = referenceUtils.found({
@@ -10927,9 +10916,7 @@ const jsenvPluginNodeEsmResolution = ({
   const onFileChange = () => {
     packageScopesCache.clear();
     packageJsonsCache.clear();
-    Object.keys(urlGraph.urlInfos).forEach(url => {
-      const urlInfo = urlGraph.getUrlInfo(url);
-
+    urlGraph.urlInfoMap.forEach(urlInfo => {
       if (urlInfo.dependsOnPackageJson) {
         urlGraph.considerModified(urlInfo);
       }
@@ -19338,8 +19325,7 @@ const rollupPluginJsenv = ({
             data: {
               generatedBy: "rollup",
               bundleRelativeUrl: rollupFileInfo.fileName,
-              usesImport: rollupFileInfo.imports.length > 0 || rollupFileInfo.dynamicImports.length > 0,
-              usesExport: rollupFileInfo.exports.length > 0
+              usesImport: rollupFileInfo.imports.length > 0 || rollupFileInfo.dynamicImports.length > 0
             },
             contentType: "text/javascript",
             content: rollupFileInfo.code,
@@ -20338,8 +20324,6 @@ const jsenvPluginDevSSEServer = ({
   };
 
   const propagateUpdate = firstUrlInfo => {
-    const urlInfos = urlGraph.urlInfos;
-
     const iterate = (urlInfo, trace) => {
       if (urlInfo.data.hotAcceptSelf) {
         return {
@@ -20359,7 +20343,7 @@ const jsenvPluginDevSSEServer = ({
       const instructions = [];
 
       for (const dependentUrl of dependents) {
-        const dependentUrlInfo = urlInfos[dependentUrl];
+        const dependentUrlInfo = urlGraph.getUrlInfo(dependentUrl);
 
         if (dependentUrlInfo.data.hotDecline) {
           return {
@@ -20722,15 +20706,15 @@ const createUrlGraph = ({
   clientFileChangeCallbackList,
   clientFilesPruneCallbackList
 } = {}) => {
-  const urlInfos = {};
+  const urlInfoMap = new Map();
 
-  const getUrlInfo = url => urlInfos[url];
+  const getUrlInfo = url => urlInfoMap.get(url);
 
   const deleteUrlInfo = url => {
-    const urlInfo = urlInfos[url];
+    const urlInfo = urlInfoMap.get(url);
 
     if (urlInfo) {
-      delete urlInfos[url];
+      urlInfoMap.delete(url);
 
       if (urlInfo.sourcemapReference) {
         deleteUrlInfo(urlInfo.sourcemapReference.url);
@@ -20739,15 +20723,15 @@ const createUrlGraph = ({
   };
 
   const reuseOrCreateUrlInfo = url => {
-    const existingUrlInfo = urlInfos[url];
+    const existingUrlInfo = getUrlInfo(url);
     if (existingUrlInfo) return existingUrlInfo;
     const urlInfo = createUrlInfo(url);
-    urlInfos[url] = urlInfo;
+    urlInfoMap.set(url, urlInfo);
     return urlInfo;
   };
 
   const inferReference = (specifier, parentUrl) => {
-    const parentUrlInfo = urlInfos[parentUrl];
+    const parentUrlInfo = getUrlInfo(parentUrl);
 
     if (!parentUrlInfo) {
       return null;
@@ -20760,7 +20744,7 @@ const createUrlGraph = ({
   };
 
   const findDependent = (url, predicate) => {
-    const urlInfo = urlInfos[url];
+    const urlInfo = getUrlInfo(url);
 
     if (!urlInfo) {
       return null;
@@ -20768,7 +20752,7 @@ const createUrlGraph = ({
 
     const visitDependents = urlInfo => {
       for (const dependentUrl of urlInfo.dependents) {
-        const dependent = urlInfos[dependentUrl];
+        const dependent = getUrlInfo(dependentUrl);
 
         if (predicate(dependent)) {
           return dependent;
@@ -20818,7 +20802,7 @@ const createUrlGraph = ({
     const removeDependencies = (urlInfo, urlsToPrune) => {
       urlsToPrune.forEach(urlToPrune => {
         urlInfo.dependencies.delete(urlToPrune);
-        const dependency = urlInfos[urlToPrune];
+        const dependency = getUrlInfo(urlToPrune);
 
         if (!dependency) {
           return;
@@ -20858,7 +20842,7 @@ const createUrlGraph = ({
     clientFileChangeCallbackList.push(({
       url
     }) => {
-      const urlInfo = urlInfos[url];
+      const urlInfo = getUrlInfo(url);
 
       if (urlInfo) {
         considerModified(urlInfo, Date.now());
@@ -20878,7 +20862,7 @@ const createUrlGraph = ({
       urlInfo.modifiedTimestamp = modifiedTimestamp;
       urlInfo.contentEtag = undefined;
       urlInfo.dependents.forEach(dependentUrl => {
-        const dependentUrlInfo = urlInfos[dependentUrl];
+        const dependentUrlInfo = getUrlInfo(dependentUrl);
         const {
           hotAcceptDependencies = []
         } = dependentUrlInfo.data;
@@ -20908,7 +20892,7 @@ const createUrlGraph = ({
   };
 
   return {
-    urlInfos,
+    urlInfoMap,
     reuseOrCreateUrlInfo,
     getUrlInfo,
     deleteUrlInfo,
@@ -20917,13 +20901,20 @@ const createUrlGraph = ({
     updateReferences,
     considerModified,
     getRelatedUrlInfos,
+    toObject: () => {
+      const data = {};
+      urlInfoMap.forEach(urlInfo => {
+        data[urlInfo.url] = urlInfo;
+      });
+      return data;
+    },
     toJSON: rootDirectoryUrl => {
       const data = {};
-      Object.keys(urlInfos).forEach(url => {
-        const dependencyUrls = Array.from(urlInfos[url].dependencies);
+      urlInfoMap.forEach(urlInfo => {
+        const dependencyUrls = Array.from(urlInfo.dependencies);
 
         if (dependencyUrls.length) {
-          const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
+          const relativeUrl = urlToRelativeUrl(urlInfo.url, rootDirectoryUrl);
           data[relativeUrl] = dependencyUrls.map(dependencyUrl => urlToRelativeUrl(dependencyUrl, rootDirectoryUrl));
         }
       });
@@ -27098,9 +27089,6 @@ ${createRepartitionMessage(graphReport)}
 };
 
 const createUrlGraphReport = urlGraph => {
-  const {
-    urlInfos
-  } = urlGraph;
   const countGroups = {
     sourcemaps: 0,
     html: 0,
@@ -27119,14 +27107,13 @@ const createUrlGraphReport = urlGraph => {
     other: 0,
     total: 0
   };
-  Object.keys(urlInfos).forEach(url => {
-    if (url.startsWith("data:")) {
+  urlGraph.urlInfoMap.forEach(urlInfo => {
+    if (urlInfo.url.startsWith("data:")) {
       return;
-    }
-
-    const urlInfo = urlInfos[url]; // ignore:
+    } // ignore:
     // - inline files: they are already taken into account in the file where they appear
     // - ignored files: we don't know their content
+
 
     if (urlInfo.isInline || !urlInfo.shouldHandle) {
       return;
@@ -27305,20 +27292,18 @@ const createRepartitionMessage = ({
 
 const GRAPH = {
   map: (graph, callback) => {
-    return Object.keys(graph.urlInfos).map(url => {
-      return callback(graph.urlInfos[url]);
+    const array = [];
+    graph.urlInfoMap.forEach(urlInfo => {
+      array.push(callback(urlInfo));
     });
+    return array;
   },
   forEach: (graph, callback) => {
-    Object.keys(graph.urlInfos).forEach(url => {
-      callback(graph.urlInfos[url], url);
-    });
+    graph.urlInfoMap.forEach(callback);
   },
   filter: (graph, callback) => {
     const urlInfos = [];
-    Object.keys(graph.urlInfos).forEach(url => {
-      const urlInfo = graph.urlInfos[url];
-
+    graph.urlInfoMap.forEach(urlInfo => {
       if (callback(urlInfo)) {
         urlInfos.push(urlInfo);
       }
@@ -27326,10 +27311,16 @@ const GRAPH = {
     return urlInfos;
   },
   find: (graph, callback) => {
-    const urlFound = Object.keys(graph.urlInfos).find(url => {
-      return callback(graph.urlInfos[url]);
-    });
-    return graph.urlInfos[urlFound];
+    let found = null;
+
+    for (const urlInfo of graph.urlInfoMap.values()) {
+      if (callback(urlInfo)) {
+        found = urlInfo;
+        break;
+      }
+    }
+
+    return found;
   }
 };
 
@@ -28475,7 +28466,7 @@ build ${entryPointKeys.length} entry points`);
 
     buildTask.done();
     logger.debug(`graph urls pre-versioning:
-${Object.keys(finalGraph.urlInfos).join("\n")}`);
+${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`);
 
     if (versioning) {
       await applyUrlVersioning({
@@ -28731,7 +28722,7 @@ const applyUrlVersioning = async ({
   });
 
   try {
-    const urlsSorted = sortByDependencies(finalGraph.urlInfos);
+    const urlsSorted = sortByDependencies(finalGraph.toObject());
     urlsSorted.forEach(url => {
       if (url.startsWith("data:")) {
         return;
