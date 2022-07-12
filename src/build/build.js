@@ -738,7 +738,7 @@ build ${entryPointKeys.length} entry points`)
 
     logger.debug(
       `graph urls pre-versioning:
-${Object.keys(finalGraph.urlInfos).join("\n")}`,
+${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`,
     )
     if (versioning) {
       await applyUrlVersioning({
@@ -973,7 +973,7 @@ const applyUrlVersioning = async ({
     disabled: infoLogsAreDisabled,
   })
   try {
-    const urlsSorted = sortByDependencies(finalGraph.urlInfos)
+    const urlsSorted = sortByDependencies(finalGraph.toObject())
     urlsSorted.forEach((url) => {
       if (url.startsWith("data:")) {
         return

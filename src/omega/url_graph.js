@@ -5,12 +5,12 @@ export const createUrlGraph = ({
   clientFileChangeCallbackList,
   clientFilesPruneCallbackList,
 } = {}) => {
-  const urlInfos = {}
-  const getUrlInfo = (url) => urlInfos[url]
+  const urlInfoMap = new Map()
+  const getUrlInfo = (url) => urlInfoMap.get(url)
   const deleteUrlInfo = (url) => {
-    const urlInfo = urlInfos[url]
+    const urlInfo = urlInfoMap.get(url)
     if (urlInfo) {
-      delete urlInfos[url]
+      urlInfoMap.delete(url)
       if (urlInfo.sourcemapReference) {
         deleteUrlInfo(urlInfo.sourcemapReference.url)
       }
@@ -18,14 +18,14 @@ export const createUrlGraph = ({
   }
 
   const reuseOrCreateUrlInfo = (url) => {
-    const existingUrlInfo = urlInfos[url]
+    const existingUrlInfo = getUrlInfo(url)
     if (existingUrlInfo) return existingUrlInfo
     const urlInfo = createUrlInfo(url)
-    urlInfos[url] = urlInfo
+    urlInfoMap.set(url, urlInfo)
     return urlInfo
   }
   const inferReference = (specifier, parentUrl) => {
-    const parentUrlInfo = urlInfos[parentUrl]
+    const parentUrlInfo = getUrlInfo(parentUrl)
     if (!parentUrlInfo) {
       return null
     }
@@ -37,13 +37,13 @@ export const createUrlGraph = ({
     return firstReferenceOnThatUrl
   }
   const findDependent = (url, predicate) => {
-    const urlInfo = urlInfos[url]
+    const urlInfo = getUrlInfo(url)
     if (!urlInfo) {
       return null
     }
     const visitDependents = (urlInfo) => {
       for (const dependentUrl of urlInfo.dependents) {
-        const dependent = urlInfos[dependentUrl]
+        const dependent = getUrlInfo(dependentUrl)
         if (predicate(dependent)) {
           return dependent
         }
@@ -90,7 +90,7 @@ export const createUrlGraph = ({
     const removeDependencies = (urlInfo, urlsToPrune) => {
       urlsToPrune.forEach((urlToPrune) => {
         urlInfo.dependencies.delete(urlToPrune)
-        const dependency = urlInfos[urlToPrune]
+        const dependency = getUrlInfo(urlToPrune)
         if (!dependency) {
           return
         }
@@ -122,7 +122,7 @@ export const createUrlGraph = ({
 
   if (clientFileChangeCallbackList) {
     clientFileChangeCallbackList.push(({ url }) => {
-      const urlInfo = urlInfos[url]
+      const urlInfo = getUrlInfo(url)
       if (urlInfo) {
         considerModified(urlInfo, Date.now())
       }
@@ -139,7 +139,7 @@ export const createUrlGraph = ({
       urlInfo.modifiedTimestamp = modifiedTimestamp
       urlInfo.contentEtag = undefined
       urlInfo.dependents.forEach((dependentUrl) => {
-        const dependentUrlInfo = urlInfos[dependentUrl]
+        const dependentUrlInfo = getUrlInfo(dependentUrl)
         const { hotAcceptDependencies = [] } = dependentUrlInfo.data
         if (!hotAcceptDependencies.includes(urlInfo.url)) {
           iterate(dependentUrlInfo)
@@ -164,7 +164,7 @@ export const createUrlGraph = ({
   }
 
   return {
-    urlInfos,
+    urlInfoMap,
     reuseOrCreateUrlInfo,
     getUrlInfo,
     deleteUrlInfo,
@@ -174,12 +174,19 @@ export const createUrlGraph = ({
     considerModified,
     getRelatedUrlInfos,
 
+    toObject: () => {
+      const data = {}
+      urlInfoMap.forEach((urlInfo) => {
+        data[urlInfo.url] = urlInfo
+      })
+      return data
+    },
     toJSON: (rootDirectoryUrl) => {
       const data = {}
-      Object.keys(urlInfos).forEach((url) => {
-        const dependencyUrls = Array.from(urlInfos[url].dependencies)
+      urlInfoMap.forEach((urlInfo) => {
+        const dependencyUrls = Array.from(urlInfo.dependencies)
         if (dependencyUrls.length) {
-          const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl)
+          const relativeUrl = urlToRelativeUrl(urlInfo.url, rootDirectoryUrl)
           data[relativeUrl] = dependencyUrls.map((dependencyUrl) =>
             urlToRelativeUrl(dependencyUrl, rootDirectoryUrl),
           )

@@ -11,7 +11,6 @@ ${createRepartitionMessage(graphReport)}
 }
 
 const createUrlGraphReport = (urlGraph) => {
-  const { urlInfos } = urlGraph
   const countGroups = {
     sourcemaps: 0,
     html: 0,
@@ -30,11 +29,10 @@ const createUrlGraphReport = (urlGraph) => {
     other: 0,
     total: 0,
   }
-  Object.keys(urlInfos).forEach((url) => {
-    if (url.startsWith("data:")) {
+  urlGraph.urlInfoMap.forEach((urlInfo) => {
+    if (urlInfo.url.startsWith("data:")) {
       return
     }
-    const urlInfo = urlInfos[url]
     // ignore:
     // - inline files: they are already taken into account in the file where they appear
     // - ignored files: we don't know their content
