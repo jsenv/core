@@ -125,7 +125,6 @@ const rollupPluginJsenv = ({
               usesImport:
                 rollupFileInfo.imports.length > 0 ||
                 rollupFileInfo.dynamicImports.length > 0,
-              usesExport: rollupFileInfo.exports.length > 0,
             },
             contentType: "text/javascript",
             content: rollupFileInfo.code,
