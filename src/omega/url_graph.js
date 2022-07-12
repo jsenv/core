@@ -145,6 +145,12 @@ export const createUrlGraph = ({
           iterate(dependentUrlInfo)
         }
       })
+      urlInfo.dependencies.forEach((dependencyUrl) => {
+        const dependencyUrlInfo = getUrlInfo(dependencyUrl)
+        if (dependencyUrlInfo.isInline) {
+          iterate(dependencyUrlInfo)
+        }
+      })
     }
     iterate(urlInfo)
   }

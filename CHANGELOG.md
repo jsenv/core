@@ -1,3 +1,7 @@
+# 27.3.4
+
+- Fix: invalidate HTML inline contents when it changes
+
 # 27.3.3
 
 - coverageMethodForNodeJs default value becomes "Profiler"
