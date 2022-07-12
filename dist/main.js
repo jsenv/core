@@ -24840,7 +24840,7 @@ const executePlan = async (plan, {
             getCustomBabelPlugins: ({
               clientRuntimeCompat
             }) => {
-              if (coverageEnabled && Object.keys(clientRuntimeCompat)[0] !== "chrome") {
+              if (coverageEnabled && (coverageMethodForBrowsers !== "playwright_api" || Object.keys(clientRuntimeCompat)[0] !== "chrome")) {
                 return {
                   "transform-instrument": [babelPluginInstrument, {
                     rootDirectoryUrl,
@@ -25620,7 +25620,7 @@ const createRuntimeFromPlaywright = ({
           const scriptExecutionResults = result.namespace;
 
           if (scriptExecutionResults) {
-            const coverage = generateCoverageForPage(scriptExecutionResults);
+            const coverage = generateCoverageForPage(scriptExecutionResults) || {};
             writeFileSync$1(new URL(coverageFileUrl), JSON.stringify(coverage, null, "  "));
           }
         });
