@@ -55,12 +55,14 @@ jobs:
         run: node ./packages/server/scripts/certificate_install.mjs
       - name: Run ESLint
         run: npm run eslint
-      - name: Run package tests
-        env:
-          NODE_V8_COVERAGE: .coverage/node
-        run: npm run test --workspaces --if-present -- --coverage
+      - name: Run packages tests
+        # env:
+        #   NODE_V8_COVERAGE: .coverage/packages
+        run: npm run test:workspace
       - name: Run core tests
-        run: npm run test:coverage
+        env:
+          NODE_V8_COVERAGE: .coverage/core
+        run: npm run test -- --coverage
       - name: Upload coverage
         uses: codecov/codecov-action@v2
         with:
