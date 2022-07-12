@@ -40,12 +40,14 @@ export const run = async ({
         timeoutAbortSource.signal.aborted
       ) {
         result.status = "timedout"
+        delete result.error
       }
     })
   }
   callbacks.push(() => {
     if (result.status === "errored" && Abort.isAbortError(result.error)) {
       result.status = "aborted"
+      delete result.error
     }
   })
   const consoleCalls = []

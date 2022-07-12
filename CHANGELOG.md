@@ -1,6 +1,7 @@
 # 27.3.4
 
-- Fix: invalidate HTML inline contents when it changes
+- fix: invalidate HTML inline contents when it changes
+- fix: remove redundant abort error from test plan logs
 
 # 27.3.3
 

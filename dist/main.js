@@ -20871,6 +20871,13 @@ const createUrlGraph = ({
           iterate(dependentUrlInfo);
         }
       });
+      urlInfo.dependencies.forEach(dependencyUrl => {
+        const dependencyUrlInfo = getUrlInfo(dependencyUrl);
+
+        if (dependencyUrlInfo.isInline) {
+          iterate(dependencyUrlInfo);
+        }
+      });
     };
 
     iterate(urlInfo);
@@ -24142,6 +24149,7 @@ const run = async ({
     callbacks.push(() => {
       if (result.status === "errored" && Abort.isAbortError(result.error) && timeoutAbortSource.signal.aborted) {
         result.status = "timedout";
+        delete result.error;
       }
     });
   }
@@ -24149,6 +24157,7 @@ const run = async ({
   callbacks.push(() => {
     if (result.status === "errored" && Abort.isAbortError(result.error)) {
       result.status = "aborted";
+      delete result.error;
     }
   });
   const consoleCalls = [];
