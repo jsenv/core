@@ -21548,6 +21548,7 @@ const createTransformUrlContentError = ({
     transformError.url = reference.trace.url;
     transformError.line = reference.trace.line;
     transformError.column = reference.trace.column;
+    transformError.stack = error.stack;
     transformError.contentFrame = reference.trace.message;
 
     if (code === "PARSE_ERROR") {
@@ -22842,7 +22843,8 @@ const createFileService = ({
   kitchen,
   scenario,
   onParseError,
-  onFileNotFound
+  onFileNotFound,
+  onUnexpectedError
 }) => {
   kitchen.pluginController.addHook("serve");
   kitchen.pluginController.addHook("augmentResponse");
@@ -23022,6 +23024,15 @@ const createFileService = ({
         };
       }
 
+      onUnexpectedError({
+        reason: e.reason,
+        message: e.message,
+        stack: e.stack,
+        url: e.url,
+        line: e.line,
+        column: e.column,
+        contentFrame: e.contentFrame
+      });
       return {
         url: reference.url,
         status: 500,
@@ -23148,6 +23159,12 @@ const startOmegaServer = async ({
       onParseError: data => {
         sendServerErrorEvent({
           type: "parse_error",
+          data
+        });
+      },
+      onUnexpectedError: data => {
+        sendServerErrorEvent({
+          type: "unexpected_error",
           data
         });
       }

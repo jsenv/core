@@ -306,7 +306,7 @@ const replaceLinks = (string, {
         return onFileUrl(fileUrlObject);
       }
 
-      if (urlObject.href.startsWith(rootDirectoryUrl)) {
+      if (urlObject.href.startsWith("file:")) {
         return onFileUrl(urlObject);
       }
 
@@ -671,21 +671,29 @@ const installHtmlSupervisor = ({
 
   if (window.__jsenv_event_source_client__) {
     const onServerErrorEvent = serverErrorEvent => {
-      const data = JSON.parse(serverErrorEvent.data);
+      const {
+        reason,
+        stack,
+        url,
+        line,
+        column,
+        contentFrame
+      } = JSON.parse(serverErrorEvent.data);
       displayErrorInDocument({
-        message: data.reason,
-        stack: data.contentFrame
+        message: reason,
+        stack: stack ? `${stack}\n\n${contentFrame}` : contentFrame
       }, {
         rootDirectoryUrl,
-        url: data.url,
-        line: data.line,
-        column: data.column
+        url,
+        line,
+        column
       });
     };
 
     window.__jsenv_event_source_client__.addEventCallbacks({
       file_not_found: onServerErrorEvent,
-      parse_error: onServerErrorEvent
+      parse_error: onServerErrorEvent,
+      unexpected_error: onServerErrorEvent
     });
   }
 };
