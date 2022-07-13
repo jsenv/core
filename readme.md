@@ -27,7 +27,7 @@ These demos are showing how jsenv can be integrated with preconfigured scripts s
 > **Info**
 > Executing "npm install" in web demos can take time. It is because in these demos tests are runned in headless browsers that needs to be installed.
 
-See also [packages/create-jsenv/README.md](./packages/create-jsenv/README.md).
+See also [packages/create-jsenv](./packages/create-jsenv).
 
 # Installation
 
