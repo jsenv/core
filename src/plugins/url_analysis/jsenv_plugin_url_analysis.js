@@ -79,7 +79,9 @@ export const jsenvPluginUrlAnalysis = ({
             type: "filesystem",
             subtype: "directory_entry",
             specifier: directoryEntryName,
-            trace: `"${directoryRelativeUrl}${directoryEntryName}" entry in directory referenced by ${originalDirectoryReference.trace}`,
+            trace: {
+              message: `"${directoryRelativeUrl}${directoryEntryName}" entry in directory referenced by ${originalDirectoryReference.trace.message}`,
+            },
           })
         })
       },

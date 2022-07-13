@@ -34,7 +34,7 @@ export const jsenvPluginDevSSEServer = ({
         })
       }
       const propagateUpdate = (firstUrlInfo) => {
-        const iterate = (urlInfo, trace) => {
+        const iterate = (urlInfo, seen) => {
           if (urlInfo.data.hotAcceptSelf) {
             return {
               accepted: true,
@@ -71,7 +71,7 @@ export const jsenvPluginDevSSEServer = ({
               })
               continue
             }
-            if (trace.includes(dependentUrl)) {
+            if (seen.includes(dependentUrl)) {
               return {
                 declined: true,
                 reason: "circular dependency",
@@ -79,7 +79,7 @@ export const jsenvPluginDevSSEServer = ({
               }
             }
             const dependentPropagationResult = iterate(dependentUrlInfo, [
-              ...trace,
+              ...seen,
               dependentUrl,
             ])
             if (dependentPropagationResult.accepted) {
@@ -107,8 +107,8 @@ export const jsenvPluginDevSSEServer = ({
             instructions,
           }
         }
-        const trace = []
-        return iterate(firstUrlInfo, trace)
+        const seen = []
+        return iterate(firstUrlInfo, seen)
       }
       clientFileChangeCallbackList.push(({ url, event }) => {
         const urlInfo = urlGraph.getUrlInfo(url)

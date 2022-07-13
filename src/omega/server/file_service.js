@@ -52,7 +52,7 @@ export const createFileService = ({
     }
     if (!reference) {
       const entryPoint = kitchen.injectReference({
-        trace: parentUrl || rootDirectoryUrl,
+        trace: { message: parentUrl || rootDirectoryUrl },
         parentUrl: parentUrl || rootDirectoryUrl,
         type: "http_request",
         specifier: request.ressource,
@@ -170,6 +170,10 @@ export const createFileService = ({
         onFileNotFound({
           reason: e.reason,
           message: e.message,
+          url: e.url,
+          line: e.line,
+          column: e.column,
+          contentFrame: e.contentFrame,
         })
         return {
           url: reference.url,

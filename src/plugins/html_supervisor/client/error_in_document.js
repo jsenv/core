@@ -128,7 +128,7 @@ pre a {
 <div class="overlay">
   <h1 class="title"></h1>
   <pre class="stack"></pre>
-  <div class="tip">Click outside or fix to close.</div>
+  <div class="tip">Click outside to close.</div>
 </div>
 `
 
@@ -145,6 +145,11 @@ const parseErrorInfo = (error) => {
   if (error === undefined) {
     return {
       message: "undefined",
+    }
+  }
+  if (error === null) {
+    return {
+      message: "null",
     }
   }
   if (typeof error === "string") {
@@ -179,6 +184,9 @@ const parseErrorInfo = (error) => {
       message: error.message,
       stack: error.stack ? `  ${error.stack}` : null,
     }
+  }
+  if (typeof error === "object") {
+    return error
   }
   return {
     message: JSON.stringify(error),
@@ -223,11 +231,8 @@ const replaceLinks = (string, { rootDirectoryUrl }) => {
   string = stringToStringWithLink(string, {
     transform: (url, { line, column }) => {
       const urlObject = new URL(url)
-      if (urlObject.origin === window.origin) {
-        const fileUrlObject = new URL(
-          `${urlObject.pathname.slice(1)}${urlObject.search}`,
-          rootDirectoryUrl,
-        )
+
+      const onFileUrl = (fileUrlObject) => {
         const atFsIndex = fileUrlObject.pathname.indexOf("/@fs/")
         let fileUrl
         if (atFsIndex > -1) {
@@ -246,6 +251,17 @@ const replaceLinks = (string, { rootDirectoryUrl }) => {
           href: `javascript:window.fetch('/__open_in_editor__/${fileUrl}')`,
           text: fileUrl,
         })
+      }
+
+      if (urlObject.origin === window.origin) {
+        const fileUrlObject = new URL(
+          `${urlObject.pathname.slice(1)}${urlObject.search}`,
+          rootDirectoryUrl,
+        )
+        return onFileUrl(fileUrlObject)
+      }
+      if (urlObject.href.startsWith(rootDirectoryUrl)) {
+        return onFileUrl(urlObject)
       }
       return link({
         href: url,

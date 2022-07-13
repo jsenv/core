@@ -73,13 +73,16 @@ export const startOmegaServer = async ({
       urlGraph,
       kitchen,
       scenario,
-      onFileNotFound: ({ message }) => {
-        sendServerEvent({
-          type: "file_not_found",
-          data: {
-            message,
-          },
-        })
+      onFileNotFound: (data) => {
+        // setTimeout display first the error
+        // dispatched on window by browser
+        // then display the jsenv error
+        setTimeout(() => {
+          sendServerEvent({
+            type: "file_not_found",
+            data,
+          })
+        }, 10)
       },
     }),
   }

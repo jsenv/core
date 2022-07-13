@@ -3,8 +3,6 @@
 // https://github.com/postcss/postcss/blob/fd30d3df5abc0954a0ec642a3cdc644ab2aacf9c/lib/terminal-highlight.js#L50
 // https://github.com/babel/babel/blob/eea156b2cb8deecfcf82d52aa1b71ba4995c7d68/packages/babel-code-frame/src/index.js#L1
 
-import { urlToFileSystemPath } from "./url_to_filesystem_path.js"
-
 export const stringifyUrlTrace = (trace) => {
   let string = ""
   trace.forEach(({ type, url, line, column, source }, index) => {
@@ -41,7 +39,7 @@ export const stringifyUrlSite = (
     color,
   } = {},
 ) => {
-  let string = `${humanizeUrl(url)}`
+  let string = url
 
   if (typeof line === "number") {
     string += `:${line}`
@@ -65,15 +63,6 @@ export const stringifyUrlSite = (
 
   return `${string}
 ${sourceLoc}`
-}
-
-export const humanizeUrl = (url) => {
-  if (url.startsWith("file://")) {
-    // we prefer file system path because vscode reliably make them clickable
-    // and sometimes it won't for file:// urls
-    return urlToFileSystemPath(url)
-  }
-  return url
 }
 
 export const showSourceLocation = ({

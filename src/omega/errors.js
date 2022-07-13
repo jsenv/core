@@ -15,7 +15,7 @@ export const createResolveUrlError = ({
         reason,
         ...details,
         "specifier": `"${reference.specifier}"`,
-        "specifier trace": reference.trace,
+        "specifier trace": reference.trace.message,
         ...detailsFromPluginController(pluginController),
       }),
     )
@@ -51,13 +51,17 @@ export const createFetchUrlContentError = ({
         reason,
         ...details,
         "url": urlInfo.url,
-        "url reference trace": reference.trace,
+        "url reference trace": reference.trace.message,
         ...detailsFromPluginController(pluginController),
       }),
     )
     fetchContentError.name = "FETCH_URL_CONTENT_ERROR"
     fetchContentError.code = code
     fetchContentError.reason = reason
+    fetchContentError.url = reference.trace.url
+    fetchContentError.line = reference.trace.line
+    fetchContentError.column = reference.trace.column
+    fetchContentError.contentFrame = reference.trace.message
     return fetchContentError
   }
 
@@ -103,7 +107,7 @@ export const createTransformUrlContentError = ({
           reason,
           ...details,
           "url": urlInfo.url,
-          "url reference trace": reference.trace,
+          "url reference trace": reference.trace.message,
           ...detailsFromPluginController(pluginController),
         },
       ),
@@ -130,7 +134,7 @@ export const createFinalizeUrlContentError = ({
       "reason": `An error occured during "finalizeUrlContent"`,
       ...detailsFromValueThrown(error),
       "url": urlInfo.url,
-      "url reference trace": reference.trace,
+      "url reference trace": reference.trace.message,
       ...detailsFromPluginController(pluginController),
     }),
   )

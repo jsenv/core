@@ -223,9 +223,15 @@ export const installHtmlSupervisor = ({
   window.__jsenv_event_source_client__.addEventCallbacks({
     file_not_found: ({ data }) => {
       data = JSON.parse(data)
-      displayErrorInDocument(data.message, {
-        rootDirectoryUrl,
-      })
+      displayErrorInDocument(
+        { message: data.reason, stack: data.contentFrame },
+        {
+          rootDirectoryUrl,
+          url: data.url,
+          line: data.line,
+          column: data.column,
+        },
+      )
     },
   })
 }
