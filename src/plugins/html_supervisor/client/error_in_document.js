@@ -245,7 +245,7 @@ const stringToStringWithLink = (
           line: lineNumber,
         })
       } else {
-        linkHTML = transform(match)
+        linkHTML = transform(match, {})
       }
     }
     if (endsWithSeparationChar) {
