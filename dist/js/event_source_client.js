@@ -2,7 +2,12 @@ import { urlHotMetas } from "./import_meta_hot.js";
 import { parseSrcSet, stringifySrcSet } from "@jsenv/ast/src/html/html_src_set.js";
 
 /* eslint-env browser */
-const createEventSourceConnection = (eventSourceUrl, events = {}, {
+const STATUSES = {
+  CONNECTING: "connecting",
+  CONNECTED: "connected",
+  DISCONNECTED: "disconnected"
+};
+const createEventSourceConnection = (eventSourceUrl, {
   retryMaxAttempt = Infinity,
   retryAllocatedMs = Infinity,
   lastEventId
@@ -15,20 +20,31 @@ const createEventSourceConnection = (eventSourceUrl, events = {}, {
     return () => {};
   }
 
+  let eventSource;
+  const events = {};
   const eventSourceOrigin = new URL(eventSourceUrl).origin;
-  Object.keys(events).forEach(eventName => {
-    const eventCallback = events[eventName];
 
-    events[eventName] = e => {
-      if (e.origin === eventSourceOrigin) {
-        if (e.lastEventId) {
-          lastEventId = e.lastEventId;
+  const addEventCallbacks = eventCallbacks => {
+    Object.keys(eventCallbacks).forEach(eventName => {
+      const eventCallback = eventCallbacks[eventName];
+
+      events[eventName] = e => {
+        if (e.origin === eventSourceOrigin) {
+          if (e.lastEventId) {
+            lastEventId = e.lastEventId;
+          }
+
+          eventCallback(e);
         }
+      };
 
-        eventCallback(e);
+      if (eventSource) {
+        eventSource.addEventListener(eventName, events[eventName]);
       }
-    };
-  });
+    });
+  };
+
+  addEventCallbacks(events);
   const status = {
     value: "default",
     goTo: value => {
@@ -45,12 +61,12 @@ const createEventSourceConnection = (eventSourceUrl, events = {}, {
   let _disconnect = () => {};
 
   const attemptConnection = url => {
-    const eventSource = new EventSource(url, {
+    eventSource = new EventSource(url, {
       withCredentials: true
     });
 
     _disconnect = () => {
-      if (status.value !== "connecting" && status.value !== "connected") {
+      if (status.value !== STATUSES.CONNECTING && status.value !== STATUSES.CONNECTED) {
         console.warn(`disconnect() ignored because connection is ${status.value}`);
         return;
       }
@@ -60,7 +76,8 @@ const createEventSourceConnection = (eventSourceUrl, events = {}, {
       Object.keys(events).forEach(eventName => {
         eventSource.removeEventListener(eventName, events[eventName]);
       });
-      status.goTo("disconnected");
+      eventSource = null;
+      status.goTo(STATUSES.DISCONNECTED);
     };
 
     let retryCount = 0;
@@ -91,7 +108,7 @@ const createEventSourceConnection = (eventSourceUrl, events = {}, {
         }
 
         retryCount++;
-        status.goTo("connecting");
+        status.goTo(STATUSES.CONNECTING);
         return;
       }
 
@@ -103,7 +120,7 @@ const createEventSourceConnection = (eventSourceUrl, events = {}, {
     };
 
     eventSource.onopen = () => {
-      status.goTo("connected");
+      status.goTo(STATUSES.CONNECTED);
     };
 
     Object.keys(events).forEach(eventName => {
@@ -118,7 +135,7 @@ const createEventSourceConnection = (eventSourceUrl, events = {}, {
       });
     }
 
-    status.goTo("connecting");
+    status.goTo(STATUSES.CONNECTING);
   };
 
   let connect = () => {
@@ -130,7 +147,7 @@ const createEventSourceConnection = (eventSourceUrl, events = {}, {
   };
 
   const removePageUnloadListener = listenPageUnload(() => {
-    if (status.value === "connecting" || status.value === "connected") {
+    if (status.value === STATUSES.CONNECTING || status.value === STATUSES.CONNECTED) {
       _disconnect();
     }
   });
@@ -144,6 +161,7 @@ const createEventSourceConnection = (eventSourceUrl, events = {}, {
   return {
     status,
     connect,
+    addEventCallbacks,
     disconnect: () => _disconnect(),
     destroy
   };
@@ -492,23 +510,26 @@ const addReloadMessage = reloadMessage => {
 };
 
 const eventsourceConnection = createEventSourceConnection(document.location.href, {
-  reload: ({
-    data
-  }) => {
-    const reloadMessage = JSON.parse(data);
-    addReloadMessage(reloadMessage);
-  }
-}, {
   retryMaxAttempt: Infinity,
   retryAllocatedMs: 20 * 1000
 });
 const {
   status,
   connect,
+  addEventCallbacks,
   disconnect
 } = eventsourceConnection;
+eventsourceConnection.addEventCallbacks({
+  reload: ({
+    data
+  }) => {
+    const reloadMessage = JSON.parse(data);
+    addReloadMessage(reloadMessage);
+  }
+});
 connect();
 window.__jsenv_event_source_client__ = {
+  addEventCallbacks,
   status,
   connect,
   disconnect,

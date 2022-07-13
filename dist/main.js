@@ -5928,19 +5928,6 @@ const generateInlineContentUrl = ({
   return inlineContentUrl;
 };
 
-const urlToFileSystemPath = url => {
-  let urlString = String(url);
-
-  if (urlString[urlString.length - 1] === "/") {
-    // remove trailing / so that nodejs path becomes predictable otherwise it logs
-    // the trailing slash on linux but does not on windows
-    urlString = urlString.slice(0, -1);
-  }
-
-  const fileSystemPath = fileURLToPath(urlString);
-  return fileSystemPath;
-};
-
 // consider switching to https://babeljs.io/docs/en/babel-code-frame
 const stringifyUrlSite = ({
   url,
@@ -5953,7 +5940,7 @@ const stringifyUrlSite = ({
   lineMaxLength,
   color
 } = {}) => {
-  let string = `${humanizeUrl(url)}`;
+  let string = url;
 
   if (typeof line === "number") {
     string += `:${line}`;
@@ -5977,15 +5964,6 @@ const stringifyUrlSite = ({
   });
   return `${string}
 ${sourceLoc}`;
-};
-const humanizeUrl = url => {
-  if (url.startsWith("file://")) {
-    // we prefer file system path because vscode reliably make them clickable
-    // and sometimes it won't for file:// urls
-    return urlToFileSystemPath(url);
-  }
-
-  return url;
 };
 const showSourceLocation = ({
   content,
@@ -6487,6 +6465,19 @@ const urlToBasename = url => {
   const dotLastIndex = filename.lastIndexOf(".");
   const basename = dotLastIndex === -1 ? filename : filename.slice(0, dotLastIndex);
   return basename;
+};
+
+const urlToFileSystemPath = url => {
+  let urlString = String(url);
+
+  if (urlString[urlString.length - 1] === "/") {
+    // remove trailing / so that nodejs path becomes predictable otherwise it logs
+    // the trailing slash on linux but does not on windows
+    urlString = urlString.slice(0, -1);
+  }
+
+  const fileSystemPath = fileURLToPath(urlString);
+  return fileSystemPath;
 };
 
 const assertAndNormalizeDirectoryUrl = value => {
@@ -8622,7 +8613,9 @@ const jsenvPluginUrlAnalysis = ({
             type: "filesystem",
             subtype: "directory_entry",
             specifier: directoryEntryName,
-            trace: `"${directoryRelativeUrl}${directoryEntryName}" entry in directory referenced by ${originalDirectoryReference.trace}`
+            trace: {
+              message: `"${directoryRelativeUrl}${directoryEntryName}" entry in directory referenced by ${originalDirectoryReference.trace.message}`
+            }
           });
         });
       }
@@ -12037,6 +12030,8 @@ const jsenvPluginInlineUrls = () => {
   };
 };
 
+const requireFromJsenv = createRequire(import.meta.url);
+
 /*
  * Things happening here
  * - html supervisor module injection
@@ -12054,13 +12049,32 @@ const jsenvPluginHtmlSupervisor = ({
       dev: true,
       test: true
     },
+    serve: request => {
+      if (!request.ressource.startsWith("/__open_in_editor__/")) {
+        return null;
+      }
+
+      const file = request.ressource.slice("/__open_in_editor__/".length);
+
+      if (!file) {
+        return {
+          status: 400,
+          body: 'Missing "file" in url search params'
+        };
+      }
+
+      const launch = requireFromJsenv("launch-editor");
+      launch(fileURLToPath(file), () => {// ignore error for now
+      });
+      return {
+        status: 200
+      };
+    },
     transformUrlContent: {
       html: ({
         url,
         content
-      }, {
-        referenceUtils
-      }) => {
+      }, context) => {
         const htmlAst = parseHtmlString(content);
         const scriptsToSupervise = [];
 
@@ -12083,7 +12097,7 @@ const jsenvPluginHtmlSupervisor = ({
             lineEnd,
             columnEnd
           });
-          const [inlineScriptReference] = referenceUtils.foundInline({
+          const [inlineScriptReference] = context.referenceUtils.foundInline({
             type: "script_src",
             expectedType: {
               classic: "js_classic",
@@ -12160,7 +12174,7 @@ const jsenvPluginHtmlSupervisor = ({
             }
           }
         });
-        const [htmlSupervisorInstallerFileReference] = referenceUtils.inject({
+        const [htmlSupervisorInstallerFileReference] = context.referenceUtils.inject({
           type: "js_import_export",
           expectedType: "js_module",
           specifier: htmlSupervisorInstallerFileUrl
@@ -12172,11 +12186,12 @@ const jsenvPluginHtmlSupervisor = ({
       import { installHtmlSupervisor } from ${htmlSupervisorInstallerFileReference.generatedSpecifier}
       installHtmlSupervisor(${JSON.stringify({
             logs,
-            measurePerf
+            measurePerf,
+            rootDirectoryUrl: context.rootDirectoryUrl
           }, null, "        ")})`,
           "injected-by": "jsenv:html_supervisor"
         }));
-        const [htmlSupervisorSetupFileReference] = referenceUtils.inject({
+        const [htmlSupervisorSetupFileReference] = context.referenceUtils.inject({
           type: "script_src",
           expectedType: "js_classic",
           specifier: htmlSupervisorSetupFileUrl
@@ -12762,8 +12777,6 @@ export default inlineContent.text`,
   };
   return [asJsonModule, asCssModule, asTextModule];
 };
-
-const requireFromJsenv = createRequire(import.meta.url);
 
 const babelPluginPackagePath = requireFromJsenv.resolve("@jsenv/babel-plugins");
 const babelPluginPackageUrl = pathToFileURL(babelPluginPackagePath);
@@ -20226,267 +20239,216 @@ const jsenvPluginDevSSEClient = () => {
   };
 };
 
-const createSSEService = ({
-  serverEventCallbackList
-}) => {
-  const destroyCallbackList = createCallbackListNotifiedOnce();
-  const cache = [];
-  const sseRoomLimit = 100;
-
-  const getOrCreateSSERoom = request => {
-    const htmlFileRelativeUrl = request.ressource.slice(1);
-    const cacheEntry = cache.find(cacheEntryCandidate => cacheEntryCandidate.htmlFileRelativeUrl === htmlFileRelativeUrl);
-
-    if (cacheEntry) {
-      return cacheEntry.sseRoom;
-    }
-
-    const sseRoom = createSSERoom({
-      retryDuration: 2000,
-      historyLength: 100,
-      welcomeEventEnabled: true,
-      effect: () => {
-        return serverEventCallbackList.add(event => {
-          sseRoom.sendEvent(event);
-        });
-      }
-    });
-    const removeSSECleanupCallback = destroyCallbackList.add(() => {
-      removeSSECleanupCallback();
-      sseRoom.close();
-    });
-    cache.push({
-      htmlFileRelativeUrl,
-      sseRoom,
-      cleanup: () => {
-        removeSSECleanupCallback();
-        sseRoom.close();
-      }
-    });
-
-    if (cache.length >= sseRoomLimit) {
-      const firstCacheEntry = cache.shift();
-      firstCacheEntry.cleanup();
-    }
-
-    return sseRoom;
-  };
-
-  return {
-    getOrCreateSSERoom,
-    destroy: () => {
-      destroyCallbackList.notify();
-    }
-  };
-};
-
 const jsenvPluginDevSSEServer = ({
-  rootDirectoryUrl,
-  urlGraph,
   clientFileChangeCallbackList,
   clientFilesPruneCallbackList
 }) => {
-  const serverEventCallbackList = createCallbackList();
-  const sseService = createSSEService({
-    serverEventCallbackList
-  });
-
-  const notifyDeclined = ({
-    cause,
-    reason,
-    declinedBy
-  }) => {
-    serverEventCallbackList.notify({
-      type: "reload",
-      data: JSON.stringify({
-        cause,
-        type: "full",
-        typeReason: reason,
-        declinedBy
-      })
-    });
-  };
-
-  const notifyAccepted = ({
-    cause,
-    reason,
-    instructions
-  }) => {
-    serverEventCallbackList.notify({
-      type: "reload",
-      data: JSON.stringify({
-        cause,
-        type: "hot",
-        typeReason: reason,
-        hotInstructions: instructions
-      })
-    });
-  };
-
-  const propagateUpdate = firstUrlInfo => {
-    const iterate = (urlInfo, trace) => {
-      if (urlInfo.data.hotAcceptSelf) {
-        return {
-          accepted: true,
-          reason: urlInfo === firstUrlInfo ? `file accepts hot reload` : `a dependent file accepts hot reload`,
-          instructions: [{
-            type: urlInfo.type,
-            boundary: urlToRelativeUrl(urlInfo.url, rootDirectoryUrl),
-            acceptedBy: urlToRelativeUrl(urlInfo.url, rootDirectoryUrl)
-          }]
-        };
-      }
-
-      const {
-        dependents
-      } = urlInfo;
-      const instructions = [];
-
-      for (const dependentUrl of dependents) {
-        const dependentUrlInfo = urlGraph.getUrlInfo(dependentUrl);
-
-        if (dependentUrlInfo.data.hotDecline) {
-          return {
-            declined: true,
-            reason: `a dependent file declines hot reload`,
-            declinedBy: dependentUrl
-          };
-        }
-
-        const {
-          hotAcceptDependencies = []
-        } = dependentUrlInfo.data;
-
-        if (hotAcceptDependencies.includes(urlInfo.url)) {
-          instructions.push({
-            type: dependentUrlInfo.type,
-            boundary: urlToRelativeUrl(dependentUrl, rootDirectoryUrl),
-            acceptedBy: urlToRelativeUrl(urlInfo.url, rootDirectoryUrl)
-          });
-          continue;
-        }
-
-        if (trace.includes(dependentUrl)) {
-          return {
-            declined: true,
-            reason: "circular dependency",
-            declinedBy: urlToRelativeUrl(dependentUrl, rootDirectoryUrl)
-          };
-        }
-
-        const dependentPropagationResult = iterate(dependentUrlInfo, [...trace, dependentUrl]);
-
-        if (dependentPropagationResult.accepted) {
-          instructions.push(...dependentPropagationResult.instructions);
-          continue;
-        }
-
-        if ( // declined explicitely by an other file, it must decline the whole update
-        dependentPropagationResult.declinedBy) {
-          return dependentPropagationResult;
-        } // declined by absence of boundary, we can keep searching
-
-
-        continue;
-      }
-
-      if (instructions.length === 0) {
-        return {
-          declined: true,
-          reason: `there is no file accepting hot reload while propagating update`
-        };
-      }
-
-      return {
-        accepted: true,
-        reason: `${instructions.length} dependent file(s) accepts hot reload`,
-        instructions
-      };
-    };
-
-    const trace = [];
-    return iterate(firstUrlInfo, trace);
-  };
-
-  clientFileChangeCallbackList.push(({
-    url,
-    event
-  }) => {
-    const urlInfo = urlGraph.getUrlInfo(url); // file not part of dependency graph
-
-    if (!urlInfo) {
-      return;
-    }
-
-    const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
-    const hotUpdate = propagateUpdate(urlInfo);
-
-    if (hotUpdate.declined) {
-      notifyDeclined({
-        cause: `${relativeUrl} ${event}`,
-        reason: hotUpdate.reason,
-        declinedBy: hotUpdate.declinedBy
-      });
-    } else {
-      notifyAccepted({
-        cause: `${relativeUrl} ${event}`,
-        reason: hotUpdate.reason,
-        instructions: hotUpdate.instructions
-      });
-    }
-  });
-  clientFilesPruneCallbackList.push(({
-    prunedUrlInfos,
-    firstUrlInfo
-  }) => {
-    const mainHotUpdate = propagateUpdate(firstUrlInfo);
-    const cause = `following files are no longer referenced: ${prunedUrlInfos.map(prunedUrlInfo => urlToRelativeUrl(prunedUrlInfo.url, rootDirectoryUrl))}`; // now check if we can hot update the main ressource
-    // then if we can hot update all dependencies
-
-    if (mainHotUpdate.declined) {
-      notifyDeclined({
-        cause,
-        reason: mainHotUpdate.reason,
-        declinedBy: mainHotUpdate.declinedBy
-      });
-      return;
-    } // main can hot update
-
-
-    let i = 0;
-    const instructions = [];
-
-    while (i < prunedUrlInfos.length) {
-      const prunedUrlInfo = prunedUrlInfos[i++];
-
-      if (prunedUrlInfo.data.hotDecline) {
-        notifyDeclined({
-          cause,
-          reason: `a pruned file declines hot reload`,
-          declinedBy: urlToRelativeUrl(prunedUrlInfo.url, rootDirectoryUrl)
-        });
-        return;
-      }
-
-      instructions.push({
-        type: "prune",
-        boundary: urlToRelativeUrl(prunedUrlInfo.url, rootDirectoryUrl),
-        acceptedBy: urlToRelativeUrl(firstUrlInfo.url, rootDirectoryUrl)
-      });
-    }
-
-    notifyAccepted({
-      cause,
-      reason: mainHotUpdate.reason,
-      instructions
-    });
-  });
   return {
     name: "jsenv:sse_server",
     appliesDuring: {
       dev: true
     },
-    serve: request => {
+    registerServerEvents: ({
+      sendServerEvent
+    }, {
+      rootDirectoryUrl,
+      urlGraph
+    }) => {
+      const notifyDeclined = ({
+        cause,
+        reason,
+        declinedBy
+      }) => {
+        sendServerEvent({
+          type: "reload",
+          data: {
+            cause,
+            type: "full",
+            typeReason: reason,
+            declinedBy
+          }
+        });
+      };
+
+      const notifyAccepted = ({
+        cause,
+        reason,
+        instructions
+      }) => {
+        sendServerEvent({
+          type: "reload",
+          data: {
+            cause,
+            type: "hot",
+            typeReason: reason,
+            hotInstructions: instructions
+          }
+        });
+      };
+
+      const propagateUpdate = firstUrlInfo => {
+        const iterate = (urlInfo, seen) => {
+          if (urlInfo.data.hotAcceptSelf) {
+            return {
+              accepted: true,
+              reason: urlInfo === firstUrlInfo ? `file accepts hot reload` : `a dependent file accepts hot reload`,
+              instructions: [{
+                type: urlInfo.type,
+                boundary: urlToRelativeUrl(urlInfo.url, rootDirectoryUrl),
+                acceptedBy: urlToRelativeUrl(urlInfo.url, rootDirectoryUrl)
+              }]
+            };
+          }
+
+          const {
+            dependents
+          } = urlInfo;
+          const instructions = [];
+
+          for (const dependentUrl of dependents) {
+            const dependentUrlInfo = urlGraph.getUrlInfo(dependentUrl);
+
+            if (dependentUrlInfo.data.hotDecline) {
+              return {
+                declined: true,
+                reason: `a dependent file declines hot reload`,
+                declinedBy: dependentUrl
+              };
+            }
+
+            const {
+              hotAcceptDependencies = []
+            } = dependentUrlInfo.data;
+
+            if (hotAcceptDependencies.includes(urlInfo.url)) {
+              instructions.push({
+                type: dependentUrlInfo.type,
+                boundary: urlToRelativeUrl(dependentUrl, rootDirectoryUrl),
+                acceptedBy: urlToRelativeUrl(urlInfo.url, rootDirectoryUrl)
+              });
+              continue;
+            }
+
+            if (seen.includes(dependentUrl)) {
+              return {
+                declined: true,
+                reason: "circular dependency",
+                declinedBy: urlToRelativeUrl(dependentUrl, rootDirectoryUrl)
+              };
+            }
+
+            const dependentPropagationResult = iterate(dependentUrlInfo, [...seen, dependentUrl]);
+
+            if (dependentPropagationResult.accepted) {
+              instructions.push(...dependentPropagationResult.instructions);
+              continue;
+            }
+
+            if ( // declined explicitely by an other file, it must decline the whole update
+            dependentPropagationResult.declinedBy) {
+              return dependentPropagationResult;
+            } // declined by absence of boundary, we can keep searching
+
+
+            continue;
+          }
+
+          if (instructions.length === 0) {
+            return {
+              declined: true,
+              reason: `there is no file accepting hot reload while propagating update`
+            };
+          }
+
+          return {
+            accepted: true,
+            reason: `${instructions.length} dependent file(s) accepts hot reload`,
+            instructions
+          };
+        };
+
+        const seen = [];
+        return iterate(firstUrlInfo, seen);
+      };
+
+      clientFileChangeCallbackList.push(({
+        url,
+        event
+      }) => {
+        const urlInfo = urlGraph.getUrlInfo(url); // file not part of dependency graph
+
+        if (!urlInfo) {
+          return;
+        }
+
+        const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
+        const hotUpdate = propagateUpdate(urlInfo);
+
+        if (hotUpdate.declined) {
+          notifyDeclined({
+            cause: `${relativeUrl} ${event}`,
+            reason: hotUpdate.reason,
+            declinedBy: hotUpdate.declinedBy
+          });
+        } else {
+          notifyAccepted({
+            cause: `${relativeUrl} ${event}`,
+            reason: hotUpdate.reason,
+            instructions: hotUpdate.instructions
+          });
+        }
+      });
+      clientFilesPruneCallbackList.push(({
+        prunedUrlInfos,
+        firstUrlInfo
+      }) => {
+        const mainHotUpdate = propagateUpdate(firstUrlInfo);
+        const cause = `following files are no longer referenced: ${prunedUrlInfos.map(prunedUrlInfo => urlToRelativeUrl(prunedUrlInfo.url, rootDirectoryUrl))}`; // now check if we can hot update the main ressource
+        // then if we can hot update all dependencies
+
+        if (mainHotUpdate.declined) {
+          notifyDeclined({
+            cause,
+            reason: mainHotUpdate.reason,
+            declinedBy: mainHotUpdate.declinedBy
+          });
+          return;
+        } // main can hot update
+
+
+        let i = 0;
+        const instructions = [];
+
+        while (i < prunedUrlInfos.length) {
+          const prunedUrlInfo = prunedUrlInfos[i++];
+
+          if (prunedUrlInfo.data.hotDecline) {
+            notifyDeclined({
+              cause,
+              reason: `a pruned file declines hot reload`,
+              declinedBy: urlToRelativeUrl(prunedUrlInfo.url, rootDirectoryUrl)
+            });
+            return;
+          }
+
+          instructions.push({
+            type: "prune",
+            boundary: urlToRelativeUrl(prunedUrlInfo.url, rootDirectoryUrl),
+            acceptedBy: urlToRelativeUrl(firstUrlInfo.url, rootDirectoryUrl)
+          });
+        }
+
+        notifyAccepted({
+          cause,
+          reason: mainHotUpdate.reason,
+          instructions
+        });
+      });
+    },
+    serve: (request, {
+      rootDirectoryUrl,
+      urlGraph
+    }) => {
       if (request.ressource === "/__graph__") {
         const graphJson = JSON.stringify(urlGraph.toJSON(rootDirectoryUrl));
         return {
@@ -20499,26 +20461,12 @@ const jsenvPluginDevSSEServer = ({
         };
       }
 
-      const {
-        accept
-      } = request.headers;
-
-      if (accept && accept.includes("text/event-stream")) {
-        const room = sseService.getOrCreateSSERoom(request);
-        return room.join(request);
-      }
-
       return null;
-    },
-    destroy: () => {
-      sseService.destroy();
     }
   };
 };
 
 const jsenvPluginAutoreload = ({
-  rootDirectoryUrl,
-  urlGraph,
   scenario,
   clientFileChangeCallbackList,
   clientFilesPruneCallbackList
@@ -20528,8 +20476,6 @@ const jsenvPluginAutoreload = ({
   }
 
   return [jsenvPluginHmr(), jsenvPluginDevSSEClient(), jsenvPluginDevSSEServer({
-    rootDirectoryUrl,
-    urlGraph,
     clientFileChangeCallbackList,
     clientFilesPruneCallbackList
   })];
@@ -20618,8 +20564,6 @@ const getCorePlugins = ({
   }), jsenvPluginUrlResolution(), jsenvPluginUrlVersion(), jsenvPluginCommonJsGlobals(), jsenvPluginImportMetaScenarios(), jsenvPluginNodeRuntime({
     runtimeCompat
   }), jsenvPluginBundling(bundling), jsenvPluginMinification(minification), jsenvPluginImportMetaHot(), ...(clientAutoreload ? [jsenvPluginAutoreload({ ...clientAutoreload,
-    rootDirectoryUrl,
-    urlGraph,
     scenario,
     clientFileChangeCallbackList,
     clientFilesPruneCallbackList
@@ -21506,7 +21450,7 @@ const createResolveUrlError = ({
       reason,
       ...details,
       "specifier": `"${reference.specifier}"`,
-      "specifier trace": reference.trace,
+      "specifier trace": reference.trace.message,
       ...detailsFromPluginController(pluginController)
     }));
     resolveError.name = "RESOLVE_URL_ERROR";
@@ -21537,17 +21481,21 @@ const createFetchUrlContentError = ({
     reason,
     ...details
   }) => {
-    const fetchContentError = new Error(createDetailedMessage$1(`Failed to fetch url content`, {
+    const fetchError = new Error(createDetailedMessage$1(`Failed to fetch url content`, {
       reason,
       ...details,
       "url": urlInfo.url,
-      "url reference trace": reference.trace,
+      "url reference trace": reference.trace.message,
       ...detailsFromPluginController(pluginController)
     }));
-    fetchContentError.name = "FETCH_URL_CONTENT_ERROR";
-    fetchContentError.code = code;
-    fetchContentError.reason = reason;
-    return fetchContentError;
+    fetchError.name = "FETCH_URL_CONTENT_ERROR";
+    fetchError.code = code;
+    fetchError.reason = reason;
+    fetchError.url = reference.trace.url;
+    fetchError.line = reference.trace.line;
+    fetchError.column = reference.trace.column;
+    fetchError.contentFrame = reference.trace.message;
+    return fetchError;
   };
 
   if (error.code === "EPERM") {
@@ -21591,12 +21539,41 @@ const createTransformUrlContentError = ({
       reason,
       ...details,
       "url": urlInfo.url,
-      "url reference trace": reference.trace,
+      "url reference trace": reference.trace.message,
       ...detailsFromPluginController(pluginController)
     }));
     transformError.name = "TRANSFORM_URL_CONTENT_ERROR";
     transformError.code = code;
     transformError.reason = reason;
+    transformError.url = reference.trace.url;
+    transformError.line = reference.trace.line;
+    transformError.column = reference.trace.column;
+    transformError.contentFrame = reference.trace.message;
+
+    if (code === "PARSE_ERROR") {
+      transformError.reason = error.message;
+
+      if (urlInfo.isInline) {
+        transformError.line = reference.trace.line + error.line - 1;
+        transformError.column = reference.trace.column + error.column;
+        transformError.contentFrame = stringifyUrlSite({
+          url: urlInfo.inlineUrlSite.url,
+          line: transformError.line,
+          column: transformError.column,
+          content: urlInfo.inlineUrlSite.content
+        });
+      } else {
+        transformError.line = error.line;
+        transformError.column = error.column;
+        transformError.contentFrame = stringifyUrlSite({
+          url: urlInfo.url,
+          line: transformError.line,
+          column: transformError.column,
+          content: urlInfo.content
+        });
+      }
+    }
+
     return transformError;
   };
 
@@ -21615,7 +21592,7 @@ const createFinalizeUrlContentError = ({
     "reason": `An error occured during "finalizeUrlContent"`,
     ...detailsFromValueThrown(error),
     "url": urlInfo.url,
-    "url reference trace": reference.trace,
+    "url reference trace": reference.trace.message,
     ...detailsFromPluginController(pluginController)
   }));
   finalizeError.name = "FINALIZE_URL_CONTENT_ERROR";
@@ -22010,7 +21987,10 @@ const createKitchen = ({
       specifier
     }) => {
       const sourcemapReference = createReference({
-        trace: `sourcemap comment placeholder for ${urlInfo.url}`,
+        trace: {
+          message: `sourcemap comment placeholder`,
+          url: urlInfo.url
+        },
         type: "sourcemap_comment",
         subtype: urlInfo.contentType === "text/javascript" ? "js" : "css",
         parentUrl: urlInfo.url,
@@ -22027,13 +22007,14 @@ const createKitchen = ({
       specifierLine,
       specifierColumn
     }) => {
+      const sourcemapUrlSite = adjustUrlSite(urlInfo, {
+        urlGraph,
+        url: urlInfo.url,
+        line: specifierLine,
+        column: specifierColumn
+      });
       const sourcemapReference = createReference({
-        trace: stringifyUrlSite(adjustUrlSite(urlInfo, {
-          urlGraph,
-          url: urlInfo.url,
-          line: specifierLine,
-          column: specifierColumn
-        })),
+        trace: traceFromUrlSite(sourcemapUrlSite),
         type,
         parentUrl: urlInfo.url,
         specifier,
@@ -22056,7 +22037,7 @@ const createKitchen = ({
       if (!fetchUrlContentReturnValue) {
         logger.warn(createDetailedMessage$1(`no plugin has handled url during "fetchUrlContent" hook -> url will be ignored`, {
           "url": urlInfo.url,
-          "url reference trace": reference.trace
+          "url reference trace": reference.trace.message
         }));
         return;
       }
@@ -22213,7 +22194,7 @@ const createKitchen = ({
           ...rest
         }) => {
           if (trace === undefined) {
-            trace = stringifyUrlSite(adjustUrlSite(urlInfo, {
+            trace = traceFromUrlSite(adjustUrlSite(urlInfo, {
               urlGraph,
               url: urlInfo.url,
               line: rest.specifierLine,
@@ -22229,22 +22210,22 @@ const createKitchen = ({
         },
         foundInline: ({
           isOriginalPosition,
-          line,
-          column,
+          specifierLine,
+          specifierColumn,
           ...rest
         }) => {
           const parentUrl = isOriginalPosition ? urlInfo.url : urlInfo.generatedUrl;
           const parentContent = isOriginalPosition ? urlInfo.originalContent : urlInfo.content;
           return addReference({
-            trace: stringifyUrlSite({
+            trace: traceFromUrlSite({
               url: parentUrl,
               content: parentContent,
-              line,
-              column
+              line: specifierLine,
+              column: specifierColumn
             }),
             isOriginalPosition,
-            line,
-            column,
+            specifierLine,
+            specifierColumn,
             isInline: true,
             ...rest
           });
@@ -22282,7 +22263,7 @@ const createKitchen = ({
           const parentUrl = isOriginalPosition ? urlInfo.url : urlInfo.generatedUrl;
           const parentContent = isOriginalPosition ? urlInfo.originalContent : urlInfo.content;
           return referenceUtils.update(reference, {
-            trace: stringifyUrlSite({
+            trace: traceFromUrlSite({
               url: parentUrl,
               content: parentContent,
               line: specifierLine,
@@ -22307,7 +22288,7 @@ const createKitchen = ({
               line,
               column
             } = getCallerPosition();
-            trace = stringifyUrlSite({
+            trace = traceFromUrlSite({
               url,
               line,
               column
@@ -22513,6 +22494,15 @@ const memoizeCook = cook => {
     } finally {
       pendingDishes.delete(url);
     }
+  };
+};
+
+const traceFromUrlSite = urlSite => {
+  return {
+    message: stringifyUrlSite(urlSite),
+    url: urlSite.url,
+    line: urlSite.line,
+    column: urlSite.column
   };
 };
 
@@ -22744,6 +22734,60 @@ const determineFileUrlForOutDirectory = ({
 //   }
 // }
 
+const createSSEService = ({
+  serverEventCallbackList
+}) => {
+  const destroyCallbackList = createCallbackListNotifiedOnce();
+  const cache = [];
+  const sseRoomLimit = 100;
+
+  const getOrCreateSSERoom = request => {
+    const htmlFileRelativeUrl = request.ressource.slice(1);
+    const cacheEntry = cache.find(cacheEntryCandidate => cacheEntryCandidate.htmlFileRelativeUrl === htmlFileRelativeUrl);
+
+    if (cacheEntry) {
+      return cacheEntry.sseRoom;
+    }
+
+    const sseRoom = createSSERoom({
+      retryDuration: 2000,
+      historyLength: 100,
+      welcomeEventEnabled: true,
+      effect: () => {
+        return serverEventCallbackList.add(event => {
+          sseRoom.sendEvent(event);
+        });
+      }
+    });
+    const removeSSECleanupCallback = destroyCallbackList.add(() => {
+      removeSSECleanupCallback();
+      sseRoom.close();
+    });
+    cache.push({
+      htmlFileRelativeUrl,
+      sseRoom,
+      cleanup: () => {
+        removeSSECleanupCallback();
+        sseRoom.close();
+      }
+    });
+
+    if (cache.length >= sseRoomLimit) {
+      const firstCacheEntry = cache.shift();
+      firstCacheEntry.cleanup();
+    }
+
+    return sseRoom;
+  };
+
+  return {
+    getOrCreateSSERoom,
+    destroy: () => {
+      destroyCallbackList.notify();
+    }
+  };
+};
+
 const memoizeByFirstArgument = compute => {
   const urlCache = new Map();
 
@@ -22796,7 +22840,9 @@ const createFileService = ({
   rootDirectoryUrl,
   urlGraph,
   kitchen,
-  scenario
+  scenario,
+  onParseError,
+  onFileNotFound
 }) => {
   kitchen.pluginController.addHook("serve");
   kitchen.pluginController.addHook("augmentResponse");
@@ -22836,7 +22882,9 @@ const createFileService = ({
 
     if (!reference) {
       const entryPoint = kitchen.injectReference({
-        trace: parentUrl || rootDirectoryUrl,
+        trace: {
+          message: parentUrl || rootDirectoryUrl
+        },
         parentUrl: parentUrl || rootDirectoryUrl,
         type: "http_request",
         specifier: request.ressource
@@ -22916,10 +22964,18 @@ const createFileService = ({
       const code = e.code;
 
       if (code === "PARSE_ERROR") {
-        // let the browser re-throw the syntax error
+        onParseError({
+          reason: e.reason,
+          message: e.message,
+          url: e.url,
+          line: e.line,
+          column: e.column,
+          contentFrame: e.contentFrame
+        });
         return {
           url: reference.url,
           status: 200,
+          // let the browser re-throw the syntax error
           statusText: e.reason,
           statusMessage: e.message,
           headers: {
@@ -22950,6 +23006,14 @@ const createFileService = ({
       }
 
       if (code === "NOT_FOUND") {
+        onFileNotFound({
+          reason: e.reason,
+          message: e.message,
+          url: e.url,
+          line: e.line,
+          column: e.column,
+          contentFrame: e.contentFrame
+        });
         return {
           url: reference.url,
           status: 404,
@@ -23024,12 +23088,69 @@ const startOmegaServer = async ({
   kitchen
 }) => {
   const serverStopCallbackList = createCallbackListNotifiedOnce();
+  const serverEventCallbackList = createCallbackList();
+  const sseService = createSSEService({
+    serverEventCallbackList
+  });
+
+  const sendServerEvent = ({
+    type,
+    data
+  }) => {
+    serverEventCallbackList.notify({
+      type,
+      data: JSON.stringify(data)
+    });
+  };
+
+  kitchen.pluginController.addHook("registerServerEvents");
+  kitchen.pluginController.callHooks("registerServerEvents", {
+    sendServerEvent
+  }, {
+    rootDirectoryUrl,
+    urlGraph,
+    scenario
+  }, () => {});
+
+  const sendServerErrorEvent = event => {
+    // setTimeout display first the error
+    // dispatched on window by browser
+    // then display the jsenv error
+    setTimeout(() => {
+      sendServerEvent(event);
+    }, 10);
+  };
+
   const coreServices = {
+    "service:server_events": request => {
+      const {
+        accept
+      } = request.headers;
+
+      if (accept && accept.includes("text/event-stream")) {
+        const room = sseService.getOrCreateSSERoom(request);
+        return room.join(request);
+      }
+
+      return null;
+    },
     "service:file": createFileService({
       rootDirectoryUrl,
       urlGraph,
       kitchen,
-      scenario
+      scenario,
+      onFileNotFound: data => {
+        sendServerErrorEvent({
+          type: "file_not_found",
+          data
+        });
+      },
+      onParseError: data => {
+        sendServerErrorEvent({
+          type: "parse_error",
+          data
+        });
+      }
     })
   };
   const server = await startServer({
@@ -23110,6 +23231,7 @@ const startOmegaServer = async ({
     }),
     onStop: reason => {
       onStop();
+      sseService.destroy();
       serverStopCallbackList.notify(reason);
     }
   });
@@ -28018,7 +28140,9 @@ build ${entryPointKeys.length} entry points`);
         startLoading: cookEntryFile => {
           Object.keys(entryPoints).forEach(key => {
             const [, entryUrlInfo] = cookEntryFile({
-              trace: `"${key}" in entryPoints parameter`,
+              trace: {
+                message: `"${key}" in entryPoints parameter`
+              },
               type: "entry_point",
               specifier: key
             });
@@ -28514,7 +28638,9 @@ build ${entryPointKeys.length} entry points`);
         startLoading: cookEntryFile => {
           entryUrls.forEach(entryUrl => {
             const [, postBuildEntryUrlInfo] = cookEntryFile({
-              trace: `entryPoint`,
+              trace: {
+                message: `entryPoint`
+              },
               type: "entry_point",
               specifier: entryUrl
             });
