@@ -4,18 +4,29 @@ Jsenv was first created to write tests that could be executed in different runti
 
 - :exploding_head: Directly execute HTML files as tests
 - :relieved: Consistent and integral developer experience (dev + test + build)
-- :relieved: Same dev experience for source and test files
+- :sparkles: Same dev experience for source and test files
 - :ok_hand: Seamless integration with standard HTML, CSS and JS
+
+Jsenv is NOT a tool for fullstack projects where client and server code are in the same files.
+
+Jsenv is designed for projects where client and server codebases are independent.
 
 # Demo
 
-Run the following command to create a demo of a jsenv project on your machine.
+The following command can be used to create a jsenv project on a machine.
 
 ```console
 npm create jsenv@latest
 ```
 
-> "web" demos are running tests in headless browsers. If you never have installed playwright on your machine npm install can take a bit of time.
+These demos are showing how jsenv can be integrated with preconfigured scripts such as:
+
+- `npm run dev`: starts a dev server with autoreload.
+- `npm run test`: execute test files on browsers(s) and/or Node.js.
+- `npm run build`: generate files optimized for production.
+
+> **Info**
+> Executing "npm install" in web demos can take time. It is because in these demos tests are runned in headless browsers that needs to be installed.
 
 # Installation
 
