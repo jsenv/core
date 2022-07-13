@@ -79,6 +79,12 @@ img.src = imageUrl
 document.body.appendChild(img)
 ```
 
+When js is executed by `<script></script>` and not `<script type="module"></script>`, an other solution must be used:
+
+```js
+const url = new URL("./img.png", document.currentScript.src)
+```
+
 ## Content from CDN
 
 External urls are kept intact.
