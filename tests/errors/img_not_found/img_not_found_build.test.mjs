@@ -1,4 +1,3 @@
-import { urlToFileSystemPath } from "@jsenv/urls"
 import { assert } from "@jsenv/assert"
 
 import { build } from "@jsenv/core"
@@ -22,7 +21,7 @@ no entry on filesystem
 --- url ---
 ${new URL("./client/img.png", import.meta.url).href}
 --- url reference trace ---
-${urlToFileSystemPath(new URL("./client/main.html", import.meta.url).href)}:9:10
+${new URL("./client/main.html", import.meta.url).href}:9:10
   8  |   <body>
 > 9  |     <img src="./img.png" />
                 ^

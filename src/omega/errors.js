@@ -122,18 +122,25 @@ export const createTransformUrlContentError = ({
     transformError.contentFrame = reference.trace.message
     if (code === "PARSE_ERROR") {
       transformError.reason = error.message
-      transformError.line = urlInfo.isInline
-        ? reference.trace.line - 1 + error.line
-        : error.line
-      transformError.column = urlInfo.isInline
-        ? reference.trace.column + error.column
-        : error.column
-      transformError.contentFrame = stringifyUrlSite({
-        url: urlInfo.inlineUrlSite.url,
-        line: transformError.line,
-        column: transformError.column,
-        content: urlInfo.inlineUrlSite.content,
-      })
+      if (urlInfo.isInline) {
+        transformError.line = reference.trace.line + error.line - 1
+        transformError.column = reference.trace.column + error.column
+        transformError.contentFrame = stringifyUrlSite({
+          url: urlInfo.inlineUrlSite.url,
+          line: transformError.line,
+          column: transformError.column,
+          content: urlInfo.inlineUrlSite.content,
+        })
+      } else {
+        transformError.line = error.line
+        transformError.column = error.column
+        transformError.contentFrame = stringifyUrlSite({
+          url: urlInfo.url,
+          line: transformError.line,
+          column: transformError.column,
+          content: urlInfo.content,
+        })
+      }
     }
     return transformError
   }

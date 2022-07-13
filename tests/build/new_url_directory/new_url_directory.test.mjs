@@ -1,5 +1,4 @@
 import { readFileSync } from "node:fs"
-import { fileURLToPath } from "node:url"
 import { assert } from "@jsenv/assert"
 
 import { build } from "@jsenv/core"
@@ -49,22 +48,18 @@ try {
   await test()
   throw new Error("should throw")
 } catch (e) {
-  const actual = {
-    message: e.message,
-  }
-  const expected = {
-    message: `Failed to fetch url content
+  const actual = e.message
+  const expected = `Failed to fetch url content
 --- reason ---
 found a directory on filesystem
 --- url ---
 ${new URL("./client/src/", import.meta.url).href}
 --- url reference trace ---
-${fileURLToPath(new URL("./client/main.html", import.meta.url))}:15:40
+${new URL("./client/main.html", import.meta.url)}:15:40
   14 |     <script type="module">
 > 15 |       const directoryUrl = new URL("./src/", import.meta.url).href
                                               ^
-  16 |${" "}`,
-  }
+  16 | `
   assert({ actual, expected })
 }
 

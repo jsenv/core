@@ -1,4 +1,3 @@
-import { urlToFileSystemPath } from "@jsenv/urls"
 import { assert } from "@jsenv/assert"
 
 import { build } from "@jsenv/core"
@@ -22,10 +21,10 @@ no entry on filesystem
 --- url ---
 ${new URL("./client/style.css", import.meta.url).href}
 --- url reference trace ---
-${urlToFileSystemPath(new URL("./client/main.js", import.meta.url).href)}:1:23
+${new URL("./client/main.js", import.meta.url).href}:1:23
 > 1 | const cssUrl = new URL("./style.css", import.meta.url)
                             ^
-  2 |${" "}
+  2 | 
 --- plugin name ---
 "jsenv:file_url_fetching"`
   assert({ actual, expected })

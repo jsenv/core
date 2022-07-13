@@ -445,8 +445,8 @@ export const createKitchen = ({
               column: specifierColumn,
             }),
             isOriginalPosition,
-            line: specifierLine,
-            column: specifierColumn,
+            specifierLine,
+            specifierColumn,
             isInline: true,
             ...rest,
           })
