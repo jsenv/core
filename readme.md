@@ -7,8 +7,7 @@ Jsenv was first created to write tests that could be executed in different runti
 - :sparkles: Same dev experience for source and test files
 - :ok_hand: Seamless integration with standard HTML, CSS and JS
 
-Jsenv is NOT a tool for fullstack projects where client and server code are in the same files.
-
+Jsenv is NOT a tool for fullstack projects where client and server code are in the same files.<br />
 Jsenv is designed for projects where client and server codebases are independent.
 
 # Demo
