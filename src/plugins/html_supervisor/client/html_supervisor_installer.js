@@ -39,7 +39,7 @@ export const installHtmlSupervisor = ({
     {
       currentScript,
       errorExposureInNotification = false,
-      errorExposureInDocument = true,
+      errorExposureInDocument = false,
     },
   ) => {
     const error = executionResult.error
@@ -205,6 +205,20 @@ export const installHtmlSupervisor = ({
   scriptsToExecute.length = 0
   copy.forEach((scriptToExecute) => {
     __html_supervisor__.addScriptToExecute(scriptToExecute)
+  })
+
+  window.addEventListener("error", (errorEvent) => {
+    if (!errorEvent.isTrusted) {
+      // ignore custom error event (not sent by browser)
+      return
+    }
+    const { error } = errorEvent
+    displayErrorInDocument(error, {
+      rootDirectoryUrl,
+      url: errorEvent.filename,
+      line: errorEvent.lineno,
+      column: errorEvent.colno,
+    })
   })
 }
 

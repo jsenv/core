@@ -1,6 +1,9 @@
 const JSENV_ERROR_OVERLAY_TAGNAME = "jsenv-error-overlay"
 
-export const displayErrorInDocument = (error, { rootDirectoryUrl }) => {
+export const displayErrorInDocument = (
+  error,
+  { rootDirectoryUrl, url, line, column },
+) => {
   document.querySelectorAll(JSENV_ERROR_OVERLAY_TAGNAME).forEach((node) => {
     node.parentNode.removeChild(node)
   })
@@ -9,7 +12,7 @@ export const displayErrorInDocument = (error, { rootDirectoryUrl }) => {
     error && error.cause && error.cause.code === "PARSE_ERROR"
       ? "light"
       : "dark"
-  let message = errorToHTML(error, { rootDirectoryUrl })
+  let message = errorToHTML(error, { rootDirectoryUrl, url, line, column })
   const jsenvErrorOverlay = new JsenvErrorOverlay({
     theme,
     title,
@@ -90,6 +93,15 @@ pre {
   padding: 20px;
 }
 
+/* https://bugzilla.mozilla.org/show_bug.cgi?id=748518 */
+@-moz-document url-prefix() {
+  pre::after {
+    content: " ";
+    width: 20px;
+    display: inline-block;
+  }
+}
+
 .tip {
   border-top: 1px solid #999;
   padding-top: 12px;
@@ -121,7 +133,7 @@ pre a {
 <div class="overlay">
   <h1 class="title"></h1>
   <pre class="message"></pre>
-  <div class="tip">Click outside to close</div>
+  <div class="tip">Click outside or fix to close.</div>
 </div>
 `
 
@@ -134,20 +146,28 @@ const escapeHtml = (string) => {
     .replace(/'/g, "&#039;")
 }
 
-const errorToHTML = (error, { rootDirectoryUrl }) => {
+const errorToHTML = (error, { rootDirectoryUrl, url, line, column }) => {
   let html
 
   if (error && error instanceof Error) {
-    if (error.cause && error.cause.code === "PARSE_ERROR") {
+    if (error.name === "SyntaxError") {
+      html = `${error.message}
+  at ${appendLineAndColumn(url, { line, column })}`
+    } else if (error.cause && error.cause.code === "PARSE_ERROR") {
       html = error.messageHTML || escapeHtml(error.message)
     }
     // stackTrace formatted by V8
     else if (Error.captureStackTrace) {
       html = escapeHtml(error.stack)
     } else {
-      // other stack trace such as firefox do not contain error.message
-      html = escapeHtml(`${error.message}
-  ${error.stack}`)
+      // normalize message to get error.message + error.stack
+      // (on Firefox error.stack do not have the error.message for instance)
+      let message = error.message
+      const stack = error.stack
+      if (stack) {
+        message += `\n  ${error.stack}`
+      }
+      html = escapeHtml(message)
     }
   } else if (typeof error === "string") {
     html = error
