@@ -27,13 +27,15 @@ These demos are showing how jsenv can be integrated with preconfigured scripts s
 > **Info**
 > Executing "npm install" in web demos can take time. It is because in these demos tests are runned in headless browsers that needs to be installed.
 
+See also [packages/create-jsenv/README.md](./packages/create-jsenv/README.md).
+
 # Installation
 
 ```console
 npm install --save-dev @jsenv/core
 ```
 
-_@jsenv/core_ is tested on Mac, Windows, Linux on Node.js 18.5.0. Other operating systems and Node.js versions are not tested.
+_@jsenv/core_ is tested on Mac, Windows, Linux with Node.js 18.5.0. Other operating systems and Node.js versions are not tested.
 
 # Documentation
 
