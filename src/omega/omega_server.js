@@ -59,6 +59,15 @@ export const startOmegaServer = async ({
     () => {},
   )
 
+  const sendServerErrorEvent = (event) => {
+    // setTimeout display first the error
+    // dispatched on window by browser
+    // then display the jsenv error
+    setTimeout(() => {
+      sendServerEvent(event)
+    }, 10)
+  }
+
   const coreServices = {
     "service:server_events": (request) => {
       const { accept } = request.headers
@@ -74,15 +83,10 @@ export const startOmegaServer = async ({
       kitchen,
       scenario,
       onFileNotFound: (data) => {
-        // setTimeout display first the error
-        // dispatched on window by browser
-        // then display the jsenv error
-        setTimeout(() => {
-          sendServerEvent({
-            type: "file_not_found",
-            data,
-          })
-        }, 10)
+        sendServerErrorEvent({ type: "file_not_found", data })
+      },
+      onParseError: (data) => {
+        sendServerErrorEvent({ type: "parse_error", data })
       },
     }),
   }

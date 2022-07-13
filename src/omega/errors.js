@@ -1,4 +1,5 @@
 import { createDetailedMessage } from "@jsenv/log"
+import { stringifyUrlSite } from "@jsenv/urls"
 
 export const createResolveUrlError = ({
   pluginController,
@@ -46,7 +47,7 @@ export const createFetchUrlContentError = ({
     reason,
     ...details
   }) => {
-    const fetchContentError = new Error(
+    const fetchError = new Error(
       createDetailedMessage(`Failed to fetch url content`, {
         reason,
         ...details,
@@ -55,14 +56,14 @@ export const createFetchUrlContentError = ({
         ...detailsFromPluginController(pluginController),
       }),
     )
-    fetchContentError.name = "FETCH_URL_CONTENT_ERROR"
-    fetchContentError.code = code
-    fetchContentError.reason = reason
-    fetchContentError.url = reference.trace.url
-    fetchContentError.line = reference.trace.line
-    fetchContentError.column = reference.trace.column
-    fetchContentError.contentFrame = reference.trace.message
-    return fetchContentError
+    fetchError.name = "FETCH_URL_CONTENT_ERROR"
+    fetchError.code = code
+    fetchError.reason = reason
+    fetchError.url = reference.trace.url
+    fetchError.line = reference.trace.line
+    fetchError.column = reference.trace.column
+    fetchError.contentFrame = reference.trace.message
+    return fetchError
   }
 
   if (error.code === "EPERM") {
@@ -115,6 +116,25 @@ export const createTransformUrlContentError = ({
     transformError.name = "TRANSFORM_URL_CONTENT_ERROR"
     transformError.code = code
     transformError.reason = reason
+    transformError.url = reference.trace.url
+    transformError.line = reference.trace.line
+    transformError.column = reference.trace.column
+    transformError.contentFrame = reference.trace.message
+    if (code === "PARSE_ERROR") {
+      transformError.reason = error.message
+      transformError.line = urlInfo.isInline
+        ? reference.trace.line - 1 + error.line
+        : error.line
+      transformError.column = urlInfo.isInline
+        ? reference.trace.column + error.column
+        : error.column
+      transformError.contentFrame = stringifyUrlSite({
+        url: urlInfo.inlineUrlSite.url,
+        line: transformError.line,
+        column: transformError.column,
+        content: urlInfo.inlineUrlSite.content,
+      })
+    }
     return transformError
   }
   return createFailedToTransformError({

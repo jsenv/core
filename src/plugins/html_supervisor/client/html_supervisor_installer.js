@@ -220,9 +220,9 @@ export const installHtmlSupervisor = ({
       column: errorEvent.colno,
     })
   })
-  window.__jsenv_event_source_client__.addEventCallbacks({
-    file_not_found: ({ data }) => {
-      data = JSON.parse(data)
+  if (window.__jsenv_event_source_client__) {
+    const onServerErrorEvent = (serverErrorEvent) => {
+      const data = JSON.parse(serverErrorEvent.data)
       displayErrorInDocument(
         { message: data.reason, stack: data.contentFrame },
         {
@@ -232,8 +232,12 @@ export const installHtmlSupervisor = ({
           column: data.column,
         },
       )
-    },
-  })
+    }
+    window.__jsenv_event_source_client__.addEventCallbacks({
+      file_not_found: onServerErrorEvent,
+      parse_error: onServerErrorEvent,
+    })
+  }
 }
 
 export const superviseScriptTypeModule = ({ src, isInline }) => {

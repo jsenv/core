@@ -12,6 +12,7 @@ export const createFileService = ({
   urlGraph,
   kitchen,
   scenario,
+  onParseError,
   onFileNotFound,
 }) => {
   kitchen.pluginController.addHook("serve")
@@ -136,10 +137,17 @@ export const createFileService = ({
     } catch (e) {
       const code = e.code
       if (code === "PARSE_ERROR") {
-        // let the browser re-throw the syntax error
+        onParseError({
+          reason: e.reason,
+          message: e.message,
+          url: e.url,
+          line: e.line,
+          column: e.column,
+          contentFrame: e.contentFrame,
+        })
         return {
           url: reference.url,
-          status: 200,
+          status: 200, // let the browser re-throw the syntax error
           statusText: e.reason,
           statusMessage: e.message,
           headers: {

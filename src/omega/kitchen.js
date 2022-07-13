@@ -425,7 +425,12 @@ export const createKitchen = ({
             ...rest,
           })
         },
-        foundInline: ({ isOriginalPosition, line, column, ...rest }) => {
+        foundInline: ({
+          isOriginalPosition,
+          specifierLine,
+          specifierColumn,
+          ...rest
+        }) => {
           const parentUrl = isOriginalPosition
             ? urlInfo.url
             : urlInfo.generatedUrl
@@ -436,12 +441,12 @@ export const createKitchen = ({
             trace: traceFromUrlSite({
               url: parentUrl,
               content: parentContent,
-              line,
-              column,
+              line: specifierLine,
+              column: specifierColumn,
             }),
             isOriginalPosition,
-            line,
-            column,
+            line: specifierLine,
+            column: specifierColumn,
             isInline: true,
             ...rest,
           })

@@ -132,15 +132,6 @@ pre a {
 </div>
 `
 
-const escapeHtml = (string) => {
-  return string
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;")
-}
-
 const parseErrorInfo = (error) => {
   if (error === undefined) {
     return {
@@ -170,7 +161,7 @@ const parseErrorInfo = (error) => {
         }
       }
       return {
-        message: escapeHtml(error.message),
+        message: error.message,
       }
     }
     // stackTrace formatted by V8
@@ -227,6 +218,7 @@ const errorToHTML = (error, { url, line, column }) => {
 const replaceLinks = (string, { rootDirectoryUrl }) => {
   // normalize line breaks
   string = string.replace(/\n/g, "\n")
+  string = escapeHtml(string)
   // render links
   string = stringToStringWithLink(string, {
     transform: (url, { line, column }) => {
@@ -270,6 +262,15 @@ const replaceLinks = (string, { rootDirectoryUrl }) => {
     },
   })
   return string
+}
+
+const escapeHtml = (string) => {
+  return string
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;")
 }
 
 const appendLineAndColumn = (url, { line, column }) => {
