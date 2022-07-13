@@ -8,7 +8,6 @@ export const displayErrorInDocument = (
     node.parentNode.removeChild(node)
   })
   const { theme, title, message, stack } = errorToHTML(error, {
-    rootDirectoryUrl,
     url,
     line,
     column,
@@ -16,7 +15,11 @@ export const displayErrorInDocument = (
   const jsenvErrorOverlay = new JsenvErrorOverlay({
     theme,
     title,
-    stack: stack ? `${message}\n${stack}` : message,
+    stack: stack
+      ? `${replaceLinks(message, { rootDirectoryUrl })}\n${replaceLinks(stack, {
+          rootDirectoryUrl,
+        })}`
+      : replaceLinks(message, { rootDirectoryUrl }),
   })
   document.body.appendChild(jsenvErrorOverlay)
 }
@@ -195,42 +198,12 @@ const getErrorStackWithoutErrorMessage = (error) => {
   return stack
 }
 
-const errorToHTML = (error, { rootDirectoryUrl, url, line, column }) => {
+const errorToHTML = (error, { url, line, column }) => {
   let { message, stack } = parseErrorInfo(error)
   if (url) {
     if (!stack || (error && error.name === "SyntaxError")) {
       stack = `  at ${appendLineAndColumn(url, { line, column })}`
     }
-  }
-  if (stack) {
-    // normalize line breaks
-    stack = stack.replace(/\n/g, "\n")
-    // render links
-    stack = stringToStringWithLink(stack, {
-      transform: (url, { line, column }) => {
-        const urlObject = new URL(url)
-        if (urlObject.origin === window.origin) {
-          const fileUrl = appendLineAndColumn(
-            new URL(
-              `${urlObject.pathname.slice(1)}${urlObject.search}`,
-              rootDirectoryUrl,
-            ).href,
-            {
-              line,
-              column,
-            },
-          )
-          return link({
-            href: `javascript:window.fetch('/__open_in_editor__/${fileUrl}')`,
-            text: fileUrl,
-          })
-        }
-        return link({
-          href: url,
-          text: appendLineAndColumn(url, { line, column }),
-        })
-      },
-    })
   }
   return {
     theme:
@@ -241,6 +214,46 @@ const errorToHTML = (error, { rootDirectoryUrl, url, line, column }) => {
     message,
     stack,
   }
+}
+
+const replaceLinks = (string, { rootDirectoryUrl }) => {
+  // normalize line breaks
+  string = string.replace(/\n/g, "\n")
+  // render links
+  string = stringToStringWithLink(string, {
+    transform: (url, { line, column }) => {
+      const urlObject = new URL(url)
+      if (urlObject.origin === window.origin) {
+        const fileUrlObject = new URL(
+          `${urlObject.pathname.slice(1)}${urlObject.search}`,
+          rootDirectoryUrl,
+        )
+        const atFsIndex = fileUrlObject.pathname.indexOf("/@fs/")
+        let fileUrl
+        if (atFsIndex > -1) {
+          const afterAtFs = fileUrlObject.pathname.slice(
+            atFsIndex + "/@fs/".length,
+          )
+          fileUrl = new URL(afterAtFs, "file:///").href
+        } else {
+          fileUrl = fileUrlObject.href
+        }
+        fileUrl = appendLineAndColumn(fileUrl, {
+          line,
+          column,
+        })
+        return link({
+          href: `javascript:window.fetch('/__open_in_editor__/${fileUrl}')`,
+          text: fileUrl,
+        })
+      }
+      return link({
+        href: url,
+        text: appendLineAndColumn(url, { line, column }),
+      })
+    },
+  })
+  return string
 }
 
 const appendLineAndColumn = (url, { line, column }) => {
