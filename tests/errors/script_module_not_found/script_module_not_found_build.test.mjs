@@ -1,4 +1,3 @@
-import { urlToFileSystemPath } from "@jsenv/urls"
 import { assert } from "@jsenv/assert"
 
 import { build } from "@jsenv/core"
@@ -22,9 +21,7 @@ no entry on filesystem
 --- url ---
 ${new URL("./client/404.js", import.meta.url).href}
 --- url reference trace ---
-${urlToFileSystemPath(
-  new URL("./client/main.html", import.meta.url).href,
-)}:10:27
+${new URL("./client/main.html", import.meta.url).href}:10:27
   9  |   <body>
 > 10 |     <script type="module" src="./404.js"></script>
                                  ^

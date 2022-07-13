@@ -3,7 +3,6 @@ export { generateInlineContentUrl } from "./inline_content_url_generator.js"
 export {
   stringifyUrlTrace,
   stringifyUrlSite,
-  humanizeUrl,
   showSourceLocation,
 } from "./url_trace.js"
 export {

@@ -1,8 +1,13 @@
 /* eslint-env browser */
 
+const STATUSES = {
+  CONNECTING: "connecting",
+  CONNECTED: "connected",
+  DISCONNECTED: "disconnected",
+}
+
 export const createEventSourceConnection = (
   eventSourceUrl,
-  events = {},
   { retryMaxAttempt = Infinity, retryAllocatedMs = Infinity, lastEventId } = {},
 ) => {
   const { EventSource } = window
@@ -10,18 +15,26 @@ export const createEventSourceConnection = (
     return () => {}
   }
 
+  let eventSource
+  const events = {}
   const eventSourceOrigin = new URL(eventSourceUrl).origin
-  Object.keys(events).forEach((eventName) => {
-    const eventCallback = events[eventName]
-    events[eventName] = (e) => {
-      if (e.origin === eventSourceOrigin) {
-        if (e.lastEventId) {
-          lastEventId = e.lastEventId
+  const addEventCallbacks = (eventCallbacks) => {
+    Object.keys(eventCallbacks).forEach((eventName) => {
+      const eventCallback = eventCallbacks[eventName]
+      events[eventName] = (e) => {
+        if (e.origin === eventSourceOrigin) {
+          if (e.lastEventId) {
+            lastEventId = e.lastEventId
+          }
+          eventCallback(e)
         }
-        eventCallback(e)
       }
-    }
-  })
+      if (eventSource) {
+        eventSource.addEventListener(eventName, events[eventName])
+      }
+    })
+  }
+  addEventCallbacks(events)
 
   const status = {
     value: "default",
@@ -37,11 +50,14 @@ export const createEventSourceConnection = (
   let _disconnect = () => {}
 
   const attemptConnection = (url) => {
-    const eventSource = new EventSource(url, {
+    eventSource = new EventSource(url, {
       withCredentials: true,
     })
     _disconnect = () => {
-      if (status.value !== "connecting" && status.value !== "connected") {
+      if (
+        status.value !== STATUSES.CONNECTING &&
+        status.value !== STATUSES.CONNECTED
+      ) {
         console.warn(
           `disconnect() ignored because connection is ${status.value}`,
         )
@@ -52,7 +68,8 @@ export const createEventSourceConnection = (
       Object.keys(events).forEach((eventName) => {
         eventSource.removeEventListener(eventName, events[eventName])
       })
-      status.goTo("disconnected")
+      eventSource = null
+      status.goTo(STATUSES.DISCONNECTED)
     }
     let retryCount = 0
     let firstRetryMs = Date.now()
@@ -78,7 +95,7 @@ export const createEventSourceConnection = (
         }
 
         retryCount++
-        status.goTo("connecting")
+        status.goTo(STATUSES.CONNECTING)
         return
       }
 
@@ -88,7 +105,7 @@ export const createEventSourceConnection = (
       }
     }
     eventSource.onopen = () => {
-      status.goTo("connected")
+      status.goTo(STATUSES.CONNECTED)
     }
     Object.keys(events).forEach((eventName) => {
       eventSource.addEventListener(eventName, events[eventName])
@@ -100,7 +117,7 @@ export const createEventSourceConnection = (
         }
       })
     }
-    status.goTo("connecting")
+    status.goTo(STATUSES.CONNECTING)
   }
 
   let connect = () => {
@@ -115,7 +132,10 @@ export const createEventSourceConnection = (
   }
 
   const removePageUnloadListener = listenPageUnload(() => {
-    if (status.value === "connecting" || status.value === "connected") {
+    if (
+      status.value === STATUSES.CONNECTING ||
+      status.value === STATUSES.CONNECTED
+    ) {
       _disconnect()
     }
   })
@@ -128,6 +148,7 @@ export const createEventSourceConnection = (
   return {
     status,
     connect,
+    addEventCallbacks,
     disconnect: () => _disconnect(),
     destroy,
   }

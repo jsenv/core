@@ -1,4 +1,5 @@
 import { createDetailedMessage } from "@jsenv/log"
+import { stringifyUrlSite } from "@jsenv/urls"
 
 export const createResolveUrlError = ({
   pluginController,
@@ -15,7 +16,7 @@ export const createResolveUrlError = ({
         reason,
         ...details,
         "specifier": `"${reference.specifier}"`,
-        "specifier trace": reference.trace,
+        "specifier trace": reference.trace.message,
         ...detailsFromPluginController(pluginController),
       }),
     )
@@ -46,19 +47,23 @@ export const createFetchUrlContentError = ({
     reason,
     ...details
   }) => {
-    const fetchContentError = new Error(
+    const fetchError = new Error(
       createDetailedMessage(`Failed to fetch url content`, {
         reason,
         ...details,
         "url": urlInfo.url,
-        "url reference trace": reference.trace,
+        "url reference trace": reference.trace.message,
         ...detailsFromPluginController(pluginController),
       }),
     )
-    fetchContentError.name = "FETCH_URL_CONTENT_ERROR"
-    fetchContentError.code = code
-    fetchContentError.reason = reason
-    return fetchContentError
+    fetchError.name = "FETCH_URL_CONTENT_ERROR"
+    fetchError.code = code
+    fetchError.reason = reason
+    fetchError.url = reference.trace.url
+    fetchError.line = reference.trace.line
+    fetchError.column = reference.trace.column
+    fetchError.contentFrame = reference.trace.message
+    return fetchError
   }
 
   if (error.code === "EPERM") {
@@ -103,7 +108,7 @@ export const createTransformUrlContentError = ({
           reason,
           ...details,
           "url": urlInfo.url,
-          "url reference trace": reference.trace,
+          "url reference trace": reference.trace.message,
           ...detailsFromPluginController(pluginController),
         },
       ),
@@ -111,6 +116,33 @@ export const createTransformUrlContentError = ({
     transformError.name = "TRANSFORM_URL_CONTENT_ERROR"
     transformError.code = code
     transformError.reason = reason
+    transformError.url = reference.trace.url
+    transformError.line = reference.trace.line
+    transformError.column = reference.trace.column
+    transformError.stack = error.stack
+    transformError.contentFrame = reference.trace.message
+    if (code === "PARSE_ERROR") {
+      transformError.reason = error.message
+      if (urlInfo.isInline) {
+        transformError.line = reference.trace.line + error.line - 1
+        transformError.column = reference.trace.column + error.column
+        transformError.contentFrame = stringifyUrlSite({
+          url: urlInfo.inlineUrlSite.url,
+          line: transformError.line,
+          column: transformError.column,
+          content: urlInfo.inlineUrlSite.content,
+        })
+      } else {
+        transformError.line = error.line
+        transformError.column = error.column
+        transformError.contentFrame = stringifyUrlSite({
+          url: urlInfo.url,
+          line: transformError.line,
+          column: transformError.column,
+          content: urlInfo.content,
+        })
+      }
+    }
     return transformError
   }
   return createFailedToTransformError({
@@ -130,7 +162,7 @@ export const createFinalizeUrlContentError = ({
       "reason": `An error occured during "finalizeUrlContent"`,
       ...detailsFromValueThrown(error),
       "url": urlInfo.url,
-      "url reference trace": reference.trace,
+      "url reference trace": reference.trace.message,
       ...detailsFromPluginController(pluginController),
     }),
   )

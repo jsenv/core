@@ -228,7 +228,9 @@ build ${entryPointKeys.length} entry points`)
         startLoading: (cookEntryFile) => {
           Object.keys(entryPoints).forEach((key) => {
             const [, entryUrlInfo] = cookEntryFile({
-              trace: `"${key}" in entryPoints parameter`,
+              trace: {
+                message: `"${key}" in entryPoints parameter`,
+              },
               type: "entry_point",
               specifier: key,
             })
@@ -722,7 +724,7 @@ build ${entryPointKeys.length} entry points`)
         startLoading: (cookEntryFile) => {
           entryUrls.forEach((entryUrl) => {
             const [, postBuildEntryUrlInfo] = cookEntryFile({
-              trace: `entryPoint`,
+              trace: { message: `entryPoint` },
               type: "entry_point",
               specifier: entryUrl,
             })

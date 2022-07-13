@@ -4,7 +4,11 @@ import { displayErrorNotification } from "./error_in_notification.js"
 
 const { __html_supervisor__ } = window
 
-export const installHtmlSupervisor = ({ logs, measurePerf }) => {
+export const installHtmlSupervisor = ({
+  logs,
+  measurePerf,
+  rootDirectoryUrl,
+}) => {
   const errorTransformer = null // could implement error stack remapping if needed
   const scriptExecutionResults = {}
   let collectCalled = false
@@ -35,14 +39,14 @@ export const installHtmlSupervisor = ({ logs, measurePerf }) => {
     {
       currentScript,
       errorExposureInNotification = false,
-      errorExposureInDocument = true,
+      errorExposureInDocument = false,
     },
   ) => {
     const error = executionResult.error
     if (error && error.code === "NETWORK_FAILURE") {
       if (currentScript) {
-        const errorEvent = new Event("error")
-        currentScript.dispatchEvent(errorEvent)
+        const currentScriptErrorEvent = new Event("error")
+        currentScript.dispatchEvent(currentScriptErrorEvent)
       }
     } else if (typeof error === "object") {
       const globalErrorEvent = new Event("error")
@@ -56,7 +60,7 @@ export const installHtmlSupervisor = ({ logs, measurePerf }) => {
       displayErrorNotification(error)
     }
     if (errorExposureInDocument) {
-      displayErrorInDocument(error)
+      displayErrorInDocument(error, { rootDirectoryUrl })
     }
     executionResult.exceptionSource = unevalException(error)
     delete executionResult.error
@@ -202,6 +206,44 @@ export const installHtmlSupervisor = ({ logs, measurePerf }) => {
   copy.forEach((scriptToExecute) => {
     __html_supervisor__.addScriptToExecute(scriptToExecute)
   })
+
+  window.addEventListener("error", (errorEvent) => {
+    if (!errorEvent.isTrusted) {
+      // ignore custom error event (not sent by browser)
+      return
+    }
+    const { error } = errorEvent
+    displayErrorInDocument(error, {
+      rootDirectoryUrl,
+      url: errorEvent.filename,
+      line: errorEvent.lineno,
+      column: errorEvent.colno,
+    })
+  })
+  if (window.__jsenv_event_source_client__) {
+    const onServerErrorEvent = (serverErrorEvent) => {
+      const { reason, stack, url, line, column, contentFrame } = JSON.parse(
+        serverErrorEvent.data,
+      )
+      displayErrorInDocument(
+        {
+          message: reason,
+          stack: stack ? `${stack}\n\n${contentFrame}` : contentFrame,
+        },
+        {
+          rootDirectoryUrl,
+          url,
+          line,
+          column,
+        },
+      )
+    }
+    window.__jsenv_event_source_client__.addEventCallbacks({
+      file_not_found: onServerErrorEvent,
+      parse_error: onServerErrorEvent,
+      unexpected_error: onServerErrorEvent,
+    })
+  }
 }
 
 export const superviseScriptTypeModule = ({ src, isInline }) => {

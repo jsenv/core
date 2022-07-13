@@ -85,6 +85,7 @@
     "istanbul-lib-instrument": "5.2.0",
     "istanbul-lib-report": "3.0.0",
     "istanbul-reports": "3.1.4",
+    "launch-editor": "2.4.0",
     "pidtree": "0.6.0",
     "rollup": "2.76.0",
     "string-width": "5.1.2",

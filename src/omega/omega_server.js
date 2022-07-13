@@ -7,8 +7,12 @@ import {
   pluginCORS,
 } from "@jsenv/server"
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js"
-import { createCallbackListNotifiedOnce } from "@jsenv/abort"
+import {
+  createCallbackListNotifiedOnce,
+  createCallbackList,
+} from "@jsenv/abort"
 
+import { createSSEService } from "@jsenv/core/src/helpers/event_source/sse_service.js"
 import { createFileService } from "./server/file_service.js"
 
 export const startOmegaServer = async ({
@@ -33,12 +37,60 @@ export const startOmegaServer = async ({
   kitchen,
 }) => {
   const serverStopCallbackList = createCallbackListNotifiedOnce()
+
+  const serverEventCallbackList = createCallbackList()
+  const sseService = createSSEService({ serverEventCallbackList })
+  const sendServerEvent = ({ type, data }) => {
+    serverEventCallbackList.notify({
+      type,
+      data: JSON.stringify(data),
+    })
+  }
+
+  kitchen.pluginController.addHook("registerServerEvents")
+  kitchen.pluginController.callHooks(
+    "registerServerEvents",
+    { sendServerEvent },
+    {
+      rootDirectoryUrl,
+      urlGraph,
+      scenario,
+    },
+    () => {},
+  )
+
+  const sendServerErrorEvent = (event) => {
+    // setTimeout display first the error
+    // dispatched on window by browser
+    // then display the jsenv error
+    setTimeout(() => {
+      sendServerEvent(event)
+    }, 10)
+  }
+
   const coreServices = {
+    "service:server_events": (request) => {
+      const { accept } = request.headers
+      if (accept && accept.includes("text/event-stream")) {
+        const room = sseService.getOrCreateSSERoom(request)
+        return room.join(request)
+      }
+      return null
+    },
     "service:file": createFileService({
       rootDirectoryUrl,
       urlGraph,
       kitchen,
       scenario,
+      onFileNotFound: (data) => {
+        sendServerErrorEvent({ type: "file_not_found", data })
+      },
+      onParseError: (data) => {
+        sendServerErrorEvent({ type: "parse_error", data })
+      },
+      onUnexpectedError: (data) => {
+        sendServerErrorEvent({ type: "unexpected_error", data })
+      },
     }),
   }
   const server = await startServer({
@@ -119,6 +171,7 @@ export const startOmegaServer = async ({
     }),
     onStop: (reason) => {
       onStop()
+      sseService.destroy()
       serverStopCallbackList.notify(reason)
     },
   })

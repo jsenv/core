@@ -221,7 +221,10 @@ export const createKitchen = ({
     sourcemapsRelativeSources,
     injectSourcemapPlaceholder: ({ urlInfo, specifier }) => {
       const sourcemapReference = createReference({
-        trace: `sourcemap comment placeholder for ${urlInfo.url}`,
+        trace: {
+          message: `sourcemap comment placeholder`,
+          url: urlInfo.url,
+        },
         type: "sourcemap_comment",
         subtype: urlInfo.contentType === "text/javascript" ? "js" : "css",
         parentUrl: urlInfo.url,
@@ -238,15 +241,14 @@ export const createKitchen = ({
       specifierLine,
       specifierColumn,
     }) => {
+      const sourcemapUrlSite = adjustUrlSite(urlInfo, {
+        urlGraph,
+        url: urlInfo.url,
+        line: specifierLine,
+        column: specifierColumn,
+      })
       const sourcemapReference = createReference({
-        trace: stringifyUrlSite(
-          adjustUrlSite(urlInfo, {
-            urlGraph,
-            url: urlInfo.url,
-            line: specifierLine,
-            column: specifierColumn,
-          }),
-        ),
+        trace: traceFromUrlSite(sourcemapUrlSite),
         type,
         parentUrl: urlInfo.url,
         specifier,
@@ -273,7 +275,7 @@ export const createKitchen = ({
             `no plugin has handled url during "fetchUrlContent" hook -> url will be ignored`,
             {
               "url": urlInfo.url,
-              "url reference trace": reference.trace,
+              "url reference trace": reference.trace.message,
             },
           ),
         )
@@ -408,7 +410,7 @@ export const createKitchen = ({
         },
         found: ({ trace, ...rest }) => {
           if (trace === undefined) {
-            trace = stringifyUrlSite(
+            trace = traceFromUrlSite(
               adjustUrlSite(urlInfo, {
                 urlGraph,
                 url: urlInfo.url,
@@ -423,7 +425,12 @@ export const createKitchen = ({
             ...rest,
           })
         },
-        foundInline: ({ isOriginalPosition, line, column, ...rest }) => {
+        foundInline: ({
+          isOriginalPosition,
+          specifierLine,
+          specifierColumn,
+          ...rest
+        }) => {
           const parentUrl = isOriginalPosition
             ? urlInfo.url
             : urlInfo.generatedUrl
@@ -431,15 +438,15 @@ export const createKitchen = ({
             ? urlInfo.originalContent
             : urlInfo.content
           return addReference({
-            trace: stringifyUrlSite({
+            trace: traceFromUrlSite({
               url: parentUrl,
               content: parentContent,
-              line,
-              column,
+              line: specifierLine,
+              column: specifierColumn,
             }),
             isOriginalPosition,
-            line,
-            column,
+            specifierLine,
+            specifierColumn,
             isInline: true,
             ...rest,
           })
@@ -487,7 +494,7 @@ export const createKitchen = ({
             ? urlInfo.originalContent
             : urlInfo.content
           return referenceUtils.update(reference, {
-            trace: stringifyUrlSite({
+            trace: traceFromUrlSite({
               url: parentUrl,
               content: parentContent,
               line: specifierLine,
@@ -505,7 +512,7 @@ export const createKitchen = ({
         inject: ({ trace, ...rest }) => {
           if (trace === undefined) {
             const { url, line, column } = getCallerPosition()
-            trace = stringifyUrlSite({
+            trace = traceFromUrlSite({
               url,
               line,
               column,
@@ -719,6 +726,15 @@ const memoizeCook = (cook) => {
     } finally {
       pendingDishes.delete(url)
     }
+  }
+}
+
+const traceFromUrlSite = (urlSite) => {
+  return {
+    message: stringifyUrlSite(urlSite),
+    url: urlSite.url,
+    line: urlSite.line,
+    column: urlSite.column,
   }
 }
 

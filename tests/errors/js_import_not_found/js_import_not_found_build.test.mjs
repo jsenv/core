@@ -1,4 +1,3 @@
-import { urlToFileSystemPath } from "@jsenv/urls"
 import { assert } from "@jsenv/assert"
 
 import { build } from "@jsenv/core"
@@ -22,13 +21,11 @@ no entry on filesystem
 --- url ---
 ${new URL("./client/foo.js", import.meta.url).href}
 --- url reference trace ---
-${urlToFileSystemPath(
-  new URL("./client/intermediate.js", import.meta.url).href,
-)}:2:7
+${new URL("./client/intermediate.js", import.meta.url).href}:2:7
   1 | // eslint-disable-next-line import/no-unresolved
 > 2 | import "./foo.js"
             ^
-  3 |${" "}
+  3 | 
 --- plugin name ---
 "jsenv:file_url_fetching"`
   assert({ actual, expected })

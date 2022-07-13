@@ -12,6 +12,9 @@ export const createFileService = ({
   urlGraph,
   kitchen,
   scenario,
+  onParseError,
+  onFileNotFound,
+  onUnexpectedError,
 }) => {
   kitchen.pluginController.addHook("serve")
   kitchen.pluginController.addHook("augmentResponse")
@@ -51,7 +54,7 @@ export const createFileService = ({
     }
     if (!reference) {
       const entryPoint = kitchen.injectReference({
-        trace: parentUrl || rootDirectoryUrl,
+        trace: { message: parentUrl || rootDirectoryUrl },
         parentUrl: parentUrl || rootDirectoryUrl,
         type: "http_request",
         specifier: request.ressource,
@@ -135,10 +138,17 @@ export const createFileService = ({
     } catch (e) {
       const code = e.code
       if (code === "PARSE_ERROR") {
-        // let the browser re-throw the syntax error
+        onParseError({
+          reason: e.reason,
+          message: e.message,
+          url: e.url,
+          line: e.line,
+          column: e.column,
+          contentFrame: e.contentFrame,
+        })
         return {
           url: reference.url,
-          status: 200,
+          status: 200, // let the browser re-throw the syntax error
           statusText: e.reason,
           statusMessage: e.message,
           headers: {
@@ -166,6 +176,14 @@ export const createFileService = ({
         }
       }
       if (code === "NOT_FOUND") {
+        onFileNotFound({
+          reason: e.reason,
+          message: e.message,
+          url: e.url,
+          line: e.line,
+          column: e.column,
+          contentFrame: e.contentFrame,
+        })
         return {
           url: reference.url,
           status: 404,
@@ -173,6 +191,15 @@ export const createFileService = ({
           statusMessage: e.message,
         }
       }
+      onUnexpectedError({
+        reason: e.reason,
+        message: e.message,
+        stack: e.stack,
+        url: e.url,
+        line: e.line,
+        column: e.column,
+        contentFrame: e.contentFrame,
+      })
       return {
         url: reference.url,
         status: 500,

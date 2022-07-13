@@ -158,20 +158,20 @@ const addReloadMessage = (reloadMessage) => {
 const eventsourceConnection = createEventSourceConnection(
   document.location.href,
   {
-    reload: ({ data }) => {
-      const reloadMessage = JSON.parse(data)
-      addReloadMessage(reloadMessage)
-    },
-  },
-  {
     retryMaxAttempt: Infinity,
     retryAllocatedMs: 20 * 1000,
   },
 )
-
-const { status, connect, disconnect } = eventsourceConnection
+const { status, connect, addEventCallbacks, disconnect } = eventsourceConnection
+eventsourceConnection.addEventCallbacks({
+  reload: ({ data }) => {
+    const reloadMessage = JSON.parse(data)
+    addReloadMessage(reloadMessage)
+  },
+})
 connect()
 window.__jsenv_event_source_client__ = {
+  addEventCallbacks,
   status,
   connect,
   disconnect,

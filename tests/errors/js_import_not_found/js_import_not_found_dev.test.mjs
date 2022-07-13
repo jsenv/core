@@ -1,5 +1,4 @@
 import { Script } from "node:vm"
-import { fileURLToPath } from "node:url"
 import { assert } from "@jsenv/assert"
 
 import { startDevServer } from "@jsenv/core"
@@ -47,11 +46,11 @@ try {
   --- url ---
   ${new URL("./client/foo.js", import.meta.url).href}
   --- url reference trace ---
-  ${fileURLToPath(new URL("./client/intermediate.js", import.meta.url))}:2:7
+  ${new URL("./client/intermediate.js", import.meta.url)}:2:7
     1 | // eslint-disable-next-line import/no-unresolved
   > 2 | import "./foo.js"
               ^
-    3 |${" "}
+    3 | 
   --- plugin name ---
   "jsenv:file_url_fetching"`,
     pageLogs: [

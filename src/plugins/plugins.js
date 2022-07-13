@@ -83,8 +83,6 @@ export const getCorePlugins = ({
       ? [
           jsenvPluginAutoreload({
             ...clientAutoreload,
-            rootDirectoryUrl,
-            urlGraph,
             scenario,
             clientFileChangeCallbackList,
             clientFilesPruneCallbackList,

@@ -1,3 +1,10 @@
+# 27.4.0
+
+- feature: click on error overlay now open in editor
+- feature: improve error trace for inline scripts and syntax errors
+- fix: use custom elements to render error overlay (prevent conflicts)
+- fix: ignore "file:///" when used as second argument in new URL
+
 # 27.3.4
 
 - fix: invalidate HTML inline contents when it changes
