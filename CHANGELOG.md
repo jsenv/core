@@ -1,3 +1,8 @@
+# 27.4.0
+
+- feature: use custom elements to render error in document
+- feature: click on error overlay now open in editor
+
 # 27.3.4
 
 - fix: invalidate HTML inline contents when it changes

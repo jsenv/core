@@ -31,6 +31,13 @@ export const analyzeNewUrlCall = (node, { isJsModule, onUrl }) => {
     const baseUrlType = analyzeUrlNodeType(secondArgNode, { isJsModule })
     if (baseUrlType) {
       // we can understand the second argument
+      if (
+        baseUrlType === "StringLiteral" &&
+        secondArgNode.value === "file:///"
+      ) {
+        // ignore new URL(specifier, "file:///")
+        return
+      }
       const urlType = analyzeUrlNodeType(firstArgNode, { isJsModule })
       if (urlType === "StringLiteral") {
         // we can understand the first argument

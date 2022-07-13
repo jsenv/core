@@ -4,7 +4,11 @@ import { displayErrorNotification } from "./error_in_notification.js"
 
 const { __html_supervisor__ } = window
 
-export const installHtmlSupervisor = ({ logs, measurePerf }) => {
+export const installHtmlSupervisor = ({
+  logs,
+  measurePerf,
+  rootDirectoryUrl,
+}) => {
   const errorTransformer = null // could implement error stack remapping if needed
   const scriptExecutionResults = {}
   let collectCalled = false
@@ -56,7 +60,7 @@ export const installHtmlSupervisor = ({ logs, measurePerf }) => {
       displayErrorNotification(error)
     }
     if (errorExposureInDocument) {
-      displayErrorInDocument(error)
+      displayErrorInDocument(error, { rootDirectoryUrl })
     }
     executionResult.exceptionSource = unevalException(error)
     delete executionResult.error

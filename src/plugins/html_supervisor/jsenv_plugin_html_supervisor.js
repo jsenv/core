@@ -4,6 +4,7 @@
  * - scripts are wrapped to be supervised
  */
 
+import { fileURLToPath } from "node:url"
 import {
   parseHtmlString,
   stringifyHtmlAst,
@@ -19,6 +20,8 @@ import {
   setHtmlNodeText,
 } from "@jsenv/ast"
 import { generateInlineContentUrl } from "@jsenv/urls"
+
+import { requireFromJsenv } from "@jsenv/core/src/require_from_jsenv.js"
 
 export const jsenvPluginHtmlSupervisor = ({
   logs = false,
@@ -40,8 +43,27 @@ export const jsenvPluginHtmlSupervisor = ({
       dev: true,
       test: true,
     },
+    serve: (request) => {
+      if (!request.ressource.startsWith("/__open_in_editor__/")) {
+        return null
+      }
+      const file = request.ressource.slice("/__open_in_editor__/".length)
+      if (!file) {
+        return {
+          status: 400,
+          body: 'Missing "file" in url search params',
+        }
+      }
+      const launch = requireFromJsenv("launch-editor")
+      launch(fileURLToPath(file), () => {
+        // ignore error for now
+      })
+      return {
+        status: 200,
+      }
+    },
     transformUrlContent: {
-      html: ({ url, content }, { referenceUtils }) => {
+      html: ({ url, content }, context) => {
         const htmlAst = parseHtmlString(content)
         const scriptsToSupervise = []
 
@@ -59,7 +81,7 @@ export const jsenvPluginHtmlSupervisor = ({
             lineEnd,
             columnEnd,
           })
-          const [inlineScriptReference] = referenceUtils.foundInline({
+          const [inlineScriptReference] = context.referenceUtils.foundInline({
             type: "script_src",
             expectedType: { classic: "js_classic", module: "js_module" }[
               scriptCategory
@@ -128,11 +150,12 @@ export const jsenvPluginHtmlSupervisor = ({
             }
           },
         })
-        const [htmlSupervisorInstallerFileReference] = referenceUtils.inject({
-          type: "js_import_export",
-          expectedType: "js_module",
-          specifier: htmlSupervisorInstallerFileUrl,
-        })
+        const [htmlSupervisorInstallerFileReference] =
+          context.referenceUtils.inject({
+            type: "js_import_export",
+            expectedType: "js_module",
+            specifier: htmlSupervisorInstallerFileUrl,
+          })
         injectScriptNodeAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
@@ -146,6 +169,7 @@ export const jsenvPluginHtmlSupervisor = ({
         {
           logs,
           measurePerf,
+          rootDirectoryUrl: context.rootDirectoryUrl,
         },
         null,
         "        ",
@@ -153,11 +177,12 @@ export const jsenvPluginHtmlSupervisor = ({
             "injected-by": "jsenv:html_supervisor",
           }),
         )
-        const [htmlSupervisorSetupFileReference] = referenceUtils.inject({
-          type: "script_src",
-          expectedType: "js_classic",
-          specifier: htmlSupervisorSetupFileUrl,
-        })
+        const [htmlSupervisorSetupFileReference] =
+          context.referenceUtils.inject({
+            type: "script_src",
+            expectedType: "js_classic",
+            specifier: htmlSupervisorSetupFileUrl,
+          })
         injectScriptNodeAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({

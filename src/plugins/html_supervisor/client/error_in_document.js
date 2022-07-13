@@ -1,72 +1,129 @@
-export const displayErrorInDocument = (error) => {
+const JSENV_ERROR_OVERLAY_TAGNAME = "jsenv-error-overlay"
+
+export const displayErrorInDocument = (error, { rootDirectoryUrl }) => {
+  document.querySelectorAll(JSENV_ERROR_OVERLAY_TAGNAME).forEach((node) => {
+    node.parentNode.removeChild(node)
+  })
   const title = "An error occured"
   let theme =
     error && error.cause && error.cause.code === "PARSE_ERROR"
       ? "light"
       : "dark"
-  let message = errorToHTML(error)
-  const css = `
-    .jsenv-console {
-      background: rgba(0, 0, 0, 0.95);
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      z-index: 1000;
-      box-sizing: border-box;
-      padding: 1em;
-    }
+  let message = errorToHTML(error, { rootDirectoryUrl })
+  const jsenvErrorOverlay = new JsenvErrorOverlay({
+    theme,
+    title,
+    message,
+  })
+  document.body.appendChild(jsenvErrorOverlay)
+}
 
-    .jsenv-console h1 {
-      color: red;
-      display: flex;
-      align-items: center;
+class JsenvErrorOverlay extends HTMLElement {
+  constructor({ title, message, theme = "dark" }) {
+    super()
+    this.root = this.attachShadow({ mode: "open" })
+    this.root.innerHTML = overlayHtml
+    this.root.querySelector(".overlay").setAttribute("data-theme", theme)
+    this.root.querySelector(".title").innerHTML = title
+    this.root.querySelector(".message").innerHTML = message
+    this.root.querySelector(".backdrop").onclick = () => {
+      if (!this.parentNode) {
+        // not in document anymore
+        return
+      }
+      this.root.querySelector(".backdrop").onclick = null
+      this.parentNode.removeChild(this)
     }
-
-    #button-close-jsenv-console {
-      margin-left: 10px;
-    }
-
-    .jsenv-console pre {
-      overflow: auto;
-      max-width: 70em;
-      /* avoid scrollbar to hide the text behind it */
-      padding: 20px;
-    }
-
-    .jsenv-console pre[data-theme="dark"] {
-      background: #111;
-      border: 1px solid #333;
-      color: #eee;
-    }
-
-    .jsenv-console pre[data-theme="light"] {
-      background: #1E1E1E;
-      border: 1px solid white;
-      color: #EEEEEE;
-    }
-
-    .jsenv-console pre a {
-      color: inherit;
-    }
-    `
-  const html = `
-      <style type="text/css">${css}></style>
-      <div class="jsenv-console">
-        <h1>${title} <button id="button-close-jsenv-console">X</button></h1>
-        <pre data-theme="${theme}">${message}</pre>
-      </div>
-      `
-  const removeJsenvConsole = appendHMTLInside(html, document.body)
-
-  document.querySelector("#button-close-jsenv-console").onclick = () => {
-    removeJsenvConsole()
   }
 }
+
+if (customElements && !customElements.get(JSENV_ERROR_OVERLAY_TAGNAME)) {
+  customElements.define(JSENV_ERROR_OVERLAY_TAGNAME, JsenvErrorOverlay)
+}
+
+const overlayHtml = `
+<style>
+:host {
+  position: fixed;
+  z-index: 99999;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow-y: scroll;
+  margin: 0;
+  background: rgba(0, 0, 0, 0.66);
+}
+
+.backdrop {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+}
+
+.overlay {
+  position: relative;
+  background: rgba(0, 0, 0, 0.95);
+  width: 800px;
+  margin: 30px auto;
+  padding: 25px 40px;
+  padding-top: 0;
+  overflow: hidden; /* for h1 margins */
+  border-radius: 4px 8px;
+  box-shadow: 0 20px 40px rgb(0 0 0 / 30%), 0 15px 12px rgb(0 0 0 / 20%);
+  box-sizing: border-box;
+  font-family: monospace;
+  direction: ltr;
+}
+
+h1 {
+  color: red;
+  text-align: center;
+}
+
+pre {
+  overflow: auto;
+  max-width: 100%;
+  /* avoid scrollbar to hide the text behind it */
+  padding: 20px;
+}
+
+.tip {
+  border-top: 1px solid #999;
+  padding-top: 12px;
+}
+
+[data-theme="dark"] {
+  color: #999;
+}
+[data-theme="dark"] pre {
+  background: #111;
+  border: 1px solid #333;
+  color: #eee;
+}
+
+[data-theme="light"] {
+  color: #EEEEEE;
+}
+[data-theme="light"] pre {
+  background: #1E1E1E;
+  border: 1px solid white;
+  color: #EEEEEE;
+}
+
+pre a {
+  color: inherit;
+}
+</style>
+<div class="backdrop"></div>
+<div class="overlay">
+  <h1 class="title"></h1>
+  <pre class="message"></pre>
+  <div class="tip">Click outside to close</div>
+</div>
+`
 
 const escapeHtml = (string) => {
   return string
@@ -77,7 +134,7 @@ const escapeHtml = (string) => {
     .replace(/'/g, "&#039;")
 }
 
-const errorToHTML = (error) => {
+const errorToHTML = (error, { rootDirectoryUrl }) => {
   let html
 
   if (error && error instanceof Error) {
@@ -102,11 +159,41 @@ const errorToHTML = (error) => {
 
   const htmlWithCorrectLineBreaks = html.replace(/\n/g, "\n")
   const htmlWithLinks = stringToStringWithLink(htmlWithCorrectLineBreaks, {
-    transform: (url) => {
-      return { href: url, text: url }
+    transform: (url, { line, column }) => {
+      const urlObject = new URL(url)
+      if (urlObject.origin === window.origin) {
+        const fileUrl = appendLineAndColumn(
+          new URL(
+            `${urlObject.pathname.slice(1)}${urlObject.search}`,
+            rootDirectoryUrl,
+          ).href,
+          {
+            line,
+            column,
+          },
+        )
+        return link({
+          href: `javascript:window.fetch('/__open_in_editor__/${fileUrl}')`,
+          text: fileUrl,
+        })
+      }
+      return link({
+        href: url,
+        text: appendLineAndColumn(url, { line, column }),
+      })
     },
   })
   return htmlWithLinks
+}
+
+const appendLineAndColumn = (url, { line, column }) => {
+  if (line !== undefined && column !== undefined) {
+    return `${url}:${line}:${column}`
+  }
+  if (line !== undefined) {
+    return `${url}:${line}`
+  }
+  return url
 }
 
 // `Error: yo
@@ -144,28 +231,23 @@ const stringToStringWithLink = (
       const lineAndColumnString = lineAndColumMatch[0]
       const lineNumber = lineAndColumMatch[1]
       const columnNumber = lineAndColumMatch[2]
-      const url = match.slice(0, -lineAndColumnString.length)
-      const { href, text } = transform(url)
-      linkHTML = link({ href, text: `${text}:${lineNumber}:${columnNumber}` })
+      linkHTML = transform(match.slice(0, -lineAndColumnString.length), {
+        line: lineNumber,
+        column: columnNumber,
+      })
     } else {
       const linePattern = /:([0-9]+)$/
       const lineMatch = match.match(linePattern)
       if (lineMatch) {
         const lineString = lineMatch[0]
         const lineNumber = lineMatch[1]
-        const url = match.slice(0, -lineString.length)
-        const { href, text } = transform(url)
-        linkHTML = link({
-          href,
-          text: `${text}:${lineNumber}`,
+        linkHTML = transform(match.slice(0, -lineString.length), {
+          line: lineNumber,
         })
       } else {
-        const url = match
-        const { href, text } = transform(url)
-        linkHTML = link({ href, text })
+        linkHTML = transform(match)
       }
     }
-
     if (endsWithSeparationChar) {
       return `${linkHTML}${lastChar}`
     }
@@ -174,25 +256,3 @@ const stringToStringWithLink = (
 }
 
 const link = ({ href, text = href }) => `<a href="${href}">${text}</a>`
-
-const appendHMTLInside = (html, parentNode) => {
-  const temoraryParent = document.createElement("div")
-  temoraryParent.innerHTML = html
-  return transferChildren(temoraryParent, parentNode)
-}
-
-const transferChildren = (fromNode, toNode) => {
-  const childNodes = [].slice.call(fromNode.childNodes, 0)
-  let i = 0
-  while (i < childNodes.length) {
-    toNode.appendChild(childNodes[i])
-    i++
-  }
-  return () => {
-    let c = 0
-    while (c < childNodes.length) {
-      fromNode.appendChild(childNodes[c])
-      c++
-    }
-  }
-}
