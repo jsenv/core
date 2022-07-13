@@ -14,23 +14,23 @@ export const jsenvPluginDevSSEServer = ({
       const notifyDeclined = ({ cause, reason, declinedBy }) => {
         sendServerEvent({
           type: "reload",
-          data: JSON.stringify({
+          data: {
             cause,
             type: "full",
             typeReason: reason,
             declinedBy,
-          }),
+          },
         })
       }
       const notifyAccepted = ({ cause, reason, instructions }) => {
         sendServerEvent({
           type: "reload",
-          data: JSON.stringify({
+          data: {
             cause,
             type: "hot",
             typeReason: reason,
             hotInstructions: instructions,
-          }),
+          },
         })
       }
       const propagateUpdate = (firstUrlInfo) => {

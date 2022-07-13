@@ -45,8 +45,8 @@ export const installHtmlSupervisor = ({
     const error = executionResult.error
     if (error && error.code === "NETWORK_FAILURE") {
       if (currentScript) {
-        const errorEvent = new Event("error")
-        currentScript.dispatchEvent(errorEvent)
+        const currentScriptErrorEvent = new Event("error")
+        currentScript.dispatchEvent(currentScriptErrorEvent)
       }
     } else if (typeof error === "object") {
       const globalErrorEvent = new Event("error")
@@ -219,6 +219,14 @@ export const installHtmlSupervisor = ({
       line: errorEvent.lineno,
       column: errorEvent.colno,
     })
+  })
+  window.__jsenv_event_source_client__.addEventCallbacks({
+    file_not_found: ({ data }) => {
+      data = JSON.parse(data)
+      displayErrorInDocument(data.message, {
+        rootDirectoryUrl,
+      })
+    },
   })
 }
 

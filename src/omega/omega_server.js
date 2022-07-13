@@ -7,9 +7,12 @@ import {
   pluginCORS,
 } from "@jsenv/server"
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js"
-import { createCallbackListNotifiedOnce } from "@jsenv/abort"
+import {
+  createCallbackListNotifiedOnce,
+  createCallbackList,
+} from "@jsenv/abort"
 
-import { createServerEventsService } from "./server/server_events_service.js"
+import { createSSEService } from "@jsenv/core/src/helpers/event_source/sse_service.js"
 import { createFileService } from "./server/file_service.js"
 
 export const startOmegaServer = async ({
@@ -34,19 +37,50 @@ export const startOmegaServer = async ({
   kitchen,
 }) => {
   const serverStopCallbackList = createCallbackListNotifiedOnce()
-  const coreServices = {
-    "service:server_events": createServerEventsService({
+
+  const serverEventCallbackList = createCallbackList()
+  const sseService = createSSEService({ serverEventCallbackList })
+  const sendServerEvent = ({ type, data }) => {
+    serverEventCallbackList.notify({
+      type,
+      data: JSON.stringify(data),
+    })
+  }
+
+  kitchen.pluginController.addHook("registerServerEvents")
+  kitchen.pluginController.callHooks(
+    "registerServerEvents",
+    { sendServerEvent },
+    {
       rootDirectoryUrl,
       urlGraph,
-      kitchen,
       scenario,
-      serverStopCallbackList,
-    }),
+    },
+    () => {},
+  )
+
+  const coreServices = {
+    "service:server_events": (request) => {
+      const { accept } = request.headers
+      if (accept && accept.includes("text/event-stream")) {
+        const room = sseService.getOrCreateSSERoom(request)
+        return room.join(request)
+      }
+      return null
+    },
     "service:file": createFileService({
       rootDirectoryUrl,
       urlGraph,
       kitchen,
       scenario,
+      onFileNotFound: ({ message }) => {
+        sendServerEvent({
+          type: "file_not_found",
+          data: {
+            message,
+          },
+        })
+      },
     }),
   }
   const server = await startServer({
@@ -127,6 +161,7 @@ export const startOmegaServer = async ({
     }),
     onStop: (reason) => {
       onStop()
+      sseService.destroy()
       serverStopCallbackList.notify(reason)
     },
   })

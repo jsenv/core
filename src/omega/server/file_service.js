@@ -12,6 +12,7 @@ export const createFileService = ({
   urlGraph,
   kitchen,
   scenario,
+  onFileNotFound,
 }) => {
   kitchen.pluginController.addHook("serve")
   kitchen.pluginController.addHook("augmentResponse")
@@ -166,6 +167,10 @@ export const createFileService = ({
         }
       }
       if (code === "NOT_FOUND") {
+        onFileNotFound({
+          reason: e.reason,
+          message: e.message,
+        })
         return {
           url: reference.url,
           status: 404,
