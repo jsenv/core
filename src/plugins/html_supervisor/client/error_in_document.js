@@ -7,28 +7,28 @@ export const displayErrorInDocument = (
   document.querySelectorAll(JSENV_ERROR_OVERLAY_TAGNAME).forEach((node) => {
     node.parentNode.removeChild(node)
   })
-  const title = "An error occured"
-  let theme =
-    error && error.cause && error.cause.code === "PARSE_ERROR"
-      ? "light"
-      : "dark"
-  let message = errorToHTML(error, { rootDirectoryUrl, url, line, column })
+  const { theme, title, message, stack } = errorToHTML(error, {
+    rootDirectoryUrl,
+    url,
+    line,
+    column,
+  })
   const jsenvErrorOverlay = new JsenvErrorOverlay({
     theme,
     title,
-    message,
+    stack: stack ? `${message}\n${stack}` : message,
   })
   document.body.appendChild(jsenvErrorOverlay)
 }
 
 class JsenvErrorOverlay extends HTMLElement {
-  constructor({ title, message, theme = "dark" }) {
+  constructor({ title, stack, theme = "dark" }) {
     super()
     this.root = this.attachShadow({ mode: "open" })
     this.root.innerHTML = overlayHtml
     this.root.querySelector(".overlay").setAttribute("data-theme", theme)
     this.root.querySelector(".title").innerHTML = title
-    this.root.querySelector(".message").innerHTML = message
+    this.root.querySelector(".stack").innerHTML = stack
     this.root.querySelector(".backdrop").onclick = () => {
       if (!this.parentNode) {
         // not in document anymore
@@ -89,17 +89,9 @@ h1 {
 pre {
   overflow: auto;
   max-width: 100%;
-  /* avoid scrollbar to hide the text behind it */
-  padding: 20px;
-}
-
-/* https://bugzilla.mozilla.org/show_bug.cgi?id=748518 */
-@-moz-document url-prefix() {
-  pre::after {
-    content: " ";
-    width: 20px;
-    display: inline-block;
-  }
+  /* padding is nice + prevents scrollbar from hiding the text behind it */
+  /* does not work nicely on firefox though https://bugzilla.mozilla.org/show_bug.cgi?id=748518 */
+  padding: 20px; 
 }
 
 .tip {
@@ -132,7 +124,7 @@ pre a {
 <div class="backdrop"></div>
 <div class="overlay">
   <h1 class="title"></h1>
-  <pre class="message"></pre>
+  <pre class="stack"></pre>
   <div class="tip">Click outside or fix to close.</div>
 </div>
 `
@@ -146,64 +138,109 @@ const escapeHtml = (string) => {
     .replace(/'/g, "&#039;")
 }
 
-const errorToHTML = (error, { rootDirectoryUrl, url, line, column }) => {
-  let html
-
-  if (error && error instanceof Error) {
+const parseErrorInfo = (error) => {
+  if (error === undefined) {
+    return {
+      message: "undefined",
+    }
+  }
+  if (typeof error === "string") {
+    return {
+      message: error,
+    }
+  }
+  if (error instanceof Error) {
     if (error.name === "SyntaxError") {
-      html = `${error.message}
-  at ${appendLineAndColumn(url, { line, column })}`
-    } else if (error.cause && error.cause.code === "PARSE_ERROR") {
-      html = error.messageHTML || escapeHtml(error.message)
+      return {
+        message: error.message,
+      }
+    }
+    if (error.cause && error.cause.code === "PARSE_ERROR") {
+      if (error.messageHTML) {
+        return {
+          message: error.messageHTML,
+        }
+      }
+      return {
+        message: escapeHtml(error.message),
+      }
     }
     // stackTrace formatted by V8
-    else if (Error.captureStackTrace) {
-      html = escapeHtml(error.stack)
-    } else {
-      // normalize message to get error.message + error.stack
-      // (on Firefox error.stack do not have the error.message for instance)
-      let message = error.message
-      const stack = error.stack
-      if (stack) {
-        message += `\n  ${error.stack}`
+    if (Error.captureStackTrace) {
+      return {
+        message: error.message,
+        stack: getErrorStackWithoutErrorMessage(error),
       }
-      html = escapeHtml(message)
     }
-  } else if (typeof error === "string") {
-    html = error
-  } else if (error === undefined) {
-    html = "undefined"
-  } else {
-    html = JSON.stringify(error)
+    return {
+      message: error.message,
+      stack: error.stack ? `  ${error.stack}` : null,
+    }
   }
+  return {
+    message: JSON.stringify(error),
+  }
+}
 
-  const htmlWithCorrectLineBreaks = html.replace(/\n/g, "\n")
-  const htmlWithLinks = stringToStringWithLink(htmlWithCorrectLineBreaks, {
-    transform: (url, { line, column }) => {
-      const urlObject = new URL(url)
-      if (urlObject.origin === window.origin) {
-        const fileUrl = appendLineAndColumn(
-          new URL(
-            `${urlObject.pathname.slice(1)}${urlObject.search}`,
-            rootDirectoryUrl,
-          ).href,
-          {
-            line,
-            column,
-          },
-        )
+const getErrorStackWithoutErrorMessage = (error) => {
+  let stack = error.stack
+  const messageInStack = `${error.name}: ${error.message}`
+  if (stack.startsWith(messageInStack)) {
+    stack = stack.slice(messageInStack.length)
+  }
+  const nextLineIndex = stack.indexOf("\n")
+  if (nextLineIndex > -1) {
+    stack = stack.slice(nextLineIndex + 1)
+  }
+  return stack
+}
+
+const errorToHTML = (error, { rootDirectoryUrl, url, line, column }) => {
+  let { message, stack } = parseErrorInfo(error)
+  if (url) {
+    if (!stack || (error && error.name === "SyntaxError")) {
+      stack = `  at ${appendLineAndColumn(url, { line, column })}`
+    }
+  }
+  if (stack) {
+    // normalize line breaks
+    stack = stack.replace(/\n/g, "\n")
+    // render links
+    stack = stringToStringWithLink(stack, {
+      transform: (url, { line, column }) => {
+        const urlObject = new URL(url)
+        if (urlObject.origin === window.origin) {
+          const fileUrl = appendLineAndColumn(
+            new URL(
+              `${urlObject.pathname.slice(1)}${urlObject.search}`,
+              rootDirectoryUrl,
+            ).href,
+            {
+              line,
+              column,
+            },
+          )
+          return link({
+            href: `javascript:window.fetch('/__open_in_editor__/${fileUrl}')`,
+            text: fileUrl,
+          })
+        }
         return link({
-          href: `javascript:window.fetch('/__open_in_editor__/${fileUrl}')`,
-          text: fileUrl,
+          href: url,
+          text: appendLineAndColumn(url, { line, column }),
         })
-      }
-      return link({
-        href: url,
-        text: appendLineAndColumn(url, { line, column }),
-      })
-    },
-  })
-  return htmlWithLinks
+      },
+    })
+  }
+  return {
+    theme:
+      error && error.cause && error.cause.code === "PARSE_ERROR"
+        ? "light"
+        : "dark",
+    title: "An error occured",
+    message,
+    stack,
+  }
 }
 
 const appendLineAndColumn = (url, { line, column }) => {
