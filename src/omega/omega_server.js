@@ -88,6 +88,9 @@ export const startOmegaServer = async ({
       onParseError: (data) => {
         sendServerErrorEvent({ type: "parse_error", data })
       },
+      onUnexpectedError: (data) => {
+        sendServerErrorEvent({ type: "unexpected_error", data })
+      },
     }),
   }
   const server = await startServer({

@@ -119,6 +119,7 @@ export const createTransformUrlContentError = ({
     transformError.url = reference.trace.url
     transformError.line = reference.trace.line
     transformError.column = reference.trace.column
+    transformError.stack = error.stack
     transformError.contentFrame = reference.trace.message
     if (code === "PARSE_ERROR") {
       transformError.reason = error.message

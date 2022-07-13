@@ -14,6 +14,7 @@ export const createFileService = ({
   scenario,
   onParseError,
   onFileNotFound,
+  onUnexpectedError,
 }) => {
   kitchen.pluginController.addHook("serve")
   kitchen.pluginController.addHook("augmentResponse")
@@ -190,6 +191,15 @@ export const createFileService = ({
           statusMessage: e.message,
         }
       }
+      onUnexpectedError({
+        reason: e.reason,
+        message: e.message,
+        stack: e.stack,
+        url: e.url,
+        line: e.line,
+        column: e.column,
+        contentFrame: e.contentFrame,
+      })
       return {
         url: reference.url,
         status: 500,

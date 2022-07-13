@@ -252,7 +252,7 @@ const replaceLinks = (string, { rootDirectoryUrl }) => {
         )
         return onFileUrl(fileUrlObject)
       }
-      if (urlObject.href.startsWith(rootDirectoryUrl)) {
+      if (urlObject.href.startsWith("file:")) {
         return onFileUrl(urlObject)
       }
       return link({

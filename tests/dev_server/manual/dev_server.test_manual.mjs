@@ -21,12 +21,17 @@ await startDevServer({
           parentUrl.includes("plugin_error_resolve/main.js") &&
           specifier === "./file.js"
         ) {
-          throw new Error("here")
+          throw new Error("error_during_resolve")
         }
       },
       fetchUrlContent: ({ url }) => {
         if (url.includes("plugin_error_load/main.js")) {
-          throw new Error("here")
+          throw new Error("error_during_load")
+        }
+      },
+      transformUrlContent: ({ url }) => {
+        if (url.includes("plugin_error_transform/main.js")) {
+          throw new Error("error_during_transform")
         }
       },
     },
