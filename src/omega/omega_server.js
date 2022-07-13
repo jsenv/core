@@ -9,6 +9,7 @@ import {
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js"
 import { createCallbackListNotifiedOnce } from "@jsenv/abort"
 
+import { createServerEventsService } from "./server/server_events_service.js"
 import { createFileService } from "./server/file_service.js"
 
 export const startOmegaServer = async ({
@@ -34,6 +35,13 @@ export const startOmegaServer = async ({
 }) => {
   const serverStopCallbackList = createCallbackListNotifiedOnce()
   const coreServices = {
+    "service:server_events": createServerEventsService({
+      rootDirectoryUrl,
+      urlGraph,
+      kitchen,
+      scenario,
+      serverStopCallbackList,
+    }),
     "service:file": createFileService({
       rootDirectoryUrl,
       urlGraph,

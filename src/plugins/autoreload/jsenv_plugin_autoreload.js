@@ -3,8 +3,6 @@ import { jsenvPluginDevSSEClient } from "./dev_sse/jsenv_plugin_dev_sse_client.j
 import { jsenvPluginDevSSEServer } from "./dev_sse/jsenv_plugin_dev_sse_server.js"
 
 export const jsenvPluginAutoreload = ({
-  rootDirectoryUrl,
-  urlGraph,
   scenario,
   clientFileChangeCallbackList,
   clientFilesPruneCallbackList,
@@ -16,8 +14,6 @@ export const jsenvPluginAutoreload = ({
     jsenvPluginHmr(),
     jsenvPluginDevSSEClient(),
     jsenvPluginDevSSEServer({
-      rootDirectoryUrl,
-      urlGraph,
       clientFileChangeCallbackList,
       clientFilesPruneCallbackList,
     }),
