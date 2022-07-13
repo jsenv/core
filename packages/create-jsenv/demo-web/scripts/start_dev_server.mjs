@@ -11,10 +11,10 @@ await startDevServer({
   rootDirectoryUrl,
   port: 3400,
   explorerGroups: {
-    "app": {
+    app: {
       "./src/main.html": true,
     },
-    "unit tests": {
+    tests: {
       "tests/**/*.test.html": true,
     },
   },

@@ -12,10 +12,10 @@ await startDevServer({
   plugins,
   port: 3401,
   explorerGroups: {
-    "app": {
+    app: {
       "./src/main.html": true,
     },
-    "unit tests": {
+    tests: {
       "tests/**/*.test.html": true,
     },
   },
