@@ -4,12 +4,12 @@ import { useSelector, useDispatch } from "react-redux"
 import { increment, decrement } from "./counter/counter_action.js"
 import { counterValueSelector } from "./counter/counter_selectors.js"
 
-export const App = () => {
+export const App = ({ onRender }) => {
   const counterValue = useSelector(counterValueSelector)
   const dispatch = useDispatch()
 
   useEffect(() => {
-    console.log("mounted")
+    onRender()
   }, [])
 
   return (

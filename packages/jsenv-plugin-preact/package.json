@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-preact",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -36,11 +36,11 @@
   },
   "peerDependencies": {
     "@jsenv/core": "*",
-    "preact": "10.8.2"
+    "preact": "10.9.0"
   },
   "devDependencies": {
     "@jsenv/core": "../../",
-    "preact": "10.8.2",
+    "preact": "10.9.0",
     "react-redux": "8.0.2",
     "redux": "4.2.0"
   }

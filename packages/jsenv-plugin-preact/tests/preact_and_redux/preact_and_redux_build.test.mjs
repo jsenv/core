@@ -15,6 +15,7 @@ const test = async (params) => {
     },
     plugins,
     minification: false,
+    writeGeneratedFiles: true,
     ...params,
   })
   const server = await startFileServer({

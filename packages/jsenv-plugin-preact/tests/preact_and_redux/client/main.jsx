@@ -4,13 +4,19 @@ import { Provider } from "react-redux"
 import { store } from "./store.js"
 const { App } = await import("./app.jsx")
 
+let resolveRenderPromise
+const renderPromise = new Promise((resolve) => {
+  resolveRenderPromise = resolve
+})
+
 render(
   <Provider store={store}>
-    <App />
+    <App onRender={resolveRenderPromise} />
   </Provider>,
   document.querySelector("#app"),
 )
 
+await renderPromise
 // increment
 document.querySelector("#increment").click()
 await new Promise((resolve) => {
