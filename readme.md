@@ -7,8 +7,8 @@ Jsenv was first created to write tests that could be executed in different runti
 - :sparkles: Same dev experience for source and test files
 - :ok_hand: Seamless integration with standard HTML, CSS and JS
 
-Jsenv is NOT a tool for fullstack projects where client and server code can be mixed in a file.<br />
-Jsenv is designed for projects where client and server codebases are independent.
+Jsenv is designed for projects where client and server codebases are independent.<br />
+Jsenv produces static files.
 
 # Demo
 
@@ -18,14 +18,16 @@ The following command can be used to create a jsenv project on a machine.
 npm create jsenv@latest
 ```
 
-These demos are showing how jsenv can be integrated with preconfigured scripts such as:
+This command prompts to choose a demo from a list.
+Each demo contains preconfigured scripts such as:
 
 - `npm run dev`: starts a dev server with autoreload.
 - `npm run test`: execute test files on browsers(s) and/or Node.js.
 - `npm run build`: generate files optimized for production.
 
 > **Info**
-> Executing "npm install" in web demos can take time. It is because in these demos tests are runned in headless browsers that needs to be installed.
+> Executing "npm install" in web demos can take time.
+> It is because in these demos tests are runned in headless browsers that needs to be installed first.
 
 See also [packages/create-jsenv](./packages/create-jsenv).
 
