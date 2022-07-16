@@ -7,7 +7,7 @@ Jsenv was first created to write tests that could be executed in different runti
 - :sparkles: Same dev experience for source and test files
 - :ok_hand: Seamless integration with standard HTML, CSS and JS
 
-Jsenv is designed for projects where client and server codebases are independent (it produces static files).
+Jsenv is designed for projects where client and server codebases are independent (a build produce static files).
 
 # Demo
 
