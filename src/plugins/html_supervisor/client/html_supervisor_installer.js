@@ -222,10 +222,10 @@ export const installHtmlSupervisor = ({
           const {
             message,
             stack,
-            url,
-            line,
-            column,
-            contentFrame,
+            traceUrl,
+            traceLine,
+            traceColumn,
+            traceMessage,
             requestedRessource,
             isFaviconAutoRequest,
           } = JSON.parse(serverErrorEvent.data)
@@ -236,19 +236,19 @@ export const installHtmlSupervisor = ({
             {
               message,
               stack:
-                stack && contentFrame
-                  ? `${stack}\n\n${contentFrame}`
+                stack && traceMessage
+                  ? `${stack}\n\n${traceMessage}`
                   : stack
                   ? stack
-                  : contentFrame
-                  ? `\n${contentFrame}`
+                  : traceMessage
+                  ? `\n${traceMessage}`
                   : "",
             },
             {
               rootDirectoryUrl,
-              url,
-              line,
-              column,
+              url: traceUrl,
+              line: traceLine,
+              column: traceColumn,
               reportedBy: "server",
               requestedRessource,
             },

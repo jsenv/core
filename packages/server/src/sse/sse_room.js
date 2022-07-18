@@ -207,26 +207,12 @@ export const createSSERoom = ({
 
   open()
 
-  const sendEventToSomeClients = (event, predicate) => {
-    const filteredClients = []
-    clients.forEach((client) => {
-      if (predicate(client)) {
-        filteredClients.push(client)
-      }
-    })
-    const eventString = stringifySourceEvent(event)
-    filteredClients.forEach((filteredClient) => {
-      filteredClient.next(eventString)
-    })
-  }
-
   Object.assign(room, {
     // main api:
     // - ability to sendEvent to clients in the room
     // - ability to join the room
     // - ability to leave the room
     sendEventToAllClients,
-    sendEventToSomeClients,
     join,
     leave,
 

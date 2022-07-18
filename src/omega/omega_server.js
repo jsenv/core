@@ -7,12 +7,9 @@ import {
   pluginCORS,
 } from "@jsenv/server"
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js"
-import {
-  createCallbackListNotifiedOnce,
-  createCallbackList,
-} from "@jsenv/abort"
+import { createCallbackListNotifiedOnce } from "@jsenv/abort"
 
-import { createSSEService } from "@jsenv/core/src/helpers/event_source/sse_service.js"
+import { createServerEventsDispatcher } from "@jsenv/core/src/helpers/event_source/server_events_dispatcher.js"
 import { createFileService } from "./server/file_service.js"
 
 export const startOmegaServer = async ({
@@ -38,10 +35,9 @@ export const startOmegaServer = async ({
 }) => {
   const serverStopCallbackList = createCallbackListNotifiedOnce()
 
-  const serverEventCallbackList = createCallbackList()
-  const sseService = createSSEService({ serverEventCallbackList })
+  const serverEventsDispatcher = createServerEventsDispatcher()
   const sendServerEvent = ({ type, data }) => {
-    serverEventCallbackList.notify({
+    serverEventsDispatcher.dispatch({
       type,
       data: JSON.stringify(data),
     })
@@ -59,20 +55,11 @@ export const startOmegaServer = async ({
     () => {},
   )
 
-  const sendServerErrorEvent = (event) => {
-    // setTimeout display first the error
-    // dispatched on window by browser
-    // then display the jsenv error
-    setTimeout(() => {
-      sendServerEvent(event)
-    }, 10)
-  }
-
   const coreServices = {
     "service:server_events": (request) => {
       const { accept } = request.headers
       if (accept && accept.includes("text/event-stream")) {
-        const room = sseService.getOrCreateSSERoom(request)
+        const room = serverEventsDispatcher.addRoom(request)
         return room.join(request)
       }
       return null
@@ -83,7 +70,31 @@ export const startOmegaServer = async ({
       kitchen,
       scenario,
       onErrorWhileServingFile: (data) => {
-        sendServerErrorEvent({ type: "error_while_serving_file", data })
+        // setTimeout is to ensure the error
+        // dispatched on window by browser is displayed first,
+        // then the server error replaces it (because it contains more information)
+        setTimeout(() => {
+          serverEventsDispatcher.dispatchToRoomsMatching(
+            {
+              type: "error_while_serving_file",
+              data,
+            },
+            (room) => {
+              // send only to page depending on this file
+              const errorFileUrl = data.url
+              const roomEntryPointUrl = new URL(
+                room.request.ressource.slice(1),
+                rootDirectoryUrl,
+              ).href
+              const isErrorRelatedToEntryPoint = Boolean(
+                urlGraph.findDependent(errorFileUrl, (dependentUrlInfo) => {
+                  return dependentUrlInfo.url === roomEntryPointUrl
+                }),
+              )
+              return isErrorRelatedToEntryPoint
+            },
+          )
+        }, 10)
       },
     }),
   }
@@ -165,7 +176,7 @@ export const startOmegaServer = async ({
     }),
     onStop: (reason) => {
       onStop()
-      sseService.destroy()
+      serverEventsDispatcher.destroy()
       serverStopCallbackList.notify(reason)
     },
   })

@@ -59,10 +59,11 @@ export const createFetchUrlContentError = ({
     fetchError.name = "FETCH_URL_CONTENT_ERROR"
     fetchError.code = code
     fetchError.reason = reason
-    fetchError.url = reference.trace.url
-    fetchError.line = reference.trace.line
-    fetchError.column = reference.trace.column
-    fetchError.contentFrame = reference.trace.message
+    fetchError.url = urlInfo.url
+    fetchError.traceUrl = reference.trace.url
+    fetchError.traceLine = reference.trace.line
+    fetchError.traceColumn = reference.trace.column
+    fetchError.traceMessage = reference.trace.message
     return fetchError
   }
 
@@ -116,29 +117,30 @@ export const createTransformUrlContentError = ({
     transformError.name = "TRANSFORM_URL_CONTENT_ERROR"
     transformError.code = code
     transformError.reason = reason
-    transformError.url = reference.trace.url
-    transformError.line = reference.trace.line
-    transformError.column = reference.trace.column
     transformError.stack = error.stack
-    transformError.contentFrame = reference.trace.message
+    transformError.url = urlInfo.url
+    transformError.traceUrl = reference.trace.url
+    transformError.traceLine = reference.trace.line
+    transformError.traceColumn = reference.trace.column
+    transformError.traceMessage = reference.trace.message
     if (code === "PARSE_ERROR") {
       transformError.reason = error.message
       if (urlInfo.isInline) {
-        transformError.line = reference.trace.line + error.line - 1
-        transformError.column = reference.trace.column + error.column
-        transformError.contentFrame = stringifyUrlSite({
+        transformError.traceLine = reference.trace.line + error.line - 1
+        transformError.traceColumn = reference.trace.column + error.column
+        transformError.traceMessage = stringifyUrlSite({
           url: urlInfo.inlineUrlSite.url,
-          line: transformError.line,
-          column: transformError.column,
+          line: reference.trace.line,
+          column: reference.trace.column,
           content: urlInfo.inlineUrlSite.content,
         })
       } else {
-        transformError.line = error.line
-        transformError.column = error.column
-        transformError.contentFrame = stringifyUrlSite({
+        transformError.traceLine = error.line
+        transformError.traceColumn = error.column
+        transformError.traceMessage = stringifyUrlSite({
           url: urlInfo.url,
-          line: transformError.line,
-          column: transformError.column,
+          line: reference.trace.line,
+          column: reference.trace.column,
           content: urlInfo.content,
         })
       }
