@@ -1,13 +1,14 @@
 import { unevalException } from "./uneval_exception.js"
-import { displayErrorInDocument } from "./error_in_document.js"
+import { displayErrorInDocument } from "./error_overlay.js"
 import { displayErrorNotification } from "./error_in_notification.js"
 
 const { __html_supervisor__ } = window
 
 export const installHtmlSupervisor = ({
+  rootDirectoryUrl,
   logs,
   measurePerf,
-  rootDirectoryUrl,
+  errorOverlay,
 }) => {
   const errorTransformer = null // could implement error stack remapping if needed
   const scriptExecutionResults = {}
@@ -36,11 +37,7 @@ export const installHtmlSupervisor = ({
   }
   const onExecutionError = (
     executionResult,
-    {
-      currentScript,
-      errorExposureInNotification = false,
-      errorExposureInDocument = false,
-    },
+    { currentScript, errorExposureInNotification = false },
   ) => {
     const error = executionResult.error
     if (error && error.code === "NETWORK_FAILURE") {
@@ -58,9 +55,6 @@ export const installHtmlSupervisor = ({
     }
     if (errorExposureInNotification) {
       displayErrorNotification(error)
-    }
-    if (errorExposureInDocument) {
-      displayErrorInDocument(error, { rootDirectoryUrl })
     }
     executionResult.exceptionSource = unevalException(error)
     delete executionResult.error
@@ -207,51 +201,53 @@ export const installHtmlSupervisor = ({
     __html_supervisor__.addScriptToExecute(scriptToExecute)
   })
 
-  window.addEventListener("error", (errorEvent) => {
-    if (!errorEvent.isTrusted) {
-      // ignore custom error event (not sent by browser)
-      return
-    }
-    const { error } = errorEvent
-    displayErrorInDocument(error, {
-      rootDirectoryUrl,
-      url: errorEvent.filename,
-      line: errorEvent.lineno,
-      column: errorEvent.colno,
-      reportedBy: "browser",
+  if (errorOverlay) {
+    window.addEventListener("error", (errorEvent) => {
+      if (!errorEvent.isTrusted) {
+        // ignore custom error event (not sent by browser)
+        return
+      }
+      const { error } = errorEvent
+      displayErrorInDocument(error, {
+        rootDirectoryUrl,
+        url: errorEvent.filename,
+        line: errorEvent.lineno,
+        column: errorEvent.colno,
+        reportedBy: "browser",
+      })
     })
-  })
-  if (window.__jsenv_event_source_client__) {
-    const onServerErrorEvent = (serverErrorEvent) => {
-      const {
-        reason,
-        stack,
-        url,
-        line,
-        column,
-        contentFrame,
-        requestedRessource,
-      } = JSON.parse(serverErrorEvent.data)
-      displayErrorInDocument(
-        {
-          message: reason,
-          stack: stack ? `${stack}\n\n${contentFrame}` : contentFrame,
-        },
-        {
-          rootDirectoryUrl,
+    if (window.__jsenv_event_source_client__) {
+      const onServerErrorEvent = (serverErrorEvent) => {
+        const {
+          reason,
+          stack,
           url,
           line,
           column,
-          reportedBy: "server",
+          contentFrame,
           requestedRessource,
-        },
-      )
+        } = JSON.parse(serverErrorEvent.data)
+        displayErrorInDocument(
+          {
+            message: reason,
+            stack: stack ? `${stack}\n\n${contentFrame}` : contentFrame,
+          },
+          {
+            rootDirectoryUrl,
+            url,
+            line,
+            column,
+            reportedBy: "server",
+            requestedRessource,
+          },
+        )
+      }
+      window.__jsenv_event_source_client__.addEventCallbacks({
+        file_not_found: onServerErrorEvent,
+        parse_error: onServerErrorEvent,
+        unexpected_error: onServerErrorEvent,
+      })
     }
-    window.__jsenv_event_source_client__.addEventCallbacks({
-      file_not_found: onServerErrorEvent,
-      parse_error: onServerErrorEvent,
-      unexpected_error: onServerErrorEvent,
-    })
   }
 }
 
