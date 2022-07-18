@@ -7,10 +7,10 @@ export const createSSEService = ({ serverEventCallbackList }) => {
   const cache = []
   const sseRoomLimit = 100
   const getOrCreateSSERoom = (request) => {
-    const htmlFileRelativeUrl = request.ressource.slice(1)
+    const requestRessource = request.ressource.slice(1)
     const cacheEntry = cache.find(
       (cacheEntryCandidate) =>
-        cacheEntryCandidate.htmlFileRelativeUrl === htmlFileRelativeUrl,
+        cacheEntryCandidate.requestRessource === requestRessource,
     )
     if (cacheEntry) {
       return cacheEntry.sseRoom
@@ -21,7 +21,7 @@ export const createSSEService = ({ serverEventCallbackList }) => {
       welcomeEventEnabled: true,
       effect: () => {
         return serverEventCallbackList.add((event) => {
-          sseRoom.sendEvent(event)
+          sseRoom.sendEventToAllClients(event)
         })
       },
     })
@@ -30,7 +30,7 @@ export const createSSEService = ({ serverEventCallbackList }) => {
       sseRoom.close()
     })
     cache.push({
-      htmlFileRelativeUrl,
+      requestRessource,
       sseRoom,
       cleanup: () => {
         removeSSECleanupCallback()

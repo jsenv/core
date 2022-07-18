@@ -2,7 +2,7 @@ import { startServer, createSSERoom } from "@jsenv/server"
 
 const room = createSSERoom()
 setInterval(() => {
-  room.sendEvent({
+  room.sendEventToAllClients({
     type: "ping",
   })
 }, 1000)
