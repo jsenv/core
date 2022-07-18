@@ -98,7 +98,7 @@
     "@babel/eslint-parser": "7.18.2",
     "@babel/plugin-syntax-import-assertions": "7.18.6",
     "@jsenv/assert": "2.6.0",
-    "@jsenv/eslint-config": "16.1.0",
+    "@jsenv/eslint-config": "16.2.1",
     "@jsenv/file-size-impact": "13.0.1",
     "@jsenv/https-local": "2.1.0",
     "@jsenv/package-workspace": "0.4.1",

@@ -34,26 +34,47 @@ export const startOmegaServer = async ({
   kitchen,
 }) => {
   const serverStopCallbackList = createCallbackListNotifiedOnce()
+  let serverEventsDispatcher = null
 
-  const serverEventsDispatcher = createServerEventsDispatcher()
-  const sendServerEvent = (serverEvent) => {
-    serverEventsDispatcher.dispatch(serverEvent)
+  server_events: {
+    const allServerEvents = {}
+    kitchen.pluginController.plugins.forEach((plugin) => {
+      const { serverEvents } = plugin
+      if (serverEvents) {
+        Object.keys(serverEvents).forEach((serverEventName) => {
+          // we could throw on serverEvent name conflict
+          // we could throw if serverEvents[serverEventName] is not a function
+          allServerEvents[serverEventName] = serverEvents[serverEventName]
+        })
+      }
+    })
+    const serverEventNames = Object.keys(allServerEvents)
+    if (serverEventNames.length > 0) {
+      serverEventsDispatcher = createServerEventsDispatcher()
+      serverStopCallbackList.add(() => {
+        serverEventsDispatcher.destroy()
+      })
+      serverEventNames.forEach((serverEventName) => {
+        allServerEvents[serverEventName]({
+          rootDirectoryUrl,
+          urlGraph,
+          scenario,
+          sendServerEvent: (data) => {
+            serverEventsDispatcher.dispatch({
+              type: serverEventName,
+              data,
+            })
+          },
+        })
+      })
+    }
   }
-
-  kitchen.pluginController.addHook("registerServerEvents")
-  kitchen.pluginController.callHooks(
-    "registerServerEvents",
-    { sendServerEvent },
-    {
-      rootDirectoryUrl,
-      urlGraph,
-      scenario,
-    },
-    () => {},
-  )
 
   const coreServices = {
     "service:server_events": (request) => {
+      if (!serverEventsDispatcher) {
+        return null
+      }
       const { accept } = request.headers
       if (accept && accept.includes("text/event-stream")) {
         const room = serverEventsDispatcher.addRoom(request)
@@ -66,30 +87,33 @@ export const startOmegaServer = async ({
       urlGraph,
       kitchen,
       scenario,
-      onErrorWhileServingFile: (data) => {
-        serverEventsDispatcher.dispatchToRoomsMatching(
-          {
-            type: "error_while_serving_file",
-            data,
-          },
-          (room) => {
-            // send only to page depending on this file
-            const errorFileUrl = data.url
-            const roomEntryPointUrl = new URL(
-              room.request.ressource.slice(1),
-              rootDirectoryUrl,
-            ).href
-            const isErrorRelatedToEntryPoint = Boolean(
-              urlGraph.findDependent(errorFileUrl, (dependentUrlInfo) => {
-                return dependentUrlInfo.url === roomEntryPointUrl
-              }),
+      onErrorWhileServingFile: serverEventsDispatcher
+        ? (data) => {
+            serverEventsDispatcher.dispatchToRoomsMatching(
+              {
+                type: "error_while_serving_file",
+                data,
+              },
+              (room) => {
+                // send only to page depending on this file
+                const errorFileUrl = data.url
+                const roomEntryPointUrl = new URL(
+                  room.request.ressource.slice(1),
+                  rootDirectoryUrl,
+                ).href
+                const isErrorRelatedToEntryPoint = Boolean(
+                  urlGraph.findDependent(errorFileUrl, (dependentUrlInfo) => {
+                    return dependentUrlInfo.url === roomEntryPointUrl
+                  }),
+                )
+                return isErrorRelatedToEntryPoint
+              },
             )
-            return isErrorRelatedToEntryPoint
-          },
-        )
-      },
+          }
+        : () => {},
     }),
   }
+
   const server = await startServer({
     signal,
     stopOnExit: false,
@@ -168,7 +192,6 @@ export const startOmegaServer = async ({
     }),
     onStop: (reason) => {
       onStop()
-      serverEventsDispatcher.destroy()
       serverStopCallbackList.notify(reason)
     },
   })
