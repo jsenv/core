@@ -113,7 +113,10 @@ export const createEventSourceConnection = (
   let _disconnect = () => {}
 
   const attemptConnection = (url) => {
-    if (status.value === STATUSES.CONNECTING || STATUSES.CONNECTED) {
+    if (
+      status.value === STATUSES.CONNECTING ||
+      status.value === STATUSES.CONNECTED
+    ) {
       return
     }
     eventSource = new EventSource(url, {
