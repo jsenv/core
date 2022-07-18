@@ -76,7 +76,7 @@ const createEventSourceConnection = (eventSourceUrl, {
           const index = callbacks.indexOf(callback);
 
           if (index > -1) {
-            callbacks.splice(index, 0);
+            callbacks.splice(index, 1);
 
             if (callbacks.length === 0) {
               const listener = listenersMap.get(eventName);
@@ -130,11 +130,14 @@ const createEventSourceConnection = (eventSourceUrl, {
         return;
       }
 
-      eventSource.onerror = undefined;
-      eventSource.close();
-      listenersMap.forEach((listener, eventName) => {
-        eventSource.removeEventListener(eventName, listener);
-      });
+      if (eventSource) {
+        eventSource.onerror = undefined;
+        eventSource.close();
+        listenersMap.forEach((listener, eventName) => {
+          eventSource.removeEventListener(eventName, listener);
+        });
+      }
+
       eventSource = null;
       status.goTo(STATUSES.DISCONNECTED);
     };
@@ -301,3 +304,4 @@ window.__server_events__ = {
   connect,
   disconnect
 };
+connect();

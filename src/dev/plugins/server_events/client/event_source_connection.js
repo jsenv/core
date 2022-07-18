@@ -132,11 +132,13 @@ export const createEventSourceConnection = (
         )
         return
       }
-      eventSource.onerror = undefined
-      eventSource.close()
-      listenersMap.forEach((listener, eventName) => {
-        eventSource.removeEventListener(eventName, listener)
-      })
+      if (eventSource) {
+        eventSource.onerror = undefined
+        eventSource.close()
+        listenersMap.forEach((listener, eventName) => {
+          eventSource.removeEventListener(eventName, listener)
+        })
+      }
       eventSource = null
       status.goTo(STATUSES.DISCONNECTED)
     }
