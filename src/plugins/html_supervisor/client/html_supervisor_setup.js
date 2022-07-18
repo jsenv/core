@@ -14,7 +14,7 @@ window.__html_supervisor__ = {
       type: "js_classic",
       isInline,
       currentScript: document.currentScript,
-      execute: () => {
+      execute: (url) => {
         return new Promise((resolve, reject) => {
           const script = document.createElement("script")
           if (crossorigin) {
@@ -23,8 +23,7 @@ window.__html_supervisor__ = {
           if (integrity) {
             script.integrity = integrity
           }
-          script.src = src
-          const scriptUrl = new URL(src, window.location).href
+          script.src = url
           let lastWindowErrorUrl
           let lastWindowError
           const windowErrorCallback = (e) => {
@@ -45,7 +44,7 @@ window.__html_supervisor__ = {
           })
           script.addEventListener("load", () => {
             cleanup()
-            if (lastWindowErrorUrl === scriptUrl) {
+            if (lastWindowErrorUrl === url) {
               reject(lastWindowError)
             } else {
               resolve()

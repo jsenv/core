@@ -6,44 +6,43 @@ import {
 import { compareTwoUrlPaths } from "./url_helpers.js"
 import {
   reloadHtmlPage,
-  reloadDOMNodesUsingUrl,
   reloadJsImport,
+  getDOMNodesUsingUrl,
 } from "./reload.js"
 
-const autoreload = {
+const reloader = {
   urlHotMetas,
   isAutoreloadEnabled,
   setAutoreloadPreference,
   status: "idle",
   onstatuschange: () => {},
   setStatus: (status) => {
-    autoreload.status = status
-    autoreload.onstatuschange()
+    reloader.status = status
+    reloader.onstatuschange()
   },
   messages: [],
   addMessage: (reloadMessage) => {
-    autoreload.messages.push(reloadMessage)
+    reloader.messages.push(reloadMessage)
     if (isAutoreloadEnabled()) {
-      autoreload.reload()
+      reloader.reload()
     } else {
-      autoreload.setStatus("can_reload")
+      reloader.setStatus("can_reload")
     }
   },
   reload: () => {
-    const someEffectIsFullReload = autoreload.messages.some(
+    const someEffectIsFullReload = reloader.messages.some(
       (reloadMessage) => reloadMessage.type === "full",
     )
     if (someEffectIsFullReload) {
       reloadHtmlPage()
       return
     }
-
-    autoreload.setStatus("autoreload")
+    reloader.setStatus("reloading")
     const onApplied = (reloadMessage) => {
-      const index = autoreload.messages.indexOf(reloadMessage)
-      autoreload.messages.splice(index, 1)
-      if (autoreload.messages.length === 0) {
-        autoreload.setStatus("idle")
+      const index = reloader.messages.indexOf(reloadMessage)
+      reloader.messages.splice(index, 1)
+      if (reloader.messages.length === 0) {
+        reloader.setStatus("idle")
       }
     }
     const setReloadMessagePromise = (reloadMessage, promise) => {
@@ -52,7 +51,7 @@ const autoreload = {
           onApplied(reloadMessage)
         },
         (e) => {
-          autoreload.setStatus("failed")
+          reloader.setStatus("failed")
           if (typeof window.reportError === "function") {
             window.reportError(e)
           } else {
@@ -65,7 +64,7 @@ This could be due to syntax errors or importing non-existent modules (see errors
         },
       )
     }
-    autoreload.messages.forEach((reloadMessage) => {
+    reloader.messages.forEach((reloadMessage) => {
       if (reloadMessage.type === "hot") {
         const promise = addToHotQueue(() => {
           return applyHotReload(reloadMessage)
@@ -151,11 +150,21 @@ const applyHotReload = async ({ hotInstructions }) => {
           // we are not in that HTML page
           return null
         }
-        console.log(`reloading url`)
         const urlToReload = new URL(acceptedBy, `${window.location.origin}/`)
           .href
-        reloadDOMNodesUsingUrl(urlToReload)
-        console.log(`url reloaded`)
+        const domNodesUsingUrl = getDOMNodesUsingUrl(urlToReload)
+        const domNodesCount = domNodesUsingUrl.length
+        if (domNodesCount === 0) {
+          console.log(`no dom node using ${acceptedBy}`)
+        } else if (domNodesCount === 1) {
+          console.log(`reloading`, domNodesUsingUrl[0].node)
+          domNodesUsingUrl[0].reload()
+        } else {
+          console.log(`reloading ${domNodesCount} nodes using ${acceptedBy}`)
+          domNodesUsingUrl.forEach((domNodesUsingUrl) => {
+            domNodesUsingUrl.reload()
+          })
+        }
         console.groupEnd()
         return null
       }
@@ -166,11 +175,11 @@ const applyHotReload = async ({ hotInstructions }) => {
   )
 }
 
-window.__autoreload__ = autoreload
+window.__reloader__ = reloader
 window.__server_events__.addEventCallbacks({
   reload: ({ data }) => {
     const reloadMessage = JSON.parse(data)
-    autoreload.addMessage(reloadMessage)
+    reloader.addMessage(reloadMessage)
   },
 })
 

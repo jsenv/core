@@ -14,13 +14,27 @@ export const displayErrorInDocument = (
     reportedBy,
     requestedRessource,
   })
-  const jsenvErrorOverlay = new JsenvErrorOverlay({
+  let jsenvErrorOverlay = new JsenvErrorOverlay({
     theme,
     title,
     text: createErrorText({ rootDirectoryUrl, message, stack }),
     tip,
   })
   document.body.appendChild(jsenvErrorOverlay)
+  const removeErrorOverlay = () => {
+    if (jsenvErrorOverlay && jsenvErrorOverlay.parentNode) {
+      document.body.removeChild(jsenvErrorOverlay)
+      jsenvErrorOverlay = null
+    }
+  }
+  if (window.__reloader__) {
+    window.__reloader__.onstatuschange = () => {
+      if (window.__reloader__.status === "reloading") {
+        removeErrorOverlay()
+      }
+    }
+  }
+  return removeErrorOverlay
 }
 
 const createErrorText = ({ rootDirectoryUrl, message, stack }) => {

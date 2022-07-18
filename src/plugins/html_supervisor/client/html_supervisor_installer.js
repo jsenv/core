@@ -4,6 +4,8 @@ import { displayErrorNotification } from "./error_in_notification.js"
 
 const { __html_supervisor__ } = window
 
+const supervisedScripts = []
+
 export const installHtmlSupervisor = ({
   rootDirectoryUrl,
   logs,
@@ -67,13 +69,16 @@ export const installHtmlSupervisor = ({
     }
   }
 
-  const performExecution = async ({
-    src,
-    type,
-    currentScript,
-    execute,
-    // https://developer.mozilla.org/en-US/docs/web/html/element/script
-  }) => {
+  const performExecution = async (
+    {
+      src,
+      type,
+      currentScript,
+      execute,
+      // https://developer.mozilla.org/en-US/docs/web/html/element/script
+    },
+    { reload = false } = {},
+  ) => {
     if (logs) {
       console.group(`[jsenv] loading ${type} ${src}`)
     }
@@ -82,7 +87,11 @@ export const installHtmlSupervisor = ({
     let result
     let error
     try {
-      result = await execute()
+      const urlObject = new URL(src, window.location)
+      if (reload) {
+        urlObject.searchParams.set("hmr", Date.now())
+      }
+      result = await execute(urlObject.href)
       completed = true
     } catch (e) {
       completed = false
@@ -150,12 +159,19 @@ export const installHtmlSupervisor = ({
     }),
   )
   __html_supervisor__.addScriptToExecute = async (scriptToExecute) => {
+    if (!supervisedScripts.includes(scriptToExecute)) {
+      supervisedScripts.push(scriptToExecute)
+      scriptToExecute.reload = () => {
+        return performExecution(scriptToExecute, { reload: true })
+      }
+    }
+
     if (scriptToExecute.async) {
       performExecution(scriptToExecute)
       return
     }
     const useDeferQueue =
-      scriptToExecute.defer || scriptToExecute.type === "js_module"
+      scriptToExecute.defer || scriptToExecute.type === "module"
     if (useDeferQueue) {
       // defer must wait for classic script to be done
       const classicExecutionPromise = classicExecutionQueue.getPromise()
@@ -227,10 +243,7 @@ export const installHtmlSupervisor = ({
         ) {
           return true
         }
-        if (
-          window.__autoreload__ &&
-          window.__autoreload__.status === "reloading"
-        ) {
+        if (window.__reloader__ && window.__reloader__.status === "reloading") {
           return true
         }
         return false
@@ -286,12 +299,29 @@ export const installHtmlSupervisor = ({
   }
 }
 
+__html_supervisor__.reloadSupervisedScript = ({ type, src }) => {
+  const supervisedScript = supervisedScripts.find(
+    (supervisedScriptCandidate) => {
+      if (type && supervisedScriptCandidate.type !== type) {
+        return false
+      }
+      if (supervisedScriptCandidate.src !== src) {
+        return false
+      }
+      return true
+    },
+  )
+  if (supervisedScript) {
+    supervisedScript.reload()
+  }
+}
+
 export const superviseScriptTypeModule = ({ src, isInline }) => {
   __html_supervisor__.addScriptToExecute({
     src,
-    type: "js_module",
+    type: "module",
     isInline,
-    execute: () => import(new URL(src, document.location.href).href),
+    execute: (url) => import(url),
   })
 }
 

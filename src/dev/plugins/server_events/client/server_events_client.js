@@ -14,3 +14,4 @@ window.__server_events__ = {
   connect,
   disconnect,
 }
+connect()

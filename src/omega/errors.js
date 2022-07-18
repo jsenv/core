@@ -130,8 +130,8 @@ export const createTransformUrlContentError = ({
         transformError.traceColumn = reference.trace.column + error.column
         transformError.traceMessage = stringifyUrlSite({
           url: urlInfo.inlineUrlSite.url,
-          line: reference.trace.line,
-          column: reference.trace.column,
+          line: transformError.traceLine,
+          column: transformError.traceColumn,
           content: urlInfo.inlineUrlSite.content,
         })
       } else {
@@ -139,8 +139,8 @@ export const createTransformUrlContentError = ({
         transformError.traceColumn = error.column
         transformError.traceMessage = stringifyUrlSite({
           url: urlInfo.url,
-          line: reference.trace.line,
-          column: reference.trace.column,
+          line: error.line - 1,
+          column: error.column,
           content: urlInfo.content,
         })
       }
