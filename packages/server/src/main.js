@@ -31,7 +31,7 @@ export { pluginServerTiming } from "./server_timing/plugin_server_timing.js"
 export { timeFunction, timeStart } from "./server_timing/timing_measure.js"
 
 // SSE
-export { createSSERoom } from "./sse/createSSERoom.js"
+export { createSSERoom } from "./sse/sse_room.js"
 
 // content-negotiation
 export { negotiateContentType } from "./content_negotiation/negotiateContentType.js"

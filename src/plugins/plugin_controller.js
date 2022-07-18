@@ -41,6 +41,21 @@ export const createPluginController = ({
     addHook(hookName)
   })
 
+  const pushPlugin = (plugin) => {
+    plugins.push(plugin)
+    hooks.forEach((hookName) => {
+      const hook = plugin[hookName]
+      if (hook) {
+        const group = hookGroups[hookName] || (hookGroups[hookName] = [])
+        group.push({
+          plugin,
+          hookName,
+          value: hook,
+        })
+      }
+    })
+  }
+
   let currentPlugin = null
   let currentHookName = null
   const callHook = (hook, info, context) => {
@@ -137,6 +152,7 @@ export const createPluginController = ({
 
   return {
     plugins,
+    pushPlugin,
     addHook,
     getHookFunction,
     callHook,

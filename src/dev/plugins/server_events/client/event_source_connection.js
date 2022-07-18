@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 const STATUSES = {
   CONNECTING: "connecting",
   CONNECTED: "connected",
@@ -8,7 +6,12 @@ const STATUSES = {
 
 export const createEventSourceConnection = (
   eventSourceUrl,
-  { retryMaxAttempt = Infinity, retryAllocatedMs = Infinity, lastEventId } = {},
+  {
+    retryMaxAttempt = Infinity,
+    retryAllocatedMs = Infinity,
+    lastEventId,
+    useEventsToManageConnection = true,
+  } = {},
 ) => {
   const { EventSource } = window
   if (typeof EventSource !== "function") {
@@ -16,25 +19,85 @@ export const createEventSourceConnection = (
   }
 
   let eventSource
-  const events = {}
+  const listenersMap = new Map()
+  const callbacksMap = new Map()
   const eventSourceOrigin = new URL(eventSourceUrl).origin
-  const addEventCallbacks = (eventCallbacks) => {
-    Object.keys(eventCallbacks).forEach((eventName) => {
-      const eventCallback = eventCallbacks[eventName]
-      events[eventName] = (e) => {
-        if (e.origin === eventSourceOrigin) {
-          if (e.lastEventId) {
-            lastEventId = e.lastEventId
+  const addEventCallbacks = (namedCallbacks) => {
+    let listenersMapSize = listenersMap.size
+    Object.keys(namedCallbacks).forEach((eventName) => {
+      const callback = namedCallbacks[eventName]
+      const existingCallbacks = callbacksMap.get(eventName)
+      let callbacks
+      if (existingCallbacks) {
+        callbacks = existingCallbacks
+      } else {
+        callbacks = []
+        callbacksMap.set(eventName, callbacks)
+      }
+      if (callbacks.length === 0) {
+        const eventListener = (e) => {
+          if (e.origin === eventSourceOrigin) {
+            if (e.lastEventId) {
+              lastEventId = e.lastEventId
+            }
+            callbacks.forEach((eventCallback) => {
+              eventCallback(e)
+            })
           }
-          eventCallback(e)
+        }
+        listenersMap.set(eventName, eventListener)
+        if (eventSource) {
+          eventSource.addEventListener(eventName, eventListener)
         }
       }
-      if (eventSource) {
-        eventSource.addEventListener(eventName, events[eventName])
-      }
+      callbacks.push(callback)
     })
+    if (
+      useEventsToManageConnection &&
+      listenersMapSize === 0 &&
+      listenersMap.size > 0 &&
+      status.value !== STATUSES.CONNECTING &&
+      status.value !== STATUSES.CONNECTED
+    ) {
+      _connect()
+    }
+
+    let removed = false
+    return () => {
+      if (removed) return
+      removed = true
+      listenersMapSize = listenersMap.size
+      Object.keys(namedCallbacks).forEach((eventName) => {
+        const callback = namedCallbacks[eventName]
+        const callbacks = callbacksMap.get(eventName)
+        if (callbacks) {
+          const index = callbacks.indexOf(callback)
+          if (index > -1) {
+            callbacks.splice(index, 1)
+            if (callbacks.length === 0) {
+              const listener = listenersMap.get(eventName)
+              if (listener) {
+                listenersMap.delete(listener)
+                if (eventSource) {
+                  eventSource.removeEventListener(eventName, listener)
+                }
+              }
+            }
+          }
+        }
+      })
+      namedCallbacks = null // allow garbage collect
+      if (
+        useEventsToManageConnection &&
+        listenersMapSize > 0 &&
+        listenersMap.size === 0 &&
+        (status.value === STATUSES.CONNECTING ||
+          status.value === STATUSES.CONNECTED)
+      ) {
+        _disconnect()
+      }
+    }
   }
-  addEventCallbacks(events)
 
   const status = {
     value: "default",
@@ -50,6 +113,12 @@ export const createEventSourceConnection = (
   let _disconnect = () => {}
 
   const attemptConnection = (url) => {
+    if (
+      status.value === STATUSES.CONNECTING ||
+      status.value === STATUSES.CONNECTED
+    ) {
+      return
+    }
     eventSource = new EventSource(url, {
       withCredentials: true,
     })
@@ -63,11 +132,13 @@ export const createEventSourceConnection = (
         )
         return
       }
-      eventSource.onerror = undefined
-      eventSource.close()
-      Object.keys(events).forEach((eventName) => {
-        eventSource.removeEventListener(eventName, events[eventName])
-      })
+      if (eventSource) {
+        eventSource.onerror = undefined
+        eventSource.close()
+        listenersMap.forEach((listener, eventName) => {
+          eventSource.removeEventListener(eventName, listener)
+        })
+      }
       eventSource = null
       status.goTo(STATUSES.DISCONNECTED)
     }
@@ -107,22 +178,20 @@ export const createEventSourceConnection = (
     eventSource.onopen = () => {
       status.goTo(STATUSES.CONNECTED)
     }
-    Object.keys(events).forEach((eventName) => {
-      eventSource.addEventListener(eventName, events[eventName])
+    listenersMap.forEach((listener, eventName) => {
+      eventSource.addEventListener(eventName, listener)
     })
-    if (!events.hasOwnProperty("welcome")) {
-      eventSource.addEventListener("welcome", (e) => {
-        if (e.origin === eventSourceOrigin && e.lastEventId) {
-          lastEventId = e.lastEventId
-        }
+    if (!listenersMap.has("welcome")) {
+      addEventCallbacks({
+        welcome: () => {}, // to update lastEventId
       })
     }
     status.goTo(STATUSES.CONNECTING)
   }
 
-  let connect = () => {
+  let _connect = () => {
     attemptConnection(eventSourceUrl)
-    connect = () => {
+    _connect = () => {
       attemptConnection(
         lastEventId
           ? addLastEventIdIntoUrlSearchParams(eventSourceUrl, lastEventId)
@@ -143,11 +212,13 @@ export const createEventSourceConnection = (
   const destroy = () => {
     removePageUnloadListener()
     _disconnect()
+    listenersMap.clear()
+    callbacksMap.clear()
   }
 
   return {
     status,
-    connect,
+    connect: () => _connect(),
     addEventCallbacks,
     disconnect: () => _disconnect(),
     destroy,

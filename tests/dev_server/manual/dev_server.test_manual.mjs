@@ -47,5 +47,4 @@ await startDevServer({
       "./errors/**/*.html": true,
     },
   },
-  devServerMainFile: import.meta.url,
 })

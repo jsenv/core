@@ -15,7 +15,9 @@ const displayErrorInDocument = (error, {
   rootDirectoryUrl,
   url,
   line,
-  column
+  column,
+  reportedBy,
+  requestedRessource
 }) => {
   document.querySelectorAll(JSENV_ERROR_OVERLAY_TAGNAME).forEach(node => {
     node.parentNode.removeChild(node);
@@ -24,40 +26,81 @@ const displayErrorInDocument = (error, {
     theme,
     title,
     message,
-    stack
+    stack,
+    tip
   } = errorToHTML(error, {
     url,
     line,
-    column
+    column,
+    reportedBy,
+    requestedRessource
   });
-  const jsenvErrorOverlay = new JsenvErrorOverlay({
+  let jsenvErrorOverlay = new JsenvErrorOverlay({
     theme,
     title,
-    stack: stack ? `${replaceLinks(message, {
+    text: createErrorText({
+      rootDirectoryUrl,
+      message,
+      stack
+    }),
+    tip
+  });
+  document.body.appendChild(jsenvErrorOverlay);
+
+  const removeErrorOverlay = () => {
+    if (jsenvErrorOverlay && jsenvErrorOverlay.parentNode) {
+      document.body.removeChild(jsenvErrorOverlay);
+      jsenvErrorOverlay = null;
+    }
+  };
+
+  if (window.__reloader__) {
+    window.__reloader__.onstatuschange = () => {
+      if (window.__reloader__.status === "reloading") {
+        removeErrorOverlay();
+      }
+    };
+  }
+
+  return removeErrorOverlay;
+};
+
+const createErrorText = ({
+  rootDirectoryUrl,
+  message,
+  stack
+}) => {
+  if (message && stack) {
+    return `${replaceLinks(message, {
       rootDirectoryUrl
     })}\n${replaceLinks(stack, {
       rootDirectoryUrl
-    })}` : replaceLinks(message, {
+    })}`;
+  }
+
+  if (stack) {
+    return replaceLinks(stack, {
       rootDirectoryUrl
-    })
+    });
+  }
+
+  return replaceLinks(message, {
+    rootDirectoryUrl
   });
-  document.body.appendChild(jsenvErrorOverlay);
 };
 
 class JsenvErrorOverlay extends HTMLElement {
   constructor({
+    theme,
     title,
-    stack,
-    theme = "dark"
+    text,
+    tip
   }) {
     super();
     this.root = this.attachShadow({
       mode: "open"
     });
     this.root.innerHTML = overlayHtml;
-    this.root.querySelector(".overlay").setAttribute("data-theme", theme);
-    this.root.querySelector(".title").innerHTML = title;
-    this.root.querySelector(".stack").innerHTML = stack;
 
     this.root.querySelector(".backdrop").onclick = () => {
       if (!this.parentNode) {
@@ -68,6 +111,11 @@ class JsenvErrorOverlay extends HTMLElement {
       this.root.querySelector(".backdrop").onclick = null;
       this.parentNode.removeChild(this);
     };
+
+    this.root.querySelector(".overlay").setAttribute("data-theme", theme);
+    this.root.querySelector(".title").innerHTML = title;
+    this.root.querySelector(".text").innerHTML = text;
+    this.root.querySelector(".tip").innerHTML = tip;
   }
 
 }
@@ -156,8 +204,8 @@ pre a {
 <div class="backdrop"></div>
 <div class="overlay">
   <h1 class="title"></h1>
-  <pre class="stack"></pre>
-  <div class="tip">Click outside to close.</div>
+  <pre class="text"></pre>
+  <div class="tip"></div>
 </div>
 `;
 
@@ -242,7 +290,9 @@ const getErrorStackWithoutErrorMessage = error => {
 const errorToHTML = (error, {
   url,
   line,
-  column
+  column,
+  reportedBy,
+  requestedRessource
 }) => {
   let {
     message,
@@ -258,12 +308,30 @@ const errorToHTML = (error, {
     }
   }
 
+  let tip = formatTip({
+    reportedBy,
+    requestedRessource
+  });
   return {
     theme: error && error.cause && error.cause.code === "PARSE_ERROR" ? "light" : "dark",
     title: "An error occured",
     message,
-    stack
+    stack,
+    tip: `${tip}
+<br />
+Click outside to close.`
   };
+};
+
+const formatTip = ({
+  reportedBy,
+  requestedRessource
+}) => {
+  if (reportedBy === "browser") {
+    return `Reported by the browser while executing <code>${window.location.pathname}${window.location.search}</code>.`;
+  }
+
+  return `Reported by the server while serving <code>${requestedRessource}</code>`;
 };
 
 const replaceLinks = (string, {
@@ -432,10 +500,12 @@ const displayErrorNotification = typeof Notification === "function" ? displayErr
 const {
   __html_supervisor__
 } = window;
+const supervisedScripts = [];
 const installHtmlSupervisor = ({
+  rootDirectoryUrl,
   logs,
   measurePerf,
-  rootDirectoryUrl
+  errorOverlay
 }) => {
 
   const scriptExecutionResults = {};
@@ -471,8 +541,7 @@ const installHtmlSupervisor = ({
 
   const onExecutionError = (executionResult, {
     currentScript,
-    errorExposureInNotification = false,
-    errorExposureInDocument = false
+    errorExposureInNotification = false
   }) => {
     const error = executionResult.error;
 
@@ -494,12 +563,6 @@ const installHtmlSupervisor = ({
       displayErrorNotification(error);
     }
 
-    if (errorExposureInDocument) {
-      displayErrorInDocument(error, {
-        rootDirectoryUrl
-      });
-    }
-
     executionResult.exceptionSource = unevalException(error);
     delete executionResult.error;
   };
@@ -518,7 +581,9 @@ const installHtmlSupervisor = ({
     currentScript,
     execute // https://developer.mozilla.org/en-US/docs/web/html/element/script
 
-  }) => {
+  }, {
+    reload = false
+  } = {}) => {
     if (logs) {
       console.group(`[jsenv] loading ${type} ${src}`);
     }
@@ -529,7 +594,13 @@ const installHtmlSupervisor = ({
     let error;
 
     try {
-      result = await execute();
+      const urlObject = new URL(src, window.location);
+
+      if (reload) {
+        urlObject.searchParams.set("hmr", Date.now());
+      }
+
+      result = await execute(urlObject.href);
       completed = true;
     } catch (e) {
       completed = false;
@@ -593,12 +664,22 @@ const installHtmlSupervisor = ({
   }));
 
   __html_supervisor__.addScriptToExecute = async scriptToExecute => {
+    if (!supervisedScripts.includes(scriptToExecute)) {
+      supervisedScripts.push(scriptToExecute);
+
+      scriptToExecute.reload = () => {
+        return performExecution(scriptToExecute, {
+          reload: true
+        });
+      };
+    }
+
     if (scriptToExecute.async) {
       performExecution(scriptToExecute);
       return;
     }
 
-    const useDeferQueue = scriptToExecute.defer || scriptToExecute.type === "js_module";
+    const useDeferQueue = scriptToExecute.defer || scriptToExecute.type === "module";
 
     if (useDeferQueue) {
       // defer must wait for classic script to be done
@@ -652,60 +733,116 @@ const installHtmlSupervisor = ({
   copy.forEach(scriptToExecute => {
     __html_supervisor__.addScriptToExecute(scriptToExecute);
   });
-  window.addEventListener("error", errorEvent => {
-    if (!errorEvent.isTrusted) {
-      // ignore custom error event (not sent by browser)
-      return;
-    }
 
-    const {
-      error
-    } = errorEvent;
-    displayErrorInDocument(error, {
-      rootDirectoryUrl,
-      url: errorEvent.filename,
-      line: errorEvent.lineno,
-      column: errorEvent.colno
-    });
-  });
+  if (errorOverlay) {
+    window.addEventListener("error", errorEvent => {
+      if (!errorEvent.isTrusted) {
+        // ignore custom error event (not sent by browser)
+        return;
+      }
 
-  if (window.__jsenv_event_source_client__) {
-    const onServerErrorEvent = serverErrorEvent => {
       const {
-        reason,
-        stack,
-        url,
-        line,
-        column,
-        contentFrame
-      } = JSON.parse(serverErrorEvent.data);
-      displayErrorInDocument({
-        message: reason,
-        stack: stack ? `${stack}\n\n${contentFrame}` : contentFrame
-      }, {
+        error
+      } = errorEvent;
+      displayErrorInDocument(error, {
         rootDirectoryUrl,
-        url,
-        line,
-        column
+        url: errorEvent.filename,
+        line: errorEvent.lineno,
+        column: errorEvent.colno,
+        reportedBy: "browser"
       });
-    };
-
-    window.__jsenv_event_source_client__.addEventCallbacks({
-      file_not_found: onServerErrorEvent,
-      parse_error: onServerErrorEvent,
-      unexpected_error: onServerErrorEvent
     });
+
+    if (window.__server_events__) {
+      const isExecuting = () => {
+        if (pendingExecutionCount > 0) {
+          return true;
+        }
+
+        if (document.readyState === "loading" || document.readyState === "interactive") {
+          return true;
+        }
+
+        if (window.__reloader__ && window.__reloader__.status === "reloading") {
+          return true;
+        }
+
+        return false;
+      };
+
+      window.__server_events__.addEventCallbacks({
+        error_while_serving_file: serverErrorEvent => {
+          if (!isExecuting()) {
+            return;
+          }
+
+          const {
+            message,
+            stack,
+            traceUrl,
+            traceLine,
+            traceColumn,
+            traceMessage,
+            requestedRessource,
+            isFaviconAutoRequest
+          } = JSON.parse(serverErrorEvent.data);
+
+          if (isFaviconAutoRequest) {
+            return;
+          } // setTimeout is to ensure the error
+          // dispatched on window by browser is displayed first,
+          // then the server error replaces it (because it contains more information)
+
+
+          setTimeout(() => {
+            displayErrorInDocument({
+              message,
+              stack: stack && traceMessage ? `${stack}\n\n${traceMessage}` : stack ? stack : traceMessage ? `\n${traceMessage}` : ""
+            }, {
+              rootDirectoryUrl,
+              url: traceUrl,
+              line: traceLine,
+              column: traceColumn,
+              reportedBy: "server",
+              requestedRessource
+            });
+          }, 10);
+        }
+      });
+    }
   }
 };
+
+__html_supervisor__.reloadSupervisedScript = ({
+  type,
+  src
+}) => {
+  const supervisedScript = supervisedScripts.find(supervisedScriptCandidate => {
+    if (type && supervisedScriptCandidate.type !== type) {
+      return false;
+    }
+
+    if (supervisedScriptCandidate.src !== src) {
+      return false;
+    }
+
+    return true;
+  });
+
+  if (supervisedScript) {
+    supervisedScript.reload();
+  }
+};
+
 const superviseScriptTypeModule = ({
   src,
   isInline
 }) => {
   __html_supervisor__.addScriptToExecute({
     src,
-    type: "js_module",
+    type: "module",
     isInline,
-    execute: () => import(new URL(src, document.location.href).href)
+    execute: url => import(url)
   });
 };
 

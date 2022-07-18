@@ -57,6 +57,7 @@ export const createSSERoom = ({
       const client = {
         next,
         complete,
+        request,
       }
       if (clients.size === 0) {
         const effectReturnValue = effect()
@@ -94,7 +95,9 @@ export const createSSERoom = ({
 
         // send to everyone
         if (welcomeEventPublic) {
-          write(stringifySourceEvent(welcomeEvent))
+          sendEventToAllClients(welcomeEvent, {
+            history: false,
+          })
         }
         // send only to this client
         else {
@@ -148,14 +151,17 @@ export const createSSERoom = ({
     eventHistory.add(event)
   }
 
-  const sendEvent = (event) => {
-    if (event.type !== "comment") {
+  const sendEventToAllClients = (event, { history = true } = {}) => {
+    if (history) {
       addEventToHistory(event)
     }
     logger.debug(
       `send "${event.type}" event to ${clients.size} client in the room`,
     )
-    write(stringifySourceEvent(event))
+    const eventString = stringifySourceEvent(event)
+    clients.forEach((client) => {
+      client.next(eventString)
+    })
   }
 
   const getAllEventSince = (id) => {
@@ -166,21 +172,18 @@ export const createSSERoom = ({
     return events
   }
 
-  const write = (data) => {
-    clients.forEach((client) => {
-      client.next(data)
-    })
-  }
-
   const keepAlive = () => {
     // maybe that, when an event occurs, we can delay the keep alive event
     logger.debug(
       `send keep alive event, number of client listening event source: ${clients.size}`,
     )
-    sendEvent({
-      type: "comment",
-      data: new Date().toLocaleTimeString(),
-    })
+    sendEventToAllClients(
+      {
+        type: "comment",
+        data: new Date().toLocaleTimeString(),
+      },
+      { history: false },
+    )
   }
 
   const open = () => {
@@ -209,7 +212,7 @@ export const createSSERoom = ({
     // - ability to sendEvent to clients in the room
     // - ability to join the room
     // - ability to leave the room
-    sendEvent,
+    sendEventToAllClients,
     join,
     leave,
 
@@ -256,7 +259,6 @@ const disconnectRequestFromRoom = (request, room) => {
   if (!requestInfo) {
     return
   }
-
   const { sseProducer, roomObservableMap } = requestInfo
   const roomObservable = roomObservableMap.get(room)
   roomObservableMap.delete(room)

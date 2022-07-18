@@ -1,5 +1,4 @@
-import { createEventSourceConnection } from "@jsenv/core/src/helpers/event_source/event_source.js"
-import { urlHotMetas } from "../../../import_meta_hot/client/import_meta_hot.js"
+import { urlHotMetas } from "../../import_meta_hot/client/import_meta_hot.js"
 import {
   isAutoreloadEnabled,
   setAutoreloadPreference,
@@ -7,12 +6,77 @@ import {
 import { compareTwoUrlPaths } from "./url_helpers.js"
 import {
   reloadHtmlPage,
-  reloadDOMNodesUsingUrl,
   reloadJsImport,
+  getDOMNodesUsingUrl,
 } from "./reload.js"
 
-const reloadMessages = []
-const reloadMessagesSignal = { onchange: () => {} }
+const reloader = {
+  urlHotMetas,
+  isAutoreloadEnabled,
+  setAutoreloadPreference,
+  status: "idle",
+  onstatuschange: () => {},
+  setStatus: (status) => {
+    reloader.status = status
+    reloader.onstatuschange()
+  },
+  messages: [],
+  addMessage: (reloadMessage) => {
+    reloader.messages.push(reloadMessage)
+    if (isAutoreloadEnabled()) {
+      reloader.reload()
+    } else {
+      reloader.setStatus("can_reload")
+    }
+  },
+  reload: () => {
+    const someEffectIsFullReload = reloader.messages.some(
+      (reloadMessage) => reloadMessage.type === "full",
+    )
+    if (someEffectIsFullReload) {
+      reloadHtmlPage()
+      return
+    }
+    reloader.setStatus("reloading")
+    const onApplied = (reloadMessage) => {
+      const index = reloader.messages.indexOf(reloadMessage)
+      reloader.messages.splice(index, 1)
+      if (reloader.messages.length === 0) {
+        reloader.setStatus("idle")
+      }
+    }
+    const setReloadMessagePromise = (reloadMessage, promise) => {
+      promise.then(
+        () => {
+          onApplied(reloadMessage)
+        },
+        (e) => {
+          reloader.setStatus("failed")
+          if (typeof window.reportError === "function") {
+            window.reportError(e)
+          } else {
+            console.error(e)
+          }
+          console.error(
+            `[jsenv] Hot reload failed after ${reloadMessage.reason}.
+This could be due to syntax errors or importing non-existent modules (see errors in console)`,
+          )
+        },
+      )
+    }
+    reloader.messages.forEach((reloadMessage) => {
+      if (reloadMessage.type === "hot") {
+        const promise = addToHotQueue(() => {
+          return applyHotReload(reloadMessage)
+        })
+        setReloadMessagePromise(reloadMessage, promise)
+      } else {
+        setReloadMessagePromise(reloadMessage, Promise.resolve())
+      }
+    })
+  },
+}
+
 let pendingCallbacks = []
 let running = false
 const addToHotQueue = async (callback) => {
@@ -37,51 +101,6 @@ const dequeue = async () => {
       dequeue()
     }
   }
-}
-
-const applyReloadMessageEffects = async () => {
-  const someEffectIsFullReload = reloadMessages.some(
-    (reloadMessage) => reloadMessage.type === "full",
-  )
-  if (someEffectIsFullReload) {
-    reloadHtmlPage()
-    return
-  }
-
-  const onApplied = (reloadMessage) => {
-    const index = reloadMessages.indexOf(reloadMessage)
-    reloadMessages.splice(index, 1)
-    reloadMessagesSignal.onchange()
-  }
-  const setReloadMessagePromise = (reloadMessage, promise) => {
-    reloadMessage.status = "pending"
-    promise.then(
-      () => {
-        onApplied(reloadMessage)
-      },
-      (e) => {
-        // TODO: reuse error display from html supervisor
-        console.error(e)
-        console.error(
-          `[hmr] Failed to reload after ${reloadMessage.reason}.
-This could be due to syntax errors or importing non-existent modules (see errors above)`,
-        )
-        reloadMessage.status = "failed"
-        reloadMessagesSignal.onchange()
-      },
-    )
-  }
-  reloadMessages.forEach((reloadMessage) => {
-    if (reloadMessage.type === "hot") {
-      const promise = addToHotQueue(() => {
-        return applyHotReload(reloadMessage)
-      })
-      setReloadMessagePromise(reloadMessage, promise)
-    } else {
-      setReloadMessagePromise(reloadMessage, Promise.resolve())
-    }
-  })
-  reloadMessagesSignal.onchange() // reload status is "pending"
 }
 
 const applyHotReload = async ({ hotInstructions }) => {
@@ -131,11 +150,21 @@ const applyHotReload = async ({ hotInstructions }) => {
           // we are not in that HTML page
           return null
         }
-        console.log(`reloading url`)
         const urlToReload = new URL(acceptedBy, `${window.location.origin}/`)
           .href
-        reloadDOMNodesUsingUrl(urlToReload)
-        console.log(`url reloaded`)
+        const domNodesUsingUrl = getDOMNodesUsingUrl(urlToReload)
+        const domNodesCount = domNodesUsingUrl.length
+        if (domNodesCount === 0) {
+          console.log(`no dom node using ${acceptedBy}`)
+        } else if (domNodesCount === 1) {
+          console.log(`reloading`, domNodesUsingUrl[0].node)
+          domNodesUsingUrl[0].reload()
+        } else {
+          console.log(`reloading ${domNodesCount} nodes using ${acceptedBy}`)
+          domNodesUsingUrl.forEach((domNodesUsingUrl) => {
+            domNodesUsingUrl.reload()
+          })
+        }
         console.groupEnd()
         return null
       }
@@ -146,43 +175,13 @@ const applyHotReload = async ({ hotInstructions }) => {
   )
 }
 
-const addReloadMessage = (reloadMessage) => {
-  reloadMessages.push(reloadMessage)
-  if (isAutoreloadEnabled()) {
-    applyReloadMessageEffects()
-  } else {
-    reloadMessagesSignal.onchange()
-  }
-}
-
-const eventsourceConnection = createEventSourceConnection(
-  document.location.href,
-  {
-    retryMaxAttempt: Infinity,
-    retryAllocatedMs: 20 * 1000,
-  },
-)
-const { status, connect, addEventCallbacks, disconnect } = eventsourceConnection
-eventsourceConnection.addEventCallbacks({
+window.__reloader__ = reloader
+window.__server_events__.addEventCallbacks({
   reload: ({ data }) => {
     const reloadMessage = JSON.parse(data)
-    addReloadMessage(reloadMessage)
+    reloader.addMessage(reloadMessage)
   },
 })
-connect()
-window.__jsenv_event_source_client__ = {
-  addEventCallbacks,
-  status,
-  connect,
-  disconnect,
-  isAutoreloadEnabled,
-  setAutoreloadPreference,
-  urlHotMetas,
-  reloadMessages,
-  reloadMessagesSignal,
-  applyReloadMessageEffects,
-  addReloadMessage,
-}
 
 // const findHotMetaUrl = (originalFileRelativeUrl) => {
 //   return Object.keys(urlHotMetas).find((compileUrl) => {

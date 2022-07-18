@@ -20,7 +20,7 @@ const timeEllapsedPromise = (ms) => {
     },
   })
   const eventSource = await openEventSource(server.origin)
-  room.sendEvent({
+  room.sendEventToAllClients({
     data: 42,
   })
   await timeEllapsedPromise(200)
@@ -55,14 +55,14 @@ const timeEllapsedPromise = (ms) => {
     },
   })
   let eventSource = await openEventSource(server.origin)
-  room.sendEvent({
+  room.sendEventToAllClients({
     type: "message",
     data: 42,
   })
   await timeEllapsedPromise(200)
   const [firstMessageEvent] = eventSource.getAllMessageEvents()
   await closeEventSource(eventSource)
-  room.sendEvent({
+  room.sendEventToAllClients({
     type: "message",
     data: true,
   })
@@ -125,11 +125,11 @@ const timeEllapsedPromise = (ms) => {
   })
   const roomAEventSource = await openEventSource(`${server.origin}/roomA`)
   const roomBEventSource = await openEventSource(`${server.origin}/roomB`)
-  roomA.sendEvent({
+  roomA.sendEventToAllClients({
     type: "message",
     data: "a",
   })
-  roomB.sendEvent({
+  roomB.sendEventToAllClients({
     type: "message",
     data: "b",
   })
@@ -178,7 +178,7 @@ const timeEllapsedPromise = (ms) => {
   })
   const clientA = await openEventSource(server.origin)
   const clientB = await openEventSource(server.origin)
-  room.sendEvent({
+  room.sendEventToAllClients({
     type: "message",
     data: 42,
   })

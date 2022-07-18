@@ -7,6 +7,7 @@ import {
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 import { createLogger, loggerToLevels, createTaskLog } from "@jsenv/log"
 import { getCallerPosition } from "@jsenv/urls"
+import { URL_META } from "@jsenv/url-meta"
 
 import { createReloadableWorker } from "@jsenv/core/src/helpers/worker_reload.js"
 import { getCorePlugins } from "@jsenv/core/src/plugins/plugins.js"
@@ -15,7 +16,7 @@ import { createKitchen } from "@jsenv/core/src/omega/kitchen.js"
 import { startOmegaServer } from "@jsenv/core/src/omega/omega_server.js"
 
 import { jsenvPluginExplorer } from "./plugins/explorer/jsenv_plugin_explorer.js"
-// import { jsenvPluginToolbar } from "./plugins/toolbar/jsenv_plugin_toolbar.js"
+import { jsenvPluginServerEvents } from "./plugins/server_events/jsenv_plugin_server_events.js"
 
 export const startDevServer = async ({
   signal = new AbortController().signal,
@@ -160,11 +161,19 @@ export const startDevServer = async ({
       callback({ url, event })
     })
   }
-  const stopWatchingClientFiles = registerDirectoryLifecycle(rootDirectoryUrl, {
-    watchPatterns: {
-      ...clientFiles,
-      ".jsenv/": false,
+
+  const clientFilePatterns = {
+    ...clientFiles,
+    ".jsenv/": false,
+  }
+  const watchAssociations = URL_META.resolveAssociations(
+    {
+      watch: clientFilePatterns,
     },
+    rootDirectoryUrl,
+  )
+  const stopWatchingClientFiles = registerDirectoryLifecycle(rootDirectoryUrl, {
+    watchPatterns: clientFilePatterns,
     cooldownBetweenFileEvents,
     keepProcessAlive: false,
     recursive: true,
@@ -181,6 +190,13 @@ export const startDevServer = async ({
   const urlGraph = createUrlGraph({
     clientFileChangeCallbackList,
     clientFilesPruneCallbackList,
+    onCreateUrlInfo: (urlInfo) => {
+      const { watch } = URL_META.applyAssociations({
+        url: urlInfo.url,
+        associations: watchAssociations,
+      })
+      urlInfo.isWatched = watch
+    },
   })
   const kitchen = createKitchen({
     signal,
@@ -214,6 +230,16 @@ export const startDevServer = async ({
       // ...(toolbar ? [jsenvPluginToolbar(toolbar)] : []),
     ],
   })
+
+  const onErrorWhileServingFileReference = { current: () => {} }
+  jsenvPluginServerEvents({
+    rootDirectoryUrl,
+    urlGraph,
+    kitchen,
+    scenario: "dev",
+    onErrorWhileServingFileReference,
+  })
+
   const server = await startOmegaServer({
     logLevel: omegaServerLogLevel,
     keepProcessAlive,
@@ -228,6 +254,9 @@ export const startDevServer = async ({
     kitchen,
     scenario: "dev",
     serverPlugins,
+    onErrorWhileServingFile: (data) => {
+      onErrorWhileServingFileReference.current(data)
+    },
   })
   startDevServerTask.done()
   logger.info(``)

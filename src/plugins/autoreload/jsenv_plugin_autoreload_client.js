@@ -5,30 +5,30 @@ import {
   createHtmlNode,
 } from "@jsenv/ast"
 
-export const jsenvPluginDevSSEClient = () => {
-  const eventSourceClientFileUrl = new URL(
-    "./client/event_source_client.js",
+export const jsenvPluginAutoreloadClient = () => {
+  const autoreloadClientFileUrl = new URL(
+    "./client/autoreload.js",
     import.meta.url,
   ).href
 
   return {
-    name: "jsenv:dev_sse_client",
+    name: "jsenv:autoreload_client",
     appliesDuring: { dev: true },
     transformUrlContent: {
       html: (htmlUrlInfo, context) => {
         const htmlAst = parseHtmlString(htmlUrlInfo.content)
-        const [eventSourceClientReference] = context.referenceUtils.inject({
+        const [autoreloadClientReference] = context.referenceUtils.inject({
           type: "script_src",
           expectedType: "js_module",
-          specifier: eventSourceClientFileUrl,
+          specifier: autoreloadClientFileUrl,
         })
         injectScriptNodeAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
             "tagName": "script",
             "type": "module",
-            "src": eventSourceClientReference.generatedSpecifier,
-            "injected-by": "jsenv:dev_sse_client",
+            "src": autoreloadClientReference.generatedSpecifier,
+            "injected-by": "jsenv:autoreload_client",
           }),
         )
         const htmlModified = stringifyHtmlAst(htmlAst)

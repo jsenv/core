@@ -13,8 +13,8 @@ export const reloadHtmlPage = () => {
 // - no need to check [hot-accept]and [hot-decline] attributes for instance
 // This is because if something should full reload, we receive "full_reload"
 // from server and this function is not called
-export const reloadDOMNodesUsingUrl = (urlToReload) => {
-  const mutations = []
+export const getDOMNodesUsingUrl = (urlToReload) => {
+  const nodes = []
   const shouldReloadUrl = (urlCandidate) => {
     return compareTwoUrlPaths(urlCandidate, urlToReload)
   }
@@ -29,8 +29,11 @@ export const reloadDOMNodesUsingUrl = (urlToReload) => {
     if (!shouldReloadUrl(attribute)) {
       return
     }
-    mutations.push(() => {
-      node[attributeName] = injectQuery(attribute, { hmr: Date.now() })
+    nodes.push({
+      node,
+      reload: () => {
+        node[attributeName] = injectQuery(attribute, { hmr: Date.now() })
+      },
     })
   }
   Array.from(document.querySelectorAll(`link[rel="stylesheet"]`)).forEach(
@@ -41,8 +44,23 @@ export const reloadDOMNodesUsingUrl = (urlToReload) => {
   Array.from(document.querySelectorAll(`link[rel="icon"]`)).forEach((link) => {
     visitNodeAttributeAsUrl(link, "href")
   })
-  Array.from(document.querySelector("script")).forEach((script) => {
+  Array.from(document.querySelectorAll("script")).forEach((script) => {
     visitNodeAttributeAsUrl(script, "src")
+    const generatedFromSrc = script.getAttribute("generated-from-src")
+    if (generatedFromSrc) {
+      const generatedFromUrl = new URL(generatedFromSrc, window.location.origin)
+        .href
+      if (shouldReloadUrl(generatedFromUrl)) {
+        nodes.push({
+          node: script,
+          reload: () =>
+            window.__html_supervisor__.reloadSupervisedScript({
+              type: script.type,
+              src: generatedFromSrc,
+            }),
+        })
+      }
+    }
   })
   // There is no real need to update a.href because the ressource will be fetched when clicked.
   // But in a scenario where the ressource was already visited and is in browser cache, adding
@@ -67,8 +85,11 @@ export const reloadDOMNodesUsingUrl = (urlToReload) => {
           srcCandidate.specifier = injectQuery(url, { hmr: Date.now() })
         }
       })
-      mutations.push(() => {
-        img.srcset = stringifySrcSet(srcCandidates)
+      nodes.push({
+        node: img,
+        reload: () => {
+          img.srcset = stringifySrcSet(srcCandidates)
+        },
       })
     }
   })
@@ -83,9 +104,7 @@ export const reloadDOMNodesUsingUrl = (urlToReload) => {
   Array.from(document.querySelectorAll("use")).forEach((use) => {
     visitNodeAttributeAsUrl(use, "href")
   })
-  mutations.forEach((mutation) => {
-    mutation()
-  })
+  return nodes
 }
 
 export const reloadJsImport = async (url) => {

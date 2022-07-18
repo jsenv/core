@@ -15,7 +15,7 @@ const server = await startServer({
   },
 })
 const eventSource = await openEventSource(server.origin)
-room.sendEvent({
+room.sendEventToAllClients({
   type: "test",
   data: 42,
 })

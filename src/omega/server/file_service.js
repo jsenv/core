@@ -12,9 +12,7 @@ export const createFileService = ({
   urlGraph,
   kitchen,
   scenario,
-  onParseError,
-  onFileNotFound,
-  onUnexpectedError,
+  onErrorWhileServingFile,
 }) => {
   kitchen.pluginController.addHook("serve")
   kitchen.pluginController.addHook("augmentResponse")
@@ -65,6 +63,9 @@ export const createFileService = ({
 
     const ifNoneMatch = request.headers["if-none-match"]
     if (
+      // url must be watched otherwise nothing ever invalidate urlInfo.contentEtag
+      // and the cache version is always used
+      urlInfo.isWatched &&
       ifNoneMatch &&
       urlInfo.contentEtag === ifNoneMatch &&
       // - isValid is true by default
@@ -138,13 +139,15 @@ export const createFileService = ({
     } catch (e) {
       const code = e.code
       if (code === "PARSE_ERROR") {
-        onParseError({
-          reason: e.reason,
-          message: e.message,
+        onErrorWhileServingFile({
+          requestedRessource: request.ressource,
+          code: "PARSE_ERROR",
+          message: e.reason,
           url: e.url,
-          line: e.line,
-          column: e.column,
-          contentFrame: e.contentFrame,
+          traceUrl: e.traceUrl,
+          traceLine: e.traceLine,
+          traceColumn: e.traceColumn,
+          traceMessage: e.traceMessage,
         })
         return {
           url: reference.url,
@@ -176,13 +179,18 @@ export const createFileService = ({
         }
       }
       if (code === "NOT_FOUND") {
-        onFileNotFound({
-          reason: e.reason,
-          message: e.message,
+        onErrorWhileServingFile({
+          requestedRessource: request.ressource,
+          isFaviconAutoRequest:
+            request.ressource === "/favicon.ico" &&
+            reference.type === "http_request",
+          code: "NOT_FOUND",
+          message: e.reason,
           url: e.url,
-          line: e.line,
-          column: e.column,
-          contentFrame: e.contentFrame,
+          traceUrl: e.traceUrl,
+          traceLine: e.traceLine,
+          traceColumn: e.traceColumn,
+          traceMessage: e.traceMessage,
         })
         return {
           url: reference.url,
@@ -191,14 +199,15 @@ export const createFileService = ({
           statusMessage: e.message,
         }
       }
-      onUnexpectedError({
-        reason: e.reason,
-        message: e.message,
+      onErrorWhileServingFile({
+        requestedRessource: request.ressource,
+        code: "UNEXPECTED",
         stack: e.stack,
         url: e.url,
-        line: e.line,
-        column: e.column,
-        contentFrame: e.contentFrame,
+        traceUrl: e.traceUrl,
+        traceLine: e.traceLine,
+        traceColumn: e.traceColumn,
+        traceMessage: e.traceMessage,
       })
       return {
         url: reference.url,

@@ -44,7 +44,7 @@ const measureAppDisplayed = async ({ appUrl, waitRedirect }) => {
   const { appDisplayedDuration } = await measureAppDisplayed({
     appUrl: `${devServer.origin}/main.html`,
   })
-  devServerMetrics["time to display app using source files"] = {
+  devServerMetrics["time to display app"] = {
     value: appDisplayedDuration,
     unit: "ms",
   }

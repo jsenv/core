@@ -26,6 +26,7 @@ import { requireFromJsenv } from "@jsenv/core/src/require_from_jsenv.js"
 export const jsenvPluginHtmlSupervisor = ({
   logs = false,
   measurePerf = false,
+  errorOverlay = true,
 }) => {
   const htmlSupervisorSetupFileUrl = new URL(
     "./client/html_supervisor_setup.js?js_classic",
@@ -167,9 +168,10 @@ export const jsenvPluginHtmlSupervisor = ({
       }
       installHtmlSupervisor(${JSON.stringify(
         {
+          rootDirectoryUrl: context.rootDirectoryUrl,
           logs,
           measurePerf,
-          rootDirectoryUrl: context.rootDirectoryUrl,
+          errorOverlay,
         },
         null,
         "        ",

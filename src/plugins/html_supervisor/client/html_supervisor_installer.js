@@ -1,13 +1,16 @@
 import { unevalException } from "./uneval_exception.js"
-import { displayErrorInDocument } from "./error_in_document.js"
+import { displayErrorInDocument } from "./error_overlay.js"
 import { displayErrorNotification } from "./error_in_notification.js"
 
 const { __html_supervisor__ } = window
 
+const supervisedScripts = []
+
 export const installHtmlSupervisor = ({
+  rootDirectoryUrl,
   logs,
   measurePerf,
-  rootDirectoryUrl,
+  errorOverlay,
 }) => {
   const errorTransformer = null // could implement error stack remapping if needed
   const scriptExecutionResults = {}
@@ -36,11 +39,7 @@ export const installHtmlSupervisor = ({
   }
   const onExecutionError = (
     executionResult,
-    {
-      currentScript,
-      errorExposureInNotification = false,
-      errorExposureInDocument = false,
-    },
+    { currentScript, errorExposureInNotification = false },
   ) => {
     const error = executionResult.error
     if (error && error.code === "NETWORK_FAILURE") {
@@ -59,9 +58,6 @@ export const installHtmlSupervisor = ({
     if (errorExposureInNotification) {
       displayErrorNotification(error)
     }
-    if (errorExposureInDocument) {
-      displayErrorInDocument(error, { rootDirectoryUrl })
-    }
     executionResult.exceptionSource = unevalException(error)
     delete executionResult.error
   }
@@ -73,13 +69,16 @@ export const installHtmlSupervisor = ({
     }
   }
 
-  const performExecution = async ({
-    src,
-    type,
-    currentScript,
-    execute,
-    // https://developer.mozilla.org/en-US/docs/web/html/element/script
-  }) => {
+  const performExecution = async (
+    {
+      src,
+      type,
+      currentScript,
+      execute,
+      // https://developer.mozilla.org/en-US/docs/web/html/element/script
+    },
+    { reload = false } = {},
+  ) => {
     if (logs) {
       console.group(`[jsenv] loading ${type} ${src}`)
     }
@@ -88,7 +87,11 @@ export const installHtmlSupervisor = ({
     let result
     let error
     try {
-      result = await execute()
+      const urlObject = new URL(src, window.location)
+      if (reload) {
+        urlObject.searchParams.set("hmr", Date.now())
+      }
+      result = await execute(urlObject.href)
       completed = true
     } catch (e) {
       completed = false
@@ -156,12 +159,19 @@ export const installHtmlSupervisor = ({
     }),
   )
   __html_supervisor__.addScriptToExecute = async (scriptToExecute) => {
+    if (!supervisedScripts.includes(scriptToExecute)) {
+      supervisedScripts.push(scriptToExecute)
+      scriptToExecute.reload = () => {
+        return performExecution(scriptToExecute, { reload: true })
+      }
+    }
+
     if (scriptToExecute.async) {
       performExecution(scriptToExecute)
       return
     }
     const useDeferQueue =
-      scriptToExecute.defer || scriptToExecute.type === "js_module"
+      scriptToExecute.defer || scriptToExecute.type === "module"
     if (useDeferQueue) {
       // defer must wait for classic script to be done
       const classicExecutionPromise = classicExecutionQueue.getPromise()
@@ -207,51 +217,111 @@ export const installHtmlSupervisor = ({
     __html_supervisor__.addScriptToExecute(scriptToExecute)
   })
 
-  window.addEventListener("error", (errorEvent) => {
-    if (!errorEvent.isTrusted) {
-      // ignore custom error event (not sent by browser)
-      return
-    }
-    const { error } = errorEvent
-    displayErrorInDocument(error, {
-      rootDirectoryUrl,
-      url: errorEvent.filename,
-      line: errorEvent.lineno,
-      column: errorEvent.colno,
+  if (errorOverlay) {
+    window.addEventListener("error", (errorEvent) => {
+      if (!errorEvent.isTrusted) {
+        // ignore custom error event (not sent by browser)
+        return
+      }
+      const { error } = errorEvent
+      displayErrorInDocument(error, {
+        rootDirectoryUrl,
+        url: errorEvent.filename,
+        line: errorEvent.lineno,
+        column: errorEvent.colno,
+        reportedBy: "browser",
+      })
     })
-  })
-  if (window.__jsenv_event_source_client__) {
-    const onServerErrorEvent = (serverErrorEvent) => {
-      const { reason, stack, url, line, column, contentFrame } = JSON.parse(
-        serverErrorEvent.data,
-      )
-      displayErrorInDocument(
-        {
-          message: reason,
-          stack: stack ? `${stack}\n\n${contentFrame}` : contentFrame,
+    if (window.__server_events__) {
+      const isExecuting = () => {
+        if (pendingExecutionCount > 0) {
+          return true
+        }
+        if (
+          document.readyState === "loading" ||
+          document.readyState === "interactive"
+        ) {
+          return true
+        }
+        if (window.__reloader__ && window.__reloader__.status === "reloading") {
+          return true
+        }
+        return false
+      }
+
+      window.__server_events__.addEventCallbacks({
+        error_while_serving_file: (serverErrorEvent) => {
+          if (!isExecuting()) {
+            return
+          }
+          const {
+            message,
+            stack,
+            traceUrl,
+            traceLine,
+            traceColumn,
+            traceMessage,
+            requestedRessource,
+            isFaviconAutoRequest,
+          } = JSON.parse(serverErrorEvent.data)
+          if (isFaviconAutoRequest) {
+            return
+          }
+          // setTimeout is to ensure the error
+          // dispatched on window by browser is displayed first,
+          // then the server error replaces it (because it contains more information)
+          setTimeout(() => {
+            displayErrorInDocument(
+              {
+                message,
+                stack:
+                  stack && traceMessage
+                    ? `${stack}\n\n${traceMessage}`
+                    : stack
+                    ? stack
+                    : traceMessage
+                    ? `\n${traceMessage}`
+                    : "",
+              },
+              {
+                rootDirectoryUrl,
+                url: traceUrl,
+                line: traceLine,
+                column: traceColumn,
+                reportedBy: "server",
+                requestedRessource,
+              },
+            )
+          }, 10)
         },
-        {
-          rootDirectoryUrl,
-          url,
-          line,
-          column,
-        },
-      )
+      })
     }
-    window.__jsenv_event_source_client__.addEventCallbacks({
-      file_not_found: onServerErrorEvent,
-      parse_error: onServerErrorEvent,
-      unexpected_error: onServerErrorEvent,
-    })
+  }
+}
+
+__html_supervisor__.reloadSupervisedScript = ({ type, src }) => {
+  const supervisedScript = supervisedScripts.find(
+    (supervisedScriptCandidate) => {
+      if (type && supervisedScriptCandidate.type !== type) {
+        return false
+      }
+      if (supervisedScriptCandidate.src !== src) {
+        return false
+      }
+      return true
+    },
+  )
+  if (supervisedScript) {
+    supervisedScript.reload()
   }
 }
 
 export const superviseScriptTypeModule = ({ src, isInline }) => {
   __html_supervisor__.addScriptToExecute({
     src,
-    type: "js_module",
+    type: "module",
     isInline,
-    execute: () => import(new URL(src, document.location.href).href),
+    execute: (url) => import(url),
   })
 }
 
