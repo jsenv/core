@@ -200,6 +200,7 @@ export const createFileService = ({
       onErrorWhileServingFile({
         code: "UNEXPECTED",
         stack: e.stack,
+        contentFrame: e.contentFrame,
         url: e.url,
         line: e.line,
         column: e.column,

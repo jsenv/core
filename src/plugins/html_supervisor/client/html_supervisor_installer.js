@@ -220,7 +220,7 @@ export const installHtmlSupervisor = ({
       window.__jsenv_event_source_client__.addEventCallbacks({
         error_while_serving_file: (serverErrorEvent) => {
           const {
-            reason,
+            message,
             stack,
             url,
             line,
@@ -234,8 +234,15 @@ export const installHtmlSupervisor = ({
           }
           displayErrorInDocument(
             {
-              message: reason,
-              stack: stack ? `${stack}\n\n${contentFrame}` : contentFrame,
+              message,
+              stack:
+                stack && contentFrame
+                  ? `${stack}\n\n${contentFrame}`
+                  : stack
+                  ? stack
+                  : contentFrame
+                  ? `\n${contentFrame}`
+                  : "",
             },
             {
               rootDirectoryUrl,
