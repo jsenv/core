@@ -226,7 +226,11 @@ export const installHtmlSupervisor = ({
           column,
           contentFrame,
           requestedRessource,
+          isFaviconAutoRequest,
         } = JSON.parse(serverErrorEvent.data)
+        if (isFaviconAutoRequest) {
+          return
+        }
         displayErrorInDocument(
           {
             message: reason,

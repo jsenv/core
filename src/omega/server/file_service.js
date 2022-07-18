@@ -185,6 +185,9 @@ export const createFileService = ({
           column: e.column,
           contentFrame: e.contentFrame,
           requestedRessource: request.ressource,
+          isFaviconAutoRequest:
+            request.ressource === "/favicon.ico" &&
+            reference.type === "http_request",
         })
         return {
           url: reference.url,
