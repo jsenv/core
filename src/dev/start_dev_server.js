@@ -172,7 +172,7 @@ export const startDevServer = async ({
     rootDirectoryUrl,
   )
   const stopWatchingClientFiles = registerDirectoryLifecycle(rootDirectoryUrl, {
-    watchPatterns: watchAssociations,
+    watchPatterns: clientFilePatterns,
     cooldownBetweenFileEvents,
     keepProcessAlive: false,
     recursive: true,
