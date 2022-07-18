@@ -145,6 +145,7 @@ export const createFileService = ({
           line: e.line,
           column: e.column,
           contentFrame: e.contentFrame,
+          requestedRessource: request.ressource,
         })
         return {
           url: reference.url,
@@ -183,6 +184,7 @@ export const createFileService = ({
           line: e.line,
           column: e.column,
           contentFrame: e.contentFrame,
+          requestedRessource: request.ressource,
         })
         return {
           url: reference.url,
@@ -199,6 +201,7 @@ export const createFileService = ({
         line: e.line,
         column: e.column,
         contentFrame: e.contentFrame,
+        requestedRessource: request.ressource,
       })
       return {
         url: reference.url,

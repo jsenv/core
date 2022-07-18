@@ -2,15 +2,17 @@ const JSENV_ERROR_OVERLAY_TAGNAME = "jsenv-error-overlay"
 
 export const displayErrorInDocument = (
   error,
-  { rootDirectoryUrl, url, line, column },
+  { rootDirectoryUrl, url, line, column, reportedBy, requestedRessource },
 ) => {
   document.querySelectorAll(JSENV_ERROR_OVERLAY_TAGNAME).forEach((node) => {
     node.parentNode.removeChild(node)
   })
-  const { theme, title, message, stack } = errorToHTML(error, {
+  const { theme, title, message, stack, tip } = errorToHTML(error, {
     url,
     line,
     column,
+    reportedBy,
+    requestedRessource,
   })
   const jsenvErrorOverlay = new JsenvErrorOverlay({
     theme,
@@ -20,18 +22,16 @@ export const displayErrorInDocument = (
           rootDirectoryUrl,
         })}`
       : replaceLinks(message, { rootDirectoryUrl }),
+    tip,
   })
   document.body.appendChild(jsenvErrorOverlay)
 }
 
 class JsenvErrorOverlay extends HTMLElement {
-  constructor({ title, stack, theme = "dark" }) {
+  constructor({ theme, title, stack, tip }) {
     super()
     this.root = this.attachShadow({ mode: "open" })
     this.root.innerHTML = overlayHtml
-    this.root.querySelector(".overlay").setAttribute("data-theme", theme)
-    this.root.querySelector(".title").innerHTML = title
-    this.root.querySelector(".stack").innerHTML = stack
     this.root.querySelector(".backdrop").onclick = () => {
       if (!this.parentNode) {
         // not in document anymore
@@ -40,6 +40,10 @@ class JsenvErrorOverlay extends HTMLElement {
       this.root.querySelector(".backdrop").onclick = null
       this.parentNode.removeChild(this)
     }
+    this.root.querySelector(".overlay").setAttribute("data-theme", theme)
+    this.root.querySelector(".title").innerHTML = title
+    this.root.querySelector(".stack").innerHTML = stack
+    this.root.querySelector(".tip").innerHTML = tip
   }
 }
 
@@ -128,7 +132,7 @@ pre a {
 <div class="overlay">
   <h1 class="title"></h1>
   <pre class="stack"></pre>
-  <div class="tip">Click outside to close.</div>
+  <div class="tip"></div>
 </div>
 `
 
@@ -197,13 +201,17 @@ const getErrorStackWithoutErrorMessage = (error) => {
   return stack
 }
 
-const errorToHTML = (error, { url, line, column }) => {
+const errorToHTML = (
+  error,
+  { url, line, column, reportedBy, requestedRessource },
+) => {
   let { message, stack } = parseErrorInfo(error)
   if (url) {
     if (!stack || (error && error.name === "SyntaxError")) {
       stack = `  at ${appendLineAndColumn(url, { line, column })}`
     }
   }
+  let tip = formatTip({ reportedBy, requestedRessource })
   return {
     theme:
       error && error.cause && error.cause.code === "PARSE_ERROR"
@@ -212,7 +220,17 @@ const errorToHTML = (error, { url, line, column }) => {
     title: "An error occured",
     message,
     stack,
+    tip: `${tip}
+<br />
+Click outside to close.`,
   }
+}
+
+const formatTip = ({ reportedBy, requestedRessource }) => {
+  if (reportedBy === "browser") {
+    return `Error reported by the browser while executing <code>${window.location.pathname}${window.location.search}</code>`
+  }
+  return `Error reported by the server while serving <code>${requestedRessource}</code>`
 }
 
 const replaceLinks = (string, { rootDirectoryUrl }) => {

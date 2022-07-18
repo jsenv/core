@@ -218,13 +218,20 @@ export const installHtmlSupervisor = ({
       url: errorEvent.filename,
       line: errorEvent.lineno,
       column: errorEvent.colno,
+      reportedBy: "browser",
     })
   })
   if (window.__jsenv_event_source_client__) {
     const onServerErrorEvent = (serverErrorEvent) => {
-      const { reason, stack, url, line, column, contentFrame } = JSON.parse(
-        serverErrorEvent.data,
-      )
+      const {
+        reason,
+        stack,
+        url,
+        line,
+        column,
+        contentFrame,
+        requestedRessource,
+      } = JSON.parse(serverErrorEvent.data)
       displayErrorInDocument(
         {
           message: reason,
@@ -235,6 +242,8 @@ export const installHtmlSupervisor = ({
           url,
           line,
           column,
+          reportedBy: "server",
+          requestedRessource,
         },
       )
     }
