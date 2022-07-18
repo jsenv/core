@@ -140,13 +140,14 @@ export const createFileService = ({
       const code = e.code
       if (code === "PARSE_ERROR") {
         onErrorWhileServingFile({
+          requestedRessource: request.ressource,
           code: "PARSE_ERROR",
           message: e.reason,
           url: e.url,
-          line: e.line,
-          column: e.column,
-          contentFrame: e.contentFrame,
-          requestedRessource: request.ressource,
+          traceUrl: e.traceUrl,
+          traceLine: e.traceLine,
+          traceColumn: e.traceColumn,
+          traceMessage: e.traceMessage,
         })
         return {
           url: reference.url,
@@ -179,16 +180,17 @@ export const createFileService = ({
       }
       if (code === "NOT_FOUND") {
         onErrorWhileServingFile({
-          code: "NOT_FOUND",
-          message: e.reason,
-          url: e.url,
-          line: e.line,
-          column: e.column,
-          contentFrame: e.contentFrame,
           requestedRessource: request.ressource,
           isFaviconAutoRequest:
             request.ressource === "/favicon.ico" &&
             reference.type === "http_request",
+          code: "NOT_FOUND",
+          message: e.reason,
+          url: e.url,
+          traceUrl: e.traceUrl,
+          traceLine: e.traceLine,
+          traceColumn: e.traceColumn,
+          traceMessage: e.traceMessage,
         })
         return {
           url: reference.url,
@@ -198,13 +200,14 @@ export const createFileService = ({
         }
       }
       onErrorWhileServingFile({
+        requestedRessource: request.ressource,
         code: "UNEXPECTED",
         stack: e.stack,
-        contentFrame: e.contentFrame,
         url: e.url,
-        line: e.line,
-        column: e.column,
-        requestedRessource: request.ressource,
+        traceUrl: e.traceUrl,
+        traceLine: e.traceLine,
+        traceColumn: e.traceColumn,
+        traceMessage: e.traceMessage,
       })
       return {
         url: reference.url,

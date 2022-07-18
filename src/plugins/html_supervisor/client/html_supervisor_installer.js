@@ -217,8 +217,30 @@ export const installHtmlSupervisor = ({
       })
     })
     if (window.__jsenv_event_source_client__) {
+      const isExecuting = () => {
+        if (pendingExecutionCount > 0) {
+          return true
+        }
+        if (
+          document.readyState === "loading" ||
+          document.readyState === "interactive"
+        ) {
+          return true
+        }
+        if (
+          window.__reloading__ &&
+          window.__reloading__.status === "reloading"
+        ) {
+          return true
+        }
+        return false
+      }
+
       window.__jsenv_event_source_client__.addEventCallbacks({
         error_while_serving_file: (serverErrorEvent) => {
+          if (!isExecuting()) {
+            return
+          }
           const {
             message,
             stack,
@@ -232,27 +254,32 @@ export const installHtmlSupervisor = ({
           if (isFaviconAutoRequest) {
             return
           }
-          displayErrorInDocument(
-            {
-              message,
-              stack:
-                stack && traceMessage
-                  ? `${stack}\n\n${traceMessage}`
-                  : stack
-                  ? stack
-                  : traceMessage
-                  ? `\n${traceMessage}`
-                  : "",
-            },
-            {
-              rootDirectoryUrl,
-              url: traceUrl,
-              line: traceLine,
-              column: traceColumn,
-              reportedBy: "server",
-              requestedRessource,
-            },
-          )
+          // setTimeout is to ensure the error
+          // dispatched on window by browser is displayed first,
+          // then the server error replaces it (because it contains more information)
+          setTimeout(() => {
+            displayErrorInDocument(
+              {
+                message,
+                stack:
+                  stack && traceMessage
+                    ? `${stack}\n\n${traceMessage}`
+                    : stack
+                    ? stack
+                    : traceMessage
+                    ? `\n${traceMessage}`
+                    : "",
+              },
+              {
+                rootDirectoryUrl,
+                url: traceUrl,
+                line: traceLine,
+                column: traceColumn,
+                reportedBy: "server",
+                requestedRessource,
+              },
+            )
+          }, 10)
         },
       })
     }

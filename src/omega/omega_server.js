@@ -70,31 +70,26 @@ export const startOmegaServer = async ({
       kitchen,
       scenario,
       onErrorWhileServingFile: (data) => {
-        // setTimeout is to ensure the error
-        // dispatched on window by browser is displayed first,
-        // then the server error replaces it (because it contains more information)
-        setTimeout(() => {
-          serverEventsDispatcher.dispatchToRoomsMatching(
-            {
-              type: "error_while_serving_file",
-              data,
-            },
-            (room) => {
-              // send only to page depending on this file
-              const errorFileUrl = data.url
-              const roomEntryPointUrl = new URL(
-                room.request.ressource.slice(1),
-                rootDirectoryUrl,
-              ).href
-              const isErrorRelatedToEntryPoint = Boolean(
-                urlGraph.findDependent(errorFileUrl, (dependentUrlInfo) => {
-                  return dependentUrlInfo.url === roomEntryPointUrl
-                }),
-              )
-              return isErrorRelatedToEntryPoint
-            },
-          )
-        }, 10)
+        serverEventsDispatcher.dispatchToRoomsMatching(
+          {
+            type: "error_while_serving_file",
+            data,
+          },
+          (room) => {
+            // send only to page depending on this file
+            const errorFileUrl = data.url
+            const roomEntryPointUrl = new URL(
+              room.request.ressource.slice(1),
+              rootDirectoryUrl,
+            ).href
+            const isErrorRelatedToEntryPoint = Boolean(
+              urlGraph.findDependent(errorFileUrl, (dependentUrlInfo) => {
+                return dependentUrlInfo.url === roomEntryPointUrl
+              }),
+            )
+            return isErrorRelatedToEntryPoint
+          },
+        )
       },
     }),
   }

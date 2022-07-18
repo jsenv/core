@@ -29,13 +29,21 @@ export const createServerEventsDispatcher = () => {
       }
       return room
     },
-    dispatch: (event) => {
-      rooms.forEach((room) => room.sendEventToAllClients(event))
+    dispatch: ({ type, data }) => {
+      rooms.forEach((room) =>
+        room.sendEventToAllClients({
+          type,
+          data: JSON.stringify(data),
+        }),
+      )
     },
-    dispatchToRoomsMatching: (event, predicate) => {
+    dispatchToRoomsMatching: ({ type, data }, predicate) => {
       rooms.forEach((room) => {
         if (predicate(room)) {
-          room.sendEventToAllClients(event)
+          room.sendEventToAllClients({
+            type,
+            data: JSON.stringify(data),
+          })
         }
       })
     },

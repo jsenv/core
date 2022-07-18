@@ -40,19 +40,27 @@ try {
     },
     /* eslint-enable no-undef */
   )
-
-  await pageGeneratingError.goto(`${devServer.origin}/error.html`)
-  await pageGeneratingError.waitForSelector("jsenv-error-overlay")
-  await pageGeneratingError.mouse.click(0, 0) // close jsenv-error-overlay
-  {
-    const actual = await pageGeneratingError.evaluate(
+  const getErrorOverlayDisplayedOnPage = async (page) => {
+    const errorOverlayHandle = await page.evaluate(
       /* eslint-disable no-undef */
       () => {
         return document.querySelector("jsenv-error-overlay")
       },
       /* eslint-enable no-undef */
     )
-    const expected = null
+    return Boolean(errorOverlayHandle)
+  }
+
+  await pageGeneratingError.goto(`${devServer.origin}/error.html`)
+  await pageGeneratingError.waitForSelector("jsenv-error-overlay")
+  await pageGeneratingError.mouse.click(0, 0) // close jsenv-error-overlay
+  {
+    const actual = {
+      displayed: await getErrorOverlayDisplayedOnPage(pageGeneratingError),
+    }
+    const expected = {
+      displayed: false,
+    }
     assert({ actual, expected })
   }
 
@@ -60,23 +68,24 @@ try {
   await pageRelated.goto(`${devServer.origin}/related.html`)
   // ensure:
   // - jsenv error overlay is displayed on this page
-  // - it is also displayed on the other page using the same ressource (despites being closed)
+  // - it is not displayed on the other page using the same ressource
+  //   because it was closed AND the page execution is done
   // - it is not displayed on page not depending on this file
-  await pageGeneratingError.waitForSelector("jsenv-error-overlay", {
-    timeout: 3000,
-  })
-  await pageRelated.waitForSelector("jsenv-error-overlay", {
-    timeout: 3000,
-  })
   {
-    const actual = await pageUnrelated.evaluate(
-      /* eslint-disable no-undef */
-      () => {
-        return document.querySelector("jsenv-error-overlay")
-      },
-      /* eslint-enable no-undef */
-    )
-    const expected = null
+    const actual = {
+      displayedOnPageGeneratingError: await getErrorOverlayDisplayedOnPage(
+        pageGeneratingError,
+      ),
+      displayedOnUnrelatedPage: await getErrorOverlayDisplayedOnPage(
+        pageUnrelated,
+      ),
+      displayedOnRelatedPage: await getErrorOverlayDisplayedOnPage(pageRelated),
+    }
+    const expected = {
+      displayedOnPageGeneratingError: false,
+      displayedOnUnrelatedPage: false,
+      displayedOnRelatedPage: true,
+    }
     assert({ actual, expected })
   }
 } finally {

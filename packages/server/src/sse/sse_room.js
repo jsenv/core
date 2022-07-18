@@ -95,7 +95,7 @@ export const createSSERoom = ({
 
         // send to everyone
         if (welcomeEventPublic) {
-          sendEventToAllClients(stringifySourceEvent(welcomeEvent), {
+          sendEventToAllClients(welcomeEvent, {
             history: false,
           })
         }
