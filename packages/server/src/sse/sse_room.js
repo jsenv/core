@@ -259,7 +259,6 @@ const disconnectRequestFromRoom = (request, room) => {
   if (!requestInfo) {
     return
   }
-
   const { sseProducer, roomObservableMap } = requestInfo
   const roomObservable = roomObservableMap.get(room)
   roomObservableMap.delete(room)

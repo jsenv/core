@@ -73,7 +73,7 @@ export const createEventSourceConnection = (
         if (callbacks) {
           const index = callbacks.indexOf(callback)
           if (index > -1) {
-            callbacks.splice(index, 0)
+            callbacks.splice(index, 1)
             if (callbacks.length === 0) {
               const listener = listenersMap.get(eventName)
               if (listener) {

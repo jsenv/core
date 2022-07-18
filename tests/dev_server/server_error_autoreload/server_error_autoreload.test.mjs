@@ -1,6 +1,8 @@
 /*
- * Ensure server errors are dispatched to clients only if this page is responsible
- * for the error; unrelated pages must not display an error.
+ * Test the following:
+ * - a script[hot-accept] can hot reload when supervised
+ * - Introducing a syntax error displays the error overlay
+ * - Fixing the syntax error removes the error overlay
  */
 
 import { readFileSync, writeFileSync } from "node:fs"
@@ -19,10 +21,13 @@ const devServer = await startDevServer({
   logLevel: "off",
   omegaServerLogLevel: "off",
   rootDirectoryUrl: new URL("./client/", import.meta.url),
+  clientFiles: {
+    "**/*": true,
+  },
   keepProcessAlive: false,
 })
 
-const browser = await chromium.launch({ headless: false })
+const browser = await chromium.launch({ headless: true })
 const page = await browser.newPage({ ignoreHTTPSErrors: true })
 
 try {
@@ -37,7 +42,6 @@ try {
     )
     return Boolean(errorOverlayHandle)
   }
-
   {
     const actual = {
       displayed: await getErrorOverlayDisplayedOnPage(page),
@@ -78,5 +82,6 @@ try {
   }
 } finally {
   jsFileContent.restore()
-  // browser.close()
+  browser.close()
+  devServer.stop() // required because for some reason the rooms are kept alive
 }
