@@ -1,11 +1,11 @@
 import { urlToRelativeUrl } from "@jsenv/urls"
 
-export const jsenvPluginDevSSEServer = ({
+export const jsenvPluginAutoreloadServer = ({
   clientFileChangeCallbackList,
   clientFilesPruneCallbackList,
 }) => {
   return {
-    name: "jsenv:sse_server",
+    name: "jsenv:autoreload_server",
     appliesDuring: { dev: true },
     serverEvents: {
       reload: ({ sendServerEvent, rootDirectoryUrl, urlGraph }) => {

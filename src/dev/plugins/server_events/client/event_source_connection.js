@@ -1,4 +1,4 @@
-/* eslint-env browser */
+// TODO: auto connect/disconnect based on events being listened
 
 const STATUSES = {
   CONNECTING: "connecting",

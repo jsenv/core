@@ -1,6 +1,6 @@
 import { jsenvPluginHmr } from "./jsenv_plugin_hmr.js"
-import { jsenvPluginDevSSEClient } from "./dev_sse/jsenv_plugin_dev_sse_client.js"
-import { jsenvPluginDevSSEServer } from "./dev_sse/jsenv_plugin_dev_sse_server.js"
+import { jsenvPluginAutoreloadClient } from "./jsenv_plugin_autoreload_client.js"
+import { jsenvPluginAutoreloadServer } from "./jsenv_plugin_autoreload_server.js"
 
 export const jsenvPluginAutoreload = ({
   scenario,
@@ -12,8 +12,8 @@ export const jsenvPluginAutoreload = ({
   }
   return [
     jsenvPluginHmr(),
-    jsenvPluginDevSSEClient(),
-    jsenvPluginDevSSEServer({
+    jsenvPluginAutoreloadClient(),
+    jsenvPluginAutoreloadServer({
       clientFileChangeCallbackList,
       clientFilesPruneCallbackList,
     }),

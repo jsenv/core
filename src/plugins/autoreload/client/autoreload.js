@@ -1,5 +1,4 @@
-import { createEventSourceConnection } from "@jsenv/core/src/helpers/event_source/event_source.js"
-import { urlHotMetas } from "../../../import_meta_hot/client/import_meta_hot.js"
+import { urlHotMetas } from "../../import_meta_hot/client/import_meta_hot.js"
 import {
   isAutoreloadEnabled,
   setAutoreloadPreference,
@@ -11,27 +10,27 @@ import {
   reloadJsImport,
 } from "./reload.js"
 
-const reloading = {
+const autoreload = {
   urlHotMetas,
   isAutoreloadEnabled,
   setAutoreloadPreference,
   status: "idle",
   onstatuschange: () => {},
   setStatus: (status) => {
-    reloading.status = status
-    reloading.onstatuschange()
+    autoreload.status = status
+    autoreload.onstatuschange()
   },
   messages: [],
   addMessage: (reloadMessage) => {
-    reloading.messages.push(reloadMessage)
+    autoreload.messages.push(reloadMessage)
     if (isAutoreloadEnabled()) {
-      reloading.reload()
+      autoreload.reload()
     } else {
-      reloading.setStatus("can_reload")
+      autoreload.setStatus("can_reload")
     }
   },
   reload: () => {
-    const someEffectIsFullReload = reloading.messages.some(
+    const someEffectIsFullReload = autoreload.messages.some(
       (reloadMessage) => reloadMessage.type === "full",
     )
     if (someEffectIsFullReload) {
@@ -39,12 +38,12 @@ const reloading = {
       return
     }
 
-    reloading.setStatus("reloading")
+    autoreload.setStatus("autoreload")
     const onApplied = (reloadMessage) => {
-      const index = reloading.messages.indexOf(reloadMessage)
-      reloading.messages.splice(index, 1)
-      if (reloading.messages.length === 0) {
-        reloading.setStatus("idle")
+      const index = autoreload.messages.indexOf(reloadMessage)
+      autoreload.messages.splice(index, 1)
+      if (autoreload.messages.length === 0) {
+        autoreload.setStatus("idle")
       }
     }
     const setReloadMessagePromise = (reloadMessage, promise) => {
@@ -53,7 +52,7 @@ const reloading = {
           onApplied(reloadMessage)
         },
         (e) => {
-          reloading.setStatus("failed")
+          autoreload.setStatus("failed")
           if (typeof window.reportError === "function") {
             window.reportError(e)
           } else {
@@ -66,7 +65,7 @@ This could be due to syntax errors or importing non-existent modules (see errors
         },
       )
     }
-    reloading.messages.forEach((reloadMessage) => {
+    autoreload.messages.forEach((reloadMessage) => {
       if (reloadMessage.type === "hot") {
         const promise = addToHotQueue(() => {
           return applyHotReload(reloadMessage)
@@ -167,28 +166,13 @@ const applyHotReload = async ({ hotInstructions }) => {
   )
 }
 
-const eventsourceConnection = createEventSourceConnection(
-  document.location.href,
-  {
-    retryMaxAttempt: Infinity,
-    retryAllocatedMs: 20 * 1000,
-  },
-)
-const { status, connect, addEventCallbacks, disconnect } = eventsourceConnection
-eventsourceConnection.addEventCallbacks({
+window.__autoreload__ = autoreload
+window.__server_events__.addEventCallbacks({
   reload: ({ data }) => {
     const reloadMessage = JSON.parse(data)
-    reloading.addMessage(reloadMessage)
+    autoreload.addMessage(reloadMessage)
   },
 })
-connect()
-window.__reloading__ = reloading
-window.__jsenv_event_source_client__ = {
-  addEventCallbacks,
-  status,
-  connect,
-  disconnect,
-}
 
 // const findHotMetaUrl = (originalFileRelativeUrl) => {
 //   return Object.keys(urlHotMetas).find((compileUrl) => {

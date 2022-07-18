@@ -16,7 +16,7 @@ import { createKitchen } from "@jsenv/core/src/omega/kitchen.js"
 import { startOmegaServer } from "@jsenv/core/src/omega/omega_server.js"
 
 import { jsenvPluginExplorer } from "./plugins/explorer/jsenv_plugin_explorer.js"
-// import { jsenvPluginToolbar } from "./plugins/toolbar/jsenv_plugin_toolbar.js"
+import { jsenvPluginServerEvents } from "./plugins/server_events/jsenv_plugin_server_events.js"
 
 export const startDevServer = async ({
   signal = new AbortController().signal,
@@ -161,6 +161,7 @@ export const startDevServer = async ({
       callback({ url, event })
     })
   }
+
   const clientFilePatterns = {
     ...clientFiles,
     ".jsenv/": false,
@@ -229,6 +230,16 @@ export const startDevServer = async ({
       // ...(toolbar ? [jsenvPluginToolbar(toolbar)] : []),
     ],
   })
+
+  const onErrorWhileServingFileReference = { current: () => {} }
+  jsenvPluginServerEvents({
+    rootDirectoryUrl,
+    urlGraph,
+    kitchen,
+    scenario: "dev",
+    onErrorWhileServingFileReference,
+  })
+
   const server = await startOmegaServer({
     logLevel: omegaServerLogLevel,
     keepProcessAlive,
@@ -243,6 +254,9 @@ export const startDevServer = async ({
     kitchen,
     scenario: "dev",
     serverPlugins,
+    onErrorWhileServingFile: (data) => {
+      onErrorWhileServingFileReference.current(data)
+    },
   })
   startDevServerTask.done()
   logger.info(``)

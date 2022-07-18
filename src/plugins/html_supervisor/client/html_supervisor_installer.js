@@ -216,7 +216,7 @@ export const installHtmlSupervisor = ({
         reportedBy: "browser",
       })
     })
-    if (window.__jsenv_event_source_client__) {
+    if (window.__server_events__) {
       const isExecuting = () => {
         if (pendingExecutionCount > 0) {
           return true
@@ -228,15 +228,15 @@ export const installHtmlSupervisor = ({
           return true
         }
         if (
-          window.__reloading__ &&
-          window.__reloading__.status === "reloading"
+          window.__autoreload__ &&
+          window.__autoreload__.status === "reloading"
         ) {
           return true
         }
         return false
       }
 
-      window.__jsenv_event_source_client__.addEventCallbacks({
+      window.__server_events__.addEventCallbacks({
         error_while_serving_file: (serverErrorEvent) => {
           if (!isExecuting()) {
             return

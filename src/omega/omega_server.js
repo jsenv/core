@@ -9,7 +9,6 @@ import {
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js"
 import { createCallbackListNotifiedOnce } from "@jsenv/abort"
 
-import { createServerEventsDispatcher } from "@jsenv/core/src/helpers/event_source/server_events_dispatcher.js"
 import { createFileService } from "./server/file_service.js"
 
 export const startOmegaServer = async ({
@@ -29,91 +28,22 @@ export const startOmegaServer = async ({
   services,
 
   rootDirectoryUrl,
-  scenario,
   urlGraph,
   kitchen,
+  scenario,
+  onErrorWhileServingFile,
 }) => {
   const serverStopCallbackList = createCallbackListNotifiedOnce()
-  let serverEventsDispatcher = null
-
-  server_events: {
-    const allServerEvents = {}
-    kitchen.pluginController.plugins.forEach((plugin) => {
-      const { serverEvents } = plugin
-      if (serverEvents) {
-        Object.keys(serverEvents).forEach((serverEventName) => {
-          // we could throw on serverEvent name conflict
-          // we could throw if serverEvents[serverEventName] is not a function
-          allServerEvents[serverEventName] = serverEvents[serverEventName]
-        })
-      }
-    })
-    const serverEventNames = Object.keys(allServerEvents)
-    if (serverEventNames.length > 0) {
-      serverEventsDispatcher = createServerEventsDispatcher()
-      serverStopCallbackList.add(() => {
-        serverEventsDispatcher.destroy()
-      })
-      serverEventNames.forEach((serverEventName) => {
-        allServerEvents[serverEventName]({
-          rootDirectoryUrl,
-          urlGraph,
-          scenario,
-          sendServerEvent: (data) => {
-            serverEventsDispatcher.dispatch({
-              type: serverEventName,
-              data,
-            })
-          },
-        })
-      })
-    }
-  }
 
   const coreServices = {
-    "service:server_events": (request) => {
-      if (!serverEventsDispatcher) {
-        return null
-      }
-      const { accept } = request.headers
-      if (accept && accept.includes("text/event-stream")) {
-        const room = serverEventsDispatcher.addRoom(request)
-        return room.join(request)
-      }
-      return null
-    },
     "service:file": createFileService({
       rootDirectoryUrl,
       urlGraph,
       kitchen,
       scenario,
-      onErrorWhileServingFile: serverEventsDispatcher
-        ? (data) => {
-            serverEventsDispatcher.dispatchToRoomsMatching(
-              {
-                type: "error_while_serving_file",
-                data,
-              },
-              (room) => {
-                // send only to page depending on this file
-                const errorFileUrl = data.url
-                const roomEntryPointUrl = new URL(
-                  room.request.ressource.slice(1),
-                  rootDirectoryUrl,
-                ).href
-                const isErrorRelatedToEntryPoint = Boolean(
-                  urlGraph.findDependent(errorFileUrl, (dependentUrlInfo) => {
-                    return dependentUrlInfo.url === roomEntryPointUrl
-                  }),
-                )
-                return isErrorRelatedToEntryPoint
-              },
-            )
-          }
-        : () => {},
+      onErrorWhileServingFile,
     }),
   }
-
   const server = await startServer({
     signal,
     stopOnExit: false,
