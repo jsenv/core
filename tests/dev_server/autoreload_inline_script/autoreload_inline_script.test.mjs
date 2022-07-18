@@ -66,6 +66,6 @@ try {
     assert({ actual, expected })
   }
 } finally {
-  browser.close()
   htmlFileContent.restore()
+  browser.close()
 }

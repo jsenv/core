@@ -36,11 +36,8 @@ export const startOmegaServer = async ({
   const serverStopCallbackList = createCallbackListNotifiedOnce()
 
   const serverEventsDispatcher = createServerEventsDispatcher()
-  const sendServerEvent = ({ type, data }) => {
-    serverEventsDispatcher.dispatch({
-      type,
-      data: JSON.stringify(data),
-    })
+  const sendServerEvent = (serverEvent) => {
+    serverEventsDispatcher.dispatch(serverEvent)
   }
 
   kitchen.pluginController.addHook("registerServerEvents")
