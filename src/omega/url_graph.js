@@ -4,6 +4,7 @@ import { urlSpecifierEncoding } from "./url_specifier_encoding.js"
 export const createUrlGraph = ({
   clientFileChangeCallbackList,
   clientFilesPruneCallbackList,
+  onCreateUrlInfo = () => {},
 } = {}) => {
   const urlInfoMap = new Map()
   const getUrlInfo = (url) => urlInfoMap.get(url)
@@ -22,6 +23,7 @@ export const createUrlGraph = ({
     if (existingUrlInfo) return existingUrlInfo
     const urlInfo = createUrlInfo(url)
     urlInfoMap.set(url, urlInfo)
+    onCreateUrlInfo(urlInfo)
     return urlInfo
   }
   const inferReference = (specifier, parentUrl) => {
@@ -208,6 +210,7 @@ const createUrlInfo = (url) => {
     modifiedTimestamp: 0,
     contentEtag: null,
     dependsOnPackageJson: false,
+    isWatched: false,
     isValid,
     data: {}, // plugins can put whatever they want here
     references: [],

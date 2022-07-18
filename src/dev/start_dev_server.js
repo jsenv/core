@@ -7,6 +7,7 @@ import {
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 import { createLogger, loggerToLevels, createTaskLog } from "@jsenv/log"
 import { getCallerPosition } from "@jsenv/urls"
+import { URL_META } from "@jsenv/url-meta"
 
 import { createReloadableWorker } from "@jsenv/core/src/helpers/worker_reload.js"
 import { getCorePlugins } from "@jsenv/core/src/plugins/plugins.js"
@@ -160,11 +161,18 @@ export const startDevServer = async ({
       callback({ url, event })
     })
   }
-  const stopWatchingClientFiles = registerDirectoryLifecycle(rootDirectoryUrl, {
-    watchPatterns: {
-      ...clientFiles,
-      ".jsenv/": false,
+  const clientFilePatterns = {
+    ...clientFiles,
+    ".jsenv/": false,
+  }
+  const watchAssociations = URL_META.resolveAssociations(
+    {
+      watch: clientFilePatterns,
     },
+    rootDirectoryUrl,
+  )
+  const stopWatchingClientFiles = registerDirectoryLifecycle(rootDirectoryUrl, {
+    watchPatterns: watchAssociations,
     cooldownBetweenFileEvents,
     keepProcessAlive: false,
     recursive: true,
@@ -181,6 +189,13 @@ export const startDevServer = async ({
   const urlGraph = createUrlGraph({
     clientFileChangeCallbackList,
     clientFilesPruneCallbackList,
+    onCreateUrlInfo: (urlInfo) => {
+      const { watch } = URL_META.applyAssociations({
+        url: urlInfo.url,
+        associations: watchAssociations,
+      })
+      urlInfo.isWatched = watch
+    },
   })
   const kitchen = createKitchen({
     signal,
