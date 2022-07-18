@@ -217,39 +217,36 @@ export const installHtmlSupervisor = ({
       })
     })
     if (window.__jsenv_event_source_client__) {
-      const onServerErrorEvent = (serverErrorEvent) => {
-        const {
-          reason,
-          stack,
-          url,
-          line,
-          column,
-          contentFrame,
-          requestedRessource,
-          isFaviconAutoRequest,
-        } = JSON.parse(serverErrorEvent.data)
-        if (isFaviconAutoRequest) {
-          return
-        }
-        displayErrorInDocument(
-          {
-            message: reason,
-            stack: stack ? `${stack}\n\n${contentFrame}` : contentFrame,
-          },
-          {
-            rootDirectoryUrl,
+      window.__jsenv_event_source_client__.addEventCallbacks({
+        error_while_serving_file: (serverErrorEvent) => {
+          const {
+            reason,
+            stack,
             url,
             line,
             column,
-            reportedBy: "server",
+            contentFrame,
             requestedRessource,
-          },
-        )
-      }
-      window.__jsenv_event_source_client__.addEventCallbacks({
-        file_not_found: onServerErrorEvent,
-        parse_error: onServerErrorEvent,
-        unexpected_error: onServerErrorEvent,
+            isFaviconAutoRequest,
+          } = JSON.parse(serverErrorEvent.data)
+          if (isFaviconAutoRequest) {
+            return
+          }
+          displayErrorInDocument(
+            {
+              message: reason,
+              stack: stack ? `${stack}\n\n${contentFrame}` : contentFrame,
+            },
+            {
+              rootDirectoryUrl,
+              url,
+              line,
+              column,
+              reportedBy: "server",
+              requestedRessource,
+            },
+          )
+        },
       })
     }
   }

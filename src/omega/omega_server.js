@@ -82,14 +82,8 @@ export const startOmegaServer = async ({
       urlGraph,
       kitchen,
       scenario,
-      onFileNotFound: (data) => {
-        sendServerErrorEvent({ type: "file_not_found", data })
-      },
-      onParseError: (data) => {
-        sendServerErrorEvent({ type: "parse_error", data })
-      },
-      onUnexpectedError: (data) => {
-        sendServerErrorEvent({ type: "unexpected_error", data })
+      onErrorWhileServingFile: (data) => {
+        sendServerErrorEvent({ type: "error_while_serving_file", data })
       },
     }),
   }

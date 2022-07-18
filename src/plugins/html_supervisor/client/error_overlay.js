@@ -17,18 +17,27 @@ export const displayErrorInDocument = (
   const jsenvErrorOverlay = new JsenvErrorOverlay({
     theme,
     title,
-    stack: stack
-      ? `${replaceLinks(message, { rootDirectoryUrl })}\n${replaceLinks(stack, {
-          rootDirectoryUrl,
-        })}`
-      : replaceLinks(message, { rootDirectoryUrl }),
+    text: createErrorText({ rootDirectoryUrl, message, stack }),
     tip,
   })
   document.body.appendChild(jsenvErrorOverlay)
 }
 
+const createErrorText = ({ rootDirectoryUrl, message, stack }) => {
+  if (message && stack) {
+    return `${replaceLinks(message, { rootDirectoryUrl })}\n${replaceLinks(
+      stack,
+      { rootDirectoryUrl },
+    )}`
+  }
+  if (stack) {
+    return replaceLinks(stack, { rootDirectoryUrl })
+  }
+  return replaceLinks(message, { rootDirectoryUrl })
+}
+
 class JsenvErrorOverlay extends HTMLElement {
-  constructor({ theme, title, stack, tip }) {
+  constructor({ theme, title, text, tip }) {
     super()
     this.root = this.attachShadow({ mode: "open" })
     this.root.innerHTML = overlayHtml
@@ -42,7 +51,7 @@ class JsenvErrorOverlay extends HTMLElement {
     }
     this.root.querySelector(".overlay").setAttribute("data-theme", theme)
     this.root.querySelector(".title").innerHTML = title
-    this.root.querySelector(".stack").innerHTML = stack
+    this.root.querySelector(".text").innerHTML = text
     this.root.querySelector(".tip").innerHTML = tip
   }
 }
@@ -131,7 +140,7 @@ pre a {
 <div class="backdrop"></div>
 <div class="overlay">
   <h1 class="title"></h1>
-  <pre class="stack"></pre>
+  <pre class="text"></pre>
   <div class="tip"></div>
 </div>
 `
@@ -228,9 +237,9 @@ Click outside to close.`,
 
 const formatTip = ({ reportedBy, requestedRessource }) => {
   if (reportedBy === "browser") {
-    return `Error reported by the browser while executing <code>${window.location.pathname}${window.location.search}</code>`
+    return `Reported by the browser while executing <code>${window.location.pathname}${window.location.search}</code>.`
   }
-  return `Error reported by the server while serving <code>${requestedRessource}</code>`
+  return `Reported by the server while serving <code>${requestedRessource}</code>`
 }
 
 const replaceLinks = (string, { rootDirectoryUrl }) => {
