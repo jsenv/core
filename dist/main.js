@@ -1138,7 +1138,7 @@ const createCallbackListNotifiedOnce = () => {
         action: "add",
         status
       });
-      return removeNoop$1;
+      return removeNoop;
     }
 
     if (typeof callback !== "function") {
@@ -1151,8 +1151,8 @@ const createCallbackListNotifiedOnce = () => {
     });
 
     if (existingCallback) {
-      emitCallbackDuplicationWarning$1();
-      return removeNoop$1;
+      emitCallbackDuplicationWarning();
+      return removeNoop;
     }
 
     callbacks.push(callback);
@@ -1228,7 +1228,7 @@ const emitUnexpectedActionWarning = ({
   }
 };
 
-const emitCallbackDuplicationWarning$1 = () => {
+const emitCallbackDuplicationWarning = () => {
   if (typeof process.emitWarning === "function") {
     process.emitWarning(`Trying to add a callback already in the list`, {
       CODE: "CALLBACK_DUPLICATION",
@@ -1239,7 +1239,7 @@ const emitCallbackDuplicationWarning$1 = () => {
   }
 };
 
-const removeNoop$1 = () => {};
+const removeNoop = () => {};
 
 /*
  * https://github.com/whatwg/dom/issues/920
@@ -1508,62 +1508,6 @@ const addEventListener = (target, eventName, cb) => {
     target.removeEventListener(eventName, cb);
   };
 };
-
-const createCallbackList = () => {
-  let callbacks = [];
-
-  const add = callback => {
-    if (typeof callback !== "function") {
-      throw new Error(`callback must be a function, got ${callback}`);
-    } // don't register twice
-
-
-    const existingCallback = callbacks.find(callbackCandidate => {
-      return callbackCandidate === callback;
-    });
-
-    if (existingCallback) {
-      emitCallbackDuplicationWarning();
-      return removeNoop;
-    }
-
-    callbacks.push(callback);
-    return () => {
-      const index = callbacks.indexOf(callback);
-
-      if (index === -1) {
-        return;
-      }
-
-      callbacks.splice(index, 1);
-    };
-  };
-
-  const notify = param => {
-    const values = callbacks.slice().map(callback => {
-      return callback(param);
-    });
-    return values;
-  };
-
-  return {
-    add,
-    notify
-  };
-};
-
-const emitCallbackDuplicationWarning = () => {
-  if (typeof process.emitWarning === "function") {
-    process.emitWarning(`Trying to add a callback already in the list`, {
-      CODE: "CALLBACK_DUPLICATION",
-      detail: `Code is potentially executed more than it should`
-    });
-  } else {
-    console.warn(`Trying to add same callback twice`);
-  }
-};
-
-const removeNoop = () => {};
 
 const raceProcessTeardownEvents = (processTeardownEvents, callback) => {
   return raceCallbacks({ ...(processTeardownEvents.SIGHUP ? SIGHUP_CALLBACK : {}),
@@ -5499,7 +5443,8 @@ const createSSERoom = ({
     }) => {
       const client = {
         next,
-        complete
+        complete,
+        request
       };
 
       if (clients.size === 0) {
@@ -5536,7 +5481,9 @@ const createSSERoom = ({
         addEventToHistory(welcomeEvent); // send to everyone
 
         if (welcomeEventPublic) {
-          write(stringifySourceEvent(welcomeEvent));
+          sendEventToAllClients(stringifySourceEvent(welcomeEvent), {
+            history: false
+          });
         } // send only to this client
         else {
           next(stringifySourceEvent(welcomeEvent));
@@ -5586,13 +5533,18 @@ const createSSERoom = ({
     eventHistory.add(event);
   };
 
-  const sendEvent = event => {
-    if (event.type !== "comment") {
+  const sendEventToAllClients = (event, {
+    history = true
+  } = {}) => {
+    if (history) {
       addEventToHistory(event);
     }
 
     logger.debug(`send "${event.type}" event to ${clients.size} client in the room`);
-    write(stringifySourceEvent(event));
+    const eventString = stringifySourceEvent(event);
+    clients.forEach(client => {
+      client.next(eventString);
+    });
   };
 
   const getAllEventSince = id => {
@@ -5605,18 +5557,14 @@ const createSSERoom = ({
     return events;
   };
 
-  const write = data => {
-    clients.forEach(client => {
-      client.next(data);
-    });
-  };
-
   const keepAlive = () => {
     // maybe that, when an event occurs, we can delay the keep alive event
     logger.debug(`send keep alive event, number of client listening event source: ${clients.size}`);
-    sendEvent({
+    sendEventToAllClients({
       type: "comment",
       data: new Date().toLocaleTimeString()
+    }, {
+      history: false
     });
   };
 
@@ -5646,7 +5594,7 @@ const createSSERoom = ({
     // - ability to sendEvent to clients in the room
     // - ability to join the room
     // - ability to leave the room
-    sendEvent,
+    sendEventToAllClients,
     join,
     leave,
     // should rarely be necessary, get information about the room
@@ -12039,7 +11987,8 @@ const requireFromJsenv = createRequire(import.meta.url);
  */
 const jsenvPluginHtmlSupervisor = ({
   logs = false,
-  measurePerf = false
+  measurePerf = false,
+  errorOverlay = true
 }) => {
   const htmlSupervisorSetupFileUrl = new URL("./js/html_supervisor_setup.js", import.meta.url).href;
   const htmlSupervisorInstallerFileUrl = new URL("./js/html_supervisor_installer.js", import.meta.url).href;
@@ -12185,9 +12134,10 @@ const jsenvPluginHtmlSupervisor = ({
           "textContent": `
       import { installHtmlSupervisor } from ${htmlSupervisorInstallerFileReference.generatedSpecifier}
       installHtmlSupervisor(${JSON.stringify({
+            rootDirectoryUrl: context.rootDirectoryUrl,
             logs,
             measurePerf,
-            rootDirectoryUrl: context.rootDirectoryUrl
+            errorOverlay
           }, null, "        ")})`,
           "injected-by": "jsenv:html_supervisor"
         }));
@@ -20648,7 +20598,8 @@ const formatters = {
 
 const createUrlGraph = ({
   clientFileChangeCallbackList,
-  clientFilesPruneCallbackList
+  clientFilesPruneCallbackList,
+  onCreateUrlInfo = () => {}
 } = {}) => {
   const urlInfoMap = new Map();
 
@@ -20671,6 +20622,7 @@ const createUrlGraph = ({
     if (existingUrlInfo) return existingUrlInfo;
     const urlInfo = createUrlInfo(url);
     urlInfoMap.set(url, urlInfo);
+    onCreateUrlInfo(urlInfo);
     return urlInfo;
   };
 
@@ -20879,6 +20831,7 @@ const createUrlInfo = url => {
     modifiedTimestamp: 0,
     contentEtag: null,
     dependsOnPackageJson: false,
+    isWatched: false,
     isValid,
     data: {},
     // plugins can put whatever they want here
@@ -21491,10 +21444,11 @@ const createFetchUrlContentError = ({
     fetchError.name = "FETCH_URL_CONTENT_ERROR";
     fetchError.code = code;
     fetchError.reason = reason;
-    fetchError.url = reference.trace.url;
-    fetchError.line = reference.trace.line;
-    fetchError.column = reference.trace.column;
-    fetchError.contentFrame = reference.trace.message;
+    fetchError.url = urlInfo.url;
+    fetchError.traceUrl = reference.trace.url;
+    fetchError.traceLine = reference.trace.line;
+    fetchError.traceColumn = reference.trace.column;
+    fetchError.traceMessage = reference.trace.message;
     return fetchError;
   };
 
@@ -21545,31 +21499,32 @@ const createTransformUrlContentError = ({
     transformError.name = "TRANSFORM_URL_CONTENT_ERROR";
     transformError.code = code;
     transformError.reason = reason;
-    transformError.url = reference.trace.url;
-    transformError.line = reference.trace.line;
-    transformError.column = reference.trace.column;
     transformError.stack = error.stack;
-    transformError.contentFrame = reference.trace.message;
+    transformError.url = urlInfo.url;
+    transformError.traceUrl = reference.trace.url;
+    transformError.traceLine = reference.trace.line;
+    transformError.traceColumn = reference.trace.column;
+    transformError.traceMessage = reference.trace.message;
 
     if (code === "PARSE_ERROR") {
       transformError.reason = error.message;
 
       if (urlInfo.isInline) {
-        transformError.line = reference.trace.line + error.line - 1;
-        transformError.column = reference.trace.column + error.column;
-        transformError.contentFrame = stringifyUrlSite({
+        transformError.traceLine = reference.trace.line + error.line - 1;
+        transformError.traceColumn = reference.trace.column + error.column;
+        transformError.traceMessage = stringifyUrlSite({
           url: urlInfo.inlineUrlSite.url,
-          line: transformError.line,
-          column: transformError.column,
+          line: reference.trace.line,
+          column: reference.trace.column,
           content: urlInfo.inlineUrlSite.content
         });
       } else {
-        transformError.line = error.line;
-        transformError.column = error.column;
-        transformError.contentFrame = stringifyUrlSite({
+        transformError.traceLine = error.line;
+        transformError.traceColumn = error.column;
+        transformError.traceMessage = stringifyUrlSite({
           url: urlInfo.url,
-          line: transformError.line,
-          column: transformError.column,
+          line: reference.trace.line,
+          column: reference.trace.column,
           content: urlInfo.content
         });
       }
@@ -22735,54 +22690,44 @@ const determineFileUrlForOutDirectory = ({
 //   }
 // }
 
-const createSSEService = ({
-  serverEventCallbackList
-}) => {
+const createServerEventsDispatcher = () => {
   const destroyCallbackList = createCallbackListNotifiedOnce();
-  const cache = [];
+  const rooms = [];
   const sseRoomLimit = 100;
-
-  const getOrCreateSSERoom = request => {
-    const htmlFileRelativeUrl = request.ressource.slice(1);
-    const cacheEntry = cache.find(cacheEntryCandidate => cacheEntryCandidate.htmlFileRelativeUrl === htmlFileRelativeUrl);
-
-    if (cacheEntry) {
-      return cacheEntry.sseRoom;
-    }
-
-    const sseRoom = createSSERoom({
-      retryDuration: 2000,
-      historyLength: 100,
-      welcomeEventEnabled: true,
-      effect: () => {
-        return serverEventCallbackList.add(event => {
-          sseRoom.sendEvent(event);
-        });
-      }
-    });
-    const removeSSECleanupCallback = destroyCallbackList.add(() => {
-      removeSSECleanupCallback();
-      sseRoom.close();
-    });
-    cache.push({
-      htmlFileRelativeUrl,
-      sseRoom,
-      cleanup: () => {
-        removeSSECleanupCallback();
-        sseRoom.close();
-      }
-    });
-
-    if (cache.length >= sseRoomLimit) {
-      const firstCacheEntry = cache.shift();
-      firstCacheEntry.cleanup();
-    }
-
-    return sseRoom;
-  };
-
   return {
-    getOrCreateSSERoom,
+    addRoom: request => {
+      const existingRoom = rooms.find(roomCandidate => roomCandidate.request.ressource === request.ressource);
+
+      if (existingRoom) {
+        return existingRoom;
+      }
+
+      const room = createSSERoom({
+        retryDuration: 2000,
+        historyLength: 100,
+        welcomeEventEnabled: true
+      });
+      room.request = request;
+      destroyCallbackList.add(room.close);
+      rooms.push(room);
+
+      if (rooms.length >= sseRoomLimit) {
+        const firstRoom = rooms.shift();
+        firstRoom.close();
+      }
+
+      return room;
+    },
+    dispatch: event => {
+      rooms.forEach(room => room.sendEventToAllClients(event));
+    },
+    dispatchToRoomsMatching: (event, predicate) => {
+      rooms.forEach(room => {
+        if (predicate(room)) {
+          room.sendEventToAllClients(event);
+        }
+      });
+    },
     destroy: () => {
       destroyCallbackList.notify();
     }
@@ -22842,9 +22787,7 @@ const createFileService = ({
   urlGraph,
   kitchen,
   scenario,
-  onParseError,
-  onFileNotFound,
-  onUnexpectedError
+  onErrorWhileServingFile
 }) => {
   kitchen.pluginController.addHook("serve");
   kitchen.pluginController.addHook("augmentResponse");
@@ -22897,7 +22840,9 @@ const createFileService = ({
     const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url);
     const ifNoneMatch = request.headers["if-none-match"];
 
-    if (ifNoneMatch && urlInfo.contentEtag === ifNoneMatch && // - isValid is true by default
+    if ( // url must be watched otherwise nothing ever invalidate urlInfo.contentEtag
+    // and the cache version is always used
+    urlInfo.isWatched && ifNoneMatch && urlInfo.contentEtag === ifNoneMatch && // - isValid is true by default
     // - isValid can be overriden by plugins such as cjs_to_esm
     urlInfo.isValid()) {
       return {
@@ -22966,13 +22911,14 @@ const createFileService = ({
       const code = e.code;
 
       if (code === "PARSE_ERROR") {
-        onParseError({
-          reason: e.reason,
-          message: e.message,
+        onErrorWhileServingFile({
+          code: "PARSE_ERROR",
+          message: e.reason,
           url: e.url,
           line: e.line,
           column: e.column,
-          contentFrame: e.contentFrame
+          contentFrame: e.contentFrame,
+          requestedRessource: request.ressource
         });
         return {
           url: reference.url,
@@ -23008,13 +22954,15 @@ const createFileService = ({
       }
 
       if (code === "NOT_FOUND") {
-        onFileNotFound({
-          reason: e.reason,
-          message: e.message,
+        onErrorWhileServingFile({
+          code: "NOT_FOUND",
+          message: e.reason,
           url: e.url,
           line: e.line,
           column: e.column,
-          contentFrame: e.contentFrame
+          contentFrame: e.contentFrame,
+          requestedRessource: request.ressource,
+          isFaviconAutoRequest: request.ressource === "/favicon.ico" && reference.type === "http_request"
         });
         return {
           url: reference.url,
@@ -23024,14 +22972,14 @@ const createFileService = ({
         };
       }
 
-      onUnexpectedError({
-        reason: e.reason,
-        message: e.message,
+      onErrorWhileServingFile({
+        code: "UNEXPECTED",
         stack: e.stack,
+        contentFrame: e.contentFrame,
         url: e.url,
         line: e.line,
         column: e.column,
-        contentFrame: e.contentFrame
+        requestedRessource: request.ressource
       });
       return {
         url: reference.url,
@@ -23099,16 +23047,13 @@ const startOmegaServer = async ({
   kitchen
 }) => {
   const serverStopCallbackList = createCallbackListNotifiedOnce();
-  const serverEventCallbackList = createCallbackList();
-  const sseService = createSSEService({
-    serverEventCallbackList
-  });
+  const serverEventsDispatcher = createServerEventsDispatcher();
 
   const sendServerEvent = ({
     type,
     data
   }) => {
-    serverEventCallbackList.notify({
+    serverEventsDispatcher.dispatch({
       type,
       data: JSON.stringify(data)
     });
@@ -23122,16 +23067,6 @@ const startOmegaServer = async ({
     urlGraph,
     scenario
   }, () => {});
-
-  const sendServerErrorEvent = event => {
-    // setTimeout display first the error
-    // dispatched on window by browser
-    // then display the jsenv error
-    setTimeout(() => {
-      sendServerEvent(event);
-    }, 10);
-  };
-
   const coreServices = {
     "service:server_events": request => {
       const {
@@ -23139,7 +23074,7 @@ const startOmegaServer = async ({
       } = request.headers;
 
       if (accept && accept.includes("text/event-stream")) {
-        const room = sseService.getOrCreateSSERoom(request);
+        const room = serverEventsDispatcher.addRoom(request);
         return room.join(request);
       }
 
@@ -23150,23 +23085,24 @@ const startOmegaServer = async ({
       urlGraph,
       kitchen,
       scenario,
-      onFileNotFound: data => {
-        sendServerErrorEvent({
-          type: "file_not_found",
-          data
-        });
-      },
-      onParseError: data => {
-        sendServerErrorEvent({
-          type: "parse_error",
-          data
-        });
-      },
-      onUnexpectedError: data => {
-        sendServerErrorEvent({
-          type: "unexpected_error",
-          data
-        });
+      onErrorWhileServingFile: data => {
+        // setTimeout is to ensure the error
+        // dispatched on window by browser is displayed first,
+        // then the server error replaces it (because it contains more information)
+        setTimeout(() => {
+          serverEventsDispatcher.dispatchToRoomsMatching({
+            type: "error_while_serving_file",
+            data
+          }, room => {
+            // send only to page depending on this file
+            const errorFileUrl = data.url;
+            const roomEntryPointUrl = new URL(room.request.ressource.slice(1), rootDirectoryUrl).href;
+            const isErrorRelatedToEntryPoint = Boolean(urlGraph.findDependent(errorFileUrl, dependentUrlInfo => {
+              return dependentUrlInfo.url === roomEntryPointUrl;
+            }));
+            return isErrorRelatedToEntryPoint;
+          });
+        }, 10);
       }
     })
   };
@@ -23248,7 +23184,7 @@ const startOmegaServer = async ({
     }),
     onStop: reason => {
       onStop();
-      sseService.destroy();
+      serverEventsDispatcher.destroy();
       serverStopCallbackList.notify(reason);
     }
   });
@@ -23485,10 +23421,14 @@ const startDevServer = async ({
     });
   };
 
+  const clientFilePatterns = { ...clientFiles,
+    ".jsenv/": false
+  };
+  const watchAssociations = URL_META.resolveAssociations({
+    watch: clientFilePatterns
+  }, rootDirectoryUrl);
   const stopWatchingClientFiles = registerDirectoryLifecycle(rootDirectoryUrl, {
-    watchPatterns: { ...clientFiles,
-      ".jsenv/": false
-    },
+    watchPatterns: clientFilePatterns,
     cooldownBetweenFileEvents,
     keepProcessAlive: false,
     recursive: true,
@@ -23519,7 +23459,16 @@ const startDevServer = async ({
   });
   const urlGraph = createUrlGraph({
     clientFileChangeCallbackList,
-    clientFilesPruneCallbackList
+    clientFilesPruneCallbackList,
+    onCreateUrlInfo: urlInfo => {
+      const {
+        watch
+      } = URL_META.applyAssociations({
+        url: urlInfo.url,
+        associations: watchAssociations
+      });
+      urlInfo.isWatched = watch;
+    }
   });
   const kitchen = createKitchen({
     signal,
