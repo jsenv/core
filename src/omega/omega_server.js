@@ -31,7 +31,7 @@ export const startOmegaServer = async ({
   urlGraph,
   kitchen,
   scenario,
-  onErrorWhileServingFile,
+  onErrorWhileServingFile = () => {},
 }) => {
   const serverStopCallbackList = createCallbackListNotifiedOnce()
 

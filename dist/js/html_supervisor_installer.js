@@ -717,9 +717,29 @@ const installHtmlSupervisor = ({
       });
     });
 
-    if (window.__jsenv_event_source_client__) {
-      window.__jsenv_event_source_client__.addEventCallbacks({
+    if (window.__server_events__) {
+      const isExecuting = () => {
+        if (pendingExecutionCount > 0) {
+          return true;
+        }
+
+        if (document.readyState === "loading" || document.readyState === "interactive") {
+          return true;
+        }
+
+        if (window.__autoreload__ && window.__autoreload__.status === "reloading") {
+          return true;
+        }
+
+        return false;
+      };
+
+      window.__server_events__.addEventCallbacks({
         error_while_serving_file: serverErrorEvent => {
+          if (!isExecuting()) {
+            return;
+          }
+
           const {
             message,
             stack,
@@ -733,19 +753,24 @@ const installHtmlSupervisor = ({
 
           if (isFaviconAutoRequest) {
             return;
-          }
+          } // setTimeout is to ensure the error
+          // dispatched on window by browser is displayed first,
+          // then the server error replaces it (because it contains more information)
 
-          displayErrorInDocument({
-            message,
-            stack: stack && traceMessage ? `${stack}\n\n${traceMessage}` : stack ? stack : traceMessage ? `\n${traceMessage}` : ""
-          }, {
-            rootDirectoryUrl,
-            url: traceUrl,
-            line: traceLine,
-            column: traceColumn,
-            reportedBy: "server",
-            requestedRessource
-          });
+
+          setTimeout(() => {
+            displayErrorInDocument({
+              message,
+              stack: stack && traceMessage ? `${stack}\n\n${traceMessage}` : stack ? stack : traceMessage ? `\n${traceMessage}` : ""
+            }, {
+              rootDirectoryUrl,
+              url: traceUrl,
+              line: traceLine,
+              column: traceColumn,
+              reportedBy: "server",
+              requestedRessource
+            });
+          }, 10);
         }
       });
     }

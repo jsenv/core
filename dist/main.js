@@ -5481,7 +5481,7 @@ const createSSERoom = ({
         addEventToHistory(welcomeEvent); // send to everyone
 
         if (welcomeEventPublic) {
-          sendEventToAllClients(stringifySourceEvent(welcomeEvent), {
+          sendEventToAllClients(welcomeEvent, {
             history: false
           });
         } // send only to this client
@@ -20159,26 +20159,26 @@ const jsenvPluginHmr = () => {
   };
 };
 
-const jsenvPluginDevSSEClient = () => {
-  const eventSourceClientFileUrl = new URL("./js/event_source_client.js", import.meta.url).href;
+const jsenvPluginAutoreloadClient = () => {
+  const autoreloadClientFileUrl = new URL("./js/autoreload.js", import.meta.url).href;
   return {
-    name: "jsenv:dev_sse_client",
+    name: "jsenv:autoreload_client",
     appliesDuring: {
       dev: true
     },
     transformUrlContent: {
       html: (htmlUrlInfo, context) => {
         const htmlAst = parseHtmlString(htmlUrlInfo.content);
-        const [eventSourceClientReference] = context.referenceUtils.inject({
+        const [autoreloadClientReference] = context.referenceUtils.inject({
           type: "script_src",
           expectedType: "js_module",
-          specifier: eventSourceClientFileUrl
+          specifier: autoreloadClientFileUrl
         });
         injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
           "tagName": "script",
           "type": "module",
-          "src": eventSourceClientReference.generatedSpecifier,
-          "injected-by": "jsenv:dev_sse_client"
+          "src": autoreloadClientReference.generatedSpecifier,
+          "injected-by": "jsenv:autoreload_client"
         }));
         const htmlModified = stringifyHtmlAst(htmlAst);
         return {
@@ -20189,211 +20189,206 @@ const jsenvPluginDevSSEClient = () => {
   };
 };
 
-const jsenvPluginDevSSEServer = ({
+const jsenvPluginAutoreloadServer = ({
   clientFileChangeCallbackList,
   clientFilesPruneCallbackList
 }) => {
   return {
-    name: "jsenv:sse_server",
+    name: "jsenv:autoreload_server",
     appliesDuring: {
       dev: true
     },
-    registerServerEvents: ({
-      sendServerEvent
-    }, {
-      rootDirectoryUrl,
-      urlGraph
-    }) => {
-      const notifyDeclined = ({
-        cause,
-        reason,
-        declinedBy
+    serverEvents: {
+      reload: ({
+        sendServerEvent,
+        rootDirectoryUrl,
+        urlGraph
       }) => {
-        sendServerEvent({
-          type: "reload",
-          data: {
+        const notifyDeclined = ({
+          cause,
+          reason,
+          declinedBy
+        }) => {
+          sendServerEvent({
             cause,
             type: "full",
             typeReason: reason,
             declinedBy
-          }
-        });
-      };
+          });
+        };
 
-      const notifyAccepted = ({
-        cause,
-        reason,
-        instructions
-      }) => {
-        sendServerEvent({
-          type: "reload",
-          data: {
+        const notifyAccepted = ({
+          cause,
+          reason,
+          instructions
+        }) => {
+          sendServerEvent({
             cause,
             type: "hot",
             typeReason: reason,
             hotInstructions: instructions
-          }
-        });
-      };
+          });
+        };
 
-      const propagateUpdate = firstUrlInfo => {
-        const iterate = (urlInfo, seen) => {
-          if (urlInfo.data.hotAcceptSelf) {
-            return {
-              accepted: true,
-              reason: urlInfo === firstUrlInfo ? `file accepts hot reload` : `a dependent file accepts hot reload`,
-              instructions: [{
-                type: urlInfo.type,
-                boundary: urlToRelativeUrl(urlInfo.url, rootDirectoryUrl),
-                acceptedBy: urlToRelativeUrl(urlInfo.url, rootDirectoryUrl)
-              }]
-            };
-          }
-
-          const {
-            dependents
-          } = urlInfo;
-          const instructions = [];
-
-          for (const dependentUrl of dependents) {
-            const dependentUrlInfo = urlGraph.getUrlInfo(dependentUrl);
-
-            if (dependentUrlInfo.data.hotDecline) {
+        const propagateUpdate = firstUrlInfo => {
+          const iterate = (urlInfo, seen) => {
+            if (urlInfo.data.hotAcceptSelf) {
               return {
-                declined: true,
-                reason: `a dependent file declines hot reload`,
-                declinedBy: dependentUrl
+                accepted: true,
+                reason: urlInfo === firstUrlInfo ? `file accepts hot reload` : `a dependent file accepts hot reload`,
+                instructions: [{
+                  type: urlInfo.type,
+                  boundary: urlToRelativeUrl(urlInfo.url, rootDirectoryUrl),
+                  acceptedBy: urlToRelativeUrl(urlInfo.url, rootDirectoryUrl)
+                }]
               };
             }
 
             const {
-              hotAcceptDependencies = []
-            } = dependentUrlInfo.data;
+              dependents
+            } = urlInfo;
+            const instructions = [];
 
-            if (hotAcceptDependencies.includes(urlInfo.url)) {
-              instructions.push({
-                type: dependentUrlInfo.type,
-                boundary: urlToRelativeUrl(dependentUrl, rootDirectoryUrl),
-                acceptedBy: urlToRelativeUrl(urlInfo.url, rootDirectoryUrl)
-              });
+            for (const dependentUrl of dependents) {
+              const dependentUrlInfo = urlGraph.getUrlInfo(dependentUrl);
+
+              if (dependentUrlInfo.data.hotDecline) {
+                return {
+                  declined: true,
+                  reason: `a dependent file declines hot reload`,
+                  declinedBy: dependentUrl
+                };
+              }
+
+              const {
+                hotAcceptDependencies = []
+              } = dependentUrlInfo.data;
+
+              if (hotAcceptDependencies.includes(urlInfo.url)) {
+                instructions.push({
+                  type: dependentUrlInfo.type,
+                  boundary: urlToRelativeUrl(dependentUrl, rootDirectoryUrl),
+                  acceptedBy: urlToRelativeUrl(urlInfo.url, rootDirectoryUrl)
+                });
+                continue;
+              }
+
+              if (seen.includes(dependentUrl)) {
+                return {
+                  declined: true,
+                  reason: "circular dependency",
+                  declinedBy: urlToRelativeUrl(dependentUrl, rootDirectoryUrl)
+                };
+              }
+
+              const dependentPropagationResult = iterate(dependentUrlInfo, [...seen, dependentUrl]);
+
+              if (dependentPropagationResult.accepted) {
+                instructions.push(...dependentPropagationResult.instructions);
+                continue;
+              }
+
+              if ( // declined explicitely by an other file, it must decline the whole update
+              dependentPropagationResult.declinedBy) {
+                return dependentPropagationResult;
+              } // declined by absence of boundary, we can keep searching
+
+
               continue;
             }
 
-            if (seen.includes(dependentUrl)) {
+            if (instructions.length === 0) {
               return {
                 declined: true,
-                reason: "circular dependency",
-                declinedBy: urlToRelativeUrl(dependentUrl, rootDirectoryUrl)
+                reason: `there is no file accepting hot reload while propagating update`
               };
             }
 
-            const dependentPropagationResult = iterate(dependentUrlInfo, [...seen, dependentUrl]);
-
-            if (dependentPropagationResult.accepted) {
-              instructions.push(...dependentPropagationResult.instructions);
-              continue;
-            }
-
-            if ( // declined explicitely by an other file, it must decline the whole update
-            dependentPropagationResult.declinedBy) {
-              return dependentPropagationResult;
-            } // declined by absence of boundary, we can keep searching
-
-
-            continue;
-          }
-
-          if (instructions.length === 0) {
             return {
-              declined: true,
-              reason: `there is no file accepting hot reload while propagating update`
+              accepted: true,
+              reason: `${instructions.length} dependent file(s) accepts hot reload`,
+              instructions
             };
-          }
-
-          return {
-            accepted: true,
-            reason: `${instructions.length} dependent file(s) accepts hot reload`,
-            instructions
           };
+
+          const seen = [];
+          return iterate(firstUrlInfo, seen);
         };
 
-        const seen = [];
-        return iterate(firstUrlInfo, seen);
-      };
+        clientFileChangeCallbackList.push(({
+          url,
+          event
+        }) => {
+          const urlInfo = urlGraph.getUrlInfo(url); // file not part of dependency graph
 
-      clientFileChangeCallbackList.push(({
-        url,
-        event
-      }) => {
-        const urlInfo = urlGraph.getUrlInfo(url); // file not part of dependency graph
-
-        if (!urlInfo) {
-          return;
-        }
-
-        const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
-        const hotUpdate = propagateUpdate(urlInfo);
-
-        if (hotUpdate.declined) {
-          notifyDeclined({
-            cause: `${relativeUrl} ${event}`,
-            reason: hotUpdate.reason,
-            declinedBy: hotUpdate.declinedBy
-          });
-        } else {
-          notifyAccepted({
-            cause: `${relativeUrl} ${event}`,
-            reason: hotUpdate.reason,
-            instructions: hotUpdate.instructions
-          });
-        }
-      });
-      clientFilesPruneCallbackList.push(({
-        prunedUrlInfos,
-        firstUrlInfo
-      }) => {
-        const mainHotUpdate = propagateUpdate(firstUrlInfo);
-        const cause = `following files are no longer referenced: ${prunedUrlInfos.map(prunedUrlInfo => urlToRelativeUrl(prunedUrlInfo.url, rootDirectoryUrl))}`; // now check if we can hot update the main ressource
-        // then if we can hot update all dependencies
-
-        if (mainHotUpdate.declined) {
-          notifyDeclined({
-            cause,
-            reason: mainHotUpdate.reason,
-            declinedBy: mainHotUpdate.declinedBy
-          });
-          return;
-        } // main can hot update
-
-
-        let i = 0;
-        const instructions = [];
-
-        while (i < prunedUrlInfos.length) {
-          const prunedUrlInfo = prunedUrlInfos[i++];
-
-          if (prunedUrlInfo.data.hotDecline) {
-            notifyDeclined({
-              cause,
-              reason: `a pruned file declines hot reload`,
-              declinedBy: urlToRelativeUrl(prunedUrlInfo.url, rootDirectoryUrl)
-            });
+          if (!urlInfo) {
             return;
           }
 
-          instructions.push({
-            type: "prune",
-            boundary: urlToRelativeUrl(prunedUrlInfo.url, rootDirectoryUrl),
-            acceptedBy: urlToRelativeUrl(firstUrlInfo.url, rootDirectoryUrl)
-          });
-        }
+          const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
+          const hotUpdate = propagateUpdate(urlInfo);
 
-        notifyAccepted({
-          cause,
-          reason: mainHotUpdate.reason,
-          instructions
+          if (hotUpdate.declined) {
+            notifyDeclined({
+              cause: `${relativeUrl} ${event}`,
+              reason: hotUpdate.reason,
+              declinedBy: hotUpdate.declinedBy
+            });
+          } else {
+            notifyAccepted({
+              cause: `${relativeUrl} ${event}`,
+              reason: hotUpdate.reason,
+              instructions: hotUpdate.instructions
+            });
+          }
         });
-      });
+        clientFilesPruneCallbackList.push(({
+          prunedUrlInfos,
+          firstUrlInfo
+        }) => {
+          const mainHotUpdate = propagateUpdate(firstUrlInfo);
+          const cause = `following files are no longer referenced: ${prunedUrlInfos.map(prunedUrlInfo => urlToRelativeUrl(prunedUrlInfo.url, rootDirectoryUrl))}`; // now check if we can hot update the main ressource
+          // then if we can hot update all dependencies
+
+          if (mainHotUpdate.declined) {
+            notifyDeclined({
+              cause,
+              reason: mainHotUpdate.reason,
+              declinedBy: mainHotUpdate.declinedBy
+            });
+            return;
+          } // main can hot update
+
+
+          let i = 0;
+          const instructions = [];
+
+          while (i < prunedUrlInfos.length) {
+            const prunedUrlInfo = prunedUrlInfos[i++];
+
+            if (prunedUrlInfo.data.hotDecline) {
+              notifyDeclined({
+                cause,
+                reason: `a pruned file declines hot reload`,
+                declinedBy: urlToRelativeUrl(prunedUrlInfo.url, rootDirectoryUrl)
+              });
+              return;
+            }
+
+            instructions.push({
+              type: "prune",
+              boundary: urlToRelativeUrl(prunedUrlInfo.url, rootDirectoryUrl),
+              acceptedBy: urlToRelativeUrl(firstUrlInfo.url, rootDirectoryUrl)
+            });
+          }
+
+          notifyAccepted({
+            cause,
+            reason: mainHotUpdate.reason,
+            instructions
+          });
+        });
+      }
     },
     serve: (request, {
       rootDirectoryUrl,
@@ -20425,7 +20420,7 @@ const jsenvPluginAutoreload = ({
     return [];
   }
 
-  return [jsenvPluginHmr(), jsenvPluginDevSSEClient(), jsenvPluginDevSSEServer({
+  return [jsenvPluginHmr(), jsenvPluginAutoreloadClient(), jsenvPluginAutoreloadServer({
     clientFileChangeCallbackList,
     clientFilesPruneCallbackList
   })];
@@ -20898,6 +20893,23 @@ const createPluginController = ({
   hooks.forEach(hookName => {
     addHook(hookName);
   });
+
+  const pushPlugin = plugin => {
+    plugins.push(plugin);
+    hooks.forEach(hookName => {
+      const hook = plugin[hookName];
+
+      if (hook) {
+        const group = hookGroups[hookName] || (hookGroups[hookName] = []);
+        group.push({
+          plugin,
+          hookName,
+          value: hook
+        });
+      }
+    });
+  };
+
   let currentPlugin = null;
   let currentHookName = null;
 
@@ -21013,6 +21025,7 @@ const createPluginController = ({
 
   return {
     plugins,
+    pushPlugin,
     addHook,
     getHookFunction,
     callHook,
@@ -22690,50 +22703,6 @@ const determineFileUrlForOutDirectory = ({
 //   }
 // }
 
-const createServerEventsDispatcher = () => {
-  const destroyCallbackList = createCallbackListNotifiedOnce();
-  const rooms = [];
-  const sseRoomLimit = 100;
-  return {
-    addRoom: request => {
-      const existingRoom = rooms.find(roomCandidate => roomCandidate.request.ressource === request.ressource);
-
-      if (existingRoom) {
-        return existingRoom;
-      }
-
-      const room = createSSERoom({
-        retryDuration: 2000,
-        historyLength: 100,
-        welcomeEventEnabled: true
-      });
-      room.request = request;
-      destroyCallbackList.add(room.close);
-      rooms.push(room);
-
-      if (rooms.length >= sseRoomLimit) {
-        const firstRoom = rooms.shift();
-        firstRoom.close();
-      }
-
-      return room;
-    },
-    dispatch: event => {
-      rooms.forEach(room => room.sendEventToAllClients(event));
-    },
-    dispatchToRoomsMatching: (event, predicate) => {
-      rooms.forEach(room => {
-        if (predicate(room)) {
-          room.sendEventToAllClients(event);
-        }
-      });
-    },
-    destroy: () => {
-      destroyCallbackList.notify();
-    }
-  };
-};
-
 const memoizeByFirstArgument = compute => {
   const urlCache = new Map();
 
@@ -22912,13 +22881,14 @@ const createFileService = ({
 
       if (code === "PARSE_ERROR") {
         onErrorWhileServingFile({
+          requestedRessource: request.ressource,
           code: "PARSE_ERROR",
           message: e.reason,
           url: e.url,
-          line: e.line,
-          column: e.column,
-          contentFrame: e.contentFrame,
-          requestedRessource: request.ressource
+          traceUrl: e.traceUrl,
+          traceLine: e.traceLine,
+          traceColumn: e.traceColumn,
+          traceMessage: e.traceMessage
         });
         return {
           url: reference.url,
@@ -22955,14 +22925,15 @@ const createFileService = ({
 
       if (code === "NOT_FOUND") {
         onErrorWhileServingFile({
+          requestedRessource: request.ressource,
+          isFaviconAutoRequest: request.ressource === "/favicon.ico" && reference.type === "http_request",
           code: "NOT_FOUND",
           message: e.reason,
           url: e.url,
-          line: e.line,
-          column: e.column,
-          contentFrame: e.contentFrame,
-          requestedRessource: request.ressource,
-          isFaviconAutoRequest: request.ressource === "/favicon.ico" && reference.type === "http_request"
+          traceUrl: e.traceUrl,
+          traceLine: e.traceLine,
+          traceColumn: e.traceColumn,
+          traceMessage: e.traceMessage
         });
         return {
           url: reference.url,
@@ -22973,13 +22944,14 @@ const createFileService = ({
       }
 
       onErrorWhileServingFile({
+        requestedRessource: request.ressource,
         code: "UNEXPECTED",
         stack: e.stack,
-        contentFrame: e.contentFrame,
         url: e.url,
-        line: e.line,
-        column: e.column,
-        requestedRessource: request.ressource
+        traceUrl: e.traceUrl,
+        traceLine: e.traceLine,
+        traceColumn: e.traceColumn,
+        traceMessage: e.traceMessage
       });
       return {
         url: reference.url,
@@ -23042,68 +23014,19 @@ const startOmegaServer = async ({
   serverPlugins,
   services,
   rootDirectoryUrl,
-  scenario,
   urlGraph,
-  kitchen
+  kitchen,
+  scenario,
+  onErrorWhileServingFile = () => {}
 }) => {
   const serverStopCallbackList = createCallbackListNotifiedOnce();
-  const serverEventsDispatcher = createServerEventsDispatcher();
-
-  const sendServerEvent = ({
-    type,
-    data
-  }) => {
-    serverEventsDispatcher.dispatch({
-      type,
-      data: JSON.stringify(data)
-    });
-  };
-
-  kitchen.pluginController.addHook("registerServerEvents");
-  kitchen.pluginController.callHooks("registerServerEvents", {
-    sendServerEvent
-  }, {
-    rootDirectoryUrl,
-    urlGraph,
-    scenario
-  }, () => {});
   const coreServices = {
-    "service:server_events": request => {
-      const {
-        accept
-      } = request.headers;
-
-      if (accept && accept.includes("text/event-stream")) {
-        const room = serverEventsDispatcher.addRoom(request);
-        return room.join(request);
-      }
-
-      return null;
-    },
     "service:file": createFileService({
       rootDirectoryUrl,
       urlGraph,
       kitchen,
       scenario,
-      onErrorWhileServingFile: data => {
-        // setTimeout is to ensure the error
-        // dispatched on window by browser is displayed first,
-        // then the server error replaces it (because it contains more information)
-        setTimeout(() => {
-          serverEventsDispatcher.dispatchToRoomsMatching({
-            type: "error_while_serving_file",
-            data
-          }, room => {
-            // send only to page depending on this file
-            const errorFileUrl = data.url;
-            const roomEntryPointUrl = new URL(room.request.ressource.slice(1), rootDirectoryUrl).href;
-            const isErrorRelatedToEntryPoint = Boolean(urlGraph.findDependent(errorFileUrl, dependentUrlInfo => {
-              return dependentUrlInfo.url === roomEntryPointUrl;
-            }));
-            return isErrorRelatedToEntryPoint;
-          });
-        }, 10);
-      }
+      onErrorWhileServingFile
     })
   };
   const server = await startServer({
@@ -23184,7 +23107,6 @@ const startOmegaServer = async ({
     }),
     onStop: reason => {
       onStop();
-      serverEventsDispatcher.destroy();
       serverStopCallbackList.notify(reason);
     }
   });
@@ -23252,6 +23174,166 @@ const jsenvPluginExplorer = ({
       };
     }
   };
+};
+
+const createServerEventsDispatcher = () => {
+  const destroyCallbackList = createCallbackListNotifiedOnce();
+  const rooms = [];
+  const sseRoomLimit = 100;
+  return {
+    addRoom: request => {
+      const existingRoom = rooms.find(roomCandidate => roomCandidate.request.ressource === request.ressource);
+
+      if (existingRoom) {
+        return existingRoom;
+      }
+
+      const room = createSSERoom({
+        retryDuration: 2000,
+        historyLength: 100,
+        welcomeEventEnabled: true
+      });
+      room.request = request;
+      destroyCallbackList.add(room.close);
+      rooms.push(room);
+
+      if (rooms.length >= sseRoomLimit) {
+        const firstRoom = rooms.shift();
+        firstRoom.close();
+      }
+
+      return room;
+    },
+    dispatch: ({
+      type,
+      data
+    }) => {
+      rooms.forEach(room => room.sendEventToAllClients({
+        type,
+        data: JSON.stringify(data)
+      }));
+    },
+    dispatchToRoomsMatching: ({
+      type,
+      data
+    }, predicate) => {
+      rooms.forEach(room => {
+        if (predicate(room)) {
+          room.sendEventToAllClients({
+            type,
+            data: JSON.stringify(data)
+          });
+        }
+      });
+    },
+    destroy: () => {
+      destroyCallbackList.notify();
+    }
+  };
+};
+
+/*
+ * This plugin is very special because it is here
+ * to provide "serverEvents" used by other plugins
+ */
+const serverEventsClientFileUrl = new URL("./js/server_events_client.js", import.meta.url).href;
+const jsenvPluginServerEvents = ({
+  rootDirectoryUrl,
+  urlGraph,
+  scenario,
+  kitchen,
+  onErrorWhileServingFileReference
+}) => {
+  const allServerEvents = {};
+  kitchen.pluginController.plugins.forEach(plugin => {
+    const {
+      serverEvents
+    } = plugin;
+
+    if (serverEvents) {
+      Object.keys(serverEvents).forEach(serverEventName => {
+        // we could throw on serverEvent name conflict
+        // we could throw if serverEvents[serverEventName] is not a function
+        allServerEvents[serverEventName] = serverEvents[serverEventName];
+      });
+    }
+  });
+  const serverEventNames = Object.keys(allServerEvents);
+
+  if (serverEventNames.length === 0) {
+    return;
+  }
+
+  serverEventNames.forEach(serverEventName => {
+    allServerEvents[serverEventName]({
+      rootDirectoryUrl,
+      urlGraph,
+      scenario,
+      sendServerEvent: data => {
+        serverEventsDispatcher.dispatch({
+          type: serverEventName,
+          data
+        });
+      }
+    });
+  });
+  const serverEventsDispatcher = createServerEventsDispatcher();
+
+  onErrorWhileServingFileReference.current = data => {
+    serverEventsDispatcher.dispatchToRoomsMatching({
+      type: "error_while_serving_file",
+      data
+    }, room => {
+      // send only to page depending on this file
+      const errorFileUrl = data.url;
+      const roomEntryPointUrl = new URL(room.request.ressource.slice(1), rootDirectoryUrl).href;
+      const isErrorRelatedToEntryPoint = Boolean(urlGraph.findDependent(errorFileUrl, dependentUrlInfo => {
+        return dependentUrlInfo.url === roomEntryPointUrl;
+      }));
+      return isErrorRelatedToEntryPoint;
+    });
+  };
+
+  const jsenvServerEventPlugin = {
+    name: "jsenv:server_events",
+    appliesDuring: "*",
+    destroy: () => {
+      serverEventsDispatcher.destroy();
+    },
+    serve: request => {
+      const {
+        accept
+      } = request.headers;
+
+      if (accept && accept.includes("text/event-stream")) {
+        const room = serverEventsDispatcher.addRoom(request);
+        return room.join(request);
+      }
+
+      return null;
+    },
+    transformUrlContent: {
+      html: (htmlUrlInfo, context) => {
+        const htmlAst = parseHtmlString(htmlUrlInfo.content);
+        const [serverEventsClientFileReference] = context.referenceUtils.inject({
+          type: "script_src",
+          expectedType: "js_module",
+          specifier: serverEventsClientFileUrl
+        });
+        injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
+          "tagName": "script",
+          "type": "module",
+          "src": serverEventsClientFileReference.generatedSpecifier,
+          "injected-by": "jsenv:server_events"
+        }));
+        const htmlModified = stringifyHtmlAst(htmlAst);
+        return {
+          content: htmlModified
+        };
+      }
+    }
+  };
+  kitchen.pluginController.pushPlugin(jsenvServerEventPlugin);
 };
 
 const startDevServer = async ({
@@ -23497,6 +23579,16 @@ const startDevServer = async ({
     }) // ...(toolbar ? [jsenvPluginToolbar(toolbar)] : []),
     ]
   });
+  const onErrorWhileServingFileReference = {
+    current: () => {}
+  };
+  jsenvPluginServerEvents({
+    rootDirectoryUrl,
+    urlGraph,
+    kitchen,
+    scenario: "dev",
+    onErrorWhileServingFileReference
+  });
   const server = await startOmegaServer({
     logLevel: omegaServerLogLevel,
     keepProcessAlive,
@@ -23510,7 +23602,10 @@ const startDevServer = async ({
     urlGraph,
     kitchen,
     scenario: "dev",
-    serverPlugins
+    serverPlugins,
+    onErrorWhileServingFile: data => {
+      onErrorWhileServingFileReference.current(data);
+    }
   });
   startDevServerTask.done();
   logger.info(``);
