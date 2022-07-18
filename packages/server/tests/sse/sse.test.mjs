@@ -125,11 +125,11 @@ const timeEllapsedPromise = (ms) => {
   })
   const roomAEventSource = await openEventSource(`${server.origin}/roomA`)
   const roomBEventSource = await openEventSource(`${server.origin}/roomB`)
-  roomA.sendEvent({
+  roomA.sendEventToAllClients({
     type: "message",
     data: "a",
   })
-  roomB.sendEvent({
+  roomB.sendEventToAllClients({
     type: "message",
     data: "b",
   })
