@@ -11,6 +11,7 @@ import {
   getHtmlNodePosition,
   setHtmlNodeAttributes,
   setHtmlNodeText,
+  analyzeScriptNode,
   injectScriptNodeAsEarlyAsPossible,
   createHtmlNode,
 } from "@jsenv/ast"
@@ -49,12 +50,12 @@ export const jsenvPluginAsJsClassicHtml = ({
           }
         }
         const visitScriptNodes = (node) => {
-          const type = getHtmlNodeAttribute(node, "type")
-          if (type === "module") {
+          const { type } = analyzeScriptNode(node)
+          if (type === "js_module") {
             moduleScriptNodes.push(node)
             return
           }
-          if (type === undefined || type === "text/javascript") {
+          if (type === "js_classic") {
             classicScriptNodes.push(node)
             return
           }

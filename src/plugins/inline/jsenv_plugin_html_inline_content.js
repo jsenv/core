@@ -80,26 +80,11 @@ export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
             return
           }
           actions.push(async () => {
-            const scriptCategory = analyzeScriptNode(node)
+            const { type, contentType } = analyzeScriptNode(node)
             const { line, column, lineEnd, columnEnd, isOriginal } =
               getHtmlNodePosition(node, {
                 preferOriginal: true,
               })
-            // from MDN about [type] attribute:
-            // "Any other value: The embedded content is treated as a data block
-            // which won't be processed by the browser. Developers must use a valid MIME type
-            // that is not a JavaScript MIME type to denote data blocks.
-            // The src attribute will be ignored."
-            // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#attr-type
-            const isJs =
-              scriptCategory === "classic" || scriptCategory === "module"
-            const isImportmap = scriptCategory === "importmap"
-            const contentType = isJs
-              ? "text/javascript"
-              : isImportmap
-              ? "application/importmap+json"
-              : scriptCategory
-
             let inlineScriptUrl = generateInlineContentUrl({
               url: urlInfo.url,
               extension: CONTENT_TYPE.asFileExtension(contentType),
@@ -112,11 +97,7 @@ export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
               context.referenceUtils.foundInline({
                 node,
                 type: "script_src",
-                expectedType: {
-                  classic: "js_classic",
-                  module: "js_module",
-                  importmap: "importmap",
-                }[scriptCategory],
+                expectedType: type,
                 // we remove 1 to the line because imagine the following html:
                 // <script>console.log('ok')</script>
                 // -> content starts same line as <script>

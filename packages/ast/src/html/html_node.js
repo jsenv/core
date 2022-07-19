@@ -27,11 +27,11 @@ export const injectScriptNodeAsEarlyAsPossible = (htmlAst, scriptNode) => {
       "injected-by": "jsenv",
     })
   }
-  const isModule = analyzeScriptNode(scriptNode) === "module"
-  if (isModule) {
+  const isJsModule = analyzeScriptNode(scriptNode).type === "js_module"
+  if (isJsModule) {
     const firstImportmapScript = findHtmlNode(htmlAst, (node) => {
       if (node.nodeName !== "script") return false
-      return analyzeScriptNode(node) === "importmap"
+      return analyzeScriptNode(node).type === "importmap"
     })
     if (firstImportmapScript) {
       return insertAfter(

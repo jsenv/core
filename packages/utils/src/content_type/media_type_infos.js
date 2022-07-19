@@ -80,7 +80,7 @@ export const mediaTypeInfos = {
     extensions: ["css"],
   },
   "text/javascript": {
-    extensions: ["js", "cjs", "mjs", "ts", "jsx"],
+    extensions: ["js", "cjs", "mjs", "ts", "jsx", "tsx"],
   },
   "text/x-sass": {
     extensions: ["sass"],
