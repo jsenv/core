@@ -112,13 +112,15 @@ export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
                   contentType,
                   content: scriptNodeText,
                 })
-
               await context.cook(inlineScriptUrlInfo, {
                 reference: inlineScriptReference,
               })
               setHtmlNodeText(scriptNode, inlineScriptUrlInfo.content)
               setHtmlNodeAttributes(scriptNode, {
                 "generated-by": "jsenv:html_inline_content",
+                ...(extension
+                  ? { type: type === "js_module" ? "module" : undefined }
+                  : {}),
               })
             })
           },
