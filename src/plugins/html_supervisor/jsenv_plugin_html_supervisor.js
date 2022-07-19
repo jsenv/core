@@ -69,14 +69,14 @@ export const jsenvPluginHtmlSupervisor = ({
         const scriptsToSupervise = []
 
         const handleInlineScript = (node, htmlNodeText) => {
-          const { type } = analyzeScriptNode(node)
+          const { type, extension } = analyzeScriptNode(node)
           const { line, column, lineEnd, columnEnd, isOriginal } =
             getHtmlNodePosition(node, {
               preferOriginal: true,
             })
           let inlineScriptUrl = generateInlineContentUrl({
             url,
-            extension: ".js",
+            extension: extension || ".js",
             line,
             column,
             lineEnd,
@@ -93,6 +93,11 @@ export const jsenvPluginHtmlSupervisor = ({
             content: htmlNodeText,
           })
           removeHtmlNodeText(node)
+          if (extension) {
+            setHtmlNodeAttributes(node, {
+              type: type === "js_module" ? "module" : undefined,
+            })
+          }
           scriptsToSupervise.push({
             node,
             isInline: true,
