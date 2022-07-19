@@ -69,6 +69,14 @@ const eslintConfig = composeEslintConfig(
     plugins: ["html"],
     settings: {
       extensions: [".html"],
+      settings: {
+        "html/javascript-mime-types": [
+          "text/javascript",
+          "module",
+          "text/jsx",
+          "module/jsx",
+        ],
+      },
     },
   },
 

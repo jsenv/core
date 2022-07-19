@@ -11,9 +11,7 @@ export const executeInChromium = async ({
   headless = !debug,
   autoStop = !debug,
 }) => {
-  const browser = await chromium.launch({
-    headless,
-  })
+  const browser = await chromium.launch({ headless })
   const page = await browser.newPage({ ignoreHTTPSErrors: true })
 
   const pageLogs = []
