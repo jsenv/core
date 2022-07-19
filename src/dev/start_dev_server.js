@@ -66,11 +66,10 @@ export const startDevServer = async ({
   fileSystemMagicResolution,
   transpilation,
   explorerGroups = {
-    source: {
-      "./*.html": true,
+    src: {
       "./src/**/*.html": true,
     },
-    test: {
+    tests: {
       "./tests/**/*.test.html": true,
     },
   },

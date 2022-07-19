@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+  </head>
+
+  <body>
+    <div id="app"></div>
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve
+      })
+    </script>
+    <script type="module/jsx">
+      import { render } from "preact"
+      import { useEffect } from "preact/hooks"
+
+      const App = ({ onFirstRender }) => {
+        useEffect(() => {
+          onFirstRender()
+        }, [])
+        return <span>Hello world</span>
+      }
+
+      render(
+        <App
+          onFirstRender={() => {
+            window.resolveResultPromise(
+              document.querySelector("span").innerHTML,
+            )
+          }}
+        />,
+        document.querySelector("#app"),
+      )
+    </script>
+  </body>
+</html>

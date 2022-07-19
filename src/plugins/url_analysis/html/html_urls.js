@@ -5,6 +5,7 @@ import {
   getHtmlNodePosition,
   setHtmlNodeAttributes,
   getHtmlNodeAttributePosition,
+  analyzeScriptNode,
   parseSrcSet,
   stringifyHtmlAst,
 } from "@jsenv/ast"
@@ -188,16 +189,15 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
     },
     // style: () => {},
     script: (node) => {
-      const type = getHtmlNodeAttribute(node, "type")
-      const expectedType = {
-        "undefined": "js_classic",
-        "text/javascript": "js_classic",
-        "module": "js_module",
-        "importmap": "importmap",
-      }[type]
+      const { type } = analyzeScriptNode(node)
+      if (type === "text") {
+        // ignore <script type="whatever" src="./file.js">
+        // per HTML spec https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#attr-type
+        return
+      }
       visitAttributeAsUrlSpecifier({
         type: "script_src",
-        expectedType,
+        expectedType: type,
         node,
         attributeName: "src",
       })
