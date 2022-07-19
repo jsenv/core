@@ -63,13 +63,14 @@ export const createFileService = ({
 
     const ifNoneMatch = request.headers["if-none-match"]
     if (
-      // url must be watched otherwise nothing ever invalidate urlInfo.contentEtag
-      // and the cache version is always used
-      urlInfo.isWatched &&
       ifNoneMatch &&
       urlInfo.contentEtag === ifNoneMatch &&
-      // - isValid is true by default
-      // - isValid can be overriden by plugins such as cjs_to_esm
+      // urlInfo.isValid
+      // - is false by default because there must be some logic capable
+      //   to invalidate the url (otherwise server would return 304 forever)
+      // - is set to a function returning true if the file is watched
+      //   in start_dev_server.js
+      // - is set to a custom function by cjs_to_esm in compiled_file_cache.js
       urlInfo.isValid()
     ) {
       return {

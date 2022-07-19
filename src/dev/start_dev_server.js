@@ -195,7 +195,7 @@ export const startDevServer = async ({
         url: urlInfo.url,
         associations: watchAssociations,
       })
-      urlInfo.isWatched = watch
+      urlInfo.isValid = () => watch
     },
   })
   const kitchen = createKitchen({

@@ -210,7 +210,6 @@ const createUrlInfo = (url) => {
     modifiedTimestamp: 0,
     contentEtag: null,
     dependsOnPackageJson: false,
-    isWatched: false,
     isValid,
     data: {}, // plugins can put whatever they want here
     references: [],
@@ -238,4 +237,4 @@ const createUrlInfo = (url) => {
   }
 }
 
-const isValid = () => true
+const isValid = () => false
