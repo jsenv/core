@@ -15,13 +15,17 @@ setInterval(() => {
 startServer({
   protocol: "https",
   port: 3456,
-  requestToResponse: (request) => {
-    const { accept = "" } = request.headers
-    if (!accept.includes("text/event-stream")) {
-      return null
-    }
-    return room.join(request)
-  },
+  services: [
+    {
+      handleRequest: (request) => {
+        const { accept = "" } = request.headers
+        if (!accept.includes("text/event-stream")) {
+          return null
+        }
+        return room.join(request)
+      },
+    },
+  ],
 })
 ```
 

@@ -6,14 +6,18 @@ A server often needs to serve file without routing logic. Either the file is the
 import { startServer, fetchFileSystem } from "@jsenv/server"
 
 await startServer({
-  requestToResponse: (request) => {
-    return fetchFileSystem(
-      new URL(request.ressource.slice(1), import.meta.url),
-      {
-        headers: request.headers,
+  services: [
+    {
+      handleRequest: (request) => {
+        return fetchFileSystem(
+          new URL(request.ressource.slice(1), import.meta.url),
+          {
+            headers: request.headers,
+          },
+        )
       },
-    )
-  },
+    },
+  ],
 })
 ```
 
@@ -35,15 +39,19 @@ By default _fetchFileSystem_ will always respond with 200. You can unlock 304 re
 import { startServer, fetchFileSystem } from "@jsenv/server"
 
 await startServer({
-  requestToResponse: (request) => {
-    return fetchFileSystem(
-      new URL(request.ressource.slice(1), import.meta.url),
-      {
-        headers: request.headers,
-        etagEnabled: true,
+  services: [
+    {
+      handleRequest: (request) => {
+        return fetchFileSystem(
+          new URL(request.ressource.slice(1), import.meta.url),
+          {
+            headers: request.headers,
+            etagEnabled: true,
+          },
+        )
       },
-    )
-  },
+    },
+  ],
 })
 ```
 
@@ -56,15 +64,19 @@ When etag generated from the file content equals the one found in request header
 import { startServer, fetchFileSystem } from "@jsenv/server"
 
 await startServer({
-  requestToResponse: (request) => {
-    return fetchFileSystem(
-      new URL(request.ressource.slice(1), import.meta.url),
-      {
-        headers: request.headers,
-        mtimeEnabled: true,
+  services: [
+    {
+      handleRequest: (request) => {
+        return fetchFileSystem(
+          new URL(request.ressource.slice(1), import.meta.url),
+          {
+            headers: request.headers,
+            mtimeEnabled: true,
+          },
+        )
       },
-    )
-  },
+    },
+  ],
 })
 ```
 
@@ -82,18 +94,22 @@ Things to know:
 import { startServer, fetchFileSystem } from "@jsenv/server"
 
 await startServer({
-  requestToResponse: (request) => {
-    return fetchFileSystem(
-      new URL(request.ressource.slice(1), import.meta.url),
-      {
-        headers: request.headers,
-        cacheControl:
-          request.ressource === "/"
-            ? `private,max-age=0,must-revalidate`
-            : `private,max-age=3600,immutable`,
+  services: [
+    {
+      handleRequest: (request) => {
+        return fetchFileSystem(
+          new URL(request.ressource.slice(1), import.meta.url),
+          {
+            headers: request.headers,
+            cacheControl:
+              request.ressource === "/"
+                ? `private,max-age=0,must-revalidate`
+                : `private,max-age=3600,immutable`,
+          },
+        )
       },
-    )
-  },
+    },
+  ],
 })
 ```
 
@@ -112,15 +128,19 @@ To enable compression, use _compressionEnabled_ and _compressionSizeThreshold_ p
 import { startServer, fetchFileSystem } from "@jsenv/server"
 
 await startServer({
-  requestToResponse: (request) => {
-    return fetchFileSystem(
-      new URL(request.ressource.slice(1), import.meta.url),
-      {
-        headers: request.headers,
-        compressionEnabled: true,
-        compressionSizeThreshold: 1024,
+  services: [
+    {
+      handleRequest: (request) => {
+        return fetchFileSystem(
+          new URL(request.ressource.slice(1), import.meta.url),
+          {
+            headers: request.headers,
+            compressionEnabled: true,
+            compressionSizeThreshold: 1024,
+          },
+        )
       },
-    )
-  },
+    },
+  ],
 })
 ```

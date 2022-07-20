@@ -84,7 +84,6 @@ import { requestCertificateForLocalhost } from "@jsenv/https-local"
 import { startServer, fetchFileSystem } from "@jsenv/server"
 
 const { certificate, privateKey } = requestCertificateForLocalhost()
-
 await startServer({
   logLevel: "info",
   protocol: "https",
@@ -92,15 +91,19 @@ await startServer({
   http2: true,
   certificate,
   privateKey,
-  requestToResponse: (request) => {
-    return fetchFileSystem(
-      new URL(request.ressource.slice(1), import.meta.url),
-      {
-        headers: request.headers,
-        canReadDirectory: true,
+  services: [
+    {
+      handleRequest: (request) => {
+        return fetchFileSystem(
+          new URL(request.ressource.slice(1), import.meta.url),
+          {
+            headers: request.headers,
+            canReadDirectory: true,
+          },
+        )
       },
-    )
-  },
+    },
+  ],
 })
 ```
 
@@ -108,11 +111,9 @@ The following diff shows how http2 push can be added to the server:
 
 ```diff
 import { requestCertificateForLocalhost } from "@jsenv/https-local"
-
 import { startServer, fetchFileSystem } from "@jsenv/server"
 
 const { certificate, privateKey } = requestCertificateForLocalhost()
-
 await startServer({
   logLevel: "info",
   protocol: "https",
@@ -120,21 +121,23 @@ await startServer({
   http2: true,
   certificate,
   privateKey,
-  sendErrorDetails: true,
-- requestToResponse: (request) => {
-+ requestToResponse: (request, { pushResponse }) => {
-+   if (request.ressource === "/main.html") {
-+     pushResponse({ path: "/script.js" })
-+     pushResponse({ path: "/style.css" })
-+   }
-
-    return fetchFileSystem(
-      new URL(request.ressource.slice(1), import.meta.url),
-      {
-        headers: request.headers,
-        canReadDirectory: true,
+  services: [
+    {
+-     handleRequest: (request) => {
++     handleRequest: (request, { pushResponse }) => {
++       if (request.ressource === "/main.html") {
++       pushResponse({ path: "/script.js" })
++       pushResponse({ path: "/style.css" })
++     }
+      return fetchFileSystem(
+          new URL(request.ressource.slice(1), import.meta.url),
+          {
+            headers: request.headers,
+            canReadDirectory: true,
+          },
+        )
       },
-    )
-  },
+    },
+  ],
 })
 ```

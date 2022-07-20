@@ -5,17 +5,17 @@ All parameters starting with _accessControl_ are related to cross origin ressour
 As soon as you pass _accessControlAllowRequestOrigin_ or _accessControlAllowedOrigins_ parameter, CORS headers will be set on all server responses.
 
 ```js
-import { startServer, pluginCORS } from "@jsenv/server"
+import { startServer, jsenvServiceCORS } from "@jsenv/server"
 
 await startServer({
-  plugins: {
-    ...pluginCORS({
+  services: [
+    jsenvServiceCORS({
       accessControlAllowRequestOrigin: true,
       accessControlAllowRequestMethod: true,
       accessControlAllowRequestHeaders: true,
       accessControlAllowCredentials: true,
     }),
-  },
+  ],
 })
 ```
 
@@ -27,17 +27,19 @@ import fetch from "node-fetch"
 import { startServer } from "@jsenv/server"
 
 const server = await startServer({
-  plugins: {
-    ...pluginCORS({
+  services: [
+    jsenvServiceCORS({
       accessControlAllowRequestOrigin: true,
       accessControlAllowRequestMethod: true,
       accessControlAllowRequestHeaders: true,
       accessControlAllowCredentials: true,
     }),
-  },
-  requestToResponse: () => {
-    throw new Error("test")
-  },
+    {
+      handleRequest: () => {
+        throw new Error("test")
+      },
+    },
+  ],
 })
 
 const response = await fetch(server.origin)

@@ -8,13 +8,17 @@ This pattern is simpler than middleware with the same power.
 import { startServer } from "@jsenv/server"
 
 await startServer({
-  requestToResponse: () => {
-    return {
-      status: 200,
-      headers: { "content-type": "text/plain" },
-      body: "Hello world",
-    }
-  },
+  services: [
+    {
+      handleRequest: () => {
+        return {
+          status: 200,
+          headers: { "content-type": "text/plain" },
+          body: "Hello world",
+        }
+      },
+    },
+  ],
 })
 ```
 
@@ -56,9 +60,13 @@ const request = {
 import { startServer } from "@jsenv/server"
 
 await startServer({
-  requestToResponse: async (request) => {
-    const page = new URL(request.url).searchParams.get("page")
-  },
+  services: [
+    {
+      handleRequest: async (request) => {
+        const page = new URL(request.url).searchParams.get("page")
+      },
+    },
+  ],
 })
 ```
 
@@ -70,11 +78,17 @@ Read more at https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams.
 import { startServer, readRequestBody } from "@jsenv/server"
 
 await startServer({
-  requestToResponse: async (request) => {
-    const requestBodyAsString = await readRequestBody(request)
-    const requestBodyAsJson = await readRequestBody(request, { as: "json" })
-    const requestBodyAsBuffer = await readRequestBody(request, { as: "buffer" })
-  },
+  services: [
+    {
+      handleRequest: async (request) => {
+        const requestBodyAsString = await readRequestBody(request)
+        const requestBodyAsJson = await readRequestBody(request, { as: "json" })
+        const requestBodyAsBuffer = await readRequestBody(request, {
+          as: "buffer",
+        })
+      },
+    },
+  ],
 })
 ```
 
@@ -88,14 +102,18 @@ _response body declared with a string_
 import { startServer } from "@jsenv/server"
 
 await startServer({
-  requestToResponse: () => {
-    const response = {
-      status: 200,
-      headers: { "content-type": "text/plain" },
-      body: "Hello world",
-    }
-    return response
-  },
+  services: [
+    {
+      handleRequest: () => {
+        const response = {
+          status: 200,
+          headers: { "content-type": "text/plain" },
+          body: "Hello world",
+        }
+        return response
+      },
+    },
+  ],
 })
 ```
 
@@ -105,14 +123,18 @@ _response body declared with a buffer_
 import { startServer } from "@jsenv/server"
 
 await startServer({
-  requestToResponse: () => {
-    const response = {
-      status: 200,
-      headers: { "content-type": "text/plain" },
-      body: Buffer.from("Hello world"),
-    }
-    return response
-  },
+  services: [
+    {
+      handleRequest: () => {
+        const response = {
+          status: 200,
+          headers: { "content-type": "text/plain" },
+          body: Buffer.from("Hello world"),
+        }
+        return response
+      },
+    },
+  ],
 })
 ```
 
@@ -123,14 +145,18 @@ import { createReadStream } from "node:fs"
 import { startServer } from "@jsenv/server"
 
 await startServer({
-  requestToResponse: () => {
-    const response = {
-      status: 200,
-      headers: { "content-type": "text/plain" },
-      body: createReadStream("/User/you/folder/file.txt"),
-    }
-    return response
-  },
+  services: [
+    {
+      handleRequest: () => {
+        const response = {
+          status: 200,
+          headers: { "content-type": "text/plain" },
+          body: createReadStream("/User/you/folder/file.txt"),
+        }
+        return response
+      },
+    },
+  ],
 })
 ```
 
@@ -140,23 +166,27 @@ _response body declared with an observable_
 import { startServer } from "@jsenv/server"
 
 await startServer({
-  requestToResponse: () => {
-    const response = {
-      status: 200,
-      headers: { "content-type": "text/plain" },
-      body: {
-        [Symbol.observable]: () => {
-          return {
-            subscribe: ({ next, complete }) => {
-              next("Hello world")
-              complete()
+  services: [
+    {
+      handleRequest: () => {
+        const response = {
+          status: 200,
+          headers: { "content-type": "text/plain" },
+          body: {
+            [Symbol.observable]: () => {
+              return {
+                subscribe: ({ next, complete }) => {
+                  next("Hello world")
+                  complete()
+                },
+              }
             },
-          }
-        },
+          },
+        }
+        return response
       },
-    }
-    return response
-  },
+    },
+  ],
 })
 ```
 
@@ -175,22 +205,24 @@ The following code is an example of composition where a server logic is split in
  */
 import { startServer, composeServices } from "@jsenv/server"
 
-const indexService = (request) => {
-  if (request.ressource === "/") {
-    return { status: 200 }
-  }
-  return null // means "I don't handle that request"
-}
-
-const notFoundService = (request) => {
-  return { status: 404 }
-}
-
 await startServer({
-  requestToResponse: composeServices({
-    index: indexService,
-    otherwise: notFoundService,
-  }),
+  services: [
+    {
+      name: "index",
+      handleRequest: (request) => {
+        if (request.ressource === "/") {
+          return { status: 200 }
+        }
+        return null // means "I don't handle that request"
+      },
+    },
+    {
+      name: "otherwise",
+      handleRequest: () => {
+        return { status: 404 }
+      },
+    },
+  ],
 })
 ```
 

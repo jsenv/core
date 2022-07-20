@@ -1,120 +1,132 @@
 # Content negotiation
 
-You can use _negotiateContentType_ to respond with request prefered content type:
+You can use _pickContentType_ to respond with request prefered content type:
 
 ```js
-import { negotiateContentType, startServer } from "@jsenv/server"
+import { startServer, pickContentType } from "@jsenv/server"
 
 await startServer({
-  requestToResponse: (request) => {
-    const bestContentType = negotiateContentType(request, [
-      "application/json",
-      "text/plain",
-    ])
-    const responseContentType = bestContentType || "text/plain"
+  services: [
+    {
+      handleRequest: (request) => {
+        const bestContentType = pickContentType(request, [
+          "application/json",
+          "text/plain",
+        ])
+        const responseContentType = bestContentType || "text/plain"
 
-    return {
-      "application/json": () => {
-        const body = JSON.stringify({
-          data: "Hello world",
-        })
         return {
-          headers: {
-            "content-type": "application/json",
-            "content-length": Buffer.byteLength(body),
+          "application/json": () => {
+            const body = JSON.stringify({
+              data: "Hello world",
+            })
+            return {
+              headers: {
+                "content-type": "application/json",
+                "content-length": Buffer.byteLength(body),
+              },
+              body,
+            }
           },
-          body,
-        }
-      },
-      "text/plain": () => {
-        const body = `Hello world`
-        return {
-          headers: {
-            "content-type": "text/plain",
-            "content-length": Buffer.byteLength(body),
+          "text/plain": () => {
+            const body = `Hello world`
+            return {
+              headers: {
+                "content-type": "text/plain",
+                "content-length": Buffer.byteLength(body),
+              },
+              body,
+            }
           },
-          body,
-        }
+        }[responseContentType]
       },
-    }[responseContentType]
-  },
+    },
+  ],
 })
 ```
 
-You can use _negotiateContentLanguage_ to respond with request prefered language:
+You can use _pickContentLanguage_ to respond with request prefered language:
 
 ```js
-import { negotiateContentLanguage, startServer } from "@jsenv/server"
+import { startServer, pickContentLanguage } from "@jsenv/server"
 
 await startServer({
-  requestToResponse: (request) => {
-    const bestLanguage = negotiateContentLanguage(request, ["fr", "en"])
-    const responseLanguage = bestLanguage || "en"
+  services: [
+    {
+      handleRequest: (request) => {
+        const bestLanguage = pickContentLanguage(request, ["fr", "en"])
+        const responseLanguage = bestLanguage || "en"
 
-    return {
-      fr: () => {
-        const body = "Bonjour tout le monde !"
         return {
-          headers: {
-            "content-type": "text/plain",
-            "content-length": Buffer.byteLength(body),
-            "content-language": "fr",
+          fr: () => {
+            const body = "Bonjour tout le monde !"
+            return {
+              headers: {
+                "content-type": "text/plain",
+                "content-length": Buffer.byteLength(body),
+                "content-language": "fr",
+              },
+              body,
+            }
           },
-          body,
-        }
-      },
-      en: () => {
-        const body = `Hello world!`
-        return {
-          headers: {
-            "content-type": "text/plain",
-            "content-length": Buffer.byteLength(body),
-            "content-language": "en",
+          en: () => {
+            const body = `Hello world!`
+            return {
+              headers: {
+                "content-type": "text/plain",
+                "content-length": Buffer.byteLength(body),
+                "content-language": "en",
+              },
+              body,
+            }
           },
-          body,
-        }
+        }[responseLanguage]
       },
-    }[responseLanguage]
-  },
+    },
+  ],
 })
 ```
 
-Finally, you can use _negotiateContentEncoding_ to respond with request prefered encoding:
+Finally, you can use _pickContentEncoding_ to respond with request prefered encoding:
 
 ```js
 import { gzipSync } from "node:zlib"
-import { negotiateContentEncoding, startServer } from "@jsenv/server"
+import { startServer, pickContentEncoding } from "@jsenv/server"
 
 await startServer({
-  requestToResponse: (request) => {
-    const acceptedEncoding = negotiateContentEncoding(request, [
-      "gzip",
-      "identity",
-    ])
-    const responseEncoding = acceptedEncoding || "identity"
+  services: [
+    {
+      handleRequest: (request) => {
+        const acceptedEncoding = pickContentEncoding(request, [
+          "gzip",
+          "identity",
+        ])
+        const responseEncoding = acceptedEncoding || "identity"
 
-    return {
-      gzip: () => {
-        const body = gzipSync(Buffer.from(`Hello world!`))
         return {
-          headers: {
-            "content-type": "text/plain",
-            "content-encoding": "gzip",
+          gzip: () => {
+            const body = gzipSync(Buffer.from(`Hello world!`))
+            return {
+              headers: {
+                "content-type": "text/plain",
+                "content-encoding": "gzip",
+              },
+              body,
+            }
           },
-          body,
-        }
-      },
-      identity: () => {
-        const body = "Hello world!"
-        return {
-          headers: {
-            "content-type": "text/plain",
-            "content-length": Buffer.byteLength(body),
+          identity: () => {
+            const body = "Hello world!"
+            return {
+              headers: {
+                "content-type": "text/plain",
+                "content-length": Buffer.byteLength(body),
+              },
+              body,
+            }
           },
-          body,
-        }
+        }[responseEncoding]
       },
-    }[responseEncoding]
-  },
+    },
+  ],
 })
 ```

@@ -6,9 +6,13 @@ Any error thrown will be gracefully handled by _@jsenv/server_ and produce a 500
 import { startServer } from "@jsenv/server"
 
 await startServer({
-  requestToResponse: async () => {
-    throw new Error("foo")
-  },
+  services: [
+    {
+      handleRequest: async () => {
+        throw new Error("foo")
+      },
+    },
+  ],
 })
 ```
 
@@ -27,9 +31,13 @@ The default _errorToResponse_ value will respond with a generic error page.
 import { startServer } from "@jsenv/server"
 
 await startServer({
-  requestToResponse: () => {
-    throw new Error("test")
-  },
+  services: [
+    {
+      handleRequest: () => {
+        throw new Error("test")
+      },
+    },
+  ],
 })
 ```
 
@@ -43,10 +51,14 @@ By default error details are not available, use _sendErrorDetails_ to enable the
 import { startServer } from "@jsenv/server"
 
 await startServer({
-  requestToResponse: () => {
-    throw new Error("test")
-  },
-  sendErrorDetails: true,
+  services: [
+    jsenvServiceErrorHandler({ sendErrorDetails: true }),
+    {
+      requestToResponse: () => {
+        throw new Error("test")
+      },
+    },
+  ],
 })
 ```
 
@@ -62,20 +74,26 @@ import { startServer } from "@jsenv/server"
 const errorToThrow = new Error("toto")
 
 await startServer({
-  requestToResponse: () => {
-    throw errorToThrow
-  },
-  errorToResponse: (error, { request }) => {
-    error === errorToThrow // true
-    const body = `An error occured: ${error.message}`
-    return {
-      status: 500,
-      headers: {
-        "content-type": "text/plain",
-        "content-length": Buffer.byteLength(body),
+  services: [
+    {
+      handleRequest: () => {
+        throw errorToThrow
       },
-      body,
-    }
-  },
+    },
+    {
+      handleError: (error, { request }) => {
+        error === errorToThrow // true
+        const body = `An error occured: ${error.message}`
+        return {
+          status: 500,
+          headers: {
+            "content-type": "text/plain",
+            "content-length": Buffer.byteLength(body),
+          },
+          body,
+        }
+      },
+    },
+  ],
 })
 ```
