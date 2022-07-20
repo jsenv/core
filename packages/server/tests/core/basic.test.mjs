@@ -14,15 +14,19 @@ const { origin } = await startServer({
   keepProcessAlive: false,
   ip: "",
   port: 8998,
-  requestToResponse: () => {
-    return {
-      status: 200,
-      headers: {
-        "Content-Type": "text/plain",
+  services: [
+    {
+      handleRequest: () => {
+        return {
+          status: 200,
+          headers: {
+            "Content-Type": "text/plain",
+          },
+          body: "ok",
+        }
       },
-      body: "ok",
-    }
-  },
+    },
+  ],
 })
 
 {

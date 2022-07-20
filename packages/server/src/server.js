@@ -517,11 +517,13 @@ export const startServer = async ({
 
       let handleRequestReturnValue
       let errorWhileHandlingRequest = null
+      let handleRequestTimings = serverTiming ? {} : null
       try {
         handleRequestReturnValue = await serviceController.callAsyncHooksUntil(
           "handleRequest",
           request,
           {
+            timing: handleRequestTimings,
             warn,
             pushResponse: async ({ path, method }) => {
               if (typeof path !== "string" || path[0] !== "/") {
@@ -662,6 +664,7 @@ export const startServer = async ({
         const timeToStartResponding =
           responseReadyMeasure - requestReceivedMeasure
         const serverTiming = {
+          ...handleRequestTimings,
           ...responseProperties.timing,
           "time to start responding": timeToStartResponding,
         }
