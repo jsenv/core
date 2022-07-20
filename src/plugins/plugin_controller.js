@@ -29,7 +29,7 @@ export const createPluginController = ({
       if (hook) {
         hooks.push({
           plugin,
-          hookName,
+          name: hookName,
           value: hook,
         })
       }
@@ -49,7 +49,7 @@ export const createPluginController = ({
         const group = hookGroups[hookName] || (hookGroups[hookName] = [])
         group.push({
           plugin,
-          hookName,
+          name: hookName,
           value: hook,
         })
       }
@@ -64,7 +64,7 @@ export const createPluginController = ({
       return null
     }
     currentPlugin = hook.plugin
-    currentHookName = hook.hookName
+    currentHookName = hook.name
     const timeEnd = timeStart(
       `${currentHookName}-${currentPlugin.name.replace("jsenv:", "")}`,
     )
@@ -72,7 +72,7 @@ export const createPluginController = ({
     if (info.timing) {
       Object.assign(info.timing, timeEnd())
     }
-    valueReturned = assertAndNormalizeReturnValue(hook.hookName, valueReturned)
+    valueReturned = assertAndNormalizeReturnValue(hook.name, valueReturned)
     currentPlugin = null
     currentHookName = null
     return valueReturned
@@ -83,7 +83,7 @@ export const createPluginController = ({
       return null
     }
     currentPlugin = hook.plugin
-    currentHookName = hook.hookName
+    currentHookName = hook.name
     const timeEnd = timeStart(
       `${currentHookName}-${currentPlugin.name.replace("jsenv:", "")}`,
     )
@@ -91,7 +91,7 @@ export const createPluginController = ({
     if (info.timing) {
       Object.assign(info.timing, timeEnd())
     }
-    valueReturned = assertAndNormalizeReturnValue(hook.hookName, valueReturned)
+    valueReturned = assertAndNormalizeReturnValue(hook.name, valueReturned)
     currentPlugin = null
     currentHookName = null
     return valueReturned

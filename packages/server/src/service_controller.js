@@ -14,23 +14,30 @@ const HOOK_NAMES = [
 export const createServiceController = (services) => {
   const flatServices = flattenAndFilterServices(services)
   const hookGroups = {}
-  const addHook = (hookName) => {
-    const hooks = []
-    flatServices.forEach((service) => {
-      const hook = service[hookName]
-      if (hook) {
-        hooks.push({
+
+  const addService = (service) => {
+    Object.keys(service).forEach((key) => {
+      if (key === "name") return
+      const isHook = HOOK_NAMES.includes(key)
+      if (!isHook) {
+        console.warn(
+          `Unexpected "${key}" property on "${service.name}" service`,
+        )
+      }
+      const hookName = key
+      const hookValue = service[hookName]
+      if (hookValue) {
+        const group = hookGroups[hookName] || (hookGroups[hookName] = [])
+        group.push({
           service,
-          hookName,
-          value: hook,
+          name: hookName,
+          value: hookValue,
         })
       }
     })
-    hookGroups[hookName] = hooks
-    return hooks
   }
-  HOOK_NAMES.forEach((hookName) => {
-    addHook(hookName)
+  services.forEach((service) => {
+    addService(service)
   })
 
   let currentService = null
@@ -41,7 +48,7 @@ export const createServiceController = (services) => {
       return null
     }
     currentService = hook.service
-    currentHookName = hook.hookName
+    currentHookName = hook.name
     let timeEnd
     if (context && context.timing) {
       timeEnd = timeStart(
@@ -62,7 +69,7 @@ export const createServiceController = (services) => {
       return null
     }
     currentService = hook.service
-    currentHookName = hook.hookName
+    currentHookName = hook.name
     let timeEnd
     if (context && context.timing) {
       timeEnd = timeStart(
@@ -80,10 +87,12 @@ export const createServiceController = (services) => {
 
   const callHooks = (hookName, info, context, callback = () => {}) => {
     const hooks = hookGroups[hookName]
-    for (const hook of hooks) {
-      const returnValue = callHook(hook, info, context)
-      if (returnValue) {
-        callback(returnValue)
+    if (hooks) {
+      for (const hook of hooks) {
+        const returnValue = callHook(hook, info, context)
+        if (returnValue) {
+          callback(returnValue)
+        }
       }
     }
   }
@@ -94,17 +103,22 @@ export const createServiceController = (services) => {
     until = (returnValue) => returnValue,
   ) => {
     const hooks = hookGroups[hookName]
-    for (const hook of hooks) {
-      const returnValue = callHook(hook, info, context)
-      const untilReturnValue = until(returnValue)
-      if (untilReturnValue) {
-        return untilReturnValue
+    if (hooks) {
+      for (const hook of hooks) {
+        const returnValue = callHook(hook, info, context)
+        const untilReturnValue = until(returnValue)
+        if (untilReturnValue) {
+          return untilReturnValue
+        }
       }
     }
     return null
   }
   const callAsyncHooksUntil = (hookName, info, context) => {
     const hooks = hookGroups[hookName]
+    if (!hooks) {
+      return null
+    }
     if (hooks.length === 0) {
       return null
     }

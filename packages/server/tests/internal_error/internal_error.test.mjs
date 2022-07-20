@@ -1,19 +1,25 @@
 import { assert } from "@jsenv/assert"
 import { fetchUrl } from "@jsenv/fetch"
 
-import { startServer } from "@jsenv/server"
+import { startServer, jsenvServiceErrorHandler } from "@jsenv/server"
 import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js"
 
-// throw a primitive in requestToResponse
+// throw an error in "handleRequest"
 {
   const { origin, stop } = await startServer({
     logLevel: "off",
     protocol: "http",
     keepProcessAlive: false,
-    requestToResponse: () => {
-      // eslint-disable-next-line no-throw-literal
-      throw "here"
-    },
+    services: [
+      jsenvServiceErrorHandler(),
+      {
+        handleRequest: () => {
+          const error = new Error("message")
+          error.code = "TEST_CODE"
+          throw error
+        },
+      },
+    ],
   })
   {
     const response = await fetchUrl(origin, {
@@ -29,8 +35,7 @@ import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js"
       body: await response.text(),
     }
     const body = JSON.stringify({
-      code: "VALUE_THROWED",
-      value: "here",
+      code: "TEST_CODE",
     })
     const expected = {
       url: `${origin}/`,
@@ -50,17 +55,21 @@ import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js"
   }
 }
 
-// throw an error in requestToResponse
+// throw a primitive in "handleRequest"
 {
   const { origin, stop } = await startServer({
     logLevel: "off",
     protocol: "http",
     keepProcessAlive: false,
-    requestToResponse: () => {
-      const error = new Error("message")
-      error.code = "TEST_CODE"
-      throw error
-    },
+    services: [
+      jsenvServiceErrorHandler(),
+      {
+        handleRequest: () => {
+          // eslint-disable-next-line no-throw-literal
+          throw "here"
+        },
+      },
+    ],
   })
   {
     const response = await fetchUrl(origin, {
@@ -76,7 +85,8 @@ import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js"
       body: await response.text(),
     }
     const body = JSON.stringify({
-      code: "TEST_CODE",
+      code: "VALUE_THROWED",
+      value: "here",
     })
     const expected = {
       url: `${origin}/`,
