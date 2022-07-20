@@ -17,12 +17,10 @@ import { parentPort } from "node:worker_threads"
 import {
   jsenvAccessControlAllowedHeaders,
   startServer,
-  pluginServerTiming,
-  pluginRequestWaitingCheck,
-  pluginCORS,
   fetchFileSystem,
-  composeServices,
   findFreePort,
+  jsenvServiceCORS,
+  jsenvServiceErrorHandler,
 } from "@jsenv/server"
 import {
   assertAndNormalizeDirectoryUrl,
@@ -171,27 +169,29 @@ export const startBuildServer = async ({
     listenAnyIp,
     ip,
     port,
-    plugins: {
-      ...pluginCORS({
+    serverTiming: true,
+    requestWaitingMs: 60_000,
+    services: [
+      jsenvServiceCORS({
         accessControlAllowRequestOrigin: true,
         accessControlAllowRequestMethod: true,
         accessControlAllowRequestHeaders: true,
         accessControlAllowedRequestHeaders: jsenvAccessControlAllowedHeaders,
         accessControlAllowCredentials: true,
+        timingAllowOrigin: true,
       }),
-      ...pluginServerTiming(),
-      ...pluginRequestWaitingCheck({
-        requestWaitingMs: 60 * 1000,
-      }),
-    },
-    sendErrorDetails: true,
-    requestToResponse: composeServices({
       ...services,
-      build_files_service: createBuildFilesService({
-        buildDirectoryUrl,
-        buildIndexPath,
+      {
+        name: "jsenv:build_files_service",
+        handleRequest: createBuildFilesService({
+          buildDirectoryUrl,
+          buildIndexPath,
+        }),
+      },
+      jsenvServiceErrorHandler({
+        sendErrorDetails: true,
       }),
-    }),
+    ],
   })
   startBuildServerTask.done()
   logger.info(``)

@@ -43,6 +43,7 @@ export const executePlan = async (
 
     rootDirectoryUrl,
     keepRunning,
+    services,
     defaultMsAllocatedPerExecution,
     maxExecutionsInParallel,
     failFast,
@@ -256,6 +257,7 @@ export const executePlan = async (
         protocol,
         certificate,
         privateKey,
+        services,
       })
       multipleExecutionsOperation.addEndCallback(async () => {
         await server.stop()

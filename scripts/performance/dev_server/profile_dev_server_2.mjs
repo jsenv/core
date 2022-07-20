@@ -37,13 +37,17 @@ await startServer({
   certificate,
   privateKey,
   port: 6789,
-  sendServerTiming: true,
-  requestToResponse: (request) => {
-    return fetchFileSystem(
-      new URL(request.ressource.slice(1), projectDirectoryUrl),
-      {
-        headers: request.headers,
+  serverTiming: true,
+  services: [
+    {
+      handleRequest: (request) => {
+        return fetchFileSystem(
+          new URL(request.ressource.slice(1), projectDirectoryUrl),
+          {
+            headers: request.headers,
+          },
+        )
       },
-    )
-  },
+    },
+  ],
 })

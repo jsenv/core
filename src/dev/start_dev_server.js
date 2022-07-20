@@ -32,7 +32,7 @@ export const startDevServer = async ({
   certificate,
   privateKey,
   keepProcessAlive = true,
-  serverPlugins,
+  services,
 
   rootDirectoryUrl,
   clientFiles = {
@@ -252,7 +252,7 @@ export const startDevServer = async ({
     urlGraph,
     kitchen,
     scenario: "dev",
-    serverPlugins,
+    services,
     onErrorWhileServingFile: (data) => {
       onErrorWhileServingFileReference.current(data)
     },
