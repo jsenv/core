@@ -195,7 +195,7 @@ export const startServer = async ({
   const stop = memoize(async (reason = STOP_REASON_NOT_SPECIFIED) => {
     status = "stopping"
     await Promise.all(stopCallbackList.notify({ reason }))
-    serviceController.callHooks("serverStopped")
+    serviceController.callHooks("serverStopped", { reason })
     status = "stopped"
     stoppedResolve(reason)
   })
@@ -515,81 +515,80 @@ export const startServer = async ({
         },
       )
 
-      let produceResponseReturnValue
-      let produceResponseError = null
+      let handleRequestReturnValue
+      let errorWhileHandlingRequest = null
       try {
-        produceResponseReturnValue =
-          await serviceController.callAsyncHooksUntil(
-            "produceResponse",
-            request,
-            {
-              warn,
-              pushResponse: async ({ path, method }) => {
-                if (typeof path !== "string" || path[0] !== "/") {
-                  addRequestLog(requestNode, {
-                    type: "warn",
-                    value: `response push ignored because path is invalid (must be a string starting with "/", found ${path})`,
-                  })
-                  return
-                }
-                if (!request.http2) {
-                  addRequestLog(requestNode, {
-                    type: "warn",
-                    value: `response push ignored because request is not http2`,
-                  })
-                  return
-                }
-                const canPushStream = testCanPushStream(nodeResponse.stream)
-                if (!canPushStream.can) {
-                  addRequestLog(requestNode, {
-                    type: "debug",
-                    value: `response push ignored because ${canPushStream.reason}`,
-                  })
-                  return
-                }
+        handleRequestReturnValue = await serviceController.callAsyncHooksUntil(
+          "handleRequest",
+          request,
+          {
+            warn,
+            pushResponse: async ({ path, method }) => {
+              if (typeof path !== "string" || path[0] !== "/") {
+                addRequestLog(requestNode, {
+                  type: "warn",
+                  value: `response push ignored because path is invalid (must be a string starting with "/", found ${path})`,
+                })
+                return
+              }
+              if (!request.http2) {
+                addRequestLog(requestNode, {
+                  type: "warn",
+                  value: `response push ignored because request is not http2`,
+                })
+                return
+              }
+              const canPushStream = testCanPushStream(nodeResponse.stream)
+              if (!canPushStream.can) {
+                addRequestLog(requestNode, {
+                  type: "debug",
+                  value: `response push ignored because ${canPushStream.reason}`,
+                })
+                return
+              }
 
-                let preventedByService = null
-                const prevent = () => {
-                  preventedByService = serviceController.getCurrentService()
-                }
-                serviceController.callHooksUntil(
-                  "onResponsePush",
-                  { path, method },
-                  {
-                    request,
-                    warn,
-                    prevent,
-                  },
-                  () => preventedByService,
-                )
-                if (preventedByService) {
-                  addRequestLog(requestNode, {
-                    type: "debug",
-                    value: `response push prevented by "${preventedByService.name}" service`,
-                  })
-                  return
-                }
+              let preventedByService = null
+              const prevent = () => {
+                preventedByService = serviceController.getCurrentService()
+              }
+              serviceController.callHooksUntil(
+                "onResponsePush",
+                { path, method },
+                {
+                  request,
+                  warn,
+                  prevent,
+                },
+                () => preventedByService,
+              )
+              if (preventedByService) {
+                addRequestLog(requestNode, {
+                  type: "debug",
+                  value: `response push prevented by "${preventedByService.name}" service`,
+                })
+                return
+              }
 
-                const requestChildNode = { logs: [], children: [] }
-                requestNode.children.push(requestChildNode)
-                await pushResponse(
-                  { path, method },
-                  {
-                    requestNode: requestChildNode,
-                    parentHttp2Stream: nodeResponse.stream,
-                  },
-                )
-              },
+              const requestChildNode = { logs: [], children: [] }
+              requestNode.children.push(requestChildNode)
+              await pushResponse(
+                { path, method },
+                {
+                  requestNode: requestChildNode,
+                  parentHttp2Stream: nodeResponse.stream,
+                },
+              )
             },
-          )
+          },
+        )
       } catch (error) {
-        produceResponseError = error
+        errorWhileHandlingRequest = error
       }
 
       let responseProperties
-      if (produceResponseError) {
+      if (errorWhileHandlingRequest) {
         if (
-          produceResponseError.name === "AbortError" &&
+          errorWhileHandlingRequest.name === "AbortError" &&
           request.signal.aborted
         ) {
           responseProperties = ABORTED_RESPONSE_PROPERTIES
@@ -605,24 +604,24 @@ export const startServer = async ({
             // il faudrais pouvoir stop que les autres response ?
             stop(STOP_REASON_INTERNAL_ERROR)
           }
-          const responseDescriptionFromError =
+          const handleServerErrorReturnValue =
             await serviceController.callAsyncHooksUntil(
-              "error",
-              produceResponseError,
+              "handleServerError",
+              errorWhileHandlingRequest,
               {
                 request,
                 warn,
               },
             )
-          if (!responseDescriptionFromError) {
-            throw produceResponseError
+          if (!handleServerErrorReturnValue) {
+            throw errorWhileHandlingRequest
           }
           addRequestLog(requestNode, {
             type: "error",
             value: createDetailedMessage(
               `internal error while handling request`,
               {
-                "error stack": produceResponseError.stack,
+                "error stack": errorWhileHandlingRequest.stack,
               },
             ),
           })
@@ -636,7 +635,7 @@ export const startServer = async ({
                 "content-type": "text/plain",
               },
             },
-            responseDescriptionFromError,
+            handleServerErrorReturnValue,
           )
         }
       } else {
@@ -647,7 +646,7 @@ export const startServer = async ({
           headers = {},
           body,
           ...rest
-        } = produceResponseReturnValue || {}
+        } = handleRequestReturnValue || {}
         responseProperties = {
           status,
           statusText,

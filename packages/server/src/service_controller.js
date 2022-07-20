@@ -3,7 +3,8 @@ import { timeStart } from "./server_timing/timing_measure.js"
 const HOOK_NAMES = [
   "serverListening",
   "redirectRequest",
-  "produceResponse",
+  "handleRequest",
+  "handleServerError",
   "onResponsePush",
   "injectResponseHeaders",
   "responseReady",
@@ -86,16 +87,6 @@ export const createServiceController = (services) => {
       }
     }
   }
-  //   const callAsyncHooks = async (hookName, context, callback) => {
-  //     const hooks = hookGroups[hookName]
-  //     await hooks.reduce(async (previous, hook) => {
-  //       await previous
-  //       const returnValue = await callAsyncHook(hook, context)
-  //       if (returnValue && callback) {
-  //         await callback(returnValue)
-  //       }
-  //     }, Promise.resolve())
-  //   }
   const callHooksUntil = (
     hookName,
     info,
@@ -139,7 +130,6 @@ export const createServiceController = (services) => {
     services: flatServices,
 
     callHooks,
-    // callAsyncHooks,
     callHooksUntil,
     callAsyncHooksUntil,
 

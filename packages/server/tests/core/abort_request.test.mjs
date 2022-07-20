@@ -9,14 +9,18 @@ import { createObservable } from "@jsenv/server/src/internal/observable.js"
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    requestToResponse: async () => {
-      return {
-        status: 200,
-        body: new Promise((resolve) => {
-          resolveResponseBody = resolve
-        }),
-      }
-    },
+    services: [
+      {
+        handleRequest: () => {
+          return {
+            status: 200,
+            body: new Promise((resolve) => {
+              resolveResponseBody = resolve
+            }),
+          }
+        },
+      },
+    ],
   })
 
   const { port, hostname } = new URL(server.origin)
@@ -49,15 +53,19 @@ import { createObservable } from "@jsenv/server/src/internal/observable.js"
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    requestToResponse: async () => {
-      return {
-        status: 200,
-        body: createObservable(({ next, complete }) => {
-          next("Hell")
-          responseBodyHooks = { next, complete }
-        }),
-      }
-    },
+    services: [
+      {
+        handleRequest: async () => {
+          return {
+            status: 200,
+            body: createObservable(({ next, complete }) => {
+              next("Hell")
+              responseBodyHooks = { next, complete }
+            }),
+          }
+        },
+      },
+    ],
   })
 
   const { port, hostname } = new URL(server.origin)
@@ -89,15 +97,19 @@ import { createObservable } from "@jsenv/server/src/internal/observable.js"
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    requestToResponse: async () => {
-      return {
-        status: 200,
-        body: createObservable(({ next, complete }) => {
-          next("Hell")
-          responseBodyHooks = { next, complete }
-        }),
-      }
-    },
+    services: [
+      {
+        handleRequest: async () => {
+          return {
+            status: 200,
+            body: createObservable(({ next, complete }) => {
+              next("Hell")
+              responseBodyHooks = { next, complete }
+            }),
+          }
+        },
+      },
+    ],
   })
 
   const { port, hostname } = new URL(server.origin)
