@@ -44,7 +44,7 @@ export const startBuildServer = async ({
   listenAnyIp,
   ip,
   port = 9779,
-  services = {},
+  services = [],
   keepProcessAlive = true,
 
   rootDirectoryUrl,

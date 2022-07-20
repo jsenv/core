@@ -30,13 +30,14 @@ const devServer = await startDevServer({
   logLevel: "warn",
   rootDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
-  serverPlugins: {
-    spy_request: {
-      onRequest: (request) => {
+  services: [
+    {
+      name: "spy_request",
+      handleRequest: (request) => {
         serverRequests.push(request)
       },
     },
-  },
+  ],
   clientAutoreload: false,
   htmlSupervisor: false,
 })
