@@ -18,6 +18,7 @@ export {
   STOP_REASON_PROCESS_EXIT,
   STOP_REASON_NOT_SPECIFIED,
 } from "./stopReasons.js"
+export { jsenvServiceErrorHandler } from "./services/error_handler/jsenv_service_error_handler.js"
 
 // CORS
 export {

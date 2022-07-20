@@ -1,4 +1,4 @@
-import { negotiateContentType } from "../../content_negotiation/negotiateContentType.js"
+import { pickContentType } from "../../content_negotiation/pick_content_type.js"
 
 export const jsenvServiceErrorHandler = ({ sendErrorDetails = false } = {}) => {
   return {
@@ -88,7 +88,7 @@ export const jsenvServiceErrorHandler = ({ sendErrorDetails = false } = {}) => {
           }
         },
       }
-      const bestContentType = negotiateContentType(
+      const bestContentType = pickContentType(
         request,
         Object.keys(availableContentTypes),
       )

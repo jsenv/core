@@ -606,16 +606,16 @@ export const startServer = async ({
             // il faudrais pouvoir stop que les autres response ?
             stop(STOP_REASON_INTERNAL_ERROR)
           }
-          const handleServerErrorReturnValue =
+          const handleErrorReturnValue =
             await serviceController.callAsyncHooksUntil(
-              "handleServerError",
+              "handleError",
               errorWhileHandlingRequest,
               {
                 request,
                 warn,
               },
             )
-          if (!handleServerErrorReturnValue) {
+          if (!handleErrorReturnValue) {
             throw errorWhileHandlingRequest
           }
           addRequestLog(requestNode, {
@@ -637,7 +637,7 @@ export const startServer = async ({
                 "content-type": "text/plain",
               },
             },
-            handleServerErrorReturnValue,
+            handleErrorReturnValue,
           )
         }
       } else {

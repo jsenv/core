@@ -1,14 +1,19 @@
 import { assert } from "@jsenv/assert"
 import { fetchUrl } from "@jsenv/fetch"
 
-import { startServer, pluginCORS } from "@jsenv/server"
+import {
+  startServer,
+  jsenvServiceCORS,
+  jsenvServiceErrorHandler,
+} from "@jsenv/server"
 import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js"
 
 const server = await startServer({
   protocol: "http",
   logLevel: "off",
-  plugins: {
-    ...pluginCORS({
+  keepProcessAlive: false,
+  services: [
+    jsenvServiceCORS({
       accessControlAllowedMethods: [],
       accessControlAllowRequestOrigin: true,
       accessControlAllowRequestMethod: true,
@@ -16,11 +21,13 @@ const server = await startServer({
       accessControlAllowCredentials: true,
       accessControlMaxAge: 400,
     }),
-  },
-  keepProcessAlive: false,
-  requestToResponse: () => {
-    throw new Error("here")
-  },
+    jsenvServiceErrorHandler(),
+    {
+      handleRequest: () => {
+        throw new Error("here")
+      },
+    },
+  ],
 })
 
 const response = await fetchUrl(server.origin, {

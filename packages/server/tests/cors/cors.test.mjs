@@ -1,31 +1,33 @@
 import { assert } from "@jsenv/assert"
 import { fetchUrl } from "@jsenv/fetch"
 
-import { startServer, pluginCORS } from "@jsenv/server"
+import { startServer, jsenvServiceCORS } from "@jsenv/server"
 import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js"
 
 const server = await startServer({
   protocol: "http",
   logLevel: "warn",
-  plugins: {
-    ...pluginCORS({
+  keepProcessAlive: false,
+  services: [
+    jsenvServiceCORS({
       accessControlAllowRequestOrigin: true,
       accessControlAllowRequestMethod: true,
       accessControlAllowRequestHeaders: true,
       accessControlAllowedMethods: [],
       accessControlMaxAge: 400,
     }),
-  },
-  keepProcessAlive: false,
-  requestToResponse: () => {
-    return {
-      status: 200,
-      headers: {
-        "Content-Type": "text/plain",
+    {
+      handleRequest: () => {
+        return {
+          status: 200,
+          headers: {
+            "Content-Type": "text/plain",
+          },
+          body: "ok",
+        }
       },
-      body: "ok",
-    }
-  },
+    },
+  ],
 })
 
 const response = await fetchUrl(server.origin, {
