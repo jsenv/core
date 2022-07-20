@@ -14,30 +14,6 @@
 
   var defineProperty = Object.defineProperty;
   var forEach = Array.prototype.forEach;
-
-  var hasBrokenRules = function () {
-    var style = bootstrapper.createElement("style");
-    style.textContent = '.x{content:"y"}';
-    bootstrapper.body.appendChild(style);
-    return style.sheet.cssRules[0].style.content !== '"y"';
-  }();
-
-  var brokenRulePatterns = [/content:\s*["']/gm];
-
-  function fixBrokenRules(content) {
-    return brokenRulePatterns.reduce(function (acc, pattern) {
-      return acc.replace(pattern, "$&%%%");
-    }, content);
-  }
-
-  var placeholderPatterns = [/(content:\s*["'])%%%/gm];
-  var getCssText = hasBrokenRules ? function (rule) {
-    return placeholderPatterns.reduce(function (acc, pattern) {
-      return acc.replace(pattern, "$1");
-    }, rule.cssText);
-  } : function (rule) {
-    return rule.cssText;
-  };
   var importPattern = /@import.+?;?$/gm;
 
   function rejectImports(contents) {
@@ -48,18 +24,6 @@
     }
 
     return _contents.trim();
-  }
-
-  function clearRules(sheet) {
-    for (var i = 0; i < sheet.cssRules.length; i++) {
-      sheet.deleteRule(0);
-    }
-  }
-
-  function insertAllRules(from, to) {
-    forEach.call(from.cssRules, function (rule, i) {
-      to.insertRule(getCssText(rule), i);
-    });
   }
 
   function isElementConnected(element) {
@@ -106,9 +70,10 @@
     return typeof instance === "object" ? nonConstructedProto.isPrototypeOf(instance) : false;
   }
 
-  var $basicStyleSheet = new WeakMap();
+  var $basicStyleElement = new WeakMap();
   var $locations = new WeakMap();
   var $adoptersByLocation = new WeakMap();
+  var $appliedMethods = new WeakMap();
 
   function addAdopterLocation(sheet, location) {
     var adopter = document.createElement("style");
@@ -130,13 +95,15 @@
 
   function restyleAdopter(sheet, adopter) {
     requestAnimationFrame(function () {
-      clearRules(adopter.sheet);
-      insertAllRules($basicStyleSheet.get(sheet), adopter.sheet);
+      adopter.textContent = $basicStyleElement.get(sheet).textContent;
+      $appliedMethods.get(sheet).forEach(function (command) {
+        return adopter.sheet[command.method].apply(adopter.sheet, command.args);
+      });
     });
   }
 
   function checkInvocationCorrectness(self) {
-    if (!$basicStyleSheet.has(self)) {
+    if (!$basicStyleElement.has(self)) {
       throw new TypeError("Illegal invocation");
     }
   }
@@ -145,9 +112,10 @@
     var self = this;
     var style = document.createElement("style");
     bootstrapper.body.appendChild(style);
-    $basicStyleSheet.set(self, style.sheet);
+    $basicStyleElement.set(self, style);
     $locations.set(self, []);
     $adoptersByLocation.set(self, new WeakMap());
+    $appliedMethods.set(self, []);
   }
 
   var proto$1 = ConstructedStyleSheet.prototype;
@@ -166,9 +134,8 @@
 
     if (typeof contents === "string") {
       var self_1 = this;
-      var style = $basicStyleSheet.get(self_1).ownerNode;
-      style.textContent = hasBrokenRules ? fixBrokenRules(rejectImports(contents)) : rejectImports(contents);
-      $basicStyleSheet.set(self_1, style.sheet);
+      $basicStyleElement.get(self_1).textContent = rejectImports(contents);
+      $appliedMethods.set(self_1, []);
       $locations.get(self_1).forEach(function (location) {
         if (location.isConnected()) {
           restyleAdopter(self_1, getAdopterByLocation(self_1, location));
@@ -182,7 +149,15 @@
     enumerable: true,
     get: function cssRules() {
       checkInvocationCorrectness(this);
-      return $basicStyleSheet.get(this).cssRules;
+      return $basicStyleElement.get(this).sheet.cssRules;
+    }
+  });
+  defineProperty(proto$1, "media", {
+    configurable: true,
+    enumerable: true,
+    get: function media() {
+      checkInvocationCorrectness(this);
+      return $basicStyleElement.get(this).sheet.media;
     }
   });
   cssStyleSheetMethods.forEach(function (method) {
@@ -190,25 +165,18 @@
       var self = this;
       checkInvocationCorrectness(self);
       var args = arguments;
+      $appliedMethods.get(self).push({
+        method: method,
+        args: args
+      });
       $locations.get(self).forEach(function (location) {
         if (location.isConnected()) {
           var sheet = getAdopterByLocation(self, location).sheet;
           sheet[method].apply(sheet, args);
         }
       });
-
-      if (hasBrokenRules) {
-        if (method === "insertRule") {
-          args[0] = fixBrokenRules(args[0]);
-        }
-
-        if (method === "addRule") {
-          args[1] = fixBrokenRules(args[1]);
-        }
-      }
-
-      var basic = $basicStyleSheet.get(self);
-      return basic[method].apply(basic, args);
+      var basicSheet = $basicStyleElement.get(self).sheet;
+      return basicSheet[method].apply(basicSheet, args);
     };
   });
   defineProperty(ConstructedStyleSheet, Symbol.hasInstance, {

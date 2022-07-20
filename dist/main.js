@@ -12589,35 +12589,24 @@ const jsenvPluginImportAssertions = () => {
       js_import_export: (reference, context) => {
         if (!reference.assert) {
           return null;
-        } // during build always replace import assertions with the js:
-        // - avoid rollup to see import assertions
-        //   We would have to tell rollup to ignore import with assertion
-        // - means rollup can bundle more js file together
-        // - means url versioning can work for css inlined in js
-
+        } // When to force transpilation:
 
         if (reference.assert.type === "json") {
-          if (context.scenario !== "build" && context.isSupportedOnCurrentClients("import_type_json")) {
-            return null;
+          {
+            return updateReference(reference, "as_json_module");
           }
-
-          return updateReference(reference, "as_json_module");
         }
 
         if (reference.assert.type === "css") {
-          if (context.scenario !== "build" && context.isSupportedOnCurrentClients("import_type_css")) {
-            return null;
+          {
+            return updateReference(reference, "as_css_module");
           }
-
-          return updateReference(reference, "as_css_module");
         }
 
         if (reference.assert.type === "text") {
-          if (context.scenario !== "build" && context.isSupportedOnCurrentClients("import_type_text")) {
-            return null;
+          {
+            return updateReference(reference, "as_text_module");
           }
-
-          return updateReference(reference, "as_text_module");
         }
 
         return null;
@@ -20718,7 +20707,7 @@ const createUrlGraph = ({
 
     prunedUrlInfos.forEach(prunedUrlInfo => {
       prunedUrlInfo.modifiedTimestamp = Date.now(); // should we delete?
-      // delete urlInfos[prunedUrlInfo.url]
+      // delete urlGraph.deleteUrlInfo(prunedUrlInfo.url)
     });
 
     if (clientFilesPruneCallbackList) {
