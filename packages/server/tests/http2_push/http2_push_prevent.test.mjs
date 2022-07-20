@@ -20,33 +20,29 @@ if (process.platform !== "win32") {
     privateKey,
     certificate,
     keepProcessAlive: false,
-    plugins: {
-      prevent: {
-        onRequest: () => {
-          return {
-            onPushResponse: ({ path }, { prevent }) => {
-              if (path === "/preventme") {
-                prevent()
-              }
-            },
+    services: [
+      {
+        onResponsePush: ({ path }, { prevent }) => {
+          if (path === "/preventme") {
+            prevent()
           }
         },
-      },
-    },
-    requestToResponse: (request, { pushResponse }) => {
-      if (request.ressource === "/main.html") {
-        pushResponse({ path: "/preventme" })
-        pushResponse({ path: "/style.css" })
-      }
+        handleRequest: (request, { pushResponse }) => {
+          if (request.ressource === "/main.html") {
+            pushResponse({ path: "/preventme" })
+            pushResponse({ path: "/style.css" })
+          }
 
-      return fetchFileSystem(
-        new URL(request.ressource.slice(1), import.meta.url),
-        {
-          headers: request.headers,
-          canReadDirectory: true,
+          return fetchFileSystem(
+            new URL(request.ressource.slice(1), import.meta.url),
+            {
+              headers: request.headers,
+              canReadDirectory: true,
+            },
+          )
         },
-      )
-    },
+      },
+    ],
   })
 
   const request = async (http2Client, path) => {

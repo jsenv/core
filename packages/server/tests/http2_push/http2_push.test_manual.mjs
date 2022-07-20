@@ -11,18 +11,22 @@ await startServer({
   privateKey,
   certificate,
   sendErrorDetails: true,
-  requestToResponse: (request, { pushResponse }) => {
-    if (request.ressource === "/main.html") {
-      pushResponse({ path: "/script.js" })
-      pushResponse({ path: "/style.css" })
-    }
+  services: [
+    {
+      handleRequest: (request, { pushResponse }) => {
+        if (request.ressource === "/main.html") {
+          pushResponse({ path: "/script.js" })
+          pushResponse({ path: "/style.css" })
+        }
 
-    return fetchFileSystem(
-      new URL(request.ressource.slice(1), import.meta.url),
-      {
-        headers: request.headers,
-        canReadDirectory: true,
+        return fetchFileSystem(
+          new URL(request.ressource.slice(1), import.meta.url),
+          {
+            headers: request.headers,
+            canReadDirectory: true,
+          },
+        )
       },
-    )
-  },
+    },
+  ],
 })

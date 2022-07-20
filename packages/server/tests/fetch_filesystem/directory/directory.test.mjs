@@ -9,16 +9,20 @@ const testDirectoryUrl = new URL("./", import.meta.url).href
 const server = await startServer({
   logLevel: "warn",
   keepProcessAlive: false,
-  requestToResponse: (request) => {
-    return fetchFileSystem(
-      new URL(request.ressource.slice(1), import.meta.url),
-      {
-        headers: request.headers,
-        canReadDirectory: true,
-        rootDirectoryUrl: testDirectoryUrl,
+  services: [
+    {
+      handleRequest: (request) => {
+        return fetchFileSystem(
+          new URL(request.ressource.slice(1), import.meta.url),
+          {
+            headers: request.headers,
+            canReadDirectory: true,
+            rootDirectoryUrl: testDirectoryUrl,
+          },
+        )
       },
-    )
-  },
+    },
+  ],
 })
 
 const directoryUrl = new URL("./dir/", testDirectoryUrl).href

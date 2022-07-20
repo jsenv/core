@@ -4,7 +4,7 @@ import { fetchUrl } from "@jsenv/fetch"
 import {
   startServer,
   fetchFileSystem,
-  pluginRessourceAliases,
+  jsenvServiceRessourceAliases,
 } from "@jsenv/server"
 
 let ressourceBeforeAlias
@@ -13,19 +13,26 @@ const { origin } = await startServer({
   logLevel: "error",
   protocol: "http",
   keepProcessAlive: false,
-  plugins: {
-    ...pluginRessourceAliases({
+
+  services: [
+    jsenvServiceRessourceAliases({
       "/alias.json": "/data.json",
       "/*.js": "/file.js",
       "/dir/*": "/dir/a.txt",
       "/*/deep/*.js": "/*/deep/file.js",
     }),
-  },
-  requestToResponse: (request) => {
-    ressourceBeforeAlias = request.ressourceBeforeAlias
-    ressource = request.ressource
-    return fetchFileSystem(new URL(request.ressource.slice(1), import.meta.url))
-  },
+    {
+      handleRequest: (request) => {
+        ressourceBeforeAlias = request.original
+          ? request.original.ressource
+          : undefined
+        ressource = request.ressource
+        return fetchFileSystem(
+          new URL(request.ressource.slice(1), import.meta.url),
+        )
+      },
+    },
+  ],
 })
 
 {

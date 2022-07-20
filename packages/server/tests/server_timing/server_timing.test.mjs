@@ -32,7 +32,7 @@ const { origin } = await startServer({
   const actual = parseServerTimingHeader(response.headers.get("server-timing"))
   const expected = {
     a: {
-      description: "handleRequest-toto",
+      description: "toto.handleRequest",
       duration: actual.a.duration,
     },
     b: {
