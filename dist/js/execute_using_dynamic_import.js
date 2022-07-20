@@ -1,6 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { Session } from "node:inspector";
-import { performance, PerformanceObserver } from "node:perf_hooks";
+import { PerformanceObserver, performance } from "node:perf_hooks";
 
 /*
  * Calling Profiler.startPreciseCoverage DO NOT propagate to
