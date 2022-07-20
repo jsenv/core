@@ -45,7 +45,7 @@ const {
 })
 
 export const performanceReport = {
-  "package metrics": {
+  "package size metrics": {
     ...packageTarballMetrics,
   },
   "dev server metrics": {
