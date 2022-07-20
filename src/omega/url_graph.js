@@ -110,7 +110,7 @@ export const createUrlGraph = ({
     prunedUrlInfos.forEach((prunedUrlInfo) => {
       prunedUrlInfo.modifiedTimestamp = Date.now()
       // should we delete?
-      // delete urlInfos[prunedUrlInfo.url]
+      // delete urlGraph.deleteUrlInfo(prunedUrlInfo.url)
     })
     if (clientFilesPruneCallbackList) {
       clientFilesPruneCallbackList.forEach((callback) => {

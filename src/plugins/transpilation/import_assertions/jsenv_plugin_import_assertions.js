@@ -38,37 +38,49 @@ export const jsenvPluginImportAssertions = () => {
         if (!reference.assert) {
           return null
         }
-        // during build always replace import assertions with the js:
-        // - avoid rollup to see import assertions
-        //   We would have to tell rollup to ignore import with assertion
-        // - means rollup can bundle more js file together
-        // - means url versioning can work for css inlined in js
+        // When to force transpilation:
+        // - during build
+        //   - avoid rollup to see import assertions
+        //     We would have to tell rollup to ignore import with assertion
+        //   - means rollup can bundle more js file together
+        //   - means url versioning can work for css inlined in js
+        // - rest of the time
+        //  - fix a bug where opening the page both in chrome and firefox would
+        //  create an infinite full reload as:
+        //    - chrome use "file.css"
+        //    - firefox do not use "file.css" but "file.css?as_css_module"
+        //    -> server consider "file.css" as pruned for the file importing it
+        //    -> chrome reloads and re-use "file.css"
+        //    -> firefox reload, etc
+        //  - bonus: same code runs during dev and after build
+        const forceTranspilation = true
+
         if (reference.assert.type === "json") {
           if (
-            context.scenario !== "build" &&
-            context.isSupportedOnCurrentClients("import_type_json")
+            forceTranspilation ||
+            !context.isSupportedOnCurrentClients("import_type_json")
           ) {
-            return null
+            return updateReference(reference, "as_json_module")
           }
-          return updateReference(reference, "as_json_module")
+          return null
         }
         if (reference.assert.type === "css") {
           if (
-            context.scenario !== "build" &&
-            context.isSupportedOnCurrentClients("import_type_css")
+            forceTranspilation ||
+            !context.isSupportedOnCurrentClients("import_type_css")
           ) {
-            return null
+            return updateReference(reference, "as_css_module")
           }
-          return updateReference(reference, "as_css_module")
+          return null
         }
         if (reference.assert.type === "text") {
           if (
-            context.scenario !== "build" &&
-            context.isSupportedOnCurrentClients("import_type_text")
+            forceTranspilation ||
+            !context.isSupportedOnCurrentClients("import_type_text")
           ) {
-            return null
+            return updateReference(reference, "as_text_module")
           }
-          return updateReference(reference, "as_text_module")
+          return null
         }
         return null
       },
