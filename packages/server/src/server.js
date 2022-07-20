@@ -195,7 +195,7 @@ export const startServer = async ({
   const stop = memoize(async (reason = STOP_REASON_NOT_SPECIFIED) => {
     status = "stopping"
     await Promise.all(stopCallbackList.notify({ reason }))
-    serviceController.callHooks("stopped")
+    serviceController.callHooks("serverStopped")
     status = "stopped"
     stoppedResolve(reason)
   })
@@ -505,11 +505,13 @@ export const startServer = async ({
         request,
         { warn },
         (newRequestProperties) => {
-          request = applyRedirectionToRequest(request, {
-            original: request.original || request,
-            previous: request,
-            ...newRequestProperties,
-          })
+          if (newRequestProperties) {
+            request = applyRedirectionToRequest(request, {
+              original: request.original || request,
+              previous: request,
+              ...newRequestProperties,
+            })
+          }
         },
       )
 

@@ -21,7 +21,7 @@ export const jsenvServiceRessourceAliases = (ressourceAliases) => {
         ressourceBeforeAlias,
         ressourceAfterAlias,
       )
-      return ressource
+      return { ressource }
     },
   }
 }
