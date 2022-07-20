@@ -4,7 +4,7 @@
  * Ideally this file should be kept simple to help discovering codebase progressively.
  */
 
-export { startServer } from "./startServer.js"
+export { startServer } from "./server.js"
 export { composeServices } from "./service_composition/service_composition.js"
 export { setupRoutes } from "./service_composition/routing.js"
 export { readRequestBody } from "./readRequestBody.js"

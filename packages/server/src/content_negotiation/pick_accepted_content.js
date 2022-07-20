@@ -1,11 +1,10 @@
-export const applyContentNegotiation = ({
+export const pickAcceptedContent = ({
   availables,
   accepteds,
   getAcceptanceScore,
 }) => {
   let highestScore = -1
   let availableWithHighestScore = null
-
   let availableIndex = 0
   while (availableIndex < availables.length) {
     const available = availables[availableIndex]
@@ -23,6 +22,5 @@ export const applyContentNegotiation = ({
       }
     }
   }
-
   return availableWithHighestScore
 }

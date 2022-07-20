@@ -8,6 +8,8 @@ import {
 } from "@jsenv/abort"
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js"
 
+import { createServiceController } from "./service_controller.js"
+import { timingToServerTimingResponseHeaders } from "./server_timing/timing_header.js"
 import { createPolyglotServer } from "./internal/server-polyglot.js"
 import { trackServerPendingConnections } from "./internal/trackServerPendingConnections.js"
 import { trackServerPendingRequests } from "./internal/trackServerPendingRequests.js"
@@ -26,7 +28,6 @@ import { listen, stopListening } from "./internal/listen.js"
 import { composeTwoResponses } from "./internal/response_composition.js"
 import { listenRequest } from "./internal/listenRequest.js"
 import { listenServerConnectionError } from "./internal/listenServerConnectionError.js"
-import { applyDefaultErrorToResponse } from "./error_to_response_default.js"
 import {
   STOP_REASON_INTERNAL_ERROR,
   STOP_REASON_PROCESS_SIGHUP,
@@ -36,6 +37,7 @@ import {
   STOP_REASON_PROCESS_EXIT,
   STOP_REASON_NOT_SPECIFIED,
 } from "./stopReasons.js"
+import { composeTwoHeaders } from "./internal/headers_composition.js"
 
 export const startServer = async ({
   signal = new AbortController().signal,
@@ -64,16 +66,21 @@ export const startServer = async ({
   // auto close when requestToResponse throw an error
   stopOnInternalError = false,
   keepProcessAlive = true,
-  requestToResponse = () => null,
-  plugins = {},
-
-  sendErrorDetails = false,
-  errorToResponse = () => null,
-
-  onListenStart = () => {},
-  onListenEnd = () => {},
-  onStop = () => {},
+  services = [],
   nagle = true,
+  serverTiming = false,
+  requestWaitingMs = 0,
+  requestWaitingCallback = ({ request, warn, requestWaitingMs }) => {
+    warn(
+      createDetailedMessage(
+        `still no response found for request after ${requestWaitingMs} ms`,
+        {
+          "request url": `${request.origin}${request.ressource}`,
+          "request headers": JSON.stringify(request.headers, null, "  "),
+        },
+      ),
+    )
+  },
 } = {}) => {
   if (protocol !== "http" && protocol !== "https") {
     throw new Error(`protocol must be http or https, got ${protocol}`)
@@ -114,6 +121,8 @@ export const startServer = async ({
     allowHttpRequestOnHttps = false
   }
 
+  const serviceController = createServiceController(services)
+
   const processTeardownEvents = {
     SIGHUP: stopOnExit,
     SIGTERM: stopOnExit,
@@ -151,7 +160,6 @@ export const startServer = async ({
       nodeServer.unref()
     }
 
-    onListenStart()
     port = await listen({
       signal: startServerOperation.signal,
       server: nodeServer,
@@ -159,7 +167,7 @@ export const startServer = async ({
       portHint,
       ip,
     })
-    onListenEnd(port)
+    serviceController.callHooks("serverListening", { port })
     startServerOperation.addAbortCallback(async () => {
       await stopListening(nodeServer)
     })
@@ -177,7 +185,6 @@ export const startServer = async ({
   stopCallbackList.add(({ reason }) => {
     logger.info(`${serverName} stopping server (reason: ${reason})`)
   })
-  stopCallbackList.add(onStop)
   stopCallbackList.add(async () => {
     await stopListening(nodeServer)
   })
@@ -188,6 +195,7 @@ export const startServer = async ({
   const stop = memoize(async (reason = STOP_REASON_NOT_SPECIFIED) => {
     status = "stopping"
     await Promise.all(stopCallbackList.notify({ reason }))
+    serviceController.callHooks("stopped")
     status = "stopped"
     stoppedResolve(reason)
   })
@@ -467,13 +475,16 @@ export const startServer = async ({
     }
 
     const handleRequest = async (request, { requestNode }) => {
+      let requestReceivedMeasure
+      if (serverTiming) {
+        requestReceivedMeasure = performance.now()
+      }
       addRequestLog(requestNode, {
         type: "info",
         value: request.parent
           ? `Push ${request.ressource}`
           : `${request.method} ${request.origin}${request.ressource}`,
       })
-
       const warn = (value) => {
         addRequestLog(requestNode, {
           type: "warn",
@@ -481,100 +492,107 @@ export const startServer = async ({
         })
       }
 
-      const requestPlugins = []
-      let responseFromShortcircuit
-      const shortcircuitResponse = (value) => {
-        responseFromShortcircuit = value
+      let requestWaitingTimeout
+      if (requestWaitingMs) {
+        requestWaitingTimeout = setTimeout(
+          () => requestWaitingCallback({ request, warn, requestWaitingMs }),
+          requestWaitingMs,
+        ).unref()
       }
-      const redirectRequest = (requestRedirection) => {
-        request = applyRedirectionToRequest(request, requestRedirection)
-      }
-      Object.keys(plugins).forEach((pluginName) => {
-        const { onRequest } = plugins[pluginName]
-        if (onRequest) {
-          const returnValue = onRequest(request, {
-            warn,
-            logger,
-            shortcircuitResponse,
-            redirectRequest,
+
+      serviceController.callHooks(
+        "redirectRequest",
+        request,
+        { warn },
+        (newRequestProperties) => {
+          request = applyRedirectionToRequest(request, {
+            original: request.original || request,
+            previous: request,
+            ...newRequestProperties,
           })
-          if (returnValue) {
-            requestPlugins.push({
-              pluginName,
-              ...returnValue,
-            })
-          }
-        }
-      })
-      const result = responseFromShortcircuit
-        ? { returnValue: responseFromShortcircuit }
-        : await generateResponseDescription({
-            requestToResponse,
+        },
+      )
+
+      let produceResponseReturnValue
+      let produceResponseError = null
+      try {
+        produceResponseReturnValue =
+          await serviceController.callAsyncHooksUntil(
+            "produceResponse",
             request,
-            pushResponse: async ({ path, method }) => {
-              if (typeof path !== "string" || path[0] !== "/") {
-                addRequestLog(requestNode, {
-                  type: "warn",
-                  value: `response push ignored because path is invalid (must be a string starting with "/", found ${path})`,
-                })
-                return
-              }
-              if (!request.http2) {
-                addRequestLog(requestNode, {
-                  type: "warn",
-                  value: `response push ignored because request is not http2`,
-                })
-                return
-              }
-              const canPushStream = testCanPushStream(nodeResponse.stream)
-              if (!canPushStream.can) {
-                addRequestLog(requestNode, {
-                  type: "debug",
-                  value: `response push ignored because ${canPushStream.reason}`,
-                })
-                return
-              }
-
-              let prevented = false
-              const prevent = () => {
-                prevented = true
-              }
-              const preventedByPlugin = requestPlugins.find((requestPlugin) => {
-                const { onPushResponse } = requestPlugin
-                if (!onPushResponse) {
-                  return false
+            {
+              warn,
+              pushResponse: async ({ path, method }) => {
+                if (typeof path !== "string" || path[0] !== "/") {
+                  addRequestLog(requestNode, {
+                    type: "warn",
+                    value: `response push ignored because path is invalid (must be a string starting with "/", found ${path})`,
+                  })
+                  return
                 }
-                onPushResponse({ path, method }, { prevent })
-                return prevented
-              })
-              if (prevented) {
-                addRequestLog(requestNode, {
-                  type: "debug",
-                  value: `response push prevented by "${preventedByPlugin.pluginName}" plugin`,
-                })
-                return
-              }
+                if (!request.http2) {
+                  addRequestLog(requestNode, {
+                    type: "warn",
+                    value: `response push ignored because request is not http2`,
+                  })
+                  return
+                }
+                const canPushStream = testCanPushStream(nodeResponse.stream)
+                if (!canPushStream.can) {
+                  addRequestLog(requestNode, {
+                    type: "debug",
+                    value: `response push ignored because ${canPushStream.reason}`,
+                  })
+                  return
+                }
 
-              const requestChildNode = { logs: [], children: [] }
-              requestNode.children.push(requestChildNode)
-              await pushResponse(
-                { path, method },
-                {
-                  requestNode: requestChildNode,
-                  parentHttp2Stream: nodeResponse.stream,
-                },
-              )
+                let preventedByService = null
+                const prevent = () => {
+                  preventedByService = serviceController.getCurrentService()
+                }
+                serviceController.callHooksUntil(
+                  "onResponsePush",
+                  { path, method },
+                  {
+                    request,
+                    warn,
+                    prevent,
+                  },
+                  () => preventedByService,
+                )
+                if (preventedByService) {
+                  addRequestLog(requestNode, {
+                    type: "debug",
+                    value: `response push prevented by "${preventedByService.name}" service`,
+                  })
+                  return
+                }
+
+                const requestChildNode = { logs: [], children: [] }
+                requestNode.children.push(requestChildNode)
+                await pushResponse(
+                  { path, method },
+                  {
+                    requestNode: requestChildNode,
+                    parentHttp2Stream: nodeResponse.stream,
+                  },
+                )
+              },
             },
-          })
-
-      const { aborted } = result
-      if (aborted) {
-        return ABORTED_RESPONSE_PROPERTIES
+          )
+      } catch (error) {
+        produceResponseError = error
       }
-      const readResponseProperties = async () => {
-        const { error } = result
-        // internal error, create 500 response
-        if (error) {
+
+      let responseProperties
+      if (produceResponseError) {
+        if (
+          produceResponseError.name === "AbortError" &&
+          request.signal.aborted
+        ) {
+          responseProperties = ABORTED_RESPONSE_PROPERTIES
+        } else {
+          // internal error, create 500 response
           if (
             // stopOnInternalError stops server only if requestToResponse generated
             // a non controlled error (internal error).
@@ -586,24 +604,27 @@ export const startServer = async ({
             stop(STOP_REASON_INTERNAL_ERROR)
           }
           const responseDescriptionFromError =
-            (await errorToResponse(error, {
-              request,
-              sendErrorDetails,
-            })) ||
-            (await applyDefaultErrorToResponse(error, {
-              request,
-              sendErrorDetails,
-            }))
+            await serviceController.callAsyncHooksUntil(
+              "error",
+              produceResponseError,
+              {
+                request,
+                warn,
+              },
+            )
+          if (!responseDescriptionFromError) {
+            throw produceResponseError
+          }
           addRequestLog(requestNode, {
             type: "error",
             value: createDetailedMessage(
               `internal error while handling request`,
               {
-                "error stack": error.stack,
+                "error stack": produceResponseError.stack,
               },
             ),
           })
-          return composeTwoResponses(
+          responseProperties = composeTwoResponses(
             {
               status: 500,
               statusText: "Internal Server Error",
@@ -616,7 +637,7 @@ export const startServer = async ({
             responseDescriptionFromError,
           )
         }
-
+      } else {
         const {
           status = 501,
           statusText,
@@ -624,8 +645,8 @@ export const startServer = async ({
           headers = {},
           body,
           ...rest
-        } = result.returnValue || {}
-        const responseProperties = {
+        } = produceResponseReturnValue || {}
+        responseProperties = {
           status,
           statusText,
           statusMessage,
@@ -633,23 +654,24 @@ export const startServer = async ({
           body,
           ...rest,
         }
-        return responseProperties
       }
 
-      let responseProperties = await readResponseProperties()
-      // call every plugin "onResponse" hook
-      requestPlugins.forEach((requestPlugin) => {
-        const { onResponse } = requestPlugin
-        if (onResponse) {
-          const returnValue = onResponse(responseProperties)
-          if (returnValue) {
-            responseProperties = composeTwoResponses(
-              responseProperties,
-              returnValue,
-            )
-          }
+      if (serverTiming) {
+        const responseReadyMeasure = performance.now()
+        const timeToStartResponding =
+          responseReadyMeasure - requestReceivedMeasure
+        const serverTiming = {
+          ...responseProperties.timing,
+          "time to start responding": timeToStartResponding,
         }
-      })
+        responseProperties.headers = composeTwoHeaders(
+          responseProperties.headers,
+          timingToServerTimingResponseHeaders(serverTiming),
+        )
+      }
+      if (requestWaitingMs) {
+        clearTimeout(requestWaitingTimeout)
+      }
       if (
         request.method !== "HEAD" &&
         responseProperties.headers["content-length"] > 0 &&
@@ -660,6 +682,26 @@ export const startServer = async ({
           value: `content-length header is ${responseProperties.headers["content-length"]} but body is empty`,
         })
       }
+      serviceController.callHooks(
+        "injectResponseHeaders",
+        responseProperties,
+        {
+          request,
+          warn,
+        },
+        (returnValue) => {
+          if (returnValue) {
+            responseProperties.headers = composeTwoHeaders(
+              responseProperties.headers,
+              returnValue,
+            )
+          }
+        },
+      )
+      serviceController.callHooks("responseReady", responseProperties, {
+        request,
+        warn,
+      })
       return responseProperties
     }
 
@@ -811,29 +853,6 @@ const createNodeServer = async ({
   })
 }
 
-const generateResponseDescription = async ({
-  requestToResponse,
-  request,
-  pushResponse,
-}) => {
-  try {
-    const returnValue = await requestToResponse(request, {
-      pushResponse,
-    })
-    return {
-      returnValue,
-    }
-  } catch (error) {
-    if (error.name === "AbortError" && request.signal.aborted) {
-      return {
-        aborted: true,
-      }
-    }
-    return {
-      error,
-    }
-  }
-}
 const testCanPushStream = (http2Stream) => {
   if (!http2Stream.pushAllowed) {
     return {

@@ -1,7 +1,7 @@
 import { parseMultipleHeader } from "../internal/multiple-header.js"
-import { applyContentNegotiation } from "./applyContentNegotiation.js"
+import { pickAcceptedContent } from "./pick_accepted_content.js"
 
-export const negotiateContentLanguage = (request, availableLanguages) => {
+export const pickContentLanguage = (request, availableLanguages) => {
   const { headers = {} } = request
   const requestAcceptLanguageHeader = headers["accept-language"]
   if (!requestAcceptLanguageHeader) {
@@ -11,7 +11,7 @@ export const negotiateContentLanguage = (request, availableLanguages) => {
   const languagesAccepted = parseAcceptLanguageHeader(
     requestAcceptLanguageHeader,
   )
-  return applyContentNegotiation({
+  return pickAcceptedContent({
     accepteds: languagesAccepted,
     availables: availableLanguages,
     getAcceptanceScore: getLanguageAcceptanceScore,

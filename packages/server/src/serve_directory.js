@@ -1,6 +1,6 @@
 import { readdirSync } from "node:fs"
 
-import { negotiateContentType } from "./content_negotiation/negotiateContentType.js"
+import { pickContentType } from "./content_negotiation/pick_content_type.js"
 
 export const serveDirectory = (
   url,
@@ -57,7 +57,7 @@ export const serveDirectory = (
       }
     },
   }
-  const bestContentType = negotiateContentType(
+  const bestContentType = pickContentType(
     { headers },
     Object.keys(responseProducers),
   )
