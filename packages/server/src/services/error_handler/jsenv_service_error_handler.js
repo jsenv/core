@@ -29,7 +29,7 @@ export const jsenvServiceErrorHandler = ({ sendErrorDetails = false } = {}) => {
       const availableContentTypes = {
         "text/html": () => {
           const renderHtmlForErrorWithoutDetails = () => {
-            return `<p>Details not available: to enable them server must be started with sendErrorDetails: true.</p>`
+            return `<p>Details not available: to enable them use jsenvServiceErrorHandler({ sendErrorDetails: true }).</p>`
           }
 
           const renderHtmlForErrorWithDetails = () => {

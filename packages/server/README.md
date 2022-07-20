@@ -149,12 +149,12 @@ await startServer({
 
 # Documentation
 
-- [https](./docs/https/https.md)
-- [Serving files](./docs/serving_files/serving_files.md)
 - [Handling requests](./docs/handling_requests/handling_requests.md)
 - [Handling errors](./docs/handling_errors/handling_errors.md)
 - [Server timing](./docs/server_timing/server_timing.md)
 - [CORS](./docs/cors/cors.md)
+- [https](./docs/https/https.md)
+- [Serving files](./docs/serving_files/serving_files.md)
 - [Content negotiation](./docs/content_negotiation/content_negotiation.md)
 - [Server Sent Events](./docs/sse/sse.md)
 - [Cluster](./docs/cluster/cluster.md)

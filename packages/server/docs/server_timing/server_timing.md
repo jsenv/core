@@ -16,7 +16,7 @@ _Screenshot server timing in chrome devtools:_
 
 ## Measuring service timings
 
-Using both _composeServices_ and _pluginServerTimings_ measures time taken by each function.
+Use _serverTiming_ to measure time taken by each service.
 
 ```js
 import { startServer, composeServices } from "@jsenv/server"
@@ -48,7 +48,7 @@ Code above generates a server timing response header that looks like this:
 server-timing: a;desc="service:nocontent.handleRequest";dur=0.007546901, b;desc="service:ok";dur=0.0018849
 ```
 
-You can also measure time taken by a function using _timeFunction_ exports and returning a _timing_ property.
+It is also possible to put more timing information by returning a _timing_ property as shown below:
 
 ```js
 import { startServer, pluginServerTimings } from "@jsenv/server"

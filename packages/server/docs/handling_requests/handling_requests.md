@@ -1,8 +1,6 @@
 # Handling requests
 
-Request are handled by a parameter called "requestToResponse" responsible to describe the server response.
-It is achieved by returning an object with response properties.
-This pattern is simpler than middleware with the same power.
+Request are handled by the first service returning something in a "handleRequest" function.
 
 ```js
 import { startServer } from "@jsenv/server"
@@ -22,21 +20,21 @@ await startServer({
 })
 ```
 
-## requestToResponse
+## handleRequest
 
-_requestToResponse_ parameter is function responsible to generate a response from a request.
+_handleRequest_ is a function responsible to generate a response from a request.
 
 - It is optional
 - It receives a _request_ object in argument
 - It is expected to return a _response_, `null` or `undefined`
 - It can be an async function
 
-When _requestToResponse_ returns `null` or `undefined`, server respond to the request with _501 Not implemented_.
+When there is no service handling the request, server respond with _501 Not implemented_.
 
 ## request
 
 _request_ is an object representing an http request.
-_request_ are passed as first argument to _requestToResponse_.
+_request_ are passed as first argument to _handleRequest_.
 
 _Request object example_
 
@@ -54,7 +52,7 @@ const request = {
 }
 ```
 
-### Reading request params
+### Reading request search params
 
 ```js
 import { startServer } from "@jsenv/server"
@@ -94,7 +92,7 @@ await startServer({
 
 ## response
 
-_response_ is an object describing a server response. See below some examples that you could return in [requestToResponse](#requestToResponse)
+_response_ is an object describing a server response. See below some examples that you could return in [handleRequest](#handleRequest)
 
 _response body declared with a string_
 

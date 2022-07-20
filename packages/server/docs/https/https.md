@@ -32,7 +32,6 @@ import { requestCertificateForLocalhost } from "@jsenv/https-local"
 import { startServer } from "@jsenv/server"
 
 const { certificate, privateKey } = requestCertificateForLocalhost()
-
 const server = await startServer({
   protocol: "https",
   certificate,
@@ -52,7 +51,6 @@ import { requestCertificateForLocalhost } from "@jsenv/https-local"
 import { startServer } from "@jsenv/server"
 
 const { certificate, privateKey } = requestCertificateForLocalhost()
-
 await startServer({
   protocol: "https",
   certificate,
@@ -68,7 +66,6 @@ import { requestCertificateForLocalhost } from "@jsenv/https-local"
 import { startServer } from "@jsenv/server"
 
 const { certificate, privateKey } = requestCertificateForLocalhost()
-
 await startServer({
   protocol: "https",
   certificate,
