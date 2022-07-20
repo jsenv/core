@@ -1,27 +1,29 @@
 import { assert } from "@jsenv/assert"
 import { fetchUrl } from "@jsenv/fetch"
 
-import { startServer, composeServices, setupRoutes } from "@jsenv/server"
+import { startServer, setupRoutes } from "@jsenv/server"
 
 const { origin } = await startServer({
   keepProcessAlive: false,
   logLevel: "warn",
-  requestToResponse: composeServices({
-    test: setupRoutes({
-      "/a.js": () => {
-        return {
-          status: 200,
-          body: "a.js",
-        }
-      },
-      "/:id.js": ({ routeParams }) => {
-        return {
-          status: 200,
-          body: `${routeParams.id}.js`,
-        }
-      },
-    }),
-  }),
+  services: [
+    {
+      handleRequest: setupRoutes({
+        "/a.js": () => {
+          return {
+            status: 200,
+            body: "a.js",
+          }
+        },
+        "/:id.js": ({ routeParams }) => {
+          return {
+            status: 200,
+            body: `${routeParams.id}.js`,
+          }
+        },
+      }),
+    },
+  ],
 })
 
 {

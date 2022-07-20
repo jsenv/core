@@ -52,7 +52,7 @@ export const createServiceController = (services) => {
     let timeEnd
     if (context && context.timing) {
       timeEnd = timeStart(
-        `${currentHookName}-${currentService.name.replace("jsenv:", "")}`,
+        `${currentService.name.replace("jsenv:", "")}.${currentHookName}`,
       )
     }
     let valueReturned = hookFn(info, context)
@@ -73,7 +73,7 @@ export const createServiceController = (services) => {
     let timeEnd
     if (context && context.timing) {
       timeEnd = timeStart(
-        `${currentHookName}-${currentService.name.replace("jsenv:", "")}`,
+        `${currentService.name.replace("jsenv:", "")}.${currentHookName}`,
       )
     }
     let valueReturned = await hookFn(info, context)

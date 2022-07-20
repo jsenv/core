@@ -10,9 +10,13 @@ const room = createSSERoom({
 const server = await startServer({
   logLevel: "warn",
   keepProcessAlive: false,
-  requestToResponse: (request) => {
-    return room.join(request)
-  },
+  services: [
+    {
+      handleRequest: (request) => {
+        return room.join(request)
+      },
+    },
+  ],
 })
 const eventSource = await openEventSource(server.origin)
 room.sendEventToAllClients({

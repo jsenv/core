@@ -1,7 +1,7 @@
 import { writeFile, ensureEmptyDirectory } from "@jsenv/filesystem"
 import { fetchUrl } from "@jsenv/fetch"
 
-import { startServer } from "@jsenv/server"
+import { startServer, jsenvServiceErrorHandler } from "@jsenv/server"
 
 const htmlFilesDirectoryUrl = new URL("./snapshots/", import.meta.url).href
 
@@ -39,19 +39,30 @@ const generateInternalErrorHtmlFile = async (htmlFilename, serverParams) => {
 await ensureEmptyDirectory(htmlFilesDirectoryUrl)
 
 await generateInternalErrorHtmlFile("basic.html", {
-  requestToResponse: () => {
-    const error = new Error("test")
-    throw error
-  },
+  services: [
+    jsenvServiceErrorHandler(),
+    {
+      handleRequest: () => {
+        const error = new Error("test")
+        throw error
+      },
+    },
+  ],
 })
 
 await generateInternalErrorHtmlFile("basic_with_details.html", {
-  requestToResponse: () => {
-    const error = new Error("test")
-    error.stack = deterministicStackTrace
-    throw error
-  },
-  sendErrorDetails: true,
+  services: [
+    jsenvServiceErrorHandler({
+      sendErrorDetails: true,
+    }),
+    {
+      handleRequest: () => {
+        const error = new Error("test")
+        error.stack = deterministicStackTrace
+        throw error
+      },
+    },
+  ],
 })
 
 // only error.stack is shown in the html page.
@@ -59,26 +70,41 @@ await generateInternalErrorHtmlFile("basic_with_details.html", {
 // maybe we want to have extra properties as well ?
 // I let the test below to keep this in mind
 await generateInternalErrorHtmlFile("basic_with_code_and_details.html", {
-  requestToResponse: () => {
-    const error = new Error("test")
-    error.code = "TEST_CODE"
-    error.stack = deterministicStackTrace
-    throw error
-  },
-  sendErrorDetails: true,
+  services: [
+    jsenvServiceErrorHandler({
+      sendErrorDetails: true,
+    }),
+    {
+      handleRequest: () => {
+        const error = new Error("test")
+        error.code = "TEST_CODE"
+        error.stack = deterministicStackTrace
+        throw error
+      },
+    },
+  ],
 })
 
 await generateInternalErrorHtmlFile("literal.html", {
-  requestToResponse: () => {
-    const error = "a string"
-    throw error
-  },
+  services: [
+    jsenvServiceErrorHandler(),
+    {
+      handleRequest: () => {
+        const error = "a string"
+        throw error
+      },
+    },
+  ],
 })
 
 await generateInternalErrorHtmlFile("literal_with_details.html", {
-  requestToResponse: () => {
-    const error = "a string"
-    throw error
-  },
-  sendErrorDetails: true,
+  services: [
+    jsenvServiceErrorHandler({ sendErrorDetails: true }),
+    {
+      handleRequest: () => {
+        const error = "a string"
+        throw error
+      },
+    },
+  ],
 })

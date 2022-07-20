@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert"
 import { fetchUrl } from "@jsenv/fetch"
 
-import { startServer, pluginServerTiming, composeServices } from "@jsenv/server"
+import { startServer } from "@jsenv/server"
 import { parseServerTimingHeader } from "@jsenv/server/src/server_timing/timing_header.js"
 
 const noContentService = (request) => {
@@ -15,15 +15,13 @@ const okService = (request) => {
 }
 
 const { origin } = await startServer({
-  plugins: {
-    ...pluginServerTiming(),
-  },
   keepProcessAlive: false,
   logLevel: "warn",
-  requestToResponse: composeServices({
-    "service:no content": noContentService,
-    "service:ok": okService,
-  }),
+  serverTiming: true,
+  services: [
+    { name: "service:no content", handleRequest: noContentService },
+    { name: "service:ok", handleRequest: okService },
+  ],
 })
 
 {
@@ -36,7 +34,7 @@ const { origin } = await startServer({
     status: 204,
     timing: {
       a: {
-        description: "service:no content",
+        description: "service:no content.handleRequest",
         duration: actual.timing.a.duration,
       },
       b: {
@@ -58,11 +56,11 @@ const { origin } = await startServer({
     status: 200,
     timing: {
       a: {
-        description: "service:no content",
+        description: "service:no content.handleRequest",
         duration: actual.timing.a.duration,
       },
       b: {
-        description: "service:ok",
+        description: "service:ok.handleRequest",
         duration: actual.timing.b.duration,
       },
       c: {

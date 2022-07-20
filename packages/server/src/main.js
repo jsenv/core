@@ -5,7 +5,6 @@
  */
 
 export { startServer } from "./server.js"
-export { composeServices } from "./service_composition/service_composition.js"
 export { setupRoutes } from "./service_composition/routing.js"
 export { readRequestBody } from "./readRequestBody.js"
 export { fetchFileSystem } from "./fetch_filesystem.js"

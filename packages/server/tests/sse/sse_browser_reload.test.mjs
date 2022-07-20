@@ -11,13 +11,17 @@ if (process.platform !== "win32") {
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    requestToResponse: (request) => {
-      const { accept = "" } = request.headers
-      if (accept.includes("text/event-stream")) {
-        return room.join(request)
-      }
-      return fetchFileSystem(new URL("./main.html", import.meta.url))
-    },
+    services: [
+      {
+        handleRequest: (request) => {
+          const { accept = "" } = request.headers
+          if (accept.includes("text/event-stream")) {
+            return room.join(request)
+          }
+          return fetchFileSystem(new URL("./main.html", import.meta.url))
+        },
+      },
+    ],
   })
 
   const browser = await chromium.launch({
