@@ -14,7 +14,11 @@ import { urlToFilename, injectQueryParams } from "@jsenv/urls"
 
 import { JS_QUOTES } from "@jsenv/utils/src/string/js_quotes.js"
 
-export const jsenvPluginImportAssertions = () => {
+export const jsenvPluginImportAssertions = ({
+  json = "auto",
+  css = "auto",
+  text = "auto",
+}) => {
   const updateReference = (reference, searchParam) => {
     reference.expectedType = "js_module"
     reference.filename = `${urlToFilename(reference.url)}.js`
@@ -33,51 +37,55 @@ export const jsenvPluginImportAssertions = () => {
   const importAssertions = {
     name: "jsenv:import_assertions",
     appliesDuring: "*",
+    init: (context) => {
+      // transpilation is forced during build so that
+      //   - avoid rollup to see import assertions
+      //     We would have to tell rollup to ignore import with assertion
+      //   - means rollup can bundle more js file together
+      //   - means url versioning can work for css inlined in js
+      if (context.scenario === "build") {
+        json = true
+        css = true
+        text = true
+      }
+    },
     redirectUrl: {
       js_import_export: (reference, context) => {
         if (!reference.assert) {
           return null
         }
-        // When to force transpilation:
-        // - during build
-        //   - avoid rollup to see import assertions
-        //     We would have to tell rollup to ignore import with assertion
-        //   - means rollup can bundle more js file together
-        //   - means url versioning can work for css inlined in js
-        // - rest of the time
-        //  - fix a bug where opening the page both in chrome and firefox would
-        //  create an infinite full reload as:
-        //    - chrome use "file.css"
-        //    - firefox do not use "file.css" but "file.css?as_css_module"
-        //    -> server consider "file.css" as pruned for the file importing it
-        //    -> chrome reloads and re-use "file.css"
-        //    -> firefox reload, etc
-        //  - bonus: same code runs during dev and after build
-        const forceTranspilation = true
-
         if (reference.assert.type === "json") {
-          if (
-            forceTranspilation ||
-            !context.isSupportedOnCurrentClients("import_type_json")
-          ) {
+          const shouldTranspileJsonImportAssertion =
+            json === true
+              ? true
+              : json === "auto"
+              ? !context.isSupportedOnCurrentClients("import_type_json")
+              : false
+          if (shouldTranspileJsonImportAssertion) {
             return updateReference(reference, "as_json_module")
           }
           return null
         }
         if (reference.assert.type === "css") {
-          if (
-            forceTranspilation ||
-            !context.isSupportedOnCurrentClients("import_type_css")
-          ) {
+          const shouldTranspileCssImportAssertion =
+            css === true
+              ? true
+              : css === "auto"
+              ? !context.isSupportedOnCurrentClients("import_type_css")
+              : false
+          if (shouldTranspileCssImportAssertion) {
             return updateReference(reference, "as_css_module")
           }
           return null
         }
         if (reference.assert.type === "text") {
-          if (
-            forceTranspilation ||
-            !context.isSupportedOnCurrentClients("import_type_text")
-          ) {
+          const shouldTranspileTextImportAssertion =
+            text === true
+              ? true
+              : text === "auto"
+              ? !context.isSupportedOnCurrentClients("import_type_text")
+              : false
+          if (shouldTranspileTextImportAssertion) {
             return updateReference(reference, "as_text_module")
           }
           return null

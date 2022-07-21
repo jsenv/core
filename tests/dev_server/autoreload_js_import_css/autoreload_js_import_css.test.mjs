@@ -163,9 +163,6 @@ await new Promise((resolve) => setTimeout(resolve, 200))`)
 // not transpiling import assertion (chrome)
 await test({
   browserLauncher: chromium,
-  transpilation: {
-    importAssertions: false, // required until one url graph per browser
-  },
   pageLogsAfterRemovingCssImport: [
     {
       type: "startGroupCollapsed",
