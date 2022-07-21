@@ -217,7 +217,7 @@ export const startServer = async ({
 
   status = "opened"
   const serverOrigins = await getServerOrigins({ protocol, ip, port })
-  const serverOrigin = serverOrigins.internal
+  const serverOrigin = serverOrigins.local
 
   const removeConnectionErrorListener = listenServerConnectionError(
     nodeServer,
@@ -806,7 +806,7 @@ export const startServer = async ({
 
   if (startLog) {
     logger.info(
-      `${serverName} started at ${serverOrigin} (${serverOrigins.external})`,
+      `${serverName} started at ${serverOrigin} (${serverOrigins.network})`,
     )
   }
 
