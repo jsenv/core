@@ -11,6 +11,7 @@ export const installHtmlSupervisor = ({
   logs,
   measurePerf,
   errorOverlay,
+  openInEditor,
 }) => {
   const errorTransformer = null // could implement error stack remapping if needed
   const scriptExecutionResults = {}
@@ -226,6 +227,7 @@ export const installHtmlSupervisor = ({
       const { error } = errorEvent
       displayErrorInDocument(error, {
         rootDirectoryUrl,
+        openInEditor,
         url: errorEvent.filename,
         line: errorEvent.lineno,
         column: errorEvent.colno,
@@ -285,6 +287,7 @@ export const installHtmlSupervisor = ({
               },
               {
                 rootDirectoryUrl,
+                openInEditor,
                 url: traceUrl,
                 line: traceLine,
                 column: traceColumn,

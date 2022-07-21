@@ -27,6 +27,7 @@ export const jsenvPluginHtmlSupervisor = ({
   logs = false,
   measurePerf = false,
   errorOverlay = true,
+  openInEditor = true,
 }) => {
   const htmlSupervisorSetupFileUrl = new URL(
     "./client/html_supervisor_setup.js?js_classic",
@@ -175,6 +176,7 @@ export const jsenvPluginHtmlSupervisor = ({
           logs,
           measurePerf,
           errorOverlay,
+          openInEditor,
         },
         null,
         "        ",
