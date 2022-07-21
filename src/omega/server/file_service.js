@@ -3,44 +3,242 @@ import {
   serveDirectory,
   composeTwoResponses,
 } from "@jsenv/server"
+import { registerDirectoryLifecycle } from "@jsenv/filesystem"
 import { urlIsInsideOf, moveUrl } from "@jsenv/urls"
+import { URL_META } from "@jsenv/url-meta"
 
+import { getCorePlugins } from "@jsenv/core/src/plugins/plugins.js"
+import { createUrlGraph } from "@jsenv/core/src/omega/url_graph.js"
+import { createKitchen } from "@jsenv/core/src/omega/kitchen.js"
+import { createServerEventsDispatcher } from "@jsenv/core/src/plugins/server_events/server_events_dispatcher.js"
+import { jsenvPluginServerEventsClientInjection } from "@jsenv/core/src/plugins/server_events/jsenv_plugin_server_events_client_injection.js"
 import { parseUserAgentHeader } from "./user_agent.js"
 
 export const createFileService = ({
+  signal,
+  logLevel,
+  serverStopCallbacks,
+
   rootDirectoryUrl,
-  urlGraph,
-  kitchen,
   scenario,
-  onErrorWhileServingFile,
+  runtimeCompat,
+
+  plugins,
+  urlAnalysis,
+  htmlSupervisor,
+  nodeEsmResolution,
+  fileSystemMagicResolution,
+  transpilation,
+  clientAutoreload,
+  clientFiles,
+  cooldownBetweenFileEvents,
+  explorer,
+  sourcemaps,
+  writeGeneratedFiles,
 }) => {
-  kitchen.pluginController.addHook("serve")
-  kitchen.pluginController.addHook("augmentResponse")
-  const serveContext = {
-    rootDirectoryUrl,
-    urlGraph,
-    scenario,
-  }
-  const augmentResponseContext = {
-    rootDirectoryUrl,
-    urlGraph,
-    scenario,
+  const jsenvDirectoryUrl = new URL(".jsenv/", rootDirectoryUrl).href
+  const onErrorWhileServingFileCallbacks = []
+  const onErrorWhileServingFile = (data) => {
+    onErrorWhileServingFileCallbacks.forEach(
+      (onErrorWhileServingFileCallback) => {
+        onErrorWhileServingFileCallback(data)
+      },
+    )
   }
 
-  const getResponse = async (request) => {
+  const clientFileChangeCallbackList = []
+  const clientFilesPruneCallbackList = []
+  const clientFileChangeCallback = ({ relativeUrl, event }) => {
+    const url = new URL(relativeUrl, rootDirectoryUrl).href
+    clientFileChangeCallbackList.forEach((callback) => {
+      callback({ url, event })
+    })
+  }
+  const clientFilePatterns = {
+    ...clientFiles,
+    ".jsenv/": false,
+  }
+
+  if (scenario === "dev") {
+    const stopWatchingClientFiles = registerDirectoryLifecycle(
+      rootDirectoryUrl,
+      {
+        watchPatterns: clientFilePatterns,
+        cooldownBetweenFileEvents,
+        keepProcessAlive: false,
+        recursive: true,
+        added: ({ relativeUrl }) => {
+          clientFileChangeCallback({ event: "added", relativeUrl })
+        },
+        updated: ({ relativeUrl }) => {
+          clientFileChangeCallback({ event: "modified", relativeUrl })
+        },
+        removed: ({ relativeUrl }) => {
+          clientFileChangeCallback({ event: "removed", relativeUrl })
+        },
+      },
+    )
+    serverStopCallbacks.push(stopWatchingClientFiles)
+  }
+
+  const contextCache = new Map()
+  const getOrCreateContext = (request) => {
+    const { runtimeName, runtimeVersion } = parseUserAgentHeader(
+      request.headers["user-agent"],
+    )
+    const runtimeId = `${runtimeName}@${runtimeVersion}`
+    const existingContext = contextCache.get(runtimeId)
+    if (existingContext) {
+      return existingContext
+    }
+    const watchAssociations = URL_META.resolveAssociations(
+      { watch: clientFilePatterns },
+      rootDirectoryUrl,
+    )
+    const urlGraph = createUrlGraph({
+      clientFileChangeCallbackList,
+      clientFilesPruneCallbackList,
+      onCreateUrlInfo: (urlInfo) => {
+        const { watch } = URL_META.applyAssociations({
+          url: urlInfo.url,
+          associations: watchAssociations,
+        })
+        urlInfo.isValid = () => watch
+      },
+      includeOriginalUrls: scenario === "dev",
+    })
+    const kitchen = createKitchen({
+      signal,
+      logLevel,
+      rootDirectoryUrl,
+      scenario,
+      runtimeCompat,
+      urlGraph,
+      plugins: [
+        ...plugins,
+        ...getCorePlugins({
+          rootDirectoryUrl,
+          scenario,
+          runtimeCompat,
+
+          urlAnalysis,
+          htmlSupervisor,
+          nodeEsmResolution,
+          fileSystemMagicResolution,
+          transpilation,
+
+          clientAutoreload,
+          clientFileChangeCallbackList,
+          clientFilesPruneCallbackList,
+          explorer,
+        }),
+      ],
+      sourcemaps,
+      writeGeneratedFiles,
+    })
+    serverStopCallbacks.push(() => {
+      kitchen.pluginController.callHooks("destroy", kitchen.kitchenContext)
+    })
+    server_events: {
+      const allServerEvents = {}
+      kitchen.pluginController.plugins.forEach((plugin) => {
+        const { serverEvents } = plugin
+        if (serverEvents) {
+          Object.keys(serverEvents).forEach((serverEventName) => {
+            // we could throw on serverEvent name conflict
+            // we could throw if serverEvents[serverEventName] is not a function
+            allServerEvents[serverEventName] = serverEvents[serverEventName]
+          })
+        }
+      })
+      const serverEventNames = Object.keys(allServerEvents)
+      if (serverEventNames.length > 0) {
+        const serverEventsDispatcher = createServerEventsDispatcher()
+        serverStopCallbacks.push(() => {
+          serverEventsDispatcher.destroy()
+        })
+        Object.keys(allServerEvents).forEach((serverEventName) => {
+          allServerEvents[serverEventName]({
+            rootDirectoryUrl,
+            urlGraph,
+            scenario,
+            sendServerEvent: (data) => {
+              serverEventsDispatcher.dispatch({
+                type: serverEventName,
+                data,
+              })
+            },
+          })
+        })
+        onErrorWhileServingFileCallbacks.push((data) => {
+          serverEventsDispatcher.dispatchToRoomsMatching(
+            {
+              type: "error_while_serving_file",
+              data,
+            },
+            (room) => {
+              // send only to page depending on this file
+              const errorFileUrl = data.url
+              const roomEntryPointUrl = new URL(
+                room.request.ressource.slice(1),
+                rootDirectoryUrl,
+              ).href
+              const isErrorRelatedToEntryPoint = Boolean(
+                urlGraph.findDependent(errorFileUrl, (dependentUrlInfo) => {
+                  return dependentUrlInfo.url === roomEntryPointUrl
+                }),
+              )
+              return isErrorRelatedToEntryPoint
+            },
+          )
+        })
+        // "unshift" because serve must come first to catch event source client request
+        kitchen.pluginController.unshiftPlugin({
+          name: "jsenv:provide_server_events",
+          serve: (request) => {
+            const { accept } = request.headers
+            if (accept && accept.includes("text/event-stream")) {
+              const room = serverEventsDispatcher.addRoom(request)
+              return room.join(request)
+            }
+            return null
+          },
+        })
+        // "push" so that event source client connection can be put as early as possible in html
+        kitchen.pluginController.pushPlugin(
+          jsenvPluginServerEventsClientInjection(),
+        )
+      }
+    }
+
+    const context = {
+      rootDirectoryUrl,
+      scenario,
+      runtimeName,
+      runtimeVersion,
+      urlGraph,
+      kitchen,
+    }
+    contextCache.set(runtimeId, context)
+    return context
+  }
+
+  return async (request) => {
     // serve file inside ".jsenv" directory
     const requestFileUrl = new URL(request.ressource.slice(1), rootDirectoryUrl)
       .href
-    if (urlIsInsideOf(requestFileUrl, kitchen.jsenvDirectoryUrl)) {
+    if (urlIsInsideOf(requestFileUrl, jsenvDirectoryUrl)) {
       return fetchFileSystem(requestFileUrl, {
         headers: request.headers,
       })
     }
+    const { runtimeName, runtimeVersion, urlGraph, kitchen } =
+      getOrCreateContext(request)
     const responseFromPlugin =
       await kitchen.pluginController.callAsyncHooksUntil(
         "serve",
         request,
-        serveContext,
+        kitchen.kitchenContext,
       )
     if (responseFromPlugin) {
       return responseFromPlugin
@@ -97,9 +295,6 @@ export const createFileService = ({
         urlInfo.dependsOnPackageJson = false
         urlInfo.timing = {}
       }
-      const { runtimeName, runtimeVersion } = parseUserAgentHeader(
-        request.headers["user-agent"],
-      )
       await kitchen.cook(urlInfo, {
         request,
         reference,
@@ -131,7 +326,7 @@ export const createFileService = ({
       kitchen.pluginController.callHooks(
         "augmentResponse",
         { reference, urlInfo },
-        augmentResponseContext,
+        kitchen.kitchenContext,
         (returnValue) => {
           response = composeTwoResponses(response, returnValue)
         },
@@ -217,10 +412,6 @@ export const createFileService = ({
         statusMessage: e.stack,
       }
     }
-  }
-  return async (request) => {
-    let response = await getResponse(request)
-    return response
   }
 }
 

@@ -36,7 +36,7 @@ export const createServiceController = (services) => {
       }
     })
   }
-  services.forEach((service) => {
+  flatServices.forEach((service) => {
     addService(service)
   })
 

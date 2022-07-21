@@ -7,16 +7,9 @@ import {
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 import { createLogger, loggerToLevels, createTaskLog } from "@jsenv/log"
 import { getCallerPosition } from "@jsenv/urls"
-import { URL_META } from "@jsenv/url-meta"
 
 import { createReloadableWorker } from "@jsenv/core/src/helpers/worker_reload.js"
-import { getCorePlugins } from "@jsenv/core/src/plugins/plugins.js"
-import { createUrlGraph } from "@jsenv/core/src/omega/url_graph.js"
-import { createKitchen } from "@jsenv/core/src/omega/kitchen.js"
 import { startOmegaServer } from "@jsenv/core/src/omega/omega_server.js"
-
-import { jsenvPluginExplorer } from "./plugins/explorer/jsenv_plugin_explorer.js"
-import { jsenvPluginServerEvents } from "./plugins/server_events/jsenv_plugin_server_events.js"
 
 export const startDevServer = async ({
   signal = new AbortController().signal,
@@ -48,7 +41,6 @@ export const startDevServer = async ({
   devServerMainFile = getCallerPosition().url,
   cooldownBetweenFileEvents,
 
-  sourcemaps = "inline",
   // default runtimeCompat assume dev server will be request by recent browsers
   // Used by "jsenv_plugin_node_runtime.js" to deactivate itself
   // If dev server can be requested by Node.js to exec files
@@ -65,15 +57,19 @@ export const startDevServer = async ({
   nodeEsmResolution,
   fileSystemMagicResolution,
   transpilation,
-  explorerGroups = {
-    src: {
-      "./src/**/*.html": true,
-    },
-    tests: {
-      "./tests/**/*.test.html": true,
+  explorer = {
+    groups: {
+      src: {
+        "./src/**/*.html": true,
+      },
+      tests: {
+        "./tests/**/*.test.html": true,
+      },
     },
   },
   // toolbar = false,
+
+  sourcemaps = "inline",
   writeGeneratedFiles = true,
 }) => {
   const logger = createLogger({ logLevel })
@@ -152,94 +148,6 @@ export const startDevServer = async ({
     disabled: !loggerToLevels(logger).info,
   })
 
-  const clientFileChangeCallbackList = []
-  const clientFilesPruneCallbackList = []
-  const clientFileChangeCallback = ({ relativeUrl, event }) => {
-    const url = new URL(relativeUrl, rootDirectoryUrl).href
-    clientFileChangeCallbackList.forEach((callback) => {
-      callback({ url, event })
-    })
-  }
-
-  const clientFilePatterns = {
-    ...clientFiles,
-    ".jsenv/": false,
-  }
-  const watchAssociations = URL_META.resolveAssociations(
-    {
-      watch: clientFilePatterns,
-    },
-    rootDirectoryUrl,
-  )
-  const stopWatchingClientFiles = registerDirectoryLifecycle(rootDirectoryUrl, {
-    watchPatterns: clientFilePatterns,
-    cooldownBetweenFileEvents,
-    keepProcessAlive: false,
-    recursive: true,
-    added: ({ relativeUrl }) => {
-      clientFileChangeCallback({ event: "added", relativeUrl })
-    },
-    updated: ({ relativeUrl }) => {
-      clientFileChangeCallback({ event: "modified", relativeUrl })
-    },
-    removed: ({ relativeUrl }) => {
-      clientFileChangeCallback({ event: "removed", relativeUrl })
-    },
-  })
-  const urlGraph = createUrlGraph({
-    clientFileChangeCallbackList,
-    clientFilesPruneCallbackList,
-    onCreateUrlInfo: (urlInfo) => {
-      const { watch } = URL_META.applyAssociations({
-        url: urlInfo.url,
-        associations: watchAssociations,
-      })
-      urlInfo.isValid = () => watch
-    },
-    includeOriginalUrls: true,
-  })
-  const kitchen = createKitchen({
-    signal,
-    logger,
-    rootDirectoryUrl,
-    urlGraph,
-    scenario: "dev",
-    runtimeCompat,
-    sourcemaps,
-    writeGeneratedFiles,
-    plugins: [
-      ...plugins,
-      ...getCorePlugins({
-        rootDirectoryUrl,
-        urlGraph,
-        scenario: "dev",
-        runtimeCompat,
-
-        urlAnalysis,
-        htmlSupervisor,
-        nodeEsmResolution,
-        fileSystemMagicResolution,
-        transpilation,
-        clientAutoreload,
-        clientFileChangeCallbackList,
-        clientFilesPruneCallbackList,
-      }),
-      jsenvPluginExplorer({
-        groups: explorerGroups,
-      }),
-      // ...(toolbar ? [jsenvPluginToolbar(toolbar)] : []),
-    ],
-  })
-
-  const onErrorWhileServingFileReference = { current: () => {} }
-  jsenvPluginServerEvents({
-    rootDirectoryUrl,
-    urlGraph,
-    kitchen,
-    scenario: "dev",
-    onErrorWhileServingFileReference,
-  })
-
   const server = await startOmegaServer({
     logLevel: omegaServerLogLevel,
     keepProcessAlive,
@@ -249,14 +157,23 @@ export const startDevServer = async ({
     http2,
     certificate,
     privateKey,
-    rootDirectoryUrl,
-    urlGraph,
-    kitchen,
-    scenario: "dev",
     services,
-    onErrorWhileServingFile: (data) => {
-      onErrorWhileServingFileReference.current(data)
-    },
+
+    rootDirectoryUrl,
+    scenario: "dev",
+    runtimeCompat,
+    plugins,
+    urlAnalysis,
+    htmlSupervisor,
+    nodeEsmResolution,
+    fileSystemMagicResolution,
+    transpilation,
+    clientFiles,
+    clientAutoreload,
+    cooldownBetweenFileEvents,
+    explorer,
+    sourcemaps,
+    writeGeneratedFiles,
   })
   startDevServerTask.done()
   logger.info(``)
@@ -264,18 +181,12 @@ export const startDevServer = async ({
     logger.info(`- ${server.origins[key]}`)
   })
   logger.info(``)
-  server.addEffect(() => {
-    return () => {
-      kitchen.pluginController.callHooks("destroy", {})
-    }
-  })
   if (reloadableWorker && reloadableWorker.isWorker) {
     parentPort.postMessage(server.origin)
   }
   return {
     origin: server.origin,
     stop: () => {
-      stopWatchingClientFiles()
       server.stop()
     },
   }

@@ -5,7 +5,6 @@ import {
   jsenvServiceErrorHandler,
 } from "@jsenv/server"
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js"
-import { createCallbackListNotifiedOnce } from "@jsenv/abort"
 
 import { createFileService } from "./server/file_service.js"
 
@@ -25,25 +24,23 @@ export const startOmegaServer = async ({
   services = [],
 
   rootDirectoryUrl,
-  urlGraph,
-  kitchen,
   scenario,
-  onErrorWhileServingFile = () => {},
-}) => {
-  const serverStopCallbackList = createCallbackListNotifiedOnce()
+  runtimeCompat,
 
-  const coreServices = [
-    {
-      name: "jsenv:omega_file_service",
-      handleRequest: createFileService({
-        rootDirectoryUrl,
-        urlGraph,
-        kitchen,
-        scenario,
-        onErrorWhileServingFile,
-      }),
-    },
-  ]
+  plugins,
+  urlAnalysis,
+  htmlSupervisor,
+  nodeEsmResolution,
+  fileSystemMagicResolution,
+  transpilation,
+  clientAutoreload,
+  clientFiles,
+  cooldownBetweenFileEvents,
+  explorer,
+  sourcemaps,
+  writeGeneratedFiles,
+}) => {
+  const serverStopCallbacks = []
   const server = await startServer({
     signal,
     stopOnExit: false,
@@ -74,8 +71,31 @@ export const startOmegaServer = async ({
         timingAllowOrigin: true,
       }),
       ...services,
-      ...coreServices,
-      // specific error handling
+      {
+        name: "jsenv:omega_file_service",
+        handleRequest: createFileService({
+          signal,
+          logLevel,
+          serverStopCallbacks,
+
+          rootDirectoryUrl,
+          scenario,
+          runtimeCompat,
+
+          plugins,
+          urlAnalysis,
+          htmlSupervisor,
+          nodeEsmResolution,
+          fileSystemMagicResolution,
+          transpilation,
+          clientAutoreload,
+          clientFiles,
+          cooldownBetweenFileEvents,
+          explorer,
+          sourcemaps,
+          writeGeneratedFiles,
+        }),
+      },
       {
         name: "jsenv:omega_error_handler",
         handleError: (error) => {
@@ -120,10 +140,11 @@ export const startOmegaServer = async ({
     ],
     onStop: (reason) => {
       onStop()
-      serverStopCallbackList.notify(reason)
+      serverStopCallbacks.forEach((serverStopCallback) => {
+        serverStopCallback(reason)
+      })
+      serverStopCallbacks.length = 0
     },
   })
-  return {
-    ...server,
-  }
+  return server
 }
