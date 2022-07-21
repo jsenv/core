@@ -805,9 +805,13 @@ export const startServer = async ({
   stopCallbackList.add(removeRequestListener)
 
   if (startLog) {
-    logger.info(
-      `${serverName} started at ${serverOrigin} (${serverOrigins.network})`,
-    )
+    if (serverOrigins.network) {
+      logger.info(
+        `${serverName} started at ${serverOrigins.local} (${serverOrigins.network})`,
+      )
+    } else {
+      logger.info(`${serverName} started at ${serverOrigins.local}`)
+    }
   }
 
   const addEffect = (callback) => {
@@ -819,6 +823,7 @@ export const startServer = async ({
 
   return {
     getStatus: () => status,
+    port,
     origin: serverOrigin,
     origins: serverOrigins,
     nodeServer,
