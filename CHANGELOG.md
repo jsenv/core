@@ -1,3 +1,7 @@
+# 27.5.1
+
+- add host to startDevServer
+
 # 27.5.0
 
 - add htmlSupervisor.errorOverlay parameters

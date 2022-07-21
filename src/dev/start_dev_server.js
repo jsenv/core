@@ -15,14 +15,15 @@ export const startDevServer = async ({
   handleSIGINT = true,
   logLevel = "info",
   omegaServerLogLevel = "warn",
-  port = 3456,
   protocol = "http",
-  acceptAnyIp,
   // it's better to use http1 by default because it allows to get statusText in devtools
   // which gives valuable information when there is errors
   http2 = false,
   certificate,
   privateKey,
+  host,
+  port = 3456,
+  acceptAnyIp,
   keepProcessAlive = true,
   services,
 
@@ -148,11 +149,12 @@ export const startDevServer = async ({
     logLevel: omegaServerLogLevel,
     keepProcessAlive,
     acceptAnyIp,
-    port,
     protocol,
     http2,
     certificate,
     privateKey,
+    host,
+    port,
     services,
 
     rootDirectoryUrl,
