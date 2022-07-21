@@ -18,6 +18,7 @@ import {
 
 export const jsenvPluginNodeEsmResolution = ({
   rootDirectoryUrl,
+  scenario,
   urlGraph,
   runtimeCompat,
   packageConditions,
@@ -53,36 +54,42 @@ export const jsenvPluginNodeEsmResolution = ({
   }
 
   const unregisters = []
-  const onFileChange = () => {
-    packageScopesCache.clear()
-    packageJsonsCache.clear()
-    urlGraph.urlInfoMap.forEach((urlInfo) => {
-      if (urlInfo.dependsOnPackageJson) {
-        urlGraph.considerModified(urlInfo)
-      }
+  if (scenario === "dev") {
+    const onFileChange = () => {
+      packageScopesCache.clear()
+      packageJsonsCache.clear()
+      // TODO: update to do this on all url graph
+      urlGraph.urlInfoMap.forEach((urlInfo) => {
+        if (urlInfo.dependsOnPackageJson) {
+          urlGraph.considerModified(urlInfo)
+        }
+      })
+    }
+    filesInvalidatingCache.forEach((file) => {
+      const unregister = registerFileLifecycle(
+        new URL(file, rootDirectoryUrl),
+        {
+          added: () => {
+            onFileChange()
+          },
+          updated: () => {
+            onFileChange()
+          },
+          removed: () => {
+            onFileChange()
+          },
+          keepProcessAlive: false,
+        },
+      )
+      unregisters.push(unregister)
     })
   }
-  filesInvalidatingCache.forEach((file) => {
-    const unregister = registerFileLifecycle(new URL(file, rootDirectoryUrl), {
-      added: () => {
-        onFileChange()
-      },
-      updated: () => {
-        onFileChange()
-      },
-      removed: () => {
-        onFileChange()
-      },
-      keepProcessAlive: false,
-    })
-    unregisters.push(unregister)
-  })
 
   return {
     name: "jsenv:node_esm_resolution",
     appliesDuring: "*",
     resolveUrl: {
-      js_import_export: (reference) => {
+      js_import_export: (reference, context) => {
         const { parentUrl, specifier } = reference
         const { type, url } = applyNodeEsmResolution({
           conditions: packageConditions,
@@ -100,7 +107,9 @@ export const jsenvPluginNodeEsmResolution = ({
           type !== "relative_specifier" &&
           type !== "absolute_specifier" &&
           type !== "node_builtin_specifier"
-        const relatedUrlInfos = urlGraph.getRelatedUrlInfos(reference.parentUrl)
+        const relatedUrlInfos = context.urlGraph.getRelatedUrlInfos(
+          reference.parentUrl,
+        )
         relatedUrlInfos.forEach((relatedUrlInfo) => {
           if (relatedUrlInfo.dependsOnPackageJson) {
             // the url may depend due to an other reference

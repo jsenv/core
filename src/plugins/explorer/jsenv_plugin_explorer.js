@@ -9,9 +9,7 @@ export const jsenvPluginExplorer = ({ groups }) => {
 
   return {
     name: "jsenv:explorer",
-    appliesDuring: {
-      dev: true,
-    },
+    appliesDuring: "dev",
     serve: async (request, { rootDirectoryUrl }) => {
       if (request.ressource !== "/") {
         return null
