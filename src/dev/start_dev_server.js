@@ -196,6 +196,7 @@ export const startDevServer = async ({
       })
       urlInfo.isValid = () => watch
     },
+    includeOriginalUrls: true,
   })
   const kitchen = createKitchen({
     signal,

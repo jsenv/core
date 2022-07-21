@@ -1,4 +1,4 @@
-import { urlToRelativeUrl } from "@jsenv/urls"
+import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls"
 
 export const jsenvPluginAutoreloadServer = ({
   clientFileChangeCallbackList,
@@ -9,6 +9,13 @@ export const jsenvPluginAutoreloadServer = ({
     appliesDuring: { dev: true },
     serverEvents: {
       reload: ({ sendServerEvent, rootDirectoryUrl, urlGraph }) => {
+        const formatUrlForClient = (url) => {
+          if (urlIsInsideOf(url, rootDirectoryUrl)) {
+            return urlToRelativeUrl(url, rootDirectoryUrl)
+          }
+          return url
+        }
+
         const notifyDeclined = ({ cause, reason, declinedBy }) => {
           sendServerEvent({
             cause,
@@ -37,8 +44,8 @@ export const jsenvPluginAutoreloadServer = ({
                 instructions: [
                   {
                     type: urlInfo.type,
-                    boundary: urlToRelativeUrl(urlInfo.url, rootDirectoryUrl),
-                    acceptedBy: urlToRelativeUrl(urlInfo.url, rootDirectoryUrl),
+                    boundary: formatUrlForClient(urlInfo.url),
+                    acceptedBy: formatUrlForClient(urlInfo.url),
                   },
                 ],
               }
@@ -58,8 +65,8 @@ export const jsenvPluginAutoreloadServer = ({
               if (hotAcceptDependencies.includes(urlInfo.url)) {
                 instructions.push({
                   type: dependentUrlInfo.type,
-                  boundary: urlToRelativeUrl(dependentUrl, rootDirectoryUrl),
-                  acceptedBy: urlToRelativeUrl(urlInfo.url, rootDirectoryUrl),
+                  boundary: formatUrlForClient(dependentUrl),
+                  acceptedBy: formatUrlForClient(urlInfo.url),
                 })
                 continue
               }
@@ -67,7 +74,7 @@ export const jsenvPluginAutoreloadServer = ({
                 return {
                   declined: true,
                   reason: "circular dependency",
-                  declinedBy: urlToRelativeUrl(dependentUrl, rootDirectoryUrl),
+                  declinedBy: formatUrlForClient(dependentUrl),
                 }
               }
               const dependentPropagationResult = iterate(dependentUrlInfo, [
@@ -108,7 +115,7 @@ export const jsenvPluginAutoreloadServer = ({
           if (!urlInfo) {
             return
           }
-          const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl)
+          const relativeUrl = formatUrlForClient(url)
           const hotUpdate = propagateUpdate(urlInfo)
           if (hotUpdate.declined) {
             notifyDeclined({
@@ -128,8 +135,7 @@ export const jsenvPluginAutoreloadServer = ({
           ({ prunedUrlInfos, firstUrlInfo }) => {
             const mainHotUpdate = propagateUpdate(firstUrlInfo)
             const cause = `following files are no longer referenced: ${prunedUrlInfos.map(
-              (prunedUrlInfo) =>
-                urlToRelativeUrl(prunedUrlInfo.url, rootDirectoryUrl),
+              (prunedUrlInfo) => formatUrlForClient(prunedUrlInfo.url),
             )}`
             // now check if we can hot update the main ressource
             // then if we can hot update all dependencies
@@ -150,20 +156,14 @@ export const jsenvPluginAutoreloadServer = ({
                 notifyDeclined({
                   cause,
                   reason: `a pruned file declines hot reload`,
-                  declinedBy: urlToRelativeUrl(
-                    prunedUrlInfo.url,
-                    rootDirectoryUrl,
-                  ),
+                  declinedBy: formatUrlForClient(prunedUrlInfo.url),
                 })
                 return
               }
               instructions.push({
                 type: "prune",
-                boundary: urlToRelativeUrl(prunedUrlInfo.url, rootDirectoryUrl),
-                acceptedBy: urlToRelativeUrl(
-                  firstUrlInfo.url,
-                  rootDirectoryUrl,
-                ),
+                boundary: formatUrlForClient(prunedUrlInfo.url),
+                acceptedBy: formatUrlForClient(firstUrlInfo.url),
               })
             }
             notifyAccepted({
