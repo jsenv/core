@@ -1,4 +1,8 @@
-import { startServer, fetchFileSystem } from "@jsenv/server"
+import {
+  startServer,
+  fetchFileSystem,
+  jsenvServiceErrorHandler,
+} from "@jsenv/server"
 
 export const startFileServer = ({
   rootDirectoryUrl,
@@ -10,13 +14,20 @@ export const startFileServer = ({
     protocol: "http",
     keepProcessAlive: debug,
     port: debug ? 9777 : 0,
-    sendErrorDetails: true,
-    requestToResponse: (request) =>
-      fetchFileSystem(new URL(request.ressource.slice(1), rootDirectoryUrl), {
-        rootDirectoryUrl,
-        canReadDirectory: true,
-        headers: request.headers,
-      }),
+    services: [
+      jsenvServiceErrorHandler({ sendErrorDetails: true }),
+      {
+        handleRequest: (request) =>
+          fetchFileSystem(
+            new URL(request.ressource.slice(1), rootDirectoryUrl),
+            {
+              rootDirectoryUrl,
+              canReadDirectory: true,
+              headers: request.headers,
+            },
+          ),
+      },
+    ],
     ...rest,
   })
 }

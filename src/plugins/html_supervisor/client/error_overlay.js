@@ -2,7 +2,15 @@ const JSENV_ERROR_OVERLAY_TAGNAME = "jsenv-error-overlay"
 
 export const displayErrorInDocument = (
   error,
-  { rootDirectoryUrl, url, line, column, reportedBy, requestedRessource },
+  {
+    rootDirectoryUrl,
+    openInEditor,
+    url,
+    line,
+    column,
+    reportedBy,
+    requestedRessource,
+  },
 ) => {
   document.querySelectorAll(JSENV_ERROR_OVERLAY_TAGNAME).forEach((node) => {
     node.parentNode.removeChild(node)
@@ -17,7 +25,7 @@ export const displayErrorInDocument = (
   let jsenvErrorOverlay = new JsenvErrorOverlay({
     theme,
     title,
-    text: createErrorText({ rootDirectoryUrl, message, stack }),
+    text: createErrorText({ rootDirectoryUrl, openInEditor, message, stack }),
     tip,
   })
   document.body.appendChild(jsenvErrorOverlay)
@@ -37,17 +45,22 @@ export const displayErrorInDocument = (
   return removeErrorOverlay
 }
 
-const createErrorText = ({ rootDirectoryUrl, message, stack }) => {
+const createErrorText = ({
+  rootDirectoryUrl,
+  openInEditor,
+  message,
+  stack,
+}) => {
   if (message && stack) {
-    return `${replaceLinks(message, { rootDirectoryUrl })}\n${replaceLinks(
-      stack,
-      { rootDirectoryUrl },
-    )}`
+    return `${replaceLinks(message, {
+      rootDirectoryUrl,
+      openInEditor,
+    })}\n${replaceLinks(stack, { rootDirectoryUrl, openInEditor })}`
   }
   if (stack) {
-    return replaceLinks(stack, { rootDirectoryUrl })
+    return replaceLinks(stack, { rootDirectoryUrl, openInEditor })
   }
-  return replaceLinks(message, { rootDirectoryUrl })
+  return replaceLinks(message, { rootDirectoryUrl, openInEditor })
 }
 
 class JsenvErrorOverlay extends HTMLElement {
@@ -256,7 +269,7 @@ const formatTip = ({ reportedBy, requestedRessource }) => {
   return `Reported by the server while serving <code>${requestedRessource}</code>`
 }
 
-const replaceLinks = (string, { rootDirectoryUrl }) => {
+const replaceLinks = (string, { rootDirectoryUrl, openInEditor }) => {
   // normalize line breaks
   string = string.replace(/\n/g, "\n")
   string = escapeHtml(string)
@@ -281,7 +294,9 @@ const replaceLinks = (string, { rootDirectoryUrl }) => {
           column,
         })
         return link({
-          href: `javascript:window.fetch('/__open_in_editor__/${fileUrl}')`,
+          href: openInEditor
+            ? `javascript:window.fetch('/__open_in_editor__/${fileUrl}')`
+            : fileUrl,
           text: fileUrl,
         })
       }

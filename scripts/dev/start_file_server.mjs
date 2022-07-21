@@ -10,11 +10,18 @@ await startServer({
   port: 3689,
   privateKey,
   certificate,
-  requestToResponse: (request) => {
-    return fetchFileSystem(new URL(request.ressource.slice(1), directoryUrl), {
-      rootDirectoryUrl: directoryUrl,
-      headers: request.headers,
-      canReadDirectory: true,
-    })
-  },
+  services: [
+    {
+      handleRequest: (request) => {
+        return fetchFileSystem(
+          new URL(request.ressource.slice(1), directoryUrl),
+          {
+            rootDirectoryUrl: directoryUrl,
+            headers: request.headers,
+            canReadDirectory: true,
+          },
+        )
+      },
+    },
+  ],
 })

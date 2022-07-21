@@ -16,12 +16,16 @@ import {
     protocol: "https",
     certificate: testServerCertificate,
     privateKey: testServerCertificatePrivateKey,
-    requestToResponse: () => {
-      return {
-        status: 200,
-        body: "Welcome, HTTPS user!",
-      }
-    },
+    services: [
+      {
+        handleRequest: () => {
+          return {
+            status: 200,
+            body: "Welcome, HTTPS user!",
+          }
+        },
+      },
+    ],
   })
 
   // 301 on http
@@ -76,12 +80,16 @@ import {
     certificate: testServerCertificate,
     privateKey: testServerCertificatePrivateKey,
     http2: true,
-    requestToResponse: () => {
-      return {
-        status: 200,
-        body: "Welcome, HTTPS user!",
-      }
-    },
+    services: [
+      {
+        handleRequest: () => {
+          return {
+            status: 200,
+            body: "Welcome, HTTPS user!",
+          }
+        },
+      },
+    ],
   })
 
   // 301 on http
@@ -169,15 +177,19 @@ import {
     certificate: testServerCertificate,
     privateKey: testServerCertificatePrivateKey,
     allowHttpRequestOnHttps: true,
-    requestToResponse: (request) => {
-      return {
-        status: 200,
-        headers: {
-          "content-type": "text/plain",
+    services: [
+      {
+        handleRequest: (request) => {
+          return {
+            status: 200,
+            headers: {
+              "content-type": "text/plain",
+            },
+            body: request.origin,
+          }
         },
-        body: request.origin,
-      }
-    },
+      },
+    ],
   })
 
   // request origin is http on http request

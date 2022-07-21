@@ -15,9 +15,13 @@ const timeEllapsedPromise = (ms) => {
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    requestToResponse: (request) => {
-      return room.join(request)
-    },
+    services: [
+      {
+        handleRequest: (request) => {
+          return room.join(request)
+        },
+      },
+    ],
   })
   const eventSource = await openEventSource(server.origin)
   room.sendEventToAllClients({
@@ -50,9 +54,13 @@ const timeEllapsedPromise = (ms) => {
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    requestToResponse: (request) => {
-      return room.join(request)
-    },
+    services: [
+      {
+        handleRequest: (request) => {
+          return room.join(request)
+        },
+      },
+    ],
   })
   let eventSource = await openEventSource(server.origin)
   room.sendEventToAllClients({
@@ -113,15 +121,19 @@ const timeEllapsedPromise = (ms) => {
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    requestToResponse: (request) => {
-      if (request.ressource === "/roomA") {
-        return roomA.join(request)
-      }
-      if (request.ressource === "/roomB") {
-        return roomB.join(request)
-      }
-      return null
-    },
+    services: [
+      {
+        handleRequest: (request) => {
+          if (request.ressource === "/roomA") {
+            return roomA.join(request)
+          }
+          if (request.ressource === "/roomB") {
+            return roomB.join(request)
+          }
+          return null
+        },
+      },
+    ],
   })
   const roomAEventSource = await openEventSource(`${server.origin}/roomA`)
   const roomBEventSource = await openEventSource(`${server.origin}/roomB`)
@@ -172,9 +184,13 @@ const timeEllapsedPromise = (ms) => {
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    requestToResponse: (request) => {
-      return room.join(request)
-    },
+    services: [
+      {
+        handleRequest: (request) => {
+          return room.join(request)
+        },
+      },
+    ],
   })
   const clientA = await openEventSource(server.origin)
   const clientB = await openEventSource(server.origin)
@@ -228,9 +244,13 @@ const timeEllapsedPromise = (ms) => {
   const server = await startServer({
     logLevel: "off",
     keepProcessAlive: false,
-    requestToResponse: (request) => {
-      return room.join(request)
-    },
+    services: [
+      {
+        handleRequest: (request) => {
+          return room.join(request)
+        },
+      },
+    ],
   })
   const clientA = await openEventSource(server.origin)
   try {
@@ -261,9 +281,13 @@ const timeEllapsedPromise = (ms) => {
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    requestToResponse: (request) => {
-      return room.join(request)
-    },
+    services: [
+      {
+        handleRequest: (request) => {
+          return room.join(request)
+        },
+      },
+    ],
   })
   try {
     await openEventSource(server.origin)

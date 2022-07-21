@@ -13,6 +13,7 @@ const unevalException = value => {
 const JSENV_ERROR_OVERLAY_TAGNAME = "jsenv-error-overlay";
 const displayErrorInDocument = (error, {
   rootDirectoryUrl,
+  openInEditor,
   url,
   line,
   column,
@@ -40,6 +41,7 @@ const displayErrorInDocument = (error, {
     title,
     text: createErrorText({
       rootDirectoryUrl,
+      openInEditor,
       message,
       stack
     }),
@@ -67,25 +69,30 @@ const displayErrorInDocument = (error, {
 
 const createErrorText = ({
   rootDirectoryUrl,
+  openInEditor,
   message,
   stack
 }) => {
   if (message && stack) {
     return `${replaceLinks(message, {
-      rootDirectoryUrl
+      rootDirectoryUrl,
+      openInEditor
     })}\n${replaceLinks(stack, {
-      rootDirectoryUrl
+      rootDirectoryUrl,
+      openInEditor
     })}`;
   }
 
   if (stack) {
     return replaceLinks(stack, {
-      rootDirectoryUrl
+      rootDirectoryUrl,
+      openInEditor
     });
   }
 
   return replaceLinks(message, {
-    rootDirectoryUrl
+    rootDirectoryUrl,
+    openInEditor
   });
 };
 
@@ -335,7 +342,8 @@ const formatTip = ({
 };
 
 const replaceLinks = (string, {
-  rootDirectoryUrl
+  rootDirectoryUrl,
+  openInEditor
 }) => {
   // normalize line breaks
   string = string.replace(/\n/g, "\n");
@@ -364,7 +372,7 @@ const replaceLinks = (string, {
           column
         });
         return link({
-          href: `javascript:window.fetch('/__open_in_editor__/${fileUrl}')`,
+          href: openInEditor ? `javascript:window.fetch('/__open_in_editor__/${fileUrl}')` : fileUrl,
           text: fileUrl
         });
       };
@@ -505,7 +513,8 @@ const installHtmlSupervisor = ({
   rootDirectoryUrl,
   logs,
   measurePerf,
-  errorOverlay
+  errorOverlay,
+  openInEditor
 }) => {
 
   const scriptExecutionResults = {};
@@ -746,6 +755,7 @@ const installHtmlSupervisor = ({
       } = errorEvent;
       displayErrorInDocument(error, {
         rootDirectoryUrl,
+        openInEditor,
         url: errorEvent.filename,
         line: errorEvent.lineno,
         column: errorEvent.colno,
@@ -800,6 +810,7 @@ const installHtmlSupervisor = ({
               stack: stack && traceMessage ? `${stack}\n\n${traceMessage}` : stack ? stack : traceMessage ? `\n${traceMessage}` : ""
             }, {
               rootDirectoryUrl,
+              openInEditor,
               url: traceUrl,
               line: traceLine,
               column: traceColumn,

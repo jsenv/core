@@ -2,11 +2,8 @@ import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 
 import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem"
 import { createLogger } from "@jsenv/log"
-import { getCorePlugins } from "@jsenv/core/src/plugins/plugins.js"
-import { createUrlGraph } from "@jsenv/core/src/omega/url_graph.js"
-import { createKitchen } from "@jsenv/core/src/omega/kitchen.js"
-import { startOmegaServer } from "@jsenv/core/src/omega/omega_server.js"
 
+import { startOmegaServer } from "@jsenv/core/src/omega/omega_server.js"
 import { run } from "./run.js"
 
 export const execute = async ({
@@ -19,6 +16,7 @@ export const execute = async ({
   allocatedMs,
   mirrorConsole = true,
   keepRunning = false,
+  services,
   collectConsole,
   collectCoverage,
   coverageTempDirectoryUrl,
@@ -27,12 +25,12 @@ export const execute = async ({
   runtimeParams,
 
   scenario = "dev",
-  sourcemaps = "inline",
   plugins = [],
   nodeEsmResolution,
   fileSystemMagicResolution,
   transpilation,
   htmlSupervisor = true,
+  sourcemaps = "inline",
   writeGeneratedFiles = false,
 
   port,
@@ -65,45 +63,29 @@ export const execute = async ({
     ...runtimeParams,
   }
   if (runtime.needsServer) {
-    const urlGraph = createUrlGraph()
-    const runtimeCompat = { [runtime.name]: runtime.version }
-    const kitchen = createKitchen({
-      signal,
-      logger,
-      rootDirectoryUrl,
-      urlGraph,
-      scenario,
-      sourcemaps,
-      runtimeCompat,
-      writeGeneratedFiles,
-      plugins: [
-        ...plugins,
-        ...getCorePlugins({
-          rootDirectoryUrl,
-          urlGraph,
-          scenario,
-          runtimeCompat,
-
-          htmlSupervisor,
-          nodeEsmResolution,
-          fileSystemMagicResolution,
-          transpilation,
-        }),
-      ],
-    })
     const server = await startOmegaServer({
       signal: executeOperation.signal,
       logLevel: "warn",
-      rootDirectoryUrl,
-      urlGraph,
-      kitchen,
-      scenario,
       keepProcessAlive: false,
+      services,
       port,
       protocol,
       http2,
       certificate,
       privateKey,
+
+      rootDirectoryUrl,
+      scenario,
+      runtimeCompat: { [runtime.name]: runtime.version },
+
+      plugins,
+
+      htmlSupervisor,
+      nodeEsmResolution,
+      fileSystemMagicResolution,
+      transpilation,
+      sourcemaps,
+      writeGeneratedFiles,
     })
     executeOperation.addEndCallback(async () => {
       await server.stop("execution done")

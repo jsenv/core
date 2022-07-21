@@ -14,11 +14,11 @@ import { startBuildServer } from "@jsenv/core"
 if (process.platform !== "win32") {
   const buildServer = await startBuildServer({
     logLevel: "warn",
+    // serverLogLevel: "debug",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
     buildDirectoryUrl: new URL("./build/", import.meta.url),
     buildIndexPath: "./main.html",
     keepProcessAlive: false,
-    buildServerAutoreload: true,
   })
   const response = await fetchUrl(buildServer.origin)
   const actual = {

@@ -3,8 +3,8 @@ import { requestCertificateForLocalhost } from "@jsenv/https-local"
 import {
   startServer,
   fetchFileSystem,
-  pluginServerTiming,
-  pluginCORS,
+  jsenvServiceCORS,
+  jsenvServiceErrorHandler,
   jsenvAccessControlAllowedHeaders,
 } from "@jsenv/server"
 
@@ -16,10 +16,9 @@ await startServer({
   http2: true,
   privateKey,
   certificate,
-  sendErrorDetails: true,
-  plugins: {
-    ...pluginServerTiming,
-    ...pluginCORS({
+  serverTiming: true,
+  services: [
+    jsenvServiceCORS({
       accessControlAllowRequestOrigin: true,
       accessControlAllowRequestMethod: true,
       accessControlAllowRequestHeaders: true,
@@ -29,21 +28,25 @@ await startServer({
       ],
       accessControlAllowCredentials: true,
     }),
-  },
-  requestToResponse: (request, { pushResponse }) => {
-    if (request.ressource === "/main.html") {
-      pushResponse({ path: "/script.js" })
-      pushResponse({ path: "/style.css" })
-    }
-
-    return fetchFileSystem(
-      new URL(request.ressource.slice(1), new URL("./", import.meta.url)),
-      {
-        headers: request.headers,
-        rootDirectoryUrl: new URL("./", import.meta.url),
-        canReadDirectory: true,
-        mtimeEnabled: true,
+    jsenvServiceErrorHandler({
+      sendErrorDetails: true,
+    }),
+    {
+      handleRequest: (request, { pushResponse }) => {
+        if (request.ressource === "/main.html") {
+          pushResponse({ path: "/script.js" })
+          pushResponse({ path: "/style.css" })
+        }
+        return fetchFileSystem(
+          new URL(request.ressource.slice(1), new URL("./", import.meta.url)),
+          {
+            headers: request.headers,
+            rootDirectoryUrl: new URL("./", import.meta.url),
+            canReadDirectory: true,
+            mtimeEnabled: true,
+          },
+        )
       },
-    )
-  },
+    },
+  ],
 })

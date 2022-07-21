@@ -16,79 +16,77 @@ _Screenshot server timing in chrome devtools:_
 
 ## Measuring service timings
 
-Using both _composeServices_ and _pluginServerTimings_ measures time taken by each function.
+Use _serverTiming_ to measure time taken by each service.
 
 ```js
-import {
-  startServer,
-  composeServices,
-  pluginServerTimings,
-} from "@jsenv/server"
-
-const noContentService = (request) => {
-  if (request.ressource !== "/") return null
-  return { status: 204 }
-}
-
-const okService = (request) => {
-  if (request.ressource !== "/whatever") return null
-  return { status: 200 }
-}
+import { startServer, composeServices } from "@jsenv/server"
 
 await startServer({
-  plugins: {
-    ...pluginServerTimings(),
-  },
-  requestToResponse: composeServices({
-    "service:nocontent": noContentService,
-    "service:ok": okService,
-  }),
+  serverTiming: true,
+  services: [
+    {
+      name: "service:nocontent",
+      handleRequest: (request) => {
+        if (request.ressource !== "/") return null
+        return { status: 204 }
+      },
+    },
+    {
+      name: "service:ok",
+      handleRequest: (request) => {
+        if (request.ressource !== "/whatever") return null
+        return { status: 200 }
+      },
+    },
+  ],
 })
 ```
 
 Code above generates a server timing response header that looks like this:
 
 ```console
-server-timing: a;desc="service:nocontent";dur=0.007546901, b;desc="service:ok";dur=0.0018849
+server-timing: a;desc="service:nocontent.handleRequest";dur=0.007546901, b;desc="service:ok";dur=0.0018849
 ```
 
-You can also measure time taken by a function using _timeFunction_ exports and returning a _timing_ property.
+It is also possible to put more timing information by returning a _timing_ property as shown below:
 
 ```js
-import { startServer, pluginServerTimings, timeFunction } from "@jsenv/server"
+import { startServer, pluginServerTimings } from "@jsenv/server"
 
 await startServer({
-  plugins: {
-    ...pluginServerTimings(),
-  },
-  requestToResponse: async () => {
-    const [waitTiming] = await timeFunction("waiting 50ms", async () => {
-      await new Promise((resolve) => {
-        setTimeout(resolve, 50)
-      })
-    })
-    const [getMessageTiming, message] = await timeFunction(
-      "get message",
-      () => "hello",
-    )
-
-    return {
-      status: 200,
-      headers: {
-        "content-type": "text/plain",
+  serverTiming: true,
+  services: [
+    {
+      handleRequest: async () => {
+        const timeoutStart = performance.now()
+        const [waitTiming] = await timeFunction("waiting 50ms", async () => {
+          await new Promise((resolve) => {
+            setTimeout(resolve, 50)
+          })
+        })
+        const timeoutDuration = performance.now() - timeoutStart
+        const additionStart = performance.now()
+        1 + 1
+        const additionDuration = performance.now() - additionStart
+        return {
+          status: 200,
+          headers: {
+            "content-type": "text/plain",
+          },
+          body: message,
+          timing: {
+            "setTimeout(50)": timeoutDuration,
+            "1+1": additionDuration,
+          },
+        }
       },
-      body: message,
-      timing: {
-        ...waitTiming,
-        ...getMessageTiming,
-      },
-    }
-  },
+    },
+  ],
 })
 ```
 
 Code aboves generates a server timing response headers that looks as below
 
 ```console
-server-timing: a;desc="waiting 50ms";dur=50.7546901, b;desc="get message";dur=0.0018849
+server-timing: a;desc="setTimeout(50)";dur=50.7546901, b;desc="1+1";dur=0.0018849
 ```

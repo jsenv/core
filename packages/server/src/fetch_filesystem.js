@@ -12,7 +12,7 @@ import { bufferToEtag } from "./internal/etag.js"
 import { composeTwoResponses } from "./internal/response_composition.js"
 import { convertFileSystemErrorToResponseProperties } from "./internal/convertFileSystemErrorToResponseProperties.js"
 import { timeFunction } from "./server_timing/timing_measure.js"
-import { negotiateContentEncoding } from "./content_negotiation/negotiateContentEncoding.js"
+import { pickContentEncoding } from "./content_negotiation/pick_content_encoding.js"
 import { serveDirectory } from "./serve_directory.js"
 
 export const fetchFileSystem = async (
@@ -360,7 +360,7 @@ const getMtimeResponse = async ({ headers, sourceStat }) => {
 }
 
 const getCompressedResponse = async ({ sourceUrl, headers }) => {
-  const acceptedCompressionFormat = negotiateContentEncoding(
+  const acceptedCompressionFormat = pickContentEncoding(
     { headers },
     Object.keys(availableCompressionFormats),
   )

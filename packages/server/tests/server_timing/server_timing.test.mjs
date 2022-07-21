@@ -1,27 +1,30 @@
 import { assert } from "@jsenv/assert"
 import { fetchUrl } from "@jsenv/fetch"
 
-import { startServer, pluginServerTiming, timeFunction } from "@jsenv/server"
+import { startServer, timeFunction } from "@jsenv/server"
 import { parseServerTimingHeader } from "@jsenv/server/src/server_timing/timing_header.js"
 
 const { origin } = await startServer({
-  plugins: {
-    ...pluginServerTiming(),
-  },
   keepProcessAlive: false,
   logLevel: "warn",
-  requestToResponse: async () => {
-    const [waitTiming] = await timeFunction("waiting 50ms", async () => {
-      await new Promise((resolve) => {
-        setTimeout(resolve, 50)
-      })
-    })
+  serverTiming: true,
+  services: [
+    {
+      name: "toto",
+      handleRequest: async () => {
+        const [waitTiming] = await timeFunction("waiting 50ms", async () => {
+          await new Promise((resolve) => {
+            setTimeout(resolve, 50)
+          })
+        })
 
-    return {
-      status: 200,
-      timing: waitTiming,
-    }
-  },
+        return {
+          status: 200,
+          timing: waitTiming,
+        }
+      },
+    },
+  ],
 })
 
 {
@@ -29,12 +32,16 @@ const { origin } = await startServer({
   const actual = parseServerTimingHeader(response.headers.get("server-timing"))
   const expected = {
     a: {
-      description: "waiting 50ms",
+      description: "toto.handleRequest",
       duration: actual.a.duration,
     },
     b: {
-      description: "time to start responding",
+      description: "waiting 50ms",
       duration: actual.b.duration,
+    },
+    c: {
+      description: "time to start responding",
+      duration: actual.c.duration,
     },
   }
   assert({ actual, expected })

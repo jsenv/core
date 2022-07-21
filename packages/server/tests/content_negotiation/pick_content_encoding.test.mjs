@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert"
 
-import { negotiateContentEncoding } from "@jsenv/server"
+import { pickContentEncoding } from "@jsenv/server"
 
 {
   const request = {
@@ -10,17 +10,17 @@ import { negotiateContentEncoding } from "@jsenv/server"
   }
 
   {
-    const actual = negotiateContentEncoding(request, ["gzip"])
+    const actual = pickContentEncoding(request, ["gzip"])
     const expected = "gzip"
     assert({ actual, expected })
   }
   {
-    const actual = negotiateContentEncoding(request, ["deflate"])
+    const actual = pickContentEncoding(request, ["deflate"])
     const expected = "deflate"
     assert({ actual, expected })
   }
   {
-    const actual = negotiateContentEncoding(request, ["brotli"])
+    const actual = pickContentEncoding(request, ["brotli"])
     const expected = null
     assert({ actual, expected })
   }
@@ -34,21 +34,17 @@ import { negotiateContentEncoding } from "@jsenv/server"
   }
 
   {
-    const actual = negotiateContentEncoding(request, [
-      "gzip",
-      "deflate",
-      "brotli",
-    ])
+    const actual = pickContentEncoding(request, ["gzip", "deflate", "brotli"])
     const expected = "brotli"
     assert({ actual, expected })
   }
   {
-    const actual = negotiateContentEncoding(request, ["gzip", "deflate"])
+    const actual = pickContentEncoding(request, ["gzip", "deflate"])
     const expected = "gzip"
     assert({ actual, expected })
   }
   {
-    const actual = negotiateContentEncoding(request, ["deflate"])
+    const actual = pickContentEncoding(request, ["deflate"])
     const expected = "deflate"
     assert({ actual, expected })
   }

@@ -9,16 +9,20 @@ import { startServer, readRequestBody } from "@jsenv/server"
   const { origin } = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    requestToResponse: async (request) => {
-      requestBody = await readRequestBody(request)
-      return {
-        status: 200,
-        headers: {
-          "Content-Type": "text/plain",
+    services: [
+      {
+        handleRequest: async (request) => {
+          requestBody = await readRequestBody(request)
+          return {
+            status: 200,
+            headers: {
+              "Content-Type": "text/plain",
+            },
+            body: "",
+          }
         },
-        body: "",
-      }
-    },
+      },
+    ],
   })
   await fetchUrl(origin, {
     method: "POST",
@@ -35,17 +39,21 @@ import { startServer, readRequestBody } from "@jsenv/server"
   const { origin } = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    requestToResponse: async (request) => {
-      requestBody = await readRequestBody(request, { as: "json" })
+    services: [
+      {
+        handleRequest: async (request) => {
+          requestBody = await readRequestBody(request, { as: "json" })
 
-      return {
-        status: 200,
-        headers: {
-          "Content-Type": "text/plain",
+          return {
+            status: 200,
+            headers: {
+              "Content-Type": "text/plain",
+            },
+            body: "",
+          }
         },
-        body: "",
-      }
-    },
+      },
+    ],
   })
 
   await fetchUrl(origin, {
@@ -63,17 +71,21 @@ import { startServer, readRequestBody } from "@jsenv/server"
   const { origin } = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    requestToResponse: async (request) => {
-      requestBody = await readRequestBody(request, { as: "buffer" })
+    services: [
+      {
+        handleRequest: async (request) => {
+          requestBody = await readRequestBody(request, { as: "buffer" })
 
-      return {
-        status: 200,
-        headers: {
-          "Content-Type": "text/plain",
+          return {
+            status: 200,
+            headers: {
+              "Content-Type": "text/plain",
+            },
+            body: "",
+          }
         },
-        body: "",
-      }
-    },
+      },
+    ],
   })
   await fetchUrl(origin, {
     method: "PATCH",
@@ -94,17 +106,21 @@ import { startServer, readRequestBody } from "@jsenv/server"
   const { origin } = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    requestToResponse: async (request) => {
-      await readPromise
-      requestBody = await readRequestBody(request, { as: "string" })
-      return {
-        status: 200,
-        headers: {
-          "Content-Type": "text/plain",
+    services: [
+      {
+        handleRequest: async (request) => {
+          await readPromise
+          requestBody = await readRequestBody(request, { as: "string" })
+          return {
+            status: 200,
+            headers: {
+              "Content-Type": "text/plain",
+            },
+            body: "",
+          }
         },
-        body: "",
-      }
-    },
+      },
+    ],
   })
   const responsePromise = fetchUrl(origin, {
     method: "POST",

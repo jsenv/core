@@ -8,7 +8,7 @@ const { certificate, privateKey } = requestCertificateForLocalhost({
 await startDevServer({
   port: 3589,
   protocol: "https",
-  listenAnyIp: true,
+  acceptAnyIp: true,
   certificate,
   privateKey,
   rootDirectoryUrl: new URL("./", import.meta.url),
@@ -36,15 +36,17 @@ await startDevServer({
       },
     },
   ],
-  explorerGroups: {
-    main: {
-      "./main/**/*.html": true,
-    },
-    autoreload: {
-      "./autoreload/**/*.html": true,
-    },
-    errors: {
-      "./errors/**/*.html": true,
+  explorer: {
+    groups: {
+      main: {
+        "./main/**/*.html": true,
+      },
+      autoreload: {
+        "./autoreload/**/*.html": true,
+      },
+      errors: {
+        "./errors/**/*.html": true,
+      },
     },
   },
 })

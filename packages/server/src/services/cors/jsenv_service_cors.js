@@ -8,7 +8,7 @@ export const jsenvAccessControlAllowedMethods = [
   "OPTIONS",
 ]
 
-export const pluginCORS = ({
+export const jsenvServiceCORS = ({
   accessControlAllowedOrigins = [],
   accessControlAllowedMethods = jsenvAccessControlAllowedMethods,
   accessControlAllowedHeaders = jsenvAccessControlAllowedHeaders,
@@ -19,7 +19,7 @@ export const pluginCORS = ({
   // by default OPTIONS request can be cache for a long time, it's not going to change soon ?
   // we could put a lot here, see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Max-Age
   accessControlMaxAge = 600,
-  timingAllowOrigin,
+  timingAllowOrigin = false,
 } = {}) => {
   // TODO: we should check access control params to throw or warn if we find strange values
 
@@ -27,56 +27,40 @@ export const pluginCORS = ({
     accessControlAllowRequestOrigin || accessControlAllowedOrigins.length
 
   if (!corsEnabled) {
-    return {
-      cors: {},
-    }
+    return []
   }
 
   return {
-    cors: {
-      onServerParams: ({ plugins }) => {
-        if (timingAllowOrigin === undefined && plugins.server_timings) {
-          timingAllowOrigin = true
-        }
-      },
+    name: "jsenv:cors",
 
-      onRequest: (request, { shortcircuitResponse }) => {
-        if (request.method === "OPTIONS") {
-          // when request method is "OPTIONS" we must return a 200 without body
-          // So we bypass "requestToResponse" in that scenario using shortcircuitResponse
-          shortcircuitResponse({
-            status: 200,
-            headers: {
-              "content-length": 0,
-            },
-          })
-        }
-
-        if (request.parent) {
-          return null
-        }
-
+    handleRequest: (request) => {
+      // when request method is "OPTIONS" we must return a 200 without body
+      // So we bypass "requestToResponse" in that scenario using shortcircuitResponse
+      if (request.method === "OPTIONS") {
         return {
-          onResponse: () => {
-            const accessControlHeaders = generateAccessControlHeaders({
-              request,
-              accessControlAllowedOrigins,
-              accessControlAllowRequestOrigin,
-              accessControlAllowedMethods,
-              accessControlAllowRequestMethod,
-              accessControlAllowedHeaders,
-              accessControlAllowRequestHeaders,
-              accessControlAllowCredentials,
-              accessControlMaxAge,
-              timingAllowOrigin,
-            })
-
-            return {
-              headers: accessControlHeaders,
-            }
+          status: 200,
+          headers: {
+            "content-length": 0,
           },
         }
-      },
+      }
+      return null
+    },
+
+    injectResponseHeaders: (response, { request }) => {
+      const accessControlHeaders = generateAccessControlHeaders({
+        request,
+        accessControlAllowedOrigins,
+        accessControlAllowRequestOrigin,
+        accessControlAllowedMethods,
+        accessControlAllowRequestMethod,
+        accessControlAllowedHeaders,
+        accessControlAllowRequestHeaders,
+        accessControlAllowCredentials,
+        accessControlMaxAge,
+        timingAllowOrigin,
+      })
+      return accessControlHeaders
     },
   }
 }

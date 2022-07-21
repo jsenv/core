@@ -17,72 +17,78 @@ import {
 } from "@jsenv/node-esm-resolution"
 
 export const jsenvPluginNodeEsmResolution = ({
-  rootDirectoryUrl,
-  urlGraph,
-  runtimeCompat,
   packageConditions,
   filesInvalidatingCache = ["package.json", "package-lock.json"],
 }) => {
-  const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node")
-  // https://nodejs.org/api/esm.html#resolver-algorithm-specification
-  packageConditions = packageConditions || [
-    ...readCustomConditionsFromProcessArgs(),
-    nodeRuntimeEnabled ? "node" : "browser",
-    "import",
-  ]
-
-  const packageScopesCache = new Map()
-  const lookupPackageScope = (url) => {
-    const fromCache = packageScopesCache.get(url)
-    if (fromCache) {
-      return fromCache
-    }
-    const packageScope = defaultLookupPackageScope(url)
-    packageScopesCache.set(url, packageScope)
-    return packageScope
-  }
-  const packageJsonsCache = new Map()
-  const readPackageJson = (url) => {
-    const fromCache = packageJsonsCache.get(url)
-    if (fromCache) {
-      return fromCache
-    }
-    const packageJson = defaultReadPackageJson(url)
-    packageJsonsCache.set(url, packageJson)
-    return packageJson
-  }
-
   const unregisters = []
-  const onFileChange = () => {
-    packageScopesCache.clear()
-    packageJsonsCache.clear()
-    urlGraph.urlInfoMap.forEach((urlInfo) => {
-      if (urlInfo.dependsOnPackageJson) {
-        urlGraph.considerModified(urlInfo)
-      }
-    })
-  }
-  filesInvalidatingCache.forEach((file) => {
-    const unregister = registerFileLifecycle(new URL(file, rootDirectoryUrl), {
-      added: () => {
-        onFileChange()
-      },
-      updated: () => {
-        onFileChange()
-      },
-      removed: () => {
-        onFileChange()
-      },
-      keepProcessAlive: false,
-    })
-    unregisters.push(unregister)
-  })
+  let lookupPackageScope // defined in "init"
+  let readPackageJson // defined in "init"
 
   return {
     name: "jsenv:node_esm_resolution",
     appliesDuring: "*",
+    init: ({ rootDirectoryUrl, scenario, runtimeCompat, urlGraph }) => {
+      const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node")
+      // https://nodejs.org/api/esm.html#resolver-algorithm-specification
+      packageConditions = packageConditions || [
+        ...readCustomConditionsFromProcessArgs(),
+        nodeRuntimeEnabled ? "node" : "browser",
+        "import",
+      ]
+
+      const packageScopesCache = new Map()
+      lookupPackageScope = (url) => {
+        const fromCache = packageScopesCache.get(url)
+        if (fromCache) {
+          return fromCache
+        }
+        const packageScope = defaultLookupPackageScope(url)
+        packageScopesCache.set(url, packageScope)
+        return packageScope
+      }
+      const packageJsonsCache = new Map()
+      readPackageJson = (url) => {
+        const fromCache = packageJsonsCache.get(url)
+        if (fromCache) {
+          return fromCache
+        }
+        const packageJson = defaultReadPackageJson(url)
+        packageJsonsCache.set(url, packageJson)
+        return packageJson
+      }
+
+      if (scenario === "dev") {
+        const onFileChange = () => {
+          packageScopesCache.clear()
+          packageJsonsCache.clear()
+          urlGraph.urlInfoMap.forEach((urlInfo) => {
+            if (urlInfo.dependsOnPackageJson) {
+              urlGraph.considerModified(urlInfo)
+            }
+          })
+        }
+        filesInvalidatingCache.forEach((file) => {
+          const unregister = registerFileLifecycle(
+            new URL(file, rootDirectoryUrl),
+            {
+              added: () => {
+                onFileChange()
+              },
+              updated: () => {
+                onFileChange()
+              },
+              removed: () => {
+                onFileChange()
+              },
+              keepProcessAlive: false,
+            },
+          )
+          unregisters.push(unregister)
+        })
+      }
+    },
     resolveUrl: {
-      js_import_export: (reference) => {
+      js_import_export: (reference, context) => {
         const { parentUrl, specifier } = reference
         const { type, url } = applyNodeEsmResolution({
           conditions: packageConditions,
@@ -100,7 +106,9 @@ export const jsenvPluginNodeEsmResolution = ({
           type !== "relative_specifier" &&
           type !== "absolute_specifier" &&
           type !== "node_builtin_specifier"
-        const relatedUrlInfos = urlGraph.getRelatedUrlInfos(reference.parentUrl)
+        const relatedUrlInfos = context.urlGraph.getRelatedUrlInfos(
+          reference.parentUrl,
+        )
         relatedUrlInfos.forEach((relatedUrlInfo) => {
           if (relatedUrlInfo.dependsOnPackageJson) {
             // the url may depend due to an other reference

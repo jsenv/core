@@ -19,16 +19,17 @@ import { jsenvPluginMinification } from "./minification/jsenv_plugin_minificatio
 import { jsenvPluginImportMetaHot } from "./import_meta_hot/jsenv_plugin_import_meta_hot.js"
 import { jsenvPluginAutoreload } from "./autoreload/jsenv_plugin_autoreload.js"
 import { jsenvPluginCacheControl } from "./cache_control/jsenv_plugin_cache_control.js"
+// dev only
+import { jsenvPluginExplorer } from "./explorer/jsenv_plugin_explorer.js"
 
 export const getCorePlugins = ({
   rootDirectoryUrl,
-  urlGraph,
   scenario,
   runtimeCompat,
 
   urlAnalysis = {},
   htmlSupervisor,
-  nodeEsmResolution,
+  nodeEsmResolution = true,
   fileSystemMagicResolution,
   directoryReferenceAllowed,
   transpilation = true,
@@ -38,6 +39,7 @@ export const getCorePlugins = ({
   clientAutoreload = false,
   clientFileChangeCallbackList,
   clientFilesPruneCallbackList,
+  explorer,
 } = {}) => {
   if (htmlSupervisor === true) {
     htmlSupervisor = {}
@@ -45,9 +47,13 @@ export const getCorePlugins = ({
   if (nodeEsmResolution === true) {
     nodeEsmResolution = {}
   }
+  if (fileSystemMagicResolution === true) {
+    fileSystemMagicResolution = {}
+  }
   if (clientAutoreload === true) {
     clientAutoreload = {}
   }
+
   return [
     jsenvPluginUrlAnalysis({ rootDirectoryUrl, ...urlAnalysis }),
     jsenvPluginTranspilation(transpilation),
@@ -63,12 +69,7 @@ export const getCorePlugins = ({
     jsenvPluginHttpUrls(),
     jsenvPluginLeadingSlash(),
     // before url resolution to handle "js_import_export" resolution
-    jsenvPluginNodeEsmResolution({
-      rootDirectoryUrl,
-      urlGraph,
-      runtimeCompat,
-      ...nodeEsmResolution,
-    }),
+    jsenvPluginNodeEsmResolution(nodeEsmResolution),
     jsenvPluginUrlResolution(),
     jsenvPluginUrlVersion(),
     jsenvPluginCommonJsGlobals(),
@@ -90,5 +91,6 @@ export const getCorePlugins = ({
         ]
       : []),
     jsenvPluginCacheControl(),
+    ...(explorer ? [jsenvPluginExplorer(explorer)] : []),
   ]
 }

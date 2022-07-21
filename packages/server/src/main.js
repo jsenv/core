@@ -4,8 +4,7 @@
  * Ideally this file should be kept simple to help discovering codebase progressively.
  */
 
-export { startServer } from "./startServer.js"
-export { composeServices } from "./service_composition/service_composition.js"
+export { startServer } from "./server.js"
 export { setupRoutes } from "./service_composition/routing.js"
 export { readRequestBody } from "./readRequestBody.js"
 export { fetchFileSystem } from "./fetch_filesystem.js"
@@ -18,31 +17,30 @@ export {
   STOP_REASON_PROCESS_EXIT,
   STOP_REASON_NOT_SPECIFIED,
 } from "./stopReasons.js"
+export { jsenvServiceErrorHandler } from "./services/error_handler/jsenv_service_error_handler.js"
 
 // CORS
 export {
-  pluginCORS,
+  jsenvServiceCORS,
   jsenvAccessControlAllowedHeaders,
   jsenvAccessControlAllowedMethods,
-} from "./cors/plugin_cors.js"
+} from "./services/cors/jsenv_service_cors.js"
 
-// server timings
-export { pluginServerTiming } from "./server_timing/plugin_server_timing.js"
+// server timing
 export { timeFunction, timeStart } from "./server_timing/timing_measure.js"
 
 // SSE
 export { createSSERoom } from "./sse/sse_room.js"
 
 // content-negotiation
-export { negotiateContentType } from "./content_negotiation/negotiateContentType.js"
-export { negotiateContentEncoding } from "./content_negotiation/negotiateContentEncoding.js"
-export { negotiateContentLanguage } from "./content_negotiation/negotiateContentLanguage.js"
-export { pluginContentNegotiationCheck } from "./content_negotiation/plugin_content_negotiation_check.js"
+export { pickContentType } from "./content_negotiation/pick_content_type.js"
+export { pickContentEncoding } from "./content_negotiation/pick_content_encoding.js"
+export { pickContentLanguage } from "./content_negotiation/pick_content_language.js"
+export { jsenvServiceResponseAcceptanceCheck } from "./services/response_acceptance_check/jsenv_service_response_acceptance_check.js"
 
 // others
 export { serveDirectory } from "./serve_directory.js"
 export { fromFetchResponse } from "./from_fetch_response.js"
 export { composeTwoResponses } from "./internal/response_composition.js"
-export { pluginRessourceAliases } from "./ressource_aliases/plugin_ressource_aliases.js"
-export { pluginRequestWaitingCheck } from "./plugin_request_waiting_check.js"
+export { jsenvServiceRessourceAliases } from "./services/ressource_aliases/jsenv_service_ressource_aliases.js"
 export { findFreePort } from "./internal/listen.js"

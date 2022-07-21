@@ -12,7 +12,7 @@ await startBuildServer({
   protocol: "https",
   certificate,
   privateKey,
-  listenAnyIp: true,
+  acceptAnyIp: true,
   rootDirectoryUrl: new URL("./", import.meta.url),
   buildDirectoryUrl: new URL("./dist/", import.meta.url),
   // minification: false,

@@ -1,9 +1,9 @@
 import { assert } from "@jsenv/assert"
 
-import { negotiateContentType } from "@jsenv/server"
+import { pickContentType } from "@jsenv/server"
 
 {
-  const actual = negotiateContentType(
+  const actual = pickContentType(
     {
       headers: {
         accept: "text/html",
@@ -16,7 +16,7 @@ import { negotiateContentType } from "@jsenv/server"
 }
 
 {
-  const actual = negotiateContentType(
+  const actual = pickContentType(
     {
       headers: {
         accept: "text/html",
@@ -29,7 +29,7 @@ import { negotiateContentType } from "@jsenv/server"
 }
 
 {
-  const actual = negotiateContentType(
+  const actual = pickContentType(
     {
       headers: {
         accept: "text/*",
@@ -42,7 +42,7 @@ import { negotiateContentType } from "@jsenv/server"
 }
 
 {
-  const actual = negotiateContentType(
+  const actual = pickContentType(
     {
       headers: {
         accept: "image/*",
@@ -55,7 +55,7 @@ import { negotiateContentType } from "@jsenv/server"
 }
 
 {
-  const actual = negotiateContentType(
+  const actual = pickContentType(
     {
       headers: {
         accept: "*/*",
@@ -68,7 +68,7 @@ import { negotiateContentType } from "@jsenv/server"
 }
 
 {
-  const actual = negotiateContentType(
+  const actual = pickContentType(
     {
       headers: {
         accept: "text/plain, text/javascript",
@@ -81,7 +81,7 @@ import { negotiateContentType } from "@jsenv/server"
 }
 
 {
-  const actual = negotiateContentType(
+  const actual = pickContentType(
     {
       headers: {
         accept: "text/plain, text/javascript",
@@ -94,7 +94,7 @@ import { negotiateContentType } from "@jsenv/server"
 }
 
 {
-  const actual = negotiateContentType(
+  const actual = pickContentType(
     {
       headers: {
         accept: "text/plain, */*",
@@ -107,7 +107,7 @@ import { negotiateContentType } from "@jsenv/server"
 }
 
 {
-  const actual = negotiateContentType(
+  const actual = pickContentType(
     {
       headers: {
         accept: "text/plain, */*;q=0.1",

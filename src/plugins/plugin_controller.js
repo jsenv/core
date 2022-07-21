@@ -1,60 +1,64 @@
 import { timeStart } from "@jsenv/server"
 
-export const createPluginController = ({
-  plugins,
-  scenario,
-  hooks = [
-    "init",
-    "resolveUrl",
-    "redirectUrl",
-    "fetchUrlContent",
-    "transformUrlContent",
-    "transformUrlSearchParams",
-    "formatUrl",
-    "finalizeUrlContent",
-    "cooked",
-    "destroy",
-  ],
-}) => {
-  plugins = flattenAndFilterPlugins(plugins, { scenario })
-  // precompute a list of hooks per hookName
-  // For one major reason:
-  // - When debugging, there is less iteration
-  // And also it should increase perf as there is less work to do
-  const hookGroups = {}
-  const addHook = (hookName) => {
-    const hooks = []
-    plugins.forEach((plugin) => {
-      const hook = plugin[hookName]
-      if (hook) {
-        hooks.push({
-          plugin,
-          hookName,
-          value: hook,
-        })
-      }
-    })
-    hookGroups[hookName] = hooks
-    return hooks
-  }
-  hooks.forEach((hookName) => {
-    addHook(hookName)
-  })
+const HOOK_NAMES = [
+  "init",
+  "serve", // is called only during dev/tests
+  "resolveUrl",
+  "redirectUrl",
+  "fetchUrlContent",
+  "transformUrlContent",
+  "transformUrlSearchParams",
+  "formatUrl",
+  "finalizeUrlContent",
+  "bundle", // is called only during build
+  "optimizeUrlContent", // is called only during build
+  "cooked",
+  "augmentResponse", // is called only during dev/tests
+  "destroy",
+]
 
-  const pushPlugin = (plugin) => {
-    plugins.push(plugin)
-    hooks.forEach((hookName) => {
-      const hook = plugin[hookName]
-      if (hook) {
+export const createPluginController = ({ plugins, scenario }) => {
+  const flatPlugins = flattenAndFilterPlugins(plugins, { scenario })
+  // precompute a list of hooks per hookName for one major reason:
+  // - When debugging, there is less iteration
+  // also it should increase perf as there is less work to do
+
+  const hookGroups = {}
+  const addPlugin = (plugin, { position = "start" }) => {
+    Object.keys(plugin).forEach((key) => {
+      if (key === "name" || key === "appliesDuring" || key === "serverEvents") {
+        return
+      }
+      const isHook = HOOK_NAMES.includes(key)
+      if (!isHook) {
+        console.warn(`Unexpected "${key}" property on "${plugin.name}" plugin`)
+      }
+      const hookName = key
+      const hookValue = plugin[hookName]
+      if (hookValue) {
         const group = hookGroups[hookName] || (hookGroups[hookName] = [])
-        group.push({
+        const hook = {
           plugin,
-          hookName,
-          value: hook,
-        })
+          name: hookName,
+          value: hookValue,
+        }
+        if (position === "start") {
+          group.push(hook)
+        } else {
+          group.unshift(hook)
+        }
       }
     })
   }
+  const pushPlugin = (plugin) => {
+    addPlugin(plugin, { position: "start" })
+  }
+  const unshiftPlugin = (plugin) => {
+    addPlugin(plugin, { position: "end" })
+  }
+  flatPlugins.forEach((plugin) => {
+    pushPlugin(plugin)
+  })
 
   let currentPlugin = null
   let currentHookName = null
@@ -64,15 +68,18 @@ export const createPluginController = ({
       return null
     }
     currentPlugin = hook.plugin
-    currentHookName = hook.hookName
-    const timeEnd = timeStart(
-      `${currentHookName}-${currentPlugin.name.replace("jsenv:", "")}`,
-    )
+    currentHookName = hook.name
+    let timeEnd
+    if (info.timing) {
+      timeEnd = timeStart(
+        `${currentHookName}-${currentPlugin.name.replace("jsenv:", "")}`,
+      )
+    }
     let valueReturned = hookFn(info, context)
     if (info.timing) {
       Object.assign(info.timing, timeEnd())
     }
-    valueReturned = assertAndNormalizeReturnValue(hook.hookName, valueReturned)
+    valueReturned = assertAndNormalizeReturnValue(hook.name, valueReturned)
     currentPlugin = null
     currentHookName = null
     return valueReturned
@@ -83,15 +90,18 @@ export const createPluginController = ({
       return null
     }
     currentPlugin = hook.plugin
-    currentHookName = hook.hookName
-    const timeEnd = timeStart(
-      `${currentHookName}-${currentPlugin.name.replace("jsenv:", "")}`,
-    )
+    currentHookName = hook.name
+    let timeEnd
+    if (info.timing) {
+      timeEnd = timeStart(
+        `${currentHookName}-${currentPlugin.name.replace("jsenv:", "")}`,
+      )
+    }
     let valueReturned = await hookFn(info, context)
     if (info.timing) {
       Object.assign(info.timing, timeEnd())
     }
-    valueReturned = assertAndNormalizeReturnValue(hook.hookName, valueReturned)
+    valueReturned = assertAndNormalizeReturnValue(hook.name, valueReturned)
     currentPlugin = null
     currentHookName = null
     return valueReturned
@@ -99,36 +109,45 @@ export const createPluginController = ({
 
   const callHooks = (hookName, info, context, callback) => {
     const hooks = hookGroups[hookName]
-    for (const hook of hooks) {
-      const returnValue = callHook(hook, info, context)
-      if (returnValue) {
-        callback(returnValue)
+    if (hooks) {
+      for (const hook of hooks) {
+        const returnValue = callHook(hook, info, context)
+        if (returnValue && callback) {
+          callback(returnValue)
+        }
       }
     }
   }
   const callAsyncHooks = async (hookName, info, context, callback) => {
     const hooks = hookGroups[hookName]
-    await hooks.reduce(async (previous, hook) => {
-      await previous
-      const returnValue = await callAsyncHook(hook, info, context)
-      if (returnValue && callback) {
-        await callback(returnValue)
-      }
-    }, Promise.resolve())
+    if (hooks) {
+      await hooks.reduce(async (previous, hook) => {
+        await previous
+        const returnValue = await callAsyncHook(hook, info, context)
+        if (returnValue && callback) {
+          await callback(returnValue)
+        }
+      }, Promise.resolve())
+    }
   }
 
   const callHooksUntil = (hookName, info, context) => {
     const hooks = hookGroups[hookName]
-    for (const hook of hooks) {
-      const returnValue = callHook(hook, info, context)
-      if (returnValue) {
-        return returnValue
+    if (hooks) {
+      for (const hook of hooks) {
+        const returnValue = callHook(hook, info, context)
+        if (returnValue) {
+          return returnValue
+        }
       }
     }
     return null
   }
   const callAsyncHooksUntil = (hookName, info, context) => {
     const hooks = hookGroups[hookName]
+    if (!hooks) {
+      return null
+    }
     if (hooks.length === 0) {
       return null
     }
@@ -151,9 +170,9 @@ export const createPluginController = ({
   }
 
   return {
-    plugins,
+    plugins: flatPlugins,
     pushPlugin,
-    addHook,
+    unshiftPlugin,
     getHookFunction,
     callHook,
     callAsyncHook,
@@ -168,8 +187,8 @@ export const createPluginController = ({
   }
 }
 
-const flattenAndFilterPlugins = (pluginsRaw, { scenario }) => {
-  const plugins = []
+const flattenAndFilterPlugins = (plugins, { scenario }) => {
+  const flatPlugins = []
   const visitPluginEntry = (pluginEntry) => {
     if (Array.isArray(pluginEntry)) {
       pluginEntry.forEach((value) => visitPluginEntry(value))
@@ -185,7 +204,7 @@ const flattenAndFilterPlugins = (pluginsRaw, { scenario }) => {
         return
       }
       if (appliesDuring === "*") {
-        plugins.push(pluginEntry)
+        flatPlugins.push(pluginEntry)
         return
       }
       if (typeof appliesDuring === "string") {
@@ -195,7 +214,7 @@ const flattenAndFilterPlugins = (pluginsRaw, { scenario }) => {
           )
         }
         if (appliesDuring === scenario) {
-          plugins.push(pluginEntry)
+          flatPlugins.push(pluginEntry)
         }
         return
       }
@@ -205,7 +224,7 @@ const flattenAndFilterPlugins = (pluginsRaw, { scenario }) => {
         )
       }
       if (appliesDuring[scenario]) {
-        plugins.push(pluginEntry)
+        flatPlugins.push(pluginEntry)
         return
       }
       if (pluginEntry.destroy) {
@@ -215,8 +234,8 @@ const flattenAndFilterPlugins = (pluginsRaw, { scenario }) => {
     }
     throw new Error(`plugin must be objects, got ${pluginEntry}`)
   }
-  pluginsRaw.forEach((plugin) => visitPluginEntry(plugin))
-  return plugins
+  plugins.forEach((plugin) => visitPluginEntry(plugin))
+  return flatPlugins
 }
 
 const getHookFunction = (

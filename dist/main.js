@@ -1,20 +1,20 @@
 import { workerData, Worker, parentPort } from "node:worker_threads";
-import http from "node:http";
-import cluster from "node:cluster";
+import { pathToFileURL, fileURLToPath } from "node:url";
+import { chmod, stat, lstat, readdir, promises, unlink, openSync, closeSync, rmdir, readFile as readFile$1, readFileSync as readFileSync$1, watch, readdirSync, statSync, writeFile as writeFile$1, writeFileSync as writeFileSync$1, mkdirSync, createReadStream, existsSync, realpathSync } from "node:fs";
+import crypto, { createHash } from "node:crypto";
+import { dirname, basename, extname } from "node:path";
+import { U as URL_META, f as filterV8Coverage } from "./js/v8_coverage.js";
 import process$1, { memoryUsage } from "node:process";
 import os, { networkInterfaces } from "node:os";
 import tty from "node:tty";
 import stringWidth from "string-width";
+import http from "node:http";
+import cluster from "node:cluster";
+import { performance as performance$1 } from "node:perf_hooks";
 import net, { createServer } from "node:net";
 import { Readable, Stream, Writable } from "node:stream";
 import { Http2ServerResponse } from "node:http2";
-import { createReadStream, readdirSync, statSync, readFile as readFile$1, chmod, stat, lstat, readdir, promises, unlink, openSync, closeSync, rmdir, readFileSync as readFileSync$1, watch, writeFile as writeFile$1, writeFileSync as writeFileSync$1, mkdirSync, existsSync, realpathSync } from "node:fs";
 import { lookup } from "node:dns";
-import { performance } from "node:perf_hooks";
-import { extname, dirname, basename } from "node:path";
-import { pathToFileURL, fileURLToPath } from "node:url";
-import crypto, { createHash } from "node:crypto";
-import { U as URL_META, f as filterV8Coverage } from "./js/v8_coverage.js";
 import { parseHtmlString, stringifyHtmlAst, visitHtmlNodes, getHtmlNodeAttribute, analyzeScriptNode, setHtmlNodeAttributes, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, applyPostCss, postCssPluginUrlVisitor, parseJsUrls, findHtmlNode, getHtmlNodeText, removeHtmlNode, setHtmlNodeText, applyBabelPlugins, injectScriptNodeAsEarlyAsPossible, createHtmlNode, removeHtmlNodeText, transpileWithParcel, injectJsImport, minifyWithParcel, analyzeLinkNode } from "@jsenv/ast";
 import { createMagicSource, composeTwoSourcemaps, sourcemapConverter, SOURCEMAP, generateSourcemapFileUrl, generateSourcemapDataUrl } from "@jsenv/sourcemap";
 import { createRequire } from "node:module";
@@ -25,6 +25,2750 @@ import stripAnsi from "strip-ansi";
 import cuid from "cuid";
 import { runInNewContext, Script } from "node:vm";
 import { fork } from "node:child_process";
+
+/*
+ * data:[<mediatype>][;base64],<data>
+ * https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URIs#syntax
+ */
+
+/* eslint-env browser, node */
+const DATA_URL = {
+  parse: string => {
+    const afterDataProtocol = string.slice("data:".length);
+    const commaIndex = afterDataProtocol.indexOf(",");
+    const beforeComma = afterDataProtocol.slice(0, commaIndex);
+    let contentType;
+    let base64Flag;
+
+    if (beforeComma.endsWith(`;base64`)) {
+      contentType = beforeComma.slice(0, -`;base64`.length);
+      base64Flag = true;
+    } else {
+      contentType = beforeComma;
+      base64Flag = false;
+    }
+
+    contentType = contentType === "" ? "text/plain;charset=US-ASCII" : contentType;
+    const afterComma = afterDataProtocol.slice(commaIndex + 1);
+    return {
+      contentType,
+      base64Flag,
+      data: afterComma
+    };
+  },
+  stringify: ({
+    contentType,
+    base64Flag = true,
+    data
+  }) => {
+    if (!contentType || contentType === "text/plain;charset=US-ASCII") {
+      // can be a buffer or a string, hence check on data.length instead of !data or data === ''
+      if (data.length === 0) {
+        return `data:,`;
+      }
+
+      if (base64Flag) {
+        return `data:;base64,${data}`;
+      }
+
+      return `data:,${data}`;
+    }
+
+    if (base64Flag) {
+      return `data:${contentType};base64,${data}`;
+    }
+
+    return `data:${contentType},${data}`;
+  }
+};
+
+const urlToScheme$1 = url => {
+  const urlString = String(url);
+  const colonIndex = urlString.indexOf(":");
+
+  if (colonIndex === -1) {
+    return "";
+  }
+
+  const scheme = urlString.slice(0, colonIndex);
+  return scheme;
+};
+
+const urlToRessource$1 = url => {
+  const scheme = urlToScheme$1(url);
+
+  if (scheme === "file") {
+    const urlAsStringWithoutFileProtocol = String(url).slice("file://".length);
+    return urlAsStringWithoutFileProtocol;
+  }
+
+  if (scheme === "https" || scheme === "http") {
+    // remove origin
+    const afterProtocol = String(url).slice(scheme.length + "://".length);
+    const pathnameSlashIndex = afterProtocol.indexOf("/", "://".length);
+    const urlAsStringWithoutOrigin = afterProtocol.slice(pathnameSlashIndex);
+    return urlAsStringWithoutOrigin;
+  }
+
+  const urlAsStringWithoutProtocol = String(url).slice(scheme.length + 1);
+  return urlAsStringWithoutProtocol;
+};
+
+const urlToPathname$1 = url => {
+  const ressource = urlToRessource$1(url);
+  const pathname = ressourceToPathname$1(ressource);
+  return pathname;
+};
+
+const ressourceToPathname$1 = ressource => {
+  const searchSeparatorIndex = ressource.indexOf("?");
+
+  if (searchSeparatorIndex > -1) {
+    return ressource.slice(0, searchSeparatorIndex);
+  }
+
+  const hashIndex = ressource.indexOf("#");
+
+  if (hashIndex > -1) {
+    return ressource.slice(0, hashIndex);
+  }
+
+  return ressource;
+};
+
+const urlToFilename$1 = url => {
+  const pathname = urlToPathname$1(url);
+  const pathnameBeforeLastSlash = pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
+  const slashLastIndex = pathnameBeforeLastSlash.lastIndexOf("/");
+  const filename = slashLastIndex === -1 ? pathnameBeforeLastSlash : pathnameBeforeLastSlash.slice(slashLastIndex + 1);
+  return filename;
+};
+
+const generateInlineContentUrl = ({
+  url,
+  extension,
+  line,
+  column,
+  lineEnd,
+  columnEnd
+}) => {
+  const generatedName = line === lineEnd ? `L${line}C${column}-L${lineEnd}C${columnEnd}` : `L${line}-L${lineEnd}`;
+  const filenameRaw = urlToFilename$1(url);
+  const filename = `${filenameRaw}@${generatedName}${extension}`; // ideally we should keep query params from url
+  // maybe we could use a custom scheme like "inline:"
+
+  const inlineContentUrl = new URL(filename, url).href;
+  return inlineContentUrl;
+};
+
+// consider switching to https://babeljs.io/docs/en/babel-code-frame
+const stringifyUrlSite = ({
+  url,
+  line,
+  column,
+  content
+}, {
+  showCodeFrame = true,
+  numberOfSurroundingLinesToShow,
+  lineMaxLength,
+  color
+} = {}) => {
+  let string = url;
+
+  if (typeof line === "number") {
+    string += `:${line}`;
+
+    if (typeof column === "number") {
+      string += `:${column}`;
+    }
+  }
+
+  if (!showCodeFrame || typeof line !== "number" || !content) {
+    return string;
+  }
+
+  const sourceLoc = showSourceLocation({
+    content,
+    line,
+    column,
+    numberOfSurroundingLinesToShow,
+    lineMaxLength,
+    color
+  });
+  return `${string}
+${sourceLoc}`;
+};
+const showSourceLocation = ({
+  content,
+  line,
+  column,
+  numberOfSurroundingLinesToShow = 1,
+  lineMaxLength = 120
+} = {}) => {
+  let mark = string => string;
+
+  let aside = string => string; // if (color) {
+  //   mark = (string) => ANSI.color(string, ANSI.RED)
+  //   aside = (string) => ANSI.color(string, ANSI.GREY)
+  // }
+
+
+  const lines = content.split(/\r?\n/);
+  if (line === 0) line = 1;
+  let lineRange = {
+    start: line - 1,
+    end: line
+  };
+  lineRange = moveLineRangeUp(lineRange, numberOfSurroundingLinesToShow);
+  lineRange = moveLineRangeDown(lineRange, numberOfSurroundingLinesToShow);
+  lineRange = lineRangeWithinLines(lineRange, lines);
+  const linesToShow = lines.slice(lineRange.start, lineRange.end);
+  const endLineNumber = lineRange.end;
+  const lineNumberMaxWidth = String(endLineNumber).length;
+  if (column === 0) column = 1;
+  const columnRange = {};
+
+  if (column === undefined) {
+    columnRange.start = 0;
+    columnRange.end = lineMaxLength;
+  } else if (column > lineMaxLength) {
+    columnRange.start = column - Math.floor(lineMaxLength / 2);
+    columnRange.end = column + Math.ceil(lineMaxLength / 2);
+  } else {
+    columnRange.start = 0;
+    columnRange.end = lineMaxLength;
+  }
+
+  return linesToShow.map((lineSource, index) => {
+    const lineNumber = lineRange.start + index + 1;
+    const isMainLine = lineNumber === line;
+    const lineSourceTruncated = applyColumnRange(columnRange, lineSource);
+    const lineNumberWidth = String(lineNumber).length; // ensure if line moves from 7,8,9 to 10 the display is still great
+
+    const lineNumberRightSpacing = " ".repeat(lineNumberMaxWidth - lineNumberWidth);
+    const asideSource = `${lineNumber}${lineNumberRightSpacing} |`;
+    const lineFormatted = `${aside(asideSource)} ${lineSourceTruncated}`;
+
+    if (isMainLine) {
+      if (column === undefined) {
+        return `${mark(">")} ${lineFormatted}`;
+      }
+
+      const spacing = stringToSpaces(`${asideSource} ${lineSourceTruncated.slice(0, column - columnRange.start - 1)}`);
+      return `${mark(">")} ${lineFormatted}
+  ${spacing}${mark("^")}`;
+    }
+
+    return `  ${lineFormatted}`;
+  }).join(`
+`);
+};
+
+const applyColumnRange = ({
+  start,
+  end
+}, line) => {
+  if (typeof start !== "number") {
+    throw new TypeError(`start must be a number, received ${start}`);
+  }
+
+  if (typeof end !== "number") {
+    throw new TypeError(`end must be a number, received ${end}`);
+  }
+
+  if (end < start) {
+    throw new Error(`end must be greater than start, but ${end} is smaller than ${start}`);
+  }
+
+  const prefix = "…";
+  const suffix = "…";
+  const lastIndex = line.length;
+
+  if (line.length === 0) {
+    // don't show any ellipsis if the line is empty
+    // because it's not truncated in that case
+    return "";
+  }
+
+  const startTruncated = start > 0;
+  const endTruncated = lastIndex > end;
+  let from = startTruncated ? start + prefix.length : start;
+  let to = endTruncated ? end - suffix.length : end;
+  if (to > lastIndex) to = lastIndex;
+
+  if (start >= lastIndex || from === to) {
+    return "";
+  }
+
+  let result = "";
+
+  while (from < to) {
+    result += line[from];
+    from++;
+  }
+
+  if (result.length === 0) {
+    return "";
+  }
+
+  if (startTruncated && endTruncated) {
+    return `${prefix}${result}${suffix}`;
+  }
+
+  if (startTruncated) {
+    return `${prefix}${result}`;
+  }
+
+  if (endTruncated) {
+    return `${result}${suffix}`;
+  }
+
+  return result;
+};
+
+const stringToSpaces = string => string.replace(/[^\t]/g, " "); // const getLineRangeLength = ({ start, end }) => end - start
+
+
+const moveLineRangeUp = ({
+  start,
+  end
+}, number) => {
+  return {
+    start: start - number,
+    end
+  };
+};
+
+const moveLineRangeDown = ({
+  start,
+  end
+}, number) => {
+  return {
+    start,
+    end: end + number
+  };
+};
+
+const lineRangeWithinLines = ({
+  start,
+  end
+}, lines) => {
+  return {
+    start: start < 0 ? 0 : start,
+    end: end > lines.length ? lines.length : end
+  };
+};
+
+const urlToExtension$1 = url => {
+  const pathname = urlToPathname$1(url);
+  return pathnameToExtension$1(pathname);
+};
+
+const pathnameToExtension$1 = pathname => {
+  const slashLastIndex = pathname.lastIndexOf("/");
+
+  if (slashLastIndex !== -1) {
+    pathname = pathname.slice(slashLastIndex + 1);
+  }
+
+  const dotLastIndex = pathname.lastIndexOf(".");
+  if (dotLastIndex === -1) return ""; // if (dotLastIndex === pathname.length - 1) return ""
+
+  const extension = pathname.slice(dotLastIndex);
+  return extension;
+};
+
+const asUrlWithoutSearch = url => {
+  const urlObject = new URL(url);
+  urlObject.search = "";
+  return urlObject.href;
+};
+const isValidUrl$1 = url => {
+  try {
+    // eslint-disable-next-line no-new
+    new URL(url);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}; // normalize url search params:
+// Using URLSearchParams to alter the url search params
+// can result into "file:///file.css?css_module"
+// becoming "file:///file.css?css_module="
+// we want to get rid of the "=" and consider it's the same url
+
+const normalizeUrl = url => {
+  if (url.includes("?")) {
+    // disable on data urls (would mess up base64 encoding)
+    if (url.startsWith("data:")) {
+      return url;
+    }
+
+    return url.replace(/[=](?=&|$)/g, "");
+  }
+
+  return url;
+};
+const injectQueryParamsIntoSpecifier = (specifier, params) => {
+  if (isValidUrl$1(specifier)) {
+    return injectQueryParams(specifier, params);
+  }
+
+  const [beforeQuestion, afterQuestion = ""] = specifier.split("?");
+  const searchParams = new URLSearchParams(afterQuestion);
+  Object.keys(params).forEach(key => {
+    searchParams.set(key, params[key]);
+  });
+  const paramsString = searchParams.toString();
+
+  if (paramsString) {
+    return `${beforeQuestion}?${paramsString}`;
+  }
+
+  return specifier;
+};
+const injectQueryParams = (url, params) => {
+  const urlObject = new URL(url);
+  Object.keys(params).forEach(key => {
+    urlObject.searchParams.set(key, params[key]);
+  });
+  const urlWithParams = urlObject.href;
+  return urlWithParams;
+};
+const setUrlFilename = (url, filename) => {
+  const urlObject = new URL(url);
+  let {
+    origin,
+    search,
+    hash
+  } = urlObject; // origin is "null" for "file://" urls with Node.js
+
+  if (origin === "null" && urlObject.href.startsWith("file:")) {
+    origin = "file://";
+  }
+
+  const parentPathname = new URL("./", urlObject).pathname;
+  return `${origin}${parentPathname}${filename}${search}${hash}`;
+};
+const ensurePathnameTrailingSlash = url => {
+  const urlObject = new URL(url);
+  const {
+    pathname
+  } = urlObject;
+
+  if (pathname.endsWith("/")) {
+    return url;
+  }
+
+  let {
+    origin
+  } = urlObject; // origin is "null" for "file://" urls with Node.js
+
+  if (origin === "null" && urlObject.href.startsWith("file:")) {
+    origin = "file://";
+  }
+
+  const {
+    search,
+    hash
+  } = urlObject;
+  return `${origin}${pathname}/${search}${hash}`;
+};
+const asUrlUntilPathname = url => {
+  const urlObject = new URL(url);
+  let {
+    origin,
+    pathname
+  } = urlObject; // origin is "null" for "file://" urls with Node.js
+
+  if (origin === "null" && urlObject.href.startsWith("file:")) {
+    origin = "file://";
+  }
+
+  const urlUntilPathname = `${origin}${pathname}`;
+  return urlUntilPathname;
+};
+
+const isFileSystemPath$1 = value => {
+  if (typeof value !== "string") {
+    throw new TypeError(`isFileSystemPath first arg must be a string, got ${value}`);
+  }
+
+  if (value[0] === "/") {
+    return true;
+  }
+
+  return startsWithWindowsDriveLetter$1(value);
+};
+
+const startsWithWindowsDriveLetter$1 = string => {
+  const firstChar = string[0];
+  if (!/[a-zA-Z]/.test(firstChar)) return false;
+  const secondChar = string[1];
+  if (secondChar !== ":") return false;
+  return true;
+};
+
+const fileSystemPathToUrl$1 = value => {
+  if (!isFileSystemPath$1(value)) {
+    throw new Error(`value must be a filesystem path, got ${value}`);
+  }
+
+  return String(pathToFileURL(value));
+};
+
+const getCallerPosition = () => {
+  const {
+    prepareStackTrace
+  } = Error;
+
+  Error.prepareStackTrace = (error, stack) => {
+    Error.prepareStackTrace = prepareStackTrace;
+    return stack;
+  };
+
+  const {
+    stack
+  } = new Error();
+  const callerCallsite = stack[2];
+  const fileName = callerCallsite.getFileName();
+  return {
+    url: fileName && isFileSystemPath$1(fileName) ? fileSystemPathToUrl$1(fileName) : fileName,
+    line: callerCallsite.getLineNumber(),
+    column: callerCallsite.getColumnNumber()
+  };
+};
+
+const resolveUrl$1 = (specifier, baseUrl) => {
+  if (typeof baseUrl === "undefined") {
+    throw new TypeError(`baseUrl missing to resolve ${specifier}`);
+  }
+
+  return String(new URL(specifier, baseUrl));
+};
+
+const resolveDirectoryUrl = (specifier, baseUrl) => {
+  const url = resolveUrl$1(specifier, baseUrl);
+  return ensurePathnameTrailingSlash(url);
+};
+
+const getCommonPathname = (pathname, otherPathname) => {
+  if (pathname === otherPathname) {
+    return pathname;
+  }
+
+  let commonPart = "";
+  let commonPathname = "";
+  let i = 0;
+  const length = pathname.length;
+  const otherLength = otherPathname.length;
+
+  while (i < length) {
+    const char = pathname.charAt(i);
+    const otherChar = otherPathname.charAt(i);
+    i++;
+
+    if (char === otherChar) {
+      if (char === "/") {
+        commonPart += "/";
+        commonPathname += commonPart;
+        commonPart = "";
+      } else {
+        commonPart += char;
+      }
+    } else {
+      if (char === "/" && i - 1 === otherLength) {
+        commonPart += "/";
+        commonPathname += commonPart;
+      }
+
+      return commonPathname;
+    }
+  }
+
+  if (length === otherLength) {
+    commonPathname += commonPart;
+  } else if (otherPathname.charAt(i) === "/") {
+    commonPathname += commonPart;
+  }
+
+  return commonPathname;
+};
+
+const urlToRelativeUrl = (url, baseUrl) => {
+  const urlObject = new URL(url);
+  const baseUrlObject = new URL(baseUrl);
+
+  if (urlObject.protocol !== baseUrlObject.protocol) {
+    const urlAsString = String(url);
+    return urlAsString;
+  }
+
+  if (urlObject.username !== baseUrlObject.username || urlObject.password !== baseUrlObject.password || urlObject.host !== baseUrlObject.host) {
+    const afterUrlScheme = String(url).slice(urlObject.protocol.length);
+    return afterUrlScheme;
+  }
+
+  const {
+    pathname,
+    hash,
+    search
+  } = urlObject;
+
+  if (pathname === "/") {
+    const baseUrlRessourceWithoutLeadingSlash = baseUrlObject.pathname.slice(1);
+    return baseUrlRessourceWithoutLeadingSlash;
+  }
+
+  const basePathname = baseUrlObject.pathname;
+  const commonPathname = getCommonPathname(pathname, basePathname);
+
+  if (!commonPathname) {
+    const urlAsString = String(url);
+    return urlAsString;
+  }
+
+  const specificPathname = pathname.slice(commonPathname.length);
+  const baseSpecificPathname = basePathname.slice(commonPathname.length);
+
+  if (baseSpecificPathname.includes("/")) {
+    const baseSpecificParentPathname = pathnameToParentPathname$1(baseSpecificPathname);
+    const relativeDirectoriesNotation = baseSpecificParentPathname.replace(/.*?\//g, "../");
+    const relativeUrl = `${relativeDirectoriesNotation}${specificPathname}${search}${hash}`;
+    return relativeUrl;
+  }
+
+  const relativeUrl = `${specificPathname}${search}${hash}`;
+  return relativeUrl;
+};
+
+const pathnameToParentPathname$1 = pathname => {
+  const slashLastIndex = pathname.lastIndexOf("/");
+
+  if (slashLastIndex === -1) {
+    return "/";
+  }
+
+  return pathname.slice(0, slashLastIndex + 1);
+};
+
+const moveUrl = ({
+  url,
+  from,
+  to,
+  preferAbsolute = false
+}) => {
+  let relativeUrl = urlToRelativeUrl(url, from);
+
+  if (relativeUrl.slice(0, 2) === "//") {
+    // restore the protocol
+    relativeUrl = new URL(relativeUrl, url).href;
+  }
+
+  const absoluteUrl = new URL(relativeUrl, to).href;
+
+  if (preferAbsolute) {
+    return absoluteUrl;
+  }
+
+  return urlToRelativeUrl(absoluteUrl, to);
+};
+
+const urlIsInsideOf = (url, otherUrl) => {
+  const urlObject = new URL(url);
+  const otherUrlObject = new URL(otherUrl);
+
+  if (urlObject.origin !== otherUrlObject.origin) {
+    return false;
+  }
+
+  const urlPathname = urlObject.pathname;
+  const otherUrlPathname = otherUrlObject.pathname;
+
+  if (urlPathname === otherUrlPathname) {
+    return false;
+  }
+
+  const isInside = urlPathname.startsWith(otherUrlPathname);
+  return isInside;
+};
+
+const urlToBasename = url => {
+  const filename = urlToFilename$1(url);
+  const dotLastIndex = filename.lastIndexOf(".");
+  const basename = dotLastIndex === -1 ? filename : filename.slice(0, dotLastIndex);
+  return basename;
+};
+
+const urlToFileSystemPath = url => {
+  let urlString = String(url);
+
+  if (urlString[urlString.length - 1] === "/") {
+    // remove trailing / so that nodejs path becomes predictable otherwise it logs
+    // the trailing slash on linux but does not on windows
+    urlString = urlString.slice(0, -1);
+  }
+
+  const fileSystemPath = fileURLToPath(urlString);
+  return fileSystemPath;
+};
+
+const assertAndNormalizeDirectoryUrl = value => {
+  let urlString;
+
+  if (value instanceof URL) {
+    urlString = value.href;
+  } else if (typeof value === "string") {
+    if (isFileSystemPath$1(value)) {
+      urlString = fileSystemPathToUrl$1(value);
+    } else {
+      try {
+        urlString = String(new URL(value));
+      } catch (e) {
+        throw new TypeError(`directoryUrl must be a valid url, received ${value}`);
+      }
+    }
+  } else {
+    throw new TypeError(`directoryUrl must be a string or an url, received ${value}`);
+  }
+
+  if (!urlString.startsWith("file://")) {
+    throw new Error(`directoryUrl must starts with file://, received ${value}`);
+  }
+
+  return ensurePathnameTrailingSlash(urlString);
+};
+
+const assertAndNormalizeFileUrl = (value, baseUrl) => {
+  let urlString;
+
+  if (value instanceof URL) {
+    urlString = value.href;
+  } else if (typeof value === "string") {
+    if (isFileSystemPath$1(value)) {
+      urlString = fileSystemPathToUrl$1(value);
+    } else {
+      try {
+        urlString = String(new URL(value, baseUrl));
+      } catch (e) {
+        throw new TypeError(`fileUrl must be a valid url, received ${value}`);
+      }
+    }
+  } else {
+    throw new TypeError(`fileUrl must be a string or an url, received ${value}`);
+  }
+
+  if (!urlString.startsWith("file://")) {
+    throw new Error(`fileUrl must starts with file://, received ${value}`);
+  }
+
+  return urlString;
+};
+
+const statsToType = stats => {
+  if (stats.isFile()) return "file";
+  if (stats.isDirectory()) return "directory";
+  if (stats.isSymbolicLink()) return "symbolic-link";
+  if (stats.isFIFO()) return "fifo";
+  if (stats.isSocket()) return "socket";
+  if (stats.isCharacterDevice()) return "character-device";
+  if (stats.isBlockDevice()) return "block-device";
+  return undefined;
+};
+
+// https://github.com/coderaiser/cloudcmd/issues/63#issuecomment-195478143
+// https://nodejs.org/api/fs.html#fs_file_modes
+// https://github.com/TooTallNate/stat-mode
+// cannot get from fs.constants because they are not available on windows
+const S_IRUSR = 256;
+/* 0000400 read permission, owner */
+
+const S_IWUSR = 128;
+/* 0000200 write permission, owner */
+
+const S_IXUSR = 64;
+/* 0000100 execute/search permission, owner */
+
+const S_IRGRP = 32;
+/* 0000040 read permission, group */
+
+const S_IWGRP = 16;
+/* 0000020 write permission, group */
+
+const S_IXGRP = 8;
+/* 0000010 execute/search permission, group */
+
+const S_IROTH = 4;
+/* 0000004 read permission, others */
+
+const S_IWOTH = 2;
+/* 0000002 write permission, others */
+
+const S_IXOTH = 1;
+const permissionsToBinaryFlags = ({
+  owner,
+  group,
+  others
+}) => {
+  let binaryFlags = 0;
+  if (owner.read) binaryFlags |= S_IRUSR;
+  if (owner.write) binaryFlags |= S_IWUSR;
+  if (owner.execute) binaryFlags |= S_IXUSR;
+  if (group.read) binaryFlags |= S_IRGRP;
+  if (group.write) binaryFlags |= S_IWGRP;
+  if (group.execute) binaryFlags |= S_IXGRP;
+  if (others.read) binaryFlags |= S_IROTH;
+  if (others.write) binaryFlags |= S_IWOTH;
+  if (others.execute) binaryFlags |= S_IXOTH;
+  return binaryFlags;
+};
+
+const writeEntryPermissions = async (source, permissions) => {
+  const sourceUrl = assertAndNormalizeFileUrl(source);
+  let binaryFlags;
+
+  if (typeof permissions === "object") {
+    permissions = {
+      owner: {
+        read: getPermissionOrComputeDefault("read", "owner", permissions),
+        write: getPermissionOrComputeDefault("write", "owner", permissions),
+        execute: getPermissionOrComputeDefault("execute", "owner", permissions)
+      },
+      group: {
+        read: getPermissionOrComputeDefault("read", "group", permissions),
+        write: getPermissionOrComputeDefault("write", "group", permissions),
+        execute: getPermissionOrComputeDefault("execute", "group", permissions)
+      },
+      others: {
+        read: getPermissionOrComputeDefault("read", "others", permissions),
+        write: getPermissionOrComputeDefault("write", "others", permissions),
+        execute: getPermissionOrComputeDefault("execute", "others", permissions)
+      }
+    };
+    binaryFlags = permissionsToBinaryFlags(permissions);
+  } else {
+    binaryFlags = permissions;
+  }
+
+  return new Promise((resolve, reject) => {
+    chmod(new URL(sourceUrl), binaryFlags, error => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
+  });
+};
+const actionLevels = {
+  read: 0,
+  write: 1,
+  execute: 2
+};
+const subjectLevels = {
+  others: 0,
+  group: 1,
+  owner: 2
+};
+
+const getPermissionOrComputeDefault = (action, subject, permissions) => {
+  if (subject in permissions) {
+    const subjectPermissions = permissions[subject];
+
+    if (action in subjectPermissions) {
+      return subjectPermissions[action];
+    }
+
+    const actionLevel = actionLevels[action];
+    const actionFallback = Object.keys(actionLevels).find(actionFallbackCandidate => actionLevels[actionFallbackCandidate] > actionLevel && actionFallbackCandidate in subjectPermissions);
+
+    if (actionFallback) {
+      return subjectPermissions[actionFallback];
+    }
+  }
+
+  const subjectLevel = subjectLevels[subject]; // do we have a subject with a stronger level (group or owner)
+  // where we could read the action permission ?
+
+  const subjectFallback = Object.keys(subjectLevels).find(subjectFallbackCandidate => subjectLevels[subjectFallbackCandidate] > subjectLevel && subjectFallbackCandidate in permissions);
+
+  if (subjectFallback) {
+    const subjectPermissions = permissions[subjectFallback];
+    return action in subjectPermissions ? subjectPermissions[action] : getPermissionOrComputeDefault(action, subjectFallback, permissions);
+  }
+
+  return false;
+};
+
+/*
+ * - stats object documentation on Node.js
+ *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
+ */
+const isWindows$2 = process.platform === "win32";
+const readEntryStat = async (source, {
+  nullIfNotFound = false,
+  followLink = true
+} = {}) => {
+  let sourceUrl = assertAndNormalizeFileUrl(source);
+  if (sourceUrl.endsWith("/")) sourceUrl = sourceUrl.slice(0, -1);
+  const sourcePath = urlToFileSystemPath(sourceUrl);
+  const handleNotFoundOption = nullIfNotFound ? {
+    handleNotFoundError: () => null
+  } : {};
+  return readStat(sourcePath, {
+    followLink,
+    ...handleNotFoundOption,
+    ...(isWindows$2 ? {
+      // Windows can EPERM on stat
+      handlePermissionDeniedError: async error => {
+        console.error(`trying to fix windows EPERM after stats on ${sourcePath}`);
+
+        try {
+          // unfortunately it means we mutate the permissions
+          // without being able to restore them to the previous value
+          // (because reading current permission would also throw)
+          await writeEntryPermissions(sourceUrl, 0o666);
+          const stats = await readStat(sourcePath, {
+            followLink,
+            ...handleNotFoundOption,
+            // could not fix the permission error, give up and throw original error
+            handlePermissionDeniedError: () => {
+              console.error(`still got EPERM after stats on ${sourcePath}`);
+              throw error;
+            }
+          });
+          return stats;
+        } catch (e) {
+          console.error(`error while trying to fix windows EPERM after stats on ${sourcePath}: ${e.stack}`);
+          throw error;
+        }
+      }
+    } : {})
+  });
+};
+
+const readStat = (sourcePath, {
+  followLink,
+  handleNotFoundError = null,
+  handlePermissionDeniedError = null
+} = {}) => {
+  const nodeMethod = followLink ? stat : lstat;
+  return new Promise((resolve, reject) => {
+    nodeMethod(sourcePath, (error, statsObject) => {
+      if (error) {
+        if (handleNotFoundError && error.code === "ENOENT") {
+          resolve(handleNotFoundError(error));
+        } else if (handlePermissionDeniedError && (error.code === "EPERM" || error.code === "EACCES")) {
+          resolve(handlePermissionDeniedError(error));
+        } else {
+          reject(error);
+        }
+      } else {
+        resolve(statsObject);
+      }
+    });
+  });
+};
+
+/*
+ * - Buffer documentation on Node.js
+ *   https://nodejs.org/docs/latest-v13.x/api/buffer.html
+ * - eTag documentation on MDN
+ *   https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag
+ */
+const ETAG_FOR_EMPTY_CONTENT$1 = '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
+const bufferToEtag$1 = buffer => {
+  if (!Buffer.isBuffer(buffer)) {
+    throw new TypeError(`buffer expected, got ${buffer}`);
+  }
+
+  if (buffer.length === 0) {
+    return ETAG_FOR_EMPTY_CONTENT$1;
+  }
+
+  const hash = createHash("sha1");
+  hash.update(buffer, "utf8");
+  const hashBase64String = hash.digest("base64");
+  const hashBase64StringSubset = hashBase64String.slice(0, 27);
+  const length = buffer.length;
+  return `"${length.toString(16)}-${hashBase64StringSubset}"`;
+};
+
+/*
+ * See callback_race.md
+ */
+const raceCallbacks = (raceDescription, winnerCallback) => {
+  let cleanCallbacks = [];
+  let status = "racing";
+
+  const clean = () => {
+    cleanCallbacks.forEach(clean => {
+      clean();
+    });
+    cleanCallbacks = null;
+  };
+
+  const cancel = () => {
+    if (status !== "racing") {
+      return;
+    }
+
+    status = "cancelled";
+    clean();
+  };
+
+  Object.keys(raceDescription).forEach(candidateName => {
+    const register = raceDescription[candidateName];
+    const returnValue = register(data => {
+      if (status !== "racing") {
+        return;
+      }
+
+      status = "done";
+      clean();
+      winnerCallback({
+        name: candidateName,
+        data
+      });
+    });
+
+    if (typeof returnValue === "function") {
+      cleanCallbacks.push(returnValue);
+    }
+  });
+  return cancel;
+};
+
+const createCallbackListNotifiedOnce = () => {
+  let callbacks = [];
+  let status = "waiting";
+  let currentCallbackIndex = -1;
+  const callbackListOnce = {};
+
+  const add = callback => {
+    if (status !== "waiting") {
+      emitUnexpectedActionWarning({
+        action: "add",
+        status
+      });
+      return removeNoop;
+    }
+
+    if (typeof callback !== "function") {
+      throw new Error(`callback must be a function, got ${callback}`);
+    } // don't register twice
+
+
+    const existingCallback = callbacks.find(callbackCandidate => {
+      return callbackCandidate === callback;
+    });
+
+    if (existingCallback) {
+      emitCallbackDuplicationWarning();
+      return removeNoop;
+    }
+
+    callbacks.push(callback);
+    return () => {
+      if (status === "notified") {
+        // once called removing does nothing
+        // as the callbacks array is frozen to null
+        return;
+      }
+
+      const index = callbacks.indexOf(callback);
+
+      if (index === -1) {
+        return;
+      }
+
+      if (status === "looping") {
+        if (index <= currentCallbackIndex) {
+          // The callback was already called (or is the current callback)
+          // We don't want to mutate the callbacks array
+          // or it would alter the looping done in "call" and the next callback
+          // would be skipped
+          return;
+        } // Callback is part of the next callback to call,
+        // we mutate the callbacks array to prevent this callback to be called
+
+      }
+
+      callbacks.splice(index, 1);
+    };
+  };
+
+  const notify = param => {
+    if (status !== "waiting") {
+      emitUnexpectedActionWarning({
+        action: "call",
+        status
+      });
+      return [];
+    }
+
+    status = "looping";
+    const values = callbacks.map((callback, index) => {
+      currentCallbackIndex = index;
+      return callback(param);
+    });
+    callbackListOnce.notified = true;
+    status = "notified"; // we reset callbacks to null after looping
+    // so that it's possible to remove during the loop
+
+    callbacks = null;
+    currentCallbackIndex = -1;
+    return values;
+  };
+
+  callbackListOnce.notified = false;
+  callbackListOnce.add = add;
+  callbackListOnce.notify = notify;
+  return callbackListOnce;
+};
+
+const emitUnexpectedActionWarning = ({
+  action,
+  status
+}) => {
+  if (typeof process.emitWarning === "function") {
+    process.emitWarning(`"${action}" should not happen when callback list is ${status}`, {
+      CODE: "UNEXPECTED_ACTION_ON_CALLBACK_LIST",
+      detail: `Code is potentially executed when it should not`
+    });
+  } else {
+    console.warn(`"${action}" should not happen when callback list is ${status}`);
+  }
+};
+
+const emitCallbackDuplicationWarning = () => {
+  if (typeof process.emitWarning === "function") {
+    process.emitWarning(`Trying to add a callback already in the list`, {
+      CODE: "CALLBACK_DUPLICATION",
+      detail: `Code is potentially executed more than it should`
+    });
+  } else {
+    console.warn(`Trying to add same callback twice`);
+  }
+};
+
+const removeNoop = () => {};
+
+/*
+ * https://github.com/whatwg/dom/issues/920
+ */
+const Abort = {
+  isAbortError: error => {
+    return error.name === "AbortError";
+  },
+  startOperation: () => {
+    return createOperation();
+  },
+  throwIfAborted: signal => {
+    if (signal.aborted) {
+      const error = new Error(`The operation was aborted`);
+      error.name = "AbortError";
+      error.type = "aborted";
+      throw error;
+    }
+  }
+};
+
+const createOperation = () => {
+  const operationAbortController = new AbortController(); // const abortOperation = (value) => abortController.abort(value)
+
+  const operationSignal = operationAbortController.signal; // abortCallbackList is used to ignore the max listeners warning from Node.js
+  // this warning is useful but becomes problematic when it's expected
+  // (a function doing 20 http call in parallel)
+  // To be 100% sure we don't have memory leak, only Abortable.asyncCallback
+  // uses abortCallbackList to know when something is aborted
+
+  const abortCallbackList = createCallbackListNotifiedOnce();
+  const endCallbackList = createCallbackListNotifiedOnce();
+  let isAbortAfterEnd = false;
+
+  operationSignal.onabort = () => {
+    operationSignal.onabort = null;
+    const allAbortCallbacksPromise = Promise.all(abortCallbackList.notify());
+
+    if (!isAbortAfterEnd) {
+      addEndCallback(async () => {
+        await allAbortCallbacksPromise;
+      });
+    }
+  };
+
+  const throwIfAborted = () => {
+    Abort.throwIfAborted(operationSignal);
+  }; // add a callback called on abort
+  // differences with signal.addEventListener('abort')
+  // - operation.end awaits the return value of this callback
+  // - It won't increase the count of listeners for "abort" that would
+  //   trigger max listeners warning when count > 10
+
+
+  const addAbortCallback = callback => {
+    // It would be painful and not super redable to check if signal is aborted
+    // before deciding if it's an abort or end callback
+    // with pseudo-code below where we want to stop server either
+    // on abort or when ended because signal is aborted
+    // operation[operation.signal.aborted ? 'addAbortCallback': 'addEndCallback'](async () => {
+    //   await server.stop()
+    // })
+    if (operationSignal.aborted) {
+      return addEndCallback(callback);
+    }
+
+    return abortCallbackList.add(callback);
+  };
+
+  const addEndCallback = callback => {
+    return endCallbackList.add(callback);
+  };
+
+  const end = async ({
+    abortAfterEnd = false
+  } = {}) => {
+    await Promise.all(endCallbackList.notify()); // "abortAfterEnd" can be handy to ensure "abort" callbacks
+    // added with { once: true } are removed
+    // It might also help garbage collection because
+    // runtime implementing AbortSignal (Node.js, browsers) can consider abortSignal
+    // as settled and clean up things
+
+    if (abortAfterEnd) {
+      // because of operationSignal.onabort = null
+      // + abortCallbackList.clear() this won't re-call
+      // callbacks
+      if (!operationSignal.aborted) {
+        isAbortAfterEnd = true;
+        operationAbortController.abort();
+      }
+    }
+  };
+
+  const addAbortSignal = (signal, {
+    onAbort = callbackNoop,
+    onRemove = callbackNoop
+  } = {}) => {
+    const applyAbortEffects = () => {
+      const onAbortCallback = onAbort;
+      onAbort = callbackNoop;
+      onAbortCallback();
+    };
+
+    const applyRemoveEffects = () => {
+      const onRemoveCallback = onRemove;
+      onRemove = callbackNoop;
+      onAbort = callbackNoop;
+      onRemoveCallback();
+    };
+
+    if (operationSignal.aborted) {
+      applyAbortEffects();
+      applyRemoveEffects();
+      return callbackNoop;
+    }
+
+    if (signal.aborted) {
+      operationAbortController.abort();
+      applyAbortEffects();
+      applyRemoveEffects();
+      return callbackNoop;
+    }
+
+    const cancelRace = raceCallbacks({
+      operation_abort: cb => {
+        return addAbortCallback(cb);
+      },
+      operation_end: cb => {
+        return addEndCallback(cb);
+      },
+      child_abort: cb => {
+        return addEventListener(signal, "abort", cb);
+      }
+    }, winner => {
+      const raceEffects = {
+        // Both "operation_abort" and "operation_end"
+        // means we don't care anymore if the child aborts.
+        // So we can:
+        // - remove "abort" event listener on child (done by raceCallback)
+        // - remove abort callback on operation (done by raceCallback)
+        // - remove end callback on operation (done by raceCallback)
+        // - call any custom cancel function
+        operation_abort: () => {
+          applyAbortEffects();
+          applyRemoveEffects();
+        },
+        operation_end: () => {
+          // Exists to
+          // - remove abort callback on operation
+          // - remove "abort" event listener on child
+          // - call any custom cancel function
+          applyRemoveEffects();
+        },
+        child_abort: () => {
+          applyAbortEffects();
+          operationAbortController.abort();
+        }
+      };
+      raceEffects[winner.name](winner.value);
+    });
+    return () => {
+      cancelRace();
+      applyRemoveEffects();
+    };
+  };
+
+  const addAbortSource = abortSourceCallback => {
+    const abortSourceController = new AbortController();
+    const abortSourceSignal = abortSourceController.signal;
+
+    if (operationSignal.aborted) {
+      return {
+        signal: abortSourceSignal,
+        remove: callbackNoop
+      };
+    }
+
+    const returnValue = abortSourceCallback(value => {
+      abortSourceController.abort(value);
+    });
+    const removeAbortSource = typeof returnValue === "function" ? returnValue : callbackNoop;
+    const removeAbortSignal = addAbortSignal(abortSourceSignal, {
+      onRemove: () => {
+        removeAbortSource();
+      }
+    });
+    return {
+      signal: abortSourceSignal,
+      remove: removeAbortSignal
+    };
+  };
+
+  const timeout = ms => {
+    return addAbortSource(abort => {
+      const timeoutId = setTimeout(abort, ms); // an abort source return value is called when:
+      // - operation is aborted (by an other source)
+      // - operation ends
+
+      return () => {
+        clearTimeout(timeoutId);
+      };
+    });
+  };
+
+  const withSignal = async asyncCallback => {
+    const abortController = new AbortController();
+    const signal = abortController.signal;
+    const removeAbortSignal = addAbortSignal(signal, {
+      onAbort: () => {
+        abortController.abort();
+      }
+    });
+
+    try {
+      const value = await asyncCallback(signal);
+      removeAbortSignal();
+      return value;
+    } catch (e) {
+      removeAbortSignal();
+      throw e;
+    }
+  };
+
+  const withSignalSync = callback => {
+    const abortController = new AbortController();
+    const signal = abortController.signal;
+    const removeAbortSignal = addAbortSignal(signal, {
+      onAbort: () => {
+        abortController.abort();
+      }
+    });
+
+    try {
+      const value = callback(signal);
+      removeAbortSignal();
+      return value;
+    } catch (e) {
+      removeAbortSignal();
+      throw e;
+    }
+  };
+
+  return {
+    // We could almost hide the operationSignal
+    // But it can be handy for 2 things:
+    // - know if operation is aborted (operation.signal.aborted)
+    // - forward the operation.signal directly (not using "withSignal" or "withSignalSync")
+    signal: operationSignal,
+    throwIfAborted,
+    addAbortCallback,
+    addAbortSignal,
+    addAbortSource,
+    timeout,
+    withSignal,
+    withSignalSync,
+    addEndCallback,
+    end
+  };
+};
+
+const callbackNoop = () => {};
+
+const addEventListener = (target, eventName, cb) => {
+  target.addEventListener(eventName, cb);
+  return () => {
+    target.removeEventListener(eventName, cb);
+  };
+};
+
+const raceProcessTeardownEvents = (processTeardownEvents, callback) => {
+  return raceCallbacks({ ...(processTeardownEvents.SIGHUP ? SIGHUP_CALLBACK : {}),
+    ...(processTeardownEvents.SIGTERM ? SIGTERM_CALLBACK : {}),
+    ...(processTeardownEvents.SIGINT ? SIGINT_CALLBACK : {}),
+    ...(processTeardownEvents.beforeExit ? BEFORE_EXIT_CALLBACK : {}),
+    ...(processTeardownEvents.exit ? EXIT_CALLBACK : {})
+  }, callback);
+};
+const SIGHUP_CALLBACK = {
+  SIGHUP: cb => {
+    process.on("SIGHUP", cb);
+    return () => {
+      process.removeListener("SIGHUP", cb);
+    };
+  }
+};
+const SIGTERM_CALLBACK = {
+  SIGTERM: cb => {
+    process.on("SIGTERM", cb);
+    return () => {
+      process.removeListener("SIGTERM", cb);
+    };
+  }
+};
+const BEFORE_EXIT_CALLBACK = {
+  beforeExit: cb => {
+    process.on("beforeExit", cb);
+    return () => {
+      process.removeListener("beforeExit", cb);
+    };
+  }
+};
+const EXIT_CALLBACK = {
+  exit: cb => {
+    process.on("exit", cb);
+    return () => {
+      process.removeListener("exit", cb);
+    };
+  }
+};
+const SIGINT_CALLBACK = {
+  SIGINT: cb => {
+    process.on("SIGINT", cb);
+    return () => {
+      process.removeListener("SIGINT", cb);
+    };
+  }
+};
+
+const readDirectory = async (url, {
+  emfileMaxWait = 1000
+} = {}) => {
+  const directoryUrl = assertAndNormalizeDirectoryUrl(url);
+  const directoryPath = urlToFileSystemPath(directoryUrl);
+  const startMs = Date.now();
+  let attemptCount = 0;
+
+  const attempt = () => {
+    return readdirNaive(directoryPath, {
+      handleTooManyFilesOpenedError: async error => {
+        attemptCount++;
+        const nowMs = Date.now();
+        const timeSpentWaiting = nowMs - startMs;
+
+        if (timeSpentWaiting > emfileMaxWait) {
+          throw error;
+        }
+
+        return new Promise(resolve => {
+          setTimeout(() => {
+            resolve(attempt());
+          }, attemptCount);
+        });
+      }
+    });
+  };
+
+  return attempt();
+};
+
+const readdirNaive = (directoryPath, {
+  handleTooManyFilesOpenedError = null
+} = {}) => {
+  return new Promise((resolve, reject) => {
+    readdir(directoryPath, (error, names) => {
+      if (error) {
+        // https://nodejs.org/dist/latest-v13.x/docs/api/errors.html#errors_common_system_errors
+        if (handleTooManyFilesOpenedError && (error.code === "EMFILE" || error.code === "ENFILE")) {
+          resolve(handleTooManyFilesOpenedError(error));
+        } else {
+          reject(error);
+        }
+      } else {
+        resolve(names);
+      }
+    });
+  });
+};
+
+const comparePathnames = (leftPathame, rightPathname) => {
+  const leftPartArray = leftPathame.split("/");
+  const rightPartArray = rightPathname.split("/");
+  const leftLength = leftPartArray.length;
+  const rightLength = rightPartArray.length;
+  const maxLength = Math.max(leftLength, rightLength);
+  let i = 0;
+
+  while (i < maxLength) {
+    const leftPartExists = (i in leftPartArray);
+    const rightPartExists = (i in rightPartArray); // longer comes first
+
+    if (!leftPartExists) {
+      return +1;
+    }
+
+    if (!rightPartExists) {
+      return -1;
+    }
+
+    const leftPartIsLast = i === leftPartArray.length - 1;
+    const rightPartIsLast = i === rightPartArray.length - 1; // folder comes first
+
+    if (leftPartIsLast && !rightPartIsLast) {
+      return +1;
+    }
+
+    if (!leftPartIsLast && rightPartIsLast) {
+      return -1;
+    }
+
+    const leftPart = leftPartArray[i];
+    const rightPart = rightPartArray[i];
+    i++; // local comparison comes first
+
+    const comparison = leftPart.localeCompare(rightPart);
+
+    if (comparison !== 0) {
+      return comparison;
+    }
+  }
+
+  if (leftLength < rightLength) {
+    return +1;
+  }
+
+  if (leftLength > rightLength) {
+    return -1;
+  }
+
+  return 0;
+};
+
+const collectFiles = async ({
+  signal = new AbortController().signal,
+  directoryUrl,
+  associations,
+  predicate
+}) => {
+  const rootDirectoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl);
+
+  if (typeof predicate !== "function") {
+    throw new TypeError(`predicate must be a function, got ${predicate}`);
+  }
+
+  associations = URL_META.resolveAssociations(associations, rootDirectoryUrl);
+  const collectOperation = Abort.startOperation();
+  collectOperation.addAbortSignal(signal);
+  const matchingFileResultArray = [];
+
+  const visitDirectory = async directoryUrl => {
+    collectOperation.throwIfAborted();
+    const directoryItems = await readDirectory(directoryUrl);
+    await Promise.all(directoryItems.map(async directoryItem => {
+      const directoryChildNodeUrl = `${directoryUrl}${directoryItem}`;
+      collectOperation.throwIfAborted();
+      const directoryChildNodeStats = await readEntryStat(directoryChildNodeUrl, {
+        // we ignore symlink because recursively traversed
+        // so symlinked file will be discovered.
+        // Moreover if they lead outside of directoryPath it can become a problem
+        // like infinite recursion of whatever.
+        // that we could handle using an object of pathname already seen but it will be useless
+        // because directoryPath is recursively traversed
+        followLink: false
+      });
+
+      if (directoryChildNodeStats.isDirectory()) {
+        const subDirectoryUrl = `${directoryChildNodeUrl}/`;
+
+        if (!URL_META.urlChildMayMatch({
+          url: subDirectoryUrl,
+          associations,
+          predicate
+        })) {
+          return;
+        }
+
+        await visitDirectory(subDirectoryUrl);
+        return;
+      }
+
+      if (directoryChildNodeStats.isFile()) {
+        const meta = URL_META.applyAssociations({
+          url: directoryChildNodeUrl,
+          associations
+        });
+        if (!predicate(meta)) return;
+        const relativeUrl = urlToRelativeUrl(directoryChildNodeUrl, rootDirectoryUrl);
+        matchingFileResultArray.push({
+          url: new URL(relativeUrl, rootDirectoryUrl).href,
+          relativeUrl,
+          meta,
+          fileStats: directoryChildNodeStats
+        });
+        return;
+      }
+    }));
+  };
+
+  try {
+    await visitDirectory(rootDirectoryUrl); // When we operate on thoose files later it feels more natural
+    // to perform operation in the same order they appear in the filesystem.
+    // It also allow to get a predictable return value.
+    // For that reason we sort matchingFileResultArray
+
+    matchingFileResultArray.sort((leftFile, rightFile) => {
+      return comparePathnames(leftFile.relativeUrl, rightFile.relativeUrl);
+    });
+    return matchingFileResultArray;
+  } finally {
+    await collectOperation.end();
+  }
+};
+
+const {
+  mkdir
+} = promises;
+const writeDirectory = async (destination, {
+  recursive = true,
+  allowUseless = false
+} = {}) => {
+  const destinationUrl = assertAndNormalizeDirectoryUrl(destination);
+  const destinationPath = urlToFileSystemPath(destinationUrl);
+  const destinationStats = await readEntryStat(destinationUrl, {
+    nullIfNotFound: true,
+    followLink: false
+  });
+
+  if (destinationStats) {
+    if (destinationStats.isDirectory()) {
+      if (allowUseless) {
+        return;
+      }
+
+      throw new Error(`directory already exists at ${destinationPath}`);
+    }
+
+    const destinationType = statsToType(destinationStats);
+    throw new Error(`cannot write directory at ${destinationPath} because there is a ${destinationType}`);
+  }
+
+  try {
+    await mkdir(destinationPath, {
+      recursive
+    });
+  } catch (error) {
+    if (allowUseless && error.code === "EEXIST") {
+      return;
+    }
+
+    throw error;
+  }
+};
+
+const removeEntry = async (source, {
+  signal = new AbortController().signal,
+  allowUseless = false,
+  recursive = false,
+  maxRetries = 3,
+  retryDelay = 100,
+  onlyContent = false
+} = {}) => {
+  const sourceUrl = assertAndNormalizeFileUrl(source);
+  const removeOperation = Abort.startOperation();
+  removeOperation.addAbortSignal(signal);
+
+  try {
+    removeOperation.throwIfAborted();
+    const sourceStats = await readEntryStat(sourceUrl, {
+      nullIfNotFound: true,
+      followLink: false
+    });
+
+    if (!sourceStats) {
+      if (allowUseless) {
+        return;
+      }
+
+      throw new Error(`nothing to remove at ${urlToFileSystemPath(sourceUrl)}`);
+    } // https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_class_fs_stats
+    // FIFO and socket are ignored, not sure what they are exactly and what to do with them
+    // other libraries ignore them, let's do the same.
+
+
+    if (sourceStats.isFile() || sourceStats.isSymbolicLink() || sourceStats.isCharacterDevice() || sourceStats.isBlockDevice()) {
+      await removeNonDirectory(sourceUrl.endsWith("/") ? sourceUrl.slice(0, -1) : sourceUrl, {
+        maxRetries,
+        retryDelay
+      });
+    } else if (sourceStats.isDirectory()) {
+      await removeDirectory(ensurePathnameTrailingSlash(sourceUrl), {
+        signal: removeOperation.signal,
+        recursive,
+        maxRetries,
+        retryDelay,
+        onlyContent
+      });
+    }
+  } finally {
+    await removeOperation.end();
+  }
+};
+
+const removeNonDirectory = (sourceUrl, {
+  maxRetries,
+  retryDelay
+}) => {
+  const sourcePath = urlToFileSystemPath(sourceUrl);
+  let retryCount = 0;
+
+  const attempt = () => {
+    return unlinkNaive(sourcePath, { ...(retryCount >= maxRetries ? {} : {
+        handleTemporaryError: async () => {
+          retryCount++;
+          return new Promise(resolve => {
+            setTimeout(() => {
+              resolve(attempt());
+            }, retryCount * retryDelay);
+          });
+        }
+      })
+    });
+  };
+
+  return attempt();
+};
+
+const unlinkNaive = (sourcePath, {
+  handleTemporaryError = null
+} = {}) => {
+  return new Promise((resolve, reject) => {
+    unlink(sourcePath, error => {
+      if (error) {
+        if (error.code === "ENOENT") {
+          resolve();
+        } else if (handleTemporaryError && (error.code === "EBUSY" || error.code === "EMFILE" || error.code === "ENFILE" || error.code === "ENOENT")) {
+          resolve(handleTemporaryError(error));
+        } else {
+          reject(error);
+        }
+      } else {
+        resolve();
+      }
+    });
+  });
+};
+
+const removeDirectory = async (rootDirectoryUrl, {
+  signal,
+  maxRetries,
+  retryDelay,
+  recursive,
+  onlyContent
+}) => {
+  const removeDirectoryOperation = Abort.startOperation();
+  removeDirectoryOperation.addAbortSignal(signal);
+
+  const visit = async sourceUrl => {
+    removeDirectoryOperation.throwIfAborted();
+    const sourceStats = await readEntryStat(sourceUrl, {
+      nullIfNotFound: true,
+      followLink: false
+    }); // file/directory not found
+
+    if (sourceStats === null) {
+      return;
+    }
+
+    if (sourceStats.isFile() || sourceStats.isCharacterDevice() || sourceStats.isBlockDevice()) {
+      await visitFile(sourceUrl);
+    } else if (sourceStats.isSymbolicLink()) {
+      await visitSymbolicLink(sourceUrl);
+    } else if (sourceStats.isDirectory()) {
+      await visitDirectory(`${sourceUrl}/`);
+    }
+  };
+
+  const visitDirectory = async directoryUrl => {
+    const directoryPath = urlToFileSystemPath(directoryUrl);
+    const optionsFromRecursive = recursive ? {
+      handleNotEmptyError: async () => {
+        await removeDirectoryContent(directoryUrl);
+        await visitDirectory(directoryUrl);
+      }
+    } : {};
+    removeDirectoryOperation.throwIfAborted();
+    await removeDirectoryNaive(directoryPath, { ...optionsFromRecursive,
+      // Workaround for https://github.com/joyent/node/issues/4337
+      ...(process.platform === "win32" ? {
+        handlePermissionError: async error => {
+          console.error(`trying to fix windows EPERM after readir on ${directoryPath}`);
+          let openOrCloseError;
+
+          try {
+            const fd = openSync(directoryPath);
+            closeSync(fd);
+          } catch (e) {
+            openOrCloseError = e;
+          }
+
+          if (openOrCloseError) {
+            if (openOrCloseError.code === "ENOENT") {
+              return;
+            }
+
+            console.error(`error while trying to fix windows EPERM after readir on ${directoryPath}: ${openOrCloseError.stack}`);
+            throw error;
+          }
+
+          await removeDirectoryNaive(directoryPath, { ...optionsFromRecursive
+          });
+        }
+      } : {})
+    });
+  };
+
+  const removeDirectoryContent = async directoryUrl => {
+    removeDirectoryOperation.throwIfAborted();
+    const names = await readDirectory(directoryUrl);
+    await Promise.all(names.map(async name => {
+      const url = resolveUrl$1(name, directoryUrl);
+      await visit(url);
+    }));
+  };
+
+  const visitFile = async fileUrl => {
+    await removeNonDirectory(fileUrl, {
+      maxRetries,
+      retryDelay
+    });
+  };
+
+  const visitSymbolicLink = async symbolicLinkUrl => {
+    await removeNonDirectory(symbolicLinkUrl, {
+      maxRetries,
+      retryDelay
+    });
+  };
+
+  try {
+    if (onlyContent) {
+      await removeDirectoryContent(rootDirectoryUrl);
+    } else {
+      await visitDirectory(rootDirectoryUrl);
+    }
+  } finally {
+    await removeDirectoryOperation.end();
+  }
+};
+
+const removeDirectoryNaive = (directoryPath, {
+  handleNotEmptyError = null,
+  handlePermissionError = null
+} = {}) => {
+  return new Promise((resolve, reject) => {
+    rmdir(directoryPath, (error, lstatObject) => {
+      if (error) {
+        if (handlePermissionError && error.code === "EPERM") {
+          resolve(handlePermissionError(error));
+        } else if (error.code === "ENOENT") {
+          resolve();
+        } else if (handleNotEmptyError && ( // linux os
+        error.code === "ENOTEMPTY" || // SunOS
+        error.code === "EEXIST")) {
+          resolve(handleNotEmptyError(error));
+        } else {
+          reject(error);
+        }
+      } else {
+        resolve(lstatObject);
+      }
+    });
+  });
+};
+
+const ensureEmptyDirectory = async source => {
+  const stats = await readEntryStat(source, {
+    nullIfNotFound: true,
+    followLink: false
+  });
+
+  if (stats === null) {
+    // if there is nothing, create a directory
+    return writeDirectory(source, {
+      allowUseless: true
+    });
+  }
+
+  if (stats.isDirectory()) {
+    // if there is a directory remove its content and done
+    return removeEntry(source, {
+      allowUseless: true,
+      recursive: true,
+      onlyContent: true
+    });
+  }
+
+  const sourceType = statsToType(stats);
+  const sourcePath = urlToFileSystemPath(assertAndNormalizeFileUrl(source));
+  throw new Error(`ensureEmptyDirectory expect directory at ${sourcePath}, found ${sourceType} instead`);
+};
+
+const ensureParentDirectories = async destination => {
+  const destinationUrl = assertAndNormalizeFileUrl(destination);
+  const destinationPath = urlToFileSystemPath(destinationUrl);
+  const destinationParentPath = dirname(destinationPath);
+  return writeDirectory(destinationParentPath, {
+    recursive: true,
+    allowUseless: true
+  });
+};
+
+const isWindows$1 = process.platform === "win32";
+const baseUrlFallback = fileSystemPathToUrl$1(process.cwd());
+/**
+ * Some url might be resolved or remapped to url without the windows drive letter.
+ * For instance
+ * new URL('/foo.js', 'file:///C:/dir/file.js')
+ * resolves to
+ * 'file:///foo.js'
+ *
+ * But on windows it becomes a problem because we need the drive letter otherwise
+ * url cannot be converted to a filesystem path.
+ *
+ * ensureWindowsDriveLetter ensure a resolved url still contains the drive letter.
+ */
+
+const ensureWindowsDriveLetter = (url, baseUrl) => {
+  try {
+    url = String(new URL(url));
+  } catch (e) {
+    throw new Error(`absolute url expected but got ${url}`);
+  }
+
+  if (!isWindows$1) {
+    return url;
+  }
+
+  try {
+    baseUrl = String(new URL(baseUrl));
+  } catch (e) {
+    throw new Error(`absolute baseUrl expected but got ${baseUrl} to ensure windows drive letter on ${url}`);
+  }
+
+  if (!url.startsWith("file://")) {
+    return url;
+  }
+
+  const afterProtocol = url.slice("file://".length); // we still have the windows drive letter
+
+  if (extractDriveLetter(afterProtocol)) {
+    return url;
+  } // drive letter was lost, restore it
+
+
+  const baseUrlOrFallback = baseUrl.startsWith("file://") ? baseUrl : baseUrlFallback;
+  const driveLetter = extractDriveLetter(baseUrlOrFallback.slice("file://".length));
+
+  if (!driveLetter) {
+    throw new Error(`drive letter expected on baseUrl but got ${baseUrl} to ensure windows drive letter on ${url}`);
+  }
+
+  return `file:///${driveLetter}:${afterProtocol}`;
+};
+
+const extractDriveLetter = ressource => {
+  // we still have the windows drive letter
+  if (/[a-zA-Z]/.test(ressource[1]) && ressource[2] === ":") {
+    return ressource[1];
+  }
+
+  return null;
+};
+
+process.platform === "win32";
+
+const readFile = async (value, {
+  as = "buffer"
+} = {}) => {
+  const fileUrl = assertAndNormalizeFileUrl(value);
+  const buffer = await new Promise((resolve, reject) => {
+    readFile$1(new URL(fileUrl), (error, buffer) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(buffer);
+      }
+    });
+  });
+
+  if (as === "buffer") {
+    return buffer;
+  }
+
+  if (as === "string") {
+    return buffer.toString();
+  }
+
+  if (as === "json") {
+    return JSON.parse(buffer.toString());
+  }
+
+  throw new Error(`"as" must be one of "buffer","string","json" received "${as}"`);
+};
+
+const readFileSync = (value, {
+  as = "buffer"
+} = {}) => {
+  const fileUrl = assertAndNormalizeFileUrl(value);
+  const buffer = readFileSync$1(new URL(fileUrl));
+
+  if (as === "buffer") {
+    return buffer;
+  }
+
+  if (as === "string") {
+    return buffer.toString();
+  }
+
+  if (as === "json") {
+    return JSON.parse(buffer.toString());
+  }
+
+  throw new Error(`"as" must be one of "buffer","string","json" received "${as}"`);
+};
+
+const guardTooFastSecondCall = (callback, cooldownBetweenFileEvents = 40) => {
+  let previousCallMs;
+  return (...args) => {
+    const nowMs = Date.now();
+
+    if (previousCallMs) {
+      const msEllapsed = nowMs - previousCallMs;
+
+      if (msEllapsed < cooldownBetweenFileEvents) {
+        previousCallMs = null;
+        return;
+      }
+    }
+
+    previousCallMs = nowMs;
+    callback(...args);
+  };
+};
+const guardTooFastSecondCallPerFile = (callback, cooldownBetweenFileEvents = 40) => {
+  const previousCallMsMap = new Map();
+  return fileEvent => {
+    const {
+      relativeUrl
+    } = fileEvent;
+    const previousCallMs = previousCallMsMap.get(relativeUrl);
+    const nowMs = Date.now();
+
+    if (previousCallMs) {
+      const msEllapsed = nowMs - previousCallMs;
+
+      if (msEllapsed < cooldownBetweenFileEvents) {
+        previousCallMsMap.delete(relativeUrl);
+        return;
+      }
+    }
+
+    previousCallMsMap.set(relativeUrl, nowMs);
+    callback(fileEvent);
+  };
+};
+
+const isWindows = process.platform === "win32";
+const createWatcher = (sourcePath, options) => {
+  const watcher = watch(sourcePath, options);
+
+  if (isWindows) {
+    watcher.on("error", async error => {
+      // https://github.com/joyent/node/issues/4337
+      if (error.code === "EPERM") {
+        try {
+          const fd = openSync(sourcePath, "r");
+          closeSync(fd);
+        } catch (e) {
+          if (e.code === "ENOENT") {
+            return;
+          }
+
+          console.error(`error while fixing windows eperm: ${e.stack}`);
+          throw error;
+        }
+      } else {
+        throw error;
+      }
+    });
+  }
+
+  return watcher;
+};
+
+const trackRessources = () => {
+  const callbackArray = [];
+
+  const registerCleanupCallback = callback => {
+    if (typeof callback !== "function") throw new TypeError(`callback must be a function
+callback: ${callback}`);
+    callbackArray.push(callback);
+    return () => {
+      const index = callbackArray.indexOf(callback);
+      if (index > -1) callbackArray.splice(index, 1);
+    };
+  };
+
+  const cleanup = async reason => {
+    const localCallbackArray = callbackArray.slice();
+    await Promise.all(localCallbackArray.map(callback => callback(reason)));
+  };
+
+  return {
+    registerCleanupCallback,
+    cleanup
+  };
+};
+
+const isLinux = process.platform === "linux"; // linux does not support recursive option
+
+const fsWatchSupportsRecursive = !isLinux;
+const registerDirectoryLifecycle = (source, {
+  debug = false,
+  added,
+  updated,
+  removed,
+  watchPatterns = {
+    "./**/*": true
+  },
+  notifyExistent = false,
+  keepProcessAlive = true,
+  recursive = false,
+  // filesystem might dispatch more events than expected
+  // Code can use "cooldownBetweenFileEvents" to prevent that
+  // BUT it is UNADVISED to rely on this as explained later (search for "is lying" in this file)
+  // For this reason"cooldownBetweenFileEvents" should be reserved to scenarios
+  // like unit tests
+  cooldownBetweenFileEvents = 0
+}) => {
+  const sourceUrl = assertAndNormalizeDirectoryUrl(source);
+
+  if (!undefinedOrFunction$1(added)) {
+    throw new TypeError(`added must be a function or undefined, got ${added}`);
+  }
+
+  if (!undefinedOrFunction$1(updated)) {
+    throw new TypeError(`updated must be a function or undefined, got ${updated}`);
+  }
+
+  if (!undefinedOrFunction$1(removed)) {
+    throw new TypeError(`removed must be a function or undefined, got ${removed}`);
+  }
+
+  if (cooldownBetweenFileEvents) {
+    if (added) {
+      added = guardTooFastSecondCallPerFile(added, cooldownBetweenFileEvents);
+    }
+
+    if (updated) {
+      updated = guardTooFastSecondCallPerFile(updated, cooldownBetweenFileEvents);
+    }
+
+    if (removed) {
+      removed = guardTooFastSecondCallPerFile(removed, cooldownBetweenFileEvents);
+    }
+  }
+
+  const associations = URL_META.resolveAssociations({
+    watch: watchPatterns
+  }, sourceUrl);
+
+  const getWatchPatternValue = ({
+    url,
+    type
+  }) => {
+    if (type === "directory") {
+      let firstMeta = false;
+      URL_META.urlChildMayMatch({
+        url: `${url}/`,
+        associations,
+        predicate: ({
+          watch
+        }) => {
+          if (watch) {
+            firstMeta = watch;
+          }
+
+          return watch;
+        }
+      });
+      return firstMeta;
+    }
+
+    const {
+      watch
+    } = URL_META.applyAssociations({
+      url,
+      associations
+    });
+    return watch;
+  };
+
+  const tracker = trackRessources();
+  const infoMap = new Map();
+
+  const readEntryInfo = url => {
+    try {
+      const relativeUrl = urlToRelativeUrl(url, source);
+      const previousInfo = infoMap.get(relativeUrl);
+      const stats = statSync(new URL(url));
+      const type = statsToType(stats);
+      const patternValue = previousInfo ? previousInfo.patternValue : getWatchPatternValue({
+        url,
+        type
+      });
+      return {
+        previousInfo,
+        url,
+        relativeUrl,
+        type,
+        atimeMs: stats.atimeMs,
+        mtimeMs: stats.mtimeMs,
+        patternValue
+      };
+    } catch (e) {
+      if (e.code === "ENOENT") {
+        return null;
+      }
+
+      throw e;
+    }
+  };
+
+  const handleDirectoryEvent = ({
+    directoryRelativeUrl,
+    filename,
+    eventType
+  }) => {
+    if (filename) {
+      if (directoryRelativeUrl) {
+        handleChange(`${directoryRelativeUrl}/${filename}`);
+        return;
+      }
+
+      handleChange(`${filename}`);
+      return;
+    }
+
+    if (eventType === "rename") {
+      if (!removed && !added) {
+        return;
+      } // we might receive `rename` without filename
+      // in that case we try to find ourselves which file was removed.
+
+
+      let relativeUrlCandidateArray = Array.from(infoMap.keys());
+
+      if (recursive && !fsWatchSupportsRecursive) {
+        relativeUrlCandidateArray = relativeUrlCandidateArray.filter(relativeUrlCandidate => {
+          if (!directoryRelativeUrl) {
+            // ensure entry is top level
+            if (relativeUrlCandidate.includes("/")) {
+              return false;
+            }
+
+            return true;
+          } // entry not inside this directory
+
+
+          if (!relativeUrlCandidate.startsWith(directoryRelativeUrl)) {
+            return false;
+          }
+
+          const afterDirectory = relativeUrlCandidate.slice(directoryRelativeUrl.length + 1); // deep inside this directory
+
+          if (afterDirectory.includes("/")) {
+            return false;
+          }
+
+          return true;
+        });
+      }
+
+      const removedEntryRelativeUrl = relativeUrlCandidateArray.find(relativeUrlCandidate => {
+        try {
+          statSync(new URL(relativeUrlCandidate, sourceUrl));
+          return false;
+        } catch (e) {
+          if (e.code === "ENOENT") {
+            return true;
+          }
+
+          throw e;
+        }
+      });
+
+      if (removedEntryRelativeUrl) {
+        handleEntryLost(infoMap.get(removedEntryRelativeUrl));
+      }
+    }
+  };
+
+  const handleChange = relativeUrl => {
+    const entryUrl = new URL(relativeUrl, sourceUrl).href;
+    const entryInfo = readEntryInfo(entryUrl);
+
+    if (!entryInfo) {
+      const previousEntryInfo = infoMap.get(relativeUrl);
+
+      if (!previousEntryInfo) {
+        // on MacOS it's possible to receive a "rename" event for
+        // a file that does not exists...
+        return;
+      }
+
+      if (debug) {
+        console.debug(`"${relativeUrl}" removed`);
+      }
+
+      handleEntryLost(previousEntryInfo);
+      return;
+    }
+
+    const {
+      previousInfo
+    } = entryInfo;
+
+    if (!previousInfo) {
+      if (debug) {
+        console.debug(`"${relativeUrl}" added`);
+      }
+
+      handleEntryFound(entryInfo);
+      return;
+    }
+
+    if (entryInfo.type !== previousInfo.type) {
+      // it existed and was replaced by something else
+      // we don't handle this as an update. We rather say the ressource
+      // is lost and something else is found (call removed() then added())
+      handleEntryLost(previousInfo);
+      handleEntryFound(entryInfo);
+      return;
+    }
+
+    if (entryInfo.type === "directory") {
+      // a directory cannot really be updated in way that matters for us
+      // filesystem is trying to tell us the directory content have changed
+      // but we don't care about that
+      // we'll already be notified about what has changed
+      return;
+    } // something has changed at this relativeUrl (the file existed and was not deleted)
+    // it's possible to get there without a real update
+    // (file content is the same and file mtime is the same).
+    // In short filesystem is sometimes "lying"
+    // Not trying to guard against that because:
+    // - hurt perfs a lot
+    // - it happens very rarely
+    // - it's not really a concern in practice
+    // - filesystem did not send an event out of nowhere:
+    //   something occured but we don't know exactly what
+    // maybe we should exclude some stuff as done in
+    // https://github.com/paulmillr/chokidar/blob/b2c4f249b6cfa98c703f0066fb4a56ccd83128b5/lib/nodefs-handler.js#L366
+
+
+    if (debug) {
+      console.debug(`"${relativeUrl}" modified`);
+    }
+
+    handleEntryUpdated(entryInfo);
+  };
+
+  const handleEntryFound = (entryInfo, {
+    notify = true
+  } = {}) => {
+    infoMap.set(entryInfo.relativeUrl, entryInfo);
+
+    if (entryInfo.type === "directory") {
+      const directoryUrl = `${entryInfo.url}/`;
+      readdirSync(new URL(directoryUrl)).forEach(entryName => {
+        const childEntryUrl = new URL(entryName, directoryUrl).href;
+        const childEntryInfo = readEntryInfo(childEntryUrl);
+
+        if (childEntryInfo && childEntryInfo.patternValue) {
+          handleEntryFound(childEntryInfo, {
+            notify
+          });
+        }
+      }); // we must watch manually every directory we find
+
+      if (!fsWatchSupportsRecursive) {
+        const watcher = createWatcher(urlToFileSystemPath(entryInfo.url), {
+          persistent: keepProcessAlive
+        });
+        tracker.registerCleanupCallback(() => {
+          watcher.close();
+        });
+        watcher.on("change", (eventType, filename) => {
+          handleDirectoryEvent({
+            directoryRelativeUrl: entryInfo.relativeUrl,
+            filename: filename ? // replace back slashes with slashes
+            filename.replace(/\\/g, "/") : "",
+            eventType
+          });
+        });
+      }
+    }
+
+    if (added && entryInfo.patternValue && notify) {
+      added({
+        relativeUrl: entryInfo.relativeUrl,
+        type: entryInfo.type,
+        patternValue: entryInfo.patternValue,
+        mtime: entryInfo.mtimeMs
+      });
+    }
+  };
+
+  const handleEntryLost = entryInfo => {
+    infoMap.delete(entryInfo.relativeUrl);
+
+    if (removed && entryInfo.patternValue) {
+      removed({
+        relativeUrl: entryInfo.relativeUrl,
+        type: entryInfo.type,
+        patternValue: entryInfo.patternValue,
+        mtime: entryInfo.mtimeMs
+      });
+    }
+  };
+
+  const handleEntryUpdated = entryInfo => {
+    infoMap.set(entryInfo.relativeUrl, entryInfo);
+
+    if (updated && entryInfo.patternValue) {
+      updated({
+        relativeUrl: entryInfo.relativeUrl,
+        type: entryInfo.type,
+        patternValue: entryInfo.patternValue,
+        mtime: entryInfo.mtimeMs,
+        previousMtime: entryInfo.previousInfo.mtimeMs
+      });
+    }
+  };
+
+  readdirSync(new URL(sourceUrl)).forEach(entry => {
+    const entryUrl = new URL(entry, sourceUrl).href;
+    const entryInfo = readEntryInfo(entryUrl);
+
+    if (entryInfo && entryInfo.patternValue) {
+      handleEntryFound(entryInfo, {
+        notify: notifyExistent
+      });
+    }
+  });
+
+  if (debug) {
+    const relativeUrls = Array.from(infoMap.keys());
+
+    if (relativeUrls.length === 0) {
+      console.debug(`No file found`);
+    } else {
+      console.debug(`${relativeUrls.length} file found: 
+${relativeUrls.join("\n")}`);
+    }
+  }
+
+  const watcher = createWatcher(urlToFileSystemPath(sourceUrl), {
+    recursive: recursive && fsWatchSupportsRecursive,
+    persistent: keepProcessAlive
+  });
+  tracker.registerCleanupCallback(() => {
+    watcher.close();
+  });
+  watcher.on("change", (eventType, fileSystemPath) => {
+    handleDirectoryEvent({ ...fileSystemPathToDirectoryRelativeUrlAndFilename(fileSystemPath),
+      eventType
+    });
+  });
+  return tracker.cleanup;
+};
+
+const undefinedOrFunction$1 = value => {
+  return typeof value === "undefined" || typeof value === "function";
+};
+
+const fileSystemPathToDirectoryRelativeUrlAndFilename = path => {
+  if (!path) {
+    return {
+      directoryRelativeUrl: "",
+      filename: ""
+    };
+  }
+
+  const normalizedPath = path.replace(/\\/g, "/"); // replace back slashes with slashes
+
+  const slashLastIndex = normalizedPath.lastIndexOf("/");
+
+  if (slashLastIndex === -1) {
+    return {
+      directoryRelativeUrl: "",
+      filename: normalizedPath
+    };
+  }
+
+  const directoryRelativeUrl = normalizedPath.slice(0, slashLastIndex);
+  const filename = normalizedPath.slice(slashLastIndex + 1);
+  return {
+    directoryRelativeUrl,
+    filename
+  };
+};
+
+const registerFileLifecycle = (source, {
+  added,
+  updated,
+  removed,
+  notifyExistent = false,
+  keepProcessAlive = true,
+  cooldownBetweenFileEvents = 0
+}) => {
+  const sourceUrl = assertAndNormalizeFileUrl(source);
+
+  if (!undefinedOrFunction(added)) {
+    throw new TypeError(`added must be a function or undefined, got ${added}`);
+  }
+
+  if (!undefinedOrFunction(updated)) {
+    throw new TypeError(`updated must be a function or undefined, got ${updated}`);
+  }
+
+  if (!undefinedOrFunction(removed)) {
+    throw new TypeError(`removed must be a function or undefined, got ${removed}`);
+  }
+
+  if (cooldownBetweenFileEvents) {
+    if (added) {
+      added = guardTooFastSecondCall(added, cooldownBetweenFileEvents);
+    }
+
+    if (updated) {
+      updated = guardTooFastSecondCall(updated, cooldownBetweenFileEvents);
+    }
+
+    if (removed) {
+      removed = guardTooFastSecondCall(removed, cooldownBetweenFileEvents);
+    }
+  }
+
+  const tracker = trackRessources();
+
+  const handleFileFound = ({
+    existent
+  }) => {
+    const fileMutationStopWatching = watchFileMutation(sourceUrl, {
+      updated,
+      removed: () => {
+        fileMutationStopTracking();
+        watchFileAdded();
+
+        if (removed) {
+          removed();
+        }
+      },
+      keepProcessAlive
+    });
+    const fileMutationStopTracking = tracker.registerCleanupCallback(fileMutationStopWatching);
+
+    if (added) {
+      if (existent) {
+        if (notifyExistent) {
+          added({
+            existent: true
+          });
+        }
+      } else {
+        added({});
+      }
+    }
+  };
+
+  const watchFileAdded = () => {
+    const fileCreationStopWatching = watchFileCreation(sourceUrl, () => {
+      fileCreationgStopTracking();
+      handleFileFound({
+        existent: false
+      });
+    }, keepProcessAlive);
+    const fileCreationgStopTracking = tracker.registerCleanupCallback(fileCreationStopWatching);
+  };
+
+  const sourceType = entryToTypeOrNull(sourceUrl);
+
+  if (sourceType === null) {
+    if (added) {
+      watchFileAdded();
+    } else {
+      throw new Error(`${urlToFileSystemPath(sourceUrl)} must lead to a file, found nothing`);
+    }
+  } else if (sourceType === "file") {
+    handleFileFound({
+      existent: true
+    });
+  } else {
+    throw new Error(`${urlToFileSystemPath(sourceUrl)} must lead to a file, type found instead`);
+  }
+
+  return tracker.cleanup;
+};
+
+const entryToTypeOrNull = url => {
+  try {
+    const stats = statSync(new URL(url));
+    return statsToType(stats);
+  } catch (e) {
+    if (e.code === "ENOENT") {
+      return null;
+    }
+
+    throw e;
+  }
+};
+
+const undefinedOrFunction = value => typeof value === "undefined" || typeof value === "function";
+
+const watchFileCreation = (source, callback, keepProcessAlive) => {
+  const sourcePath = urlToFileSystemPath(source);
+  const sourceFilename = basename(sourcePath);
+  const directoryPath = dirname(sourcePath);
+  let directoryWatcher = createWatcher(directoryPath, {
+    persistent: keepProcessAlive
+  });
+  directoryWatcher.on("change", (eventType, filename) => {
+    if (filename && filename !== sourceFilename) return;
+    const type = entryToTypeOrNull(source); // ignore if something else with that name gets created
+    // we are only interested into files
+
+    if (type !== "file") return;
+    directoryWatcher.close();
+    directoryWatcher = undefined;
+    callback();
+  });
+  return () => {
+    if (directoryWatcher) {
+      directoryWatcher.close();
+    }
+  };
+};
+
+const watchFileMutation = (sourceUrl, {
+  updated,
+  removed,
+  keepProcessAlive
+}) => {
+  let watcher = createWatcher(urlToFileSystemPath(sourceUrl), {
+    persistent: keepProcessAlive
+  });
+  watcher.on("change", () => {
+    const sourceType = entryToTypeOrNull(sourceUrl);
+
+    if (sourceType === null) {
+      watcher.close();
+      watcher = undefined;
+
+      if (removed) {
+        removed();
+      }
+    } else if (sourceType === "file") {
+      if (updated) {
+        updated();
+      }
+    }
+  });
+  return () => {
+    if (watcher) {
+      watcher.close();
+    }
+  };
+};
+
+const writeFile = async (destination, content = "") => {
+  const destinationUrl = assertAndNormalizeFileUrl(destination);
+  const destinationUrlObject = new URL(destinationUrl);
+
+  try {
+    await writeFileNaive(destinationUrlObject, content);
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      await ensureParentDirectories(destinationUrl);
+      await writeFileNaive(destinationUrlObject, content);
+      return;
+    }
+
+    throw error;
+  }
+};
+
+const writeFileNaive = (urlObject, content) => {
+  return new Promise((resolve, reject) => {
+    writeFile$1(urlObject, content, error => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
+  });
+};
+
+const writeFileSync = (destination, content = "") => {
+  const destinationUrl = assertAndNormalizeFileUrl(destination);
+  const destinationUrlObject = new URL(destinationUrl);
+
+  try {
+    writeFileSync$1(destinationUrlObject, content);
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      mkdirSync(new URL("./", destinationUrlObject), {
+        recursive: true
+      });
+      writeFileSync$1(destinationUrlObject, content);
+      return;
+    }
+
+    throw error;
+  }
+};
 
 const LOG_LEVEL_OFF = "off";
 const LOG_LEVEL_DEBUG = "debug";
@@ -1081,481 +3825,59 @@ const createTaskLog = (label, {
   };
 };
 
-/*
- * See callback_race.md
- */
-const raceCallbacks = (raceDescription, winnerCallback) => {
-  let cleanCallbacks = [];
-  let status = "racing";
+const createReloadableWorker = (workerFileUrl, options = {}) => {
+  const workerFilePath = fileURLToPath(workerFileUrl);
+  const isPrimary = !workerData || workerData.workerFilePath !== workerFilePath;
+  let worker;
 
-  const clean = () => {
-    cleanCallbacks.forEach(clean => {
-      clean();
-    });
-    cleanCallbacks = null;
-  };
-
-  const cancel = () => {
-    if (status !== "racing") {
-      return;
-    }
-
-    status = "cancelled";
-    clean();
-  };
-
-  Object.keys(raceDescription).forEach(candidateName => {
-    const register = raceDescription[candidateName];
-    const returnValue = register(data => {
-      if (status !== "racing") {
-        return;
-      }
-
-      status = "done";
-      clean();
-      winnerCallback({
-        name: candidateName,
-        data
+  const terminate = async () => {
+    if (worker) {
+      let _worker = worker;
+      worker = null;
+      const exitPromise = new Promise(resolve => {
+        _worker.once("exit", resolve);
       });
-    });
 
-    if (typeof returnValue === "function") {
-      cleanCallbacks.push(returnValue);
-    }
-  });
-  return cancel;
-};
+      _worker.terminate();
 
-const createCallbackListNotifiedOnce = () => {
-  let callbacks = [];
-  let status = "waiting";
-  let currentCallbackIndex = -1;
-  const callbackListOnce = {};
-
-  const add = callback => {
-    if (status !== "waiting") {
-      emitUnexpectedActionWarning({
-        action: "add",
-        status
-      });
-      return removeNoop;
-    }
-
-    if (typeof callback !== "function") {
-      throw new Error(`callback must be a function, got ${callback}`);
-    } // don't register twice
-
-
-    const existingCallback = callbacks.find(callbackCandidate => {
-      return callbackCandidate === callback;
-    });
-
-    if (existingCallback) {
-      emitCallbackDuplicationWarning();
-      return removeNoop;
-    }
-
-    callbacks.push(callback);
-    return () => {
-      if (status === "notified") {
-        // once called removing does nothing
-        // as the callbacks array is frozen to null
-        return;
-      }
-
-      const index = callbacks.indexOf(callback);
-
-      if (index === -1) {
-        return;
-      }
-
-      if (status === "looping") {
-        if (index <= currentCallbackIndex) {
-          // The callback was already called (or is the current callback)
-          // We don't want to mutate the callbacks array
-          // or it would alter the looping done in "call" and the next callback
-          // would be skipped
-          return;
-        } // Callback is part of the next callback to call,
-        // we mutate the callbacks array to prevent this callback to be called
-
-      }
-
-      callbacks.splice(index, 1);
-    };
-  };
-
-  const notify = param => {
-    if (status !== "waiting") {
-      emitUnexpectedActionWarning({
-        action: "call",
-        status
-      });
-      return [];
-    }
-
-    status = "looping";
-    const values = callbacks.map((callback, index) => {
-      currentCallbackIndex = index;
-      return callback(param);
-    });
-    callbackListOnce.notified = true;
-    status = "notified"; // we reset callbacks to null after looping
-    // so that it's possible to remove during the loop
-
-    callbacks = null;
-    currentCallbackIndex = -1;
-    return values;
-  };
-
-  callbackListOnce.notified = false;
-  callbackListOnce.add = add;
-  callbackListOnce.notify = notify;
-  return callbackListOnce;
-};
-
-const emitUnexpectedActionWarning = ({
-  action,
-  status
-}) => {
-  if (typeof process.emitWarning === "function") {
-    process.emitWarning(`"${action}" should not happen when callback list is ${status}`, {
-      CODE: "UNEXPECTED_ACTION_ON_CALLBACK_LIST",
-      detail: `Code is potentially executed when it should not`
-    });
-  } else {
-    console.warn(`"${action}" should not happen when callback list is ${status}`);
-  }
-};
-
-const emitCallbackDuplicationWarning = () => {
-  if (typeof process.emitWarning === "function") {
-    process.emitWarning(`Trying to add a callback already in the list`, {
-      CODE: "CALLBACK_DUPLICATION",
-      detail: `Code is potentially executed more than it should`
-    });
-  } else {
-    console.warn(`Trying to add same callback twice`);
-  }
-};
-
-const removeNoop = () => {};
-
-/*
- * https://github.com/whatwg/dom/issues/920
- */
-const Abort = {
-  isAbortError: error => {
-    return error.name === "AbortError";
-  },
-  startOperation: () => {
-    return createOperation();
-  },
-  throwIfAborted: signal => {
-    if (signal.aborted) {
-      const error = new Error(`The operation was aborted`);
-      error.name = "AbortError";
-      error.type = "aborted";
-      throw error;
-    }
-  }
-};
-
-const createOperation = () => {
-  const operationAbortController = new AbortController(); // const abortOperation = (value) => abortController.abort(value)
-
-  const operationSignal = operationAbortController.signal; // abortCallbackList is used to ignore the max listeners warning from Node.js
-  // this warning is useful but becomes problematic when it's expected
-  // (a function doing 20 http call in parallel)
-  // To be 100% sure we don't have memory leak, only Abortable.asyncCallback
-  // uses abortCallbackList to know when something is aborted
-
-  const abortCallbackList = createCallbackListNotifiedOnce();
-  const endCallbackList = createCallbackListNotifiedOnce();
-  let isAbortAfterEnd = false;
-
-  operationSignal.onabort = () => {
-    operationSignal.onabort = null;
-    const allAbortCallbacksPromise = Promise.all(abortCallbackList.notify());
-
-    if (!isAbortAfterEnd) {
-      addEndCallback(async () => {
-        await allAbortCallbacksPromise;
-      });
+      await exitPromise;
     }
   };
 
-  const throwIfAborted = () => {
-    Abort.throwIfAborted(operationSignal);
-  }; // add a callback called on abort
-  // differences with signal.addEventListener('abort')
-  // - operation.end awaits the return value of this callback
-  // - It won't increase the count of listeners for "abort" that would
-  //   trigger max listeners warning when count > 10
-
-
-  const addAbortCallback = callback => {
-    // It would be painful and not super redable to check if signal is aborted
-    // before deciding if it's an abort or end callback
-    // with pseudo-code below where we want to stop server either
-    // on abort or when ended because signal is aborted
-    // operation[operation.signal.aborted ? 'addAbortCallback': 'addEndCallback'](async () => {
-    //   await server.stop()
-    // })
-    if (operationSignal.aborted) {
-      return addEndCallback(callback);
+  const load = async () => {
+    if (!isPrimary) {
+      throw new Error(`worker can be loaded from primary file only`);
     }
 
-    return abortCallbackList.add(callback);
-  };
-
-  const addEndCallback = callback => {
-    return endCallbackList.add(callback);
-  };
-
-  const end = async ({
-    abortAfterEnd = false
-  } = {}) => {
-    await Promise.all(endCallbackList.notify()); // "abortAfterEnd" can be handy to ensure "abort" callbacks
-    // added with { once: true } are removed
-    // It might also help garbage collection because
-    // runtime implementing AbortSignal (Node.js, browsers) can consider abortSignal
-    // as settled and clean up things
-
-    if (abortAfterEnd) {
-      // because of operationSignal.onabort = null
-      // + abortCallbackList.clear() this won't re-call
-      // callbacks
-      if (!operationSignal.aborted) {
-        isAbortAfterEnd = true;
-        operationAbortController.abort();
-      }
-    }
-  };
-
-  const addAbortSignal = (signal, {
-    onAbort = callbackNoop,
-    onRemove = callbackNoop
-  } = {}) => {
-    const applyAbortEffects = () => {
-      const onAbortCallback = onAbort;
-      onAbort = callbackNoop;
-      onAbortCallback();
-    };
-
-    const applyRemoveEffects = () => {
-      const onRemoveCallback = onRemove;
-      onRemove = callbackNoop;
-      onAbort = callbackNoop;
-      onRemoveCallback();
-    };
-
-    if (operationSignal.aborted) {
-      applyAbortEffects();
-      applyRemoveEffects();
-      return callbackNoop;
-    }
-
-    if (signal.aborted) {
-      operationAbortController.abort();
-      applyAbortEffects();
-      applyRemoveEffects();
-      return callbackNoop;
-    }
-
-    const cancelRace = raceCallbacks({
-      operation_abort: cb => {
-        return addAbortCallback(cb);
-      },
-      operation_end: cb => {
-        return addEndCallback(cb);
-      },
-      child_abort: cb => {
-        return addEventListener(signal, "abort", cb);
-      }
-    }, winner => {
-      const raceEffects = {
-        // Both "operation_abort" and "operation_end"
-        // means we don't care anymore if the child aborts.
-        // So we can:
-        // - remove "abort" event listener on child (done by raceCallback)
-        // - remove abort callback on operation (done by raceCallback)
-        // - remove end callback on operation (done by raceCallback)
-        // - call any custom cancel function
-        operation_abort: () => {
-          applyAbortEffects();
-          applyRemoveEffects();
-        },
-        operation_end: () => {
-          // Exists to
-          // - remove abort callback on operation
-          // - remove "abort" event listener on child
-          // - call any custom cancel function
-          applyRemoveEffects();
-        },
-        child_abort: () => {
-          applyAbortEffects();
-          operationAbortController.abort();
-        }
-      };
-      raceEffects[winner.name](winner.value);
-    });
-    return () => {
-      cancelRace();
-      applyRemoveEffects();
-    };
-  };
-
-  const addAbortSource = abortSourceCallback => {
-    const abortSourceController = new AbortController();
-    const abortSourceSignal = abortSourceController.signal;
-
-    if (operationSignal.aborted) {
-      return {
-        signal: abortSourceSignal,
-        remove: callbackNoop
-      };
-    }
-
-    const returnValue = abortSourceCallback(value => {
-      abortSourceController.abort(value);
-    });
-    const removeAbortSource = typeof returnValue === "function" ? returnValue : callbackNoop;
-    const removeAbortSignal = addAbortSignal(abortSourceSignal, {
-      onRemove: () => {
-        removeAbortSource();
+    worker = new Worker(workerFilePath, { ...options,
+      workerData: { ...options.workerData,
+        workerFilePath
       }
     });
-    return {
-      signal: abortSourceSignal,
-      remove: removeAbortSignal
-    };
+    worker.once("error", error => {
+      console.error(error);
+    });
+    worker.once("exit", () => {
+      worker = null;
+    });
+    await new Promise(resolve => {
+      worker.once("online", resolve);
+    });
+    return worker;
   };
 
-  const timeout = ms => {
-    return addAbortSource(abort => {
-      const timeoutId = setTimeout(abort, ms); // an abort source return value is called when:
-      // - operation is aborted (by an other source)
-      // - operation ends
-
-      return () => {
-        clearTimeout(timeoutId);
-      };
-    });
-  };
-
-  const withSignal = async asyncCallback => {
-    const abortController = new AbortController();
-    const signal = abortController.signal;
-    const removeAbortSignal = addAbortSignal(signal, {
-      onAbort: () => {
-        abortController.abort();
-      }
-    });
-
-    try {
-      const value = await asyncCallback(signal);
-      removeAbortSignal();
-      return value;
-    } catch (e) {
-      removeAbortSignal();
-      throw e;
-    }
-  };
-
-  const withSignalSync = callback => {
-    const abortController = new AbortController();
-    const signal = abortController.signal;
-    const removeAbortSignal = addAbortSignal(signal, {
-      onAbort: () => {
-        abortController.abort();
-      }
-    });
-
-    try {
-      const value = callback(signal);
-      removeAbortSignal();
-      return value;
-    } catch (e) {
-      removeAbortSignal();
-      throw e;
-    }
+  const reload = async () => {
+    await terminate();
+    await load();
   };
 
   return {
-    // We could almost hide the operationSignal
-    // But it can be handy for 2 things:
-    // - know if operation is aborted (operation.signal.aborted)
-    // - forward the operation.signal directly (not using "withSignal" or "withSignalSync")
-    signal: operationSignal,
-    throwIfAborted,
-    addAbortCallback,
-    addAbortSignal,
-    addAbortSource,
-    timeout,
-    withSignal,
-    withSignalSync,
-    addEndCallback,
-    end
+    isPrimary,
+    isWorker: !isPrimary,
+    load,
+    reload,
+    terminate
   };
-};
-
-const callbackNoop = () => {};
-
-const addEventListener = (target, eventName, cb) => {
-  target.addEventListener(eventName, cb);
-  return () => {
-    target.removeEventListener(eventName, cb);
-  };
-};
-
-const raceProcessTeardownEvents = (processTeardownEvents, callback) => {
-  return raceCallbacks({ ...(processTeardownEvents.SIGHUP ? SIGHUP_CALLBACK : {}),
-    ...(processTeardownEvents.SIGTERM ? SIGTERM_CALLBACK : {}),
-    ...(processTeardownEvents.SIGINT ? SIGINT_CALLBACK : {}),
-    ...(processTeardownEvents.beforeExit ? BEFORE_EXIT_CALLBACK : {}),
-    ...(processTeardownEvents.exit ? EXIT_CALLBACK : {})
-  }, callback);
-};
-const SIGHUP_CALLBACK = {
-  SIGHUP: cb => {
-    process.on("SIGHUP", cb);
-    return () => {
-      process.removeListener("SIGHUP", cb);
-    };
-  }
-};
-const SIGTERM_CALLBACK = {
-  SIGTERM: cb => {
-    process.on("SIGTERM", cb);
-    return () => {
-      process.removeListener("SIGTERM", cb);
-    };
-  }
-};
-const BEFORE_EXIT_CALLBACK = {
-  beforeExit: cb => {
-    process.on("beforeExit", cb);
-    return () => {
-      process.removeListener("beforeExit", cb);
-    };
-  }
-};
-const EXIT_CALLBACK = {
-  exit: cb => {
-    process.on("exit", cb);
-    return () => {
-      process.removeListener("exit", cb);
-    };
-  }
-};
-const SIGINT_CALLBACK = {
-  SIGINT: cb => {
-    process.on("SIGINT", cb);
-    return () => {
-      process.removeListener("SIGINT", cb);
-    };
-  }
 };
 
 const memoize = compute => {
@@ -1583,6 +3905,404 @@ const memoize = compute => {
 
   return fnWithMemoization;
 };
+
+const timeStart = name => {
+  // as specified in https://w3c.github.io/server-timing/#the-performanceservertiming-interface
+  // duration is a https://www.w3.org/TR/hr-time-2/#sec-domhighrestimestamp
+  const startTimestamp = performance$1.now();
+
+  const timeEnd = () => {
+    const endTimestamp = performance$1.now();
+    const timing = {
+      [name]: endTimestamp - startTimestamp
+    };
+    return timing;
+  };
+
+  return timeEnd;
+};
+const timeFunction = (name, fn) => {
+  const timeEnd = timeStart(name);
+  const returnValue = fn();
+
+  if (returnValue && typeof returnValue.then === "function") {
+    return returnValue.then(value => {
+      return [timeEnd(), value];
+    });
+  }
+
+  return [timeEnd(), returnValue];
+};
+
+const HOOK_NAMES$1 = ["serverListening", "redirectRequest", "handleRequest", "handleError", "onResponsePush", "injectResponseHeaders", "responseReady", "serverStopped"];
+const createServiceController = services => {
+  const flatServices = flattenAndFilterServices(services);
+  const hookGroups = {};
+
+  const addService = service => {
+    Object.keys(service).forEach(key => {
+      if (key === "name") return;
+      const isHook = HOOK_NAMES$1.includes(key);
+
+      if (!isHook) {
+        console.warn(`Unexpected "${key}" property on "${service.name}" service`);
+      }
+
+      const hookName = key;
+      const hookValue = service[hookName];
+
+      if (hookValue) {
+        const group = hookGroups[hookName] || (hookGroups[hookName] = []);
+        group.push({
+          service,
+          name: hookName,
+          value: hookValue
+        });
+      }
+    });
+  };
+
+  flatServices.forEach(service => {
+    addService(service);
+  });
+  let currentService = null;
+  let currentHookName = null;
+
+  const callHook = (hook, info, context) => {
+    const hookFn = hook.value;
+
+    if (!hookFn) {
+      return null;
+    }
+
+    currentService = hook.service;
+    currentHookName = hook.name;
+    let timeEnd;
+
+    if (context && context.timing) {
+      timeEnd = timeStart(`${currentService.name.replace("jsenv:", "")}.${currentHookName}`);
+    }
+
+    let valueReturned = hookFn(info, context);
+
+    if (context && context.timing) {
+      Object.assign(context.timing, timeEnd());
+    }
+
+    currentService = null;
+    currentHookName = null;
+    return valueReturned;
+  };
+
+  const callAsyncHook = async (hook, info, context) => {
+    const hookFn = hook.value;
+
+    if (!hookFn) {
+      return null;
+    }
+
+    currentService = hook.service;
+    currentHookName = hook.name;
+    let timeEnd;
+
+    if (context && context.timing) {
+      timeEnd = timeStart(`${currentService.name.replace("jsenv:", "")}.${currentHookName}`);
+    }
+
+    let valueReturned = await hookFn(info, context);
+
+    if (context && context.timing) {
+      Object.assign(context.timing, timeEnd());
+    }
+
+    currentService = null;
+    currentHookName = null;
+    return valueReturned;
+  };
+
+  const callHooks = (hookName, info, context, callback = () => {}) => {
+    const hooks = hookGroups[hookName];
+
+    if (hooks) {
+      for (const hook of hooks) {
+        const returnValue = callHook(hook, info, context);
+
+        if (returnValue) {
+          callback(returnValue);
+        }
+      }
+    }
+  };
+
+  const callHooksUntil = (hookName, info, context, until = returnValue => returnValue) => {
+    const hooks = hookGroups[hookName];
+
+    if (hooks) {
+      for (const hook of hooks) {
+        const returnValue = callHook(hook, info, context);
+        const untilReturnValue = until(returnValue);
+
+        if (untilReturnValue) {
+          return untilReturnValue;
+        }
+      }
+    }
+
+    return null;
+  };
+
+  const callAsyncHooksUntil = (hookName, info, context) => {
+    const hooks = hookGroups[hookName];
+
+    if (!hooks) {
+      return null;
+    }
+
+    if (hooks.length === 0) {
+      return null;
+    }
+
+    return new Promise((resolve, reject) => {
+      const visit = index => {
+        if (index >= hooks.length) {
+          return resolve();
+        }
+
+        const hook = hooks[index];
+        const returnValue = callAsyncHook(hook, info, context);
+        return Promise.resolve(returnValue).then(output => {
+          if (output) {
+            return resolve(output);
+          }
+
+          return visit(index + 1);
+        }, reject);
+      };
+
+      visit(0);
+    });
+  };
+
+  return {
+    services: flatServices,
+    callHooks,
+    callHooksUntil,
+    callAsyncHooksUntil,
+    getCurrentService: () => currentService,
+    getCurrentHookName: () => currentHookName
+  };
+};
+
+const flattenAndFilterServices = services => {
+  const flatServices = [];
+
+  const visitServiceEntry = serviceEntry => {
+    if (Array.isArray(serviceEntry)) {
+      serviceEntry.forEach(value => visitServiceEntry(value));
+      return;
+    }
+
+    if (typeof serviceEntry === "object" && serviceEntry !== null) {
+      if (!serviceEntry.name) {
+        serviceEntry.name = "anonymous";
+      }
+
+      flatServices.push(serviceEntry);
+      return;
+    }
+
+    throw new Error(`services must be objects, got ${serviceEntry}`);
+  };
+
+  services.forEach(serviceEntry => visitServiceEntry(serviceEntry));
+  return flatServices;
+};
+
+/**
+
+ A multiple header is a header with multiple values like
+
+ "text/plain, application/json;q=0.1"
+
+ Each, means it's a new value (it's optionally followed by a space)
+
+ Each; mean it's a property followed by =
+ if "" is a string
+ if not it's likely a number
+ */
+const parseMultipleHeader = (multipleHeaderString, {
+  validateName = () => true,
+  validateProperty = () => true
+} = {}) => {
+  const values = multipleHeaderString.split(",");
+  const multipleHeader = {};
+  values.forEach(value => {
+    const valueTrimmed = value.trim();
+    const valueParts = valueTrimmed.split(";");
+    const name = valueParts[0];
+    const nameValidation = validateName(name);
+
+    if (!nameValidation) {
+      return;
+    }
+
+    const properties = parseHeaderProperties(valueParts.slice(1), {
+      validateProperty
+    });
+    multipleHeader[name] = properties;
+  });
+  return multipleHeader;
+};
+
+const parseHeaderProperties = (headerProperties, {
+  validateProperty
+}) => {
+  const properties = headerProperties.reduce((previous, valuePart) => {
+    const [propertyName, propertyValueString] = valuePart.split("=");
+    const propertyValue = parseHeaderPropertyValue(propertyValueString);
+    const property = {
+      name: propertyName,
+      value: propertyValue
+    };
+    const propertyValidation = validateProperty(property);
+
+    if (!propertyValidation) {
+      return previous;
+    }
+
+    return { ...previous,
+      [property.name]: property.value
+    };
+  }, {});
+  return properties;
+};
+
+const parseHeaderPropertyValue = headerPropertyValueString => {
+  const firstChar = headerPropertyValueString[0];
+  const lastChar = headerPropertyValueString[headerPropertyValueString.length - 1];
+
+  if (firstChar === '"' && lastChar === '"') {
+    return headerPropertyValueString.slice(1, -1);
+  }
+
+  if (isNaN(headerPropertyValueString)) {
+    return headerPropertyValueString;
+  }
+
+  return parseFloat(headerPropertyValueString);
+};
+
+const stringifyMultipleHeader = (multipleHeader, {
+  validateName = () => true,
+  validateProperty = () => true
+} = {}) => {
+  return Object.keys(multipleHeader).filter(name => {
+    const headerProperties = multipleHeader[name];
+
+    if (!headerProperties) {
+      return false;
+    }
+
+    if (typeof headerProperties !== "object") {
+      return false;
+    }
+
+    const nameValidation = validateName(name);
+
+    if (!nameValidation) {
+      return false;
+    }
+
+    return true;
+  }).map(name => {
+    const headerProperties = multipleHeader[name];
+    const headerPropertiesString = stringifyHeaderProperties(headerProperties, {
+      validateProperty
+    });
+
+    if (headerPropertiesString.length) {
+      return `${name};${headerPropertiesString}`;
+    }
+
+    return name;
+  }).join(", ");
+};
+
+const stringifyHeaderProperties = (headerProperties, {
+  validateProperty
+}) => {
+  const headerPropertiesString = Object.keys(headerProperties).map(name => {
+    const property = {
+      name,
+      value: headerProperties[name]
+    };
+    return property;
+  }).filter(property => {
+    const propertyValidation = validateProperty(property);
+
+    if (!propertyValidation) {
+      return false;
+    }
+
+    return true;
+  }).map(stringifyHeaderProperty).join(";");
+  return headerPropertiesString;
+};
+
+const stringifyHeaderProperty = ({
+  name,
+  value
+}) => {
+  if (typeof value === "string") {
+    return `${name}="${value}"`;
+  }
+
+  return `${name}=${value}`;
+};
+
+// because in chrome dev tools they are shown in alphabetic order
+// also we should manipulate a timing object instead of a header to facilitate
+// manipulation of the object so that the timing header response generation logic belongs to @jsenv/server
+// so response can return a new timing object
+// yes it's awful, feel free to PR with a better approach :)
+
+const timingToServerTimingResponseHeaders = timing => {
+  const serverTimingHeader = {};
+  Object.keys(timing).forEach((key, index) => {
+    const name = letters[index] || "zz";
+    serverTimingHeader[name] = {
+      desc: key,
+      dur: timing[key]
+    };
+  });
+  const serverTimingHeaderString = stringifyServerTimingHeader(serverTimingHeader);
+  return {
+    "server-timing": serverTimingHeaderString
+  };
+};
+const stringifyServerTimingHeader = serverTimingHeader => {
+  return stringifyMultipleHeader(serverTimingHeader, {
+    validateName: validateServerTimingName
+  });
+}; // (),/:;<=>?@[\]{}" Don't allowed
+// Minimal length is one symbol
+// Digits, alphabet characters,
+// and !#$%&'*+-.^_`|~ are allowed
+// https://www.w3.org/TR/2019/WD-server-timing-20190307/#the-server-timing-header-field
+// https://tools.ietf.org/html/rfc7230#section-3.2.6
+
+const validateServerTimingName = name => {
+  const valid = /^[!#$%&'*+\-.^_`|~0-9a-z]+$/gi.test(name);
+
+  if (!valid) {
+    console.warn(`server timing contains invalid symbols`);
+    return false;
+  }
+
+  return true;
+};
+
+const letters = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"];
 
 const listenEvent = (objectWithEventEmitter, eventName, callback, {
   once = false
@@ -2598,9 +5318,13 @@ const statusIsClientError = status => status >= 400 && status < 500;
 
 const statusIsServerError = status => status >= 500 && status < 600;
 
-const applyDnsResolution = async hostname => {
+const applyDnsResolution = async (hostname, {
+  verbatim = false
+} = {}) => {
   const dnsResolution = await new Promise((resolve, reject) => {
-    lookup(hostname, (error, address, family) => {
+    lookup(hostname, {
+      verbatim
+    }, (error, address, family) => {
       if (error) {
         reject(error);
       } else {
@@ -2616,33 +5340,36 @@ const applyDnsResolution = async hostname => {
 
 const getServerOrigins = async ({
   protocol,
-  ip,
+  host,
   port
 }) => {
-  const isInternalIp = ip === "127.0.0.1";
+  const isLocal = LOOPBACK_HOSTNAMES.includes(host);
   const localhostDnsResolution = await applyDnsResolution("localhost");
-  const internalOrigin = createServerOrigin({
+  const localOrigin = createServerOrigin({
     protocol,
     hostname: localhostDnsResolution.address === "127.0.0.1" ? "localhost" : "127.0.0.1",
     port
   });
 
-  if (isInternalIp) {
+  if (isLocal) {
     return {
-      internal: internalOrigin
+      local: localOrigin
     };
   }
 
-  const isAnyIp = !ip || ip === "::" || ip === "0.0.0.0";
+  const isAnyIp = WILDCARD_HOSTNAMES.includes(host);
+  const networkOrigin = createServerOrigin({
+    protocol,
+    hostname: isAnyIp ? getExternalIp() : host,
+    port
+  });
   return {
-    internal: internalOrigin,
-    external: createServerOrigin({
-      protocol,
-      hostname: isAnyIp ? getExternalIp() : ip,
-      port
-    })
+    local: localOrigin,
+    network: networkOrigin
   };
 };
+const LOOPBACK_HOSTNAMES = ["localhost", "127.0.0.1", "::1", "0000:0000:0000:0000:0000:0000:0000:0001"];
+const WILDCARD_HOSTNAMES = [undefined, "0.0.0.0", "::", "0000:0000:0000:0000:0000:0000:0000:0000"];
 
 const createServerOrigin = ({
   protocol,
@@ -2663,7 +5390,7 @@ const getExternalIp = () => {
     const networkAddressArray = networkInterfaceMap[key];
     return networkAddressArray.find(networkAddress => {
       if (networkAddress.internal) return false;
-      if (networkAddress.family !== "IPv4") return false;
+      if (!isIpV4(networkAddress)) return false;
       internalIPV4NetworkAddress = networkAddress;
       return true;
     });
@@ -2671,12 +5398,21 @@ const getExternalIp = () => {
   return internalIPV4NetworkAddress ? internalIPV4NetworkAddress.address : null;
 };
 
+const isIpV4 = networkAddress => {
+  // node 18+
+  if (typeof networkAddress.family === "number") {
+    return networkAddress.family === 4;
+  }
+
+  return networkAddress.family === "IPv4";
+};
+
 const listen = async ({
   signal = new AbortController().signal,
   server,
   port,
   portHint,
-  ip
+  host
 }) => {
   const listeningOperation = Abort.startOperation();
 
@@ -2687,7 +5423,7 @@ const listen = async ({
       listeningOperation.throwIfAborted();
       port = await findFreePort(portHint, {
         signal: listeningOperation.signal,
-        ip
+        host
       });
     }
 
@@ -2695,7 +5431,7 @@ const listen = async ({
     port = await startListening({
       server,
       port,
-      ip
+      host
     });
     listeningOperation.addAbortCallback(() => stopListening(server));
     listeningOperation.throwIfAborted();
@@ -2707,7 +5443,7 @@ const listen = async ({
 
 const findFreePort = async (initialPort = 1, {
   signal = new AbortController().signal,
-  ip = "127.0.0.1",
+  host = "127.0.0.1",
   min = 1,
   max = 65534,
   next = port => port + 1
@@ -2718,9 +5454,9 @@ const findFreePort = async (initialPort = 1, {
     findFreePortOperation.addAbortSignal(signal);
     findFreePortOperation.throwIfAborted();
 
-    const testUntil = async (port, ip) => {
+    const testUntil = async (port, host) => {
       findFreePortOperation.throwIfAborted();
-      const free = await portIsFree(port, ip);
+      const free = await portIsFree(port, host);
 
       if (free) {
         return port;
@@ -2729,27 +5465,27 @@ const findFreePort = async (initialPort = 1, {
       const nextPort = next(port);
 
       if (nextPort > max) {
-        throw new Error(`${ip} has no available port between ${min} and ${max}`);
+        throw new Error(`${host} has no available port between ${min} and ${max}`);
       }
 
-      return testUntil(nextPort, ip);
+      return testUntil(nextPort, host);
     };
 
-    const freePort = await testUntil(initialPort, ip);
+    const freePort = await testUntil(initialPort, host);
     return freePort;
   } finally {
     await findFreePortOperation.end();
   }
 };
 
-const portIsFree = async (port, ip) => {
+const portIsFree = async (port, host) => {
   const server = createServer();
 
   try {
     await startListening({
       server,
       port,
-      ip
+      host
     });
   } catch (error) {
     if (error && error.code === "EADDRINUSE") {
@@ -2770,7 +5506,7 @@ const portIsFree = async (port, ip) => {
 const startListening = ({
   server,
   port,
-  ip
+  host
 }) => {
   return new Promise((resolve, reject) => {
     server.on("error", reject);
@@ -2779,7 +5515,7 @@ const startListening = ({
       // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
       resolve(server.address().port);
     });
-    server.listen(port, ip);
+    server.listen(port, host);
   });
 };
 
@@ -3004,316 +5740,6 @@ const listenServerConnectionError = (nodeServer, connectionErrorCallback, {
   };
 };
 
-/**
-
- A multiple header is a header with multiple values like
-
- "text/plain, application/json;q=0.1"
-
- Each, means it's a new value (it's optionally followed by a space)
-
- Each; mean it's a property followed by =
- if "" is a string
- if not it's likely a number
- */
-const parseMultipleHeader = (multipleHeaderString, {
-  validateName = () => true,
-  validateProperty = () => true
-} = {}) => {
-  const values = multipleHeaderString.split(",");
-  const multipleHeader = {};
-  values.forEach(value => {
-    const valueTrimmed = value.trim();
-    const valueParts = valueTrimmed.split(";");
-    const name = valueParts[0];
-    const nameValidation = validateName(name);
-
-    if (!nameValidation) {
-      return;
-    }
-
-    const properties = parseHeaderProperties(valueParts.slice(1), {
-      validateProperty
-    });
-    multipleHeader[name] = properties;
-  });
-  return multipleHeader;
-};
-
-const parseHeaderProperties = (headerProperties, {
-  validateProperty
-}) => {
-  const properties = headerProperties.reduce((previous, valuePart) => {
-    const [propertyName, propertyValueString] = valuePart.split("=");
-    const propertyValue = parseHeaderPropertyValue(propertyValueString);
-    const property = {
-      name: propertyName,
-      value: propertyValue
-    };
-    const propertyValidation = validateProperty(property);
-
-    if (!propertyValidation) {
-      return previous;
-    }
-
-    return { ...previous,
-      [property.name]: property.value
-    };
-  }, {});
-  return properties;
-};
-
-const parseHeaderPropertyValue = headerPropertyValueString => {
-  const firstChar = headerPropertyValueString[0];
-  const lastChar = headerPropertyValueString[headerPropertyValueString.length - 1];
-
-  if (firstChar === '"' && lastChar === '"') {
-    return headerPropertyValueString.slice(1, -1);
-  }
-
-  if (isNaN(headerPropertyValueString)) {
-    return headerPropertyValueString;
-  }
-
-  return parseFloat(headerPropertyValueString);
-};
-
-const stringifyMultipleHeader = (multipleHeader, {
-  validateName = () => true,
-  validateProperty = () => true
-} = {}) => {
-  return Object.keys(multipleHeader).filter(name => {
-    const headerProperties = multipleHeader[name];
-
-    if (!headerProperties) {
-      return false;
-    }
-
-    if (typeof headerProperties !== "object") {
-      return false;
-    }
-
-    const nameValidation = validateName(name);
-
-    if (!nameValidation) {
-      return false;
-    }
-
-    return true;
-  }).map(name => {
-    const headerProperties = multipleHeader[name];
-    const headerPropertiesString = stringifyHeaderProperties(headerProperties, {
-      validateProperty
-    });
-
-    if (headerPropertiesString.length) {
-      return `${name};${headerPropertiesString}`;
-    }
-
-    return name;
-  }).join(", ");
-};
-
-const stringifyHeaderProperties = (headerProperties, {
-  validateProperty
-}) => {
-  const headerPropertiesString = Object.keys(headerProperties).map(name => {
-    const property = {
-      name,
-      value: headerProperties[name]
-    };
-    return property;
-  }).filter(property => {
-    const propertyValidation = validateProperty(property);
-
-    if (!propertyValidation) {
-      return false;
-    }
-
-    return true;
-  }).map(stringifyHeaderProperty).join(";");
-  return headerPropertiesString;
-};
-
-const stringifyHeaderProperty = ({
-  name,
-  value
-}) => {
-  if (typeof value === "string") {
-    return `${name}="${value}"`;
-  }
-
-  return `${name}=${value}`;
-};
-
-const applyContentNegotiation = ({
-  availables,
-  accepteds,
-  getAcceptanceScore
-}) => {
-  let highestScore = -1;
-  let availableWithHighestScore = null;
-  let availableIndex = 0;
-
-  while (availableIndex < availables.length) {
-    const available = availables[availableIndex];
-    availableIndex++;
-    let acceptedIndex = 0;
-
-    while (acceptedIndex < accepteds.length) {
-      const accepted = accepteds[acceptedIndex];
-      acceptedIndex++;
-      const score = getAcceptanceScore(accepted, available);
-
-      if (score > highestScore) {
-        availableWithHighestScore = available;
-        highestScore = score;
-      }
-    }
-  }
-
-  return availableWithHighestScore;
-};
-
-const negotiateContentType = (request, availableContentTypes) => {
-  const {
-    headers = {}
-  } = request;
-  const requestAcceptHeader = headers.accept;
-
-  if (!requestAcceptHeader) {
-    return null;
-  }
-
-  const contentTypesAccepted = parseAcceptHeader(requestAcceptHeader);
-  return applyContentNegotiation({
-    accepteds: contentTypesAccepted,
-    availables: availableContentTypes,
-    getAcceptanceScore: getContentTypeAcceptanceScore
-  });
-};
-
-const parseAcceptHeader = acceptHeader => {
-  const acceptHeaderObject = parseMultipleHeader(acceptHeader, {
-    validateProperty: ({
-      name
-    }) => {
-      // read only q, anything else is ignored
-      return name === "q";
-    }
-  });
-  const accepts = [];
-  Object.keys(acceptHeaderObject).forEach(key => {
-    const {
-      q = 1
-    } = acceptHeaderObject[key];
-    const value = key;
-    accepts.push({
-      value,
-      quality: q
-    });
-  });
-  accepts.sort((a, b) => {
-    return b.quality - a.quality;
-  });
-  return accepts;
-};
-
-const getContentTypeAcceptanceScore = ({
-  value,
-  quality
-}, availableContentType) => {
-  const [acceptedType, acceptedSubtype] = decomposeContentType(value);
-  const [availableType, availableSubtype] = decomposeContentType(availableContentType);
-  const typeAccepted = acceptedType === "*" || acceptedType === availableType;
-  const subtypeAccepted = acceptedSubtype === "*" || acceptedSubtype === availableSubtype;
-
-  if (typeAccepted && subtypeAccepted) {
-    return quality;
-  }
-
-  return -1;
-};
-
-const decomposeContentType = fullType => {
-  const [type, subtype] = fullType.split("/");
-  return [type, subtype];
-};
-
-const applyDefaultErrorToResponse = (serverInternalError, {
-  request,
-  sendErrorDetails = false
-}) => {
-  const serverInternalErrorIsAPrimitive = serverInternalError === null || typeof serverInternalError !== "object" && typeof serverInternalError !== "function";
-
-  if (!serverInternalErrorIsAPrimitive && serverInternalError.asResponse) {
-    return serverInternalError.asResponse();
-  }
-
-  const dataToSend = serverInternalErrorIsAPrimitive ? {
-    code: "VALUE_THROWED",
-    value: serverInternalError
-  } : {
-    code: serverInternalError.code || "UNKNOWN_ERROR",
-    ...(sendErrorDetails ? {
-      stack: serverInternalError.stack,
-      ...serverInternalError
-    } : {})
-  };
-  const availableContentTypes = {
-    "text/html": () => {
-      const renderHtmlForErrorWithoutDetails = () => {
-        return `<p>Details not available: to enable them server must be started with sendErrorDetails: true.</p>`;
-      };
-
-      const renderHtmlForErrorWithDetails = () => {
-        if (serverInternalErrorIsAPrimitive) {
-          return `<pre>${JSON.stringify(serverInternalError, null, "  ")}</pre>`;
-        }
-
-        return `<pre>${serverInternalError.stack}</pre>`;
-      };
-
-      const body = `<!DOCTYPE html>
-<html>
-  <head>
-    <title>Internal server error</title>
-    <meta charset="utf-8" />
-    <link rel="icon" href="data:," />
-  </head>
-
-  <body>
-    <h1>Internal server error</h1>
-    <p>${serverInternalErrorIsAPrimitive ? `Code inside server has thrown a literal.` : `Code inside server has thrown an error.`}</p>
-    <details>
-      <summary>See internal error details</summary>
-      ${sendErrorDetails ? renderHtmlForErrorWithDetails() : renderHtmlForErrorWithoutDetails()}
-    </details>
-  </body>
-</html>`;
-      return {
-        headers: {
-          "content-type": "text/html",
-          "content-length": Buffer.byteLength(body)
-        },
-        body
-      };
-    },
-    "application/json": () => {
-      const body = JSON.stringify(dataToSend);
-      return {
-        headers: {
-          "content-type": "application/json",
-          "content-length": Buffer.byteLength(body)
-        },
-        body
-      };
-    }
-  };
-  const bestContentType = negotiateContentType(request, Object.keys(availableContentTypes));
-  return availableContentTypes[bestContentType || "application/json"]();
-};
-
 const createReason = reasonString => {
   return {
     toString: () => reasonString
@@ -3338,8 +5764,8 @@ const startServer = async ({
   http1Allowed = true,
   redirectHttpToHttps,
   allowHttpRequestOnHttps = false,
-  listenAnyIp = false,
-  ip = listenAnyIp ? undefined : "127.0.0.1",
+  acceptAnyIp = false,
+  host = acceptAnyIp ? undefined : "localhost",
   port = 0,
   // assign a random available port
   portHint,
@@ -3354,14 +5780,20 @@ const startServer = async ({
   // auto close when requestToResponse throw an error
   stopOnInternalError = false,
   keepProcessAlive = true,
-  requestToResponse = () => null,
-  plugins = {},
-  sendErrorDetails = false,
-  errorToResponse = () => null,
-  onListenStart = () => {},
-  onListenEnd = () => {},
-  onStop = () => {},
-  nagle = true
+  services = [],
+  nagle = true,
+  serverTiming = false,
+  requestWaitingMs = 0,
+  requestWaitingCallback = ({
+    request,
+    warn,
+    requestWaitingMs
+  }) => {
+    warn(createDetailedMessage$1(`still no response found for request after ${requestWaitingMs} ms`, {
+      "request url": `${request.origin}${request.ressource}`,
+      "request headers": JSON.stringify(request.headers, null, "  ")
+    }));
+  }
 } = {}) => {
   if (protocol !== "http" && protocol !== "https") {
     throw new Error(`protocol must be http or https, got ${protocol}`);
@@ -3404,6 +5836,7 @@ const startServer = async ({
     allowHttpRequestOnHttps = false;
   }
 
+  const serviceController = createServiceController(services);
   const processTeardownEvents = {
     SIGHUP: stopOnExit,
     SIGTERM: stopOnExit,
@@ -3441,15 +5874,16 @@ const startServer = async ({
       nodeServer.unref();
     }
 
-    onListenStart();
     port = await listen({
       signal: startServerOperation.signal,
       server: nodeServer,
       port,
       portHint,
-      ip
+      host
     });
-    onListenEnd(port);
+    serviceController.callHooks("serverListening", {
+      port
+    });
     startServerOperation.addAbortCallback(async () => {
       await stopListening(nodeServer);
     });
@@ -3468,7 +5902,6 @@ const startServer = async ({
   }) => {
     logger.info(`${serverName} stopping server (reason: ${reason})`);
   });
-  stopCallbackList.add(onStop);
   stopCallbackList.add(async () => {
     await stopListening(nodeServer);
   });
@@ -3481,6 +5914,9 @@ const startServer = async ({
     await Promise.all(stopCallbackList.notify({
       reason
     }));
+    serviceController.callHooks("serverStopped", {
+      reason
+    });
     status = "stopped";
     stoppedResolve(reason);
   });
@@ -3500,10 +5936,10 @@ const startServer = async ({
   status = "opened";
   const serverOrigins = await getServerOrigins({
     protocol,
-    ip,
+    host,
     port
   });
-  const serverOrigin = serverOrigins.internal;
+  const serverOrigin = serverOrigins.local;
   const removeConnectionErrorListener = listenServerConnectionError(nodeServer, onError);
   stopCallbackList.add(removeConnectionErrorListener);
   const connectionsTracker = trackServerPendingConnections(nodeServer, {
@@ -3790,6 +6226,12 @@ const startServer = async ({
     const handleRequest = async (request, {
       requestNode
     }) => {
+      let requestReceivedMeasure;
+
+      if (serverTiming) {
+        requestReceivedMeasure = performance.now();
+      }
+
       addRequestLog(requestNode, {
         type: "info",
         value: request.parent ? `Push ${request.ressource}` : `${request.method} ${request.origin}${request.ressource}`
@@ -3802,133 +6244,113 @@ const startServer = async ({
         });
       };
 
-      const requestPlugins = [];
-      let responseFromShortcircuit;
+      let requestWaitingTimeout;
 
-      const shortcircuitResponse = value => {
-        responseFromShortcircuit = value;
-      };
+      if (requestWaitingMs) {
+        requestWaitingTimeout = setTimeout(() => requestWaitingCallback({
+          request,
+          warn,
+          requestWaitingMs
+        }), requestWaitingMs).unref();
+      }
 
-      const redirectRequest = requestRedirection => {
-        request = applyRedirectionToRequest(request, requestRedirection);
-      };
-
-      Object.keys(plugins).forEach(pluginName => {
-        const {
-          onRequest
-        } = plugins[pluginName];
-
-        if (onRequest) {
-          const returnValue = onRequest(request, {
-            warn,
-            logger,
-            shortcircuitResponse,
-            redirectRequest
+      serviceController.callHooks("redirectRequest", request, {
+        warn
+      }, newRequestProperties => {
+        if (newRequestProperties) {
+          request = applyRedirectionToRequest(request, {
+            original: request.original || request,
+            previous: request,
+            ...newRequestProperties
           });
-
-          if (returnValue) {
-            requestPlugins.push({
-              pluginName,
-              ...returnValue
-            });
-          }
         }
       });
-      const result = responseFromShortcircuit ? {
-        returnValue: responseFromShortcircuit
-      } : await generateResponseDescription({
-        requestToResponse,
-        request,
-        pushResponse: async ({
-          path,
-          method
-        }) => {
-          if (typeof path !== "string" || path[0] !== "/") {
-            addRequestLog(requestNode, {
-              type: "warn",
-              value: `response push ignored because path is invalid (must be a string starting with "/", found ${path})`
-            });
-            return;
-          }
+      let handleRequestReturnValue;
+      let errorWhileHandlingRequest = null;
+      let handleRequestTimings = serverTiming ? {} : null;
 
-          if (!request.http2) {
-            addRequestLog(requestNode, {
-              type: "warn",
-              value: `response push ignored because request is not http2`
-            });
-            return;
-          }
-
-          const canPushStream = testCanPushStream(nodeResponse.stream);
-
-          if (!canPushStream.can) {
-            addRequestLog(requestNode, {
-              type: "debug",
-              value: `response push ignored because ${canPushStream.reason}`
-            });
-            return;
-          }
-
-          let prevented = false;
-
-          const prevent = () => {
-            prevented = true;
-          };
-
-          const preventedByPlugin = requestPlugins.find(requestPlugin => {
-            const {
-              onPushResponse
-            } = requestPlugin;
-
-            if (!onPushResponse) {
-              return false;
+      try {
+        handleRequestReturnValue = await serviceController.callAsyncHooksUntil("handleRequest", request, {
+          timing: handleRequestTimings,
+          warn,
+          pushResponse: async ({
+            path,
+            method
+          }) => {
+            if (typeof path !== "string" || path[0] !== "/") {
+              addRequestLog(requestNode, {
+                type: "warn",
+                value: `response push ignored because path is invalid (must be a string starting with "/", found ${path})`
+              });
+              return;
             }
 
-            onPushResponse({
+            if (!request.http2) {
+              addRequestLog(requestNode, {
+                type: "warn",
+                value: `response push ignored because request is not http2`
+              });
+              return;
+            }
+
+            const canPushStream = testCanPushStream(nodeResponse.stream);
+
+            if (!canPushStream.can) {
+              addRequestLog(requestNode, {
+                type: "debug",
+                value: `response push ignored because ${canPushStream.reason}`
+              });
+              return;
+            }
+
+            let preventedByService = null;
+
+            const prevent = () => {
+              preventedByService = serviceController.getCurrentService();
+            };
+
+            serviceController.callHooksUntil("onResponsePush", {
               path,
               method
             }, {
+              request,
+              warn,
               prevent
-            });
-            return prevented;
-          });
+            }, () => preventedByService);
 
-          if (prevented) {
-            addRequestLog(requestNode, {
-              type: "debug",
-              value: `response push prevented by "${preventedByPlugin.pluginName}" plugin`
+            if (preventedByService) {
+              addRequestLog(requestNode, {
+                type: "debug",
+                value: `response push prevented by "${preventedByService.name}" service`
+              });
+              return;
+            }
+
+            const requestChildNode = {
+              logs: [],
+              children: []
+            };
+            requestNode.children.push(requestChildNode);
+            await pushResponse({
+              path,
+              method
+            }, {
+              requestNode: requestChildNode,
+              parentHttp2Stream: nodeResponse.stream
             });
-            return;
           }
-
-          const requestChildNode = {
-            logs: [],
-            children: []
-          };
-          requestNode.children.push(requestChildNode);
-          await pushResponse({
-            path,
-            method
-          }, {
-            requestNode: requestChildNode,
-            parentHttp2Stream: nodeResponse.stream
-          });
-        }
-      });
-      const {
-        aborted
-      } = result;
-
-      if (aborted) {
-        return ABORTED_RESPONSE_PROPERTIES;
+        });
+      } catch (error) {
+        errorWhileHandlingRequest = error;
       }
 
-      const readResponseProperties = async () => {
-        const {
-          error
-        } = result; // internal error, create 500 response
+      let responseProperties;
 
-        if (error) {
+      if (errorWhileHandlingRequest) {
+        if (errorWhileHandlingRequest.name === "AbortError" && request.signal.aborted) {
+          responseProperties = ABORTED_RESPONSE_PROPERTIES;
+        } else {
+          // internal error, create 500 response
           if ( // stopOnInternalError stops server only if requestToResponse generated
           // a non controlled error (internal error).
           // if requestToResponse gracefully produced a 500 response (it did not throw)
@@ -3938,20 +6360,22 @@ const startServer = async ({
             stop(STOP_REASON_INTERNAL_ERROR);
           }
 
-          const responseDescriptionFromError = (await errorToResponse(error, {
+          const handleErrorReturnValue = await serviceController.callAsyncHooksUntil("handleError", errorWhileHandlingRequest, {
             request,
-            sendErrorDetails
-          })) || (await applyDefaultErrorToResponse(error, {
-            request,
-            sendErrorDetails
-          }));
+            warn
+          });
+
+          if (!handleErrorReturnValue) {
+            throw errorWhileHandlingRequest;
+          }
+
           addRequestLog(requestNode, {
             type: "error",
             value: createDetailedMessage$1(`internal error while handling request`, {
-              "error stack": error.stack
+              "error stack": errorWhileHandlingRequest.stack
             })
           });
-          return composeTwoResponses({
+          responseProperties = composeTwoResponses({
             status: 500,
             statusText: "Internal Server Error",
             headers: {
@@ -3959,9 +6383,9 @@ const startServer = async ({
               "cache-control": "no-store",
               "content-type": "text/plain"
             }
-          }, responseDescriptionFromError);
+          }, handleErrorReturnValue);
         }
-
+      } else {
         const {
           status = 501,
           statusText,
@@ -3969,8 +6393,8 @@ const startServer = async ({
           headers = {},
           body,
           ...rest
-        } = result.returnValue || {};
-        const responseProperties = {
+        } = handleRequestReturnValue || {};
+        responseProperties = {
           status,
           statusText,
           statusMessage,
@@ -3978,24 +6402,21 @@ const startServer = async ({
           body,
           ...rest
         };
-        return responseProperties;
-      };
+      }
 
-      let responseProperties = await readResponseProperties(); // call every plugin "onResponse" hook
+      if (serverTiming) {
+        const responseReadyMeasure = performance.now();
+        const timeToStartResponding = responseReadyMeasure - requestReceivedMeasure;
+        const serverTiming = { ...handleRequestTimings,
+          ...responseProperties.timing,
+          "time to start responding": timeToStartResponding
+        };
+        responseProperties.headers = composeTwoHeaders(responseProperties.headers, timingToServerTimingResponseHeaders(serverTiming));
+      }
 
-      requestPlugins.forEach(requestPlugin => {
-        const {
-          onResponse
-        } = requestPlugin;
-
-        if (onResponse) {
-          const returnValue = onResponse(responseProperties);
-
-          if (returnValue) {
-            responseProperties = composeTwoResponses(responseProperties, returnValue);
-          }
-        }
-      });
+      if (requestWaitingMs) {
+        clearTimeout(requestWaitingTimeout);
+      }
 
       if (request.method !== "HEAD" && responseProperties.headers["content-length"] > 0 && !responseProperties.body) {
         addRequestLog(requestNode, {
@@ -4004,6 +6425,18 @@ const startServer = async ({
         });
       }
 
+      serviceController.callHooks("injectResponseHeaders", responseProperties, {
+        request,
+        warn
+      }, returnValue => {
+        if (returnValue) {
+          responseProperties.headers = composeTwoHeaders(responseProperties.headers, returnValue);
+        }
+      });
+      serviceController.callHooks("responseReady", responseProperties, {
+        request,
+        warn
+      });
       return responseProperties;
     };
 
@@ -4104,7 +6537,11 @@ const startServer = async ({
   stopCallbackList.add(removeRequestListener);
 
   if (startLog) {
-    logger.info(`${serverName} started at ${serverOrigin} (${serverOrigins.external})`);
+    if (serverOrigins.network) {
+      logger.info(`${serverName} started at ${serverOrigins.local} (${serverOrigins.network})`);
+    } else {
+      logger.info(`${serverName} started at ${serverOrigins.local}`);
+    }
   }
 
   const addEffect = callback => {
@@ -4117,6 +6554,7 @@ const startServer = async ({
 
   return {
     getStatus: () => status,
+    port,
     origin: serverOrigin,
     origins: serverOrigins,
     nodeServer,
@@ -4157,31 +6595,6 @@ const createNodeServer = async ({
   });
 };
 
-const generateResponseDescription = async ({
-  requestToResponse,
-  request,
-  pushResponse
-}) => {
-  try {
-    const returnValue = await requestToResponse(request, {
-      pushResponse
-    });
-    return {
-      returnValue
-    };
-  } catch (error) {
-    if (error.name === "AbortError" && request.signal.aborted) {
-      return {
-        aborted: true
-      };
-    }
-
-    return {
-      error
-    };
-  }
-};
-
 const testCanPushStream = http2Stream => {
   if (!http2Stream.pushAllowed) {
     return {
@@ -4215,106 +6628,6 @@ const PROCESS_TEARDOWN_EVENTS_MAP = {
   SIGINT: STOP_REASON_PROCESS_SIGINT,
   beforeExit: STOP_REASON_PROCESS_BEFORE_EXIT,
   exit: STOP_REASON_PROCESS_EXIT
-};
-
-const timeStart = name => {
-  // as specified in https://w3c.github.io/server-timing/#the-performanceservertiming-interface
-  // duration is a https://www.w3.org/TR/hr-time-2/#sec-domhighrestimestamp
-  const startTimestamp = performance.now();
-
-  const timeEnd = () => {
-    const endTimestamp = performance.now();
-    const timing = {
-      [name]: endTimestamp - startTimestamp
-    };
-    return timing;
-  };
-
-  return timeEnd;
-};
-const timeFunction = (name, fn) => {
-  const timeEnd = timeStart(name);
-  const returnValue = fn();
-
-  if (returnValue && typeof returnValue.then === "function") {
-    return returnValue.then(value => {
-      return [timeEnd(), value];
-    });
-  }
-
-  return [timeEnd(), returnValue];
-};
-
-const composeServices = namedServices => {
-  return async (request, {
-    pushResponse
-  }) => {
-    const redirectRequest = requestRedirection => {
-      request = applyRedirectionToRequest(request, requestRedirection);
-    };
-
-    const servicesTiming = {};
-    const response = await firstOperationMatching({
-      array: Object.keys(namedServices).map(serviceName => {
-        return {
-          serviceName,
-          serviceFn: namedServices[serviceName]
-        };
-      }),
-      start: async ({
-        serviceName,
-        serviceFn
-      }) => {
-        const [serviceTiming, value] = await timeFunction(serviceName, () => serviceFn(request, {
-          pushResponse,
-          redirectRequest
-        }));
-        Object.assign(servicesTiming, serviceTiming);
-        return value;
-      },
-      predicate: returnValue => {
-        if (returnValue === null || typeof returnValue !== "object") {
-          return false;
-        }
-
-        return true;
-      }
-    });
-
-    if (response) {
-      return composeTwoResponses({
-        timing: servicesTiming
-      }, response);
-    }
-
-    return null;
-  };
-};
-
-const firstOperationMatching = ({
-  array,
-  start,
-  predicate
-}) => {
-  return new Promise((resolve, reject) => {
-    const visit = index => {
-      if (index >= array.length) {
-        return resolve();
-      }
-
-      const input = array[index];
-      const returnValue = start(input);
-      return Promise.resolve(returnValue).then(output => {
-        if (predicate(output)) {
-          return resolve(output);
-        }
-
-        return visit(index + 1);
-      }, reject);
-    };
-
-    visit(0);
-  });
 };
 
 const mediaTypeInfos = {
@@ -4510,7 +6823,7 @@ const normalizeMediaType = value => {
   return value;
 };
 
-const isFileSystemPath$1 = value => {
+const isFileSystemPath = value => {
   if (typeof value !== "string") {
     throw new TypeError(`isFileSystemPath first arg must be a string, got ${value}`);
   }
@@ -4519,10 +6832,10 @@ const isFileSystemPath$1 = value => {
     return true;
   }
 
-  return startsWithWindowsDriveLetter$1(value);
+  return startsWithWindowsDriveLetter(value);
 };
 
-const startsWithWindowsDriveLetter$1 = string => {
+const startsWithWindowsDriveLetter = string => {
   const firstChar = string[0];
   if (!/[a-zA-Z]/.test(firstChar)) return false;
   const secondChar = string[1];
@@ -4530,22 +6843,22 @@ const startsWithWindowsDriveLetter$1 = string => {
   return true;
 };
 
-const fileSystemPathToUrl$1 = value => {
-  if (!isFileSystemPath$1(value)) {
+const fileSystemPathToUrl = value => {
+  if (!isFileSystemPath(value)) {
     throw new Error(`received an invalid value for fileSystemPath: ${value}`);
   }
 
   return String(pathToFileURL(value));
 };
 
-const ETAG_FOR_EMPTY_CONTENT$1 = '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
-const bufferToEtag$1 = buffer => {
+const ETAG_FOR_EMPTY_CONTENT = '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
+const bufferToEtag = buffer => {
   if (!Buffer.isBuffer(buffer)) {
     throw new TypeError(`buffer expected, got ${buffer}`);
   }
 
   if (buffer.length === 0) {
-    return ETAG_FOR_EMPTY_CONTENT$1;
+    return ETAG_FOR_EMPTY_CONTENT;
   }
 
   const hash = createHash("sha1");
@@ -4618,7 +6931,36 @@ const isErrorWithCode = (error, code) => {
   return typeof error === "object" && error.code === code;
 };
 
-const negotiateContentEncoding = (request, availableEncodings) => {
+const pickAcceptedContent = ({
+  availables,
+  accepteds,
+  getAcceptanceScore
+}) => {
+  let highestScore = -1;
+  let availableWithHighestScore = null;
+  let availableIndex = 0;
+
+  while (availableIndex < availables.length) {
+    const available = availables[availableIndex];
+    availableIndex++;
+    let acceptedIndex = 0;
+
+    while (acceptedIndex < accepteds.length) {
+      const accepted = accepteds[acceptedIndex];
+      acceptedIndex++;
+      const score = getAcceptanceScore(accepted, available);
+
+      if (score > highestScore) {
+        availableWithHighestScore = available;
+        highestScore = score;
+      }
+    }
+  }
+
+  return availableWithHighestScore;
+};
+
+const pickContentEncoding = (request, availableEncodings) => {
   const {
     headers = {}
   } = request;
@@ -4629,7 +6971,7 @@ const negotiateContentEncoding = (request, availableEncodings) => {
   }
 
   const encodingsAccepted = parseAcceptEncodingHeader(requestAcceptEncodingHeader);
-  return applyContentNegotiation({
+  return pickAcceptedContent({
     accepteds: encodingsAccepted,
     availables: availableEncodings,
     getAcceptanceScore: getEncodingAcceptanceScore
@@ -4679,6 +7021,71 @@ const getEncodingAcceptanceScore = ({
   }
 
   return -1;
+};
+
+const pickContentType = (request, availableContentTypes) => {
+  const {
+    headers = {}
+  } = request;
+  const requestAcceptHeader = headers.accept;
+
+  if (!requestAcceptHeader) {
+    return null;
+  }
+
+  const contentTypesAccepted = parseAcceptHeader(requestAcceptHeader);
+  return pickAcceptedContent({
+    accepteds: contentTypesAccepted,
+    availables: availableContentTypes,
+    getAcceptanceScore: getContentTypeAcceptanceScore
+  });
+};
+
+const parseAcceptHeader = acceptHeader => {
+  const acceptHeaderObject = parseMultipleHeader(acceptHeader, {
+    validateProperty: ({
+      name
+    }) => {
+      // read only q, anything else is ignored
+      return name === "q";
+    }
+  });
+  const accepts = [];
+  Object.keys(acceptHeaderObject).forEach(key => {
+    const {
+      q = 1
+    } = acceptHeaderObject[key];
+    const value = key;
+    accepts.push({
+      value,
+      quality: q
+    });
+  });
+  accepts.sort((a, b) => {
+    return b.quality - a.quality;
+  });
+  return accepts;
+};
+
+const getContentTypeAcceptanceScore = ({
+  value,
+  quality
+}, availableContentType) => {
+  const [acceptedType, acceptedSubtype] = decomposeContentType(value);
+  const [availableType, availableSubtype] = decomposeContentType(availableContentType);
+  const typeAccepted = acceptedType === "*" || acceptedType === availableType;
+  const subtypeAccepted = acceptedSubtype === "*" || acceptedSubtype === availableSubtype;
+
+  if (typeAccepted && subtypeAccepted) {
+    return quality;
+  }
+
+  return -1;
+};
+
+const decomposeContentType = fullType => {
+  const [type, subtype] = fullType.split("/");
+  return [type, subtype];
 };
 
 const serveDirectory = (url, {
@@ -4733,7 +7140,7 @@ const serveDirectory = (url, {
       };
     }
   };
-  const bestContentType = negotiateContentType({
+  const bestContentType = pickContentType({
     headers
   }, Object.keys(responseProducers));
   return responseProducers[bestContentType || "application/json"]();
@@ -5014,7 +7421,7 @@ const computeEtag = async ({
       }
     });
   });
-  const eTag = bufferToEtag$1(fileContentAsBuffer);
+  const eTag = bufferToEtag(fileContentAsBuffer);
 
   if (etagMemory) {
     if (ETAG_MEMORY_MAP.size >= etagMemoryMaxSize) {
@@ -5080,7 +7487,7 @@ const getCompressedResponse = async ({
   sourceUrl,
   headers
 }) => {
-  const acceptedCompressionFormat = negotiateContentEncoding({
+  const acceptedCompressionFormat = pickContentEncoding({
     headers
   }, Object.keys(availableCompressionFormats));
 
@@ -5158,8 +7565,8 @@ const asUrlString = value => {
   }
 
   if (typeof value === "string") {
-    if (isFileSystemPath$1(value)) {
-      return fileSystemPathToUrl$1(value);
+    if (isFileSystemPath(value)) {
+      return fileSystemPathToUrl(value);
     }
 
     try {
@@ -5173,9 +7580,89 @@ const asUrlString = value => {
   return null;
 };
 
+const jsenvServiceErrorHandler = ({
+  sendErrorDetails = false
+} = {}) => {
+  return {
+    name: "jsenv:error_handler",
+    handleError: (serverInternalError, {
+      request
+    }) => {
+      const serverInternalErrorIsAPrimitive = serverInternalError === null || typeof serverInternalError !== "object" && typeof serverInternalError !== "function";
+
+      if (!serverInternalErrorIsAPrimitive && serverInternalError.asResponse) {
+        return serverInternalError.asResponse();
+      }
+
+      const dataToSend = serverInternalErrorIsAPrimitive ? {
+        code: "VALUE_THROWED",
+        value: serverInternalError
+      } : {
+        code: serverInternalError.code || "UNKNOWN_ERROR",
+        ...(sendErrorDetails ? {
+          stack: serverInternalError.stack,
+          ...serverInternalError
+        } : {})
+      };
+      const availableContentTypes = {
+        "text/html": () => {
+          const renderHtmlForErrorWithoutDetails = () => {
+            return `<p>Details not available: to enable them use jsenvServiceErrorHandler({ sendErrorDetails: true }).</p>`;
+          };
+
+          const renderHtmlForErrorWithDetails = () => {
+            if (serverInternalErrorIsAPrimitive) {
+              return `<pre>${JSON.stringify(serverInternalError, null, "  ")}</pre>`;
+            }
+
+            return `<pre>${serverInternalError.stack}</pre>`;
+          };
+
+          const body = `<!DOCTYPE html>
+<html>
+  <head>
+    <title>Internal server error</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <h1>Internal server error</h1>
+    <p>${serverInternalErrorIsAPrimitive ? `Code inside server has thrown a literal.` : `Code inside server has thrown an error.`}</p>
+    <details>
+      <summary>See internal error details</summary>
+      ${sendErrorDetails ? renderHtmlForErrorWithDetails() : renderHtmlForErrorWithoutDetails()}
+    </details>
+  </body>
+</html>`;
+          return {
+            headers: {
+              "content-type": "text/html",
+              "content-length": Buffer.byteLength(body)
+            },
+            body
+          };
+        },
+        "application/json": () => {
+          const body = JSON.stringify(dataToSend);
+          return {
+            headers: {
+              "content-type": "application/json",
+              "content-length": Buffer.byteLength(body)
+            },
+            body
+          };
+        }
+      };
+      const bestContentType = pickContentType(request, Object.keys(availableContentTypes));
+      return availableContentTypes[bestContentType || "application/json"]();
+    }
+  };
+};
+
 const jsenvAccessControlAllowedHeaders = ["x-requested-with"];
 const jsenvAccessControlAllowedMethods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"];
-const pluginCORS = ({
+const jsenvServiceCORS = ({
   accessControlAllowedOrigins = [],
   accessControlAllowedMethods = jsenvAccessControlAllowedMethods,
   accessControlAllowedHeaders = jsenvAccessControlAllowedHeaders,
@@ -5186,64 +7673,47 @@ const pluginCORS = ({
   // by default OPTIONS request can be cache for a long time, it's not going to change soon ?
   // we could put a lot here, see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Max-Age
   accessControlMaxAge = 600,
-  timingAllowOrigin
+  timingAllowOrigin = false
 } = {}) => {
   // TODO: we should check access control params to throw or warn if we find strange values
   const corsEnabled = accessControlAllowRequestOrigin || accessControlAllowedOrigins.length;
 
   if (!corsEnabled) {
-    return {
-      cors: {}
-    };
+    return [];
   }
 
   return {
-    cors: {
-      onServerParams: ({
-        plugins
-      }) => {
-        if (timingAllowOrigin === undefined && plugins.server_timings) {
-          timingAllowOrigin = true;
-        }
-      },
-      onRequest: (request, {
-        shortcircuitResponse
-      }) => {
-        if (request.method === "OPTIONS") {
-          // when request method is "OPTIONS" we must return a 200 without body
-          // So we bypass "requestToResponse" in that scenario using shortcircuitResponse
-          shortcircuitResponse({
-            status: 200,
-            headers: {
-              "content-length": 0
-            }
-          });
-        }
-
-        if (request.parent) {
-          return null;
-        }
-
+    name: "jsenv:cors",
+    handleRequest: request => {
+      // when request method is "OPTIONS" we must return a 200 without body
+      // So we bypass "requestToResponse" in that scenario using shortcircuitResponse
+      if (request.method === "OPTIONS") {
         return {
-          onResponse: () => {
-            const accessControlHeaders = generateAccessControlHeaders({
-              request,
-              accessControlAllowedOrigins,
-              accessControlAllowRequestOrigin,
-              accessControlAllowedMethods,
-              accessControlAllowRequestMethod,
-              accessControlAllowedHeaders,
-              accessControlAllowRequestHeaders,
-              accessControlAllowCredentials,
-              accessControlMaxAge,
-              timingAllowOrigin
-            });
-            return {
-              headers: accessControlHeaders
-            };
+          status: 200,
+          headers: {
+            "content-length": 0
           }
         };
       }
+
+      return null;
+    },
+    injectResponseHeaders: (response, {
+      request
+    }) => {
+      const accessControlHeaders = generateAccessControlHeaders({
+        request,
+        accessControlAllowedOrigins,
+        accessControlAllowRequestOrigin,
+        accessControlAllowedMethods,
+        accessControlAllowRequestMethod,
+        accessControlAllowedHeaders,
+        accessControlAllowRequestHeaders,
+        accessControlAllowCredentials,
+        accessControlMaxAge,
+        timingAllowOrigin
+      });
+      return accessControlHeaders;
     }
   };
 }; // https://www.w3.org/TR/cors/
@@ -5322,73 +7792,6 @@ const generateAccessControlHeaders = ({
     ...(vary.length ? {
       vary: vary.join(", ")
     } : {})
-  };
-};
-
-// because in chrome dev tools they are shown in alphabetic order
-// also we should manipulate a timing object instead of a header to facilitate
-// manipulation of the object so that the timing header response generation logic belongs to @jsenv/server
-// so response can return a new timing object
-// yes it's awful, feel free to PR with a better approach :)
-
-const timingToServerTimingResponseHeaders = timing => {
-  const serverTimingHeader = {};
-  Object.keys(timing).forEach((key, index) => {
-    const name = letters[index] || "zz";
-    serverTimingHeader[name] = {
-      desc: key,
-      dur: timing[key]
-    };
-  });
-  const serverTimingHeaderString = stringifyServerTimingHeader(serverTimingHeader);
-  return {
-    "server-timing": serverTimingHeaderString
-  };
-};
-const stringifyServerTimingHeader = serverTimingHeader => {
-  return stringifyMultipleHeader(serverTimingHeader, {
-    validateName: validateServerTimingName
-  });
-}; // (),/:;<=>?@[\]{}" Don't allowed
-// Minimal length is one symbol
-// Digits, alphabet characters,
-// and !#$%&'*+-.^_`|~ are allowed
-// https://www.w3.org/TR/2019/WD-server-timing-20190307/#the-server-timing-header-field
-// https://tools.ietf.org/html/rfc7230#section-3.2.6
-
-const validateServerTimingName = name => {
-  const valid = /^[!#$%&'*+\-.^_`|~0-9a-z]+$/gi.test(name);
-
-  if (!valid) {
-    console.warn(`server timing contains invalid symbols`);
-    return false;
-  }
-
-  return true;
-};
-
-const letters = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"];
-
-// https://www.w3.org/TR/server-timing/
-const pluginServerTiming = () => {
-  return {
-    server_timing: {
-      onRequest: () => {
-        const requestStartEvent = performance.now();
-        return {
-          onResponse: response => {
-            const responseEndEvent = performance.now();
-            const timeToCreateResponse = responseEndEvent - requestStartEvent;
-            const serverTiming = { ...response.timing,
-              "time to start responding": timeToCreateResponse
-            };
-            return {
-              headers: timingToServerTimingResponseHeaders(serverTiming)
-            };
-          }
-        };
-      }
-    }
   };
 };
 
@@ -5705,2361 +8108,6 @@ const createEventHistory = limit => {
     add,
     since,
     reset
-  };
-};
-
-const pluginRequestWaitingCheck = ({
-  requestWaitingMs = 20000,
-  requestWaitingCallback = ({
-    request,
-    logger,
-    requestWaitingMs
-  }) => {
-    logger.warn(createDetailedMessage$1(`still no response found for request after ${requestWaitingMs} ms`, {
-      "request url": `${request.origin}${request.ressource}`,
-      "request headers": JSON.stringify(request.headers, null, "  ")
-    }));
-  }
-} = {}) => {
-  return {
-    plugin_request_waiting_check: {
-      onRequest: (request, {
-        logger
-      }) => {
-        const timeout = setTimeout(() => requestWaitingCallback({
-          request,
-          logger,
-          requestWaitingMs
-        }), requestWaitingMs);
-        return {
-          onResponse: () => {
-            clearTimeout(timeout);
-          }
-        };
-      }
-    }
-  };
-};
-
-/*
- * data:[<mediatype>][;base64],<data>
- * https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URIs#syntax
- */
-
-/* eslint-env browser, node */
-const DATA_URL = {
-  parse: string => {
-    const afterDataProtocol = string.slice("data:".length);
-    const commaIndex = afterDataProtocol.indexOf(",");
-    const beforeComma = afterDataProtocol.slice(0, commaIndex);
-    let contentType;
-    let base64Flag;
-
-    if (beforeComma.endsWith(`;base64`)) {
-      contentType = beforeComma.slice(0, -`;base64`.length);
-      base64Flag = true;
-    } else {
-      contentType = beforeComma;
-      base64Flag = false;
-    }
-
-    contentType = contentType === "" ? "text/plain;charset=US-ASCII" : contentType;
-    const afterComma = afterDataProtocol.slice(commaIndex + 1);
-    return {
-      contentType,
-      base64Flag,
-      data: afterComma
-    };
-  },
-  stringify: ({
-    contentType,
-    base64Flag = true,
-    data
-  }) => {
-    if (!contentType || contentType === "text/plain;charset=US-ASCII") {
-      // can be a buffer or a string, hence check on data.length instead of !data or data === ''
-      if (data.length === 0) {
-        return `data:,`;
-      }
-
-      if (base64Flag) {
-        return `data:;base64,${data}`;
-      }
-
-      return `data:,${data}`;
-    }
-
-    if (base64Flag) {
-      return `data:${contentType};base64,${data}`;
-    }
-
-    return `data:${contentType},${data}`;
-  }
-};
-
-const urlToScheme$1 = url => {
-  const urlString = String(url);
-  const colonIndex = urlString.indexOf(":");
-
-  if (colonIndex === -1) {
-    return "";
-  }
-
-  const scheme = urlString.slice(0, colonIndex);
-  return scheme;
-};
-
-const urlToRessource$1 = url => {
-  const scheme = urlToScheme$1(url);
-
-  if (scheme === "file") {
-    const urlAsStringWithoutFileProtocol = String(url).slice("file://".length);
-    return urlAsStringWithoutFileProtocol;
-  }
-
-  if (scheme === "https" || scheme === "http") {
-    // remove origin
-    const afterProtocol = String(url).slice(scheme.length + "://".length);
-    const pathnameSlashIndex = afterProtocol.indexOf("/", "://".length);
-    const urlAsStringWithoutOrigin = afterProtocol.slice(pathnameSlashIndex);
-    return urlAsStringWithoutOrigin;
-  }
-
-  const urlAsStringWithoutProtocol = String(url).slice(scheme.length + 1);
-  return urlAsStringWithoutProtocol;
-};
-
-const urlToPathname$1 = url => {
-  const ressource = urlToRessource$1(url);
-  const pathname = ressourceToPathname$1(ressource);
-  return pathname;
-};
-
-const ressourceToPathname$1 = ressource => {
-  const searchSeparatorIndex = ressource.indexOf("?");
-
-  if (searchSeparatorIndex > -1) {
-    return ressource.slice(0, searchSeparatorIndex);
-  }
-
-  const hashIndex = ressource.indexOf("#");
-
-  if (hashIndex > -1) {
-    return ressource.slice(0, hashIndex);
-  }
-
-  return ressource;
-};
-
-const urlToFilename$1 = url => {
-  const pathname = urlToPathname$1(url);
-  const pathnameBeforeLastSlash = pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
-  const slashLastIndex = pathnameBeforeLastSlash.lastIndexOf("/");
-  const filename = slashLastIndex === -1 ? pathnameBeforeLastSlash : pathnameBeforeLastSlash.slice(slashLastIndex + 1);
-  return filename;
-};
-
-const generateInlineContentUrl = ({
-  url,
-  extension,
-  line,
-  column,
-  lineEnd,
-  columnEnd
-}) => {
-  const generatedName = line === lineEnd ? `L${line}C${column}-L${lineEnd}C${columnEnd}` : `L${line}-L${lineEnd}`;
-  const filenameRaw = urlToFilename$1(url);
-  const filename = `${filenameRaw}@${generatedName}${extension}`; // ideally we should keep query params from url
-  // maybe we could use a custom scheme like "inline:"
-
-  const inlineContentUrl = new URL(filename, url).href;
-  return inlineContentUrl;
-};
-
-// consider switching to https://babeljs.io/docs/en/babel-code-frame
-const stringifyUrlSite = ({
-  url,
-  line,
-  column,
-  content
-}, {
-  showCodeFrame = true,
-  numberOfSurroundingLinesToShow,
-  lineMaxLength,
-  color
-} = {}) => {
-  let string = url;
-
-  if (typeof line === "number") {
-    string += `:${line}`;
-
-    if (typeof column === "number") {
-      string += `:${column}`;
-    }
-  }
-
-  if (!showCodeFrame || typeof line !== "number" || !content) {
-    return string;
-  }
-
-  const sourceLoc = showSourceLocation({
-    content,
-    line,
-    column,
-    numberOfSurroundingLinesToShow,
-    lineMaxLength,
-    color
-  });
-  return `${string}
-${sourceLoc}`;
-};
-const showSourceLocation = ({
-  content,
-  line,
-  column,
-  numberOfSurroundingLinesToShow = 1,
-  lineMaxLength = 120
-} = {}) => {
-  let mark = string => string;
-
-  let aside = string => string; // if (color) {
-  //   mark = (string) => ANSI.color(string, ANSI.RED)
-  //   aside = (string) => ANSI.color(string, ANSI.GREY)
-  // }
-
-
-  const lines = content.split(/\r?\n/);
-  if (line === 0) line = 1;
-  let lineRange = {
-    start: line - 1,
-    end: line
-  };
-  lineRange = moveLineRangeUp(lineRange, numberOfSurroundingLinesToShow);
-  lineRange = moveLineRangeDown(lineRange, numberOfSurroundingLinesToShow);
-  lineRange = lineRangeWithinLines(lineRange, lines);
-  const linesToShow = lines.slice(lineRange.start, lineRange.end);
-  const endLineNumber = lineRange.end;
-  const lineNumberMaxWidth = String(endLineNumber).length;
-  if (column === 0) column = 1;
-  const columnRange = {};
-
-  if (column === undefined) {
-    columnRange.start = 0;
-    columnRange.end = lineMaxLength;
-  } else if (column > lineMaxLength) {
-    columnRange.start = column - Math.floor(lineMaxLength / 2);
-    columnRange.end = column + Math.ceil(lineMaxLength / 2);
-  } else {
-    columnRange.start = 0;
-    columnRange.end = lineMaxLength;
-  }
-
-  return linesToShow.map((lineSource, index) => {
-    const lineNumber = lineRange.start + index + 1;
-    const isMainLine = lineNumber === line;
-    const lineSourceTruncated = applyColumnRange(columnRange, lineSource);
-    const lineNumberWidth = String(lineNumber).length; // ensure if line moves from 7,8,9 to 10 the display is still great
-
-    const lineNumberRightSpacing = " ".repeat(lineNumberMaxWidth - lineNumberWidth);
-    const asideSource = `${lineNumber}${lineNumberRightSpacing} |`;
-    const lineFormatted = `${aside(asideSource)} ${lineSourceTruncated}`;
-
-    if (isMainLine) {
-      if (column === undefined) {
-        return `${mark(">")} ${lineFormatted}`;
-      }
-
-      const spacing = stringToSpaces(`${asideSource} ${lineSourceTruncated.slice(0, column - columnRange.start - 1)}`);
-      return `${mark(">")} ${lineFormatted}
-  ${spacing}${mark("^")}`;
-    }
-
-    return `  ${lineFormatted}`;
-  }).join(`
-`);
-};
-
-const applyColumnRange = ({
-  start,
-  end
-}, line) => {
-  if (typeof start !== "number") {
-    throw new TypeError(`start must be a number, received ${start}`);
-  }
-
-  if (typeof end !== "number") {
-    throw new TypeError(`end must be a number, received ${end}`);
-  }
-
-  if (end < start) {
-    throw new Error(`end must be greater than start, but ${end} is smaller than ${start}`);
-  }
-
-  const prefix = "…";
-  const suffix = "…";
-  const lastIndex = line.length;
-
-  if (line.length === 0) {
-    // don't show any ellipsis if the line is empty
-    // because it's not truncated in that case
-    return "";
-  }
-
-  const startTruncated = start > 0;
-  const endTruncated = lastIndex > end;
-  let from = startTruncated ? start + prefix.length : start;
-  let to = endTruncated ? end - suffix.length : end;
-  if (to > lastIndex) to = lastIndex;
-
-  if (start >= lastIndex || from === to) {
-    return "";
-  }
-
-  let result = "";
-
-  while (from < to) {
-    result += line[from];
-    from++;
-  }
-
-  if (result.length === 0) {
-    return "";
-  }
-
-  if (startTruncated && endTruncated) {
-    return `${prefix}${result}${suffix}`;
-  }
-
-  if (startTruncated) {
-    return `${prefix}${result}`;
-  }
-
-  if (endTruncated) {
-    return `${result}${suffix}`;
-  }
-
-  return result;
-};
-
-const stringToSpaces = string => string.replace(/[^\t]/g, " "); // const getLineRangeLength = ({ start, end }) => end - start
-
-
-const moveLineRangeUp = ({
-  start,
-  end
-}, number) => {
-  return {
-    start: start - number,
-    end
-  };
-};
-
-const moveLineRangeDown = ({
-  start,
-  end
-}, number) => {
-  return {
-    start,
-    end: end + number
-  };
-};
-
-const lineRangeWithinLines = ({
-  start,
-  end
-}, lines) => {
-  return {
-    start: start < 0 ? 0 : start,
-    end: end > lines.length ? lines.length : end
-  };
-};
-
-const urlToExtension$1 = url => {
-  const pathname = urlToPathname$1(url);
-  return pathnameToExtension$1(pathname);
-};
-
-const pathnameToExtension$1 = pathname => {
-  const slashLastIndex = pathname.lastIndexOf("/");
-
-  if (slashLastIndex !== -1) {
-    pathname = pathname.slice(slashLastIndex + 1);
-  }
-
-  const dotLastIndex = pathname.lastIndexOf(".");
-  if (dotLastIndex === -1) return ""; // if (dotLastIndex === pathname.length - 1) return ""
-
-  const extension = pathname.slice(dotLastIndex);
-  return extension;
-};
-
-const asUrlWithoutSearch = url => {
-  const urlObject = new URL(url);
-  urlObject.search = "";
-  return urlObject.href;
-};
-const isValidUrl$1 = url => {
-  try {
-    // eslint-disable-next-line no-new
-    new URL(url);
-    return true;
-  } catch (e) {
-    return false;
-  }
-}; // normalize url search params:
-// Using URLSearchParams to alter the url search params
-// can result into "file:///file.css?css_module"
-// becoming "file:///file.css?css_module="
-// we want to get rid of the "=" and consider it's the same url
-
-const normalizeUrl = url => {
-  if (url.includes("?")) {
-    // disable on data urls (would mess up base64 encoding)
-    if (url.startsWith("data:")) {
-      return url;
-    }
-
-    return url.replace(/[=](?=&|$)/g, "");
-  }
-
-  return url;
-};
-const injectQueryParamsIntoSpecifier = (specifier, params) => {
-  if (isValidUrl$1(specifier)) {
-    return injectQueryParams(specifier, params);
-  }
-
-  const [beforeQuestion, afterQuestion = ""] = specifier.split("?");
-  const searchParams = new URLSearchParams(afterQuestion);
-  Object.keys(params).forEach(key => {
-    searchParams.set(key, params[key]);
-  });
-  const paramsString = searchParams.toString();
-
-  if (paramsString) {
-    return `${beforeQuestion}?${paramsString}`;
-  }
-
-  return specifier;
-};
-const injectQueryParams = (url, params) => {
-  const urlObject = new URL(url);
-  Object.keys(params).forEach(key => {
-    urlObject.searchParams.set(key, params[key]);
-  });
-  const urlWithParams = urlObject.href;
-  return urlWithParams;
-};
-const setUrlFilename = (url, filename) => {
-  const urlObject = new URL(url);
-  let {
-    origin,
-    search,
-    hash
-  } = urlObject; // origin is "null" for "file://" urls with Node.js
-
-  if (origin === "null" && urlObject.href.startsWith("file:")) {
-    origin = "file://";
-  }
-
-  const parentPathname = new URL("./", urlObject).pathname;
-  return `${origin}${parentPathname}${filename}${search}${hash}`;
-};
-const ensurePathnameTrailingSlash = url => {
-  const urlObject = new URL(url);
-  const {
-    pathname
-  } = urlObject;
-
-  if (pathname.endsWith("/")) {
-    return url;
-  }
-
-  let {
-    origin
-  } = urlObject; // origin is "null" for "file://" urls with Node.js
-
-  if (origin === "null" && urlObject.href.startsWith("file:")) {
-    origin = "file://";
-  }
-
-  const {
-    search,
-    hash
-  } = urlObject;
-  return `${origin}${pathname}/${search}${hash}`;
-};
-const asUrlUntilPathname = url => {
-  const urlObject = new URL(url);
-  let {
-    origin,
-    pathname
-  } = urlObject; // origin is "null" for "file://" urls with Node.js
-
-  if (origin === "null" && urlObject.href.startsWith("file:")) {
-    origin = "file://";
-  }
-
-  const urlUntilPathname = `${origin}${pathname}`;
-  return urlUntilPathname;
-};
-
-const isFileSystemPath = value => {
-  if (typeof value !== "string") {
-    throw new TypeError(`isFileSystemPath first arg must be a string, got ${value}`);
-  }
-
-  if (value[0] === "/") {
-    return true;
-  }
-
-  return startsWithWindowsDriveLetter(value);
-};
-
-const startsWithWindowsDriveLetter = string => {
-  const firstChar = string[0];
-  if (!/[a-zA-Z]/.test(firstChar)) return false;
-  const secondChar = string[1];
-  if (secondChar !== ":") return false;
-  return true;
-};
-
-const fileSystemPathToUrl = value => {
-  if (!isFileSystemPath(value)) {
-    throw new Error(`value must be a filesystem path, got ${value}`);
-  }
-
-  return String(pathToFileURL(value));
-};
-
-const getCallerPosition = () => {
-  const {
-    prepareStackTrace
-  } = Error;
-
-  Error.prepareStackTrace = (error, stack) => {
-    Error.prepareStackTrace = prepareStackTrace;
-    return stack;
-  };
-
-  const {
-    stack
-  } = new Error();
-  const callerCallsite = stack[2];
-  const fileName = callerCallsite.getFileName();
-  return {
-    url: fileName && isFileSystemPath(fileName) ? fileSystemPathToUrl(fileName) : fileName,
-    line: callerCallsite.getLineNumber(),
-    column: callerCallsite.getColumnNumber()
-  };
-};
-
-const resolveUrl$1 = (specifier, baseUrl) => {
-  if (typeof baseUrl === "undefined") {
-    throw new TypeError(`baseUrl missing to resolve ${specifier}`);
-  }
-
-  return String(new URL(specifier, baseUrl));
-};
-
-const resolveDirectoryUrl = (specifier, baseUrl) => {
-  const url = resolveUrl$1(specifier, baseUrl);
-  return ensurePathnameTrailingSlash(url);
-};
-
-const getCommonPathname = (pathname, otherPathname) => {
-  if (pathname === otherPathname) {
-    return pathname;
-  }
-
-  let commonPart = "";
-  let commonPathname = "";
-  let i = 0;
-  const length = pathname.length;
-  const otherLength = otherPathname.length;
-
-  while (i < length) {
-    const char = pathname.charAt(i);
-    const otherChar = otherPathname.charAt(i);
-    i++;
-
-    if (char === otherChar) {
-      if (char === "/") {
-        commonPart += "/";
-        commonPathname += commonPart;
-        commonPart = "";
-      } else {
-        commonPart += char;
-      }
-    } else {
-      if (char === "/" && i - 1 === otherLength) {
-        commonPart += "/";
-        commonPathname += commonPart;
-      }
-
-      return commonPathname;
-    }
-  }
-
-  if (length === otherLength) {
-    commonPathname += commonPart;
-  } else if (otherPathname.charAt(i) === "/") {
-    commonPathname += commonPart;
-  }
-
-  return commonPathname;
-};
-
-const urlToRelativeUrl = (url, baseUrl) => {
-  const urlObject = new URL(url);
-  const baseUrlObject = new URL(baseUrl);
-
-  if (urlObject.protocol !== baseUrlObject.protocol) {
-    const urlAsString = String(url);
-    return urlAsString;
-  }
-
-  if (urlObject.username !== baseUrlObject.username || urlObject.password !== baseUrlObject.password || urlObject.host !== baseUrlObject.host) {
-    const afterUrlScheme = String(url).slice(urlObject.protocol.length);
-    return afterUrlScheme;
-  }
-
-  const {
-    pathname,
-    hash,
-    search
-  } = urlObject;
-
-  if (pathname === "/") {
-    const baseUrlRessourceWithoutLeadingSlash = baseUrlObject.pathname.slice(1);
-    return baseUrlRessourceWithoutLeadingSlash;
-  }
-
-  const basePathname = baseUrlObject.pathname;
-  const commonPathname = getCommonPathname(pathname, basePathname);
-
-  if (!commonPathname) {
-    const urlAsString = String(url);
-    return urlAsString;
-  }
-
-  const specificPathname = pathname.slice(commonPathname.length);
-  const baseSpecificPathname = basePathname.slice(commonPathname.length);
-
-  if (baseSpecificPathname.includes("/")) {
-    const baseSpecificParentPathname = pathnameToParentPathname$1(baseSpecificPathname);
-    const relativeDirectoriesNotation = baseSpecificParentPathname.replace(/.*?\//g, "../");
-    const relativeUrl = `${relativeDirectoriesNotation}${specificPathname}${search}${hash}`;
-    return relativeUrl;
-  }
-
-  const relativeUrl = `${specificPathname}${search}${hash}`;
-  return relativeUrl;
-};
-
-const pathnameToParentPathname$1 = pathname => {
-  const slashLastIndex = pathname.lastIndexOf("/");
-
-  if (slashLastIndex === -1) {
-    return "/";
-  }
-
-  return pathname.slice(0, slashLastIndex + 1);
-};
-
-const moveUrl = ({
-  url,
-  from,
-  to,
-  preferAbsolute = false
-}) => {
-  let relativeUrl = urlToRelativeUrl(url, from);
-
-  if (relativeUrl.slice(0, 2) === "//") {
-    // restore the protocol
-    relativeUrl = new URL(relativeUrl, url).href;
-  }
-
-  const absoluteUrl = new URL(relativeUrl, to).href;
-
-  if (preferAbsolute) {
-    return absoluteUrl;
-  }
-
-  return urlToRelativeUrl(absoluteUrl, to);
-};
-
-const urlIsInsideOf = (url, otherUrl) => {
-  const urlObject = new URL(url);
-  const otherUrlObject = new URL(otherUrl);
-
-  if (urlObject.origin !== otherUrlObject.origin) {
-    return false;
-  }
-
-  const urlPathname = urlObject.pathname;
-  const otherUrlPathname = otherUrlObject.pathname;
-
-  if (urlPathname === otherUrlPathname) {
-    return false;
-  }
-
-  const isInside = urlPathname.startsWith(otherUrlPathname);
-  return isInside;
-};
-
-const urlToBasename = url => {
-  const filename = urlToFilename$1(url);
-  const dotLastIndex = filename.lastIndexOf(".");
-  const basename = dotLastIndex === -1 ? filename : filename.slice(0, dotLastIndex);
-  return basename;
-};
-
-const urlToFileSystemPath = url => {
-  let urlString = String(url);
-
-  if (urlString[urlString.length - 1] === "/") {
-    // remove trailing / so that nodejs path becomes predictable otherwise it logs
-    // the trailing slash on linux but does not on windows
-    urlString = urlString.slice(0, -1);
-  }
-
-  const fileSystemPath = fileURLToPath(urlString);
-  return fileSystemPath;
-};
-
-const assertAndNormalizeDirectoryUrl = value => {
-  let urlString;
-
-  if (value instanceof URL) {
-    urlString = value.href;
-  } else if (typeof value === "string") {
-    if (isFileSystemPath(value)) {
-      urlString = fileSystemPathToUrl(value);
-    } else {
-      try {
-        urlString = String(new URL(value));
-      } catch (e) {
-        throw new TypeError(`directoryUrl must be a valid url, received ${value}`);
-      }
-    }
-  } else {
-    throw new TypeError(`directoryUrl must be a string or an url, received ${value}`);
-  }
-
-  if (!urlString.startsWith("file://")) {
-    throw new Error(`directoryUrl must starts with file://, received ${value}`);
-  }
-
-  return ensurePathnameTrailingSlash(urlString);
-};
-
-const assertAndNormalizeFileUrl = (value, baseUrl) => {
-  let urlString;
-
-  if (value instanceof URL) {
-    urlString = value.href;
-  } else if (typeof value === "string") {
-    if (isFileSystemPath(value)) {
-      urlString = fileSystemPathToUrl(value);
-    } else {
-      try {
-        urlString = String(new URL(value, baseUrl));
-      } catch (e) {
-        throw new TypeError(`fileUrl must be a valid url, received ${value}`);
-      }
-    }
-  } else {
-    throw new TypeError(`fileUrl must be a string or an url, received ${value}`);
-  }
-
-  if (!urlString.startsWith("file://")) {
-    throw new Error(`fileUrl must starts with file://, received ${value}`);
-  }
-
-  return urlString;
-};
-
-const statsToType = stats => {
-  if (stats.isFile()) return "file";
-  if (stats.isDirectory()) return "directory";
-  if (stats.isSymbolicLink()) return "symbolic-link";
-  if (stats.isFIFO()) return "fifo";
-  if (stats.isSocket()) return "socket";
-  if (stats.isCharacterDevice()) return "character-device";
-  if (stats.isBlockDevice()) return "block-device";
-  return undefined;
-};
-
-// https://github.com/coderaiser/cloudcmd/issues/63#issuecomment-195478143
-// https://nodejs.org/api/fs.html#fs_file_modes
-// https://github.com/TooTallNate/stat-mode
-// cannot get from fs.constants because they are not available on windows
-const S_IRUSR = 256;
-/* 0000400 read permission, owner */
-
-const S_IWUSR = 128;
-/* 0000200 write permission, owner */
-
-const S_IXUSR = 64;
-/* 0000100 execute/search permission, owner */
-
-const S_IRGRP = 32;
-/* 0000040 read permission, group */
-
-const S_IWGRP = 16;
-/* 0000020 write permission, group */
-
-const S_IXGRP = 8;
-/* 0000010 execute/search permission, group */
-
-const S_IROTH = 4;
-/* 0000004 read permission, others */
-
-const S_IWOTH = 2;
-/* 0000002 write permission, others */
-
-const S_IXOTH = 1;
-const permissionsToBinaryFlags = ({
-  owner,
-  group,
-  others
-}) => {
-  let binaryFlags = 0;
-  if (owner.read) binaryFlags |= S_IRUSR;
-  if (owner.write) binaryFlags |= S_IWUSR;
-  if (owner.execute) binaryFlags |= S_IXUSR;
-  if (group.read) binaryFlags |= S_IRGRP;
-  if (group.write) binaryFlags |= S_IWGRP;
-  if (group.execute) binaryFlags |= S_IXGRP;
-  if (others.read) binaryFlags |= S_IROTH;
-  if (others.write) binaryFlags |= S_IWOTH;
-  if (others.execute) binaryFlags |= S_IXOTH;
-  return binaryFlags;
-};
-
-const writeEntryPermissions = async (source, permissions) => {
-  const sourceUrl = assertAndNormalizeFileUrl(source);
-  let binaryFlags;
-
-  if (typeof permissions === "object") {
-    permissions = {
-      owner: {
-        read: getPermissionOrComputeDefault("read", "owner", permissions),
-        write: getPermissionOrComputeDefault("write", "owner", permissions),
-        execute: getPermissionOrComputeDefault("execute", "owner", permissions)
-      },
-      group: {
-        read: getPermissionOrComputeDefault("read", "group", permissions),
-        write: getPermissionOrComputeDefault("write", "group", permissions),
-        execute: getPermissionOrComputeDefault("execute", "group", permissions)
-      },
-      others: {
-        read: getPermissionOrComputeDefault("read", "others", permissions),
-        write: getPermissionOrComputeDefault("write", "others", permissions),
-        execute: getPermissionOrComputeDefault("execute", "others", permissions)
-      }
-    };
-    binaryFlags = permissionsToBinaryFlags(permissions);
-  } else {
-    binaryFlags = permissions;
-  }
-
-  return new Promise((resolve, reject) => {
-    chmod(new URL(sourceUrl), binaryFlags, error => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve();
-      }
-    });
-  });
-};
-const actionLevels = {
-  read: 0,
-  write: 1,
-  execute: 2
-};
-const subjectLevels = {
-  others: 0,
-  group: 1,
-  owner: 2
-};
-
-const getPermissionOrComputeDefault = (action, subject, permissions) => {
-  if (subject in permissions) {
-    const subjectPermissions = permissions[subject];
-
-    if (action in subjectPermissions) {
-      return subjectPermissions[action];
-    }
-
-    const actionLevel = actionLevels[action];
-    const actionFallback = Object.keys(actionLevels).find(actionFallbackCandidate => actionLevels[actionFallbackCandidate] > actionLevel && actionFallbackCandidate in subjectPermissions);
-
-    if (actionFallback) {
-      return subjectPermissions[actionFallback];
-    }
-  }
-
-  const subjectLevel = subjectLevels[subject]; // do we have a subject with a stronger level (group or owner)
-  // where we could read the action permission ?
-
-  const subjectFallback = Object.keys(subjectLevels).find(subjectFallbackCandidate => subjectLevels[subjectFallbackCandidate] > subjectLevel && subjectFallbackCandidate in permissions);
-
-  if (subjectFallback) {
-    const subjectPermissions = permissions[subjectFallback];
-    return action in subjectPermissions ? subjectPermissions[action] : getPermissionOrComputeDefault(action, subjectFallback, permissions);
-  }
-
-  return false;
-};
-
-/*
- * - stats object documentation on Node.js
- *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
- */
-const isWindows$2 = process.platform === "win32";
-const readEntryStat = async (source, {
-  nullIfNotFound = false,
-  followLink = true
-} = {}) => {
-  let sourceUrl = assertAndNormalizeFileUrl(source);
-  if (sourceUrl.endsWith("/")) sourceUrl = sourceUrl.slice(0, -1);
-  const sourcePath = urlToFileSystemPath(sourceUrl);
-  const handleNotFoundOption = nullIfNotFound ? {
-    handleNotFoundError: () => null
-  } : {};
-  return readStat(sourcePath, {
-    followLink,
-    ...handleNotFoundOption,
-    ...(isWindows$2 ? {
-      // Windows can EPERM on stat
-      handlePermissionDeniedError: async error => {
-        console.error(`trying to fix windows EPERM after stats on ${sourcePath}`);
-
-        try {
-          // unfortunately it means we mutate the permissions
-          // without being able to restore them to the previous value
-          // (because reading current permission would also throw)
-          await writeEntryPermissions(sourceUrl, 0o666);
-          const stats = await readStat(sourcePath, {
-            followLink,
-            ...handleNotFoundOption,
-            // could not fix the permission error, give up and throw original error
-            handlePermissionDeniedError: () => {
-              console.error(`still got EPERM after stats on ${sourcePath}`);
-              throw error;
-            }
-          });
-          return stats;
-        } catch (e) {
-          console.error(`error while trying to fix windows EPERM after stats on ${sourcePath}: ${e.stack}`);
-          throw error;
-        }
-      }
-    } : {})
-  });
-};
-
-const readStat = (sourcePath, {
-  followLink,
-  handleNotFoundError = null,
-  handlePermissionDeniedError = null
-} = {}) => {
-  const nodeMethod = followLink ? stat : lstat;
-  return new Promise((resolve, reject) => {
-    nodeMethod(sourcePath, (error, statsObject) => {
-      if (error) {
-        if (handleNotFoundError && error.code === "ENOENT") {
-          resolve(handleNotFoundError(error));
-        } else if (handlePermissionDeniedError && (error.code === "EPERM" || error.code === "EACCES")) {
-          resolve(handlePermissionDeniedError(error));
-        } else {
-          reject(error);
-        }
-      } else {
-        resolve(statsObject);
-      }
-    });
-  });
-};
-
-/*
- * - Buffer documentation on Node.js
- *   https://nodejs.org/docs/latest-v13.x/api/buffer.html
- * - eTag documentation on MDN
- *   https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag
- */
-const ETAG_FOR_EMPTY_CONTENT = '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
-const bufferToEtag = buffer => {
-  if (!Buffer.isBuffer(buffer)) {
-    throw new TypeError(`buffer expected, got ${buffer}`);
-  }
-
-  if (buffer.length === 0) {
-    return ETAG_FOR_EMPTY_CONTENT;
-  }
-
-  const hash = createHash("sha1");
-  hash.update(buffer, "utf8");
-  const hashBase64String = hash.digest("base64");
-  const hashBase64StringSubset = hashBase64String.slice(0, 27);
-  const length = buffer.length;
-  return `"${length.toString(16)}-${hashBase64StringSubset}"`;
-};
-
-const readDirectory = async (url, {
-  emfileMaxWait = 1000
-} = {}) => {
-  const directoryUrl = assertAndNormalizeDirectoryUrl(url);
-  const directoryPath = urlToFileSystemPath(directoryUrl);
-  const startMs = Date.now();
-  let attemptCount = 0;
-
-  const attempt = () => {
-    return readdirNaive(directoryPath, {
-      handleTooManyFilesOpenedError: async error => {
-        attemptCount++;
-        const nowMs = Date.now();
-        const timeSpentWaiting = nowMs - startMs;
-
-        if (timeSpentWaiting > emfileMaxWait) {
-          throw error;
-        }
-
-        return new Promise(resolve => {
-          setTimeout(() => {
-            resolve(attempt());
-          }, attemptCount);
-        });
-      }
-    });
-  };
-
-  return attempt();
-};
-
-const readdirNaive = (directoryPath, {
-  handleTooManyFilesOpenedError = null
-} = {}) => {
-  return new Promise((resolve, reject) => {
-    readdir(directoryPath, (error, names) => {
-      if (error) {
-        // https://nodejs.org/dist/latest-v13.x/docs/api/errors.html#errors_common_system_errors
-        if (handleTooManyFilesOpenedError && (error.code === "EMFILE" || error.code === "ENFILE")) {
-          resolve(handleTooManyFilesOpenedError(error));
-        } else {
-          reject(error);
-        }
-      } else {
-        resolve(names);
-      }
-    });
-  });
-};
-
-const comparePathnames = (leftPathame, rightPathname) => {
-  const leftPartArray = leftPathame.split("/");
-  const rightPartArray = rightPathname.split("/");
-  const leftLength = leftPartArray.length;
-  const rightLength = rightPartArray.length;
-  const maxLength = Math.max(leftLength, rightLength);
-  let i = 0;
-
-  while (i < maxLength) {
-    const leftPartExists = (i in leftPartArray);
-    const rightPartExists = (i in rightPartArray); // longer comes first
-
-    if (!leftPartExists) {
-      return +1;
-    }
-
-    if (!rightPartExists) {
-      return -1;
-    }
-
-    const leftPartIsLast = i === leftPartArray.length - 1;
-    const rightPartIsLast = i === rightPartArray.length - 1; // folder comes first
-
-    if (leftPartIsLast && !rightPartIsLast) {
-      return +1;
-    }
-
-    if (!leftPartIsLast && rightPartIsLast) {
-      return -1;
-    }
-
-    const leftPart = leftPartArray[i];
-    const rightPart = rightPartArray[i];
-    i++; // local comparison comes first
-
-    const comparison = leftPart.localeCompare(rightPart);
-
-    if (comparison !== 0) {
-      return comparison;
-    }
-  }
-
-  if (leftLength < rightLength) {
-    return +1;
-  }
-
-  if (leftLength > rightLength) {
-    return -1;
-  }
-
-  return 0;
-};
-
-const collectFiles = async ({
-  signal = new AbortController().signal,
-  directoryUrl,
-  associations,
-  predicate
-}) => {
-  const rootDirectoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl);
-
-  if (typeof predicate !== "function") {
-    throw new TypeError(`predicate must be a function, got ${predicate}`);
-  }
-
-  associations = URL_META.resolveAssociations(associations, rootDirectoryUrl);
-  const collectOperation = Abort.startOperation();
-  collectOperation.addAbortSignal(signal);
-  const matchingFileResultArray = [];
-
-  const visitDirectory = async directoryUrl => {
-    collectOperation.throwIfAborted();
-    const directoryItems = await readDirectory(directoryUrl);
-    await Promise.all(directoryItems.map(async directoryItem => {
-      const directoryChildNodeUrl = `${directoryUrl}${directoryItem}`;
-      collectOperation.throwIfAborted();
-      const directoryChildNodeStats = await readEntryStat(directoryChildNodeUrl, {
-        // we ignore symlink because recursively traversed
-        // so symlinked file will be discovered.
-        // Moreover if they lead outside of directoryPath it can become a problem
-        // like infinite recursion of whatever.
-        // that we could handle using an object of pathname already seen but it will be useless
-        // because directoryPath is recursively traversed
-        followLink: false
-      });
-
-      if (directoryChildNodeStats.isDirectory()) {
-        const subDirectoryUrl = `${directoryChildNodeUrl}/`;
-
-        if (!URL_META.urlChildMayMatch({
-          url: subDirectoryUrl,
-          associations,
-          predicate
-        })) {
-          return;
-        }
-
-        await visitDirectory(subDirectoryUrl);
-        return;
-      }
-
-      if (directoryChildNodeStats.isFile()) {
-        const meta = URL_META.applyAssociations({
-          url: directoryChildNodeUrl,
-          associations
-        });
-        if (!predicate(meta)) return;
-        const relativeUrl = urlToRelativeUrl(directoryChildNodeUrl, rootDirectoryUrl);
-        matchingFileResultArray.push({
-          url: new URL(relativeUrl, rootDirectoryUrl).href,
-          relativeUrl,
-          meta,
-          fileStats: directoryChildNodeStats
-        });
-        return;
-      }
-    }));
-  };
-
-  try {
-    await visitDirectory(rootDirectoryUrl); // When we operate on thoose files later it feels more natural
-    // to perform operation in the same order they appear in the filesystem.
-    // It also allow to get a predictable return value.
-    // For that reason we sort matchingFileResultArray
-
-    matchingFileResultArray.sort((leftFile, rightFile) => {
-      return comparePathnames(leftFile.relativeUrl, rightFile.relativeUrl);
-    });
-    return matchingFileResultArray;
-  } finally {
-    await collectOperation.end();
-  }
-};
-
-const {
-  mkdir
-} = promises;
-const writeDirectory = async (destination, {
-  recursive = true,
-  allowUseless = false
-} = {}) => {
-  const destinationUrl = assertAndNormalizeDirectoryUrl(destination);
-  const destinationPath = urlToFileSystemPath(destinationUrl);
-  const destinationStats = await readEntryStat(destinationUrl, {
-    nullIfNotFound: true,
-    followLink: false
-  });
-
-  if (destinationStats) {
-    if (destinationStats.isDirectory()) {
-      if (allowUseless) {
-        return;
-      }
-
-      throw new Error(`directory already exists at ${destinationPath}`);
-    }
-
-    const destinationType = statsToType(destinationStats);
-    throw new Error(`cannot write directory at ${destinationPath} because there is a ${destinationType}`);
-  }
-
-  try {
-    await mkdir(destinationPath, {
-      recursive
-    });
-  } catch (error) {
-    if (allowUseless && error.code === "EEXIST") {
-      return;
-    }
-
-    throw error;
-  }
-};
-
-const removeEntry = async (source, {
-  signal = new AbortController().signal,
-  allowUseless = false,
-  recursive = false,
-  maxRetries = 3,
-  retryDelay = 100,
-  onlyContent = false
-} = {}) => {
-  const sourceUrl = assertAndNormalizeFileUrl(source);
-  const removeOperation = Abort.startOperation();
-  removeOperation.addAbortSignal(signal);
-
-  try {
-    removeOperation.throwIfAborted();
-    const sourceStats = await readEntryStat(sourceUrl, {
-      nullIfNotFound: true,
-      followLink: false
-    });
-
-    if (!sourceStats) {
-      if (allowUseless) {
-        return;
-      }
-
-      throw new Error(`nothing to remove at ${urlToFileSystemPath(sourceUrl)}`);
-    } // https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_class_fs_stats
-    // FIFO and socket are ignored, not sure what they are exactly and what to do with them
-    // other libraries ignore them, let's do the same.
-
-
-    if (sourceStats.isFile() || sourceStats.isSymbolicLink() || sourceStats.isCharacterDevice() || sourceStats.isBlockDevice()) {
-      await removeNonDirectory(sourceUrl.endsWith("/") ? sourceUrl.slice(0, -1) : sourceUrl, {
-        maxRetries,
-        retryDelay
-      });
-    } else if (sourceStats.isDirectory()) {
-      await removeDirectory(ensurePathnameTrailingSlash(sourceUrl), {
-        signal: removeOperation.signal,
-        recursive,
-        maxRetries,
-        retryDelay,
-        onlyContent
-      });
-    }
-  } finally {
-    await removeOperation.end();
-  }
-};
-
-const removeNonDirectory = (sourceUrl, {
-  maxRetries,
-  retryDelay
-}) => {
-  const sourcePath = urlToFileSystemPath(sourceUrl);
-  let retryCount = 0;
-
-  const attempt = () => {
-    return unlinkNaive(sourcePath, { ...(retryCount >= maxRetries ? {} : {
-        handleTemporaryError: async () => {
-          retryCount++;
-          return new Promise(resolve => {
-            setTimeout(() => {
-              resolve(attempt());
-            }, retryCount * retryDelay);
-          });
-        }
-      })
-    });
-  };
-
-  return attempt();
-};
-
-const unlinkNaive = (sourcePath, {
-  handleTemporaryError = null
-} = {}) => {
-  return new Promise((resolve, reject) => {
-    unlink(sourcePath, error => {
-      if (error) {
-        if (error.code === "ENOENT") {
-          resolve();
-        } else if (handleTemporaryError && (error.code === "EBUSY" || error.code === "EMFILE" || error.code === "ENFILE" || error.code === "ENOENT")) {
-          resolve(handleTemporaryError(error));
-        } else {
-          reject(error);
-        }
-      } else {
-        resolve();
-      }
-    });
-  });
-};
-
-const removeDirectory = async (rootDirectoryUrl, {
-  signal,
-  maxRetries,
-  retryDelay,
-  recursive,
-  onlyContent
-}) => {
-  const removeDirectoryOperation = Abort.startOperation();
-  removeDirectoryOperation.addAbortSignal(signal);
-
-  const visit = async sourceUrl => {
-    removeDirectoryOperation.throwIfAborted();
-    const sourceStats = await readEntryStat(sourceUrl, {
-      nullIfNotFound: true,
-      followLink: false
-    }); // file/directory not found
-
-    if (sourceStats === null) {
-      return;
-    }
-
-    if (sourceStats.isFile() || sourceStats.isCharacterDevice() || sourceStats.isBlockDevice()) {
-      await visitFile(sourceUrl);
-    } else if (sourceStats.isSymbolicLink()) {
-      await visitSymbolicLink(sourceUrl);
-    } else if (sourceStats.isDirectory()) {
-      await visitDirectory(`${sourceUrl}/`);
-    }
-  };
-
-  const visitDirectory = async directoryUrl => {
-    const directoryPath = urlToFileSystemPath(directoryUrl);
-    const optionsFromRecursive = recursive ? {
-      handleNotEmptyError: async () => {
-        await removeDirectoryContent(directoryUrl);
-        await visitDirectory(directoryUrl);
-      }
-    } : {};
-    removeDirectoryOperation.throwIfAborted();
-    await removeDirectoryNaive(directoryPath, { ...optionsFromRecursive,
-      // Workaround for https://github.com/joyent/node/issues/4337
-      ...(process.platform === "win32" ? {
-        handlePermissionError: async error => {
-          console.error(`trying to fix windows EPERM after readir on ${directoryPath}`);
-          let openOrCloseError;
-
-          try {
-            const fd = openSync(directoryPath);
-            closeSync(fd);
-          } catch (e) {
-            openOrCloseError = e;
-          }
-
-          if (openOrCloseError) {
-            if (openOrCloseError.code === "ENOENT") {
-              return;
-            }
-
-            console.error(`error while trying to fix windows EPERM after readir on ${directoryPath}: ${openOrCloseError.stack}`);
-            throw error;
-          }
-
-          await removeDirectoryNaive(directoryPath, { ...optionsFromRecursive
-          });
-        }
-      } : {})
-    });
-  };
-
-  const removeDirectoryContent = async directoryUrl => {
-    removeDirectoryOperation.throwIfAborted();
-    const names = await readDirectory(directoryUrl);
-    await Promise.all(names.map(async name => {
-      const url = resolveUrl$1(name, directoryUrl);
-      await visit(url);
-    }));
-  };
-
-  const visitFile = async fileUrl => {
-    await removeNonDirectory(fileUrl, {
-      maxRetries,
-      retryDelay
-    });
-  };
-
-  const visitSymbolicLink = async symbolicLinkUrl => {
-    await removeNonDirectory(symbolicLinkUrl, {
-      maxRetries,
-      retryDelay
-    });
-  };
-
-  try {
-    if (onlyContent) {
-      await removeDirectoryContent(rootDirectoryUrl);
-    } else {
-      await visitDirectory(rootDirectoryUrl);
-    }
-  } finally {
-    await removeDirectoryOperation.end();
-  }
-};
-
-const removeDirectoryNaive = (directoryPath, {
-  handleNotEmptyError = null,
-  handlePermissionError = null
-} = {}) => {
-  return new Promise((resolve, reject) => {
-    rmdir(directoryPath, (error, lstatObject) => {
-      if (error) {
-        if (handlePermissionError && error.code === "EPERM") {
-          resolve(handlePermissionError(error));
-        } else if (error.code === "ENOENT") {
-          resolve();
-        } else if (handleNotEmptyError && ( // linux os
-        error.code === "ENOTEMPTY" || // SunOS
-        error.code === "EEXIST")) {
-          resolve(handleNotEmptyError(error));
-        } else {
-          reject(error);
-        }
-      } else {
-        resolve(lstatObject);
-      }
-    });
-  });
-};
-
-const ensureEmptyDirectory = async source => {
-  const stats = await readEntryStat(source, {
-    nullIfNotFound: true,
-    followLink: false
-  });
-
-  if (stats === null) {
-    // if there is nothing, create a directory
-    return writeDirectory(source, {
-      allowUseless: true
-    });
-  }
-
-  if (stats.isDirectory()) {
-    // if there is a directory remove its content and done
-    return removeEntry(source, {
-      allowUseless: true,
-      recursive: true,
-      onlyContent: true
-    });
-  }
-
-  const sourceType = statsToType(stats);
-  const sourcePath = urlToFileSystemPath(assertAndNormalizeFileUrl(source));
-  throw new Error(`ensureEmptyDirectory expect directory at ${sourcePath}, found ${sourceType} instead`);
-};
-
-const ensureParentDirectories = async destination => {
-  const destinationUrl = assertAndNormalizeFileUrl(destination);
-  const destinationPath = urlToFileSystemPath(destinationUrl);
-  const destinationParentPath = dirname(destinationPath);
-  return writeDirectory(destinationParentPath, {
-    recursive: true,
-    allowUseless: true
-  });
-};
-
-const isWindows$1 = process.platform === "win32";
-const baseUrlFallback = fileSystemPathToUrl(process.cwd());
-/**
- * Some url might be resolved or remapped to url without the windows drive letter.
- * For instance
- * new URL('/foo.js', 'file:///C:/dir/file.js')
- * resolves to
- * 'file:///foo.js'
- *
- * But on windows it becomes a problem because we need the drive letter otherwise
- * url cannot be converted to a filesystem path.
- *
- * ensureWindowsDriveLetter ensure a resolved url still contains the drive letter.
- */
-
-const ensureWindowsDriveLetter = (url, baseUrl) => {
-  try {
-    url = String(new URL(url));
-  } catch (e) {
-    throw new Error(`absolute url expected but got ${url}`);
-  }
-
-  if (!isWindows$1) {
-    return url;
-  }
-
-  try {
-    baseUrl = String(new URL(baseUrl));
-  } catch (e) {
-    throw new Error(`absolute baseUrl expected but got ${baseUrl} to ensure windows drive letter on ${url}`);
-  }
-
-  if (!url.startsWith("file://")) {
-    return url;
-  }
-
-  const afterProtocol = url.slice("file://".length); // we still have the windows drive letter
-
-  if (extractDriveLetter(afterProtocol)) {
-    return url;
-  } // drive letter was lost, restore it
-
-
-  const baseUrlOrFallback = baseUrl.startsWith("file://") ? baseUrl : baseUrlFallback;
-  const driveLetter = extractDriveLetter(baseUrlOrFallback.slice("file://".length));
-
-  if (!driveLetter) {
-    throw new Error(`drive letter expected on baseUrl but got ${baseUrl} to ensure windows drive letter on ${url}`);
-  }
-
-  return `file:///${driveLetter}:${afterProtocol}`;
-};
-
-const extractDriveLetter = ressource => {
-  // we still have the windows drive letter
-  if (/[a-zA-Z]/.test(ressource[1]) && ressource[2] === ":") {
-    return ressource[1];
-  }
-
-  return null;
-};
-
-process.platform === "win32";
-
-const readFile = async (value, {
-  as = "buffer"
-} = {}) => {
-  const fileUrl = assertAndNormalizeFileUrl(value);
-  const buffer = await new Promise((resolve, reject) => {
-    readFile$1(new URL(fileUrl), (error, buffer) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve(buffer);
-      }
-    });
-  });
-
-  if (as === "buffer") {
-    return buffer;
-  }
-
-  if (as === "string") {
-    return buffer.toString();
-  }
-
-  if (as === "json") {
-    return JSON.parse(buffer.toString());
-  }
-
-  throw new Error(`"as" must be one of "buffer","string","json" received "${as}"`);
-};
-
-const readFileSync = (value, {
-  as = "buffer"
-} = {}) => {
-  const fileUrl = assertAndNormalizeFileUrl(value);
-  const buffer = readFileSync$1(new URL(fileUrl));
-
-  if (as === "buffer") {
-    return buffer;
-  }
-
-  if (as === "string") {
-    return buffer.toString();
-  }
-
-  if (as === "json") {
-    return JSON.parse(buffer.toString());
-  }
-
-  throw new Error(`"as" must be one of "buffer","string","json" received "${as}"`);
-};
-
-const guardTooFastSecondCall = (callback, cooldownBetweenFileEvents = 40) => {
-  let previousCallMs;
-  return (...args) => {
-    const nowMs = Date.now();
-
-    if (previousCallMs) {
-      const msEllapsed = nowMs - previousCallMs;
-
-      if (msEllapsed < cooldownBetweenFileEvents) {
-        previousCallMs = null;
-        return;
-      }
-    }
-
-    previousCallMs = nowMs;
-    callback(...args);
-  };
-};
-const guardTooFastSecondCallPerFile = (callback, cooldownBetweenFileEvents = 40) => {
-  const previousCallMsMap = new Map();
-  return fileEvent => {
-    const {
-      relativeUrl
-    } = fileEvent;
-    const previousCallMs = previousCallMsMap.get(relativeUrl);
-    const nowMs = Date.now();
-
-    if (previousCallMs) {
-      const msEllapsed = nowMs - previousCallMs;
-
-      if (msEllapsed < cooldownBetweenFileEvents) {
-        previousCallMsMap.delete(relativeUrl);
-        return;
-      }
-    }
-
-    previousCallMsMap.set(relativeUrl, nowMs);
-    callback(fileEvent);
-  };
-};
-
-const isWindows = process.platform === "win32";
-const createWatcher = (sourcePath, options) => {
-  const watcher = watch(sourcePath, options);
-
-  if (isWindows) {
-    watcher.on("error", async error => {
-      // https://github.com/joyent/node/issues/4337
-      if (error.code === "EPERM") {
-        try {
-          const fd = openSync(sourcePath, "r");
-          closeSync(fd);
-        } catch (e) {
-          if (e.code === "ENOENT") {
-            return;
-          }
-
-          console.error(`error while fixing windows eperm: ${e.stack}`);
-          throw error;
-        }
-      } else {
-        throw error;
-      }
-    });
-  }
-
-  return watcher;
-};
-
-const trackRessources = () => {
-  const callbackArray = [];
-
-  const registerCleanupCallback = callback => {
-    if (typeof callback !== "function") throw new TypeError(`callback must be a function
-callback: ${callback}`);
-    callbackArray.push(callback);
-    return () => {
-      const index = callbackArray.indexOf(callback);
-      if (index > -1) callbackArray.splice(index, 1);
-    };
-  };
-
-  const cleanup = async reason => {
-    const localCallbackArray = callbackArray.slice();
-    await Promise.all(localCallbackArray.map(callback => callback(reason)));
-  };
-
-  return {
-    registerCleanupCallback,
-    cleanup
-  };
-};
-
-const isLinux = process.platform === "linux"; // linux does not support recursive option
-
-const fsWatchSupportsRecursive = !isLinux;
-const registerDirectoryLifecycle = (source, {
-  debug = false,
-  added,
-  updated,
-  removed,
-  watchPatterns = {
-    "./**/*": true
-  },
-  notifyExistent = false,
-  keepProcessAlive = true,
-  recursive = false,
-  // filesystem might dispatch more events than expected
-  // Code can use "cooldownBetweenFileEvents" to prevent that
-  // BUT it is UNADVISED to rely on this as explained later (search for "is lying" in this file)
-  // For this reason"cooldownBetweenFileEvents" should be reserved to scenarios
-  // like unit tests
-  cooldownBetweenFileEvents = 0
-}) => {
-  const sourceUrl = assertAndNormalizeDirectoryUrl(source);
-
-  if (!undefinedOrFunction$1(added)) {
-    throw new TypeError(`added must be a function or undefined, got ${added}`);
-  }
-
-  if (!undefinedOrFunction$1(updated)) {
-    throw new TypeError(`updated must be a function or undefined, got ${updated}`);
-  }
-
-  if (!undefinedOrFunction$1(removed)) {
-    throw new TypeError(`removed must be a function or undefined, got ${removed}`);
-  }
-
-  if (cooldownBetweenFileEvents) {
-    if (added) {
-      added = guardTooFastSecondCallPerFile(added, cooldownBetweenFileEvents);
-    }
-
-    if (updated) {
-      updated = guardTooFastSecondCallPerFile(updated, cooldownBetweenFileEvents);
-    }
-
-    if (removed) {
-      removed = guardTooFastSecondCallPerFile(removed, cooldownBetweenFileEvents);
-    }
-  }
-
-  const associations = URL_META.resolveAssociations({
-    watch: watchPatterns
-  }, sourceUrl);
-
-  const getWatchPatternValue = ({
-    url,
-    type
-  }) => {
-    if (type === "directory") {
-      let firstMeta = false;
-      URL_META.urlChildMayMatch({
-        url: `${url}/`,
-        associations,
-        predicate: ({
-          watch
-        }) => {
-          if (watch) {
-            firstMeta = watch;
-          }
-
-          return watch;
-        }
-      });
-      return firstMeta;
-    }
-
-    const {
-      watch
-    } = URL_META.applyAssociations({
-      url,
-      associations
-    });
-    return watch;
-  };
-
-  const tracker = trackRessources();
-  const infoMap = new Map();
-
-  const readEntryInfo = url => {
-    try {
-      const relativeUrl = urlToRelativeUrl(url, source);
-      const previousInfo = infoMap.get(relativeUrl);
-      const stats = statSync(new URL(url));
-      const type = statsToType(stats);
-      const patternValue = previousInfo ? previousInfo.patternValue : getWatchPatternValue({
-        url,
-        type
-      });
-      return {
-        previousInfo,
-        url,
-        relativeUrl,
-        type,
-        atimeMs: stats.atimeMs,
-        mtimeMs: stats.mtimeMs,
-        patternValue
-      };
-    } catch (e) {
-      if (e.code === "ENOENT") {
-        return null;
-      }
-
-      throw e;
-    }
-  };
-
-  const handleDirectoryEvent = ({
-    directoryRelativeUrl,
-    filename,
-    eventType
-  }) => {
-    if (filename) {
-      if (directoryRelativeUrl) {
-        handleChange(`${directoryRelativeUrl}/${filename}`);
-        return;
-      }
-
-      handleChange(`${filename}`);
-      return;
-    }
-
-    if (eventType === "rename") {
-      if (!removed && !added) {
-        return;
-      } // we might receive `rename` without filename
-      // in that case we try to find ourselves which file was removed.
-
-
-      let relativeUrlCandidateArray = Array.from(infoMap.keys());
-
-      if (recursive && !fsWatchSupportsRecursive) {
-        relativeUrlCandidateArray = relativeUrlCandidateArray.filter(relativeUrlCandidate => {
-          if (!directoryRelativeUrl) {
-            // ensure entry is top level
-            if (relativeUrlCandidate.includes("/")) {
-              return false;
-            }
-
-            return true;
-          } // entry not inside this directory
-
-
-          if (!relativeUrlCandidate.startsWith(directoryRelativeUrl)) {
-            return false;
-          }
-
-          const afterDirectory = relativeUrlCandidate.slice(directoryRelativeUrl.length + 1); // deep inside this directory
-
-          if (afterDirectory.includes("/")) {
-            return false;
-          }
-
-          return true;
-        });
-      }
-
-      const removedEntryRelativeUrl = relativeUrlCandidateArray.find(relativeUrlCandidate => {
-        try {
-          statSync(new URL(relativeUrlCandidate, sourceUrl));
-          return false;
-        } catch (e) {
-          if (e.code === "ENOENT") {
-            return true;
-          }
-
-          throw e;
-        }
-      });
-
-      if (removedEntryRelativeUrl) {
-        handleEntryLost(infoMap.get(removedEntryRelativeUrl));
-      }
-    }
-  };
-
-  const handleChange = relativeUrl => {
-    const entryUrl = new URL(relativeUrl, sourceUrl).href;
-    const entryInfo = readEntryInfo(entryUrl);
-
-    if (!entryInfo) {
-      const previousEntryInfo = infoMap.get(relativeUrl);
-
-      if (!previousEntryInfo) {
-        // on MacOS it's possible to receive a "rename" event for
-        // a file that does not exists...
-        return;
-      }
-
-      if (debug) {
-        console.debug(`"${relativeUrl}" removed`);
-      }
-
-      handleEntryLost(previousEntryInfo);
-      return;
-    }
-
-    const {
-      previousInfo
-    } = entryInfo;
-
-    if (!previousInfo) {
-      if (debug) {
-        console.debug(`"${relativeUrl}" added`);
-      }
-
-      handleEntryFound(entryInfo);
-      return;
-    }
-
-    if (entryInfo.type !== previousInfo.type) {
-      // it existed and was replaced by something else
-      // we don't handle this as an update. We rather say the ressource
-      // is lost and something else is found (call removed() then added())
-      handleEntryLost(previousInfo);
-      handleEntryFound(entryInfo);
-      return;
-    }
-
-    if (entryInfo.type === "directory") {
-      // a directory cannot really be updated in way that matters for us
-      // filesystem is trying to tell us the directory content have changed
-      // but we don't care about that
-      // we'll already be notified about what has changed
-      return;
-    } // something has changed at this relativeUrl (the file existed and was not deleted)
-    // it's possible to get there without a real update
-    // (file content is the same and file mtime is the same).
-    // In short filesystem is sometimes "lying"
-    // Not trying to guard against that because:
-    // - hurt perfs a lot
-    // - it happens very rarely
-    // - it's not really a concern in practice
-    // - filesystem did not send an event out of nowhere:
-    //   something occured but we don't know exactly what
-    // maybe we should exclude some stuff as done in
-    // https://github.com/paulmillr/chokidar/blob/b2c4f249b6cfa98c703f0066fb4a56ccd83128b5/lib/nodefs-handler.js#L366
-
-
-    if (debug) {
-      console.debug(`"${relativeUrl}" modified`);
-    }
-
-    handleEntryUpdated(entryInfo);
-  };
-
-  const handleEntryFound = (entryInfo, {
-    notify = true
-  } = {}) => {
-    infoMap.set(entryInfo.relativeUrl, entryInfo);
-
-    if (entryInfo.type === "directory") {
-      const directoryUrl = `${entryInfo.url}/`;
-      readdirSync(new URL(directoryUrl)).forEach(entryName => {
-        const childEntryUrl = new URL(entryName, directoryUrl).href;
-        const childEntryInfo = readEntryInfo(childEntryUrl);
-
-        if (childEntryInfo && childEntryInfo.patternValue) {
-          handleEntryFound(childEntryInfo, {
-            notify
-          });
-        }
-      }); // we must watch manually every directory we find
-
-      if (!fsWatchSupportsRecursive) {
-        const watcher = createWatcher(urlToFileSystemPath(entryInfo.url), {
-          persistent: keepProcessAlive
-        });
-        tracker.registerCleanupCallback(() => {
-          watcher.close();
-        });
-        watcher.on("change", (eventType, filename) => {
-          handleDirectoryEvent({
-            directoryRelativeUrl: entryInfo.relativeUrl,
-            filename: filename ? // replace back slashes with slashes
-            filename.replace(/\\/g, "/") : "",
-            eventType
-          });
-        });
-      }
-    }
-
-    if (added && entryInfo.patternValue && notify) {
-      added({
-        relativeUrl: entryInfo.relativeUrl,
-        type: entryInfo.type,
-        patternValue: entryInfo.patternValue,
-        mtime: entryInfo.mtimeMs
-      });
-    }
-  };
-
-  const handleEntryLost = entryInfo => {
-    infoMap.delete(entryInfo.relativeUrl);
-
-    if (removed && entryInfo.patternValue) {
-      removed({
-        relativeUrl: entryInfo.relativeUrl,
-        type: entryInfo.type,
-        patternValue: entryInfo.patternValue,
-        mtime: entryInfo.mtimeMs
-      });
-    }
-  };
-
-  const handleEntryUpdated = entryInfo => {
-    infoMap.set(entryInfo.relativeUrl, entryInfo);
-
-    if (updated && entryInfo.patternValue) {
-      updated({
-        relativeUrl: entryInfo.relativeUrl,
-        type: entryInfo.type,
-        patternValue: entryInfo.patternValue,
-        mtime: entryInfo.mtimeMs,
-        previousMtime: entryInfo.previousInfo.mtimeMs
-      });
-    }
-  };
-
-  readdirSync(new URL(sourceUrl)).forEach(entry => {
-    const entryUrl = new URL(entry, sourceUrl).href;
-    const entryInfo = readEntryInfo(entryUrl);
-
-    if (entryInfo && entryInfo.patternValue) {
-      handleEntryFound(entryInfo, {
-        notify: notifyExistent
-      });
-    }
-  });
-
-  if (debug) {
-    const relativeUrls = Array.from(infoMap.keys());
-
-    if (relativeUrls.length === 0) {
-      console.debug(`No file found`);
-    } else {
-      console.debug(`${relativeUrls.length} file found: 
-${relativeUrls.join("\n")}`);
-    }
-  }
-
-  const watcher = createWatcher(urlToFileSystemPath(sourceUrl), {
-    recursive: recursive && fsWatchSupportsRecursive,
-    persistent: keepProcessAlive
-  });
-  tracker.registerCleanupCallback(() => {
-    watcher.close();
-  });
-  watcher.on("change", (eventType, fileSystemPath) => {
-    handleDirectoryEvent({ ...fileSystemPathToDirectoryRelativeUrlAndFilename(fileSystemPath),
-      eventType
-    });
-  });
-  return tracker.cleanup;
-};
-
-const undefinedOrFunction$1 = value => {
-  return typeof value === "undefined" || typeof value === "function";
-};
-
-const fileSystemPathToDirectoryRelativeUrlAndFilename = path => {
-  if (!path) {
-    return {
-      directoryRelativeUrl: "",
-      filename: ""
-    };
-  }
-
-  const normalizedPath = path.replace(/\\/g, "/"); // replace back slashes with slashes
-
-  const slashLastIndex = normalizedPath.lastIndexOf("/");
-
-  if (slashLastIndex === -1) {
-    return {
-      directoryRelativeUrl: "",
-      filename: normalizedPath
-    };
-  }
-
-  const directoryRelativeUrl = normalizedPath.slice(0, slashLastIndex);
-  const filename = normalizedPath.slice(slashLastIndex + 1);
-  return {
-    directoryRelativeUrl,
-    filename
-  };
-};
-
-const registerFileLifecycle = (source, {
-  added,
-  updated,
-  removed,
-  notifyExistent = false,
-  keepProcessAlive = true,
-  cooldownBetweenFileEvents = 0
-}) => {
-  const sourceUrl = assertAndNormalizeFileUrl(source);
-
-  if (!undefinedOrFunction(added)) {
-    throw new TypeError(`added must be a function or undefined, got ${added}`);
-  }
-
-  if (!undefinedOrFunction(updated)) {
-    throw new TypeError(`updated must be a function or undefined, got ${updated}`);
-  }
-
-  if (!undefinedOrFunction(removed)) {
-    throw new TypeError(`removed must be a function or undefined, got ${removed}`);
-  }
-
-  if (cooldownBetweenFileEvents) {
-    if (added) {
-      added = guardTooFastSecondCall(added, cooldownBetweenFileEvents);
-    }
-
-    if (updated) {
-      updated = guardTooFastSecondCall(updated, cooldownBetweenFileEvents);
-    }
-
-    if (removed) {
-      removed = guardTooFastSecondCall(removed, cooldownBetweenFileEvents);
-    }
-  }
-
-  const tracker = trackRessources();
-
-  const handleFileFound = ({
-    existent
-  }) => {
-    const fileMutationStopWatching = watchFileMutation(sourceUrl, {
-      updated,
-      removed: () => {
-        fileMutationStopTracking();
-        watchFileAdded();
-
-        if (removed) {
-          removed();
-        }
-      },
-      keepProcessAlive
-    });
-    const fileMutationStopTracking = tracker.registerCleanupCallback(fileMutationStopWatching);
-
-    if (added) {
-      if (existent) {
-        if (notifyExistent) {
-          added({
-            existent: true
-          });
-        }
-      } else {
-        added({});
-      }
-    }
-  };
-
-  const watchFileAdded = () => {
-    const fileCreationStopWatching = watchFileCreation(sourceUrl, () => {
-      fileCreationgStopTracking();
-      handleFileFound({
-        existent: false
-      });
-    }, keepProcessAlive);
-    const fileCreationgStopTracking = tracker.registerCleanupCallback(fileCreationStopWatching);
-  };
-
-  const sourceType = entryToTypeOrNull(sourceUrl);
-
-  if (sourceType === null) {
-    if (added) {
-      watchFileAdded();
-    } else {
-      throw new Error(`${urlToFileSystemPath(sourceUrl)} must lead to a file, found nothing`);
-    }
-  } else if (sourceType === "file") {
-    handleFileFound({
-      existent: true
-    });
-  } else {
-    throw new Error(`${urlToFileSystemPath(sourceUrl)} must lead to a file, type found instead`);
-  }
-
-  return tracker.cleanup;
-};
-
-const entryToTypeOrNull = url => {
-  try {
-    const stats = statSync(new URL(url));
-    return statsToType(stats);
-  } catch (e) {
-    if (e.code === "ENOENT") {
-      return null;
-    }
-
-    throw e;
-  }
-};
-
-const undefinedOrFunction = value => typeof value === "undefined" || typeof value === "function";
-
-const watchFileCreation = (source, callback, keepProcessAlive) => {
-  const sourcePath = urlToFileSystemPath(source);
-  const sourceFilename = basename(sourcePath);
-  const directoryPath = dirname(sourcePath);
-  let directoryWatcher = createWatcher(directoryPath, {
-    persistent: keepProcessAlive
-  });
-  directoryWatcher.on("change", (eventType, filename) => {
-    if (filename && filename !== sourceFilename) return;
-    const type = entryToTypeOrNull(source); // ignore if something else with that name gets created
-    // we are only interested into files
-
-    if (type !== "file") return;
-    directoryWatcher.close();
-    directoryWatcher = undefined;
-    callback();
-  });
-  return () => {
-    if (directoryWatcher) {
-      directoryWatcher.close();
-    }
-  };
-};
-
-const watchFileMutation = (sourceUrl, {
-  updated,
-  removed,
-  keepProcessAlive
-}) => {
-  let watcher = createWatcher(urlToFileSystemPath(sourceUrl), {
-    persistent: keepProcessAlive
-  });
-  watcher.on("change", () => {
-    const sourceType = entryToTypeOrNull(sourceUrl);
-
-    if (sourceType === null) {
-      watcher.close();
-      watcher = undefined;
-
-      if (removed) {
-        removed();
-      }
-    } else if (sourceType === "file") {
-      if (updated) {
-        updated();
-      }
-    }
-  });
-  return () => {
-    if (watcher) {
-      watcher.close();
-    }
-  };
-};
-
-const writeFile = async (destination, content = "") => {
-  const destinationUrl = assertAndNormalizeFileUrl(destination);
-  const destinationUrlObject = new URL(destinationUrl);
-
-  try {
-    await writeFileNaive(destinationUrlObject, content);
-  } catch (error) {
-    if (error.code === "ENOENT") {
-      await ensureParentDirectories(destinationUrl);
-      await writeFileNaive(destinationUrlObject, content);
-      return;
-    }
-
-    throw error;
-  }
-};
-
-const writeFileNaive = (urlObject, content) => {
-  return new Promise((resolve, reject) => {
-    writeFile$1(urlObject, content, error => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve();
-      }
-    });
-  });
-};
-
-const writeFileSync = (destination, content = "") => {
-  const destinationUrl = assertAndNormalizeFileUrl(destination);
-  const destinationUrlObject = new URL(destinationUrl);
-
-  try {
-    writeFileSync$1(destinationUrlObject, content);
-  } catch (error) {
-    if (error.code === "ENOENT") {
-      mkdirSync(new URL("./", destinationUrlObject), {
-        recursive: true
-      });
-      writeFileSync$1(destinationUrlObject, content);
-      return;
-    }
-
-    throw error;
-  }
-};
-
-const createReloadableWorker = (workerFileUrl, options = {}) => {
-  const workerFilePath = fileURLToPath(workerFileUrl);
-  const isPrimary = !workerData || workerData.workerFilePath !== workerFilePath;
-  let worker;
-
-  const terminate = async () => {
-    if (worker) {
-      let _worker = worker;
-      worker = null;
-      const exitPromise = new Promise(resolve => {
-        _worker.once("exit", resolve);
-      });
-
-      _worker.terminate();
-
-      await exitPromise;
-    }
-  };
-
-  const load = async () => {
-    if (!isPrimary) {
-      throw new Error(`worker can be loaded from primary file only`);
-    }
-
-    worker = new Worker(workerFilePath, { ...options,
-      workerData: { ...options.workerData,
-        workerFilePath
-      }
-    });
-    worker.once("error", error => {
-      console.error(error);
-    });
-    worker.once("exit", () => {
-      worker = null;
-    });
-    await new Promise(resolve => {
-      worker.once("online", resolve);
-    });
-    return worker;
-  };
-
-  const reload = async () => {
-    await terminate();
-    await load();
-  };
-
-  return {
-    isPrimary,
-    isWorker: !isPrimary,
-    load,
-    reload,
-    terminate
   };
 };
 
@@ -10818,75 +10866,84 @@ const getExtensionsToTry = (magicExtensions, importer) => {
  *   it should likely be an other plugin happening after the others
  */
 const jsenvPluginNodeEsmResolution = ({
-  rootDirectoryUrl,
-  urlGraph,
-  runtimeCompat,
   packageConditions,
   filesInvalidatingCache = ["package.json", "package-lock.json"]
 }) => {
-  const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node"); // https://nodejs.org/api/esm.html#resolver-algorithm-specification
-
-  packageConditions = packageConditions || [...readCustomConditionsFromProcessArgs(), nodeRuntimeEnabled ? "node" : "browser", "import"];
-  const packageScopesCache = new Map();
-
-  const lookupPackageScope = url => {
-    const fromCache = packageScopesCache.get(url);
-
-    if (fromCache) {
-      return fromCache;
-    }
-
-    const packageScope = defaultLookupPackageScope(url);
-    packageScopesCache.set(url, packageScope);
-    return packageScope;
-  };
-
-  const packageJsonsCache = new Map();
-
-  const readPackageJson = url => {
-    const fromCache = packageJsonsCache.get(url);
-
-    if (fromCache) {
-      return fromCache;
-    }
-
-    const packageJson = defaultReadPackageJson(url);
-    packageJsonsCache.set(url, packageJson);
-    return packageJson;
-  };
-
   const unregisters = [];
+  let lookupPackageScope; // defined in "init"
 
-  const onFileChange = () => {
-    packageScopesCache.clear();
-    packageJsonsCache.clear();
-    urlGraph.urlInfoMap.forEach(urlInfo => {
-      if (urlInfo.dependsOnPackageJson) {
-        urlGraph.considerModified(urlInfo);
-      }
-    });
-  };
+  let readPackageJson; // defined in "init"
 
-  filesInvalidatingCache.forEach(file => {
-    const unregister = registerFileLifecycle(new URL(file, rootDirectoryUrl), {
-      added: () => {
-        onFileChange();
-      },
-      updated: () => {
-        onFileChange();
-      },
-      removed: () => {
-        onFileChange();
-      },
-      keepProcessAlive: false
-    });
-    unregisters.push(unregister);
-  });
   return {
     name: "jsenv:node_esm_resolution",
     appliesDuring: "*",
+    init: ({
+      rootDirectoryUrl,
+      scenario,
+      runtimeCompat,
+      urlGraph
+    }) => {
+      const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node"); // https://nodejs.org/api/esm.html#resolver-algorithm-specification
+
+      packageConditions = packageConditions || [...readCustomConditionsFromProcessArgs(), nodeRuntimeEnabled ? "node" : "browser", "import"];
+      const packageScopesCache = new Map();
+
+      lookupPackageScope = url => {
+        const fromCache = packageScopesCache.get(url);
+
+        if (fromCache) {
+          return fromCache;
+        }
+
+        const packageScope = defaultLookupPackageScope(url);
+        packageScopesCache.set(url, packageScope);
+        return packageScope;
+      };
+
+      const packageJsonsCache = new Map();
+
+      readPackageJson = url => {
+        const fromCache = packageJsonsCache.get(url);
+
+        if (fromCache) {
+          return fromCache;
+        }
+
+        const packageJson = defaultReadPackageJson(url);
+        packageJsonsCache.set(url, packageJson);
+        return packageJson;
+      };
+
+      if (scenario === "dev") {
+        const onFileChange = () => {
+          packageScopesCache.clear();
+          packageJsonsCache.clear();
+          urlGraph.urlInfoMap.forEach(urlInfo => {
+            if (urlInfo.dependsOnPackageJson) {
+              urlGraph.considerModified(urlInfo);
+            }
+          });
+        };
+
+        filesInvalidatingCache.forEach(file => {
+          const unregister = registerFileLifecycle(new URL(file, rootDirectoryUrl), {
+            added: () => {
+              onFileChange();
+            },
+            updated: () => {
+              onFileChange();
+            },
+            removed: () => {
+              onFileChange();
+            },
+            keepProcessAlive: false
+          });
+          unregisters.push(unregister);
+        });
+      }
+    },
     resolveUrl: {
-      js_import_export: reference => {
+      js_import_export: (reference, context) => {
         const {
           parentUrl,
           specifier
@@ -10906,7 +10963,7 @@ const jsenvPluginNodeEsmResolution = ({
         // changes
 
         const dependsOnPackageJson = type !== "relative_specifier" && type !== "absolute_specifier" && type !== "node_builtin_specifier";
-        const relatedUrlInfos = urlGraph.getRelatedUrlInfos(reference.parentUrl);
+        const relatedUrlInfos = context.urlGraph.getRelatedUrlInfos(reference.parentUrl);
         relatedUrlInfos.forEach(relatedUrlInfo => {
           if (relatedUrlInfo.dependsOnPackageJson) {
             // the url may depend due to an other reference
@@ -11977,7 +12034,8 @@ const requireFromJsenv = createRequire(import.meta.url);
 const jsenvPluginHtmlSupervisor = ({
   logs = false,
   measurePerf = false,
-  errorOverlay = true
+  errorOverlay = true,
+  openInEditor = true
 }) => {
   const htmlSupervisorSetupFileUrl = new URL("./js/html_supervisor_setup.js", import.meta.url).href;
   const htmlSupervisorInstallerFileUrl = new URL("./js/html_supervisor_installer.js", import.meta.url).href;
@@ -12137,7 +12195,8 @@ const jsenvPluginHtmlSupervisor = ({
             rootDirectoryUrl: context.rootDirectoryUrl,
             logs,
             measurePerf,
-            errorOverlay
+            errorOverlay,
+            openInEditor
           }, null, "        ")})`,
           "injected-by": "jsenv:html_supervisor"
         }));
@@ -12564,7 +12623,11 @@ const jsenvPluginCssParcel = () => {
  * do not support import assertions
  * But for now (as it is simpler) we let the browser throw the error
  */
-const jsenvPluginImportAssertions = () => {
+const jsenvPluginImportAssertions = ({
+  json = "auto",
+  css = "auto",
+  text = "auto"
+}) => {
   const updateReference = (reference, searchParam) => {
     reference.expectedType = "js_module";
     reference.filename = `${urlToFilename$1(reference.url)}.js`;
@@ -12585,28 +12648,52 @@ const jsenvPluginImportAssertions = () => {
   const importAssertions = {
     name: "jsenv:import_assertions",
     appliesDuring: "*",
+    init: context => {
+      // transpilation is forced during build so that
+      //   - avoid rollup to see import assertions
+      //     We would have to tell rollup to ignore import with assertion
+      //   - means rollup can bundle more js file together
+      //   - means url versioning can work for css inlined in js
+      if (context.scenario === "build") {
+        json = true;
+        css = true;
+        text = true;
+      }
+    },
     redirectUrl: {
       js_import_export: (reference, context) => {
         if (!reference.assert) {
           return null;
-        } // When to force transpilation:
+        }
 
         if (reference.assert.type === "json") {
-          {
+          const shouldTranspileJsonImportAssertion = json === true ? true : json === "auto" ? !context.isSupportedOnCurrentClients("import_type_json") : false;
+
+          if (shouldTranspileJsonImportAssertion) {
             return updateReference(reference, "as_json_module");
           }
+
+          return null;
         }
 
         if (reference.assert.type === "css") {
-          {
+          const shouldTranspileCssImportAssertion = css === true ? true : css === "auto" ? !context.isSupportedOnCurrentClients("import_type_css") : false;
+
+          if (shouldTranspileCssImportAssertion) {
             return updateReference(reference, "as_css_module");
           }
+
+          return null;
         }
 
         if (reference.assert.type === "text") {
-          {
+          const shouldTranspileTextImportAssertion = text === true ? true : text === "auto" ? !context.isSupportedOnCurrentClients("import_type_text") : false;
+
+          if (shouldTranspileTextImportAssertion) {
             return updateReference(reference, "as_text_module");
           }
+
+          return null;
         }
 
         return null;
@@ -18919,8 +19006,12 @@ const jsenvPluginTranspilation = ({
   babelHelpersAsImport = true,
   getCustomBabelPlugins
 }) => {
+  if (importAssertions === true) {
+    importAssertions = {};
+  }
+
   return [// import assertions we want it all the time
-  ...(importAssertions ? [jsenvPluginImportAssertions()] : []), // babel also so that rollup can bundle babel helpers for instance
+  ...(importAssertions ? [jsenvPluginImportAssertions(importAssertions)] : []), // babel also so that rollup can bundle babel helpers for instance
   jsenvPluginBabel({
     topLevelAwait,
     getCustomBabelPlugins,
@@ -19156,7 +19247,7 @@ const fileUrlConverter = {
     return `${filePath}${stringifyQuery(searchParams)}`;
   },
   asFileUrl: filePath => {
-    return decodeURIComponent(fileSystemPathToUrl(filePath)).replace(/[=](?=&|$)/g, "");
+    return decodeURIComponent(fileSystemPathToUrl$1(filePath)).replace(/[=](?=&|$)/g, "");
   }
 };
 
@@ -19368,7 +19459,7 @@ const rollupPluginJsenv = ({
       });
     },
     resolveId: (specifier, importer = rootDirectoryUrl) => {
-      if (isFileSystemPath(importer)) {
+      if (isFileSystemPath$1(importer)) {
         importer = fileUrlConverter.asFileUrl(importer);
       }
 
@@ -20195,6 +20286,18 @@ const jsenvPluginAutoreloadServer = ({
         rootDirectoryUrl,
         urlGraph
       }) => {
+        const formatUrlForClient = url => {
+          if (urlIsInsideOf(url, rootDirectoryUrl)) {
+            return urlToRelativeUrl(url, rootDirectoryUrl);
+          }
+
+          if (url.startsWith("file:")) {
+            return `/@fs/${url.slice("file:///".length)}`;
+          }
+
+          return url;
+        };
+
         const notifyDeclined = ({
           cause,
           reason,
@@ -20229,8 +20332,8 @@ const jsenvPluginAutoreloadServer = ({
                 reason: urlInfo === firstUrlInfo ? `file accepts hot reload` : `a dependent file accepts hot reload`,
                 instructions: [{
                   type: urlInfo.type,
-                  boundary: urlToRelativeUrl(urlInfo.url, rootDirectoryUrl),
-                  acceptedBy: urlToRelativeUrl(urlInfo.url, rootDirectoryUrl)
+                  boundary: formatUrlForClient(urlInfo.url),
+                  acceptedBy: formatUrlForClient(urlInfo.url)
                 }]
               };
             }
@@ -20258,8 +20361,8 @@ const jsenvPluginAutoreloadServer = ({
               if (hotAcceptDependencies.includes(urlInfo.url)) {
                 instructions.push({
                   type: dependentUrlInfo.type,
-                  boundary: urlToRelativeUrl(dependentUrl, rootDirectoryUrl),
-                  acceptedBy: urlToRelativeUrl(urlInfo.url, rootDirectoryUrl)
+                  boundary: formatUrlForClient(dependentUrl),
+                  acceptedBy: formatUrlForClient(urlInfo.url)
                 });
                 continue;
               }
@@ -20268,7 +20371,7 @@ const jsenvPluginAutoreloadServer = ({
                 return {
                   declined: true,
                   reason: "circular dependency",
-                  declinedBy: urlToRelativeUrl(dependentUrl, rootDirectoryUrl)
+                  declinedBy: formatUrlForClient(dependentUrl)
                 };
               }
 
@@ -20316,7 +20419,7 @@ const jsenvPluginAutoreloadServer = ({
             return;
           }
 
-          const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
+          const relativeUrl = formatUrlForClient(url);
           const hotUpdate = propagateUpdate(urlInfo);
 
           if (hotUpdate.declined) {
@@ -20338,7 +20441,7 @@ const jsenvPluginAutoreloadServer = ({
           firstUrlInfo
         }) => {
           const mainHotUpdate = propagateUpdate(firstUrlInfo);
-          const cause = `following files are no longer referenced: ${prunedUrlInfos.map(prunedUrlInfo => urlToRelativeUrl(prunedUrlInfo.url, rootDirectoryUrl))}`; // now check if we can hot update the main ressource
+          const cause = `following files are no longer referenced: ${prunedUrlInfos.map(prunedUrlInfo => formatUrlForClient(prunedUrlInfo.url))}`; // now check if we can hot update the main ressource
           // then if we can hot update all dependencies
 
           if (mainHotUpdate.declined) {
@@ -20361,15 +20464,15 @@ const jsenvPluginAutoreloadServer = ({
               notifyDeclined({
                 cause,
                 reason: `a pruned file declines hot reload`,
-                declinedBy: urlToRelativeUrl(prunedUrlInfo.url, rootDirectoryUrl)
+                declinedBy: formatUrlForClient(prunedUrlInfo.url)
               });
               return;
             }
 
             instructions.push({
               type: "prune",
-              boundary: urlToRelativeUrl(prunedUrlInfo.url, rootDirectoryUrl),
-              acceptedBy: urlToRelativeUrl(firstUrlInfo.url, rootDirectoryUrl)
+              boundary: formatUrlForClient(prunedUrlInfo.url),
+              acceptedBy: formatUrlForClient(firstUrlInfo.url)
             });
           }
 
@@ -20452,14 +20555,73 @@ const jsenvPluginCacheControl = () => {
 };
 const SECONDS_IN_30_DAYS$1 = 60 * 60 * 24 * 30;
 
+const jsenvPluginExplorer = ({
+  groups
+}) => {
+  const htmlClientFileUrl = new URL("./html/explorer.html", import.meta.url);
+  const faviconClientFileUrl = new URL("./other/jsenv.png", import.meta.url);
+  return {
+    name: "jsenv:explorer",
+    appliesDuring: "dev",
+    serve: async (request, {
+      rootDirectoryUrl
+    }) => {
+      if (request.ressource !== "/") {
+        return null;
+      }
+
+      const associationsForExplorable = {};
+      Object.keys(groups).forEach(groupName => {
+        const groupConfig = groups[groupName];
+        associationsForExplorable[groupName] = {
+          "**/.jsenv/": false,
+          // avoid visting .jsenv directory in jsenv itself
+          ...groupConfig
+        };
+      });
+      const matchingFileResultArray = await collectFiles({
+        directoryUrl: rootDirectoryUrl,
+        associations: associationsForExplorable,
+        predicate: meta => Object.keys(meta).some(group => Boolean(meta[group]))
+      });
+      const files = matchingFileResultArray.map(({
+        relativeUrl,
+        meta
+      }) => ({
+        relativeUrl,
+        meta
+      }));
+      let html = String(readFileSync$1(new URL(htmlClientFileUrl)));
+      html = html.replace("ignore:FAVICON_HREF", DATA_URL.stringify({
+        contentType: CONTENT_TYPE.fromUrlExtension(faviconClientFileUrl),
+        base64Flag: true,
+        data: readFileSync$1(new URL(faviconClientFileUrl)).toString("base64")
+      }));
+      html = html.replace("SERVER_PARAMS", JSON.stringify({
+        rootDirectoryUrl,
+        groups,
+        files
+      }, null, "  "));
+      return {
+        status: 200,
+        headers: {
+          "cache-control": "no-store",
+          "content-type": "text/html",
+          "content-length": Buffer.byteLength(html)
+        },
+        body: html
+      };
+    }
+  };
+};
+
 const getCorePlugins = ({
   rootDirectoryUrl,
-  urlGraph,
   scenario,
   runtimeCompat,
   urlAnalysis = {},
   htmlSupervisor,
-  nodeEsmResolution,
+  nodeEsmResolution = true,
   fileSystemMagicResolution,
   directoryReferenceAllowed,
   transpilation = true,
@@ -20467,7 +20629,8 @@ const getCorePlugins = ({
   bundling = false,
   clientAutoreload = false,
   clientFileChangeCallbackList,
-  clientFilesPruneCallbackList
+  clientFilesPruneCallbackList,
+  explorer
 } = {}) => {
   if (htmlSupervisor === true) {
     htmlSupervisor = {};
@@ -20475,6 +20638,10 @@ const getCorePlugins = ({
 
   if (nodeEsmResolution === true) {
     nodeEsmResolution = {};
+  }
+
+  if (fileSystemMagicResolution === true) {
+    fileSystemMagicResolution = {};
   }
 
   if (clientAutoreload === true) {
@@ -20492,18 +20659,13 @@ const getCorePlugins = ({
     directoryReferenceAllowed,
     ...fileSystemMagicResolution
   }), jsenvPluginHttpUrls(), jsenvPluginLeadingSlash(), // before url resolution to handle "js_import_export" resolution
-  jsenvPluginNodeEsmResolution({
-    rootDirectoryUrl,
-    urlGraph,
-    runtimeCompat,
-    ...nodeEsmResolution
-  }), jsenvPluginUrlResolution(), jsenvPluginUrlVersion(), jsenvPluginCommonJsGlobals(), jsenvPluginImportMetaScenarios(), jsenvPluginNodeRuntime({
+  jsenvPluginNodeEsmResolution(nodeEsmResolution), jsenvPluginUrlResolution(), jsenvPluginUrlVersion(), jsenvPluginCommonJsGlobals(), jsenvPluginImportMetaScenarios(), jsenvPluginNodeRuntime({
     runtimeCompat
   }), jsenvPluginBundling(bundling), jsenvPluginMinification(minification), jsenvPluginImportMetaHot(), ...(clientAutoreload ? [jsenvPluginAutoreload({ ...clientAutoreload,
     scenario,
     clientFileChangeCallbackList,
     clientFilesPruneCallbackList
-  })] : []), jsenvPluginCacheControl()];
+  })] : []), jsenvPluginCacheControl(), ...(explorer ? [jsenvPluginExplorer(explorer)] : [])];
 };
 
 const urlSpecifierEncoding = {
@@ -20585,7 +20747,8 @@ const formatters = {
 const createUrlGraph = ({
   clientFileChangeCallbackList,
   clientFilesPruneCallbackList,
-  onCreateUrlInfo = () => {}
+  onCreateUrlInfo = () => {},
+  includeOriginalUrls
 } = {}) => {
   const urlInfoMap = new Map();
 
@@ -20650,7 +20813,16 @@ const createUrlGraph = ({
   };
 
   const updateReferences = (urlInfo, references) => {
-    const dependencyUrls = [];
+    const setOfDependencyUrls = new Set(); // for import assertion "file.css?as_css_module" depends on "file.css"
+    // this is enabled only for dev where there is autoreload
+    // during build the css file must be considered as not referenced
+    // (except if referenced explicitely by something else) so that
+    // the css file does not appear in the build directory
+
+    if (includeOriginalUrls && urlInfo.originalUrl !== urlInfo.url) {
+      setOfDependencyUrls.add(urlInfo.originalUrl);
+    }
+
     references.forEach(reference => {
       if (reference.isRessourceHint) {
         // ressource hint are a special kind of reference.
@@ -20662,15 +20834,12 @@ const createUrlGraph = ({
         return;
       }
 
-      if (dependencyUrls.includes(reference.url)) {
-        return;
-      }
-
-      dependencyUrls.push(reference.url);
+      setOfDependencyUrls.add(reference.url);
     });
-    pruneDependencies(urlInfo, Array.from(urlInfo.dependencies).filter(dep => !dependencyUrls.includes(dep)));
+    const urlsToRemove = Array.from(urlInfo.dependencies).filter(dep => !setOfDependencyUrls.has(dep));
+    pruneDependencies(urlInfo, urlsToRemove);
     urlInfo.references = references;
-    dependencyUrls.forEach(dependencyUrl => {
+    setOfDependencyUrls.forEach(dependencyUrl => {
       const dependencyUrlInfo = reuseOrCreateUrlInfo(dependencyUrl);
       urlInfo.dependencies.add(dependencyUrl);
       dependencyUrlInfo.dependents.add(urlInfo.url);
@@ -20684,17 +20853,17 @@ const createUrlGraph = ({
     const removeDependencies = (urlInfo, urlsToPrune) => {
       urlsToPrune.forEach(urlToPrune => {
         urlInfo.dependencies.delete(urlToPrune);
-        const dependency = getUrlInfo(urlToPrune);
+        const dependencyUrlInfo = getUrlInfo(urlToPrune);
 
-        if (!dependency) {
+        if (!dependencyUrlInfo) {
           return;
         }
 
-        dependency.dependents.delete(urlInfo.url);
+        dependencyUrlInfo.dependents.delete(urlInfo.url);
 
-        if (dependency.dependents.size === 0) {
-          removeDependencies(dependency, Array.from(dependency.dependencies));
-          prunedUrlInfos.push(dependency);
+        if (dependencyUrlInfo.dependents.size === 0) {
+          removeDependencies(dependencyUrlInfo, Array.from(dependencyUrlInfo.dependencies));
+          prunedUrlInfos.push(dependencyUrlInfo);
         }
       });
     };
@@ -20706,8 +20875,12 @@ const createUrlGraph = ({
     }
 
     prunedUrlInfos.forEach(prunedUrlInfo => {
-      prunedUrlInfo.modifiedTimestamp = Date.now(); // should we delete?
-      // delete urlGraph.deleteUrlInfo(prunedUrlInfo.url)
+      prunedUrlInfo.modifiedTimestamp = Date.now();
+
+      if (prunedUrlInfo.isInline) {
+        // should we always delete?
+        deleteUrlInfo(prunedUrlInfo.url);
+      }
     });
 
     if (clientFilesPruneCallbackList) {
@@ -20849,57 +21022,72 @@ const createUrlInfo = url => {
 
 const isValid = () => false;
 
+const HOOK_NAMES = ["init", "serve", // is called only during dev/tests
+"resolveUrl", "redirectUrl", "fetchUrlContent", "transformUrlContent", "transformUrlSearchParams", "formatUrl", "finalizeUrlContent", "bundle", // is called only during build
+"optimizeUrlContent", // is called only during build
+"cooked", "augmentResponse", // is called only during dev/tests
+"destroy"];
 const createPluginController = ({
   plugins,
-  scenario,
-  hooks = ["init", "resolveUrl", "redirectUrl", "fetchUrlContent", "transformUrlContent", "transformUrlSearchParams", "formatUrl", "finalizeUrlContent", "cooked", "destroy"]
+  scenario
 }) => {
-  plugins = flattenAndFilterPlugins(plugins, {
+  const flatPlugins = flattenAndFilterPlugins(plugins, {
     scenario
-  }); // precompute a list of hooks per hookName
-  // For one major reason:
+  }); // precompute a list of hooks per hookName for one major reason:
   // - When debugging, there is less iteration
-  // And also it should increase perf as there is less work to do
+  // also it should increase perf as there is less work to do
 
   const hookGroups = {};
 
-  const addHook = hookName => {
-    const hooks = [];
-    plugins.forEach(plugin => {
-      const hook = plugin[hookName];
+  const addPlugin = (plugin, {
+    position = "start"
+  }) => {
+    Object.keys(plugin).forEach(key => {
+      if (key === "name" || key === "appliesDuring" || key === "serverEvents") {
+        return;
+      }
 
-      if (hook) {
-        hooks.push({
+      const isHook = HOOK_NAMES.includes(key);
+
+      if (!isHook) {
+        console.warn(`Unexpected "${key}" property on "${plugin.name}" plugin`);
+      }
+
+      const hookName = key;
+      const hookValue = plugin[hookName];
+
+      if (hookValue) {
+        const group = hookGroups[hookName] || (hookGroups[hookName] = []);
+        const hook = {
           plugin,
-          hookName,
-          value: hook
-        });
+          name: hookName,
+          value: hookValue
+        };
+
+        if (position === "start") {
+          group.push(hook);
+        } else {
+          group.unshift(hook);
+        }
       }
     });
-    hookGroups[hookName] = hooks;
-    return hooks;
   };
-
-  hooks.forEach(hookName => {
-    addHook(hookName);
-  });
 
   const pushPlugin = plugin => {
-    plugins.push(plugin);
-    hooks.forEach(hookName => {
-      const hook = plugin[hookName];
-
-      if (hook) {
-        const group = hookGroups[hookName] || (hookGroups[hookName] = []);
-        group.push({
-          plugin,
-          hookName,
-          value: hook
-        });
-      }
+    addPlugin(plugin, {
+      position: "start"
     });
   };
 
+  const unshiftPlugin = plugin => {
+    addPlugin(plugin, {
+      position: "end"
+    });
+  };
+
+  flatPlugins.forEach(plugin => {
+    pushPlugin(plugin);
+  });
   let currentPlugin = null;
   let currentHookName = null;
 
@@ -20911,15 +21099,20 @@ const createPluginController = ({
     }
 
     currentPlugin = hook.plugin;
-    currentHookName = hook.hookName;
-    const timeEnd = timeStart(`${currentHookName}-${currentPlugin.name.replace("jsenv:", "")}`);
+    currentHookName = hook.name;
+    let timeEnd;
+
+    if (info.timing) {
+      timeEnd = timeStart(`${currentHookName}-${currentPlugin.name.replace("jsenv:", "")}`);
+    }
+
     let valueReturned = hookFn(info, context);
 
     if (info.timing) {
       Object.assign(info.timing, timeEnd());
     }
 
-    valueReturned = assertAndNormalizeReturnValue(hook.hookName, valueReturned);
+    valueReturned = assertAndNormalizeReturnValue(hook.name, valueReturned);
     currentPlugin = null;
     currentHookName = null;
     return valueReturned;
@@ -20933,15 +21126,20 @@ const createPluginController = ({
     }
 
     currentPlugin = hook.plugin;
-    currentHookName = hook.hookName;
-    const timeEnd = timeStart(`${currentHookName}-${currentPlugin.name.replace("jsenv:", "")}`);
+    currentHookName = hook.name;
+    let timeEnd;
+
+    if (info.timing) {
+      timeEnd = timeStart(`${currentHookName}-${currentPlugin.name.replace("jsenv:", "")}`);
+    }
+
     let valueReturned = await hookFn(info, context);
 
     if (info.timing) {
       Object.assign(info.timing, timeEnd());
     }
 
-    valueReturned = assertAndNormalizeReturnValue(hook.hookName, valueReturned);
+    valueReturned = assertAndNormalizeReturnValue(hook.name, valueReturned);
     currentPlugin = null;
     currentHookName = null;
     return valueReturned;
@@ -20950,35 +21148,42 @@ const createPluginController = ({
   const callHooks = (hookName, info, context, callback) => {
     const hooks = hookGroups[hookName];
 
-    for (const hook of hooks) {
-      const returnValue = callHook(hook, info, context);
+    if (hooks) {
+      for (const hook of hooks) {
+        const returnValue = callHook(hook, info, context);
 
-      if (returnValue) {
-        callback(returnValue);
+        if (returnValue && callback) {
+          callback(returnValue);
+        }
       }
     }
   };
 
   const callAsyncHooks = async (hookName, info, context, callback) => {
     const hooks = hookGroups[hookName];
-    await hooks.reduce(async (previous, hook) => {
-      await previous;
-      const returnValue = await callAsyncHook(hook, info, context);
 
-      if (returnValue && callback) {
-        await callback(returnValue);
-      }
-    }, Promise.resolve());
+    if (hooks) {
+      await hooks.reduce(async (previous, hook) => {
+        await previous;
+        const returnValue = await callAsyncHook(hook, info, context);
+
+        if (returnValue && callback) {
+          await callback(returnValue);
+        }
+      }, Promise.resolve());
+    }
   };
 
   const callHooksUntil = (hookName, info, context) => {
     const hooks = hookGroups[hookName];
 
-    for (const hook of hooks) {
-      const returnValue = callHook(hook, info, context);
+    if (hooks) {
+      for (const hook of hooks) {
+        const returnValue = callHook(hook, info, context);
 
-      if (returnValue) {
-        return returnValue;
+        if (returnValue) {
+          return returnValue;
+        }
       }
     }
 
@@ -20987,6 +21192,10 @@ const createPluginController = ({
 
   const callAsyncHooksUntil = (hookName, info, context) => {
     const hooks = hookGroups[hookName];
+
+    if (!hooks) {
+      return null;
+    }
 
     if (hooks.length === 0) {
       return null;
@@ -21014,9 +21223,9 @@ const createPluginController = ({
   };
 
   return {
-    plugins,
+    plugins: flatPlugins,
     pushPlugin,
-    addHook,
+    unshiftPlugin,
     getHookFunction,
     callHook,
     callAsyncHook,
@@ -21029,10 +21238,10 @@ const createPluginController = ({
   };
 };
 
-const flattenAndFilterPlugins = (pluginsRaw, {
+const flattenAndFilterPlugins = (plugins, {
   scenario
 }) => {
-  const plugins = [];
+  const flatPlugins = [];
 
   const visitPluginEntry = pluginEntry => {
     if (Array.isArray(pluginEntry)) {
@@ -21055,7 +21264,7 @@ const flattenAndFilterPlugins = (pluginsRaw, {
       }
 
       if (appliesDuring === "*") {
-        plugins.push(pluginEntry);
+        flatPlugins.push(pluginEntry);
         return;
       }
 
@@ -21065,7 +21274,7 @@ const flattenAndFilterPlugins = (pluginsRaw, {
         }
 
         if (appliesDuring === scenario) {
-          plugins.push(pluginEntry);
+          flatPlugins.push(pluginEntry);
         }
 
         return;
@@ -21076,7 +21285,7 @@ const flattenAndFilterPlugins = (pluginsRaw, {
       }
 
       if (appliesDuring[scenario]) {
-        plugins.push(pluginEntry);
+        flatPlugins.push(pluginEntry);
         return;
       }
 
@@ -21090,8 +21299,8 @@ const flattenAndFilterPlugins = (pluginsRaw, {
     throw new Error(`plugin must be objects, got ${pluginEntry}`);
   };
 
-  pluginsRaw.forEach(plugin => visitPluginEntry(plugin));
-  return plugins;
+  plugins.forEach(plugin => visitPluginEntry(plugin));
+  return flatPlugins;
 };
 
 const getHookFunction = (hook, // can be undefined, reference, or urlInfo
@@ -21198,7 +21407,7 @@ const createUrlInfoTransformer = ({
 
     if (sources) {
       sources = sources.map(source => {
-        if (source && isFileSystemPath(source)) {
+        if (source && isFileSystemPath$1(source)) {
           return String(pathToFileURL(source));
         }
 
@@ -21382,7 +21591,7 @@ const createUrlInfoTransformer = ({
       urlGraph.deleteUrlInfo(urlInfo.sourcemapReference.url);
     }
 
-    urlInfo.contentEtag = bufferToEtag(Buffer.from(urlInfo.content));
+    urlInfo.contentEtag = bufferToEtag$1(Buffer.from(urlInfo.content));
   };
 
   return {
@@ -21757,11 +21966,12 @@ const assertFetchedContentCompliance = ({
 
 const createKitchen = ({
   signal,
-  logger,
+  logLevel,
   rootDirectoryUrl,
+  scenario,
+  runtimeCompat,
   urlGraph,
   plugins,
-  scenario,
   sourcemaps = {
     dev: "inline",
     // "programmatic" and "file" also allowed
@@ -21776,9 +21986,11 @@ const createKitchen = ({
     build: true
   }[scenario],
   sourcemapsRelativeSources,
-  runtimeCompat,
   writeGeneratedFiles
 }) => {
+  const logger = createLogger({
+    logLevel
+  });
   const pluginController = createPluginController({
     plugins,
     scenario
@@ -21788,13 +22000,13 @@ const createKitchen = ({
     signal,
     logger,
     rootDirectoryUrl,
-    sourcemaps,
     urlGraph,
     scenario,
     runtimeCompat,
     isSupportedOnFutureClients: feature => {
       return RUNTIME_COMPAT.isSupported(runtimeCompat, feature);
-    }
+    },
+    sourcemaps
   };
   pluginController.callHooks("init", kitchenContext);
 
@@ -22693,6 +22905,109 @@ const determineFileUrlForOutDirectory = ({
 //   }
 // }
 
+const createServerEventsDispatcher = () => {
+  const destroyCallbackList = createCallbackListNotifiedOnce();
+  const rooms = [];
+  const sseRoomLimit = 100;
+  destroyCallbackList.add(() => {
+    rooms.forEach(room => {
+      room.close();
+    });
+  });
+  return {
+    addRoom: request => {
+      const existingRoom = rooms.find(roomCandidate => roomCandidate.request.ressource === request.ressource);
+
+      if (existingRoom) {
+        return existingRoom;
+      }
+
+      const room = createSSERoom({
+        retryDuration: 2000,
+        historyLength: 100,
+        welcomeEventEnabled: true,
+        effect: () => {
+          rooms.push(room);
+
+          if (rooms.length >= sseRoomLimit) {
+            const firstRoom = rooms.shift();
+            firstRoom.close();
+          }
+
+          return () => {
+            // when the last client leaves the room it is closed and removed from the list
+            room.close();
+            const index = rooms.indexOf(room);
+
+            if (index > -1) {
+              rooms.splice(index, 1);
+            }
+          };
+        }
+      });
+      room.request = request;
+      return room;
+    },
+    dispatch: ({
+      type,
+      data
+    }) => {
+      rooms.forEach(room => room.sendEventToAllClients({
+        type,
+        data: JSON.stringify(data)
+      }));
+    },
+    dispatchToRoomsMatching: ({
+      type,
+      data
+    }, predicate) => {
+      rooms.forEach(room => {
+        if (predicate(room)) {
+          room.sendEventToAllClients({
+            type,
+            data: JSON.stringify(data)
+          });
+        }
+      });
+    },
+    destroy: () => {
+      destroyCallbackList.notify();
+    }
+  };
+};
+
+/*
+ * This plugin is very special because it is here
+ * to provide "serverEvents" used by other plugins
+ */
+const serverEventsClientFileUrl = new URL("./js/server_events_client.js", import.meta.url).href;
+const jsenvPluginServerEventsClientInjection = () => {
+  return {
+    name: "jsenv:server_events_client_injection",
+    appliesDuring: "*",
+    transformUrlContent: {
+      html: (htmlUrlInfo, context) => {
+        const htmlAst = parseHtmlString(htmlUrlInfo.content);
+        const [serverEventsClientFileReference] = context.referenceUtils.inject({
+          type: "script_src",
+          expectedType: "js_module",
+          specifier: serverEventsClientFileUrl
+        });
+        injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
+          "tagName": "script",
+          "type": "module",
+          "src": serverEventsClientFileReference.generatedSpecifier,
+          "injected-by": "jsenv:server_events"
+        }));
+        const htmlModified = stringifyHtmlAst(htmlAst);
+        return {
+          content: htmlModified
+        };
+      }
+    }
+  };
+};
+
 const memoizeByFirstArgument = compute => {
   const urlCache = new Map();
 
@@ -22742,36 +23057,247 @@ const parseUserAgentHeader = memoizeByFirstArgument(userAgent => {
 });
 
 const createFileService = ({
+  signal,
+  logLevel,
+  serverStopCallbacks,
   rootDirectoryUrl,
-  urlGraph,
-  kitchen,
   scenario,
-  onErrorWhileServingFile
+  runtimeCompat,
+  plugins,
+  urlAnalysis,
+  htmlSupervisor,
+  nodeEsmResolution,
+  fileSystemMagicResolution,
+  transpilation,
+  clientAutoreload,
+  clientFiles,
+  cooldownBetweenFileEvents,
+  explorer,
+  sourcemaps,
+  writeGeneratedFiles
 }) => {
-  kitchen.pluginController.addHook("serve");
-  kitchen.pluginController.addHook("augmentResponse");
-  const serveContext = {
-    rootDirectoryUrl,
-    urlGraph,
-    scenario
-  };
-  const augmentResponseContext = {
-    rootDirectoryUrl,
-    urlGraph,
-    scenario
+  const jsenvDirectoryUrl = new URL(".jsenv/", rootDirectoryUrl).href;
+  const onErrorWhileServingFileCallbacks = [];
+
+  const onErrorWhileServingFile = data => {
+    onErrorWhileServingFileCallbacks.forEach(onErrorWhileServingFileCallback => {
+      onErrorWhileServingFileCallback(data);
+    });
   };
 
-  const getResponse = async request => {
+  const clientFileChangeCallbackList = [];
+  const clientFilesPruneCallbackList = [];
+
+  const clientFileChangeCallback = ({
+    relativeUrl,
+    event
+  }) => {
+    const url = new URL(relativeUrl, rootDirectoryUrl).href;
+    clientFileChangeCallbackList.forEach(callback => {
+      callback({
+        url,
+        event
+      });
+    });
+  };
+
+  const clientFilePatterns = { ...clientFiles,
+    ".jsenv/": false
+  };
+
+  if (scenario === "dev") {
+    const stopWatchingClientFiles = registerDirectoryLifecycle(rootDirectoryUrl, {
+      watchPatterns: clientFilePatterns,
+      cooldownBetweenFileEvents,
+      keepProcessAlive: false,
+      recursive: true,
+      added: ({
+        relativeUrl
+      }) => {
+        clientFileChangeCallback({
+          event: "added",
+          relativeUrl
+        });
+      },
+      updated: ({
+        relativeUrl
+      }) => {
+        clientFileChangeCallback({
+          event: "modified",
+          relativeUrl
+        });
+      },
+      removed: ({
+        relativeUrl
+      }) => {
+        clientFileChangeCallback({
+          event: "removed",
+          relativeUrl
+        });
+      }
+    });
+    serverStopCallbacks.push(stopWatchingClientFiles);
+  }
+
+  const contextCache = new Map();
+
+  const getOrCreateContext = request => {
+    const {
+      runtimeName,
+      runtimeVersion
+    } = parseUserAgentHeader(request.headers["user-agent"]);
+    const runtimeId = `${runtimeName}@${runtimeVersion}`;
+    const existingContext = contextCache.get(runtimeId);
+
+    if (existingContext) {
+      return existingContext;
+    }
+
+    const watchAssociations = URL_META.resolveAssociations({
+      watch: clientFilePatterns
+    }, rootDirectoryUrl);
+    const urlGraph = createUrlGraph({
+      clientFileChangeCallbackList,
+      clientFilesPruneCallbackList,
+      onCreateUrlInfo: urlInfo => {
+        const {
+          watch
+        } = URL_META.applyAssociations({
+          url: urlInfo.url,
+          associations: watchAssociations
+        });
+
+        urlInfo.isValid = () => watch;
+      },
+      includeOriginalUrls: scenario === "dev"
+    });
+    const kitchen = createKitchen({
+      signal,
+      logLevel,
+      rootDirectoryUrl,
+      scenario,
+      runtimeCompat,
+      urlGraph,
+      plugins: [...plugins, ...getCorePlugins({
+        rootDirectoryUrl,
+        scenario,
+        runtimeCompat,
+        urlAnalysis,
+        htmlSupervisor,
+        nodeEsmResolution,
+        fileSystemMagicResolution,
+        transpilation,
+        clientAutoreload,
+        clientFileChangeCallbackList,
+        clientFilesPruneCallbackList,
+        explorer
+      })],
+      sourcemaps,
+      writeGeneratedFiles
+    });
+    serverStopCallbacks.push(() => {
+      kitchen.pluginController.callHooks("destroy", kitchen.kitchenContext);
+    });
+
+    {
+      const allServerEvents = {};
+      kitchen.pluginController.plugins.forEach(plugin => {
+        const {
+          serverEvents
+        } = plugin;
+
+        if (serverEvents) {
+          Object.keys(serverEvents).forEach(serverEventName => {
+            // we could throw on serverEvent name conflict
+            // we could throw if serverEvents[serverEventName] is not a function
+            allServerEvents[serverEventName] = serverEvents[serverEventName];
+          });
+        }
+      });
+      const serverEventNames = Object.keys(allServerEvents);
+
+      if (serverEventNames.length > 0) {
+        const serverEventsDispatcher = createServerEventsDispatcher();
+        serverStopCallbacks.push(() => {
+          serverEventsDispatcher.destroy();
+        });
+        Object.keys(allServerEvents).forEach(serverEventName => {
+          allServerEvents[serverEventName]({
+            rootDirectoryUrl,
+            urlGraph,
+            scenario,
+            sendServerEvent: data => {
+              serverEventsDispatcher.dispatch({
+                type: serverEventName,
+                data
+              });
+            }
+          });
+        });
+        onErrorWhileServingFileCallbacks.push(data => {
+          serverEventsDispatcher.dispatchToRoomsMatching({
+            type: "error_while_serving_file",
+            data
+          }, room => {
+            // send only to page depending on this file
+            const errorFileUrl = data.url;
+            const roomEntryPointUrl = new URL(room.request.ressource.slice(1), rootDirectoryUrl).href;
+            const isErrorRelatedToEntryPoint = Boolean(urlGraph.findDependent(errorFileUrl, dependentUrlInfo => {
+              return dependentUrlInfo.url === roomEntryPointUrl;
+            }));
+            return isErrorRelatedToEntryPoint;
+          });
+        }); // "unshift" because serve must come first to catch event source client request
+
+        kitchen.pluginController.unshiftPlugin({
+          name: "jsenv:provide_server_events",
+          serve: request => {
+            const {
+              accept
+            } = request.headers;
+
+            if (accept && accept.includes("text/event-stream")) {
+              const room = serverEventsDispatcher.addRoom(request);
+              return room.join(request);
+            }
+
+            return null;
+          }
+        }); // "push" so that event source client connection can be put as early as possible in html
+
+        kitchen.pluginController.pushPlugin(jsenvPluginServerEventsClientInjection());
+      }
+    }
+
+    const context = {
+      rootDirectoryUrl,
+      scenario,
+      runtimeName,
+      runtimeVersion,
+      urlGraph,
+      kitchen
+    };
+    contextCache.set(runtimeId, context);
+    return context;
+  };
+
+  return async request => {
     // serve file inside ".jsenv" directory
     const requestFileUrl = new URL(request.ressource.slice(1), rootDirectoryUrl).href;
 
-    if (urlIsInsideOf(requestFileUrl, kitchen.jsenvDirectoryUrl)) {
+    if (urlIsInsideOf(requestFileUrl, jsenvDirectoryUrl)) {
       return fetchFileSystem(requestFileUrl, {
         headers: request.headers
       });
     }
 
-    const responseFromPlugin = await kitchen.pluginController.callAsyncHooksUntil("serve", request, serveContext);
+    const {
+      runtimeName,
+      runtimeVersion,
+      urlGraph,
+      kitchen
+    } = getOrCreateContext(request);
+    const responseFromPlugin = await kitchen.pluginController.callAsyncHooksUntil("serve", request, kitchen.kitchenContext);
 
     if (responseFromPlugin) {
       return responseFromPlugin;
@@ -22828,10 +23354,6 @@ const createFileService = ({
         urlInfo.timing = {};
       }
 
-      const {
-        runtimeName,
-        runtimeVersion
-      } = parseUserAgentHeader(request.headers["user-agent"]);
       await kitchen.cook(urlInfo, {
         request,
         reference,
@@ -22864,7 +23386,7 @@ const createFileService = ({
       kitchen.pluginController.callHooks("augmentResponse", {
         reference,
         urlInfo
-      }, augmentResponseContext, returnValue => {
+      }, kitchen.kitchenContext, returnValue => {
         response = composeTwoResponses(response, returnValue);
       });
       return response;
@@ -22953,11 +23475,6 @@ const createFileService = ({
       };
     }
   };
-
-  return async request => {
-    let response = await getResponse(request);
-    return response;
-  };
 };
 
 const inferParentFromRequest = (request, rootDirectoryUrl) => {
@@ -22998,29 +23515,29 @@ const startOmegaServer = async ({
   http2 = protocol === "https",
   privateKey,
   certificate,
-  listenAnyIp,
-  ip,
+  acceptAnyIp,
+  host,
   port = 0,
   keepProcessAlive = false,
   onStop = () => {},
-  serverPlugins,
-  services,
+  services = [],
   rootDirectoryUrl,
-  urlGraph,
-  kitchen,
   scenario,
-  onErrorWhileServingFile = () => {}
+  runtimeCompat,
+  plugins,
+  urlAnalysis,
+  htmlSupervisor,
+  nodeEsmResolution,
+  fileSystemMagicResolution,
+  transpilation,
+  clientAutoreload,
+  clientFiles,
+  cooldownBetweenFileEvents,
+  explorer,
+  sourcemaps,
+  writeGeneratedFiles
 }) => {
-  const serverStopCallbackList = createCallbackListNotifiedOnce();
-  const coreServices = {
-    "service:file": createFileService({
-      rootDirectoryUrl,
-      urlGraph,
-      kitchen,
-      scenario,
-      onErrorWhileServingFile
-    })
-  };
+  const serverStopCallbacks = [];
   const server = await startServer({
     signal,
     stopOnExit: false,
@@ -23033,314 +23550,90 @@ const startOmegaServer = async ({
     http2,
     certificate,
     privateKey,
-    listenAnyIp,
-    ip,
+    acceptAnyIp,
+    host,
     port,
-    plugins: { ...serverPlugins,
-      ...pluginCORS({
-        accessControlAllowRequestOrigin: true,
-        accessControlAllowRequestMethod: true,
-        accessControlAllowRequestHeaders: true,
-        accessControlAllowedRequestHeaders: [...jsenvAccessControlAllowedHeaders, "x-jsenv-execution-id"],
-        accessControlAllowCredentials: true
-      }),
-      ...pluginServerTiming(),
-      ...pluginRequestWaitingCheck({
-        requestWaitingMs: 60 * 1000
-      })
-    },
-    sendErrorDetails: true,
-    errorToResponse: (error, {
-      request
-    }) => {
-      const getResponseForError = () => {
-        if (error && error.asResponse) {
-          return error.asResponse();
-        }
-
-        if (error && error.statusText === "Unexpected directory operation") {
-          return {
-            status: 403
-          };
-        }
-
-        return convertFileSystemErrorToResponseProperties(error);
-      };
-
-      const response = getResponseForError();
-
-      if (!response) {
-        return null;
-      }
-
-      const isInspectRequest = new URL(request.ressource, request.origin).searchParams.has("__inspect__");
-
-      if (!isInspectRequest) {
-        return response;
-      }
-
-      const body = JSON.stringify({
-        status: response.status,
-        statusText: response.statusText,
-        headers: response.headers,
-        body: response.body
-      });
-      return {
-        status: 200,
-        headers: {
-          "content-type": "application/json",
-          "content-length": Buffer.byteLength(body)
-        },
-        body
-      };
-    },
-    requestToResponse: composeServices({ ...services,
-      ...coreServices
-    }),
-    onStop: reason => {
-      onStop();
-      serverStopCallbackList.notify(reason);
-    }
-  });
-  return { ...server
-  };
-};
-
-const jsenvPluginExplorer = ({
-  groups
-}) => {
-  const htmlClientFileUrl = new URL("./html/explorer.html", import.meta.url);
-  const faviconClientFileUrl = new URL("./other/jsenv.png", import.meta.url);
-  return {
-    name: "jsenv:explorer",
-    appliesDuring: {
-      dev: true
-    },
-    serve: async (request, {
-      rootDirectoryUrl
-    }) => {
-      if (request.ressource !== "/") {
-        return null;
-      }
-
-      const associationsForExplorable = {};
-      Object.keys(groups).forEach(groupName => {
-        const groupConfig = groups[groupName];
-        associationsForExplorable[groupName] = {
-          "**/.jsenv/": false,
-          // avoid visting .jsenv directory in jsenv itself
-          ...groupConfig
-        };
-      });
-      const matchingFileResultArray = await collectFiles({
-        directoryUrl: rootDirectoryUrl,
-        associations: associationsForExplorable,
-        predicate: meta => Object.keys(meta).some(group => Boolean(meta[group]))
-      });
-      const files = matchingFileResultArray.map(({
-        relativeUrl,
-        meta
-      }) => ({
-        relativeUrl,
-        meta
-      }));
-      let html = String(readFileSync$1(new URL(htmlClientFileUrl)));
-      html = html.replace("ignore:FAVICON_HREF", DATA_URL.stringify({
-        contentType: CONTENT_TYPE.fromUrlExtension(faviconClientFileUrl),
-        base64Flag: true,
-        data: readFileSync$1(new URL(faviconClientFileUrl)).toString("base64")
-      }));
-      html = html.replace("SERVER_PARAMS", JSON.stringify({
+    requestWaitingMs: 60_1000,
+    services: [jsenvServiceCORS({
+      accessControlAllowRequestOrigin: true,
+      accessControlAllowRequestMethod: true,
+      accessControlAllowRequestHeaders: true,
+      accessControlAllowedRequestHeaders: [...jsenvAccessControlAllowedHeaders, "x-jsenv-execution-id"],
+      accessControlAllowCredentials: true,
+      timingAllowOrigin: true
+    }), ...services, {
+      name: "jsenv:omega_file_service",
+      handleRequest: createFileService({
+        signal,
+        logLevel,
+        serverStopCallbacks,
         rootDirectoryUrl,
-        groups,
-        files
-      }, null, "  "));
-      return {
-        status: 200,
-        headers: {
-          "cache-control": "no-store",
-          "content-type": "text/html",
-          "content-length": Buffer.byteLength(html)
-        },
-        body: html
-      };
-    }
-  };
-};
-
-const createServerEventsDispatcher = () => {
-  const destroyCallbackList = createCallbackListNotifiedOnce();
-  const rooms = [];
-  const sseRoomLimit = 100;
-  destroyCallbackList.add(() => {
-    rooms.forEach(room => {
-      room.close();
-    });
-  });
-  return {
-    addRoom: request => {
-      const existingRoom = rooms.find(roomCandidate => roomCandidate.request.ressource === request.ressource);
-
-      if (existingRoom) {
-        return existingRoom;
-      }
-
-      const room = createSSERoom({
-        retryDuration: 2000,
-        historyLength: 100,
-        welcomeEventEnabled: true,
-        effect: () => {
-          rooms.push(room);
-
-          if (rooms.length >= sseRoomLimit) {
-            const firstRoom = rooms.shift();
-            firstRoom.close();
+        scenario,
+        runtimeCompat,
+        plugins,
+        urlAnalysis,
+        htmlSupervisor,
+        nodeEsmResolution,
+        fileSystemMagicResolution,
+        transpilation,
+        clientAutoreload,
+        clientFiles,
+        cooldownBetweenFileEvents,
+        explorer,
+        sourcemaps,
+        writeGeneratedFiles
+      })
+    }, {
+      name: "jsenv:omega_error_handler",
+      handleError: error => {
+        const getResponseForError = () => {
+          if (error && error.asResponse) {
+            return error.asResponse();
           }
 
-          return () => {
-            // when the last client leaves the room it is closed and removed from the list
-            room.close();
-            const index = rooms.indexOf(room);
+          if (error && error.statusText === "Unexpected directory operation") {
+            return {
+              status: 403
+            };
+          }
 
-            if (index > -1) {
-              rooms.splice(index, 1);
-            }
-          };
+          return convertFileSystemErrorToResponseProperties(error);
+        };
+
+        const response = getResponseForError();
+
+        if (!response) {
+          return null;
         }
-      });
-      room.request = request;
-      return room;
-    },
-    dispatch: ({
-      type,
-      data
-    }) => {
-      rooms.forEach(room => room.sendEventToAllClients({
-        type,
-        data: JSON.stringify(data)
-      }));
-    },
-    dispatchToRoomsMatching: ({
-      type,
-      data
-    }, predicate) => {
-      rooms.forEach(room => {
-        if (predicate(room)) {
-          room.sendEventToAllClients({
-            type,
-            data: JSON.stringify(data)
-          });
-        }
-      });
-    },
-    destroy: () => {
-      destroyCallbackList.notify();
-    }
-  };
-};
 
-/*
- * This plugin is very special because it is here
- * to provide "serverEvents" used by other plugins
- */
-const serverEventsClientFileUrl = new URL("./js/server_events_client.js", import.meta.url).href;
-const jsenvPluginServerEvents = ({
-  rootDirectoryUrl,
-  urlGraph,
-  scenario,
-  kitchen,
-  onErrorWhileServingFileReference
-}) => {
-  const allServerEvents = {};
-  kitchen.pluginController.plugins.forEach(plugin => {
-    const {
-      serverEvents
-    } = plugin;
-
-    if (serverEvents) {
-      Object.keys(serverEvents).forEach(serverEventName => {
-        // we could throw on serverEvent name conflict
-        // we could throw if serverEvents[serverEventName] is not a function
-        allServerEvents[serverEventName] = serverEvents[serverEventName];
-      });
-    }
-  });
-  const serverEventNames = Object.keys(allServerEvents);
-
-  if (serverEventNames.length === 0) {
-    return;
-  }
-
-  serverEventNames.forEach(serverEventName => {
-    allServerEvents[serverEventName]({
-      rootDirectoryUrl,
-      urlGraph,
-      scenario,
-      sendServerEvent: data => {
-        serverEventsDispatcher.dispatch({
-          type: serverEventName,
-          data
+        const body = JSON.stringify({
+          status: response.status,
+          statusText: response.statusText,
+          headers: response.headers,
+          body: response.body
         });
-      }
-    });
-  });
-  const serverEventsDispatcher = createServerEventsDispatcher();
-
-  onErrorWhileServingFileReference.current = data => {
-    serverEventsDispatcher.dispatchToRoomsMatching({
-      type: "error_while_serving_file",
-      data
-    }, room => {
-      // send only to page depending on this file
-      const errorFileUrl = data.url;
-      const roomEntryPointUrl = new URL(room.request.ressource.slice(1), rootDirectoryUrl).href;
-      const isErrorRelatedToEntryPoint = Boolean(urlGraph.findDependent(errorFileUrl, dependentUrlInfo => {
-        return dependentUrlInfo.url === roomEntryPointUrl;
-      }));
-      return isErrorRelatedToEntryPoint;
-    });
-  };
-
-  const jsenvServerEventPlugin = {
-    name: "jsenv:server_events",
-    appliesDuring: "*",
-    destroy: () => {
-      serverEventsDispatcher.destroy();
-    },
-    serve: request => {
-      const {
-        accept
-      } = request.headers;
-
-      if (accept && accept.includes("text/event-stream")) {
-        const room = serverEventsDispatcher.addRoom(request);
-        return room.join(request);
-      }
-
-      return null;
-    },
-    transformUrlContent: {
-      html: (htmlUrlInfo, context) => {
-        const htmlAst = parseHtmlString(htmlUrlInfo.content);
-        const [serverEventsClientFileReference] = context.referenceUtils.inject({
-          type: "script_src",
-          expectedType: "js_module",
-          specifier: serverEventsClientFileUrl
-        });
-        injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
-          "tagName": "script",
-          "type": "module",
-          "src": serverEventsClientFileReference.generatedSpecifier,
-          "injected-by": "jsenv:server_events"
-        }));
-        const htmlModified = stringifyHtmlAst(htmlAst);
         return {
-          content: htmlModified
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+            "content-length": Buffer.byteLength(body)
+          },
+          body
         };
       }
+    }, // default error handling
+    jsenvServiceErrorHandler({
+      sendErrorDetails: true
+    })],
+    onStop: reason => {
+      onStop();
+      serverStopCallbacks.forEach(serverStopCallback => {
+        serverStopCallback(reason);
+      });
+      serverStopCallbacks.length = 0;
     }
-  };
-  kitchen.pluginController.pushPlugin(jsenvServerEventPlugin);
+  });
+  return server;
 };
 
 const startDevServer = async ({
@@ -23350,14 +23643,14 @@ const startDevServer = async ({
   omegaServerLogLevel = "warn",
   port = 3456,
   protocol = "http",
-  listenAnyIp,
+  acceptAnyIp,
   // it's better to use http1 by default because it allows to get statusText in devtools
   // which gives valuable information when there is errors
   http2 = false,
   certificate,
   privateKey,
   keepProcessAlive = true,
-  serverPlugins,
+  services,
   rootDirectoryUrl,
   clientFiles = {
     "./src/": true,
@@ -23371,7 +23664,6 @@ const startDevServer = async ({
   devServerAutoreload = false,
   devServerMainFile = getCallerPosition().url,
   cooldownBetweenFileEvents,
-  sourcemaps = "inline",
   // default runtimeCompat assume dev server will be request by recent browsers
   // Used by "jsenv_plugin_node_runtime.js" to deactivate itself
   // If dev server can be requested by Node.js to exec files
@@ -23388,15 +23680,18 @@ const startDevServer = async ({
   nodeEsmResolution,
   fileSystemMagicResolution,
   transpilation,
-  explorerGroups = {
-    src: {
-      "./src/**/*.html": true
-    },
-    tests: {
-      "./tests/**/*.test.html": true
+  explorer = {
+    groups: {
+      src: {
+        "./src/**/*.html": true
+      },
+      tests: {
+        "./tests/**/*.test.html": true
+      }
     }
   },
   // toolbar = false,
+  sourcemaps = "inline",
   writeGeneratedFiles = true
 }) => {
   const logger = createLogger({
@@ -23411,12 +23706,6 @@ const startDevServer = async ({
       return raceProcessTeardownEvents({
         SIGINT: true
       }, abort);
-    });
-  }
-
-  if (port === 0) {
-    port = await findFreePort(port, {
-      signal: operation.signal
     });
   }
 
@@ -23476,12 +23765,12 @@ const startDevServer = async ({
       const messagePromise = new Promise(resolve => {
         worker.once("message", resolve);
       });
-      await messagePromise; // if (!keepProcessAlive) {
+      const origin = await messagePromise; // if (!keepProcessAlive) {
       //   worker.unref()
       // }
 
       return {
-        origin: `${protocol}://127.0.0.1:${port}`,
+        origin,
         stop: () => {
           stopWatchingDevServerFiles();
           reloadableWorker.terminate();
@@ -23493,126 +23782,31 @@ const startDevServer = async ({
   const startDevServerTask = createTaskLog("start dev server", {
     disabled: !loggerToLevels(logger).info
   });
-  const clientFileChangeCallbackList = [];
-  const clientFilesPruneCallbackList = [];
-
-  const clientFileChangeCallback = ({
-    relativeUrl,
-    event
-  }) => {
-    const url = new URL(relativeUrl, rootDirectoryUrl).href;
-    clientFileChangeCallbackList.forEach(callback => {
-      callback({
-        url,
-        event
-      });
-    });
-  };
-
-  const clientFilePatterns = { ...clientFiles,
-    ".jsenv/": false
-  };
-  const watchAssociations = URL_META.resolveAssociations({
-    watch: clientFilePatterns
-  }, rootDirectoryUrl);
-  const stopWatchingClientFiles = registerDirectoryLifecycle(rootDirectoryUrl, {
-    watchPatterns: clientFilePatterns,
-    cooldownBetweenFileEvents,
-    keepProcessAlive: false,
-    recursive: true,
-    added: ({
-      relativeUrl
-    }) => {
-      clientFileChangeCallback({
-        event: "added",
-        relativeUrl
-      });
-    },
-    updated: ({
-      relativeUrl
-    }) => {
-      clientFileChangeCallback({
-        event: "modified",
-        relativeUrl
-      });
-    },
-    removed: ({
-      relativeUrl
-    }) => {
-      clientFileChangeCallback({
-        event: "removed",
-        relativeUrl
-      });
-    }
-  });
-  const urlGraph = createUrlGraph({
-    clientFileChangeCallbackList,
-    clientFilesPruneCallbackList,
-    onCreateUrlInfo: urlInfo => {
-      const {
-        watch
-      } = URL_META.applyAssociations({
-        url: urlInfo.url,
-        associations: watchAssociations
-      });
-
-      urlInfo.isValid = () => watch;
-    }
-  });
-  const kitchen = createKitchen({
-    signal,
-    logger,
-    rootDirectoryUrl,
-    urlGraph,
-    scenario: "dev",
-    runtimeCompat,
-    sourcemaps,
-    writeGeneratedFiles,
-    plugins: [...plugins, ...getCorePlugins({
-      rootDirectoryUrl,
-      urlGraph,
-      scenario: "dev",
-      runtimeCompat,
-      urlAnalysis,
-      htmlSupervisor,
-      nodeEsmResolution,
-      fileSystemMagicResolution,
-      transpilation,
-      clientAutoreload,
-      clientFileChangeCallbackList,
-      clientFilesPruneCallbackList
-    }), jsenvPluginExplorer({
-      groups: explorerGroups
-    }) // ...(toolbar ? [jsenvPluginToolbar(toolbar)] : []),
-    ]
-  });
-  const onErrorWhileServingFileReference = {
-    current: () => {}
-  };
-  jsenvPluginServerEvents({
-    rootDirectoryUrl,
-    urlGraph,
-    kitchen,
-    scenario: "dev",
-    onErrorWhileServingFileReference
-  });
   const server = await startOmegaServer({
     logLevel: omegaServerLogLevel,
     keepProcessAlive,
-    listenAnyIp,
+    acceptAnyIp,
     port,
     protocol,
     http2,
     certificate,
     privateKey,
+    services,
     rootDirectoryUrl,
-    urlGraph,
-    kitchen,
     scenario: "dev",
-    serverPlugins,
-    onErrorWhileServingFile: data => {
-      onErrorWhileServingFileReference.current(data);
-    }
+    runtimeCompat,
+    plugins,
+    urlAnalysis,
+    htmlSupervisor,
+    nodeEsmResolution,
+    fileSystemMagicResolution,
+    transpilation,
+    clientFiles,
+    clientAutoreload,
+    cooldownBetweenFileEvents,
+    explorer,
+    sourcemaps,
+    writeGeneratedFiles
   });
   startDevServerTask.done();
   logger.info(``);
@@ -23620,11 +23814,6 @@ const startDevServer = async ({
     logger.info(`- ${server.origins[key]}`);
   });
   logger.info(``);
-  server.addEffect(() => {
-    return () => {
-      kitchen.pluginController.callHooks("destroy", {});
-    };
-  });
 
   if (reloadableWorker && reloadableWorker.isWorker) {
     parentPort.postMessage(server.origin);
@@ -23633,7 +23822,6 @@ const startDevServer = async ({
   return {
     origin: server.origin,
     stop: () => {
-      stopWatchingClientFiles();
       server.stop();
     }
   };
@@ -23741,7 +23929,7 @@ const babelPluginInstrument = (api, {
             return;
           }
 
-          const fileUrl = fileSystemPathToUrl(opts.sourceFileName);
+          const fileUrl = fileSystemPathToUrl$1(opts.sourceFileName);
 
           if (!shouldInstrument(fileUrl)) {
             return;
@@ -24038,7 +24226,7 @@ const normalizeFileByFileCoveragePaths = (fileByFileCoverage, rootDirectoryUrl) 
     const {
       path
     } = fileCoverage;
-    const url = isFileSystemPath(path) ? fileSystemPathToUrl(path) : new URL(path, rootDirectoryUrl).href;
+    const url = isFileSystemPath$1(path) ? fileSystemPathToUrl$1(path) : new URL(path, rootDirectoryUrl).href;
     const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
     fileByFileNormalized[`./${relativeUrl}`] = { ...fileCoverage,
       path: `./${relativeUrl}`
@@ -24909,6 +25097,7 @@ const executePlan = async (plan, {
   completedExecutionLogAbbreviation,
   rootDirectoryUrl,
   keepRunning,
+  services,
   defaultMsAllocatedPerExecution,
   maxExecutionsInParallel,
   failFast,
@@ -24931,7 +25120,7 @@ const executePlan = async (plan, {
   protocol,
   privateKey,
   certificate,
-  ip,
+  host,
   port,
   beforeExecutionCallback = () => {},
   afterExecutionCallback = () => {}
@@ -25055,55 +25244,41 @@ const executePlan = async (plan, {
     };
 
     if (someNeedsServer) {
-      const urlGraph = createUrlGraph();
-      const kitchen = createKitchen({
-        signal,
-        logger,
-        rootDirectoryUrl,
-        urlGraph,
-        scenario,
-        sourcemaps,
-        runtimeCompat: runtimes,
-        writeGeneratedFiles,
-        plugins: [...plugins, ...getCorePlugins({
-          rootDirectoryUrl,
-          urlGraph,
-          scenario,
-          runtimeCompat: runtimes,
-          htmlSupervisor: true,
-          nodeEsmResolution,
-          fileSystemMagicResolution,
-          transpilation: { ...transpilation,
-            getCustomBabelPlugins: ({
-              clientRuntimeCompat
-            }) => {
-              if (coverageEnabled && (coverageMethodForBrowsers !== "playwright_api" || Object.keys(clientRuntimeCompat)[0] !== "chrome")) {
-                return {
-                  "transform-instrument": [babelPluginInstrument, {
-                    rootDirectoryUrl,
-                    coverageConfig
-                  }]
-                };
-              }
-
-              return {};
-            }
-          }
-        })]
-      });
       const server = await startOmegaServer({
         signal: multipleExecutionsOperation.signal,
         logLevel: "warn",
-        rootDirectoryUrl,
-        urlGraph,
-        kitchen,
-        scenario,
         keepProcessAlive: false,
         port,
-        ip,
+        host,
         protocol,
         certificate,
-        privateKey
+        privateKey,
+        services,
+        rootDirectoryUrl,
+        scenario,
+        runtimeCompat: runtimes,
+        plugins,
+        htmlSupervisor: true,
+        nodeEsmResolution,
+        fileSystemMagicResolution,
+        transpilation: { ...transpilation,
+          getCustomBabelPlugins: ({
+            clientRuntimeCompat
+          }) => {
+            if (coverageEnabled && (coverageMethodForBrowsers !== "playwright_api" || Object.keys(clientRuntimeCompat)[0] !== "chrome")) {
+              return {
+                "transform-instrument": [babelPluginInstrument, {
+                  rootDirectoryUrl,
+                  coverageConfig
+                }]
+              };
+            }
+
+            return {};
+          }
+        },
+        sourcemaps,
+        writeGeneratedFiles
       });
       multipleExecutionsOperation.addEndCallback(async () => {
         await server.stop();
@@ -25521,7 +25696,7 @@ const executeTestPlan = async ({
   protocol,
   privateKey,
   certificate,
-  ip,
+  host,
   port
 }) => {
   const logger = createLogger({
@@ -25604,7 +25779,7 @@ const executeTestPlan = async ({
     protocol,
     privateKey,
     certificate,
-    ip,
+    host,
     port
   });
 
@@ -28087,7 +28262,7 @@ const build = async ({
   sourcemaps = false,
   sourcemapsSourcesContent,
   urlAnalysis = {},
-  nodeEsmResolution,
+  nodeEsmResolution = true,
   fileSystemMagicResolution,
   directoryReferenceAllowed,
   transpilation = {},
@@ -28396,7 +28571,6 @@ build ${entryPointKeys.length} entry points`);
     });
     const postBuildRedirections = {};
     const finalGraph = createUrlGraph();
-    const optimizeUrlContentHooks = rawGraphKitchen.pluginController.addHook("optimizeUrlContent");
     const finalGraphKitchen = createKitchen({
       logger,
       rootDirectoryUrl,
@@ -28682,11 +28856,9 @@ build ${entryPointKeys.length} entry points`);
         name: "jsenv:optimize",
         appliesDuring: "build",
         finalizeUrlContent: async (urlInfo, context) => {
-          if (optimizeUrlContentHooks.length) {
-            await rawGraphKitchen.pluginController.callAsyncHooks("optimizeUrlContent", urlInfo, context, async optimizeReturnValue => {
-              await finalGraphKitchen.urlInfoTransformer.applyFinalTransformations(urlInfo, optimizeReturnValue);
-            });
-          }
+          await rawGraphKitchen.pluginController.callAsyncHooks("optimizeUrlContent", urlInfo, context, async optimizeReturnValue => {
+            await finalGraphKitchen.urlInfoTransformer.applyFinalTransformations(urlInfo, optimizeReturnValue);
+          });
         }
       }]
     });
@@ -29289,10 +29461,10 @@ const startBuildServer = async ({
   http2,
   certificate,
   privateKey,
-  listenAnyIp,
-  ip,
+  acceptAnyIp,
+  host,
   port = 9779,
-  services = {},
+  services = [],
   keepProcessAlive = true,
   rootDirectoryUrl,
   buildDirectoryUrl,
@@ -29337,12 +29509,6 @@ const startBuildServer = async ({
       return raceProcessTeardownEvents({
         SIGINT: true
       }, abort);
-    });
-  }
-
-  if (port === 0) {
-    port = await findFreePort(port, {
-      signal: operation.signal
     });
   }
 
@@ -29402,12 +29568,12 @@ const startBuildServer = async ({
       const messagePromise = new Promise(resolve => {
         worker.once("message", resolve);
       });
-      await messagePromise; // if (!keepProcessAlive) {
+      const origin = await messagePromise; // if (!keepProcessAlive) {
       //   worker.unref()
       // }
 
       return {
-        origin: `${protocol}://127.0.0.1:${port}`,
+        origin,
         stop: () => {
           stopWatchingBuildServerFiles();
           reloadableWorker.terminate();
@@ -29432,28 +29598,27 @@ const startBuildServer = async ({
     http2,
     certificate,
     privateKey,
-    listenAnyIp,
-    ip,
+    acceptAnyIp,
+    host,
     port,
-    plugins: { ...pluginCORS({
-        accessControlAllowRequestOrigin: true,
-        accessControlAllowRequestMethod: true,
-        accessControlAllowRequestHeaders: true,
-        accessControlAllowedRequestHeaders: jsenvAccessControlAllowedHeaders,
-        accessControlAllowCredentials: true
-      }),
-      ...pluginServerTiming(),
-      ...pluginRequestWaitingCheck({
-        requestWaitingMs: 60 * 1000
-      })
-    },
-    sendErrorDetails: true,
-    requestToResponse: composeServices({ ...services,
-      build_files_service: createBuildFilesService({
+    serverTiming: true,
+    requestWaitingMs: 60_000,
+    services: [jsenvServiceCORS({
+      accessControlAllowRequestOrigin: true,
+      accessControlAllowRequestMethod: true,
+      accessControlAllowRequestHeaders: true,
+      accessControlAllowedRequestHeaders: jsenvAccessControlAllowedHeaders,
+      accessControlAllowCredentials: true,
+      timingAllowOrigin: true
+    }), ...services, {
+      name: "jsenv:build_files_service",
+      handleRequest: createBuildFilesService({
         buildDirectoryUrl,
         buildIndexPath
       })
-    })
+    }, jsenvServiceErrorHandler({
+      sendErrorDetails: true
+    })]
   });
   startBuildServerTask.done();
   logger.info(``);
@@ -29509,6 +29674,7 @@ const execute = async ({
   allocatedMs,
   mirrorConsole = true,
   keepRunning = false,
+  services,
   collectConsole,
   collectCoverage,
   coverageTempDirectoryUrl,
@@ -29516,12 +29682,12 @@ const execute = async ({
   runtime,
   runtimeParams,
   scenario = "dev",
-  sourcemaps = "inline",
   plugins = [],
   nodeEsmResolution,
   fileSystemMagicResolution,
   transpilation,
   htmlSupervisor = true,
+  sourcemaps = "inline",
   writeGeneratedFiles = false,
   port,
   protocol,
@@ -29554,43 +29720,28 @@ const execute = async ({
   };
 
   if (runtime.needsServer) {
-    const urlGraph = createUrlGraph();
-    const runtimeCompat = {
-      [runtime.name]: runtime.version
-    };
-    const kitchen = createKitchen({
-      signal,
-      logger,
-      rootDirectoryUrl,
-      urlGraph,
-      scenario,
-      sourcemaps,
-      runtimeCompat,
-      writeGeneratedFiles,
-      plugins: [...plugins, ...getCorePlugins({
-        rootDirectoryUrl,
-        urlGraph,
-        scenario,
-        runtimeCompat,
-        htmlSupervisor,
-        nodeEsmResolution,
-        fileSystemMagicResolution,
-        transpilation
-      })]
-    });
     const server = await startOmegaServer({
       signal: executeOperation.signal,
       logLevel: "warn",
-      rootDirectoryUrl,
-      urlGraph,
-      kitchen,
-      scenario,
       keepProcessAlive: false,
+      services,
       port,
       protocol,
       http2,
       certificate,
-      privateKey
+      privateKey,
+      rootDirectoryUrl,
+      scenario,
+      runtimeCompat: {
+        [runtime.name]: runtime.version
+      },
+      plugins,
+      htmlSupervisor,
+      nodeEsmResolution,
+      fileSystemMagicResolution,
+      transpilation,
+      sourcemaps,
+      writeGeneratedFiles
     });
     executeOperation.addEndCallback(async () => {
       await server.stop("execution done");

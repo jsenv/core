@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert"
 import { fetchUrl } from "@jsenv/fetch"
 
-import { startServer, composeServices } from "@jsenv/server"
+import { startServer } from "@jsenv/server"
 import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js"
 
 const noContentService = (request) => {
@@ -17,10 +17,16 @@ const okService = (request) => {
 const { origin } = await startServer({
   keepProcessAlive: false,
   logLevel: "warn",
-  requestToResponse: composeServices({
-    noContentService,
-    okService,
-  }),
+  services: [
+    {
+      name: "nocontent",
+      handleRequest: noContentService,
+    },
+    {
+      name: "ok",
+      handleRequest: okService,
+    },
+  ],
 })
 
 {

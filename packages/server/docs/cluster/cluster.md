@@ -4,14 +4,18 @@ _cluster_demo_server.mjs:_
 import { startServer, fetchFileSystem } from "@jsenv/server"
 
 await startServer({
-  requestToResponse: (request) => {
-    return fetchFileSystem(
-      new URL(request.ressource.slice(1), import.meta.url),
-      {
-        ...request,
+  services: [
+    {
+      handleRequest: (request) => {
+        return fetchFileSystem(
+          new URL(request.ressource.slice(1), import.meta.url),
+          {
+            ...request,
+          },
+        )
       },
-    )
-  },
+    },
+  ],
 })
 ```
 

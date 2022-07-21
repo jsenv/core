@@ -1,43 +1,50 @@
-## CORS
+# CORS
 
-All parameters starting with _accessControl_ are related to cross origin ressource sharing, also called CORS. By default CORS parameters are disabled meaning CORS headers are not set.
-
-As soon as you pass _accessControlAllowRequestOrigin_ or _accessControlAllowedOrigins_ parameter, CORS headers will be set on all server responses.
+Cross origin ressource sharing, also called CORS are disabled by default. They can be enabled using [jsenvServiceCORS](./#jsenvServiceCORS)
 
 ```js
-import { startServer, pluginCORS } from "@jsenv/server"
+import { startServer, jsenvServiceCORS } from "@jsenv/server"
 
 await startServer({
-  plugins: {
-    ...pluginCORS({
+  services: [
+    jsenvServiceCORS({
       accessControlAllowRequestOrigin: true,
       accessControlAllowRequestMethod: true,
       accessControlAllowRequestHeaders: true,
       accessControlAllowCredentials: true,
     }),
-  },
+  ],
 })
 ```
 
-When CORS are enabled, jsenv server **ensure CORS headers are always set**. It's important to always set CORS headers, even on unexpected errors (500), or browser agents rightfully assumes CORS are disabled.
-For this reason cors headers are set even when your code throws an error.
+## jsenvServiceCORS
+
+This service ensure CORS headers **are always set**.
+It's important to always set CORS headers, even on unexpected errors (500), or browser agents rightfully assumes CORS are disabled.
 
 ```js
 import fetch from "node-fetch"
-import { startServer } from "@jsenv/server"
+import {
+  startServer,
+  jsenvServiceCORS,
+  jsenvServiceErrorHandler,
+} from "@jsenv/server"
 
 const server = await startServer({
-  plugins: {
-    ...pluginCORS({
+  services: [
+    jsenvServiceErrorHandler(),
+    jsenvServiceCORS({
       accessControlAllowRequestOrigin: true,
       accessControlAllowRequestMethod: true,
       accessControlAllowRequestHeaders: true,
       accessControlAllowCredentials: true,
     }),
-  },
-  requestToResponse: () => {
-    throw new Error("test")
-  },
+    {
+      handleRequest: () => {
+        throw new Error("test")
+      },
+    },
+  ],
 })
 
 const response = await fetch(server.origin)

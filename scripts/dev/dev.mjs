@@ -20,21 +20,23 @@ await startDevServer({
   htmlSupervisor: {
     logs: true,
   },
-  explorerGroups: {
-    main: {
-      "./dev_exploring/main/**/*.html": true,
-    },
-    autoreload: {
-      "./dev_exploring/autoreload/**/*.html": true,
-    },
-    errors: {
-      "./dev_exploring/errors/**/*.html": true,
-    },
-    other: {
-      "./dev_exploring/other/**/*.html": true,
-    },
-    tests: {
-      "./tests/**/client/main.html": true,
+  explorer: {
+    groups: {
+      main: {
+        "./dev_exploring/main/**/*.html": true,
+      },
+      autoreload: {
+        "./dev_exploring/autoreload/**/*.html": true,
+      },
+      errors: {
+        "./dev_exploring/errors/**/*.html": true,
+      },
+      other: {
+        "./dev_exploring/other/**/*.html": true,
+      },
+      tests: {
+        "./tests/**/client/main.html": true,
+      },
     },
   },
   clientFiles: {

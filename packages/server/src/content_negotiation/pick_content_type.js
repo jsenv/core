@@ -1,7 +1,7 @@
 import { parseMultipleHeader } from "../internal/multiple-header.js"
-import { applyContentNegotiation } from "./applyContentNegotiation.js"
+import { pickAcceptedContent } from "./pick_accepted_content.js"
 
-export const negotiateContentType = (request, availableContentTypes) => {
+export const pickContentType = (request, availableContentTypes) => {
   const { headers = {} } = request
   const requestAcceptHeader = headers.accept
   if (!requestAcceptHeader) {
@@ -9,7 +9,7 @@ export const negotiateContentType = (request, availableContentTypes) => {
   }
 
   const contentTypesAccepted = parseAcceptHeader(requestAcceptHeader)
-  return applyContentNegotiation({
+  return pickAcceptedContent({
     accepteds: contentTypesAccepted,
     availables: availableContentTypes,
     getAcceptanceScore: getContentTypeAcceptanceScore,

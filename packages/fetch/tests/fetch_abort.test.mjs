@@ -16,12 +16,15 @@ const server = await startServer({
   certificate: testServerCertificate,
   privateKey: testServerCertificatePrivateKey,
   keepProcessAlive: false,
-  ip: "",
   port: 8998,
-  requestToResponse: async () => {
-    const response = await serverResponsePromise
-    return response
-  },
+  services: [
+    {
+      handleRequest: async () => {
+        const response = await serverResponsePromise
+        return response
+      },
+    },
+  ],
 })
 
 // cancel request before response is found

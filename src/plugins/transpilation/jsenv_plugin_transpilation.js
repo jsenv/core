@@ -22,9 +22,14 @@ export const jsenvPluginTranspilation = ({
   babelHelpersAsImport = true,
   getCustomBabelPlugins,
 }) => {
+  if (importAssertions === true) {
+    importAssertions = {}
+  }
   return [
     // import assertions we want it all the time
-    ...(importAssertions ? [jsenvPluginImportAssertions()] : []),
+    ...(importAssertions
+      ? [jsenvPluginImportAssertions(importAssertions)]
+      : []),
     // babel also so that rollup can bundle babel helpers for instance
     jsenvPluginBabel({
       topLevelAwait,

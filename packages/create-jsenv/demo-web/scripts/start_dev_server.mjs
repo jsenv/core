@@ -10,12 +10,14 @@ import { rootDirectoryUrl } from "../jsenv.config.mjs"
 await startDevServer({
   rootDirectoryUrl,
   port: 3400,
-  explorerGroups: {
-    app: {
-      "./src/main.html": true,
-    },
-    tests: {
-      "tests/**/*.test.html": true,
+  explorer: {
+    groups: {
+      src: {
+        "./src/main.html": true,
+      },
+      tests: {
+        "tests/**/*.test.html": true,
+      },
     },
   },
 })

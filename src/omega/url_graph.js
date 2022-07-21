@@ -5,6 +5,7 @@ export const createUrlGraph = ({
   clientFileChangeCallbackList,
   clientFilesPruneCallbackList,
   onCreateUrlInfo = () => {},
+  includeOriginalUrls,
 } = {}) => {
   const urlInfoMap = new Map()
   const getUrlInfo = (url) => urlInfoMap.get(url)
@@ -57,7 +58,17 @@ export const createUrlGraph = ({
   }
 
   const updateReferences = (urlInfo, references) => {
-    const dependencyUrls = []
+    const setOfDependencyUrls = new Set()
+
+    // for import assertion "file.css?as_css_module" depends on "file.css"
+    // this is enabled only for dev where there is autoreload
+    // during build the css file must be considered as not referenced
+    // (except if referenced explicitely by something else) so that
+    // the css file does not appear in the build directory
+    if (includeOriginalUrls && urlInfo.originalUrl !== urlInfo.url) {
+      setOfDependencyUrls.add(urlInfo.originalUrl)
+    }
+
     references.forEach((reference) => {
       if (reference.isRessourceHint) {
         // ressource hint are a special kind of reference.
@@ -68,19 +79,14 @@ export const createUrlGraph = ({
         // by <link> as dependency and it's fine
         return
       }
-      if (dependencyUrls.includes(reference.url)) {
-        return
-      }
-      dependencyUrls.push(reference.url)
+      setOfDependencyUrls.add(reference.url)
     })
-    pruneDependencies(
-      urlInfo,
-      Array.from(urlInfo.dependencies).filter(
-        (dep) => !dependencyUrls.includes(dep),
-      ),
+    const urlsToRemove = Array.from(urlInfo.dependencies).filter(
+      (dep) => !setOfDependencyUrls.has(dep),
     )
+    pruneDependencies(urlInfo, urlsToRemove)
     urlInfo.references = references
-    dependencyUrls.forEach((dependencyUrl) => {
+    setOfDependencyUrls.forEach((dependencyUrl) => {
       const dependencyUrlInfo = reuseOrCreateUrlInfo(dependencyUrl)
       urlInfo.dependencies.add(dependencyUrl)
       dependencyUrlInfo.dependents.add(urlInfo.url)
@@ -92,14 +98,17 @@ export const createUrlGraph = ({
     const removeDependencies = (urlInfo, urlsToPrune) => {
       urlsToPrune.forEach((urlToPrune) => {
         urlInfo.dependencies.delete(urlToPrune)
-        const dependency = getUrlInfo(urlToPrune)
-        if (!dependency) {
+        const dependencyUrlInfo = getUrlInfo(urlToPrune)
+        if (!dependencyUrlInfo) {
           return
         }
-        dependency.dependents.delete(urlInfo.url)
-        if (dependency.dependents.size === 0) {
-          removeDependencies(dependency, Array.from(dependency.dependencies))
-          prunedUrlInfos.push(dependency)
+        dependencyUrlInfo.dependents.delete(urlInfo.url)
+        if (dependencyUrlInfo.dependents.size === 0) {
+          removeDependencies(
+            dependencyUrlInfo,
+            Array.from(dependencyUrlInfo.dependencies),
+          )
+          prunedUrlInfos.push(dependencyUrlInfo)
         }
       })
     }
@@ -109,8 +118,10 @@ export const createUrlGraph = ({
     }
     prunedUrlInfos.forEach((prunedUrlInfo) => {
       prunedUrlInfo.modifiedTimestamp = Date.now()
-      // should we delete?
-      // delete urlGraph.deleteUrlInfo(prunedUrlInfo.url)
+      if (prunedUrlInfo.isInline) {
+        // should we always delete?
+        deleteUrlInfo(prunedUrlInfo.url)
+      }
     })
     if (clientFilesPruneCallbackList) {
       clientFilesPruneCallbackList.forEach((callback) => {

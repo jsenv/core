@@ -1,38 +1,40 @@
 # Handling requests
 
-Request are handled by a parameter called "requestToResponse" responsible to describe the server response.
-It is achieved by returning an object with response properties.
-This pattern is simpler than middleware with the same power.
+Request are handled by the first service returning something in a "handleRequest" function.
 
 ```js
 import { startServer } from "@jsenv/server"
 
 await startServer({
-  requestToResponse: () => {
-    return {
-      status: 200,
-      headers: { "content-type": "text/plain" },
-      body: "Hello world",
-    }
-  },
+  services: [
+    {
+      handleRequest: () => {
+        return {
+          status: 200,
+          headers: { "content-type": "text/plain" },
+          body: "Hello world",
+        }
+      },
+    },
+  ],
 })
 ```
 
-## requestToResponse
+## handleRequest
 
-_requestToResponse_ parameter is function responsible to generate a response from a request.
+_handleRequest_ is a function responsible to generate a response from a request.
 
 - It is optional
 - It receives a _request_ object in argument
 - It is expected to return a _response_, `null` or `undefined`
 - It can be an async function
 
-When _requestToResponse_ returns `null` or `undefined`, server respond to the request with _501 Not implemented_.
+When there is no service handling the request, server respond with _501 Not implemented_.
 
 ## request
 
 _request_ is an object representing an http request.
-_request_ are passed as first argument to _requestToResponse_.
+_request_ are passed as first argument to _handleRequest_.
 
 _Request object example_
 
@@ -50,15 +52,19 @@ const request = {
 }
 ```
 
-### Reading request params
+### Reading request search params
 
 ```js
 import { startServer } from "@jsenv/server"
 
 await startServer({
-  requestToResponse: async (request) => {
-    const page = new URL(request.url).searchParams.get("page")
-  },
+  services: [
+    {
+      handleRequest: async (request) => {
+        const page = new URL(request.url).searchParams.get("page")
+      },
+    },
+  ],
 })
 ```
 
@@ -70,17 +76,23 @@ Read more at https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams.
 import { startServer, readRequestBody } from "@jsenv/server"
 
 await startServer({
-  requestToResponse: async (request) => {
-    const requestBodyAsString = await readRequestBody(request)
-    const requestBodyAsJson = await readRequestBody(request, { as: "json" })
-    const requestBodyAsBuffer = await readRequestBody(request, { as: "buffer" })
-  },
+  services: [
+    {
+      handleRequest: async (request) => {
+        const requestBodyAsString = await readRequestBody(request)
+        const requestBodyAsJson = await readRequestBody(request, { as: "json" })
+        const requestBodyAsBuffer = await readRequestBody(request, {
+          as: "buffer",
+        })
+      },
+    },
+  ],
 })
 ```
 
 ## response
 
-_response_ is an object describing a server response. See below some examples that you could return in [requestToResponse](#requestToResponse)
+_response_ is an object describing a server response. See below some examples that you could return in [handleRequest](#handleRequest)
 
 _response body declared with a string_
 
@@ -88,14 +100,18 @@ _response body declared with a string_
 import { startServer } from "@jsenv/server"
 
 await startServer({
-  requestToResponse: () => {
-    const response = {
-      status: 200,
-      headers: { "content-type": "text/plain" },
-      body: "Hello world",
-    }
-    return response
-  },
+  services: [
+    {
+      handleRequest: () => {
+        const response = {
+          status: 200,
+          headers: { "content-type": "text/plain" },
+          body: "Hello world",
+        }
+        return response
+      },
+    },
+  ],
 })
 ```
 
@@ -105,14 +121,18 @@ _response body declared with a buffer_
 import { startServer } from "@jsenv/server"
 
 await startServer({
-  requestToResponse: () => {
-    const response = {
-      status: 200,
-      headers: { "content-type": "text/plain" },
-      body: Buffer.from("Hello world"),
-    }
-    return response
-  },
+  services: [
+    {
+      handleRequest: () => {
+        const response = {
+          status: 200,
+          headers: { "content-type": "text/plain" },
+          body: Buffer.from("Hello world"),
+        }
+        return response
+      },
+    },
+  ],
 })
 ```
 
@@ -123,14 +143,18 @@ import { createReadStream } from "node:fs"
 import { startServer } from "@jsenv/server"
 
 await startServer({
-  requestToResponse: () => {
-    const response = {
-      status: 200,
-      headers: { "content-type": "text/plain" },
-      body: createReadStream("/User/you/folder/file.txt"),
-    }
-    return response
-  },
+  services: [
+    {
+      handleRequest: () => {
+        const response = {
+          status: 200,
+          headers: { "content-type": "text/plain" },
+          body: createReadStream("/User/you/folder/file.txt"),
+        }
+        return response
+      },
+    },
+  ],
 })
 ```
 
@@ -140,23 +164,27 @@ _response body declared with an observable_
 import { startServer } from "@jsenv/server"
 
 await startServer({
-  requestToResponse: () => {
-    const response = {
-      status: 200,
-      headers: { "content-type": "text/plain" },
-      body: {
-        [Symbol.observable]: () => {
-          return {
-            subscribe: ({ next, complete }) => {
-              next("Hello world")
-              complete()
+  services: [
+    {
+      handleRequest: () => {
+        const response = {
+          status: 200,
+          headers: { "content-type": "text/plain" },
+          body: {
+            [Symbol.observable]: () => {
+              return {
+                subscribe: ({ next, complete }) => {
+                  next("Hello world")
+                  complete()
+                },
+              }
             },
-          }
-        },
+          },
+        }
+        return response
       },
-    }
-    return response
-  },
+    },
+  ],
 })
 ```
 
@@ -175,22 +203,24 @@ The following code is an example of composition where a server logic is split in
  */
 import { startServer, composeServices } from "@jsenv/server"
 
-const indexService = (request) => {
-  if (request.ressource === "/") {
-    return { status: 200 }
-  }
-  return null // means "I don't handle that request"
-}
-
-const notFoundService = (request) => {
-  return { status: 404 }
-}
-
 await startServer({
-  requestToResponse: composeServices({
-    index: indexService,
-    otherwise: notFoundService,
-  }),
+  services: [
+    {
+      name: "index",
+      handleRequest: (request) => {
+        if (request.ressource === "/") {
+          return { status: 200 }
+        }
+        return null // means "I don't handle that request"
+      },
+    },
+    {
+      name: "otherwise",
+      handleRequest: () => {
+        return { status: 404 }
+      },
+    },
+  ],
 })
 ```
 

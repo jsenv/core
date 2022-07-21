@@ -1,35 +1,59 @@
 # Error handling
 
-Any error thrown will be gracefully handled by _@jsenv/server_ and produce a 500 response.
+Errors are handled by the first service returning something in a "handleError" function.
 
 ```js
 import { startServer } from "@jsenv/server"
 
 await startServer({
-  requestToResponse: async () => {
-    throw new Error("foo")
-  },
+  services: [
+    {
+      handleRequest: () => {
+        throw new Error("toto")
+      },
+      handleError: (error, { request }) => {
+        const body = `An error occured: ${error.message}`
+        return {
+          status: 500,
+          headers: {
+            "content-type": "text/plain",
+            "content-length": Buffer.byteLength(body),
+          },
+          body,
+        }
+      },
+    },
+  ],
 })
 ```
 
-# Server internal error
+## handleError
 
-A server internal error is when an error is thrown inside [requestToResponse](../handling_requests/handling_requests.md#requestToResponse). When it happens a function becomes responsible to turn the error into an http response. This function is called _errorToResponse_.
+_handleError_ is a function responsible to generate a response from an error.
 
-## errorToResponse
+- It is optional
+- It receives the error in argument
+- It is expected to return a _response_, `null` or `undefined`
+- It can be an async function
 
-_errorToResponse_ is an async function responsible to generate response for error thrown during server execution.
-There is a default value for this parameter visible at [src/error_to_response_default.js](../../src/error_to_response_default.js).
+When there is no service handling the error it is thrown leading to process exiting with 1.
 
-The default _errorToResponse_ value will respond with a generic error page.
+### jsenvServiceErrorHandler
+
+_jsenvServiceErrorHandler_ is a generic error handler. It can be used to catch errors and display a generic message.
 
 ```js
-import { startServer } from "@jsenv/server"
+import { startServer, jsenvServiceErrorHandler } from "@jsenv/server"
 
 await startServer({
-  requestToResponse: () => {
-    throw new Error("test")
-  },
+  services: [
+    {
+      handleRequest: () => {
+        throw new Error("toto")
+      },
+    },
+    jsenvServiceErrorHandler(),
+  ],
 })
 ```
 
@@ -37,45 +61,32 @@ await startServer({
 
 ![screenshot of internal error page expanded](./screenshot-500-html-expanded.png)
 
-By default error details are not available, use _sendErrorDetails_ to enable them.
-
-```js
-import { startServer } from "@jsenv/server"
-
-await startServer({
-  requestToResponse: () => {
-    throw new Error("test")
-  },
-  sendErrorDetails: true,
-})
-```
+When _sendErrorDetails_ is enabled the error details becomes available
 
 ![screenshot of internal error page with details expanded](./screenshot-500-html-details-expanded.png)
 
-You can customize this behaviour by passing your own _errorToResponse_.
-This function is asynchronous and receive `error` as first parameter.
-It can also access _request_ by destructuring its second parameter.
+When used this error handler should be the last service implementing "handleError" because it catch all errors.
+Any service catching a subset of error should be placed before this one as in the example below:
 
 ```js
-import { startServer } from "@jsenv/server"
-
-const errorToThrow = new Error("toto")
+import { startServer, jsenvServiceErrorHandler } from "@jsenv/server"
 
 await startServer({
-  requestToResponse: () => {
-    throw errorToThrow
-  },
-  errorToResponse: (error, { request }) => {
-    error === errorToThrow // true
-    const body = `An error occured: ${error.message}`
-    return {
-      status: 500,
-      headers: {
-        "content-type": "text/plain",
-        "content-length": Buffer.byteLength(body),
+  services: [
+    {
+      handleError: (error) => {
+        if (error.code === "FOO") {
+          return {
+            status: 500,
+            headers: {
+              "content-type": "text/plain",
+            },
+            body: 'Custom response for error with code "FOO"',
+          }
+        }
       },
-      body,
-    }
-  },
+    },
+    jsenvServiceErrorHandler(),
+  ],
 })
 ```

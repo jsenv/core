@@ -95,20 +95,24 @@ const tempDirectoryUrl = new URL("./temp/", import.meta.url).href
 {
   const body = "Hello world"
   const server = await startServer({
-    requestToResponse: ({ method }) => {
-      if (method !== "POST") return null
-
-      return {
-        status: 201,
-        headers: {
-          "content-type": "text/plain",
-          "content-length": body.length,
-        },
-        body,
-      }
-    },
     logLevel: "warn",
     keepProcessAlive: false,
+    services: [
+      {
+        handleRequest: ({ method }) => {
+          if (method !== "POST") return null
+
+          return {
+            status: 201,
+            headers: {
+              "content-type": "text/plain",
+              "content-length": body.length,
+            },
+            body,
+          }
+        },
+      },
+    ],
   })
   const url = server.origin
 
@@ -140,13 +144,17 @@ const tempDirectoryUrl = new URL("./temp/", import.meta.url).href
 {
   await ensureEmptyDirectory(tempDirectoryUrl)
   const server = await startServer({
-    requestToResponse: async () => {
-      await new Promise((resolve) => {
-        setTimeout(resolve, 2000).unref()
-      })
-    },
     logLevel: "warn",
     keepProcessAlive: false,
+    services: [
+      {
+        handleRequest: async () => {
+          await new Promise((resolve) => {
+            setTimeout(resolve, 2000).unref()
+          })
+        },
+      },
+    ],
   })
   const url = server.origin
   const abortController = new AbortController()

@@ -7,7 +7,7 @@ import {
   setUrlFilename,
 } from "@jsenv/urls"
 import { writeFileSync, ensureWindowsDriveLetter } from "@jsenv/filesystem"
-import { createDetailedMessage } from "@jsenv/log"
+import { createLogger, createDetailedMessage } from "@jsenv/log"
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js"
 
 import { createPluginController } from "../plugins/plugin_controller.js"
@@ -25,12 +25,13 @@ import { isWebWorkerEntryPointReference } from "./web_workers.js"
 
 export const createKitchen = ({
   signal,
-  logger,
-  rootDirectoryUrl,
-  urlGraph,
+  logLevel,
 
-  plugins,
+  rootDirectoryUrl,
   scenario,
+  runtimeCompat,
+  urlGraph,
+  plugins,
   sourcemaps = {
     dev: "inline", // "programmatic" and "file" also allowed
     test: "inline",
@@ -44,9 +45,9 @@ export const createKitchen = ({
     build: true,
   }[scenario],
   sourcemapsRelativeSources,
-  runtimeCompat,
   writeGeneratedFiles,
 }) => {
+  const logger = createLogger({ logLevel })
   const pluginController = createPluginController({
     plugins,
     scenario,
@@ -56,13 +57,13 @@ export const createKitchen = ({
     signal,
     logger,
     rootDirectoryUrl,
-    sourcemaps,
     urlGraph,
     scenario,
     runtimeCompat,
     isSupportedOnFutureClients: (feature) => {
       return RUNTIME_COMPAT.isSupported(runtimeCompat, feature)
     },
+    sourcemaps,
   }
   pluginController.callHooks("init", kitchenContext)
   const createReference = ({

@@ -8,15 +8,19 @@ import { startServer } from "@jsenv/server"
 await startServer({
   protocol: "http",
   port: 8080,
-  requestToResponse: () => {
-    return {
-      status: 200,
-      headers: {
-        "content-type": "text/plain",
+  services: [
+    {
+      handleRequest: () => {
+        return {
+          status: 200,
+          headers: {
+            "content-type": "text/plain",
+          },
+          body: "Hello world",
+        }
       },
-      body: "Hello world",
-    }
-  },
+    },
+  ],
 })
 ```
 
@@ -29,15 +33,19 @@ import fetch from "node-fetch"
 import { startServer } from "@jsenv/server"
 
 const server = await startServer({
-  requestToResponse: () => {
-    return {
-      status: 200,
-      headers: {
-        "content-type": "text/plain",
+  services: [
+    {
+      handleRequest: () => {
+        return {
+          status: 200,
+          headers: {
+            "content-type": "text/plain",
+          },
+          body: "Hello world",
+        }
       },
-      body: "Hello world",
-    }
-  },
+    },
+  ],
 })
 
 const response = await fetch(server.origin)
@@ -57,22 +65,24 @@ _Code starting a server with 2 request handlers:_
  */
 import { startServer, composeServices } from "@jsenv/server"
 
-const indexService = (request) => {
-  if (request.ressource === "/") {
-    return { status: 200 }
-  }
-  return null // means "I don't handle that request"
-}
-
-const notFoundService = (request) => {
-  return { status: 404 }
-}
-
 const server = await startServer({
-  requestToResponse: composeServices({
-    index: indexService,
-    otherwise: notFoundService,
-  }),
+  services: [
+    {
+      name: "index",
+      handleRequest: (request) => {
+        if (request.ressource === "/") {
+          return { status: 200 }
+        }
+        return null // means "I don't handle that request"
+      },
+    },
+    {
+      name: "otherwise",
+      handleRequest: () => {
+        return { status: 404 }
+      },
+    },
+  ],
 })
 
 const fetch = await import("node-fetch")
@@ -94,17 +104,21 @@ await startServer({
   certificate: readFileSyncAsString("./server.crt"),
   privateKey: readFileSyncAsString("./server.key"),
   allowHttpRequestOnHttps: true,
-  requestToResponse: (request) => {
-    const clientUsesHttp = request.origin.startsWith("http:")
+  services: [
+    {
+      handleRequest: (request) => {
+        const clientUsesHttp = request.origin.startsWith("http:")
 
-    return {
-      status: 200,
-      headers: {
-        "content-type": "text/plain",
+        return {
+          status: 200,
+          headers: {
+            "content-type": "text/plain",
+          },
+          body: clientUsesHttp ? `Welcome http user` : `Welcome https user`,
+        }
       },
-      body: clientUsesHttp ? `Welcome http user` : `Welcome https user`,
-    }
-  },
+    },
+  ],
 })
 
 function readFileSyncAsString(relativeUrl) {
@@ -119,24 +133,28 @@ _Code starting a server for static files:_
 import { startServer, fetchFileSystem } from "@jsenv/server"
 
 await startServer({
-  requestToResponse: async (request) => {
-    const fileUrl = new URL(request.ressource.slice(1), import.meta.url)
-    const response = await fetchFileSystem(fileUrl, {
-      ...request,
-    })
-    return response
-  },
+  services: [
+    {
+      handleRequest: async (request) => {
+        const fileUrl = new URL(request.ressource.slice(1), import.meta.url)
+        const response = await fetchFileSystem(fileUrl, {
+          ...request,
+        })
+        return response
+      },
+    },
+  ],
 })
 ```
 
 # Documentation
 
-- [https](./docs/https/https.md)
-- [Serving files](./docs/serving_files/serving_files.md)
 - [Handling requests](./docs/handling_requests/handling_requests.md)
 - [Handling errors](./docs/handling_errors/handling_errors.md)
 - [Server timing](./docs/server_timing/server_timing.md)
 - [CORS](./docs/cors/cors.md)
+- [https](./docs/https/https.md)
+- [Serving files](./docs/serving_files/serving_files.md)
 - [Content negotiation](./docs/content_negotiation/content_negotiation.md)
 - [Server Sent Events](./docs/sse/sse.md)
 - [Cluster](./docs/cluster/cluster.md)
