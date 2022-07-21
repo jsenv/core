@@ -36,15 +36,17 @@ await startDevServer({
       },
     },
   ],
-  explorerGroups: {
-    main: {
-      "./main/**/*.html": true,
-    },
-    autoreload: {
-      "./autoreload/**/*.html": true,
-    },
-    errors: {
-      "./errors/**/*.html": true,
+  explorer: {
+    groups: {
+      main: {
+        "./main/**/*.html": true,
+      },
+      autoreload: {
+        "./autoreload/**/*.html": true,
+      },
+      errors: {
+        "./errors/**/*.html": true,
+      },
     },
   },
 })

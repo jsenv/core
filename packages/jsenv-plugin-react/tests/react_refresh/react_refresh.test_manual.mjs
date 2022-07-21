@@ -14,9 +14,11 @@ await startDevServer({
   privateKey,
   rootDirectoryUrl: new URL("./client/", import.meta.url),
   plugins: [jsenvPluginReact()],
-  explorerGroups: {
-    main: {
-      "./main.html": true,
+  explorer: {
+    groups: {
+      main: {
+        "./main.html": true,
+      },
     },
   },
   clientFiles: {
