@@ -18,7 +18,6 @@ import {
   jsenvAccessControlAllowedHeaders,
   startServer,
   fetchFileSystem,
-  findFreePort,
   jsenvServiceCORS,
   jsenvServiceErrorHandler,
 } from "@jsenv/server"
@@ -91,9 +90,6 @@ export const startBuildServer = async ({
         abort,
       )
     })
-  }
-  if (port === 0) {
-    port = await findFreePort(port, { signal: operation.signal })
   }
 
   let reloadableWorker
