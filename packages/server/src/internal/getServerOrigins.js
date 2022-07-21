@@ -2,8 +2,8 @@ import { networkInterfaces } from "node:os"
 
 import { applyDnsResolution } from "./dns_resolution.js"
 
-export const getServerOrigins = async ({ protocol, ip, port }) => {
-  const isLocal = LOOPBACK_HOSTNAMES.includes(ip)
+export const getServerOrigins = async ({ protocol, host, port }) => {
+  const isLocal = LOOPBACK_HOSTNAMES.includes(host)
   const localhostDnsResolution = await applyDnsResolution("localhost")
   const localOrigin = createServerOrigin({
     protocol,
@@ -16,10 +16,10 @@ export const getServerOrigins = async ({ protocol, ip, port }) => {
   if (isLocal) {
     return { local: localOrigin }
   }
-  const isAnyIp = WILDCARD_HOSTNAMES.includes(ip)
+  const isAnyIp = WILDCARD_HOSTNAMES.includes(host)
   const networkOrigin = createServerOrigin({
     protocol,
-    hostname: isAnyIp ? getExternalIp(ip) : ip,
+    hostname: isAnyIp ? getExternalIp() : host,
     port,
   })
   return {

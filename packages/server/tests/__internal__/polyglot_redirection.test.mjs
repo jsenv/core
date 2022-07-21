@@ -32,7 +32,7 @@ server.unref()
 const port = await listen({
   server,
   port: 0,
-  ip: "127.0.0.1",
+  host: "127.0.0.1",
 })
 
 // 301 on http request

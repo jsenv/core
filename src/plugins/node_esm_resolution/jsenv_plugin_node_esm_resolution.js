@@ -17,77 +17,76 @@ import {
 } from "@jsenv/node-esm-resolution"
 
 export const jsenvPluginNodeEsmResolution = ({
-  rootDirectoryUrl,
-  scenario,
-  urlGraph,
-  runtimeCompat,
   packageConditions,
   filesInvalidatingCache = ["package.json", "package-lock.json"],
 }) => {
-  const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node")
-  // https://nodejs.org/api/esm.html#resolver-algorithm-specification
-  packageConditions = packageConditions || [
-    ...readCustomConditionsFromProcessArgs(),
-    nodeRuntimeEnabled ? "node" : "browser",
-    "import",
-  ]
-
-  const packageScopesCache = new Map()
-  const lookupPackageScope = (url) => {
-    const fromCache = packageScopesCache.get(url)
-    if (fromCache) {
-      return fromCache
-    }
-    const packageScope = defaultLookupPackageScope(url)
-    packageScopesCache.set(url, packageScope)
-    return packageScope
-  }
-  const packageJsonsCache = new Map()
-  const readPackageJson = (url) => {
-    const fromCache = packageJsonsCache.get(url)
-    if (fromCache) {
-      return fromCache
-    }
-    const packageJson = defaultReadPackageJson(url)
-    packageJsonsCache.set(url, packageJson)
-    return packageJson
-  }
-
   const unregisters = []
-  if (scenario === "dev") {
-    const onFileChange = () => {
-      packageScopesCache.clear()
-      packageJsonsCache.clear()
-      // TODO: update to do this on all url graph
-      urlGraph.urlInfoMap.forEach((urlInfo) => {
-        if (urlInfo.dependsOnPackageJson) {
-          urlGraph.considerModified(urlInfo)
-        }
-      })
-    }
-    filesInvalidatingCache.forEach((file) => {
-      const unregister = registerFileLifecycle(
-        new URL(file, rootDirectoryUrl),
-        {
-          added: () => {
-            onFileChange()
-          },
-          updated: () => {
-            onFileChange()
-          },
-          removed: () => {
-            onFileChange()
-          },
-          keepProcessAlive: false,
-        },
-      )
-      unregisters.push(unregister)
-    })
-  }
+  let lookupPackageScope // defined in "init"
+  let readPackageJson // defined in "init"
 
   return {
     name: "jsenv:node_esm_resolution",
     appliesDuring: "*",
+    init: ({ rootDirectoryUrl, scenario, runtimeCompat, urlGraph }) => {
+      const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node")
+      // https://nodejs.org/api/esm.html#resolver-algorithm-specification
+      packageConditions = packageConditions || [
+        ...readCustomConditionsFromProcessArgs(),
+        nodeRuntimeEnabled ? "node" : "browser",
+        "import",
+      ]
+
+      const packageScopesCache = new Map()
+      lookupPackageScope = (url) => {
+        const fromCache = packageScopesCache.get(url)
+        if (fromCache) {
+          return fromCache
+        }
+        const packageScope = defaultLookupPackageScope(url)
+        packageScopesCache.set(url, packageScope)
+        return packageScope
+      }
+      const packageJsonsCache = new Map()
+      readPackageJson = (url) => {
+        const fromCache = packageJsonsCache.get(url)
+        if (fromCache) {
+          return fromCache
+        }
+        const packageJson = defaultReadPackageJson(url)
+        packageJsonsCache.set(url, packageJson)
+        return packageJson
+      }
+
+      if (scenario === "dev") {
+        const onFileChange = () => {
+          packageScopesCache.clear()
+          packageJsonsCache.clear()
+          urlGraph.urlInfoMap.forEach((urlInfo) => {
+            if (urlInfo.dependsOnPackageJson) {
+              urlGraph.considerModified(urlInfo)
+            }
+          })
+        }
+        filesInvalidatingCache.forEach((file) => {
+          const unregister = registerFileLifecycle(
+            new URL(file, rootDirectoryUrl),
+            {
+              added: () => {
+                onFileChange()
+              },
+              updated: () => {
+                onFileChange()
+              },
+              removed: () => {
+                onFileChange()
+              },
+              keepProcessAlive: false,
+            },
+          )
+          unregisters.push(unregister)
+        })
+      }
+    },
     resolveUrl: {
       js_import_export: (reference, context) => {
         const { parentUrl, specifier } = reference

@@ -16,7 +16,6 @@ const server = await startServer({
   certificate: testServerCertificate,
   privateKey: testServerCertificatePrivateKey,
   keepProcessAlive: false,
-  ip: "",
   port: 8998,
   services: [
     {

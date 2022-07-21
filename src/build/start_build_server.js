@@ -41,8 +41,8 @@ export const startBuildServer = async ({
   http2,
   certificate,
   privateKey,
-  listenAnyIp,
-  ip,
+  acceptAnyIp,
+  host,
   port = 9779,
   services = [],
   keepProcessAlive = true,
@@ -135,12 +135,12 @@ export const startBuildServer = async ({
       const messagePromise = new Promise((resolve) => {
         worker.once("message", resolve)
       })
-      await messagePromise
+      const origin = await messagePromise
       // if (!keepProcessAlive) {
       //   worker.unref()
       // }
       return {
-        origin: `${protocol}://127.0.0.1:${port}`,
+        origin,
         stop: () => {
           stopWatchingBuildServerFiles()
           reloadableWorker.terminate()
@@ -166,8 +166,8 @@ export const startBuildServer = async ({
     http2,
     certificate,
     privateKey,
-    listenAnyIp,
-    ip,
+    acceptAnyIp,
+    host,
     port,
     serverTiming: true,
     requestWaitingMs: 60_000,

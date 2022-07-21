@@ -9,7 +9,7 @@ const { certificate, privateKey } = requestCertificateForLocalhost({
 await startDevServer({
   port: 3589,
   protocol: "https",
-  listenAnyIp: true,
+  acceptAnyIp: true,
   certificate,
   privateKey,
   rootDirectoryUrl: new URL("./client/", import.meta.url),

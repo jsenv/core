@@ -50,8 +50,8 @@ export const startServer = async ({
   http1Allowed = true,
   redirectHttpToHttps,
   allowHttpRequestOnHttps = false,
-  listenAnyIp = false,
-  ip = listenAnyIp ? undefined : "127.0.0.1",
+  acceptAnyIp = false,
+  host = acceptAnyIp ? undefined : "localhost",
   port = 0, // assign a random available port
   portHint,
   privateKey,
@@ -165,7 +165,7 @@ export const startServer = async ({
       server: nodeServer,
       port,
       portHint,
-      ip,
+      host,
     })
     serviceController.callHooks("serverListening", { port })
     startServerOperation.addAbortCallback(async () => {
@@ -216,7 +216,7 @@ export const startServer = async ({
   }
 
   status = "opened"
-  const serverOrigins = await getServerOrigins({ protocol, ip, port })
+  const serverOrigins = await getServerOrigins({ protocol, host, port })
   const serverOrigin = serverOrigins.local
 
   const removeConnectionErrorListener = listenServerConnectionError(

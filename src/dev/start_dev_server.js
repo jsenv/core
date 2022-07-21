@@ -18,7 +18,7 @@ export const startDevServer = async ({
   omegaServerLogLevel = "warn",
   port = 3456,
   protocol = "http",
-  listenAnyIp,
+  acceptAnyIp,
   // it's better to use http1 by default because it allows to get statusText in devtools
   // which gives valuable information when there is errors
   http2 = false,
@@ -151,7 +151,7 @@ export const startDevServer = async ({
   const server = await startOmegaServer({
     logLevel: omegaServerLogLevel,
     keepProcessAlive,
-    listenAnyIp,
+    acceptAnyIp,
     port,
     protocol,
     http2,

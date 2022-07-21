@@ -6,7 +6,7 @@ const listen = async ({
   server,
   port,
   portHint,
-  ip,
+  host,
 }) => {
   const listeningOperation = Abort.startOperation()
 
@@ -17,11 +17,11 @@ const listen = async ({
       listeningOperation.throwIfAborted()
       port = await findFreePort(portHint, {
         signal: listeningOperation.signal,
-        ip,
+        host,
       })
     }
     listeningOperation.throwIfAborted()
-    port = await startListening({ server, port, ip })
+    port = await startListening({ server, port, host })
     listeningOperation.addAbortCallback(() => stopListening(server))
     listeningOperation.throwIfAborted()
 
@@ -35,7 +35,7 @@ export const findFreePort = async (
   initialPort = 1,
   {
     signal = new AbortController().signal,
-    ip = "127.0.0.1",
+    host = "127.0.0.1",
     min = 1,
     max = 65534,
     next = (port) => port + 1,
@@ -46,34 +46,36 @@ export const findFreePort = async (
     findFreePortOperation.addAbortSignal(signal)
     findFreePortOperation.throwIfAborted()
 
-    const testUntil = async (port, ip) => {
+    const testUntil = async (port, host) => {
       findFreePortOperation.throwIfAborted()
-      const free = await portIsFree(port, ip)
+      const free = await portIsFree(port, host)
       if (free) {
         return port
       }
 
       const nextPort = next(port)
       if (nextPort > max) {
-        throw new Error(`${ip} has no available port between ${min} and ${max}`)
+        throw new Error(
+          `${host} has no available port between ${min} and ${max}`,
+        )
       }
-      return testUntil(nextPort, ip)
+      return testUntil(nextPort, host)
     }
-    const freePort = await testUntil(initialPort, ip)
+    const freePort = await testUntil(initialPort, host)
     return freePort
   } finally {
     await findFreePortOperation.end()
   }
 }
 
-const portIsFree = async (port, ip) => {
+const portIsFree = async (port, host) => {
   const server = createServer()
 
   try {
     await startListening({
       server,
       port,
-      ip,
+      host,
     })
   } catch (error) {
     if (error && error.code === "EADDRINUSE") {
@@ -89,7 +91,7 @@ const portIsFree = async (port, ip) => {
   return true
 }
 
-const startListening = ({ server, port, ip }) => {
+const startListening = ({ server, port, host }) => {
   return new Promise((resolve, reject) => {
     server.on("error", reject)
     server.on("listening", () => {
@@ -97,7 +99,7 @@ const startListening = ({ server, port, ip }) => {
       // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
       resolve(server.address().port)
     })
-    server.listen(port, ip)
+    server.listen(port, host)
   })
 }
 

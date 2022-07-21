@@ -1,14 +1,14 @@
 # See also
 
-## listenAnyIp
+## acceptAnyIp
 
-_listenAnyIp_ parameter is a boolean. When enabled server will be accessible by all machines connected to your network. This parameter is optional and disabled by default.
+_acceptAnyIp_ parameter is a boolean. When enabled server will be accessible by all machines connected to your network. This parameter is optional and disabled by default.
 
 When you are on a secure internal network, you can enable this parameter to make your server accessible to other machine than yours.
 
-## ip
+## host
 
-_ip_ parameter is a string representing the ip server will listen. This parameter is optional with a default value of `"127.0.0.1"`.
+_host_ parameter is a string representing the host server will listen. This parameter is optional with a default value of `"localhost"`.
 
 ## port
 

@@ -2,7 +2,7 @@ import { timeStart } from "@jsenv/server"
 
 const HOOK_NAMES = [
   "init",
-  "serve",
+  "serve", // is called only during dev/tests
   "resolveUrl",
   "redirectUrl",
   "fetchUrlContent",
@@ -10,8 +10,10 @@ const HOOK_NAMES = [
   "transformUrlSearchParams",
   "formatUrl",
   "finalizeUrlContent",
+  "bundle", // is called only during build
+  "optimizeUrlContent", // is called only during build
   "cooked",
-  "augmentResponse",
+  "augmentResponse", // is called only during dev/tests
   "destroy",
 ]
 

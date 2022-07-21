@@ -12,7 +12,6 @@ const { origin } = await startServer({
   logLevel: "warn",
   protocol: "http",
   keepProcessAlive: false,
-  ip: "",
   port: 8998,
   services: [
     {

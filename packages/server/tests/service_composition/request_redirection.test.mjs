@@ -7,7 +7,6 @@ const { origin } = await startServer({
   logLevel: "warn",
   protocol: "http",
   keepProcessAlive: false,
-  ip: "",
   services: [
     {
       name: "redirect",

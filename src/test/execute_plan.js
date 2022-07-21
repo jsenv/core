@@ -16,9 +16,6 @@ import { ensureEmptyDirectory, writeFileSync } from "@jsenv/filesystem"
 
 import { babelPluginInstrument } from "./coverage/babel_plugin_instrument.js"
 import { reportToCoverage } from "./coverage/report_to_coverage.js"
-import { createUrlGraph } from "@jsenv/core/src/omega/url_graph.js"
-import { getCorePlugins } from "@jsenv/core/src/plugins/plugins.js"
-import { createKitchen } from "@jsenv/core/src/omega/kitchen.js"
 import { startOmegaServer } from "@jsenv/core/src/omega/omega_server.js"
 import { run } from "@jsenv/core/src/execute/run.js"
 
@@ -69,7 +66,7 @@ export const executePlan = async (
     protocol,
     privateKey,
     certificate,
-    ip,
+    host,
     port,
 
     beforeExecutionCallback = () => {},
@@ -199,65 +196,48 @@ export const executePlan = async (
       stopAfterAllSignal,
     }
     if (someNeedsServer) {
-      const urlGraph = createUrlGraph()
-      const kitchen = createKitchen({
-        signal,
-        logger,
-        rootDirectoryUrl,
-        urlGraph,
-        scenario,
-        sourcemaps,
-        runtimeCompat: runtimes,
-        writeGeneratedFiles,
-        plugins: [
-          ...plugins,
-          ...getCorePlugins({
-            rootDirectoryUrl,
-            urlGraph,
-            scenario,
-            runtimeCompat: runtimes,
-
-            htmlSupervisor: true,
-            nodeEsmResolution,
-            fileSystemMagicResolution,
-            transpilation: {
-              ...transpilation,
-              getCustomBabelPlugins: ({ clientRuntimeCompat }) => {
-                if (
-                  coverageEnabled &&
-                  (coverageMethodForBrowsers !== "playwright_api" ||
-                    Object.keys(clientRuntimeCompat)[0] !== "chrome")
-                ) {
-                  return {
-                    "transform-instrument": [
-                      babelPluginInstrument,
-                      {
-                        rootDirectoryUrl,
-                        coverageConfig,
-                      },
-                    ],
-                  }
-                }
-                return {}
-              },
-            },
-          }),
-        ],
-      })
       const server = await startOmegaServer({
         signal: multipleExecutionsOperation.signal,
         logLevel: "warn",
-        rootDirectoryUrl,
-        urlGraph,
-        kitchen,
-        scenario,
         keepProcessAlive: false,
         port,
-        ip,
+        host,
         protocol,
         certificate,
         privateKey,
         services,
+
+        rootDirectoryUrl,
+        scenario,
+        runtimeCompat: runtimes,
+
+        plugins,
+        htmlSupervisor: true,
+        nodeEsmResolution,
+        fileSystemMagicResolution,
+        transpilation: {
+          ...transpilation,
+          getCustomBabelPlugins: ({ clientRuntimeCompat }) => {
+            if (
+              coverageEnabled &&
+              (coverageMethodForBrowsers !== "playwright_api" ||
+                Object.keys(clientRuntimeCompat)[0] !== "chrome")
+            ) {
+              return {
+                "transform-instrument": [
+                  babelPluginInstrument,
+                  {
+                    rootDirectoryUrl,
+                    coverageConfig,
+                  },
+                ],
+              }
+            }
+            return {}
+          },
+        },
+        sourcemaps,
+        writeGeneratedFiles,
       })
       multipleExecutionsOperation.addEndCallback(async () => {
         await server.stop()

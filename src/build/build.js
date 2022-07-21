@@ -102,7 +102,7 @@ export const build = async ({
   sourcemaps = false,
   sourcemapsSourcesContent,
   urlAnalysis = {},
-  nodeEsmResolution,
+  nodeEsmResolution = true,
   fileSystemMagicResolution,
   directoryReferenceAllowed,
   transpilation = {},
@@ -417,8 +417,6 @@ build ${entryPointKeys.length} entry points`)
     })
     const postBuildRedirections = {}
     const finalGraph = createUrlGraph()
-    const optimizeUrlContentHooks =
-      rawGraphKitchen.pluginController.addHook("optimizeUrlContent")
     const finalGraphKitchen = createKitchen({
       logger,
       rootDirectoryUrl,
@@ -694,19 +692,17 @@ build ${entryPointKeys.length} entry points`)
           name: "jsenv:optimize",
           appliesDuring: "build",
           finalizeUrlContent: async (urlInfo, context) => {
-            if (optimizeUrlContentHooks.length) {
-              await rawGraphKitchen.pluginController.callAsyncHooks(
-                "optimizeUrlContent",
-                urlInfo,
-                context,
-                async (optimizeReturnValue) => {
-                  await finalGraphKitchen.urlInfoTransformer.applyFinalTransformations(
-                    urlInfo,
-                    optimizeReturnValue,
-                  )
-                },
-              )
-            }
+            await rawGraphKitchen.pluginController.callAsyncHooks(
+              "optimizeUrlContent",
+              urlInfo,
+              context,
+              async (optimizeReturnValue) => {
+                await finalGraphKitchen.urlInfoTransformer.applyFinalTransformations(
+                  urlInfo,
+                  optimizeReturnValue,
+                )
+              },
+            )
           },
         },
       ],
