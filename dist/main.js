@@ -5,12 +5,12 @@ import process$1, { memoryUsage } from "node:process";
 import os, { networkInterfaces } from "node:os";
 import tty from "node:tty";
 import stringWidth from "string-width";
+import { performance as performance$1 } from "node:perf_hooks";
 import net, { createServer } from "node:net";
 import { Readable, Stream, Writable } from "node:stream";
 import { Http2ServerResponse } from "node:http2";
 import { createReadStream, readdirSync, statSync, readFile as readFile$1, chmod, stat, lstat, readdir, promises, unlink, openSync, closeSync, rmdir, readFileSync as readFileSync$1, watch, writeFile as writeFile$1, writeFileSync as writeFileSync$1, mkdirSync, existsSync, realpathSync } from "node:fs";
 import { lookup } from "node:dns";
-import { performance } from "node:perf_hooks";
 import { extname, dirname, basename } from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import crypto, { createHash } from "node:crypto";
@@ -1584,6 +1584,404 @@ const memoize = compute => {
   return fnWithMemoization;
 };
 
+const timeStart = name => {
+  // as specified in https://w3c.github.io/server-timing/#the-performanceservertiming-interface
+  // duration is a https://www.w3.org/TR/hr-time-2/#sec-domhighrestimestamp
+  const startTimestamp = performance$1.now();
+
+  const timeEnd = () => {
+    const endTimestamp = performance$1.now();
+    const timing = {
+      [name]: endTimestamp - startTimestamp
+    };
+    return timing;
+  };
+
+  return timeEnd;
+};
+const timeFunction = (name, fn) => {
+  const timeEnd = timeStart(name);
+  const returnValue = fn();
+
+  if (returnValue && typeof returnValue.then === "function") {
+    return returnValue.then(value => {
+      return [timeEnd(), value];
+    });
+  }
+
+  return [timeEnd(), returnValue];
+};
+
+const HOOK_NAMES = ["serverListening", "redirectRequest", "handleRequest", "handleError", "onResponsePush", "injectResponseHeaders", "responseReady", "serverStopped"];
+const createServiceController = services => {
+  const flatServices = flattenAndFilterServices(services);
+  const hookGroups = {};
+
+  const addService = service => {
+    Object.keys(service).forEach(key => {
+      if (key === "name") return;
+      const isHook = HOOK_NAMES.includes(key);
+
+      if (!isHook) {
+        console.warn(`Unexpected "${key}" property on "${service.name}" service`);
+      }
+
+      const hookName = key;
+      const hookValue = service[hookName];
+
+      if (hookValue) {
+        const group = hookGroups[hookName] || (hookGroups[hookName] = []);
+        group.push({
+          service,
+          name: hookName,
+          value: hookValue
+        });
+      }
+    });
+  };
+
+  services.forEach(service => {
+    addService(service);
+  });
+  let currentService = null;
+  let currentHookName = null;
+
+  const callHook = (hook, info, context) => {
+    const hookFn = hook.value;
+
+    if (!hookFn) {
+      return null;
+    }
+
+    currentService = hook.service;
+    currentHookName = hook.name;
+    let timeEnd;
+
+    if (context && context.timing) {
+      timeEnd = timeStart(`${currentService.name.replace("jsenv:", "")}.${currentHookName}`);
+    }
+
+    let valueReturned = hookFn(info, context);
+
+    if (context && context.timing) {
+      Object.assign(context.timing, timeEnd());
+    }
+
+    currentService = null;
+    currentHookName = null;
+    return valueReturned;
+  };
+
+  const callAsyncHook = async (hook, info, context) => {
+    const hookFn = hook.value;
+
+    if (!hookFn) {
+      return null;
+    }
+
+    currentService = hook.service;
+    currentHookName = hook.name;
+    let timeEnd;
+
+    if (context && context.timing) {
+      timeEnd = timeStart(`${currentService.name.replace("jsenv:", "")}.${currentHookName}`);
+    }
+
+    let valueReturned = await hookFn(info, context);
+
+    if (context && context.timing) {
+      Object.assign(context.timing, timeEnd());
+    }
+
+    currentService = null;
+    currentHookName = null;
+    return valueReturned;
+  };
+
+  const callHooks = (hookName, info, context, callback = () => {}) => {
+    const hooks = hookGroups[hookName];
+
+    if (hooks) {
+      for (const hook of hooks) {
+        const returnValue = callHook(hook, info, context);
+
+        if (returnValue) {
+          callback(returnValue);
+        }
+      }
+    }
+  };
+
+  const callHooksUntil = (hookName, info, context, until = returnValue => returnValue) => {
+    const hooks = hookGroups[hookName];
+
+    if (hooks) {
+      for (const hook of hooks) {
+        const returnValue = callHook(hook, info, context);
+        const untilReturnValue = until(returnValue);
+
+        if (untilReturnValue) {
+          return untilReturnValue;
+        }
+      }
+    }
+
+    return null;
+  };
+
+  const callAsyncHooksUntil = (hookName, info, context) => {
+    const hooks = hookGroups[hookName];
+
+    if (!hooks) {
+      return null;
+    }
+
+    if (hooks.length === 0) {
+      return null;
+    }
+
+    return new Promise((resolve, reject) => {
+      const visit = index => {
+        if (index >= hooks.length) {
+          return resolve();
+        }
+
+        const hook = hooks[index];
+        const returnValue = callAsyncHook(hook, info, context);
+        return Promise.resolve(returnValue).then(output => {
+          if (output) {
+            return resolve(output);
+          }
+
+          return visit(index + 1);
+        }, reject);
+      };
+
+      visit(0);
+    });
+  };
+
+  return {
+    services: flatServices,
+    callHooks,
+    callHooksUntil,
+    callAsyncHooksUntil,
+    getCurrentService: () => currentService,
+    getCurrentHookName: () => currentHookName
+  };
+};
+
+const flattenAndFilterServices = services => {
+  const flatServices = [];
+
+  const visitServiceEntry = serviceEntry => {
+    if (Array.isArray(serviceEntry)) {
+      serviceEntry.forEach(value => visitServiceEntry(value));
+      return;
+    }
+
+    if (typeof serviceEntry === "object" && serviceEntry !== null) {
+      if (!serviceEntry.name) {
+        serviceEntry.name = "anonymous";
+      }
+
+      flatServices.push(serviceEntry);
+      return;
+    }
+
+    throw new Error(`services must be objects, got ${serviceEntry}`);
+  };
+
+  services.forEach(serviceEntry => visitServiceEntry(serviceEntry));
+  return flatServices;
+};
+
+/**
+
+ A multiple header is a header with multiple values like
+
+ "text/plain, application/json;q=0.1"
+
+ Each, means it's a new value (it's optionally followed by a space)
+
+ Each; mean it's a property followed by =
+ if "" is a string
+ if not it's likely a number
+ */
+const parseMultipleHeader = (multipleHeaderString, {
+  validateName = () => true,
+  validateProperty = () => true
+} = {}) => {
+  const values = multipleHeaderString.split(",");
+  const multipleHeader = {};
+  values.forEach(value => {
+    const valueTrimmed = value.trim();
+    const valueParts = valueTrimmed.split(";");
+    const name = valueParts[0];
+    const nameValidation = validateName(name);
+
+    if (!nameValidation) {
+      return;
+    }
+
+    const properties = parseHeaderProperties(valueParts.slice(1), {
+      validateProperty
+    });
+    multipleHeader[name] = properties;
+  });
+  return multipleHeader;
+};
+
+const parseHeaderProperties = (headerProperties, {
+  validateProperty
+}) => {
+  const properties = headerProperties.reduce((previous, valuePart) => {
+    const [propertyName, propertyValueString] = valuePart.split("=");
+    const propertyValue = parseHeaderPropertyValue(propertyValueString);
+    const property = {
+      name: propertyName,
+      value: propertyValue
+    };
+    const propertyValidation = validateProperty(property);
+
+    if (!propertyValidation) {
+      return previous;
+    }
+
+    return { ...previous,
+      [property.name]: property.value
+    };
+  }, {});
+  return properties;
+};
+
+const parseHeaderPropertyValue = headerPropertyValueString => {
+  const firstChar = headerPropertyValueString[0];
+  const lastChar = headerPropertyValueString[headerPropertyValueString.length - 1];
+
+  if (firstChar === '"' && lastChar === '"') {
+    return headerPropertyValueString.slice(1, -1);
+  }
+
+  if (isNaN(headerPropertyValueString)) {
+    return headerPropertyValueString;
+  }
+
+  return parseFloat(headerPropertyValueString);
+};
+
+const stringifyMultipleHeader = (multipleHeader, {
+  validateName = () => true,
+  validateProperty = () => true
+} = {}) => {
+  return Object.keys(multipleHeader).filter(name => {
+    const headerProperties = multipleHeader[name];
+
+    if (!headerProperties) {
+      return false;
+    }
+
+    if (typeof headerProperties !== "object") {
+      return false;
+    }
+
+    const nameValidation = validateName(name);
+
+    if (!nameValidation) {
+      return false;
+    }
+
+    return true;
+  }).map(name => {
+    const headerProperties = multipleHeader[name];
+    const headerPropertiesString = stringifyHeaderProperties(headerProperties, {
+      validateProperty
+    });
+
+    if (headerPropertiesString.length) {
+      return `${name};${headerPropertiesString}`;
+    }
+
+    return name;
+  }).join(", ");
+};
+
+const stringifyHeaderProperties = (headerProperties, {
+  validateProperty
+}) => {
+  const headerPropertiesString = Object.keys(headerProperties).map(name => {
+    const property = {
+      name,
+      value: headerProperties[name]
+    };
+    return property;
+  }).filter(property => {
+    const propertyValidation = validateProperty(property);
+
+    if (!propertyValidation) {
+      return false;
+    }
+
+    return true;
+  }).map(stringifyHeaderProperty).join(";");
+  return headerPropertiesString;
+};
+
+const stringifyHeaderProperty = ({
+  name,
+  value
+}) => {
+  if (typeof value === "string") {
+    return `${name}="${value}"`;
+  }
+
+  return `${name}=${value}`;
+};
+
+// because in chrome dev tools they are shown in alphabetic order
+// also we should manipulate a timing object instead of a header to facilitate
+// manipulation of the object so that the timing header response generation logic belongs to @jsenv/server
+// so response can return a new timing object
+// yes it's awful, feel free to PR with a better approach :)
+
+const timingToServerTimingResponseHeaders = timing => {
+  const serverTimingHeader = {};
+  Object.keys(timing).forEach((key, index) => {
+    const name = letters[index] || "zz";
+    serverTimingHeader[name] = {
+      desc: key,
+      dur: timing[key]
+    };
+  });
+  const serverTimingHeaderString = stringifyServerTimingHeader(serverTimingHeader);
+  return {
+    "server-timing": serverTimingHeaderString
+  };
+};
+const stringifyServerTimingHeader = serverTimingHeader => {
+  return stringifyMultipleHeader(serverTimingHeader, {
+    validateName: validateServerTimingName
+  });
+}; // (),/:;<=>?@[\]{}" Don't allowed
+// Minimal length is one symbol
+// Digits, alphabet characters,
+// and !#$%&'*+-.^_`|~ are allowed
+// https://www.w3.org/TR/2019/WD-server-timing-20190307/#the-server-timing-header-field
+// https://tools.ietf.org/html/rfc7230#section-3.2.6
+
+const validateServerTimingName = name => {
+  const valid = /^[!#$%&'*+\-.^_`|~0-9a-z]+$/gi.test(name);
+
+  if (!valid) {
+    console.warn(`server timing contains invalid symbols`);
+    return false;
+  }
+
+  return true;
+};
+
+const letters = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"];
+
 const listenEvent = (objectWithEventEmitter, eventName, callback, {
   once = false
 } = {}) => {
@@ -3004,316 +3402,6 @@ const listenServerConnectionError = (nodeServer, connectionErrorCallback, {
   };
 };
 
-/**
-
- A multiple header is a header with multiple values like
-
- "text/plain, application/json;q=0.1"
-
- Each, means it's a new value (it's optionally followed by a space)
-
- Each; mean it's a property followed by =
- if "" is a string
- if not it's likely a number
- */
-const parseMultipleHeader = (multipleHeaderString, {
-  validateName = () => true,
-  validateProperty = () => true
-} = {}) => {
-  const values = multipleHeaderString.split(",");
-  const multipleHeader = {};
-  values.forEach(value => {
-    const valueTrimmed = value.trim();
-    const valueParts = valueTrimmed.split(";");
-    const name = valueParts[0];
-    const nameValidation = validateName(name);
-
-    if (!nameValidation) {
-      return;
-    }
-
-    const properties = parseHeaderProperties(valueParts.slice(1), {
-      validateProperty
-    });
-    multipleHeader[name] = properties;
-  });
-  return multipleHeader;
-};
-
-const parseHeaderProperties = (headerProperties, {
-  validateProperty
-}) => {
-  const properties = headerProperties.reduce((previous, valuePart) => {
-    const [propertyName, propertyValueString] = valuePart.split("=");
-    const propertyValue = parseHeaderPropertyValue(propertyValueString);
-    const property = {
-      name: propertyName,
-      value: propertyValue
-    };
-    const propertyValidation = validateProperty(property);
-
-    if (!propertyValidation) {
-      return previous;
-    }
-
-    return { ...previous,
-      [property.name]: property.value
-    };
-  }, {});
-  return properties;
-};
-
-const parseHeaderPropertyValue = headerPropertyValueString => {
-  const firstChar = headerPropertyValueString[0];
-  const lastChar = headerPropertyValueString[headerPropertyValueString.length - 1];
-
-  if (firstChar === '"' && lastChar === '"') {
-    return headerPropertyValueString.slice(1, -1);
-  }
-
-  if (isNaN(headerPropertyValueString)) {
-    return headerPropertyValueString;
-  }
-
-  return parseFloat(headerPropertyValueString);
-};
-
-const stringifyMultipleHeader = (multipleHeader, {
-  validateName = () => true,
-  validateProperty = () => true
-} = {}) => {
-  return Object.keys(multipleHeader).filter(name => {
-    const headerProperties = multipleHeader[name];
-
-    if (!headerProperties) {
-      return false;
-    }
-
-    if (typeof headerProperties !== "object") {
-      return false;
-    }
-
-    const nameValidation = validateName(name);
-
-    if (!nameValidation) {
-      return false;
-    }
-
-    return true;
-  }).map(name => {
-    const headerProperties = multipleHeader[name];
-    const headerPropertiesString = stringifyHeaderProperties(headerProperties, {
-      validateProperty
-    });
-
-    if (headerPropertiesString.length) {
-      return `${name};${headerPropertiesString}`;
-    }
-
-    return name;
-  }).join(", ");
-};
-
-const stringifyHeaderProperties = (headerProperties, {
-  validateProperty
-}) => {
-  const headerPropertiesString = Object.keys(headerProperties).map(name => {
-    const property = {
-      name,
-      value: headerProperties[name]
-    };
-    return property;
-  }).filter(property => {
-    const propertyValidation = validateProperty(property);
-
-    if (!propertyValidation) {
-      return false;
-    }
-
-    return true;
-  }).map(stringifyHeaderProperty).join(";");
-  return headerPropertiesString;
-};
-
-const stringifyHeaderProperty = ({
-  name,
-  value
-}) => {
-  if (typeof value === "string") {
-    return `${name}="${value}"`;
-  }
-
-  return `${name}=${value}`;
-};
-
-const applyContentNegotiation = ({
-  availables,
-  accepteds,
-  getAcceptanceScore
-}) => {
-  let highestScore = -1;
-  let availableWithHighestScore = null;
-  let availableIndex = 0;
-
-  while (availableIndex < availables.length) {
-    const available = availables[availableIndex];
-    availableIndex++;
-    let acceptedIndex = 0;
-
-    while (acceptedIndex < accepteds.length) {
-      const accepted = accepteds[acceptedIndex];
-      acceptedIndex++;
-      const score = getAcceptanceScore(accepted, available);
-
-      if (score > highestScore) {
-        availableWithHighestScore = available;
-        highestScore = score;
-      }
-    }
-  }
-
-  return availableWithHighestScore;
-};
-
-const negotiateContentType = (request, availableContentTypes) => {
-  const {
-    headers = {}
-  } = request;
-  const requestAcceptHeader = headers.accept;
-
-  if (!requestAcceptHeader) {
-    return null;
-  }
-
-  const contentTypesAccepted = parseAcceptHeader(requestAcceptHeader);
-  return applyContentNegotiation({
-    accepteds: contentTypesAccepted,
-    availables: availableContentTypes,
-    getAcceptanceScore: getContentTypeAcceptanceScore
-  });
-};
-
-const parseAcceptHeader = acceptHeader => {
-  const acceptHeaderObject = parseMultipleHeader(acceptHeader, {
-    validateProperty: ({
-      name
-    }) => {
-      // read only q, anything else is ignored
-      return name === "q";
-    }
-  });
-  const accepts = [];
-  Object.keys(acceptHeaderObject).forEach(key => {
-    const {
-      q = 1
-    } = acceptHeaderObject[key];
-    const value = key;
-    accepts.push({
-      value,
-      quality: q
-    });
-  });
-  accepts.sort((a, b) => {
-    return b.quality - a.quality;
-  });
-  return accepts;
-};
-
-const getContentTypeAcceptanceScore = ({
-  value,
-  quality
-}, availableContentType) => {
-  const [acceptedType, acceptedSubtype] = decomposeContentType(value);
-  const [availableType, availableSubtype] = decomposeContentType(availableContentType);
-  const typeAccepted = acceptedType === "*" || acceptedType === availableType;
-  const subtypeAccepted = acceptedSubtype === "*" || acceptedSubtype === availableSubtype;
-
-  if (typeAccepted && subtypeAccepted) {
-    return quality;
-  }
-
-  return -1;
-};
-
-const decomposeContentType = fullType => {
-  const [type, subtype] = fullType.split("/");
-  return [type, subtype];
-};
-
-const applyDefaultErrorToResponse = (serverInternalError, {
-  request,
-  sendErrorDetails = false
-}) => {
-  const serverInternalErrorIsAPrimitive = serverInternalError === null || typeof serverInternalError !== "object" && typeof serverInternalError !== "function";
-
-  if (!serverInternalErrorIsAPrimitive && serverInternalError.asResponse) {
-    return serverInternalError.asResponse();
-  }
-
-  const dataToSend = serverInternalErrorIsAPrimitive ? {
-    code: "VALUE_THROWED",
-    value: serverInternalError
-  } : {
-    code: serverInternalError.code || "UNKNOWN_ERROR",
-    ...(sendErrorDetails ? {
-      stack: serverInternalError.stack,
-      ...serverInternalError
-    } : {})
-  };
-  const availableContentTypes = {
-    "text/html": () => {
-      const renderHtmlForErrorWithoutDetails = () => {
-        return `<p>Details not available: to enable them server must be started with sendErrorDetails: true.</p>`;
-      };
-
-      const renderHtmlForErrorWithDetails = () => {
-        if (serverInternalErrorIsAPrimitive) {
-          return `<pre>${JSON.stringify(serverInternalError, null, "  ")}</pre>`;
-        }
-
-        return `<pre>${serverInternalError.stack}</pre>`;
-      };
-
-      const body = `<!DOCTYPE html>
-<html>
-  <head>
-    <title>Internal server error</title>
-    <meta charset="utf-8" />
-    <link rel="icon" href="data:," />
-  </head>
-
-  <body>
-    <h1>Internal server error</h1>
-    <p>${serverInternalErrorIsAPrimitive ? `Code inside server has thrown a literal.` : `Code inside server has thrown an error.`}</p>
-    <details>
-      <summary>See internal error details</summary>
-      ${sendErrorDetails ? renderHtmlForErrorWithDetails() : renderHtmlForErrorWithoutDetails()}
-    </details>
-  </body>
-</html>`;
-      return {
-        headers: {
-          "content-type": "text/html",
-          "content-length": Buffer.byteLength(body)
-        },
-        body
-      };
-    },
-    "application/json": () => {
-      const body = JSON.stringify(dataToSend);
-      return {
-        headers: {
-          "content-type": "application/json",
-          "content-length": Buffer.byteLength(body)
-        },
-        body
-      };
-    }
-  };
-  const bestContentType = negotiateContentType(request, Object.keys(availableContentTypes));
-  return availableContentTypes[bestContentType || "application/json"]();
-};
-
 const createReason = reasonString => {
   return {
     toString: () => reasonString
@@ -3354,14 +3442,20 @@ const startServer = async ({
   // auto close when requestToResponse throw an error
   stopOnInternalError = false,
   keepProcessAlive = true,
-  requestToResponse = () => null,
-  plugins = {},
-  sendErrorDetails = false,
-  errorToResponse = () => null,
-  onListenStart = () => {},
-  onListenEnd = () => {},
-  onStop = () => {},
-  nagle = true
+  services = [],
+  nagle = true,
+  serverTiming = false,
+  requestWaitingMs = 0,
+  requestWaitingCallback = ({
+    request,
+    warn,
+    requestWaitingMs
+  }) => {
+    warn(createDetailedMessage$1(`still no response found for request after ${requestWaitingMs} ms`, {
+      "request url": `${request.origin}${request.ressource}`,
+      "request headers": JSON.stringify(request.headers, null, "  ")
+    }));
+  }
 } = {}) => {
   if (protocol !== "http" && protocol !== "https") {
     throw new Error(`protocol must be http or https, got ${protocol}`);
@@ -3404,6 +3498,7 @@ const startServer = async ({
     allowHttpRequestOnHttps = false;
   }
 
+  const serviceController = createServiceController(services);
   const processTeardownEvents = {
     SIGHUP: stopOnExit,
     SIGTERM: stopOnExit,
@@ -3441,7 +3536,6 @@ const startServer = async ({
       nodeServer.unref();
     }
 
-    onListenStart();
     port = await listen({
       signal: startServerOperation.signal,
       server: nodeServer,
@@ -3449,7 +3543,9 @@ const startServer = async ({
       portHint,
       ip
     });
-    onListenEnd(port);
+    serviceController.callHooks("serverListening", {
+      port
+    });
     startServerOperation.addAbortCallback(async () => {
       await stopListening(nodeServer);
     });
@@ -3468,7 +3564,6 @@ const startServer = async ({
   }) => {
     logger.info(`${serverName} stopping server (reason: ${reason})`);
   });
-  stopCallbackList.add(onStop);
   stopCallbackList.add(async () => {
     await stopListening(nodeServer);
   });
@@ -3481,6 +3576,9 @@ const startServer = async ({
     await Promise.all(stopCallbackList.notify({
       reason
     }));
+    serviceController.callHooks("serverStopped", {
+      reason
+    });
     status = "stopped";
     stoppedResolve(reason);
   });
@@ -3790,6 +3888,12 @@ const startServer = async ({
     const handleRequest = async (request, {
       requestNode
     }) => {
+      let requestReceivedMeasure;
+
+      if (serverTiming) {
+        requestReceivedMeasure = performance.now();
+      }
+
       addRequestLog(requestNode, {
         type: "info",
         value: request.parent ? `Push ${request.ressource}` : `${request.method} ${request.origin}${request.ressource}`
@@ -3802,133 +3906,113 @@ const startServer = async ({
         });
       };
 
-      const requestPlugins = [];
-      let responseFromShortcircuit;
+      let requestWaitingTimeout;
 
-      const shortcircuitResponse = value => {
-        responseFromShortcircuit = value;
-      };
+      if (requestWaitingMs) {
+        requestWaitingTimeout = setTimeout(() => requestWaitingCallback({
+          request,
+          warn,
+          requestWaitingMs
+        }), requestWaitingMs).unref();
+      }
 
-      const redirectRequest = requestRedirection => {
-        request = applyRedirectionToRequest(request, requestRedirection);
-      };
-
-      Object.keys(plugins).forEach(pluginName => {
-        const {
-          onRequest
-        } = plugins[pluginName];
-
-        if (onRequest) {
-          const returnValue = onRequest(request, {
-            warn,
-            logger,
-            shortcircuitResponse,
-            redirectRequest
+      serviceController.callHooks("redirectRequest", request, {
+        warn
+      }, newRequestProperties => {
+        if (newRequestProperties) {
+          request = applyRedirectionToRequest(request, {
+            original: request.original || request,
+            previous: request,
+            ...newRequestProperties
           });
-
-          if (returnValue) {
-            requestPlugins.push({
-              pluginName,
-              ...returnValue
-            });
-          }
         }
       });
-      const result = responseFromShortcircuit ? {
-        returnValue: responseFromShortcircuit
-      } : await generateResponseDescription({
-        requestToResponse,
-        request,
-        pushResponse: async ({
-          path,
-          method
-        }) => {
-          if (typeof path !== "string" || path[0] !== "/") {
-            addRequestLog(requestNode, {
-              type: "warn",
-              value: `response push ignored because path is invalid (must be a string starting with "/", found ${path})`
-            });
-            return;
-          }
+      let handleRequestReturnValue;
+      let errorWhileHandlingRequest = null;
+      let handleRequestTimings = serverTiming ? {} : null;
 
-          if (!request.http2) {
-            addRequestLog(requestNode, {
-              type: "warn",
-              value: `response push ignored because request is not http2`
-            });
-            return;
-          }
-
-          const canPushStream = testCanPushStream(nodeResponse.stream);
-
-          if (!canPushStream.can) {
-            addRequestLog(requestNode, {
-              type: "debug",
-              value: `response push ignored because ${canPushStream.reason}`
-            });
-            return;
-          }
-
-          let prevented = false;
-
-          const prevent = () => {
-            prevented = true;
-          };
-
-          const preventedByPlugin = requestPlugins.find(requestPlugin => {
-            const {
-              onPushResponse
-            } = requestPlugin;
-
-            if (!onPushResponse) {
-              return false;
+      try {
+        handleRequestReturnValue = await serviceController.callAsyncHooksUntil("handleRequest", request, {
+          timing: handleRequestTimings,
+          warn,
+          pushResponse: async ({
+            path,
+            method
+          }) => {
+            if (typeof path !== "string" || path[0] !== "/") {
+              addRequestLog(requestNode, {
+                type: "warn",
+                value: `response push ignored because path is invalid (must be a string starting with "/", found ${path})`
+              });
+              return;
             }
 
-            onPushResponse({
+            if (!request.http2) {
+              addRequestLog(requestNode, {
+                type: "warn",
+                value: `response push ignored because request is not http2`
+              });
+              return;
+            }
+
+            const canPushStream = testCanPushStream(nodeResponse.stream);
+
+            if (!canPushStream.can) {
+              addRequestLog(requestNode, {
+                type: "debug",
+                value: `response push ignored because ${canPushStream.reason}`
+              });
+              return;
+            }
+
+            let preventedByService = null;
+
+            const prevent = () => {
+              preventedByService = serviceController.getCurrentService();
+            };
+
+            serviceController.callHooksUntil("onResponsePush", {
               path,
               method
             }, {
+              request,
+              warn,
               prevent
-            });
-            return prevented;
-          });
+            }, () => preventedByService);
 
-          if (prevented) {
-            addRequestLog(requestNode, {
-              type: "debug",
-              value: `response push prevented by "${preventedByPlugin.pluginName}" plugin`
+            if (preventedByService) {
+              addRequestLog(requestNode, {
+                type: "debug",
+                value: `response push prevented by "${preventedByService.name}" service`
+              });
+              return;
+            }
+
+            const requestChildNode = {
+              logs: [],
+              children: []
+            };
+            requestNode.children.push(requestChildNode);
+            await pushResponse({
+              path,
+              method
+            }, {
+              requestNode: requestChildNode,
+              parentHttp2Stream: nodeResponse.stream
             });
-            return;
           }
-
-          const requestChildNode = {
-            logs: [],
-            children: []
-          };
-          requestNode.children.push(requestChildNode);
-          await pushResponse({
-            path,
-            method
-          }, {
-            requestNode: requestChildNode,
-            parentHttp2Stream: nodeResponse.stream
-          });
-        }
-      });
-      const {
-        aborted
-      } = result;
-
-      if (aborted) {
-        return ABORTED_RESPONSE_PROPERTIES;
+        });
+      } catch (error) {
+        errorWhileHandlingRequest = error;
       }
 
-      const readResponseProperties = async () => {
-        const {
-          error
-        } = result; // internal error, create 500 response
+      let responseProperties;
 
-        if (error) {
+      if (errorWhileHandlingRequest) {
+        if (errorWhileHandlingRequest.name === "AbortError" && request.signal.aborted) {
+          responseProperties = ABORTED_RESPONSE_PROPERTIES;
+        } else {
+          // internal error, create 500 response
           if ( // stopOnInternalError stops server only if requestToResponse generated
           // a non controlled error (internal error).
           // if requestToResponse gracefully produced a 500 response (it did not throw)
@@ -3938,20 +4022,22 @@ const startServer = async ({
             stop(STOP_REASON_INTERNAL_ERROR);
           }
 
-          const responseDescriptionFromError = (await errorToResponse(error, {
+          const handleErrorReturnValue = await serviceController.callAsyncHooksUntil("handleError", errorWhileHandlingRequest, {
             request,
-            sendErrorDetails
-          })) || (await applyDefaultErrorToResponse(error, {
-            request,
-            sendErrorDetails
-          }));
+            warn
+          });
+
+          if (!handleErrorReturnValue) {
+            throw errorWhileHandlingRequest;
+          }
+
           addRequestLog(requestNode, {
             type: "error",
             value: createDetailedMessage$1(`internal error while handling request`, {
-              "error stack": error.stack
+              "error stack": errorWhileHandlingRequest.stack
             })
           });
-          return composeTwoResponses({
+          responseProperties = composeTwoResponses({
             status: 500,
             statusText: "Internal Server Error",
             headers: {
@@ -3959,9 +4045,9 @@ const startServer = async ({
               "cache-control": "no-store",
               "content-type": "text/plain"
             }
-          }, responseDescriptionFromError);
+          }, handleErrorReturnValue);
         }
-
+      } else {
         const {
           status = 501,
           statusText,
@@ -3969,8 +4055,8 @@ const startServer = async ({
           headers = {},
           body,
           ...rest
-        } = result.returnValue || {};
-        const responseProperties = {
+        } = handleRequestReturnValue || {};
+        responseProperties = {
           status,
           statusText,
           statusMessage,
@@ -3978,24 +4064,21 @@ const startServer = async ({
           body,
           ...rest
         };
-        return responseProperties;
-      };
+      }
 
-      let responseProperties = await readResponseProperties(); // call every plugin "onResponse" hook
+      if (serverTiming) {
+        const responseReadyMeasure = performance.now();
+        const timeToStartResponding = responseReadyMeasure - requestReceivedMeasure;
+        const serverTiming = { ...handleRequestTimings,
+          ...responseProperties.timing,
+          "time to start responding": timeToStartResponding
+        };
+        responseProperties.headers = composeTwoHeaders(responseProperties.headers, timingToServerTimingResponseHeaders(serverTiming));
+      }
 
-      requestPlugins.forEach(requestPlugin => {
-        const {
-          onResponse
-        } = requestPlugin;
-
-        if (onResponse) {
-          const returnValue = onResponse(responseProperties);
-
-          if (returnValue) {
-            responseProperties = composeTwoResponses(responseProperties, returnValue);
-          }
-        }
-      });
+      if (requestWaitingMs) {
+        clearTimeout(requestWaitingTimeout);
+      }
 
       if (request.method !== "HEAD" && responseProperties.headers["content-length"] > 0 && !responseProperties.body) {
         addRequestLog(requestNode, {
@@ -4004,6 +4087,18 @@ const startServer = async ({
         });
       }
 
+      serviceController.callHooks("injectResponseHeaders", responseProperties, {
+        request,
+        warn
+      }, returnValue => {
+        if (returnValue) {
+          responseProperties.headers = composeTwoHeaders(responseProperties.headers, returnValue);
+        }
+      });
+      serviceController.callHooks("responseReady", responseProperties, {
+        request,
+        warn
+      });
       return responseProperties;
     };
 
@@ -4157,31 +4252,6 @@ const createNodeServer = async ({
   });
 };
 
-const generateResponseDescription = async ({
-  requestToResponse,
-  request,
-  pushResponse
-}) => {
-  try {
-    const returnValue = await requestToResponse(request, {
-      pushResponse
-    });
-    return {
-      returnValue
-    };
-  } catch (error) {
-    if (error.name === "AbortError" && request.signal.aborted) {
-      return {
-        aborted: true
-      };
-    }
-
-    return {
-      error
-    };
-  }
-};
-
 const testCanPushStream = http2Stream => {
   if (!http2Stream.pushAllowed) {
     return {
@@ -4215,106 +4285,6 @@ const PROCESS_TEARDOWN_EVENTS_MAP = {
   SIGINT: STOP_REASON_PROCESS_SIGINT,
   beforeExit: STOP_REASON_PROCESS_BEFORE_EXIT,
   exit: STOP_REASON_PROCESS_EXIT
-};
-
-const timeStart = name => {
-  // as specified in https://w3c.github.io/server-timing/#the-performanceservertiming-interface
-  // duration is a https://www.w3.org/TR/hr-time-2/#sec-domhighrestimestamp
-  const startTimestamp = performance.now();
-
-  const timeEnd = () => {
-    const endTimestamp = performance.now();
-    const timing = {
-      [name]: endTimestamp - startTimestamp
-    };
-    return timing;
-  };
-
-  return timeEnd;
-};
-const timeFunction = (name, fn) => {
-  const timeEnd = timeStart(name);
-  const returnValue = fn();
-
-  if (returnValue && typeof returnValue.then === "function") {
-    return returnValue.then(value => {
-      return [timeEnd(), value];
-    });
-  }
-
-  return [timeEnd(), returnValue];
-};
-
-const composeServices = namedServices => {
-  return async (request, {
-    pushResponse
-  }) => {
-    const redirectRequest = requestRedirection => {
-      request = applyRedirectionToRequest(request, requestRedirection);
-    };
-
-    const servicesTiming = {};
-    const response = await firstOperationMatching({
-      array: Object.keys(namedServices).map(serviceName => {
-        return {
-          serviceName,
-          serviceFn: namedServices[serviceName]
-        };
-      }),
-      start: async ({
-        serviceName,
-        serviceFn
-      }) => {
-        const [serviceTiming, value] = await timeFunction(serviceName, () => serviceFn(request, {
-          pushResponse,
-          redirectRequest
-        }));
-        Object.assign(servicesTiming, serviceTiming);
-        return value;
-      },
-      predicate: returnValue => {
-        if (returnValue === null || typeof returnValue !== "object") {
-          return false;
-        }
-
-        return true;
-      }
-    });
-
-    if (response) {
-      return composeTwoResponses({
-        timing: servicesTiming
-      }, response);
-    }
-
-    return null;
-  };
-};
-
-const firstOperationMatching = ({
-  array,
-  start,
-  predicate
-}) => {
-  return new Promise((resolve, reject) => {
-    const visit = index => {
-      if (index >= array.length) {
-        return resolve();
-      }
-
-      const input = array[index];
-      const returnValue = start(input);
-      return Promise.resolve(returnValue).then(output => {
-        if (predicate(output)) {
-          return resolve(output);
-        }
-
-        return visit(index + 1);
-      }, reject);
-    };
-
-    visit(0);
-  });
 };
 
 const mediaTypeInfos = {
@@ -4618,7 +4588,36 @@ const isErrorWithCode = (error, code) => {
   return typeof error === "object" && error.code === code;
 };
 
-const negotiateContentEncoding = (request, availableEncodings) => {
+const pickAcceptedContent = ({
+  availables,
+  accepteds,
+  getAcceptanceScore
+}) => {
+  let highestScore = -1;
+  let availableWithHighestScore = null;
+  let availableIndex = 0;
+
+  while (availableIndex < availables.length) {
+    const available = availables[availableIndex];
+    availableIndex++;
+    let acceptedIndex = 0;
+
+    while (acceptedIndex < accepteds.length) {
+      const accepted = accepteds[acceptedIndex];
+      acceptedIndex++;
+      const score = getAcceptanceScore(accepted, available);
+
+      if (score > highestScore) {
+        availableWithHighestScore = available;
+        highestScore = score;
+      }
+    }
+  }
+
+  return availableWithHighestScore;
+};
+
+const pickContentEncoding = (request, availableEncodings) => {
   const {
     headers = {}
   } = request;
@@ -4629,7 +4628,7 @@ const negotiateContentEncoding = (request, availableEncodings) => {
   }
 
   const encodingsAccepted = parseAcceptEncodingHeader(requestAcceptEncodingHeader);
-  return applyContentNegotiation({
+  return pickAcceptedContent({
     accepteds: encodingsAccepted,
     availables: availableEncodings,
     getAcceptanceScore: getEncodingAcceptanceScore
@@ -4679,6 +4678,71 @@ const getEncodingAcceptanceScore = ({
   }
 
   return -1;
+};
+
+const pickContentType = (request, availableContentTypes) => {
+  const {
+    headers = {}
+  } = request;
+  const requestAcceptHeader = headers.accept;
+
+  if (!requestAcceptHeader) {
+    return null;
+  }
+
+  const contentTypesAccepted = parseAcceptHeader(requestAcceptHeader);
+  return pickAcceptedContent({
+    accepteds: contentTypesAccepted,
+    availables: availableContentTypes,
+    getAcceptanceScore: getContentTypeAcceptanceScore
+  });
+};
+
+const parseAcceptHeader = acceptHeader => {
+  const acceptHeaderObject = parseMultipleHeader(acceptHeader, {
+    validateProperty: ({
+      name
+    }) => {
+      // read only q, anything else is ignored
+      return name === "q";
+    }
+  });
+  const accepts = [];
+  Object.keys(acceptHeaderObject).forEach(key => {
+    const {
+      q = 1
+    } = acceptHeaderObject[key];
+    const value = key;
+    accepts.push({
+      value,
+      quality: q
+    });
+  });
+  accepts.sort((a, b) => {
+    return b.quality - a.quality;
+  });
+  return accepts;
+};
+
+const getContentTypeAcceptanceScore = ({
+  value,
+  quality
+}, availableContentType) => {
+  const [acceptedType, acceptedSubtype] = decomposeContentType(value);
+  const [availableType, availableSubtype] = decomposeContentType(availableContentType);
+  const typeAccepted = acceptedType === "*" || acceptedType === availableType;
+  const subtypeAccepted = acceptedSubtype === "*" || acceptedSubtype === availableSubtype;
+
+  if (typeAccepted && subtypeAccepted) {
+    return quality;
+  }
+
+  return -1;
+};
+
+const decomposeContentType = fullType => {
+  const [type, subtype] = fullType.split("/");
+  return [type, subtype];
 };
 
 const serveDirectory = (url, {
@@ -4733,7 +4797,7 @@ const serveDirectory = (url, {
       };
     }
   };
-  const bestContentType = negotiateContentType({
+  const bestContentType = pickContentType({
     headers
   }, Object.keys(responseProducers));
   return responseProducers[bestContentType || "application/json"]();
@@ -5080,7 +5144,7 @@ const getCompressedResponse = async ({
   sourceUrl,
   headers
 }) => {
-  const acceptedCompressionFormat = negotiateContentEncoding({
+  const acceptedCompressionFormat = pickContentEncoding({
     headers
   }, Object.keys(availableCompressionFormats));
 
@@ -5173,9 +5237,89 @@ const asUrlString = value => {
   return null;
 };
 
+const jsenvServiceErrorHandler = ({
+  sendErrorDetails = false
+} = {}) => {
+  return {
+    name: "jsenv:error_handler",
+    handleError: (serverInternalError, {
+      request
+    }) => {
+      const serverInternalErrorIsAPrimitive = serverInternalError === null || typeof serverInternalError !== "object" && typeof serverInternalError !== "function";
+
+      if (!serverInternalErrorIsAPrimitive && serverInternalError.asResponse) {
+        return serverInternalError.asResponse();
+      }
+
+      const dataToSend = serverInternalErrorIsAPrimitive ? {
+        code: "VALUE_THROWED",
+        value: serverInternalError
+      } : {
+        code: serverInternalError.code || "UNKNOWN_ERROR",
+        ...(sendErrorDetails ? {
+          stack: serverInternalError.stack,
+          ...serverInternalError
+        } : {})
+      };
+      const availableContentTypes = {
+        "text/html": () => {
+          const renderHtmlForErrorWithoutDetails = () => {
+            return `<p>Details not available: to enable them use jsenvServiceErrorHandler({ sendErrorDetails: true }).</p>`;
+          };
+
+          const renderHtmlForErrorWithDetails = () => {
+            if (serverInternalErrorIsAPrimitive) {
+              return `<pre>${JSON.stringify(serverInternalError, null, "  ")}</pre>`;
+            }
+
+            return `<pre>${serverInternalError.stack}</pre>`;
+          };
+
+          const body = `<!DOCTYPE html>
+<html>
+  <head>
+    <title>Internal server error</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <h1>Internal server error</h1>
+    <p>${serverInternalErrorIsAPrimitive ? `Code inside server has thrown a literal.` : `Code inside server has thrown an error.`}</p>
+    <details>
+      <summary>See internal error details</summary>
+      ${sendErrorDetails ? renderHtmlForErrorWithDetails() : renderHtmlForErrorWithoutDetails()}
+    </details>
+  </body>
+</html>`;
+          return {
+            headers: {
+              "content-type": "text/html",
+              "content-length": Buffer.byteLength(body)
+            },
+            body
+          };
+        },
+        "application/json": () => {
+          const body = JSON.stringify(dataToSend);
+          return {
+            headers: {
+              "content-type": "application/json",
+              "content-length": Buffer.byteLength(body)
+            },
+            body
+          };
+        }
+      };
+      const bestContentType = pickContentType(request, Object.keys(availableContentTypes));
+      return availableContentTypes[bestContentType || "application/json"]();
+    }
+  };
+};
+
 const jsenvAccessControlAllowedHeaders = ["x-requested-with"];
 const jsenvAccessControlAllowedMethods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"];
-const pluginCORS = ({
+const jsenvServiceCORS = ({
   accessControlAllowedOrigins = [],
   accessControlAllowedMethods = jsenvAccessControlAllowedMethods,
   accessControlAllowedHeaders = jsenvAccessControlAllowedHeaders,
@@ -5186,64 +5330,47 @@ const pluginCORS = ({
   // by default OPTIONS request can be cache for a long time, it's not going to change soon ?
   // we could put a lot here, see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Max-Age
   accessControlMaxAge = 600,
-  timingAllowOrigin
+  timingAllowOrigin = false
 } = {}) => {
   // TODO: we should check access control params to throw or warn if we find strange values
   const corsEnabled = accessControlAllowRequestOrigin || accessControlAllowedOrigins.length;
 
   if (!corsEnabled) {
-    return {
-      cors: {}
-    };
+    return [];
   }
 
   return {
-    cors: {
-      onServerParams: ({
-        plugins
-      }) => {
-        if (timingAllowOrigin === undefined && plugins.server_timings) {
-          timingAllowOrigin = true;
-        }
-      },
-      onRequest: (request, {
-        shortcircuitResponse
-      }) => {
-        if (request.method === "OPTIONS") {
-          // when request method is "OPTIONS" we must return a 200 without body
-          // So we bypass "requestToResponse" in that scenario using shortcircuitResponse
-          shortcircuitResponse({
-            status: 200,
-            headers: {
-              "content-length": 0
-            }
-          });
-        }
-
-        if (request.parent) {
-          return null;
-        }
-
+    name: "jsenv:cors",
+    handleRequest: request => {
+      // when request method is "OPTIONS" we must return a 200 without body
+      // So we bypass "requestToResponse" in that scenario using shortcircuitResponse
+      if (request.method === "OPTIONS") {
         return {
-          onResponse: () => {
-            const accessControlHeaders = generateAccessControlHeaders({
-              request,
-              accessControlAllowedOrigins,
-              accessControlAllowRequestOrigin,
-              accessControlAllowedMethods,
-              accessControlAllowRequestMethod,
-              accessControlAllowedHeaders,
-              accessControlAllowRequestHeaders,
-              accessControlAllowCredentials,
-              accessControlMaxAge,
-              timingAllowOrigin
-            });
-            return {
-              headers: accessControlHeaders
-            };
+          status: 200,
+          headers: {
+            "content-length": 0
           }
         };
       }
+
+      return null;
+    },
+    injectResponseHeaders: (response, {
+      request
+    }) => {
+      const accessControlHeaders = generateAccessControlHeaders({
+        request,
+        accessControlAllowedOrigins,
+        accessControlAllowRequestOrigin,
+        accessControlAllowedMethods,
+        accessControlAllowRequestMethod,
+        accessControlAllowedHeaders,
+        accessControlAllowRequestHeaders,
+        accessControlAllowCredentials,
+        accessControlMaxAge,
+        timingAllowOrigin
+      });
+      return accessControlHeaders;
     }
   };
 }; // https://www.w3.org/TR/cors/
@@ -5322,73 +5449,6 @@ const generateAccessControlHeaders = ({
     ...(vary.length ? {
       vary: vary.join(", ")
     } : {})
-  };
-};
-
-// because in chrome dev tools they are shown in alphabetic order
-// also we should manipulate a timing object instead of a header to facilitate
-// manipulation of the object so that the timing header response generation logic belongs to @jsenv/server
-// so response can return a new timing object
-// yes it's awful, feel free to PR with a better approach :)
-
-const timingToServerTimingResponseHeaders = timing => {
-  const serverTimingHeader = {};
-  Object.keys(timing).forEach((key, index) => {
-    const name = letters[index] || "zz";
-    serverTimingHeader[name] = {
-      desc: key,
-      dur: timing[key]
-    };
-  });
-  const serverTimingHeaderString = stringifyServerTimingHeader(serverTimingHeader);
-  return {
-    "server-timing": serverTimingHeaderString
-  };
-};
-const stringifyServerTimingHeader = serverTimingHeader => {
-  return stringifyMultipleHeader(serverTimingHeader, {
-    validateName: validateServerTimingName
-  });
-}; // (),/:;<=>?@[\]{}" Don't allowed
-// Minimal length is one symbol
-// Digits, alphabet characters,
-// and !#$%&'*+-.^_`|~ are allowed
-// https://www.w3.org/TR/2019/WD-server-timing-20190307/#the-server-timing-header-field
-// https://tools.ietf.org/html/rfc7230#section-3.2.6
-
-const validateServerTimingName = name => {
-  const valid = /^[!#$%&'*+\-.^_`|~0-9a-z]+$/gi.test(name);
-
-  if (!valid) {
-    console.warn(`server timing contains invalid symbols`);
-    return false;
-  }
-
-  return true;
-};
-
-const letters = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"];
-
-// https://www.w3.org/TR/server-timing/
-const pluginServerTiming = () => {
-  return {
-    server_timing: {
-      onRequest: () => {
-        const requestStartEvent = performance.now();
-        return {
-          onResponse: response => {
-            const responseEndEvent = performance.now();
-            const timeToCreateResponse = responseEndEvent - requestStartEvent;
-            const serverTiming = { ...response.timing,
-              "time to start responding": timeToCreateResponse
-            };
-            return {
-              headers: timingToServerTimingResponseHeaders(serverTiming)
-            };
-          }
-        };
-      }
-    }
   };
 };
 
@@ -5705,39 +5765,6 @@ const createEventHistory = limit => {
     add,
     since,
     reset
-  };
-};
-
-const pluginRequestWaitingCheck = ({
-  requestWaitingMs = 20000,
-  requestWaitingCallback = ({
-    request,
-    logger,
-    requestWaitingMs
-  }) => {
-    logger.warn(createDetailedMessage$1(`still no response found for request after ${requestWaitingMs} ms`, {
-      "request url": `${request.origin}${request.ressource}`,
-      "request headers": JSON.stringify(request.headers, null, "  ")
-    }));
-  }
-} = {}) => {
-  return {
-    plugin_request_waiting_check: {
-      onRequest: (request, {
-        logger
-      }) => {
-        const timeout = setTimeout(() => requestWaitingCallback({
-          request,
-          logger,
-          requestWaitingMs
-        }), requestWaitingMs);
-        return {
-          onResponse: () => {
-            clearTimeout(timeout);
-          }
-        };
-      }
-    }
   };
 };
 
@@ -11977,7 +12004,8 @@ const requireFromJsenv = createRequire(import.meta.url);
 const jsenvPluginHtmlSupervisor = ({
   logs = false,
   measurePerf = false,
-  errorOverlay = true
+  errorOverlay = true,
+  openInEditor = true
 }) => {
   const htmlSupervisorSetupFileUrl = new URL("./js/html_supervisor_setup.js", import.meta.url).href;
   const htmlSupervisorInstallerFileUrl = new URL("./js/html_supervisor_installer.js", import.meta.url).href;
@@ -12137,7 +12165,8 @@ const jsenvPluginHtmlSupervisor = ({
             rootDirectoryUrl: context.rootDirectoryUrl,
             logs,
             measurePerf,
-            errorOverlay
+            errorOverlay,
+            openInEditor
           }, null, "        ")})`,
           "injected-by": "jsenv:html_supervisor"
         }));
@@ -20195,6 +20224,18 @@ const jsenvPluginAutoreloadServer = ({
         rootDirectoryUrl,
         urlGraph
       }) => {
+        const formatUrlForClient = url => {
+          if (urlIsInsideOf(url, rootDirectoryUrl)) {
+            return urlToRelativeUrl(url, rootDirectoryUrl);
+          }
+
+          if (url.startsWith("file:")) {
+            return `/@fs/${url.slice("file:///".length)}`;
+          }
+
+          return url;
+        };
+
         const notifyDeclined = ({
           cause,
           reason,
@@ -20229,8 +20270,8 @@ const jsenvPluginAutoreloadServer = ({
                 reason: urlInfo === firstUrlInfo ? `file accepts hot reload` : `a dependent file accepts hot reload`,
                 instructions: [{
                   type: urlInfo.type,
-                  boundary: urlToRelativeUrl(urlInfo.url, rootDirectoryUrl),
-                  acceptedBy: urlToRelativeUrl(urlInfo.url, rootDirectoryUrl)
+                  boundary: formatUrlForClient(urlInfo.url),
+                  acceptedBy: formatUrlForClient(urlInfo.url)
                 }]
               };
             }
@@ -20258,8 +20299,8 @@ const jsenvPluginAutoreloadServer = ({
               if (hotAcceptDependencies.includes(urlInfo.url)) {
                 instructions.push({
                   type: dependentUrlInfo.type,
-                  boundary: urlToRelativeUrl(dependentUrl, rootDirectoryUrl),
-                  acceptedBy: urlToRelativeUrl(urlInfo.url, rootDirectoryUrl)
+                  boundary: formatUrlForClient(dependentUrl),
+                  acceptedBy: formatUrlForClient(urlInfo.url)
                 });
                 continue;
               }
@@ -20268,7 +20309,7 @@ const jsenvPluginAutoreloadServer = ({
                 return {
                   declined: true,
                   reason: "circular dependency",
-                  declinedBy: urlToRelativeUrl(dependentUrl, rootDirectoryUrl)
+                  declinedBy: formatUrlForClient(dependentUrl)
                 };
               }
 
@@ -20316,7 +20357,7 @@ const jsenvPluginAutoreloadServer = ({
             return;
           }
 
-          const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
+          const relativeUrl = formatUrlForClient(url);
           const hotUpdate = propagateUpdate(urlInfo);
 
           if (hotUpdate.declined) {
@@ -20338,7 +20379,7 @@ const jsenvPluginAutoreloadServer = ({
           firstUrlInfo
         }) => {
           const mainHotUpdate = propagateUpdate(firstUrlInfo);
-          const cause = `following files are no longer referenced: ${prunedUrlInfos.map(prunedUrlInfo => urlToRelativeUrl(prunedUrlInfo.url, rootDirectoryUrl))}`; // now check if we can hot update the main ressource
+          const cause = `following files are no longer referenced: ${prunedUrlInfos.map(prunedUrlInfo => formatUrlForClient(prunedUrlInfo.url))}`; // now check if we can hot update the main ressource
           // then if we can hot update all dependencies
 
           if (mainHotUpdate.declined) {
@@ -20361,15 +20402,15 @@ const jsenvPluginAutoreloadServer = ({
               notifyDeclined({
                 cause,
                 reason: `a pruned file declines hot reload`,
-                declinedBy: urlToRelativeUrl(prunedUrlInfo.url, rootDirectoryUrl)
+                declinedBy: formatUrlForClient(prunedUrlInfo.url)
               });
               return;
             }
 
             instructions.push({
               type: "prune",
-              boundary: urlToRelativeUrl(prunedUrlInfo.url, rootDirectoryUrl),
-              acceptedBy: urlToRelativeUrl(firstUrlInfo.url, rootDirectoryUrl)
+              boundary: formatUrlForClient(prunedUrlInfo.url),
+              acceptedBy: formatUrlForClient(firstUrlInfo.url)
             });
           }
 
@@ -20585,7 +20626,8 @@ const formatters = {
 const createUrlGraph = ({
   clientFileChangeCallbackList,
   clientFilesPruneCallbackList,
-  onCreateUrlInfo = () => {}
+  onCreateUrlInfo = () => {},
+  includeOriginalUrls
 } = {}) => {
   const urlInfoMap = new Map();
 
@@ -20650,7 +20692,16 @@ const createUrlGraph = ({
   };
 
   const updateReferences = (urlInfo, references) => {
-    const dependencyUrls = [];
+    const setOfDependencyUrls = new Set(); // for import assertion "file.css?as_css_module" depends on "file.css"
+    // this is enabled only for dev where there is autoreload
+    // during build the css file must be considered as not referenced
+    // (except if referenced explicitely by something else) so that
+    // the css file does not appear in the build directory
+
+    if (includeOriginalUrls && urlInfo.originalUrl !== urlInfo.url) {
+      setOfDependencyUrls.add(urlInfo.originalUrl);
+    }
+
     references.forEach(reference => {
       if (reference.isRessourceHint) {
         // ressource hint are a special kind of reference.
@@ -20662,15 +20713,12 @@ const createUrlGraph = ({
         return;
       }
 
-      if (dependencyUrls.includes(reference.url)) {
-        return;
-      }
-
-      dependencyUrls.push(reference.url);
+      setOfDependencyUrls.add(reference.url);
     });
-    pruneDependencies(urlInfo, Array.from(urlInfo.dependencies).filter(dep => !dependencyUrls.includes(dep)));
+    const urlsToRemove = Array.from(urlInfo.dependencies).filter(dep => !setOfDependencyUrls.has(dep));
+    pruneDependencies(urlInfo, urlsToRemove);
     urlInfo.references = references;
-    dependencyUrls.forEach(dependencyUrl => {
+    setOfDependencyUrls.forEach(dependencyUrl => {
       const dependencyUrlInfo = reuseOrCreateUrlInfo(dependencyUrl);
       urlInfo.dependencies.add(dependencyUrl);
       dependencyUrlInfo.dependents.add(urlInfo.url);
@@ -20684,17 +20732,17 @@ const createUrlGraph = ({
     const removeDependencies = (urlInfo, urlsToPrune) => {
       urlsToPrune.forEach(urlToPrune => {
         urlInfo.dependencies.delete(urlToPrune);
-        const dependency = getUrlInfo(urlToPrune);
+        const dependencyUrlInfo = getUrlInfo(urlToPrune);
 
-        if (!dependency) {
+        if (!dependencyUrlInfo) {
           return;
         }
 
-        dependency.dependents.delete(urlInfo.url);
+        dependencyUrlInfo.dependents.delete(urlInfo.url);
 
-        if (dependency.dependents.size === 0) {
-          removeDependencies(dependency, Array.from(dependency.dependencies));
-          prunedUrlInfos.push(dependency);
+        if (dependencyUrlInfo.dependents.size === 0) {
+          removeDependencies(dependencyUrlInfo, Array.from(dependencyUrlInfo.dependencies));
+          prunedUrlInfos.push(dependencyUrlInfo);
         }
       });
     };
@@ -20706,8 +20754,12 @@ const createUrlGraph = ({
     }
 
     prunedUrlInfos.forEach(prunedUrlInfo => {
-      prunedUrlInfo.modifiedTimestamp = Date.now(); // should we delete?
-      // delete urlGraph.deleteUrlInfo(prunedUrlInfo.url)
+      prunedUrlInfo.modifiedTimestamp = Date.now();
+
+      if (prunedUrlInfo.isInline) {
+        // should we always delete?
+        deleteUrlInfo(prunedUrlInfo.url);
+      }
     });
 
     if (clientFilesPruneCallbackList) {
@@ -20871,7 +20923,7 @@ const createPluginController = ({
       if (hook) {
         hooks.push({
           plugin,
-          hookName,
+          name: hookName,
           value: hook
         });
       }
@@ -20893,7 +20945,7 @@ const createPluginController = ({
         const group = hookGroups[hookName] || (hookGroups[hookName] = []);
         group.push({
           plugin,
-          hookName,
+          name: hookName,
           value: hook
         });
       }
@@ -20911,7 +20963,7 @@ const createPluginController = ({
     }
 
     currentPlugin = hook.plugin;
-    currentHookName = hook.hookName;
+    currentHookName = hook.name;
     const timeEnd = timeStart(`${currentHookName}-${currentPlugin.name.replace("jsenv:", "")}`);
     let valueReturned = hookFn(info, context);
 
@@ -20919,7 +20971,7 @@ const createPluginController = ({
       Object.assign(info.timing, timeEnd());
     }
 
-    valueReturned = assertAndNormalizeReturnValue(hook.hookName, valueReturned);
+    valueReturned = assertAndNormalizeReturnValue(hook.name, valueReturned);
     currentPlugin = null;
     currentHookName = null;
     return valueReturned;
@@ -20933,7 +20985,7 @@ const createPluginController = ({
     }
 
     currentPlugin = hook.plugin;
-    currentHookName = hook.hookName;
+    currentHookName = hook.name;
     const timeEnd = timeStart(`${currentHookName}-${currentPlugin.name.replace("jsenv:", "")}`);
     let valueReturned = await hookFn(info, context);
 
@@ -20941,7 +20993,7 @@ const createPluginController = ({
       Object.assign(info.timing, timeEnd());
     }
 
-    valueReturned = assertAndNormalizeReturnValue(hook.hookName, valueReturned);
+    valueReturned = assertAndNormalizeReturnValue(hook.name, valueReturned);
     currentPlugin = null;
     currentHookName = null;
     return valueReturned;
@@ -23003,8 +23055,7 @@ const startOmegaServer = async ({
   port = 0,
   keepProcessAlive = false,
   onStop = () => {},
-  serverPlugins,
-  services,
+  services = [],
   rootDirectoryUrl,
   urlGraph,
   kitchen,
@@ -23012,15 +23063,16 @@ const startOmegaServer = async ({
   onErrorWhileServingFile = () => {}
 }) => {
   const serverStopCallbackList = createCallbackListNotifiedOnce();
-  const coreServices = {
-    "service:file": createFileService({
+  const coreServices = [{
+    name: "jsenv:omega_file_service",
+    handleRequest: createFileService({
       rootDirectoryUrl,
       urlGraph,
       kitchen,
       scenario,
       onErrorWhileServingFile
     })
-  };
+  }];
   const server = await startServer({
     signal,
     stopOnExit: false,
@@ -23036,67 +23088,57 @@ const startOmegaServer = async ({
     listenAnyIp,
     ip,
     port,
-    plugins: { ...serverPlugins,
-      ...pluginCORS({
-        accessControlAllowRequestOrigin: true,
-        accessControlAllowRequestMethod: true,
-        accessControlAllowRequestHeaders: true,
-        accessControlAllowedRequestHeaders: [...jsenvAccessControlAllowedHeaders, "x-jsenv-execution-id"],
-        accessControlAllowCredentials: true
-      }),
-      ...pluginServerTiming(),
-      ...pluginRequestWaitingCheck({
-        requestWaitingMs: 60 * 1000
-      })
-    },
-    sendErrorDetails: true,
-    errorToResponse: (error, {
-      request
-    }) => {
-      const getResponseForError = () => {
-        if (error && error.asResponse) {
-          return error.asResponse();
+    requestWaitingMs: 60_1000,
+    services: [jsenvServiceCORS({
+      accessControlAllowRequestOrigin: true,
+      accessControlAllowRequestMethod: true,
+      accessControlAllowRequestHeaders: true,
+      accessControlAllowedRequestHeaders: [...jsenvAccessControlAllowedHeaders, "x-jsenv-execution-id"],
+      accessControlAllowCredentials: true,
+      timingAllowOrigin: true
+    }), ...services, ...coreServices, // specific error handling
+    {
+      name: "jsenv:omega_error_handler",
+      handleError: error => {
+        const getResponseForError = () => {
+          if (error && error.asResponse) {
+            return error.asResponse();
+          }
+
+          if (error && error.statusText === "Unexpected directory operation") {
+            return {
+              status: 403
+            };
+          }
+
+          return convertFileSystemErrorToResponseProperties(error);
+        };
+
+        const response = getResponseForError();
+
+        if (!response) {
+          return null;
         }
 
-        if (error && error.statusText === "Unexpected directory operation") {
-          return {
-            status: 403
-          };
-        }
-
-        return convertFileSystemErrorToResponseProperties(error);
-      };
-
-      const response = getResponseForError();
-
-      if (!response) {
-        return null;
+        const body = JSON.stringify({
+          status: response.status,
+          statusText: response.statusText,
+          headers: response.headers,
+          body: response.body
+        });
+        return {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+            "content-length": Buffer.byteLength(body)
+          },
+          body
+        };
       }
-
-      const isInspectRequest = new URL(request.ressource, request.origin).searchParams.has("__inspect__");
-
-      if (!isInspectRequest) {
-        return response;
-      }
-
-      const body = JSON.stringify({
-        status: response.status,
-        statusText: response.statusText,
-        headers: response.headers,
-        body: response.body
-      });
-      return {
-        status: 200,
-        headers: {
-          "content-type": "application/json",
-          "content-length": Buffer.byteLength(body)
-        },
-        body
-      };
-    },
-    requestToResponse: composeServices({ ...services,
-      ...coreServices
-    }),
+    }, // default error handling
+    jsenvServiceErrorHandler({
+      sendErrorDetails: true
+    })],
     onStop: reason => {
       onStop();
       serverStopCallbackList.notify(reason);
@@ -23357,7 +23399,7 @@ const startDevServer = async ({
   certificate,
   privateKey,
   keepProcessAlive = true,
-  serverPlugins,
+  services,
   rootDirectoryUrl,
   clientFiles = {
     "./src/": true,
@@ -23557,7 +23599,8 @@ const startDevServer = async ({
       });
 
       urlInfo.isValid = () => watch;
-    }
+    },
+    includeOriginalUrls: true
   });
   const kitchen = createKitchen({
     signal,
@@ -23609,7 +23652,7 @@ const startDevServer = async ({
     urlGraph,
     kitchen,
     scenario: "dev",
-    serverPlugins,
+    services,
     onErrorWhileServingFile: data => {
       onErrorWhileServingFileReference.current(data);
     }
@@ -24909,6 +24952,7 @@ const executePlan = async (plan, {
   completedExecutionLogAbbreviation,
   rootDirectoryUrl,
   keepRunning,
+  services,
   defaultMsAllocatedPerExecution,
   maxExecutionsInParallel,
   failFast,
@@ -25103,7 +25147,8 @@ const executePlan = async (plan, {
         ip,
         protocol,
         certificate,
-        privateKey
+        privateKey,
+        services
       });
       multipleExecutionsOperation.addEndCallback(async () => {
         await server.stop();
@@ -29292,7 +29337,7 @@ const startBuildServer = async ({
   listenAnyIp,
   ip,
   port = 9779,
-  services = {},
+  services = [],
   keepProcessAlive = true,
   rootDirectoryUrl,
   buildDirectoryUrl,
@@ -29435,25 +29480,24 @@ const startBuildServer = async ({
     listenAnyIp,
     ip,
     port,
-    plugins: { ...pluginCORS({
-        accessControlAllowRequestOrigin: true,
-        accessControlAllowRequestMethod: true,
-        accessControlAllowRequestHeaders: true,
-        accessControlAllowedRequestHeaders: jsenvAccessControlAllowedHeaders,
-        accessControlAllowCredentials: true
-      }),
-      ...pluginServerTiming(),
-      ...pluginRequestWaitingCheck({
-        requestWaitingMs: 60 * 1000
-      })
-    },
-    sendErrorDetails: true,
-    requestToResponse: composeServices({ ...services,
-      build_files_service: createBuildFilesService({
+    serverTiming: true,
+    requestWaitingMs: 60_000,
+    services: [jsenvServiceCORS({
+      accessControlAllowRequestOrigin: true,
+      accessControlAllowRequestMethod: true,
+      accessControlAllowRequestHeaders: true,
+      accessControlAllowedRequestHeaders: jsenvAccessControlAllowedHeaders,
+      accessControlAllowCredentials: true,
+      timingAllowOrigin: true
+    }), ...services, {
+      name: "jsenv:build_files_service",
+      handleRequest: createBuildFilesService({
         buildDirectoryUrl,
         buildIndexPath
       })
-    })
+    }, jsenvServiceErrorHandler({
+      sendErrorDetails: true
+    })]
   });
   startBuildServerTask.done();
   logger.info(``);
@@ -29509,6 +29553,7 @@ const execute = async ({
   allocatedMs,
   mirrorConsole = true,
   keepRunning = false,
+  services,
   collectConsole,
   collectCoverage,
   coverageTempDirectoryUrl,
@@ -29586,6 +29631,7 @@ const execute = async ({
       kitchen,
       scenario,
       keepProcessAlive: false,
+      services,
       port,
       protocol,
       http2,
