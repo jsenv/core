@@ -1,3 +1,20 @@
+# 27.5.0
+
+- add htmlSupervisor.errorOverlay parameters
+- add "reported by browser/server ..." at the bottom of error overlay
+- close error overlay on hot reload
+- prevent server errors from displaying overlay on unrelated pages or once execution is done
+- fix hot reload for script using `hot-accept` attribute
+- handle type="text/jsx" and type="module/jsx" on script tags (same for ts)
+- add warnings when plugin contains unexpected properties
+- fix server host resolution for node 18+
+- add htmlSupervisor.openInEditor
+- css import assertion + hot reload works in firefox
+- fix infinite reloading when code using import assertion is executed at the same time in firefox and chrome
+- rename explorerGroups into explorer.groups (gives ability to disable explorer)
+- allow any preact/react version in peerDependencies
+- update dependencies
+
 # 27.4.0
 
 - feature: click on error overlay now open in editor
