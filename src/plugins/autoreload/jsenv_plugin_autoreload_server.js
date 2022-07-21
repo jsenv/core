@@ -13,6 +13,9 @@ export const jsenvPluginAutoreloadServer = ({
           if (urlIsInsideOf(url, rootDirectoryUrl)) {
             return urlToRelativeUrl(url, rootDirectoryUrl)
           }
+          if (url.startsWith("file:")) {
+            return `/@fs/${url.slice("file:///".length)}`
+          }
           return url
         }
 

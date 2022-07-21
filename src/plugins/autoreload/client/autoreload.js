@@ -110,23 +110,25 @@ const applyHotReload = async ({ hotInstructions }) => {
 
       const urlToFetch = new URL(boundary, `${window.location.origin}/`).href
       const urlHotMeta = urlHotMetas[urlToFetch]
-      // there is no url hot meta when code was not executed (code splitting with dynamic import)
-      if (!urlHotMeta) {
-        return null
-      }
+      // there is no url hot meta when:
+      // - code was not executed (code splitting with dynamic import)
+      // - import.meta.hot.accept() is not called (happens for HTML and CSS)
 
       if (type === "prune") {
-        delete urlHotMetas[urlToFetch]
-        if (urlHotMeta.disposeCallback) {
-          console.groupCollapsed(
-            `[jsenv] cleanup ${boundary} (previously used in ${acceptedBy})`,
-          )
-          console.log(`call dispose callback`)
-          await urlHotMeta.disposeCallback()
-          console.groupEnd()
+        if (urlHotMeta) {
+          delete urlHotMetas[urlToFetch]
+          if (urlHotMeta.disposeCallback) {
+            console.groupCollapsed(
+              `[jsenv] cleanup ${boundary} (previously used in ${acceptedBy})`,
+            )
+            console.log(`call dispose callback`)
+            await urlHotMeta.disposeCallback()
+            console.groupEnd()
+          }
         }
         return null
       }
+
       if (acceptedBy === boundary) {
         console.groupCollapsed(`[jsenv] hot reloading ${boundary}`)
       } else {
@@ -134,14 +136,18 @@ const applyHotReload = async ({ hotInstructions }) => {
           `[jsenv] hot reloading ${acceptedBy} usage in ${boundary}`,
         )
       }
-      if (urlHotMeta.disposeCallback) {
-        console.log(`call dispose callback`)
-        await urlHotMeta.disposeCallback()
-      }
       if (type === "js_module") {
+        if (!urlHotMeta) {
+          // code was not executed, no need to re-execute it
+          return null
+        }
+        if (urlHotMeta.disposeCallback) {
+          console.log(`call dispose callback`)
+          await urlHotMeta.disposeCallback()
+        }
         console.log(`importing js module`)
         const namespace = await reloadJsImport(urlToFetch)
-        if (urlHotMeta && urlHotMeta.acceptCallback) {
+        if (urlHotMeta.acceptCallback) {
           await urlHotMeta.acceptCallback(namespace)
         }
         console.log(`js module import done`)
