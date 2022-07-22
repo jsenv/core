@@ -5,13 +5,14 @@ import { startDevServer } from "@jsenv/core"
 const { certificate, privateKey } = requestCertificateForLocalhost({
   altNames: ["local"],
 })
-await startDevServer({
+export const devServer = await startDevServer({
+  logLevel: process.env.LOG_LEVEL,
   port: 3589,
   protocol: "https",
   acceptAnyIp: true,
   certificate,
   privateKey,
-  rootDirectoryUrl: new URL("./", import.meta.url),
+  rootDirectoryUrl: new URL("./scenarios/", import.meta.url),
   plugins: [
     {
       name: "plugin_throwing",
