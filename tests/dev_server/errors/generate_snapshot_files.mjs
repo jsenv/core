@@ -5,11 +5,11 @@ process.env.GENERATING_SNAPSHOTS = "true"
 const { devServer } = await import("./start_dev_server.mjs")
 const browser = await chromium.launch({ headless: true })
 
-const generateHtmlForStory = async ({ story, waitForServerErrorReporting }) => {
+const generateHtmlForStory = async ({ story, preferServerErrorReporting }) => {
   const page = await browser.newPage()
   await page.goto(`${devServer.origin}/${story}/main.html`)
   await page.waitForSelector("jsenv-error-overlay")
-  if (waitForServerErrorReporting) {
+  if (preferServerErrorReporting) {
     // wait a bit more to let server error replace browser error
     await new Promise((resolve) => setTimeout(resolve, 100))
   }
@@ -42,7 +42,35 @@ try {
   })
   await generateHtmlForStory({
     story: "js_import_not_found",
-    waitForServerErrorReporting: true,
+    preferServerErrorReporting: true,
+  })
+  await generateHtmlForStory({
+    story: "js_import_syntax_error",
+    preferServerErrorReporting: true,
+  })
+  await generateHtmlForStory({
+    story: "js_throw",
+  })
+  await generateHtmlForStory({
+    story: "plugin_error_transform",
+    preferServerErrorReporting: true,
+  })
+  await generateHtmlForStory({
+    story: "script_module_inline_export_not_found",
+  })
+  await generateHtmlForStory({
+    story: "script_module_inline_import_not_found",
+    preferServerErrorReporting: true,
+  })
+  await generateHtmlForStory({
+    story: "script_module_inline_syntax_error",
+    preferServerErrorReporting: true,
+  })
+  await generateHtmlForStory({
+    story: "script_module_inline_throw",
+  })
+  await generateHtmlForStory({
+    story: "script_src_not_found",
   })
 } finally {
   browser.close()
