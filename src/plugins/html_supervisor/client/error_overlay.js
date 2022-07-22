@@ -19,22 +19,33 @@ export const displayErrorInDocument = (
   },
 ) => {
   const nowMs = Date.now()
-  // ensure error dispatched on window by browser is displayed first
-  // then the server error replaces it (because it contains more information)
+  // error reported by server contains more information than error
+  // reporter by browser.
+  // Most of the time server reports first and shortly after browser report the same
+  // error. In that case we want to ignore the browser error
   if (previousErrorInfo) {
-    const previousErrorReportedBy = previousErrorInfo.reportedBy
-    const msEllapsedSincePreviousError = nowMs - previousErrorInfo.ms
-    if (
-      previousErrorReportedBy === "server" &&
-      reportedBy === "browser" &&
-      msEllapsedSincePreviousError < 50
-    ) {
-      return () => {}
+    if (previousErrorInfo.reportedBy === "server" && reportedBy === "browser") {
+      const currentUrl = window.__html_supervisor__
+        ? window.__html_supervisor__.currentExecutionUrl
+        : null
+      const msEllapsedSincePreviousError = nowMs - previousErrorInfo.ms
+      if (
+        currentUrl &&
+        previousErrorInfo.url &&
+        currentUrl === previousErrorInfo.url &&
+        msEllapsedSincePreviousError < 1000
+      ) {
+        return () => {}
+      }
+      if (msEllapsedSincePreviousError < 250) {
+        return () => {}
+      }
     }
   }
   previousErrorInfo = {
     ms: nowMs,
     reportedBy,
+    url,
   }
 
   const { theme, title, text, codeFramePromise, tip } = formatError(error, {

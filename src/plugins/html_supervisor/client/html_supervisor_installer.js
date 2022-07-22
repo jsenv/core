@@ -88,11 +88,12 @@ export const installHtmlSupervisor = ({
     let completed
     let result
     let error
+    const urlObject = new URL(src, window.location)
+    if (reload) {
+      urlObject.searchParams.set("hmr", Date.now())
+    }
+    __html_supervisor__.currentExecutionUrl = urlObject.href
     try {
-      const urlObject = new URL(src, window.location)
-      if (reload) {
-        urlObject.searchParams.set("hmr", Date.now())
-      }
       result = await execute(urlObject.href)
       completed = true
     } catch (e) {
@@ -110,6 +111,7 @@ export const installHtmlSupervisor = ({
         console.log(`${type} load ended`)
         console.groupEnd()
       }
+      __html_supervisor__.currentExecutionUrl = undefined
       return
     }
     const executionResult = {
@@ -140,6 +142,7 @@ export const installHtmlSupervisor = ({
     if (logs) {
       console.groupEnd()
     }
+    __html_supervisor__.currentExecutionUrl = undefined
   }
 
   const classicExecutionQueue = createExecutionQueue(performExecution)
