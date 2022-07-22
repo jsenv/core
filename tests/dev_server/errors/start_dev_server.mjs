@@ -1,18 +1,9 @@
-import { requestCertificateForLocalhost } from "@jsenv/https-local"
-
 import { startDevServer } from "@jsenv/core"
 
-const { certificate, privateKey } = requestCertificateForLocalhost({
-  altNames: ["local"],
-})
 export const devServer = await startDevServer({
   logLevel: process.env.GENERATING_SNAPSHOTS ? "off" : undefined,
   omegaServerLogLevel: process.env.GENERATING_SNAPSHOTS ? "off" : undefined,
   port: 3589,
-  protocol: "https",
-  acceptAnyIp: true,
-  certificate,
-  privateKey,
   rootDirectoryUrl: new URL("./stories/", import.meta.url),
   htmlSupervisor: {
     errorBaseUrl: process.env.GENERATING_SNAPSHOTS ? "file:///" : undefined,
