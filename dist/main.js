@@ -25715,7 +25715,7 @@ const executeTestPlan = async ({
   keepRunning = false,
   cooldownBetweenExecutions = 0,
   gcBetweenExecutions = logMemoryHeapUsage,
-  coverageEnabled = process.argv.includes("--cover") || process.argv.includes("--coverage"),
+  coverageEnabled = process.argv.includes("--coverage"),
   coverageConfig = {
     "./src/": true
   },

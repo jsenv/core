@@ -11,7 +11,7 @@ const generateHtmlForStory = async ({ story, preferServerErrorReporting }) => {
   await page.waitForSelector("jsenv-error-overlay")
   if (preferServerErrorReporting) {
     // wait a bit more to let server error replace browser error
-    await new Promise((resolve) => setTimeout(resolve, 100))
+    await new Promise((resolve) => setTimeout(resolve, 200))
   }
   const htmlGenerated = await page.evaluate(
     /* eslint-disable no-undef */
@@ -34,11 +34,11 @@ const generateHtmlForStory = async ({ story, preferServerErrorReporting }) => {
     new URL(`./snapshots/${story}.png`, import.meta.url),
     sceenshotBuffer,
   )
-  await page.close()
   writeFileSync(
     new URL(`./snapshots/${story}.html`, import.meta.url),
     htmlGenerated,
   )
+  await page.close()
 }
 
 try {

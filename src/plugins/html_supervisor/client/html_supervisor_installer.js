@@ -225,14 +225,14 @@ export const installHtmlSupervisor = ({
         // ignore custom error event (not sent by browser)
         return
       }
-      const { error } = errorEvent
+      const { error, filename, lineno, colno } = errorEvent
       displayErrorInDocument(error, {
         rootDirectoryUrl,
         errorBaseUrl,
         openInEditor,
-        url: errorEvent.filename,
-        line: errorEvent.lineno,
-        column: errorEvent.colno,
+        url: filename,
+        line: lineno,
+        column: colno,
         reportedBy: "browser",
       })
     })
@@ -252,7 +252,6 @@ export const installHtmlSupervisor = ({
         }
         return false
       }
-
       window.__server_events__.addEventCallbacks({
         error_while_serving_file: (serverErrorEvent) => {
           if (!isExecuting()) {
@@ -271,28 +270,23 @@ export const installHtmlSupervisor = ({
           if (isFaviconAutoRequest) {
             return
           }
-          // setTimeout is to ensure the error
-          // dispatched on window by browser is displayed first,
-          // then the server error replaces it (because it contains more information)
-          setTimeout(() => {
-            displayErrorInDocument(
-              {
-                message,
-                stack,
-              },
-              {
-                rootDirectoryUrl,
-                errorBaseUrl,
-                openInEditor,
-                url: traceUrl,
-                line: traceLine,
-                column: traceColumn,
-                codeFrame: traceMessage,
-                reportedBy: "server",
-                requestedRessource,
-              },
-            )
-          }, 10)
+          displayErrorInDocument(
+            {
+              message,
+              stack,
+            },
+            {
+              rootDirectoryUrl,
+              errorBaseUrl,
+              openInEditor,
+              url: traceUrl,
+              line: traceLine,
+              column: traceColumn,
+              codeFrame: traceMessage,
+              reportedBy: "server",
+              requestedRessource,
+            },
+          )
         },
       })
     }

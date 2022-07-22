@@ -131,7 +131,8 @@ const formatError = (error, {
   // so use it only when error.stack is not available
 
 
-  if (url && !stack) {
+  if (url && !stack && // ignore window.reportError() it gives no valuable info
+  !url.endsWith("html_supervisor_installer.js")) {
     onErrorLocated(resolveUrlSite({
       url,
       line,
@@ -358,6 +359,7 @@ const link = ({
 }) => `<a href="${href}">${text}</a>`;
 
 const JSENV_ERROR_OVERLAY_TAGNAME = "jsenv-error-overlay";
+let previousErrorInfo = null;
 const displayErrorInDocument = (error, {
   rootDirectoryUrl,
   errorBaseUrl,
@@ -369,6 +371,22 @@ const displayErrorInDocument = (error, {
   reportedBy,
   requestedRessource
 }) => {
+  const nowMs = Date.now(); // ensure error dispatched on window by browser is displayed first
+  // then the server error replaces it (because it contains more information)
+
+  if (previousErrorInfo) {
+    const previousErrorReportedBy = previousErrorInfo.reportedBy;
+    const msEllapsedSincePreviousError = nowMs - previousErrorInfo.ms;
+
+    if (previousErrorReportedBy === "server" && reportedBy === "browser" && msEllapsedSincePreviousError < 50) {
+      return () => {};
+    }
+  }
+
+  previousErrorInfo = {
+    ms: nowMs,
+    reportedBy
+  };
   const {
     theme,
     title,
@@ -815,15 +833,18 @@ const installHtmlSupervisor = ({
       }
 
       const {
-        error
+        error,
+        filename,
+        lineno,
+        colno
       } = errorEvent;
       displayErrorInDocument(error, {
         rootDirectoryUrl,
         errorBaseUrl,
         openInEditor,
-        url: errorEvent.filename,
-        line: errorEvent.lineno,
-        column: errorEvent.colno,
+        url: filename,
+        line: lineno,
+        column: colno,
         reportedBy: "browser"
       });
     });
@@ -864,27 +885,22 @@ const installHtmlSupervisor = ({
 
           if (isFaviconAutoRequest) {
             return;
-          } // setTimeout is to ensure the error
-          // dispatched on window by browser is displayed first,
-          // then the server error replaces it (because it contains more information)
+          }
 
-
-          setTimeout(() => {
-            displayErrorInDocument({
-              message,
-              stack
-            }, {
-              rootDirectoryUrl,
-              errorBaseUrl,
-              openInEditor,
-              url: traceUrl,
-              line: traceLine,
-              column: traceColumn,
-              codeFrame: traceMessage,
-              reportedBy: "server",
-              requestedRessource
-            });
-          }, 10);
+          displayErrorInDocument({
+            message,
+            stack
+          }, {
+            rootDirectoryUrl,
+            errorBaseUrl,
+            openInEditor,
+            url: traceUrl,
+            line: traceLine,
+            column: traceColumn,
+            codeFrame: traceMessage,
+            reportedBy: "server",
+            requestedRessource
+          });
         }
       });
     }

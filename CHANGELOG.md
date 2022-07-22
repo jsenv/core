@@ -1,3 +1,7 @@
+# 27.5.3
+
+- use a more resilient logic to choose between browser and server error
+
 # 27.5.2
 
 - display correct url:line:column for inline scripts

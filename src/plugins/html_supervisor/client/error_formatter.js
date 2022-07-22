@@ -103,7 +103,12 @@ export const formatError = (
 
   // error.stack is more reliable than url/line/column reported on window error events
   // so use it only when error.stack is not available
-  if (url && !stack) {
+  if (
+    url &&
+    !stack &&
+    // ignore window.reportError() it gives no valuable info
+    !url.endsWith("html_supervisor_installer.js")
+  ) {
     onErrorLocated(resolveUrlSite({ url, line, column }))
   }
 
