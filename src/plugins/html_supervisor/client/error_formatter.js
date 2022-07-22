@@ -186,8 +186,12 @@ const replaceLinks = (
         } else {
           fileUrl = fileUrlObject.href
         }
-        if (errorBaseUrl && fileUrl.startsWith(rootDirectoryUrl)) {
-          fileUrl = `${errorBaseUrl}${fileUrl.slice(rootDirectoryUrl.length)}`
+        if (errorBaseUrl) {
+          if (fileUrl.startsWith(rootDirectoryUrl)) {
+            fileUrl = `${errorBaseUrl}${fileUrl.slice(rootDirectoryUrl.length)}`
+          } else {
+            fileUrl = "file:///mocked_for_snapshots"
+          }
         }
         fileUrl = appendLineAndColumn(fileUrl, {
           line,

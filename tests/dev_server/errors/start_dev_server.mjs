@@ -15,7 +15,7 @@ export const devServer = await startDevServer({
   privateKey,
   rootDirectoryUrl: new URL("./stories/", import.meta.url),
   htmlSupervisor: {
-    errorBaseUrl: process.env.GENERATING_SNAPSHOTS ? "file:///" : undefined,
+    errorBaseUrl: process.env.GENERATING_SNAPSHOTS ? "file:///" : "file:///",
   },
   plugins: [
     {
