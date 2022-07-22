@@ -7,41 +7,126 @@ export const formatError = (
     url,
     line,
     column,
+    codeFrame,
     requestedRessource,
     reportedBy,
   },
 ) => {
   let { message, stack } = normalizeErrorParts(error)
+  let codeFramePromiseReference = { current: null }
   let tip = formatTip({ reportedBy, requestedRessource })
+  let errorUrlSite
 
-  if (url && error && error.name === "SyntaxError") {
-    // c'est pas vraiment stack qu'on veut update
-    // on veut ceci:
-    // file.js: Unexpected token (1:0)
-    // code frame here
-    // idéalement disant qui a requété ce fichier
-    stack = `  at ${appendLineAndColumn(url, { line, column })}`
+  const resolveUrlSite = ({ url, line, column }) => {
+    const inlineUrlMatch = url.match(/@L([0-9]+)\-L([0-9]+)\.[\w]+$/)
+    if (inlineUrlMatch) {
+      const htmlUrl = url.slice(0, inlineUrlMatch.index)
+      const tagLine = parseInt(inlineUrlMatch[1])
+      const tagColumn = parseInt(inlineUrlMatch[2])
+      url = htmlUrl
+      line = tagLine + parseInt(line) - 1
+      column = tagColumn + parseInt(column)
+    }
+
+    let urlObject = new URL(url)
+    if (urlObject.origin === window.origin) {
+      urlObject = new URL(
+        `${urlObject.pathname.slice(1)}${urlObject.search}`,
+        rootDirectoryUrl,
+      )
+    }
+    if (urlObject.href.startsWith("file:")) {
+      const atFsIndex = urlObject.pathname.indexOf("/@fs/")
+      if (atFsIndex > -1) {
+        const afterAtFs = urlObject.pathname.slice(atFsIndex + "/@fs/".length)
+        url = new URL(afterAtFs, "file:///").href
+      } else {
+        url = urlObject.href
+      }
+    } else {
+      url = urlObject.href
+    }
+
+    return {
+      url,
+      line,
+      column,
+    }
   }
 
-  if (reportedBy === "bowser") {
-    // ici on veut plutot profiter de error.stack pour choper line+column
-    // et ajouter un codeframe
-    // mais si on a pas de stack?
-    // si on a stack on peut chopper url/line/column
-    // et s'en servir pour augmenter le message avec une partie codeFrame
-    // mais cela devrait se produire que sur certains erreurs
-    // (les erreur serveur auront déja ce codeframe par example)
-  } else if (!stack && url) {
-    stack = `  at ${appendLineAndColumn(url, { line, column })}`
+  const generateClickableText = (text) => {
+    const textWithHtmlLinks = makeLinksClickable(text, {
+      createLink: (url, { line, column }) => {
+        const urlSite = resolveUrlSite({ url, line, column })
+        if (!errorUrlSite && text === stack) {
+          onErrorLocated(urlSite)
+        }
+        if (errorBaseUrl) {
+          if (url.startsWith(rootDirectoryUrl)) {
+            urlSite.url = `${errorBaseUrl}${url.slice(rootDirectoryUrl.length)}`
+          } else {
+            urlSite.url = "file:///mocked_for_snapshots"
+          }
+        }
+        const urlWithLineAndColumn = formatUrlWithLineAndColumn(urlSite)
+        return {
+          href:
+            url.startsWith("file:") && openInEditor
+              ? `javascript:window.fetch('/__open_in_editor__/${urlWithLineAndColumn}')`
+              : urlSite.url,
+          text: urlWithLineAndColumn,
+        }
+      },
+    })
+    return textWithHtmlLinks
   }
 
-  const text = createErrorText({
-    rootDirectoryUrl,
-    errorBaseUrl,
-    openInEditor,
-    message,
-    stack,
-  })
+  const onErrorLocated = (urlSite) => {
+    errorUrlSite = urlSite
+    if (codeFrame) {
+      return
+    }
+    if (reportedBy !== "browser") {
+      return
+    }
+    codeFramePromiseReference.current = (async () => {
+      const response = await window.fetch(
+        `/__get_code_frame__/${formatUrlWithLineAndColumn(urlSite)}`,
+      )
+      const codeFrame = await response.text()
+      const codeFrameClickable = generateClickableText(codeFrame)
+      return codeFrameClickable
+    })()
+  }
+
+  // error.stack is more reliable than url/line/column reported on window error events
+  // so use it only when error.stack is not available
+  if (url && !stack) {
+    onErrorLocated(resolveUrlSite({ url, line, column }))
+  }
+
+  // if (errorUrlSite && error && error.name === "SyntaxError") {
+  //   // c'est pas vraiment stack qu'on veut update
+  //   // on veut ceci:
+  //   // file.js: Unexpected token (1:0)
+  //   // code frame here
+  //   // idéalement disant qui a requété ce fichier
+  //   stack = `  at ${formatUrlWithLineAndColumn(errorUrlSite)}`
+  // }
+
+  let text
+
+  if (message && stack) {
+    text = `${generateClickableText(message)}\n${generateClickableText(stack)}`
+  } else if (stack) {
+    text = generateClickableText(stack)
+  } else {
+    text = generateClickableText(message)
+  }
+
+  if (codeFrame) {
+    text += `\n\n${generateClickableText(codeFrame)}`
+  }
 
   return {
     theme:
@@ -50,10 +135,19 @@ export const formatError = (
         : "dark",
     title: "An error occured",
     text,
+    codeFramePromise: codeFramePromiseReference.current,
     tip: `${tip}
     <br />
     Click outside to close.`,
   }
+}
+
+const formatUrlWithLineAndColumn = ({ url, line, column }) => {
+  return line === undefined && column === undefined
+    ? url
+    : column === undefined
+    ? `${url}:${line}`
+    : `${url}:${line}:${column}`
 }
 
 const normalizeErrorParts = (error) => {
@@ -128,97 +222,15 @@ const formatTip = ({ reportedBy, requestedRessource }) => {
   return `Reported by the server while serving <code>${requestedRessource}</code>`
 }
 
-const createErrorText = ({
-  rootDirectoryUrl,
-  errorBaseUrl,
-  openInEditor,
-  message,
-  stack,
-}) => {
-  const generateClickableText = (text) => {
-    const textWithHtmlLinks = replaceLinks(text, {
-      rootDirectoryUrl,
-      errorBaseUrl,
-      openInEditor,
-    })
-    return textWithHtmlLinks
-  }
-
-  if (message && stack) {
-    return `${generateClickableText(message)}\n${generateClickableText(stack)}`
-  }
-  if (stack) {
-    return generateClickableText(stack)
-  }
-  return generateClickableText(message)
-}
-
-const replaceLinks = (
-  string,
-  { rootDirectoryUrl, errorBaseUrl, openInEditor },
-) => {
+const makeLinksClickable = (string, { createLink = (url) => url }) => {
   // normalize line breaks
   string = string.replace(/\n/g, "\n")
   string = escapeHtml(string)
   // render links
   string = stringToStringWithLink(string, {
     transform: (url, { line, column }) => {
-      const inlineUrlMatch = url.match(/@L([0-9]+)\-L([0-9]+)\.[\w]+$/)
-      if (inlineUrlMatch) {
-        const htmlUrl = url.slice(0, inlineUrlMatch.index)
-        const tagLine = parseInt(inlineUrlMatch[1])
-        const tagColumn = parseInt(inlineUrlMatch[2])
-        url = htmlUrl
-        line = tagLine + parseInt(line) - 1
-        column = tagColumn + parseInt(column)
-      }
-
-      const urlObject = new URL(url)
-
-      const onFileUrl = (fileUrlObject) => {
-        const atFsIndex = fileUrlObject.pathname.indexOf("/@fs/")
-        let fileUrl
-        if (atFsIndex > -1) {
-          const afterAtFs = fileUrlObject.pathname.slice(
-            atFsIndex + "/@fs/".length,
-          )
-          fileUrl = new URL(afterAtFs, "file:///").href
-        } else {
-          fileUrl = fileUrlObject.href
-        }
-        if (errorBaseUrl) {
-          if (fileUrl.startsWith(rootDirectoryUrl)) {
-            fileUrl = `${errorBaseUrl}${fileUrl.slice(rootDirectoryUrl.length)}`
-          } else {
-            fileUrl = "file:///mocked_for_snapshots"
-          }
-        }
-        fileUrl = appendLineAndColumn(fileUrl, {
-          line,
-          column,
-        })
-        return link({
-          href: openInEditor
-            ? `javascript:window.fetch('/__open_in_editor__/${fileUrl}')`
-            : fileUrl,
-          text: fileUrl,
-        })
-      }
-
-      if (urlObject.origin === window.origin) {
-        const fileUrlObject = new URL(
-          `${urlObject.pathname.slice(1)}${urlObject.search}`,
-          rootDirectoryUrl,
-        )
-        return onFileUrl(fileUrlObject)
-      }
-      if (urlObject.href.startsWith("file:")) {
-        return onFileUrl(urlObject)
-      }
-      return link({
-        href: url,
-        text: appendLineAndColumn(url, { line, column }),
-      })
+      const { href, text } = createLink(url, { line, column })
+      return link({ href, text })
     },
   })
   return string
@@ -231,16 +243,6 @@ const escapeHtml = (string) => {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;")
-}
-
-const appendLineAndColumn = (url, { line, column }) => {
-  if (line !== undefined && column !== undefined) {
-    return `${url}:${line}:${column}`
-  }
-  if (line !== undefined) {
-    return `${url}:${line}`
-  }
-  return url
 }
 
 // `Error: yo

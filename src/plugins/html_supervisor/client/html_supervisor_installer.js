@@ -278,14 +278,7 @@ export const installHtmlSupervisor = ({
             displayErrorInDocument(
               {
                 message,
-                stack:
-                  stack && traceMessage
-                    ? `${stack}\n\n${traceMessage}`
-                    : stack
-                    ? stack
-                    : traceMessage
-                    ? `\n${traceMessage}`
-                    : "",
+                stack,
               },
               {
                 rootDirectoryUrl,
@@ -294,6 +287,7 @@ export const installHtmlSupervisor = ({
                 url: traceUrl,
                 line: traceLine,
                 column: traceColumn,
+                codeFrame: traceMessage,
                 reportedBy: "server",
                 requestedRessource,
               },

@@ -2,7 +2,7 @@ import { formatError } from "./error_formatter.js"
 
 const JSENV_ERROR_OVERLAY_TAGNAME = "jsenv-error-overlay"
 
-export const displayErrorInDocument = async (
+export const displayErrorInDocument = (
   error,
   {
     rootDirectoryUrl,
@@ -11,17 +11,19 @@ export const displayErrorInDocument = async (
     url,
     line,
     column,
+    codeFrame,
     reportedBy,
     requestedRessource,
   },
 ) => {
-  const { theme, title, text, tip } = formatError(error, {
+  const { theme, title, text, codeFramePromise, tip } = formatError(error, {
     rootDirectoryUrl,
     errorBaseUrl,
     openInEditor,
     url,
     line,
     column,
+    codeFrame,
     reportedBy,
     requestedRessource,
   })
@@ -30,6 +32,7 @@ export const displayErrorInDocument = async (
     theme,
     title,
     text,
+    codeFramePromise,
     tip,
   })
   document.querySelectorAll(JSENV_ERROR_OVERLAY_TAGNAME).forEach((node) => {
@@ -53,7 +56,7 @@ export const displayErrorInDocument = async (
 }
 
 class JsenvErrorOverlay extends HTMLElement {
-  constructor({ theme, title, text, tip }) {
+  constructor({ theme, title, text, codeFramePromise, tip }) {
     super()
     this.root = this.attachShadow({ mode: "open" })
     this.root.innerHTML = `
@@ -77,6 +80,13 @@ class JsenvErrorOverlay extends HTMLElement {
       }
       this.root.querySelector(".backdrop").onclick = null
       this.parentNode.removeChild(this)
+    }
+    if (codeFramePromise) {
+      codeFramePromise.then((codeFrame) => {
+        if (this.parentNode) {
+          this.root.querySelector(".text").innerHTML += `\n\n${codeFrame}`
+        }
+      })
     }
   }
 }
