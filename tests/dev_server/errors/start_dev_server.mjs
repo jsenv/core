@@ -6,7 +6,8 @@ const { certificate, privateKey } = requestCertificateForLocalhost({
   altNames: ["local"],
 })
 export const devServer = await startDevServer({
-  logLevel: process.env.GENERATING_SNAPSHOTS ? "warn" : undefined,
+  logLevel: process.env.GENERATING_SNAPSHOTS ? "off" : undefined,
+  omegaServerLogLevel: process.env.GENERATING_SNAPSHOTS ? "off" : undefined,
   port: 3589,
   protocol: "https",
   acceptAnyIp: true,

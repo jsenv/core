@@ -173,7 +173,8 @@ export const jsenvPluginHtmlSupervisor = ({
       }
       installHtmlSupervisor(${JSON.stringify(
         {
-          errorBaseUrl: errorBaseUrl || context.rootDirectoryUrl,
+          rootDirectoryUrl: context.rootDirectoryUrl,
+          errorBaseUrl,
           logs,
           measurePerf,
           errorOverlay,

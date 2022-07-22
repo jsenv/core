@@ -1,6 +1,7 @@
 export const formatError = (
   error,
   {
+    rootDirectoryUrl,
     errorBaseUrl,
     openInEditor,
     url,
@@ -35,6 +36,7 @@ export const formatError = (
   }
 
   const text = createErrorText({
+    rootDirectoryUrl,
     errorBaseUrl,
     openInEditor,
     message,
@@ -126,9 +128,16 @@ const formatTip = ({ reportedBy, requestedRessource }) => {
   return `Reported by the server while serving <code>${requestedRessource}</code>`
 }
 
-const createErrorText = ({ errorBaseUrl, openInEditor, message, stack }) => {
+const createErrorText = ({
+  rootDirectoryUrl,
+  errorBaseUrl,
+  openInEditor,
+  message,
+  stack,
+}) => {
   const generateClickableText = (text) => {
     const textWithHtmlLinks = replaceLinks(text, {
+      rootDirectoryUrl,
       errorBaseUrl,
       openInEditor,
     })
@@ -144,7 +153,10 @@ const createErrorText = ({ errorBaseUrl, openInEditor, message, stack }) => {
   return generateClickableText(message)
 }
 
-const replaceLinks = (string, { errorBaseUrl, openInEditor }) => {
+const replaceLinks = (
+  string,
+  { rootDirectoryUrl, errorBaseUrl, openInEditor },
+) => {
   // normalize line breaks
   string = string.replace(/\n/g, "\n")
   string = escapeHtml(string)
@@ -174,6 +186,9 @@ const replaceLinks = (string, { errorBaseUrl, openInEditor }) => {
         } else {
           fileUrl = fileUrlObject.href
         }
+        if (errorBaseUrl && fileUrl.startsWith(rootDirectoryUrl)) {
+          fileUrl = `${errorBaseUrl}${fileUrl.slice(rootDirectoryUrl.length)}`
+        }
         fileUrl = appendLineAndColumn(fileUrl, {
           line,
           column,
@@ -189,7 +204,7 @@ const replaceLinks = (string, { errorBaseUrl, openInEditor }) => {
       if (urlObject.origin === window.origin) {
         const fileUrlObject = new URL(
           `${urlObject.pathname.slice(1)}${urlObject.search}`,
-          errorBaseUrl,
+          rootDirectoryUrl,
         )
         return onFileUrl(fileUrlObject)
       }

@@ -50,6 +50,7 @@
     "performances": "node --expose-gc ./scripts/performance/generate_performance_report.mjs --log --once",
     "file-size": "node ./scripts/file_size/file_size.mjs --log",
     "start_file_server": "node ./scripts/dev/start_file_server.mjs",
+    "generate-dev-errors-snapshot-files": "node --conditions=development ./tests/dev_server/errors/generate_snapshot_files.mjs",
     "prettier": "prettier --write .",
     "playwright-install": "npx playwright install-deps && npx playwright install",
     "certificate-install": "node ./scripts/dev/install_certificate_authority.mjs",

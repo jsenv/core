@@ -7,6 +7,7 @@ const { __html_supervisor__ } = window
 const supervisedScripts = []
 
 export const installHtmlSupervisor = ({
+  rootDirectoryUrl,
   logs,
   measurePerf,
   errorOverlay,
@@ -226,6 +227,7 @@ export const installHtmlSupervisor = ({
       }
       const { error } = errorEvent
       displayErrorInDocument(error, {
+        rootDirectoryUrl,
         errorBaseUrl,
         openInEditor,
         url: errorEvent.filename,
@@ -286,6 +288,7 @@ export const installHtmlSupervisor = ({
                     : "",
               },
               {
+                rootDirectoryUrl,
                 errorBaseUrl,
                 openInEditor,
                 url: traceUrl,
