@@ -10,213 +10,169 @@ const unevalException = value => {
   });
 };
 
-const JSENV_ERROR_OVERLAY_TAGNAME = "jsenv-error-overlay";
-const displayErrorInDocument = (error, {
+const formatError = (error, {
   rootDirectoryUrl,
+  errorBaseUrl,
   openInEditor,
   url,
   line,
   column,
-  reportedBy,
-  requestedRessource
+  codeFrame,
+  requestedRessource,
+  reportedBy
 }) => {
-  document.querySelectorAll(JSENV_ERROR_OVERLAY_TAGNAME).forEach(node => {
-    node.parentNode.removeChild(node);
-  });
-  const {
-    theme,
-    title,
+  let {
     message,
-    stack,
-    tip
-  } = errorToHTML(error, {
-    url,
-    line,
-    column,
+    stack
+  } = normalizeErrorParts(error);
+  let codeFramePromiseReference = {
+    current: null
+  };
+  let tip = formatTip({
     reportedBy,
     requestedRessource
   });
-  let jsenvErrorOverlay = new JsenvErrorOverlay({
-    theme,
-    title,
-    text: createErrorText({
-      rootDirectoryUrl,
-      openInEditor,
-      message,
-      stack
-    }),
-    tip
-  });
-  document.body.appendChild(jsenvErrorOverlay);
+  let errorUrlSite;
 
-  const removeErrorOverlay = () => {
-    if (jsenvErrorOverlay && jsenvErrorOverlay.parentNode) {
-      document.body.removeChild(jsenvErrorOverlay);
-      jsenvErrorOverlay = null;
+  const resolveUrlSite = ({
+    url,
+    line,
+    column
+  }) => {
+    const inlineUrlMatch = url.match(/@L([0-9]+)\-L([0-9]+)\.[\w]+$/);
+
+    if (inlineUrlMatch) {
+      const htmlUrl = url.slice(0, inlineUrlMatch.index);
+      const tagLine = parseInt(inlineUrlMatch[1]);
+      const tagColumn = parseInt(inlineUrlMatch[2]);
+      url = htmlUrl;
+      line = tagLine + parseInt(line) - 1;
+      column = tagColumn + parseInt(column);
     }
+
+    let urlObject = new URL(url);
+
+    if (urlObject.origin === window.origin) {
+      urlObject = new URL(`${urlObject.pathname.slice(1)}${urlObject.search}`, rootDirectoryUrl);
+    }
+
+    if (urlObject.href.startsWith("file:")) {
+      const atFsIndex = urlObject.pathname.indexOf("/@fs/");
+
+      if (atFsIndex > -1) {
+        const afterAtFs = urlObject.pathname.slice(atFsIndex + "/@fs/".length);
+        url = new URL(afterAtFs, "file:///").href;
+      } else {
+        url = urlObject.href;
+      }
+    } else {
+      url = urlObject.href;
+    }
+
+    return {
+      url,
+      line,
+      column
+    };
   };
 
-  if (window.__reloader__) {
-    window.__reloader__.onstatuschange = () => {
-      if (window.__reloader__.status === "reloading") {
-        removeErrorOverlay();
+  const generateClickableText = text => {
+    const textWithHtmlLinks = makeLinksClickable(text, {
+      createLink: (url, {
+        line,
+        column
+      }) => {
+        const urlSite = resolveUrlSite({
+          url,
+          line,
+          column
+        });
+
+        if (!errorUrlSite && text === stack) {
+          onErrorLocated(urlSite);
+        }
+
+        if (errorBaseUrl) {
+          if (urlSite.url.startsWith(rootDirectoryUrl)) {
+            urlSite.url = `${errorBaseUrl}${urlSite.url.slice(rootDirectoryUrl.length)}`;
+          } else {
+            urlSite.url = "file:///mocked_for_snapshots";
+          }
+        }
+
+        const urlWithLineAndColumn = formatUrlWithLineAndColumn(urlSite);
+        return {
+          href: url.startsWith("file:") && openInEditor ? `javascript:window.fetch('/__open_in_editor__/${urlWithLineAndColumn}')` : urlSite.url,
+          text: urlWithLineAndColumn
+        };
       }
-    };
+    });
+    return textWithHtmlLinks;
+  };
+
+  const onErrorLocated = urlSite => {
+    errorUrlSite = urlSite;
+
+    if (codeFrame) {
+      return;
+    }
+
+    if (reportedBy !== "browser") {
+      return;
+    }
+
+    codeFramePromiseReference.current = (async () => {
+      const response = await window.fetch(`/__get_code_frame__/${formatUrlWithLineAndColumn(urlSite)}`);
+      const codeFrame = await response.text();
+      const codeFrameClickable = generateClickableText(codeFrame);
+      return codeFrameClickable;
+    })();
+  }; // error.stack is more reliable than url/line/column reported on window error events
+  // so use it only when error.stack is not available
+
+
+  if (url && !stack) {
+    onErrorLocated(resolveUrlSite({
+      url,
+      line,
+      column
+    }));
   }
 
-  return removeErrorOverlay;
-};
+  let text;
 
-const createErrorText = ({
-  rootDirectoryUrl,
-  openInEditor,
-  message,
-  stack
-}) => {
   if (message && stack) {
-    return `${replaceLinks(message, {
-      rootDirectoryUrl,
-      openInEditor
-    })}\n${replaceLinks(stack, {
-      rootDirectoryUrl,
-      openInEditor
-    })}`;
+    text = `${generateClickableText(message)}\n${generateClickableText(stack)}`;
+  } else if (stack) {
+    text = generateClickableText(stack);
+  } else {
+    text = generateClickableText(message);
   }
 
-  if (stack) {
-    return replaceLinks(stack, {
-      rootDirectoryUrl,
-      openInEditor
-    });
+  if (codeFrame) {
+    text += `\n\n${generateClickableText(codeFrame)}`;
   }
 
-  return replaceLinks(message, {
-    rootDirectoryUrl,
-    openInEditor
-  });
+  return {
+    theme: error && error.cause && error.cause.code === "PARSE_ERROR" ? "light" : "dark",
+    title: "An error occured",
+    text,
+    codeFramePromise: codeFramePromiseReference.current,
+    tip: `${tip}
+    <br />
+    Click outside to close.`
+  };
 };
 
-class JsenvErrorOverlay extends HTMLElement {
-  constructor({
-    theme,
-    title,
-    text,
-    tip
-  }) {
-    super();
-    this.root = this.attachShadow({
-      mode: "open"
-    });
-    this.root.innerHTML = overlayHtml;
+const formatUrlWithLineAndColumn = ({
+  url,
+  line,
+  column
+}) => {
+  return line === undefined && column === undefined ? url : column === undefined ? `${url}:${line}` : `${url}:${line}:${column}`;
+};
 
-    this.root.querySelector(".backdrop").onclick = () => {
-      if (!this.parentNode) {
-        // not in document anymore
-        return;
-      }
-
-      this.root.querySelector(".backdrop").onclick = null;
-      this.parentNode.removeChild(this);
-    };
-
-    this.root.querySelector(".overlay").setAttribute("data-theme", theme);
-    this.root.querySelector(".title").innerHTML = title;
-    this.root.querySelector(".text").innerHTML = text;
-    this.root.querySelector(".tip").innerHTML = tip;
-  }
-
-}
-
-if (customElements && !customElements.get(JSENV_ERROR_OVERLAY_TAGNAME)) {
-  customElements.define(JSENV_ERROR_OVERLAY_TAGNAME, JsenvErrorOverlay);
-}
-
-const overlayHtml = `
-<style>
-:host {
-  position: fixed;
-  z-index: 99999;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  overflow-y: scroll;
-  margin: 0;
-  background: rgba(0, 0, 0, 0.66);
-}
-
-.backdrop {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  bottom: 0;
-}
-
-.overlay {
-  position: relative;
-  background: rgba(0, 0, 0, 0.95);
-  width: 800px;
-  margin: 30px auto;
-  padding: 25px 40px;
-  padding-top: 0;
-  overflow: hidden; /* for h1 margins */
-  border-radius: 4px 8px;
-  box-shadow: 0 20px 40px rgb(0 0 0 / 30%), 0 15px 12px rgb(0 0 0 / 20%);
-  box-sizing: border-box;
-  font-family: monospace;
-  direction: ltr;
-}
-
-h1 {
-  color: red;
-  text-align: center;
-}
-
-pre {
-  overflow: auto;
-  max-width: 100%;
-  /* padding is nice + prevents scrollbar from hiding the text behind it */
-  /* does not work nicely on firefox though https://bugzilla.mozilla.org/show_bug.cgi?id=748518 */
-  padding: 20px; 
-}
-
-.tip {
-  border-top: 1px solid #999;
-  padding-top: 12px;
-}
-
-[data-theme="dark"] {
-  color: #999;
-}
-[data-theme="dark"] pre {
-  background: #111;
-  border: 1px solid #333;
-  color: #eee;
-}
-
-[data-theme="light"] {
-  color: #EEEEEE;
-}
-[data-theme="light"] pre {
-  background: #1E1E1E;
-  border: 1px solid white;
-  color: #EEEEEE;
-}
-
-pre a {
-  color: inherit;
-}
-</style>
-<div class="backdrop"></div>
-<div class="overlay">
-  <h1 class="title"></h1>
-  <pre class="text"></pre>
-  <div class="tip"></div>
-</div>
-`;
-
-const parseErrorInfo = error => {
+const normalizeErrorParts = error => {
   if (error === undefined) {
     return {
       message: "undefined"
@@ -294,42 +250,6 @@ const getErrorStackWithoutErrorMessage = error => {
   return stack;
 };
 
-const errorToHTML = (error, {
-  url,
-  line,
-  column,
-  reportedBy,
-  requestedRessource
-}) => {
-  let {
-    message,
-    stack
-  } = parseErrorInfo(error);
-
-  if (url) {
-    if (!stack || error && error.name === "SyntaxError") {
-      stack = `  at ${appendLineAndColumn(url, {
-        line,
-        column
-      })}`;
-    }
-  }
-
-  let tip = formatTip({
-    reportedBy,
-    requestedRessource
-  });
-  return {
-    theme: error && error.cause && error.cause.code === "PARSE_ERROR" ? "light" : "dark",
-    title: "An error occured",
-    message,
-    stack,
-    tip: `${tip}
-<br />
-Click outside to close.`
-  };
-};
-
 const formatTip = ({
   reportedBy,
   requestedRessource
@@ -341,9 +261,8 @@ const formatTip = ({
   return `Reported by the server while serving <code>${requestedRessource}</code>`;
 };
 
-const replaceLinks = (string, {
-  rootDirectoryUrl,
-  openInEditor
+const makeLinksClickable = (string, {
+  createLink = url => url
 }) => {
   // normalize line breaks
   string = string.replace(/\n/g, "\n");
@@ -354,44 +273,16 @@ const replaceLinks = (string, {
       line,
       column
     }) => {
-      const urlObject = new URL(url);
-
-      const onFileUrl = fileUrlObject => {
-        const atFsIndex = fileUrlObject.pathname.indexOf("/@fs/");
-        let fileUrl;
-
-        if (atFsIndex > -1) {
-          const afterAtFs = fileUrlObject.pathname.slice(atFsIndex + "/@fs/".length);
-          fileUrl = new URL(afterAtFs, "file:///").href;
-        } else {
-          fileUrl = fileUrlObject.href;
-        }
-
-        fileUrl = appendLineAndColumn(fileUrl, {
-          line,
-          column
-        });
-        return link({
-          href: openInEditor ? `javascript:window.fetch('/__open_in_editor__/${fileUrl}')` : fileUrl,
-          text: fileUrl
-        });
-      };
-
-      if (urlObject.origin === window.origin) {
-        const fileUrlObject = new URL(`${urlObject.pathname.slice(1)}${urlObject.search}`, rootDirectoryUrl);
-        return onFileUrl(fileUrlObject);
-      }
-
-      if (urlObject.href.startsWith("file:")) {
-        return onFileUrl(urlObject);
-      }
-
+      const {
+        href,
+        text
+      } = createLink(url, {
+        line,
+        column
+      });
       return link({
-        href: url,
-        text: appendLineAndColumn(url, {
-          line,
-          column
-        })
+        href,
+        text
       });
     }
   });
@@ -400,21 +291,6 @@ const replaceLinks = (string, {
 
 const escapeHtml = string => {
   return string.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-};
-
-const appendLineAndColumn = (url, {
-  line,
-  column
-}) => {
-  if (line !== undefined && column !== undefined) {
-    return `${url}:${line}:${column}`;
-  }
-
-  if (line !== undefined) {
-    return `${url}:${line}`;
-  }
-
-  return url;
 }; // `Error: yo
 // at Object.execute (http://127.0.0.1:57300/build/src/__test__/file-throw.js:9:13)
 // at doExec (http://127.0.0.1:3000/src/__test__/file-throw.js:452:38)
@@ -481,6 +357,193 @@ const link = ({
   text = href
 }) => `<a href="${href}">${text}</a>`;
 
+const JSENV_ERROR_OVERLAY_TAGNAME = "jsenv-error-overlay";
+const displayErrorInDocument = (error, {
+  rootDirectoryUrl,
+  errorBaseUrl,
+  openInEditor,
+  url,
+  line,
+  column,
+  codeFrame,
+  reportedBy,
+  requestedRessource
+}) => {
+  const {
+    theme,
+    title,
+    text,
+    codeFramePromise,
+    tip
+  } = formatError(error, {
+    rootDirectoryUrl,
+    errorBaseUrl,
+    openInEditor,
+    url,
+    line,
+    column,
+    codeFrame,
+    reportedBy,
+    requestedRessource
+  });
+  let jsenvErrorOverlay = new JsenvErrorOverlay({
+    theme,
+    title,
+    text,
+    codeFramePromise,
+    tip
+  });
+  document.querySelectorAll(JSENV_ERROR_OVERLAY_TAGNAME).forEach(node => {
+    node.parentNode.removeChild(node);
+  });
+  document.body.appendChild(jsenvErrorOverlay);
+
+  const removeErrorOverlay = () => {
+    if (jsenvErrorOverlay && jsenvErrorOverlay.parentNode) {
+      document.body.removeChild(jsenvErrorOverlay);
+      jsenvErrorOverlay = null;
+    }
+  };
+
+  if (window.__reloader__) {
+    window.__reloader__.onstatuschange = () => {
+      if (window.__reloader__.status === "reloading") {
+        removeErrorOverlay();
+      }
+    };
+  }
+
+  return removeErrorOverlay;
+};
+
+class JsenvErrorOverlay extends HTMLElement {
+  constructor({
+    theme,
+    title,
+    text,
+    codeFramePromise,
+    tip
+  }) {
+    super();
+    this.root = this.attachShadow({
+      mode: "open"
+    });
+    this.root.innerHTML = `
+<style>
+  ${overlayCSS}
+</style>
+<div class="backdrop"></div>
+<div class="overlay" data-theme=${theme}>
+  <h1 class="title">
+    ${title}
+  </h1>
+  <pre class="text">${text}</pre>
+  <div class="tip">
+    ${tip}
+  </div>
+</div>`;
+
+    this.root.querySelector(".backdrop").onclick = () => {
+      if (!this.parentNode) {
+        // not in document anymore
+        return;
+      }
+
+      this.root.querySelector(".backdrop").onclick = null;
+      this.parentNode.removeChild(this);
+    };
+
+    if (codeFramePromise) {
+      codeFramePromise.then(codeFrame => {
+        if (this.parentNode) {
+          this.root.querySelector(".text").innerHTML += `\n\n${codeFrame}`;
+        }
+      });
+    }
+  }
+
+}
+
+if (customElements && !customElements.get(JSENV_ERROR_OVERLAY_TAGNAME)) {
+  customElements.define(JSENV_ERROR_OVERLAY_TAGNAME, JsenvErrorOverlay);
+}
+
+const overlayCSS = `
+:host {
+  position: fixed;
+  z-index: 99999;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow-y: scroll;
+  margin: 0;
+  background: rgba(0, 0, 0, 0.66);
+}
+
+.backdrop {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+}
+
+.overlay {
+  position: relative;
+  background: rgba(0, 0, 0, 0.95);
+  width: 800px;
+  margin: 30px auto;
+  padding: 25px 40px;
+  padding-top: 0;
+  overflow: hidden; /* for h1 margins */
+  border-radius: 4px 8px;
+  box-shadow: 0 20px 40px rgb(0 0 0 / 30%), 0 15px 12px rgb(0 0 0 / 20%);
+  box-sizing: border-box;
+  font-family: monospace;
+  direction: ltr;
+}
+
+h1 {
+  color: red;
+  text-align: center;
+}
+
+pre {
+  overflow: auto;
+  max-width: 100%;
+  /* padding is nice + prevents scrollbar from hiding the text behind it */
+  /* does not work nicely on firefox though https://bugzilla.mozilla.org/show_bug.cgi?id=748518 */
+  padding: 20px; 
+}
+
+.tip {
+  border-top: 1px solid #999;
+  padding-top: 12px;
+}
+
+[data-theme="dark"] {
+  color: #999;
+}
+[data-theme="dark"] pre {
+  background: #111;
+  border: 1px solid #333;
+  color: #eee;
+}
+
+[data-theme="light"] {
+  color: #EEEEEE;
+}
+[data-theme="light"] pre {
+  background: #1E1E1E;
+  border: 1px solid white;
+  color: #EEEEEE;
+}
+
+pre a {
+  color: inherit;
+}`;
+
 const {
   Notification
 } = window;
@@ -514,6 +577,7 @@ const installHtmlSupervisor = ({
   logs,
   measurePerf,
   errorOverlay,
+  errorBaseUrl,
   openInEditor
 }) => {
 
@@ -755,6 +819,7 @@ const installHtmlSupervisor = ({
       } = errorEvent;
       displayErrorInDocument(error, {
         rootDirectoryUrl,
+        errorBaseUrl,
         openInEditor,
         url: errorEvent.filename,
         line: errorEvent.lineno,
@@ -807,13 +872,15 @@ const installHtmlSupervisor = ({
           setTimeout(() => {
             displayErrorInDocument({
               message,
-              stack: stack && traceMessage ? `${stack}\n\n${traceMessage}` : stack ? stack : traceMessage ? `\n${traceMessage}` : ""
+              stack
             }, {
               rootDirectoryUrl,
+              errorBaseUrl,
               openInEditor,
               url: traceUrl,
               line: traceLine,
               column: traceColumn,
+              codeFrame: traceMessage,
               reportedBy: "server",
               requestedRessource
             });

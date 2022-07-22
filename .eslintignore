@@ -14,9 +14,10 @@ node_modules/
 **/async-to-promises.js
 
 /tests/**/js_syntax_error.js
-/tests/**/inline_js_module_syntax_error/main.html
+/tests/**/script_module_inline_syntax_error/main.html
 
 /**/*.nomodule.js
 /**/*.jsx
 /**/*.noeslint.*
+snapshots/
 !.eslintrc.js

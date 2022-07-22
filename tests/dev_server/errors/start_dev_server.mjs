@@ -5,13 +5,18 @@ import { startDevServer } from "@jsenv/core"
 const { certificate, privateKey } = requestCertificateForLocalhost({
   altNames: ["local"],
 })
-await startDevServer({
+export const devServer = await startDevServer({
+  logLevel: process.env.GENERATING_SNAPSHOTS ? "off" : undefined,
+  omegaServerLogLevel: process.env.GENERATING_SNAPSHOTS ? "off" : undefined,
   port: 3589,
   protocol: "https",
   acceptAnyIp: true,
   certificate,
   privateKey,
-  rootDirectoryUrl: new URL("./", import.meta.url),
+  rootDirectoryUrl: new URL("./stories/", import.meta.url),
+  htmlSupervisor: {
+    errorBaseUrl: process.env.GENERATING_SNAPSHOTS ? "file:///" : undefined,
+  },
   plugins: [
     {
       name: "plugin_throwing",
@@ -38,14 +43,8 @@ await startDevServer({
   ],
   explorer: {
     groups: {
-      main: {
-        "./main/**/*.html": true,
-      },
-      autoreload: {
-        "./autoreload/**/*.html": true,
-      },
-      errors: {
-        "./errors/**/*.html": true,
+      stories: {
+        "./**/*.html": true,
       },
     },
   },

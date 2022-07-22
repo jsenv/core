@@ -11,6 +11,7 @@ export const installHtmlSupervisor = ({
   logs,
   measurePerf,
   errorOverlay,
+  errorBaseUrl,
   openInEditor,
 }) => {
   const errorTransformer = null // could implement error stack remapping if needed
@@ -227,6 +228,7 @@ export const installHtmlSupervisor = ({
       const { error } = errorEvent
       displayErrorInDocument(error, {
         rootDirectoryUrl,
+        errorBaseUrl,
         openInEditor,
         url: errorEvent.filename,
         line: errorEvent.lineno,
@@ -276,21 +278,16 @@ export const installHtmlSupervisor = ({
             displayErrorInDocument(
               {
                 message,
-                stack:
-                  stack && traceMessage
-                    ? `${stack}\n\n${traceMessage}`
-                    : stack
-                    ? stack
-                    : traceMessage
-                    ? `\n${traceMessage}`
-                    : "",
+                stack,
               },
               {
                 rootDirectoryUrl,
+                errorBaseUrl,
                 openInEditor,
                 url: traceUrl,
                 line: traceLine,
                 column: traceColumn,
+                codeFrame: traceMessage,
                 reportedBy: "server",
                 requestedRessource,
               },

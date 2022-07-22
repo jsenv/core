@@ -19,5 +19,6 @@ node_modules/
 
 /**/*.nomodule.js
 /**/*.es5.js
+snapshots/
 /jsconfig.json
 /package-lock.json
