@@ -38,14 +38,8 @@ await startDevServer({
   ],
   explorer: {
     groups: {
-      main: {
-        "./main/**/*.html": true,
-      },
-      autoreload: {
-        "./autoreload/**/*.html": true,
-      },
       errors: {
-        "./errors/**/*.html": true,
+        "./**/*.html": true,
       },
     },
   },
