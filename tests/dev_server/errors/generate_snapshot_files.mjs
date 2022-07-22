@@ -28,8 +28,12 @@ const generateHtmlForStory = async ({ story, preferServerErrorReporting }) => {
     },
     /* eslint-enable no-undef */
   )
+  const sceenshotBuffer = await page.locator("jsenv-error-overlay").screenshot()
+  writeFileSync(
+    new URL(`./snapshots/${story}.png`, import.meta.url),
+    sceenshotBuffer,
+  )
   await page.close()
-
   writeFileSync(
     new URL(`./snapshots/${story}.html`, import.meta.url),
     htmlGenerated,
