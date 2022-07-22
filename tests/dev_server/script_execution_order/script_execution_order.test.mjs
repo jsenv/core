@@ -14,6 +14,9 @@ const test = async (params) => {
     url: `${devServer.origin}/main.html`,
     /* eslint-disable no-undef */
     pageFunction: async () => {
+      await new Promise((resolve) => {
+        setTimeout(resolve, 1000)
+      })
       return window.executionOrder
     },
     /* eslint-enable no-undef */
