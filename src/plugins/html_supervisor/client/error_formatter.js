@@ -49,8 +49,8 @@ export const formatError = (
     title: "An error occured",
     text,
     tip: `${tip}
-<br />
-Click outside to close.`,
+    <br />
+    Click outside to close.`,
   }
 }
 

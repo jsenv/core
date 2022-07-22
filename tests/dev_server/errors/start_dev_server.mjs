@@ -12,7 +12,7 @@ export const devServer = await startDevServer({
   acceptAnyIp: true,
   certificate,
   privateKey,
-  rootDirectoryUrl: new URL("./scenarios/", import.meta.url),
+  rootDirectoryUrl: new URL("./stories/", import.meta.url),
   plugins: [
     {
       name: "plugin_throwing",
@@ -39,7 +39,7 @@ export const devServer = await startDevServer({
   ],
   explorer: {
     groups: {
-      errors: {
+      stories: {
         "./**/*.html": true,
       },
     },

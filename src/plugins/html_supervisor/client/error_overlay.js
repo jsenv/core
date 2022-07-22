@@ -54,7 +54,20 @@ class JsenvErrorOverlay extends HTMLElement {
   constructor({ theme, title, text, tip }) {
     super()
     this.root = this.attachShadow({ mode: "open" })
-    this.root.innerHTML = overlayHtml
+    this.root.innerHTML = `
+<style>
+  ${overlayCSS}
+</style>
+<div class="backdrop"></div>
+<div class="overlay" data-theme=${theme}>
+  <h1 class="title">
+    ${title}
+  </h1>
+  <pre class="text">${text}</pre>
+  <div class="tip">
+    ${tip}
+  </div>
+</div>`
     this.root.querySelector(".backdrop").onclick = () => {
       if (!this.parentNode) {
         // not in document anymore
@@ -63,10 +76,6 @@ class JsenvErrorOverlay extends HTMLElement {
       this.root.querySelector(".backdrop").onclick = null
       this.parentNode.removeChild(this)
     }
-    this.root.querySelector(".overlay").setAttribute("data-theme", theme)
-    this.root.querySelector(".title").innerHTML = title
-    this.root.querySelector(".text").innerHTML = text
-    this.root.querySelector(".tip").innerHTML = tip
   }
 }
 
@@ -74,8 +83,7 @@ if (customElements && !customElements.get(JSENV_ERROR_OVERLAY_TAGNAME)) {
   customElements.define(JSENV_ERROR_OVERLAY_TAGNAME, JsenvErrorOverlay)
 }
 
-const overlayHtml = `
-<style>
+const overlayCSS = `
 :host {
   position: fixed;
   z-index: 99999;
@@ -149,12 +157,4 @@ pre {
 
 pre a {
   color: inherit;
-}
-</style>
-<div class="backdrop"></div>
-<div class="overlay">
-  <h1 class="title"></h1>
-  <pre class="text"></pre>
-  <div class="tip"></div>
-</div>
-`
+}`
