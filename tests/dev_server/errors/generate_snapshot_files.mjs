@@ -28,6 +28,7 @@ const generateHtmlForStory = async ({ story, preferServerErrorReporting }) => {
     },
     /* eslint-enable no-undef */
   )
+  await page.setViewportSize({ width: 900, height: 550 }) // generate smaller screenshots
   const sceenshotBuffer = await page.locator("jsenv-error-overlay").screenshot()
   writeFileSync(
     new URL(`./snapshots/${story}.png`, import.meta.url),
