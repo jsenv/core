@@ -2,16 +2,15 @@ import { readFileSync, readdirSync } from "node:fs"
 import { assert } from "@jsenv/assert"
 
 const readHtmlFiles = () => {
-  const htmlFilesDirectoryUrl = new URL("./snapshots/", import.meta.url)
-  const htmlFilenames = readdirSync(htmlFilesDirectoryUrl)
+  const snapshotDirectoryUrl = new URL("./snapshots/", import.meta.url)
+  const snapshotFilenames = readdirSync(snapshotDirectoryUrl)
   const htmlFiles = {}
-  htmlFilenames.forEach((htmlFilename) => {
-    // to ensure order is predictable
-    htmlFiles[htmlFilename] = null
-  })
-  htmlFilenames.forEach((htmlFilename) => {
-    const htmlFileUrl = new URL(htmlFilename, htmlFilesDirectoryUrl)
-    htmlFiles[htmlFilename] = String(readFileSync(htmlFileUrl))
+  snapshotFilenames.forEach((snapshotFilename) => {
+    if (!snapshotFilename.endsWith(".html")) {
+      return
+    }
+    const htmlFileUrl = new URL(snapshotFilename, snapshotDirectoryUrl)
+    htmlFiles[snapshotFilename] = String(readFileSync(htmlFileUrl))
   })
   return htmlFiles
 }
