@@ -88,7 +88,7 @@ export const jsenvPluginHtmlSupervisor = ({
           url: file,
           line,
           column,
-          content: urlInfo.content,
+          content: urlInfo.originalContent,
         })
         return {
           status: 200,

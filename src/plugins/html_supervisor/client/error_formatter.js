@@ -62,8 +62,10 @@ export const formatError = (
           onErrorLocated(urlSite)
         }
         if (errorBaseUrl) {
-          if (url.startsWith(rootDirectoryUrl)) {
-            urlSite.url = `${errorBaseUrl}${url.slice(rootDirectoryUrl.length)}`
+          if (urlSite.url.startsWith(rootDirectoryUrl)) {
+            urlSite.url = `${errorBaseUrl}${urlSite.url.slice(
+              rootDirectoryUrl.length,
+            )}`
           } else {
             urlSite.url = "file:///mocked_for_snapshots"
           }
@@ -104,15 +106,6 @@ export const formatError = (
   if (url && !stack) {
     onErrorLocated(resolveUrlSite({ url, line, column }))
   }
-
-  // if (errorUrlSite && error && error.name === "SyntaxError") {
-  //   // c'est pas vraiment stack qu'on veut update
-  //   // on veut ceci:
-  //   // file.js: Unexpected token (1:0)
-  //   // code frame here
-  //   // idéalement disant qui a requété ce fichier
-  //   stack = `  at ${formatUrlWithLineAndColumn(errorUrlSite)}`
-  // }
 
   let text
 
