@@ -1,3 +1,9 @@
+# 27.5.2
+
+- display correct url:line:column for inline scripts
+- use snapshot to test dev server errors + screenshots
+- add code frame for runtime errors and syntax errors (error reported by browser)
+
 # 27.5.1
 
 - add host to startDevServer
