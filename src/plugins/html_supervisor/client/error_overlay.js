@@ -276,6 +276,16 @@ const replaceLinks = (string, { rootDirectoryUrl, openInEditor }) => {
   // render links
   string = stringToStringWithLink(string, {
     transform: (url, { line, column }) => {
+      const inlineUrlMatch = url.match(/@L([0-9]+)\-L([0-9]+)\.[\w]+$/)
+      if (inlineUrlMatch) {
+        const htmlUrl = url.slice(0, inlineUrlMatch.index)
+        const tagLine = parseInt(inlineUrlMatch[1])
+        const tagColumn = parseInt(inlineUrlMatch[2])
+        url = htmlUrl
+        line = tagLine + parseInt(line) - 1
+        column = tagColumn + parseInt(column)
+      }
+
       const urlObject = new URL(url)
 
       const onFileUrl = (fileUrlObject) => {
