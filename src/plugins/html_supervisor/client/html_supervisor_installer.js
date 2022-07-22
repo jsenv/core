@@ -7,10 +7,10 @@ const { __html_supervisor__ } = window
 const supervisedScripts = []
 
 export const installHtmlSupervisor = ({
-  rootDirectoryUrl,
   logs,
   measurePerf,
   errorOverlay,
+  errorBaseUrl,
   openInEditor,
 }) => {
   const errorTransformer = null // could implement error stack remapping if needed
@@ -226,7 +226,7 @@ export const installHtmlSupervisor = ({
       }
       const { error } = errorEvent
       displayErrorInDocument(error, {
-        rootDirectoryUrl,
+        errorBaseUrl,
         openInEditor,
         url: errorEvent.filename,
         line: errorEvent.lineno,
@@ -286,7 +286,7 @@ export const installHtmlSupervisor = ({
                     : "",
               },
               {
-                rootDirectoryUrl,
+                errorBaseUrl,
                 openInEditor,
                 url: traceUrl,
                 line: traceLine,

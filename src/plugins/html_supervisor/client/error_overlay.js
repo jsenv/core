@@ -5,7 +5,7 @@ const JSENV_ERROR_OVERLAY_TAGNAME = "jsenv-error-overlay"
 export const displayErrorInDocument = async (
   error,
   {
-    rootDirectoryUrl,
+    errorBaseUrl,
     openInEditor,
     url,
     line,
@@ -15,7 +15,7 @@ export const displayErrorInDocument = async (
   },
 ) => {
   const { theme, title, text, tip } = formatError(error, {
-    rootDirectoryUrl,
+    errorBaseUrl,
     openInEditor,
     url,
     line,

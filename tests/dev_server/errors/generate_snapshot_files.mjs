@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs"
 import { chromium } from "playwright"
 
-process.env.LOG_LEVEL = "warn"
+process.env.GENERATING_SNAPSHOTS = "true"
 const { devServer } = await import("./start_dev_server.mjs")
 const browser = await chromium.launch({ headless: true })
 

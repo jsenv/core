@@ -1,7 +1,7 @@
 export const formatError = (
   error,
   {
-    rootDirectoryUrl,
+    errorBaseUrl,
     openInEditor,
     url,
     line,
@@ -35,7 +35,7 @@ export const formatError = (
   }
 
   const text = createErrorText({
-    rootDirectoryUrl,
+    errorBaseUrl,
     openInEditor,
     message,
     stack,
@@ -126,15 +126,10 @@ const formatTip = ({ reportedBy, requestedRessource }) => {
   return `Reported by the server while serving <code>${requestedRessource}</code>`
 }
 
-const createErrorText = ({
-  rootDirectoryUrl,
-  openInEditor,
-  message,
-  stack,
-}) => {
+const createErrorText = ({ errorBaseUrl, openInEditor, message, stack }) => {
   const generateClickableText = (text) => {
     const textWithHtmlLinks = replaceLinks(text, {
-      rootDirectoryUrl,
+      errorBaseUrl,
       openInEditor,
     })
     return textWithHtmlLinks
@@ -149,7 +144,7 @@ const createErrorText = ({
   return generateClickableText(message)
 }
 
-const replaceLinks = (string, { rootDirectoryUrl, openInEditor }) => {
+const replaceLinks = (string, { errorBaseUrl, openInEditor }) => {
   // normalize line breaks
   string = string.replace(/\n/g, "\n")
   string = escapeHtml(string)
@@ -194,7 +189,7 @@ const replaceLinks = (string, { rootDirectoryUrl, openInEditor }) => {
       if (urlObject.origin === window.origin) {
         const fileUrlObject = new URL(
           `${urlObject.pathname.slice(1)}${urlObject.search}`,
-          rootDirectoryUrl,
+          errorBaseUrl,
         )
         return onFileUrl(fileUrlObject)
       }

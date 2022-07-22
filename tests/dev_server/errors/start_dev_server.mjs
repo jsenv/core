@@ -6,13 +6,16 @@ const { certificate, privateKey } = requestCertificateForLocalhost({
   altNames: ["local"],
 })
 export const devServer = await startDevServer({
-  logLevel: process.env.LOG_LEVEL,
+  logLevel: process.env.GENERATING_SNAPSHOTS ? "warn" : undefined,
   port: 3589,
   protocol: "https",
   acceptAnyIp: true,
   certificate,
   privateKey,
   rootDirectoryUrl: new URL("./stories/", import.meta.url),
+  htmlSupervisor: {
+    errorBaseUrl: process.env.GENERATING_SNAPSHOTS ? "file:///" : undefined,
+  },
   plugins: [
     {
       name: "plugin_throwing",
