@@ -31,10 +31,10 @@ await executeTestPlan({
   // completedExecutionLogAbbreviation: false,
   coverageEnabled: process.argv.includes("--coverage"),
   coverageConfig: {
-    "./index.js": true,
     "./src/**/*.js": true,
-    "./packages/*/main.js": true,
+    "./src/**/*.mjs": true,
     "./packages/*/src/*.js": true,
+    "./packages/*/src/*.mjs": true,
     "./**/*.test.*": false,
     "./**/test/": false,
   },
