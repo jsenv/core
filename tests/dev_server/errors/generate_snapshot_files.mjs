@@ -1,15 +1,12 @@
-import { writeFileSync } from "node:fs"
-import { chromium } from "playwright"
+import { writeFileSync } from "@jsenv/filesystem"
+import { chromium, firefox } from "playwright"
 
 process.env.GENERATING_SNAPSHOTS = "true"
 const { devServer } = await import("./start_dev_server.mjs")
 
 const test = async ({ browserLauncher, browserName }) => {
   const browser = await browserLauncher.launch({ headless: true })
-  const snapshotDirectoryUrl = new URL(
-    `./snapshots/${browserName}/`,
-    import.meta.url,
-  )
+  const snapshotDirectoryUrl = new URL(`./snapshots/`, import.meta.url)
 
   const generateHtmlForStory = async ({
     story,
@@ -42,11 +39,11 @@ const test = async ({ browserLauncher, browserName }) => {
       .locator("jsenv-error-overlay")
       .screenshot()
     writeFileSync(
-      new URL(`./${story}.png`, snapshotDirectoryUrl),
+      new URL(`./${story}_${browserName}.png`, snapshotDirectoryUrl),
       sceenshotBuffer,
     )
     writeFileSync(
-      new URL(`./${story}.html`, snapshotDirectoryUrl),
+      new URL(`./${story}_${browserName}.html`, snapshotDirectoryUrl),
       htmlGenerated,
     )
     await page.close()
@@ -90,7 +87,6 @@ const test = async ({ browserLauncher, browserName }) => {
     })
   } finally {
     browser.close()
-    devServer.stop()
   }
 }
 
@@ -98,3 +94,12 @@ await test({
   browserLauncher: chromium,
   browserName: "chromium",
 })
+await test({
+  browserLauncher: firefox,
+  browserName: "firefox",
+})
+// await test({
+//   browserLauncher: webkit,
+//   browserName: "webkit",
+// })
+devServer.stop()

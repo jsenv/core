@@ -18,6 +18,12 @@ await executeTestPlan({
         allocatedMs: 60_000,
       },
     },
+    "tests/**/*_snapshots.test.mjs": {
+      node: {
+        runtime: nodeWorkerThread,
+        allocatedMs: 60_000,
+      },
+    },
     "tests/**/*_browsers.test.mjs": {
       node: {
         runtime: nodeWorkerThread,
