@@ -4,7 +4,7 @@
  * - npm test:coverage
  */
 
-import { executeTestPlan, chromium, firefox } from "@jsenv/core"
+import { executeTestPlan, chromium, webkit } from "@jsenv/core"
 
 import { rootDirectoryUrl, plugins } from "../jsenv.config.mjs"
 
@@ -16,8 +16,8 @@ await executeTestPlan({
       chromium: {
         runtime: chromium,
       },
-      firefox: {
-        runtime: firefox,
+      webkit: {
+        runtime: webkit,
       },
     },
   },
