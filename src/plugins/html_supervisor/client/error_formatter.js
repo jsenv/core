@@ -21,15 +21,13 @@ export const formatError = (
       if (Error.captureStackTrace) {
         line--
       }
-      if (error.name === "SyntaxError") {
-        if (errorMeta.type === "dynamic_import_syntax_error") {
-          // syntax error on inline script need line-1 for some reason
-          if (Error.captureStackTrace) {
-            line--
-          } else {
-            // firefox and safari need line-2
-            line -= 2
-          }
+      if (errorMeta.type === "dynamic_import_syntax_error") {
+        // syntax error on inline script need line-1 for some reason
+        if (Error.captureStackTrace) {
+          line--
+        } else {
+          // firefox and safari need line-2
+          line -= 2
         }
       }
       column = tagColumn + parseInt(column)
@@ -185,6 +183,28 @@ const extractErrorMeta = (error, { line }) => {
     return {}
   }
 
+  export_missing: {
+    // chrome
+    if (message.includes("does not provide an export named")) {
+      return {
+        type: "dynamic_import_export_missing",
+      }
+    }
+    // firefox
+    if (message.startsWith("import not found:")) {
+      return {
+        type: "dynamic_import_export_missing",
+        browser: "firefox",
+      }
+    }
+    // safari
+    if (message.startsWith("import binding name")) {
+      return {
+        type: "dynamic_import_export_missing",
+      }
+    }
+  }
+
   js_syntax_error: {
     if (error.name === "SyntaxError" && typeof line === "number") {
       return {
@@ -214,28 +234,6 @@ const extractErrorMeta = (error, { line }) => {
     if (message === "Importing a module script failed.") {
       return {
         type: "dynamic_import_fetch_error",
-      }
-    }
-  }
-
-  export_missing: {
-    // chrome
-    if (message.includes("does not provide an export named")) {
-      return {
-        type: "dynamic_import_export_missing",
-      }
-    }
-    // firefox
-    if (message.startsWith("import not found:")) {
-      return {
-        type: "dynamic_import_export_missing",
-        browser: "firefox",
-      }
-    }
-    // safari
-    if (message.startsWith("import binding name")) {
-      return {
-        type: "dynamic_import_export_missing",
       }
     }
   }
