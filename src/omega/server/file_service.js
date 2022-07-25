@@ -105,6 +105,9 @@ export const createFileService = ({
       rootDirectoryUrl,
       scenario,
       runtimeCompat,
+      clientRuntimeCompat: {
+        [runtimeName]: runtimeVersion,
+      },
       urlGraph,
       plugins: [
         ...plugins,
@@ -269,9 +272,6 @@ export const createFileService = ({
       await kitchen.cook(urlInfo, {
         request,
         reference,
-        clientRuntimeCompat: {
-          [runtimeName]: runtimeVersion,
-        },
         outDirectoryUrl:
           scenario === "dev"
             ? `${rootDirectoryUrl}.jsenv/${runtimeName}@${runtimeVersion}/`
