@@ -109,13 +109,15 @@ export const jsenvPluginHtmlSupervisor = ({
         }
         const causeInfo = getErrorCauseInfo()
         const body = JSON.stringify(
-          {
-            code: causeInfo.code,
-            message: causeInfo.message,
-            reason: causeInfo.reason,
-            stack: causeInfo.stack,
-            codeFrame: causeInfo.traceMessage,
-          },
+          causeInfo
+            ? {
+                code: causeInfo.code,
+                message: causeInfo.message,
+                reason: causeInfo.reason,
+                stack: causeInfo.stack,
+                codeFrame: causeInfo.traceMessage,
+              }
+            : null,
           null,
           "  ",
         )
