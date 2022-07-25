@@ -770,7 +770,7 @@ const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
     }
     urlInfo.contentType = reference.contentType
     urlInfo.originalContent =
-      context === "build"
+      context.scenario === "build"
         ? urlInfo.originalContent === undefined
           ? reference.content
           : urlInfo.originalContent
