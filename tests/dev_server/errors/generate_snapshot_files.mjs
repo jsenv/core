@@ -89,10 +89,6 @@ const test = async ({ browserLauncher, browserName }) => {
     await generateHtmlForStory({
       story: "script_module_inline_throw",
     })
-    // TODO: re-enable this later on
-    // await generateHtmlForStory({
-    //   story: "script_src_not_found",
-    // })
   } finally {
     browser.close()
   }
