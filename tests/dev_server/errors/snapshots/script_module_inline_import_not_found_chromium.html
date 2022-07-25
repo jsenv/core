@@ -2,15 +2,15 @@
   <h1 class="title">
     An error occured
   </h1>
-  <pre class="text">no entry on filesystem
-
-<a href="javascript:window.fetch('/__open_in_editor__/file:///script_module_inline_import_not_found/main.html:11:18')">file:///script_module_inline_import_not_found/main.html:11:18</a>
-  10 |       // eslint-disable-next-line import/no-unresolved
-> 11 |       import "./not_found.js"
-                        ^
-  12 | </pre>
+  <pre class="text">Failed to fetch dynamically imported module: <a href="file:///script_module_inline_import_not_found/main.html">file:///script_module_inline_import_not_found/main.html:8:5</a>
+  [cause]: no entry on filesystem
+  <a href="javascript:window.fetch('/__open_in_editor__/file:///script_module_inline_import_not_found/main.html:11:18')">file:///script_module_inline_import_not_found/main.html:11:18</a>
+    10 |       // eslint-disable-next-line import/no-unresolved
+  > 11 |       import "./not_found.js"
+                          ^
+    12 | </pre>
   <div class="tip">
-    Reported by the server while serving <code>/script_module_inline_import_not_found/not_found.js</code>
+    Reported by the browser while executing <code>/script_module_inline_import_not_found/main.html</code>.
     <br>
     Click outside to close.
   </div>

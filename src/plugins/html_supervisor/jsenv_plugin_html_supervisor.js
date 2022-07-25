@@ -47,25 +47,6 @@ export const jsenvPluginHtmlSupervisor = ({
       test: true,
     },
     serve: (request, context) => {
-      if (request.ressource.startsWith("/__open_in_editor__/")) {
-        const file = request.ressource.slice("/__open_in_editor__/".length)
-        if (!file) {
-          return {
-            status: 400,
-            body: "Missing file in url",
-          }
-        }
-        const launch = requireFromJsenv("launch-editor")
-        launch(fileURLToPath(file), () => {
-          // ignore error for now
-        })
-        return {
-          status: 200,
-          headers: {
-            "cache-control": "no-store",
-          },
-        }
-      }
       if (request.ressource.startsWith("/__get_code_frame__/")) {
         const url = request.ressource.slice("/__get_code_frame__/".length)
         const match = url.match(/:([0-9]+):([0-9]+)$/)
@@ -97,6 +78,76 @@ export const jsenvPluginHtmlSupervisor = ({
             "content-length": Buffer.byteLength(codeFrame),
           },
           body: codeFrame,
+        }
+      }
+      if (request.ressource.startsWith("/__get_error_cause__/")) {
+        const file = request.ressource.slice("/__get_error_cause__/".length)
+        if (!file) {
+          return {
+            status: 400,
+            body: "Missing file in url",
+          }
+        }
+        const getErrorCauseInfo = () => {
+          const urlInfo = context.urlGraph.getUrlInfo(file)
+          if (!urlInfo) {
+            return null
+          }
+          const { error } = urlInfo
+          if (error) {
+            return error
+          }
+          // search in direct dependencies (404 or 500)
+          const { dependencies } = urlInfo
+          for (const dependencyUrl of dependencies) {
+            const dependencyUrlInfo = context.urlGraph.getUrlInfo(dependencyUrl)
+            if (dependencyUrlInfo.error) {
+              return dependencyUrlInfo.error
+            }
+          }
+          return null
+        }
+        const causeInfo = getErrorCauseInfo()
+        const body = JSON.stringify(
+          causeInfo
+            ? {
+                code: causeInfo.code,
+                message: causeInfo.message,
+                reason: causeInfo.reason,
+                stack: causeInfo.stack,
+                codeFrame: causeInfo.traceMessage,
+              }
+            : null,
+          null,
+          "  ",
+        )
+        return {
+          status: 200,
+          headers: {
+            "cache-control": "no-cache",
+            "content-type": "application/json",
+            "content-length": Buffer.byteLength(body),
+          },
+          body,
+        }
+      }
+      if (request.ressource.startsWith("/__open_in_editor__/")) {
+        const file = request.ressource.slice("/__open_in_editor__/".length)
+        if (!file) {
+          return {
+            status: 400,
+            body: "Missing file in url",
+          }
+        }
+        const launch = requireFromJsenv("launch-editor")
+        launch(fileURLToPath(file), () => {
+          // ignore error for now
+        })
+        return {
+          status: 200,
+          headers: {
+            "cache-control": "no-store",
+          },
         }
       }
       return null

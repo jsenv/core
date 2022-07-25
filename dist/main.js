@@ -152,7 +152,7 @@ const generateInlineContentUrl = ({
   lineEnd,
   columnEnd
 }) => {
-  const generatedName = line === lineEnd ? `L${line}C${column}-L${lineEnd}C${columnEnd}` : `L${line}-L${lineEnd}`;
+  const generatedName = `L${line}C${column}-L${lineEnd}C${columnEnd}`;
   const filenameRaw = urlToFilename$1(url);
   const filename = `${filenameRaw}@${generatedName}${extension}`; // ideally we should keep query params from url
   // maybe we could use a custom scheme like "inline:"
@@ -12047,27 +12047,6 @@ const jsenvPluginHtmlSupervisor = ({
       test: true
     },
     serve: (request, context) => {
-      if (request.ressource.startsWith("/__open_in_editor__/")) {
-        const file = request.ressource.slice("/__open_in_editor__/".length);
-
-        if (!file) {
-          return {
-            status: 400,
-            body: "Missing file in url"
-          };
-        }
-
-        const launch = requireFromJsenv("launch-editor");
-        launch(fileURLToPath(file), () => {// ignore error for now
-        });
-        return {
-          status: 200,
-          headers: {
-            "cache-control": "no-store"
-          }
-        };
-      }
-
       if (request.ressource.startsWith("/__get_code_frame__/")) {
         const url = request.ressource.slice("/__get_code_frame__/".length);
         const match = url.match(/:([0-9]+):([0-9]+)$/);
@@ -12103,6 +12082,87 @@ const jsenvPluginHtmlSupervisor = ({
             "content-length": Buffer.byteLength(codeFrame)
           },
           body: codeFrame
+        };
+      }
+
+      if (request.ressource.startsWith("/__get_error_cause__/")) {
+        const file = request.ressource.slice("/__get_error_cause__/".length);
+
+        if (!file) {
+          return {
+            status: 400,
+            body: "Missing file in url"
+          };
+        }
+
+        const getErrorCauseInfo = () => {
+          const urlInfo = context.urlGraph.getUrlInfo(file);
+
+          if (!urlInfo) {
+            return null;
+          }
+
+          const {
+            error
+          } = urlInfo;
+
+          if (error) {
+            return error;
+          } // search in direct dependencies (404 or 500)
+
+
+          const {
+            dependencies
+          } = urlInfo;
+
+          for (const dependencyUrl of dependencies) {
+            const dependencyUrlInfo = context.urlGraph.getUrlInfo(dependencyUrl);
+
+            if (dependencyUrlInfo.error) {
+              return dependencyUrlInfo.error;
+            }
+          }
+
+          return null;
+        };
+
+        const causeInfo = getErrorCauseInfo();
+        const body = JSON.stringify({
+          code: causeInfo.code,
+          message: causeInfo.message,
+          reason: causeInfo.reason,
+          stack: causeInfo.stack,
+          codeFrame: causeInfo.traceMessage
+        }, null, "  ");
+        return {
+          status: 200,
+          headers: {
+            "cache-control": "no-cache",
+            "content-type": "application/json",
+            "content-length": Buffer.byteLength(body)
+          },
+          body
+        };
+      }
+
+      if (request.ressource.startsWith("/__open_in_editor__/")) {
+        const file = request.ressource.slice("/__open_in_editor__/".length);
+
+        if (!file) {
+          return {
+            status: 400,
+            body: "Missing file in url"
+          };
+        }
+
+        const launch = requireFromJsenv("launch-editor");
+        launch(fileURLToPath(file), () => {// ignore error for now
+        });
+        return {
+          status: 200,
+          headers: {
+            "cache-control": "no-store"
+          }
         };
       }
 
@@ -21030,6 +21090,7 @@ const createUrlGraph = ({
 
 const createUrlInfo = url => {
   return {
+    error: null,
     modifiedTimestamp: 0,
     contentEtag: null,
     dependsOnPackageJson: false,
@@ -21435,12 +21496,30 @@ const returnValueAssertions = [{
 const createUrlInfoTransformer = ({
   logger,
   sourcemaps,
+  sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
   sourcemapsRelativeSources,
   urlGraph,
+  clientRuntimeCompat,
   injectSourcemapPlaceholder,
   foundSourcemap
 }) => {
+  const runtimeNames = Object.keys(clientRuntimeCompat);
+  const chromeAsSingleRuntime = runtimeNames.length === 1 && runtimeNames[0] === "chrome";
+
+  if (sourcemapsSourcesProtocol === undefined) {
+    sourcemapsSourcesProtocol = "file:///";
+  }
+
+  if (sourcemapsSourcesContent === undefined) {
+    if (chromeAsSingleRuntime && sourcemapsSourcesProtocol === "file:///") {
+      // chrome is able to fetch source when referenced with "file:"
+      sourcemapsSourcesContent = false;
+    } else {
+      sourcemapsSourcesContent = true;
+    }
+  }
+
   const sourcemapsEnabled = sourcemaps === "inline" || sourcemaps === "file" || sourcemaps === "programmatic";
 
   const normalizeSourcemap = (urlInfo, sourcemap) => {
@@ -21611,6 +21690,16 @@ const createUrlInfoTransformer = ({
         sourcemap.sources = sourcemap.sources.map(source => {
           const sourceRelative = urlToRelativeUrl(source, urlInfo.url);
           return sourceRelative || ".";
+        });
+      }
+
+      if (sourcemapsSourcesProtocol !== "file:///") {
+        sourcemap.sources = sourcemap.sources.map(source => {
+          if (source.startsWith("file:///")) {
+            return `${sourcemapsSourcesProtocol}${source.slice("file:///".length)}`;
+          }
+
+          return source;
         });
       }
 
@@ -22013,6 +22102,9 @@ const createKitchen = ({
   rootDirectoryUrl,
   scenario,
   runtimeCompat,
+  // during dev/test clientRuntimeCompat is a single runtime
+  // during build clientRuntimeCompat is runtimeCompat
+  clientRuntimeCompat = runtimeCompat,
   urlGraph,
   plugins,
   sourcemaps = {
@@ -22021,13 +22113,8 @@ const createKitchen = ({
     test: "inline",
     build: "none"
   }[scenario],
-  sourcemapsSourcesContent = {
-    // during dev/test, chrome is able to find the sourcemap sources
-    // as long as they use file:// protocol in the sourcemap files
-    dev: false,
-    test: false,
-    build: true
-  }[scenario],
+  sourcemapsSourcesProtocol,
+  sourcemapsSourcesContent,
   sourcemapsRelativeSources,
   writeGeneratedFiles
 }) => {
@@ -22046,6 +22133,10 @@ const createKitchen = ({
     urlGraph,
     scenario,
     runtimeCompat,
+    clientRuntimeCompat,
+    isSupportedOnCurrentClients: feature => {
+      return RUNTIME_COMPAT.isSupported(clientRuntimeCompat, feature);
+    },
     isSupportedOnFutureClients: feature => {
       return RUNTIME_COMPAT.isSupported(runtimeCompat, feature);
     },
@@ -22194,8 +22285,10 @@ const createKitchen = ({
     logger,
     urlGraph,
     sourcemaps,
+    sourcemapsSourcesProtocol,
     sourcemapsSourcesContent,
     sourcemapsRelativeSources,
+    clientRuntimeCompat,
     injectSourcemapPlaceholder: ({
       urlInfo,
       specifier
@@ -22334,19 +22427,8 @@ const createKitchen = ({
   };
 
   const _cook = async (urlInfo, dishContext) => {
-    // during dev/test clientRuntimeCompat is a single runtime
-    // during build clientRuntimeCompat is runtimeCompat
-    const {
-      clientRuntimeCompat = runtimeCompat
-    } = dishContext;
-
-    kitchenContext.isSupportedOnCurrentClients = feature => {
-      return RUNTIME_COMPAT.isSupported(clientRuntimeCompat, feature);
-    };
-
     const context = { ...kitchenContext,
-      ...dishContext,
-      clientRuntimeCompat
+      ...dishContext
     };
     const {
       cookDuringCook = cook
@@ -22754,7 +22836,7 @@ const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
       column: reference.specifierColumn
     };
     urlInfo.contentType = reference.contentType;
-    urlInfo.originalContent = context === "build" ? urlInfo.originalContent === undefined ? reference.content : urlInfo.originalContent : reference.content;
+    urlInfo.originalContent = context.scenario === "build" ? urlInfo.originalContent === undefined ? reference.content : urlInfo.originalContent : reference.content;
     urlInfo.content = reference.content;
   }
 };
@@ -23117,17 +23199,11 @@ const createFileService = ({
   cooldownBetweenFileEvents,
   explorer,
   sourcemaps,
+  sourcemapsSourcesProtocol,
+  sourcemapsSourcesContent,
   writeGeneratedFiles
 }) => {
   const jsenvDirectoryUrl = new URL(".jsenv/", rootDirectoryUrl).href;
-  const onErrorWhileServingFileCallbacks = [];
-
-  const onErrorWhileServingFile = data => {
-    onErrorWhileServingFileCallbacks.forEach(onErrorWhileServingFileCallback => {
-      onErrorWhileServingFileCallback(data);
-    });
-  };
-
   const clientFileChangeCallbackList = [];
   const clientFilesPruneCallbackList = [];
 
@@ -23220,6 +23296,9 @@ const createFileService = ({
       rootDirectoryUrl,
       scenario,
       runtimeCompat,
+      clientRuntimeCompat: {
+        [runtimeName]: runtimeVersion
+      },
       urlGraph,
       plugins: [...plugins, ...getCorePlugins({
         rootDirectoryUrl,
@@ -23236,6 +23315,8 @@ const createFileService = ({
         explorer
       })],
       sourcemaps,
+      sourcemapsSourcesProtocol,
+      sourcemapsSourcesContent,
       writeGeneratedFiles
     });
     serverStopCallbacks.push(() => {
@@ -23275,20 +23356,6 @@ const createFileService = ({
                 data
               });
             }
-          });
-        });
-        onErrorWhileServingFileCallbacks.push(data => {
-          serverEventsDispatcher.dispatchToRoomsMatching({
-            type: "error_while_serving_file",
-            data
-          }, room => {
-            // send only to page depending on this file
-            const errorFileUrl = data.url;
-            const roomEntryPointUrl = new URL(room.request.ressource.slice(1), rootDirectoryUrl).href;
-            const isErrorRelatedToEntryPoint = Boolean(urlGraph.findDependent(errorFileUrl, dependentUrlInfo => {
-              return dependentUrlInfo.url === roomEntryPointUrl;
-            }));
-            return isErrorRelatedToEntryPoint;
           });
         }); // "unshift" because serve must come first to catch event source client request
 
@@ -23387,6 +23454,7 @@ const createFileService = ({
     try {
       // urlInfo objects are reused, they must be "reset" before cooking them again
       if (urlInfo.contentEtag && !urlInfo.isInline && urlInfo.type !== "sourcemap") {
+        urlInfo.error = null;
         urlInfo.sourcemap = null;
         urlInfo.sourcemapReference = null;
         urlInfo.content = null;
@@ -23400,9 +23468,6 @@ const createFileService = ({
       await kitchen.cook(urlInfo, {
         request,
         reference,
-        clientRuntimeCompat: {
-          [runtimeName]: runtimeVersion
-        },
         outDirectoryUrl: scenario === "dev" ? `${rootDirectoryUrl}.jsenv/${runtimeName}@${runtimeVersion}/` : `${rootDirectoryUrl}.jsenv/${scenario}/${runtimeName}@${runtimeVersion}/`
       });
       let {
@@ -23434,19 +23499,10 @@ const createFileService = ({
       });
       return response;
     } catch (e) {
+      urlInfo.error = e;
       const code = e.code;
 
       if (code === "PARSE_ERROR") {
-        onErrorWhileServingFile({
-          requestedRessource: request.ressource,
-          code: "PARSE_ERROR",
-          message: e.reason,
-          url: e.url,
-          traceUrl: e.traceUrl,
-          traceLine: e.traceLine,
-          traceColumn: e.traceColumn,
-          traceMessage: e.traceMessage
-        });
         return {
           url: reference.url,
           status: 200,
@@ -23481,17 +23537,6 @@ const createFileService = ({
       }
 
       if (code === "NOT_FOUND") {
-        onErrorWhileServingFile({
-          requestedRessource: request.ressource,
-          isFaviconAutoRequest: request.ressource === "/favicon.ico" && reference.type === "http_request",
-          code: "NOT_FOUND",
-          message: e.reason,
-          url: e.url,
-          traceUrl: e.traceUrl,
-          traceLine: e.traceLine,
-          traceColumn: e.traceColumn,
-          traceMessage: e.traceMessage
-        });
         return {
           url: reference.url,
           status: 404,
@@ -23500,16 +23545,6 @@ const createFileService = ({
         };
       }
 
-      onErrorWhileServingFile({
-        requestedRessource: request.ressource,
-        code: "UNEXPECTED",
-        stack: e.stack,
-        url: e.url,
-        traceUrl: e.traceUrl,
-        traceLine: e.traceLine,
-        traceColumn: e.traceColumn,
-        traceMessage: e.traceMessage
-      });
       return {
         url: reference.url,
         status: 500,
@@ -23578,6 +23613,8 @@ const startOmegaServer = async ({
   cooldownBetweenFileEvents,
   explorer,
   sourcemaps,
+  sourcemapsSourcesProtocol,
+  sourcemapsSourcesContent,
   writeGeneratedFiles
 }) => {
   const serverStopCallbacks = [];
@@ -23624,6 +23661,8 @@ const startOmegaServer = async ({
         cooldownBetweenFileEvents,
         explorer,
         sourcemaps,
+        sourcemapsSourcesProtocol,
+        sourcemapsSourcesContent,
         writeGeneratedFiles
       })
     }, {
@@ -23736,6 +23775,8 @@ const startDevServer = async ({
   },
   // toolbar = false,
   sourcemaps = "inline",
+  sourcemapsSourcesProtocol,
+  sourcemapsSourcesContent,
   writeGeneratedFiles = true
 }) => {
   const logger = createLogger({
@@ -23851,6 +23892,8 @@ const startDevServer = async ({
     cooldownBetweenFileEvents,
     explorer,
     sourcemaps,
+    sourcemapsSourcesProtocol,
+    sourcemapsSourcesContent,
     writeGeneratedFiles
   });
   startDevServerTask.done();
@@ -27466,8 +27509,7 @@ const loadUrlGraph = async ({
   kitchen,
   startLoading,
   writeGeneratedFiles,
-  outDirectoryUrl,
-  clientRuntimeCompat
+  outDirectoryUrl
 }) => {
   if (writeGeneratedFiles && outDirectoryUrl) {
     await ensureEmptyDirectory(outDirectoryUrl);
@@ -27482,7 +27524,6 @@ const loadUrlGraph = async ({
 
     const promise = _cook(urlInfo, {
       outDirectoryUrl,
-      clientRuntimeCompat,
       ...context
     });
 

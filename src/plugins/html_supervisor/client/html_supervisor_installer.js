@@ -92,7 +92,10 @@ export const installHtmlSupervisor = ({
     if (reload) {
       urlObject.searchParams.set("hmr", Date.now())
     }
-    __html_supervisor__.currentExecutionUrl = urlObject.href
+    __html_supervisor__.currentExecution = {
+      type: type === "module" ? "dynamic_import" : "script_injection",
+      url: urlObject.href,
+    }
     try {
       result = await execute(urlObject.href)
       completed = true
@@ -111,7 +114,7 @@ export const installHtmlSupervisor = ({
         console.log(`${type} load ended`)
         console.groupEnd()
       }
-      __html_supervisor__.currentExecutionUrl = undefined
+      __html_supervisor__.currentExecution = null
       return
     }
     const executionResult = {
@@ -142,7 +145,7 @@ export const installHtmlSupervisor = ({
     if (logs) {
       console.groupEnd()
     }
-    __html_supervisor__.currentExecutionUrl = undefined
+    __html_supervisor__.currentExecution = null
   }
 
   const classicExecutionQueue = createExecutionQueue(performExecution)
@@ -223,76 +226,28 @@ export const installHtmlSupervisor = ({
   })
 
   if (errorOverlay) {
+    const onErrorReportedByBrowser = (error, { url, line, column }) => {
+      displayErrorInDocument(error, {
+        rootDirectoryUrl,
+        errorBaseUrl,
+        openInEditor,
+        url,
+        line,
+        column,
+      })
+    }
     window.addEventListener("error", (errorEvent) => {
       if (!errorEvent.isTrusted) {
         // ignore custom error event (not sent by browser)
         return
       }
       const { error, filename, lineno, colno } = errorEvent
-      displayErrorInDocument(error, {
-        rootDirectoryUrl,
-        errorBaseUrl,
-        openInEditor,
+      onErrorReportedByBrowser(error, {
         url: filename,
         line: lineno,
         column: colno,
-        reportedBy: "browser",
       })
     })
-    if (window.__server_events__) {
-      const isExecuting = () => {
-        if (pendingExecutionCount > 0) {
-          return true
-        }
-        if (
-          document.readyState === "loading" ||
-          document.readyState === "interactive"
-        ) {
-          return true
-        }
-        if (window.__reloader__ && window.__reloader__.status === "reloading") {
-          return true
-        }
-        return false
-      }
-      window.__server_events__.addEventCallbacks({
-        error_while_serving_file: (serverErrorEvent) => {
-          if (!isExecuting()) {
-            return
-          }
-          const {
-            message,
-            stack,
-            traceUrl,
-            traceLine,
-            traceColumn,
-            traceMessage,
-            requestedRessource,
-            isFaviconAutoRequest,
-          } = JSON.parse(serverErrorEvent.data)
-          if (isFaviconAutoRequest) {
-            return
-          }
-          displayErrorInDocument(
-            {
-              message,
-              stack,
-            },
-            {
-              rootDirectoryUrl,
-              errorBaseUrl,
-              openInEditor,
-              url: traceUrl,
-              line: traceLine,
-              column: traceColumn,
-              codeFrame: traceMessage,
-              reportedBy: "server",
-              requestedRessource,
-            },
-          )
-        },
-      })
-    }
   }
 }
 

@@ -16,40 +16,74 @@ const formatError = (error, {
   openInEditor,
   url,
   line,
-  column,
-  codeFrame,
-  requestedRessource,
-  reportedBy
+  column
 }) => {
   let {
     message,
     stack
   } = normalizeErrorParts(error);
-  let codeFramePromiseReference = {
+  let errorDetailsPromiseReference = {
     current: null
   };
-  let tip = formatTip({
-    reportedBy,
-    requestedRessource
-  });
+  let tip = `Reported by the browser while executing <code>${window.location.pathname}${window.location.search}</code>.`;
   let errorUrlSite;
+  const errorMeta = extractErrorMeta(error, {
+    url,
+    line,
+    column
+  });
 
   const resolveUrlSite = ({
     url,
     line,
     column
   }) => {
-    const inlineUrlMatch = url.match(/@L([0-9]+)\-L([0-9]+)\.[\w]+$/);
+    const inlineUrlMatch = url.match(/@L([0-9]+)C([0-9]+)\-L([0-9]+)C([0-9]+)(\.[\w]+)$/);
 
     if (inlineUrlMatch) {
       const htmlUrl = url.slice(0, inlineUrlMatch.index);
-      const tagLine = parseInt(inlineUrlMatch[1]);
-      const tagColumn = parseInt(inlineUrlMatch[2]);
+      const tagLineStart = parseInt(inlineUrlMatch[1]);
+      const tagColumnStart = parseInt(inlineUrlMatch[2]);
+      const tagLineEnd = parseInt(inlineUrlMatch[3]);
+      const tagColumnEnd = parseInt(inlineUrlMatch[4]);
+      const extension = inlineUrlMatch[5];
       url = htmlUrl;
-      line = tagLine + parseInt(line) - 1;
-      column = tagColumn + parseInt(column);
+      line = tagLineStart + (line === undefined ? 0 : parseInt(line)); // stackTrace formatted by V8 (chrome)
+
+      if (Error.captureStackTrace) {
+        line--;
+      }
+
+      if (errorMeta.type === "dynamic_import_syntax_error") {
+        // syntax error on inline script need line-1 for some reason
+        if (Error.captureStackTrace) {
+          line--;
+        } else {
+          // firefox and safari need line-2
+          line -= 2;
+        }
+      }
+
+      column = tagColumnStart + (column === undefined ? 0 : parseInt(column));
+      const fileUrl = resolveFileUrl(url);
+      return {
+        isInline: true,
+        originalUrl: `${fileUrl}@L${tagLineStart}C${tagColumnStart}-L${tagLineEnd}C${tagColumnEnd}${extension}`,
+        url: fileUrl,
+        line,
+        column
+      };
     }
 
+    return {
+      isInline: false,
+      url: resolveFileUrl(url),
+      line,
+      column
+    };
+  };
+
+  const resolveFileUrl = url => {
     let urlObject = new URL(url);
 
     if (urlObject.origin === window.origin) {
@@ -61,19 +95,11 @@ const formatError = (error, {
 
       if (atFsIndex > -1) {
         const afterAtFs = urlObject.pathname.slice(atFsIndex + "/@fs/".length);
-        url = new URL(afterAtFs, "file:///").href;
-      } else {
-        url = urlObject.href;
+        return new URL(afterAtFs, "file:///").href;
       }
-    } else {
-      url = urlObject.href;
     }
 
-    return {
-      url,
-      line,
-      column
-    };
+    return urlObject.href;
   };
 
   const generateClickableText = text => {
@@ -110,22 +136,68 @@ const formatError = (error, {
     return textWithHtmlLinks;
   };
 
+  const formatErrorText = ({
+    message,
+    stack,
+    codeFrame
+  }) => {
+    let text;
+
+    if (message && stack) {
+      text = `${generateClickableText(message)}\n${generateClickableText(stack)}`;
+    } else if (stack) {
+      text = generateClickableText(stack);
+    } else {
+      text = generateClickableText(message);
+    }
+
+    if (codeFrame) {
+      text += `\n\n${generateClickableText(codeFrame)}`;
+    }
+
+    return text;
+  };
+
   const onErrorLocated = urlSite => {
     errorUrlSite = urlSite;
 
-    if (codeFrame) {
-      return;
-    }
+    errorDetailsPromiseReference.current = (async () => {
+      if (errorMeta.type === "dynamic_import_fetch_error") {
+        const response = await window.fetch(`/__get_error_cause__/${urlSite.isInline ? urlSite.originalUrl : urlSite.url}`);
 
-    if (reportedBy !== "browser") {
-      return;
-    }
+        if (response.status !== 200) {
+          return null;
+        }
 
-    codeFramePromiseReference.current = (async () => {
-      const response = await window.fetch(`/__get_code_frame__/${formatUrlWithLineAndColumn(urlSite)}`);
-      const codeFrame = await response.text();
-      const codeFrameClickable = generateClickableText(codeFrame);
-      return codeFrameClickable;
+        const causeInfo = await response.json();
+
+        if (!causeInfo) {
+          return null;
+        }
+
+        const causeText = causeInfo.code === "NOT_FOUND" ? formatErrorText({
+          message: causeInfo.reason,
+          stack: causeInfo.codeFrame
+        }) : formatErrorText({
+          message: causeInfo.stack,
+          stack: causeInfo.codeFrame
+        });
+        return {
+          cause: causeText
+        };
+      }
+
+      if (urlSite.line !== undefined) {
+        const response = await window.fetch(`/__get_code_frame__/${formatUrlWithLineAndColumn(urlSite)}`);
+        const codeFrame = await response.text();
+        return {
+          codeFrame: formatErrorText({
+            message: codeFrame
+          })
+        };
+      }
+
+      return null;
     })();
   }; // error.stack is more reliable than url/line/column reported on window error events
   // so use it only when error.stack is not available
@@ -138,31 +210,97 @@ const formatError = (error, {
       line,
       column
     }));
-  }
-
-  let text;
-
-  if (message && stack) {
-    text = `${generateClickableText(message)}\n${generateClickableText(stack)}`;
-  } else if (stack) {
-    text = generateClickableText(stack);
-  } else {
-    text = generateClickableText(message);
-  }
-
-  if (codeFrame) {
-    text += `\n\n${generateClickableText(codeFrame)}`;
+  } else if (errorMeta.url) {
+    onErrorLocated(resolveUrlSite(errorMeta));
   }
 
   return {
     theme: error && error.cause && error.cause.code === "PARSE_ERROR" ? "light" : "dark",
     title: "An error occured",
-    text,
-    codeFramePromise: codeFramePromiseReference.current,
+    text: formatErrorText({
+      message,
+      stack
+    }),
     tip: `${tip}
     <br />
-    Click outside to close.`
+    Click outside to close.`,
+    errorDetailsPromise: errorDetailsPromiseReference.current
   };
+};
+
+const extractErrorMeta = (error, {
+  line
+}) => {
+  if (!error) {
+    return {};
+  }
+
+  const {
+    message
+  } = error;
+
+  if (!message) {
+    return {};
+  }
+
+  {
+    // chrome
+    if (message.includes("does not provide an export named")) {
+      return {
+        type: "dynamic_import_export_missing"
+      };
+    } // firefox
+
+
+    if (message.startsWith("import not found:")) {
+      return {
+        type: "dynamic_import_export_missing",
+        browser: "firefox"
+      };
+    } // safari
+
+
+    if (message.startsWith("import binding name")) {
+      return {
+        type: "dynamic_import_export_missing"
+      };
+    }
+  }
+
+  {
+    if (error.name === "SyntaxError" && typeof line === "number") {
+      return {
+        type: "dynamic_import_syntax_error"
+      };
+    }
+  }
+
+  {
+    // chrome
+    if (message.startsWith("Failed to fetch dynamically imported module: ")) {
+      const url = error.message.slice("Failed to fetch dynamically imported module: ".length);
+      return {
+        type: "dynamic_import_fetch_error",
+        url
+      };
+    } // firefox
+
+
+    if (message === "error loading dynamically imported module") {
+      return {
+        type: "dynamic_import_fetch_error"
+      };
+    } // safari
+
+
+    if (message === "Importing a module script failed.") {
+      return {
+        type: "dynamic_import_fetch_error"
+      };
+    }
+  }
+
+  return {};
 };
 
 const formatUrlWithLineAndColumn = ({
@@ -249,17 +387,6 @@ const getErrorStackWithoutErrorMessage = error => {
   }
 
   return stack;
-};
-
-const formatTip = ({
-  reportedBy,
-  requestedRessource
-}) => {
-  if (reportedBy === "browser") {
-    return `Reported by the browser while executing <code>${window.location.pathname}${window.location.search}</code>.`;
-  }
-
-  return `Reported by the server while serving <code>${requestedRessource}</code>`;
 };
 
 const makeLinksClickable = (string, {
@@ -359,7 +486,6 @@ const link = ({
 }) => `<a href="${href}">${text}</a>`;
 
 const JSENV_ERROR_OVERLAY_TAGNAME = "jsenv-error-overlay";
-let previousErrorInfo = null;
 const displayErrorInDocument = (error, {
   rootDirectoryUrl,
   errorBaseUrl,
@@ -367,32 +493,14 @@ const displayErrorInDocument = (error, {
   url,
   line,
   column,
-  codeFrame,
-  reportedBy,
-  requestedRessource
+  codeFrame
 }) => {
-  const nowMs = Date.now(); // ensure error dispatched on window by browser is displayed first
-  // then the server error replaces it (because it contains more information)
-
-  if (previousErrorInfo) {
-    const previousErrorReportedBy = previousErrorInfo.reportedBy;
-    const msEllapsedSincePreviousError = nowMs - previousErrorInfo.ms;
-
-    if (previousErrorReportedBy === "server" && reportedBy === "browser" && msEllapsedSincePreviousError < 50) {
-      return () => {};
-    }
-  }
-
-  previousErrorInfo = {
-    ms: nowMs,
-    reportedBy
-  };
   const {
     theme,
     title,
     text,
-    codeFramePromise,
-    tip
+    tip,
+    errorDetailsPromise
   } = formatError(error, {
     rootDirectoryUrl,
     errorBaseUrl,
@@ -400,16 +508,14 @@ const displayErrorInDocument = (error, {
     url,
     line,
     column,
-    codeFrame,
-    reportedBy,
-    requestedRessource
+    codeFrame
   });
   let jsenvErrorOverlay = new JsenvErrorOverlay({
     theme,
     title,
     text,
-    codeFramePromise,
-    tip
+    tip,
+    errorDetailsPromise
   });
   document.querySelectorAll(JSENV_ERROR_OVERLAY_TAGNAME).forEach(node => {
     node.parentNode.removeChild(node);
@@ -439,8 +545,8 @@ class JsenvErrorOverlay extends HTMLElement {
     theme,
     title,
     text,
-    codeFramePromise,
-    tip
+    tip,
+    errorDetailsPromise
   }) {
     super();
     this.root = this.attachShadow({
@@ -471,16 +577,45 @@ class JsenvErrorOverlay extends HTMLElement {
       this.parentNode.removeChild(this);
     };
 
-    if (codeFramePromise) {
-      codeFramePromise.then(codeFrame => {
-        if (this.parentNode) {
+    if (errorDetailsPromise) {
+      errorDetailsPromise.then(errorDetails => {
+        if (!errorDetails || !this.parentNode) {
+          return;
+        }
+
+        const {
+          codeFrame,
+          cause
+        } = errorDetails;
+
+        if (codeFrame) {
           this.root.querySelector(".text").innerHTML += `\n\n${codeFrame}`;
+        }
+
+        if (cause) {
+          const causeIndented = prefixRemainingLines(cause, "  ");
+          this.root.querySelector(".text").innerHTML += `\n  [cause]: ${causeIndented}`;
         }
       });
     }
   }
 
 }
+
+const prefixRemainingLines = (text, prefix) => {
+  const lines = text.split(/\r?\n/);
+  const firstLine = lines.shift();
+  let result = firstLine;
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+    i++;
+    result += line.length ? `\n${prefix}${line}` : `\n`;
+  }
+
+  return result;
+};
 
 if (customElements && !customElements.get(JSENV_ERROR_OVERLAY_TAGNAME)) {
   customElements.define(JSENV_ERROR_OVERLAY_TAGNAME, JsenvErrorOverlay);
@@ -683,14 +818,18 @@ const installHtmlSupervisor = ({
     let completed;
     let result;
     let error;
+    const urlObject = new URL(src, window.location);
+
+    if (reload) {
+      urlObject.searchParams.set("hmr", Date.now());
+    }
+
+    __html_supervisor__.currentExecution = {
+      type: type === "module" ? "dynamic_import" : "script_injection",
+      url: urlObject.href
+    };
 
     try {
-      const urlObject = new URL(src, window.location);
-
-      if (reload) {
-        urlObject.searchParams.set("hmr", Date.now());
-      }
-
       result = await execute(urlObject.href);
       completed = true;
     } catch (e) {
@@ -711,6 +850,7 @@ const installHtmlSupervisor = ({
         console.groupEnd();
       }
 
+      __html_supervisor__.currentExecution = null;
       return;
     }
 
@@ -738,6 +878,8 @@ const installHtmlSupervisor = ({
     if (logs) {
       console.groupEnd();
     }
+
+    __html_supervisor__.currentExecution = null;
   };
 
   const classicExecutionQueue = createExecutionQueue(performExecution);
@@ -826,6 +968,21 @@ const installHtmlSupervisor = ({
   });
 
   if (errorOverlay) {
+    const onErrorReportedByBrowser = (error, {
+      url,
+      line,
+      column
+    }) => {
+      displayErrorInDocument(error, {
+        rootDirectoryUrl,
+        errorBaseUrl,
+        openInEditor,
+        url,
+        line,
+        column
+      });
+    };
+
     window.addEventListener("error", errorEvent => {
       if (!errorEvent.isTrusted) {
         // ignore custom error event (not sent by browser)
@@ -838,72 +995,12 @@ const installHtmlSupervisor = ({
         lineno,
         colno
       } = errorEvent;
-      displayErrorInDocument(error, {
-        rootDirectoryUrl,
-        errorBaseUrl,
-        openInEditor,
+      onErrorReportedByBrowser(error, {
         url: filename,
         line: lineno,
-        column: colno,
-        reportedBy: "browser"
+        column: colno
       });
     });
-
-    if (window.__server_events__) {
-      const isExecuting = () => {
-        if (pendingExecutionCount > 0) {
-          return true;
-        }
-
-        if (document.readyState === "loading" || document.readyState === "interactive") {
-          return true;
-        }
-
-        if (window.__reloader__ && window.__reloader__.status === "reloading") {
-          return true;
-        }
-
-        return false;
-      };
-
-      window.__server_events__.addEventCallbacks({
-        error_while_serving_file: serverErrorEvent => {
-          if (!isExecuting()) {
-            return;
-          }
-
-          const {
-            message,
-            stack,
-            traceUrl,
-            traceLine,
-            traceColumn,
-            traceMessage,
-            requestedRessource,
-            isFaviconAutoRequest
-          } = JSON.parse(serverErrorEvent.data);
-
-          if (isFaviconAutoRequest) {
-            return;
-          }
-
-          displayErrorInDocument({
-            message,
-            stack
-          }, {
-            rootDirectoryUrl,
-            errorBaseUrl,
-            openInEditor,
-            url: traceUrl,
-            line: traceLine,
-            column: traceColumn,
-            codeFrame: traceMessage,
-            reportedBy: "server",
-            requestedRessource
-          });
-        }
-      });
-    }
   }
 };
 

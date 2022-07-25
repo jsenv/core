@@ -30,6 +30,9 @@ export const createKitchen = ({
   rootDirectoryUrl,
   scenario,
   runtimeCompat,
+  // during dev/test clientRuntimeCompat is a single runtime
+  // during build clientRuntimeCompat is runtimeCompat
+  clientRuntimeCompat = runtimeCompat,
   urlGraph,
   plugins,
   sourcemaps = {
@@ -37,13 +40,8 @@ export const createKitchen = ({
     test: "inline",
     build: "none",
   }[scenario],
-  sourcemapsSourcesContent = {
-    // during dev/test, chrome is able to find the sourcemap sources
-    // as long as they use file:// protocol in the sourcemap files
-    dev: false,
-    test: false,
-    build: true,
-  }[scenario],
+  sourcemapsSourcesProtocol,
+  sourcemapsSourcesContent,
   sourcemapsRelativeSources,
   writeGeneratedFiles,
 }) => {
@@ -60,6 +58,10 @@ export const createKitchen = ({
     urlGraph,
     scenario,
     runtimeCompat,
+    clientRuntimeCompat,
+    isSupportedOnCurrentClients: (feature) => {
+      return RUNTIME_COMPAT.isSupported(clientRuntimeCompat, feature)
+    },
     isSupportedOnFutureClients: (feature) => {
       return RUNTIME_COMPAT.isSupported(runtimeCompat, feature)
     },
@@ -214,12 +216,15 @@ export const createKitchen = ({
     }
   }
   kitchenContext.resolveReference = resolveReference
+
   const urlInfoTransformer = createUrlInfoTransformer({
     logger,
     urlGraph,
     sourcemaps,
+    sourcemapsSourcesProtocol,
     sourcemapsSourcesContent,
     sourcemapsRelativeSources,
+    clientRuntimeCompat,
     injectSourcemapPlaceholder: ({ urlInfo, specifier }) => {
       const sourcemapReference = createReference({
         trace: {
@@ -356,16 +361,9 @@ export const createKitchen = ({
   }
 
   const _cook = async (urlInfo, dishContext) => {
-    // during dev/test clientRuntimeCompat is a single runtime
-    // during build clientRuntimeCompat is runtimeCompat
-    const { clientRuntimeCompat = runtimeCompat } = dishContext
-    kitchenContext.isSupportedOnCurrentClients = (feature) => {
-      return RUNTIME_COMPAT.isSupported(clientRuntimeCompat, feature)
-    }
     const context = {
       ...kitchenContext,
       ...dishContext,
-      clientRuntimeCompat,
     }
     const { cookDuringCook = cook } = dishContext
     context.cook = (urlInfo, nestedDishContext) => {
@@ -772,7 +770,7 @@ const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
     }
     urlInfo.contentType = reference.contentType
     urlInfo.originalContent =
-      context === "build"
+      context.scenario === "build"
         ? urlInfo.originalContent === undefined
           ? reference.content
           : urlInfo.originalContent

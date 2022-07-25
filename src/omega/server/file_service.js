@@ -34,17 +34,11 @@ export const createFileService = ({
   cooldownBetweenFileEvents,
   explorer,
   sourcemaps,
+  sourcemapsSourcesProtocol,
+  sourcemapsSourcesContent,
   writeGeneratedFiles,
 }) => {
   const jsenvDirectoryUrl = new URL(".jsenv/", rootDirectoryUrl).href
-  const onErrorWhileServingFileCallbacks = []
-  const onErrorWhileServingFile = (data) => {
-    onErrorWhileServingFileCallbacks.forEach(
-      (onErrorWhileServingFileCallback) => {
-        onErrorWhileServingFileCallback(data)
-      },
-    )
-  }
 
   const clientFileChangeCallbackList = []
   const clientFilesPruneCallbackList = []
@@ -113,6 +107,9 @@ export const createFileService = ({
       rootDirectoryUrl,
       scenario,
       runtimeCompat,
+      clientRuntimeCompat: {
+        [runtimeName]: runtimeVersion,
+      },
       urlGraph,
       plugins: [
         ...plugins,
@@ -134,6 +131,8 @@ export const createFileService = ({
         }),
       ],
       sourcemaps,
+      sourcemapsSourcesProtocol,
+      sourcemapsSourcesContent,
       writeGeneratedFiles,
     })
     serverStopCallbacks.push(() => {
@@ -169,28 +168,6 @@ export const createFileService = ({
               })
             },
           })
-        })
-        onErrorWhileServingFileCallbacks.push((data) => {
-          serverEventsDispatcher.dispatchToRoomsMatching(
-            {
-              type: "error_while_serving_file",
-              data,
-            },
-            (room) => {
-              // send only to page depending on this file
-              const errorFileUrl = data.url
-              const roomEntryPointUrl = new URL(
-                room.request.ressource.slice(1),
-                rootDirectoryUrl,
-              ).href
-              const isErrorRelatedToEntryPoint = Boolean(
-                urlGraph.findDependent(errorFileUrl, (dependentUrlInfo) => {
-                  return dependentUrlInfo.url === roomEntryPointUrl
-                }),
-              )
-              return isErrorRelatedToEntryPoint
-            },
-          )
         })
         // "unshift" because serve must come first to catch event source client request
         kitchen.pluginController.unshiftPlugin({
@@ -286,6 +263,7 @@ export const createFileService = ({
         !urlInfo.isInline &&
         urlInfo.type !== "sourcemap"
       ) {
+        urlInfo.error = null
         urlInfo.sourcemap = null
         urlInfo.sourcemapReference = null
         urlInfo.content = null
@@ -298,9 +276,6 @@ export const createFileService = ({
       await kitchen.cook(urlInfo, {
         request,
         reference,
-        clientRuntimeCompat: {
-          [runtimeName]: runtimeVersion,
-        },
         outDirectoryUrl:
           scenario === "dev"
             ? `${rootDirectoryUrl}.jsenv/${runtimeName}@${runtimeVersion}/`
@@ -333,18 +308,9 @@ export const createFileService = ({
       )
       return response
     } catch (e) {
+      urlInfo.error = e
       const code = e.code
       if (code === "PARSE_ERROR") {
-        onErrorWhileServingFile({
-          requestedRessource: request.ressource,
-          code: "PARSE_ERROR",
-          message: e.reason,
-          url: e.url,
-          traceUrl: e.traceUrl,
-          traceLine: e.traceLine,
-          traceColumn: e.traceColumn,
-          traceMessage: e.traceMessage,
-        })
         return {
           url: reference.url,
           status: 200, // let the browser re-throw the syntax error
@@ -375,19 +341,6 @@ export const createFileService = ({
         }
       }
       if (code === "NOT_FOUND") {
-        onErrorWhileServingFile({
-          requestedRessource: request.ressource,
-          isFaviconAutoRequest:
-            request.ressource === "/favicon.ico" &&
-            reference.type === "http_request",
-          code: "NOT_FOUND",
-          message: e.reason,
-          url: e.url,
-          traceUrl: e.traceUrl,
-          traceLine: e.traceLine,
-          traceColumn: e.traceColumn,
-          traceMessage: e.traceMessage,
-        })
         return {
           url: reference.url,
           status: 404,
@@ -395,16 +348,6 @@ export const createFileService = ({
           statusMessage: e.message,
         }
       }
-      onErrorWhileServingFile({
-        requestedRessource: request.ressource,
-        code: "UNEXPECTED",
-        stack: e.stack,
-        url: e.url,
-        traceUrl: e.traceUrl,
-        traceLine: e.traceLine,
-        traceColumn: e.traceColumn,
-        traceMessage: e.traceMessage,
-      })
       return {
         url: reference.url,
         status: 500,

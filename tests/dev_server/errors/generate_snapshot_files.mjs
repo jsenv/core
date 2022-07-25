@@ -1,12 +1,15 @@
-import { writeFileSync } from "@jsenv/filesystem"
+import { ensureEmptyDirectory, writeFileSync } from "@jsenv/filesystem"
 import { chromium, firefox, webkit } from "playwright"
 
 process.env.GENERATING_SNAPSHOTS = "true"
 const { devServer } = await import("./start_dev_server.mjs")
+const snapshotDirectoryUrl = new URL(`./snapshots/`, import.meta.url)
+const screenshotsDirectoryUrl = new URL(`./sceenshots/`, import.meta.url)
+await ensureEmptyDirectory(snapshotDirectoryUrl)
+await ensureEmptyDirectory(screenshotsDirectoryUrl)
 
 const test = async ({ browserLauncher, browserName }) => {
   const browser = await browserLauncher.launch({ headless: true })
-  const snapshotDirectoryUrl = new URL(`./snapshots/`, import.meta.url)
 
   const generateHtmlForStory = async ({
     story,
@@ -14,7 +17,13 @@ const test = async ({ browserLauncher, browserName }) => {
   }) => {
     const page = await browser.newPage()
     await page.goto(`${devServer.origin}/${story}/main.html`)
-    await page.waitForSelector("jsenv-error-overlay")
+    try {
+      await page.waitForSelector("jsenv-error-overlay", { timeout: 5_000 })
+    } catch (e) {
+      throw new Error(
+        `jsenv error overlay not displayed on ${browserName} for ${story}`,
+      )
+    }
     if (preferServerErrorReporting) {
       // wait a bit more to let server error replace browser error
       await new Promise((resolve) => setTimeout(resolve, 200))
@@ -39,7 +48,7 @@ const test = async ({ browserLauncher, browserName }) => {
       .locator("jsenv-error-overlay")
       .screenshot()
     writeFileSync(
-      new URL(`./${story}_${browserName}.png`, snapshotDirectoryUrl),
+      new URL(`./${story}_${browserName}.png`, screenshotsDirectoryUrl),
       sceenshotBuffer,
     )
     writeFileSync(
@@ -61,7 +70,6 @@ const test = async ({ browserLauncher, browserName }) => {
     })
     await generateHtmlForStory({
       story: "js_import_syntax_error",
-      preferServerErrorReporting: true,
     })
     await generateHtmlForStory({
       story: "js_throw",
@@ -79,29 +87,31 @@ const test = async ({ browserLauncher, browserName }) => {
     })
     await generateHtmlForStory({
       story: "script_module_inline_syntax_error",
-      preferServerErrorReporting: true,
     })
     await generateHtmlForStory({
       story: "script_module_inline_throw",
     })
     await generateHtmlForStory({
-      story: "script_src_not_found",
+      story: "undefined_is_not_a_function",
     })
   } finally {
     browser.close()
   }
 }
 
-await test({
-  browserLauncher: chromium,
-  browserName: "chromium",
-})
-await test({
-  browserLauncher: firefox,
-  browserName: "firefox",
-})
-await test({
-  browserLauncher: webkit,
-  browserName: "webkit",
-})
-devServer.stop()
+try {
+  await test({
+    browserLauncher: chromium,
+    browserName: "chromium",
+  })
+  await test({
+    browserLauncher: firefox,
+    browserName: "firefox",
+  })
+  await test({
+    browserLauncher: webkit,
+    browserName: "webkit",
+  })
+} finally {
+  devServer.stop()
+}

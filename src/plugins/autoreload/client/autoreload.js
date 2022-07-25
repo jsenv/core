@@ -15,6 +15,7 @@ const reloader = {
   isAutoreloadEnabled,
   setAutoreloadPreference,
   status: "idle",
+  currentExecution: null,
   onstatuschange: () => {},
   setStatus: (status) => {
     reloader.status = status
@@ -49,6 +50,7 @@ const reloader = {
       promise.then(
         () => {
           onApplied(reloadMessage)
+          reloader.currentExecution = null
         },
         (e) => {
           reloader.setStatus("failed")
@@ -61,6 +63,7 @@ const reloader = {
             `[jsenv] Hot reload failed after ${reloadMessage.reason}.
 This could be due to syntax errors or importing non-existent modules (see errors in console)`,
           )
+          reloader.currentExecution = null
         },
       )
     }
@@ -146,6 +149,10 @@ const applyHotReload = async ({ hotInstructions }) => {
           await urlHotMeta.disposeCallback()
         }
         console.log(`importing js module`)
+        reloader.currentExecution = {
+          type: "dynamic_import",
+          url: urlToFetch,
+        }
         const namespace = await reloadJsImport(urlToFetch)
         if (urlHotMeta.acceptCallback) {
           await urlHotMeta.acceptCallback(namespace)

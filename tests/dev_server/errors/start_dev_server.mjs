@@ -32,6 +32,8 @@ export const devServer = await startDevServer({
       },
     },
   ],
+  // sourcemaps: "file",
+  // sourcemapsSourcesProtocol: "source-maps://",
   explorer: {
     groups: {
       stories: {

@@ -70,6 +70,8 @@ export const startDevServer = async ({
   // toolbar = false,
 
   sourcemaps = "inline",
+  sourcemapsSourcesProtocol,
+  sourcemapsSourcesContent,
   writeGeneratedFiles = true,
 }) => {
   const logger = createLogger({ logLevel })
@@ -171,6 +173,8 @@ export const startDevServer = async ({
     cooldownBetweenFileEvents,
     explorer,
     sourcemaps,
+    sourcemapsSourcesProtocol,
+    sourcemapsSourcesContent,
     writeGeneratedFiles,
   })
   startDevServerTask.done()

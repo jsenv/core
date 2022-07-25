@@ -11,12 +11,29 @@ import {
 export const createUrlInfoTransformer = ({
   logger,
   sourcemaps,
+  sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
   sourcemapsRelativeSources,
   urlGraph,
+  clientRuntimeCompat,
   injectSourcemapPlaceholder,
   foundSourcemap,
 }) => {
+  const runtimeNames = Object.keys(clientRuntimeCompat)
+  const chromeAsSingleRuntime =
+    runtimeNames.length === 1 && runtimeNames[0] === "chrome"
+  if (sourcemapsSourcesProtocol === undefined) {
+    sourcemapsSourcesProtocol = "file:///"
+  }
+  if (sourcemapsSourcesContent === undefined) {
+    if (chromeAsSingleRuntime && sourcemapsSourcesProtocol === "file:///") {
+      // chrome is able to fetch source when referenced with "file:"
+      sourcemapsSourcesContent = false
+    } else {
+      sourcemapsSourcesContent = true
+    }
+  }
+
   const sourcemapsEnabled =
     sourcemaps === "inline" ||
     sourcemaps === "file" ||
@@ -170,6 +187,16 @@ export const createUrlInfoTransformer = ({
         sourcemap.sources = sourcemap.sources.map((source) => {
           const sourceRelative = urlToRelativeUrl(source, urlInfo.url)
           return sourceRelative || "."
+        })
+      }
+      if (sourcemapsSourcesProtocol !== "file:///") {
+        sourcemap.sources = sourcemap.sources.map((source) => {
+          if (source.startsWith("file:///")) {
+            return `${sourcemapsSourcesProtocol}${source.slice(
+              "file:///".length,
+            )}`
+          }
+          return source
         })
       }
       sourcemapUrlInfo.content = JSON.stringify(sourcemap, null, "  ")

@@ -9,5 +9,5 @@
 /secrets.json
 /yarn.lock
 .DS_STORE
-/todo.txt
+todo.txt
 /tests/**/dist/

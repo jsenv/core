@@ -2,8 +2,6 @@ import { formatError } from "./error_formatter.js"
 
 const JSENV_ERROR_OVERLAY_TAGNAME = "jsenv-error-overlay"
 
-let previousErrorInfo = null
-
 export const displayErrorInDocument = (
   error,
   {
@@ -14,41 +12,9 @@ export const displayErrorInDocument = (
     line,
     column,
     codeFrame,
-    reportedBy,
-    requestedRessource,
   },
 ) => {
-  const nowMs = Date.now()
-  // error reported by server contains more information than error
-  // reporter by browser.
-  // Most of the time server reports first and shortly after browser report the same
-  // error. In that case we want to ignore the browser error
-  if (previousErrorInfo) {
-    if (previousErrorInfo.reportedBy === "server" && reportedBy === "browser") {
-      const currentUrl = window.__html_supervisor__
-        ? window.__html_supervisor__.currentExecutionUrl
-        : null
-      const msEllapsedSincePreviousError = nowMs - previousErrorInfo.ms
-      if (
-        currentUrl &&
-        previousErrorInfo.url &&
-        currentUrl === previousErrorInfo.url &&
-        msEllapsedSincePreviousError < 1000
-      ) {
-        return () => {}
-      }
-      if (msEllapsedSincePreviousError < 250) {
-        return () => {}
-      }
-    }
-  }
-  previousErrorInfo = {
-    ms: nowMs,
-    reportedBy,
-    url,
-  }
-
-  const { theme, title, text, codeFramePromise, tip } = formatError(error, {
+  const { theme, title, text, tip, errorDetailsPromise } = formatError(error, {
     rootDirectoryUrl,
     errorBaseUrl,
     openInEditor,
@@ -56,16 +22,14 @@ export const displayErrorInDocument = (
     line,
     column,
     codeFrame,
-    reportedBy,
-    requestedRessource,
   })
 
   let jsenvErrorOverlay = new JsenvErrorOverlay({
     theme,
     title,
     text,
-    codeFramePromise,
     tip,
+    errorDetailsPromise,
   })
   document.querySelectorAll(JSENV_ERROR_OVERLAY_TAGNAME).forEach((node) => {
     node.parentNode.removeChild(node)
@@ -88,7 +52,7 @@ export const displayErrorInDocument = (
 }
 
 class JsenvErrorOverlay extends HTMLElement {
-  constructor({ theme, title, text, codeFramePromise, tip }) {
+  constructor({ theme, title, text, tip, errorDetailsPromise }) {
     super()
     this.root = this.attachShadow({ mode: "open" })
     this.root.innerHTML = `
@@ -113,14 +77,37 @@ class JsenvErrorOverlay extends HTMLElement {
       this.root.querySelector(".backdrop").onclick = null
       this.parentNode.removeChild(this)
     }
-    if (codeFramePromise) {
-      codeFramePromise.then((codeFrame) => {
-        if (this.parentNode) {
+    if (errorDetailsPromise) {
+      errorDetailsPromise.then((errorDetails) => {
+        if (!errorDetails || !this.parentNode) {
+          return
+        }
+        const { codeFrame, cause } = errorDetails
+        if (codeFrame) {
           this.root.querySelector(".text").innerHTML += `\n\n${codeFrame}`
+        }
+        if (cause) {
+          const causeIndented = prefixRemainingLines(cause, "  ")
+          this.root.querySelector(
+            ".text",
+          ).innerHTML += `\n  [cause]: ${causeIndented}`
         }
       })
     }
   }
+}
+
+const prefixRemainingLines = (text, prefix) => {
+  const lines = text.split(/\r?\n/)
+  const firstLine = lines.shift()
+  let result = firstLine
+  let i = 0
+  while (i < lines.length) {
+    const line = lines[i]
+    i++
+    result += line.length ? `\n${prefix}${line}` : `\n`
+  }
+  return result
 }
 
 if (customElements && !customElements.get(JSENV_ERROR_OVERLAY_TAGNAME)) {

@@ -12,7 +12,8 @@
   },
   "type": "module",
   "exports": {
-    ".": "./src/main.js"
+    ".": "./src/main.js",
+    "./*": "./*"
   },
   "scripts": {
     "test": "node --conditions=development ./scripts/test.mjs"

@@ -218,6 +218,7 @@ export const createUrlGraph = ({
 
 const createUrlInfo = (url) => {
   return {
+    error: null,
     modifiedTimestamp: 0,
     contentEtag: null,
     dependsOnPackageJson: false,

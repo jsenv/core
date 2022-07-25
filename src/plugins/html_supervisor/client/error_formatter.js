@@ -1,33 +1,59 @@
 export const formatError = (
   error,
-  {
-    rootDirectoryUrl,
-    errorBaseUrl,
-    openInEditor,
-    url,
-    line,
-    column,
-    codeFrame,
-    requestedRessource,
-    reportedBy,
-  },
+  { rootDirectoryUrl, errorBaseUrl, openInEditor, url, line, column },
 ) => {
   let { message, stack } = normalizeErrorParts(error)
-  let codeFramePromiseReference = { current: null }
-  let tip = formatTip({ reportedBy, requestedRessource })
+  let errorDetailsPromiseReference = { current: null }
+  let tip = `Reported by the browser while executing <code>${window.location.pathname}${window.location.search}</code>.`
   let errorUrlSite
 
+  const errorMeta = extractErrorMeta(error, { url, line, column })
+
   const resolveUrlSite = ({ url, line, column }) => {
-    const inlineUrlMatch = url.match(/@L([0-9]+)\-L([0-9]+)\.[\w]+$/)
+    const inlineUrlMatch = url.match(
+      /@L([0-9]+)C([0-9]+)\-L([0-9]+)C([0-9]+)(\.[\w]+)$/,
+    )
     if (inlineUrlMatch) {
       const htmlUrl = url.slice(0, inlineUrlMatch.index)
-      const tagLine = parseInt(inlineUrlMatch[1])
-      const tagColumn = parseInt(inlineUrlMatch[2])
+      const tagLineStart = parseInt(inlineUrlMatch[1])
+      const tagColumnStart = parseInt(inlineUrlMatch[2])
+      const tagLineEnd = parseInt(inlineUrlMatch[3])
+      const tagColumnEnd = parseInt(inlineUrlMatch[4])
+      const extension = inlineUrlMatch[5]
       url = htmlUrl
-      line = tagLine + parseInt(line) - 1
-      column = tagColumn + parseInt(column)
+      line = tagLineStart + (line === undefined ? 0 : parseInt(line))
+      // stackTrace formatted by V8 (chrome)
+      if (Error.captureStackTrace) {
+        line--
+      }
+      if (errorMeta.type === "dynamic_import_syntax_error") {
+        // syntax error on inline script need line-1 for some reason
+        if (Error.captureStackTrace) {
+          line--
+        } else {
+          // firefox and safari need line-2
+          line -= 2
+        }
+      }
+      column = tagColumnStart + (column === undefined ? 0 : parseInt(column))
+      const fileUrl = resolveFileUrl(url)
+      return {
+        isInline: true,
+        originalUrl: `${fileUrl}@L${tagLineStart}C${tagColumnStart}-L${tagLineEnd}C${tagColumnEnd}${extension}`,
+        url: fileUrl,
+        line,
+        column,
+      }
     }
+    return {
+      isInline: false,
+      url: resolveFileUrl(url),
+      line,
+      column,
+    }
+  }
 
+  const resolveFileUrl = (url) => {
     let urlObject = new URL(url)
     if (urlObject.origin === window.origin) {
       urlObject = new URL(
@@ -39,19 +65,10 @@ export const formatError = (
       const atFsIndex = urlObject.pathname.indexOf("/@fs/")
       if (atFsIndex > -1) {
         const afterAtFs = urlObject.pathname.slice(atFsIndex + "/@fs/".length)
-        url = new URL(afterAtFs, "file:///").href
-      } else {
-        url = urlObject.href
+        return new URL(afterAtFs, "file:///").href
       }
-    } else {
-      url = urlObject.href
     }
-
-    return {
-      url,
-      line,
-      column,
-    }
+    return urlObject.href
   }
 
   const generateClickableText = (text) => {
@@ -59,7 +76,7 @@ export const formatError = (
       createLink: (url, { line, column }) => {
         const urlSite = resolveUrlSite({ url, line, column })
         if (!errorUrlSite && text === stack) {
-          onErrorLocated(urlSite)
+          onErrorLocated(urlSite, "error.stack")
         }
         if (errorBaseUrl) {
           if (urlSite.url.startsWith(rootDirectoryUrl)) {
@@ -83,21 +100,64 @@ export const formatError = (
     return textWithHtmlLinks
   }
 
+  const formatErrorText = ({ message, stack, codeFrame }) => {
+    let text
+    if (message && stack) {
+      text = `${generateClickableText(message)}\n${generateClickableText(
+        stack,
+      )}`
+    } else if (stack) {
+      text = generateClickableText(stack)
+    } else {
+      text = generateClickableText(message)
+    }
+    if (codeFrame) {
+      text += `\n\n${generateClickableText(codeFrame)}`
+    }
+    return text
+  }
+
   const onErrorLocated = (urlSite) => {
     errorUrlSite = urlSite
-    if (codeFrame) {
-      return
-    }
-    if (reportedBy !== "browser") {
-      return
-    }
-    codeFramePromiseReference.current = (async () => {
-      const response = await window.fetch(
-        `/__get_code_frame__/${formatUrlWithLineAndColumn(urlSite)}`,
-      )
-      const codeFrame = await response.text()
-      const codeFrameClickable = generateClickableText(codeFrame)
-      return codeFrameClickable
+    errorDetailsPromiseReference.current = (async () => {
+      if (errorMeta.type === "dynamic_import_fetch_error") {
+        const response = await window.fetch(
+          `/__get_error_cause__/${
+            urlSite.isInline ? urlSite.originalUrl : urlSite.url
+          }`,
+        )
+        if (response.status !== 200) {
+          return null
+        }
+        const causeInfo = await response.json()
+        if (!causeInfo) {
+          return null
+        }
+
+        const causeText =
+          causeInfo.code === "NOT_FOUND"
+            ? formatErrorText({
+                message: causeInfo.reason,
+                stack: causeInfo.codeFrame,
+              })
+            : formatErrorText({
+                message: causeInfo.stack,
+                stack: causeInfo.codeFrame,
+              })
+        return {
+          cause: causeText,
+        }
+      }
+      if (urlSite.line !== undefined) {
+        const response = await window.fetch(
+          `/__get_code_frame__/${formatUrlWithLineAndColumn(urlSite)}`,
+        )
+        const codeFrame = await response.text()
+        return {
+          codeFrame: formatErrorText({ message: codeFrame }),
+        }
+      }
+      return null
     })()
   }
 
@@ -110,20 +170,8 @@ export const formatError = (
     !url.endsWith("html_supervisor_installer.js")
   ) {
     onErrorLocated(resolveUrlSite({ url, line, column }))
-  }
-
-  let text
-
-  if (message && stack) {
-    text = `${generateClickableText(message)}\n${generateClickableText(stack)}`
-  } else if (stack) {
-    text = generateClickableText(stack)
-  } else {
-    text = generateClickableText(message)
-  }
-
-  if (codeFrame) {
-    text += `\n\n${generateClickableText(codeFrame)}`
+  } else if (errorMeta.url) {
+    onErrorLocated(resolveUrlSite(errorMeta))
   }
 
   return {
@@ -132,12 +180,79 @@ export const formatError = (
         ? "light"
         : "dark",
     title: "An error occured",
-    text,
-    codeFramePromise: codeFramePromiseReference.current,
+    text: formatErrorText({ message, stack }),
     tip: `${tip}
     <br />
     Click outside to close.`,
+    errorDetailsPromise: errorDetailsPromiseReference.current,
   }
+}
+
+const extractErrorMeta = (error, { line }) => {
+  if (!error) {
+    return {}
+  }
+  const { message } = error
+  if (!message) {
+    return {}
+  }
+
+  export_missing: {
+    // chrome
+    if (message.includes("does not provide an export named")) {
+      return {
+        type: "dynamic_import_export_missing",
+      }
+    }
+    // firefox
+    if (message.startsWith("import not found:")) {
+      return {
+        type: "dynamic_import_export_missing",
+        browser: "firefox",
+      }
+    }
+    // safari
+    if (message.startsWith("import binding name")) {
+      return {
+        type: "dynamic_import_export_missing",
+      }
+    }
+  }
+
+  js_syntax_error: {
+    if (error.name === "SyntaxError" && typeof line === "number") {
+      return {
+        type: "dynamic_import_syntax_error",
+      }
+    }
+  }
+
+  fetch_error: {
+    // chrome
+    if (message.startsWith("Failed to fetch dynamically imported module: ")) {
+      const url = error.message.slice(
+        "Failed to fetch dynamically imported module: ".length,
+      )
+      return {
+        type: "dynamic_import_fetch_error",
+        url,
+      }
+    }
+    // firefox
+    if (message === "error loading dynamically imported module") {
+      return {
+        type: "dynamic_import_fetch_error",
+      }
+    }
+    // safari
+    if (message === "Importing a module script failed.") {
+      return {
+        type: "dynamic_import_fetch_error",
+      }
+    }
+  }
+
+  return {}
 }
 
 const formatUrlWithLineAndColumn = ({ url, line, column }) => {
@@ -211,13 +326,6 @@ const getErrorStackWithoutErrorMessage = (error) => {
     stack = stack.slice(nextLineIndex + 1)
   }
   return stack
-}
-
-const formatTip = ({ reportedBy, requestedRessource }) => {
-  if (reportedBy === "browser") {
-    return `Reported by the browser while executing <code>${window.location.pathname}${window.location.search}</code>.`
-  }
-  return `Reported by the server while serving <code>${requestedRessource}</code>`
 }
 
 const makeLinksClickable = (string, { createLink = (url) => url }) => {
