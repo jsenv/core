@@ -217,21 +217,6 @@ export const createKitchen = ({
   }
   kitchenContext.resolveReference = resolveReference
 
-  const runtimeNames = Object.keys(clientRuntimeCompat)
-  const chromeAsSingleRuntime =
-    runtimeNames.length === 1 && runtimeNames[0] === "chrome"
-  if (sourcemapsSourcesProtocol === undefined) {
-    sourcemapsSourcesProtocol = "file:///"
-  }
-  if (sourcemapsSourcesContent === undefined) {
-    if (chromeAsSingleRuntime && sourcemapsSourcesProtocol === "file:///") {
-      // chrome is able to fetch source when referenced with "file:"
-      sourcemapsSourcesContent = false
-    } else {
-      sourcemapsSourcesContent = true
-    }
-  }
-
   const urlInfoTransformer = createUrlInfoTransformer({
     logger,
     urlGraph,
@@ -239,6 +224,7 @@ export const createKitchen = ({
     sourcemapsSourcesProtocol,
     sourcemapsSourcesContent,
     sourcemapsRelativeSources,
+    clientRuntimeCompat,
     injectSourcemapPlaceholder: ({ urlInfo, specifier }) => {
       const sourcemapReference = createReference({
         trace: {

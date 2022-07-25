@@ -38,6 +38,8 @@ export const startOmegaServer = async ({
   cooldownBetweenFileEvents,
   explorer,
   sourcemaps,
+  sourcemapsSourcesProtocol,
+  sourcemapsSourcesContent,
   writeGeneratedFiles,
 }) => {
   const serverStopCallbacks = []
@@ -93,6 +95,8 @@ export const startOmegaServer = async ({
           cooldownBetweenFileEvents,
           explorer,
           sourcemaps,
+          sourcemapsSourcesProtocol,
+          sourcemapsSourcesContent,
           writeGeneratedFiles,
         }),
       },

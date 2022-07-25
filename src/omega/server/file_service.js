@@ -34,6 +34,8 @@ export const createFileService = ({
   cooldownBetweenFileEvents,
   explorer,
   sourcemaps,
+  sourcemapsSourcesProtocol,
+  sourcemapsSourcesContent,
   writeGeneratedFiles,
 }) => {
   const jsenvDirectoryUrl = new URL(".jsenv/", rootDirectoryUrl).href
@@ -129,6 +131,8 @@ export const createFileService = ({
         }),
       ],
       sourcemaps,
+      sourcemapsSourcesProtocol,
+      sourcemapsSourcesContent,
       writeGeneratedFiles,
     })
     serverStopCallbacks.push(() => {

@@ -76,7 +76,7 @@ export const formatError = (
       createLink: (url, { line, column }) => {
         const urlSite = resolveUrlSite({ url, line, column })
         if (!errorUrlSite && text === stack) {
-          onErrorLocated(urlSite)
+          onErrorLocated(urlSite, "error.stack")
         }
         if (errorBaseUrl) {
           if (urlSite.url.startsWith(rootDirectoryUrl)) {
