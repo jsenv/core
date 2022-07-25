@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/sourcemap",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -12,7 +12,8 @@
   },
   "type": "module",
   "exports": {
-    ".": "./src/main.js"
+    ".": "./src/main.js",
+    "./*": "./*"
   },
   "scripts": {
     "test": "node --conditions=development ./scripts/test.mjs"
