@@ -12127,13 +12127,13 @@ const jsenvPluginHtmlSupervisor = ({
         };
 
         const causeInfo = getErrorCauseInfo();
-        const body = JSON.stringify({
+        const body = JSON.stringify(causeInfo ? {
           code: causeInfo.code,
           message: causeInfo.message,
           reason: causeInfo.reason,
           stack: causeInfo.stack,
           codeFrame: causeInfo.traceMessage
-        }, null, "  ");
+        } : null, null, "  ");
         return {
           status: 200,
           headers: {

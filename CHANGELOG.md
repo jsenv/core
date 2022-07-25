@@ -1,3 +1,9 @@
+# 27.6.0
+
+- add code frame in error overlay for fetch/parse/execute errors
+- generate error overlay screenshots for firefox and webkit too
+- fix cannot fetch file: on sourcemap in Firefox and webkit
+
 # 27.5.3
 
 - use a more resilient logic to choose between browser and server error
