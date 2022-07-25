@@ -6,6 +6,7 @@ const { devServer } = await import("./start_dev_server.mjs")
 
 const test = async ({ browserLauncher, browserName }) => {
   const browser = await browserLauncher.launch({ headless: true })
+  const screenshotsDirectoryUrl = new URL(`./sceenshots/`, import.meta.url)
   const snapshotDirectoryUrl = new URL(`./snapshots/`, import.meta.url)
 
   const generateHtmlForStory = async ({
@@ -39,7 +40,7 @@ const test = async ({ browserLauncher, browserName }) => {
       .locator("jsenv-error-overlay")
       .screenshot()
     writeFileSync(
-      new URL(`./${story}_${browserName}.png`, snapshotDirectoryUrl),
+      new URL(`./${story}_${browserName}.png`, screenshotsDirectoryUrl),
       sceenshotBuffer,
     )
     writeFileSync(
@@ -61,7 +62,6 @@ const test = async ({ browserLauncher, browserName }) => {
     })
     await generateHtmlForStory({
       story: "js_import_syntax_error",
-      preferServerErrorReporting: true,
     })
     await generateHtmlForStory({
       story: "js_throw",
@@ -79,7 +79,6 @@ const test = async ({ browserLauncher, browserName }) => {
     })
     await generateHtmlForStory({
       story: "script_module_inline_syntax_error",
-      preferServerErrorReporting: true,
     })
     await generateHtmlForStory({
       story: "script_module_inline_throw",
