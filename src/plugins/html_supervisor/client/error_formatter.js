@@ -7,7 +7,7 @@ export const formatError = (
   let tip = `Reported by the browser while executing <code>${window.location.pathname}${window.location.search}</code>.`
   let errorUrlSite
 
-  const errorMeta = extractErrorMeta(error)
+  const errorMeta = extractErrorMeta(error, { url, line, column })
 
   const resolveUrlSite = ({ url, line, column }) => {
     const inlineUrlMatch = url.match(/@L([0-9]+)\-L([0-9]+)\.[\w]+$/)
@@ -16,17 +16,20 @@ export const formatError = (
       const tagLine = parseInt(inlineUrlMatch[1])
       const tagColumn = parseInt(inlineUrlMatch[2])
       url = htmlUrl
-      line = tagLine + parseInt(line) - 1
+      line = tagLine + parseInt(line)
+      // stackTrace formatted by V8 (chrome)
+      if (Error.captureStackTrace) {
+        line--
+      }
       if (error.name === "SyntaxError") {
-        if (
-          errorMeta.type === "export_missing" &&
-          errorMeta.browser === "firefox"
-        ) {
-          // inline import not found needs line+1 on firefox
-          line++
-        } else if (errorMeta.type === undefined) {
+        if (errorMeta.type === "dynamic_import_syntax_error") {
           // syntax error on inline script need line-1 for some reason
-          line--
+          if (Error.captureStackTrace) {
+            line--
+          } else {
+            // firefox and safari need line-2
+            line -= 2
+          }
         }
       }
       column = tagColumn + parseInt(column)
@@ -107,7 +110,33 @@ export const formatError = (
   const onErrorLocated = (urlSite) => {
     errorUrlSite = urlSite
     errorDetailsPromiseReference.current = (async () => {
-      if (error.name === "SyntaxError" && typeof urlSite.line === "number") {
+      if (errorMeta.type === "dynamic_import_fetch_error") {
+        const response = await window.fetch(
+          `/__get_error_cause__/${urlSite.url}`,
+        )
+        if (response.status !== 200) {
+          return null
+        }
+        const causeInfo = await response.json()
+        if (!causeInfo) {
+          return null
+        }
+
+        const causeText =
+          causeInfo.code === "NOT_FOUND"
+            ? formatErrorText({
+                message: causeInfo.reason,
+                stack: causeInfo.codeFrame,
+              })
+            : formatErrorText({
+                message: causeInfo.stack,
+                stack: causeInfo.codeFrame,
+              })
+        return {
+          cause: causeText,
+        }
+      }
+      if (typeof urlSite.line === "number") {
         const response = await window.fetch(
           `/__get_code_frame__/${formatUrlWithLineAndColumn(urlSite)}`,
         )
@@ -116,30 +145,7 @@ export const formatError = (
           codeFrame: formatErrorText({ message: codeFrame }),
         }
       }
-      // for 404 and 500 we can recognize the message
-
-      const response = await window.fetch(`/__get_error_cause__/${urlSite.url}`)
-      if (response.status !== 200) {
-        return null
-      }
-      const causeInfo = await response.json()
-      if (!causeInfo) {
-        return null
-      }
-
-      const causeText =
-        causeInfo.code === "NOT_FOUND"
-          ? formatErrorText({
-              message: causeInfo.reason,
-              stack: causeInfo.codeFrame,
-            })
-          : formatErrorText({
-              message: causeInfo.stack,
-              stack: causeInfo.codeFrame,
-            })
-      return {
-        cause: causeText,
-      }
+      return null
     })()
   }
 
@@ -170,13 +176,21 @@ export const formatError = (
   }
 }
 
-const extractErrorMeta = (error) => {
+const extractErrorMeta = (error, { line }) => {
   if (!error) {
     return {}
   }
   const { message } = error
   if (!message) {
     return {}
+  }
+
+  js_syntax_error: {
+    if (error.name === "SyntaxError" && typeof line === "number") {
+      return {
+        type: "dynamic_import_syntax_error",
+      }
+    }
   }
 
   fetch_error: {
@@ -208,20 +222,20 @@ const extractErrorMeta = (error) => {
     // chrome
     if (message.includes("does not provide an export named")) {
       return {
-        type: "export_missing",
+        type: "dynamic_import_export_missing",
       }
     }
     // firefox
     if (message.startsWith("import not found:")) {
       return {
-        type: "export_missing",
+        type: "dynamic_import_export_missing",
         browser: "firefox",
       }
     }
     // safari
     if (message.startsWith("import binding name")) {
       return {
-        type: "export_missing",
+        type: "dynamic_import_export_missing",
       }
     }
   }
