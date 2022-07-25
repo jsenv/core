@@ -335,16 +335,6 @@ export const createFileService = ({
     } catch (e) {
       const code = e.code
       if (code === "PARSE_ERROR") {
-        onErrorWhileServingFile({
-          requestedRessource: request.ressource,
-          code: "PARSE_ERROR",
-          message: e.reason,
-          url: e.url,
-          traceUrl: e.traceUrl,
-          traceLine: e.traceLine,
-          traceColumn: e.traceColumn,
-          traceMessage: e.traceMessage,
-        })
         return {
           url: reference.url,
           status: 200, // let the browser re-throw the syntax error

@@ -2,8 +2,6 @@ import { formatError } from "./error_formatter.js"
 
 const JSENV_ERROR_OVERLAY_TAGNAME = "jsenv-error-overlay"
 
-let previousErrorInfo = null
-
 export const displayErrorInDocument = (
   error,
   {
@@ -18,36 +16,6 @@ export const displayErrorInDocument = (
     requestedRessource,
   },
 ) => {
-  const nowMs = Date.now()
-  // error reported by server contains more information than error
-  // reporter by browser.
-  // Most of the time server reports first and shortly after browser report the same
-  // error. In that case we want to ignore the browser error
-  if (previousErrorInfo) {
-    if (previousErrorInfo.reportedBy === "server" && reportedBy === "browser") {
-      const currentUrl = window.__html_supervisor__
-        ? window.__html_supervisor__.currentExecutionUrl
-        : null
-      const msEllapsedSincePreviousError = nowMs - previousErrorInfo.ms
-      if (
-        currentUrl &&
-        previousErrorInfo.url &&
-        currentUrl === previousErrorInfo.url &&
-        msEllapsedSincePreviousError < 1000
-      ) {
-        return () => {}
-      }
-      if (msEllapsedSincePreviousError < 250) {
-        return () => {}
-      }
-    }
-  }
-  previousErrorInfo = {
-    ms: nowMs,
-    reportedBy,
-    url,
-  }
-
   const { theme, title, text, codeFramePromise, tip } = formatError(error, {
     rootDirectoryUrl,
     errorBaseUrl,

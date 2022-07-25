@@ -92,16 +92,19 @@ const test = async ({ browserLauncher, browserName }) => {
   }
 }
 
-await test({
-  browserLauncher: chromium,
-  browserName: "chromium",
-})
-await test({
-  browserLauncher: firefox,
-  browserName: "firefox",
-})
-await test({
-  browserLauncher: webkit,
-  browserName: "webkit",
-})
-devServer.stop()
+try {
+  await test({
+    browserLauncher: chromium,
+    browserName: "chromium",
+  })
+  // await test({
+  //   browserLauncher: firefox,
+  //   browserName: "firefox",
+  // })
+  // await test({
+  //   browserLauncher: webkit,
+  //   browserName: "webkit",
+  // })
+} finally {
+  devServer.stop()
+}

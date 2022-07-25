@@ -92,7 +92,10 @@ export const installHtmlSupervisor = ({
     if (reload) {
       urlObject.searchParams.set("hmr", Date.now())
     }
-    __html_supervisor__.currentExecutionUrl = urlObject.href
+    __html_supervisor__.currentExecution = {
+      type: type === "module" ? "dynamic_import" : "script_injection",
+      url: urlObject.href,
+    }
     try {
       result = await execute(urlObject.href)
       completed = true
@@ -111,7 +114,7 @@ export const installHtmlSupervisor = ({
         console.log(`${type} load ended`)
         console.groupEnd()
       }
-      __html_supervisor__.currentExecutionUrl = undefined
+      __html_supervisor__.currentExecution = null
       return
     }
     const executionResult = {
@@ -142,7 +145,7 @@ export const installHtmlSupervisor = ({
     if (logs) {
       console.groupEnd()
     }
-    __html_supervisor__.currentExecutionUrl = undefined
+    __html_supervisor__.currentExecution = null
   }
 
   const classicExecutionQueue = createExecutionQueue(performExecution)
@@ -223,20 +226,84 @@ export const installHtmlSupervisor = ({
   })
 
   if (errorOverlay) {
+    // Some errors are reported both by the server and the browser.
+    // - 404 on dynamic import
+    // - 500 on dynamic import
+    // - js syntax errors
+    // In that case we want to favor the server error as it contains more info.
+    // - Most of the time server reports first and shortly after browser reports the same error
+    // - Browser don't give much details about the error cause
+    // So in the end there is 2 mecanism to favor server errors:
+    // - Discard browser error when we know it will be reported by server too
+    // - An optimist setTimeout on server errors
+    // It that fails the error overlay will just contain less info about the error
+    const isJsenvExecutingADynamicImport = () => {
+      if (
+        window.__html_supervisor__.currentExecution &&
+        window.__html_supervisor__.currentExecution.type === "dynamic_import"
+      ) {
+        return true
+      }
+      if (
+        window.__reloader__ &&
+        window.__reloader__.currentExecution &&
+        window.__reloader__.currentExecution.type === "dynamic_import"
+      ) {
+        return true
+      }
+      return false
+    }
+    const isReportedByBrowserAndServer = () => {
+      // TODO
+      return false
+    }
+    const onErrorReportedByBrowser = (error, { url, line, column }) => {
+      if (
+        isJsenvExecutingADynamicImport() &&
+        isReportedByBrowserAndServer(error)
+      ) {
+        return
+      }
+      // are we doing a dynamic import?
+      displayErrorInDocument(error, {
+        rootDirectoryUrl,
+        errorBaseUrl,
+        openInEditor,
+        url,
+        line,
+        column,
+        reportedBy: "browser",
+      })
+    }
+    const onErrorReportedByServer = (
+      error,
+      { url, line, column, codeFrame, requestedRessource },
+    ) => {
+      setTimeout(() => {
+        displayErrorInDocument(error, {
+          rootDirectoryUrl,
+          errorBaseUrl,
+          openInEditor,
+          url,
+          line,
+          column,
+          codeFrame,
+          requestedRessource,
+          reportedBy: "server",
+        })
+      })
+    }
+
     window.addEventListener("error", (errorEvent) => {
       if (!errorEvent.isTrusted) {
         // ignore custom error event (not sent by browser)
         return
       }
       const { error, filename, lineno, colno } = errorEvent
-      displayErrorInDocument(error, {
-        rootDirectoryUrl,
-        errorBaseUrl,
-        openInEditor,
+      onErrorReportedByBrowser(error, {
         url: filename,
         line: lineno,
         column: colno,
-        reportedBy: "browser",
       })
     })
     if (window.__server_events__) {
@@ -273,20 +340,16 @@ export const installHtmlSupervisor = ({
           if (isFaviconAutoRequest) {
             return
           }
-          displayErrorInDocument(
+          onErrorReportedByServer(
             {
               message,
               stack,
             },
             {
-              rootDirectoryUrl,
-              errorBaseUrl,
-              openInEditor,
               url: traceUrl,
               line: traceLine,
               column: traceColumn,
               codeFrame: traceMessage,
-              reportedBy: "server",
               requestedRessource,
             },
           )
