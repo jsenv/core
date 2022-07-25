@@ -7,6 +7,8 @@ export const formatError = (
   let tip = `Reported by the browser while executing <code>${window.location.pathname}${window.location.search}</code>.`
   let errorUrlSite
 
+  const errorMeta = extractErrorMeta(error)
+
   const resolveUrlSite = ({ url, line, column }) => {
     const inlineUrlMatch = url.match(/@L([0-9]+)\-L([0-9]+)\.[\w]+$/)
     if (inlineUrlMatch) {
@@ -16,13 +18,15 @@ export const formatError = (
       url = htmlUrl
       line = tagLine + parseInt(line) - 1
       if (error.name === "SyntaxError") {
-        const exportMissingBrowser = getExportMissingError(error)
-        if (exportMissingBrowser === null) {
-          // syntax error on inline script need line-1 for some reason
-          line--
-        } else if (exportMissingBrowser === "firefox") {
+        if (
+          errorMeta.type === "export_missing" &&
+          errorMeta.browser === "firefox"
+        ) {
           // inline import not found needs line+1 on firefox
           line++
+        } else if (errorMeta.type === undefined) {
+          // syntax error on inline script need line-1 for some reason
+          line--
         }
       }
       column = tagColumn + parseInt(column)
@@ -112,6 +116,7 @@ export const formatError = (
           codeFrame: formatErrorText({ message: codeFrame }),
         }
       }
+      // for 404 and 500 we can recognize the message
 
       const response = await window.fetch(`/__get_error_cause__/${urlSite.url}`)
       if (response.status !== 200) {
@@ -147,11 +152,8 @@ export const formatError = (
     !url.endsWith("html_supervisor_installer.js")
   ) {
     onErrorLocated(resolveUrlSite({ url, line, column }))
-  } else {
-    const extractedErrorLocation = extractErrorLocation(error)
-    if (extractedErrorLocation) {
-      onErrorLocated(resolveUrlSite(extractedErrorLocation))
-    }
+  } else if (errorMeta.url) {
+    onErrorLocated(resolveUrlSite(errorMeta))
   }
 
   return {
@@ -168,30 +170,63 @@ export const formatError = (
   }
 }
 
-const extractErrorLocation = (error) => {
-  // 404 on chrome
-  if (
-    error &&
-    error.message.startsWith("Failed to fetch dynamically imported module: ")
-  ) {
-    const url = error.message.slice(
-      "Failed to fetch dynamically imported module: ".length,
-    )
-    return { url }
+const extractErrorMeta = (error) => {
+  if (!error) {
+    return {}
   }
-  return null
-}
+  const { message } = error
+  if (!message) {
+    return {}
+  }
 
-const getExportMissingError = (error) => {
-  // chrome
-  if (error.message.includes("does not provide an export named")) {
-    return "chrome"
+  fetch_error: {
+    // chrome
+    if (message.startsWith("Failed to fetch dynamically imported module: ")) {
+      const url = error.message.slice(
+        "Failed to fetch dynamically imported module: ".length,
+      )
+      return {
+        type: "dynamic_import_fetch_error",
+        url,
+      }
+    }
+    // firefox
+    if (message === "error loading dynamically imported module") {
+      return {
+        type: "dynamic_import_fetch_error",
+      }
+    }
+    // safari
+    if (message === "Importing a module script failed.") {
+      return {
+        type: "dynamic_import_fetch_error",
+      }
+    }
   }
-  // firefox
-  if (error.message.startsWith("import not found:")) {
-    return "firefox"
+
+  export_missing: {
+    // chrome
+    if (message.includes("does not provide an export named")) {
+      return {
+        type: "export_missing",
+      }
+    }
+    // firefox
+    if (message.startsWith("import not found:")) {
+      return {
+        type: "export_missing",
+        browser: "firefox",
+      }
+    }
+    // safari
+    if (message.startsWith("import binding name")) {
+      return {
+        type: "export_missing",
+      }
+    }
   }
-  return null
+
+  return {}
 }
 
 const formatUrlWithLineAndColumn = ({ url, line, column }) => {

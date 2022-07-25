@@ -1,13 +1,15 @@
-import { writeFileSync } from "@jsenv/filesystem"
+import { ensureEmptyDirectory, writeFileSync } from "@jsenv/filesystem"
 import { chromium, firefox, webkit } from "playwright"
 
 process.env.GENERATING_SNAPSHOTS = "true"
 const { devServer } = await import("./start_dev_server.mjs")
+const snapshotDirectoryUrl = new URL(`./snapshots/`, import.meta.url)
+const screenshotsDirectoryUrl = new URL(`./sceenshots/`, import.meta.url)
+await ensureEmptyDirectory(snapshotDirectoryUrl)
+await ensureEmptyDirectory(screenshotsDirectoryUrl)
 
 const test = async ({ browserLauncher, browserName }) => {
   const browser = await browserLauncher.launch({ headless: true })
-  const screenshotsDirectoryUrl = new URL(`./sceenshots/`, import.meta.url)
-  const snapshotDirectoryUrl = new URL(`./snapshots/`, import.meta.url)
 
   const generateHtmlForStory = async ({
     story,
@@ -99,14 +101,14 @@ try {
     browserLauncher: chromium,
     browserName: "chromium",
   })
-  // await test({
-  //   browserLauncher: firefox,
-  //   browserName: "firefox",
-  // })
-  // await test({
-  //   browserLauncher: webkit,
-  //   browserName: "webkit",
-  // })
+  await test({
+    browserLauncher: firefox,
+    browserName: "firefox",
+  })
+  await test({
+    browserLauncher: webkit,
+    browserName: "webkit",
+  })
 } finally {
   devServer.stop()
 }
