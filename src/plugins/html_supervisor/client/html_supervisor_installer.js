@@ -229,7 +229,6 @@ export const installHtmlSupervisor = ({
     // Some errors are reported both by the server and the browser.
     // - 404 on dynamic import
     // - 500 on dynamic import
-    // - js syntax errors
     // In that case we want to favor the server error as it contains more info.
     // - Most of the time server reports first and shortly after browser reports the same error
     // - Browser don't give much details about the error cause

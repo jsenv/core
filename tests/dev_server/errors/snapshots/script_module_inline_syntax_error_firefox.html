@@ -2,12 +2,15 @@
   <h1 class="title">
     An error occured
   </h1>
-  <pre class="text">Unexpected token (3:4)
+  <pre class="text">expected expression, got end of script
 
-<a href="javascript:window.fetch('/__open_in_editor__/file:///script_module_inline_syntax_error/main.html:NaN:NaN')">file:///script_module_inline_syntax_error/main.html:NaN:NaN</a>
-</pre>
+<a href="javascript:window.fetch('/__open_in_editor__/file:///script_module_inline_syntax_error/main.html:10:15')">file:///script_module_inline_syntax_error/main.html:10:15</a>
+  9  |     <script type="module">
+> 10 |       const browser = (
+                     ^
+  11 |     </script></pre>
   <div class="tip">
-    Reported by the server while serving <code>/script_module_inline_syntax_error/main.html@L9-L11.js</code>
+    Reported by the browser while executing <code>/script_module_inline_syntax_error/main.html</code>.
     <br>
     Click outside to close.
   </div>
