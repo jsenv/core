@@ -148,7 +148,7 @@ export const formatError = (
           cause: causeText,
         }
       }
-      if (typeof urlSite.line === "number") {
+      if (urlSite.line !== undefined) {
         const response = await window.fetch(
           `/__get_code_frame__/${formatUrlWithLineAndColumn(urlSite)}`,
         )
