@@ -10,13 +10,18 @@ export const formatError = (
   const errorMeta = extractErrorMeta(error, { url, line, column })
 
   const resolveUrlSite = ({ url, line, column }) => {
-    const inlineUrlMatch = url.match(/@L([0-9]+)\-L([0-9]+)\.[\w]+$/)
+    const inlineUrlMatch = url.match(
+      /@L([0-9]+)C([0-9]+)\-L([0-9]+)C([0-9]+)(\.[\w]+)$/,
+    )
     if (inlineUrlMatch) {
       const htmlUrl = url.slice(0, inlineUrlMatch.index)
-      const tagLine = parseInt(inlineUrlMatch[1])
-      const tagColumn = parseInt(inlineUrlMatch[2])
+      const tagLineStart = parseInt(inlineUrlMatch[1])
+      const tagColumnStart = parseInt(inlineUrlMatch[2])
+      const tagLineEnd = parseInt(inlineUrlMatch[3])
+      const tagColumnEnd = parseInt(inlineUrlMatch[4])
+      const extension = inlineUrlMatch[5]
       url = htmlUrl
-      line = tagLine + parseInt(line)
+      line = tagLineStart + (line === undefined ? 0 : parseInt(line))
       // stackTrace formatted by V8 (chrome)
       if (Error.captureStackTrace) {
         line--
@@ -30,9 +35,25 @@ export const formatError = (
           line -= 2
         }
       }
-      column = tagColumn + parseInt(column)
+      column = tagColumnStart + (column === undefined ? 0 : parseInt(column))
+      const fileUrl = resolveFileUrl(url)
+      return {
+        isInline: true,
+        originalUrl: `${fileUrl}@L${tagLineStart}C${tagColumnStart}-L${tagLineEnd}C${tagColumnEnd}${extension}`,
+        url: fileUrl,
+        line,
+        column,
+      }
     }
+    return {
+      isInline: false,
+      url: resolveFileUrl(url),
+      line,
+      column,
+    }
+  }
 
+  const resolveFileUrl = (url) => {
     let urlObject = new URL(url)
     if (urlObject.origin === window.origin) {
       urlObject = new URL(
@@ -44,19 +65,10 @@ export const formatError = (
       const atFsIndex = urlObject.pathname.indexOf("/@fs/")
       if (atFsIndex > -1) {
         const afterAtFs = urlObject.pathname.slice(atFsIndex + "/@fs/".length)
-        url = new URL(afterAtFs, "file:///").href
-      } else {
-        url = urlObject.href
+        return new URL(afterAtFs, "file:///").href
       }
-    } else {
-      url = urlObject.href
     }
-
-    return {
-      url,
-      line,
-      column,
-    }
+    return urlObject.href
   }
 
   const generateClickableText = (text) => {
@@ -110,7 +122,9 @@ export const formatError = (
     errorDetailsPromiseReference.current = (async () => {
       if (errorMeta.type === "dynamic_import_fetch_error") {
         const response = await window.fetch(
-          `/__get_error_cause__/${urlSite.url}`,
+          `/__get_error_cause__/${
+            urlSite.isInline ? urlSite.originalUrl : urlSite.url
+          }`,
         )
         if (response.status !== 200) {
           return null
