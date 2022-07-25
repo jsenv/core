@@ -91,6 +91,9 @@ const test = async ({ browserLauncher, browserName }) => {
     await generateHtmlForStory({
       story: "script_module_inline_throw",
     })
+    await generateHtmlForStory({
+      story: "undefined_is_not_a_function",
+    })
   } finally {
     browser.close()
   }
