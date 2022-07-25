@@ -2,13 +2,7 @@ import { assert } from "@jsenv/assert"
 
 import { execute, chromium, firefox, webkit } from "@jsenv/core"
 
-await [
-  // ensure multiline
-  chromium,
-  firefox,
-  webkit,
-].reduce(async (previous, runtime) => {
-  await previous
+const test = async ({ runtime }) => {
   const { status, error, server, consoleCalls } = await execute({
     // logLevel: "debug"
     rootDirectoryUrl: new URL("./client/", import.meta.url),
@@ -61,4 +55,14 @@ await [
     },
   }
   errorStackAssertions[runtime.name]()
-}, Promise.resolve())
+}
+
+await test({
+  runtime: chromium,
+})
+await test({
+  runtime: firefox,
+})
+await test({
+  runtime: webkit,
+})

@@ -9,16 +9,8 @@ const devServer = await startDevServer({
   keepProcessAlive: false,
   rootDirectoryUrl: new URL("./client/", import.meta.url),
 })
-
-await [
-  // ensure multiline
-  chromium,
-  firefox,
-  webkit,
-].reduce(async (previous, runtime) => {
-  await previous
-
-  const browser = await runtime.launch({ headless: true })
+const test = async ({ browserLauncher }) => {
+  const browser = await browserLauncher.launch({ headless: true })
   const page = await launchBrowserPage(browser)
   await page.goto(`${devServer.origin}/main.html`)
 
@@ -36,4 +28,14 @@ await [
   }
   assert({ actual, expected })
   browser.close()
-}, Promise.resolve())
+}
+
+await test({
+  browserLauncher: chromium,
+})
+await test({
+  browserLauncher: firefox,
+})
+await test({
+  browserLauncher: webkit,
+})
