@@ -97,14 +97,14 @@ try {
     browserLauncher: chromium,
     browserName: "chromium",
   })
-  // await test({
-  //   browserLauncher: firefox,
-  //   browserName: "firefox",
-  // })
-  // await test({
-  //   browserLauncher: webkit,
-  //   browserName: "webkit",
-  // })
+  await test({
+    browserLauncher: firefox,
+    browserName: "firefox",
+  })
+  await test({
+    browserLauncher: webkit,
+    browserName: "webkit",
+  })
 } finally {
   devServer.stop()
 }

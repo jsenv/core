@@ -25,6 +25,12 @@ export const formatError = (
       const tagColumn = parseInt(inlineUrlMatch[2])
       url = htmlUrl
       line = tagLine + parseInt(line) - 1
+      if (
+        error.name === "SyntaxError" &&
+        !error.message.includes("does not provide an export named")
+      ) {
+        line--
+      }
       column = tagColumn + parseInt(column)
     }
 
