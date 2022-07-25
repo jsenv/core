@@ -16,9 +16,7 @@ const readHtmlFiles = () => {
 }
 
 // disable on windows because it would fails due to line endings (CRLF)
-if (process.platform !== "win32") {
-  const expected = readHtmlFiles()
-  await import("./generate_snapshot_files.mjs")
-  const actual = readHtmlFiles()
-  assert({ actual, expected })
-}
+const expected = readHtmlFiles()
+await import("./generate_snapshot_files.mjs")
+const actual = readHtmlFiles()
+assert({ actual, expected })

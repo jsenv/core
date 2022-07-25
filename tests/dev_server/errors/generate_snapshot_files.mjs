@@ -1,5 +1,5 @@
 import { writeFileSync } from "@jsenv/filesystem"
-import { chromium, firefox } from "playwright"
+import { chromium, firefox, webkit } from "playwright"
 
 process.env.GENERATING_SNAPSHOTS = "true"
 const { devServer } = await import("./start_dev_server.mjs")
@@ -44,7 +44,9 @@ const test = async ({ browserLauncher, browserName }) => {
     )
     writeFileSync(
       new URL(`./${story}_${browserName}.html`, snapshotDirectoryUrl),
-      htmlGenerated,
+      process.platform === "win32"
+        ? htmlGenerated.replace(/\r\n/g, "\n")
+        : htmlGenerated,
     )
     await page.close()
   }
@@ -98,8 +100,8 @@ await test({
   browserLauncher: firefox,
   browserName: "firefox",
 })
-// await test({
-//   browserLauncher: webkit,
-//   browserName: "webkit",
-// })
+await test({
+  browserLauncher: webkit,
+  browserName: "webkit",
+})
 devServer.stop()
