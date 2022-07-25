@@ -1,20 +1,10 @@
 export const formatError = (
   error,
-  {
-    rootDirectoryUrl,
-    errorBaseUrl,
-    openInEditor,
-    url,
-    line,
-    column,
-    codeFrame,
-    requestedRessource,
-    reportedBy,
-  },
+  { rootDirectoryUrl, errorBaseUrl, openInEditor, url, line, column },
 ) => {
   let { message, stack } = normalizeErrorParts(error)
-  let codeFramePromiseReference = { current: null }
-  let tip = formatTip({ reportedBy, requestedRessource })
+  let errorDetailsPromiseReference = { current: null }
+  let tip = `Reported by the browser while executing <code>${window.location.pathname}${window.location.search}</code>.`
   let errorUrlSite
 
   const resolveUrlSite = ({ url, line, column }) => {
@@ -93,21 +83,58 @@ export const formatError = (
     return textWithHtmlLinks
   }
 
+  const formatErrorText = ({ message, stack, codeFrame }) => {
+    let text
+    if (message && stack) {
+      text = `${generateClickableText(message)}\n${generateClickableText(
+        stack,
+      )}`
+    } else if (stack) {
+      text = generateClickableText(stack)
+    } else {
+      text = generateClickableText(message)
+    }
+    if (codeFrame) {
+      text += `\n\n${generateClickableText(codeFrame)}`
+    }
+    return text
+  }
+
   const onErrorLocated = (urlSite) => {
     errorUrlSite = urlSite
-    if (codeFrame) {
-      return
-    }
-    if (reportedBy !== "browser") {
-      return
-    }
-    codeFramePromiseReference.current = (async () => {
-      const response = await window.fetch(
-        `/__get_code_frame__/${formatUrlWithLineAndColumn(urlSite)}`,
-      )
-      const codeFrame = await response.text()
-      const codeFrameClickable = generateClickableText(codeFrame)
-      return codeFrameClickable
+    errorDetailsPromiseReference.current = (async () => {
+      if (error.name === "SyntaxError" && typeof urlSite.line === "number") {
+        const response = await window.fetch(
+          `/__get_code_frame__/${formatUrlWithLineAndColumn(urlSite)}`,
+        )
+        const codeFrame = await response.text()
+        return {
+          codeFrame: formatErrorText({ message: codeFrame }),
+        }
+      }
+
+      const response = await window.fetch(`/__get_error_cause__/${urlSite.url}`)
+      if (response.status !== 200) {
+        return null
+      }
+      const causeInfo = await response.json()
+      if (!causeInfo) {
+        return null
+      }
+
+      const causeText =
+        causeInfo.code === "NOT_FOUND"
+          ? formatErrorText({
+              message: causeInfo.reason,
+              stack: causeInfo.codeFrame,
+            })
+          : formatErrorText({
+              message: causeInfo.stack,
+              stack: causeInfo.codeFrame,
+            })
+      return {
+        cause: causeText,
+      }
     })()
   }
 
@@ -120,20 +147,11 @@ export const formatError = (
     !url.endsWith("html_supervisor_installer.js")
   ) {
     onErrorLocated(resolveUrlSite({ url, line, column }))
-  }
-
-  let text
-
-  if (message && stack) {
-    text = `${generateClickableText(message)}\n${generateClickableText(stack)}`
-  } else if (stack) {
-    text = generateClickableText(stack)
   } else {
-    text = generateClickableText(message)
-  }
-
-  if (codeFrame) {
-    text += `\n\n${generateClickableText(codeFrame)}`
+    const extractedErrorLocation = extractErrorLocation(error)
+    if (extractedErrorLocation) {
+      onErrorLocated(resolveUrlSite(extractedErrorLocation))
+    }
   }
 
   return {
@@ -142,12 +160,26 @@ export const formatError = (
         ? "light"
         : "dark",
     title: "An error occured",
-    text,
-    codeFramePromise: codeFramePromiseReference.current,
+    text: formatErrorText({ message, stack }),
     tip: `${tip}
     <br />
     Click outside to close.`,
+    errorDetailsPromise: errorDetailsPromiseReference.current,
   }
+}
+
+const extractErrorLocation = (error) => {
+  // 404 on chrome
+  if (
+    error &&
+    error.message.startsWith("Failed to fetch dynamically imported module: ")
+  ) {
+    const url = error.message.slice(
+      "Failed to fetch dynamically imported module: ".length,
+    )
+    return { url }
+  }
+  return null
 }
 
 const getExportMissingError = (error) => {
@@ -233,13 +265,6 @@ const getErrorStackWithoutErrorMessage = (error) => {
     stack = stack.slice(nextLineIndex + 1)
   }
   return stack
-}
-
-const formatTip = ({ reportedBy, requestedRessource }) => {
-  if (reportedBy === "browser") {
-    return `Reported by the browser while executing <code>${window.location.pathname}${window.location.search}</code>.`
-  }
-  return `Reported by the server while serving <code>${requestedRessource}</code>`
 }
 
 const makeLinksClickable = (string, { createLink = (url) => url }) => {

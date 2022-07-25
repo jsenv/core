@@ -37,14 +37,6 @@ export const createFileService = ({
   writeGeneratedFiles,
 }) => {
   const jsenvDirectoryUrl = new URL(".jsenv/", rootDirectoryUrl).href
-  const onErrorWhileServingFileCallbacks = []
-  const onErrorWhileServingFile = (data) => {
-    onErrorWhileServingFileCallbacks.forEach(
-      (onErrorWhileServingFileCallback) => {
-        onErrorWhileServingFileCallback(data)
-      },
-    )
-  }
 
   const clientFileChangeCallbackList = []
   const clientFilesPruneCallbackList = []
@@ -170,28 +162,6 @@ export const createFileService = ({
             },
           })
         })
-        onErrorWhileServingFileCallbacks.push((data) => {
-          serverEventsDispatcher.dispatchToRoomsMatching(
-            {
-              type: "error_while_serving_file",
-              data,
-            },
-            (room) => {
-              // send only to page depending on this file
-              const errorFileUrl = data.url
-              const roomEntryPointUrl = new URL(
-                room.request.ressource.slice(1),
-                rootDirectoryUrl,
-              ).href
-              const isErrorRelatedToEntryPoint = Boolean(
-                urlGraph.findDependent(errorFileUrl, (dependentUrlInfo) => {
-                  return dependentUrlInfo.url === roomEntryPointUrl
-                }),
-              )
-              return isErrorRelatedToEntryPoint
-            },
-          )
-        })
         // "unshift" because serve must come first to catch event source client request
         kitchen.pluginController.unshiftPlugin({
           name: "jsenv:provide_server_events",
@@ -286,6 +256,7 @@ export const createFileService = ({
         !urlInfo.isInline &&
         urlInfo.type !== "sourcemap"
       ) {
+        urlInfo.error = null
         urlInfo.sourcemap = null
         urlInfo.sourcemapReference = null
         urlInfo.content = null
@@ -333,6 +304,7 @@ export const createFileService = ({
       )
       return response
     } catch (e) {
+      urlInfo.error = e
       const code = e.code
       if (code === "PARSE_ERROR") {
         return {
@@ -365,19 +337,6 @@ export const createFileService = ({
         }
       }
       if (code === "NOT_FOUND") {
-        onErrorWhileServingFile({
-          requestedRessource: request.ressource,
-          isFaviconAutoRequest:
-            request.ressource === "/favicon.ico" &&
-            reference.type === "http_request",
-          code: "NOT_FOUND",
-          message: e.reason,
-          url: e.url,
-          traceUrl: e.traceUrl,
-          traceLine: e.traceLine,
-          traceColumn: e.traceColumn,
-          traceMessage: e.traceMessage,
-        })
         return {
           url: reference.url,
           status: 404,
@@ -385,16 +344,6 @@ export const createFileService = ({
           statusMessage: e.message,
         }
       }
-      onErrorWhileServingFile({
-        requestedRessource: request.ressource,
-        code: "UNEXPECTED",
-        stack: e.stack,
-        url: e.url,
-        traceUrl: e.traceUrl,
-        traceLine: e.traceLine,
-        traceColumn: e.traceColumn,
-        traceMessage: e.traceMessage,
-      })
       return {
         url: reference.url,
         status: 500,
