@@ -6,7 +6,9 @@ process.env.GENERATING_SNAPSHOTS = "true"
 const { devServer } = await import("./start_dev_server.mjs")
 const snapshotDirectoryUrl = new URL(`./snapshots/`, import.meta.url)
 const screenshotsDirectoryUrl = new URL(`./sceenshots/`, import.meta.url)
-await ensureEmptyDirectory(snapshotDirectoryUrl)
+if (!process.env.FROM_TESTS) {
+  await ensureEmptyDirectory(snapshotDirectoryUrl)
+}
 await ensureEmptyDirectory(screenshotsDirectoryUrl)
 
 const test = async ({ browserLauncher, browserName }) => {

@@ -1,3 +1,7 @@
+# 27.6.1
+
+- code frame show source code frame also in firefox/webkit for runtime errors
+
 # 27.6.0
 
 - add code frame in error overlay for fetch/parse/execute errors
