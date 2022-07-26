@@ -1,5 +1,6 @@
 import http from "node:http"
 import cluster from "node:cluster"
+import { WebSocketServer } from "ws"
 import { createDetailedMessage, createLogger } from "@jsenv/log"
 import {
   Abort,
@@ -121,6 +122,7 @@ export const startServer = async ({
     allowHttpRequestOnHttps = false
   }
 
+  const server = {}
   const serviceController = createServiceController(services)
 
   const processTeardownEvents = {
@@ -134,6 +136,7 @@ export const startServer = async ({
   let status = "starting"
   let nodeServer
   const startServerOperation = Abort.startOperation()
+  const stopCallbackList = createCallbackListNotifiedOnce()
 
   try {
     startServerOperation.addAbortSignal(signal)
@@ -160,6 +163,44 @@ export const startServer = async ({
       nodeServer.unref()
     }
 
+    const websocketHandlers = []
+    serviceController.services.forEach((service) => {
+      const { handleWebsocket } = service
+      if (handleWebsocket) {
+        websocketHandlers.push(handleWebsocket)
+      }
+    })
+
+    if (websocketHandlers.length > 0) {
+      let websocketServer = new WebSocketServer({ noServer: true })
+
+      // see server-polyglot.js, upgrade must be listened on https server when used
+      const frontServer = nodeServer._tlsServer || nodeServer
+      frontServer.on("upgrade", (nodeRequest, socket, head) => {
+        websocketServer.handleUpgrade(
+          nodeRequest,
+          socket,
+          head,
+          (websocket) => {
+            websocketServer.emit("connection", websocket, nodeRequest)
+          },
+        )
+      })
+      websocketServer.on("connection", async (websocket, nodeRequest) => {
+        await serviceController.callAsyncHooksUntil(
+          "handleWebsocket",
+          websocket,
+          {
+            nodeRequest,
+          },
+        )
+      })
+      stopCallbackList.add(() => {
+        websocketServer.close()
+        websocketServer = null
+      })
+    }
+
     port = await listen({
       signal: startServerOperation.signal,
       server: nodeServer,
@@ -167,6 +208,12 @@ export const startServer = async ({
       portHint,
       host,
     })
+
+    if (websocketHandlers.length > 0) {
+      server.websocketOrigin =
+        protocol === "https" ? `wss://${host}:${port}` : `ws://${host}:${port}`
+    }
+
     serviceController.callHooks("serverListening", { port })
     startServerOperation.addAbortCallback(async () => {
       await stopListening(nodeServer)
@@ -180,8 +227,6 @@ export const startServer = async ({
   // (otherwise an AbortError is thrown to the code calling "startServer")
   // we can proceed to create a stop function to stop it gacefully
   // and add a request handler
-
-  const stopCallbackList = createCallbackListNotifiedOnce()
   stopCallbackList.add(({ reason }) => {
     logger.info(`${serverName} stopping server (reason: ${reason})`)
   })
@@ -814,14 +859,7 @@ export const startServer = async ({
     }
   }
 
-  const addEffect = (callback) => {
-    const cleanup = callback()
-    if (typeof cleanup === "function") {
-      stopCallbackList.add(cleanup)
-    }
-  }
-
-  return {
+  Object.assign(server, {
     getStatus: () => status,
     port,
     origin: serverOrigin,
@@ -829,8 +867,14 @@ export const startServer = async ({
     nodeServer,
     stop,
     stoppedPromise,
-    addEffect,
-  }
+    addEffect: (callback) => {
+      const cleanup = callback()
+      if (typeof cleanup === "function") {
+        stopCallbackList.add(cleanup)
+      }
+    },
+  })
+  return server
 }
 
 const createNodeServer = async ({
