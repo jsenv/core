@@ -168,9 +168,7 @@ import.meta.hot.accept(__preact_refresh__.acceptCallback)`)
             }
           }
         }
-        const result = magicSource.toContentAndSourcemap({
-          source: "jsenv:plugin_preact",
-        })
+        const result = magicSource.toContentAndSourcemap()
         return {
           content: result.content,
           sourcemap: await composeTwoSourcemaps(map, result.sourcemap),
