@@ -1,5 +1,6 @@
 import { ensureEmptyDirectory, writeFileSync } from "@jsenv/filesystem"
 import { chromium, firefox, webkit } from "playwright"
+import { createTaskLog } from "@jsenv/log"
 
 process.env.GENERATING_SNAPSHOTS = "true"
 const { devServer } = await import("./start_dev_server.mjs")
@@ -11,7 +12,10 @@ await ensureEmptyDirectory(screenshotsDirectoryUrl)
 const test = async ({ browserLauncher, browserName }) => {
   const browser = await browserLauncher.launch({ headless: true })
 
-  const generateHtmlForStory = async ({ story, waitErrorDetails }) => {
+  const generateHtmlForStory = async ({ story }) => {
+    const task = createTaskLog(`snapshoting ${story} on ${browserName}`, {
+      disabled: process.env.FROM_TESTS,
+    })
     const page = await browser.newPage()
     await page.goto(`${devServer.origin}/${story}/main.html`)
     try {
@@ -21,10 +25,9 @@ const test = async ({ browserLauncher, browserName }) => {
         `jsenv error overlay not displayed on ${browserName} for ${story}`,
       )
     }
-    if (waitErrorDetails) {
-      // wait a bit more to let client time to fetch error details from server
-      await new Promise((resolve) => setTimeout(resolve, 200))
-    }
+    // wait a bit more to let client time to fetch error details from server
+    await new Promise((resolve) => setTimeout(resolve, 200))
+
     const htmlGenerated = await page.evaluate(
       /* eslint-disable no-undef */
       async () => {
@@ -40,14 +43,16 @@ const test = async ({ browserLauncher, browserName }) => {
       },
       /* eslint-enable no-undef */
     )
-    await page.setViewportSize({ width: 900, height: 550 }) // generate smaller screenshots
-    const sceenshotBuffer = await page
-      .locator("jsenv-error-overlay")
-      .screenshot()
-    writeFileSync(
-      new URL(`./${story}_${browserName}.png`, screenshotsDirectoryUrl),
-      sceenshotBuffer,
-    )
+    if (!process.env.FROM_TESTS) {
+      await page.setViewportSize({ width: 900, height: 550 }) // generate smaller screenshots
+      const sceenshotBuffer = await page
+        .locator("jsenv-error-overlay")
+        .screenshot()
+      writeFileSync(
+        new URL(`./${story}_${browserName}.png`, screenshotsDirectoryUrl),
+        sceenshotBuffer,
+      )
+    }
     writeFileSync(
       new URL(`./${story}_${browserName}.html`, snapshotDirectoryUrl),
       process.platform === "win32"
@@ -55,48 +60,39 @@ const test = async ({ browserLauncher, browserName }) => {
         : htmlGenerated,
     )
     await page.close()
+    task.done()
   }
 
   try {
     await generateHtmlForStory({
       story: "js_export_not_found",
-      waitErrorDetails: true,
     })
     await generateHtmlForStory({
       story: "js_import_not_found",
-      waitErrorDetails: true,
     })
     await generateHtmlForStory({
       story: "js_import_syntax_error",
-      waitErrorDetails: true,
     })
     await generateHtmlForStory({
       story: "js_throw",
-      waitErrorDetails: true,
     })
     await generateHtmlForStory({
       story: "plugin_error_transform",
-      waitErrorDetails: true,
     })
     await generateHtmlForStory({
       story: "script_module_inline_export_not_found",
-      waitErrorDetails: true,
     })
     await generateHtmlForStory({
       story: "script_module_inline_import_not_found",
-      waitErrorDetails: true,
     })
     await generateHtmlForStory({
       story: "script_module_inline_syntax_error",
-      waitErrorDetails: true,
     })
     await generateHtmlForStory({
       story: "script_module_inline_throw",
-      waitErrorDetails: true,
     })
     await generateHtmlForStory({
       story: "undefined_is_not_a_function",
-      waitErrorDetails: true,
     })
   } finally {
     browser.close()
