@@ -1,15 +1,10 @@
 import { requireSourcemap } from "./require_sourcemap.js"
 
 // https://github.com/mozilla/source-map#sourcemapconsumerprototypeoriginalpositionforgeneratedposition
-export const getOriginalPosition = async ({
-  sourcemap,
-  line,
-  column,
-  bias,
-}) => {
+export const getOriginalPosition = ({ sourcemap, line, column, bias }) => {
   const { SourceMapConsumer } = requireSourcemap()
 
-  const sourceMapConsumer = await new SourceMapConsumer(sourcemap)
+  const sourceMapConsumer = new SourceMapConsumer(sourcemap)
   const originalPosition = sourceMapConsumer.originalPositionFor({
     line,
     column,

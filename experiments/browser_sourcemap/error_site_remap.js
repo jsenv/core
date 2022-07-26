@@ -3,9 +3,15 @@ import { remapSourcePosition } from "@jsenv/sourcemap/src/error_stack_remap/rema
 import { SOURCEMAP } from "@jsenv/sourcemap/src/sourcemap_comment.js"
 import { DATA_URL } from "@jsenv/urls/src/data_url.js"
 
+const sourcemapJsFileUrl = new URL(
+  "./source-map@0.7.3.js?js_classic",
+  import.meta.url,
+)
+const sourcemapWasmFileUrl = new URL("./source-map@0.7.3.wasm", import.meta.url)
+
 const loadSourceMapConsumer = memoize(async () => {
   const script = document.createElement("script")
-  script.src = "https://unpkg.com/source-map@0.7.3/dist/source-map.js"
+  script.src = sourcemapJsFileUrl.href
 
   const scriptLoadedPromise = new Promise((resolve) => {
     script.onload = resolve
@@ -14,7 +20,7 @@ const loadSourceMapConsumer = memoize(async () => {
   await scriptLoadedPromise
   const { SourceMapConsumer } = window.sourceMap
   await SourceMapConsumer.initialize({
-    "lib/mappings.wasm": "https://unpkg.com/source-map@0.7.3/lib/mappings.wasm",
+    "lib/mappings.wasm": sourcemapWasmFileUrl.href,
   })
   return SourceMapConsumer
 })
@@ -27,9 +33,8 @@ export const remapErrorSite = async ({ url, line, column }) => {
     return url
   }
 
-  const SourceMapConsumer = await loadSourceMapConsumer()
   const original = await remapSourcePosition({
-    source: url,
+    url,
     line,
     column,
     resolveFile: (specifier) => new URL(specifier, `${window.origin}/`).href,
@@ -41,6 +46,9 @@ export const remapErrorSite = async ({ url, line, column }) => {
         contentType: "text/javascript",
         content: text,
       })
+      if (!jsSourcemapComment) {
+        return null
+      }
 
       const jsSourcemapUrl = jsSourcemapComment.specifier
       let sourcemapUrl
@@ -78,6 +86,8 @@ export const remapErrorSite = async ({ url, line, column }) => {
       if (firstSourceMapSourceFailure) {
         return null
       }
+
+      const SourceMapConsumer = await loadSourceMapConsumer()
       return new SourceMapConsumer(sourceMap)
     },
   })

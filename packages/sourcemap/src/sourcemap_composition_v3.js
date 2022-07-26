@@ -6,7 +6,7 @@ import { requireSourcemap } from "./require_sourcemap.js"
 
 const { SourceMapConsumer, SourceMapGenerator } = requireSourcemap()
 
-export const composeTwoSourcemaps = async (firstSourcemap, secondSourcemap) => {
+export const composeTwoSourcemaps = (firstSourcemap, secondSourcemap) => {
   if (!firstSourcemap && !secondSourcemap) {
     return null
   }
@@ -17,8 +17,8 @@ export const composeTwoSourcemaps = async (firstSourcemap, secondSourcemap) => {
     return firstSourcemap
   }
   const sourcemapGenerator = new SourceMapGenerator()
-  const firstSourcemapConsumer = await new SourceMapConsumer(firstSourcemap)
-  const secondSourcemapConsumer = await new SourceMapConsumer(secondSourcemap)
+  const firstSourcemapConsumer = new SourceMapConsumer(firstSourcemap)
+  const secondSourcemapConsumer = new SourceMapConsumer(secondSourcemap)
   const firstMappings = readMappings(firstSourcemapConsumer)
   firstMappings.forEach((mapping) => {
     sourcemapGenerator.addMapping(mapping)

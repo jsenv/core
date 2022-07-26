@@ -10,6 +10,9 @@ export const formatError = (
   const errorMeta = extractErrorMeta(error, { url, line, column })
 
   const resolveUrlSite = ({ url, line, column }) => {
+    if (typeof line === "string") line = parseInt(line)
+    if (typeof column === "string") column = parseInt(column)
+
     const inlineUrlMatch = url.match(
       /@L([0-9]+)C([0-9]+)\-L([0-9]+)C([0-9]+)(\.[\w]+)$/,
     )
@@ -21,7 +24,7 @@ export const formatError = (
       const tagColumnEnd = parseInt(inlineUrlMatch[4])
       const extension = inlineUrlMatch[5]
       url = htmlUrl
-      line = tagLineStart + (line === undefined ? 0 : parseInt(line))
+      line = tagLineStart + (typeof line === "number" ? line : 0)
       // stackTrace formatted by V8 (chrome)
       if (Error.captureStackTrace) {
         line--
@@ -35,7 +38,7 @@ export const formatError = (
           line -= 2
         }
       }
-      column = tagColumnStart + (column === undefined ? 0 : parseInt(column))
+      column = tagColumnStart + (typeof column === "number" ? column : 0)
       const fileUrl = resolveFileUrl(url)
       return {
         isInline: true,
@@ -149,9 +152,13 @@ export const formatError = (
         }
       }
       if (urlSite.line !== undefined) {
-        const response = await window.fetch(
-          `/__get_code_frame__/${formatUrlWithLineAndColumn(urlSite)}`,
-        )
+        let ressourceToFetch = `/__get_code_frame__/${formatUrlWithLineAndColumn(
+          urlSite,
+        )}`
+        if (!Error.captureStackTrace) {
+          ressourceToFetch += `?remap`
+        }
+        const response = await window.fetch(ressourceToFetch)
         const codeFrame = await response.text()
         return {
           codeFrame: formatErrorText({ message: codeFrame }),

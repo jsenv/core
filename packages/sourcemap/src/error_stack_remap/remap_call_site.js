@@ -16,13 +16,12 @@ export const remapCallSite = async (
     const line = callSite.getLineNumber()
     const column = callSite.getColumnNumber() - 1
     const originalPosition = await remapSourcePosition({
-      source,
+      url: resolveFile(source),
       line,
       column,
       resolveFile,
       urlToSourcemapConsumer,
       readErrorStack,
-      onFailure,
     })
 
     const callSiteClone = cloneCallSite(callSite)
@@ -194,12 +193,11 @@ const remapEvalOrigin = async (
     const line = Number(topLevelEvalMatch[3])
     const column = topLevelEvalMatch[4] - 1
     const originalPosition = await remapSourcePosition({
-      source,
+      url: resolveFile(source),
       line,
       column,
       resolveFile,
       urlToSourcemapConsumer,
-      onFailure,
     })
     return `eval at ${topLevelEvalMatch[1]} (${originalPosition.source}:${
       originalPosition.line
