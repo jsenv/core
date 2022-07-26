@@ -11,10 +11,7 @@ await ensureEmptyDirectory(screenshotsDirectoryUrl)
 const test = async ({ browserLauncher, browserName }) => {
   const browser = await browserLauncher.launch({ headless: true })
 
-  const generateHtmlForStory = async ({
-    story,
-    preferServerErrorReporting,
-  }) => {
+  const generateHtmlForStory = async ({ story, waitErrorDetails }) => {
     const page = await browser.newPage()
     await page.goto(`${devServer.origin}/${story}/main.html`)
     try {
@@ -24,8 +21,8 @@ const test = async ({ browserLauncher, browserName }) => {
         `jsenv error overlay not displayed on ${browserName} for ${story}`,
       )
     }
-    if (preferServerErrorReporting) {
-      // wait a bit more to let server error replace browser error
+    if (waitErrorDetails) {
+      // wait a bit more to let client time to fetch error details from server
       await new Promise((resolve) => setTimeout(resolve, 200))
     }
     const htmlGenerated = await page.evaluate(
@@ -63,36 +60,43 @@ const test = async ({ browserLauncher, browserName }) => {
   try {
     await generateHtmlForStory({
       story: "js_export_not_found",
+      waitErrorDetails: true,
     })
     await generateHtmlForStory({
       story: "js_import_not_found",
-      preferServerErrorReporting: true,
+      waitErrorDetails: true,
     })
     await generateHtmlForStory({
       story: "js_import_syntax_error",
+      waitErrorDetails: true,
     })
     await generateHtmlForStory({
       story: "js_throw",
+      waitErrorDetails: true,
     })
     await generateHtmlForStory({
       story: "plugin_error_transform",
-      preferServerErrorReporting: true,
+      waitErrorDetails: true,
     })
     await generateHtmlForStory({
       story: "script_module_inline_export_not_found",
+      waitErrorDetails: true,
     })
     await generateHtmlForStory({
       story: "script_module_inline_import_not_found",
-      preferServerErrorReporting: true,
+      waitErrorDetails: true,
     })
     await generateHtmlForStory({
       story: "script_module_inline_syntax_error",
+      waitErrorDetails: true,
     })
     await generateHtmlForStory({
       story: "script_module_inline_throw",
+      waitErrorDetails: true,
     })
     await generateHtmlForStory({
       story: "undefined_is_not_a_function",
+      waitErrorDetails: true,
     })
   } finally {
     browser.close()

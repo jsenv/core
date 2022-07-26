@@ -19,6 +19,7 @@ node_modules/
 
 /**/*.nomodule.js
 /**/*.es5.js
+source-map@*.js
 snapshots/
 /jsconfig.json
 /package-lock.json

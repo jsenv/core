@@ -20,6 +20,7 @@ import {
   setHtmlNodeText,
 } from "@jsenv/ast"
 import { generateInlineContentUrl, stringifyUrlSite } from "@jsenv/urls"
+import { getOriginalPosition } from "@jsenv/sourcemap"
 
 import { requireFromJsenv } from "@jsenv/core/src/require_from_jsenv.js"
 
@@ -46,23 +47,40 @@ export const jsenvPluginHtmlSupervisor = ({
       dev: true,
       test: true,
     },
-    serve: (request, context) => {
+    serve: async (request, context) => {
       if (request.ressource.startsWith("/__get_code_frame__/")) {
-        const url = request.ressource.slice("/__get_code_frame__/".length)
-        const match = url.match(/:([0-9]+):([0-9]+)$/)
+        const { pathname, searchParams } = new URL(request.url)
+        const urlWithLineAndColumn = pathname.slice(
+          "/__get_code_frame__/".length,
+        )
+        const match = urlWithLineAndColumn.match(/:([0-9]+):([0-9]+)$/)
         if (!match) {
           return {
             status: 400,
             body: "Missing line and column in url",
           }
         }
-        const file = url.slice(0, match.index)
-        const line = parseInt(match[1])
-        const column = parseInt(match[2])
+        const file = urlWithLineAndColumn.slice(0, match.index)
+        let line = parseInt(match[1])
+        let column = parseInt(match[2])
         const urlInfo = context.urlGraph.getUrlInfo(file)
         if (!urlInfo) {
           return {
             status: 404,
+          }
+        }
+        const remap = searchParams.has("remap")
+        if (remap) {
+          const sourcemap = urlInfo.sourcemap
+          if (sourcemap) {
+            const original = await getOriginalPosition({
+              sourcemap,
+              url: file,
+              line,
+              column,
+            })
+            line = original.line
+            column = original.column
           }
         }
         const codeFrame = stringifyUrlSite({

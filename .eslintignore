@@ -19,5 +19,6 @@ node_modules/
 /**/*.nomodule.js
 /**/*.jsx
 /**/*.noeslint.*
+source-map@*.js
 snapshots/
 !.eslintrc.js
