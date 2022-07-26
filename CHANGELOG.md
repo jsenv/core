@@ -1,6 +1,7 @@
 # 27.6.1
 
 - code frame show source code frame also in firefox/webkit for runtime errors
+- use [sourcemap-js](https://github.com/7rulnik/source-map-js) instead of [source-map](https://github.com/mozilla/source-map)
 
 # 27.6.0
 
