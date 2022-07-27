@@ -817,6 +817,7 @@ export const startServer = async ({
   }
 
   websocket: {
+    // https://github.com/websockets/ws/blob/master/doc/ws.md#event-close-1
     const websocketHandlers = []
     serviceController.services.forEach((service) => {
       const { handleWebsocket } = service
@@ -825,6 +826,7 @@ export const startServer = async ({
       }
     })
     if (websocketHandlers.length > 0) {
+      const websocketClients = new Set()
       let websocketServer = new WebSocketServer({ noServer: true })
       const upgradeCallback = (nodeRequest, socket, head) => {
         websocketServer.handleUpgrade(
@@ -832,6 +834,10 @@ export const startServer = async ({
           socket,
           head,
           async (websocket) => {
+            websocketClients.add(websocket)
+            websocket.once("close", () => {
+              websocketClients.remove(websocket)
+            })
             serviceController.callAsyncHooksUntil(
               "handleWebsocket",
               websocket,
@@ -855,9 +861,9 @@ export const startServer = async ({
         websocketServer.close()
         websocketServer = null
       })
+      server.websocketOrigin =
+        protocol === "https" ? `wss://${host}:${port}` : `ws://${host}:${port}`
     }
-    server.websocketOrigin =
-      protocol === "https" ? `wss://${host}:${port}` : `ws://${host}:${port}`
   }
 
   if (startLog) {
