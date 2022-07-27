@@ -193,8 +193,8 @@ const applyHotReload = async ({ hotInstructions }) => {
 
 window.__reloader__ = reloader
 window.__server_events__.listenEvents({
-  reload: (reloadMessage) => {
-    reloader.addMessage(reloadMessage)
+  reload: (reloadServerEvent) => {
+    reloader.addMessage(reloadServerEvent.data)
   },
 })
 

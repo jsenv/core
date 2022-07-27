@@ -46,6 +46,7 @@ export const createServerEventsDispatcher = () => {
           websocket.terminate()
         },
       }
+      client.sendEvent({ type: "welcome" })
       return addClient(client)
     },
     // we could add "addEventSource" and let clients connect using

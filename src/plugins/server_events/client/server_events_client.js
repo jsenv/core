@@ -1,6 +1,10 @@
+/* globals self */
+
 import { createWebSocketConnection } from "./web_socket_connection.js"
 
-const websocketConnection = createWebSocketConnection(document.location.href, {
+const websocketScheme = self.location.protocol === "https" ? "wss" : "ws"
+const websocketUrl = `${websocketScheme}://${self.location.host}`
+const websocketConnection = createWebSocketConnection(websocketUrl, {
   retry: true,
   retryMaxAttempt: Infinity,
   retryAllocatedMs: 20_000,

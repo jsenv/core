@@ -54,7 +54,7 @@ export const createEventsManager = ({ effect = () => {} } = {}) => {
     const callbacks = callbacksMap.get(event.type)
     if (callbacks) {
       callbacks.forEach((callback) => {
-        callback(event.type)
+        callback(event)
       })
     }
   }

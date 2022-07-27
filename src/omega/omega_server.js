@@ -84,6 +84,7 @@ export const startOmegaServer = async ({
           signal,
           logLevel,
           serverStopCallbacks,
+          serverEventsDispatcher,
 
           rootDirectoryUrl,
           scenario,

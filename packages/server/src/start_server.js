@@ -836,7 +836,7 @@ export const startServer = async ({
           async (websocket) => {
             websocketClients.add(websocket)
             websocket.once("close", () => {
-              websocketClients.remove(websocket)
+              websocketClients.delete(websocket)
             })
             serviceController.callAsyncHooksUntil(
               "handleWebsocket",

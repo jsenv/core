@@ -14,6 +14,7 @@ export const createWebSocketConnection = (
   const connectionManager = createConnectionManager(
     ({ onClosed, onOpen }) => {
       let socket = new WebSocket(websocketUrl, protocols)
+      let interval
       socket.onerror = () => {
         socket.onerror = null
         socket.onopen = null
@@ -24,10 +25,19 @@ export const createWebSocketConnection = (
       socket.onopen = () => {
         socket.onopen = null
         onOpen()
+        interval = setInterval(() => {
+          socket.send('{"type":"ping"}')
+        }, 30_000)
       }
       socket.onmessage = (messageEvent) => {
         const event = JSON.parse(messageEvent.data)
         eventsManager.triggerCallbacks(event)
+      }
+      return () => {
+        if (socket) {
+          socket.close()
+          clearInterval(interval)
+        }
       }
     },
     { retry, retryMaxAttempt, retryAllocatedMs },
