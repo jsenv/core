@@ -5,6 +5,7 @@ import {
   jsenvServiceErrorHandler,
 } from "@jsenv/server"
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js"
+import { createServerEventsDispatcher } from "@jsenv/core/src/plugins/server_events/server_events_dispatcher.js"
 
 import { createFileService } from "./server/file_service.js"
 
@@ -43,6 +44,10 @@ export const startOmegaServer = async ({
   writeGeneratedFiles,
 }) => {
   const serverStopCallbacks = []
+  const serverEventsDispatcher = createServerEventsDispatcher()
+  serverStopCallbacks.push(() => {
+    serverEventsDispatcher.destroy()
+  })
   const server = await startServer({
     signal,
     stopOnExit: false,
@@ -99,6 +104,9 @@ export const startOmegaServer = async ({
           sourcemapsSourcesContent,
           writeGeneratedFiles,
         }),
+        handleWebsocket: (websocket) => {
+          serverEventsDispatcher.addWebsocket(websocket)
+        },
       },
       {
         name: "jsenv:omega_error_handler",

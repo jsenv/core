@@ -10,7 +10,6 @@ import { URL_META } from "@jsenv/url-meta"
 import { getCorePlugins } from "@jsenv/core/src/plugins/plugins.js"
 import { createUrlGraph } from "@jsenv/core/src/omega/url_graph.js"
 import { createKitchen } from "@jsenv/core/src/omega/kitchen.js"
-import { createServerEventsDispatcher } from "@jsenv/core/src/plugins/server_events/server_events_dispatcher.js"
 import { jsenvPluginServerEventsClientInjection } from "@jsenv/core/src/plugins/server_events/jsenv_plugin_server_events_client_injection.js"
 import { parseUserAgentHeader } from "./user_agent.js"
 
@@ -18,6 +17,7 @@ export const createFileService = ({
   signal,
   logLevel,
   serverStopCallbacks,
+  serverEventsDispatcher,
 
   rootDirectoryUrl,
   scenario,
@@ -152,10 +152,6 @@ export const createFileService = ({
       })
       const serverEventNames = Object.keys(allServerEvents)
       if (serverEventNames.length > 0) {
-        const serverEventsDispatcher = createServerEventsDispatcher()
-        serverStopCallbacks.push(() => {
-          serverEventsDispatcher.destroy()
-        })
         Object.keys(allServerEvents).forEach((serverEventName) => {
           allServerEvents[serverEventName]({
             rootDirectoryUrl,
@@ -169,19 +165,7 @@ export const createFileService = ({
             },
           })
         })
-        // "unshift" because serve must come first to catch event source client request
-        kitchen.pluginController.unshiftPlugin({
-          name: "jsenv:provide_server_events",
-          serve: (request) => {
-            const { accept } = request.headers
-            if (accept && accept.includes("text/event-stream")) {
-              const room = serverEventsDispatcher.addRoom(request)
-              return room.join(request)
-            }
-            return null
-          },
-        })
-        // "push" so that event source client connection can be put as early as possible in html
+        // "pushPlugin" so that event source client connection can be put as early as possible in html
         kitchen.pluginController.pushPlugin(
           jsenvPluginServerEventsClientInjection(),
         )

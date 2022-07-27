@@ -817,7 +817,7 @@ export const startServer = async ({
   }
 
   websocket: {
-    // https://github.com/websockets/ws/blob/master/doc/ws.md#event-close-1
+    // https://github.com/websockets/ws/blob/master/doc/ws.md#class-websocket
     const websocketHandlers = []
     serviceController.services.forEach((service) => {
       const { handleWebsocket } = service

@@ -1,227 +1,75 @@
-const STATUSES = {
-  CONNECTING: "connecting",
-  CONNECTED: "connected",
-  DISCONNECTED: "disconnected",
-}
+import { createConnectionManager } from "./connection_manager.js"
+import { createEventsManager } from "./events_manager.js"
 
 export const createEventSourceConnection = (
   eventSourceUrl,
   {
-    retryMaxAttempt = Infinity,
-    retryAllocatedMs = Infinity,
+    withCredentials = true,
     lastEventId,
     useEventsToManageConnection = true,
+    retry = false,
+    retryMaxAttempt = Infinity,
+    retryAllocatedMs = Infinity,
   } = {},
 ) => {
-  const { EventSource } = window
-  if (typeof EventSource !== "function") {
-    return () => {}
-  }
-
-  let eventSource
-  const listenersMap = new Map()
-  const callbacksMap = new Map()
   const eventSourceOrigin = new URL(eventSourceUrl).origin
-  const addEventCallbacks = (namedCallbacks) => {
-    let listenersMapSize = listenersMap.size
-    Object.keys(namedCallbacks).forEach((eventName) => {
-      const callback = namedCallbacks[eventName]
-      const existingCallbacks = callbacksMap.get(eventName)
-      let callbacks
-      if (existingCallbacks) {
-        callbacks = existingCallbacks
-      } else {
-        callbacks = []
-        callbacksMap.set(eventName, callbacks)
-      }
-      if (callbacks.length === 0) {
-        const eventListener = (e) => {
-          if (e.origin === eventSourceOrigin) {
-            if (e.lastEventId) {
-              lastEventId = e.lastEventId
-            }
-            callbacks.forEach((eventCallback) => {
-              eventCallback(e)
-            })
-          }
-        }
-        listenersMap.set(eventName, eventListener)
-        if (eventSource) {
-          eventSource.addEventListener(eventName, eventListener)
-        }
-      }
-      callbacks.push(callback)
-    })
-    if (
-      useEventsToManageConnection &&
-      listenersMapSize === 0 &&
-      listenersMap.size > 0 &&
-      status.value !== STATUSES.CONNECTING &&
-      status.value !== STATUSES.CONNECTED
-    ) {
-      _connect()
-    }
-
-    let removed = false
-    return () => {
-      if (removed) return
-      removed = true
-      listenersMapSize = listenersMap.size
-      Object.keys(namedCallbacks).forEach((eventName) => {
-        const callback = namedCallbacks[eventName]
-        const callbacks = callbacksMap.get(eventName)
-        if (callbacks) {
-          const index = callbacks.indexOf(callback)
-          if (index > -1) {
-            callbacks.splice(index, 1)
-            if (callbacks.length === 0) {
-              const listener = listenersMap.get(eventName)
-              if (listener) {
-                listenersMap.delete(listener)
-                if (eventSource) {
-                  eventSource.removeEventListener(eventName, listener)
-                }
-              }
-            }
-          }
-        }
-      })
-      namedCallbacks = null // allow garbage collect
-      if (
-        useEventsToManageConnection &&
-        listenersMapSize > 0 &&
-        listenersMap.size === 0 &&
-        (status.value === STATUSES.CONNECTING ||
-          status.value === STATUSES.CONNECTED)
-      ) {
-        _disconnect()
-      }
-    }
-  }
-
-  const status = {
-    value: "default",
-    goTo: (value) => {
-      if (value === status.value) {
-        return
-      }
-      status.value = value
-      status.onchange()
-    },
-    onchange: () => {},
-  }
-  let _disconnect = () => {}
-
-  const attemptConnection = (url) => {
-    if (
-      status.value === STATUSES.CONNECTING ||
-      status.value === STATUSES.CONNECTED
-    ) {
-      return
-    }
-    eventSource = new EventSource(url, {
-      withCredentials: true,
-    })
-    _disconnect = () => {
-      if (
-        status.value !== STATUSES.CONNECTING &&
-        status.value !== STATUSES.CONNECTED
-      ) {
-        console.warn(
-          `disconnect() ignored because connection is ${status.value}`,
-        )
-        return
-      }
-      if (eventSource) {
-        eventSource.onerror = undefined
-        eventSource.close()
-        listenersMap.forEach((listener, eventName) => {
-          eventSource.removeEventListener(eventName, listener)
-        })
-      }
+  const attemptConnection = ({ onOpen, onClosed }) => {
+    const url = lastEventId
+      ? addLastEventIdIntoUrlSearchParams(eventSourceUrl, lastEventId)
+      : eventSourceUrl
+    let eventSource = new EventSource(url, { withCredentials })
+    eventSource.onerror = () => {
+      eventSource.onerror = null
+      eventSource.onopen = null
+      eventSource.onmessage = null
       eventSource = null
-      status.goTo(STATUSES.DISCONNECTED)
-    }
-    let retryCount = 0
-    let firstRetryMs = Date.now()
-    eventSource.onerror = (errorEvent) => {
-      if (errorEvent.target.readyState === EventSource.CONNECTING) {
-        if (retryCount > retryMaxAttempt) {
-          console.info(`could not connect after ${retryMaxAttempt} attempt`)
-          _disconnect()
-          return
-        }
-
-        if (retryCount === 0) {
-          firstRetryMs = Date.now()
-        } else {
-          const allRetryDuration = Date.now() - firstRetryMs
-          if (retryAllocatedMs && allRetryDuration > retryAllocatedMs) {
-            console.info(
-              `could not connect in less than ${retryAllocatedMs} ms`,
-            )
-            _disconnect()
-            return
-          }
-        }
-
-        retryCount++
-        status.goTo(STATUSES.CONNECTING)
-        return
-      }
-
-      if (errorEvent.target.readyState === EventSource.CLOSED) {
-        _disconnect()
-        return
-      }
+      onClosed()
     }
     eventSource.onopen = () => {
-      status.goTo(STATUSES.CONNECTED)
+      eventSource.onopen = null
+      onOpen()
     }
-    listenersMap.forEach((listener, eventName) => {
-      eventSource.addEventListener(eventName, listener)
-    })
-    if (!listenersMap.has("welcome")) {
-      addEventCallbacks({
-        welcome: () => {}, // to update lastEventId
-      })
+    eventSource.onmessage = (messageEvent) => {
+      if (messageEvent.origin === eventSourceOrigin) {
+        if (messageEvent.lastEventId) {
+          lastEventId = messageEvent.lastEventId
+        }
+        const event = JSON.parse(messageEvent.data)
+        eventsManager.triggerCallbacks(event)
+      }
     }
-    status.goTo(STATUSES.CONNECTING)
-  }
-
-  let _connect = () => {
-    attemptConnection(eventSourceUrl)
-    _connect = () => {
-      attemptConnection(
-        lastEventId
-          ? addLastEventIdIntoUrlSearchParams(eventSourceUrl, lastEventId)
-          : eventSourceUrl,
-      )
+    return () => {
+      if (eventSource) {
+        eventSource.close()
+      }
     }
   }
-
-  const removePageUnloadListener = listenPageUnload(() => {
-    if (
-      status.value === STATUSES.CONNECTING ||
-      status.value === STATUSES.CONNECTED
-    ) {
-      _disconnect()
-    }
+  const connectionManager = createConnectionManager(attemptConnection, {
+    retry,
+    retryMaxAttempt,
+    retryAllocatedMs,
+  })
+  const eventsManager = createEventsManager({
+    effect: () => {
+      if (useEventsToManageConnection) {
+        connectionManager.connect()
+        return () => {
+          connectionManager.disconnect()
+        }
+      }
+      return null
+    },
   })
 
-  const destroy = () => {
-    removePageUnloadListener()
-    _disconnect()
-    listenersMap.clear()
-    callbacksMap.clear()
-  }
-
   return {
-    status,
-    connect: () => _connect(),
-    addEventCallbacks,
-    disconnect: () => _disconnect(),
-    destroy,
+    readyState: connectionManager.readyState,
+    listenEvents: (namedCallbacks) => {
+      return eventsManager.addCallbacks(namedCallbacks)
+    },
+    destroy: () => {
+      connectionManager.destroy()
+      eventsManager.destroy()
+    },
   }
 }
 
@@ -232,58 +80,4 @@ const addLastEventIdIntoUrlSearchParams = (url, lastEventId) => {
     url += "&"
   }
   return `${url}last-event-id=${encodeURIComponent(lastEventId)}`
-}
-
-// const listenPageMightFreeze = (callback) => {
-//   const removePageHideListener = listenEvent(window, "pagehide", (pageHideEvent) => {
-//     if (pageHideEvent.persisted === true) {
-//       callback(pageHideEvent)
-//     }
-//   })
-//   return removePageHideListener
-// }
-
-// const listenPageFreeze = (callback) => {
-//   const removeFreezeListener = listenEvent(document, "freeze", (freezeEvent) => {
-//     callback(freezeEvent)
-//   })
-//   return removeFreezeListener
-// }
-
-// const listenPageIsRestored = (callback) => {
-//   const removeResumeListener = listenEvent(document, "resume", (resumeEvent) => {
-//     removePageshowListener()
-//     callback(resumeEvent)
-//   })
-//   const removePageshowListener = listenEvent(window, "pageshow", (pageshowEvent) => {
-//     if (pageshowEvent.persisted === true) {
-//       removePageshowListener()
-//       removeResumeListener()
-//       callback(pageshowEvent)
-//     }
-//   })
-//   return () => {
-//     removeResumeListener()
-//     removePageshowListener()
-//   }
-// }
-
-const listenPageUnload = (callback) => {
-  const removePageHideListener = listenEvent(
-    window,
-    "pagehide",
-    (pageHideEvent) => {
-      if (pageHideEvent.persisted !== true) {
-        callback(pageHideEvent)
-      }
-    },
-  )
-  return removePageHideListener
-}
-
-const listenEvent = (emitter, event, callback) => {
-  emitter.addEventListener(event, callback)
-  return () => {
-    emitter.removeEventListener(event, callback)
-  }
 }
