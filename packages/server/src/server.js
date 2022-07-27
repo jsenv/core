@@ -28,6 +28,7 @@ import { getServerOrigins } from "./internal/getServerOrigins.js"
 import { listen, stopListening } from "./internal/listen.js"
 import { composeTwoResponses } from "./internal/response_composition.js"
 import { listenRequest } from "./internal/listenRequest.js"
+import { listenEvent } from "./internal/listenEvent.js"
 import { listenServerConnectionError } from "./internal/listenServerConnectionError.js"
 import {
   STOP_REASON_INTERNAL_ERROR,
@@ -163,44 +164,6 @@ export const startServer = async ({
       nodeServer.unref()
     }
 
-    const websocketHandlers = []
-    serviceController.services.forEach((service) => {
-      const { handleWebsocket } = service
-      if (handleWebsocket) {
-        websocketHandlers.push(handleWebsocket)
-      }
-    })
-
-    if (websocketHandlers.length > 0) {
-      let websocketServer = new WebSocketServer({ noServer: true })
-
-      // see server-polyglot.js, upgrade must be listened on https server when used
-      const frontServer = nodeServer._tlsServer || nodeServer
-      frontServer.on("upgrade", (nodeRequest, socket, head) => {
-        websocketServer.handleUpgrade(
-          nodeRequest,
-          socket,
-          head,
-          (websocket) => {
-            websocketServer.emit("connection", websocket, nodeRequest)
-          },
-        )
-      })
-      websocketServer.on("connection", async (websocket, nodeRequest) => {
-        await serviceController.callAsyncHooksUntil(
-          "handleWebsocket",
-          websocket,
-          {
-            nodeRequest,
-          },
-        )
-      })
-      stopCallbackList.add(() => {
-        websocketServer.close()
-        websocketServer = null
-      })
-    }
-
     port = await listen({
       signal: startServerOperation.signal,
       server: nodeServer,
@@ -208,11 +171,6 @@ export const startServer = async ({
       portHint,
       host,
     })
-
-    if (websocketHandlers.length > 0) {
-      server.websocketOrigin =
-        protocol === "https" ? `wss://${host}:${port}` : `ws://${host}:${port}`
-    }
 
     serviceController.callHooks("serverListening", { port })
     startServerOperation.addAbortCallback(async () => {
@@ -287,567 +245,620 @@ export const startServer = async ({
     })
   })
 
-  const requestCallback = async (nodeRequest, nodeResponse) => {
-    // pause the stream to let a chance to "requestToResponse"
-    // to call "requestRequestBody". Without this the request body readable stream
-    // might be closed when we'll try to attach "data" and "end" listeners to it
-    nodeRequest.pause()
-    if (!nagle) {
-      nodeRequest.connection.setNoDelay(true)
-    }
-    if (redirectHttpToHttps && !nodeRequest.connection.encrypted) {
-      nodeResponse.writeHead(301, {
-        location: `${serverOrigin}${nodeRequest.url}`,
-      })
-      nodeResponse.end()
-      return
-    }
-
-    const receiveRequestOperation = Abort.startOperation()
-    receiveRequestOperation.addAbortSource((abort) => {
-      const closeEventCallback = () => {
-        if (nodeRequest.complete) {
-          receiveRequestOperation.end()
-        } else {
-          nodeResponse.destroy()
-          abort()
-        }
+  request: {
+    const requestCallback = async (nodeRequest, nodeResponse) => {
+      // pause the stream to let a chance to "requestToResponse"
+      // to call "requestRequestBody". Without this the request body readable stream
+      // might be closed when we'll try to attach "data" and "end" listeners to it
+      nodeRequest.pause()
+      if (!nagle) {
+        nodeRequest.connection.setNoDelay(true)
       }
-      nodeRequest.once("close", closeEventCallback)
-      return () => {
-        nodeRequest.removeListener("close", closeEventCallback)
-      }
-    })
-    receiveRequestOperation.addAbortSource((abort) => {
-      return stopCallbackList.add(abort)
-    })
-
-    const sendResponseOperation = Abort.startOperation()
-    sendResponseOperation.addAbortSignal(receiveRequestOperation.signal)
-    sendResponseOperation.addAbortSource((abort) => {
-      return stopCallbackList.add(abort)
-    })
-
-    const request = fromNodeRequest(nodeRequest, {
-      serverOrigin,
-      signal: receiveRequestOperation.signal,
-    })
-
-    // Handling request is asynchronous, we buffer logs for that request
-    // until we know what happens with that request
-    // It delays logs until we know of the request will be handled
-    // but it's mandatory to make logs readable.
-    const rootRequestNode = {
-      logs: [],
-      children: [],
-    }
-    const addRequestLog = (node, { type, value }) => {
-      node.logs.push({ type, value })
-    }
-    const onRequestHandled = (node) => {
-      if (node !== rootRequestNode) {
-        // keep buffering until root request write logs for everyone
-        return
-      }
-      const prefixLines = (string, prefix) => {
-        return string.replace(/^(?!\s*$)/gm, prefix)
-      }
-      const writeLog = (
-        { type, value },
-        { someLogIsError, someLogIsWarn, depth },
-      ) => {
-        if (depth > 0) {
-          value = prefixLines(value, "  ".repeat(depth))
-        }
-        if (type === "info") {
-          if (someLogIsError) {
-            type = "error"
-          } else if (someLogIsWarn) {
-            type = "warn"
-          }
-        }
-        logger[type](value)
-      }
-      const visitRequestNodeToLog = (requestNode, depth) => {
-        let someLogIsError = false
-        let someLogIsWarn = false
-        requestNode.logs.forEach((log) => {
-          if (log.type === "error") {
-            someLogIsError = true
-          }
-          if (log.type === "warn") {
-            someLogIsWarn = true
-          }
+      if (redirectHttpToHttps && !nodeRequest.connection.encrypted) {
+        nodeResponse.writeHead(301, {
+          location: `${serverOrigin}${nodeRequest.url}`,
         })
-
-        const firstLog = requestNode.logs.shift()
-        const lastLog = requestNode.logs.pop()
-        const middleLogs = requestNode.logs
-
-        writeLog(firstLog, { someLogIsError, someLogIsWarn, depth })
-        middleLogs.forEach((log) => {
-          writeLog(log, { someLogIsError, someLogIsWarn, depth })
-        })
-        requestNode.children.forEach((child) => {
-          visitRequestNodeToLog(child, depth + 1)
-        })
-        if (lastLog) {
-          writeLog(lastLog, { someLogIsError, someLogIsWarn, depth: depth + 1 })
-        }
-      }
-      visitRequestNodeToLog(rootRequestNode, 0)
-    }
-    nodeRequest.on("error", (error) => {
-      if (error.message === "aborted") {
-        addRequestLog(rootRequestNode, {
-          type: "debug",
-          value: createDetailedMessage(`request aborted by client`, {
-            "error message": error.message,
-          }),
-        })
-      } else {
-        // I'm not sure this can happen but it's here in case
-        addRequestLog(rootRequestNode, {
-          type: "error",
-          value: createDetailedMessage(`"error" event emitted on request`, {
-            "error stack": error.stack,
-          }),
-        })
-      }
-    })
-
-    const pushResponse = async ({ path, method }, { requestNode }) => {
-      const http2Stream = nodeResponse.stream
-
-      // being able to push a stream is nice to have
-      // so when it fails it's not critical
-      const onPushStreamError = (e) => {
-        addRequestLog(requestNode, {
-          type: "error",
-          value: createDetailedMessage(
-            `An error occured while pushing a stream to the response for ${request.ressource}`,
-            {
-              "error stack": e.stack,
-            },
-          ),
-        })
-      }
-
-      // not aborted, let's try to push a stream into that response
-      // https://nodejs.org/docs/latest-v16.x/api/http2.html#http2streampushstreamheaders-options-callback
-      let pushStream
-      try {
-        pushStream = await new Promise((resolve, reject) => {
-          http2Stream.pushStream(
-            {
-              ":path": path,
-              ...(method ? { ":method": method } : {}),
-            },
-            async (
-              error,
-              pushStream,
-              // headers
-            ) => {
-              if (error) {
-                reject(error)
-              }
-              resolve(pushStream)
-            },
-          )
-        })
-      } catch (e) {
-        onPushStreamError(e)
+        nodeResponse.end()
         return
       }
 
-      const abortController = new AbortController()
-      // It's possible to get NGHTTP2_REFUSED_STREAM errors here
-      // https://github.com/nodejs/node/issues/20824
-      const pushErrorCallback = (error) => {
-        onPushStreamError(error)
-        abortController.abort()
-      }
-      pushStream.on("error", pushErrorCallback)
-      sendResponseOperation.addEndCallback(() => {
-        pushStream.removeListener("error", onPushStreamError)
+      const receiveRequestOperation = Abort.startOperation()
+      receiveRequestOperation.addAbortSource((abort) => {
+        const closeEventCallback = () => {
+          if (nodeRequest.complete) {
+            receiveRequestOperation.end()
+          } else {
+            nodeResponse.destroy()
+            abort()
+          }
+        }
+        nodeRequest.once("close", closeEventCallback)
+        return () => {
+          nodeRequest.removeListener("close", closeEventCallback)
+        }
+      })
+      receiveRequestOperation.addAbortSource((abort) => {
+        return stopCallbackList.add(abort)
       })
 
-      await sendResponseOperation.withSignal(async (signal) => {
-        const pushResponseOperation = Abort.startOperation()
-        pushResponseOperation.addAbortSignal(signal)
-        pushResponseOperation.addAbortSignal(abortController.signal)
+      const sendResponseOperation = Abort.startOperation()
+      sendResponseOperation.addAbortSignal(receiveRequestOperation.signal)
+      sendResponseOperation.addAbortSource((abort) => {
+        return stopCallbackList.add(abort)
+      })
 
-        const pushRequest = createPushRequest(request, {
-          signal: pushResponseOperation.signal,
-          pathname: path,
-          method,
-        })
+      const request = fromNodeRequest(nodeRequest, {
+        serverOrigin,
+        signal: receiveRequestOperation.signal,
+      })
 
-        try {
-          const responseProperties = await handleRequest(pushRequest, {
-            requestNode,
-          })
-          if (!abortController.signal.aborted) {
-            if (pushStream.destroyed) {
-              abortController.abort()
-            } else if (!http2Stream.pushAllowed) {
-              abortController.abort()
-            } else if (responseProperties !== ABORTED_RESPONSE_PROPERTIES) {
-              const responseLength =
-                responseProperties.headers["content-length"] || 0
-              const { effectiveRecvDataLength, remoteWindowSize } =
-                http2Stream.session.state
-              if (effectiveRecvDataLength + responseLength > remoteWindowSize) {
-                addRequestLog(requestNode, {
-                  type: "debug",
-                  value: `Aborting stream to prevent exceeding remoteWindowSize`,
-                })
-                abortController.abort()
-              }
+      // Handling request is asynchronous, we buffer logs for that request
+      // until we know what happens with that request
+      // It delays logs until we know of the request will be handled
+      // but it's mandatory to make logs readable.
+      const rootRequestNode = {
+        logs: [],
+        children: [],
+      }
+      const addRequestLog = (node, { type, value }) => {
+        node.logs.push({ type, value })
+      }
+      const onRequestHandled = (node) => {
+        if (node !== rootRequestNode) {
+          // keep buffering until root request write logs for everyone
+          return
+        }
+        const prefixLines = (string, prefix) => {
+          return string.replace(/^(?!\s*$)/gm, prefix)
+        }
+        const writeLog = (
+          { type, value },
+          { someLogIsError, someLogIsWarn, depth },
+        ) => {
+          if (depth > 0) {
+            value = prefixLines(value, "  ".repeat(depth))
+          }
+          if (type === "info") {
+            if (someLogIsError) {
+              type = "error"
+            } else if (someLogIsWarn) {
+              type = "warn"
             }
           }
-          await sendResponse({
-            signal: pushResponseOperation.signal,
-            request: pushRequest,
-            requestNode,
-            responseStream: pushStream,
-            responseProperties,
+          logger[type](value)
+        }
+        const visitRequestNodeToLog = (requestNode, depth) => {
+          let someLogIsError = false
+          let someLogIsWarn = false
+          requestNode.logs.forEach((log) => {
+            if (log.type === "error") {
+              someLogIsError = true
+            }
+            if (log.type === "warn") {
+              someLogIsWarn = true
+            }
           })
-        } finally {
-          await pushResponseOperation.end()
+
+          const firstLog = requestNode.logs.shift()
+          const lastLog = requestNode.logs.pop()
+          const middleLogs = requestNode.logs
+
+          writeLog(firstLog, { someLogIsError, someLogIsWarn, depth })
+          middleLogs.forEach((log) => {
+            writeLog(log, { someLogIsError, someLogIsWarn, depth })
+          })
+          requestNode.children.forEach((child) => {
+            visitRequestNodeToLog(child, depth + 1)
+          })
+          if (lastLog) {
+            writeLog(lastLog, {
+              someLogIsError,
+              someLogIsWarn,
+              depth: depth + 1,
+            })
+          }
+        }
+        visitRequestNodeToLog(rootRequestNode, 0)
+      }
+      nodeRequest.on("error", (error) => {
+        if (error.message === "aborted") {
+          addRequestLog(rootRequestNode, {
+            type: "debug",
+            value: createDetailedMessage(`request aborted by client`, {
+              "error message": error.message,
+            }),
+          })
+        } else {
+          // I'm not sure this can happen but it's here in case
+          addRequestLog(rootRequestNode, {
+            type: "error",
+            value: createDetailedMessage(`"error" event emitted on request`, {
+              "error stack": error.stack,
+            }),
+          })
         }
       })
-    }
 
-    const handleRequest = async (request, { requestNode }) => {
-      let requestReceivedMeasure
-      if (serverTiming) {
-        requestReceivedMeasure = performance.now()
-      }
-      addRequestLog(requestNode, {
-        type: "info",
-        value: request.parent
-          ? `Push ${request.ressource}`
-          : `${request.method} ${request.origin}${request.ressource}`,
-      })
-      const warn = (value) => {
-        addRequestLog(requestNode, {
-          type: "warn",
-          value,
+      const pushResponse = async ({ path, method }, { requestNode }) => {
+        const http2Stream = nodeResponse.stream
+
+        // being able to push a stream is nice to have
+        // so when it fails it's not critical
+        const onPushStreamError = (e) => {
+          addRequestLog(requestNode, {
+            type: "error",
+            value: createDetailedMessage(
+              `An error occured while pushing a stream to the response for ${request.ressource}`,
+              {
+                "error stack": e.stack,
+              },
+            ),
+          })
+        }
+
+        // not aborted, let's try to push a stream into that response
+        // https://nodejs.org/docs/latest-v16.x/api/http2.html#http2streampushstreamheaders-options-callback
+        let pushStream
+        try {
+          pushStream = await new Promise((resolve, reject) => {
+            http2Stream.pushStream(
+              {
+                ":path": path,
+                ...(method ? { ":method": method } : {}),
+              },
+              async (
+                error,
+                pushStream,
+                // headers
+              ) => {
+                if (error) {
+                  reject(error)
+                }
+                resolve(pushStream)
+              },
+            )
+          })
+        } catch (e) {
+          onPushStreamError(e)
+          return
+        }
+
+        const abortController = new AbortController()
+        // It's possible to get NGHTTP2_REFUSED_STREAM errors here
+        // https://github.com/nodejs/node/issues/20824
+        const pushErrorCallback = (error) => {
+          onPushStreamError(error)
+          abortController.abort()
+        }
+        pushStream.on("error", pushErrorCallback)
+        sendResponseOperation.addEndCallback(() => {
+          pushStream.removeListener("error", onPushStreamError)
+        })
+
+        await sendResponseOperation.withSignal(async (signal) => {
+          const pushResponseOperation = Abort.startOperation()
+          pushResponseOperation.addAbortSignal(signal)
+          pushResponseOperation.addAbortSignal(abortController.signal)
+
+          const pushRequest = createPushRequest(request, {
+            signal: pushResponseOperation.signal,
+            pathname: path,
+            method,
+          })
+
+          try {
+            const responseProperties = await handleRequest(pushRequest, {
+              requestNode,
+            })
+            if (!abortController.signal.aborted) {
+              if (pushStream.destroyed) {
+                abortController.abort()
+              } else if (!http2Stream.pushAllowed) {
+                abortController.abort()
+              } else if (responseProperties !== ABORTED_RESPONSE_PROPERTIES) {
+                const responseLength =
+                  responseProperties.headers["content-length"] || 0
+                const { effectiveRecvDataLength, remoteWindowSize } =
+                  http2Stream.session.state
+                if (
+                  effectiveRecvDataLength + responseLength >
+                  remoteWindowSize
+                ) {
+                  addRequestLog(requestNode, {
+                    type: "debug",
+                    value: `Aborting stream to prevent exceeding remoteWindowSize`,
+                  })
+                  abortController.abort()
+                }
+              }
+            }
+            await sendResponse({
+              signal: pushResponseOperation.signal,
+              request: pushRequest,
+              requestNode,
+              responseStream: pushStream,
+              responseProperties,
+            })
+          } finally {
+            await pushResponseOperation.end()
+          }
         })
       }
 
-      let requestWaitingTimeout
-      if (requestWaitingMs) {
-        requestWaitingTimeout = setTimeout(
-          () => requestWaitingCallback({ request, warn, requestWaitingMs }),
-          requestWaitingMs,
-        ).unref()
-      }
+      const handleRequest = async (request, { requestNode }) => {
+        let requestReceivedMeasure
+        if (serverTiming) {
+          requestReceivedMeasure = performance.now()
+        }
+        addRequestLog(requestNode, {
+          type: "info",
+          value: request.parent
+            ? `Push ${request.ressource}`
+            : `${request.method} ${request.origin}${request.ressource}`,
+        })
+        const warn = (value) => {
+          addRequestLog(requestNode, {
+            type: "warn",
+            value,
+          })
+        }
 
-      serviceController.callHooks(
-        "redirectRequest",
-        request,
-        { warn },
-        (newRequestProperties) => {
-          if (newRequestProperties) {
-            request = applyRedirectionToRequest(request, {
-              original: request.original || request,
-              previous: request,
-              ...newRequestProperties,
-            })
-          }
-        },
-      )
+        let requestWaitingTimeout
+        if (requestWaitingMs) {
+          requestWaitingTimeout = setTimeout(
+            () => requestWaitingCallback({ request, warn, requestWaitingMs }),
+            requestWaitingMs,
+          ).unref()
+        }
 
-      let handleRequestReturnValue
-      let errorWhileHandlingRequest = null
-      let handleRequestTimings = serverTiming ? {} : null
-      try {
-        handleRequestReturnValue = await serviceController.callAsyncHooksUntil(
-          "handleRequest",
+        serviceController.callHooks(
+          "redirectRequest",
           request,
-          {
-            timing: handleRequestTimings,
-            warn,
-            pushResponse: async ({ path, method }) => {
-              if (typeof path !== "string" || path[0] !== "/") {
-                addRequestLog(requestNode, {
-                  type: "warn",
-                  value: `response push ignored because path is invalid (must be a string starting with "/", found ${path})`,
-                })
-                return
-              }
-              if (!request.http2) {
-                addRequestLog(requestNode, {
-                  type: "warn",
-                  value: `response push ignored because request is not http2`,
-                })
-                return
-              }
-              const canPushStream = testCanPushStream(nodeResponse.stream)
-              if (!canPushStream.can) {
-                addRequestLog(requestNode, {
-                  type: "debug",
-                  value: `response push ignored because ${canPushStream.reason}`,
-                })
-                return
-              }
+          { warn },
+          (newRequestProperties) => {
+            if (newRequestProperties) {
+              request = applyRedirectionToRequest(request, {
+                original: request.original || request,
+                previous: request,
+                ...newRequestProperties,
+              })
+            }
+          },
+        )
 
-              let preventedByService = null
-              const prevent = () => {
-                preventedByService = serviceController.getCurrentService()
-              }
-              serviceController.callHooksUntil(
-                "onResponsePush",
-                { path, method },
+        let handleRequestReturnValue
+        let errorWhileHandlingRequest = null
+        let handleRequestTimings = serverTiming ? {} : null
+        try {
+          handleRequestReturnValue =
+            await serviceController.callAsyncHooksUntil(
+              "handleRequest",
+              request,
+              {
+                timing: handleRequestTimings,
+                warn,
+                pushResponse: async ({ path, method }) => {
+                  if (typeof path !== "string" || path[0] !== "/") {
+                    addRequestLog(requestNode, {
+                      type: "warn",
+                      value: `response push ignored because path is invalid (must be a string starting with "/", found ${path})`,
+                    })
+                    return
+                  }
+                  if (!request.http2) {
+                    addRequestLog(requestNode, {
+                      type: "warn",
+                      value: `response push ignored because request is not http2`,
+                    })
+                    return
+                  }
+                  const canPushStream = testCanPushStream(nodeResponse.stream)
+                  if (!canPushStream.can) {
+                    addRequestLog(requestNode, {
+                      type: "debug",
+                      value: `response push ignored because ${canPushStream.reason}`,
+                    })
+                    return
+                  }
+
+                  let preventedByService = null
+                  const prevent = () => {
+                    preventedByService = serviceController.getCurrentService()
+                  }
+                  serviceController.callHooksUntil(
+                    "onResponsePush",
+                    { path, method },
+                    {
+                      request,
+                      warn,
+                      prevent,
+                    },
+                    () => preventedByService,
+                  )
+                  if (preventedByService) {
+                    addRequestLog(requestNode, {
+                      type: "debug",
+                      value: `response push prevented by "${preventedByService.name}" service`,
+                    })
+                    return
+                  }
+
+                  const requestChildNode = { logs: [], children: [] }
+                  requestNode.children.push(requestChildNode)
+                  await pushResponse(
+                    { path, method },
+                    {
+                      requestNode: requestChildNode,
+                      parentHttp2Stream: nodeResponse.stream,
+                    },
+                  )
+                },
+              },
+            )
+        } catch (error) {
+          errorWhileHandlingRequest = error
+        }
+
+        let responseProperties
+        if (errorWhileHandlingRequest) {
+          if (
+            errorWhileHandlingRequest.name === "AbortError" &&
+            request.signal.aborted
+          ) {
+            responseProperties = ABORTED_RESPONSE_PROPERTIES
+          } else {
+            // internal error, create 500 response
+            if (
+              // stopOnInternalError stops server only if requestToResponse generated
+              // a non controlled error (internal error).
+              // if requestToResponse gracefully produced a 500 response (it did not throw)
+              // then we can assume we are still in control of what we are doing
+              stopOnInternalError
+            ) {
+              // il faudrais pouvoir stop que les autres response ?
+              stop(STOP_REASON_INTERNAL_ERROR)
+            }
+            const handleErrorReturnValue =
+              await serviceController.callAsyncHooksUntil(
+                "handleError",
+                errorWhileHandlingRequest,
                 {
                   request,
                   warn,
-                  prevent,
                 },
-                () => preventedByService,
               )
-              if (preventedByService) {
-                addRequestLog(requestNode, {
-                  type: "debug",
-                  value: `response push prevented by "${preventedByService.name}" service`,
-                })
-                return
-              }
-
-              const requestChildNode = { logs: [], children: [] }
-              requestNode.children.push(requestChildNode)
-              await pushResponse(
-                { path, method },
+            if (!handleErrorReturnValue) {
+              throw errorWhileHandlingRequest
+            }
+            addRequestLog(requestNode, {
+              type: "error",
+              value: createDetailedMessage(
+                `internal error while handling request`,
                 {
-                  requestNode: requestChildNode,
-                  parentHttp2Stream: nodeResponse.stream,
+                  "error stack": errorWhileHandlingRequest.stack,
                 },
-              )
-            },
-          },
-        )
-      } catch (error) {
-        errorWhileHandlingRequest = error
-      }
-
-      let responseProperties
-      if (errorWhileHandlingRequest) {
-        if (
-          errorWhileHandlingRequest.name === "AbortError" &&
-          request.signal.aborted
-        ) {
-          responseProperties = ABORTED_RESPONSE_PROPERTIES
-        } else {
-          // internal error, create 500 response
-          if (
-            // stopOnInternalError stops server only if requestToResponse generated
-            // a non controlled error (internal error).
-            // if requestToResponse gracefully produced a 500 response (it did not throw)
-            // then we can assume we are still in control of what we are doing
-            stopOnInternalError
-          ) {
-            // il faudrais pouvoir stop que les autres response ?
-            stop(STOP_REASON_INTERNAL_ERROR)
-          }
-          const handleErrorReturnValue =
-            await serviceController.callAsyncHooksUntil(
-              "handleError",
-              errorWhileHandlingRequest,
+              ),
+            })
+            responseProperties = composeTwoResponses(
               {
-                request,
-                warn,
+                status: 500,
+                statusText: "Internal Server Error",
+                headers: {
+                  // ensure error are not cached
+                  "cache-control": "no-store",
+                  "content-type": "text/plain",
+                },
               },
+              handleErrorReturnValue,
             )
-          if (!handleErrorReturnValue) {
-            throw errorWhileHandlingRequest
           }
-          addRequestLog(requestNode, {
-            type: "error",
-            value: createDetailedMessage(
-              `internal error while handling request`,
-              {
-                "error stack": errorWhileHandlingRequest.stack,
-              },
-            ),
-          })
-          responseProperties = composeTwoResponses(
-            {
-              status: 500,
-              statusText: "Internal Server Error",
-              headers: {
-                // ensure error are not cached
-                "cache-control": "no-store",
-                "content-type": "text/plain",
-              },
-            },
-            handleErrorReturnValue,
+        } else {
+          const {
+            status = 501,
+            statusText,
+            statusMessage,
+            headers = {},
+            body,
+            ...rest
+          } = handleRequestReturnValue || {}
+          responseProperties = {
+            status,
+            statusText,
+            statusMessage,
+            headers,
+            body,
+            ...rest,
+          }
+        }
+
+        if (serverTiming) {
+          const responseReadyMeasure = performance.now()
+          const timeToStartResponding =
+            responseReadyMeasure - requestReceivedMeasure
+          const serverTiming = {
+            ...handleRequestTimings,
+            ...responseProperties.timing,
+            "time to start responding": timeToStartResponding,
+          }
+          responseProperties.headers = composeTwoHeaders(
+            responseProperties.headers,
+            timingToServerTimingResponseHeaders(serverTiming),
           )
         }
-      } else {
-        const {
-          status = 501,
-          statusText,
-          statusMessage,
-          headers = {},
-          body,
-          ...rest
-        } = handleRequestReturnValue || {}
-        responseProperties = {
-          status,
-          statusText,
-          statusMessage,
-          headers,
-          body,
-          ...rest,
+        if (requestWaitingMs) {
+          clearTimeout(requestWaitingTimeout)
         }
-      }
-
-      if (serverTiming) {
-        const responseReadyMeasure = performance.now()
-        const timeToStartResponding =
-          responseReadyMeasure - requestReceivedMeasure
-        const serverTiming = {
-          ...handleRequestTimings,
-          ...responseProperties.timing,
-          "time to start responding": timeToStartResponding,
+        if (
+          request.method !== "HEAD" &&
+          responseProperties.headers["content-length"] > 0 &&
+          !responseProperties.body
+        ) {
+          addRequestLog(requestNode, {
+            type: "warn",
+            value: `content-length header is ${responseProperties.headers["content-length"]} but body is empty`,
+          })
         }
-        responseProperties.headers = composeTwoHeaders(
-          responseProperties.headers,
-          timingToServerTimingResponseHeaders(serverTiming),
+        serviceController.callHooks(
+          "injectResponseHeaders",
+          responseProperties,
+          {
+            request,
+            warn,
+          },
+          (returnValue) => {
+            if (returnValue) {
+              responseProperties.headers = composeTwoHeaders(
+                responseProperties.headers,
+                returnValue,
+              )
+            }
+          },
         )
-      }
-      if (requestWaitingMs) {
-        clearTimeout(requestWaitingTimeout)
-      }
-      if (
-        request.method !== "HEAD" &&
-        responseProperties.headers["content-length"] > 0 &&
-        !responseProperties.body
-      ) {
-        addRequestLog(requestNode, {
-          type: "warn",
-          value: `content-length header is ${responseProperties.headers["content-length"]} but body is empty`,
-        })
-      }
-      serviceController.callHooks(
-        "injectResponseHeaders",
-        responseProperties,
-        {
+        serviceController.callHooks("responseReady", responseProperties, {
           request,
           warn,
-        },
-        (returnValue) => {
-          if (returnValue) {
-            responseProperties.headers = composeTwoHeaders(
-              responseProperties.headers,
-              returnValue,
-            )
-          }
-        },
-      )
-      serviceController.callHooks("responseReady", responseProperties, {
-        request,
-        warn,
-      })
-      return responseProperties
-    }
-
-    const sendResponse = async ({
-      signal,
-      request,
-      requestNode,
-      responseStream,
-      responseProperties,
-    }) => {
-      // When "pushResponse" is called and the parent response has no body
-      // the parent response is immediatly ended. It means child responses (pushed streams)
-      // won't get a chance to be pushed.
-      // To let a chance to pushed streams we wait a little before sending the response
-      const ignoreBody = request.method === "HEAD"
-      const bodyIsEmpty = !responseProperties.body || ignoreBody
-      if (bodyIsEmpty && requestNode.children.length > 0) {
-        await new Promise((resolve) => setTimeout(resolve))
+        })
+        return responseProperties
       }
 
-      await populateNodeResponse(responseStream, responseProperties, {
+      const sendResponse = async ({
         signal,
-        ignoreBody,
-        onAbort: () => {
-          addRequestLog(requestNode, {
-            type: "info",
-            value: `response aborted`,
-          })
-          onRequestHandled(requestNode)
-        },
-        onError: (error) => {
-          addRequestLog(requestNode, {
-            type: "error",
-            value: createDetailedMessage(
-              `An error occured while sending response`,
-              {
-                "error stack": error.stack,
-              },
-            ),
-          })
-          onRequestHandled(requestNode)
-        },
-        onHeadersSent: ({ status, statusText }) => {
-          const statusType = statusToType(status)
-          addRequestLog(requestNode, {
-            type: {
-              information: "info",
-              success: "info",
-              redirection: "info",
-              client_error: "warn",
-              server_error: "error",
-            }[statusType],
-            value: `${colorizeResponseStatus(status)} ${
-              responseProperties.statusMessage || statusText
-            }`,
-          })
-        },
-        onEnd: () => {
-          onRequestHandled(requestNode)
-        },
-      })
-    }
-
-    try {
-      if (receiveRequestOperation.signal.aborted) {
-        return
-      }
-      const responseProperties = await handleRequest(request, {
-        requestNode: rootRequestNode,
-      })
-      nodeRequest.resume()
-      if (receiveRequestOperation.signal.aborted) {
-        return
-      }
-
-      // the node request readable stream is never closed because
-      // the response headers contains "connection: keep-alive"
-      // In this scenario we want to disable READABLE_STREAM_TIMEOUT warning
-      if (responseProperties.headers.connection === "keep-alive") {
-        clearTimeout(request.body.timeout)
-      }
-
-      await sendResponse({
-        signal: sendResponseOperation.signal,
         request,
-        requestNode: rootRequestNode,
-        responseStream: nodeResponse,
+        requestNode,
+        responseStream,
         responseProperties,
-      })
-    } finally {
-      await sendResponseOperation.end()
+      }) => {
+        // When "pushResponse" is called and the parent response has no body
+        // the parent response is immediatly ended. It means child responses (pushed streams)
+        // won't get a chance to be pushed.
+        // To let a chance to pushed streams we wait a little before sending the response
+        const ignoreBody = request.method === "HEAD"
+        const bodyIsEmpty = !responseProperties.body || ignoreBody
+        if (bodyIsEmpty && requestNode.children.length > 0) {
+          await new Promise((resolve) => setTimeout(resolve))
+        }
+
+        await populateNodeResponse(responseStream, responseProperties, {
+          signal,
+          ignoreBody,
+          onAbort: () => {
+            addRequestLog(requestNode, {
+              type: "info",
+              value: `response aborted`,
+            })
+            onRequestHandled(requestNode)
+          },
+          onError: (error) => {
+            addRequestLog(requestNode, {
+              type: "error",
+              value: createDetailedMessage(
+                `An error occured while sending response`,
+                {
+                  "error stack": error.stack,
+                },
+              ),
+            })
+            onRequestHandled(requestNode)
+          },
+          onHeadersSent: ({ status, statusText }) => {
+            const statusType = statusToType(status)
+            addRequestLog(requestNode, {
+              type: {
+                information: "info",
+                success: "info",
+                redirection: "info",
+                client_error: "warn",
+                server_error: "error",
+              }[statusType],
+              value: `${colorizeResponseStatus(status)} ${
+                responseProperties.statusMessage || statusText
+              }`,
+            })
+          },
+          onEnd: () => {
+            onRequestHandled(requestNode)
+          },
+        })
+      }
+
+      try {
+        if (receiveRequestOperation.signal.aborted) {
+          return
+        }
+        const responseProperties = await handleRequest(request, {
+          requestNode: rootRequestNode,
+        })
+        nodeRequest.resume()
+        if (receiveRequestOperation.signal.aborted) {
+          return
+        }
+
+        // the node request readable stream is never closed because
+        // the response headers contains "connection: keep-alive"
+        // In this scenario we want to disable READABLE_STREAM_TIMEOUT warning
+        if (responseProperties.headers.connection === "keep-alive") {
+          clearTimeout(request.body.timeout)
+        }
+
+        await sendResponse({
+          signal: sendResponseOperation.signal,
+          request,
+          requestNode: rootRequestNode,
+          responseStream: nodeResponse,
+          responseProperties,
+        })
+      } finally {
+        await sendResponseOperation.end()
+      }
     }
+    const removeRequestListener = listenRequest(nodeServer, requestCallback)
+    // ensure we don't try to handle new requests while server is stopping
+    stopCallbackList.add(removeRequestListener)
   }
 
-  const removeRequestListener = listenRequest(nodeServer, requestCallback)
-  // ensure we don't try to handle new requests while server is stopping
-  stopCallbackList.add(removeRequestListener)
+  websocket: {
+    const websocketHandlers = []
+    serviceController.services.forEach((service) => {
+      const { handleWebsocket } = service
+      if (handleWebsocket) {
+        websocketHandlers.push(handleWebsocket)
+      }
+    })
+    if (websocketHandlers.length > 0) {
+      let websocketServer = new WebSocketServer({ noServer: true })
+      const upgradeCallback = (nodeRequest, socket, head) => {
+        websocketServer.handleUpgrade(
+          nodeRequest,
+          socket,
+          head,
+          async (websocket) => {
+            serviceController.callAsyncHooksUntil(
+              "handleWebsocket",
+              websocket,
+              {
+                nodeRequest,
+              },
+            )
+          },
+        )
+      }
+
+      // see server-polyglot.js, upgrade must be listened on https server when used
+      const facadeServer = nodeServer._tlsServer || nodeServer
+      const removeUpgradeCallback = listenEvent(
+        facadeServer,
+        "upgrade",
+        upgradeCallback,
+      )
+      stopCallbackList.add(removeUpgradeCallback)
+      stopCallbackList.add(() => {
+        websocketServer.close()
+        websocketServer = null
+      })
+    }
+    server.websocketOrigin =
+      protocol === "https" ? `wss://${host}:${port}` : `ws://${host}:${port}`
+  }
 
   if (startLog) {
     if (serverOrigins.network) {
