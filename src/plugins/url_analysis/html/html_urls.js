@@ -13,9 +13,9 @@ import {
 export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
   const url = urlInfo.originalUrl
   const content = urlInfo.content
-  const { scenario, referenceUtils } = context
+  const { scenarios, referenceUtils } = context
   const htmlAst = parseHtmlString(content, {
-    storeOriginalPositions: scenario !== "build",
+    storeOriginalPositions: scenarios.dev,
   })
   const actions = []
   visitHtmlUrls({

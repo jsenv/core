@@ -16,7 +16,7 @@ export const jsenvPluginImportMetaHot = () => {
     transformUrlContent: {
       html: (htmlUrlInfo, context) => {
         // during build we don't really care to parse html hot dependencies
-        if (context.scenario === "build") {
+        if (context.scenarios.build) {
           return
         }
         const htmlAst = parseHtmlString(htmlUrlInfo.content)
@@ -58,7 +58,7 @@ export const jsenvPluginImportMetaHot = () => {
         if (importMetaHotPaths.length === 0) {
           return null
         }
-        if (context.scenario === "build") {
+        if (context.scenarios.build) {
           return removeImportMetaHots(urlInfo, importMetaHotPaths)
         }
         return injectImportMetaHot(urlInfo, context, importMetaHotClientFileUrl)

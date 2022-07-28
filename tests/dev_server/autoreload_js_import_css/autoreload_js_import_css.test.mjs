@@ -137,8 +137,7 @@ const test = async ({
 
 if (import.meta.hot) {
   import.meta.hot.accept()
-}
-await new Promise((resolve) => setTimeout(resolve, 200))`)
+}`)
     await new Promise((resolve) => setTimeout(resolve, 500))
     {
       const actual = {

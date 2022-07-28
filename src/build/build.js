@@ -175,7 +175,7 @@ build ${entryPointKeys.length} entry points`)
       logger,
       rootDirectoryUrl,
       urlGraph: rawGraph,
-      scenario: "build",
+      scenarios: { build: true },
       sourcemaps,
       sourcemapsSourcesContent,
       runtimeCompat,
@@ -202,7 +202,6 @@ build ${entryPointKeys.length} entry points`)
         ...getCorePlugins({
           rootDirectoryUrl,
           urlGraph: rawGraph,
-          scenario: "build",
           runtimeCompat,
 
           urlAnalysis,
@@ -423,7 +422,7 @@ build ${entryPointKeys.length} entry points`)
       logger,
       rootDirectoryUrl,
       urlGraph: finalGraph,
-      scenario: "build",
+      scenarios: { build: true },
       sourcemaps,
       sourcemapsSourcesContent,
       sourcemapsRelativeSources: !versioning,
@@ -1063,7 +1062,7 @@ const applyUrlVersioning = async ({
       logger,
       rootDirectoryUrl: buildDirectoryUrl,
       urlGraph: finalGraph,
-      scenario: "build",
+      scenarios: { build: true },
       sourcemaps,
       sourcemapsSourcesContent,
       sourcemapsRelativeSources: true,
@@ -1078,7 +1077,7 @@ const applyUrlVersioning = async ({
         }),
         {
           name: "jsenv:versioning",
-          appliesDuring: { build: true },
+          appliesDuring: "build",
           resolveUrl: (reference) => {
             const buildUrl = buildUrls[reference.specifier]
             if (buildUrl) {

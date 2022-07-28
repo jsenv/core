@@ -5,5 +5,5 @@ if (import.meta.hot) {
 }
 
 // let browser time to parse and apply css to the document
-await new Promise((resolve) => setTimeout(resolve, 200))
+await new Promise((resolve) => setTimeout(resolve, 500))
 window.resolveReadyPromise()

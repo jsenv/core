@@ -27,8 +27,10 @@ export const jsenvPluginNodeEsmResolution = ({
   return {
     name: "jsenv:node_esm_resolution",
     appliesDuring: "*",
-    init: ({ rootDirectoryUrl, scenario, runtimeCompat, urlGraph }) => {
-      const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node")
+    init: (context) => {
+      const nodeRuntimeEnabled = Object.keys(context.runtimeCompat).includes(
+        "node",
+      )
       // https://nodejs.org/api/esm.html#resolver-algorithm-specification
       packageConditions = packageConditions || [
         ...readCustomConditionsFromProcessArgs(),
@@ -57,19 +59,19 @@ export const jsenvPluginNodeEsmResolution = ({
         return packageJson
       }
 
-      if (scenario === "dev") {
+      if (context.scenarios.dev) {
         const onFileChange = () => {
           packageScopesCache.clear()
           packageJsonsCache.clear()
-          urlGraph.urlInfoMap.forEach((urlInfo) => {
+          context.urlGraph.urlInfoMap.forEach((urlInfo) => {
             if (urlInfo.dependsOnPackageJson) {
-              urlGraph.considerModified(urlInfo)
+              context.urlGraph.considerModified(urlInfo)
             }
           })
         }
         filesInvalidatingCache.forEach((file) => {
           const unregister = registerFileLifecycle(
-            new URL(file, rootDirectoryUrl),
+            new URL(file, context.rootDirectoryUrl),
             {
               added: () => {
                 onFileChange()
@@ -131,7 +133,7 @@ export const jsenvPluginNodeEsmResolution = ({
       return null
     },
     transformUrlSearchParams: (reference, context) => {
-      if (context.scenario === "build") {
+      if (context.scenarios.build) {
         return null
       }
       if (!reference.url.startsWith("file:")) {

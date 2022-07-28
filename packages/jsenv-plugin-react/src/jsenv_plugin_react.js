@@ -56,18 +56,18 @@ const jsenvPluginJsxAndRefresh = ({
     name: "jsenv:jsx_and_refresh",
     appliesDuring: "*",
     transformUrlContent: {
-      js_module: async (urlInfo, { scenario, referenceUtils }) => {
+      js_module: async (urlInfo, context) => {
         const urlMeta = URL_META.applyAssociations({
           url: urlInfo.url,
           associations,
         })
         const jsxEnabled = urlMeta.jsx
-        const refreshEnabled = scenario === "dev" ? urlMeta.refresh : false
+        const refreshEnabled = context.scenarios.dev ? urlMeta.refresh : false
         const babelPlugins = [
           ...(jsxEnabled
             ? [
                 [
-                  scenario === "dev"
+                  context.scenarios.dev
                     ? "@babel/plugin-transform-react-jsx-development"
                     : "@babel/plugin-transform-react-jsx",
                   {
@@ -103,7 +103,7 @@ const jsenvPluginJsxAndRefresh = ({
             let index = code.indexOf(importSpecifier)
             while (index > -1) {
               const specifier = importSpecifier.slice(1, -1)
-              const [injectedReference] = referenceUtils.inject({
+              const [injectedReference] = context.referenceUtils.inject({
                 type: "js_import_export",
                 expectedType: "js_module",
                 specifier,
@@ -121,11 +121,13 @@ const jsenvPluginJsxAndRefresh = ({
           const hasReg = /\$RefreshReg\$\(/.test(code)
           const hasSig = /\$RefreshSig\$\(/.test(code)
           if (hasReg || hasSig) {
-            const [reactRefreshClientReference] = referenceUtils.inject({
-              type: "js_import_export",
-              expectedType: "js_module",
-              specifier: "@jsenv/plugin-react/src/client/react_refresh.js",
-            })
+            const [reactRefreshClientReference] = context.referenceUtils.inject(
+              {
+                type: "js_import_export",
+                expectedType: "js_module",
+                specifier: "@jsenv/plugin-react/src/client/react_refresh.js",
+              },
+            )
             magicSource.prepend(`import { installReactRefresh } from ${
               reactRefreshClientReference.generatedSpecifier
             }

@@ -19,7 +19,13 @@ const test = async ({ browserLauncher, browserName }) => {
       disabled: process.env.FROM_TESTS,
     })
     const page = await browser.newPage()
-    await page.goto(`${devServer.origin}/${story}/main.html`)
+    try {
+      await page.goto(`${devServer.origin}/${story}/main.html`)
+    } catch (e) {
+      throw new Error(
+        `error while loading page on ${browserName} for ${story}: ${e.stack}`,
+      )
+    }
     try {
       await page.waitForSelector("jsenv-error-overlay", { timeout: 5_000 })
     } catch (e) {

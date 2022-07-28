@@ -28,18 +28,14 @@ export const createKitchen = ({
   logLevel,
 
   rootDirectoryUrl,
-  scenario,
+  scenarios,
   runtimeCompat,
   // during dev/test clientRuntimeCompat is a single runtime
   // during build clientRuntimeCompat is runtimeCompat
   clientRuntimeCompat = runtimeCompat,
   urlGraph,
   plugins,
-  sourcemaps = {
-    dev: "inline", // "programmatic" and "file" also allowed
-    test: "inline",
-    build: "none",
-  }[scenario],
+  sourcemaps = scenarios.dev ? "inline" : "none", // "programmatic" and "file" also allowed
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
   sourcemapsRelativeSources,
@@ -48,7 +44,7 @@ export const createKitchen = ({
   const logger = createLogger({ logLevel })
   const pluginController = createPluginController({
     plugins,
-    scenario,
+    scenarios,
   })
   const jsenvDirectoryUrl = new URL(".jsenv/", rootDirectoryUrl).href
   const kitchenContext = {
@@ -56,7 +52,7 @@ export const createKitchen = ({
     logger,
     rootDirectoryUrl,
     urlGraph,
-    scenario,
+    scenarios,
     runtimeCompat,
     clientRuntimeCompat,
     isSupportedOnCurrentClients: (feature) => {
@@ -769,12 +765,11 @@ const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
       column: reference.specifierColumn,
     }
     urlInfo.contentType = reference.contentType
-    urlInfo.originalContent =
-      context.scenario === "build"
-        ? urlInfo.originalContent === undefined
-          ? reference.content
-          : urlInfo.originalContent
-        : reference.content
+    urlInfo.originalContent = context.scenarios.build
+      ? urlInfo.originalContent === undefined
+        ? reference.content
+        : urlInfo.originalContent
+      : reference.content
     urlInfo.content = reference.content
   }
 }

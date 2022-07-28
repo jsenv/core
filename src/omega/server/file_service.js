@@ -20,7 +20,7 @@ export const createFileService = ({
   serverEventsDispatcher,
 
   rootDirectoryUrl,
-  scenario,
+  scenarios,
   runtimeCompat,
 
   plugins,
@@ -53,7 +53,7 @@ export const createFileService = ({
     ".jsenv/": false,
   }
 
-  if (scenario === "dev") {
+  if (scenarios.dev) {
     const stopWatchingClientFiles = registerDirectoryLifecycle(
       rootDirectoryUrl,
       {
@@ -99,13 +99,13 @@ export const createFileService = ({
         })
         urlInfo.isValid = () => watch
       },
-      includeOriginalUrls: scenario === "dev",
+      includeOriginalUrls: scenarios.dev,
     })
     const kitchen = createKitchen({
       signal,
       logLevel,
       rootDirectoryUrl,
-      scenario,
+      scenarios,
       runtimeCompat,
       clientRuntimeCompat: {
         [runtimeName]: runtimeVersion,
@@ -115,7 +115,6 @@ export const createFileService = ({
         ...plugins,
         ...getCorePlugins({
           rootDirectoryUrl,
-          scenario,
           runtimeCompat,
 
           urlAnalysis,
@@ -156,7 +155,7 @@ export const createFileService = ({
           allServerEvents[serverEventName]({
             rootDirectoryUrl,
             urlGraph,
-            scenario,
+            scenarios,
             sendServerEvent: (data) => {
               serverEventsDispatcher.dispatch({
                 type: serverEventName,
@@ -174,7 +173,7 @@ export const createFileService = ({
 
     const context = {
       rootDirectoryUrl,
-      scenario,
+      scenarios,
       runtimeName,
       runtimeVersion,
       urlGraph,
@@ -260,10 +259,11 @@ export const createFileService = ({
       await kitchen.cook(urlInfo, {
         request,
         reference,
-        outDirectoryUrl:
-          scenario === "dev"
-            ? `${rootDirectoryUrl}.jsenv/${runtimeName}@${runtimeVersion}/`
-            : `${rootDirectoryUrl}.jsenv/${scenario}/${runtimeName}@${runtimeVersion}/`,
+        outDirectoryUrl: scenarios.dev
+          ? `${rootDirectoryUrl}.jsenv/${runtimeName}@${runtimeVersion}/`
+          : `${rootDirectoryUrl}.jsenv/${
+              scenarios.test ? "test" : "build"
+            }/${runtimeName}@${runtimeVersion}/`,
       })
       let { response } = urlInfo
       if (response) {

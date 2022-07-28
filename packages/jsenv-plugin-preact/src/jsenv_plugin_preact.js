@@ -52,18 +52,15 @@ export const jsenvPluginPreact = ({
       },
     },
     transformUrlContent: {
-      html: ({ content }, { scenario, referenceUtils }) => {
-        if (!preactDevtoolsDuringBuild && scenario === "build") {
+      html: (urlInfo, context) => {
+        if (!preactDevtoolsDuringBuild && context.scenarios.build) {
           return null
         }
-        const htmlAst = parseHtmlString(content)
-        const [preactDevtoolsReference] = referenceUtils.inject({
+        const htmlAst = parseHtmlString(urlInfo.content)
+        const [preactDevtoolsReference] = context.referenceUtils.inject({
           type: "js_import_export",
           expectedType: "js_module",
-          specifier:
-            scenario === "dev" || scenario === "test"
-              ? "preact/debug"
-              : "preact/devtools",
+          specifier: context.scenarios.dev ? "preact/debug" : "preact/devtools",
         })
         injectScriptNodeAsEarlyAsPossible(
           htmlAst,
@@ -79,15 +76,15 @@ import ${preactDevtoolsReference.generatedSpecifier}
         const htmlModified = stringifyHtmlAst(htmlAst)
         return { content: htmlModified }
       },
-      js_module: async (urlInfo, { scenario, referenceUtils }) => {
+      js_module: async (urlInfo, context) => {
         const urlMeta = URL_META.applyAssociations({
           url: urlInfo.url,
           associations,
         })
         const jsxEnabled = urlMeta.jsx
-        const refreshEnabled = scenario === "dev" ? urlMeta.refresh : false
+        const refreshEnabled = context.scenarios.dev ? urlMeta.refresh : false
         const hookNamesEnabled =
-          scenario === "dev" &&
+          context.scenarios.dev &&
           urlMeta.hookNames &&
           (urlInfo.content.includes("useState") ||
             urlInfo.content.includes("useReducer") ||
@@ -99,7 +96,7 @@ import ${preactDevtoolsReference.generatedSpecifier}
             ...(jsxEnabled
               ? [
                   [
-                    scenario === "dev"
+                    context.scenarios.dev
                       ? "@babel/plugin-transform-react-jsx-development"
                       : "@babel/plugin-transform-react-jsx",
                     {
@@ -133,7 +130,7 @@ import ${preactDevtoolsReference.generatedSpecifier}
             let index = code.indexOf(importSpecifier)
             while (index > -1) {
               const specifier = importSpecifier.slice(1, -1)
-              const [injectedReference] = referenceUtils.inject({
+              const [injectedReference] = context.referenceUtils.inject({
                 type: "js_import_export",
                 expectedType: "js_module",
                 specifier,
@@ -151,11 +148,12 @@ import ${preactDevtoolsReference.generatedSpecifier}
           const hasReg = /\$RefreshReg\$\(/.test(code)
           const hasSig = /\$RefreshSig\$\(/.test(code)
           if (hasReg || hasSig) {
-            const [preactRefreshClientReference] = referenceUtils.inject({
-              type: "js_import_export",
-              expectedType: "js_module",
-              specifier: "@jsenv/plugin-preact/src/client/preact_refresh.js",
-            })
+            const [preactRefreshClientReference] =
+              context.referenceUtils.inject({
+                type: "js_import_export",
+                expectedType: "js_module",
+                specifier: "@jsenv/plugin-preact/src/client/preact_refresh.js",
+              })
             magicSource.prepend(`import { installPreactRefresh } from ${
               preactRefreshClientReference.generatedSpecifier
             }

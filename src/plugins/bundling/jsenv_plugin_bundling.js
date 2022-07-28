@@ -18,9 +18,7 @@ export const jsenvPluginBundling = (bundling) => {
 
   return {
     name: "jsenv:bundling",
-    appliesDuring: {
-      build: true,
-    },
+    appliesDuring: "build",
     bundle: {
       css: bundling.css
         ? (cssUrlInfos, context) => {

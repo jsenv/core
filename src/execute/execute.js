@@ -24,7 +24,7 @@ export const execute = async ({
   runtime,
   runtimeParams,
 
-  scenario = "dev",
+  scenarios = { dev: true },
   plugins = [],
   nodeEsmResolution,
   fileSystemMagicResolution,
@@ -75,7 +75,7 @@ export const execute = async ({
       privateKey,
 
       rootDirectoryUrl,
-      scenario,
+      scenarios,
       runtimeCompat: { [runtime.name]: runtime.version },
 
       plugins,

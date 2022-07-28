@@ -43,7 +43,7 @@ export const jsenvPluginImportAssertions = ({
       //     We would have to tell rollup to ignore import with assertion
       //   - means rollup can bundle more js file together
       //   - means url versioning can work for css inlined in js
-      if (context.scenario === "build") {
+      if (context.scenarios.build) {
         json = true
         css = true
         text = true
