@@ -1,3 +1,8 @@
+# 27.7.0
+
+- use websocket to communicate between jsenv dev server and clients
+- update playwright
+
 # 27.6.1
 
 - code frame show source code frame also in firefox/webkit for runtime errors
