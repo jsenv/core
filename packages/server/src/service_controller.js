@@ -4,6 +4,7 @@ const HOOK_NAMES = [
   "serverListening",
   "redirectRequest",
   "handleRequest",
+  "handleWebsocket",
   "handleError",
   "onResponsePush",
   "injectResponseHeaders",

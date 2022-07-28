@@ -7,9 +7,9 @@ const { devServer } = await import("./start_dev_server.mjs")
 const snapshotDirectoryUrl = new URL(`./snapshots/`, import.meta.url)
 const screenshotsDirectoryUrl = new URL(`./sceenshots/`, import.meta.url)
 if (!process.env.FROM_TESTS) {
-  await ensureEmptyDirectory(snapshotDirectoryUrl)
+  await ensureEmptyDirectory(screenshotsDirectoryUrl)
 }
-await ensureEmptyDirectory(screenshotsDirectoryUrl)
+await ensureEmptyDirectory(snapshotDirectoryUrl)
 
 const test = async ({ browserLauncher, browserName }) => {
   const browser = await browserLauncher.launch({ headless: true })

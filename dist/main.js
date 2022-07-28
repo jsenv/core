@@ -1,6 +1,6 @@
 import { workerData, Worker, parentPort } from "node:worker_threads";
 import { pathToFileURL, fileURLToPath } from "node:url";
-import { chmod, stat, lstat, readdir, promises, unlink, openSync, closeSync, rmdir, readFile as readFile$1, readFileSync as readFileSync$1, watch, readdirSync, statSync, writeFile as writeFile$1, writeFileSync as writeFileSync$1, mkdirSync, createReadStream, existsSync, realpathSync } from "node:fs";
+import { chmod, stat, lstat, readdir, promises, unlink, openSync, closeSync, rmdir, readFile as readFile$1, readFileSync as readFileSync$1, watch, readdirSync, statSync, writeFile as writeFile$1, writeFileSync as writeFileSync$1, mkdirSync, existsSync, realpathSync, createReadStream } from "node:fs";
 import crypto, { createHash } from "node:crypto";
 import { dirname, basename, extname } from "node:path";
 import { U as URL_META, f as filterV8Coverage } from "./js/v8_coverage.js";
@@ -8,6 +8,10 @@ import process$1, { memoryUsage } from "node:process";
 import os, { networkInterfaces } from "node:os";
 import tty from "node:tty";
 import stringWidth from "string-width";
+import { createMagicSource, composeTwoSourcemaps, getOriginalPosition, sourcemapConverter, SOURCEMAP, generateSourcemapFileUrl, generateSourcemapDataUrl } from "@jsenv/sourcemap";
+import { parseHtmlString, stringifyHtmlAst, visitHtmlNodes, getHtmlNodeAttribute, analyzeScriptNode, setHtmlNodeAttributes, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, applyPostCss, postCssPluginUrlVisitor, parseJsUrls, getHtmlNodeText, setHtmlNodeText, applyBabelPlugins, injectScriptNodeAsEarlyAsPossible, createHtmlNode, findHtmlNode, removeHtmlNode, removeHtmlNodeText, transpileWithParcel, injectJsImport, minifyWithParcel, analyzeLinkNode } from "@jsenv/ast";
+import { createRequire } from "node:module";
+import babelParser from "@babel/parser";
 import http from "node:http";
 import cluster from "node:cluster";
 import { performance as performance$1 } from "node:perf_hooks";
@@ -15,10 +19,6 @@ import net, { createServer } from "node:net";
 import { Readable, Stream, Writable } from "node:stream";
 import { Http2ServerResponse } from "node:http2";
 import { lookup } from "node:dns";
-import { parseHtmlString, stringifyHtmlAst, visitHtmlNodes, getHtmlNodeAttribute, analyzeScriptNode, setHtmlNodeAttributes, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, applyPostCss, postCssPluginUrlVisitor, parseJsUrls, findHtmlNode, getHtmlNodeText, removeHtmlNode, setHtmlNodeText, applyBabelPlugins, injectScriptNodeAsEarlyAsPossible, createHtmlNode, removeHtmlNodeText, transpileWithParcel, injectJsImport, minifyWithParcel, analyzeLinkNode } from "@jsenv/ast";
-import { createMagicSource, getOriginalPosition, composeTwoSourcemaps, sourcemapConverter, SOURCEMAP, generateSourcemapFileUrl, generateSourcemapDataUrl } from "@jsenv/sourcemap";
-import { createRequire } from "node:module";
-import babelParser from "@babel/parser";
 import v8, { takeCoverage } from "node:v8";
 import wrapAnsi from "wrap-ansi";
 import stripAnsi from "strip-ansi";
@@ -3825,4291 +3825,393 @@ const createTaskLog = (label, {
   };
 };
 
-const createReloadableWorker = (workerFileUrl, options = {}) => {
-  const workerFilePath = fileURLToPath(workerFileUrl);
-  const isPrimary = !workerData || workerData.workerFilePath !== workerFilePath;
-  let worker;
+const sortByDependencies = nodes => {
+  const visited = [];
+  const sorted = [];
+  const circular = [];
 
-  const terminate = async () => {
-    if (worker) {
-      let _worker = worker;
-      worker = null;
-      const exitPromise = new Promise(resolve => {
-        _worker.once("exit", resolve);
+  const visit = url => {
+    const isSorted = sorted.includes(url);
+
+    if (isSorted) {
+      return;
+    }
+
+    const isVisited = visited.includes(url);
+
+    if (isVisited) {
+      circular.push(url);
+      sorted.push(url);
+    } else {
+      visited.push(url);
+      nodes[url].dependencies.forEach(dependencyUrl => {
+        visit(dependencyUrl);
       });
-
-      _worker.terminate();
-
-      await exitPromise;
+      sorted.push(url);
     }
   };
 
-  const load = async () => {
-    if (!isPrimary) {
-      throw new Error(`worker can be loaded from primary file only`);
-    }
-
-    worker = new Worker(workerFilePath, { ...options,
-      workerData: { ...options.workerData,
-        workerFilePath
-      }
-    });
-    worker.once("error", error => {
-      console.error(error);
-    });
-    worker.once("exit", () => {
-      worker = null;
-    });
-    await new Promise(resolve => {
-      worker.once("online", resolve);
-    });
-    return worker;
-  };
-
-  const reload = async () => {
-    await terminate();
-    await load();
-  };
-
-  return {
-    isPrimary,
-    isWorker: !isPrimary,
-    load,
-    reload,
-    terminate
-  };
-};
-
-const memoize = compute => {
-  let memoized = false;
-  let memoizedValue;
-
-  const fnWithMemoization = (...args) => {
-    if (memoized) {
-      return memoizedValue;
-    } // if compute is recursive wait for it to be fully done before storing the lockValue
-    // so set locked later
-
-
-    memoizedValue = compute(...args);
-    memoized = true;
-    return memoizedValue;
-  };
-
-  fnWithMemoization.forget = () => {
-    const value = memoizedValue;
-    memoized = false;
-    memoizedValue = undefined;
-    return value;
-  };
-
-  return fnWithMemoization;
-};
-
-const timeStart = name => {
-  // as specified in https://w3c.github.io/server-timing/#the-performanceservertiming-interface
-  // duration is a https://www.w3.org/TR/hr-time-2/#sec-domhighrestimestamp
-  const startTimestamp = performance$1.now();
-
-  const timeEnd = () => {
-    const endTimestamp = performance$1.now();
-    const timing = {
-      [name]: endTimestamp - startTimestamp
-    };
-    return timing;
-  };
-
-  return timeEnd;
-};
-const timeFunction = (name, fn) => {
-  const timeEnd = timeStart(name);
-  const returnValue = fn();
-
-  if (returnValue && typeof returnValue.then === "function") {
-    return returnValue.then(value => {
-      return [timeEnd(), value];
-    });
-  }
-
-  return [timeEnd(), returnValue];
-};
-
-const HOOK_NAMES$1 = ["serverListening", "redirectRequest", "handleRequest", "handleError", "onResponsePush", "injectResponseHeaders", "responseReady", "serverStopped"];
-const createServiceController = services => {
-  const flatServices = flattenAndFilterServices(services);
-  const hookGroups = {};
-
-  const addService = service => {
-    Object.keys(service).forEach(key => {
-      if (key === "name") return;
-      const isHook = HOOK_NAMES$1.includes(key);
-
-      if (!isHook) {
-        console.warn(`Unexpected "${key}" property on "${service.name}" service`);
-      }
-
-      const hookName = key;
-      const hookValue = service[hookName];
-
-      if (hookValue) {
-        const group = hookGroups[hookName] || (hookGroups[hookName] = []);
-        group.push({
-          service,
-          name: hookName,
-          value: hookValue
-        });
-      }
-    });
-  };
-
-  flatServices.forEach(service => {
-    addService(service);
+  Object.keys(nodes).forEach(url => {
+    visit(url);
   });
-  let currentService = null;
-  let currentHookName = null;
-
-  const callHook = (hook, info, context) => {
-    const hookFn = hook.value;
-
-    if (!hookFn) {
-      return null;
-    }
-
-    currentService = hook.service;
-    currentHookName = hook.name;
-    let timeEnd;
-
-    if (context && context.timing) {
-      timeEnd = timeStart(`${currentService.name.replace("jsenv:", "")}.${currentHookName}`);
-    }
-
-    let valueReturned = hookFn(info, context);
-
-    if (context && context.timing) {
-      Object.assign(context.timing, timeEnd());
-    }
-
-    currentService = null;
-    currentHookName = null;
-    return valueReturned;
-  };
-
-  const callAsyncHook = async (hook, info, context) => {
-    const hookFn = hook.value;
-
-    if (!hookFn) {
-      return null;
-    }
-
-    currentService = hook.service;
-    currentHookName = hook.name;
-    let timeEnd;
-
-    if (context && context.timing) {
-      timeEnd = timeStart(`${currentService.name.replace("jsenv:", "")}.${currentHookName}`);
-    }
-
-    let valueReturned = await hookFn(info, context);
-
-    if (context && context.timing) {
-      Object.assign(context.timing, timeEnd());
-    }
-
-    currentService = null;
-    currentHookName = null;
-    return valueReturned;
-  };
-
-  const callHooks = (hookName, info, context, callback = () => {}) => {
-    const hooks = hookGroups[hookName];
-
-    if (hooks) {
-      for (const hook of hooks) {
-        const returnValue = callHook(hook, info, context);
-
-        if (returnValue) {
-          callback(returnValue);
-        }
-      }
-    }
-  };
-
-  const callHooksUntil = (hookName, info, context, until = returnValue => returnValue) => {
-    const hooks = hookGroups[hookName];
-
-    if (hooks) {
-      for (const hook of hooks) {
-        const returnValue = callHook(hook, info, context);
-        const untilReturnValue = until(returnValue);
-
-        if (untilReturnValue) {
-          return untilReturnValue;
-        }
-      }
-    }
-
-    return null;
-  };
-
-  const callAsyncHooksUntil = (hookName, info, context) => {
-    const hooks = hookGroups[hookName];
-
-    if (!hooks) {
-      return null;
-    }
-
-    if (hooks.length === 0) {
-      return null;
-    }
-
-    return new Promise((resolve, reject) => {
-      const visit = index => {
-        if (index >= hooks.length) {
-          return resolve();
-        }
-
-        const hook = hooks[index];
-        const returnValue = callAsyncHook(hook, info, context);
-        return Promise.resolve(returnValue).then(output => {
-          if (output) {
-            return resolve(output);
-          }
-
-          return visit(index + 1);
-        }, reject);
-      };
-
-      visit(0);
-    });
-  };
-
-  return {
-    services: flatServices,
-    callHooks,
-    callHooksUntil,
-    callAsyncHooksUntil,
-    getCurrentService: () => currentService,
-    getCurrentHookName: () => currentHookName
-  };
+  sorted.circular = circular;
+  return sorted;
 };
 
-const flattenAndFilterServices = services => {
-  const flatServices = [];
-
-  const visitServiceEntry = serviceEntry => {
-    if (Array.isArray(serviceEntry)) {
-      serviceEntry.forEach(value => visitServiceEntry(value));
-      return;
-    }
-
-    if (typeof serviceEntry === "object" && serviceEntry !== null) {
-      if (!serviceEntry.name) {
-        serviceEntry.name = "anonymous";
-      }
-
-      flatServices.push(serviceEntry);
-      return;
-    }
-
-    throw new Error(`services must be objects, got ${serviceEntry}`);
-  };
-
-  services.forEach(serviceEntry => visitServiceEntry(serviceEntry));
-  return flatServices;
-};
-
-/**
-
- A multiple header is a header with multiple values like
-
- "text/plain, application/json;q=0.1"
-
- Each, means it's a new value (it's optionally followed by a space)
-
- Each; mean it's a property followed by =
- if "" is a string
- if not it's likely a number
- */
-const parseMultipleHeader = (multipleHeaderString, {
-  validateName = () => true,
-  validateProperty = () => true
-} = {}) => {
-  const values = multipleHeaderString.split(",");
-  const multipleHeader = {};
-  values.forEach(value => {
-    const valueTrimmed = value.trim();
-    const valueParts = valueTrimmed.split(";");
-    const name = valueParts[0];
-    const nameValidation = validateName(name);
-
-    if (!nameValidation) {
-      return;
-    }
-
-    const properties = parseHeaderProperties(valueParts.slice(1), {
-      validateProperty
-    });
-    multipleHeader[name] = properties;
-  });
-  return multipleHeader;
-};
-
-const parseHeaderProperties = (headerProperties, {
-  validateProperty
-}) => {
-  const properties = headerProperties.reduce((previous, valuePart) => {
-    const [propertyName, propertyValueString] = valuePart.split("=");
-    const propertyValue = parseHeaderPropertyValue(propertyValueString);
-    const property = {
-      name: propertyName,
-      value: propertyValue
-    };
-    const propertyValidation = validateProperty(property);
-
-    if (!propertyValidation) {
-      return previous;
-    }
-
-    return { ...previous,
-      [property.name]: property.value
-    };
-  }, {});
-  return properties;
-};
-
-const parseHeaderPropertyValue = headerPropertyValueString => {
-  const firstChar = headerPropertyValueString[0];
-  const lastChar = headerPropertyValueString[headerPropertyValueString.length - 1];
-
-  if (firstChar === '"' && lastChar === '"') {
-    return headerPropertyValueString.slice(1, -1);
-  }
-
-  if (isNaN(headerPropertyValueString)) {
-    return headerPropertyValueString;
-  }
-
-  return parseFloat(headerPropertyValueString);
-};
-
-const stringifyMultipleHeader = (multipleHeader, {
-  validateName = () => true,
-  validateProperty = () => true
-} = {}) => {
-  return Object.keys(multipleHeader).filter(name => {
-    const headerProperties = multipleHeader[name];
-
-    if (!headerProperties) {
-      return false;
-    }
-
-    if (typeof headerProperties !== "object") {
-      return false;
-    }
-
-    const nameValidation = validateName(name);
-
-    if (!nameValidation) {
-      return false;
-    }
-
-    return true;
-  }).map(name => {
-    const headerProperties = multipleHeader[name];
-    const headerPropertiesString = stringifyHeaderProperties(headerProperties, {
-      validateProperty
-    });
-
-    if (headerPropertiesString.length) {
-      return `${name};${headerPropertiesString}`;
-    }
-
-    return name;
-  }).join(", ");
-};
-
-const stringifyHeaderProperties = (headerProperties, {
-  validateProperty
-}) => {
-  const headerPropertiesString = Object.keys(headerProperties).map(name => {
-    const property = {
-      name,
-      value: headerProperties[name]
-    };
-    return property;
-  }).filter(property => {
-    const propertyValidation = validateProperty(property);
-
-    if (!propertyValidation) {
-      return false;
-    }
-
-    return true;
-  }).map(stringifyHeaderProperty).join(";");
-  return headerPropertiesString;
-};
-
-const stringifyHeaderProperty = ({
-  name,
-  value
-}) => {
-  if (typeof value === "string") {
-    return `${name}="${value}"`;
-  }
-
-  return `${name}=${value}`;
-};
-
-// because in chrome dev tools they are shown in alphabetic order
-// also we should manipulate a timing object instead of a header to facilitate
-// manipulation of the object so that the timing header response generation logic belongs to @jsenv/server
-// so response can return a new timing object
-// yes it's awful, feel free to PR with a better approach :)
-
-const timingToServerTimingResponseHeaders = timing => {
-  const serverTimingHeader = {};
-  Object.keys(timing).forEach((key, index) => {
-    const name = letters[index] || "zz";
-    serverTimingHeader[name] = {
-      desc: key,
-      dur: timing[key]
-    };
-  });
-  const serverTimingHeaderString = stringifyServerTimingHeader(serverTimingHeader);
-  return {
-    "server-timing": serverTimingHeaderString
-  };
-};
-const stringifyServerTimingHeader = serverTimingHeader => {
-  return stringifyMultipleHeader(serverTimingHeader, {
-    validateName: validateServerTimingName
-  });
-}; // (),/:;<=>?@[\]{}" Don't allowed
-// Minimal length is one symbol
-// Digits, alphabet characters,
-// and !#$%&'*+-.^_`|~ are allowed
-// https://www.w3.org/TR/2019/WD-server-timing-20190307/#the-server-timing-header-field
-// https://tools.ietf.org/html/rfc7230#section-3.2.6
-
-const validateServerTimingName = name => {
-  const valid = /^[!#$%&'*+\-.^_`|~0-9a-z]+$/gi.test(name);
-
-  if (!valid) {
-    console.warn(`server timing contains invalid symbols`);
-    return false;
-  }
-
-  return true;
-};
-
-const letters = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"];
-
-const listenEvent = (objectWithEventEmitter, eventName, callback, {
-  once = false
-} = {}) => {
-  if (once) {
-    objectWithEventEmitter.once(eventName, callback);
-  } else {
-    objectWithEventEmitter.addListener(eventName, callback);
-  }
-
-  return () => {
-    objectWithEventEmitter.removeListener(eventName, callback);
-  };
-};
-
-/**
-
-https://stackoverflow.com/a/42019773/2634179
-
-*/
-const createPolyglotServer = async ({
-  http2 = false,
-  http1Allowed = true,
-  certificate,
-  privateKey
-}) => {
-  const httpServer = http.createServer();
-  const tlsServer = await createSecureServer({
-    certificate,
-    privateKey,
-    http2,
-    http1Allowed
-  });
-  const netServer = net.createServer({
-    allowHalfOpen: false
-  });
-  listenEvent(netServer, "connection", socket => {
-    detectSocketProtocol(socket, protocol => {
-      if (protocol === "http") {
-        httpServer.emit("connection", socket);
-        return;
-      }
-
-      if (protocol === "tls") {
-        tlsServer.emit("connection", socket);
-        return;
-      }
-
-      const response = [`HTTP/1.1 400 Bad Request`, `Content-Length: 0`, "", ""].join("\r\n");
-      socket.write(response);
-      socket.end();
-      socket.destroy();
-      netServer.emit("clientError", new Error("protocol error, Neither http, nor tls"), socket);
-    });
-  });
-  netServer._httpServer = httpServer;
-  netServer._tlsServer = tlsServer;
-  return netServer;
-}; // The async part is just to lazyly import "http2" or "https"
-// so that these module are parsed only if used.
-
-const createSecureServer = async ({
-  certificate,
-  privateKey,
-  http2,
-  http1Allowed
-}) => {
-  if (http2) {
+const urlSpecifierEncoding = {
+  encode: reference => {
     const {
-      createSecureServer
-    } = await import("node:http2");
-    return createSecureServer({
-      cert: certificate,
-      key: privateKey,
-      allowHTTP1: http1Allowed
-    });
-  }
+      generatedSpecifier
+    } = reference;
 
-  const {
-    createServer
-  } = await import("node:https");
-  return createServer({
-    cert: certificate,
-    key: privateKey
-  });
-};
-
-const detectSocketProtocol = (socket, protocolDetectedCallback) => {
-  let removeOnceReadableListener = () => {};
-
-  const tryToRead = () => {
-    const buffer = socket.read(1);
-
-    if (buffer === null) {
-      removeOnceReadableListener = socket.once("readable", tryToRead);
-      return;
-    }
-
-    const firstByte = buffer[0];
-    socket.unshift(buffer);
-
-    if (firstByte === 22) {
-      protocolDetectedCallback("tls");
-      return;
-    }
-
-    if (firstByte > 32 && firstByte < 127) {
-      protocolDetectedCallback("http");
-      return;
-    }
-
-    protocolDetectedCallback(null);
-  };
-
-  tryToRead();
-  return () => {
-    removeOnceReadableListener();
-  };
-};
-
-const trackServerPendingConnections = (nodeServer, {
-  http2
-}) => {
-  if (http2) {
-    // see http2.js: we rely on https://nodejs.org/api/http2.html#http2_compatibility_api
-    return trackHttp1ServerPendingConnections(nodeServer);
-  }
-
-  return trackHttp1ServerPendingConnections(nodeServer);
-}; // const trackHttp2ServerPendingSessions = () => {}
-
-const trackHttp1ServerPendingConnections = nodeServer => {
-  const pendingConnections = new Set();
-  const removeConnectionListener = listenEvent(nodeServer, "connection", connection => {
-    pendingConnections.add(connection);
-    listenEvent(connection, "close", () => {
-      pendingConnections.delete(connection);
-    }, {
-      once: true
-    });
-  });
-
-  const stop = async reason => {
-    removeConnectionListener();
-    const pendingConnectionsArray = Array.from(pendingConnections);
-    pendingConnections.clear();
-    await Promise.all(pendingConnectionsArray.map(async pendingConnection => {
-      await destroyConnection(pendingConnection, reason);
-    }));
-  };
-
-  return {
-    stop
-  };
-};
-
-const destroyConnection = (connection, reason) => {
-  return new Promise((resolve, reject) => {
-    connection.destroy(reason, error => {
-      if (error) {
-        if (error === reason || error.code === "ENOTCONN") {
-          resolve();
-        } else {
-          reject(error);
-        }
-      } else {
-        resolve();
-      }
-    });
-  });
-}; // export const trackServerPendingStreams = (nodeServer) => {
-//   const pendingClients = new Set()
-//   const streamListener = (http2Stream, headers, flags) => {
-//     const client = { http2Stream, headers, flags }
-//     pendingClients.add(client)
-//     http2Stream.on("close", () => {
-//       pendingClients.delete(client)
-//     })
-//   }
-//   nodeServer.on("stream", streamListener)
-//   const stop = ({
-//     status,
-//     // reason
-//   }) => {
-//     nodeServer.removeListener("stream", streamListener)
-//     return Promise.all(
-//       Array.from(pendingClients).map(({ http2Stream }) => {
-//         if (http2Stream.sentHeaders === false) {
-//           http2Stream.respond({ ":status": status }, { endStream: true })
-//         }
-//         return new Promise((resolve, reject) => {
-//           if (http2Stream.closed) {
-//             resolve()
-//           } else {
-//             http2Stream.close(NGHTTP2_NO_ERROR, (error) => {
-//               if (error) {
-//                 reject(error)
-//               } else {
-//                 resolve()
-//               }
-//             })
-//           }
-//         })
-//       }),
-//     )
-//   }
-//   return { stop }
-// }
-// export const trackServerPendingSessions = (nodeServer, { onSessionError }) => {
-//   const pendingSessions = new Set()
-//   const sessionListener = (session) => {
-//     session.on("close", () => {
-//       pendingSessions.delete(session)
-//     })
-//     session.on("error", onSessionError)
-//     pendingSessions.add(session)
-//   }
-//   nodeServer.on("session", sessionListener)
-//   const stop = async (reason) => {
-//     nodeServer.removeListener("session", sessionListener)
-//     await Promise.all(
-//       Array.from(pendingSessions).map((pendingSession) => {
-//         return new Promise((resolve, reject) => {
-//           pendingSession.close((error) => {
-//             if (error) {
-//               if (error === reason || error.code === "ENOTCONN") {
-//                 resolve()
-//               } else {
-//                 reject(error)
-//               }
-//             } else {
-//               resolve()
-//             }
-//           })
-//         })
-//       }),
-//     )
-//   }
-//   return { stop }
-// }
-
-const listenRequest = (nodeServer, requestCallback) => {
-  if (nodeServer._httpServer) {
-    const removeHttpRequestListener = listenEvent(nodeServer._httpServer, "request", requestCallback);
-    const removeTlsRequestListener = listenEvent(nodeServer._tlsServer, "request", requestCallback);
-    return () => {
-      removeHttpRequestListener();
-      removeTlsRequestListener();
-    };
-  }
-
-  return listenEvent(nodeServer, "request", requestCallback);
-};
-
-const trackServerPendingRequests = (nodeServer, {
-  http2
-}) => {
-  if (http2) {
-    // see http2.js: we rely on https://nodejs.org/api/http2.html#http2_compatibility_api
-    return trackHttp1ServerPendingRequests(nodeServer);
-  }
-
-  return trackHttp1ServerPendingRequests(nodeServer);
-};
-
-const trackHttp1ServerPendingRequests = nodeServer => {
-  const pendingClients = new Set();
-  const removeRequestListener = listenRequest(nodeServer, (nodeRequest, nodeResponse) => {
-    const client = {
-      nodeRequest,
-      nodeResponse
-    };
-    pendingClients.add(client);
-    nodeResponse.once("close", () => {
-      pendingClients.delete(client);
-    });
-  });
-
-  const stop = async ({
-    status,
-    reason
-  }) => {
-    removeRequestListener();
-    const pendingClientsArray = Array.from(pendingClients);
-    pendingClients.clear();
-    await Promise.all(pendingClientsArray.map(({
-      nodeResponse
-    }) => {
-      if (nodeResponse.headersSent === false) {
-        nodeResponse.writeHead(status, String(reason));
-      } // http2
-
-
-      if (nodeResponse.close) {
-        return new Promise((resolve, reject) => {
-          if (nodeResponse.closed) {
-            resolve();
-          } else {
-            nodeResponse.close(error => {
-              if (error) {
-                reject(error);
-              } else {
-                resolve();
-              }
-            });
-          }
-        });
-      } // http
-
-
-      return new Promise(resolve => {
-        if (nodeResponse.destroyed) {
-          resolve();
-        } else {
-          nodeResponse.once("close", () => {
-            resolve();
-          });
-          nodeResponse.destroy();
-        }
+    if (generatedSpecifier.then) {
+      return generatedSpecifier.then(value => {
+        reference.generatedSpecifier = value;
+        return urlSpecifierEncoding.encode(reference);
       });
-    }));
-  };
+    } // allow plugin to return a function to bypas default formatting
+    // (which is to use JSON.stringify when url is referenced inside js)
 
-  return {
-    stop
-  };
-};
 
-if ("observable" in Symbol === false) {
-  Symbol.observable = Symbol.for("observable");
-}
-
-const createObservable = producer => {
-  if (typeof producer !== "function") {
-    throw new TypeError(`producer must be a function, got ${producer}`);
-  }
-
-  const observable = {
-    [Symbol.observable]: () => observable,
-    subscribe: ({
-      next = () => {},
-      error = value => {
-        throw value;
-      },
-      complete = () => {}
-    }) => {
-      let cleanup = () => {};
-
-      const subscription = {
-        closed: false,
-        unsubscribe: () => {
-          subscription.closed = true;
-          cleanup();
-        }
-      };
-      const producerReturnValue = producer({
-        next: value => {
-          if (subscription.closed) return;
-          next(value);
-        },
-        error: value => {
-          if (subscription.closed) return;
-          error(value);
-        },
-        complete: () => {
-          if (subscription.closed) return;
-          complete();
-        }
-      });
-
-      if (typeof producerReturnValue === "function") {
-        cleanup = producerReturnValue;
-      }
-
-      return subscription;
+    if (typeof generatedSpecifier === "function") {
+      return generatedSpecifier();
     }
-  };
-  return observable;
-};
-const isObservable = value => {
-  if (value === null || value === undefined) {
-    return false;
-  }
 
-  if (typeof value === "object" || typeof value === "function") {
-    return Symbol.observable in value;
-  }
+    const formatter = formatters[reference.type];
+    const value = formatter ? formatter.encode(generatedSpecifier) : generatedSpecifier;
 
-  return false;
-};
-const observableFromValue = value => {
-  if (isObservable(value)) {
+    if (reference.escape) {
+      return reference.escape(value);
+    }
+
     return value;
+  },
+  decode: reference => {
+    const formatter = formatters[reference.type];
+    return formatter ? formatter.decode(reference.generatedSpecifier) : reference.generatedSpecifier;
   }
-
-  return createObservable(({
-    next,
-    complete
-  }) => {
-    next(value);
-    const timer = setTimeout(() => {
-      complete();
-    });
-    return () => {
-      clearTimeout(timer);
-    };
-  });
 };
-const createCompositeProducer = ({
-  cleanup = () => {}
+const formatters = {
+  "js_import_export": {
+    encode: JSON.stringify,
+    decode: JSON.parse
+  },
+  "js_url_specifier": {
+    encode: JSON.stringify,
+    decode: JSON.parse
+  },
+  "css_@import": {
+    encode: JSON.stringify,
+    code: JSON.stringify
+  },
+  // https://github.com/webpack-contrib/css-loader/pull/627/files
+  "css_url": {
+    encode: url => {
+      // If url is already wrapped in quotes, remove them
+      url = formatters.css_url.decode(url); // Should url be wrapped?
+      // See https://drafts.csswg.org/css-values-3/#urls
+
+      if (/["'() \t\n]/.test(url)) {
+        return `"${url.replace(/"/g, '\\"').replace(/\n/g, "\\n")}"`;
+      }
+
+      return url;
+    },
+    decode: url => {
+      const firstChar = url[0];
+      const lastChar = url[url.length - 1];
+
+      if (firstChar === `"` && lastChar === `"`) {
+        return url.slice(1, -1);
+      }
+
+      if (firstChar === `'` && lastChar === `'`) {
+        return url.slice(1, -1);
+      }
+
+      return url;
+    }
+  }
+};
+
+const createUrlGraph = ({
+  clientFileChangeCallbackList,
+  clientFilesPruneCallbackList,
+  onCreateUrlInfo = () => {},
+  includeOriginalUrls
 } = {}) => {
-  const observables = new Set();
-  const observers = new Set();
+  const urlInfoMap = new Map();
 
-  const addObservable = observable => {
-    if (observables.has(observable)) {
-      return false;
-    }
+  const getUrlInfo = url => urlInfoMap.get(url);
 
-    observables.add(observable);
-    observers.forEach(observer => {
-      observer.observe(observable);
-    });
-    return true;
-  };
+  const deleteUrlInfo = url => {
+    const urlInfo = urlInfoMap.get(url);
 
-  const removeObservable = observable => {
-    if (!observables.has(observable)) {
-      return false;
-    }
+    if (urlInfo) {
+      urlInfoMap.delete(url);
 
-    observables.delete(observable);
-    observers.forEach(observer => {
-      observer.unobserve(observable);
-    });
-    return true;
-  };
-
-  const producer = ({
-    next = () => {},
-    complete = () => {},
-    error = () => {}
-  }) => {
-    let completeCount = 0;
-
-    const checkComplete = () => {
-      if (completeCount === observables.size) {
-        complete();
+      if (urlInfo.sourcemapReference) {
+        deleteUrlInfo(urlInfo.sourcemapReference.url);
       }
-    };
-
-    const subscriptions = new Map();
-
-    const observe = observable => {
-      const subscription = observable.subscribe({
-        next: value => {
-          next(value);
-        },
-        error: value => {
-          error(value);
-        },
-        complete: () => {
-          subscriptions.delete(observable);
-          completeCount++;
-          checkComplete();
-        }
-      });
-      subscriptions.set(observable, subscription);
-    };
-
-    const unobserve = observable => {
-      const subscription = subscriptions.get(observable);
-
-      if (!subscription) {
-        return;
-      }
-
-      subscription.unsubscribe();
-      subscriptions.delete(observable);
-      checkComplete();
-    };
-
-    const observer = {
-      observe,
-      unobserve
-    };
-    observers.add(observer);
-    observables.forEach(observable => {
-      observe(observable);
-    });
-    return () => {
-      observers.delete(observer);
-      subscriptions.forEach(subscription => {
-        subscription.unsubscribe();
-      });
-      subscriptions.clear();
-      cleanup();
-    };
+    }
   };
 
-  producer.addObservable = addObservable;
-  producer.removeObservable = removeObservable;
-  return producer;
-};
+  const reuseOrCreateUrlInfo = url => {
+    const existingUrlInfo = getUrlInfo(url);
+    if (existingUrlInfo) return existingUrlInfo;
+    const urlInfo = createUrlInfo(url);
+    urlInfoMap.set(url, urlInfo);
+    onCreateUrlInfo(urlInfo);
+    return urlInfo;
+  };
 
-// https://github.com/jamestalmage/stream-to-observable/blob/master/index.js
-const readableStreamLifetimeInSeconds = 120;
-const nodeStreamToObservable = nodeStream => {
-  const observable = createObservable(({
-    next,
-    error,
-    complete
-  }) => {
-    if (nodeStream.isPaused()) {
-      nodeStream.resume();
-    } else if (nodeStream.complete) {
-      complete();
+  const inferReference = (specifier, parentUrl) => {
+    const parentUrlInfo = getUrlInfo(parentUrl);
+
+    if (!parentUrlInfo) {
       return null;
     }
 
-    const cleanup = () => {
-      nodeStream.removeListener("data", next);
-      nodeStream.removeListener("error", error);
-      nodeStream.removeListener("end", complete);
-      nodeStream.removeListener("close", cleanup);
-      nodeStream.destroy();
-    }; // should we do nodeStream.resume() in case the stream was paused ?
-
-
-    nodeStream.once("error", error);
-    nodeStream.on("data", data => {
-      next(data);
+    const firstReferenceOnThatUrl = parentUrlInfo.references.find(reference => {
+      return urlSpecifierEncoding.decode(reference) === specifier;
     });
-    nodeStream.once("close", () => {
-      cleanup();
-    });
-    nodeStream.once("end", () => {
-      complete();
-    });
-    return cleanup;
-  });
-
-  if (nodeStream instanceof Readable) {
-    // safe measure, ensure the readable stream gets
-    // used in the next ${readableStreamLifetimeInSeconds} otherwise destroys it
-    const timeout = setTimeout(() => {
-      process.emitWarning(`Readable stream not used after ${readableStreamLifetimeInSeconds} seconds. It will be destroyed to release ressources`, {
-        CODE: "READABLE_STREAM_TIMEOUT",
-        // url is for http client request
-        detail: `path: ${nodeStream.path}, fd: ${nodeStream.fd}, url: ${nodeStream.url}`
-      });
-      nodeStream.destroy();
-    }, readableStreamLifetimeInSeconds * 1000);
-    observable.timeout = timeout;
-    onceReadableStreamUsedOrClosed(nodeStream, () => {
-      clearTimeout(timeout);
-    });
-  }
-
-  return observable;
-};
-
-const onceReadableStreamUsedOrClosed = (readableStream, callback) => {
-  const dataOrCloseCallback = () => {
-    readableStream.removeListener("data", dataOrCloseCallback);
-    readableStream.removeListener("close", dataOrCloseCallback);
-    callback();
+    return firstReferenceOnThatUrl;
   };
 
-  readableStream.on("data", dataOrCloseCallback);
-  readableStream.once("close", dataOrCloseCallback);
-};
+  const findDependent = (url, predicate) => {
+    const urlInfo = getUrlInfo(url);
 
-const normalizeHeaderName = headerName => {
-  headerName = String(headerName);
-
-  if (/[^a-z0-9\-#$%&'*+.\^_`|~]/i.test(headerName)) {
-    throw new TypeError("Invalid character in header field name");
-  }
-
-  return headerName.toLowerCase();
-};
-
-const normalizeHeaderValue = headerValue => {
-  return String(headerValue);
-};
-
-/*
-https://developer.mozilla.org/en-US/docs/Web/API/Headers
-https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
-*/
-const headersFromObject = headersObject => {
-  const headers = {};
-  Object.keys(headersObject).forEach(headerName => {
-    if (headerName[0] === ":") {
-      // exclude http2 headers
-      return;
+    if (!urlInfo) {
+      return null;
     }
 
-    headers[normalizeHeaderName(headerName)] = normalizeHeaderValue(headersObject[headerName]);
-  });
-  return headers;
-};
+    const visitDependents = urlInfo => {
+      for (const dependentUrl of urlInfo.dependents) {
+        const dependent = getUrlInfo(dependentUrl);
 
-const fromNodeRequest = (nodeRequest, {
-  serverOrigin,
-  signal
-}) => {
-  const headers = headersFromObject(nodeRequest.headers);
-  const body = nodeStreamToObservable(nodeRequest);
-  let requestOrigin;
-
-  if (nodeRequest.authority) {
-    requestOrigin = nodeRequest.connection.encrypted ? `https://${nodeRequest.authority}` : `http://${nodeRequest.authority}`;
-  } else if (nodeRequest.headers.host) {
-    requestOrigin = nodeRequest.connection.encrypted ? `https://${nodeRequest.headers.host}` : `http://${nodeRequest.headers.host}`;
-  } else {
-    requestOrigin = serverOrigin;
-  }
-
-  return Object.freeze({
-    signal,
-    http2: Boolean(nodeRequest.stream),
-    origin: requestOrigin,
-    ...getPropertiesFromRessource({
-      ressource: nodeRequest.url,
-      baseUrl: requestOrigin
-    }),
-    method: nodeRequest.method,
-    headers,
-    body
-  });
-};
-const applyRedirectionToRequest = (request, {
-  ressource,
-  pathname,
-  ...rest
-}) => {
-  return { ...request,
-    ...(ressource ? getPropertiesFromRessource({
-      ressource,
-      baseUrl: request.url
-    }) : pathname ? getPropertiesFromPathname({
-      pathname,
-      baseUrl: request.url
-    }) : {}),
-    ...rest
-  };
-};
-
-const getPropertiesFromRessource = ({
-  ressource,
-  baseUrl
-}) => {
-  const urlObject = new URL(ressource, baseUrl);
-  let pathname = urlObject.pathname;
-  return {
-    url: String(urlObject),
-    pathname,
-    ressource
-  };
-};
-
-const getPropertiesFromPathname = ({
-  pathname,
-  baseUrl
-}) => {
-  return getPropertiesFromRessource({
-    ressource: `${pathname}${new URL(baseUrl).search}`,
-    baseUrl
-  });
-};
-
-const createPushRequest = (request, {
-  signal,
-  pathname,
-  method
-}) => {
-  const pushRequest = Object.freeze({ ...request,
-    parent: request,
-    signal,
-    http2: true,
-    ...(pathname ? getPropertiesFromPathname({
-      pathname,
-      baseUrl: request.url
-    }) : {}),
-    method: method || request.method,
-    headers: getHeadersInheritedByPushRequest(request),
-    body: undefined
-  });
-  return pushRequest;
-};
-
-const getHeadersInheritedByPushRequest = request => {
-  const headersInherited = { ...request.headers
-  }; // mtime sent by the client in request headers concerns the main request
-  // Time remains valid for request to other ressources so we keep it
-  // in child requests
-  // delete childHeaders["if-modified-since"]
-  // eTag sent by the client in request headers concerns the main request
-  // A request made to an other ressource must not inherit the eTag
-
-  delete headersInherited["if-none-match"];
-  return headersInherited;
-};
-
-const normalizeBodyMethods = body => {
-  if (isObservable(body)) {
-    return {
-      asObservable: () => body,
-      destroy: () => {}
-    };
-  }
-
-  if (isFileHandle(body)) {
-    return {
-      asObservable: () => fileHandleToObservable(body),
-      destroy: () => {
-        body.close();
-      }
-    };
-  }
-
-  if (isNodeStream(body)) {
-    return {
-      asObservable: () => nodeStreamToObservable(body),
-      destroy: () => {
-        body.destroy();
-      }
-    };
-  }
-
-  return {
-    asObservable: () => observableFromValue(body),
-    destroy: () => {}
-  };
-};
-const isFileHandle = value => {
-  return value && value.constructor && value.constructor.name === "FileHandle";
-};
-const fileHandleToReadableStream = fileHandle => {
-  const fileReadableStream = typeof fileHandle.createReadStream === "function" ? fileHandle.createReadStream() : createReadStream("/toto", // is it ok to pass a fake path like this?
-  {
-    fd: fileHandle.fd,
-    emitClose: true // autoClose: true
-
-  }); // I suppose it's required only when doing fs.createReadStream()
-  // and not fileHandle.createReadStream()
-  // fileReadableStream.on("end", () => {
-  //   fileHandle.close()
-  // })
-
-  return fileReadableStream;
-};
-
-const fileHandleToObservable = fileHandle => {
-  return nodeStreamToObservable(fileHandleToReadableStream(fileHandle));
-};
-
-const isNodeStream = value => {
-  if (value === undefined) {
-    return false;
-  }
-
-  if (value instanceof Stream || value instanceof Writable || value instanceof Readable) {
-    return true;
-  }
-
-  return false;
-};
-
-const populateNodeResponse = async (responseStream, {
-  status,
-  statusText,
-  headers,
-  body,
-  bodyEncoding
-}, {
-  signal,
-  ignoreBody,
-  onAbort,
-  onError,
-  onHeadersSent,
-  onEnd
-} = {}) => {
-  body = await body;
-  const bodyMethods = normalizeBodyMethods(body);
-
-  if (signal.aborted) {
-    bodyMethods.destroy();
-    responseStream.destroy();
-    onAbort();
-    return;
-  }
-
-  writeHead(responseStream, {
-    status,
-    statusText,
-    headers,
-    onHeadersSent
-  });
-
-  if (!body) {
-    onEnd();
-    responseStream.end();
-    return;
-  }
-
-  if (ignoreBody) {
-    onEnd();
-    bodyMethods.destroy();
-    responseStream.end();
-    return;
-  }
-
-  if (bodyEncoding) {
-    responseStream.setEncoding(bodyEncoding);
-  }
-
-  await new Promise(resolve => {
-    const observable = bodyMethods.asObservable();
-    const subscription = observable.subscribe({
-      next: data => {
-        try {
-          responseStream.write(data);
-        } catch (e) {
-          // Something inside Node.js sometimes puts stream
-          // in a state where .write() throw despites nodeResponse.destroyed
-          // being undefined and "close" event not being emitted.
-          // I have tested if we are the one calling destroy
-          // (I have commented every .destroy() call)
-          // but issue still occurs
-          // For the record it's "hard" to reproduce but can be by running
-          // a lot of tests against a browser in the context of @jsenv/core testing
-          if (e.code === "ERR_HTTP2_INVALID_STREAM") {
-            return;
-          }
-
-          responseStream.emit("error", e);
+        if (predicate(dependent)) {
+          return dependent;
         }
-      },
-      error: value => {
-        responseStream.emit("error", value);
-      },
-      complete: () => {
-        responseStream.end();
+
+        return visitDependents(dependent);
       }
-    });
-    raceCallbacks({
-      abort: cb => {
-        signal.addEventListener("abort", cb);
-        return () => {
-          signal.removeEventListener("abort", cb);
-        };
-      },
-      error: cb => {
-        responseStream.on("error", cb);
-        return () => {
-          responseStream.removeListener("error", cb);
-        };
-      },
-      close: cb => {
-        responseStream.on("close", cb);
-        return () => {
-          responseStream.removeListener("close", cb);
-        };
-      },
-      finish: cb => {
-        responseStream.on("finish", cb);
-        return () => {
-          responseStream.removeListener("finish", cb);
-        };
-      }
-    }, winner => {
-      const raceEffects = {
-        abort: () => {
-          subscription.unsubscribe();
-          responseStream.destroy();
-          onAbort();
-          resolve();
-        },
-        error: error => {
-          subscription.unsubscribe();
-          responseStream.destroy();
-          onError(error);
-          resolve();
-        },
-        close: () => {
-          // close body in case nodeResponse is prematurely closed
-          // while body is writing
-          // it may happen in case of server sent event
-          // where body is kept open to write to client
-          // and the browser is reloaded or closed for instance
-          subscription.unsubscribe();
-          responseStream.destroy();
-          onAbort();
-          resolve();
-        },
-        finish: () => {
-          onEnd();
-          resolve();
-        }
-      };
-      raceEffects[winner.name](winner.data);
-    });
-  });
-};
 
-const writeHead = (responseStream, {
-  status,
-  statusText,
-  headers,
-  onHeadersSent
-}) => {
-  const responseIsHttp2ServerResponse = responseStream instanceof Http2ServerResponse;
-  const responseIsServerHttp2Stream = responseStream.constructor.name === "ServerHttp2Stream";
-  let nodeHeaders = headersToNodeHeaders(headers, {
-    // https://github.com/nodejs/node/blob/79296dc2d02c0b9872bbfcbb89148ea036a546d0/lib/internal/http2/compat.js#L112
-    ignoreConnectionHeader: responseIsHttp2ServerResponse || responseIsServerHttp2Stream
-  });
-
-  if (statusText === undefined) {
-    statusText = statusTextFromStatus(status);
-  }
-
-  if (responseIsServerHttp2Stream) {
-    nodeHeaders = { ...nodeHeaders,
-      ":status": status
+      return null;
     };
-    responseStream.respond(nodeHeaders);
-    onHeadersSent({
-      nodeHeaders,
-      status,
-      statusText
-    });
-    return;
-  } // nodejs strange signature for writeHead force this
-  // https://nodejs.org/api/http.html#http_response_writehead_statuscode_statusmessage_headers
 
-
-  if ( // https://github.com/nodejs/node/blob/79296dc2d02c0b9872bbfcbb89148ea036a546d0/lib/internal/http2/compat.js#L97
-  responseIsHttp2ServerResponse) {
-    responseStream.writeHead(status, nodeHeaders);
-    onHeadersSent({
-      nodeHeaders,
-      status,
-      statusText
-    });
-    return;
-  }
-
-  responseStream.writeHead(status, statusText, nodeHeaders);
-  onHeadersSent({
-    nodeHeaders,
-    status,
-    statusText
-  });
-};
-
-const statusTextFromStatus = status => http.STATUS_CODES[status] || "not specified";
-
-const headersToNodeHeaders = (headers, {
-  ignoreConnectionHeader
-}) => {
-  const nodeHeaders = {};
-  Object.keys(headers).forEach(name => {
-    if (name === "connection" && ignoreConnectionHeader) return;
-    const nodeHeaderName = name in mapping ? mapping[name] : name;
-    nodeHeaders[nodeHeaderName] = headers[name];
-  });
-  return nodeHeaders;
-};
-
-const mapping = {// "content-type": "Content-Type",
-  // "last-modified": "Last-Modified",
-};
-
-// https://github.com/Marak/colors.js/blob/b63ef88e521b42920a9e908848de340b31e68c9d/lib/styles.js#L29
-const close = "\x1b[0m";
-const red = "\x1b[31m";
-const green = "\x1b[32m";
-const yellow = "\x1b[33m"; // const blue = "\x1b[34m"
-
-const magenta = "\x1b[35m";
-const cyan = "\x1b[36m"; // const white = "\x1b[37m"
-
-const colorizeResponseStatus = status => {
-  const statusType = statusToType(status);
-  if (statusType === "information") return `${cyan}${status}${close}`;
-  if (statusType === "success") return `${green}${status}${close}`;
-  if (statusType === "redirection") return `${magenta}${status}${close}`;
-  if (statusType === "client_error") return `${yellow}${status}${close}`;
-  if (statusType === "server_error") return `${red}${status}${close}`;
-  return status;
-}; // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
-
-const statusToType = status => {
-  if (statusIsInformation(status)) return "information";
-  if (statusIsSuccess(status)) return "success";
-  if (statusIsRedirection(status)) return "redirection";
-  if (statusIsClientError(status)) return "client_error";
-  if (statusIsServerError(status)) return "server_error";
-  return "unknown";
-};
-
-const statusIsInformation = status => status >= 100 && status < 200;
-
-const statusIsSuccess = status => status >= 200 && status < 300;
-
-const statusIsRedirection = status => status >= 300 && status < 400;
-
-const statusIsClientError = status => status >= 400 && status < 500;
-
-const statusIsServerError = status => status >= 500 && status < 600;
-
-const applyDnsResolution = async (hostname, {
-  verbatim = false
-} = {}) => {
-  const dnsResolution = await new Promise((resolve, reject) => {
-    lookup(hostname, {
-      verbatim
-    }, (error, address, family) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve({
-          address,
-          family
-        });
-      }
-    });
-  });
-  return dnsResolution;
-};
-
-const getServerOrigins = async ({
-  protocol,
-  host,
-  port
-}) => {
-  const isLocal = LOOPBACK_HOSTNAMES.includes(host);
-  const localhostDnsResolution = await applyDnsResolution("localhost");
-  const localOrigin = createServerOrigin({
-    protocol,
-    hostname: localhostDnsResolution.address === "127.0.0.1" ? "localhost" : "127.0.0.1",
-    port
-  });
-
-  if (isLocal) {
-    return {
-      local: localOrigin
-    };
-  }
-
-  const isAnyIp = WILDCARD_HOSTNAMES.includes(host);
-  const networkOrigin = createServerOrigin({
-    protocol,
-    hostname: isAnyIp ? getExternalIp() : host,
-    port
-  });
-  return {
-    local: localOrigin,
-    network: networkOrigin
+    return visitDependents(urlInfo);
   };
-};
-const LOOPBACK_HOSTNAMES = ["localhost", "127.0.0.1", "::1", "0000:0000:0000:0000:0000:0000:0000:0001"];
-const WILDCARD_HOSTNAMES = [undefined, "0.0.0.0", "::", "0000:0000:0000:0000:0000:0000:0000:0000"];
 
-const createServerOrigin = ({
-  protocol,
-  hostname,
-  port
-}) => {
-  const url = new URL("https://127.0.0.1:80");
-  url.protocol = protocol;
-  url.hostname = hostname;
-  url.port = port;
-  return url.origin;
-};
+  const updateReferences = (urlInfo, references) => {
+    const setOfDependencyUrls = new Set(); // for import assertion "file.css?as_css_module" depends on "file.css"
+    // this is enabled only for dev where there is autoreload
+    // during build the css file must be considered as not referenced
+    // (except if referenced explicitely by something else) so that
+    // the css file does not appear in the build directory
 
-const getExternalIp = () => {
-  const networkInterfaceMap = networkInterfaces();
-  let internalIPV4NetworkAddress;
-  Object.keys(networkInterfaceMap).find(key => {
-    const networkAddressArray = networkInterfaceMap[key];
-    return networkAddressArray.find(networkAddress => {
-      if (networkAddress.internal) return false;
-      if (!isIpV4(networkAddress)) return false;
-      internalIPV4NetworkAddress = networkAddress;
-      return true;
-    });
-  });
-  return internalIPV4NetworkAddress ? internalIPV4NetworkAddress.address : null;
-};
-
-const isIpV4 = networkAddress => {
-  // node 18+
-  if (typeof networkAddress.family === "number") {
-    return networkAddress.family === 4;
-  }
-
-  return networkAddress.family === "IPv4";
-};
-
-const listen = async ({
-  signal = new AbortController().signal,
-  server,
-  port,
-  portHint,
-  host
-}) => {
-  const listeningOperation = Abort.startOperation();
-
-  try {
-    listeningOperation.addAbortSignal(signal);
-
-    if (portHint) {
-      listeningOperation.throwIfAborted();
-      port = await findFreePort(portHint, {
-        signal: listeningOperation.signal,
-        host
-      });
+    if (includeOriginalUrls && urlInfo.originalUrl !== urlInfo.url) {
+      setOfDependencyUrls.add(urlInfo.originalUrl);
     }
 
-    listeningOperation.throwIfAborted();
-    port = await startListening({
-      server,
-      port,
-      host
-    });
-    listeningOperation.addAbortCallback(() => stopListening(server));
-    listeningOperation.throwIfAborted();
-    return port;
-  } finally {
-    await listeningOperation.end();
-  }
-};
-
-const findFreePort = async (initialPort = 1, {
-  signal = new AbortController().signal,
-  host = "127.0.0.1",
-  min = 1,
-  max = 65534,
-  next = port => port + 1
-} = {}) => {
-  const findFreePortOperation = Abort.startOperation();
-
-  try {
-    findFreePortOperation.addAbortSignal(signal);
-    findFreePortOperation.throwIfAborted();
-
-    const testUntil = async (port, host) => {
-      findFreePortOperation.throwIfAborted();
-      const free = await portIsFree(port, host);
-
-      if (free) {
-        return port;
-      }
-
-      const nextPort = next(port);
-
-      if (nextPort > max) {
-        throw new Error(`${host} has no available port between ${min} and ${max}`);
-      }
-
-      return testUntil(nextPort, host);
-    };
-
-    const freePort = await testUntil(initialPort, host);
-    return freePort;
-  } finally {
-    await findFreePortOperation.end();
-  }
-};
-
-const portIsFree = async (port, host) => {
-  const server = createServer();
-
-  try {
-    await startListening({
-      server,
-      port,
-      host
-    });
-  } catch (error) {
-    if (error && error.code === "EADDRINUSE") {
-      return false;
-    }
-
-    if (error && error.code === "EACCES") {
-      return false;
-    }
-
-    throw error;
-  }
-
-  await stopListening(server);
-  return true;
-};
-
-const startListening = ({
-  server,
-  port,
-  host
-}) => {
-  return new Promise((resolve, reject) => {
-    server.on("error", reject);
-    server.on("listening", () => {
-      // in case port is 0 (randomly assign an available port)
-      // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
-      resolve(server.address().port);
-    });
-    server.listen(port, host);
-  });
-};
-
-const stopListening = server => {
-  return new Promise((resolve, reject) => {
-    server.on("error", reject);
-    server.on("close", resolve);
-    server.close();
-  });
-}; // unit test exports
-
-const composeTwoObjects = (firstObject, secondObject, {
-  keysComposition,
-  strict = false,
-  forceLowerCase = false
-} = {}) => {
-  if (forceLowerCase) {
-    return applyCompositionForcingLowerCase(firstObject, secondObject, {
-      keysComposition,
-      strict
-    });
-  }
-
-  return applyCaseSensitiveComposition(firstObject, secondObject, {
-    keysComposition,
-    strict
-  });
-};
-
-const applyCaseSensitiveComposition = (firstObject, secondObject, {
-  keysComposition,
-  strict
-}) => {
-  if (strict) {
-    const composed = {};
-    Object.keys(keysComposition).forEach(key => {
-      composed[key] = composeValueAtKey({
-        firstObject,
-        secondObject,
-        keysComposition,
-        key,
-        firstKey: keyExistsIn(key, firstObject) ? key : null,
-        secondKey: keyExistsIn(key, secondObject) ? key : null
-      });
-    });
-    return composed;
-  }
-
-  const composed = {};
-  Object.keys(firstObject).forEach(key => {
-    composed[key] = firstObject[key];
-  });
-  Object.keys(secondObject).forEach(key => {
-    composed[key] = composeValueAtKey({
-      firstObject,
-      secondObject,
-      keysComposition,
-      key,
-      firstKey: keyExistsIn(key, firstObject) ? key : null,
-      secondKey: keyExistsIn(key, secondObject) ? key : null
-    });
-  });
-  return composed;
-};
-
-const applyCompositionForcingLowerCase = (firstObject, secondObject, {
-  keysComposition,
-  strict
-}) => {
-  if (strict) {
-    const firstObjectKeyMapping = {};
-    Object.keys(firstObject).forEach(key => {
-      firstObjectKeyMapping[key.toLowerCase()] = key;
-    });
-    const secondObjectKeyMapping = {};
-    Object.keys(secondObject).forEach(key => {
-      secondObjectKeyMapping[key.toLowerCase()] = key;
-    });
-    Object.keys(keysComposition).forEach(key => {
-      composed[key] = composeValueAtKey({
-        firstObject,
-        secondObject,
-        keysComposition,
-        key,
-        firstKey: firstObjectKeyMapping[key] || null,
-        secondKey: secondObjectKeyMapping[key] || null
-      });
-    });
-  }
-
-  const composed = {};
-  Object.keys(firstObject).forEach(key => {
-    composed[key.toLowerCase()] = firstObject[key];
-  });
-  Object.keys(secondObject).forEach(key => {
-    const keyLowercased = key.toLowerCase();
-    composed[key.toLowerCase()] = composeValueAtKey({
-      firstObject,
-      secondObject,
-      keysComposition,
-      key: keyLowercased,
-      firstKey: keyExistsIn(keyLowercased, firstObject) ? keyLowercased : keyExistsIn(key, firstObject) ? key : null,
-      secondKey: keyExistsIn(keyLowercased, secondObject) ? keyLowercased : keyExistsIn(key, secondObject) ? key : null
-    });
-  });
-  return composed;
-};
-
-const composeValueAtKey = ({
-  firstObject,
-  secondObject,
-  firstKey,
-  secondKey,
-  key,
-  keysComposition
-}) => {
-  if (!firstKey) {
-    return secondObject[secondKey];
-  }
-
-  if (!secondKey) {
-    return firstObject[firstKey];
-  }
-
-  const keyForCustomComposition = keyExistsIn(key, keysComposition) ? key : null;
-
-  if (!keyForCustomComposition) {
-    return secondObject[secondKey];
-  }
-
-  const composeTwoValues = keysComposition[keyForCustomComposition];
-  return composeTwoValues(firstObject[firstKey], secondObject[secondKey]);
-};
-
-const keyExistsIn = (key, object) => {
-  return Object.prototype.hasOwnProperty.call(object, key);
-};
-
-const composeTwoHeaders = (firstHeaders, secondHeaders) => {
-  return composeTwoObjects(firstHeaders, secondHeaders, {
-    keysComposition: HEADER_NAMES_COMPOSITION,
-    forceLowerCase: true
-  });
-};
-
-const composeHeaderValues = (value, nextValue) => {
-  const headerValues = value.split(", ");
-  nextValue.split(", ").forEach(value => {
-    if (!headerValues.includes(value)) {
-      headerValues.push(value);
-    }
-  });
-  return headerValues.join(", ");
-};
-
-const HEADER_NAMES_COMPOSITION = {
-  "accept": composeHeaderValues,
-  "accept-charset": composeHeaderValues,
-  "accept-language": composeHeaderValues,
-  "access-control-allow-headers": composeHeaderValues,
-  "access-control-allow-methods": composeHeaderValues,
-  "access-control-allow-origin": composeHeaderValues,
-  // https://www.w3.org/TR/server-timing/
-  // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Server-Timing
-  "server-timing": composeHeaderValues,
-  // 'content-type', // https://github.com/ninenines/cowboy/issues/1230
-  "vary": composeHeaderValues
-};
-
-const composeTwoResponses = (firstResponse, secondResponse) => {
-  return composeTwoObjects(firstResponse, secondResponse, {
-    keysComposition: RESPONSE_KEYS_COMPOSITION,
-    strict: true
-  });
-};
-const RESPONSE_KEYS_COMPOSITION = {
-  status: (prevStatus, status) => status,
-  statusText: (prevStatusText, statusText) => statusText,
-  statusMessage: (prevStatusMessage, statusMessage) => statusMessage,
-  headers: composeTwoHeaders,
-  body: (prevBody, body) => body,
-  bodyEncoding: (prevEncoding, encoding) => encoding,
-  timing: (prevTiming, timing) => {
-    return { ...prevTiming,
-      ...timing
-    };
-  }
-};
-
-const listenServerConnectionError = (nodeServer, connectionErrorCallback, {
-  ignoreErrorAfterConnectionIsDestroyed = true
-} = {}) => {
-  const cleanupSet = new Set();
-  const removeConnectionListener = listenEvent(nodeServer, "connection", socket => {
-    const removeSocketErrorListener = listenEvent(socket, "error", error => {
-      if (ignoreErrorAfterConnectionIsDestroyed && socket.destroyed) {
+    references.forEach(reference => {
+      if (reference.isRessourceHint) {
+        // ressource hint are a special kind of reference.
+        // They are a sort of weak reference to an url.
+        // We ignore them so that url referenced only by ressource hints
+        // have url.dependents.size === 0 and can be considered as not used
+        // It means html won't consider url referenced solely
+        // by <link> as dependency and it's fine
         return;
       }
 
-      connectionErrorCallback(error, socket);
+      setOfDependencyUrls.add(reference.url);
     });
-    const removeOnceSocketCloseListener = listenEvent(socket, "close", () => {
-      removeSocketErrorListener();
-      cleanupSet.delete(cleanup);
-    }, {
-      once: true
+    const urlsToRemove = Array.from(urlInfo.dependencies).filter(dep => !setOfDependencyUrls.has(dep));
+    pruneDependencies(urlInfo, urlsToRemove);
+    urlInfo.references = references;
+    setOfDependencyUrls.forEach(dependencyUrl => {
+      const dependencyUrlInfo = reuseOrCreateUrlInfo(dependencyUrl);
+      urlInfo.dependencies.add(dependencyUrl);
+      dependencyUrlInfo.dependents.add(urlInfo.url);
     });
+    return urlInfo;
+  };
 
-    const cleanup = () => {
-      removeSocketErrorListener();
-      removeOnceSocketCloseListener();
+  const pruneDependencies = (firstUrlInfo, urlsToRemove) => {
+    const prunedUrlInfos = [];
+
+    const removeDependencies = (urlInfo, urlsToPrune) => {
+      urlsToPrune.forEach(urlToPrune => {
+        urlInfo.dependencies.delete(urlToPrune);
+        const dependencyUrlInfo = getUrlInfo(urlToPrune);
+
+        if (!dependencyUrlInfo) {
+          return;
+        }
+
+        dependencyUrlInfo.dependents.delete(urlInfo.url);
+
+        if (dependencyUrlInfo.dependents.size === 0) {
+          removeDependencies(dependencyUrlInfo, Array.from(dependencyUrlInfo.dependencies));
+          prunedUrlInfos.push(dependencyUrlInfo);
+        }
+      });
     };
 
-    cleanupSet.add(cleanup);
-  });
-  return () => {
-    removeConnectionListener();
-    cleanupSet.forEach(cleanup => {
-      cleanup();
-    });
-    cleanupSet.clear();
-  };
-};
+    removeDependencies(firstUrlInfo, urlsToRemove);
 
-const createReason = reasonString => {
-  return {
-    toString: () => reasonString
-  };
-};
-
-const STOP_REASON_INTERNAL_ERROR = createReason("Internal error");
-const STOP_REASON_PROCESS_SIGHUP = createReason("process SIGHUP");
-const STOP_REASON_PROCESS_SIGTERM = createReason("process SIGTERM");
-const STOP_REASON_PROCESS_SIGINT = createReason("process SIGINT");
-const STOP_REASON_PROCESS_BEFORE_EXIT = createReason("process before exit");
-const STOP_REASON_PROCESS_EXIT = createReason("process exit");
-const STOP_REASON_NOT_SPECIFIED = createReason("not specified");
-
-const startServer = async ({
-  signal = new AbortController().signal,
-  logLevel,
-  startLog = true,
-  serverName = "server",
-  protocol = "http",
-  http2 = false,
-  http1Allowed = true,
-  redirectHttpToHttps,
-  allowHttpRequestOnHttps = false,
-  acceptAnyIp = false,
-  host = acceptAnyIp ? undefined : "localhost",
-  port = 0,
-  // assign a random available port
-  portHint,
-  privateKey,
-  certificate,
-  // when inside a worker, we should not try to stop server on SIGINT
-  // otherwise it can create an EPIPE error while primary process tries
-  // to kill the server
-  stopOnSIGINT = !cluster.isWorker,
-  // auto close the server when the process exits
-  stopOnExit = true,
-  // auto close when requestToResponse throw an error
-  stopOnInternalError = false,
-  keepProcessAlive = true,
-  services = [],
-  nagle = true,
-  serverTiming = false,
-  requestWaitingMs = 0,
-  requestWaitingCallback = ({
-    request,
-    warn,
-    requestWaitingMs
-  }) => {
-    warn(createDetailedMessage$1(`still no response found for request after ${requestWaitingMs} ms`, {
-      "request url": `${request.origin}${request.ressource}`,
-      "request headers": JSON.stringify(request.headers, null, "  ")
-    }));
-  }
-} = {}) => {
-  if (protocol !== "http" && protocol !== "https") {
-    throw new Error(`protocol must be http or https, got ${protocol}`);
-  }
-
-  if (protocol === "https") {
-    if (!certificate) {
-      throw new Error(`missing certificate for https server`);
-    }
-
-    if (!privateKey) {
-      throw new Error(`missing privateKey for https server`);
-    }
-  }
-
-  if (http2 && protocol !== "https") {
-    throw new Error(`http2 needs "https" but protocol is "${protocol}"`);
-  }
-
-  const logger = createLogger({
-    logLevel
-  });
-
-  if (redirectHttpToHttps === undefined && protocol === "https" && !allowHttpRequestOnHttps) {
-    redirectHttpToHttps = true;
-  }
-
-  if (redirectHttpToHttps && protocol === "http") {
-    logger.warn(`redirectHttpToHttps ignored because protocol is http`);
-    redirectHttpToHttps = false;
-  }
-
-  if (allowHttpRequestOnHttps && redirectHttpToHttps) {
-    logger.warn(`redirectHttpToHttps ignored because allowHttpRequestOnHttps is enabled`);
-    redirectHttpToHttps = false;
-  }
-
-  if (allowHttpRequestOnHttps && protocol === "http") {
-    logger.warn(`allowHttpRequestOnHttps ignored because protocol is http`);
-    allowHttpRequestOnHttps = false;
-  }
-
-  const serviceController = createServiceController(services);
-  const processTeardownEvents = {
-    SIGHUP: stopOnExit,
-    SIGTERM: stopOnExit,
-    SIGINT: stopOnSIGINT,
-    beforeExit: stopOnExit,
-    exit: stopOnExit
-  };
-  let status = "starting";
-  let nodeServer;
-  const startServerOperation = Abort.startOperation();
-
-  try {
-    startServerOperation.addAbortSignal(signal);
-    startServerOperation.addAbortSource(abort => {
-      return raceProcessTeardownEvents(processTeardownEvents, ({
-        name
-      }) => {
-        logger.info(`process teardown (${name}) -> aborting start server`);
-        abort();
-      });
-    });
-    startServerOperation.throwIfAborted();
-    nodeServer = await createNodeServer({
-      protocol,
-      redirectHttpToHttps,
-      allowHttpRequestOnHttps,
-      certificate,
-      privateKey,
-      http2,
-      http1Allowed
-    });
-    startServerOperation.throwIfAborted(); // https://nodejs.org/api/net.html#net_server_unref
-
-    if (!keepProcessAlive) {
-      nodeServer.unref();
-    }
-
-    port = await listen({
-      signal: startServerOperation.signal,
-      server: nodeServer,
-      port,
-      portHint,
-      host
-    });
-    serviceController.callHooks("serverListening", {
-      port
-    });
-    startServerOperation.addAbortCallback(async () => {
-      await stopListening(nodeServer);
-    });
-    startServerOperation.throwIfAborted();
-  } finally {
-    await startServerOperation.end();
-  } // now the server is started (listening) it cannot be aborted anymore
-  // (otherwise an AbortError is thrown to the code calling "startServer")
-  // we can proceed to create a stop function to stop it gacefully
-  // and add a request handler
-
-
-  const stopCallbackList = createCallbackListNotifiedOnce();
-  stopCallbackList.add(({
-    reason
-  }) => {
-    logger.info(`${serverName} stopping server (reason: ${reason})`);
-  });
-  stopCallbackList.add(async () => {
-    await stopListening(nodeServer);
-  });
-  let stoppedResolve;
-  const stoppedPromise = new Promise(resolve => {
-    stoppedResolve = resolve;
-  });
-  const stop = memoize(async (reason = STOP_REASON_NOT_SPECIFIED) => {
-    status = "stopping";
-    await Promise.all(stopCallbackList.notify({
-      reason
-    }));
-    serviceController.callHooks("serverStopped", {
-      reason
-    });
-    status = "stopped";
-    stoppedResolve(reason);
-  });
-  const cancelProcessTeardownRace = raceProcessTeardownEvents(processTeardownEvents, winner => {
-    stop(PROCESS_TEARDOWN_EVENTS_MAP[winner.name]);
-  });
-  stopCallbackList.add(cancelProcessTeardownRace);
-
-  const onError = error => {
-    if (status === "stopping" && error.code === "ECONNRESET") {
+    if (prunedUrlInfos.length === 0) {
       return;
     }
 
-    throw error;
+    prunedUrlInfos.forEach(prunedUrlInfo => {
+      prunedUrlInfo.modifiedTimestamp = Date.now();
+
+      if (prunedUrlInfo.isInline) {
+        // should we always delete?
+        deleteUrlInfo(prunedUrlInfo.url);
+      }
+    });
+
+    if (clientFilesPruneCallbackList) {
+      clientFilesPruneCallbackList.forEach(callback => {
+        callback({
+          firstUrlInfo,
+          prunedUrlInfos
+        });
+      });
+    }
   };
 
-  status = "opened";
-  const serverOrigins = await getServerOrigins({
-    protocol,
-    host,
-    port
-  });
-  const serverOrigin = serverOrigins.local;
-  const removeConnectionErrorListener = listenServerConnectionError(nodeServer, onError);
-  stopCallbackList.add(removeConnectionErrorListener);
-  const connectionsTracker = trackServerPendingConnections(nodeServer, {
-    http2
-  }); // opened connection must be shutdown before the close event is emitted
-
-  stopCallbackList.add(connectionsTracker.stop);
-  const pendingRequestsTracker = trackServerPendingRequests(nodeServer, {
-    http2
-  }); // ensure pending requests got a response from the server
-
-  stopCallbackList.add(reason => {
-    pendingRequestsTracker.stop({
-      status: reason === STOP_REASON_INTERNAL_ERROR ? 500 : 503,
-      reason
-    });
-  });
-
-  const requestCallback = async (nodeRequest, nodeResponse) => {
-    // pause the stream to let a chance to "requestToResponse"
-    // to call "requestRequestBody". Without this the request body readable stream
-    // might be closed when we'll try to attach "data" and "end" listeners to it
-    nodeRequest.pause();
-
-    if (!nagle) {
-      nodeRequest.connection.setNoDelay(true);
-    }
-
-    if (redirectHttpToHttps && !nodeRequest.connection.encrypted) {
-      nodeResponse.writeHead(301, {
-        location: `${serverOrigin}${nodeRequest.url}`
-      });
-      nodeResponse.end();
-      return;
-    }
-
-    const receiveRequestOperation = Abort.startOperation();
-    receiveRequestOperation.addAbortSource(abort => {
-      const closeEventCallback = () => {
-        if (nodeRequest.complete) {
-          receiveRequestOperation.end();
-        } else {
-          nodeResponse.destroy();
-          abort();
-        }
-      };
-
-      nodeRequest.once("close", closeEventCallback);
-      return () => {
-        nodeRequest.removeListener("close", closeEventCallback);
-      };
-    });
-    receiveRequestOperation.addAbortSource(abort => {
-      return stopCallbackList.add(abort);
-    });
-    const sendResponseOperation = Abort.startOperation();
-    sendResponseOperation.addAbortSignal(receiveRequestOperation.signal);
-    sendResponseOperation.addAbortSource(abort => {
-      return stopCallbackList.add(abort);
-    });
-    const request = fromNodeRequest(nodeRequest, {
-      serverOrigin,
-      signal: receiveRequestOperation.signal
-    }); // Handling request is asynchronous, we buffer logs for that request
-    // until we know what happens with that request
-    // It delays logs until we know of the request will be handled
-    // but it's mandatory to make logs readable.
-
-    const rootRequestNode = {
-      logs: [],
-      children: []
-    };
-
-    const addRequestLog = (node, {
-      type,
-      value
+  if (clientFileChangeCallbackList) {
+    clientFileChangeCallbackList.push(({
+      url
     }) => {
-      node.logs.push({
-        type,
-        value
-      });
-    };
+      const urlInfo = getUrlInfo(url);
 
-    const onRequestHandled = node => {
-      if (node !== rootRequestNode) {
-        // keep buffering until root request write logs for everyone
+      if (urlInfo) {
+        considerModified(urlInfo, Date.now());
+      }
+    });
+  }
+
+  const considerModified = (urlInfo, modifiedTimestamp = Date.now()) => {
+    const seen = [];
+
+    const iterate = urlInfo => {
+      if (seen.includes(urlInfo.url)) {
         return;
       }
 
-      const prefixLines = (string, prefix) => {
-        return string.replace(/^(?!\s*$)/gm, prefix);
-      };
-
-      const writeLog = ({
-        type,
-        value
-      }, {
-        someLogIsError,
-        someLogIsWarn,
-        depth
-      }) => {
-        if (depth > 0) {
-          value = prefixLines(value, "  ".repeat(depth));
-        }
-
-        if (type === "info") {
-          if (someLogIsError) {
-            type = "error";
-          } else if (someLogIsWarn) {
-            type = "warn";
-          }
-        }
-
-        logger[type](value);
-      };
-
-      const visitRequestNodeToLog = (requestNode, depth) => {
-        let someLogIsError = false;
-        let someLogIsWarn = false;
-        requestNode.logs.forEach(log => {
-          if (log.type === "error") {
-            someLogIsError = true;
-          }
-
-          if (log.type === "warn") {
-            someLogIsWarn = true;
-          }
-        });
-        const firstLog = requestNode.logs.shift();
-        const lastLog = requestNode.logs.pop();
-        const middleLogs = requestNode.logs;
-        writeLog(firstLog, {
-          someLogIsError,
-          someLogIsWarn,
-          depth
-        });
-        middleLogs.forEach(log => {
-          writeLog(log, {
-            someLogIsError,
-            someLogIsWarn,
-            depth
-          });
-        });
-        requestNode.children.forEach(child => {
-          visitRequestNodeToLog(child, depth + 1);
-        });
-
-        if (lastLog) {
-          writeLog(lastLog, {
-            someLogIsError,
-            someLogIsWarn,
-            depth: depth + 1
-          });
-        }
-      };
-
-      visitRequestNodeToLog(rootRequestNode, 0);
-    };
-
-    nodeRequest.on("error", error => {
-      if (error.message === "aborted") {
-        addRequestLog(rootRequestNode, {
-          type: "debug",
-          value: createDetailedMessage$1(`request aborted by client`, {
-            "error message": error.message
-          })
-        });
-      } else {
-        // I'm not sure this can happen but it's here in case
-        addRequestLog(rootRequestNode, {
-          type: "error",
-          value: createDetailedMessage$1(`"error" event emitted on request`, {
-            "error stack": error.stack
-          })
-        });
-      }
-    });
-
-    const pushResponse = async ({
-      path,
-      method
-    }, {
-      requestNode
-    }) => {
-      const http2Stream = nodeResponse.stream; // being able to push a stream is nice to have
-      // so when it fails it's not critical
-
-      const onPushStreamError = e => {
-        addRequestLog(requestNode, {
-          type: "error",
-          value: createDetailedMessage$1(`An error occured while pushing a stream to the response for ${request.ressource}`, {
-            "error stack": e.stack
-          })
-        });
-      }; // not aborted, let's try to push a stream into that response
-      // https://nodejs.org/docs/latest-v16.x/api/http2.html#http2streampushstreamheaders-options-callback
-
-
-      let pushStream;
-
-      try {
-        pushStream = await new Promise((resolve, reject) => {
-          http2Stream.pushStream({
-            ":path": path,
-            ...(method ? {
-              ":method": method
-            } : {})
-          }, async (error, pushStream // headers
-          ) => {
-            if (error) {
-              reject(error);
-            }
-
-            resolve(pushStream);
-          });
-        });
-      } catch (e) {
-        onPushStreamError(e);
-        return;
-      }
-
-      const abortController = new AbortController(); // It's possible to get NGHTTP2_REFUSED_STREAM errors here
-      // https://github.com/nodejs/node/issues/20824
-
-      const pushErrorCallback = error => {
-        onPushStreamError(error);
-        abortController.abort();
-      };
-
-      pushStream.on("error", pushErrorCallback);
-      sendResponseOperation.addEndCallback(() => {
-        pushStream.removeListener("error", onPushStreamError);
-      });
-      await sendResponseOperation.withSignal(async signal => {
-        const pushResponseOperation = Abort.startOperation();
-        pushResponseOperation.addAbortSignal(signal);
-        pushResponseOperation.addAbortSignal(abortController.signal);
-        const pushRequest = createPushRequest(request, {
-          signal: pushResponseOperation.signal,
-          pathname: path,
-          method
-        });
-
-        try {
-          const responseProperties = await handleRequest(pushRequest, {
-            requestNode
-          });
-
-          if (!abortController.signal.aborted) {
-            if (pushStream.destroyed) {
-              abortController.abort();
-            } else if (!http2Stream.pushAllowed) {
-              abortController.abort();
-            } else if (responseProperties !== ABORTED_RESPONSE_PROPERTIES) {
-              const responseLength = responseProperties.headers["content-length"] || 0;
-              const {
-                effectiveRecvDataLength,
-                remoteWindowSize
-              } = http2Stream.session.state;
-
-              if (effectiveRecvDataLength + responseLength > remoteWindowSize) {
-                addRequestLog(requestNode, {
-                  type: "debug",
-                  value: `Aborting stream to prevent exceeding remoteWindowSize`
-                });
-                abortController.abort();
-              }
-            }
-          }
-
-          await sendResponse({
-            signal: pushResponseOperation.signal,
-            request: pushRequest,
-            requestNode,
-            responseStream: pushStream,
-            responseProperties
-          });
-        } finally {
-          await pushResponseOperation.end();
-        }
-      });
-    };
-
-    const handleRequest = async (request, {
-      requestNode
-    }) => {
-      let requestReceivedMeasure;
-
-      if (serverTiming) {
-        requestReceivedMeasure = performance.now();
-      }
-
-      addRequestLog(requestNode, {
-        type: "info",
-        value: request.parent ? `Push ${request.ressource}` : `${request.method} ${request.origin}${request.ressource}`
-      });
-
-      const warn = value => {
-        addRequestLog(requestNode, {
-          type: "warn",
-          value
-        });
-      };
-
-      let requestWaitingTimeout;
-
-      if (requestWaitingMs) {
-        requestWaitingTimeout = setTimeout(() => requestWaitingCallback({
-          request,
-          warn,
-          requestWaitingMs
-        }), requestWaitingMs).unref();
-      }
-
-      serviceController.callHooks("redirectRequest", request, {
-        warn
-      }, newRequestProperties => {
-        if (newRequestProperties) {
-          request = applyRedirectionToRequest(request, {
-            original: request.original || request,
-            previous: request,
-            ...newRequestProperties
-          });
-        }
-      });
-      let handleRequestReturnValue;
-      let errorWhileHandlingRequest = null;
-      let handleRequestTimings = serverTiming ? {} : null;
-
-      try {
-        handleRequestReturnValue = await serviceController.callAsyncHooksUntil("handleRequest", request, {
-          timing: handleRequestTimings,
-          warn,
-          pushResponse: async ({
-            path,
-            method
-          }) => {
-            if (typeof path !== "string" || path[0] !== "/") {
-              addRequestLog(requestNode, {
-                type: "warn",
-                value: `response push ignored because path is invalid (must be a string starting with "/", found ${path})`
-              });
-              return;
-            }
-
-            if (!request.http2) {
-              addRequestLog(requestNode, {
-                type: "warn",
-                value: `response push ignored because request is not http2`
-              });
-              return;
-            }
-
-            const canPushStream = testCanPushStream(nodeResponse.stream);
-
-            if (!canPushStream.can) {
-              addRequestLog(requestNode, {
-                type: "debug",
-                value: `response push ignored because ${canPushStream.reason}`
-              });
-              return;
-            }
-
-            let preventedByService = null;
-
-            const prevent = () => {
-              preventedByService = serviceController.getCurrentService();
-            };
-
-            serviceController.callHooksUntil("onResponsePush", {
-              path,
-              method
-            }, {
-              request,
-              warn,
-              prevent
-            }, () => preventedByService);
-
-            if (preventedByService) {
-              addRequestLog(requestNode, {
-                type: "debug",
-                value: `response push prevented by "${preventedByService.name}" service`
-              });
-              return;
-            }
-
-            const requestChildNode = {
-              logs: [],
-              children: []
-            };
-            requestNode.children.push(requestChildNode);
-            await pushResponse({
-              path,
-              method
-            }, {
-              requestNode: requestChildNode,
-              parentHttp2Stream: nodeResponse.stream
-            });
-          }
-        });
-      } catch (error) {
-        errorWhileHandlingRequest = error;
-      }
-
-      let responseProperties;
-
-      if (errorWhileHandlingRequest) {
-        if (errorWhileHandlingRequest.name === "AbortError" && request.signal.aborted) {
-          responseProperties = ABORTED_RESPONSE_PROPERTIES;
-        } else {
-          // internal error, create 500 response
-          if ( // stopOnInternalError stops server only if requestToResponse generated
-          // a non controlled error (internal error).
-          // if requestToResponse gracefully produced a 500 response (it did not throw)
-          // then we can assume we are still in control of what we are doing
-          stopOnInternalError) {
-            // il faudrais pouvoir stop que les autres response ?
-            stop(STOP_REASON_INTERNAL_ERROR);
-          }
-
-          const handleErrorReturnValue = await serviceController.callAsyncHooksUntil("handleError", errorWhileHandlingRequest, {
-            request,
-            warn
-          });
-
-          if (!handleErrorReturnValue) {
-            throw errorWhileHandlingRequest;
-          }
-
-          addRequestLog(requestNode, {
-            type: "error",
-            value: createDetailedMessage$1(`internal error while handling request`, {
-              "error stack": errorWhileHandlingRequest.stack
-            })
-          });
-          responseProperties = composeTwoResponses({
-            status: 500,
-            statusText: "Internal Server Error",
-            headers: {
-              // ensure error are not cached
-              "cache-control": "no-store",
-              "content-type": "text/plain"
-            }
-          }, handleErrorReturnValue);
-        }
-      } else {
+      seen.push(urlInfo.url);
+      urlInfo.modifiedTimestamp = modifiedTimestamp;
+      urlInfo.contentEtag = undefined;
+      urlInfo.dependents.forEach(dependentUrl => {
+        const dependentUrlInfo = getUrlInfo(dependentUrl);
         const {
-          status = 501,
-          statusText,
-          statusMessage,
-          headers = {},
-          body,
-          ...rest
-        } = handleRequestReturnValue || {};
-        responseProperties = {
-          status,
-          statusText,
-          statusMessage,
-          headers,
-          body,
-          ...rest
-        };
-      }
+          hotAcceptDependencies = []
+        } = dependentUrlInfo.data;
 
-      if (serverTiming) {
-        const responseReadyMeasure = performance.now();
-        const timeToStartResponding = responseReadyMeasure - requestReceivedMeasure;
-        const serverTiming = { ...handleRequestTimings,
-          ...responseProperties.timing,
-          "time to start responding": timeToStartResponding
-        };
-        responseProperties.headers = composeTwoHeaders(responseProperties.headers, timingToServerTimingResponseHeaders(serverTiming));
-      }
-
-      if (requestWaitingMs) {
-        clearTimeout(requestWaitingTimeout);
-      }
-
-      if (request.method !== "HEAD" && responseProperties.headers["content-length"] > 0 && !responseProperties.body) {
-        addRequestLog(requestNode, {
-          type: "warn",
-          value: `content-length header is ${responseProperties.headers["content-length"]} but body is empty`
-        });
-      }
-
-      serviceController.callHooks("injectResponseHeaders", responseProperties, {
-        request,
-        warn
-      }, returnValue => {
-        if (returnValue) {
-          responseProperties.headers = composeTwoHeaders(responseProperties.headers, returnValue);
+        if (!hotAcceptDependencies.includes(urlInfo.url)) {
+          iterate(dependentUrlInfo);
         }
       });
-      serviceController.callHooks("responseReady", responseProperties, {
-        request,
-        warn
-      });
-      return responseProperties;
-    };
+      urlInfo.dependencies.forEach(dependencyUrl => {
+        const dependencyUrlInfo = getUrlInfo(dependencyUrl);
 
-    const sendResponse = async ({
-      signal,
-      request,
-      requestNode,
-      responseStream,
-      responseProperties
-    }) => {
-      // When "pushResponse" is called and the parent response has no body
-      // the parent response is immediatly ended. It means child responses (pushed streams)
-      // won't get a chance to be pushed.
-      // To let a chance to pushed streams we wait a little before sending the response
-      const ignoreBody = request.method === "HEAD";
-      const bodyIsEmpty = !responseProperties.body || ignoreBody;
-
-      if (bodyIsEmpty && requestNode.children.length > 0) {
-        await new Promise(resolve => setTimeout(resolve));
-      }
-
-      await populateNodeResponse(responseStream, responseProperties, {
-        signal,
-        ignoreBody,
-        onAbort: () => {
-          addRequestLog(requestNode, {
-            type: "info",
-            value: `response aborted`
-          });
-          onRequestHandled(requestNode);
-        },
-        onError: error => {
-          addRequestLog(requestNode, {
-            type: "error",
-            value: createDetailedMessage$1(`An error occured while sending response`, {
-              "error stack": error.stack
-            })
-          });
-          onRequestHandled(requestNode);
-        },
-        onHeadersSent: ({
-          status,
-          statusText
-        }) => {
-          const statusType = statusToType(status);
-          addRequestLog(requestNode, {
-            type: {
-              information: "info",
-              success: "info",
-              redirection: "info",
-              client_error: "warn",
-              server_error: "error"
-            }[statusType],
-            value: `${colorizeResponseStatus(status)} ${responseProperties.statusMessage || statusText}`
-          });
-        },
-        onEnd: () => {
-          onRequestHandled(requestNode);
+        if (dependencyUrlInfo.isInline) {
+          iterate(dependencyUrlInfo);
         }
       });
     };
 
-    try {
-      if (receiveRequestOperation.signal.aborted) {
-        return;
-      }
-
-      const responseProperties = await handleRequest(request, {
-        requestNode: rootRequestNode
-      });
-      nodeRequest.resume();
-
-      if (receiveRequestOperation.signal.aborted) {
-        return;
-      } // the node request readable stream is never closed because
-      // the response headers contains "connection: keep-alive"
-      // In this scenario we want to disable READABLE_STREAM_TIMEOUT warning
-
-
-      if (responseProperties.headers.connection === "keep-alive") {
-        clearTimeout(request.body.timeout);
-      }
-
-      await sendResponse({
-        signal: sendResponseOperation.signal,
-        request,
-        requestNode: rootRequestNode,
-        responseStream: nodeResponse,
-        responseProperties
-      });
-    } finally {
-      await sendResponseOperation.end();
-    }
+    iterate(urlInfo);
   };
 
-  const removeRequestListener = listenRequest(nodeServer, requestCallback); // ensure we don't try to handle new requests while server is stopping
+  const getRelatedUrlInfos = url => {
+    const urlInfosUntilNotInline = [];
+    const parentUrlInfo = getUrlInfo(url);
 
-  stopCallbackList.add(removeRequestListener);
+    if (parentUrlInfo) {
+      urlInfosUntilNotInline.push(parentUrlInfo);
 
-  if (startLog) {
-    if (serverOrigins.network) {
-      logger.info(`${serverName} started at ${serverOrigins.local} (${serverOrigins.network})`);
-    } else {
-      logger.info(`${serverName} started at ${serverOrigins.local}`);
+      if (parentUrlInfo.inlineUrlSite) {
+        urlInfosUntilNotInline.push(...getRelatedUrlInfos(parentUrlInfo.inlineUrlSite.url));
+      }
     }
-  }
 
-  const addEffect = callback => {
-    const cleanup = callback();
-
-    if (typeof cleanup === "function") {
-      stopCallbackList.add(cleanup);
-    }
+    return urlInfosUntilNotInline;
   };
 
   return {
-    getStatus: () => status,
-    port,
-    origin: serverOrigin,
-    origins: serverOrigins,
-    nodeServer,
-    stop,
-    stoppedPromise,
-    addEffect
-  };
-};
-
-const createNodeServer = async ({
-  protocol,
-  redirectHttpToHttps,
-  allowHttpRequestOnHttps,
-  certificate,
-  privateKey,
-  http2,
-  http1Allowed
-}) => {
-  if (protocol === "http") {
-    return http.createServer();
-  }
-
-  if (redirectHttpToHttps || allowHttpRequestOnHttps) {
-    return createPolyglotServer({
-      certificate,
-      privateKey,
-      http2,
-      http1Allowed
-    });
-  }
-
-  const {
-    createServer
-  } = await import("node:https");
-  return createServer({
-    cert: certificate,
-    key: privateKey
-  });
-};
-
-const testCanPushStream = http2Stream => {
-  if (!http2Stream.pushAllowed) {
-    return {
-      can: false,
-      reason: `stream.pushAllowed is false`
-    };
-  } // See https://nodejs.org/dist/latest-v16.x/docs/api/http2.html#http2sessionstate
-  // And https://github.com/google/node-h2-auto-push/blob/67a36c04cbbd6da7b066a4e8d361c593d38853a4/src/index.ts#L100-L106
-
-
-  const {
-    remoteWindowSize
-  } = http2Stream.session.state;
-
-  if (remoteWindowSize === 0) {
-    return {
-      can: false,
-      reason: `no more remoteWindowSize`
-    };
-  }
-
-  return {
-    can: true
-  };
-};
-
-const ABORTED_RESPONSE_PROPERTIES = {};
-const PROCESS_TEARDOWN_EVENTS_MAP = {
-  SIGHUP: STOP_REASON_PROCESS_SIGHUP,
-  SIGTERM: STOP_REASON_PROCESS_SIGTERM,
-  SIGINT: STOP_REASON_PROCESS_SIGINT,
-  beforeExit: STOP_REASON_PROCESS_BEFORE_EXIT,
-  exit: STOP_REASON_PROCESS_EXIT
-};
-
-const mediaTypeInfos = {
-  "application/json": {
-    extensions: ["json"],
-    isTextual: true
-  },
-  "application/importmap+json": {
-    extensions: ["importmap"],
-    isTextual: true
-  },
-  "application/manifest+json": {
-    extensions: ["webmanifest"],
-    isTextual: true
-  },
-  "application/octet-stream": {},
-  "application/pdf": {
-    extensions: ["pdf"]
-  },
-  "application/xml": {
-    extensions: ["xml"]
-  },
-  "application/x-gzip": {
-    extensions: ["gz"]
-  },
-  "application/wasm": {
-    extensions: ["wasm"]
-  },
-  "application/zip": {
-    extensions: ["zip"]
-  },
-  "audio/basic": {
-    extensions: ["au", "snd"]
-  },
-  "audio/mpeg": {
-    extensions: ["mpga", "mp2", "mp2a", "mp3", "m2a", "m3a"]
-  },
-  "audio/midi": {
-    extensions: ["midi", "mid", "kar", "rmi"]
-  },
-  "audio/mp4": {
-    extensions: ["m4a", "mp4a"]
-  },
-  "audio/ogg": {
-    extensions: ["oga", "ogg", "spx"]
-  },
-  "audio/webm": {
-    extensions: ["weba"]
-  },
-  "audio/x-wav": {
-    extensions: ["wav"]
-  },
-  "font/ttf": {
-    extensions: ["ttf"]
-  },
-  "font/woff": {
-    extensions: ["woff"]
-  },
-  "font/woff2": {
-    extensions: ["woff2"]
-  },
-  "image/png": {
-    extensions: ["png"]
-  },
-  "image/gif": {
-    extensions: ["gif"]
-  },
-  "image/jpeg": {
-    extensions: ["jpg"]
-  },
-  "image/svg+xml": {
-    extensions: ["svg", "svgz"],
-    isTextual: true
-  },
-  "text/plain": {
-    extensions: ["txt"]
-  },
-  "text/html": {
-    extensions: ["html"]
-  },
-  "text/css": {
-    extensions: ["css"]
-  },
-  "text/javascript": {
-    extensions: ["js", "cjs", "mjs", "ts", "jsx", "tsx"]
-  },
-  "text/x-sass": {
-    extensions: ["sass"]
-  },
-  "text/x-scss": {
-    extensions: ["scss"]
-  },
-  "text/cache-manifest": {
-    extensions: ["appcache"]
-  },
-  "video/mp4": {
-    extensions: ["mp4", "mp4v", "mpg4"]
-  },
-  "video/mpeg": {
-    extensions: ["mpeg", "mpg", "mpe", "m1v", "m2v"]
-  },
-  "video/ogg": {
-    extensions: ["ogv"]
-  },
-  "video/webm": {
-    extensions: ["webm"]
-  }
-};
-
-const CONTENT_TYPE = {
-  parse: string => {
-    const [mediaType, charset] = string.split(";");
-    return {
-      mediaType: normalizeMediaType(mediaType),
-      charset
-    };
-  },
-  stringify: ({
-    mediaType,
-    charset
-  }) => {
-    if (charset) {
-      return `${mediaType};${charset}`;
-    }
-
-    return mediaType;
-  },
-  asMediaType: value => {
-    if (typeof value === "string") {
-      return CONTENT_TYPE.parse(value).mediaType;
-    }
-
-    if (typeof value === "object") {
-      return value.mediaType;
-    }
-
-    return null;
-  },
-  isJson: value => {
-    const mediaType = CONTENT_TYPE.asMediaType(value);
-    return mediaType === "application/json" || /^application\/\w+\+json$/.test(mediaType);
-  },
-  isTextual: value => {
-    const mediaType = CONTENT_TYPE.asMediaType(value);
-
-    if (mediaType.startsWith("text/")) {
-      return true;
-    }
-
-    const mediaTypeInfo = mediaTypeInfos[mediaType];
-
-    if (mediaTypeInfo && mediaTypeInfo.isTextual) {
-      return true;
-    } // catch things like application/manifest+json, application/importmap+json
-
-
-    if (/^application\/\w+\+json$/.test(mediaType)) {
-      return true;
-    }
-
-    return false;
-  },
-  isBinary: value => !CONTENT_TYPE.isTextual(value),
-  asFileExtension: value => {
-    const mediaType = CONTENT_TYPE.asMediaType(value);
-    const mediaTypeInfo = mediaTypeInfos[mediaType];
-    return mediaTypeInfo ? `.${mediaTypeInfo.extensions[0]}` : "";
-  },
-  fromUrlExtension: url => {
-    const {
-      pathname
-    } = new URL(url);
-    const extensionWithDot = extname(pathname);
-
-    if (!extensionWithDot || extensionWithDot === ".") {
-      return "application/octet-stream";
-    }
-
-    const extension = extensionWithDot.slice(1);
-    const mediaTypeFound = Object.keys(mediaTypeInfos).find(mediaType => {
-      const mediaTypeInfo = mediaTypeInfos[mediaType];
-      return mediaTypeInfo.extensions && mediaTypeInfo.extensions.includes(extension);
-    });
-    return mediaTypeFound || "application/octet-stream";
-  }
-};
-
-const normalizeMediaType = value => {
-  if (value === "application/javascript") {
-    return "text/javascript";
-  }
-
-  return value;
-};
-
-const isFileSystemPath = value => {
-  if (typeof value !== "string") {
-    throw new TypeError(`isFileSystemPath first arg must be a string, got ${value}`);
-  }
-
-  if (value[0] === "/") {
-    return true;
-  }
-
-  return startsWithWindowsDriveLetter(value);
-};
-
-const startsWithWindowsDriveLetter = string => {
-  const firstChar = string[0];
-  if (!/[a-zA-Z]/.test(firstChar)) return false;
-  const secondChar = string[1];
-  if (secondChar !== ":") return false;
-  return true;
-};
-
-const fileSystemPathToUrl = value => {
-  if (!isFileSystemPath(value)) {
-    throw new Error(`received an invalid value for fileSystemPath: ${value}`);
-  }
-
-  return String(pathToFileURL(value));
-};
-
-const ETAG_FOR_EMPTY_CONTENT = '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
-const bufferToEtag = buffer => {
-  if (!Buffer.isBuffer(buffer)) {
-    throw new TypeError(`buffer expected, got ${buffer}`);
-  }
-
-  if (buffer.length === 0) {
-    return ETAG_FOR_EMPTY_CONTENT;
-  }
-
-  const hash = createHash("sha1");
-  hash.update(buffer, "utf8");
-  const hashBase64String = hash.digest("base64");
-  const hashBase64StringSubset = hashBase64String.slice(0, 27);
-  const length = buffer.length;
-  return `"${length.toString(16)}-${hashBase64StringSubset}"`;
-};
-
-const convertFileSystemErrorToResponseProperties = error => {
-  // https://iojs.org/api/errors.html#errors_eacces_permission_denied
-  if (isErrorWithCode(error, "EACCES")) {
-    return {
-      status: 403,
-      statusText: `EACCES: No permission to read file at ${error.path}`
-    };
-  }
-
-  if (isErrorWithCode(error, "EPERM")) {
-    return {
-      status: 403,
-      statusText: `EPERM: No permission to read file at ${error.path}`
-    };
-  }
-
-  if (isErrorWithCode(error, "ENOENT")) {
-    return {
-      status: 404,
-      statusText: `ENOENT: File not found at ${error.path}`
-    };
-  } // file access may be temporarily blocked
-  // (by an antivirus scanning it because recently modified for instance)
-
-
-  if (isErrorWithCode(error, "EBUSY")) {
-    return {
-      status: 503,
-      statusText: `EBUSY: File is busy ${error.path}`,
-      headers: {
-        "retry-after": 0.01 // retry in 10ms
-
-      }
-    };
-  } // emfile means there is too many files currently opened
-
-
-  if (isErrorWithCode(error, "EMFILE")) {
-    return {
-      status: 503,
-      statusText: "EMFILE: too many file opened",
-      headers: {
-        "retry-after": 0.1 // retry in 100ms
-
-      }
-    };
-  }
-
-  if (isErrorWithCode(error, "EISDIR")) {
-    return {
-      status: 500,
-      statusText: `EISDIR: Unexpected directory operation at ${error.path}`
-    };
-  }
-
-  return null;
-};
-
-const isErrorWithCode = (error, code) => {
-  return typeof error === "object" && error.code === code;
-};
-
-const pickAcceptedContent = ({
-  availables,
-  accepteds,
-  getAcceptanceScore
-}) => {
-  let highestScore = -1;
-  let availableWithHighestScore = null;
-  let availableIndex = 0;
-
-  while (availableIndex < availables.length) {
-    const available = availables[availableIndex];
-    availableIndex++;
-    let acceptedIndex = 0;
-
-    while (acceptedIndex < accepteds.length) {
-      const accepted = accepteds[acceptedIndex];
-      acceptedIndex++;
-      const score = getAcceptanceScore(accepted, available);
-
-      if (score > highestScore) {
-        availableWithHighestScore = available;
-        highestScore = score;
-      }
-    }
-  }
-
-  return availableWithHighestScore;
-};
-
-const pickContentEncoding = (request, availableEncodings) => {
-  const {
-    headers = {}
-  } = request;
-  const requestAcceptEncodingHeader = headers["accept-encoding"];
-
-  if (!requestAcceptEncodingHeader) {
-    return null;
-  }
-
-  const encodingsAccepted = parseAcceptEncodingHeader(requestAcceptEncodingHeader);
-  return pickAcceptedContent({
-    accepteds: encodingsAccepted,
-    availables: availableEncodings,
-    getAcceptanceScore: getEncodingAcceptanceScore
-  });
-};
-
-const parseAcceptEncodingHeader = acceptEncodingHeaderString => {
-  const acceptEncodingHeader = parseMultipleHeader(acceptEncodingHeaderString, {
-    validateProperty: ({
-      name
-    }) => {
-      // read only q, anything else is ignored
-      return name === "q";
-    }
-  });
-  const encodingsAccepted = [];
-  Object.keys(acceptEncodingHeader).forEach(key => {
-    const {
-      q = 1
-    } = acceptEncodingHeader[key];
-    const value = key;
-    encodingsAccepted.push({
-      value,
-      quality: q
-    });
-  });
-  encodingsAccepted.sort((a, b) => {
-    return b.quality - a.quality;
-  });
-  return encodingsAccepted;
-};
-
-const getEncodingAcceptanceScore = ({
-  value,
-  quality
-}, availableEncoding) => {
-  if (value === "*") {
-    return quality;
-  } // normalize br to brotli
-
-
-  if (value === "br") value = "brotli";
-  if (availableEncoding === "br") availableEncoding = "brotli";
-
-  if (value === availableEncoding) {
-    return quality;
-  }
-
-  return -1;
-};
-
-const pickContentType = (request, availableContentTypes) => {
-  const {
-    headers = {}
-  } = request;
-  const requestAcceptHeader = headers.accept;
-
-  if (!requestAcceptHeader) {
-    return null;
-  }
-
-  const contentTypesAccepted = parseAcceptHeader(requestAcceptHeader);
-  return pickAcceptedContent({
-    accepteds: contentTypesAccepted,
-    availables: availableContentTypes,
-    getAcceptanceScore: getContentTypeAcceptanceScore
-  });
-};
-
-const parseAcceptHeader = acceptHeader => {
-  const acceptHeaderObject = parseMultipleHeader(acceptHeader, {
-    validateProperty: ({
-      name
-    }) => {
-      // read only q, anything else is ignored
-      return name === "q";
-    }
-  });
-  const accepts = [];
-  Object.keys(acceptHeaderObject).forEach(key => {
-    const {
-      q = 1
-    } = acceptHeaderObject[key];
-    const value = key;
-    accepts.push({
-      value,
-      quality: q
-    });
-  });
-  accepts.sort((a, b) => {
-    return b.quality - a.quality;
-  });
-  return accepts;
-};
-
-const getContentTypeAcceptanceScore = ({
-  value,
-  quality
-}, availableContentType) => {
-  const [acceptedType, acceptedSubtype] = decomposeContentType(value);
-  const [availableType, availableSubtype] = decomposeContentType(availableContentType);
-  const typeAccepted = acceptedType === "*" || acceptedType === availableType;
-  const subtypeAccepted = acceptedSubtype === "*" || acceptedSubtype === availableSubtype;
-
-  if (typeAccepted && subtypeAccepted) {
-    return quality;
-  }
-
-  return -1;
-};
-
-const decomposeContentType = fullType => {
-  const [type, subtype] = fullType.split("/");
-  return [type, subtype];
-};
-
-const serveDirectory = (url, {
-  headers = {},
-  rootDirectoryUrl
-} = {}) => {
-  url = String(url);
-  url = url[url.length - 1] === "/" ? url : `${url}/`;
-  const directoryContentArray = readdirSync(new URL(url));
-  const responseProducers = {
-    "application/json": () => {
-      const directoryContentJson = JSON.stringify(directoryContentArray);
-      return {
-        status: 200,
-        headers: {
-          "content-type": "application/json",
-          "content-length": directoryContentJson.length
-        },
-        body: directoryContentJson
-      };
+    urlInfoMap,
+    reuseOrCreateUrlInfo,
+    getUrlInfo,
+    deleteUrlInfo,
+    inferReference,
+    findDependent,
+    updateReferences,
+    considerModified,
+    getRelatedUrlInfos,
+    toObject: () => {
+      const data = {};
+      urlInfoMap.forEach(urlInfo => {
+        data[urlInfo.url] = urlInfo;
+      });
+      return data;
     },
-    "text/html": () => {
-      const directoryAsHtml = `<!DOCTYPE html>
-<html>
-  <head>
-    <title>Directory explorer</title>
-    <meta charset="utf-8" />
-    <link rel="icon" href="data:," />
-  </head>
+    toJSON: rootDirectoryUrl => {
+      const data = {};
+      urlInfoMap.forEach(urlInfo => {
+        const dependencyUrls = Array.from(urlInfo.dependencies);
 
-  <body>
-    <h1>Content of directory ${url}</h1>
-    <ul>
-      ${directoryContentArray.map(filename => {
-        const fileUrl = String(new URL(filename, url));
-        const fileUrlRelativeToServer = fileUrl.slice(String(rootDirectoryUrl).length);
-        return `<li>
-        <a href="/${fileUrlRelativeToServer}">${fileUrlRelativeToServer}</a>
-      </li>`;
-      }).join(`
-      `)}
-    </ul>
-  </body>
-</html>`;
-      return {
-        status: 200,
-        headers: {
-          "content-type": "text/html",
-          "content-length": Buffer.byteLength(directoryAsHtml)
-        },
-        body: directoryAsHtml
-      };
-    }
-  };
-  const bestContentType = pickContentType({
-    headers
-  }, Object.keys(responseProducers));
-  return responseProducers[bestContentType || "application/json"]();
-};
-
-/*
- * This function returns response properties in a plain object like
- * { status: 200, body: "Hello world" }.
- * It is meant to be used inside "requestToResponse"
- */
-const fetchFileSystem = async (filesystemUrl, {
-  // signal,
-  method = "GET",
-  headers = {},
-  etagEnabled = false,
-  etagMemory = true,
-  etagMemoryMaxSize = 1000,
-  mtimeEnabled = false,
-  compressionEnabled = false,
-  compressionSizeThreshold = 1024,
-  cacheControl = etagEnabled || mtimeEnabled ? "private,max-age=0,must-revalidate" : "no-store",
-  canReadDirectory = false,
-  rootDirectoryUrl //  = `${pathToFileURL(process.cwd())}/`,
-
-} = {}) => {
-  const urlString = asUrlString(filesystemUrl);
-
-  if (!urlString) {
-    return create500Response(`fetchFileSystem first parameter must be a file url, got ${filesystemUrl}`);
-  }
-
-  if (!urlString.startsWith("file://")) {
-    return create500Response(`fetchFileSystem url must use "file://" scheme, got ${filesystemUrl}`);
-  }
-
-  if (rootDirectoryUrl) {
-    let rootDirectoryUrlString = asUrlString(rootDirectoryUrl);
-
-    if (!rootDirectoryUrlString) {
-      return create500Response(`rootDirectoryUrl must be a string or an url, got ${rootDirectoryUrl}`);
-    }
-
-    if (!rootDirectoryUrlString.endsWith("/")) {
-      rootDirectoryUrlString = `${rootDirectoryUrlString}/`;
-    }
-
-    if (!urlString.startsWith(rootDirectoryUrlString)) {
-      return create500Response(`fetchFileSystem url must be inside root directory, got ${urlString}`);
-    }
-
-    rootDirectoryUrl = rootDirectoryUrlString;
-  } // here you might be tempted to add || cacheControl === 'no-cache'
-  // but no-cache means ressource can be cache but must be revalidated (yeah naming is strange)
-  // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#Cacheability
-
-
-  if (cacheControl === "no-store") {
-    if (etagEnabled) {
-      console.warn(`cannot enable etag when cache-control is ${cacheControl}`);
-      etagEnabled = false;
-    }
-
-    if (mtimeEnabled) {
-      console.warn(`cannot enable mtime when cache-control is ${cacheControl}`);
-      mtimeEnabled = false;
-    }
-  }
-
-  if (etagEnabled && mtimeEnabled) {
-    console.warn(`cannot enable both etag and mtime, mtime disabled in favor of etag.`);
-    mtimeEnabled = false;
-  }
-
-  if (method !== "GET" && method !== "HEAD") {
-    return {
-      status: 501
-    };
-  }
-
-  const sourceUrl = `file://${new URL(urlString).pathname}`;
-
-  try {
-    const [readStatTiming, sourceStat] = await timeFunction("file service>read file stat", () => statSync(new URL(sourceUrl)));
-
-    if (sourceStat.isDirectory()) {
-      if (canReadDirectory) {
-        return serveDirectory(urlString, {
-          headers,
-          canReadDirectory,
-          rootDirectoryUrl
-        });
-      }
-
-      return {
-        status: 403,
-        statusText: "not allowed to read directory"
-      };
-    } // not a file, give up
-
-
-    if (!sourceStat.isFile()) {
-      return {
-        status: 404,
-        timing: readStatTiming
-      };
-    }
-
-    const clientCacheResponse = await getClientCacheResponse({
-      headers,
-      etagEnabled,
-      etagMemory,
-      etagMemoryMaxSize,
-      mtimeEnabled,
-      sourceStat,
-      sourceUrl
-    }); // send 304 (redirect response to client cache)
-    // because the response body does not have to be transmitted
-
-    if (clientCacheResponse.status === 304) {
-      return composeTwoResponses({
-        timing: readStatTiming,
-        headers: { ...(cacheControl ? {
-            "cache-control": cacheControl
-          } : {})
+        if (dependencyUrls.length) {
+          const relativeUrl = urlToRelativeUrl(urlInfo.url, rootDirectoryUrl);
+          data[relativeUrl] = dependencyUrls.map(dependencyUrl => urlToRelativeUrl(dependencyUrl, rootDirectoryUrl));
         }
-      }, clientCacheResponse);
-    }
-
-    let response;
-
-    if (compressionEnabled && sourceStat.size >= compressionSizeThreshold) {
-      const compressedResponse = await getCompressedResponse({
-        headers,
-        sourceUrl
       });
-
-      if (compressedResponse) {
-        response = compressedResponse;
-      }
+      return data;
     }
-
-    if (!response) {
-      response = await getRawResponse({
-        sourceStat,
-        sourceUrl
-      });
-    }
-
-    const intermediateResponse = composeTwoResponses({
-      timing: readStatTiming,
-      headers: { ...(cacheControl ? {
-          "cache-control": cacheControl
-        } : {}) // even if client cache is disabled, server can still
-        // send his own cache control but client should just ignore it
-        // and keep sending cache-control: 'no-store'
-        // if not, uncomment the line below to preserve client
-        // desire to ignore cache
-        // ...(headers["cache-control"] === "no-store" ? { "cache-control": "no-store" } : {}),
-
-      }
-    }, response);
-    return composeTwoResponses(intermediateResponse, clientCacheResponse);
-  } catch (e) {
-    return composeTwoResponses({
-      headers: { ...(cacheControl ? {
-          "cache-control": cacheControl
-        } : {})
-      }
-    }, convertFileSystemErrorToResponseProperties(e) || {});
-  }
+  };
 };
 
-const create500Response = message => {
+const createUrlInfo = url => {
   return {
-    status: 500,
-    headers: {
-      "content-type": "text/plain",
-      "content-length": Buffer.byteLength(message)
-    },
-    body: message
+    error: null,
+    modifiedTimestamp: 0,
+    contentEtag: null,
+    dependsOnPackageJson: false,
+    isValid,
+    data: {},
+    // plugins can put whatever they want here
+    references: [],
+    dependencies: new Set(),
+    dependents: new Set(),
+    type: undefined,
+    // "html", "css", "js_classic", "js_module", "importmap", "json", "webmanifest", ...
+    subtype: undefined,
+    // "worker", "service_worker", "shared_worker" for js, otherwise undefined
+    contentType: "",
+    // "text/html", "text/css", "text/javascript", "application/json", ...
+    url,
+    originalUrl: undefined,
+    generatedUrl: null,
+    filename: "",
+    isEntryPoint: false,
+    isInline: false,
+    inlineUrlSite: null,
+    shouldHandle: undefined,
+    originalContent: undefined,
+    content: undefined,
+    sourcemap: null,
+    sourcemapReference: null,
+    sourcemapIsWrong: false,
+    timing: {},
+    headers: {}
   };
 };
 
-const getClientCacheResponse = async ({
-  headers,
-  etagEnabled,
-  etagMemory,
-  etagMemoryMaxSize,
-  mtimeEnabled,
-  sourceStat,
-  sourceUrl
-}) => {
-  // here you might be tempted to add || headers["cache-control"] === "no-cache"
-  // but no-cache means ressource can be cache but must be revalidated (yeah naming is strange)
-  // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#Cacheability
-  if (headers["cache-control"] === "no-store" || // let's disable it on no-cache too
-  headers["cache-control"] === "no-cache") {
-    return {
-      status: 200
-    };
-  }
-
-  if (etagEnabled) {
-    return getEtagResponse({
-      headers,
-      etagMemory,
-      etagMemoryMaxSize,
-      sourceStat,
-      sourceUrl
-    });
-  }
-
-  if (mtimeEnabled) {
-    return getMtimeResponse({
-      headers,
-      sourceStat
-    });
-  }
-
-  return {
-    status: 200
-  };
-};
-
-const getEtagResponse = async ({
-  headers,
-  etagMemory,
-  etagMemoryMaxSize,
-  sourceUrl,
-  sourceStat
-}) => {
-  const [computeEtagTiming, fileContentEtag] = await timeFunction("file service>generate file etag", () => computeEtag({
-    etagMemory,
-    etagMemoryMaxSize,
-    sourceUrl,
-    sourceStat
-  }));
-  const requestHasIfNoneMatchHeader = ("if-none-match" in headers);
-
-  if (requestHasIfNoneMatchHeader && headers["if-none-match"] === fileContentEtag) {
-    return {
-      status: 304,
-      timing: computeEtagTiming
-    };
-  }
-
-  return {
-    status: 200,
-    headers: {
-      etag: fileContentEtag
-    },
-    timing: computeEtagTiming
-  };
-};
-
-const ETAG_MEMORY_MAP = new Map();
-
-const computeEtag = async ({
-  etagMemory,
-  etagMemoryMaxSize,
-  sourceUrl,
-  sourceStat
-}) => {
-  if (etagMemory) {
-    const etagMemoryEntry = ETAG_MEMORY_MAP.get(sourceUrl);
-
-    if (etagMemoryEntry && fileStatAreTheSame(etagMemoryEntry.sourceStat, sourceStat)) {
-      return etagMemoryEntry.eTag;
-    }
-  }
-
-  const fileContentAsBuffer = await new Promise((resolve, reject) => {
-    readFile$1(new URL(sourceUrl), (error, buffer) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve(buffer);
-      }
-    });
-  });
-  const eTag = bufferToEtag(fileContentAsBuffer);
-
-  if (etagMemory) {
-    if (ETAG_MEMORY_MAP.size >= etagMemoryMaxSize) {
-      const firstKey = Array.from(ETAG_MEMORY_MAP.keys())[0];
-      ETAG_MEMORY_MAP.delete(firstKey);
-    }
-
-    ETAG_MEMORY_MAP.set(sourceUrl, {
-      sourceStat,
-      eTag
-    });
-  }
-
-  return eTag;
-}; // https://nodejs.org/api/fs.html#fs_class_fs_stats
-
-
-const fileStatAreTheSame = (leftFileStat, rightFileStat) => {
-  return fileStatKeysToCompare.every(keyToCompare => {
-    const leftValue = leftFileStat[keyToCompare];
-    const rightValue = rightFileStat[keyToCompare];
-    return leftValue === rightValue;
-  });
-};
-
-const fileStatKeysToCompare = [// mtime the the most likely to change, check it first
-"mtimeMs", "size", "ctimeMs", "ino", "mode", "uid", "gid", "blksize"];
-
-const getMtimeResponse = async ({
-  headers,
-  sourceStat
-}) => {
-  if ("if-modified-since" in headers) {
-    let cachedModificationDate;
-
-    try {
-      cachedModificationDate = new Date(headers["if-modified-since"]);
-    } catch (e) {
-      return {
-        status: 400,
-        statusText: "if-modified-since header is not a valid date"
-      };
-    }
-
-    const actualModificationDate = dateToSecondsPrecision(sourceStat.mtime);
-
-    if (Number(cachedModificationDate) >= Number(actualModificationDate)) {
-      return {
-        status: 304
-      };
-    }
-  }
-
-  return {
-    status: 200,
-    headers: {
-      "last-modified": dateToUTCString(sourceStat.mtime)
-    }
-  };
-};
-
-const getCompressedResponse = async ({
-  sourceUrl,
-  headers
-}) => {
-  const acceptedCompressionFormat = pickContentEncoding({
-    headers
-  }, Object.keys(availableCompressionFormats));
-
-  if (!acceptedCompressionFormat) {
-    return null;
-  }
-
-  const fileReadableStream = fileUrlToReadableStream(sourceUrl);
-  const body = await availableCompressionFormats[acceptedCompressionFormat](fileReadableStream);
-  return {
-    status: 200,
-    headers: {
-      "content-type": CONTENT_TYPE.fromUrlExtension(sourceUrl),
-      "content-encoding": acceptedCompressionFormat,
-      "vary": "accept-encoding"
-    },
-    body
-  };
-};
-
-const fileUrlToReadableStream = fileUrl => {
-  return createReadStream(new URL(fileUrl), {
-    emitClose: true,
-    autoClose: true
-  });
-};
-
-const availableCompressionFormats = {
-  br: async fileReadableStream => {
-    const {
-      createBrotliCompress
-    } = await import("node:zlib");
-    return fileReadableStream.pipe(createBrotliCompress());
-  },
-  deflate: async fileReadableStream => {
-    const {
-      createDeflate
-    } = await import("node:zlib");
-    return fileReadableStream.pipe(createDeflate());
-  },
-  gzip: async fileReadableStream => {
-    const {
-      createGzip
-    } = await import("node:zlib");
-    return fileReadableStream.pipe(createGzip());
-  }
-};
-
-const getRawResponse = async ({
-  sourceUrl,
-  sourceStat
-}) => {
-  return {
-    status: 200,
-    headers: {
-      "content-type": CONTENT_TYPE.fromUrlExtension(sourceUrl),
-      "content-length": sourceStat.size
-    },
-    body: fileUrlToReadableStream(sourceUrl)
-  };
-}; // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toUTCString
-
-
-const dateToUTCString = date => date.toUTCString();
-
-const dateToSecondsPrecision = date => {
-  const dateWithSecondsPrecision = new Date(date);
-  dateWithSecondsPrecision.setMilliseconds(0);
-  return dateWithSecondsPrecision;
-};
-
-const asUrlString = value => {
-  if (value instanceof URL) {
-    return value.href;
-  }
-
-  if (typeof value === "string") {
-    if (isFileSystemPath(value)) {
-      return fileSystemPathToUrl(value);
-    }
-
-    try {
-      const urlObject = new URL(value);
-      return String(urlObject);
-    } catch (e) {
-      return null;
-    }
-  }
-
-  return null;
-};
-
-const jsenvServiceErrorHandler = ({
-  sendErrorDetails = false
-} = {}) => {
-  return {
-    name: "jsenv:error_handler",
-    handleError: (serverInternalError, {
-      request
-    }) => {
-      const serverInternalErrorIsAPrimitive = serverInternalError === null || typeof serverInternalError !== "object" && typeof serverInternalError !== "function";
-
-      if (!serverInternalErrorIsAPrimitive && serverInternalError.asResponse) {
-        return serverInternalError.asResponse();
-      }
-
-      const dataToSend = serverInternalErrorIsAPrimitive ? {
-        code: "VALUE_THROWED",
-        value: serverInternalError
-      } : {
-        code: serverInternalError.code || "UNKNOWN_ERROR",
-        ...(sendErrorDetails ? {
-          stack: serverInternalError.stack,
-          ...serverInternalError
-        } : {})
-      };
-      const availableContentTypes = {
-        "text/html": () => {
-          const renderHtmlForErrorWithoutDetails = () => {
-            return `<p>Details not available: to enable them use jsenvServiceErrorHandler({ sendErrorDetails: true }).</p>`;
-          };
-
-          const renderHtmlForErrorWithDetails = () => {
-            if (serverInternalErrorIsAPrimitive) {
-              return `<pre>${JSON.stringify(serverInternalError, null, "  ")}</pre>`;
-            }
-
-            return `<pre>${serverInternalError.stack}</pre>`;
-          };
-
-          const body = `<!DOCTYPE html>
-<html>
-  <head>
-    <title>Internal server error</title>
-    <meta charset="utf-8" />
-    <link rel="icon" href="data:," />
-  </head>
-
-  <body>
-    <h1>Internal server error</h1>
-    <p>${serverInternalErrorIsAPrimitive ? `Code inside server has thrown a literal.` : `Code inside server has thrown an error.`}</p>
-    <details>
-      <summary>See internal error details</summary>
-      ${sendErrorDetails ? renderHtmlForErrorWithDetails() : renderHtmlForErrorWithoutDetails()}
-    </details>
-  </body>
-</html>`;
-          return {
-            headers: {
-              "content-type": "text/html",
-              "content-length": Buffer.byteLength(body)
-            },
-            body
-          };
-        },
-        "application/json": () => {
-          const body = JSON.stringify(dataToSend);
-          return {
-            headers: {
-              "content-type": "application/json",
-              "content-length": Buffer.byteLength(body)
-            },
-            body
-          };
-        }
-      };
-      const bestContentType = pickContentType(request, Object.keys(availableContentTypes));
-      return availableContentTypes[bestContentType || "application/json"]();
-    }
-  };
-};
-
-const jsenvAccessControlAllowedHeaders = ["x-requested-with"];
-const jsenvAccessControlAllowedMethods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"];
-const jsenvServiceCORS = ({
-  accessControlAllowedOrigins = [],
-  accessControlAllowedMethods = jsenvAccessControlAllowedMethods,
-  accessControlAllowedHeaders = jsenvAccessControlAllowedHeaders,
-  accessControlAllowRequestOrigin = false,
-  accessControlAllowRequestMethod = false,
-  accessControlAllowRequestHeaders = false,
-  accessControlAllowCredentials = false,
-  // by default OPTIONS request can be cache for a long time, it's not going to change soon ?
-  // we could put a lot here, see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Max-Age
-  accessControlMaxAge = 600,
-  timingAllowOrigin = false
-} = {}) => {
-  // TODO: we should check access control params to throw or warn if we find strange values
-  const corsEnabled = accessControlAllowRequestOrigin || accessControlAllowedOrigins.length;
-
-  if (!corsEnabled) {
-    return [];
-  }
-
-  return {
-    name: "jsenv:cors",
-    handleRequest: request => {
-      // when request method is "OPTIONS" we must return a 200 without body
-      // So we bypass "requestToResponse" in that scenario using shortcircuitResponse
-      if (request.method === "OPTIONS") {
-        return {
-          status: 200,
-          headers: {
-            "content-length": 0
-          }
-        };
-      }
-
-      return null;
-    },
-    injectResponseHeaders: (response, {
-      request
-    }) => {
-      const accessControlHeaders = generateAccessControlHeaders({
-        request,
-        accessControlAllowedOrigins,
-        accessControlAllowRequestOrigin,
-        accessControlAllowedMethods,
-        accessControlAllowRequestMethod,
-        accessControlAllowedHeaders,
-        accessControlAllowRequestHeaders,
-        accessControlAllowCredentials,
-        accessControlMaxAge,
-        timingAllowOrigin
-      });
-      return accessControlHeaders;
-    }
-  };
-}; // https://www.w3.org/TR/cors/
-// https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
-
-const generateAccessControlHeaders = ({
-  request: {
-    headers
-  },
-  accessControlAllowedOrigins,
-  accessControlAllowRequestOrigin,
-  accessControlAllowedMethods,
-  accessControlAllowRequestMethod,
-  accessControlAllowedHeaders,
-  accessControlAllowRequestHeaders,
-  accessControlAllowCredentials,
-  // by default OPTIONS request can be cache for a long time, it's not going to change soon ?
-  // we could put a lot here, see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Max-Age
-  accessControlMaxAge = 600,
-  timingAllowOrigin
-} = {}) => {
-  const vary = [];
-  const allowedOriginArray = [...accessControlAllowedOrigins];
-
-  if (accessControlAllowRequestOrigin) {
-    if ("origin" in headers && headers.origin !== "null") {
-      allowedOriginArray.push(headers.origin);
-      vary.push("origin");
-    } else if ("referer" in headers) {
-      allowedOriginArray.push(new URL(headers.referer).origin);
-      vary.push("referer");
-    } else {
-      allowedOriginArray.push("*");
-    }
-  }
-
-  const allowedMethodArray = [...accessControlAllowedMethods];
-
-  if (accessControlAllowRequestMethod && "access-control-request-method" in headers) {
-    const requestMethodName = headers["access-control-request-method"];
-
-    if (!allowedMethodArray.includes(requestMethodName)) {
-      allowedMethodArray.push(requestMethodName);
-      vary.push("access-control-request-method");
-    }
-  }
-
-  const allowedHeaderArray = [...accessControlAllowedHeaders];
-
-  if (accessControlAllowRequestHeaders && "access-control-request-headers" in headers) {
-    const requestHeaderNameArray = headers["access-control-request-headers"].split(", ");
-    requestHeaderNameArray.forEach(headerName => {
-      const headerNameLowerCase = headerName.toLowerCase();
-
-      if (!allowedHeaderArray.includes(headerNameLowerCase)) {
-        allowedHeaderArray.push(headerNameLowerCase);
-
-        if (!vary.includes("access-control-request-headers")) {
-          vary.push("access-control-request-headers");
-        }
-      }
-    });
-  }
-
-  return {
-    "access-control-allow-origin": allowedOriginArray.join(", "),
-    "access-control-allow-methods": allowedMethodArray.join(", "),
-    "access-control-allow-headers": allowedHeaderArray.join(", "),
-    ...(accessControlAllowCredentials ? {
-      "access-control-allow-credentials": true
-    } : {}),
-    "access-control-max-age": accessControlMaxAge,
-    ...(timingAllowOrigin ? {
-      "timing-allow-origin": allowedOriginArray.join(", ")
-    } : {}),
-    ...(vary.length ? {
-      vary: vary.join(", ")
-    } : {})
-  };
-};
-
-const createSSERoom = ({
-  logLevel,
-  effect = () => {},
-  // do not keep process alive because of rooms, something else must keep it alive
-  keepProcessAlive = false,
-  keepaliveDuration = 30 * 1000,
-  retryDuration = 1 * 1000,
-  historyLength = 1 * 1000,
-  maxClientAllowed = 100,
-  // max 100 clients accepted
-  computeEventId = (event, lastEventId) => lastEventId + 1,
-  welcomeEventEnabled = false,
-  welcomeEventPublic = false // decides if welcome event are sent to other clients
-
-} = {}) => {
-  const logger = createLogger({
-    logLevel
-  });
-  const room = {};
-  const clients = new Set();
-  const eventHistory = createEventHistory(historyLength); // what about previousEventId that keeps growing ?
-  // we could add some limit
-  // one limit could be that an event older than 24h is deleted
-
-  let previousEventId = 0;
-  let opened = false;
-  let interval;
-  let cleanupEffect = CLEANUP_NOOP;
-
-  const join = request => {
-    // should we ensure a given request can join a room only once?
-    const lastKnownId = request.headers["last-event-id"] || new URL(request.ressource, request.origin).searchParams.get("last-event-id");
-
-    if (clients.size >= maxClientAllowed) {
-      return {
-        status: 503
-      };
-    }
-
-    if (!opened) {
-      return {
-        status: 204
-      };
-    }
-
-    const sseRoomObservable = createObservable(({
-      next,
-      complete
-    }) => {
-      const client = {
-        next,
-        complete,
-        request
-      };
-
-      if (clients.size === 0) {
-        const effectReturnValue = effect();
-
-        if (typeof effectReturnValue === "function") {
-          cleanupEffect = effectReturnValue;
-        } else {
-          cleanupEffect = CLEANUP_NOOP;
-        }
-      }
-
-      clients.add(client);
-      logger.debug(`A client has joined. Number of client in room: ${clients.size}`);
-
-      if (lastKnownId !== undefined) {
-        const previousEvents = getAllEventSince(lastKnownId);
-        const eventMissedCount = previousEvents.length;
-
-        if (eventMissedCount > 0) {
-          logger.info(`send ${eventMissedCount} event missed by client since event with id "${lastKnownId}"`);
-          previousEvents.forEach(previousEvent => {
-            next(stringifySourceEvent(previousEvent));
-          });
-        }
-      }
-
-      if (welcomeEventEnabled) {
-        const welcomeEvent = {
-          retry: retryDuration,
-          type: "welcome",
-          data: new Date().toLocaleTimeString()
-        };
-        addEventToHistory(welcomeEvent); // send to everyone
-
-        if (welcomeEventPublic) {
-          sendEventToAllClients(welcomeEvent, {
-            history: false
-          });
-        } // send only to this client
-        else {
-          next(stringifySourceEvent(welcomeEvent));
-        }
-      } else {
-        const firstEvent = {
-          retry: retryDuration,
-          type: "comment",
-          data: new Date().toLocaleTimeString()
-        };
-        next(stringifySourceEvent(firstEvent));
-      }
-
-      return () => {
-        clients.delete(client);
-
-        if (clients.size === 0) {
-          cleanupEffect();
-          cleanupEffect = CLEANUP_NOOP;
-        }
-
-        logger.debug(`A client left. Number of client in room: ${clients.size}`);
-      };
-    });
-    const requestSSEObservable = connectRequestAndRoom(request, room, sseRoomObservable);
-    return {
-      status: 200,
-      headers: {
-        "content-type": "text/event-stream",
-        "cache-control": "no-store",
-        "connection": "keep-alive"
-      },
-      body: requestSSEObservable
-    };
-  };
-
-  const leave = request => {
-    disconnectRequestFromRoom(request, room);
-  };
-
-  const addEventToHistory = event => {
-    if (typeof event.id === "undefined") {
-      event.id = computeEventId(event, previousEventId);
-    }
-
-    previousEventId = event.id;
-    eventHistory.add(event);
-  };
-
-  const sendEventToAllClients = (event, {
-    history = true
-  } = {}) => {
-    if (history) {
-      addEventToHistory(event);
-    }
-
-    logger.debug(`send "${event.type}" event to ${clients.size} client in the room`);
-    const eventString = stringifySourceEvent(event);
-    clients.forEach(client => {
-      client.next(eventString);
-    });
-  };
-
-  const getAllEventSince = id => {
-    const events = eventHistory.since(id);
-
-    if (welcomeEventEnabled && !welcomeEventPublic) {
-      return events.filter(event => event.type !== "welcome");
-    }
-
-    return events;
-  };
-
-  const keepAlive = () => {
-    // maybe that, when an event occurs, we can delay the keep alive event
-    logger.debug(`send keep alive event, number of client listening event source: ${clients.size}`);
-    sendEventToAllClients({
-      type: "comment",
-      data: new Date().toLocaleTimeString()
-    }, {
-      history: false
-    });
-  };
-
-  const open = () => {
-    if (opened) return;
-    opened = true;
-    interval = setInterval(keepAlive, keepaliveDuration);
-
-    if (!keepProcessAlive) {
-      interval.unref();
-    }
-  };
-
-  const close = () => {
-    if (!opened) return;
-    logger.debug(`closing room, number of client in the room: ${clients.size}`);
-    clients.forEach(client => client.complete());
-    clients.clear();
-    clearInterval(interval);
-    eventHistory.reset();
-    opened = false;
-  };
-
-  open();
-  Object.assign(room, {
-    // main api:
-    // - ability to sendEvent to clients in the room
-    // - ability to join the room
-    // - ability to leave the room
-    sendEventToAllClients,
-    join,
-    leave,
-    // should rarely be necessary, get information about the room
-    getAllEventSince,
-    getRoomClientCount: () => clients.size,
-    // should rarely be used
-    close,
-    open
-  });
-  return room;
-};
-
-const CLEANUP_NOOP = () => {};
-
-const requestMap = new Map();
-
-const connectRequestAndRoom = (request, room, roomObservable) => {
-  let sseProducer;
-  let roomObservableMap;
-  const requestInfo = requestMap.get(request);
-
-  if (requestInfo) {
-    sseProducer = requestInfo.sseProducer;
-    roomObservableMap = requestInfo.roomObservableMap;
-  } else {
-    sseProducer = createCompositeProducer({
-      cleanup: () => {
-        requestMap.delete(request);
-      }
-    });
-    roomObservableMap = new Map();
-    requestMap.set(request, {
-      sseProducer,
-      roomObservableMap
-    });
-  }
-
-  roomObservableMap.set(room, roomObservable);
-  sseProducer.addObservable(roomObservable);
-  return createObservable(sseProducer);
-};
-
-const disconnectRequestFromRoom = (request, room) => {
-  const requestInfo = requestMap.get(request);
-
-  if (!requestInfo) {
-    return;
-  }
-
-  const {
-    sseProducer,
-    roomObservableMap
-  } = requestInfo;
-  const roomObservable = roomObservableMap.get(room);
-  roomObservableMap.delete(room);
-  sseProducer.removeObservable(roomObservable);
-}; // https://github.com/dmail-old/project/commit/da7d2c88fc8273850812972885d030a22f9d7448
-// https://github.com/dmail-old/project/commit/98b3ae6748d461ac4bd9c48944a551b1128f4459
-// https://github.com/dmail-old/http-eventsource/blob/master/lib/event-source.js
-// http://html5doctor.com/server-sent-events/
-
-
-const stringifySourceEvent = ({
-  data,
-  type = "message",
-  id,
-  retry
-}) => {
-  let string = "";
-
-  if (id !== undefined) {
-    string += `id:${id}\n`;
-  }
-
-  if (retry) {
-    string += `retry:${retry}\n`;
-  }
-
-  if (type !== "message") {
-    string += `event:${type}\n`;
-  }
-
-  string += `data:${data}\n\n`;
-  return string;
-};
-
-const createEventHistory = limit => {
-  const events = [];
-
-  const add = data => {
-    events.push(data);
-
-    if (events.length >= limit) {
-      events.shift();
-    }
-  };
-
-  const since = id => {
-    const index = events.findIndex(event => String(event.id) === id);
-    return index === -1 ? [] : events.slice(index + 1);
-  };
-
-  const reset = () => {
-    events.length = 0;
-  };
-
-  return {
-    add,
-    since,
-    reset
-  };
-};
+const isValid = () => false;
 
 const parseAndTransformHtmlUrls = async (urlInfo, context) => {
   const url = urlInfo.originalUrl;
@@ -8651,2610 +4753,197 @@ const findOriginalDirectoryReference = (urlInfo, context) => {
   return ref;
 };
 
-const jsenvPluginLeadingSlash = () => {
-  return {
-    name: "jsenv:leading_slash",
-    appliesDuring: "*",
-    resolveUrl: (reference, context) => {
-      if (reference.specifier[0] !== "/") {
-        return null;
-      }
-
-      return new URL(reference.specifier.slice(1), context.rootDirectoryUrl).href;
-    }
-  };
+const mediaTypeInfos = {
+  "application/json": {
+    extensions: ["json"],
+    isTextual: true
+  },
+  "application/importmap+json": {
+    extensions: ["importmap"],
+    isTextual: true
+  },
+  "application/manifest+json": {
+    extensions: ["webmanifest"],
+    isTextual: true
+  },
+  "application/octet-stream": {},
+  "application/pdf": {
+    extensions: ["pdf"]
+  },
+  "application/xml": {
+    extensions: ["xml"]
+  },
+  "application/x-gzip": {
+    extensions: ["gz"]
+  },
+  "application/wasm": {
+    extensions: ["wasm"]
+  },
+  "application/zip": {
+    extensions: ["zip"]
+  },
+  "audio/basic": {
+    extensions: ["au", "snd"]
+  },
+  "audio/mpeg": {
+    extensions: ["mpga", "mp2", "mp2a", "mp3", "m2a", "m3a"]
+  },
+  "audio/midi": {
+    extensions: ["midi", "mid", "kar", "rmi"]
+  },
+  "audio/mp4": {
+    extensions: ["m4a", "mp4a"]
+  },
+  "audio/ogg": {
+    extensions: ["oga", "ogg", "spx"]
+  },
+  "audio/webm": {
+    extensions: ["weba"]
+  },
+  "audio/x-wav": {
+    extensions: ["wav"]
+  },
+  "font/ttf": {
+    extensions: ["ttf"]
+  },
+  "font/woff": {
+    extensions: ["woff"]
+  },
+  "font/woff2": {
+    extensions: ["woff2"]
+  },
+  "image/png": {
+    extensions: ["png"]
+  },
+  "image/gif": {
+    extensions: ["gif"]
+  },
+  "image/jpeg": {
+    extensions: ["jpg"]
+  },
+  "image/svg+xml": {
+    extensions: ["svg", "svgz"],
+    isTextual: true
+  },
+  "text/plain": {
+    extensions: ["txt"]
+  },
+  "text/html": {
+    extensions: ["html"]
+  },
+  "text/css": {
+    extensions: ["css"]
+  },
+  "text/javascript": {
+    extensions: ["js", "cjs", "mjs", "ts", "jsx", "tsx"]
+  },
+  "text/x-sass": {
+    extensions: ["sass"]
+  },
+  "text/x-scss": {
+    extensions: ["scss"]
+  },
+  "text/cache-manifest": {
+    extensions: ["appcache"]
+  },
+  "video/mp4": {
+    extensions: ["mp4", "mp4v", "mpg4"]
+  },
+  "video/mpeg": {
+    extensions: ["mpeg", "mpg", "mpe", "m1v", "m2v"]
+  },
+  "video/ogg": {
+    extensions: ["ogv"]
+  },
+  "video/webm": {
+    extensions: ["webm"]
+  }
 };
 
-// duplicated from @jsenv/log to avoid the dependency
-const createDetailedMessage = (message, details = {}) => {
-  let string = `${message}`;
-  Object.keys(details).forEach(key => {
-    const value = details[key];
-    string += `
-    --- ${key} ---
-    ${Array.isArray(value) ? value.join(`
-    `) : value}`;
-  });
-  return string;
-};
-
-const assertImportMap = value => {
-  if (value === null) {
-    throw new TypeError(`an importMap must be an object, got null`);
-  }
-
-  const type = typeof value;
-
-  if (type !== "object") {
-    throw new TypeError(`an importMap must be an object, received ${value}`);
-  }
-
-  if (Array.isArray(value)) {
-    throw new TypeError(`an importMap must be an object, received array ${value}`);
-  }
-};
-
-const hasScheme = string => {
-  return /^[a-zA-Z]{2,}:/.test(string);
-};
-
-const urlToScheme = urlString => {
-  const colonIndex = urlString.indexOf(":");
-  if (colonIndex === -1) return "";
-  return urlString.slice(0, colonIndex);
-};
-
-const urlToPathname = urlString => {
-  return ressourceToPathname(urlToRessource(urlString));
-};
-
-const urlToRessource = urlString => {
-  const scheme = urlToScheme(urlString);
-
-  if (scheme === "file") {
-    return urlString.slice("file://".length);
-  }
-
-  if (scheme === "https" || scheme === "http") {
-    // remove origin
-    const afterProtocol = urlString.slice(scheme.length + "://".length);
-    const pathnameSlashIndex = afterProtocol.indexOf("/", "://".length);
-    return afterProtocol.slice(pathnameSlashIndex);
-  }
-
-  return urlString.slice(scheme.length + 1);
-};
-
-const ressourceToPathname = ressource => {
-  const searchSeparatorIndex = ressource.indexOf("?");
-  return searchSeparatorIndex === -1 ? ressource : ressource.slice(0, searchSeparatorIndex);
-};
-
-const urlToOrigin = urlString => {
-  const scheme = urlToScheme(urlString);
-
-  if (scheme === "file") {
-    return "file://";
-  }
-
-  if (scheme === "http" || scheme === "https") {
-    const secondProtocolSlashIndex = scheme.length + "://".length;
-    const pathnameSlashIndex = urlString.indexOf("/", secondProtocolSlashIndex);
-    if (pathnameSlashIndex === -1) return urlString;
-    return urlString.slice(0, pathnameSlashIndex);
-  }
-
-  return urlString.slice(0, scheme.length + 1);
-};
-
-const pathnameToParentPathname = pathname => {
-  const slashLastIndex = pathname.lastIndexOf("/");
-
-  if (slashLastIndex === -1) {
-    return "/";
-  }
-
-  return pathname.slice(0, slashLastIndex + 1);
-};
-
-// could be useful: https://url.spec.whatwg.org/#url-miscellaneous
-const resolveUrl = (specifier, baseUrl) => {
-  if (baseUrl) {
-    if (typeof baseUrl !== "string") {
-      throw new TypeError(writeBaseUrlMustBeAString({
-        baseUrl,
-        specifier
-      }));
-    }
-
-    if (!hasScheme(baseUrl)) {
-      throw new Error(writeBaseUrlMustBeAbsolute({
-        baseUrl,
-        specifier
-      }));
-    }
-  }
-
-  if (hasScheme(specifier)) {
-    return specifier;
-  }
-
-  if (!baseUrl) {
-    throw new Error(writeBaseUrlRequired({
-      baseUrl,
-      specifier
-    }));
-  } // scheme relative
-
-
-  if (specifier.slice(0, 2) === "//") {
-    return `${urlToScheme(baseUrl)}:${specifier}`;
-  } // origin relative
-
-
-  if (specifier[0] === "/") {
-    return `${urlToOrigin(baseUrl)}${specifier}`;
-  }
-
-  const baseOrigin = urlToOrigin(baseUrl);
-  const basePathname = urlToPathname(baseUrl);
-
-  if (specifier === ".") {
-    const baseDirectoryPathname = pathnameToParentPathname(basePathname);
-    return `${baseOrigin}${baseDirectoryPathname}`;
-  } // pathname relative inside
-
-
-  if (specifier.slice(0, 2) === "./") {
-    const baseDirectoryPathname = pathnameToParentPathname(basePathname);
-    return `${baseOrigin}${baseDirectoryPathname}${specifier.slice(2)}`;
-  } // pathname relative outside
-
-
-  if (specifier.slice(0, 3) === "../") {
-    let unresolvedPathname = specifier;
-    const importerFolders = basePathname.split("/");
-    importerFolders.pop();
-
-    while (unresolvedPathname.slice(0, 3) === "../") {
-      unresolvedPathname = unresolvedPathname.slice(3); // when there is no folder left to resolved
-      // we just ignore '../'
-
-      if (importerFolders.length) {
-        importerFolders.pop();
-      }
-    }
-
-    const resolvedPathname = `${importerFolders.join("/")}/${unresolvedPathname}`;
-    return `${baseOrigin}${resolvedPathname}`;
-  } // bare
-
-
-  if (basePathname === "") {
-    return `${baseOrigin}/${specifier}`;
-  }
-
-  if (basePathname[basePathname.length] === "/") {
-    return `${baseOrigin}${basePathname}${specifier}`;
-  }
-
-  return `${baseOrigin}${pathnameToParentPathname(basePathname)}${specifier}`;
-};
-
-const writeBaseUrlMustBeAString = ({
-  baseUrl,
-  specifier
-}) => `baseUrl must be a string.
---- base url ---
-${baseUrl}
---- specifier ---
-${specifier}`;
-
-const writeBaseUrlMustBeAbsolute = ({
-  baseUrl,
-  specifier
-}) => `baseUrl must be absolute.
---- base url ---
-${baseUrl}
---- specifier ---
-${specifier}`;
-
-const writeBaseUrlRequired = ({
-  baseUrl,
-  specifier
-}) => `baseUrl required to resolve relative specifier.
---- base url ---
-${baseUrl}
---- specifier ---
-${specifier}`;
-
-const tryUrlResolution = (string, url) => {
-  const result = resolveUrl(string, url);
-  return hasScheme(result) ? result : null;
-};
-
-const resolveSpecifier = (specifier, importer) => {
-  if (specifier === "." || specifier[0] === "/" || specifier.startsWith("./") || specifier.startsWith("../")) {
-    return resolveUrl(specifier, importer);
-  }
-
-  if (hasScheme(specifier)) {
-    return specifier;
-  }
-
-  return null;
-};
-
-const applyImportMap = ({
-  importMap,
-  specifier,
-  importer,
-  createBareSpecifierError = ({
-    specifier,
-    importer
+const CONTENT_TYPE = {
+  parse: string => {
+    const [mediaType, charset] = string.split(";");
+    return {
+      mediaType: normalizeMediaType(mediaType),
+      charset
+    };
+  },
+  stringify: ({
+    mediaType,
+    charset
   }) => {
-    return new Error(createDetailedMessage(`Unmapped bare specifier.`, {
-      specifier,
-      importer
-    }));
+    if (charset) {
+      return `${mediaType};${charset}`;
+    }
+
+    return mediaType;
   },
-  onImportMapping = () => {}
-}) => {
-  assertImportMap(importMap);
-
-  if (typeof specifier !== "string") {
-    throw new TypeError(createDetailedMessage("specifier must be a string.", {
-      specifier,
-      importer
-    }));
-  }
-
-  if (importer) {
-    if (typeof importer !== "string") {
-      throw new TypeError(createDetailedMessage("importer must be a string.", {
-        importer,
-        specifier
-      }));
+  asMediaType: value => {
+    if (typeof value === "string") {
+      return CONTENT_TYPE.parse(value).mediaType;
     }
 
-    if (!hasScheme(importer)) {
-      throw new Error(createDetailedMessage(`importer must be an absolute url.`, {
-        importer,
-        specifier
-      }));
-    }
-  }
-
-  const specifierUrl = resolveSpecifier(specifier, importer);
-  const specifierNormalized = specifierUrl || specifier;
-  const {
-    scopes
-  } = importMap;
-
-  if (scopes && importer) {
-    const scopeSpecifierMatching = Object.keys(scopes).find(scopeSpecifier => {
-      return scopeSpecifier === importer || specifierIsPrefixOf(scopeSpecifier, importer);
-    });
-
-    if (scopeSpecifierMatching) {
-      const scopeMappings = scopes[scopeSpecifierMatching];
-      const mappingFromScopes = applyMappings(scopeMappings, specifierNormalized, scopeSpecifierMatching, onImportMapping);
-
-      if (mappingFromScopes !== null) {
-        return mappingFromScopes;
-      }
-    }
-  }
-
-  const {
-    imports
-  } = importMap;
-
-  if (imports) {
-    const mappingFromImports = applyMappings(imports, specifierNormalized, undefined, onImportMapping);
-
-    if (mappingFromImports !== null) {
-      return mappingFromImports;
-    }
-  }
-
-  if (specifierUrl) {
-    return specifierUrl;
-  }
-
-  throw createBareSpecifierError({
-    specifier,
-    importer
-  });
-};
-
-const applyMappings = (mappings, specifierNormalized, scope, onImportMapping) => {
-  const specifierCandidates = Object.keys(mappings);
-  let i = 0;
-
-  while (i < specifierCandidates.length) {
-    const specifierCandidate = specifierCandidates[i];
-    i++;
-
-    if (specifierCandidate === specifierNormalized) {
-      const address = mappings[specifierCandidate];
-      onImportMapping({
-        scope,
-        from: specifierCandidate,
-        to: address,
-        before: specifierNormalized,
-        after: address
-      });
-      return address;
+    if (typeof value === "object") {
+      return value.mediaType;
     }
 
-    if (specifierIsPrefixOf(specifierCandidate, specifierNormalized)) {
-      const address = mappings[specifierCandidate];
-      const afterSpecifier = specifierNormalized.slice(specifierCandidate.length);
-      const addressFinal = tryUrlResolution(afterSpecifier, address);
-      onImportMapping({
-        scope,
-        from: specifierCandidate,
-        to: address,
-        before: specifierNormalized,
-        after: addressFinal
-      });
-      return addressFinal;
-    }
-  }
+    return null;
+  },
+  isJson: value => {
+    const mediaType = CONTENT_TYPE.asMediaType(value);
+    return mediaType === "application/json" || /^application\/\w+\+json$/.test(mediaType);
+  },
+  isTextual: value => {
+    const mediaType = CONTENT_TYPE.asMediaType(value);
 
-  return null;
-};
-
-const specifierIsPrefixOf = (specifierHref, href) => {
-  return specifierHref[specifierHref.length - 1] === "/" && href.startsWith(specifierHref);
-};
-
-// https://github.com/systemjs/systemjs/blob/89391f92dfeac33919b0223bbf834a1f4eea5750/src/common.js#L136
-const composeTwoImportMaps = (leftImportMap, rightImportMap) => {
-  assertImportMap(leftImportMap);
-  assertImportMap(rightImportMap);
-  const importMap = {};
-  const leftImports = leftImportMap.imports;
-  const rightImports = rightImportMap.imports;
-  const leftHasImports = Boolean(leftImports);
-  const rightHasImports = Boolean(rightImports);
-
-  if (leftHasImports && rightHasImports) {
-    importMap.imports = composeTwoMappings(leftImports, rightImports);
-  } else if (leftHasImports) {
-    importMap.imports = { ...leftImports
-    };
-  } else if (rightHasImports) {
-    importMap.imports = { ...rightImports
-    };
-  }
-
-  const leftScopes = leftImportMap.scopes;
-  const rightScopes = rightImportMap.scopes;
-  const leftHasScopes = Boolean(leftScopes);
-  const rightHasScopes = Boolean(rightScopes);
-
-  if (leftHasScopes && rightHasScopes) {
-    importMap.scopes = composeTwoScopes(leftScopes, rightScopes, importMap.imports || {});
-  } else if (leftHasScopes) {
-    importMap.scopes = { ...leftScopes
-    };
-  } else if (rightHasScopes) {
-    importMap.scopes = { ...rightScopes
-    };
-  }
-
-  return importMap;
-};
-
-const composeTwoMappings = (leftMappings, rightMappings) => {
-  const mappings = {};
-  Object.keys(leftMappings).forEach(leftSpecifier => {
-    if (objectHasKey(rightMappings, leftSpecifier)) {
-      // will be overidden
-      return;
+    if (mediaType.startsWith("text/")) {
+      return true;
     }
 
-    const leftAddress = leftMappings[leftSpecifier];
-    const rightSpecifier = Object.keys(rightMappings).find(rightSpecifier => {
-      return compareAddressAndSpecifier(leftAddress, rightSpecifier);
-    });
-    mappings[leftSpecifier] = rightSpecifier ? rightMappings[rightSpecifier] : leftAddress;
-  });
-  Object.keys(rightMappings).forEach(rightSpecifier => {
-    mappings[rightSpecifier] = rightMappings[rightSpecifier];
-  });
-  return mappings;
-};
+    const mediaTypeInfo = mediaTypeInfos[mediaType];
 
-const objectHasKey = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
+    if (mediaTypeInfo && mediaTypeInfo.isTextual) {
+      return true;
+    } // catch things like application/manifest+json, application/importmap+json
 
-const compareAddressAndSpecifier = (address, specifier) => {
-  const addressUrl = resolveUrl(address, "file:///");
-  const specifierUrl = resolveUrl(specifier, "file:///");
-  return addressUrl === specifierUrl;
-};
 
-const composeTwoScopes = (leftScopes, rightScopes, imports) => {
-  const scopes = {};
-  Object.keys(leftScopes).forEach(leftScopeKey => {
-    if (objectHasKey(rightScopes, leftScopeKey)) {
-      // will be merged
-      scopes[leftScopeKey] = leftScopes[leftScopeKey];
-      return;
+    if (/^application\/\w+\+json$/.test(mediaType)) {
+      return true;
     }
 
-    const topLevelSpecifier = Object.keys(imports).find(topLevelSpecifierCandidate => {
-      return compareAddressAndSpecifier(leftScopeKey, topLevelSpecifierCandidate);
-    });
-
-    if (topLevelSpecifier) {
-      scopes[imports[topLevelSpecifier]] = leftScopes[leftScopeKey];
-    } else {
-      scopes[leftScopeKey] = leftScopes[leftScopeKey];
-    }
-  });
-  Object.keys(rightScopes).forEach(rightScopeKey => {
-    if (objectHasKey(scopes, rightScopeKey)) {
-      scopes[rightScopeKey] = composeTwoMappings(scopes[rightScopeKey], rightScopes[rightScopeKey]);
-    } else {
-      scopes[rightScopeKey] = { ...rightScopes[rightScopeKey]
-      };
-    }
-  });
-  return scopes;
-};
-
-const sortImports = imports => {
-  const mappingsSorted = {};
-  Object.keys(imports).sort(compareLengthOrLocaleCompare).forEach(name => {
-    mappingsSorted[name] = imports[name];
-  });
-  return mappingsSorted;
-};
-const sortScopes = scopes => {
-  const scopesSorted = {};
-  Object.keys(scopes).sort(compareLengthOrLocaleCompare).forEach(scopeSpecifier => {
-    scopesSorted[scopeSpecifier] = sortImports(scopes[scopeSpecifier]);
-  });
-  return scopesSorted;
-};
-
-const compareLengthOrLocaleCompare = (a, b) => {
-  return b.length - a.length || a.localeCompare(b);
-};
-
-const normalizeImportMap = (importMap, baseUrl) => {
-  assertImportMap(importMap);
-
-  if (!isStringOrUrl(baseUrl)) {
-    throw new TypeError(formulateBaseUrlMustBeStringOrUrl({
-      baseUrl
-    }));
-  }
-
-  const {
-    imports,
-    scopes
-  } = importMap;
-  return {
-    imports: imports ? normalizeMappings(imports, baseUrl) : undefined,
-    scopes: scopes ? normalizeScopes(scopes, baseUrl) : undefined
-  };
-};
-
-const isStringOrUrl = value => {
-  if (typeof value === "string") {
-    return true;
-  }
-
-  if (typeof URL === "function" && value instanceof URL) {
-    return true;
-  }
-
-  return false;
-};
-
-const normalizeMappings = (mappings, baseUrl) => {
-  const mappingsNormalized = {};
-  Object.keys(mappings).forEach(specifier => {
-    const address = mappings[specifier];
-
-    if (typeof address !== "string") {
-      console.warn(formulateAddressMustBeAString({
-        address,
-        specifier
-      }));
-      return;
-    }
-
-    const specifierResolved = resolveSpecifier(specifier, baseUrl) || specifier;
-    const addressUrl = tryUrlResolution(address, baseUrl);
-
-    if (addressUrl === null) {
-      console.warn(formulateAdressResolutionFailed({
-        address,
-        baseUrl,
-        specifier
-      }));
-      return;
-    }
-
-    if (specifier.endsWith("/") && !addressUrl.endsWith("/")) {
-      console.warn(formulateAddressUrlRequiresTrailingSlash({
-        addressUrl,
-        address,
-        specifier
-      }));
-      return;
-    }
-
-    mappingsNormalized[specifierResolved] = addressUrl;
-  });
-  return sortImports(mappingsNormalized);
-};
-
-const normalizeScopes = (scopes, baseUrl) => {
-  const scopesNormalized = {};
-  Object.keys(scopes).forEach(scopeSpecifier => {
-    const scopeMappings = scopes[scopeSpecifier];
-    const scopeUrl = tryUrlResolution(scopeSpecifier, baseUrl);
-
-    if (scopeUrl === null) {
-      console.warn(formulateScopeResolutionFailed({
-        scope: scopeSpecifier,
-        baseUrl
-      }));
-      return;
-    }
-
-    const scopeValueNormalized = normalizeMappings(scopeMappings, baseUrl);
-    scopesNormalized[scopeUrl] = scopeValueNormalized;
-  });
-  return sortScopes(scopesNormalized);
-};
-
-const formulateBaseUrlMustBeStringOrUrl = ({
-  baseUrl
-}) => `baseUrl must be a string or an url.
---- base url ---
-${baseUrl}`;
-
-const formulateAddressMustBeAString = ({
-  specifier,
-  address
-}) => `Address must be a string.
---- address ---
-${address}
---- specifier ---
-${specifier}`;
-
-const formulateAdressResolutionFailed = ({
-  address,
-  baseUrl,
-  specifier
-}) => `Address url resolution failed.
---- address ---
-${address}
---- base url ---
-${baseUrl}
---- specifier ---
-${specifier}`;
-
-const formulateAddressUrlRequiresTrailingSlash = ({
-  addressURL,
-  address,
-  specifier
-}) => `Address must end with /.
---- address url ---
-${addressURL}
---- address ---
-${address}
---- specifier ---
-${specifier}`;
-
-const formulateScopeResolutionFailed = ({
-  scope,
-  baseUrl
-}) => `Scope url resolution failed.
---- scope ---
-${scope}
---- base url ---
-${baseUrl}`;
-
-const pathnameToExtension = pathname => {
-  const slashLastIndex = pathname.lastIndexOf("/");
-
-  if (slashLastIndex !== -1) {
-    pathname = pathname.slice(slashLastIndex + 1);
-  }
-
-  const dotLastIndex = pathname.lastIndexOf(".");
-  if (dotLastIndex === -1) return ""; // if (dotLastIndex === pathname.length - 1) return ""
-
-  return pathname.slice(dotLastIndex);
-};
-
-const resolveImport = ({
-  specifier,
-  importer,
-  importMap,
-  defaultExtension = false,
-  createBareSpecifierError,
-  onImportMapping = () => {}
-}) => {
-  let url;
-
-  if (importMap) {
-    url = applyImportMap({
-      importMap,
-      specifier,
-      importer,
-      createBareSpecifierError,
-      onImportMapping
-    });
-  } else {
-    url = resolveUrl(specifier, importer);
-  }
-
-  if (defaultExtension) {
-    url = applyDefaultExtension({
-      url,
-      importer,
-      defaultExtension
-    });
-  }
-
-  return url;
-};
-
-const applyDefaultExtension = ({
-  url,
-  importer,
-  defaultExtension
-}) => {
-  if (urlToPathname(url).endsWith("/")) {
-    return url;
-  }
-
-  if (typeof defaultExtension === "string") {
-    const extension = pathnameToExtension(url);
-
-    if (extension === "") {
-      return `${url}${defaultExtension}`;
-    }
-
-    return url;
-  }
-
-  if (defaultExtension === true) {
-    const extension = pathnameToExtension(url);
-
-    if (extension === "" && importer) {
-      const importerPathname = urlToPathname(importer);
-      const importerExtension = pathnameToExtension(importerPathname);
-      return `${url}${importerExtension}`;
-    }
-  }
-
-  return url;
-};
-
-/*
- * Plugin to read and apply importmap files found in html files.
- * - feeds importmap files to jsenv kitchen
- * - use importmap to resolve import (when there is one + fallback to other resolution mecanism)
- * - inline importmap with [src=""]
- *
- * A correct importmap resolution should scope importmap resolution per html file.
- * It would be doable by adding ?html_id to each js file in order to track
- * the html file importing it.
- * Considering it happens only when all the following conditions are met:
- * - 2+ html files are using an importmap
- * - the importmap used is not the same
- * - the importmap contain conflicting mappings
- * - these html files are both executed during the same scenario (dev, test, build)
- * And that it would be ugly to see ?html_id all over the place
- * -> The importmap resolution implemented here takes a shortcut and does the following:
- * - All importmap found are merged into a single one that is applied to every import specifiers
- */
-const jsenvPluginImportmap = () => {
-  let finalImportmap = null;
-  const importmaps = {};
-
-  const onHtmlImportmapParsed = (importmap, htmlUrl) => {
-    importmaps[htmlUrl] = importmap ? normalizeImportMap(importmap, htmlUrl) : null;
-    finalImportmap = Object.keys(importmaps).reduce((previous, url) => {
-      const importmap = importmaps[url];
-
-      if (!previous) {
-        return importmap;
-      }
-
-      if (!importmap) {
-        return previous;
-      }
-
-      return composeTwoImportMaps(previous, importmap);
-    }, null);
-  };
-
-  return {
-    name: "jsenv:importmap",
-    appliesDuring: "*",
-    resolveUrl: {
-      js_import_export: reference => {
-        if (!finalImportmap) {
-          return null;
-        }
-
-        try {
-          let fromMapping = false;
-          const result = resolveImport({
-            specifier: reference.specifier,
-            importer: reference.parentUrl,
-            importMap: finalImportmap,
-            onImportMapping: () => {
-              fromMapping = true;
-            }
-          });
-
-          if (fromMapping) {
-            return result;
-          }
-
-          return null;
-        } catch (e) {
-          if (e.message.includes("bare specifier")) {
-            // in theory we should throw to be compliant with web behaviour
-            // but for now it's simpler to return null
-            // and let a chance to other plugins to handle the bare specifier
-            // (node esm resolution)
-            // and we want importmap to be prio over node esm so we cannot put this plugin after
-            return null;
-          }
-
-          throw e;
-        }
-      }
-    },
-    transformUrlContent: {
-      html: async (htmlUrlInfo, context) => {
-        const htmlAst = parseHtmlString(htmlUrlInfo.content);
-        const importmap = findHtmlNode(htmlAst, node => {
-          if (node.nodeName !== "script") {
-            return false;
-          }
-
-          const type = getHtmlNodeAttribute(node, "type");
-
-          if (type === undefined || type !== "importmap") {
-            return false;
-          }
-
-          return true;
-        });
-
-        if (!importmap) {
-          onHtmlImportmapParsed(null, htmlUrlInfo.url);
-          return null;
-        }
-
-        const handleInlineImportmap = async (importmap, htmlNodeText) => {
-          const {
-            line,
-            column,
-            lineEnd,
-            columnEnd,
-            isOriginal
-          } = getHtmlNodePosition(importmap, {
-            preferOriginal: true
-          });
-          const inlineImportmapUrl = generateInlineContentUrl({
-            url: htmlUrlInfo.url,
-            extension: ".importmap",
-            line,
-            column,
-            lineEnd,
-            columnEnd
-          });
-          const [inlineImportmapReference, inlineImportmapUrlInfo] = context.referenceUtils.foundInline({
-            type: "script_src",
-            isOriginalPosition: isOriginal,
-            specifierLine: line - 1,
-            specifierColumn: column,
-            specifier: inlineImportmapUrl,
-            contentType: "application/importmap+json",
-            content: htmlNodeText
-          });
-          await context.cook(inlineImportmapUrlInfo, {
-            reference: inlineImportmapReference
-          });
-          setHtmlNodeText(importmap, inlineImportmapUrlInfo.content);
-          setHtmlNodeAttributes(importmap, {
-            "generated-by": "jsenv:importmap"
-          });
-          onHtmlImportmapParsed(JSON.parse(inlineImportmapUrlInfo.content), htmlUrlInfo.url);
-        };
-
-        const handleImportmapWithSrc = async (importmap, src) => {
-          // Browser would throw on remote importmap
-          // and won't sent a request to the server for it
-          // We must precook the importmap to know its content and inline it into the HTML
-          // In this situation the ref to the importmap was already discovered
-          // when parsing the HTML
-          const importmapReference = context.referenceUtils.findByGeneratedSpecifier(src);
-          const importmapUrlInfo = context.urlGraph.getUrlInfo(importmapReference.url);
-          await context.cook(importmapUrlInfo, {
-            reference: importmapReference
-          });
-          onHtmlImportmapParsed(JSON.parse(importmapUrlInfo.content), htmlUrlInfo.url);
-          setHtmlNodeText(importmap, importmapUrlInfo.content);
-          setHtmlNodeAttributes(importmap, {
-            "src": undefined,
-            "generated-by": "jsenv:importmap",
-            "generated-from-src": src
-          });
-          const {
-            line,
-            column,
-            lineEnd,
-            columnEnd,
-            isOriginal
-          } = getHtmlNodePosition(importmap, {
-            preferOriginal: true
-          });
-          const inlineImportmapUrl = generateInlineContentUrl({
-            url: htmlUrlInfo.url,
-            extension: ".importmap",
-            line,
-            column,
-            lineEnd,
-            columnEnd
-          });
-          context.referenceUtils.becomesInline(importmapReference, {
-            line: line - 1,
-            column,
-            isOriginal,
-            specifier: inlineImportmapUrl,
-            contentType: "application/importmap+json",
-            content: importmapUrlInfo.content
-          });
-        };
-
-        const src = getHtmlNodeAttribute(importmap, "src");
-
-        if (src) {
-          await handleImportmapWithSrc(importmap, src);
-        } else {
-          const htmlNodeText = getHtmlNodeText(importmap);
-
-          if (htmlNodeText) {
-            await handleInlineImportmap(importmap, htmlNodeText);
-          }
-        } // once this plugin knows the importmap, it will use it
-        // to map imports. These import specifiers will be normalized
-        // by "formatReferencedUrl" making the importmap presence useless.
-        // In dev/test we keep importmap into the HTML to see it even if useless
-        // Duing build we get rid of it
-
-
-        if (context.scenario === "build") {
-          removeHtmlNode(importmap);
-        }
-
-        return {
-          content: stringifyHtmlAst(htmlAst)
-        };
-      }
-    }
-  };
-};
-
-const jsenvPluginUrlResolution = () => {
-  const urlResolver = reference => {
-    return new URL(reference.specifier, reference.baseUrl || reference.parentUrl).href;
-  };
-
-  return {
-    name: "jsenv:url_resolution",
-    appliesDuring: "*",
-    resolveUrl: {
-      "http_request": urlResolver,
-      // during dev
-      "entry_point": urlResolver,
-      // during build
-      "link_href": urlResolver,
-      "script_src": urlResolver,
-      "a_href": urlResolver,
-      "iframe_src": urlResolver,
-      "img_src": urlResolver,
-      "img_srcset": urlResolver,
-      "source_src": urlResolver,
-      "source_srcset": urlResolver,
-      "image_href": urlResolver,
-      "use_href": urlResolver,
-      "css_@import": urlResolver,
-      "css_url": urlResolver,
-      "sourcemap_comment": urlResolver,
-      "js_import_export": urlResolver,
-      "js_url_specifier": urlResolver,
-      "js_inline_content": urlResolver,
-      "webmanifest_icon_src": urlResolver
-    }
-  };
-};
-
-const isSpecifierForNodeBuiltin = specifier => {
-  return specifier.startsWith("node:") || NODE_BUILTIN_MODULE_SPECIFIERS.includes(specifier);
-};
-const NODE_BUILTIN_MODULE_SPECIFIERS = ["assert", "assert/strict", "async_hooks", "buffer_ieee754", "buffer", "child_process", "cluster", "console", "constants", "crypto", "_debugger", "dgram", "dns", "domain", "events", "freelist", "fs", "fs/promises", "_http_agent", "_http_client", "_http_common", "_http_incoming", "_http_outgoing", "_http_server", "http", "http2", "https", "inspector", "_linklist", "module", "net", "node-inspect/lib/_inspect", "node-inspect/lib/internal/inspect_client", "node-inspect/lib/internal/inspect_repl", "os", "path", "perf_hooks", "process", "punycode", "querystring", "readline", "repl", "smalloc", "_stream_duplex", "_stream_transform", "_stream_wrap", "_stream_passthrough", "_stream_readable", "_stream_writable", "stream", "stream/promises", "string_decoder", "sys", "timers", "_tls_common", "_tls_legacy", "_tls_wrap", "tls", "trace_events", "tty", "url", "util", "v8/tools/arguments", "v8/tools/codemap", "v8/tools/consarray", "v8/tools/csvparser", "v8/tools/logreader", "v8/tools/profile_view", "v8/tools/splaytree", "v8", "vm", "worker_threads", "zlib", // global is special
-"global"];
-
-const asDirectoryUrl = url => {
-  const {
-    pathname
-  } = new URL(url);
-
-  if (pathname.endsWith("/")) {
-    return url;
-  }
-
-  return new URL("./", url).href;
-};
-const getParentUrl = url => {
-  if (url.startsWith("file://")) {
-    // With node.js new URL('../', 'file:///C:/').href
-    // returns "file:///C:/" instead of "file:///"
-    const ressource = url.slice("file://".length);
-    const slashLastIndex = ressource.lastIndexOf("/");
-
-    if (slashLastIndex === -1) {
-      return url;
-    }
-
-    const lastCharIndex = ressource.length - 1;
-
-    if (slashLastIndex === lastCharIndex) {
-      const slashBeforeLastIndex = ressource.lastIndexOf("/", slashLastIndex - 1);
-
-      if (slashBeforeLastIndex === -1) {
-        return url;
-      }
-
-      return `file://${ressource.slice(0, slashBeforeLastIndex + 1)}`;
-    }
-
-    return `file://${ressource.slice(0, slashLastIndex + 1)}`;
-  }
-
-  return new URL(url.endsWith("/") ? "../" : "./", url).href;
-};
-const isValidUrl = url => {
-  try {
-    // eslint-disable-next-line no-new
-    new URL(url);
-    return true;
-  } catch (e) {
     return false;
-  }
-};
-const urlToFilename = url => {
-  const {
-    pathname
-  } = new URL(url);
-  const pathnameBeforeLastSlash = pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
-  const slashLastIndex = pathnameBeforeLastSlash.lastIndexOf("/");
-  const filename = slashLastIndex === -1 ? pathnameBeforeLastSlash : pathnameBeforeLastSlash.slice(slashLastIndex + 1);
-  return filename;
-};
-const urlToExtension = url => {
-  const filename = urlToFilename(url);
-  const dotLastIndex = filename.lastIndexOf(".");
-  if (dotLastIndex === -1) return ""; // if (dotLastIndex === pathname.length - 1) return ""
-
-  const extension = filename.slice(dotLastIndex);
-  return extension;
-};
-
-const defaultLookupPackageScope = url => {
-  let scopeUrl = asDirectoryUrl(url);
-
-  while (scopeUrl !== "file:///") {
-    if (scopeUrl.endsWith("node_modules/")) {
-      return null;
-    }
-
-    const packageJsonUrlObject = new URL("package.json", scopeUrl);
-
-    if (existsSync(packageJsonUrlObject)) {
-      return scopeUrl;
-    }
-
-    scopeUrl = getParentUrl(scopeUrl);
-  }
-
-  return null;
-};
-
-const defaultReadPackageJson = packageUrl => {
-  const packageJsonUrl = new URL("package.json", packageUrl);
-  const buffer = readFileSync$1(packageJsonUrl);
-  const string = String(buffer);
-
-  try {
-    return JSON.parse(string);
-  } catch (e) {
-    throw new Error(`Invalid package configuration`);
-  }
-};
-
-// https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/tools/node_modules/eslint/node_modules/%40babel/core/lib/vendor/import-meta-resolve.js#L2473
-const createInvalidModuleSpecifierError = ({
-  specifier,
-  parentUrl,
-  reason
-}) => {
-  const error = new Error(`Invalid module "${specifier}" ${reason} imported from ${fileURLToPath(parentUrl)}`);
-  error.code = "INVALID_MODULE_SPECIFIER";
-  return error;
-};
-const createInvalidPackageTargetError = ({
-  parentUrl,
-  packageUrl,
-  target,
-  key,
-  isImport,
-  reason
-}) => {
-  let message;
-
-  if (key === ".") {
-    message = `Invalid "exports" main target defined in ${fileURLToPath(packageUrl)}package.json imported from ${fileURLToPath(parentUrl)}; ${reason}`;
-  } else {
-    message = `Invalid "${isImport ? "imports" : "exports"}" target ${JSON.stringify(target)} defined for "${key}" in ${fileURLToPath(packageUrl)}package.json imported from ${fileURLToPath(parentUrl)}; ${reason}`;
-  }
-
-  const error = new Error(message);
-  error.code = "INVALID_PACKAGE_TARGET";
-  return error;
-};
-const createPackagePathNotExportedError = ({
-  subpath,
-  parentUrl,
-  packageUrl
-}) => {
-  let message;
-
-  if (subpath === ".") {
-    message = `No "exports" main defined in ${fileURLToPath(packageUrl)}package.json imported from ${fileURLToPath(parentUrl)}`;
-  } else {
-    message = `Package subpath "${subpath}" is not defined by "exports" in ${fileURLToPath(packageUrl)}package.json imported from ${fileURLToPath(parentUrl)}`;
-  }
-
-  const error = new Error(message);
-  error.code = "PACKAGE_PATH_NOT_EXPORTED";
-  return error;
-};
-const createModuleNotFoundError = ({
-  specifier,
-  parentUrl
-}) => {
-  const error = new Error(`Cannot find "${specifier}" imported from ${fileURLToPath(parentUrl)}`);
-  error.code = "MODULE_NOT_FOUND";
-  return error;
-};
-const createPackageImportNotDefinedError = ({
-  specifier,
-  packageUrl,
-  parentUrl
-}) => {
-  const error = new Error(`Package import specifier "${specifier}" is not defined in ${fileURLToPath(packageUrl)}package.json imported from ${fileURLToPath(parentUrl)}`);
-  error.code = "PACKAGE_IMPORT_NOT_DEFINED";
-  return error;
-};
-
-// https://nodejs.org/api/packages.html#resolving-user-conditions
-const readCustomConditionsFromProcessArgs = () => {
-  const packageConditions = [];
-  process.execArgv.forEach(arg => {
-    if (arg.includes("-C=")) {
-      const packageCondition = arg.slice(0, "-C=".length);
-      packageConditions.push(packageCondition);
-    }
-
-    if (arg.includes("--conditions=")) {
-      const packageCondition = arg.slice("--conditions=".length);
-      packageConditions.push(packageCondition);
-    }
-  });
-  return packageConditions;
-};
-
-/*
- * https://nodejs.org/api/esm.html#resolver-algorithm-specification
- * https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/lib/internal/modules/esm/resolve.js#L1
- * deviations from the spec:
- * - take into account "browser", "module" and "jsnext"
- * - the check for isDirectory -> throw is delayed is descoped to the caller
- * - the call to real path ->
- *   delayed to the caller so that we can decide to
- *   maintain symlink as facade url when it's outside project directory
- *   or use the real path when inside
- */
-const applyNodeEsmResolution = ({
-  conditions = [...readCustomConditionsFromProcessArgs(), "node", "import"],
-  parentUrl,
-  specifier,
-  lookupPackageScope = defaultLookupPackageScope,
-  readPackageJson = defaultReadPackageJson
-}) => {
-  const resolution = applyPackageSpecifierResolution({
-    conditions,
-    parentUrl: String(parentUrl),
-    specifier,
-    lookupPackageScope,
-    readPackageJson
-  });
-  const {
-    url
-  } = resolution;
-
-  if (url.startsWith("file:")) {
-    if (url.includes("%2F") || url.includes("%5C")) {
-      throw createInvalidModuleSpecifierError({
-        specifier,
-        parentUrl,
-        reason: `must not include encoded "/" or "\\" characters`
-      });
-    }
-
-    return resolution;
-  }
-
-  return resolution;
-};
-
-const applyPackageSpecifierResolution = ({
-  conditions,
-  parentUrl,
-  specifier,
-  lookupPackageScope,
-  readPackageJson
-}) => {
-  // relative specifier
-  if (specifier[0] === "/" || specifier.startsWith("./") || specifier.startsWith("../")) {
-    if (specifier[0] !== "/") {
-      const browserFieldResolution = applyBrowserFieldResolution({
-        conditions,
-        parentUrl,
-        specifier,
-        lookupPackageScope,
-        readPackageJson
-      });
-
-      if (browserFieldResolution) {
-        return browserFieldResolution;
-      }
-    }
-
-    return {
-      type: "relative_specifier",
-      url: new URL(specifier, parentUrl).href
-    };
-  }
-
-  if (specifier[0] === "#") {
-    return applyPackageImportsResolution({
-      conditions,
-      parentUrl,
-      specifier,
-      lookupPackageScope,
-      readPackageJson
-    });
-  }
-
-  try {
-    const urlObject = new URL(specifier);
-
-    if (specifier.startsWith("node:")) {
-      return {
-        type: "node_builtin_specifier",
-        url: specifier
-      };
-    }
-
-    return {
-      type: "absolute_specifier",
-      url: urlObject.href
-    };
-  } catch (e) {
-    // bare specifier
-    const browserFieldResolution = applyBrowserFieldResolution({
-      conditions,
-      parentUrl,
-      packageSpecifier: specifier,
-      lookupPackageScope,
-      readPackageJson
-    });
-
-    if (browserFieldResolution) {
-      return browserFieldResolution;
-    }
-
-    return applyPackageResolve({
-      conditions,
-      parentUrl,
-      packageSpecifier: specifier,
-      lookupPackageScope,
-      readPackageJson
-    });
-  }
-};
-
-const applyBrowserFieldResolution = ({
-  conditions,
-  parentUrl,
-  packageSpecifier,
-  lookupPackageScope,
-  readPackageJson
-}) => {
-  const browserCondition = conditions.includes("browser");
-
-  if (!browserCondition) {
-    return null;
-  }
-
-  const packageUrl = lookupPackageScope(parentUrl);
-
-  if (!packageUrl) {
-    return null;
-  }
-
-  const packageJson = readPackageJson(packageUrl);
-
-  if (!packageJson) {
-    return null;
-  }
-
-  const {
-    browser
-  } = packageJson;
-
-  if (!browser) {
-    return null;
-  }
-
-  if (typeof browser !== "object") {
-    return null;
-  }
-
-  let url;
-
-  if (packageSpecifier.startsWith(".")) {
-    const packageSpecifierUrl = new URL(packageSpecifier, parentUrl).href;
-    const packageSpecifierRelativeUrl = packageSpecifierUrl.slice(packageUrl.length);
-    const packageSpecifierRelativeNotation = `./${packageSpecifierRelativeUrl}`;
-    const browserMapping = browser[packageSpecifierRelativeNotation];
-
-    if (typeof browserMapping === "string") {
-      url = new URL(browserMapping, packageUrl).href;
-    } else if (browserMapping === false) {
-      url = `file:///@ignore/${packageSpecifierUrl.slice("file:///")}`;
-    }
-  } else {
-    const browserMapping = browser[packageSpecifier];
-
-    if (typeof browserMapping === "string") {
-      url = new URL(browserMapping, packageUrl).href;
-    } else if (browserMapping === false) {
-      url = `file:///@ignore/${packageSpecifier}`;
-    }
-  }
-
-  if (url) {
-    return {
-      type: "browser",
-      packageUrl,
-      packageJson,
-      url
-    };
-  }
-
-  return null;
-};
-
-const applyPackageImportsResolution = ({
-  conditions,
-  parentUrl,
-  specifier,
-  lookupPackageScope,
-  readPackageJson
-}) => {
-  if (!specifier.startsWith("#")) {
-    throw createInvalidModuleSpecifierError({
-      specifier,
-      parentUrl,
-      reason: "internal imports must start with #"
-    });
-  }
-
-  if (specifier === "#" || specifier.startsWith("#/")) {
-    throw createInvalidModuleSpecifierError({
-      specifier,
-      parentUrl,
-      reason: "not a valid internal imports specifier name"
-    });
-  }
-
-  const packageUrl = lookupPackageScope(parentUrl);
-
-  if (packageUrl !== null) {
-    const packageJson = readPackageJson(packageUrl);
+  },
+  isBinary: value => !CONTENT_TYPE.isTextual(value),
+  asFileExtension: value => {
+    const mediaType = CONTENT_TYPE.asMediaType(value);
+    const mediaTypeInfo = mediaTypeInfos[mediaType];
+    return mediaTypeInfo ? `.${mediaTypeInfo.extensions[0]}` : "";
+  },
+  fromUrlExtension: url => {
     const {
-      imports
-    } = packageJson;
+      pathname
+    } = new URL(url);
+    const extensionWithDot = extname(pathname);
 
-    if (imports !== null && typeof imports === "object") {
-      const resolved = applyPackageImportsExportsResolution({
-        conditions,
-        parentUrl,
-        packageUrl,
-        packageJson,
-        matchObject: imports,
-        matchKey: specifier,
-        isImports: true,
-        lookupPackageScope,
-        readPackageJson
-      });
-
-      if (resolved) {
-        return resolved;
-      }
+    if (!extensionWithDot || extensionWithDot === ".") {
+      return "application/octet-stream";
     }
-  }
 
-  throw createPackageImportNotDefinedError({
-    specifier,
-    packageUrl,
-    parentUrl
-  });
-};
-
-const applyPackageResolve = ({
-  conditions,
-  parentUrl,
-  packageSpecifier,
-  lookupPackageScope,
-  readPackageJson
-}) => {
-  if (packageSpecifier === "") {
-    throw new Error("invalid module specifier");
-  }
-
-  if (conditions.includes("node") && isSpecifierForNodeBuiltin(packageSpecifier)) {
-    return {
-      type: "node_builtin_specifier",
-      url: `node:${packageSpecifier}`
-    };
-  }
-
-  const {
-    packageName,
-    packageSubpath
-  } = parsePackageSpecifier(packageSpecifier);
-
-  if (packageName[0] === "." || packageName.includes("\\") || packageName.includes("%")) {
-    throw createInvalidModuleSpecifierError({
-      specifier: packageName,
-      parentUrl,
-      reason: `is not a valid package name`
+    const extension = extensionWithDot.slice(1);
+    const mediaTypeFound = Object.keys(mediaTypeInfos).find(mediaType => {
+      const mediaTypeInfo = mediaTypeInfos[mediaType];
+      return mediaTypeInfo.extensions && mediaTypeInfo.extensions.includes(extension);
     });
-  }
-
-  if (packageSubpath.endsWith("/")) {
-    throw new Error("invalid module specifier");
-  }
-
-  const selfResolution = applyPackageSelfResolution({
-    conditions,
-    parentUrl,
-    packageName,
-    packageSubpath,
-    lookupPackageScope,
-    readPackageJson
-  });
-
-  if (selfResolution) {
-    return selfResolution;
-  }
-
-  let currentUrl = parentUrl;
-
-  while (currentUrl !== "file:///") {
-    const packageUrl = new URL(`node_modules/${packageName}/`, currentUrl).href;
-
-    if (!existsSync(new URL(packageUrl))) {
-      currentUrl = getParentUrl(currentUrl);
-      continue;
-    }
-
-    const packageJson = readPackageJson(packageUrl);
-
-    if (packageJson !== null) {
-      const {
-        exports
-      } = packageJson;
-
-      if (exports !== null && exports !== undefined) {
-        return applyPackageExportsResolution({
-          conditions,
-          parentUrl,
-          packageUrl,
-          packageJson,
-          packageSubpath,
-          exports,
-          lookupPackageScope,
-          readPackageJson
-        });
-      }
-    }
-
-    return applyLegacySubpathResolution({
-      conditions,
-      parentUrl,
-      packageUrl,
-      packageJson,
-      packageSubpath,
-      lookupPackageScope,
-      readPackageJson
-    });
-  }
-
-  throw createModuleNotFoundError({
-    specifier: packageName,
-    parentUrl
-  });
-};
-
-const applyPackageSelfResolution = ({
-  conditions,
-  parentUrl,
-  packageName,
-  packageSubpath,
-  lookupPackageScope,
-  readPackageJson
-}) => {
-  const packageUrl = lookupPackageScope(parentUrl);
-
-  if (!packageUrl) {
-    return undefined;
-  }
-
-  const packageJson = readPackageJson(packageUrl);
-
-  if (!packageJson) {
-    return undefined;
-  }
-
-  if (packageJson.name !== packageName) {
-    return undefined;
-  }
-
-  const {
-    exports
-  } = packageJson;
-
-  if (!exports) {
-    const subpathResolution = applyLegacySubpathResolution({
-      conditions,
-      parentUrl,
-      packageUrl,
-      packageJson,
-      packageSubpath,
-      lookupPackageScope,
-      readPackageJson
-    });
-
-    if (subpathResolution && subpathResolution.type !== "subpath") {
-      return subpathResolution;
-    }
-
-    return undefined;
-  }
-
-  return applyPackageExportsResolution({
-    conditions,
-    parentUrl,
-    packageUrl,
-    packageJson,
-    packageSubpath,
-    exports,
-    lookupPackageScope,
-    readPackageJson
-  });
-}; // https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/lib/internal/modules/esm/resolve.js#L642
-
-
-const applyPackageExportsResolution = ({
-  conditions,
-  parentUrl,
-  packageUrl,
-  packageJson,
-  packageSubpath,
-  exports,
-  lookupPackageScope,
-  readPackageJson
-}) => {
-  const exportsInfo = readExports({
-    exports,
-    packageUrl
-  });
-
-  if (packageSubpath === ".") {
-    const mainExport = applyMainExportResolution({
-      exports,
-      exportsInfo
-    });
-
-    if (!mainExport) {
-      throw createPackagePathNotExportedError({
-        subpath: packageSubpath,
-        parentUrl,
-        packageUrl
-      });
-    }
-
-    const resolved = applyPackageTargetResolution({
-      conditions,
-      parentUrl,
-      packageUrl,
-      packageJson,
-      key: ".",
-      target: mainExport,
-      lookupPackageScope,
-      readPackageJson
-    });
-
-    if (resolved) {
-      return resolved;
-    }
-
-    throw createPackagePathNotExportedError({
-      subpath: packageSubpath,
-      parentUrl,
-      packageUrl
-    });
-  }
-
-  if (exportsInfo.type === "object" && exportsInfo.allKeysAreRelative) {
-    const resolved = applyPackageImportsExportsResolution({
-      conditions,
-      parentUrl,
-      packageUrl,
-      packageJson,
-      matchObject: exports,
-      matchKey: packageSubpath,
-      isImports: false,
-      lookupPackageScope,
-      readPackageJson
-    });
-
-    if (resolved) {
-      return resolved;
-    }
-  }
-
-  throw createPackagePathNotExportedError({
-    subpath: packageSubpath,
-    parentUrl,
-    packageUrl
-  });
-};
-
-const applyPackageImportsExportsResolution = ({
-  conditions,
-  parentUrl,
-  packageUrl,
-  packageJson,
-  matchObject,
-  matchKey,
-  isImports,
-  lookupPackageScope,
-  readPackageJson
-}) => {
-  if (!matchKey.includes("*") && matchObject.hasOwnProperty(matchKey)) {
-    const target = matchObject[matchKey];
-    return applyPackageTargetResolution({
-      conditions,
-      parentUrl,
-      packageUrl,
-      packageJson,
-      key: matchKey,
-      target,
-      internal: isImports,
-      lookupPackageScope,
-      readPackageJson
-    });
-  }
-
-  const expansionKeys = Object.keys(matchObject).filter(key => key.split("*").length === 2).sort(comparePatternKeys);
-
-  for (const expansionKey of expansionKeys) {
-    const [patternBase, patternTrailer] = expansionKey.split("*");
-    if (matchKey === patternBase) continue;
-    if (!matchKey.startsWith(patternBase)) continue;
-
-    if (patternTrailer.length > 0) {
-      if (!matchKey.endsWith(patternTrailer)) continue;
-      if (matchKey.length < expansionKey.length) continue;
-    }
-
-    const target = matchObject[expansionKey];
-    const subpath = matchKey.slice(patternBase.length, matchKey.length - patternTrailer.length);
-    return applyPackageTargetResolution({
-      conditions,
-      parentUrl,
-      packageUrl,
-      packageJson,
-      key: matchKey,
-      target,
-      subpath,
-      pattern: true,
-      internal: isImports,
-      lookupPackageScope,
-      readPackageJson
-    });
-  }
-
-  return null;
-};
-
-const applyPackageTargetResolution = ({
-  conditions,
-  parentUrl,
-  packageUrl,
-  packageJson,
-  key,
-  target,
-  subpath = "",
-  pattern = false,
-  internal = false,
-  lookupPackageScope,
-  readPackageJson
-}) => {
-  if (typeof target === "string") {
-    if (pattern === false && subpath !== "" && !target.endsWith("/")) {
-      throw new Error("invalid module specifier");
-    }
-
-    if (target.startsWith("./")) {
-      const targetUrl = new URL(target, packageUrl).href;
-
-      if (!targetUrl.startsWith(packageUrl)) {
-        throw createInvalidPackageTargetError({
-          parentUrl,
-          packageUrl,
-          target,
-          key,
-          isImport: internal,
-          reason: `target must be inside package`
-        });
-      }
-
-      return {
-        type: internal ? "imports_subpath" : "exports_subpath",
-        packageUrl,
-        packageJson,
-        url: pattern ? targetUrl.replaceAll("*", subpath) : new URL(subpath, targetUrl).href
-      };
-    }
-
-    if (!internal || target.startsWith("../") || isValidUrl(target)) {
-      throw createInvalidPackageTargetError({
-        parentUrl,
-        packageUrl,
-        target,
-        key,
-        isImport: internal,
-        reason: `target must starst with "./"`
-      });
-    }
-
-    return applyPackageResolve({
-      conditions,
-      parentUrl: packageUrl,
-      packageSpecifier: pattern ? target.replaceAll("*", subpath) : `${target}${subpath}`,
-      lookupPackageScope,
-      readPackageJson
-    });
-  }
-
-  if (Array.isArray(target)) {
-    if (target.length === 0) {
-      return null;
-    }
-
-    let lastResult;
-    let i = 0;
-
-    while (i < target.length) {
-      const targetValue = target[i];
-      i++;
-
-      try {
-        const resolved = applyPackageTargetResolution({
-          conditions,
-          parentUrl,
-          packageUrl,
-          packageJson,
-          key: `${key}[${i}]`,
-          target: targetValue,
-          subpath,
-          pattern,
-          internal,
-          lookupPackageScope,
-          readPackageJson
-        });
-
-        if (resolved) {
-          return resolved;
-        }
-
-        lastResult = resolved;
-      } catch (e) {
-        if (e.code === "INVALID_PACKAGE_TARGET") {
-          continue;
-        }
-
-        lastResult = e;
-      }
-    }
-
-    if (lastResult) {
-      throw lastResult;
-    }
-
-    return null;
-  }
-
-  if (target === null) {
-    return null;
-  }
-
-  if (typeof target === "object") {
-    const keys = Object.keys(target);
-
-    for (const key of keys) {
-      if (Number.isInteger(key)) {
-        throw new Error("Invalid package configuration");
-      }
-
-      if (key === "default" || conditions.includes(key)) {
-        const targetValue = target[key];
-        const resolved = applyPackageTargetResolution({
-          conditions,
-          parentUrl,
-          packageUrl,
-          packageJson,
-          key,
-          target: targetValue,
-          subpath,
-          pattern,
-          internal,
-          lookupPackageScope,
-          readPackageJson
-        });
-
-        if (resolved) {
-          return resolved;
-        }
-      }
-    }
-
-    return null;
-  }
-
-  throw createInvalidPackageTargetError({
-    parentUrl,
-    packageUrl,
-    target,
-    key,
-    isImport: internal,
-    reason: `target must be a string, array, object or null`
-  });
-};
-
-const readExports = ({
-  exports,
-  packageUrl
-}) => {
-  if (Array.isArray(exports)) {
-    return {
-      type: "array"
-    };
-  }
-
-  if (exports === null) {
-    return {};
-  }
-
-  if (typeof exports === "object") {
-    const keys = Object.keys(exports);
-    const relativeKeys = [];
-    const conditionalKeys = [];
-    keys.forEach(availableKey => {
-      if (availableKey.startsWith(".")) {
-        relativeKeys.push(availableKey);
-      } else {
-        conditionalKeys.push(availableKey);
-      }
-    });
-    const hasRelativeKey = relativeKeys.length > 0;
-
-    if (hasRelativeKey && conditionalKeys.length > 0) {
-      throw new Error(`Invalid package configuration: cannot mix relative and conditional keys in package.exports
---- unexpected keys ---
-${conditionalKeys.map(key => `"${key}"`).join("\n")}
---- package.json ---
-${packageUrl}`);
-    }
-
-    return {
-      type: "object",
-      hasRelativeKey,
-      allKeysAreRelative: relativeKeys.length === keys.length
-    };
-  }
-
-  if (typeof exports === "string") {
-    return {
-      type: "string"
-    };
-  }
-
-  return {};
-};
-
-const parsePackageSpecifier = packageSpecifier => {
-  if (packageSpecifier[0] === "@") {
-    const firstSlashIndex = packageSpecifier.indexOf("/");
-
-    if (firstSlashIndex === -1) {
-      throw new Error("invalid module specifier");
-    }
-
-    const secondSlashIndex = packageSpecifier.indexOf("/", firstSlashIndex + 1);
-
-    if (secondSlashIndex === -1) {
-      return {
-        packageName: packageSpecifier,
-        packageSubpath: ".",
-        isScoped: true
-      };
-    }
-
-    const packageName = packageSpecifier.slice(0, secondSlashIndex);
-    const afterSecondSlash = packageSpecifier.slice(secondSlashIndex + 1);
-    const packageSubpath = `./${afterSecondSlash}`;
-    return {
-      packageName,
-      packageSubpath,
-      isScoped: true
-    };
-  }
-
-  const firstSlashIndex = packageSpecifier.indexOf("/");
-
-  if (firstSlashIndex === -1) {
-    return {
-      packageName: packageSpecifier,
-      packageSubpath: "."
-    };
-  }
-
-  const packageName = packageSpecifier.slice(0, firstSlashIndex);
-  const afterFirstSlash = packageSpecifier.slice(firstSlashIndex + 1);
-  const packageSubpath = `./${afterFirstSlash}`;
-  return {
-    packageName,
-    packageSubpath
-  };
-};
-
-const applyMainExportResolution = ({
-  exports,
-  exportsInfo
-}) => {
-  if (exportsInfo.type === "array" || exportsInfo.type === "string") {
-    return exports;
-  }
-
-  if (exportsInfo.type === "object") {
-    if (exportsInfo.hasRelativeKey) {
-      return exports["."];
-    }
-
-    return exports;
-  }
-
-  return undefined;
-};
-
-const applyLegacySubpathResolution = ({
-  conditions,
-  parentUrl,
-  packageUrl,
-  packageJson,
-  packageSubpath,
-  lookupPackageScope,
-  readPackageJson
-}) => {
-  if (packageSubpath === ".") {
-    return applyLegacyMainResolution({
-      conditions,
-      packageUrl,
-      packageJson
-    });
-  }
-
-  const browserFieldResolution = applyBrowserFieldResolution({
-    conditions,
-    parentUrl,
-    specifier: packageSubpath,
-    lookupPackageScope,
-    readPackageJson
-  });
-
-  if (browserFieldResolution) {
-    return browserFieldResolution;
-  }
-
-  return {
-    type: "subpath",
-    packageUrl,
-    packageJson,
-    url: new URL(packageSubpath, packageUrl).href
-  };
-};
-
-const applyLegacyMainResolution = ({
-  conditions,
-  packageUrl,
-  packageJson
-}) => {
-  for (const condition of conditions) {
-    const conditionResolver = mainLegacyResolvers[condition];
-
-    if (!conditionResolver) {
-      continue;
-    }
-
-    const resolved = conditionResolver(packageJson, packageUrl);
-
-    if (resolved) {
-      return {
-        type: resolved.type,
-        packageUrl,
-        packageJson,
-        url: new URL(resolved.path, packageUrl).href
-      };
-    }
-  }
-
-  return {
-    type: "default",
-    packageUrl,
-    packageJson,
-    url: new URL("index.js", packageUrl).href
-  };
-};
-
-const mainLegacyResolvers = {
-  import: packageJson => {
-    if (typeof packageJson.module === "string") {
-      return {
-        type: "module",
-        path: packageJson.module
-      };
-    }
-
-    if (typeof packageJson.jsnext === "string") {
-      return {
-        type: "jsnext",
-        path: packageJson.jsnext
-      };
-    }
-
-    if (typeof packageJson.main === "string") {
-      return {
-        type: "main",
-        path: packageJson.main
-      };
-    }
-
-    return null;
-  },
-  browser: (packageJson, packageUrl) => {
-    const browserMain = typeof packageJson.browser === "string" ? packageJson.browser : typeof packageJson.browser === "object" && packageJson.browser !== null ? packageJson.browser["."] : "";
-
-    if (!browserMain) {
-      if (typeof packageJson.module === "string") {
-        return {
-          type: "module",
-          path: packageJson.module
-        };
-      }
-
-      return null;
-    }
-
-    if (typeof packageJson.module !== "string" || packageJson.module === browserMain) {
-      return {
-        type: "browser",
-        path: browserMain
-      };
-    }
-
-    const browserMainUrlObject = new URL(browserMain, packageUrl);
-    const content = readFileSync$1(browserMainUrlObject, "utf-8");
-
-    if (/typeof exports\s*==/.test(content) && /typeof module\s*==/.test(content) || /module\.exports\s*=/.test(content)) {
-      return {
-        type: "module",
-        path: packageJson.module
-      };
-    }
-
-    return {
-      type: "browser",
-      path: browserMain
-    };
-  },
-  node: packageJson => {
-    if (typeof packageJson.main === "string") {
-      return {
-        type: "main",
-        path: packageJson.main
-      };
-    }
-
-    return null;
+    return mediaTypeFound || "application/octet-stream";
   }
 };
 
-const comparePatternKeys = (keyA, keyB) => {
-  if (!keyA.endsWith("/") && !keyA.contains("*")) {
-    throw new Error("Invalid package configuration");
+const normalizeMediaType = value => {
+  if (value === "application/javascript") {
+    return "text/javascript";
   }
 
-  if (!keyB.endsWith("/") && !keyB.contains("*")) {
-    throw new Error("Invalid package configuration");
-  }
-
-  const aStarIndex = keyA.indexOf("*");
-  const baseLengthA = aStarIndex > -1 ? aStarIndex + 1 : keyA.length;
-  const bStarIndex = keyB.indexOf("*");
-  const baseLengthB = bStarIndex > -1 ? bStarIndex + 1 : keyB.length;
-
-  if (baseLengthA > baseLengthB) {
-    return -1;
-  }
-
-  if (baseLengthB > baseLengthA) {
-    return 1;
-  }
-
-  if (aStarIndex === -1) {
-    return 1;
-  }
-
-  if (bStarIndex === -1) {
-    return -1;
-  }
-
-  if (keyA.length > keyB.length) {
-    return -1;
-  }
-
-  if (keyB.length > keyA.length) {
-    return 1;
-  }
-
-  return 0;
-};
-
-const applyFileSystemMagicResolution = (fileUrl, {
-  fileStat,
-  magicDirectoryIndex,
-  magicExtensions
-}) => {
-  let lastENOENTError = null;
-
-  const fileStatOrNull = url => {
-    try {
-      return statSync(new URL(url));
-    } catch (e) {
-      if (e.code === "ENOENT") {
-        lastENOENTError = e;
-        return null;
-      }
-
-      throw e;
-    }
-  };
-
-  fileStat = fileStat === undefined ? fileStatOrNull(fileUrl) : fileStat;
-
-  if (fileStat && fileStat.isFile()) {
-    return {
-      found: true,
-      url: fileUrl
-    };
-  }
-
-  if (fileStat && fileStat.isDirectory()) {
-    if (magicDirectoryIndex) {
-      const indexFileSuffix = fileUrl.endsWith("/") ? "index" : "/index";
-      const indexFileUrl = `${fileUrl}${indexFileSuffix}`;
-      const result = applyFileSystemMagicResolution(indexFileUrl, {
-        magicDirectoryIndex: false,
-        magicExtensions
-      });
-      return { ...result,
-        magicDirectoryIndex: true
-      };
-    }
-
-    return {
-      found: true,
-      url: fileUrl,
-      isDirectory: true
-    };
-  }
-
-  if (magicExtensions && magicExtensions.length) {
-    const parentUrl = new URL("./", fileUrl).href;
-    const urlFilename = urlToFilename(fileUrl);
-    const extensionLeadingToFile = magicExtensions.find(extensionToTry => {
-      const urlCandidate = `${parentUrl}${urlFilename}${extensionToTry}`;
-      const stat = fileStatOrNull(urlCandidate);
-      return stat;
-    });
-
-    if (extensionLeadingToFile) {
-      // magic extension worked
-      return {
-        found: true,
-        url: `${fileUrl}${extensionLeadingToFile}`,
-        magicExtension: extensionLeadingToFile
-      };
-    }
-  } // magic extension not found
-
-
-  return {
-    found: false,
-    url: fileUrl,
-    lastENOENTError
-  };
-};
-const getExtensionsToTry = (magicExtensions, importer) => {
-  if (!magicExtensions) {
-    return [];
-  }
-
-  const extensionsSet = new Set();
-  magicExtensions.forEach(magicExtension => {
-    if (magicExtension === "inherit") {
-      const importerExtension = urlToExtension(importer);
-      extensionsSet.add(importerExtension);
-    } else {
-      extensionsSet.add(magicExtension);
-    }
-  });
-  return Array.from(extensionsSet.values());
-};
-
-/*
- * - should I restore eventual search params lost during node esm resolution
- * - what about symlinks?
- *   It feels like I should apply symlink (when we don't want to preserve them)
- *   once a file:/// url is found, regardless
- *   if that comes from node resolution or anything else (not even magic resolution)
- *   it should likely be an other plugin happening after the others
- */
-const jsenvPluginNodeEsmResolution = ({
-  packageConditions,
-  filesInvalidatingCache = ["package.json", "package-lock.json"]
-}) => {
-  const unregisters = [];
-  let lookupPackageScope; // defined in "init"
-
-  let readPackageJson; // defined in "init"
-
-  return {
-    name: "jsenv:node_esm_resolution",
-    appliesDuring: "*",
-    init: ({
-      rootDirectoryUrl,
-      scenario,
-      runtimeCompat,
-      urlGraph
-    }) => {
-      const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node"); // https://nodejs.org/api/esm.html#resolver-algorithm-specification
-
-      packageConditions = packageConditions || [...readCustomConditionsFromProcessArgs(), nodeRuntimeEnabled ? "node" : "browser", "import"];
-      const packageScopesCache = new Map();
-
-      lookupPackageScope = url => {
-        const fromCache = packageScopesCache.get(url);
-
-        if (fromCache) {
-          return fromCache;
-        }
-
-        const packageScope = defaultLookupPackageScope(url);
-        packageScopesCache.set(url, packageScope);
-        return packageScope;
-      };
-
-      const packageJsonsCache = new Map();
-
-      readPackageJson = url => {
-        const fromCache = packageJsonsCache.get(url);
-
-        if (fromCache) {
-          return fromCache;
-        }
-
-        const packageJson = defaultReadPackageJson(url);
-        packageJsonsCache.set(url, packageJson);
-        return packageJson;
-      };
-
-      if (scenario === "dev") {
-        const onFileChange = () => {
-          packageScopesCache.clear();
-          packageJsonsCache.clear();
-          urlGraph.urlInfoMap.forEach(urlInfo => {
-            if (urlInfo.dependsOnPackageJson) {
-              urlGraph.considerModified(urlInfo);
-            }
-          });
-        };
-
-        filesInvalidatingCache.forEach(file => {
-          const unregister = registerFileLifecycle(new URL(file, rootDirectoryUrl), {
-            added: () => {
-              onFileChange();
-            },
-            updated: () => {
-              onFileChange();
-            },
-            removed: () => {
-              onFileChange();
-            },
-            keepProcessAlive: false
-          });
-          unregisters.push(unregister);
-        });
-      }
-    },
-    resolveUrl: {
-      js_import_export: (reference, context) => {
-        const {
-          parentUrl,
-          specifier
-        } = reference;
-        const {
-          type,
-          url
-        } = applyNodeEsmResolution({
-          conditions: packageConditions,
-          parentUrl,
-          specifier,
-          lookupPackageScope,
-          readPackageJson
-        }); // this reference depend on package.json and node_modules
-        // to be resolved. Each file using this specifier
-        // must be invalidated when package.json or package_lock.json
-        // changes
-
-        const dependsOnPackageJson = type !== "relative_specifier" && type !== "absolute_specifier" && type !== "node_builtin_specifier";
-        const relatedUrlInfos = context.urlGraph.getRelatedUrlInfos(reference.parentUrl);
-        relatedUrlInfos.forEach(relatedUrlInfo => {
-          if (relatedUrlInfo.dependsOnPackageJson) {
-            // the url may depend due to an other reference
-            // in that case keep dependsOnPackageJson to true
-            return;
-          }
-
-          relatedUrlInfo.dependsOnPackageJson = dependsOnPackageJson;
-        });
-        return url;
-      }
-    },
-    fetchUrlContent: urlInfo => {
-      if (urlInfo.url.startsWith("file:///@ignore/")) {
-        return {
-          content: "export default {}",
-          contentType: "text/javascript",
-          type: "js_module"
-        };
-      }
-
-      return null;
-    },
-    transformUrlSearchParams: (reference, context) => {
-      if (context.scenario === "build") {
-        return null;
-      }
-
-      if (!reference.url.startsWith("file:")) {
-        return null;
-      } // without this check a file inside a project without package.json
-      // could be considered as a node module if there is a ancestor package.json
-      // but we want to version only node modules
-
-
-      if (!reference.url.includes("/node_modules/")) {
-        return null;
-      }
-
-      if (reference.searchParams.has("v")) {
-        return null;
-      }
-
-      const packageUrl = lookupPackageScope(reference.url);
-
-      if (!packageUrl) {
-        return null;
-      }
-
-      if (packageUrl === context.rootDirectoryUrl) {
-        return null;
-      }
-
-      const packageVersion = readPackageJson(packageUrl).version;
-
-      if (!packageVersion) {
-        // example where it happens: https://github.com/babel/babel/blob/2ce56e832c2dd7a7ed92c89028ba929f874c2f5c/packages/babel-runtime/helpers/esm/package.json#L2
-        return null;
-      }
-
-      return {
-        v: packageVersion
-      };
-    },
-    destroy: () => {
-      unregisters.forEach(unregister => unregister());
-    }
-  };
-};
-
-const jsenvPluginUrlVersion = () => {
-  return {
-    name: "jsenv:url_version",
-    appliesDuring: "*",
-    redirectUrl: reference => {
-      // "v" search param goal is to enable long-term cache
-      // for server response headers
-      // it is also used by hmr to bypass browser cache
-      // this goal is achieved when we reach this part of the code
-      // We get rid of this params so that urlGraph and other parts of the code
-      // recognize the url (it is not considered as a different url)
-      const urlObject = new URL(reference.url);
-      urlObject.searchParams.delete("v");
-      return urlObject.href;
-    },
-    transformUrlSearchParams: reference => {
-      if (!reference.data.version) {
-        return null;
-      }
-
-      if (reference.searchParams.has("v")) {
-        return null;
-      }
-
-      return {
-        v: reference.data.version
-      };
-    }
-  };
-};
-
-const jsenvPluginFileUrls = ({
-  magicExtensions = ["inherit", ".js"],
-  magicDirectoryIndex = true,
-  preserveSymlinks = false,
-  directoryReferenceAllowed = false
-}) => {
-  return [{
-    name: "jsenv:file_url_resolution",
-    appliesDuring: "*",
-    redirectUrl: reference => {
-      // http, https, data, about, ...
-      if (!reference.url.startsWith("file:")) {
-        return null;
-      }
-
-      if (reference.isInline) {
-        return null;
-      }
-
-      const urlObject = new URL(reference.url);
-      let stat;
-
-      try {
-        stat = statSync(urlObject);
-      } catch (e) {
-        if (e.code === "ENOENT") {
-          stat = null;
-        } else {
-          throw e;
-        }
-      }
-
-      const {
-        search,
-        hash
-      } = urlObject;
-      let {
-        pathname
-      } = urlObject;
-      const pathnameUsesTrailingSlash = pathname.endsWith("/");
-      urlObject.search = "";
-      urlObject.hash = "";
-      const foundADirectory = stat && stat.isDirectory();
-      const foundSomething = stat && !foundADirectory; // force trailing slash on directories
-
-      if (foundADirectory && !pathnameUsesTrailingSlash) {
-        urlObject.pathname = `${pathname}/`;
-      } // otherwise remove trailing slash if any
-
-
-      if (foundSomething && pathnameUsesTrailingSlash) {
-        // a warning here? (because it's strange to reference a file with a trailing slash)
-        urlObject.pathname = pathname.slice(0, -1);
-      }
-
-      if (foundADirectory && directoryReferenceAllowed) {
-        if ( // ignore new URL second arg
-        reference.subtype === "new_url_second_arg" || // ignore root file url
-        reference.url === "file:///") {
-          reference.shouldHandle = false;
-        }
-
-        reference.data.foundADirectory = true;
-        const directoryFacadeUrl = urlObject.href;
-        const directoryUrlRaw = preserveSymlinks ? directoryFacadeUrl : resolveSymlink(directoryFacadeUrl);
-        const directoryUrl = `${directoryUrlRaw}${search}${hash}`;
-        return directoryUrl;
-      }
-
-      const url = urlObject.href;
-      const filesystemResolution = applyFileSystemMagicResolution(url, {
-        fileStat: stat,
-        magicDirectoryIndex,
-        magicExtensions: getExtensionsToTry(magicExtensions, reference.parentUrl)
-      });
-
-      if (!filesystemResolution.found) {
-        reference.data.foundADirectory = foundADirectory;
-        return null;
-      }
-
-      reference.data.foundADirectory = filesystemResolution.isDirectory;
-      const fileFacadeUrl = filesystemResolution.url;
-      const fileUrlRaw = preserveSymlinks ? fileFacadeUrl : resolveSymlink(fileFacadeUrl);
-      const fileUrl = `${fileUrlRaw}${search}${hash}`;
-      return fileUrl;
-    }
-  }, {
-    name: "jsenv:filesystem_resolution",
-    appliesDuring: "*",
-    resolveUrl: {
-      filesystem: (reference, context) => {
-        const {
-          parentUrl
-        } = reference;
-        const parentUrlInfo = context.urlGraph.getUrlInfo(parentUrl);
-        const baseUrl = parentUrlInfo && parentUrlInfo.type === "directory" ? ensurePathnameTrailingSlash(parentUrl) : parentUrl;
-        return new URL(reference.specifier, baseUrl).href;
-      }
-    }
-  }, {
-    name: "jsenv:@fs_resolution",
-    appliesDuring: {
-      // during dev and test it's a browser running the code
-      // so absolute file urls needs to be relativized
-      dev: true,
-      test: true,
-      // during build it's fine to use file:// urls
-      build: false
-    },
-    resolveUrl: reference => {
-      if (reference.specifier.startsWith("/@fs/")) {
-        const fsRootRelativeUrl = reference.specifier.slice("/@fs/".length);
-        return `file:///${fsRootRelativeUrl}`;
-      }
-
-      return null;
-    },
-    formatUrl: (reference, context) => {
-      if (!reference.generatedUrl.startsWith("file:")) {
-        return null;
-      }
-
-      if (urlIsInsideOf(reference.generatedUrl, context.rootDirectoryUrl)) {
-        return `/${urlToRelativeUrl(reference.generatedUrl, context.rootDirectoryUrl)}`;
-      }
-
-      return `/@fs/${reference.generatedUrl.slice("file:///".length)}`;
-    }
-  }, {
-    name: "jsenv:file_url_fetching",
-    appliesDuring: "*",
-    fetchUrlContent: (urlInfo, context) => {
-      if (!urlInfo.url.startsWith("file:")) {
-        return null;
-      }
-
-      const urlObject = new URL(urlInfo.url);
-
-      if (context.reference.data.foundADirectory) {
-        if (directoryReferenceAllowed) {
-          const directoryEntries = readdirSync(urlObject);
-          let filename;
-
-          if (context.reference.type === "filesystem") {
-            const parentUrlInfo = context.urlGraph.getUrlInfo(context.reference.parentUrl);
-            filename = `${parentUrlInfo.filename}${context.reference.specifier}/`;
-          } else {
-            filename = `${urlToFilename$1(urlInfo.url)}/`;
-          }
-
-          return {
-            type: "directory",
-            contentType: "application/json",
-            content: JSON.stringify(directoryEntries, null, "  "),
-            filename
-          };
-        }
-
-        const error = new Error("found a directory on filesystem");
-        error.code = "DIRECTORY_REFERENCE_NOT_ALLOWED";
-        throw error;
-      }
-
-      const fileBuffer = readFileSync$1(urlObject);
-      const contentType = CONTENT_TYPE.fromUrlExtension(urlInfo.url);
-      return {
-        content: CONTENT_TYPE.isTextual(contentType) ? String(fileBuffer) : fileBuffer,
-        contentType
-      };
-    }
-  }];
-};
-
-const resolveSymlink = fileUrl => {
-  return pathToFileURL(realpathSync(new URL(fileUrl))).href;
-};
-
-const jsenvPluginHttpUrls = () => {
-  return {
-    name: "jsenv:http_urls",
-    appliesDuring: "*",
-    redirectUrl: reference => {
-      if (reference.url.startsWith("http:") || reference.url.startsWith("https:")) {
-        reference.shouldHandle = false;
-      } // TODO: according to some pattern matching jsenv could be allowed
-      // to fetch and transform http urls
-
-    }
-  };
+  return value;
 };
 
 const jsenvPluginHtmlInlineContent = ({
@@ -12025,908 +5714,6 @@ const jsenvPluginInlineUrls = () => {
 };
 
 const requireFromJsenv = createRequire(import.meta.url);
-
-/*
- * Things happening here
- * - html supervisor module injection
- * - scripts are wrapped to be supervised
- */
-const jsenvPluginHtmlSupervisor = ({
-  logs = false,
-  measurePerf = false,
-  errorOverlay = true,
-  openInEditor = true,
-  errorBaseUrl
-}) => {
-  const htmlSupervisorSetupFileUrl = new URL("./js/html_supervisor_setup.js", import.meta.url).href;
-  const htmlSupervisorInstallerFileUrl = new URL("./js/html_supervisor_installer.js", import.meta.url).href;
-  return {
-    name: "jsenv:html_supervisor",
-    appliesDuring: {
-      dev: true,
-      test: true
-    },
-    serve: async (request, context) => {
-      if (request.ressource.startsWith("/__get_code_frame__/")) {
-        const {
-          pathname,
-          searchParams
-        } = new URL(request.url);
-        const urlWithLineAndColumn = pathname.slice("/__get_code_frame__/".length);
-        const match = urlWithLineAndColumn.match(/:([0-9]+):([0-9]+)$/);
-
-        if (!match) {
-          return {
-            status: 400,
-            body: "Missing line and column in url"
-          };
-        }
-
-        const file = urlWithLineAndColumn.slice(0, match.index);
-        let line = parseInt(match[1]);
-        let column = parseInt(match[2]);
-        const urlInfo = context.urlGraph.getUrlInfo(file);
-
-        if (!urlInfo) {
-          return {
-            status: 404
-          };
-        }
-
-        const remap = searchParams.has("remap");
-
-        if (remap) {
-          const sourcemap = urlInfo.sourcemap;
-
-          if (sourcemap) {
-            const original = await getOriginalPosition({
-              sourcemap,
-              url: file,
-              line,
-              column
-            });
-            line = original.line;
-            column = original.column;
-          }
-        }
-
-        const codeFrame = stringifyUrlSite({
-          url: file,
-          line,
-          column,
-          content: urlInfo.originalContent
-        });
-        return {
-          status: 200,
-          headers: {
-            "content-type": "text/plain",
-            "content-length": Buffer.byteLength(codeFrame)
-          },
-          body: codeFrame
-        };
-      }
-
-      if (request.ressource.startsWith("/__get_error_cause__/")) {
-        const file = request.ressource.slice("/__get_error_cause__/".length);
-
-        if (!file) {
-          return {
-            status: 400,
-            body: "Missing file in url"
-          };
-        }
-
-        const getErrorCauseInfo = () => {
-          const urlInfo = context.urlGraph.getUrlInfo(file);
-
-          if (!urlInfo) {
-            return null;
-          }
-
-          const {
-            error
-          } = urlInfo;
-
-          if (error) {
-            return error;
-          } // search in direct dependencies (404 or 500)
-
-
-          const {
-            dependencies
-          } = urlInfo;
-
-          for (const dependencyUrl of dependencies) {
-            const dependencyUrlInfo = context.urlGraph.getUrlInfo(dependencyUrl);
-
-            if (dependencyUrlInfo.error) {
-              return dependencyUrlInfo.error;
-            }
-          }
-
-          return null;
-        };
-
-        const causeInfo = getErrorCauseInfo();
-        const body = JSON.stringify(causeInfo ? {
-          code: causeInfo.code,
-          message: causeInfo.message,
-          reason: causeInfo.reason,
-          stack: causeInfo.stack,
-          codeFrame: causeInfo.traceMessage
-        } : null, null, "  ");
-        return {
-          status: 200,
-          headers: {
-            "cache-control": "no-cache",
-            "content-type": "application/json",
-            "content-length": Buffer.byteLength(body)
-          },
-          body
-        };
-      }
-
-      if (request.ressource.startsWith("/__open_in_editor__/")) {
-        const file = request.ressource.slice("/__open_in_editor__/".length);
-
-        if (!file) {
-          return {
-            status: 400,
-            body: "Missing file in url"
-          };
-        }
-
-        const launch = requireFromJsenv("launch-editor");
-        launch(fileURLToPath(file), () => {// ignore error for now
-        });
-        return {
-          status: 200,
-          headers: {
-            "cache-control": "no-store"
-          }
-        };
-      }
-
-      return null;
-    },
-    transformUrlContent: {
-      html: ({
-        url,
-        content
-      }, context) => {
-        const htmlAst = parseHtmlString(content);
-        const scriptsToSupervise = [];
-
-        const handleInlineScript = (node, htmlNodeText) => {
-          const {
-            type,
-            extension
-          } = analyzeScriptNode(node);
-          const {
-            line,
-            column,
-            lineEnd,
-            columnEnd,
-            isOriginal
-          } = getHtmlNodePosition(node, {
-            preferOriginal: true
-          });
-          let inlineScriptUrl = generateInlineContentUrl({
-            url,
-            extension: extension || ".js",
-            line,
-            column,
-            lineEnd,
-            columnEnd
-          });
-          const [inlineScriptReference] = context.referenceUtils.foundInline({
-            type: "script_src",
-            expectedType: type,
-            isOriginalPosition: isOriginal,
-            specifierLine: line - 1,
-            specifierColumn: column,
-            specifier: inlineScriptUrl,
-            contentType: "text/javascript",
-            content: htmlNodeText
-          });
-          removeHtmlNodeText(node);
-
-          if (extension) {
-            setHtmlNodeAttributes(node, {
-              type: type === "js_module" ? "module" : undefined
-            });
-          }
-
-          scriptsToSupervise.push({
-            node,
-            isInline: true,
-            type,
-            src: inlineScriptReference.generatedSpecifier
-          });
-        };
-
-        const handleScriptWithSrc = (node, src) => {
-          const {
-            type
-          } = analyzeScriptNode(node);
-          const integrity = getHtmlNodeAttribute(node, "integrity");
-          const crossorigin = getHtmlNodeAttribute(node, "crossorigin") !== undefined;
-          const defer = getHtmlNodeAttribute(node, "defer") !== undefined;
-          const async = getHtmlNodeAttribute(node, "async") !== undefined;
-          setHtmlNodeAttributes(node, {
-            src: undefined
-          });
-          scriptsToSupervise.push({
-            node,
-            type,
-            src,
-            defer,
-            async,
-            integrity,
-            crossorigin
-          });
-        };
-
-        visitHtmlNodes(htmlAst, {
-          script: node => {
-            const {
-              type
-            } = analyzeScriptNode(node);
-
-            if (type !== "js_classic" && type !== "js_module") {
-              return;
-            }
-
-            const injectedBy = getHtmlNodeAttribute(node, "injected-by");
-
-            if (injectedBy !== undefined) {
-              return;
-            }
-
-            const noHtmlSupervisor = getHtmlNodeAttribute(node, "no-html-supervisor");
-
-            if (noHtmlSupervisor !== undefined) {
-              return;
-            }
-
-            const htmlNodeText = getHtmlNodeText(node);
-
-            if (htmlNodeText) {
-              handleInlineScript(node, htmlNodeText);
-              return;
-            }
-
-            const src = getHtmlNodeAttribute(node, "src");
-
-            if (src) {
-              handleScriptWithSrc(node, src);
-              return;
-            }
-          }
-        });
-        const [htmlSupervisorInstallerFileReference] = context.referenceUtils.inject({
-          type: "js_import_export",
-          expectedType: "js_module",
-          specifier: htmlSupervisorInstallerFileUrl
-        });
-        injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
-          "tagName": "script",
-          "type": "module",
-          "textContent": `
-      import { installHtmlSupervisor } from ${htmlSupervisorInstallerFileReference.generatedSpecifier}
-      installHtmlSupervisor(${JSON.stringify({
-            rootDirectoryUrl: context.rootDirectoryUrl,
-            errorBaseUrl,
-            logs,
-            measurePerf,
-            errorOverlay,
-            openInEditor
-          }, null, "        ")})`,
-          "injected-by": "jsenv:html_supervisor"
-        }));
-        const [htmlSupervisorSetupFileReference] = context.referenceUtils.inject({
-          type: "script_src",
-          expectedType: "js_classic",
-          specifier: htmlSupervisorSetupFileUrl
-        });
-        injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
-          "tagName": "script",
-          "src": htmlSupervisorSetupFileReference.generatedSpecifier,
-          "injected-by": "jsenv:html_supervisor"
-        }));
-        scriptsToSupervise.forEach(({
-          node,
-          isInline,
-          type,
-          src,
-          defer,
-          async,
-          integrity,
-          crossorigin
-        }) => {
-          setHtmlNodeText(node, generateCodeToSuperviseScript({
-            type,
-            src,
-            isInline,
-            defer,
-            async,
-            integrity,
-            crossorigin,
-            htmlSupervisorInstallerSpecifier: htmlSupervisorInstallerFileReference.generatedSpecifier
-          }));
-          setHtmlNodeAttributes(node, {
-            "generated-by": "jsenv:html_supervisor",
-            ...(src ? {
-              "generated-from-src": src
-            } : {}),
-            ...(isInline ? {
-              "generated-from-inline-content": ""
-            } : {})
-          });
-        });
-        const htmlModified = stringifyHtmlAst(htmlAst);
-        return {
-          content: htmlModified
-        };
-      }
-    }
-  };
-}; // Ideally jsenv should take into account eventual
-// "integrity" and "crossorigin" attribute during supervision
-
-const generateCodeToSuperviseScript = ({
-  type,
-  src,
-  isInline,
-  defer,
-  async,
-  integrity,
-  crossorigin,
-  htmlSupervisorInstallerSpecifier
-}) => {
-  const paramsAsJson = JSON.stringify({
-    src,
-    isInline,
-    defer,
-    async,
-    integrity,
-    crossorigin
-  });
-
-  if (type === "js_module") {
-    return `
-      import { superviseScriptTypeModule } from ${htmlSupervisorInstallerSpecifier}
-      superviseScriptTypeModule(${paramsAsJson})
-`;
-  }
-
-  return `
-      window.__html_supervisor__.superviseScript(${paramsAsJson})
-`;
-};
-
-/*
- * Some code uses globals specific to Node.js in code meant to run in browsers...
- * This plugin will replace some node globals to things compatible with web:
- * - process.env.NODE_ENV
- * - __filename
- * - __dirname
- * - global
- */
-const jsenvPluginCommonJsGlobals = () => {
-  const transformCommonJsGlobals = async (urlInfo, {
-    scenario
-  }) => {
-    if (!urlInfo.content.includes("process.env.NODE_ENV") && !urlInfo.content.includes("__filename") && !urlInfo.content.includes("__dirname")) {
-      return null;
-    }
-
-    const isJsModule = urlInfo.type === "js_module";
-    const replaceMap = {
-      "process.env.NODE_ENV": `("${scenario === "dev" || scenario === "test" ? "development" : "production"}")`,
-      "global": "globalThis",
-      "__filename": isJsModule ? `import.meta.url.slice('file:///'.length)` : `document.currentScript.src`,
-      "__dirname": isJsModule ? `import.meta.url.slice('file:///'.length).replace(/[\\\/\\\\][^\\\/\\\\]*$/, '')` : `new URL('./', document.currentScript.src).href`
-    };
-    const {
-      metadata
-    } = await applyBabelPlugins({
-      babelPlugins: [[babelPluginMetadataExpressionPaths, {
-        replaceMap,
-        allowConflictingReplacements: true
-      }]],
-      urlInfo
-    });
-    const {
-      expressionPaths
-    } = metadata;
-    const keys = Object.keys(expressionPaths);
-
-    if (keys.length === 0) {
-      return null;
-    }
-
-    const magicSource = createMagicSource(urlInfo.content);
-    keys.forEach(key => {
-      expressionPaths[key].forEach(path => {
-        magicSource.replace({
-          start: path.node.start,
-          end: path.node.end,
-          replacement: replaceMap[key]
-        });
-      });
-    });
-    return magicSource.toContentAndSourcemap();
-  };
-
-  return {
-    name: "jsenv:commonjs_globals",
-    appliesDuring: "*",
-    transformUrlContent: {
-      js_classic: transformCommonJsGlobals,
-      js_module: transformCommonJsGlobals
-    }
-  };
-}; // heavily inspired from https://github.com/jviide/babel-plugin-transform-replace-expressions
-// last known commit: 57b608e0eeb8807db53d1c68292621dfafb5599c
-
-const babelPluginMetadataExpressionPaths = (babel, {
-  replaceMap = {},
-  allowConflictingReplacements = false
-}) => {
-  const {
-    traverse,
-    parse,
-    types
-  } = babel;
-  const replacementMap = new Map();
-  const valueExpressionSet = new Set();
-  return {
-    name: "metadata-replace",
-    pre: state => {
-      // https://github.com/babel/babel/blob/d50e78d45b608f6e0f6cc33aeb22f5db5027b153/packages/babel-traverse/src/path/replacement.js#L93
-      const parseExpression = value => {
-        const expressionNode = parse(value, state.opts).program.body[0].expression;
-        traverse.removeProperties(expressionNode);
-        return expressionNode;
-      };
-
-      Object.keys(replaceMap).forEach(key => {
-        const keyExpressionNode = parseExpression(key);
-        const candidateArray = replacementMap.get(keyExpressionNode.type) || [];
-        const value = replaceMap[key];
-        const valueExpressionNode = parseExpression(value);
-        const equivalentKeyExpressionIndex = candidateArray.findIndex(candidate => types.isNodesEquivalent(candidate.keyExpressionNode, keyExpressionNode));
-
-        if (!allowConflictingReplacements && equivalentKeyExpressionIndex > -1) {
-          throw new Error(`Expressions ${candidateArray[equivalentKeyExpressionIndex].key} and ${key} conflict`);
-        }
-
-        const newCandidate = {
-          key,
-          value,
-          keyExpressionNode,
-          valueExpressionNode
-        };
-
-        if (equivalentKeyExpressionIndex > -1) {
-          candidateArray[equivalentKeyExpressionIndex] = newCandidate;
-        } else {
-          candidateArray.push(newCandidate);
-        }
-
-        replacementMap.set(keyExpressionNode.type, candidateArray);
-      });
-      replacementMap.forEach(candidateArray => {
-        candidateArray.forEach(candidate => {
-          valueExpressionSet.add(candidate.valueExpressionNode);
-        });
-      });
-    },
-    visitor: {
-      Program: (programPath, state) => {
-        const expressionPaths = {};
-        programPath.traverse({
-          Expression(path) {
-            if (valueExpressionSet.has(path.node)) {
-              path.skip();
-              return;
-            }
-
-            const candidateArray = replacementMap.get(path.node.type);
-
-            if (!candidateArray) {
-              return;
-            }
-
-            const candidateFound = candidateArray.find(candidate => {
-              return types.isNodesEquivalent(candidate.keyExpressionNode, path.node);
-            });
-
-            if (candidateFound) {
-              try {
-                types.validate(path.parent, path.key, candidateFound.valueExpressionNode);
-              } catch (err) {
-                if (err instanceof TypeError) {
-                  path.skip();
-                  return;
-                }
-
-                throw err;
-              }
-
-              const paths = expressionPaths[candidateFound.key];
-
-              if (paths) {
-                expressionPaths[candidateFound.key] = [...paths, path];
-              } else {
-                expressionPaths[candidateFound.key] = [path];
-              }
-
-              return;
-            }
-          }
-
-        });
-        state.file.metadata.expressionPaths = expressionPaths;
-      }
-    }
-  };
-};
-
-/*
- * Source code can contain the following
- * - import.meta.dev
- * - import.meta.test
- * - import.meta.build
- * They are either:
- * - replaced by true: When scenario matches (import.meta.dev and it's the dev server)
- * - left as is to be evaluated to undefined (import.meta.test but it's the dev server)
- * - replaced by undefined (import.meta.dev but it's build; the goal is to ensure it's tree-shaked)
- */
-const jsenvPluginImportMetaScenarios = () => {
-  return {
-    name: "jsenv:import_meta_scenario",
-    appliesDuring: "*",
-    transformUrlContent: {
-      js_module: async (urlInfo, {
-        scenario
-      }) => {
-        if (!urlInfo.content.includes("import.meta.dev") && !urlInfo.content.includes("import.meta.test") && !urlInfo.content.includes("import.meta.build")) {
-          return null;
-        }
-
-        const {
-          metadata
-        } = await applyBabelPlugins({
-          babelPlugins: [babelPluginMetadataImportMetaScenarios],
-          urlInfo
-        });
-        const {
-          dev = [],
-          test = [],
-          build = []
-        } = metadata.importMetaScenarios;
-        const replacements = [];
-
-        const replace = (path, value) => {
-          replacements.push({
-            path,
-            value
-          });
-        };
-
-        if (scenario === "dev") {
-          dev.forEach(path => {
-            replace(path, "true");
-          });
-        } else if (scenario === "test") {
-          // test is also considered a dev environment
-          // just like the dev server can be used to debug test files
-          // without this people would have to write
-          // if (import.meta.dev || import.meta.test) or if (!import.meta.build)
-          dev.forEach(path => {
-            replace(path, "true");
-          });
-          test.forEach(path => {
-            replace(path, "true");
-          });
-        } else if (scenario === "build") {
-          // replacing by undefined might not be required
-          // as I suppose rollup would consider them as undefined
-          // but let's make it explicit to ensure code is properly tree-shaked
-          dev.forEach(path => {
-            replace(path, "undefined");
-          });
-          test.forEach(path => {
-            replace(path, "undefined");
-          });
-          build.forEach(path => {
-            replace(path, "true");
-          });
-        }
-
-        const magicSource = createMagicSource(urlInfo.content);
-        replacements.forEach(({
-          path,
-          value
-        }) => {
-          magicSource.replace({
-            start: path.node.start,
-            end: path.node.end,
-            replacement: value
-          });
-        });
-        return magicSource.toContentAndSourcemap();
-      }
-    }
-  };
-};
-
-const babelPluginMetadataImportMetaScenarios = () => {
-  return {
-    name: "metadata-import-meta-scenarios",
-    visitor: {
-      Program(programPath, state) {
-        const importMetas = {};
-        programPath.traverse({
-          MemberExpression(path) {
-            const {
-              node
-            } = path;
-            const {
-              object
-            } = node;
-
-            if (object.type !== "MetaProperty") {
-              return;
-            }
-
-            const {
-              property: objectProperty
-            } = object;
-
-            if (objectProperty.name !== "meta") {
-              return;
-            }
-
-            const {
-              property
-            } = node;
-            const {
-              name
-            } = property;
-            const importMetaPaths = importMetas[name];
-
-            if (importMetaPaths) {
-              importMetaPaths.push(path);
-            } else {
-              importMetas[name] = [path];
-            }
-          }
-
-        });
-        state.file.metadata.importMetaScenarios = {
-          dev: importMetas.dev,
-          test: importMetas.test,
-          build: importMetas.build
-        };
-      }
-
-    }
-  };
-};
-
-const jsenvPluginCssParcel = () => {
-  return {
-    name: "jsenv:css_parcel",
-    appliesDuring: "*",
-    transformUrlContent: {
-      css: (urlInfo, context) => {
-        const {
-          code,
-          map
-        } = transpileWithParcel(urlInfo, context);
-        return {
-          content: String(code),
-          sourcemap: map
-        };
-      }
-    }
-  };
-};
-
-/*
- * Jsenv wont touch code where "specifier" or "type" is dynamic (see code below)
- * ```js
- * const file = "./style.css"
- * const type = "css"
- * import(file, { assert: { type }})
- * ```
- * Jsenv could throw an error when it knows some browsers in runtimeCompat
- * do not support import assertions
- * But for now (as it is simpler) we let the browser throw the error
- */
-const jsenvPluginImportAssertions = ({
-  json = "auto",
-  css = "auto",
-  text = "auto"
-}) => {
-  const updateReference = (reference, searchParam) => {
-    reference.expectedType = "js_module";
-    reference.filename = `${urlToFilename$1(reference.url)}.js`;
-
-    reference.mutation = magicSource => {
-      magicSource.remove({
-        start: reference.assertNode.start,
-        end: reference.assertNode.end
-      });
-    };
-
-    const newUrl = injectQueryParams(reference.url, {
-      [searchParam]: ""
-    });
-    return newUrl;
-  };
-
-  const importAssertions = {
-    name: "jsenv:import_assertions",
-    appliesDuring: "*",
-    init: context => {
-      // transpilation is forced during build so that
-      //   - avoid rollup to see import assertions
-      //     We would have to tell rollup to ignore import with assertion
-      //   - means rollup can bundle more js file together
-      //   - means url versioning can work for css inlined in js
-      if (context.scenario === "build") {
-        json = true;
-        css = true;
-        text = true;
-      }
-    },
-    redirectUrl: {
-      js_import_export: (reference, context) => {
-        if (!reference.assert) {
-          return null;
-        }
-
-        if (reference.assert.type === "json") {
-          const shouldTranspileJsonImportAssertion = json === true ? true : json === "auto" ? !context.isSupportedOnCurrentClients("import_type_json") : false;
-
-          if (shouldTranspileJsonImportAssertion) {
-            return updateReference(reference, "as_json_module");
-          }
-
-          return null;
-        }
-
-        if (reference.assert.type === "css") {
-          const shouldTranspileCssImportAssertion = css === true ? true : css === "auto" ? !context.isSupportedOnCurrentClients("import_type_css") : false;
-
-          if (shouldTranspileCssImportAssertion) {
-            return updateReference(reference, "as_css_module");
-          }
-
-          return null;
-        }
-
-        if (reference.assert.type === "text") {
-          const shouldTranspileTextImportAssertion = text === true ? true : text === "auto" ? !context.isSupportedOnCurrentClients("import_type_text") : false;
-
-          if (shouldTranspileTextImportAssertion) {
-            return updateReference(reference, "as_text_module");
-          }
-
-          return null;
-        }
-
-        return null;
-      }
-    }
-  };
-  return [importAssertions, ...jsenvPluginAsModules()];
-};
-
-const jsenvPluginAsModules = () => {
-  const inlineContentClientFileUrl = new URL("./js/inline_content.js", import.meta.url).href;
-  const asJsonModule = {
-    name: `jsenv:as_json_module`,
-    appliesDuring: "*",
-    fetchUrlContent: async (urlInfo, context) => {
-      const originalUrlInfo = await context.fetchOriginalUrlInfo({
-        urlInfo,
-        context,
-        searchParam: "as_json_module",
-        expectedType: "json"
-      });
-
-      if (!originalUrlInfo) {
-        return null;
-      }
-
-      const jsonText = JSON.stringify(originalUrlInfo.content.trim());
-      return {
-        // here we could `export default ${jsonText}`:
-        // but js engine are optimized to recognize JSON.parse
-        // and use a faster parsing strategy
-        content: `export default JSON.parse(${jsonText})`,
-        contentType: "text/javascript",
-        type: "js_module",
-        originalUrl: originalUrlInfo.originalUrl,
-        originalContent: originalUrlInfo.originalContent
-      };
-    }
-  };
-  const asCssModule = {
-    name: `jsenv:as_css_module`,
-    appliesDuring: "*",
-    fetchUrlContent: async (urlInfo, context) => {
-      const originalUrlInfo = await context.fetchOriginalUrlInfo({
-        urlInfo,
-        context,
-        searchParam: "as_css_module",
-        expectedType: "css"
-      });
-
-      if (!originalUrlInfo) {
-        return null;
-      }
-
-      const cssText = JS_QUOTES.escapeSpecialChars(originalUrlInfo.content, {
-        // If template string is choosen and runtime do not support template literals
-        // it's ok because "jsenv:new_inline_content" plugin executes after this one
-        // and convert template strings into raw strings
-        canUseTemplateString: true
-      });
-      return {
-        content: `import { InlineContent } from ${JSON.stringify(inlineContentClientFileUrl)}
-  
-  const inlineContent = new InlineContent(${cssText}, { type: "text/css" })
-  const stylesheet = new CSSStyleSheet()
-  stylesheet.replaceSync(inlineContent.text)
-  export default stylesheet`,
-        contentType: "text/javascript",
-        type: "js_module",
-        originalUrl: originalUrlInfo.originalUrl,
-        originalContent: originalUrlInfo.originalContent
-      };
-    }
-  };
-  const asTextModule = {
-    name: `jsenv:as_text_module`,
-    appliesDuring: "*",
-    fetchUrlContent: async (urlInfo, context) => {
-      const originalUrlInfo = await context.fetchOriginalUrlInfo({
-        urlInfo,
-        context,
-        searchParam: "as_text_module",
-        expectedType: "text"
-      });
-
-      if (!originalUrlInfo) {
-        return null;
-      }
-
-      const textPlain = JS_QUOTES.escapeSpecialChars(urlInfo.content, {
-        // If template string is choosen and runtime do not support template literals
-        // it's ok because "jsenv:new_inline_content" plugin executes after this one
-        // and convert template strings into raw strings
-        canUseTemplateString: true
-      });
-      return {
-        content: `import { InlineContent } from ${JSON.stringify(inlineContentClientFileUrl)}
-  
-const inlineContent = new InlineContent(${textPlain}, { type: "text/plain" })
-export default inlineContent.text`,
-        contentType: "text/javascript",
-        type: "js_module",
-        originalUrl: originalUrlInfo.originalUrl,
-        originalContent: originalUrlInfo.originalContent
-      };
-    }
-  };
-  return [asJsonModule, asCssModule, asTextModule];
-};
 
 const babelPluginPackagePath = requireFromJsenv.resolve("@jsenv/babel-plugins");
 const babelPluginPackageUrl = pathToFileURL(babelPluginPackagePath);
@@ -17788,6 +10575,3514 @@ const convertJsModuleToJsClassic = async ({
   };
 };
 
+const jsenvPluginLeadingSlash = () => {
+  return {
+    name: "jsenv:leading_slash",
+    appliesDuring: "*",
+    resolveUrl: (reference, context) => {
+      if (reference.specifier[0] !== "/") {
+        return null;
+      }
+
+      return new URL(reference.specifier.slice(1), context.rootDirectoryUrl).href;
+    }
+  };
+};
+
+// duplicated from @jsenv/log to avoid the dependency
+const createDetailedMessage = (message, details = {}) => {
+  let string = `${message}`;
+  Object.keys(details).forEach(key => {
+    const value = details[key];
+    string += `
+    --- ${key} ---
+    ${Array.isArray(value) ? value.join(`
+    `) : value}`;
+  });
+  return string;
+};
+
+const assertImportMap = value => {
+  if (value === null) {
+    throw new TypeError(`an importMap must be an object, got null`);
+  }
+
+  const type = typeof value;
+
+  if (type !== "object") {
+    throw new TypeError(`an importMap must be an object, received ${value}`);
+  }
+
+  if (Array.isArray(value)) {
+    throw new TypeError(`an importMap must be an object, received array ${value}`);
+  }
+};
+
+const hasScheme = string => {
+  return /^[a-zA-Z]{2,}:/.test(string);
+};
+
+const urlToScheme = urlString => {
+  const colonIndex = urlString.indexOf(":");
+  if (colonIndex === -1) return "";
+  return urlString.slice(0, colonIndex);
+};
+
+const urlToPathname = urlString => {
+  return ressourceToPathname(urlToRessource(urlString));
+};
+
+const urlToRessource = urlString => {
+  const scheme = urlToScheme(urlString);
+
+  if (scheme === "file") {
+    return urlString.slice("file://".length);
+  }
+
+  if (scheme === "https" || scheme === "http") {
+    // remove origin
+    const afterProtocol = urlString.slice(scheme.length + "://".length);
+    const pathnameSlashIndex = afterProtocol.indexOf("/", "://".length);
+    return afterProtocol.slice(pathnameSlashIndex);
+  }
+
+  return urlString.slice(scheme.length + 1);
+};
+
+const ressourceToPathname = ressource => {
+  const searchSeparatorIndex = ressource.indexOf("?");
+  return searchSeparatorIndex === -1 ? ressource : ressource.slice(0, searchSeparatorIndex);
+};
+
+const urlToOrigin = urlString => {
+  const scheme = urlToScheme(urlString);
+
+  if (scheme === "file") {
+    return "file://";
+  }
+
+  if (scheme === "http" || scheme === "https") {
+    const secondProtocolSlashIndex = scheme.length + "://".length;
+    const pathnameSlashIndex = urlString.indexOf("/", secondProtocolSlashIndex);
+    if (pathnameSlashIndex === -1) return urlString;
+    return urlString.slice(0, pathnameSlashIndex);
+  }
+
+  return urlString.slice(0, scheme.length + 1);
+};
+
+const pathnameToParentPathname = pathname => {
+  const slashLastIndex = pathname.lastIndexOf("/");
+
+  if (slashLastIndex === -1) {
+    return "/";
+  }
+
+  return pathname.slice(0, slashLastIndex + 1);
+};
+
+// could be useful: https://url.spec.whatwg.org/#url-miscellaneous
+const resolveUrl = (specifier, baseUrl) => {
+  if (baseUrl) {
+    if (typeof baseUrl !== "string") {
+      throw new TypeError(writeBaseUrlMustBeAString({
+        baseUrl,
+        specifier
+      }));
+    }
+
+    if (!hasScheme(baseUrl)) {
+      throw new Error(writeBaseUrlMustBeAbsolute({
+        baseUrl,
+        specifier
+      }));
+    }
+  }
+
+  if (hasScheme(specifier)) {
+    return specifier;
+  }
+
+  if (!baseUrl) {
+    throw new Error(writeBaseUrlRequired({
+      baseUrl,
+      specifier
+    }));
+  } // scheme relative
+
+
+  if (specifier.slice(0, 2) === "//") {
+    return `${urlToScheme(baseUrl)}:${specifier}`;
+  } // origin relative
+
+
+  if (specifier[0] === "/") {
+    return `${urlToOrigin(baseUrl)}${specifier}`;
+  }
+
+  const baseOrigin = urlToOrigin(baseUrl);
+  const basePathname = urlToPathname(baseUrl);
+
+  if (specifier === ".") {
+    const baseDirectoryPathname = pathnameToParentPathname(basePathname);
+    return `${baseOrigin}${baseDirectoryPathname}`;
+  } // pathname relative inside
+
+
+  if (specifier.slice(0, 2) === "./") {
+    const baseDirectoryPathname = pathnameToParentPathname(basePathname);
+    return `${baseOrigin}${baseDirectoryPathname}${specifier.slice(2)}`;
+  } // pathname relative outside
+
+
+  if (specifier.slice(0, 3) === "../") {
+    let unresolvedPathname = specifier;
+    const importerFolders = basePathname.split("/");
+    importerFolders.pop();
+
+    while (unresolvedPathname.slice(0, 3) === "../") {
+      unresolvedPathname = unresolvedPathname.slice(3); // when there is no folder left to resolved
+      // we just ignore '../'
+
+      if (importerFolders.length) {
+        importerFolders.pop();
+      }
+    }
+
+    const resolvedPathname = `${importerFolders.join("/")}/${unresolvedPathname}`;
+    return `${baseOrigin}${resolvedPathname}`;
+  } // bare
+
+
+  if (basePathname === "") {
+    return `${baseOrigin}/${specifier}`;
+  }
+
+  if (basePathname[basePathname.length] === "/") {
+    return `${baseOrigin}${basePathname}${specifier}`;
+  }
+
+  return `${baseOrigin}${pathnameToParentPathname(basePathname)}${specifier}`;
+};
+
+const writeBaseUrlMustBeAString = ({
+  baseUrl,
+  specifier
+}) => `baseUrl must be a string.
+--- base url ---
+${baseUrl}
+--- specifier ---
+${specifier}`;
+
+const writeBaseUrlMustBeAbsolute = ({
+  baseUrl,
+  specifier
+}) => `baseUrl must be absolute.
+--- base url ---
+${baseUrl}
+--- specifier ---
+${specifier}`;
+
+const writeBaseUrlRequired = ({
+  baseUrl,
+  specifier
+}) => `baseUrl required to resolve relative specifier.
+--- base url ---
+${baseUrl}
+--- specifier ---
+${specifier}`;
+
+const tryUrlResolution = (string, url) => {
+  const result = resolveUrl(string, url);
+  return hasScheme(result) ? result : null;
+};
+
+const resolveSpecifier = (specifier, importer) => {
+  if (specifier === "." || specifier[0] === "/" || specifier.startsWith("./") || specifier.startsWith("../")) {
+    return resolveUrl(specifier, importer);
+  }
+
+  if (hasScheme(specifier)) {
+    return specifier;
+  }
+
+  return null;
+};
+
+const applyImportMap = ({
+  importMap,
+  specifier,
+  importer,
+  createBareSpecifierError = ({
+    specifier,
+    importer
+  }) => {
+    return new Error(createDetailedMessage(`Unmapped bare specifier.`, {
+      specifier,
+      importer
+    }));
+  },
+  onImportMapping = () => {}
+}) => {
+  assertImportMap(importMap);
+
+  if (typeof specifier !== "string") {
+    throw new TypeError(createDetailedMessage("specifier must be a string.", {
+      specifier,
+      importer
+    }));
+  }
+
+  if (importer) {
+    if (typeof importer !== "string") {
+      throw new TypeError(createDetailedMessage("importer must be a string.", {
+        importer,
+        specifier
+      }));
+    }
+
+    if (!hasScheme(importer)) {
+      throw new Error(createDetailedMessage(`importer must be an absolute url.`, {
+        importer,
+        specifier
+      }));
+    }
+  }
+
+  const specifierUrl = resolveSpecifier(specifier, importer);
+  const specifierNormalized = specifierUrl || specifier;
+  const {
+    scopes
+  } = importMap;
+
+  if (scopes && importer) {
+    const scopeSpecifierMatching = Object.keys(scopes).find(scopeSpecifier => {
+      return scopeSpecifier === importer || specifierIsPrefixOf(scopeSpecifier, importer);
+    });
+
+    if (scopeSpecifierMatching) {
+      const scopeMappings = scopes[scopeSpecifierMatching];
+      const mappingFromScopes = applyMappings(scopeMappings, specifierNormalized, scopeSpecifierMatching, onImportMapping);
+
+      if (mappingFromScopes !== null) {
+        return mappingFromScopes;
+      }
+    }
+  }
+
+  const {
+    imports
+  } = importMap;
+
+  if (imports) {
+    const mappingFromImports = applyMappings(imports, specifierNormalized, undefined, onImportMapping);
+
+    if (mappingFromImports !== null) {
+      return mappingFromImports;
+    }
+  }
+
+  if (specifierUrl) {
+    return specifierUrl;
+  }
+
+  throw createBareSpecifierError({
+    specifier,
+    importer
+  });
+};
+
+const applyMappings = (mappings, specifierNormalized, scope, onImportMapping) => {
+  const specifierCandidates = Object.keys(mappings);
+  let i = 0;
+
+  while (i < specifierCandidates.length) {
+    const specifierCandidate = specifierCandidates[i];
+    i++;
+
+    if (specifierCandidate === specifierNormalized) {
+      const address = mappings[specifierCandidate];
+      onImportMapping({
+        scope,
+        from: specifierCandidate,
+        to: address,
+        before: specifierNormalized,
+        after: address
+      });
+      return address;
+    }
+
+    if (specifierIsPrefixOf(specifierCandidate, specifierNormalized)) {
+      const address = mappings[specifierCandidate];
+      const afterSpecifier = specifierNormalized.slice(specifierCandidate.length);
+      const addressFinal = tryUrlResolution(afterSpecifier, address);
+      onImportMapping({
+        scope,
+        from: specifierCandidate,
+        to: address,
+        before: specifierNormalized,
+        after: addressFinal
+      });
+      return addressFinal;
+    }
+  }
+
+  return null;
+};
+
+const specifierIsPrefixOf = (specifierHref, href) => {
+  return specifierHref[specifierHref.length - 1] === "/" && href.startsWith(specifierHref);
+};
+
+// https://github.com/systemjs/systemjs/blob/89391f92dfeac33919b0223bbf834a1f4eea5750/src/common.js#L136
+const composeTwoImportMaps = (leftImportMap, rightImportMap) => {
+  assertImportMap(leftImportMap);
+  assertImportMap(rightImportMap);
+  const importMap = {};
+  const leftImports = leftImportMap.imports;
+  const rightImports = rightImportMap.imports;
+  const leftHasImports = Boolean(leftImports);
+  const rightHasImports = Boolean(rightImports);
+
+  if (leftHasImports && rightHasImports) {
+    importMap.imports = composeTwoMappings(leftImports, rightImports);
+  } else if (leftHasImports) {
+    importMap.imports = { ...leftImports
+    };
+  } else if (rightHasImports) {
+    importMap.imports = { ...rightImports
+    };
+  }
+
+  const leftScopes = leftImportMap.scopes;
+  const rightScopes = rightImportMap.scopes;
+  const leftHasScopes = Boolean(leftScopes);
+  const rightHasScopes = Boolean(rightScopes);
+
+  if (leftHasScopes && rightHasScopes) {
+    importMap.scopes = composeTwoScopes(leftScopes, rightScopes, importMap.imports || {});
+  } else if (leftHasScopes) {
+    importMap.scopes = { ...leftScopes
+    };
+  } else if (rightHasScopes) {
+    importMap.scopes = { ...rightScopes
+    };
+  }
+
+  return importMap;
+};
+
+const composeTwoMappings = (leftMappings, rightMappings) => {
+  const mappings = {};
+  Object.keys(leftMappings).forEach(leftSpecifier => {
+    if (objectHasKey(rightMappings, leftSpecifier)) {
+      // will be overidden
+      return;
+    }
+
+    const leftAddress = leftMappings[leftSpecifier];
+    const rightSpecifier = Object.keys(rightMappings).find(rightSpecifier => {
+      return compareAddressAndSpecifier(leftAddress, rightSpecifier);
+    });
+    mappings[leftSpecifier] = rightSpecifier ? rightMappings[rightSpecifier] : leftAddress;
+  });
+  Object.keys(rightMappings).forEach(rightSpecifier => {
+    mappings[rightSpecifier] = rightMappings[rightSpecifier];
+  });
+  return mappings;
+};
+
+const objectHasKey = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
+
+const compareAddressAndSpecifier = (address, specifier) => {
+  const addressUrl = resolveUrl(address, "file:///");
+  const specifierUrl = resolveUrl(specifier, "file:///");
+  return addressUrl === specifierUrl;
+};
+
+const composeTwoScopes = (leftScopes, rightScopes, imports) => {
+  const scopes = {};
+  Object.keys(leftScopes).forEach(leftScopeKey => {
+    if (objectHasKey(rightScopes, leftScopeKey)) {
+      // will be merged
+      scopes[leftScopeKey] = leftScopes[leftScopeKey];
+      return;
+    }
+
+    const topLevelSpecifier = Object.keys(imports).find(topLevelSpecifierCandidate => {
+      return compareAddressAndSpecifier(leftScopeKey, topLevelSpecifierCandidate);
+    });
+
+    if (topLevelSpecifier) {
+      scopes[imports[topLevelSpecifier]] = leftScopes[leftScopeKey];
+    } else {
+      scopes[leftScopeKey] = leftScopes[leftScopeKey];
+    }
+  });
+  Object.keys(rightScopes).forEach(rightScopeKey => {
+    if (objectHasKey(scopes, rightScopeKey)) {
+      scopes[rightScopeKey] = composeTwoMappings(scopes[rightScopeKey], rightScopes[rightScopeKey]);
+    } else {
+      scopes[rightScopeKey] = { ...rightScopes[rightScopeKey]
+      };
+    }
+  });
+  return scopes;
+};
+
+const sortImports = imports => {
+  const mappingsSorted = {};
+  Object.keys(imports).sort(compareLengthOrLocaleCompare).forEach(name => {
+    mappingsSorted[name] = imports[name];
+  });
+  return mappingsSorted;
+};
+const sortScopes = scopes => {
+  const scopesSorted = {};
+  Object.keys(scopes).sort(compareLengthOrLocaleCompare).forEach(scopeSpecifier => {
+    scopesSorted[scopeSpecifier] = sortImports(scopes[scopeSpecifier]);
+  });
+  return scopesSorted;
+};
+
+const compareLengthOrLocaleCompare = (a, b) => {
+  return b.length - a.length || a.localeCompare(b);
+};
+
+const normalizeImportMap = (importMap, baseUrl) => {
+  assertImportMap(importMap);
+
+  if (!isStringOrUrl(baseUrl)) {
+    throw new TypeError(formulateBaseUrlMustBeStringOrUrl({
+      baseUrl
+    }));
+  }
+
+  const {
+    imports,
+    scopes
+  } = importMap;
+  return {
+    imports: imports ? normalizeMappings(imports, baseUrl) : undefined,
+    scopes: scopes ? normalizeScopes(scopes, baseUrl) : undefined
+  };
+};
+
+const isStringOrUrl = value => {
+  if (typeof value === "string") {
+    return true;
+  }
+
+  if (typeof URL === "function" && value instanceof URL) {
+    return true;
+  }
+
+  return false;
+};
+
+const normalizeMappings = (mappings, baseUrl) => {
+  const mappingsNormalized = {};
+  Object.keys(mappings).forEach(specifier => {
+    const address = mappings[specifier];
+
+    if (typeof address !== "string") {
+      console.warn(formulateAddressMustBeAString({
+        address,
+        specifier
+      }));
+      return;
+    }
+
+    const specifierResolved = resolveSpecifier(specifier, baseUrl) || specifier;
+    const addressUrl = tryUrlResolution(address, baseUrl);
+
+    if (addressUrl === null) {
+      console.warn(formulateAdressResolutionFailed({
+        address,
+        baseUrl,
+        specifier
+      }));
+      return;
+    }
+
+    if (specifier.endsWith("/") && !addressUrl.endsWith("/")) {
+      console.warn(formulateAddressUrlRequiresTrailingSlash({
+        addressUrl,
+        address,
+        specifier
+      }));
+      return;
+    }
+
+    mappingsNormalized[specifierResolved] = addressUrl;
+  });
+  return sortImports(mappingsNormalized);
+};
+
+const normalizeScopes = (scopes, baseUrl) => {
+  const scopesNormalized = {};
+  Object.keys(scopes).forEach(scopeSpecifier => {
+    const scopeMappings = scopes[scopeSpecifier];
+    const scopeUrl = tryUrlResolution(scopeSpecifier, baseUrl);
+
+    if (scopeUrl === null) {
+      console.warn(formulateScopeResolutionFailed({
+        scope: scopeSpecifier,
+        baseUrl
+      }));
+      return;
+    }
+
+    const scopeValueNormalized = normalizeMappings(scopeMappings, baseUrl);
+    scopesNormalized[scopeUrl] = scopeValueNormalized;
+  });
+  return sortScopes(scopesNormalized);
+};
+
+const formulateBaseUrlMustBeStringOrUrl = ({
+  baseUrl
+}) => `baseUrl must be a string or an url.
+--- base url ---
+${baseUrl}`;
+
+const formulateAddressMustBeAString = ({
+  specifier,
+  address
+}) => `Address must be a string.
+--- address ---
+${address}
+--- specifier ---
+${specifier}`;
+
+const formulateAdressResolutionFailed = ({
+  address,
+  baseUrl,
+  specifier
+}) => `Address url resolution failed.
+--- address ---
+${address}
+--- base url ---
+${baseUrl}
+--- specifier ---
+${specifier}`;
+
+const formulateAddressUrlRequiresTrailingSlash = ({
+  addressURL,
+  address,
+  specifier
+}) => `Address must end with /.
+--- address url ---
+${addressURL}
+--- address ---
+${address}
+--- specifier ---
+${specifier}`;
+
+const formulateScopeResolutionFailed = ({
+  scope,
+  baseUrl
+}) => `Scope url resolution failed.
+--- scope ---
+${scope}
+--- base url ---
+${baseUrl}`;
+
+const pathnameToExtension = pathname => {
+  const slashLastIndex = pathname.lastIndexOf("/");
+
+  if (slashLastIndex !== -1) {
+    pathname = pathname.slice(slashLastIndex + 1);
+  }
+
+  const dotLastIndex = pathname.lastIndexOf(".");
+  if (dotLastIndex === -1) return ""; // if (dotLastIndex === pathname.length - 1) return ""
+
+  return pathname.slice(dotLastIndex);
+};
+
+const resolveImport = ({
+  specifier,
+  importer,
+  importMap,
+  defaultExtension = false,
+  createBareSpecifierError,
+  onImportMapping = () => {}
+}) => {
+  let url;
+
+  if (importMap) {
+    url = applyImportMap({
+      importMap,
+      specifier,
+      importer,
+      createBareSpecifierError,
+      onImportMapping
+    });
+  } else {
+    url = resolveUrl(specifier, importer);
+  }
+
+  if (defaultExtension) {
+    url = applyDefaultExtension({
+      url,
+      importer,
+      defaultExtension
+    });
+  }
+
+  return url;
+};
+
+const applyDefaultExtension = ({
+  url,
+  importer,
+  defaultExtension
+}) => {
+  if (urlToPathname(url).endsWith("/")) {
+    return url;
+  }
+
+  if (typeof defaultExtension === "string") {
+    const extension = pathnameToExtension(url);
+
+    if (extension === "") {
+      return `${url}${defaultExtension}`;
+    }
+
+    return url;
+  }
+
+  if (defaultExtension === true) {
+    const extension = pathnameToExtension(url);
+
+    if (extension === "" && importer) {
+      const importerPathname = urlToPathname(importer);
+      const importerExtension = pathnameToExtension(importerPathname);
+      return `${url}${importerExtension}`;
+    }
+  }
+
+  return url;
+};
+
+/*
+ * Plugin to read and apply importmap files found in html files.
+ * - feeds importmap files to jsenv kitchen
+ * - use importmap to resolve import (when there is one + fallback to other resolution mecanism)
+ * - inline importmap with [src=""]
+ *
+ * A correct importmap resolution should scope importmap resolution per html file.
+ * It would be doable by adding ?html_id to each js file in order to track
+ * the html file importing it.
+ * Considering it happens only when all the following conditions are met:
+ * - 2+ html files are using an importmap
+ * - the importmap used is not the same
+ * - the importmap contain conflicting mappings
+ * - these html files are both executed during the same scenario (dev, test, build)
+ * And that it would be ugly to see ?html_id all over the place
+ * -> The importmap resolution implemented here takes a shortcut and does the following:
+ * - All importmap found are merged into a single one that is applied to every import specifiers
+ */
+const jsenvPluginImportmap = () => {
+  let finalImportmap = null;
+  const importmaps = {};
+
+  const onHtmlImportmapParsed = (importmap, htmlUrl) => {
+    importmaps[htmlUrl] = importmap ? normalizeImportMap(importmap, htmlUrl) : null;
+    finalImportmap = Object.keys(importmaps).reduce((previous, url) => {
+      const importmap = importmaps[url];
+
+      if (!previous) {
+        return importmap;
+      }
+
+      if (!importmap) {
+        return previous;
+      }
+
+      return composeTwoImportMaps(previous, importmap);
+    }, null);
+  };
+
+  return {
+    name: "jsenv:importmap",
+    appliesDuring: "*",
+    resolveUrl: {
+      js_import_export: reference => {
+        if (!finalImportmap) {
+          return null;
+        }
+
+        try {
+          let fromMapping = false;
+          const result = resolveImport({
+            specifier: reference.specifier,
+            importer: reference.parentUrl,
+            importMap: finalImportmap,
+            onImportMapping: () => {
+              fromMapping = true;
+            }
+          });
+
+          if (fromMapping) {
+            return result;
+          }
+
+          return null;
+        } catch (e) {
+          if (e.message.includes("bare specifier")) {
+            // in theory we should throw to be compliant with web behaviour
+            // but for now it's simpler to return null
+            // and let a chance to other plugins to handle the bare specifier
+            // (node esm resolution)
+            // and we want importmap to be prio over node esm so we cannot put this plugin after
+            return null;
+          }
+
+          throw e;
+        }
+      }
+    },
+    transformUrlContent: {
+      html: async (htmlUrlInfo, context) => {
+        const htmlAst = parseHtmlString(htmlUrlInfo.content);
+        const importmap = findHtmlNode(htmlAst, node => {
+          if (node.nodeName !== "script") {
+            return false;
+          }
+
+          const type = getHtmlNodeAttribute(node, "type");
+
+          if (type === undefined || type !== "importmap") {
+            return false;
+          }
+
+          return true;
+        });
+
+        if (!importmap) {
+          onHtmlImportmapParsed(null, htmlUrlInfo.url);
+          return null;
+        }
+
+        const handleInlineImportmap = async (importmap, htmlNodeText) => {
+          const {
+            line,
+            column,
+            lineEnd,
+            columnEnd,
+            isOriginal
+          } = getHtmlNodePosition(importmap, {
+            preferOriginal: true
+          });
+          const inlineImportmapUrl = generateInlineContentUrl({
+            url: htmlUrlInfo.url,
+            extension: ".importmap",
+            line,
+            column,
+            lineEnd,
+            columnEnd
+          });
+          const [inlineImportmapReference, inlineImportmapUrlInfo] = context.referenceUtils.foundInline({
+            type: "script_src",
+            isOriginalPosition: isOriginal,
+            specifierLine: line - 1,
+            specifierColumn: column,
+            specifier: inlineImportmapUrl,
+            contentType: "application/importmap+json",
+            content: htmlNodeText
+          });
+          await context.cook(inlineImportmapUrlInfo, {
+            reference: inlineImportmapReference
+          });
+          setHtmlNodeText(importmap, inlineImportmapUrlInfo.content);
+          setHtmlNodeAttributes(importmap, {
+            "generated-by": "jsenv:importmap"
+          });
+          onHtmlImportmapParsed(JSON.parse(inlineImportmapUrlInfo.content), htmlUrlInfo.url);
+        };
+
+        const handleImportmapWithSrc = async (importmap, src) => {
+          // Browser would throw on remote importmap
+          // and won't sent a request to the server for it
+          // We must precook the importmap to know its content and inline it into the HTML
+          // In this situation the ref to the importmap was already discovered
+          // when parsing the HTML
+          const importmapReference = context.referenceUtils.findByGeneratedSpecifier(src);
+          const importmapUrlInfo = context.urlGraph.getUrlInfo(importmapReference.url);
+          await context.cook(importmapUrlInfo, {
+            reference: importmapReference
+          });
+          onHtmlImportmapParsed(JSON.parse(importmapUrlInfo.content), htmlUrlInfo.url);
+          setHtmlNodeText(importmap, importmapUrlInfo.content);
+          setHtmlNodeAttributes(importmap, {
+            "src": undefined,
+            "generated-by": "jsenv:importmap",
+            "generated-from-src": src
+          });
+          const {
+            line,
+            column,
+            lineEnd,
+            columnEnd,
+            isOriginal
+          } = getHtmlNodePosition(importmap, {
+            preferOriginal: true
+          });
+          const inlineImportmapUrl = generateInlineContentUrl({
+            url: htmlUrlInfo.url,
+            extension: ".importmap",
+            line,
+            column,
+            lineEnd,
+            columnEnd
+          });
+          context.referenceUtils.becomesInline(importmapReference, {
+            line: line - 1,
+            column,
+            isOriginal,
+            specifier: inlineImportmapUrl,
+            contentType: "application/importmap+json",
+            content: importmapUrlInfo.content
+          });
+        };
+
+        const src = getHtmlNodeAttribute(importmap, "src");
+
+        if (src) {
+          await handleImportmapWithSrc(importmap, src);
+        } else {
+          const htmlNodeText = getHtmlNodeText(importmap);
+
+          if (htmlNodeText) {
+            await handleInlineImportmap(importmap, htmlNodeText);
+          }
+        } // once this plugin knows the importmap, it will use it
+        // to map imports. These import specifiers will be normalized
+        // by "formatReferencedUrl" making the importmap presence useless.
+        // In dev/test we keep importmap into the HTML to see it even if useless
+        // Duing build we get rid of it
+
+
+        if (context.scenario === "build") {
+          removeHtmlNode(importmap);
+        }
+
+        return {
+          content: stringifyHtmlAst(htmlAst)
+        };
+      }
+    }
+  };
+};
+
+const jsenvPluginUrlResolution = () => {
+  const urlResolver = reference => {
+    return new URL(reference.specifier, reference.baseUrl || reference.parentUrl).href;
+  };
+
+  return {
+    name: "jsenv:url_resolution",
+    appliesDuring: "*",
+    resolveUrl: {
+      "http_request": urlResolver,
+      // during dev
+      "entry_point": urlResolver,
+      // during build
+      "link_href": urlResolver,
+      "script_src": urlResolver,
+      "a_href": urlResolver,
+      "iframe_src": urlResolver,
+      "img_src": urlResolver,
+      "img_srcset": urlResolver,
+      "source_src": urlResolver,
+      "source_srcset": urlResolver,
+      "image_href": urlResolver,
+      "use_href": urlResolver,
+      "css_@import": urlResolver,
+      "css_url": urlResolver,
+      "sourcemap_comment": urlResolver,
+      "js_import_export": urlResolver,
+      "js_url_specifier": urlResolver,
+      "js_inline_content": urlResolver,
+      "webmanifest_icon_src": urlResolver
+    }
+  };
+};
+
+const isSpecifierForNodeBuiltin = specifier => {
+  return specifier.startsWith("node:") || NODE_BUILTIN_MODULE_SPECIFIERS.includes(specifier);
+};
+const NODE_BUILTIN_MODULE_SPECIFIERS = ["assert", "assert/strict", "async_hooks", "buffer_ieee754", "buffer", "child_process", "cluster", "console", "constants", "crypto", "_debugger", "dgram", "dns", "domain", "events", "freelist", "fs", "fs/promises", "_http_agent", "_http_client", "_http_common", "_http_incoming", "_http_outgoing", "_http_server", "http", "http2", "https", "inspector", "_linklist", "module", "net", "node-inspect/lib/_inspect", "node-inspect/lib/internal/inspect_client", "node-inspect/lib/internal/inspect_repl", "os", "path", "perf_hooks", "process", "punycode", "querystring", "readline", "repl", "smalloc", "_stream_duplex", "_stream_transform", "_stream_wrap", "_stream_passthrough", "_stream_readable", "_stream_writable", "stream", "stream/promises", "string_decoder", "sys", "timers", "_tls_common", "_tls_legacy", "_tls_wrap", "tls", "trace_events", "tty", "url", "util", "v8/tools/arguments", "v8/tools/codemap", "v8/tools/consarray", "v8/tools/csvparser", "v8/tools/logreader", "v8/tools/profile_view", "v8/tools/splaytree", "v8", "vm", "worker_threads", "zlib", // global is special
+"global"];
+
+const asDirectoryUrl = url => {
+  const {
+    pathname
+  } = new URL(url);
+
+  if (pathname.endsWith("/")) {
+    return url;
+  }
+
+  return new URL("./", url).href;
+};
+const getParentUrl = url => {
+  if (url.startsWith("file://")) {
+    // With node.js new URL('../', 'file:///C:/').href
+    // returns "file:///C:/" instead of "file:///"
+    const ressource = url.slice("file://".length);
+    const slashLastIndex = ressource.lastIndexOf("/");
+
+    if (slashLastIndex === -1) {
+      return url;
+    }
+
+    const lastCharIndex = ressource.length - 1;
+
+    if (slashLastIndex === lastCharIndex) {
+      const slashBeforeLastIndex = ressource.lastIndexOf("/", slashLastIndex - 1);
+
+      if (slashBeforeLastIndex === -1) {
+        return url;
+      }
+
+      return `file://${ressource.slice(0, slashBeforeLastIndex + 1)}`;
+    }
+
+    return `file://${ressource.slice(0, slashLastIndex + 1)}`;
+  }
+
+  return new URL(url.endsWith("/") ? "../" : "./", url).href;
+};
+const isValidUrl = url => {
+  try {
+    // eslint-disable-next-line no-new
+    new URL(url);
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+const urlToFilename = url => {
+  const {
+    pathname
+  } = new URL(url);
+  const pathnameBeforeLastSlash = pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
+  const slashLastIndex = pathnameBeforeLastSlash.lastIndexOf("/");
+  const filename = slashLastIndex === -1 ? pathnameBeforeLastSlash : pathnameBeforeLastSlash.slice(slashLastIndex + 1);
+  return filename;
+};
+const urlToExtension = url => {
+  const filename = urlToFilename(url);
+  const dotLastIndex = filename.lastIndexOf(".");
+  if (dotLastIndex === -1) return ""; // if (dotLastIndex === pathname.length - 1) return ""
+
+  const extension = filename.slice(dotLastIndex);
+  return extension;
+};
+
+const defaultLookupPackageScope = url => {
+  let scopeUrl = asDirectoryUrl(url);
+
+  while (scopeUrl !== "file:///") {
+    if (scopeUrl.endsWith("node_modules/")) {
+      return null;
+    }
+
+    const packageJsonUrlObject = new URL("package.json", scopeUrl);
+
+    if (existsSync(packageJsonUrlObject)) {
+      return scopeUrl;
+    }
+
+    scopeUrl = getParentUrl(scopeUrl);
+  }
+
+  return null;
+};
+
+const defaultReadPackageJson = packageUrl => {
+  const packageJsonUrl = new URL("package.json", packageUrl);
+  const buffer = readFileSync$1(packageJsonUrl);
+  const string = String(buffer);
+
+  try {
+    return JSON.parse(string);
+  } catch (e) {
+    throw new Error(`Invalid package configuration`);
+  }
+};
+
+// https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/tools/node_modules/eslint/node_modules/%40babel/core/lib/vendor/import-meta-resolve.js#L2473
+const createInvalidModuleSpecifierError = ({
+  specifier,
+  parentUrl,
+  reason
+}) => {
+  const error = new Error(`Invalid module "${specifier}" ${reason} imported from ${fileURLToPath(parentUrl)}`);
+  error.code = "INVALID_MODULE_SPECIFIER";
+  return error;
+};
+const createInvalidPackageTargetError = ({
+  parentUrl,
+  packageUrl,
+  target,
+  key,
+  isImport,
+  reason
+}) => {
+  let message;
+
+  if (key === ".") {
+    message = `Invalid "exports" main target defined in ${fileURLToPath(packageUrl)}package.json imported from ${fileURLToPath(parentUrl)}; ${reason}`;
+  } else {
+    message = `Invalid "${isImport ? "imports" : "exports"}" target ${JSON.stringify(target)} defined for "${key}" in ${fileURLToPath(packageUrl)}package.json imported from ${fileURLToPath(parentUrl)}; ${reason}`;
+  }
+
+  const error = new Error(message);
+  error.code = "INVALID_PACKAGE_TARGET";
+  return error;
+};
+const createPackagePathNotExportedError = ({
+  subpath,
+  parentUrl,
+  packageUrl
+}) => {
+  let message;
+
+  if (subpath === ".") {
+    message = `No "exports" main defined in ${fileURLToPath(packageUrl)}package.json imported from ${fileURLToPath(parentUrl)}`;
+  } else {
+    message = `Package subpath "${subpath}" is not defined by "exports" in ${fileURLToPath(packageUrl)}package.json imported from ${fileURLToPath(parentUrl)}`;
+  }
+
+  const error = new Error(message);
+  error.code = "PACKAGE_PATH_NOT_EXPORTED";
+  return error;
+};
+const createModuleNotFoundError = ({
+  specifier,
+  parentUrl
+}) => {
+  const error = new Error(`Cannot find "${specifier}" imported from ${fileURLToPath(parentUrl)}`);
+  error.code = "MODULE_NOT_FOUND";
+  return error;
+};
+const createPackageImportNotDefinedError = ({
+  specifier,
+  packageUrl,
+  parentUrl
+}) => {
+  const error = new Error(`Package import specifier "${specifier}" is not defined in ${fileURLToPath(packageUrl)}package.json imported from ${fileURLToPath(parentUrl)}`);
+  error.code = "PACKAGE_IMPORT_NOT_DEFINED";
+  return error;
+};
+
+// https://nodejs.org/api/packages.html#resolving-user-conditions
+const readCustomConditionsFromProcessArgs = () => {
+  const packageConditions = [];
+  process.execArgv.forEach(arg => {
+    if (arg.includes("-C=")) {
+      const packageCondition = arg.slice(0, "-C=".length);
+      packageConditions.push(packageCondition);
+    }
+
+    if (arg.includes("--conditions=")) {
+      const packageCondition = arg.slice("--conditions=".length);
+      packageConditions.push(packageCondition);
+    }
+  });
+  return packageConditions;
+};
+
+/*
+ * https://nodejs.org/api/esm.html#resolver-algorithm-specification
+ * https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/lib/internal/modules/esm/resolve.js#L1
+ * deviations from the spec:
+ * - take into account "browser", "module" and "jsnext"
+ * - the check for isDirectory -> throw is delayed is descoped to the caller
+ * - the call to real path ->
+ *   delayed to the caller so that we can decide to
+ *   maintain symlink as facade url when it's outside project directory
+ *   or use the real path when inside
+ */
+const applyNodeEsmResolution = ({
+  conditions = [...readCustomConditionsFromProcessArgs(), "node", "import"],
+  parentUrl,
+  specifier,
+  lookupPackageScope = defaultLookupPackageScope,
+  readPackageJson = defaultReadPackageJson
+}) => {
+  const resolution = applyPackageSpecifierResolution({
+    conditions,
+    parentUrl: String(parentUrl),
+    specifier,
+    lookupPackageScope,
+    readPackageJson
+  });
+  const {
+    url
+  } = resolution;
+
+  if (url.startsWith("file:")) {
+    if (url.includes("%2F") || url.includes("%5C")) {
+      throw createInvalidModuleSpecifierError({
+        specifier,
+        parentUrl,
+        reason: `must not include encoded "/" or "\\" characters`
+      });
+    }
+
+    return resolution;
+  }
+
+  return resolution;
+};
+
+const applyPackageSpecifierResolution = ({
+  conditions,
+  parentUrl,
+  specifier,
+  lookupPackageScope,
+  readPackageJson
+}) => {
+  // relative specifier
+  if (specifier[0] === "/" || specifier.startsWith("./") || specifier.startsWith("../")) {
+    if (specifier[0] !== "/") {
+      const browserFieldResolution = applyBrowserFieldResolution({
+        conditions,
+        parentUrl,
+        specifier,
+        lookupPackageScope,
+        readPackageJson
+      });
+
+      if (browserFieldResolution) {
+        return browserFieldResolution;
+      }
+    }
+
+    return {
+      type: "relative_specifier",
+      url: new URL(specifier, parentUrl).href
+    };
+  }
+
+  if (specifier[0] === "#") {
+    return applyPackageImportsResolution({
+      conditions,
+      parentUrl,
+      specifier,
+      lookupPackageScope,
+      readPackageJson
+    });
+  }
+
+  try {
+    const urlObject = new URL(specifier);
+
+    if (specifier.startsWith("node:")) {
+      return {
+        type: "node_builtin_specifier",
+        url: specifier
+      };
+    }
+
+    return {
+      type: "absolute_specifier",
+      url: urlObject.href
+    };
+  } catch (e) {
+    // bare specifier
+    const browserFieldResolution = applyBrowserFieldResolution({
+      conditions,
+      parentUrl,
+      packageSpecifier: specifier,
+      lookupPackageScope,
+      readPackageJson
+    });
+
+    if (browserFieldResolution) {
+      return browserFieldResolution;
+    }
+
+    return applyPackageResolve({
+      conditions,
+      parentUrl,
+      packageSpecifier: specifier,
+      lookupPackageScope,
+      readPackageJson
+    });
+  }
+};
+
+const applyBrowserFieldResolution = ({
+  conditions,
+  parentUrl,
+  packageSpecifier,
+  lookupPackageScope,
+  readPackageJson
+}) => {
+  const browserCondition = conditions.includes("browser");
+
+  if (!browserCondition) {
+    return null;
+  }
+
+  const packageUrl = lookupPackageScope(parentUrl);
+
+  if (!packageUrl) {
+    return null;
+  }
+
+  const packageJson = readPackageJson(packageUrl);
+
+  if (!packageJson) {
+    return null;
+  }
+
+  const {
+    browser
+  } = packageJson;
+
+  if (!browser) {
+    return null;
+  }
+
+  if (typeof browser !== "object") {
+    return null;
+  }
+
+  let url;
+
+  if (packageSpecifier.startsWith(".")) {
+    const packageSpecifierUrl = new URL(packageSpecifier, parentUrl).href;
+    const packageSpecifierRelativeUrl = packageSpecifierUrl.slice(packageUrl.length);
+    const packageSpecifierRelativeNotation = `./${packageSpecifierRelativeUrl}`;
+    const browserMapping = browser[packageSpecifierRelativeNotation];
+
+    if (typeof browserMapping === "string") {
+      url = new URL(browserMapping, packageUrl).href;
+    } else if (browserMapping === false) {
+      url = `file:///@ignore/${packageSpecifierUrl.slice("file:///")}`;
+    }
+  } else {
+    const browserMapping = browser[packageSpecifier];
+
+    if (typeof browserMapping === "string") {
+      url = new URL(browserMapping, packageUrl).href;
+    } else if (browserMapping === false) {
+      url = `file:///@ignore/${packageSpecifier}`;
+    }
+  }
+
+  if (url) {
+    return {
+      type: "browser",
+      packageUrl,
+      packageJson,
+      url
+    };
+  }
+
+  return null;
+};
+
+const applyPackageImportsResolution = ({
+  conditions,
+  parentUrl,
+  specifier,
+  lookupPackageScope,
+  readPackageJson
+}) => {
+  if (!specifier.startsWith("#")) {
+    throw createInvalidModuleSpecifierError({
+      specifier,
+      parentUrl,
+      reason: "internal imports must start with #"
+    });
+  }
+
+  if (specifier === "#" || specifier.startsWith("#/")) {
+    throw createInvalidModuleSpecifierError({
+      specifier,
+      parentUrl,
+      reason: "not a valid internal imports specifier name"
+    });
+  }
+
+  const packageUrl = lookupPackageScope(parentUrl);
+
+  if (packageUrl !== null) {
+    const packageJson = readPackageJson(packageUrl);
+    const {
+      imports
+    } = packageJson;
+
+    if (imports !== null && typeof imports === "object") {
+      const resolved = applyPackageImportsExportsResolution({
+        conditions,
+        parentUrl,
+        packageUrl,
+        packageJson,
+        matchObject: imports,
+        matchKey: specifier,
+        isImports: true,
+        lookupPackageScope,
+        readPackageJson
+      });
+
+      if (resolved) {
+        return resolved;
+      }
+    }
+  }
+
+  throw createPackageImportNotDefinedError({
+    specifier,
+    packageUrl,
+    parentUrl
+  });
+};
+
+const applyPackageResolve = ({
+  conditions,
+  parentUrl,
+  packageSpecifier,
+  lookupPackageScope,
+  readPackageJson
+}) => {
+  if (packageSpecifier === "") {
+    throw new Error("invalid module specifier");
+  }
+
+  if (conditions.includes("node") && isSpecifierForNodeBuiltin(packageSpecifier)) {
+    return {
+      type: "node_builtin_specifier",
+      url: `node:${packageSpecifier}`
+    };
+  }
+
+  const {
+    packageName,
+    packageSubpath
+  } = parsePackageSpecifier(packageSpecifier);
+
+  if (packageName[0] === "." || packageName.includes("\\") || packageName.includes("%")) {
+    throw createInvalidModuleSpecifierError({
+      specifier: packageName,
+      parentUrl,
+      reason: `is not a valid package name`
+    });
+  }
+
+  if (packageSubpath.endsWith("/")) {
+    throw new Error("invalid module specifier");
+  }
+
+  const selfResolution = applyPackageSelfResolution({
+    conditions,
+    parentUrl,
+    packageName,
+    packageSubpath,
+    lookupPackageScope,
+    readPackageJson
+  });
+
+  if (selfResolution) {
+    return selfResolution;
+  }
+
+  let currentUrl = parentUrl;
+
+  while (currentUrl !== "file:///") {
+    const packageUrl = new URL(`node_modules/${packageName}/`, currentUrl).href;
+
+    if (!existsSync(new URL(packageUrl))) {
+      currentUrl = getParentUrl(currentUrl);
+      continue;
+    }
+
+    const packageJson = readPackageJson(packageUrl);
+
+    if (packageJson !== null) {
+      const {
+        exports
+      } = packageJson;
+
+      if (exports !== null && exports !== undefined) {
+        return applyPackageExportsResolution({
+          conditions,
+          parentUrl,
+          packageUrl,
+          packageJson,
+          packageSubpath,
+          exports,
+          lookupPackageScope,
+          readPackageJson
+        });
+      }
+    }
+
+    return applyLegacySubpathResolution({
+      conditions,
+      parentUrl,
+      packageUrl,
+      packageJson,
+      packageSubpath,
+      lookupPackageScope,
+      readPackageJson
+    });
+  }
+
+  throw createModuleNotFoundError({
+    specifier: packageName,
+    parentUrl
+  });
+};
+
+const applyPackageSelfResolution = ({
+  conditions,
+  parentUrl,
+  packageName,
+  packageSubpath,
+  lookupPackageScope,
+  readPackageJson
+}) => {
+  const packageUrl = lookupPackageScope(parentUrl);
+
+  if (!packageUrl) {
+    return undefined;
+  }
+
+  const packageJson = readPackageJson(packageUrl);
+
+  if (!packageJson) {
+    return undefined;
+  }
+
+  if (packageJson.name !== packageName) {
+    return undefined;
+  }
+
+  const {
+    exports
+  } = packageJson;
+
+  if (!exports) {
+    const subpathResolution = applyLegacySubpathResolution({
+      conditions,
+      parentUrl,
+      packageUrl,
+      packageJson,
+      packageSubpath,
+      lookupPackageScope,
+      readPackageJson
+    });
+
+    if (subpathResolution && subpathResolution.type !== "subpath") {
+      return subpathResolution;
+    }
+
+    return undefined;
+  }
+
+  return applyPackageExportsResolution({
+    conditions,
+    parentUrl,
+    packageUrl,
+    packageJson,
+    packageSubpath,
+    exports,
+    lookupPackageScope,
+    readPackageJson
+  });
+}; // https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/lib/internal/modules/esm/resolve.js#L642
+
+
+const applyPackageExportsResolution = ({
+  conditions,
+  parentUrl,
+  packageUrl,
+  packageJson,
+  packageSubpath,
+  exports,
+  lookupPackageScope,
+  readPackageJson
+}) => {
+  const exportsInfo = readExports({
+    exports,
+    packageUrl
+  });
+
+  if (packageSubpath === ".") {
+    const mainExport = applyMainExportResolution({
+      exports,
+      exportsInfo
+    });
+
+    if (!mainExport) {
+      throw createPackagePathNotExportedError({
+        subpath: packageSubpath,
+        parentUrl,
+        packageUrl
+      });
+    }
+
+    const resolved = applyPackageTargetResolution({
+      conditions,
+      parentUrl,
+      packageUrl,
+      packageJson,
+      key: ".",
+      target: mainExport,
+      lookupPackageScope,
+      readPackageJson
+    });
+
+    if (resolved) {
+      return resolved;
+    }
+
+    throw createPackagePathNotExportedError({
+      subpath: packageSubpath,
+      parentUrl,
+      packageUrl
+    });
+  }
+
+  if (exportsInfo.type === "object" && exportsInfo.allKeysAreRelative) {
+    const resolved = applyPackageImportsExportsResolution({
+      conditions,
+      parentUrl,
+      packageUrl,
+      packageJson,
+      matchObject: exports,
+      matchKey: packageSubpath,
+      isImports: false,
+      lookupPackageScope,
+      readPackageJson
+    });
+
+    if (resolved) {
+      return resolved;
+    }
+  }
+
+  throw createPackagePathNotExportedError({
+    subpath: packageSubpath,
+    parentUrl,
+    packageUrl
+  });
+};
+
+const applyPackageImportsExportsResolution = ({
+  conditions,
+  parentUrl,
+  packageUrl,
+  packageJson,
+  matchObject,
+  matchKey,
+  isImports,
+  lookupPackageScope,
+  readPackageJson
+}) => {
+  if (!matchKey.includes("*") && matchObject.hasOwnProperty(matchKey)) {
+    const target = matchObject[matchKey];
+    return applyPackageTargetResolution({
+      conditions,
+      parentUrl,
+      packageUrl,
+      packageJson,
+      key: matchKey,
+      target,
+      internal: isImports,
+      lookupPackageScope,
+      readPackageJson
+    });
+  }
+
+  const expansionKeys = Object.keys(matchObject).filter(key => key.split("*").length === 2).sort(comparePatternKeys);
+
+  for (const expansionKey of expansionKeys) {
+    const [patternBase, patternTrailer] = expansionKey.split("*");
+    if (matchKey === patternBase) continue;
+    if (!matchKey.startsWith(patternBase)) continue;
+
+    if (patternTrailer.length > 0) {
+      if (!matchKey.endsWith(patternTrailer)) continue;
+      if (matchKey.length < expansionKey.length) continue;
+    }
+
+    const target = matchObject[expansionKey];
+    const subpath = matchKey.slice(patternBase.length, matchKey.length - patternTrailer.length);
+    return applyPackageTargetResolution({
+      conditions,
+      parentUrl,
+      packageUrl,
+      packageJson,
+      key: matchKey,
+      target,
+      subpath,
+      pattern: true,
+      internal: isImports,
+      lookupPackageScope,
+      readPackageJson
+    });
+  }
+
+  return null;
+};
+
+const applyPackageTargetResolution = ({
+  conditions,
+  parentUrl,
+  packageUrl,
+  packageJson,
+  key,
+  target,
+  subpath = "",
+  pattern = false,
+  internal = false,
+  lookupPackageScope,
+  readPackageJson
+}) => {
+  if (typeof target === "string") {
+    if (pattern === false && subpath !== "" && !target.endsWith("/")) {
+      throw new Error("invalid module specifier");
+    }
+
+    if (target.startsWith("./")) {
+      const targetUrl = new URL(target, packageUrl).href;
+
+      if (!targetUrl.startsWith(packageUrl)) {
+        throw createInvalidPackageTargetError({
+          parentUrl,
+          packageUrl,
+          target,
+          key,
+          isImport: internal,
+          reason: `target must be inside package`
+        });
+      }
+
+      return {
+        type: internal ? "imports_subpath" : "exports_subpath",
+        packageUrl,
+        packageJson,
+        url: pattern ? targetUrl.replaceAll("*", subpath) : new URL(subpath, targetUrl).href
+      };
+    }
+
+    if (!internal || target.startsWith("../") || isValidUrl(target)) {
+      throw createInvalidPackageTargetError({
+        parentUrl,
+        packageUrl,
+        target,
+        key,
+        isImport: internal,
+        reason: `target must starst with "./"`
+      });
+    }
+
+    return applyPackageResolve({
+      conditions,
+      parentUrl: packageUrl,
+      packageSpecifier: pattern ? target.replaceAll("*", subpath) : `${target}${subpath}`,
+      lookupPackageScope,
+      readPackageJson
+    });
+  }
+
+  if (Array.isArray(target)) {
+    if (target.length === 0) {
+      return null;
+    }
+
+    let lastResult;
+    let i = 0;
+
+    while (i < target.length) {
+      const targetValue = target[i];
+      i++;
+
+      try {
+        const resolved = applyPackageTargetResolution({
+          conditions,
+          parentUrl,
+          packageUrl,
+          packageJson,
+          key: `${key}[${i}]`,
+          target: targetValue,
+          subpath,
+          pattern,
+          internal,
+          lookupPackageScope,
+          readPackageJson
+        });
+
+        if (resolved) {
+          return resolved;
+        }
+
+        lastResult = resolved;
+      } catch (e) {
+        if (e.code === "INVALID_PACKAGE_TARGET") {
+          continue;
+        }
+
+        lastResult = e;
+      }
+    }
+
+    if (lastResult) {
+      throw lastResult;
+    }
+
+    return null;
+  }
+
+  if (target === null) {
+    return null;
+  }
+
+  if (typeof target === "object") {
+    const keys = Object.keys(target);
+
+    for (const key of keys) {
+      if (Number.isInteger(key)) {
+        throw new Error("Invalid package configuration");
+      }
+
+      if (key === "default" || conditions.includes(key)) {
+        const targetValue = target[key];
+        const resolved = applyPackageTargetResolution({
+          conditions,
+          parentUrl,
+          packageUrl,
+          packageJson,
+          key,
+          target: targetValue,
+          subpath,
+          pattern,
+          internal,
+          lookupPackageScope,
+          readPackageJson
+        });
+
+        if (resolved) {
+          return resolved;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  throw createInvalidPackageTargetError({
+    parentUrl,
+    packageUrl,
+    target,
+    key,
+    isImport: internal,
+    reason: `target must be a string, array, object or null`
+  });
+};
+
+const readExports = ({
+  exports,
+  packageUrl
+}) => {
+  if (Array.isArray(exports)) {
+    return {
+      type: "array"
+    };
+  }
+
+  if (exports === null) {
+    return {};
+  }
+
+  if (typeof exports === "object") {
+    const keys = Object.keys(exports);
+    const relativeKeys = [];
+    const conditionalKeys = [];
+    keys.forEach(availableKey => {
+      if (availableKey.startsWith(".")) {
+        relativeKeys.push(availableKey);
+      } else {
+        conditionalKeys.push(availableKey);
+      }
+    });
+    const hasRelativeKey = relativeKeys.length > 0;
+
+    if (hasRelativeKey && conditionalKeys.length > 0) {
+      throw new Error(`Invalid package configuration: cannot mix relative and conditional keys in package.exports
+--- unexpected keys ---
+${conditionalKeys.map(key => `"${key}"`).join("\n")}
+--- package.json ---
+${packageUrl}`);
+    }
+
+    return {
+      type: "object",
+      hasRelativeKey,
+      allKeysAreRelative: relativeKeys.length === keys.length
+    };
+  }
+
+  if (typeof exports === "string") {
+    return {
+      type: "string"
+    };
+  }
+
+  return {};
+};
+
+const parsePackageSpecifier = packageSpecifier => {
+  if (packageSpecifier[0] === "@") {
+    const firstSlashIndex = packageSpecifier.indexOf("/");
+
+    if (firstSlashIndex === -1) {
+      throw new Error("invalid module specifier");
+    }
+
+    const secondSlashIndex = packageSpecifier.indexOf("/", firstSlashIndex + 1);
+
+    if (secondSlashIndex === -1) {
+      return {
+        packageName: packageSpecifier,
+        packageSubpath: ".",
+        isScoped: true
+      };
+    }
+
+    const packageName = packageSpecifier.slice(0, secondSlashIndex);
+    const afterSecondSlash = packageSpecifier.slice(secondSlashIndex + 1);
+    const packageSubpath = `./${afterSecondSlash}`;
+    return {
+      packageName,
+      packageSubpath,
+      isScoped: true
+    };
+  }
+
+  const firstSlashIndex = packageSpecifier.indexOf("/");
+
+  if (firstSlashIndex === -1) {
+    return {
+      packageName: packageSpecifier,
+      packageSubpath: "."
+    };
+  }
+
+  const packageName = packageSpecifier.slice(0, firstSlashIndex);
+  const afterFirstSlash = packageSpecifier.slice(firstSlashIndex + 1);
+  const packageSubpath = `./${afterFirstSlash}`;
+  return {
+    packageName,
+    packageSubpath
+  };
+};
+
+const applyMainExportResolution = ({
+  exports,
+  exportsInfo
+}) => {
+  if (exportsInfo.type === "array" || exportsInfo.type === "string") {
+    return exports;
+  }
+
+  if (exportsInfo.type === "object") {
+    if (exportsInfo.hasRelativeKey) {
+      return exports["."];
+    }
+
+    return exports;
+  }
+
+  return undefined;
+};
+
+const applyLegacySubpathResolution = ({
+  conditions,
+  parentUrl,
+  packageUrl,
+  packageJson,
+  packageSubpath,
+  lookupPackageScope,
+  readPackageJson
+}) => {
+  if (packageSubpath === ".") {
+    return applyLegacyMainResolution({
+      conditions,
+      packageUrl,
+      packageJson
+    });
+  }
+
+  const browserFieldResolution = applyBrowserFieldResolution({
+    conditions,
+    parentUrl,
+    specifier: packageSubpath,
+    lookupPackageScope,
+    readPackageJson
+  });
+
+  if (browserFieldResolution) {
+    return browserFieldResolution;
+  }
+
+  return {
+    type: "subpath",
+    packageUrl,
+    packageJson,
+    url: new URL(packageSubpath, packageUrl).href
+  };
+};
+
+const applyLegacyMainResolution = ({
+  conditions,
+  packageUrl,
+  packageJson
+}) => {
+  for (const condition of conditions) {
+    const conditionResolver = mainLegacyResolvers[condition];
+
+    if (!conditionResolver) {
+      continue;
+    }
+
+    const resolved = conditionResolver(packageJson, packageUrl);
+
+    if (resolved) {
+      return {
+        type: resolved.type,
+        packageUrl,
+        packageJson,
+        url: new URL(resolved.path, packageUrl).href
+      };
+    }
+  }
+
+  return {
+    type: "default",
+    packageUrl,
+    packageJson,
+    url: new URL("index.js", packageUrl).href
+  };
+};
+
+const mainLegacyResolvers = {
+  import: packageJson => {
+    if (typeof packageJson.module === "string") {
+      return {
+        type: "module",
+        path: packageJson.module
+      };
+    }
+
+    if (typeof packageJson.jsnext === "string") {
+      return {
+        type: "jsnext",
+        path: packageJson.jsnext
+      };
+    }
+
+    if (typeof packageJson.main === "string") {
+      return {
+        type: "main",
+        path: packageJson.main
+      };
+    }
+
+    return null;
+  },
+  browser: (packageJson, packageUrl) => {
+    const browserMain = typeof packageJson.browser === "string" ? packageJson.browser : typeof packageJson.browser === "object" && packageJson.browser !== null ? packageJson.browser["."] : "";
+
+    if (!browserMain) {
+      if (typeof packageJson.module === "string") {
+        return {
+          type: "module",
+          path: packageJson.module
+        };
+      }
+
+      return null;
+    }
+
+    if (typeof packageJson.module !== "string" || packageJson.module === browserMain) {
+      return {
+        type: "browser",
+        path: browserMain
+      };
+    }
+
+    const browserMainUrlObject = new URL(browserMain, packageUrl);
+    const content = readFileSync$1(browserMainUrlObject, "utf-8");
+
+    if (/typeof exports\s*==/.test(content) && /typeof module\s*==/.test(content) || /module\.exports\s*=/.test(content)) {
+      return {
+        type: "module",
+        path: packageJson.module
+      };
+    }
+
+    return {
+      type: "browser",
+      path: browserMain
+    };
+  },
+  node: packageJson => {
+    if (typeof packageJson.main === "string") {
+      return {
+        type: "main",
+        path: packageJson.main
+      };
+    }
+
+    return null;
+  }
+};
+
+const comparePatternKeys = (keyA, keyB) => {
+  if (!keyA.endsWith("/") && !keyA.contains("*")) {
+    throw new Error("Invalid package configuration");
+  }
+
+  if (!keyB.endsWith("/") && !keyB.contains("*")) {
+    throw new Error("Invalid package configuration");
+  }
+
+  const aStarIndex = keyA.indexOf("*");
+  const baseLengthA = aStarIndex > -1 ? aStarIndex + 1 : keyA.length;
+  const bStarIndex = keyB.indexOf("*");
+  const baseLengthB = bStarIndex > -1 ? bStarIndex + 1 : keyB.length;
+
+  if (baseLengthA > baseLengthB) {
+    return -1;
+  }
+
+  if (baseLengthB > baseLengthA) {
+    return 1;
+  }
+
+  if (aStarIndex === -1) {
+    return 1;
+  }
+
+  if (bStarIndex === -1) {
+    return -1;
+  }
+
+  if (keyA.length > keyB.length) {
+    return -1;
+  }
+
+  if (keyB.length > keyA.length) {
+    return 1;
+  }
+
+  return 0;
+};
+
+const applyFileSystemMagicResolution = (fileUrl, {
+  fileStat,
+  magicDirectoryIndex,
+  magicExtensions
+}) => {
+  let lastENOENTError = null;
+
+  const fileStatOrNull = url => {
+    try {
+      return statSync(new URL(url));
+    } catch (e) {
+      if (e.code === "ENOENT") {
+        lastENOENTError = e;
+        return null;
+      }
+
+      throw e;
+    }
+  };
+
+  fileStat = fileStat === undefined ? fileStatOrNull(fileUrl) : fileStat;
+
+  if (fileStat && fileStat.isFile()) {
+    return {
+      found: true,
+      url: fileUrl
+    };
+  }
+
+  if (fileStat && fileStat.isDirectory()) {
+    if (magicDirectoryIndex) {
+      const indexFileSuffix = fileUrl.endsWith("/") ? "index" : "/index";
+      const indexFileUrl = `${fileUrl}${indexFileSuffix}`;
+      const result = applyFileSystemMagicResolution(indexFileUrl, {
+        magicDirectoryIndex: false,
+        magicExtensions
+      });
+      return { ...result,
+        magicDirectoryIndex: true
+      };
+    }
+
+    return {
+      found: true,
+      url: fileUrl,
+      isDirectory: true
+    };
+  }
+
+  if (magicExtensions && magicExtensions.length) {
+    const parentUrl = new URL("./", fileUrl).href;
+    const urlFilename = urlToFilename(fileUrl);
+    const extensionLeadingToFile = magicExtensions.find(extensionToTry => {
+      const urlCandidate = `${parentUrl}${urlFilename}${extensionToTry}`;
+      const stat = fileStatOrNull(urlCandidate);
+      return stat;
+    });
+
+    if (extensionLeadingToFile) {
+      // magic extension worked
+      return {
+        found: true,
+        url: `${fileUrl}${extensionLeadingToFile}`,
+        magicExtension: extensionLeadingToFile
+      };
+    }
+  } // magic extension not found
+
+
+  return {
+    found: false,
+    url: fileUrl,
+    lastENOENTError
+  };
+};
+const getExtensionsToTry = (magicExtensions, importer) => {
+  if (!magicExtensions) {
+    return [];
+  }
+
+  const extensionsSet = new Set();
+  magicExtensions.forEach(magicExtension => {
+    if (magicExtension === "inherit") {
+      const importerExtension = urlToExtension(importer);
+      extensionsSet.add(importerExtension);
+    } else {
+      extensionsSet.add(magicExtension);
+    }
+  });
+  return Array.from(extensionsSet.values());
+};
+
+/*
+ * - should I restore eventual search params lost during node esm resolution
+ * - what about symlinks?
+ *   It feels like I should apply symlink (when we don't want to preserve them)
+ *   once a file:/// url is found, regardless
+ *   if that comes from node resolution or anything else (not even magic resolution)
+ *   it should likely be an other plugin happening after the others
+ */
+const jsenvPluginNodeEsmResolution = ({
+  packageConditions,
+  filesInvalidatingCache = ["package.json", "package-lock.json"]
+}) => {
+  const unregisters = [];
+  let lookupPackageScope; // defined in "init"
+
+  let readPackageJson; // defined in "init"
+
+  return {
+    name: "jsenv:node_esm_resolution",
+    appliesDuring: "*",
+    init: ({
+      rootDirectoryUrl,
+      scenario,
+      runtimeCompat,
+      urlGraph
+    }) => {
+      const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node"); // https://nodejs.org/api/esm.html#resolver-algorithm-specification
+
+      packageConditions = packageConditions || [...readCustomConditionsFromProcessArgs(), nodeRuntimeEnabled ? "node" : "browser", "import"];
+      const packageScopesCache = new Map();
+
+      lookupPackageScope = url => {
+        const fromCache = packageScopesCache.get(url);
+
+        if (fromCache) {
+          return fromCache;
+        }
+
+        const packageScope = defaultLookupPackageScope(url);
+        packageScopesCache.set(url, packageScope);
+        return packageScope;
+      };
+
+      const packageJsonsCache = new Map();
+
+      readPackageJson = url => {
+        const fromCache = packageJsonsCache.get(url);
+
+        if (fromCache) {
+          return fromCache;
+        }
+
+        const packageJson = defaultReadPackageJson(url);
+        packageJsonsCache.set(url, packageJson);
+        return packageJson;
+      };
+
+      if (scenario === "dev") {
+        const onFileChange = () => {
+          packageScopesCache.clear();
+          packageJsonsCache.clear();
+          urlGraph.urlInfoMap.forEach(urlInfo => {
+            if (urlInfo.dependsOnPackageJson) {
+              urlGraph.considerModified(urlInfo);
+            }
+          });
+        };
+
+        filesInvalidatingCache.forEach(file => {
+          const unregister = registerFileLifecycle(new URL(file, rootDirectoryUrl), {
+            added: () => {
+              onFileChange();
+            },
+            updated: () => {
+              onFileChange();
+            },
+            removed: () => {
+              onFileChange();
+            },
+            keepProcessAlive: false
+          });
+          unregisters.push(unregister);
+        });
+      }
+    },
+    resolveUrl: {
+      js_import_export: (reference, context) => {
+        const {
+          parentUrl,
+          specifier
+        } = reference;
+        const {
+          type,
+          url
+        } = applyNodeEsmResolution({
+          conditions: packageConditions,
+          parentUrl,
+          specifier,
+          lookupPackageScope,
+          readPackageJson
+        }); // this reference depend on package.json and node_modules
+        // to be resolved. Each file using this specifier
+        // must be invalidated when package.json or package_lock.json
+        // changes
+
+        const dependsOnPackageJson = type !== "relative_specifier" && type !== "absolute_specifier" && type !== "node_builtin_specifier";
+        const relatedUrlInfos = context.urlGraph.getRelatedUrlInfos(reference.parentUrl);
+        relatedUrlInfos.forEach(relatedUrlInfo => {
+          if (relatedUrlInfo.dependsOnPackageJson) {
+            // the url may depend due to an other reference
+            // in that case keep dependsOnPackageJson to true
+            return;
+          }
+
+          relatedUrlInfo.dependsOnPackageJson = dependsOnPackageJson;
+        });
+        return url;
+      }
+    },
+    fetchUrlContent: urlInfo => {
+      if (urlInfo.url.startsWith("file:///@ignore/")) {
+        return {
+          content: "export default {}",
+          contentType: "text/javascript",
+          type: "js_module"
+        };
+      }
+
+      return null;
+    },
+    transformUrlSearchParams: (reference, context) => {
+      if (context.scenario === "build") {
+        return null;
+      }
+
+      if (!reference.url.startsWith("file:")) {
+        return null;
+      } // without this check a file inside a project without package.json
+      // could be considered as a node module if there is a ancestor package.json
+      // but we want to version only node modules
+
+
+      if (!reference.url.includes("/node_modules/")) {
+        return null;
+      }
+
+      if (reference.searchParams.has("v")) {
+        return null;
+      }
+
+      const packageUrl = lookupPackageScope(reference.url);
+
+      if (!packageUrl) {
+        return null;
+      }
+
+      if (packageUrl === context.rootDirectoryUrl) {
+        return null;
+      }
+
+      const packageVersion = readPackageJson(packageUrl).version;
+
+      if (!packageVersion) {
+        // example where it happens: https://github.com/babel/babel/blob/2ce56e832c2dd7a7ed92c89028ba929f874c2f5c/packages/babel-runtime/helpers/esm/package.json#L2
+        return null;
+      }
+
+      return {
+        v: packageVersion
+      };
+    },
+    destroy: () => {
+      unregisters.forEach(unregister => unregister());
+    }
+  };
+};
+
+const jsenvPluginUrlVersion = () => {
+  return {
+    name: "jsenv:url_version",
+    appliesDuring: "*",
+    redirectUrl: reference => {
+      // "v" search param goal is to enable long-term cache
+      // for server response headers
+      // it is also used by hmr to bypass browser cache
+      // this goal is achieved when we reach this part of the code
+      // We get rid of this params so that urlGraph and other parts of the code
+      // recognize the url (it is not considered as a different url)
+      const urlObject = new URL(reference.url);
+      urlObject.searchParams.delete("v");
+      return urlObject.href;
+    },
+    transformUrlSearchParams: reference => {
+      if (!reference.data.version) {
+        return null;
+      }
+
+      if (reference.searchParams.has("v")) {
+        return null;
+      }
+
+      return {
+        v: reference.data.version
+      };
+    }
+  };
+};
+
+const jsenvPluginFileUrls = ({
+  magicExtensions = ["inherit", ".js"],
+  magicDirectoryIndex = true,
+  preserveSymlinks = false,
+  directoryReferenceAllowed = false
+}) => {
+  return [{
+    name: "jsenv:file_url_resolution",
+    appliesDuring: "*",
+    redirectUrl: reference => {
+      // http, https, data, about, ...
+      if (!reference.url.startsWith("file:")) {
+        return null;
+      }
+
+      if (reference.isInline) {
+        return null;
+      }
+
+      const urlObject = new URL(reference.url);
+      let stat;
+
+      try {
+        stat = statSync(urlObject);
+      } catch (e) {
+        if (e.code === "ENOENT") {
+          stat = null;
+        } else {
+          throw e;
+        }
+      }
+
+      const {
+        search,
+        hash
+      } = urlObject;
+      let {
+        pathname
+      } = urlObject;
+      const pathnameUsesTrailingSlash = pathname.endsWith("/");
+      urlObject.search = "";
+      urlObject.hash = "";
+      const foundADirectory = stat && stat.isDirectory();
+      const foundSomething = stat && !foundADirectory; // force trailing slash on directories
+
+      if (foundADirectory && !pathnameUsesTrailingSlash) {
+        urlObject.pathname = `${pathname}/`;
+      } // otherwise remove trailing slash if any
+
+
+      if (foundSomething && pathnameUsesTrailingSlash) {
+        // a warning here? (because it's strange to reference a file with a trailing slash)
+        urlObject.pathname = pathname.slice(0, -1);
+      }
+
+      if (foundADirectory && directoryReferenceAllowed) {
+        if ( // ignore new URL second arg
+        reference.subtype === "new_url_second_arg" || // ignore root file url
+        reference.url === "file:///") {
+          reference.shouldHandle = false;
+        }
+
+        reference.data.foundADirectory = true;
+        const directoryFacadeUrl = urlObject.href;
+        const directoryUrlRaw = preserveSymlinks ? directoryFacadeUrl : resolveSymlink(directoryFacadeUrl);
+        const directoryUrl = `${directoryUrlRaw}${search}${hash}`;
+        return directoryUrl;
+      }
+
+      const url = urlObject.href;
+      const filesystemResolution = applyFileSystemMagicResolution(url, {
+        fileStat: stat,
+        magicDirectoryIndex,
+        magicExtensions: getExtensionsToTry(magicExtensions, reference.parentUrl)
+      });
+
+      if (!filesystemResolution.found) {
+        reference.data.foundADirectory = foundADirectory;
+        return null;
+      }
+
+      reference.data.foundADirectory = filesystemResolution.isDirectory;
+      const fileFacadeUrl = filesystemResolution.url;
+      const fileUrlRaw = preserveSymlinks ? fileFacadeUrl : resolveSymlink(fileFacadeUrl);
+      const fileUrl = `${fileUrlRaw}${search}${hash}`;
+      return fileUrl;
+    }
+  }, {
+    name: "jsenv:filesystem_resolution",
+    appliesDuring: "*",
+    resolveUrl: {
+      filesystem: (reference, context) => {
+        const {
+          parentUrl
+        } = reference;
+        const parentUrlInfo = context.urlGraph.getUrlInfo(parentUrl);
+        const baseUrl = parentUrlInfo && parentUrlInfo.type === "directory" ? ensurePathnameTrailingSlash(parentUrl) : parentUrl;
+        return new URL(reference.specifier, baseUrl).href;
+      }
+    }
+  }, {
+    name: "jsenv:@fs_resolution",
+    appliesDuring: {
+      // during dev and test it's a browser running the code
+      // so absolute file urls needs to be relativized
+      dev: true,
+      test: true,
+      // during build it's fine to use file:// urls
+      build: false
+    },
+    resolveUrl: reference => {
+      if (reference.specifier.startsWith("/@fs/")) {
+        const fsRootRelativeUrl = reference.specifier.slice("/@fs/".length);
+        return `file:///${fsRootRelativeUrl}`;
+      }
+
+      return null;
+    },
+    formatUrl: (reference, context) => {
+      if (!reference.generatedUrl.startsWith("file:")) {
+        return null;
+      }
+
+      if (urlIsInsideOf(reference.generatedUrl, context.rootDirectoryUrl)) {
+        return `/${urlToRelativeUrl(reference.generatedUrl, context.rootDirectoryUrl)}`;
+      }
+
+      return `/@fs/${reference.generatedUrl.slice("file:///".length)}`;
+    }
+  }, {
+    name: "jsenv:file_url_fetching",
+    appliesDuring: "*",
+    fetchUrlContent: (urlInfo, context) => {
+      if (!urlInfo.url.startsWith("file:")) {
+        return null;
+      }
+
+      const urlObject = new URL(urlInfo.url);
+
+      if (context.reference.data.foundADirectory) {
+        if (directoryReferenceAllowed) {
+          const directoryEntries = readdirSync(urlObject);
+          let filename;
+
+          if (context.reference.type === "filesystem") {
+            const parentUrlInfo = context.urlGraph.getUrlInfo(context.reference.parentUrl);
+            filename = `${parentUrlInfo.filename}${context.reference.specifier}/`;
+          } else {
+            filename = `${urlToFilename$1(urlInfo.url)}/`;
+          }
+
+          return {
+            type: "directory",
+            contentType: "application/json",
+            content: JSON.stringify(directoryEntries, null, "  "),
+            filename
+          };
+        }
+
+        const error = new Error("found a directory on filesystem");
+        error.code = "DIRECTORY_REFERENCE_NOT_ALLOWED";
+        throw error;
+      }
+
+      const fileBuffer = readFileSync$1(urlObject);
+      const contentType = CONTENT_TYPE.fromUrlExtension(urlInfo.url);
+      return {
+        content: CONTENT_TYPE.isTextual(contentType) ? String(fileBuffer) : fileBuffer,
+        contentType
+      };
+    }
+  }];
+};
+
+const resolveSymlink = fileUrl => {
+  return pathToFileURL(realpathSync(new URL(fileUrl))).href;
+};
+
+const jsenvPluginHttpUrls = () => {
+  return {
+    name: "jsenv:http_urls",
+    appliesDuring: "*",
+    redirectUrl: reference => {
+      if (reference.url.startsWith("http:") || reference.url.startsWith("https:")) {
+        reference.shouldHandle = false;
+      } // TODO: according to some pattern matching jsenv could be allowed
+      // to fetch and transform http urls
+
+    }
+  };
+};
+
+/*
+ * Things happening here
+ * - html supervisor module injection
+ * - scripts are wrapped to be supervised
+ */
+const jsenvPluginHtmlSupervisor = ({
+  logs = false,
+  measurePerf = false,
+  errorOverlay = true,
+  openInEditor = true,
+  errorBaseUrl
+}) => {
+  const htmlSupervisorSetupFileUrl = new URL("./js/html_supervisor_setup.js", import.meta.url).href;
+  const htmlSupervisorInstallerFileUrl = new URL("./js/html_supervisor_installer.js", import.meta.url).href;
+  return {
+    name: "jsenv:html_supervisor",
+    appliesDuring: {
+      dev: true,
+      test: true
+    },
+    serve: async (request, context) => {
+      if (request.ressource.startsWith("/__get_code_frame__/")) {
+        const {
+          pathname,
+          searchParams
+        } = new URL(request.url);
+        const urlWithLineAndColumn = pathname.slice("/__get_code_frame__/".length);
+        const match = urlWithLineAndColumn.match(/:([0-9]+):([0-9]+)$/);
+
+        if (!match) {
+          return {
+            status: 400,
+            body: "Missing line and column in url"
+          };
+        }
+
+        const file = urlWithLineAndColumn.slice(0, match.index);
+        let line = parseInt(match[1]);
+        let column = parseInt(match[2]);
+        const urlInfo = context.urlGraph.getUrlInfo(file);
+
+        if (!urlInfo) {
+          return {
+            status: 404
+          };
+        }
+
+        const remap = searchParams.has("remap");
+
+        if (remap) {
+          const sourcemap = urlInfo.sourcemap;
+
+          if (sourcemap) {
+            const original = await getOriginalPosition({
+              sourcemap,
+              url: file,
+              line,
+              column
+            });
+            line = original.line;
+            column = original.column;
+          }
+        }
+
+        const codeFrame = stringifyUrlSite({
+          url: file,
+          line,
+          column,
+          content: urlInfo.originalContent
+        });
+        return {
+          status: 200,
+          headers: {
+            "content-type": "text/plain",
+            "content-length": Buffer.byteLength(codeFrame)
+          },
+          body: codeFrame
+        };
+      }
+
+      if (request.ressource.startsWith("/__get_error_cause__/")) {
+        const file = request.ressource.slice("/__get_error_cause__/".length);
+
+        if (!file) {
+          return {
+            status: 400,
+            body: "Missing file in url"
+          };
+        }
+
+        const getErrorCauseInfo = () => {
+          const urlInfo = context.urlGraph.getUrlInfo(file);
+
+          if (!urlInfo) {
+            return null;
+          }
+
+          const {
+            error
+          } = urlInfo;
+
+          if (error) {
+            return error;
+          } // search in direct dependencies (404 or 500)
+
+
+          const {
+            dependencies
+          } = urlInfo;
+
+          for (const dependencyUrl of dependencies) {
+            const dependencyUrlInfo = context.urlGraph.getUrlInfo(dependencyUrl);
+
+            if (dependencyUrlInfo.error) {
+              return dependencyUrlInfo.error;
+            }
+          }
+
+          return null;
+        };
+
+        const causeInfo = getErrorCauseInfo();
+        const body = JSON.stringify(causeInfo ? {
+          code: causeInfo.code,
+          message: causeInfo.message,
+          reason: causeInfo.reason,
+          stack: errorBaseUrl ? `stack mocked for snapshot` : causeInfo.stack,
+          codeFrame: causeInfo.traceMessage
+        } : null, null, "  ");
+        return {
+          status: 200,
+          headers: {
+            "cache-control": "no-cache",
+            "content-type": "application/json",
+            "content-length": Buffer.byteLength(body)
+          },
+          body
+        };
+      }
+
+      if (request.ressource.startsWith("/__open_in_editor__/")) {
+        const file = request.ressource.slice("/__open_in_editor__/".length);
+
+        if (!file) {
+          return {
+            status: 400,
+            body: "Missing file in url"
+          };
+        }
+
+        const launch = requireFromJsenv("launch-editor");
+        launch(fileURLToPath(file), () => {// ignore error for now
+        });
+        return {
+          status: 200,
+          headers: {
+            "cache-control": "no-store"
+          }
+        };
+      }
+
+      return null;
+    },
+    transformUrlContent: {
+      html: ({
+        url,
+        content
+      }, context) => {
+        const htmlAst = parseHtmlString(content);
+        const scriptsToSupervise = [];
+
+        const handleInlineScript = (node, htmlNodeText) => {
+          const {
+            type,
+            extension
+          } = analyzeScriptNode(node);
+          const {
+            line,
+            column,
+            lineEnd,
+            columnEnd,
+            isOriginal
+          } = getHtmlNodePosition(node, {
+            preferOriginal: true
+          });
+          let inlineScriptUrl = generateInlineContentUrl({
+            url,
+            extension: extension || ".js",
+            line,
+            column,
+            lineEnd,
+            columnEnd
+          });
+          const [inlineScriptReference] = context.referenceUtils.foundInline({
+            type: "script_src",
+            expectedType: type,
+            isOriginalPosition: isOriginal,
+            specifierLine: line - 1,
+            specifierColumn: column,
+            specifier: inlineScriptUrl,
+            contentType: "text/javascript",
+            content: htmlNodeText
+          });
+          removeHtmlNodeText(node);
+
+          if (extension) {
+            setHtmlNodeAttributes(node, {
+              type: type === "js_module" ? "module" : undefined
+            });
+          }
+
+          scriptsToSupervise.push({
+            node,
+            isInline: true,
+            type,
+            src: inlineScriptReference.generatedSpecifier
+          });
+        };
+
+        const handleScriptWithSrc = (node, src) => {
+          const {
+            type
+          } = analyzeScriptNode(node);
+          const integrity = getHtmlNodeAttribute(node, "integrity");
+          const crossorigin = getHtmlNodeAttribute(node, "crossorigin") !== undefined;
+          const defer = getHtmlNodeAttribute(node, "defer") !== undefined;
+          const async = getHtmlNodeAttribute(node, "async") !== undefined;
+          setHtmlNodeAttributes(node, {
+            src: undefined
+          });
+          scriptsToSupervise.push({
+            node,
+            type,
+            src,
+            defer,
+            async,
+            integrity,
+            crossorigin
+          });
+        };
+
+        visitHtmlNodes(htmlAst, {
+          script: node => {
+            const {
+              type
+            } = analyzeScriptNode(node);
+
+            if (type !== "js_classic" && type !== "js_module") {
+              return;
+            }
+
+            const injectedBy = getHtmlNodeAttribute(node, "injected-by");
+
+            if (injectedBy !== undefined) {
+              return;
+            }
+
+            const noHtmlSupervisor = getHtmlNodeAttribute(node, "no-html-supervisor");
+
+            if (noHtmlSupervisor !== undefined) {
+              return;
+            }
+
+            const htmlNodeText = getHtmlNodeText(node);
+
+            if (htmlNodeText) {
+              handleInlineScript(node, htmlNodeText);
+              return;
+            }
+
+            const src = getHtmlNodeAttribute(node, "src");
+
+            if (src) {
+              handleScriptWithSrc(node, src);
+              return;
+            }
+          }
+        });
+        const [htmlSupervisorInstallerFileReference] = context.referenceUtils.inject({
+          type: "js_import_export",
+          expectedType: "js_module",
+          specifier: htmlSupervisorInstallerFileUrl
+        });
+        injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
+          "tagName": "script",
+          "type": "module",
+          "textContent": `
+      import { installHtmlSupervisor } from ${htmlSupervisorInstallerFileReference.generatedSpecifier}
+      installHtmlSupervisor(${JSON.stringify({
+            rootDirectoryUrl: context.rootDirectoryUrl,
+            errorBaseUrl,
+            logs,
+            measurePerf,
+            errorOverlay,
+            openInEditor
+          }, null, "        ")})`,
+          "injected-by": "jsenv:html_supervisor"
+        }));
+        const [htmlSupervisorSetupFileReference] = context.referenceUtils.inject({
+          type: "script_src",
+          expectedType: "js_classic",
+          specifier: htmlSupervisorSetupFileUrl
+        });
+        injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
+          "tagName": "script",
+          "src": htmlSupervisorSetupFileReference.generatedSpecifier,
+          "injected-by": "jsenv:html_supervisor"
+        }));
+        scriptsToSupervise.forEach(({
+          node,
+          isInline,
+          type,
+          src,
+          defer,
+          async,
+          integrity,
+          crossorigin
+        }) => {
+          setHtmlNodeText(node, generateCodeToSuperviseScript({
+            type,
+            src,
+            isInline,
+            defer,
+            async,
+            integrity,
+            crossorigin,
+            htmlSupervisorInstallerSpecifier: htmlSupervisorInstallerFileReference.generatedSpecifier
+          }));
+          setHtmlNodeAttributes(node, {
+            "generated-by": "jsenv:html_supervisor",
+            ...(src ? {
+              "generated-from-src": src
+            } : {}),
+            ...(isInline ? {
+              "generated-from-inline-content": ""
+            } : {})
+          });
+        });
+        const htmlModified = stringifyHtmlAst(htmlAst);
+        return {
+          content: htmlModified
+        };
+      }
+    }
+  };
+}; // Ideally jsenv should take into account eventual
+// "integrity" and "crossorigin" attribute during supervision
+
+const generateCodeToSuperviseScript = ({
+  type,
+  src,
+  isInline,
+  defer,
+  async,
+  integrity,
+  crossorigin,
+  htmlSupervisorInstallerSpecifier
+}) => {
+  const paramsAsJson = JSON.stringify({
+    src,
+    isInline,
+    defer,
+    async,
+    integrity,
+    crossorigin
+  });
+
+  if (type === "js_module") {
+    return `
+      import { superviseScriptTypeModule } from ${htmlSupervisorInstallerSpecifier}
+      superviseScriptTypeModule(${paramsAsJson})
+`;
+  }
+
+  return `
+      window.__html_supervisor__.superviseScript(${paramsAsJson})
+`;
+};
+
+/*
+ * Some code uses globals specific to Node.js in code meant to run in browsers...
+ * This plugin will replace some node globals to things compatible with web:
+ * - process.env.NODE_ENV
+ * - __filename
+ * - __dirname
+ * - global
+ */
+const jsenvPluginCommonJsGlobals = () => {
+  const transformCommonJsGlobals = async (urlInfo, {
+    scenario
+  }) => {
+    if (!urlInfo.content.includes("process.env.NODE_ENV") && !urlInfo.content.includes("__filename") && !urlInfo.content.includes("__dirname")) {
+      return null;
+    }
+
+    const isJsModule = urlInfo.type === "js_module";
+    const replaceMap = {
+      "process.env.NODE_ENV": `("${scenario === "dev" || scenario === "test" ? "development" : "production"}")`,
+      "global": "globalThis",
+      "__filename": isJsModule ? `import.meta.url.slice('file:///'.length)` : `document.currentScript.src`,
+      "__dirname": isJsModule ? `import.meta.url.slice('file:///'.length).replace(/[\\\/\\\\][^\\\/\\\\]*$/, '')` : `new URL('./', document.currentScript.src).href`
+    };
+    const {
+      metadata
+    } = await applyBabelPlugins({
+      babelPlugins: [[babelPluginMetadataExpressionPaths, {
+        replaceMap,
+        allowConflictingReplacements: true
+      }]],
+      urlInfo
+    });
+    const {
+      expressionPaths
+    } = metadata;
+    const keys = Object.keys(expressionPaths);
+
+    if (keys.length === 0) {
+      return null;
+    }
+
+    const magicSource = createMagicSource(urlInfo.content);
+    keys.forEach(key => {
+      expressionPaths[key].forEach(path => {
+        magicSource.replace({
+          start: path.node.start,
+          end: path.node.end,
+          replacement: replaceMap[key]
+        });
+      });
+    });
+    return magicSource.toContentAndSourcemap();
+  };
+
+  return {
+    name: "jsenv:commonjs_globals",
+    appliesDuring: "*",
+    transformUrlContent: {
+      js_classic: transformCommonJsGlobals,
+      js_module: transformCommonJsGlobals
+    }
+  };
+}; // heavily inspired from https://github.com/jviide/babel-plugin-transform-replace-expressions
+// last known commit: 57b608e0eeb8807db53d1c68292621dfafb5599c
+
+const babelPluginMetadataExpressionPaths = (babel, {
+  replaceMap = {},
+  allowConflictingReplacements = false
+}) => {
+  const {
+    traverse,
+    parse,
+    types
+  } = babel;
+  const replacementMap = new Map();
+  const valueExpressionSet = new Set();
+  return {
+    name: "metadata-replace",
+    pre: state => {
+      // https://github.com/babel/babel/blob/d50e78d45b608f6e0f6cc33aeb22f5db5027b153/packages/babel-traverse/src/path/replacement.js#L93
+      const parseExpression = value => {
+        const expressionNode = parse(value, state.opts).program.body[0].expression;
+        traverse.removeProperties(expressionNode);
+        return expressionNode;
+      };
+
+      Object.keys(replaceMap).forEach(key => {
+        const keyExpressionNode = parseExpression(key);
+        const candidateArray = replacementMap.get(keyExpressionNode.type) || [];
+        const value = replaceMap[key];
+        const valueExpressionNode = parseExpression(value);
+        const equivalentKeyExpressionIndex = candidateArray.findIndex(candidate => types.isNodesEquivalent(candidate.keyExpressionNode, keyExpressionNode));
+
+        if (!allowConflictingReplacements && equivalentKeyExpressionIndex > -1) {
+          throw new Error(`Expressions ${candidateArray[equivalentKeyExpressionIndex].key} and ${key} conflict`);
+        }
+
+        const newCandidate = {
+          key,
+          value,
+          keyExpressionNode,
+          valueExpressionNode
+        };
+
+        if (equivalentKeyExpressionIndex > -1) {
+          candidateArray[equivalentKeyExpressionIndex] = newCandidate;
+        } else {
+          candidateArray.push(newCandidate);
+        }
+
+        replacementMap.set(keyExpressionNode.type, candidateArray);
+      });
+      replacementMap.forEach(candidateArray => {
+        candidateArray.forEach(candidate => {
+          valueExpressionSet.add(candidate.valueExpressionNode);
+        });
+      });
+    },
+    visitor: {
+      Program: (programPath, state) => {
+        const expressionPaths = {};
+        programPath.traverse({
+          Expression(path) {
+            if (valueExpressionSet.has(path.node)) {
+              path.skip();
+              return;
+            }
+
+            const candidateArray = replacementMap.get(path.node.type);
+
+            if (!candidateArray) {
+              return;
+            }
+
+            const candidateFound = candidateArray.find(candidate => {
+              return types.isNodesEquivalent(candidate.keyExpressionNode, path.node);
+            });
+
+            if (candidateFound) {
+              try {
+                types.validate(path.parent, path.key, candidateFound.valueExpressionNode);
+              } catch (err) {
+                if (err instanceof TypeError) {
+                  path.skip();
+                  return;
+                }
+
+                throw err;
+              }
+
+              const paths = expressionPaths[candidateFound.key];
+
+              if (paths) {
+                expressionPaths[candidateFound.key] = [...paths, path];
+              } else {
+                expressionPaths[candidateFound.key] = [path];
+              }
+
+              return;
+            }
+          }
+
+        });
+        state.file.metadata.expressionPaths = expressionPaths;
+      }
+    }
+  };
+};
+
+/*
+ * Source code can contain the following
+ * - import.meta.dev
+ * - import.meta.test
+ * - import.meta.build
+ * They are either:
+ * - replaced by true: When scenario matches (import.meta.dev and it's the dev server)
+ * - left as is to be evaluated to undefined (import.meta.test but it's the dev server)
+ * - replaced by undefined (import.meta.dev but it's build; the goal is to ensure it's tree-shaked)
+ */
+const jsenvPluginImportMetaScenarios = () => {
+  return {
+    name: "jsenv:import_meta_scenario",
+    appliesDuring: "*",
+    transformUrlContent: {
+      js_module: async (urlInfo, {
+        scenario
+      }) => {
+        if (!urlInfo.content.includes("import.meta.dev") && !urlInfo.content.includes("import.meta.test") && !urlInfo.content.includes("import.meta.build")) {
+          return null;
+        }
+
+        const {
+          metadata
+        } = await applyBabelPlugins({
+          babelPlugins: [babelPluginMetadataImportMetaScenarios],
+          urlInfo
+        });
+        const {
+          dev = [],
+          test = [],
+          build = []
+        } = metadata.importMetaScenarios;
+        const replacements = [];
+
+        const replace = (path, value) => {
+          replacements.push({
+            path,
+            value
+          });
+        };
+
+        if (scenario === "dev") {
+          dev.forEach(path => {
+            replace(path, "true");
+          });
+        } else if (scenario === "test") {
+          // test is also considered a dev environment
+          // just like the dev server can be used to debug test files
+          // without this people would have to write
+          // if (import.meta.dev || import.meta.test) or if (!import.meta.build)
+          dev.forEach(path => {
+            replace(path, "true");
+          });
+          test.forEach(path => {
+            replace(path, "true");
+          });
+        } else if (scenario === "build") {
+          // replacing by undefined might not be required
+          // as I suppose rollup would consider them as undefined
+          // but let's make it explicit to ensure code is properly tree-shaked
+          dev.forEach(path => {
+            replace(path, "undefined");
+          });
+          test.forEach(path => {
+            replace(path, "undefined");
+          });
+          build.forEach(path => {
+            replace(path, "true");
+          });
+        }
+
+        const magicSource = createMagicSource(urlInfo.content);
+        replacements.forEach(({
+          path,
+          value
+        }) => {
+          magicSource.replace({
+            start: path.node.start,
+            end: path.node.end,
+            replacement: value
+          });
+        });
+        return magicSource.toContentAndSourcemap();
+      }
+    }
+  };
+};
+
+const babelPluginMetadataImportMetaScenarios = () => {
+  return {
+    name: "metadata-import-meta-scenarios",
+    visitor: {
+      Program(programPath, state) {
+        const importMetas = {};
+        programPath.traverse({
+          MemberExpression(path) {
+            const {
+              node
+            } = path;
+            const {
+              object
+            } = node;
+
+            if (object.type !== "MetaProperty") {
+              return;
+            }
+
+            const {
+              property: objectProperty
+            } = object;
+
+            if (objectProperty.name !== "meta") {
+              return;
+            }
+
+            const {
+              property
+            } = node;
+            const {
+              name
+            } = property;
+            const importMetaPaths = importMetas[name];
+
+            if (importMetaPaths) {
+              importMetaPaths.push(path);
+            } else {
+              importMetas[name] = [path];
+            }
+          }
+
+        });
+        state.file.metadata.importMetaScenarios = {
+          dev: importMetas.dev,
+          test: importMetas.test,
+          build: importMetas.build
+        };
+      }
+
+    }
+  };
+};
+
+const jsenvPluginCssParcel = () => {
+  return {
+    name: "jsenv:css_parcel",
+    appliesDuring: "*",
+    transformUrlContent: {
+      css: (urlInfo, context) => {
+        const {
+          code,
+          map
+        } = transpileWithParcel(urlInfo, context);
+        return {
+          content: String(code),
+          sourcemap: map
+        };
+      }
+    }
+  };
+};
+
+/*
+ * Jsenv wont touch code where "specifier" or "type" is dynamic (see code below)
+ * ```js
+ * const file = "./style.css"
+ * const type = "css"
+ * import(file, { assert: { type }})
+ * ```
+ * Jsenv could throw an error when it knows some browsers in runtimeCompat
+ * do not support import assertions
+ * But for now (as it is simpler) we let the browser throw the error
+ */
+const jsenvPluginImportAssertions = ({
+  json = "auto",
+  css = "auto",
+  text = "auto"
+}) => {
+  const updateReference = (reference, searchParam) => {
+    reference.expectedType = "js_module";
+    reference.filename = `${urlToFilename$1(reference.url)}.js`;
+
+    reference.mutation = magicSource => {
+      magicSource.remove({
+        start: reference.assertNode.start,
+        end: reference.assertNode.end
+      });
+    };
+
+    const newUrl = injectQueryParams(reference.url, {
+      [searchParam]: ""
+    });
+    return newUrl;
+  };
+
+  const importAssertions = {
+    name: "jsenv:import_assertions",
+    appliesDuring: "*",
+    init: context => {
+      // transpilation is forced during build so that
+      //   - avoid rollup to see import assertions
+      //     We would have to tell rollup to ignore import with assertion
+      //   - means rollup can bundle more js file together
+      //   - means url versioning can work for css inlined in js
+      if (context.scenario === "build") {
+        json = true;
+        css = true;
+        text = true;
+      }
+    },
+    redirectUrl: {
+      js_import_export: (reference, context) => {
+        if (!reference.assert) {
+          return null;
+        }
+
+        if (reference.assert.type === "json") {
+          const shouldTranspileJsonImportAssertion = json === true ? true : json === "auto" ? !context.isSupportedOnCurrentClients("import_type_json") : false;
+
+          if (shouldTranspileJsonImportAssertion) {
+            return updateReference(reference, "as_json_module");
+          }
+
+          return null;
+        }
+
+        if (reference.assert.type === "css") {
+          const shouldTranspileCssImportAssertion = css === true ? true : css === "auto" ? !context.isSupportedOnCurrentClients("import_type_css") : false;
+
+          if (shouldTranspileCssImportAssertion) {
+            return updateReference(reference, "as_css_module");
+          }
+
+          return null;
+        }
+
+        if (reference.assert.type === "text") {
+          const shouldTranspileTextImportAssertion = text === true ? true : text === "auto" ? !context.isSupportedOnCurrentClients("import_type_text") : false;
+
+          if (shouldTranspileTextImportAssertion) {
+            return updateReference(reference, "as_text_module");
+          }
+
+          return null;
+        }
+
+        return null;
+      }
+    }
+  };
+  return [importAssertions, ...jsenvPluginAsModules()];
+};
+
+const jsenvPluginAsModules = () => {
+  const inlineContentClientFileUrl = new URL("./js/inline_content.js", import.meta.url).href;
+  const asJsonModule = {
+    name: `jsenv:as_json_module`,
+    appliesDuring: "*",
+    fetchUrlContent: async (urlInfo, context) => {
+      const originalUrlInfo = await context.fetchOriginalUrlInfo({
+        urlInfo,
+        context,
+        searchParam: "as_json_module",
+        expectedType: "json"
+      });
+
+      if (!originalUrlInfo) {
+        return null;
+      }
+
+      const jsonText = JSON.stringify(originalUrlInfo.content.trim());
+      return {
+        // here we could `export default ${jsonText}`:
+        // but js engine are optimized to recognize JSON.parse
+        // and use a faster parsing strategy
+        content: `export default JSON.parse(${jsonText})`,
+        contentType: "text/javascript",
+        type: "js_module",
+        originalUrl: originalUrlInfo.originalUrl,
+        originalContent: originalUrlInfo.originalContent
+      };
+    }
+  };
+  const asCssModule = {
+    name: `jsenv:as_css_module`,
+    appliesDuring: "*",
+    fetchUrlContent: async (urlInfo, context) => {
+      const originalUrlInfo = await context.fetchOriginalUrlInfo({
+        urlInfo,
+        context,
+        searchParam: "as_css_module",
+        expectedType: "css"
+      });
+
+      if (!originalUrlInfo) {
+        return null;
+      }
+
+      const cssText = JS_QUOTES.escapeSpecialChars(originalUrlInfo.content, {
+        // If template string is choosen and runtime do not support template literals
+        // it's ok because "jsenv:new_inline_content" plugin executes after this one
+        // and convert template strings into raw strings
+        canUseTemplateString: true
+      });
+      return {
+        content: `import { InlineContent } from ${JSON.stringify(inlineContentClientFileUrl)}
+  
+  const inlineContent = new InlineContent(${cssText}, { type: "text/css" })
+  const stylesheet = new CSSStyleSheet()
+  stylesheet.replaceSync(inlineContent.text)
+  export default stylesheet`,
+        contentType: "text/javascript",
+        type: "js_module",
+        originalUrl: originalUrlInfo.originalUrl,
+        originalContent: originalUrlInfo.originalContent
+      };
+    }
+  };
+  const asTextModule = {
+    name: `jsenv:as_text_module`,
+    appliesDuring: "*",
+    fetchUrlContent: async (urlInfo, context) => {
+      const originalUrlInfo = await context.fetchOriginalUrlInfo({
+        urlInfo,
+        context,
+        searchParam: "as_text_module",
+        expectedType: "text"
+      });
+
+      if (!originalUrlInfo) {
+        return null;
+      }
+
+      const textPlain = JS_QUOTES.escapeSpecialChars(urlInfo.content, {
+        // If template string is choosen and runtime do not support template literals
+        // it's ok because "jsenv:new_inline_content" plugin executes after this one
+        // and convert template strings into raw strings
+        canUseTemplateString: true
+      });
+      return {
+        content: `import { InlineContent } from ${JSON.stringify(inlineContentClientFileUrl)}
+  
+const inlineContent = new InlineContent(${textPlain}, { type: "text/plain" })
+export default inlineContent.text`,
+        contentType: "text/javascript",
+        type: "js_module",
+        originalUrl: originalUrlInfo.originalUrl,
+        originalContent: originalUrlInfo.originalContent
+      };
+    }
+  };
+  return [asJsonModule, asCssModule, asTextModule];
+};
+
 const versionFromValue = value => {
   if (typeof value === "number") {
     return numberToVersion(value);
@@ -19165,39 +15460,6 @@ const jsenvPluginNodeRuntime = ({
     name: "jsenv:node_runtime",
     appliesDuring: "*"
   };
-};
-
-const sortByDependencies = nodes => {
-  const visited = [];
-  const sorted = [];
-  const circular = [];
-
-  const visit = url => {
-    const isSorted = sorted.includes(url);
-
-    if (isSorted) {
-      return;
-    }
-
-    const isVisited = visited.includes(url);
-
-    if (isVisited) {
-      circular.push(url);
-      sorted.push(url);
-    } else {
-      visited.push(url);
-      nodes[url].dependencies.forEach(dependencyUrl => {
-        visit(dependencyUrl);
-      });
-      sorted.push(url);
-    }
-  };
-
-  Object.keys(nodes).forEach(url => {
-    visit(url);
-  });
-  sorted.circular = circular;
-  return sorted;
 };
 
 /*
@@ -20792,360 +17054,3687 @@ const getCorePlugins = ({
   })] : []), jsenvPluginCacheControl(), ...(explorer ? [jsenvPluginExplorer(explorer)] : [])];
 };
 
-const urlSpecifierEncoding = {
-  encode: reference => {
-    const {
-      generatedSpecifier
-    } = reference;
+const memoize = compute => {
+  let memoized = false;
+  let memoizedValue;
 
-    if (generatedSpecifier.then) {
-      return generatedSpecifier.then(value => {
-        reference.generatedSpecifier = value;
-        return urlSpecifierEncoding.encode(reference);
-      });
-    } // allow plugin to return a function to bypas default formatting
-    // (which is to use JSON.stringify when url is referenced inside js)
+  const fnWithMemoization = (...args) => {
+    if (memoized) {
+      return memoizedValue;
+    } // if compute is recursive wait for it to be fully done before storing the lockValue
+    // so set locked later
 
 
-    if (typeof generatedSpecifier === "function") {
-      return generatedSpecifier();
-    }
+    memoizedValue = compute(...args);
+    memoized = true;
+    return memoizedValue;
+  };
 
-    const formatter = formatters[reference.type];
-    const value = formatter ? formatter.encode(generatedSpecifier) : generatedSpecifier;
-
-    if (reference.escape) {
-      return reference.escape(value);
-    }
-
+  fnWithMemoization.forget = () => {
+    const value = memoizedValue;
+    memoized = false;
+    memoizedValue = undefined;
     return value;
-  },
-  decode: reference => {
-    const formatter = formatters[reference.type];
-    return formatter ? formatter.decode(reference.generatedSpecifier) : reference.generatedSpecifier;
-  }
-};
-const formatters = {
-  "js_import_export": {
-    encode: JSON.stringify,
-    decode: JSON.parse
-  },
-  "js_url_specifier": {
-    encode: JSON.stringify,
-    decode: JSON.parse
-  },
-  "css_@import": {
-    encode: JSON.stringify,
-    code: JSON.stringify
-  },
-  // https://github.com/webpack-contrib/css-loader/pull/627/files
-  "css_url": {
-    encode: url => {
-      // If url is already wrapped in quotes, remove them
-      url = formatters.css_url.decode(url); // Should url be wrapped?
-      // See https://drafts.csswg.org/css-values-3/#urls
+  };
 
-      if (/["'() \t\n]/.test(url)) {
-        return `"${url.replace(/"/g, '\\"').replace(/\n/g, "\\n")}"`;
-      }
-
-      return url;
-    },
-    decode: url => {
-      const firstChar = url[0];
-      const lastChar = url[url.length - 1];
-
-      if (firstChar === `"` && lastChar === `"`) {
-        return url.slice(1, -1);
-      }
-
-      if (firstChar === `'` && lastChar === `'`) {
-        return url.slice(1, -1);
-      }
-
-      return url;
-    }
-  }
+  return fnWithMemoization;
 };
 
-const createUrlGraph = ({
-  clientFileChangeCallbackList,
-  clientFilesPruneCallbackList,
-  onCreateUrlInfo = () => {},
-  includeOriginalUrls
-} = {}) => {
-  const urlInfoMap = new Map();
+const timeStart = name => {
+  // as specified in https://w3c.github.io/server-timing/#the-performanceservertiming-interface
+  // duration is a https://www.w3.org/TR/hr-time-2/#sec-domhighrestimestamp
+  const startTimestamp = performance$1.now();
 
-  const getUrlInfo = url => urlInfoMap.get(url);
-
-  const deleteUrlInfo = url => {
-    const urlInfo = urlInfoMap.get(url);
-
-    if (urlInfo) {
-      urlInfoMap.delete(url);
-
-      if (urlInfo.sourcemapReference) {
-        deleteUrlInfo(urlInfo.sourcemapReference.url);
-      }
-    }
-  };
-
-  const reuseOrCreateUrlInfo = url => {
-    const existingUrlInfo = getUrlInfo(url);
-    if (existingUrlInfo) return existingUrlInfo;
-    const urlInfo = createUrlInfo(url);
-    urlInfoMap.set(url, urlInfo);
-    onCreateUrlInfo(urlInfo);
-    return urlInfo;
-  };
-
-  const inferReference = (specifier, parentUrl) => {
-    const parentUrlInfo = getUrlInfo(parentUrl);
-
-    if (!parentUrlInfo) {
-      return null;
-    }
-
-    const firstReferenceOnThatUrl = parentUrlInfo.references.find(reference => {
-      return urlSpecifierEncoding.decode(reference) === specifier;
-    });
-    return firstReferenceOnThatUrl;
-  };
-
-  const findDependent = (url, predicate) => {
-    const urlInfo = getUrlInfo(url);
-
-    if (!urlInfo) {
-      return null;
-    }
-
-    const visitDependents = urlInfo => {
-      for (const dependentUrl of urlInfo.dependents) {
-        const dependent = getUrlInfo(dependentUrl);
-
-        if (predicate(dependent)) {
-          return dependent;
-        }
-
-        return visitDependents(dependent);
-      }
-
-      return null;
+  const timeEnd = () => {
+    const endTimestamp = performance$1.now();
+    const timing = {
+      [name]: endTimestamp - startTimestamp
     };
-
-    return visitDependents(urlInfo);
+    return timing;
   };
 
-  const updateReferences = (urlInfo, references) => {
-    const setOfDependencyUrls = new Set(); // for import assertion "file.css?as_css_module" depends on "file.css"
-    // this is enabled only for dev where there is autoreload
-    // during build the css file must be considered as not referenced
-    // (except if referenced explicitely by something else) so that
-    // the css file does not appear in the build directory
+  return timeEnd;
+};
+const timeFunction = (name, fn) => {
+  const timeEnd = timeStart(name);
+  const returnValue = fn();
 
-    if (includeOriginalUrls && urlInfo.originalUrl !== urlInfo.url) {
-      setOfDependencyUrls.add(urlInfo.originalUrl);
-    }
+  if (returnValue && typeof returnValue.then === "function") {
+    return returnValue.then(value => {
+      return [timeEnd(), value];
+    });
+  }
 
-    references.forEach(reference => {
-      if (reference.isRessourceHint) {
-        // ressource hint are a special kind of reference.
-        // They are a sort of weak reference to an url.
-        // We ignore them so that url referenced only by ressource hints
-        // have url.dependents.size === 0 and can be considered as not used
-        // It means html won't consider url referenced solely
-        // by <link> as dependency and it's fine
-        return;
+  return [timeEnd(), returnValue];
+};
+
+const HOOK_NAMES$1 = ["serverListening", "redirectRequest", "handleRequest", "handleWebsocket", "handleError", "onResponsePush", "injectResponseHeaders", "responseReady", "serverStopped"];
+const createServiceController = services => {
+  const flatServices = flattenAndFilterServices(services);
+  const hookGroups = {};
+
+  const addService = service => {
+    Object.keys(service).forEach(key => {
+      if (key === "name") return;
+      const isHook = HOOK_NAMES$1.includes(key);
+
+      if (!isHook) {
+        console.warn(`Unexpected "${key}" property on "${service.name}" service`);
       }
 
-      setOfDependencyUrls.add(reference.url);
+      const hookName = key;
+      const hookValue = service[hookName];
+
+      if (hookValue) {
+        const group = hookGroups[hookName] || (hookGroups[hookName] = []);
+        group.push({
+          service,
+          name: hookName,
+          value: hookValue
+        });
+      }
     });
-    const urlsToRemove = Array.from(urlInfo.dependencies).filter(dep => !setOfDependencyUrls.has(dep));
-    pruneDependencies(urlInfo, urlsToRemove);
-    urlInfo.references = references;
-    setOfDependencyUrls.forEach(dependencyUrl => {
-      const dependencyUrlInfo = reuseOrCreateUrlInfo(dependencyUrl);
-      urlInfo.dependencies.add(dependencyUrl);
-      dependencyUrlInfo.dependents.add(urlInfo.url);
-    });
-    return urlInfo;
   };
 
-  const pruneDependencies = (firstUrlInfo, urlsToRemove) => {
-    const prunedUrlInfos = [];
+  flatServices.forEach(service => {
+    addService(service);
+  });
+  let currentService = null;
+  let currentHookName = null;
 
-    const removeDependencies = (urlInfo, urlsToPrune) => {
-      urlsToPrune.forEach(urlToPrune => {
-        urlInfo.dependencies.delete(urlToPrune);
-        const dependencyUrlInfo = getUrlInfo(urlToPrune);
+  const callHook = (hook, info, context) => {
+    const hookFn = hook.value;
 
-        if (!dependencyUrlInfo) {
-          return;
+    if (!hookFn) {
+      return null;
+    }
+
+    currentService = hook.service;
+    currentHookName = hook.name;
+    let timeEnd;
+
+    if (context && context.timing) {
+      timeEnd = timeStart(`${currentService.name.replace("jsenv:", "")}.${currentHookName}`);
+    }
+
+    let valueReturned = hookFn(info, context);
+
+    if (context && context.timing) {
+      Object.assign(context.timing, timeEnd());
+    }
+
+    currentService = null;
+    currentHookName = null;
+    return valueReturned;
+  };
+
+  const callAsyncHook = async (hook, info, context) => {
+    const hookFn = hook.value;
+
+    if (!hookFn) {
+      return null;
+    }
+
+    currentService = hook.service;
+    currentHookName = hook.name;
+    let timeEnd;
+
+    if (context && context.timing) {
+      timeEnd = timeStart(`${currentService.name.replace("jsenv:", "")}.${currentHookName}`);
+    }
+
+    let valueReturned = await hookFn(info, context);
+
+    if (context && context.timing) {
+      Object.assign(context.timing, timeEnd());
+    }
+
+    currentService = null;
+    currentHookName = null;
+    return valueReturned;
+  };
+
+  const callHooks = (hookName, info, context, callback = () => {}) => {
+    const hooks = hookGroups[hookName];
+
+    if (hooks) {
+      for (const hook of hooks) {
+        const returnValue = callHook(hook, info, context);
+
+        if (returnValue) {
+          callback(returnValue);
+        }
+      }
+    }
+  };
+
+  const callHooksUntil = (hookName, info, context, until = returnValue => returnValue) => {
+    const hooks = hookGroups[hookName];
+
+    if (hooks) {
+      for (const hook of hooks) {
+        const returnValue = callHook(hook, info, context);
+        const untilReturnValue = until(returnValue);
+
+        if (untilReturnValue) {
+          return untilReturnValue;
+        }
+      }
+    }
+
+    return null;
+  };
+
+  const callAsyncHooksUntil = (hookName, info, context) => {
+    const hooks = hookGroups[hookName];
+
+    if (!hooks) {
+      return null;
+    }
+
+    if (hooks.length === 0) {
+      return null;
+    }
+
+    return new Promise((resolve, reject) => {
+      const visit = index => {
+        if (index >= hooks.length) {
+          return resolve();
         }
 
-        dependencyUrlInfo.dependents.delete(urlInfo.url);
+        const hook = hooks[index];
+        const returnValue = callAsyncHook(hook, info, context);
+        return Promise.resolve(returnValue).then(output => {
+          if (output) {
+            return resolve(output);
+          }
 
-        if (dependencyUrlInfo.dependents.size === 0) {
-          removeDependencies(dependencyUrlInfo, Array.from(dependencyUrlInfo.dependencies));
-          prunedUrlInfos.push(dependencyUrlInfo);
-        }
-      });
-    };
+          return visit(index + 1);
+        }, reject);
+      };
 
-    removeDependencies(firstUrlInfo, urlsToRemove);
+      visit(0);
+    });
+  };
 
-    if (prunedUrlInfos.length === 0) {
+  return {
+    services: flatServices,
+    callHooks,
+    callHooksUntil,
+    callAsyncHooksUntil,
+    getCurrentService: () => currentService,
+    getCurrentHookName: () => currentHookName
+  };
+};
+
+const flattenAndFilterServices = services => {
+  const flatServices = [];
+
+  const visitServiceEntry = serviceEntry => {
+    if (Array.isArray(serviceEntry)) {
+      serviceEntry.forEach(value => visitServiceEntry(value));
       return;
     }
 
-    prunedUrlInfos.forEach(prunedUrlInfo => {
-      prunedUrlInfo.modifiedTimestamp = Date.now();
+    if (typeof serviceEntry === "object" && serviceEntry !== null) {
+      if (!serviceEntry.name) {
+        serviceEntry.name = "anonymous";
+      }
 
-      if (prunedUrlInfo.isInline) {
-        // should we always delete?
-        deleteUrlInfo(prunedUrlInfo.url);
+      flatServices.push(serviceEntry);
+      return;
+    }
+
+    throw new Error(`services must be objects, got ${serviceEntry}`);
+  };
+
+  services.forEach(serviceEntry => visitServiceEntry(serviceEntry));
+  return flatServices;
+};
+
+/**
+
+ A multiple header is a header with multiple values like
+
+ "text/plain, application/json;q=0.1"
+
+ Each, means it's a new value (it's optionally followed by a space)
+
+ Each; mean it's a property followed by =
+ if "" is a string
+ if not it's likely a number
+ */
+const parseMultipleHeader = (multipleHeaderString, {
+  validateName = () => true,
+  validateProperty = () => true
+} = {}) => {
+  const values = multipleHeaderString.split(",");
+  const multipleHeader = {};
+  values.forEach(value => {
+    const valueTrimmed = value.trim();
+    const valueParts = valueTrimmed.split(";");
+    const name = valueParts[0];
+    const nameValidation = validateName(name);
+
+    if (!nameValidation) {
+      return;
+    }
+
+    const properties = parseHeaderProperties(valueParts.slice(1), {
+      validateProperty
+    });
+    multipleHeader[name] = properties;
+  });
+  return multipleHeader;
+};
+
+const parseHeaderProperties = (headerProperties, {
+  validateProperty
+}) => {
+  const properties = headerProperties.reduce((previous, valuePart) => {
+    const [propertyName, propertyValueString] = valuePart.split("=");
+    const propertyValue = parseHeaderPropertyValue(propertyValueString);
+    const property = {
+      name: propertyName,
+      value: propertyValue
+    };
+    const propertyValidation = validateProperty(property);
+
+    if (!propertyValidation) {
+      return previous;
+    }
+
+    return { ...previous,
+      [property.name]: property.value
+    };
+  }, {});
+  return properties;
+};
+
+const parseHeaderPropertyValue = headerPropertyValueString => {
+  const firstChar = headerPropertyValueString[0];
+  const lastChar = headerPropertyValueString[headerPropertyValueString.length - 1];
+
+  if (firstChar === '"' && lastChar === '"') {
+    return headerPropertyValueString.slice(1, -1);
+  }
+
+  if (isNaN(headerPropertyValueString)) {
+    return headerPropertyValueString;
+  }
+
+  return parseFloat(headerPropertyValueString);
+};
+
+const stringifyMultipleHeader = (multipleHeader, {
+  validateName = () => true,
+  validateProperty = () => true
+} = {}) => {
+  return Object.keys(multipleHeader).filter(name => {
+    const headerProperties = multipleHeader[name];
+
+    if (!headerProperties) {
+      return false;
+    }
+
+    if (typeof headerProperties !== "object") {
+      return false;
+    }
+
+    const nameValidation = validateName(name);
+
+    if (!nameValidation) {
+      return false;
+    }
+
+    return true;
+  }).map(name => {
+    const headerProperties = multipleHeader[name];
+    const headerPropertiesString = stringifyHeaderProperties(headerProperties, {
+      validateProperty
+    });
+
+    if (headerPropertiesString.length) {
+      return `${name};${headerPropertiesString}`;
+    }
+
+    return name;
+  }).join(", ");
+};
+
+const stringifyHeaderProperties = (headerProperties, {
+  validateProperty
+}) => {
+  const headerPropertiesString = Object.keys(headerProperties).map(name => {
+    const property = {
+      name,
+      value: headerProperties[name]
+    };
+    return property;
+  }).filter(property => {
+    const propertyValidation = validateProperty(property);
+
+    if (!propertyValidation) {
+      return false;
+    }
+
+    return true;
+  }).map(stringifyHeaderProperty).join(";");
+  return headerPropertiesString;
+};
+
+const stringifyHeaderProperty = ({
+  name,
+  value
+}) => {
+  if (typeof value === "string") {
+    return `${name}="${value}"`;
+  }
+
+  return `${name}=${value}`;
+};
+
+// because in chrome dev tools they are shown in alphabetic order
+// also we should manipulate a timing object instead of a header to facilitate
+// manipulation of the object so that the timing header response generation logic belongs to @jsenv/server
+// so response can return a new timing object
+// yes it's awful, feel free to PR with a better approach :)
+
+const timingToServerTimingResponseHeaders = timing => {
+  const serverTimingHeader = {};
+  Object.keys(timing).forEach((key, index) => {
+    const name = letters[index] || "zz";
+    serverTimingHeader[name] = {
+      desc: key,
+      dur: timing[key]
+    };
+  });
+  const serverTimingHeaderString = stringifyServerTimingHeader(serverTimingHeader);
+  return {
+    "server-timing": serverTimingHeaderString
+  };
+};
+const stringifyServerTimingHeader = serverTimingHeader => {
+  return stringifyMultipleHeader(serverTimingHeader, {
+    validateName: validateServerTimingName
+  });
+}; // (),/:;<=>?@[\]{}" Don't allowed
+// Minimal length is one symbol
+// Digits, alphabet characters,
+// and !#$%&'*+-.^_`|~ are allowed
+// https://www.w3.org/TR/2019/WD-server-timing-20190307/#the-server-timing-header-field
+// https://tools.ietf.org/html/rfc7230#section-3.2.6
+
+const validateServerTimingName = name => {
+  const valid = /^[!#$%&'*+\-.^_`|~0-9a-z]+$/gi.test(name);
+
+  if (!valid) {
+    console.warn(`server timing contains invalid symbols`);
+    return false;
+  }
+
+  return true;
+};
+
+const letters = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"];
+
+const listenEvent = (objectWithEventEmitter, eventName, callback, {
+  once = false
+} = {}) => {
+  if (once) {
+    objectWithEventEmitter.once(eventName, callback);
+  } else {
+    objectWithEventEmitter.addListener(eventName, callback);
+  }
+
+  return () => {
+    objectWithEventEmitter.removeListener(eventName, callback);
+  };
+};
+
+/**
+
+https://stackoverflow.com/a/42019773/2634179
+
+*/
+const createPolyglotServer = async ({
+  http2 = false,
+  http1Allowed = true,
+  certificate,
+  privateKey
+}) => {
+  const httpServer = http.createServer();
+  const tlsServer = await createSecureServer({
+    certificate,
+    privateKey,
+    http2,
+    http1Allowed
+  });
+  const netServer = net.createServer({
+    allowHalfOpen: false
+  });
+  listenEvent(netServer, "connection", socket => {
+    detectSocketProtocol(socket, protocol => {
+      if (protocol === "http") {
+        httpServer.emit("connection", socket);
+        return;
+      }
+
+      if (protocol === "tls") {
+        tlsServer.emit("connection", socket);
+        return;
+      }
+
+      const response = [`HTTP/1.1 400 Bad Request`, `Content-Length: 0`, "", ""].join("\r\n");
+      socket.write(response);
+      socket.end();
+      socket.destroy();
+      netServer.emit("clientError", new Error("protocol error, Neither http, nor tls"), socket);
+    });
+  });
+  netServer._httpServer = httpServer;
+  netServer._tlsServer = tlsServer;
+  return netServer;
+}; // The async part is just to lazyly import "http2" or "https"
+// so that these module are parsed only if used.
+// https://nodejs.org/api/tls.html#tlscreatesecurecontextoptions
+
+const createSecureServer = async ({
+  certificate,
+  privateKey,
+  http2,
+  http1Allowed
+}) => {
+  if (http2) {
+    const {
+      createSecureServer
+    } = await import("node:http2");
+    return createSecureServer({
+      cert: certificate,
+      key: privateKey,
+      allowHTTP1: http1Allowed
+    });
+  }
+
+  const {
+    createServer
+  } = await import("node:https");
+  return createServer({
+    cert: certificate,
+    key: privateKey
+  });
+};
+
+const detectSocketProtocol = (socket, protocolDetectedCallback) => {
+  let removeOnceReadableListener = () => {};
+
+  const tryToRead = () => {
+    const buffer = socket.read(1);
+
+    if (buffer === null) {
+      removeOnceReadableListener = socket.once("readable", tryToRead);
+      return;
+    }
+
+    const firstByte = buffer[0];
+    socket.unshift(buffer);
+
+    if (firstByte === 22) {
+      protocolDetectedCallback("tls");
+      return;
+    }
+
+    if (firstByte > 32 && firstByte < 127) {
+      protocolDetectedCallback("http");
+      return;
+    }
+
+    protocolDetectedCallback(null);
+  };
+
+  tryToRead();
+  return () => {
+    removeOnceReadableListener();
+  };
+};
+
+const trackServerPendingConnections = (nodeServer, {
+  http2
+}) => {
+  if (http2) {
+    // see http2.js: we rely on https://nodejs.org/api/http2.html#http2_compatibility_api
+    return trackHttp1ServerPendingConnections(nodeServer);
+  }
+
+  return trackHttp1ServerPendingConnections(nodeServer);
+}; // const trackHttp2ServerPendingSessions = () => {}
+
+const trackHttp1ServerPendingConnections = nodeServer => {
+  const pendingConnections = new Set();
+  const removeConnectionListener = listenEvent(nodeServer, "connection", connection => {
+    pendingConnections.add(connection);
+    listenEvent(connection, "close", () => {
+      pendingConnections.delete(connection);
+    }, {
+      once: true
+    });
+  });
+
+  const stop = async reason => {
+    removeConnectionListener();
+    const pendingConnectionsArray = Array.from(pendingConnections);
+    pendingConnections.clear();
+    await Promise.all(pendingConnectionsArray.map(async pendingConnection => {
+      await destroyConnection(pendingConnection, reason);
+    }));
+  };
+
+  return {
+    stop
+  };
+};
+
+const destroyConnection = (connection, reason) => {
+  return new Promise((resolve, reject) => {
+    connection.destroy(reason, error => {
+      if (error) {
+        if (error === reason || error.code === "ENOTCONN") {
+          resolve();
+        } else {
+          reject(error);
+        }
+      } else {
+        resolve();
+      }
+    });
+  });
+}; // export const trackServerPendingStreams = (nodeServer) => {
+//   const pendingClients = new Set()
+//   const streamListener = (http2Stream, headers, flags) => {
+//     const client = { http2Stream, headers, flags }
+//     pendingClients.add(client)
+//     http2Stream.on("close", () => {
+//       pendingClients.delete(client)
+//     })
+//   }
+//   nodeServer.on("stream", streamListener)
+//   const stop = ({
+//     status,
+//     // reason
+//   }) => {
+//     nodeServer.removeListener("stream", streamListener)
+//     return Promise.all(
+//       Array.from(pendingClients).map(({ http2Stream }) => {
+//         if (http2Stream.sentHeaders === false) {
+//           http2Stream.respond({ ":status": status }, { endStream: true })
+//         }
+//         return new Promise((resolve, reject) => {
+//           if (http2Stream.closed) {
+//             resolve()
+//           } else {
+//             http2Stream.close(NGHTTP2_NO_ERROR, (error) => {
+//               if (error) {
+//                 reject(error)
+//               } else {
+//                 resolve()
+//               }
+//             })
+//           }
+//         })
+//       }),
+//     )
+//   }
+//   return { stop }
+// }
+// export const trackServerPendingSessions = (nodeServer, { onSessionError }) => {
+//   const pendingSessions = new Set()
+//   const sessionListener = (session) => {
+//     session.on("close", () => {
+//       pendingSessions.delete(session)
+//     })
+//     session.on("error", onSessionError)
+//     pendingSessions.add(session)
+//   }
+//   nodeServer.on("session", sessionListener)
+//   const stop = async (reason) => {
+//     nodeServer.removeListener("session", sessionListener)
+//     await Promise.all(
+//       Array.from(pendingSessions).map((pendingSession) => {
+//         return new Promise((resolve, reject) => {
+//           pendingSession.close((error) => {
+//             if (error) {
+//               if (error === reason || error.code === "ENOTCONN") {
+//                 resolve()
+//               } else {
+//                 reject(error)
+//               }
+//             } else {
+//               resolve()
+//             }
+//           })
+//         })
+//       }),
+//     )
+//   }
+//   return { stop }
+// }
+
+const listenRequest = (nodeServer, requestCallback) => {
+  if (nodeServer._httpServer) {
+    const removeHttpRequestListener = listenEvent(nodeServer._httpServer, "request", requestCallback);
+    const removeTlsRequestListener = listenEvent(nodeServer._tlsServer, "request", requestCallback);
+    return () => {
+      removeHttpRequestListener();
+      removeTlsRequestListener();
+    };
+  }
+
+  return listenEvent(nodeServer, "request", requestCallback);
+};
+
+const trackServerPendingRequests = (nodeServer, {
+  http2
+}) => {
+  if (http2) {
+    // see http2.js: we rely on https://nodejs.org/api/http2.html#http2_compatibility_api
+    return trackHttp1ServerPendingRequests(nodeServer);
+  }
+
+  return trackHttp1ServerPendingRequests(nodeServer);
+};
+
+const trackHttp1ServerPendingRequests = nodeServer => {
+  const pendingClients = new Set();
+  const removeRequestListener = listenRequest(nodeServer, (nodeRequest, nodeResponse) => {
+    const client = {
+      nodeRequest,
+      nodeResponse
+    };
+    pendingClients.add(client);
+    nodeResponse.once("close", () => {
+      pendingClients.delete(client);
+    });
+  });
+
+  const stop = async ({
+    status,
+    reason
+  }) => {
+    removeRequestListener();
+    const pendingClientsArray = Array.from(pendingClients);
+    pendingClients.clear();
+    await Promise.all(pendingClientsArray.map(({
+      nodeResponse
+    }) => {
+      if (nodeResponse.headersSent === false) {
+        nodeResponse.writeHead(status, String(reason));
+      } // http2
+
+
+      if (nodeResponse.close) {
+        return new Promise((resolve, reject) => {
+          if (nodeResponse.closed) {
+            resolve();
+          } else {
+            nodeResponse.close(error => {
+              if (error) {
+                reject(error);
+              } else {
+                resolve();
+              }
+            });
+          }
+        });
+      } // http
+
+
+      return new Promise(resolve => {
+        if (nodeResponse.destroyed) {
+          resolve();
+        } else {
+          nodeResponse.once("close", () => {
+            resolve();
+          });
+          nodeResponse.destroy();
+        }
+      });
+    }));
+  };
+
+  return {
+    stop
+  };
+};
+
+if ("observable" in Symbol === false) {
+  Symbol.observable = Symbol.for("observable");
+}
+
+const createObservable = producer => {
+  if (typeof producer !== "function") {
+    throw new TypeError(`producer must be a function, got ${producer}`);
+  }
+
+  const observable = {
+    [Symbol.observable]: () => observable,
+    subscribe: ({
+      next = () => {},
+      error = value => {
+        throw value;
+      },
+      complete = () => {}
+    }) => {
+      let cleanup = () => {};
+
+      const subscription = {
+        closed: false,
+        unsubscribe: () => {
+          subscription.closed = true;
+          cleanup();
+        }
+      };
+      const producerReturnValue = producer({
+        next: value => {
+          if (subscription.closed) return;
+          next(value);
+        },
+        error: value => {
+          if (subscription.closed) return;
+          error(value);
+        },
+        complete: () => {
+          if (subscription.closed) return;
+          complete();
+        }
+      });
+
+      if (typeof producerReturnValue === "function") {
+        cleanup = producerReturnValue;
+      }
+
+      return subscription;
+    }
+  };
+  return observable;
+};
+const isObservable = value => {
+  if (value === null || value === undefined) {
+    return false;
+  }
+
+  if (typeof value === "object" || typeof value === "function") {
+    return Symbol.observable in value;
+  }
+
+  return false;
+};
+const observableFromValue = value => {
+  if (isObservable(value)) {
+    return value;
+  }
+
+  return createObservable(({
+    next,
+    complete
+  }) => {
+    next(value);
+    const timer = setTimeout(() => {
+      complete();
+    });
+    return () => {
+      clearTimeout(timer);
+    };
+  });
+};
+
+// https://github.com/jamestalmage/stream-to-observable/blob/master/index.js
+const readableStreamLifetimeInSeconds = 120;
+const nodeStreamToObservable = nodeStream => {
+  const observable = createObservable(({
+    next,
+    error,
+    complete
+  }) => {
+    if (nodeStream.isPaused()) {
+      nodeStream.resume();
+    } else if (nodeStream.complete) {
+      complete();
+      return null;
+    }
+
+    const cleanup = () => {
+      nodeStream.removeListener("data", next);
+      nodeStream.removeListener("error", error);
+      nodeStream.removeListener("end", complete);
+      nodeStream.removeListener("close", cleanup);
+      nodeStream.destroy();
+    }; // should we do nodeStream.resume() in case the stream was paused ?
+
+
+    nodeStream.once("error", error);
+    nodeStream.on("data", data => {
+      next(data);
+    });
+    nodeStream.once("close", () => {
+      cleanup();
+    });
+    nodeStream.once("end", () => {
+      complete();
+    });
+    return cleanup;
+  });
+
+  if (nodeStream instanceof Readable) {
+    // safe measure, ensure the readable stream gets
+    // used in the next ${readableStreamLifetimeInSeconds} otherwise destroys it
+    const timeout = setTimeout(() => {
+      process.emitWarning(`Readable stream not used after ${readableStreamLifetimeInSeconds} seconds. It will be destroyed to release ressources`, {
+        CODE: "READABLE_STREAM_TIMEOUT",
+        // url is for http client request
+        detail: `path: ${nodeStream.path}, fd: ${nodeStream.fd}, url: ${nodeStream.url}`
+      });
+      nodeStream.destroy();
+    }, readableStreamLifetimeInSeconds * 1000);
+    observable.timeout = timeout;
+    onceReadableStreamUsedOrClosed(nodeStream, () => {
+      clearTimeout(timeout);
+    });
+  }
+
+  return observable;
+};
+
+const onceReadableStreamUsedOrClosed = (readableStream, callback) => {
+  const dataOrCloseCallback = () => {
+    readableStream.removeListener("data", dataOrCloseCallback);
+    readableStream.removeListener("close", dataOrCloseCallback);
+    callback();
+  };
+
+  readableStream.on("data", dataOrCloseCallback);
+  readableStream.once("close", dataOrCloseCallback);
+};
+
+const normalizeHeaderName = headerName => {
+  headerName = String(headerName);
+
+  if (/[^a-z0-9\-#$%&'*+.\^_`|~]/i.test(headerName)) {
+    throw new TypeError("Invalid character in header field name");
+  }
+
+  return headerName.toLowerCase();
+};
+
+const normalizeHeaderValue = headerValue => {
+  return String(headerValue);
+};
+
+/*
+https://developer.mozilla.org/en-US/docs/Web/API/Headers
+https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+*/
+const headersFromObject = headersObject => {
+  const headers = {};
+  Object.keys(headersObject).forEach(headerName => {
+    if (headerName[0] === ":") {
+      // exclude http2 headers
+      return;
+    }
+
+    headers[normalizeHeaderName(headerName)] = normalizeHeaderValue(headersObject[headerName]);
+  });
+  return headers;
+};
+
+const fromNodeRequest = (nodeRequest, {
+  serverOrigin,
+  signal
+}) => {
+  const headers = headersFromObject(nodeRequest.headers);
+  const body = nodeStreamToObservable(nodeRequest);
+  let requestOrigin;
+
+  if (nodeRequest.upgrade) {
+    requestOrigin = serverOrigin;
+  } else if (nodeRequest.authority) {
+    requestOrigin = nodeRequest.connection.encrypted ? `https://${nodeRequest.authority}` : `http://${nodeRequest.authority}`;
+  } else if (nodeRequest.headers.host) {
+    requestOrigin = nodeRequest.connection.encrypted ? `https://${nodeRequest.headers.host}` : `http://${nodeRequest.headers.host}`;
+  } else {
+    requestOrigin = serverOrigin;
+  }
+
+  return Object.freeze({
+    signal,
+    http2: Boolean(nodeRequest.stream),
+    origin: requestOrigin,
+    ...getPropertiesFromRessource({
+      ressource: nodeRequest.url,
+      baseUrl: requestOrigin
+    }),
+    method: nodeRequest.method,
+    headers,
+    body
+  });
+};
+const applyRedirectionToRequest = (request, {
+  ressource,
+  pathname,
+  ...rest
+}) => {
+  return { ...request,
+    ...(ressource ? getPropertiesFromRessource({
+      ressource,
+      baseUrl: request.url
+    }) : pathname ? getPropertiesFromPathname({
+      pathname,
+      baseUrl: request.url
+    }) : {}),
+    ...rest
+  };
+};
+
+const getPropertiesFromRessource = ({
+  ressource,
+  baseUrl
+}) => {
+  const urlObject = new URL(ressource, baseUrl);
+  let pathname = urlObject.pathname;
+  return {
+    url: String(urlObject),
+    pathname,
+    ressource
+  };
+};
+
+const getPropertiesFromPathname = ({
+  pathname,
+  baseUrl
+}) => {
+  return getPropertiesFromRessource({
+    ressource: `${pathname}${new URL(baseUrl).search}`,
+    baseUrl
+  });
+};
+
+const createPushRequest = (request, {
+  signal,
+  pathname,
+  method
+}) => {
+  const pushRequest = Object.freeze({ ...request,
+    parent: request,
+    signal,
+    http2: true,
+    ...(pathname ? getPropertiesFromPathname({
+      pathname,
+      baseUrl: request.url
+    }) : {}),
+    method: method || request.method,
+    headers: getHeadersInheritedByPushRequest(request),
+    body: undefined
+  });
+  return pushRequest;
+};
+
+const getHeadersInheritedByPushRequest = request => {
+  const headersInherited = { ...request.headers
+  }; // mtime sent by the client in request headers concerns the main request
+  // Time remains valid for request to other ressources so we keep it
+  // in child requests
+  // delete childHeaders["if-modified-since"]
+  // eTag sent by the client in request headers concerns the main request
+  // A request made to an other ressource must not inherit the eTag
+
+  delete headersInherited["if-none-match"];
+  return headersInherited;
+};
+
+const normalizeBodyMethods = body => {
+  if (isObservable(body)) {
+    return {
+      asObservable: () => body,
+      destroy: () => {}
+    };
+  }
+
+  if (isFileHandle(body)) {
+    return {
+      asObservable: () => fileHandleToObservable(body),
+      destroy: () => {
+        body.close();
+      }
+    };
+  }
+
+  if (isNodeStream(body)) {
+    return {
+      asObservable: () => nodeStreamToObservable(body),
+      destroy: () => {
+        body.destroy();
+      }
+    };
+  }
+
+  return {
+    asObservable: () => observableFromValue(body),
+    destroy: () => {}
+  };
+};
+const isFileHandle = value => {
+  return value && value.constructor && value.constructor.name === "FileHandle";
+};
+const fileHandleToReadableStream = fileHandle => {
+  const fileReadableStream = typeof fileHandle.createReadStream === "function" ? fileHandle.createReadStream() : createReadStream("/toto", // is it ok to pass a fake path like this?
+  {
+    fd: fileHandle.fd,
+    emitClose: true // autoClose: true
+
+  }); // I suppose it's required only when doing fs.createReadStream()
+  // and not fileHandle.createReadStream()
+  // fileReadableStream.on("end", () => {
+  //   fileHandle.close()
+  // })
+
+  return fileReadableStream;
+};
+
+const fileHandleToObservable = fileHandle => {
+  return nodeStreamToObservable(fileHandleToReadableStream(fileHandle));
+};
+
+const isNodeStream = value => {
+  if (value === undefined) {
+    return false;
+  }
+
+  if (value instanceof Stream || value instanceof Writable || value instanceof Readable) {
+    return true;
+  }
+
+  return false;
+};
+
+const populateNodeResponse = async (responseStream, {
+  status,
+  statusText,
+  headers,
+  body,
+  bodyEncoding
+}, {
+  signal,
+  ignoreBody,
+  onAbort,
+  onError,
+  onHeadersSent,
+  onEnd
+} = {}) => {
+  body = await body;
+  const bodyMethods = normalizeBodyMethods(body);
+
+  if (signal.aborted) {
+    bodyMethods.destroy();
+    responseStream.destroy();
+    onAbort();
+    return;
+  }
+
+  writeHead(responseStream, {
+    status,
+    statusText,
+    headers,
+    onHeadersSent
+  });
+
+  if (!body) {
+    onEnd();
+    responseStream.end();
+    return;
+  }
+
+  if (ignoreBody) {
+    onEnd();
+    bodyMethods.destroy();
+    responseStream.end();
+    return;
+  }
+
+  if (bodyEncoding) {
+    responseStream.setEncoding(bodyEncoding);
+  }
+
+  await new Promise(resolve => {
+    const observable = bodyMethods.asObservable();
+    const subscription = observable.subscribe({
+      next: data => {
+        try {
+          responseStream.write(data);
+        } catch (e) {
+          // Something inside Node.js sometimes puts stream
+          // in a state where .write() throw despites nodeResponse.destroyed
+          // being undefined and "close" event not being emitted.
+          // I have tested if we are the one calling destroy
+          // (I have commented every .destroy() call)
+          // but issue still occurs
+          // For the record it's "hard" to reproduce but can be by running
+          // a lot of tests against a browser in the context of @jsenv/core testing
+          if (e.code === "ERR_HTTP2_INVALID_STREAM") {
+            return;
+          }
+
+          responseStream.emit("error", e);
+        }
+      },
+      error: value => {
+        responseStream.emit("error", value);
+      },
+      complete: () => {
+        responseStream.end();
+      }
+    });
+    raceCallbacks({
+      abort: cb => {
+        signal.addEventListener("abort", cb);
+        return () => {
+          signal.removeEventListener("abort", cb);
+        };
+      },
+      error: cb => {
+        responseStream.on("error", cb);
+        return () => {
+          responseStream.removeListener("error", cb);
+        };
+      },
+      close: cb => {
+        responseStream.on("close", cb);
+        return () => {
+          responseStream.removeListener("close", cb);
+        };
+      },
+      finish: cb => {
+        responseStream.on("finish", cb);
+        return () => {
+          responseStream.removeListener("finish", cb);
+        };
+      }
+    }, winner => {
+      const raceEffects = {
+        abort: () => {
+          subscription.unsubscribe();
+          responseStream.destroy();
+          onAbort();
+          resolve();
+        },
+        error: error => {
+          subscription.unsubscribe();
+          responseStream.destroy();
+          onError(error);
+          resolve();
+        },
+        close: () => {
+          // close body in case nodeResponse is prematurely closed
+          // while body is writing
+          // it may happen in case of server sent event
+          // where body is kept open to write to client
+          // and the browser is reloaded or closed for instance
+          subscription.unsubscribe();
+          responseStream.destroy();
+          onAbort();
+          resolve();
+        },
+        finish: () => {
+          onEnd();
+          resolve();
+        }
+      };
+      raceEffects[winner.name](winner.data);
+    });
+  });
+};
+
+const writeHead = (responseStream, {
+  status,
+  statusText,
+  headers,
+  onHeadersSent
+}) => {
+  const responseIsHttp2ServerResponse = responseStream instanceof Http2ServerResponse;
+  const responseIsServerHttp2Stream = responseStream.constructor.name === "ServerHttp2Stream";
+  let nodeHeaders = headersToNodeHeaders(headers, {
+    // https://github.com/nodejs/node/blob/79296dc2d02c0b9872bbfcbb89148ea036a546d0/lib/internal/http2/compat.js#L112
+    ignoreConnectionHeader: responseIsHttp2ServerResponse || responseIsServerHttp2Stream
+  });
+
+  if (statusText === undefined) {
+    statusText = statusTextFromStatus(status);
+  }
+
+  if (responseIsServerHttp2Stream) {
+    nodeHeaders = { ...nodeHeaders,
+      ":status": status
+    };
+    responseStream.respond(nodeHeaders);
+    onHeadersSent({
+      nodeHeaders,
+      status,
+      statusText
+    });
+    return;
+  } // nodejs strange signature for writeHead force this
+  // https://nodejs.org/api/http.html#http_response_writehead_statuscode_statusmessage_headers
+
+
+  if ( // https://github.com/nodejs/node/blob/79296dc2d02c0b9872bbfcbb89148ea036a546d0/lib/internal/http2/compat.js#L97
+  responseIsHttp2ServerResponse) {
+    responseStream.writeHead(status, nodeHeaders);
+    onHeadersSent({
+      nodeHeaders,
+      status,
+      statusText
+    });
+    return;
+  }
+
+  responseStream.writeHead(status, statusText, nodeHeaders);
+  onHeadersSent({
+    nodeHeaders,
+    status,
+    statusText
+  });
+};
+
+const statusTextFromStatus = status => http.STATUS_CODES[status] || "not specified";
+
+const headersToNodeHeaders = (headers, {
+  ignoreConnectionHeader
+}) => {
+  const nodeHeaders = {};
+  Object.keys(headers).forEach(name => {
+    if (name === "connection" && ignoreConnectionHeader) return;
+    const nodeHeaderName = name in mapping ? mapping[name] : name;
+    nodeHeaders[nodeHeaderName] = headers[name];
+  });
+  return nodeHeaders;
+};
+
+const mapping = {// "content-type": "Content-Type",
+  // "last-modified": "Last-Modified",
+};
+
+// https://github.com/Marak/colors.js/blob/b63ef88e521b42920a9e908848de340b31e68c9d/lib/styles.js#L29
+const close = "\x1b[0m";
+const red = "\x1b[31m";
+const green = "\x1b[32m";
+const yellow = "\x1b[33m"; // const blue = "\x1b[34m"
+
+const magenta = "\x1b[35m";
+const cyan = "\x1b[36m"; // const white = "\x1b[37m"
+
+const colorizeResponseStatus = status => {
+  const statusType = statusToType(status);
+  if (statusType === "information") return `${cyan}${status}${close}`;
+  if (statusType === "success") return `${green}${status}${close}`;
+  if (statusType === "redirection") return `${magenta}${status}${close}`;
+  if (statusType === "client_error") return `${yellow}${status}${close}`;
+  if (statusType === "server_error") return `${red}${status}${close}`;
+  return status;
+}; // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+
+const statusToType = status => {
+  if (statusIsInformation(status)) return "information";
+  if (statusIsSuccess(status)) return "success";
+  if (statusIsRedirection(status)) return "redirection";
+  if (statusIsClientError(status)) return "client_error";
+  if (statusIsServerError(status)) return "server_error";
+  return "unknown";
+};
+
+const statusIsInformation = status => status >= 100 && status < 200;
+
+const statusIsSuccess = status => status >= 200 && status < 300;
+
+const statusIsRedirection = status => status >= 300 && status < 400;
+
+const statusIsClientError = status => status >= 400 && status < 500;
+
+const statusIsServerError = status => status >= 500 && status < 600;
+
+const applyDnsResolution = async (hostname, {
+  verbatim = false
+} = {}) => {
+  const dnsResolution = await new Promise((resolve, reject) => {
+    lookup(hostname, {
+      verbatim
+    }, (error, address, family) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve({
+          address,
+          family
+        });
+      }
+    });
+  });
+  return dnsResolution;
+};
+
+const getServerOrigins = async ({
+  protocol,
+  host,
+  port
+}) => {
+  const isLocal = LOOPBACK_HOSTNAMES.includes(host);
+  const localhostDnsResolution = await applyDnsResolution("localhost");
+  const localOrigin = createServerOrigin({
+    protocol,
+    hostname: localhostDnsResolution.address === "127.0.0.1" ? "localhost" : "127.0.0.1",
+    port
+  });
+
+  if (isLocal) {
+    return {
+      local: localOrigin
+    };
+  }
+
+  const isAnyIp = WILDCARD_HOSTNAMES.includes(host);
+  const networkOrigin = createServerOrigin({
+    protocol,
+    hostname: isAnyIp ? getExternalIp() : host,
+    port
+  });
+  return {
+    local: localOrigin,
+    network: networkOrigin
+  };
+};
+const LOOPBACK_HOSTNAMES = ["localhost", "127.0.0.1", "::1", "0000:0000:0000:0000:0000:0000:0000:0001"];
+const WILDCARD_HOSTNAMES = [undefined, "0.0.0.0", "::", "0000:0000:0000:0000:0000:0000:0000:0000"];
+
+const createServerOrigin = ({
+  protocol,
+  hostname,
+  port
+}) => {
+  const url = new URL("https://127.0.0.1:80");
+  url.protocol = protocol;
+  url.hostname = hostname;
+  url.port = port;
+  return url.origin;
+};
+
+const getExternalIp = () => {
+  const networkInterfaceMap = networkInterfaces();
+  let internalIPV4NetworkAddress;
+  Object.keys(networkInterfaceMap).find(key => {
+    const networkAddressArray = networkInterfaceMap[key];
+    return networkAddressArray.find(networkAddress => {
+      if (networkAddress.internal) return false;
+      if (!isIpV4(networkAddress)) return false;
+      internalIPV4NetworkAddress = networkAddress;
+      return true;
+    });
+  });
+  return internalIPV4NetworkAddress ? internalIPV4NetworkAddress.address : null;
+};
+
+const isIpV4 = networkAddress => {
+  // node 18+
+  if (typeof networkAddress.family === "number") {
+    return networkAddress.family === 4;
+  }
+
+  return networkAddress.family === "IPv4";
+};
+
+const listen = async ({
+  signal = new AbortController().signal,
+  server,
+  port,
+  portHint,
+  host
+}) => {
+  const listeningOperation = Abort.startOperation();
+
+  try {
+    listeningOperation.addAbortSignal(signal);
+
+    if (portHint) {
+      listeningOperation.throwIfAborted();
+      port = await findFreePort(portHint, {
+        signal: listeningOperation.signal,
+        host
+      });
+    }
+
+    listeningOperation.throwIfAborted();
+    port = await startListening({
+      server,
+      port,
+      host
+    });
+    listeningOperation.addAbortCallback(() => stopListening(server));
+    listeningOperation.throwIfAborted();
+    return port;
+  } finally {
+    await listeningOperation.end();
+  }
+};
+
+const findFreePort = async (initialPort = 1, {
+  signal = new AbortController().signal,
+  host = "127.0.0.1",
+  min = 1,
+  max = 65534,
+  next = port => port + 1
+} = {}) => {
+  const findFreePortOperation = Abort.startOperation();
+
+  try {
+    findFreePortOperation.addAbortSignal(signal);
+    findFreePortOperation.throwIfAborted();
+
+    const testUntil = async (port, host) => {
+      findFreePortOperation.throwIfAborted();
+      const free = await portIsFree(port, host);
+
+      if (free) {
+        return port;
+      }
+
+      const nextPort = next(port);
+
+      if (nextPort > max) {
+        throw new Error(`${host} has no available port between ${min} and ${max}`);
+      }
+
+      return testUntil(nextPort, host);
+    };
+
+    const freePort = await testUntil(initialPort, host);
+    return freePort;
+  } finally {
+    await findFreePortOperation.end();
+  }
+};
+
+const portIsFree = async (port, host) => {
+  const server = createServer();
+
+  try {
+    await startListening({
+      server,
+      port,
+      host
+    });
+  } catch (error) {
+    if (error && error.code === "EADDRINUSE") {
+      return false;
+    }
+
+    if (error && error.code === "EACCES") {
+      return false;
+    }
+
+    throw error;
+  }
+
+  await stopListening(server);
+  return true;
+};
+
+const startListening = ({
+  server,
+  port,
+  host
+}) => {
+  return new Promise((resolve, reject) => {
+    server.on("error", reject);
+    server.on("listening", () => {
+      // in case port is 0 (randomly assign an available port)
+      // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
+      resolve(server.address().port);
+    });
+    server.listen(port, host);
+  });
+};
+
+const stopListening = server => {
+  return new Promise((resolve, reject) => {
+    server.on("error", reject);
+    server.on("close", resolve);
+    server.close();
+  });
+}; // unit test exports
+
+const composeTwoObjects = (firstObject, secondObject, {
+  keysComposition,
+  strict = false,
+  forceLowerCase = false
+} = {}) => {
+  if (forceLowerCase) {
+    return applyCompositionForcingLowerCase(firstObject, secondObject, {
+      keysComposition,
+      strict
+    });
+  }
+
+  return applyCaseSensitiveComposition(firstObject, secondObject, {
+    keysComposition,
+    strict
+  });
+};
+
+const applyCaseSensitiveComposition = (firstObject, secondObject, {
+  keysComposition,
+  strict
+}) => {
+  if (strict) {
+    const composed = {};
+    Object.keys(keysComposition).forEach(key => {
+      composed[key] = composeValueAtKey({
+        firstObject,
+        secondObject,
+        keysComposition,
+        key,
+        firstKey: keyExistsIn(key, firstObject) ? key : null,
+        secondKey: keyExistsIn(key, secondObject) ? key : null
+      });
+    });
+    return composed;
+  }
+
+  const composed = {};
+  Object.keys(firstObject).forEach(key => {
+    composed[key] = firstObject[key];
+  });
+  Object.keys(secondObject).forEach(key => {
+    composed[key] = composeValueAtKey({
+      firstObject,
+      secondObject,
+      keysComposition,
+      key,
+      firstKey: keyExistsIn(key, firstObject) ? key : null,
+      secondKey: keyExistsIn(key, secondObject) ? key : null
+    });
+  });
+  return composed;
+};
+
+const applyCompositionForcingLowerCase = (firstObject, secondObject, {
+  keysComposition,
+  strict
+}) => {
+  if (strict) {
+    const firstObjectKeyMapping = {};
+    Object.keys(firstObject).forEach(key => {
+      firstObjectKeyMapping[key.toLowerCase()] = key;
+    });
+    const secondObjectKeyMapping = {};
+    Object.keys(secondObject).forEach(key => {
+      secondObjectKeyMapping[key.toLowerCase()] = key;
+    });
+    Object.keys(keysComposition).forEach(key => {
+      composed[key] = composeValueAtKey({
+        firstObject,
+        secondObject,
+        keysComposition,
+        key,
+        firstKey: firstObjectKeyMapping[key] || null,
+        secondKey: secondObjectKeyMapping[key] || null
+      });
+    });
+  }
+
+  const composed = {};
+  Object.keys(firstObject).forEach(key => {
+    composed[key.toLowerCase()] = firstObject[key];
+  });
+  Object.keys(secondObject).forEach(key => {
+    const keyLowercased = key.toLowerCase();
+    composed[key.toLowerCase()] = composeValueAtKey({
+      firstObject,
+      secondObject,
+      keysComposition,
+      key: keyLowercased,
+      firstKey: keyExistsIn(keyLowercased, firstObject) ? keyLowercased : keyExistsIn(key, firstObject) ? key : null,
+      secondKey: keyExistsIn(keyLowercased, secondObject) ? keyLowercased : keyExistsIn(key, secondObject) ? key : null
+    });
+  });
+  return composed;
+};
+
+const composeValueAtKey = ({
+  firstObject,
+  secondObject,
+  firstKey,
+  secondKey,
+  key,
+  keysComposition
+}) => {
+  if (!firstKey) {
+    return secondObject[secondKey];
+  }
+
+  if (!secondKey) {
+    return firstObject[firstKey];
+  }
+
+  const keyForCustomComposition = keyExistsIn(key, keysComposition) ? key : null;
+
+  if (!keyForCustomComposition) {
+    return secondObject[secondKey];
+  }
+
+  const composeTwoValues = keysComposition[keyForCustomComposition];
+  return composeTwoValues(firstObject[firstKey], secondObject[secondKey]);
+};
+
+const keyExistsIn = (key, object) => {
+  return Object.prototype.hasOwnProperty.call(object, key);
+};
+
+const composeTwoHeaders = (firstHeaders, secondHeaders) => {
+  return composeTwoObjects(firstHeaders, secondHeaders, {
+    keysComposition: HEADER_NAMES_COMPOSITION,
+    forceLowerCase: true
+  });
+};
+
+const composeHeaderValues = (value, nextValue) => {
+  const headerValues = value.split(", ");
+  nextValue.split(", ").forEach(value => {
+    if (!headerValues.includes(value)) {
+      headerValues.push(value);
+    }
+  });
+  return headerValues.join(", ");
+};
+
+const HEADER_NAMES_COMPOSITION = {
+  "accept": composeHeaderValues,
+  "accept-charset": composeHeaderValues,
+  "accept-language": composeHeaderValues,
+  "access-control-allow-headers": composeHeaderValues,
+  "access-control-allow-methods": composeHeaderValues,
+  "access-control-allow-origin": composeHeaderValues,
+  // https://www.w3.org/TR/server-timing/
+  // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Server-Timing
+  "server-timing": composeHeaderValues,
+  // 'content-type', // https://github.com/ninenines/cowboy/issues/1230
+  "vary": composeHeaderValues
+};
+
+const composeTwoResponses = (firstResponse, secondResponse) => {
+  return composeTwoObjects(firstResponse, secondResponse, {
+    keysComposition: RESPONSE_KEYS_COMPOSITION,
+    strict: true
+  });
+};
+const RESPONSE_KEYS_COMPOSITION = {
+  status: (prevStatus, status) => status,
+  statusText: (prevStatusText, statusText) => statusText,
+  statusMessage: (prevStatusMessage, statusMessage) => statusMessage,
+  headers: composeTwoHeaders,
+  body: (prevBody, body) => body,
+  bodyEncoding: (prevEncoding, encoding) => encoding,
+  timing: (prevTiming, timing) => {
+    return { ...prevTiming,
+      ...timing
+    };
+  }
+};
+
+const listenServerConnectionError = (nodeServer, connectionErrorCallback, {
+  ignoreErrorAfterConnectionIsDestroyed = true
+} = {}) => {
+  const cleanupSet = new Set();
+  const removeConnectionListener = listenEvent(nodeServer, "connection", socket => {
+    const removeSocketErrorListener = listenEvent(socket, "error", error => {
+      if (ignoreErrorAfterConnectionIsDestroyed && socket.destroyed) {
+        return;
+      }
+
+      connectionErrorCallback(error, socket);
+    });
+    const removeOnceSocketCloseListener = listenEvent(socket, "close", () => {
+      removeSocketErrorListener();
+      cleanupSet.delete(cleanup);
+    }, {
+      once: true
+    });
+
+    const cleanup = () => {
+      removeSocketErrorListener();
+      removeOnceSocketCloseListener();
+    };
+
+    cleanupSet.add(cleanup);
+  });
+  return () => {
+    removeConnectionListener();
+    cleanupSet.forEach(cleanup => {
+      cleanup();
+    });
+    cleanupSet.clear();
+  };
+};
+
+const createReason = reasonString => {
+  return {
+    toString: () => reasonString
+  };
+};
+
+const STOP_REASON_INTERNAL_ERROR = createReason("Internal error");
+const STOP_REASON_PROCESS_SIGHUP = createReason("process SIGHUP");
+const STOP_REASON_PROCESS_SIGTERM = createReason("process SIGTERM");
+const STOP_REASON_PROCESS_SIGINT = createReason("process SIGINT");
+const STOP_REASON_PROCESS_BEFORE_EXIT = createReason("process before exit");
+const STOP_REASON_PROCESS_EXIT = createReason("process exit");
+const STOP_REASON_NOT_SPECIFIED = createReason("not specified");
+
+const startServer = async ({
+  signal = new AbortController().signal,
+  logLevel,
+  startLog = true,
+  serverName = "server",
+  protocol = "http",
+  http2 = false,
+  http1Allowed = true,
+  redirectHttpToHttps,
+  allowHttpRequestOnHttps = false,
+  acceptAnyIp = false,
+  host = acceptAnyIp ? undefined : "localhost",
+  port = 0,
+  // assign a random available port
+  portHint,
+  privateKey,
+  certificate,
+  // when inside a worker, we should not try to stop server on SIGINT
+  // otherwise it can create an EPIPE error while primary process tries
+  // to kill the server
+  stopOnSIGINT = !cluster.isWorker,
+  // auto close the server when the process exits
+  stopOnExit = true,
+  // auto close when requestToResponse throw an error
+  stopOnInternalError = false,
+  keepProcessAlive = true,
+  services = [],
+  nagle = true,
+  serverTiming = false,
+  requestWaitingMs = 0,
+  requestWaitingCallback = ({
+    request,
+    warn,
+    requestWaitingMs
+  }) => {
+    warn(createDetailedMessage$1(`still no response found for request after ${requestWaitingMs} ms`, {
+      "request url": `${request.origin}${request.ressource}`,
+      "request headers": JSON.stringify(request.headers, null, "  ")
+    }));
+  }
+} = {}) => {
+  if (protocol !== "http" && protocol !== "https") {
+    throw new Error(`protocol must be http or https, got ${protocol}`);
+  }
+
+  if (protocol === "https") {
+    if (!certificate) {
+      throw new Error(`missing certificate for https server`);
+    }
+
+    if (!privateKey) {
+      throw new Error(`missing privateKey for https server`);
+    }
+  }
+
+  if (http2 && protocol !== "https") {
+    throw new Error(`http2 needs "https" but protocol is "${protocol}"`);
+  }
+
+  const logger = createLogger({
+    logLevel
+  });
+
+  if (redirectHttpToHttps === undefined && protocol === "https" && !allowHttpRequestOnHttps) {
+    redirectHttpToHttps = true;
+  }
+
+  if (redirectHttpToHttps && protocol === "http") {
+    logger.warn(`redirectHttpToHttps ignored because protocol is http`);
+    redirectHttpToHttps = false;
+  }
+
+  if (allowHttpRequestOnHttps && redirectHttpToHttps) {
+    logger.warn(`redirectHttpToHttps ignored because allowHttpRequestOnHttps is enabled`);
+    redirectHttpToHttps = false;
+  }
+
+  if (allowHttpRequestOnHttps && protocol === "http") {
+    logger.warn(`allowHttpRequestOnHttps ignored because protocol is http`);
+    allowHttpRequestOnHttps = false;
+  }
+
+  const server = {};
+  const serviceController = createServiceController(services);
+  const processTeardownEvents = {
+    SIGHUP: stopOnExit,
+    SIGTERM: stopOnExit,
+    SIGINT: stopOnSIGINT,
+    beforeExit: stopOnExit,
+    exit: stopOnExit
+  };
+  let status = "starting";
+  let nodeServer;
+  const startServerOperation = Abort.startOperation();
+  const stopCallbackList = createCallbackListNotifiedOnce();
+
+  try {
+    startServerOperation.addAbortSignal(signal);
+    startServerOperation.addAbortSource(abort => {
+      return raceProcessTeardownEvents(processTeardownEvents, ({
+        name
+      }) => {
+        logger.info(`process teardown (${name}) -> aborting start server`);
+        abort();
+      });
+    });
+    startServerOperation.throwIfAborted();
+    nodeServer = await createNodeServer({
+      protocol,
+      redirectHttpToHttps,
+      allowHttpRequestOnHttps,
+      certificate,
+      privateKey,
+      http2,
+      http1Allowed
+    });
+    startServerOperation.throwIfAborted(); // https://nodejs.org/api/net.html#net_server_unref
+
+    if (!keepProcessAlive) {
+      nodeServer.unref();
+    }
+
+    port = await listen({
+      signal: startServerOperation.signal,
+      server: nodeServer,
+      port,
+      portHint,
+      host
+    });
+    serviceController.callHooks("serverListening", {
+      port
+    });
+    startServerOperation.addAbortCallback(async () => {
+      await stopListening(nodeServer);
+    });
+    startServerOperation.throwIfAborted();
+  } finally {
+    await startServerOperation.end();
+  } // now the server is started (listening) it cannot be aborted anymore
+  // (otherwise an AbortError is thrown to the code calling "startServer")
+  // we can proceed to create a stop function to stop it gacefully
+  // and add a request handler
+
+
+  stopCallbackList.add(({
+    reason
+  }) => {
+    logger.info(`${serverName} stopping server (reason: ${reason})`);
+  });
+  stopCallbackList.add(async () => {
+    await stopListening(nodeServer);
+  });
+  let stoppedResolve;
+  const stoppedPromise = new Promise(resolve => {
+    stoppedResolve = resolve;
+  });
+  const stop = memoize(async (reason = STOP_REASON_NOT_SPECIFIED) => {
+    status = "stopping";
+    await Promise.all(stopCallbackList.notify({
+      reason
+    }));
+    serviceController.callHooks("serverStopped", {
+      reason
+    });
+    status = "stopped";
+    stoppedResolve(reason);
+  });
+  const cancelProcessTeardownRace = raceProcessTeardownEvents(processTeardownEvents, winner => {
+    stop(PROCESS_TEARDOWN_EVENTS_MAP[winner.name]);
+  });
+  stopCallbackList.add(cancelProcessTeardownRace);
+
+  const onError = error => {
+    if (status === "stopping" && error.code === "ECONNRESET") {
+      return;
+    }
+
+    throw error;
+  };
+
+  status = "opened";
+  const serverOrigins = await getServerOrigins({
+    protocol,
+    host,
+    port
+  });
+  const serverOrigin = serverOrigins.local;
+  const removeConnectionErrorListener = listenServerConnectionError(nodeServer, onError);
+  stopCallbackList.add(removeConnectionErrorListener);
+  const connectionsTracker = trackServerPendingConnections(nodeServer, {
+    http2
+  }); // opened connection must be shutdown before the close event is emitted
+
+  stopCallbackList.add(connectionsTracker.stop);
+  const pendingRequestsTracker = trackServerPendingRequests(nodeServer, {
+    http2
+  }); // ensure pending requests got a response from the server
+
+  stopCallbackList.add(reason => {
+    pendingRequestsTracker.stop({
+      status: reason === STOP_REASON_INTERNAL_ERROR ? 500 : 503,
+      reason
+    });
+  });
+
+  {
+    const requestCallback = async (nodeRequest, nodeResponse) => {
+      // pause the stream to let a chance to "requestToResponse"
+      // to call "requestRequestBody". Without this the request body readable stream
+      // might be closed when we'll try to attach "data" and "end" listeners to it
+      nodeRequest.pause();
+
+      if (!nagle) {
+        nodeRequest.connection.setNoDelay(true);
+      }
+
+      if (redirectHttpToHttps && !nodeRequest.connection.encrypted) {
+        nodeResponse.writeHead(301, {
+          location: `${serverOrigin}${nodeRequest.url}`
+        });
+        nodeResponse.end();
+        return;
+      }
+
+      const receiveRequestOperation = Abort.startOperation();
+      receiveRequestOperation.addAbortSource(abort => {
+        const closeEventCallback = () => {
+          if (nodeRequest.complete) {
+            receiveRequestOperation.end();
+          } else {
+            nodeResponse.destroy();
+            abort();
+          }
+        };
+
+        nodeRequest.once("close", closeEventCallback);
+        return () => {
+          nodeRequest.removeListener("close", closeEventCallback);
+        };
+      });
+      receiveRequestOperation.addAbortSource(abort => {
+        return stopCallbackList.add(abort);
+      });
+      const sendResponseOperation = Abort.startOperation();
+      sendResponseOperation.addAbortSignal(receiveRequestOperation.signal);
+      sendResponseOperation.addAbortSource(abort => {
+        return stopCallbackList.add(abort);
+      });
+      const request = fromNodeRequest(nodeRequest, {
+        serverOrigin,
+        signal: receiveRequestOperation.signal
+      }); // Handling request is asynchronous, we buffer logs for that request
+      // until we know what happens with that request
+      // It delays logs until we know of the request will be handled
+      // but it's mandatory to make logs readable.
+
+      const rootRequestNode = {
+        logs: [],
+        children: []
+      };
+
+      const addRequestLog = (node, {
+        type,
+        value
+      }) => {
+        node.logs.push({
+          type,
+          value
+        });
+      };
+
+      const onRequestHandled = node => {
+        if (node !== rootRequestNode) {
+          // keep buffering until root request write logs for everyone
+          return;
+        }
+
+        const prefixLines = (string, prefix) => {
+          return string.replace(/^(?!\s*$)/gm, prefix);
+        };
+
+        const writeLog = ({
+          type,
+          value
+        }, {
+          someLogIsError,
+          someLogIsWarn,
+          depth
+        }) => {
+          if (depth > 0) {
+            value = prefixLines(value, "  ".repeat(depth));
+          }
+
+          if (type === "info") {
+            if (someLogIsError) {
+              type = "error";
+            } else if (someLogIsWarn) {
+              type = "warn";
+            }
+          }
+
+          logger[type](value);
+        };
+
+        const visitRequestNodeToLog = (requestNode, depth) => {
+          let someLogIsError = false;
+          let someLogIsWarn = false;
+          requestNode.logs.forEach(log => {
+            if (log.type === "error") {
+              someLogIsError = true;
+            }
+
+            if (log.type === "warn") {
+              someLogIsWarn = true;
+            }
+          });
+          const firstLog = requestNode.logs.shift();
+          const lastLog = requestNode.logs.pop();
+          const middleLogs = requestNode.logs;
+          writeLog(firstLog, {
+            someLogIsError,
+            someLogIsWarn,
+            depth
+          });
+          middleLogs.forEach(log => {
+            writeLog(log, {
+              someLogIsError,
+              someLogIsWarn,
+              depth
+            });
+          });
+          requestNode.children.forEach(child => {
+            visitRequestNodeToLog(child, depth + 1);
+          });
+
+          if (lastLog) {
+            writeLog(lastLog, {
+              someLogIsError,
+              someLogIsWarn,
+              depth: depth + 1
+            });
+          }
+        };
+
+        visitRequestNodeToLog(rootRequestNode, 0);
+      };
+
+      nodeRequest.on("error", error => {
+        if (error.message === "aborted") {
+          addRequestLog(rootRequestNode, {
+            type: "debug",
+            value: createDetailedMessage$1(`request aborted by client`, {
+              "error message": error.message
+            })
+          });
+        } else {
+          // I'm not sure this can happen but it's here in case
+          addRequestLog(rootRequestNode, {
+            type: "error",
+            value: createDetailedMessage$1(`"error" event emitted on request`, {
+              "error stack": error.stack
+            })
+          });
+        }
+      });
+
+      const pushResponse = async ({
+        path,
+        method
+      }, {
+        requestNode
+      }) => {
+        const http2Stream = nodeResponse.stream; // being able to push a stream is nice to have
+        // so when it fails it's not critical
+
+        const onPushStreamError = e => {
+          addRequestLog(requestNode, {
+            type: "error",
+            value: createDetailedMessage$1(`An error occured while pushing a stream to the response for ${request.ressource}`, {
+              "error stack": e.stack
+            })
+          });
+        }; // not aborted, let's try to push a stream into that response
+        // https://nodejs.org/docs/latest-v16.x/api/http2.html#http2streampushstreamheaders-options-callback
+
+
+        let pushStream;
+
+        try {
+          pushStream = await new Promise((resolve, reject) => {
+            http2Stream.pushStream({
+              ":path": path,
+              ...(method ? {
+                ":method": method
+              } : {})
+            }, async (error, pushStream // headers
+            ) => {
+              if (error) {
+                reject(error);
+              }
+
+              resolve(pushStream);
+            });
+          });
+        } catch (e) {
+          onPushStreamError(e);
+          return;
+        }
+
+        const abortController = new AbortController(); // It's possible to get NGHTTP2_REFUSED_STREAM errors here
+        // https://github.com/nodejs/node/issues/20824
+
+        const pushErrorCallback = error => {
+          onPushStreamError(error);
+          abortController.abort();
+        };
+
+        pushStream.on("error", pushErrorCallback);
+        sendResponseOperation.addEndCallback(() => {
+          pushStream.removeListener("error", onPushStreamError);
+        });
+        await sendResponseOperation.withSignal(async signal => {
+          const pushResponseOperation = Abort.startOperation();
+          pushResponseOperation.addAbortSignal(signal);
+          pushResponseOperation.addAbortSignal(abortController.signal);
+          const pushRequest = createPushRequest(request, {
+            signal: pushResponseOperation.signal,
+            pathname: path,
+            method
+          });
+
+          try {
+            const responseProperties = await handleRequest(pushRequest, {
+              requestNode
+            });
+
+            if (!abortController.signal.aborted) {
+              if (pushStream.destroyed) {
+                abortController.abort();
+              } else if (!http2Stream.pushAllowed) {
+                abortController.abort();
+              } else if (responseProperties !== ABORTED_RESPONSE_PROPERTIES) {
+                const responseLength = responseProperties.headers["content-length"] || 0;
+                const {
+                  effectiveRecvDataLength,
+                  remoteWindowSize
+                } = http2Stream.session.state;
+
+                if (effectiveRecvDataLength + responseLength > remoteWindowSize) {
+                  addRequestLog(requestNode, {
+                    type: "debug",
+                    value: `Aborting stream to prevent exceeding remoteWindowSize`
+                  });
+                  abortController.abort();
+                }
+              }
+            }
+
+            await sendResponse({
+              signal: pushResponseOperation.signal,
+              request: pushRequest,
+              requestNode,
+              responseStream: pushStream,
+              responseProperties
+            });
+          } finally {
+            await pushResponseOperation.end();
+          }
+        });
+      };
+
+      const handleRequest = async (request, {
+        requestNode
+      }) => {
+        let requestReceivedMeasure;
+
+        if (serverTiming) {
+          requestReceivedMeasure = performance.now();
+        }
+
+        addRequestLog(requestNode, {
+          type: "info",
+          value: request.parent ? `Push ${request.ressource}` : `${request.method} ${request.origin}${request.ressource}`
+        });
+
+        const warn = value => {
+          addRequestLog(requestNode, {
+            type: "warn",
+            value
+          });
+        };
+
+        let requestWaitingTimeout;
+
+        if (requestWaitingMs) {
+          requestWaitingTimeout = setTimeout(() => requestWaitingCallback({
+            request,
+            warn,
+            requestWaitingMs
+          }), requestWaitingMs).unref();
+        }
+
+        serviceController.callHooks("redirectRequest", request, {
+          warn
+        }, newRequestProperties => {
+          if (newRequestProperties) {
+            request = applyRedirectionToRequest(request, {
+              original: request.original || request,
+              previous: request,
+              ...newRequestProperties
+            });
+          }
+        });
+        let handleRequestReturnValue;
+        let errorWhileHandlingRequest = null;
+        let handleRequestTimings = serverTiming ? {} : null;
+
+        try {
+          handleRequestReturnValue = await serviceController.callAsyncHooksUntil("handleRequest", request, {
+            timing: handleRequestTimings,
+            warn,
+            pushResponse: async ({
+              path,
+              method
+            }) => {
+              if (typeof path !== "string" || path[0] !== "/") {
+                addRequestLog(requestNode, {
+                  type: "warn",
+                  value: `response push ignored because path is invalid (must be a string starting with "/", found ${path})`
+                });
+                return;
+              }
+
+              if (!request.http2) {
+                addRequestLog(requestNode, {
+                  type: "warn",
+                  value: `response push ignored because request is not http2`
+                });
+                return;
+              }
+
+              const canPushStream = testCanPushStream(nodeResponse.stream);
+
+              if (!canPushStream.can) {
+                addRequestLog(requestNode, {
+                  type: "debug",
+                  value: `response push ignored because ${canPushStream.reason}`
+                });
+                return;
+              }
+
+              let preventedByService = null;
+
+              const prevent = () => {
+                preventedByService = serviceController.getCurrentService();
+              };
+
+              serviceController.callHooksUntil("onResponsePush", {
+                path,
+                method
+              }, {
+                request,
+                warn,
+                prevent
+              }, () => preventedByService);
+
+              if (preventedByService) {
+                addRequestLog(requestNode, {
+                  type: "debug",
+                  value: `response push prevented by "${preventedByService.name}" service`
+                });
+                return;
+              }
+
+              const requestChildNode = {
+                logs: [],
+                children: []
+              };
+              requestNode.children.push(requestChildNode);
+              await pushResponse({
+                path,
+                method
+              }, {
+                requestNode: requestChildNode,
+                parentHttp2Stream: nodeResponse.stream
+              });
+            }
+          });
+        } catch (error) {
+          errorWhileHandlingRequest = error;
+        }
+
+        let responseProperties;
+
+        if (errorWhileHandlingRequest) {
+          if (errorWhileHandlingRequest.name === "AbortError" && request.signal.aborted) {
+            responseProperties = ABORTED_RESPONSE_PROPERTIES;
+          } else {
+            // internal error, create 500 response
+            if ( // stopOnInternalError stops server only if requestToResponse generated
+            // a non controlled error (internal error).
+            // if requestToResponse gracefully produced a 500 response (it did not throw)
+            // then we can assume we are still in control of what we are doing
+            stopOnInternalError) {
+              // il faudrais pouvoir stop que les autres response ?
+              stop(STOP_REASON_INTERNAL_ERROR);
+            }
+
+            const handleErrorReturnValue = await serviceController.callAsyncHooksUntil("handleError", errorWhileHandlingRequest, {
+              request,
+              warn
+            });
+
+            if (!handleErrorReturnValue) {
+              throw errorWhileHandlingRequest;
+            }
+
+            addRequestLog(requestNode, {
+              type: "error",
+              value: createDetailedMessage$1(`internal error while handling request`, {
+                "error stack": errorWhileHandlingRequest.stack
+              })
+            });
+            responseProperties = composeTwoResponses({
+              status: 500,
+              statusText: "Internal Server Error",
+              headers: {
+                // ensure error are not cached
+                "cache-control": "no-store",
+                "content-type": "text/plain"
+              }
+            }, handleErrorReturnValue);
+          }
+        } else {
+          const {
+            status = 501,
+            statusText,
+            statusMessage,
+            headers = {},
+            body,
+            ...rest
+          } = handleRequestReturnValue || {};
+          responseProperties = {
+            status,
+            statusText,
+            statusMessage,
+            headers,
+            body,
+            ...rest
+          };
+        }
+
+        if (serverTiming) {
+          const responseReadyMeasure = performance.now();
+          const timeToStartResponding = responseReadyMeasure - requestReceivedMeasure;
+          const serverTiming = { ...handleRequestTimings,
+            ...responseProperties.timing,
+            "time to start responding": timeToStartResponding
+          };
+          responseProperties.headers = composeTwoHeaders(responseProperties.headers, timingToServerTimingResponseHeaders(serverTiming));
+        }
+
+        if (requestWaitingMs) {
+          clearTimeout(requestWaitingTimeout);
+        }
+
+        if (request.method !== "HEAD" && responseProperties.headers["content-length"] > 0 && !responseProperties.body) {
+          addRequestLog(requestNode, {
+            type: "warn",
+            value: `content-length header is ${responseProperties.headers["content-length"]} but body is empty`
+          });
+        }
+
+        serviceController.callHooks("injectResponseHeaders", responseProperties, {
+          request,
+          warn
+        }, returnValue => {
+          if (returnValue) {
+            responseProperties.headers = composeTwoHeaders(responseProperties.headers, returnValue);
+          }
+        });
+        serviceController.callHooks("responseReady", responseProperties, {
+          request,
+          warn
+        });
+        return responseProperties;
+      };
+
+      const sendResponse = async ({
+        signal,
+        request,
+        requestNode,
+        responseStream,
+        responseProperties
+      }) => {
+        // When "pushResponse" is called and the parent response has no body
+        // the parent response is immediatly ended. It means child responses (pushed streams)
+        // won't get a chance to be pushed.
+        // To let a chance to pushed streams we wait a little before sending the response
+        const ignoreBody = request.method === "HEAD";
+        const bodyIsEmpty = !responseProperties.body || ignoreBody;
+
+        if (bodyIsEmpty && requestNode.children.length > 0) {
+          await new Promise(resolve => setTimeout(resolve));
+        }
+
+        await populateNodeResponse(responseStream, responseProperties, {
+          signal,
+          ignoreBody,
+          onAbort: () => {
+            addRequestLog(requestNode, {
+              type: "info",
+              value: `response aborted`
+            });
+            onRequestHandled(requestNode);
+          },
+          onError: error => {
+            addRequestLog(requestNode, {
+              type: "error",
+              value: createDetailedMessage$1(`An error occured while sending response`, {
+                "error stack": error.stack
+              })
+            });
+            onRequestHandled(requestNode);
+          },
+          onHeadersSent: ({
+            status,
+            statusText
+          }) => {
+            const statusType = statusToType(status);
+            addRequestLog(requestNode, {
+              type: {
+                information: "info",
+                success: "info",
+                redirection: "info",
+                client_error: "warn",
+                server_error: "error"
+              }[statusType],
+              value: `${colorizeResponseStatus(status)} ${responseProperties.statusMessage || statusText}`
+            });
+          },
+          onEnd: () => {
+            onRequestHandled(requestNode);
+          }
+        });
+      };
+
+      try {
+        if (receiveRequestOperation.signal.aborted) {
+          return;
+        }
+
+        const responseProperties = await handleRequest(request, {
+          requestNode: rootRequestNode
+        });
+        nodeRequest.resume();
+
+        if (receiveRequestOperation.signal.aborted) {
+          return;
+        } // the node request readable stream is never closed because
+        // the response headers contains "connection: keep-alive"
+        // In this scenario we want to disable READABLE_STREAM_TIMEOUT warning
+
+
+        if (responseProperties.headers.connection === "keep-alive") {
+          clearTimeout(request.body.timeout);
+        }
+
+        await sendResponse({
+          signal: sendResponseOperation.signal,
+          request,
+          requestNode: rootRequestNode,
+          responseStream: nodeResponse,
+          responseProperties
+        });
+      } finally {
+        await sendResponseOperation.end();
+      }
+    };
+
+    const removeRequestListener = listenRequest(nodeServer, requestCallback); // ensure we don't try to handle new requests while server is stopping
+
+    stopCallbackList.add(removeRequestListener);
+  }
+
+  {
+    // https://github.com/websockets/ws/blob/master/doc/ws.md#class-websocket
+    const websocketHandlers = [];
+    serviceController.services.forEach(service => {
+      const {
+        handleWebsocket
+      } = service;
+
+      if (handleWebsocket) {
+        websocketHandlers.push(handleWebsocket);
       }
     });
 
-    if (clientFilesPruneCallbackList) {
-      clientFilesPruneCallbackList.forEach(callback => {
-        callback({
-          firstUrlInfo,
-          prunedUrlInfos
+    if (websocketHandlers.length > 0) {
+      const websocketClients = new Set();
+      const {
+        WebSocketServer
+      } = await import("./js/wrapper.mjs");
+      let websocketServer = new WebSocketServer({
+        noServer: true
+      });
+      const websocketOrigin = protocol === "https" ? `wss://${host}:${port}` : `ws://${host}:${port}`;
+      server.websocketOrigin = websocketOrigin;
+
+      const upgradeCallback = (nodeRequest, socket, head) => {
+        websocketServer.handleUpgrade(nodeRequest, socket, head, async websocket => {
+          websocketClients.add(websocket);
+          websocket.once("close", () => {
+            websocketClients.delete(websocket);
+          });
+          const request = fromNodeRequest(nodeRequest, {
+            serverOrigin: websocketOrigin,
+            signal: new AbortController().signal
+          });
+          serviceController.callAsyncHooksUntil("handleWebsocket", websocket, {
+            request
+          });
         });
+      }; // see server-polyglot.js, upgrade must be listened on https server when used
+
+
+      const facadeServer = nodeServer._tlsServer || nodeServer;
+      const removeUpgradeCallback = listenEvent(facadeServer, "upgrade", upgradeCallback);
+      stopCallbackList.add(removeUpgradeCallback);
+      stopCallbackList.add(() => {
+        websocketServer.close();
+        websocketServer = null;
       });
     }
+  }
+
+  if (startLog) {
+    if (serverOrigins.network) {
+      logger.info(`${serverName} started at ${serverOrigins.local} (${serverOrigins.network})`);
+    } else {
+      logger.info(`${serverName} started at ${serverOrigins.local}`);
+    }
+  }
+
+  Object.assign(server, {
+    getStatus: () => status,
+    port,
+    origin: serverOrigin,
+    origins: serverOrigins,
+    nodeServer,
+    stop,
+    stoppedPromise,
+    addEffect: callback => {
+      const cleanup = callback();
+
+      if (typeof cleanup === "function") {
+        stopCallbackList.add(cleanup);
+      }
+    }
+  });
+  return server;
+};
+
+const createNodeServer = async ({
+  protocol,
+  redirectHttpToHttps,
+  allowHttpRequestOnHttps,
+  certificate,
+  privateKey,
+  http2,
+  http1Allowed
+}) => {
+  if (protocol === "http") {
+    return http.createServer();
+  }
+
+  if (redirectHttpToHttps || allowHttpRequestOnHttps) {
+    return createPolyglotServer({
+      certificate,
+      privateKey,
+      http2,
+      http1Allowed
+    });
+  }
+
+  const {
+    createServer
+  } = await import("node:https");
+  return createServer({
+    cert: certificate,
+    key: privateKey
+  });
+};
+
+const testCanPushStream = http2Stream => {
+  if (!http2Stream.pushAllowed) {
+    return {
+      can: false,
+      reason: `stream.pushAllowed is false`
+    };
+  } // See https://nodejs.org/dist/latest-v16.x/docs/api/http2.html#http2sessionstate
+  // And https://github.com/google/node-h2-auto-push/blob/67a36c04cbbd6da7b066a4e8d361c593d38853a4/src/index.ts#L100-L106
+
+
+  const {
+    remoteWindowSize
+  } = http2Stream.session.state;
+
+  if (remoteWindowSize === 0) {
+    return {
+      can: false,
+      reason: `no more remoteWindowSize`
+    };
+  }
+
+  return {
+    can: true
   };
+};
 
-  if (clientFileChangeCallbackList) {
-    clientFileChangeCallbackList.push(({
-      url
+const ABORTED_RESPONSE_PROPERTIES = {};
+const PROCESS_TEARDOWN_EVENTS_MAP = {
+  SIGHUP: STOP_REASON_PROCESS_SIGHUP,
+  SIGTERM: STOP_REASON_PROCESS_SIGTERM,
+  SIGINT: STOP_REASON_PROCESS_SIGINT,
+  beforeExit: STOP_REASON_PROCESS_BEFORE_EXIT,
+  exit: STOP_REASON_PROCESS_EXIT
+};
+
+const isFileSystemPath = value => {
+  if (typeof value !== "string") {
+    throw new TypeError(`isFileSystemPath first arg must be a string, got ${value}`);
+  }
+
+  if (value[0] === "/") {
+    return true;
+  }
+
+  return startsWithWindowsDriveLetter(value);
+};
+
+const startsWithWindowsDriveLetter = string => {
+  const firstChar = string[0];
+  if (!/[a-zA-Z]/.test(firstChar)) return false;
+  const secondChar = string[1];
+  if (secondChar !== ":") return false;
+  return true;
+};
+
+const fileSystemPathToUrl = value => {
+  if (!isFileSystemPath(value)) {
+    throw new Error(`received an invalid value for fileSystemPath: ${value}`);
+  }
+
+  return String(pathToFileURL(value));
+};
+
+const ETAG_FOR_EMPTY_CONTENT = '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
+const bufferToEtag = buffer => {
+  if (!Buffer.isBuffer(buffer)) {
+    throw new TypeError(`buffer expected, got ${buffer}`);
+  }
+
+  if (buffer.length === 0) {
+    return ETAG_FOR_EMPTY_CONTENT;
+  }
+
+  const hash = createHash("sha1");
+  hash.update(buffer, "utf8");
+  const hashBase64String = hash.digest("base64");
+  const hashBase64StringSubset = hashBase64String.slice(0, 27);
+  const length = buffer.length;
+  return `"${length.toString(16)}-${hashBase64StringSubset}"`;
+};
+
+const convertFileSystemErrorToResponseProperties = error => {
+  // https://iojs.org/api/errors.html#errors_eacces_permission_denied
+  if (isErrorWithCode(error, "EACCES")) {
+    return {
+      status: 403,
+      statusText: `EACCES: No permission to read file at ${error.path}`
+    };
+  }
+
+  if (isErrorWithCode(error, "EPERM")) {
+    return {
+      status: 403,
+      statusText: `EPERM: No permission to read file at ${error.path}`
+    };
+  }
+
+  if (isErrorWithCode(error, "ENOENT")) {
+    return {
+      status: 404,
+      statusText: `ENOENT: File not found at ${error.path}`
+    };
+  } // file access may be temporarily blocked
+  // (by an antivirus scanning it because recently modified for instance)
+
+
+  if (isErrorWithCode(error, "EBUSY")) {
+    return {
+      status: 503,
+      statusText: `EBUSY: File is busy ${error.path}`,
+      headers: {
+        "retry-after": 0.01 // retry in 10ms
+
+      }
+    };
+  } // emfile means there is too many files currently opened
+
+
+  if (isErrorWithCode(error, "EMFILE")) {
+    return {
+      status: 503,
+      statusText: "EMFILE: too many file opened",
+      headers: {
+        "retry-after": 0.1 // retry in 100ms
+
+      }
+    };
+  }
+
+  if (isErrorWithCode(error, "EISDIR")) {
+    return {
+      status: 500,
+      statusText: `EISDIR: Unexpected directory operation at ${error.path}`
+    };
+  }
+
+  return null;
+};
+
+const isErrorWithCode = (error, code) => {
+  return typeof error === "object" && error.code === code;
+};
+
+const pickAcceptedContent = ({
+  availables,
+  accepteds,
+  getAcceptanceScore
+}) => {
+  let highestScore = -1;
+  let availableWithHighestScore = null;
+  let availableIndex = 0;
+
+  while (availableIndex < availables.length) {
+    const available = availables[availableIndex];
+    availableIndex++;
+    let acceptedIndex = 0;
+
+    while (acceptedIndex < accepteds.length) {
+      const accepted = accepteds[acceptedIndex];
+      acceptedIndex++;
+      const score = getAcceptanceScore(accepted, available);
+
+      if (score > highestScore) {
+        availableWithHighestScore = available;
+        highestScore = score;
+      }
+    }
+  }
+
+  return availableWithHighestScore;
+};
+
+const pickContentEncoding = (request, availableEncodings) => {
+  const {
+    headers = {}
+  } = request;
+  const requestAcceptEncodingHeader = headers["accept-encoding"];
+
+  if (!requestAcceptEncodingHeader) {
+    return null;
+  }
+
+  const encodingsAccepted = parseAcceptEncodingHeader(requestAcceptEncodingHeader);
+  return pickAcceptedContent({
+    accepteds: encodingsAccepted,
+    availables: availableEncodings,
+    getAcceptanceScore: getEncodingAcceptanceScore
+  });
+};
+
+const parseAcceptEncodingHeader = acceptEncodingHeaderString => {
+  const acceptEncodingHeader = parseMultipleHeader(acceptEncodingHeaderString, {
+    validateProperty: ({
+      name
     }) => {
-      const urlInfo = getUrlInfo(url);
+      // read only q, anything else is ignored
+      return name === "q";
+    }
+  });
+  const encodingsAccepted = [];
+  Object.keys(acceptEncodingHeader).forEach(key => {
+    const {
+      q = 1
+    } = acceptEncodingHeader[key];
+    const value = key;
+    encodingsAccepted.push({
+      value,
+      quality: q
+    });
+  });
+  encodingsAccepted.sort((a, b) => {
+    return b.quality - a.quality;
+  });
+  return encodingsAccepted;
+};
 
-      if (urlInfo) {
-        considerModified(urlInfo, Date.now());
+const getEncodingAcceptanceScore = ({
+  value,
+  quality
+}, availableEncoding) => {
+  if (value === "*") {
+    return quality;
+  } // normalize br to brotli
+
+
+  if (value === "br") value = "brotli";
+  if (availableEncoding === "br") availableEncoding = "brotli";
+
+  if (value === availableEncoding) {
+    return quality;
+  }
+
+  return -1;
+};
+
+const pickContentType = (request, availableContentTypes) => {
+  const {
+    headers = {}
+  } = request;
+  const requestAcceptHeader = headers.accept;
+
+  if (!requestAcceptHeader) {
+    return null;
+  }
+
+  const contentTypesAccepted = parseAcceptHeader(requestAcceptHeader);
+  return pickAcceptedContent({
+    accepteds: contentTypesAccepted,
+    availables: availableContentTypes,
+    getAcceptanceScore: getContentTypeAcceptanceScore
+  });
+};
+
+const parseAcceptHeader = acceptHeader => {
+  const acceptHeaderObject = parseMultipleHeader(acceptHeader, {
+    validateProperty: ({
+      name
+    }) => {
+      // read only q, anything else is ignored
+      return name === "q";
+    }
+  });
+  const accepts = [];
+  Object.keys(acceptHeaderObject).forEach(key => {
+    const {
+      q = 1
+    } = acceptHeaderObject[key];
+    const value = key;
+    accepts.push({
+      value,
+      quality: q
+    });
+  });
+  accepts.sort((a, b) => {
+    return b.quality - a.quality;
+  });
+  return accepts;
+};
+
+const getContentTypeAcceptanceScore = ({
+  value,
+  quality
+}, availableContentType) => {
+  const [acceptedType, acceptedSubtype] = decomposeContentType(value);
+  const [availableType, availableSubtype] = decomposeContentType(availableContentType);
+  const typeAccepted = acceptedType === "*" || acceptedType === availableType;
+  const subtypeAccepted = acceptedSubtype === "*" || acceptedSubtype === availableSubtype;
+
+  if (typeAccepted && subtypeAccepted) {
+    return quality;
+  }
+
+  return -1;
+};
+
+const decomposeContentType = fullType => {
+  const [type, subtype] = fullType.split("/");
+  return [type, subtype];
+};
+
+const serveDirectory = (url, {
+  headers = {},
+  rootDirectoryUrl
+} = {}) => {
+  url = String(url);
+  url = url[url.length - 1] === "/" ? url : `${url}/`;
+  const directoryContentArray = readdirSync(new URL(url));
+  const responseProducers = {
+    "application/json": () => {
+      const directoryContentJson = JSON.stringify(directoryContentArray);
+      return {
+        status: 200,
+        headers: {
+          "content-type": "application/json",
+          "content-length": directoryContentJson.length
+        },
+        body: directoryContentJson
+      };
+    },
+    "text/html": () => {
+      const directoryAsHtml = `<!DOCTYPE html>
+<html>
+  <head>
+    <title>Directory explorer</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <h1>Content of directory ${url}</h1>
+    <ul>
+      ${directoryContentArray.map(filename => {
+        const fileUrl = String(new URL(filename, url));
+        const fileUrlRelativeToServer = fileUrl.slice(String(rootDirectoryUrl).length);
+        return `<li>
+        <a href="/${fileUrlRelativeToServer}">${fileUrlRelativeToServer}</a>
+      </li>`;
+      }).join(`
+      `)}
+    </ul>
+  </body>
+</html>`;
+      return {
+        status: 200,
+        headers: {
+          "content-type": "text/html",
+          "content-length": Buffer.byteLength(directoryAsHtml)
+        },
+        body: directoryAsHtml
+      };
+    }
+  };
+  const bestContentType = pickContentType({
+    headers
+  }, Object.keys(responseProducers));
+  return responseProducers[bestContentType || "application/json"]();
+};
+
+/*
+ * This function returns response properties in a plain object like
+ * { status: 200, body: "Hello world" }.
+ * It is meant to be used inside "requestToResponse"
+ */
+const fetchFileSystem = async (filesystemUrl, {
+  // signal,
+  method = "GET",
+  headers = {},
+  etagEnabled = false,
+  etagMemory = true,
+  etagMemoryMaxSize = 1000,
+  mtimeEnabled = false,
+  compressionEnabled = false,
+  compressionSizeThreshold = 1024,
+  cacheControl = etagEnabled || mtimeEnabled ? "private,max-age=0,must-revalidate" : "no-store",
+  canReadDirectory = false,
+  rootDirectoryUrl //  = `${pathToFileURL(process.cwd())}/`,
+
+} = {}) => {
+  const urlString = asUrlString(filesystemUrl);
+
+  if (!urlString) {
+    return create500Response(`fetchFileSystem first parameter must be a file url, got ${filesystemUrl}`);
+  }
+
+  if (!urlString.startsWith("file://")) {
+    return create500Response(`fetchFileSystem url must use "file://" scheme, got ${filesystemUrl}`);
+  }
+
+  if (rootDirectoryUrl) {
+    let rootDirectoryUrlString = asUrlString(rootDirectoryUrl);
+
+    if (!rootDirectoryUrlString) {
+      return create500Response(`rootDirectoryUrl must be a string or an url, got ${rootDirectoryUrl}`);
+    }
+
+    if (!rootDirectoryUrlString.endsWith("/")) {
+      rootDirectoryUrlString = `${rootDirectoryUrlString}/`;
+    }
+
+    if (!urlString.startsWith(rootDirectoryUrlString)) {
+      return create500Response(`fetchFileSystem url must be inside root directory, got ${urlString}`);
+    }
+
+    rootDirectoryUrl = rootDirectoryUrlString;
+  } // here you might be tempted to add || cacheControl === 'no-cache'
+  // but no-cache means ressource can be cache but must be revalidated (yeah naming is strange)
+  // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#Cacheability
+
+
+  if (cacheControl === "no-store") {
+    if (etagEnabled) {
+      console.warn(`cannot enable etag when cache-control is ${cacheControl}`);
+      etagEnabled = false;
+    }
+
+    if (mtimeEnabled) {
+      console.warn(`cannot enable mtime when cache-control is ${cacheControl}`);
+      mtimeEnabled = false;
+    }
+  }
+
+  if (etagEnabled && mtimeEnabled) {
+    console.warn(`cannot enable both etag and mtime, mtime disabled in favor of etag.`);
+    mtimeEnabled = false;
+  }
+
+  if (method !== "GET" && method !== "HEAD") {
+    return {
+      status: 501
+    };
+  }
+
+  const sourceUrl = `file://${new URL(urlString).pathname}`;
+
+  try {
+    const [readStatTiming, sourceStat] = await timeFunction("file service>read file stat", () => statSync(new URL(sourceUrl)));
+
+    if (sourceStat.isDirectory()) {
+      if (canReadDirectory) {
+        return serveDirectory(urlString, {
+          headers,
+          canReadDirectory,
+          rootDirectoryUrl
+        });
+      }
+
+      return {
+        status: 403,
+        statusText: "not allowed to read directory"
+      };
+    } // not a file, give up
+
+
+    if (!sourceStat.isFile()) {
+      return {
+        status: 404,
+        timing: readStatTiming
+      };
+    }
+
+    const clientCacheResponse = await getClientCacheResponse({
+      headers,
+      etagEnabled,
+      etagMemory,
+      etagMemoryMaxSize,
+      mtimeEnabled,
+      sourceStat,
+      sourceUrl
+    }); // send 304 (redirect response to client cache)
+    // because the response body does not have to be transmitted
+
+    if (clientCacheResponse.status === 304) {
+      return composeTwoResponses({
+        timing: readStatTiming,
+        headers: { ...(cacheControl ? {
+            "cache-control": cacheControl
+          } : {})
+        }
+      }, clientCacheResponse);
+    }
+
+    let response;
+
+    if (compressionEnabled && sourceStat.size >= compressionSizeThreshold) {
+      const compressedResponse = await getCompressedResponse({
+        headers,
+        sourceUrl
+      });
+
+      if (compressedResponse) {
+        response = compressedResponse;
+      }
+    }
+
+    if (!response) {
+      response = await getRawResponse({
+        sourceStat,
+        sourceUrl
+      });
+    }
+
+    const intermediateResponse = composeTwoResponses({
+      timing: readStatTiming,
+      headers: { ...(cacheControl ? {
+          "cache-control": cacheControl
+        } : {}) // even if client cache is disabled, server can still
+        // send his own cache control but client should just ignore it
+        // and keep sending cache-control: 'no-store'
+        // if not, uncomment the line below to preserve client
+        // desire to ignore cache
+        // ...(headers["cache-control"] === "no-store" ? { "cache-control": "no-store" } : {}),
+
+      }
+    }, response);
+    return composeTwoResponses(intermediateResponse, clientCacheResponse);
+  } catch (e) {
+    return composeTwoResponses({
+      headers: { ...(cacheControl ? {
+          "cache-control": cacheControl
+        } : {})
+      }
+    }, convertFileSystemErrorToResponseProperties(e) || {});
+  }
+};
+
+const create500Response = message => {
+  return {
+    status: 500,
+    headers: {
+      "content-type": "text/plain",
+      "content-length": Buffer.byteLength(message)
+    },
+    body: message
+  };
+};
+
+const getClientCacheResponse = async ({
+  headers,
+  etagEnabled,
+  etagMemory,
+  etagMemoryMaxSize,
+  mtimeEnabled,
+  sourceStat,
+  sourceUrl
+}) => {
+  // here you might be tempted to add || headers["cache-control"] === "no-cache"
+  // but no-cache means ressource can be cache but must be revalidated (yeah naming is strange)
+  // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#Cacheability
+  if (headers["cache-control"] === "no-store" || // let's disable it on no-cache too
+  headers["cache-control"] === "no-cache") {
+    return {
+      status: 200
+    };
+  }
+
+  if (etagEnabled) {
+    return getEtagResponse({
+      headers,
+      etagMemory,
+      etagMemoryMaxSize,
+      sourceStat,
+      sourceUrl
+    });
+  }
+
+  if (mtimeEnabled) {
+    return getMtimeResponse({
+      headers,
+      sourceStat
+    });
+  }
+
+  return {
+    status: 200
+  };
+};
+
+const getEtagResponse = async ({
+  headers,
+  etagMemory,
+  etagMemoryMaxSize,
+  sourceUrl,
+  sourceStat
+}) => {
+  const [computeEtagTiming, fileContentEtag] = await timeFunction("file service>generate file etag", () => computeEtag({
+    etagMemory,
+    etagMemoryMaxSize,
+    sourceUrl,
+    sourceStat
+  }));
+  const requestHasIfNoneMatchHeader = ("if-none-match" in headers);
+
+  if (requestHasIfNoneMatchHeader && headers["if-none-match"] === fileContentEtag) {
+    return {
+      status: 304,
+      timing: computeEtagTiming
+    };
+  }
+
+  return {
+    status: 200,
+    headers: {
+      etag: fileContentEtag
+    },
+    timing: computeEtagTiming
+  };
+};
+
+const ETAG_MEMORY_MAP = new Map();
+
+const computeEtag = async ({
+  etagMemory,
+  etagMemoryMaxSize,
+  sourceUrl,
+  sourceStat
+}) => {
+  if (etagMemory) {
+    const etagMemoryEntry = ETAG_MEMORY_MAP.get(sourceUrl);
+
+    if (etagMemoryEntry && fileStatAreTheSame(etagMemoryEntry.sourceStat, sourceStat)) {
+      return etagMemoryEntry.eTag;
+    }
+  }
+
+  const fileContentAsBuffer = await new Promise((resolve, reject) => {
+    readFile$1(new URL(sourceUrl), (error, buffer) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(buffer);
+      }
+    });
+  });
+  const eTag = bufferToEtag(fileContentAsBuffer);
+
+  if (etagMemory) {
+    if (ETAG_MEMORY_MAP.size >= etagMemoryMaxSize) {
+      const firstKey = Array.from(ETAG_MEMORY_MAP.keys())[0];
+      ETAG_MEMORY_MAP.delete(firstKey);
+    }
+
+    ETAG_MEMORY_MAP.set(sourceUrl, {
+      sourceStat,
+      eTag
+    });
+  }
+
+  return eTag;
+}; // https://nodejs.org/api/fs.html#fs_class_fs_stats
+
+
+const fileStatAreTheSame = (leftFileStat, rightFileStat) => {
+  return fileStatKeysToCompare.every(keyToCompare => {
+    const leftValue = leftFileStat[keyToCompare];
+    const rightValue = rightFileStat[keyToCompare];
+    return leftValue === rightValue;
+  });
+};
+
+const fileStatKeysToCompare = [// mtime the the most likely to change, check it first
+"mtimeMs", "size", "ctimeMs", "ino", "mode", "uid", "gid", "blksize"];
+
+const getMtimeResponse = async ({
+  headers,
+  sourceStat
+}) => {
+  if ("if-modified-since" in headers) {
+    let cachedModificationDate;
+
+    try {
+      cachedModificationDate = new Date(headers["if-modified-since"]);
+    } catch (e) {
+      return {
+        status: 400,
+        statusText: "if-modified-since header is not a valid date"
+      };
+    }
+
+    const actualModificationDate = dateToSecondsPrecision(sourceStat.mtime);
+
+    if (Number(cachedModificationDate) >= Number(actualModificationDate)) {
+      return {
+        status: 304
+      };
+    }
+  }
+
+  return {
+    status: 200,
+    headers: {
+      "last-modified": dateToUTCString(sourceStat.mtime)
+    }
+  };
+};
+
+const getCompressedResponse = async ({
+  sourceUrl,
+  headers
+}) => {
+  const acceptedCompressionFormat = pickContentEncoding({
+    headers
+  }, Object.keys(availableCompressionFormats));
+
+  if (!acceptedCompressionFormat) {
+    return null;
+  }
+
+  const fileReadableStream = fileUrlToReadableStream(sourceUrl);
+  const body = await availableCompressionFormats[acceptedCompressionFormat](fileReadableStream);
+  return {
+    status: 200,
+    headers: {
+      "content-type": CONTENT_TYPE.fromUrlExtension(sourceUrl),
+      "content-encoding": acceptedCompressionFormat,
+      "vary": "accept-encoding"
+    },
+    body
+  };
+};
+
+const fileUrlToReadableStream = fileUrl => {
+  return createReadStream(new URL(fileUrl), {
+    emitClose: true,
+    autoClose: true
+  });
+};
+
+const availableCompressionFormats = {
+  br: async fileReadableStream => {
+    const {
+      createBrotliCompress
+    } = await import("node:zlib");
+    return fileReadableStream.pipe(createBrotliCompress());
+  },
+  deflate: async fileReadableStream => {
+    const {
+      createDeflate
+    } = await import("node:zlib");
+    return fileReadableStream.pipe(createDeflate());
+  },
+  gzip: async fileReadableStream => {
+    const {
+      createGzip
+    } = await import("node:zlib");
+    return fileReadableStream.pipe(createGzip());
+  }
+};
+
+const getRawResponse = async ({
+  sourceUrl,
+  sourceStat
+}) => {
+  return {
+    status: 200,
+    headers: {
+      "content-type": CONTENT_TYPE.fromUrlExtension(sourceUrl),
+      "content-length": sourceStat.size
+    },
+    body: fileUrlToReadableStream(sourceUrl)
+  };
+}; // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toUTCString
+
+
+const dateToUTCString = date => date.toUTCString();
+
+const dateToSecondsPrecision = date => {
+  const dateWithSecondsPrecision = new Date(date);
+  dateWithSecondsPrecision.setMilliseconds(0);
+  return dateWithSecondsPrecision;
+};
+
+const asUrlString = value => {
+  if (value instanceof URL) {
+    return value.href;
+  }
+
+  if (typeof value === "string") {
+    if (isFileSystemPath(value)) {
+      return fileSystemPathToUrl(value);
+    }
+
+    try {
+      const urlObject = new URL(value);
+      return String(urlObject);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  return null;
+};
+
+const jsenvServiceErrorHandler = ({
+  sendErrorDetails = false
+} = {}) => {
+  return {
+    name: "jsenv:error_handler",
+    handleError: (serverInternalError, {
+      request
+    }) => {
+      const serverInternalErrorIsAPrimitive = serverInternalError === null || typeof serverInternalError !== "object" && typeof serverInternalError !== "function";
+
+      if (!serverInternalErrorIsAPrimitive && serverInternalError.asResponse) {
+        return serverInternalError.asResponse();
+      }
+
+      const dataToSend = serverInternalErrorIsAPrimitive ? {
+        code: "VALUE_THROWED",
+        value: serverInternalError
+      } : {
+        code: serverInternalError.code || "UNKNOWN_ERROR",
+        ...(sendErrorDetails ? {
+          stack: serverInternalError.stack,
+          ...serverInternalError
+        } : {})
+      };
+      const availableContentTypes = {
+        "text/html": () => {
+          const renderHtmlForErrorWithoutDetails = () => {
+            return `<p>Details not available: to enable them use jsenvServiceErrorHandler({ sendErrorDetails: true }).</p>`;
+          };
+
+          const renderHtmlForErrorWithDetails = () => {
+            if (serverInternalErrorIsAPrimitive) {
+              return `<pre>${JSON.stringify(serverInternalError, null, "  ")}</pre>`;
+            }
+
+            return `<pre>${serverInternalError.stack}</pre>`;
+          };
+
+          const body = `<!DOCTYPE html>
+<html>
+  <head>
+    <title>Internal server error</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <h1>Internal server error</h1>
+    <p>${serverInternalErrorIsAPrimitive ? `Code inside server has thrown a literal.` : `Code inside server has thrown an error.`}</p>
+    <details>
+      <summary>See internal error details</summary>
+      ${sendErrorDetails ? renderHtmlForErrorWithDetails() : renderHtmlForErrorWithoutDetails()}
+    </details>
+  </body>
+</html>`;
+          return {
+            headers: {
+              "content-type": "text/html",
+              "content-length": Buffer.byteLength(body)
+            },
+            body
+          };
+        },
+        "application/json": () => {
+          const body = JSON.stringify(dataToSend);
+          return {
+            headers: {
+              "content-type": "application/json",
+              "content-length": Buffer.byteLength(body)
+            },
+            body
+          };
+        }
+      };
+      const bestContentType = pickContentType(request, Object.keys(availableContentTypes));
+      return availableContentTypes[bestContentType || "application/json"]();
+    }
+  };
+};
+
+const jsenvAccessControlAllowedHeaders = ["x-requested-with"];
+const jsenvAccessControlAllowedMethods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"];
+const jsenvServiceCORS = ({
+  accessControlAllowedOrigins = [],
+  accessControlAllowedMethods = jsenvAccessControlAllowedMethods,
+  accessControlAllowedHeaders = jsenvAccessControlAllowedHeaders,
+  accessControlAllowRequestOrigin = false,
+  accessControlAllowRequestMethod = false,
+  accessControlAllowRequestHeaders = false,
+  accessControlAllowCredentials = false,
+  // by default OPTIONS request can be cache for a long time, it's not going to change soon ?
+  // we could put a lot here, see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Max-Age
+  accessControlMaxAge = 600,
+  timingAllowOrigin = false
+} = {}) => {
+  // TODO: we should check access control params to throw or warn if we find strange values
+  const corsEnabled = accessControlAllowRequestOrigin || accessControlAllowedOrigins.length;
+
+  if (!corsEnabled) {
+    return [];
+  }
+
+  return {
+    name: "jsenv:cors",
+    handleRequest: request => {
+      // when request method is "OPTIONS" we must return a 200 without body
+      // So we bypass "requestToResponse" in that scenario using shortcircuitResponse
+      if (request.method === "OPTIONS") {
+        return {
+          status: 200,
+          headers: {
+            "content-length": 0
+          }
+        };
+      }
+
+      return null;
+    },
+    injectResponseHeaders: (response, {
+      request
+    }) => {
+      const accessControlHeaders = generateAccessControlHeaders({
+        request,
+        accessControlAllowedOrigins,
+        accessControlAllowRequestOrigin,
+        accessControlAllowedMethods,
+        accessControlAllowRequestMethod,
+        accessControlAllowedHeaders,
+        accessControlAllowRequestHeaders,
+        accessControlAllowCredentials,
+        accessControlMaxAge,
+        timingAllowOrigin
+      });
+      return accessControlHeaders;
+    }
+  };
+}; // https://www.w3.org/TR/cors/
+// https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
+
+const generateAccessControlHeaders = ({
+  request: {
+    headers
+  },
+  accessControlAllowedOrigins,
+  accessControlAllowRequestOrigin,
+  accessControlAllowedMethods,
+  accessControlAllowRequestMethod,
+  accessControlAllowedHeaders,
+  accessControlAllowRequestHeaders,
+  accessControlAllowCredentials,
+  // by default OPTIONS request can be cache for a long time, it's not going to change soon ?
+  // we could put a lot here, see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Max-Age
+  accessControlMaxAge = 600,
+  timingAllowOrigin
+} = {}) => {
+  const vary = [];
+  const allowedOriginArray = [...accessControlAllowedOrigins];
+
+  if (accessControlAllowRequestOrigin) {
+    if ("origin" in headers && headers.origin !== "null") {
+      allowedOriginArray.push(headers.origin);
+      vary.push("origin");
+    } else if ("referer" in headers) {
+      allowedOriginArray.push(new URL(headers.referer).origin);
+      vary.push("referer");
+    } else {
+      allowedOriginArray.push("*");
+    }
+  }
+
+  const allowedMethodArray = [...accessControlAllowedMethods];
+
+  if (accessControlAllowRequestMethod && "access-control-request-method" in headers) {
+    const requestMethodName = headers["access-control-request-method"];
+
+    if (!allowedMethodArray.includes(requestMethodName)) {
+      allowedMethodArray.push(requestMethodName);
+      vary.push("access-control-request-method");
+    }
+  }
+
+  const allowedHeaderArray = [...accessControlAllowedHeaders];
+
+  if (accessControlAllowRequestHeaders && "access-control-request-headers" in headers) {
+    const requestHeaderNameArray = headers["access-control-request-headers"].split(", ");
+    requestHeaderNameArray.forEach(headerName => {
+      const headerNameLowerCase = headerName.toLowerCase();
+
+      if (!allowedHeaderArray.includes(headerNameLowerCase)) {
+        allowedHeaderArray.push(headerNameLowerCase);
+
+        if (!vary.includes("access-control-request-headers")) {
+          vary.push("access-control-request-headers");
+        }
       }
     });
   }
 
-  const considerModified = (urlInfo, modifiedTimestamp = Date.now()) => {
-    const seen = [];
-
-    const iterate = urlInfo => {
-      if (seen.includes(urlInfo.url)) {
-        return;
-      }
-
-      seen.push(urlInfo.url);
-      urlInfo.modifiedTimestamp = modifiedTimestamp;
-      urlInfo.contentEtag = undefined;
-      urlInfo.dependents.forEach(dependentUrl => {
-        const dependentUrlInfo = getUrlInfo(dependentUrl);
-        const {
-          hotAcceptDependencies = []
-        } = dependentUrlInfo.data;
-
-        if (!hotAcceptDependencies.includes(urlInfo.url)) {
-          iterate(dependentUrlInfo);
-        }
-      });
-      urlInfo.dependencies.forEach(dependencyUrl => {
-        const dependencyUrlInfo = getUrlInfo(dependencyUrl);
-
-        if (dependencyUrlInfo.isInline) {
-          iterate(dependencyUrlInfo);
-        }
-      });
-    };
-
-    iterate(urlInfo);
-  };
-
-  const getRelatedUrlInfos = url => {
-    const urlInfosUntilNotInline = [];
-    const parentUrlInfo = getUrlInfo(url);
-
-    if (parentUrlInfo) {
-      urlInfosUntilNotInline.push(parentUrlInfo);
-
-      if (parentUrlInfo.inlineUrlSite) {
-        urlInfosUntilNotInline.push(...getRelatedUrlInfos(parentUrlInfo.inlineUrlSite.url));
-      }
-    }
-
-    return urlInfosUntilNotInline;
-  };
-
   return {
-    urlInfoMap,
-    reuseOrCreateUrlInfo,
-    getUrlInfo,
-    deleteUrlInfo,
-    inferReference,
-    findDependent,
-    updateReferences,
-    considerModified,
-    getRelatedUrlInfos,
-    toObject: () => {
-      const data = {};
-      urlInfoMap.forEach(urlInfo => {
-        data[urlInfo.url] = urlInfo;
-      });
-      return data;
-    },
-    toJSON: rootDirectoryUrl => {
-      const data = {};
-      urlInfoMap.forEach(urlInfo => {
-        const dependencyUrls = Array.from(urlInfo.dependencies);
-
-        if (dependencyUrls.length) {
-          const relativeUrl = urlToRelativeUrl(urlInfo.url, rootDirectoryUrl);
-          data[relativeUrl] = dependencyUrls.map(dependencyUrl => urlToRelativeUrl(dependencyUrl, rootDirectoryUrl));
-        }
-      });
-      return data;
-    }
+    "access-control-allow-origin": allowedOriginArray.join(", "),
+    "access-control-allow-methods": allowedMethodArray.join(", "),
+    "access-control-allow-headers": allowedHeaderArray.join(", "),
+    ...(accessControlAllowCredentials ? {
+      "access-control-allow-credentials": true
+    } : {}),
+    "access-control-max-age": accessControlMaxAge,
+    ...(timingAllowOrigin ? {
+      "timing-allow-origin": allowedOriginArray.join(", ")
+    } : {}),
+    ...(vary.length ? {
+      vary: vary.join(", ")
+    } : {})
   };
 };
-
-const createUrlInfo = url => {
-  return {
-    error: null,
-    modifiedTimestamp: 0,
-    contentEtag: null,
-    dependsOnPackageJson: false,
-    isValid,
-    data: {},
-    // plugins can put whatever they want here
-    references: [],
-    dependencies: new Set(),
-    dependents: new Set(),
-    type: undefined,
-    // "html", "css", "js_classic", "js_module", "importmap", "json", "webmanifest", ...
-    subtype: undefined,
-    // "worker", "service_worker", "shared_worker" for js, otherwise undefined
-    contentType: "",
-    // "text/html", "text/css", "text/javascript", "application/json", ...
-    url,
-    originalUrl: undefined,
-    generatedUrl: null,
-    filename: "",
-    isEntryPoint: false,
-    isInline: false,
-    inlineUrlSite: null,
-    shouldHandle: undefined,
-    originalContent: undefined,
-    content: undefined,
-    sourcemap: null,
-    sourcemapReference: null,
-    sourcemapIsWrong: false,
-    timing: {},
-    headers: {}
-  };
-};
-
-const isValid = () => false;
 
 const HOOK_NAMES = ["init", "serve", // is called only during dev/tests
 "resolveUrl", "redirectUrl", "fetchUrlContent", "transformUrlContent", "transformUrlSearchParams", "formatUrl", "finalizeUrlContent", "bundle", // is called only during build
@@ -23051,73 +22640,2191 @@ const determineFileUrlForOutDirectory = ({
 //   }
 // }
 
-const createServerEventsDispatcher = () => {
-  const destroyCallbackList = createCallbackListNotifiedOnce();
-  const rooms = [];
-  const sseRoomLimit = 100;
-  destroyCallbackList.add(() => {
-    rooms.forEach(room => {
-      room.close();
-    });
-  });
-  return {
-    addRoom: request => {
-      const existingRoom = rooms.find(roomCandidate => roomCandidate.request.ressource === request.ressource);
+const loadUrlGraph = async ({
+  operation,
+  urlGraph,
+  kitchen,
+  startLoading,
+  writeGeneratedFiles,
+  outDirectoryUrl
+}) => {
+  if (writeGeneratedFiles && outDirectoryUrl) {
+    await ensureEmptyDirectory(outDirectoryUrl);
+  }
 
-      if (existingRoom) {
-        return existingRoom;
+  const promises = [];
+  const promiseMap = new Map();
+
+  const cook = (urlInfo, context) => {
+    const promiseFromData = promiseMap.get(urlInfo);
+    if (promiseFromData) return promiseFromData;
+
+    const promise = _cook(urlInfo, {
+      outDirectoryUrl,
+      ...context
+    });
+
+    promises.push(promise);
+    promiseMap.set(urlInfo, promise);
+    return promise;
+  };
+
+  const _cook = async (urlInfo, context) => {
+    await kitchen.cook(urlInfo, {
+      cookDuringCook: cook,
+      ...context
+    });
+    const {
+      references
+    } = urlInfo;
+    references.forEach(reference => {
+      // we don't cook ressource hints
+      // because they might refer to ressource that will be modified during build
+      // It also means something else have to reference that url in order to cook it
+      // so that the preload is deleted by "resync_ressource_hints.js" otherwise
+      if (reference.isRessourceHint) {
+        return;
+      } // we use reference.generatedUrl to mimic what a browser would do:
+      // do a fetch to the specifier as found in the file
+
+
+      const referencedUrlInfo = urlGraph.reuseOrCreateUrlInfo(reference.generatedUrl);
+      cook(referencedUrlInfo, {
+        reference
+      });
+    });
+  };
+
+  startLoading(({
+    trace,
+    parentUrl = kitchen.rootDirectoryUrl,
+    type,
+    specifier
+  }) => {
+    const [entryReference, entryUrlInfo] = kitchen.prepareEntryPoint({
+      trace,
+      parentUrl,
+      type,
+      specifier
+    });
+    cook(entryUrlInfo, {
+      reference: entryReference
+    });
+    return [entryReference, entryUrlInfo];
+  });
+
+  const waitAll = async () => {
+    operation.throwIfAborted();
+
+    if (promises.length === 0) {
+      return;
+    }
+
+    const promisesToWait = promises.slice();
+    promises.length = 0;
+    await Promise.all(promisesToWait);
+    await waitAll();
+  };
+
+  await waitAll();
+  promiseMap.clear();
+};
+
+const createUrlGraphSummary = (urlGraph, {
+  title = "graph summary"
+} = {}) => {
+  const graphReport = createUrlGraphReport(urlGraph);
+  return `--- ${title} ---  
+${createRepartitionMessage(graphReport)}
+--------------------`;
+};
+
+const createUrlGraphReport = urlGraph => {
+  const countGroups = {
+    sourcemaps: 0,
+    html: 0,
+    css: 0,
+    js: 0,
+    json: 0,
+    other: 0,
+    total: 0
+  };
+  const sizeGroups = {
+    sourcemaps: 0,
+    html: 0,
+    css: 0,
+    js: 0,
+    json: 0,
+    other: 0,
+    total: 0
+  };
+  urlGraph.urlInfoMap.forEach(urlInfo => {
+    if (urlInfo.url.startsWith("data:")) {
+      return;
+    } // ignore:
+    // - inline files: they are already taken into account in the file where they appear
+    // - ignored files: we don't know their content
+
+
+    if (urlInfo.isInline || !urlInfo.shouldHandle) {
+      return;
+    } // file loaded via import assertion are already inside the graph
+    // their js module equivalent are ignored to avoid counting it twice
+    // in the build graph the file targeted by import assertion will likely be gone
+    // and only the js module remain (likely bundled)
+
+
+    const urlObject = new URL(urlInfo.url);
+
+    if (urlObject.searchParams.has("as_json_module") || urlObject.searchParams.has("as_css_module") || urlObject.searchParams.has("as_text_module")) {
+      return;
+    }
+
+    const urlContentSize = Buffer.byteLength(urlInfo.content);
+    const category = determineCategory(urlInfo);
+
+    if (category === "sourcemap") {
+      countGroups.sourcemaps++;
+      sizeGroups.sourcemaps += urlContentSize;
+      return;
+    }
+
+    countGroups.total++;
+    sizeGroups.total += urlContentSize;
+
+    if (category === "html") {
+      countGroups.html++;
+      sizeGroups.html += urlContentSize;
+      return;
+    }
+
+    if (category === "css") {
+      countGroups.css++;
+      sizeGroups.css += urlContentSize;
+      return;
+    }
+
+    if (category === "js") {
+      countGroups.js++;
+      sizeGroups.js += urlContentSize;
+      return;
+    }
+
+    if (category === "json") {
+      countGroups.json++;
+      sizeGroups.json += urlContentSize;
+      return;
+    }
+
+    countGroups.other++;
+    sizeGroups.other += urlContentSize;
+    return;
+  });
+  const sizesToDistribute = {};
+  Object.keys(sizeGroups).forEach(groupName => {
+    if (groupName !== "sourcemaps" && groupName !== "total") {
+      sizesToDistribute[groupName] = sizeGroups[groupName];
+    }
+  });
+  const percentageGroups = distributePercentages(sizesToDistribute);
+  return {
+    // sourcemaps are special, there size are ignored
+    // so there is no "percentage" associated
+    sourcemaps: {
+      count: countGroups.sourcemaps,
+      size: sizeGroups.sourcemaps,
+      percentage: undefined
+    },
+    html: {
+      count: countGroups.html,
+      size: sizeGroups.html,
+      percentage: percentageGroups.html
+    },
+    css: {
+      count: countGroups.css,
+      size: sizeGroups.css,
+      percentage: percentageGroups.css
+    },
+    js: {
+      count: countGroups.js,
+      size: sizeGroups.js,
+      percentage: percentageGroups.js
+    },
+    json: {
+      count: countGroups.json,
+      size: sizeGroups.json,
+      percentage: percentageGroups.json
+    },
+    other: {
+      count: countGroups.other,
+      size: sizeGroups.other,
+      percentage: percentageGroups.other
+    },
+    total: {
+      count: countGroups.total,
+      size: sizeGroups.total,
+      percentage: 100
+    }
+  };
+};
+
+const determineCategory = urlInfo => {
+  if (urlInfo.type === "sourcemap") {
+    return "sourcemap";
+  }
+
+  if (urlInfo.type === "html") {
+    return "html";
+  }
+
+  if (urlInfo.type === "css") {
+    return "css";
+  }
+
+  if (urlInfo.type === "js_module" || urlInfo.type === "js_classic") {
+    return "js";
+  }
+
+  if (urlInfo.type === "json") {
+    return "json";
+  }
+
+  return "other";
+};
+
+const createRepartitionMessage = ({
+  html,
+  css,
+  js,
+  json,
+  other,
+  total
+}) => {
+  const addPart = (name, {
+    count,
+    size,
+    percentage
+  }) => {
+    parts.push(`${ANSI.color(`${name}:`, ANSI.GREY)} ${count} (${byteAsFileSize(size)} / ${percentage} %)`);
+  };
+
+  const parts = []; // if (sourcemaps.count) {
+  //   parts.push(
+  //     `${ANSI.color(`sourcemaps:`, ANSI.GREY)} ${
+  //       sourcemaps.count
+  //     } (${byteAsFileSize(sourcemaps.size)})`,
+  //   )
+  // }
+
+  if (html.count) {
+    addPart("html ", html);
+  }
+
+  if (css.count) {
+    addPart("css  ", css);
+  }
+
+  if (js.count) {
+    addPart("js   ", js);
+  }
+
+  if (json.count) {
+    addPart("json ", json);
+  }
+
+  if (other.count) {
+    addPart("other", other);
+  }
+
+  addPart("total", total);
+  return `- ${parts.join(`
+- `)}`;
+};
+
+const GRAPH = {
+  map: (graph, callback) => {
+    const array = [];
+    graph.urlInfoMap.forEach(urlInfo => {
+      array.push(callback(urlInfo));
+    });
+    return array;
+  },
+  forEach: (graph, callback) => {
+    graph.urlInfoMap.forEach(callback);
+  },
+  filter: (graph, callback) => {
+    const urlInfos = [];
+    graph.urlInfoMap.forEach(urlInfo => {
+      if (callback(urlInfo)) {
+        urlInfos.push(urlInfo);
+      }
+    });
+    return urlInfos;
+  },
+  find: (graph, callback) => {
+    let found = null;
+
+    for (const urlInfo of graph.urlInfoMap.values()) {
+      if (callback(urlInfo)) {
+        found = urlInfo;
+        break;
+      }
+    }
+
+    return found;
+  }
+};
+
+const memoizeByFirstArgument = compute => {
+  const urlCache = new Map();
+
+  const fnWithMemoization = (url, ...args) => {
+    const valueFromCache = urlCache.get(url);
+
+    if (valueFromCache) {
+      return valueFromCache;
+    }
+
+    const value = compute(url, ...args);
+    urlCache.set(url, value);
+    return value;
+  };
+
+  fnWithMemoization.forget = () => {
+    urlCache.clear();
+  };
+
+  return fnWithMemoization;
+};
+
+const createBuilUrlsGenerator = ({
+  buildDirectoryUrl
+}) => {
+  const cache = {};
+
+  const getUrlName = (url, urlInfo) => {
+    if (!urlInfo) {
+      return urlToFilename$1(url);
+    }
+
+    if (urlInfo.filename) {
+      return urlInfo.filename;
+    }
+
+    return urlToFilename$1(url);
+  };
+
+  const generate = memoizeByFirstArgument((url, {
+    urlInfo,
+    parentUrlInfo
+  }) => {
+    const directoryPath = determineDirectoryPath({
+      buildDirectoryUrl,
+      urlInfo,
+      parentUrlInfo
+    });
+    let names = cache[directoryPath];
+
+    if (!names) {
+      names = [];
+      cache[directoryPath] = names;
+    }
+
+    const urlObject = new URL(url);
+    let {
+      search,
+      hash
+    } = urlObject;
+    let name = getUrlName(url, urlInfo);
+    let [basename, extension] = splitFileExtension(name);
+    extension = extensionMappings[extension] || extension;
+    let nameCandidate = `${basename}${extension}`; // reconstruct name in case extension was normalized
+
+    let integer = 1; // eslint-disable-next-line no-constant-condition
+
+    while (true) {
+      if (!names.includes(nameCandidate)) {
+        names.push(nameCandidate);
+        break;
       }
 
-      const room = createSSERoom({
-        retryDuration: 2000,
-        historyLength: 100,
-        welcomeEventEnabled: true,
-        effect: () => {
-          rooms.push(room);
+      integer++;
+      nameCandidate = `${basename}${integer}${extension}`;
+    }
 
-          if (rooms.length >= sseRoomLimit) {
-            const firstRoom = rooms.shift();
-            firstRoom.close();
+    return `${buildDirectoryUrl}${directoryPath}${nameCandidate}${search}${hash}`;
+  });
+  return {
+    generate
+  };
+}; // It's best to generate files with an extension representing what is inside the file
+// and after build js files contains solely js (js or typescript is gone).
+// This way a static file server is already configured to server the correct content-type
+// (otherwise one would have to configure that ".jsx" is "text/javascript")
+// To keep in mind: if you have "user.jsx" and "user.js" AND both file are not bundled
+// you end up with "dist/js/user.js" and "dist/js/user2.js"
+
+const extensionMappings = {
+  ".jsx": ".js",
+  ".ts": ".js",
+  ".tsx": ".js"
+};
+
+const splitFileExtension = filename => {
+  const dotLastIndex = filename.lastIndexOf(".");
+
+  if (dotLastIndex === -1) {
+    return [filename, ""];
+  }
+
+  return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)];
+};
+
+const determineDirectoryPath = ({
+  buildDirectoryUrl,
+  urlInfo,
+  parentUrlInfo
+}) => {
+  if (urlInfo.type === "directory") {
+    return "";
+  }
+
+  if (parentUrlInfo && parentUrlInfo.type === "directory") {
+    const parentDirectoryPath = urlToRelativeUrl(parentUrlInfo.url, buildDirectoryUrl);
+    return parentDirectoryPath;
+  }
+
+  if (urlInfo.isInline) {
+    const parentDirectoryPath = determineDirectoryPath({
+      buildDirectoryUrl,
+      urlInfo: parentUrlInfo
+    });
+    return parentDirectoryPath;
+  }
+
+  if (urlInfo.isEntryPoint) {
+    return "";
+  }
+
+  if (urlInfo.type === "importmap") {
+    return "";
+  }
+
+  if (urlInfo.type === "html") {
+    return "html/";
+  }
+
+  if (urlInfo.type === "css") {
+    return "css/";
+  }
+
+  if (urlInfo.type === "js_module" || urlInfo.type === "js_classic") {
+    return "js/";
+  }
+
+  if (urlInfo.type === "json") {
+    return "json/";
+  }
+
+  return "other/";
+};
+
+// https://bundlers.tooling.report/hashing/avoid-cascade/
+const injectGlobalVersionMapping = async ({
+  finalGraphKitchen,
+  finalGraph,
+  versionMappings
+}) => {
+  await Promise.all(GRAPH.map(finalGraph, async urlInfo => {
+    if (urlInfo.isEntryPoint) {
+      await injectVersionMappings({
+        urlInfo,
+        kitchen: finalGraphKitchen,
+        versionMappings
+      });
+    }
+  }));
+};
+
+const injectVersionMappings = async ({
+  urlInfo,
+  kitchen,
+  versionMappings
+}) => {
+  const injector = injectors[urlInfo.type];
+
+  if (injector) {
+    const {
+      content,
+      sourcemap
+    } = injector(urlInfo, {
+      versionMappings
+    });
+    await kitchen.urlInfoTransformer.applyFinalTransformations(urlInfo, {
+      content,
+      sourcemap
+    });
+  }
+};
+
+const jsInjector = (urlInfo, {
+  versionMappings
+}) => {
+  const magicSource = createMagicSource(urlInfo.content);
+  magicSource.prepend(generateClientCodeForVersionMappings(versionMappings, {
+    globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window"
+  }));
+  return magicSource.toContentAndSourcemap();
+};
+
+const injectors = {
+  html: (urlInfo, {
+    versionMappings
+  }) => {
+    // ideally we would inject an importmap but browser support is too low
+    // (even worse for worker/service worker)
+    // so for now we inject code into entry points
+    const htmlAst = parseHtmlString(urlInfo.content, {
+      storeOriginalPositions: false
+    });
+    injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
+      "tagName": "script",
+      "textContent": generateClientCodeForVersionMappings(versionMappings, {
+        globalName: "window"
+      }),
+      "injected-by": "jsenv:versioning"
+    }));
+    return {
+      content: stringifyHtmlAst(htmlAst)
+    };
+  },
+  js_classic: jsInjector,
+  js_module: jsInjector
+};
+
+const generateClientCodeForVersionMappings = (versionMappings, {
+  globalName
+}) => {
+  return `
+;(function() {
+
+var __versionMappings__ = ${JSON.stringify(versionMappings, null, "  ")};
+${globalName}.__v__ = function (specifier) {
+  return __versionMappings__[specifier] || specifier
+};
+
+})();
+
+`;
+};
+
+// https://github.com/rollup/rollup/blob/5a5391971d695c808eed0c5d7d2c6ccb594fc689/src/Chunk.ts#L870
+
+const createVersionGenerator = () => {
+  const hash = createHash("sha256");
+
+  const augmentWithContent = ({
+    content,
+    contentType = "application/octet-stream",
+    lineBreakNormalization = false
+  }) => {
+    hash.update(lineBreakNormalization && CONTENT_TYPE.isTextual(contentType) ? normalizeLineBreaks(content) : content);
+  };
+
+  const augmentWithDependencyVersion = version => {
+    hash.update(version);
+  };
+
+  return {
+    augmentWithContent,
+    augmentWithDependencyVersion,
+    generate: () => {
+      return hash.digest("hex").slice(0, 8);
+    }
+  };
+};
+
+const normalizeLineBreaks = stringOrBuffer => {
+  if (typeof stringOrBuffer === "string") {
+    const stringWithLinuxBreaks = stringOrBuffer.replace(/\r\n/g, "\n");
+    return stringWithLinuxBreaks;
+  }
+
+  return normalizeLineBreaksForBuffer(stringOrBuffer);
+}; // https://github.com/nodejs/help/issues/1738#issuecomment-458460503
+
+
+const normalizeLineBreaksForBuffer = buffer => {
+  const int32Array = new Int32Array(buffer, 0, buffer.length);
+  const int32ArrayWithLineBreaksNormalized = int32Array.filter((element, index, typedArray) => {
+    if (element === 0x0d) {
+      if (typedArray[index + 1] === 0x0a) {
+        // Windows -> Unix
+        return false;
+      } // Mac OS -> Unix
+
+
+      typedArray[index] = 0x0a;
+    }
+
+    return true;
+  });
+  return Buffer.from(int32ArrayWithLineBreaksNormalized);
+};
+
+const injectServiceWorkerUrls = async ({
+  finalGraph,
+  finalGraphKitchen,
+  lineBreakNormalization
+}) => {
+  const serviceWorkerEntryUrlInfos = GRAPH.filter(finalGraph, finalUrlInfo => {
+    return finalUrlInfo.subtype === "service_worker" && finalUrlInfo.isEntryPoint;
+  });
+
+  if (serviceWorkerEntryUrlInfos.length === 0) {
+    return;
+  }
+
+  const serviceWorkerUrls = {};
+  GRAPH.forEach(finalGraph, urlInfo => {
+    if (urlInfo.isInline || !urlInfo.shouldHandle) {
+      return;
+    }
+
+    if (!urlInfo.url.startsWith("file:")) {
+      return;
+    }
+
+    if (urlInfo.data.buildUrlIsVersioned) {
+      serviceWorkerUrls[urlInfo.data.buildUrlSpecifier] = {
+        versioned: true
+      };
+      return;
+    }
+
+    if (!urlInfo.data.version) {
+      // when url is not versioned we compute a "version" for that url anyway
+      // so that service worker source still changes and navigator
+      // detect there is a change
+      const versionGenerator = createVersionGenerator();
+      versionGenerator.augmentWithContent({
+        content: urlInfo.content,
+        contentType: urlInfo.contentType,
+        lineBreakNormalization
+      });
+      const version = versionGenerator.generate();
+      urlInfo.data.version = version;
+    }
+
+    serviceWorkerUrls[urlInfo.data.buildUrlSpecifier] = {
+      versioned: false,
+      version: urlInfo.data.version
+    };
+  });
+  await Promise.all(serviceWorkerEntryUrlInfos.map(async serviceWorkerEntryUrlInfo => {
+    const magicSource = createMagicSource(serviceWorkerEntryUrlInfo.content);
+    const urlsWithoutSelf = { ...serviceWorkerUrls
+    };
+    delete urlsWithoutSelf[serviceWorkerEntryUrlInfo.data.buildUrlSpecifier];
+    magicSource.prepend(generateClientCode(urlsWithoutSelf));
+    const {
+      content,
+      sourcemap
+    } = magicSource.toContentAndSourcemap();
+    await finalGraphKitchen.urlInfoTransformer.applyFinalTransformations(serviceWorkerEntryUrlInfo, {
+      content,
+      sourcemap
+    });
+  }));
+};
+
+const generateClientCode = serviceWorkerUrls => {
+  return `
+self.serviceWorkerUrls = ${JSON.stringify(serviceWorkerUrls, null, "  ")};
+`;
+};
+
+/*
+ * Update <link rel="preload"> and friends after build (once we know everything)
+ *
+ * - Used to remove ressource hint targeting an url that is no longer used:
+ *   - Happens because of import assertions transpilation (file is inlined into JS)
+ */
+const resyncRessourceHints = async ({
+  logger,
+  finalGraphKitchen,
+  finalGraph,
+  rawUrls,
+  postBuildRedirections
+}) => {
+  const ressourceHintActions = [];
+  GRAPH.forEach(finalGraph, urlInfo => {
+    if (urlInfo.type !== "html") {
+      return;
+    }
+
+    ressourceHintActions.push(async () => {
+      const htmlAst = parseHtmlString(urlInfo.content, {
+        storeOriginalPositions: false
+      });
+      const actions = [];
+
+      const visitLinkWithHref = (linkNode, href) => {
+        if (!href || href.startsWith("data:")) {
+          return;
+        }
+
+        const rel = getHtmlNodeAttribute(linkNode, "rel");
+        const isRessourceHint = ["preconnect", "dns-prefetch", "prefetch", "preload", "modulepreload"].includes(rel);
+
+        if (!isRessourceHint) {
+          return;
+        }
+
+        let buildUrl;
+
+        for (const key of Object.keys(rawUrls)) {
+          if (rawUrls[key] === href) {
+            buildUrl = key;
+            break;
           }
+        }
 
-          return () => {
-            // when the last client leaves the room it is closed and removed from the list
-            room.close();
-            const index = rooms.indexOf(room);
+        if (!buildUrl) {
+          logger.warn(`remove ressource hint because cannot find "${href}"`);
+          actions.push(() => {
+            removeHtmlNode(linkNode);
+          });
+          return;
+        }
 
-            if (index > -1) {
-              rooms.splice(index, 1);
-            }
-          };
+        buildUrl = postBuildRedirections[buildUrl] || buildUrl;
+        const urlInfo = finalGraph.getUrlInfo(buildUrl);
+
+        if (!urlInfo) {
+          logger.warn(`remove ressource hint because cannot find "${buildUrl}" in the graph`);
+          actions.push(() => {
+            removeHtmlNode(linkNode);
+          });
+          return;
+        }
+
+        if (urlInfo.dependents.size === 0) {
+          logger.info(`remove ressource hint because "${href}" not used anymore`);
+          actions.push(() => {
+            removeHtmlNode(linkNode);
+          });
+          return;
+        }
+
+        actions.push(() => {
+          setHtmlNodeAttributes(linkNode, {
+            href: urlInfo.data.buildUrlSpecifier
+          });
+        });
+      };
+
+      visitHtmlNodes(htmlAst, {
+        link: node => {
+          const href = getHtmlNodeAttribute(node, "href");
+
+          if (href !== undefined) {
+            visitLinkWithHref(node, href);
+          }
         }
       });
-      room.request = request;
-      return room;
-    },
-    dispatch: ({
-      type,
-      data
-    }) => {
-      rooms.forEach(room => room.sendEventToAllClients({
-        type,
-        data: JSON.stringify(data)
-      }));
-    },
-    dispatchToRoomsMatching: ({
-      type,
-      data
-    }, predicate) => {
-      rooms.forEach(room => {
-        if (predicate(room)) {
-          room.sendEventToAllClients({
-            type,
-            data: JSON.stringify(data)
+
+      if (actions.length) {
+        actions.forEach(action => action());
+        await finalGraphKitchen.urlInfoTransformer.applyFinalTransformations(urlInfo, {
+          content: stringifyHtmlAst(htmlAst)
+        });
+      }
+    });
+  });
+  await Promise.all(ressourceHintActions.map(ressourceHintAction => ressourceHintAction()));
+};
+
+/*
+ * Things hapenning here:
+ * 1. load raw build files
+ * 2. bundle files
+ * 3. optimize files (minify mostly)
+ * 4. urls versioning
+ */
+// "we can keep <script type="module"> intact":
+// so script_type_module + dynamic_import + import_meta
+
+const defaultRuntimeCompat = {
+  // android: "8",
+  chrome: "64",
+  edge: "79",
+  firefox: "67",
+  ios: "12",
+  opera: "51",
+  safari: "11.3",
+  samsung: "9.2"
+};
+/**
+ * Generate an optimized version of source files into a directory
+ * @param {Object} buildParameters
+ * @param {string|url} buildParameters.rootDirectoryUrl
+ *        Directory containing source files
+ * @param {string|url} buildParameters.buildDirectoryUrl
+ *        Directory where optimized files will be written
+ * @param {object} buildParameters.entryPoints
+ *        Describe entry point paths and control their names in the build directory
+ * @param {object} buildParameters.runtimeCompat
+ *        Code generated will be compatible with these runtimes
+ * @param {string="/"} buildParameters.baseUrl
+ *        All urls in build file contents are prefixed with this url
+ * @param {boolean|object} [buildParameters.minification=true]
+ *        Minify build file contents
+ * @param {boolean} [buildParameters.versioning=true]
+ *        Controls if url in build file contents are versioned
+ * @param {('search_param'|'filename')} [buildParameters.versioningMethod="search_param"]
+ *        Controls how url are versioned
+ * @param {boolean|string} [buildParameters.sourcemaps=false]
+ *        Generate sourcemaps in the build directory
+ * @return {Object} buildReturnValue
+ * @return {Object} buildReturnValue.buildFileContents
+ *        Contains all build file paths relative to the build directory and their content
+ * @return {Object} buildReturnValue.buildInlineContents
+ *        Contains content that is inline into build files
+ * @return {Object} buildReturnValue.buildManifest
+ *        Map build file paths without versioning to versioned file paths
+ */
+
+const build = async ({
+  signal = new AbortController().signal,
+  handleSIGINT = true,
+  logLevel = "info",
+  rootDirectoryUrl,
+  buildDirectoryUrl,
+  entryPoints = {},
+  baseUrl = "/",
+  runtimeCompat = defaultRuntimeCompat,
+  plugins = [],
+  sourcemaps = false,
+  sourcemapsSourcesContent,
+  urlAnalysis = {},
+  nodeEsmResolution = true,
+  fileSystemMagicResolution,
+  directoryReferenceAllowed,
+  transpilation = {},
+  bundling = true,
+  minification = true,
+  versioning = true,
+  versioningMethod = "search_param",
+  // "filename", "search_param"
+  lineBreakNormalization = process.platform === "win32",
+  clientFiles = {
+    "./src/": true
+  },
+  cooldownBetweenFileEvents,
+  watch = false,
+  buildDirectoryClean = true,
+  writeOnFileSystem = true,
+  writeGeneratedFiles = false,
+  assetManifest = true,
+  assetManifestFileRelativeUrl = "asset-manifest.json"
+}) => {
+  const operation = Abort.startOperation();
+  operation.addAbortSignal(signal);
+
+  if (handleSIGINT) {
+    operation.addAbortSource(abort => {
+      return raceProcessTeardownEvents({
+        SIGINT: true
+      }, abort);
+    });
+  }
+
+  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl);
+  buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl);
+  assertEntryPoints({
+    entryPoints
+  });
+
+  if (!["filename", "search_param"].includes(versioningMethod)) {
+    throw new Error(`Unexpected "versioningMethod": must be "filename", "search_param"; got ${versioning}`);
+  }
+
+  const runBuild = async ({
+    signal,
+    logLevel
+  }) => {
+    const logger = createLogger({
+      logLevel
+    });
+    const buildOperation = Abort.startOperation();
+    const infoLogsAreDisabled = !loggerToLevels(logger).info;
+    buildOperation.addAbortSignal(signal);
+    const entryPointKeys = Object.keys(entryPoints);
+
+    if (entryPointKeys.length === 1) {
+      logger.info(`
+build "${entryPointKeys[0]}"`);
+    } else {
+      logger.info(`
+build ${entryPointKeys.length} entry points`);
+    }
+
+    const useExplicitJsClassicConversion = entryPointKeys.some(key => entryPoints[key].includes("?as_js_classic"));
+    const rawGraph = createUrlGraph();
+    const prebuildTask = createTaskLog("prebuild", {
+      disabled: infoLogsAreDisabled
+    });
+    const prebuildRedirections = new Map();
+    const rawGraphKitchen = createKitchen({
+      signal,
+      logger,
+      rootDirectoryUrl,
+      urlGraph: rawGraph,
+      scenario: "build",
+      sourcemaps,
+      sourcemapsSourcesContent,
+      runtimeCompat,
+      writeGeneratedFiles,
+      plugins: [...plugins, {
+        appliesDuring: "build",
+        fetchUrlContent: (urlInfo, context) => {
+          if (context.reference.original) {
+            prebuildRedirections.set(context.reference.original.url, context.reference.url);
+          }
+        },
+        formatUrl: reference => {
+          if (!reference.shouldHandle) {
+            return `ignore:${reference.specifier}`;
+          }
+
+          return null;
+        }
+      }, ...getCorePlugins({
+        rootDirectoryUrl,
+        urlGraph: rawGraph,
+        scenario: "build",
+        runtimeCompat,
+        urlAnalysis,
+        nodeEsmResolution,
+        fileSystemMagicResolution,
+        directoryReferenceAllowed,
+        transpilation: { ...transpilation,
+          babelHelpersAsImport: !useExplicitJsClassicConversion,
+          jsModuleAsJsClassic: false
+        },
+        minification,
+        bundling
+      })]
+    });
+    const entryUrls = [];
+
+    try {
+      await loadUrlGraph({
+        operation: buildOperation,
+        urlGraph: rawGraph,
+        kitchen: rawGraphKitchen,
+        writeGeneratedFiles,
+        outDirectoryUrl: new URL(`.jsenv/build/`, rootDirectoryUrl),
+        startLoading: cookEntryFile => {
+          Object.keys(entryPoints).forEach(key => {
+            const [, entryUrlInfo] = cookEntryFile({
+              trace: {
+                message: `"${key}" in entryPoints parameter`
+              },
+              type: "entry_point",
+              specifier: key
+            });
+            entryUrls.push(entryUrlInfo.url);
+            entryUrlInfo.filename = entryPoints[key]; // entryUrlInfo.data.entryPointKey = key
           });
         }
       });
+    } catch (e) {
+      prebuildTask.fail();
+      throw e;
+    }
+
+    prebuildTask.done();
+    const buildUrlsGenerator = createBuilUrlsGenerator({
+      buildDirectoryUrl
+    });
+    const rawUrls = {};
+    const bundleRedirections = {};
+    const buildUrls = {};
+    const bundleUrlInfos = {};
+    const bundlers = {};
+    rawGraphKitchen.pluginController.plugins.forEach(plugin => {
+      const bundle = plugin.bundle;
+
+      if (!bundle) {
+        return;
+      }
+
+      if (typeof bundle !== "object") {
+        throw new Error(`bundle must be an object, found "${bundle}" on plugin named "${plugin.name}"`);
+      }
+
+      Object.keys(bundle).forEach(type => {
+        const bundleFunction = bundle[type];
+
+        if (!bundleFunction) {
+          return;
+        }
+
+        const bundlerForThatType = bundlers[type];
+
+        if (bundlerForThatType) {
+          // first plugin to define a bundle hook wins
+          return;
+        }
+
+        bundlers[type] = {
+          plugin,
+          bundleFunction: bundle[type],
+          urlInfos: []
+        };
+      });
+    });
+
+    const addToBundlerIfAny = rawUrlInfo => {
+      const bundler = bundlers[rawUrlInfo.type];
+
+      if (bundler) {
+        bundler.urlInfos.push(rawUrlInfo);
+        return;
+      }
+    };
+
+    GRAPH.forEach(rawGraph, rawUrlInfo => {
+      if (rawUrlInfo.isEntryPoint) {
+        addToBundlerIfAny(rawUrlInfo);
+
+        if (rawUrlInfo.type === "html") {
+          rawUrlInfo.dependencies.forEach(dependencyUrl => {
+            const dependencyUrlInfo = rawGraph.getUrlInfo(dependencyUrl);
+
+            if (dependencyUrlInfo.isInline) {
+              if (dependencyUrlInfo.type === "js_module") {
+                // bundle inline script type module deps
+                dependencyUrlInfo.references.forEach(inlineScriptRef => {
+                  if (inlineScriptRef.type === "js_import_export") {
+                    const inlineUrlInfo = rawGraph.getUrlInfo(inlineScriptRef.url);
+                    addToBundlerIfAny(inlineUrlInfo);
+                  }
+                });
+              } // inline content cannot be bundled
+
+
+              return;
+            }
+
+            addToBundlerIfAny(dependencyUrlInfo);
+          });
+          rawUrlInfo.references.forEach(reference => {
+            if (reference.isRessourceHint && reference.expectedType === "js_module") {
+              const referencedUrlInfo = rawGraph.getUrlInfo(reference.url);
+
+              if (referencedUrlInfo && // something else than the ressource hint is using this url
+              referencedUrlInfo.dependents.size > 0) {
+                addToBundlerIfAny(referencedUrlInfo);
+              }
+            }
+          });
+          return;
+        }
+      } // File referenced with new URL('./file.js', import.meta.url)
+      // are entry points that can be bundled
+      // For instance we will bundle service worker/workers detected like this
+
+
+      if (rawUrlInfo.type === "js_module") {
+        rawUrlInfo.references.forEach(reference => {
+          if (reference.type === "js_url_specifier") {
+            const urlInfo = rawGraph.getUrlInfo(reference.url);
+            addToBundlerIfAny(urlInfo);
+          }
+        });
+      }
+    });
+    const bundleInternalRedirections = {};
+    await Object.keys(bundlers).reduce(async (previous, type) => {
+      await previous;
+      const bundler = bundlers[type];
+      const urlInfosToBundle = bundler.urlInfos;
+
+      if (urlInfosToBundle.length === 0) {
+        return;
+      }
+
+      const bundleTask = createTaskLog(`bundle "${type}"`, {
+        disabled: infoLogsAreDisabled
+      });
+
+      try {
+        const bundlerGeneratedUrlInfos = await rawGraphKitchen.pluginController.callAsyncHook({
+          plugin: bundler.plugin,
+          hookName: "bundle",
+          value: bundler.bundleFunction
+        }, urlInfosToBundle, { ...rawGraphKitchen.kitchenContext,
+          buildDirectoryUrl
+        });
+        Object.keys(bundlerGeneratedUrlInfos).forEach(url => {
+          const rawUrlInfo = rawGraph.getUrlInfo(url);
+          const bundlerGeneratedUrlInfo = bundlerGeneratedUrlInfos[url];
+          const bundleUrlInfo = {
+            type,
+            subtype: rawUrlInfo ? rawUrlInfo.subtype : undefined,
+            isEntryPoint: rawUrlInfo ? rawUrlInfo.isEntryPoint : undefined,
+            filename: rawUrlInfo ? rawUrlInfo.filename : undefined,
+            originalUrl: rawUrlInfo ? rawUrlInfo.originalUrl : undefined,
+            originalContent: rawUrlInfo ? rawUrlInfo.originalContent : undefined,
+            ...bundlerGeneratedUrlInfo,
+            data: { ...(rawUrlInfo ? rawUrlInfo.data : {}),
+              ...bundlerGeneratedUrlInfo.data,
+              fromBundle: true
+            }
+          };
+          const buildUrl = buildUrlsGenerator.generate(url, {
+            urlInfo: bundleUrlInfo
+          });
+          bundleRedirections[url] = buildUrl;
+          rawUrls[buildUrl] = url;
+          bundleUrlInfos[buildUrl] = bundleUrlInfo;
+
+          if (buildUrl.includes("?")) {
+            bundleUrlInfos[asUrlWithoutSearch(buildUrl)] = bundleUrlInfo;
+          }
+
+          if (bundlerGeneratedUrlInfo.data.bundleRelativeUrl) {
+            const urlForBundler = new URL(bundlerGeneratedUrlInfo.data.bundleRelativeUrl, buildDirectoryUrl).href;
+
+            if (urlForBundler !== buildUrl) {
+              bundleInternalRedirections[urlForBundler] = buildUrl;
+            }
+          }
+        });
+      } catch (e) {
+        bundleTask.fail();
+        throw e;
+      }
+
+      bundleTask.done();
+    }, Promise.resolve());
+    const urlAnalysisPlugin = jsenvPluginUrlAnalysis({
+      rootDirectoryUrl,
+      ...urlAnalysis
+    });
+    const postBuildRedirections = {};
+    const finalGraph = createUrlGraph();
+    const finalGraphKitchen = createKitchen({
+      logger,
+      rootDirectoryUrl,
+      urlGraph: finalGraph,
+      scenario: "build",
+      sourcemaps,
+      sourcemapsSourcesContent,
+      sourcemapsRelativeSources: !versioning,
+      runtimeCompat,
+      writeGeneratedFiles,
+      plugins: [urlAnalysisPlugin, jsenvPluginAsJsClassic({
+        systemJsInjection: true
+      }), jsenvPluginInline({
+        fetchInlineUrls: false
+      }), {
+        name: "jsenv:postbuild",
+        appliesDuring: "build",
+        resolveUrl: reference => {
+          const performInternalRedirections = url => {
+            const prebuildRedirection = prebuildRedirections.get(url);
+
+            if (prebuildRedirection) {
+              logger.debug(`\nprebuild redirection\n${url} ->\n${prebuildRedirection}\n`);
+              url = prebuildRedirection;
+            }
+
+            const bundleRedirection = bundleRedirections[url];
+
+            if (bundleRedirection) {
+              logger.debug(`\nbundler redirection\n${url} ->\n${bundleRedirection}\n`);
+              url = bundleRedirection;
+            }
+
+            const bundleInternalRedirection = bundleInternalRedirections[url];
+
+            if (bundleInternalRedirection) {
+              logger.debug(`\nbundler internal redirection\n${url} ->\n${bundleInternalRedirection}\n`);
+              url = bundleInternalRedirection;
+            }
+
+            return url;
+          };
+
+          if (reference.type === "filesystem") {
+            const parentRawUrl = rawUrls[reference.parentUrl];
+            const baseUrl = ensurePathnameTrailingSlash(parentRawUrl);
+            return performInternalRedirections(new URL(reference.specifier, baseUrl).href);
+          }
+
+          if (reference.specifier[0] === "/") {
+            return performInternalRedirections(new URL(reference.specifier.slice(1), buildDirectoryUrl).href);
+          }
+
+          return performInternalRedirections(new URL(reference.specifier, reference.baseUrl || reference.parentUrl).href);
+        },
+        // redirecting urls into the build directory
+        redirectUrl: reference => {
+          if (!reference.url.startsWith("file:")) {
+            return null;
+          } // already a build url
+
+
+          const rawUrl = rawUrls[reference.url];
+
+          if (rawUrl) {
+            return reference.url;
+          } // from "js_module_as_js_classic":
+          //   - injecting "?as_js_classic" for the first time
+          //   - injecting "?as_js_classic" because the parentUrl has it
+
+
+          if (reference.original) {
+            const referenceOriginalUrl = reference.original.url;
+            let originalBuildUrl;
+
+            if (urlIsInsideOf(referenceOriginalUrl, buildDirectoryUrl)) {
+              originalBuildUrl = referenceOriginalUrl;
+            } else {
+              originalBuildUrl = Object.keys(rawUrls).find(key => rawUrls[key] === referenceOriginalUrl);
+            }
+
+            let rawUrl;
+
+            if (urlIsInsideOf(reference.url, buildDirectoryUrl)) {
+              const originalBuildUrl = postBuildRedirections[referenceOriginalUrl];
+              rawUrl = originalBuildUrl ? rawUrls[originalBuildUrl] : reference.url;
+            } else {
+              rawUrl = reference.url;
+            } // the url info do not exists yet (it will be created after this "normalize" hook)
+            // And the content will be generated when url is cooked by url graph loader.
+            // Here we just want to reserve an url for that file
+
+
+            const buildUrl = buildUrlsGenerator.generate(rawUrl, {
+              urlInfo: {
+                data: reference.data,
+                isEntryPoint: reference.isEntryPoint || isWebWorkerEntryPointReference(reference),
+                type: reference.expectedType,
+                subtype: reference.expectedSubtype,
+                filename: reference.filename
+              }
+            });
+            postBuildRedirections[originalBuildUrl] = buildUrl;
+            rawUrls[buildUrl] = rawUrl;
+            return buildUrl;
+          }
+
+          if (reference.isInline) {
+            const rawUrlInfo = GRAPH.find(rawGraph, rawUrlInfo => {
+              if (!rawUrlInfo.isInline) {
+                return false;
+              }
+
+              if (rawUrlInfo.content === reference.content) {
+                return true;
+              }
+
+              if (rawUrlInfo.originalContent === reference.content) {
+                return true;
+              }
+
+              return false;
+            });
+            const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl);
+
+            if (!rawUrlInfo) {
+              // generated during final graph
+              // (happens for JSON.parse injected for import assertions for instance)
+              // throw new Error(`cannot find raw url for "${reference.url}"`)
+              return reference.url;
+            }
+
+            const buildUrl = buildUrlsGenerator.generate(reference.url, {
+              urlInfo: rawUrlInfo,
+              parentUrlInfo
+            });
+            rawUrls[buildUrl] = rawUrlInfo.url;
+            return buildUrl;
+          } // from "js_module_as_js_classic":
+          //   - to inject "s.js"
+
+
+          if (reference.injected) {
+            const buildUrl = buildUrlsGenerator.generate(reference.url, {
+              urlInfo: {
+                data: {},
+                type: "js_classic"
+              }
+            });
+            rawUrls[buildUrl] = reference.url;
+            return buildUrl;
+          }
+
+          const rawUrlInfo = rawGraph.getUrlInfo(reference.url);
+          const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl); // files from root directory but not given to rollup nor postcss
+
+          if (rawUrlInfo) {
+            const buildUrl = buildUrlsGenerator.generate(reference.url, {
+              urlInfo: rawUrlInfo,
+              parentUrlInfo
+            });
+            rawUrls[buildUrl] = rawUrlInfo.url;
+
+            if (buildUrl.includes("?")) {
+              rawUrls[asUrlWithoutSearch(buildUrl)] = rawUrlInfo.url;
+            }
+
+            return buildUrl;
+          }
+
+          if (reference.type === "sourcemap_comment") {
+            // inherit parent build url
+            return generateSourcemapFileUrl(reference.parentUrl);
+          } // files generated during the final graph:
+          // - sourcemaps
+          // const finalUrlInfo = finalGraph.getUrlInfo(url)
+
+
+          const buildUrl = buildUrlsGenerator.generate(reference.url, {
+            urlInfo: {
+              data: {},
+              type: "asset"
+            }
+          });
+          return buildUrl;
+        },
+        formatUrl: reference => {
+          if (!reference.generatedUrl.startsWith("file:")) {
+            if (!versioning && reference.generatedUrl.startsWith("ignore:")) {
+              return reference.generatedUrl.slice("ignore:".length);
+            }
+
+            return null;
+          }
+
+          if (!urlIsInsideOf(reference.generatedUrl, buildDirectoryUrl)) {
+            throw new Error(`urls should be inside build directory at this stage, found "${reference.url}"`);
+          }
+
+          if (reference.isRessourceHint) {
+            // return the raw url, we will resync at the end
+            return rawUrls[reference.url];
+          } // remove eventual search params and hash
+
+
+          const urlUntilPathname = asUrlUntilPathname(reference.generatedUrl);
+          let specifier;
+
+          if (baseUrl === "./") {
+            const relativeUrl = urlToRelativeUrl(urlUntilPathname, reference.parentUrl === rootDirectoryUrl ? buildDirectoryUrl : reference.parentUrl); // ensure "./" on relative url (otherwise it could be a "bare specifier")
+
+            specifier = relativeUrl[0] === "." ? relativeUrl : `./${relativeUrl}`;
+          } else {
+            // if a file is in the same directory we could prefer the relative notation
+            // but to keep things simple let's keep the "absolutely relative" to baseUrl for now
+            specifier = `${baseUrl}${urlToRelativeUrl(urlUntilPathname, buildDirectoryUrl)}`;
+          }
+
+          buildUrls[specifier] = reference.generatedUrl;
+          return specifier;
+        },
+        fetchUrlContent: async (finalUrlInfo, context) => {
+          const fromBundleOrRawGraph = url => {
+            const bundleUrlInfo = bundleUrlInfos[url];
+
+            if (bundleUrlInfo) {
+              logger.debug(`fetching from bundle ${url}`);
+              return bundleUrlInfo;
+            }
+
+            const rawUrl = rawUrls[url] || url;
+            const rawUrlInfo = rawGraph.getUrlInfo(rawUrl);
+
+            if (!rawUrlInfo) {
+              throw new Error(`Cannot find url`);
+            }
+
+            logger.debug(`fetching from raw graph ${url}`);
+
+            if (rawUrlInfo.isInline) {
+              // Inline content, such as <script> inside html, is transformed during the previous phase.
+              // If we read the inline content it would be considered as the original content.
+              // - It could be "fixed" by taking into account sourcemap and consider sourcemap sources
+              //   as the original content.
+              //   - But it would not work when sourcemap are not generated
+              //   - would be a bit slower
+              // - So instead of reading the inline content directly, we search into raw graph
+              //   to get "originalContent" and "sourcemap"
+              finalUrlInfo.type = rawUrlInfo.type;
+              finalUrlInfo.subtype = rawUrlInfo.subtype;
+              return rawUrlInfo;
+            }
+
+            return rawUrlInfo;
+          }; // reference injected during "postbuild":
+          // - happens for "as_js_classic" injecting "s.js"
+
+
+          if (context.reference.injected) {
+            const [ref, rawUrlInfo] = rawGraphKitchen.injectReference({
+              type: context.reference.type,
+              expectedType: context.reference.expectedType,
+              expectedSubtype: context.reference.expectedSubtype,
+              parentUrl: rawUrls[context.reference.parentUrl],
+              specifier: context.reference.specifier,
+              injected: true
+            });
+            await rawGraphKitchen.cook(rawUrlInfo, {
+              reference: ref
+            });
+            return rawUrlInfo;
+          } // reference updated during "postbuild":
+          // - happens for "as_js_classic"
+
+
+          if (context.reference.original) {
+            return fromBundleOrRawGraph(context.reference.original.url);
+          }
+
+          return fromBundleOrRawGraph(finalUrlInfo.url);
+        }
+      }, {
+        name: "jsenv:optimize",
+        appliesDuring: "build",
+        finalizeUrlContent: async (urlInfo, context) => {
+          await rawGraphKitchen.pluginController.callAsyncHooks("optimizeUrlContent", urlInfo, context, async optimizeReturnValue => {
+            await finalGraphKitchen.urlInfoTransformer.applyFinalTransformations(urlInfo, optimizeReturnValue);
+          });
+        }
+      }]
+    });
+    const buildTask = createTaskLog("build", {
+      disabled: infoLogsAreDisabled
+    });
+    const postBuildEntryUrls = [];
+
+    try {
+      await loadUrlGraph({
+        operation: buildOperation,
+        urlGraph: finalGraph,
+        kitchen: finalGraphKitchen,
+        outDirectoryUrl: new URL(".jsenv/postbuild/", rootDirectoryUrl),
+        writeGeneratedFiles,
+        skipRessourceHint: true,
+        startLoading: cookEntryFile => {
+          entryUrls.forEach(entryUrl => {
+            const [, postBuildEntryUrlInfo] = cookEntryFile({
+              trace: {
+                message: `entryPoint`
+              },
+              type: "entry_point",
+              specifier: entryUrl
+            });
+            postBuildEntryUrls.push(postBuildEntryUrlInfo.url);
+          });
+        }
+      });
+    } catch (e) {
+      buildTask.fail();
+      throw e;
+    }
+
+    buildTask.done();
+    logger.debug(`graph urls pre-versioning:
+${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`);
+
+    if (versioning) {
+      await applyUrlVersioning({
+        buildOperation,
+        logger,
+        infoLogsAreDisabled,
+        buildDirectoryUrl,
+        rawUrls,
+        buildUrls,
+        baseUrl,
+        postBuildEntryUrls,
+        sourcemaps,
+        sourcemapsSourcesContent,
+        runtimeCompat,
+        writeGeneratedFiles,
+        rawGraph,
+        urlAnalysisPlugin,
+        finalGraph,
+        finalGraphKitchen,
+        lineBreakNormalization,
+        versioningMethod
+      });
+    }
+
+    GRAPH.forEach(finalGraph, urlInfo => {
+      if (!urlInfo.shouldHandle) {
+        return;
+      }
+
+      if (!urlInfo.url.startsWith("file:")) {
+        return;
+      }
+
+      if (urlInfo.type === "html") {
+        const htmlAst = parseHtmlString(urlInfo.content, {
+          storeOriginalPositions: false
+        });
+        urlInfo.content = stringifyHtmlAst(htmlAst, {
+          removeOriginalPositionAttributes: true
+        });
+      }
+
+      const version = urlInfo.data.version;
+      const useVersionedUrl = version && canUseVersionedUrl(urlInfo);
+      const buildUrl = useVersionedUrl ? urlInfo.data.versionedUrl : urlInfo.url;
+      const buildUrlSpecifier = Object.keys(buildUrls).find(key => buildUrls[key] === buildUrl);
+      urlInfo.data.buildUrl = buildUrl;
+      urlInfo.data.buildUrlIsVersioned = useVersionedUrl;
+      urlInfo.data.buildUrlSpecifier = buildUrlSpecifier;
+    });
+    await resyncRessourceHints({
+      logger,
+      finalGraphKitchen,
+      finalGraph,
+      rawUrls,
+      postBuildRedirections
+    });
+    buildOperation.throwIfAborted();
+    const cleanupActions = [];
+    GRAPH.forEach(finalGraph, urlInfo => {
+      // nothing uses this url anymore
+      // - versioning update inline content
+      // - file converted for import assertion of js_classic conversion
+      if (!urlInfo.isEntryPoint && urlInfo.type !== "sourcemap" && urlInfo.dependents.size === 0) {
+        cleanupActions.push(() => {
+          finalGraph.deleteUrlInfo(urlInfo.url);
+        });
+      }
+    });
+    cleanupActions.forEach(cleanupAction => cleanupAction());
+    await injectServiceWorkerUrls({
+      finalGraphKitchen,
+      finalGraph,
+      lineBreakNormalization
+    });
+    buildOperation.throwIfAborted();
+    const buildManifest = {};
+    const buildFileContents = {};
+    const buildInlineContents = {};
+    GRAPH.forEach(finalGraph, urlInfo => {
+      if (!urlInfo.shouldHandle) {
+        return;
+      }
+
+      if (!urlInfo.url.startsWith("file:")) {
+        return;
+      }
+
+      if (urlInfo.type === "directory") {
+        return;
+      }
+
+      const buildRelativeUrl = urlToRelativeUrl(urlInfo.data.buildUrl, buildDirectoryUrl);
+
+      if (urlInfo.isInline) {
+        buildInlineContents[buildRelativeUrl] = urlInfo.content;
+      } else {
+        buildFileContents[buildRelativeUrl] = urlInfo.content;
+        const buildRelativeUrlWithoutVersioning = urlToRelativeUrl(urlInfo.url, buildDirectoryUrl);
+        buildManifest[buildRelativeUrlWithoutVersioning] = buildRelativeUrl;
+      }
+    });
+
+    if (writeOnFileSystem) {
+      if (buildDirectoryClean) {
+        await ensureEmptyDirectory(buildDirectoryUrl);
+      }
+
+      const buildRelativeUrls = Object.keys(buildFileContents);
+      await Promise.all(buildRelativeUrls.map(async buildRelativeUrl => {
+        await writeFile(new URL(buildRelativeUrl, buildDirectoryUrl), buildFileContents[buildRelativeUrl]);
+      }));
+
+      if (versioning && assetManifest && Object.keys(buildManifest).length) {
+        await writeFile(new URL(assetManifestFileRelativeUrl, buildDirectoryUrl), JSON.stringify(buildManifest, null, "  "));
+      }
+    }
+
+    logger.info(createUrlGraphSummary(finalGraph, {
+      title: "build files"
+    }));
+    return {
+      buildFileContents,
+      buildInlineContents,
+      buildManifest
+    };
+  };
+
+  if (!watch) {
+    return runBuild({
+      signal: operation.signal,
+      logLevel
+    });
+  }
+
+  let resolveFirstBuild;
+  let rejectFirstBuild;
+  const firstBuildPromise = new Promise((resolve, reject) => {
+    resolveFirstBuild = resolve;
+    rejectFirstBuild = reject;
+  });
+  let buildAbortController;
+  let watchFilesTask;
+
+  const startBuild = async () => {
+    const buildTask = createTaskLog("build");
+    buildAbortController = new AbortController();
+
+    try {
+      const result = await runBuild({
+        signal: buildAbortController.signal,
+        logLevel: "warn"
+      });
+      buildTask.done();
+      resolveFirstBuild(result);
+      watchFilesTask = createTaskLog("watch files");
+    } catch (e) {
+      if (Abort.isAbortError(e)) {
+        buildTask.fail(`build aborted`);
+      } else if (e.code === "PARSE_ERROR") {
+        buildTask.fail();
+        console.error(e.stack);
+        watchFilesTask = createTaskLog("watch files");
+      } else {
+        buildTask.fail();
+        rejectFirstBuild(e);
+        throw e;
+      }
+    }
+  };
+
+  startBuild();
+  let startTimeout;
+
+  const clientFileChangeCallback = ({
+    relativeUrl,
+    event
+  }) => {
+    const url = new URL(relativeUrl, rootDirectoryUrl).href;
+
+    if (watchFilesTask) {
+      watchFilesTask.happen(`${url.slice(rootDirectoryUrl.length)} ${event}`);
+      watchFilesTask = null;
+    }
+
+    buildAbortController.abort(); // setTimeout is to ensure the abortController.abort() above
+    // is properly taken into account so that logs about abort comes first
+    // then logs about re-running the build happens
+
+    clearTimeout(startTimeout);
+    startTimeout = setTimeout(startBuild, 20);
+  };
+
+  const stopWatchingClientFiles = registerDirectoryLifecycle(rootDirectoryUrl, {
+    watchPatterns: clientFiles,
+    cooldownBetweenFileEvents,
+    keepProcessAlive: true,
+    recursive: true,
+    added: ({
+      relativeUrl
+    }) => {
+      clientFileChangeCallback({
+        relativeUrl,
+        event: "added"
+      });
+    },
+    updated: ({
+      relativeUrl
+    }) => {
+      clientFileChangeCallback({
+        relativeUrl,
+        event: "modified"
+      });
+    },
+    removed: ({
+      relativeUrl
+    }) => {
+      clientFileChangeCallback({
+        relativeUrl,
+        event: "removed"
+      });
+    }
+  });
+  operation.addAbortCallback(() => {
+    stopWatchingClientFiles();
+  });
+  await firstBuildPromise;
+  return stopWatchingClientFiles;
+};
+
+const applyUrlVersioning = async ({
+  buildOperation,
+  logger,
+  infoLogsAreDisabled,
+  buildDirectoryUrl,
+  rawUrls,
+  buildUrls,
+  baseUrl,
+  postBuildEntryUrls,
+  sourcemaps,
+  sourcemapsSourcesContent,
+  runtimeCompat,
+  writeGeneratedFiles,
+  rawGraph,
+  urlAnalysisPlugin,
+  finalGraph,
+  finalGraphKitchen,
+  lineBreakNormalization,
+  versioningMethod
+}) => {
+  const versioningTask = createTaskLog("inject version in urls", {
+    disabled: infoLogsAreDisabled
+  });
+
+  try {
+    const urlsSorted = sortByDependencies(finalGraph.toObject());
+    urlsSorted.forEach(url => {
+      if (url.startsWith("data:")) {
+        return;
+      }
+
+      const urlInfo = finalGraph.getUrlInfo(url);
+
+      if (urlInfo.type === "sourcemap") {
+        return;
+      } // ignore:
+      // - inline files:
+      //   they are already taken into account in the file where they appear
+      // - ignored files:
+      //   we don't know their content
+      // - unused files without reference
+      //   File updated such as style.css -> style.css.js or file.js->file.nomodule.js
+      //   Are used at some point just to be discarded later because they need to be converted
+      //   There is no need to version them and we could not because the file have been ignored
+      //   so their content is unknown
+
+
+      if (urlInfo.isInline) {
+        return;
+      }
+
+      if (!urlInfo.shouldHandle) {
+        return;
+      }
+
+      if (!urlInfo.isEntryPoint && urlInfo.dependents.size === 0) {
+        return;
+      }
+
+      const urlContent = urlInfo.type === "html" ? stringifyHtmlAst(parseHtmlString(urlInfo.content, {
+        storeOriginalPositions: false
+      }), {
+        removeOriginalPositionAttributes: true
+      }) : urlInfo.content;
+      const versionGenerator = createVersionGenerator();
+      versionGenerator.augmentWithContent({
+        content: urlContent,
+        contentType: urlInfo.contentType,
+        lineBreakNormalization
+      });
+      urlInfo.dependencies.forEach(dependencyUrl => {
+        // this dependency is inline
+        if (dependencyUrl.startsWith("data:")) {
+          return;
+        }
+
+        const dependencyUrlInfo = finalGraph.getUrlInfo(dependencyUrl);
+
+        if ( // this content is part of the file, no need to take into account twice
+        dependencyUrlInfo.isInline || // this dependency content is not known
+        !dependencyUrlInfo.shouldHandle) {
+          return;
+        }
+
+        if (dependencyUrlInfo.data.version) {
+          versionGenerator.augmentWithDependencyVersion(dependencyUrlInfo.data.version);
+        } else {
+          // because all dependencies are know, if the dependency has no version
+          // it means there is a circular dependency between this file
+          // and it's dependency
+          // in that case we'll use the dependency content
+          versionGenerator.augmentWithContent({
+            content: dependencyUrlInfo.content,
+            contentType: dependencyUrlInfo.contentType,
+            lineBreakNormalization
+          });
+        }
+      });
+      urlInfo.data.version = versionGenerator.generate();
+      urlInfo.data.versionedUrl = normalizeUrl(injectVersionIntoBuildUrl({
+        buildUrl: urlInfo.url,
+        version: urlInfo.data.version,
+        versioningMethod
+      }));
+    });
+    const versionMappings = {};
+    const usedVersionMappings = [];
+    const versioningKitchen = createKitchen({
+      logger,
+      rootDirectoryUrl: buildDirectoryUrl,
+      urlGraph: finalGraph,
+      scenario: "build",
+      sourcemaps,
+      sourcemapsSourcesContent,
+      sourcemapsRelativeSources: true,
+      runtimeCompat,
+      writeGeneratedFiles,
+      plugins: [urlAnalysisPlugin, jsenvPluginInline({
+        fetchInlineUrls: false,
+        analyzeConvertedScripts: true,
+        // to be able to version their urls
+        allowEscapeForVersioning: true
+      }), {
+        name: "jsenv:versioning",
+        appliesDuring: {
+          build: true
+        },
+        resolveUrl: reference => {
+          const buildUrl = buildUrls[reference.specifier];
+
+          if (buildUrl) {
+            return buildUrl;
+          }
+
+          const urlObject = new URL(reference.specifier, reference.baseUrl || reference.parentUrl);
+          const url = urlObject.href; // during versioning we revisit the deps
+          // but the code used to enforce trailing slash on directories
+          // is not applied because "jsenv:file_url_resolution" is not used
+          // so here we search if the url with a trailing slash exists
+
+          if (reference.type === "filesystem" && !urlObject.pathname.endsWith("/")) {
+            const urlWithTrailingSlash = `${url}/`;
+            const specifier = Object.keys(buildUrls).find(key => buildUrls[key] === urlWithTrailingSlash);
+
+            if (specifier) {
+              return urlWithTrailingSlash;
+            }
+          }
+
+          return url;
+        },
+        formatUrl: reference => {
+          if (!reference.shouldHandle) {
+            if (reference.generatedUrl.startsWith("ignore:")) {
+              return reference.generatedUrl.slice("ignore:".length);
+            }
+
+            return null;
+          }
+
+          if (reference.isInline || reference.url.startsWith("data:")) {
+            return null;
+          }
+
+          if (reference.isRessourceHint) {
+            return null;
+          } // specifier comes from "normalize" hook done a bit earlier in this file
+          // we want to get back their build url to access their infos
+
+
+          const referencedUrlInfo = finalGraph.getUrlInfo(reference.url);
+
+          if (!canUseVersionedUrl(referencedUrlInfo)) {
+            return reference.specifier;
+          }
+
+          if (!referencedUrlInfo.shouldHandle) {
+            return null;
+          }
+
+          const versionedUrl = referencedUrlInfo.data.versionedUrl;
+
+          if (!versionedUrl) {
+            // happens for sourcemap
+            return `${baseUrl}${urlToRelativeUrl(referencedUrlInfo.url, buildDirectoryUrl)}`;
+          }
+
+          const versionedSpecifier = `${baseUrl}${urlToRelativeUrl(versionedUrl, buildDirectoryUrl)}`;
+          versionMappings[reference.specifier] = versionedSpecifier;
+          buildUrls[versionedSpecifier] = versionedUrl;
+          const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl);
+
+          if (parentUrlInfo.jsQuote) {
+            // the url is inline inside js quotes
+            usedVersionMappings.push(reference.specifier);
+            return () => `${parentUrlInfo.jsQuote}+__v__(${JSON.stringify(reference.specifier)})+${parentUrlInfo.jsQuote}`;
+          }
+
+          if (reference.type === "js_url_specifier" || reference.subtype === "import_dynamic") {
+            usedVersionMappings.push(reference.specifier);
+            return () => `__v__(${JSON.stringify(reference.specifier)})`;
+          }
+
+          return versionedSpecifier;
+        },
+        fetchUrlContent: versionedUrlInfo => {
+          if (versionedUrlInfo.isInline) {
+            const rawUrlInfo = rawGraph.getUrlInfo(rawUrls[versionedUrlInfo.url]);
+            const finalUrlInfo = finalGraph.getUrlInfo(versionedUrlInfo.url);
+            return {
+              content: versionedUrlInfo.content,
+              contentType: versionedUrlInfo.contentType,
+              originalContent: rawUrlInfo ? rawUrlInfo.originalContent : undefined,
+              sourcemap: finalUrlInfo ? finalUrlInfo.sourcemap : undefined
+            };
+          }
+
+          return versionedUrlInfo;
+        }
+      }]
+    });
+    await loadUrlGraph({
+      operation: buildOperation,
+      urlGraph: finalGraph,
+      kitchen: versioningKitchen,
+      skipRessourceHint: true,
+      writeGeneratedFiles,
+      startLoading: cookEntryFile => {
+        postBuildEntryUrls.forEach(postBuildEntryUrl => {
+          cookEntryFile({
+            trace: `entryPoint`,
+            type: "entry_point",
+            specifier: postBuildEntryUrl
+          });
+        });
+      }
+    });
+
+    if (usedVersionMappings.length) {
+      const versionMappingsNeeded = {};
+      usedVersionMappings.forEach(specifier => {
+        versionMappingsNeeded[specifier] = versionMappings[specifier];
+      });
+      await injectGlobalVersionMapping({
+        finalGraphKitchen,
+        finalGraph,
+        versionMappings: versionMappingsNeeded
+      });
+    }
+  } catch (e) {
+    versioningTask.fail();
+    throw e;
+  }
+
+  versioningTask.done();
+};
+
+const injectVersionIntoBuildUrl = ({
+  buildUrl,
+  version,
+  versioningMethod
+}) => {
+  if (versioningMethod === "search_param") {
+    return injectQueryParams(buildUrl, {
+      v: version
+    });
+  }
+
+  const basename = urlToBasename(buildUrl);
+  const extension = urlToExtension$1(buildUrl);
+  const versionedFilename = `${basename}-${version}${extension}`;
+  const versionedUrl = setUrlFilename(buildUrl, versionedFilename);
+  return versionedUrl;
+};
+
+const assertEntryPoints = ({
+  entryPoints
+}) => {
+  if (typeof entryPoints !== "object" || entryPoints === null) {
+    throw new TypeError(`entryPoints must be an object, got ${entryPoints}`);
+  }
+
+  const keys = Object.keys(entryPoints);
+  keys.forEach(key => {
+    if (!key.startsWith("./")) {
+      throw new TypeError(`unexpected key in entryPoints, all keys must start with ./ but found ${key}`);
+    }
+
+    const value = entryPoints[key];
+
+    if (typeof value !== "string") {
+      throw new TypeError(`unexpected value in entryPoints, all values must be strings found ${value} for key ${key}`);
+    }
+
+    if (value.includes("/")) {
+      throw new TypeError(`unexpected value in entryPoints, all values must be plain strings (no "/") but found ${value} for key ${key}`);
+    }
+  });
+};
+
+const canUseVersionedUrl = urlInfo => {
+  if (urlInfo.isEntryPoint) {
+    return false;
+  }
+
+  if (urlInfo.type === "webmanifest") {
+    return false;
+  }
+
+  return true;
+};
+
+const createReloadableWorker = (workerFileUrl, options = {}) => {
+  const workerFilePath = fileURLToPath(workerFileUrl);
+  const isPrimary = !workerData || workerData.workerFilePath !== workerFilePath;
+  let worker;
+
+  const terminate = async () => {
+    if (worker) {
+      let _worker = worker;
+      worker = null;
+      const exitPromise = new Promise(resolve => {
+        _worker.once("exit", resolve);
+      });
+
+      _worker.terminate();
+
+      await exitPromise;
+    }
+  };
+
+  const load = async () => {
+    if (!isPrimary) {
+      throw new Error(`worker can be loaded from primary file only`);
+    }
+
+    worker = new Worker(workerFilePath, { ...options,
+      workerData: { ...options.workerData,
+        workerFilePath
+      }
+    });
+    worker.once("error", error => {
+      console.error(error);
+    });
+    worker.once("exit", () => {
+      worker = null;
+    });
+    await new Promise(resolve => {
+      worker.once("online", resolve);
+    });
+    return worker;
+  };
+
+  const reload = async () => {
+    await terminate();
+    await load();
+  };
+
+  return {
+    isPrimary,
+    isWorker: !isPrimary,
+    load,
+    reload,
+    terminate
+  };
+};
+
+const createServerEventsDispatcher = () => {
+  const clients = [];
+  const MAX_CLIENTS = 100;
+
+  const addClient = client => {
+    clients.push(client);
+
+    if (clients.length >= MAX_CLIENTS) {
+      const firstClient = clients.shift();
+      firstClient.close();
+    }
+
+    return () => {
+      client.close();
+      const index = clients.indexOf(client);
+
+      if (index > -1) {
+        clients.splice(index, 1);
+      }
+    };
+  };
+
+  return {
+    addWebsocket: (websocket, request) => {
+      const client = {
+        request,
+        getReadystate: () => {
+          return websocket.readyState;
+        },
+        sendEvent: event => {
+          websocket.send(JSON.stringify(event));
+        },
+        close: reason => {
+          const closePromise = new Promise((resolve, reject) => {
+            websocket.onclose = () => {
+              websocket.onclose = null;
+              websocket.onerror = null;
+              resolve();
+            };
+
+            websocket.onerror = e => {
+              websocket.onclose = null;
+              websocket.onerror = null;
+              reject(e);
+            };
+          });
+          websocket.close(reason);
+          return closePromise;
+        },
+        destroy: () => {
+          websocket.terminate();
+        }
+      };
+      client.sendEvent({
+        type: "welcome"
+      });
+      return addClient(client);
+    },
+    // we could add "addEventSource" and let clients connect using
+    // new WebSocket or new EventSource
+    // in practice the new EventSource won't be used
+    // so "serverEventsDispatcher.addEventSource" is not implemented
+    // addEventSource: (request) => {},
+    dispatch: event => {
+      clients.forEach(client => {
+        if (client.getReadystate() === 1) {
+          client.sendEvent(event);
+        }
+      });
+    },
+    dispatchToClientsMatching: (event, predicate) => {
+      clients.forEach(client => {
+        if (client.getReadystate() === 1 && predicate(client)) {
+          client.sendEvent(event);
+        }
+      });
+    },
+    close: async reason => {
+      await Promise.all(clients.map(async client => {
+        await client.close(reason);
+      }));
     },
     destroy: () => {
-      destroyCallbackList.notify();
+      clients.forEach(client => {
+        client.destroy();
+      });
     }
   };
 };
@@ -23154,28 +24861,6 @@ const jsenvPluginServerEventsClientInjection = () => {
   };
 };
 
-const memoizeByFirstArgument = compute => {
-  const urlCache = new Map();
-
-  const fnWithMemoization = (url, ...args) => {
-    const valueFromCache = urlCache.get(url);
-
-    if (valueFromCache) {
-      return valueFromCache;
-    }
-
-    const value = compute(url, ...args);
-    urlCache.set(url, value);
-    return value;
-  };
-
-  fnWithMemoization.forget = () => {
-    urlCache.clear();
-  };
-
-  return fnWithMemoization;
-};
-
 const parseUserAgentHeader = memoizeByFirstArgument(userAgent => {
   if (userAgent.includes("node-fetch/")) {
     // it's not really node and conceptually we can't assume the node version
@@ -23206,6 +24891,7 @@ const createFileService = ({
   signal,
   logLevel,
   serverStopCallbacks,
+  serverEventsDispatcher,
   rootDirectoryUrl,
   scenario,
   runtimeCompat,
@@ -23362,10 +25048,6 @@ const createFileService = ({
       const serverEventNames = Object.keys(allServerEvents);
 
       if (serverEventNames.length > 0) {
-        const serverEventsDispatcher = createServerEventsDispatcher();
-        serverStopCallbacks.push(() => {
-          serverEventsDispatcher.destroy();
-        });
         Object.keys(allServerEvents).forEach(serverEventName => {
           allServerEvents[serverEventName]({
             rootDirectoryUrl,
@@ -23378,23 +25060,7 @@ const createFileService = ({
               });
             }
           });
-        }); // "unshift" because serve must come first to catch event source client request
-
-        kitchen.pluginController.unshiftPlugin({
-          name: "jsenv:provide_server_events",
-          serve: request => {
-            const {
-              accept
-            } = request.headers;
-
-            if (accept && accept.includes("text/event-stream")) {
-              const room = serverEventsDispatcher.addRoom(request);
-              return room.join(request);
-            }
-
-            return null;
-          }
-        }); // "push" so that event source client connection can be put as early as possible in html
+        }); // "pushPlugin" so that event source client connection can be put as early as possible in html
 
         kitchen.pluginController.pushPlugin(jsenvPluginServerEventsClientInjection());
       }
@@ -23639,6 +25305,10 @@ const startOmegaServer = async ({
   writeGeneratedFiles
 }) => {
   const serverStopCallbacks = [];
+  const serverEventsDispatcher = createServerEventsDispatcher();
+  serverStopCallbacks.push(() => {
+    serverEventsDispatcher.destroy();
+  });
   const server = await startServer({
     signal,
     stopOnExit: false,
@@ -23668,6 +25338,7 @@ const startOmegaServer = async ({
         signal,
         logLevel,
         serverStopCallbacks,
+        serverEventsDispatcher,
         rootDirectoryUrl,
         scenario,
         runtimeCompat,
@@ -23685,7 +25356,14 @@ const startOmegaServer = async ({
         sourcemapsSourcesProtocol,
         sourcemapsSourcesContent,
         writeGeneratedFiles
-      })
+      }),
+      handleWebsocket: (websocket, {
+        request
+      }) => {
+        if (request.headers["sec-websocket-protocol"] === "jsenv") {
+          serverEventsDispatcher.addWebsocket(websocket, request);
+        }
+      }
     }, {
       name: "jsenv:omega_error_handler",
       handleError: error => {
@@ -23768,16 +25446,10 @@ const startDevServer = async ({
   devServerAutoreload = false,
   devServerMainFile = getCallerPosition().url,
   cooldownBetweenFileEvents,
-  // default runtimeCompat assume dev server will be request by recent browsers
-  // Used by "jsenv_plugin_node_runtime.js" to deactivate itself
-  // If dev server can be requested by Node.js to exec files
-  // we would add "node" to the potential runtimes. For now it's out of the scope of the dev server
-  // and "jsenv_plugin_node_runtime.js" applies only during build made for node.js
-  runtimeCompat = {
-    chrome: "100",
-    firefox: "100",
-    safari: "15.5"
-  },
+  // runtimeCompat is the runtimeCompat for the build
+  // when specified, dev server use it to warn in case
+  // code would be supported during dev but not after build
+  runtimeCompat = defaultRuntimeCompat,
   plugins = [],
   urlAnalysis = {},
   htmlSupervisor = true,
@@ -26560,7 +28232,7 @@ const evalException = (exceptionSource, {
 
 const chromium = createRuntimeFromPlaywright({
   browserName: "chromium",
-  browserVersion: "104.0.5112.20",
+  browserVersion: "104.0.5112.48",
   // to update, check https://github.com/microsoft/playwright/releases
   coveragePlaywrightAPIAvailable: true
 });
@@ -26568,14 +28240,14 @@ const chromiumIsolatedTab = chromium.isolatedTab;
 
 const firefox = createRuntimeFromPlaywright({
   browserName: "firefox",
-  browserVersion: "100.0.2" // to update, check https://github.com/microsoft/playwright/releases
+  browserVersion: "102.0" // to update, check https://github.com/microsoft/playwright/releases
 
 });
 const firefoxIsolatedTab = firefox.isolatedTab;
 
 const webkit = createRuntimeFromPlaywright({
   browserName: "webkit",
-  browserVersion: "15.4",
+  browserVersion: "16.0",
   // to update, check https://github.com/microsoft/playwright/releases
   ignoreErrorHook: error => {
     // we catch error during execution but safari throw unhandled rejection
@@ -27522,2027 +29194,6 @@ const onceWorkerThreadEvent = (worker, type, callback) => {
   return () => {
     worker.removeListener(type, callback);
   };
-};
-
-const loadUrlGraph = async ({
-  operation,
-  urlGraph,
-  kitchen,
-  startLoading,
-  writeGeneratedFiles,
-  outDirectoryUrl
-}) => {
-  if (writeGeneratedFiles && outDirectoryUrl) {
-    await ensureEmptyDirectory(outDirectoryUrl);
-  }
-
-  const promises = [];
-  const promiseMap = new Map();
-
-  const cook = (urlInfo, context) => {
-    const promiseFromData = promiseMap.get(urlInfo);
-    if (promiseFromData) return promiseFromData;
-
-    const promise = _cook(urlInfo, {
-      outDirectoryUrl,
-      ...context
-    });
-
-    promises.push(promise);
-    promiseMap.set(urlInfo, promise);
-    return promise;
-  };
-
-  const _cook = async (urlInfo, context) => {
-    await kitchen.cook(urlInfo, {
-      cookDuringCook: cook,
-      ...context
-    });
-    const {
-      references
-    } = urlInfo;
-    references.forEach(reference => {
-      // we don't cook ressource hints
-      // because they might refer to ressource that will be modified during build
-      // It also means something else have to reference that url in order to cook it
-      // so that the preload is deleted by "resync_ressource_hints.js" otherwise
-      if (reference.isRessourceHint) {
-        return;
-      } // we use reference.generatedUrl to mimic what a browser would do:
-      // do a fetch to the specifier as found in the file
-
-
-      const referencedUrlInfo = urlGraph.reuseOrCreateUrlInfo(reference.generatedUrl);
-      cook(referencedUrlInfo, {
-        reference
-      });
-    });
-  };
-
-  startLoading(({
-    trace,
-    parentUrl = kitchen.rootDirectoryUrl,
-    type,
-    specifier
-  }) => {
-    const [entryReference, entryUrlInfo] = kitchen.prepareEntryPoint({
-      trace,
-      parentUrl,
-      type,
-      specifier
-    });
-    cook(entryUrlInfo, {
-      reference: entryReference
-    });
-    return [entryReference, entryUrlInfo];
-  });
-
-  const waitAll = async () => {
-    operation.throwIfAborted();
-
-    if (promises.length === 0) {
-      return;
-    }
-
-    const promisesToWait = promises.slice();
-    promises.length = 0;
-    await Promise.all(promisesToWait);
-    await waitAll();
-  };
-
-  await waitAll();
-  promiseMap.clear();
-};
-
-const createUrlGraphSummary = (urlGraph, {
-  title = "graph summary"
-} = {}) => {
-  const graphReport = createUrlGraphReport(urlGraph);
-  return `--- ${title} ---  
-${createRepartitionMessage(graphReport)}
---------------------`;
-};
-
-const createUrlGraphReport = urlGraph => {
-  const countGroups = {
-    sourcemaps: 0,
-    html: 0,
-    css: 0,
-    js: 0,
-    json: 0,
-    other: 0,
-    total: 0
-  };
-  const sizeGroups = {
-    sourcemaps: 0,
-    html: 0,
-    css: 0,
-    js: 0,
-    json: 0,
-    other: 0,
-    total: 0
-  };
-  urlGraph.urlInfoMap.forEach(urlInfo => {
-    if (urlInfo.url.startsWith("data:")) {
-      return;
-    } // ignore:
-    // - inline files: they are already taken into account in the file where they appear
-    // - ignored files: we don't know their content
-
-
-    if (urlInfo.isInline || !urlInfo.shouldHandle) {
-      return;
-    } // file loaded via import assertion are already inside the graph
-    // their js module equivalent are ignored to avoid counting it twice
-    // in the build graph the file targeted by import assertion will likely be gone
-    // and only the js module remain (likely bundled)
-
-
-    const urlObject = new URL(urlInfo.url);
-
-    if (urlObject.searchParams.has("as_json_module") || urlObject.searchParams.has("as_css_module") || urlObject.searchParams.has("as_text_module")) {
-      return;
-    }
-
-    const urlContentSize = Buffer.byteLength(urlInfo.content);
-    const category = determineCategory(urlInfo);
-
-    if (category === "sourcemap") {
-      countGroups.sourcemaps++;
-      sizeGroups.sourcemaps += urlContentSize;
-      return;
-    }
-
-    countGroups.total++;
-    sizeGroups.total += urlContentSize;
-
-    if (category === "html") {
-      countGroups.html++;
-      sizeGroups.html += urlContentSize;
-      return;
-    }
-
-    if (category === "css") {
-      countGroups.css++;
-      sizeGroups.css += urlContentSize;
-      return;
-    }
-
-    if (category === "js") {
-      countGroups.js++;
-      sizeGroups.js += urlContentSize;
-      return;
-    }
-
-    if (category === "json") {
-      countGroups.json++;
-      sizeGroups.json += urlContentSize;
-      return;
-    }
-
-    countGroups.other++;
-    sizeGroups.other += urlContentSize;
-    return;
-  });
-  const sizesToDistribute = {};
-  Object.keys(sizeGroups).forEach(groupName => {
-    if (groupName !== "sourcemaps" && groupName !== "total") {
-      sizesToDistribute[groupName] = sizeGroups[groupName];
-    }
-  });
-  const percentageGroups = distributePercentages(sizesToDistribute);
-  return {
-    // sourcemaps are special, there size are ignored
-    // so there is no "percentage" associated
-    sourcemaps: {
-      count: countGroups.sourcemaps,
-      size: sizeGroups.sourcemaps,
-      percentage: undefined
-    },
-    html: {
-      count: countGroups.html,
-      size: sizeGroups.html,
-      percentage: percentageGroups.html
-    },
-    css: {
-      count: countGroups.css,
-      size: sizeGroups.css,
-      percentage: percentageGroups.css
-    },
-    js: {
-      count: countGroups.js,
-      size: sizeGroups.js,
-      percentage: percentageGroups.js
-    },
-    json: {
-      count: countGroups.json,
-      size: sizeGroups.json,
-      percentage: percentageGroups.json
-    },
-    other: {
-      count: countGroups.other,
-      size: sizeGroups.other,
-      percentage: percentageGroups.other
-    },
-    total: {
-      count: countGroups.total,
-      size: sizeGroups.total,
-      percentage: 100
-    }
-  };
-};
-
-const determineCategory = urlInfo => {
-  if (urlInfo.type === "sourcemap") {
-    return "sourcemap";
-  }
-
-  if (urlInfo.type === "html") {
-    return "html";
-  }
-
-  if (urlInfo.type === "css") {
-    return "css";
-  }
-
-  if (urlInfo.type === "js_module" || urlInfo.type === "js_classic") {
-    return "js";
-  }
-
-  if (urlInfo.type === "json") {
-    return "json";
-  }
-
-  return "other";
-};
-
-const createRepartitionMessage = ({
-  html,
-  css,
-  js,
-  json,
-  other,
-  total
-}) => {
-  const addPart = (name, {
-    count,
-    size,
-    percentage
-  }) => {
-    parts.push(`${ANSI.color(`${name}:`, ANSI.GREY)} ${count} (${byteAsFileSize(size)} / ${percentage} %)`);
-  };
-
-  const parts = []; // if (sourcemaps.count) {
-  //   parts.push(
-  //     `${ANSI.color(`sourcemaps:`, ANSI.GREY)} ${
-  //       sourcemaps.count
-  //     } (${byteAsFileSize(sourcemaps.size)})`,
-  //   )
-  // }
-
-  if (html.count) {
-    addPart("html ", html);
-  }
-
-  if (css.count) {
-    addPart("css  ", css);
-  }
-
-  if (js.count) {
-    addPart("js   ", js);
-  }
-
-  if (json.count) {
-    addPart("json ", json);
-  }
-
-  if (other.count) {
-    addPart("other", other);
-  }
-
-  addPart("total", total);
-  return `- ${parts.join(`
-- `)}`;
-};
-
-const GRAPH = {
-  map: (graph, callback) => {
-    const array = [];
-    graph.urlInfoMap.forEach(urlInfo => {
-      array.push(callback(urlInfo));
-    });
-    return array;
-  },
-  forEach: (graph, callback) => {
-    graph.urlInfoMap.forEach(callback);
-  },
-  filter: (graph, callback) => {
-    const urlInfos = [];
-    graph.urlInfoMap.forEach(urlInfo => {
-      if (callback(urlInfo)) {
-        urlInfos.push(urlInfo);
-      }
-    });
-    return urlInfos;
-  },
-  find: (graph, callback) => {
-    let found = null;
-
-    for (const urlInfo of graph.urlInfoMap.values()) {
-      if (callback(urlInfo)) {
-        found = urlInfo;
-        break;
-      }
-    }
-
-    return found;
-  }
-};
-
-const createBuilUrlsGenerator = ({
-  buildDirectoryUrl
-}) => {
-  const cache = {};
-
-  const getUrlName = (url, urlInfo) => {
-    if (!urlInfo) {
-      return urlToFilename$1(url);
-    }
-
-    if (urlInfo.filename) {
-      return urlInfo.filename;
-    }
-
-    return urlToFilename$1(url);
-  };
-
-  const generate = memoizeByFirstArgument((url, {
-    urlInfo,
-    parentUrlInfo
-  }) => {
-    const directoryPath = determineDirectoryPath({
-      buildDirectoryUrl,
-      urlInfo,
-      parentUrlInfo
-    });
-    let names = cache[directoryPath];
-
-    if (!names) {
-      names = [];
-      cache[directoryPath] = names;
-    }
-
-    const urlObject = new URL(url);
-    let {
-      search,
-      hash
-    } = urlObject;
-    let name = getUrlName(url, urlInfo);
-    let [basename, extension] = splitFileExtension(name);
-    extension = extensionMappings[extension] || extension;
-    let nameCandidate = `${basename}${extension}`; // reconstruct name in case extension was normalized
-
-    let integer = 1; // eslint-disable-next-line no-constant-condition
-
-    while (true) {
-      if (!names.includes(nameCandidate)) {
-        names.push(nameCandidate);
-        break;
-      }
-
-      integer++;
-      nameCandidate = `${basename}${integer}${extension}`;
-    }
-
-    return `${buildDirectoryUrl}${directoryPath}${nameCandidate}${search}${hash}`;
-  });
-  return {
-    generate
-  };
-}; // It's best to generate files with an extension representing what is inside the file
-// and after build js files contains solely js (js or typescript is gone).
-// This way a static file server is already configured to server the correct content-type
-// (otherwise one would have to configure that ".jsx" is "text/javascript")
-// To keep in mind: if you have "user.jsx" and "user.js" AND both file are not bundled
-// you end up with "dist/js/user.js" and "dist/js/user2.js"
-
-const extensionMappings = {
-  ".jsx": ".js",
-  ".ts": ".js",
-  ".tsx": ".js"
-};
-
-const splitFileExtension = filename => {
-  const dotLastIndex = filename.lastIndexOf(".");
-
-  if (dotLastIndex === -1) {
-    return [filename, ""];
-  }
-
-  return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)];
-};
-
-const determineDirectoryPath = ({
-  buildDirectoryUrl,
-  urlInfo,
-  parentUrlInfo
-}) => {
-  if (urlInfo.type === "directory") {
-    return "";
-  }
-
-  if (parentUrlInfo && parentUrlInfo.type === "directory") {
-    const parentDirectoryPath = urlToRelativeUrl(parentUrlInfo.url, buildDirectoryUrl);
-    return parentDirectoryPath;
-  }
-
-  if (urlInfo.isInline) {
-    const parentDirectoryPath = determineDirectoryPath({
-      buildDirectoryUrl,
-      urlInfo: parentUrlInfo
-    });
-    return parentDirectoryPath;
-  }
-
-  if (urlInfo.isEntryPoint) {
-    return "";
-  }
-
-  if (urlInfo.type === "importmap") {
-    return "";
-  }
-
-  if (urlInfo.type === "html") {
-    return "html/";
-  }
-
-  if (urlInfo.type === "css") {
-    return "css/";
-  }
-
-  if (urlInfo.type === "js_module" || urlInfo.type === "js_classic") {
-    return "js/";
-  }
-
-  if (urlInfo.type === "json") {
-    return "json/";
-  }
-
-  return "other/";
-};
-
-// https://bundlers.tooling.report/hashing/avoid-cascade/
-const injectGlobalVersionMapping = async ({
-  finalGraphKitchen,
-  finalGraph,
-  versionMappings
-}) => {
-  await Promise.all(GRAPH.map(finalGraph, async urlInfo => {
-    if (urlInfo.isEntryPoint) {
-      await injectVersionMappings({
-        urlInfo,
-        kitchen: finalGraphKitchen,
-        versionMappings
-      });
-    }
-  }));
-};
-
-const injectVersionMappings = async ({
-  urlInfo,
-  kitchen,
-  versionMappings
-}) => {
-  const injector = injectors[urlInfo.type];
-
-  if (injector) {
-    const {
-      content,
-      sourcemap
-    } = injector(urlInfo, {
-      versionMappings
-    });
-    await kitchen.urlInfoTransformer.applyFinalTransformations(urlInfo, {
-      content,
-      sourcemap
-    });
-  }
-};
-
-const jsInjector = (urlInfo, {
-  versionMappings
-}) => {
-  const magicSource = createMagicSource(urlInfo.content);
-  magicSource.prepend(generateClientCodeForVersionMappings(versionMappings, {
-    globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window"
-  }));
-  return magicSource.toContentAndSourcemap();
-};
-
-const injectors = {
-  html: (urlInfo, {
-    versionMappings
-  }) => {
-    // ideally we would inject an importmap but browser support is too low
-    // (even worse for worker/service worker)
-    // so for now we inject code into entry points
-    const htmlAst = parseHtmlString(urlInfo.content, {
-      storeOriginalPositions: false
-    });
-    injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
-      "tagName": "script",
-      "textContent": generateClientCodeForVersionMappings(versionMappings, {
-        globalName: "window"
-      }),
-      "injected-by": "jsenv:versioning"
-    }));
-    return {
-      content: stringifyHtmlAst(htmlAst)
-    };
-  },
-  js_classic: jsInjector,
-  js_module: jsInjector
-};
-
-const generateClientCodeForVersionMappings = (versionMappings, {
-  globalName
-}) => {
-  return `
-;(function() {
-
-var __versionMappings__ = ${JSON.stringify(versionMappings, null, "  ")};
-${globalName}.__v__ = function (specifier) {
-  return __versionMappings__[specifier] || specifier
-};
-
-})();
-
-`;
-};
-
-// https://github.com/rollup/rollup/blob/5a5391971d695c808eed0c5d7d2c6ccb594fc689/src/Chunk.ts#L870
-
-const createVersionGenerator = () => {
-  const hash = createHash("sha256");
-
-  const augmentWithContent = ({
-    content,
-    contentType = "application/octet-stream",
-    lineBreakNormalization = false
-  }) => {
-    hash.update(lineBreakNormalization && CONTENT_TYPE.isTextual(contentType) ? normalizeLineBreaks(content) : content);
-  };
-
-  const augmentWithDependencyVersion = version => {
-    hash.update(version);
-  };
-
-  return {
-    augmentWithContent,
-    augmentWithDependencyVersion,
-    generate: () => {
-      return hash.digest("hex").slice(0, 8);
-    }
-  };
-};
-
-const normalizeLineBreaks = stringOrBuffer => {
-  if (typeof stringOrBuffer === "string") {
-    const stringWithLinuxBreaks = stringOrBuffer.replace(/\r\n/g, "\n");
-    return stringWithLinuxBreaks;
-  }
-
-  return normalizeLineBreaksForBuffer(stringOrBuffer);
-}; // https://github.com/nodejs/help/issues/1738#issuecomment-458460503
-
-
-const normalizeLineBreaksForBuffer = buffer => {
-  const int32Array = new Int32Array(buffer, 0, buffer.length);
-  const int32ArrayWithLineBreaksNormalized = int32Array.filter((element, index, typedArray) => {
-    if (element === 0x0d) {
-      if (typedArray[index + 1] === 0x0a) {
-        // Windows -> Unix
-        return false;
-      } // Mac OS -> Unix
-
-
-      typedArray[index] = 0x0a;
-    }
-
-    return true;
-  });
-  return Buffer.from(int32ArrayWithLineBreaksNormalized);
-};
-
-const injectServiceWorkerUrls = async ({
-  finalGraph,
-  finalGraphKitchen,
-  lineBreakNormalization
-}) => {
-  const serviceWorkerEntryUrlInfos = GRAPH.filter(finalGraph, finalUrlInfo => {
-    return finalUrlInfo.subtype === "service_worker" && finalUrlInfo.isEntryPoint;
-  });
-
-  if (serviceWorkerEntryUrlInfos.length === 0) {
-    return;
-  }
-
-  const serviceWorkerUrls = {};
-  GRAPH.forEach(finalGraph, urlInfo => {
-    if (urlInfo.isInline || !urlInfo.shouldHandle) {
-      return;
-    }
-
-    if (!urlInfo.url.startsWith("file:")) {
-      return;
-    }
-
-    if (urlInfo.data.buildUrlIsVersioned) {
-      serviceWorkerUrls[urlInfo.data.buildUrlSpecifier] = {
-        versioned: true
-      };
-      return;
-    }
-
-    if (!urlInfo.data.version) {
-      // when url is not versioned we compute a "version" for that url anyway
-      // so that service worker source still changes and navigator
-      // detect there is a change
-      const versionGenerator = createVersionGenerator();
-      versionGenerator.augmentWithContent({
-        content: urlInfo.content,
-        contentType: urlInfo.contentType,
-        lineBreakNormalization
-      });
-      const version = versionGenerator.generate();
-      urlInfo.data.version = version;
-    }
-
-    serviceWorkerUrls[urlInfo.data.buildUrlSpecifier] = {
-      versioned: false,
-      version: urlInfo.data.version
-    };
-  });
-  await Promise.all(serviceWorkerEntryUrlInfos.map(async serviceWorkerEntryUrlInfo => {
-    const magicSource = createMagicSource(serviceWorkerEntryUrlInfo.content);
-    const urlsWithoutSelf = { ...serviceWorkerUrls
-    };
-    delete urlsWithoutSelf[serviceWorkerEntryUrlInfo.data.buildUrlSpecifier];
-    magicSource.prepend(generateClientCode(urlsWithoutSelf));
-    const {
-      content,
-      sourcemap
-    } = magicSource.toContentAndSourcemap();
-    await finalGraphKitchen.urlInfoTransformer.applyFinalTransformations(serviceWorkerEntryUrlInfo, {
-      content,
-      sourcemap
-    });
-  }));
-};
-
-const generateClientCode = serviceWorkerUrls => {
-  return `
-self.serviceWorkerUrls = ${JSON.stringify(serviceWorkerUrls, null, "  ")};
-`;
-};
-
-/*
- * Update <link rel="preload"> and friends after build (once we know everything)
- *
- * - Used to remove ressource hint targeting an url that is no longer used:
- *   - Happens because of import assertions transpilation (file is inlined into JS)
- */
-const resyncRessourceHints = async ({
-  logger,
-  finalGraphKitchen,
-  finalGraph,
-  rawUrls,
-  postBuildRedirections
-}) => {
-  const ressourceHintActions = [];
-  GRAPH.forEach(finalGraph, urlInfo => {
-    if (urlInfo.type !== "html") {
-      return;
-    }
-
-    ressourceHintActions.push(async () => {
-      const htmlAst = parseHtmlString(urlInfo.content, {
-        storeOriginalPositions: false
-      });
-      const actions = [];
-
-      const visitLinkWithHref = (linkNode, href) => {
-        if (!href || href.startsWith("data:")) {
-          return;
-        }
-
-        const rel = getHtmlNodeAttribute(linkNode, "rel");
-        const isRessourceHint = ["preconnect", "dns-prefetch", "prefetch", "preload", "modulepreload"].includes(rel);
-
-        if (!isRessourceHint) {
-          return;
-        }
-
-        let buildUrl;
-
-        for (const key of Object.keys(rawUrls)) {
-          if (rawUrls[key] === href) {
-            buildUrl = key;
-            break;
-          }
-        }
-
-        if (!buildUrl) {
-          logger.warn(`remove ressource hint because cannot find "${href}"`);
-          actions.push(() => {
-            removeHtmlNode(linkNode);
-          });
-          return;
-        }
-
-        buildUrl = postBuildRedirections[buildUrl] || buildUrl;
-        const urlInfo = finalGraph.getUrlInfo(buildUrl);
-
-        if (!urlInfo) {
-          logger.warn(`remove ressource hint because cannot find "${buildUrl}" in the graph`);
-          actions.push(() => {
-            removeHtmlNode(linkNode);
-          });
-          return;
-        }
-
-        if (urlInfo.dependents.size === 0) {
-          logger.info(`remove ressource hint because "${href}" not used anymore`);
-          actions.push(() => {
-            removeHtmlNode(linkNode);
-          });
-          return;
-        }
-
-        actions.push(() => {
-          setHtmlNodeAttributes(linkNode, {
-            href: urlInfo.data.buildUrlSpecifier
-          });
-        });
-      };
-
-      visitHtmlNodes(htmlAst, {
-        link: node => {
-          const href = getHtmlNodeAttribute(node, "href");
-
-          if (href !== undefined) {
-            visitLinkWithHref(node, href);
-          }
-        }
-      });
-
-      if (actions.length) {
-        actions.forEach(action => action());
-        await finalGraphKitchen.urlInfoTransformer.applyFinalTransformations(urlInfo, {
-          content: stringifyHtmlAst(htmlAst)
-        });
-      }
-    });
-  });
-  await Promise.all(ressourceHintActions.map(ressourceHintAction => ressourceHintAction()));
-};
-
-/*
- * Things hapenning here:
- * 1. load raw build files
- * 2. bundle files
- * 3. optimize files (minify mostly)
- * 4. urls versioning
- */
-/**
- * Generate an optimized version of source files into a directory
- * @param {Object} buildParameters
- * @param {string|url} buildParameters.rootDirectoryUrl
- *        Directory containing source files
- * @param {string|url} buildParameters.buildDirectoryUrl
- *        Directory where optimized files will be written
- * @param {object} buildParameters.entryPoints
- *        Describe entry point paths and control their names in the build directory
- * @param {object} buildParameters.runtimeCompat
- *        Code generated will be compatible with these runtimes
- * @param {string="/"} buildParameters.baseUrl
- *        All urls in build file contents are prefixed with this url
- * @param {boolean|object} [buildParameters.minification=true]
- *        Minify build file contents
- * @param {boolean} [buildParameters.versioning=true]
- *        Controls if url in build file contents are versioned
- * @param {('search_param'|'filename')} [buildParameters.versioningMethod="search_param"]
- *        Controls how url are versioned
- * @param {boolean|string} [buildParameters.sourcemaps=false]
- *        Generate sourcemaps in the build directory
- * @return {Object} buildReturnValue
- * @return {Object} buildReturnValue.buildFileContents
- *        Contains all build file paths relative to the build directory and their content
- * @return {Object} buildReturnValue.buildInlineContents
- *        Contains content that is inline into build files
- * @return {Object} buildReturnValue.buildManifest
- *        Map build file paths without versioning to versioned file paths
- */
-
-const build = async ({
-  signal = new AbortController().signal,
-  handleSIGINT = true,
-  logLevel = "info",
-  rootDirectoryUrl,
-  buildDirectoryUrl,
-  entryPoints = {},
-  baseUrl = "/",
-  // default runtimeCompat corresponds to
-  // "we can keep <script type="module"> intact":
-  // so script_type_module + dynamic_import + import_meta
-  runtimeCompat = {
-    // android: "8",
-    chrome: "64",
-    edge: "79",
-    firefox: "67",
-    ios: "12",
-    opera: "51",
-    safari: "11.3",
-    samsung: "9.2"
-  },
-  plugins = [],
-  sourcemaps = false,
-  sourcemapsSourcesContent,
-  urlAnalysis = {},
-  nodeEsmResolution = true,
-  fileSystemMagicResolution,
-  directoryReferenceAllowed,
-  transpilation = {},
-  bundling = true,
-  minification = true,
-  versioning = true,
-  versioningMethod = "search_param",
-  // "filename", "search_param"
-  lineBreakNormalization = process.platform === "win32",
-  clientFiles = {
-    "./src/": true
-  },
-  cooldownBetweenFileEvents,
-  watch = false,
-  buildDirectoryClean = true,
-  writeOnFileSystem = true,
-  writeGeneratedFiles = false,
-  assetManifest = true,
-  assetManifestFileRelativeUrl = "asset-manifest.json"
-}) => {
-  const operation = Abort.startOperation();
-  operation.addAbortSignal(signal);
-
-  if (handleSIGINT) {
-    operation.addAbortSource(abort => {
-      return raceProcessTeardownEvents({
-        SIGINT: true
-      }, abort);
-    });
-  }
-
-  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl);
-  buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl);
-  assertEntryPoints({
-    entryPoints
-  });
-
-  if (!["filename", "search_param"].includes(versioningMethod)) {
-    throw new Error(`Unexpected "versioningMethod": must be "filename", "search_param"; got ${versioning}`);
-  }
-
-  const runBuild = async ({
-    signal,
-    logLevel
-  }) => {
-    const logger = createLogger({
-      logLevel
-    });
-    const buildOperation = Abort.startOperation();
-    const infoLogsAreDisabled = !loggerToLevels(logger).info;
-    buildOperation.addAbortSignal(signal);
-    const entryPointKeys = Object.keys(entryPoints);
-
-    if (entryPointKeys.length === 1) {
-      logger.info(`
-build "${entryPointKeys[0]}"`);
-    } else {
-      logger.info(`
-build ${entryPointKeys.length} entry points`);
-    }
-
-    const useExplicitJsClassicConversion = entryPointKeys.some(key => entryPoints[key].includes("?as_js_classic"));
-    const rawGraph = createUrlGraph();
-    const prebuildTask = createTaskLog("prebuild", {
-      disabled: infoLogsAreDisabled
-    });
-    const prebuildRedirections = new Map();
-    const rawGraphKitchen = createKitchen({
-      signal,
-      logger,
-      rootDirectoryUrl,
-      urlGraph: rawGraph,
-      scenario: "build",
-      sourcemaps,
-      sourcemapsSourcesContent,
-      runtimeCompat,
-      writeGeneratedFiles,
-      plugins: [...plugins, {
-        appliesDuring: "build",
-        fetchUrlContent: (urlInfo, context) => {
-          if (context.reference.original) {
-            prebuildRedirections.set(context.reference.original.url, context.reference.url);
-          }
-        },
-        formatUrl: reference => {
-          if (!reference.shouldHandle) {
-            return `ignore:${reference.specifier}`;
-          }
-
-          return null;
-        }
-      }, ...getCorePlugins({
-        rootDirectoryUrl,
-        urlGraph: rawGraph,
-        scenario: "build",
-        runtimeCompat,
-        urlAnalysis,
-        nodeEsmResolution,
-        fileSystemMagicResolution,
-        directoryReferenceAllowed,
-        transpilation: { ...transpilation,
-          babelHelpersAsImport: !useExplicitJsClassicConversion,
-          jsModuleAsJsClassic: false
-        },
-        minification,
-        bundling
-      })]
-    });
-    const entryUrls = [];
-
-    try {
-      await loadUrlGraph({
-        operation: buildOperation,
-        urlGraph: rawGraph,
-        kitchen: rawGraphKitchen,
-        writeGeneratedFiles,
-        outDirectoryUrl: new URL(`.jsenv/build/`, rootDirectoryUrl),
-        startLoading: cookEntryFile => {
-          Object.keys(entryPoints).forEach(key => {
-            const [, entryUrlInfo] = cookEntryFile({
-              trace: {
-                message: `"${key}" in entryPoints parameter`
-              },
-              type: "entry_point",
-              specifier: key
-            });
-            entryUrls.push(entryUrlInfo.url);
-            entryUrlInfo.filename = entryPoints[key]; // entryUrlInfo.data.entryPointKey = key
-          });
-        }
-      });
-    } catch (e) {
-      prebuildTask.fail();
-      throw e;
-    }
-
-    prebuildTask.done();
-    const buildUrlsGenerator = createBuilUrlsGenerator({
-      buildDirectoryUrl
-    });
-    const rawUrls = {};
-    const bundleRedirections = {};
-    const buildUrls = {};
-    const bundleUrlInfos = {};
-    const bundlers = {};
-    rawGraphKitchen.pluginController.plugins.forEach(plugin => {
-      const bundle = plugin.bundle;
-
-      if (!bundle) {
-        return;
-      }
-
-      if (typeof bundle !== "object") {
-        throw new Error(`bundle must be an object, found "${bundle}" on plugin named "${plugin.name}"`);
-      }
-
-      Object.keys(bundle).forEach(type => {
-        const bundleFunction = bundle[type];
-
-        if (!bundleFunction) {
-          return;
-        }
-
-        const bundlerForThatType = bundlers[type];
-
-        if (bundlerForThatType) {
-          // first plugin to define a bundle hook wins
-          return;
-        }
-
-        bundlers[type] = {
-          plugin,
-          bundleFunction: bundle[type],
-          urlInfos: []
-        };
-      });
-    });
-
-    const addToBundlerIfAny = rawUrlInfo => {
-      const bundler = bundlers[rawUrlInfo.type];
-
-      if (bundler) {
-        bundler.urlInfos.push(rawUrlInfo);
-        return;
-      }
-    };
-
-    GRAPH.forEach(rawGraph, rawUrlInfo => {
-      if (rawUrlInfo.isEntryPoint) {
-        addToBundlerIfAny(rawUrlInfo);
-
-        if (rawUrlInfo.type === "html") {
-          rawUrlInfo.dependencies.forEach(dependencyUrl => {
-            const dependencyUrlInfo = rawGraph.getUrlInfo(dependencyUrl);
-
-            if (dependencyUrlInfo.isInline) {
-              if (dependencyUrlInfo.type === "js_module") {
-                // bundle inline script type module deps
-                dependencyUrlInfo.references.forEach(inlineScriptRef => {
-                  if (inlineScriptRef.type === "js_import_export") {
-                    const inlineUrlInfo = rawGraph.getUrlInfo(inlineScriptRef.url);
-                    addToBundlerIfAny(inlineUrlInfo);
-                  }
-                });
-              } // inline content cannot be bundled
-
-
-              return;
-            }
-
-            addToBundlerIfAny(dependencyUrlInfo);
-          });
-          rawUrlInfo.references.forEach(reference => {
-            if (reference.isRessourceHint && reference.expectedType === "js_module") {
-              const referencedUrlInfo = rawGraph.getUrlInfo(reference.url);
-
-              if (referencedUrlInfo && // something else than the ressource hint is using this url
-              referencedUrlInfo.dependents.size > 0) {
-                addToBundlerIfAny(referencedUrlInfo);
-              }
-            }
-          });
-          return;
-        }
-      } // File referenced with new URL('./file.js', import.meta.url)
-      // are entry points that can be bundled
-      // For instance we will bundle service worker/workers detected like this
-
-
-      if (rawUrlInfo.type === "js_module") {
-        rawUrlInfo.references.forEach(reference => {
-          if (reference.type === "js_url_specifier") {
-            const urlInfo = rawGraph.getUrlInfo(reference.url);
-            addToBundlerIfAny(urlInfo);
-          }
-        });
-      }
-    });
-    const bundleInternalRedirections = {};
-    await Object.keys(bundlers).reduce(async (previous, type) => {
-      await previous;
-      const bundler = bundlers[type];
-      const urlInfosToBundle = bundler.urlInfos;
-
-      if (urlInfosToBundle.length === 0) {
-        return;
-      }
-
-      const bundleTask = createTaskLog(`bundle "${type}"`, {
-        disabled: infoLogsAreDisabled
-      });
-
-      try {
-        const bundlerGeneratedUrlInfos = await rawGraphKitchen.pluginController.callAsyncHook({
-          plugin: bundler.plugin,
-          hookName: "bundle",
-          value: bundler.bundleFunction
-        }, urlInfosToBundle, { ...rawGraphKitchen.kitchenContext,
-          buildDirectoryUrl
-        });
-        Object.keys(bundlerGeneratedUrlInfos).forEach(url => {
-          const rawUrlInfo = rawGraph.getUrlInfo(url);
-          const bundlerGeneratedUrlInfo = bundlerGeneratedUrlInfos[url];
-          const bundleUrlInfo = {
-            type,
-            subtype: rawUrlInfo ? rawUrlInfo.subtype : undefined,
-            isEntryPoint: rawUrlInfo ? rawUrlInfo.isEntryPoint : undefined,
-            filename: rawUrlInfo ? rawUrlInfo.filename : undefined,
-            originalUrl: rawUrlInfo ? rawUrlInfo.originalUrl : undefined,
-            originalContent: rawUrlInfo ? rawUrlInfo.originalContent : undefined,
-            ...bundlerGeneratedUrlInfo,
-            data: { ...(rawUrlInfo ? rawUrlInfo.data : {}),
-              ...bundlerGeneratedUrlInfo.data,
-              fromBundle: true
-            }
-          };
-          const buildUrl = buildUrlsGenerator.generate(url, {
-            urlInfo: bundleUrlInfo
-          });
-          bundleRedirections[url] = buildUrl;
-          rawUrls[buildUrl] = url;
-          bundleUrlInfos[buildUrl] = bundleUrlInfo;
-
-          if (buildUrl.includes("?")) {
-            bundleUrlInfos[asUrlWithoutSearch(buildUrl)] = bundleUrlInfo;
-          }
-
-          if (bundlerGeneratedUrlInfo.data.bundleRelativeUrl) {
-            const urlForBundler = new URL(bundlerGeneratedUrlInfo.data.bundleRelativeUrl, buildDirectoryUrl).href;
-
-            if (urlForBundler !== buildUrl) {
-              bundleInternalRedirections[urlForBundler] = buildUrl;
-            }
-          }
-        });
-      } catch (e) {
-        bundleTask.fail();
-        throw e;
-      }
-
-      bundleTask.done();
-    }, Promise.resolve());
-    const urlAnalysisPlugin = jsenvPluginUrlAnalysis({
-      rootDirectoryUrl,
-      ...urlAnalysis
-    });
-    const postBuildRedirections = {};
-    const finalGraph = createUrlGraph();
-    const finalGraphKitchen = createKitchen({
-      logger,
-      rootDirectoryUrl,
-      urlGraph: finalGraph,
-      scenario: "build",
-      sourcemaps,
-      sourcemapsSourcesContent,
-      sourcemapsRelativeSources: !versioning,
-      runtimeCompat,
-      writeGeneratedFiles,
-      plugins: [urlAnalysisPlugin, jsenvPluginAsJsClassic({
-        systemJsInjection: true
-      }), jsenvPluginInline({
-        fetchInlineUrls: false
-      }), {
-        name: "jsenv:postbuild",
-        appliesDuring: "build",
-        resolveUrl: reference => {
-          const performInternalRedirections = url => {
-            const prebuildRedirection = prebuildRedirections.get(url);
-
-            if (prebuildRedirection) {
-              logger.debug(`\nprebuild redirection\n${url} ->\n${prebuildRedirection}\n`);
-              url = prebuildRedirection;
-            }
-
-            const bundleRedirection = bundleRedirections[url];
-
-            if (bundleRedirection) {
-              logger.debug(`\nbundler redirection\n${url} ->\n${bundleRedirection}\n`);
-              url = bundleRedirection;
-            }
-
-            const bundleInternalRedirection = bundleInternalRedirections[url];
-
-            if (bundleInternalRedirection) {
-              logger.debug(`\nbundler internal redirection\n${url} ->\n${bundleInternalRedirection}\n`);
-              url = bundleInternalRedirection;
-            }
-
-            return url;
-          };
-
-          if (reference.type === "filesystem") {
-            const parentRawUrl = rawUrls[reference.parentUrl];
-            const baseUrl = ensurePathnameTrailingSlash(parentRawUrl);
-            return performInternalRedirections(new URL(reference.specifier, baseUrl).href);
-          }
-
-          if (reference.specifier[0] === "/") {
-            return performInternalRedirections(new URL(reference.specifier.slice(1), buildDirectoryUrl).href);
-          }
-
-          return performInternalRedirections(new URL(reference.specifier, reference.baseUrl || reference.parentUrl).href);
-        },
-        // redirecting urls into the build directory
-        redirectUrl: reference => {
-          if (!reference.url.startsWith("file:")) {
-            return null;
-          } // already a build url
-
-
-          const rawUrl = rawUrls[reference.url];
-
-          if (rawUrl) {
-            return reference.url;
-          } // from "js_module_as_js_classic":
-          //   - injecting "?as_js_classic" for the first time
-          //   - injecting "?as_js_classic" because the parentUrl has it
-
-
-          if (reference.original) {
-            const referenceOriginalUrl = reference.original.url;
-            let originalBuildUrl;
-
-            if (urlIsInsideOf(referenceOriginalUrl, buildDirectoryUrl)) {
-              originalBuildUrl = referenceOriginalUrl;
-            } else {
-              originalBuildUrl = Object.keys(rawUrls).find(key => rawUrls[key] === referenceOriginalUrl);
-            }
-
-            let rawUrl;
-
-            if (urlIsInsideOf(reference.url, buildDirectoryUrl)) {
-              const originalBuildUrl = postBuildRedirections[referenceOriginalUrl];
-              rawUrl = originalBuildUrl ? rawUrls[originalBuildUrl] : reference.url;
-            } else {
-              rawUrl = reference.url;
-            } // the url info do not exists yet (it will be created after this "normalize" hook)
-            // And the content will be generated when url is cooked by url graph loader.
-            // Here we just want to reserve an url for that file
-
-
-            const buildUrl = buildUrlsGenerator.generate(rawUrl, {
-              urlInfo: {
-                data: reference.data,
-                isEntryPoint: reference.isEntryPoint || isWebWorkerEntryPointReference(reference),
-                type: reference.expectedType,
-                subtype: reference.expectedSubtype,
-                filename: reference.filename
-              }
-            });
-            postBuildRedirections[originalBuildUrl] = buildUrl;
-            rawUrls[buildUrl] = rawUrl;
-            return buildUrl;
-          }
-
-          if (reference.isInline) {
-            const rawUrlInfo = GRAPH.find(rawGraph, rawUrlInfo => {
-              if (!rawUrlInfo.isInline) {
-                return false;
-              }
-
-              if (rawUrlInfo.content === reference.content) {
-                return true;
-              }
-
-              if (rawUrlInfo.originalContent === reference.content) {
-                return true;
-              }
-
-              return false;
-            });
-            const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl);
-
-            if (!rawUrlInfo) {
-              // generated during final graph
-              // (happens for JSON.parse injected for import assertions for instance)
-              // throw new Error(`cannot find raw url for "${reference.url}"`)
-              return reference.url;
-            }
-
-            const buildUrl = buildUrlsGenerator.generate(reference.url, {
-              urlInfo: rawUrlInfo,
-              parentUrlInfo
-            });
-            rawUrls[buildUrl] = rawUrlInfo.url;
-            return buildUrl;
-          } // from "js_module_as_js_classic":
-          //   - to inject "s.js"
-
-
-          if (reference.injected) {
-            const buildUrl = buildUrlsGenerator.generate(reference.url, {
-              urlInfo: {
-                data: {},
-                type: "js_classic"
-              }
-            });
-            rawUrls[buildUrl] = reference.url;
-            return buildUrl;
-          }
-
-          const rawUrlInfo = rawGraph.getUrlInfo(reference.url);
-          const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl); // files from root directory but not given to rollup nor postcss
-
-          if (rawUrlInfo) {
-            const buildUrl = buildUrlsGenerator.generate(reference.url, {
-              urlInfo: rawUrlInfo,
-              parentUrlInfo
-            });
-            rawUrls[buildUrl] = rawUrlInfo.url;
-
-            if (buildUrl.includes("?")) {
-              rawUrls[asUrlWithoutSearch(buildUrl)] = rawUrlInfo.url;
-            }
-
-            return buildUrl;
-          }
-
-          if (reference.type === "sourcemap_comment") {
-            // inherit parent build url
-            return generateSourcemapFileUrl(reference.parentUrl);
-          } // files generated during the final graph:
-          // - sourcemaps
-          // const finalUrlInfo = finalGraph.getUrlInfo(url)
-
-
-          const buildUrl = buildUrlsGenerator.generate(reference.url, {
-            urlInfo: {
-              data: {},
-              type: "asset"
-            }
-          });
-          return buildUrl;
-        },
-        formatUrl: reference => {
-          if (!reference.generatedUrl.startsWith("file:")) {
-            if (!versioning && reference.generatedUrl.startsWith("ignore:")) {
-              return reference.generatedUrl.slice("ignore:".length);
-            }
-
-            return null;
-          }
-
-          if (!urlIsInsideOf(reference.generatedUrl, buildDirectoryUrl)) {
-            throw new Error(`urls should be inside build directory at this stage, found "${reference.url}"`);
-          }
-
-          if (reference.isRessourceHint) {
-            // return the raw url, we will resync at the end
-            return rawUrls[reference.url];
-          } // remove eventual search params and hash
-
-
-          const urlUntilPathname = asUrlUntilPathname(reference.generatedUrl);
-          let specifier;
-
-          if (baseUrl === "./") {
-            const relativeUrl = urlToRelativeUrl(urlUntilPathname, reference.parentUrl === rootDirectoryUrl ? buildDirectoryUrl : reference.parentUrl); // ensure "./" on relative url (otherwise it could be a "bare specifier")
-
-            specifier = relativeUrl[0] === "." ? relativeUrl : `./${relativeUrl}`;
-          } else {
-            // if a file is in the same directory we could prefer the relative notation
-            // but to keep things simple let's keep the "absolutely relative" to baseUrl for now
-            specifier = `${baseUrl}${urlToRelativeUrl(urlUntilPathname, buildDirectoryUrl)}`;
-          }
-
-          buildUrls[specifier] = reference.generatedUrl;
-          return specifier;
-        },
-        fetchUrlContent: async (finalUrlInfo, context) => {
-          const fromBundleOrRawGraph = url => {
-            const bundleUrlInfo = bundleUrlInfos[url];
-
-            if (bundleUrlInfo) {
-              logger.debug(`fetching from bundle ${url}`);
-              return bundleUrlInfo;
-            }
-
-            const rawUrl = rawUrls[url] || url;
-            const rawUrlInfo = rawGraph.getUrlInfo(rawUrl);
-
-            if (!rawUrlInfo) {
-              throw new Error(`Cannot find url`);
-            }
-
-            logger.debug(`fetching from raw graph ${url}`);
-
-            if (rawUrlInfo.isInline) {
-              // Inline content, such as <script> inside html, is transformed during the previous phase.
-              // If we read the inline content it would be considered as the original content.
-              // - It could be "fixed" by taking into account sourcemap and consider sourcemap sources
-              //   as the original content.
-              //   - But it would not work when sourcemap are not generated
-              //   - would be a bit slower
-              // - So instead of reading the inline content directly, we search into raw graph
-              //   to get "originalContent" and "sourcemap"
-              finalUrlInfo.type = rawUrlInfo.type;
-              finalUrlInfo.subtype = rawUrlInfo.subtype;
-              return rawUrlInfo;
-            }
-
-            return rawUrlInfo;
-          }; // reference injected during "postbuild":
-          // - happens for "as_js_classic" injecting "s.js"
-
-
-          if (context.reference.injected) {
-            const [ref, rawUrlInfo] = rawGraphKitchen.injectReference({
-              type: context.reference.type,
-              expectedType: context.reference.expectedType,
-              expectedSubtype: context.reference.expectedSubtype,
-              parentUrl: rawUrls[context.reference.parentUrl],
-              specifier: context.reference.specifier,
-              injected: true
-            });
-            await rawGraphKitchen.cook(rawUrlInfo, {
-              reference: ref
-            });
-            return rawUrlInfo;
-          } // reference updated during "postbuild":
-          // - happens for "as_js_classic"
-
-
-          if (context.reference.original) {
-            return fromBundleOrRawGraph(context.reference.original.url);
-          }
-
-          return fromBundleOrRawGraph(finalUrlInfo.url);
-        }
-      }, {
-        name: "jsenv:optimize",
-        appliesDuring: "build",
-        finalizeUrlContent: async (urlInfo, context) => {
-          await rawGraphKitchen.pluginController.callAsyncHooks("optimizeUrlContent", urlInfo, context, async optimizeReturnValue => {
-            await finalGraphKitchen.urlInfoTransformer.applyFinalTransformations(urlInfo, optimizeReturnValue);
-          });
-        }
-      }]
-    });
-    const buildTask = createTaskLog("build", {
-      disabled: infoLogsAreDisabled
-    });
-    const postBuildEntryUrls = [];
-
-    try {
-      await loadUrlGraph({
-        operation: buildOperation,
-        urlGraph: finalGraph,
-        kitchen: finalGraphKitchen,
-        outDirectoryUrl: new URL(".jsenv/postbuild/", rootDirectoryUrl),
-        writeGeneratedFiles,
-        skipRessourceHint: true,
-        startLoading: cookEntryFile => {
-          entryUrls.forEach(entryUrl => {
-            const [, postBuildEntryUrlInfo] = cookEntryFile({
-              trace: {
-                message: `entryPoint`
-              },
-              type: "entry_point",
-              specifier: entryUrl
-            });
-            postBuildEntryUrls.push(postBuildEntryUrlInfo.url);
-          });
-        }
-      });
-    } catch (e) {
-      buildTask.fail();
-      throw e;
-    }
-
-    buildTask.done();
-    logger.debug(`graph urls pre-versioning:
-${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`);
-
-    if (versioning) {
-      await applyUrlVersioning({
-        buildOperation,
-        logger,
-        infoLogsAreDisabled,
-        buildDirectoryUrl,
-        rawUrls,
-        buildUrls,
-        baseUrl,
-        postBuildEntryUrls,
-        sourcemaps,
-        sourcemapsSourcesContent,
-        runtimeCompat,
-        writeGeneratedFiles,
-        rawGraph,
-        urlAnalysisPlugin,
-        finalGraph,
-        finalGraphKitchen,
-        lineBreakNormalization,
-        versioningMethod
-      });
-    }
-
-    GRAPH.forEach(finalGraph, urlInfo => {
-      if (!urlInfo.shouldHandle) {
-        return;
-      }
-
-      if (!urlInfo.url.startsWith("file:")) {
-        return;
-      }
-
-      if (urlInfo.type === "html") {
-        const htmlAst = parseHtmlString(urlInfo.content, {
-          storeOriginalPositions: false
-        });
-        urlInfo.content = stringifyHtmlAst(htmlAst, {
-          removeOriginalPositionAttributes: true
-        });
-      }
-
-      const version = urlInfo.data.version;
-      const useVersionedUrl = version && canUseVersionedUrl(urlInfo);
-      const buildUrl = useVersionedUrl ? urlInfo.data.versionedUrl : urlInfo.url;
-      const buildUrlSpecifier = Object.keys(buildUrls).find(key => buildUrls[key] === buildUrl);
-      urlInfo.data.buildUrl = buildUrl;
-      urlInfo.data.buildUrlIsVersioned = useVersionedUrl;
-      urlInfo.data.buildUrlSpecifier = buildUrlSpecifier;
-    });
-    await resyncRessourceHints({
-      logger,
-      finalGraphKitchen,
-      finalGraph,
-      rawUrls,
-      postBuildRedirections
-    });
-    buildOperation.throwIfAborted();
-    const cleanupActions = [];
-    GRAPH.forEach(finalGraph, urlInfo => {
-      // nothing uses this url anymore
-      // - versioning update inline content
-      // - file converted for import assertion of js_classic conversion
-      if (!urlInfo.isEntryPoint && urlInfo.type !== "sourcemap" && urlInfo.dependents.size === 0) {
-        cleanupActions.push(() => {
-          finalGraph.deleteUrlInfo(urlInfo.url);
-        });
-      }
-    });
-    cleanupActions.forEach(cleanupAction => cleanupAction());
-    await injectServiceWorkerUrls({
-      finalGraphKitchen,
-      finalGraph,
-      lineBreakNormalization
-    });
-    buildOperation.throwIfAborted();
-    const buildManifest = {};
-    const buildFileContents = {};
-    const buildInlineContents = {};
-    GRAPH.forEach(finalGraph, urlInfo => {
-      if (!urlInfo.shouldHandle) {
-        return;
-      }
-
-      if (!urlInfo.url.startsWith("file:")) {
-        return;
-      }
-
-      if (urlInfo.type === "directory") {
-        return;
-      }
-
-      const buildRelativeUrl = urlToRelativeUrl(urlInfo.data.buildUrl, buildDirectoryUrl);
-
-      if (urlInfo.isInline) {
-        buildInlineContents[buildRelativeUrl] = urlInfo.content;
-      } else {
-        buildFileContents[buildRelativeUrl] = urlInfo.content;
-        const buildRelativeUrlWithoutVersioning = urlToRelativeUrl(urlInfo.url, buildDirectoryUrl);
-        buildManifest[buildRelativeUrlWithoutVersioning] = buildRelativeUrl;
-      }
-    });
-
-    if (writeOnFileSystem) {
-      if (buildDirectoryClean) {
-        await ensureEmptyDirectory(buildDirectoryUrl);
-      }
-
-      const buildRelativeUrls = Object.keys(buildFileContents);
-      await Promise.all(buildRelativeUrls.map(async buildRelativeUrl => {
-        await writeFile(new URL(buildRelativeUrl, buildDirectoryUrl), buildFileContents[buildRelativeUrl]);
-      }));
-
-      if (versioning && assetManifest && Object.keys(buildManifest).length) {
-        await writeFile(new URL(assetManifestFileRelativeUrl, buildDirectoryUrl), JSON.stringify(buildManifest, null, "  "));
-      }
-    }
-
-    logger.info(createUrlGraphSummary(finalGraph, {
-      title: "build files"
-    }));
-    return {
-      buildFileContents,
-      buildInlineContents,
-      buildManifest
-    };
-  };
-
-  if (!watch) {
-    return runBuild({
-      signal: operation.signal,
-      logLevel
-    });
-  }
-
-  let resolveFirstBuild;
-  let rejectFirstBuild;
-  const firstBuildPromise = new Promise((resolve, reject) => {
-    resolveFirstBuild = resolve;
-    rejectFirstBuild = reject;
-  });
-  let buildAbortController;
-  let watchFilesTask;
-
-  const startBuild = async () => {
-    const buildTask = createTaskLog("build");
-    buildAbortController = new AbortController();
-
-    try {
-      const result = await runBuild({
-        signal: buildAbortController.signal,
-        logLevel: "warn"
-      });
-      buildTask.done();
-      resolveFirstBuild(result);
-      watchFilesTask = createTaskLog("watch files");
-    } catch (e) {
-      if (Abort.isAbortError(e)) {
-        buildTask.fail(`build aborted`);
-      } else if (e.code === "PARSE_ERROR") {
-        buildTask.fail();
-        console.error(e.stack);
-        watchFilesTask = createTaskLog("watch files");
-      } else {
-        buildTask.fail();
-        rejectFirstBuild(e);
-        throw e;
-      }
-    }
-  };
-
-  startBuild();
-  let startTimeout;
-
-  const clientFileChangeCallback = ({
-    relativeUrl,
-    event
-  }) => {
-    const url = new URL(relativeUrl, rootDirectoryUrl).href;
-
-    if (watchFilesTask) {
-      watchFilesTask.happen(`${url.slice(rootDirectoryUrl.length)} ${event}`);
-      watchFilesTask = null;
-    }
-
-    buildAbortController.abort(); // setTimeout is to ensure the abortController.abort() above
-    // is properly taken into account so that logs about abort comes first
-    // then logs about re-running the build happens
-
-    clearTimeout(startTimeout);
-    startTimeout = setTimeout(startBuild, 20);
-  };
-
-  const stopWatchingClientFiles = registerDirectoryLifecycle(rootDirectoryUrl, {
-    watchPatterns: clientFiles,
-    cooldownBetweenFileEvents,
-    keepProcessAlive: true,
-    recursive: true,
-    added: ({
-      relativeUrl
-    }) => {
-      clientFileChangeCallback({
-        relativeUrl,
-        event: "added"
-      });
-    },
-    updated: ({
-      relativeUrl
-    }) => {
-      clientFileChangeCallback({
-        relativeUrl,
-        event: "modified"
-      });
-    },
-    removed: ({
-      relativeUrl
-    }) => {
-      clientFileChangeCallback({
-        relativeUrl,
-        event: "removed"
-      });
-    }
-  });
-  operation.addAbortCallback(() => {
-    stopWatchingClientFiles();
-  });
-  await firstBuildPromise;
-  return stopWatchingClientFiles;
-};
-
-const applyUrlVersioning = async ({
-  buildOperation,
-  logger,
-  infoLogsAreDisabled,
-  buildDirectoryUrl,
-  rawUrls,
-  buildUrls,
-  baseUrl,
-  postBuildEntryUrls,
-  sourcemaps,
-  sourcemapsSourcesContent,
-  runtimeCompat,
-  writeGeneratedFiles,
-  rawGraph,
-  urlAnalysisPlugin,
-  finalGraph,
-  finalGraphKitchen,
-  lineBreakNormalization,
-  versioningMethod
-}) => {
-  const versioningTask = createTaskLog("inject version in urls", {
-    disabled: infoLogsAreDisabled
-  });
-
-  try {
-    const urlsSorted = sortByDependencies(finalGraph.toObject());
-    urlsSorted.forEach(url => {
-      if (url.startsWith("data:")) {
-        return;
-      }
-
-      const urlInfo = finalGraph.getUrlInfo(url);
-
-      if (urlInfo.type === "sourcemap") {
-        return;
-      } // ignore:
-      // - inline files:
-      //   they are already taken into account in the file where they appear
-      // - ignored files:
-      //   we don't know their content
-      // - unused files without reference
-      //   File updated such as style.css -> style.css.js or file.js->file.nomodule.js
-      //   Are used at some point just to be discarded later because they need to be converted
-      //   There is no need to version them and we could not because the file have been ignored
-      //   so their content is unknown
-
-
-      if (urlInfo.isInline) {
-        return;
-      }
-
-      if (!urlInfo.shouldHandle) {
-        return;
-      }
-
-      if (!urlInfo.isEntryPoint && urlInfo.dependents.size === 0) {
-        return;
-      }
-
-      const urlContent = urlInfo.type === "html" ? stringifyHtmlAst(parseHtmlString(urlInfo.content, {
-        storeOriginalPositions: false
-      }), {
-        removeOriginalPositionAttributes: true
-      }) : urlInfo.content;
-      const versionGenerator = createVersionGenerator();
-      versionGenerator.augmentWithContent({
-        content: urlContent,
-        contentType: urlInfo.contentType,
-        lineBreakNormalization
-      });
-      urlInfo.dependencies.forEach(dependencyUrl => {
-        // this dependency is inline
-        if (dependencyUrl.startsWith("data:")) {
-          return;
-        }
-
-        const dependencyUrlInfo = finalGraph.getUrlInfo(dependencyUrl);
-
-        if ( // this content is part of the file, no need to take into account twice
-        dependencyUrlInfo.isInline || // this dependency content is not known
-        !dependencyUrlInfo.shouldHandle) {
-          return;
-        }
-
-        if (dependencyUrlInfo.data.version) {
-          versionGenerator.augmentWithDependencyVersion(dependencyUrlInfo.data.version);
-        } else {
-          // because all dependencies are know, if the dependency has no version
-          // it means there is a circular dependency between this file
-          // and it's dependency
-          // in that case we'll use the dependency content
-          versionGenerator.augmentWithContent({
-            content: dependencyUrlInfo.content,
-            contentType: dependencyUrlInfo.contentType,
-            lineBreakNormalization
-          });
-        }
-      });
-      urlInfo.data.version = versionGenerator.generate();
-      urlInfo.data.versionedUrl = normalizeUrl(injectVersionIntoBuildUrl({
-        buildUrl: urlInfo.url,
-        version: urlInfo.data.version,
-        versioningMethod
-      }));
-    });
-    const versionMappings = {};
-    const usedVersionMappings = [];
-    const versioningKitchen = createKitchen({
-      logger,
-      rootDirectoryUrl: buildDirectoryUrl,
-      urlGraph: finalGraph,
-      scenario: "build",
-      sourcemaps,
-      sourcemapsSourcesContent,
-      sourcemapsRelativeSources: true,
-      runtimeCompat,
-      writeGeneratedFiles,
-      plugins: [urlAnalysisPlugin, jsenvPluginInline({
-        fetchInlineUrls: false,
-        analyzeConvertedScripts: true,
-        // to be able to version their urls
-        allowEscapeForVersioning: true
-      }), {
-        name: "jsenv:versioning",
-        appliesDuring: {
-          build: true
-        },
-        resolveUrl: reference => {
-          const buildUrl = buildUrls[reference.specifier];
-
-          if (buildUrl) {
-            return buildUrl;
-          }
-
-          const urlObject = new URL(reference.specifier, reference.baseUrl || reference.parentUrl);
-          const url = urlObject.href; // during versioning we revisit the deps
-          // but the code used to enforce trailing slash on directories
-          // is not applied because "jsenv:file_url_resolution" is not used
-          // so here we search if the url with a trailing slash exists
-
-          if (reference.type === "filesystem" && !urlObject.pathname.endsWith("/")) {
-            const urlWithTrailingSlash = `${url}/`;
-            const specifier = Object.keys(buildUrls).find(key => buildUrls[key] === urlWithTrailingSlash);
-
-            if (specifier) {
-              return urlWithTrailingSlash;
-            }
-          }
-
-          return url;
-        },
-        formatUrl: reference => {
-          if (!reference.shouldHandle) {
-            if (reference.generatedUrl.startsWith("ignore:")) {
-              return reference.generatedUrl.slice("ignore:".length);
-            }
-
-            return null;
-          }
-
-          if (reference.isInline || reference.url.startsWith("data:")) {
-            return null;
-          }
-
-          if (reference.isRessourceHint) {
-            return null;
-          } // specifier comes from "normalize" hook done a bit earlier in this file
-          // we want to get back their build url to access their infos
-
-
-          const referencedUrlInfo = finalGraph.getUrlInfo(reference.url);
-
-          if (!canUseVersionedUrl(referencedUrlInfo)) {
-            return reference.specifier;
-          }
-
-          if (!referencedUrlInfo.shouldHandle) {
-            return null;
-          }
-
-          const versionedUrl = referencedUrlInfo.data.versionedUrl;
-
-          if (!versionedUrl) {
-            // happens for sourcemap
-            return `${baseUrl}${urlToRelativeUrl(referencedUrlInfo.url, buildDirectoryUrl)}`;
-          }
-
-          const versionedSpecifier = `${baseUrl}${urlToRelativeUrl(versionedUrl, buildDirectoryUrl)}`;
-          versionMappings[reference.specifier] = versionedSpecifier;
-          buildUrls[versionedSpecifier] = versionedUrl;
-          const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl);
-
-          if (parentUrlInfo.jsQuote) {
-            // the url is inline inside js quotes
-            usedVersionMappings.push(reference.specifier);
-            return () => `${parentUrlInfo.jsQuote}+__v__(${JSON.stringify(reference.specifier)})+${parentUrlInfo.jsQuote}`;
-          }
-
-          if (reference.type === "js_url_specifier" || reference.subtype === "import_dynamic") {
-            usedVersionMappings.push(reference.specifier);
-            return () => `__v__(${JSON.stringify(reference.specifier)})`;
-          }
-
-          return versionedSpecifier;
-        },
-        fetchUrlContent: versionedUrlInfo => {
-          if (versionedUrlInfo.isInline) {
-            const rawUrlInfo = rawGraph.getUrlInfo(rawUrls[versionedUrlInfo.url]);
-            const finalUrlInfo = finalGraph.getUrlInfo(versionedUrlInfo.url);
-            return {
-              content: versionedUrlInfo.content,
-              contentType: versionedUrlInfo.contentType,
-              originalContent: rawUrlInfo ? rawUrlInfo.originalContent : undefined,
-              sourcemap: finalUrlInfo ? finalUrlInfo.sourcemap : undefined
-            };
-          }
-
-          return versionedUrlInfo;
-        }
-      }]
-    });
-    await loadUrlGraph({
-      operation: buildOperation,
-      urlGraph: finalGraph,
-      kitchen: versioningKitchen,
-      skipRessourceHint: true,
-      writeGeneratedFiles,
-      startLoading: cookEntryFile => {
-        postBuildEntryUrls.forEach(postBuildEntryUrl => {
-          cookEntryFile({
-            trace: `entryPoint`,
-            type: "entry_point",
-            specifier: postBuildEntryUrl
-          });
-        });
-      }
-    });
-
-    if (usedVersionMappings.length) {
-      const versionMappingsNeeded = {};
-      usedVersionMappings.forEach(specifier => {
-        versionMappingsNeeded[specifier] = versionMappings[specifier];
-      });
-      await injectGlobalVersionMapping({
-        finalGraphKitchen,
-        finalGraph,
-        versionMappings: versionMappingsNeeded
-      });
-    }
-  } catch (e) {
-    versioningTask.fail();
-    throw e;
-  }
-
-  versioningTask.done();
-};
-
-const injectVersionIntoBuildUrl = ({
-  buildUrl,
-  version,
-  versioningMethod
-}) => {
-  if (versioningMethod === "search_param") {
-    return injectQueryParams(buildUrl, {
-      v: version
-    });
-  }
-
-  const basename = urlToBasename(buildUrl);
-  const extension = urlToExtension$1(buildUrl);
-  const versionedFilename = `${basename}-${version}${extension}`;
-  const versionedUrl = setUrlFilename(buildUrl, versionedFilename);
-  return versionedUrl;
-};
-
-const assertEntryPoints = ({
-  entryPoints
-}) => {
-  if (typeof entryPoints !== "object" || entryPoints === null) {
-    throw new TypeError(`entryPoints must be an object, got ${entryPoints}`);
-  }
-
-  const keys = Object.keys(entryPoints);
-  keys.forEach(key => {
-    if (!key.startsWith("./")) {
-      throw new TypeError(`unexpected key in entryPoints, all keys must start with ./ but found ${key}`);
-    }
-
-    const value = entryPoints[key];
-
-    if (typeof value !== "string") {
-      throw new TypeError(`unexpected value in entryPoints, all values must be strings found ${value} for key ${key}`);
-    }
-
-    if (value.includes("/")) {
-      throw new TypeError(`unexpected value in entryPoints, all values must be plain strings (no "/") but found ${value} for key ${key}`);
-    }
-  });
-};
-
-const canUseVersionedUrl = urlInfo => {
-  if (urlInfo.isEntryPoint) {
-    return false;
-  }
-
-  if (urlInfo.type === "webmanifest") {
-    return false;
-  }
-
-  return true;
 };
 
 /*

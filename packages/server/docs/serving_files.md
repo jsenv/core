@@ -120,7 +120,7 @@ During development, you likely don't want to enable _cache-control_ header.
 ## Configuring file response compression
 
 When compression is enabled _fetchFileSystem_ uses a compression format if possible.
-Internally it uses content encoding negotiation (see [Content negotiation](../content_negotiation/content_negotiation.md#content-negotiation)).
+Internally it uses content encoding negotiation (see [Content negotiation](./content_negotiation.md#content-negotiation)).
 The available compression formats are _gzip_, _brotli_ and _deflate_. One (or none) is picked according to the _accept-encoding_ request header.
 To enable compression, use _compressionEnabled_ and _compressionSizeThreshold_ parameter.
 

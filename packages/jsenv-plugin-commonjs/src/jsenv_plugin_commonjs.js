@@ -48,10 +48,14 @@ export const jsenvPluginCommonJs = ({
       if (!originalUrlInfo) {
         return null
       }
+      const nodeRuntimeEnabled = Object.keys(context.runtimeCompat).includes(
+        "node",
+      )
       const { content, sourcemap, isValid } = await commonJsToJsModule({
         logLevel,
         rootDirectoryUrl: context.rootDirectoryUrl,
         sourceFileUrl: originalUrlInfo.url,
+        browsers: !nodeRuntimeEnabled,
         processEnvNodeEnv:
           context.scenario === "dev" || context.scenario === "test"
             ? "development"

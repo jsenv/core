@@ -9,11 +9,12 @@ window.__html_supervisor__ = {
     window.__html_supervisor__.scriptsToExecute.push(scriptToExecute)
   },
   superviseScript: ({ src, isInline, crossorigin, integrity }) => {
+    const { currentScript } = document
     window.__html_supervisor__.addScriptToExecute({
       src,
       type: "js_classic",
       isInline,
-      currentScript: document.currentScript,
+      currentScript,
       execute: (url) => {
         return new Promise((resolve, reject) => {
           const script = document.createElement("script")
@@ -50,7 +51,14 @@ window.__html_supervisor__ = {
               resolve()
             }
           })
-          document.body.appendChild(script)
+          if (currentScript) {
+            currentScript.parentNode.insertBefore(
+              script,
+              currentScript.nextSibling,
+            )
+          } else {
+            document.body.appendChild(script)
+          }
         })
       },
     })

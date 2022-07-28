@@ -132,9 +132,7 @@ export const installHtmlSupervisor = ({
     }
     executionResult.error = error
     onExecutionSettled(src, executionResult)
-    onExecutionError(executionResult, {
-      currentScript,
-    })
+    onExecutionError(executionResult, { currentScript })
     if (errorExposureInConsole) {
       if (typeof window.reportError === "function") {
         window.reportError(error)
@@ -181,7 +179,6 @@ export const installHtmlSupervisor = ({
     const useDeferQueue =
       scriptToExecute.defer || scriptToExecute.type === "module"
     if (useDeferQueue) {
-      // defer must wait for classic script to be done
       const classicExecutionPromise = classicExecutionQueue.getPromise()
       if (classicExecutionPromise) {
         deferedExecutionQueue.waitFor(classicExecutionPromise)

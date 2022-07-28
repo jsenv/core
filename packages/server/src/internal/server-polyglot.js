@@ -62,6 +62,7 @@ export const createPolyglotServer = async ({
 
 // The async part is just to lazyly import "http2" or "https"
 // so that these module are parsed only if used.
+// https://nodejs.org/api/tls.html#tlscreatesecurecontextoptions
 const createSecureServer = async ({
   certificate,
   privateKey,

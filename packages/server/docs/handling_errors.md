@@ -57,13 +57,13 @@ await startServer({
 })
 ```
 
-![screenshot of internal error page](./screenshot-500-html.png)
+![screenshot of internal error page](./screenshots/500.png)
 
-![screenshot of internal error page expanded](./screenshot-500-html-expanded.png)
+![screenshot of internal error page expanded](./screenshots/500_expanded.png)
 
 When _sendErrorDetails_ is enabled the error details becomes available
 
-![screenshot of internal error page with details expanded](./screenshot-500-html-details-expanded.png)
+![screenshot of internal error page with details expanded](./screenshots/500_expanded_and_details_enabled.png)
 
 When used this error handler should be the last service implementing "handleError" because it catch all errors.
 Any service catching a subset of error should be placed before this one as in the example below:

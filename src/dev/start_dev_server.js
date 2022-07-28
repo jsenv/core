@@ -7,6 +7,7 @@ import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 import { createLogger, loggerToLevels, createTaskLog } from "@jsenv/log"
 import { getCallerPosition } from "@jsenv/urls"
 
+import { defaultRuntimeCompat } from "@jsenv/core/src/build/build.js"
 import { createReloadableWorker } from "@jsenv/core/src/helpers/worker_reload.js"
 import { startOmegaServer } from "@jsenv/core/src/omega/omega_server.js"
 
@@ -41,16 +42,10 @@ export const startDevServer = async ({
   devServerMainFile = getCallerPosition().url,
   cooldownBetweenFileEvents,
 
-  // default runtimeCompat assume dev server will be request by recent browsers
-  // Used by "jsenv_plugin_node_runtime.js" to deactivate itself
-  // If dev server can be requested by Node.js to exec files
-  // we would add "node" to the potential runtimes. For now it's out of the scope of the dev server
-  // and "jsenv_plugin_node_runtime.js" applies only during build made for node.js
-  runtimeCompat = {
-    chrome: "100",
-    firefox: "100",
-    safari: "15.5",
-  },
+  // runtimeCompat is the runtimeCompat for the build
+  // when specified, dev server use it to warn in case
+  // code would be supported during dev but not after build
+  runtimeCompat = defaultRuntimeCompat,
   plugins = [],
   urlAnalysis = {},
   htmlSupervisor = true,
@@ -162,6 +157,7 @@ export const startDevServer = async ({
     rootDirectoryUrl,
     scenario: "dev",
     runtimeCompat,
+
     plugins,
     urlAnalysis,
     htmlSupervisor,

@@ -14,7 +14,7 @@ This documentation shows how to use http2 push to improve network performances.
 
 ### Network waterfall
 
-![stuff](./http2_push_before.png)
+![stuff](./screenshots/http2_push_before.png)
 
 ### Server logs
 
@@ -31,7 +31,7 @@ GET https://localhost:3679/style.css
 
 ### Network waterfall
 
-![stuff](./http2_push_after.png)
+![stuff](./screenshots/http2_push_after.png)
 
 ### Server logs
 

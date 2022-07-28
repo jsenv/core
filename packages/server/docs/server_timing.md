@@ -6,13 +6,13 @@ _Screenshot TTFB in chrome devtools:_
 
 > Chrome devtools are saying TTFB took 45.80ms.
 
-![screenshot of chrome devtools TTFB](./screenshot-devtools-TTFB.png)
+![screenshot of chrome devtools TTFB](./screenshots/devtools_TTFB.png)
 
 _Screenshot server timing in chrome devtools:_
 
 > Server timing tells chrome devtools what server was doing during `45.80ms`: `43.16ms` were needed by something called `service:compiled files`.
 
-![screenshot of chrome devtools server timing](./screenshot-devtools-timing.png)
+![screenshot of chrome devtools server timing](./screenshots/devtools_server_timing.png)
 
 ## Measuring service timings
 

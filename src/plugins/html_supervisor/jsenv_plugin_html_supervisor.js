@@ -132,7 +132,9 @@ export const jsenvPluginHtmlSupervisor = ({
                 code: causeInfo.code,
                 message: causeInfo.message,
                 reason: causeInfo.reason,
-                stack: causeInfo.stack,
+                stack: errorBaseUrl
+                  ? `stack mocked for snapshot`
+                  : causeInfo.stack,
                 codeFrame: causeInfo.traceMessage,
               }
             : null,
