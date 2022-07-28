@@ -59,9 +59,11 @@ const test = async (params) => {
 await test()
 
 // https
-const { certificate, privateKey } = requestCertificateForLocalhost()
-await test({
-  protocol: "https",
-  certificate,
-  privateKey,
-})
+if (process.platform !== "win32") {
+  const { certificate, privateKey } = requestCertificateForLocalhost()
+  await test({
+    protocol: "https",
+    certificate,
+    privateKey,
+  })
+}
