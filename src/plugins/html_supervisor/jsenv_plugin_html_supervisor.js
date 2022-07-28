@@ -43,10 +43,7 @@ export const jsenvPluginHtmlSupervisor = ({
 
   return {
     name: "jsenv:html_supervisor",
-    appliesDuring: {
-      dev: true,
-      test: true,
-    },
+    appliesDuring: "dev",
     serve: async (request, context) => {
       if (request.ressource.startsWith("/__get_code_frame__/")) {
         const { pathname, searchParams } = new URL(request.url)

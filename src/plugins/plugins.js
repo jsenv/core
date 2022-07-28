@@ -24,7 +24,6 @@ import { jsenvPluginExplorer } from "./explorer/jsenv_plugin_explorer.js"
 
 export const getCorePlugins = ({
   rootDirectoryUrl,
-  scenario,
   runtimeCompat,
 
   urlAnalysis = {},
@@ -84,7 +83,6 @@ export const getCorePlugins = ({
       ? [
           jsenvPluginAutoreload({
             ...clientAutoreload,
-            scenario,
             clientFileChangeCallbackList,
             clientFilesPruneCallbackList,
           }),

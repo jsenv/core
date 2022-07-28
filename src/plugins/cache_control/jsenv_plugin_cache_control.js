@@ -1,12 +1,9 @@
 export const jsenvPluginCacheControl = () => {
   return {
     name: "jsenv:cache_control",
-    appliesDuring: {
-      dev: true,
-      test: true,
-    },
+    appliesDuring: "dev",
     augmentResponse: ({ reference }, context) => {
-      if (context.scenario === "test") {
+      if (context.scenarios.test) {
         // During dev, all files are put into browser cache for 1 hour because:
         // 1: Browser cache is a temporary directory created by playwright
         // 2: We assume source files won't be modified while tests are running

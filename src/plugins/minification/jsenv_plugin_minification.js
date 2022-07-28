@@ -40,9 +40,7 @@ export const jsenvPluginMinification = (minification) => {
 
   return {
     name: "jsenv:minification",
-    appliesDuring: {
-      build: true,
-    },
+    appliesDuring: "build",
     optimizeUrlContent: {
       html: htmlOptimizer,
       svg: htmlOptimizer,

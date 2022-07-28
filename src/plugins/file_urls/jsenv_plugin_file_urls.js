@@ -113,14 +113,10 @@ export const jsenvPluginFileUrls = ({
     },
     {
       name: "jsenv:@fs_resolution",
-      appliesDuring: {
-        // during dev and test it's a browser running the code
-        // so absolute file urls needs to be relativized
-        dev: true,
-        test: true,
-        // during build it's fine to use file:// urls
-        build: false,
-      },
+      // during dev and test it's a browser running the code
+      // so absolute file urls needs to be relativized
+      // during build it's fine to use file:// urls
+      appliesDuring: "dev",
       resolveUrl: (reference) => {
         if (reference.specifier.startsWith("/@fs/")) {
           const fsRootRelativeUrl = reference.specifier.slice("/@fs/".length)

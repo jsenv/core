@@ -25,7 +25,7 @@ export const startOmegaServer = async ({
   services = [],
 
   rootDirectoryUrl,
-  scenario,
+  scenarios,
   runtimeCompat,
 
   plugins,
@@ -87,7 +87,7 @@ export const startOmegaServer = async ({
           serverEventsDispatcher,
 
           rootDirectoryUrl,
-          scenario,
+          scenarios,
           runtimeCompat,
 
           plugins,

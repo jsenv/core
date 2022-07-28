@@ -1,11 +1,10 @@
 /*
  * Source code can contain the following
  * - import.meta.dev
- * - import.meta.test
  * - import.meta.build
  * They are either:
  * - replaced by true: When scenario matches (import.meta.dev and it's the dev server)
- * - left as is to be evaluated to undefined (import.meta.test but it's the dev server)
+ * - left as is to be evaluated to undefined (import.meta.build but it's the dev server)
  * - replaced by undefined (import.meta.dev but it's build; the goal is to ensure it's tree-shaked)
  */
 
@@ -17,7 +16,7 @@ export const jsenvPluginImportMetaScenarios = () => {
     name: "jsenv:import_meta_scenario",
     appliesDuring: "*",
     transformUrlContent: {
-      js_module: async (urlInfo, { scenario }) => {
+      js_module: async (urlInfo, context) => {
         if (
           !urlInfo.content.includes("import.meta.dev") &&
           !urlInfo.content.includes("import.meta.test") &&
@@ -34,34 +33,30 @@ export const jsenvPluginImportMetaScenarios = () => {
         const replace = (path, value) => {
           replacements.push({ path, value })
         }
-        if (scenario === "dev") {
-          dev.forEach((path) => {
-            replace(path, "true")
-          })
-        } else if (scenario === "test") {
-          // test is also considered a dev environment
-          // just like the dev server can be used to debug test files
-          // without this people would have to write
-          // if (import.meta.dev || import.meta.test) or if (!import.meta.build)
-          dev.forEach((path) => {
-            replace(path, "true")
-          })
-          test.forEach((path) => {
-            replace(path, "true")
-          })
-        } else if (scenario === "build") {
-          // replacing by undefined might not be required
-          // as I suppose rollup would consider them as undefined
-          // but let's make it explicit to ensure code is properly tree-shaked
+        if (context.scenarios.build) {
+          // during build ensure replacement for tree-shaking
           dev.forEach((path) => {
             replace(path, "undefined")
           })
           test.forEach((path) => {
-            replace(path, "undefined")
+            replace(path, context.scenarios.test ? "true" : "undefined")
           })
           build.forEach((path) => {
             replace(path, "true")
           })
+        } else {
+          // during dev we can let "import.meta.build" untouched
+          // it will be evaluated to undefined.
+          // Moreover it can be surprising to see some "undefined"
+          // when source file contains "import.meta.build"
+          dev.forEach((path) => {
+            replace(path, "true")
+          })
+          if (context.scenarios.test) {
+            test.forEach((path) => {
+              replace(path, "true")
+            })
+          }
         }
         const magicSource = createMagicSource(urlInfo.content)
         replacements.forEach(({ path, value }) => {
@@ -106,7 +101,6 @@ const babelPluginMetadataImportMetaScenarios = () => {
         })
         state.file.metadata.importMetaScenarios = {
           dev: importMetas.dev,
-          test: importMetas.test,
           build: importMetas.build,
         }
       },

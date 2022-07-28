@@ -55,7 +55,7 @@ export const executePlan = async (
     coverageV8ConflictWarning,
     coverageTempDirectoryRelativeUrl,
 
-    scenario,
+    scenarios,
     sourcemaps,
     plugins,
     nodeEsmResolution,
@@ -208,7 +208,7 @@ export const executePlan = async (
         services,
 
         rootDirectoryUrl,
-        scenario,
+        scenarios,
         runtimeCompat: runtimes,
 
         plugins,

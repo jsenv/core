@@ -166,7 +166,7 @@ export const executeTestPlan = async ({
     coverageV8ConflictWarning,
     coverageTempDirectoryRelativeUrl,
 
-    scenario: "test",
+    scenarios: { dev: true, test: true },
     sourcemaps,
     plugins,
     nodeEsmResolution,

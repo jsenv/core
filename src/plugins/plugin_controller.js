@@ -17,8 +17,8 @@ const HOOK_NAMES = [
   "destroy",
 ]
 
-export const createPluginController = ({ plugins, scenario }) => {
-  const flatPlugins = flattenAndFilterPlugins(plugins, { scenario })
+export const createPluginController = ({ plugins, scenarios }) => {
+  const flatPlugins = flattenAndFilterPlugins(plugins, { scenarios })
   // precompute a list of hooks per hookName for one major reason:
   // - When debugging, there is less iteration
   // also it should increase perf as there is less work to do
@@ -187,7 +187,7 @@ export const createPluginController = ({ plugins, scenario }) => {
   }
 }
 
-const flattenAndFilterPlugins = (plugins, { scenario }) => {
+const flattenAndFilterPlugins = (plugins, { scenarios }) => {
   const flatPlugins = []
   const visitPluginEntry = (pluginEntry) => {
     if (Array.isArray(pluginEntry)) {
@@ -208,13 +208,14 @@ const flattenAndFilterPlugins = (plugins, { scenario }) => {
         return
       }
       if (typeof appliesDuring === "string") {
-        if (!["dev", "build", "test"].includes(appliesDuring)) {
+        if (!["dev", "test", "build"].includes(appliesDuring)) {
           throw new Error(
             `"appliesDuring" must be "dev", "test" or "build", got ${appliesDuring}`,
           )
         }
-        if (appliesDuring === scenario) {
+        if (scenarios[appliesDuring]) {
           flatPlugins.push(pluginEntry)
+          return
         }
         return
       }
@@ -223,7 +224,17 @@ const flattenAndFilterPlugins = (plugins, { scenario }) => {
           `"appliesDuring" must be an object or a string, got ${appliesDuring}`,
         )
       }
-      if (appliesDuring[scenario]) {
+      let applies
+      for (const key of Object.keys(appliesDuring)) {
+        if (!appliesDuring[key] && scenarios[key]) {
+          applies = false
+          break
+        }
+        if (appliesDuring[key] && scenarios[key]) {
+          applies = true
+        }
+      }
+      if (applies) {
         flatPlugins.push(pluginEntry)
         return
       }

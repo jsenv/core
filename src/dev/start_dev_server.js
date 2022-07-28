@@ -155,7 +155,7 @@ export const startDevServer = async ({
     services,
 
     rootDirectoryUrl,
-    scenario: "dev",
+    scenarios: { dev: true },
     runtimeCompat,
 
     plugins,
