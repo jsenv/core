@@ -4217,11 +4217,11 @@ const parseAndTransformHtmlUrls = async (urlInfo, context) => {
   const url = urlInfo.originalUrl;
   const content = urlInfo.content;
   const {
-    scenario,
+    scenarios,
     referenceUtils
   } = context;
   const htmlAst = parseHtmlString(content, {
-    storeOriginalPositions: scenario !== "build"
+    storeOriginalPositions: scenarios.dev
   });
   const actions = [];
   visitHtmlUrls({
@@ -11464,7 +11464,7 @@ const jsenvPluginImportmap = () => {
         // Duing build we get rid of it
 
 
-        if (context.scenario === "build") {
+        if (context.scenarios.build) {
           removeHtmlNode(importmap);
         }
 
@@ -12801,13 +12801,8 @@ const jsenvPluginNodeEsmResolution = ({
   return {
     name: "jsenv:node_esm_resolution",
     appliesDuring: "*",
-    init: ({
-      rootDirectoryUrl,
-      scenario,
-      runtimeCompat,
-      urlGraph
-    }) => {
-      const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node"); // https://nodejs.org/api/esm.html#resolver-algorithm-specification
+    init: context => {
+      const nodeRuntimeEnabled = Object.keys(context.runtimeCompat).includes("node"); // https://nodejs.org/api/esm.html#resolver-algorithm-specification
 
       packageConditions = packageConditions || [...readCustomConditionsFromProcessArgs(), nodeRuntimeEnabled ? "node" : "browser", "import"];
       const packageScopesCache = new Map();
@@ -12838,19 +12833,19 @@ const jsenvPluginNodeEsmResolution = ({
         return packageJson;
       };
 
-      if (scenario === "dev") {
+      if (context.scenarios.dev) {
         const onFileChange = () => {
           packageScopesCache.clear();
           packageJsonsCache.clear();
-          urlGraph.urlInfoMap.forEach(urlInfo => {
+          context.urlGraph.urlInfoMap.forEach(urlInfo => {
             if (urlInfo.dependsOnPackageJson) {
-              urlGraph.considerModified(urlInfo);
+              context.urlGraph.considerModified(urlInfo);
             }
           });
         };
 
         filesInvalidatingCache.forEach(file => {
-          const unregister = registerFileLifecycle(new URL(file, rootDirectoryUrl), {
+          const unregister = registerFileLifecycle(new URL(file, context.rootDirectoryUrl), {
             added: () => {
               onFileChange();
             },
@@ -12912,7 +12907,7 @@ const jsenvPluginNodeEsmResolution = ({
       return null;
     },
     transformUrlSearchParams: (reference, context) => {
-      if (context.scenario === "build") {
+      if (context.scenarios.build) {
         return null;
       }
 
@@ -13091,14 +13086,10 @@ const jsenvPluginFileUrls = ({
     }
   }, {
     name: "jsenv:@fs_resolution",
-    appliesDuring: {
-      // during dev and test it's a browser running the code
-      // so absolute file urls needs to be relativized
-      dev: true,
-      test: true,
-      // during build it's fine to use file:// urls
-      build: false
-    },
+    // during dev and test it's a browser running the code
+    // so absolute file urls needs to be relativized
+    // during build it's fine to use file:// urls
+    appliesDuring: "dev",
     resolveUrl: reference => {
       if (reference.specifier.startsWith("/@fs/")) {
         const fsRootRelativeUrl = reference.specifier.slice("/@fs/".length);
@@ -13197,10 +13188,7 @@ const jsenvPluginHtmlSupervisor = ({
   const htmlSupervisorInstallerFileUrl = new URL("./js/html_supervisor_installer.js", import.meta.url).href;
   return {
     name: "jsenv:html_supervisor",
-    appliesDuring: {
-      dev: true,
-      test: true
-    },
+    appliesDuring: "dev",
     serve: async (request, context) => {
       if (request.ressource.startsWith("/__get_code_frame__/")) {
         const {
@@ -13569,16 +13557,14 @@ const generateCodeToSuperviseScript = ({
  * - global
  */
 const jsenvPluginCommonJsGlobals = () => {
-  const transformCommonJsGlobals = async (urlInfo, {
-    scenario
-  }) => {
+  const transformCommonJsGlobals = async (urlInfo, context) => {
     if (!urlInfo.content.includes("process.env.NODE_ENV") && !urlInfo.content.includes("__filename") && !urlInfo.content.includes("__dirname")) {
       return null;
     }
 
     const isJsModule = urlInfo.type === "js_module";
     const replaceMap = {
-      "process.env.NODE_ENV": `("${scenario === "dev" || scenario === "test" ? "development" : "production"}")`,
+      "process.env.NODE_ENV": `("${context.scenarios.dev ? "development" : "production"}")`,
       "global": "globalThis",
       "__filename": isJsModule ? `import.meta.url.slice('file:///'.length)` : `document.currentScript.src`,
       "__dirname": isJsModule ? `import.meta.url.slice('file:///'.length).replace(/[\\\/\\\\][^\\\/\\\\]*$/, '')` : `new URL('./', document.currentScript.src).href`
@@ -13732,11 +13718,10 @@ const babelPluginMetadataExpressionPaths = (babel, {
 /*
  * Source code can contain the following
  * - import.meta.dev
- * - import.meta.test
  * - import.meta.build
  * They are either:
  * - replaced by true: When scenario matches (import.meta.dev and it's the dev server)
- * - left as is to be evaluated to undefined (import.meta.test but it's the dev server)
+ * - left as is to be evaluated to undefined (import.meta.build but it's the dev server)
  * - replaced by undefined (import.meta.dev but it's build; the goal is to ensure it's tree-shaked)
  */
 const jsenvPluginImportMetaScenarios = () => {
@@ -13744,9 +13729,7 @@ const jsenvPluginImportMetaScenarios = () => {
     name: "jsenv:import_meta_scenario",
     appliesDuring: "*",
     transformUrlContent: {
-      js_module: async (urlInfo, {
-        scenario
-      }) => {
+      js_module: async (urlInfo, context) => {
         if (!urlInfo.content.includes("import.meta.dev") && !urlInfo.content.includes("import.meta.test") && !urlInfo.content.includes("import.meta.build")) {
           return null;
         }
@@ -13771,34 +13754,31 @@ const jsenvPluginImportMetaScenarios = () => {
           });
         };
 
-        if (scenario === "dev") {
-          dev.forEach(path => {
-            replace(path, "true");
-          });
-        } else if (scenario === "test") {
-          // test is also considered a dev environment
-          // just like the dev server can be used to debug test files
-          // without this people would have to write
-          // if (import.meta.dev || import.meta.test) or if (!import.meta.build)
-          dev.forEach(path => {
-            replace(path, "true");
-          });
-          test.forEach(path => {
-            replace(path, "true");
-          });
-        } else if (scenario === "build") {
-          // replacing by undefined might not be required
-          // as I suppose rollup would consider them as undefined
-          // but let's make it explicit to ensure code is properly tree-shaked
+        if (context.scenarios.build) {
+          // during build ensure replacement for tree-shaking
           dev.forEach(path => {
             replace(path, "undefined");
           });
           test.forEach(path => {
-            replace(path, "undefined");
+            replace(path, context.scenarios.test ? "true" : "undefined");
           });
           build.forEach(path => {
             replace(path, "true");
           });
+        } else {
+          // during dev we can let "import.meta.build" untouched
+          // it will be evaluated to undefined.
+          // Moreover it can be surprising to see some "undefined"
+          // when source file contains "import.meta.build"
+          dev.forEach(path => {
+            replace(path, "true");
+          });
+
+          if (context.scenarios.test) {
+            test.forEach(path => {
+              replace(path, "true");
+            });
+          }
         }
 
         const magicSource = createMagicSource(urlInfo.content);
@@ -13863,7 +13843,6 @@ const babelPluginMetadataImportMetaScenarios = () => {
         });
         state.file.metadata.importMetaScenarios = {
           dev: importMetas.dev,
-          test: importMetas.test,
           build: importMetas.build
         };
       }
@@ -13933,7 +13912,7 @@ const jsenvPluginImportAssertions = ({
       //     We would have to tell rollup to ignore import with assertion
       //   - means rollup can bundle more js file together
       //   - means url versioning can work for css inlined in js
-      if (context.scenario === "build") {
+      if (context.scenarios.build) {
         json = true;
         css = true;
         text = true;
@@ -16034,9 +16013,7 @@ const jsenvPluginBundling = bundling => {
   });
   return {
     name: "jsenv:bundling",
-    appliesDuring: {
-      build: true
-    },
+    appliesDuring: "build",
     bundle: {
       css: bundling.css ? (cssUrlInfos, context) => {
         return bundleCss({
@@ -16172,9 +16149,7 @@ const jsenvPluginMinification = minification => {
   }) : null;
   return {
     name: "jsenv:minification",
-    appliesDuring: {
-      build: true
-    },
+    appliesDuring: "build",
     optimizeUrlContent: {
       html: htmlOptimizer,
       svg: htmlOptimizer,
@@ -16494,7 +16469,7 @@ const jsenvPluginImportMetaHot = () => {
     transformUrlContent: {
       html: (htmlUrlInfo, context) => {
         // during build we don't really care to parse html hot dependencies
-        if (context.scenario === "build") {
+        if (context.scenarios.build) {
           return;
         }
 
@@ -16543,7 +16518,7 @@ const jsenvPluginImportMetaHot = () => {
           return null;
         }
 
-        if (context.scenario === "build") {
+        if (context.scenarios.build) {
           return removeImportMetaHots(urlInfo, importMetaHotPaths);
         }
 
@@ -16587,7 +16562,8 @@ const jsenvPluginHmr = () => {
   return {
     name: "jsenv:hmr",
     appliesDuring: {
-      dev: true
+      dev: true,
+      test: false
     },
     redirectUrl: reference => {
       const urlObject = new URL(reference.url);
@@ -16632,7 +16608,8 @@ const jsenvPluginAutoreloadClient = () => {
   return {
     name: "jsenv:autoreload_client",
     appliesDuring: {
-      dev: true
+      dev: true,
+      test: false
     },
     transformUrlContent: {
       html: (htmlUrlInfo, context) => {
@@ -16664,7 +16641,8 @@ const jsenvPluginAutoreloadServer = ({
   return {
     name: "jsenv:autoreload_server",
     appliesDuring: {
-      dev: true
+      dev: true,
+      test: false
     },
     serverEvents: {
       reload: ({
@@ -16892,14 +16870,9 @@ const jsenvPluginAutoreloadServer = ({
 };
 
 const jsenvPluginAutoreload = ({
-  scenario,
   clientFileChangeCallbackList,
   clientFilesPruneCallbackList
 }) => {
-  if (scenario === "build") {
-    return [];
-  }
-
   return [jsenvPluginHmr(), jsenvPluginAutoreloadClient(), jsenvPluginAutoreloadServer({
     clientFileChangeCallbackList,
     clientFilesPruneCallbackList
@@ -16909,14 +16882,11 @@ const jsenvPluginAutoreload = ({
 const jsenvPluginCacheControl = () => {
   return {
     name: "jsenv:cache_control",
-    appliesDuring: {
-      dev: true,
-      test: true
-    },
+    appliesDuring: "dev",
     augmentResponse: ({
       reference
     }, context) => {
-      if (context.scenario === "test") {
+      if (context.scenarios.test) {
         // During dev, all files are put into browser cache for 1 hour because:
         // 1: Browser cache is a temporary directory created by playwright
         // 2: We assume source files won't be modified while tests are running
@@ -17003,7 +16973,6 @@ const jsenvPluginExplorer = ({
 
 const getCorePlugins = ({
   rootDirectoryUrl,
-  scenario,
   runtimeCompat,
   urlAnalysis = {},
   htmlSupervisor,
@@ -17048,7 +17017,6 @@ const getCorePlugins = ({
   jsenvPluginNodeEsmResolution(nodeEsmResolution), jsenvPluginUrlResolution(), jsenvPluginUrlVersion(), jsenvPluginCommonJsGlobals(), jsenvPluginImportMetaScenarios(), jsenvPluginNodeRuntime({
     runtimeCompat
   }), jsenvPluginBundling(bundling), jsenvPluginMinification(minification), jsenvPluginImportMetaHot(), ...(clientAutoreload ? [jsenvPluginAutoreload({ ...clientAutoreload,
-    scenario,
     clientFileChangeCallbackList,
     clientFilesPruneCallbackList
   })] : []), jsenvPluginCacheControl(), ...(explorer ? [jsenvPluginExplorer(explorer)] : [])];
@@ -20743,10 +20711,10 @@ const HOOK_NAMES = ["init", "serve", // is called only during dev/tests
 "destroy"];
 const createPluginController = ({
   plugins,
-  scenario
+  scenarios
 }) => {
   const flatPlugins = flattenAndFilterPlugins(plugins, {
-    scenario
+    scenarios
   }); // precompute a list of hooks per hookName for one major reason:
   // - When debugging, there is less iteration
   // also it should increase perf as there is less work to do
@@ -20953,7 +20921,7 @@ const createPluginController = ({
 };
 
 const flattenAndFilterPlugins = (plugins, {
-  scenario
+  scenarios
 }) => {
   const flatPlugins = [];
 
@@ -20983,12 +20951,13 @@ const flattenAndFilterPlugins = (plugins, {
       }
 
       if (typeof appliesDuring === "string") {
-        if (!["dev", "build", "test"].includes(appliesDuring)) {
+        if (!["dev", "test", "build"].includes(appliesDuring)) {
           throw new Error(`"appliesDuring" must be "dev", "test" or "build", got ${appliesDuring}`);
         }
 
-        if (appliesDuring === scenario) {
+        if (scenarios[appliesDuring]) {
           flatPlugins.push(pluginEntry);
+          return;
         }
 
         return;
@@ -20998,7 +20967,20 @@ const flattenAndFilterPlugins = (plugins, {
         throw new Error(`"appliesDuring" must be an object or a string, got ${appliesDuring}`);
       }
 
-      if (appliesDuring[scenario]) {
+      let applies;
+
+      for (const key of Object.keys(appliesDuring)) {
+        if (!appliesDuring[key] && scenarios[key]) {
+          applies = false;
+          break;
+        }
+
+        if (appliesDuring[key] && scenarios[key]) {
+          applies = true;
+        }
+      }
+
+      if (applies) {
         flatPlugins.push(pluginEntry);
         return;
       }
@@ -21710,19 +21692,15 @@ const createKitchen = ({
   signal,
   logLevel,
   rootDirectoryUrl,
-  scenario,
+  scenarios,
   runtimeCompat,
   // during dev/test clientRuntimeCompat is a single runtime
   // during build clientRuntimeCompat is runtimeCompat
   clientRuntimeCompat = runtimeCompat,
   urlGraph,
   plugins,
-  sourcemaps = {
-    dev: "inline",
-    // "programmatic" and "file" also allowed
-    test: "inline",
-    build: "none"
-  }[scenario],
+  sourcemaps = scenarios.dev ? "inline" : "none",
+  // "programmatic" and "file" also allowed
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
   sourcemapsRelativeSources,
@@ -21733,7 +21711,7 @@ const createKitchen = ({
   });
   const pluginController = createPluginController({
     plugins,
-    scenario
+    scenarios
   });
   const jsenvDirectoryUrl = new URL(".jsenv/", rootDirectoryUrl).href;
   const kitchenContext = {
@@ -21741,7 +21719,7 @@ const createKitchen = ({
     logger,
     rootDirectoryUrl,
     urlGraph,
-    scenario,
+    scenarios,
     runtimeCompat,
     clientRuntimeCompat,
     isSupportedOnCurrentClients: feature => {
@@ -22446,7 +22424,7 @@ const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
       column: reference.specifierColumn
     };
     urlInfo.contentType = reference.contentType;
-    urlInfo.originalContent = context.scenario === "build" ? urlInfo.originalContent === undefined ? reference.content : urlInfo.originalContent : reference.content;
+    urlInfo.originalContent = context.scenarios.build ? urlInfo.originalContent === undefined ? reference.content : urlInfo.originalContent : reference.content;
     urlInfo.content = reference.content;
   }
 };
@@ -23581,7 +23559,9 @@ build ${entryPointKeys.length} entry points`);
       logger,
       rootDirectoryUrl,
       urlGraph: rawGraph,
-      scenario: "build",
+      scenarios: {
+        build: true
+      },
       sourcemaps,
       sourcemapsSourcesContent,
       runtimeCompat,
@@ -23603,7 +23583,6 @@ build ${entryPointKeys.length} entry points`);
       }, ...getCorePlugins({
         rootDirectoryUrl,
         urlGraph: rawGraph,
-        scenario: "build",
         runtimeCompat,
         urlAnalysis,
         nodeEsmResolution,
@@ -23821,7 +23800,9 @@ build ${entryPointKeys.length} entry points`);
       logger,
       rootDirectoryUrl,
       urlGraph: finalGraph,
-      scenario: "build",
+      scenarios: {
+        build: true
+      },
       sourcemaps,
       sourcemapsSourcesContent,
       sourcemapsRelativeSources: !versioning,
@@ -24483,7 +24464,9 @@ const applyUrlVersioning = async ({
       logger,
       rootDirectoryUrl: buildDirectoryUrl,
       urlGraph: finalGraph,
-      scenario: "build",
+      scenarios: {
+        build: true
+      },
       sourcemaps,
       sourcemapsSourcesContent,
       sourcemapsRelativeSources: true,
@@ -24496,9 +24479,7 @@ const applyUrlVersioning = async ({
         allowEscapeForVersioning: true
       }), {
         name: "jsenv:versioning",
-        appliesDuring: {
-          build: true
-        },
+        appliesDuring: "build",
         resolveUrl: reference => {
           const buildUrl = buildUrls[reference.specifier];
 
@@ -24893,7 +24874,7 @@ const createFileService = ({
   serverStopCallbacks,
   serverEventsDispatcher,
   rootDirectoryUrl,
-  scenario,
+  scenarios,
   runtimeCompat,
   plugins,
   urlAnalysis,
@@ -24931,7 +24912,7 @@ const createFileService = ({
     ".jsenv/": false
   };
 
-  if (scenario === "dev") {
+  if (scenarios.dev) {
     const stopWatchingClientFiles = registerDirectoryLifecycle(rootDirectoryUrl, {
       watchPatterns: clientFilePatterns,
       cooldownBetweenFileEvents,
@@ -24995,13 +24976,13 @@ const createFileService = ({
 
         urlInfo.isValid = () => watch;
       },
-      includeOriginalUrls: scenario === "dev"
+      includeOriginalUrls: scenarios.dev
     });
     const kitchen = createKitchen({
       signal,
       logLevel,
       rootDirectoryUrl,
-      scenario,
+      scenarios,
       runtimeCompat,
       clientRuntimeCompat: {
         [runtimeName]: runtimeVersion
@@ -25009,7 +24990,6 @@ const createFileService = ({
       urlGraph,
       plugins: [...plugins, ...getCorePlugins({
         rootDirectoryUrl,
-        scenario,
         runtimeCompat,
         urlAnalysis,
         htmlSupervisor,
@@ -25052,7 +25032,7 @@ const createFileService = ({
           allServerEvents[serverEventName]({
             rootDirectoryUrl,
             urlGraph,
-            scenario,
+            scenarios,
             sendServerEvent: data => {
               serverEventsDispatcher.dispatch({
                 type: serverEventName,
@@ -25068,7 +25048,7 @@ const createFileService = ({
 
     const context = {
       rootDirectoryUrl,
-      scenario,
+      scenarios,
       runtimeName,
       runtimeVersion,
       urlGraph,
@@ -25155,7 +25135,7 @@ const createFileService = ({
       await kitchen.cook(urlInfo, {
         request,
         reference,
-        outDirectoryUrl: scenario === "dev" ? `${rootDirectoryUrl}.jsenv/${runtimeName}@${runtimeVersion}/` : `${rootDirectoryUrl}.jsenv/${scenario}/${runtimeName}@${runtimeVersion}/`
+        outDirectoryUrl: scenarios.dev ? `${rootDirectoryUrl}.jsenv/${runtimeName}@${runtimeVersion}/` : `${rootDirectoryUrl}.jsenv/${scenarios.test ? "test" : "build"}/${runtimeName}@${runtimeVersion}/`
       });
       let {
         response
@@ -25287,7 +25267,7 @@ const startOmegaServer = async ({
   onStop = () => {},
   services = [],
   rootDirectoryUrl,
-  scenario,
+  scenarios,
   runtimeCompat,
   plugins,
   urlAnalysis,
@@ -25340,7 +25320,7 @@ const startOmegaServer = async ({
         serverStopCallbacks,
         serverEventsDispatcher,
         rootDirectoryUrl,
-        scenario,
+        scenarios,
         runtimeCompat,
         plugins,
         urlAnalysis,
@@ -25572,7 +25552,9 @@ const startDevServer = async ({
     port,
     services,
     rootDirectoryUrl,
-    scenario: "dev",
+    scenarios: {
+      dev: true
+    },
     runtimeCompat,
     plugins,
     urlAnalysis,
@@ -26891,7 +26873,7 @@ const executePlan = async (plan, {
   coverageMethodForNodeJs,
   coverageV8ConflictWarning,
   coverageTempDirectoryRelativeUrl,
-  scenario,
+  scenarios,
   sourcemaps,
   plugins,
   nodeEsmResolution,
@@ -27036,7 +27018,7 @@ const executePlan = async (plan, {
         privateKey,
         services,
         rootDirectoryUrl,
-        scenario,
+        scenarios,
         runtimeCompat: runtimes,
         plugins,
         htmlSupervisor: true,
@@ -27551,7 +27533,10 @@ const executeTestPlan = async ({
     coverageMethodForNodeJs,
     coverageV8ConflictWarning,
     coverageTempDirectoryRelativeUrl,
-    scenario: "test",
+    scenarios: {
+      dev: true,
+      test: true
+    },
     sourcemaps,
     plugins,
     nodeEsmResolution,
@@ -29439,7 +29424,9 @@ const execute = async ({
   collectPerformance = false,
   runtime,
   runtimeParams,
-  scenario = "dev",
+  scenarios = {
+    dev: true
+  },
   plugins = [],
   nodeEsmResolution,
   fileSystemMagicResolution,
@@ -29489,7 +29476,7 @@ const execute = async ({
       certificate,
       privateKey,
       rootDirectoryUrl,
-      scenario,
+      scenarios,
       runtimeCompat: {
         [runtime.name]: runtime.version
       },

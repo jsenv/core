@@ -1,3 +1,9 @@
+# 27.8.0
+
+- update plugin.appliesDuring and context.scenarios
+  - when appliesDuring is "dev" plugin applies during dev+test
+  - when appliesDuring is {dev: true, test: false} plugins applies only during dev
+
 # 27.7.0
 
 - use websocket to communicate between jsenv dev server and clients
