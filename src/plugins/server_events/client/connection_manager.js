@@ -7,7 +7,7 @@ const READY_STATES = {
 
 export const createConnectionManager = (
   attemptConnection,
-  { retry, retryMaxAttempt, retryAllocatedMs },
+  { retry, retryAfter, retryMaxAttempt, retryAllocatedMs },
 ) => {
   const readyState = {
     value: READY_STATES.CLOSED,
@@ -29,44 +29,48 @@ export const createConnectionManager = (
     ) {
       return
     }
-    readyState.goTo(READY_STATES.CONNECTING)
 
     let retryCount = 0
-    let firstRetryMs = Date.now()
+    let msSpent = 0
     const attempt = () => {
+      readyState.goTo(READY_STATES.CONNECTING)
       _disconnect = attemptConnection({
         onClosed: () => {
-          // onClosed can be called while connecting
-          // const isClosedWhileConnecting = readyState.value === READY_STATES.CONNECTING
-          // or after connection is opened
-          // in both cases we'll attempt to reconnect
-
           if (!retry) {
             readyState.goTo(READY_STATES.CLOSED)
+            console.info(`[jsenv] failed to connect to server`)
             return
           }
           if (retryCount > retryMaxAttempt) {
-            console.info(`could not connect after ${retryMaxAttempt} attempt`)
             readyState.goTo(READY_STATES.CLOSED)
+            console.info(
+              `[jsenv] could not connect to server after ${retryMaxAttempt} attempt`,
+            )
             return
           }
-          if (retryCount === 0) {
-            firstRetryMs = Date.now()
-          } else {
-            const allRetryDuration = Date.now() - firstRetryMs
-            if (retryAllocatedMs && allRetryDuration > retryAllocatedMs) {
-              console.info(
-                `could not connect in less than ${retryAllocatedMs} ms`,
-              )
-              readyState.goTo(READY_STATES.CLOSED)
-              return
-            }
+          if (retryAllocatedMs && msSpent > retryAllocatedMs) {
+            readyState.goTo(READY_STATES.CLOSED)
+            console.info(
+              `[jsenv] could not connect to server in less than ${retryAllocatedMs}ms`,
+            )
+            return
+          }
+
+          // if closed while open -> connection lost
+          // otherwise it's the attempt to connect for the first time
+          // or to reconnect
+          if (readyState.value === READY_STATES.OPEN) {
+            console.info(`[jsenv] server connection lost; retrying to connect`)
           }
           retryCount++
-          attempt()
+          setTimeout(() => {
+            msSpent += retryAfter
+            attempt()
+          }, retryAfter)
         },
         onOpen: () => {
           readyState.goTo(READY_STATES.OPEN)
+          console.info(`[jsenv] connected to server`)
         },
       })
     }

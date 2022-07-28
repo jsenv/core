@@ -123,46 +123,52 @@ export const formatError = (
   const onErrorLocated = (urlSite) => {
     errorUrlSite = urlSite
     errorDetailsPromiseReference.current = (async () => {
-      if (errorMeta.type === "dynamic_import_fetch_error") {
-        const response = await window.fetch(
-          `/__get_error_cause__/${
-            urlSite.isInline ? urlSite.originalUrl : urlSite.url
-          }`,
-        )
-        if (response.status !== 200) {
-          return null
-        }
-        const causeInfo = await response.json()
-        if (!causeInfo) {
-          return null
-        }
+      try {
+        if (errorMeta.type === "dynamic_import_fetch_error") {
+          const response = await window.fetch(
+            `/__get_error_cause__/${
+              urlSite.isInline ? urlSite.originalUrl : urlSite.url
+            }`,
+          )
 
-        const causeText =
-          causeInfo.code === "NOT_FOUND"
-            ? formatErrorText({
-                message: causeInfo.reason,
-                stack: causeInfo.codeFrame,
-              })
-            : formatErrorText({
-                message: causeInfo.stack,
-                stack: causeInfo.codeFrame,
-              })
-        return {
-          cause: causeText,
+          if (response.status !== 200) {
+            return null
+          }
+          const causeInfo = await response.json()
+          if (!causeInfo) {
+            return null
+          }
+
+          const causeText =
+            causeInfo.code === "NOT_FOUND"
+              ? formatErrorText({
+                  message: causeInfo.reason,
+                  stack: causeInfo.codeFrame,
+                })
+              : formatErrorText({
+                  message: causeInfo.stack,
+                  stack: causeInfo.codeFrame,
+                })
+          return {
+            cause: causeText,
+          }
         }
-      }
-      if (urlSite.line !== undefined) {
-        let ressourceToFetch = `/__get_code_frame__/${formatUrlWithLineAndColumn(
-          urlSite,
-        )}`
-        if (!Error.captureStackTrace) {
-          ressourceToFetch += `?remap`
+        if (urlSite.line !== undefined) {
+          let ressourceToFetch = `/__get_code_frame__/${formatUrlWithLineAndColumn(
+            urlSite,
+          )}`
+          if (!Error.captureStackTrace) {
+            ressourceToFetch += `?remap`
+          }
+          const response = await window.fetch(ressourceToFetch)
+          const codeFrame = await response.text()
+          return {
+            codeFrame: formatErrorText({ message: codeFrame }),
+          }
         }
-        const response = await window.fetch(ressourceToFetch)
-        const codeFrame = await response.text()
-        return {
-          codeFrame: formatErrorText({ message: codeFrame }),
-        }
+      } catch (e) {
+        // happens if server is closed for instance
+        return null
       }
       return null
     })()

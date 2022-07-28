@@ -7,6 +7,7 @@ export const createWebSocketConnection = (
     protocols = ["jsenv"],
     useEventsToManageConnection = true,
     retry = false,
+    retryAfter = 1000,
     retryMaxAttempt = Infinity,
     retryAllocatedMs = Infinity,
   } = {},
@@ -15,11 +16,18 @@ export const createWebSocketConnection = (
     ({ onClosed, onOpen }) => {
       let socket = new WebSocket(websocketUrl, protocols)
       let interval
+      const cleanup = () => {
+        if (socket) {
+          socket.onerror = null
+          socket.onopen = null
+          socket.onclose = null
+          socket.onmessage = null
+          socket = null
+          clearInterval(interval)
+        }
+      }
       socket.onerror = () => {
-        socket.onerror = null
-        socket.onopen = null
-        socket.onmessage = null
-        socket = null
+        cleanup()
         onClosed()
       }
       socket.onopen = () => {
@@ -29,6 +37,10 @@ export const createWebSocketConnection = (
           socket.send('{"type":"ping"}')
         }, 30_000)
       }
+      socket.onclose = () => {
+        cleanup()
+        onClosed()
+      }
       socket.onmessage = (messageEvent) => {
         const event = JSON.parse(messageEvent.data)
         eventsManager.triggerCallbacks(event)
@@ -36,11 +48,11 @@ export const createWebSocketConnection = (
       return () => {
         if (socket) {
           socket.close()
-          clearInterval(interval)
+          cleanup()
         }
       }
     },
-    { retry, retryMaxAttempt, retryAllocatedMs },
+    { retry, retryAfter, retryMaxAttempt, retryAllocatedMs },
   )
   const eventsManager = createEventsManager({
     effect: () => {
