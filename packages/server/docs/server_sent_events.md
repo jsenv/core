@@ -1,5 +1,7 @@
 # SSE (Server Sent Events)
 
+Code below shows how server can accept event source clients(s) and send data to these clients.
+
 _server.js_
 
 ```js
