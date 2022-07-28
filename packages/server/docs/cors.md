@@ -1,6 +1,6 @@
 # CORS
 
-Cross origin ressource sharing, also called CORS are disabled by default. They can be enabled using [jsenvServiceCORS](./#jsenvServiceCORS)
+Cross origin ressource sharing, also called CORS are disabled by default. They can be enabled using [jsenvServiceCORS](#jsenvServiceCORS)
 
 ```js
 import { startServer, jsenvServiceCORS } from "@jsenv/server"

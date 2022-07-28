@@ -24,34 +24,7 @@ await startServer({
 })
 ```
 
-# Example
-
-_Code starting a server and using [node-fetch](https://github.com/node-fetch/node-fetch) to send a request on that server:_
-
-```js
-import fetch from "node-fetch"
-import { startServer } from "@jsenv/server"
-
-const server = await startServer({
-  services: [
-    {
-      handleRequest: () => {
-        return {
-          status: 200,
-          headers: {
-            "content-type": "text/plain",
-          },
-          body: "Hello world",
-        }
-      },
-    },
-  ],
-})
-
-const response = await fetch(server.origin)
-const responseBodyAsText = await response.text()
-console.log(responseBodyAsText) // "Hello world"
-```
+# Examples
 
 _Code starting a server with 2 request handlers:_
 
@@ -73,7 +46,7 @@ const server = await startServer({
         if (request.ressource === "/") {
           return { status: 200 }
         }
-        return null // means "I don't handle that request"
+        return null
       },
     },
     {
@@ -101,8 +74,8 @@ import { startServer } from "@jsenv/server"
 
 await startServer({
   protocol: "https",
-  certificate: readFileSyncAsString("./server.crt"),
-  privateKey: readFileSyncAsString("./server.key"),
+  certificate: readFileSync(new URL("./server.crt", import.meta.url), "utf8"),
+  privateKey: readFileSync(new URL("./server.key", import.meta.url), "utf8"),
   allowHttpRequestOnHttps: true,
   services: [
     {
@@ -120,11 +93,6 @@ await startServer({
     },
   ],
 })
-
-function readFileSyncAsString(relativeUrl) {
-  const fileUrl = new URL(relativeUrl, import.meta.url)
-  return String(readFileSync(fileUrl))
-}
 ```
 
 _Code starting a server for static files:_
@@ -137,9 +105,7 @@ await startServer({
     {
       handleRequest: async (request) => {
         const fileUrl = new URL(request.ressource.slice(1), import.meta.url)
-        const response = await fetchFileSystem(fileUrl, {
-          ...request,
-        })
+        const response = await fetchFileSystem(fileUrl, request)
         return response
       },
     },
@@ -149,16 +115,17 @@ await startServer({
 
 # Documentation
 
-- [Handling requests](./docs/handling_requests/handling_requests.md)
-- [Handling errors](./docs/handling_errors/handling_errors.md)
-- [Server timing](./docs/server_timing/server_timing.md)
-- [CORS](./docs/cors/cors.md)
-- [https](./docs/https/https.md)
-- [Serving files](./docs/serving_files/serving_files.md)
-- [Content negotiation](./docs/content_negotiation/content_negotiation.md)
-- [Server Sent Events](./docs/sse/sse.md)
-- [Cluster](./docs/cluster/cluster.md)
-- [Http2 push](./docs/http2_push/http2_push.md)
+- [Handling requests](./docs/handling_requests.md)
+- [Handling errors](./docs/handling_errors.md)
+- [Server timing](./docs/server_timing.md)
+- [CORS](./docs/cors.md)
+- [https](./docs/https.md)
+- [Serving files](./docs/serving_files.md)
+- [Content negotiation](./docs/content_negotiation.md)
+- [Websocket](./docs/websocket.md)
+- [Server Sent Events](./docs/server_sent_events.md)
+- [Cluster](./docs/cluster.md)
+- [Http2 push](./docs/http2_push.md)
 
 # Installation
 

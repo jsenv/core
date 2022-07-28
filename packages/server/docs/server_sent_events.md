@@ -54,4 +54,4 @@ import("./server.js")
 import("./client.js")
 ```
 
-![Screencast of server sent events execution in a terminal](./sse-screencast.gif)
+![Screencast of server sent events execution in a terminal](./screenshots/sse-screencast.gif)
