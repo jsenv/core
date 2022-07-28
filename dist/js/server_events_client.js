@@ -319,7 +319,7 @@ const createWebSocketConnection = (websocketUrl, {
 };
 
 /* globals self */
-const websocketScheme = self.location.protocol === "https" ? "wss" : "ws";
+const websocketScheme = self.location.protocol === "https:" ? "wss" : "ws";
 const websocketUrl = `${websocketScheme}://${self.location.host}${self.location.pathname}${self.location.search}`;
 const websocketConnection = createWebSocketConnection(websocketUrl, {
   retry: true,

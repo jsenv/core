@@ -1,3 +1,7 @@
+# 27.8.1
+
+- fix websocket connection on https
+
 # 27.8.0
 
 - update plugin.appliesDuring and context.scenarios
