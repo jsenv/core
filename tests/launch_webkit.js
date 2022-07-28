@@ -4,5 +4,4 @@ import { webkit } from "playwright"
 
 const browser = await webkit.launch({ headless: false })
 const browserContext = await browser.newContext({ ignoreHTTPSErrors: true })
-const page = await browserContext.newPage()
-console.log(page)
+await browserContext.newPage()
