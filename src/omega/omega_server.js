@@ -106,7 +106,7 @@ export const startOmegaServer = async ({
           writeGeneratedFiles,
         }),
         handleWebsocket: (websocket, { request }) => {
-          if (request["sec-websocket-protocol"] === "jsenv") {
+          if (request.headers["sec-websocket-protocol"] === "jsenv") {
             serverEventsDispatcher.addWebsocket(websocket, request)
           }
         },
