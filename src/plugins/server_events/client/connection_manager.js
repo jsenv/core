@@ -70,7 +70,7 @@ export const createConnectionManager = (
         },
         onOpen: () => {
           readyState.goTo(READY_STATES.OPEN)
-          console.info(`[jsenv] connected to server`)
+          // console.info(`[jsenv] connected to server`)
         },
       })
     }
