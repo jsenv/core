@@ -11,23 +11,26 @@ const devServer = await startDevServer({
 })
 const test = async ({ browserLauncher }) => {
   const browser = await browserLauncher.launch({ headless: true })
-  const page = await launchBrowserPage(browser)
-  await page.goto(`${devServer.origin}/main.html`)
+  try {
+    const page = await launchBrowserPage(browser)
+    await page.goto(`${devServer.origin}/main.html`)
 
-  const result = await page.evaluate(
-    /* eslint-disable no-undef */
-    () => {
-      return window.resultPromise
-    },
-    /* eslint-enable no-undef */
-  )
-  const actual = result
-  const expected = {
-    bodyBackgroundColor: "rgb(255, 0, 0)",
-    bodyBackgroundImage: `url("${devServer.origin}/src/jsenv.png")`,
+    const result = await page.evaluate(
+      /* eslint-disable no-undef */
+      () => {
+        return window.resultPromise
+      },
+      /* eslint-enable no-undef */
+    )
+    const actual = result
+    const expected = {
+      bodyBackgroundColor: "rgb(255, 0, 0)",
+      bodyBackgroundImage: `url("${devServer.origin}/src/jsenv.png")`,
+    }
+    assert({ actual, expected })
+  } finally {
+    browser.close()
   }
-  assert({ actual, expected })
-  browser.close()
 }
 
 await test({
