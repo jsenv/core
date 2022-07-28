@@ -1,4 +1,5 @@
 import { build } from "@jsenv/core"
+import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs"
 
 const jsenvRootDirectoryUrl = new URL("../../", import.meta.url)
 const jsenvDistDirectoryUrl = new URL("./dist/", jsenvRootDirectoryUrl)
@@ -41,6 +42,7 @@ await build({
       "**/node_modules/ansi-escapes/": true,
       "**/node_modules/is-unicode-supported/": true,
       "**/node_modules/supports-color/": true,
+      "**/node_modules/ws/": true,
     },
   },
   bundling: {
@@ -48,6 +50,13 @@ await build({
       babelHelpersChunk: false,
     },
   },
+  plugins: [
+    jsenvPluginCommonJs({
+      include: {
+        "/**/node_modules/ws/": true,
+      },
+    }),
+  ],
   // writeGeneratedFiles: true,
 })
 

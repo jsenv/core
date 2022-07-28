@@ -1,6 +1,5 @@
 import http from "node:http"
 import cluster from "node:cluster"
-import { WebSocketServer } from "ws"
 import { createDetailedMessage, createLogger } from "@jsenv/log"
 import {
   Abort,
@@ -827,6 +826,7 @@ export const startServer = async ({
     })
     if (websocketHandlers.length > 0) {
       const websocketClients = new Set()
+      const { WebSocketServer } = await import("ws")
       let websocketServer = new WebSocketServer({ noServer: true })
       const websocketOrigin =
         protocol === "https" ? `wss://${host}:${port}` : `ws://${host}:${port}`

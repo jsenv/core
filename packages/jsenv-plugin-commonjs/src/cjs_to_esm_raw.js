@@ -7,15 +7,16 @@ export const commonJsToJsModuleRaw = async ({
   logLevel,
   sourceFileUrl,
 
-  replaceGlobalObject = true,
-  replaceGlobalFilename = true,
-  replaceGlobalDirname = true,
-  replaceProcessEnvNodeEnv = true,
-  replaceProcess = true,
-  replaceBuffer = true,
+  browsers = true,
+  replaceGlobalObject = browsers,
+  replaceGlobalFilename = browsers,
+  replaceGlobalDirname = browsers,
+  replaceProcessEnvNodeEnv = browsers,
+  replaceProcess = browsers,
+  replaceBuffer = browsers,
   processEnvNodeEnv = process.env.NODE_ENV,
   replaceMap = {},
-  convertBuiltinsToBrowser = true,
+  convertBuiltinsToBrowser = browsers,
   external = [],
   sourcemapExcludeSources,
 } = {}) => {
@@ -31,14 +32,16 @@ export const commonJsToJsModuleRaw = async ({
 
   const { nodeResolve } = await import("@rollup/plugin-node-resolve")
   const nodeResolveRollupPlugin = nodeResolve({
-    mainFields: [
-      "browser:module",
-      "module",
-      "browser",
-      "main:esnext",
-      "jsnext:main",
-      "main",
-    ],
+    mainFields: browsers
+      ? [
+          "browser:module",
+          "module",
+          "browser",
+          "main:esnext",
+          "jsnext:main",
+          "main",
+        ]
+      : ["module", "main:esnext", "jsxnext:main", "main"],
     extensions: [".mjs", ".cjs", ".js", ".json"],
     preferBuiltins: false,
     exportConditions: [],
@@ -82,13 +85,6 @@ export const commonJsToJsModuleRaw = async ({
   const { default: createNodeGlobalRollupPlugin } = await import(
     "rollup-plugin-node-globals"
   )
-  const nodeGlobalRollupPlugin = createNodeGlobalRollupPlugin({
-    global: false, // handled by replaceMap
-    dirname: false, // handled by replaceMap
-    filename: false, // handled by replaceMap
-    process: replaceProcess,
-    buffer: replaceBuffer,
-  })
 
   const commonJsNamedExportsRollupPlugin = rollupPluginCommonJsNamedExports({
     logger,
@@ -109,7 +105,17 @@ export const commonJsToJsModuleRaw = async ({
       replaceRollupPlugin,
       commonJsRollupPlugin,
       commonJsNamedExportsRollupPlugin,
-      nodeGlobalRollupPlugin,
+      ...(replaceProcess || replaceBuffer
+        ? [
+            createNodeGlobalRollupPlugin({
+              global: false, // handled by replaceMap
+              dirname: false, // handled by replaceMap
+              filename: false, // handled by replaceMap
+              process: replaceProcess,
+              buffer: replaceBuffer,
+            }),
+          ]
+        : []),
       ...(convertBuiltinsToBrowser
         ? [
             rollupPluginNodePolyfills({
@@ -119,6 +125,13 @@ export const commonJsToJsModuleRaw = async ({
         : []),
     ],
     onwarn: (warning) => {
+      if (
+        warning.code === "UNRESOLVED_IMPORT" &&
+        warning.importer.endsWith("?commonjs-external")
+      ) {
+        return
+      }
+
       const { loc, message } = warning
       const logMessage = loc
         ? `${loc.file}:${loc.line}:${loc.column} ${message}`
