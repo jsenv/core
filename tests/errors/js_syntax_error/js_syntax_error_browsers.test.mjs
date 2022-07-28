@@ -3,7 +3,7 @@ import { assert } from "@jsenv/assert"
 import { execute, chromium, firefox, webkit } from "@jsenv/core"
 
 const test = async ({ runtime }) => {
-  const { status, error, consoleCalls } = await execute({
+  const { status, error, consoleCalls, server } = await execute({
     // logLevel: "debug"
     rootDirectoryUrl: new URL("./client/", import.meta.url),
     fileRelativeUrl: `./main.html`,
@@ -19,18 +19,41 @@ const test = async ({ runtime }) => {
   }
   const expected = {
     status: "errored",
-    error: Object.assign(
-      new Error(
-        {
-          chromium: "Unexpected end of input",
-          firefox: "expected expression, got end of script",
-          webkit: "Unexpected end of script",
-        }[runtime.name],
-      ),
-      {
-        name: "SyntaxError",
+    error: {
+      chromium: () => {
+        const error = new Error("Unexpected end of input")
+        Object.assign(error, { name: "SyntaxError" })
+        return error
       },
-    ),
+      firefox: () => {
+        const syntaxError = new SyntaxError(
+          "expected expression, got end of script",
+        )
+        Object.defineProperties(syntaxError, {
+          fileName: {
+            configurable: true,
+            writable: true,
+            value: `${server.origin}/js_syntax_error.js`,
+          },
+          lineNumber: {
+            configurable: true,
+            writable: true,
+            value: 1,
+          },
+          columnNumber: {
+            configurable: true,
+            writable: true,
+            value: 11,
+          },
+        })
+        return syntaxError
+      },
+      webkit: () => {
+        const error = new Error("Unexpected end of script")
+        Object.assign(error, { name: "SyntaxError" })
+        return error
+      },
+    }[runtime.name](),
     consoleCalls: [],
   }
   assert({ actual, expected })
