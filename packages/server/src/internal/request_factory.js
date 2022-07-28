@@ -6,7 +6,9 @@ export const fromNodeRequest = (nodeRequest, { serverOrigin, signal }) => {
   const body = nodeStreamToObservable(nodeRequest)
 
   let requestOrigin
-  if (nodeRequest.authority) {
+  if (nodeRequest.upgrade) {
+    requestOrigin = serverOrigin
+  } else if (nodeRequest.authority) {
     requestOrigin = nodeRequest.connection.encrypted
       ? `https://${nodeRequest.authority}`
       : `http://${nodeRequest.authority}`

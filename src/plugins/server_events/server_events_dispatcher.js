@@ -18,8 +18,9 @@ export const createServerEventsDispatcher = () => {
   }
 
   return {
-    addWebsocket: (websocket) => {
+    addWebsocket: (websocket, request) => {
       const client = {
+        request,
         getReadystate: () => {
           return websocket.readyState
         },

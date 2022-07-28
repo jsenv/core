@@ -828,6 +828,9 @@ export const startServer = async ({
     if (websocketHandlers.length > 0) {
       const websocketClients = new Set()
       let websocketServer = new WebSocketServer({ noServer: true })
+      const websocketOrigin =
+        protocol === "https" ? `wss://${host}:${port}` : `ws://${host}:${port}`
+      server.websocketOrigin = websocketOrigin
       const upgradeCallback = (nodeRequest, socket, head) => {
         websocketServer.handleUpgrade(
           nodeRequest,
@@ -838,11 +841,15 @@ export const startServer = async ({
             websocket.once("close", () => {
               websocketClients.delete(websocket)
             })
+            const request = fromNodeRequest(nodeRequest, {
+              serverOrigin: websocketOrigin,
+              signal: new AbortController().signal,
+            })
             serviceController.callAsyncHooksUntil(
               "handleWebsocket",
               websocket,
               {
-                nodeRequest,
+                request,
               },
             )
           },
@@ -861,8 +868,6 @@ export const startServer = async ({
         websocketServer.close()
         websocketServer = null
       })
-      server.websocketOrigin =
-        protocol === "https" ? `wss://${host}:${port}` : `ws://${host}:${port}`
     }
   }
 

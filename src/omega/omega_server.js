@@ -105,8 +105,10 @@ export const startOmegaServer = async ({
           sourcemapsSourcesContent,
           writeGeneratedFiles,
         }),
-        handleWebsocket: (websocket) => {
-          serverEventsDispatcher.addWebsocket(websocket)
+        handleWebsocket: (websocket, { request }) => {
+          if (request["sec-websocket-protocol"] === "jsenv") {
+            serverEventsDispatcher.addWebsocket(websocket, request)
+          }
         },
       },
       {
