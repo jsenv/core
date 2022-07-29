@@ -17,6 +17,7 @@ try {
     keepProcessAlive: false,
     htmlSupervisor: true,
     devServerAutoreload: false,
+    port: 0,
   })
   const { returnValue, pageLogs, pageErrors } = await executeInChromium({
     url: `${devServer.origin}/main.html`,

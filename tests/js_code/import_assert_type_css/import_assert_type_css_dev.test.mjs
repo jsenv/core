@@ -8,6 +8,7 @@ const devServer = await startDevServer({
   logLevel: "warn",
   keepProcessAlive: false,
   rootDirectoryUrl: new URL("./client/", import.meta.url),
+  port: 0,
 })
 const test = async ({ browserLauncher }) => {
   const browser = await browserLauncher.launch({ headless: true })
@@ -33,12 +34,6 @@ const test = async ({ browserLauncher }) => {
   }
 }
 
-await test({
-  browserLauncher: chromium,
-})
-await test({
-  browserLauncher: firefox,
-})
-await test({
-  browserLauncher: webkit,
-})
+await test({ browserLauncher: chromium })
+await test({ browserLauncher: firefox })
+await test({ browserLauncher: webkit })

@@ -10,6 +10,7 @@ const devServer = await startDevServer({
   logLevel: "warn",
   rootDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
+  port: 0,
 })
 const result = await executeTestPlan({
   logLevel: "warn",

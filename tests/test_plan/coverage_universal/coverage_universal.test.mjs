@@ -13,6 +13,7 @@ const devServer = await startDevServer({
   logLevel: "warn",
   rootDirectoryUrl: new URL("./", import.meta.url),
   keepProcessAlive: false,
+  port: 0,
 })
 const { testPlanCoverage } = await executeTestPlan({
   logLevel: "warn",
