@@ -26553,7 +26553,7 @@ const pingServer = async url => {
   const {
     hostname,
     port
-  } = url;
+  } = new URL(url);
 
   try {
     await new Promise((resolve, reject) => {
@@ -26565,11 +26565,11 @@ const pingServer = async url => {
     });
   } catch (error) {
     if (error && error.code === "EADDRINUSE") {
-      return false;
+      return true;
     }
 
     if (error && error.code === "EACCES") {
-      return false;
+      return true;
     }
 
     throw error;
@@ -26580,7 +26580,7 @@ const pingServer = async url => {
     server.on("close", resolve);
     server.close();
   });
-  return true;
+  return false;
 };
 
 const ensureGlobalGc = () => {

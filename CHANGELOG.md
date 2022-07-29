@@ -1,3 +1,11 @@
+# 28.0.0
+
+- tests now executed on the dev server
+  - dev server must be started before executing tests
+  - add new public export: "pingServer"
+  - update test scripts in jsenv demos
+- rename "host" into "hostname" for startDevServer
+
 # 27.8.1
 
 - fix websocket connection on https

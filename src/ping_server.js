@@ -2,7 +2,7 @@ import { createServer } from "node:net"
 
 export const pingServer = async (url) => {
   const server = createServer()
-  const { hostname, port } = url
+  const { hostname, port } = new URL(url)
 
   try {
     await new Promise((resolve, reject) => {
@@ -14,10 +14,10 @@ export const pingServer = async (url) => {
     })
   } catch (error) {
     if (error && error.code === "EADDRINUSE") {
-      return false
+      return true
     }
     if (error && error.code === "EACCES") {
-      return false
+      return true
     }
     throw error
   }
@@ -26,5 +26,5 @@ export const pingServer = async (url) => {
     server.on("close", resolve)
     server.close()
   })
-  return true
+  return false
 }

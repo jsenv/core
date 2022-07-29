@@ -4,25 +4,24 @@
  * - npm test:coverage
  */
 
-import { executeTestPlan, chromium, webkit, pingServer } from "@jsenv/core"
+import { executeTestPlan, firefox, pingServer } from "@jsenv/core"
 
 import { rootDirectoryUrl } from "../jsenv.config.mjs"
 
-const devServerStarted = await pingServer(`http://127.0.0.1:3400`)
+const devServerOrigin = "http://localhost:3400"
+const devServerStarted = await pingServer(devServerOrigin)
 let devServer
 if (!devServerStarted) {
-  devServer = await import("./start_dev_server.mjs").devServer
+  devServer = (await import("./start_dev_server.mjs")).devServer
 }
 try {
   await executeTestPlan({
     rootDirectoryUrl,
+    devServerOrigin,
     testPlan: {
       "./tests/**/*.test.html": {
-        chromium: {
-          runtime: chromium,
-        },
-        webkit: {
-          runtime: webkit,
+        firefox: {
+          runtime: firefox,
         },
       },
     },
