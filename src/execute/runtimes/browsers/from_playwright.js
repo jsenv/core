@@ -27,7 +27,6 @@ export const createRuntimeFromPlaywright = ({
     type: "browser",
     name: browserName,
     version: browserVersion,
-    needsServer: true,
   }
   let browserAndContextPromise
   runtime.run = async ({
@@ -35,7 +34,7 @@ export const createRuntimeFromPlaywright = ({
     logger,
     rootDirectoryUrl,
     fileRelativeUrl,
-    serverOrigin,
+    devServerOrigin,
 
     // measurePerformance,
     collectPerformance,
@@ -140,7 +139,7 @@ export const createRuntimeFromPlaywright = ({
             (v8CoveragesWithWebUrl) => {
               const fsUrl = moveUrl({
                 url: v8CoveragesWithWebUrl.url,
-                from: `${serverOrigin}/`,
+                from: `${devServerOrigin}/`,
                 to: rootDirectoryUrl,
                 preferAbsolute: true,
               })
@@ -214,7 +213,7 @@ export const createRuntimeFromPlaywright = ({
       })
     }
 
-    const fileClientUrl = new URL(fileRelativeUrl, `${serverOrigin}/`).href
+    const fileClientUrl = new URL(fileRelativeUrl, `${devServerOrigin}/`).href
 
     // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-console
     const removeConsoleListener = registerEvent({
@@ -314,7 +313,7 @@ export const createRuntimeFromPlaywright = ({
                 const { exceptionSource } = returnValue
                 const error = evalException(exceptionSource, {
                   rootDirectoryUrl,
-                  serverOrigin,
+                  devServerOrigin,
                   transformErrorHook,
                 })
                 cb({
@@ -537,13 +536,13 @@ const registerEvent = ({ object, eventType, callback }) => {
 
 const evalException = (
   exceptionSource,
-  { rootDirectoryUrl, serverOrigin, transformErrorHook },
+  { rootDirectoryUrl, devServerOrigin, transformErrorHook },
 ) => {
   const script = new Script(exceptionSource, { filename: "" })
   const error = script.runInThisContext()
   if (error && error instanceof Error) {
     const remoteRootRegexp = new RegExp(
-      escapeRegexpSpecialChars(`${serverOrigin}/`),
+      escapeRegexpSpecialChars(`${devServerOrigin}/`),
       "g",
     )
     error.stack = error.stack.replace(remoteRootRegexp, rootDirectoryUrl)

@@ -17,9 +17,10 @@ import { generateCoverageTextLog } from "./coverage/coverage_reporter_text_log.j
 import { executePlan } from "./execute_plan.js"
 
 /**
- * Execute a list of files and log how it goes
+ * Execute a list of files and log how it goes.
  * @param {Object} testPlanParameters
  * @param {string|url} testPlanParameters.rootDirectoryUrl Root directory of the project
+ * @param {string|url} [testPlanParameters.serverOrigin=undefined] Jsenv dev server origin; required when executing test on browsers
  * @param {Object} testPlanParameters.testPlan Object associating patterns leading to files to runtimes where they should be executed
  * @param {boolean} [testPlanParameters.completedExecutionLogAbbreviation=false] Abbreviate completed execution information to shorten terminal output
  * @param {boolean} [testPlanParameters.completedExecutionLogMerging=false] Merge completed execution logs to shorten terminal output
@@ -45,7 +46,7 @@ export const executeTestPlan = async ({
   completedExecutionLogAbbreviation = false,
   completedExecutionLogMerging = false,
   rootDirectoryUrl,
-  serverOrigin,
+  devServerOrigin,
 
   testPlan,
   updateProcessExitCode = true,
@@ -139,7 +140,7 @@ export const executeTestPlan = async ({
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
     rootDirectoryUrl,
-    serverOrigin,
+    devServerOrigin,
 
     maxExecutionsInParallel,
     defaultMsAllocatedPerExecution,

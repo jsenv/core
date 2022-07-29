@@ -1,17 +1,25 @@
 import { assert } from "@jsenv/assert"
 
-import { execute, chromium, firefox, webkit } from "@jsenv/core"
+import { startDevServer, execute, chromium, firefox, webkit } from "@jsenv/core"
 
 const test = async ({ runtime }) => {
-  const { status, error, consoleCalls, server } = await execute({
+  const devServer = await startDevServer({
+    logLevel: "warn",
+    rootDirectoryUrl: new URL("./client/", import.meta.url),
+    keepProcessAlive: false,
+    port: 0,
+  })
+  const { status, error, consoleCalls } = await execute({
     // logLevel: "debug"
     rootDirectoryUrl: new URL("./client/", import.meta.url),
+    devServerOrigin: devServer.origin,
     fileRelativeUrl: `./main.html`,
     runtime,
     mirrorConsole: false,
     collectConsole: true,
     ignoreError: true,
   })
+  devServer.stop()
   const actual = {
     status,
     error,
@@ -33,7 +41,7 @@ const test = async ({ runtime }) => {
           fileName: {
             configurable: true,
             writable: true,
-            value: `${server.origin}/js_syntax_error.js`,
+            value: `${devServer.origin}/js_syntax_error.js`,
           },
           lineNumber: {
             configurable: true,
@@ -59,12 +67,6 @@ const test = async ({ runtime }) => {
   assert({ actual, expected })
 }
 
-await test({
-  runtime: chromium,
-})
-await test({
-  runtime: firefox,
-})
-await test({
-  runtime: webkit,
-})
+await test({ runtime: chromium })
+await test({ runtime: firefox })
+await test({ runtime: webkit })

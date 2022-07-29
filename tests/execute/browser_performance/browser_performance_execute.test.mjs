@@ -1,16 +1,24 @@
 import { assert } from "@jsenv/assert"
 
-import { execute, chromium, firefox, webkit } from "@jsenv/core"
+import { startDevServer, execute, chromium, firefox, webkit } from "@jsenv/core"
 
 const test = async ({ runtime }) => {
+  const devServer = await startDevServer({
+    logLevel: "warn",
+    rootDirectoryUrl: new URL("./client/", import.meta.url),
+    keepProcessAlive: false,
+    port: 0,
+  })
   const { status, namespace, performance } = await execute({
     rootDirectoryUrl: new URL("./client/", import.meta.url),
+    devServerOrigin: devServer.origin,
     fileRelativeUrl: `./main.html`,
     runtime,
     mirrorConsole: false,
     collectConsole: true,
     collectPerformance: true,
   })
+  devServer.stop()
   const actual = {
     status,
     namespace,
@@ -40,13 +48,7 @@ const test = async ({ runtime }) => {
 }
 
 if (process.platform !== "win32") {
-  await test({
-    runtime: chromium,
-  })
-  await test({
-    runtime: firefox,
-  })
-  await test({
-    runtime: webkit,
-  })
+  await test({ runtime: chromium })
+  await test({ runtime: firefox })
+  await test({ runtime: webkit })
 }

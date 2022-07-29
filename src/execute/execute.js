@@ -1,9 +1,8 @@
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
-
 import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem"
 import { createLogger } from "@jsenv/log"
 
-import { startOmegaServer } from "@jsenv/core/src/omega/omega_server.js"
+import { pingServer } from "../ping_server.js"
 import { run } from "./run.js"
 
 export const execute = async ({
@@ -11,33 +10,19 @@ export const execute = async ({
   handleSIGINT = true,
   logLevel,
   rootDirectoryUrl,
+  devServerOrigin,
 
   fileRelativeUrl,
   allocatedMs,
   mirrorConsole = true,
   keepRunning = false,
-  services,
+
   collectConsole,
   collectCoverage,
   coverageTempDirectoryUrl,
   collectPerformance = false,
   runtime,
   runtimeParams,
-
-  scenarios = { dev: true },
-  plugins = [],
-  nodeEsmResolution,
-  fileSystemMagicResolution,
-  transpilation,
-  htmlSupervisor = true,
-  sourcemaps = "inline",
-  writeGeneratedFiles = false,
-
-  port,
-  protocol,
-  http2,
-  certificate,
-  privateKey,
 
   ignoreError = false,
 }) => {
@@ -59,44 +44,21 @@ export const execute = async ({
   let resultTransformer = (result) => result
   runtimeParams = {
     rootDirectoryUrl,
+    devServerOrigin,
     fileRelativeUrl,
     ...runtimeParams,
   }
-  if (runtime.needsServer) {
-    const server = await startOmegaServer({
-      signal: executeOperation.signal,
-      logLevel: "warn",
-      keepProcessAlive: false,
-      services,
-      port,
-      protocol,
-      http2,
-      certificate,
-      privateKey,
-
-      rootDirectoryUrl,
-      scenarios,
-      runtimeCompat: { [runtime.name]: runtime.version },
-
-      plugins,
-
-      htmlSupervisor,
-      nodeEsmResolution,
-      fileSystemMagicResolution,
-      transpilation,
-      sourcemaps,
-      writeGeneratedFiles,
-    })
-    executeOperation.addEndCallback(async () => {
-      await server.stop("execution done")
-    })
-    runtimeParams = {
-      ...runtimeParams,
-      server,
+  if (runtime.type === "browser") {
+    if (!devServerOrigin) {
+      throw new TypeError(
+        `devServerOrigin is required when running tests on browser(s)`,
+      )
     }
-    resultTransformer = (result) => {
-      result.server = server
-      return result
+    const devServerStarted = await pingServer(devServerOrigin)
+    if (!devServerStarted) {
+      throw new Error(
+        `dev server not started at ${devServerOrigin}. It is required to run tests`,
+      )
     }
   }
 

@@ -21,6 +21,9 @@ export { nodeWorkerThread } from "./execute/runtimes/node/node_worker_thread.js"
 export { build } from "./build/build.js"
 export { startBuildServer } from "./build/start_build_server.js"
 
+// helpers
+export { pingServer } from "./ping_server.js"
+
 // advanced
 export { execute } from "./execute/execute.js"
 export { jsenvPluginInjectGlobals } from "./plugins/inject_globals/jsenv_plugin_inject_globals.js"

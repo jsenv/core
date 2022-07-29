@@ -17,6 +17,7 @@ import { ensureEmptyDirectory, writeFileSync } from "@jsenv/filesystem"
 import { reportToCoverage } from "./coverage/report_to_coverage.js"
 import { run } from "@jsenv/core/src/execute/run.js"
 
+import { pingServer } from "../ping_server.js"
 import { ensureGlobalGc } from "./gc.js"
 import { generateExecutionSteps } from "./execution_steps.js"
 import { createExecutionLog, createSummaryLog } from "./logs_file_execution.js"
@@ -36,7 +37,7 @@ export const executePlan = async (
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
     rootDirectoryUrl,
-    serverOrigin,
+    devServerOrigin,
 
     keepRunning,
     defaultMsAllocatedPerExecution,
@@ -72,7 +73,7 @@ export const executePlan = async (
       const { runtime } = executionConfig
       if (runtime) {
         runtimes[runtime.name] = runtime.version
-        if (runtime.needsServer) {
+        if (runtime.type === "browser") {
           someNeedsServer = true
         }
         if (runtime.type === "node") {
@@ -173,7 +174,7 @@ export const executePlan = async (
 
     let runtimeParams = {
       rootDirectoryUrl,
-      serverOrigin,
+      devServerOrigin,
       coverageEnabled,
       coverageConfig,
       coverageMethodForBrowsers,
@@ -181,6 +182,17 @@ export const executePlan = async (
       stopAfterAllSignal,
     }
     if (someNeedsServer) {
+      if (!devServerOrigin) {
+        throw new TypeError(
+          `devServerOrigin is required when running tests on browser(s)`,
+        )
+      }
+      const devServerStarted = await pingServer(devServerOrigin)
+      if (!devServerStarted) {
+        throw new Error(
+          `dev server not started at ${devServerOrigin}. It is required to run tests`,
+        )
+      }
     }
 
     logger.debug(`Generate executions`)

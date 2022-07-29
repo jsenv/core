@@ -11,7 +11,7 @@ await executeTestPlan({
   logEachDuration: false,
   logSummary: false,
   rootDirectoryUrl: new URL("./", import.meta.url),
-  serverOrigin: devServer.origin,
+  devServerOrigin: devServer.origin,
   testPlan: {
     "./client/main.html": {
       chrome: {
