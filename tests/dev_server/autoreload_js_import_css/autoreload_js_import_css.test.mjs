@@ -160,124 +160,127 @@ if (import.meta.hot) {
   }
 }
 
-// not transpiling import assertion (chrome)
-await test({
-  browserLauncher: chromium,
-  pageLogsAfterRemovingCssImport: [
-    {
-      type: "startGroupCollapsed",
-      text: "[jsenv] hot reloading main.js",
-    },
-    {
-      type: "log",
-      text: "importing js module",
-    },
-    {
-      type: "log",
-      text: "js module import done",
-    },
-    {
-      type: "endGroup",
-      text: "console.groupEnd",
-    },
-    {
-      type: "startGroupCollapsed",
-      text: "[jsenv] cleanup file.js (previously used in main.js)",
-    },
-    {
-      type: "log",
-      text: "call dispose callback",
-    },
-    {
-      type: "log",
-      text: "remove stylesheet",
-    },
-    {
-      type: "endGroup",
-      text: "console.groupEnd",
-    },
-  ],
-  pageLogsAfterRestoringCssImport: [
-    {
-      type: "startGroupCollapsed",
-      text: "[jsenv] hot reloading main.js",
-    },
-    {
-      type: "log",
-      text: "importing js module",
-    },
-    {
-      type: "log",
-      text: "adding stylesheet",
-    },
-    {
-      type: "log",
-      text: "js module import done",
-    },
-    {
-      type: "endGroup",
-      text: "console.groupEnd",
-    },
-  ],
-})
+// TODO: fix on windows
+if (process.platform !== "win32") {
+  // not transpiling import assertion (chrome)
+  await test({
+    browserLauncher: chromium,
+    pageLogsAfterRemovingCssImport: [
+      {
+        type: "startGroupCollapsed",
+        text: "[jsenv] hot reloading main.js",
+      },
+      {
+        type: "log",
+        text: "importing js module",
+      },
+      {
+        type: "log",
+        text: "js module import done",
+      },
+      {
+        type: "endGroup",
+        text: "console.groupEnd",
+      },
+      {
+        type: "startGroupCollapsed",
+        text: "[jsenv] cleanup file.js (previously used in main.js)",
+      },
+      {
+        type: "log",
+        text: "call dispose callback",
+      },
+      {
+        type: "log",
+        text: "remove stylesheet",
+      },
+      {
+        type: "endGroup",
+        text: "console.groupEnd",
+      },
+    ],
+    pageLogsAfterRestoringCssImport: [
+      {
+        type: "startGroupCollapsed",
+        text: "[jsenv] hot reloading main.js",
+      },
+      {
+        type: "log",
+        text: "importing js module",
+      },
+      {
+        type: "log",
+        text: "adding stylesheet",
+      },
+      {
+        type: "log",
+        text: "js module import done",
+      },
+      {
+        type: "endGroup",
+        text: "console.groupEnd",
+      },
+    ],
+  })
 
-// transpiling import assertion (firefox)
-await test({
-  browserLauncher: firefox,
-  pageLogsAfterRemovingCssImport: [
-    {
-      type: "startGroupCollapsed",
-      text: "[jsenv] hot reloading main.js",
-    },
-    {
-      type: "log",
-      text: "importing js module",
-    },
-    {
-      type: "log",
-      text: "js module import done",
-    },
-    {
-      type: "endGroup",
-      text: "",
-    },
-    {
-      type: "startGroupCollapsed",
-      text: "[jsenv] cleanup file.js (previously used in main.js)",
-    },
-    {
-      type: "log",
-      text: "call dispose callback",
-    },
-    {
-      type: "log",
-      text: "remove stylesheet",
-    },
-    {
-      type: "endGroup",
-      text: "",
-    },
-  ],
-  pageLogsAfterRestoringCssImport: [
-    {
-      type: "startGroupCollapsed",
-      text: "[jsenv] hot reloading main.js",
-    },
-    {
-      type: "log",
-      text: "importing js module",
-    },
-    {
-      type: "log",
-      text: "adding stylesheet",
-    },
-    {
-      type: "log",
-      text: "js module import done",
-    },
-    {
-      type: "endGroup",
-      text: "",
-    },
-  ],
-})
+  // transpiling import assertion (firefox)
+  await test({
+    browserLauncher: firefox,
+    pageLogsAfterRemovingCssImport: [
+      {
+        type: "startGroupCollapsed",
+        text: "[jsenv] hot reloading main.js",
+      },
+      {
+        type: "log",
+        text: "importing js module",
+      },
+      {
+        type: "log",
+        text: "js module import done",
+      },
+      {
+        type: "endGroup",
+        text: "",
+      },
+      {
+        type: "startGroupCollapsed",
+        text: "[jsenv] cleanup file.js (previously used in main.js)",
+      },
+      {
+        type: "log",
+        text: "call dispose callback",
+      },
+      {
+        type: "log",
+        text: "remove stylesheet",
+      },
+      {
+        type: "endGroup",
+        text: "",
+      },
+    ],
+    pageLogsAfterRestoringCssImport: [
+      {
+        type: "startGroupCollapsed",
+        text: "[jsenv] hot reloading main.js",
+      },
+      {
+        type: "log",
+        text: "importing js module",
+      },
+      {
+        type: "log",
+        text: "adding stylesheet",
+      },
+      {
+        type: "log",
+        text: "js module import done",
+      },
+      {
+        type: "endGroup",
+        text: "",
+      },
+    ],
+  })
+}
