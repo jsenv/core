@@ -208,9 +208,9 @@ const flattenAndFilterPlugins = (plugins, { scenarios }) => {
         return
       }
       if (typeof appliesDuring === "string") {
-        if (!["dev", "test", "build"].includes(appliesDuring)) {
+        if (!["dev", "build"].includes(appliesDuring)) {
           throw new Error(
-            `"appliesDuring" must be "dev", "test" or "build", got ${appliesDuring}`,
+            `"appliesDuring" must be "dev" or "build", got ${appliesDuring}`,
           )
         }
         if (scenarios[appliesDuring]) {

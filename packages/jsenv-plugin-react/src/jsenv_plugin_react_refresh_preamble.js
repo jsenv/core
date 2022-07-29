@@ -13,7 +13,7 @@ export const jsenvPluginReactRefreshPreamble = () => {
 
   return {
     name: "jsenv:react_refresh_preamble",
-    appliesDuring: { dev: true, test: false },
+    appliesDuring: "dev",
     transformUrlContent: {
       html: (urlInfo, context) => {
         const htmlAst = parseHtmlString(urlInfo.content)

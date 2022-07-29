@@ -13,7 +13,7 @@ export const jsenvPluginAutoreloadClient = () => {
 
   return {
     name: "jsenv:autoreload_client",
-    appliesDuring: { dev: true, test: false },
+    appliesDuring: "dev",
     transformUrlContent: {
       html: (htmlUrlInfo, context) => {
         const htmlAst = parseHtmlString(htmlUrlInfo.content)

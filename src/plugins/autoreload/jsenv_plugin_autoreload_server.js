@@ -6,7 +6,7 @@ export const jsenvPluginAutoreloadServer = ({
 }) => {
   return {
     name: "jsenv:autoreload_server",
-    appliesDuring: { dev: true, test: false },
+    appliesDuring: "dev",
     serverEvents: {
       reload: ({ sendServerEvent, rootDirectoryUrl, urlGraph }) => {
         const formatUrlForClient = (url) => {

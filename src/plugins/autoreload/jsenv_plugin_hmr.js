@@ -1,7 +1,7 @@
 export const jsenvPluginHmr = () => {
   return {
     name: "jsenv:hmr",
-    appliesDuring: { dev: true, test: false },
+    appliesDuring: "dev",
     redirectUrl: (reference) => {
       const urlObject = new URL(reference.url)
       if (!urlObject.searchParams.has("hmr")) {
