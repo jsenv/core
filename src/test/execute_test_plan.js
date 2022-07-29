@@ -89,7 +89,7 @@ export const executeTestPlan = async ({
   protocol,
   privateKey,
   certificate,
-  host,
+  hostname,
   port,
 }) => {
   const logger = createLogger({ logLevel })
@@ -176,7 +176,7 @@ export const executeTestPlan = async ({
     protocol,
     privateKey,
     certificate,
-    host,
+    hostname,
     port,
   })
   if (

@@ -66,7 +66,7 @@ export const executePlan = async (
     protocol,
     privateKey,
     certificate,
-    host,
+    hostname,
     port,
 
     beforeExecutionCallback = () => {},
@@ -201,7 +201,7 @@ export const executePlan = async (
         logLevel: "warn",
         keepProcessAlive: false,
         port,
-        host,
+        hostname,
         protocol,
         certificate,
         privateKey,

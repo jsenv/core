@@ -201,13 +201,14 @@ export const startServer = async ({
 
       preferIpv6 = hostnameInfo.version === 6
       const firstInternalIp = ipGetters.getFirstInternalIp({ preferIpv6 })
+      serverOrigins.local = createOrigin(firstInternalIp)
       serverOrigins.localip = createOrigin(firstInternalIp)
       if (hostnameInfo.label === "unspecified") {
         const firstExternalIp = ipGetters.getFirstExternalIp({ preferIpv6 })
         serverOrigins.externalip = createOrigin(firstExternalIp)
       } else if (hostnameInfo.label === "loopback") {
       } else {
-        serverOrigins.local = `${protocol}://${hostname}`
+        serverOrigins.local = createOrigin(hostname)
       }
     } else {
       const hostnameDnsResolution = await applyDnsResolution(hostname, {

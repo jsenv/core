@@ -18,7 +18,7 @@ export const startOmegaServer = async ({
   privateKey,
   certificate,
   acceptAnyIp,
-  host,
+  hostname,
   port = 0,
   keepProcessAlive = false,
   onStop = () => {},
@@ -62,7 +62,7 @@ export const startOmegaServer = async ({
     certificate,
     privateKey,
     acceptAnyIp,
-    host,
+    hostname,
     port,
     requestWaitingMs: 60_1000,
     services: [
