@@ -13742,7 +13742,6 @@ const jsenvPluginImportMetaScenarios = () => {
         });
         const {
           dev = [],
-          test = [],
           build = []
         } = metadata.importMetaScenarios;
         const replacements = [];
@@ -13759,9 +13758,6 @@ const jsenvPluginImportMetaScenarios = () => {
           dev.forEach(path => {
             replace(path, "undefined");
           });
-          test.forEach(path => {
-            replace(path, context.scenarios.test ? "true" : "undefined");
-          });
           build.forEach(path => {
             replace(path, "true");
           });
@@ -13773,12 +13769,6 @@ const jsenvPluginImportMetaScenarios = () => {
           dev.forEach(path => {
             replace(path, "true");
           });
-
-          if (context.scenarios.test) {
-            test.forEach(path => {
-              replace(path, "true");
-            });
-          }
         }
 
         const magicSource = createMagicSource(urlInfo.content);
@@ -14060,6 +14050,87 @@ export default inlineContent.text`,
     }
   };
   return [asJsonModule, asCssModule, asTextModule];
+};
+
+const babelPluginInstrument = (api, {
+  rootDirectoryUrl,
+  useInlineSourceMaps = false,
+  coverageConfig = {
+    "./**/*": true
+  }
+}) => {
+  const {
+    programVisitor
+  } = requireFromJsenv("istanbul-lib-instrument");
+  const {
+    types
+  } = api;
+  const associations = URL_META.resolveAssociations({
+    cover: coverageConfig
+  }, rootDirectoryUrl);
+
+  const shouldInstrument = url => {
+    return URL_META.applyAssociations({
+      url,
+      associations
+    }).cover;
+  };
+
+  return {
+    name: "transform-instrument",
+    visitor: {
+      Program: {
+        enter(path) {
+          const {
+            file
+          } = this;
+          const {
+            opts
+          } = file;
+
+          if (!opts.sourceFileName) {
+            console.warn(`cannot instrument file when "sourceFileName" option is not set`);
+            return;
+          }
+
+          const fileUrl = fileSystemPathToUrl$1(opts.sourceFileName);
+
+          if (!shouldInstrument(fileUrl)) {
+            return;
+          }
+
+          this.__dv__ = null;
+          let inputSourceMap;
+
+          if (useInlineSourceMaps) {
+            // https://github.com/istanbuljs/babel-plugin-istanbul/commit/a9e15643d249a2985e4387e4308022053b2cd0ad#diff-1fdf421c05c1140f6d71444ea2b27638R65
+            inputSourceMap = opts.inputSourceMap || file.inputMap ? file.inputMap.sourcemap : null;
+          } else {
+            inputSourceMap = opts.inputSourceMap;
+          }
+
+          this.__dv__ = programVisitor(types, opts.filenameRelative || opts.filename, {
+            coverageVariable: "__coverage__",
+            inputSourceMap
+          });
+
+          this.__dv__.enter(path);
+        },
+
+        exit(path) {
+          if (!this.__dv__) {
+            return;
+          }
+
+          const object = this.__dv__.exit(path); // object got two properties: fileCoverage and sourceMappingURL
+
+
+          this.file.metadata.coverage = object.fileCoverage;
+        }
+
+      }
+    }
+  };
 };
 
 const versionFromValue = value => {
@@ -15242,6 +15313,17 @@ const jsenvPluginBabel = ({
       isJsModule,
       getImportSpecifier
     });
+
+    if (context.scenarios.dev) {
+      const requestHeaders = context.request.headers;
+
+      if (requestHeaders["x-coverage-instanbul"]) {
+        babelPluginStructure["transform-instrument"] = [babelPluginInstrument, {
+          rootDirectoryUrl: context.rootDirectoryUrl,
+          coverageConfig: JSON.parse(requestHeaders["x-coverage-instanbul"])
+        }];
+      }
+    }
 
     if (getCustomBabelPlugins) {
       Object.assign(babelPluginStructure, getCustomBabelPlugins(context));
@@ -25774,87 +25856,6 @@ const generateCoverageTextLog = (coverage, {
   report.execute(context);
 };
 
-const babelPluginInstrument = (api, {
-  rootDirectoryUrl,
-  useInlineSourceMaps = false,
-  coverageConfig = {
-    "./**/*": true
-  }
-}) => {
-  const {
-    programVisitor
-  } = requireFromJsenv("istanbul-lib-instrument");
-  const {
-    types
-  } = api;
-  const associations = URL_META.resolveAssociations({
-    cover: coverageConfig
-  }, rootDirectoryUrl);
-
-  const shouldInstrument = url => {
-    return URL_META.applyAssociations({
-      url,
-      associations
-    }).cover;
-  };
-
-  return {
-    name: "transform-instrument",
-    visitor: {
-      Program: {
-        enter(path) {
-          const {
-            file
-          } = this;
-          const {
-            opts
-          } = file;
-
-          if (!opts.sourceFileName) {
-            console.warn(`cannot instrument file when "sourceFileName" option is not set`);
-            return;
-          }
-
-          const fileUrl = fileSystemPathToUrl$1(opts.sourceFileName);
-
-          if (!shouldInstrument(fileUrl)) {
-            return;
-          }
-
-          this.__dv__ = null;
-          let inputSourceMap;
-
-          if (useInlineSourceMaps) {
-            // https://github.com/istanbuljs/babel-plugin-istanbul/commit/a9e15643d249a2985e4387e4308022053b2cd0ad#diff-1fdf421c05c1140f6d71444ea2b27638R65
-            inputSourceMap = opts.inputSourceMap || file.inputMap ? file.inputMap.sourcemap : null;
-          } else {
-            inputSourceMap = opts.inputSourceMap;
-          }
-
-          this.__dv__ = programVisitor(types, opts.filenameRelative || opts.filename, {
-            coverageVariable: "__coverage__",
-            inputSourceMap
-          });
-
-          this.__dv__.enter(path);
-        },
-
-        exit(path) {
-          if (!this.__dv__) {
-            return;
-          }
-
-          const object = this.__dv__.exit(path); // object got two properties: fileCoverage and sourceMappingURL
-
-
-          this.file.metadata.coverage = object.fileCoverage;
-        }
-
-      }
-    }
-  };
-};
-
 const readNodeV8CoverageDirectory = async ({
   logger,
   signal,
@@ -26547,6 +26548,41 @@ const run = async ({
   }
 };
 
+const pingServer = async url => {
+  const server = createServer();
+  const {
+    hostname,
+    port
+  } = url;
+
+  try {
+    await new Promise((resolve, reject) => {
+      server.on("error", reject);
+      server.on("listening", () => {
+        resolve();
+      });
+      server.listen(port, hostname);
+    });
+  } catch (error) {
+    if (error && error.code === "EADDRINUSE") {
+      return false;
+    }
+
+    if (error && error.code === "EACCES") {
+      return false;
+    }
+
+    throw error;
+  }
+
+  await new Promise((resolve, reject) => {
+    server.on("error", reject);
+    server.on("close", resolve);
+    server.close();
+  });
+  return true;
+};
+
 const ensureGlobalGc = () => {
   if (!global.gc) {
     v8.setFlagsFromString("--expose_gc");
@@ -26982,8 +27018,8 @@ const executePlan = async (plan, {
   completedExecutionLogMerging,
   completedExecutionLogAbbreviation,
   rootDirectoryUrl,
+  devServerOrigin,
   keepRunning,
-  services,
   defaultMsAllocatedPerExecution,
   maxExecutionsInParallel,
   failFast,
@@ -26996,18 +27032,6 @@ const executePlan = async (plan, {
   coverageMethodForNodeJs,
   coverageV8ConflictWarning,
   coverageTempDirectoryRelativeUrl,
-  scenarios,
-  sourcemaps,
-  plugins,
-  nodeEsmResolution,
-  fileSystemMagicResolution,
-  transpilation,
-  writeGeneratedFiles,
-  protocol,
-  privateKey,
-  certificate,
-  hostname,
-  port,
   beforeExecutionCallback = () => {},
   afterExecutionCallback = () => {}
 } = {}) => {
@@ -27031,7 +27055,7 @@ const executePlan = async (plan, {
       if (runtime) {
         runtimes[runtime.name] = runtime.version;
 
-        if (runtime.needsServer) {
+        if (runtime.type === "browser") {
           someNeedsServer = true;
         }
 
@@ -27122,6 +27146,7 @@ const executePlan = async (plan, {
 
     let runtimeParams = {
       rootDirectoryUrl,
+      devServerOrigin,
       coverageEnabled,
       coverageConfig,
       coverageMethodForBrowsers,
@@ -27130,48 +27155,15 @@ const executePlan = async (plan, {
     };
 
     if (someNeedsServer) {
-      const server = await startOmegaServer({
-        signal: multipleExecutionsOperation.signal,
-        logLevel: "warn",
-        keepProcessAlive: false,
-        port,
-        hostname,
-        protocol,
-        certificate,
-        privateKey,
-        services,
-        rootDirectoryUrl,
-        scenarios,
-        runtimeCompat: runtimes,
-        plugins,
-        htmlSupervisor: true,
-        nodeEsmResolution,
-        fileSystemMagicResolution,
-        transpilation: { ...transpilation,
-          getCustomBabelPlugins: ({
-            clientRuntimeCompat
-          }) => {
-            if (coverageEnabled && (coverageMethodForBrowsers !== "playwright_api" || Object.keys(clientRuntimeCompat)[0] !== "chrome")) {
-              return {
-                "transform-instrument": [babelPluginInstrument, {
-                  rootDirectoryUrl,
-                  coverageConfig
-                }]
-              };
-            }
+      if (!devServerOrigin) {
+        throw new TypeError(`devServerOrigin is required when running tests on browser(s)`);
+      }
 
-            return {};
-          }
-        },
-        sourcemaps,
-        writeGeneratedFiles
-      });
-      multipleExecutionsOperation.addEndCallback(async () => {
-        await server.stop();
-      });
-      runtimeParams = { ...runtimeParams,
-        server
-      };
+      const devServerStarted = await pingServer(devServerOrigin);
+
+      if (!devServerStarted) {
+        throw new Error(`dev server not started at ${devServerOrigin}. It is required to run tests`);
+      }
     }
 
     logger.debug(`Generate executions`);
@@ -27514,9 +27506,10 @@ const executeInParallel = async ({
 };
 
 /**
- * Execute a list of files and log how it goes
+ * Execute a list of files and log how it goes.
  * @param {Object} testPlanParameters
  * @param {string|url} testPlanParameters.rootDirectoryUrl Root directory of the project
+ * @param {string|url} [testPlanParameters.serverOrigin=undefined] Jsenv dev server origin; required when executing test on browsers
  * @param {Object} testPlanParameters.testPlan Object associating patterns leading to files to runtimes where they should be executed
  * @param {boolean} [testPlanParameters.completedExecutionLogAbbreviation=false] Abbreviate completed execution information to shorten terminal output
  * @param {boolean} [testPlanParameters.completedExecutionLogMerging=false] Merge completed execution logs to shorten terminal output
@@ -27543,6 +27536,7 @@ const executeTestPlan = async ({
   completedExecutionLogAbbreviation = false,
   completedExecutionLogMerging = false,
   rootDirectoryUrl,
+  devServerOrigin,
   testPlan,
   updateProcessExitCode = true,
   maxExecutionsInParallel = 1,
@@ -27573,17 +27567,7 @@ const executeTestPlan = async ({
   coverageReportSkipFull = false,
   coverageReportTextLog = true,
   coverageReportJsonFile = process.env.CI ? null : "./.coverage/coverage.json",
-  coverageReportHtmlDirectory = process.env.CI ? "./.coverage/" : null,
-  sourcemaps = "inline",
-  plugins = [],
-  nodeEsmResolution,
-  fileSystemMagicResolution,
-  writeGeneratedFiles = false,
-  protocol,
-  privateKey,
-  certificate,
-  hostname,
-  port
+  coverageReportHtmlDirectory = process.env.CI ? "./.coverage/" : null
 }) => {
   const logger = createLogger({
     logLevel
@@ -27643,6 +27627,7 @@ const executeTestPlan = async ({
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
     rootDirectoryUrl,
+    devServerOrigin,
     maxExecutionsInParallel,
     defaultMsAllocatedPerExecution,
     failFast,
@@ -27655,21 +27640,7 @@ const executeTestPlan = async ({
     coverageMethodForBrowsers,
     coverageMethodForNodeJs,
     coverageV8ConflictWarning,
-    coverageTempDirectoryRelativeUrl,
-    scenarios: {
-      dev: true,
-      test: true
-    },
-    sourcemaps,
-    plugins,
-    nodeEsmResolution,
-    fileSystemMagicResolution,
-    writeGeneratedFiles,
-    protocol,
-    privateKey,
-    certificate,
-    hostname,
-    port
+    coverageTempDirectoryRelativeUrl
   });
 
   if (updateProcessExitCode && result.planSummary.counters.total !== result.planSummary.counters.completed) {
@@ -27787,8 +27758,7 @@ const createRuntimeFromPlaywright = ({
   const runtime = {
     type: "browser",
     name: browserName,
-    version: browserVersion,
-    needsServer: true
+    version: browserVersion
   };
   let browserAndContextPromise;
 
@@ -27797,7 +27767,7 @@ const createRuntimeFromPlaywright = ({
     logger,
     rootDirectoryUrl,
     fileRelativeUrl,
-    server,
+    devServerOrigin,
     // measurePerformance,
     collectPerformance,
     coverageEnabled = false,
@@ -27872,7 +27842,13 @@ const createRuntimeFromPlaywright = ({
       await disconnected;
     };
 
-    const page = await browserContext.newPage();
+    const coverageInHeaders = coverageEnabled && (!coveragePlaywrightAPIAvailable || coverageMethodForBrowsers !== "playwright_api");
+    const page = await browserContext.newPage({
+      extraHTTPHeaders: { ...(coverageInHeaders ? {
+          "x-coverage-istanbul": JSON.stringify(coverageConfig)
+        } : {})
+      }
+    });
 
     const closePage = async () => {
       try {
@@ -27900,7 +27876,7 @@ const createRuntimeFromPlaywright = ({
           const v8CoveragesWithFsUrls = v8CoveragesWithWebUrls.map(v8CoveragesWithWebUrl => {
             const fsUrl = moveUrl({
               url: v8CoveragesWithWebUrl.url,
-              from: `${server.origin}/`,
+              from: `${devServerOrigin}/`,
               to: rootDirectoryUrl,
               preferAbsolute: true
             });
@@ -27971,7 +27947,7 @@ const createRuntimeFromPlaywright = ({
       });
     }
 
-    const fileClientUrl = new URL(fileRelativeUrl, `${server.origin}/`).href; // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-console
+    const fileClientUrl = new URL(fileRelativeUrl, `${devServerOrigin}/`).href; // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-console
 
     const removeConsoleListener = registerEvent({
       object: page,
@@ -28085,7 +28061,7 @@ const createRuntimeFromPlaywright = ({
               } = returnValue;
               const error = evalException(exceptionSource, {
                 rootDirectoryUrl,
-                server,
+                devServerOrigin,
                 transformErrorHook
               });
               cb({
@@ -28321,7 +28297,7 @@ const registerEvent = ({
 
 const evalException = (exceptionSource, {
   rootDirectoryUrl,
-  server,
+  devServerOrigin,
   transformErrorHook
 }) => {
   const script = new Script(exceptionSource, {
@@ -28330,7 +28306,7 @@ const evalException = (exceptionSource, {
   const error = script.runInThisContext();
 
   if (error && error instanceof Error) {
-    const remoteRootRegexp = new RegExp(escapeRegexpSpecialChars(`${server.origin}/`), "g");
+    const remoteRootRegexp = new RegExp(escapeRegexpSpecialChars(`${devServerOrigin}/`), "g");
     error.stack = error.stack.replace(remoteRootRegexp, rootDirectoryUrl);
     error.message = error.message.replace(remoteRootRegexp, rootDirectoryUrl);
   }
@@ -29536,32 +29512,17 @@ const execute = async ({
   handleSIGINT = true,
   logLevel,
   rootDirectoryUrl,
+  devServerOrigin,
   fileRelativeUrl,
   allocatedMs,
   mirrorConsole = true,
   keepRunning = false,
-  services,
   collectConsole,
   collectCoverage,
   coverageTempDirectoryUrl,
   collectPerformance = false,
   runtime,
   runtimeParams,
-  scenarios = {
-    dev: true
-  },
-  plugins = [],
-  nodeEsmResolution,
-  fileSystemMagicResolution,
-  transpilation,
-  htmlSupervisor = true,
-  sourcemaps = "inline",
-  writeGeneratedFiles = false,
-  port,
-  protocol,
-  http2,
-  certificate,
-  privateKey,
   ignoreError = false
 }) => {
   const logger = createLogger({
@@ -29583,45 +29544,21 @@ const execute = async ({
 
   runtimeParams = {
     rootDirectoryUrl,
+    devServerOrigin,
     fileRelativeUrl,
     ...runtimeParams
   };
 
-  if (runtime.needsServer) {
-    const server = await startOmegaServer({
-      signal: executeOperation.signal,
-      logLevel: "warn",
-      keepProcessAlive: false,
-      services,
-      port,
-      protocol,
-      http2,
-      certificate,
-      privateKey,
-      rootDirectoryUrl,
-      scenarios,
-      runtimeCompat: {
-        [runtime.name]: runtime.version
-      },
-      plugins,
-      htmlSupervisor,
-      nodeEsmResolution,
-      fileSystemMagicResolution,
-      transpilation,
-      sourcemaps,
-      writeGeneratedFiles
-    });
-    executeOperation.addEndCallback(async () => {
-      await server.stop("execution done");
-    });
-    runtimeParams = { ...runtimeParams,
-      server
-    };
+  if (runtime.type === "browser") {
+    if (!devServerOrigin) {
+      throw new TypeError(`devServerOrigin is required when running tests on browser(s)`);
+    }
 
-    resultTransformer = result => {
-      result.server = server;
-      return result;
-    };
+    const devServerStarted = await pingServer(devServerOrigin);
+
+    if (!devServerStarted) {
+      throw new Error(`dev server not started at ${devServerOrigin}. It is required to run tests`);
+    }
   }
 
   let result = await run({
@@ -29743,4 +29680,4 @@ const jsenvPluginInjectGlobals = urlAssociations => {
   };
 };
 
-export { build, chromium, chromiumIsolatedTab, execute, executeTestPlan, firefox, firefoxIsolatedTab, jsenvPluginInjectGlobals, nodeChildProcess, nodeWorkerThread, startBuildServer, startDevServer, webkit, webkitIsolatedTab };
+export { build, chromium, chromiumIsolatedTab, execute, executeTestPlan, firefox, firefoxIsolatedTab, jsenvPluginInjectGlobals, nodeChildProcess, nodeWorkerThread, pingServer, startBuildServer, startDevServer, webkit, webkitIsolatedTab };

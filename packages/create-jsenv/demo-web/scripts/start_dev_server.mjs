@@ -7,7 +7,7 @@ import { startDevServer } from "@jsenv/core"
 
 import { rootDirectoryUrl } from "../jsenv.config.mjs"
 
-await startDevServer({
+export const devServer = await startDevServer({
   rootDirectoryUrl,
   port: 3400,
   explorer: {
