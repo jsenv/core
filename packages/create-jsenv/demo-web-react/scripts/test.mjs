@@ -8,7 +8,7 @@ import { pingServer, executeTestPlan, chromium, webkit } from "@jsenv/core"
 
 import { rootDirectoryUrl, plugins } from "../jsenv.config.mjs"
 
-const devServerOrigin = "http://127.0.0.1:3401"
+const devServerOrigin = "http://localhost:3401"
 const devServerStarted = await pingServer(devServerOrigin)
 let devServer
 if (!devServerStarted) {
