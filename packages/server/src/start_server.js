@@ -1,3 +1,4 @@
+import { isIP } from "node:net"
 import http from "node:http"
 import cluster from "node:cluster"
 import { createDetailedMessage, createLogger } from "@jsenv/log"
@@ -23,7 +24,6 @@ import {
   statusToType,
   colorizeResponseStatus,
 } from "./internal/colorizeResponseStatus.js"
-import { getServerOrigins } from "./internal/getServerOrigins.js"
 import { listen, stopListening } from "./internal/listen.js"
 import { composeTwoResponses } from "./internal/response_composition.js"
 import { listenRequest } from "./internal/listenRequest.js"
@@ -40,6 +40,10 @@ import {
 } from "./stopReasons.js"
 import { composeTwoHeaders } from "./internal/headers_composition.js"
 
+import { createIpGetters } from "./internal/server_ips.js"
+import { parseHostname } from "./internal/hostname_parser.js"
+import { applyDnsResolution } from "./internal/dns_resolution.js"
+
 export const startServer = async ({
   signal = new AbortController().signal,
   logLevel,
@@ -52,7 +56,8 @@ export const startServer = async ({
   redirectHttpToHttps,
   allowHttpRequestOnHttps = false,
   acceptAnyIp = false,
-  host = acceptAnyIp ? undefined : "localhost",
+  preferIpv6,
+  hostname = "localhost",
   port = 0, // assign a random available port
   portHint,
   privateKey,
@@ -83,6 +88,8 @@ export const startServer = async ({
     )
   },
 } = {}) => {
+  const logger = createLogger({ logLevel })
+
   if (protocol !== "http" && protocol !== "https") {
     throw new Error(`protocol must be http or https, got ${protocol}`)
   }
@@ -98,7 +105,6 @@ export const startServer = async ({
     throw new Error(`http2 needs "https" but protocol is "${protocol}"`)
   }
 
-  const logger = createLogger({ logLevel })
   if (
     redirectHttpToHttps === undefined &&
     protocol === "https" &&
@@ -137,6 +143,9 @@ export const startServer = async ({
   let nodeServer
   const startServerOperation = Abort.startOperation()
   const stopCallbackList = createCallbackListNotifiedOnce()
+  const serverOrigins = {
+    local: "", // favors hostname when possible
+  }
 
   try {
     startServerOperation.addAbortSignal(signal)
@@ -163,12 +172,72 @@ export const startServer = async ({
       nodeServer.unref()
     }
 
+    const createOrigin = (hostname) => {
+      if (isIP(hostname) === 6) {
+        return `${protocol}://[${hostname}]`
+      }
+      return `${protocol}://${hostname}`
+    }
+
+    const ipGetters = createIpGetters()
+    let hostnameToListen
+    if (acceptAnyIp) {
+      const firstInternalIp = ipGetters.getFirstInternalIp({ preferIpv6 })
+      serverOrigins.local = createOrigin(firstInternalIp)
+      serverOrigins.localip = createOrigin(firstInternalIp)
+      const firstExternalIp = ipGetters.getFirstExternalIp({ preferIpv6 })
+      serverOrigins.externalip = createOrigin(firstExternalIp)
+      hostnameToListen = preferIpv6 ? "::" : "0.0.0.0"
+    } else {
+      hostnameToListen = hostname
+    }
+    const hostnameInfo = parseHostname(hostname)
+    if (hostnameInfo.type === "ip") {
+      if (acceptAnyIp) {
+        throw new Error(
+          `hostname cannot be an ip when acceptAnyIp is enabled, got ${hostname}`,
+        )
+      }
+
+      preferIpv6 = hostnameInfo.version === 6
+      const firstInternalIp = ipGetters.getFirstInternalIp({ preferIpv6 })
+      serverOrigins.localip = createOrigin(firstInternalIp)
+      if (hostnameInfo.label === "unspecified") {
+        const firstExternalIp = ipGetters.getFirstExternalIp({ preferIpv6 })
+        serverOrigins.externalip = createOrigin(firstExternalIp)
+      } else if (hostnameInfo.label === "loopback") {
+      } else {
+        serverOrigins.local = `${protocol}://${hostname}`
+      }
+    } else {
+      const hostnameDnsResolution = await applyDnsResolution(hostname, {
+        verbatim: true,
+      })
+      if (hostnameDnsResolution) {
+        const hostnameIp = hostnameDnsResolution.address
+        serverOrigins.localip = createOrigin(hostnameIp)
+        serverOrigins.local = createOrigin(hostname)
+      } else {
+        const firstInternalIp = ipGetters.getFirstInternalIp({ preferIpv6 })
+        // fallback to internal ip because there is no ip
+        // associated to this hostname on operating system (in hosts file)
+        hostname = firstInternalIp
+        hostnameToListen = firstInternalIp
+        serverOrigins.local = createOrigin(firstInternalIp)
+      }
+    }
+
     port = await listen({
       signal: startServerOperation.signal,
       server: nodeServer,
       port,
       portHint,
-      host,
+      hostname: hostnameToListen,
+    })
+
+    // normalize origins (remove :80 when port is 80 for instance)
+    Object.keys(serverOrigins).forEach((key) => {
+      serverOrigins[key] = new URL(`${serverOrigins[key]}:${port}`).origin
     })
 
     serviceController.callHooks("serverListening", { port })
@@ -179,6 +248,18 @@ export const startServer = async ({
   } finally {
     await startServerOperation.end()
   }
+
+  // the main server origin
+  // - when protocol is http
+  //   node-fetch do not apply local dns resolution to map localhost back to 127.0.0.1
+  //   despites localhost being mapped so we prefer to use the internal ip
+  //   (127.0.0.1)
+  // - when protocol is https
+  //   using the hostname becomes important because the certificate is generated
+  //   for hostnames, not for ips
+  //   so we prefer https://locahost or https://local_hostname
+  //   over the ip
+  const serverOrigin = serverOrigins.local
 
   // now the server is started (listening) it cannot be aborted anymore
   // (otherwise an AbortError is thrown to the code calling "startServer")
@@ -218,8 +299,6 @@ export const startServer = async ({
   }
 
   status = "opened"
-  const serverOrigins = await getServerOrigins({ protocol, host, port })
-  const serverOrigin = serverOrigins.local
 
   const removeConnectionErrorListener = listenServerConnectionError(
     nodeServer,
@@ -829,7 +908,9 @@ export const startServer = async ({
       const { WebSocketServer } = await import("ws")
       let websocketServer = new WebSocketServer({ noServer: true })
       const websocketOrigin =
-        protocol === "https" ? `wss://${host}:${port}` : `ws://${host}:${port}`
+        protocol === "https"
+          ? `wss://${hostname}:${port}`
+          : `ws://${hostname}:${port}`
       server.websocketOrigin = websocketOrigin
       const upgradeCallback = (nodeRequest, socket, head) => {
         websocketServer.handleUpgrade(
@@ -884,6 +965,7 @@ export const startServer = async ({
   Object.assign(server, {
     getStatus: () => status,
     port,
+    hostname,
     origin: serverOrigin,
     origins: serverOrigins,
     nodeServer,

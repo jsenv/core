@@ -6,7 +6,7 @@ const listen = async ({
   server,
   port,
   portHint,
-  host,
+  hostname,
 }) => {
   const listeningOperation = Abort.startOperation()
 
@@ -17,11 +17,11 @@ const listen = async ({
       listeningOperation.throwIfAborted()
       port = await findFreePort(portHint, {
         signal: listeningOperation.signal,
-        host,
+        hostname,
       })
     }
     listeningOperation.throwIfAborted()
-    port = await startListening({ server, port, host })
+    port = await startListening({ server, port, hostname })
     listeningOperation.addAbortCallback(() => stopListening(server))
     listeningOperation.throwIfAborted()
 
@@ -35,7 +35,7 @@ export const findFreePort = async (
   initialPort = 1,
   {
     signal = new AbortController().signal,
-    host = "127.0.0.1",
+    hostname = "127.0.0.1",
     min = 1,
     max = 65534,
     next = (port) => port + 1,
@@ -56,26 +56,26 @@ export const findFreePort = async (
       const nextPort = next(port)
       if (nextPort > max) {
         throw new Error(
-          `${host} has no available port between ${min} and ${max}`,
+          `${hostname} has no available port between ${min} and ${max}`,
         )
       }
-      return testUntil(nextPort, host)
+      return testUntil(nextPort, hostname)
     }
-    const freePort = await testUntil(initialPort, host)
+    const freePort = await testUntil(initialPort, hostname)
     return freePort
   } finally {
     await findFreePortOperation.end()
   }
 }
 
-const portIsFree = async (port, host) => {
+const portIsFree = async (port, hostname) => {
   const server = createServer()
 
   try {
     await startListening({
       server,
       port,
-      host,
+      hostname,
     })
   } catch (error) {
     if (error && error.code === "EADDRINUSE") {
@@ -91,7 +91,7 @@ const portIsFree = async (port, host) => {
   return true
 }
 
-const startListening = ({ server, port, host }) => {
+const startListening = ({ server, port, hostname }) => {
   return new Promise((resolve, reject) => {
     server.on("error", reject)
     server.on("listening", () => {
@@ -99,7 +99,7 @@ const startListening = ({ server, port, host }) => {
       // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
       resolve(server.address().port)
     })
-    server.listen(port, host)
+    server.listen(port, hostname)
   })
 }
 
