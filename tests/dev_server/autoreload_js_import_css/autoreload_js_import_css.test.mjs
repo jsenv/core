@@ -103,6 +103,7 @@ const test = async ({
       }
       assert({ actual, expected })
     }
+    await new Promise((resolve) => setTimeout(resolve, 500))
     cssFileContent.update(`body { background: green; }`)
     await new Promise((resolve) => setTimeout(resolve, 500))
     {
