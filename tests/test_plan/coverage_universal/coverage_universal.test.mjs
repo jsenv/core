@@ -1,6 +1,7 @@
 import { assert } from "@jsenv/assert"
 
 import {
+  startDevServer,
   executeTestPlan,
   nodeWorkerThread,
   chromium,
@@ -8,9 +9,15 @@ import {
   webkit,
 } from "@jsenv/core"
 
+const devServer = await startDevServer({
+  logLevel: "warn",
+  rootDirectoryUrl: new URL("./", import.meta.url),
+  keepProcessAlive: false,
+})
 const { testPlanCoverage } = await executeTestPlan({
   logLevel: "warn",
   rootDirectoryUrl: new URL("./", import.meta.url),
+  devServerOrigin: devServer.origin,
   testPlan: {
     "./main.html": {
       chromium: {

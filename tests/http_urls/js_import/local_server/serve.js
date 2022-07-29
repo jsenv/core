@@ -4,7 +4,7 @@ const serverDirectoryUrl = new URL("./client/", import.meta.url)
 
 export const localServer = await startServer({
   logLevel: "warn",
-  host: "127.0.0.1",
+  hostname: "127.0.0.1",
   port: 9999,
   keepProcessAlive: false,
   services: [

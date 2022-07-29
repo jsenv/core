@@ -26,7 +26,7 @@ server.unref()
 const port = await listen({
   server,
   port: 0,
-  host: "127.0.0.1",
+  hostname: "127.0.0.1",
 })
 
 // http request
@@ -83,7 +83,7 @@ if (!process.env.JSENV) {
   })
   try {
     const request = https.get({
-      host: "127.0.0.1",
+      hostname: "127.0.0.1",
       port,
       rejectUnauthorized: true,
     })

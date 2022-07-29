@@ -27,7 +27,6 @@ export const createRuntimeFromPlaywright = ({
     type: "browser",
     name: browserName,
     version: browserVersion,
-    needsServer: true,
   }
   let browserAndContextPromise
   runtime.run = async ({
@@ -35,7 +34,7 @@ export const createRuntimeFromPlaywright = ({
     logger,
     rootDirectoryUrl,
     fileRelativeUrl,
-    server,
+    devServerOrigin,
 
     // measurePerformance,
     collectPerformance,
@@ -98,7 +97,19 @@ export const createRuntimeFromPlaywright = ({
       }
       await disconnected
     }
-    const page = await browserContext.newPage()
+    const coverageInHeaders =
+      coverageEnabled &&
+      (!coveragePlaywrightAPIAvailable ||
+        coverageMethodForBrowsers !== "playwright_api")
+    const page = await browserContext.newPage({
+      extraHTTPHeaders: {
+        ...(coverageInHeaders
+          ? {
+              "x-coverage-istanbul": JSON.stringify(coverageConfig),
+            }
+          : {}),
+      },
+    })
     const closePage = async () => {
       try {
         await page.close()
@@ -128,7 +139,7 @@ export const createRuntimeFromPlaywright = ({
             (v8CoveragesWithWebUrl) => {
               const fsUrl = moveUrl({
                 url: v8CoveragesWithWebUrl.url,
-                from: `${server.origin}/`,
+                from: `${devServerOrigin}/`,
                 to: rootDirectoryUrl,
                 preferAbsolute: true,
               })
@@ -202,7 +213,7 @@ export const createRuntimeFromPlaywright = ({
       })
     }
 
-    const fileClientUrl = new URL(fileRelativeUrl, `${server.origin}/`).href
+    const fileClientUrl = new URL(fileRelativeUrl, `${devServerOrigin}/`).href
 
     // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-console
     const removeConsoleListener = registerEvent({
@@ -302,7 +313,7 @@ export const createRuntimeFromPlaywright = ({
                 const { exceptionSource } = returnValue
                 const error = evalException(exceptionSource, {
                   rootDirectoryUrl,
-                  server,
+                  devServerOrigin,
                   transformErrorHook,
                 })
                 cb({
@@ -525,13 +536,13 @@ const registerEvent = ({ object, eventType, callback }) => {
 
 const evalException = (
   exceptionSource,
-  { rootDirectoryUrl, server, transformErrorHook },
+  { rootDirectoryUrl, devServerOrigin, transformErrorHook },
 ) => {
   const script = new Script(exceptionSource, { filename: "" })
   const error = script.runInThisContext()
   if (error && error instanceof Error) {
     const remoteRootRegexp = new RegExp(
-      escapeRegexpSpecialChars(`${server.origin}/`),
+      escapeRegexpSpecialChars(`${devServerOrigin}/`),
       "g",
     )
     error.stack = error.stack.replace(remoteRootRegexp, rootDirectoryUrl)

@@ -1,15 +1,22 @@
 import { assert } from "@jsenv/assert"
 
 import {
+  startDevServer,
   executeTestPlan,
   chromium,
   nodeChildProcess,
   nodeWorkerThread,
 } from "@jsenv/core"
 
+const devServer = await startDevServer({
+  logLevel: "warn",
+  rootDirectoryUrl: new URL("./client/", import.meta.url),
+  keepProcessAlive: false,
+})
 const { testPlanCoverage } = await executeTestPlan({
   logLevel: "off",
   rootDirectoryUrl: new URL("./client/", import.meta.url),
+  devServerOrigin: devServer.origin,
   testPlan: {
     "./main.html": {
       chromium: {

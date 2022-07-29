@@ -4,23 +4,36 @@
  * - npm test:coverage
  */
 
-import { executeTestPlan, chromium, webkit } from "@jsenv/core"
+import { pingServer, executeTestPlan, chromium, webkit } from "@jsenv/core"
 
 import { rootDirectoryUrl, plugins } from "../jsenv.config.mjs"
 
-await executeTestPlan({
-  rootDirectoryUrl,
-  plugins,
-  testPlan: {
-    "./tests/**/*.test.html": {
-      chromium: {
-        runtime: chromium,
-      },
-      webkit: {
-        runtime: webkit,
+const devServerOrigin = "http://127.0.0.1:3401"
+const devServerStarted = await pingServer(devServerOrigin)
+let devServer
+if (!devServerStarted) {
+  devServer = (await import("./start_dev_server.mjs")).devServer
+}
+try {
+  await executeTestPlan({
+    rootDirectoryUrl,
+    devServerOrigin,
+    plugins,
+    testPlan: {
+      "./tests/**/*.test.html": {
+        chromium: {
+          runtime: chromium,
+        },
+        webkit: {
+          runtime: webkit,
+        },
       },
     },
-  },
-  coverageEnabled: process.argv.includes("--coverage"),
-  coverageMethodForBrowsers: "istanbul",
-})
+    coverageEnabled: process.argv.includes("--coverage"),
+    coverageMethodForBrowsers: "istanbul",
+  })
+} finally {
+  if (devServer) {
+    devServer.stop()
+  }
+}

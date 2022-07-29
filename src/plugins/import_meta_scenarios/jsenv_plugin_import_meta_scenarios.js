@@ -28,7 +28,7 @@ export const jsenvPluginImportMetaScenarios = () => {
           babelPlugins: [babelPluginMetadataImportMetaScenarios],
           urlInfo,
         })
-        const { dev = [], test = [], build = [] } = metadata.importMetaScenarios
+        const { dev = [], build = [] } = metadata.importMetaScenarios
         const replacements = []
         const replace = (path, value) => {
           replacements.push({ path, value })
@@ -37,9 +37,6 @@ export const jsenvPluginImportMetaScenarios = () => {
           // during build ensure replacement for tree-shaking
           dev.forEach((path) => {
             replace(path, "undefined")
-          })
-          test.forEach((path) => {
-            replace(path, context.scenarios.test ? "true" : "undefined")
           })
           build.forEach((path) => {
             replace(path, "true")
@@ -52,11 +49,6 @@ export const jsenvPluginImportMetaScenarios = () => {
           dev.forEach((path) => {
             replace(path, "true")
           })
-          if (context.scenarios.test) {
-            test.forEach((path) => {
-              replace(path, "true")
-            })
-          }
         }
         const magicSource = createMagicSource(urlInfo.content)
         replacements.forEach(({ path, value }) => {

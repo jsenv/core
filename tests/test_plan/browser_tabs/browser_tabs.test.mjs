@@ -4,11 +4,17 @@
 
 import { assert } from "@jsenv/assert"
 
-import { executeTestPlan, chromium } from "@jsenv/core"
+import { startDevServer, executeTestPlan, chromium } from "@jsenv/core"
 
-const result = await executeTestPlan({
-  rootDirectoryUrl: new URL("./client/", import.meta.url),
+const devServer = await startDevServer({
   logLevel: "warn",
+  rootDirectoryUrl: new URL("./client/", import.meta.url),
+  keepProcessAlive: false,
+})
+const result = await executeTestPlan({
+  logLevel: "warn",
+  rootDirectoryUrl: new URL("./client/", import.meta.url),
+  devServerOrigin: devServer.origin,
   testPlan: {
     "./*.html": {
       a: {

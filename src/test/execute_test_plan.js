@@ -17,9 +17,10 @@ import { generateCoverageTextLog } from "./coverage/coverage_reporter_text_log.j
 import { executePlan } from "./execute_plan.js"
 
 /**
- * Execute a list of files and log how it goes
+ * Execute a list of files and log how it goes.
  * @param {Object} testPlanParameters
  * @param {string|url} testPlanParameters.rootDirectoryUrl Root directory of the project
+ * @param {string|url} [testPlanParameters.serverOrigin=undefined] Jsenv dev server origin; required when executing test on browsers
  * @param {Object} testPlanParameters.testPlan Object associating patterns leading to files to runtimes where they should be executed
  * @param {boolean} [testPlanParameters.completedExecutionLogAbbreviation=false] Abbreviate completed execution information to shorten terminal output
  * @param {boolean} [testPlanParameters.completedExecutionLogMerging=false] Merge completed execution logs to shorten terminal output
@@ -45,6 +46,7 @@ export const executeTestPlan = async ({
   completedExecutionLogAbbreviation = false,
   completedExecutionLogMerging = false,
   rootDirectoryUrl,
+  devServerOrigin,
 
   testPlan,
   updateProcessExitCode = true,
@@ -79,18 +81,6 @@ export const executeTestPlan = async ({
   coverageReportTextLog = true,
   coverageReportJsonFile = process.env.CI ? null : "./.coverage/coverage.json",
   coverageReportHtmlDirectory = process.env.CI ? "./.coverage/" : null,
-
-  sourcemaps = "inline",
-  plugins = [],
-  nodeEsmResolution,
-  fileSystemMagicResolution,
-  writeGeneratedFiles = false,
-
-  protocol,
-  privateKey,
-  certificate,
-  host,
-  port,
 }) => {
   const logger = createLogger({ logLevel })
   rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
@@ -150,6 +140,7 @@ export const executeTestPlan = async ({
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
     rootDirectoryUrl,
+    devServerOrigin,
 
     maxExecutionsInParallel,
     defaultMsAllocatedPerExecution,
@@ -165,19 +156,6 @@ export const executeTestPlan = async ({
     coverageMethodForNodeJs,
     coverageV8ConflictWarning,
     coverageTempDirectoryRelativeUrl,
-
-    scenarios: { dev: true, test: true },
-    sourcemaps,
-    plugins,
-    nodeEsmResolution,
-    fileSystemMagicResolution,
-    writeGeneratedFiles,
-
-    protocol,
-    privateKey,
-    certificate,
-    host,
-    port,
   })
   if (
     updateProcessExitCode &&

@@ -22,7 +22,7 @@ export const startDevServer = async ({
   http2 = false,
   certificate,
   privateKey,
-  host,
+  hostname,
   port = 3456,
   acceptAnyIp,
   keepProcessAlive = true,
@@ -150,7 +150,7 @@ export const startDevServer = async ({
     http2,
     certificate,
     privateKey,
-    host,
+    hostname,
     port,
     services,
 

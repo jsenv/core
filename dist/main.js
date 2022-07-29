@@ -12,10 +12,10 @@ import { createMagicSource, composeTwoSourcemaps, getOriginalPosition, sourcemap
 import { parseHtmlString, stringifyHtmlAst, visitHtmlNodes, getHtmlNodeAttribute, analyzeScriptNode, setHtmlNodeAttributes, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, applyPostCss, postCssPluginUrlVisitor, parseJsUrls, getHtmlNodeText, setHtmlNodeText, applyBabelPlugins, injectScriptNodeAsEarlyAsPossible, createHtmlNode, findHtmlNode, removeHtmlNode, removeHtmlNodeText, transpileWithParcel, injectJsImport, minifyWithParcel, analyzeLinkNode } from "@jsenv/ast";
 import { createRequire } from "node:module";
 import babelParser from "@babel/parser";
+import net, { createServer, isIP } from "node:net";
 import http from "node:http";
 import cluster from "node:cluster";
 import { performance as performance$1 } from "node:perf_hooks";
-import net, { createServer } from "node:net";
 import { Readable, Stream, Writable } from "node:stream";
 import { Http2ServerResponse } from "node:http2";
 import { lookup } from "node:dns";
@@ -13742,7 +13742,6 @@ const jsenvPluginImportMetaScenarios = () => {
         });
         const {
           dev = [],
-          test = [],
           build = []
         } = metadata.importMetaScenarios;
         const replacements = [];
@@ -13759,9 +13758,6 @@ const jsenvPluginImportMetaScenarios = () => {
           dev.forEach(path => {
             replace(path, "undefined");
           });
-          test.forEach(path => {
-            replace(path, context.scenarios.test ? "true" : "undefined");
-          });
           build.forEach(path => {
             replace(path, "true");
           });
@@ -13773,12 +13769,6 @@ const jsenvPluginImportMetaScenarios = () => {
           dev.forEach(path => {
             replace(path, "true");
           });
-
-          if (context.scenarios.test) {
-            test.forEach(path => {
-              replace(path, "true");
-            });
-          }
         }
 
         const magicSource = createMagicSource(urlInfo.content);
@@ -14060,6 +14050,87 @@ export default inlineContent.text`,
     }
   };
   return [asJsonModule, asCssModule, asTextModule];
+};
+
+const babelPluginInstrument = (api, {
+  rootDirectoryUrl,
+  useInlineSourceMaps = false,
+  coverageConfig = {
+    "./**/*": true
+  }
+}) => {
+  const {
+    programVisitor
+  } = requireFromJsenv("istanbul-lib-instrument");
+  const {
+    types
+  } = api;
+  const associations = URL_META.resolveAssociations({
+    cover: coverageConfig
+  }, rootDirectoryUrl);
+
+  const shouldInstrument = url => {
+    return URL_META.applyAssociations({
+      url,
+      associations
+    }).cover;
+  };
+
+  return {
+    name: "transform-instrument",
+    visitor: {
+      Program: {
+        enter(path) {
+          const {
+            file
+          } = this;
+          const {
+            opts
+          } = file;
+
+          if (!opts.sourceFileName) {
+            console.warn(`cannot instrument file when "sourceFileName" option is not set`);
+            return;
+          }
+
+          const fileUrl = fileSystemPathToUrl$1(opts.sourceFileName);
+
+          if (!shouldInstrument(fileUrl)) {
+            return;
+          }
+
+          this.__dv__ = null;
+          let inputSourceMap;
+
+          if (useInlineSourceMaps) {
+            // https://github.com/istanbuljs/babel-plugin-istanbul/commit/a9e15643d249a2985e4387e4308022053b2cd0ad#diff-1fdf421c05c1140f6d71444ea2b27638R65
+            inputSourceMap = opts.inputSourceMap || file.inputMap ? file.inputMap.sourcemap : null;
+          } else {
+            inputSourceMap = opts.inputSourceMap;
+          }
+
+          this.__dv__ = programVisitor(types, opts.filenameRelative || opts.filename, {
+            coverageVariable: "__coverage__",
+            inputSourceMap
+          });
+
+          this.__dv__.enter(path);
+        },
+
+        exit(path) {
+          if (!this.__dv__) {
+            return;
+          }
+
+          const object = this.__dv__.exit(path); // object got two properties: fileCoverage and sourceMappingURL
+
+
+          this.file.metadata.coverage = object.fileCoverage;
+        }
+
+      }
+    }
+  };
 };
 
 const versionFromValue = value => {
@@ -15242,6 +15313,17 @@ const jsenvPluginBabel = ({
       isJsModule,
       getImportSpecifier
     });
+
+    if (context.scenarios.dev) {
+      const requestHeaders = context.request.headers;
+
+      if (requestHeaders["x-coverage-instanbul"]) {
+        babelPluginStructure["transform-instrument"] = [babelPluginInstrument, {
+          rootDirectoryUrl: context.rootDirectoryUrl,
+          coverageConfig: JSON.parse(requestHeaders["x-coverage-instanbul"])
+        }];
+      }
+    }
 
     if (getCustomBabelPlugins) {
       Object.assign(babelPluginStructure, getCustomBabelPlugins(context));
@@ -18367,101 +18449,12 @@ const statusIsClientError = status => status >= 400 && status < 500;
 
 const statusIsServerError = status => status >= 500 && status < 600;
 
-const applyDnsResolution = async (hostname, {
-  verbatim = false
-} = {}) => {
-  const dnsResolution = await new Promise((resolve, reject) => {
-    lookup(hostname, {
-      verbatim
-    }, (error, address, family) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve({
-          address,
-          family
-        });
-      }
-    });
-  });
-  return dnsResolution;
-};
-
-const getServerOrigins = async ({
-  protocol,
-  host,
-  port
-}) => {
-  const isLocal = LOOPBACK_HOSTNAMES.includes(host);
-  const localhostDnsResolution = await applyDnsResolution("localhost");
-  const localOrigin = createServerOrigin({
-    protocol,
-    hostname: localhostDnsResolution.address === "127.0.0.1" ? "localhost" : "127.0.0.1",
-    port
-  });
-
-  if (isLocal) {
-    return {
-      local: localOrigin
-    };
-  }
-
-  const isAnyIp = WILDCARD_HOSTNAMES.includes(host);
-  const networkOrigin = createServerOrigin({
-    protocol,
-    hostname: isAnyIp ? getExternalIp() : host,
-    port
-  });
-  return {
-    local: localOrigin,
-    network: networkOrigin
-  };
-};
-const LOOPBACK_HOSTNAMES = ["localhost", "127.0.0.1", "::1", "0000:0000:0000:0000:0000:0000:0000:0001"];
-const WILDCARD_HOSTNAMES = [undefined, "0.0.0.0", "::", "0000:0000:0000:0000:0000:0000:0000:0000"];
-
-const createServerOrigin = ({
-  protocol,
-  hostname,
-  port
-}) => {
-  const url = new URL("https://127.0.0.1:80");
-  url.protocol = protocol;
-  url.hostname = hostname;
-  url.port = port;
-  return url.origin;
-};
-
-const getExternalIp = () => {
-  const networkInterfaceMap = networkInterfaces();
-  let internalIPV4NetworkAddress;
-  Object.keys(networkInterfaceMap).find(key => {
-    const networkAddressArray = networkInterfaceMap[key];
-    return networkAddressArray.find(networkAddress => {
-      if (networkAddress.internal) return false;
-      if (!isIpV4(networkAddress)) return false;
-      internalIPV4NetworkAddress = networkAddress;
-      return true;
-    });
-  });
-  return internalIPV4NetworkAddress ? internalIPV4NetworkAddress.address : null;
-};
-
-const isIpV4 = networkAddress => {
-  // node 18+
-  if (typeof networkAddress.family === "number") {
-    return networkAddress.family === 4;
-  }
-
-  return networkAddress.family === "IPv4";
-};
-
 const listen = async ({
   signal = new AbortController().signal,
   server,
   port,
   portHint,
-  host
+  hostname
 }) => {
   const listeningOperation = Abort.startOperation();
 
@@ -18472,7 +18465,7 @@ const listen = async ({
       listeningOperation.throwIfAborted();
       port = await findFreePort(portHint, {
         signal: listeningOperation.signal,
-        host
+        hostname
       });
     }
 
@@ -18480,7 +18473,7 @@ const listen = async ({
     port = await startListening({
       server,
       port,
-      host
+      hostname
     });
     listeningOperation.addAbortCallback(() => stopListening(server));
     listeningOperation.throwIfAborted();
@@ -18492,7 +18485,7 @@ const listen = async ({
 
 const findFreePort = async (initialPort = 1, {
   signal = new AbortController().signal,
-  host = "127.0.0.1",
+  hostname = "127.0.0.1",
   min = 1,
   max = 65534,
   next = port => port + 1
@@ -18514,27 +18507,27 @@ const findFreePort = async (initialPort = 1, {
       const nextPort = next(port);
 
       if (nextPort > max) {
-        throw new Error(`${host} has no available port between ${min} and ${max}`);
+        throw new Error(`${hostname} has no available port between ${min} and ${max}`);
       }
 
-      return testUntil(nextPort, host);
+      return testUntil(nextPort, hostname);
     };
 
-    const freePort = await testUntil(initialPort, host);
+    const freePort = await testUntil(initialPort, hostname);
     return freePort;
   } finally {
     await findFreePortOperation.end();
   }
 };
 
-const portIsFree = async (port, host) => {
+const portIsFree = async (port, hostname) => {
   const server = createServer();
 
   try {
     await startListening({
       server,
       port,
-      host
+      hostname
     });
   } catch (error) {
     if (error && error.code === "EADDRINUSE") {
@@ -18555,7 +18548,7 @@ const portIsFree = async (port, host) => {
 const startListening = ({
   server,
   port,
-  host
+  hostname
 }) => {
   return new Promise((resolve, reject) => {
     server.on("error", reject);
@@ -18564,7 +18557,7 @@ const startListening = ({
       // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
       resolve(server.address().port);
     });
-    server.listen(port, host);
+    server.listen(port, hostname);
   });
 };
 
@@ -18803,6 +18796,134 @@ const STOP_REASON_PROCESS_BEFORE_EXIT = createReason("process before exit");
 const STOP_REASON_PROCESS_EXIT = createReason("process exit");
 const STOP_REASON_NOT_SPECIFIED = createReason("not specified");
 
+const createIpGetters = () => {
+  const networkAddresses = [];
+  const networkInterfaceMap = networkInterfaces();
+
+  for (const key of Object.keys(networkInterfaceMap)) {
+    for (const networkAddress of networkInterfaceMap[key]) {
+      networkAddresses.push(networkAddress);
+    }
+  }
+
+  return {
+    getFirstInternalIp: ({
+      preferIpv6
+    }) => {
+      const isPref = preferIpv6 ? isIpV6 : isIpV4;
+      let firstInternalIp;
+
+      for (const networkAddress of networkAddresses) {
+        if (networkAddress.internal) {
+          firstInternalIp = networkAddress.address;
+
+          if (isPref(networkAddress)) {
+            break;
+          }
+        }
+      }
+
+      return firstInternalIp;
+    },
+    getFirstExternalIp: ({
+      preferIpv6
+    }) => {
+      const isPref = preferIpv6 ? isIpV6 : isIpV4;
+      let firstExternalIp;
+
+      for (const networkAddress of networkAddresses) {
+        if (!networkAddress.internal) {
+          firstExternalIp = networkAddress.address;
+
+          if (isPref(networkAddress)) {
+            break;
+          }
+        }
+      }
+
+      return firstExternalIp;
+    }
+  };
+};
+
+const isIpV4 = networkAddress => {
+  // node 18.5
+  if (typeof networkAddress.family === "number") {
+    return networkAddress.family === 4;
+  }
+
+  return networkAddress.family === "IPv4";
+};
+
+const isIpV6 = networkAddress => !isIpV4(networkAddress);
+
+const parseHostname = hostname => {
+  if (hostname === "0.0.0.0") {
+    return {
+      type: "ip",
+      label: "unspecified",
+      version: 4
+    };
+  }
+
+  if (hostname === "::" || hostname === "0000:0000:0000:0000:0000:0000:0000:0000") {
+    return {
+      type: "ip",
+      label: "unspecified",
+      version: 6
+    };
+  }
+
+  if (hostname === "127.0.0.1") {
+    return {
+      type: "ip",
+      label: "loopback",
+      version: 4
+    };
+  }
+
+  if (hostname === "::1" || hostname === "0000:0000:0000:0000:0000:0000:0000:0001") {
+    return {
+      type: "ip",
+      label: "loopback",
+      version: 6
+    };
+  }
+
+  const ipVersion = isIP(hostname);
+
+  if (ipVersion === 0) {
+    return {
+      type: "hostname"
+    };
+  }
+
+  return {
+    type: "ip",
+    version: ipVersion
+  };
+};
+
+const applyDnsResolution = async (hostname, {
+  verbatim = false
+} = {}) => {
+  const dnsResolution = await new Promise((resolve, reject) => {
+    lookup(hostname, {
+      verbatim
+    }, (error, address, family) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve({
+          address,
+          family
+        });
+      }
+    });
+  });
+  return dnsResolution;
+};
+
 const startServer = async ({
   signal = new AbortController().signal,
   logLevel,
@@ -18814,7 +18935,8 @@ const startServer = async ({
   redirectHttpToHttps,
   allowHttpRequestOnHttps = false,
   acceptAnyIp = false,
-  host = acceptAnyIp ? undefined : "localhost",
+  preferIpv6,
+  hostname = "localhost",
   port = 0,
   // assign a random available port
   portHint,
@@ -18844,6 +18966,10 @@ const startServer = async ({
     }));
   }
 } = {}) => {
+  const logger = createLogger({
+    logLevel
+  });
+
   if (protocol !== "http" && protocol !== "https") {
     throw new Error(`protocol must be http or https, got ${protocol}`);
   }
@@ -18861,10 +18987,6 @@ const startServer = async ({
   if (http2 && protocol !== "https") {
     throw new Error(`http2 needs "https" but protocol is "${protocol}"`);
   }
-
-  const logger = createLogger({
-    logLevel
-  });
 
   if (redirectHttpToHttps === undefined && protocol === "https" && !allowHttpRequestOnHttps) {
     redirectHttpToHttps = true;
@@ -18898,6 +19020,10 @@ const startServer = async ({
   let nodeServer;
   const startServerOperation = Abort.startOperation();
   const stopCallbackList = createCallbackListNotifiedOnce();
+  const serverOrigins = {
+    local: "" // favors hostname when possible
+
+  };
 
   try {
     startServerOperation.addAbortSignal(signal);
@@ -18925,12 +19051,85 @@ const startServer = async ({
       nodeServer.unref();
     }
 
+    const createOrigin = hostname => {
+      if (isIP(hostname) === 6) {
+        return `${protocol}://[${hostname}]`;
+      }
+
+      return `${protocol}://${hostname}`;
+    };
+
+    const ipGetters = createIpGetters();
+    let hostnameToListen;
+
+    if (acceptAnyIp) {
+      const firstInternalIp = ipGetters.getFirstInternalIp({
+        preferIpv6
+      });
+      serverOrigins.local = createOrigin(firstInternalIp);
+      serverOrigins.localip = createOrigin(firstInternalIp);
+      const firstExternalIp = ipGetters.getFirstExternalIp({
+        preferIpv6
+      });
+      serverOrigins.externalip = createOrigin(firstExternalIp);
+      hostnameToListen = preferIpv6 ? "::" : "0.0.0.0";
+    } else {
+      hostnameToListen = hostname;
+    }
+
+    const hostnameInfo = parseHostname(hostname);
+
+    if (hostnameInfo.type === "ip") {
+      if (acceptAnyIp) {
+        throw new Error(`hostname cannot be an ip when acceptAnyIp is enabled, got ${hostname}`);
+      }
+
+      preferIpv6 = hostnameInfo.version === 6;
+      const firstInternalIp = ipGetters.getFirstInternalIp({
+        preferIpv6
+      });
+      serverOrigins.local = createOrigin(firstInternalIp);
+      serverOrigins.localip = createOrigin(firstInternalIp);
+
+      if (hostnameInfo.label === "unspecified") {
+        const firstExternalIp = ipGetters.getFirstExternalIp({
+          preferIpv6
+        });
+        serverOrigins.externalip = createOrigin(firstExternalIp);
+      } else if (hostnameInfo.label === "loopback") {} else {
+        serverOrigins.local = createOrigin(hostname);
+      }
+    } else {
+      const hostnameDnsResolution = await applyDnsResolution(hostname, {
+        verbatim: true
+      });
+
+      if (hostnameDnsResolution) {
+        const hostnameIp = hostnameDnsResolution.address;
+        serverOrigins.localip = createOrigin(hostnameIp);
+        serverOrigins.local = createOrigin(hostname);
+      } else {
+        const firstInternalIp = ipGetters.getFirstInternalIp({
+          preferIpv6
+        }); // fallback to internal ip because there is no ip
+        // associated to this hostname on operating system (in hosts file)
+
+        hostname = firstInternalIp;
+        hostnameToListen = firstInternalIp;
+        serverOrigins.local = createOrigin(firstInternalIp);
+      }
+    }
+
     port = await listen({
       signal: startServerOperation.signal,
       server: nodeServer,
       port,
       portHint,
-      host
+      hostname: hostnameToListen
+    }); // normalize origins (remove :80 when port is 80 for instance)
+
+    Object.keys(serverOrigins).forEach(key => {
+      serverOrigins[key] = new URL(`${serverOrigins[key]}:${port}`).origin;
     });
     serviceController.callHooks("serverListening", {
       port
@@ -18941,11 +19140,22 @@ const startServer = async ({
     startServerOperation.throwIfAborted();
   } finally {
     await startServerOperation.end();
-  } // now the server is started (listening) it cannot be aborted anymore
+  } // the main server origin
+  // - when protocol is http
+  //   node-fetch do not apply local dns resolution to map localhost back to 127.0.0.1
+  //   despites localhost being mapped so we prefer to use the internal ip
+  //   (127.0.0.1)
+  // - when protocol is https
+  //   using the hostname becomes important because the certificate is generated
+  //   for hostnames, not for ips
+  //   so we prefer https://locahost or https://local_hostname
+  //   over the ip
+
+
+  const serverOrigin = serverOrigins.local; // now the server is started (listening) it cannot be aborted anymore
   // (otherwise an AbortError is thrown to the code calling "startServer")
   // we can proceed to create a stop function to stop it gacefully
   // and add a request handler
-
 
   stopCallbackList.add(({
     reason
@@ -18984,12 +19194,6 @@ const startServer = async ({
   };
 
   status = "opened";
-  const serverOrigins = await getServerOrigins({
-    protocol,
-    host,
-    port
-  });
-  const serverOrigin = serverOrigins.local;
   const removeConnectionErrorListener = listenServerConnectionError(nodeServer, onError);
   stopCallbackList.add(removeConnectionErrorListener);
   const connectionsTracker = trackServerPendingConnections(nodeServer, {
@@ -19609,7 +19813,7 @@ const startServer = async ({
       let websocketServer = new WebSocketServer({
         noServer: true
       });
-      const websocketOrigin = protocol === "https" ? `wss://${host}:${port}` : `ws://${host}:${port}`;
+      const websocketOrigin = protocol === "https" ? `wss://${hostname}:${port}` : `ws://${hostname}:${port}`;
       server.websocketOrigin = websocketOrigin;
 
       const upgradeCallback = (nodeRequest, socket, head) => {
@@ -19650,6 +19854,7 @@ const startServer = async ({
   Object.assign(server, {
     getStatus: () => status,
     port,
+    hostname,
     origin: serverOrigin,
     origins: serverOrigins,
     nodeServer,
@@ -25261,7 +25466,7 @@ const startOmegaServer = async ({
   privateKey,
   certificate,
   acceptAnyIp,
-  host,
+  hostname,
   port = 0,
   keepProcessAlive = false,
   onStop = () => {},
@@ -25302,7 +25507,7 @@ const startOmegaServer = async ({
     certificate,
     privateKey,
     acceptAnyIp,
-    host,
+    hostname,
     port,
     requestWaitingMs: 60_1000,
     services: [jsenvServiceCORS({
@@ -25408,7 +25613,7 @@ const startDevServer = async ({
   http2 = false,
   certificate,
   privateKey,
-  host,
+  hostname,
   port = 3456,
   acceptAnyIp,
   keepProcessAlive = true,
@@ -25548,7 +25753,7 @@ const startDevServer = async ({
     http2,
     certificate,
     privateKey,
-    host,
+    hostname,
     port,
     services,
     rootDirectoryUrl,
@@ -25649,87 +25854,6 @@ const generateCoverageTextLog = (coverage, {
     skipFull: coverageReportSkipFull
   });
   report.execute(context);
-};
-
-const babelPluginInstrument = (api, {
-  rootDirectoryUrl,
-  useInlineSourceMaps = false,
-  coverageConfig = {
-    "./**/*": true
-  }
-}) => {
-  const {
-    programVisitor
-  } = requireFromJsenv("istanbul-lib-instrument");
-  const {
-    types
-  } = api;
-  const associations = URL_META.resolveAssociations({
-    cover: coverageConfig
-  }, rootDirectoryUrl);
-
-  const shouldInstrument = url => {
-    return URL_META.applyAssociations({
-      url,
-      associations
-    }).cover;
-  };
-
-  return {
-    name: "transform-instrument",
-    visitor: {
-      Program: {
-        enter(path) {
-          const {
-            file
-          } = this;
-          const {
-            opts
-          } = file;
-
-          if (!opts.sourceFileName) {
-            console.warn(`cannot instrument file when "sourceFileName" option is not set`);
-            return;
-          }
-
-          const fileUrl = fileSystemPathToUrl$1(opts.sourceFileName);
-
-          if (!shouldInstrument(fileUrl)) {
-            return;
-          }
-
-          this.__dv__ = null;
-          let inputSourceMap;
-
-          if (useInlineSourceMaps) {
-            // https://github.com/istanbuljs/babel-plugin-istanbul/commit/a9e15643d249a2985e4387e4308022053b2cd0ad#diff-1fdf421c05c1140f6d71444ea2b27638R65
-            inputSourceMap = opts.inputSourceMap || file.inputMap ? file.inputMap.sourcemap : null;
-          } else {
-            inputSourceMap = opts.inputSourceMap;
-          }
-
-          this.__dv__ = programVisitor(types, opts.filenameRelative || opts.filename, {
-            coverageVariable: "__coverage__",
-            inputSourceMap
-          });
-
-          this.__dv__.enter(path);
-        },
-
-        exit(path) {
-          if (!this.__dv__) {
-            return;
-          }
-
-          const object = this.__dv__.exit(path); // object got two properties: fileCoverage and sourceMappingURL
-
-
-          this.file.metadata.coverage = object.fileCoverage;
-        }
-
-      }
-    }
-  };
 };
 
 const readNodeV8CoverageDirectory = async ({
@@ -26424,6 +26548,41 @@ const run = async ({
   }
 };
 
+const pingServer = async url => {
+  const server = createServer();
+  const {
+    hostname,
+    port
+  } = new URL(url);
+
+  try {
+    await new Promise((resolve, reject) => {
+      server.on("error", reject);
+      server.on("listening", () => {
+        resolve();
+      });
+      server.listen(port, hostname);
+    });
+  } catch (error) {
+    if (error && error.code === "EADDRINUSE") {
+      return true;
+    }
+
+    if (error && error.code === "EACCES") {
+      return true;
+    }
+
+    throw error;
+  }
+
+  await new Promise((resolve, reject) => {
+    server.on("error", reject);
+    server.on("close", resolve);
+    server.close();
+  });
+  return false;
+};
+
 const ensureGlobalGc = () => {
   if (!global.gc) {
     v8.setFlagsFromString("--expose_gc");
@@ -26859,8 +27018,8 @@ const executePlan = async (plan, {
   completedExecutionLogMerging,
   completedExecutionLogAbbreviation,
   rootDirectoryUrl,
+  devServerOrigin,
   keepRunning,
-  services,
   defaultMsAllocatedPerExecution,
   maxExecutionsInParallel,
   failFast,
@@ -26873,18 +27032,6 @@ const executePlan = async (plan, {
   coverageMethodForNodeJs,
   coverageV8ConflictWarning,
   coverageTempDirectoryRelativeUrl,
-  scenarios,
-  sourcemaps,
-  plugins,
-  nodeEsmResolution,
-  fileSystemMagicResolution,
-  transpilation,
-  writeGeneratedFiles,
-  protocol,
-  privateKey,
-  certificate,
-  host,
-  port,
   beforeExecutionCallback = () => {},
   afterExecutionCallback = () => {}
 } = {}) => {
@@ -26908,7 +27055,7 @@ const executePlan = async (plan, {
       if (runtime) {
         runtimes[runtime.name] = runtime.version;
 
-        if (runtime.needsServer) {
+        if (runtime.type === "browser") {
           someNeedsServer = true;
         }
 
@@ -26999,6 +27146,7 @@ const executePlan = async (plan, {
 
     let runtimeParams = {
       rootDirectoryUrl,
+      devServerOrigin,
       coverageEnabled,
       coverageConfig,
       coverageMethodForBrowsers,
@@ -27007,48 +27155,15 @@ const executePlan = async (plan, {
     };
 
     if (someNeedsServer) {
-      const server = await startOmegaServer({
-        signal: multipleExecutionsOperation.signal,
-        logLevel: "warn",
-        keepProcessAlive: false,
-        port,
-        host,
-        protocol,
-        certificate,
-        privateKey,
-        services,
-        rootDirectoryUrl,
-        scenarios,
-        runtimeCompat: runtimes,
-        plugins,
-        htmlSupervisor: true,
-        nodeEsmResolution,
-        fileSystemMagicResolution,
-        transpilation: { ...transpilation,
-          getCustomBabelPlugins: ({
-            clientRuntimeCompat
-          }) => {
-            if (coverageEnabled && (coverageMethodForBrowsers !== "playwright_api" || Object.keys(clientRuntimeCompat)[0] !== "chrome")) {
-              return {
-                "transform-instrument": [babelPluginInstrument, {
-                  rootDirectoryUrl,
-                  coverageConfig
-                }]
-              };
-            }
+      if (!devServerOrigin) {
+        throw new TypeError(`devServerOrigin is required when running tests on browser(s)`);
+      }
 
-            return {};
-          }
-        },
-        sourcemaps,
-        writeGeneratedFiles
-      });
-      multipleExecutionsOperation.addEndCallback(async () => {
-        await server.stop();
-      });
-      runtimeParams = { ...runtimeParams,
-        server
-      };
+      const devServerStarted = await pingServer(devServerOrigin);
+
+      if (!devServerStarted) {
+        throw new Error(`dev server not started at ${devServerOrigin}. It is required to run tests`);
+      }
     }
 
     logger.debug(`Generate executions`);
@@ -27391,9 +27506,10 @@ const executeInParallel = async ({
 };
 
 /**
- * Execute a list of files and log how it goes
+ * Execute a list of files and log how it goes.
  * @param {Object} testPlanParameters
  * @param {string|url} testPlanParameters.rootDirectoryUrl Root directory of the project
+ * @param {string|url} [testPlanParameters.serverOrigin=undefined] Jsenv dev server origin; required when executing test on browsers
  * @param {Object} testPlanParameters.testPlan Object associating patterns leading to files to runtimes where they should be executed
  * @param {boolean} [testPlanParameters.completedExecutionLogAbbreviation=false] Abbreviate completed execution information to shorten terminal output
  * @param {boolean} [testPlanParameters.completedExecutionLogMerging=false] Merge completed execution logs to shorten terminal output
@@ -27420,6 +27536,7 @@ const executeTestPlan = async ({
   completedExecutionLogAbbreviation = false,
   completedExecutionLogMerging = false,
   rootDirectoryUrl,
+  devServerOrigin,
   testPlan,
   updateProcessExitCode = true,
   maxExecutionsInParallel = 1,
@@ -27450,17 +27567,7 @@ const executeTestPlan = async ({
   coverageReportSkipFull = false,
   coverageReportTextLog = true,
   coverageReportJsonFile = process.env.CI ? null : "./.coverage/coverage.json",
-  coverageReportHtmlDirectory = process.env.CI ? "./.coverage/" : null,
-  sourcemaps = "inline",
-  plugins = [],
-  nodeEsmResolution,
-  fileSystemMagicResolution,
-  writeGeneratedFiles = false,
-  protocol,
-  privateKey,
-  certificate,
-  host,
-  port
+  coverageReportHtmlDirectory = process.env.CI ? "./.coverage/" : null
 }) => {
   const logger = createLogger({
     logLevel
@@ -27520,6 +27627,7 @@ const executeTestPlan = async ({
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
     rootDirectoryUrl,
+    devServerOrigin,
     maxExecutionsInParallel,
     defaultMsAllocatedPerExecution,
     failFast,
@@ -27532,21 +27640,7 @@ const executeTestPlan = async ({
     coverageMethodForBrowsers,
     coverageMethodForNodeJs,
     coverageV8ConflictWarning,
-    coverageTempDirectoryRelativeUrl,
-    scenarios: {
-      dev: true,
-      test: true
-    },
-    sourcemaps,
-    plugins,
-    nodeEsmResolution,
-    fileSystemMagicResolution,
-    writeGeneratedFiles,
-    protocol,
-    privateKey,
-    certificate,
-    host,
-    port
+    coverageTempDirectoryRelativeUrl
   });
 
   if (updateProcessExitCode && result.planSummary.counters.total !== result.planSummary.counters.completed) {
@@ -27664,8 +27758,7 @@ const createRuntimeFromPlaywright = ({
   const runtime = {
     type: "browser",
     name: browserName,
-    version: browserVersion,
-    needsServer: true
+    version: browserVersion
   };
   let browserAndContextPromise;
 
@@ -27674,7 +27767,7 @@ const createRuntimeFromPlaywright = ({
     logger,
     rootDirectoryUrl,
     fileRelativeUrl,
-    server,
+    devServerOrigin,
     // measurePerformance,
     collectPerformance,
     coverageEnabled = false,
@@ -27749,7 +27842,13 @@ const createRuntimeFromPlaywright = ({
       await disconnected;
     };
 
-    const page = await browserContext.newPage();
+    const coverageInHeaders = coverageEnabled && (!coveragePlaywrightAPIAvailable || coverageMethodForBrowsers !== "playwright_api");
+    const page = await browserContext.newPage({
+      extraHTTPHeaders: { ...(coverageInHeaders ? {
+          "x-coverage-istanbul": JSON.stringify(coverageConfig)
+        } : {})
+      }
+    });
 
     const closePage = async () => {
       try {
@@ -27777,7 +27876,7 @@ const createRuntimeFromPlaywright = ({
           const v8CoveragesWithFsUrls = v8CoveragesWithWebUrls.map(v8CoveragesWithWebUrl => {
             const fsUrl = moveUrl({
               url: v8CoveragesWithWebUrl.url,
-              from: `${server.origin}/`,
+              from: `${devServerOrigin}/`,
               to: rootDirectoryUrl,
               preferAbsolute: true
             });
@@ -27848,7 +27947,7 @@ const createRuntimeFromPlaywright = ({
       });
     }
 
-    const fileClientUrl = new URL(fileRelativeUrl, `${server.origin}/`).href; // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-console
+    const fileClientUrl = new URL(fileRelativeUrl, `${devServerOrigin}/`).href; // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-console
 
     const removeConsoleListener = registerEvent({
       object: page,
@@ -27962,7 +28061,7 @@ const createRuntimeFromPlaywright = ({
               } = returnValue;
               const error = evalException(exceptionSource, {
                 rootDirectoryUrl,
-                server,
+                devServerOrigin,
                 transformErrorHook
               });
               cb({
@@ -28198,7 +28297,7 @@ const registerEvent = ({
 
 const evalException = (exceptionSource, {
   rootDirectoryUrl,
-  server,
+  devServerOrigin,
   transformErrorHook
 }) => {
   const script = new Script(exceptionSource, {
@@ -28207,7 +28306,7 @@ const evalException = (exceptionSource, {
   const error = script.runInThisContext();
 
   if (error && error instanceof Error) {
-    const remoteRootRegexp = new RegExp(escapeRegexpSpecialChars(`${server.origin}/`), "g");
+    const remoteRootRegexp = new RegExp(escapeRegexpSpecialChars(`${devServerOrigin}/`), "g");
     error.stack = error.stack.replace(remoteRootRegexp, rootDirectoryUrl);
     error.message = error.message.replace(remoteRootRegexp, rootDirectoryUrl);
   }
@@ -29205,7 +29304,7 @@ const startBuildServer = async ({
   certificate,
   privateKey,
   acceptAnyIp,
-  host,
+  hostname,
   port = 9779,
   services = [],
   keepProcessAlive = true,
@@ -29342,7 +29441,7 @@ const startBuildServer = async ({
     certificate,
     privateKey,
     acceptAnyIp,
-    host,
+    hostname,
     port,
     serverTiming: true,
     requestWaitingMs: 60_000,
@@ -29413,32 +29512,17 @@ const execute = async ({
   handleSIGINT = true,
   logLevel,
   rootDirectoryUrl,
+  devServerOrigin,
   fileRelativeUrl,
   allocatedMs,
   mirrorConsole = true,
   keepRunning = false,
-  services,
   collectConsole,
   collectCoverage,
   coverageTempDirectoryUrl,
   collectPerformance = false,
   runtime,
   runtimeParams,
-  scenarios = {
-    dev: true
-  },
-  plugins = [],
-  nodeEsmResolution,
-  fileSystemMagicResolution,
-  transpilation,
-  htmlSupervisor = true,
-  sourcemaps = "inline",
-  writeGeneratedFiles = false,
-  port,
-  protocol,
-  http2,
-  certificate,
-  privateKey,
   ignoreError = false
 }) => {
   const logger = createLogger({
@@ -29460,45 +29544,21 @@ const execute = async ({
 
   runtimeParams = {
     rootDirectoryUrl,
+    devServerOrigin,
     fileRelativeUrl,
     ...runtimeParams
   };
 
-  if (runtime.needsServer) {
-    const server = await startOmegaServer({
-      signal: executeOperation.signal,
-      logLevel: "warn",
-      keepProcessAlive: false,
-      services,
-      port,
-      protocol,
-      http2,
-      certificate,
-      privateKey,
-      rootDirectoryUrl,
-      scenarios,
-      runtimeCompat: {
-        [runtime.name]: runtime.version
-      },
-      plugins,
-      htmlSupervisor,
-      nodeEsmResolution,
-      fileSystemMagicResolution,
-      transpilation,
-      sourcemaps,
-      writeGeneratedFiles
-    });
-    executeOperation.addEndCallback(async () => {
-      await server.stop("execution done");
-    });
-    runtimeParams = { ...runtimeParams,
-      server
-    };
+  if (runtime.type === "browser") {
+    if (!devServerOrigin) {
+      throw new TypeError(`devServerOrigin is required when running tests on browser(s)`);
+    }
 
-    resultTransformer = result => {
-      result.server = server;
-      return result;
-    };
+    const devServerStarted = await pingServer(devServerOrigin);
+
+    if (!devServerStarted) {
+      throw new Error(`dev server not started at ${devServerOrigin}. It is required to run tests`);
+    }
   }
 
   let result = await run({
@@ -29620,4 +29680,4 @@ const jsenvPluginInjectGlobals = urlAssociations => {
   };
 };
 
-export { build, chromium, chromiumIsolatedTab, execute, executeTestPlan, firefox, firefoxIsolatedTab, jsenvPluginInjectGlobals, nodeChildProcess, nodeWorkerThread, startBuildServer, startDevServer, webkit, webkitIsolatedTab };
+export { build, chromium, chromiumIsolatedTab, execute, executeTestPlan, firefox, firefoxIsolatedTab, jsenvPluginInjectGlobals, nodeChildProcess, nodeWorkerThread, pingServer, startBuildServer, startDevServer, webkit, webkitIsolatedTab };
