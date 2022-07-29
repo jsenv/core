@@ -45,6 +45,7 @@ export const executeTestPlan = async ({
   completedExecutionLogAbbreviation = false,
   completedExecutionLogMerging = false,
   rootDirectoryUrl,
+  serverOrigin,
 
   testPlan,
   updateProcessExitCode = true,
@@ -79,18 +80,6 @@ export const executeTestPlan = async ({
   coverageReportTextLog = true,
   coverageReportJsonFile = process.env.CI ? null : "./.coverage/coverage.json",
   coverageReportHtmlDirectory = process.env.CI ? "./.coverage/" : null,
-
-  sourcemaps = "inline",
-  plugins = [],
-  nodeEsmResolution,
-  fileSystemMagicResolution,
-  writeGeneratedFiles = false,
-
-  protocol,
-  privateKey,
-  certificate,
-  hostname,
-  port,
 }) => {
   const logger = createLogger({ logLevel })
   rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
@@ -150,6 +139,7 @@ export const executeTestPlan = async ({
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
     rootDirectoryUrl,
+    serverOrigin,
 
     maxExecutionsInParallel,
     defaultMsAllocatedPerExecution,
@@ -165,19 +155,6 @@ export const executeTestPlan = async ({
     coverageMethodForNodeJs,
     coverageV8ConflictWarning,
     coverageTempDirectoryRelativeUrl,
-
-    scenarios: { dev: true, test: true },
-    sourcemaps,
-    plugins,
-    nodeEsmResolution,
-    fileSystemMagicResolution,
-    writeGeneratedFiles,
-
-    protocol,
-    privateKey,
-    certificate,
-    hostname,
-    port,
   })
   if (
     updateProcessExitCode &&

@@ -14,9 +14,7 @@ import {
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 import { ensureEmptyDirectory, writeFileSync } from "@jsenv/filesystem"
 
-import { babelPluginInstrument } from "./coverage/babel_plugin_instrument.js"
 import { reportToCoverage } from "./coverage/report_to_coverage.js"
-import { startOmegaServer } from "@jsenv/core/src/omega/omega_server.js"
 import { run } from "@jsenv/core/src/execute/run.js"
 
 import { ensureGlobalGc } from "./gc.js"
@@ -37,10 +35,10 @@ export const executePlan = async (
     logFileRelativeUrl,
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
-
     rootDirectoryUrl,
+    serverOrigin,
+
     keepRunning,
-    services,
     defaultMsAllocatedPerExecution,
     maxExecutionsInParallel,
     failFast,
@@ -54,20 +52,6 @@ export const executePlan = async (
     coverageMethodForNodeJs,
     coverageV8ConflictWarning,
     coverageTempDirectoryRelativeUrl,
-
-    scenarios,
-    sourcemaps,
-    plugins,
-    nodeEsmResolution,
-    fileSystemMagicResolution,
-    transpilation,
-    writeGeneratedFiles,
-
-    protocol,
-    privateKey,
-    certificate,
-    hostname,
-    port,
 
     beforeExecutionCallback = () => {},
     afterExecutionCallback = () => {},
@@ -189,6 +173,7 @@ export const executePlan = async (
 
     let runtimeParams = {
       rootDirectoryUrl,
+      serverOrigin,
       coverageEnabled,
       coverageConfig,
       coverageMethodForBrowsers,
@@ -196,56 +181,6 @@ export const executePlan = async (
       stopAfterAllSignal,
     }
     if (someNeedsServer) {
-      const server = await startOmegaServer({
-        signal: multipleExecutionsOperation.signal,
-        logLevel: "warn",
-        keepProcessAlive: false,
-        port,
-        hostname,
-        protocol,
-        certificate,
-        privateKey,
-        services,
-
-        rootDirectoryUrl,
-        scenarios,
-        runtimeCompat: runtimes,
-
-        plugins,
-        htmlSupervisor: true,
-        nodeEsmResolution,
-        fileSystemMagicResolution,
-        transpilation: {
-          ...transpilation,
-          getCustomBabelPlugins: ({ clientRuntimeCompat }) => {
-            if (
-              coverageEnabled &&
-              (coverageMethodForBrowsers !== "playwright_api" ||
-                Object.keys(clientRuntimeCompat)[0] !== "chrome")
-            ) {
-              return {
-                "transform-instrument": [
-                  babelPluginInstrument,
-                  {
-                    rootDirectoryUrl,
-                    coverageConfig,
-                  },
-                ],
-              }
-            }
-            return {}
-          },
-        },
-        sourcemaps,
-        writeGeneratedFiles,
-      })
-      multipleExecutionsOperation.addEndCallback(async () => {
-        await server.stop()
-      })
-      runtimeParams = {
-        ...runtimeParams,
-        server,
-      }
     }
 
     logger.debug(`Generate executions`)
