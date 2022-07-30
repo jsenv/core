@@ -16,7 +16,7 @@ npm create jsenv@latest
 ```
 
 This command prompts to choose a demo from a list.
-Each demo contains preconfigured scripts such as:
+Each demo contains preconfigured scripts:
 
 - `npm run dev`: starts a dev server with autoreload.
 - `npm run test`: execute test files on browsers(s) and/or Node.js.
