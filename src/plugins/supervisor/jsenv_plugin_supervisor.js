@@ -308,17 +308,16 @@ export const jsenvPluginSupervisor = ({
         injectScriptNodeAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
-            "jsenv-plugin-owner": "jsenv:supervisor",
-            "tagName": "script",
-            "src": supervisorFileReference.generatedSpecifier,
+            tagName: "script",
+            src: supervisorFileReference.generatedSpecifier,
           }),
+          "jsenv:supervisor",
         )
         injectScriptNodeAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
-            "jsenv-plugin-owner": "jsenv:supervisor",
-            "tagName": "script",
-            "textContent": `
+            tagName: "script",
+            textContent: `
       window.__supervisor__.setup(${JSON.stringify(
         {
           rootDirectoryUrl: context.rootDirectoryUrl,
@@ -333,6 +332,7 @@ export const jsenvPluginSupervisor = ({
       )})
     `,
           }),
+          "jsenv:supervisor",
         )
 
         scriptsToSupervise.forEach(

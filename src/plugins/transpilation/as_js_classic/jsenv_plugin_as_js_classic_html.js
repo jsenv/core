@@ -271,10 +271,10 @@ export const jsenvPluginAsJsClassicHtml = ({
             injectScriptNodeAsEarlyAsPossible(
               htmlAst,
               createHtmlNode({
-                "jsenv-plugin-owner": "jsenv:as_js_classic_html",
-                "tagName": "script",
-                "src": systemJsReference.generatedSpecifier,
+                tagName: "script",
+                src: systemJsReference.generatedSpecifier,
               }),
+              "jsenv:as_js_classic_html",
             )
           }
         }

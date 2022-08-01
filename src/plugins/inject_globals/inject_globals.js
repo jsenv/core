@@ -30,10 +30,10 @@ const globalInjectorOnHtml = async (urlInfo, globals) => {
   injectScriptNodeAsEarlyAsPossible(
     htmlAst,
     createHtmlNode({
-      "jsenv-plugin-owner": "jsenv:inject_globals",
-      "tagName": "script",
-      "textContent": clientCode,
+      tagName: "script",
+      textContent: clientCode,
     }),
+    "jsenv:inject_globals",
   )
   return stringifyHtmlAst(htmlAst)
 }

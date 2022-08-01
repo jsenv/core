@@ -1,9 +1,6 @@
 import { parseFragment } from "parse5"
 
-import {
-  getHtmlNodeAttribute,
-  setHtmlNodeAttributes,
-} from "./html_node_attributes.js"
+import { setHtmlNodeAttributes } from "./html_node_attributes.js"
 import { findHtmlNode } from "./html_search.js"
 import { analyzeScriptNode } from "./html_analysis.js"
 
@@ -20,25 +17,15 @@ export const createHtmlNode = ({ tagName, textContent = "", ...rest }) => {
   return fragment.childNodes[0]
 }
 
-export const injectScriptNodeAsEarlyAsPossible = (htmlAst, scriptNode) => {
-  const jsenvPluginOwner = getHtmlNodeAttribute(
-    scriptNode,
-    "jsenv-plugin-owner",
-  )
-  if (jsenvPluginOwner === undefined) {
-    setHtmlNodeAttributes(scriptNode, {
-      "jsenv-plugin-owner": "jsenv",
-    })
-  }
-  const jsenvPluginAction = getHtmlNodeAttribute(
-    scriptNode,
-    "jsenv-plugin-action",
-  )
-  if (jsenvPluginAction === undefined) {
-    setHtmlNodeAttributes(scriptNode, {
-      "jsenv-plugin-action": "injected",
-    })
-  }
+export const injectScriptNodeAsEarlyAsPossible = (
+  htmlAst,
+  scriptNode,
+  jsenvPluginName = "jsenv",
+) => {
+  setHtmlNodeAttributes(scriptNode, {
+    "jsenv-plugin-owner": jsenvPluginName,
+    "jsenv-plugin-action": "injected",
+  })
   const isJsModule = analyzeScriptNode(scriptNode).type === "js_module"
   if (isJsModule) {
     const firstImportmapScript = findHtmlNode(htmlAst, (node) => {
