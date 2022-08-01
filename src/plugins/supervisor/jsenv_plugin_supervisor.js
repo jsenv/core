@@ -360,11 +360,19 @@ export const jsenvPluginSupervisor = ({
                   scriptTypeModuleSupervisorFileReference.generatedSpecifier,
               }),
             )
-            setHtmlNodeAttributes(node, {
-              "generated-by": "jsenv:supervisor",
-              ...(src ? { "inlined-from-src": src } : {}),
-              ...(isInline ? { "generated-from-inline-content": "" } : {}),
-            })
+            if (src) {
+              setHtmlNodeAttributes(node, {
+                "jsenv-plugin-owner": "jsenv:supervisor",
+                "jsenv-plugin-action": "inlined",
+                "inlined-from-src": src,
+              })
+            } else {
+              setHtmlNodeAttributes(node, {
+                "jsenv-plugin-owner": "jsenv:supervisor",
+                "jsenv-plugin-action": "cook_content",
+                "generated-from-inline-content": "",
+              })
+            }
           },
         )
         const htmlModified = stringifyHtmlAst(htmlAst)

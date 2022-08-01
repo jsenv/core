@@ -66,10 +66,10 @@ export const stringifyHtmlAst = (
             "original-position": undefined,
             "original-src-position": undefined,
             "original-href-position": undefined,
-            "injected-by": undefined,
-            "generated-by": undefined,
             "inlined-from-src": undefined,
             "inlined-from-href": undefined,
+            "jsenv-plugin-owner": undefined,
+            "jsenv-plugin-action": undefined,
           })
         },
       })

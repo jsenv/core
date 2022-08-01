@@ -59,7 +59,8 @@ export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
               })
               setHtmlNodeText(styleNode, inlineStyleUrlInfo.content)
               setHtmlNodeAttributes(styleNode, {
-                "generated-by": "jsenv:html_inline_content",
+                "jsenv-plugin-owner": "jsenv:html_inline_content",
+                "jsenv-plugin-action": "cook_content",
               })
             })
           },
@@ -117,7 +118,8 @@ export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
               })
               setHtmlNodeText(scriptNode, inlineScriptUrlInfo.content)
               setHtmlNodeAttributes(scriptNode, {
-                "generated-by": "jsenv:html_inline_content",
+                "jsenv-plugin-owner": "jsenv:html_inline_content",
+                "jsenv-plugin-action": "cook_content",
                 ...(extension
                   ? { type: type === "js_module" ? "module" : undefined }
                   : {}),
