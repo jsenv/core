@@ -309,14 +309,6 @@ export const jsenvPluginSupervisor = ({
           htmlAst,
           createHtmlNode({
             tagName: "script",
-            src: supervisorFileReference.generatedSpecifier,
-          }),
-          "jsenv:supervisor",
-        )
-        injectScriptNodeAsEarlyAsPossible(
-          htmlAst,
-          createHtmlNode({
-            tagName: "script",
             textContent: `
       window.__supervisor__.setup(${JSON.stringify(
         {
@@ -331,6 +323,14 @@ export const jsenvPluginSupervisor = ({
         "        ",
       )})
     `,
+          }),
+          "jsenv:supervisor",
+        )
+        injectScriptNodeAsEarlyAsPossible(
+          htmlAst,
+          createHtmlNode({
+            tagName: "script",
+            src: supervisorFileReference.generatedSpecifier,
           }),
           "jsenv:supervisor",
         )
