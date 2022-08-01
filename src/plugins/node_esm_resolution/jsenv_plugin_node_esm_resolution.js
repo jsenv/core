@@ -90,7 +90,7 @@ export const jsenvPluginNodeEsmResolution = ({
       }
     },
     resolveUrl: {
-      js_import_export: (reference, context) => {
+      js_import_export: (reference) => {
         const { parentUrl, specifier } = reference
         const { type, url } = applyNodeEsmResolution({
           conditions: packageConditions,
@@ -99,7 +99,6 @@ export const jsenvPluginNodeEsmResolution = ({
           lookupPackageScope,
           readPackageJson,
         })
-
         // this reference depend on package.json and node_modules
         // to be resolved. Each file using this specifier
         // must be invalidated when package.json or package_lock.json
@@ -108,17 +107,7 @@ export const jsenvPluginNodeEsmResolution = ({
           type !== "relative_specifier" &&
           type !== "absolute_specifier" &&
           type !== "node_builtin_specifier"
-        const relatedUrlInfos = context.urlGraph.getRelatedUrlInfos(
-          reference.parentUrl,
-        )
-        relatedUrlInfos.forEach((relatedUrlInfo) => {
-          if (relatedUrlInfo.dependsOnPackageJson) {
-            // the url may depend due to an other reference
-            // in that case keep dependsOnPackageJson to true
-            return
-          }
-          relatedUrlInfo.dependsOnPackageJson = dependsOnPackageJson
-        })
+        reference.dependsOnPackageJson = dependsOnPackageJson
         return url
       },
     },

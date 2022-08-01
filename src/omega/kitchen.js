@@ -89,6 +89,7 @@ export const createKitchen = ({
     isInline = false,
     injected = false,
     isResourceHint = false,
+    dependsOnPackageJson,
     content,
     contentType,
     assert,
@@ -126,6 +127,7 @@ export const createKitchen = ({
       isInline,
       injected,
       isResourceHint,
+      dependsOnPackageJson,
       // for inline resources the reference contains the content
       content,
       contentType,
@@ -772,6 +774,20 @@ const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
       : reference.content
     urlInfo.content = reference.content
   }
+
+  const { dependsOnPackageJson } = reference
+  urlInfo.dependsOnPackageJson = dependsOnPackageJson
+  const relatedUrlInfos = context.urlGraph.getRelatedUrlInfos(
+    reference.parentUrl,
+  )
+  relatedUrlInfos.forEach((relatedUrlInfo) => {
+    if (relatedUrlInfo.dependsOnPackageJson) {
+      // the url may depend due to an other reference
+      // in that case keep dependsOnPackageJson to true
+      return
+    }
+    relatedUrlInfo.dependsOnPackageJson = dependsOnPackageJson
+  })
 }
 
 const adjustUrlSite = (urlInfo, { urlGraph, url, line, column }) => {

@@ -1,3 +1,7 @@
+# 28.0.2
+
+- prefer "ws.js" over "wrapper.js" when generating build files
+
 # 28.0.1
 
 - prefer "resource" over "ressource" in names

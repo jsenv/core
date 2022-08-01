@@ -1,5 +1,5 @@
 import { URL_META } from "@jsenv/url-meta"
-import { injectQueryParams } from "@jsenv/urls"
+import { injectQueryParams, urlToExtension } from "@jsenv/urls"
 
 import { commonJsToJsModule } from "./cjs_to_esm.js"
 
@@ -62,6 +62,14 @@ export const jsenvPluginCommonJs = ({
       if (isValid) {
         urlInfo.isValid = isValid
       }
+      const originalReference = context.reference.original
+        ? context.reference.original
+        : context.reference
+      const filename = originalReference.dependsOnPackageJson
+        ? `${originalReference.specifier}${urlToExtension(
+            originalReference.parentUrl,
+          )}`
+        : undefined
       return {
         content,
         contentType: "text/javascript",
@@ -69,6 +77,7 @@ export const jsenvPluginCommonJs = ({
         originalUrl: originalUrlInfo.originalUrl,
         originalContent: originalUrlInfo.originalContent,
         sourcemap,
+        filename,
       }
     },
   }

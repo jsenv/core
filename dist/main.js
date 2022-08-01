@@ -12862,7 +12862,7 @@ const jsenvPluginNodeEsmResolution = ({
       }
     },
     resolveUrl: {
-      js_import_export: (reference, context) => {
+      js_import_export: reference => {
         const {
           parentUrl,
           specifier
@@ -12882,16 +12882,7 @@ const jsenvPluginNodeEsmResolution = ({
         // changes
 
         const dependsOnPackageJson = type !== "relative_specifier" && type !== "absolute_specifier" && type !== "node_builtin_specifier";
-        const relatedUrlInfos = context.urlGraph.getRelatedUrlInfos(reference.parentUrl);
-        relatedUrlInfos.forEach(relatedUrlInfo => {
-          if (relatedUrlInfo.dependsOnPackageJson) {
-            // the url may depend due to an other reference
-            // in that case keep dependsOnPackageJson to true
-            return;
-          }
-
-          relatedUrlInfo.dependsOnPackageJson = dependsOnPackageJson;
-        });
+        reference.dependsOnPackageJson = dependsOnPackageJson;
         return url;
       }
     },
@@ -19800,7 +19791,7 @@ const startServer = async ({
       const websocketClients = new Set();
       const {
         WebSocketServer
-      } = await import("./js/wrapper.mjs");
+      } = await import("./js/ws.js");
       let websocketServer = new WebSocketServer({
         noServer: true
       });
@@ -21953,6 +21944,7 @@ const createKitchen = ({
     isInline = false,
     injected = false,
     isResourceHint = false,
+    dependsOnPackageJson,
     content,
     contentType,
     assert,
@@ -21991,6 +21983,7 @@ const createKitchen = ({
       isInline,
       injected,
       isResourceHint,
+      dependsOnPackageJson,
       // for inline resources the reference contains the content
       content,
       contentType,
@@ -22623,6 +22616,21 @@ const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
     urlInfo.originalContent = context.scenarios.build ? urlInfo.originalContent === undefined ? reference.content : urlInfo.originalContent : reference.content;
     urlInfo.content = reference.content;
   }
+
+  const {
+    dependsOnPackageJson
+  } = reference;
+  urlInfo.dependsOnPackageJson = dependsOnPackageJson;
+  const relatedUrlInfos = context.urlGraph.getRelatedUrlInfos(reference.parentUrl);
+  relatedUrlInfos.forEach(relatedUrlInfo => {
+    if (relatedUrlInfo.dependsOnPackageJson) {
+      // the url may depend due to an other reference
+      // in that case keep dependsOnPackageJson to true
+      return;
+    }
+
+    relatedUrlInfo.dependsOnPackageJson = dependsOnPackageJson;
+  });
 };
 
 const adjustUrlSite = (urlInfo, {
