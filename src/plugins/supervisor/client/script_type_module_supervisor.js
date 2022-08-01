@@ -1,1 +1,8 @@
-// TODO: implement only the dynamic import because it must happen in a script type="module"
+export const superviseScriptTypeModule = ({ src }) => {
+  const execution = window.__supervisor__.createExecution({
+    src,
+    type: "js_module",
+    execute: (url) => import(url),
+  })
+  execution.start()
+}

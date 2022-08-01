@@ -12,6 +12,7 @@
  * This plugin provides a way for jsenv to know when js execution is done
  * As a side effect this plugin enables ability to hot reload js inlined into <script hot-accept>
  *
+ * TODO: do it this way instead (to repect code execution)
  * <script src="file.js">
  * becomes
  * <script supervised-src="file.js">
@@ -66,7 +67,7 @@ export const jsenvPluginSupervisor = ({
   errorBaseUrl,
 }) => {
   const supervisorFileUrl = new URL(
-    "./client/supervisor_setup.js?js_classic",
+    "./client/supervisor.js?js_classic",
     import.meta.url,
   ).href
   const scriptTypeModuleSupervisorFileUrl = new URL(
@@ -299,16 +300,26 @@ export const jsenvPluginSupervisor = ({
             expectedType: "js_module",
             specifier: scriptTypeModuleSupervisorFileUrl,
           })
+        const [supervisorFileReference] = context.referenceUtils.inject({
+          type: "script_src",
+          expectedType: "js_classic",
+          specifier: supervisorFileUrl,
+        })
         injectScriptNodeAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
+            "injected-by": "jsenv:supervisor",
             "tagName": "script",
-            "type": "module",
+            "src": supervisorFileReference.generatedSpecifier,
+          }),
+        )
+        injectScriptNodeAsEarlyAsPossible(
+          htmlAst,
+          createHtmlNode({
+            "injected-by": "jsenv:supervisor",
+            "tagName": "script",
             "textContent": `
-      import { installScriptTypeModuleSupervisor } from ${
-        scriptTypeModuleSupervisorFileReference.generatedSpecifier
-      }
-      installScriptTypeModuleSupervisor(${JSON.stringify(
+      window.__supervisor__.setup(${JSON.stringify(
         {
           rootDirectoryUrl: context.rootDirectoryUrl,
           errorBaseUrl,
@@ -319,23 +330,11 @@ export const jsenvPluginSupervisor = ({
         },
         null,
         "        ",
-      )})`,
-            "injected-by": "jsenv:supervisor",
+      )})
+    `,
           }),
         )
-        const [supervisorFileReference] = context.referenceUtils.inject({
-          type: "script_src",
-          expectedType: "js_classic",
-          specifier: supervisorFileUrl,
-        })
-        injectScriptNodeAsEarlyAsPossible(
-          htmlAst,
-          createHtmlNode({
-            "tagName": "script",
-            "src": supervisorFileReference.generatedSpecifier,
-            "injected-by": "jsenv:supervisor",
-          }),
-        )
+
         scriptsToSupervise.forEach(
           ({
             node,
