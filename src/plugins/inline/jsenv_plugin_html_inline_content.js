@@ -78,7 +78,7 @@ export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
             ) {
               return
             }
-            if (generatedBy === "jsenv:html_supervisor") {
+            if (generatedBy === "jsenv:supervisor") {
               return
             }
             actions.push(async () => {

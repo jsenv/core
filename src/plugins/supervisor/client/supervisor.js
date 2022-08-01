@@ -1,3 +1,5 @@
+// TODO: move all supervision into a big IIFE
+
 window.__supervisor__ = {
   // "html_supervisor_installer.js" will implement
   // - "addScriptToExecute"

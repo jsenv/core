@@ -180,7 +180,7 @@ export const formatError = (
     url &&
     !stack &&
     // ignore window.reportError() it gives no valuable info
-    !url.endsWith("html_supervisor_installer.js")
+    !url.endsWith("supervisor.js")
   ) {
     onErrorLocated(resolveUrlSite({ url, line, column }))
   } else if (errorMeta.url) {

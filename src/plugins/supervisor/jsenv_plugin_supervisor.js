@@ -11,6 +11,31 @@
  *
  * This plugin provides a way for jsenv to know when js execution is done
  * As a side effect this plugin enables ability to hot reload js inlined into <script hot-accept>
+ *
+ * <script src="file.js">
+ * becomes
+ * <script supervised-src="file.js">
+ *   window.__supervisor__.superviseScript(document.currentScript)
+ * </script>
+ *
+ * <script>
+ *    console.log(42)
+ * </script>
+ * becomes
+ * <script supervised-src="main.html@L10-L13.js>
+ *   window.__supervisor__.superviseScript(document.currentScript)
+ * </script>
+ *
+ * <script type="module" src="module.js"></script>
+ * becomes
+ * <script type="module" supervised-src="module.js">
+ *   import { superviseScriptTypeModule } from 'supervisor'
+ *   superviseScriptTypeModule({
+ *     src: "module.js"
+ *   })
+ * </script>
+ *
+ * And same logic for inline <script type="module">
  */
 
 import { fileURLToPath } from "node:url"
@@ -40,12 +65,12 @@ export const jsenvPluginSupervisor = ({
   openInEditor = true,
   errorBaseUrl,
 }) => {
-  const supervisorSetupFileUrl = new URL(
+  const supervisorFileUrl = new URL(
     "./client/supervisor_setup.js?js_classic",
     import.meta.url,
   ).href
-  const supervisorInstallerFileUrl = new URL(
-    "./client/supervisor_installer.js",
+  const scriptTypeModuleSupervisorFileUrl = new URL(
+    "./client/script_type_module_supervisor.js",
     import.meta.url,
   ).href
 
@@ -268,11 +293,11 @@ export const jsenvPluginSupervisor = ({
             }
           },
         })
-        const [supervisorInstallerFileReference] =
+        const [scriptTypeModuleSupervisorFileReference] =
           context.referenceUtils.inject({
             type: "js_import_export",
             expectedType: "js_module",
-            specifier: supervisorInstallerFileUrl,
+            specifier: scriptTypeModuleSupervisorFileUrl,
           })
         injectScriptNodeAsEarlyAsPossible(
           htmlAst,
@@ -280,10 +305,10 @@ export const jsenvPluginSupervisor = ({
             "tagName": "script",
             "type": "module",
             "textContent": `
-      import { installHtmlSupervisor } from ${
-        supervisorInstallerFileReference.generatedSpecifier
+      import { installScriptTypeModuleSupervisor } from ${
+        scriptTypeModuleSupervisorFileReference.generatedSpecifier
       }
-      installHtmlSupervisor(${JSON.stringify(
+      installScriptTypeModuleSupervisor(${JSON.stringify(
         {
           rootDirectoryUrl: context.rootDirectoryUrl,
           errorBaseUrl,
@@ -295,20 +320,20 @@ export const jsenvPluginSupervisor = ({
         null,
         "        ",
       )})`,
-            "injected-by": "jsenv:html_supervisor",
+            "injected-by": "jsenv:supervisor",
           }),
         )
-        const [supervisorSetupFileReference] = context.referenceUtils.inject({
+        const [supervisorFileReference] = context.referenceUtils.inject({
           type: "script_src",
           expectedType: "js_classic",
-          specifier: supervisorSetupFileUrl,
+          specifier: supervisorFileUrl,
         })
         injectScriptNodeAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
             "tagName": "script",
-            "src": supervisorSetupFileReference.generatedSpecifier,
-            "injected-by": "jsenv:html_supervisor",
+            "src": supervisorFileReference.generatedSpecifier,
+            "injected-by": "jsenv:supervisor",
           }),
         )
         scriptsToSupervise.forEach(
@@ -332,12 +357,12 @@ export const jsenvPluginSupervisor = ({
                 async,
                 integrity,
                 crossorigin,
-                supervisorInstallerSpecifier:
-                  supervisorInstallerFileReference.generatedSpecifier,
+                scriptTypeModuleSupervisorSpecifier:
+                  scriptTypeModuleSupervisorFileReference.generatedSpecifier,
               }),
             )
             setHtmlNodeAttributes(node, {
-              "generated-by": "jsenv:html_supervisor",
+              "generated-by": "jsenv:supervisor",
               ...(src ? { "generated-from-src": src } : {}),
               ...(isInline ? { "generated-from-inline-content": "" } : {}),
             })
@@ -362,7 +387,7 @@ const generateCodeToSuperviseScript = ({
   async,
   integrity,
   crossorigin,
-  supervisorInstallerSpecifier,
+  scriptTypeModuleSupervisorSpecifier,
 }) => {
   const paramsAsJson = JSON.stringify({
     src,
@@ -374,7 +399,7 @@ const generateCodeToSuperviseScript = ({
   })
   if (type === "js_module") {
     return `
-      import { superviseScriptTypeModule } from ${supervisorInstallerSpecifier}
+      import { superviseScriptTypeModule } from ${scriptTypeModuleSupervisorSpecifier}
       superviseScriptTypeModule(${paramsAsJson})
 `
   }
