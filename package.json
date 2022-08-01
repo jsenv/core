@@ -102,7 +102,7 @@
     "@jsenv/assert": "2.6.0",
     "@jsenv/eslint-config": "16.2.1",
     "@jsenv/file-size-impact": "13.0.1",
-    "@jsenv/https-local": "2.1.0",
+    "@jsenv/https-local": "3.0.1",
     "@jsenv/package-workspace": "0.4.1",
     "@jsenv/performance-impact": "3.0.1",
     "eslint": "8.20.0",
