@@ -231,8 +231,8 @@ window.__supervisor__ = (() => {
           title: "An error occured",
           text: formatErrorText({ message, stack }),
           tip: `${tip}
-          <br />
-          Click outside to close.`,
+    <br />
+    Click outside to close.`,
           errorDetailsPromise: errorDetailsPromiseReference.current,
         }
       }
@@ -515,19 +515,19 @@ window.__supervisor__ = (() => {
           super()
           this.root = this.attachShadow({ mode: "open" })
           this.root.innerHTML = `
-  <style>
-    ${overlayCSS}
-  </style>
-  <div class="backdrop"></div>
-  <div class="overlay" data-theme=${theme}>
-    <h1 class="title">
-      ${title}
-    </h1>
-    <pre class="text">${text}</pre>
-    <div class="tip">
-      ${tip}
-    </div>
-  </div>`
+<style>
+  ${overlayCSS}
+</style>
+<div class="backdrop"></div>
+<div class="overlay" data-theme=${theme}>
+  <h1 class="title">
+    ${title}
+  </h1>
+  <pre class="text">${text}</pre>
+  <div class="tip">
+    ${tip}
+  </div>
+</div>`
           this.root.querySelector(".backdrop").onclick = () => {
             if (!this.parentNode) {
               // not in document anymore
