@@ -38,7 +38,7 @@ export const nodeStreamToObservable = (nodeStream) => {
     // used in the next ${readableStreamLifetimeInSeconds} otherwise destroys it
     const timeout = setTimeout(() => {
       process.emitWarning(
-        `Readable stream not used after ${readableStreamLifetimeInSeconds} seconds. It will be destroyed to release ressources`,
+        `Readable stream not used after ${readableStreamLifetimeInSeconds} seconds. It will be destroyed to release resources`,
         {
           CODE: "READABLE_STREAM_TIMEOUT",
           // url is for http client request

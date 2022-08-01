@@ -43,7 +43,7 @@ const server = await startServer({
     {
       name: "index",
       handleRequest: (request) => {
-        if (request.ressource === "/") {
+        if (request.resource === "/") {
           return { status: 200 }
         }
         return null
@@ -104,7 +104,7 @@ await startServer({
   services: [
     {
       handleRequest: async (request) => {
-        const fileUrl = new URL(request.ressource.slice(1), import.meta.url)
+        const fileUrl = new URL(request.resource.slice(1), import.meta.url)
         const response = await fetchFileSystem(fileUrl, request)
         return response
       },

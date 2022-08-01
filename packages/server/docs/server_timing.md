@@ -27,14 +27,14 @@ await startServer({
     {
       name: "service:nocontent",
       handleRequest: (request) => {
-        if (request.ressource !== "/") return null
+        if (request.pathname !== "/") return null
         return { status: 204 }
       },
     },
     {
       name: "service:ok",
       handleRequest: (request) => {
-        if (request.ressource !== "/whatever") return null
+        if (request.pathname !== "/whatever") return null
         return { status: 200 }
       },
     },

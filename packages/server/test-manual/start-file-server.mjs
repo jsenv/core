@@ -5,7 +5,7 @@ const publicDirectoryUrl = new URL("./public/", import.meta.url)
 startServer({
   requestToResponse: (request) => {
     return fetchFileSystem(
-      new URL(request.ressource.slice(1), publicDirectoryUrl),
+      new URL(request.resource.slice(1), publicDirectoryUrl),
       {
         headers: request.headers,
         canReadDirectory: true,

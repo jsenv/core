@@ -27,7 +27,7 @@ const { origin } = await startServer({
           headers: {
             "Content-Type": "text/plain",
           },
-          body: request.ressource,
+          body: request.resource,
         }
       },
     },

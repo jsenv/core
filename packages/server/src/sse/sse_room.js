@@ -37,9 +37,7 @@ export const createSSERoom = ({
 
     const lastKnownId =
       request.headers["last-event-id"] ||
-      new URL(request.ressource, request.origin).searchParams.get(
-        "last-event-id",
-      )
+      new URL(request.url).searchParams.get("last-event-id")
 
     if (clients.size >= maxClientAllowed) {
       return {

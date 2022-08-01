@@ -81,7 +81,7 @@ export const startServer = async ({
       createDetailedMessage(
         `still no response found for request after ${requestWaitingMs} ms`,
         {
-          "request url": `${request.origin}${request.ressource}`,
+          "request url": request.url,
           "request headers": JSON.stringify(request.headers, null, "  "),
         },
       ),
@@ -467,7 +467,7 @@ export const startServer = async ({
           addRequestLog(requestNode, {
             type: "error",
             value: createDetailedMessage(
-              `An error occured while pushing a stream to the response for ${request.ressource}`,
+              `An error occured while pushing a stream to the response for ${request.resource}`,
               {
                 "error stack": e.stack,
               },
@@ -572,8 +572,8 @@ export const startServer = async ({
         addRequestLog(requestNode, {
           type: "info",
           value: request.parent
-            ? `Push ${request.ressource}`
-            : `${request.method} ${request.origin}${request.ressource}`,
+            ? `Push ${request.resource}`
+            : `${request.method} ${request.url}`,
         })
         const warn = (value) => {
           addRequestLog(requestNode, {

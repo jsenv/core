@@ -45,7 +45,7 @@ const request = {
   url: "http://127.0.0.1:8080/index.html?param=1",
   origin: "http://127.0.0.1:8080",
   pathname: "/index.html",
-  ressource: "/index.html?param=1",
+  resource: "/index.html?param=1",
   method: "GET",
   headers: { accept: "text/html" },
   body,
@@ -208,7 +208,7 @@ await startServer({
     {
       name: "index",
       handleRequest: (request) => {
-        if (request.ressource === "/") {
+        if (request.resource === "/") {
           return { status: 200 }
         }
         return null // means "I don't handle that request"

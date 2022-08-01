@@ -18,12 +18,12 @@ _server.js:_
 import { startServer, composeServices } from "@jsenv/server"
 
 const noContentService = (request) => {
-  if (request.ressource !== "/") return null
+  if (request.pathname !== "/") return null
   return { status: 204 }
 }
 
 const okService = (request) => {
-  if (request.ressource !== "/whatever") return null
+  if (request.pathname !== "/whatever") return null
   return { status: 200 }
 }
 
@@ -46,28 +46,28 @@ import assert from "assert"
 
 // okService returns 200 on /whatever
 {
-  const actual = okService({ ressource: "/whatever" })
+  const actual = okService({ pathname: "/whatever" })
   const expected = { status: 200 }
   assert.equal(actual, expected)
 }
 
 // okService returns 200 only on /whatever
 {
-  const actual = okService({ ressource: "/" })
+  const actual = okService({ pathname: "/" })
   const expected = null
   assert.equal(actual, expected)
 }
 
 // noContentService returns 204 on /
 {
-  const actual = noContentService({ ressource: "/" })
+  const actual = noContentService({ pathname: "/" })
   const expected = { status: 204 }
   assert.equal(actual, expected)
 }
 
 // noContentService returns 204 only on /
 {
-  const actual = noContentService({ ressource: "/toto" })
+  const actual = noContentService({ pathname: "/toto" })
   const expected = null
   assert.equal(actual, expected)
 }

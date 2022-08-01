@@ -14,13 +14,13 @@ await startServer({
   services: [
     {
       handleRequest: (request, { pushResponse }) => {
-        if (request.ressource === "/main.html") {
+        if (request.pathname === "/main.html") {
           pushResponse({ path: "/script.js" })
           pushResponse({ path: "/style.css" })
         }
 
         return fetchFileSystem(
-          new URL(request.ressource.slice(1), import.meta.url),
+          new URL(request.resource.slice(1), import.meta.url),
           {
             headers: request.headers,
             canReadDirectory: true,

@@ -124,10 +124,10 @@ const timeEllapsedPromise = (ms) => {
     services: [
       {
         handleRequest: (request) => {
-          if (request.ressource === "/roomA") {
+          if (request.pathname === "/roomA") {
             return roomA.join(request)
           }
-          if (request.ressource === "/roomB") {
+          if (request.pathname === "/roomB") {
             return roomB.join(request)
           }
           return null

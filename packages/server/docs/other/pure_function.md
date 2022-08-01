@@ -6,7 +6,7 @@ _A pure middleware:_
 
 ```js
 const pureMiddleware = (request) => {
-  if (request.ressource !== "/") {
+  if (request.pathname !== "/") {
     return null
   }
 

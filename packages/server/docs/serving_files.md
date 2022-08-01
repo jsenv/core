@@ -10,7 +10,7 @@ await startServer({
     {
       handleRequest: (request) => {
         return fetchFileSystem(
-          new URL(request.ressource.slice(1), import.meta.url),
+          new URL(request.resource.slice(1), import.meta.url),
           {
             headers: request.headers,
           },
@@ -43,7 +43,7 @@ await startServer({
     {
       handleRequest: (request) => {
         return fetchFileSystem(
-          new URL(request.ressource.slice(1), import.meta.url),
+          new URL(request.resource.slice(1), import.meta.url),
           {
             headers: request.headers,
             etagEnabled: true,
@@ -68,7 +68,7 @@ await startServer({
     {
       handleRequest: (request) => {
         return fetchFileSystem(
-          new URL(request.ressource.slice(1), import.meta.url),
+          new URL(request.resource.slice(1), import.meta.url),
           {
             headers: request.headers,
             mtimeEnabled: true,
@@ -98,11 +98,11 @@ await startServer({
     {
       handleRequest: (request) => {
         return fetchFileSystem(
-          new URL(request.ressource.slice(1), import.meta.url),
+          new URL(request.resource.slice(1), import.meta.url),
           {
             headers: request.headers,
             cacheControl:
-              request.ressource === "/"
+              request.resource === "/"
                 ? `private,max-age=0,must-revalidate`
                 : `private,max-age=3600,immutable`,
           },
@@ -132,7 +132,7 @@ await startServer({
     {
       handleRequest: (request) => {
         return fetchFileSystem(
-          new URL(request.ressource.slice(1), import.meta.url),
+          new URL(request.resource.slice(1), import.meta.url),
           {
             headers: request.headers,
             compressionEnabled: true,

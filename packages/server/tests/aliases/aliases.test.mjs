@@ -4,18 +4,18 @@ import { fetchUrl } from "@jsenv/fetch"
 import {
   startServer,
   fetchFileSystem,
-  jsenvServiceRessourceAliases,
+  jsenvServiceRequestAliases,
 } from "@jsenv/server"
 
-let ressourceBeforeAlias
-let ressource
+let resourceBeforeAlias
+let resource
 const { origin } = await startServer({
   logLevel: "error",
   protocol: "http",
   keepProcessAlive: false,
 
   services: [
-    jsenvServiceRessourceAliases({
+    jsenvServiceRequestAliases({
       "/alias.json": "/data.json",
       "/*.js": "/file.js",
       "/dir/*": "/dir/a.txt",
@@ -23,12 +23,12 @@ const { origin } = await startServer({
     }),
     {
       handleRequest: (request) => {
-        ressourceBeforeAlias = request.original
-          ? request.original.ressource
+        resourceBeforeAlias = request.original
+          ? request.original.resource
           : undefined
-        ressource = request.ressource
+        resource = request.resource
         return fetchFileSystem(
-          new URL(request.ressource.slice(1), import.meta.url),
+          new URL(request.resource.slice(1), import.meta.url),
         )
       },
     },
@@ -38,16 +38,16 @@ const { origin } = await startServer({
 {
   const response = await fetchUrl(`${origin}/src/deep/whatever.js`)
   const actual = {
-    ressourceBeforeAlias,
-    ressource,
+    resourceBeforeAlias,
+    resource,
     status: response.status,
     headers: {
       "content-type": response.headers.get("content-type"),
     },
   }
   const expected = {
-    ressourceBeforeAlias: "/src/deep/whatever.js",
-    ressource: "/src/deep/file.js",
+    resourceBeforeAlias: "/src/deep/whatever.js",
+    resource: "/src/deep/file.js",
     status: 200,
     headers: {
       "content-type": "text/javascript",
@@ -59,16 +59,16 @@ const { origin } = await startServer({
 {
   const response = await fetchUrl(`${origin}/alias.json?foo=foo&test=1`)
   const actual = {
-    ressourceBeforeAlias,
-    ressource,
+    resourceBeforeAlias,
+    resource,
     status: response.status,
     headers: {
       "content-type": response.headers.get("content-type"),
     },
   }
   const expected = {
-    ressourceBeforeAlias: "/alias.json?foo=foo&test=1",
-    ressource: "/data.json?foo=foo&test=1",
+    resourceBeforeAlias: "/alias.json?foo=foo&test=1",
+    resource: "/data.json?foo=foo&test=1",
     status: 200,
     headers: {
       "content-type": "application/json",
@@ -80,14 +80,14 @@ const { origin } = await startServer({
 {
   const response = await fetchUrl(`${origin}/diuei.js`)
   const actual = {
-    ressourceBeforeAlias,
+    resourceBeforeAlias,
     status: response.status,
     headers: {
       "content-type": response.headers.get("content-type"),
     },
   }
   const expected = {
-    ressourceBeforeAlias: "/diuei.js",
+    resourceBeforeAlias: "/diuei.js",
     status: 200,
     headers: {
       "content-type": "text/javascript",
@@ -99,11 +99,11 @@ const { origin } = await startServer({
 {
   const response = await fetchUrl(`${origin}/diuei.js/`)
   const actual = {
-    ressourceBeforeAlias,
+    resourceBeforeAlias,
     status: response.status,
   }
   const expected = {
-    ressourceBeforeAlias: undefined,
+    resourceBeforeAlias: undefined,
     status: 404,
   }
   assert({ actual, expected })
@@ -112,14 +112,14 @@ const { origin } = await startServer({
 {
   const response = await fetchUrl(`${origin}/dir/toto`)
   const actual = {
-    ressourceBeforeAlias,
+    resourceBeforeAlias,
     status: response.status,
     headers: {
       "content-type": response.headers.get("content-type"),
     },
   }
   const expected = {
-    ressourceBeforeAlias: "/dir/toto",
+    resourceBeforeAlias: "/dir/toto",
     status: 200,
     headers: {
       "content-type": "text/plain",

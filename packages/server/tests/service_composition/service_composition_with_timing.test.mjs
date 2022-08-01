@@ -5,12 +5,12 @@ import { startServer } from "@jsenv/server"
 import { parseServerTimingHeader } from "@jsenv/server/src/server_timing/timing_header.js"
 
 const noContentService = (request) => {
-  if (request.ressource !== "/") return null
+  if (request.pathname !== "/") return null
   return { status: 204 }
 }
 
 const okService = (request) => {
-  if (request.ressource !== "/whatever") return null
+  if (request.pathname !== "/whatever") return null
   return { status: 200 }
 }
 

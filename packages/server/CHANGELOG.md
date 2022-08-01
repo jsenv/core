@@ -1,3 +1,7 @@
+# 14.1.0
+
+- request.ressource renamed request.resource
+
 # 14.0.0
 
 - rename "host" parameter into "hostname" (match web standards)

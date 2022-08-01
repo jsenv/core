@@ -24,8 +24,8 @@ export const fromNodeRequest = (nodeRequest, { serverOrigin, signal }) => {
     signal,
     http2: Boolean(nodeRequest.stream),
     origin: requestOrigin,
-    ...getPropertiesFromRessource({
-      ressource: nodeRequest.url,
+    ...getPropertiesFromResource({
+      resource: nodeRequest.url,
       baseUrl: requestOrigin,
     }),
     method: nodeRequest.method,
@@ -36,13 +36,13 @@ export const fromNodeRequest = (nodeRequest, { serverOrigin, signal }) => {
 
 export const applyRedirectionToRequest = (
   request,
-  { ressource, pathname, ...rest },
+  { resource, pathname, ...rest },
 ) => {
   return {
     ...request,
-    ...(ressource
-      ? getPropertiesFromRessource({
-          ressource,
+    ...(resource
+      ? getPropertiesFromResource({
+          resource,
           baseUrl: request.url,
         })
       : pathname
@@ -55,20 +55,20 @@ export const applyRedirectionToRequest = (
   }
 }
 
-const getPropertiesFromRessource = ({ ressource, baseUrl }) => {
-  const urlObject = new URL(ressource, baseUrl)
+const getPropertiesFromResource = ({ resource, baseUrl }) => {
+  const urlObject = new URL(resource, baseUrl)
   let pathname = urlObject.pathname
 
   return {
     url: String(urlObject),
     pathname,
-    ressource,
+    resource,
   }
 }
 
 const getPropertiesFromPathname = ({ pathname, baseUrl }) => {
-  return getPropertiesFromRessource({
-    ressource: `${pathname}${new URL(baseUrl).search}`,
+  return getPropertiesFromResource({
+    resource: `${pathname}${new URL(baseUrl).search}`,
     baseUrl,
   })
 }
@@ -95,12 +95,12 @@ export const createPushRequest = (request, { signal, pathname, method }) => {
 const getHeadersInheritedByPushRequest = (request) => {
   const headersInherited = { ...request.headers }
   // mtime sent by the client in request headers concerns the main request
-  // Time remains valid for request to other ressources so we keep it
+  // Time remains valid for request to other resources so we keep it
   // in child requests
   // delete childHeaders["if-modified-since"]
 
   // eTag sent by the client in request headers concerns the main request
-  // A request made to an other ressource must not inherit the eTag
+  // A request made to an other resource must not inherit the eTag
   delete headersInherited["if-none-match"]
 
   return headersInherited
