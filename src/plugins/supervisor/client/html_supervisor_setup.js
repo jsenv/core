@@ -1,4 +1,4 @@
-window.__html_supervisor__ = {
+window.__supervisor__ = {
   // "html_supervisor_installer.js" will implement
   // - "addScriptToExecute"
   // - "superviseScriptTypeModule"
@@ -6,11 +6,11 @@ window.__html_supervisor__ = {
   // and take all executions in "scriptsToExecute" and implement their supervision
   scriptsToExecute: [],
   addScriptToExecute: (scriptToExecute) => {
-    window.__html_supervisor__.scriptsToExecute.push(scriptToExecute)
+    window.__supervisor__.scriptsToExecute.push(scriptToExecute)
   },
   superviseScript: ({ src, isInline, crossorigin, integrity }) => {
     const { currentScript } = document
-    window.__html_supervisor__.addScriptToExecute({
+    window.__supervisor__.addScriptToExecute({
       src,
       type: "js_classic",
       isInline,
@@ -64,7 +64,7 @@ window.__html_supervisor__ = {
     })
   },
   superviseScriptTypeModule: () => {
-    throw new Error("htmlSupervisor not installed")
+    throw new Error("supervisor not installed")
   },
   getScriptExecutionResults: () => {
     // wait for page to load before collecting script execution results
@@ -80,10 +80,10 @@ window.__html_supervisor__ = {
       window.addEventListener("load", loadCallback)
     })
     return htmlReadyPromise.then(() => {
-      return window.__html_supervisor__.collectScriptResults()
+      return window.__supervisor__.collectScriptResults()
     })
   },
   collectScriptResults: () => {
-    throw new Error("htmlSupervisor not installed")
+    throw new Error("supervisor not installed")
   },
 }

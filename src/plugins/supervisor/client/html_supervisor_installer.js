@@ -2,7 +2,7 @@ import { unevalException } from "./uneval_exception.js"
 import { displayErrorInDocument } from "./error_overlay.js"
 import { displayErrorNotification } from "./error_in_notification.js"
 
-const { __html_supervisor__ } = window
+const { __supervisor__ } = window
 
 const supervisedScripts = []
 
@@ -92,7 +92,7 @@ export const installHtmlSupervisor = ({
     if (reload) {
       urlObject.searchParams.set("hmr", Date.now())
     }
-    __html_supervisor__.currentExecution = {
+    __supervisor__.currentExecution = {
       type: type === "module" ? "dynamic_import" : "script_injection",
       url: urlObject.href,
     }
@@ -114,7 +114,7 @@ export const installHtmlSupervisor = ({
         console.log(`${type} load ended`)
         console.groupEnd()
       }
-      __html_supervisor__.currentExecution = null
+      __supervisor__.currentExecution = null
       return
     }
     const executionResult = {
@@ -143,7 +143,7 @@ export const installHtmlSupervisor = ({
     if (logs) {
       console.groupEnd()
     }
-    __html_supervisor__.currentExecution = null
+    __supervisor__.currentExecution = null
   }
 
   const classicExecutionQueue = createExecutionQueue(performExecution)
@@ -164,7 +164,7 @@ export const installHtmlSupervisor = ({
       }
     }),
   )
-  __html_supervisor__.addScriptToExecute = async (scriptToExecute) => {
+  __supervisor__.addScriptToExecute = async (scriptToExecute) => {
     if (!supervisedScripts.includes(scriptToExecute)) {
       supervisedScripts.push(scriptToExecute)
       scriptToExecute.reload = () => {
@@ -189,7 +189,7 @@ export const installHtmlSupervisor = ({
     }
   }
 
-  __html_supervisor__.collectScriptResults = async () => {
+  __supervisor__.collectScriptResults = async () => {
     collectCalled = true
     if (pendingExecutionCount === 0) {
       resolveScriptExecutionsPromise()
@@ -215,11 +215,11 @@ export const installHtmlSupervisor = ({
     }
   }
 
-  const { scriptsToExecute } = __html_supervisor__
+  const { scriptsToExecute } = __supervisor__
   const copy = scriptsToExecute.slice()
   scriptsToExecute.length = 0
   copy.forEach((scriptToExecute) => {
-    __html_supervisor__.addScriptToExecute(scriptToExecute)
+    __supervisor__.addScriptToExecute(scriptToExecute)
   })
 
   if (errorOverlay) {
@@ -248,7 +248,7 @@ export const installHtmlSupervisor = ({
   }
 }
 
-__html_supervisor__.reloadSupervisedScript = ({ type, src }) => {
+__supervisor__.reloadSupervisedScript = ({ type, src }) => {
   const supervisedScript = supervisedScripts.find(
     (supervisedScriptCandidate) => {
       if (type && supervisedScriptCandidate.type !== type) {
@@ -266,7 +266,7 @@ __html_supervisor__.reloadSupervisedScript = ({ type, src }) => {
 }
 
 export const superviseScriptTypeModule = ({ src, isInline }) => {
-  __html_supervisor__.addScriptToExecute({
+  __supervisor__.addScriptToExecute({
     src,
     type: "module",
     isInline,
@@ -303,7 +303,7 @@ const createExecutionQueue = (execute) => {
   const dequeue = () => {
     const scriptWaiting = scripts.shift()
     if (scriptWaiting) {
-      __html_supervisor__.addScriptToExecute(scriptWaiting)
+      __supervisor__.addScriptToExecute(scriptWaiting)
     }
   }
 

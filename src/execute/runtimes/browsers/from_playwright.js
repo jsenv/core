@@ -301,10 +301,10 @@ export const createRuntimeFromPlaywright = ({
                 /* eslint-disable no-undef */
                 /* istanbul ignore next */
                 () => {
-                  if (!window.__html_supervisor__) {
-                    throw new Error(`window.__html_supervisor__ not found`)
+                  if (!window.__supervisor__) {
+                    throw new Error(`window.__supervisor__ not found`)
                   }
-                  return window.__html_supervisor__.getScriptExecutionResults()
+                  return window.__supervisor__.getScriptExecutionResults()
                 },
                 /* eslint-enable no-undef */
               )

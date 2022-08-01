@@ -29,7 +29,7 @@ const devServer = await startDevServer({
     }),
   ],
   clientAutoreload: false,
-  htmlSupervisor: false,
+  supervisor: false,
 })
 const browser = await chromium.launch({
   headless: !debug,

@@ -54,7 +54,7 @@ export const getDOMNodesUsingUrl = (urlToReload) => {
         nodes.push({
           node: script,
           reload: () =>
-            window.__html_supervisor__.reloadSupervisedScript({
+            window.__supervisor__.reloadSupervisedScript({
               type: script.type,
               src: generatedFromSrc,
             }),

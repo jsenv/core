@@ -9,7 +9,6 @@ const test = async (params) => {
     logLevel: "warn",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
-    htmlSupervisor: true,
     ...params,
   })
   const { returnValue, pageLogs, pageErrors } = await executeInChromium({
@@ -18,7 +17,7 @@ const test = async (params) => {
     collectErrors: true,
     /* eslint-disable no-undef */
     pageFunction: async () => {
-      return window.__html_supervisor__.getScriptExecutionResults()
+      return window.__supervisor__.getScriptExecutionResults()
     },
     /* eslint-enable no-undef */
   })

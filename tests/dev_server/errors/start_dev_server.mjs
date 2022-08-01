@@ -5,7 +5,7 @@ export const devServer = await startDevServer({
   omegaServerLogLevel: process.env.GENERATING_SNAPSHOTS ? "off" : undefined,
   port: 3589,
   rootDirectoryUrl: new URL("./stories/", import.meta.url),
-  htmlSupervisor: {
+  supervisor: {
     errorBaseUrl: process.env.GENERATING_SNAPSHOTS ? "file:///" : undefined,
   },
   plugins: [

@@ -15,7 +15,6 @@ try {
     omegaServerLogLevel: "warn",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
-    htmlSupervisor: true,
     devServerAutoreload: false,
     port: 0,
   })
@@ -25,7 +24,7 @@ try {
     collectErrors: true,
     /* eslint-disable no-undef */
     pageFunction: async () => {
-      return window.__html_supervisor__.getScriptExecutionResults()
+      return window.__supervisor__.getScriptExecutionResults()
     },
     /* eslint-enable no-undef */
   })

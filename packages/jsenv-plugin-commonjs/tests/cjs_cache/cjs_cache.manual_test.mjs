@@ -13,5 +13,5 @@ await startDevServer({
     }),
   ],
   clientAutoreload: false,
-  htmlSupervisor: false,
+  supervisor: false,
 })

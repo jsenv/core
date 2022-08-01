@@ -48,7 +48,7 @@ export const startDevServer = async ({
   runtimeCompat = defaultRuntimeCompat,
   plugins = [],
   urlAnalysis = {},
-  htmlSupervisor = true,
+  supervisor = true,
   nodeEsmResolution,
   fileSystemMagicResolution,
   transpilation,
@@ -160,7 +160,7 @@ export const startDevServer = async ({
 
     plugins,
     urlAnalysis,
-    htmlSupervisor,
+    supervisor,
     nodeEsmResolution,
     fileSystemMagicResolution,
     transpilation,
