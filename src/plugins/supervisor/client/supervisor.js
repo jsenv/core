@@ -778,36 +778,44 @@ window.__supervisor__ = (() => {
       executionResult.status = "errored"
       executionResult.coverage = window.__coverage__
       executionResult.error = error
-      if (typeof window.reportError === "function") {
-        window.reportError(error)
-      } else {
-        console.error(error)
+      if (execution.type === "js_module") {
+        if (typeof window.reportError === "function") {
+          window.reportError(error)
+        } else {
+          console.error(error)
+        }
       }
       if (logs) {
         console.groupEnd()
       }
     }
-    supervisor.superviseScript = ({ src, crossorigin, integrity }) => {
+    supervisor.superviseScript = ({ src }) => {
       const { currentScript } = document
+      const parentNode = currentScript.parentNode
+      let nodeToReplace
+      let currentScriptClone
       const execution = supervisor.createExecution({
         src,
         type: "js_classic",
         execute: ({ isReload }) => {
           return new Promise((resolve, reject) => {
+            currentScriptClone = cloneScript(currentScript)
             const urlObject = new URL(src, window.location)
             if (isReload) {
               urlObject.searchParams.set("hmr", Date.now())
+              nodeToReplace = currentScriptClone
+              currentScriptClone.src = urlObject.href
+            } else {
+              currentScriptClone.removeAttribute("jsenv-plugin-owner")
+              currentScriptClone.removeAttribute("jsenv-plugin-action")
+              currentScriptClone.removeAttribute("inlined-from-src")
+              currentScriptClone.removeAttribute("original-position")
+              currentScriptClone.removeAttribute("original-src-position")
+              nodeToReplace = currentScript
+              currentScriptClone.src = src
             }
             const url = urlObject.href
 
-            const script = document.createElement("script")
-            if (crossorigin) {
-              script.crossorigin = crossorigin
-            }
-            if (integrity) {
-              script.integrity = integrity
-            }
-            script.src = url
             let lastWindowErrorUrl
             let lastWindowError
             const windowErrorCallback = (e) => {
@@ -815,49 +823,22 @@ window.__supervisor__ = (() => {
               lastWindowError = e.error
             }
             const cleanup = () => {
-              // the execution of the script itself can remove script from the page
-              if (script.parentNode) {
-                script.parentNode.removeChild(script)
-              }
               window.removeEventListener("error", windowErrorCallback)
             }
             window.addEventListener("error", windowErrorCallback)
-            script.addEventListener("error", () => {
+            currentScriptClone.addEventListener("error", () => {
               cleanup()
               reject(src)
             })
-            script.addEventListener("load", () => {
+            currentScriptClone.addEventListener("load", () => {
               cleanup()
               if (lastWindowErrorUrl === url) {
-                if (
-                  lastWindowError &&
-                  lastWindowError.code === "NETWORK_FAILURE"
-                ) {
-                  const currentScriptErrorEvent = new Event("error")
-                  currentScript.dispatchEvent(currentScriptErrorEvent)
-                } else if (typeof lastWindowError === "object") {
-                  const globalErrorEvent = new Event("error")
-                  globalErrorEvent.filename = lastWindowError.filename
-                  globalErrorEvent.lineno =
-                    lastWindowError.line || lastWindowError.lineno
-                  globalErrorEvent.colno =
-                    lastWindowError.column || lastWindowError.columnno
-                  globalErrorEvent.message = lastWindowError.message
-                  window.dispatchEvent(globalErrorEvent)
-                }
                 reject(lastWindowError)
               } else {
                 resolve()
               }
             })
-            if (currentScript) {
-              currentScript.parentNode.insertBefore(
-                script,
-                currentScript.nextSibling,
-              )
-            } else {
-              document.body.appendChild(script)
-            }
+            parentNode.replaceChild(currentScriptClone, nodeToReplace)
           })
         },
       })
@@ -905,6 +886,16 @@ window.__supervisor__ = (() => {
       } catch (e) {
         return Date.now()
       }
+    }
+
+    const cloneScript = (script) => {
+      // do not use script.cloneNode()
+      // bcause https://stackoverflow.com/questions/28771542/why-dont-clonenode-script-tags-execute
+      const clone = document.createElement("script")
+      Array.from(script.attributes).forEach((attribute) => {
+        clone.setAttribute(attribute.nodeName, attribute.nodeVale)
+      })
+      return clone
     }
   }
 

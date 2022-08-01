@@ -88,6 +88,9 @@ const test = async ({ browserLauncher, browserName }) => {
       story: "plugin_error_transform",
     })
     await generateHtmlForStory({
+      story: "script_inline_throw",
+    })
+    await generateHtmlForStory({
       story: "script_module_inline_export_not_found",
     })
     await generateHtmlForStory({
@@ -98,6 +101,9 @@ const test = async ({ browserLauncher, browserName }) => {
     })
     await generateHtmlForStory({
       story: "script_module_inline_throw",
+    })
+    await generateHtmlForStory({
+      story: "script_throw",
     })
     await generateHtmlForStory({
       story: "undefined_is_not_a_function",

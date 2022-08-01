@@ -12,31 +12,35 @@
  * This plugin provides a way for jsenv to know when js execution is done
  * As a side effect this plugin enables ability to hot reload js inlined into <script hot-accept>
  *
- * TODO: do it this way instead (to repect code execution)
  * <script src="file.js">
  * becomes
- * <script supervised-src="file.js">
- *   window.__supervisor__.superviseScript(document.currentScript)
+ * <script>
+ *   window.__supervisor__.superviseScript({ src: 'file.js' })
  * </script>
  *
  * <script>
  *    console.log(42)
  * </script>
  * becomes
- * <script supervised-src="main.html@L10-L13.js>
- *   window.__supervisor__.superviseScript(document.currentScript)
+ * <script>
+ *   window.__supervisor__.superviseScript({ src: 'main.html@L10-L13.js' })
  * </script>
  *
  * <script type="module" src="module.js"></script>
  * becomes
- * <script type="module" supervised-src="module.js">
+ * <script type="module">
  *   import { superviseScriptTypeModule } from 'supervisor'
- *   superviseScriptTypeModule({
- *     src: "module.js"
- *   })
+ *   superviseScriptTypeModule({ src: "module.js" })
  * </script>
  *
- * And same logic for inline <script type="module">
+ * <script type="module">
+ *   console.log(42)
+ * </script>
+ * becomes
+ * <script type="module">
+ *   import { superviseScriptTypeModule } from 'supervisor'
+ *   superviseScriptTypeModule({ src: 'main.html@L10-L13.js' })
+ * </script>
  */
 
 import { fileURLToPath } from "node:url"
@@ -341,20 +345,30 @@ export const jsenvPluginSupervisor = ({
             integrity,
             crossorigin,
           }) => {
-            setHtmlNodeText(
-              node,
-              generateCodeToSuperviseScript({
-                type,
-                src,
-                isInline,
-                defer,
-                async,
-                integrity,
-                crossorigin,
-                scriptTypeModuleSupervisorSpecifier:
-                  scriptTypeModuleSupervisorFileReference.generatedSpecifier,
-              }),
-            )
+            const paramsAsJson = JSON.stringify({
+              src,
+              isInline,
+              defer,
+              async,
+              integrity,
+              crossorigin,
+            })
+            if (type === "js_module") {
+              setHtmlNodeText(
+                node,
+                `
+      import { superviseScriptTypeModule } from ${scriptTypeModuleSupervisorFileReference.generatedSpecifier}
+      superviseScriptTypeModule(${paramsAsJson})
+        `,
+              )
+            } else {
+              setHtmlNodeText(
+                node,
+                `
+      window.__supervisor__.superviseScript(${paramsAsJson})
+        `,
+              )
+            }
             if (src) {
               setHtmlNodeAttributes(node, {
                 "jsenv-plugin-owner": "jsenv:supervisor",
@@ -377,35 +391,4 @@ export const jsenvPluginSupervisor = ({
       },
     },
   }
-}
-
-// Ideally jsenv should take into account eventual
-// "integrity" and "crossorigin" attribute during supervision
-const generateCodeToSuperviseScript = ({
-  type,
-  src,
-  isInline,
-  defer,
-  async,
-  integrity,
-  crossorigin,
-  scriptTypeModuleSupervisorSpecifier,
-}) => {
-  const paramsAsJson = JSON.stringify({
-    src,
-    isInline,
-    defer,
-    async,
-    integrity,
-    crossorigin,
-  })
-  if (type === "js_module") {
-    return `
-      import { superviseScriptTypeModule } from ${scriptTypeModuleSupervisorSpecifier}
-      superviseScriptTypeModule(${paramsAsJson})
-`
-  }
-  return `
-      window.__supervisor__.superviseScript(${paramsAsJson})
-`
 }
