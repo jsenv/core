@@ -101,7 +101,7 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
     let position
     if (generatedFromInlineContent) {
       // when generated from inline content,
-      // line, column is not "src" nor "generated-from-src" but "original-position"
+      // line, column is not "src" nor "inlined-from-src" but "original-position"
       position = getHtmlNodePosition(node)
     } else {
       position = getHtmlNodeAttributePosition(node, attributeName)
@@ -137,8 +137,8 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
         node,
         attributeName,
         specifier:
-          attributeName === "generated-from-src" ||
-          attributeName === "generated-from-href"
+          attributeName === "inlined-from-src" ||
+          attributeName === "inlined-from-href"
             ? new URL(value, url).href
             : value,
       })
@@ -146,13 +146,13 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
       visitAttributeAsUrlSpecifier({
         ...rest,
         node,
-        attributeName: "generated-from-src",
+        attributeName: "inlined-from-src",
       })
     } else if (attributeName === "href") {
       visitAttributeAsUrlSpecifier({
         ...rest,
         node,
-        attributeName: "generated-from-href",
+        attributeName: "inlined-from-href",
       })
     }
   }

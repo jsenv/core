@@ -362,7 +362,7 @@ export const jsenvPluginSupervisor = ({
             )
             setHtmlNodeAttributes(node, {
               "generated-by": "jsenv:supervisor",
-              ...(src ? { "generated-from-src": src } : {}),
+              ...(src ? { "inlined-from-src": src } : {}),
               ...(isInline ? { "generated-from-inline-content": "" } : {}),
             })
           },

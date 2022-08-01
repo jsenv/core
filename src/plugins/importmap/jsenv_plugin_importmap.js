@@ -163,7 +163,7 @@ export const jsenvPluginImportmap = () => {
           setHtmlNodeAttributes(importmap, {
             "src": undefined,
             "generated-by": "jsenv:importmap",
-            "generated-from-src": src,
+            "inlined-from-src": src,
           })
 
           const { line, column, lineEnd, columnEnd, isOriginal } =

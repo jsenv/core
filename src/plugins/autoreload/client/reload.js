@@ -46,17 +46,17 @@ export const getDOMNodesUsingUrl = (urlToReload) => {
   })
   Array.from(document.querySelectorAll("script")).forEach((script) => {
     visitNodeAttributeAsUrl(script, "src")
-    const generatedFromSrc = script.getAttribute("generated-from-src")
-    if (generatedFromSrc) {
-      const generatedFromUrl = new URL(generatedFromSrc, window.location.origin)
+    const inlinedFromSrc = script.getAttribute("inlined-from-src")
+    if (inlinedFromSrc) {
+      const inlinedFromUrl = new URL(inlinedFromSrc, window.location.origin)
         .href
-      if (shouldReloadUrl(generatedFromUrl)) {
+      if (shouldReloadUrl(inlinedFromUrl)) {
         nodes.push({
           node: script,
           reload: () =>
             window.__supervisor__.reloadSupervisedScript({
               type: script.type,
-              src: generatedFromSrc,
+              src: inlinedFromSrc,
             }),
         })
       }

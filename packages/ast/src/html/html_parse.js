@@ -68,8 +68,8 @@ export const stringifyHtmlAst = (
             "original-href-position": undefined,
             "injected-by": undefined,
             "generated-by": undefined,
-            "generated-from-src": undefined,
-            "generated-from-href": undefined,
+            "inlined-from-src": undefined,
+            "inlined-from-href": undefined,
           })
         },
       })
