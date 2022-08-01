@@ -21,10 +21,22 @@ export const createHtmlNode = ({ tagName, textContent = "", ...rest }) => {
 }
 
 export const injectScriptNodeAsEarlyAsPossible = (htmlAst, scriptNode) => {
-  const injectedBy = getHtmlNodeAttribute(scriptNode, "injected-by")
-  if (injectedBy === undefined) {
+  const jsenvPluginOwner = getHtmlNodeAttribute(
+    scriptNode,
+    "jsenv-plugin-owner",
+  )
+  if (jsenvPluginOwner === undefined) {
     setHtmlNodeAttributes(scriptNode, {
-      "injected-by": "jsenv",
+      "jsenv-plugin-owner": "jsenv",
+    })
+  }
+  const jsenvPluginAction = getHtmlNodeAttribute(
+    scriptNode,
+    "jsenv-plugin-action",
+  )
+  if (jsenvPluginAction === undefined) {
+    setHtmlNodeAttributes(scriptNode, {
+      "jsenv-plugin-action": "injected",
     })
   }
   const isJsModule = analyzeScriptNode(scriptNode).type === "js_module"

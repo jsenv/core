@@ -126,8 +126,8 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
   const visitAttributeAsUrlSpecifier = ({ node, attributeName, ...rest }) => {
     const value = getHtmlNodeAttribute(node, attributeName)
     if (value) {
-      const generatedBy = getHtmlNodeAttribute(node, "generated-by")
-      if (generatedBy !== undefined) {
+      const jsenvPluginOwner = getHtmlNodeAttribute(node, "jsenv-plugin-owner")
+      if (jsenvPluginOwner !== undefined) {
         // during build the importmap is inlined
         // and shoud not be considered as a dependency anymore
         return

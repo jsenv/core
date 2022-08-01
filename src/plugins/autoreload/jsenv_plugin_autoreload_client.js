@@ -25,10 +25,10 @@ export const jsenvPluginAutoreloadClient = () => {
         injectScriptNodeAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
+            "jsenv-plugin-owner": "jsenv:autoreload_client",
             "tagName": "script",
             "type": "module",
             "src": autoreloadClientReference.generatedSpecifier,
-            "injected-by": "jsenv:autoreload_client",
           }),
         )
         const htmlModified = stringifyHtmlAst(htmlAst)

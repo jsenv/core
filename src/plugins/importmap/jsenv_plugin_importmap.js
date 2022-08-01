@@ -135,7 +135,7 @@ export const jsenvPluginImportmap = () => {
           setHtmlNodeText(importmap, inlineImportmapUrlInfo.content)
           setHtmlNodeAttributes(importmap, {
             "jsenv-plugin-owner": "jsenv:importmap",
-            "jsenv-plugin-action": "cook_content",
+            "jsenv-plugin-action": "content_cooked",
           })
           onHtmlImportmapParsed(
             JSON.parse(inlineImportmapUrlInfo.content),

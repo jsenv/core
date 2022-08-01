@@ -65,12 +65,12 @@ export const jsenvPluginPreact = ({
         injectScriptNodeAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
+            "jsenv-plugin-owner": "jsenv:preact",
             "tagName": "script",
             "type": "module",
             "textContent": `
 import ${preactDevtoolsReference.generatedSpecifier}
 `,
-            "injected-by": "jsenv:preact",
           }),
         )
         const htmlModified = stringifyHtmlAst(htmlAst)

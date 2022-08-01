@@ -37,6 +37,7 @@ export const jsenvPluginToolbar = ({ logs = false } = {}) => {
         injectScriptNodeAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
+            "jsenv-plugin-owner": "jsenv:toolbar",
             "tagName": "script",
             "type": "module",
             "textContent": `
@@ -49,7 +50,6 @@ injectToolbar(${JSON.stringify(
               null,
               "  ",
             )})`,
-            "injected-by": "jsenv:toolbar",
           }),
         )
         const htmlModified = stringifyHtmlAst(htmlAst)

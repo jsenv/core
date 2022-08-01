@@ -271,15 +271,15 @@ export const jsenvPluginSupervisor = ({
             if (type !== "js_classic" && type !== "js_module") {
               return
             }
-            const injectedBy = getHtmlNodeAttribute(node, "injected-by")
-            if (injectedBy !== undefined) {
+            const jsenvPluginOwner = getHtmlNodeAttribute(
+              node,
+              "jsenv-plugin-owner",
+            )
+            if (jsenvPluginOwner !== undefined) {
               return
             }
-            const noHtmlSupervisor = getHtmlNodeAttribute(
-              node,
-              "no-html-supervisor",
-            )
-            if (noHtmlSupervisor !== undefined) {
+            const noSupervisor = getHtmlNodeAttribute(node, "no-supervisor")
+            if (noSupervisor !== undefined) {
               return
             }
             const htmlNodeText = getHtmlNodeText(node)
@@ -308,7 +308,7 @@ export const jsenvPluginSupervisor = ({
         injectScriptNodeAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
-            "injected-by": "jsenv:supervisor",
+            "jsenv-plugin-owner": "jsenv:supervisor",
             "tagName": "script",
             "src": supervisorFileReference.generatedSpecifier,
           }),
@@ -316,7 +316,7 @@ export const jsenvPluginSupervisor = ({
         injectScriptNodeAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
-            "injected-by": "jsenv:supervisor",
+            "jsenv-plugin-owner": "jsenv:supervisor",
             "tagName": "script",
             "textContent": `
       window.__supervisor__.setup(${JSON.stringify(
@@ -369,7 +369,7 @@ export const jsenvPluginSupervisor = ({
             } else {
               setHtmlNodeAttributes(node, {
                 "jsenv-plugin-owner": "jsenv:supervisor",
-                "jsenv-plugin-action": "cook_content",
+                "jsenv-plugin-action": "content_cooked",
                 "generated-from-inline-content": "",
               })
             }

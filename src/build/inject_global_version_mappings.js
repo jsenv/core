@@ -61,11 +61,11 @@ const injectors = {
     injectScriptNodeAsEarlyAsPossible(
       htmlAst,
       createHtmlNode({
+        "jsenv-plugin-owner": "jsenv:versioning",
         "tagName": "script",
         "textContent": generateClientCodeForVersionMappings(versionMappings, {
           globalName: "window",
         }),
-        "injected-by": "jsenv:versioning",
       }),
     )
     return {

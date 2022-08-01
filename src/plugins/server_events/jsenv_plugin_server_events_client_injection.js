@@ -32,10 +32,10 @@ export const jsenvPluginServerEventsClientInjection = () => {
         injectScriptNodeAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
+            "jsenv-plugin-owner": "jsenv:server_events",
             "tagName": "script",
             "type": "module",
             "src": serverEventsClientFileReference.generatedSpecifier,
-            "injected-by": "jsenv:server_events",
           }),
         )
         const htmlModified = stringifyHtmlAst(htmlAst)

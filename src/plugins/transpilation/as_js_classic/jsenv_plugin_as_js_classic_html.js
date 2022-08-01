@@ -192,7 +192,7 @@ export const jsenvPluginAsJsClassicHtml = ({
               setHtmlNodeAttributes(moduleScriptNode, {
                 "type": undefined,
                 "jsenv-plugin-owner": "jsenv:as_js_classic_html",
-                "jsenv-plugin-action": "cook_content",
+                "jsenv-plugin-action": "content_cooked",
               })
             })
           }
@@ -271,9 +271,9 @@ export const jsenvPluginAsJsClassicHtml = ({
             injectScriptNodeAsEarlyAsPossible(
               htmlAst,
               createHtmlNode({
+                "jsenv-plugin-owner": "jsenv:as_js_classic_html",
                 "tagName": "script",
                 "src": systemJsReference.generatedSpecifier,
-                "injected-by": "jsenv:as_js_classic_html",
               }),
             )
           }

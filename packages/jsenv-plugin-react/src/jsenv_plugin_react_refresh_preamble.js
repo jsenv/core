@@ -25,10 +25,10 @@ export const jsenvPluginReactRefreshPreamble = () => {
         injectScriptNodeAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
+            "jsenv-plugin-owner": "jsenv:react_refresh_preamble",
             "tagName": "script",
             "type": "module",
             "src": reactRefreshPreambleReference.generatedSpecifier,
-            "injected-by": "jsenv:react_refresh_preamble",
           }),
         )
         const htmlModified = stringifyHtmlAst(htmlAst)
