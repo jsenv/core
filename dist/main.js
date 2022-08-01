@@ -94,7 +94,7 @@ const urlToScheme$1 = url => {
   return scheme;
 };
 
-const urlToRessource$1 = url => {
+const urlToResource = url => {
   const scheme = urlToScheme$1(url);
 
   if (scheme === "file") {
@@ -115,25 +115,25 @@ const urlToRessource$1 = url => {
 };
 
 const urlToPathname$1 = url => {
-  const ressource = urlToRessource$1(url);
-  const pathname = ressourceToPathname$1(ressource);
+  const resource = urlToResource(url);
+  const pathname = resourceToPathname(resource);
   return pathname;
 };
 
-const ressourceToPathname$1 = ressource => {
-  const searchSeparatorIndex = ressource.indexOf("?");
+const resourceToPathname = resource => {
+  const searchSeparatorIndex = resource.indexOf("?");
 
   if (searchSeparatorIndex > -1) {
-    return ressource.slice(0, searchSeparatorIndex);
+    return resource.slice(0, searchSeparatorIndex);
   }
 
-  const hashIndex = ressource.indexOf("#");
+  const hashIndex = resource.indexOf("#");
 
   if (hashIndex > -1) {
-    return ressource.slice(0, hashIndex);
+    return resource.slice(0, hashIndex);
   }
 
-  return ressource;
+  return resource;
 };
 
 const urlToFilename$1 = url => {
@@ -616,8 +616,8 @@ const urlToRelativeUrl = (url, baseUrl) => {
   } = urlObject;
 
   if (pathname === "/") {
-    const baseUrlRessourceWithoutLeadingSlash = baseUrlObject.pathname.slice(1);
-    return baseUrlRessourceWithoutLeadingSlash;
+    const baseUrlResourceWithoutLeadingSlash = baseUrlObject.pathname.slice(1);
+    return baseUrlResourceWithoutLeadingSlash;
   }
 
   const basePathname = baseUrlObject.pathname;
@@ -2006,10 +2006,10 @@ const ensureWindowsDriveLetter = (url, baseUrl) => {
   return `file:///${driveLetter}:${afterProtocol}`;
 };
 
-const extractDriveLetter = ressource => {
+const extractDriveLetter = resource => {
   // we still have the windows drive letter
-  if (/[a-zA-Z]/.test(ressource[1]) && ressource[2] === ":") {
-    return ressource[1];
+  if (/[a-zA-Z]/.test(resource[1]) && resource[2] === ":") {
+    return resource[1];
   }
 
   return null;
@@ -2136,7 +2136,7 @@ const createWatcher = (sourcePath, options) => {
   return watcher;
 };
 
-const trackRessources = () => {
+const trackResources = () => {
   const callbackArray = [];
 
   const registerCleanupCallback = callback => {
@@ -2244,7 +2244,7 @@ const registerDirectoryLifecycle = (source, {
     return watch;
   };
 
-  const tracker = trackRessources();
+  const tracker = trackResources();
   const infoMap = new Map();
 
   const readEntryInfo = url => {
@@ -2380,7 +2380,7 @@ const registerDirectoryLifecycle = (source, {
 
     if (entryInfo.type !== previousInfo.type) {
       // it existed and was replaced by something else
-      // we don't handle this as an update. We rather say the ressource
+      // we don't handle this as an update. We rather say the resource
       // is lost and something else is found (call removed() then added())
       handleEntryLost(previousInfo);
       handleEntryFound(entryInfo);
@@ -2591,7 +2591,7 @@ const registerFileLifecycle = (source, {
     }
   }
 
-  const tracker = trackRessources();
+  const tracker = trackResources();
 
   const handleFileFound = ({
     existent
@@ -4014,10 +4014,10 @@ const createUrlGraph = ({
     }
 
     references.forEach(reference => {
-      if (reference.isRessourceHint) {
-        // ressource hint are a special kind of reference.
+      if (reference.isResourceHint) {
+        // resource hint are a special kind of reference.
         // They are a sort of weak reference to an url.
-        // We ignore them so that url referenced only by ressource hints
+        // We ignore them so that url referenced only by resource hints
         // have url.dependents.size === 0 and can be considered as not used
         // It means html won't consider url referenced solely
         // by <link> as dependency and it's fine
@@ -4243,7 +4243,7 @@ const parseAndTransformHtmlUrls = async (urlInfo, context) => {
         crossorigin,
         integrity
       } = readFetchMetas(node);
-      const isRessourceHint = ["preconnect", "dns-prefetch", "prefetch", "preload", "modulepreload"].includes(subtype);
+      const isResourceHint = ["preconnect", "dns-prefetch", "prefetch", "preload", "modulepreload"].includes(subtype);
       const [reference] = referenceUtils.found({
         type,
         expectedType,
@@ -4252,7 +4252,7 @@ const parseAndTransformHtmlUrls = async (urlInfo, context) => {
         specifier,
         specifierLine: line,
         specifierColumn: column,
-        isRessourceHint,
+        isResourceHint,
         crossorigin,
         integrity
       });
@@ -4669,7 +4669,7 @@ const jsenvPluginUrlAnalysis = ({
         return;
       }
 
-      if (reference.specifier[0] === "#" && // For Html, css and in general "#" refer to a ressource in the page
+      if (reference.specifier[0] === "#" && // For Html, css and in general "#" refer to a resource in the page
       // so that urls must be kept intact
       // However for js import specifiers they have a different meaning and we want
       // to resolve them (https://nodejs.org/api/packages.html#imports for instance)
@@ -5825,10 +5825,10 @@ const jsenvPluginAsJsClassicHtml = ({
         const convertedUrls = [];
 
         const getReferenceAsJsClassic = async (reference, {
-          // we don't cook ressource hints
-          // because they might refer to ressource that will be modified during build
+          // we don't cook resource hints
+          // because they might refer to resource that will be modified during build
           // It also means something else HAVE to reference that url in order to cook it
-          // so that the preload is deleted by "resync_ressource_hints.js" otherwise
+          // so that the preload is deleted by "resync_resource_hints.js" otherwise
           cookIt = false
         } = {}) => {
           const newReferenceProps = {
@@ -10451,7 +10451,7 @@ const jsenvPluginAsJsClassicConversion = ({
       // - import specifier (static/dynamic import + re-export)
       // - url specifier when inside System.register/_context.import()
       //   (because it's the transpiled equivalent of static and dynamic imports)
-      // And not other references otherwise we could try to transform inline ressources
+      // And not other references otherwise we could try to transform inline resources
       // or specifiers inside new URL()...
       js_import_export: propagateJsClassicSearchParam,
       js_url_specifier: (reference, context) => {
@@ -10468,7 +10468,7 @@ const jsenvPluginAsJsClassicConversion = ({
         context,
         searchParam: "as_js_classic",
         // override the expectedType to "js_module"
-        // because when there is ?as_js_classic it means the underlying ressource
+        // because when there is ?as_js_classic it means the underlying resource
         // is a js_module
         expectedType: "js_module"
       });
@@ -11531,26 +11531,26 @@ const getParentUrl = url => {
   if (url.startsWith("file://")) {
     // With node.js new URL('../', 'file:///C:/').href
     // returns "file:///C:/" instead of "file:///"
-    const ressource = url.slice("file://".length);
-    const slashLastIndex = ressource.lastIndexOf("/");
+    const resource = url.slice("file://".length);
+    const slashLastIndex = resource.lastIndexOf("/");
 
     if (slashLastIndex === -1) {
       return url;
     }
 
-    const lastCharIndex = ressource.length - 1;
+    const lastCharIndex = resource.length - 1;
 
     if (slashLastIndex === lastCharIndex) {
-      const slashBeforeLastIndex = ressource.lastIndexOf("/", slashLastIndex - 1);
+      const slashBeforeLastIndex = resource.lastIndexOf("/", slashLastIndex - 1);
 
       if (slashBeforeLastIndex === -1) {
         return url;
       }
 
-      return `file://${ressource.slice(0, slashBeforeLastIndex + 1)}`;
+      return `file://${resource.slice(0, slashBeforeLastIndex + 1)}`;
     }
 
-    return `file://${ressource.slice(0, slashLastIndex + 1)}`;
+    return `file://${resource.slice(0, slashLastIndex + 1)}`;
   }
 
   return new URL(url.endsWith("/") ? "../" : "./", url).href;
@@ -13190,7 +13190,7 @@ const jsenvPluginHtmlSupervisor = ({
     name: "jsenv:html_supervisor",
     appliesDuring: "dev",
     serve: async (request, context) => {
-      if (request.ressource.startsWith("/__get_code_frame__/")) {
+      if (request.pathname.startsWith("/__get_code_frame__/")) {
         const {
           pathname,
           searchParams
@@ -13249,8 +13249,8 @@ const jsenvPluginHtmlSupervisor = ({
         };
       }
 
-      if (request.ressource.startsWith("/__get_error_cause__/")) {
-        const file = request.ressource.slice("/__get_error_cause__/".length);
+      if (request.pathname.startsWith("/__get_error_cause__/")) {
+        const file = request.pathname.slice("/__get_error_cause__/".length);
 
         if (!file) {
           return {
@@ -13309,8 +13309,8 @@ const jsenvPluginHtmlSupervisor = ({
         };
       }
 
-      if (request.ressource.startsWith("/__open_in_editor__/")) {
-        const file = request.ressource.slice("/__open_in_editor__/".length);
+      if (request.pathname.startsWith("/__open_in_editor__/")) {
+        const file = request.pathname.slice("/__open_in_editor__/".length);
 
         if (!file) {
           return {
@@ -16397,7 +16397,7 @@ const htmlNodeCanHotReload = node => {
   if (node.nodeName === "link") {
     const {
       isStylesheet,
-      isRessourceHint,
+      isResourceHint,
       rel
     } = analyzeLinkNode(node);
 
@@ -16406,9 +16406,9 @@ const htmlNodeCanHotReload = node => {
       return true;
     }
 
-    if (isRessourceHint) {
-      // for ressource hints html will be notified the underlying ressource has changed
-      // but we won't do anything (if the ressource is deleted we should?)
+    if (isResourceHint) {
+      // for resource hints html will be notified the underlying resource has changed
+      // but we won't do anything (if the resource is deleted we should?)
       return true;
     }
 
@@ -16643,10 +16643,7 @@ import.meta.hot = createImportMetaHot(import.meta.url)
 const jsenvPluginHmr = () => {
   return {
     name: "jsenv:hmr",
-    appliesDuring: {
-      dev: true,
-      test: false
-    },
+    appliesDuring: "dev",
     redirectUrl: reference => {
       const urlObject = new URL(reference.url);
 
@@ -16689,10 +16686,7 @@ const jsenvPluginAutoreloadClient = () => {
   const autoreloadClientFileUrl = new URL("./js/autoreload.js", import.meta.url).href;
   return {
     name: "jsenv:autoreload_client",
-    appliesDuring: {
-      dev: true,
-      test: false
-    },
+    appliesDuring: "dev",
     transformUrlContent: {
       html: (htmlUrlInfo, context) => {
         const htmlAst = parseHtmlString(htmlUrlInfo.content);
@@ -16722,10 +16716,7 @@ const jsenvPluginAutoreloadServer = ({
 }) => {
   return {
     name: "jsenv:autoreload_server",
-    appliesDuring: {
-      dev: true,
-      test: false
-    },
+    appliesDuring: "dev",
     serverEvents: {
       reload: ({
         sendServerEvent,
@@ -16887,7 +16878,7 @@ const jsenvPluginAutoreloadServer = ({
           firstUrlInfo
         }) => {
           const mainHotUpdate = propagateUpdate(firstUrlInfo);
-          const cause = `following files are no longer referenced: ${prunedUrlInfos.map(prunedUrlInfo => formatUrlForClient(prunedUrlInfo.url))}`; // now check if we can hot update the main ressource
+          const cause = `following files are no longer referenced: ${prunedUrlInfos.map(prunedUrlInfo => formatUrlForClient(prunedUrlInfo.url))}`; // now check if we can hot update the main resource
           // then if we can hot update all dependencies
 
           if (mainHotUpdate.declined) {
@@ -16934,7 +16925,7 @@ const jsenvPluginAutoreloadServer = ({
       rootDirectoryUrl,
       urlGraph
     }) => {
-      if (request.ressource === "/__graph__") {
+      if (request.pathname === "/__graph__") {
         const graphJson = JSON.stringify(urlGraph.toJSON(rootDirectoryUrl));
         return {
           status: 200,
@@ -17004,7 +16995,7 @@ const jsenvPluginExplorer = ({
     serve: async (request, {
       rootDirectoryUrl
     }) => {
-      if (request.ressource !== "/") {
+      if (request.pathname !== "/") {
         return null;
       }
 
@@ -17978,7 +17969,7 @@ const nodeStreamToObservable = nodeStream => {
     // safe measure, ensure the readable stream gets
     // used in the next ${readableStreamLifetimeInSeconds} otherwise destroys it
     const timeout = setTimeout(() => {
-      process.emitWarning(`Readable stream not used after ${readableStreamLifetimeInSeconds} seconds. It will be destroyed to release ressources`, {
+      process.emitWarning(`Readable stream not used after ${readableStreamLifetimeInSeconds} seconds. It will be destroyed to release resources`, {
         CODE: "READABLE_STREAM_TIMEOUT",
         // url is for http client request
         detail: `path: ${nodeStream.path}, fd: ${nodeStream.fd}, url: ${nodeStream.url}`
@@ -18058,8 +18049,8 @@ const fromNodeRequest = (nodeRequest, {
     signal,
     http2: Boolean(nodeRequest.stream),
     origin: requestOrigin,
-    ...getPropertiesFromRessource({
-      ressource: nodeRequest.url,
+    ...getPropertiesFromResource({
+      resource: nodeRequest.url,
       baseUrl: requestOrigin
     }),
     method: nodeRequest.method,
@@ -18068,13 +18059,13 @@ const fromNodeRequest = (nodeRequest, {
   });
 };
 const applyRedirectionToRequest = (request, {
-  ressource,
+  resource,
   pathname,
   ...rest
 }) => {
   return { ...request,
-    ...(ressource ? getPropertiesFromRessource({
-      ressource,
+    ...(resource ? getPropertiesFromResource({
+      resource,
       baseUrl: request.url
     }) : pathname ? getPropertiesFromPathname({
       pathname,
@@ -18084,16 +18075,16 @@ const applyRedirectionToRequest = (request, {
   };
 };
 
-const getPropertiesFromRessource = ({
-  ressource,
+const getPropertiesFromResource = ({
+  resource,
   baseUrl
 }) => {
-  const urlObject = new URL(ressource, baseUrl);
+  const urlObject = new URL(resource, baseUrl);
   let pathname = urlObject.pathname;
   return {
     url: String(urlObject),
     pathname,
-    ressource
+    resource
   };
 };
 
@@ -18101,8 +18092,8 @@ const getPropertiesFromPathname = ({
   pathname,
   baseUrl
 }) => {
-  return getPropertiesFromRessource({
-    ressource: `${pathname}${new URL(baseUrl).search}`,
+  return getPropertiesFromResource({
+    resource: `${pathname}${new URL(baseUrl).search}`,
     baseUrl
   });
 };
@@ -18130,11 +18121,11 @@ const createPushRequest = (request, {
 const getHeadersInheritedByPushRequest = request => {
   const headersInherited = { ...request.headers
   }; // mtime sent by the client in request headers concerns the main request
-  // Time remains valid for request to other ressources so we keep it
+  // Time remains valid for request to other resources so we keep it
   // in child requests
   // delete childHeaders["if-modified-since"]
   // eTag sent by the client in request headers concerns the main request
-  // A request made to an other ressource must not inherit the eTag
+  // A request made to an other resource must not inherit the eTag
 
   delete headersInherited["if-none-match"];
   return headersInherited;
@@ -18961,7 +18952,7 @@ const startServer = async ({
     requestWaitingMs
   }) => {
     warn(createDetailedMessage$1(`still no response found for request after ${requestWaitingMs} ms`, {
-      "request url": `${request.origin}${request.ressource}`,
+      "request url": request.url,
       "request headers": JSON.stringify(request.headers, null, "  ")
     }));
   }
@@ -19385,7 +19376,7 @@ const startServer = async ({
         const onPushStreamError = e => {
           addRequestLog(requestNode, {
             type: "error",
-            value: createDetailedMessage$1(`An error occured while pushing a stream to the response for ${request.ressource}`, {
+            value: createDetailedMessage$1(`An error occured while pushing a stream to the response for ${request.resource}`, {
               "error stack": e.stack
             })
           });
@@ -19489,7 +19480,7 @@ const startServer = async ({
 
         addRequestLog(requestNode, {
           type: "info",
-          value: request.parent ? `Push ${request.ressource}` : `${request.method} ${request.origin}${request.ressource}`
+          value: request.parent ? `Push ${request.resource}` : `${request.method} ${request.url}`
         });
 
         const warn = value => {
@@ -20307,7 +20298,7 @@ const fetchFileSystem = async (filesystemUrl, {
 
     rootDirectoryUrl = rootDirectoryUrlString;
   } // here you might be tempted to add || cacheControl === 'no-cache'
-  // but no-cache means ressource can be cache but must be revalidated (yeah naming is strange)
+  // but no-cache means resource can be cache but must be revalidated (yeah naming is strange)
   // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#Cacheability
 
 
@@ -20448,7 +20439,7 @@ const getClientCacheResponse = async ({
   sourceUrl
 }) => {
   // here you might be tempted to add || headers["cache-control"] === "no-cache"
-  // but no-cache means ressource can be cache but must be revalidated (yeah naming is strange)
+  // but no-cache means resource can be cache but must be revalidated (yeah naming is strange)
   // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#Cacheability
   if (headers["cache-control"] === "no-store" || // let's disable it on no-cache too
   headers["cache-control"] === "no-cache") {
@@ -21156,8 +21147,8 @@ const flattenAndFilterPlugins = (plugins, {
       }
 
       if (typeof appliesDuring === "string") {
-        if (!["dev", "test", "build"].includes(appliesDuring)) {
-          throw new Error(`"appliesDuring" must be "dev", "test" or "build", got ${appliesDuring}`);
+        if (!["dev", "build"].includes(appliesDuring)) {
+          throw new Error(`"appliesDuring" must be "dev" or "build", got ${appliesDuring}`);
         }
 
         if (scenarios[appliesDuring]) {
@@ -21849,7 +21840,7 @@ const validateResponseIntegrity = ({
     return true;
   }
 
-  const error = new Error(`Integrity validation failed for ressource "${url}". The integrity found for this ressource is "${strongestAlgo}-${actualBase64Value}"`);
+  const error = new Error(`Integrity validation failed for resource "${url}". The integrity found for this resource is "${strongestAlgo}-${actualBase64Value}"`);
   error.code = "EINTEGRITY";
   error.algorithm = strongestAlgo;
   error.found = actualBase64Value;
@@ -21961,7 +21952,7 @@ const createKitchen = ({
     isEntryPoint = false,
     isInline = false,
     injected = false,
-    isRessourceHint = false,
+    isResourceHint = false,
     content,
     contentType,
     assert,
@@ -21999,8 +21990,8 @@ const createKitchen = ({
       isEntryPoint,
       isInline,
       injected,
-      isRessourceHint,
-      // for inline ressources the reference contains the content
+      isResourceHint,
+      // for inline resources the reference contains the content
       content,
       contentType,
       timing: {},
@@ -22051,8 +22042,8 @@ const createKitchen = ({
       // And this is because this hook inject query params used to:
       // - bypass browser cache (?v)
       // - convey information (?hmr)
-      // But do not represent an other ressource, it is considered as
-      // the same ressource under the hood
+      // But do not represent an other resource, it is considered as
+      // the same resource under the hood
 
       pluginController.callHooks("transformUrlSearchParams", reference, kitchenContext, returnValue => {
         Object.keys(returnValue).forEach(key => {
@@ -22861,11 +22852,11 @@ const loadUrlGraph = async ({
       references
     } = urlInfo;
     references.forEach(reference => {
-      // we don't cook ressource hints
-      // because they might refer to ressource that will be modified during build
+      // we don't cook resource hints
+      // because they might refer to resource that will be modified during build
       // It also means something else have to reference that url in order to cook it
-      // so that the preload is deleted by "resync_ressource_hints.js" otherwise
-      if (reference.isRessourceHint) {
+      // so that the preload is deleted by "resync_resource_hints.js" otherwise
+      if (reference.isResourceHint) {
         return;
       } // we use reference.generatedUrl to mimic what a browser would do:
       // do a fetch to the specifier as found in the file
@@ -23530,23 +23521,23 @@ self.serviceWorkerUrls = ${JSON.stringify(serviceWorkerUrls, null, "  ")};
 /*
  * Update <link rel="preload"> and friends after build (once we know everything)
  *
- * - Used to remove ressource hint targeting an url that is no longer used:
+ * - Used to remove resource hint targeting an url that is no longer used:
  *   - Happens because of import assertions transpilation (file is inlined into JS)
  */
-const resyncRessourceHints = async ({
+const resyncResourceHints = async ({
   logger,
   finalGraphKitchen,
   finalGraph,
   rawUrls,
   postBuildRedirections
 }) => {
-  const ressourceHintActions = [];
+  const resourceHintActions = [];
   GRAPH.forEach(finalGraph, urlInfo => {
     if (urlInfo.type !== "html") {
       return;
     }
 
-    ressourceHintActions.push(async () => {
+    resourceHintActions.push(async () => {
       const htmlAst = parseHtmlString(urlInfo.content, {
         storeOriginalPositions: false
       });
@@ -23558,9 +23549,9 @@ const resyncRessourceHints = async ({
         }
 
         const rel = getHtmlNodeAttribute(linkNode, "rel");
-        const isRessourceHint = ["preconnect", "dns-prefetch", "prefetch", "preload", "modulepreload"].includes(rel);
+        const isresourceHint = ["preconnect", "dns-prefetch", "prefetch", "preload", "modulepreload"].includes(rel);
 
-        if (!isRessourceHint) {
+        if (!isresourceHint) {
           return;
         }
 
@@ -23574,7 +23565,7 @@ const resyncRessourceHints = async ({
         }
 
         if (!buildUrl) {
-          logger.warn(`remove ressource hint because cannot find "${href}"`);
+          logger.warn(`remove resource hint because cannot find "${href}"`);
           actions.push(() => {
             removeHtmlNode(linkNode);
           });
@@ -23585,7 +23576,7 @@ const resyncRessourceHints = async ({
         const urlInfo = finalGraph.getUrlInfo(buildUrl);
 
         if (!urlInfo) {
-          logger.warn(`remove ressource hint because cannot find "${buildUrl}" in the graph`);
+          logger.warn(`remove resource hint because cannot find "${buildUrl}" in the graph`);
           actions.push(() => {
             removeHtmlNode(linkNode);
           });
@@ -23593,7 +23584,7 @@ const resyncRessourceHints = async ({
         }
 
         if (urlInfo.dependents.size === 0) {
-          logger.info(`remove ressource hint because "${href}" not used anymore`);
+          logger.info(`remove resource hint because "${href}" not used anymore`);
           actions.push(() => {
             removeHtmlNode(linkNode);
           });
@@ -23625,7 +23616,7 @@ const resyncRessourceHints = async ({
       }
     });
   });
-  await Promise.all(ressourceHintActions.map(ressourceHintAction => ressourceHintAction()));
+  await Promise.all(resourceHintActions.map(resourceHintAction => resourceHintAction()));
 };
 
 /*
@@ -23906,10 +23897,10 @@ build ${entryPointKeys.length} entry points`);
             addToBundlerIfAny(dependencyUrlInfo);
           });
           rawUrlInfo.references.forEach(reference => {
-            if (reference.isRessourceHint && reference.expectedType === "js_module") {
+            if (reference.isResourceHint && reference.expectedType === "js_module") {
               const referencedUrlInfo = rawGraph.getUrlInfo(reference.url);
 
-              if (referencedUrlInfo && // something else than the ressource hint is using this url
+              if (referencedUrlInfo && // something else than the resource hint is using this url
               referencedUrlInfo.dependents.size > 0) {
                 addToBundlerIfAny(referencedUrlInfo);
               }
@@ -24202,7 +24193,7 @@ build ${entryPointKeys.length} entry points`);
             throw new Error(`urls should be inside build directory at this stage, found "${reference.url}"`);
           }
 
-          if (reference.isRessourceHint) {
+          if (reference.isResourceHint) {
             // return the raw url, we will resync at the end
             return rawUrls[reference.url];
           } // remove eventual search params and hash
@@ -24306,7 +24297,7 @@ build ${entryPointKeys.length} entry points`);
         kitchen: finalGraphKitchen,
         outDirectoryUrl: new URL(".jsenv/postbuild/", rootDirectoryUrl),
         writeGeneratedFiles,
-        skipRessourceHint: true,
+        skipResourceHint: true,
         startLoading: cookEntryFile => {
           entryUrls.forEach(entryUrl => {
             const [, postBuildEntryUrlInfo] = cookEntryFile({
@@ -24378,7 +24369,7 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`);
       urlInfo.data.buildUrlIsVersioned = useVersionedUrl;
       urlInfo.data.buildUrlSpecifier = buildUrlSpecifier;
     });
-    await resyncRessourceHints({
+    await resyncResourceHints({
       logger,
       finalGraphKitchen,
       finalGraph,
@@ -24722,7 +24713,7 @@ const applyUrlVersioning = async ({
             return null;
           }
 
-          if (reference.isRessourceHint) {
+          if (reference.isResourceHint) {
             return null;
           } // specifier comes from "normalize" hook done a bit earlier in this file
           // we want to get back their build url to access their infos
@@ -24783,7 +24774,7 @@ const applyUrlVersioning = async ({
       operation: buildOperation,
       urlGraph: finalGraph,
       kitchen: versioningKitchen,
-      skipRessourceHint: true,
+      skipResourceHint: true,
       writeGeneratedFiles,
       startLoading: cookEntryFile => {
         postBuildEntryUrls.forEach(postBuildEntryUrl => {
@@ -25265,7 +25256,7 @@ const createFileService = ({
 
   return async request => {
     // serve file inside ".jsenv" directory
-    const requestFileUrl = new URL(request.ressource.slice(1), rootDirectoryUrl).href;
+    const requestFileUrl = new URL(request.resource.slice(1), rootDirectoryUrl).href;
 
     if (urlIsInsideOf(requestFileUrl, jsenvDirectoryUrl)) {
       return fetchFileSystem(requestFileUrl, {
@@ -25289,7 +25280,7 @@ const createFileService = ({
     const parentUrl = inferParentFromRequest(request, rootDirectoryUrl);
 
     if (parentUrl) {
-      reference = urlGraph.inferReference(request.ressource, parentUrl);
+      reference = urlGraph.inferReference(request.resource, parentUrl);
     }
 
     if (!reference) {
@@ -25299,7 +25290,7 @@ const createFileService = ({
         },
         parentUrl: parentUrl || rootDirectoryUrl,
         type: "http_request",
-        specifier: request.ressource
+        specifier: request.resource
       });
       reference = entryPoint[0];
     }
@@ -29486,15 +29477,15 @@ const createBuildFilesService = ({
   buildIndexPath
 }) => {
   return request => {
-    const urlIsVersioned = new URL(request.ressource, request.origin).searchParams.has("v");
+    const urlIsVersioned = new URL(request.url).searchParams.has("v");
 
-    if (buildIndexPath && request.ressource === "/") {
+    if (buildIndexPath && request.resource === "/") {
       request = { ...request,
-        ressource: `/${buildIndexPath}`
+        resource: `/${buildIndexPath}`
       };
     }
 
-    return fetchFileSystem(new URL(request.ressource.slice(1), buildDirectoryUrl), {
+    return fetchFileSystem(new URL(request.resource.slice(1), buildDirectoryUrl), {
       headers: request.headers,
       cacheControl: urlIsVersioned ? `private,max-age=${SECONDS_IN_30_DAYS},immutable` : "private,max-age=0,must-revalidate",
       etagEnabled: true,

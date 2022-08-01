@@ -1,3 +1,7 @@
+# 28.0.1
+
+- prefer "resource" over "ressource" in names
+
 # 28.0.0
 
 - tests now executed on the dev server
