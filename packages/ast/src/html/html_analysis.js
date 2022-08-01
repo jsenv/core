@@ -84,7 +84,7 @@ export const analyzeLinkNode = (linkNode) => {
       isStylesheet: true,
     }
   }
-  const isRessourceHint = [
+  const isResourceHint = [
     "preconnect",
     "dns-prefetch",
     "prefetch",
@@ -92,7 +92,7 @@ export const analyzeLinkNode = (linkNode) => {
     "modulepreload",
   ].includes(rel)
   return {
-    isRessourceHint,
+    isResourceHint,
     rel,
   }
 }

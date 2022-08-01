@@ -1,19 +1,19 @@
-import { urlToRessource } from "./url_to_ressource.js"
+import { urlToResource } from "./url_to_resource.js"
 
 export const urlToPathname = (url) => {
-  const ressource = urlToRessource(url)
-  const pathname = ressourceToPathname(ressource)
+  const resource = urlToResource(url)
+  const pathname = resourceToPathname(resource)
   return pathname
 }
 
-const ressourceToPathname = (ressource) => {
-  const searchSeparatorIndex = ressource.indexOf("?")
+const resourceToPathname = (resource) => {
+  const searchSeparatorIndex = resource.indexOf("?")
   if (searchSeparatorIndex > -1) {
-    return ressource.slice(0, searchSeparatorIndex)
+    return resource.slice(0, searchSeparatorIndex)
   }
-  const hashIndex = ressource.indexOf("#")
+  const hashIndex = resource.indexOf("#")
   if (hashIndex > -1) {
-    return ressource.slice(0, hashIndex)
+    return resource.slice(0, hashIndex)
   }
-  return ressource
+  return resource
 }

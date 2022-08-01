@@ -119,14 +119,14 @@ const getNodeContext = (node) => {
 
 const htmlNodeCanHotReload = (node) => {
   if (node.nodeName === "link") {
-    const { isStylesheet, isRessourceHint, rel } = analyzeLinkNode(node)
+    const { isStylesheet, isResourceHint, rel } = analyzeLinkNode(node)
     if (isStylesheet) {
       // stylesheets can be hot replaced by default
       return true
     }
-    if (isRessourceHint) {
-      // for ressource hints html will be notified the underlying ressource has changed
-      // but we won't do anything (if the ressource is deleted we should?)
+    if (isResourceHint) {
+      // for resource hints html will be notified the underlying resource has changed
+      // but we won't do anything (if the resource is deleted we should?)
       return true
     }
     if (rel === "icon") {

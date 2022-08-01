@@ -19,7 +19,7 @@ export const startFileServer = ({
       {
         handleRequest: (request) =>
           fetchFileSystem(
-            new URL(request.ressource.slice(1), rootDirectoryUrl),
+            new URL(request.resource.slice(1), rootDirectoryUrl),
             {
               rootDirectoryUrl,
               canReadDirectory: true,

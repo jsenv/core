@@ -45,7 +45,7 @@ export const jsenvPluginHtmlSupervisor = ({
     name: "jsenv:html_supervisor",
     appliesDuring: "dev",
     serve: async (request, context) => {
-      if (request.ressource.startsWith("/__get_code_frame__/")) {
+      if (request.pathname.startsWith("/__get_code_frame__/")) {
         const { pathname, searchParams } = new URL(request.url)
         const urlWithLineAndColumn = pathname.slice(
           "/__get_code_frame__/".length,
@@ -95,8 +95,8 @@ export const jsenvPluginHtmlSupervisor = ({
           body: codeFrame,
         }
       }
-      if (request.ressource.startsWith("/__get_error_cause__/")) {
-        const file = request.ressource.slice("/__get_error_cause__/".length)
+      if (request.pathname.startsWith("/__get_error_cause__/")) {
+        const file = request.pathname.slice("/__get_error_cause__/".length)
         if (!file) {
           return {
             status: 400,
@@ -148,8 +148,8 @@ export const jsenvPluginHtmlSupervisor = ({
           body,
         }
       }
-      if (request.ressource.startsWith("/__open_in_editor__/")) {
-        const file = request.ressource.slice("/__open_in_editor__/".length)
+      if (request.pathname.startsWith("/__open_in_editor__/")) {
+        const file = request.pathname.slice("/__open_in_editor__/".length)
         if (!file) {
           return {
             status: 400,

@@ -1,6 +1,6 @@
 import { urlToScheme } from "./url_to_scheme.js"
 
-export const urlToRessource = (url) => {
+export const urlToResource = (url) => {
   const scheme = urlToScheme(url)
 
   if (scheme === "file") {

@@ -75,10 +75,10 @@ export const jsenvPluginAsJsClassicHtml = ({
         const getReferenceAsJsClassic = async (
           reference,
           {
-            // we don't cook ressource hints
-            // because they might refer to ressource that will be modified during build
+            // we don't cook resource hints
+            // because they might refer to resource that will be modified during build
             // It also means something else HAVE to reference that url in order to cook it
-            // so that the preload is deleted by "resync_ressource_hints.js" otherwise
+            // so that the preload is deleted by "resync_resource_hints.js" otherwise
             cookIt = false,
           } = {},
         ) => {

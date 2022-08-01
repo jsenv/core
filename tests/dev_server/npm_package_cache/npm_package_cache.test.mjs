@@ -60,7 +60,7 @@ try {
   const getServerRequestedForFoo = () => {
     return serverRequests.some((request) => {
       // We don't see "?v=1.0.0" because we check request.pathname
-      // We could use request.ressource to see it but it's not the purpose of this test
+      // We could use request.resource to see it but it's not the purpose of this test
       // to test how it's done. Here we just want to ensure it's cached/uncached
       return request.pathname === "/node_modules/foo/index.js"
     })

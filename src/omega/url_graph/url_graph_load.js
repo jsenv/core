@@ -31,11 +31,11 @@ export const loadUrlGraph = async ({
     })
     const { references } = urlInfo
     references.forEach((reference) => {
-      // we don't cook ressource hints
-      // because they might refer to ressource that will be modified during build
+      // we don't cook resource hints
+      // because they might refer to resource that will be modified during build
       // It also means something else have to reference that url in order to cook it
-      // so that the preload is deleted by "resync_ressource_hints.js" otherwise
-      if (reference.isRessourceHint) {
+      // so that the preload is deleted by "resync_resource_hints.js" otherwise
+      if (reference.isResourceHint) {
         return
       }
       // we use reference.generatedUrl to mimic what a browser would do:

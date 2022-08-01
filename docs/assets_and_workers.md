@@ -69,7 +69,7 @@ console.log(text)
 ## Images (and everything else)
 
 Any of your file can be referenced using `new URL() + import meta url`.
-It will give you an url for that ressource that can be used later.
+It will give you an url for that resource that can be used later.
 
 ```js
 const imageUrl = new URL("./img.png", import.meta.url)

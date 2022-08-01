@@ -59,10 +59,10 @@ export const ensureWindowsDriveLetter = (url, baseUrl) => {
   return `file:///${driveLetter}:${afterProtocol}`
 }
 
-const extractDriveLetter = (ressource) => {
+const extractDriveLetter = (resource) => {
   // we still have the windows drive letter
-  if (/[a-zA-Z]/.test(ressource[1]) && ressource[2] === ":") {
-    return ressource[1]
+  if (/[a-zA-Z]/.test(resource[1]) && resource[2] === ":") {
+    return resource[1]
   }
   return null
 }

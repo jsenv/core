@@ -1,4 +1,4 @@
-export const trackRessources = () => {
+export const trackResources = () => {
   const callbackArray = []
 
   const registerCleanupCallback = (callback) => {

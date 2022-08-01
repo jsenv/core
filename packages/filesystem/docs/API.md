@@ -460,14 +460,14 @@ urlToRelativeUrl("file:///directory/file.js", "file:///directory/") // file.js
 urlToRelativeUrl("file:///directory/index.js", "file:///directory/foo/file.js") // ../index.js
 ```
 
-# urlToRessource
+# urlToResource
 
-_urlToRessource_ is a function receiving an url and returning its ressource.
+_urlToResource_ is a function receiving an url and returning its resource.
 
 ```js
-import { urlToRessource } from "@jsenv/filesystem"
+import { urlToResource } from "@jsenv/filesystem"
 
-urlToRessource("http://example.com/dir/file.js?foo=bar#10") // "/dir/file.js?foo=bar#10"
+urlToResource("http://example.com/dir/file.js?foo=bar#10") // "/dir/file.js?foo=bar#10"
 ```
 
 # urlToScheme

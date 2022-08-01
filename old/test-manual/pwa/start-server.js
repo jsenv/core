@@ -13,7 +13,7 @@ startServer({
   port: 3689,
   requestToResponse: composeServices({
     update_manifest: async (request) => {
-      if (request.ressource !== "/actions/update-manifest") return null
+      if (request.resource !== "/actions/update-manifest") return null
 
       const serviceWorkerFileUrl = resolveUrl("./sw.js", directoryUrl)
       const serviceWorkerFileContent = await readFile(serviceWorkerFileUrl)
@@ -28,7 +28,7 @@ startServer({
       }
     },
     update_file: async (request) => {
-      if (request.ressource !== "/actions/update-file") return null
+      if (request.resource !== "/actions/update-file") return null
 
       const fileContent = await readRequestBody(request.body)
       const fileUrl = resolveUrl("./file.txt", directoryUrl)
@@ -37,12 +37,12 @@ startServer({
       return { status: 200 }
     },
     static: (request) => {
-      let { ressource } = request
-      if (ressource === "/") {
-        ressource = "/main.html"
+      let { resource } = request
+      if (resource === "/") {
+        resource = "/main.html"
       }
       return fetchFileSystem(
-        new URL(request.ressource.slice(1), directoryUrl),
+        new URL(request.resource.slice(1), directoryUrl),
         {
           headers: request.headers,
           canReadDirectory: true,

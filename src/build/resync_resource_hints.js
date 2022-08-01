@@ -1,7 +1,7 @@
 /*
  * Update <link rel="preload"> and friends after build (once we know everything)
  *
- * - Used to remove ressource hint targeting an url that is no longer used:
+ * - Used to remove resource hint targeting an url that is no longer used:
  *   - Happens because of import assertions transpilation (file is inlined into JS)
  */
 
@@ -16,19 +16,19 @@ import {
 
 import { GRAPH } from "./graph_utils.js"
 
-export const resyncRessourceHints = async ({
+export const resyncResourceHints = async ({
   logger,
   finalGraphKitchen,
   finalGraph,
   rawUrls,
   postBuildRedirections,
 }) => {
-  const ressourceHintActions = []
+  const resourceHintActions = []
   GRAPH.forEach(finalGraph, (urlInfo) => {
     if (urlInfo.type !== "html") {
       return
     }
-    ressourceHintActions.push(async () => {
+    resourceHintActions.push(async () => {
       const htmlAst = parseHtmlString(urlInfo.content, {
         storeOriginalPositions: false,
       })
@@ -38,14 +38,14 @@ export const resyncRessourceHints = async ({
           return
         }
         const rel = getHtmlNodeAttribute(linkNode, "rel")
-        const isRessourceHint = [
+        const isresourceHint = [
           "preconnect",
           "dns-prefetch",
           "prefetch",
           "preload",
           "modulepreload",
         ].includes(rel)
-        if (!isRessourceHint) {
+        if (!isresourceHint) {
           return
         }
 
@@ -57,7 +57,7 @@ export const resyncRessourceHints = async ({
           }
         }
         if (!buildUrl) {
-          logger.warn(`remove ressource hint because cannot find "${href}"`)
+          logger.warn(`remove resource hint because cannot find "${href}"`)
           actions.push(() => {
             removeHtmlNode(linkNode)
           })
@@ -67,7 +67,7 @@ export const resyncRessourceHints = async ({
         const urlInfo = finalGraph.getUrlInfo(buildUrl)
         if (!urlInfo) {
           logger.warn(
-            `remove ressource hint because cannot find "${buildUrl}" in the graph`,
+            `remove resource hint because cannot find "${buildUrl}" in the graph`,
           )
           actions.push(() => {
             removeHtmlNode(linkNode)
@@ -75,9 +75,7 @@ export const resyncRessourceHints = async ({
           return
         }
         if (urlInfo.dependents.size === 0) {
-          logger.info(
-            `remove ressource hint because "${href}" not used anymore`,
-          )
+          logger.info(`remove resource hint because "${href}" not used anymore`)
           actions.push(() => {
             removeHtmlNode(linkNode)
           })
@@ -109,6 +107,6 @@ export const resyncRessourceHints = async ({
     })
   })
   await Promise.all(
-    ressourceHintActions.map((ressourceHintAction) => ressourceHintAction()),
+    resourceHintActions.map((resourceHintAction) => resourceHintAction()),
   )
 }

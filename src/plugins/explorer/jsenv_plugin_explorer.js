@@ -11,7 +11,7 @@ export const jsenvPluginExplorer = ({ groups }) => {
     name: "jsenv:explorer",
     appliesDuring: "dev",
     serve: async (request, { rootDirectoryUrl }) => {
-      if (request.ressource !== "/") {
+      if (request.pathname !== "/") {
         return null
       }
       const associationsForExplorable = {}

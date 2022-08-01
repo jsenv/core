@@ -35,7 +35,7 @@ export const validateResponseIntegrity = (
     return true
   }
   const error = new Error(
-    `Integrity validation failed for ressource "${url}". The integrity found for this ressource is "${strongestAlgo}-${actualBase64Value}"`,
+    `Integrity validation failed for resource "${url}". The integrity found for this resource is "${strongestAlgo}-${actualBase64Value}"`,
   )
   error.code = "EINTEGRITY"
   error.algorithm = strongestAlgo

@@ -208,18 +208,15 @@ export const startBuildServer = async ({
 
 const createBuildFilesService = ({ buildDirectoryUrl, buildIndexPath }) => {
   return (request) => {
-    const urlIsVersioned = new URL(
-      request.ressource,
-      request.origin,
-    ).searchParams.has("v")
-    if (buildIndexPath && request.ressource === "/") {
+    const urlIsVersioned = new URL(request.url).searchParams.has("v")
+    if (buildIndexPath && request.resource === "/") {
       request = {
         ...request,
-        ressource: `/${buildIndexPath}`,
+        resource: `/${buildIndexPath}`,
       }
     }
     return fetchFileSystem(
-      new URL(request.ressource.slice(1), buildDirectoryUrl),
+      new URL(request.resource.slice(1), buildDirectoryUrl),
       {
         headers: request.headers,
         cacheControl: urlIsVersioned

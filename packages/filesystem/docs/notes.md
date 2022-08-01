@@ -3,22 +3,24 @@
 You can refer to figure below to see how each part of an url is named.
 
 <pre>
+/*
                                                            href
                    ┌────────────────────────────────────────┴──────────────────────────────────────────────┐
                 origin                                                                                     │
       ┌────────────┴──────────────┐                                                                        │
       │                       authority                                                                    │
       │           ┌───────────────┴───────────────────────────┐                                            │
-      │           │                                         host                                        ressource
-      │           │                                ┌──────────┴────────────────┐             ┌──────────────┴────────┬────────┐
-      │           │                             hostname                       │          pathname                   │        │
-      │           │                 ┌──────────────┴────────────┐              │      ┌──────┴──────┐                │        │
-  protocol     userinfo         subdomain                    domain            │      │          filename            │        │
-   ┌─┴──┐     ┌───┴────┐            │                  ┌────────┴───────┐      │      │         ┌───┴─────┐          │        │
-scheme  │username password lowerleveldomains secondleveldomain topleveldomain port dirname   basename extension   search     hash
-┌──┴───┐│┌──┴───┐ ┌──┴───┐ ┌──┬─┬─┴─────┬───┐┌───────┴───────┐ ┌──────┴──────┐┌┴┐┌────┴─────┐ ┌──┴───┐ ┌───┴───┐ ┌────┴────┐ ┌┴┐
-│      │││      │ │      │ │  │ │       │   ││               │ │             ││ ││          │ │      │ │       │ │         │ │ │
-scheme://username:password@test.abcdedgh.www.secondleveldomain.topleveldomain:123/hello/world/basename.extension?name=ferret#hash
+      │           │                                         host                                       resource
+      │           │                                ┌──────────┴─────────────────┐             ┌────────────┴───────────┬───────┐
+      │           │                             hostname                        │          pathname                    │       │
+      │           │                 ┌──────────────┴────────────┐               │      ┌──────┴───────┐                │       │
+  protocol     userinfo         subdomain                    domain             │      │           filename            │       │
+   ┌─┴──┐     ┌───┴────┐            │                  ┌────────┴───────┐       │      │          ┌───┴─────┐          │       │
+scheme  │username password lowerleveldomains secondleveldomain topleveldomain port  dirname    basename extension    search   hash
+┌──┴───┐│┌──┴───┐ ┌──┴───┐ ┌──┬─┬─┴─────┬───┐┌───────┴───────┐ ┌──────┴──────┐┌─┴┐┌────┴──────┐┌──┴───┐ ┌───┴───┐ ┌────┴────┐ ┌┴┐
+│      │││      │ │      │ │  │ │       │   ││               │ │             ││  ││           ││      │ │       │ │         │ │ │
+scheme://username:password@test.abcdedgh.www.secondleveldomain.topleveldomain:1234/hello/world/basename.extension?name=ferret#hash
+*/
 </pre>
 
 ## Entry

@@ -42,7 +42,7 @@ await startServer({
     {
       handleRequest: (request) => {
         return fetchFileSystem(
-          new URL(request.ressource.slice(1), projectDirectoryUrl),
+          new URL(request.resource.slice(1), projectDirectoryUrl),
           {
             headers: request.headers,
           },

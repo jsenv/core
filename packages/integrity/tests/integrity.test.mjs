@@ -56,7 +56,7 @@ const integrity = `sha256-${helloWorldAsSha256AndBase64} sha512-${helloWorldAsSh
     }
     const expected = {
       code: "EINTEGRITY",
-      message: `Integrity validation failed for ressource "http://example.com/file.txt". The integrity found for this ressource is "sha512-E+RbhRojnWN6dkeUqrS8Fxl9hHR+5by21VwGtX/3sQtmItAdMtpv7G9Q8CEsoMx0fRuVp7zBqXfOhMl2yRFBuA=="`,
+      message: `Integrity validation failed for resource "http://example.com/file.txt". The integrity found for this resource is "sha512-E+RbhRojnWN6dkeUqrS8Fxl9hHR+5by21VwGtX/3sQtmItAdMtpv7G9Q8CEsoMx0fRuVp7zBqXfOhMl2yRFBuA=="`,
     }
     assert({ actual, expected })
   }

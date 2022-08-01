@@ -35,7 +35,7 @@ export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
     }) => {
       const { crossorigin, integrity } = readFetchMetas(node)
 
-      const isRessourceHint = [
+      const isResourceHint = [
         "preconnect",
         "dns-prefetch",
         "prefetch",
@@ -50,7 +50,7 @@ export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
         specifier,
         specifierLine: line,
         specifierColumn: column,
-        isRessourceHint,
+        isResourceHint,
         crossorigin,
         integrity,
       })

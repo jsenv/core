@@ -75,7 +75,7 @@ const jsenvPluginAsJsClassicConversion = ({
       // - import specifier (static/dynamic import + re-export)
       // - url specifier when inside System.register/_context.import()
       //   (because it's the transpiled equivalent of static and dynamic imports)
-      // And not other references otherwise we could try to transform inline ressources
+      // And not other references otherwise we could try to transform inline resources
       // or specifiers inside new URL()...
       js_import_export: propagateJsClassicSearchParam,
       js_url_specifier: (reference, context) => {
@@ -94,7 +94,7 @@ const jsenvPluginAsJsClassicConversion = ({
         context,
         searchParam: "as_js_classic",
         // override the expectedType to "js_module"
-        // because when there is ?as_js_classic it means the underlying ressource
+        // because when there is ?as_js_classic it means the underlying resource
         // is a js_module
         expectedType: "js_module",
       })

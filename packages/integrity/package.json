@@ -1,7 +1,7 @@
 {
   "name": "@jsenv/integrity",
   "version": "0.0.1",
-  "description": "Sub ressource integrity helpers",
+  "description": "Sub resource integrity helpers",
   "license": "MIT",
   "repository": {
     "type": "git",

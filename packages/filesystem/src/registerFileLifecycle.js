@@ -6,7 +6,7 @@ import { assertAndNormalizeFileUrl } from "./assertAndNormalizeFileUrl.js"
 import { guardTooFastSecondCall } from "./internal/guard_second_call.js"
 import { statsToType } from "./internal/statsToType.js"
 import { createWatcher } from "./internal/createWatcher.js"
-import { trackRessources } from "./internal/trackRessources.js"
+import { trackResources } from "./internal/track_resources.js"
 
 export const registerFileLifecycle = (
   source,
@@ -45,7 +45,7 @@ export const registerFileLifecycle = (
     }
   }
 
-  const tracker = trackRessources()
+  const tracker = trackResources()
 
   const handleFileFound = ({ existent }) => {
     const fileMutationStopWatching = watchFileMutation(sourceUrl, {

@@ -6,7 +6,7 @@ import { assertAndNormalizeDirectoryUrl } from "./assertAndNormalizeDirectoryUrl
 import { statsToType } from "./internal/statsToType.js"
 import { guardTooFastSecondCallPerFile } from "./internal/guard_second_call.js"
 import { createWatcher } from "./internal/createWatcher.js"
-import { trackRessources } from "./internal/trackRessources.js"
+import { trackResources } from "./internal/track_resources.js"
 
 const isLinux = process.platform === "linux"
 // linux does not support recursive option
@@ -87,7 +87,7 @@ export const registerDirectoryLifecycle = (
     const { watch } = URL_META.applyAssociations({ url, associations })
     return watch
   }
-  const tracker = trackRessources()
+  const tracker = trackResources()
   const infoMap = new Map()
   const readEntryInfo = (url) => {
     try {
@@ -205,7 +205,7 @@ export const registerDirectoryLifecycle = (
     }
     if (entryInfo.type !== previousInfo.type) {
       // it existed and was replaced by something else
-      // we don't handle this as an update. We rather say the ressource
+      // we don't handle this as an update. We rather say the resource
       // is lost and something else is found (call removed() then added())
       handleEntryLost(previousInfo)
       handleEntryFound(entryInfo)

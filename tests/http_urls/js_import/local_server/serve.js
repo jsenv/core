@@ -16,7 +16,7 @@ export const localServer = await startServer({
     }),
     {
       handleRequest: async (request) => {
-        const fileUrl = new URL(request.ressource.slice(1), serverDirectoryUrl)
+        const fileUrl = new URL(request.resource.slice(1), serverDirectoryUrl)
         const response = await fetchFileSystem(fileUrl, {
           ...request,
         })

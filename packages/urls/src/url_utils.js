@@ -1,6 +1,6 @@
 import { urlToOrigin } from "./url_to_origin.js"
 import { urlToExtension } from "./url_to_extension.js"
-import { urlToRessource } from "./url_to_ressource.js"
+import { urlToResource } from "./url_to_resource.js"
 
 export const asUrlWithoutSearch = (url) => {
   const urlObject = new URL(url)
@@ -62,8 +62,8 @@ export const injectQueryParams = (url, params) => {
 export const setUrlExtension = (url, extension) => {
   const origin = urlToOrigin(url)
   const currentExtension = urlToExtension(url)
-  const ressource = urlToRessource(url)
-  const [pathname, search] = ressource.split("?")
+  const resource = urlToResource(url)
+  const [pathname, search] = resource.split("?")
   const pathnameWithoutExtension = currentExtension
     ? pathname.slice(0, -currentExtension.length)
     : pathname

@@ -62,8 +62,8 @@ export const getDOMNodesUsingUrl = (urlToReload) => {
       }
     }
   })
-  // There is no real need to update a.href because the ressource will be fetched when clicked.
-  // But in a scenario where the ressource was already visited and is in browser cache, adding
+  // There is no real need to update a.href because the resource will be fetched when clicked.
+  // But in a scenario where the resource was already visited and is in browser cache, adding
   // the dynamic query param ensure the cache is invalidated
   Array.from(document.querySelectorAll("a")).forEach((a) => {
     visitNodeAttributeAsUrl(a, "href")

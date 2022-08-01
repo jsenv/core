@@ -45,7 +45,7 @@ import { createBuilUrlsGenerator } from "./build_urls_generator.js"
 import { injectGlobalVersionMapping } from "./inject_global_version_mappings.js"
 import { createVersionGenerator } from "./version_generator.js"
 import { injectServiceWorkerUrls } from "./inject_service_worker_urls.js"
-import { resyncRessourceHints } from "./resync_ressource_hints.js"
+import { resyncResourceHints } from "./resync_resource_hints.js"
 
 // default runtimeCompat corresponds to
 // "we can keep <script type="module"> intact":
@@ -314,13 +314,13 @@ build ${entryPointKeys.length} entry points`)
           })
           rawUrlInfo.references.forEach((reference) => {
             if (
-              reference.isRessourceHint &&
+              reference.isResourceHint &&
               reference.expectedType === "js_module"
             ) {
               const referencedUrlInfo = rawGraph.getUrlInfo(reference.url)
               if (
                 referencedUrlInfo &&
-                // something else than the ressource hint is using this url
+                // something else than the resource hint is using this url
                 referencedUrlInfo.dependents.size > 0
               ) {
                 addToBundlerIfAny(referencedUrlInfo)
@@ -611,7 +611,7 @@ build ${entryPointKeys.length} entry points`)
                 `urls should be inside build directory at this stage, found "${reference.url}"`,
               )
             }
-            if (reference.isRessourceHint) {
+            if (reference.isResourceHint) {
               // return the raw url, we will resync at the end
               return rawUrls[reference.url]
             }
@@ -717,7 +717,7 @@ build ${entryPointKeys.length} entry points`)
         kitchen: finalGraphKitchen,
         outDirectoryUrl: new URL(".jsenv/postbuild/", rootDirectoryUrl),
         writeGeneratedFiles,
-        skipRessourceHint: true,
+        skipResourceHint: true,
         startLoading: (cookEntryFile) => {
           entryUrls.forEach((entryUrl) => {
             const [, postBuildEntryUrlInfo] = cookEntryFile({
@@ -786,7 +786,7 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`,
       urlInfo.data.buildUrlIsVersioned = useVersionedUrl
       urlInfo.data.buildUrlSpecifier = buildUrlSpecifier
     })
-    await resyncRessourceHints({
+    await resyncResourceHints({
       logger,
       finalGraphKitchen,
       finalGraph,
@@ -1116,7 +1116,7 @@ const applyUrlVersioning = async ({
             if (reference.isInline || reference.url.startsWith("data:")) {
               return null
             }
-            if (reference.isRessourceHint) {
+            if (reference.isResourceHint) {
               return null
             }
             // specifier comes from "normalize" hook done a bit earlier in this file
@@ -1185,7 +1185,7 @@ const applyUrlVersioning = async ({
       operation: buildOperation,
       urlGraph: finalGraph,
       kitchen: versioningKitchen,
-      skipRessourceHint: true,
+      skipResourceHint: true,
       writeGeneratedFiles,
       startLoading: (cookEntryFile) => {
         postBuildEntryUrls.forEach((postBuildEntryUrl) => {

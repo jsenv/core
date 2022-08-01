@@ -20,8 +20,8 @@ export const urlToRelativeUrl = (url, baseUrl) => {
 
   const { pathname, hash, search } = urlObject
   if (pathname === "/") {
-    const baseUrlRessourceWithoutLeadingSlash = baseUrlObject.pathname.slice(1)
-    return baseUrlRessourceWithoutLeadingSlash
+    const baseUrlResourceWithoutLeadingSlash = baseUrlObject.pathname.slice(1)
+    return baseUrlResourceWithoutLeadingSlash
   }
 
   const basePathname = baseUrlObject.pathname

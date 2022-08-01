@@ -140,7 +140,7 @@ export const jsenvPluginAutoreloadServer = ({
             const cause = `following files are no longer referenced: ${prunedUrlInfos.map(
               (prunedUrlInfo) => formatUrlForClient(prunedUrlInfo.url),
             )}`
-            // now check if we can hot update the main ressource
+            // now check if we can hot update the main resource
             // then if we can hot update all dependencies
             if (mainHotUpdate.declined) {
               notifyDeclined({
@@ -179,7 +179,7 @@ export const jsenvPluginAutoreloadServer = ({
       },
     },
     serve: (request, { rootDirectoryUrl, urlGraph }) => {
-      if (request.ressource === "/__graph__") {
+      if (request.pathname === "/__graph__") {
         const graphJson = JSON.stringify(urlGraph.toJSON(rootDirectoryUrl))
         return {
           status: 200,

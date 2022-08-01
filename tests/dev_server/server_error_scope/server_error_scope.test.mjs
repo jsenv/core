@@ -69,7 +69,7 @@ try {
   await pageRelated.goto(`${devServer.origin}/related.html`)
   // ensure:
   // - jsenv error overlay is displayed on this page
-  // - it is not displayed on the other page using the same ressource
+  // - it is not displayed on the other page using the same resource
   //   because it was closed AND the page execution is done
   // - it is not displayed on page not depending on this file
   {

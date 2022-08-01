@@ -9,7 +9,7 @@ import { validateCompileCache } from "./validate_compile_cache.js"
 import { createLockRegistry } from "./file_lock_registry.js"
 import { updateCompileCache } from "./update_compile_cache.js"
 
-const { lockForRessource } = createLockRegistry()
+const { lockForResource } = createLockRegistry()
 
 export const reuseOrCreateCompiledFile = async ({
   logLevel,
@@ -165,7 +165,7 @@ const readCompileContextFile = ({ logger, compileContextJsonFileUrl }) => {
 }
 
 const startAsap = async (fn, { compiledFileUrl }) => {
-  const unlockLocal = await lockForRessource(compiledFileUrl)
+  const unlockLocal = await lockForResource(compiledFileUrl)
   try {
     return await fn()
   } finally {

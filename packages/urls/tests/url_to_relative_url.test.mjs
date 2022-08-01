@@ -93,7 +93,7 @@ import { urlToRelativeUrl } from "@jsenv/urls"
   assert({ actual, expected })
 }
 
-// same origins and ressources
+// same origins and resources
 {
   const actual = urlToRelativeUrl("http://example.org", "http://example.org")
   const expected = ""

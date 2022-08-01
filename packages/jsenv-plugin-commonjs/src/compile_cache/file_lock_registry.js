@@ -1,13 +1,13 @@
 export const createLockRegistry = () => {
   let lockArray = []
-  const lockForRessource = async (ressource) => {
-    const currentLock = lockArray.find((lock) => lock.ressource === ressource)
+  const lockForResource = async (resource) => {
+    const currentLock = lockArray.find((lock) => lock.resource === resource)
     let unlockResolve
     const unlocked = new Promise((resolve) => {
       unlockResolve = resolve
     })
     const lock = {
-      ressource,
+      resource,
       unlocked,
     }
     lockArray = [...lockArray, lock]
@@ -20,5 +20,5 @@ export const createLockRegistry = () => {
     }
     return unlock
   }
-  return { lockForRessource }
+  return { lockForResource }
 }

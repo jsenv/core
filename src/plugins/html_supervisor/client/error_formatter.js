@@ -154,13 +154,13 @@ export const formatError = (
           }
         }
         if (urlSite.line !== undefined) {
-          let ressourceToFetch = `/__get_code_frame__/${formatUrlWithLineAndColumn(
+          let resourceToFetch = `/__get_code_frame__/${formatUrlWithLineAndColumn(
             urlSite,
           )}`
           if (!Error.captureStackTrace) {
-            ressourceToFetch += `?remap`
+            resourceToFetch += `?remap`
           }
-          const response = await window.fetch(ressourceToFetch)
+          const response = await window.fetch(resourceToFetch)
           const codeFrame = await response.text()
           return {
             codeFrame: formatErrorText({ message: codeFrame }),

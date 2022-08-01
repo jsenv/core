@@ -185,7 +185,7 @@ export const createFileService = ({
 
   return async (request) => {
     // serve file inside ".jsenv" directory
-    const requestFileUrl = new URL(request.ressource.slice(1), rootDirectoryUrl)
+    const requestFileUrl = new URL(request.resource.slice(1), rootDirectoryUrl)
       .href
     if (urlIsInsideOf(requestFileUrl, jsenvDirectoryUrl)) {
       return fetchFileSystem(requestFileUrl, {
@@ -206,14 +206,14 @@ export const createFileService = ({
     let reference
     const parentUrl = inferParentFromRequest(request, rootDirectoryUrl)
     if (parentUrl) {
-      reference = urlGraph.inferReference(request.ressource, parentUrl)
+      reference = urlGraph.inferReference(request.resource, parentUrl)
     }
     if (!reference) {
       const entryPoint = kitchen.injectReference({
         trace: { message: parentUrl || rootDirectoryUrl },
         parentUrl: parentUrl || rootDirectoryUrl,
         type: "http_request",
-        specifier: request.ressource,
+        specifier: request.resource,
       })
       reference = entryPoint[0]
     }
