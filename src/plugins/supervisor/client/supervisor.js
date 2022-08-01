@@ -216,7 +216,8 @@ window.__supervisor__ = (() => {
           url &&
           !stack &&
           // ignore window.reportError() it gives no valuable info
-          !url.endsWith("supervisor.js")
+          !url.endsWith("supervisor.js") &&
+          !url.endsWith("supervisor.js?js_classic")
         ) {
           onErrorLocated(resolveUrlSite({ url, line, column }))
         } else if (errorMeta.url) {
