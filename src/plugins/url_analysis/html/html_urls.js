@@ -96,10 +96,10 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
     attributeName,
     specifier,
   }) => {
-    const generatedFromInlineContent =
-      getHtmlNodeAttribute(node, "generated-from-inline-content") !== undefined
+    const isContentCooked =
+      getHtmlNodeAttribute(node, "jsenv-plugin-action") === "content_cooked"
     let position
-    if (generatedFromInlineContent) {
+    if (isContentCooked) {
       // when generated from inline content,
       // line, column is not "src" nor "inlined-from-src" but "original-position"
       position = getHtmlNodePosition(node)

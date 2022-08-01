@@ -211,9 +211,7 @@ export const jsenvPluginSupervisor = ({
         const handleInlineScript = (node, htmlNodeText) => {
           const { type, extension } = analyzeScriptNode(node)
           const { line, column, lineEnd, columnEnd, isOriginal } =
-            getHtmlNodePosition(node, {
-              preferOriginal: true,
-            })
+            getHtmlNodePosition(node, { preferOriginal: true })
           let inlineScriptUrl = generateInlineContentUrl({
             url,
             extension: extension || ".js",
@@ -252,9 +250,6 @@ export const jsenvPluginSupervisor = ({
             getHtmlNodeAttribute(node, "crossorigin") !== undefined
           const defer = getHtmlNodeAttribute(node, "defer") !== undefined
           const async = getHtmlNodeAttribute(node, "async") !== undefined
-          setHtmlNodeAttributes(node, {
-            src: undefined,
-          })
           scriptsToSupervise.push({
             node,
             type,
@@ -364,13 +359,13 @@ export const jsenvPluginSupervisor = ({
               setHtmlNodeAttributes(node, {
                 "jsenv-plugin-owner": "jsenv:supervisor",
                 "jsenv-plugin-action": "inlined",
+                "src": undefined,
                 "inlined-from-src": src,
               })
             } else {
               setHtmlNodeAttributes(node, {
                 "jsenv-plugin-owner": "jsenv:supervisor",
                 "jsenv-plugin-action": "content_cooked",
-                "generated-from-inline-content": "",
               })
             }
           },
