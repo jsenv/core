@@ -1,11 +1,8 @@
-import { requestCertificateForLocalhost } from "@jsenv/https-local"
+import { requestCertificate } from "@jsenv/https-local"
 
 import { startBuildServer } from "@jsenv/core"
 
-const { certificate, privateKey } = requestCertificateForLocalhost({
-  altNames: ["local"],
-})
-
+const { certificate, privateKey } = requestCertificate({ altNames: ["local"] })
 await startBuildServer({
   logLevel: "info",
   port: "9999",

@@ -1,6 +1,6 @@
 import { WebSocket } from "ws"
 
-import { requestCertificateForLocalhost } from "@jsenv/https-local"
+import { requestCertificate } from "@jsenv/https-local"
 
 import { startServer } from "@jsenv/server"
 import { assert } from "@jsenv/assert"
@@ -60,7 +60,7 @@ await test()
 
 // https
 if (process.platform !== "win32") {
-  const { certificate, privateKey } = requestCertificateForLocalhost()
+  const { certificate, privateKey } = requestCertificate()
   await test({
     protocol: "https",
     certificate,

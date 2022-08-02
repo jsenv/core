@@ -10,11 +10,11 @@
  */
 
 import { startServer, fetchFileSystem } from "@jsenv/server"
-import { requestCertificateForLocalhost } from "@jsenv/https-local"
+import { requestCertificate } from "@jsenv/https-local"
 import { urlToRelativeUrl, resolveUrl } from "@jsenv/urls"
 import { ensureEmptyDirectory } from "@jsenv/filesystem"
 
-const { certificate, privateKey } = requestCertificateForLocalhost()
+const { certificate, privateKey } = requestCertificate()
 const projectDirectoryUrl = new URL("../../../", import.meta.url)
 const directoryRelativeUrl = urlToRelativeUrl(
   new URL("./", import.meta.url),

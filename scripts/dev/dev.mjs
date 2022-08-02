@@ -1,9 +1,9 @@
-import { requestCertificateForLocalhost } from "@jsenv/https-local"
+import { requestCertificate } from "@jsenv/https-local"
 
 import { rootDirectoryUrl } from "@jsenv/core/jsenv.config.mjs"
 import { startDevServer } from "@jsenv/core"
 
-const { certificate, privateKey } = requestCertificateForLocalhost({
+const { certificate, privateKey } = requestCertificate({
   altNames: ["local"],
 })
 await startDevServer({

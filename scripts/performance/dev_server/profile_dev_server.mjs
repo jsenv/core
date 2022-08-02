@@ -9,11 +9,10 @@
  *    It will trigger the http requests, populating the server performances
  */
 
-import { requestCertificateForLocalhost } from "@jsenv/https-local"
+import { requestCertificate } from "@jsenv/https-local"
 import { startDevServer } from "@jsenv/core"
 
-const { certificate, privateKey } = requestCertificateForLocalhost()
-
+const { certificate, privateKey } = requestCertificate()
 await startDevServer({
   rootDirectoryUrl: new URL("./basic_app/", import.meta.url),
   logLevel: "info",

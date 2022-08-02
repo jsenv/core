@@ -28,10 +28,10 @@ If you don't have these certificate files you can use [@jsenv/https-local](https
 to generate a certificate dynamically.
 
 ```js
-import { requestCertificateForLocalhost } from "@jsenv/https-local"
+import { requestCertificate } from "@jsenv/https-local"
 import { startServer } from "@jsenv/server"
 
-const { certificate, privateKey } = requestCertificateForLocalhost()
+const { certificate, privateKey } = requestCertificate()
 const server = await startServer({
   protocol: "https",
   certificate,
@@ -47,10 +47,10 @@ By default, a server started in https will redirect http requests to https.
 You can disable this behaviour using _redirectHttpToHttps_ parameter.
 
 ```js
-import { requestCertificateForLocalhost } from "@jsenv/https-local"
+import { requestCertificate } from "@jsenv/https-local"
 import { startServer } from "@jsenv/server"
 
-const { certificate, privateKey } = requestCertificateForLocalhost()
+const { certificate, privateKey } = requestCertificate()
 await startServer({
   protocol: "https",
   certificate,
@@ -62,10 +62,10 @@ await startServer({
 When "http to https redirection" is disabled, the server ignores http request. If you want to do something special for request made in "http" while your server is "https", you can use _allowHttpRequestOnHttps_ parameter.
 
 ```js
-import { requestCertificateForLocalhost } from "@jsenv/https-local"
+import { requestCertificate } from "@jsenv/https-local"
 import { startServer } from "@jsenv/server"
 
-const { certificate, privateKey } = requestCertificateForLocalhost()
+const { certificate, privateKey } = requestCertificate()
 await startServer({
   protocol: "https",
   certificate,
@@ -95,10 +95,10 @@ await startServer({
 You can enable http2 using _http2_ parameter
 
 ```js
-import { requestCertificateForLocalhost } from "@jsenv/https-local"
+import { requestCertificate } from "@jsenv/https-local"
 import { startServer } from "@jsenv/server"
 
-const { certificate, privateKey } = requestCertificateForLocalhost()
+const { certificate, privateKey } = requestCertificate()
 await startServer({
   protocol: "https",
   certificate,
@@ -111,11 +111,10 @@ When http2 is enabled, server still accepts requests made using http1.
 You can disable http1 fallback using _http1Allowed_ parameter.
 
 ```js
-import { requestCertificateForLocalhost } from "@jsenv/https-local"
+import { requestCertificate } from "@jsenv/https-local"
 import { startServer } from "@jsenv/server"
 
-const { certificate, privateKey } = requestCertificateForLocalhost()
-
+const { certificate, privateKey } = requestCertificate()
 await startServer({
   protocol: "https",
   certificate,
