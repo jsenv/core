@@ -14,25 +14,22 @@ const test = async (params) => {
     url: `${devServer.origin}/main.html`,
     /* eslint-disable no-undef */
     pageFunction: async () => {
-      await new Promise((resolve) => {
-        setTimeout(resolve, 1000)
-      })
-      return window.executionOrder
+      return window.resultPromise
     },
     /* eslint-enable no-undef */
   })
-  const actual = {
-    returnValue,
-  }
-  const expected = {
-    returnValue: [
-      "classic_inline_before_a",
-      "classic_a",
-      "classic_inline_after_a",
-      "classic_after_module",
-      "module_inline",
-    ],
-  }
+  const actual = returnValue
+  const expected = [
+    "before_js_classic_inline",
+    "js_classic_inline",
+    "after_js_classic_inline",
+    "before_js_classic_src",
+    "js_classic",
+    "after_js_classic_src",
+    "window_load_dispatched",
+    "js_module_inline",
+    "js_module",
+  ]
   assert({ actual, expected })
 }
 
