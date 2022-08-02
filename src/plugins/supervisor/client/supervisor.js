@@ -37,7 +37,7 @@ window.__supervisor__ = (() => {
     const DYNAMIC_IMPORT_EXPORT_MISSING = "dynamic_import_export_missing"
     const DYNAMIC_IMPORT_SYNTAX_ERROR = "dynamic_import_syntax_error"
 
-    const createExceptionInfo = (exception, { url, line, column }) => {
+    const createExceptionInfo = (exception, { url, line, column } = {}) => {
       const exceptionInfo = {
         isError: false, // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/throw
         code: null,
@@ -146,8 +146,9 @@ window.__supervisor__ = (() => {
       // first create a version of the stack with file://
       // (and use it to locate exception url+line+column)
       if (exceptionInfo.stack) {
-        exceptionInfo.stackFiles = replaceUrls(
-          exceptionInfo.stack,
+        exceptionInfo.originalStack = exceptionInfo.stack
+        exceptionInfo.stack = replaceUrls(
+          exceptionInfo.originalStack,
           ({ url, line, column }) => {
             const urlSite = resolveUrlSite({ url, line, column })
             if (exceptionInfo.site.url === null) {
@@ -181,7 +182,19 @@ window.__supervisor__ = (() => {
         Object.assign(exceptionInfo.site, urlSite)
       }
 
+      exceptionInfo.text = stringifyMessageAndStack(exceptionInfo)
+
       return exceptionInfo
+    }
+
+    const stringifyMessageAndStack = ({ message, stack }) => {
+      if (message && stack) {
+        return `${message}\n${stack}`
+      }
+      if (stack) {
+        return stack
+      }
+      return message
     }
 
     const stringifyUrlSite = ({ url, line, column }) => {
@@ -348,23 +361,13 @@ window.__supervisor__ = (() => {
           return textWithHtmlLinks
         }
 
-        const generateErrorText = ({ message, stack }) => {
-          let text = ""
-          if (message && stack) {
-            text = `${generateClickableText(message)}\n${generateClickableText(
-              stack,
-            )}`
-          } else if (stack) {
-            text = generateClickableText(stack)
-          } else {
-            text = generateClickableText(message)
-          }
-          return text
-        }
-
-        errorParts.text = generateErrorText({
-          message: exceptionInfo.message,
-          stack: exceptionInfo.stack,
+        errorParts.text = stringifyMessageAndStack({
+          message: exceptionInfo.message
+            ? generateClickableText(exceptionInfo.message)
+            : "",
+          stack: exceptionInfo.stack
+            ? generateClickableText(exceptionInfo.stack)
+            : "",
         })
         if (exceptionInfo.site.url) {
           errorParts.errorDetailsPromise = (async () => {
@@ -388,13 +391,13 @@ window.__supervisor__ = (() => {
 
                 const causeText =
                   causeInfo.code === "NOT_FOUND"
-                    ? generateErrorText({
-                        message: causeInfo.reason,
-                        stack: causeInfo.codeFrame,
+                    ? stringifyMessageAndStack({
+                        message: generateClickableText(causeInfo.reason),
+                        stack: generateClickableText(causeInfo.codeFrame),
                       })
-                    : generateErrorText({
-                        message: causeInfo.stack,
-                        stack: causeInfo.codeFrame,
+                    : stringifyMessageAndStack({
+                        message: generateClickableText(causeInfo.stack),
+                        stack: generateClickableText(causeInfo.codeFrame),
                       })
                 return {
                   cause: causeText,
@@ -410,7 +413,7 @@ window.__supervisor__ = (() => {
                 const response = await window.fetch(resourceToFetch)
                 const codeFrame = await response.text()
                 return {
-                  codeFrame: generateErrorText({ message: codeFrame }),
+                  codeFrame: generateClickableText(codeFrame),
                 }
               }
             } catch (e) {
@@ -636,6 +639,10 @@ window.__supervisor__ = (() => {
   }`
     }
 
+    supervisor.createException = (exception) => {
+      const exceptionInfo = createExceptionInfo(exception)
+      return exceptionInfo
+    }
     supervisor.reportException = (exception, { url, line, column }) => {
       const exceptionInfo = createExceptionInfo(exception, {
         url,
@@ -667,6 +674,7 @@ window.__supervisor__ = (() => {
           text,
         })
       }
+      return exception
     }
     window.addEventListener("error", (errorEvent) => {
       if (!errorEvent.isTrusted) {
@@ -764,7 +772,6 @@ window.__supervisor__ = (() => {
         if (logs) {
           console.groupEnd()
         }
-        // here transform the error
         resolvePromise()
       }
     }
@@ -839,10 +846,24 @@ window.__supervisor__ = (() => {
         supervisedScript.reload()
       }
     }
-    supervisor.collectScriptResults = async () => {
+    supervisor.collectScriptResults = async ({ mapErrorStack = true } = {}) => {
       try {
         await Promise.all(executionPromises)
       } catch (e) {}
+
+      if (mapErrorStack) {
+        await Promise.all(
+          Object.keys(executionResults).map(async (key) => {
+            const executionResult = executionResults[key]
+            if (executionResult.status === "errored") {
+              const exceptionInfo = supervisor.createException(
+                executionResult.error,
+              )
+              executionResult.error = exceptionInfo.text
+            }
+          }),
+        )
+      }
       return {
         status: "completed",
         executionResults,
