@@ -33,7 +33,9 @@ const test = async ({ runtime }) => {
     namespace: {
       "/main.js": {
         status: "completed",
+        error: null,
         namespace: {},
+        coverage: null,
       },
     },
     // there is also the html supervisor logs

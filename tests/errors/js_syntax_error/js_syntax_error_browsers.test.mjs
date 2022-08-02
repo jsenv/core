@@ -34,26 +34,8 @@ const test = async ({ runtime }) => {
         return error
       },
       firefox: () => {
-        const syntaxError = new SyntaxError(
-          "expected expression, got end of script",
-        )
-        Object.defineProperties(syntaxError, {
-          fileName: {
-            configurable: true,
-            writable: true,
-            value: `${devServer.origin}/js_syntax_error.js`,
-          },
-          lineNumber: {
-            configurable: true,
-            writable: true,
-            value: 1,
-          },
-          columnNumber: {
-            configurable: true,
-            writable: true,
-            value: 11,
-          },
-        })
+        const syntaxError =
+          "SyntaxError: expected expression, got end of script\n"
         return syntaxError
       },
       webkit: () => {

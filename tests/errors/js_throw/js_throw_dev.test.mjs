@@ -1,4 +1,3 @@
-import { Script } from "node:vm"
 import { assert } from "@jsenv/assert"
 
 import { startDevServer } from "@jsenv/core"
@@ -25,21 +24,16 @@ const test = async (params) => {
 }
 
 const { server, returnValue, pageLogs, pageErrors } = await test({})
-const error = new Script(returnValue.exceptionSource, {
-  filename: "",
-}).runInThisContext()
 const expectedErrorStack = `Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
     at triggerError (${server.origin}/trigger_error.js:2:9)
     at ${server.origin}/main.js:3:1`
 const actual = {
-  error,
-  errorStack: error.stack.slice(0, expectedErrorStack.length),
+  error: returnValue.error.slice(0, expectedErrorStack.length),
   pageLogs,
   pageErrors,
 }
 const expected = {
-  error: new Error("SPECIAL_STRING_UNLIKELY_TO_COLLIDE"),
-  errorStack: expectedErrorStack,
+  error: expectedErrorStack,
   pageLogs: [],
   pageErrors: [
     Object.assign(new Error("SPECIAL_STRING_UNLIKELY_TO_COLLIDE"), {

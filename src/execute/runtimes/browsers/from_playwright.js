@@ -1,4 +1,3 @@
-import { Script } from "node:vm"
 import { writeFileSync } from "node:fs"
 
 import { createDetailedMessage } from "@jsenv/log"
@@ -10,7 +9,6 @@ import {
 } from "@jsenv/abort"
 import { moveUrl } from "@jsenv/urls"
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js"
-import { escapeRegexpSpecialChars } from "@jsenv/utils/src/string/escape_regexp_special_chars.js"
 
 import { filterV8Coverage } from "@jsenv/core/src/test/coverage/v8_coverage.js"
 import { composeTwoFileByFileIstanbulCoverages } from "@jsenv/core/src/test/coverage/istanbul_coverage_composition.js"
@@ -308,23 +306,17 @@ export const createRuntimeFromPlaywright = ({
                 },
                 /* eslint-enable no-undef */
               )
-              const { status, scriptExecutionResults } = returnValue
+              const { status, executionResults } = returnValue
               if (status === "errored") {
-                const { exceptionSource } = returnValue
-                const error = evalException(exceptionSource, {
-                  rootDirectoryUrl,
-                  devServerOrigin,
-                  transformErrorHook,
-                })
                 cb({
                   status: "errored",
-                  error,
-                  namespace: scriptExecutionResults,
+                  error: returnValue.error,
+                  namespace: executionResults,
                 })
               } else {
                 cb({
                   status: "completed",
-                  namespace: scriptExecutionResults,
+                  namespace: executionResults,
                 })
               }
             } catch (e) {
@@ -532,21 +524,4 @@ const registerEvent = ({ object, eventType, callback }) => {
   return () => {
     object.removeListener(eventType, callback)
   }
-}
-
-const evalException = (
-  exceptionSource,
-  { rootDirectoryUrl, devServerOrigin, transformErrorHook },
-) => {
-  const script = new Script(exceptionSource, { filename: "" })
-  const error = script.runInThisContext()
-  if (error && error instanceof Error) {
-    const remoteRootRegexp = new RegExp(
-      escapeRegexpSpecialChars(`${devServerOrigin}/`),
-      "g",
-    )
-    error.stack = error.stack.replace(remoteRootRegexp, rootDirectoryUrl)
-    error.message = error.message.replace(remoteRootRegexp, rootDirectoryUrl)
-  }
-  return transformErrorHook(error)
 }

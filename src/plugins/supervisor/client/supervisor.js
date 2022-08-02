@@ -748,9 +748,9 @@ window.__supervisor__ = (() => {
       }
       const executionResult = {
         status: "pending",
+        error: null,
         namespace: null,
         coverage: null,
-        error: null,
       }
       executionResults[execution.src] = executionResult
       try {

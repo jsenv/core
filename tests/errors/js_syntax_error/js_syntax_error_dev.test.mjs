@@ -1,4 +1,3 @@
-import { Script } from "node:vm"
 import { assert } from "@jsenv/assert"
 
 import { startDevServer } from "@jsenv/core"
@@ -25,14 +24,11 @@ const test = async (params) => {
 }
 
 const { returnValue, pageLogs, pageErrors } = await test({})
-const error = new Script(returnValue.exceptionSource, {
-  filename: "",
-}).runInThisContext()
 
 const actual = {
   pageLogs,
   pageErrors,
-  error,
+  error: returnValue.error,
 }
 const expected = {
   pageLogs: [],
@@ -41,6 +37,6 @@ const expected = {
       name: "SyntaxError",
     }),
   ],
-  error: new SyntaxError("Unexpected end of input"),
+  error: "SyntaxError: Unexpected end of input",
 }
 assert({ actual, expected })
