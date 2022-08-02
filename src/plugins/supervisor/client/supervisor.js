@@ -740,9 +740,6 @@ window.__supervisor__ = (() => {
       if (logs) {
         console.group(`[jsenv] loading ${execution.type} ${execution.src}`)
       }
-      let completed
-      let result
-      let error
       if (measurePerf) {
         performance.mark(`execution_start`)
       }
@@ -753,19 +750,16 @@ window.__supervisor__ = (() => {
         coverage: null,
       }
       executionResults[execution.src] = executionResult
+      let resolvePromise
+      const promise = new Promise((resolve) => {
+        resolvePromise = resolve
+      })
+      executionPromises.push(promise)
       try {
-        const promise = execution.execute({ isReload })
-        executionPromises.push(promise)
-        result = await promise
-        completed = true
-      } catch (e) {
-        completed = false
-        error = e
-      }
-      if (measurePerf) {
-        performance.measure(`execution`, `execution_start`)
-      }
-      if (completed) {
+        const result = await execution.execute({ isReload })
+        if (measurePerf) {
+          performance.measure(`execution`, `execution_start`)
+        }
         executionResult.status = "completed"
         executionResult.namespace = result
         executionResult.coverage = window.__coverage__
@@ -773,20 +767,25 @@ window.__supervisor__ = (() => {
           console.log(`${execution.type} load ended`)
           console.groupEnd()
         }
-        return
-      }
-      executionResult.status = "errored"
-      executionResult.error = error
-      executionResult.coverage = window.__coverage__
-      if (execution.type === "js_module") {
-        if (typeof window.reportError === "function") {
-          window.reportError(error)
-        } else {
-          console.error(error)
+        resolvePromise()
+      } catch (e) {
+        if (measurePerf) {
+          performance.measure(`execution`, `execution_start`)
         }
-      }
-      if (logs) {
-        console.groupEnd()
+        executionResult.status = "errored"
+        executionResult.error = e
+        executionResult.coverage = window.__coverage__
+        if (execution.type === "js_module") {
+          if (typeof window.reportError === "function") {
+            window.reportError(e)
+          } else {
+            console.error(e)
+          }
+        }
+        if (logs) {
+          console.groupEnd()
+        }
+        resolvePromise()
       }
     }
     supervisor.superviseScript = ({ src }) => {

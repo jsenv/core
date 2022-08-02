@@ -249,18 +249,18 @@ export const createRuntimeFromPlaywright = ({
             })
           },
           // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
-          pageerror: (cb) => {
-            return registerEvent({
-              object: page,
-              eventType: "pageerror",
-              callback: (error) => {
-                if (ignoreErrorHook(error)) {
-                  return
-                }
-                cb(transformErrorHook(error))
-              },
-            })
-          },
+          // pageerror: (cb) => {
+          //   return registerEvent({
+          //     object: page,
+          //     eventType: "pageerror",
+          //     callback: (error) => {
+          //       if (ignoreErrorHook(error)) {
+          //         return
+          //       }
+          //       cb(transformErrorHook(error))
+          //     },
+          //   })
+          // },
           closed: (cb) => {
             // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
             if (isBrowserDedicatedToExecution) {
@@ -340,6 +340,7 @@ export const createRuntimeFromPlaywright = ({
         return {
           status: "errored",
           error,
+          namespace: winner.data.namespace,
         }
       }
       if (winner.name === "closed") {
@@ -356,10 +357,9 @@ export const createRuntimeFromPlaywright = ({
     try {
       const { status, error, namespace, performance } = await getResult()
       result.status = status
+      result.namespace = namespace
       if (status === "errored") {
         result.error = error
-      } else {
-        result.namespace = namespace
       }
       if (collectPerformance) {
         result.performance = performance
