@@ -167,7 +167,7 @@ window.__supervisor__ = (() => {
         }
         const urlSite = resolveUrlSite({ url, line, column })
         if (
-          exceptionInfo.site.isInline &&
+          urlSite.isInline &&
           exceptionInfo.code === DYNAMIC_IMPORT_SYNTAX_ERROR
         ) {
           // syntax error on inline script need line-1 for some reason
