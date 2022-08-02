@@ -73,40 +73,40 @@ const test = async ({ browserLauncher, browserName }) => {
 
   try {
     await generateHtmlForStory({
-      story: "js_export_not_found",
+      story: "js_classic_inline_throw",
     })
     await generateHtmlForStory({
-      story: "js_import_not_found",
+      story: "js_classic_throw",
     })
     await generateHtmlForStory({
-      story: "js_import_syntax_error",
+      story: "js_module_export_not_found",
     })
     await generateHtmlForStory({
-      story: "js_throw",
+      story: "js_module_import_not_found",
     })
     await generateHtmlForStory({
-      story: "plugin_error_transform",
+      story: "js_module_inline_export_not_found",
     })
     await generateHtmlForStory({
-      story: "script_inline_throw",
+      story: "js_module_inline_import_not_found",
     })
     await generateHtmlForStory({
-      story: "script_module_inline_export_not_found",
+      story: "js_module_inline_syntax_error",
     })
     await generateHtmlForStory({
-      story: "script_module_inline_import_not_found",
+      story: "js_module_inline_throw",
     })
     await generateHtmlForStory({
-      story: "script_module_inline_syntax_error",
+      story: "js_module_plugin_error_transform",
     })
     await generateHtmlForStory({
-      story: "script_module_inline_throw",
+      story: "js_module_syntax_error",
     })
     await generateHtmlForStory({
-      story: "script_throw",
+      story: "js_module_throw",
     })
     await generateHtmlForStory({
-      story: "undefined_is_not_a_function",
+      story: "js_module_undefined_is_not_a_function",
     })
   } finally {
     browser.close()
