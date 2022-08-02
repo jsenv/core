@@ -183,6 +183,32 @@ window.__supervisor__ = (() => {
       }
 
       exceptionInfo.text = stringifyMessageAndStack(exceptionInfo)
+      exceptionInfo.remapErrorStack = async () => {
+        if (!exceptionInfo.stack || exceptionInfo.stackSourcemapped) {
+          return
+        }
+        const urlSites = []
+        replaceUrls(exceptionInfo.stack, (urlSite) => {
+          urlSite = resolveUrlSite(urlSite)
+          urlSites.push(urlSite)
+          return ""
+        })
+        const response = await window.fetch(`/__remap_urls__/`, {
+          method: "POST",
+          headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(urlSites),
+        })
+        const urlSitesResponse = await response.json()
+        exceptionInfo.stack = replaceUrls(exceptionInfo.stack, (urlSite) => {
+          return stringifyUrlSite(
+            urlSitesResponse.find((site) => site.url === urlSite.url),
+          )
+        })
+        exceptionInfo.text = stringifyMessageAndStack(exceptionInfo)
+      }
 
       return exceptionInfo
     }
@@ -859,6 +885,7 @@ window.__supervisor__ = (() => {
               const exceptionInfo = supervisor.createException(
                 executionResult.error,
               )
+              await exceptionInfo.remapErrorStack()
               executionResult.error = exceptionInfo.text
             }
           }),

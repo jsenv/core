@@ -44,6 +44,7 @@
  */
 
 import { fileURLToPath } from "node:url"
+import { readRequestBody } from "@jsenv/server"
 import {
   parseHtmlString,
   stringifyHtmlAst,
@@ -131,6 +132,7 @@ export const jsenvPluginSupervisor = ({
         return {
           status: 200,
           headers: {
+            "cache-control": "no-store",
             "content-type": "text/plain",
             "content-length": Buffer.byteLength(codeFrame),
           },
@@ -183,7 +185,7 @@ export const jsenvPluginSupervisor = ({
         return {
           status: 200,
           headers: {
-            "cache-control": "no-cache",
+            "cache-control": "no-store",
             "content-type": "application/json",
             "content-length": Buffer.byteLength(body),
           },
@@ -207,6 +209,41 @@ export const jsenvPluginSupervisor = ({
           headers: {
             "cache-control": "no-store",
           },
+        }
+      }
+      if (request.pathname.startsWith("/__remap_urls__/")) {
+        const urlSites = await readRequestBody(request, { as: "json" })
+        urlSites.forEach((urlSite) => {
+          if (typeof urlSite.line === "number") {
+            const urlInfo = context.urlGraph.getUrlInfo(urlSite.url)
+            if (urlInfo) {
+              const sourcemap = urlInfo.sourcemap
+              if (sourcemap) {
+                const original = getOriginalPosition({
+                  sourcemap,
+                  url: urlSite.url,
+                  line: urlSite.line,
+                  column: urlSite.column,
+                })
+                if (original.line !== null) {
+                  urlSite.line = original.line
+                  if (original.column !== null) {
+                    urlSite.column = original.column
+                  }
+                }
+              }
+            }
+          }
+        })
+        const responseBody = JSON.stringify(urlSites, null, "  ")
+        return {
+          status: 200,
+          headers: {
+            "cache-control": "no-store",
+            "content-type": "application/json",
+            "content-length": Buffer.byteLength(responseBody),
+          },
+          body: responseBody,
         }
       }
       return null
