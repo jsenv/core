@@ -306,19 +306,7 @@ export const createRuntimeFromPlaywright = ({
                 },
                 /* eslint-enable no-undef */
               )
-              const { status, executionResults } = returnValue
-              if (status === "errored") {
-                cb({
-                  status: "errored",
-                  error: returnValue.error,
-                  namespace: executionResults,
-                })
-              } else {
-                cb({
-                  status: "completed",
-                  namespace: executionResults,
-                })
-              }
+              cb(returnValue)
             } catch (e) {
               reject(e)
             }
@@ -336,11 +324,10 @@ export const createRuntimeFromPlaywright = ({
         }
       }
       if (winner.name === "error" || winner.name === "pageerror") {
-        const error = winner.data
+        let error = winner.data
         return {
           status: "errored",
           error,
-          namespace: winner.data.namespace,
         }
       }
       if (winner.name === "closed") {
@@ -351,6 +338,21 @@ export const createRuntimeFromPlaywright = ({
             : new Error(`page closed during execution`),
         }
       }
+      if (winner.name === "response") {
+        const { executionResults } = winner.data
+        const result = {
+          status: "completed",
+          namespace: executionResults,
+        }
+        Object.keys(executionResults).forEach((key) => {
+          const executionResult = executionResults[key]
+          if (executionResult.status === "errored") {
+            result.status = "errored"
+            result.error = executionResult.error
+          }
+        })
+        return result
+      }
       return winner.data
     }
 
@@ -358,9 +360,7 @@ export const createRuntimeFromPlaywright = ({
       const { status, error, namespace, performance } = await getResult()
       result.status = status
       result.namespace = namespace
-      if (status === "errored") {
-        result.error = error
-      }
+      result.error = error
       if (collectPerformance) {
         result.performance = performance
       }

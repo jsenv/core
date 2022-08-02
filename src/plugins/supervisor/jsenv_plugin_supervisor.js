@@ -108,14 +108,18 @@ export const jsenvPluginSupervisor = ({
         if (remap) {
           const sourcemap = urlInfo.sourcemap
           if (sourcemap) {
-            const original = await getOriginalPosition({
+            const original = getOriginalPosition({
               sourcemap,
               url: file,
               line,
               column,
             })
-            line = original.line
-            column = original.column
+            if (original.line !== null) {
+              line = original.line
+              if (original.column !== null) {
+                column = original.column
+              }
+            }
           }
         }
         const codeFrame = stringifyUrlSite({

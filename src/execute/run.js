@@ -136,11 +136,8 @@ export const run = async ({
 
     const { status, namespace, error, performance } = winner.data
     result.status = status
-    if (status === "errored") {
-      result.error = error
-    } else {
-      result.namespace = namespace
-    }
+    result.error = error
+    result.namespace = namespace
     if (collectPerformance) {
       result.performance = performance
     }
