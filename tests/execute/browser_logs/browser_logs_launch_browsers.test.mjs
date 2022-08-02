@@ -35,7 +35,6 @@ const test = async ({ runtime }) => {
         status: "completed",
         error: null,
         namespace: {},
-        coverage: null,
       },
     },
     // there is also the html supervisor logs

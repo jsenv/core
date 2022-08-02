@@ -776,8 +776,8 @@ window.__supervisor__ = (() => {
         return
       }
       executionResult.status = "errored"
-      executionResult.coverage = window.__coverage__
       executionResult.error = error
+      executionResult.coverage = window.__coverage__
       if (execution.type === "js_module") {
         if (typeof window.reportError === "function") {
           window.reportError(error)
@@ -876,10 +876,10 @@ window.__supervisor__ = (() => {
       })
       return {
         status,
+        ...(status === "errored" ? { error } : {}),
+        executionResults,
         startTime: getNavigationStartTime(),
         endTime: Date.now(),
-        executionResults,
-        ...(status === "errored" ? { error } : {}),
       }
     }
 

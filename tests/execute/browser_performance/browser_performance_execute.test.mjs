@@ -29,6 +29,7 @@ const test = async ({ runtime }) => {
     namespace: {
       "/main.js": {
         status: "completed",
+        error: null,
         namespace: {},
       },
     },
