@@ -35,9 +35,7 @@ export const executeInChromium = async ({
   await page.goto(url)
   if (headScriptUrl) {
     // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#pageaddscripttagoptions
-    await page.addScriptTag({
-      url: headScriptUrl,
-    })
+    await page.addScriptTag({ url: headScriptUrl })
   }
   try {
     const returnValue = await page.evaluate(pageFunction, ...pageArguments)

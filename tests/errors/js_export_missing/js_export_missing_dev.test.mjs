@@ -1,4 +1,3 @@
-import { Script } from "node:vm"
 import { assert } from "@jsenv/assert"
 
 import { startDevServer } from "@jsenv/core"
@@ -24,14 +23,11 @@ const test = async (params) => {
 }
 
 const { returnValue, pageLogs, pageErrors } = await test()
-const error = new Script(returnValue.exceptionSource, {
-  filename: "",
-}).runInThisContext()
 
 const actual = {
   pageLogs,
   pageErrors,
-  error,
+  error: returnValue.error,
 }
 const expected = {
   pageLogs: [],
@@ -45,8 +41,6 @@ const expected = {
       },
     ),
   ],
-  error: new SyntaxError(
-    `The requested module '/file.js' does not provide an export named 'answer'`,
-  ),
+  error: `SyntaxError: The requested module '/file.js' does not provide an export named 'answer'`,
 }
 assert({ actual, expected })

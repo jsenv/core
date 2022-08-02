@@ -861,14 +861,17 @@ window.__supervisor__ = (() => {
       }
     }
     supervisor.collectScriptResults = async () => {
-      await Promise.all(executionPromises)
+      try {
+        await Promise.all(executionPromises)
+      } catch (e) {}
       let status = "completed"
-      let exceptionSource = ""
+      let error
+
       Object.keys(executionResults).forEach((src) => {
         const executionResult = executionResults[src]
         if (executionResult.status === "errored") {
           status = "errored"
-          exceptionSource = executionResult.exceptionSource
+          error = executionResult.error
         }
       })
       return {
@@ -876,7 +879,7 @@ window.__supervisor__ = (() => {
         startTime: getNavigationStartTime(),
         endTime: Date.now(),
         executionResults,
-        ...(status === "errored" ? { exceptionSource } : {}),
+        ...(status === "errored" ? { error } : {}),
       }
     }
 

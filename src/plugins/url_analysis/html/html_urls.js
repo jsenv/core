@@ -127,7 +127,7 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
     const value = getHtmlNodeAttribute(node, attributeName)
     if (value) {
       const jsenvPluginOwner = getHtmlNodeAttribute(node, "jsenv-plugin-owner")
-      if (jsenvPluginOwner !== undefined) {
+      if (jsenvPluginOwner === "jsenv:importmap") {
         // during build the importmap is inlined
         // and shoud not be considered as a dependency anymore
         return
@@ -193,6 +193,7 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
       if (type === "text") {
         // ignore <script type="whatever" src="./file.js">
         // per HTML spec https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#attr-type
+        // this will be handled by jsenv_plugin_html_inline_content
         return
       }
       visitAttributeAsUrlSpecifier({

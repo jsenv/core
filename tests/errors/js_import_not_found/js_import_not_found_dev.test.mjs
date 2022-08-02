@@ -1,4 +1,3 @@
-import { Script } from "node:vm"
 import { assert } from "@jsenv/assert"
 
 import { startDevServer } from "@jsenv/core"
@@ -29,14 +28,11 @@ try {
     /* eslint-enable no-undef */
   })
 
-  const error = new Script(returnValue.exceptionSource, {
-    filename: "",
-  }).runInThisContext()
   const actual = {
     serverWarnOutput: warnCalls.join("\n"),
     pageLogs,
     pageErrors,
-    error,
+    error: returnValue.error,
   }
   const expected = {
     serverWarnOutput: `GET ${devServer.origin}/foo.js
@@ -69,9 +65,7 @@ try {
         },
       ),
     ],
-    error: new TypeError(
-      `Failed to fetch dynamically imported module: ${devServer.origin}/main.js`,
-    ),
+    error: `TypeError: Failed to fetch dynamically imported module: ${devServer.origin}/main.js`,
   }
   assert({ actual, expected })
 } finally {
