@@ -44,8 +44,9 @@ export const createExecutionLog = (
   if (completedExecutionLogAbbreviation && status === "completed") {
     return `${description}${summary}`
   }
-  const { consoleCalls = [], error, exception } = executionResult
+  const { consoleCalls = [], errors } = executionResult
   const consoleOutput = formatConsoleCalls(consoleCalls)
+  const errorsOutput = formatErrors(errors)
   return formatExecution({
     label: `${description}${summary}`,
     details: {
@@ -59,11 +60,37 @@ export const createExecutionLog = (
                 : msAsDuration(endMs - startMs),
           }
         : {}),
-      ...(error ? { error: error.stack || error.message || error } : {}),
-      ...(exception ? { error: exception.text } : {}),
     },
     consoleOutput,
+    errorsOutput,
   })
+}
+
+const formatErrors = (errors) => {
+  if (errors.length === 0) {
+    return ""
+  }
+  const formatError = (error) => error.stack || error.message || error
+
+  if (errors.length === 1) {
+    return `${ANSI.color(`-------- error --------`, ANSI.RED)}
+${formatError(errors[0])}
+${ANSI.color(`-------------------------`, ANSI.RED)}`
+  }
+
+  let output = []
+  errors.forEach((error) => {
+    output.push(
+      prefixFirstAndIndentRemainingLines({
+        prefix: `${UNICODE.CIRCLE_CROSS} `,
+        indentation: "   ",
+        text: formatError(error),
+      }),
+    )
+  })
+  return `${ANSI.color(`-------- errors (${errors.length}) --------`, ANSI.RED)}
+${output.join(`\n`)}
+${ANSI.color(`-------------------------`, ANSI.RED)}`
 }
 
 export const createSummaryLog = (
@@ -272,6 +299,7 @@ export const formatConsoleOutput = (consoleCalls) => {
     const textFormatted = prefixFirstAndIndentRemainingLines({
       prefix: CONSOLE_ICONS[regroupedCall.type],
       text,
+      trimLines: true,
       trimLastLine: index === regroupedCalls.length - 1,
     })
     consoleOutput += textFormatted
@@ -279,14 +307,19 @@ export const formatConsoleOutput = (consoleCalls) => {
   return consoleOutput
 }
 
-const prefixFirstAndIndentRemainingLines = ({ prefix, text, trimLastLine }) => {
+const prefixFirstAndIndentRemainingLines = ({
+  prefix,
+  indentation = "  ",
+  text,
+  trimLines,
+  trimLastLine,
+}) => {
   const lines = text.split(/\r?\n/)
   const firstLine = lines.shift()
   let result = `${prefix} ${firstLine}`
   let i = 0
-  const indentation = `  `
   while (i < lines.length) {
-    const line = lines[i].trim()
+    const line = trimLines ? lines[i].trim() : lines[i]
     i++
     result += line.length
       ? `\n${indentation}${line}`
@@ -326,7 +359,12 @@ const formatConsoleSummary = (repartition) => {
   return `console (${parts.join(" ")})`
 }
 
-const formatExecution = ({ label, details = {}, consoleOutput }) => {
+const formatExecution = ({
+  label,
+  details = {},
+  consoleOutput,
+  errorsOutput,
+}) => {
   let message = ``
   message += label
   Object.keys(details).forEach((key) => {
@@ -334,8 +372,10 @@ const formatExecution = ({ label, details = {}, consoleOutput }) => {
 ${key}: ${details[key]}`
   })
   if (consoleOutput) {
-    message += `
-${consoleOutput}`
+    message += `\n${consoleOutput}`
+  }
+  if (errorsOutput) {
+    message += `\n${errorsOutput}`
   }
   return message
 }

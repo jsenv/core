@@ -27,7 +27,7 @@ const { returnValue, pageLogs, pageErrors } = await test()
 const actual = {
   pageLogs,
   pageErrors,
-  error: returnValue.error,
+  errorMessage: returnValue.executionResults["/main.js"].error.message,
 }
 const expected = {
   pageLogs: [],
@@ -41,6 +41,6 @@ const expected = {
       },
     ),
   ],
-  error: `SyntaxError: The requested module '/file.js' does not provide an export named 'answer'`,
+  errorMessage: `The requested module '/file.js' does not provide an export named 'answer'`,
 }
 assert({ actual, expected })

@@ -32,7 +32,7 @@ try {
     serverWarnOutput: warnCalls.join("\n"),
     pageLogs,
     pageErrors,
-    error: returnValue.error,
+    error: returnValue.executionResults["/main.js"].error.message,
   }
   const expected = {
     serverWarnOutput: `GET ${devServer.origin}/foo.js
@@ -55,17 +55,8 @@ try {
         text: `Failed to load resource: the server responded with a status of 404 (no entry on filesystem)`,
       },
     ],
-    pageErrors: [
-      Object.assign(
-        new Error(
-          `Failed to fetch dynamically imported module: ${devServer.origin}/main.js`,
-        ),
-        {
-          name: "TypeError",
-        },
-      ),
-    ],
-    error: `TypeError: Failed to fetch dynamically imported module: ${devServer.origin}/main.js`,
+    pageErrors: [],
+    error: `Failed to fetch module: ${devServer.origin}/main.js`,
   }
   assert({ actual, expected })
 } finally {

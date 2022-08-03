@@ -312,9 +312,11 @@ export const executePlan = async (
         } else {
           executionResult = {
             status: "errored",
-            error: new Error(
-              `No file at ${fileRelativeUrl} for execution "${executionName}"`,
-            ),
+            errors: [
+              new Error(
+                `No file at ${fileRelativeUrl} for execution "${executionName}"`,
+              ),
+            ],
           }
         }
         counters.done++

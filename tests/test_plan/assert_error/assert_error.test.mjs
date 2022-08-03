@@ -35,13 +35,13 @@ const test = async ({ runtime }) => {
   const namespace = testPlanReport["main.html"].browser.namespace
 
   const getErrorStackLastUrl = (executionResult) => {
-    const error = executionResult.error
-    if (!error) {
+    const exception = executionResult.exception
+    if (!exception) {
       throw new Error(
         `no error on ${runtime.name}: ${JSON.stringify(executionResult)}`,
       )
     }
-    const errorStack = error.stack
+    const errorStack = exception.stack
     const regex = {
       // eslint-disable-next-line no-regex-spaces
       chromium: /    at (.+)$/gm,

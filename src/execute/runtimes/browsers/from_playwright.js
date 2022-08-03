@@ -119,7 +119,11 @@ export const createRuntimeFromPlaywright = ({
       }
     }
 
-    const result = {}
+    const result = {
+      status: "pending",
+      namespace: null,
+      errors: [],
+    }
     const callbacks = []
     if (coverageEnabled) {
       if (
@@ -249,7 +253,7 @@ export const createRuntimeFromPlaywright = ({
             })
           },
           // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
-          // pageerror: (cb) => {
+          // pageerror: () => {
           //   return registerEvent({
           //     object: page,
           //     eventType: "pageerror",
@@ -257,7 +261,7 @@ export const createRuntimeFromPlaywright = ({
           //       if (ignoreErrorHook(error)) {
           //         return
           //       }
-          //       cb(transformErrorHook(error))
+          //       result.errors.push(transformErrorHook(error))
           //     },
           //   })
           // },
@@ -316,51 +320,46 @@ export const createRuntimeFromPlaywright = ({
       )
     })
 
-    const getResult = async () => {
+    const writeResult = async () => {
       const winner = await winnerPromise
       if (winner.name === "aborted") {
-        return {
-          status: "aborted",
-        }
+        result.status = "aborted"
+        return
       }
-      if (winner.name === "error" || winner.name === "pageerror") {
+      if (winner.name === "error") {
         let error = winner.data
-        return {
-          status: "errored",
-          error,
-        }
+        result.status = "errored"
+        result.errors.push(error)
+        return
       }
       if (winner.name === "closed") {
-        return {
-          status: "errored",
-          error: isBrowserDedicatedToExecution
+        result.status = "errored"
+        result.errors.push(
+          isBrowserDedicatedToExecution
             ? new Error(`browser disconnected during execution`)
             : new Error(`page closed during execution`),
-        }
+        )
+        return
       }
-      if (winner.name === "response") {
-        const { executionResults } = winner.data
-        const result = {
-          status: "completed",
-          namespace: executionResults,
+      // winner.name = 'response'
+      const { executionResults } = winner.data
+      result.status = "completed"
+      result.namespace = executionResults
+      Object.keys(executionResults).forEach((key) => {
+        const executionResult = executionResults[key]
+        if (executionResult.status === "errored") {
+          result.status = "errored"
+          result.errors.push({
+            ...executionResult.exception,
+            stack: executionResult.exception.text,
+          })
         }
-        Object.keys(executionResults).forEach((key) => {
-          const executionResult = executionResults[key]
-          if (executionResult.status === "errored") {
-            result.status = "errored"
-            result.error = executionResult.error
-          }
-        })
-        return result
-      }
-      return winner.data
+      })
+      return
     }
 
     try {
-      const { status, error, namespace, performance } = await getResult()
-      result.status = status
-      result.namespace = namespace
-      result.error = error
+      await writeResult()
       if (collectPerformance) {
         result.performance = performance
       }
@@ -370,7 +369,7 @@ export const createRuntimeFromPlaywright = ({
       }, Promise.resolve())
     } catch (e) {
       result.status = "errored"
-      result.error = e
+      result.errors = [e]
     }
     if (keepRunning) {
       stopSignal.notify = cleanup
