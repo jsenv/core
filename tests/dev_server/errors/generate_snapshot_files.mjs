@@ -121,6 +121,9 @@ const test = async ({ browserLauncher, browserName }) => {
       story: "js_module_undefined_is_not_a_function",
     })
     await generateHtmlForStory({
+      story: "js_module_worker_throw",
+    })
+    await generateHtmlForStory({
       story: "script_src_not_found",
     })
   } finally {
