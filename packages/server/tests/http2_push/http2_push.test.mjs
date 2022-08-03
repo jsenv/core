@@ -7,7 +7,8 @@ import { readFile } from "@jsenv/filesystem"
 
 import { startServer, fetchFileSystem } from "@jsenv/server"
 
-if (process.platform !== "win32") {
+// certificates only generated on linux
+if (process.platform === "linux") {
   const { certificate, privateKey } = requestCertificate()
   const server = await startServer({
     logLevel: "warn",

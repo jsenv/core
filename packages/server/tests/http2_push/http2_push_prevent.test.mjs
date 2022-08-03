@@ -6,7 +6,8 @@ import { readFile } from "@jsenv/filesystem"
 import { startServer, fetchFileSystem } from "@jsenv/server"
 import { applyDnsResolution } from "@jsenv/server/src/internal/dns_resolution.js"
 
-if (process.platform !== "win32") {
+// certificates only generated on linux
+if (process.platform === "linux") {
   const localhostDns = await applyDnsResolution("localhost")
   const expectedOrigin =
     localhostDns.address === "127.0.0.1" ? "localhost" : "127.0.0.1"

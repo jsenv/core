@@ -27,7 +27,7 @@ jobs:
   test:
     strategy:
       matrix:
-        os: [ubuntu-20.04, macos-11, windows-2022]
+        os: [ubuntu-20.04, macos-12, windows-2022]
         node: [18.5.0]
     runs-on: ${{ matrix.os }}
     name: test on ${{ matrix.os }} and node ${{ matrix.node }}
@@ -51,7 +51,7 @@ jobs:
       - name: Install playwright
         run: npm run playwright-install
       - name: Install certificate # needed for @jsenv/server tests
-        if: runner.os != 'Windows'
+        if: runner.os == 'Linux'
         run: node ./packages/server/scripts/certificate_install.mjs
       - name: Run ESLint
         run: npm run eslint

@@ -59,7 +59,8 @@ const test = async (params) => {
 await test()
 
 // https
-if (process.platform !== "win32") {
+// certificates only generated on linux
+if (process.platform === "linux") {
   const { certificate, privateKey } = requestCertificate()
   await test({
     protocol: "https",
