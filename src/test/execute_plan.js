@@ -28,6 +28,7 @@ export const executePlan = async (
     signal,
     handleSIGINT,
     logger,
+    logRefresh,
     logRuntime,
     logEachDuration,
     logSummary,
@@ -211,6 +212,7 @@ export const executePlan = async (
     const debugLogsEnabled = loggerToLevels(logger).debug
     const executionLogsEnabled = loggerToLevels(logger).info
     const executionSpinner =
+      logRefresh &&
       !debugLogsEnabled &&
       executionLogsEnabled &&
       process.stdout.isTTY &&
