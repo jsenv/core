@@ -47,6 +47,7 @@ window.__supervisor__ = (() => {
       column,
     } = {}) => {
       const exception = {
+        reason,
         reportedBy,
         isError: false, // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/throw
         code: null,
@@ -94,6 +95,15 @@ window.__supervisor__ = (() => {
             exception.stackFormatIsV8 = false
             exception.stackSourcemapped = false
           }
+          if (error.reportedBy) {
+            exception.reportedBy = error.reportedBy
+          }
+          if (error.url) {
+            Object.assign(exception.site, resolveUrlSite({ url: error.url }))
+          }
+          if (error.needsReport) {
+            exception.needsReport = true
+          }
           export_missing: {
             // chrome
             if (message.includes("does not provide an export named")) {
@@ -123,8 +133,14 @@ window.__supervisor__ = (() => {
           exception.code = reason.code
           exception.message = reason.message
           exception.stack = reason.stack
+          if (reason.reportedBy) {
+            exception.reportedBy = reason.reportedBy
+          }
           if (reason.url) {
             Object.assign(exception.site, resolveUrlSite({ url: reason.url }))
+          }
+          if (reason.needsReport) {
+            exception.needsReport = true
           }
           return
         }
@@ -754,19 +770,19 @@ window.__supervisor__ = (() => {
           console.groupEnd()
         }
         resolvePromise()
-      } catch (exceptionInfo) {
+      } catch (e) {
         if (measurePerf) {
           performance.measure(`execution`, `execution_start`)
         }
         executionResult.status = "errored"
-        const exception = supervisor.createException(exceptionInfo)
+        const exception = supervisor.createException({
+          reason: e,
+        })
+        if (exception.needsReport) {
+          supervisor.reportException(exception)
+        }
         executionResult.exception = exception
         executionResult.coverage = window.__coverage__
-        // const isWebkitOrSafari =
-        //   typeof window.webkitConvertPointFromNodeToPage === "function"
-        // if (isWebkitOrSafari && exception.reportedBy === "dynamic_import") {
-        //   supervisor.reportException(exception)
-        // }
         if (logs) {
           console.groupEnd()
         }
@@ -781,8 +797,9 @@ window.__supervisor__ = (() => {
       const execution = supervisor.createExecution({
         src,
         type: "js_classic",
-        execute: ({ isReload }) => {
-          return new Promise((resolve, reject) => {
+        execute: async ({ isReload }) => {
+          const urlObject = new URL(src, window.location)
+          const loadPromise = new Promise((resolve, reject) => {
             // do not use script.cloneNode()
             // bcause https://stackoverflow.com/questions/28771542/why-dont-clonenode-script-tags-execute
             currentScriptClone = document.createElement("script")
@@ -792,7 +809,6 @@ window.__supervisor__ = (() => {
                 attribute.nodeValue,
               )
             })
-            const urlObject = new URL(src, window.location)
             if (isReload) {
               urlObject.searchParams.set("hmr", Date.now())
               nodeToReplace = currentScriptClone
@@ -806,21 +822,22 @@ window.__supervisor__ = (() => {
               nodeToReplace = currentScript
               currentScriptClone.src = src
             }
-            const url = urlObject.href
-            currentScriptClone.addEventListener("error", () => {
-              reject({
-                reason: {
-                  message: "Failed to fetch script",
-                  url,
-                },
-                reportedBy: "script_error_event",
-              })
-            })
-            currentScriptClone.addEventListener("load", () => {
-              resolve()
-            })
+            currentScriptClone.addEventListener("error", reject)
+            currentScriptClone.addEventListener("load", resolve)
             parentNode.replaceChild(currentScriptClone, nodeToReplace)
           })
+          try {
+            await loadPromise
+          } catch (e) {
+            // eslint-disable-next-line no-throw-literal
+            throw {
+              message: `Failed to fetch script: ${urlObject.href}`,
+              reportedBy: "script_error_event",
+              url: urlObject.href,
+              // window.error won't be dispatched for this error
+              needsReport: true,
+            }
+          }
         },
       })
       execution.start()
