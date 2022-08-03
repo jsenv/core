@@ -61,8 +61,8 @@ export const superviseScriptTypeModule = async ({ src, async }) => {
               reject(lastWindowError)
             } else {
               // do not resolve right away, wait for top level execution
-              const executionPromise = import(url)
-              resolve(executionPromise)
+              // const executionPromise = import(url)
+              resolve()
             }
           })
           parentNode.replaceChild(currentScriptClone, nodeToReplace)

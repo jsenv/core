@@ -108,9 +108,12 @@ const test = async ({ browserLauncher, browserName }) => {
     await generateHtmlForStory({
       story: "js_module_throw",
     })
-    await generateHtmlForStory({
-      story: "js_module_top_level_await_then_throw",
-    })
+    // for some reason webkit ignore this error (it does not report an error on window)
+    if (browserLauncher !== webkit) {
+      await generateHtmlForStory({
+        story: "js_module_top_level_await_then_throw",
+      })
+    }
     await generateHtmlForStory({
       story: "js_module_undefined_is_not_a_function",
     })
