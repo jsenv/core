@@ -4,7 +4,7 @@
  * - npm test:coverage
  */
 
-import { executeTestPlan, firefox, pingServer } from "@jsenv/core"
+import { executeTestPlan, chromium, pingServer } from "@jsenv/core"
 
 import { rootDirectoryUrl } from "../jsenv.config.mjs"
 
@@ -21,7 +21,7 @@ try {
     testPlan: {
       "./tests/**/*.test.html": {
         firefox: {
-          runtime: firefox,
+          runtime: chromium,
         },
       },
     },
