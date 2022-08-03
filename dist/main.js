@@ -23,7 +23,7 @@ import v8, { takeCoverage } from "node:v8";
 import wrapAnsi from "wrap-ansi";
 import stripAnsi from "strip-ansi";
 import cuid from "cuid";
-import { runInNewContext, Script } from "node:vm";
+import { runInNewContext } from "node:vm";
 import { fork } from "node:child_process";
 
 /*
@@ -1159,7 +1159,7 @@ const removeNoop = () => {};
  */
 const Abort = {
   isAbortError: error => {
-    return error.name === "AbortError";
+    return error && error.name === "AbortError";
   },
   startOperation: () => {
     return createOperation();
@@ -1475,50 +1475,42 @@ const readDirectory = async (url, {
   emfileMaxWait = 1000
 } = {}) => {
   const directoryUrl = assertAndNormalizeDirectoryUrl(url);
-  const directoryPath = urlToFileSystemPath(directoryUrl);
+  const directoryUrlObject = new URL(directoryUrl);
   const startMs = Date.now();
   let attemptCount = 0;
 
-  const attempt = () => {
-    return readdirNaive(directoryPath, {
-      handleTooManyFilesOpenedError: async error => {
+  const attempt = async () => {
+    try {
+      const names = await new Promise((resolve, reject) => {
+        readdir(directoryUrlObject, (error, names) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(names);
+          }
+        });
+      });
+      return names.map(encodeURIComponent);
+    } catch (e) {
+      // https://nodejs.org/dist/latest-v13.x/docs/api/errors.html#errors_common_system_errors
+      if (e.code === "EMFILE" || e.code === "ENFILE") {
         attemptCount++;
         const nowMs = Date.now();
         const timeSpentWaiting = nowMs - startMs;
 
         if (timeSpentWaiting > emfileMaxWait) {
-          throw error;
+          throw e;
         }
 
-        return new Promise(resolve => {
-          setTimeout(() => {
-            resolve(attempt());
-          }, attemptCount);
-        });
+        await new Promise(resolve => setTimeout(resolve), attemptCount);
+        return await attempt();
       }
-    });
+
+      throw e;
+    }
   };
 
   return attempt();
-};
-
-const readdirNaive = (directoryPath, {
-  handleTooManyFilesOpenedError = null
-} = {}) => {
-  return new Promise((resolve, reject) => {
-    readdir(directoryPath, (error, names) => {
-      if (error) {
-        // https://nodejs.org/dist/latest-v13.x/docs/api/errors.html#errors_common_system_errors
-        if (handleTooManyFilesOpenedError && (error.code === "EMFILE" || error.code === "ENFILE")) {
-          resolve(handleTooManyFilesOpenedError(error));
-        } else {
-          reject(error);
-        }
-      } else {
-        resolve(names);
-      }
-    });
-  });
 };
 
 const comparePathnames = (leftPathame, rightPathname) => {
@@ -3080,6 +3072,7 @@ const FAILURE_RAW = canUseUnicode ? `✖` : `×`;
 const DEBUG_RAW = canUseUnicode ? `◆` : `♦`;
 const INFO_RAW = canUseUnicode ? `ℹ` : `i`;
 const WARNING_RAW = canUseUnicode ? `⚠` : `‼`;
+const CIRCLE_CROSS_RAW = canUseUnicode ? `ⓧ` : `(×)`;
 const COMMAND = ANSI.color(COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
 
 const OK = ANSI.color(OK_RAW, ANSI.GREEN);
@@ -3087,6 +3080,7 @@ const FAILURE = ANSI.color(FAILURE_RAW, ANSI.RED);
 const DEBUG = ANSI.color(DEBUG_RAW, ANSI.GREY);
 const INFO = ANSI.color(INFO_RAW, ANSI.BLUE);
 const WARNING = ANSI.color(WARNING_RAW, ANSI.YELLOW);
+const CIRCLE_CROSS = ANSI.color(CIRCLE_CROSS_RAW, ANSI.RED);
 const UNICODE = {
   COMMAND,
   OK,
@@ -3094,12 +3088,14 @@ const UNICODE = {
   DEBUG,
   INFO,
   WARNING,
+  CIRCLE_CROSS,
   COMMAND_RAW,
   OK_RAW,
   FAILURE_RAW,
   DEBUG_RAW,
   INFO_RAW,
   WARNING_RAW,
+  CIRCLE_CROSS_RAW,
   supported: canUseUnicode
 };
 
@@ -4305,12 +4301,12 @@ const visitHtmlUrls = ({
     attributeName,
     specifier
   }) => {
-    const generatedFromInlineContent = getHtmlNodeAttribute(node, "generated-from-inline-content") !== undefined;
+    const isContentCooked = getHtmlNodeAttribute(node, "jsenv-plugin-action") === "content_cooked";
     let position;
 
-    if (generatedFromInlineContent) {
+    if (isContentCooked) {
       // when generated from inline content,
-      // line, column is not "src" nor "generated-from-src" but "original-position"
+      // line, column is not "src" nor "inlined-from-src" but "original-position"
       position = getHtmlNodePosition(node);
     } else {
       position = getHtmlNodeAttributePosition(node, attributeName);
@@ -4342,9 +4338,9 @@ const visitHtmlUrls = ({
     const value = getHtmlNodeAttribute(node, attributeName);
 
     if (value) {
-      const generatedBy = getHtmlNodeAttribute(node, "generated-by");
+      const jsenvPluginOwner = getHtmlNodeAttribute(node, "jsenv-plugin-owner");
 
-      if (generatedBy !== undefined) {
+      if (jsenvPluginOwner === "jsenv:importmap") {
         // during build the importmap is inlined
         // and shoud not be considered as a dependency anymore
         return;
@@ -4353,17 +4349,17 @@ const visitHtmlUrls = ({
       addDependency({ ...rest,
         node,
         attributeName,
-        specifier: attributeName === "generated-from-src" || attributeName === "generated-from-href" ? new URL(value, url).href : value
+        specifier: attributeName === "inlined-from-src" || attributeName === "inlined-from-href" ? new URL(value, url).href : value
       });
     } else if (attributeName === "src") {
       visitAttributeAsUrlSpecifier({ ...rest,
         node,
-        attributeName: "generated-from-src"
+        attributeName: "inlined-from-src"
       });
     } else if (attributeName === "href") {
       visitAttributeAsUrlSpecifier({ ...rest,
         node,
-        attributeName: "generated-from-href"
+        attributeName: "inlined-from-href"
       });
     }
   };
@@ -4413,6 +4409,7 @@ const visitHtmlUrls = ({
       if (type === "text") {
         // ignore <script type="whatever" src="./file.js">
         // per HTML spec https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#attr-type
+        // this will be handled by jsenv_plugin_html_inline_content
         return;
       }
 
@@ -5001,7 +4998,8 @@ const jsenvPluginHtmlInlineContent = ({
               });
               setHtmlNodeText(styleNode, inlineStyleUrlInfo.content);
               setHtmlNodeAttributes(styleNode, {
-                "generated-by": "jsenv:html_inline_content"
+                "jsenv-plugin-owner": "jsenv:html_inline_content",
+                "jsenv-plugin-action": "content_cooked"
               });
             });
           },
@@ -5015,13 +5013,13 @@ const jsenvPluginHtmlInlineContent = ({
             // - we want to avoid cooking twice a script during build
 
 
-            const generatedBy = getHtmlNodeAttribute(scriptNode, "generated-by");
+            const jsenvPluginOwner = getHtmlNodeAttribute(scriptNode, "jsenv-plugin-owner");
 
-            if (generatedBy === "jsenv:as_js_classic_html" && !analyzeConvertedScripts) {
+            if (jsenvPluginOwner === "jsenv:as_js_classic_html" && !analyzeConvertedScripts) {
               return;
             }
 
-            if (generatedBy === "jsenv:html_supervisor") {
+            if (jsenvPluginOwner === "jsenv:supervisor") {
               return;
             }
 
@@ -5067,7 +5065,8 @@ const jsenvPluginHtmlInlineContent = ({
               });
               setHtmlNodeText(scriptNode, inlineScriptUrlInfo.content);
               setHtmlNodeAttributes(scriptNode, {
-                "generated-by": "jsenv:html_inline_content",
+                "jsenv-plugin-owner": "jsenv:html_inline_content",
+                "jsenv-plugin-action": "content_cooked",
                 ...(extension ? {
                   type: type === "js_module" ? "module" : undefined
                 } : {})
@@ -5605,7 +5604,7 @@ const jsenvPluginDataUrls = () => {
         }
 
         const specifier = DATA_URL.stringify({
-          contentType: urlInfo.headers["content-type"],
+          contentType: urlInfo.contentType,
           base64Flag: urlInfo.data.base64Flag,
           data: urlInfo.data.base64Flag ? dataToBase64(urlInfo.content) : String(urlInfo.content)
         });
@@ -5943,7 +5942,8 @@ const jsenvPluginAsJsClassicHtml = ({
               setHtmlNodeText(moduleScriptNode, newUrlInfo.content);
               setHtmlNodeAttributes(moduleScriptNode, {
                 "type": undefined,
-                "generated-by": "jsenv:as_js_classic_html"
+                "jsenv-plugin-owner": "jsenv:as_js_classic_html",
+                "jsenv-plugin-action": "content_cooked"
               });
             });
           }
@@ -6010,10 +6010,9 @@ const jsenvPluginAsJsClassicHtml = ({
               specifier: systemJsClientFileUrl
             });
             injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
-              "tagName": "script",
-              "src": systemJsReference.generatedSpecifier,
-              "injected-by": "jsenv:as_js_classic_html"
-            }));
+              tagName: "script",
+              src: systemJsReference.generatedSpecifier
+            }), "jsenv:as_js_classic_html");
           }
         }
 
@@ -10409,7 +10408,7 @@ function default_1({
  * and prefer to unique identifier based solely on the specifier basename for instance
  */
 const jsenvPluginAsJsClassic = ({
-  systemJsInjection
+  systemJsInjection = true
 }) => {
   const systemJsClientFileUrl = new URL("./js/s.js", import.meta.url).href;
   return [jsenvPluginAsJsClassicConversion({
@@ -10483,7 +10482,7 @@ const jsenvPluginAsJsClassicConversion = ({
       // - the reference contains ?entry_point
       // When js is entry point there can be no HTML to inject systemjs
       // and systemjs must be injected into the js file
-      originalUrlInfo.isEntryPoint && // if it's an entry point without dependency (it does not use import)
+      urlInfo.isEntryPoint && // if it's an entry point without dependency (it does not use import)
       // then we can use UMD, otherwise we have to use systemjs
       // because it is imported by systemjs
       !originalUrlInfo.data.usesImport ? "umd" : "system";
@@ -10493,7 +10492,8 @@ const jsenvPluginAsJsClassicConversion = ({
       } = await convertJsModuleToJsClassic({
         systemJsInjection,
         systemJsClientFileUrl,
-        urlInfo: originalUrlInfo,
+        urlInfo,
+        originalUrlInfo,
         jsClassicFormat
       });
       urlInfo.data.jsClassicFormat = jsClassicFormat;
@@ -10537,6 +10537,7 @@ const convertJsModuleToJsClassic = async ({
   systemJsInjection,
   systemJsClientFileUrl,
   urlInfo,
+  originalUrlInfo,
   jsClassicFormat
 }) => {
   const {
@@ -10550,9 +10551,9 @@ const convertJsModuleToJsClassic = async ({
     }]] : [[requireBabelPlugin("babel-plugin-transform-async-to-promises"), {
       topLevelAwait: "simple"
     }], babelPluginTransformImportMetaUrl, requireFromJsenv("@babel/plugin-transform-modules-umd")])],
-    urlInfo
+    urlInfo: originalUrlInfo
   });
-  let sourcemap = urlInfo.sourcemap;
+  let sourcemap = originalUrlInfo.sourcemap;
   sourcemap = await composeTwoSourcemaps(sourcemap, map);
 
   if (systemJsInjection && jsClassicFormat === "system" && urlInfo.isEntryPoint) {
@@ -11397,7 +11398,8 @@ const jsenvPluginImportmap = () => {
           });
           setHtmlNodeText(importmap, inlineImportmapUrlInfo.content);
           setHtmlNodeAttributes(importmap, {
-            "generated-by": "jsenv:importmap"
+            "jsenv-plugin-owner": "jsenv:importmap",
+            "jsenv-plugin-action": "content_cooked"
           });
           onHtmlImportmapParsed(JSON.parse(inlineImportmapUrlInfo.content), htmlUrlInfo.url);
         };
@@ -11417,8 +11419,9 @@ const jsenvPluginImportmap = () => {
           setHtmlNodeText(importmap, importmapUrlInfo.content);
           setHtmlNodeAttributes(importmap, {
             "src": undefined,
-            "generated-by": "jsenv:importmap",
-            "generated-from-src": src
+            "jsenv-plugin-owner": "jsenv:importmap",
+            "jsenv-plugin-action": "inlined",
+            "inlined-from-src": src
           });
           const {
             line,
@@ -13164,21 +13167,60 @@ const jsenvPluginHttpUrls = () => {
 };
 
 /*
- * Things happening here
- * - html supervisor module injection
- * - scripts are wrapped to be supervised
+ * Jsenv needs to wait for all js execution inside an HTML page before killing the browser.
+ * A naive approach would consider execution done when "load" event is dispatched on window but:
+ *
+ * scenario                                    | covered by window "load"
+ * ------------------------------------------- | -------------------------
+ * js referenced by <script src>               | yes
+ * js inlined into <script>                    | yes
+ * js referenced by <script type="module" src> | partially (not for import and top level await)
+ * js inlined into <script type="module">      | not at all
+ *
+ * This plugin provides a way for jsenv to know when js execution is done
+ * As a side effect this plugin enables ability to hot reload js inlined into <script hot-accept>
+ *
+ * <script src="file.js">
+ * becomes
+ * <script>
+ *   window.__supervisor__.superviseScript({ src: 'file.js' })
+ * </script>
+ *
+ * <script>
+ *    console.log(42)
+ * </script>
+ * becomes
+ * <script>
+ *   window.__supervisor__.superviseScript({ src: 'main.html@L10-L13.js' })
+ * </script>
+ *
+ * <script type="module" src="module.js"></script>
+ * becomes
+ * <script type="module">
+ *   import { superviseScriptTypeModule } from 'supervisor'
+ *   superviseScriptTypeModule({ src: "module.js" })
+ * </script>
+ *
+ * <script type="module">
+ *   console.log(42)
+ * </script>
+ * becomes
+ * <script type="module">
+ *   import { superviseScriptTypeModule } from 'supervisor'
+ *   superviseScriptTypeModule({ src: 'main.html@L10-L13.js' })
+ * </script>
  */
-const jsenvPluginHtmlSupervisor = ({
+const jsenvPluginSupervisor = ({
   logs = false,
   measurePerf = false,
   errorOverlay = true,
   openInEditor = true,
   errorBaseUrl
 }) => {
-  const htmlSupervisorSetupFileUrl = new URL("./js/html_supervisor_setup.js", import.meta.url).href;
-  const htmlSupervisorInstallerFileUrl = new URL("./js/html_supervisor_installer.js", import.meta.url).href;
+  const supervisorFileUrl = new URL("./js/supervisor.js", import.meta.url).href;
+  const scriptTypeModuleSupervisorFileUrl = new URL("./js/script_type_module_supervisor.js", import.meta.url).href;
   return {
-    name: "jsenv:html_supervisor",
+    name: "jsenv:supervisor",
     appliesDuring: "dev",
     serve: async (request, context) => {
       if (request.pathname.startsWith("/__get_code_frame__/")) {
@@ -13186,7 +13228,8 @@ const jsenvPluginHtmlSupervisor = ({
           pathname,
           searchParams
         } = new URL(request.url);
-        const urlWithLineAndColumn = pathname.slice("/__get_code_frame__/".length);
+        let urlWithLineAndColumn = pathname.slice("/__get_code_frame__/".length);
+        urlWithLineAndColumn = decodeURIComponent(urlWithLineAndColumn);
         const match = urlWithLineAndColumn.match(/:([0-9]+):([0-9]+)$/);
 
         if (!match) {
@@ -13203,7 +13246,10 @@ const jsenvPluginHtmlSupervisor = ({
 
         if (!urlInfo) {
           return {
-            status: 404
+            status: 204,
+            headers: {
+              "cache-control": "no-store"
+            }
           };
         }
 
@@ -13213,14 +13259,20 @@ const jsenvPluginHtmlSupervisor = ({
           const sourcemap = urlInfo.sourcemap;
 
           if (sourcemap) {
-            const original = await getOriginalPosition({
+            const original = getOriginalPosition({
               sourcemap,
               url: file,
               line,
               column
             });
-            line = original.line;
-            column = original.column;
+
+            if (original.line !== null) {
+              line = original.line;
+
+              if (original.column !== null) {
+                column = original.column;
+              }
+            }
           }
         }
 
@@ -13233,6 +13285,7 @@ const jsenvPluginHtmlSupervisor = ({
         return {
           status: 200,
           headers: {
+            "cache-control": "no-store",
             "content-type": "text/plain",
             "content-length": Buffer.byteLength(codeFrame)
           },
@@ -13241,7 +13294,8 @@ const jsenvPluginHtmlSupervisor = ({
       }
 
       if (request.pathname.startsWith("/__get_error_cause__/")) {
-        const file = request.pathname.slice("/__get_error_cause__/".length);
+        let file = request.pathname.slice("/__get_error_cause__/".length);
+        file = decodeURIComponent(file);
 
         if (!file) {
           return {
@@ -13292,7 +13346,7 @@ const jsenvPluginHtmlSupervisor = ({
         return {
           status: 200,
           headers: {
-            "cache-control": "no-cache",
+            "cache-control": "no-store",
             "content-type": "application/json",
             "content-length": Buffer.byteLength(body)
           },
@@ -13301,7 +13355,8 @@ const jsenvPluginHtmlSupervisor = ({
       }
 
       if (request.pathname.startsWith("/__open_in_editor__/")) {
-        const file = request.pathname.slice("/__open_in_editor__/".length);
+        let file = request.pathname.slice("/__open_in_editor__/".length);
+        file = decodeURIComponent(file);
 
         if (!file) {
           return {
@@ -13387,9 +13442,6 @@ const jsenvPluginHtmlSupervisor = ({
           const crossorigin = getHtmlNodeAttribute(node, "crossorigin") !== undefined;
           const defer = getHtmlNodeAttribute(node, "defer") !== undefined;
           const async = getHtmlNodeAttribute(node, "async") !== undefined;
-          setHtmlNodeAttributes(node, {
-            src: undefined
-          });
           scriptsToSupervise.push({
             node,
             type,
@@ -13411,15 +13463,15 @@ const jsenvPluginHtmlSupervisor = ({
               return;
             }
 
-            const injectedBy = getHtmlNodeAttribute(node, "injected-by");
+            const jsenvPluginOwner = getHtmlNodeAttribute(node, "jsenv-plugin-owner");
 
-            if (injectedBy !== undefined) {
+            if (jsenvPluginOwner !== undefined) {
               return;
             }
 
-            const noHtmlSupervisor = getHtmlNodeAttribute(node, "no-html-supervisor");
+            const noSupervisor = getHtmlNodeAttribute(node, "no-supervisor");
 
-            if (noHtmlSupervisor !== undefined) {
+            if (noSupervisor !== undefined) {
               return;
             }
 
@@ -13438,36 +13490,33 @@ const jsenvPluginHtmlSupervisor = ({
             }
           }
         });
-        const [htmlSupervisorInstallerFileReference] = context.referenceUtils.inject({
+        const [scriptTypeModuleSupervisorFileReference] = context.referenceUtils.inject({
           type: "js_import_export",
           expectedType: "js_module",
-          specifier: htmlSupervisorInstallerFileUrl
+          specifier: scriptTypeModuleSupervisorFileUrl
+        });
+        const [supervisorFileReference] = context.referenceUtils.inject({
+          type: "script_src",
+          expectedType: "js_classic",
+          specifier: supervisorFileUrl
         });
         injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
-          "tagName": "script",
-          "type": "module",
-          "textContent": `
-      import { installHtmlSupervisor } from ${htmlSupervisorInstallerFileReference.generatedSpecifier}
-      installHtmlSupervisor(${JSON.stringify({
+          tagName: "script",
+          textContent: `
+      window.__supervisor__.setup(${JSON.stringify({
             rootDirectoryUrl: context.rootDirectoryUrl,
             errorBaseUrl,
             logs,
             measurePerf,
             errorOverlay,
             openInEditor
-          }, null, "        ")})`,
-          "injected-by": "jsenv:html_supervisor"
-        }));
-        const [htmlSupervisorSetupFileReference] = context.referenceUtils.inject({
-          type: "script_src",
-          expectedType: "js_classic",
-          specifier: htmlSupervisorSetupFileUrl
-        });
+          }, null, "        ")})
+    `
+        }), "jsenv:supervisor");
         injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
-          "tagName": "script",
-          "src": htmlSupervisorSetupFileReference.generatedSpecifier,
-          "injected-by": "jsenv:html_supervisor"
-        }));
+          tagName: "script",
+          src: supervisorFileReference.generatedSpecifier
+        }), "jsenv:supervisor");
         scriptsToSupervise.forEach(({
           node,
           isInline,
@@ -13478,25 +13527,39 @@ const jsenvPluginHtmlSupervisor = ({
           integrity,
           crossorigin
         }) => {
-          setHtmlNodeText(node, generateCodeToSuperviseScript({
-            type,
+          const paramsAsJson = JSON.stringify({
             src,
             isInline,
             defer,
             async,
             integrity,
-            crossorigin,
-            htmlSupervisorInstallerSpecifier: htmlSupervisorInstallerFileReference.generatedSpecifier
-          }));
-          setHtmlNodeAttributes(node, {
-            "generated-by": "jsenv:html_supervisor",
-            ...(src ? {
-              "generated-from-src": src
-            } : {}),
-            ...(isInline ? {
-              "generated-from-inline-content": ""
-            } : {})
+            crossorigin
           });
+
+          if (type === "js_module") {
+            setHtmlNodeText(node, `
+      import { superviseScriptTypeModule } from ${scriptTypeModuleSupervisorFileReference.generatedSpecifier}
+      superviseScriptTypeModule(${paramsAsJson})
+        `);
+          } else {
+            setHtmlNodeText(node, `
+      window.__supervisor__.superviseScript(${paramsAsJson})
+        `);
+          }
+
+          if (src) {
+            setHtmlNodeAttributes(node, {
+              "jsenv-plugin-owner": "jsenv:supervisor",
+              "jsenv-plugin-action": "inlined",
+              "src": undefined,
+              "inlined-from-src": src
+            });
+          } else {
+            setHtmlNodeAttributes(node, {
+              "jsenv-plugin-owner": "jsenv:supervisor",
+              "jsenv-plugin-action": "content_cooked"
+            });
+          }
         });
         const htmlModified = stringifyHtmlAst(htmlAst);
         return {
@@ -13505,38 +13568,6 @@ const jsenvPluginHtmlSupervisor = ({
       }
     }
   };
-}; // Ideally jsenv should take into account eventual
-// "integrity" and "crossorigin" attribute during supervision
-
-const generateCodeToSuperviseScript = ({
-  type,
-  src,
-  isInline,
-  defer,
-  async,
-  integrity,
-  crossorigin,
-  htmlSupervisorInstallerSpecifier
-}) => {
-  const paramsAsJson = JSON.stringify({
-    src,
-    isInline,
-    defer,
-    async,
-    integrity,
-    crossorigin
-  });
-
-  if (type === "js_module") {
-    return `
-      import { superviseScriptTypeModule } from ${htmlSupervisorInstallerSpecifier}
-      superviseScriptTypeModule(${paramsAsJson})
-`;
-  }
-
-  return `
-      window.__html_supervisor__.superviseScript(${paramsAsJson})
-`;
 };
 
 /*
@@ -15069,13 +15100,13 @@ const babelPluginNewStylesheetAsJsenvImport = (babel, {
   return {
     name: "new-stylesheet-as-jsenv-import",
     visitor: {
-      Program: (programPath, {
-        filename
-      }) => {
-        const fileUrl = pathToFileURL(filename).href;
+      Program: (programPath, babelState) => {
+        if (babelState.filename) {
+          const fileUrl = pathToFileURL(babelState.filename).href;
 
-        if (fileUrl === newStylesheetClientFileUrl) {
-          return;
+          if (fileUrl === newStylesheetClientFileUrl) {
+            return;
+          }
         }
 
         let usesNewStylesheet = false;
@@ -15472,13 +15503,16 @@ const jsenvPluginTranspilation = ({
   importAssertions = true,
   css = true,
   jsModuleAsJsClassic = true,
-  systemJsInjection = true,
   topLevelAwait = true,
   babelHelpersAsImport = true,
   getCustomBabelPlugins
 }) => {
   if (importAssertions === true) {
     importAssertions = {};
+  }
+
+  if (jsModuleAsJsClassic === true) {
+    jsModuleAsJsClassic = {};
   }
 
   return [// import assertions we want it all the time
@@ -15491,9 +15525,7 @@ const jsenvPluginTranspilation = ({
   // we want to do it after bundling
   // so the build function will disable jsModuleAsJsClassic during build
   // and enable it manually during postbuild
-  ...(jsModuleAsJsClassic ? [jsenvPluginAsJsClassic({
-    systemJsInjection
-  })] : []), // topLevelAwait must come after js_module_as_js_classic because it's related to the module format
+  ...(jsModuleAsJsClassic ? [jsenvPluginAsJsClassic(jsModuleAsJsClassic)] : []), // topLevelAwait must come after js_module_as_js_classic because it's related to the module format
   // so we want to wait to know the module format before transforming things related to top level await
   ...(topLevelAwait ? [jsenvPluginTopLevelAwait()] : []), ...(css ? [jsenvPluginCssParcel()] : [])];
 };
@@ -16306,7 +16338,7 @@ const collectHotDataFromHtmlAst = htmlAst => {
       });
       visitUrlSpecifierAttribute({
         node,
-        attributeName: "generated-from-href",
+        attributeName: "inlined-from-href",
         hotAccepted
       });
     }
@@ -16319,7 +16351,7 @@ const collectHotDataFromHtmlAst = htmlAst => {
       });
       visitUrlSpecifierAttribute({
         node,
-        attributeName: "generated-from-src",
+        attributeName: "inlined-from-src",
         hotAccepted
       });
     }
@@ -16687,11 +16719,10 @@ const jsenvPluginAutoreloadClient = () => {
           specifier: autoreloadClientFileUrl
         });
         injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
-          "tagName": "script",
-          "type": "module",
-          "src": autoreloadClientReference.generatedSpecifier,
-          "injected-by": "jsenv:autoreload_client"
-        }));
+          tagName: "script",
+          type: "module",
+          src: autoreloadClientReference.generatedSpecifier
+        }), "jsenv:autoreload_client");
         const htmlModified = stringifyHtmlAst(htmlAst);
         return {
           content: htmlModified
@@ -17039,7 +17070,7 @@ const getCorePlugins = ({
   rootDirectoryUrl,
   runtimeCompat,
   urlAnalysis = {},
-  htmlSupervisor,
+  supervisor,
   nodeEsmResolution = true,
   fileSystemMagicResolution,
   directoryReferenceAllowed,
@@ -17051,8 +17082,8 @@ const getCorePlugins = ({
   clientFilesPruneCallbackList,
   explorer
 } = {}) => {
-  if (htmlSupervisor === true) {
-    htmlSupervisor = {};
+  if (supervisor === true) {
+    supervisor = {};
   }
 
   if (nodeEsmResolution === true) {
@@ -17070,7 +17101,7 @@ const getCorePlugins = ({
   return [jsenvPluginUrlAnalysis({
     rootDirectoryUrl,
     ...urlAnalysis
-  }), jsenvPluginTranspilation(transpilation), ...(htmlSupervisor ? [jsenvPluginHtmlSupervisor(htmlSupervisor)] : []), // before inline as it turns inline <script> into <script src>
+  }), jsenvPluginTranspilation(transpilation), ...(supervisor ? [jsenvPluginSupervisor(supervisor)] : []), // before inline as it turns inline <script> into <script src>
   jsenvPluginImportmap(), // before node esm to handle bare specifiers
   // + before node esm to handle importmap before inline content
   jsenvPluginInline(), // before "file urls" to resolve and load inline urls
@@ -21348,6 +21379,10 @@ const createUrlInfoTransformer = ({
 
     if (!SOURCEMAP.enabledOnContentType(urlInfo.contentType)) {
       return;
+    }
+
+    if (urlInfo.generatedUrl.startsWith("data:")) {
+      return;
     } // sourcemap is a special kind of reference:
     // It's a reference to a content generated dynamically the content itself.
     // For this reason sourcemap are not added to urlInfo.references
@@ -21454,7 +21489,7 @@ const createUrlInfoTransformer = ({
       await applyIntermediateTransformations(urlInfo, transformations);
     }
 
-    if (sourcemapsEnabled && urlInfo.sourcemap) {
+    if (sourcemapsEnabled && urlInfo.sourcemap && !urlInfo.generatedUrl.startsWith("data:")) {
       // during build this function can be called after the file is cooked
       // - to update content and sourcemap after "optimize" hook
       // - to inject versioning into the entry point content
@@ -22000,9 +22035,9 @@ const createKitchen = ({
     newReference.original = reference.original || reference; //  newReference.isEntryPoint = reference.isEntryPoint
   };
 
-  const resolveReference = reference => {
+  const resolveReference = (reference, context = kitchenContext) => {
     try {
-      let resolvedUrl = pluginController.callHooksUntil("resolveUrl", reference, kitchenContext);
+      let resolvedUrl = pluginController.callHooksUntil("resolveUrl", reference, context);
 
       if (!resolvedUrl) {
         throw new Error(`NO_RESOLVE`);
@@ -22010,7 +22045,7 @@ const createKitchen = ({
 
       resolvedUrl = normalizeUrl(resolvedUrl);
       reference.url = resolvedUrl;
-      pluginController.callHooks("redirectUrl", reference, kitchenContext, returnValue => {
+      pluginController.callHooks("redirectUrl", reference, context, returnValue => {
         const normalizedReturnValue = normalizeUrl(returnValue);
 
         if (normalizedReturnValue === reference.url) {
@@ -22031,20 +22066,20 @@ const createKitchen = ({
       }
 
       const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url);
-      applyReferenceEffectsOnUrlInfo(reference, urlInfo, kitchenContext); // This hook must touch reference.generatedUrl, NOT reference.url
+      applyReferenceEffectsOnUrlInfo(reference, urlInfo, context); // This hook must touch reference.generatedUrl, NOT reference.url
       // And this is because this hook inject query params used to:
       // - bypass browser cache (?v)
       // - convey information (?hmr)
       // But do not represent an other resource, it is considered as
       // the same resource under the hood
 
-      pluginController.callHooks("transformUrlSearchParams", reference, kitchenContext, returnValue => {
+      pluginController.callHooks("transformUrlSearchParams", reference, context, returnValue => {
         Object.keys(returnValue).forEach(key => {
           referenceUrlObject.searchParams.set(key, returnValue[key]);
         });
         reference.generatedUrl = normalizeUrl(referenceUrlObject.href);
       });
-      const returnValue = pluginController.callHooksUntil("formatUrl", reference, kitchenContext);
+      const returnValue = pluginController.callHooksUntil("formatUrl", reference, context);
       reference.generatedSpecifier = returnValue || reference.generatedUrl;
       reference.generatedSpecifier = urlSpecifierEncoding.encode(reference);
       return urlInfo;
@@ -22241,7 +22276,7 @@ const createKitchen = ({
           ...props
         });
         references.push(reference);
-        const referencedUrlInfo = resolveReference(reference);
+        const referencedUrlInfo = resolveReference(reference, context);
         return [reference, referencedUrlInfo];
       };
 
@@ -22316,7 +22351,7 @@ const createKitchen = ({
           });
           references[index] = nextReference;
           mutateReference(previousReference, nextReference);
-          const newUrlInfo = resolveReference(nextReference);
+          const newUrlInfo = resolveReference(nextReference, context);
           const currentUrlInfo = context.urlGraph.getUrlInfo(currentReference.url);
 
           if (currentUrlInfo && currentUrlInfo !== newUrlInfo && currentUrlInfo.dependents.size === 0) {
@@ -22512,7 +22547,8 @@ const createKitchen = ({
       reference: originalReference
     });
 
-    if (originalUrlInfo.dependents.size === 0) {
+    if (originalUrlInfo.dependents.size === 0 // && context.scenarios.build
+    ) {
       context.urlGraph.deleteUrlInfo(originalUrlInfo.url);
     }
 
@@ -23370,12 +23406,11 @@ const injectors = {
       storeOriginalPositions: false
     });
     injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
-      "tagName": "script",
-      "textContent": generateClientCodeForVersionMappings(versionMappings, {
+      tagName: "script",
+      textContent: generateClientCodeForVersionMappings(versionMappings, {
         globalName: "window"
-      }),
-      "injected-by": "jsenv:versioning"
-    }));
+      })
+    }), "jsenv:versioning");
     return {
       content: stringifyHtmlAst(htmlAst)
     };
@@ -25032,11 +25067,10 @@ const jsenvPluginServerEventsClientInjection = () => {
           specifier: serverEventsClientFileUrl
         });
         injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
-          "tagName": "script",
-          "type": "module",
-          "src": serverEventsClientFileReference.generatedSpecifier,
-          "injected-by": "jsenv:server_events"
-        }));
+          tagName: "script",
+          type: "module",
+          src: serverEventsClientFileReference.generatedSpecifier
+        }), "jsenv:server_events");
         const htmlModified = stringifyHtmlAst(htmlAst);
         return {
           content: htmlModified
@@ -25082,7 +25116,7 @@ const createFileService = ({
   runtimeCompat,
   plugins,
   urlAnalysis,
-  htmlSupervisor,
+  supervisor,
   nodeEsmResolution,
   fileSystemMagicResolution,
   transpilation,
@@ -25196,7 +25230,7 @@ const createFileService = ({
         rootDirectoryUrl,
         runtimeCompat,
         urlAnalysis,
-        htmlSupervisor,
+        supervisor,
         nodeEsmResolution,
         fileSystemMagicResolution,
         transpilation,
@@ -25475,7 +25509,7 @@ const startOmegaServer = async ({
   runtimeCompat,
   plugins,
   urlAnalysis,
-  htmlSupervisor,
+  supervisor,
   nodeEsmResolution,
   fileSystemMagicResolution,
   transpilation,
@@ -25528,7 +25562,7 @@ const startOmegaServer = async ({
         runtimeCompat,
         plugins,
         urlAnalysis,
-        htmlSupervisor,
+        supervisor,
         nodeEsmResolution,
         fileSystemMagicResolution,
         transpilation,
@@ -25636,7 +25670,7 @@ const startDevServer = async ({
   runtimeCompat = defaultRuntimeCompat,
   plugins = [],
   urlAnalysis = {},
-  htmlSupervisor = true,
+  supervisor = true,
   nodeEsmResolution,
   fileSystemMagicResolution,
   transpilation,
@@ -25762,7 +25796,7 @@ const startDevServer = async ({
     runtimeCompat,
     plugins,
     urlAnalysis,
-    htmlSupervisor,
+    supervisor,
     nodeEsmResolution,
     fileSystemMagicResolution,
     transpilation,
@@ -26394,7 +26428,11 @@ const run = async ({
   runtime,
   runtimeParams
 }) => {
-  const result = {};
+  const result = {
+    status: "pending",
+    errors: [],
+    namespace: null
+  };
   const callbacks = [];
   const onConsoleRef = {
     current: () => {}
@@ -26405,25 +26443,14 @@ const run = async ({
   const runtimeLabel = `${runtime.name}/${runtime.version}`;
   const runOperation = Abort.startOperation();
   runOperation.addAbortSignal(signal);
+  let timeoutAbortSource;
 
   if ( // ideally we would rather log than the timeout is ignored
   // when keepRunning is true
   !keepRunning && typeof allocatedMs === "number" && allocatedMs !== Infinity) {
-    const timeoutAbortSource = runOperation.timeout(allocatedMs);
-    callbacks.push(() => {
-      if (result.status === "errored" && Abort.isAbortError(result.error) && timeoutAbortSource.signal.aborted) {
-        result.status = "timedout";
-        delete result.error;
-      }
-    });
+    timeoutAbortSource = runOperation.timeout(allocatedMs);
   }
 
-  callbacks.push(() => {
-    if (result.status === "errored" && Abort.isAbortError(result.error)) {
-      result.status = "aborted";
-      delete result.error;
-    }
-  });
   const consoleCalls = [];
 
   onConsoleRef.current = ({
@@ -26516,35 +26543,35 @@ const run = async ({
     const {
       status,
       namespace,
-      error,
+      errors,
       performance
     } = winner.data;
     result.status = status;
-
-    if (status === "errored") {
-      result.error = error;
-    } else {
-      result.namespace = namespace;
-    }
+    result.errors.push(...errors);
+    result.namespace = namespace;
 
     if (collectPerformance) {
       result.performance = performance;
     }
-
-    callbacks.forEach(callback => {
-      callback();
-    });
-    return result;
   } catch (e) {
-    result.status = "errored";
-    result.error = e;
-    callbacks.forEach(callback => {
-      callback();
-    });
-    return result;
+    if (Abort.isAbortError(e)) {
+      if (timeoutAbortSource && timeoutAbortSource.signal.aborted) {
+        result.status = "timedout";
+      } else {
+        result.status = "aborted";
+      }
+    } else {
+      result.status = "errored";
+      result.errors.push(e);
+    }
   } finally {
     await runOperation.end();
   }
+
+  callbacks.forEach(callback => {
+    callback();
+  });
+  return result;
 };
 
 const pingServer = async url => {
@@ -26693,9 +26720,10 @@ const createExecutionLog = ({
 
   const {
     consoleCalls = [],
-    error
+    errors = []
   } = executionResult;
   const consoleOutput = formatConsoleCalls(consoleCalls);
+  const errorsOutput = formatErrors(errors);
   return formatExecution({
     label: `${description}${summary}`,
     details: {
@@ -26705,14 +26733,39 @@ const createExecutionLog = ({
       } : {}),
       ...(logEachDuration ? {
         duration: status === "executing" ? msAsEllapsedTime(Date.now() - startMs) : msAsDuration(endMs - startMs)
-      } : {}),
-      ...(error ? {
-        error: error.stack || error.message || error
       } : {})
     },
-    consoleOutput
+    consoleOutput,
+    errorsOutput
   });
 };
+
+const formatErrors = errors => {
+  if (errors.length === 0) {
+    return "";
+  }
+
+  const formatError = error => error.stack || error.message || error;
+
+  if (errors.length === 1) {
+    return `${ANSI.color(`-------- error --------`, ANSI.RED)}
+${formatError(errors[0])}
+${ANSI.color(`-------------------------`, ANSI.RED)}`;
+  }
+
+  let output = [];
+  errors.forEach(error => {
+    output.push(prefixFirstAndIndentRemainingLines({
+      prefix: `${UNICODE.CIRCLE_CROSS} `,
+      indentation: "   ",
+      text: formatError(error)
+    }));
+  });
+  return `${ANSI.color(`-------- errors (${errors.length}) --------`, ANSI.RED)}
+${output.join(`\n`)}
+${ANSI.color(`-------------------------`, ANSI.RED)}`;
+};
+
 const createSummaryLog = summary => `-------------- summary -----------------
 ${createAllExecutionsSummary(summary)}
 total duration: ${msAsDuration(summary.duration)}
@@ -26917,6 +26970,7 @@ const formatConsoleOutput = consoleCalls => {
     const textFormatted = prefixFirstAndIndentRemainingLines({
       prefix: CONSOLE_ICONS[regroupedCall.type],
       text,
+      trimLines: true,
       trimLastLine: index === regroupedCalls.length - 1
     });
     consoleOutput += textFormatted;
@@ -26926,17 +26980,18 @@ const formatConsoleOutput = consoleCalls => {
 
 const prefixFirstAndIndentRemainingLines = ({
   prefix,
+  indentation = "  ",
   text,
+  trimLines,
   trimLastLine
 }) => {
   const lines = text.split(/\r?\n/);
   const firstLine = lines.shift();
   let result = `${prefix} ${firstLine}`;
   let i = 0;
-  const indentation = `  `;
 
   while (i < lines.length) {
-    const line = lines[i].trim();
+    const line = trimLines ? lines[i].trim() : lines[i];
     i++;
     result += line.length ? `\n${indentation}${line}` : trimLastLine && i === lines.length ? "" : `\n`;
   }
@@ -26987,7 +27042,8 @@ const formatConsoleSummary = repartition => {
 const formatExecution = ({
   label,
   details = {},
-  consoleOutput
+  consoleOutput,
+  errorsOutput
 }) => {
   let message = ``;
   message += label;
@@ -26997,8 +27053,11 @@ ${key}: ${details[key]}`;
   });
 
   if (consoleOutput) {
-    message += `
-${consoleOutput}`;
+    message += `\n${consoleOutput}`;
+  }
+
+  if (errorsOutput) {
+    message += `\n${errorsOutput}`;
   }
 
   return message;
@@ -27008,6 +27067,7 @@ const executePlan = async (plan, {
   signal,
   handleSIGINT,
   logger,
+  logRefresh,
   logRuntime,
   logEachDuration,
   logSummary,
@@ -27180,7 +27240,7 @@ const executePlan = async (plan, {
 
     const debugLogsEnabled = loggerToLevels(logger).debug;
     const executionLogsEnabled = loggerToLevels(logger).info;
-    const executionSpinner = !debugLogsEnabled && executionLogsEnabled && process.stdout.isTTY && // if there is an error during execution npm will mess up the output
+    const executionSpinner = logRefresh && !debugLogsEnabled && executionLogsEnabled && process.stdout.isTTY && // if there is an error during execution npm will mess up the output
     // (happens when npm runs several command in a workspace)
     // so we enable spinner only when !process.exitCode (no error so far)
     process.exitCode !== 1;
@@ -27280,7 +27340,7 @@ const executePlan = async (plan, {
         } else {
           executionResult = {
             status: "errored",
-            error: new Error(`No file at ${fileRelativeUrl} for execution "${executionName}"`)
+            errors: [new Error(`No file at ${fileRelativeUrl} for execution "${executionName}"`)]
           };
         }
 
@@ -27526,6 +27586,7 @@ const executeTestPlan = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
   logLevel = "info",
+  logRefresh = true,
   logRuntime = true,
   logEachDuration = true,
   logSummary = true,
@@ -27616,7 +27677,7 @@ const executeTestPlan = async ({
     signal,
     handleSIGINT,
     logger,
-    logLevel,
+    logRefresh,
     logSummary,
     logRuntime,
     logEachDuration,
@@ -27696,54 +27757,6 @@ const executeTestPlan = async ({
     testPlanReport: result.planReport,
     testPlanCoverage: planCoverage
   };
-};
-
-const escapeChars = (string, replacements) => {
-  const charsToEscape = Object.keys(replacements);
-  let result = "";
-  let last = 0;
-  let i = 0;
-
-  while (i < string.length) {
-    const char = string[i];
-    i++;
-
-    if (charsToEscape.includes(char) && !isEscaped(i - 1, string)) {
-      if (last === i - 1) {
-        result += replacements[char];
-      } else {
-        result += `${string.slice(last, i - 1)}${replacements[char]}`;
-      }
-
-      last = i;
-    }
-  }
-
-  if (last !== string.length) {
-    result += string.slice(last);
-  }
-
-  return result;
-};
-
-const escapeRegexpSpecialChars = string => {
-  return escapeChars(String(string), {
-    "/": "\\/",
-    "^": "\\^",
-    "\\": "\\\\",
-    "[": "\\[",
-    "]": "\\]",
-    "(": "\\(",
-    ")": "\\)",
-    "{": "\\{",
-    "}": "\\}",
-    "?": "\\?",
-    "+": "\\+",
-    "*": "\\*",
-    ".": "\\.",
-    "|": "\\|",
-    "$": "\\$"
-  });
 };
 
 const createRuntimeFromPlaywright = ({
@@ -27861,7 +27874,11 @@ const createRuntimeFromPlaywright = ({
       }
     };
 
-    const result = {};
+    const result = {
+      status: "pending",
+      namespace: null,
+      errors: []
+    };
     const callbacks = [];
 
     if (coverageEnabled) {
@@ -27983,19 +28000,18 @@ const createRuntimeFromPlaywright = ({
           });
         },
         // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
-        pageerror: cb => {
-          return registerEvent({
-            object: page,
-            eventType: "pageerror",
-            callback: error => {
-              if (ignoreErrorHook(error)) {
-                return;
-              }
-
-              cb(transformErrorHook(error));
-            }
-          });
-        },
+        // pageerror: () => {
+        //   return registerEvent({
+        //     object: page,
+        //     eventType: "pageerror",
+        //     callback: (error) => {
+        //       if (ignoreErrorHook(error)) {
+        //         return
+        //       }
+        //       result.errors.push(transformErrorHook(error))
+        //     },
+        //   })
+        // },
         closed: cb => {
           // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
           if (isBrowserDedicatedToExecution) {
@@ -28041,39 +28057,15 @@ const createRuntimeFromPlaywright = ({
 
             /* istanbul ignore next */
             () => {
-              if (!window.__html_supervisor__) {
-                throw new Error(`window.__html_supervisor__ not found`);
+              if (!window.__supervisor__) {
+                throw new Error(`window.__supervisor__ not found`);
               }
 
-              return window.__html_supervisor__.getScriptExecutionResults();
+              return window.__supervisor__.getScriptExecutionResults();
             }
             /* eslint-enable no-undef */
             );
-            const {
-              status,
-              scriptExecutionResults
-            } = returnValue;
-
-            if (status === "errored") {
-              const {
-                exceptionSource
-              } = returnValue;
-              const error = evalException(exceptionSource, {
-                rootDirectoryUrl,
-                devServerOrigin,
-                transformErrorHook
-              });
-              cb({
-                status: "errored",
-                error,
-                namespace: scriptExecutionResults
-              });
-            } else {
-              cb({
-                status: "completed",
-                namespace: scriptExecutionResults
-              });
-            }
+            cb(returnValue);
           } catch (e) {
             reject(e);
           }
@@ -28081,47 +28073,48 @@ const createRuntimeFromPlaywright = ({
       }, resolve);
     });
 
-    const getResult = async () => {
+    const writeResult = async () => {
       const winner = await winnerPromise;
 
       if (winner.name === "aborted") {
-        return {
-          status: "aborted"
-        };
+        result.status = "aborted";
+        return;
       }
 
-      if (winner.name === "error" || winner.name === "pageerror") {
-        const error = winner.data;
-        return {
-          status: "errored",
-          error
-        };
+      if (winner.name === "error") {
+        let error = winner.data;
+        result.status = "errored";
+        result.errors.push(error);
+        return;
       }
 
       if (winner.name === "closed") {
-        return {
-          status: "errored",
-          error: isBrowserDedicatedToExecution ? new Error(`browser disconnected during execution`) : new Error(`page closed during execution`)
-        };
-      }
+        result.status = "errored";
+        result.errors.push(isBrowserDedicatedToExecution ? new Error(`browser disconnected during execution`) : new Error(`page closed during execution`));
+        return;
+      } // winner.name = 'response'
 
-      return winner.data;
+
+      const {
+        executionResults
+      } = winner.data;
+      result.status = "completed";
+      result.namespace = executionResults;
+      Object.keys(executionResults).forEach(key => {
+        const executionResult = executionResults[key];
+
+        if (executionResult.status === "errored") {
+          result.status = "errored";
+          result.errors.push({ ...executionResult.exception,
+            stack: executionResult.exception.text
+          });
+        }
+      });
+      return;
     };
 
     try {
-      const {
-        status,
-        error,
-        namespace,
-        performance
-      } = await getResult();
-      result.status = status;
-
-      if (status === "errored") {
-        result.error = error;
-      } else {
-        result.namespace = namespace;
-      }
+      await writeResult();
 
       if (collectPerformance) {
         result.performance = performance;
@@ -28133,7 +28126,7 @@ const createRuntimeFromPlaywright = ({
       }, Promise.resolve());
     } catch (e) {
       result.status = "errored";
-      result.error = e;
+      result.errors = [e];
     }
 
     if (keepRunning) {
@@ -28292,25 +28285,6 @@ const registerEvent = ({
   return () => {
     object.removeListener(eventType, callback);
   };
-};
-
-const evalException = (exceptionSource, {
-  rootDirectoryUrl,
-  devServerOrigin,
-  transformErrorHook
-}) => {
-  const script = new Script(exceptionSource, {
-    filename: ""
-  });
-  const error = script.runInThisContext();
-
-  if (error && error instanceof Error) {
-    const remoteRootRegexp = new RegExp(escapeRegexpSpecialChars(`${devServerOrigin}/`), "g");
-    error.stack = error.stack.replace(remoteRootRegexp, rootDirectoryUrl);
-    error.message = error.message.replace(remoteRootRegexp, rootDirectoryUrl);
-  }
-
-  return transformErrorHook(error);
 };
 
 const chromium = createRuntimeFromPlaywright({
@@ -28808,8 +28782,13 @@ nodeChildProcess.run = async ({
       }
     }, resolve);
   });
+  const result = {
+    status: "executing",
+    errors: [],
+    namespace: null
+  };
 
-  const getResult = async () => {
+  const writeResult = async () => {
     actionOperation.throwIfAborted();
     await childProcessReadyPromise;
     actionOperation.throwIfAborted();
@@ -28832,18 +28811,16 @@ nodeChildProcess.run = async ({
     const winner = await winnerPromise;
 
     if (winner.name === "aborted") {
-      return {
-        status: "aborted"
-      };
+      result.status = "aborted";
+      return;
     }
 
     if (winner.name === "error") {
       const error = winner.data;
       removeOutputListener();
-      return {
-        status: "errored",
-        error
-      };
+      result.status = "errored";
+      result.errors.push(error);
+      return;
     }
 
     if (winner.name === "exit") {
@@ -28853,25 +28830,22 @@ nodeChildProcess.run = async ({
       await cleanup("process exit");
 
       if (code === 12) {
-        return {
-          status: "errored",
-          error: new Error(`node process exited with 12 (the forked child process wanted to use a non-available port for debug)`)
-        };
+        result.status = "errored";
+        result.errors.push(new Error(`node process exited with 12 (the forked child process wanted to use a non-available port for debug)`));
+        return;
       }
 
       if (code === null || code === 0 || code === EXIT_CODES.SIGINT || code === EXIT_CODES.SIGTERM || code === EXIT_CODES.SIGABORT) {
-        return {
-          status: "errored",
-          error: new Error(`node process exited during execution`)
-        };
+        result.status = "errored";
+        result.errors.push(new Error(`node process exited during execution`));
+        return;
       } // process.exit(1) in child process or process.exitCode = 1 + process.exit()
       // means there was an error even if we don't know exactly what.
 
 
-      return {
-        status: "errored",
-        error: new Error(`node process exited with code ${code} during execution`)
-      };
+      result.status = "errored";
+      result.errors.push(new Error(`node process exited with code ${code} during execution`));
+      return;
     }
 
     const {
@@ -28880,27 +28854,27 @@ nodeChildProcess.run = async ({
     } = winner.data;
 
     if (status === "action-failed") {
-      return {
-        status: "errored",
-        error: value
-      };
+      result.status = "errored";
+      result.errors.push(value);
+      return;
     }
 
-    return {
-      status: "completed",
-      ...value
-    };
+    const {
+      namespace,
+      performance,
+      coverage
+    } = value;
+    result.status = "completed";
+    result.namespace = namespace;
+    result.performance = performance;
+    result.coverage = coverage;
   };
 
-  let result;
-
   try {
-    result = await getResult();
+    await writeResult();
   } catch (e) {
-    result = {
-      status: "errored",
-      error: e
-    };
+    result.status = "errored";
+    result.errors.push(e);
   }
 
   if (keepRunning) {
@@ -29107,8 +29081,13 @@ nodeWorkerThread.run = async ({
       }
     }, resolve);
   });
+  const result = {
+    status: "executing",
+    errors: [],
+    namespace: null
+  };
 
-  const getResult = async () => {
+  const writeResult = async () => {
     actionOperation.throwIfAborted();
     await workerThreadReadyPromise;
     actionOperation.throwIfAborted();
@@ -29131,18 +29110,16 @@ nodeWorkerThread.run = async ({
     const winner = await winnerPromise;
 
     if (winner.name === "aborted") {
-      return {
-        status: "aborted"
-      };
+      result.status = "aborted";
+      return;
     }
 
     if (winner.name === "error") {
       const error = winner.data;
       removeOutputListener();
-      return {
-        status: "errored",
-        error
-      };
+      result.status = "errored";
+      result.errors.push(error);
+      return;
     }
 
     if (winner.name === "exit") {
@@ -29152,25 +29129,21 @@ nodeWorkerThread.run = async ({
       await cleanup("process exit");
 
       if (code === 12) {
-        return {
-          status: "errored",
-          error: new Error(`node process exited with 12 (the forked child process wanted to use a non-available port for debug)`)
-        };
+        result.status = "errored";
+        result.errors.push(new Error(`node process exited with 12 (the forked child process wanted to use a non-available port for debug)`));
+        return;
       }
 
       if (code === null || code === 0 || code === EXIT_CODES.SIGINT || code === EXIT_CODES.SIGTERM || code === EXIT_CODES.SIGABORT) {
-        return {
-          status: "errored",
-          error: new Error(`node worker thread exited during execution`)
-        };
+        result.status = "errored";
+        result.errors.push(new Error(`node worker thread exited during execution`));
+        return;
       } // process.exit(1) in child process or process.exitCode = 1 + process.exit()
       // means there was an error even if we don't know exactly what.
 
 
-      return {
-        status: "errored",
-        error: new Error(`node worker thread exited with code ${code} during execution`)
-      };
+      result.status = "errored";
+      result.errors.push(new Error(`node worker thread exited with code ${code} during execution`));
     }
 
     const {
@@ -29179,10 +29152,9 @@ nodeWorkerThread.run = async ({
     } = winner.data;
 
     if (status === "action-failed") {
-      return {
-        status: "errored",
-        error: value
-      };
+      result.status = "errored";
+      result.errors.push(value);
+      return;
     }
 
     const {
@@ -29190,23 +29162,17 @@ nodeWorkerThread.run = async ({
       performance,
       coverage
     } = value;
-    return {
-      status: "completed",
-      namespace,
-      performance,
-      coverage
-    };
+    result.status = "completed";
+    result.namespace = namespace;
+    result.performance = performance;
+    result.coverage = coverage;
   };
 
-  let result;
-
   try {
-    result = await getResult();
+    await writeResult();
   } catch (e) {
-    result = {
-      status: "errored",
-      error: e
-    };
+    result.status = "errored";
+    result.errors.push(e);
   }
 
   if (keepRunning) {
@@ -29593,7 +29559,7 @@ const execute = async ({
       */
 
 
-      throw result.error;
+      throw result.errors[result.errors.length - 1];
     }
 
     return result;
@@ -29626,10 +29592,9 @@ const globalInjectorOnHtml = async (urlInfo, globals) => {
     isWebWorker: false
   });
   injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
-    "tagName": "script",
-    "textContent": clientCode,
-    "injected-by": "jsenv:inject_globals"
-  }));
+    tagName: "script",
+    textContent: clientCode
+  }), "jsenv:inject_globals");
   return stringifyHtmlAst(htmlAst);
 };
 
