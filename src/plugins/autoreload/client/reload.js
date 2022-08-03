@@ -32,7 +32,20 @@ export const getDOMNodesUsingUrl = (urlToReload) => {
     nodes.push({
       node,
       reload: () => {
-        node[attributeName] = injectQuery(attribute, { hmr: Date.now() })
+        if (node.nodeName === "SCRIPT") {
+          const copy = document.createElement("script")
+          Array.from(node.attributes).forEach((attribute) => {
+            copy.setAttribute(attribute.nodeName, attribute.nodeValue)
+          })
+          copy.src = injectQuery(node.src, { hmr: Date.now() })
+          if (node.parentNode) {
+            node.parentNode.replaceChild(copy, node)
+          } else {
+            document.body.appendChild(copy)
+          }
+        } else {
+          node[attributeName] = injectQuery(attribute, { hmr: Date.now() })
+        }
       },
     })
   }
