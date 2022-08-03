@@ -44,7 +44,7 @@ export const createExecutionLog = (
   if (completedExecutionLogAbbreviation && status === "completed") {
     return `${description}${summary}`
   }
-  const { consoleCalls = [], errors } = executionResult
+  const { consoleCalls = [], errors = [] } = executionResult
   const consoleOutput = formatConsoleCalls(consoleCalls)
   const errorsOutput = formatErrors(errors)
   return formatExecution({

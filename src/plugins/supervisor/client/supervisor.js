@@ -753,7 +753,7 @@ window.__supervisor__ = (() => {
       }
       const executionResult = {
         status: "pending",
-        error: null,
+        exception: null,
         namespace: null,
         coverage: null,
       }

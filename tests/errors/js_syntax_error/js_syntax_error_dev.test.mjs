@@ -20,23 +20,22 @@ const test = async (params) => {
     },
     /* eslint-enable no-undef */
   })
-  return { returnValue, server: devServer, pageLogs, pageErrors }
+  const errorText = returnValue.executionResults["/main.js"].exception.text
+  const actual = {
+    pageLogs,
+    pageErrors,
+    errorText,
+  }
+  const expected = {
+    pageLogs: [],
+    pageErrors: [
+      Object.assign(new Error("Unexpected end of input"), {
+        name: "SyntaxError",
+      }),
+    ],
+    errorText: "Unexpected end of input",
+  }
+  assert({ actual, expected })
 }
 
-const { returnValue, pageLogs, pageErrors } = await test({})
-
-const actual = {
-  pageLogs,
-  pageErrors,
-  error: returnValue.error,
-}
-const expected = {
-  pageLogs: [],
-  pageErrors: [
-    Object.assign(new Error("Unexpected end of input"), {
-      name: "SyntaxError",
-    }),
-  ],
-  error: "SyntaxError: Unexpected end of input",
-}
-assert({ actual, expected })
+await test()

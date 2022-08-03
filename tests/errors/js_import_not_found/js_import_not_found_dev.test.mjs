@@ -32,7 +32,7 @@ try {
     serverWarnOutput: warnCalls.join("\n"),
     pageLogs,
     pageErrors,
-    error: returnValue.executionResults["/main.js"].error.message,
+    errorMessage: returnValue.executionResults["/main.js"].exception.message,
   }
   const expected = {
     serverWarnOutput: `GET ${devServer.origin}/foo.js
@@ -56,7 +56,7 @@ try {
       },
     ],
     pageErrors: [],
-    error: `Failed to fetch module: ${devServer.origin}/main.js`,
+    errorMessage: `Failed to fetch module: ${devServer.origin}/main.js`,
   }
   assert({ actual, expected })
 } finally {

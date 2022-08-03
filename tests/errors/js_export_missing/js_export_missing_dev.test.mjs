@@ -27,7 +27,7 @@ const { returnValue, pageLogs, pageErrors } = await test()
 const actual = {
   pageLogs,
   pageErrors,
-  errorMessage: returnValue.executionResults["/main.js"].error.message,
+  errorMessage: returnValue.executionResults["/main.js"].exception.message,
 }
 const expected = {
   pageLogs: [],

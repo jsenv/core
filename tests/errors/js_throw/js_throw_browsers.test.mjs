@@ -9,7 +9,7 @@ const test = async ({ runtime }) => {
     keepProcessAlive: false,
     port: 0,
   })
-  const { status, error, consoleCalls } = await execute({
+  const { status, errors, consoleCalls } = await execute({
     // logLevel: "debug"
     rootDirectoryUrl: new URL("./client/", import.meta.url),
     devServerOrigin: devServer.origin,
@@ -25,6 +25,7 @@ const test = async ({ runtime }) => {
   })
   devServer.stop()
 
+  const error = errors[0]
   const actual = {
     status,
     errorMessage: error.message,
@@ -38,31 +39,26 @@ const test = async ({ runtime }) => {
   assert({ actual, expected })
 
   // error stack
-  const errorStackAssertions = {
-    chromium: () => {
-      const expected = `Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
-    at triggerError (${devServer.origin}/trigger_error.js:2:9)
+  if (runtime === chromium) {
+    const actual = error.originalStack
+    const expected = `    at triggerError (${devServer.origin}/trigger_error.js:2:9)
     at ${devServer.origin}/main.js:3:1`
-      const actual = error.stack.slice(0, expected.length)
-      assert({ actual, expected })
-    },
-    firefox: () => {
-      const expected = `Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
-    at triggerError (${devServer.origin}/trigger_error.js:2:9)
-    at  (${devServer.origin}/main.js:2:1)`
-      const actual = error.stack.slice(0, expected.length)
-      assert({ actual, expected })
-    },
-    webkit: () => {
-      const expected = `SPECIAL_STRING_UNLIKELY_TO_COLLIDE
-    at Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
-    at reportError (${devServer.origin}/trigger_error.js:2:18)
-    at unknown (${devServer.origin}`
-      const actual = error.stack.slice(0, expected.length)
-      assert({ actual, expected })
-    },
+    assert({ actual, expected })
   }
-  errorStackAssertions[runtime.name]()
+  if (runtime === firefox) {
+    const actual = error.originalStack
+    const expected = `  triggerError@${devServer.origin}/trigger_error.js:2:9
+@${devServer.origin}/main.js:2:1
+`
+    assert({ actual, expected })
+  }
+  if (runtime === webkit) {
+    const expected = `  triggerError@${devServer.origin}/trigger_error.js:2:18
+module code@${devServer.origin}/main.js:2:13
+`
+    const actual = error.originalStack.slice(0, expected.length)
+    assert({ actual, expected })
+  }
 }
 
 await test({ runtime: chromium })
