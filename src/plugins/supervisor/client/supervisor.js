@@ -795,58 +795,70 @@ window.__supervisor__ = (() => {
         resolvePromise()
       }
     }
-    supervisor.superviseScript = ({ src }) => {
+    let previousExecutionPromise
+    supervisor.superviseScript = async ({ src, async }) => {
       const { currentScript } = document
       const parentNode = currentScript.parentNode
-      let nodeToReplace
-      let currentScriptClone
-      const execution = supervisor.createExecution({
-        src,
-        type: "js_classic",
-        execute: async ({ isReload }) => {
-          const urlObject = new URL(src, window.location)
-          const loadPromise = new Promise((resolve, reject) => {
-            // do not use script.cloneNode()
-            // bcause https://stackoverflow.com/questions/28771542/why-dont-clonenode-script-tags-execute
-            currentScriptClone = document.createElement("script")
-            Array.from(currentScript.attributes).forEach((attribute) => {
-              currentScriptClone.setAttribute(
-                attribute.nodeName,
-                attribute.nodeValue,
-              )
+      const startExecution = () => {
+        let nodeToReplace
+        let currentScriptClone
+        const execution = supervisor.createExecution({
+          src,
+          type: "js_classic",
+          execute: async ({ isReload }) => {
+            const urlObject = new URL(src, window.location)
+            const loadPromise = new Promise((resolve, reject) => {
+              // do not use script.cloneNode()
+              // bcause https://stackoverflow.com/questions/28771542/why-dont-clonenode-script-tags-execute
+              currentScriptClone = document.createElement("script")
+              Array.from(currentScript.attributes).forEach((attribute) => {
+                currentScriptClone.setAttribute(
+                  attribute.nodeName,
+                  attribute.nodeValue,
+                )
+              })
+              if (isReload) {
+                urlObject.searchParams.set("hmr", Date.now())
+                nodeToReplace = currentScriptClone
+                currentScriptClone.src = urlObject.href
+              } else {
+                currentScriptClone.removeAttribute("jsenv-plugin-owner")
+                currentScriptClone.removeAttribute("jsenv-plugin-action")
+                currentScriptClone.removeAttribute("inlined-from-src")
+                currentScriptClone.removeAttribute("original-position")
+                currentScriptClone.removeAttribute("original-src-position")
+                nodeToReplace = currentScript
+                currentScriptClone.src = src
+              }
+              currentScriptClone.addEventListener("error", reject)
+              currentScriptClone.addEventListener("load", resolve)
+              parentNode.replaceChild(currentScriptClone, nodeToReplace)
             })
-            if (isReload) {
-              urlObject.searchParams.set("hmr", Date.now())
-              nodeToReplace = currentScriptClone
-              currentScriptClone.src = urlObject.href
-            } else {
-              currentScriptClone.removeAttribute("jsenv-plugin-owner")
-              currentScriptClone.removeAttribute("jsenv-plugin-action")
-              currentScriptClone.removeAttribute("inlined-from-src")
-              currentScriptClone.removeAttribute("original-position")
-              currentScriptClone.removeAttribute("original-src-position")
-              nodeToReplace = currentScript
-              currentScriptClone.src = src
+            try {
+              await loadPromise
+            } catch (e) {
+              // eslint-disable-next-line no-throw-literal
+              throw {
+                message: `Failed to fetch script: ${urlObject.href}`,
+                reportedBy: "script_error_event",
+                url: urlObject.href,
+                // window.error won't be dispatched for this error
+                needsReport: true,
+              }
             }
-            currentScriptClone.addEventListener("error", reject)
-            currentScriptClone.addEventListener("load", resolve)
-            parentNode.replaceChild(currentScriptClone, nodeToReplace)
-          })
-          try {
-            await loadPromise
-          } catch (e) {
-            // eslint-disable-next-line no-throw-literal
-            throw {
-              message: `Failed to fetch script: ${urlObject.href}`,
-              reportedBy: "script_error_event",
-              url: urlObject.href,
-              // window.error won't be dispatched for this error
-              needsReport: true,
-            }
-          }
-        },
-      })
-      execution.start()
+          },
+        })
+        return execution.start()
+      }
+      if (async) {
+        startExecution()
+        return
+      }
+      if (previousExecutionPromise) {
+        await previousExecutionPromise
+        previousExecutionPromise = null
+      }
+      previousExecutionPromise = startExecution()
     }
     supervisor.reloadSupervisedScript = ({ type, src }) => {
       const supervisedScript = supervisedScripts.find(

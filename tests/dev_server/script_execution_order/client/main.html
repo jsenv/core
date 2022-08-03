@@ -20,12 +20,9 @@
     <script>
       window.order.push(document.currentScript.previousElementSibling.id)
       window.order.push("js_classic_inline")
-      window.order.push(document.currentScript.nextElementSibling.id)
     </script>
-    <div id="after_js_classic_inline"></div>
     <div id="before_js_classic_src"></div>
     <script src="./js_classic.js"></script>
-    <div id="after_js_classic_src"></div>
     <script type="module">
       window.order.push("js_module_inline")
     </script>
