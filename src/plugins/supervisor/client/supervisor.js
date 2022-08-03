@@ -37,8 +37,12 @@ window.__supervisor__ = (() => {
     const DYNAMIC_IMPORT_EXPORT_MISSING = "dynamic_import_export_missing"
     const DYNAMIC_IMPORT_SYNTAX_ERROR = "dynamic_import_syntax_error"
 
-    const createExceptionInfo = (exception, { url, line, column } = {}) => {
+    const createExceptionInfo = (
+      exception,
+      { reportedBy, url, line, column } = {},
+    ) => {
       const exceptionInfo = {
+        reportedBy,
         isError: false, // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/throw
         code: null,
         message: null,
@@ -313,7 +317,7 @@ window.__supervisor__ = (() => {
       formatError = (exceptionInfo) => {
         const errorParts = {
           theme: "dark",
-          title: "An error occured", // one day: Unhandled rejection detected
+          title: "An error occured",
           text: "",
           tip: "",
           errorDetailsPromise: null,
@@ -627,8 +631,12 @@ window.__supervisor__ = (() => {
       const exceptionInfo = createExceptionInfo(exception)
       return exceptionInfo
     }
-    supervisor.reportException = (exception, { url, line, column } = {}) => {
+    supervisor.reportException = (
+      exception,
+      { reportedBy, url, line, column },
+    ) => {
       const exceptionInfo = createExceptionInfo(exception, {
+        reportedBy,
         url,
         line,
         column,
@@ -667,9 +675,18 @@ window.__supervisor__ = (() => {
       }
       const { error, filename, lineno, colno } = errorEvent
       supervisor.reportException(error, {
+        reportedBy: "window_error_event",
         url: filename,
         line: lineno,
         column: colno,
+      })
+    })
+    window.addEventListener("unhandledrejection", (event) => {
+      if (event.defaultPrevented) {
+        return
+      }
+      supervisor.reportException(event.reason, {
+        reportedBy: "window_unhandledrejection_event",
       })
     })
   }
@@ -747,7 +764,9 @@ window.__supervisor__ = (() => {
         executionResult.error = e
         executionResult.coverage = window.__coverage__
         if (e.code === "FETCH_ERROR") {
-          supervisor.reportException(e)
+          supervisor.reportException(e, {
+            reportedBy: "script_error_event",
+          })
         }
         if (logs) {
           console.groupEnd()
