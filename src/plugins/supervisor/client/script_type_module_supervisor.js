@@ -42,19 +42,25 @@ export const superviseScriptTypeModule = async ({ src, async }) => {
               url: urlObject.href,
             })
           })
+          let importPromise
           currentScriptClone.addEventListener("load", async () => {
             // do not resolve right away, wait for top level execution
             try {
-              if (window.safari) {
-                // https://twitter.com/damienmaillard/status/1554752482273787906
-                urlObject.searchParams.set("safari", Date.now())
+              if (!importPromise) {
+                importPromise = import(urlObject.href)
               }
-              const namespace = await import(urlObject.href)
+              const namespace = await importPromise
               resolve(namespace)
             } catch (e) {
               reject(e)
             }
           })
+          const isWebkitOrSafari =
+            typeof window.webkitConvertPointFromNodeToPage === "function"
+          if (isWebkitOrSafari) {
+            // https://twitter.com/damienmaillard/status/1554752482273787906
+            importPromise = import(urlObject.href)
+          }
           parentNode.replaceChild(currentScriptClone, nodeToReplace)
         })
       },

@@ -847,6 +847,20 @@ window.__supervisor__ = (() => {
       }
     }
     supervisor.collectScriptResults = async () => {
+      // just to be super safe and ensure any <script type="module"> got a chance to execute
+      const scriptTypeModuleLoaded = new Promise((resolve) => {
+        const scriptTypeModule = document.createElement("script")
+        scriptTypeModule.type = "module"
+        scriptTypeModule.innerText =
+          "window.__supervisor__.scriptModuleCallback()"
+        window.__supervisor__.scriptModuleCallback = () => {
+          document.body.removeChild(scriptTypeModule)
+          resolve()
+        }
+        document.body.appendChild(scriptTypeModule)
+      })
+      await scriptTypeModuleLoaded
+
       const waitPendingExecutions = async () => {
         if (executionPromises.length) {
           const promisesToWait = executionPromises.slice()
