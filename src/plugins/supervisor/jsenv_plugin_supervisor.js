@@ -85,9 +85,8 @@ export const jsenvPluginSupervisor = ({
     serve: async (request, context) => {
       if (request.pathname.startsWith("/__get_code_frame__/")) {
         const { pathname, searchParams } = new URL(request.url)
-        const urlWithLineAndColumn = pathname.slice(
-          "/__get_code_frame__/".length,
-        )
+        let urlWithLineAndColumn = pathname.slice("/__get_code_frame__/".length)
+        urlWithLineAndColumn = decodeURIComponent(urlWithLineAndColumn)
         const match = urlWithLineAndColumn.match(/:([0-9]+):([0-9]+)$/)
         if (!match) {
           return {
@@ -139,7 +138,8 @@ export const jsenvPluginSupervisor = ({
         }
       }
       if (request.pathname.startsWith("/__get_error_cause__/")) {
-        const file = request.pathname.slice("/__get_error_cause__/".length)
+        let file = request.pathname.slice("/__get_error_cause__/".length)
+        file = decodeURIComponent(file)
         if (!file) {
           return {
             status: 400,
@@ -192,7 +192,8 @@ export const jsenvPluginSupervisor = ({
         }
       }
       if (request.pathname.startsWith("/__open_in_editor__/")) {
-        const file = request.pathname.slice("/__open_in_editor__/".length)
+        let file = request.pathname.slice("/__open_in_editor__/".length)
+        file = decodeURIComponent(file)
         if (!file) {
           return {
             status: 400,

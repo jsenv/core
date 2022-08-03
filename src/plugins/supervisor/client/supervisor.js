@@ -343,7 +343,9 @@ window.__supervisor__ = (() => {
               return {
                 href:
                   urlSite.url.startsWith("file:") && openInEditor
-                    ? `javascript:window.fetch('/__open_in_editor__/${urlWithLineAndColumn}')`
+                    ? `javascript:window.fetch('/__open_in_editor__/${encodeURIComponent(
+                        urlWithLineAndColumn,
+                      )}')`
                     : urlSite.url,
                 text: urlWithLineAndColumn,
               }
@@ -368,11 +370,11 @@ window.__supervisor__ = (() => {
                 exceptionInfo.code === "FETCH_ERROR"
               ) {
                 const response = await window.fetch(
-                  `/__get_error_cause__/${
+                  `/__get_error_cause__/${encodeURIComponent(
                     exceptionInfo.site.isInline
                       ? exceptionInfo.site.originalUrl
-                      : exceptionInfo.site.url
-                  }`,
+                      : exceptionInfo.site.url,
+                  )}`,
                 )
 
                 if (response.status !== 200) {
@@ -398,13 +400,16 @@ window.__supervisor__ = (() => {
                 }
               }
               if (exceptionInfo.site.line !== undefined) {
-                let resourceToFetch = `/__get_code_frame__/${stringifyUrlSite(
-                  exceptionInfo.site,
-                )}`
+                const urlToFetch = new URL(
+                  `/__get_code_frame__/${encodeURIComponent(
+                    stringifyUrlSite(exceptionInfo.site),
+                  )}`,
+                  window.origin,
+                )
                 if (!exceptionInfo.stackSourcemapped) {
-                  resourceToFetch += `?remap`
+                  urlToFetch.searchParams.set("remap", "")
                 }
-                const response = await window.fetch(resourceToFetch)
+                const response = await window.fetch(urlToFetch)
                 const codeFrame = await response.text()
                 return {
                   codeFrame: generateClickableText(codeFrame),
@@ -673,8 +678,11 @@ window.__supervisor__ = (() => {
         // ignore custom error event (not sent by browser)
         return
       }
-      const { error, filename, lineno, colno } = errorEvent
-      supervisor.reportException(error, {
+      const { error, message, filename, lineno, colno } = errorEvent
+      // when error is reported within a worker error is null
+      // but there is a message property on errorEvent
+      const exception = error || message
+      supervisor.reportException(exception, {
         reportedBy: "window_error_event",
         url: filename,
         line: lineno,
