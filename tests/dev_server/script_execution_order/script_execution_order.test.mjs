@@ -22,21 +22,22 @@ const test = async ({ browserLauncher }) => {
       },
       /* eslint-enable no-undef */
     )
-    // each browser dispatch "load" differently:
-    // - chrome: after module script(s) and top level await execution
-    // - firefox: after module scripts(s) loaded ignoring top level execution
-    // - webkit: ignore module scripts(s)
+    // this should be the order found in each browser
+    const correctOrder = [
+      "before_js_classic_inline",
+      "js_classic_inline",
+      "before_js_classic_src",
+      "js_classic",
+      "js_module_inline",
+      "js_module",
+      "window_load_dispatched",
+    ]
+    // because of the webkit bug (https://twitter.com/damienmaillard/status/1554752482273787906)
+    // jsenv has to resort to dynamic import on webkit so the order differs
+
     if (browserLauncher === chromium) {
       const actual = result
-      const expected = [
-        "before_js_classic_inline",
-        "js_classic_inline",
-        "before_js_classic_src",
-        "js_classic",
-        "js_module_inline",
-        "js_module",
-        "window_load_dispatched",
-      ]
+      const expected = correctOrder
       assert({ actual, expected })
     }
     if (browserLauncher === firefox) {
@@ -70,6 +71,6 @@ const test = async ({ browserLauncher }) => {
   }
 }
 
-await test({ browserLauncher: chromium })
+// await test({ browserLauncher: chromium })
 await test({ browserLauncher: firefox })
-await test({ browserLauncher: webkit })
+// await test({ browserLauncher: webkit })

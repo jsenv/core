@@ -27,8 +27,8 @@
       window.order.push("js_module_inline")
     </script>
     <script type="module" src="./js_module.js"></script>
-    <script>
-      setTimeout(window.resolveResultPromise(window.order), 2000)
+    <script no-supervisor>
+      setTimeout(() => window.resolveResultPromise(window.order), 1500)
     </script>
   </body>
 </html>

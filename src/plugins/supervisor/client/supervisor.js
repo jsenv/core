@@ -884,7 +884,7 @@ window.__supervisor__ = (() => {
         scriptTypeModule.innerText =
           "window.__supervisor__.scriptModuleCallback()"
         window.__supervisor__.scriptModuleCallback = () => {
-          document.body.removeChild(scriptTypeModule)
+          scriptTypeModule.parentNode.removeChild(scriptTypeModule)
           resolve()
         }
         document.body.appendChild(scriptTypeModule)
