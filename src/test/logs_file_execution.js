@@ -59,7 +59,9 @@ export const createExecutionLog = (
                 : msAsDuration(endMs - startMs),
           }
         : {}),
-      ...(error ? { error: error.stack || error.message || error } : {}),
+      ...(error
+        ? { error: error.text || error.stack || error.message || error }
+        : {}),
     },
     consoleOutput,
   })
