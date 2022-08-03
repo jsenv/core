@@ -412,7 +412,13 @@ window.__supervisor__ = (() => {
                   cause: causeText,
                 }
               }
-              if (exceptionInfo.site.line !== undefined) {
+              if (
+                exceptionInfo.site.line !== undefined &&
+                // code frame showing internal window.reportError is pointless
+                !exceptionInfo.site.url.endsWith(
+                  `script_type_module_supervisor.js`,
+                )
+              ) {
                 const urlToFetch = new URL(
                   `/__get_code_frame__/${encodeURIComponent(
                     stringifyUrlSite(exceptionInfo.site),
