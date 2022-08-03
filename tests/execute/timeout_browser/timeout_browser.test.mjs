@@ -1,6 +1,12 @@
 import { assert } from "@jsenv/assert"
 
-import { startDevServer, execute, chromium, firefox, webkit } from "@jsenv/core"
+import {
+  startDevServer,
+  execute,
+  chromium,
+  // firefox,
+  webkit,
+} from "@jsenv/core"
 
 const test = async ({ runtime }) => {
   const devServer = await startDevServer({
@@ -15,7 +21,7 @@ const test = async ({ runtime }) => {
     devServerOrigin: devServer.origin,
     fileRelativeUrl: `./main.html`,
     runtime,
-    allocatedMs: 5000,
+    allocatedMs: 5_000,
     mirrorConsole: false,
     collectConsole: true,
   })
@@ -41,5 +47,5 @@ const test = async ({ runtime }) => {
 }
 
 await test({ runtime: chromium })
-await test({ runtime: firefox })
+// await test({ runtime: firefox })
 await test({ runtime: webkit })
