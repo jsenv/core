@@ -91,6 +91,9 @@ const test = async ({ browserLauncher, browserName }) => {
       story: "js_module_inline_import_not_found",
     })
     await generateHtmlForStory({
+      story: "js_module_inline_assertion_error",
+    })
+    await generateHtmlForStory({
       story: "js_module_inline_syntax_error",
     })
     await generateHtmlForStory({
@@ -104,6 +107,9 @@ const test = async ({ browserLauncher, browserName }) => {
     })
     await generateHtmlForStory({
       story: "js_module_throw",
+    })
+    await generateHtmlForStory({
+      story: "js_module_top_level_await_then_throw",
     })
     await generateHtmlForStory({
       story: "js_module_undefined_is_not_a_function",

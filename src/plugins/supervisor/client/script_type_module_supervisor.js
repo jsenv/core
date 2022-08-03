@@ -51,7 +51,7 @@ export const superviseScriptTypeModule = async ({ src, async }) => {
             cleanup()
             reject({
               code: "FETCH_ERROR",
-              message: "Failed to fetch module",
+              message: `Failed to fetch module: ${url}`,
               url,
             })
           })

@@ -108,31 +108,6 @@ window.__supervisor__ = (() => {
               return
             }
           }
-          fetch_error: {
-            // chrome
-            if (
-              message.startsWith(
-                "Failed to fetch dynamically imported module: ",
-              )
-            ) {
-              const url = error.message.slice(
-                "Failed to fetch dynamically imported module: ".length,
-              )
-              exceptionInfo.code = DYNAMIC_IMPORT_FETCH_ERROR
-              exceptionInfo.site.url = resolveFileUrl(url)
-              return
-            }
-            // firefox
-            if (message === "error loading dynamically imported module") {
-              exceptionInfo.code = DYNAMIC_IMPORT_FETCH_ERROR
-              return
-            }
-            // safari
-            if (message === "Importing a module script failed.") {
-              exceptionInfo.code = DYNAMIC_IMPORT_FETCH_ERROR
-              return
-            }
-          }
           return
         }
         if (typeof exception === "object") {
@@ -140,7 +115,10 @@ window.__supervisor__ = (() => {
           exceptionInfo.message = exception.message
           exceptionInfo.stack = exception.stack
           if (exception.url) {
-            exceptionInfo.site.url = resolveFileUrl(exception.url)
+            Object.assign(
+              exceptionInfo.site,
+              resolveUrlSite({ url: exception.url }),
+            )
           }
           return
         }
@@ -232,6 +210,7 @@ window.__supervisor__ = (() => {
         const fileUrl = resolveFileUrl(url)
         return {
           isInline: true,
+          serverUrl: url,
           originalUrl: `${fileUrl}@L${tagLineStart}C${tagColumnStart}-L${tagLineEnd}C${tagColumnEnd}${extension}`,
           url: fileUrl,
           line,
@@ -240,6 +219,7 @@ window.__supervisor__ = (() => {
       }
       return {
         isInline: false,
+        serverUrl: url,
         url: resolveFileUrl(url),
         line,
         column,
@@ -333,13 +313,14 @@ window.__supervisor__ = (() => {
       formatError = (exceptionInfo) => {
         const errorParts = {
           theme: "dark",
-          title: "An error occured",
+          title: "An error occured", // one day: Unhandled rejection detected
           text: "",
-          tip: `Reported by the browser while executing <code>${window.location.pathname}${window.location.search}</code>.
-    <br />
-    Click outside to close.`,
+          tip: "",
           errorDetailsPromise: null,
         }
+        const tips = []
+        tips.push("Click outside to close.")
+        errorParts.tip = tips.join(`\n    <br />\n    `)
 
         const generateClickableText = (text) => {
           const textWithHtmlLinks = makeLinksClickable(text, {
@@ -768,13 +749,6 @@ window.__supervisor__ = (() => {
         if (e.code === "FETCH_ERROR") {
           supervisor.reportException(e)
         }
-        // if (execution.type === "js_module") {
-        //   if (typeof window.reportError === "function") {
-        //     window.reportError(e)
-        //   } else {
-        //     console.error(e)
-        //   }
-        // }
         if (logs) {
           console.groupEnd()
         }
