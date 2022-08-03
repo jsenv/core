@@ -100,7 +100,10 @@ export const jsenvPluginSupervisor = ({
         const urlInfo = context.urlGraph.getUrlInfo(file)
         if (!urlInfo) {
           return {
-            status: 404,
+            status: 204,
+            headers: {
+              "cache-control": "no-store",
+            },
           }
         }
         const remap = searchParams.has("remap")

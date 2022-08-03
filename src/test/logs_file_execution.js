@@ -44,7 +44,7 @@ export const createExecutionLog = (
   if (completedExecutionLogAbbreviation && status === "completed") {
     return `${description}${summary}`
   }
-  const { consoleCalls = [], error } = executionResult
+  const { consoleCalls = [], error, exception } = executionResult
   const consoleOutput = formatConsoleCalls(consoleCalls)
   return formatExecution({
     label: `${description}${summary}`,
@@ -59,9 +59,8 @@ export const createExecutionLog = (
                 : msAsDuration(endMs - startMs),
           }
         : {}),
-      ...(error
-        ? { error: error.text || error.stack || error.message || error }
-        : {}),
+      ...(error ? { error: error.stack || error.message || error } : {}),
+      ...(exception ? { error: exception.text } : {}),
     },
     consoleOutput,
   })

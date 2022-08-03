@@ -39,11 +39,14 @@ window.__supervisor__ = (() => {
     const DYNAMIC_IMPORT_EXPORT_MISSING = "dynamic_import_export_missing"
     const DYNAMIC_IMPORT_SYNTAX_ERROR = "dynamic_import_syntax_error"
 
-    const createExceptionInfo = (
-      exception,
-      { reportedBy, url, line, column } = {},
-    ) => {
-      const exceptionInfo = {
+    const createException = ({
+      reason,
+      reportedBy,
+      url,
+      line,
+      column,
+    } = {}) => {
+      const exception = {
         reportedBy,
         isError: false, // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/throw
         code: null,
@@ -63,92 +66,89 @@ window.__supervisor__ = (() => {
       }
 
       const writeBasicProperties = () => {
-        if (exception === undefined) {
-          exceptionInfo.message = "undefined"
+        if (reason === undefined) {
+          exception.message = "undefined"
           return
         }
-        if (exception === null) {
-          exceptionInfo.message = "null"
+        if (reason === null) {
+          exception.message = "null"
           return
         }
-        if (typeof exception === "string") {
-          exceptionInfo.message = exception
+        if (typeof reason === "string") {
+          exception.message = reason
           return
         }
-        if (exception instanceof Error) {
-          const error = exception
+        if (reason instanceof Error) {
+          const error = reason
           let message = error.message
           exception.isError = true
           if (Error.captureStackTrace) {
             // stackTrace formatted by V8
-            exceptionInfo.message = message
-            exceptionInfo.stack = getErrorStackWithoutErrorMessage(error)
-            exceptionInfo.stackFormatIsV8 = true
-            exceptionInfo.stackSourcemapped = true
+            exception.message = message
+            exception.stack = getErrorStackWithoutErrorMessage(error)
+            exception.stackFormatIsV8 = true
+            exception.stackSourcemapped = true
           } else {
-            exceptionInfo.message = message
-            exceptionInfo.stack = error.stack ? `  ${error.stack}` : null
-            exceptionInfo.stackFormatIsV8 = false
-            exceptionInfo.stackSourcemapped = false
+            exception.message = message
+            exception.stack = error.stack ? `  ${error.stack}` : null
+            exception.stackFormatIsV8 = false
+            exception.stackSourcemapped = false
           }
           export_missing: {
             // chrome
             if (message.includes("does not provide an export named")) {
-              exceptionInfo.code = DYNAMIC_IMPORT_EXPORT_MISSING
+              exception.code = DYNAMIC_IMPORT_EXPORT_MISSING
               return
             }
             // firefox
             if (message.startsWith("import not found:")) {
-              exceptionInfo.code = DYNAMIC_IMPORT_EXPORT_MISSING
+              exception.code = DYNAMIC_IMPORT_EXPORT_MISSING
               return
             }
             // safari
             if (message.startsWith("import binding name")) {
-              exceptionInfo.code = DYNAMIC_IMPORT_EXPORT_MISSING
+              exception.code = DYNAMIC_IMPORT_EXPORT_MISSING
               return
             }
           }
           js_syntax_error: {
             if (error.name === "SyntaxError" && typeof line === "number") {
-              exceptionInfo.code = DYNAMIC_IMPORT_SYNTAX_ERROR
+              exception.code = DYNAMIC_IMPORT_SYNTAX_ERROR
               return
             }
           }
           return
         }
-        if (typeof exception === "object") {
-          exceptionInfo.code = exception.code
-          exceptionInfo.message = exception.message
-          exceptionInfo.stack = exception.stack
-          if (exception.url) {
-            Object.assign(
-              exceptionInfo.site,
-              resolveUrlSite({ url: exception.url }),
-            )
+        if (typeof reason === "object") {
+          exception.code = reason.code
+          exception.message = reason.message
+          exception.stack = reason.stack
+          if (reason.url) {
+            Object.assign(exception.site, resolveUrlSite({ url: reason.url }))
           }
           return
         }
-        exceptionInfo.message = JSON.stringify(exception)
+        exception.message = JSON.stringify(reason)
       }
       writeBasicProperties()
 
       // first create a version of the stack with file://
       // (and use it to locate exception url+line+column)
-      if (exceptionInfo.stack) {
-        exceptionInfo.originalStack = exceptionInfo.stack
-        exceptionInfo.stack = replaceUrls(
-          exceptionInfo.originalStack,
+      if (exception.stack) {
+        exception.originalStack = exception.stack
+        exception.stack = replaceUrls(
+          exception.originalStack,
           (serverUrlSite) => {
             const fileUrlSite = resolveUrlSite(serverUrlSite)
-            if (exceptionInfo.site.url === null) {
-              Object.assign(exceptionInfo.site, fileUrlSite)
+            if (exception.site.url === null) {
+              Object.assign(exception.site, fileUrlSite)
             }
             return stringifyUrlSite(fileUrlSite)
           },
         )
       }
       // then if it fails, use url+line+column passed
-      if (exceptionInfo.site.url === null && url) {
+      if (exception.site.url === null && url) {
         if (typeof line === "string") {
           line = parseInt(line)
         }
@@ -158,7 +158,7 @@ window.__supervisor__ = (() => {
         const fileUrlSite = resolveUrlSite({ url, line, column })
         if (
           fileUrlSite.isInline &&
-          exceptionInfo.code === DYNAMIC_IMPORT_SYNTAX_ERROR
+          exception.code === DYNAMIC_IMPORT_SYNTAX_ERROR
         ) {
           // syntax error on inline script need line-1 for some reason
           if (Error.captureStackTrace) {
@@ -168,10 +168,10 @@ window.__supervisor__ = (() => {
             fileUrlSite.line -= 2
           }
         }
-        Object.assign(exceptionInfo.site, fileUrlSite)
+        Object.assign(exception.site, fileUrlSite)
       }
-      exceptionInfo.text = stringifyMessageAndStack(exceptionInfo)
-      return exceptionInfo
+      exception.text = stringifyMessageAndStack(exception)
+      return exception
     }
 
     const stringifyMessageAndStack = ({ message, stack }) => {
@@ -366,7 +366,7 @@ window.__supervisor__ = (() => {
             try {
               if (
                 exceptionInfo.code === DYNAMIC_IMPORT_FETCH_ERROR ||
-                exceptionInfo.code === "FETCH_ERROR"
+                exceptionInfo.reportedBy === "script_error_event"
               ) {
                 const response = await window.fetch(
                   `/__get_error_cause__/${encodeURIComponent(
@@ -375,7 +375,6 @@ window.__supervisor__ = (() => {
                       : exceptionInfo.site.url,
                   )}`,
                 )
-
                 if (response.status !== 200) {
                   return null
                 }
@@ -383,7 +382,6 @@ window.__supervisor__ = (() => {
                 if (!causeInfo) {
                   return null
                 }
-
                 const causeText =
                   causeInfo.code === "NOT_FOUND"
                     ? stringifyMessageAndStack({
@@ -409,6 +407,9 @@ window.__supervisor__ = (() => {
                   urlToFetch.searchParams.set("remap", "")
                 }
                 const response = await window.fetch(urlToFetch)
+                if (response.status !== 200) {
+                  return null
+                }
                 const codeFrame = await response.text()
                 return {
                   codeFrame: generateClickableText(codeFrame),
@@ -631,22 +632,10 @@ window.__supervisor__ = (() => {
   }`
     }
 
-    supervisor.createExceptionInfo = (exception) => {
-      const exceptionInfo = createExceptionInfo(exception)
-      return exceptionInfo
-    }
-    supervisor.reportException = (
-      exception,
-      { reportedBy, url, line, column },
-    ) => {
-      const exceptionInfo = createExceptionInfo(exception, {
-        reportedBy,
-        url,
-        line,
-        column,
-      })
+    supervisor.createException = createException
+    supervisor.reportException = (exception) => {
       const { theme, title, text, tip, errorDetailsPromise } =
-        formatError(exceptionInfo)
+        formatError(exception)
 
       if (errorOverlay) {
         const removeErrorOverlay = displayJsenvErrorOverlay({
@@ -678,23 +667,26 @@ window.__supervisor__ = (() => {
         return
       }
       const { error, message, filename, lineno, colno } = errorEvent
-      // when error is reported within a worker error is null
-      // but there is a message property on errorEvent
-      const exception = error || message
-      supervisor.reportException(exception, {
+      const exception = supervisor.createException({
+        // when error is reported within a worker error is null
+        // but there is a message property on errorEvent
+        reason: error || message,
         reportedBy: "window_error_event",
         url: filename,
         line: lineno,
         column: colno,
       })
+      supervisor.reportException(exception)
     })
     window.addEventListener("unhandledrejection", (event) => {
       if (event.defaultPrevented) {
         return
       }
-      supervisor.reportException(event.reason, {
+      const exception = supervisor.createException({
+        reason: event.reason,
         reportedBy: "window_unhandledrejection_event",
       })
+      supervisor.reportException(exception)
     })
   }
 
@@ -762,18 +754,19 @@ window.__supervisor__ = (() => {
           console.groupEnd()
         }
         resolvePromise()
-      } catch (e) {
+      } catch (exceptionInfo) {
         if (measurePerf) {
           performance.measure(`execution`, `execution_start`)
         }
         executionResult.status = "errored"
-        executionResult.error = supervisor.createExceptionInfo(e)
+        const exception = supervisor.createException(exceptionInfo)
+        executionResult.exception = exception
         executionResult.coverage = window.__coverage__
-        if (e.code === "FETCH_ERROR") {
-          supervisor.reportException(e, {
-            reportedBy: "script_error_event",
-          })
-        }
+        // const isWebkitOrSafari =
+        //   typeof window.webkitConvertPointFromNodeToPage === "function"
+        // if (isWebkitOrSafari && exception.reportedBy === "dynamic_import") {
+        //   supervisor.reportException(exception)
+        // }
         if (logs) {
           console.groupEnd()
         }
@@ -816,9 +809,11 @@ window.__supervisor__ = (() => {
             const url = urlObject.href
             currentScriptClone.addEventListener("error", () => {
               reject({
-                code: "FETCH_ERROR",
-                message: "Failed to fetch script",
-                url,
+                reason: {
+                  message: "Failed to fetch script",
+                  url,
+                },
+                reportedBy: "script_error_event",
               })
             })
             currentScriptClone.addEventListener("load", () => {

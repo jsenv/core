@@ -37,9 +37,11 @@ export const superviseScriptTypeModule = async ({ src, async }) => {
           }
           currentScriptClone.addEventListener("error", () => {
             reject({
-              code: "FETCH_ERROR",
-              message: `Failed to fetch module: ${urlObject.href}`,
-              url: urlObject.href,
+              reason: {
+                message: `Failed to fetch module: ${urlObject.href}`,
+                url: urlObject.href,
+              },
+              reportedBy: "script_error_event",
             })
           })
           let importPromise
@@ -52,13 +54,16 @@ export const superviseScriptTypeModule = async ({ src, async }) => {
               const namespace = await importPromise
               resolve(namespace)
             } catch (e) {
-              reject(e)
+              reject({
+                reason: e,
+                reportedBy: "dynamic_import",
+              })
             }
           })
+          // https://twitter.com/damienmaillard/status/1554752482273787906
           const isWebkitOrSafari =
             typeof window.webkitConvertPointFromNodeToPage === "function"
           if (isWebkitOrSafari) {
-            // https://twitter.com/damienmaillard/status/1554752482273787906
             importPromise = import(urlObject.href)
           }
           parentNode.replaceChild(currentScriptClone, nodeToReplace)
