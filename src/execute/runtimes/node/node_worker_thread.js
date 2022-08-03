@@ -137,7 +137,13 @@ nodeWorkerThread.run = async ({
     )
   })
 
-  const getResult = async () => {
+  const result = {
+    status: "executing",
+    errors: [],
+    namespace: null,
+  }
+
+  const writeResult = async () => {
     actionOperation.throwIfAborted()
     await workerThreadReadyPromise
     actionOperation.throwIfAborted()
@@ -159,28 +165,27 @@ nodeWorkerThread.run = async ({
     })
     const winner = await winnerPromise
     if (winner.name === "aborted") {
-      return {
-        status: "aborted",
-      }
+      result.status = "aborted"
+      return
     }
     if (winner.name === "error") {
       const error = winner.data
       removeOutputListener()
-      return {
-        status: "errored",
-        error,
-      }
+      result.status = "errored"
+      result.errors.push(error)
+      return
     }
     if (winner.name === "exit") {
       const { code } = winner.data
       await cleanup("process exit")
       if (code === 12) {
-        return {
-          status: "errored",
-          error: new Error(
+        result.status = "errored"
+        result.errors.push(
+          new Error(
             `node process exited with 12 (the forked child process wanted to use a non-available port for debug)`,
           ),
-        }
+        )
+        return
       }
       if (
         code === null ||
@@ -189,44 +194,39 @@ nodeWorkerThread.run = async ({
         code === EXIT_CODES.SIGTERM ||
         code === EXIT_CODES.SIGABORT
       ) {
-        return {
-          status: "errored",
-          error: new Error(`node worker thread exited during execution`),
-        }
+        result.status = "errored"
+        result.errors.push(
+          new Error(`node worker thread exited during execution`),
+        )
+        return
       }
       // process.exit(1) in child process or process.exitCode = 1 + process.exit()
       // means there was an error even if we don't know exactly what.
-      return {
-        status: "errored",
-        error: new Error(
+      result.status = "errored"
+      result.errors.push(
+        new Error(
           `node worker thread exited with code ${code} during execution`,
         ),
-      }
+      )
     }
     const { status, value } = winner.data
     if (status === "action-failed") {
-      return {
-        status: "errored",
-        error: value,
-      }
+      result.status = "errored"
+      result.errors.push(value)
+      return
     }
     const { namespace, performance, coverage } = value
-    return {
-      status: "completed",
-      namespace,
-      performance,
-      coverage,
-    }
+    result.status = "completed"
+    result.namespace = namespace
+    result.performance = performance
+    result.coverage = coverage
   }
 
-  let result
   try {
-    result = await getResult()
+    await writeResult()
   } catch (e) {
-    result = {
-      status: "errored",
-      error: e,
-    }
+    result.status = "errored"
+    result.errors.push(e)
   }
 
   if (keepRunning) {
