@@ -24,7 +24,7 @@ import { jsenvPluginAsJsClassicWorkers } from "./jsenv_plugin_as_js_classic_work
 // because of https://github.com/rpetrich/babel-plugin-transform-async-to-promises/issues/84
 import customAsyncToPromises from "./async-to-promises.js"
 
-export const jsenvPluginAsJsClassic = ({ systemJsInjection }) => {
+export const jsenvPluginAsJsClassic = ({ systemJsInjection = true }) => {
   const systemJsClientFileUrl = new URL(
     "./client/s.js?js_classic",
     import.meta.url,
@@ -108,7 +108,7 @@ const jsenvPluginAsJsClassicConversion = ({
         // - the reference contains ?entry_point
         // When js is entry point there can be no HTML to inject systemjs
         // and systemjs must be injected into the js file
-        originalUrlInfo.isEntryPoint &&
+        urlInfo.isEntryPoint &&
         // if it's an entry point without dependency (it does not use import)
         // then we can use UMD, otherwise we have to use systemjs
         // because it is imported by systemjs
@@ -118,7 +118,8 @@ const jsenvPluginAsJsClassicConversion = ({
       const { content, sourcemap } = await convertJsModuleToJsClassic({
         systemJsInjection,
         systemJsClientFileUrl,
-        urlInfo: originalUrlInfo,
+        urlInfo,
+        originalUrlInfo,
         jsClassicFormat,
       })
       urlInfo.data.jsClassicFormat = jsClassicFormat
@@ -160,6 +161,7 @@ const convertJsModuleToJsClassic = async ({
   systemJsInjection,
   systemJsClientFileUrl,
   urlInfo,
+  originalUrlInfo,
   jsClassicFormat,
 }) => {
   const { code, map } = await applyBabelPlugins({
@@ -188,9 +190,9 @@ const convertJsModuleToJsClassic = async ({
             requireFromJsenv("@babel/plugin-transform-modules-umd"),
           ]),
     ],
-    urlInfo,
+    urlInfo: originalUrlInfo,
   })
-  let sourcemap = urlInfo.sourcemap
+  let sourcemap = originalUrlInfo.sourcemap
   sourcemap = await composeTwoSourcemaps(sourcemap, map)
   if (
     systemJsInjection &&

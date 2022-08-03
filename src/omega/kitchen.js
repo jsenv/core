@@ -677,7 +677,10 @@ export const createKitchen = ({
     await context.fetchUrlContent(originalUrlInfo, {
       reference: originalReference,
     })
-    if (originalUrlInfo.dependents.size === 0) {
+    if (
+      originalUrlInfo.dependents.size === 0
+      // && context.scenarios.build
+    ) {
       context.urlGraph.deleteUrlInfo(originalUrlInfo.url)
     }
     return originalUrlInfo
