@@ -2,7 +2,13 @@
   <h1 class="title">
     An error occured
   </h1>
-  <pre class="text">error loading dynamically imported module</pre>
+  <pre class="text">Failed to fetch module
+  [cause]: no entry on filesystem
+  <a href="javascript:window.fetch('/__open_in_editor__/file:///js_module_import_not_found/main.js:2:7')">file:///js_module_import_not_found/main.js:2:7</a>
+    1 | // eslint-disable-next-line import/no-unresolved
+  > 2 | import "./not_found.js"
+              ^
+    3 | </pre>
   <div class="tip">
     Reported by the browser while executing <code>/js_module_import_not_found/main.html</code>.
     <br>

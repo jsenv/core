@@ -45,6 +45,7 @@ window.__supervisor__ = (() => {
         stack: null,
         stackFormatIsV8: null,
         stackSourcemapped: null,
+        originalStack: null,
         meta: null,
         site: {
           isInline: null,
@@ -135,8 +136,12 @@ window.__supervisor__ = (() => {
           return
         }
         if (typeof exception === "object") {
+          exceptionInfo.code = exception.code
           exceptionInfo.message = exception.message
           exceptionInfo.stack = exception.stack
+          if (exception.url) {
+            exceptionInfo.site.url = resolveFileUrl(exception.url)
+          }
           return
         }
         exceptionInfo.message = JSON.stringify(exception)
@@ -149,12 +154,16 @@ window.__supervisor__ = (() => {
         exceptionInfo.originalStack = exceptionInfo.stack
         exceptionInfo.stack = replaceUrls(
           exceptionInfo.originalStack,
-          ({ url, line, column }) => {
-            const urlSite = resolveUrlSite({ url, line, column })
+          (serverUrlSite) => {
+            const fileUrlSite = resolveUrlSite(serverUrlSite)
             if (exceptionInfo.site.url === null) {
-              Object.assign(exceptionInfo.site, urlSite)
+              Object.assign(exceptionInfo.site, fileUrlSite)
             }
-            return stringifyUrlSite(urlSite)
+            if (exceptionInfo.stackSourcemapped) {
+              return stringifyUrlSite(fileUrlSite)
+            }
+            // sourcemap do not apply, better keep the server urls
+            return stringifyUrlSite(serverUrlSite)
           },
         )
       }
@@ -166,50 +175,21 @@ window.__supervisor__ = (() => {
         if (typeof column === "string") {
           column = parseInt(column)
         }
-        const urlSite = resolveUrlSite({ url, line, column })
+        const fileUrlSite = resolveUrlSite({ url, line, column })
         if (
-          urlSite.isInline &&
+          fileUrlSite.isInline &&
           exceptionInfo.code === DYNAMIC_IMPORT_SYNTAX_ERROR
         ) {
           // syntax error on inline script need line-1 for some reason
           if (Error.captureStackTrace) {
-            urlSite.line--
+            fileUrlSite.line--
           } else {
             // firefox and safari need line-2
-            urlSite.line -= 2
+            fileUrlSite.line -= 2
           }
         }
-        Object.assign(exceptionInfo.site, urlSite)
+        Object.assign(exceptionInfo.site, fileUrlSite)
       }
-
-      exceptionInfo.text = stringifyMessageAndStack(exceptionInfo)
-      exceptionInfo.remapErrorStack = async () => {
-        if (!exceptionInfo.stack || exceptionInfo.stackSourcemapped) {
-          return
-        }
-        const urlSites = []
-        replaceUrls(exceptionInfo.stack, (urlSite) => {
-          urlSite = resolveUrlSite(urlSite)
-          urlSites.push(urlSite)
-          return ""
-        })
-        const response = await window.fetch(`/__remap_urls__/`, {
-          method: "POST",
-          headers: {
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(urlSites),
-        })
-        const urlSitesResponse = await response.json()
-        exceptionInfo.stack = replaceUrls(exceptionInfo.stack, (urlSite) => {
-          return stringifyUrlSite(
-            urlSitesResponse.find((site) => site.url === urlSite.url),
-          )
-        })
-        exceptionInfo.text = stringifyMessageAndStack(exceptionInfo)
-      }
-
       return exceptionInfo
     }
 
@@ -398,7 +378,10 @@ window.__supervisor__ = (() => {
         if (exceptionInfo.site.url) {
           errorParts.errorDetailsPromise = (async () => {
             try {
-              if (exceptionInfo.code === DYNAMIC_IMPORT_FETCH_ERROR) {
+              if (
+                exceptionInfo.code === DYNAMIC_IMPORT_FETCH_ERROR ||
+                exceptionInfo.code === "FETCH_ERROR"
+              ) {
                 const response = await window.fetch(
                   `/__get_error_cause__/${
                     exceptionInfo.site.isInline
@@ -482,27 +465,21 @@ window.__supervisor__ = (() => {
     let displayErrorNotification
     error_notification: {
       const { Notification } = window
-      const displayErrorNotificationNotAvailable = () => {}
-      const displayErrorNotificationImplementation = ({
-        title,
-        text,
-        icon,
-      }) => {
-        if (Notification.permission === "granted") {
-          const notification = new Notification(title, {
-            lang: "en",
-            body: text,
-            icon,
-          })
-          notification.onclick = () => {
-            window.focus()
-          }
-        }
-      }
       displayErrorNotification =
         typeof Notification === "function"
-          ? displayErrorNotificationImplementation
-          : displayErrorNotificationNotAvailable
+          ? ({ title, text, icon }) => {
+              if (Notification.permission === "granted") {
+                const notification = new Notification(title, {
+                  lang: "en",
+                  body: text,
+                  icon,
+                })
+                notification.onclick = () => {
+                  window.focus()
+                }
+              }
+            }
+          : () => {}
     }
 
     const JSENV_ERROR_OVERLAY_TAGNAME = "jsenv-error-overlay"
@@ -669,7 +646,7 @@ window.__supervisor__ = (() => {
       const exceptionInfo = createExceptionInfo(exception)
       return exceptionInfo
     }
-    supervisor.reportException = (exception, { url, line, column }) => {
+    supervisor.reportException = (exception, { url, line, column } = {}) => {
       const exceptionInfo = createExceptionInfo(exception, {
         url,
         line,
@@ -788,13 +765,16 @@ window.__supervisor__ = (() => {
         executionResult.status = "errored"
         executionResult.error = e
         executionResult.coverage = window.__coverage__
-        if (execution.type === "js_module") {
-          if (typeof window.reportError === "function") {
-            window.reportError(e)
-          } else {
-            console.error(e)
-          }
+        if (e.code === "FETCH_ERROR") {
+          supervisor.reportException(e)
         }
+        // if (execution.type === "js_module") {
+        //   if (typeof window.reportError === "function") {
+        //     window.reportError(e)
+        //   } else {
+        //     console.error(e)
+        //   }
+        // }
         if (logs) {
           console.groupEnd()
         }
@@ -811,7 +791,15 @@ window.__supervisor__ = (() => {
         type: "js_classic",
         execute: ({ isReload }) => {
           return new Promise((resolve, reject) => {
-            currentScriptClone = cloneScript(currentScript)
+            // do not use script.cloneNode()
+            // bcause https://stackoverflow.com/questions/28771542/why-dont-clonenode-script-tags-execute
+            currentScriptClone = document.createElement("script")
+            Array.from(currentScript.attributes).forEach((attribute) => {
+              currentScriptClone.setAttribute(
+                attribute.nodeName,
+                attribute.nodeValue,
+              )
+            })
             const urlObject = new URL(src, window.location)
             if (isReload) {
               urlObject.searchParams.set("hmr", Date.now())
@@ -840,7 +828,11 @@ window.__supervisor__ = (() => {
             window.addEventListener("error", windowErrorCallback)
             currentScriptClone.addEventListener("error", () => {
               cleanup()
-              reject(src)
+              reject({
+                code: "FETCH_ERROR",
+                message: "Failed to fetch script",
+                url,
+              })
             })
             currentScriptClone.addEventListener("load", () => {
               cleanup()
@@ -872,25 +864,25 @@ window.__supervisor__ = (() => {
         supervisedScript.reload()
       }
     }
-    supervisor.collectScriptResults = async ({ mapErrorStack = true } = {}) => {
+    supervisor.collectScriptResults = async () => {
       try {
         await Promise.all(executionPromises)
       } catch (e) {}
-
-      if (mapErrorStack) {
-        await Promise.all(
-          Object.keys(executionResults).map(async (key) => {
-            const executionResult = executionResults[key]
-            if (executionResult.status === "errored") {
-              const exceptionInfo = supervisor.createException(
-                executionResult.error,
-              )
-              await exceptionInfo.remapErrorStack()
-              executionResult.error = exceptionInfo.text
-            }
-          }),
-        )
-      }
+      Object.keys(executionResults).forEach((key) => {
+        const executionResult = executionResults[key]
+        if (executionResult.status === "errored") {
+          const exceptionInfo = supervisor.createExceptionInfo(
+            executionResult.error,
+          )
+          executionResult.error = {
+            isError: exceptionInfo.isError,
+            type: exceptionInfo.type,
+            code: exceptionInfo.code,
+            text: exceptionInfo.text,
+            site: exceptionInfo.site,
+          }
+        }
+      })
       return {
         status: "completed",
         executionResults,
@@ -905,16 +897,6 @@ window.__supervisor__ = (() => {
       } catch (e) {
         return Date.now()
       }
-    }
-
-    const cloneScript = (script) => {
-      // do not use script.cloneNode()
-      // bcause https://stackoverflow.com/questions/28771542/why-dont-clonenode-script-tags-execute
-      const clone = document.createElement("script")
-      Array.from(script.attributes).forEach((attribute) => {
-        clone.setAttribute(attribute.nodeName, attribute.nodeVale)
-      })
-      return clone
     }
   }
 
