@@ -2,7 +2,6 @@
  * The goal is to ensure the last error wins
  * and that error stack points to the file:// urls to be clickable
  * TODO
- * - test on firefox
  * - update @jsenv/assert to replace --- at --- by --- path ---
  */
 
@@ -26,6 +25,7 @@ const test = async ({ runtime }) => {
   })
   const { testPlanReport } = await executeTestPlan({
     logLevel: "warn",
+    logRefresh: false,
     rootDirectoryUrl,
     devServerOrigin: devServer.origin,
     testPlan: {
@@ -36,7 +36,14 @@ const test = async ({ runtime }) => {
   })
   const namespace = testPlanReport["main.html"].browser.namespace
 
-  const getErrorStackLastUrl = (errorStack) => {
+  const getErrorStackLastUrl = (executionResult) => {
+    const error = executionResult.error
+    if (!error) {
+      throw new Error(
+        `no error on ${runtime.name}: ${JSON.stringify(executionResult)}`,
+      )
+    }
+    const errorStack = error.stack
     const regex = {
       // eslint-disable-next-line no-regex-spaces
       chromium: /    at (.+)$/gm,
@@ -57,9 +64,9 @@ const test = async ({ runtime }) => {
   }
   const actual = {
     inlineErrorStackLastUrl: getErrorStackLastUrl(
-      namespace["/main.html@L10C5-L17C14.js"].error,
+      namespace["/main.html@L10C5-L17C14.js"],
     ),
-    errorStackLastUrl: getErrorStackLastUrl(namespace["/main.js"].error),
+    errorStackLastUrl: getErrorStackLastUrl(namespace["/main.js"]),
   }
 
   /* eslint-disable no-regex-spaces */
@@ -73,14 +80,14 @@ const test = async ({ runtime }) => {
     const expected = {
       // not as good as chrome but good enough for now
       inlineErrorStackLastUrl: `${rootDirectoryUrl}main.html:12:12`,
-      errorStackLastUrl: `${rootDirectoryUrl}main.js:3:7`,
+      errorStackLastUrl: `${rootDirectoryUrl}main.js:2:7`,
     }
     assert({ actual, expected })
   } else if (runtime === webkit) {
     const expected = {
       // not as good as chrome but good enough for now
       inlineErrorStackLastUrl: `${rootDirectoryUrl}main.html:12:12`,
-      errorStackLastUrl: `${rootDirectoryUrl}main.js:3:7`,
+      errorStackLastUrl: `${rootDirectoryUrl}main.js:2:7`,
     }
     assert({ actual, expected })
   }
@@ -89,5 +96,5 @@ const test = async ({ runtime }) => {
 if (process.platform !== "win32") {
   await test({ runtime: chromium })
   await test({ runtime: firefox })
-  // await test({ runtime: webkit })
+  await test({ runtime: webkit })
 }

@@ -35,18 +35,21 @@ export const superviseScriptTypeModule = async ({ src, async }) => {
             nodeToReplace = currentScript
             currentScriptClone.src = src
           }
-          const url = urlObject.href
           currentScriptClone.addEventListener("error", () => {
             reject({
               code: "FETCH_ERROR",
-              message: `Failed to fetch module: ${url}`,
-              url,
+              message: `Failed to fetch module: ${urlObject.href}`,
+              url: urlObject.href,
             })
           })
           currentScriptClone.addEventListener("load", async () => {
             // do not resolve right away, wait for top level execution
             try {
-              const namespace = await import(url)
+              if (window.safari) {
+                // https://twitter.com/damienmaillard/status/1554752482273787906
+                urlObject.searchParams.set("safari", "")
+              }
+              const namespace = await import(urlObject.href)
               resolve(namespace)
             } catch (e) {
               reject(e)

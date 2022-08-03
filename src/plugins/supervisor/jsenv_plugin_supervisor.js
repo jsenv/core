@@ -213,6 +213,12 @@ export const jsenvPluginSupervisor = ({
       }
       return null
     },
+    // hotfix for https://twitter.com/damienmaillard/status/1554752482273787906
+    redirectUrl: (reference) => {
+      const urlObject = new URL(reference.url)
+      urlObject.searchParams.delete("safari")
+      return urlObject.href
+    },
     transformUrlContent: {
       html: ({ url, content }, context) => {
         const htmlAst = parseHtmlString(content)
