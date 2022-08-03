@@ -13,10 +13,12 @@ export const babelPluginNewStylesheetAsJsenvImport = (
   return {
     name: "new-stylesheet-as-jsenv-import",
     visitor: {
-      Program: (programPath, { filename }) => {
-        const fileUrl = pathToFileURL(filename).href
-        if (fileUrl === newStylesheetClientFileUrl) {
-          return
+      Program: (programPath, babelState) => {
+        if (babelState.filename) {
+          const fileUrl = pathToFileURL(babelState.filename).href
+          if (fileUrl === newStylesheetClientFileUrl) {
+            return
+          }
         }
         let usesNewStylesheet = false
         programPath.traverse({

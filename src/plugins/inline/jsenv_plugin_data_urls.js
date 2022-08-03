@@ -40,7 +40,7 @@ export const jsenvPluginDataUrls = () => {
           return reference.generatedUrl
         }
         const specifier = DATA_URL.stringify({
-          contentType: urlInfo.headers["content-type"],
+          contentType: urlInfo.contentType,
           base64Flag: urlInfo.data.base64Flag,
           data: urlInfo.data.base64Flag
             ? dataToBase64(urlInfo.content)

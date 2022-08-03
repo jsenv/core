@@ -81,6 +81,9 @@ export const createUrlInfoTransformer = ({
     if (!SOURCEMAP.enabledOnContentType(urlInfo.contentType)) {
       return
     }
+    if (urlInfo.generatedUrl.startsWith("data:")) {
+      return
+    }
     // sourcemap is a special kind of reference:
     // It's a reference to a content generated dynamically the content itself.
     // For this reason sourcemap are not added to urlInfo.references
@@ -173,7 +176,11 @@ export const createUrlInfoTransformer = ({
     if (transformations) {
       await applyIntermediateTransformations(urlInfo, transformations)
     }
-    if (sourcemapsEnabled && urlInfo.sourcemap) {
+    if (
+      sourcemapsEnabled &&
+      urlInfo.sourcemap &&
+      !urlInfo.generatedUrl.startsWith("data:")
+    ) {
       // during build this function can be called after the file is cooked
       // - to update content and sourcemap after "optimize" hook
       // - to inject versioning into the entry point content
