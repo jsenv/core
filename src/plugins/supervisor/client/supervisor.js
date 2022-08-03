@@ -141,11 +141,7 @@ window.__supervisor__ = (() => {
             if (exceptionInfo.site.url === null) {
               Object.assign(exceptionInfo.site, fileUrlSite)
             }
-            if (exceptionInfo.stackSourcemapped) {
-              return stringifyUrlSite(fileUrlSite)
-            }
-            // sourcemap do not apply, better keep the server urls
-            return stringifyUrlSite(serverUrlSite)
+            return stringifyUrlSite(fileUrlSite)
           },
         )
       }
@@ -172,6 +168,7 @@ window.__supervisor__ = (() => {
         }
         Object.assign(exceptionInfo.site, fileUrlSite)
       }
+      exceptionInfo.text = stringifyMessageAndStack(exceptionInfo)
       return exceptionInfo
     }
 
@@ -632,7 +629,7 @@ window.__supervisor__ = (() => {
   }`
     }
 
-    supervisor.createException = (exception) => {
+    supervisor.createExceptionInfo = (exception) => {
       const exceptionInfo = createExceptionInfo(exception)
       return exceptionInfo
     }
@@ -769,7 +766,7 @@ window.__supervisor__ = (() => {
           performance.measure(`execution`, `execution_start`)
         }
         executionResult.status = "errored"
-        executionResult.error = e
+        executionResult.error = supervisor.createExceptionInfo(e)
         executionResult.coverage = window.__coverage__
         if (e.code === "FETCH_ERROR") {
           supervisor.reportException(e, {
@@ -816,19 +813,7 @@ window.__supervisor__ = (() => {
               currentScriptClone.src = src
             }
             const url = urlObject.href
-
-            let lastWindowErrorUrl
-            let lastWindowError
-            const windowErrorCallback = (e) => {
-              lastWindowErrorUrl = e.filename
-              lastWindowError = e.error
-            }
-            const cleanup = () => {
-              window.removeEventListener("error", windowErrorCallback)
-            }
-            window.addEventListener("error", windowErrorCallback)
             currentScriptClone.addEventListener("error", () => {
-              cleanup()
               reject({
                 code: "FETCH_ERROR",
                 message: "Failed to fetch script",
@@ -836,12 +821,7 @@ window.__supervisor__ = (() => {
               })
             })
             currentScriptClone.addEventListener("load", () => {
-              cleanup()
-              if (lastWindowErrorUrl === url) {
-                reject(lastWindowError)
-              } else {
-                resolve()
-              }
+              resolve()
             })
             parentNode.replaceChild(currentScriptClone, nodeToReplace)
           })
@@ -869,21 +849,6 @@ window.__supervisor__ = (() => {
       try {
         await Promise.all(executionPromises)
       } catch (e) {}
-      Object.keys(executionResults).forEach((key) => {
-        const executionResult = executionResults[key]
-        if (executionResult.status === "errored") {
-          const exceptionInfo = supervisor.createExceptionInfo(
-            executionResult.error,
-          )
-          executionResult.error = {
-            isError: exceptionInfo.isError,
-            type: exceptionInfo.type,
-            code: exceptionInfo.code,
-            text: exceptionInfo.text,
-            site: exceptionInfo.site,
-          }
-        }
-      })
       return {
         status: "completed",
         executionResults,

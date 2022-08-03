@@ -36,33 +36,20 @@ export const superviseScriptTypeModule = async ({ src, async }) => {
             currentScriptClone.src = src
           }
           const url = urlObject.href
-
-          let lastWindowErrorUrl
-          let lastWindowError
-          const windowErrorCallback = (e) => {
-            lastWindowErrorUrl = e.filename
-            lastWindowError = e.error
-          }
-          const cleanup = () => {
-            window.removeEventListener("error", windowErrorCallback)
-          }
-          window.addEventListener("error", windowErrorCallback)
           currentScriptClone.addEventListener("error", () => {
-            cleanup()
             reject({
               code: "FETCH_ERROR",
               message: `Failed to fetch module: ${url}`,
               url,
             })
           })
-          currentScriptClone.addEventListener("load", () => {
-            cleanup()
-            if (lastWindowErrorUrl === url) {
-              reject(lastWindowError)
-            } else {
-              // do not resolve right away, wait for top level execution
-              // const executionPromise = import(url)
-              resolve()
+          currentScriptClone.addEventListener("load", async () => {
+            // do not resolve right away, wait for top level execution
+            try {
+              const namespace = await import(url)
+              resolve(namespace)
+            } catch (e) {
+              reject(e)
             }
           })
           parentNode.replaceChild(currentScriptClone, nodeToReplace)
