@@ -1,7 +1,7 @@
 # @jsenv/core [![npm package](https://img.shields.io/npm/v/@jsenv/core.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/core)
 
 Jsenv was first created to write tests that could be executed in different runtimes.
-It has naturally evolved to cover the core needs of a JavaScript project: developement, testing and building for production. 
+It has naturally evolved to cover the core needs of a JavaScript project: developement, testing and building for production.
 
 - :exploding_head: Execute HTML files as tests
 - :sparkles: A single tool for the whole developer experience
