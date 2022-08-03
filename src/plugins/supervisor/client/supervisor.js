@@ -2,6 +2,7 @@ window.__supervisor__ = (() => {
   const notImplemented = () => {
     throw new Error(`window.__supervisor__.setup() not called`)
   }
+  const executionResults = {}
   const supervisor = {
     reportError: notImplemented,
     superviseScript: notImplemented,
@@ -24,6 +25,7 @@ window.__supervisor__ = (() => {
         return supervisor.collectScriptResults()
       })
     },
+    executionResults,
   }
 
   supervisor.setupReportException = ({
@@ -712,7 +714,6 @@ window.__supervisor__ = (() => {
     })
 
     const supervisedScripts = []
-    const executionResults = {}
     const executionPromises = []
     supervisor.createExecution = ({ type, src, execute }) => {
       const execution = {
@@ -846,9 +847,15 @@ window.__supervisor__ = (() => {
       }
     }
     supervisor.collectScriptResults = async () => {
-      try {
-        await Promise.all(executionPromises)
-      } catch (e) {}
+      const waitPendingExecutions = async () => {
+        if (executionPromises.length) {
+          const promisesToWait = executionPromises.slice()
+          executionPromises.length = 0
+          await Promise.all(promisesToWait)
+          await waitPendingExecutions()
+        }
+      }
+      await waitPendingExecutions()
       return {
         status: "completed",
         executionResults,

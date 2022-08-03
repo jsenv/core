@@ -47,7 +47,7 @@ export const superviseScriptTypeModule = async ({ src, async }) => {
             try {
               if (window.safari) {
                 // https://twitter.com/damienmaillard/status/1554752482273787906
-                urlObject.searchParams.set("safari", "")
+                urlObject.searchParams.set("safari", Date.now())
               }
               const namespace = await import(urlObject.href)
               resolve(namespace)

@@ -1,8 +1,6 @@
 /*
  * The goal is to ensure the last error wins
  * and that error stack points to the file:// urls to be clickable
- * TODO
- * - update @jsenv/assert to replace --- at --- by --- path ---
  */
 
 import { assert } from "@jsenv/assert"
