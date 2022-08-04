@@ -53,7 +53,7 @@ jobs:
         # env:
         #   NODE_V8_COVERAGE: .coverage/packages
         run: npm run test:workspace
-      - name: Run code tests
+      - name: Run core tests
         run: npm test
       # - name: Run core tests
       #   env:
