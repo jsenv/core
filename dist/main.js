@@ -14075,11 +14075,7 @@ export default inlineContent.text`,
 };
 
 const babelPluginInstrument = (api, {
-  rootDirectoryUrl,
-  useInlineSourceMaps = false,
-  coverageConfig = {
-    "./**/*": true
-  }
+  useInlineSourceMaps = false
 }) => {
   const {
     programVisitor
@@ -14087,17 +14083,6 @@ const babelPluginInstrument = (api, {
   const {
     types
   } = api;
-  const associations = URL_META.resolveAssociations({
-    cover: coverageConfig
-  }, rootDirectoryUrl);
-
-  const shouldInstrument = url => {
-    return URL_META.applyAssociations({
-      url,
-      associations
-    }).cover;
-  };
-
   return {
     name: "transform-instrument",
     visitor: {
@@ -14109,19 +14094,6 @@ const babelPluginInstrument = (api, {
           const {
             opts
           } = file;
-
-          if (!opts.sourceFileName) {
-            console.warn(`cannot instrument file when "sourceFileName" option is not set`);
-            return;
-          }
-
-          const fileUrl = fileSystemPathToUrl$1(opts.sourceFileName);
-
-          if (!shouldInstrument(fileUrl)) {
-            return;
-          }
-
-          this.__dv__ = null;
           let inputSourceMap;
 
           if (useInlineSourceMaps) {
@@ -15340,10 +15312,17 @@ const jsenvPluginBabel = ({
       const requestHeaders = context.request.headers;
 
       if (requestHeaders["x-coverage-instanbul"]) {
-        babelPluginStructure["transform-instrument"] = [babelPluginInstrument, {
-          rootDirectoryUrl: context.rootDirectoryUrl,
-          coverageConfig: JSON.parse(requestHeaders["x-coverage-instanbul"])
-        }];
+        const coverageConfig = JSON.parse(requestHeaders["x-coverage-instanbul"]);
+        const associations = URL_META.resolveAssociations({
+          cover: coverageConfig
+        }, context.rootDirectoryUrl);
+
+        if (URL_META.applyAssociations({
+          url: urlInfo.url,
+          associations
+        }).cover) {
+          babelPluginStructure["transform-instrument"] = [babelPluginInstrument];
+        }
       }
     }
 
@@ -26191,9 +26170,7 @@ const relativeUrlToEmptyCoverage = async (relativeUrl, {
     const {
       metadata
     } = await applyBabelPlugins({
-      babelPlugins: [[babelPluginInstrument, {
-        rootDirectoryUrl
-      }]],
+      babelPlugins: [babelPluginInstrument],
       urlInfo: {
         originalUrl: fileUrl,
         content
@@ -26474,9 +26451,7 @@ const run = async ({
   };
 
   if (collectConsole) {
-    callbacks.push(() => {
-      result.consoleCalls = consoleCalls;
-    });
+    result.consoleCalls = consoleCalls;
   } // we do not keep coverage in memory, it can grow very big
   // instead we store it on the filesystem
   // and they can be read later at "coverageFileUrl"
