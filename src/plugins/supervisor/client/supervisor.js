@@ -11,6 +11,13 @@ window.__supervisor__ = (() => {
     executionResults,
   }
 
+  let navigationStartTime
+  try {
+    navigationStartTime = window.performance.timing.navigationStart
+  } catch (e) {
+    navigationStartTime = Date.now()
+  }
+
   supervisor.setupReportException = ({
     rootDirectoryUrl,
     errorNotification,
@@ -737,6 +744,8 @@ window.__supervisor__ = (() => {
       }
       const executionResult = {
         status: "pending",
+        startTime: Date.now(),
+        endTime: null,
         exception: null,
         namespace: null,
         coverage: null,
@@ -745,6 +754,10 @@ window.__supervisor__ = (() => {
       let resolveScriptExecutionPromise
       const scriptExecutionPromise = new Promise((resolve) => {
         resolveScriptExecutionPromise = () => {
+          executionResult.endTime = Date.now()
+          if (measurePerf) {
+            performance.measure(`execution`, `execution_start`)
+          }
           resolve()
         }
       })
@@ -752,9 +765,6 @@ window.__supervisor__ = (() => {
       scriptExecutionPromises.push(scriptExecutionPromise)
       try {
         const result = await execution.execute({ isReload })
-        if (measurePerf) {
-          performance.measure(`execution`, `execution_start`)
-        }
         executionResult.status = "completed"
         executionResult.namespace = result
         executionResult.coverage = window.__coverage__
@@ -764,9 +774,6 @@ window.__supervisor__ = (() => {
         }
         resolveScriptExecutionPromise()
       } catch (e) {
-        if (measurePerf) {
-          performance.measure(`execution`, `execution_start`)
-        }
         executionResult.status = "errored"
         const exception = supervisor.createException({
           reason: e,
@@ -898,16 +905,8 @@ window.__supervisor__ = (() => {
       return {
         status: "completed",
         executionResults,
-        startTime: getNavigationStartTime(),
+        startTime: navigationStartTime,
         endTime: Date.now(),
-      }
-    }
-
-    const getNavigationStartTime = () => {
-      try {
-        return window.performance.timing.navigationStart
-      } catch (e) {
-        return Date.now()
       }
     }
   }

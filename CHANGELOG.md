@@ -1,3 +1,7 @@
+# 28.1.2
+
+- update how script execution is awaited by document supervisor
+
 # 28.1.1
 
 - fix script execution order in html

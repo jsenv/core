@@ -7,25 +7,15 @@ window.__supervisor__ = (() => {
     reportError: notImplemented,
     superviseScript: notImplemented,
     reloadSupervisedScript: notImplemented,
-    collectScriptResults: notImplemented,
-    getScriptExecutionResults: () => {
-      // wait for page to load before collecting script execution results
-      const htmlReadyPromise = new Promise((resolve) => {
-        if (document.readyState === "complete") {
-          resolve()
-          return
-        }
-        const loadCallback = () => {
-          window.removeEventListener("load", loadCallback)
-          resolve()
-        }
-        window.addEventListener("load", loadCallback)
-      })
-      return htmlReadyPromise.then(() => {
-        return supervisor.collectScriptResults()
-      })
-    },
+    getDocumentExecutionResult: notImplemented,
     executionResults,
+  }
+
+  let navigationStartTime
+  try {
+    navigationStartTime = window.performance.timing.navigationStart
+  } catch (e) {
+    navigationStartTime = Date.now()
   }
 
   supervisor.setupReportException = ({
@@ -728,7 +718,7 @@ window.__supervisor__ = (() => {
     })
 
     const supervisedScripts = []
-    const executionPromises = []
+    const scriptExecutionPromises = []
     supervisor.createExecution = ({ type, src, async, execute }) => {
       const execution = {
         type,
@@ -754,28 +744,27 @@ window.__supervisor__ = (() => {
       }
       const executionResult = {
         status: "pending",
+        startTime: Date.now(),
+        endTime: null,
         exception: null,
         namespace: null,
         coverage: null,
       }
       executionResults[execution.src] = executionResult
-      let resolveExecutionPromise
-      const promise = new Promise((resolve) => {
-        resolveExecutionPromise = () => {
-          const index = executionPromises.indexOf(promise)
-          if (index > -1) {
-            executionPromises.splice(index, 1)
+      let resolveScriptExecutionPromise
+      const scriptExecutionPromise = new Promise((resolve) => {
+        resolveScriptExecutionPromise = () => {
+          executionResult.endTime = Date.now()
+          if (measurePerf) {
+            performance.measure(`execution`, `execution_start`)
           }
           resolve()
         }
       })
-      promise.execution = execution
-      executionPromises.push(promise)
+      scriptExecutionPromise.execution = execution
+      scriptExecutionPromises.push(scriptExecutionPromise)
       try {
         const result = await execution.execute({ isReload })
-        if (measurePerf) {
-          performance.measure(`execution`, `execution_start`)
-        }
         executionResult.status = "completed"
         executionResult.namespace = result
         executionResult.coverage = window.__coverage__
@@ -783,11 +772,8 @@ window.__supervisor__ = (() => {
           console.log(`${execution.type} load ended`)
           console.groupEnd()
         }
-        resolveExecutionPromise()
+        resolveScriptExecutionPromise()
       } catch (e) {
-        if (measurePerf) {
-          performance.measure(`execution`, `execution_start`)
-        }
         executionResult.status = "errored"
         const exception = supervisor.createException({
           reason: e,
@@ -800,7 +786,7 @@ window.__supervisor__ = (() => {
         if (logs) {
           console.groupEnd()
         }
-        resolveExecutionPromise()
+        resolveScriptExecutionPromise()
       }
     }
 
@@ -809,10 +795,10 @@ window.__supervisor__ = (() => {
     // - wait module script previous execution (non async)
     // see  https://gist.github.com/jakub-g/385ee6b41085303a53ad92c7c8afd7a6#typemodule-vs-non-module-typetextjavascript-vs-script-nomodule
     supervisor.getPreviousExecutionDonePromise = async () => {
-      const previousNonAsyncExecutions = executionPromises.filter(
+      const previousNonAsyncScriptExecutions = scriptExecutionPromises.filter(
         (promise) => !promise.execution.async,
       )
-      await Promise.all(previousNonAsyncExecutions)
+      await Promise.all(previousNonAsyncScriptExecutions)
     }
     supervisor.superviseScript = async ({ src, async }) => {
       const { currentScript } = document
@@ -890,41 +876,37 @@ window.__supervisor__ = (() => {
         supervisedScript.reload()
       }
     }
-    supervisor.collectScriptResults = async () => {
+    supervisor.getDocumentExecutionResult = async () => {
       // just to be super safe and ensure any <script type="module"> got a chance to execute
-      const scriptTypeModuleLoaded = new Promise((resolve) => {
-        const scriptTypeModule = document.createElement("script")
-        scriptTypeModule.type = "module"
-        scriptTypeModule.innerText =
-          "window.__supervisor__.scriptModuleCallback()"
-        window.__supervisor__.scriptModuleCallback = () => {
-          scriptTypeModule.parentNode.removeChild(scriptTypeModule)
+      const documentReadyPromise = new Promise((resolve) => {
+        if (document.readyState === "complete") {
+          resolve()
+          return
+        }
+        const loadCallback = () => {
+          window.removeEventListener("load", loadCallback)
           resolve()
         }
-        document.body.appendChild(scriptTypeModule)
+        window.addEventListener("load", loadCallback)
       })
-      await scriptTypeModuleLoaded
-
-      const waitPendingExecutions = async () => {
-        if (executionPromises.length) {
-          await Promise.all(executionPromises)
-          await waitPendingExecutions()
+      await documentReadyPromise
+      const waitScriptExecutions = async () => {
+        const numberOfScripts = scriptExecutionPromises.length
+        await Promise.all(scriptExecutionPromises)
+        // new scripts added while the other where executing
+        // (should happen only on webkit where
+        // script might be added after window load event)
+        if (scriptExecutionPromises.length > numberOfScripts) {
+          await waitScriptExecutions()
         }
       }
-      await waitPendingExecutions()
+      await waitScriptExecutions()
+
       return {
         status: "completed",
         executionResults,
-        startTime: getNavigationStartTime(),
+        startTime: navigationStartTime,
         endTime: Date.now(),
-      }
-    }
-
-    const getNavigationStartTime = () => {
-      try {
-        return window.performance.timing.navigationStart
-      } catch (e) {
-        return Date.now()
       }
     }
   }

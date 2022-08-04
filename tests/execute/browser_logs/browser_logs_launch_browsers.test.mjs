@@ -33,6 +33,8 @@ const test = async ({ runtime }) => {
     namespace: {
       "/main.js": {
         status: "completed",
+        startTime: assert.any(Number),
+        endTime: assert.any(Number),
         exception: null,
         namespace: {},
       },
