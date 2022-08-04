@@ -1,3 +1,7 @@
+# 28.1.3
+
+- fix error handling when runtine.run throw
+
 # 28.1.2
 
 - update how script execution is awaited by document supervisor

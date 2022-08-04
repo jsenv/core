@@ -173,31 +173,30 @@ const createOperation = () => {
   }
 
   const addAbortSource = (abortSourceCallback) => {
+    const abortSource = {
+      cleaned: false,
+      signal: null,
+      remove: callbackNoop,
+    }
     const abortSourceController = new AbortController()
     const abortSourceSignal = abortSourceController.signal
-
+    abortSource.signal = abortSourceSignal
     if (operationSignal.aborted) {
-      return {
-        signal: abortSourceSignal,
-        remove: callbackNoop,
-      }
+      return abortSource
     }
-
     const returnValue = abortSourceCallback((value) => {
       abortSourceController.abort(value)
     })
-    const removeAbortSource =
-      typeof returnValue === "function" ? returnValue : callbackNoop
-
     const removeAbortSignal = addAbortSignal(abortSourceSignal, {
       onRemove: () => {
-        removeAbortSource()
+        if (typeof returnValue === "function") {
+          returnValue()
+        }
+        abortSource.cleaned = true
       },
     })
-    return {
-      signal: abortSourceSignal,
-      remove: removeAbortSignal,
-    }
+    abortSource.remove = removeAbortSignal
+    return abortSource
   }
 
   const timeout = (ms) => {

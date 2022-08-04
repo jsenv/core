@@ -10,9 +10,9 @@ import { rootDirectoryUrl, plugins } from "../jsenv.config.mjs"
 
 const devServerOrigin = "http://localhost:3401"
 const devServerStarted = await pingServer(devServerOrigin)
-let devServer
+let devServerModule
 if (!devServerStarted) {
-  devServer = (await import("./start_dev_server.mjs")).devServer
+  devServerModule = await import("./start_dev_server.mjs")
 }
 try {
   await executeTestPlan({
@@ -33,7 +33,7 @@ try {
     coverageMethodForBrowsers: "istanbul",
   })
 } finally {
-  if (devServer) {
-    devServer.stop()
+  if (devServerModule) {
+    devServerModule.devServer.stop()
   }
 }

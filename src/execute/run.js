@@ -108,7 +108,7 @@ export const run = async ({
             } catch (e) {
               cb({
                 status: "errored",
-                error: e,
+                errors: [e],
               })
             }
           },

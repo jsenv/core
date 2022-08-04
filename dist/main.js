@@ -1320,29 +1320,33 @@ const createOperation = () => {
   };
 
   const addAbortSource = abortSourceCallback => {
+    const abortSource = {
+      cleaned: false,
+      signal: null,
+      remove: callbackNoop
+    };
     const abortSourceController = new AbortController();
     const abortSourceSignal = abortSourceController.signal;
+    abortSource.signal = abortSourceSignal;
 
     if (operationSignal.aborted) {
-      return {
-        signal: abortSourceSignal,
-        remove: callbackNoop
-      };
+      return abortSource;
     }
 
     const returnValue = abortSourceCallback(value => {
       abortSourceController.abort(value);
     });
-    const removeAbortSource = typeof returnValue === "function" ? returnValue : callbackNoop;
     const removeAbortSignal = addAbortSignal(abortSourceSignal, {
       onRemove: () => {
-        removeAbortSource();
+        if (typeof returnValue === "function") {
+          returnValue();
+        }
+
+        abortSource.cleaned = true;
       }
     });
-    return {
-      signal: abortSourceSignal,
-      remove: removeAbortSignal
-    };
+    abortSource.remove = removeAbortSignal;
+    return abortSource;
   };
 
   const timeout = ms => {
@@ -26503,7 +26507,7 @@ const run = async ({
           } catch (e) {
             cb({
               status: "errored",
-              error: e
+              errors: [e]
             });
           }
         }
@@ -27575,7 +27579,7 @@ const executeTestPlan = async ({
   testPlan,
   updateProcessExitCode = true,
   maxExecutionsInParallel = 1,
-  defaultMsAllocatedPerExecution = 30000,
+  defaultMsAllocatedPerExecution = 30_000,
   failFast = false,
   // keepRunning: false to ensure runtime is stopped once executed
   // because we have what we wants: execution is completed and

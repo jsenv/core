@@ -52,7 +52,7 @@ export const executeTestPlan = async ({
   testPlan,
   updateProcessExitCode = true,
   maxExecutionsInParallel = 1,
-  defaultMsAllocatedPerExecution = 30000,
+  defaultMsAllocatedPerExecution = 30_000,
   failFast = false,
   // keepRunning: false to ensure runtime is stopped once executed
   // because we have what we wants: execution is completed and
