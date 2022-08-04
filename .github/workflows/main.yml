@@ -6,12 +6,6 @@
 # It does the following:
 #  - Check linting passes (no eslint error on files)
 #  - Run tests and ensure none is failing
-#  - Update tests code coverage
-#
-# If all these steps are passing the workflow ends up
-# publishing package on npm if needed. It will publish the npm package
-# using the token found in secrets.NPM_TOKEN. Be sure to create this
-# token in the GitHub repository.
 
 name: main
 
@@ -27,7 +21,7 @@ jobs:
   test:
     strategy:
       matrix:
-        os: [ubuntu-20.04, macos-10.15, windows-2022]
+        os: [ubuntu-20.04, macos-12, windows-2022]
         node: [18.5.0]
     runs-on: ${{ matrix.os }}
     name: test on ${{ matrix.os }} and node ${{ matrix.node }}
@@ -51,7 +45,7 @@ jobs:
       - name: Install playwright
         run: npm run playwright-install
       - name: Install certificate # needed for @jsenv/server tests
-        if: runner.os != 'Windows'
+        if: runner.os == 'Linux'
         run: node ./packages/server/scripts/certificate_install.mjs
       - name: Run ESLint
         run: npm run eslint
@@ -60,12 +54,14 @@ jobs:
         #   NODE_V8_COVERAGE: .coverage/packages
         run: npm run test:workspace
       - name: Run core tests
-        env:
-          NODE_V8_COVERAGE: .coverage/core
-        run: npm run test -- --coverage
-      - name: Upload coverage
-        uses: codecov/codecov-action@v2
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./.coverage/coverage.json,./packages/integrity/.coverage/coverage.json,./packages/utils/.coverage/coverage.json
-          verbose: true
+        run: npm test
+      # - name: Run core tests
+      #   env:
+      #     NODE_V8_COVERAGE: .coverage/core
+      #   run: npm run test -- --coverage
+      # - name: Upload coverage
+      #   uses: codecov/codecov-action@v2
+      #   with:
+      #     token: ${{ secrets.CODECOV_TOKEN }}
+      #     files: ./.coverage/coverage.json,./packages/integrity/.coverage/coverage.json,./packages/utils/.coverage/coverage.json
+      #     verbose: true

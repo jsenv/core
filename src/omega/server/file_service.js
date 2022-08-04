@@ -25,7 +25,7 @@ export const createFileService = ({
 
   plugins,
   urlAnalysis,
-  htmlSupervisor,
+  supervisor,
   nodeEsmResolution,
   fileSystemMagicResolution,
   transpilation,
@@ -118,7 +118,7 @@ export const createFileService = ({
           runtimeCompat,
 
           urlAnalysis,
-          htmlSupervisor,
+          supervisor,
           nodeEsmResolution,
           fileSystemMagicResolution,
           transpilation,

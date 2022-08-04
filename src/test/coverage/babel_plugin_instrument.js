@@ -1,29 +1,10 @@
-import { URL_META } from "@jsenv/url-meta"
-import { fileSystemPathToUrl } from "@jsenv/urls"
-
 import { requireFromJsenv } from "@jsenv/core/src/require_from_jsenv.js"
 
 // https://github.com/istanbuljs/babel-plugin-istanbul/blob/321740f7b25d803f881466ea819d870f7ed6a254/src/index.js
 
-export const babelPluginInstrument = (
-  api,
-  {
-    rootDirectoryUrl,
-    useInlineSourceMaps = false,
-    coverageConfig = { "./**/*": true },
-  },
-) => {
+export const babelPluginInstrument = (api, { useInlineSourceMaps = false }) => {
   const { programVisitor } = requireFromJsenv("istanbul-lib-instrument")
-
   const { types } = api
-
-  const associations = URL_META.resolveAssociations(
-    { cover: coverageConfig },
-    rootDirectoryUrl,
-  )
-  const shouldInstrument = (url) => {
-    return URL_META.applyAssociations({ url, associations }).cover
-  }
 
   return {
     name: "transform-instrument",
@@ -32,21 +13,7 @@ export const babelPluginInstrument = (
         enter(path) {
           const { file } = this
           const { opts } = file
-          if (!opts.sourceFileName) {
-            console.warn(
-              `cannot instrument file when "sourceFileName" option is not set`,
-            )
-            return
-          }
-          const fileUrl = fileSystemPathToUrl(opts.sourceFileName)
-          if (!shouldInstrument(fileUrl)) {
-            return
-          }
-
-          this.__dv__ = null
-
           let inputSourceMap
-
           if (useInlineSourceMaps) {
             // https://github.com/istanbuljs/babel-plugin-istanbul/commit/a9e15643d249a2985e4387e4308022053b2cd0ad#diff-1fdf421c05c1140f6d71444ea2b27638R65
             inputSourceMap =
@@ -56,7 +23,6 @@ export const babelPluginInstrument = (
           } else {
             inputSourceMap = opts.inputSourceMap
           }
-
           this.__dv__ = programVisitor(
             types,
             opts.filenameRelative || opts.filename,

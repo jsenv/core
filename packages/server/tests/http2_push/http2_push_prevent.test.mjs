@@ -1,17 +1,18 @@
 import { connect } from "node:http2"
-import { requestCertificateForLocalhost } from "@jsenv/https-local"
+import { requestCertificate } from "@jsenv/https-local"
 import { assert } from "@jsenv/assert"
 import { readFile } from "@jsenv/filesystem"
 
 import { startServer, fetchFileSystem } from "@jsenv/server"
 import { applyDnsResolution } from "@jsenv/server/src/internal/dns_resolution.js"
 
-if (process.platform !== "win32") {
+// certificates only generated on linux
+if (process.platform === "linux") {
   const localhostDns = await applyDnsResolution("localhost")
   const expectedOrigin =
     localhostDns.address === "127.0.0.1" ? "localhost" : "127.0.0.1"
 
-  const { certificate, privateKey } = requestCertificateForLocalhost()
+  const { certificate, privateKey } = requestCertificate()
   const server = await startServer({
     logLevel: "warn",
     protocol: "https",

@@ -1,6 +1,12 @@
 import { assert } from "@jsenv/assert"
 
-import { startDevServer, execute, chromium, firefox, webkit } from "@jsenv/core"
+import {
+  startDevServer,
+  execute,
+  chromium,
+  // firefox,
+  webkit,
+} from "@jsenv/core"
 
 const test = async ({ runtime }) => {
   const devServer = await startDevServer({
@@ -9,20 +15,20 @@ const test = async ({ runtime }) => {
     keepProcessAlive: false,
     port: 0,
   })
-  const { status, consoleCalls } = await execute({
+  const result = await execute({
     logLevel: "warn",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
     devServerOrigin: devServer.origin,
     fileRelativeUrl: `./main.html`,
     runtime,
-    allocatedMs: 5000,
+    allocatedMs: 5_000,
     mirrorConsole: false,
     collectConsole: true,
   })
   devServer.stop()
   const actual = {
-    status,
-    consoleCalls,
+    status: result.status,
+    consoleCalls: result.consoleCalls,
   }
   const expected = {
     status: "timedout",
@@ -41,5 +47,5 @@ const test = async ({ runtime }) => {
 }
 
 await test({ runtime: chromium })
-await test({ runtime: firefox })
+// await test({ runtime: firefox })
 await test({ runtime: webkit })

@@ -30,7 +30,6 @@ export const collectFiles = async ({
     await Promise.all(
       directoryItems.map(async (directoryItem) => {
         const directoryChildNodeUrl = `${directoryUrl}${directoryItem}`
-
         collectOperation.throwIfAborted()
         const directoryChildNodeStats = await readEntryStat(
           directoryChildNodeUrl,

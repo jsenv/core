@@ -16,7 +16,11 @@ export const run = async ({
   runtime,
   runtimeParams,
 }) => {
-  const result = {}
+  const result = {
+    status: "pending",
+    errors: [],
+    namespace: null,
+  }
   const callbacks = []
 
   const onConsoleRef = { current: () => {} }
@@ -25,6 +29,7 @@ export const run = async ({
 
   const runOperation = Abort.startOperation()
   runOperation.addAbortSignal(signal)
+  let timeoutAbortSource
   if (
     // ideally we would rather log than the timeout is ignored
     // when keepRunning is true
@@ -32,24 +37,8 @@ export const run = async ({
     typeof allocatedMs === "number" &&
     allocatedMs !== Infinity
   ) {
-    const timeoutAbortSource = runOperation.timeout(allocatedMs)
-    callbacks.push(() => {
-      if (
-        result.status === "errored" &&
-        Abort.isAbortError(result.error) &&
-        timeoutAbortSource.signal.aborted
-      ) {
-        result.status = "timedout"
-        delete result.error
-      }
-    })
+    timeoutAbortSource = runOperation.timeout(allocatedMs)
   }
-  callbacks.push(() => {
-    if (result.status === "errored" && Abort.isAbortError(result.error)) {
-      result.status = "aborted"
-      delete result.error
-    }
-  })
   const consoleCalls = []
   onConsoleRef.current = ({ type, text }) => {
     if (mirrorConsole) {
@@ -64,9 +53,7 @@ export const run = async ({
     }
   }
   if (collectConsole) {
-    callbacks.push(() => {
-      result.consoleCalls = consoleCalls
-    })
+    result.consoleCalls = consoleCalls
   }
 
   // we do not keep coverage in memory, it can grow very big
@@ -133,29 +120,30 @@ export const run = async ({
     if (winner.name === "aborted") {
       runOperation.throwIfAborted()
     }
-
-    const { status, namespace, error, performance } = winner.data
+    const { status, namespace, errors, performance } = winner.data
     result.status = status
-    if (status === "errored") {
-      result.error = error
-    } else {
-      result.namespace = namespace
-    }
+    result.errors.push(...errors)
+    result.namespace = namespace
     if (collectPerformance) {
       result.performance = performance
     }
-    callbacks.forEach((callback) => {
-      callback()
-    })
-    return result
   } catch (e) {
-    result.status = "errored"
-    result.error = e
-    callbacks.forEach((callback) => {
-      callback()
-    })
-    return result
+    if (Abort.isAbortError(e)) {
+      if (timeoutAbortSource && timeoutAbortSource.signal.aborted) {
+        result.status = "timedout"
+      } else {
+        result.status = "aborted"
+      }
+    } else {
+      result.status = "errored"
+      result.errors.push(e)
+    }
   } finally {
     await runOperation.end()
   }
+
+  callbacks.forEach((callback) => {
+    callback()
+  })
+  return result
 }

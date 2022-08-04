@@ -1,4 +1,3 @@
-import { Script } from "node:vm"
 import { writeFileSync } from "node:fs"
 
 import { createDetailedMessage } from "@jsenv/log"
@@ -10,7 +9,6 @@ import {
 } from "@jsenv/abort"
 import { moveUrl } from "@jsenv/urls"
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js"
-import { escapeRegexpSpecialChars } from "@jsenv/utils/src/string/escape_regexp_special_chars.js"
 
 import { filterV8Coverage } from "@jsenv/core/src/test/coverage/v8_coverage.js"
 import { composeTwoFileByFileIstanbulCoverages } from "@jsenv/core/src/test/coverage/istanbul_coverage_composition.js"
@@ -121,7 +119,11 @@ export const createRuntimeFromPlaywright = ({
       }
     }
 
-    const result = {}
+    const result = {
+      status: "pending",
+      namespace: null,
+      errors: [],
+    }
     const callbacks = []
     if (coverageEnabled) {
       if (
@@ -251,18 +253,18 @@ export const createRuntimeFromPlaywright = ({
             })
           },
           // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
-          pageerror: (cb) => {
-            return registerEvent({
-              object: page,
-              eventType: "pageerror",
-              callback: (error) => {
-                if (ignoreErrorHook(error)) {
-                  return
-                }
-                cb(transformErrorHook(error))
-              },
-            })
-          },
+          // pageerror: () => {
+          //   return registerEvent({
+          //     object: page,
+          //     eventType: "pageerror",
+          //     callback: (error) => {
+          //       if (ignoreErrorHook(error)) {
+          //         return
+          //       }
+          //       result.errors.push(transformErrorHook(error))
+          //     },
+          //   })
+          // },
           closed: (cb) => {
             // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
             if (isBrowserDedicatedToExecution) {
@@ -301,32 +303,14 @@ export const createRuntimeFromPlaywright = ({
                 /* eslint-disable no-undef */
                 /* istanbul ignore next */
                 () => {
-                  if (!window.__html_supervisor__) {
-                    throw new Error(`window.__html_supervisor__ not found`)
+                  if (!window.__supervisor__) {
+                    throw new Error(`window.__supervisor__ not found`)
                   }
-                  return window.__html_supervisor__.getScriptExecutionResults()
+                  return window.__supervisor__.getScriptExecutionResults()
                 },
                 /* eslint-enable no-undef */
               )
-              const { status, scriptExecutionResults } = returnValue
-              if (status === "errored") {
-                const { exceptionSource } = returnValue
-                const error = evalException(exceptionSource, {
-                  rootDirectoryUrl,
-                  devServerOrigin,
-                  transformErrorHook,
-                })
-                cb({
-                  status: "errored",
-                  error,
-                  namespace: scriptExecutionResults,
-                })
-              } else {
-                cb({
-                  status: "completed",
-                  namespace: scriptExecutionResults,
-                })
-              }
+              cb(returnValue)
             } catch (e) {
               reject(e)
             }
@@ -336,39 +320,46 @@ export const createRuntimeFromPlaywright = ({
       )
     })
 
-    const getResult = async () => {
+    const writeResult = async () => {
       const winner = await winnerPromise
       if (winner.name === "aborted") {
-        return {
-          status: "aborted",
-        }
+        result.status = "aborted"
+        return
       }
-      if (winner.name === "error" || winner.name === "pageerror") {
-        const error = winner.data
-        return {
-          status: "errored",
-          error,
-        }
+      if (winner.name === "error") {
+        let error = winner.data
+        result.status = "errored"
+        result.errors.push(error)
+        return
       }
       if (winner.name === "closed") {
-        return {
-          status: "errored",
-          error: isBrowserDedicatedToExecution
+        result.status = "errored"
+        result.errors.push(
+          isBrowserDedicatedToExecution
             ? new Error(`browser disconnected during execution`)
             : new Error(`page closed during execution`),
-        }
+        )
+        return
       }
-      return winner.data
+      // winner.name = 'response'
+      const { executionResults } = winner.data
+      result.status = "completed"
+      result.namespace = executionResults
+      Object.keys(executionResults).forEach((key) => {
+        const executionResult = executionResults[key]
+        if (executionResult.status === "errored") {
+          result.status = "errored"
+          result.errors.push({
+            ...executionResult.exception,
+            stack: executionResult.exception.text,
+          })
+        }
+      })
+      return
     }
 
     try {
-      const { status, error, namespace, performance } = await getResult()
-      result.status = status
-      if (status === "errored") {
-        result.error = error
-      } else {
-        result.namespace = namespace
-      }
+      await writeResult()
       if (collectPerformance) {
         result.performance = performance
       }
@@ -378,7 +369,7 @@ export const createRuntimeFromPlaywright = ({
       }, Promise.resolve())
     } catch (e) {
       result.status = "errored"
-      result.error = e
+      result.errors = [e]
     }
     if (keepRunning) {
       stopSignal.notify = cleanup
@@ -532,21 +523,4 @@ const registerEvent = ({ object, eventType, callback }) => {
   return () => {
     object.removeListener(eventType, callback)
   }
-}
-
-const evalException = (
-  exceptionSource,
-  { rootDirectoryUrl, devServerOrigin, transformErrorHook },
-) => {
-  const script = new Script(exceptionSource, { filename: "" })
-  const error = script.runInThisContext()
-  if (error && error instanceof Error) {
-    const remoteRootRegexp = new RegExp(
-      escapeRegexpSpecialChars(`${devServerOrigin}/`),
-      "g",
-    )
-    error.stack = error.stack.replace(remoteRootRegexp, rootDirectoryUrl)
-    error.message = error.message.replace(remoteRootRegexp, rootDirectoryUrl)
-  }
-  return transformErrorHook(error)
 }

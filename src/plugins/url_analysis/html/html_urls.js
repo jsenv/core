@@ -96,12 +96,12 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
     attributeName,
     specifier,
   }) => {
-    const generatedFromInlineContent =
-      getHtmlNodeAttribute(node, "generated-from-inline-content") !== undefined
+    const isContentCooked =
+      getHtmlNodeAttribute(node, "jsenv-plugin-action") === "content_cooked"
     let position
-    if (generatedFromInlineContent) {
+    if (isContentCooked) {
       // when generated from inline content,
-      // line, column is not "src" nor "generated-from-src" but "original-position"
+      // line, column is not "src" nor "inlined-from-src" but "original-position"
       position = getHtmlNodePosition(node)
     } else {
       position = getHtmlNodeAttributePosition(node, attributeName)
@@ -126,8 +126,8 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
   const visitAttributeAsUrlSpecifier = ({ node, attributeName, ...rest }) => {
     const value = getHtmlNodeAttribute(node, attributeName)
     if (value) {
-      const generatedBy = getHtmlNodeAttribute(node, "generated-by")
-      if (generatedBy !== undefined) {
+      const jsenvPluginOwner = getHtmlNodeAttribute(node, "jsenv-plugin-owner")
+      if (jsenvPluginOwner === "jsenv:importmap") {
         // during build the importmap is inlined
         // and shoud not be considered as a dependency anymore
         return
@@ -137,8 +137,8 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
         node,
         attributeName,
         specifier:
-          attributeName === "generated-from-src" ||
-          attributeName === "generated-from-href"
+          attributeName === "inlined-from-src" ||
+          attributeName === "inlined-from-href"
             ? new URL(value, url).href
             : value,
       })
@@ -146,13 +146,13 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
       visitAttributeAsUrlSpecifier({
         ...rest,
         node,
-        attributeName: "generated-from-src",
+        attributeName: "inlined-from-src",
       })
     } else if (attributeName === "href") {
       visitAttributeAsUrlSpecifier({
         ...rest,
         node,
-        attributeName: "generated-from-href",
+        attributeName: "inlined-from-href",
       })
     }
   }
@@ -193,6 +193,7 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
       if (type === "text") {
         // ignore <script type="whatever" src="./file.js">
         // per HTML spec https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#attr-type
+        // this will be handled by jsenv_plugin_html_inline_content
         return
       }
       visitAttributeAsUrlSpecifier({

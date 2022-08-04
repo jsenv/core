@@ -33,6 +33,7 @@ const test = async ({ runtime }) => {
     namespace: {
       "/main.js": {
         status: "completed",
+        exception: null,
         namespace: {},
       },
     },

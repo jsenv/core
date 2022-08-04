@@ -134,7 +134,8 @@ export const jsenvPluginImportmap = () => {
           })
           setHtmlNodeText(importmap, inlineImportmapUrlInfo.content)
           setHtmlNodeAttributes(importmap, {
-            "generated-by": "jsenv:importmap",
+            "jsenv-plugin-owner": "jsenv:importmap",
+            "jsenv-plugin-action": "content_cooked",
           })
           onHtmlImportmapParsed(
             JSON.parse(inlineImportmapUrlInfo.content),
@@ -162,8 +163,9 @@ export const jsenvPluginImportmap = () => {
           setHtmlNodeText(importmap, importmapUrlInfo.content)
           setHtmlNodeAttributes(importmap, {
             "src": undefined,
-            "generated-by": "jsenv:importmap",
-            "generated-from-src": src,
+            "jsenv-plugin-owner": "jsenv:importmap",
+            "jsenv-plugin-action": "inlined",
+            "inlined-from-src": src,
           })
 
           const { line, column, lineEnd, columnEnd, isOriginal } =

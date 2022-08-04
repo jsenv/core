@@ -1,15 +1,14 @@
-import { Script } from "node:vm"
 import { assert } from "@jsenv/assert"
 
 import { startDevServer } from "@jsenv/core"
 import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
 
 const test = async (params) => {
+  const rootDirectoryUrl = new URL("./client/", import.meta.url)
   const devServer = await startDevServer({
     logLevel: "warn",
-    rootDirectoryUrl: new URL("./client/", import.meta.url),
+    rootDirectoryUrl,
     keepProcessAlive: false,
-    htmlSupervisor: true,
     ...params,
   })
   const { returnValue, pageLogs, pageErrors } = await executeInChromium({
@@ -18,34 +17,28 @@ const test = async (params) => {
     collectErrors: true,
     /* eslint-disable no-undef */
     pageFunction: async () => {
-      return window.__html_supervisor__.getScriptExecutionResults()
+      return window.__supervisor__.getScriptExecutionResults()
     },
     /* eslint-enable no-undef */
   })
-  return { returnValue, server: devServer, pageLogs, pageErrors }
+  const errorStack =
+    returnValue.executionResults["/main.js"].exception.originalStack
+  const actual = {
+    errorStack,
+    pageLogs,
+    pageErrors,
+  }
+  const expected = {
+    errorStack: `    at triggerError (${devServer.origin}/trigger_error.js:2:9)
+    at ${devServer.origin}/main.js:3:1`,
+    pageLogs: [],
+    pageErrors: [
+      Object.assign(new Error("SPECIAL_STRING_UNLIKELY_TO_COLLIDE"), {
+        name: "Error",
+      }),
+    ],
+  }
+  assert({ actual, expected })
 }
 
-const { server, returnValue, pageLogs, pageErrors } = await test({})
-const error = new Script(returnValue.exceptionSource, {
-  filename: "",
-}).runInThisContext()
-const expectedErrorStack = `Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
-    at triggerError (${server.origin}/trigger_error.js:2:9)
-    at ${server.origin}/main.js:3:1`
-const actual = {
-  error,
-  errorStack: error.stack.slice(0, expectedErrorStack.length),
-  pageLogs,
-  pageErrors,
-}
-const expected = {
-  error: new Error("SPECIAL_STRING_UNLIKELY_TO_COLLIDE"),
-  errorStack: expectedErrorStack,
-  pageLogs: [],
-  pageErrors: [
-    Object.assign(new Error("SPECIAL_STRING_UNLIKELY_TO_COLLIDE"), {
-      name: "Error",
-    }),
-  ],
-}
-assert({ actual, expected })
+await test()

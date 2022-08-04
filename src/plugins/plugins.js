@@ -7,7 +7,7 @@ import { jsenvPluginUrlVersion } from "./url_version/jsenv_plugin_url_version.js
 import { jsenvPluginFileUrls } from "./file_urls/jsenv_plugin_file_urls.js"
 import { jsenvPluginHttpUrls } from "./http_urls/jsenv_plugin_http_urls.js"
 import { jsenvPluginInline } from "./inline/jsenv_plugin_inline.js"
-import { jsenvPluginHtmlSupervisor } from "./html_supervisor/jsenv_plugin_html_supervisor.js"
+import { jsenvPluginSupervisor } from "./supervisor/jsenv_plugin_supervisor.js"
 import { jsenvPluginCommonJsGlobals } from "./commonjs_globals/jsenv_plugin_commonjs_globals.js"
 import { jsenvPluginImportMetaScenarios } from "./import_meta_scenarios/jsenv_plugin_import_meta_scenarios.js"
 import { jsenvPluginTranspilation } from "./transpilation/jsenv_plugin_transpilation.js"
@@ -27,7 +27,7 @@ export const getCorePlugins = ({
   runtimeCompat,
 
   urlAnalysis = {},
-  htmlSupervisor,
+  supervisor,
   nodeEsmResolution = true,
   fileSystemMagicResolution,
   directoryReferenceAllowed,
@@ -40,8 +40,8 @@ export const getCorePlugins = ({
   clientFilesPruneCallbackList,
   explorer,
 } = {}) => {
-  if (htmlSupervisor === true) {
-    htmlSupervisor = {}
+  if (supervisor === true) {
+    supervisor = {}
   }
   if (nodeEsmResolution === true) {
     nodeEsmResolution = {}
@@ -56,7 +56,7 @@ export const getCorePlugins = ({
   return [
     jsenvPluginUrlAnalysis({ rootDirectoryUrl, ...urlAnalysis }),
     jsenvPluginTranspilation(transpilation),
-    ...(htmlSupervisor ? [jsenvPluginHtmlSupervisor(htmlSupervisor)] : []), // before inline as it turns inline <script> into <script src>
+    ...(supervisor ? [jsenvPluginSupervisor(supervisor)] : []), // before inline as it turns inline <script> into <script src>
     jsenvPluginImportmap(),
     // before node esm to handle bare specifiers
     // + before node esm to handle importmap before inline content

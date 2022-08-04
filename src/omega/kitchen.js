@@ -143,12 +143,12 @@ export const createKitchen = ({
     newReference.original = reference.original || reference
     //  newReference.isEntryPoint = reference.isEntryPoint
   }
-  const resolveReference = (reference) => {
+  const resolveReference = (reference, context = kitchenContext) => {
     try {
       let resolvedUrl = pluginController.callHooksUntil(
         "resolveUrl",
         reference,
-        kitchenContext,
+        context,
       )
       if (!resolvedUrl) {
         throw new Error(`NO_RESOLVE`)
@@ -158,7 +158,7 @@ export const createKitchen = ({
       pluginController.callHooks(
         "redirectUrl",
         reference,
-        kitchenContext,
+        context,
         (returnValue) => {
           const normalizedReturnValue = normalizeUrl(returnValue)
           if (normalizedReturnValue === reference.url) {
@@ -178,7 +178,7 @@ export const createKitchen = ({
       }
 
       const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url)
-      applyReferenceEffectsOnUrlInfo(reference, urlInfo, kitchenContext)
+      applyReferenceEffectsOnUrlInfo(reference, urlInfo, context)
 
       // This hook must touch reference.generatedUrl, NOT reference.url
       // And this is because this hook inject query params used to:
@@ -189,7 +189,7 @@ export const createKitchen = ({
       pluginController.callHooks(
         "transformUrlSearchParams",
         reference,
-        kitchenContext,
+        context,
         (returnValue) => {
           Object.keys(returnValue).forEach((key) => {
             referenceUrlObject.searchParams.set(key, returnValue[key])
@@ -200,7 +200,7 @@ export const createKitchen = ({
       const returnValue = pluginController.callHooksUntil(
         "formatUrl",
         reference,
-        kitchenContext,
+        context,
       )
       reference.generatedSpecifier = returnValue || reference.generatedUrl
       reference.generatedSpecifier = urlSpecifierEncoding.encode(reference)
@@ -386,7 +386,7 @@ export const createKitchen = ({
           ...props,
         })
         references.push(reference)
-        const referencedUrlInfo = resolveReference(reference)
+        const referencedUrlInfo = resolveReference(reference, context)
         return [reference, referencedUrlInfo]
       }
       const referenceUtils = {
@@ -460,7 +460,7 @@ export const createKitchen = ({
           })
           references[index] = nextReference
           mutateReference(previousReference, nextReference)
-          const newUrlInfo = resolveReference(nextReference)
+          const newUrlInfo = resolveReference(nextReference, context)
           const currentUrlInfo = context.urlGraph.getUrlInfo(
             currentReference.url,
           )
@@ -677,7 +677,10 @@ export const createKitchen = ({
     await context.fetchUrlContent(originalUrlInfo, {
       reference: originalReference,
     })
-    if (originalUrlInfo.dependents.size === 0) {
+    if (
+      originalUrlInfo.dependents.size === 0
+      // && context.scenarios.build
+    ) {
       context.urlGraph.deleteUrlInfo(originalUrlInfo.url)
     }
     return originalUrlInfo

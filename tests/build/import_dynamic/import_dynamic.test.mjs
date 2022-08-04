@@ -27,27 +27,17 @@ const test = async (params) => {
     },
     /* eslint-enable no-undef */
   })
-  const actual = {
-    returnValue,
-  }
-  const expected = {
-    returnValue: {
-      answer: 42,
-    },
-  }
+  const actual = returnValue
+  const expected = { answer: 42 }
   assert({ actual, expected })
 }
 
 // support for <script type="module">
 await test({
-  runtimeCompat: {
-    chrome: "64",
-  },
+  runtimeCompat: { chrome: "64" },
 })
 
 // no support for <script type="module">
 await test({
-  runtimeCompat: {
-    chrome: "62",
-  },
+  runtimeCompat: { chrome: "62" },
 })

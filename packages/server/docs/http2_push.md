@@ -80,10 +80,10 @@ console.log("Hello world")
 _start_server.mjs:_
 
 ```js
-import { requestCertificateForLocalhost } from "@jsenv/https-local"
+import { requestCertificate } from "@jsenv/https-local"
 import { startServer, fetchFileSystem } from "@jsenv/server"
 
-const { certificate, privateKey } = requestCertificateForLocalhost()
+const { certificate, privateKey } = requestCertificate()
 await startServer({
   logLevel: "info",
   protocol: "https",
@@ -110,10 +110,10 @@ await startServer({
 The following diff shows how http2 push can be added to the server:
 
 ```diff
-import { requestCertificateForLocalhost } from "@jsenv/https-local"
+import { requestCertificate } from "@jsenv/https-local"
 import { startServer, fetchFileSystem } from "@jsenv/server"
 
-const { certificate, privateKey } = requestCertificateForLocalhost()
+const { certificate, privateKey } = requestCertificate()
 await startServer({
   logLevel: "info",
   protocol: "https",

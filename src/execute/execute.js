@@ -94,7 +94,7 @@ export const execute = async ({
   ```
   But it feels like a hack.
   */
-      throw result.error
+      throw result.errors[result.errors.length - 1]
     }
     return result
   } finally {

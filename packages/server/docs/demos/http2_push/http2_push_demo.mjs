@@ -1,4 +1,4 @@
-import { requestCertificateForLocalhost } from "@jsenv/https-local"
+import { requestCertificate } from "@jsenv/https-local"
 
 import {
   startServer,
@@ -8,7 +8,7 @@ import {
   jsenvAccessControlAllowedHeaders,
 } from "@jsenv/server"
 
-const { certificate, privateKey } = requestCertificateForLocalhost()
+const { certificate, privateKey } = requestCertificate()
 await startServer({
   logLevel: "info",
   protocol: "https",

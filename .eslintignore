@@ -14,7 +14,7 @@ node_modules/
 **/async-to-promises.js
 
 /tests/**/js_syntax_error.js
-/tests/**/script_module_inline_syntax_error/main.html
+/tests/**/js_module_inline_syntax_error/main.html
 
 /**/*.nomodule.js
 /**/*.jsx

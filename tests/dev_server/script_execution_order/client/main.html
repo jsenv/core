@@ -7,21 +7,28 @@
   </head>
 
   <body>
-    <script>
-      window.executionOrder = []
+    <script no-supervisor>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve
+      })
+      window.order = []
+      window.onload = () => {
+        window.order.push("window_load_dispatched")
+      }
     </script>
+    <div id="before_js_classic_inline"></div>
     <script>
-      window.executionOrder.push("classic_inline_before_a")
+      window.order.push(document.currentScript.previousElementSibling.id)
+      window.order.push("js_classic_inline")
     </script>
-    <script src="./a.js"></script>
-    <script>
-      window.executionOrder.push("classic_inline_after_a")
-    </script>
+    <div id="before_js_classic_src"></div>
+    <script src="./js_classic.js"></script>
     <script type="module">
-      window.executionOrder.push("module_inline")
+      window.order.push("js_module_inline")
     </script>
-    <script>
-      window.executionOrder.push("classic_after_module")
+    <script type="module" src="./js_module.js"></script>
+    <script no-supervisor>
+      setTimeout(() => window.resolveResultPromise(window.order), 1500)
     </script>
   </body>
 </html>

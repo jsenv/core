@@ -17,13 +17,15 @@ export const jsenvPluginTranspilation = ({
   importAssertions = true,
   css = true,
   jsModuleAsJsClassic = true,
-  systemJsInjection = true,
   topLevelAwait = true,
   babelHelpersAsImport = true,
   getCustomBabelPlugins,
 }) => {
   if (importAssertions === true) {
     importAssertions = {}
+  }
+  if (jsModuleAsJsClassic === true) {
+    jsModuleAsJsClassic = {}
   }
   return [
     // import assertions we want it all the time
@@ -41,7 +43,7 @@ export const jsenvPluginTranspilation = ({
     // so the build function will disable jsModuleAsJsClassic during build
     // and enable it manually during postbuild
     ...(jsModuleAsJsClassic
-      ? [jsenvPluginAsJsClassic({ systemJsInjection })]
+      ? [jsenvPluginAsJsClassic(jsModuleAsJsClassic)]
       : []),
     // topLevelAwait must come after js_module_as_js_classic because it's related to the module format
     // so we want to wait to know the module format before transforming things related to top level await

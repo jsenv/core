@@ -1,4 +1,3 @@
-import { Script } from "node:vm"
 import { assert } from "@jsenv/assert"
 
 import { startDevServer } from "@jsenv/core"
@@ -9,7 +8,6 @@ const test = async (params) => {
     logLevel: "warn",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
-    htmlSupervisor: true,
     ...params,
   })
   const { returnValue, pageLogs, pageErrors } = await executeInChromium({
@@ -17,7 +15,7 @@ const test = async (params) => {
     url: `${devServer.origin}/main.html`,
     /* eslint-disable no-undef */
     pageFunction: async () => {
-      return window.__html_supervisor__.getScriptExecutionResults()
+      return window.__supervisor__.getScriptExecutionResults()
     },
     /* eslint-enable no-undef */
   })
@@ -25,14 +23,11 @@ const test = async (params) => {
 }
 
 const { returnValue, pageLogs, pageErrors } = await test()
-const error = new Script(returnValue.exceptionSource, {
-  filename: "",
-}).runInThisContext()
 
 const actual = {
   pageLogs,
   pageErrors,
-  error,
+  errorMessage: returnValue.executionResults["/main.js"].exception.message,
 }
 const expected = {
   pageLogs: [],
@@ -46,8 +41,6 @@ const expected = {
       },
     ),
   ],
-  error: new SyntaxError(
-    `The requested module '/file.js' does not provide an export named 'answer'`,
-  ),
+  errorMessage: `The requested module '/file.js' does not provide an export named 'answer'`,
 }
 assert({ actual, expected })

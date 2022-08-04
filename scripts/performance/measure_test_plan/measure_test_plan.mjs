@@ -6,11 +6,24 @@ const measures = startMeasures({
   filesystemUsage: true,
 })
 
-const { executeTestPlan, chromium, firefox, webkit, nodeWorkerThread } =
-  await import("@jsenv/core")
+const {
+  startDevServer,
+  executeTestPlan,
+  chromium,
+  firefox,
+  webkit,
+  nodeWorkerThread,
+} = await import("@jsenv/core")
+
+const devServer = await startDevServer({
+  logLevel: "warn",
+  rootDirectoryUrl: new URL("./", import.meta.url),
+  keepProcessAlive: false,
+})
 
 await executeTestPlan({
   rootDirectoryUrl: new URL("./", import.meta.url),
+  devServerOrigin: devServer.origin,
   testPlan: {
     "./animals.test.html": {
       chromium: {
@@ -34,7 +47,6 @@ await executeTestPlan({
     },
   },
   logLevel: "warn",
-  protocol: "http",
   coverageEnabled: true,
   coverageConfig: {
     "./animals.js": true,

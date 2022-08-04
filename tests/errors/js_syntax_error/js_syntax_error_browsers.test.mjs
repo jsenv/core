@@ -9,7 +9,7 @@ const test = async ({ runtime }) => {
     keepProcessAlive: false,
     port: 0,
   })
-  const { status, error, consoleCalls } = await execute({
+  const { errors } = await execute({
     // logLevel: "debug"
     rootDirectoryUrl: new URL("./client/", import.meta.url),
     devServerOrigin: devServer.origin,
@@ -20,51 +20,21 @@ const test = async ({ runtime }) => {
     ignoreError: true,
   })
   devServer.stop()
-  const actual = {
-    status,
-    error,
-    consoleCalls,
+  if (runtime === chromium) {
+    const actual = errors[0].reason
+    const expected = "SyntaxError: Unexpected end of input"
+    assert({ actual, expected })
   }
-  const expected = {
-    status: "errored",
-    error: {
-      chromium: () => {
-        const error = new Error("Unexpected end of input")
-        Object.assign(error, { name: "SyntaxError" })
-        return error
-      },
-      firefox: () => {
-        const syntaxError = new SyntaxError(
-          "expected expression, got end of script",
-        )
-        Object.defineProperties(syntaxError, {
-          fileName: {
-            configurable: true,
-            writable: true,
-            value: `${devServer.origin}/js_syntax_error.js`,
-          },
-          lineNumber: {
-            configurable: true,
-            writable: true,
-            value: 1,
-          },
-          columnNumber: {
-            configurable: true,
-            writable: true,
-            value: 11,
-          },
-        })
-        return syntaxError
-      },
-      webkit: () => {
-        const error = new Error("Unexpected end of script")
-        Object.assign(error, { name: "SyntaxError" })
-        return error
-      },
-    }[runtime.name](),
-    consoleCalls: [],
+  if (runtime === firefox) {
+    const actual = errors[0].reason
+    const expected = "SyntaxError: expected expression, got end of script\n"
+    assert({ actual, expected })
   }
-  assert({ actual, expected })
+  if (runtime === webkit) {
+    const actual = errors[0].message
+    const expected = `Unexpected end of script`
+    assert({ actual, expected })
+  }
 }
 
 await test({ runtime: chromium })

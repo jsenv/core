@@ -7,7 +7,7 @@ import { createCallbackListNotifiedOnce } from "./callback_list_once.js"
 
 export const Abort = {
   isAbortError: (error) => {
-    return error.name === "AbortError"
+    return error && error.name === "AbortError"
   },
 
   startOperation: () => {

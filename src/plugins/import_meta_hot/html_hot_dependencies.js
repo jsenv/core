@@ -48,7 +48,7 @@ export const collectHotDataFromHtmlAst = (htmlAst) => {
       })
       visitUrlSpecifierAttribute({
         node,
-        attributeName: "generated-from-href",
+        attributeName: "inlined-from-href",
         hotAccepted,
       })
     }
@@ -60,7 +60,7 @@ export const collectHotDataFromHtmlAst = (htmlAst) => {
       })
       visitUrlSpecifierAttribute({
         node,
-        attributeName: "generated-from-src",
+        attributeName: "inlined-from-src",
         hotAccepted,
       })
     }

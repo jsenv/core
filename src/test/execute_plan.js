@@ -28,6 +28,7 @@ export const executePlan = async (
     signal,
     handleSIGINT,
     logger,
+    logRefresh,
     logRuntime,
     logEachDuration,
     logSummary,
@@ -211,6 +212,7 @@ export const executePlan = async (
     const debugLogsEnabled = loggerToLevels(logger).debug
     const executionLogsEnabled = loggerToLevels(logger).info
     const executionSpinner =
+      logRefresh &&
       !debugLogsEnabled &&
       executionLogsEnabled &&
       process.stdout.isTTY &&
@@ -310,9 +312,11 @@ export const executePlan = async (
         } else {
           executionResult = {
             status: "errored",
-            error: new Error(
-              `No file at ${fileRelativeUrl} for execution "${executionName}"`,
-            ),
+            errors: [
+              new Error(
+                `No file at ${fileRelativeUrl} for execution "${executionName}"`,
+              ),
+            ],
           }
         }
         counters.done++

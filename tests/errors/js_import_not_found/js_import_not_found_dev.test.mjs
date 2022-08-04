@@ -1,4 +1,3 @@
-import { Script } from "node:vm"
 import { assert } from "@jsenv/assert"
 
 import { startDevServer } from "@jsenv/core"
@@ -15,7 +14,6 @@ try {
     omegaServerLogLevel: "warn",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
-    htmlSupervisor: true,
     devServerAutoreload: false,
     port: 0,
   })
@@ -25,19 +23,16 @@ try {
     collectErrors: true,
     /* eslint-disable no-undef */
     pageFunction: async () => {
-      return window.__html_supervisor__.getScriptExecutionResults()
+      return window.__supervisor__.getScriptExecutionResults()
     },
     /* eslint-enable no-undef */
   })
 
-  const error = new Script(returnValue.exceptionSource, {
-    filename: "",
-  }).runInThisContext()
   const actual = {
     serverWarnOutput: warnCalls.join("\n"),
     pageLogs,
     pageErrors,
-    error,
+    errorMessage: returnValue.executionResults["/main.js"].exception.message,
   }
   const expected = {
     serverWarnOutput: `GET ${devServer.origin}/foo.js
@@ -60,19 +55,8 @@ try {
         text: `Failed to load resource: the server responded with a status of 404 (no entry on filesystem)`,
       },
     ],
-    pageErrors: [
-      Object.assign(
-        new Error(
-          `Failed to fetch dynamically imported module: ${devServer.origin}/main.js`,
-        ),
-        {
-          name: "TypeError",
-        },
-      ),
-    ],
-    error: new TypeError(
-      `Failed to fetch dynamically imported module: ${devServer.origin}/main.js`,
-    ),
+    pageErrors: [],
+    errorMessage: `Failed to fetch module: ${devServer.origin}/main.js`,
   }
   assert({ actual, expected })
 } finally {

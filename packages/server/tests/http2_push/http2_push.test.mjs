@@ -1,14 +1,15 @@
 // https://nodejs.org/dist/latest-v16.x/docs/api/http2.html#server-side-example
 
 import { connect } from "node:http2"
-import { requestCertificateForLocalhost } from "@jsenv/https-local"
+import { requestCertificate } from "@jsenv/https-local"
 import { assert } from "@jsenv/assert"
 import { readFile } from "@jsenv/filesystem"
 
 import { startServer, fetchFileSystem } from "@jsenv/server"
 
-if (process.platform !== "win32") {
-  const { certificate, privateKey } = requestCertificateForLocalhost()
+// certificates only generated on linux
+if (process.platform === "linux") {
+  const { certificate, privateKey } = requestCertificate()
   const server = await startServer({
     logLevel: "warn",
     protocol: "https",
