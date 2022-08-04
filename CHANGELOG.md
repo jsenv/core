@@ -1,3 +1,18 @@
+# 28.1.0
+
+- htmlSupervisor renamed supervisor
+- allow multiple errors during execution
+  - update how error are logged during tests
+- display error overlay on unhandled rejection
+- add logRefresh to executeTestPlan
+- add more stories in dev errors
+- update @jsenv/assert output
+- fix worker type module on firefox during dev
+- fix data url handling during dev
+- fix collectFiles in @jsenv/filesystem when path contains special chars
+- stop generating coverage for this repository
+  (I am not using this anymore it's a waste of ressources to compute it)
+
 # 28.0.2
 
 - prefer "ws.js" over "wrapper.js" when generating build files
