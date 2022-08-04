@@ -53,9 +53,7 @@ export const run = async ({
     }
   }
   if (collectConsole) {
-    callbacks.push(() => {
-      result.consoleCalls = consoleCalls
-    })
+    result.consoleCalls = consoleCalls
   }
 
   // we do not keep coverage in memory, it can grow very big

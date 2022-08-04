@@ -15,7 +15,7 @@ const test = async ({ runtime }) => {
     keepProcessAlive: false,
     port: 0,
   })
-  const { status, consoleCalls } = await execute({
+  const result = await execute({
     logLevel: "warn",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
     devServerOrigin: devServer.origin,
@@ -27,8 +27,8 @@ const test = async ({ runtime }) => {
   })
   devServer.stop()
   const actual = {
-    status,
-    consoleCalls,
+    status: result.status,
+    consoleCalls: result.consoleCalls,
   }
   const expected = {
     status: "timedout",
