@@ -42,32 +42,17 @@ const test = async ({ browserLauncher }) => {
     }
     if (browserLauncher === firefox) {
       const actual = result
-      const expected = [
-        "before_js_classic_inline",
-        "js_classic_inline",
-        "before_js_classic_src",
-        "js_classic",
-        "js_module_inline",
-        "js_module",
-        "window_load_dispatched",
-      ]
+      const expected = correctOrder
       assert({ actual, expected })
     }
     if (browserLauncher === webkit) {
-      const actual = result
-      const expected = [
-        "before_js_classic_inline",
-        "js_classic_inline",
-        "before_js_classic_src",
-        "js_classic",
-        // window "load" occurs before module script(s)
-        // this is because we use dynamic import
-        // and we have to use them because of the webkit bug
-        // https://twitter.com/damienmaillard/status/1554752482273787906
-        "window_load_dispatched",
-        "js_module_inline",
-        "js_module",
-      ]
+      // window "load" event is not deterministic on webkit due to
+      // the bug mentioned previously, so remove it and ensure only the
+      // js execution order is correct
+      const actual = result.filter((v) => v !== "window_load_dispatched")
+      const expected = correctOrder.filter(
+        (v) => v !== "window_load_dispatched",
+      )
       assert({ actual, expected })
     }
   } finally {
