@@ -6,12 +6,6 @@
 # It does the following:
 #  - Check linting passes (no eslint error on files)
 #  - Run tests and ensure none is failing
-#  - Update tests code coverage
-#
-# If all these steps are passing the workflow ends up
-# publishing package on npm if needed. It will publish the npm package
-# using the token found in secrets.NPM_TOKEN. Be sure to create this
-# token in the GitHub repository.
 
 name: main
 
@@ -59,13 +53,15 @@ jobs:
         # env:
         #   NODE_V8_COVERAGE: .coverage/packages
         run: npm run test:workspace
-      - name: Run core tests
-        env:
-          NODE_V8_COVERAGE: .coverage/core
-        run: npm run test -- --coverage
-      - name: Upload coverage
-        uses: codecov/codecov-action@v2
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./.coverage/coverage.json,./packages/integrity/.coverage/coverage.json,./packages/utils/.coverage/coverage.json
-          verbose: true
+      - name: Run code tests
+        run: npm test
+      # - name: Run core tests
+      #   env:
+      #     NODE_V8_COVERAGE: .coverage/core
+      #   run: npm run test -- --coverage
+      # - name: Upload coverage
+      #   uses: codecov/codecov-action@v2
+      #   with:
+      #     token: ${{ secrets.CODECOV_TOKEN }}
+      #     files: ./.coverage/coverage.json,./packages/integrity/.coverage/coverage.json,./packages/utils/.coverage/coverage.json
+      #     verbose: true
