@@ -729,10 +729,11 @@ window.__supervisor__ = (() => {
 
     const supervisedScripts = []
     const executionPromises = []
-    supervisor.createExecution = ({ type, src, execute }) => {
+    supervisor.createExecution = ({ type, src, async, execute }) => {
       const execution = {
         type,
         src,
+        async,
         execute,
       }
       execution.start = () => {
@@ -758,10 +759,17 @@ window.__supervisor__ = (() => {
         coverage: null,
       }
       executionResults[execution.src] = executionResult
-      let resolvePromise
+      let resolveExecutionPromise
       const promise = new Promise((resolve) => {
-        resolvePromise = resolve
+        resolveExecutionPromise = () => {
+          const index = executionPromises.indexOf(promise)
+          if (index > -1) {
+            executionPromises.splice(index, 1)
+          }
+          resolve()
+        }
       })
+      promise.execution = execution
       executionPromises.push(promise)
       try {
         const result = await execution.execute({ isReload })
@@ -775,7 +783,7 @@ window.__supervisor__ = (() => {
           console.log(`${execution.type} load ended`)
           console.groupEnd()
         }
-        resolvePromise()
+        resolveExecutionPromise()
       } catch (e) {
         if (measurePerf) {
           performance.measure(`execution`, `execution_start`)
@@ -792,73 +800,79 @@ window.__supervisor__ = (() => {
         if (logs) {
           console.groupEnd()
         }
-        resolvePromise()
+        resolveExecutionPromise()
       }
     }
-    let previousExecutionPromise
+
+    // respect execution order
+    // - wait for classic scripts to be done (non async)
+    // - wait module script previous execution (non async)
+    // see  https://gist.github.com/jakub-g/385ee6b41085303a53ad92c7c8afd7a6#typemodule-vs-non-module-typetextjavascript-vs-script-nomodule
+    supervisor.getPreviousExecutionDonePromise = async () => {
+      const previousNonAsyncExecutions = executionPromises.filter(
+        (promise) => !promise.execution.async,
+      )
+      await Promise.all(previousNonAsyncExecutions)
+    }
     supervisor.superviseScript = async ({ src, async }) => {
       const { currentScript } = document
       const parentNode = currentScript.parentNode
-      const startExecution = () => {
-        let nodeToReplace
-        let currentScriptClone
-        const execution = supervisor.createExecution({
-          src,
-          type: "js_classic",
-          execute: async ({ isReload }) => {
-            const urlObject = new URL(src, window.location)
-            const loadPromise = new Promise((resolve, reject) => {
-              // do not use script.cloneNode()
-              // bcause https://stackoverflow.com/questions/28771542/why-dont-clonenode-script-tags-execute
-              currentScriptClone = document.createElement("script")
-              Array.from(currentScript.attributes).forEach((attribute) => {
-                currentScriptClone.setAttribute(
-                  attribute.nodeName,
-                  attribute.nodeValue,
-                )
-              })
-              if (isReload) {
-                urlObject.searchParams.set("hmr", Date.now())
-                nodeToReplace = currentScriptClone
-                currentScriptClone.src = urlObject.href
-              } else {
-                currentScriptClone.removeAttribute("jsenv-plugin-owner")
-                currentScriptClone.removeAttribute("jsenv-plugin-action")
-                currentScriptClone.removeAttribute("inlined-from-src")
-                currentScriptClone.removeAttribute("original-position")
-                currentScriptClone.removeAttribute("original-src-position")
-                nodeToReplace = currentScript
-                currentScriptClone.src = src
-              }
-              currentScriptClone.addEventListener("error", reject)
-              currentScriptClone.addEventListener("load", resolve)
-              parentNode.replaceChild(currentScriptClone, nodeToReplace)
+      if (!async) {
+        await supervisor.getPreviousExecutionDonePromise()
+      }
+      let nodeToReplace
+      let currentScriptClone
+      const execution = supervisor.createExecution({
+        src,
+        type: "js_classic",
+        async,
+        execute: async ({ isReload }) => {
+          const urlObject = new URL(src, window.location)
+          const loadPromise = new Promise((resolve, reject) => {
+            // do not use script.cloneNode()
+            // bcause https://stackoverflow.com/questions/28771542/why-dont-clonenode-script-tags-execute
+            currentScriptClone = document.createElement("script")
+            // browsers set async by default when creating script(s)
+            // we want an exact copy to preserves how code is executed
+            currentScriptClone.async = false
+            Array.from(currentScript.attributes).forEach((attribute) => {
+              currentScriptClone.setAttribute(
+                attribute.nodeName,
+                attribute.nodeValue,
+              )
             })
-            try {
-              await loadPromise
-            } catch (e) {
-              // eslint-disable-next-line no-throw-literal
-              throw {
-                message: `Failed to fetch script: ${urlObject.href}`,
-                reportedBy: "script_error_event",
-                url: urlObject.href,
-                // window.error won't be dispatched for this error
-                needsReport: true,
-              }
+            if (isReload) {
+              urlObject.searchParams.set("hmr", Date.now())
+              nodeToReplace = currentScriptClone
+              currentScriptClone.src = urlObject.href
+            } else {
+              currentScriptClone.removeAttribute("jsenv-plugin-owner")
+              currentScriptClone.removeAttribute("jsenv-plugin-action")
+              currentScriptClone.removeAttribute("inlined-from-src")
+              currentScriptClone.removeAttribute("original-position")
+              currentScriptClone.removeAttribute("original-src-position")
+              nodeToReplace = currentScript
+              currentScriptClone.src = src
             }
-          },
-        })
-        return execution.start()
-      }
-      if (async) {
-        startExecution()
-        return
-      }
-      if (previousExecutionPromise) {
-        await previousExecutionPromise
-        previousExecutionPromise = null
-      }
-      previousExecutionPromise = startExecution()
+            currentScriptClone.addEventListener("error", reject)
+            currentScriptClone.addEventListener("load", resolve)
+            parentNode.replaceChild(currentScriptClone, nodeToReplace)
+          })
+          try {
+            await loadPromise
+          } catch (e) {
+            // eslint-disable-next-line no-throw-literal
+            throw {
+              message: `Failed to fetch script: ${urlObject.href}`,
+              reportedBy: "script_error_event",
+              url: urlObject.href,
+              // window.error won't be dispatched for this error
+              needsReport: true,
+            }
+          }
+        },
+      })
+      return execution.start()
     }
     supervisor.reloadSupervisedScript = ({ type, src }) => {
       const supervisedScript = supervisedScripts.find(
@@ -893,9 +907,7 @@ window.__supervisor__ = (() => {
 
       const waitPendingExecutions = async () => {
         if (executionPromises.length) {
-          const promisesToWait = executionPromises.slice()
-          executionPromises.length = 0
-          await Promise.all(promisesToWait)
+          await Promise.all(executionPromises)
           await waitPendingExecutions()
         }
       }

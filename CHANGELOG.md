@@ -1,3 +1,7 @@
+# 28.1.1
+
+- fix script execution order in html
+
 # 28.1.0
 
 - htmlSupervisor renamed supervisor

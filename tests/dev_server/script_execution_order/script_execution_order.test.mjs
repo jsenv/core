@@ -48,8 +48,8 @@ const test = async ({ browserLauncher }) => {
         "before_js_classic_src",
         "js_classic",
         "js_module_inline",
-        "window_load_dispatched", // "load" occurs before top level await is done
         "js_module",
+        "window_load_dispatched",
       ]
       assert({ actual, expected })
     }
@@ -60,7 +60,11 @@ const test = async ({ browserLauncher }) => {
         "js_classic_inline",
         "before_js_classic_src",
         "js_classic",
-        "window_load_dispatched", // "load" occurs before module script(s)
+        // window "load" occurs before module script(s)
+        // this is because we use dynamic import
+        // and we have to use them because of the webkit bug
+        // https://twitter.com/damienmaillard/status/1554752482273787906
+        "window_load_dispatched",
         "js_module_inline",
         "js_module",
       ]

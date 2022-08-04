@@ -1,45 +1,35 @@
-let previousExecutionPromise; // https://twitter.com/damienmaillard/status/1554752482273787906
-
+// https://twitter.com/damienmaillard/status/1554752482273787906
 const isWebkitOrSafari = typeof window.webkitConvertPointFromNodeToPage === "function";
 const superviseScriptTypeModule = async ({
   src,
   async
 }) => {
+  const currentScript = document.querySelector(`script[type="module"][inlined-from-src="${src}"]`);
   const execute = isWebkitOrSafari ? createExecuteWithDynamicImport({
     src
   }) : createExecuteWithScript({
+    currentScript,
     src
   });
 
-  const startExecution = () => {
-    const execution = window.__supervisor__.createExecution({
-      src,
-      type: "js_module",
-      execute
-    });
-
-    return execution.start();
-  };
-
-  if (async) {
-    startExecution();
-    return;
-  } // there is guaranteed execution order for non async script type="module"
-  // see https://gist.github.com/jakub-g/385ee6b41085303a53ad92c7c8afd7a6#typemodule-vs-non-module-typetextjavascript-vs-script-nomodule
-
-
-  if (previousExecutionPromise) {
-    await previousExecutionPromise;
-    previousExecutionPromise = null;
+  if (!async) {
+    await window.__supervisor__.getPreviousExecutionDonePromise();
   }
 
-  previousExecutionPromise = startExecution();
+  const execution = window.__supervisor__.createExecution({
+    src,
+    async,
+    type: "js_module",
+    execute
+  });
+
+  return execution.start();
 };
 
 const createExecuteWithScript = ({
+  currentScript,
   src
 }) => {
-  const currentScript = document.querySelector(`script[type="module"][inlined-from-src="${src}"]`);
   const parentNode = currentScript.parentNode;
   let nodeToReplace;
   let currentScriptClone;
@@ -48,7 +38,10 @@ const createExecuteWithScript = ({
   }) => {
     const urlObject = new URL(src, window.location);
     const loadPromise = new Promise((resolve, reject) => {
-      currentScriptClone = document.createElement("script");
+      currentScriptClone = document.createElement("script"); // browsers set async by default when creating script(s)
+      // we want an exact copy to preserves how code is executed
+
+      currentScriptClone.async = false;
       Array.from(currentScript.attributes).forEach(attribute => {
         currentScriptClone.setAttribute(attribute.nodeName, attribute.nodeValue);
       });
