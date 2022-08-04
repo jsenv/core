@@ -9,7 +9,7 @@ export const renderExecutionInToolbar = async () => {
   removeForceHideElement(document.querySelector("#execution-indicator"))
 
   const { status, startTime, endTime } =
-    await window.parent.__supervisor__.getScriptExecutionResults()
+    await window.parent.__supervisor__.getDocumentExecutionResult()
   const execution = { status, startTime, endTime }
   applyExecutionIndicator(execution)
   const executionStorageKey = window.location.href

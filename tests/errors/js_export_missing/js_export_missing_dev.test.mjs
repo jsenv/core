@@ -15,7 +15,7 @@ const test = async (params) => {
     url: `${devServer.origin}/main.html`,
     /* eslint-disable no-undef */
     pageFunction: async () => {
-      return window.__supervisor__.getScriptExecutionResults()
+      return window.__supervisor__.getDocumentExecutionResult()
     },
     /* eslint-enable no-undef */
   })

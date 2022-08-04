@@ -306,7 +306,7 @@ export const createRuntimeFromPlaywright = ({
                   if (!window.__supervisor__) {
                     throw new Error(`window.__supervisor__ not found`)
                   }
-                  return window.__supervisor__.getScriptExecutionResults()
+                  return window.__supervisor__.getDocumentExecutionResult()
                 },
                 /* eslint-enable no-undef */
               )
