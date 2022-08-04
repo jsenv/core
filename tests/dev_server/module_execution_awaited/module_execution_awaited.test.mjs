@@ -23,7 +23,7 @@ const test = async ({ browserLauncher }) => {
       /* eslint-enable no-undef */
     )
     const moduleExecutionResult =
-      result.executionResults["/main.html@L11C5-L13C14.js"]
+      result.executionResults["/main.html@L10C5-L12C14.js"]
     const duration =
       moduleExecutionResult.endTime - moduleExecutionResult.startTime
     const durationAroundSetTimeout = duration > 2_000 && duration < 3_000
