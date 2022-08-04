@@ -41,16 +41,10 @@ const test = async (params) => {
   assert({ actual, expected })
 }
 
-// support for <script type="module">
-await test({
-  runtimeCompat: {
-    chrome: "64",
-  },
-})
-
-// no support for <script type="module">
-await test({
-  runtimeCompat: {
-    chrome: "62",
-  },
-})
+// sometimes timeout on windows
+if (process.platform !== "win32") {
+  // support for <script type="module">
+  await test({ runtimeCompat: { chrome: "64" } })
+  // no support for <script type="module">
+  await test({ runtimeCompat: { chrome: "62" } })
+}
