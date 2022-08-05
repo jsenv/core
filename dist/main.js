@@ -8,7 +8,7 @@ import process$1, { memoryUsage } from "node:process";
 import os, { networkInterfaces } from "node:os";
 import tty from "node:tty";
 import stringWidth from "string-width";
-import { createMagicSource, composeTwoSourcemaps, getOriginalPosition, sourcemapConverter, SOURCEMAP, generateSourcemapFileUrl, generateSourcemapDataUrl } from "@jsenv/sourcemap";
+import { createMagicSource, composeTwoSourcemaps, sourcemapConverter, getOriginalPosition, SOURCEMAP, generateSourcemapFileUrl, generateSourcemapDataUrl } from "@jsenv/sourcemap";
 import { parseHtmlString, stringifyHtmlAst, visitHtmlNodes, getHtmlNodeAttribute, analyzeScriptNode, setHtmlNodeAttributes, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, applyPostCss, postCssPluginUrlVisitor, parseJsUrls, getHtmlNodeText, setHtmlNodeText, applyBabelPlugins, injectScriptNodeAsEarlyAsPossible, createHtmlNode, findHtmlNode, removeHtmlNode, removeHtmlNodeText, transpileWithParcel, injectJsImport, minifyWithParcel, analyzeLinkNode } from "@jsenv/ast";
 import { createRequire } from "node:module";
 import babelParser from "@babel/parser";
@@ -5763,328 +5763,6 @@ const generateExpressionAst = (expression, options) => {
   return ast;
 };
 
-const jsenvPluginAsJsClassicHtml = ({
-  systemJsInjection,
-  systemJsClientFileUrl,
-  generateJsClassicFilename
-}) => {
-  return {
-    name: "jsenv:as_js_classic_html",
-    appliesDuring: "*",
-    transformUrlContent: {
-      html: async (urlInfo, context) => {
-        const shouldTransformScriptTypeModule = !context.isSupportedOnCurrentClients("script_type_module") || !context.isSupportedOnCurrentClients("import_dynamic") || !context.isSupportedOnCurrentClients("import_meta");
-        const htmlAst = parseHtmlString(urlInfo.content);
-        const preloadAsScriptNodes = [];
-        const modulePreloadNodes = [];
-        const moduleScriptNodes = [];
-        const classicScriptNodes = [];
-
-        const visitLinkNodes = node => {
-          const rel = getHtmlNodeAttribute(node, "rel");
-
-          if (rel === "modulepreload") {
-            modulePreloadNodes.push(node);
-            return;
-          }
-
-          if (rel === "preload") {
-            const asValue = getHtmlNodeAttribute(node, "as");
-
-            if (asValue === "script") {
-              preloadAsScriptNodes.push(node);
-            }
-
-            return;
-          }
-        };
-
-        const visitScriptNodes = node => {
-          const {
-            type
-          } = analyzeScriptNode(node);
-
-          if (type === "js_module") {
-            moduleScriptNodes.push(node);
-            return;
-          }
-
-          if (type === "js_classic") {
-            classicScriptNodes.push(node);
-            return;
-          }
-        };
-
-        visitHtmlNodes(htmlAst, {
-          link: node => {
-            visitLinkNodes(node);
-          },
-          script: node => {
-            visitScriptNodes(node);
-          }
-        });
-        const actions = [];
-        const jsModuleUrls = [];
-        const convertedUrls = [];
-
-        const getReferenceAsJsClassic = async (reference, {
-          // we don't cook resource hints
-          // because they might refer to resource that will be modified during build
-          // It also means something else HAVE to reference that url in order to cook it
-          // so that the preload is deleted by "resync_resource_hints.js" otherwise
-          cookIt = false
-        } = {}) => {
-          const newReferenceProps = {
-            expectedType: "js_classic",
-            specifier: injectQueryParamsIntoSpecifier(reference.specifier, {
-              as_js_classic: ""
-            }),
-            filename: generateJsClassicFilename(reference.url)
-          };
-          const [newReference, newUrlInfo] = context.referenceUtils.update(reference, newReferenceProps);
-          const convertedUrl = newUrlInfo.url;
-
-          if (!convertedUrls.includes(convertedUrl)) {
-            convertedUrls.push(convertedUrl);
-          }
-
-          if (cookIt) {
-            // during dev it means js modules will be cooked before server sends the HTML
-            // it's ok because:
-            // - during dev script_type_module are supported (dev use a recent browser)
-            // - even if browser is not supported it still works it's jus a bit slower
-            //   because it needs to decide if systemjs will be injected or not
-            await context.cook(newUrlInfo, {
-              reference: newReference
-            });
-          }
-
-          return [newReference, newUrlInfo];
-        };
-
-        classicScriptNodes.forEach(classicScriptNode => {
-          const src = getHtmlNodeAttribute(classicScriptNode, "src");
-
-          if (src !== undefined) {
-            const reference = urlInfo.references.find(ref => ref.generatedSpecifier === src && ref.type === "script_src");
-            const urlObject = new URL(reference.url);
-
-            if (urlObject.searchParams.has("as_js_classic")) {
-              const convertedUrl = urlObject.href;
-              convertedUrls.push(convertedUrl);
-              urlObject.searchParams.delete("as_js_classic");
-              const jsModuleUrl = urlObject.href;
-              jsModuleUrls.push(jsModuleUrl);
-              actions.push(async () => {
-                const urlInfo = context.urlGraph.getUrlInfo(convertedUrl);
-                await context.cook(urlInfo, {
-                  reference
-                });
-              });
-            }
-          }
-        });
-        moduleScriptNodes.forEach(moduleScriptNode => {
-          const src = getHtmlNodeAttribute(moduleScriptNode, "src");
-
-          if (src !== undefined) {
-            const reference = urlInfo.references.find(ref => ref.generatedSpecifier === src && ref.type === "script_src" && ref.expectedType === "js_module");
-            jsModuleUrls.push(reference.url);
-
-            if (shouldTransformScriptTypeModule) {
-              actions.push(async () => {
-                const [newReference] = await getReferenceAsJsClassic(reference, {
-                  cookIt: true
-                });
-                setHtmlNodeAttributes(moduleScriptNode, {
-                  type: undefined,
-                  src: newReference.generatedSpecifier
-                });
-              });
-            }
-
-            return;
-          }
-
-          if (shouldTransformScriptTypeModule) {
-            const htmlNodeText = getHtmlNodeText(moduleScriptNode);
-            actions.push(async () => {
-              const {
-                line,
-                column,
-                lineEnd,
-                columnEnd,
-                isOriginal
-              } = getHtmlNodePosition(moduleScriptNode, {
-                preferOriginal: true
-              });
-              let inlineScriptUrl = generateInlineContentUrl({
-                url: urlInfo.url,
-                extension: ".js",
-                line,
-                column,
-                lineEnd,
-                columnEnd
-              });
-              const [inlineReference] = context.referenceUtils.foundInline({
-                node: moduleScriptNode,
-                type: "script_src",
-                expectedType: "js_module",
-                isOriginalPosition: isOriginal,
-                // we remove 1 to the line because imagine the following html:
-                // <script>console.log('ok')</script>
-                // -> content starts same line as <script>
-                specifierLine: line - 1,
-                specifierColumn: column,
-                specifier: inlineScriptUrl,
-                contentType: "text/javascript",
-                content: htmlNodeText
-              });
-              const [, newUrlInfo] = await getReferenceAsJsClassic(inlineReference, {
-                cookIt: true
-              });
-              setHtmlNodeText(moduleScriptNode, newUrlInfo.content);
-              setHtmlNodeAttributes(moduleScriptNode, {
-                "type": undefined,
-                "jsenv-plugin-owner": "jsenv:as_js_classic_html",
-                "jsenv-plugin-action": "content_cooked"
-              });
-            });
-          }
-        });
-
-        if (shouldTransformScriptTypeModule) {
-          preloadAsScriptNodes.forEach(preloadAsScriptNode => {
-            const href = getHtmlNodeAttribute(preloadAsScriptNode, "href");
-            const reference = urlInfo.references.find(ref => ref.generatedSpecifier === href && ref.type === "link_href" && ref.expectedType === undefined);
-            const expectedScriptType = jsModuleUrls.includes(reference.url) ? "module" : "classic";
-
-            if (expectedScriptType === "module") {
-              actions.push(async () => {
-                // reference modified by <script type="module"> conversion
-                let newReference;
-
-                if (reference.next) {
-                  newReference = reference.next;
-                } else {
-                  [newReference] = await getReferenceAsJsClassic(reference);
-                }
-
-                setHtmlNodeAttributes(preloadAsScriptNode, {
-                  href: newReference.generatedSpecifier,
-                  crossorigin: undefined
-                });
-              });
-            }
-          });
-          modulePreloadNodes.forEach(modulePreloadNode => {
-            const href = getHtmlNodeAttribute(modulePreloadNode, "href");
-            const reference = urlInfo.references.find(ref => ref.generatedSpecifier === href && ref.type === "link_href" && ref.expectedType === "js_module");
-            actions.push(async () => {
-              let newReference;
-
-              if (reference.next) {
-                newReference = reference.next;
-              } else {
-                [newReference] = await getReferenceAsJsClassic(reference);
-              }
-
-              setHtmlNodeAttributes(modulePreloadNode, {
-                rel: "preload",
-                as: "script",
-                href: newReference.generatedSpecifier
-              });
-            });
-          });
-        }
-
-        if (actions.length === 0) {
-          return null;
-        }
-
-        await Promise.all(actions.map(action => action()));
-
-        if (systemJsInjection) {
-          const needsSystemJs = convertedUrls.some(convertedUrl => context.urlGraph.getUrlInfo(convertedUrl).data.jsClassicFormat === "system");
-
-          if (needsSystemJs) {
-            const [systemJsReference] = context.referenceUtils.inject({
-              type: "script_src",
-              expectedType: "js_classic",
-              specifier: systemJsClientFileUrl
-            });
-            injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
-              tagName: "script",
-              src: systemJsReference.generatedSpecifier
-            }), "jsenv:as_js_classic_html");
-          }
-        }
-
-        return stringifyHtmlAst(htmlAst);
-      }
-    }
-  };
-};
-
-const jsenvPluginAsJsClassicWorkers = ({
-  generateJsClassicFilename
-}) => {
-  const updateReference = reference => {
-    reference.filename = generateJsClassicFilename(reference.url);
-
-    reference.mutation = magicSource => {
-      magicSource.replace({
-        start: reference.typePropertyNode.value.start,
-        end: reference.typePropertyNode.value.end,
-        replacement: JSON.stringify("classic")
-      });
-    };
-
-    reference.expectedType = "js_classic";
-    return injectQueryParams(reference.url, {
-      as_js_classic: ""
-    });
-  };
-
-  return {
-    name: "jsenv:as_js_classic_workers",
-    appliesDuring: "*",
-    redirectUrl: {
-      js_url_specifier: (reference, context) => {
-        if (reference.expectedType !== "js_module") {
-          return null;
-        }
-
-        if (reference.expectedSubtype === "worker") {
-          if (context.isSupportedOnCurrentClients("worker_type_module")) {
-            return null;
-          }
-
-          return updateReference(reference);
-        }
-
-        if (reference.expectedSubtype === "service_worker") {
-          if (context.isSupportedOnCurrentClients("service_worker_type_module")) {
-            return null;
-          }
-
-          return updateReference(reference);
-        }
-
-        if (reference.expectedSubtype === "shared_worker") {
-          if (context.isSupportedOnCurrentClients("shared_worker_type_module")) {
-            return null;
-          }
-
-          return updateReference(reference);
-        }
-
-        return null;
-      }
-    }
-  };
-};
-
 var helpers_string_1 = '// A type of promise-like that resolves synchronously and supports only one observer\nexport const _Pact = /*#__PURE__*/(function() {\n\tfunction _Pact() {}\n\t_Pact.prototype.then = function(onFulfilled, onRejected) {\n\t\tconst result = new _Pact();\n\t\tconst state = this.s;\n\t\tif (state) {\n\t\t\tconst callback = state & 1 ? onFulfilled : onRejected;\n\t\t\tif (callback) {\n\t\t\t\ttry {\n\t\t\t\t\t_settle(result, 1, callback(this.v));\n\t\t\t\t} catch (e) {\n\t\t\t\t\t_settle(result, 2, e);\n\t\t\t\t}\n\t\t\t\treturn result;\n\t\t\t} else {\n\t\t\t\treturn this;\n\t\t\t}\n\t\t}\n\t\tthis.o = function(_this) {\n\t\t\ttry {\n\t\t\t\tconst value = _this.v;\n\t\t\t\tif (_this.s & 1) {\n\t\t\t\t\t_settle(result, 1, onFulfilled ? onFulfilled(value) : value);\n\t\t\t\t} else if (onRejected) {\n\t\t\t\t\t_settle(result, 1, onRejected(value));\n\t\t\t\t} else {\n\t\t\t\t\t_settle(result, 2, value);\n\t\t\t\t}\n\t\t\t} catch (e) {\n\t\t\t\t_settle(result, 2, e);\n\t\t\t}\n\t\t};\n\t\treturn result;\n\t}\n\treturn _Pact;\n})();\n\n// Settles a pact synchronously\nexport function _settle(pact, state, value) {\n\tif (!pact.s) {\n\t\tif (value instanceof _Pact) {\n\t\t\tif (value.s) {\n\t\t\t\tif (state & 1) {\n\t\t\t\t\tstate = value.s;\n\t\t\t\t}\n\t\t\t\tvalue = value.v;\n\t\t\t} else {\n\t\t\t\tvalue.o = _settle.bind(null, pact, state);\n\t\t\t\treturn;\n\t\t\t}\n\t\t}\n\t\tif (value && value.then) {\n\t\t\tvalue.then(_settle.bind(null, pact, state), _settle.bind(null, pact, 2));\n\t\t\treturn;\n\t\t}\n\t\tpact.s = state;\n\t\tpact.v = value;\n\t\tconst observer = pact.o;\n\t\tif (observer) {\n\t\t\tobserver(pact);\n\t\t}\n\t}\n}\n\nexport function _isSettledPact(thenable) {\n\treturn thenable instanceof _Pact && thenable.s & 1;\n}\n\n// Converts argument to a function that always returns a Promise\nexport function _async(f) {\n\treturn function() {\n\t\tfor (var args = [], i = 0; i < arguments.length; i++) {\n\t\t\targs[i] = arguments[i];\n\t\t}\n\t\ttry {\n\t\t\treturn Promise.resolve(f.apply(this, args));\n\t\t} catch(e) {\n\t\t\treturn Promise.reject(e);\n\t\t}\n\t}\n}\n\n// Awaits on a value that may or may not be a Promise (equivalent to the await keyword in ES2015, with continuations passed explicitly)\nexport function _await(value, then, direct) {\n\tif (direct) {\n\t\treturn then ? then(value) : value;\n\t}\n\tif (!value || !value.then) {\n\t\tvalue = Promise.resolve(value);\n\t}\n\treturn then ? value.then(then) : value;\n}\n\n// Awaits on a value that may or may not be a Promise, then ignores it\nexport function _awaitIgnored(value, direct) {\n\tif (!direct) {\n\t\treturn value && value.then ? value.then(_empty) : Promise.resolve();\n\t}\n}\n\n// Proceeds after a value has resolved, or proceeds immediately if the value is not thenable\nexport function _continue(value, then) {\n\treturn value && value.then ? value.then(then) : then(value);\n}\n\n// Proceeds after a value has resolved, or proceeds immediately if the value is not thenable\nexport function _continueIgnored(value) {\n\tif (value && value.then) {\n\t\treturn value.then(_empty);\n\t}\n}\n\n// Asynchronously iterate through an object that has a length property, passing the index as the first argument to the callback (even as the length property changes)\nexport function _forTo(array, body, check) {\n\tvar i = -1, pact, reject;\n\tfunction _cycle(result) {\n\t\ttry {\n\t\t\twhile (++i < array.length && (!check || !check())) {\n\t\t\t\tresult = body(i);\n\t\t\t\tif (result && result.then) {\n\t\t\t\t\tif (_isSettledPact(result)) {\n\t\t\t\t\t\tresult = result.v;\n\t\t\t\t\t} else {\n\t\t\t\t\t\tresult.then(_cycle, reject || (reject = _settle.bind(null, pact = new _Pact(), 2)));\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t\tif (pact) {\n\t\t\t\t_settle(pact, 1, result);\n\t\t\t} else {\n\t\t\t\tpact = result;\n\t\t\t}\n\t\t} catch (e) {\n\t\t\t_settle(pact || (pact = new _Pact()), 2, e);\n\t\t}\n\t}\n\t_cycle();\n\treturn pact;\n}\n\n// Asynchronously iterate through an object\'s properties (including properties inherited from the prototype)\n// Uses a snapshot of the object\'s properties\nexport function _forIn(target, body, check) {\n\tvar keys = [];\n\tfor (var key in target) {\n\t\tkeys.push(key);\n\t}\n\treturn _forTo(keys, function(i) { return body(keys[i]); }, check);\n}\n\n// Asynchronously iterate through an object\'s own properties (excluding properties inherited from the prototype)\n// Uses a snapshot of the object\'s properties\nexport function _forOwn(target, body, check) {\n\tvar keys = [];\n\tfor (var key in target) {\n\t\tif (Object.prototype.hasOwnProperty.call(target, key)) {\n\t\t\tkeys.push(key);\n\t\t}\n\t}\n\treturn _forTo(keys, function(i) { return body(keys[i]); }, check);\n}\n\nexport const _iteratorSymbol = /*#__PURE__*/ typeof Symbol !== "undefined" ? (Symbol.iterator || (Symbol.iterator = Symbol("Symbol.iterator"))) : "@@iterator";\n\n// Asynchronously iterate through an object\'s values\n// Uses for...of if the runtime supports it, otherwise iterates until length on a copy\nexport function _forOf(target, body, check) {\n\tif (typeof target[_iteratorSymbol] === "function") {\n\t\tvar iterator = target[_iteratorSymbol](), step, pact, reject;\n\t\tfunction _cycle(result) {\n\t\t\ttry {\n\t\t\t\twhile (!(step = iterator.next()).done && (!check || !check())) {\n\t\t\t\t\tresult = body(step.value);\n\t\t\t\t\tif (result && result.then) {\n\t\t\t\t\t\tif (_isSettledPact(result)) {\n\t\t\t\t\t\t\tresult = result.v;\n\t\t\t\t\t\t} else {\n\t\t\t\t\t\t\tresult.then(_cycle, reject || (reject = _settle.bind(null, pact = new _Pact(), 2)));\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\tif (pact) {\n\t\t\t\t\t_settle(pact, 1, result);\n\t\t\t\t} else {\n\t\t\t\t\tpact = result;\n\t\t\t\t}\n\t\t\t} catch (e) {\n\t\t\t\t_settle(pact || (pact = new _Pact()), 2, e);\n\t\t\t}\n\t\t}\n\t\t_cycle();\n\t\tif (iterator.return) {\n\t\t\tvar _fixup = function(value) {\n\t\t\t\ttry {\n\t\t\t\t\tif (!step.done) {\n\t\t\t\t\t\titerator.return();\n\t\t\t\t\t}\n\t\t\t\t} catch(e) {\n\t\t\t\t}\n\t\t\t\treturn value;\n\t\t\t}\n\t\t\tif (pact && pact.then) {\n\t\t\t\treturn pact.then(_fixup, function(e) {\n\t\t\t\t\tthrow _fixup(e);\n\t\t\t\t});\n\t\t\t}\n\t\t\t_fixup();\n\t\t}\n\t\treturn pact;\n\t}\n\t// No support for Symbol.iterator\n\tif (!("length" in target)) {\n\t\tthrow new TypeError("Object is not iterable");\n\t}\n\t// Handle live collections properly\n\tvar values = [];\n\tfor (var i = 0; i < target.length; i++) {\n\t\tvalues.push(target[i]);\n\t}\n\treturn _forTo(values, function(i) { return body(values[i]); }, check);\n}\n\nexport const _asyncIteratorSymbol = /*#__PURE__*/ typeof Symbol !== "undefined" ? (Symbol.asyncIterator || (Symbol.asyncIterator = Symbol("Symbol.asyncIterator"))) : "@@asyncIterator";\n\n// Asynchronously iterate on a value using it\'s async iterator if present, or its synchronous iterator if missing\nexport function _forAwaitOf(target, body, check) {\n\tif (typeof target[_asyncIteratorSymbol] === "function") {\n\t\tvar pact = new _Pact();\n\t\tvar iterator = target[_asyncIteratorSymbol]();\n\t\titerator.next().then(_resumeAfterNext).then(void 0, _reject);\n\t\treturn pact;\n\t\tfunction _resumeAfterBody(result) {\n\t\t\tif (check && check()) {\n\t\t\t\treturn _settle(pact, 1, iterator.return ? iterator.return().then(function() { return result; }) : result);\n\t\t\t}\n\t\t\titerator.next().then(_resumeAfterNext).then(void 0, _reject);\n\t\t}\n\t\tfunction _resumeAfterNext(step) {\n\t\t\tif (step.done) {\n\t\t\t\t_settle(pact, 1);\n\t\t\t} else {\n\t\t\t\tPromise.resolve(body(step.value)).then(_resumeAfterBody).then(void 0, _reject);\n\t\t\t}\n\t\t}\n\t\tfunction _reject(error) {\n\t\t\t_settle(pact, 2, iterator.return ? iterator.return().then(function() { return error; }) : error);\n\t\t}\n\t}\n\treturn Promise.resolve(_forOf(target, function(value) { return Promise.resolve(value).then(body); }, check));\n}\n\n// Asynchronously implement a generic for loop\nexport function _for(test, update, body) {\n\tvar stage;\n\tfor (;;) {\n\t\tvar shouldContinue = test();\n\t\tif (_isSettledPact(shouldContinue)) {\n\t\t\tshouldContinue = shouldContinue.v;\n\t\t}\n\t\tif (!shouldContinue) {\n\t\t\treturn result;\n\t\t}\n\t\tif (shouldContinue.then) {\n\t\t\tstage = 0;\n\t\t\tbreak;\n\t\t}\n\t\tvar result = body();\n\t\tif (result && result.then) {\n\t\t\tif (_isSettledPact(result)) {\n\t\t\t\tresult = result.s;\n\t\t\t} else {\n\t\t\t\tstage = 1;\n\t\t\t\tbreak;\n\t\t\t}\n\t\t}\n\t\tif (update) {\n\t\t\tvar updateValue = update();\n\t\t\tif (updateValue && updateValue.then && !_isSettledPact(updateValue)) {\n\t\t\t\tstage = 2;\n\t\t\t\tbreak;\n\t\t\t}\n\t\t}\n\t}\n\tvar pact = new _Pact();\n\tvar reject = _settle.bind(null, pact, 2);\n\t(stage === 0 ? shouldContinue.then(_resumeAfterTest) : stage === 1 ? result.then(_resumeAfterBody) : updateValue.then(_resumeAfterUpdate)).then(void 0, reject);\n\treturn pact;\n\tfunction _resumeAfterBody(value) {\n\t\tresult = value;\n\t\tdo {\n\t\t\tif (update) {\n\t\t\t\tupdateValue = update();\n\t\t\t\tif (updateValue && updateValue.then && !_isSettledPact(updateValue)) {\n\t\t\t\t\tupdateValue.then(_resumeAfterUpdate).then(void 0, reject);\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t}\n\t\t\tshouldContinue = test();\n\t\t\tif (!shouldContinue || (_isSettledPact(shouldContinue) && !shouldContinue.v)) {\n\t\t\t\t_settle(pact, 1, result);\n\t\t\t\treturn;\n\t\t\t}\n\t\t\tif (shouldContinue.then) {\n\t\t\t\tshouldContinue.then(_resumeAfterTest).then(void 0, reject);\n\t\t\t\treturn;\n\t\t\t}\n\t\t\tresult = body();\n\t\t\tif (_isSettledPact(result)) {\n\t\t\t\tresult = result.v;\n\t\t\t}\n\t\t} while (!result || !result.then);\n\t\tresult.then(_resumeAfterBody).then(void 0, reject);\n\t}\n\tfunction _resumeAfterTest(shouldContinue) {\n\t\tif (shouldContinue) {\n\t\t\tresult = body();\n\t\t\tif (result && result.then) {\n\t\t\t\tresult.then(_resumeAfterBody).then(void 0, reject);\n\t\t\t} else {\n\t\t\t\t_resumeAfterBody(result);\n\t\t\t}\n\t\t} else {\n\t\t\t_settle(pact, 1, result);\n\t\t}\n\t}\n\tfunction _resumeAfterUpdate() {\n\t\tif (shouldContinue = test()) {\n\t\t\tif (shouldContinue.then) {\n\t\t\t\tshouldContinue.then(_resumeAfterTest).then(void 0, reject);\n\t\t\t} else {\n\t\t\t\t_resumeAfterTest(shouldContinue);\n\t\t\t}\n\t\t} else {\n\t\t\t_settle(pact, 1, result);\n\t\t}\n\t}\n}\n\n// Asynchronously implement a do ... while loop\nexport function _do(body, test) {\n\tvar awaitBody;\n\tdo {\n\t\tvar result = body();\n\t\tif (result && result.then) {\n\t\t\tif (_isSettledPact(result)) {\n\t\t\t\tresult = result.v;\n\t\t\t} else {\n\t\t\t\tawaitBody = true;\n\t\t\t\tbreak;\n\t\t\t}\n\t\t}\n\t\tvar shouldContinue = test();\n\t\tif (_isSettledPact(shouldContinue)) {\n\t\t\tshouldContinue = shouldContinue.v;\n\t\t}\n\t\tif (!shouldContinue) {\n\t\t\treturn result;\n\t\t}\n\t} while (!shouldContinue.then);\n\tconst pact = new _Pact();\n\tconst reject = _settle.bind(null, pact, 2);\n\t(awaitBody ? result.then(_resumeAfterBody) : shouldContinue.then(_resumeAfterTest)).then(void 0, reject);\n\treturn pact;\n\tfunction _resumeAfterBody(value) {\n\t\tresult = value;\n\t\tfor (;;) {\n\t\t\tshouldContinue = test();\n\t\t\tif (_isSettledPact(shouldContinue)) {\n\t\t\t\tshouldContinue = shouldContinue.v;\n\t\t\t}\n\t\t\tif (!shouldContinue) {\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\tif (shouldContinue.then) {\n\t\t\t\tshouldContinue.then(_resumeAfterTest).then(void 0, reject);\n\t\t\t\treturn;\n\t\t\t}\n\t\t\tresult = body();\n\t\t\tif (result && result.then) {\n\t\t\t\tif (_isSettledPact(result)) {\n\t\t\t\t\tresult = result.v;\n\t\t\t\t} else {\n\t\t\t\t\tresult.then(_resumeAfterBody).then(void 0, reject);\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\t_settle(pact, 1, result);\n\t}\n\tfunction _resumeAfterTest(shouldContinue) {\n\t\tif (shouldContinue) {\n\t\t\tdo {\n\t\t\t\tresult = body();\n\t\t\t\tif (result && result.then) {\n\t\t\t\t\tif (_isSettledPact(result)) {\n\t\t\t\t\t\tresult = result.v;\n\t\t\t\t\t} else {\n\t\t\t\t\t\tresult.then(_resumeAfterBody).then(void 0, reject);\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\tshouldContinue = test();\n\t\t\t\tif (_isSettledPact(shouldContinue)) {\n\t\t\t\t\tshouldContinue = shouldContinue.v;\n\t\t\t\t}\n\t\t\t\tif (!shouldContinue) {\n\t\t\t\t\t_settle(pact, 1, result);\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t} while (!shouldContinue.then);\n\t\t\tshouldContinue.then(_resumeAfterTest).then(void 0, reject);\n\t\t} else {\n\t\t\t_settle(pact, 1, result);\n\t\t}\n\t}\n}\n\n// Asynchronously implement a switch statement\nexport function _switch(discriminant, cases) {\n\tvar dispatchIndex = -1;\n\tvar awaitBody;\n\touter: {\n\t\tfor (var i = 0; i < cases.length; i++) {\n\t\t\tvar test = cases[i][0];\n\t\t\tif (test) {\n\t\t\t\tvar testValue = test();\n\t\t\t\tif (testValue && testValue.then) {\n\t\t\t\t\tbreak outer;\n\t\t\t\t}\n\t\t\t\tif (testValue === discriminant) {\n\t\t\t\t\tdispatchIndex = i;\n\t\t\t\t\tbreak;\n\t\t\t\t}\n\t\t\t} else {\n\t\t\t\t// Found the default case, set it as the pending dispatch case\n\t\t\t\tdispatchIndex = i;\n\t\t\t}\n\t\t}\n\t\tif (dispatchIndex !== -1) {\n\t\t\tdo {\n\t\t\t\tvar body = cases[dispatchIndex][1];\n\t\t\t\twhile (!body) {\n\t\t\t\t\tdispatchIndex++;\n\t\t\t\t\tbody = cases[dispatchIndex][1];\n\t\t\t\t}\n\t\t\t\tvar result = body();\n\t\t\t\tif (result && result.then) {\n\t\t\t\t\tawaitBody = true;\n\t\t\t\t\tbreak outer;\n\t\t\t\t}\n\t\t\t\tvar fallthroughCheck = cases[dispatchIndex][2];\n\t\t\t\tdispatchIndex++;\n\t\t\t} while (fallthroughCheck && !fallthroughCheck());\n\t\t\treturn result;\n\t\t}\n\t}\n\tconst pact = new _Pact();\n\tconst reject = _settle.bind(null, pact, 2);\n\t(awaitBody ? result.then(_resumeAfterBody) : testValue.then(_resumeAfterTest)).then(void 0, reject);\n\treturn pact;\n\tfunction _resumeAfterTest(value) {\n\t\tfor (;;) {\n\t\t\tif (value === discriminant) {\n\t\t\t\tdispatchIndex = i;\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\tif (++i === cases.length) {\n\t\t\t\tif (dispatchIndex !== -1) {\n\t\t\t\t\tbreak;\n\t\t\t\t} else {\n\t\t\t\t\t_settle(pact, 1, result);\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t}\n\t\t\ttest = cases[i][0];\n\t\t\tif (test) {\n\t\t\t\tvalue = test();\n\t\t\t\tif (value && value.then) {\n\t\t\t\t\tvalue.then(_resumeAfterTest).then(void 0, reject);\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t} else {\n\t\t\t\tdispatchIndex = i;\n\t\t\t}\n\t\t}\n\t\tdo {\n\t\t\tvar body = cases[dispatchIndex][1];\n\t\t\twhile (!body) {\n\t\t\t\tdispatchIndex++;\n\t\t\t\tbody = cases[dispatchIndex][1];\n\t\t\t}\n\t\t\tvar result = body();\n\t\t\tif (result && result.then) {\n\t\t\t\tresult.then(_resumeAfterBody).then(void 0, reject);\n\t\t\t\treturn;\n\t\t\t}\n\t\t\tvar fallthroughCheck = cases[dispatchIndex][2];\n\t\t\tdispatchIndex++;\n\t\t} while (fallthroughCheck && !fallthroughCheck());\n\t\t_settle(pact, 1, result);\n\t}\n\tfunction _resumeAfterBody(result) {\n\t\tfor (;;) {\n\t\t\tvar fallthroughCheck = cases[dispatchIndex][2];\n\t\t\tif (!fallthroughCheck || fallthroughCheck()) {\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\tdispatchIndex++;\n\t\t\tvar body = cases[dispatchIndex][1];\n\t\t\twhile (!body) {\n\t\t\t\tdispatchIndex++;\n\t\t\t\tbody = cases[dispatchIndex][1];\n\t\t\t}\n\t\t\tresult = body();\n\t\t\tif (result && result.then) {\n\t\t\t\tresult.then(_resumeAfterBody).then(void 0, reject);\n\t\t\t\treturn;\n\t\t\t}\n\t\t}\n\t\t_settle(pact, 1, result);\n\t}\n}\n\n// Asynchronously call a function and pass the result to explicitly passed continuations\nexport function _call(body, then, direct) {\n\tif (direct) {\n\t\treturn then ? then(body()) : body();\n\t}\n\ttry {\n\t\tvar result = Promise.resolve(body());\n\t\treturn then ? result.then(then) : result;\n\t} catch (e) {\n\t\treturn Promise.reject(e);\n\t}\n}\n\n// Asynchronously call a function and swallow the result\nexport function _callIgnored(body, direct) {\n\treturn _call(body, _empty, direct);\n}\n\n// Asynchronously call a function and pass the result to explicitly passed continuations\nexport function _invoke(body, then) {\n\tvar result = body();\n\tif (result && result.then) {\n\t\treturn result.then(then);\n\t}\n\treturn then(result);\n}\n\n// Asynchronously call a function and swallow the result\nexport function _invokeIgnored(body) {\n\tvar result = body();\n\tif (result && result.then) {\n\t\treturn result.then(_empty);\n\t}\n}\n\n// Asynchronously call a function and send errors to recovery continuation\nexport function _catch(body, recover) {\n\ttry {\n\t\tvar result = body();\n\t} catch(e) {\n\t\treturn recover(e);\n\t}\n\tif (result && result.then) {\n\t\treturn result.then(void 0, recover);\n\t}\n\treturn result;\n}\n\n// Asynchronously await a promise and pass the result to a finally continuation\nexport function _finallyRethrows(body, finalizer) {\n\ttry {\n\t\tvar result = body();\n\t} catch (e) {\n\t\treturn finalizer(true, e);\n\t}\n\tif (result && result.then) {\n\t\treturn result.then(finalizer.bind(null, false), finalizer.bind(null, true));\n\t}\n\treturn finalizer(false, result);\n}\n\n// Asynchronously await a promise and invoke a finally continuation that always overrides the result\nexport function _finally(body, finalizer) {\n\ttry {\n\t\tvar result = body();\n\t} catch (e) {\n\t\treturn finalizer();\n\t}\n\tif (result && result.then) {\n\t\treturn result.then(finalizer, finalizer);\n\t}\n\treturn finalizer();\n}\n\n// Rethrow or return a value from a finally continuation\nexport function _rethrow(thrown, value) {\n\tif (thrown)\n\t\tthrow value;\n\treturn value;\n}\n\n// Empty function to implement break and other control flow that ignores asynchronous results\nexport function _empty() {\n}\n\n// Sentinel value for early returns in generators \nexport const _earlyReturn = /*#__PURE__*/ {};\n\n// Asynchronously call a function and send errors to recovery continuation, skipping early returns\nexport function _catchInGenerator(body, recover) {\n\treturn _catch(body, function(e) {\n\t\tif (e === _earlyReturn) {\n\t\t\tthrow e;\n\t\t}\n\t\treturn recover(e);\n\t});\n}\n\n// Asynchronous generator class; accepts the entrypoint of the generator, to which it passes itself when the generator should start\nexport const _AsyncGenerator = /*#__PURE__*/(function() {\n\tfunction _AsyncGenerator(entry) {\n\t\tthis._entry = entry;\n\t\tthis._pact = null;\n\t\tthis._resolve = null;\n\t\tthis._return = null;\n\t\tthis._promise = null;\n\t}\n\n\tfunction _wrapReturnedValue(value) {\n\t\treturn { value: value, done: true };\n\t}\n\tfunction _wrapYieldedValue(value) {\n\t\treturn { value: value, done: false };\n\t}\n\n\t_AsyncGenerator.prototype._yield = function(value) {\n\t\t// Yield the value to the pending next call\n\t\tthis._resolve(value && value.then ? value.then(_wrapYieldedValue) : _wrapYieldedValue(value));\n\t\t// Return a pact for an upcoming next/return/throw call\n\t\treturn this._pact = new _Pact();\n\t};\n\t_AsyncGenerator.prototype.next = function(value) {\n\t\t// Advance the generator, starting it if it has yet to be started\n\t\tconst _this = this;\n\t\treturn _this._promise = new Promise(function (resolve) {\n\t\t\tconst _pact = _this._pact;\n\t\t\tif (_pact === null) {\n\t\t\t\tconst _entry = _this._entry;\n\t\t\t\tif (_entry === null) {\n\t\t\t\t\t// Generator is started, but not awaiting a yield expression\n\t\t\t\t\t// Abandon the next call!\n\t\t\t\t\treturn resolve(_this._promise);\n\t\t\t\t}\n\t\t\t\t// Start the generator\n\t\t\t\t_this._entry = null;\n\t\t\t\t_this._resolve = resolve;\n\t\t\t\tfunction returnValue(value) {\n\t\t\t\t\t_this._resolve(value && value.then ? value.then(_wrapReturnedValue) : _wrapReturnedValue(value));\n\t\t\t\t\t_this._pact = null;\n\t\t\t\t\t_this._resolve = null;\n\t\t\t\t}\n\t\t\t\tvar result = _entry(_this);\n\t\t\t\tif (result && result.then) {\n\t\t\t\t\tresult.then(returnValue, function(error) {\n\t\t\t\t\t\tif (error === _earlyReturn) {\n\t\t\t\t\t\t\treturnValue(_this._return);\n\t\t\t\t\t\t} else {\n\t\t\t\t\t\t\tconst pact = new _Pact();\n\t\t\t\t\t\t\t_this._resolve(pact);\n\t\t\t\t\t\t\t_this._pact = null;\n\t\t\t\t\t\t\t_this._resolve = null;\n\t\t\t\t\t\t\t_resolve(pact, 2, error);\n\t\t\t\t\t\t}\n\t\t\t\t\t});\n\t\t\t\t} else {\n\t\t\t\t\treturnValue(result);\n\t\t\t\t}\n\t\t\t} else {\n\t\t\t\t// Generator is started and a yield expression is pending, settle it\n\t\t\t\t_this._pact = null;\n\t\t\t\t_this._resolve = resolve;\n\t\t\t\t_settle(_pact, 1, value);\n\t\t\t}\n\t\t});\n\t};\n\t_AsyncGenerator.prototype.return = function(value) {\n\t\t// Early return from the generator if started, otherwise abandons the generator\n\t\tconst _this = this;\n\t\treturn _this._promise = new Promise(function (resolve) {\n\t\t\tconst _pact = _this._pact;\n\t\t\tif (_pact === null) {\n\t\t\t\tif (_this._entry === null) {\n\t\t\t\t\t// Generator is started, but not awaiting a yield expression\n\t\t\t\t\t// Abandon the return call!\n\t\t\t\t\treturn resolve(_this._promise);\n\t\t\t\t}\n\t\t\t\t// Generator is not started, abandon it and return the specified value\n\t\t\t\t_this._entry = null;\n\t\t\t\treturn resolve(value && value.then ? value.then(_wrapReturnedValue) : _wrapReturnedValue(value));\n\t\t\t}\n\t\t\t// Settle the yield expression with a rejected "early return" value\n\t\t\t_this._return = value;\n\t\t\t_this._resolve = resolve;\n\t\t\t_this._pact = null;\n\t\t\t_settle(_pact, 2, _earlyReturn);\n\t\t});\n\t};\n\t_AsyncGenerator.prototype.throw = function(error) {\n\t\t// Inject an exception into the pending yield expression\n\t\tconst _this = this;\n\t\treturn _this._promise = new Promise(function (resolve, reject) {\n\t\t\tconst _pact = _this._pact;\n\t\t\tif (_pact === null) {\n\t\t\t\tif (_this._entry === null) {\n\t\t\t\t\t// Generator is started, but not awaiting a yield expression\n\t\t\t\t\t// Abandon the throw call!\n\t\t\t\t\treturn resolve(_this._promise);\n\t\t\t\t}\n\t\t\t\t// Generator is not started, abandon it and return a rejected Promise containing the error\n\t\t\t\t_this._entry = null;\n\t\t\t\treturn reject(error);\n\t\t\t}\n\t\t\t// Settle the yield expression with the value as a rejection\n\t\t\t_this._resolve = resolve;\n\t\t\t_this._pact = null;\n\t\t\t_settle(_pact, 2, error);\n\t\t});\n\t};\n\n\t_AsyncGenerator.prototype[_asyncIteratorSymbol] = function() {\n\t\treturn this;\n\t};\n\t\n\treturn _AsyncGenerator;\n})();\n';
 
 const require = createRequire(import.meta.url);
@@ -10399,38 +10077,65 @@ function default_1({
   };
 }
 
-/*
- * Something to keep in mind:
- * When systemjs format is used by babel, it will generated UID based on
- * the import specifier:
- * https://github.com/babel/babel/blob/97d1967826077f15e766778c0d64711399e9a72a/packages/babel-plugin-transform-modules-systemjs/src/index.ts#L498
- * But at this stage import specifier are absolute file urls
- * So without minification these specifier are long and dependent
- * on where the files are on the filesystem.
- * This is mitigated by minification that will shorten them
- * But ideally babel should not generate this in the first place
- * and prefer to unique identifier based solely on the specifier basename for instance
- */
-const jsenvPluginAsJsClassic = ({
-  systemJsInjection = true
+const convertJsModuleToJsClassic = async ({
+  systemJsInjection,
+  systemJsClientFileUrl,
+  urlInfo,
+  jsModuleUrlInfo
 }) => {
-  const systemJsClientFileUrl = new URL("./js/s.js", import.meta.url).href;
-  return [jsenvPluginAsJsClassicConversion({
-    systemJsInjection,
-    systemJsClientFileUrl
-  }), jsenvPluginAsJsClassicHtml({
-    systemJsInjection,
-    systemJsClientFileUrl,
-    generateJsClassicFilename
-  }), jsenvPluginAsJsClassicWorkers({
-    generateJsClassicFilename
-  })];
-}; // propagate ?as_js_classic to referenced urls
+  const jsClassicFormat = // in general html file are entry points, but js can be entry point when:
+  // - passed in entryPoints to build
+  // - is used by web worker
+  // - the reference contains ?entry_point
+  // When js is entry point there can be no HTML to inject systemjs
+  // and systemjs must be injected into the js file
+  urlInfo.isEntryPoint && // if it's an entry point without dependency (it does not use import)
+  // then we can use UMD, otherwise we have to use systemjs
+  // because it is imported by systemjs
+  !jsModuleUrlInfo.data.usesImport ? "umd" : "system";
+  urlInfo.data.jsClassicFormat = jsClassicFormat;
+  const {
+    code,
+    map
+  } = await applyBabelPlugins({
+    babelPlugins: [...(jsClassicFormat === "system" ? [// propposal-dynamic-import required with systemjs for babel8:
+    // https://github.com/babel/babel/issues/10746
+    requireFromJsenv("@babel/plugin-proposal-dynamic-import"), requireFromJsenv("@babel/plugin-transform-modules-systemjs"), [default_1, {
+      topLevelAwait: "return"
+    }]] : [[requireBabelPlugin("babel-plugin-transform-async-to-promises"), {
+      topLevelAwait: "simple"
+    }], babelPluginTransformImportMetaUrl, requireFromJsenv("@babel/plugin-transform-modules-umd")])],
+    urlInfo: jsModuleUrlInfo
+  });
+  let sourcemap = jsModuleUrlInfo.sourcemap;
+  sourcemap = await composeTwoSourcemaps(sourcemap, map);
+
+  if (systemJsInjection && jsClassicFormat === "system" && urlInfo.isEntryPoint) {
+    const magicSource = createMagicSource(code);
+    const systemjsCode = readFileSync(systemJsClientFileUrl, {
+      as: "string"
+    });
+    magicSource.prepend(`${systemjsCode}\n\n`);
+    const magicResult = magicSource.toContentAndSourcemap();
+    sourcemap = await composeTwoSourcemaps(sourcemap, magicResult.sourcemap);
+    return {
+      content: magicResult.content,
+      sourcemap
+    };
+  }
+
+  return {
+    content: code,
+    sourcemap
+  };
+};
+
 // and perform the conversion during fetchUrlContent
 
 const jsenvPluginAsJsClassicConversion = ({
   systemJsInjection,
-  systemJsClientFileUrl
+  systemJsClientFileUrl,
+  generateJsClassicFilename
 }) => {
   const propagateJsClassicSearchParam = (reference, context) => {
     const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl);
@@ -10466,7 +10171,7 @@ const jsenvPluginAsJsClassicConversion = ({
       }
     },
     fetchUrlContent: async (urlInfo, context) => {
-      const originalUrlInfo = await context.fetchOriginalUrlInfo({
+      const [jsModuleReference, jsModuleUrlInfo] = context.getWithoutSearchParam({
         urlInfo,
         context,
         searchParam: "as_js_classic",
@@ -10476,20 +10181,14 @@ const jsenvPluginAsJsClassicConversion = ({
         expectedType: "js_module"
       });
 
-      if (!originalUrlInfo) {
+      if (!jsModuleReference) {
         return null;
       }
 
-      const jsClassicFormat = // in general html file are entry points, but js can be entry point when:
-      // - passed in entryPoints to build
-      // - is used by web worker
-      // - the reference contains ?entry_point
-      // When js is entry point there can be no HTML to inject systemjs
-      // and systemjs must be injected into the js file
-      urlInfo.isEntryPoint && // if it's an entry point without dependency (it does not use import)
-      // then we can use UMD, otherwise we have to use systemjs
-      // because it is imported by systemjs
-      !originalUrlInfo.data.usesImport ? "umd" : "system";
+      await context.fetchUrlContent(jsModuleUrlInfo, {
+        reference: jsModuleReference,
+        cleanAfterFetch: true
+      });
       const {
         content,
         sourcemap
@@ -10497,20 +10196,978 @@ const jsenvPluginAsJsClassicConversion = ({
         systemJsInjection,
         systemJsClientFileUrl,
         urlInfo,
-        originalUrlInfo,
-        jsClassicFormat
+        jsModuleUrlInfo
       });
-      urlInfo.data.jsClassicFormat = jsClassicFormat;
       return {
         content,
         contentType: "text/javascript",
         type: "js_classic",
-        originalUrl: originalUrlInfo.originalUrl,
-        originalContent: originalUrlInfo.originalContent,
+        originalUrl: jsModuleUrlInfo.originalUrl,
+        originalContent: jsModuleUrlInfo.originalContent,
         sourcemap
       };
     }
   };
+};
+
+/*
+ * when <script type="module"> cannot be used:
+ * - ?as_js_classic is injected into the src of <script type="module">
+ * - js inside <script type="module"> is transformed into classic js
+ * - <link rel="modulepreload"> are converted to <link rel="preload">
+ */
+const jsenvPluginAsJsClassicHtml = ({
+  systemJsInjection,
+  systemJsClientFileUrl,
+  generateJsClassicFilename
+}) => {
+  return {
+    name: "jsenv:as_js_classic_html",
+    appliesDuring: "*",
+    transformUrlContent: {
+      html: async (urlInfo, context) => {
+        const shouldTransformScriptTypeModule = !context.isSupportedOnCurrentClients("script_type_module") || !context.isSupportedOnCurrentClients("import_dynamic") || !context.isSupportedOnCurrentClients("import_meta");
+        const htmlAst = parseHtmlString(urlInfo.content);
+        const preloadAsScriptNodes = [];
+        const modulePreloadNodes = [];
+        const moduleScriptNodes = [];
+        const classicScriptNodes = [];
+
+        const visitLinkNodes = node => {
+          const rel = getHtmlNodeAttribute(node, "rel");
+
+          if (rel === "modulepreload") {
+            modulePreloadNodes.push(node);
+            return;
+          }
+
+          if (rel === "preload") {
+            const asValue = getHtmlNodeAttribute(node, "as");
+
+            if (asValue === "script") {
+              preloadAsScriptNodes.push(node);
+            }
+
+            return;
+          }
+        };
+
+        const visitScriptNodes = node => {
+          const {
+            type
+          } = analyzeScriptNode(node);
+
+          if (type === "js_module") {
+            moduleScriptNodes.push(node);
+            return;
+          }
+
+          if (type === "js_classic") {
+            classicScriptNodes.push(node);
+            return;
+          }
+        };
+
+        visitHtmlNodes(htmlAst, {
+          link: node => {
+            visitLinkNodes(node);
+          },
+          script: node => {
+            visitScriptNodes(node);
+          }
+        });
+        const actions = [];
+        const jsModuleUrls = [];
+        const convertedUrls = [];
+
+        const getReferenceAsJsClassic = async (reference, {
+          // we don't cook resource hints
+          // because they might refer to resource that will be modified during build
+          // It also means something else HAVE to reference that url in order to cook it
+          // so that the preload is deleted by "resync_resource_hints.js" otherwise
+          cookIt = false
+        } = {}) => {
+          const newReferenceProps = {
+            expectedType: "js_classic",
+            specifier: injectQueryParamsIntoSpecifier(reference.specifier, {
+              as_js_classic: ""
+            }),
+            filename: generateJsClassicFilename(reference.url)
+          };
+          const [newReference, newUrlInfo] = context.referenceUtils.update(reference, newReferenceProps);
+          const convertedUrl = newUrlInfo.url;
+
+          if (!convertedUrls.includes(convertedUrl)) {
+            convertedUrls.push(convertedUrl);
+          }
+
+          if (cookIt) {
+            // during dev it means js modules will be cooked before server sends the HTML
+            // it's ok because:
+            // - during dev script_type_module are supported (dev use a recent browser)
+            // - even if browser is not supported it still works it's jus a bit slower
+            //   because it needs to decide if systemjs will be injected or not
+            await context.cook(newUrlInfo, {
+              reference: newReference
+            });
+          }
+
+          return [newReference, newUrlInfo];
+        };
+
+        classicScriptNodes.forEach(classicScriptNode => {
+          const src = getHtmlNodeAttribute(classicScriptNode, "src");
+
+          if (src !== undefined) {
+            const reference = urlInfo.references.find(ref => ref.generatedSpecifier === src && ref.type === "script_src");
+            const urlObject = new URL(reference.url);
+
+            if (urlObject.searchParams.has("as_js_classic")) {
+              const convertedUrl = urlObject.href;
+              convertedUrls.push(convertedUrl);
+              urlObject.searchParams.delete("as_js_classic");
+              const jsModuleUrl = urlObject.href;
+              jsModuleUrls.push(jsModuleUrl);
+              actions.push(async () => {
+                const urlInfo = context.urlGraph.getUrlInfo(convertedUrl);
+                await context.cook(urlInfo, {
+                  reference
+                });
+              });
+            }
+          }
+        });
+        moduleScriptNodes.forEach(moduleScriptNode => {
+          const src = getHtmlNodeAttribute(moduleScriptNode, "src");
+
+          if (src !== undefined) {
+            const reference = urlInfo.references.find(ref => ref.generatedSpecifier === src && ref.type === "script_src" && ref.expectedType === "js_module");
+            jsModuleUrls.push(reference.url);
+
+            if (shouldTransformScriptTypeModule) {
+              actions.push(async () => {
+                const [newReference] = await getReferenceAsJsClassic(reference, {
+                  cookIt: true
+                });
+                setHtmlNodeAttributes(moduleScriptNode, {
+                  type: undefined,
+                  src: newReference.generatedSpecifier
+                });
+              });
+            }
+
+            return;
+          }
+
+          if (shouldTransformScriptTypeModule) {
+            const htmlNodeText = getHtmlNodeText(moduleScriptNode);
+            actions.push(async () => {
+              const {
+                line,
+                column,
+                lineEnd,
+                columnEnd,
+                isOriginal
+              } = getHtmlNodePosition(moduleScriptNode, {
+                preferOriginal: true
+              });
+              let inlineScriptUrl = generateInlineContentUrl({
+                url: urlInfo.url,
+                extension: ".js",
+                line,
+                column,
+                lineEnd,
+                columnEnd
+              });
+              const [inlineReference] = context.referenceUtils.foundInline({
+                node: moduleScriptNode,
+                type: "script_src",
+                expectedType: "js_module",
+                isOriginalPosition: isOriginal,
+                // we remove 1 to the line because imagine the following html:
+                // <script>console.log('ok')</script>
+                // -> content starts same line as <script>
+                specifierLine: line - 1,
+                specifierColumn: column,
+                specifier: inlineScriptUrl,
+                contentType: "text/javascript",
+                content: htmlNodeText
+              });
+              const [, newUrlInfo] = await getReferenceAsJsClassic(inlineReference, {
+                cookIt: true
+              });
+              setHtmlNodeText(moduleScriptNode, newUrlInfo.content);
+              setHtmlNodeAttributes(moduleScriptNode, {
+                "type": undefined,
+                "jsenv-plugin-owner": "jsenv:as_js_classic_html",
+                "jsenv-plugin-action": "content_cooked"
+              });
+            });
+          }
+        });
+
+        if (shouldTransformScriptTypeModule) {
+          preloadAsScriptNodes.forEach(preloadAsScriptNode => {
+            const href = getHtmlNodeAttribute(preloadAsScriptNode, "href");
+            const reference = urlInfo.references.find(ref => ref.generatedSpecifier === href && ref.type === "link_href" && ref.expectedType === undefined);
+            const expectedScriptType = jsModuleUrls.includes(reference.url) ? "module" : "classic";
+
+            if (expectedScriptType === "module") {
+              actions.push(async () => {
+                // reference modified by <script type="module"> conversion
+                let newReference;
+
+                if (reference.next) {
+                  newReference = reference.next;
+                } else {
+                  [newReference] = await getReferenceAsJsClassic(reference);
+                }
+
+                setHtmlNodeAttributes(preloadAsScriptNode, {
+                  href: newReference.generatedSpecifier,
+                  crossorigin: undefined
+                });
+              });
+            }
+          });
+          modulePreloadNodes.forEach(modulePreloadNode => {
+            const href = getHtmlNodeAttribute(modulePreloadNode, "href");
+            const reference = urlInfo.references.find(ref => ref.generatedSpecifier === href && ref.type === "link_href" && ref.expectedType === "js_module");
+            actions.push(async () => {
+              let newReference;
+
+              if (reference.next) {
+                newReference = reference.next;
+              } else {
+                [newReference] = await getReferenceAsJsClassic(reference);
+              }
+
+              setHtmlNodeAttributes(modulePreloadNode, {
+                rel: "preload",
+                as: "script",
+                href: newReference.generatedSpecifier
+              });
+            });
+          });
+        }
+
+        if (actions.length === 0) {
+          return null;
+        }
+
+        await Promise.all(actions.map(action => action()));
+
+        if (systemJsInjection) {
+          const needsSystemJs = convertedUrls.some(convertedUrl => context.urlGraph.getUrlInfo(convertedUrl).data.jsClassicFormat === "system");
+
+          if (needsSystemJs) {
+            const [systemJsReference] = context.referenceUtils.inject({
+              type: "script_src",
+              expectedType: "js_classic",
+              specifier: systemJsClientFileUrl
+            });
+            injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
+              tagName: "script",
+              src: systemJsReference.generatedSpecifier
+            }), "jsenv:as_js_classic_html");
+          }
+        }
+
+        return stringifyHtmlAst(htmlAst);
+      }
+    }
+  };
+};
+
+/*
+ * when {type: "module"} cannot be used on web workers:
+ * - new Worker("worker.js", { type: "module" })
+ *   transformed into
+ *   new Worker("worker.js?as_js_classic", { type: " lassic" })
+ * - navigator.serviceWorker.register("service_worker.js", { type: "module" })
+ *   transformed into
+ *   navigator.serviceWorker.register("service_worker.js?as_js_classic", { type: "classic" })
+ * - new SharedWorker("shared_worker.js", { type: "module" })
+ *   transformed into
+ *   new SharedWorker("shared_worker.js?as_js_classic", { type: "classic" })
+ */
+const jsenvPluginAsJsClassicWorkers = ({
+  generateJsClassicFilename
+}) => {
+  const updateReference = reference => {
+    reference.filename = generateJsClassicFilename(reference.url);
+
+    reference.mutation = magicSource => {
+      magicSource.replace({
+        start: reference.typePropertyNode.value.start,
+        end: reference.typePropertyNode.value.end,
+        replacement: JSON.stringify("classic")
+      });
+    };
+
+    reference.expectedType = "js_classic";
+    return injectQueryParams(reference.url, {
+      as_js_classic: ""
+    });
+  };
+
+  return {
+    name: "jsenv:as_js_classic_workers",
+    appliesDuring: "*",
+    redirectUrl: {
+      js_url_specifier: (reference, context) => {
+        if (reference.expectedType !== "js_module") {
+          return null;
+        }
+
+        if (reference.expectedSubtype === "worker") {
+          if (context.isSupportedOnCurrentClients("worker_type_module")) {
+            return null;
+          }
+
+          return updateReference(reference);
+        }
+
+        if (reference.expectedSubtype === "service_worker") {
+          if (context.isSupportedOnCurrentClients("service_worker_type_module")) {
+            return null;
+          }
+
+          return updateReference(reference);
+        }
+
+        if (reference.expectedSubtype === "shared_worker") {
+          if (context.isSupportedOnCurrentClients("shared_worker_type_module")) {
+            return null;
+          }
+
+          return updateReference(reference);
+        }
+
+        return null;
+      }
+    }
+  };
+};
+
+const createUrlGraphLoader = context => {
+  const promises = [];
+  const promiseMap = new Map();
+
+  const load = (urlInfo, dishContext, {
+    ignoreRessourceHint = true,
+    ignoreDynamicImport = false
+  } = {}) => {
+    const promiseFromData = promiseMap.get(urlInfo);
+    if (promiseFromData) return promiseFromData;
+
+    const promise = (async () => {
+      await context.cook(urlInfo, {
+        cookDuringCook: load,
+        ...dishContext
+      });
+      loadReferencedUrlInfos(urlInfo, {
+        ignoreRessourceHint,
+        ignoreDynamicImport
+      });
+    })();
+
+    promises.push(promise);
+    promiseMap.set(urlInfo, promise);
+    return promise;
+  };
+
+  const loadReferencedUrlInfos = (urlInfo, {
+    ignoreRessourceHint,
+    ignoreDynamicImport
+  }) => {
+    const {
+      references
+    } = urlInfo;
+    references.forEach(reference => {
+      // we don't cook resource hints
+      // because they might refer to resource that will be modified during build
+      // It also means something else have to reference that url in order to cook it
+      // so that the preload is deleted by "resync_resource_hints.js" otherwise
+      if (ignoreRessourceHint && reference.isResourceHint) {
+        return;
+      }
+
+      if (ignoreDynamicImport && // TODO: it's not really this, update to the real check
+      reference.type === "dynamic_import") {
+        return;
+      } // we use reference.generatedUrl to mimic what a browser would do:
+      // do a fetch to the specifier as found in the file
+
+
+      const referencedUrlInfo = context.urlGraph.reuseOrCreateUrlInfo(reference.generatedUrl);
+      load(referencedUrlInfo, {
+        reference,
+        ignoreRessourceHint,
+        ignoreDynamicImport
+      });
+    });
+  };
+
+  const getAllLoadDonePromise = async operation => {
+    const waitAll = async () => {
+      if (operation) {
+        operation.throwIfAborted();
+      }
+
+      if (promises.length === 0) {
+        return;
+      }
+
+      const promisesToWait = promises.slice();
+      promises.length = 0;
+      await Promise.all(promisesToWait);
+      await waitAll();
+    };
+
+    await waitAll();
+    promiseMap.clear();
+  };
+
+  return {
+    load,
+    loadReferencedUrlInfos,
+    getAllLoadDonePromise
+  };
+};
+
+/*
+ * Generated helpers
+ * - https://github.com/babel/babel/commits/main/packages/babel-helpers/src/helpers.ts
+ * File helpers
+ * - https://github.com/babel/babel/tree/main/packages/babel-helpers/src/helpers
+ *
+ */
+const babelHelperClientDirectoryUrl = new URL("./babel_helpers/", import.meta.url).href; // we cannot use "@jsenv/core/src/*" because babel helper might be injected
+// into node_modules not depending on "@jsenv/core"
+
+const getBabelHelperFileUrl = babelHelperName => {
+  const babelHelperFileUrl = new URL(`./${babelHelperName}/${babelHelperName}.js`, babelHelperClientDirectoryUrl).href;
+  return babelHelperFileUrl;
+};
+const babelHelperNameFromUrl = url => {
+  if (!url.startsWith(babelHelperClientDirectoryUrl)) {
+    return null;
+  }
+
+  const afterBabelHelperDirectory = url.slice(babelHelperClientDirectoryUrl.length);
+  const babelHelperName = afterBabelHelperDirectory.slice(0, afterBabelHelperDirectory.indexOf("/"));
+  return babelHelperName;
+};
+
+const fileUrlConverter = {
+  asFilePath: fileUrl => {
+    const filePath = urlToFileSystemPath(fileUrl);
+    const urlObject = new URL(fileUrl);
+    const {
+      searchParams
+    } = urlObject;
+    return `${filePath}${stringifyQuery(searchParams)}`;
+  },
+  asFileUrl: filePath => {
+    return decodeURIComponent(fileSystemPathToUrl$1(filePath)).replace(/[=](?=&|$)/g, "");
+  }
+};
+
+const stringifyQuery = searchParams => {
+  const search = searchParams.toString();
+  return search ? `?${search}` : "";
+};
+
+const globalThisClientFileUrl = new URL("./js/global_this.js", import.meta.url).href;
+const newStylesheetClientFileUrl = new URL("./js/new_stylesheet.js", import.meta.url).href;
+const regeneratorRuntimeClientFileUrl = new URL("./js/regenerator_runtime.js", import.meta.url).href;
+const bundleJsModules = async ({
+  jsModuleUrlInfos,
+  context,
+  options
+}) => {
+  const {
+    signal,
+    logger,
+    rootDirectoryUrl,
+    buildDirectoryUrl,
+    urlGraph,
+    runtimeCompat,
+    sourcemaps
+  } = context;
+  const {
+    babelHelpersChunk = true,
+    include
+  } = options;
+  const {
+    jsModuleBundleUrlInfos
+  } = await buildWithRollup({
+    signal,
+    logger,
+    rootDirectoryUrl,
+    buildDirectoryUrl,
+    urlGraph,
+    jsModuleUrlInfos,
+    runtimeCompat,
+    sourcemaps,
+    include,
+    babelHelpersChunk
+  });
+  return jsModuleBundleUrlInfos;
+};
+
+const rollupPluginJsenv = ({
+  // logger,
+  rootDirectoryUrl,
+  buildDirectoryUrl,
+  urlGraph,
+  jsModuleUrlInfos,
+  sourcemaps,
+  include,
+  babelHelpersChunk,
+  resultRef
+}) => {
+  let _rollupEmitFile = () => {
+    throw new Error("not implemented");
+  };
+
+  const format = jsModuleUrlInfos.some(jsModuleUrlInfo => jsModuleUrlInfo.filename.endsWith(".cjs")) ? "cjs" : "esm";
+
+  const emitChunk = chunk => {
+    return _rollupEmitFile({
+      type: "chunk",
+      ...chunk
+    });
+  };
+
+  let importCanBeBundled = () => true;
+
+  if (include) {
+    const associations = URL_META.resolveAssociations({
+      bundle: include
+    }, rootDirectoryUrl);
+
+    importCanBeBundled = url => {
+      return URL_META.applyAssociations({
+        url,
+        associations
+      }).bundle;
+    };
+  }
+
+  const urlImporters = {};
+  return {
+    name: "jsenv",
+
+    async buildStart() {
+      _rollupEmitFile = (...args) => this.emitFile(...args);
+
+      let previousNonEntryPointModuleId;
+      jsModuleUrlInfos.forEach(jsModuleUrlInfo => {
+        const id = jsModuleUrlInfo.url;
+
+        if (jsModuleUrlInfo.isEntryPoint) {
+          emitChunk({
+            id
+          });
+          return;
+        }
+
+        emitChunk({
+          id,
+          implicitlyLoadedAfterOneOf: previousNonEntryPointModuleId ? [previousNonEntryPointModuleId] : null // preserveSignature: "allow-extension",
+
+        });
+        previousNonEntryPointModuleId = id;
+      });
+    },
+
+    async generateBundle(outputOptions, rollupResult) {
+      _rollupEmitFile = (...args) => this.emitFile(...args);
+
+      const jsModuleBundleUrlInfos = {};
+      Object.keys(rollupResult).forEach(fileName => {
+        const rollupFileInfo = rollupResult[fileName]; // there is 3 types of file: "placeholder", "asset", "chunk"
+
+        if (rollupFileInfo.type === "chunk") {
+          let url;
+
+          if (rollupFileInfo.facadeModuleId) {
+            url = fileUrlConverter.asFileUrl(rollupFileInfo.facadeModuleId);
+          } else {
+            url = new URL(rollupFileInfo.fileName, buildDirectoryUrl).href;
+          }
+
+          const jsModuleBundleUrlInfo = {
+            url,
+            originalUrl: url,
+            type: format === "esm" ? "js_module" : "common_js",
+            data: {
+              generatedBy: "rollup",
+              bundleRelativeUrl: rollupFileInfo.fileName,
+              usesImport: rollupFileInfo.imports.length > 0 || rollupFileInfo.dynamicImports.length > 0
+            },
+            contentType: "text/javascript",
+            content: rollupFileInfo.code,
+            sourcemap: rollupFileInfo.map
+          };
+          jsModuleBundleUrlInfos[url] = jsModuleBundleUrlInfo;
+        }
+      });
+      resultRef.current = {
+        jsModuleBundleUrlInfos
+      };
+    },
+
+    outputOptions: outputOptions => {
+      // const sourcemapFile = buildDirectoryUrl
+      Object.assign(outputOptions, {
+        format,
+        dir: fileUrlConverter.asFilePath(buildDirectoryUrl),
+        sourcemap: sourcemaps === "file" || sourcemaps === "inline",
+        // sourcemapFile,
+        sourcemapPathTransform: relativePath => {
+          return new URL(relativePath, buildDirectoryUrl).href;
+        },
+        entryFileNames: () => {
+          return `[name].js`;
+        },
+        chunkFileNames: chunkInfo => {
+          const insideJs = willBeInsideJsDirectory({
+            chunkInfo,
+            fileUrlConverter,
+            jsModuleUrlInfos
+          });
+          let nameFromUrlInfo;
+
+          if (chunkInfo.facadeModuleId) {
+            const url = fileUrlConverter.asFileUrl(chunkInfo.facadeModuleId);
+            const urlInfo = jsModuleUrlInfos.find(jsModuleUrlInfo => jsModuleUrlInfo.url === url);
+
+            if (urlInfo) {
+              nameFromUrlInfo = urlInfo.filename;
+            }
+          }
+
+          const name = nameFromUrlInfo || `${chunkInfo.name}.js`;
+          return insideJs ? `js/${name}` : `${name}`;
+        },
+        manualChunks: id => {
+          if (babelHelpersChunk) {
+            const fileUrl = fileUrlConverter.asFileUrl(id);
+
+            if (fileUrl.endsWith("babel-plugin-transform-async-to-promises/helpers.mjs")) {
+              return "babel_helpers";
+            }
+
+            if (babelHelperNameFromUrl(fileUrl)) {
+              return "babel_helpers";
+            }
+
+            if (fileUrl === globalThisClientFileUrl) {
+              return "babel_helpers";
+            }
+
+            if (fileUrl === newStylesheetClientFileUrl) {
+              return "babel_helpers";
+            }
+
+            if (fileUrl === regeneratorRuntimeClientFileUrl) {
+              return "babel_helpers";
+            }
+          }
+
+          return null;
+        } // https://rollupjs.org/guide/en/#outputpaths
+        // paths: (id) => {
+        //   return id
+        // },
+
+      });
+    },
+    resolveId: (specifier, importer = rootDirectoryUrl) => {
+      if (isFileSystemPath$1(importer)) {
+        importer = fileUrlConverter.asFileUrl(importer);
+      }
+
+      let url;
+
+      if (specifier[0] === "/") {
+        url = new URL(specifier.slice(1), rootDirectoryUrl).href;
+      } else {
+        url = new URL(specifier, importer).href;
+      }
+
+      const existingImporter = urlImporters[url];
+
+      if (!existingImporter) {
+        urlImporters[url] = importer;
+      }
+
+      if (!url.startsWith("file:")) {
+        return {
+          id: url,
+          external: true
+        };
+      }
+
+      if (!importCanBeBundled(url)) {
+        return {
+          id: url,
+          external: true
+        };
+      }
+
+      const urlInfo = urlGraph.getUrlInfo(url);
+
+      if (!urlInfo) {
+        // happen when excluded by urlAnalysis.include
+        return {
+          id: url,
+          external: true
+        };
+      }
+
+      if (!urlInfo.shouldHandle) {
+        return {
+          id: url,
+          external: true
+        };
+      }
+
+      const filePath = fileUrlConverter.asFilePath(url);
+      return filePath;
+    },
+
+    async load(rollupId) {
+      const fileUrl = fileUrlConverter.asFileUrl(rollupId);
+      const urlInfo = urlGraph.getUrlInfo(fileUrl);
+      return {
+        code: urlInfo.content,
+        map: urlInfo.sourcemap ? sourcemapConverter.toFilePaths(urlInfo.sourcemap) : null
+      };
+    }
+
+  };
+};
+
+const buildWithRollup = async ({
+  signal,
+  logger,
+  rootDirectoryUrl,
+  buildDirectoryUrl,
+  urlGraph,
+  jsModuleUrlInfos,
+  runtimeCompat,
+  sourcemaps,
+  include,
+  babelHelpersChunk
+}) => {
+  const resultRef = {
+    current: null
+  };
+
+  try {
+    await applyRollupPlugins({
+      rollupPlugins: [rollupPluginJsenv({
+        signal,
+        logger,
+        rootDirectoryUrl,
+        buildDirectoryUrl,
+        urlGraph,
+        jsModuleUrlInfos,
+        runtimeCompat,
+        sourcemaps,
+        include,
+        babelHelpersChunk,
+        resultRef
+      })],
+      inputOptions: {
+        input: [],
+        onwarn: warning => {
+          if (warning.code === "CIRCULAR_DEPENDENCY") {
+            return;
+          }
+
+          if (warning.code === "THIS_IS_UNDEFINED" && pathToFileURL(warning.id).href === globalThisClientFileUrl) {
+            return;
+          }
+
+          if (warning.code === "EVAL") {
+            // ideally we should disable only for jsenv files
+            return;
+          }
+
+          logger.warn(String(warning));
+        }
+      }
+    });
+    return resultRef.current;
+  } catch (e) {
+    if (e.code === "MISSING_EXPORT") {
+      const detailedMessage = createDetailedMessage$1(e.message, {
+        frame: e.frame
+      });
+      throw new Error(detailedMessage, {
+        cause: e
+      });
+    }
+
+    throw e;
+  }
+};
+
+const applyRollupPlugins = async ({
+  rollupPlugins,
+  inputOptions = {},
+  outputOptions = {}
+}) => {
+  const {
+    rollup
+  } = await import("rollup");
+  const {
+    importAssertions
+  } = await import("acorn-import-assertions");
+  const rollupReturnValue = await rollup({ ...inputOptions,
+    plugins: rollupPlugins,
+    acornInjectPlugins: [importAssertions, ...(inputOptions.acornInjectPlugins || [])]
+  });
+  const rollupOutputArray = await rollupReturnValue.generate(outputOptions);
+  return rollupOutputArray;
+};
+
+const willBeInsideJsDirectory = ({
+  chunkInfo,
+  fileUrlConverter,
+  jsModuleUrlInfos
+}) => {
+  // if the chunk is generated dynamically by rollup
+  // for an entry point jsenv will put that file inside js/ directory
+  // if it's generated dynamically for a file already in js/ directory
+  // both will be inside the js/ directory
+  if (!chunkInfo.facadeModuleId) {
+    // generated by rollup
+    return true;
+  }
+
+  const url = fileUrlConverter.asFileUrl(chunkInfo.facadeModuleId);
+  const jsModuleUrlInfo = jsModuleUrlInfos.find(jsModuleUrlInfo => jsModuleUrlInfo.url === url);
+
+  if (!jsModuleUrlInfo) {
+    // generated by rollup
+    return true;
+  }
+
+  if (!jsModuleUrlInfo.isEntryPoint) {
+    // not an entry point, jsenv will put it inside js/ directory
+    return true;
+  }
+
+  return false;
+};
+
+const jsenvPluginAsJsClassicLibrary = ({
+  systemJsInjection,
+  systemJsClientFileUrl
+}) => {
+  return {
+    name: "jsenv:as_js_classic_library",
+    // I think it applies both during dev and build
+    // otherwise it's strange
+    // we'll see as we tests
+    appliesDuring: "*",
+    fetchUrlContent: async (urlInfo, context) => {
+      const [jsModuleReference, jsModuleUrlInfo] = context.getWithoutSearchParam({
+        urlInfo,
+        context,
+        searchParam: "as_js_classic_library",
+        // override the expectedType to "js_module"
+        // because when there is ?as_js_classic_library it means the underlying resource
+        // is a js_module
+        expectedType: "js_module"
+      });
+
+      if (!jsModuleReference) {
+        return null;
+      }
+
+      urlInfo.isEntryPoint = true; // cook it to get content + dependencies
+
+      await context.cook(jsModuleUrlInfo, {
+        reference: jsModuleReference
+      }); // TODO: likely needs to "clean after cook":
+      // delete url info from graph to avoid having it generated in build directory?
+
+      const loader = createUrlGraphLoader(context);
+      loader.loadReferencedUrlInfos(jsModuleUrlInfo, {
+        // for dynamic import we ignore them yes
+        // but we must set something so that when they will be cooked
+        // they inherit as_js_classic_library behaviour
+        ignoreDynamicImport: true
+      });
+      await loader.getAllLoadDonePromise();
+      const bundleUrlInfos = await bundleJsModules({
+        jsModuleUrlInfos: [jsModuleUrlInfo],
+        context: { ...context,
+          buildDirectoryUrl: context.outDirectoryUrl
+        },
+        options: {}
+      });
+      const jsModuleBundledUrlInfo = bundleUrlInfos[jsModuleUrlInfo.url];
+      const {
+        content,
+        sourcemap
+      } = await convertJsModuleToJsClassic({
+        systemJsInjection,
+        systemJsClientFileUrl,
+        urlInfo,
+        jsModuleUrlInfo: jsModuleBundledUrlInfo
+      });
+      return {
+        content,
+        contentType: "text/javascript",
+        type: "js_classic",
+        originalUrl: jsModuleBundledUrlInfo.originalUrl,
+        originalContent: jsModuleBundledUrlInfo.originalContent,
+        sourcemap
+      }; // TODO: ensure urlInfo contains all js modules in dependences
+      // so that is gets properly invalidated when a js module source file changes
+    }
+  };
+};
+
+/*
+ * Something to keep in mind:
+ * When systemjs format is used by babel, it will generated UID based on
+ * the import specifier:
+ * https://github.com/babel/babel/blob/97d1967826077f15e766778c0d64711399e9a72a/packages/babel-plugin-transform-modules-systemjs/src/index.ts#L498
+ * But at this stage import specifier are absolute file urls
+ * So without minification these specifier are long and dependent
+ * on where the files are on the filesystem.
+ * This is mitigated by minification that will shorten them
+ * But ideally babel should not generate this in the first place
+ * and prefer to unique identifier based solely on the specifier basename for instance
+ */
+const jsenvPluginAsJsClassic = ({
+  jsClassicFallback,
+  systemJsInjection
+}) => {
+  const systemJsClientFileUrl = new URL("./js/s.js", import.meta.url).href;
+  return [jsenvPluginAsJsClassicLibrary({
+    systemJsInjection,
+    systemJsClientFileUrl
+  }), ...(jsClassicFallback ? [jsenvPluginAsJsClassicConversion({
+    systemJsInjection,
+    systemJsClientFileUrl,
+    generateJsClassicFilename
+  }), jsenvPluginAsJsClassicHtml({
+    systemJsInjection,
+    systemJsClientFileUrl,
+    generateJsClassicFilename
+  }), jsenvPluginAsJsClassicWorkers({
+    generateJsClassicFilename
+  })] : [])];
 };
 
 const generateJsClassicFilename = url => {
@@ -10535,49 +11192,6 @@ const splitFileExtension$1 = filename => {
   }
 
   return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)];
-};
-
-const convertJsModuleToJsClassic = async ({
-  systemJsInjection,
-  systemJsClientFileUrl,
-  urlInfo,
-  originalUrlInfo,
-  jsClassicFormat
-}) => {
-  const {
-    code,
-    map
-  } = await applyBabelPlugins({
-    babelPlugins: [...(jsClassicFormat === "system" ? [// propposal-dynamic-import required with systemjs for babel8:
-    // https://github.com/babel/babel/issues/10746
-    requireFromJsenv("@babel/plugin-proposal-dynamic-import"), requireFromJsenv("@babel/plugin-transform-modules-systemjs"), [default_1, {
-      topLevelAwait: "return"
-    }]] : [[requireBabelPlugin("babel-plugin-transform-async-to-promises"), {
-      topLevelAwait: "simple"
-    }], babelPluginTransformImportMetaUrl, requireFromJsenv("@babel/plugin-transform-modules-umd")])],
-    urlInfo: originalUrlInfo
-  });
-  let sourcemap = originalUrlInfo.sourcemap;
-  sourcemap = await composeTwoSourcemaps(sourcemap, map);
-
-  if (systemJsInjection && jsClassicFormat === "system" && urlInfo.isEntryPoint) {
-    const magicSource = createMagicSource(code);
-    const systemjsCode = readFileSync(systemJsClientFileUrl, {
-      as: "string"
-    });
-    magicSource.prepend(`${systemjsCode}\n\n`);
-    const magicResult = magicSource.toContentAndSourcemap();
-    sourcemap = await composeTwoSourcemaps(sourcemap, magicResult.sourcemap);
-    return {
-      content: magicResult.content,
-      sourcemap
-    };
-  }
-
-  return {
-    content: code,
-    sourcemap
-  };
 };
 
 const jsenvPluginLeadingSlash = () => {
@@ -13983,18 +14597,22 @@ const jsenvPluginAsModules = () => {
     name: `jsenv:as_json_module`,
     appliesDuring: "*",
     fetchUrlContent: async (urlInfo, context) => {
-      const originalUrlInfo = await context.fetchOriginalUrlInfo({
+      const [jsonReference, jsonUrlInfo] = context.getWithoutSearchParam({
         urlInfo,
         context,
         searchParam: "as_json_module",
         expectedType: "json"
       });
 
-      if (!originalUrlInfo) {
+      if (!jsonReference) {
         return null;
       }
 
-      const jsonText = JSON.stringify(originalUrlInfo.content.trim());
+      await context.fetchUrlContent(jsonUrlInfo, {
+        reference: jsonReference,
+        cleanAfterFetch: true
+      });
+      const jsonText = JSON.stringify(jsonUrlInfo.content.trim());
       return {
         // here we could `export default ${jsonText}`:
         // but js engine are optimized to recognize JSON.parse
@@ -14002,8 +14620,8 @@ const jsenvPluginAsModules = () => {
         content: `export default JSON.parse(${jsonText})`,
         contentType: "text/javascript",
         type: "js_module",
-        originalUrl: originalUrlInfo.originalUrl,
-        originalContent: originalUrlInfo.originalContent
+        originalUrl: jsonUrlInfo.originalUrl,
+        originalContent: jsonUrlInfo.originalContent
       };
     }
   };
@@ -14011,18 +14629,22 @@ const jsenvPluginAsModules = () => {
     name: `jsenv:as_css_module`,
     appliesDuring: "*",
     fetchUrlContent: async (urlInfo, context) => {
-      const originalUrlInfo = await context.fetchOriginalUrlInfo({
+      const [cssReference, cssUrlInfo] = context.getWithoutSearchParam({
         urlInfo,
         context,
         searchParam: "as_css_module",
         expectedType: "css"
       });
 
-      if (!originalUrlInfo) {
+      if (!cssReference) {
         return null;
       }
 
-      const cssText = JS_QUOTES.escapeSpecialChars(originalUrlInfo.content, {
+      await context.fetchUrlContent(cssUrlInfo, {
+        reference: cssReference,
+        cleanAfterFetch: true
+      });
+      const cssText = JS_QUOTES.escapeSpecialChars(cssUrlInfo.content, {
         // If template string is choosen and runtime do not support template literals
         // it's ok because "jsenv:new_inline_content" plugin executes after this one
         // and convert template strings into raw strings
@@ -14037,8 +14659,8 @@ const jsenvPluginAsModules = () => {
   export default stylesheet`,
         contentType: "text/javascript",
         type: "js_module",
-        originalUrl: originalUrlInfo.originalUrl,
-        originalContent: originalUrlInfo.originalContent
+        originalUrl: cssUrlInfo.originalUrl,
+        originalContent: cssUrlInfo.originalContent
       };
     }
   };
@@ -14046,17 +14668,21 @@ const jsenvPluginAsModules = () => {
     name: `jsenv:as_text_module`,
     appliesDuring: "*",
     fetchUrlContent: async (urlInfo, context) => {
-      const originalUrlInfo = await context.fetchOriginalUrlInfo({
+      const [textReference, textUrlInfo] = context.getWithoutSearchParam({
         urlInfo,
         context,
         searchParam: "as_text_module",
         expectedType: "text"
       });
 
-      if (!originalUrlInfo) {
+      if (!textReference) {
         return null;
       }
 
+      await context.fetchUrlContent(textUrlInfo, {
+        reference: textReference,
+        cleanAfterFetch: true
+      });
       const textPlain = JS_QUOTES.escapeSpecialChars(urlInfo.content, {
         // If template string is choosen and runtime do not support template literals
         // it's ok because "jsenv:new_inline_content" plugin executes after this one
@@ -14070,8 +14696,8 @@ const inlineContent = new InlineContent(${textPlain}, { type: "text/plain" })
 export default inlineContent.text`,
         contentType: "text/javascript",
         type: "js_module",
-        originalUrl: originalUrlInfo.originalUrl,
-        originalContent: originalUrlInfo.originalContent
+        originalUrl: textUrlInfo.originalUrl,
+        originalContent: textUrlInfo.originalContent
       };
     }
   };
@@ -14425,30 +15051,6 @@ const getFeatureCompat = feature => {
   }
 
   return feature;
-};
-
-/*
- * Generated helpers
- * - https://github.com/babel/babel/commits/main/packages/babel-helpers/src/helpers.ts
- * File helpers
- * - https://github.com/babel/babel/tree/main/packages/babel-helpers/src/helpers
- *
- */
-const babelHelperClientDirectoryUrl = new URL("./babel_helpers/", import.meta.url).href; // we cannot use "@jsenv/core/src/*" because babel helper might be injected
-// into node_modules not depending on "@jsenv/core"
-
-const getBabelHelperFileUrl = babelHelperName => {
-  const babelHelperFileUrl = new URL(`./${babelHelperName}/${babelHelperName}.js`, babelHelperClientDirectoryUrl).href;
-  return babelHelperFileUrl;
-};
-const babelHelperNameFromUrl = url => {
-  if (!url.startsWith(babelHelperClientDirectoryUrl)) {
-    return null;
-  }
-
-  const afterBabelHelperDirectory = url.slice(babelHelperClientDirectoryUrl.length);
-  const babelHelperName = afterBabelHelperDirectory.slice(0, afterBabelHelperDirectory.indexOf("/"));
-  return babelHelperName;
 };
 
 /* eslint-disable camelcase */
@@ -15485,7 +16087,11 @@ const babelPluginMetadataUsesTopLevelAwait = () => {
 const jsenvPluginTranspilation = ({
   importAssertions = true,
   css = true,
-  jsModuleAsJsClassic = true,
+  // build sets jsClassicFallback: false during first step of the build
+  // and re-enable it in the second phase (when performing the bundling)
+  // so that bundling is applied on js modules THEN it is converted to js classic if needed
+  jsClassicFallback = true,
+  systemJsInjection = true,
   topLevelAwait = true,
   babelHelpersAsImport = true,
   getCustomBabelPlugins
@@ -15494,21 +16100,15 @@ const jsenvPluginTranspilation = ({
     importAssertions = {};
   }
 
-  if (jsModuleAsJsClassic === true) {
-    jsModuleAsJsClassic = {};
-  }
-
-  return [// import assertions we want it all the time
-  ...(importAssertions ? [jsenvPluginImportAssertions(importAssertions)] : []), // babel also so that rollup can bundle babel helpers for instance
+  return [...(importAssertions ? [jsenvPluginImportAssertions(importAssertions)] : []), // babel also so that rollup can bundle babel helpers for instance
   jsenvPluginBabel({
     topLevelAwait,
     getCustomBabelPlugins,
     babelHelpersAsImport
-  }), // but the conversion from js_module to js_classic
-  // we want to do it after bundling
-  // so the build function will disable jsModuleAsJsClassic during build
-  // and enable it manually during postbuild
-  ...(jsModuleAsJsClassic ? [jsenvPluginAsJsClassic(jsModuleAsJsClassic)] : []), // topLevelAwait must come after js_module_as_js_classic because it's related to the module format
+  }), jsenvPluginAsJsClassic({
+    jsClassicFallback,
+    systemJsInjection
+  }), // topLevelAwait must come after jsenvPluginAsJsClassic because it's related to the module format
   // so we want to wait to know the module format before transforming things related to top level await
   ...(topLevelAwait ? [jsenvPluginTopLevelAwait()] : []), ...(css ? [jsenvPluginCssParcel()] : [])];
 };
@@ -15690,401 +16290,6 @@ const bundleJsClassicWorkers = () => {
   return {};
 };
 
-const fileUrlConverter = {
-  asFilePath: fileUrl => {
-    const filePath = urlToFileSystemPath(fileUrl);
-    const urlObject = new URL(fileUrl);
-    const {
-      searchParams
-    } = urlObject;
-    return `${filePath}${stringifyQuery(searchParams)}`;
-  },
-  asFileUrl: filePath => {
-    return decodeURIComponent(fileSystemPathToUrl$1(filePath)).replace(/[=](?=&|$)/g, "");
-  }
-};
-
-const stringifyQuery = searchParams => {
-  const search = searchParams.toString();
-  return search ? `?${search}` : "";
-};
-
-const globalThisClientFileUrl = new URL("./js/global_this.js", import.meta.url).href;
-const newStylesheetClientFileUrl = new URL("./js/new_stylesheet.js", import.meta.url).href;
-const regeneratorRuntimeClientFileUrl = new URL("./js/regenerator_runtime.js", import.meta.url).href;
-const bundleJsModule = async ({
-  jsModuleUrlInfos,
-  context,
-  options
-}) => {
-  const {
-    signal,
-    logger,
-    rootDirectoryUrl,
-    buildDirectoryUrl,
-    urlGraph,
-    runtimeCompat,
-    sourcemaps
-  } = context;
-  const {
-    babelHelpersChunk = true,
-    include
-  } = options;
-  const {
-    jsModuleBundleUrlInfos
-  } = await buildWithRollup({
-    signal,
-    logger,
-    rootDirectoryUrl,
-    buildDirectoryUrl,
-    urlGraph,
-    jsModuleUrlInfos,
-    runtimeCompat,
-    sourcemaps,
-    include,
-    babelHelpersChunk
-  });
-  return jsModuleBundleUrlInfos;
-};
-
-const rollupPluginJsenv = ({
-  // logger,
-  rootDirectoryUrl,
-  buildDirectoryUrl,
-  urlGraph,
-  jsModuleUrlInfos,
-  sourcemaps,
-  include,
-  babelHelpersChunk,
-  resultRef
-}) => {
-  let _rollupEmitFile = () => {
-    throw new Error("not implemented");
-  };
-
-  const emitChunk = chunk => {
-    return _rollupEmitFile({
-      type: "chunk",
-      ...chunk
-    });
-  };
-
-  let importCanBeBundled = () => true;
-
-  if (include) {
-    const associations = URL_META.resolveAssociations({
-      bundle: include
-    }, rootDirectoryUrl);
-
-    importCanBeBundled = url => {
-      return URL_META.applyAssociations({
-        url,
-        associations
-      }).bundle;
-    };
-  }
-
-  const urlImporters = {};
-  return {
-    name: "jsenv",
-
-    async buildStart() {
-      _rollupEmitFile = (...args) => this.emitFile(...args);
-
-      let previousNonEntryPointModuleId;
-      jsModuleUrlInfos.forEach(jsModuleUrlInfo => {
-        const id = jsModuleUrlInfo.url;
-
-        if (jsModuleUrlInfo.isEntryPoint) {
-          emitChunk({
-            id
-          });
-          return;
-        }
-
-        emitChunk({
-          id,
-          implicitlyLoadedAfterOneOf: previousNonEntryPointModuleId ? [previousNonEntryPointModuleId] : null // preserveSignature: "allow-extension",
-
-        });
-        previousNonEntryPointModuleId = id;
-      });
-    },
-
-    async generateBundle(outputOptions, rollupResult) {
-      _rollupEmitFile = (...args) => this.emitFile(...args);
-
-      const jsModuleBundleUrlInfos = {};
-      Object.keys(rollupResult).forEach(fileName => {
-        const rollupFileInfo = rollupResult[fileName]; // there is 3 types of file: "placeholder", "asset", "chunk"
-
-        if (rollupFileInfo.type === "chunk") {
-          const jsModuleBundleUrlInfo = {
-            data: {
-              generatedBy: "rollup",
-              bundleRelativeUrl: rollupFileInfo.fileName,
-              usesImport: rollupFileInfo.imports.length > 0 || rollupFileInfo.dynamicImports.length > 0
-            },
-            contentType: "text/javascript",
-            content: rollupFileInfo.code,
-            sourcemap: rollupFileInfo.map
-          };
-          let url;
-
-          if (rollupFileInfo.facadeModuleId) {
-            url = fileUrlConverter.asFileUrl(rollupFileInfo.facadeModuleId);
-          } else {
-            url = new URL(rollupFileInfo.fileName, buildDirectoryUrl).href;
-          }
-
-          jsModuleBundleUrlInfos[url] = jsModuleBundleUrlInfo;
-        }
-      });
-      resultRef.current = {
-        jsModuleBundleUrlInfos
-      };
-    },
-
-    outputOptions: outputOptions => {
-      // const sourcemapFile = buildDirectoryUrl
-      Object.assign(outputOptions, {
-        format: jsModuleUrlInfos.some(jsModuleUrlInfo => jsModuleUrlInfo.filename.endsWith(".cjs")) ? "cjs" : "esm",
-        dir: fileUrlConverter.asFilePath(buildDirectoryUrl),
-        sourcemap: sourcemaps === "file" || sourcemaps === "inline",
-        // sourcemapFile,
-        sourcemapPathTransform: relativePath => {
-          return new URL(relativePath, buildDirectoryUrl).href;
-        },
-        entryFileNames: () => {
-          return `[name].js`;
-        },
-        chunkFileNames: chunkInfo => {
-          const insideJs = willBeInsideJsDirectory({
-            chunkInfo,
-            fileUrlConverter,
-            jsModuleUrlInfos
-          });
-          let nameFromUrlInfo;
-
-          if (chunkInfo.facadeModuleId) {
-            const url = fileUrlConverter.asFileUrl(chunkInfo.facadeModuleId);
-            const urlInfo = jsModuleUrlInfos.find(jsModuleUrlInfo => jsModuleUrlInfo.url === url);
-
-            if (urlInfo) {
-              nameFromUrlInfo = urlInfo.filename;
-            }
-          }
-
-          const name = nameFromUrlInfo || `${chunkInfo.name}.js`;
-          return insideJs ? `js/${name}` : `${name}`;
-        },
-        manualChunks: id => {
-          if (babelHelpersChunk) {
-            const fileUrl = fileUrlConverter.asFileUrl(id);
-
-            if (fileUrl.endsWith("babel-plugin-transform-async-to-promises/helpers.mjs")) {
-              return "babel_helpers";
-            }
-
-            if (babelHelperNameFromUrl(fileUrl)) {
-              return "babel_helpers";
-            }
-
-            if (fileUrl === globalThisClientFileUrl) {
-              return "babel_helpers";
-            }
-
-            if (fileUrl === newStylesheetClientFileUrl) {
-              return "babel_helpers";
-            }
-
-            if (fileUrl === regeneratorRuntimeClientFileUrl) {
-              return "babel_helpers";
-            }
-          }
-
-          return null;
-        } // https://rollupjs.org/guide/en/#outputpaths
-        // paths: (id) => {
-        //   return id
-        // },
-
-      });
-    },
-    resolveId: (specifier, importer = rootDirectoryUrl) => {
-      if (isFileSystemPath$1(importer)) {
-        importer = fileUrlConverter.asFileUrl(importer);
-      }
-
-      const url = new URL(specifier, importer).href;
-      const existingImporter = urlImporters[url];
-
-      if (!existingImporter) {
-        urlImporters[url] = importer;
-      }
-
-      if (!url.startsWith("file:")) {
-        return {
-          id: url,
-          external: true
-        };
-      }
-
-      if (!importCanBeBundled(url)) {
-        return {
-          id: url,
-          external: true
-        };
-      }
-
-      const urlInfo = urlGraph.getUrlInfo(url);
-
-      if (!urlInfo) {
-        // happen when excluded by urlAnalysis.include
-        return {
-          id: url,
-          external: true
-        };
-      }
-
-      if (!urlInfo.shouldHandle) {
-        return {
-          id: url,
-          external: true
-        };
-      }
-
-      const filePath = fileUrlConverter.asFilePath(url);
-      return filePath;
-    },
-
-    async load(rollupId) {
-      const fileUrl = fileUrlConverter.asFileUrl(rollupId);
-      const urlInfo = urlGraph.getUrlInfo(fileUrl);
-      return {
-        code: urlInfo.content,
-        map: urlInfo.sourcemap ? sourcemapConverter.toFilePaths(urlInfo.sourcemap) : null
-      };
-    }
-
-  };
-};
-
-const buildWithRollup = async ({
-  signal,
-  logger,
-  rootDirectoryUrl,
-  buildDirectoryUrl,
-  urlGraph,
-  jsModuleUrlInfos,
-  runtimeCompat,
-  sourcemaps,
-  include,
-  babelHelpersChunk
-}) => {
-  const resultRef = {
-    current: null
-  };
-
-  try {
-    await applyRollupPlugins({
-      rollupPlugins: [rollupPluginJsenv({
-        signal,
-        logger,
-        rootDirectoryUrl,
-        buildDirectoryUrl,
-        urlGraph,
-        jsModuleUrlInfos,
-        runtimeCompat,
-        sourcemaps,
-        include,
-        babelHelpersChunk,
-        resultRef
-      })],
-      inputOptions: {
-        input: [],
-        onwarn: warning => {
-          if (warning.code === "CIRCULAR_DEPENDENCY") {
-            return;
-          }
-
-          if (warning.code === "THIS_IS_UNDEFINED" && pathToFileURL(warning.id).href === globalThisClientFileUrl) {
-            return;
-          }
-
-          if (warning.code === "EVAL") {
-            // ideally we should disable only for jsenv files
-            return;
-          }
-
-          logger.warn(String(warning));
-        }
-      }
-    });
-    return resultRef.current;
-  } catch (e) {
-    if (e.code === "MISSING_EXPORT") {
-      const detailedMessage = createDetailedMessage$1(e.message, {
-        frame: e.frame
-      });
-      throw new Error(detailedMessage, {
-        cause: e
-      });
-    }
-
-    throw e;
-  }
-};
-
-const applyRollupPlugins = async ({
-  rollupPlugins,
-  inputOptions = {},
-  outputOptions = {}
-}) => {
-  const {
-    rollup
-  } = await import("rollup");
-  const {
-    importAssertions
-  } = await import("acorn-import-assertions");
-  const rollupReturnValue = await rollup({ ...inputOptions,
-    plugins: rollupPlugins,
-    acornInjectPlugins: [importAssertions, ...(inputOptions.acornInjectPlugins || [])]
-  });
-  const rollupOutputArray = await rollupReturnValue.generate(outputOptions);
-  return rollupOutputArray;
-};
-
-const willBeInsideJsDirectory = ({
-  chunkInfo,
-  fileUrlConverter,
-  jsModuleUrlInfos
-}) => {
-  // if the chunk is generated dynamically by rollup
-  // for an entry point jsenv will put that file inside js/ directory
-  // if it's generated dynamically for a file already in js/ directory
-  // both will be inside the js/ directory
-  if (!chunkInfo.facadeModuleId) {
-    // generated by rollup
-    return true;
-  }
-
-  const url = fileUrlConverter.asFileUrl(chunkInfo.facadeModuleId);
-  const jsModuleUrlInfo = jsModuleUrlInfos.find(jsModuleUrlInfo => jsModuleUrlInfo.url === url);
-
-  if (!jsModuleUrlInfo) {
-    // generated by rollup
-    return true;
-  }
-
-  if (!jsModuleUrlInfo.isEntryPoint) {
-    // not an entry point, jsenv will put it inside js/ directory
-    return true;
-  }
-
-  return false;
-};
-
 const jsenvPluginBundling = bundling => {
   if (typeof bundling === "boolean") {
     bundling = {
@@ -16118,7 +16323,7 @@ const jsenvPluginBundling = bundling => {
         });
       } : undefined,
       js_module: bundling.js_module ? (jsModuleUrlInfos, context) => {
-        return bundleJsModule({
+        return bundleJsModules({
           jsModuleUrlInfos,
           context,
           options: bundling.js_module
@@ -20981,23 +21186,23 @@ const createPluginController = ({
       return null;
     }
 
-    currentPlugin = hook.plugin;
-    currentHookName = hook.name;
     let timeEnd;
 
     if (info.timing) {
-      timeEnd = timeStart(`${currentHookName}-${currentPlugin.name.replace("jsenv:", "")}`);
+      timeEnd = timeStart(`${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`);
     }
 
+    currentPlugin = hook.plugin;
+    currentHookName = hook.name;
     let valueReturned = hookFn(info, context);
+    currentPlugin = null;
+    currentHookName = null;
 
     if (info.timing) {
       Object.assign(info.timing, timeEnd());
     }
 
     valueReturned = assertAndNormalizeReturnValue(hook.name, valueReturned);
-    currentPlugin = null;
-    currentHookName = null;
     return valueReturned;
   };
 
@@ -21008,23 +21213,23 @@ const createPluginController = ({
       return null;
     }
 
-    currentPlugin = hook.plugin;
-    currentHookName = hook.name;
     let timeEnd;
 
     if (info.timing) {
-      timeEnd = timeStart(`${currentHookName}-${currentPlugin.name.replace("jsenv:", "")}`);
+      timeEnd = timeStart(`${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`);
     }
 
+    currentPlugin = hook.plugin;
+    currentHookName = hook.name;
     let valueReturned = await hookFn(info, context);
+    currentPlugin = null;
+    currentHookName = null;
 
     if (info.timing) {
       Object.assign(info.timing, timeEnd());
     }
 
     valueReturned = assertAndNormalizeReturnValue(hook.name, valueReturned);
-    currentPlugin = null;
-    currentHookName = null;
     return valueReturned;
   };
 
@@ -21142,7 +21347,8 @@ const flattenAndFilterPlugins = (plugins, {
       } = pluginEntry;
 
       if (appliesDuring === undefined) {
-        console.warn(`"appliesDuring" is undefined on ${pluginEntry.name}`);
+        // console.debug(`"appliesDuring" is undefined on ${pluginEntry.name}`)
+        flatPlugins.push(pluginEntry);
         return;
       }
 
@@ -21909,7 +22115,8 @@ const createKitchen = ({
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
   sourcemapsRelativeSources,
-  writeGeneratedFiles
+  writeGeneratedFiles,
+  outDirectoryUrl
 }) => {
   const logger = createLogger({
     logLevel
@@ -21918,7 +22125,6 @@ const createKitchen = ({
     plugins,
     scenarios
   });
-  const jsenvDirectoryUrl = new URL(".jsenv/", rootDirectoryUrl).href;
   const kitchenContext = {
     signal,
     logger,
@@ -21933,7 +22139,8 @@ const createKitchen = ({
     isSupportedOnFutureClients: feature => {
       return RUNTIME_COMPAT.isSupported(runtimeCompat, feature);
     },
-    sourcemaps
+    sourcemaps,
+    outDirectoryUrl
   };
   pluginController.callHooks("init", kitchenContext);
 
@@ -22131,10 +22338,11 @@ const createKitchen = ({
 
   const fetchUrlContent = async (urlInfo, {
     reference,
-    context
+    contextDuringFetch,
+    cleanAfterFetch = false
   }) => {
     try {
-      const fetchUrlContentReturnValue = await pluginController.callAsyncHooksUntil("fetchUrlContent", urlInfo, context);
+      const fetchUrlContentReturnValue = await pluginController.callAsyncHooksUntil("fetchUrlContent", urlInfo, contextDuringFetch);
 
       if (!fetchUrlContentReturnValue) {
         logger.warn(createDetailedMessage$1(`no plugin has handled url during "fetchUrlContent" hook -> url will be ignored`, {
@@ -22216,10 +22424,17 @@ const createKitchen = ({
 
     urlInfo.generatedUrl = determineFileUrlForOutDirectory({
       urlInfo,
-      context
+      context: contextDuringFetch
     });
-    await urlInfoTransformer.initTransformations(urlInfo, context);
+    await urlInfoTransformer.initTransformations(urlInfo, contextDuringFetch);
+
+    if (cleanAfterFetch && urlInfo.dependents.size === 0 // && context.scenarios.build
+    ) {
+      contextDuringFetch.urlGraph.deleteUrlInfo(urlInfo.url);
+    }
   };
+
+  kitchenContext.fetchUrlContent = fetchUrlContent;
 
   const _cook = async (urlInfo, dishContext) => {
     const context = { ...kitchenContext,
@@ -22236,11 +22451,13 @@ const createKitchen = ({
     };
 
     context.fetchUrlContent = (urlInfo, {
-      reference
+      reference,
+      cleanAfterFetch
     }) => {
       return fetchUrlContent(urlInfo, {
         reference,
-        context
+        contextDuringFetch: context,
+        cleanAfterFetch
       });
     };
 
@@ -22248,7 +22465,7 @@ const createKitchen = ({
       // "fetchUrlContent" hook
       await fetchUrlContent(urlInfo, {
         reference: context.reference,
-        context
+        contextDuringFetch: context
       }); // parsing
 
       const references = [];
@@ -22483,7 +22700,6 @@ const createKitchen = ({
       }
     }
   });
-  kitchenContext.fetchUrlContent = fetchUrlContent;
   kitchenContext.cook = cook;
 
   const prepareEntryPoint = params => {
@@ -22493,13 +22709,15 @@ const createKitchen = ({
     return [entryReference, entryUrlInfo];
   };
 
+  kitchenContext.prepareEntryPoint = prepareEntryPoint;
+
   const injectReference = params => {
     const ref = createReference(params);
     const urlInfo = resolveReference(ref);
     return [ref, urlInfo];
   };
 
-  const fetchOriginalUrlInfo = async ({
+  const getWithoutSearchParam = ({
     urlInfo,
     context,
     searchParam,
@@ -22511,42 +22729,30 @@ const createKitchen = ({
     } = urlObject;
 
     if (!searchParams.has(searchParam)) {
-      return null;
+      return [null, null];
     }
 
     searchParams.delete(searchParam);
-    const originalUrl = urlObject.href;
-    const originalReference = { ...(context.reference.original || context.reference),
-      expectedType
+    const referenceWithoutSearchParam = { ...(context.reference.original || context.reference),
+      expectedType,
+      url: urlObject.href
     };
-    originalReference.url = originalUrl;
-    const originalUrlInfo = context.urlGraph.reuseOrCreateUrlInfo(originalReference.url);
+    const urlInfoWithoutSearchParam = context.urlGraph.reuseOrCreateUrlInfo(referenceWithoutSearchParam.url);
 
-    if (originalUrlInfo.originalUrl === undefined) {
-      applyReferenceEffectsOnUrlInfo(originalReference, originalUrlInfo, context);
+    if (urlInfoWithoutSearchParam.originalUrl === undefined) {
+      applyReferenceEffectsOnUrlInfo(referenceWithoutSearchParam, urlInfoWithoutSearchParam, context);
     }
 
-    await context.fetchUrlContent(originalUrlInfo, {
-      reference: originalReference
-    });
-
-    if (originalUrlInfo.dependents.size === 0 // && context.scenarios.build
-    ) {
-      context.urlGraph.deleteUrlInfo(originalUrlInfo.url);
-    }
-
-    return originalUrlInfo;
+    return [referenceWithoutSearchParam, urlInfoWithoutSearchParam];
   };
 
-  kitchenContext.fetchOriginalUrlInfo = fetchOriginalUrlInfo;
+  kitchenContext.getWithoutSearchParam = getWithoutSearchParam;
   return {
     pluginController,
     urlInfoTransformer,
     rootDirectoryUrl,
-    jsenvDirectoryUrl,
     kitchenContext,
     cook,
-    prepareEntryPoint,
     injectReference
   };
 };
@@ -22840,96 +23046,6 @@ const determineFileUrlForOutDirectory = ({
 //     column: originalPosition.column,
 //   }
 // }
-
-const loadUrlGraph = async ({
-  operation,
-  urlGraph,
-  kitchen,
-  startLoading,
-  writeGeneratedFiles,
-  outDirectoryUrl
-}) => {
-  if (writeGeneratedFiles && outDirectoryUrl) {
-    await ensureEmptyDirectory(outDirectoryUrl);
-  }
-
-  const promises = [];
-  const promiseMap = new Map();
-
-  const cook = (urlInfo, context) => {
-    const promiseFromData = promiseMap.get(urlInfo);
-    if (promiseFromData) return promiseFromData;
-
-    const promise = _cook(urlInfo, {
-      outDirectoryUrl,
-      ...context
-    });
-
-    promises.push(promise);
-    promiseMap.set(urlInfo, promise);
-    return promise;
-  };
-
-  const _cook = async (urlInfo, context) => {
-    await kitchen.cook(urlInfo, {
-      cookDuringCook: cook,
-      ...context
-    });
-    const {
-      references
-    } = urlInfo;
-    references.forEach(reference => {
-      // we don't cook resource hints
-      // because they might refer to resource that will be modified during build
-      // It also means something else have to reference that url in order to cook it
-      // so that the preload is deleted by "resync_resource_hints.js" otherwise
-      if (reference.isResourceHint) {
-        return;
-      } // we use reference.generatedUrl to mimic what a browser would do:
-      // do a fetch to the specifier as found in the file
-
-
-      const referencedUrlInfo = urlGraph.reuseOrCreateUrlInfo(reference.generatedUrl);
-      cook(referencedUrlInfo, {
-        reference
-      });
-    });
-  };
-
-  startLoading(({
-    trace,
-    parentUrl = kitchen.rootDirectoryUrl,
-    type,
-    specifier
-  }) => {
-    const [entryReference, entryUrlInfo] = kitchen.prepareEntryPoint({
-      trace,
-      parentUrl,
-      type,
-      specifier
-    });
-    cook(entryUrlInfo, {
-      reference: entryReference
-    });
-    return [entryReference, entryUrlInfo];
-  });
-
-  const waitAll = async () => {
-    operation.throwIfAborted();
-
-    if (promises.length === 0) {
-      return;
-    }
-
-    const promisesToWait = promises.slice();
-    promises.length = 0;
-    await Promise.all(promisesToWait);
-    await waitAll();
-  };
-
-  await waitAll();
-  promiseMap.clear();
-};
 
 const createUrlGraphSummary = (urlGraph, {
   title = "graph summary"
@@ -23784,10 +23900,7 @@ build ${entryPointKeys.length} entry points`);
       scenarios: {
         build: true
       },
-      sourcemaps,
-      sourcemapsSourcesContent,
       runtimeCompat,
-      writeGeneratedFiles,
       plugins: [...plugins, {
         appliesDuring: "build",
         fetchUrlContent: (urlInfo, context) => {
@@ -23812,35 +23925,40 @@ build ${entryPointKeys.length} entry points`);
         directoryReferenceAllowed,
         transpilation: { ...transpilation,
           babelHelpersAsImport: !useExplicitJsClassicConversion,
-          jsModuleAsJsClassic: false
+          jsClassicFallback: false
         },
         minification,
         bundling
-      })]
+      })],
+      sourcemaps,
+      sourcemapsSourcesContent,
+      writeGeneratedFiles,
+      outDirectoryUrl: new URL(`.jsenv/build/`, rootDirectoryUrl)
     });
     const entryUrls = [];
 
     try {
-      await loadUrlGraph({
-        operation: buildOperation,
-        urlGraph: rawGraph,
-        kitchen: rawGraphKitchen,
-        writeGeneratedFiles,
-        outDirectoryUrl: new URL(`.jsenv/build/`, rootDirectoryUrl),
-        startLoading: cookEntryFile => {
-          Object.keys(entryPoints).forEach(key => {
-            const [, entryUrlInfo] = cookEntryFile({
-              trace: {
-                message: `"${key}" in entryPoints parameter`
-              },
-              type: "entry_point",
-              specifier: key
-            });
-            entryUrls.push(entryUrlInfo.url);
-            entryUrlInfo.filename = entryPoints[key]; // entryUrlInfo.data.entryPointKey = key
-          });
-        }
+      if (writeGeneratedFiles) {
+        await ensureEmptyDirectory(new URL(`.jsenv/build/`, rootDirectoryUrl));
+      }
+
+      const rawUrlGraphLoader = createUrlGraphLoader(rawGraphKitchen.kitchenContext);
+      Object.keys(entryPoints).forEach(key => {
+        const [entryReference, entryUrlInfo] = rawGraphKitchen.kitchenContext.prepareEntryPoint({
+          trace: {
+            message: `"${key}" in entryPoints parameter`
+          },
+          parentUrl: rootDirectoryUrl,
+          type: "entry_point",
+          specifier: key
+        });
+        entryUrls.push(entryUrlInfo.url);
+        entryUrlInfo.filename = entryPoints[key];
+        rawUrlGraphLoader.load(entryUrlInfo, {
+          reference: entryReference
+        });
       });
+      await rawUrlGraphLoader.getAllLoadDonePromise(buildOperation);
     } catch (e) {
       prebuildTask.fail();
       throw e;
@@ -24025,12 +24143,9 @@ build ${entryPointKeys.length} entry points`);
       scenarios: {
         build: true
       },
-      sourcemaps,
-      sourcemapsSourcesContent,
-      sourcemapsRelativeSources: !versioning,
       runtimeCompat,
-      writeGeneratedFiles,
       plugins: [urlAnalysisPlugin, jsenvPluginAsJsClassic({
+        jsClassicFallback: true,
         systemJsInjection: true
       }), jsenvPluginInline({
         fetchInlineUrls: false
@@ -24309,7 +24424,12 @@ build ${entryPointKeys.length} entry points`);
             await finalGraphKitchen.urlInfoTransformer.applyFinalTransformations(urlInfo, optimizeReturnValue);
           });
         }
-      }]
+      }],
+      sourcemaps,
+      sourcemapsSourcesContent,
+      sourcemapsRelativeSources: !versioning,
+      writeGeneratedFiles,
+      outDirectoryUrl: new URL(".jsenv/postbuild/", rootDirectoryUrl)
     });
     const buildTask = createTaskLog("build", {
       disabled: infoLogsAreDisabled
@@ -24317,26 +24437,26 @@ build ${entryPointKeys.length} entry points`);
     const postBuildEntryUrls = [];
 
     try {
-      await loadUrlGraph({
-        operation: buildOperation,
-        urlGraph: finalGraph,
-        kitchen: finalGraphKitchen,
-        outDirectoryUrl: new URL(".jsenv/postbuild/", rootDirectoryUrl),
-        writeGeneratedFiles,
-        skipResourceHint: true,
-        startLoading: cookEntryFile => {
-          entryUrls.forEach(entryUrl => {
-            const [, postBuildEntryUrlInfo] = cookEntryFile({
-              trace: {
-                message: `entryPoint`
-              },
-              type: "entry_point",
-              specifier: entryUrl
-            });
-            postBuildEntryUrls.push(postBuildEntryUrlInfo.url);
-          });
-        }
+      if (writeGeneratedFiles) {
+        await ensureEmptyDirectory(new URL(`.jsenv/postbuild/`, rootDirectoryUrl));
+      }
+
+      const finalUrlGraphLoader = createUrlGraphLoader(finalGraphKitchen.kitchenContext);
+      entryUrls.forEach(entryUrl => {
+        const [postBuildEntryReference, postBuildEntryUrlInfo] = finalGraphKitchen.kitchenContext.prepareEntryPoint({
+          trace: {
+            message: `entryPoint`
+          },
+          parentUrl: rootDirectoryUrl,
+          type: "entry_point",
+          specifier: entryUrl
+        });
+        postBuildEntryUrls.push(postBuildEntryUrlInfo.url);
+        finalUrlGraphLoader.load(postBuildEntryUrlInfo, {
+          reference: postBuildEntryReference
+        });
       });
+      await finalUrlGraphLoader.getAllLoadDonePromise(buildOperation);
     } catch (e) {
       buildTask.fail();
       throw e;
@@ -24689,11 +24809,7 @@ const applyUrlVersioning = async ({
       scenarios: {
         build: true
       },
-      sourcemaps,
-      sourcemapsSourcesContent,
-      sourcemapsRelativeSources: true,
       runtimeCompat,
-      writeGeneratedFiles,
       plugins: [urlAnalysisPlugin, jsenvPluginInline({
         fetchInlineUrls: false,
         analyzeConvertedScripts: true,
@@ -24794,24 +24910,28 @@ const applyUrlVersioning = async ({
 
           return versionedUrlInfo;
         }
-      }]
-    });
-    await loadUrlGraph({
-      operation: buildOperation,
-      urlGraph: finalGraph,
-      kitchen: versioningKitchen,
-      skipResourceHint: true,
+      }],
+      sourcemaps,
+      sourcemapsSourcesContent,
+      sourcemapsRelativeSources: true,
       writeGeneratedFiles,
-      startLoading: cookEntryFile => {
-        postBuildEntryUrls.forEach(postBuildEntryUrl => {
-          cookEntryFile({
-            trace: `entryPoint`,
-            type: "entry_point",
-            specifier: postBuildEntryUrl
-          });
-        });
-      }
+      outDirectoryUrl: new URL(".jsenv/postbuild/", finalGraphKitchen.rootDirectoryUrl)
     });
+    const versioningUrlGraphLoader = createUrlGraphLoader(versioningKitchen.kitchenContext);
+    postBuildEntryUrls.forEach(postBuildEntryUrl => {
+      const [postBuildEntryReference, postBuildEntryUrlInfo] = finalGraphKitchen.kitchenContext.prepareEntryPoint({
+        trace: {
+          message: `entryPoint`
+        },
+        parentUrl: buildDirectoryUrl,
+        type: "entry_point",
+        specifier: postBuildEntryUrl
+      });
+      versioningUrlGraphLoader.load(postBuildEntryUrlInfo, {
+        reference: postBuildEntryReference
+      });
+    });
+    await versioningUrlGraphLoader.getAllLoadDonePromise(buildOperation);
 
     if (usedVersionMappings.length) {
       const versionMappingsNeeded = {};
