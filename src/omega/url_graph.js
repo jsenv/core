@@ -79,7 +79,7 @@ export const createUrlGraph = ({
         // by <link> as dependency and it's fine
         return
       }
-      setOfDependencyUrls.add(reference.url)
+      setOfDependencyUrls.add(reference.urlInfoUrl || reference.url)
     })
     const urlsToRemove = Array.from(urlInfo.dependencies).filter(
       (dep) => !setOfDependencyUrls.has(dep),

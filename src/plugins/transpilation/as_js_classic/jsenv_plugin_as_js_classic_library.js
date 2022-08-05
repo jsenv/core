@@ -1,4 +1,4 @@
-import { createUrlGraphLoader } from "@jsenv/core/src/omega/url_graph/url_graph_load.js"
+import { createUrlGraphLoader } from "@jsenv/core/src/omega/url_graph/url_graph_loader.js"
 import { bundleJsModules } from "@jsenv/core/src/plugins/bundling/js_module/bundle_js_modules.js"
 
 import { convertJsModuleToJsClassic } from "./convert_js_module_to_js_classic.js"
@@ -13,6 +13,22 @@ export const jsenvPluginAsJsClassicLibrary = ({
     // otherwise it's strange
     // we'll see as we tests
     appliesDuring: "*",
+    redirectUrl: (reference) => {
+      const urlObject = new URL(reference.url)
+      if (urlObject.searchParams.has("as_js_classic_library")) {
+        urlObject.searchParams.delete("as_js_classic_library")
+        reference.urlInfoUrl = urlObject.href
+        if (
+          reference.type === "script_src" ||
+          (reference.type === "js_url_specifier" &&
+            reference.subtype !== "system_import_arg") ||
+          (reference.type === "js_import_export" &&
+            reference.subtype !== "import_dynamic")
+        ) {
+          reference.isEntryPoint = true
+        }
+      }
+    },
     fetchUrlContent: async (urlInfo, context) => {
       const [jsModuleReference, jsModuleUrlInfo] =
         context.getWithoutSearchParam({
@@ -27,7 +43,6 @@ export const jsenvPluginAsJsClassicLibrary = ({
       if (!jsModuleReference) {
         return null
       }
-      urlInfo.isEntryPoint = true
       // cook it to get content + dependencies
       await context.cook(jsModuleUrlInfo, { reference: jsModuleReference })
       // TODO: likely needs to "clean after cook":
@@ -47,7 +62,9 @@ export const jsenvPluginAsJsClassicLibrary = ({
           ...context,
           buildDirectoryUrl: context.outDirectoryUrl,
         },
-        options: {},
+        options: {
+          preserveDynamicImport: true,
+        },
       })
       const jsModuleBundledUrlInfo = bundleUrlInfos[jsModuleUrlInfo.url]
       const { content, sourcemap } = await convertJsModuleToJsClassic({

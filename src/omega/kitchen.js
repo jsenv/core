@@ -108,6 +108,8 @@ export const createKitchen = ({
       node,
       trace,
       parentUrl,
+      url: null,
+      urlInfoUrl: null,
       type,
       subtype,
       expectedContentType,

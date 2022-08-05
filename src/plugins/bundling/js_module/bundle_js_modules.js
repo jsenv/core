@@ -35,7 +35,11 @@ export const bundleJsModules = async ({
     runtimeCompat,
     sourcemaps,
   } = context
-  const { babelHelpersChunk = true, include } = options
+  const {
+    babelHelpersChunk = true,
+    include,
+    preserveDynamicImport = false,
+  } = options
   const { jsModuleBundleUrlInfos } = await buildWithRollup({
     signal,
     logger,
@@ -49,6 +53,7 @@ export const bundleJsModules = async ({
 
     include,
     babelHelpersChunk,
+    preserveDynamicImport,
   })
   return jsModuleBundleUrlInfos
 }
@@ -63,6 +68,7 @@ const rollupPluginJsenv = ({
 
   include,
   babelHelpersChunk,
+  preserveDynamicImport,
 
   resultRef,
 }) => {
@@ -214,6 +220,20 @@ const rollupPluginJsenv = ({
         // },
       })
     },
+    // https://rollupjs.org/guide/en/#resolvedynamicimport
+    resolveDynamicImport: (specifier, importer) => {
+      if (preserveDynamicImport) {
+        let urlObject
+        if (specifier[0] === "/") {
+          urlObject = new URL(specifier.slice(1), rootDirectoryUrl)
+        } else {
+          urlObject = new URL(specifier, importer)
+        }
+        urlObject.searchParams.set("as_js_classic_library", "")
+        return { external: true, id: urlObject.href }
+      }
+      return null
+    },
     resolveId: (specifier, importer = rootDirectoryUrl) => {
       if (isFileSystemPath(importer)) {
         importer = fileUrlConverter.asFileUrl(importer)
@@ -271,6 +291,7 @@ const buildWithRollup = async ({
 
   include,
   babelHelpersChunk,
+  preserveDynamicImport,
 }) => {
   const resultRef = { current: null }
   try {
@@ -288,6 +309,7 @@ const buildWithRollup = async ({
           sourcemaps,
           include,
           babelHelpersChunk,
+          preserveDynamicImport,
           resultRef,
         }),
       ],
