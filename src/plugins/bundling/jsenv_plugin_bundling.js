@@ -1,6 +1,6 @@
 import { bundleCss } from "./css/bundle_css.js"
 import { bundleJsClassicWorkers } from "./js_classic_workers/bundle_js_classic_workers.js"
-import { bundleJsModule } from "./js_module/bundle_js_module.js"
+import { bundleJsModules } from "./js_module/bundle_js_modules.js"
 
 export const jsenvPluginBundling = (bundling) => {
   if (typeof bundling === "boolean") {
@@ -40,7 +40,7 @@ export const jsenvPluginBundling = (bundling) => {
         : undefined,
       js_module: bundling.js_module
         ? (jsModuleUrlInfos, context) => {
-            return bundleJsModule({
+            return bundleJsModules({
               jsModuleUrlInfos,
               context,
               options: bundling.js_module,

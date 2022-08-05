@@ -21,7 +21,7 @@ const regeneratorRuntimeClientFileUrl = new URL(
   import.meta.url,
 ).href
 
-export const bundleJsModule = async ({
+export const bundleJsModules = async ({
   jsModuleUrlInfos,
   context,
   options,
