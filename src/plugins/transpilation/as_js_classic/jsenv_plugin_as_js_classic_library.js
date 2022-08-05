@@ -27,6 +27,7 @@ export const jsenvPluginAsJsClassicLibrary = ({
       if (!jsModuleReference) {
         return null
       }
+      urlInfo.isEntryPoint = true
       // cook it to get content + dependencies
       await context.cook(jsModuleUrlInfo, { reference: jsModuleReference })
       // TODO: likely needs to "clean after cook":
@@ -42,10 +43,13 @@ export const jsenvPluginAsJsClassicLibrary = ({
       await loader.getAllLoadDonePromise()
       const bundleUrlInfos = await bundleJsModules({
         jsModuleUrlInfos: [jsModuleUrlInfo],
-        context,
+        context: {
+          ...context,
+          buildDirectoryUrl: context.outDirectoryUrl,
+        },
         options: {},
       })
-      const jsModuleBundledUrlInfo = bundleUrlInfos[0]
+      const jsModuleBundledUrlInfo = bundleUrlInfos[jsModuleUrlInfo.url]
       const { content, sourcemap } = await convertJsModuleToJsClassic({
         systemJsInjection,
         systemJsClientFileUrl,

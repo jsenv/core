@@ -69,6 +69,11 @@ const rollupPluginJsenv = ({
   let _rollupEmitFile = () => {
     throw new Error("not implemented")
   }
+  const format = jsModuleUrlInfos.some((jsModuleUrlInfo) =>
+    jsModuleUrlInfo.filename.endsWith(".cjs"),
+  )
+    ? "cjs"
+    : "esm"
   const emitChunk = (chunk) => {
     return _rollupEmitFile({
       type: "chunk",
@@ -118,7 +123,16 @@ const rollupPluginJsenv = ({
         const rollupFileInfo = rollupResult[fileName]
         // there is 3 types of file: "placeholder", "asset", "chunk"
         if (rollupFileInfo.type === "chunk") {
+          let url
+          if (rollupFileInfo.facadeModuleId) {
+            url = fileUrlConverter.asFileUrl(rollupFileInfo.facadeModuleId)
+          } else {
+            url = new URL(rollupFileInfo.fileName, buildDirectoryUrl).href
+          }
           const jsModuleBundleUrlInfo = {
+            url,
+            originalUrl: url,
+            type: format === "esm" ? "js_module" : "common_js",
             data: {
               generatedBy: "rollup",
               bundleRelativeUrl: rollupFileInfo.fileName,
@@ -130,12 +144,6 @@ const rollupPluginJsenv = ({
             content: rollupFileInfo.code,
             sourcemap: rollupFileInfo.map,
           }
-          let url
-          if (rollupFileInfo.facadeModuleId) {
-            url = fileUrlConverter.asFileUrl(rollupFileInfo.facadeModuleId)
-          } else {
-            url = new URL(rollupFileInfo.fileName, buildDirectoryUrl).href
-          }
           jsModuleBundleUrlInfos[url] = jsModuleBundleUrlInfo
         }
       })
@@ -146,11 +154,7 @@ const rollupPluginJsenv = ({
     outputOptions: (outputOptions) => {
       // const sourcemapFile = buildDirectoryUrl
       Object.assign(outputOptions, {
-        format: jsModuleUrlInfos.some((jsModuleUrlInfo) =>
-          jsModuleUrlInfo.filename.endsWith(".cjs"),
-        )
-          ? "cjs"
-          : "esm",
+        format,
         dir: fileUrlConverter.asFilePath(buildDirectoryUrl),
         sourcemap: sourcemaps === "file" || sourcemaps === "inline",
         // sourcemapFile,
@@ -214,7 +218,12 @@ const rollupPluginJsenv = ({
       if (isFileSystemPath(importer)) {
         importer = fileUrlConverter.asFileUrl(importer)
       }
-      const url = new URL(specifier, importer).href
+      let url
+      if (specifier[0] === "/") {
+        url = new URL(specifier.slice(1), rootDirectoryUrl).href
+      } else {
+        url = new URL(specifier, importer).href
+      }
       const existingImporter = urlImporters[url]
       if (!existingImporter) {
         urlImporters[url] = importer
