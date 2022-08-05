@@ -75,14 +75,17 @@ export const createPluginController = ({ plugins, scenarios }) => {
         `${currentHookName}-${currentPlugin.name.replace("jsenv:", "")}`,
       )
     }
-    let valueReturned = hookFn(info, context)
-    if (info.timing) {
-      Object.assign(info.timing, timeEnd())
+    try {
+      let valueReturned = hookFn(info, context)
+      if (info.timing) {
+        Object.assign(info.timing, timeEnd())
+      }
+      valueReturned = assertAndNormalizeReturnValue(hook.name, valueReturned)
+      return valueReturned
+    } finally {
+      currentPlugin = null
+      currentHookName = null
     }
-    valueReturned = assertAndNormalizeReturnValue(hook.name, valueReturned)
-    currentPlugin = null
-    currentHookName = null
-    return valueReturned
   }
   const callAsyncHook = async (hook, info, context) => {
     const hookFn = getHookFunction(hook, info)
@@ -97,14 +100,17 @@ export const createPluginController = ({ plugins, scenarios }) => {
         `${currentHookName}-${currentPlugin.name.replace("jsenv:", "")}`,
       )
     }
-    let valueReturned = await hookFn(info, context)
-    if (info.timing) {
-      Object.assign(info.timing, timeEnd())
+    try {
+      let valueReturned = await hookFn(info, context)
+      if (info.timing) {
+        Object.assign(info.timing, timeEnd())
+      }
+      valueReturned = assertAndNormalizeReturnValue(hook.name, valueReturned)
+      return valueReturned
+    } finally {
+      currentPlugin = null
+      currentHookName = null
     }
-    valueReturned = assertAndNormalizeReturnValue(hook.name, valueReturned)
-    currentPlugin = null
-    currentHookName = null
-    return valueReturned
   }
 
   const callHooks = (hookName, info, context, callback) => {
