@@ -40,13 +40,13 @@ export const createKitchen = ({
   sourcemapsSourcesContent,
   sourcemapsRelativeSources,
   writeGeneratedFiles,
+  outDirectoryUrl,
 }) => {
   const logger = createLogger({ logLevel })
   const pluginController = createPluginController({
     plugins,
     scenarios,
   })
-  const jsenvDirectoryUrl = new URL(".jsenv/", rootDirectoryUrl).href
   const kitchenContext = {
     signal,
     logger,
@@ -62,6 +62,7 @@ export const createKitchen = ({
       return RUNTIME_COMPAT.isSupported(runtimeCompat, feature)
     },
     sourcemaps,
+    outDirectoryUrl,
   }
   pluginController.callHooks("init", kitchenContext)
   const createReference = ({
@@ -357,6 +358,7 @@ export const createKitchen = ({
     })
     await urlInfoTransformer.initTransformations(urlInfo, context)
   }
+  kitchenContext.fetchUrlContent = fetchUrlContent
 
   const _cook = async (urlInfo, dishContext) => {
     const context = {
@@ -630,7 +632,6 @@ export const createKitchen = ({
       }
     }
   })
-  kitchenContext.fetchUrlContent = fetchUrlContent
   kitchenContext.cook = cook
 
   const prepareEntryPoint = (params) => {
@@ -639,6 +640,7 @@ export const createKitchen = ({
     const entryUrlInfo = resolveReference(entryReference)
     return [entryReference, entryUrlInfo]
   }
+  kitchenContext.prepareEntryPoint = prepareEntryPoint
 
   const injectReference = (params) => {
     const ref = createReference(params)
@@ -691,10 +693,8 @@ export const createKitchen = ({
     pluginController,
     urlInfoTransformer,
     rootDirectoryUrl,
-    jsenvDirectoryUrl,
     kitchenContext,
     cook,
-    prepareEntryPoint,
     injectReference,
   }
 }

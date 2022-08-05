@@ -1,33 +1,18 @@
-import { ensureEmptyDirectory } from "@jsenv/filesystem"
-
-export const loadUrlGraph = async ({
-  operation,
-  urlGraph,
-  kitchen,
-  startLoading,
-  writeGeneratedFiles,
-  outDirectoryUrl,
-}) => {
-  if (writeGeneratedFiles && outDirectoryUrl) {
-    await ensureEmptyDirectory(outDirectoryUrl)
-  }
+export const loadUrlGraph = async ({ context, startLoading, operation }) => {
   const promises = []
   const promiseMap = new Map()
   const cook = (urlInfo, context) => {
     const promiseFromData = promiseMap.get(urlInfo)
     if (promiseFromData) return promiseFromData
-    const promise = _cook(urlInfo, {
-      outDirectoryUrl,
-      ...context,
-    })
+    const promise = _cook(urlInfo, context)
     promises.push(promise)
     promiseMap.set(urlInfo, promise)
     return promise
   }
-  const _cook = async (urlInfo, context) => {
-    await kitchen.cook(urlInfo, {
+  const _cook = async (urlInfo, dishContext) => {
+    await context.cook(urlInfo, {
       cookDuringCook: cook,
-      ...context,
+      ...dishContext,
     })
     const { references } = urlInfo
     references.forEach((reference) => {
@@ -40,15 +25,15 @@ export const loadUrlGraph = async ({
       }
       // we use reference.generatedUrl to mimic what a browser would do:
       // do a fetch to the specifier as found in the file
-      const referencedUrlInfo = urlGraph.reuseOrCreateUrlInfo(
+      const referencedUrlInfo = context.urlGraph.reuseOrCreateUrlInfo(
         reference.generatedUrl,
       )
       cook(referencedUrlInfo, { reference })
     })
   }
   startLoading(
-    ({ trace, parentUrl = kitchen.rootDirectoryUrl, type, specifier }) => {
-      const [entryReference, entryUrlInfo] = kitchen.prepareEntryPoint({
+    ({ trace, parentUrl = context.rootDirectoryUrl, type, specifier }) => {
+      const [entryReference, entryUrlInfo] = context.prepareEntryPoint({
         trace,
         parentUrl,
         type,
@@ -60,7 +45,9 @@ export const loadUrlGraph = async ({
   )
 
   const waitAll = async () => {
-    operation.throwIfAborted()
+    if (operation) {
+      operation.throwIfAborted()
+    }
     if (promises.length === 0) {
       return
     }
