@@ -36,11 +36,7 @@ export const createUrlGraphLoader = (context) => {
       if (ignoreRessourceHint && reference.isResourceHint) {
         return
       }
-      if (
-        ignoreDynamicImport &&
-        // TODO: it's not really this, update to the real check
-        reference.type === "dynamic_import"
-      ) {
+      if (ignoreDynamicImport && reference.subtype === "import_dynamic") {
         return
       }
       // we use reference.generatedUrl to mimic what a browser would do:

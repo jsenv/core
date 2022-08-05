@@ -36,7 +36,7 @@ import { jsenvPluginInline } from "../plugins/inline/jsenv_plugin_inline.js"
 import { jsenvPluginAsJsClassic } from "../plugins/transpilation/as_js_classic/jsenv_plugin_as_js_classic.js"
 import { getCorePlugins } from "../plugins/plugins.js"
 import { createKitchen } from "../omega/kitchen.js"
-import { createUrlGraphLoader } from "../omega/url_graph/url_graph_load.js"
+import { createUrlGraphLoader } from "../omega/url_graph/url_graph_loader.js"
 import { createUrlGraphSummary } from "../omega/url_graph/url_graph_report.js"
 import { isWebWorkerEntryPointReference } from "../omega/web_workers.js"
 
