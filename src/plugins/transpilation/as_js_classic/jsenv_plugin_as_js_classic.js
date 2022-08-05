@@ -89,17 +89,27 @@ const jsenvPluginAsJsClassicConversion = ({
       },
     },
     fetchUrlContent: async (urlInfo, context) => {
-      const originalUrlInfo = await context.fetchOriginalUrlInfo({
-        urlInfo,
-        context,
-        searchParam: "as_js_classic",
-        // override the expectedType to "js_module"
-        // because when there is ?as_js_classic it means the underlying resource
-        // is a js_module
-        expectedType: "js_module",
-      })
-      if (!originalUrlInfo) {
+      const [jsModuleReference, jsModuleUrlInfo] =
+        context.getWithoutSearchParam({
+          urlInfo,
+          context,
+          searchParam: "as_js_classic",
+          // override the expectedType to "js_module"
+          // because when there is ?as_js_classic it means the underlying resource
+          // is a js_module
+          expectedType: "js_module",
+        })
+      if (!jsModuleReference) {
         return null
+      }
+      await context.fetchUrlContent(jsModuleUrlInfo, {
+        reference: jsModuleReference,
+      })
+      if (
+        jsModuleUrlInfo.dependents.size === 0
+        // && context.scenarios.build
+      ) {
+        context.urlGraph.deleteUrlInfo(jsModuleUrlInfo.url)
       }
       const jsClassicFormat =
         // in general html file are entry points, but js can be entry point when:
@@ -112,14 +122,14 @@ const jsenvPluginAsJsClassicConversion = ({
         // if it's an entry point without dependency (it does not use import)
         // then we can use UMD, otherwise we have to use systemjs
         // because it is imported by systemjs
-        !originalUrlInfo.data.usesImport
+        !jsModuleUrlInfo.data.usesImport
           ? "umd"
           : "system"
       const { content, sourcemap } = await convertJsModuleToJsClassic({
         systemJsInjection,
         systemJsClientFileUrl,
         urlInfo,
-        originalUrlInfo,
+        jsModuleUrlInfo,
         jsClassicFormat,
       })
       urlInfo.data.jsClassicFormat = jsClassicFormat
@@ -127,8 +137,8 @@ const jsenvPluginAsJsClassicConversion = ({
         content,
         contentType: "text/javascript",
         type: "js_classic",
-        originalUrl: originalUrlInfo.originalUrl,
-        originalContent: originalUrlInfo.originalContent,
+        originalUrl: jsModuleUrlInfo.originalUrl,
+        originalContent: jsModuleUrlInfo.originalContent,
         sourcemap,
       }
     },
@@ -161,7 +171,7 @@ const convertJsModuleToJsClassic = async ({
   systemJsInjection,
   systemJsClientFileUrl,
   urlInfo,
-  originalUrlInfo,
+  jsModuleUrlInfo,
   jsClassicFormat,
 }) => {
   const { code, map } = await applyBabelPlugins({
@@ -190,9 +200,9 @@ const convertJsModuleToJsClassic = async ({
             requireFromJsenv("@babel/plugin-transform-modules-umd"),
           ]),
     ],
-    urlInfo: originalUrlInfo,
+    urlInfo: jsModuleUrlInfo,
   })
-  let sourcemap = originalUrlInfo.sourcemap
+  let sourcemap = jsModuleUrlInfo.sourcemap
   sourcemap = await composeTwoSourcemaps(sourcemap, map)
   if (
     systemJsInjection &&

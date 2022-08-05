@@ -59,12 +59,12 @@ ${new URL("./client/main.html", import.meta.url)}:15:40
   14 |     <script type="module">
 > 15 |       const directoryUrl = new URL("./src/", import.meta.url).href
                                               ^
-  16 | `
+  16 | 
+--- plugin name ---
+"jsenv:file_url_fetching"`
   assert({ actual, expected })
 }
 
 // but it can be allowed explicitely and it will copy the directory content
 // in the build directory and update the url accorindgly
-await test({
-  directoryReferenceAllowed: true,
-})
+await test({ directoryReferenceAllowed: true })

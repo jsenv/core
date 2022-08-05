@@ -648,7 +648,7 @@ export const createKitchen = ({
     return [ref, urlInfo]
   }
 
-  const fetchOriginalUrlInfo = async ({
+  const getWithoutSearchParam = ({
     urlInfo,
     context,
     searchParam,
@@ -657,37 +657,27 @@ export const createKitchen = ({
     const urlObject = new URL(urlInfo.url)
     const { searchParams } = urlObject
     if (!searchParams.has(searchParam)) {
-      return null
+      return [null, null]
     }
     searchParams.delete(searchParam)
-    const originalUrl = urlObject.href
-    const originalReference = {
+    const referenceWithoutSearchParam = {
       ...(context.reference.original || context.reference),
       expectedType,
+      url: urlObject.href,
     }
-    originalReference.url = originalUrl
-    const originalUrlInfo = context.urlGraph.reuseOrCreateUrlInfo(
-      originalReference.url,
+    const urlInfoWithoutSearchParam = context.urlGraph.reuseOrCreateUrlInfo(
+      referenceWithoutSearchParam.url,
     )
-    if (originalUrlInfo.originalUrl === undefined) {
+    if (urlInfoWithoutSearchParam.originalUrl === undefined) {
       applyReferenceEffectsOnUrlInfo(
-        originalReference,
-        originalUrlInfo,
+        referenceWithoutSearchParam,
+        urlInfoWithoutSearchParam,
         context,
       )
     }
-    await context.fetchUrlContent(originalUrlInfo, {
-      reference: originalReference,
-    })
-    if (
-      originalUrlInfo.dependents.size === 0
-      // && context.scenarios.build
-    ) {
-      context.urlGraph.deleteUrlInfo(originalUrlInfo.url)
-    }
-    return originalUrlInfo
+    return [referenceWithoutSearchParam, urlInfoWithoutSearchParam]
   }
-  kitchenContext.fetchOriginalUrlInfo = fetchOriginalUrlInfo
+  kitchenContext.getWithoutSearchParam = getWithoutSearchParam
 
   return {
     pluginController,
