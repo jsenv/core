@@ -62,28 +62,12 @@ export const jsenvPluginAsJsClassicConversion = ({
         reference: jsModuleReference,
         cleanAfterFetch: true,
       })
-      const jsClassicFormat =
-        // in general html file are entry points, but js can be entry point when:
-        // - passed in entryPoints to build
-        // - is used by web worker
-        // - the reference contains ?entry_point
-        // When js is entry point there can be no HTML to inject systemjs
-        // and systemjs must be injected into the js file
-        urlInfo.isEntryPoint &&
-        // if it's an entry point without dependency (it does not use import)
-        // then we can use UMD, otherwise we have to use systemjs
-        // because it is imported by systemjs
-        !jsModuleUrlInfo.data.usesImport
-          ? "umd"
-          : "system"
       const { content, sourcemap } = await convertJsModuleToJsClassic({
         systemJsInjection,
         systemJsClientFileUrl,
         urlInfo,
         jsModuleUrlInfo,
-        jsClassicFormat,
       })
-      urlInfo.data.jsClassicFormat = jsClassicFormat
       return {
         content,
         contentType: "text/javascript",

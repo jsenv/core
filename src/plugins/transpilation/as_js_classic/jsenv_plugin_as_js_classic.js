@@ -16,7 +16,7 @@ import { urlToFilename } from "@jsenv/urls"
 import { jsenvPluginAsJsClassicConversion } from "./jsenv_plugin_as_js_classic_conversion.js"
 import { jsenvPluginAsJsClassicHtml } from "./jsenv_plugin_as_js_classic_html.js"
 import { jsenvPluginAsJsClassicWorkers } from "./jsenv_plugin_as_js_classic_workers.js"
-// import { jsenvPluginAsJsClassicLibrary } from "./jsenv_plugin_as_js_classic_library.js"
+import { jsenvPluginAsJsClassicLibrary } from "./jsenv_plugin_as_js_classic_library.js"
 
 export const jsenvPluginAsJsClassic = ({
   jsClassicFallback,
@@ -28,6 +28,10 @@ export const jsenvPluginAsJsClassic = ({
   ).href
 
   return [
+    jsenvPluginAsJsClassicLibrary({
+      systemJsInjection,
+      systemJsClientFileUrl,
+    }),
     ...(jsClassicFallback
       ? [
           jsenvPluginAsJsClassicConversion({

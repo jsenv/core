@@ -1,6 +1,7 @@
 import { createUrlGraphLoader } from "@jsenv/core/src/omega/url_graph/url_graph_load.js"
 import { bundleJsModules } from "@jsenv/core/src/plugins/bundling/js_module/bundle_js_modules.js"
-// import { convertJsModuleToJsClassic } from "../as_js_classic/convert_js_module_to_js_classic.js"
+
+import { convertJsModuleToJsClassic } from "./convert_js_module_to_js_classic.js"
 
 export const jsenvPluginAsJsClassicLibrary = ({
   systemJsInjection,
