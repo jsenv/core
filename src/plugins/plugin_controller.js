@@ -67,50 +67,45 @@ export const createPluginController = ({ plugins, scenarios }) => {
     if (!hookFn) {
       return null
     }
-    currentPlugin = hook.plugin
-    currentHookName = hook.name
     let timeEnd
     if (info.timing) {
       timeEnd = timeStart(
-        `${currentHookName}-${currentPlugin.name.replace("jsenv:", "")}`,
+        `${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`,
       )
     }
-    try {
-      let valueReturned = hookFn(info, context)
-      if (info.timing) {
-        Object.assign(info.timing, timeEnd())
-      }
-      valueReturned = assertAndNormalizeReturnValue(hook.name, valueReturned)
-      return valueReturned
-    } finally {
-      currentPlugin = null
-      currentHookName = null
+    currentPlugin = hook.plugin
+    currentHookName = hook.name
+    let valueReturned = hookFn(info, context)
+    currentPlugin = null
+    currentHookName = null
+    if (info.timing) {
+      Object.assign(info.timing, timeEnd())
     }
+    valueReturned = assertAndNormalizeReturnValue(hook.name, valueReturned)
+    return valueReturned
   }
   const callAsyncHook = async (hook, info, context) => {
     const hookFn = getHookFunction(hook, info)
     if (!hookFn) {
       return null
     }
-    currentPlugin = hook.plugin
-    currentHookName = hook.name
+
     let timeEnd
     if (info.timing) {
       timeEnd = timeStart(
-        `${currentHookName}-${currentPlugin.name.replace("jsenv:", "")}`,
+        `${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`,
       )
     }
-    try {
-      let valueReturned = await hookFn(info, context)
-      if (info.timing) {
-        Object.assign(info.timing, timeEnd())
-      }
-      valueReturned = assertAndNormalizeReturnValue(hook.name, valueReturned)
-      return valueReturned
-    } finally {
-      currentPlugin = null
-      currentHookName = null
+    currentPlugin = hook.plugin
+    currentHookName = hook.name
+    let valueReturned = await hookFn(info, context)
+    currentPlugin = null
+    currentHookName = null
+    if (info.timing) {
+      Object.assign(info.timing, timeEnd())
     }
+    valueReturned = assertAndNormalizeReturnValue(hook.name, valueReturned)
+    return valueReturned
   }
 
   const callHooks = (hookName, info, context, callback) => {

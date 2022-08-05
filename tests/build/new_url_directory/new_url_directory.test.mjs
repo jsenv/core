@@ -59,9 +59,7 @@ ${new URL("./client/main.html", import.meta.url)}:15:40
   14 |     <script type="module">
 > 15 |       const directoryUrl = new URL("./src/", import.meta.url).href
                                               ^
-  16 | 
---- plugin name ---
-"jsenv:file_url_fetching"`
+  16 | `
   assert({ actual, expected })
 }
 
