@@ -200,7 +200,8 @@ const flattenAndFilterPlugins = (plugins, { scenarios }) => {
       }
       const { appliesDuring } = pluginEntry
       if (appliesDuring === undefined) {
-        console.warn(`"appliesDuring" is undefined on ${pluginEntry.name}`)
+        // console.debug(`"appliesDuring" is undefined on ${pluginEntry.name}`)
+        flatPlugins.push(pluginEntry)
         return
       }
       if (appliesDuring === "*") {
