@@ -36,7 +36,7 @@ import { jsenvPluginInline } from "../plugins/inline/jsenv_plugin_inline.js"
 import { jsenvPluginAsJsClassic } from "../plugins/transpilation/as_js_classic/jsenv_plugin_as_js_classic.js"
 import { getCorePlugins } from "../plugins/plugins.js"
 import { createKitchen } from "../omega/kitchen.js"
-import { loadUrlGraph } from "../omega/url_graph/url_graph_load.js"
+import { createUrlGraphLoader } from "../omega/url_graph/url_graph_load.js"
 import { createUrlGraphSummary } from "../omega/url_graph/url_graph_report.js"
 import { isWebWorkerEntryPointReference } from "../omega/web_workers.js"
 
@@ -224,24 +224,22 @@ build ${entryPointKeys.length} entry points`)
       if (writeGeneratedFiles) {
         await ensureEmptyDirectory(new URL(`.jsenv/build/`, rootDirectoryUrl))
       }
-      await loadUrlGraph({
-        operation: buildOperation,
-        context: rawGraphKitchen.kitchenContext,
-        startLoading: (cookEntryFile) => {
-          Object.keys(entryPoints).forEach((key) => {
-            const [, entryUrlInfo] = cookEntryFile({
-              trace: {
-                message: `"${key}" in entryPoints parameter`,
-              },
-              type: "entry_point",
-              specifier: key,
-            })
-            entryUrls.push(entryUrlInfo.url)
-            entryUrlInfo.filename = entryPoints[key]
-            // entryUrlInfo.data.entryPointKey = key
+      const rawUrlGraphLoader = createUrlGraphLoader(
+        rawGraphKitchen.kitchenContext,
+      )
+      Object.keys(entryPoints).forEach((key) => {
+        const [entryReference, entryUrlInfo] =
+          rawGraphKitchen.kitchenContext.prepareEntryPoint({
+            trace: { message: `"${key}" in entryPoints parameter` },
+            parentUrl: rootDirectoryUrl,
+            type: "entry_point",
+            specifier: key,
           })
-        },
+        entryUrls.push(entryUrlInfo.url)
+        entryUrlInfo.filename = entryPoints[key]
+        rawUrlGraphLoader.load(entryUrlInfo, { reference: entryReference })
       })
+      await rawUrlGraphLoader.getAllLoadDonePromise(buildOperation)
     } catch (e) {
       prebuildTask.fail()
       throw e
@@ -718,20 +716,23 @@ build ${entryPointKeys.length} entry points`)
           new URL(`.jsenv/postbuild/`, rootDirectoryUrl),
         )
       }
-      await loadUrlGraph({
-        operation: buildOperation,
-        context: finalGraphKitchen.kitchenContext,
-        startLoading: (cookEntryFile) => {
-          entryUrls.forEach((entryUrl) => {
-            const [, postBuildEntryUrlInfo] = cookEntryFile({
-              trace: { message: `entryPoint` },
-              type: "entry_point",
-              specifier: entryUrl,
-            })
-            postBuildEntryUrls.push(postBuildEntryUrlInfo.url)
+      const finalUrlGraphLoader = createUrlGraphLoader(
+        finalGraphKitchen.kitchenContext,
+      )
+      entryUrls.forEach((entryUrl) => {
+        const [postBuildEntryReference, postBuildEntryUrlInfo] =
+          finalGraphKitchen.kitchenContext.prepareEntryPoint({
+            trace: { message: `entryPoint` },
+            parentUrl: rootDirectoryUrl,
+            type: "entry_point",
+            specifier: entryUrl,
           })
-        },
+        postBuildEntryUrls.push(postBuildEntryUrlInfo.url)
+        finalUrlGraphLoader.load(postBuildEntryUrlInfo, {
+          reference: postBuildEntryReference,
+        })
       })
+      await finalUrlGraphLoader.getAllLoadDonePromise(buildOperation)
     } catch (e) {
       buildTask.fail()
       throw e
@@ -1188,19 +1189,22 @@ const applyUrlVersioning = async ({
         finalGraphKitchen.rootDirectoryUrl,
       ),
     })
-    await loadUrlGraph({
-      operation: buildOperation,
-      context: versioningKitchen.kitchenContext,
-      startLoading: (cookEntryFile) => {
-        postBuildEntryUrls.forEach((postBuildEntryUrl) => {
-          cookEntryFile({
-            trace: `entryPoint`,
-            type: "entry_point",
-            specifier: postBuildEntryUrl,
-          })
+    const versioningUrlGraphLoader = createUrlGraphLoader(
+      versioningKitchen.kitchenContext,
+    )
+    postBuildEntryUrls.forEach((postBuildEntryUrl) => {
+      const [postBuildEntryReference, postBuildEntryUrlInfo] =
+        finalGraphKitchen.kitchenContext.prepareEntryPoint({
+          trace: { message: `entryPoint` },
+          parentUrl: buildDirectoryUrl,
+          type: "entry_point",
+          specifier: postBuildEntryUrl,
         })
-      },
+      versioningUrlGraphLoader.load(postBuildEntryUrlInfo, {
+        reference: postBuildEntryReference,
+      })
     })
+    await versioningUrlGraphLoader.getAllLoadDonePromise(buildOperation)
     if (usedVersionMappings.length) {
       const versionMappingsNeeded = {}
       usedVersionMappings.forEach((specifier) => {

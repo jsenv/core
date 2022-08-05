@@ -1,17 +1,9 @@
-export const loadUrlGraph = async ({ context, startLoading, operation }) => {
+export const createUrlGraphLoader = (context) => {
   const promises = []
   const promiseMap = new Map()
-  const cook = (urlInfo, context) => {
-    const promiseFromData = promiseMap.get(urlInfo)
-    if (promiseFromData) return promiseFromData
-    const promise = _cook(urlInfo, context)
-    promises.push(promise)
-    promiseMap.set(urlInfo, promise)
-    return promise
-  }
   const _cook = async (urlInfo, dishContext) => {
     await context.cook(urlInfo, {
-      cookDuringCook: cook,
+      cookDuringCook: load,
       ...dishContext,
     })
     const { references } = urlInfo
@@ -28,34 +20,38 @@ export const loadUrlGraph = async ({ context, startLoading, operation }) => {
       const referencedUrlInfo = context.urlGraph.reuseOrCreateUrlInfo(
         reference.generatedUrl,
       )
-      cook(referencedUrlInfo, { reference })
+      load(referencedUrlInfo, { reference })
     })
   }
-  startLoading(
-    ({ trace, parentUrl = context.rootDirectoryUrl, type, specifier }) => {
-      const [entryReference, entryUrlInfo] = context.prepareEntryPoint({
-        trace,
-        parentUrl,
-        type,
-        specifier,
-      })
-      cook(entryUrlInfo, { reference: entryReference })
-      return [entryReference, entryUrlInfo]
-    },
-  )
 
-  const waitAll = async () => {
-    if (operation) {
-      operation.throwIfAborted()
-    }
-    if (promises.length === 0) {
-      return
-    }
-    const promisesToWait = promises.slice()
-    promises.length = 0
-    await Promise.all(promisesToWait)
-    await waitAll()
+  const load = (urlInfo, dishContext) => {
+    const promiseFromData = promiseMap.get(urlInfo)
+    if (promiseFromData) return promiseFromData
+    const promise = _cook(urlInfo, dishContext)
+    promises.push(promise)
+    promiseMap.set(urlInfo, promise)
+    return promise
   }
-  await waitAll()
-  promiseMap.clear()
+
+  const getAllLoadDonePromise = async (operation) => {
+    const waitAll = async () => {
+      if (operation) {
+        operation.throwIfAborted()
+      }
+      if (promises.length === 0) {
+        return
+      }
+      const promisesToWait = promises.slice()
+      promises.length = 0
+      await Promise.all(promisesToWait)
+      await waitAll()
+    }
+    await waitAll()
+    promiseMap.clear()
+  }
+
+  return {
+    load,
+    getAllLoadDonePromise,
+  }
 }
