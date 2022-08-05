@@ -1,18 +1,46 @@
 export const createUrlGraphLoader = (context) => {
   const promises = []
   const promiseMap = new Map()
-  const _cook = async (urlInfo, dishContext) => {
-    await context.cook(urlInfo, {
-      cookDuringCook: load,
-      ...dishContext,
-    })
+  const load = (
+    urlInfo,
+    dishContext,
+    { ignoreRessourceHint = true, ignoreDynamicImport = false } = {},
+  ) => {
+    const promiseFromData = promiseMap.get(urlInfo)
+    if (promiseFromData) return promiseFromData
+    const promise = (async () => {
+      await context.cook(urlInfo, {
+        cookDuringCook: load,
+        ...dishContext,
+      })
+      loadReferencedUrlInfos(urlInfo, {
+        ignoreRessourceHint,
+        ignoreDynamicImport,
+      })
+    })()
+    promises.push(promise)
+    promiseMap.set(urlInfo, promise)
+    return promise
+  }
+
+  const loadReferencedUrlInfos = (
+    urlInfo,
+    { ignoreRessourceHint, ignoreDynamicImport },
+  ) => {
     const { references } = urlInfo
     references.forEach((reference) => {
       // we don't cook resource hints
       // because they might refer to resource that will be modified during build
       // It also means something else have to reference that url in order to cook it
       // so that the preload is deleted by "resync_resource_hints.js" otherwise
-      if (reference.isResourceHint) {
+      if (ignoreRessourceHint && reference.isResourceHint) {
+        return
+      }
+      if (
+        ignoreDynamicImport &&
+        // TODO: it's not really this, update to the real check
+        reference.type === "dynamic_import"
+      ) {
         return
       }
       // we use reference.generatedUrl to mimic what a browser would do:
@@ -20,17 +48,12 @@ export const createUrlGraphLoader = (context) => {
       const referencedUrlInfo = context.urlGraph.reuseOrCreateUrlInfo(
         reference.generatedUrl,
       )
-      load(referencedUrlInfo, { reference })
+      load(referencedUrlInfo, {
+        reference,
+        ignoreRessourceHint,
+        ignoreDynamicImport,
+      })
     })
-  }
-
-  const load = (urlInfo, dishContext) => {
-    const promiseFromData = promiseMap.get(urlInfo)
-    if (promiseFromData) return promiseFromData
-    const promise = _cook(urlInfo, dishContext)
-    promises.push(promise)
-    promiseMap.set(urlInfo, promise)
-    return promise
   }
 
   const getAllLoadDonePromise = async (operation) => {
@@ -52,6 +75,7 @@ export const createUrlGraphLoader = (context) => {
 
   return {
     load,
+    loadReferencedUrlInfos,
     getAllLoadDonePromise,
   }
 }
