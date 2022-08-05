@@ -104,13 +104,8 @@ const jsenvPluginAsJsClassicConversion = ({
       }
       await context.fetchUrlContent(jsModuleUrlInfo, {
         reference: jsModuleReference,
+        cleanAfterFetch: true,
       })
-      if (
-        jsModuleUrlInfo.dependents.size === 0
-        // && context.scenarios.build
-      ) {
-        context.urlGraph.deleteUrlInfo(jsModuleUrlInfo.url)
-      }
       const jsClassicFormat =
         // in general html file are entry points, but js can be entry point when:
         // - passed in entryPoints to build

@@ -266,13 +266,16 @@ export const createKitchen = ({
     },
   })
 
-  const fetchUrlContent = async (urlInfo, { reference, context }) => {
+  const fetchUrlContent = async (
+    urlInfo,
+    { reference, contextDuringFetch, cleanAfterFetch = false },
+  ) => {
     try {
       const fetchUrlContentReturnValue =
         await pluginController.callAsyncHooksUntil(
           "fetchUrlContent",
           urlInfo,
-          context,
+          contextDuringFetch,
         )
       if (!fetchUrlContentReturnValue) {
         logger.warn(
@@ -354,9 +357,16 @@ export const createKitchen = ({
     }
     urlInfo.generatedUrl = determineFileUrlForOutDirectory({
       urlInfo,
-      context,
+      context: contextDuringFetch,
     })
-    await urlInfoTransformer.initTransformations(urlInfo, context)
+    await urlInfoTransformer.initTransformations(urlInfo, contextDuringFetch)
+    if (
+      cleanAfterFetch &&
+      urlInfo.dependents.size === 0
+      // && context.scenarios.build
+    ) {
+      contextDuringFetch.urlGraph.deleteUrlInfo(urlInfo.url)
+    }
   }
   kitchenContext.fetchUrlContent = fetchUrlContent
 
@@ -372,13 +382,20 @@ export const createKitchen = ({
         ...nestedDishContext,
       })
     }
-    context.fetchUrlContent = (urlInfo, { reference }) => {
-      return fetchUrlContent(urlInfo, { reference, context })
+    context.fetchUrlContent = (urlInfo, { reference, cleanAfterFetch }) => {
+      return fetchUrlContent(urlInfo, {
+        reference,
+        contextDuringFetch: context,
+        cleanAfterFetch,
+      })
     }
 
     if (urlInfo.shouldHandle) {
       // "fetchUrlContent" hook
-      await fetchUrlContent(urlInfo, { reference: context.reference, context })
+      await fetchUrlContent(urlInfo, {
+        reference: context.reference,
+        contextDuringFetch: context,
+      })
 
       // parsing
       const references = []

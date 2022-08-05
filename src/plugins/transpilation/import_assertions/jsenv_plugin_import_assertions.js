@@ -118,13 +118,8 @@ const jsenvPluginAsModules = () => {
       }
       await context.fetchUrlContent(jsonUrlInfo, {
         reference: jsonReference,
+        cleanAfterFetch: true,
       })
-      if (
-        jsonUrlInfo.dependents.size === 0
-        // && context.scenarios.build
-      ) {
-        context.urlGraph.deleteUrlInfo(jsonUrlInfo.url)
-      }
       const jsonText = JSON.stringify(jsonUrlInfo.content.trim())
       return {
         // here we could `export default ${jsonText}`:
@@ -154,13 +149,8 @@ const jsenvPluginAsModules = () => {
       }
       await context.fetchUrlContent(cssUrlInfo, {
         reference: cssReference,
+        cleanAfterFetch: true,
       })
-      if (
-        cssUrlInfo.dependents.size === 0
-        // && context.scenarios.build
-      ) {
-        context.urlGraph.deleteUrlInfo(cssUrlInfo.url)
-      }
       const cssText = JS_QUOTES.escapeSpecialChars(cssUrlInfo.content, {
         // If template string is choosen and runtime do not support template literals
         // it's ok because "jsenv:new_inline_content" plugin executes after this one
@@ -199,13 +189,8 @@ const jsenvPluginAsModules = () => {
       }
       await context.fetchUrlContent(textUrlInfo, {
         reference: textReference,
+        cleanAfterFetch: true,
       })
-      if (
-        textUrlInfo.dependents.size === 0
-        // && context.scenarios.build
-      ) {
-        context.urlGraph.deleteUrlInfo(textUrlInfo.url)
-      }
       const textPlain = JS_QUOTES.escapeSpecialChars(urlInfo.content, {
         // If template string is choosen and runtime do not support template literals
         // it's ok because "jsenv:new_inline_content" plugin executes after this one
