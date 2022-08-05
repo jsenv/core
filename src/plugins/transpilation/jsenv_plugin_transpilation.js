@@ -16,7 +16,11 @@ import { jsenvPluginTopLevelAwait } from "./jsenv_plugin_top_level_await.js"
 export const jsenvPluginTranspilation = ({
   importAssertions = true,
   css = true,
-  jsModuleAsJsClassic = true,
+  // build sets jsClassicFallback: false during first step of the build
+  // and re-enable it in the second phase (when performing the bundling)
+  // so that bundling is applied on js modules THEN it is converted to js classic if needed
+  jsClassicFallback = true,
+  systemJsInjection = true,
   topLevelAwait = true,
   babelHelpersAsImport = true,
   getCustomBabelPlugins,
@@ -24,11 +28,7 @@ export const jsenvPluginTranspilation = ({
   if (importAssertions === true) {
     importAssertions = {}
   }
-  if (jsModuleAsJsClassic === true) {
-    jsModuleAsJsClassic = {}
-  }
   return [
-    // import assertions we want it all the time
     ...(importAssertions
       ? [jsenvPluginImportAssertions(importAssertions)]
       : []),
@@ -38,14 +38,11 @@ export const jsenvPluginTranspilation = ({
       getCustomBabelPlugins,
       babelHelpersAsImport,
     }),
-    // but the conversion from js_module to js_classic
-    // we want to do it after bundling
-    // so the build function will disable jsModuleAsJsClassic during build
-    // and enable it manually during postbuild
-    ...(jsModuleAsJsClassic
-      ? [jsenvPluginAsJsClassic(jsModuleAsJsClassic)]
-      : []),
-    // topLevelAwait must come after js_module_as_js_classic because it's related to the module format
+    jsenvPluginAsJsClassic({
+      jsClassicFallback,
+      systemJsInjection,
+    }),
+    // topLevelAwait must come after jsenvPluginAsJsClassic because it's related to the module format
     // so we want to wait to know the module format before transforming things related to top level await
     ...(topLevelAwait ? [jsenvPluginTopLevelAwait(topLevelAwait)] : []),
     ...(css ? [jsenvPluginCssParcel()] : []),

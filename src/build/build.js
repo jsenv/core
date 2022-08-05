@@ -208,7 +208,7 @@ build ${entryPointKeys.length} entry points`)
           transpilation: {
             ...transpilation,
             babelHelpersAsImport: !useExplicitJsClassicConversion,
-            jsModuleAsJsClassic: false,
+            jsClassicFallback: false,
           },
           minification,
           bundling,
@@ -425,8 +425,13 @@ build ${entryPointKeys.length} entry points`)
       runtimeCompat,
       plugins: [
         urlAnalysisPlugin,
-        jsenvPluginAsJsClassic({ systemJsInjection: true }),
-        jsenvPluginInline({ fetchInlineUrls: false }),
+        jsenvPluginAsJsClassic({
+          jsClassicFallback: true,
+          systemJsInjection: true,
+        }),
+        jsenvPluginInline({
+          fetchInlineUrls: false,
+        }),
         {
           name: "jsenv:postbuild",
           appliesDuring: "build",

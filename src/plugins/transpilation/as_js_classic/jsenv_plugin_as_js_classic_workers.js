@@ -1,3 +1,16 @@
+/*
+ * when {type: "module"} cannot be used on web workers:
+ * - new Worker("worker.js", { type: "module" })
+ *   transformed into
+ *   new Worker("worker.js?as_js_classic", { type: " lassic" })
+ * - navigator.serviceWorker.register("service_worker.js", { type: "module" })
+ *   transformed into
+ *   navigator.serviceWorker.register("service_worker.js?as_js_classic", { type: "classic" })
+ * - new SharedWorker("shared_worker.js", { type: "module" })
+ *   transformed into
+ *   new SharedWorker("shared_worker.js?as_js_classic", { type: "classic" })
+ */
+
 import { injectQueryParams } from "@jsenv/urls"
 
 export const jsenvPluginAsJsClassicWorkers = ({
