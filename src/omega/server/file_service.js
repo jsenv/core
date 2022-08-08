@@ -97,7 +97,7 @@ export const createFileService = ({
           url: urlInfo.url,
           associations: watchAssociations,
         })
-        urlInfo.isValid = () => watch
+        urlInfo.isWatched = watch
       },
       includeOriginalUrls: scenarios.dev,
     })
@@ -218,25 +218,23 @@ export const createFileService = ({
       reference = entryPoint[0]
     }
     const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url)
-
     const ifNoneMatch = request.headers["if-none-match"]
-    if (
-      ifNoneMatch &&
-      urlInfo.contentEtag === ifNoneMatch &&
-      // urlInfo.isValid
-      // - is false by default because there must be some logic capable
-      //   to invalidate the url (otherwise server would return 304 forever)
-      // - is set to a function returning true if the file is watched
-      //   in start_dev_server.js
-      // - is set to a custom function by cjs_to_esm in compiled_file_cache.js
-      urlInfo.isValid()
-    ) {
-      return {
-        status: 304,
-        headers: {
-          "cache-control": `private,max-age=0,must-revalidate`,
-          ...urlInfo.headers,
-        },
+    const urlInfoTargetedByCache = urlInfo.isInline
+      ? urlGraph.getUrlInfo(urlInfo.inlineUrlSite.url)
+      : urlInfo
+
+    if (ifNoneMatch) {
+      if (
+        urlInfoTargetedByCache.contentEtag === ifNoneMatch &&
+        urlInfoTargetedByCache.isValid()
+      ) {
+        return {
+          status: 304,
+          headers: {
+            "cache-control": `private,max-age=0,must-revalidate`,
+            ...urlInfo.headers,
+          },
+        }
       }
     }
     try {
@@ -275,7 +273,7 @@ export const createFileService = ({
         headers: {
           "content-length": Buffer.byteLength(urlInfo.content),
           "cache-control": `private,max-age=0,must-revalidate`,
-          "eTag": urlInfo.contentEtag,
+          "eTag": urlInfoTargetedByCache.contentEtag,
           ...urlInfo.headers,
           "content-type": urlInfo.contentType,
         },

@@ -1,4 +1,7 @@
+import { readFileSync } from "node:fs"
 import { urlToRelativeUrl } from "@jsenv/urls"
+import { bufferToEtag } from "@jsenv/filesystem"
+
 import { urlSpecifierEncoding } from "./url_specifier_encoding.js"
 
 export const createUrlGraph = ({
@@ -150,6 +153,7 @@ export const createUrlGraph = ({
       }
       seen.push(urlInfo.url)
       urlInfo.modifiedTimestamp = modifiedTimestamp
+      urlInfo.originalContentEtag = undefined
       urlInfo.contentEtag = undefined
       urlInfo.dependents.forEach((dependentUrl) => {
         const dependentUrlInfo = getUrlInfo(dependentUrl)
@@ -220,9 +224,27 @@ const createUrlInfo = (url) => {
   const urlInfo = {
     error: null,
     modifiedTimestamp: 0,
+    originalContentEtag: null,
     contentEtag: null,
     dependsOnPackageJson: false,
-    isValid,
+    isWatched: false,
+    isValid: () => {
+      if (!urlInfo.url.startsWith("file:")) {
+        return false
+      }
+      // we trust the watching mecanism
+      // doing urlInfo.contentEtag = undefined
+      // when file is modified
+      if (!urlInfo.isWatched) {
+        const fileContentAsBuffer = readFileSync(new URL(urlInfo.url))
+        const fileContentEtag = bufferToEtag(fileContentAsBuffer)
+        if (fileContentEtag !== urlInfo.originalContentEtag) {
+          return false
+        }
+      }
+      return true
+    },
+
     data: {}, // plugins can put whatever they want here
     references: [],
     dependencies: new Set(),
@@ -255,5 +277,3 @@ const createUrlInfo = (url) => {
   // Object.preventExtensions(urlInfo) // useful to ensure all properties are declared here
   return urlInfo
 }
-
-const isValid = () => false
