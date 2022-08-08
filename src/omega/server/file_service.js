@@ -59,13 +59,22 @@ export const createFileService = ({
     keepProcessAlive: false,
     recursive: true,
     added: ({ relativeUrl }) => {
-      onFileChange(new URL(relativeUrl, rootDirectoryUrl).href)
+      onFileChange({
+        url: new URL(relativeUrl, rootDirectoryUrl).href,
+        event: "added",
+      })
     },
     updated: ({ relativeUrl }) => {
-      onFileChange(new URL(relativeUrl, rootDirectoryUrl).href)
+      onFileChange({
+        url: new URL(relativeUrl, rootDirectoryUrl).href,
+        event: "modified",
+      })
     },
     removed: ({ relativeUrl }) => {
-      onFileChange(new URL(relativeUrl, rootDirectoryUrl).href)
+      onFileChange({
+        url: new URL(relativeUrl, rootDirectoryUrl).href,
+        event: "removed",
+      })
     },
   })
   serverStopCallbacks.push(stopWatchingClientFiles)
@@ -87,7 +96,7 @@ export const createFileService = ({
     const urlGraph = createUrlGraph({
       includeOriginalUrls: scenarios.dev,
     })
-    clientFileChangeCallbackList.push((url) => {
+    clientFileChangeCallbackList.push(({ url }) => {
       const urlInfo = urlGraph.getUrlInfo(url)
       if (urlInfo) {
         urlGraph.considerModified(urlInfo)
