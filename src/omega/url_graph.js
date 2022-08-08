@@ -217,7 +217,7 @@ export const createUrlGraph = ({
 }
 
 const createUrlInfo = (url) => {
-  return {
+  const urlInfo = {
     error: null,
     modifiedTimestamp: 0,
     contentEtag: null,
@@ -232,11 +232,8 @@ const createUrlInfo = (url) => {
     contentType: "", // "text/html", "text/css", "text/javascript", "application/json", ...
     url,
     originalUrl: undefined,
-    generatedUrl: null,
     filename: "",
     isEntryPoint: false,
-    isInline: false,
-    inlineUrlSite: null,
     shouldHandle: undefined,
     originalContent: undefined,
     content: undefined,
@@ -244,9 +241,19 @@ const createUrlInfo = (url) => {
     sourcemap: null,
     sourcemapReference: null,
     sourcemapIsWrong: false,
+
+    generatedUrl: null,
+    sourcemapGeneratedUrl: null,
+
+    isInline: false,
+    inlineUrlSite: null,
+    jsQuote: null, // maybe move to inlineUrlSite?
+
     timing: {},
     headers: {},
   }
+  // Object.preventExtensions(urlInfo) // useful to ensure all properties are declared here
+  return urlInfo
 }
 
 const isValid = () => false

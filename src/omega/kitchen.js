@@ -100,7 +100,7 @@ export const createKitchen = ({
     if (typeof specifier !== "string") {
       throw new TypeError(`"specifier" must be a string, got ${specifier}`)
     }
-    return {
+    const reference = {
       original: null,
       prev: null,
       next: null,
@@ -110,6 +110,9 @@ export const createKitchen = ({
       parentUrl,
       url: null,
       urlInfoUrl: null,
+      searchParams: null,
+      generatedUrl: null,
+      generatedSpecifier: null,
       type,
       subtype,
       expectedContentType,
@@ -123,22 +126,27 @@ export const createKitchen = ({
       specifierEnd,
       specifierLine,
       specifierColumn,
-      baseUrl,
       isOriginalPosition,
+      baseUrl,
       shouldHandle,
       isEntryPoint,
       isInline,
       injected,
       isResourceHint,
       dependsOnPackageJson,
+      timing: {},
       // for inline resources the reference contains the content
       content,
       contentType,
-      timing: {},
+      escape: null,
+      // import assertions (maybe move to data?)
       assert,
       assertNode,
       typePropertyNode,
+      mutation: null,
     }
+    // Object.preventExtensions(reference) // useful to ensure all properties are declared here
+    return reference
   }
   const mutateReference = (reference, newReference) => {
     reference.next = newReference
