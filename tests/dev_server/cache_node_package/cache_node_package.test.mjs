@@ -1,3 +1,8 @@
+/*
+ * - Ensure cache for node modules do not hit the server
+ * - Ensure cache is invalidated when package version changes
+ */
+
 import { writeFileSync, readFileSync, utimesSync } from "node:fs"
 import { chromium } from "playwright"
 import { assert } from "@jsenv/assert"
