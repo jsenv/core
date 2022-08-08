@@ -3796,28 +3796,35 @@ const createUrlGraph = ({
     return firstReferenceOnThatUrl;
   };
 
-  const findDependent = (url, predicate) => {
-    const urlInfo = getUrlInfo(url);
+  const visitDependents = (urlInfo, visitor) => {
+    const seen = [urlInfo.url];
+    let stopped = false;
 
-    if (!urlInfo) {
-      return null;
-    }
+    const stop = () => {
+      stopped = true;
+    };
 
-    const visitDependents = urlInfo => {
-      for (const dependentUrl of urlInfo.dependents) {
-        const dependent = getUrlInfo(dependentUrl);
-
-        if (predicate(dependent)) {
-          return dependent;
+    const iterate = currentUrlInfo => {
+      for (const dependentUrl of currentUrlInfo.dependents) {
+        if (seen.includes(dependentUrl)) {
+          continue;
         }
 
-        return visitDependents(dependent);
+        seen.push(dependentUrl);
+        const dependentUrlInfo = getUrlInfo(dependentUrl);
+        visitor(dependentUrlInfo, stop);
+
+        if (stopped) {
+          return dependentUrlInfo;
+        }
+
+        iterate(dependentUrlInfo);
       }
 
       return null;
     };
 
-    return visitDependents(urlInfo);
+    return iterate(urlInfo);
   };
 
   const updateReferences = (urlInfo, references) => {
@@ -3935,9 +3942,9 @@ const createUrlGraph = ({
     getUrlInfo,
     deleteUrlInfo,
     inferReference,
-    findDependent,
     updateReferences,
     considerModified,
+    visitDependents,
     toObject: () => {
       const data = {};
       urlInfoMap.forEach(urlInfo => {
@@ -13273,15 +13280,9 @@ const jsenvPluginNodeEsmResolution = ({
     }
 
     if (propagateToAncestors) {
-      const propagateToDependents = () => {
-        urlInfo.dependents.forEach(dependent => {
-          const dependentUrlInfo = context.urlGraph.getUrlInfo(dependent);
-          dependentUrlInfo.relateds.add(packageJsonUrl);
-          propagateToDependents();
-        });
-      };
-
-      propagateToDependents();
+      context.urlGraph.visitDependents(urlInfo, dependentUrlInfo => {
+        dependentUrlInfo.relateds.add(packageJsonUrl);
+      });
     }
   };
 
@@ -25093,17 +25094,26 @@ const createFileService = ({
     added: ({
       relativeUrl
     }) => {
-      onFileChange(new URL(relativeUrl, rootDirectoryUrl).href);
+      onFileChange({
+        url: new URL(relativeUrl, rootDirectoryUrl).href,
+        event: "added"
+      });
     },
     updated: ({
       relativeUrl
     }) => {
-      onFileChange(new URL(relativeUrl, rootDirectoryUrl).href);
+      onFileChange({
+        url: new URL(relativeUrl, rootDirectoryUrl).href,
+        event: "modified"
+      });
     },
     removed: ({
       relativeUrl
     }) => {
-      onFileChange(new URL(relativeUrl, rootDirectoryUrl).href);
+      onFileChange({
+        url: new URL(relativeUrl, rootDirectoryUrl).href,
+        event: "removed"
+      });
     }
   });
   serverStopCallbacks.push(stopWatchingClientFiles);
@@ -25127,7 +25137,9 @@ const createFileService = ({
     const urlGraph = createUrlGraph({
       includeOriginalUrls: scenarios.dev
     });
-    clientFileChangeCallbackList.push(url => {
+    clientFileChangeCallbackList.push(({
+      url
+    }) => {
       const urlInfo = urlGraph.getUrlInfo(url);
 
       if (urlInfo) {
