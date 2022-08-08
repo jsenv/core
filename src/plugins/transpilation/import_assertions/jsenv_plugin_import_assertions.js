@@ -107,16 +107,20 @@ const jsenvPluginAsModules = () => {
     name: `jsenv:as_json_module`,
     appliesDuring: "*",
     fetchUrlContent: async (urlInfo, context) => {
-      const originalUrlInfo = await context.fetchOriginalUrlInfo({
+      const [jsonReference, jsonUrlInfo] = context.getWithoutSearchParam({
         urlInfo,
         context,
         searchParam: "as_json_module",
         expectedType: "json",
       })
-      if (!originalUrlInfo) {
+      if (!jsonReference) {
         return null
       }
-      const jsonText = JSON.stringify(originalUrlInfo.content.trim())
+      await context.fetchUrlContent(jsonUrlInfo, {
+        reference: jsonReference,
+        cleanAfterFetch: true,
+      })
+      const jsonText = JSON.stringify(jsonUrlInfo.content.trim())
       return {
         // here we could `export default ${jsonText}`:
         // but js engine are optimized to recognize JSON.parse
@@ -124,8 +128,8 @@ const jsenvPluginAsModules = () => {
         content: `export default JSON.parse(${jsonText})`,
         contentType: "text/javascript",
         type: "js_module",
-        originalUrl: originalUrlInfo.originalUrl,
-        originalContent: originalUrlInfo.originalContent,
+        originalUrl: jsonUrlInfo.originalUrl,
+        originalContent: jsonUrlInfo.originalContent,
       }
     },
   }
@@ -134,16 +138,20 @@ const jsenvPluginAsModules = () => {
     name: `jsenv:as_css_module`,
     appliesDuring: "*",
     fetchUrlContent: async (urlInfo, context) => {
-      const originalUrlInfo = await context.fetchOriginalUrlInfo({
+      const [cssReference, cssUrlInfo] = context.getWithoutSearchParam({
         urlInfo,
         context,
         searchParam: "as_css_module",
         expectedType: "css",
       })
-      if (!originalUrlInfo) {
+      if (!cssReference) {
         return null
       }
-      const cssText = JS_QUOTES.escapeSpecialChars(originalUrlInfo.content, {
+      await context.fetchUrlContent(cssUrlInfo, {
+        reference: cssReference,
+        cleanAfterFetch: true,
+      })
+      const cssText = JS_QUOTES.escapeSpecialChars(cssUrlInfo.content, {
         // If template string is choosen and runtime do not support template literals
         // it's ok because "jsenv:new_inline_content" plugin executes after this one
         // and convert template strings into raw strings
@@ -160,8 +168,8 @@ const jsenvPluginAsModules = () => {
   export default stylesheet`,
         contentType: "text/javascript",
         type: "js_module",
-        originalUrl: originalUrlInfo.originalUrl,
-        originalContent: originalUrlInfo.originalContent,
+        originalUrl: cssUrlInfo.originalUrl,
+        originalContent: cssUrlInfo.originalContent,
       }
     },
   }
@@ -170,15 +178,19 @@ const jsenvPluginAsModules = () => {
     name: `jsenv:as_text_module`,
     appliesDuring: "*",
     fetchUrlContent: async (urlInfo, context) => {
-      const originalUrlInfo = await context.fetchOriginalUrlInfo({
+      const [textReference, textUrlInfo] = context.getWithoutSearchParam({
         urlInfo,
         context,
         searchParam: "as_text_module",
         expectedType: "text",
       })
-      if (!originalUrlInfo) {
+      if (!textReference) {
         return null
       }
+      await context.fetchUrlContent(textUrlInfo, {
+        reference: textReference,
+        cleanAfterFetch: true,
+      })
       const textPlain = JS_QUOTES.escapeSpecialChars(urlInfo.content, {
         // If template string is choosen and runtime do not support template literals
         // it's ok because "jsenv:new_inline_content" plugin executes after this one
@@ -194,8 +206,8 @@ const inlineContent = new InlineContent(${textPlain}, { type: "text/plain" })
 export default inlineContent.text`,
         contentType: "text/javascript",
         type: "js_module",
-        originalUrl: originalUrlInfo.originalUrl,
-        originalContent: originalUrlInfo.originalContent,
+        originalUrl: textUrlInfo.originalUrl,
+        originalContent: textUrlInfo.originalContent,
       }
     },
   }

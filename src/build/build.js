@@ -36,7 +36,7 @@ import { jsenvPluginInline } from "../plugins/inline/jsenv_plugin_inline.js"
 import { jsenvPluginAsJsClassic } from "../plugins/transpilation/as_js_classic/jsenv_plugin_as_js_classic.js"
 import { getCorePlugins } from "../plugins/plugins.js"
 import { createKitchen } from "../omega/kitchen.js"
-import { loadUrlGraph } from "../omega/url_graph/url_graph_load.js"
+import { createUrlGraphLoader } from "../omega/url_graph/url_graph_loader.js"
 import { createUrlGraphSummary } from "../omega/url_graph/url_graph_report.js"
 import { isWebWorkerEntryPointReference } from "../omega/web_workers.js"
 
@@ -176,10 +176,7 @@ build ${entryPointKeys.length} entry points`)
       rootDirectoryUrl,
       urlGraph: rawGraph,
       scenarios: { build: true },
-      sourcemaps,
-      sourcemapsSourcesContent,
       runtimeCompat,
-      writeGeneratedFiles,
       plugins: [
         ...plugins,
         {
@@ -211,36 +208,38 @@ build ${entryPointKeys.length} entry points`)
           transpilation: {
             ...transpilation,
             babelHelpersAsImport: !useExplicitJsClassicConversion,
-            jsModuleAsJsClassic: false,
+            jsClassicFallback: false,
           },
           minification,
           bundling,
         }),
       ],
+      sourcemaps,
+      sourcemapsSourcesContent,
+      writeGeneratedFiles,
+      outDirectoryUrl: new URL(`.jsenv/build/`, rootDirectoryUrl),
     })
     const entryUrls = []
     try {
-      await loadUrlGraph({
-        operation: buildOperation,
-        urlGraph: rawGraph,
-        kitchen: rawGraphKitchen,
-        writeGeneratedFiles,
-        outDirectoryUrl: new URL(`.jsenv/build/`, rootDirectoryUrl),
-        startLoading: (cookEntryFile) => {
-          Object.keys(entryPoints).forEach((key) => {
-            const [, entryUrlInfo] = cookEntryFile({
-              trace: {
-                message: `"${key}" in entryPoints parameter`,
-              },
-              type: "entry_point",
-              specifier: key,
-            })
-            entryUrls.push(entryUrlInfo.url)
-            entryUrlInfo.filename = entryPoints[key]
-            // entryUrlInfo.data.entryPointKey = key
+      if (writeGeneratedFiles) {
+        await ensureEmptyDirectory(new URL(`.jsenv/build/`, rootDirectoryUrl))
+      }
+      const rawUrlGraphLoader = createUrlGraphLoader(
+        rawGraphKitchen.kitchenContext,
+      )
+      Object.keys(entryPoints).forEach((key) => {
+        const [entryReference, entryUrlInfo] =
+          rawGraphKitchen.kitchenContext.prepareEntryPoint({
+            trace: { message: `"${key}" in entryPoints parameter` },
+            parentUrl: rootDirectoryUrl,
+            type: "entry_point",
+            specifier: key,
           })
-        },
+        entryUrls.push(entryUrlInfo.url)
+        entryUrlInfo.filename = entryPoints[key]
+        rawUrlGraphLoader.load(entryUrlInfo, { reference: entryReference })
       })
+      await rawUrlGraphLoader.getAllLoadDonePromise(buildOperation)
     } catch (e) {
       prebuildTask.fail()
       throw e
@@ -423,15 +422,16 @@ build ${entryPointKeys.length} entry points`)
       rootDirectoryUrl,
       urlGraph: finalGraph,
       scenarios: { build: true },
-      sourcemaps,
-      sourcemapsSourcesContent,
-      sourcemapsRelativeSources: !versioning,
       runtimeCompat,
-      writeGeneratedFiles,
       plugins: [
         urlAnalysisPlugin,
-        jsenvPluginAsJsClassic({ systemJsInjection: true }),
-        jsenvPluginInline({ fetchInlineUrls: false }),
+        jsenvPluginAsJsClassic({
+          jsClassicFallback: true,
+          systemJsInjection: true,
+        }),
+        jsenvPluginInline({
+          fetchInlineUrls: false,
+        }),
         {
           name: "jsenv:postbuild",
           appliesDuring: "build",
@@ -707,28 +707,37 @@ build ${entryPointKeys.length} entry points`)
           },
         },
       ],
+      sourcemaps,
+      sourcemapsSourcesContent,
+      sourcemapsRelativeSources: !versioning,
+      writeGeneratedFiles,
+      outDirectoryUrl: new URL(".jsenv/postbuild/", rootDirectoryUrl),
     })
     const buildTask = createTaskLog("build", { disabled: infoLogsAreDisabled })
     const postBuildEntryUrls = []
     try {
-      await loadUrlGraph({
-        operation: buildOperation,
-        urlGraph: finalGraph,
-        kitchen: finalGraphKitchen,
-        outDirectoryUrl: new URL(".jsenv/postbuild/", rootDirectoryUrl),
-        writeGeneratedFiles,
-        skipResourceHint: true,
-        startLoading: (cookEntryFile) => {
-          entryUrls.forEach((entryUrl) => {
-            const [, postBuildEntryUrlInfo] = cookEntryFile({
-              trace: { message: `entryPoint` },
-              type: "entry_point",
-              specifier: entryUrl,
-            })
-            postBuildEntryUrls.push(postBuildEntryUrlInfo.url)
+      if (writeGeneratedFiles) {
+        await ensureEmptyDirectory(
+          new URL(`.jsenv/postbuild/`, rootDirectoryUrl),
+        )
+      }
+      const finalUrlGraphLoader = createUrlGraphLoader(
+        finalGraphKitchen.kitchenContext,
+      )
+      entryUrls.forEach((entryUrl) => {
+        const [postBuildEntryReference, postBuildEntryUrlInfo] =
+          finalGraphKitchen.kitchenContext.prepareEntryPoint({
+            trace: { message: `entryPoint` },
+            parentUrl: rootDirectoryUrl,
+            type: "entry_point",
+            specifier: entryUrl,
           })
-        },
+        postBuildEntryUrls.push(postBuildEntryUrlInfo.url)
+        finalUrlGraphLoader.load(postBuildEntryUrlInfo, {
+          reference: postBuildEntryReference,
+        })
       })
+      await finalUrlGraphLoader.getAllLoadDonePromise(buildOperation)
     } catch (e) {
       buildTask.fail()
       throw e
@@ -1063,11 +1072,7 @@ const applyUrlVersioning = async ({
       rootDirectoryUrl: buildDirectoryUrl,
       urlGraph: finalGraph,
       scenarios: { build: true },
-      sourcemaps,
-      sourcemapsSourcesContent,
-      sourcemapsRelativeSources: true,
       runtimeCompat,
-      writeGeneratedFiles,
       plugins: [
         urlAnalysisPlugin,
         jsenvPluginInline({
@@ -1180,23 +1185,31 @@ const applyUrlVersioning = async ({
           },
         },
       ],
-    })
-    await loadUrlGraph({
-      operation: buildOperation,
-      urlGraph: finalGraph,
-      kitchen: versioningKitchen,
-      skipResourceHint: true,
+      sourcemaps,
+      sourcemapsSourcesContent,
+      sourcemapsRelativeSources: true,
       writeGeneratedFiles,
-      startLoading: (cookEntryFile) => {
-        postBuildEntryUrls.forEach((postBuildEntryUrl) => {
-          cookEntryFile({
-            trace: `entryPoint`,
-            type: "entry_point",
-            specifier: postBuildEntryUrl,
-          })
-        })
-      },
+      outDirectoryUrl: new URL(
+        ".jsenv/postbuild/",
+        finalGraphKitchen.rootDirectoryUrl,
+      ),
     })
+    const versioningUrlGraphLoader = createUrlGraphLoader(
+      versioningKitchen.kitchenContext,
+    )
+    postBuildEntryUrls.forEach((postBuildEntryUrl) => {
+      const [postBuildEntryReference, postBuildEntryUrlInfo] =
+        finalGraphKitchen.kitchenContext.prepareEntryPoint({
+          trace: { message: `entryPoint` },
+          parentUrl: buildDirectoryUrl,
+          type: "entry_point",
+          specifier: postBuildEntryUrl,
+        })
+      versioningUrlGraphLoader.load(postBuildEntryUrlInfo, {
+        reference: postBuildEntryReference,
+      })
+    })
+    await versioningUrlGraphLoader.getAllLoadDonePromise(buildOperation)
     if (usedVersionMappings.length) {
       const versionMappingsNeeded = {}
       usedVersionMappings.forEach((specifier) => {

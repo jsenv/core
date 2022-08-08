@@ -40,13 +40,13 @@ export const createKitchen = ({
   sourcemapsSourcesContent,
   sourcemapsRelativeSources,
   writeGeneratedFiles,
+  outDirectoryUrl,
 }) => {
   const logger = createLogger({ logLevel })
   const pluginController = createPluginController({
     plugins,
     scenarios,
   })
-  const jsenvDirectoryUrl = new URL(".jsenv/", rootDirectoryUrl).href
   const kitchenContext = {
     signal,
     logger,
@@ -62,6 +62,7 @@ export const createKitchen = ({
       return RUNTIME_COMPAT.isSupported(runtimeCompat, feature)
     },
     sourcemaps,
+    outDirectoryUrl,
   }
   pluginController.callHooks("init", kitchenContext)
   const createReference = ({
@@ -107,6 +108,8 @@ export const createKitchen = ({
       node,
       trace,
       parentUrl,
+      url: null,
+      urlInfoUrl: null,
       type,
       subtype,
       expectedContentType,
@@ -265,13 +268,16 @@ export const createKitchen = ({
     },
   })
 
-  const fetchUrlContent = async (urlInfo, { reference, context }) => {
+  const fetchUrlContent = async (
+    urlInfo,
+    { reference, contextDuringFetch, cleanAfterFetch = false },
+  ) => {
     try {
       const fetchUrlContentReturnValue =
         await pluginController.callAsyncHooksUntil(
           "fetchUrlContent",
           urlInfo,
-          context,
+          contextDuringFetch,
         )
       if (!fetchUrlContentReturnValue) {
         logger.warn(
@@ -353,10 +359,18 @@ export const createKitchen = ({
     }
     urlInfo.generatedUrl = determineFileUrlForOutDirectory({
       urlInfo,
-      context,
+      context: contextDuringFetch,
     })
-    await urlInfoTransformer.initTransformations(urlInfo, context)
+    await urlInfoTransformer.initTransformations(urlInfo, contextDuringFetch)
+    if (
+      cleanAfterFetch &&
+      urlInfo.dependents.size === 0
+      // && context.scenarios.build
+    ) {
+      contextDuringFetch.urlGraph.deleteUrlInfo(urlInfo.url)
+    }
   }
+  kitchenContext.fetchUrlContent = fetchUrlContent
 
   const _cook = async (urlInfo, dishContext) => {
     const context = {
@@ -370,13 +384,20 @@ export const createKitchen = ({
         ...nestedDishContext,
       })
     }
-    context.fetchUrlContent = (urlInfo, { reference }) => {
-      return fetchUrlContent(urlInfo, { reference, context })
+    context.fetchUrlContent = (urlInfo, { reference, cleanAfterFetch }) => {
+      return fetchUrlContent(urlInfo, {
+        reference,
+        contextDuringFetch: context,
+        cleanAfterFetch,
+      })
     }
 
     if (urlInfo.shouldHandle) {
       // "fetchUrlContent" hook
-      await fetchUrlContent(urlInfo, { reference: context.reference, context })
+      await fetchUrlContent(urlInfo, {
+        reference: context.reference,
+        contextDuringFetch: context,
+      })
 
       // parsing
       const references = []
@@ -630,7 +651,6 @@ export const createKitchen = ({
       }
     }
   })
-  kitchenContext.fetchUrlContent = fetchUrlContent
   kitchenContext.cook = cook
 
   const prepareEntryPoint = (params) => {
@@ -639,6 +659,7 @@ export const createKitchen = ({
     const entryUrlInfo = resolveReference(entryReference)
     return [entryReference, entryUrlInfo]
   }
+  kitchenContext.prepareEntryPoint = prepareEntryPoint
 
   const injectReference = (params) => {
     const ref = createReference(params)
@@ -646,7 +667,7 @@ export const createKitchen = ({
     return [ref, urlInfo]
   }
 
-  const fetchOriginalUrlInfo = async ({
+  const getWithoutSearchParam = ({
     urlInfo,
     context,
     searchParam,
@@ -655,46 +676,34 @@ export const createKitchen = ({
     const urlObject = new URL(urlInfo.url)
     const { searchParams } = urlObject
     if (!searchParams.has(searchParam)) {
-      return null
+      return [null, null]
     }
     searchParams.delete(searchParam)
-    const originalUrl = urlObject.href
-    const originalReference = {
+    const referenceWithoutSearchParam = {
       ...(context.reference.original || context.reference),
       expectedType,
+      url: urlObject.href,
     }
-    originalReference.url = originalUrl
-    const originalUrlInfo = context.urlGraph.reuseOrCreateUrlInfo(
-      originalReference.url,
+    const urlInfoWithoutSearchParam = context.urlGraph.reuseOrCreateUrlInfo(
+      referenceWithoutSearchParam.url,
     )
-    if (originalUrlInfo.originalUrl === undefined) {
+    if (urlInfoWithoutSearchParam.originalUrl === undefined) {
       applyReferenceEffectsOnUrlInfo(
-        originalReference,
-        originalUrlInfo,
+        referenceWithoutSearchParam,
+        urlInfoWithoutSearchParam,
         context,
       )
     }
-    await context.fetchUrlContent(originalUrlInfo, {
-      reference: originalReference,
-    })
-    if (
-      originalUrlInfo.dependents.size === 0
-      // && context.scenarios.build
-    ) {
-      context.urlGraph.deleteUrlInfo(originalUrlInfo.url)
-    }
-    return originalUrlInfo
+    return [referenceWithoutSearchParam, urlInfoWithoutSearchParam]
   }
-  kitchenContext.fetchOriginalUrlInfo = fetchOriginalUrlInfo
+  kitchenContext.getWithoutSearchParam = getWithoutSearchParam
 
   return {
     pluginController,
     urlInfoTransformer,
     rootDirectoryUrl,
-    jsenvDirectoryUrl,
     kitchenContext,
     cook,
-    prepareEntryPoint,
     injectReference,
   }
 }

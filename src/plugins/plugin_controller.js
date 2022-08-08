@@ -67,21 +67,21 @@ export const createPluginController = ({ plugins, scenarios }) => {
     if (!hookFn) {
       return null
     }
-    currentPlugin = hook.plugin
-    currentHookName = hook.name
     let timeEnd
     if (info.timing) {
       timeEnd = timeStart(
-        `${currentHookName}-${currentPlugin.name.replace("jsenv:", "")}`,
+        `${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`,
       )
     }
+    currentPlugin = hook.plugin
+    currentHookName = hook.name
     let valueReturned = hookFn(info, context)
+    currentPlugin = null
+    currentHookName = null
     if (info.timing) {
       Object.assign(info.timing, timeEnd())
     }
     valueReturned = assertAndNormalizeReturnValue(hook.name, valueReturned)
-    currentPlugin = null
-    currentHookName = null
     return valueReturned
   }
   const callAsyncHook = async (hook, info, context) => {
@@ -89,21 +89,22 @@ export const createPluginController = ({ plugins, scenarios }) => {
     if (!hookFn) {
       return null
     }
-    currentPlugin = hook.plugin
-    currentHookName = hook.name
+
     let timeEnd
     if (info.timing) {
       timeEnd = timeStart(
-        `${currentHookName}-${currentPlugin.name.replace("jsenv:", "")}`,
+        `${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`,
       )
     }
+    currentPlugin = hook.plugin
+    currentHookName = hook.name
     let valueReturned = await hookFn(info, context)
+    currentPlugin = null
+    currentHookName = null
     if (info.timing) {
       Object.assign(info.timing, timeEnd())
     }
     valueReturned = assertAndNormalizeReturnValue(hook.name, valueReturned)
-    currentPlugin = null
-    currentHookName = null
     return valueReturned
   }
 
@@ -200,7 +201,8 @@ const flattenAndFilterPlugins = (plugins, { scenarios }) => {
       }
       const { appliesDuring } = pluginEntry
       if (appliesDuring === undefined) {
-        console.warn(`"appliesDuring" is undefined on ${pluginEntry.name}`)
+        // console.debug(`"appliesDuring" is undefined on ${pluginEntry.name}`)
+        flatPlugins.push(pluginEntry)
         return
       }
       if (appliesDuring === "*") {

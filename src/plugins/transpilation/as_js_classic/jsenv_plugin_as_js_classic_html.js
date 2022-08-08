@@ -1,3 +1,10 @@
+/*
+ * when <script type="module"> cannot be used:
+ * - ?as_js_classic is injected into the src of <script type="module">
+ * - js inside <script type="module"> is transformed into classic js
+ * - <link rel="modulepreload"> are converted to <link rel="preload">
+ */
+
 import {
   generateInlineContentUrl,
   injectQueryParamsIntoSpecifier,
