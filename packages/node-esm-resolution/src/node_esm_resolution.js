@@ -174,7 +174,7 @@ const applyBrowserFieldResolution = ({
   }
   if (url) {
     return {
-      type: "browser",
+      type: "field:browser",
       packageUrl,
       packageJson,
       url,
@@ -515,7 +515,7 @@ const applyPackageTargetResolution = ({
         })
       }
       return {
-        type: internal ? "imports_subpath" : "exports_subpath",
+        type: internal ? "field:imports" : "field:exports",
         packageUrl,
         packageJson,
         url: pattern
@@ -768,7 +768,7 @@ const applyLegacyMainResolution = ({ conditions, packageUrl, packageJson }) => {
     }
   }
   return {
-    type: "default",
+    type: "field:main", // the absence of "main" field
     packageUrl,
     packageJson,
     url: new URL("index.js", packageUrl).href,
@@ -777,13 +777,13 @@ const applyLegacyMainResolution = ({ conditions, packageUrl, packageJson }) => {
 const mainLegacyResolvers = {
   import: (packageJson) => {
     if (typeof packageJson.module === "string") {
-      return { type: "module", path: packageJson.module }
+      return { type: "field:module", path: packageJson.module }
     }
     if (typeof packageJson.jsnext === "string") {
-      return { type: "jsnext", path: packageJson.jsnext }
+      return { type: "field:jsnext", path: packageJson.jsnext }
     }
     if (typeof packageJson.main === "string") {
-      return { type: "main", path: packageJson.main }
+      return { type: "field:main", path: packageJson.main }
     }
     return null
   },
@@ -798,7 +798,7 @@ const mainLegacyResolvers = {
     if (!browserMain) {
       if (typeof packageJson.module === "string") {
         return {
-          type: "module",
+          type: "field:module",
           path: packageJson.module,
         }
       }
@@ -809,7 +809,7 @@ const mainLegacyResolvers = {
       packageJson.module === browserMain
     ) {
       return {
-        type: "browser",
+        type: "field:browser",
         path: browserMain,
       }
     }
@@ -821,19 +821,19 @@ const mainLegacyResolvers = {
       /module\.exports\s*=/.test(content)
     ) {
       return {
-        type: "module",
+        type: "field:module",
         path: packageJson.module,
       }
     }
     return {
-      type: "browser",
+      type: "field:browser",
       path: browserMain,
     }
   },
   node: (packageJson) => {
     if (typeof packageJson.main === "string") {
       return {
-        type: "main",
+        type: "field:main",
         path: packageJson.main,
       }
     }

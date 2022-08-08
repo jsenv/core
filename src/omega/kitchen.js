@@ -109,7 +109,6 @@ export const createKitchen = ({
       trace,
       parentUrl,
       url: null,
-      urlInfoUrl: null,
       searchParams: null,
       generatedUrl: null,
       generatedSpecifier: null,
@@ -674,6 +673,7 @@ export const createKitchen = ({
     const urlInfo = resolveReference(ref)
     return [ref, urlInfo]
   }
+  kitchenContext.injectReference = injectReference
 
   const getWithoutSearchParam = ({
     urlInfo,
@@ -794,20 +794,6 @@ const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
       : reference.content
     urlInfo.content = reference.content
   }
-
-  const { dependsOnPackageJson } = reference
-  urlInfo.dependsOnPackageJson = dependsOnPackageJson
-  const relatedUrlInfos = context.urlGraph.getRelatedUrlInfos(
-    reference.parentUrl,
-  )
-  relatedUrlInfos.forEach((relatedUrlInfo) => {
-    if (relatedUrlInfo.dependsOnPackageJson) {
-      // the url may depend due to an other reference
-      // in that case keep dependsOnPackageJson to true
-      return
-    }
-    relatedUrlInfo.dependsOnPackageJson = dependsOnPackageJson
-  })
 }
 
 const adjustUrlSite = (urlInfo, { urlGraph, url, line, column }) => {

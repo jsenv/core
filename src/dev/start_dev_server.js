@@ -32,6 +32,7 @@ export const startDevServer = async ({
   clientFiles = {
     "./src/": true,
     "./tests/": true,
+    "./package.json": true,
   },
   devServerFiles = {
     "./package.json": true,

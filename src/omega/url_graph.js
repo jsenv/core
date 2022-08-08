@@ -82,7 +82,7 @@ export const createUrlGraph = ({
         // by <link> as dependency and it's fine
         return
       }
-      setOfDependencyUrls.add(reference.urlInfoUrl || reference.url)
+      setOfDependencyUrls.add(reference.url)
     })
     const urlsToRemove = Array.from(urlInfo.dependencies).filter(
       (dep) => !setOfDependencyUrls.has(dep),
@@ -172,20 +172,6 @@ export const createUrlGraph = ({
     iterate(urlInfo)
   }
 
-  const getRelatedUrlInfos = (url) => {
-    const urlInfosUntilNotInline = []
-    const parentUrlInfo = getUrlInfo(url)
-    if (parentUrlInfo) {
-      urlInfosUntilNotInline.push(parentUrlInfo)
-      if (parentUrlInfo.inlineUrlSite) {
-        urlInfosUntilNotInline.push(
-          ...getRelatedUrlInfos(parentUrlInfo.inlineUrlSite.url),
-        )
-      }
-    }
-    return urlInfosUntilNotInline
-  }
-
   return {
     urlInfoMap,
     reuseOrCreateUrlInfo,
@@ -195,7 +181,6 @@ export const createUrlGraph = ({
     findDependent,
     updateReferences,
     considerModified,
-    getRelatedUrlInfos,
 
     toObject: () => {
       const data = {}
@@ -226,7 +211,6 @@ const createUrlInfo = (url) => {
     modifiedTimestamp: 0,
     originalContentEtag: null,
     contentEtag: null,
-    dependsOnPackageJson: false,
     isWatched: false,
     isValid: () => {
       if (!urlInfo.url.startsWith("file:")) {

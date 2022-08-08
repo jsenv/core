@@ -46,9 +46,7 @@ const devServer = await startDevServer({
   clientAutoreload: false,
   supervisor: false,
 })
-const browser = await chromium.launch({
-  headless: !debug,
-})
+const browser = await chromium.launch({ headless: !debug })
 try {
   const page = await launchBrowserPage(browser)
   await page.goto(`${devServer.origin}/src/main.html`)

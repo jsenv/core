@@ -17,7 +17,8 @@ export const jsenvPluginAsJsClassicLibrary = ({
       const urlObject = new URL(reference.url)
       if (urlObject.searchParams.has("as_js_classic_library")) {
         urlObject.searchParams.delete("as_js_classic_library")
-        reference.urlInfoUrl = urlObject.href
+        // TODO: inject reference to urlObject.href
+        // in order to get reload during dev
         if (
           reference.type === "script_src" ||
           (reference.type === "js_url_specifier" &&

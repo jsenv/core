@@ -63,11 +63,6 @@ export const jsenvPluginNodeEsmResolution = ({
         const onFileChange = () => {
           packageScopesCache.clear()
           packageJsonsCache.clear()
-          context.urlGraph.urlInfoMap.forEach((urlInfo) => {
-            if (urlInfo.dependsOnPackageJson) {
-              context.urlGraph.considerModified(urlInfo)
-            }
-          })
         }
         filesInvalidatingCache.forEach((file) => {
           const unregister = registerFileLifecycle(
@@ -90,9 +85,9 @@ export const jsenvPluginNodeEsmResolution = ({
       }
     },
     resolveUrl: {
-      js_import_export: (reference) => {
+      js_import_export: (reference, context) => {
         const { parentUrl, specifier } = reference
-        const { type, url } = applyNodeEsmResolution({
+        const nodeEsmResolutionResult = applyNodeEsmResolution({
           conditions: packageConditions,
           parentUrl,
           specifier,
@@ -104,11 +99,35 @@ export const jsenvPluginNodeEsmResolution = ({
         // must be invalidated when package.json or package_lock.json
         // changes
         const dependsOnPackageJson =
-          type !== "relative_specifier" &&
-          type !== "absolute_specifier" &&
-          type !== "node_builtin_specifier"
+          nodeEsmResolutionResult.type !== "relative_specifier" &&
+          nodeEsmResolutionResult.type !== "absolute_specifier" &&
+          nodeEsmResolutionResult.type !== "node_builtin_specifier"
         reference.dependsOnPackageJson = dependsOnPackageJson
-        return url
+        if (dependsOnPackageJson) {
+          const rootPackageJsonUrl = new URL(
+            "./package.json",
+            context.rootDirectoryUrl,
+          ).href
+          const packageJsonUrl = `${nodeEsmResolutionResult.packageUrl}package.json`
+          context.referenceUtils.inject({
+            type: "programmatic_package_json",
+            subtype: nodeEsmResolutionResult.type,
+            specifier: packageJsonUrl,
+          })
+          if (packageJsonUrl !== rootPackageJsonUrl) {
+            // injecting a reference to the root package.json for every
+            // module resolved by node_esm means a modification to the root package.json
+            // is considered as a change to all package.json inside node_modules/
+            // this is a bazooka to avoid having to watch entire node_modules/
+            // but when node_modules are watched (using custom clientFiles patterns)
+            // we should disable this because it's too aggressive
+            context.referenceUtils.inject({
+              type: "programmatic_package_json",
+              specifier: rootPackageJsonUrl,
+            })
+          }
+        }
+        return nodeEsmResolutionResult.url
       },
     },
     fetchUrlContent: (urlInfo) => {
