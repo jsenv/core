@@ -152,11 +152,16 @@ export const createKitchen = ({
     //  newReference.isEntryPoint = reference.isEntryPoint
   }
   const resolveReference = (reference, context = kitchenContext) => {
+    const referenceContext = {
+      ...context,
+      resolveReference: (reference, context = referenceContext) =>
+        resolveReference(reference, context),
+    }
     try {
       let resolvedUrl = pluginController.callHooksUntil(
         "resolveUrl",
         reference,
-        context,
+        referenceContext,
       )
       if (!resolvedUrl) {
         throw new Error(`NO_RESOLVE`)
@@ -166,7 +171,7 @@ export const createKitchen = ({
       pluginController.callHooks(
         "redirectUrl",
         reference,
-        context,
+        referenceContext,
         (returnValue) => {
           const normalizedReturnValue = normalizeUrl(returnValue)
           if (normalizedReturnValue === reference.url) {
@@ -197,7 +202,7 @@ export const createKitchen = ({
       pluginController.callHooks(
         "transformUrlSearchParams",
         reference,
-        context,
+        referenceContext,
         (returnValue) => {
           Object.keys(returnValue).forEach((key) => {
             referenceUrlObject.searchParams.set(key, returnValue[key])
@@ -208,7 +213,7 @@ export const createKitchen = ({
       const returnValue = pluginController.callHooksUntil(
         "formatUrl",
         reference,
-        context,
+        referenceContext,
       )
       reference.generatedSpecifier = returnValue || reference.generatedUrl
       reference.generatedSpecifier = urlSpecifierEncoding.encode(reference)

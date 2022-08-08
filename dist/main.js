@@ -13370,7 +13370,7 @@ const jsenvPluginNodeEsmResolution = ({
         return null;
       }
 
-      if (context.scenarios.dev && reference.type !== "http_request") {
+      if (context.scenarios.dev && reference.type === "js_import_export") {
         injectDependencyToPackageFile({
           packageDirectoryUrl,
           packageFieldName: "version",
@@ -22078,8 +22078,12 @@ const createKitchen = ({
   };
 
   const resolveReference = (reference, context = kitchenContext) => {
+    const referenceContext = { ...context,
+      resolveReference: (reference, context = referenceContext) => resolveReference(reference, context)
+    };
+
     try {
-      let resolvedUrl = pluginController.callHooksUntil("resolveUrl", reference, context);
+      let resolvedUrl = pluginController.callHooksUntil("resolveUrl", reference, referenceContext);
 
       if (!resolvedUrl) {
         throw new Error(`NO_RESOLVE`);
@@ -22087,7 +22091,7 @@ const createKitchen = ({
 
       resolvedUrl = normalizeUrl(resolvedUrl);
       reference.url = resolvedUrl;
-      pluginController.callHooks("redirectUrl", reference, context, returnValue => {
+      pluginController.callHooks("redirectUrl", reference, referenceContext, returnValue => {
         const normalizedReturnValue = normalizeUrl(returnValue);
 
         if (normalizedReturnValue === reference.url) {
@@ -22115,13 +22119,13 @@ const createKitchen = ({
       // But do not represent an other resource, it is considered as
       // the same resource under the hood
 
-      pluginController.callHooks("transformUrlSearchParams", reference, context, returnValue => {
+      pluginController.callHooks("transformUrlSearchParams", reference, referenceContext, returnValue => {
         Object.keys(returnValue).forEach(key => {
           referenceUrlObject.searchParams.set(key, returnValue[key]);
         });
         reference.generatedUrl = normalizeUrl(referenceUrlObject.href);
       });
-      const returnValue = pluginController.callHooksUntil("formatUrl", reference, context);
+      const returnValue = pluginController.callHooksUntil("formatUrl", reference, referenceContext);
       reference.generatedSpecifier = returnValue || reference.generatedUrl;
       reference.generatedSpecifier = urlSpecifierEncoding.encode(reference);
       return urlInfo;

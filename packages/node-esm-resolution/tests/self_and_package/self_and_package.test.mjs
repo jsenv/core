@@ -12,7 +12,7 @@ import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution"
     url,
   }
   const expected = {
-    type: "exports_subpath",
+    type: "field:exports",
     url: new URL("./root/packages/foo", import.meta.url).href,
   }
   assert({ actual, expected })
@@ -28,7 +28,7 @@ import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution"
     url,
   }
   const expected = {
-    type: "exports_subpath",
+    type: "field:exports",
     url: new URL("./root/packages/foo/src/file.js", import.meta.url).href,
   }
   assert({ actual, expected })
@@ -44,7 +44,7 @@ import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution"
     url,
   }
   const expected = {
-    type: "exports_subpath",
+    type: "field:exports",
     url: new URL("./root/packages/bar", import.meta.url).href,
   }
   assert({ actual, expected })
