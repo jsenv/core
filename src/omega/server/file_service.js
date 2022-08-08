@@ -168,11 +168,6 @@ export const createFileService = ({
         }
         return true
       }
-      kitchen.pluginController.callHooks(
-        "createUrlInfo",
-        urlInfo,
-        kitchen.kitchenContext,
-      )
     }
     urlGraph.prunedUrlInfosCallbackRef.current = (urlInfos, firstUrlInfo) => {
       clientFilesPruneCallbackList.forEach((callback) => {
