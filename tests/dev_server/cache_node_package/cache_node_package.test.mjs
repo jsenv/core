@@ -21,14 +21,14 @@ const fooPackageFileContent = {
   restore: () =>
     writeFileSync(fooPackageFileUrl, fooPackageFileContent.beforeTest),
 }
-const fooMainFileUrl = new URL(
-  "./client/node_modules/foo/index.js",
+const asnwerFileUrl = new URL(
+  "./client/node_modules/foo/answer.js",
   import.meta.url,
 )
-const fooMainFileContent = {
-  beforeTest: readFileSync(fooMainFileUrl),
-  update: (content) => writeFileSync(fooMainFileUrl, content),
-  restore: () => writeFileSync(fooMainFileUrl, fooMainFileContent.beforeTest),
+const answerFileContent = {
+  beforeTest: readFileSync(asnwerFileUrl),
+  update: (content) => writeFileSync(asnwerFileUrl, content),
+  restore: () => writeFileSync(asnwerFileUrl, answerFileContent.beforeTest),
 }
 const serverRequests = []
 const devServer = await startDevServer({
@@ -100,7 +100,7 @@ try {
   // now update the package content + version and see if reloading the page updates the result
   {
     serverRequests.length = 0
-    fooMainFileContent.update(`export const answer = 43`)
+    answerFileContent.update(`export const answer = 43`)
     fooPackageFileContent.update(
       JSON.stringify(
         {
@@ -135,5 +135,5 @@ try {
     browser.close()
   }
   fooPackageFileContent.restore()
-  fooMainFileContent.restore()
+  answerFileContent.restore()
 }

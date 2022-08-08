@@ -7,7 +7,9 @@
  *   it should likely be an other plugin happening after the others
  */
 
+import { existsSync } from "node:fs"
 import { registerFileLifecycle } from "@jsenv/filesystem"
+import { urlIsInsideOf } from "@jsenv/urls"
 
 import {
   applyNodeEsmResolution,
@@ -21,8 +23,48 @@ export const jsenvPluginNodeEsmResolution = ({
   filesInvalidatingCache = ["package.json", "package-lock.json"],
 }) => {
   const unregisters = []
+  let rootPackageJsonUrl // defined in "init"
   let lookupPackageScope // defined in "init"
   let readPackageJson // defined in "init"
+  // When "injectReferenceToRootPackage" is enabled
+  // updating the root package.json is handled as updating all package.json
+  // This exists because
+  // - watching node_modules might consume a lot of ressources
+  // - most of the time the content of node_modules do not change
+  // - most of the time the content of node_modules is updated after an update to the root
+  // package.json done by npm commands
+  // So by default jsenv do not watch node_modules and a change to the root package.json
+  // is handled as a change to a package.json inside node_modules/
+  // This is disabled when
+  // - root package.json do not exists
+  // - the package.json is watched (a custom clientFiles enabled for node_modules for instance)
+  let injectReferenceToRootPackage = false
+
+  const injectDependencyToPackageFile = ({
+    packageDirectoryUrl,
+    packageFieldName,
+    context,
+  }) => {
+    const packageJsonUrl = new URL("./package.json", packageDirectoryUrl).href
+    if (!context.referenceUtils) {
+      debugger
+    }
+    const [, packageJsonUrlInfo] = context.referenceUtils.inject({
+      type: "package_json",
+      subtype: packageFieldName,
+      specifier: packageJsonUrl,
+    })
+    if (
+      !packageJsonUrlInfo.isWatched &&
+      injectReferenceToRootPackage &&
+      !urlIsInsideOf(context.rootDirectoryUrl, packageDirectoryUrl)
+    ) {
+      context.referenceUtils.inject({
+        type: "package_json",
+        specifier: rootPackageJsonUrl,
+      })
+    }
+  }
 
   return {
     name: "jsenv:node_esm_resolution",
@@ -59,14 +101,14 @@ export const jsenvPluginNodeEsmResolution = ({
         return packageJson
       }
 
+      rootPackageJsonUrl = new URL("./package.json", context.rootDirectoryUrl)
+        .href
+
       if (context.scenarios.dev) {
+        injectReferenceToRootPackage = existsSync(rootPackageJsonUrl)
         const onFileChange = () => {
           packageScopesCache.clear()
           packageJsonsCache.clear()
-          const rootPackageJsonUrl = new URL(
-            "./package.json",
-            context.rootDirectoryUrl,
-          ).href
           const rootPackageUrlInfo =
             context.urlGraph.getUrlInfo(rootPackageJsonUrl)
           if (rootPackageUrlInfo) {
@@ -96,7 +138,7 @@ export const jsenvPluginNodeEsmResolution = ({
     resolveUrl: {
       js_import_export: (reference, context) => {
         const { parentUrl, specifier } = reference
-        const nodeEsmResolutionResult = applyNodeEsmResolution({
+        const { url, type, packageUrl } = applyNodeEsmResolution({
           conditions: packageConditions,
           parentUrl,
           specifier,
@@ -108,35 +150,20 @@ export const jsenvPluginNodeEsmResolution = ({
         // must be invalidated when package.json or package_lock.json
         // changes
         const dependsOnPackageJson =
-          nodeEsmResolutionResult.type !== "relative_specifier" &&
-          nodeEsmResolutionResult.type !== "absolute_specifier" &&
-          nodeEsmResolutionResult.type !== "node_builtin_specifier"
+          type !== "relative_specifier" &&
+          type !== "absolute_specifier" &&
+          type !== "node_builtin_specifier"
         reference.dependsOnPackageJson = dependsOnPackageJson
         if (dependsOnPackageJson) {
-          const rootPackageJsonUrl = new URL(
-            "./package.json",
-            context.rootDirectoryUrl,
-          ).href
-          const packageJsonUrl = `${nodeEsmResolutionResult.packageUrl}package.json`
-          context.referenceUtils.inject({
-            type: "programmatic_package_json",
-            subtype: nodeEsmResolutionResult.type,
-            specifier: packageJsonUrl,
+          injectDependencyToPackageFile({
+            packageDirectoryUrl: packageUrl,
+            packageFieldName: type.startsWith("field:")
+              ? type.slice("field:".length)
+              : null,
+            context,
           })
-          if (packageJsonUrl !== rootPackageJsonUrl) {
-            // injecting a reference to the root package.json for every
-            // module resolved by node_esm means a modification to the root package.json
-            // is considered as a change to all package.json inside node_modules/
-            // this is a bazooka to avoid having to watch entire node_modules/
-            // but when node_modules are watched (using custom clientFiles patterns)
-            // we should disable this because it's too aggressive
-            context.referenceUtils.inject({
-              type: "programmatic_package_json",
-              specifier: rootPackageJsonUrl,
-            })
-          }
         }
-        return nodeEsmResolutionResult.url
+        return url
       },
     },
     fetchUrlContent: (urlInfo) => {
@@ -150,6 +177,9 @@ export const jsenvPluginNodeEsmResolution = ({
       return null
     },
     transformUrlSearchParams: (reference, context) => {
+      if (reference.type === "package_json") {
+        return null
+      }
       if (context.scenarios.build) {
         return null
       }
@@ -165,18 +195,24 @@ export const jsenvPluginNodeEsmResolution = ({
       if (reference.searchParams.has("v")) {
         return null
       }
-      const packageUrl = lookupPackageScope(reference.url)
-      if (!packageUrl) {
+      const packageDirectoryUrl = lookupPackageScope(reference.url)
+      if (!packageDirectoryUrl) {
         return null
       }
-      if (packageUrl === context.rootDirectoryUrl) {
+      if (packageDirectoryUrl === context.rootDirectoryUrl) {
         return null
       }
-      const packageVersion = readPackageJson(packageUrl).version
+      // there is a dependency between this file and the package.json version field
+      const packageVersion = readPackageJson(packageDirectoryUrl).version
       if (!packageVersion) {
         // example where it happens: https://github.com/babel/babel/blob/2ce56e832c2dd7a7ed92c89028ba929f874c2f5c/packages/babel-runtime/helpers/esm/package.json#L2
         return null
       }
+      injectDependencyToPackageFile({
+        packageDirectoryUrl,
+        packageFieldName: "version",
+        context,
+      })
       return {
         v: packageVersion,
       }

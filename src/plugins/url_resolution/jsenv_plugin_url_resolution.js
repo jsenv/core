@@ -28,7 +28,7 @@ export const jsenvPluginUrlResolution = () => {
       "js_url_specifier": urlResolver,
       "js_inline_content": urlResolver,
       "webmanifest_icon_src": urlResolver,
-      "programmatic_package_json": urlResolver,
+      "package_json": urlResolver,
     },
   }
 }
