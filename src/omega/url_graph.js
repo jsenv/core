@@ -38,22 +38,28 @@ export const createUrlGraph = ({ includeOriginalUrls } = {}) => {
     )
     return firstReferenceOnThatUrl
   }
-  const findDependent = (url, predicate) => {
-    const urlInfo = getUrlInfo(url)
-    if (!urlInfo) {
-      return null
+  const visitDependents = (urlInfo, visitor) => {
+    const seen = [urlInfo.url]
+    let stopped = false
+    const stop = () => {
+      stopped = true
     }
-    const visitDependents = (urlInfo) => {
-      for (const dependentUrl of urlInfo.dependents) {
-        const dependent = getUrlInfo(dependentUrl)
-        if (predicate(dependent)) {
-          return dependent
+    const iterate = (currentUrlInfo) => {
+      for (const dependentUrl of currentUrlInfo.dependents) {
+        if (seen.includes(dependentUrl)) {
+          continue
         }
-        return visitDependents(dependent)
+        seen.push(dependentUrl)
+        const dependentUrlInfo = getUrlInfo(dependentUrl)
+        visitor(dependentUrlInfo, stop)
+        if (stopped) {
+          return dependentUrlInfo
+        }
+        iterate(dependentUrlInfo)
       }
       return null
     }
-    return visitDependents(urlInfo)
+    return iterate(urlInfo)
   }
 
   const updateReferences = (urlInfo, references) => {
@@ -161,9 +167,9 @@ export const createUrlGraph = ({ includeOriginalUrls } = {}) => {
     getUrlInfo,
     deleteUrlInfo,
     inferReference,
-    findDependent,
     updateReferences,
     considerModified,
+    visitDependents,
 
     toObject: () => {
       const data = {}

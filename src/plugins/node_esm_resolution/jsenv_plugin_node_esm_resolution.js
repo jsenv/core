@@ -51,14 +51,9 @@ export const jsenvPluginNodeEsmResolution = ({ packageConditions }) => {
     }
 
     if (propagateToAncestors) {
-      const propagateToDependents = () => {
-        urlInfo.dependents.forEach((dependent) => {
-          const dependentUrlInfo = context.urlGraph.getUrlInfo(dependent)
-          dependentUrlInfo.relateds.add(packageJsonUrl)
-          propagateToDependents(dependentUrlInfo)
-        })
-      }
-      propagateToDependents(urlInfo)
+      context.urlGraph.visitDependents(urlInfo, (dependentUrlInfo) => {
+        dependentUrlInfo.relateds.add(packageJsonUrl)
+      })
     }
   }
 
