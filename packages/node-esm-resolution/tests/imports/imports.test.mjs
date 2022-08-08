@@ -11,7 +11,7 @@ const actual = {
   url,
 }
 const expected = {
-  type: "imports_subpath",
+  type: "field:imports",
   url: new URL("./root/src/dir/file.js", import.meta.url).href,
 }
 assert({ actual, expected })

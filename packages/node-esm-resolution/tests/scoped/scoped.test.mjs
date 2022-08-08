@@ -11,7 +11,7 @@ const actual = {
   url,
 }
 const expected = {
-  type: "exports_subpath",
+  type: "field:exports",
   url: new URL("./root/node_modules/@jsenv/toto/main.js", import.meta.url).href,
 }
 assert({ actual, expected })

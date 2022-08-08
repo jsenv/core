@@ -75,6 +75,9 @@ export const createUrlInfoTransformer = ({
   }
 
   const initTransformations = async (urlInfo, context) => {
+    urlInfo.originalContentEtag =
+      urlInfo.originalContentEtag ||
+      bufferToEtag(Buffer.from(urlInfo.originalContent))
     if (!sourcemapsEnabled) {
       return
     }
@@ -227,7 +230,10 @@ export const createUrlInfoTransformer = ({
       // in the end we don't use the sourcemap placeholder
       urlGraph.deleteUrlInfo(urlInfo.sourcemapReference.url)
     }
-    urlInfo.contentEtag = bufferToEtag(Buffer.from(urlInfo.content))
+    urlInfo.contentEtag =
+      urlInfo.content === urlInfo.originalContent
+        ? urlInfo.originalContentEtag
+        : bufferToEtag(Buffer.from(urlInfo.content))
   }
 
   return {

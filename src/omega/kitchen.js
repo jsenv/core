@@ -90,7 +90,6 @@ export const createKitchen = ({
     isInline = false,
     injected = false,
     isResourceHint = false,
-    dependsOnPackageJson,
     content,
     contentType,
     assert,
@@ -100,7 +99,7 @@ export const createKitchen = ({
     if (typeof specifier !== "string") {
       throw new TypeError(`"specifier" must be a string, got ${specifier}`)
     }
-    return {
+    const reference = {
       original: null,
       prev: null,
       next: null,
@@ -109,7 +108,9 @@ export const createKitchen = ({
       trace,
       parentUrl,
       url: null,
-      urlInfoUrl: null,
+      searchParams: null,
+      generatedUrl: null,
+      generatedSpecifier: null,
       type,
       subtype,
       expectedContentType,
@@ -123,22 +124,26 @@ export const createKitchen = ({
       specifierEnd,
       specifierLine,
       specifierColumn,
-      baseUrl,
       isOriginalPosition,
+      baseUrl,
       shouldHandle,
       isEntryPoint,
       isInline,
       injected,
       isResourceHint,
-      dependsOnPackageJson,
+      timing: {},
       // for inline resources the reference contains the content
       content,
       contentType,
-      timing: {},
+      escape: null,
+      // import assertions (maybe move to data?)
       assert,
       assertNode,
       typePropertyNode,
+      mutation: null,
     }
+    // Object.preventExtensions(reference) // useful to ensure all properties are declared here
+    return reference
   }
   const mutateReference = (reference, newReference) => {
     reference.next = newReference
@@ -147,11 +152,16 @@ export const createKitchen = ({
     //  newReference.isEntryPoint = reference.isEntryPoint
   }
   const resolveReference = (reference, context = kitchenContext) => {
+    const referenceContext = {
+      ...context,
+      resolveReference: (reference, context = referenceContext) =>
+        resolveReference(reference, context),
+    }
     try {
       let resolvedUrl = pluginController.callHooksUntil(
         "resolveUrl",
         reference,
-        context,
+        referenceContext,
       )
       if (!resolvedUrl) {
         throw new Error(`NO_RESOLVE`)
@@ -161,7 +171,7 @@ export const createKitchen = ({
       pluginController.callHooks(
         "redirectUrl",
         reference,
-        context,
+        referenceContext,
         (returnValue) => {
           const normalizedReturnValue = normalizeUrl(returnValue)
           if (normalizedReturnValue === reference.url) {
@@ -192,7 +202,7 @@ export const createKitchen = ({
       pluginController.callHooks(
         "transformUrlSearchParams",
         reference,
-        context,
+        referenceContext,
         (returnValue) => {
           Object.keys(returnValue).forEach((key) => {
             referenceUrlObject.searchParams.set(key, returnValue[key])
@@ -203,7 +213,7 @@ export const createKitchen = ({
       const returnValue = pluginController.callHooksUntil(
         "formatUrl",
         reference,
-        context,
+        referenceContext,
       )
       reference.generatedSpecifier = returnValue || reference.generatedUrl
       reference.generatedSpecifier = urlSpecifierEncoding.encode(reference)
@@ -392,6 +402,146 @@ export const createKitchen = ({
       })
     }
 
+    // references
+    const references = []
+    const addReference = (props) => {
+      const reference = createReference({
+        parentUrl: urlInfo.url,
+        ...props,
+      })
+      references.push(reference)
+      const referencedUrlInfo = resolveReference(reference, context)
+      return [reference, referencedUrlInfo]
+    }
+    context.referenceUtils = {
+      readGeneratedSpecifier,
+      found: ({ trace, ...rest }) => {
+        if (trace === undefined) {
+          trace = traceFromUrlSite(
+            adjustUrlSite(urlInfo, {
+              urlGraph,
+              url: urlInfo.url,
+              line: rest.specifierLine,
+              column: rest.specifierColumn,
+            }),
+          )
+        }
+        // console.log(trace)
+        return addReference({
+          trace,
+          ...rest,
+        })
+      },
+      foundInline: ({
+        isOriginalPosition,
+        specifierLine,
+        specifierColumn,
+        ...rest
+      }) => {
+        const parentUrl = isOriginalPosition
+          ? urlInfo.url
+          : urlInfo.generatedUrl
+        const parentContent = isOriginalPosition
+          ? urlInfo.originalContent
+          : urlInfo.content
+        return addReference({
+          trace: traceFromUrlSite({
+            url: parentUrl,
+            content: parentContent,
+            line: specifierLine,
+            column: specifierColumn,
+          }),
+          isOriginalPosition,
+          specifierLine,
+          specifierColumn,
+          isInline: true,
+          ...rest,
+        })
+      },
+      update: (currentReference, newReferenceParams) => {
+        const index = references.indexOf(currentReference)
+        if (index === -1) {
+          throw new Error(`reference do not exists`)
+        }
+        const previousReference = currentReference
+        const nextReference = createReference({
+          ...previousReference,
+          ...newReferenceParams,
+        })
+        references[index] = nextReference
+        mutateReference(previousReference, nextReference)
+        const newUrlInfo = resolveReference(nextReference, context)
+        const currentUrlInfo = context.urlGraph.getUrlInfo(currentReference.url)
+        if (
+          currentUrlInfo &&
+          currentUrlInfo !== newUrlInfo &&
+          currentUrlInfo.dependents.size === 0
+        ) {
+          context.urlGraph.deleteUrlInfo(currentReference.url)
+        }
+        return [nextReference, newUrlInfo]
+      },
+      becomesInline: (
+        reference,
+        {
+          isOriginalPosition,
+          specifier,
+          specifierLine,
+          specifierColumn,
+          contentType,
+          content,
+        },
+      ) => {
+        const parentUrl = isOriginalPosition
+          ? urlInfo.url
+          : urlInfo.generatedUrl
+        const parentContent = isOriginalPosition
+          ? urlInfo.originalContent
+          : urlInfo.content
+        return context.referenceUtils.update(reference, {
+          trace: traceFromUrlSite({
+            url: parentUrl,
+            content: parentContent,
+            line: specifierLine,
+            column: specifierColumn,
+          }),
+          isOriginalPosition,
+          isInline: true,
+          specifier,
+          specifierLine,
+          specifierColumn,
+          contentType,
+          content,
+        })
+      },
+      inject: ({ trace, ...rest }) => {
+        if (trace === undefined) {
+          const { url, line, column } = getCallerPosition()
+          trace = traceFromUrlSite({
+            url,
+            line,
+            column,
+          })
+        }
+        return addReference({
+          trace,
+          injected: true,
+          ...rest,
+        })
+      },
+      findByGeneratedSpecifier: (generatedSpecifier) => {
+        const reference = references.find(
+          (ref) => ref.generatedSpecifier === generatedSpecifier,
+        )
+        if (!reference) {
+          throw new Error(
+            `No reference found using the following generatedSpecifier: "${generatedSpecifier}"`,
+          )
+        }
+        return reference
+      },
+    }
+
     if (urlInfo.shouldHandle) {
       // "fetchUrlContent" hook
       await fetchUrlContent(urlInfo, {
@@ -399,165 +549,8 @@ export const createKitchen = ({
         contextDuringFetch: context,
       })
 
-      // parsing
-      const references = []
-      const addReference = (props) => {
-        const reference = createReference({
-          parentUrl: urlInfo.url,
-          ...props,
-        })
-        references.push(reference)
-        const referencedUrlInfo = resolveReference(reference, context)
-        return [reference, referencedUrlInfo]
-      }
-      const referenceUtils = {
-        readGeneratedSpecifier: async (reference) => {
-          // "formatReferencedUrl" can be async BUT this is an exception
-          // for most cases it will be sync. We want to favor the sync signature to keep things simpler
-          // The only case where it needs to be async is when
-          // the specifier is a `data:*` url
-          // in this case we'll wait for the promise returned by
-          // "formatReferencedUrl"
-          if (reference.generatedSpecifier.then) {
-            return reference.generatedSpecifier.then((value) => {
-              reference.generatedSpecifier = value
-              return value
-            })
-          }
-          return reference.generatedSpecifier
-        },
-        found: ({ trace, ...rest }) => {
-          if (trace === undefined) {
-            trace = traceFromUrlSite(
-              adjustUrlSite(urlInfo, {
-                urlGraph,
-                url: urlInfo.url,
-                line: rest.specifierLine,
-                column: rest.specifierColumn,
-              }),
-            )
-          }
-          // console.log(trace)
-          return addReference({
-            trace,
-            ...rest,
-          })
-        },
-        foundInline: ({
-          isOriginalPosition,
-          specifierLine,
-          specifierColumn,
-          ...rest
-        }) => {
-          const parentUrl = isOriginalPosition
-            ? urlInfo.url
-            : urlInfo.generatedUrl
-          const parentContent = isOriginalPosition
-            ? urlInfo.originalContent
-            : urlInfo.content
-          return addReference({
-            trace: traceFromUrlSite({
-              url: parentUrl,
-              content: parentContent,
-              line: specifierLine,
-              column: specifierColumn,
-            }),
-            isOriginalPosition,
-            specifierLine,
-            specifierColumn,
-            isInline: true,
-            ...rest,
-          })
-        },
-        update: (currentReference, newReferenceParams) => {
-          const index = references.indexOf(currentReference)
-          if (index === -1) {
-            throw new Error(`reference do not exists`)
-          }
-          const previousReference = currentReference
-          const nextReference = createReference({
-            ...previousReference,
-            ...newReferenceParams,
-          })
-          references[index] = nextReference
-          mutateReference(previousReference, nextReference)
-          const newUrlInfo = resolveReference(nextReference, context)
-          const currentUrlInfo = context.urlGraph.getUrlInfo(
-            currentReference.url,
-          )
-          if (
-            currentUrlInfo &&
-            currentUrlInfo !== newUrlInfo &&
-            currentUrlInfo.dependents.size === 0
-          ) {
-            context.urlGraph.deleteUrlInfo(currentReference.url)
-          }
-          return [nextReference, newUrlInfo]
-        },
-        becomesInline: (
-          reference,
-          {
-            isOriginalPosition,
-            specifier,
-            specifierLine,
-            specifierColumn,
-            contentType,
-            content,
-          },
-        ) => {
-          const parentUrl = isOriginalPosition
-            ? urlInfo.url
-            : urlInfo.generatedUrl
-          const parentContent = isOriginalPosition
-            ? urlInfo.originalContent
-            : urlInfo.content
-          return referenceUtils.update(reference, {
-            trace: traceFromUrlSite({
-              url: parentUrl,
-              content: parentContent,
-              line: specifierLine,
-              column: specifierColumn,
-            }),
-            isOriginalPosition,
-            isInline: true,
-            specifier,
-            specifierLine,
-            specifierColumn,
-            contentType,
-            content,
-          })
-        },
-        inject: ({ trace, ...rest }) => {
-          if (trace === undefined) {
-            const { url, line, column } = getCallerPosition()
-            trace = traceFromUrlSite({
-              url,
-              line,
-              column,
-            })
-          }
-          return addReference({
-            trace,
-            injected: true,
-            ...rest,
-          })
-        },
-        findByGeneratedSpecifier: (generatedSpecifier) => {
-          const reference = references.find(
-            (ref) => ref.generatedSpecifier === generatedSpecifier,
-          )
-          if (!reference) {
-            throw new Error(
-              `No reference found using the following generatedSpecifier: "${generatedSpecifier}"`,
-            )
-          }
-          return reference
-        },
-      }
-
       // "transform" hook
       urlInfo.references = references
-      context.referenceUtils = referenceUtils
       try {
         await pluginController.callAsyncHooks(
           "transformUrlContent",
@@ -666,6 +659,7 @@ export const createKitchen = ({
     const urlInfo = resolveReference(ref)
     return [ref, urlInfo]
   }
+  kitchenContext.injectReference = injectReference
 
   const getWithoutSearchParam = ({
     urlInfo,
@@ -704,8 +698,26 @@ export const createKitchen = ({
     rootDirectoryUrl,
     kitchenContext,
     cook,
+    createReference,
     injectReference,
   }
+}
+
+// "formatReferencedUrl" can be async BUT this is an exception
+// for most cases it will be sync. We want to favor the sync signature to keep things simpler
+// The only case where it needs to be async is when
+// the specifier is a `data:*` url
+// in this case we'll wait for the promise returned by
+// "formatReferencedUrl"
+
+const readGeneratedSpecifier = (reference) => {
+  if (reference.generatedSpecifier.then) {
+    return reference.generatedSpecifier.then((value) => {
+      reference.generatedSpecifier = value
+      return value
+    })
+  }
+  return reference.generatedSpecifier
 }
 
 const memoizeCook = (cook) => {
@@ -786,20 +798,6 @@ const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
       : reference.content
     urlInfo.content = reference.content
   }
-
-  const { dependsOnPackageJson } = reference
-  urlInfo.dependsOnPackageJson = dependsOnPackageJson
-  const relatedUrlInfos = context.urlGraph.getRelatedUrlInfos(
-    reference.parentUrl,
-  )
-  relatedUrlInfos.forEach((relatedUrlInfo) => {
-    if (relatedUrlInfo.dependsOnPackageJson) {
-      // the url may depend due to an other reference
-      // in that case keep dependsOnPackageJson to true
-      return
-    }
-    relatedUrlInfo.dependsOnPackageJson = dependsOnPackageJson
-  })
 }
 
 const adjustUrlSite = (urlInfo, { urlGraph, url, line, column }) => {

@@ -13,7 +13,7 @@ import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution"
     url,
   }
   const expected = {
-    type: "imports_subpath",
+    type: "field:imports",
     url: new URL("./import_first/import.js", import.meta.url).href,
   }
   assert({ actual, expected })
@@ -30,7 +30,7 @@ import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution"
     url,
   }
   const expected = {
-    type: "imports_subpath",
+    type: "field:imports",
     url: new URL("./node_first/node.js", import.meta.url).href,
   }
   assert({ actual, expected })

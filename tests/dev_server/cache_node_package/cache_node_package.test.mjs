@@ -1,4 +1,9 @@
-import { writeFileSync, readFileSync, utimesSync } from "node:fs"
+/*
+ * - Ensure cache for node modules do not hit the server
+ * - Ensure cache is invalidated when package version changes
+ */
+
+import { writeFileSync, readFileSync } from "node:fs"
 import { chromium } from "playwright"
 import { assert } from "@jsenv/assert"
 
@@ -16,14 +21,14 @@ const fooPackageFileContent = {
   restore: () =>
     writeFileSync(fooPackageFileUrl, fooPackageFileContent.beforeTest),
 }
-const fooMainFileUrl = new URL(
-  "./client/node_modules/foo/index.js",
+const asnwerFileUrl = new URL(
+  "./client/node_modules/foo/answer.js",
   import.meta.url,
 )
-const fooMainFileContent = {
-  beforeTest: readFileSync(fooMainFileUrl),
-  update: (content) => writeFileSync(fooMainFileUrl, content),
-  restore: () => writeFileSync(fooMainFileUrl, fooMainFileContent.beforeTest),
+const answerFileContent = {
+  beforeTest: readFileSync(asnwerFileUrl),
+  update: (content) => writeFileSync(asnwerFileUrl, content),
+  restore: () => writeFileSync(asnwerFileUrl, answerFileContent.beforeTest),
 }
 const serverRequests = []
 const devServer = await startDevServer({
@@ -41,9 +46,7 @@ const devServer = await startDevServer({
   clientAutoreload: false,
   supervisor: false,
 })
-const browser = await chromium.launch({
-  headless: !debug,
-})
+const browser = await chromium.launch({ headless: !debug })
 try {
   const page = await launchBrowserPage(browser)
   await page.goto(`${devServer.origin}/src/main.html`)
@@ -59,10 +62,7 @@ try {
   }
   const getServerRequestedForFoo = () => {
     return serverRequests.some((request) => {
-      // We don't see "?v=1.0.0" because we check request.pathname
-      // We could use request.resource to see it but it's not the purpose of this test
-      // to test how it's done. Here we just want to ensure it's cached/uncached
-      return request.pathname === "/node_modules/foo/index.js"
+      return request.pathname.startsWith("/node_modules/foo/")
     })
   }
 
@@ -97,18 +97,17 @@ try {
   // now update the package content + version and see if reloading the page updates the result
   {
     serverRequests.length = 0
-    fooMainFileContent.update(`export const answer = 43`)
+    answerFileContent.update(`export const answer = 43`)
     fooPackageFileContent.update(
-      JSON.stringify({
-        name: "foo",
-        private: true,
-        version: "1.0.1",
-      }),
-    )
-    utimesSync(
-      new URL("./client/package.json", import.meta.url),
-      new Date(),
-      new Date(),
+      JSON.stringify(
+        {
+          name: "foo",
+          private: true,
+          version: "1.0.1",
+        },
+        null,
+        "  ",
+      ),
     )
     // await new Promise((resolve) => setTimeout(resolve, 500))
     await page.reload()
@@ -124,9 +123,9 @@ try {
     assert({ actual, expected })
   }
 } finally {
+  fooPackageFileContent.restore()
+  answerFileContent.restore()
   if (!debug) {
     browser.close()
   }
-  fooPackageFileContent.restore()
-  fooMainFileContent.restore()
 }

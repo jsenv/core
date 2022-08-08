@@ -807,7 +807,7 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`,
     GRAPH.forEach(finalGraph, (urlInfo) => {
       // nothing uses this url anymore
       // - versioning update inline content
-      // - file converted for import assertion of js_classic conversion
+      // - file converted for import assertion or js_classic conversion
       if (
         !urlInfo.isEntryPoint &&
         urlInfo.type !== "sourcemap" &&

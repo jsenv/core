@@ -7,7 +7,8 @@
  *   it should likely be an other plugin happening after the others
  */
 
-import { registerFileLifecycle } from "@jsenv/filesystem"
+import { readFileSync } from "node:fs"
+import { bufferToEtag } from "@jsenv/filesystem"
 
 import {
   applyNodeEsmResolution,
@@ -16,13 +17,45 @@ import {
   readCustomConditionsFromProcessArgs,
 } from "@jsenv/node-esm-resolution"
 
-export const jsenvPluginNodeEsmResolution = ({
-  packageConditions,
-  filesInvalidatingCache = ["package.json", "package-lock.json"],
-}) => {
+export const jsenvPluginNodeEsmResolution = ({ packageConditions }) => {
   const unregisters = []
-  let lookupPackageScope // defined in "init"
-  let readPackageJson // defined in "init"
+
+  const injectDependencyToPackageFile = ({
+    packageDirectoryUrl,
+    packageFieldName,
+    propagateToAncestors = false,
+    context,
+  }) => {
+    const packageJsonUrl = new URL("./package.json", packageDirectoryUrl).href
+    const urlInfo = context.urlGraph.reuseOrCreateUrlInfo(
+      context.reference.parentUrl,
+    )
+    const referenceFound = urlInfo.references.find(
+      (ref) => ref.type === "package_json" && ref.subtype === packageFieldName,
+    )
+    if (referenceFound) {
+      return
+    }
+    urlInfo.relateds.add(packageJsonUrl)
+    const [, packageJsonUrlInfo] = context.referenceUtils.inject({
+      type: "package_json",
+      subtype: packageFieldName,
+      specifier: packageJsonUrl,
+    })
+    if (packageJsonUrlInfo.type === undefined) {
+      const packageJsonContentAsBuffer = readFileSync(new URL(packageJsonUrl))
+      packageJsonUrlInfo.type = "json"
+      packageJsonUrlInfo.content = String(packageJsonContentAsBuffer)
+      packageJsonUrlInfo.originalContentEtag = packageJsonUrlInfo.contentEtag =
+        bufferToEtag(packageJsonContentAsBuffer)
+    }
+
+    if (propagateToAncestors) {
+      context.urlGraph.visitDependents(urlInfo, (dependentUrlInfo) => {
+        dependentUrlInfo.relateds.add(packageJsonUrl)
+      })
+    }
+  }
 
   return {
     name: "jsenv:node_esm_resolution",
@@ -37,91 +70,40 @@ export const jsenvPluginNodeEsmResolution = ({
         nodeRuntimeEnabled ? "node" : "browser",
         "import",
       ]
-
-      const packageScopesCache = new Map()
-      lookupPackageScope = (url) => {
-        const fromCache = packageScopesCache.get(url)
-        if (fromCache) {
-          return fromCache
-        }
-        const packageScope = defaultLookupPackageScope(url)
-        packageScopesCache.set(url, packageScope)
-        return packageScope
-      }
-      const packageJsonsCache = new Map()
-      readPackageJson = (url) => {
-        const fromCache = packageJsonsCache.get(url)
-        if (fromCache) {
-          return fromCache
-        }
-        const packageJson = defaultReadPackageJson(url)
-        packageJsonsCache.set(url, packageJson)
-        return packageJson
-      }
-
-      if (context.scenarios.dev) {
-        const onFileChange = () => {
-          packageScopesCache.clear()
-          packageJsonsCache.clear()
-          context.urlGraph.urlInfoMap.forEach((urlInfo) => {
-            if (urlInfo.dependsOnPackageJson) {
-              context.urlGraph.considerModified(urlInfo)
-            }
-          })
-        }
-        filesInvalidatingCache.forEach((file) => {
-          const unregister = registerFileLifecycle(
-            new URL(file, context.rootDirectoryUrl),
-            {
-              added: () => {
-                onFileChange()
-              },
-              updated: () => {
-                onFileChange()
-              },
-              removed: () => {
-                onFileChange()
-              },
-              keepProcessAlive: false,
-            },
-          )
-          unregisters.push(unregister)
-        })
-      }
     },
     resolveUrl: {
-      js_import_export: (reference) => {
+      js_import_export: (reference, context) => {
         const { parentUrl, specifier } = reference
-        const { type, url } = applyNodeEsmResolution({
+        const { url, type, packageUrl } = applyNodeEsmResolution({
           conditions: packageConditions,
           parentUrl,
           specifier,
-          lookupPackageScope,
-          readPackageJson,
         })
-        // this reference depend on package.json and node_modules
-        // to be resolved. Each file using this specifier
-        // must be invalidated when package.json or package_lock.json
-        // changes
-        const dependsOnPackageJson =
-          type !== "relative_specifier" &&
-          type !== "absolute_specifier" &&
-          type !== "node_builtin_specifier"
-        reference.dependsOnPackageJson = dependsOnPackageJson
+        if (context.scenarios.dev) {
+          const dependsOnPackageJson =
+            type !== "relative_specifier" &&
+            type !== "absolute_specifier" &&
+            type !== "node_builtin_specifier"
+          if (dependsOnPackageJson) {
+            // this reference depends on package.json and node_modules
+            // to be resolved. Each file using this specifier
+            // must be invalidated when corresponding package.json changes
+            injectDependencyToPackageFile({
+              packageDirectoryUrl: packageUrl,
+              packageFieldName: type.startsWith("field:")
+                ? type.slice("field:".length)
+                : null,
+              context,
+            })
+          }
+        }
         return url
       },
     },
-    fetchUrlContent: (urlInfo) => {
-      if (urlInfo.url.startsWith("file:///@ignore/")) {
-        return {
-          content: "export default {}",
-          contentType: "text/javascript",
-          type: "js_module",
-        }
-      }
-      return null
-    },
     transformUrlSearchParams: (reference, context) => {
+      if (reference.type === "package_json") {
+        return null
+      }
       if (context.scenarios.build) {
         return null
       }
@@ -137,21 +119,43 @@ export const jsenvPluginNodeEsmResolution = ({
       if (reference.searchParams.has("v")) {
         return null
       }
-      const packageUrl = lookupPackageScope(reference.url)
-      if (!packageUrl) {
+      const packageDirectoryUrl = defaultLookupPackageScope(reference.url)
+      if (!packageDirectoryUrl) {
         return null
       }
-      if (packageUrl === context.rootDirectoryUrl) {
+      if (packageDirectoryUrl === context.rootDirectoryUrl) {
         return null
       }
-      const packageVersion = readPackageJson(packageUrl).version
+      // there is a dependency between this file and the package.json version field
+      const packageVersion = defaultReadPackageJson(packageDirectoryUrl).version
       if (!packageVersion) {
         // example where it happens: https://github.com/babel/babel/blob/2ce56e832c2dd7a7ed92c89028ba929f874c2f5c/packages/babel-runtime/helpers/esm/package.json#L2
         return null
       }
+      if (context.scenarios.dev && reference.type === "js_import_export") {
+        injectDependencyToPackageFile({
+          packageDirectoryUrl,
+          packageFieldName: "version",
+          context,
+          // because versioning must be disabled until
+          // we found something not versioned (html for instance)
+          // and reconstruct graph from there as files are put in browser cache
+          propagateToAncestors: true,
+        })
+      }
       return {
         v: packageVersion,
       }
+    },
+    fetchUrlContent: (urlInfo) => {
+      if (urlInfo.url.startsWith("file:///@ignore/")) {
+        return {
+          content: "export default {}",
+          contentType: "text/javascript",
+          type: "js_module",
+        }
+      }
+      return null
     },
     destroy: () => {
       unregisters.forEach((unregister) => unregister())

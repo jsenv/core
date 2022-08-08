@@ -1,5 +1,6 @@
 import { URL_META } from "@jsenv/url-meta"
 import { injectQueryParams, urlToExtension } from "@jsenv/urls"
+import { defaultLookupPackageScope } from "@jsenv/node-esm-resolution"
 
 import { commonJsToJsModule } from "./cjs_to_esm.js"
 
@@ -70,7 +71,8 @@ export const jsenvPluginCommonJs = ({
       const originalReference = context.reference.original
         ? context.reference.original
         : context.reference
-      const filename = originalReference.dependsOnPackageJson
+      const packageFileUrl = defaultLookupPackageScope(originalReference.url)
+      const filename = packageFileUrl
         ? `${originalReference.specifier}${urlToExtension(
             originalReference.parentUrl,
           )}`

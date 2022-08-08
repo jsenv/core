@@ -1,9 +1,10 @@
+import { readFileSync } from "node:fs"
 import {
   fetchFileSystem,
   serveDirectory,
   composeTwoResponses,
 } from "@jsenv/server"
-import { registerDirectoryLifecycle } from "@jsenv/filesystem"
+import { registerDirectoryLifecycle, bufferToEtag } from "@jsenv/filesystem"
 import { urlIsInsideOf, moveUrl } from "@jsenv/urls"
 import { URL_META } from "@jsenv/url-meta"
 
@@ -42,38 +43,41 @@ export const createFileService = ({
 
   const clientFileChangeCallbackList = []
   const clientFilesPruneCallbackList = []
-  const clientFileChangeCallback = ({ relativeUrl, event }) => {
-    const url = new URL(relativeUrl, rootDirectoryUrl).href
-    clientFileChangeCallbackList.forEach((callback) => {
-      callback({ url, event })
-    })
-  }
   const clientFilePatterns = {
     ...clientFiles,
     ".jsenv/": false,
   }
 
-  if (scenarios.dev) {
-    const stopWatchingClientFiles = registerDirectoryLifecycle(
-      rootDirectoryUrl,
-      {
-        watchPatterns: clientFilePatterns,
-        cooldownBetweenFileEvents,
-        keepProcessAlive: false,
-        recursive: true,
-        added: ({ relativeUrl }) => {
-          clientFileChangeCallback({ event: "added", relativeUrl })
-        },
-        updated: ({ relativeUrl }) => {
-          clientFileChangeCallback({ event: "modified", relativeUrl })
-        },
-        removed: ({ relativeUrl }) => {
-          clientFileChangeCallback({ event: "removed", relativeUrl })
-        },
-      },
-    )
-    serverStopCallbacks.push(stopWatchingClientFiles)
+  const onFileChange = (url) => {
+    clientFileChangeCallbackList.forEach((callback) => {
+      callback(url)
+    })
   }
+  const stopWatchingClientFiles = registerDirectoryLifecycle(rootDirectoryUrl, {
+    watchPatterns: clientFilePatterns,
+    cooldownBetweenFileEvents,
+    keepProcessAlive: false,
+    recursive: true,
+    added: ({ relativeUrl }) => {
+      onFileChange({
+        url: new URL(relativeUrl, rootDirectoryUrl).href,
+        event: "added",
+      })
+    },
+    updated: ({ relativeUrl }) => {
+      onFileChange({
+        url: new URL(relativeUrl, rootDirectoryUrl).href,
+        event: "modified",
+      })
+    },
+    removed: ({ relativeUrl }) => {
+      onFileChange({
+        url: new URL(relativeUrl, rootDirectoryUrl).href,
+        event: "removed",
+      })
+    },
+  })
+  serverStopCallbacks.push(stopWatchingClientFiles)
 
   const contextCache = new Map()
   const getOrCreateContext = (request) => {
@@ -90,16 +94,13 @@ export const createFileService = ({
       rootDirectoryUrl,
     )
     const urlGraph = createUrlGraph({
-      clientFileChangeCallbackList,
-      clientFilesPruneCallbackList,
-      onCreateUrlInfo: (urlInfo) => {
-        const { watch } = URL_META.applyAssociations({
-          url: urlInfo.url,
-          associations: watchAssociations,
-        })
-        urlInfo.isValid = () => watch
-      },
       includeOriginalUrls: scenarios.dev,
+    })
+    clientFileChangeCallbackList.push(({ url }) => {
+      const urlInfo = urlGraph.getUrlInfo(url)
+      if (urlInfo) {
+        urlGraph.considerModified(urlInfo)
+      }
     })
     const kitchen = createKitchen({
       signal,
@@ -134,6 +135,45 @@ export const createFileService = ({
       sourcemapsSourcesContent,
       writeGeneratedFiles,
     })
+    urlGraph.createUrlInfoCallbackRef.current = (urlInfo) => {
+      const { watch } = URL_META.applyAssociations({
+        url: urlInfo.url,
+        associations: watchAssociations,
+      })
+      urlInfo.isWatched = watch
+      // si une urlInfo dépends de pleins d'autres alors
+      // on voudrait check chacune de ces url infos (package.json dans mon cas)
+      urlInfo.isValid = () => {
+        if (!urlInfo.url.startsWith("file:")) {
+          return false
+        }
+        if (watch && urlInfo.contentEtag === undefined) {
+          // we trust the watching mecanism
+          // doing urlInfo.contentEtag = undefined
+          // when file is modified
+          return false
+        }
+        if (!watch) {
+          const fileContentAsBuffer = readFileSync(new URL(urlInfo.url))
+          const fileContentEtag = bufferToEtag(fileContentAsBuffer)
+          if (fileContentEtag !== urlInfo.originalContentEtag) {
+            return false
+          }
+        }
+        for (const related of urlInfo.relateds) {
+          const relatedUrlInfo = context.urlGraph.getUrlInfo(related)
+          if (relatedUrlInfo && !relatedUrlInfo.isValid()) {
+            return false
+          }
+        }
+        return true
+      }
+    }
+    urlGraph.prunedUrlInfosCallbackRef.current = (urlInfos, firstUrlInfo) => {
+      clientFilesPruneCallbackList.forEach((callback) => {
+        callback(urlInfos, firstUrlInfo)
+      })
+    }
     serverStopCallbacks.push(() => {
       kitchen.pluginController.callHooks("destroy", kitchen.kitchenContext)
     })
@@ -218,25 +258,23 @@ export const createFileService = ({
       reference = entryPoint[0]
     }
     const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url)
-
     const ifNoneMatch = request.headers["if-none-match"]
-    if (
-      ifNoneMatch &&
-      urlInfo.contentEtag === ifNoneMatch &&
-      // urlInfo.isValid
-      // - is false by default because there must be some logic capable
-      //   to invalidate the url (otherwise server would return 304 forever)
-      // - is set to a function returning true if the file is watched
-      //   in start_dev_server.js
-      // - is set to a custom function by cjs_to_esm in compiled_file_cache.js
-      urlInfo.isValid()
-    ) {
-      return {
-        status: 304,
-        headers: {
-          "cache-control": `private,max-age=0,must-revalidate`,
-          ...urlInfo.headers,
-        },
+    const urlInfoTargetedByCache = urlInfo.isInline
+      ? urlGraph.getUrlInfo(urlInfo.inlineUrlSite.url)
+      : urlInfo
+
+    if (ifNoneMatch) {
+      if (
+        urlInfoTargetedByCache.contentEtag === ifNoneMatch &&
+        urlInfoTargetedByCache.isValid()
+      ) {
+        return {
+          status: 304,
+          headers: {
+            "cache-control": `private,max-age=0,must-revalidate`,
+            ...urlInfo.headers,
+          },
+        }
       }
     }
     try {
@@ -253,7 +291,6 @@ export const createFileService = ({
         urlInfo.originalContent = null
         urlInfo.type = null
         urlInfo.subtype = null
-        urlInfo.dependsOnPackageJson = false
         urlInfo.timing = {}
       }
       await kitchen.cook(urlInfo, {
@@ -275,7 +312,7 @@ export const createFileService = ({
         headers: {
           "content-length": Buffer.byteLength(urlInfo.content),
           "cache-control": `private,max-age=0,must-revalidate`,
-          "eTag": urlInfo.contentEtag,
+          "eTag": urlInfoTargetedByCache.contentEtag,
           ...urlInfo.headers,
           "content-type": urlInfo.contentType,
         },

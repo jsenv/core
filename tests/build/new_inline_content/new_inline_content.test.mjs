@@ -12,9 +12,8 @@ const { buildManifest } = await build({
     "./main.html": "main.html",
   },
   minification: false,
-  transpilation: {
-    css: false,
-  },
+  transpilation: { css: false },
+  writeGeneratedFiles: true,
 })
 const server = await startFileServer({
   rootDirectoryUrl: new URL("./dist/", import.meta.url),
@@ -26,9 +25,7 @@ const { returnValue } = await executeInChromium({
     const namespace = await import(jsRelativeUrl)
 
     // let 500ms for the background image to load
-    await new Promise((resolve) => {
-      setTimeout(resolve, 500)
-    })
+    await new Promise((resolve) => setTimeout(resolve, 500))
     const bodyBackgroundImage = getComputedStyle(document.body).backgroundImage
 
     return {

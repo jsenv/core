@@ -1,12 +1,11 @@
 import { urlToRelativeUrl } from "@jsenv/urls"
+
 import { urlSpecifierEncoding } from "./url_specifier_encoding.js"
 
-export const createUrlGraph = ({
-  clientFileChangeCallbackList,
-  clientFilesPruneCallbackList,
-  onCreateUrlInfo = () => {},
-  includeOriginalUrls,
-} = {}) => {
+export const createUrlGraph = ({ includeOriginalUrls } = {}) => {
+  const createUrlInfoCallbackRef = { current: () => {} }
+  const prunedUrlInfosCallbackRef = { current: () => {} }
+
   const urlInfoMap = new Map()
   const getUrlInfo = (url) => urlInfoMap.get(url)
   const deleteUrlInfo = (url) => {
@@ -24,7 +23,7 @@ export const createUrlGraph = ({
     if (existingUrlInfo) return existingUrlInfo
     const urlInfo = createUrlInfo(url)
     urlInfoMap.set(url, urlInfo)
-    onCreateUrlInfo(urlInfo)
+    createUrlInfoCallbackRef.current(urlInfo)
     return urlInfo
   }
   const inferReference = (specifier, parentUrl) => {
@@ -39,22 +38,28 @@ export const createUrlGraph = ({
     )
     return firstReferenceOnThatUrl
   }
-  const findDependent = (url, predicate) => {
-    const urlInfo = getUrlInfo(url)
-    if (!urlInfo) {
-      return null
+  const visitDependents = (urlInfo, visitor) => {
+    const seen = [urlInfo.url]
+    let stopped = false
+    const stop = () => {
+      stopped = true
     }
-    const visitDependents = (urlInfo) => {
-      for (const dependentUrl of urlInfo.dependents) {
-        const dependent = getUrlInfo(dependentUrl)
-        if (predicate(dependent)) {
-          return dependent
+    const iterate = (currentUrlInfo) => {
+      for (const dependentUrl of currentUrlInfo.dependents) {
+        if (seen.includes(dependentUrl)) {
+          continue
         }
-        return visitDependents(dependent)
+        seen.push(dependentUrl)
+        const dependentUrlInfo = getUrlInfo(dependentUrl)
+        visitor(dependentUrlInfo, stop)
+        if (stopped) {
+          return dependentUrlInfo
+        }
+        iterate(dependentUrlInfo)
       }
       return null
     }
-    return visitDependents(urlInfo)
+    return iterate(urlInfo)
   }
 
   const updateReferences = (urlInfo, references) => {
@@ -79,7 +84,7 @@ export const createUrlGraph = ({
         // by <link> as dependency and it's fine
         return
       }
-      setOfDependencyUrls.add(reference.urlInfoUrl || reference.url)
+      setOfDependencyUrls.add(reference.url)
     })
     const urlsToRemove = Array.from(urlInfo.dependencies).filter(
       (dep) => !setOfDependencyUrls.has(dep),
@@ -123,23 +128,7 @@ export const createUrlGraph = ({
         deleteUrlInfo(prunedUrlInfo.url)
       }
     })
-    if (clientFilesPruneCallbackList) {
-      clientFilesPruneCallbackList.forEach((callback) => {
-        callback({
-          firstUrlInfo,
-          prunedUrlInfos,
-        })
-      })
-    }
-  }
-
-  if (clientFileChangeCallbackList) {
-    clientFileChangeCallbackList.push(({ url }) => {
-      const urlInfo = getUrlInfo(url)
-      if (urlInfo) {
-        considerModified(urlInfo, Date.now())
-      }
-    })
+    prunedUrlInfosCallbackRef.current(prunedUrlInfos, firstUrlInfo)
   }
 
   const considerModified = (urlInfo, modifiedTimestamp = Date.now()) => {
@@ -150,6 +139,7 @@ export const createUrlGraph = ({
       }
       seen.push(urlInfo.url)
       urlInfo.modifiedTimestamp = modifiedTimestamp
+      urlInfo.originalContentEtag = undefined
       urlInfo.contentEtag = undefined
       urlInfo.dependents.forEach((dependentUrl) => {
         const dependentUrlInfo = getUrlInfo(dependentUrl)
@@ -168,30 +158,18 @@ export const createUrlGraph = ({
     iterate(urlInfo)
   }
 
-  const getRelatedUrlInfos = (url) => {
-    const urlInfosUntilNotInline = []
-    const parentUrlInfo = getUrlInfo(url)
-    if (parentUrlInfo) {
-      urlInfosUntilNotInline.push(parentUrlInfo)
-      if (parentUrlInfo.inlineUrlSite) {
-        urlInfosUntilNotInline.push(
-          ...getRelatedUrlInfos(parentUrlInfo.inlineUrlSite.url),
-        )
-      }
-    }
-    return urlInfosUntilNotInline
-  }
-
   return {
+    createUrlInfoCallbackRef,
+    prunedUrlInfosCallbackRef,
+
     urlInfoMap,
     reuseOrCreateUrlInfo,
     getUrlInfo,
     deleteUrlInfo,
     inferReference,
-    findDependent,
     updateReferences,
     considerModified,
-    getRelatedUrlInfos,
+    visitDependents,
 
     toObject: () => {
       const data = {}
@@ -217,26 +195,25 @@ export const createUrlGraph = ({
 }
 
 const createUrlInfo = (url) => {
-  return {
+  const urlInfo = {
     error: null,
     modifiedTimestamp: 0,
+    originalContentEtag: null,
     contentEtag: null,
-    dependsOnPackageJson: false,
-    isValid,
+    isWatched: false,
+    isValid: () => false,
     data: {}, // plugins can put whatever they want here
     references: [],
     dependencies: new Set(),
     dependents: new Set(),
+    relateds: new Set(),
     type: undefined, // "html", "css", "js_classic", "js_module", "importmap", "json", "webmanifest", ...
     subtype: undefined, // "worker", "service_worker", "shared_worker" for js, otherwise undefined
     contentType: "", // "text/html", "text/css", "text/javascript", "application/json", ...
     url,
     originalUrl: undefined,
-    generatedUrl: null,
     filename: "",
     isEntryPoint: false,
-    isInline: false,
-    inlineUrlSite: null,
     shouldHandle: undefined,
     originalContent: undefined,
     content: undefined,
@@ -244,9 +221,17 @@ const createUrlInfo = (url) => {
     sourcemap: null,
     sourcemapReference: null,
     sourcemapIsWrong: false,
+
+    generatedUrl: null,
+    sourcemapGeneratedUrl: null,
+
+    isInline: false,
+    inlineUrlSite: null,
+    jsQuote: null, // maybe move to inlineUrlSite?
+
     timing: {},
     headers: {},
   }
+  // Object.preventExtensions(urlInfo) // useful to ensure all properties are declared here
+  return urlInfo
 }
-
-const isValid = () => false
