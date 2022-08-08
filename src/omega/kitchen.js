@@ -90,7 +90,6 @@ export const createKitchen = ({
     isInline = false,
     injected = false,
     isResourceHint = false,
-    dependsOnPackageJson,
     content,
     contentType,
     assert,
@@ -132,7 +131,6 @@ export const createKitchen = ({
       isInline,
       injected,
       isResourceHint,
-      dependsOnPackageJson,
       timing: {},
       // for inline resources the reference contains the content
       content,
@@ -695,6 +693,7 @@ export const createKitchen = ({
     rootDirectoryUrl,
     kitchenContext,
     cook,
+    createReference,
     injectReference,
   }
 }

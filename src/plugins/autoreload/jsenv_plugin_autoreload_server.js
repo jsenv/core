@@ -134,48 +134,46 @@ export const jsenvPluginAutoreloadServer = ({
             })
           }
         })
-        clientFilesPruneCallbackList.push(
-          ({ prunedUrlInfos, firstUrlInfo }) => {
-            const mainHotUpdate = propagateUpdate(firstUrlInfo)
-            const cause = `following files are no longer referenced: ${prunedUrlInfos.map(
-              (prunedUrlInfo) => formatUrlForClient(prunedUrlInfo.url),
-            )}`
-            // now check if we can hot update the main resource
-            // then if we can hot update all dependencies
-            if (mainHotUpdate.declined) {
+        clientFilesPruneCallbackList.push((prunedUrlInfos, firstUrlInfo) => {
+          const mainHotUpdate = propagateUpdate(firstUrlInfo)
+          const cause = `following files are no longer referenced: ${prunedUrlInfos.map(
+            (prunedUrlInfo) => formatUrlForClient(prunedUrlInfo.url),
+          )}`
+          // now check if we can hot update the main resource
+          // then if we can hot update all dependencies
+          if (mainHotUpdate.declined) {
+            notifyDeclined({
+              cause,
+              reason: mainHotUpdate.reason,
+              declinedBy: mainHotUpdate.declinedBy,
+            })
+            return
+          }
+          // main can hot update
+          let i = 0
+          const instructions = []
+          while (i < prunedUrlInfos.length) {
+            const prunedUrlInfo = prunedUrlInfos[i++]
+            if (prunedUrlInfo.data.hotDecline) {
               notifyDeclined({
                 cause,
-                reason: mainHotUpdate.reason,
-                declinedBy: mainHotUpdate.declinedBy,
+                reason: `a pruned file declines hot reload`,
+                declinedBy: formatUrlForClient(prunedUrlInfo.url),
               })
               return
             }
-            // main can hot update
-            let i = 0
-            const instructions = []
-            while (i < prunedUrlInfos.length) {
-              const prunedUrlInfo = prunedUrlInfos[i++]
-              if (prunedUrlInfo.data.hotDecline) {
-                notifyDeclined({
-                  cause,
-                  reason: `a pruned file declines hot reload`,
-                  declinedBy: formatUrlForClient(prunedUrlInfo.url),
-                })
-                return
-              }
-              instructions.push({
-                type: "prune",
-                boundary: formatUrlForClient(prunedUrlInfo.url),
-                acceptedBy: formatUrlForClient(firstUrlInfo.url),
-              })
-            }
-            notifyAccepted({
-              cause,
-              reason: mainHotUpdate.reason,
-              instructions,
+            instructions.push({
+              type: "prune",
+              boundary: formatUrlForClient(prunedUrlInfo.url),
+              acceptedBy: formatUrlForClient(firstUrlInfo.url),
             })
-          },
-        )
+          }
+          notifyAccepted({
+            cause,
+            reason: mainHotUpdate.reason,
+            instructions,
+          })
+        })
       },
     },
     serve: (request, { rootDirectoryUrl, urlGraph }) => {

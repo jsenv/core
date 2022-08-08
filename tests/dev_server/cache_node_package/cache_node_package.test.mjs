@@ -3,7 +3,7 @@
  * - Ensure cache is invalidated when package version changes
  */
 
-import { writeFileSync, readFileSync, utimesSync } from "node:fs"
+import { writeFileSync, readFileSync } from "node:fs"
 import { chromium } from "playwright"
 import { assert } from "@jsenv/assert"
 
@@ -62,10 +62,7 @@ try {
   }
   const getServerRequestedForFoo = () => {
     return serverRequests.some((request) => {
-      // We don't see "?v=1.0.0" because we check request.pathname
-      // We could use request.resource to see it but it's not the purpose of this test
-      // to test how it's done. Here we just want to ensure it's cached/uncached
-      return request.pathname === "/node_modules/foo/index.js"
+      return request.pathname.startsWith("/node_modules/foo/")
     })
   }
 
@@ -112,11 +109,6 @@ try {
         "  ",
       ),
     )
-    utimesSync(
-      new URL("./client/package.json", import.meta.url),
-      new Date(),
-      new Date(),
-    )
     // await new Promise((resolve) => setTimeout(resolve, 500))
     await page.reload()
 
@@ -131,9 +123,9 @@ try {
     assert({ actual, expected })
   }
 } finally {
+  fooPackageFileContent.restore()
+  answerFileContent.restore()
   if (!debug) {
     browser.close()
   }
-  fooPackageFileContent.restore()
-  answerFileContent.restore()
 }

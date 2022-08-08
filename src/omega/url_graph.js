@@ -1,15 +1,11 @@
-import { readFileSync } from "node:fs"
 import { urlToRelativeUrl } from "@jsenv/urls"
-import { bufferToEtag } from "@jsenv/filesystem"
 
 import { urlSpecifierEncoding } from "./url_specifier_encoding.js"
 
-export const createUrlGraph = ({
-  clientFileChangeCallbackList,
-  clientFilesPruneCallbackList,
-  onCreateUrlInfo = () => {},
-  includeOriginalUrls,
-} = {}) => {
+export const createUrlGraph = ({ includeOriginalUrls } = {}) => {
+  const createUrlInfoCallbackRef = { current: () => {} }
+  const prunedUrlInfosCallbackRef = { current: () => {} }
+
   const urlInfoMap = new Map()
   const getUrlInfo = (url) => urlInfoMap.get(url)
   const deleteUrlInfo = (url) => {
@@ -27,7 +23,7 @@ export const createUrlGraph = ({
     if (existingUrlInfo) return existingUrlInfo
     const urlInfo = createUrlInfo(url)
     urlInfoMap.set(url, urlInfo)
-    onCreateUrlInfo(urlInfo)
+    createUrlInfoCallbackRef.current(urlInfo)
     return urlInfo
   }
   const inferReference = (specifier, parentUrl) => {
@@ -126,23 +122,7 @@ export const createUrlGraph = ({
         deleteUrlInfo(prunedUrlInfo.url)
       }
     })
-    if (clientFilesPruneCallbackList) {
-      clientFilesPruneCallbackList.forEach((callback) => {
-        callback({
-          firstUrlInfo,
-          prunedUrlInfos,
-        })
-      })
-    }
-  }
-
-  if (clientFileChangeCallbackList) {
-    clientFileChangeCallbackList.push(({ url }) => {
-      const urlInfo = getUrlInfo(url)
-      if (urlInfo) {
-        considerModified(urlInfo, Date.now())
-      }
-    })
+    prunedUrlInfosCallbackRef.current(prunedUrlInfos, firstUrlInfo)
   }
 
   const considerModified = (urlInfo, modifiedTimestamp = Date.now()) => {
@@ -173,6 +153,9 @@ export const createUrlGraph = ({
   }
 
   return {
+    createUrlInfoCallbackRef,
+    prunedUrlInfosCallbackRef,
+
     urlInfoMap,
     reuseOrCreateUrlInfo,
     getUrlInfo,
@@ -212,27 +195,12 @@ const createUrlInfo = (url) => {
     originalContentEtag: null,
     contentEtag: null,
     isWatched: false,
-    isValid: () => {
-      if (!urlInfo.url.startsWith("file:")) {
-        return false
-      }
-      // we trust the watching mecanism
-      // doing urlInfo.contentEtag = undefined
-      // when file is modified
-      if (!urlInfo.isWatched) {
-        const fileContentAsBuffer = readFileSync(new URL(urlInfo.url))
-        const fileContentEtag = bufferToEtag(fileContentAsBuffer)
-        if (fileContentEtag !== urlInfo.originalContentEtag) {
-          return false
-        }
-      }
-      return true
-    },
-
+    isValid: () => false,
     data: {}, // plugins can put whatever they want here
     references: [],
     dependencies: new Set(),
     dependents: new Set(),
+    relateds: new Set(),
     type: undefined, // "html", "css", "js_classic", "js_module", "importmap", "json", "webmanifest", ...
     subtype: undefined, // "worker", "service_worker", "shared_worker" for js, otherwise undefined
     contentType: "", // "text/html", "text/css", "text/javascript", "application/json", ...
