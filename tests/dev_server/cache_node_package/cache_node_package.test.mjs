@@ -102,11 +102,15 @@ try {
     serverRequests.length = 0
     fooMainFileContent.update(`export const answer = 43`)
     fooPackageFileContent.update(
-      JSON.stringify({
-        name: "foo",
-        private: true,
-        version: "1.0.1",
-      }),
+      JSON.stringify(
+        {
+          name: "foo",
+          private: true,
+          version: "1.0.1",
+        },
+        null,
+        "  ",
+      ),
     )
     utimesSync(
       new URL("./client/package.json", import.meta.url),

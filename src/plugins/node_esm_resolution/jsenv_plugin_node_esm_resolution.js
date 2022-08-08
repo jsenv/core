@@ -63,6 +63,15 @@ export const jsenvPluginNodeEsmResolution = ({
         const onFileChange = () => {
           packageScopesCache.clear()
           packageJsonsCache.clear()
+          const rootPackageJsonUrl = new URL(
+            "./package.json",
+            context.rootDirectoryUrl,
+          ).href
+          const rootPackageUrlInfo =
+            context.urlGraph.getUrlInfo(rootPackageJsonUrl)
+          if (rootPackageUrlInfo) {
+            context.urlGraph.considerModified(rootPackageUrlInfo)
+          }
         }
         filesInvalidatingCache.forEach((file) => {
           const unregister = registerFileLifecycle(
@@ -94,7 +103,7 @@ export const jsenvPluginNodeEsmResolution = ({
           lookupPackageScope,
           readPackageJson,
         })
-        // this reference depend on package.json and node_modules
+        // this reference depends on package.json and node_modules
         // to be resolved. Each file using this specifier
         // must be invalidated when package.json or package_lock.json
         // changes
