@@ -12,7 +12,16 @@ It's recommended to prefer leading slash instead of `"../"`:
 - :+1: create consistent specifiers
 - :+1: escape `"../../"` hell.
 
-Note that external urls like `https://fonts.googleapis.com/css2?family=Roboto` are preserved during dev and in the build files.
+> **Note**  
+> External urls, like `https://fonts.googleapis.com/css2?family=Roboto`, are preserved during dev and in the build files.
+
+> **Note**  
+> When something is not supported during dev or after build, it is transformed by jsenv to run as expected. This includes mainly:
+>
+> - script type module
+> - worker type module
+> - import assertion
+> - document.adoptedStylesheets
 
 The rest of this page shows how files can be referenced within HTML, CSS and js.
 
@@ -67,9 +76,10 @@ body {
 > **Note**  
 > "@import" not yet allowed with [CSS import assertion](#CSS-import-assertion) as explained in https://web.dev/css-module-scripts/#@import-rules-not-yet-allowed
 
-## Js modules
+## Js module
 
-Js modules refers to js executed in a context where is has access to `import` and `import.meta.url`. In these files the following is supported:
+Js module refers to js executed in a context where is has access to `import` and `import.meta.url`.<br />
+In these files the following is supported:
 
 ### CSS import assertion
 
@@ -88,9 +98,6 @@ const sheet = await import("./style.css", {
 
 document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet]
 ```
-
-> **Note**  
-> Code is transformed when browser do not support [import assertion](https://v8.dev/features/import-assertions) or `document.adoptedStyleSheets`.
 
 ### CSS urls
 
@@ -131,9 +138,6 @@ const worker = new Worker(new URL("/worker.js", import.meta.url), {
 })
 ```
 
-> **Note**  
-> Code is transformed when browser do not support { type: "module" }
-
 Jsenv also supports [serviceWorker.register()](https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerContainer/register) and [new SharedWorker()](https://developer.mozilla.org/en-US/docs/Web/API/SharedWorker).
 
 ### JSON import assertion
@@ -154,9 +158,6 @@ const jsonModule = await import("./data.json", {
 console.log(jsonModule.default)
 ```
 
-> **Note**  
-> Code is transformed when browser do not support import assertion
-
 ### Text import assertion
 
 ```js
@@ -164,9 +165,6 @@ import text from "./data.txt" assert { type: "text" }
 
 console.log(text)
 ```
-
-> **Note**  
-> Code is always transformed because "text" is not yet a standard import assertion
 
 ## Js classic
 
