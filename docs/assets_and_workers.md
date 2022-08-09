@@ -64,7 +64,7 @@ body {
 }
 ```
 
-> **Note**
+> **Note**  
 > "@import" not yet allowed with [CSS import assertion](#CSS-import-assertion) as explained in https://web.dev/css-module-scripts/#@import-rules-not-yet-allowed
 
 ## Js modules
@@ -89,7 +89,7 @@ const sheet = await import("./style.css", {
 document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet]
 ```
 
-> **Note**
+> **Note**  
 > Code is transformed when browser do not support [import assertion](https://v8.dev/features/import-assertions) or `document.adoptedStyleSheets`.
 
 ### CSS urls
@@ -131,7 +131,7 @@ const worker = new Worker(new URL("/worker.js", import.meta.url), {
 })
 ```
 
-> **Note**
+> **Note**  
 > Code is transformed when browser do not support { type: "module" }
 
 Jsenv also supports [serviceWorker.register()](https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerContainer/register) and [new SharedWorker()](https://developer.mozilla.org/en-US/docs/Web/API/SharedWorker).
@@ -154,7 +154,7 @@ const jsonModule = await import("./data.json", {
 console.log(jsonModule.default)
 ```
 
-> **Note**
+> **Note**  
 > Code is transformed when browser do not support import assertion
 
 ### Text import assertion
@@ -165,7 +165,7 @@ import text from "./data.txt" assert { type: "text" }
 console.log(text)
 ```
 
-> **Note**
+> **Note**  
 > Code is always transformed because "text" is not yet a standard import assertion
 
 ## Js classic
