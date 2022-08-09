@@ -1,94 +1,24 @@
 # Assets and workers
 
-Or how to reference files and create web workers.
+Or how to reference files within a file.
 
-## JSON
+It's recommended to prefer leading slash url specifiers over `"../"`
 
-```js
-import json from "./data.json" assert { type: "json" }
-
-console.log(json)
+```diff
+-  background-image: url(../../logo.png);
++  background-image: url(/src/logo.png);
 ```
 
-> **Note**
-> Code is transformed if browser do not support import assertion
+- :+1: create consistent specifiers
+- :+1: escape `"../../"` hell.
 
-You can also use a dynamic import:
+The way to reference a file depends how it will be used and from where it is referenced.
 
-```js
-const jsonModule = await import("./data.json", {
-  assert: { type: "json" },
-})
+Note that external urls like `https://fonts.googleapis.com/css2?family=Roboto` are preserved during dev and in the build files.
 
-console.log(jsonModule.default)
-```
+## HTML
 
-## CSS
-
-```js
-import sheet from "./style.css" assert { type: "css" }
-
-document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet]
-```
-
-> **Note**
-> Code is transformed if browser do not support import assertion or `document.adoptedStyleSheets`.
-
-You can also use a dynamic import:
-
-```js
-const sheet = await import("./style.css", {
-  assert: { type: "css" },
-})
-
-document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet]
-```
-
-It's also possible to reference CSS file with an url:
-
-```js
-const cssFileUrl = new URL("./style.css", import.meta.url)
-
-const link = document.createElement("link")
-link.rel = "stylesheet"
-link.href = cssFileUrl
-document.head.appendChild(link)
-```
-
-## Text
-
-```js
-import text from "./data.txt" assert { type: "text" }
-
-console.log(text)
-```
-
-> **Note**
-> Code is always transformed because "text" is not yet a standard import assertion
-
-## Images (and everything else)
-
-Any of your file can be referenced using `new URL() + import meta url`.
-It will give you an url for that resource that can be used later.
-
-```js
-const imageUrl = new URL("./img.png", import.meta.url)
-
-const img = document.createElement("img")
-img.src = imageUrl
-document.body.appendChild(img)
-```
-
-When js is executed by `<script></script>` and not `<script type="module"></script>`, an other solution must be used:
-
-```js
-const url = new URL("./img.png", document.currentScript.src)
-```
-
-## Content from CDN
-
-External urls are kept intact.
-In the following HTML, jsenv keeps url to roboto font intact during dev and in the build files.
+Inside HTML files the following way to reference files are supported:
 
 ```html
 <!DOCTYPE html>
@@ -101,17 +31,163 @@ In the following HTML, jsenv keeps url to roboto font intact during dev and in t
       href="https://fonts.googleapis.com/css2?family=Roboto"
       crossorigin="anonymous"
     />
-    <style>
-      body {
-        font-family: Roboto;
-      }
-    </style>
+    <link rel="preload" href="./image.jpg" />
+    <link rel="preload" href="./script.js" as="script" />
+    <link rel="modulepreload" href="./module.js" />
   </head>
 
   <body>
     Hello world
+    <iframe href="./iframe.html"></iframe>
+    <a href="./page.html">page</a>
+    <picture>
+      <source srcset="image_320.jpg 320w, image_640.jpg 640w" />
+      <img src="image.jpg" alt="logo" />
+    </picture>
+    <script src="script.js"></script>
+    <script type="module" src="module.js"></script>
   </body>
 </html>
+```
+
+Everything is not listed in the HTML above but everything that is part of the web standard is supported including [<link rel="manifest">](https://developer.mozilla.org/en-US/docs/Web/Manifest#deploying_a_manifest) for instance.
+
+## CSS
+
+Inside CSS files all the web standards way of referencing urls are supported.
+
+```css
+@import "./file.css";
+
+body {
+  background-image: url(../../logo.png);
+}
+```
+
+> **Note**
+> "@import" not yet allowed with [CSS import assertion](#CSS-import-assertion) as explained in https://web.dev/css-module-scripts/#@import-rules-not-yet-allowed
+
+## Js modules
+
+This section explains what can be used to reference files inside js modules: when js can use `import` and `import.meta.url`.
+
+### CSS import assertion
+
+```js
+import sheet from "./style.css" assert { type: "css" }
+
+document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet]
+```
+
+And the dynamic import counterpart
+
+```js
+const sheet = await import("./style.css", {
+  assert: { type: "css" },
+})
+
+document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet]
+```
+
+> **Note**
+> Code is transformed when browser do not support [import assertion](https://v8.dev/features/import-assertions) or `document.adoptedStyleSheets`.
+
+### CSS urls
+
+```js
+const cssFileUrl = new URL("./style.css", import.meta.url)
+
+const link = document.createElement("link")
+link.rel = "stylesheet"
+link.href = cssFileUrl
+document.head.appendChild(link)
+```
+
+### Image urls
+
+```js
+const imageUrl = new URL("./img.png", import.meta.url)
+
+const img = document.createElement("img")
+img.src = imageUrl
+document.body.appendChild(img)
+```
+
+### Worker urls
+
+Depending how the worker file is written one of the 2 solutions below must be used
+
+### Js classic worker
+
+```js
+const worker = new Worker(new URL("/worker.js", import.meta.url))
+```
+
+### Js module worker
+
+```js
+const worker = new Worker(new URL("/worker.js", import.meta.url), {
+  type: "module",
+})
+```
+
+> **Note**
+> Code is transformed when browser do not support { type: "module" }
+
+Jsenv also supports [serviceWorker.register()](https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerContainer/register) and [new SharedWorker()](https://developer.mozilla.org/en-US/docs/Web/API/SharedWorker).
+
+### JSON import assertion
+
+```js
+import data from "./data.json" assert { type: "json" }
+
+console.log(data)
+```
+
+And the dynamic import counterpart
+
+```js
+const jsonModule = await import("./data.json", {
+  assert: { type: "json" },
+})
+
+console.log(jsonModule.default)
+```
+
+> **Note**
+> Code is transformed when browser do not support import assertion
+
+### Text import assertion
+
+```js
+import text from "./data.txt" assert { type: "text" }
+
+console.log(text)
+```
+
+> **Note**
+> Code is always transformed because "text" is not yet a standard import assertion
+
+## Js classic
+
+When js is executed by `<script></script>` and not `<script type="module"></script>`, import is not available. In that case `document.currentScript.src` can be used as substitute of `import.meta.url`. So all the solutions involving urls are still available.
+
+```js
+const imageUrl = new URL("./img.png", document.currentScript.src)
+
+const img = document.createElement("img")
+img.src = imageUrl
+document.body.appendChild(img)
+```
+
+It's also possible to lazy load other files using [window.fetch](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API)
+
+```js
+const jsonUrl = new URL("./data.json", document.currentScript.src)
+
+const response = await window.fetch(jsonUrl)
+const json = await response.json()
+console.log(json)
 ```
 
 <!-- Part below commented until the jsenv plugin for http urls is done -->
@@ -178,31 +254,3 @@ await startDevServer({
 > Be sure to pass "preservedUrls" to startDevServer, executeTestPlan and build
 
 --->
-
-## Worker
-
-```js
-const worker = new Worker("/worker.js", {
-  type: "module",
-})
-```
-
-You can also use the "non module" notation. Then the file must be written in "classic" worker format: a single file eventually using [self.importScripts](https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope/importScripts).
-
-```js
-const worker = new Worker("/worker.js")
-```
-
-## Service worker
-
-```js
-navigator.serviceWorker.register("/service_worker.js", {
-  type: "module",
-})
-```
-
-You can also use the "non module" notation. Then the file must be written in "classic" worker format: a single file eventually using [self.importScripts](https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope/importScripts).
-
-```js
-navigator.serviceWorker.register("/service_worker.js")
-```

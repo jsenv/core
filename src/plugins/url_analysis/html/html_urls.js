@@ -228,7 +228,7 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
         node,
       })
     },
-    souce: (node) => {
+    source: (node) => {
       visitAttributeAsUrlSpecifier({
         type: "source_src",
         node,

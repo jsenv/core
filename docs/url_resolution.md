@@ -2,8 +2,6 @@
 
 Jsenv resolve url found in files like a browser would: `new URL(specifier, baseUrl)`. Inside js modules, the url resolution is augmented with [Node ESM resolution algorithm](#node-esm-resolution-algorithm) and [FileSystem magic resolution](#filesystem-magic-resolution).
 
-It is recommended to use [leading slash](#leading-slash) when writing urls.
-
 ## Node ESM resolution algorithm
 
 Without it, the code below would throw in a browser:
@@ -63,15 +61,3 @@ await startDevServer({
 
 > **Warning**
 > File system magic resolution must be enabled if some dependencies are using import without extensions.
-
-## Leading slash
-
-It's recommended to prefer leading slash url specifiers over `"../"`
-
-```diff
--  background-image: url(../../logo.png);
-+  background-image: url(/src/logo.png);
-```
-
-- :+1: create consistent specifiers
-- :+1: escape `"../../"` hell.
