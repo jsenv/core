@@ -14,7 +14,7 @@ It's recommended to prefer leading slash instead of `"../"`:
 
 Note that external urls like `https://fonts.googleapis.com/css2?family=Roboto` are preserved during dev and in the build files.
 
-The rest of this page shows what is recommended to reference other files from HTML, CSS and js files.
+The rest of this page shows how files can be referenced within HTML, CSS and js.
 
 ## HTML
 
@@ -50,7 +50,7 @@ Inside HTML files the following way to reference files are supported:
 </html>
 ```
 
-Even if it is not listed in the HTML above, everything part of the web standard is supported. This includes [<link rel="manifest">](https://developer.mozilla.org/en-US/docs/Web/Manifest#deploying_a_manifest) for instance.
+Even if it is not listed in the HTML above, everything part of the web standard is supported. This includes [`<link rel="manifest">`](https://developer.mozilla.org/en-US/docs/Web/Manifest#deploying_a_manifest) for instance.
 
 ## CSS
 
