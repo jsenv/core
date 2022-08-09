@@ -409,16 +409,16 @@ export const createKitchen = ({
     if (urlInfo.shouldHandle) {
       // references
       const references = []
-      const addReference = (props) => {
-        const reference = createReference({
-          parentUrl: urlInfo.url,
-          ...props,
-        })
-        references.push(reference)
-        const referencedUrlInfo = resolveReference(reference, context)
-        return [reference, referencedUrlInfo]
-      }
       context.referenceUtils = {
+        add: (props) => {
+          const reference = createReference({
+            parentUrl: urlInfo.url,
+            ...props,
+          })
+          references.push(reference)
+          const referencedUrlInfo = resolveReference(reference, context)
+          return [reference, referencedUrlInfo]
+        },
         find: (predicate) => references.find(predicate),
         readGeneratedSpecifier,
         found: ({ trace, ...rest }) => {
@@ -433,7 +433,7 @@ export const createKitchen = ({
             )
           }
           // console.log(trace)
-          return addReference({
+          return context.referenceUtils.add({
             trace,
             ...rest,
           })
@@ -450,7 +450,7 @@ export const createKitchen = ({
           const parentContent = isOriginalPosition
             ? urlInfo.originalContent
             : urlInfo.content
-          return addReference({
+          return context.referenceUtils.add({
             trace: traceFromUrlSite({
               url: parentUrl,
               content: parentContent,
@@ -531,7 +531,7 @@ export const createKitchen = ({
               column,
             })
           }
-          return addReference({
+          return context.referenceUtils.add({
             trace,
             injected: true,
             ...rest,
@@ -683,6 +683,9 @@ export const createKitchen = ({
       ...(context.reference.original || context.reference),
       expectedType,
       url: urlObject.href,
+    }
+    if (context.scenarios.dev) {
+      context.referenceUtils.add(referenceWithoutSearchParam)
     }
     const urlInfoWithoutSearchParam = context.urlGraph.reuseOrCreateUrlInfo(
       referenceWithoutSearchParam.url,

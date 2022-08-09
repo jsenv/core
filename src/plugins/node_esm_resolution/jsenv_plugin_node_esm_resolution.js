@@ -123,7 +123,7 @@ export const jsenvPluginNodeEsmResolution = ({ packageConditions }) => {
         // example where it happens: https://github.com/babel/babel/blob/2ce56e832c2dd7a7ed92c89028ba929f874c2f5c/packages/babel-runtime/helpers/esm/package.json#L2
         return null
       }
-      if (context.scenarios.dev && reference.type === "js_import_export") {
+      if (reference.type === "js_import_export") {
         addRelationshipWithPackageJson({
           reference,
           context,
