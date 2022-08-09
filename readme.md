@@ -42,7 +42,7 @@ _@jsenv/core_ is tested on Mac, Windows, Linux with Node.js 18.5.0. Other operat
 | -------------------------------------------------- | ---------------------------------------------- |
 | [Browser support](./docs/browser_support.md)       | Documentation around browser support           |
 | [Url resolution](./docs/url_resolution.md)         | Url resolution inside and outside js modules   |
-| [Assets and workers](./docs/assets_and_workers.md) | How to use assets and workers                  |
+| [Assets and workers](./docs/assets_and_workers.md) | How to reference files within a file           |
 | [NPM package](./docs/npm_package.md)               | How to use a NPM package (especially commonjs) |
 
 # Name

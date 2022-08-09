@@ -2,7 +2,7 @@
 
 Or how to reference files within a file.
 
-It's recommended to prefer leading slash url specifiers over `"../"`
+It's recommended to prefer leading slash instead of `"../"`:
 
 ```diff
 -  background-image: url(../../logo.png);
@@ -12,9 +12,9 @@ It's recommended to prefer leading slash url specifiers over `"../"`
 - :+1: create consistent specifiers
 - :+1: escape `"../../"` hell.
 
-The way to reference a file depends how it will be used and from where it is referenced.
-
 Note that external urls like `https://fonts.googleapis.com/css2?family=Roboto` are preserved during dev and in the build files.
+
+The rest of this page shows what is recommended to reference other files from HTML, CSS and js files.
 
 ## HTML
 
@@ -50,11 +50,11 @@ Inside HTML files the following way to reference files are supported:
 </html>
 ```
 
-Everything is not listed in the HTML above but everything that is part of the web standard is supported including [<link rel="manifest">](https://developer.mozilla.org/en-US/docs/Web/Manifest#deploying_a_manifest) for instance.
+Even if it is not listed in the HTML above, everything part of the web standard is supported. This includes [<link rel="manifest">](https://developer.mozilla.org/en-US/docs/Web/Manifest#deploying_a_manifest) for instance.
 
 ## CSS
 
-Inside CSS files all the web standards way of referencing urls are supported.
+Inside CSS files the following ways to reference files are supported:
 
 ```css
 @import "./file.css";
@@ -69,7 +69,7 @@ body {
 
 ## Js modules
 
-This section explains what can be used to reference files inside js modules: when js can use `import` and `import.meta.url`.
+Js modules refers to js executed in a context where is has access to `import` and `import.meta.url`. In these files the following is supported:
 
 ### CSS import assertion
 
@@ -170,7 +170,7 @@ console.log(text)
 
 ## Js classic
 
-When js is executed by `<script></script>` and not `<script type="module"></script>`, import is not available. In that case `document.currentScript.src` can be used as substitute of `import.meta.url`. So all the solutions involving urls are still available.
+When js is executed by `<script></script>` and not `<script type="module"></script>`, import is not available. In that case `document.currentScript.src` can be used as substitute of `import.meta.url`. So all the solutions involving urls raised in the js modules parts are still available.
 
 ```js
 const imageUrl = new URL("./img.png", document.currentScript.src)
