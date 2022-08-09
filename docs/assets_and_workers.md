@@ -14,10 +14,10 @@ It's recommended to prefer leading slash instead of `"../"`:
 
 When a browser do not support a feature during dev or after build, code is transformed by jsenv to become compatible. Most remarkably:
 
-> - script type module
-> - worker type module
-> - import assertions
-> - document.adoptedStylesheets
+- script type module
+- worker type module
+- import assertions
+- document.adoptedStylesheets
 
 The rest of this page shows how files can be referenced within HTML, CSS and js.
 
