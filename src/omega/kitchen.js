@@ -432,7 +432,7 @@ export const createKitchen = ({
               }),
             )
           }
-          // console.log(trace)
+          // console.log(trace.message)
           return context.referenceUtils.add({
             trace,
             ...rest,
