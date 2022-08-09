@@ -133,7 +133,20 @@ export const createUrlGraph = () => {
     }
     urlInfo.implicitUrls.forEach((implicitUrl) => {
       if (!setOfDependencyUrls.has(implicitUrl)) {
-        urlInfo.implicitUrls.delete(implicitUrl)
+        let implicitUrlComesFromInlineContent = false
+        for (const dependencyUrl of urlInfo.dependencies) {
+          const dependencyUrlInfo = getUrlInfo(dependencyUrl)
+          if (
+            dependencyUrlInfo.isInline &&
+            dependencyUrlInfo.implicitUrls.has(implicitUrl)
+          ) {
+            implicitUrlComesFromInlineContent = true
+            break
+          }
+        }
+        if (!implicitUrlComesFromInlineContent) {
+          urlInfo.implicitUrls.delete(implicitUrl)
+        }
         if (urlInfo.isInline) {
           const parentUrlInfo = getUrlInfo(urlInfo.inlineUrlSite.url)
           parentUrlInfo.implicitUrls.delete(implicitUrl)
