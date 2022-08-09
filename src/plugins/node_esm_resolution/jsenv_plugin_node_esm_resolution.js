@@ -17,8 +17,6 @@ import {
 } from "@jsenv/node-esm-resolution"
 
 export const jsenvPluginNodeEsmResolution = ({ packageConditions }) => {
-  const unregisters = []
-
   const addRelationshipWithPackageJson = ({
     context,
     packageJsonUrl,
@@ -145,9 +143,6 @@ export const jsenvPluginNodeEsmResolution = ({ packageConditions }) => {
         }
       }
       return null
-    },
-    destroy: () => {
-      unregisters.forEach((unregister) => unregister())
     },
   }
 }
