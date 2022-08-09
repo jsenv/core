@@ -12,14 +12,14 @@ It's recommended to prefer leading slash instead of `"../"`:
 - :+1: create consistent specifiers
 - :+1: escape `"../../"` hell.
 
-When a browser do not support a feature during dev or after build, code is transformed by jsenv to become compatible. Most remarkably:
+The rest of this page shows how files can be referenced within HTML, CSS and js.
+
+This upcoming sections contains extract of code using recent features. Keep in mind that when a feature is not supported by a browser during dev of after build, code is transformed by jsenv to become compatible. This includes most remarkably:
 
 - script type module
 - worker type module
 - import assertions
 - document.adoptedStylesheets
-
-The rest of this page shows how files can be referenced within HTML, CSS and js.
 
 > **Note**  
 > External urls, like `https://fonts.googleapis.com/css2?family=Roboto`, are preserved during dev and in the build files.
