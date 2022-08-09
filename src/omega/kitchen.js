@@ -153,7 +153,7 @@ export const createKitchen = ({
     reference.next = newReference
     newReference.prev = reference
     newReference.original = reference.original || reference
-    //  newReference.isEntryPoint = reference.isEntryPoint
+    // newReference.isEntryPoint = reference.isEntryPoint
   }
   const resolveReference = (reference, context = kitchenContext) => {
     const referenceContext = {
@@ -376,11 +376,7 @@ export const createKitchen = ({
       context: contextDuringFetch,
     })
     await urlInfoTransformer.initTransformations(urlInfo, contextDuringFetch)
-    if (
-      cleanAfterFetch &&
-      urlInfo.dependents.size === 0
-      // && context.scenarios.build
-    ) {
+    if (cleanAfterFetch && urlInfo.dependents.size === 0 && scenarios.build) {
       contextDuringFetch.urlGraph.deleteUrlInfo(urlInfo.url)
     }
   }
@@ -410,6 +406,7 @@ export const createKitchen = ({
       // references
       const references = []
       context.referenceUtils = {
+        _references: references,
         add: (props) => {
           const reference = createReference({
             parentUrl: urlInfo.url,
@@ -683,9 +680,6 @@ export const createKitchen = ({
       ...(context.reference.original || context.reference),
       expectedType,
       url: urlObject.href,
-    }
-    if (context.scenarios.dev) {
-      context.referenceUtils.add(referenceWithoutSearchParam)
     }
     const urlInfoWithoutSearchParam = context.urlGraph.reuseOrCreateUrlInfo(
       referenceWithoutSearchParam.url,

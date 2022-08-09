@@ -19,9 +19,18 @@ export const jsenvPluginImportAssertions = ({
   css = "auto",
   text = "auto",
 }) => {
-  const updateReference = (reference, searchParam) => {
-    reference.expectedType = "js_module"
-    reference.filename = `${urlToFilename(reference.url)}.js`
+  const transpilations = { json, css, text }
+  const shouldTranspileImportAssertion = (context, type) => {
+    const transpilation = transpilations[type]
+    if (transpilation === true) {
+      return true
+    }
+    if (transpilation === "auto") {
+      return !context.isSupportedOnCurrentClients(`import_type_${type}`)
+    }
+    return false
+  }
+  const updateReference = (reference, type) => {
     reference.mutation = (magicSource) => {
       magicSource.remove({
         start: reference.assertNode.start,
@@ -29,7 +38,7 @@ export const jsenvPluginImportAssertions = ({
       })
     }
     const newUrl = injectQueryParams(reference.url, {
-      [searchParam]: "",
+      [`as_${type}_module`]: "",
     })
     return newUrl
   }
@@ -44,9 +53,9 @@ export const jsenvPluginImportAssertions = ({
       //   - means rollup can bundle more js file together
       //   - means url versioning can work for css inlined in js
       if (context.scenarios.build) {
-        json = true
-        css = true
-        text = true
+        transpilations.json = true
+        transpilations.css = true
+        transpilations.text = true
       }
     },
     redirectUrl: {
@@ -54,43 +63,53 @@ export const jsenvPluginImportAssertions = ({
         if (!reference.assert) {
           return null
         }
-        if (reference.assert.type === "json") {
-          const shouldTranspileJsonImportAssertion =
-            json === true
-              ? true
-              : json === "auto"
-              ? !context.isSupportedOnCurrentClients("import_type_json")
-              : false
-          if (shouldTranspileJsonImportAssertion) {
-            return updateReference(reference, "as_json_module")
-          }
-          return null
-        }
-        if (reference.assert.type === "css") {
-          const shouldTranspileCssImportAssertion =
-            css === true
-              ? true
-              : css === "auto"
-              ? !context.isSupportedOnCurrentClients("import_type_css")
-              : false
-          if (shouldTranspileCssImportAssertion) {
-            return updateReference(reference, "as_css_module")
-          }
-          return null
-        }
-        if (reference.assert.type === "text") {
-          const shouldTranspileTextImportAssertion =
-            text === true
-              ? true
-              : text === "auto"
-              ? !context.isSupportedOnCurrentClients("import_type_text")
-              : false
-          if (shouldTranspileTextImportAssertion) {
-            return updateReference(reference, "as_text_module")
-          }
-          return null
+        const type = reference.assert.type
+        if (shouldTranspileImportAssertion(context, type)) {
+          return updateReference(reference, type)
         }
         return null
+      },
+    },
+    transformUrlSearchParams: {
+      js_import_export: (reference) => {
+        if (
+          reference.searchParams.has("as_json_module") ||
+          reference.searchParams.has("as_css_module") ||
+          reference.searchParams.has("as_text_module")
+        ) {
+          reference.expectedType = "js_module"
+          reference.filename = `${urlToFilename(reference.url)}.js`
+        }
+      },
+    },
+    transformUrlContent: {
+      js_module: (urlInfo, context) => {
+        if (!context.scenarios.dev) {
+          return
+        }
+        const urlObject = new URL(urlInfo.url)
+        let searchParam
+        if (urlObject.searchParams.has("as_json_module")) {
+          searchParam = "as_json_module"
+        } else if (urlObject.searchParams.has("as_css_module")) {
+          searchParam = "as_css_module"
+        } else if (urlObject.searchParams.has("as_text_module")) {
+          searchParam = "as_text_module"
+        }
+        if (!searchParam) {
+          return
+        }
+        urlObject.searchParams.delete(searchParam)
+        // do a reference.inject
+        // (because it's not a real reference to the file)
+        // or we could consider this ref as implicit?
+        // not it's explicit
+        context.referenceUtils.found({
+          type: "js_import_export",
+          subtype: context.reference.subtype,
+          specifier: urlObject.href,
+          expectedType: "js_module",
+        })
       },
     },
   }

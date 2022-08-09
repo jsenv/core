@@ -66,8 +66,41 @@ export const createUrlGraph = () => {
   }
 
   const updateReferences = (urlInfo, references) => {
-    const currentSetOfDependencyUrls = new Set(urlInfo.dependencies)
-    const currentSetOfImplicitUrls = new Set(urlInfo.implicitUrls)
+    const setOfDependencyUrls = new Set()
+    const setOfImplicitUrls = new Set()
+    references.forEach((reference) => {
+      if (reference.isResourceHint) {
+        // resource hint are a special kind of reference.
+        // They are a sort of weak reference to an url.
+        // We ignore them so that url referenced only by resource hints
+        // have url.dependents.size === 0 and can be considered as not used
+        // It means html won't consider url referenced solely
+        // by <link> as dependency and it's fine
+        return
+      }
+      const dependencyUrl = reference.url
+      setOfDependencyUrls.add(dependencyUrl)
+      // an implicit reference do not appear in the file but a non-explicited file have an impact on it
+      // (package.json on import resolution for instance)
+      // in that case:
+      // - file depends on the implicit file (it must autoreload if package.json is modified)
+      // - cache validity for the file depends on the implicit file (it must be re-cooked in package.json is modified)
+      if (reference.isImplicit) {
+        setOfImplicitUrls.add(dependencyUrl)
+      }
+    })
+    setOfDependencyUrls.forEach((dependencyUrl) => {
+      urlInfo.dependencies.add(dependencyUrl)
+      const dependencyUrlInfo = reuseOrCreateUrlInfo(dependencyUrl)
+      dependencyUrlInfo.dependents.add(urlInfo.url)
+    })
+    setOfImplicitUrls.forEach((implicitUrl) => {
+      urlInfo.implicitUrls.add(implicitUrl)
+      if (urlInfo.isInline) {
+        const parentUrlInfo = getUrlInfo(urlInfo.inlineUrlSite.url)
+        parentUrlInfo.implicitUrls.add(implicitUrl)
+      }
+    })
     const prunedUrlInfos = []
     const pruneDependency = (urlInfo, urlToClean) => {
       urlInfo.dependencies.delete(urlToClean)
@@ -83,50 +116,9 @@ export const createUrlGraph = () => {
         prunedUrlInfos.push(dependencyUrlInfo)
       }
     }
-
-    references.forEach((reference) => {
-      if (reference.isResourceHint) {
-        // resource hint are a special kind of reference.
-        // They are a sort of weak reference to an url.
-        // We ignore them so that url referenced only by resource hints
-        // have url.dependents.size === 0 and can be considered as not used
-        // It means html won't consider url referenced solely
-        // by <link> as dependency and it's fine
-        return
-      }
-      const dependencyUrl = reference.url
-      const exists = currentSetOfDependencyUrls.has(dependencyUrl)
-      if (exists) {
-        // if it already exists there is nothing to do right??
-      } else {
-        urlInfo.dependencies.add(dependencyUrl)
-        const dependencyUrlInfo = reuseOrCreateUrlInfo(dependencyUrl)
-        dependencyUrlInfo.dependents.add(urlInfo.url)
-      }
-
-      // an implicit reference do not appear in the file but a non-explicited file have an impact on it
-      // (package.json on import resolution for instance)
-      // in that case:
-      // - file depends on the implicit file (it must autoreload if package.json is modified)
-      // - cache validity for the file depends on the implicit file (it must be re-cooked in package.json is modified)
-      if (reference.isImplicit) {
-        if (!currentSetOfImplicitUrls.has(dependencyUrl)) {
-          urlInfo.implicitUrls.add(dependencyUrl)
-        }
-        if (urlInfo.isInline) {
-          const parentUrlInfo = getUrlInfo(urlInfo.inlineUrlSite.url)
-          parentUrlInfo.implicitUrls.add(dependencyUrl)
-        }
-      }
-    })
-    currentSetOfDependencyUrls.forEach((dependencyUrl) => {
-      if (!urlInfo.dependencies.has(dependencyUrl)) {
+    urlInfo.dependencies.forEach((dependencyUrl) => {
+      if (!setOfDependencyUrls.has(dependencyUrl)) {
         pruneDependency(urlInfo, dependencyUrl)
-      }
-    })
-    currentSetOfImplicitUrls.forEach((implicitUrl) => {
-      if (!urlInfo.implicitUrls.has(implicitUrl)) {
-        urlInfo.implicitUrls.delete(implicitUrl)
       }
     })
     if (prunedUrlInfos.length) {
@@ -139,6 +131,15 @@ export const createUrlGraph = () => {
       })
       prunedUrlInfosCallbackRef.current(prunedUrlInfos, urlInfo)
     }
+    urlInfo.implicitUrls.forEach((implicitUrl) => {
+      if (!setOfDependencyUrls.has(implicitUrl)) {
+        urlInfo.implicitUrls.delete(implicitUrl)
+        if (urlInfo.isInline) {
+          const parentUrlInfo = getUrlInfo(urlInfo.inlineUrlSite.url)
+          parentUrlInfo.implicitUrls.delete(implicitUrl)
+        }
+      }
+    })
     urlInfo.references = references
     return urlInfo
   }
