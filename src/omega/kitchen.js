@@ -622,7 +622,7 @@ export const createKitchen = ({
     )
   }
   const cook = memoizeCook(async (urlInfo, context) => {
-    if (!writeGeneratedFiles || !context.outDirectoryUrl) {
+    if (!writeGeneratedFiles || !outDirectoryUrl) {
       await _cook(urlInfo, context)
       return
     }

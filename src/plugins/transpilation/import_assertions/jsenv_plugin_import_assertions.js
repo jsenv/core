@@ -37,6 +37,8 @@ export const jsenvPluginImportAssertions = ({
         end: reference.assertNode.end,
       })
     }
+    reference.expectedType = "js_module"
+    reference.filename = `${urlToFilename(reference.url)}.js`
     const newUrl = injectQueryParams(reference.url, {
       [`as_${type}_module`]: "",
     })
@@ -67,19 +69,16 @@ export const jsenvPluginImportAssertions = ({
         if (shouldTranspileImportAssertion(context, type)) {
           return updateReference(reference, type)
         }
-        return null
-      },
-    },
-    transformUrlSearchParams: {
-      js_import_export: (reference) => {
+        const { searchParams } = new URL(reference.url)
         if (
-          reference.searchParams.has("as_json_module") ||
-          reference.searchParams.has("as_css_module") ||
-          reference.searchParams.has("as_text_module")
+          searchParams.has("as_json_module") ||
+          searchParams.has("as_css_module") ||
+          searchParams.has("as_text_module")
         ) {
           reference.expectedType = "js_module"
           reference.filename = `${urlToFilename(reference.url)}.js`
         }
+        return null
       },
     },
     transformUrlContent: {
