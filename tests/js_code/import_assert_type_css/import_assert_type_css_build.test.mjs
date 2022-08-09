@@ -35,30 +35,12 @@ const test = async (options) => {
 }
 
 // support for <script type="module">
-await test({
-  // logLevel: "info",
-  runtimeCompat: {
-    chrome: "65",
-  },
-})
+await test({ runtimeCompat: { chrome: "65" } })
 
 // no bundling
-await test({
-  bundling: false,
-  runtimeCompat: {
-    chrome: "65",
-  },
-})
-
+await test({ bundling: false, runtimeCompat: { chrome: "65" } })
 // no support for <script type="module">
-await test({
-  // transpilation: {
-  //   topLevelAwait: true,
-  // },
-  runtimeCompat: {
-    chrome: "60",
-  },
-})
+await test({ runtimeCompat: { chrome: "60" } })
 
 // minification
 {

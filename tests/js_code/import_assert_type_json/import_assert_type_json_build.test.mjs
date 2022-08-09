@@ -13,6 +13,7 @@ const test = async (options) => {
       "./main.html": "main.html",
     },
     minification: false,
+    writeGeneratedFiles: true,
     ...options,
   })
   const server = await startFileServer({
@@ -36,20 +37,12 @@ const test = async (options) => {
 }
 
 // support for <script type="module">
-await test({
-  runtimeCompat: {
-    chrome: "64",
-  },
-})
-
+await test({ runtimeCompat: { chrome: "64" } })
 // no support <script type="module">
+await test({ runtimeCompat: { chrome: "60" } })
+// support for <script type="module"> + no bundling
 await test({
-  runtimeCompat: {
-    chrome: "60",
-  },
-})
-
-// no bundling
-await test({
+  runtimeCompat: { chrome: "64" },
   bundling: false,
+  versioning: false,
 })

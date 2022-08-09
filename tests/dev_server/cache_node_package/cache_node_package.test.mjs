@@ -49,7 +49,7 @@ const devServer = await startDevServer({
 const browser = await chromium.launch({ headless: !debug })
 try {
   const page = await launchBrowserPage(browser)
-  await page.goto(`${devServer.origin}/src/main.html`)
+  await page.goto(`${devServer.origin}/main.html`)
   const getResult = async () => {
     const result = await page.evaluate(
       /* eslint-disable no-undef */

@@ -2,7 +2,7 @@ import { urlToRelativeUrl } from "@jsenv/urls"
 
 import { urlSpecifierEncoding } from "./url_specifier_encoding.js"
 
-export const createUrlGraph = ({ includeOriginalUrls } = {}) => {
+export const createUrlGraph = () => {
   const createUrlInfoCallbackRef = { current: () => {} }
   const prunedUrlInfosCallbackRef = { current: () => {} }
 
@@ -17,7 +17,6 @@ export const createUrlGraph = ({ includeOriginalUrls } = {}) => {
       }
     }
   }
-
   const reuseOrCreateUrlInfo = (url) => {
     const existingUrlInfo = getUrlInfo(url)
     if (existingUrlInfo) return existingUrlInfo
@@ -26,6 +25,10 @@ export const createUrlGraph = ({ includeOriginalUrls } = {}) => {
     createUrlInfoCallbackRef.current(urlInfo)
     return urlInfo
   }
+  const getParentIfInline = (urlInfo) => {
+    return urlInfo.isInline ? getUrlInfo(urlInfo.inlineUrlSite.url) : urlInfo
+  }
+
   const inferReference = (specifier, parentUrl) => {
     const parentUrlInfo = getUrlInfo(parentUrl)
     if (!parentUrlInfo) {
@@ -64,16 +67,7 @@ export const createUrlGraph = ({ includeOriginalUrls } = {}) => {
 
   const updateReferences = (urlInfo, references) => {
     const setOfDependencyUrls = new Set()
-
-    // for import assertion "file.css?as_css_module" depends on "file.css"
-    // this is enabled only for dev where there is autoreload
-    // during build the css file must be considered as not referenced
-    // (except if referenced explicitely by something else) so that
-    // the css file does not appear in the build directory
-    if (includeOriginalUrls && urlInfo.originalUrl !== urlInfo.url) {
-      setOfDependencyUrls.add(urlInfo.originalUrl)
-    }
-
+    const setOfImplicitUrls = new Set()
     references.forEach((reference) => {
       if (reference.isResourceHint) {
         // resource hint are a special kind of reference.
@@ -84,51 +78,83 @@ export const createUrlGraph = ({ includeOriginalUrls } = {}) => {
         // by <link> as dependency and it's fine
         return
       }
-      setOfDependencyUrls.add(reference.url)
-    })
-    const urlsToRemove = Array.from(urlInfo.dependencies).filter(
-      (dep) => !setOfDependencyUrls.has(dep),
-    )
-    pruneDependencies(urlInfo, urlsToRemove)
-    urlInfo.references = references
-    setOfDependencyUrls.forEach((dependencyUrl) => {
-      const dependencyUrlInfo = reuseOrCreateUrlInfo(dependencyUrl)
-      urlInfo.dependencies.add(dependencyUrl)
-      dependencyUrlInfo.dependents.add(urlInfo.url)
-    })
-    return urlInfo
-  }
-  const pruneDependencies = (firstUrlInfo, urlsToRemove) => {
-    const prunedUrlInfos = []
-    const removeDependencies = (urlInfo, urlsToPrune) => {
-      urlsToPrune.forEach((urlToPrune) => {
-        urlInfo.dependencies.delete(urlToPrune)
-        const dependencyUrlInfo = getUrlInfo(urlToPrune)
-        if (!dependencyUrlInfo) {
-          return
-        }
-        dependencyUrlInfo.dependents.delete(urlInfo.url)
-        if (dependencyUrlInfo.dependents.size === 0) {
-          removeDependencies(
-            dependencyUrlInfo,
-            Array.from(dependencyUrlInfo.dependencies),
-          )
-          prunedUrlInfos.push(dependencyUrlInfo)
-        }
-      })
-    }
-    removeDependencies(firstUrlInfo, urlsToRemove)
-    if (prunedUrlInfos.length === 0) {
-      return
-    }
-    prunedUrlInfos.forEach((prunedUrlInfo) => {
-      prunedUrlInfo.modifiedTimestamp = Date.now()
-      if (prunedUrlInfo.isInline) {
-        // should we always delete?
-        deleteUrlInfo(prunedUrlInfo.url)
+      const dependencyUrl = reference.url
+      setOfDependencyUrls.add(dependencyUrl)
+      // an implicit reference do not appear in the file but a non-explicited file have an impact on it
+      // (package.json on import resolution for instance)
+      // in that case:
+      // - file depends on the implicit file (it must autoreload if package.json is modified)
+      // - cache validity for the file depends on the implicit file (it must be re-cooked in package.json is modified)
+      if (reference.isImplicit) {
+        setOfImplicitUrls.add(dependencyUrl)
       }
     })
-    prunedUrlInfosCallbackRef.current(prunedUrlInfos, firstUrlInfo)
+    setOfDependencyUrls.forEach((dependencyUrl) => {
+      urlInfo.dependencies.add(dependencyUrl)
+      const dependencyUrlInfo = reuseOrCreateUrlInfo(dependencyUrl)
+      dependencyUrlInfo.dependents.add(urlInfo.url)
+    })
+    setOfImplicitUrls.forEach((implicitUrl) => {
+      urlInfo.implicitUrls.add(implicitUrl)
+      if (urlInfo.isInline) {
+        const parentUrlInfo = getUrlInfo(urlInfo.inlineUrlSite.url)
+        parentUrlInfo.implicitUrls.add(implicitUrl)
+      }
+    })
+    const prunedUrlInfos = []
+    const pruneDependency = (urlInfo, urlToClean) => {
+      urlInfo.dependencies.delete(urlToClean)
+      const dependencyUrlInfo = getUrlInfo(urlToClean)
+      if (!dependencyUrlInfo) {
+        return
+      }
+      dependencyUrlInfo.dependents.delete(urlInfo.url)
+      if (dependencyUrlInfo.dependents.size === 0) {
+        dependencyUrlInfo.dependencies.forEach((dependencyUrl) => {
+          pruneDependency(dependencyUrlInfo, dependencyUrl)
+        })
+        prunedUrlInfos.push(dependencyUrlInfo)
+      }
+    }
+    urlInfo.dependencies.forEach((dependencyUrl) => {
+      if (!setOfDependencyUrls.has(dependencyUrl)) {
+        pruneDependency(urlInfo, dependencyUrl)
+      }
+    })
+    if (prunedUrlInfos.length) {
+      prunedUrlInfos.forEach((prunedUrlInfo) => {
+        prunedUrlInfo.modifiedTimestamp = Date.now()
+        if (prunedUrlInfo.isInline) {
+          // should we always delete?
+          deleteUrlInfo(prunedUrlInfo.url)
+        }
+      })
+      prunedUrlInfosCallbackRef.current(prunedUrlInfos, urlInfo)
+    }
+    urlInfo.implicitUrls.forEach((implicitUrl) => {
+      if (!setOfDependencyUrls.has(implicitUrl)) {
+        let implicitUrlComesFromInlineContent = false
+        for (const dependencyUrl of urlInfo.dependencies) {
+          const dependencyUrlInfo = getUrlInfo(dependencyUrl)
+          if (
+            dependencyUrlInfo.isInline &&
+            dependencyUrlInfo.implicitUrls.has(implicitUrl)
+          ) {
+            implicitUrlComesFromInlineContent = true
+            break
+          }
+        }
+        if (!implicitUrlComesFromInlineContent) {
+          urlInfo.implicitUrls.delete(implicitUrl)
+        }
+        if (urlInfo.isInline) {
+          const parentUrlInfo = getUrlInfo(urlInfo.inlineUrlSite.url)
+          parentUrlInfo.implicitUrls.delete(implicitUrl)
+        }
+      }
+    })
+    urlInfo.references = references
+    return urlInfo
   }
 
   const considerModified = (urlInfo, modifiedTimestamp = Date.now()) => {
@@ -166,6 +192,8 @@ export const createUrlGraph = ({ includeOriginalUrls } = {}) => {
     reuseOrCreateUrlInfo,
     getUrlInfo,
     deleteUrlInfo,
+    getParentIfInline,
+
     inferReference,
     updateReferences,
     considerModified,
@@ -206,7 +234,7 @@ const createUrlInfo = (url) => {
     references: [],
     dependencies: new Set(),
     dependents: new Set(),
-    relateds: new Set(),
+    implicitUrls: new Set(),
     type: undefined, // "html", "css", "js_classic", "js_module", "importmap", "json", "webmanifest", ...
     subtype: undefined, // "worker", "service_worker", "shared_worker" for js, otherwise undefined
     contentType: "", // "text/html", "text/css", "text/javascript", "application/json", ...

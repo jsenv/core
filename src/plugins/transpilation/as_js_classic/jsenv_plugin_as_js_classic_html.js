@@ -118,7 +118,7 @@ export const jsenvPluginAsJsClassicHtml = ({
         classicScriptNodes.forEach((classicScriptNode) => {
           const src = getHtmlNodeAttribute(classicScriptNode, "src")
           if (src !== undefined) {
-            const reference = urlInfo.references.find(
+            const reference = context.referenceUtils.find(
               (ref) =>
                 ref.generatedSpecifier === src && ref.type === "script_src",
             )
@@ -139,7 +139,7 @@ export const jsenvPluginAsJsClassicHtml = ({
         moduleScriptNodes.forEach((moduleScriptNode) => {
           const src = getHtmlNodeAttribute(moduleScriptNode, "src")
           if (src !== undefined) {
-            const reference = urlInfo.references.find(
+            const reference = context.referenceUtils.find(
               (ref) =>
                 ref.generatedSpecifier === src &&
                 ref.type === "script_src" &&
@@ -207,7 +207,7 @@ export const jsenvPluginAsJsClassicHtml = ({
         if (shouldTransformScriptTypeModule) {
           preloadAsScriptNodes.forEach((preloadAsScriptNode) => {
             const href = getHtmlNodeAttribute(preloadAsScriptNode, "href")
-            const reference = urlInfo.references.find(
+            const reference = context.referenceUtils.find(
               (ref) =>
                 ref.generatedSpecifier === href &&
                 ref.type === "link_href" &&
@@ -237,7 +237,7 @@ export const jsenvPluginAsJsClassicHtml = ({
           })
           modulePreloadNodes.forEach((modulePreloadNode) => {
             const href = getHtmlNodeAttribute(modulePreloadNode, "href")
-            const reference = urlInfo.references.find(
+            const reference = context.referenceUtils.find(
               (ref) =>
                 ref.generatedSpecifier === href &&
                 ref.type === "link_href" &&
