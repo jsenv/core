@@ -1,4 +1,4 @@
-import { timeStart } from "@jsenv/server"
+import { performance } from "node:perf_hooks"
 
 const HOOK_NAMES = [
   "init",
@@ -67,11 +67,9 @@ export const createPluginController = ({ plugins, scenarios }) => {
     if (!hookFn) {
       return null
     }
-    let timeEnd
+    let startTimestamp
     if (info.timing) {
-      timeEnd = timeStart(
-        `${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`,
-      )
+      startTimestamp = performance.now()
     }
     currentPlugin = hook.plugin
     currentHookName = hook.name
@@ -79,7 +77,8 @@ export const createPluginController = ({ plugins, scenarios }) => {
     currentPlugin = null
     currentHookName = null
     if (info.timing) {
-      Object.assign(info.timing, timeEnd())
+      info.timing[`${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`] =
+        performance.now() - startTimestamp
     }
     valueReturned = assertAndNormalizeReturnValue(hook.name, valueReturned)
     return valueReturned
@@ -90,11 +89,9 @@ export const createPluginController = ({ plugins, scenarios }) => {
       return null
     }
 
-    let timeEnd
+    let startTimestamp
     if (info.timing) {
-      timeEnd = timeStart(
-        `${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`,
-      )
+      startTimestamp = performance.now()
     }
     currentPlugin = hook.plugin
     currentHookName = hook.name
@@ -102,7 +99,8 @@ export const createPluginController = ({ plugins, scenarios }) => {
     currentPlugin = null
     currentHookName = null
     if (info.timing) {
-      Object.assign(info.timing, timeEnd())
+      info.timing[`${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`] =
+        performance.now() - startTimestamp
     }
     valueReturned = assertAndNormalizeReturnValue(hook.name, valueReturned)
     return valueReturned
