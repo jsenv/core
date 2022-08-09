@@ -16,11 +16,11 @@ It's recommended to prefer leading slash instead of `"../"`:
 > External urls, like `https://fonts.googleapis.com/css2?family=Roboto`, are preserved during dev and in the build files.
 
 > **Note**  
-> When something is not supported during dev or after build, it is transformed by jsenv to run as expected. This includes mainly:
+> When a browser do not support a feature during dev or after build, code is transformed by jsenv to become compatible. We will mainly notice:
 >
 > - script type module
 > - worker type module
-> - import assertion
+> - import assertions
 > - document.adoptedStylesheets
 
 The rest of this page shows how files can be referenced within HTML, CSS and js.
