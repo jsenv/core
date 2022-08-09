@@ -9,7 +9,6 @@
 
 import { readFileSync } from "node:fs"
 import { bufferToEtag } from "@jsenv/filesystem"
-
 import {
   applyNodeEsmResolution,
   defaultLookupPackageScope,
@@ -20,27 +19,24 @@ import {
 export const jsenvPluginNodeEsmResolution = ({ packageConditions }) => {
   const unregisters = []
 
-  const injectDependencyToPackageFile = ({
-    packageDirectoryUrl,
-    packageFieldName,
-    propagateToAncestors = false,
+  const addRelationshipWithPackageJson = ({
     context,
+    packageJsonUrl,
+    field,
+    hasVersioningEffect = false,
   }) => {
-    const packageJsonUrl = new URL("./package.json", packageDirectoryUrl).href
-    const urlInfo = context.urlGraph.reuseOrCreateUrlInfo(
-      context.reference.parentUrl,
-    )
-    const referenceFound = urlInfo.references.find(
-      (ref) => ref.type === "package_json" && ref.subtype === packageFieldName,
+    const referenceFound = context.referenceUtils.find(
+      (ref) => ref.type === "package_json" && ref.subtype === field,
     )
     if (referenceFound) {
       return
     }
-    urlInfo.relateds.add(packageJsonUrl)
     const [, packageJsonUrlInfo] = context.referenceUtils.inject({
       type: "package_json",
-      subtype: packageFieldName,
+      subtype: field,
       specifier: packageJsonUrl,
+      isImplicit: true,
+      hasVersioningEffect,
     })
     if (packageJsonUrlInfo.type === undefined) {
       const packageJsonContentAsBuffer = readFileSync(new URL(packageJsonUrl))
@@ -48,12 +44,6 @@ export const jsenvPluginNodeEsmResolution = ({ packageConditions }) => {
       packageJsonUrlInfo.content = String(packageJsonContentAsBuffer)
       packageJsonUrlInfo.originalContentEtag = packageJsonUrlInfo.contentEtag =
         bufferToEtag(packageJsonContentAsBuffer)
-    }
-
-    if (propagateToAncestors) {
-      context.urlGraph.visitDependents(urlInfo, (dependentUrlInfo) => {
-        dependentUrlInfo.relateds.add(packageJsonUrl)
-      })
     }
   }
 
@@ -88,12 +78,13 @@ export const jsenvPluginNodeEsmResolution = ({ packageConditions }) => {
             // this reference depends on package.json and node_modules
             // to be resolved. Each file using this specifier
             // must be invalidated when corresponding package.json changes
-            injectDependencyToPackageFile({
-              packageDirectoryUrl: packageUrl,
-              packageFieldName: type.startsWith("field:")
-                ? type.slice("field:".length)
-                : null,
+            addRelationshipWithPackageJson({
+              reference,
               context,
+              packageJsonUrl: `${packageUrl}package.json`,
+              field: type.startsWith("field:")
+                ? `#${type.slice("field:".length)}`
+                : "",
             })
           }
         }
@@ -133,14 +124,12 @@ export const jsenvPluginNodeEsmResolution = ({ packageConditions }) => {
         return null
       }
       if (context.scenarios.dev && reference.type === "js_import_export") {
-        injectDependencyToPackageFile({
-          packageDirectoryUrl,
-          packageFieldName: "version",
+        addRelationshipWithPackageJson({
+          reference,
           context,
-          // because versioning must be disabled until
-          // we found something not versioned (html for instance)
-          // and reconstruct graph from there as files are put in browser cache
-          propagateToAncestors: true,
+          packageJsonUrl: `${packageDirectoryUrl}package.json`,
+          field: "version",
+          hasVersioningEffect: true,
         })
       }
       return {

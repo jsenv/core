@@ -25,7 +25,7 @@ export const jsenvPluginImportMetaHot = () => {
         htmlUrlInfo.data.hotAcceptSelf = false
         htmlUrlInfo.data.hotAcceptDependencies = hotReferences.map(
           ({ type, specifier }) => {
-            const existingReference = htmlUrlInfo.references.find(
+            const existingReference = context.referenceUtils.find(
               (existingReference) => {
                 return (
                   existingReference.type === type &&

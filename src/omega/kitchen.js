@@ -87,9 +87,11 @@ export const createKitchen = ({
     isOriginalPosition,
     shouldHandle,
     isEntryPoint = false,
-    isInline = false,
-    injected = false,
     isResourceHint = false,
+    isImplicit = false,
+    hasVersioningEffect = false,
+    injected = false,
+    isInline = false,
     content,
     contentType,
     assert,
@@ -128,11 +130,13 @@ export const createKitchen = ({
       baseUrl,
       shouldHandle,
       isEntryPoint,
-      isInline,
-      injected,
       isResourceHint,
+      isImplicit,
+      hasVersioningEffect,
+      injected,
       timing: {},
       // for inline resources the reference contains the content
+      isInline,
       content,
       contentType,
       escape: null,
@@ -402,147 +406,150 @@ export const createKitchen = ({
       })
     }
 
-    // references
-    const references = []
-    const addReference = (props) => {
-      const reference = createReference({
-        parentUrl: urlInfo.url,
-        ...props,
-      })
-      references.push(reference)
-      const referencedUrlInfo = resolveReference(reference, context)
-      return [reference, referencedUrlInfo]
-    }
-    context.referenceUtils = {
-      readGeneratedSpecifier,
-      found: ({ trace, ...rest }) => {
-        if (trace === undefined) {
-          trace = traceFromUrlSite(
-            adjustUrlSite(urlInfo, {
-              urlGraph,
-              url: urlInfo.url,
-              line: rest.specifierLine,
-              column: rest.specifierColumn,
-            }),
-          )
-        }
-        // console.log(trace)
-        return addReference({
-          trace,
-          ...rest,
-        })
-      },
-      foundInline: ({
-        isOriginalPosition,
-        specifierLine,
-        specifierColumn,
-        ...rest
-      }) => {
-        const parentUrl = isOriginalPosition
-          ? urlInfo.url
-          : urlInfo.generatedUrl
-        const parentContent = isOriginalPosition
-          ? urlInfo.originalContent
-          : urlInfo.content
-        return addReference({
-          trace: traceFromUrlSite({
-            url: parentUrl,
-            content: parentContent,
-            line: specifierLine,
-            column: specifierColumn,
-          }),
-          isOriginalPosition,
-          specifierLine,
-          specifierColumn,
-          isInline: true,
-          ...rest,
-        })
-      },
-      update: (currentReference, newReferenceParams) => {
-        const index = references.indexOf(currentReference)
-        if (index === -1) {
-          throw new Error(`reference do not exists`)
-        }
-        const previousReference = currentReference
-        const nextReference = createReference({
-          ...previousReference,
-          ...newReferenceParams,
-        })
-        references[index] = nextReference
-        mutateReference(previousReference, nextReference)
-        const newUrlInfo = resolveReference(nextReference, context)
-        const currentUrlInfo = context.urlGraph.getUrlInfo(currentReference.url)
-        if (
-          currentUrlInfo &&
-          currentUrlInfo !== newUrlInfo &&
-          currentUrlInfo.dependents.size === 0
-        ) {
-          context.urlGraph.deleteUrlInfo(currentReference.url)
-        }
-        return [nextReference, newUrlInfo]
-      },
-      becomesInline: (
-        reference,
-        {
-          isOriginalPosition,
-          specifier,
-          specifierLine,
-          specifierColumn,
-          contentType,
-          content,
-        },
-      ) => {
-        const parentUrl = isOriginalPosition
-          ? urlInfo.url
-          : urlInfo.generatedUrl
-        const parentContent = isOriginalPosition
-          ? urlInfo.originalContent
-          : urlInfo.content
-        return context.referenceUtils.update(reference, {
-          trace: traceFromUrlSite({
-            url: parentUrl,
-            content: parentContent,
-            line: specifierLine,
-            column: specifierColumn,
-          }),
-          isOriginalPosition,
-          isInline: true,
-          specifier,
-          specifierLine,
-          specifierColumn,
-          contentType,
-          content,
-        })
-      },
-      inject: ({ trace, ...rest }) => {
-        if (trace === undefined) {
-          const { url, line, column } = getCallerPosition()
-          trace = traceFromUrlSite({
-            url,
-            line,
-            column,
-          })
-        }
-        return addReference({
-          trace,
-          injected: true,
-          ...rest,
-        })
-      },
-      findByGeneratedSpecifier: (generatedSpecifier) => {
-        const reference = references.find(
-          (ref) => ref.generatedSpecifier === generatedSpecifier,
-        )
-        if (!reference) {
-          throw new Error(
-            `No reference found using the following generatedSpecifier: "${generatedSpecifier}"`,
-          )
-        }
-        return reference
-      },
-    }
-
     if (urlInfo.shouldHandle) {
+      // references
+      const references = []
+      const addReference = (props) => {
+        const reference = createReference({
+          parentUrl: urlInfo.url,
+          ...props,
+        })
+        references.push(reference)
+        const referencedUrlInfo = resolveReference(reference, context)
+        return [reference, referencedUrlInfo]
+      }
+      context.referenceUtils = {
+        find: (predicate) => references.find(predicate),
+        readGeneratedSpecifier,
+        found: ({ trace, ...rest }) => {
+          if (trace === undefined) {
+            trace = traceFromUrlSite(
+              adjustUrlSite(urlInfo, {
+                urlGraph,
+                url: urlInfo.url,
+                line: rest.specifierLine,
+                column: rest.specifierColumn,
+              }),
+            )
+          }
+          // console.log(trace)
+          return addReference({
+            trace,
+            ...rest,
+          })
+        },
+        foundInline: ({
+          isOriginalPosition,
+          specifierLine,
+          specifierColumn,
+          ...rest
+        }) => {
+          const parentUrl = isOriginalPosition
+            ? urlInfo.url
+            : urlInfo.generatedUrl
+          const parentContent = isOriginalPosition
+            ? urlInfo.originalContent
+            : urlInfo.content
+          return addReference({
+            trace: traceFromUrlSite({
+              url: parentUrl,
+              content: parentContent,
+              line: specifierLine,
+              column: specifierColumn,
+            }),
+            isOriginalPosition,
+            specifierLine,
+            specifierColumn,
+            isInline: true,
+            ...rest,
+          })
+        },
+        update: (currentReference, newReferenceParams) => {
+          const index = references.indexOf(currentReference)
+          if (index === -1) {
+            throw new Error(`reference do not exists`)
+          }
+          const previousReference = currentReference
+          const nextReference = createReference({
+            ...previousReference,
+            ...newReferenceParams,
+          })
+          references[index] = nextReference
+          mutateReference(previousReference, nextReference)
+          const newUrlInfo = resolveReference(nextReference, context)
+          const currentUrlInfo = context.urlGraph.getUrlInfo(
+            currentReference.url,
+          )
+          if (
+            currentUrlInfo &&
+            currentUrlInfo !== newUrlInfo &&
+            currentUrlInfo.dependents.size === 0
+          ) {
+            context.urlGraph.deleteUrlInfo(currentReference.url)
+          }
+          return [nextReference, newUrlInfo]
+        },
+        becomesInline: (
+          reference,
+          {
+            isOriginalPosition,
+            specifier,
+            specifierLine,
+            specifierColumn,
+            contentType,
+            content,
+          },
+        ) => {
+          const parentUrl = isOriginalPosition
+            ? urlInfo.url
+            : urlInfo.generatedUrl
+          const parentContent = isOriginalPosition
+            ? urlInfo.originalContent
+            : urlInfo.content
+          return context.referenceUtils.update(reference, {
+            trace: traceFromUrlSite({
+              url: parentUrl,
+              content: parentContent,
+              line: specifierLine,
+              column: specifierColumn,
+            }),
+            isOriginalPosition,
+            isInline: true,
+            specifier,
+            specifierLine,
+            specifierColumn,
+            contentType,
+            content,
+          })
+        },
+        inject: ({ trace, ...rest }) => {
+          if (trace === undefined) {
+            const { url, line, column } = getCallerPosition()
+            trace = traceFromUrlSite({
+              url,
+              line,
+              column,
+            })
+          }
+          return addReference({
+            trace,
+            injected: true,
+            ...rest,
+          })
+        },
+        findByGeneratedSpecifier: (generatedSpecifier) => {
+          const reference = references.find(
+            (ref) => ref.generatedSpecifier === generatedSpecifier,
+          )
+          if (!reference) {
+            throw new Error(
+              `No reference found using the following generatedSpecifier: "${generatedSpecifier}"`,
+            )
+          }
+          return reference
+        },
+      }
+
       // "fetchUrlContent" hook
       await fetchUrlContent(urlInfo, {
         reference: context.reference,
@@ -550,7 +557,6 @@ export const createKitchen = ({
       })
 
       // "transform" hook
-      urlInfo.references = references
       try {
         await pluginController.callAsyncHooks(
           "transformUrlContent",

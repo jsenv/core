@@ -93,9 +93,7 @@ export const createFileService = ({
       { watch: clientFilePatterns },
       rootDirectoryUrl,
     )
-    const urlGraph = createUrlGraph({
-      includeOriginalUrls: scenarios.dev,
-    })
+    const urlGraph = createUrlGraph()
     clientFileChangeCallbackList.push(({ url }) => {
       const urlInfo = urlGraph.getUrlInfo(url)
       if (urlInfo) {
@@ -160,9 +158,9 @@ export const createFileService = ({
             return false
           }
         }
-        for (const related of urlInfo.relateds) {
-          const relatedUrlInfo = context.urlGraph.getUrlInfo(related)
-          if (relatedUrlInfo && !relatedUrlInfo.isValid()) {
+        for (const implicitUrl of urlInfo.implicitUrls) {
+          const implicitUrlInfo = context.urlGraph.getUrlInfo(implicitUrl)
+          if (implicitUrlInfo && !implicitUrlInfo.isValid()) {
             return false
           }
         }
@@ -259,9 +257,7 @@ export const createFileService = ({
     }
     const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url)
     const ifNoneMatch = request.headers["if-none-match"]
-    const urlInfoTargetedByCache = urlInfo.isInline
-      ? urlGraph.getUrlInfo(urlInfo.inlineUrlSite.url)
-      : urlInfo
+    const urlInfoTargetedByCache = urlGraph.getParentIfInline(urlInfo)
 
     if (ifNoneMatch) {
       if (
