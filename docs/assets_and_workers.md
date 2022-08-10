@@ -14,7 +14,7 @@ It's recommended to prefer leading slash instead of `"../"`:
 
 The rest of this page shows how files can be referenced within HTML, CSS and js.
 
-This upcoming sections contains extract of code using recent features. Keep in mind that when a feature is not supported by a browser during dev of after build, code is transformed by jsenv to become compatible. This includes most remarkably:
+This upcoming sections shows extracts of code using recent features. Keep in mind that when a feature is not supported by a browser during dev or after build, code is transformed by jsenv to become compatible. This includes most remarkably:
 
 - script type module
 - worker type module
@@ -75,7 +75,7 @@ body {
 > **Note**  
 > "@import" not yet allowed with [CSS import assertion](#CSS-import-assertion) as explained in https://web.dev/css-module-scripts/#@import-rules-not-yet-allowed
 
-## Js module
+## JS module
 
 Js module refers to js executed in a context where is has access to `import` and `import.meta.url`.<br />
 In these files the following is supported:
@@ -123,13 +123,13 @@ document.body.appendChild(img)
 
 Depending how the worker file is written one of the 2 solutions below must be used
 
-#### Js classic worker
+#### Classic worker
 
 ```js
 const worker = new Worker(new URL("/worker.js", import.meta.url))
 ```
 
-#### Js module worker
+#### Module worker
 
 ```js
 const worker = new Worker(new URL("/worker.js", import.meta.url), {
@@ -165,7 +165,7 @@ import text from "./data.txt" assert { type: "text" }
 console.log(text)
 ```
 
-## Js classic
+## JS classic
 
 When js is executed by `<script></script>` and not `<script type="module"></script>`, import is not available. In that case `document.currentScript.src` can be used as substitute of `import.meta.url`. So all the solutions involving urls raised in the js modules parts are still available.
 
