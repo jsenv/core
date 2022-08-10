@@ -2,6 +2,7 @@
  * in development
  */
 
+import { writeFileSync, readFileSync } from "node:fs"
 import { chromium } from "playwright"
 import { assert } from "@jsenv/assert"
 
@@ -17,8 +18,18 @@ const devServer = await startDevServer({
   supervisor: false,
 })
 const browser = await chromium.launch({ headless: !debug })
+const jsFileUrl = new URL("./client/dep.js", import.meta.url)
+const jsFileContent = {
+  beforeTest: readFileSync(jsFileUrl),
+  update: (content) => writeFileSync(jsFileUrl, content),
+  restore: () => writeFileSync(jsFileUrl, jsFileContent.beforeTest),
+}
 try {
   const page = await launchBrowserPage(browser)
+  const responses = []
+  page.on("response", (response) => {
+    responses.push(response)
+  })
   await page.goto(`${devServer.origin}/main.html`)
   const getResult = async () => {
     const result = await page.evaluate(
@@ -37,17 +48,35 @@ try {
     assert({ actual, expected })
   }
 
-  // TODO
-  // - reload the page
-  // - ensure the response is served from cache
-  // (the jsenv server must no re-apply rollup)
+  // reloading page = 304
+  {
+    responses.length = 0
+    await page.reload()
+    const responseForJsFile = responses.find(
+      (response) => response.url() === `${devServer.origin}/main.js`,
+    )
+    const jsFileResponseStatus = responseForJsFile.status()
+    const answer = await getResult()
+    const actual = {
+      jsFileResponseStatus,
+      answer,
+    }
+    const expected = {
+      jsFileResponseStatus: 304,
+      answer: 42,
+    }
+    assert({ actual, expected })
+  }
 
-  // TODO:
-  // - update dep.js to export 43
-  // - reload the page
-  // - ensure result is 43
-  // await page.reload()
+  {
+    jsFileContent.update(`export const answer = 43`)
+    await page.reload()
+    const actual = await getResult()
+    const expected = 43
+    assert({ actual, expected })
+  }
 } finally {
+  jsFileContent.restore()
   if (!debug) {
     browser.close()
   }
