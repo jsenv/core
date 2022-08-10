@@ -1,6 +1,7 @@
-# Url resolution
+# Import resolution
 
-Jsenv resolve url found in files like a browser would: `new URL(specifier, baseUrl)`. Inside js modules, the url resolution is augmented with [Node ESM resolution algorithm](#node-esm-resolution-algorithm) and [FileSystem magic resolution](#filesystem-magic-resolution).
+Jsenv resolve url found in files like a browser would: `new URL(specifier, baseUrl)`.
+Inside js modules, the url resolution is augmented with [Node ESM resolution algorithm](#node-esm-resolution-algorithm) and [FileSystem magic resolution](#filesystem-magic-resolution).
 
 ## Node ESM resolution algorithm
 

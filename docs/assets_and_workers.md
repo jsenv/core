@@ -123,13 +123,13 @@ document.body.appendChild(img)
 
 Depending how the worker file is written one of the 2 solutions below must be used
 
-### Js classic worker
+#### Js classic worker
 
 ```js
 const worker = new Worker(new URL("/worker.js", import.meta.url))
 ```
 
-### Js module worker
+#### Js module worker
 
 ```js
 const worker = new Worker(new URL("/worker.js", import.meta.url), {
