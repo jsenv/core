@@ -22,13 +22,15 @@
       window.order.push("js_classic_inline")
     </script>
     <div id="before_js_classic_src"></div>
-    <script src="./js_classic.js"></script>
+    <script src="./js_classic_a.js"></script>
+    <script src="./js_classic_b.js"></script>
     <script type="module">
       window.order.push("js_module_inline")
     </script>
-    <script type="module" src="./js_module.js"></script>
+    <script type="module" src="./js_module_a.js"></script>
+    <script type="module" src="./js_module_b.js"></script>
     <script no-supervisor>
-      setTimeout(() => window.resolveResultPromise(window.order), 1500)
+      setTimeout(() => window.resolveResultPromise(window.order), 2500)
     </script>
   </body>
 </html>

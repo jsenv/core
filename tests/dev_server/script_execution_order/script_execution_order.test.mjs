@@ -1,3 +1,7 @@
+/*
+ * Ensures standard script execution order is preserved by jsenv supervisor
+ */
+
 import { chromium, firefox, webkit } from "playwright"
 import { assert } from "@jsenv/assert"
 
@@ -23,17 +27,19 @@ const test = async ({ browserLauncher }) => {
       /* eslint-enable no-undef */
     )
     // this should be the order found in each browser
+    // However on webkit it will be different because of a bug (https://twitter.com/damienmaillard/status/1554752482273787906)
     const correctOrder = [
       "before_js_classic_inline",
       "js_classic_inline",
       "before_js_classic_src",
-      "js_classic",
+      "js_classic_a",
+      "js_classic_b",
       "js_module_inline",
-      "js_module",
+      "js_module_a",
+      "js_module_b",
       "window_load_dispatched",
+      "js_module_a_after_top_level_await",
     ]
-    // because of the webkit bug (https://twitter.com/damienmaillard/status/1554752482273787906)
-    // jsenv has to resort to dynamic import on webkit so the order differs
 
     if (browserLauncher === chromium) {
       const actual = result
@@ -49,10 +55,19 @@ const test = async ({ browserLauncher }) => {
       // window "load" event is not deterministic on webkit due to
       // the bug mentioned previously, so remove it and ensure only the
       // js execution order is correct
-      const actual = result.filter((v) => v !== "window_load_dispatched")
-      const expected = correctOrder.filter(
-        (v) => v !== "window_load_dispatched",
-      )
+      const actual = result
+      const expected = [
+        "before_js_classic_inline",
+        "js_classic_inline",
+        "before_js_classic_src",
+        "js_classic_a",
+        "js_classic_b",
+        "window_load_dispatched",
+        "js_module_inline",
+        "js_module_a",
+        "js_module_a_after_top_level_await",
+        "js_module_b",
+      ]
       assert({ actual, expected })
     }
   } finally {

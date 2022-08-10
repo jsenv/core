@@ -9,16 +9,12 @@ export const superviseScriptTypeModule = async ({ src, async }) => {
   const execute = isWebkitOrSafari
     ? createExecuteWithDynamicImport({ src })
     : createExecuteWithScript({ currentScript, src })
-  if (!async) {
-    await window.__supervisor__.getPreviousExecutionDonePromise()
-  }
-  const execution = window.__supervisor__.createExecution({
+  return window.__supervisor__.addExecution({
     src,
     async,
     type: "js_module",
     execute,
   })
-  return execution.start()
 }
 
 const createExecuteWithScript = ({ currentScript, src }) => {
@@ -64,10 +60,10 @@ const createExecuteWithScript = ({ currentScript, src }) => {
         needsReport: true,
       }
     }
-    // do not resolve right away, wait for top level execution
     try {
-      const namespace = await import(urlObject.href)
-      return namespace
+      return {
+        executionPromise: import(urlObject.href),
+      }
     } catch (e) {
       e.reportedBy = "dynamic_import"
       throw e
@@ -83,7 +79,9 @@ const createExecuteWithDynamicImport = ({ src }) => {
     }
     try {
       const namespace = await import(urlObject.href)
-      return namespace
+      return {
+        executionPromise: namespace,
+      }
     } catch (e) {
       e.reportedBy = "dynamic_import"
       // dynamic import would hide the error to the browser
