@@ -31,11 +31,7 @@ const test = async (params) => {
 if (process.platform === "darwin") {
   // no support for {type: "module"} on service worker
   {
-    const actual = await test({
-      runtimeCompat: {
-        chrome: "79",
-      },
-    })
+    const actual = await test({ runtimeCompat: { chrome: "79" } })
     const expected = {
       order: [],
       serviceWorkerUrls: {
@@ -52,9 +48,7 @@ if (process.platform === "darwin") {
   // no support for {type: "module"} on service worker + no bundling
   {
     const actual = await test({
-      runtimeCompat: {
-        chrome: "79",
-      },
+      runtimeCompat: { chrome: "79" },
       bundling: false,
     })
     const expected = {
@@ -89,11 +83,7 @@ if (process.platform === "darwin") {
 
   // support
   {
-    const actual = await test({
-      runtimeCompat: {
-        chrome: "80",
-      },
-    })
+    const actual = await test({ runtimeCompat: { chrome: "80" } })
     const expected = {
       order: [],
       serviceWorkerUrls: {
@@ -108,9 +98,7 @@ if (process.platform === "darwin") {
   // support + no bundling
   {
     const actual = await test({
-      runtimeCompat: {
-        chrome: "80",
-      },
+      runtimeCompat: { chrome: "80" },
       bundling: false,
     })
     const expected = {

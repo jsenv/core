@@ -26,7 +26,6 @@ import {
 export const jsenvPluginAsJsClassicHtml = ({
   systemJsInjection,
   systemJsClientFileUrl,
-  generateJsClassicFilename,
 }) => {
   return {
     name: "jsenv:as_js_classic_html",
@@ -79,7 +78,7 @@ export const jsenvPluginAsJsClassicHtml = ({
         const actions = []
         const jsModuleUrls = []
         const convertedUrls = []
-        const getReferenceAsJsClassic = async (
+        const turnIntoJsClassicProxy = async (
           reference,
           {
             // we don't cook resource hints
@@ -89,20 +88,15 @@ export const jsenvPluginAsJsClassicHtml = ({
             cookIt = false,
           } = {},
         ) => {
-          const newReferenceProps = {
-            expectedType: "js_classic",
-            specifier: injectQueryParamsIntoSpecifier(reference.specifier, {
-              as_js_classic: "",
-            }),
-            filename: generateJsClassicFilename(reference.url),
-          }
-          const [newReference, newUrlInfo] = context.referenceUtils.update(
-            reference,
-            newReferenceProps,
-          )
-          const convertedUrl = newUrlInfo.url
-          if (!convertedUrls.includes(convertedUrl)) {
-            convertedUrls.push(convertedUrl)
+          const [jsClassicReference, jsClassicUrlInfo] =
+            context.referenceUtils.update(reference, {
+              specifier: injectQueryParamsIntoSpecifier(reference.specifier, {
+                as_js_classic: "",
+              }),
+            })
+          const jsClassicUrl = jsClassicUrlInfo.url
+          if (!convertedUrls.includes(jsClassicUrl)) {
+            convertedUrls.push(jsClassicUrl)
           }
           if (cookIt) {
             // during dev it means js modules will be cooked before server sends the HTML
@@ -110,9 +104,11 @@ export const jsenvPluginAsJsClassicHtml = ({
             // - during dev script_type_module are supported (dev use a recent browser)
             // - even if browser is not supported it still works it's jus a bit slower
             //   because it needs to decide if systemjs will be injected or not
-            await context.cook(newUrlInfo, { reference: newReference })
+            await context.cook(jsClassicUrlInfo, {
+              reference: jsClassicReference,
+            })
           }
-          return [newReference, newUrlInfo]
+          return [jsClassicReference, jsClassicUrlInfo]
         }
 
         classicScriptNodes.forEach((classicScriptNode) => {
@@ -148,7 +144,7 @@ export const jsenvPluginAsJsClassicHtml = ({
             jsModuleUrls.push(reference.url)
             if (shouldTransformScriptTypeModule) {
               actions.push(async () => {
-                const [newReference] = await getReferenceAsJsClassic(
+                const [jsClassicReference] = await turnIntoJsClassicProxy(
                   reference,
                   {
                     cookIt: true,
@@ -156,7 +152,7 @@ export const jsenvPluginAsJsClassicHtml = ({
                 )
                 setHtmlNodeAttributes(moduleScriptNode, {
                   type: undefined,
-                  src: newReference.generatedSpecifier,
+                  src: jsClassicReference.generatedSpecifier,
                 })
               })
             }
@@ -191,11 +187,11 @@ export const jsenvPluginAsJsClassicHtml = ({
                 contentType: "text/javascript",
                 content: htmlNodeText,
               })
-              const [, newUrlInfo] = await getReferenceAsJsClassic(
+              const [, jsClassicUrlInfo] = await turnIntoJsClassicProxy(
                 inlineReference,
                 { cookIt: true },
               )
-              setHtmlNodeText(moduleScriptNode, newUrlInfo.content)
+              setHtmlNodeText(moduleScriptNode, jsClassicUrlInfo.content)
               setHtmlNodeAttributes(moduleScriptNode, {
                 "type": undefined,
                 "jsenv-plugin-owner": "jsenv:as_js_classic_html",
@@ -219,17 +215,19 @@ export const jsenvPluginAsJsClassicHtml = ({
             if (expectedScriptType === "module") {
               actions.push(async () => {
                 // reference modified by <script type="module"> conversion
-                let newReference
+                let jsClassicReference
                 if (reference.next) {
-                  newReference = reference.next
+                  jsClassicReference = reference.next
                 } else {
                   // when the url is not referenced by a <script type="module">
                   // we assume we want to preload "classic" but it might not be the case
                   // but it's unlikely to happen and people should use "modulepreload" in that case anyway
-                  ;[newReference] = await getReferenceAsJsClassic(reference)
+                  ;[jsClassicReference] = await turnIntoJsClassicProxy(
+                    reference,
+                  )
                 }
                 setHtmlNodeAttributes(preloadAsScriptNode, {
-                  href: newReference.generatedSpecifier,
+                  href: jsClassicReference.generatedSpecifier,
                   crossorigin: undefined,
                 })
               })
@@ -244,16 +242,16 @@ export const jsenvPluginAsJsClassicHtml = ({
                 ref.expectedType === "js_module",
             )
             actions.push(async () => {
-              let newReference
+              let jsClassicReference
               if (reference.next) {
-                newReference = reference.next
+                jsClassicReference = reference.next
               } else {
-                ;[newReference] = await getReferenceAsJsClassic(reference)
+                ;[jsClassicReference] = await turnIntoJsClassicProxy(reference)
               }
               setHtmlNodeAttributes(modulePreloadNode, {
                 rel: "preload",
                 as: "script",
-                href: newReference.generatedSpecifier,
+                href: jsClassicReference.generatedSpecifier,
               })
             })
           })

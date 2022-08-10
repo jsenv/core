@@ -38,38 +38,12 @@ const test = async (params) => {
 }
 
 // support for {type: "module"} in new Worker
-await test({
-  runtimeCompat: {
-    chrome: "81",
-  },
-})
-
+await test({ runtimeCompat: { chrome: "81" } })
 // no support for {type: "module"} in new Worker
-await test({
-  runtimeCompat: {
-    chrome: "79",
-  },
-})
-
+await test({ runtimeCompat: { chrome: "79" } })
 // no support for <script type="modue">
-await test({
-  runtimeCompat: {
-    chrome: "62",
-  },
-})
-
+await test({ runtimeCompat: { chrome: "62" } })
 // support + no bundling
-await test({
-  runtimeCompat: {
-    chrome: "81",
-  },
-  bundling: false,
-})
-
+await test({ runtimeCompat: { chrome: "81" }, bundling: false })
 // no support + no bundling
-await test({
-  runtimeCompat: {
-    chrome: "79",
-  },
-  bundling: false,
-})
+await test({ runtimeCompat: { chrome: "79" }, bundling: false })

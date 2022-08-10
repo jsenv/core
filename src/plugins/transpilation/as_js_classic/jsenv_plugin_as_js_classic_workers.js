@@ -13,11 +13,8 @@
 
 import { injectQueryParams } from "@jsenv/urls"
 
-export const jsenvPluginAsJsClassicWorkers = ({
-  generateJsClassicFilename,
-}) => {
-  const updateReference = (reference) => {
-    reference.filename = generateJsClassicFilename(reference.url)
+export const jsenvPluginAsJsClassicWorkers = () => {
+  const turnIntoJsClassicProxy = (reference) => {
     reference.mutation = (magicSource) => {
       magicSource.replace({
         start: reference.typePropertyNode.value.start,
@@ -25,7 +22,6 @@ export const jsenvPluginAsJsClassicWorkers = ({
         replacement: JSON.stringify("classic"),
       })
     }
-    reference.expectedType = "js_classic"
     return injectQueryParams(reference.url, {
       as_js_classic: "",
     })
@@ -43,7 +39,7 @@ export const jsenvPluginAsJsClassicWorkers = ({
           if (context.isSupportedOnCurrentClients("worker_type_module")) {
             return null
           }
-          return updateReference(reference)
+          return turnIntoJsClassicProxy(reference)
         }
         if (reference.expectedSubtype === "service_worker") {
           if (
@@ -51,7 +47,7 @@ export const jsenvPluginAsJsClassicWorkers = ({
           ) {
             return null
           }
-          return updateReference(reference)
+          return turnIntoJsClassicProxy(reference)
         }
         if (reference.expectedSubtype === "shared_worker") {
           if (
@@ -59,7 +55,7 @@ export const jsenvPluginAsJsClassicWorkers = ({
           ) {
             return null
           }
-          return updateReference(reference)
+          return turnIntoJsClassicProxy(reference)
         }
         return null
       },
