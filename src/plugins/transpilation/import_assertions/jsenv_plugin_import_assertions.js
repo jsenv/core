@@ -81,36 +81,6 @@ export const jsenvPluginImportAssertions = ({
         return null
       },
     },
-    transformUrlContent: {
-      js_module: (urlInfo, context) => {
-        if (!context.scenarios.dev) {
-          return
-        }
-        const urlObject = new URL(urlInfo.url)
-        let searchParam
-        if (urlObject.searchParams.has("as_json_module")) {
-          searchParam = "as_json_module"
-        } else if (urlObject.searchParams.has("as_css_module")) {
-          searchParam = "as_css_module"
-        } else if (urlObject.searchParams.has("as_text_module")) {
-          searchParam = "as_text_module"
-        }
-        if (!searchParam) {
-          return
-        }
-        urlObject.searchParams.delete(searchParam)
-        // do a reference.inject
-        // (because it's not a real reference to the file)
-        // or we could consider this ref as implicit?
-        // not it's explicit
-        context.referenceUtils.found({
-          type: "js_import_export",
-          subtype: context.reference.subtype,
-          specifier: urlObject.href,
-          expectedType: "js_module",
-        })
-      },
-    },
   }
   return [importAssertions, ...jsenvPluginAsModules()]
 }
@@ -138,6 +108,14 @@ const jsenvPluginAsModules = () => {
         reference: jsonReference,
         cleanAfterFetch: true,
       })
+      if (context.scenarios.dev) {
+        context.referenceUtils.found({
+          type: "js_import_export",
+          subtype: jsonReference.subtype,
+          specifier: jsonReference.url,
+          expectedType: "js_module",
+        })
+      }
       const jsonText = JSON.stringify(jsonUrlInfo.content.trim())
       return {
         // here we could `export default ${jsonText}`:
@@ -169,6 +147,14 @@ const jsenvPluginAsModules = () => {
         reference: cssReference,
         cleanAfterFetch: true,
       })
+      if (context.scenarios.dev) {
+        context.referenceUtils.found({
+          type: "js_import_export",
+          subtype: cssReference.subtype,
+          specifier: cssReference.url,
+          expectedType: "js_module",
+        })
+      }
       const cssText = JS_QUOTES.escapeSpecialChars(cssUrlInfo.content, {
         // If template string is choosen and runtime do not support template literals
         // it's ok because "jsenv:new_inline_content" plugin executes after this one
@@ -209,6 +195,14 @@ const jsenvPluginAsModules = () => {
         reference: textReference,
         cleanAfterFetch: true,
       })
+      if (context.scenarios.dev) {
+        context.referenceUtils.found({
+          type: "js_import_export",
+          subtype: textReference.subtype,
+          specifier: textReference.url,
+          expectedType: "js_module",
+        })
+      }
       const textPlain = JS_QUOTES.escapeSpecialChars(urlInfo.content, {
         // If template string is choosen and runtime do not support template literals
         // it's ok because "jsenv:new_inline_content" plugin executes after this one
