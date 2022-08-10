@@ -9,6 +9,23 @@ export const jsenvPluginCommonJs = ({
   logLevel,
   include,
 }) => {
+  const markAsJsModuleProxy = (reference) => {
+    reference.expectedType = "js_module"
+    const packageFileUrl = defaultLookupPackageScope(reference.url)
+    if (packageFileUrl) {
+      reference.filename = `${reference.specifier}${urlToExtension(
+        reference.parentUrl,
+      )}`
+    }
+  }
+  const turnIntoJsModuleProxy = (reference) => {
+    const urlTransformed = injectQueryParams(reference.url, {
+      cjs_as_js_module: "",
+    })
+    markAsJsModuleProxy(reference)
+    return urlTransformed
+  }
+
   let associations
 
   return {
@@ -24,6 +41,10 @@ export const jsenvPluginCommonJs = ({
     },
     redirectUrl: {
       js_import_export: (reference) => {
+        if (new URL(reference.url).searchParams.has("cjs_as_js_module")) {
+          markAsJsModuleProxy(reference)
+          return null
+        }
         const { commonjs } = URL_META.applyAssociations({
           url: reference.url,
           associations,
@@ -32,9 +53,7 @@ export const jsenvPluginCommonJs = ({
           return null
         }
         reference.data.commonjs = commonjs
-        return injectQueryParams(reference.url, {
-          cjs_as_js_module: "",
-        })
+        return turnIntoJsModuleProxy(reference)
       },
     },
     fetchUrlContent: async (urlInfo, context) => {
@@ -68,15 +87,6 @@ export const jsenvPluginCommonJs = ({
       if (isValid) {
         urlInfo.isValid = isValid
       }
-      const originalReference = context.reference.original
-        ? context.reference.original
-        : context.reference
-      const packageFileUrl = defaultLookupPackageScope(originalReference.url)
-      const filename = packageFileUrl
-        ? `${originalReference.specifier}${urlToExtension(
-            originalReference.parentUrl,
-          )}`
-        : undefined
       return {
         content,
         contentType: "text/javascript",
@@ -84,7 +94,6 @@ export const jsenvPluginCommonJs = ({
         originalUrl: commonJsUrlInfo.originalUrl,
         originalContent: commonJsUrlInfo.originalContent,
         sourcemap,
-        filename,
       }
     },
   }

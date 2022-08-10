@@ -9967,17 +9967,21 @@ const jsenvPluginAsJsClassicConversion = ({
   systemJsClientFileUrl,
   generateJsClassicFilename
 }) => {
-  const propagateJsClassicSearchParam = (reference, context) => {
+  const shouldPropagateJsClassic = (reference, context) => {
     const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl);
+    return parentUrlInfo && new URL(parentUrlInfo.url).searchParams.has("as_js_classic");
+  };
 
-    if (!parentUrlInfo || !new URL(parentUrlInfo.url).searchParams.has("as_js_classic")) {
-      return null;
-    }
+  const markAsJsClassicProxy = reference => {
+    reference.expectedType = "js_classic";
+    reference.filename = generateJsClassicFilename(reference.url);
+  };
 
+  const turnIntoJsClassicProxy = reference => {
     const urlTransformed = injectQueryParams(reference.url, {
       as_js_classic: ""
     });
-    reference.filename = generateJsClassicFilename(reference.url);
+    markAsJsClassicProxy(reference);
     return urlTransformed;
   };
 
@@ -9991,10 +9995,28 @@ const jsenvPluginAsJsClassicConversion = ({
       //   (because it's the transpiled equivalent of static and dynamic imports)
       // And not other references otherwise we could try to transform inline resources
       // or specifiers inside new URL()...
-      js_import_export: propagateJsClassicSearchParam,
+      js_import_export: (reference, context) => {
+        if (new URL(reference.url).searchParams.has("as_js_classic")) {
+          markAsJsClassicProxy(reference);
+          return null;
+        }
+
+        if (shouldPropagateJsClassic(reference, context)) {
+          return turnIntoJsClassicProxy(reference);
+        }
+
+        return null;
+      },
       js_url_specifier: (reference, context) => {
         if (reference.subtype === "system_register_arg" || reference.subtype === "system_import_arg") {
-          return propagateJsClassicSearchParam(reference, context);
+          if (new URL(reference.url).searchParams.has("as_js_classic")) {
+            markAsJsClassicProxy(reference);
+            return null;
+          }
+
+          if (shouldPropagateJsClassic(reference, context)) {
+            return turnIntoJsClassicProxy(reference);
+          }
         }
 
         return null;
@@ -10019,6 +10041,16 @@ const jsenvPluginAsJsClassicConversion = ({
         reference: jsModuleReference,
         cleanAfterFetch: true
       });
+
+      if (context.scenarios.dev) {
+        context.referenceUtils.found({
+          type: "js_import_export",
+          subtype: jsModuleReference.subtype,
+          specifier: jsModuleReference.url,
+          expectedType: "js_module"
+        });
+      }
+
       const {
         content,
         sourcemap
@@ -14394,7 +14426,12 @@ const jsenvPluginImportAssertions = ({
     return false;
   };
 
-  const updateReference = (reference, type) => {
+  const markAsJsModuleProxy = reference => {
+    reference.expectedType = "js_module";
+    reference.filename = `${urlToFilename$1(reference.url)}.js`;
+  };
+
+  const turnIntoJsModuleProxy = (reference, type) => {
     reference.mutation = magicSource => {
       magicSource.remove({
         start: reference.assertNode.start,
@@ -14402,11 +14439,10 @@ const jsenvPluginImportAssertions = ({
       });
     };
 
-    reference.expectedType = "js_module";
-    reference.filename = `${urlToFilename$1(reference.url)}.js`;
     const newUrl = injectQueryParams(reference.url, {
       [`as_${type}_module`]: ""
     });
+    markAsJsModuleProxy(reference);
     return newUrl;
   };
 
@@ -14431,56 +14467,22 @@ const jsenvPluginImportAssertions = ({
           return null;
         }
 
-        const type = reference.assert.type;
-
-        if (shouldTranspileImportAssertion(context, type)) {
-          return updateReference(reference, type);
-        }
-
         const {
           searchParams
         } = new URL(reference.url);
 
         if (searchParams.has("as_json_module") || searchParams.has("as_css_module") || searchParams.has("as_text_module")) {
-          reference.expectedType = "js_module";
-          reference.filename = `${urlToFilename$1(reference.url)}.js`;
+          markAsJsModuleProxy(reference);
+          return null;
+        }
+
+        const type = reference.assert.type;
+
+        if (shouldTranspileImportAssertion(context, type)) {
+          return turnIntoJsModuleProxy(reference, type);
         }
 
         return null;
-      }
-    },
-    transformUrlContent: {
-      js_module: (urlInfo, context) => {
-        if (!context.scenarios.dev) {
-          return;
-        }
-
-        const urlObject = new URL(urlInfo.url);
-        let searchParam;
-
-        if (urlObject.searchParams.has("as_json_module")) {
-          searchParam = "as_json_module";
-        } else if (urlObject.searchParams.has("as_css_module")) {
-          searchParam = "as_css_module";
-        } else if (urlObject.searchParams.has("as_text_module")) {
-          searchParam = "as_text_module";
-        }
-
-        if (!searchParam) {
-          return;
-        }
-
-        urlObject.searchParams.delete(searchParam); // do a reference.inject
-        // (because it's not a real reference to the file)
-        // or we could consider this ref as implicit?
-        // not it's explicit
-
-        context.referenceUtils.found({
-          type: "js_import_export",
-          subtype: context.reference.subtype,
-          specifier: urlObject.href,
-          expectedType: "js_module"
-        });
       }
     }
   };
@@ -14508,6 +14510,16 @@ const jsenvPluginAsModules = () => {
         reference: jsonReference,
         cleanAfterFetch: true
       });
+
+      if (context.scenarios.dev) {
+        context.referenceUtils.found({
+          type: "js_import_export",
+          subtype: jsonReference.subtype,
+          specifier: jsonReference.url,
+          expectedType: "js_module"
+        });
+      }
+
       const jsonText = JSON.stringify(jsonUrlInfo.content.trim());
       return {
         // here we could `export default ${jsonText}`:
@@ -14540,6 +14552,16 @@ const jsenvPluginAsModules = () => {
         reference: cssReference,
         cleanAfterFetch: true
       });
+
+      if (context.scenarios.dev) {
+        context.referenceUtils.found({
+          type: "js_import_export",
+          subtype: cssReference.subtype,
+          specifier: cssReference.url,
+          expectedType: "js_module"
+        });
+      }
+
       const cssText = JS_QUOTES.escapeSpecialChars(cssUrlInfo.content, {
         // If template string is choosen and runtime do not support template literals
         // it's ok because "jsenv:new_inline_content" plugin executes after this one
@@ -14579,6 +14601,16 @@ const jsenvPluginAsModules = () => {
         reference: textReference,
         cleanAfterFetch: true
       });
+
+      if (context.scenarios.dev) {
+        context.referenceUtils.found({
+          type: "js_import_export",
+          subtype: textReference.subtype,
+          specifier: textReference.url,
+          expectedType: "js_module"
+        });
+      }
+
       const textPlain = JS_QUOTES.escapeSpecialChars(urlInfo.content, {
         // If template string is choosen and runtime do not support template literals
         // it's ok because "jsenv:new_inline_content" plugin executes after this one
