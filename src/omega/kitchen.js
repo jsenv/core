@@ -284,7 +284,7 @@ export const createKitchen = ({
 
   const fetchUrlContent = async (
     urlInfo,
-    { reference, contextDuringFetch, cleanAfterFetch = false },
+    { reference, contextDuringFetch },
   ) => {
     try {
       const fetchUrlContentReturnValue =
@@ -376,9 +376,6 @@ export const createKitchen = ({
       context: contextDuringFetch,
     })
     await urlInfoTransformer.initTransformations(urlInfo, contextDuringFetch)
-    if (cleanAfterFetch && urlInfo.dependents.size === 0 && scenarios.build) {
-      contextDuringFetch.urlGraph.deleteUrlInfo(urlInfo.url)
-    }
   }
   kitchenContext.fetchUrlContent = fetchUrlContent
 
@@ -394,11 +391,10 @@ export const createKitchen = ({
         ...nestedDishContext,
       })
     }
-    context.fetchUrlContent = (urlInfo, { reference, cleanAfterFetch }) => {
+    context.fetchUrlContent = (urlInfo, { reference }) => {
       return fetchUrlContent(urlInfo, {
         reference,
         contextDuringFetch: context,
-        cleanAfterFetch,
       })
     }
 
@@ -777,7 +773,7 @@ const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
   Object.assign(urlInfo.data, reference.data)
   Object.assign(urlInfo.timing, reference.timing)
   if (reference.injected) {
-    urlInfo.data.injected = true
+    urlInfo.injected = true
   }
   if (reference.filename) {
     urlInfo.filename = reference.filename

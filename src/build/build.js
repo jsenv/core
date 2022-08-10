@@ -250,6 +250,12 @@ build ${entryPointKeys.length} entry points`)
       buildDirectoryUrl,
     })
     const rawUrls = {}
+    const associateBuildUrlAndRawUrl = (buildUrl, rawUrl) => {
+      if (urlIsInsideOf(rawUrl, buildDirectoryUrl)) {
+        // throw new Error(`raw url must be inside rawGraph, got ${rawUrl}`)
+      }
+      rawUrls[buildUrl] = rawUrl
+    }
     const bundleRedirections = {}
     const buildUrls = {}
     const bundleUrlInfos = {}
@@ -389,7 +395,7 @@ build ${entryPointKeys.length} entry points`)
             urlInfo: bundleUrlInfo,
           })
           bundleRedirections[url] = buildUrl
-          rawUrls[buildUrl] = url
+          associateBuildUrlAndRawUrl(buildUrl, url)
           bundleUrlInfos[buildUrl] = bundleUrlInfo
           if (buildUrl.includes("?")) {
             bundleUrlInfos[asUrlWithoutSearch(buildUrl)] = bundleUrlInfo
@@ -528,7 +534,7 @@ build ${entryPointKeys.length} entry points`)
                 },
               })
               postBuildRedirections[originalBuildUrl] = buildUrl
-              rawUrls[buildUrl] = rawUrl
+              associateBuildUrlAndRawUrl(buildUrl, rawUrl)
               return buildUrl
             }
             if (reference.isInline) {
@@ -555,7 +561,7 @@ build ${entryPointKeys.length} entry points`)
                 urlInfo: rawUrlInfo,
                 parentUrlInfo,
               })
-              rawUrls[buildUrl] = rawUrlInfo.url
+              associateBuildUrlAndRawUrl(buildUrl, rawUrlInfo.url)
               return buildUrl
             }
             // from "js_module_as_js_classic":
@@ -567,7 +573,7 @@ build ${entryPointKeys.length} entry points`)
                   type: "js_classic",
                 },
               })
-              rawUrls[buildUrl] = reference.url
+              associateBuildUrlAndRawUrl(buildUrl, reference.url)
               return buildUrl
             }
             const rawUrlInfo = rawGraph.getUrlInfo(reference.url)
@@ -578,9 +584,12 @@ build ${entryPointKeys.length} entry points`)
                 urlInfo: rawUrlInfo,
                 parentUrlInfo,
               })
-              rawUrls[buildUrl] = rawUrlInfo.url
+              associateBuildUrlAndRawUrl(buildUrl, rawUrlInfo.url)
               if (buildUrl.includes("?")) {
-                rawUrls[asUrlWithoutSearch(buildUrl)] = rawUrlInfo.url
+                associateBuildUrlAndRawUrl(
+                  asUrlWithoutSearch(buildUrl),
+                  rawUrlInfo.url,
+                )
               }
               return buildUrl
             }
@@ -811,7 +820,8 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`,
       if (
         !urlInfo.isEntryPoint &&
         urlInfo.type !== "sourcemap" &&
-        urlInfo.dependents.size === 0
+        urlInfo.dependents.size === 0 &&
+        !urlInfo.injected // injected during postbuild
       ) {
         cleanupActions.push(() => {
           finalGraph.deleteUrlInfo(urlInfo.url)

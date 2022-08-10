@@ -207,7 +207,7 @@ export const jsenvPluginAsJsClassicHtml = ({
               (ref) =>
                 ref.generatedSpecifier === href &&
                 ref.type === "link_href" &&
-                ref.expectedType === undefined,
+                ref.expectedType === "js_module",
             )
             const expectedScriptType = jsModuleUrls.includes(reference.url)
               ? "module"

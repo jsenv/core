@@ -13,15 +13,17 @@ import {
 export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
   const url = urlInfo.originalUrl
   const content = urlInfo.content
-  const { scenarios, referenceUtils } = context
   const htmlAst = parseHtmlString(content, {
-    storeOriginalPositions: scenarios.dev,
+    storeOriginalPositions: context.scenarios.dev,
   })
-  const actions = []
-  visitHtmlUrls({
+  const mentions = visitHtmlUrls({
     url,
     htmlAst,
-    onUrl: ({
+  })
+  const actions = []
+  const mutations = []
+  mentions.forEach(
+    ({
       type,
       subtype,
       expectedType,
@@ -34,7 +36,6 @@ export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
       specifier,
     }) => {
       const { crossorigin, integrity } = readFetchMetas(node)
-
       const isResourceHint = [
         "preconnect",
         "dns-prefetch",
@@ -42,8 +43,9 @@ export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
         "preload",
         "modulepreload",
       ].includes(subtype)
-      const [reference] = referenceUtils.found({
+      const [reference] = context.referenceUtils.found({
         type,
+        // subtype,
         expectedType,
         originalLine,
         originalColumn,
@@ -55,21 +57,23 @@ export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
         integrity,
       })
       actions.push(async () => {
+        await context.referenceUtils.readGeneratedSpecifier(reference)
+      })
+      mutations.push(() => {
         setHtmlNodeAttributes(node, {
-          [attributeName]: await referenceUtils.readGeneratedSpecifier(
-            reference,
-          ),
+          [attributeName]: reference.generatedSpecifier,
         })
       })
     },
-  })
-  if (actions.length === 0) {
+  )
+  if (actions.length > 0) {
+    await Promise.all(actions.map((action) => action()))
+  }
+  if (mutations.length === 0) {
     return null
   }
-  await Promise.all(actions.map((action) => action()))
-  return {
-    content: stringifyHtmlAst(htmlAst),
-  }
+  mutations.forEach((mutation) => mutation())
+  return stringifyHtmlAst(htmlAst)
 }
 
 const crossOriginCompatibleTagNames = ["script", "link", "img", "source"]
@@ -87,7 +91,8 @@ const readFetchMetas = (node) => {
   return meta
 }
 
-const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
+const visitHtmlUrls = ({ url, htmlAst }) => {
+  const mentions = []
   const addDependency = ({
     type,
     subtype,
@@ -111,7 +116,7 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
       column,
       // originalLine, originalColumn
     } = position
-    onUrl({
+    mentions.push({
       type,
       subtype,
       expectedType,
@@ -174,17 +179,43 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
     link: (node) => {
       const rel = getHtmlNodeAttribute(node, "rel")
       const type = getHtmlNodeAttribute(node, "type")
+      const expectedType = {
+        manifest: "webmanifest",
+        modulepreload: "js_module",
+        stylesheet: "css",
+        preload: () => {
+          const as = getHtmlNodeAttribute(node, "as")
+          // https://developer.mozilla.org/en-US/docs/Web/HTML/Link_types/preload#what_types_of_content_can_be_preloaded
+          if (as === "document") {
+            return "html"
+          }
+          if (as === "style") {
+            return "css"
+          }
+          if (as === "script") {
+            return (mention) => {
+              const firstScriptOnThisUrl = mentions.find(
+                (mentionCandidate) =>
+                  mentionCandidate.url === mention.url &&
+                  mention.type === "script_src",
+              )
+              if (firstScriptOnThisUrl) {
+                return firstScriptOnThisUrl.expectedType
+              }
+              return undefined
+            }
+          }
+          return undefined
+        },
+      }[rel]
       visitAttributeAsUrlSpecifier({
         type: "link_href",
         subtype: rel,
         node,
         attributeName: "href",
+        // https://developer.mozilla.org/en-US/docs/Web/HTML/Link_types/preload#including_a_mime_type
         expectedContentType: type,
-        expectedType: {
-          manifest: "webmanifest",
-          modulepreload: "js_module",
-          stylesheet: "css",
-        }[rel],
+        expectedType,
       })
     },
     // style: () => {},
@@ -255,4 +286,10 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
       })
     },
   })
+  mentions.forEach((mention) => {
+    if (typeof mention.expectedType === "function") {
+      mention.expectedType = mention.expectedType(mention)
+    }
+  })
+  return mentions
 }
