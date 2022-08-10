@@ -29,8 +29,9 @@ const test = async ({ runtime }) => {
     namespace: {
       "/main.js": {
         status: "completed",
-        startTime: assert.any(Number),
-        endTime: assert.any(Number),
+        loadDuration: assert.any(Number),
+        executionDuration: assert.any(Number),
+        duration: assert.any(Number),
         exception: null,
         namespace: {},
       },

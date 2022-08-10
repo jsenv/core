@@ -4279,7 +4279,7 @@ const visitHtmlUrls = ({
         node
       });
     },
-    souce: node => {
+    source: node => {
       visitAttributeAsUrlSpecifier({
         type: "source_src",
         node,

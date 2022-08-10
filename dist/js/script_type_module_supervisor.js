@@ -11,19 +11,12 @@ const superviseScriptTypeModule = async ({
     currentScript,
     src
   });
-
-  if (!async) {
-    await window.__supervisor__.getPreviousExecutionDonePromise();
-  }
-
-  const execution = window.__supervisor__.createExecution({
+  return window.__supervisor__.addExecution({
     src,
     async,
     type: "js_module",
     execute
   });
-
-  return execution.start();
 };
 
 const createExecuteWithScript = ({
@@ -76,12 +69,12 @@ const createExecuteWithScript = ({
         // window.error won't be dispatched for this error
         needsReport: true
       };
-    } // do not resolve right away, wait for top level execution
-
+    }
 
     try {
-      const namespace = await import(urlObject.href);
-      return namespace;
+      return {
+        executionPromise: import(urlObject.href)
+      };
     } catch (e) {
       e.reportedBy = "dynamic_import";
       throw e;
@@ -103,7 +96,9 @@ const createExecuteWithDynamicImport = ({
 
     try {
       const namespace = await import(urlObject.href);
-      return namespace;
+      return {
+        executionPromise: Promise.resolve(namespace)
+      };
     } catch (e) {
       e.reportedBy = "dynamic_import"; // dynamic import would hide the error to the browser
       // so it must be re-reported using window.reportError

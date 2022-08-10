@@ -705,7 +705,6 @@ window.__supervisor__ = (() => {
   supervisor.setup = ({
     rootDirectoryUrl,
     logs,
-    measurePerf,
     errorOverlay,
     errorBaseUrl,
     openInEditor,
@@ -718,8 +717,35 @@ window.__supervisor__ = (() => {
     })
 
     const supervisedScripts = []
-    const scriptExecutionPromises = []
-    supervisor.createExecution = ({ type, src, async, execute }) => {
+    const pendingPromises = []
+    // respect execution order
+    // - wait for classic scripts to be done (non async)
+    // - wait module script previous execution (non async)
+    // see https://gist.github.com/jakub-g/385ee6b41085303a53ad92c7c8afd7a6#typemodule-vs-non-module-typetextjavascript-vs-script-nomodule
+    const executionQueue = []
+    let executing = false
+    const addToExecutionQueue = async (execution) => {
+      if (execution.async) {
+        execution.start()
+        return
+      }
+      if (executing) {
+        executionQueue.push(execution)
+        return
+      }
+      startThenDequeue(execution)
+    }
+    const startThenDequeue = async (execution) => {
+      executing = true
+      const promise = execution.start()
+      await promise
+      executing = false
+      if (executionQueue.length) {
+        const nextExecution = executionQueue.shift()
+        startThenDequeue(nextExecution)
+      }
+    }
+    supervisor.addExecution = ({ type, src, async, execute }) => {
       const execution = {
         type,
         src,
@@ -733,82 +759,103 @@ window.__supervisor__ = (() => {
         return superviseExecution(execution, { isReload: true })
       }
       supervisedScripts.push(execution)
-      return execution
+      return addToExecutionQueue(execution)
     }
     const superviseExecution = async (execution, { isReload }) => {
       if (logs) {
         console.group(`[jsenv] loading ${execution.type} ${execution.src}`)
       }
-      if (measurePerf) {
-        performance.mark(`execution_start`)
-      }
       const executionResult = {
         status: "pending",
-        startTime: Date.now(),
-        endTime: null,
+        loadDuration: null,
+        executionDuration: null,
+        duration: null,
         exception: null,
         namespace: null,
         coverage: null,
       }
       executionResults[execution.src] = executionResult
-      let resolveScriptExecutionPromise
-      const scriptExecutionPromise = new Promise((resolve) => {
-        resolveScriptExecutionPromise = () => {
-          executionResult.endTime = Date.now()
-          if (measurePerf) {
-            performance.measure(`execution`, `execution_start`)
-          }
-          resolve()
-        }
-      })
-      scriptExecutionPromise.execution = execution
-      scriptExecutionPromises.push(scriptExecutionPromise)
-      try {
-        const result = await execution.execute({ isReload })
-        executionResult.status = "completed"
-        executionResult.namespace = result
-        executionResult.coverage = window.__coverage__
-        if (logs) {
-          console.log(`${execution.type} load ended`)
-          console.groupEnd()
-        }
-        resolveScriptExecutionPromise()
-      } catch (e) {
-        executionResult.status = "errored"
-        const exception = supervisor.createException({
-          reason: e,
+
+      const monitorScriptLoad = () => {
+        const loadStartTime = Date.now()
+        let resolveScriptLoadPromise
+        const scriptLoadPromise = new Promise((resolve) => {
+          resolveScriptLoadPromise = resolve
         })
+        pendingPromises.push(scriptLoadPromise)
+        return () => {
+          const loadEndTime = Date.now()
+          executionResult.loadDuration = loadEndTime - loadStartTime
+          resolveScriptLoadPromise()
+        }
+      }
+      const monitorScriptExecution = () => {
+        const executionStartTime = Date.now()
+        let resolveExecutionPromise
+        const executionPromise = new Promise((resolve) => {
+          resolveExecutionPromise = resolve
+        })
+        pendingPromises.push(executionPromise)
+        return () => {
+          executionResult.coverage = window.__coverage__
+          executionResult.executionDuration = Date.now() - executionStartTime
+          executionResult.duration =
+            executionResult.loadDuration + executionResult.executionDuration
+          resolveExecutionPromise()
+        }
+      }
+
+      const onError = (e) => {
+        executionResult.status = "errored"
+        const exception = supervisor.createException({ reason: e })
         if (exception.needsReport) {
           supervisor.reportException(exception)
         }
         executionResult.exception = exception
-        executionResult.coverage = window.__coverage__
+      }
+
+      const scriptLoadDone = monitorScriptLoad()
+      try {
+        const result = await execution.execute({ isReload })
+        if (logs) {
+          console.log(`${execution.type} load ended`)
+          console.groupEnd()
+        }
+        executionResult.status = "loaded"
+        scriptLoadDone()
+
+        const scriptExecutionDone = monitorScriptExecution()
+        if (execution.type === "js_classic") {
+          executionResult.status = "completed"
+          scriptExecutionDone()
+        } else if (execution.type === "js_module") {
+          result.executionPromise.then(
+            (namespace) => {
+              executionResult.status = "completed"
+              executionResult.namespace = namespace
+              scriptExecutionDone()
+            },
+            (e) => {
+              onError(e)
+              scriptExecutionDone()
+            },
+          )
+        }
+      } catch (e) {
         if (logs) {
           console.groupEnd()
         }
-        resolveScriptExecutionPromise()
+        onError(e)
+        scriptLoadDone()
       }
     }
 
-    // respect execution order
-    // - wait for classic scripts to be done (non async)
-    // - wait module script previous execution (non async)
-    // see  https://gist.github.com/jakub-g/385ee6b41085303a53ad92c7c8afd7a6#typemodule-vs-non-module-typetextjavascript-vs-script-nomodule
-    supervisor.getPreviousExecutionDonePromise = async () => {
-      const previousNonAsyncScriptExecutions = scriptExecutionPromises.filter(
-        (promise) => !promise.execution.async,
-      )
-      await Promise.all(previousNonAsyncScriptExecutions)
-    }
     supervisor.superviseScript = async ({ src, async }) => {
       const { currentScript } = document
       const parentNode = currentScript.parentNode
-      if (!async) {
-        await supervisor.getPreviousExecutionDonePromise()
-      }
       let nodeToReplace
       let currentScriptClone
-      const execution = supervisor.createExecution({
+      return supervisor.addExecution({
         src,
         type: "js_classic",
         async,
@@ -858,7 +905,6 @@ window.__supervisor__ = (() => {
           }
         },
       })
-      return execution.start()
     }
     supervisor.reloadSupervisedScript = ({ type, src }) => {
       const supervisedScript = supervisedScripts.find(
@@ -891,12 +937,13 @@ window.__supervisor__ = (() => {
       })
       await documentReadyPromise
       const waitScriptExecutions = async () => {
-        const numberOfScripts = scriptExecutionPromises.length
-        await Promise.all(scriptExecutionPromises)
+        const numberOfPromises = pendingPromises.length
+        await Promise.all(pendingPromises)
         // new scripts added while the other where executing
         // (should happen only on webkit where
         // script might be added after window load event)
-        if (scriptExecutionPromises.length > numberOfScripts) {
+        await new Promise((resolve) => setTimeout(resolve))
+        if (pendingPromises.length > numberOfPromises) {
           await waitScriptExecutions()
         }
       }
