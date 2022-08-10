@@ -24,8 +24,7 @@ const test = async ({ browserLauncher }) => {
     )
     const moduleExecutionResult =
       result.executionResults["/main.html@L10C5-L12C14.js"]
-    const duration =
-      moduleExecutionResult.endTime - moduleExecutionResult.startTime
+    const duration = moduleExecutionResult.duration
     const durationAroundSetTimeout = duration > 2_000 && duration < 3_000
     const actual = {
       durationAroundSetTimeout,

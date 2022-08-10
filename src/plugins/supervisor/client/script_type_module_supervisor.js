@@ -80,7 +80,7 @@ const createExecuteWithDynamicImport = ({ src }) => {
     try {
       const namespace = await import(urlObject.href)
       return {
-        executionPromise: namespace,
+        executionPromise: Promise.resolve(namespace),
       }
     } catch (e) {
       e.reportedBy = "dynamic_import"
