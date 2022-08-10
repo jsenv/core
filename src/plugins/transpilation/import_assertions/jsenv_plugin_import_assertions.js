@@ -30,18 +30,21 @@ export const jsenvPluginImportAssertions = ({
     }
     return false
   }
-  const updateReference = (reference, type) => {
+  const markAsJsModuleProxy = (reference) => {
+    reference.expectedType = "js_module"
+    reference.filename = `${urlToFilename(reference.url)}.js`
+  }
+  const turnIntoJsModuleProxy = (reference, type) => {
     reference.mutation = (magicSource) => {
       magicSource.remove({
         start: reference.assertNode.start,
         end: reference.assertNode.end,
       })
     }
-    reference.expectedType = "js_module"
-    reference.filename = `${urlToFilename(reference.url)}.js`
     const newUrl = injectQueryParams(reference.url, {
       [`as_${type}_module`]: "",
     })
+    markAsJsModuleProxy(reference)
     return newUrl
   }
 
@@ -65,18 +68,18 @@ export const jsenvPluginImportAssertions = ({
         if (!reference.assert) {
           return null
         }
-        const type = reference.assert.type
-        if (shouldTranspileImportAssertion(context, type)) {
-          return updateReference(reference, type)
-        }
         const { searchParams } = new URL(reference.url)
         if (
           searchParams.has("as_json_module") ||
           searchParams.has("as_css_module") ||
           searchParams.has("as_text_module")
         ) {
-          reference.expectedType = "js_module"
-          reference.filename = `${urlToFilename(reference.url)}.js`
+          markAsJsModuleProxy(reference)
+          return null
+        }
+        const type = reference.assert.type
+        if (shouldTranspileImportAssertion(context, type)) {
+          return turnIntoJsModuleProxy(reference, type)
         }
         return null
       },

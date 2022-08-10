@@ -8,18 +8,22 @@ export const jsenvPluginAsJsClassicConversion = ({
   systemJsClientFileUrl,
   generateJsClassicFilename,
 }) => {
-  const propagateJsClassicSearchParam = (reference, context) => {
+  const shouldPropagateJsClassic = (reference, context) => {
     const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl)
-    if (
-      !parentUrlInfo ||
-      !new URL(parentUrlInfo.url).searchParams.has("as_js_classic")
-    ) {
-      return null
-    }
+    return (
+      parentUrlInfo &&
+      new URL(parentUrlInfo.url).searchParams.has("as_js_classic")
+    )
+  }
+  const markAsJsClassicProxy = (reference) => {
+    reference.expectedType = "js_classic"
+    reference.filename = generateJsClassicFilename(reference.url)
+  }
+  const turnIntoJsClassicProxy = (reference) => {
     const urlTransformed = injectQueryParams(reference.url, {
       as_js_classic: "",
     })
-    reference.filename = generateJsClassicFilename(reference.url)
+    markAsJsClassicProxy(reference)
     return urlTransformed
   }
 
@@ -33,13 +37,28 @@ export const jsenvPluginAsJsClassicConversion = ({
       //   (because it's the transpiled equivalent of static and dynamic imports)
       // And not other references otherwise we could try to transform inline resources
       // or specifiers inside new URL()...
-      js_import_export: propagateJsClassicSearchParam,
+      js_import_export: (reference, context) => {
+        if (new URL(reference.url).searchParams.has("as_js_classic")) {
+          markAsJsClassicProxy(reference)
+          return null
+        }
+        if (shouldPropagateJsClassic(reference, context)) {
+          return turnIntoJsClassicProxy(reference, context)
+        }
+        return null
+      },
       js_url_specifier: (reference, context) => {
         if (
           reference.subtype === "system_register_arg" ||
           reference.subtype === "system_import_arg"
         ) {
-          return propagateJsClassicSearchParam(reference, context)
+          if (new URL(reference.url).searchParams.has("as_js_classic")) {
+            markAsJsClassicProxy(reference)
+            return null
+          }
+          if (shouldPropagateJsClassic(reference, context)) {
+            return turnIntoJsClassicProxy(reference, context)
+          }
         }
         return null
       },
@@ -62,6 +81,14 @@ export const jsenvPluginAsJsClassicConversion = ({
         reference: jsModuleReference,
         cleanAfterFetch: true,
       })
+      if (context.scenarios.dev) {
+        context.referenceUtils.found({
+          type: "js_import_export",
+          subtype: jsModuleReference.subtype,
+          specifier: jsModuleReference.url,
+          expectedType: "js_module",
+        })
+      }
       const { content, sourcemap } = await convertJsModuleToJsClassic({
         systemJsInjection,
         systemJsClientFileUrl,
