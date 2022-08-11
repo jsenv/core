@@ -57,10 +57,10 @@ await test({
   versioning: false,
   expectedUrl: "/main.html__inline_script__1",
 })
-// // no support + no bundling + versioning
-// await test({
-//   runtimeCompat: { chrome: "60" },
-//   bundling: false,
-//   versioning: true,
-//   expectedUrl: "/main.html__inline_script__1",
-// })
+// no support + no bundling + versioning
+await test({
+  runtimeCompat: { chrome: "60" },
+  bundling: false,
+  versioning: true,
+  expectedUrl: "/main.html__inline_script__1",
+})

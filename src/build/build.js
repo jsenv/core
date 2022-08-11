@@ -1148,9 +1148,6 @@ const applyUrlVersioning = async ({
             if (reference.isInline || reference.url.startsWith("data:")) {
               return null
             }
-            if (reference.isResourceHint) {
-              return null
-            }
             // specifier comes from "normalize" hook done a bit earlier in this file
             // we want to get back their build url to access their infos
             const referencedUrlInfo = finalGraph.getUrlInfo(reference.url)
@@ -1173,7 +1170,7 @@ const applyUrlVersioning = async ({
               buildDirectoryUrl,
             )}`
             versionMappings[reference.specifier] = versionedSpecifier
-            buildUrls[versionedSpecifier] = versionedUrl
+            buildUrls[versionedSpecifier] = reference.url
 
             const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
             if (parentUrlInfo.jsQuote) {

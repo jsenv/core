@@ -41,7 +41,7 @@ const test = async (params) => {
 }
 
 // default (support for <script type="module">)
-// await test({ runtimeCompat: { chrome: "64" } })
+await test({ runtimeCompat: { chrome: "64" } })
 // no support for <script type="module">
 await test({
   runtimeCompat: { chrome: "60" },

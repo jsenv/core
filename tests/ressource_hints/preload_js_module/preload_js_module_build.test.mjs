@@ -6,13 +6,14 @@ import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
 
 const test = async (params) => {
   await build({
-    logLevel: "warn",
+    logLevel: "debug",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
       "./main.html": "main.html",
     },
     minification: false,
+    writeGeneratedFiles: true,
     ...params,
   })
   const server = await startFileServer({
@@ -40,15 +41,6 @@ const test = async (params) => {
 }
 
 // support for <script type="module">
-await test({
-  runtimeCompat: {
-    chrome: "64",
-  },
-})
-
+await test({ runtimeCompat: { chrome: "64" } })
 // no support for <script type="module">
-await test({
-  runtimeCompat: {
-    chrome: "60",
-  },
-})
+await test({ runtimeCompat: { chrome: "60" } })

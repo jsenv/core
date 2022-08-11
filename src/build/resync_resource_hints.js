@@ -52,7 +52,7 @@ export const resyncResourceHints = async ({
           const buildUrlInfo = finalGraph.getUrlInfo(buildUrl)
           if (!buildUrlInfo) {
             logger.warn(
-              `remove resource hint because cannot find "${buildUrl}" in the graph`,
+              `remove resource hint because cannot find "${href}" in the graph`,
             )
             mutations.push(() => {
               removeHtmlNode(node)
