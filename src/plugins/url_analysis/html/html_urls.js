@@ -45,7 +45,7 @@ export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
       ].includes(subtype)
       const [reference] = context.referenceUtils.found({
         type,
-        // subtype,
+        subtype,
         expectedType,
         originalLine,
         originalColumn,
@@ -93,7 +93,8 @@ const readFetchMetas = (node) => {
 
 const visitHtmlUrls = ({ url, htmlAst }) => {
   const mentions = []
-  const addDependency = ({
+  const finalizeCallbacks = []
+  const addMention = ({
     type,
     subtype,
     expectedType,
@@ -116,7 +117,7 @@ const visitHtmlUrls = ({ url, htmlAst }) => {
       column,
       // originalLine, originalColumn
     } = position
-    mentions.push({
+    const mention = {
       type,
       subtype,
       expectedType,
@@ -126,7 +127,9 @@ const visitHtmlUrls = ({ url, htmlAst }) => {
       specifier,
       node,
       attributeName,
-    })
+    }
+    mentions.push(mention)
+    return mention
   }
   const visitAttributeAsUrlSpecifier = ({ node, attributeName, ...rest }) => {
     const value = getHtmlNodeAttribute(node, attributeName)
@@ -135,9 +138,9 @@ const visitHtmlUrls = ({ url, htmlAst }) => {
       if (jsenvPluginOwner === "jsenv:importmap") {
         // during build the importmap is inlined
         // and shoud not be considered as a dependency anymore
-        return
+        return null
       }
-      addDependency({
+      return addMention({
         ...rest,
         node,
         attributeName,
@@ -147,26 +150,29 @@ const visitHtmlUrls = ({ url, htmlAst }) => {
             ? new URL(value, url).href
             : value,
       })
-    } else if (attributeName === "src") {
-      visitAttributeAsUrlSpecifier({
+    }
+    if (attributeName === "src") {
+      return visitAttributeAsUrlSpecifier({
         ...rest,
         node,
         attributeName: "inlined-from-src",
       })
-    } else if (attributeName === "href") {
-      visitAttributeAsUrlSpecifier({
+    }
+    if (attributeName === "href") {
+      return visitAttributeAsUrlSpecifier({
         ...rest,
         node,
         attributeName: "inlined-from-href",
       })
     }
+    return null
   }
   const visitSrcset = ({ type, node }) => {
     const srcset = getHtmlNodeAttribute(node, "srcset")
     if (srcset) {
       const srcCandidates = parseSrcSet(srcset)
       srcCandidates.forEach((srcCandidate) => {
-        addDependency({
+        addMention({
           type,
           node,
           attributeName: "srcset",
@@ -179,44 +185,20 @@ const visitHtmlUrls = ({ url, htmlAst }) => {
     link: (node) => {
       const rel = getHtmlNodeAttribute(node, "rel")
       const type = getHtmlNodeAttribute(node, "type")
-      const expectedType = {
-        manifest: "webmanifest",
-        modulepreload: "js_module",
-        stylesheet: "css",
-        preload: () => {
-          const as = getHtmlNodeAttribute(node, "as")
-          // https://developer.mozilla.org/en-US/docs/Web/HTML/Link_types/preload#what_types_of_content_can_be_preloaded
-          if (as === "document") {
-            return "html"
-          }
-          if (as === "style") {
-            return "css"
-          }
-          if (as === "script") {
-            return (mention) => {
-              const firstScriptOnThisUrl = mentions.find(
-                (mentionCandidate) =>
-                  mentionCandidate.url === mention.url &&
-                  mention.type === "script_src",
-              )
-              if (firstScriptOnThisUrl) {
-                return firstScriptOnThisUrl.expectedType
-              }
-              return undefined
-            }
-          }
-          return undefined
-        },
-      }[rel]
-      visitAttributeAsUrlSpecifier({
+      const mention = visitAttributeAsUrlSpecifier({
         type: "link_href",
         subtype: rel,
         node,
         attributeName: "href",
         // https://developer.mozilla.org/en-US/docs/Web/HTML/Link_types/preload#including_a_mime_type
         expectedContentType: type,
-        expectedType,
       })
+
+      if (mention) {
+        finalizeCallbacks.push(() => {
+          mention.expectedType = decideLinkExpectedType(mention, mentions)
+        })
+      }
     },
     // style: () => {},
     script: (node) => {
@@ -286,10 +268,43 @@ const visitHtmlUrls = ({ url, htmlAst }) => {
       })
     },
   })
-  mentions.forEach((mention) => {
-    if (typeof mention.expectedType === "function") {
-      mention.expectedType = mention.expectedType(mention)
-    }
+  finalizeCallbacks.forEach((finalizeCallback) => {
+    finalizeCallback()
   })
   return mentions
+}
+
+const decideLinkExpectedType = (linkMention, mentions) => {
+  const rel = getHtmlNodeAttribute(linkMention.node, "rel")
+  if (rel === "webmanifest") {
+    return "webmanifest"
+  }
+  if (rel === "modulepreload") {
+    return "js_module"
+  }
+  if (rel === "stylesheet") {
+    return "css"
+  }
+  if (rel === "preload") {
+    // https://developer.mozilla.org/en-US/docs/Web/HTML/Link_types/preload#what_types_of_content_can_be_preloaded
+    const as = getHtmlNodeAttribute(linkMention.node, "as")
+    if (as === "document") {
+      return "html"
+    }
+    if (as === "style") {
+      return "css"
+    }
+    if (as === "script") {
+      const firstScriptOnThisUrl = mentions.find(
+        (mentionCandidate) =>
+          mentionCandidate.url === linkMention.url &&
+          mentionCandidate.type === "script_src",
+      )
+      if (firstScriptOnThisUrl) {
+        return firstScriptOnThisUrl.expectedType
+      }
+      return undefined
+    }
+  }
+  return undefined
 }
