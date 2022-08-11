@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert"
 
-import { createLogger, loggerToLevels } from "@jsenv/log"
+import { createLogger } from "@jsenv/log"
 
 try {
   createLogger({ logLevel: "foo" })
@@ -20,7 +20,7 @@ debug`)
 
 {
   const logger = createLogger()
-  const actual = loggerToLevels(logger)
+  const actual = logger.levels
   const expected = {
     debug: false,
     info: true,
@@ -32,7 +32,7 @@ debug`)
 
 {
   const logger = createLogger({ logLevel: "off" })
-  const actual = loggerToLevels(logger)
+  const actual = logger.levels
   const expected = {
     debug: false,
     info: false,
@@ -44,7 +44,7 @@ debug`)
 
 {
   const logger = createLogger({ logLevel: "debug" })
-  const actual = loggerToLevels(logger)
+  const actual = logger.levels
   const expected = {
     debug: true,
     info: true,
@@ -56,7 +56,7 @@ debug`)
 
 {
   const logger = createLogger({ logLevel: "info" })
-  const actual = loggerToLevels(logger)
+  const actual = logger.levels
   const expected = {
     debug: false,
     info: true,
@@ -68,7 +68,7 @@ debug`)
 
 {
   const logger = createLogger({ logLevel: "warn" })
-  const actual = loggerToLevels(logger)
+  const actual = logger.levels
   const expected = {
     debug: false,
     info: false,
@@ -80,7 +80,7 @@ debug`)
 
 {
   const logger = createLogger({ logLevel: "error" })
-  const actual = loggerToLevels(logger)
+  const actual = logger.levels
   const expected = {
     debug: false,
     info: false,

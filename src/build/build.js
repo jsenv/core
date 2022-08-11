@@ -25,7 +25,7 @@ import {
   registerDirectoryLifecycle,
 } from "@jsenv/filesystem"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
-import { createLogger, loggerToLevels, createTaskLog } from "@jsenv/log"
+import { createLogger, createTaskLog } from "@jsenv/log"
 import { generateSourcemapFileUrl } from "@jsenv/sourcemap"
 import { parseHtmlString, stringifyHtmlAst } from "@jsenv/ast"
 
@@ -151,7 +151,7 @@ export const build = async ({
   const runBuild = async ({ signal, logLevel }) => {
     const logger = createLogger({ logLevel })
     const buildOperation = Abort.startOperation()
-    const infoLogsAreDisabled = !loggerToLevels(logger).info
+    const infoLogsAreDisabled = !logger.levels.info
     buildOperation.addAbortSignal(signal)
     const entryPointKeys = Object.keys(entryPoints)
     if (entryPointKeys.length === 1) {

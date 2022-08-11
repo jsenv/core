@@ -5,12 +5,7 @@ import wrapAnsi from "wrap-ansi"
 import stripAnsi from "strip-ansi"
 
 import { urlToFileSystemPath } from "@jsenv/urls"
-import {
-  createDetailedMessage,
-  loggerToLevels,
-  createLog,
-  startSpinner,
-} from "@jsenv/log"
+import { createDetailedMessage, createLog, startSpinner } from "@jsenv/log"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 import { ensureEmptyDirectory, writeFileSync } from "@jsenv/filesystem"
 
@@ -209,8 +204,8 @@ export const executePlan = async (
         `Force completedExecutionLogMerging to false because process.stdout.isTTY is false`,
       )
     }
-    const debugLogsEnabled = loggerToLevels(logger).debug
-    const executionLogsEnabled = loggerToLevels(logger).info
+    const debugLogsEnabled = logger.levels.debug
+    const executionLogsEnabled = logger.levels.info
     const executionSpinner =
       logRefresh &&
       !debugLogsEnabled &&

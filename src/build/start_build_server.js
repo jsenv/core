@@ -26,7 +26,7 @@ import {
   registerDirectoryLifecycle,
 } from "@jsenv/filesystem"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
-import { createLogger, loggerToLevels, createTaskLog } from "@jsenv/log"
+import { createLogger, createTaskLog } from "@jsenv/log"
 import { getCallerPosition } from "@jsenv/urls"
 
 import { createReloadableWorker } from "@jsenv/core/src/helpers/worker_reload.js"
@@ -146,7 +146,7 @@ export const startBuildServer = async ({
   }
 
   const startBuildServerTask = createTaskLog("start build server", {
-    disabled: !loggerToLevels(logger).info,
+    disabled: !logger.levels.info,
   })
   const server = await startServer({
     signal,
