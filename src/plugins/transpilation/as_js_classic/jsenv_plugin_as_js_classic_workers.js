@@ -22,9 +22,7 @@ export const jsenvPluginAsJsClassicWorkers = () => {
         replacement: JSON.stringify("classic"),
       })
     }
-    return injectQueryParams(reference.url, {
-      as_js_classic: "",
-    })
+    return injectQueryParams(reference.url, { as_js_classic: "" })
   }
 
   return {
