@@ -20,7 +20,7 @@ export const resyncResourceHints = async ({
   logger,
   finalGraphKitchen,
   finalGraph,
-  rawUrls,
+  buildToRawUrls,
   postBuildRedirections,
 }) => {
   const resourceHintActions = []
@@ -50,8 +50,8 @@ export const resyncResourceHints = async ({
         }
 
         let buildUrl
-        for (const key of Object.keys(rawUrls)) {
-          if (rawUrls[key] === href) {
+        for (const key of Object.keys(buildToRawUrls)) {
+          if (buildToRawUrls[key] === href) {
             buildUrl = key
             break
           }

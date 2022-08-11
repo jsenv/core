@@ -253,17 +253,16 @@ build ${entryPointKeys.length} entry points`)
     const buildUrlsGenerator = createBuilUrlsGenerator({
       buildDirectoryUrl,
     })
-    const rawUrls = {}
+    const buildToRawUrls = {}
     const associateBuildUrlAndRawUrl = (buildUrl, rawUrl) => {
       if (urlIsInsideOf(rawUrl, buildDirectoryUrl)) {
-        // throw new Error(`raw url must be inside rawGraph, got ${rawUrl}`)
+        throw new Error(`raw url must be inside rawGraph, got ${rawUrl}`)
       }
       logger.debug(`build url generated
 ${ANSI.color(rawUrl, ANSI.GREY)} ->
 ${ANSI.color(buildUrl, ANSI.MAGENTA)}
 `)
-
-      rawUrls[buildUrl] = rawUrl
+      buildToRawUrls[buildUrl] = rawUrl
     }
     const bundleRedirections = {}
     const buildUrls = {}
@@ -466,9 +465,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               }
               return url
             }
-
             if (reference.type === "filesystem") {
-              const parentRawUrl = rawUrls[reference.parentUrl]
+              const parentRawUrl = buildToRawUrls[reference.parentUrl]
               const baseUrl = ensurePathnameTrailingSlash(parentRawUrl)
               return performInternalRedirections(
                 new URL(reference.specifier, baseUrl).href,
@@ -492,7 +490,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               return null
             }
             // already a build url
-            const rawUrl = rawUrls[reference.url]
+            const rawUrl = buildToRawUrls[reference.url]
             if (rawUrl) {
               return reference.url
             }
@@ -501,12 +499,13 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             //   - injecting "?as_js_classic" because the parentUrl has it
             if (reference.original) {
               const referenceOriginalUrl = reference.original.url
+              // const referenceOriginalUrl = buildToRawUrls[reference.original.url] || reference.original.url
               let originalBuildUrl
               if (urlIsInsideOf(referenceOriginalUrl, buildDirectoryUrl)) {
                 originalBuildUrl = referenceOriginalUrl
               } else {
-                originalBuildUrl = Object.keys(rawUrls).find(
-                  (key) => rawUrls[key] === referenceOriginalUrl,
+                originalBuildUrl = Object.keys(buildToRawUrls).find(
+                  (key) => buildToRawUrls[key] === referenceOriginalUrl,
                 )
               }
               let rawUrl
@@ -514,7 +513,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 const originalBuildUrl =
                   postBuildRedirections[referenceOriginalUrl]
                 rawUrl = originalBuildUrl
-                  ? rawUrls[originalBuildUrl]
+                  ? buildToRawUrls[originalBuildUrl]
                   : reference.url
               } else {
                 rawUrl = reference.url
@@ -623,7 +622,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             }
             if (reference.isResourceHint) {
               // return the raw url, we will resync at the end
-              return rawUrls[reference.url]
+              return buildToRawUrls[reference.url]
             }
             // remove eventual search params and hash
             const urlUntilPathname = asUrlUntilPathname(reference.generatedUrl)
@@ -656,14 +655,14 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 // logger.debug(`fetching from bundle ${url}`)
                 return bundleUrlInfo
               }
-              const rawUrl = rawUrls[url] || url
+              const rawUrl = buildToRawUrls[url] || url
               const rawUrlInfo = rawGraph.getUrlInfo(rawUrl)
               if (!rawUrlInfo) {
                 throw new Error(
                   createDetailedMessage(`Cannot find url`, {
                     url,
-                    "raw urls": Object.values(rawUrls),
-                    "build urls": Object.keys(rawUrls),
+                    "raw urls": Object.values(buildToRawUrls),
+                    "build urls": Object.keys(buildToRawUrls),
                   }),
                 )
               }
@@ -690,7 +689,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 type: context.reference.type,
                 expectedType: context.reference.expectedType,
                 expectedSubtype: context.reference.expectedSubtype,
-                parentUrl: rawUrls[context.reference.parentUrl],
+                parentUrl: buildToRawUrls[context.reference.parentUrl],
                 specifier: context.reference.specifier,
                 injected: true,
               })
@@ -771,7 +770,7 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`,
         buildOperation,
         logger,
         buildDirectoryUrl,
-        rawUrls,
+        buildToRawUrls,
         buildUrls,
         baseUrl,
         postBuildEntryUrls,
@@ -816,7 +815,7 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`,
       logger,
       finalGraphKitchen,
       finalGraph,
-      rawUrls,
+      buildToRawUrls,
       postBuildRedirections,
     })
     buildOperation.throwIfAborted()
