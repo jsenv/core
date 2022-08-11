@@ -11,6 +11,7 @@ import {
   stringifyHtmlAst,
   getHtmlNodeAttribute,
   setHtmlNodeAttributes,
+  analyzeScriptNode,
   injectScriptNodeAsEarlyAsPossible,
   createHtmlNode,
 } from "@jsenv/ast"
@@ -100,13 +101,36 @@ export const jsenvPluginAsJsClassicHtml = ({
             }
             if (rel === "preload") {
               mutations.push(() => {
-                setHtmlNodeAttributes(node, {
-                  crossorigin: undefined,
-                })
+                setHtmlNodeAttributes(node, { crossorigin: undefined })
               })
             }
           },
-          script: (node) => {},
+          script: (node) => {
+            const type = analyzeScriptNode(node)
+            if (type !== "js_module") {
+              return
+            }
+            const href = getHtmlNodeAttribute(node, "href")
+            if (href) {
+              const reference = context.referenceUtils.find(
+                (ref) =>
+                  ref.generatedSpecifier === href &&
+                  ref.type === "script_src" &&
+                  ref.subtype === "js_module",
+              )
+              const urlObject = new URL(reference.url)
+              if (!urlObject.searchParams.has("as_js_classic")) {
+                return
+              }
+              mutations.push(() => {
+                setHtmlNodeAttributes(node, { type: undefined })
+              })
+            } else if (shouldTransformScriptTypeModule) {
+              mutations.push(() => {
+                setHtmlNodeAttributes(node, { type: undefined })
+              })
+            }
+          },
         })
 
         if (systemJsInjection) {
