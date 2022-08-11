@@ -31,10 +31,10 @@ export const jsenvPluginAsJsClassicConversion = ({
 
   const shouldPropagateJsClassic = (reference, context) => {
     const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl)
-    return (
-      parentUrlInfo &&
-      new URL(parentUrlInfo.url).searchParams.has("as_js_classic")
-    )
+    if (!parentUrlInfo) {
+      return false
+    }
+    return new URL(parentUrlInfo.url).searchParams.has("as_js_classic")
   }
   const markAsJsClassicProxy = (reference) => {
     reference.expectedType = "js_classic"
