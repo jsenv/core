@@ -48,7 +48,7 @@ await test({
   versioning: false,
   expectedUrl: "/js/main.nomodule.js",
 })
-// no support + without bundling
+// no support + no bundling
 await test({
   runtimeCompat: { chrome: "60" },
   bundling: false,

@@ -172,6 +172,9 @@ export const createKitchen = ({
       if (!resolvedUrl) {
         throw new Error(`NO_RESOLVE`)
       }
+      // if (resolvedUrl.includes(".js")) {
+      //   reference.debug = true
+      // }
       resolvedUrl = normalizeUrl(resolvedUrl)
       reference.url = resolvedUrl
       if (reference.debug) {

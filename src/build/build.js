@@ -254,11 +254,11 @@ build ${entryPointKeys.length} entry points`)
       buildDirectoryUrl,
     })
     const buildToRawUrls = {}
-    const associateBuildUrlAndRawUrl = (buildUrl, rawUrl) => {
+    const associateBuildUrlAndRawUrl = (buildUrl, rawUrl, reason) => {
       if (urlIsInsideOf(rawUrl, buildDirectoryUrl)) {
         throw new Error(`raw url must be inside rawGraph, got ${rawUrl}`)
       }
-      logger.debug(`build url generated
+      logger.debug(`build url generated (${reason})
 ${ANSI.color(rawUrl, ANSI.GREY)} ->
 ${ANSI.color(buildUrl, ANSI.MAGENTA)}
 `)
@@ -403,7 +403,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             urlInfo: bundleUrlInfo,
           })
           bundleRedirections[url] = buildUrl
-          associateBuildUrlAndRawUrl(buildUrl, url)
+          associateBuildUrlAndRawUrl(buildUrl, url, "bundle")
           bundleUrlInfos[buildUrl] = bundleUrlInfo
           if (buildUrl.includes("?")) {
             bundleUrlInfos[asUrlWithoutSearch(buildUrl)] = bundleUrlInfo
@@ -498,43 +498,37 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             //   - injecting "?as_js_classic" for the first time
             //   - injecting "?as_js_classic" because the parentUrl has it
             if (reference.original) {
-              const referenceOriginalUrl = reference.original.url
-              // const referenceOriginalUrl = buildToRawUrls[reference.original.url] || reference.original.url
-              let originalBuildUrl
-              if (urlIsInsideOf(referenceOriginalUrl, buildDirectoryUrl)) {
-                originalBuildUrl = referenceOriginalUrl
-              } else {
-                originalBuildUrl = Object.keys(buildToRawUrls).find(
-                  (key) => buildToRawUrls[key] === referenceOriginalUrl,
-                )
-              }
-              let rawUrl
-              if (urlIsInsideOf(reference.url, buildDirectoryUrl)) {
-                const originalBuildUrl =
-                  postBuildRedirections[referenceOriginalUrl]
-                rawUrl = originalBuildUrl
-                  ? buildToRawUrls[originalBuildUrl]
-                  : reference.url
-              } else {
-                rawUrl = reference.url
-              }
-              // the url info do not exists yet (it will be created after this "redirectUrl" hook)
-              // And the content will be generated when url is cooked by url graph loader.
-              // Here we just want to reserve an url for that file
+              const urlBeforeRedirect = reference.original.url
+              const urlAfterRedirect = reference.url
+              postBuildRedirections[urlBeforeRedirect] = urlAfterRedirect
+
               const isEntryPoint =
                 reference.isEntryPoint ||
                 isWebWorkerEntryPointReference(reference)
-              const buildUrl = buildUrlsGenerator.generate(rawUrl, {
-                urlInfo: {
-                  data: reference.data,
-                  isEntryPoint,
-                  type: reference.expectedType,
-                  subtype: reference.expectedSubtype,
-                  filename: reference.filename,
-                },
-              })
-              postBuildRedirections[originalBuildUrl] = buildUrl
-              associateBuildUrlAndRawUrl(buildUrl, rawUrl)
+              // the url info do not exists yet (it will be created after this "redirectUrl" hook)
+              // And the content will be generated when url is cooked by url graph loader.
+              // Here we just want to reserve an url for that file
+              const urlInfo = {
+                data: reference.data,
+                isEntryPoint,
+                type: reference.expectedType,
+                subtype: reference.expectedSubtype,
+                filename: reference.filename,
+              }
+              if (urlIsInsideOf(urlBeforeRedirect, buildDirectoryUrl)) {
+                // the redirection happened on a build url (because of bundling)
+                const buildUrl = buildUrlsGenerator.generate(urlAfterRedirect, {
+                  urlInfo,
+                })
+                return buildUrl
+              }
+              const rawUrl = urlAfterRedirect
+              const buildUrl = buildUrlsGenerator.generate(rawUrl, { urlInfo })
+              associateBuildUrlAndRawUrl(
+                buildUrl,
+                rawUrl,
+                "redirected during postbuild",
+              )
               return buildUrl
             }
             if (reference.isInline) {
@@ -561,7 +555,11 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 urlInfo: rawUrlInfo,
                 parentUrlInfo,
               })
-              associateBuildUrlAndRawUrl(buildUrl, rawUrlInfo.url)
+              associateBuildUrlAndRawUrl(
+                buildUrl,
+                rawUrlInfo.url,
+                "inline content",
+              )
               return buildUrl
             }
             // from "js_module_as_js_classic":
@@ -573,7 +571,11 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   type: "js_classic",
                 },
               })
-              associateBuildUrlAndRawUrl(buildUrl, reference.url)
+              associateBuildUrlAndRawUrl(
+                buildUrl,
+                reference.url,
+                "injected during postbuild",
+              )
               return buildUrl
             }
             const rawUrlInfo = rawGraph.getUrlInfo(reference.url)
@@ -584,11 +586,12 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 urlInfo: rawUrlInfo,
                 parentUrlInfo,
               })
-              associateBuildUrlAndRawUrl(buildUrl, rawUrlInfo.url)
+              associateBuildUrlAndRawUrl(buildUrl, rawUrlInfo.url, "raw file")
               if (buildUrl.includes("?")) {
                 associateBuildUrlAndRawUrl(
                   asUrlWithoutSearch(buildUrl),
                   rawUrlInfo.url,
+                  "raw file",
                 )
               }
               return buildUrl
@@ -624,7 +627,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               // return the raw url, we will resync at the end
               return buildToRawUrls[reference.url]
             }
-            // remove eventual search params and hash
+            // remove eventual search params (as_js_classic) and hash
+            // (TODO: we should remove only OUR search params and preserve any search params
+            // that would be there in the source file)
             const urlUntilPathname = asUrlUntilPathname(reference.generatedUrl)
             let specifier
             if (baseUrl === "./") {
@@ -978,7 +983,7 @@ const applyUrlVersioning = async ({
   buildOperation,
   logger,
   buildDirectoryUrl,
-  rawUrls,
+  buildToRawUrls,
   buildUrls,
   baseUrl,
   postBuildEntryUrls,
@@ -1185,7 +1190,7 @@ const applyUrlVersioning = async ({
           fetchUrlContent: (versionedUrlInfo) => {
             if (versionedUrlInfo.isInline) {
               const rawUrlInfo = rawGraph.getUrlInfo(
-                rawUrls[versionedUrlInfo.url],
+                buildToRawUrls[versionedUrlInfo.url],
               )
               const finalUrlInfo = finalGraph.getUrlInfo(versionedUrlInfo.url)
               return {
