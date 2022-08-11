@@ -60,6 +60,7 @@ export const createPluginController = ({ plugins, scenarios }) => {
     pushPlugin(plugin)
   })
 
+  let lastPluginUsed = null
   let currentPlugin = null
   let currentHookName = null
   const callHook = (hook, info, context) => {
@@ -71,6 +72,7 @@ export const createPluginController = ({ plugins, scenarios }) => {
     if (info.timing) {
       startTimestamp = performance.now()
     }
+    lastPluginUsed = hook.plugin
     currentPlugin = hook.plugin
     currentHookName = hook.name
     let valueReturned = hookFn(info, context)
@@ -93,6 +95,7 @@ export const createPluginController = ({ plugins, scenarios }) => {
     if (info.timing) {
       startTimestamp = performance.now()
     }
+    lastPluginUsed = hook.plugin
     currentPlugin = hook.plugin
     currentHookName = hook.name
     let valueReturned = await hookFn(info, context)
@@ -181,6 +184,7 @@ export const createPluginController = ({ plugins, scenarios }) => {
     callAsyncHooks,
     callAsyncHooksUntil,
 
+    getLastPluginUsed: () => lastPluginUsed,
     getCurrentPlugin: () => currentPlugin,
     getCurrentHookName: () => currentHookName,
   }

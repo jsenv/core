@@ -106,25 +106,23 @@ export const jsenvPluginAsJsClassicHtml = ({
             }
           },
           script: (node) => {
-            const type = analyzeScriptNode(node)
+            const { type } = analyzeScriptNode(node)
             if (type !== "js_module") {
               return
             }
-            const href = getHtmlNodeAttribute(node, "href")
-            if (href) {
+            const src = getHtmlNodeAttribute(node, "src")
+            if (src) {
               const reference = context.referenceUtils.find(
                 (ref) =>
-                  ref.generatedSpecifier === href &&
+                  ref.generatedSpecifier === src &&
                   ref.type === "script_src" &&
                   ref.subtype === "js_module",
               )
-              const urlObject = new URL(reference.url)
-              if (!urlObject.searchParams.has("as_js_classic")) {
-                return
+              if (reference.expectedType === "js_classic") {
+                mutations.push(() => {
+                  setHtmlNodeAttributes(node, { type: undefined })
+                })
               }
-              mutations.push(() => {
-                setHtmlNodeAttributes(node, { type: undefined })
-              })
             } else if (shouldTransformScriptTypeModule) {
               mutations.push(() => {
                 setHtmlNodeAttributes(node, { type: undefined })
@@ -137,6 +135,10 @@ export const jsenvPluginAsJsClassicHtml = ({
           let needsSystemJs = false
           for (const reference of urlInfo.references) {
             if (reference.isResourceHint) {
+              // we don't cook resource hints
+              // because they might refer to resource that will be modified during build
+              // It also means something else HAVE to reference that url in order to cook it
+              // so that the preload is deleted by "resync_resource_hints.js" otherwise
               continue
             }
             if (

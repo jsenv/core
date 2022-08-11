@@ -25,7 +25,7 @@ import {
   registerDirectoryLifecycle,
 } from "@jsenv/filesystem"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
-import { createLogger, createTaskLog } from "@jsenv/log"
+import { createLogger, createTaskLog, ANSI } from "@jsenv/log"
 import { generateSourcemapFileUrl } from "@jsenv/sourcemap"
 import { parseHtmlString, stringifyHtmlAst } from "@jsenv/ast"
 
@@ -151,7 +151,6 @@ export const build = async ({
   const runBuild = async ({ signal, logLevel }) => {
     const logger = createLogger({ logLevel })
     const buildOperation = Abort.startOperation()
-    const infoLogsAreDisabled = !logger.levels.info
     buildOperation.addAbortSignal(signal)
     const entryPointKeys = Object.keys(entryPoints)
     if (entryPointKeys.length === 1) {
@@ -167,12 +166,12 @@ build ${entryPointKeys.length} entry points`)
 
     const rawGraph = createUrlGraph()
     const prebuildTask = createTaskLog("prebuild", {
-      disabled: infoLogsAreDisabled,
+      disabled: logger.levels.debug || !logger.levels.info,
     })
     const prebuildRedirections = new Map()
     const rawGraphKitchen = createKitchen({
       signal,
-      logger,
+      logLevel,
       rootDirectoryUrl,
       urlGraph: rawGraph,
       scenarios: { build: true },
@@ -254,6 +253,11 @@ build ${entryPointKeys.length} entry points`)
       if (urlIsInsideOf(rawUrl, buildDirectoryUrl)) {
         // throw new Error(`raw url must be inside rawGraph, got ${rawUrl}`)
       }
+      logger.debug(`build url generated
+${ANSI.color(rawUrl, ANSI.GREY)} ->
+${ANSI.color(buildUrl, ANSI.MAGENTA)}
+`)
+
       rawUrls[buildUrl] = rawUrl
     }
     const bundleRedirections = {}
@@ -356,7 +360,7 @@ build ${entryPointKeys.length} entry points`)
         return
       }
       const bundleTask = createTaskLog(`bundle "${type}"`, {
-        disabled: infoLogsAreDisabled,
+        disabled: logger.levels.debug || !logger.levels.info,
       })
       try {
         const bundlerGeneratedUrlInfos =
@@ -424,7 +428,7 @@ build ${entryPointKeys.length} entry points`)
     const postBuildRedirections = {}
     const finalGraph = createUrlGraph()
     const finalGraphKitchen = createKitchen({
-      logger,
+      logLevel,
       rootDirectoryUrl,
       urlGraph: finalGraph,
       scenarios: { build: true },
@@ -445,23 +449,14 @@ build ${entryPointKeys.length} entry points`)
             const performInternalRedirections = (url) => {
               const prebuildRedirection = prebuildRedirections.get(url)
               if (prebuildRedirection) {
-                logger.debug(
-                  `\nprebuild redirection\n${url} ->\n${prebuildRedirection}\n`,
-                )
                 url = prebuildRedirection
               }
               const bundleRedirection = bundleRedirections[url]
               if (bundleRedirection) {
-                logger.debug(
-                  `\nbundler redirection\n${url} ->\n${bundleRedirection}\n`,
-                )
                 url = bundleRedirection
               }
               const bundleInternalRedirection = bundleInternalRedirections[url]
               if (bundleInternalRedirection) {
-                logger.debug(
-                  `\nbundler internal redirection\n${url} ->\n${bundleInternalRedirection}\n`,
-                )
                 url = bundleInternalRedirection
               }
               return url
@@ -519,15 +514,16 @@ build ${entryPointKeys.length} entry points`)
               } else {
                 rawUrl = reference.url
               }
-              // the url info do not exists yet (it will be created after this "normalize" hook)
+              // the url info do not exists yet (it will be created after this "redirectUrl" hook)
               // And the content will be generated when url is cooked by url graph loader.
               // Here we just want to reserve an url for that file
+              const isEntryPoint =
+                reference.isEntryPoint ||
+                isWebWorkerEntryPointReference(reference)
               const buildUrl = buildUrlsGenerator.generate(rawUrl, {
                 urlInfo: {
                   data: reference.data,
-                  isEntryPoint:
-                    reference.isEntryPoint ||
-                    isWebWorkerEntryPointReference(reference),
+                  isEntryPoint,
                   type: reference.expectedType,
                   subtype: reference.expectedSubtype,
                   filename: reference.filename,
@@ -652,7 +648,7 @@ build ${entryPointKeys.length} entry points`)
             const fromBundleOrRawGraph = (url) => {
               const bundleUrlInfo = bundleUrlInfos[url]
               if (bundleUrlInfo) {
-                logger.debug(`fetching from bundle ${url}`)
+                // logger.debug(`fetching from bundle ${url}`)
                 return bundleUrlInfo
               }
               const rawUrl = rawUrls[url] || url
@@ -660,7 +656,7 @@ build ${entryPointKeys.length} entry points`)
               if (!rawUrlInfo) {
                 throw new Error(`Cannot find url`)
               }
-              logger.debug(`fetching from raw graph ${url}`)
+              // logger.debug(`fetching from raw graph ${url}`)
               if (rawUrlInfo.isInline) {
                 // Inline content, such as <script> inside html, is transformed during the previous phase.
                 // If we read the inline content it would be considered as the original content.
@@ -722,7 +718,9 @@ build ${entryPointKeys.length} entry points`)
       writeGeneratedFiles,
       outDirectoryUrl: new URL(".jsenv/postbuild/", rootDirectoryUrl),
     })
-    const buildTask = createTaskLog("build", { disabled: infoLogsAreDisabled })
+    const buildTask = createTaskLog("build", {
+      disabled: logger.levels.debug || !logger.levels.info,
+    })
     const postBuildEntryUrls = []
     try {
       if (writeGeneratedFiles) {
@@ -761,7 +759,6 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`,
       await applyUrlVersioning({
         buildOperation,
         logger,
-        infoLogsAreDisabled,
         buildDirectoryUrl,
         rawUrls,
         buildUrls,
@@ -970,7 +967,6 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`,
 const applyUrlVersioning = async ({
   buildOperation,
   logger,
-  infoLogsAreDisabled,
   buildDirectoryUrl,
   rawUrls,
   buildUrls,
@@ -988,7 +984,7 @@ const applyUrlVersioning = async ({
   versioningMethod,
 }) => {
   const versioningTask = createTaskLog("inject version in urls", {
-    disabled: infoLogsAreDisabled,
+    disabled: logger.levels.debug || !logger.levels.info,
   })
   try {
     const urlsSorted = sortByDependencies(finalGraph.toObject())
@@ -1078,7 +1074,7 @@ const applyUrlVersioning = async ({
     const versionMappings = {}
     const usedVersionMappings = []
     const versioningKitchen = createKitchen({
-      logger,
+      logLevel: logger.level,
       rootDirectoryUrl: buildDirectoryUrl,
       urlGraph: finalGraph,
       scenarios: { build: true },

@@ -7,7 +7,7 @@ import {
   setUrlFilename,
 } from "@jsenv/urls"
 import { writeFileSync, ensureWindowsDriveLetter } from "@jsenv/filesystem"
-import { createLogger, createDetailedMessage } from "@jsenv/log"
+import { createLogger, createDetailedMessage, ANSI } from "@jsenv/log"
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js"
 
 import { createPluginController } from "../plugins/plugin_controller.js"
@@ -97,6 +97,7 @@ export const createKitchen = ({
     assert,
     assertNode,
     typePropertyNode,
+    debug = false,
   }) => {
     if (typeof specifier !== "string") {
       throw new TypeError(`"specifier" must be a string, got ${specifier}`)
@@ -145,6 +146,7 @@ export const createKitchen = ({
       assertNode,
       typePropertyNode,
       mutation: null,
+      debug,
     }
     // Object.preventExtensions(reference) // useful to ensure all properties are declared here
     return reference
@@ -172,14 +174,30 @@ export const createKitchen = ({
       }
       resolvedUrl = normalizeUrl(resolvedUrl)
       reference.url = resolvedUrl
+      if (reference.debug) {
+        logger.debug(`url resolved by "${
+          pluginController.getLastPluginUsed().name
+        }"
+${ANSI.color(reference.specifier, ANSI.GREY)} ->
+${ANSI.color(reference.url, ANSI.YELLOW)}
+`)
+      }
       pluginController.callHooks(
         "redirectUrl",
         reference,
         referenceContext,
-        (returnValue) => {
+        (returnValue, plugin) => {
           const normalizedReturnValue = normalizeUrl(returnValue)
           if (normalizedReturnValue === reference.url) {
             return
+          }
+          if (reference.debug) {
+            logger.debug(
+              `url redirected by "${plugin.name}"
+${ANSI.color(reference.url, ANSI.GREY)} ->
+${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
+`,
+            )
           }
           const previousReference = { ...reference }
           reference.url = normalizedReturnValue

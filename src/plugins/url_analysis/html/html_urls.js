@@ -33,6 +33,7 @@ export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
       originalColumn,
       node,
       attributeName,
+      debug,
       specifier,
     }) => {
       const { crossorigin, integrity } = readFetchMetas(node)
@@ -55,6 +56,7 @@ export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
         isResourceHint,
         crossorigin,
         integrity,
+        debug,
       })
       actions.push(async () => {
         await context.referenceUtils.readGeneratedSpecifier(reference)
@@ -117,6 +119,7 @@ const visitHtmlUrls = ({ url, htmlAst }) => {
       column,
       // originalLine, originalColumn
     } = position
+    const debug = getHtmlNodeAttribute(node, "jsenv-debug") !== undefined
     const mention = {
       type,
       subtype,
@@ -127,6 +130,7 @@ const visitHtmlUrls = ({ url, htmlAst }) => {
       specifier,
       node,
       attributeName,
+      debug,
     }
     mentions.push(mention)
     return mention
@@ -211,6 +215,7 @@ const visitHtmlUrls = ({ url, htmlAst }) => {
       }
       visitAttributeAsUrlSpecifier({
         type: "script_src",
+        subtype: type,
         expectedType: type,
         node,
         attributeName: "src",

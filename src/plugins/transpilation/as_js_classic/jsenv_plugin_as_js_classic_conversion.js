@@ -51,44 +51,27 @@ export const jsenvPluginAsJsClassicConversion = ({
   return {
     name: "jsenv:as_js_classic_conversion",
     appliesDuring: "*",
-    redirectUrl: {
-      script_src: (reference) => {
-        if (new URL(reference.url).searchParams.has("as_js_classic")) {
-          markAsJsClassicProxy(reference)
-          return null
-        }
+    redirectUrl: (reference, context) => {
+      if (new URL(reference.url).searchParams.has("as_js_classic")) {
+        markAsJsClassicProxy(reference)
         return null
-      },
-      // We want to propagate transformation of js module to js classic to:
-      // - import specifier (static/dynamic import + re-export)
-      // - url specifier when inside System.register/_context.import()
-      //   (because it's the transpiled equivalent of static and dynamic imports)
-      // And not other references otherwise we could try to transform inline resources
-      // or specifiers inside new URL()...
-      js_import_export: (reference, context) => {
-        if (new URL(reference.url).searchParams.has("as_js_classic")) {
-          markAsJsClassicProxy(reference)
-          return null
-        }
+      }
+      if (
+        reference.type === "js_import_export" ||
+        reference.subtype === "system_register_arg" ||
+        reference.subtype === "system_import_arg"
+      ) {
+        // We want to propagate transformation of js module to js classic to:
+        // - import specifier (static/dynamic import + re-export)
+        // - url specifier when inside System.register/_context.import()
+        //   (because it's the transpiled equivalent of static and dynamic imports)
+        // And not other references otherwise we could try to transform inline resources
+        // or specifiers inside new URL()...
         if (shouldPropagateJsClassic(reference, context)) {
           return turnIntoJsClassicProxy(reference, context)
         }
-        return null
-      },
-      js_url_specifier: (reference, context) => {
-        if (new URL(reference.url).searchParams.has("as_js_classic")) {
-          markAsJsClassicProxy(reference)
-          return null
-        }
-        if (
-          (reference.subtype === "system_register_arg" ||
-            reference.subtype === "system_import_arg") &&
-          shouldPropagateJsClassic(reference, context)
-        ) {
-          return turnIntoJsClassicProxy(reference, context)
-        }
-        return null
-      },
+      }
+      return null
     },
     fetchUrlContent: async (urlInfo, context) => {
       const [jsModuleReference, jsModuleUrlInfo] =
