@@ -25,7 +25,12 @@ import {
   registerDirectoryLifecycle,
 } from "@jsenv/filesystem"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
-import { createLogger, createTaskLog, ANSI } from "@jsenv/log"
+import {
+  createLogger,
+  createTaskLog,
+  ANSI,
+  createDetailedMessage,
+} from "@jsenv/log"
 import { generateSourcemapFileUrl } from "@jsenv/sourcemap"
 import { parseHtmlString, stringifyHtmlAst } from "@jsenv/ast"
 
@@ -654,7 +659,13 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               const rawUrl = rawUrls[url] || url
               const rawUrlInfo = rawGraph.getUrlInfo(rawUrl)
               if (!rawUrlInfo) {
-                throw new Error(`Cannot find url`)
+                throw new Error(
+                  createDetailedMessage(`Cannot find url`, {
+                    url,
+                    "raw urls": Object.values(rawUrls),
+                    "build urls": Object.keys(rawUrls),
+                  }),
+                )
               }
               // logger.debug(`fetching from raw graph ${url}`)
               if (rawUrlInfo.isInline) {
