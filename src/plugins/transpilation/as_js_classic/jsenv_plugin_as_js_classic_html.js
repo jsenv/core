@@ -83,7 +83,7 @@ export const jsenvPluginAsJsClassicHtml = ({
                 ref.type === "link_href" &&
                 ref.subtype === rel,
             )
-            if (reference.expectedType !== "js_module") {
+            if (!isOrWasExpectingJsModule(reference)) {
               return
             }
             const urlObject = new URL(reference.url)
@@ -141,11 +141,7 @@ export const jsenvPluginAsJsClassicHtml = ({
               // so that the preload is deleted by "resync_resource_hints.js" otherwise
               continue
             }
-            if (
-              reference.expectedType === "js_module" ||
-              (reference.original &&
-                reference.original.expectedType === "js_module")
-            ) {
+            if (isOrWasExpectingJsModule(reference)) {
               const dependencyUrlInfo = context.urlGraph.getUrlInfo(
                 reference.url,
               )
@@ -182,4 +178,11 @@ export const jsenvPluginAsJsClassicHtml = ({
       },
     },
   }
+}
+
+const isOrWasExpectingJsModule = (reference) => {
+  return (
+    reference.expectedType === "js_module" ||
+    (reference.original && reference.original.expectedType === "js_module")
+  )
 }

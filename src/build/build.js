@@ -9,7 +9,6 @@
 import {
   injectQueryParams,
   setUrlFilename,
-  asUrlUntilPathname,
   normalizeUrl,
   asUrlWithoutSearch,
   ensurePathnameTrailingSlash,
@@ -623,18 +622,17 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 `urls should be inside build directory at this stage, found "${reference.url}"`,
               )
             }
-            if (reference.isResourceHint) {
-              // return the raw url, we will resync at the end
-              return buildToRawUrls[reference.url]
+            const generatedUrlObject = new URL(reference.generatedUrl)
+            if (generatedUrlObject.searchParams.has("as_js_classic")) {
+              generatedUrlObject.searchParams.delete("as_js_classic")
             }
-            // remove eventual search params (as_js_classic) and hash
-            // (TODO: we should remove only OUR search params and preserve any search params
-            // that would be there in the source file)
-            const urlUntilPathname = asUrlUntilPathname(reference.generatedUrl)
+            // TODO: also remove stuff related to import assertions
+            generatedUrlObject.hash = ""
+            const generatedUrl = generatedUrlObject.href
             let specifier
             if (baseUrl === "./") {
               const relativeUrl = urlToRelativeUrl(
-                urlUntilPathname,
+                generatedUrl,
                 reference.parentUrl === rootDirectoryUrl
                   ? buildDirectoryUrl
                   : reference.parentUrl,
@@ -646,7 +644,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               // if a file is in the same directory we could prefer the relative notation
               // but to keep things simple let's keep the "absolutely relative" to baseUrl for now
               specifier = `${baseUrl}${urlToRelativeUrl(
-                urlUntilPathname,
+                generatedUrl,
                 buildDirectoryUrl,
               )}`
             }
@@ -816,14 +814,6 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`,
       urlInfo.data.buildUrlIsVersioned = useVersionedUrl
       urlInfo.data.buildUrlSpecifier = buildUrlSpecifier
     })
-    await resyncResourceHints({
-      logger,
-      finalGraphKitchen,
-      finalGraph,
-      buildToRawUrls,
-      postBuildRedirections,
-    })
-    buildOperation.throwIfAborted()
     const cleanupActions = []
     GRAPH.forEach(finalGraph, (urlInfo) => {
       // nothing uses this url anymore
@@ -841,6 +831,15 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`,
       }
     })
     cleanupActions.forEach((cleanupAction) => cleanupAction())
+    await resyncResourceHints({
+      logger,
+      finalGraphKitchen,
+      finalGraph,
+      buildUrls,
+      postBuildRedirections,
+    })
+    buildOperation.throwIfAborted()
+
     await injectServiceWorkerUrls({
       finalGraphKitchen,
       finalGraph,

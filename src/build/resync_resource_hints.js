@@ -9,7 +9,6 @@ import {
   parseHtmlString,
   visitHtmlNodes,
   getHtmlNodeAttribute,
-  setHtmlNodeAttributes,
   removeHtmlNode,
   stringifyHtmlAst,
 } from "@jsenv/ast"
@@ -20,83 +19,59 @@ export const resyncResourceHints = async ({
   logger,
   finalGraphKitchen,
   finalGraph,
-  buildToRawUrls,
-  postBuildRedirections,
+  buildUrls,
 }) => {
-  const resourceHintActions = []
+  const actions = []
   GRAPH.forEach(finalGraph, (urlInfo) => {
     if (urlInfo.type !== "html") {
       return
     }
-    resourceHintActions.push(async () => {
+    actions.push(async () => {
       const htmlAst = parseHtmlString(urlInfo.content, {
         storeOriginalPositions: false,
       })
-      const actions = []
-      const visitLinkWithHref = (linkNode, href) => {
-        if (!href || href.startsWith("data:")) {
-          return
-        }
-        const rel = getHtmlNodeAttribute(linkNode, "rel")
-        const isresourceHint = [
-          "preconnect",
-          "dns-prefetch",
-          "prefetch",
-          "preload",
-          "modulepreload",
-        ].includes(rel)
-        if (!isresourceHint) {
-          return
-        }
-
-        let buildUrl
-        for (const key of Object.keys(buildToRawUrls)) {
-          if (buildToRawUrls[key] === href) {
-            buildUrl = key
-            break
-          }
-        }
-        if (!buildUrl) {
-          logger.warn(`remove resource hint because cannot find "${href}"`)
-          actions.push(() => {
-            removeHtmlNode(linkNode)
-          })
-          return
-        }
-        buildUrl = postBuildRedirections[buildUrl] || buildUrl
-        const urlInfo = finalGraph.getUrlInfo(buildUrl)
-        if (!urlInfo) {
-          logger.warn(
-            `remove resource hint because cannot find "${buildUrl}" in the graph`,
-          )
-          actions.push(() => {
-            removeHtmlNode(linkNode)
-          })
-          return
-        }
-        if (urlInfo.dependents.size === 0) {
-          logger.info(`remove resource hint because "${href}" not used anymore`)
-          actions.push(() => {
-            removeHtmlNode(linkNode)
-          })
-          return
-        }
-        actions.push(() => {
-          setHtmlNodeAttributes(linkNode, {
-            href: urlInfo.data.buildUrlSpecifier,
-          })
-        })
-      }
+      const mutations = []
       visitHtmlNodes(htmlAst, {
         link: (node) => {
           const href = getHtmlNodeAttribute(node, "href")
-          if (href !== undefined) {
-            visitLinkWithHref(node, href)
+          if (href === undefined || href.startsWith("data:")) {
+            return
+          }
+          const rel = getHtmlNodeAttribute(node, "rel")
+          const isresourceHint = [
+            "preconnect",
+            "dns-prefetch",
+            "prefetch",
+            "preload",
+            "modulepreload",
+          ].includes(rel)
+          if (!isresourceHint) {
+            return
+          }
+          const buildUrl = buildUrls[href]
+          const buildUrlInfo = finalGraph.getUrlInfo(buildUrl)
+          if (!buildUrlInfo) {
+            logger.warn(
+              `remove resource hint because cannot find "${buildUrl}" in the graph`,
+            )
+            mutations.push(() => {
+              removeHtmlNode(node)
+            })
+            return
+          }
+          if (buildUrlInfo.dependents.size === 0) {
+            logger.info(
+              `remove resource hint because "${href}" not used anymore`,
+            )
+            mutations.push(() => {
+              removeHtmlNode(node)
+            })
+            return
           }
         },
       })
-      if (actions.length) {
-        actions.forEach((action) => action())
+      if (mutations.length > 0) {
+        mutations.forEach((mutation) => mutation())
         await finalGraphKitchen.urlInfoTransformer.applyFinalTransformations(
           urlInfo,
           {
@@ -106,7 +81,5 @@ export const resyncResourceHints = async ({
       }
     })
   })
-  await Promise.all(
-    resourceHintActions.map((resourceHintAction) => resourceHintAction()),
-  )
+  await Promise.all(actions.map((resourceHintAction) => resourceHintAction()))
 }
