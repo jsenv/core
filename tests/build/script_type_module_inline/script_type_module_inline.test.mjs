@@ -6,7 +6,7 @@ import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
 
 const test = async ({ expectedUrl, ...rest }) => {
   await build({
-    logLevel: "debug",
+    logLevel: "warn",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
@@ -37,12 +37,12 @@ const test = async ({ expectedUrl, ...rest }) => {
 }
 
 // support + bundling
-// await test({
-//   runtimeCompat: { chrome: "64" },
-//   bundling: true,
-//   versioning: false,
-//   expectedUrl: "/main.html",
-// })
+await test({
+  runtimeCompat: { chrome: "64" },
+  bundling: true,
+  versioning: false,
+  expectedUrl: "/main.html",
+})
 // no support + bundling
 await test({
   runtimeCompat: { chrome: "60" },
@@ -51,12 +51,12 @@ await test({
   expectedUrl: "/main.html__inline_script__1",
 })
 // no support + no bundling
-// await test({
-//   runtimeCompat: { chrome: "60" },
-//   bundling: false,
-//   versioning: false,
-//   expectedUrl: "/main.html__inline_script__1",
-// })
+await test({
+  runtimeCompat: { chrome: "60" },
+  bundling: false,
+  versioning: false,
+  expectedUrl: "/main.html__inline_script__1",
+})
 // // no support + no bundling + versioning
 // await test({
 //   runtimeCompat: { chrome: "60" },

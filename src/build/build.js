@@ -493,43 +493,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             if (rawUrl) {
               return reference.url
             }
-            // from "js_module_as_js_classic":
-            //   - injecting "?as_js_classic" for the first time
-            //   - injecting "?as_js_classic" because the parentUrl has it
-            if (reference.original) {
-              const urlBeforeRedirect = reference.original.url
-              const urlAfterRedirect = reference.url
-              postBuildRedirections[urlBeforeRedirect] = urlAfterRedirect
-
-              const isEntryPoint =
-                reference.isEntryPoint ||
-                isWebWorkerEntryPointReference(reference)
-              // the url info do not exists yet (it will be created after this "redirectUrl" hook)
-              // And the content will be generated when url is cooked by url graph loader.
-              // Here we just want to reserve an url for that file
-              const urlInfo = {
-                data: reference.data,
-                isEntryPoint,
-                type: reference.expectedType,
-                subtype: reference.expectedSubtype,
-                filename: reference.filename,
-              }
-              if (urlIsInsideOf(urlBeforeRedirect, buildDirectoryUrl)) {
-                // the redirection happened on a build url (because of bundling)
-                const buildUrl = buildUrlsGenerator.generate(urlAfterRedirect, {
-                  urlInfo,
-                })
-                return buildUrl
-              }
-              const rawUrl = urlAfterRedirect
-              const buildUrl = buildUrlsGenerator.generate(rawUrl, { urlInfo })
-              associateBuildUrlAndRawUrl(
-                buildUrl,
-                rawUrl,
-                "redirected during postbuild",
-              )
-              return buildUrl
-            }
             if (reference.isInline) {
               const rawUrlInfo = GRAPH.find(rawGraph, (rawUrlInfo) => {
                 if (!rawUrlInfo.isInline) {
@@ -558,6 +521,43 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 buildUrl,
                 rawUrlInfo.url,
                 "inline content",
+              )
+              return buildUrl
+            }
+            // from "js_module_as_js_classic":
+            //   - injecting "?as_js_classic" for the first time
+            //   - injecting "?as_js_classic" because the parentUrl has it
+            if (reference.original) {
+              const urlBeforeRedirect = reference.original.url
+              const urlAfterRedirect = reference.url
+              const isEntryPoint =
+                reference.isEntryPoint ||
+                isWebWorkerEntryPointReference(reference)
+              // the url info do not exists yet (it will be created after this "redirectUrl" hook)
+              // And the content will be generated when url is cooked by url graph loader.
+              // Here we just want to reserve an url for that file
+              const urlInfo = {
+                data: reference.data,
+                isEntryPoint,
+                type: reference.expectedType,
+                subtype: reference.expectedSubtype,
+                filename: reference.filename,
+              }
+              if (urlIsInsideOf(urlBeforeRedirect, buildDirectoryUrl)) {
+                // the redirection happened on a build url, happens due to:
+                // 1. bundling
+                const buildUrl = buildUrlsGenerator.generate(urlAfterRedirect, {
+                  urlInfo,
+                })
+                postBuildRedirections[urlBeforeRedirect] = buildUrl
+                return buildUrl
+              }
+              const rawUrl = urlAfterRedirect
+              const buildUrl = buildUrlsGenerator.generate(rawUrl, { urlInfo })
+              associateBuildUrlAndRawUrl(
+                buildUrl,
+                rawUrl,
+                "redirected during postbuild",
               )
               return buildUrl
             }
@@ -685,24 +685,28 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               }
               return rawUrlInfo
             }
+            const { reference } = context
             // reference injected during "postbuild":
             // - happens for "as_js_classic" injecting "s.js"
-            if (context.reference.injected) {
+            if (reference.injected) {
               const [ref, rawUrlInfo] = rawGraphKitchen.injectReference({
-                type: context.reference.type,
-                expectedType: context.reference.expectedType,
-                expectedSubtype: context.reference.expectedSubtype,
-                parentUrl: buildToRawUrls[context.reference.parentUrl],
-                specifier: context.reference.specifier,
+                type: reference.type,
+                expectedType: reference.expectedType,
+                expectedSubtype: reference.expectedSubtype,
+                parentUrl: buildToRawUrls[reference.parentUrl],
+                specifier: reference.specifier,
                 injected: true,
               })
               await rawGraphKitchen.cook(rawUrlInfo, { reference: ref })
               return rawUrlInfo
             }
+            if (reference.isInline) {
+              return fromBundleOrRawGraph(reference.url)
+            }
             // reference updated during "postbuild":
             // - happens for "as_js_classic"
-            if (context.reference.original) {
-              return fromBundleOrRawGraph(context.reference.original.url)
+            if (reference.original) {
+              return fromBundleOrRawGraph(reference.original.url)
             }
             return fromBundleOrRawGraph(finalUrlInfo.url)
           },
@@ -836,7 +840,6 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`,
       finalGraphKitchen,
       finalGraph,
       buildUrls,
-      postBuildRedirections,
     })
     buildOperation.throwIfAborted()
 
