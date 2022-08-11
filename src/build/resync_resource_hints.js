@@ -9,6 +9,7 @@ import {
   parseHtmlString,
   visitHtmlNodes,
   getHtmlNodeAttribute,
+  setHtmlNodeAttributes,
   removeHtmlNode,
   stringifyHtmlAst,
 } from "@jsenv/ast"
@@ -20,6 +21,7 @@ export const resyncResourceHints = async ({
   finalGraphKitchen,
   finalGraph,
   buildUrls,
+  postBuildRedirections,
 }) => {
   const actions = []
   GRAPH.forEach(finalGraph, (urlInfo) => {
@@ -49,7 +51,39 @@ export const resyncResourceHints = async ({
             return
           }
           const buildUrl = buildUrls[href]
-          const buildUrlInfo = finalGraph.getUrlInfo(buildUrl)
+          const buildUrlInGraph = postBuildRedirections.getUrlInGraph(buildUrl)
+          if (buildUrlInGraph !== buildUrl) {
+            const buildUrlInfo = finalGraph.getUrlInfo(buildUrlInGraph)
+            if (!buildUrlInfo) {
+              logger.warn(
+                `remove resource hint because cannot find "${href}" in the graph`,
+              )
+              mutations.push(() => {
+                removeHtmlNode(node)
+              })
+              return
+            }
+            if (rel === "preload" && buildUrlInfo.type === "js_classic") {
+              const buildUrlAfterVersioning =
+                postBuildRedirections.getUrlAfterVersioning(buildUrlInGraph)
+              const buildSpecifierBeforeRedirect = Object.keys(buildUrls).find(
+                (buildSpecifierCandidate) => {
+                  const buildUrlCandidate = buildUrls[buildSpecifierCandidate]
+                  return buildUrlCandidate === buildUrlAfterVersioning
+                },
+              )
+              mutations.push(() => {
+                setHtmlNodeAttributes(node, {
+                  href: buildSpecifierBeforeRedirect,
+                  crossorigin: undefined,
+                })
+              })
+            }
+            return
+          }
+          const buildUrlBeforeVersioning =
+            postBuildRedirections.getUrlBeforeVersioning(buildUrl)
+          const buildUrlInfo = finalGraph.getUrlInfo(buildUrlBeforeVersioning)
           if (!buildUrlInfo) {
             logger.warn(
               `remove resource hint because cannot find "${href}" in the graph`,

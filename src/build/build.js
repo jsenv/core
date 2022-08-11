@@ -432,7 +432,90 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       rootDirectoryUrl,
       ...urlAnalysis,
     })
-    const postBuildRedirections = {}
+    const postBuildRedirections = (() => {
+      const map = new Map()
+
+      const getUrlAfterRedirect = (
+        url,
+        { postbuild = false, versioning = false, cleanup = false },
+      ) => {
+        const redirections = map.get(url)
+        if (!redirections) {
+          return url
+        }
+        if (postbuild && redirections.postbuild) {
+          const postbuildUrl = redirections.postbuild
+          return getUrlAfterRedirect(postbuildUrl, {
+            postbuild,
+            versioning,
+            cleanup,
+          })
+        }
+        if (versioning && redirections.versioning) {
+          return redirections.versioning
+        }
+        if (cleanup && redirections.cleanup) {
+          return redirections.cleanup
+        }
+        return url
+      }
+
+      const getUrlBeforeRedirect = (
+        url,
+        { postbuild = false, versioning = false, cleanup = false },
+      ) => {
+        for (const [urlBeforeRedirect, redirections] of map) {
+          if (versioning && redirections.versioning === url) {
+            return urlBeforeRedirect
+          }
+          if (cleanup && redirections.cleanup === url) {
+            return urlBeforeRedirect
+          }
+          if (postbuild && redirections.postbuild) {
+            return urlBeforeRedirect
+          }
+        }
+        return url
+      }
+
+      return {
+        map,
+        add: ({ type, from, to }) => {
+          let redirections = map.get(from)
+          if (!redirections) {
+            redirections = {
+              postbuild: null,
+              versioning: null,
+              cleanup: null,
+            }
+            map.set(from, redirections)
+          }
+          redirections[type] = from === to ? null : to
+        },
+        getUrlInGraph: (url) => {
+          return getUrlAfterRedirect(url, {
+            postbuild: true,
+          })
+        },
+        getUrlInFile: (url) => {
+          return getUrlAfterRedirect(url, {
+            postbuild: true,
+            versioning: true,
+            cleanup: true,
+          })
+        },
+        getUrlBeforeVersioning: (url) => {
+          return getUrlBeforeRedirect(url, {
+            versioning: true,
+          })
+        },
+        getUrlAfterVersioning: (url) => {
+          return getUrlAfterRedirect(url, {
+            versioning: true,
+          })
+        },
+      }
+    })()
     const finalGraph = createUrlGraph()
     const finalGraphKitchen = createKitchen({
       logLevel,
@@ -553,7 +636,11 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 const buildUrl = buildUrlsGenerator.generate(urlAfterRedirect, {
                   urlInfo,
                 })
-                postBuildRedirections[urlBeforeRedirect] = buildUrl
+                postBuildRedirections.add({
+                  type: "postbuild",
+                  from: urlBeforeRedirect,
+                  to: buildUrl,
+                })
                 return buildUrl
               }
               const rawUrl = urlAfterRedirect
@@ -784,6 +871,7 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`,
         buildToRawUrls,
         buildUrls,
         baseUrl,
+        postBuildRedirections,
         postBuildEntryUrls,
         sourcemaps,
         sourcemapsSourcesContent,
@@ -844,6 +932,7 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`,
       finalGraphKitchen,
       finalGraph,
       buildUrls,
+      postBuildRedirections,
     })
     buildOperation.throwIfAborted()
 
@@ -875,8 +964,11 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`,
         buildInlineContents[buildRelativeUrl] = urlInfo.content
       } else {
         buildFileContents[buildRelativeUrl] = urlInfo.content
-        const buildRelativeUrlWithoutVersioning = urlToRelativeUrl(
+        const buildUrlFormatted = postBuildRedirections.getUrlInFile(
           urlInfo.url,
+        )
+        const buildRelativeUrlWithoutVersioning = urlToRelativeUrl(
+          buildUrlFormatted,
           buildDirectoryUrl,
         )
         buildManifest[buildRelativeUrlWithoutVersioning] = buildRelativeUrl
@@ -993,6 +1085,7 @@ const applyUrlVersioning = async ({
   buildUrls,
   baseUrl,
   postBuildEntryUrls,
+  postBuildRedirections,
   sourcemaps,
   sourcemapsSourcesContent,
   runtimeCompat,
@@ -1036,7 +1129,6 @@ const applyUrlVersioning = async ({
       if (!urlInfo.isEntryPoint && urlInfo.dependents.size === 0) {
         return
       }
-
       const urlContent =
         urlInfo.type === "html"
           ? stringifyHtmlAst(
@@ -1084,9 +1176,21 @@ const applyUrlVersioning = async ({
       })
       urlInfo.data.version = versionGenerator.generate()
 
+      const buildUrlObject = new URL(urlInfo.url)
+      // remove ?as_js_classic as
+      // this information is already hold into ".nomodule"
+      if (buildUrlObject.searchParams.has("as_js_classic")) {
+        buildUrlObject.searchParams.delete("as_js_classic")
+      }
+      const buildUrl = buildUrlObject.href
+      postBuildRedirections.add({
+        type: "cleanup",
+        from: urlInfo.url,
+        to: buildUrl,
+      })
       urlInfo.data.versionedUrl = normalizeUrl(
         injectVersionIntoBuildUrl({
-          buildUrl: urlInfo.url,
+          buildUrl,
           version: urlInfo.data.version,
           versioningMethod,
         }),
@@ -1170,7 +1274,12 @@ const applyUrlVersioning = async ({
               buildDirectoryUrl,
             )}`
             versionMappings[reference.specifier] = versionedSpecifier
-            buildUrls[versionedSpecifier] = reference.url
+            postBuildRedirections.add({
+              type: "versioning",
+              from: reference.url,
+              to: versionedUrl,
+            })
+            buildUrls[versionedSpecifier] = versionedUrl
 
             const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
             if (parentUrlInfo.jsQuote) {
