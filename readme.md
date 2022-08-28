@@ -4,7 +4,7 @@ Jsenv was first created to write tests that could be executed in different runti
 It has naturally evolved to cover the core needs of a JavaScript project: developement, testing and building for production.
 
 - :exploding_head: Execute HTML files as tests
-- :sparkles: dev, test and build in a single tool
+- :sparkles: Dev, tests and build in a single tool
 - :ok_hand: Seamless integration with standard HTML, CSS and JS
 
 # Demo
