@@ -40,7 +40,7 @@ import {
   ANSI,
   createDetailedMessage,
 } from "@jsenv/log"
-import { generateSourcemapFileUrl } from "@jsenv/sourcemap"
+import { createMagicSource, generateSourcemapFileUrl } from "@jsenv/sourcemap"
 import {
   parseHtmlString,
   stringifyHtmlAst,
@@ -65,7 +65,6 @@ import { GRAPH } from "./graph_utils.js"
 import { createBuilUrlsGenerator } from "./build_urls_generator.js"
 import { injectGlobalVersionMapping } from "./inject_global_version_mappings.js"
 import { createVersionGenerator } from "./version_generator.js"
-import { injectServiceWorkerUrls } from "./inject_service_worker_urls.js"
 
 // default runtimeCompat corresponds to
 // "we can keep <script type="module"> intact":
@@ -1212,11 +1211,75 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`,
         buildOperation.throwIfAborted()
       }
       inject_urls_in_service_workers: {
-        await injectServiceWorkerUrls({
-          finalGraphKitchen,
+        const serviceWorkerEntryUrlInfos = GRAPH.filter(
           finalGraph,
-          lineBreakNormalization,
-        })
+          (finalUrlInfo) => {
+            return (
+              finalUrlInfo.subtype === "service_worker" &&
+              finalUrlInfo.isEntryPoint
+            )
+          },
+        )
+        if (serviceWorkerEntryUrlInfos.length > 0) {
+          const serviceWorkerUrls = {}
+          GRAPH.forEach(finalGraph, (urlInfo) => {
+            if (urlInfo.isInline || !urlInfo.shouldHandle) {
+              return
+            }
+            if (!urlInfo.url.startsWith("file:")) {
+              return
+            }
+            if (urlInfo.data.buildUrlIsVersioned) {
+              serviceWorkerUrls[urlInfo.data.buildUrlSpecifier] = {
+                versioned: true,
+              }
+              return
+            }
+            if (!urlInfo.data.version) {
+              // when url is not versioned we compute a "version" for that url anyway
+              // so that service worker source still changes and navigator
+              // detect there is a change
+              const versionGenerator = createVersionGenerator()
+              versionGenerator.augmentWithContent({
+                content: urlInfo.content,
+                contentType: urlInfo.contentType,
+                lineBreakNormalization,
+              })
+              const version = versionGenerator.generate()
+              urlInfo.data.version = version
+            }
+            serviceWorkerUrls[urlInfo.data.buildUrlSpecifier] = {
+              versioned: false,
+              version: urlInfo.data.version,
+            }
+          })
+          serviceWorkerEntryUrlInfos.forEach((serviceWorkerEntryUrlInfo) => {
+            const magicSource = createMagicSource(
+              serviceWorkerEntryUrlInfo.content,
+            )
+            const urlsWithoutSelf = {
+              ...serviceWorkerUrls,
+            }
+            delete urlsWithoutSelf[
+              serviceWorkerEntryUrlInfo.data.buildUrlSpecifier
+            ]
+            magicSource.prepend(
+              `\nself.serviceWorkerUrls = ${JSON.stringify(
+                serviceWorkerUrls,
+                null,
+                "  ",
+              )};\n`,
+            )
+            const { content, sourcemap } = magicSource.toContentAndSourcemap()
+            finalGraphKitchen.urlInfoTransformer.applyFinalTransformations(
+              serviceWorkerEntryUrlInfo,
+              {
+                content,
+                sourcemap,
+              },
+            )
+          })
+        }
         buildOperation.throwIfAborted()
       }
     }

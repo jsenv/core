@@ -136,7 +136,7 @@ export const createUrlInfoTransformer = ({
     }
   }
 
-  const applyIntermediateTransformations = async (urlInfo, transformations) => {
+  const applyIntermediateTransformations = (urlInfo, transformations) => {
     if (!transformations) {
       return
     }
@@ -153,7 +153,7 @@ export const createUrlInfoTransformer = ({
     }
     if (sourcemapsEnabled && sourcemap) {
       const sourcemapNormalized = normalizeSourcemap(urlInfo, sourcemap)
-      const finalSourcemap = await composeTwoSourcemaps(
+      const finalSourcemap = composeTwoSourcemaps(
         urlInfo.sourcemap,
         sourcemapNormalized,
       )
@@ -177,7 +177,7 @@ export const createUrlInfoTransformer = ({
 
   const applyFinalTransformations = async (urlInfo, transformations) => {
     if (transformations) {
-      await applyIntermediateTransformations(urlInfo, transformations)
+      applyIntermediateTransformations(urlInfo, transformations)
     }
     if (
       sourcemapsEnabled &&
