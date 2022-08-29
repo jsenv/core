@@ -132,6 +132,11 @@ export const createFileService = ({
       sourcemapsSourcesProtocol,
       sourcemapsSourcesContent,
       writeGeneratedFiles,
+      outDirectoryUrl: scenarios.dev
+        ? `${rootDirectoryUrl}.jsenv/${runtimeName}@${runtimeVersion}/`
+        : `${rootDirectoryUrl}.jsenv/${
+            scenarios.test ? "test" : "build"
+          }/${runtimeName}@${runtimeVersion}/`,
     })
     urlGraph.createUrlInfoCallbackRef.current = (urlInfo) => {
       const { watch } = URL_META.applyAssociations({
@@ -230,8 +235,7 @@ export const createFileService = ({
         headers: request.headers,
       })
     }
-    const { runtimeName, runtimeVersion, urlGraph, kitchen } =
-      getOrCreateContext(request)
+    const { urlGraph, kitchen } = getOrCreateContext(request)
     const responseFromPlugin =
       await kitchen.pluginController.callAsyncHooksUntil(
         "serve",
@@ -292,11 +296,6 @@ export const createFileService = ({
       await kitchen.cook(urlInfo, {
         request,
         reference,
-        outDirectoryUrl: scenarios.dev
-          ? `${rootDirectoryUrl}.jsenv/${runtimeName}@${runtimeVersion}/`
-          : `${rootDirectoryUrl}.jsenv/${
-              scenarios.test ? "test" : "build"
-            }/${runtimeName}@${runtimeVersion}/`,
       })
       let { response } = urlInfo
       if (response) {

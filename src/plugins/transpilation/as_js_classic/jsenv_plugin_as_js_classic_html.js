@@ -118,6 +118,9 @@ export const jsenvPluginAsJsClassicHtml = ({
                   ref.type === "script_src" &&
                   ref.subtype === "js_module",
               )
+              if (!reference) {
+                return
+              }
               if (reference.expectedType === "js_classic") {
                 mutations.push(() => {
                   setHtmlNodeAttributes(node, { type: undefined })
@@ -183,6 +186,8 @@ export const jsenvPluginAsJsClassicHtml = ({
 const isOrWasExpectingJsModule = (reference) => {
   return (
     reference.expectedType === "js_module" ||
-    (reference.original && reference.original.expectedType === "js_module")
+    (reference.original && reference.original.expectedType === "js_module") ||
+    // happens if source file explicitely contains "?as_js_classic"
+    reference.searchParams.has("as_js_classic")
   )
 }
