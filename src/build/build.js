@@ -63,7 +63,7 @@ import { isWebWorkerEntryPointReference } from "../omega/web_workers.js"
 
 import { GRAPH } from "./graph_utils.js"
 import { createBuilUrlsGenerator } from "./build_urls_generator.js"
-import { injectGlobalVersionMapping } from "./inject_global_version_mappings.js"
+import { injectVersionMappings } from "./inject_global_version_mappings.js"
 import { createVersionGenerator } from "./version_generator.js"
 
 // default runtimeCompat corresponds to
@@ -734,9 +734,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               associateBuildUrlAndRawUrl(buildUrl, url, "bundle")
             }
             bundleUrlInfos[buildUrl] = bundleUrlInfo
-            // if (buildUrl.includes("?")) {
-            //   bundleUrlInfos[asUrlWithoutSearch(buildUrl)] = bundleUrlInfo
-            // }
+            if (buildUrl.includes("?")) {
+              bundleUrlInfos[asUrlWithoutSearch(buildUrl)] = bundleUrlInfo
+            }
             if (bundlerGeneratedUrlInfo.data.bundleRelativeUrl) {
               const urlForBundler = new URL(
                 bundlerGeneratedUrlInfo.data.bundleRelativeUrl,
@@ -884,7 +884,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             )
           })
           const versionMappings = {}
-          const usedVersionMappings = []
+          const usedVersionMappings = new Set()
           const versioningKitchen = createKitchen({
             logLevel: logger.level,
             rootDirectoryUrl: buildDirectoryUrl,
@@ -967,7 +967,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   )
                   if (parentUrlInfo.jsQuote) {
                     // the url is inline inside js quotes
-                    usedVersionMappings.push(reference.specifier)
+                    usedVersionMappings.add(reference.specifier)
                     return () =>
                       `${parentUrlInfo.jsQuote}+__v__(${JSON.stringify(
                         reference.specifier,
@@ -977,7 +977,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     reference.type === "js_url_specifier" ||
                     reference.subtype === "import_dynamic"
                   ) {
-                    usedVersionMappings.push(reference.specifier)
+                    usedVersionMappings.add(reference.specifier)
                     return () => `__v__(${JSON.stringify(reference.specifier)})`
                   }
                   return versionedSpecifier
@@ -1030,16 +1030,24 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             })
           })
           await versioningUrlGraphLoader.getAllLoadDonePromise(buildOperation)
-          if (usedVersionMappings.length) {
+          if (usedVersionMappings.size) {
             const versionMappingsNeeded = {}
             usedVersionMappings.forEach((specifier) => {
               versionMappingsNeeded[specifier] = versionMappings[specifier]
             })
-            await injectGlobalVersionMapping({
-              finalGraphKitchen,
-              finalGraph,
-              versionMappings: versionMappingsNeeded,
+            const actions = []
+            GRAPH.forEach(finalGraph, (urlInfo) => {
+              if (urlInfo.isEntryPoint) {
+                actions.push(async () => {
+                  await injectVersionMappings({
+                    urlInfo,
+                    kitchen: finalGraphKitchen,
+                    versionMappings: versionMappingsNeeded,
+                  })
+                })
+              }
             })
+            await Promise.all(actions.map((action) => action()))
           }
         } catch (e) {
           versioningTask.fail()
@@ -1287,21 +1295,24 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         )
         buildInlineContents[buildRelativeUrl] = urlInfo.content
       } else {
-        const buildRelativeUrl = urlToRelativeUrl(
-          urlInfo.url,
-          buildDirectoryUrl,
-        )
-        buildFileContents[buildRelativeUrl] = urlInfo.content
-        const urlWithoutVersioning = findKey(
-          versioningRedirections,
-          urlInfo.url,
-        )
-        if (urlWithoutVersioning) {
+        const versionedUrl = urlInfo.data.versionedUrl
+        if (versionedUrl) {
+          const buildRelativeUrl = urlToRelativeUrl(
+            versionedUrl,
+            buildDirectoryUrl,
+          )
+          buildFileContents[buildRelativeUrl] = urlInfo.content
           const buildRelativeUrlWithoutVersioning = urlToRelativeUrl(
-            urlWithoutVersioning,
+            urlInfo.url,
             buildDirectoryUrl,
           )
           buildManifest[buildRelativeUrlWithoutVersioning] = buildRelativeUrl
+        } else {
+          const buildRelativeUrl = urlToRelativeUrl(
+            urlInfo.url,
+            buildDirectoryUrl,
+          )
+          buildFileContents[buildRelativeUrl] = urlInfo.content
         }
       }
     })

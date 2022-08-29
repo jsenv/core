@@ -175,7 +175,7 @@ export const createUrlInfoTransformer = ({
     }
   }
 
-  const applyFinalTransformations = async (urlInfo, transformations) => {
+  const applyFinalTransformations = (urlInfo, transformations) => {
     if (transformations) {
       applyIntermediateTransformations(urlInfo, transformations)
     }
