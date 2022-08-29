@@ -786,22 +786,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     refine: {
       inject_version_in_urls: {
         if (!versioning) {
-          GRAPH.forEach(finalGraph, (urlInfo) => {
-            if (!urlInfo.shouldHandle) {
-              return
-            }
-            if (!urlInfo.url.startsWith("file:")) {
-              return
-            }
-            if (urlInfo.type === "html") {
-              const htmlAst = parseHtmlString(urlInfo.content, {
-                storeOriginalPositions: false,
-              })
-              urlInfo.content = stringifyHtmlAst(htmlAst, {
-                cleanupJsenvAttributes: true,
-              })
-            }
-          })
           break inject_version_in_urls
         }
         const versioningTask = createTaskLog("inject version in urls", {
@@ -936,10 +920,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     !urlObject.pathname.endsWith("/")
                   ) {
                     const urlWithTrailingSlash = `${url}/`
-                    const specifier = findKeyFromValue(
-                      buildUrls,
-                      urlWithTrailingSlash,
-                    )
+                    const specifier = findKey(buildUrls, urlWithTrailingSlash)
                     if (specifier) {
                       return urlWithTrailingSlash
                     }
@@ -1066,6 +1047,24 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         }
         versioningTask.done()
       }
+      cleanup_jsenv_attributes_from_html: {
+        GRAPH.forEach(finalGraph, (urlInfo) => {
+          if (!urlInfo.shouldHandle) {
+            return
+          }
+          if (!urlInfo.url.startsWith("file:")) {
+            return
+          }
+          if (urlInfo.type === "html") {
+            const htmlAst = parseHtmlString(urlInfo.content, {
+              storeOriginalPositions: false,
+            })
+            urlInfo.content = stringifyHtmlAst(htmlAst, {
+              cleanupJsenvAttributes: true,
+            })
+          }
+        })
+      }
       delete_unused_urls: {
         const actions = []
         GRAPH.forEach(finalGraph, (urlInfo) => {
@@ -1126,7 +1125,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     return buildUrlInfo
                   }
                   if (versioning) {
-                    const buildUrlBeforeVersioning = findKeyFromValue(
+                    const buildUrlBeforeVersioning = findKey(
                       versioningRedirections,
                       buildUrl,
                     )
@@ -1159,7 +1158,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   const buildUrlFormatted =
                     versioningRedirections.get(buildUrlInfo.url) ||
                     buildUrlInfo.url
-                  const buildSpecifierBeforeRedirect = findKeyFromValue(
+                  const buildSpecifierBeforeRedirect = findKey(
                     buildUrls,
                     buildUrlFormatted,
                   )
@@ -1207,16 +1206,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             if (!urlInfo.url.startsWith("file:")) {
               return
             }
-            const urlWithoutVersioning = findKeyFromValue(
-              versioningRedirections,
-              urlInfo.url,
-            )
-            const buildUrlSpecifier = findKeyFromValue(buildUrls, urlInfo.url)
-            if (urlWithoutVersioning) {
-              serviceWorkerUrls[buildUrlSpecifier] = { versioned: true }
-              return
-            }
-            if (!urlInfo.data.version) {
+            const versionedUrl = urlInfo.data.versionedUrl
+            if (!versionedUrl) {
               // when url is not versioned we compute a "version" for that url anyway
               // so that service worker source still changes and navigator
               // detect there is a change
@@ -1228,11 +1219,20 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               })
               const version = versionGenerator.generate()
               urlInfo.data.version = version
+              const specifier = findKey(buildUrls, urlInfo.url)
+              serviceWorkerUrls[specifier] = { versioned: false, version }
+              return
             }
-            serviceWorkerUrls[buildUrlSpecifier] = {
-              versioned: false,
-              version: urlInfo.data.version,
+            if (!canUseVersionedUrl(urlInfo)) {
+              const specifier = findKey(buildUrls, urlInfo.url)
+              serviceWorkerUrls[specifier] = {
+                versioned: false,
+                version: urlInfo.data.version,
+              }
+              return
             }
+            const versionedSpecifier = findKey(buildUrls, versionedUrl)
+            serviceWorkerUrls[versionedSpecifier] = { versioned: true }
           })
           serviceWorkerEntryUrlInfos.forEach((serviceWorkerEntryUrlInfo) => {
             const magicSource = createMagicSource(
@@ -1241,14 +1241,14 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             const urlsWithoutSelf = {
               ...serviceWorkerUrls,
             }
-            const serviceWorkerBuildUrlSpecifier = findKeyFromValue(
+            const serviceWorkerSpecifier = findKey(
               buildUrls,
               serviceWorkerEntryUrlInfo.url,
             )
-            delete urlsWithoutSelf[serviceWorkerBuildUrlSpecifier]
+            delete urlsWithoutSelf[serviceWorkerSpecifier]
             magicSource.prepend(
               `\nself.serviceWorkerUrls = ${JSON.stringify(
-                serviceWorkerUrls,
+                urlsWithoutSelf,
                 null,
                 "  ",
               )};\n`,
@@ -1292,7 +1292,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           buildDirectoryUrl,
         )
         buildFileContents[buildRelativeUrl] = urlInfo.content
-        const urlWithoutVersioning = findKeyFromValue(
+        const urlWithoutVersioning = findKey(
           versioningRedirections,
           urlInfo.url,
         )
@@ -1406,7 +1406,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
   return stopWatchingClientFiles
 }
 
-const findKeyFromValue = (map, value) => {
+const findKey = (map, value) => {
   for (const [keyCandidate, valueCandidate] of map) {
     if (valueCandidate === value) {
       return keyCandidate
