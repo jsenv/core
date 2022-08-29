@@ -4,7 +4,7 @@ import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
 import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
 
-const { buildManifest, buildInlineContents } = await build({
+const { buildInlineContents } = await build({
   logLevel: "warn",
   rootDirectoryUrl: new URL("./client/", import.meta.url),
   buildDirectoryUrl: new URL("./dist/", import.meta.url),
@@ -13,6 +13,9 @@ const { buildManifest, buildInlineContents } = await build({
   },
   bundling: false,
   versioning: false,
+  minification: {
+    json: true,
+  },
 })
 const server = await startFileServer({
   rootDirectoryUrl: new URL("./dist/", import.meta.url),
@@ -27,7 +30,7 @@ const { returnValue } = await executeInChromium({
     }
   },
   /* eslint-enable no-undef */
-  pageArguments: [`./${buildManifest["js/main.js"]}`],
+  pageArguments: ["./js/main.js"],
 })
 const actual = {
   returnValue,
