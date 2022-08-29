@@ -297,7 +297,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               ).href
             }
             let url = getUrl()
-            url = rawRedirections.get(url) || url
+            //  url = rawRedirections.get(url) || url
             url = bundleRedirections.get(url) || url
             url = bundleInternalRedirections.get(url) || url
             return url
@@ -375,6 +375,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               const buildUrl = buildUrlsGenerator.generate(rawUrl, {
                 urlInfo,
               })
+              finalRedirections.set(urlBeforeRedirect, buildUrl)
               associateBuildUrlAndRawUrl(
                 buildUrl,
                 rawUrl,
@@ -421,6 +422,12 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               // inherit parent build url
               return generateSourcemapFileUrl(reference.parentUrl)
             }
+            // referenced only by resource hint
+            // -> keep it untouched, it will be handled by "resync_resource_hints"
+            // we can try to find the corresponding file (if it exists)
+            if (reference.isResourceHint) {
+              return null
+            }
             // files generated during the final graph:
             // - sourcemaps
             // const finalUrlInfo = finalGraph.getUrlInfo(url)
@@ -440,6 +447,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               return null
             }
             if (!urlIsInsideOf(reference.generatedUrl, buildDirectoryUrl)) {
+              if (reference.isResourceHint) {
+                return null
+              }
               throw new Error(
                 `urls should be inside build directory at this stage, found "${reference.url}"`,
               )
@@ -870,9 +880,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             const buildUrlObject = new URL(urlInfo.url)
             // remove ?as_js_classic as
             // this information is already hold into ".nomodule"
-            if (buildUrlObject.searchParams.has("as_js_classic")) {
-              buildUrlObject.searchParams.delete("as_js_classic")
-            }
+            buildUrlObject.searchParams.delete("as_js_classic")
+            buildUrlObject.searchParams.delete("as_json_module")
+            buildUrlObject.searchParams.delete("as_css_module")
+            buildUrlObject.searchParams.delete("as_text_module")
             const buildUrl = buildUrlObject.href
             finalRedirections.set(urlInfo.url, buildUrl)
             urlInfo.data.versionedUrl = normalizeUrl(
@@ -940,6 +951,12 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   // specifier comes from "normalize" hook done a bit earlier in this file
                   // we want to get back their build url to access their infos
                   const referencedUrlInfo = finalGraph.getUrlInfo(reference.url)
+                  if (
+                    reference.isResourceHint &&
+                    referencedUrlInfo.content === undefined
+                  ) {
+                    return null
+                  }
                   if (!canUseVersionedUrl(referencedUrlInfo)) {
                     return reference.specifier
                   }
@@ -1078,7 +1095,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
        * - Used to remove resource hint targeting an url that is no longer used:
        *   - Happens because of import assertions transpilation (file is inlined into JS)
        */
-      resync_ressource_hints: {
+      resync_resource_hints: {
         const actions = []
         GRAPH.forEach(finalGraph, (urlInfo) => {
           if (urlInfo.type !== "html") {
@@ -1106,24 +1123,35 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 if (!isresourceHint) {
                   return
                 }
-                const buildUrl = buildUrls.get(href)
                 const buildUrlInfo = (() => {
-                  const finalUrl = finalRedirections.get(buildUrl)
-                  if (finalUrl) {
-                    const buildUrlInfo = finalGraph.getUrlInfo(finalUrl)
-                    return buildUrlInfo
-                  }
-                  if (versioning) {
-                    const buildUrlBeforeVersioning = findKey(
-                      versioningRedirections,
-                      buildUrl,
-                    )
-                    if (!buildUrlBeforeVersioning) {
-                      return null
+                  const buildUrl = buildUrls.get(href)
+                  if (buildUrl) {
+                    const finalUrl = finalRedirections.get(buildUrl)
+                    if (finalUrl) {
+                      const buildUrlInfo = finalGraph.getUrlInfo(finalUrl)
+                      return buildUrlInfo
                     }
-                    return finalGraph.getUrlInfo(buildUrlBeforeVersioning)
+                    if (versioning) {
+                      const buildUrlBeforeVersioning = findKey(
+                        versioningRedirections,
+                        buildUrl,
+                      )
+                      if (!buildUrlBeforeVersioning) {
+                        return null
+                      }
+                      return finalGraph.getUrlInfo(buildUrlBeforeVersioning)
+                    }
+                    return finalGraph.getUrlInfo(buildUrl)
                   }
-                  return finalGraph.getUrlInfo(buildUrl)
+                  if (href.startsWith("file:")) {
+                    let url = href
+                    url = rawRedirections.get(url) || url
+                    url = bundleRedirections.get(url) || url
+                    url = bundleInternalRedirections.get(url) || url
+                    url = finalRedirections.get(url) || url
+                    return finalGraph.getUrlInfo(url)
+                  }
+                  return null
                 })()
                 if (!buildUrlInfo) {
                   logger.warn(
