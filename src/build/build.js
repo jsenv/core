@@ -1140,42 +1140,25 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`,
                   return
                 }
                 const buildUrl = buildUrls[href]
-                const finalUrl = finalRedirections.get(buildUrl)
-                if (finalUrl) {
-                  const buildUrlInfo = finalGraph.getUrlInfo(finalUrl)
-                  if (!buildUrlInfo) {
-                    logger.warn(
-                      `remove resource hint because cannot find "${href}" in the graph`,
+                const buildUrlInfo = (() => {
+                  const finalUrl = finalRedirections.get(buildUrl)
+                  if (finalUrl) {
+                    const buildUrlInfo = finalGraph.getUrlInfo(finalUrl)
+                    return buildUrlInfo
+                  }
+                  if (versioning) {
+                    const buildUrlBeforeVersioning = getKeyForValue(
+                      versioningRedirections,
+                      buildUrl,
                     )
-                    mutations.push(() => {
-                      removeHtmlNode(node)
-                    })
-                    return
+                    if (!buildUrlBeforeVersioning) {
+                      return null
+                    }
+                    return finalGraph.getUrlInfo(buildUrlBeforeVersioning)
                   }
-                  if (rel === "preload" && buildUrlInfo.type === "js_classic") {
-                    const buildUrlFormatted =
-                      versioningRedirections.get(finalUrl) || finalUrl
-                    const buildSpecifierBeforeRedirect = Object.keys(
-                      buildUrls,
-                    ).find((buildSpecifierCandidate) => {
-                      const buildUrlCandidate =
-                        buildUrls[buildSpecifierCandidate]
-                      return buildUrlCandidate === buildUrlFormatted
-                    })
-                    mutations.push(() => {
-                      setHtmlNodeAttributes(node, {
-                        href: buildSpecifierBeforeRedirect,
-                        crossorigin: undefined,
-                      })
-                    })
-                  }
-                  return
-                }
-                const buildUrlBeforeVersioning = getKeyForValue(
-                  versioningRedirections,
-                  buildUrl,
-                )
-                if (!buildUrlBeforeVersioning) {
+                  return finalGraph.getUrlInfo(buildUrl)
+                })()
+                if (!buildUrlInfo) {
                   logger.warn(
                     `remove resource hint because cannot find "${href}" in the graph`,
                   )
@@ -1184,9 +1167,6 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`,
                   })
                   return
                 }
-                const buildUrlInfo = finalGraph.getUrlInfo(
-                  buildUrlBeforeVersioning,
-                )
                 if (buildUrlInfo.dependents.size === 0) {
                   logger.info(
                     `remove resource hint because "${href}" not used anymore`,
@@ -1195,6 +1175,23 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`,
                     removeHtmlNode(node)
                   })
                   return
+                }
+                if (rel === "preload" && buildUrlInfo.type === "js_classic") {
+                  const buildUrlFormatted =
+                    versioningRedirections.get(buildUrlInfo.url) ||
+                    buildUrlInfo.url
+                  const buildSpecifierBeforeRedirect = Object.keys(
+                    buildUrls,
+                  ).find((buildSpecifierCandidate) => {
+                    const buildUrlCandidate = buildUrls[buildSpecifierCandidate]
+                    return buildUrlCandidate === buildUrlFormatted
+                  })
+                  mutations.push(() => {
+                    setHtmlNodeAttributes(node, {
+                      href: buildSpecifierBeforeRedirect,
+                      crossorigin: undefined,
+                    })
+                  })
                 }
               },
             })
