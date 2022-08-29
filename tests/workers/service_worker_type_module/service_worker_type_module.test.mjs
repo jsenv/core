@@ -1,4 +1,3 @@
-// TODO: why is there async/await transpilation?
 import { assert } from "@jsenv/assert"
 
 import { build } from "@jsenv/core"
@@ -41,60 +40,33 @@ if (process.platform === "darwin") {
     },
   })
   // support + no bundling
-  // await test({
-  //   runtimeCompat: { chrome: "80" },
-  //   bundling: false,
-  //   expectedServiceWorkerUrls: {
-  //     "/main.html": { versioned: false, version: "876aac63" },
-  //     "/css/style.css?v=65c914e7": { versioned: true },
-  //     "/js/slicedToArray.js?v=5463c7ac": { versioned: true },
-  //     "/js/a.js?v=74e8b097": { versioned: true },
-  //     "/js/arrayWithHoles.js?v=f6e7da9b": { versioned: true },
-  //     "/js/iterableToArrayLimit.js?v=0438f76f": { versioned: true },
-  //     "/js/unsupportedIterableToArray.js?v=163b7fa1": { versioned: true },
-  //     "/js/nonIterableRest.js?v=3323b0da": { versioned: true },
-  //     "/js/b.js?v=e3b0c442": { versioned: true },
-  //     "/js/arrayLikeToArray.js?v=68e4b487": { versioned: true },
-  //   },
-  // })
-  // // no support for {type: "module"} on service worker
-  // await test({
-  //   runtimeCompat: { chrome: "79" },
-  //   expectedServiceWorkerUrls: {
-  //     "/main.html": { versioned: false, version: "2628245b" },
-  //     "/css/style.css?v=65c914e7": { versioned: true },
-  //     "/js/babel_helpers.nomodule.js?as_js_classic&v=10e40f65": {
-  //       versioned: true,
-  //     },
-  //   },
-  // })
-  // // no support for {type: "module"} on service worker + no bundling
-  // await test({
-  //   runtimeCompat: { chrome: "79" },
-  //   bundling: false,
-  //   expectedServiceWorkerUrls: {
-  //     "/main.html": { versioned: false, version: "2628245b" },
-  //     "/css/style.css?v=65c914e7": { versioned: true },
-  //     "/js/slicedToArray.nomodule.js?as_js_classic&v=53e5516f": {
-  //       versioned: true,
-  //     },
-  //     "/js/a.nomodule.js?as_js_classic&v=217fbe28": { versioned: true },
-  //     "/js/arrayWithHoles.nomodule.js?as_js_classic&v=267e2ee6": {
-  //       versioned: true,
-  //     },
-  //     "/js/iterableToArrayLimit.nomodule.js?as_js_classic&v=1d093038": {
-  //       versioned: true,
-  //     },
-  //     "/js/unsupportedIterableToArray.nomodule.js?as_js_classic&v=5b78d393": {
-  //       versioned: true,
-  //     },
-  //     "/js/nonIterableRest.nomodule.js?as_js_classic&v=bbc3b8e9": {
-  //       versioned: true,
-  //     },
-  //     "/js/b.nomodule.js?as_js_classic&v=5d37f892": { versioned: true },
-  //     "/js/arrayLikeToArray.nomodule.js?as_js_classic&v=3ba77d54": {
-  //       versioned: true,
-  //     },
-  //   },
-  // })
+  await test({
+    runtimeCompat: { chrome: "80" },
+    bundling: false,
+    expectedServiceWorkerUrls: {
+      "/main.html": { versioned: false, version: "8229433b" },
+      "/css/style.css?v=0e312da1": { versioned: true },
+      "/js/a.js?v=e9a31140": { versioned: true },
+      "/js/b.js?v=e3b0c442": { versioned: true },
+    },
+  })
+  // no support for { type: "module" } on service worker
+  await test({
+    runtimeCompat: { chrome: "79" },
+    expectedServiceWorkerUrls: {
+      "/main.html": { versioned: false, version: "a03ed51d" },
+      "/css/style.css?v=bd38451d": { versioned: true },
+    },
+  })
+  // no support for { type: "module" } on service worker + no bundling
+  await test({
+    runtimeCompat: { chrome: "79" },
+    bundling: false,
+    expectedServiceWorkerUrls: {
+      "/main.html": { versioned: false, version: "419f728b" },
+      "/css/style.css?v=0e312da1": { versioned: true },
+      "/js/a.nomodule.js?v=340fe042": { versioned: true },
+      "/js/b.nomodule.js?v=8f3fa8a4": { versioned: true },
+    },
+  })
 }
