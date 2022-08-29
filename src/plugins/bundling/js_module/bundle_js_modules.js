@@ -146,6 +146,9 @@ const rollupPluginJsenv = ({
                 rollupFileInfo.imports.length > 0 ||
                 rollupFileInfo.dynamicImports.length > 0,
             },
+            sourceUrls: Object.keys(rollupFileInfo.modules).map((id) =>
+              fileUrlConverter.asFileUrl(id),
+            ),
             contentType: "text/javascript",
             content: rollupFileInfo.code,
             sourcemap: rollupFileInfo.map,

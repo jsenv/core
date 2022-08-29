@@ -307,6 +307,11 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             if (!reference.url.startsWith("file:")) {
               return null
             }
+            // referenced by resource hint
+            // -> keep it untouched, it will be handled by "resync_resource_hints"
+            if (reference.isResourceHint) {
+              return reference.original ? reference.original.url : null
+            }
             // already a build url
             const rawUrl = buildToRawUrls[reference.url]
             if (rawUrl) {
@@ -422,12 +427,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               // inherit parent build url
               return generateSourcemapFileUrl(reference.parentUrl)
             }
-            // referenced only by resource hint
-            // -> keep it untouched, it will be handled by "resync_resource_hints"
-            // we can try to find the corresponding file (if it exists)
-            if (reference.isResourceHint) {
-              return null
-            }
             // files generated during the final graph:
             // - sourcemaps
             // const finalUrlInfo = finalGraph.getUrlInfo(url)
@@ -446,10 +445,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               }
               return null
             }
+            if (reference.isResourceHint) {
+              return null
+            }
             if (!urlIsInsideOf(reference.generatedUrl, buildDirectoryUrl)) {
-              if (reference.isResourceHint) {
-                return null
-              }
               throw new Error(
                 `urls should be inside build directory at this stage, found "${reference.url}"`,
               )
@@ -734,6 +733,14 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 fromBundle: true,
               },
             }
+            if (bundlerGeneratedUrlInfo.sourceUrls) {
+              bundlerGeneratedUrlInfo.sourceUrls.forEach((sourceUrl) => {
+                const rawUrlInfo = rawGraph.getUrlInfo(sourceUrl)
+                if (rawUrlInfo) {
+                  rawUrlInfo.data.bundled = true
+                }
+              })
+            }
             const buildUrl = buildUrlsGenerator.generate(url, {
               urlInfo: bundleUrlInfo,
             })
@@ -948,15 +955,12 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   if (reference.isInline || reference.url.startsWith("data:")) {
                     return null
                   }
+                  if (reference.isResourceHint) {
+                    return null
+                  }
                   // specifier comes from "normalize" hook done a bit earlier in this file
                   // we want to get back their build url to access their infos
                   const referencedUrlInfo = finalGraph.getUrlInfo(reference.url)
-                  if (
-                    reference.isResourceHint &&
-                    referencedUrlInfo.content === undefined
-                  ) {
-                    return null
-                  }
                   if (!canUseVersionedUrl(referencedUrlInfo)) {
                     return reference.specifier
                   }
@@ -1113,78 +1117,73 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   return
                 }
                 const rel = getHtmlNodeAttribute(node, "rel")
-                const isresourceHint = [
+                const isResourceHint = [
                   "preconnect",
                   "dns-prefetch",
                   "prefetch",
                   "preload",
                   "modulepreload",
                 ].includes(rel)
-                if (!isresourceHint) {
+                if (!isResourceHint) {
                   return
                 }
-                const buildUrlInfo = (() => {
-                  const buildUrl = buildUrls.get(href)
-                  if (buildUrl) {
-                    const finalUrl = finalRedirections.get(buildUrl)
-                    if (finalUrl) {
-                      const buildUrlInfo = finalGraph.getUrlInfo(finalUrl)
-                      return buildUrlInfo
-                    }
-                    if (versioning) {
-                      const buildUrlBeforeVersioning = findKey(
-                        versioningRedirections,
-                        buildUrl,
-                      )
-                      if (!buildUrlBeforeVersioning) {
-                        return null
-                      }
-                      return finalGraph.getUrlInfo(buildUrlBeforeVersioning)
-                    }
-                    return finalGraph.getUrlInfo(buildUrl)
+                const onBuildUrl = (buildUrl) => {
+                  const buildUrlInfo = buildUrl
+                    ? finalGraph.getUrlInfo(buildUrl)
+                    : null
+                  if (!buildUrlInfo) {
+                    logger.warn(
+                      `remove resource hint because cannot find "${href}" in the graph`,
+                    )
+                    mutations.push(() => {
+                      removeHtmlNode(node)
+                    })
+                    return
                   }
-                  if (href.startsWith("file:")) {
-                    let url = href
-                    url = rawRedirections.get(url) || url
+                  if (buildUrlInfo.dependents.size === 0) {
+                    logger.info(
+                      `remove resource hint because "${href}" not used anymore`,
+                    )
+                    mutations.push(() => {
+                      removeHtmlNode(node)
+                    })
+                    return
+                  }
+                  if (rel === "preload" && buildUrlInfo.type === "js_classic") {
+                    const buildUrlFormatted =
+                      versioningRedirections.get(buildUrlInfo.url) ||
+                      buildUrlInfo.url
+                    const buildSpecifierBeforeRedirect = findKey(
+                      buildUrls,
+                      buildUrlFormatted,
+                    )
+                    mutations.push(() => {
+                      setHtmlNodeAttributes(node, {
+                        href: buildSpecifierBeforeRedirect,
+                        crossorigin: undefined,
+                      })
+                    })
+                  }
+                }
+                if (href.startsWith("file:")) {
+                  let url = href
+                  url = rawRedirections.get(url) || url
+                  const rawUrlInfo = rawGraph.getUrlInfo(url)
+                  if (rawUrlInfo && rawUrlInfo.data.bundled) {
+                    logger.info(
+                      `remove resource hint because cannot "${href}" bundled`,
+                    )
+                    mutations.push(() => {
+                      removeHtmlNode(node)
+                    })
+                  } else {
                     url = bundleRedirections.get(url) || url
                     url = bundleInternalRedirections.get(url) || url
                     url = finalRedirections.get(url) || url
-                    return finalGraph.getUrlInfo(url)
+                    onBuildUrl(url)
                   }
-                  return null
-                })()
-                if (!buildUrlInfo) {
-                  logger.warn(
-                    `remove resource hint because cannot find "${href}" in the graph`,
-                  )
-                  mutations.push(() => {
-                    removeHtmlNode(node)
-                  })
-                  return
-                }
-                if (buildUrlInfo.dependents.size === 0) {
-                  logger.info(
-                    `remove resource hint because "${href}" not used anymore`,
-                  )
-                  mutations.push(() => {
-                    removeHtmlNode(node)
-                  })
-                  return
-                }
-                if (rel === "preload" && buildUrlInfo.type === "js_classic") {
-                  const buildUrlFormatted =
-                    versioningRedirections.get(buildUrlInfo.url) ||
-                    buildUrlInfo.url
-                  const buildSpecifierBeforeRedirect = findKey(
-                    buildUrls,
-                    buildUrlFormatted,
-                  )
-                  mutations.push(() => {
-                    setHtmlNodeAttributes(node, {
-                      href: buildSpecifierBeforeRedirect,
-                      crossorigin: undefined,
-                    })
-                  })
+                } else {
+                  onBuildUrl(null)
                 }
               },
             })
