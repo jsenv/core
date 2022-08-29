@@ -10,7 +10,7 @@ export const RUNTIME_COMPAT = {
     const runtimeCompat = {
       ...originalRuntimeCompat,
     }
-    Object.keys(featureCompat).forEach((runtimeName) => {
+    Object.keys(originalRuntimeCompat).forEach((runtimeName) => {
       const firstVersion = originalRuntimeCompat[runtimeName]
       const secondVersion = featureCompat[runtimeName]
       runtimeCompat[runtimeName] = firstVersion

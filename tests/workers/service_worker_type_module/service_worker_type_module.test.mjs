@@ -38,7 +38,6 @@ if (process.platform === "darwin") {
     expectedServiceWorkerUrls: {
       "/main.html": { versioned: false, version: "d7e3da44" },
       "/css/style.css?v=bd38451d": { versioned: true },
-      "/js/babel_helpers.js?v=7172ee22": { versioned: true },
     },
   })
   // support + no bundling
