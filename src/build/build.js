@@ -12,7 +12,7 @@
  * refine: perform minor changes on the url contents
  *  - cleaning html
  *  - url versioning
- *  - resync ressource hints
+ *  - ressource hints
  *  - injecting urls into service workers
  */
 
@@ -1153,14 +1153,14 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`,
                     return
                   }
                   if (rel === "preload" && buildUrlInfo.type === "js_classic") {
-                    const buildUrlAfterVersioning =
-                      versioningRedirections.get(finalUrl)
+                    const buildUrlFormatted =
+                      versioningRedirections.get(finalUrl) || finalUrl
                     const buildSpecifierBeforeRedirect = Object.keys(
                       buildUrls,
                     ).find((buildSpecifierCandidate) => {
                       const buildUrlCandidate =
                         buildUrls[buildSpecifierCandidate]
-                      return buildUrlCandidate === buildUrlAfterVersioning
+                      return buildUrlCandidate === buildUrlFormatted
                     })
                     mutations.push(() => {
                       setHtmlNodeAttributes(node, {
@@ -1245,7 +1245,8 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`,
         buildInlineContents[buildRelativeUrl] = urlInfo.content
       } else {
         buildFileContents[buildRelativeUrl] = urlInfo.content
-        const buildUrlFormatted = finalRedirections.get(urlInfo.url)
+        const buildUrlFormatted =
+          finalRedirections.get(urlInfo.url) || urlInfo.url
         const buildRelativeUrlWithoutVersioning = urlToRelativeUrl(
           buildUrlFormatted,
           buildDirectoryUrl,
