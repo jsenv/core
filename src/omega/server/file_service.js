@@ -325,13 +325,14 @@ export const createFileService = ({
       return response
     } catch (e) {
       urlInfo.error = e
-      const code = e.code
+      const originalError = e ? e.cause || e : e
+      const code = originalError.code
       if (code === "PARSE_ERROR") {
         return {
           url: reference.url,
           status: 200, // let the browser re-throw the syntax error
-          statusText: e.reason,
-          statusMessage: e.message,
+          statusText: originalError.reason,
+          statusMessage: originalError.message,
           headers: {
             "content-type": urlInfo.contentType,
             "content-length": Buffer.byteLength(urlInfo.content),
@@ -353,15 +354,15 @@ export const createFileService = ({
         return {
           url: reference.url,
           status: 403,
-          statusText: e.reason,
+          statusText: originalError.reason,
         }
       }
       if (code === "NOT_FOUND") {
         return {
           url: reference.url,
           status: 404,
-          statusText: e.reason,
-          statusMessage: e.message,
+          statusText: originalError.reason,
+          statusMessage: originalError.message,
         }
       }
       return {
