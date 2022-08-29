@@ -1073,25 +1073,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           }
         })
       }
-      delete_unused_urls: {
-        const actions = []
-        GRAPH.forEach(finalGraph, (urlInfo) => {
-          // nothing uses this url anymore
-          // - versioning update inline content
-          // - file converted for import assertion or js_classic conversion
-          if (
-            !urlInfo.isEntryPoint &&
-            urlInfo.type !== "sourcemap" &&
-            urlInfo.dependents.size === 0 &&
-            !urlInfo.injected // injected during postbuild
-          ) {
-            actions.push(() => {
-              finalGraph.deleteUrlInfo(urlInfo.url)
-            })
-          }
-        })
-        actions.forEach((action) => action())
-      }
       /*
        * Update <link rel="preload"> and friends after build (once we know everything)
        * - Used to remove resource hint targeting an url that is no longer used:
@@ -1194,6 +1175,25 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           actions.map((resourceHintAction) => resourceHintAction()),
         )
         buildOperation.throwIfAborted()
+      }
+      delete_unused_urls: {
+        const actions = []
+        GRAPH.forEach(finalGraph, (urlInfo) => {
+          // nothing uses this url anymore
+          // - versioning update inline content
+          // - file converted for import assertion or js_classic conversion
+          if (
+            !urlInfo.isEntryPoint &&
+            urlInfo.type !== "sourcemap" &&
+            urlInfo.dependents.size === 0 &&
+            !urlInfo.injected // injected during postbuild
+          ) {
+            actions.push(() => {
+              finalGraph.deleteUrlInfo(urlInfo.url)
+            })
+          }
+        })
+        actions.forEach((action) => action())
       }
       inject_urls_in_service_workers: {
         const serviceWorkerEntryUrlInfos = GRAPH.filter(
