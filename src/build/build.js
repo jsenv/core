@@ -397,6 +397,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 reference.url,
                 "injected during postbuild",
               )
+              finalRedirections.set(buildUrl, buildUrl)
               return buildUrl
             }
             const rawUrlInfo = rawGraph.getUrlInfo(reference.url)
@@ -1139,7 +1140,7 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`,
                   return
                 }
                 const buildUrl = buildUrls[href]
-                const finalUrl = getKeyForValue(finalRedirections, buildUrl)
+                const finalUrl = finalRedirections.get(buildUrl)
                 if (finalUrl) {
                   const buildUrlInfo = finalGraph.getUrlInfo(finalUrl)
                   if (!buildUrlInfo) {

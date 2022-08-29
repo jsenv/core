@@ -20,10 +20,7 @@ export const jsenvPluginAsJsClassic = ({
   jsClassicFallback,
   systemJsInjection,
 }) => {
-  const systemJsClientFileUrl = new URL(
-    "./client/s.js?js_classic",
-    import.meta.url,
-  ).href
+  const systemJsClientFileUrl = new URL("./client/s.js", import.meta.url).href
 
   return [
     jsenvPluginAsJsClassicLibrary({
