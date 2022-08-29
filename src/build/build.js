@@ -1149,21 +1149,19 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     })
                     return
                   }
-                  if (rel === "preload" && buildUrlInfo.type === "js_classic") {
-                    const buildUrlFormatted =
-                      versioningRedirections.get(buildUrlInfo.url) ||
-                      buildUrlInfo.url
-                    const buildSpecifierBeforeRedirect = findKey(
-                      buildUrls,
-                      buildUrlFormatted,
-                    )
-                    mutations.push(() => {
-                      setHtmlNodeAttributes(node, {
-                        href: buildSpecifierBeforeRedirect,
-                        crossorigin: undefined,
-                      })
+                  const buildUrlFormatted =
+                    versioningRedirections.get(buildUrlInfo.url) ||
+                    buildUrlInfo.url
+                  const buildSpecifierBeforeRedirect = findKey(
+                    buildUrls,
+                    buildUrlFormatted,
+                  )
+                  mutations.push(() => {
+                    setHtmlNodeAttributes(node, {
+                      href: buildSpecifierBeforeRedirect,
+                      crossorigin: undefined,
                     })
-                  }
+                  })
                 }
                 if (href.startsWith("file:")) {
                   let url = href
@@ -1171,7 +1169,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   const rawUrlInfo = rawGraph.getUrlInfo(url)
                   if (rawUrlInfo && rawUrlInfo.data.bundled) {
                     logger.info(
-                      `remove resource hint because cannot "${href}" bundled`,
+                      `remove resource hint on "${href}" because it was bundled`,
                     )
                     mutations.push(() => {
                       removeHtmlNode(node)
