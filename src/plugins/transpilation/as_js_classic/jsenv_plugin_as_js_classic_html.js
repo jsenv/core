@@ -148,10 +148,18 @@ export const jsenvPluginAsJsClassicHtml = ({
               const dependencyUrlInfo = context.urlGraph.getUrlInfo(
                 reference.url,
               )
-              await context.cook(dependencyUrlInfo, { reference })
-              if (dependencyUrlInfo.data.jsClassicFormat === "system") {
-                needsSystemJs = true
-                break
+              try {
+                await context.cook(dependencyUrlInfo, { reference })
+                if (dependencyUrlInfo.data.jsClassicFormat === "system") {
+                  needsSystemJs = true
+                  break
+                }
+              } catch (e) {
+                if (context.scenarios.dev) {
+                  // ignore cooking error, the browser will trigger it again on fetch
+                } else {
+                  throw e
+                }
               }
             }
           }
