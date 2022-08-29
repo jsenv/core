@@ -1324,7 +1324,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         buildInlineContents[buildRelativeUrl] = urlInfo.content
       } else {
         const versionedUrl = urlInfo.data.versionedUrl
-        if (versionedUrl) {
+        if (versionedUrl && canUseVersionedUrl(urlInfo)) {
           const buildRelativeUrl = urlToRelativeUrl(
             urlInfo.url,
             buildDirectoryUrl,
@@ -1333,7 +1333,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             versionedUrl,
             buildDirectoryUrl,
           )
-          buildFileContents[buildRelativeUrl] = urlInfo.content
+          buildFileContents[versionedBuildRelativeUrl] = urlInfo.content
           buildManifest[buildRelativeUrl] = versionedBuildRelativeUrl
         } else {
           const buildRelativeUrl = urlToRelativeUrl(
