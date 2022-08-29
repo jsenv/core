@@ -51,9 +51,9 @@ export const resyncResourceHints = async ({
             return
           }
           const buildUrl = buildUrls[href]
-          const buildUrlInGraph = postBuildRedirections.getUrlInGraph(buildUrl)
-          if (buildUrlInGraph !== buildUrl) {
-            const buildUrlInfo = finalGraph.getUrlInfo(buildUrlInGraph)
+          const postBuildUrl = postBuildRedirections.getUrlPostBuild(buildUrl)
+          if (postBuildUrl !== buildUrl) {
+            const buildUrlInfo = finalGraph.getUrlInfo(postBuildUrl)
             if (!buildUrlInfo) {
               logger.warn(
                 `remove resource hint because cannot find "${href}" in the graph`,
@@ -65,7 +65,7 @@ export const resyncResourceHints = async ({
             }
             if (rel === "preload" && buildUrlInfo.type === "js_classic") {
               const buildUrlAfterVersioning =
-                postBuildRedirections.getUrlAfterVersioning(buildUrlInGraph)
+                postBuildRedirections.getUrlAfterVersioning(postBuildUrl)
               const buildSpecifierBeforeRedirect = Object.keys(buildUrls).find(
                 (buildSpecifierCandidate) => {
                   const buildUrlCandidate = buildUrls[buildSpecifierCandidate]

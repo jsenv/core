@@ -492,12 +492,12 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           }
           redirections[type] = from === to ? null : to
         },
-        getUrlInGraph: (url) => {
+        getUrlPostBuild: (url) => {
           return getUrlAfterRedirect(url, {
             postbuild: true,
           })
         },
-        getUrlInFile: (url) => {
+        getFormattedUrl: (url) => {
           return getUrlAfterRedirect(url, {
             postbuild: true,
             versioning: true,
@@ -964,7 +964,7 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`,
         buildInlineContents[buildRelativeUrl] = urlInfo.content
       } else {
         buildFileContents[buildRelativeUrl] = urlInfo.content
-        const buildUrlFormatted = postBuildRedirections.getUrlInFile(
+        const buildUrlFormatted = postBuildRedirections.getFormattedUrl(
           urlInfo.url,
         )
         const buildRelativeUrlWithoutVersioning = urlToRelativeUrl(
