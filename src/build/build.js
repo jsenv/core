@@ -254,7 +254,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
 `)
       buildToRawUrls[buildUrl] = rawUrl
     }
-    const buildUrls = {}
+    const buildUrls = new Map()
     const bundleUrlInfos = {}
     const bundlers = {}
     const finalGraph = createUrlGraph()
@@ -470,7 +470,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 buildDirectoryUrl,
               )}`
             }
-            buildUrls[specifier] = reference.generatedUrl
+            buildUrls.set(specifier, reference.generatedUrl)
             return specifier
           },
           fetchUrlContent: async (finalUrlInfo, context) => {
@@ -785,309 +785,289 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
 
     refine: {
       inject_version_in_urls: {
-        logger.debug(
-          `graph urls pre-versioning:
-${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`,
-        )
-        if (versioning) {
-          const versioningTask = createTaskLog("inject version in urls", {
-            disabled: logger.levels.debug || !logger.levels.info,
-          })
-          try {
-            const urlsSorted = sortByDependencies(finalGraph.toObject())
-            urlsSorted.forEach((url) => {
-              if (url.startsWith("data:")) {
-                return
-              }
-              const urlInfo = finalGraph.getUrlInfo(url)
-              if (urlInfo.type === "sourcemap") {
-                return
-              }
-              // ignore:
-              // - inline files:
-              //   they are already taken into account in the file where they appear
-              // - ignored files:
-              //   we don't know their content
-              // - unused files without reference
-              //   File updated such as style.css -> style.css.js or file.js->file.nomodule.js
-              //   Are used at some point just to be discarded later because they need to be converted
-              //   There is no need to version them and we could not because the file have been ignored
-              //   so their content is unknown
-              if (urlInfo.isInline) {
-                return
-              }
-              if (!urlInfo.shouldHandle) {
-                return
-              }
-              if (!urlInfo.isEntryPoint && urlInfo.dependents.size === 0) {
-                return
-              }
-              const urlContent =
-                urlInfo.type === "html"
-                  ? stringifyHtmlAst(
-                      parseHtmlString(urlInfo.content, {
-                        storeOriginalPositions: false,
-                      }),
-                      { removeOriginalPositionAttributes: true },
-                    )
-                  : urlInfo.content
-              const versionGenerator = createVersionGenerator()
-              versionGenerator.augmentWithContent({
-                content: urlContent,
-                contentType: urlInfo.contentType,
-                lineBreakNormalization,
-              })
-              urlInfo.dependencies.forEach((dependencyUrl) => {
-                // this dependency is inline
-                if (dependencyUrl.startsWith("data:")) {
-                  return
-                }
-                const dependencyUrlInfo = finalGraph.getUrlInfo(dependencyUrl)
-                if (
-                  // this content is part of the file, no need to take into account twice
-                  dependencyUrlInfo.isInline ||
-                  // this dependency content is not known
-                  !dependencyUrlInfo.shouldHandle
-                ) {
-                  return
-                }
-                if (dependencyUrlInfo.data.version) {
-                  versionGenerator.augmentWithDependencyVersion(
-                    dependencyUrlInfo.data.version,
+        if (!versioning) {
+          break inject_version_in_urls
+        }
+        const versioningTask = createTaskLog("inject version in urls", {
+          disabled: logger.levels.debug || !logger.levels.info,
+        })
+        try {
+          const urlsSorted = sortByDependencies(finalGraph.toObject())
+          urlsSorted.forEach((url) => {
+            if (url.startsWith("data:")) {
+              return
+            }
+            const urlInfo = finalGraph.getUrlInfo(url)
+            if (urlInfo.type === "sourcemap") {
+              return
+            }
+            // ignore:
+            // - inline files:
+            //   they are already taken into account in the file where they appear
+            // - ignored files:
+            //   we don't know their content
+            // - unused files without reference
+            //   File updated such as style.css -> style.css.js or file.js->file.nomodule.js
+            //   Are used at some point just to be discarded later because they need to be converted
+            //   There is no need to version them and we could not because the file have been ignored
+            //   so their content is unknown
+            if (urlInfo.isInline) {
+              return
+            }
+            if (!urlInfo.shouldHandle) {
+              return
+            }
+            if (!urlInfo.isEntryPoint && urlInfo.dependents.size === 0) {
+              return
+            }
+            const urlContent =
+              urlInfo.type === "html"
+                ? stringifyHtmlAst(
+                    parseHtmlString(urlInfo.content, {
+                      storeOriginalPositions: false,
+                    }),
+                    { removeOriginalPositionAttributes: true },
                   )
-                } else {
-                  // because all dependencies are know, if the dependency has no version
-                  // it means there is a circular dependency between this file
-                  // and it's dependency
-                  // in that case we'll use the dependency content
-                  versionGenerator.augmentWithContent({
-                    content: dependencyUrlInfo.content,
-                    contentType: dependencyUrlInfo.contentType,
-                    lineBreakNormalization,
-                  })
-                }
-              })
-              urlInfo.data.version = versionGenerator.generate()
-
-              const buildUrlObject = new URL(urlInfo.url)
-              // remove ?as_js_classic as
-              // this information is already hold into ".nomodule"
-              if (buildUrlObject.searchParams.has("as_js_classic")) {
-                buildUrlObject.searchParams.delete("as_js_classic")
-              }
-              const buildUrl = buildUrlObject.href
-              finalRedirections.set(urlInfo.url, buildUrl)
-              urlInfo.data.versionedUrl = normalizeUrl(
-                injectVersionIntoBuildUrl({
-                  buildUrl,
-                  version: urlInfo.data.version,
-                  versioningMethod,
-                }),
-              )
+                : urlInfo.content
+            const versionGenerator = createVersionGenerator()
+            versionGenerator.augmentWithContent({
+              content: urlContent,
+              contentType: urlInfo.contentType,
+              lineBreakNormalization,
             })
-            const versionMappings = {}
-            const usedVersionMappings = []
-            const versioningKitchen = createKitchen({
-              logLevel: logger.level,
-              rootDirectoryUrl: buildDirectoryUrl,
-              urlGraph: finalGraph,
-              scenarios: { build: true },
-              runtimeCompat,
-              plugins: [
-                urlAnalysisPlugin,
-                jsenvPluginInline({
-                  fetchInlineUrls: false,
-                  analyzeConvertedScripts: true, // to be able to version their urls
-                  allowEscapeForVersioning: true,
-                }),
-                {
-                  name: "jsenv:versioning",
-                  appliesDuring: "build",
-                  resolveUrl: (reference) => {
-                    const buildUrl = buildUrls[reference.specifier]
-                    if (buildUrl) {
-                      return buildUrl
-                    }
-                    const urlObject = new URL(
-                      reference.specifier,
-                      reference.baseUrl || reference.parentUrl,
+            urlInfo.dependencies.forEach((dependencyUrl) => {
+              // this dependency is inline
+              if (dependencyUrl.startsWith("data:")) {
+                return
+              }
+              const dependencyUrlInfo = finalGraph.getUrlInfo(dependencyUrl)
+              if (
+                // this content is part of the file, no need to take into account twice
+                dependencyUrlInfo.isInline ||
+                // this dependency content is not known
+                !dependencyUrlInfo.shouldHandle
+              ) {
+                return
+              }
+              if (dependencyUrlInfo.data.version) {
+                versionGenerator.augmentWithDependencyVersion(
+                  dependencyUrlInfo.data.version,
+                )
+              } else {
+                // because all dependencies are know, if the dependency has no version
+                // it means there is a circular dependency between this file
+                // and it's dependency
+                // in that case we'll use the dependency content
+                versionGenerator.augmentWithContent({
+                  content: dependencyUrlInfo.content,
+                  contentType: dependencyUrlInfo.contentType,
+                  lineBreakNormalization,
+                })
+              }
+            })
+            urlInfo.data.version = versionGenerator.generate()
+
+            const buildUrlObject = new URL(urlInfo.url)
+            // remove ?as_js_classic as
+            // this information is already hold into ".nomodule"
+            if (buildUrlObject.searchParams.has("as_js_classic")) {
+              buildUrlObject.searchParams.delete("as_js_classic")
+            }
+            const buildUrl = buildUrlObject.href
+            finalRedirections.set(urlInfo.url, buildUrl)
+            urlInfo.data.versionedUrl = normalizeUrl(
+              injectVersionIntoBuildUrl({
+                buildUrl,
+                version: urlInfo.data.version,
+                versioningMethod,
+              }),
+            )
+          })
+          const versionMappings = {}
+          const usedVersionMappings = []
+          const versioningKitchen = createKitchen({
+            logLevel: logger.level,
+            rootDirectoryUrl: buildDirectoryUrl,
+            urlGraph: finalGraph,
+            scenarios: { build: true },
+            runtimeCompat,
+            plugins: [
+              urlAnalysisPlugin,
+              jsenvPluginInline({
+                fetchInlineUrls: false,
+                analyzeConvertedScripts: true, // to be able to version their urls
+                allowEscapeForVersioning: true,
+              }),
+              {
+                name: "jsenv:versioning",
+                appliesDuring: "build",
+                resolveUrl: (reference) => {
+                  const buildUrl = buildUrls.get(reference.specifier)
+                  if (buildUrl) {
+                    return buildUrl
+                  }
+                  const urlObject = new URL(
+                    reference.specifier,
+                    reference.baseUrl || reference.parentUrl,
+                  )
+                  const url = urlObject.href
+                  // during versioning we revisit the deps
+                  // but the code used to enforce trailing slash on directories
+                  // is not applied because "jsenv:file_url_resolution" is not used
+                  // so here we search if the url with a trailing slash exists
+                  if (
+                    reference.type === "filesystem" &&
+                    !urlObject.pathname.endsWith("/")
+                  ) {
+                    const urlWithTrailingSlash = `${url}/`
+                    const specifier = findKeyFromValue(
+                      buildUrls,
+                      urlWithTrailingSlash,
                     )
-                    const url = urlObject.href
-                    // during versioning we revisit the deps
-                    // but the code used to enforce trailing slash on directories
-                    // is not applied because "jsenv:file_url_resolution" is not used
-                    // so here we search if the url with a trailing slash exists
-                    if (
-                      reference.type === "filesystem" &&
-                      !urlObject.pathname.endsWith("/")
-                    ) {
-                      const urlWithTrailingSlash = `${url}/`
-                      const specifier = Object.keys(buildUrls).find(
-                        (key) => buildUrls[key] === urlWithTrailingSlash,
-                      )
-                      if (specifier) {
-                        return urlWithTrailingSlash
-                      }
+                    if (specifier) {
+                      return urlWithTrailingSlash
                     }
-                    return url
-                  },
-                  formatUrl: (reference) => {
-                    if (!reference.shouldHandle) {
-                      if (reference.generatedUrl.startsWith("ignore:")) {
-                        return reference.generatedUrl.slice("ignore:".length)
-                      }
-                      return null
+                  }
+                  return url
+                },
+                formatUrl: (reference) => {
+                  if (!reference.shouldHandle) {
+                    if (reference.generatedUrl.startsWith("ignore:")) {
+                      return reference.generatedUrl.slice("ignore:".length)
                     }
-                    if (
-                      reference.isInline ||
-                      reference.url.startsWith("data:")
-                    ) {
-                      return null
-                    }
-                    // specifier comes from "normalize" hook done a bit earlier in this file
-                    // we want to get back their build url to access their infos
-                    const referencedUrlInfo = finalGraph.getUrlInfo(
-                      reference.url,
-                    )
-                    if (!canUseVersionedUrl(referencedUrlInfo)) {
-                      return reference.specifier
-                    }
-                    if (!referencedUrlInfo.shouldHandle) {
-                      return null
-                    }
-                    const versionedUrl = referencedUrlInfo.data.versionedUrl
-                    if (!versionedUrl) {
-                      // happens for sourcemap
-                      return `${baseUrl}${urlToRelativeUrl(
-                        referencedUrlInfo.url,
-                        buildDirectoryUrl,
-                      )}`
-                    }
-                    const versionedSpecifier = `${baseUrl}${urlToRelativeUrl(
-                      versionedUrl,
+                    return null
+                  }
+                  if (reference.isInline || reference.url.startsWith("data:")) {
+                    return null
+                  }
+                  // specifier comes from "normalize" hook done a bit earlier in this file
+                  // we want to get back their build url to access their infos
+                  const referencedUrlInfo = finalGraph.getUrlInfo(reference.url)
+                  if (!canUseVersionedUrl(referencedUrlInfo)) {
+                    return reference.specifier
+                  }
+                  if (!referencedUrlInfo.shouldHandle) {
+                    return null
+                  }
+                  const versionedUrl = referencedUrlInfo.data.versionedUrl
+                  if (!versionedUrl) {
+                    // happens for sourcemap
+                    return `${baseUrl}${urlToRelativeUrl(
+                      referencedUrlInfo.url,
                       buildDirectoryUrl,
                     )}`
-                    versionMappings[reference.specifier] = versionedSpecifier
-                    versioningRedirections.set(reference.url, versionedUrl)
-                    buildUrls[versionedSpecifier] = versionedUrl
+                  }
+                  const versionedSpecifier = `${baseUrl}${urlToRelativeUrl(
+                    versionedUrl,
+                    buildDirectoryUrl,
+                  )}`
+                  versionMappings[reference.specifier] = versionedSpecifier
+                  versioningRedirections.set(reference.url, versionedUrl)
+                  buildUrls.set(versionedSpecifier, versionedUrl)
 
-                    const parentUrlInfo = finalGraph.getUrlInfo(
-                      reference.parentUrl,
-                    )
-                    if (parentUrlInfo.jsQuote) {
-                      // the url is inline inside js quotes
-                      usedVersionMappings.push(reference.specifier)
-                      return () =>
-                        `${parentUrlInfo.jsQuote}+__v__(${JSON.stringify(
-                          reference.specifier,
-                        )})+${parentUrlInfo.jsQuote}`
-                    }
-                    if (
-                      reference.type === "js_url_specifier" ||
-                      reference.subtype === "import_dynamic"
-                    ) {
-                      usedVersionMappings.push(reference.specifier)
-                      return () =>
-                        `__v__(${JSON.stringify(reference.specifier)})`
-                    }
-                    return versionedSpecifier
-                  },
-                  fetchUrlContent: (versionedUrlInfo) => {
-                    if (versionedUrlInfo.isInline) {
-                      const rawUrlInfo = rawGraph.getUrlInfo(
-                        buildToRawUrls[versionedUrlInfo.url],
-                      )
-                      const finalUrlInfo = finalGraph.getUrlInfo(
-                        versionedUrlInfo.url,
-                      )
-                      return {
-                        content: versionedUrlInfo.content,
-                        contentType: versionedUrlInfo.contentType,
-                        originalContent: rawUrlInfo
-                          ? rawUrlInfo.originalContent
-                          : undefined,
-                        sourcemap: finalUrlInfo
-                          ? finalUrlInfo.sourcemap
-                          : undefined,
-                      }
-                    }
-                    return versionedUrlInfo
-                  },
+                  const parentUrlInfo = finalGraph.getUrlInfo(
+                    reference.parentUrl,
+                  )
+                  if (parentUrlInfo.jsQuote) {
+                    // the url is inline inside js quotes
+                    usedVersionMappings.push(reference.specifier)
+                    return () =>
+                      `${parentUrlInfo.jsQuote}+__v__(${JSON.stringify(
+                        reference.specifier,
+                      )})+${parentUrlInfo.jsQuote}`
+                  }
+                  if (
+                    reference.type === "js_url_specifier" ||
+                    reference.subtype === "import_dynamic"
+                  ) {
+                    usedVersionMappings.push(reference.specifier)
+                    return () => `__v__(${JSON.stringify(reference.specifier)})`
+                  }
+                  return versionedSpecifier
                 },
-              ],
-              sourcemaps,
-              sourcemapsSourcesContent,
-              sourcemapsRelativeSources: true,
-              writeGeneratedFiles,
-              outDirectoryUrl: new URL(
-                ".jsenv/postbuild/",
-                finalGraphKitchen.rootDirectoryUrl,
-              ),
-            })
-            const versioningUrlGraphLoader = createUrlGraphLoader(
-              versioningKitchen.kitchenContext,
-            )
-            finalEntryUrls.forEach((finalEntryUrl) => {
-              const [finalEntryReference, finalEntryUrlInfo] =
-                finalGraphKitchen.kitchenContext.prepareEntryPoint({
-                  trace: { message: `entryPoint` },
-                  parentUrl: buildDirectoryUrl,
-                  type: "entry_point",
-                  specifier: finalEntryUrl,
-                })
-              versioningUrlGraphLoader.load(finalEntryUrlInfo, {
-                reference: finalEntryReference,
+                fetchUrlContent: (versionedUrlInfo) => {
+                  if (versionedUrlInfo.isInline) {
+                    const rawUrlInfo = rawGraph.getUrlInfo(
+                      buildToRawUrls[versionedUrlInfo.url],
+                    )
+                    const finalUrlInfo = finalGraph.getUrlInfo(
+                      versionedUrlInfo.url,
+                    )
+                    return {
+                      content: versionedUrlInfo.content,
+                      contentType: versionedUrlInfo.contentType,
+                      originalContent: rawUrlInfo
+                        ? rawUrlInfo.originalContent
+                        : undefined,
+                      sourcemap: finalUrlInfo
+                        ? finalUrlInfo.sourcemap
+                        : undefined,
+                    }
+                  }
+                  return versionedUrlInfo
+                },
+              },
+            ],
+            sourcemaps,
+            sourcemapsSourcesContent,
+            sourcemapsRelativeSources: true,
+            writeGeneratedFiles,
+            outDirectoryUrl: new URL(
+              ".jsenv/postbuild/",
+              finalGraphKitchen.rootDirectoryUrl,
+            ),
+          })
+          const versioningUrlGraphLoader = createUrlGraphLoader(
+            versioningKitchen.kitchenContext,
+          )
+          finalEntryUrls.forEach((finalEntryUrl) => {
+            const [finalEntryReference, finalEntryUrlInfo] =
+              finalGraphKitchen.kitchenContext.prepareEntryPoint({
+                trace: { message: `entryPoint` },
+                parentUrl: buildDirectoryUrl,
+                type: "entry_point",
+                specifier: finalEntryUrl,
               })
+            versioningUrlGraphLoader.load(finalEntryUrlInfo, {
+              reference: finalEntryReference,
             })
-            await versioningUrlGraphLoader.getAllLoadDonePromise(buildOperation)
-            if (usedVersionMappings.length) {
-              const versionMappingsNeeded = {}
-              usedVersionMappings.forEach((specifier) => {
-                versionMappingsNeeded[specifier] = versionMappings[specifier]
+          })
+          await versioningUrlGraphLoader.getAllLoadDonePromise(buildOperation)
+          if (usedVersionMappings.length) {
+            const versionMappingsNeeded = {}
+            usedVersionMappings.forEach((specifier) => {
+              versionMappingsNeeded[specifier] = versionMappings[specifier]
+            })
+            await injectGlobalVersionMapping({
+              finalGraphKitchen,
+              finalGraph,
+              versionMappings: versionMappingsNeeded,
+            })
+          }
+          GRAPH.forEach(finalGraph, (urlInfo) => {
+            if (!urlInfo.shouldHandle) {
+              return
+            }
+            if (!urlInfo.url.startsWith("file:")) {
+              return
+            }
+            if (urlInfo.type === "html") {
+              const htmlAst = parseHtmlString(urlInfo.content, {
+                storeOriginalPositions: false,
               })
-              await injectGlobalVersionMapping({
-                finalGraphKitchen,
-                finalGraph,
-                versionMappings: versionMappingsNeeded,
+              urlInfo.content = stringifyHtmlAst(htmlAst, {
+                removeOriginalPositionAttributes: true,
               })
             }
-          } catch (e) {
-            versioningTask.fail()
-            throw e
-          }
-          versioningTask.done()
+          })
+        } catch (e) {
+          versioningTask.fail()
+          throw e
         }
+        versioningTask.done()
       }
-      GRAPH.forEach(finalGraph, (urlInfo) => {
-        if (!urlInfo.shouldHandle) {
-          return
-        }
-        if (!urlInfo.url.startsWith("file:")) {
-          return
-        }
-        if (urlInfo.type === "html") {
-          const htmlAst = parseHtmlString(urlInfo.content, {
-            storeOriginalPositions: false,
-          })
-          urlInfo.content = stringifyHtmlAst(htmlAst, {
-            removeOriginalPositionAttributes: true,
-          })
-        }
-        const version = urlInfo.data.version
-        const useVersionedUrl =
-          version && canUseVersionedUrl(urlInfo, finalGraph)
-        const buildUrl = useVersionedUrl
-          ? urlInfo.data.versionedUrl
-          : urlInfo.url
-        const buildUrlSpecifier = Object.keys(buildUrls).find(
-          (key) => buildUrls[key] === buildUrl,
-        )
-        urlInfo.data.buildUrl = buildUrl
-        urlInfo.data.buildUrlIsVersioned = useVersionedUrl
-        urlInfo.data.buildUrlSpecifier = buildUrlSpecifier
-      })
-      cleanup_unused_urls: {
-        const cleanupActions = []
+      delete_unused_urls: {
+        const actions = []
         GRAPH.forEach(finalGraph, (urlInfo) => {
           // nothing uses this url anymore
           // - versioning update inline content
@@ -1098,12 +1078,12 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`,
             urlInfo.dependents.size === 0 &&
             !urlInfo.injected // injected during postbuild
           ) {
-            cleanupActions.push(() => {
+            actions.push(() => {
               finalGraph.deleteUrlInfo(urlInfo.url)
             })
           }
         })
-        cleanupActions.forEach((cleanupAction) => cleanupAction())
+        actions.forEach((action) => action())
       }
       /*
        * Update <link rel="preload"> and friends after build (once we know everything)
@@ -1138,7 +1118,7 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`,
                 if (!isresourceHint) {
                   return
                 }
-                const buildUrl = buildUrls[href]
+                const buildUrl = buildUrls.get(href)
                 const buildUrlInfo = (() => {
                   const finalUrl = finalRedirections.get(buildUrl)
                   if (finalUrl) {
@@ -1146,7 +1126,7 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`,
                     return buildUrlInfo
                   }
                   if (versioning) {
-                    const buildUrlBeforeVersioning = getKeyForValue(
+                    const buildUrlBeforeVersioning = findKeyFromValue(
                       versioningRedirections,
                       buildUrl,
                     )
@@ -1179,12 +1159,10 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`,
                   const buildUrlFormatted =
                     versioningRedirections.get(buildUrlInfo.url) ||
                     buildUrlInfo.url
-                  const buildSpecifierBeforeRedirect = Object.keys(
+                  const buildSpecifierBeforeRedirect = findKeyFromValue(
                     buildUrls,
-                  ).find((buildSpecifierCandidate) => {
-                    const buildUrlCandidate = buildUrls[buildSpecifierCandidate]
-                    return buildUrlCandidate === buildUrlFormatted
-                  })
+                    buildUrlFormatted,
+                  )
                   mutations.push(() => {
                     setHtmlNodeAttributes(node, {
                       href: buildSpecifierBeforeRedirect,
@@ -1229,10 +1207,13 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`,
             if (!urlInfo.url.startsWith("file:")) {
               return
             }
-            if (urlInfo.data.buildUrlIsVersioned) {
-              serviceWorkerUrls[urlInfo.data.buildUrlSpecifier] = {
-                versioned: true,
-              }
+            const urlWithoutVersioning = findKeyFromValue(
+              versioningRedirections,
+              urlInfo.url,
+            )
+            const buildUrlSpecifier = findKeyFromValue(buildUrls, urlInfo.url)
+            if (urlWithoutVersioning) {
+              serviceWorkerUrls[buildUrlSpecifier] = { versioned: true }
               return
             }
             if (!urlInfo.data.version) {
@@ -1248,7 +1229,7 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`,
               const version = versionGenerator.generate()
               urlInfo.data.version = version
             }
-            serviceWorkerUrls[urlInfo.data.buildUrlSpecifier] = {
+            serviceWorkerUrls[buildUrlSpecifier] = {
               versioned: false,
               version: urlInfo.data.version,
             }
@@ -1260,9 +1241,11 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`,
             const urlsWithoutSelf = {
               ...serviceWorkerUrls,
             }
-            delete urlsWithoutSelf[
-              serviceWorkerEntryUrlInfo.data.buildUrlSpecifier
-            ]
+            const serviceWorkerBuildUrlSpecifier = findKeyFromValue(
+              buildUrls,
+              serviceWorkerEntryUrlInfo.url,
+            )
+            delete urlsWithoutSelf[serviceWorkerBuildUrlSpecifier]
             magicSource.prepend(
               `\nself.serviceWorkerUrls = ${JSON.stringify(
                 serviceWorkerUrls,
@@ -1297,21 +1280,29 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`,
       if (urlInfo.type === "directory") {
         return
       }
-      const buildRelativeUrl = urlToRelativeUrl(
-        urlInfo.data.buildUrl,
-        buildDirectoryUrl,
-      )
       if (urlInfo.isInline) {
-        buildInlineContents[buildRelativeUrl] = urlInfo.content
-      } else {
-        buildFileContents[buildRelativeUrl] = urlInfo.content
-        const buildUrlFormatted =
-          finalRedirections.get(urlInfo.url) || urlInfo.url
-        const buildRelativeUrlWithoutVersioning = urlToRelativeUrl(
-          buildUrlFormatted,
+        const buildRelativeUrl = urlToRelativeUrl(
+          urlInfo.url,
           buildDirectoryUrl,
         )
-        buildManifest[buildRelativeUrlWithoutVersioning] = buildRelativeUrl
+        buildInlineContents[buildRelativeUrl] = urlInfo.content
+      } else {
+        const buildRelativeUrl = urlToRelativeUrl(
+          urlInfo.url,
+          buildDirectoryUrl,
+        )
+        buildFileContents[buildRelativeUrl] = urlInfo.content
+        const urlWithoutVersioning = findKeyFromValue(
+          versioningRedirections,
+          urlInfo.url,
+        )
+        if (urlWithoutVersioning) {
+          const buildRelativeUrlWithoutVersioning = urlToRelativeUrl(
+            urlWithoutVersioning,
+            buildDirectoryUrl,
+          )
+          buildManifest[buildRelativeUrlWithoutVersioning] = buildRelativeUrl
+        }
       }
     })
     if (writeOnFileSystem) {
@@ -1415,7 +1406,7 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`,
   return stopWatchingClientFiles
 }
 
-const getKeyForValue = (map, value) => {
+const findKeyFromValue = (map, value) => {
   for (const [keyCandidate, valueCandidate] of map) {
     if (valueCandidate === value) {
       return keyCandidate
