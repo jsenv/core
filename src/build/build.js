@@ -786,6 +786,22 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     refine: {
       inject_version_in_urls: {
         if (!versioning) {
+          GRAPH.forEach(finalGraph, (urlInfo) => {
+            if (!urlInfo.shouldHandle) {
+              return
+            }
+            if (!urlInfo.url.startsWith("file:")) {
+              return
+            }
+            if (urlInfo.type === "html") {
+              const htmlAst = parseHtmlString(urlInfo.content, {
+                storeOriginalPositions: false,
+              })
+              urlInfo.content = stringifyHtmlAst(htmlAst, {
+                cleanupJsenvAttributes: true,
+              })
+            }
+          })
           break inject_version_in_urls
         }
         const versioningTask = createTaskLog("inject version in urls", {
@@ -826,7 +842,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     parseHtmlString(urlInfo.content, {
                       storeOriginalPositions: false,
                     }),
-                    { removeOriginalPositionAttributes: true },
+                    { cleanupJsenvAttributes: true },
                   )
                 : urlInfo.content
             const versionGenerator = createVersionGenerator()
@@ -1044,22 +1060,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               versionMappings: versionMappingsNeeded,
             })
           }
-          GRAPH.forEach(finalGraph, (urlInfo) => {
-            if (!urlInfo.shouldHandle) {
-              return
-            }
-            if (!urlInfo.url.startsWith("file:")) {
-              return
-            }
-            if (urlInfo.type === "html") {
-              const htmlAst = parseHtmlString(urlInfo.content, {
-                storeOriginalPositions: false,
-              })
-              urlInfo.content = stringifyHtmlAst(htmlAst, {
-                removeOriginalPositionAttributes: true,
-              })
-            }
-          })
         } catch (e) {
           versioningTask.fail()
           throw e

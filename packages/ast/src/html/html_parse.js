@@ -45,9 +45,9 @@ export const parseHtmlString = (
 
 export const stringifyHtmlAst = (
   htmlAst,
-  { removeOriginalPositionAttributes = false } = {},
+  { cleanupJsenvAttributes = false } = {},
 ) => {
-  if (removeOriginalPositionAttributes) {
+  if (cleanupJsenvAttributes) {
     const htmlNode = findHtmlChildNode(
       htmlAst,
       (node) => node.nodeName === "html",
@@ -70,13 +70,13 @@ export const stringifyHtmlAst = (
             "inlined-from-href": undefined,
             "jsenv-plugin-owner": undefined,
             "jsenv-plugin-action": undefined,
+            "jsenv-debug": undefined,
           })
         },
       })
     }
   }
   const htmlString = serialize(htmlAst)
-
   return htmlString
 }
 
