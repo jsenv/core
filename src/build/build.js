@@ -445,10 +445,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               )
             }
             const generatedUrlObject = new URL(reference.generatedUrl)
-            if (generatedUrlObject.searchParams.has("as_js_classic")) {
-              generatedUrlObject.searchParams.delete("as_js_classic")
-            }
-            // TODO: also remove stuff related to import assertions
+            generatedUrlObject.searchParams.delete("as_js_classic")
+            generatedUrlObject.searchParams.delete("as_json_module")
+            generatedUrlObject.searchParams.delete("as_css_module")
+            generatedUrlObject.searchParams.delete("as_text_module")
             generatedUrlObject.hash = ""
             const generatedUrl = generatedUrlObject.href
             let specifier
@@ -734,16 +734,16 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               associateBuildUrlAndRawUrl(buildUrl, url, "bundle")
             }
             bundleUrlInfos[buildUrl] = bundleUrlInfo
-            if (buildUrl.includes("?")) {
-              bundleUrlInfos[asUrlWithoutSearch(buildUrl)] = bundleUrlInfo
-            }
+            // if (buildUrl.includes("?")) {
+            //   bundleUrlInfos[asUrlWithoutSearch(buildUrl)] = bundleUrlInfo
+            // }
             if (bundlerGeneratedUrlInfo.data.bundleRelativeUrl) {
               const urlForBundler = new URL(
                 bundlerGeneratedUrlInfo.data.bundleRelativeUrl,
                 buildDirectoryUrl,
               ).href
               if (urlForBundler !== buildUrl) {
-                bundleInternalRedirections[urlForBundler] = buildUrl
+                bundleInternalRedirections.set(urlForBundler, buildUrl)
               }
             }
           })
