@@ -693,10 +693,19 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       return [null, null]
     }
     searchParams.delete(searchParam)
+    const originalRef = context.reference.original || context.reference
     const referenceWithoutSearchParam = {
-      ...(context.reference.original || context.reference),
+      ...originalRef,
+      original: originalRef,
+      searchParams,
+      data: { ...originalRef.data },
       expectedType,
+      specifier: context.reference.specifier
+        .replace(`?${searchParam}`, "")
+        .replace(`&${searchParam}`, ""),
       url: urlObject.href,
+      generatedSpecifier: null,
+      generatedUrl: null,
     }
     const urlInfoWithoutSearchParam = context.urlGraph.reuseOrCreateUrlInfo(
       referenceWithoutSearchParam.url,

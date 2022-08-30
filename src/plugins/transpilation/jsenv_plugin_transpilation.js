@@ -16,6 +16,7 @@ import { jsenvPluginTopLevelAwait } from "./jsenv_plugin_top_level_await.js"
 export const jsenvPluginTranspilation = ({
   importAssertions = true,
   css = true,
+  jsClassicLibrary = true,
   // build sets jsClassicFallback: false during first step of the build
   // and re-enable it in the second phase (when performing the bundling)
   // so that bundling is applied on js modules THEN it is converted to js classic if needed
@@ -39,6 +40,7 @@ export const jsenvPluginTranspilation = ({
       babelHelpersAsImport,
     }),
     jsenvPluginAsJsClassic({
+      jsClassicLibrary,
       jsClassicFallback,
       systemJsInjection,
     }),

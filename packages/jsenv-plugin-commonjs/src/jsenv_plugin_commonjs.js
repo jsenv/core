@@ -72,9 +72,6 @@ export const jsenvPluginCommonJs = ({
       await context.fetchUrlContent(commonJsUrlInfo, {
         reference: commonJsReference,
       })
-      if (context.scenarios.build && commonJsUrlInfo.dependents.size === 0) {
-        context.urlGraph.deleteUrlInfo(commonJsUrlInfo.url)
-      }
       const nodeRuntimeEnabled = Object.keys(context.runtimeCompat).includes(
         "node",
       )

@@ -271,6 +271,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       plugins: [
         urlAnalysisPlugin,
         jsenvPluginAsJsClassic({
+          jsClassicLibrary: false,
           jsClassicFallback: true,
           systemJsInjection: true,
         }),
@@ -455,6 +456,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             }
             const generatedUrlObject = new URL(reference.generatedUrl)
             generatedUrlObject.searchParams.delete("as_js_classic")
+            generatedUrlObject.searchParams.delete("as_js_classic_library")
             generatedUrlObject.searchParams.delete("as_json_module")
             generatedUrlObject.searchParams.delete("as_css_module")
             generatedUrlObject.searchParams.delete("as_text_module")
@@ -888,6 +890,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             // remove ?as_js_classic as
             // this information is already hold into ".nomodule"
             buildUrlObject.searchParams.delete("as_js_classic")
+            buildUrlObject.searchParams.delete("as_js_classic_library")
             buildUrlObject.searchParams.delete("as_json_module")
             buildUrlObject.searchParams.delete("as_css_module")
             buildUrlObject.searchParams.delete("as_text_module")

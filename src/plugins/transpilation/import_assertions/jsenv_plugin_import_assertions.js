@@ -117,8 +117,6 @@ const jsenvPluginAsModules = () => {
           specifier: jsonReference.url,
           expectedType: "js_module",
         })
-      } else if (context.scenarios.build && jsonUrlInfo.dependents.size === 0) {
-        context.urlGraph.deleteUrlInfo(jsonUrlInfo.url)
       }
       const jsonText = JSON.stringify(jsonUrlInfo.content.trim())
       return {
@@ -157,8 +155,6 @@ const jsenvPluginAsModules = () => {
           specifier: cssReference.url,
           expectedType: "js_module",
         })
-      } else if (context.scenarios.build && cssUrlInfo.dependents.size === 0) {
-        context.urlGraph.deleteUrlInfo(cssUrlInfo.url)
       }
       const cssText = JS_QUOTES.escapeSpecialChars(cssUrlInfo.content, {
         // If template string is choosen and runtime do not support template literals
@@ -206,8 +202,6 @@ const jsenvPluginAsModules = () => {
           specifier: textReference.url,
           expectedType: "js_module",
         })
-      } else if (context.scenarios.build && textUrlInfo.dependents.size === 0) {
-        context.urlGraph.deleteUrlInfo(textUrlInfo.url)
       }
       const textPlain = JS_QUOTES.escapeSpecialChars(urlInfo.content, {
         // If template string is choosen and runtime do not support template literals

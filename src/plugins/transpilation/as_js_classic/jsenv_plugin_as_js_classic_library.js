@@ -6,9 +6,11 @@ import { convertJsModuleToJsClassic } from "./convert_js_module_to_js_classic.js
 export const jsenvPluginAsJsClassicLibrary = ({
   systemJsInjection,
   systemJsClientFileUrl,
+  generateJsClassicFilename,
 }) => {
   const markAsJsClassicLibraryProxy = (reference) => {
     reference.expectedType = "js_classic"
+    reference.filename = generateJsClassicFilename(reference.url)
   }
 
   return {
@@ -36,20 +38,6 @@ export const jsenvPluginAsJsClassicLibrary = ({
       }
       // cook it to get content + dependencies
       await context.cook(jsModuleUrlInfo, { reference: jsModuleReference })
-      if (context.scenarios.dev) {
-        context.referenceUtils.found({
-          type: "js_import_export",
-          subtype: jsModuleReference.subtype,
-          specifier: jsModuleReference.url,
-          expectedType: "js_module",
-        })
-      } else if (
-        context.scenarios.build &&
-        jsModuleUrlInfo.dependents.size === 0
-      ) {
-        context.urlGraph.deleteUrlInfo(jsModuleUrlInfo.url)
-      }
-
       const loader = createUrlGraphLoader(context)
       loader.loadReferencedUrlInfos(jsModuleUrlInfo, {
         // we ignore dynamic import to cook lazyly (as browser request the server)
@@ -69,6 +57,15 @@ export const jsenvPluginAsJsClassicLibrary = ({
         },
       })
       const jsModuleBundledUrlInfo = bundleUrlInfos[jsModuleUrlInfo.url]
+      if (context.scenarios.dev) {
+        jsModuleBundledUrlInfo.sourceUrls.forEach((sourceUrl) => {
+          context.referenceUtils.inject({
+            type: "js_url_specifier",
+            specifier: sourceUrl,
+            isImplicit: true,
+          })
+        })
+      }
       const { content, sourcemap } = await convertJsModuleToJsClassic({
         systemJsInjection,
         systemJsClientFileUrl,
@@ -79,8 +76,8 @@ export const jsenvPluginAsJsClassicLibrary = ({
         content,
         contentType: "text/javascript",
         type: "js_classic",
-        originalUrl: jsModuleBundledUrlInfo.originalUrl,
-        originalContent: jsModuleBundledUrlInfo.originalContent,
+        originalUrl: jsModuleUrlInfo.originalUrl,
+        originalContent: jsModuleUrlInfo.originalContent,
         sourcemap,
       }
     },

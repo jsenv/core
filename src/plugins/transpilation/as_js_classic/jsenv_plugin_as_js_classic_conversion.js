@@ -1,34 +1,14 @@
-import { urlToFilename, injectQueryParams } from "@jsenv/urls"
-import { convertJsModuleToJsClassic } from "./convert_js_module_to_js_classic.js"
-
 // propagate ?as_js_classic to referenced urls
 // and perform the conversion during fetchUrlContent
+
+import { injectQueryParams } from "@jsenv/urls"
+import { convertJsModuleToJsClassic } from "./convert_js_module_to_js_classic.js"
+
 export const jsenvPluginAsJsClassicConversion = ({
   systemJsInjection,
   systemJsClientFileUrl,
+  generateJsClassicFilename,
 }) => {
-  const generateJsClassicFilename = (url) => {
-    const filename = urlToFilename(url)
-    let [basename, extension] = splitFileExtension(filename)
-    const { searchParams } = new URL(url)
-    if (
-      searchParams.has("as_json_module") ||
-      searchParams.has("as_css_module") ||
-      searchParams.has("as_text_module")
-    ) {
-      extension = ".js"
-    }
-    return `${basename}.nomodule${extension}`
-  }
-
-  const splitFileExtension = (filename) => {
-    const dotLastIndex = filename.lastIndexOf(".")
-    if (dotLastIndex === -1) {
-      return [filename, ""]
-    }
-    return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)]
-  }
-
   const shouldPropagateJsClassic = (reference, context) => {
     const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl)
     if (!parentUrlInfo) {
@@ -97,11 +77,6 @@ export const jsenvPluginAsJsClassicConversion = ({
           specifier: jsModuleReference.url,
           expectedType: "js_module",
         })
-      } else if (
-        context.scenarios.build &&
-        jsModuleUrlInfo.dependents.size === 0
-      ) {
-        context.urlGraph.deleteUrlInfo(jsModuleUrlInfo.url)
       }
       const { content, sourcemap } = await convertJsModuleToJsClassic({
         systemJsInjection,
