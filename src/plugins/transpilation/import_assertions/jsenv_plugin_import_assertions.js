@@ -68,7 +68,7 @@ export const jsenvPluginImportAssertions = ({
         if (!reference.assert) {
           return null
         }
-        const { searchParams } = new URL(reference.url)
+        const { searchParams } = reference
         if (
           searchParams.has("as_json_module") ||
           searchParams.has("as_css_module") ||

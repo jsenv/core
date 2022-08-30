@@ -17,8 +17,7 @@ export const jsenvPluginAsJsClassicLibrary = ({
     name: "jsenv:as_js_classic_library",
     appliesDuring: "*",
     redirectUrl: (reference) => {
-      const urlObject = new URL(reference.url)
-      if (urlObject.searchParams.has("as_js_classic_library")) {
+      if (reference.searchParams.has("as_js_classic_library")) {
         markAsJsClassicLibraryProxy(reference)
       }
     },

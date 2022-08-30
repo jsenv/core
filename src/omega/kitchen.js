@@ -185,6 +185,9 @@ ${ANSI.color(reference.specifier, ANSI.GREY)} ->
 ${ANSI.color(reference.url, ANSI.YELLOW)}
 `)
       }
+      let referencedUrlObject = new URL(reference.url)
+      let searchParams = referencedUrlObject.searchParams
+      reference.searchParams = searchParams
       pluginController.callHooks(
         "redirectUrl",
         reference,
@@ -204,12 +207,12 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           }
           const previousReference = { ...reference }
           reference.url = normalizedReturnValue
+          referencedUrlObject = new URL(referencedUrlObject)
+          searchParams = referencedUrlObject.searchParams
+          reference.searchParams = searchParams
           mutateReference(previousReference, reference)
         },
       )
-
-      const referenceUrlObject = new URL(reference.url)
-      reference.searchParams = referenceUrlObject.searchParams
       reference.generatedUrl = reference.url
       if (reference.searchParams.has("entry_point")) {
         reference.isEntryPoint = true
@@ -230,9 +233,9 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         referenceContext,
         (returnValue) => {
           Object.keys(returnValue).forEach((key) => {
-            referenceUrlObject.searchParams.set(key, returnValue[key])
+            searchParams.set(key, returnValue[key])
           })
-          reference.generatedUrl = normalizeUrl(referenceUrlObject.href)
+          reference.generatedUrl = normalizeUrl(referencedUrlObject.href)
         },
       )
       const returnValue = pluginController.callHooksUntil(
