@@ -46,7 +46,7 @@ export const jsenvPluginPreact = ({
           reference.specifier === "react-dom"
         ) {
           reference.specifier = "preact/compat"
-          return context.resolveReference(reference).url
+          return context.resolveReference(reference)[0].url
         }
         return null
       },

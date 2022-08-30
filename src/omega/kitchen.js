@@ -151,11 +151,11 @@ export const createKitchen = ({
     // Object.preventExtensions(reference) // useful to ensure all properties are declared here
     return reference
   }
-  const mutateReference = (reference, newReference) => {
+  const updateReference = (reference, newReference) => {
     reference.next = newReference
-    newReference.prev = reference
     newReference.original = reference.original || reference
-    // newReference.isEntryPoint = reference.isEntryPoint
+
+    newReference.prev = reference
   }
   const resolveReference = (reference, context = kitchenContext) => {
     const referenceContext = {
@@ -176,7 +176,10 @@ export const createKitchen = ({
         reference.debug = true
       }
       resolvedUrl = normalizeUrl(resolvedUrl)
+      let referencedUrlObject = new URL(resolvedUrl)
+      let searchParams = referencedUrlObject.searchParams
       reference.url = resolvedUrl
+      reference.searchParams = searchParams
       if (reference.debug) {
         logger.debug(`url resolved by "${
           pluginController.getLastPluginUsed().name
@@ -185,9 +188,6 @@ ${ANSI.color(reference.specifier, ANSI.GREY)} ->
 ${ANSI.color(reference.url, ANSI.YELLOW)}
 `)
       }
-      let referencedUrlObject = new URL(reference.url)
-      let searchParams = referencedUrlObject.searchParams
-      reference.searchParams = searchParams
       pluginController.callHooks(
         "redirectUrl",
         reference,
@@ -205,16 +205,16 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 `,
             )
           }
-          const previousReference = { ...reference }
-          reference.url = normalizedReturnValue
-          referencedUrlObject = new URL(referencedUrlObject)
+          const prevReference = { ...reference }
+          updateReference(prevReference, reference)
+          referencedUrlObject = new URL(normalizedReturnValue)
           searchParams = referencedUrlObject.searchParams
+          reference.url = normalizedReturnValue
           reference.searchParams = searchParams
-          mutateReference(previousReference, reference)
         },
       )
       reference.generatedUrl = reference.url
-      if (reference.searchParams.has("entry_point")) {
+      if (searchParams.has("entry_point")) {
         reference.isEntryPoint = true
       }
 
@@ -245,7 +245,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       )
       reference.generatedSpecifier = returnValue || reference.generatedUrl
       reference.generatedSpecifier = urlSpecifierEncoding.encode(reference)
-      return urlInfo
+      return [reference, urlInfo]
     } catch (error) {
       throw createResolveUrlError({
         pluginController,
@@ -265,17 +265,18 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     sourcemapsRelativeSources,
     clientRuntimeCompat,
     injectSourcemapPlaceholder: ({ urlInfo, specifier }) => {
-      const sourcemapReference = createReference({
-        trace: {
-          message: `sourcemap comment placeholder`,
-          url: urlInfo.url,
-        },
-        type: "sourcemap_comment",
-        subtype: urlInfo.contentType === "text/javascript" ? "js" : "css",
-        parentUrl: urlInfo.url,
-        specifier,
-      })
-      const sourcemapUrlInfo = resolveReference(sourcemapReference)
+      const [sourcemapReference, sourcemapUrlInfo] = resolveReference(
+        createReference({
+          trace: {
+            message: `sourcemap comment placeholder`,
+            url: urlInfo.url,
+          },
+          type: "sourcemap_comment",
+          subtype: urlInfo.contentType === "text/javascript" ? "js" : "css",
+          parentUrl: urlInfo.url,
+          specifier,
+        }),
+      )
       sourcemapUrlInfo.type = "sourcemap"
       return [sourcemapReference, sourcemapUrlInfo]
     },
@@ -292,15 +293,16 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         line: specifierLine,
         column: specifierColumn,
       })
-      const sourcemapReference = createReference({
-        trace: traceFromUrlSite(sourcemapUrlSite),
-        type,
-        parentUrl: urlInfo.url,
-        specifier,
-        specifierLine,
-        specifierColumn,
-      })
-      const sourcemapUrlInfo = resolveReference(sourcemapReference)
+      const [sourcemapReference, sourcemapUrlInfo] = resolveReference(
+        createReference({
+          trace: traceFromUrlSite(sourcemapUrlSite),
+          type,
+          parentUrl: urlInfo.url,
+          specifier,
+          specifierLine,
+          specifierColumn,
+        }),
+      )
       sourcemapUrlInfo.type = "sourcemap"
       return [sourcemapReference, sourcemapUrlInfo]
     },
@@ -428,12 +430,14 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       context.referenceUtils = {
         _references: references,
         add: (props) => {
-          const reference = createReference({
-            parentUrl: urlInfo.url,
-            ...props,
-          })
+          const [reference, referencedUrlInfo] = resolveReference(
+            createReference({
+              parentUrl: urlInfo.url,
+              ...props,
+            }),
+            context,
+          )
           references.push(reference)
-          const referencedUrlInfo = resolveReference(reference, context)
           return [reference, referencedUrlInfo]
         },
         find: (predicate) => references.find(predicate),
@@ -486,14 +490,15 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           if (index === -1) {
             throw new Error(`reference do not exists`)
           }
-          const previousReference = currentReference
-          const nextReference = createReference({
-            ...previousReference,
-            ...newReferenceParams,
-          })
-          references[index] = nextReference
-          mutateReference(previousReference, nextReference)
-          const newUrlInfo = resolveReference(nextReference, context)
+          const [newReference, newUrlInfo] = resolveReference(
+            createReference({
+              ...currentReference,
+              ...newReferenceParams,
+            }),
+            context,
+          )
+          updateReference(currentReference, newReference)
+          references[index] = newReference
           const currentUrlInfo = context.urlGraph.getUrlInfo(
             currentReference.url,
           )
@@ -504,7 +509,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           ) {
             context.urlGraph.deleteUrlInfo(currentReference.url)
           }
-          return [nextReference, newUrlInfo]
+          return [newReference, newUrlInfo]
         },
         becomesInline: (
           reference,
@@ -670,17 +675,17 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   kitchenContext.cook = cook
 
   const prepareEntryPoint = (params) => {
-    const entryReference = createReference(params)
-    entryReference.isEntryPoint = true
-    const entryUrlInfo = resolveReference(entryReference)
-    return [entryReference, entryUrlInfo]
+    return resolveReference(
+      createReference({
+        ...params,
+        isEntryPoint: true,
+      }),
+    )
   }
   kitchenContext.prepareEntryPoint = prepareEntryPoint
 
   const injectReference = (params) => {
-    const ref = createReference(params)
-    const urlInfo = resolveReference(ref)
-    return [ref, urlInfo]
+    return resolveReference(createReference(params))
   }
   kitchenContext.injectReference = injectReference
 

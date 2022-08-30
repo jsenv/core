@@ -410,10 +410,15 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
             // files from root directory but not given to rollup nor postcss
             if (rawUrlInfo) {
-              const buildUrl = buildUrlsGenerator.generate(reference.url, {
-                urlInfo: rawUrlInfo,
-                parentUrlInfo,
-              })
+              const referencedUrlObject = new URL(reference.url)
+              referencedUrlObject.searchParams.delete("as_js_classic_library")
+              const buildUrl = buildUrlsGenerator.generate(
+                referencedUrlObject.href,
+                {
+                  urlInfo: rawUrlInfo,
+                  parentUrlInfo,
+                },
+              )
               associateBuildUrlAndRawUrl(buildUrl, rawUrlInfo.url, "raw file")
               if (buildUrl.includes("?")) {
                 associateBuildUrlAndRawUrl(
