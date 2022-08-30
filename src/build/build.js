@@ -576,7 +576,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     const finalEntryUrls = []
 
     craft: {
-      const prebuildTask = createTaskLog("prebuild", {
+      const loadTask = createTaskLog("load", {
         disabled: logger.levels.debug || !logger.levels.info,
       })
       try {
@@ -600,211 +600,215 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         })
         await rawUrlGraphLoader.getAllLoadDonePromise(buildOperation)
       } catch (e) {
-        prebuildTask.fail()
+        loadTask.fail()
         throw e
       }
-      prebuildTask.done()
+      loadTask.done()
     }
 
     shape: {
-      const buildTask = createTaskLog("build", {
-        disabled: logger.levels.debug || !logger.levels.info,
-      })
-      rawGraphKitchen.pluginController.plugins.forEach((plugin) => {
-        const bundle = plugin.bundle
-        if (!bundle) {
-          return
-        }
-        if (typeof bundle !== "object") {
-          throw new Error(
-            `bundle must be an object, found "${bundle}" on plugin named "${plugin.name}"`,
-          )
-        }
-        Object.keys(bundle).forEach((type) => {
-          const bundleFunction = bundle[type]
-          if (!bundleFunction) {
+      bundle: {
+        rawGraphKitchen.pluginController.plugins.forEach((plugin) => {
+          const bundle = plugin.bundle
+          if (!bundle) {
             return
           }
-          const bundlerForThatType = bundlers[type]
-          if (bundlerForThatType) {
-            // first plugin to define a bundle hook wins
-            return
+          if (typeof bundle !== "object") {
+            throw new Error(
+              `bundle must be an object, found "${bundle}" on plugin named "${plugin.name}"`,
+            )
           }
-          bundlers[type] = {
-            plugin,
-            bundleFunction: bundle[type],
-            urlInfos: [],
-          }
-        })
-      })
-      const addToBundlerIfAny = (rawUrlInfo) => {
-        const bundler = bundlers[rawUrlInfo.type]
-        if (bundler) {
-          bundler.urlInfos.push(rawUrlInfo)
-          return
-        }
-      }
-      GRAPH.forEach(rawGraph, (rawUrlInfo) => {
-        if (rawUrlInfo.isEntryPoint) {
-          addToBundlerIfAny(rawUrlInfo)
-          if (rawUrlInfo.type === "html") {
-            rawUrlInfo.dependencies.forEach((dependencyUrl) => {
-              const dependencyUrlInfo = rawGraph.getUrlInfo(dependencyUrl)
-              if (dependencyUrlInfo.isInline) {
-                if (dependencyUrlInfo.type === "js_module") {
-                  // bundle inline script type module deps
-                  dependencyUrlInfo.references.forEach((inlineScriptRef) => {
-                    if (inlineScriptRef.type === "js_import_export") {
-                      const inlineUrlInfo = rawGraph.getUrlInfo(
-                        inlineScriptRef.url,
-                      )
-                      addToBundlerIfAny(inlineUrlInfo)
-                    }
-                  })
-                }
-                // inline content cannot be bundled
-                return
-              }
-              addToBundlerIfAny(dependencyUrlInfo)
-            })
-            rawUrlInfo.references.forEach((reference) => {
-              if (
-                reference.isResourceHint &&
-                reference.expectedType === "js_module"
-              ) {
-                const referencedUrlInfo = rawGraph.getUrlInfo(reference.url)
-                if (
-                  referencedUrlInfo &&
-                  // something else than the resource hint is using this url
-                  referencedUrlInfo.dependents.size > 0
-                ) {
-                  addToBundlerIfAny(referencedUrlInfo)
-                }
-              }
-            })
-            return
-          }
-        }
-        // File referenced with new URL('./file.js', import.meta.url)
-        // are entry points that can be bundled
-        // For instance we will bundle service worker/workers detected like this
-        if (rawUrlInfo.type === "js_module") {
-          rawUrlInfo.references.forEach((reference) => {
-            if (reference.type === "js_url_specifier") {
-              const urlInfo = rawGraph.getUrlInfo(reference.url)
-              addToBundlerIfAny(urlInfo)
+          Object.keys(bundle).forEach((type) => {
+            const bundleFunction = bundle[type]
+            if (!bundleFunction) {
+              return
+            }
+            const bundlerForThatType = bundlers[type]
+            if (bundlerForThatType) {
+              // first plugin to define a bundle hook wins
+              return
+            }
+            bundlers[type] = {
+              plugin,
+              bundleFunction: bundle[type],
+              urlInfos: [],
             }
           })
+        })
+        const addToBundlerIfAny = (rawUrlInfo) => {
+          const bundler = bundlers[rawUrlInfo.type]
+          if (bundler) {
+            bundler.urlInfos.push(rawUrlInfo)
+            return
+          }
         }
-      })
-      await Object.keys(bundlers).reduce(async (previous, type) => {
-        await previous
-        const bundler = bundlers[type]
-        const urlInfosToBundle = bundler.urlInfos
-        if (urlInfosToBundle.length === 0) {
-          return
-        }
-        const bundleTask = createTaskLog(`bundle "${type}"`, {
+        GRAPH.forEach(rawGraph, (rawUrlInfo) => {
+          if (rawUrlInfo.isEntryPoint) {
+            addToBundlerIfAny(rawUrlInfo)
+            if (rawUrlInfo.type === "html") {
+              rawUrlInfo.dependencies.forEach((dependencyUrl) => {
+                const dependencyUrlInfo = rawGraph.getUrlInfo(dependencyUrl)
+                if (dependencyUrlInfo.isInline) {
+                  if (dependencyUrlInfo.type === "js_module") {
+                    // bundle inline script type module deps
+                    dependencyUrlInfo.references.forEach((inlineScriptRef) => {
+                      if (inlineScriptRef.type === "js_import_export") {
+                        const inlineUrlInfo = rawGraph.getUrlInfo(
+                          inlineScriptRef.url,
+                        )
+                        addToBundlerIfAny(inlineUrlInfo)
+                      }
+                    })
+                  }
+                  // inline content cannot be bundled
+                  return
+                }
+                addToBundlerIfAny(dependencyUrlInfo)
+              })
+              rawUrlInfo.references.forEach((reference) => {
+                if (
+                  reference.isResourceHint &&
+                  reference.expectedType === "js_module"
+                ) {
+                  const referencedUrlInfo = rawGraph.getUrlInfo(reference.url)
+                  if (
+                    referencedUrlInfo &&
+                    // something else than the resource hint is using this url
+                    referencedUrlInfo.dependents.size > 0
+                  ) {
+                    addToBundlerIfAny(referencedUrlInfo)
+                  }
+                }
+              })
+              return
+            }
+          }
+          // File referenced with new URL('./file.js', import.meta.url)
+          // are entry points that can be bundled
+          // For instance we will bundle service worker/workers detected like this
+          if (rawUrlInfo.type === "js_module") {
+            rawUrlInfo.references.forEach((reference) => {
+              if (reference.type === "js_url_specifier") {
+                const urlInfo = rawGraph.getUrlInfo(reference.url)
+                addToBundlerIfAny(urlInfo)
+              }
+            })
+          }
+        })
+        await Object.keys(bundlers).reduce(async (previous, type) => {
+          await previous
+          const bundler = bundlers[type]
+          const urlInfosToBundle = bundler.urlInfos
+          if (urlInfosToBundle.length === 0) {
+            return
+          }
+          const bundleTask = createTaskLog(`bundle "${type}"`, {
+            disabled: logger.levels.debug || !logger.levels.info,
+          })
+          try {
+            const bundlerGeneratedUrlInfos =
+              await rawGraphKitchen.pluginController.callAsyncHook(
+                {
+                  plugin: bundler.plugin,
+                  hookName: "bundle",
+                  value: bundler.bundleFunction,
+                },
+                urlInfosToBundle,
+                {
+                  ...rawGraphKitchen.kitchenContext,
+                  buildDirectoryUrl,
+                },
+              )
+            Object.keys(bundlerGeneratedUrlInfos).forEach((url) => {
+              const rawUrlInfo = rawGraph.getUrlInfo(url)
+              const bundlerGeneratedUrlInfo = bundlerGeneratedUrlInfos[url]
+              const bundleUrlInfo = {
+                type,
+                subtype: rawUrlInfo ? rawUrlInfo.subtype : undefined,
+                isEntryPoint: rawUrlInfo ? rawUrlInfo.isEntryPoint : undefined,
+                filename: rawUrlInfo ? rawUrlInfo.filename : undefined,
+                originalUrl: rawUrlInfo ? rawUrlInfo.originalUrl : undefined,
+                originalContent: rawUrlInfo
+                  ? rawUrlInfo.originalContent
+                  : undefined,
+                ...bundlerGeneratedUrlInfo,
+                data: {
+                  ...(rawUrlInfo ? rawUrlInfo.data : {}),
+                  ...bundlerGeneratedUrlInfo.data,
+                  fromBundle: true,
+                },
+              }
+              if (bundlerGeneratedUrlInfo.sourceUrls) {
+                bundlerGeneratedUrlInfo.sourceUrls.forEach((sourceUrl) => {
+                  const rawUrlInfo = rawGraph.getUrlInfo(sourceUrl)
+                  if (rawUrlInfo) {
+                    rawUrlInfo.data.bundled = true
+                  }
+                })
+              }
+              const buildUrl = buildUrlsGenerator.generate(url, {
+                urlInfo: bundleUrlInfo,
+              })
+              bundleRedirections.set(url, buildUrl)
+              if (urlIsInsideOf(url, buildDirectoryUrl)) {
+                // chunk generated by rollup to share code
+              } else {
+                associateBuildUrlAndRawUrl(buildUrl, url, "bundle")
+              }
+              bundleUrlInfos[buildUrl] = bundleUrlInfo
+              if (buildUrl.includes("?")) {
+                bundleUrlInfos[asUrlWithoutSearch(buildUrl)] = bundleUrlInfo
+              }
+              if (bundlerGeneratedUrlInfo.data.bundleRelativeUrl) {
+                const urlForBundler = new URL(
+                  bundlerGeneratedUrlInfo.data.bundleRelativeUrl,
+                  buildDirectoryUrl,
+                ).href
+                if (urlForBundler !== buildUrl) {
+                  bundleInternalRedirections.set(urlForBundler, buildUrl)
+                }
+              }
+            })
+          } catch (e) {
+            bundleTask.fail()
+            throw e
+          }
+          bundleTask.done()
+        }, Promise.resolve())
+      }
+      reload_in_build_directory: {
+        const buildTask = createTaskLog("build", {
           disabled: logger.levels.debug || !logger.levels.info,
         })
         try {
-          const bundlerGeneratedUrlInfos =
-            await rawGraphKitchen.pluginController.callAsyncHook(
-              {
-                plugin: bundler.plugin,
-                hookName: "bundle",
-                value: bundler.bundleFunction,
-              },
-              urlInfosToBundle,
-              {
-                ...rawGraphKitchen.kitchenContext,
-                buildDirectoryUrl,
-              },
+          if (writeGeneratedFiles) {
+            await ensureEmptyDirectory(
+              new URL(`.jsenv/postbuild/`, rootDirectoryUrl),
             )
-          Object.keys(bundlerGeneratedUrlInfos).forEach((url) => {
-            const rawUrlInfo = rawGraph.getUrlInfo(url)
-            const bundlerGeneratedUrlInfo = bundlerGeneratedUrlInfos[url]
-            const bundleUrlInfo = {
-              type,
-              subtype: rawUrlInfo ? rawUrlInfo.subtype : undefined,
-              isEntryPoint: rawUrlInfo ? rawUrlInfo.isEntryPoint : undefined,
-              filename: rawUrlInfo ? rawUrlInfo.filename : undefined,
-              originalUrl: rawUrlInfo ? rawUrlInfo.originalUrl : undefined,
-              originalContent: rawUrlInfo
-                ? rawUrlInfo.originalContent
-                : undefined,
-              ...bundlerGeneratedUrlInfo,
-              data: {
-                ...(rawUrlInfo ? rawUrlInfo.data : {}),
-                ...bundlerGeneratedUrlInfo.data,
-                fromBundle: true,
-              },
-            }
-            if (bundlerGeneratedUrlInfo.sourceUrls) {
-              bundlerGeneratedUrlInfo.sourceUrls.forEach((sourceUrl) => {
-                const rawUrlInfo = rawGraph.getUrlInfo(sourceUrl)
-                if (rawUrlInfo) {
-                  rawUrlInfo.data.bundled = true
-                }
+          }
+          const finalUrlGraphLoader = createUrlGraphLoader(
+            finalGraphKitchen.kitchenContext,
+          )
+          entryUrls.forEach((entryUrl) => {
+            const [finalEntryReference, finalEntryUrlInfo] =
+              finalGraphKitchen.kitchenContext.prepareEntryPoint({
+                trace: { message: `entryPoint` },
+                parentUrl: rootDirectoryUrl,
+                type: "entry_point",
+                specifier: entryUrl,
               })
-            }
-            const buildUrl = buildUrlsGenerator.generate(url, {
-              urlInfo: bundleUrlInfo,
+            finalEntryUrls.push(finalEntryUrlInfo.url)
+            finalUrlGraphLoader.load(finalEntryUrlInfo, {
+              reference: finalEntryReference,
             })
-            bundleRedirections.set(url, buildUrl)
-            if (urlIsInsideOf(url, buildDirectoryUrl)) {
-              // chunk generated by rollup to share code
-            } else {
-              associateBuildUrlAndRawUrl(buildUrl, url, "bundle")
-            }
-            bundleUrlInfos[buildUrl] = bundleUrlInfo
-            if (buildUrl.includes("?")) {
-              bundleUrlInfos[asUrlWithoutSearch(buildUrl)] = bundleUrlInfo
-            }
-            if (bundlerGeneratedUrlInfo.data.bundleRelativeUrl) {
-              const urlForBundler = new URL(
-                bundlerGeneratedUrlInfo.data.bundleRelativeUrl,
-                buildDirectoryUrl,
-              ).href
-              if (urlForBundler !== buildUrl) {
-                bundleInternalRedirections.set(urlForBundler, buildUrl)
-              }
-            }
           })
+          await finalUrlGraphLoader.getAllLoadDonePromise(buildOperation)
         } catch (e) {
-          bundleTask.fail()
+          buildTask.fail()
           throw e
         }
-        bundleTask.done()
-      }, Promise.resolve())
-      try {
-        if (writeGeneratedFiles) {
-          await ensureEmptyDirectory(
-            new URL(`.jsenv/postbuild/`, rootDirectoryUrl),
-          )
-        }
-        const finalUrlGraphLoader = createUrlGraphLoader(
-          finalGraphKitchen.kitchenContext,
-        )
-        entryUrls.forEach((entryUrl) => {
-          const [finalEntryReference, finalEntryUrlInfo] =
-            finalGraphKitchen.kitchenContext.prepareEntryPoint({
-              trace: { message: `entryPoint` },
-              parentUrl: rootDirectoryUrl,
-              type: "entry_point",
-              specifier: entryUrl,
-            })
-          finalEntryUrls.push(finalEntryUrlInfo.url)
-          finalUrlGraphLoader.load(finalEntryUrlInfo, {
-            reference: finalEntryReference,
-          })
-        })
-        await finalUrlGraphLoader.getAllLoadDonePromise(buildOperation)
-      } catch (e) {
-        buildTask.fail()
-        throw e
+        buildTask.done()
       }
-      buildTask.done()
     }
 
     refine: {

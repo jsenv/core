@@ -10009,36 +10009,12 @@ const convertJsModuleToJsClassic = async ({
   };
 };
 
-// and perform the conversion during fetchUrlContent
-
+// propagate ?as_js_classic to referenced urls
 const jsenvPluginAsJsClassicConversion = ({
   systemJsInjection,
-  systemJsClientFileUrl
+  systemJsClientFileUrl,
+  generateJsClassicFilename
 }) => {
-  const generateJsClassicFilename = url => {
-    const filename = urlToFilename$1(url);
-    let [basename, extension] = splitFileExtension(filename);
-    const {
-      searchParams
-    } = new URL(url);
-
-    if (searchParams.has("as_json_module") || searchParams.has("as_css_module") || searchParams.has("as_text_module")) {
-      extension = ".js";
-    }
-
-    return `${basename}.nomodule${extension}`;
-  };
-
-  const splitFileExtension = filename => {
-    const dotLastIndex = filename.lastIndexOf(".");
-
-    if (dotLastIndex === -1) {
-      return [filename, ""];
-    }
-
-    return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)];
-  };
-
   const shouldPropagateJsClassic = (reference, context) => {
     const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl);
 
@@ -10066,7 +10042,7 @@ const jsenvPluginAsJsClassicConversion = ({
     name: "jsenv:as_js_classic_conversion",
     appliesDuring: "*",
     redirectUrl: (reference, context) => {
-      if (new URL(reference.url).searchParams.has("as_js_classic")) {
+      if (reference.searchParams.has("as_js_classic")) {
         markAsJsClassicProxy(reference);
         return null;
       }
@@ -10204,12 +10180,6 @@ const jsenvPluginAsJsClassicHtml = ({
               return;
             }
 
-            const urlObject = new URL(reference.url);
-
-            if (!urlObject.searchParams.has("as_js_classic")) {
-              return;
-            }
-
             if (rel === "modulepreload") {
               mutations.push(() => {
                 setHtmlNodeAttributes(node, {
@@ -10322,8 +10292,19 @@ const jsenvPluginAsJsClassicHtml = ({
 };
 
 const isOrWasExpectingJsModule = reference => {
-  return reference.expectedType === "js_module" || reference.original && reference.original.expectedType === "js_module" || // happens if source file explicitely contains "?as_js_classic"
-  reference.searchParams.has("as_js_classic");
+  if (isExpectingJsModule(reference)) {
+    return true;
+  }
+
+  if (reference.original && isExpectingJsModule(reference.original)) {
+    return true;
+  }
+
+  return false;
+};
+
+const isExpectingJsModule = reference => {
+  return reference.expectedType === "js_module" || reference.searchParams.has("as_js_classic") || reference.searchParams.has("as_js_classic_library");
 };
 
 /*
@@ -10936,19 +10917,19 @@ const willBeInsideJsDirectory = ({
 
 const jsenvPluginAsJsClassicLibrary = ({
   systemJsInjection,
-  systemJsClientFileUrl
+  systemJsClientFileUrl,
+  generateJsClassicFilename
 }) => {
   const markAsJsClassicLibraryProxy = reference => {
     reference.expectedType = "js_classic";
+    reference.filename = generateJsClassicFilename(reference.url);
   };
 
   return {
     name: "jsenv:as_js_classic_library",
     appliesDuring: "*",
     redirectUrl: reference => {
-      const urlObject = new URL(reference.url);
-
-      if (urlObject.searchParams.has("as_js_classic_library")) {
+      if (reference.searchParams.has("as_js_classic_library")) {
         markAsJsClassicLibraryProxy(reference);
       }
     },
@@ -10971,18 +10952,6 @@ const jsenvPluginAsJsClassicLibrary = ({
       await context.cook(jsModuleUrlInfo, {
         reference: jsModuleReference
       });
-
-      if (context.scenarios.dev) {
-        context.referenceUtils.found({
-          type: "js_import_export",
-          subtype: jsModuleReference.subtype,
-          specifier: jsModuleReference.url,
-          expectedType: "js_module"
-        });
-      } else if (context.scenarios.build && jsModuleUrlInfo.dependents.size === 0) {
-        context.urlGraph.deleteUrlInfo(jsModuleUrlInfo.url);
-      }
-
       const loader = createUrlGraphLoader(context);
       loader.loadReferencedUrlInfos(jsModuleUrlInfo, {
         // we ignore dynamic import to cook lazyly (as browser request the server)
@@ -11001,6 +10970,17 @@ const jsenvPluginAsJsClassicLibrary = ({
         }
       });
       const jsModuleBundledUrlInfo = bundleUrlInfos[jsModuleUrlInfo.url];
+
+      if (context.scenarios.dev) {
+        jsModuleBundledUrlInfo.sourceUrls.forEach(sourceUrl => {
+          context.referenceUtils.inject({
+            type: "js_url_specifier",
+            specifier: sourceUrl,
+            isImplicit: true
+          });
+        });
+      }
+
       const {
         content,
         sourcemap
@@ -11014,8 +10994,8 @@ const jsenvPluginAsJsClassicLibrary = ({
         content,
         contentType: "text/javascript",
         type: "js_classic",
-        originalUrl: jsModuleBundledUrlInfo.originalUrl,
-        originalContent: jsModuleBundledUrlInfo.originalContent,
+        originalUrl: jsModuleUrlInfo.originalUrl,
+        originalContent: jsModuleUrlInfo.originalContent,
         sourcemap
       };
     }
@@ -11035,19 +11015,47 @@ const jsenvPluginAsJsClassicLibrary = ({
  * and prefer to unique identifier based solely on the specifier basename for instance
  */
 const jsenvPluginAsJsClassic = ({
+  jsClassicLibrary,
   jsClassicFallback,
   systemJsInjection
 }) => {
   const systemJsClientFileUrl = new URL("./js/s.js", import.meta.url).href;
-  return [jsenvPluginAsJsClassicLibrary({
+
+  const generateJsClassicFilename = url => {
+    const filename = urlToFilename$1(url);
+    let [basename, extension] = splitFileExtension(filename);
+    const {
+      searchParams
+    } = new URL(url);
+
+    if (searchParams.has("as_json_module") || searchParams.has("as_css_module") || searchParams.has("as_text_module")) {
+      extension = ".js";
+    }
+
+    return `${basename}.nomodule${extension}`;
+  };
+
+  const splitFileExtension = filename => {
+    const dotLastIndex = filename.lastIndexOf(".");
+
+    if (dotLastIndex === -1) {
+      return [filename, ""];
+    }
+
+    return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)];
+  };
+
+  return [...(jsClassicLibrary ? [jsenvPluginAsJsClassicLibrary({
     systemJsInjection,
-    systemJsClientFileUrl
-  }), ...(jsClassicFallback ? [jsenvPluginAsJsClassicHtml({
+    systemJsClientFileUrl,
+    generateJsClassicFilename
+  })] : []), ...(jsClassicFallback ? [jsenvPluginAsJsClassicHtml({
     systemJsInjection,
     systemJsClientFileUrl
   }), jsenvPluginAsJsClassicWorkers(), jsenvPluginAsJsClassicConversion({
     systemJsInjection,
-    systemJsClientFileUrl
+    systemJsClientFileUrl,
+    generateJsClassicFilename
   })] : [])];
 };
 
@@ -14427,7 +14435,7 @@ const jsenvPluginImportAssertions = ({
 
         const {
           searchParams
-        } = new URL(reference.url);
+        } = reference;
 
         if (searchParams.has("as_json_module") || searchParams.has("as_css_module") || searchParams.has("as_text_module")) {
           markAsJsModuleProxy(reference);
@@ -15768,26 +15776,8 @@ const jsenvPluginBabel = ({
 } = {}) => {
   const transformWithBabel = async (urlInfo, context) => {
     const isJsModule = urlInfo.type === "js_module";
-    const isWorker = urlInfo.subtype === "worker";
-    const isServiceWorker = urlInfo.subtype === "service_worker";
-    const isSharedWorker = urlInfo.subtype === "shared_worker";
-    const isWorkerContext = isWorker || isServiceWorker || isSharedWorker;
-    let {
-      clientRuntimeCompat
-    } = context;
 
-    if (isWorker) {
-      clientRuntimeCompat = RUNTIME_COMPAT.add(clientRuntimeCompat, "worker");
-    } else if (isServiceWorker) {
-      // when code is executed by a service worker we can assume
-      // the execution context supports more than the default one
-      // for instance arrow function are supported
-      clientRuntimeCompat = RUNTIME_COMPAT.add(clientRuntimeCompat, "service_worker");
-    } else if (isSharedWorker) {
-      clientRuntimeCompat = RUNTIME_COMPAT.add(clientRuntimeCompat, "shared_worker");
-    }
-
-    const isSupported = feature => RUNTIME_COMPAT.isSupported(clientRuntimeCompat, feature);
+    const isSupported = feature => RUNTIME_COMPAT.isSupported(context.clientRuntimeCompat, feature);
 
     const getImportSpecifier = clientFileUrl => {
       const [reference] = context.referenceUtils.inject({
@@ -15801,7 +15791,6 @@ const jsenvPluginBabel = ({
     const babelPluginStructure = getBaseBabelPluginStructure({
       url: urlInfo.url,
       isSupported,
-      isWorkerContext,
       isJsModule,
       getImportSpecifier
     });
@@ -15979,6 +15968,7 @@ const babelPluginMetadataUsesTopLevelAwait = () => {
 const jsenvPluginTranspilation = ({
   importAssertions = true,
   css = true,
+  jsClassicLibrary = true,
   // build sets jsClassicFallback: false during first step of the build
   // and re-enable it in the second phase (when performing the bundling)
   // so that bundling is applied on js modules THEN it is converted to js classic if needed
@@ -15998,6 +15988,7 @@ const jsenvPluginTranspilation = ({
     getCustomBabelPlugins,
     babelHelpersAsImport
   }), jsenvPluginAsJsClassic({
+    jsClassicLibrary,
     jsClassicFallback,
     systemJsInjection
   }), // topLevelAwait must come after jsenvPluginAsJsClassic because it's related to the module format
@@ -16756,14 +16747,13 @@ const jsenvPluginHmr = () => {
     name: "jsenv:hmr",
     appliesDuring: "dev",
     redirectUrl: reference => {
-      const urlObject = new URL(reference.url);
-
-      if (!urlObject.searchParams.has("hmr")) {
+      if (!reference.searchParams.has("hmr")) {
         reference.data.hmr = false;
         return null;
       }
 
-      reference.data.hmr = true; // "hmr" search param goal is to mark url as enabling hmr:
+      reference.data.hmr = true;
+      const urlObject = new URL(reference.url); // "hmr" search param goal is to mark url as enabling hmr:
       // this goal is achieved when we reach this part of the code
       // We get rid of this params so that urlGraph and other parts of the code
       // recognize the url (it is not considered as a different url)
@@ -17596,24 +17586,15 @@ const createUrlInfoTransformer = ({
   sourcemapsSourcesContent,
   sourcemapsRelativeSources,
   urlGraph,
-  clientRuntimeCompat,
   injectSourcemapPlaceholder,
   foundSourcemap
 }) => {
-  const runtimeNames = Object.keys(clientRuntimeCompat);
-  const chromeAsSingleRuntime = runtimeNames.length === 1 && runtimeNames[0] === "chrome";
-
   if (sourcemapsSourcesProtocol === undefined) {
     sourcemapsSourcesProtocol = "file:///";
   }
 
   if (sourcemapsSourcesContent === undefined) {
-    if (chromeAsSingleRuntime && sourcemapsSourcesProtocol === "file:///") {
-      // chrome is able to fetch source when referenced with "file:"
-      sourcemapsSourcesContent = false;
-    } else {
-      sourcemapsSourcesContent = true;
-    }
+    sourcemapsSourcesContent = true;
   }
 
   const sourcemapsEnabled = sourcemaps === "inline" || sourcemaps === "file" || sourcemaps === "programmatic";
@@ -18179,7 +18160,7 @@ const assertFetchedContentCompliance = ({
   } = reference;
 
   if (expectedContentType && urlInfo.contentType !== expectedContentType) {
-    throw new Error(`Unexpected content-type on url: got "${urlInfo.contentType}" instead of "${expectedContentType}"`);
+    throw new Error(`Unexpected content-type on url: "${expectedContentType}" was expected but got "${urlInfo.contentType}`);
   }
 
   const {
@@ -18187,7 +18168,7 @@ const assertFetchedContentCompliance = ({
   } = reference;
 
   if (expectedType && urlInfo.type !== expectedType) {
-    throw new Error(`Unexpected type on url: got "${urlInfo.type}" instead of "${expectedType}"`);
+    throw new Error(`Unexpected type on url: "${expectedType}" was expected but got "${urlInfo.type}"`);
   }
 
   const {
@@ -18336,10 +18317,10 @@ const createKitchen = ({
     return reference;
   };
 
-  const mutateReference = (reference, newReference) => {
+  const updateReference = (reference, newReference) => {
     reference.next = newReference;
+    newReference.original = reference.original || reference;
     newReference.prev = reference;
-    newReference.original = reference.original || reference; // newReference.isEntryPoint = reference.isEntryPoint
   };
 
   const resolveReference = (reference, context = kitchenContext) => {
@@ -18359,7 +18340,10 @@ const createKitchen = ({
       }
 
       resolvedUrl = normalizeUrl(resolvedUrl);
+      let referencedUrlObject = new URL(resolvedUrl);
+      let searchParams = referencedUrlObject.searchParams;
       reference.url = resolvedUrl;
+      reference.searchParams = searchParams;
 
       if (reference.debug) {
         logger.debug(`url resolved by "${pluginController.getLastPluginUsed().name}"
@@ -18382,16 +18366,17 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 `);
         }
 
-        const previousReference = { ...reference
+        const prevReference = { ...reference
         };
+        updateReference(prevReference, reference);
+        referencedUrlObject = new URL(normalizedReturnValue);
+        searchParams = referencedUrlObject.searchParams;
         reference.url = normalizedReturnValue;
-        mutateReference(previousReference, reference);
+        reference.searchParams = searchParams;
       });
-      const referenceUrlObject = new URL(reference.url);
-      reference.searchParams = referenceUrlObject.searchParams;
       reference.generatedUrl = reference.url;
 
-      if (reference.searchParams.has("entry_point")) {
+      if (searchParams.has("entry_point")) {
         reference.isEntryPoint = true;
       }
 
@@ -18405,14 +18390,14 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 
       pluginController.callHooks("transformUrlSearchParams", reference, referenceContext, returnValue => {
         Object.keys(returnValue).forEach(key => {
-          referenceUrlObject.searchParams.set(key, returnValue[key]);
+          searchParams.set(key, returnValue[key]);
         });
-        reference.generatedUrl = normalizeUrl(referenceUrlObject.href);
+        reference.generatedUrl = normalizeUrl(referencedUrlObject.href);
       });
       const returnValue = pluginController.callHooksUntil("formatUrl", reference, referenceContext);
       reference.generatedSpecifier = returnValue || reference.generatedUrl;
       reference.generatedSpecifier = urlSpecifierEncoding.encode(reference);
-      return urlInfo;
+      return [reference, urlInfo];
     } catch (error) {
       throw createResolveUrlError({
         pluginController,
@@ -18435,7 +18420,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       urlInfo,
       specifier
     }) => {
-      const sourcemapReference = createReference({
+      const [sourcemapReference, sourcemapUrlInfo] = resolveReference(createReference({
         trace: {
           message: `sourcemap comment placeholder`,
           url: urlInfo.url
@@ -18444,8 +18429,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         subtype: urlInfo.contentType === "text/javascript" ? "js" : "css",
         parentUrl: urlInfo.url,
         specifier
-      });
-      const sourcemapUrlInfo = resolveReference(sourcemapReference);
+      }));
       sourcemapUrlInfo.type = "sourcemap";
       return [sourcemapReference, sourcemapUrlInfo];
     },
@@ -18462,15 +18446,14 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         line: specifierLine,
         column: specifierColumn
       });
-      const sourcemapReference = createReference({
+      const [sourcemapReference, sourcemapUrlInfo] = resolveReference(createReference({
         trace: traceFromUrlSite(sourcemapUrlSite),
         type,
         parentUrl: urlInfo.url,
         specifier,
         specifierLine,
         specifierColumn
-      });
-      const sourcemapUrlInfo = resolveReference(sourcemapReference);
+      }));
       sourcemapUrlInfo.type = "sourcemap";
       return [sourcemapReference, sourcemapUrlInfo];
     }
@@ -18599,12 +18582,11 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       context.referenceUtils = {
         _references: references,
         add: props => {
-          const reference = createReference({
+          const [reference, referencedUrlInfo] = resolveReference(createReference({
             parentUrl: urlInfo.url,
             ...props
-          });
+          }), context);
           references.push(reference);
-          const referencedUrlInfo = resolveReference(reference, context);
           return [reference, referencedUrlInfo];
         },
         find: predicate => references.find(predicate),
@@ -18657,20 +18639,18 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
             throw new Error(`reference do not exists`);
           }
 
-          const previousReference = currentReference;
-          const nextReference = createReference({ ...previousReference,
+          const [newReference, newUrlInfo] = resolveReference(createReference({ ...currentReference,
             ...newReferenceParams
-          });
-          references[index] = nextReference;
-          mutateReference(previousReference, nextReference);
-          const newUrlInfo = resolveReference(nextReference, context);
+          }), context);
+          updateReference(currentReference, newReference);
+          references[index] = newReference;
           const currentUrlInfo = context.urlGraph.getUrlInfo(currentReference.url);
 
           if (currentUrlInfo && currentUrlInfo !== newUrlInfo && currentUrlInfo.dependents.size === 0) {
             context.urlGraph.deleteUrlInfo(currentReference.url);
           }
 
-          return [nextReference, newUrlInfo];
+          return [newReference, newUrlInfo];
         },
         becomesInline: (reference, {
           isOriginalPosition,
@@ -18817,18 +18797,15 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   kitchenContext.cook = cook;
 
   const prepareEntryPoint = params => {
-    const entryReference = createReference(params);
-    entryReference.isEntryPoint = true;
-    const entryUrlInfo = resolveReference(entryReference);
-    return [entryReference, entryUrlInfo];
+    return resolveReference(createReference({ ...params,
+      isEntryPoint: true
+    }));
   };
 
   kitchenContext.prepareEntryPoint = prepareEntryPoint;
 
   const injectReference = params => {
-    const ref = createReference(params);
-    const urlInfo = resolveReference(ref);
-    return [ref, urlInfo];
+    return resolveReference(createReference(params));
   };
 
   kitchenContext.injectReference = injectReference;
@@ -18849,9 +18826,17 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     }
 
     searchParams.delete(searchParam);
-    const referenceWithoutSearchParam = { ...(context.reference.original || context.reference),
+    const originalRef = context.reference.original || context.reference;
+    const referenceWithoutSearchParam = { ...originalRef,
+      original: originalRef,
+      searchParams,
+      data: { ...originalRef.data
+      },
       expectedType,
-      url: urlObject.href
+      specifier: context.reference.specifier.replace(`?${searchParam}`, "").replace(`&${searchParam}`, ""),
+      url: urlObject.href,
+      generatedSpecifier: null,
+      generatedUrl: null
     };
     const urlInfoWithoutSearchParam = context.urlGraph.reuseOrCreateUrlInfo(referenceWithoutSearchParam.url);
 
@@ -19909,6 +19894,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       },
       runtimeCompat,
       plugins: [urlAnalysisPlugin, jsenvPluginAsJsClassic({
+        jsClassicLibrary: false,
         jsClassicFallback: true,
         systemJsInjection: true
       }), jsenvPluginInline({
@@ -20044,7 +20030,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl); // files from root directory but not given to rollup nor postcss
 
           if (rawUrlInfo) {
-            const buildUrl = buildUrlsGenerator.generate(reference.url, {
+            const referencedUrlObject = new URL(reference.url);
+            referencedUrlObject.searchParams.delete("as_js_classic_library");
+            const buildUrl = buildUrlsGenerator.generate(referencedUrlObject.href, {
               urlInfo: rawUrlInfo,
               parentUrlInfo
             });
@@ -20092,6 +20080,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
 
           const generatedUrlObject = new URL(reference.generatedUrl);
           generatedUrlObject.searchParams.delete("as_js_classic");
+          generatedUrlObject.searchParams.delete("as_js_classic_library");
           generatedUrlObject.searchParams.delete("as_json_module");
           generatedUrlObject.searchParams.delete("as_css_module");
           generatedUrlObject.searchParams.delete("as_text_module");
@@ -20200,7 +20189,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     const finalEntryUrls = [];
 
     {
-      const prebuildTask = createTaskLog("prebuild", {
+      const loadTask = createTaskLog("load", {
         disabled: logger.levels.debug || !logger.levels.info
       });
 
@@ -20227,217 +20216,222 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         });
         await rawUrlGraphLoader.getAllLoadDonePromise(buildOperation);
       } catch (e) {
-        prebuildTask.fail();
+        loadTask.fail();
         throw e;
       }
 
-      prebuildTask.done();
+      loadTask.done();
     }
 
     {
-      const buildTask = createTaskLog("build", {
-        disabled: logger.levels.debug || !logger.levels.info
-      });
-      rawGraphKitchen.pluginController.plugins.forEach(plugin => {
-        const bundle = plugin.bundle;
+      {
+        rawGraphKitchen.pluginController.plugins.forEach(plugin => {
+          const bundle = plugin.bundle;
 
-        if (!bundle) {
-          return;
-        }
-
-        if (typeof bundle !== "object") {
-          throw new Error(`bundle must be an object, found "${bundle}" on plugin named "${plugin.name}"`);
-        }
-
-        Object.keys(bundle).forEach(type => {
-          const bundleFunction = bundle[type];
-
-          if (!bundleFunction) {
+          if (!bundle) {
             return;
           }
 
-          const bundlerForThatType = bundlers[type];
-
-          if (bundlerForThatType) {
-            // first plugin to define a bundle hook wins
-            return;
+          if (typeof bundle !== "object") {
+            throw new Error(`bundle must be an object, found "${bundle}" on plugin named "${plugin.name}"`);
           }
 
-          bundlers[type] = {
-            plugin,
-            bundleFunction: bundle[type],
-            urlInfos: []
-          };
+          Object.keys(bundle).forEach(type => {
+            const bundleFunction = bundle[type];
+
+            if (!bundleFunction) {
+              return;
+            }
+
+            const bundlerForThatType = bundlers[type];
+
+            if (bundlerForThatType) {
+              // first plugin to define a bundle hook wins
+              return;
+            }
+
+            bundlers[type] = {
+              plugin,
+              bundleFunction: bundle[type],
+              urlInfos: []
+            };
+          });
         });
-      });
 
-      const addToBundlerIfAny = rawUrlInfo => {
-        const bundler = bundlers[rawUrlInfo.type];
+        const addToBundlerIfAny = rawUrlInfo => {
+          const bundler = bundlers[rawUrlInfo.type];
 
-        if (bundler) {
-          bundler.urlInfos.push(rawUrlInfo);
-          return;
-        }
-      };
+          if (bundler) {
+            bundler.urlInfos.push(rawUrlInfo);
+            return;
+          }
+        };
 
-      GRAPH.forEach(rawGraph, rawUrlInfo => {
-        if (rawUrlInfo.isEntryPoint) {
-          addToBundlerIfAny(rawUrlInfo);
+        GRAPH.forEach(rawGraph, rawUrlInfo => {
+          if (rawUrlInfo.isEntryPoint) {
+            addToBundlerIfAny(rawUrlInfo);
 
-          if (rawUrlInfo.type === "html") {
-            rawUrlInfo.dependencies.forEach(dependencyUrl => {
-              const dependencyUrlInfo = rawGraph.getUrlInfo(dependencyUrl);
+            if (rawUrlInfo.type === "html") {
+              rawUrlInfo.dependencies.forEach(dependencyUrl => {
+                const dependencyUrlInfo = rawGraph.getUrlInfo(dependencyUrl);
 
-              if (dependencyUrlInfo.isInline) {
-                if (dependencyUrlInfo.type === "js_module") {
-                  // bundle inline script type module deps
-                  dependencyUrlInfo.references.forEach(inlineScriptRef => {
-                    if (inlineScriptRef.type === "js_import_export") {
-                      const inlineUrlInfo = rawGraph.getUrlInfo(inlineScriptRef.url);
-                      addToBundlerIfAny(inlineUrlInfo);
-                    }
-                  });
-                } // inline content cannot be bundled
+                if (dependencyUrlInfo.isInline) {
+                  if (dependencyUrlInfo.type === "js_module") {
+                    // bundle inline script type module deps
+                    dependencyUrlInfo.references.forEach(inlineScriptRef => {
+                      if (inlineScriptRef.type === "js_import_export") {
+                        const inlineUrlInfo = rawGraph.getUrlInfo(inlineScriptRef.url);
+                        addToBundlerIfAny(inlineUrlInfo);
+                      }
+                    });
+                  } // inline content cannot be bundled
 
 
-                return;
+                  return;
+                }
+
+                addToBundlerIfAny(dependencyUrlInfo);
+              });
+              rawUrlInfo.references.forEach(reference => {
+                if (reference.isResourceHint && reference.expectedType === "js_module") {
+                  const referencedUrlInfo = rawGraph.getUrlInfo(reference.url);
+
+                  if (referencedUrlInfo && // something else than the resource hint is using this url
+                  referencedUrlInfo.dependents.size > 0) {
+                    addToBundlerIfAny(referencedUrlInfo);
+                  }
+                }
+              });
+              return;
+            }
+          } // File referenced with new URL('./file.js', import.meta.url)
+          // are entry points that can be bundled
+          // For instance we will bundle service worker/workers detected like this
+
+
+          if (rawUrlInfo.type === "js_module") {
+            rawUrlInfo.references.forEach(reference => {
+              if (reference.type === "js_url_specifier") {
+                const urlInfo = rawGraph.getUrlInfo(reference.url);
+                addToBundlerIfAny(urlInfo);
+              }
+            });
+          }
+        });
+        await Object.keys(bundlers).reduce(async (previous, type) => {
+          await previous;
+          const bundler = bundlers[type];
+          const urlInfosToBundle = bundler.urlInfos;
+
+          if (urlInfosToBundle.length === 0) {
+            return;
+          }
+
+          const bundleTask = createTaskLog(`bundle "${type}"`, {
+            disabled: logger.levels.debug || !logger.levels.info
+          });
+
+          try {
+            const bundlerGeneratedUrlInfos = await rawGraphKitchen.pluginController.callAsyncHook({
+              plugin: bundler.plugin,
+              hookName: "bundle",
+              value: bundler.bundleFunction
+            }, urlInfosToBundle, { ...rawGraphKitchen.kitchenContext,
+              buildDirectoryUrl
+            });
+            Object.keys(bundlerGeneratedUrlInfos).forEach(url => {
+              const rawUrlInfo = rawGraph.getUrlInfo(url);
+              const bundlerGeneratedUrlInfo = bundlerGeneratedUrlInfos[url];
+              const bundleUrlInfo = {
+                type,
+                subtype: rawUrlInfo ? rawUrlInfo.subtype : undefined,
+                isEntryPoint: rawUrlInfo ? rawUrlInfo.isEntryPoint : undefined,
+                filename: rawUrlInfo ? rawUrlInfo.filename : undefined,
+                originalUrl: rawUrlInfo ? rawUrlInfo.originalUrl : undefined,
+                originalContent: rawUrlInfo ? rawUrlInfo.originalContent : undefined,
+                ...bundlerGeneratedUrlInfo,
+                data: { ...(rawUrlInfo ? rawUrlInfo.data : {}),
+                  ...bundlerGeneratedUrlInfo.data,
+                  fromBundle: true
+                }
+              };
+
+              if (bundlerGeneratedUrlInfo.sourceUrls) {
+                bundlerGeneratedUrlInfo.sourceUrls.forEach(sourceUrl => {
+                  const rawUrlInfo = rawGraph.getUrlInfo(sourceUrl);
+
+                  if (rawUrlInfo) {
+                    rawUrlInfo.data.bundled = true;
+                  }
+                });
               }
 
-              addToBundlerIfAny(dependencyUrlInfo);
-            });
-            rawUrlInfo.references.forEach(reference => {
-              if (reference.isResourceHint && reference.expectedType === "js_module") {
-                const referencedUrlInfo = rawGraph.getUrlInfo(reference.url);
+              const buildUrl = buildUrlsGenerator.generate(url, {
+                urlInfo: bundleUrlInfo
+              });
+              bundleRedirections.set(url, buildUrl);
 
-                if (referencedUrlInfo && // something else than the resource hint is using this url
-                referencedUrlInfo.dependents.size > 0) {
-                  addToBundlerIfAny(referencedUrlInfo);
+              if (urlIsInsideOf(url, buildDirectoryUrl)) {// chunk generated by rollup to share code
+              } else {
+                associateBuildUrlAndRawUrl(buildUrl, url, "bundle");
+              }
+
+              bundleUrlInfos[buildUrl] = bundleUrlInfo;
+
+              if (buildUrl.includes("?")) {
+                bundleUrlInfos[asUrlWithoutSearch(buildUrl)] = bundleUrlInfo;
+              }
+
+              if (bundlerGeneratedUrlInfo.data.bundleRelativeUrl) {
+                const urlForBundler = new URL(bundlerGeneratedUrlInfo.data.bundleRelativeUrl, buildDirectoryUrl).href;
+
+                if (urlForBundler !== buildUrl) {
+                  bundleInternalRedirections.set(urlForBundler, buildUrl);
                 }
               }
             });
-            return;
+          } catch (e) {
+            bundleTask.fail();
+            throw e;
           }
-        } // File referenced with new URL('./file.js', import.meta.url)
-        // are entry points that can be bundled
-        // For instance we will bundle service worker/workers detected like this
 
+          bundleTask.done();
+        }, Promise.resolve());
+      }
 
-        if (rawUrlInfo.type === "js_module") {
-          rawUrlInfo.references.forEach(reference => {
-            if (reference.type === "js_url_specifier") {
-              const urlInfo = rawGraph.getUrlInfo(reference.url);
-              addToBundlerIfAny(urlInfo);
-            }
-          });
-        }
-      });
-      await Object.keys(bundlers).reduce(async (previous, type) => {
-        await previous;
-        const bundler = bundlers[type];
-        const urlInfosToBundle = bundler.urlInfos;
-
-        if (urlInfosToBundle.length === 0) {
-          return;
-        }
-
-        const bundleTask = createTaskLog(`bundle "${type}"`, {
+      {
+        const buildTask = createTaskLog("build", {
           disabled: logger.levels.debug || !logger.levels.info
         });
 
         try {
-          const bundlerGeneratedUrlInfos = await rawGraphKitchen.pluginController.callAsyncHook({
-            plugin: bundler.plugin,
-            hookName: "bundle",
-            value: bundler.bundleFunction
-          }, urlInfosToBundle, { ...rawGraphKitchen.kitchenContext,
-            buildDirectoryUrl
-          });
-          Object.keys(bundlerGeneratedUrlInfos).forEach(url => {
-            const rawUrlInfo = rawGraph.getUrlInfo(url);
-            const bundlerGeneratedUrlInfo = bundlerGeneratedUrlInfos[url];
-            const bundleUrlInfo = {
-              type,
-              subtype: rawUrlInfo ? rawUrlInfo.subtype : undefined,
-              isEntryPoint: rawUrlInfo ? rawUrlInfo.isEntryPoint : undefined,
-              filename: rawUrlInfo ? rawUrlInfo.filename : undefined,
-              originalUrl: rawUrlInfo ? rawUrlInfo.originalUrl : undefined,
-              originalContent: rawUrlInfo ? rawUrlInfo.originalContent : undefined,
-              ...bundlerGeneratedUrlInfo,
-              data: { ...(rawUrlInfo ? rawUrlInfo.data : {}),
-                ...bundlerGeneratedUrlInfo.data,
-                fromBundle: true
-              }
-            };
+          if (writeGeneratedFiles) {
+            await ensureEmptyDirectory(new URL(`.jsenv/postbuild/`, rootDirectoryUrl));
+          }
 
-            if (bundlerGeneratedUrlInfo.sourceUrls) {
-              bundlerGeneratedUrlInfo.sourceUrls.forEach(sourceUrl => {
-                const rawUrlInfo = rawGraph.getUrlInfo(sourceUrl);
-
-                if (rawUrlInfo) {
-                  rawUrlInfo.data.bundled = true;
-                }
-              });
-            }
-
-            const buildUrl = buildUrlsGenerator.generate(url, {
-              urlInfo: bundleUrlInfo
+          const finalUrlGraphLoader = createUrlGraphLoader(finalGraphKitchen.kitchenContext);
+          entryUrls.forEach(entryUrl => {
+            const [finalEntryReference, finalEntryUrlInfo] = finalGraphKitchen.kitchenContext.prepareEntryPoint({
+              trace: {
+                message: `entryPoint`
+              },
+              parentUrl: rootDirectoryUrl,
+              type: "entry_point",
+              specifier: entryUrl
             });
-            bundleRedirections.set(url, buildUrl);
-
-            if (urlIsInsideOf(url, buildDirectoryUrl)) {// chunk generated by rollup to share code
-            } else {
-              associateBuildUrlAndRawUrl(buildUrl, url, "bundle");
-            }
-
-            bundleUrlInfos[buildUrl] = bundleUrlInfo;
-
-            if (buildUrl.includes("?")) {
-              bundleUrlInfos[asUrlWithoutSearch(buildUrl)] = bundleUrlInfo;
-            }
-
-            if (bundlerGeneratedUrlInfo.data.bundleRelativeUrl) {
-              const urlForBundler = new URL(bundlerGeneratedUrlInfo.data.bundleRelativeUrl, buildDirectoryUrl).href;
-
-              if (urlForBundler !== buildUrl) {
-                bundleInternalRedirections.set(urlForBundler, buildUrl);
-              }
-            }
+            finalEntryUrls.push(finalEntryUrlInfo.url);
+            finalUrlGraphLoader.load(finalEntryUrlInfo, {
+              reference: finalEntryReference
+            });
           });
+          await finalUrlGraphLoader.getAllLoadDonePromise(buildOperation);
         } catch (e) {
-          bundleTask.fail();
+          buildTask.fail();
           throw e;
         }
 
-        bundleTask.done();
-      }, Promise.resolve());
-
-      try {
-        if (writeGeneratedFiles) {
-          await ensureEmptyDirectory(new URL(`.jsenv/postbuild/`, rootDirectoryUrl));
-        }
-
-        const finalUrlGraphLoader = createUrlGraphLoader(finalGraphKitchen.kitchenContext);
-        entryUrls.forEach(entryUrl => {
-          const [finalEntryReference, finalEntryUrlInfo] = finalGraphKitchen.kitchenContext.prepareEntryPoint({
-            trace: {
-              message: `entryPoint`
-            },
-            parentUrl: rootDirectoryUrl,
-            type: "entry_point",
-            specifier: entryUrl
-          });
-          finalEntryUrls.push(finalEntryUrlInfo.url);
-          finalUrlGraphLoader.load(finalEntryUrlInfo, {
-            reference: finalEntryReference
-          });
-        });
-        await finalUrlGraphLoader.getAllLoadDonePromise(buildOperation);
-      } catch (e) {
-        buildTask.fail();
-        throw e;
+        buildTask.done();
       }
-
-      buildTask.done();
     }
 
     {
@@ -20529,6 +20523,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             // this information is already hold into ".nomodule"
 
             buildUrlObject.searchParams.delete("as_js_classic");
+            buildUrlObject.searchParams.delete("as_js_classic_library");
             buildUrlObject.searchParams.delete("as_json_module");
             buildUrlObject.searchParams.delete("as_css_module");
             buildUrlObject.searchParams.delete("as_text_module");
