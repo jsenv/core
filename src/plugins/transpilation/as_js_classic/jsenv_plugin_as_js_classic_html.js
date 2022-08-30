@@ -86,10 +86,6 @@ export const jsenvPluginAsJsClassicHtml = ({
             if (!isOrWasExpectingJsModule(reference)) {
               return
             }
-            const urlObject = new URL(reference.url)
-            if (!urlObject.searchParams.has("as_js_classic")) {
-              return
-            }
             if (rel === "modulepreload") {
               mutations.push(() => {
                 setHtmlNodeAttributes(node, {
@@ -196,6 +192,7 @@ const isOrWasExpectingJsModule = (reference) => {
     reference.expectedType === "js_module" ||
     (reference.original && reference.original.expectedType === "js_module") ||
     // happens if source file explicitely contains "?as_js_classic"
-    reference.searchParams.has("as_js_classic")
+    reference.searchParams.has("as_js_classic") ||
+    reference.searchParams.has("as_js_classic_library")
   )
 }

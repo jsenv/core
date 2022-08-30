@@ -1,7 +1,3 @@
-/*
- * in development
- */
-
 import { writeFileSync, readFileSync } from "node:fs"
 import { chromium } from "playwright"
 import { assert } from "@jsenv/assert"
@@ -53,7 +49,8 @@ try {
     responses.length = 0
     await page.reload()
     const responseForJsFile = responses.find(
-      (response) => response.url() === `${devServer.origin}/main.js`,
+      (response) =>
+        response.url() === `${devServer.origin}/main.js?as_js_classic_library`,
     )
     const jsFileResponseStatus = responseForJsFile.status()
     const answer = await getResult()
