@@ -10,12 +10,15 @@ export const RUNTIME_COMPAT = {
     const runtimeCompat = {
       ...originalRuntimeCompat,
     }
-    Object.keys(featureCompat).forEach((runtimeName) => {
-      const firstVersion = originalRuntimeCompat[runtimeName]
-      const secondVersion = featureCompat[runtimeName]
-      runtimeCompat[runtimeName] = firstVersion
-        ? findHighestVersion(firstVersion, secondVersion)
-        : secondVersion
+    Object.keys(originalRuntimeCompat).forEach((runtimeName) => {
+      const secondVersion = featureCompat[runtimeName] // the version supported by the feature
+      if (secondVersion) {
+        const firstVersion = originalRuntimeCompat[runtimeName]
+        runtimeCompat[runtimeName] = findHighestVersion(
+          firstVersion,
+          secondVersion,
+        )
+      }
     })
     return runtimeCompat
   },

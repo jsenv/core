@@ -252,6 +252,7 @@ const createUrlInfo = (url) => {
 
     generatedUrl: null,
     sourcemapGeneratedUrl: null,
+    injected: false,
 
     isInline: false,
     inlineUrlSite: null,

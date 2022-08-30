@@ -13,6 +13,7 @@ const test = async (params) => {
       "./main.html": "main.html",
     },
     minification: false,
+    // versioning: false,
     writeGeneratedFiles: true,
     ...params,
   })
@@ -41,18 +42,6 @@ const test = async (params) => {
 }
 
 // support for <script type="module">
-await test({
-  bundling: true,
-  runtimeCompat: {
-    chrome: "64",
-  },
-})
-
-// no support for <script type="module">
-await test({
-  // logLevel: "debug",
-  bundling: false,
-  runtimeCompat: {
-    chrome: "60",
-  },
-})
+await test({ runtimeCompat: { chrome: "64" }, bundling: true })
+// no support for <script type="module"> + no bundling
+await test({ runtimeCompat: { chrome: "60" }, bundling: false })

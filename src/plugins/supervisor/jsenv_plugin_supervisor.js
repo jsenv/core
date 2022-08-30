@@ -70,10 +70,8 @@ export const jsenvPluginSupervisor = ({
   openInEditor = true,
   errorBaseUrl,
 }) => {
-  const supervisorFileUrl = new URL(
-    "./client/supervisor.js?js_classic",
-    import.meta.url,
-  ).href
+  const supervisorFileUrl = new URL("./client/supervisor.js", import.meta.url)
+    .href
   const scriptTypeModuleSupervisorFileUrl = new URL(
     "./client/script_type_module_supervisor.js",
     import.meta.url,

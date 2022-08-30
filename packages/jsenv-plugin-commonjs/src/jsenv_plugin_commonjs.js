@@ -41,7 +41,7 @@ export const jsenvPluginCommonJs = ({
     },
     redirectUrl: {
       js_import_export: (reference) => {
-        if (new URL(reference.url).searchParams.has("cjs_as_js_module")) {
+        if (reference.searchParams.has("cjs_as_js_module")) {
           markAsJsModuleProxy(reference)
           return null
         }
@@ -71,7 +71,6 @@ export const jsenvPluginCommonJs = ({
       }
       await context.fetchUrlContent(commonJsUrlInfo, {
         reference: commonJsReference,
-        cleanAfterFetch: true,
       })
       const nodeRuntimeEnabled = Object.keys(context.runtimeCompat).includes(
         "node",

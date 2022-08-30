@@ -25,11 +25,11 @@ const test = async (params) => {
     },
     /* eslint-enable no-undef */
   })
-  return returnValue.inspectResponse
-}
-
-if (process.platform === "darwin") {
-  const actual = await test()
+  const { order, serviceWorkerUrls } = returnValue.inspectResponse
+  const actual = {
+    order,
+    serviceWorkerUrls,
+  }
   const expected = {
     order: ["before-a", "before-b", "b", "after-b", "after-a"],
     serviceWorkerUrls: {
@@ -40,4 +40,8 @@ if (process.platform === "darwin") {
     },
   }
   assert({ actual, expected })
+}
+
+if (process.platform === "darwin") {
+  await test()
 }

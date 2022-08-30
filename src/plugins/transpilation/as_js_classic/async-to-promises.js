@@ -12,6 +12,7 @@ const defaultConfigValues = {
     minify: false,
     target: "es5",
     topLevelAwait: "disabled",
+    asyncAwait: true,
 };
 function readConfigKey(config, key) {
     if (Object.hasOwnProperty.call(config, key)) {
@@ -3649,6 +3650,9 @@ function default_1({ types, traverse, transformFromAst, version, }) {
                 },
             },
             FunctionDeclaration(path) {
+                if (!readConfigKey(this.opts, 'asyncAwait')) {
+                    return
+                }
                 const node = path.node;
                 if (node.async) {
                     const expression = types.functionExpression(undefined, node.params, node.body, node.generator, node.async);
@@ -3680,6 +3684,9 @@ function default_1({ types, traverse, transformFromAst, version, }) {
                 }
             },
             ArrowFunctionExpression(path) {
+                if (!readConfigKey(this.opts, 'asyncAwait')) {
+                    return
+                }
                 const node = path.node;
                 if (node.async) {
                     rewriteThisExpressions(path, path.getFunctionParent() || path.scope.getProgramParent().path);
@@ -3691,6 +3698,9 @@ function default_1({ types, traverse, transformFromAst, version, }) {
                 }
             },
             FunctionExpression(path) {
+                if (!readConfigKey(this.opts, 'asyncAwait')) {
+                    return
+                }
                 if (path.node.async) {
                     const id = path.node.id;
                     if (path.parentPath.isExportDefaultDeclaration() && id !== null && id !== undefined) {
@@ -3773,6 +3783,9 @@ function default_1({ types, traverse, transformFromAst, version, }) {
                 }
             },
             ClassMethod(path) {
+                if (!readConfigKey(this.opts, 'asyncAwait')) {
+                    return
+                }
                 if (path.node.async) {
                     const body = path.get("body");
                     if (path.node.kind === "method") {
@@ -3832,6 +3845,9 @@ function default_1({ types, traverse, transformFromAst, version, }) {
                 }
             },
             ObjectMethod(path) {
+                if (!readConfigKey(this.opts, 'asyncAwait')) {
+                    return
+                }
                 if (path.node.async) {
                     if (path.node.kind === "method") {
                         path.replaceWith(types.objectProperty(path.node.key, types.functionExpression(undefined, path.node.params, path.node.body, path.node.generator, path.node.async), path.node.computed, false, path.node.decorators));

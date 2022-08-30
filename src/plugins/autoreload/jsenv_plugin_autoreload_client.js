@@ -19,6 +19,7 @@ export const jsenvPluginAutoreloadClient = () => {
         const htmlAst = parseHtmlString(htmlUrlInfo.content)
         const [autoreloadClientReference] = context.referenceUtils.inject({
           type: "script_src",
+          subtype: "js_module",
           expectedType: "js_module",
           specifier: autoreloadClientFileUrl,
         })

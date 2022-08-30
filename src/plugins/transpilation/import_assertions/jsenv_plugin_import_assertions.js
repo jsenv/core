@@ -68,7 +68,7 @@ export const jsenvPluginImportAssertions = ({
         if (!reference.assert) {
           return null
         }
-        const { searchParams } = new URL(reference.url)
+        const { searchParams } = reference
         if (
           searchParams.has("as_json_module") ||
           searchParams.has("as_css_module") ||
@@ -109,7 +109,6 @@ const jsenvPluginAsModules = () => {
       }
       await context.fetchUrlContent(jsonUrlInfo, {
         reference: jsonReference,
-        cleanAfterFetch: true,
       })
       if (context.scenarios.dev) {
         context.referenceUtils.found({
@@ -118,6 +117,8 @@ const jsenvPluginAsModules = () => {
           specifier: jsonReference.url,
           expectedType: "js_module",
         })
+      } else if (context.scenarios.build && jsonUrlInfo.dependents.size === 0) {
+        context.urlGraph.deleteUrlInfo(jsonUrlInfo.url)
       }
       const jsonText = JSON.stringify(jsonUrlInfo.content.trim())
       return {
@@ -148,7 +149,6 @@ const jsenvPluginAsModules = () => {
       }
       await context.fetchUrlContent(cssUrlInfo, {
         reference: cssReference,
-        cleanAfterFetch: true,
       })
       if (context.scenarios.dev) {
         context.referenceUtils.found({
@@ -157,6 +157,8 @@ const jsenvPluginAsModules = () => {
           specifier: cssReference.url,
           expectedType: "js_module",
         })
+      } else if (context.scenarios.build && cssUrlInfo.dependents.size === 0) {
+        context.urlGraph.deleteUrlInfo(cssUrlInfo.url)
       }
       const cssText = JS_QUOTES.escapeSpecialChars(cssUrlInfo.content, {
         // If template string is choosen and runtime do not support template literals
@@ -196,7 +198,6 @@ const jsenvPluginAsModules = () => {
       }
       await context.fetchUrlContent(textUrlInfo, {
         reference: textReference,
-        cleanAfterFetch: true,
       })
       if (context.scenarios.dev) {
         context.referenceUtils.found({
@@ -205,6 +206,8 @@ const jsenvPluginAsModules = () => {
           specifier: textReference.url,
           expectedType: "js_module",
         })
+      } else if (context.scenarios.build && textUrlInfo.dependents.size === 0) {
+        context.urlGraph.deleteUrlInfo(textUrlInfo.url)
       }
       const textPlain = JS_QUOTES.escapeSpecialChars(urlInfo.content, {
         // If template string is choosen and runtime do not support template literals

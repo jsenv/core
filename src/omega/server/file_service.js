@@ -132,6 +132,11 @@ export const createFileService = ({
       sourcemapsSourcesProtocol,
       sourcemapsSourcesContent,
       writeGeneratedFiles,
+      outDirectoryUrl: scenarios.dev
+        ? `${rootDirectoryUrl}.jsenv/${runtimeName}@${runtimeVersion}/`
+        : `${rootDirectoryUrl}.jsenv/${
+            scenarios.test ? "test" : "build"
+          }/${runtimeName}@${runtimeVersion}/`,
     })
     urlGraph.createUrlInfoCallbackRef.current = (urlInfo) => {
       const { watch } = URL_META.applyAssociations({
@@ -230,8 +235,7 @@ export const createFileService = ({
         headers: request.headers,
       })
     }
-    const { runtimeName, runtimeVersion, urlGraph, kitchen } =
-      getOrCreateContext(request)
+    const { urlGraph, kitchen } = getOrCreateContext(request)
     const responseFromPlugin =
       await kitchen.pluginController.callAsyncHooksUntil(
         "serve",
@@ -292,11 +296,6 @@ export const createFileService = ({
       await kitchen.cook(urlInfo, {
         request,
         reference,
-        outDirectoryUrl: scenarios.dev
-          ? `${rootDirectoryUrl}.jsenv/${runtimeName}@${runtimeVersion}/`
-          : `${rootDirectoryUrl}.jsenv/${
-              scenarios.test ? "test" : "build"
-            }/${runtimeName}@${runtimeVersion}/`,
       })
       let { response } = urlInfo
       if (response) {
@@ -326,13 +325,14 @@ export const createFileService = ({
       return response
     } catch (e) {
       urlInfo.error = e
-      const code = e.code
+      const originalError = e ? e.cause || e : e
+      const code = originalError.code
       if (code === "PARSE_ERROR") {
         return {
           url: reference.url,
           status: 200, // let the browser re-throw the syntax error
-          statusText: e.reason,
-          statusMessage: e.message,
+          statusText: originalError.reason,
+          statusMessage: originalError.message,
           headers: {
             "content-type": urlInfo.contentType,
             "content-length": Buffer.byteLength(urlInfo.content),
@@ -354,15 +354,15 @@ export const createFileService = ({
         return {
           url: reference.url,
           status: 403,
-          statusText: e.reason,
+          statusText: originalError.reason,
         }
       }
       if (code === "NOT_FOUND") {
         return {
           url: reference.url,
           status: 404,
-          statusText: e.reason,
-          statusMessage: e.message,
+          statusText: originalError.reason,
+          statusMessage: originalError.message,
         }
       }
       return {

@@ -38,27 +38,19 @@ const test = async ({ expectedUrl, ...rest }) => {
 
 // support for <script type="module">
 await test({
-  runtimeCompat: {
-    chrome: "64",
-  },
+  runtimeCompat: { chrome: "64" },
   versioning: false,
   expectedUrl: "/js/main.js",
 })
-
 // no support for <script type="module">
 await test({
-  runtimeCompat: {
-    chrome: "60",
-  },
+  runtimeCompat: { chrome: "60" },
   versioning: false,
   expectedUrl: "/js/main.nomodule.js",
 })
-
-// no support + without bundling
+// no support + no bundling
 await test({
-  runtimeCompat: {
-    chrome: "60",
-  },
+  runtimeCompat: { chrome: "60" },
   bundling: false,
   versioning: false,
   expectedUrl: `/js/main.nomodule.js`,

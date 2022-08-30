@@ -35,13 +35,14 @@ export const convertJsModuleToJsClassic = async ({
     babelPlugins: [
       ...(jsClassicFormat === "system"
         ? [
-            // propposal-dynamic-import required with systemjs for babel8:
+            // proposal-dynamic-import required with systemjs for babel8:
             // https://github.com/babel/babel/issues/10746
             requireFromJsenv("@babel/plugin-proposal-dynamic-import"),
             requireFromJsenv("@babel/plugin-transform-modules-systemjs"),
             [
               customAsyncToPromises,
               {
+                asyncAwait: false, // already handled + we might not needs it at all
                 topLevelAwait: "return",
               },
             ],
@@ -50,6 +51,7 @@ export const convertJsModuleToJsClassic = async ({
             [
               requireBabelPlugin("babel-plugin-transform-async-to-promises"),
               {
+                asyncAwait: false, // already handled + we might not needs it at all
                 topLevelAwait: "simple",
               },
             ],

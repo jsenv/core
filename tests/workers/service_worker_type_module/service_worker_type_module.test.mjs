@@ -4,7 +4,7 @@ import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
 import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
 
-const test = async (params) => {
+const test = async ({ expectedServiceWorkerUrls, ...rest }) => {
   await build({
     logLevel: "warn",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
@@ -12,7 +12,8 @@ const test = async (params) => {
     entryPoints: {
       "./main.html": "main.html",
     },
-    ...params,
+    minification: false,
+    ...rest,
   })
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
@@ -25,109 +26,47 @@ const test = async (params) => {
     },
     /* eslint-enable no-undef */
   })
-  return returnValue.inspectResponse
+  const { serviceWorkerUrls } = returnValue.inspectResponse
+  assert({ actual: serviceWorkerUrls, expected: expectedServiceWorkerUrls })
 }
 
 if (process.platform === "darwin") {
-  // no support for {type: "module"} on service worker
-  {
-    const actual = await test({
-      runtimeCompat: {
-        chrome: "79",
-      },
-    })
-    const expected = {
-      order: [],
-      serviceWorkerUrls: {
-        "/main.html": { versioned: false, version: "2628245b" },
-        "/css/style.css?v=65c914e7": { versioned: true },
-        "/js/babel_helpers.nomodule.js?as_js_classic&v=10e40f65": {
-          versioned: true,
-        },
-      },
-    }
-    assert({ actual, expected })
-  }
-
-  // no support for {type: "module"} on service worker + no bundling
-  {
-    const actual = await test({
-      runtimeCompat: {
-        chrome: "79",
-      },
-      bundling: false,
-    })
-    const expected = {
-      order: [],
-      serviceWorkerUrls: {
-        "/main.html": { versioned: false, version: "2628245b" },
-        "/css/style.css?v=65c914e7": { versioned: true },
-        "/js/slicedToArray.nomodule.js?as_js_classic&v=53e5516f": {
-          versioned: true,
-        },
-        "/js/a.nomodule.js?as_js_classic&v=217fbe28": { versioned: true },
-        "/js/arrayWithHoles.nomodule.js?as_js_classic&v=267e2ee6": {
-          versioned: true,
-        },
-        "/js/iterableToArrayLimit.nomodule.js?as_js_classic&v=1d093038": {
-          versioned: true,
-        },
-        "/js/unsupportedIterableToArray.nomodule.js?as_js_classic&v=5b78d393": {
-          versioned: true,
-        },
-        "/js/nonIterableRest.nomodule.js?as_js_classic&v=bbc3b8e9": {
-          versioned: true,
-        },
-        "/js/b.nomodule.js?as_js_classic&v=5d37f892": { versioned: true },
-        "/js/arrayLikeToArray.nomodule.js?as_js_classic&v=3ba77d54": {
-          versioned: true,
-        },
-      },
-    }
-    assert({ actual, expected })
-  }
-
   // support
-  {
-    const actual = await test({
-      runtimeCompat: {
-        chrome: "80",
-      },
-    })
-    const expected = {
-      order: [],
-      serviceWorkerUrls: {
-        "/main.html": { versioned: false, version: "876aac63" },
-        "/css/style.css?v=65c914e7": { versioned: true },
-        "/js/babel_helpers.js?v=27bcc5e3": { versioned: true },
-      },
-    }
-    assert({ actual, expected })
-  }
-
+  await test({
+    runtimeCompat: { chrome: "80" },
+    expectedServiceWorkerUrls: {
+      "/main.html": { versioned: false, version: "d7e3da44" },
+      "/css/style.css?v=bd38451d": { versioned: true },
+    },
+  })
   // support + no bundling
-  {
-    const actual = await test({
-      runtimeCompat: {
-        chrome: "80",
-      },
-      bundling: false,
-    })
-    const expected = {
-      order: [],
-      serviceWorkerUrls: {
-        "/main.html": { versioned: false, version: "876aac63" },
-        "/css/style.css?v=65c914e7": { versioned: true },
-        "/js/slicedToArray.js?v=5463c7ac": { versioned: true },
-        "/js/a.js?v=74e8b097": { versioned: true },
-        "/js/arrayWithHoles.js?v=f6e7da9b": { versioned: true },
-        "/js/iterableToArrayLimit.js?v=0438f76f": { versioned: true },
-        "/js/unsupportedIterableToArray.js?v=163b7fa1": { versioned: true },
-        "/js/nonIterableRest.js?v=3323b0da": { versioned: true },
-        "/js/b.js?v=e3b0c442": { versioned: true },
-        "/js/arrayLikeToArray.js?v=68e4b487": { versioned: true },
-      },
-    }
-    assert({ actual, expected })
-  }
+  await test({
+    runtimeCompat: { chrome: "80" },
+    bundling: false,
+    expectedServiceWorkerUrls: {
+      "/main.html": { versioned: false, version: "8229433b" },
+      "/css/style.css?v=0e312da1": { versioned: true },
+      "/js/a.js?v=e9a31140": { versioned: true },
+      "/js/b.js?v=e3b0c442": { versioned: true },
+    },
+  })
+  // no support for { type: "module" } on service worker
+  await test({
+    runtimeCompat: { chrome: "79" },
+    expectedServiceWorkerUrls: {
+      "/main.html": { versioned: false, version: "a03ed51d" },
+      "/css/style.css?v=bd38451d": { versioned: true },
+    },
+  })
+  // no support for { type: "module" } on service worker + no bundling
+  await test({
+    runtimeCompat: { chrome: "79" },
+    bundling: false,
+    expectedServiceWorkerUrls: {
+      "/main.html": { versioned: false, version: "419f728b" },
+      "/css/style.css?v=0e312da1": { versioned: true },
+      "/js/a.nomodule.js?v=340fe042": { versioned: true },
+      "/js/b.nomodule.js?v=8f3fa8a4": { versioned: true },
+    },
+  })
 }

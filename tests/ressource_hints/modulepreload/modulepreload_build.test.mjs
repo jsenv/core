@@ -40,17 +40,7 @@ const test = async (params) => {
   assert({ actual, expected })
 }
 
-// default (support for <script type="module">)
-await test({
-  runtimeCompat: {
-    chrome: "64",
-  },
-})
-
+// support for <script type="module">
+await test({ runtimeCompat: { chrome: "64" } })
 // no support for <script type="module">
-await test({
-  runtimeCompat: {
-    chrome: "60",
-  },
-  versioningMethod: "filename",
-})
+await test({ runtimeCompat: { chrome: "60" }, versioningMethod: "filename" })

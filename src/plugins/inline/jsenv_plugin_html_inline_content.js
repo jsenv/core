@@ -19,6 +19,7 @@ export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
     transformUrlContent: {
       html: async (urlInfo, context) => {
         const htmlAst = parseHtmlString(urlInfo.content)
+        const mutations = []
         const actions = []
         visitHtmlNodes(htmlAst, {
           style: (styleNode) => {
@@ -26,37 +27,42 @@ export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
             if (!styleNodeText) {
               return
             }
-            actions.push(async () => {
-              const { line, column, lineEnd, columnEnd, isOriginal } =
-                getHtmlNodePosition(styleNode, {
-                  preferOriginal: true,
-                })
-              const inlineStyleUrl = generateInlineContentUrl({
-                url: urlInfo.url,
-                extension: ".css",
-                line,
-                column,
-                lineEnd,
-                columnEnd,
+            const { line, column, lineEnd, columnEnd, isOriginal } =
+              getHtmlNodePosition(styleNode, {
+                preferOriginal: true,
               })
-              const [inlineStyleReference, inlineStyleUrlInfo] =
-                context.referenceUtils.foundInline({
-                  node: styleNode,
-                  type: "link_href",
-                  expectedType: "css",
-                  isOriginalPosition: isOriginal,
-                  // we remove 1 to the line because imagine the following html:
-                  // <style>body { color: red; }</style>
-                  // -> content starts same line as <style>
-                  specifierLine: line - 1,
-                  specifierColumn: column,
-                  specifier: inlineStyleUrl,
-                  contentType: "text/css",
-                  content: styleNodeText,
-                })
+            const inlineStyleUrl = generateInlineContentUrl({
+              url: urlInfo.url,
+              extension: ".css",
+              line,
+              column,
+              lineEnd,
+              columnEnd,
+            })
+            const debug =
+              getHtmlNodeAttribute(styleNode, "jsenv-debug") !== undefined
+            const [inlineStyleReference, inlineStyleUrlInfo] =
+              context.referenceUtils.foundInline({
+                node: styleNode,
+                type: "link_href",
+                expectedType: "css",
+                isOriginalPosition: isOriginal,
+                // we remove 1 to the line because imagine the following html:
+                // <style>body { color: red; }</style>
+                // -> content starts same line as <style>
+                specifierLine: line - 1,
+                specifierColumn: column,
+                specifier: inlineStyleUrl,
+                contentType: "text/css",
+                content: styleNodeText,
+                debug,
+              })
+            actions.push(async () => {
               await context.cook(inlineStyleUrlInfo, {
                 reference: inlineStyleReference,
               })
+            })
+            mutations.push(() => {
               setHtmlNodeText(styleNode, inlineStyleUrlInfo.content)
               setHtmlNodeAttributes(styleNode, {
                 "jsenv-plugin-owner": "jsenv:html_inline_content",
@@ -85,40 +91,44 @@ export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
             if (jsenvPluginOwner === "jsenv:supervisor") {
               return
             }
-            actions.push(async () => {
-              const { type, contentType, extension } =
-                analyzeScriptNode(scriptNode)
-              const { line, column, lineEnd, columnEnd, isOriginal } =
-                getHtmlNodePosition(scriptNode, {
-                  preferOriginal: true,
-                })
-              let inlineScriptUrl = generateInlineContentUrl({
-                url: urlInfo.url,
-                extension:
-                  extension || CONTENT_TYPE.asFileExtension(contentType),
-                line,
-                column,
-                lineEnd,
-                columnEnd,
+            const { type, contentType, extension } =
+              analyzeScriptNode(scriptNode)
+            const { line, column, lineEnd, columnEnd, isOriginal } =
+              getHtmlNodePosition(scriptNode, {
+                preferOriginal: true,
               })
-              const [inlineScriptReference, inlineScriptUrlInfo] =
-                context.referenceUtils.foundInline({
-                  node: scriptNode,
-                  type: "script_src",
-                  expectedType: type,
-                  // we remove 1 to the line because imagine the following html:
-                  // <script>console.log('ok')</script>
-                  // -> content starts same line as <script>
-                  specifierLine: line - 1,
-                  specifierColumn: column,
-                  isOriginalPosition: isOriginal,
-                  specifier: inlineScriptUrl,
-                  contentType,
-                  content: scriptNodeText,
-                })
+            let inlineScriptUrl = generateInlineContentUrl({
+              url: urlInfo.url,
+              extension: extension || CONTENT_TYPE.asFileExtension(contentType),
+              line,
+              column,
+              lineEnd,
+              columnEnd,
+            })
+            const debug =
+              getHtmlNodeAttribute(scriptNode, "jsenv-debug") !== undefined
+            const [inlineScriptReference, inlineScriptUrlInfo] =
+              context.referenceUtils.foundInline({
+                node: scriptNode,
+                type: "script_src",
+                expectedType: type,
+                // we remove 1 to the line because imagine the following html:
+                // <script>console.log('ok')</script>
+                // -> content starts same line as <script>
+                specifierLine: line - 1,
+                specifierColumn: column,
+                isOriginalPosition: isOriginal,
+                specifier: inlineScriptUrl,
+                contentType,
+                content: scriptNodeText,
+                debug,
+              })
+            actions.push(async () => {
               await context.cook(inlineScriptUrlInfo, {
                 reference: inlineScriptReference,
               })
+            })
+            mutations.push(() => {
               setHtmlNodeText(scriptNode, inlineScriptUrlInfo.content)
               setHtmlNodeAttributes(scriptNode, {
                 "jsenv-plugin-owner": "jsenv:html_inline_content",
@@ -130,14 +140,15 @@ export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
             })
           },
         })
-        if (actions.length === 0) {
+        if (actions.length > 0) {
+          await Promise.all(actions.map((action) => action()))
+        }
+        if (mutations.length === 0) {
           return null
         }
-        await Promise.all(actions.map((action) => action()))
+        mutations.forEach((mutation) => mutation())
         const htmlModified = stringifyHtmlAst(htmlAst)
-        return {
-          content: htmlModified,
-        }
+        return htmlModified
       },
     },
   }

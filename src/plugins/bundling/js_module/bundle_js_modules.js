@@ -146,6 +146,9 @@ const rollupPluginJsenv = ({
                 rollupFileInfo.imports.length > 0 ||
                 rollupFileInfo.dynamicImports.length > 0,
             },
+            sourceUrls: Object.keys(rollupFileInfo.modules).map((id) =>
+              fileUrlConverter.asFileUrl(id),
+            ),
             contentType: "text/javascript",
             content: rollupFileInfo.code,
             sourcemap: rollupFileInfo.map,
@@ -227,6 +230,9 @@ const rollupPluginJsenv = ({
         if (specifier[0] === "/") {
           urlObject = new URL(specifier.slice(1), rootDirectoryUrl)
         } else {
+          if (isFileSystemPath(importer)) {
+            importer = fileUrlConverter.asFileUrl(importer)
+          }
           urlObject = new URL(specifier, importer)
         }
         urlObject.searchParams.set("as_js_classic_library", "")

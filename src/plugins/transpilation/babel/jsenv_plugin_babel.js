@@ -15,31 +15,9 @@ export const jsenvPluginBabel = ({
 } = {}) => {
   const transformWithBabel = async (urlInfo, context) => {
     const isJsModule = urlInfo.type === "js_module"
-    const isWorker = urlInfo.subtype === "worker"
-    const isServiceWorker = urlInfo.subtype === "service_worker"
-    const isSharedWorker = urlInfo.subtype === "shared_worker"
-    const isWorkerContext = isWorker || isServiceWorker || isSharedWorker
-
-    let { clientRuntimeCompat } = context
-    if (isWorker) {
-      clientRuntimeCompat = RUNTIME_COMPAT.add(clientRuntimeCompat, "worker")
-    } else if (isServiceWorker) {
-      // when code is executed by a service worker we can assume
-      // the execution context supports more than the default one
-      // for instance arrow function are supported
-      clientRuntimeCompat = RUNTIME_COMPAT.add(
-        clientRuntimeCompat,
-        "service_worker",
-      )
-    } else if (isSharedWorker) {
-      clientRuntimeCompat = RUNTIME_COMPAT.add(
-        clientRuntimeCompat,
-        "shared_worker",
-      )
-    }
 
     const isSupported = (feature) =>
-      RUNTIME_COMPAT.isSupported(clientRuntimeCompat, feature)
+      RUNTIME_COMPAT.isSupported(context.clientRuntimeCompat, feature)
     const getImportSpecifier = (clientFileUrl) => {
       const [reference] = context.referenceUtils.inject({
         type: "js_import_export",
@@ -52,7 +30,6 @@ export const jsenvPluginBabel = ({
     const babelPluginStructure = getBaseBabelPluginStructure({
       url: urlInfo.url,
       isSupported,
-      isWorkerContext,
       isJsModule,
       getImportSpecifier,
     })

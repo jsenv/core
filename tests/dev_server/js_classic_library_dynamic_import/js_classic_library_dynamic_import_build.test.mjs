@@ -23,16 +23,13 @@ const test = async (params) => {
     url: `${server.origin}/main.html`,
     /* eslint-disable no-undef */
     pageFunction: async () => {
-      return window.resultPromise
+      return window.askPromise
     },
     /* eslint-enable no-undef */
   })
   const actual = returnValue
-  const expected = { answer: 42 }
+  const expected = 42
   assert({ actual, expected })
 }
 
-// support for <script type="module">
-await test({ runtimeCompat: { chrome: "64" } })
-// no support for <script type="module">
-await test({ runtimeCompat: { chrome: "62" } })
+await test()

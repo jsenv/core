@@ -9,31 +9,16 @@ import {
 } from "@jsenv/ast"
 
 import { isWebWorkerUrlInfo } from "@jsenv/core/src/omega/web_workers.js"
-import { GRAPH } from "./graph_utils.js"
 
-export const injectGlobalVersionMapping = async ({
-  finalGraphKitchen,
-  finalGraph,
+export const injectVersionMappings = async ({
+  urlInfo,
+  kitchen,
   versionMappings,
 }) => {
-  await Promise.all(
-    GRAPH.map(finalGraph, async (urlInfo) => {
-      if (urlInfo.isEntryPoint) {
-        await injectVersionMappings({
-          urlInfo,
-          kitchen: finalGraphKitchen,
-          versionMappings,
-        })
-      }
-    }),
-  )
-}
-
-const injectVersionMappings = async ({ urlInfo, kitchen, versionMappings }) => {
   const injector = injectors[urlInfo.type]
   if (injector) {
-    const { content, sourcemap } = injector(urlInfo, { versionMappings })
-    await kitchen.urlInfoTransformer.applyFinalTransformations(urlInfo, {
+    const { content, sourcemap } = await injector(urlInfo, { versionMappings })
+    kitchen.urlInfoTransformer.applyFinalTransformations(urlInfo, {
       content,
       sourcemap,
     })

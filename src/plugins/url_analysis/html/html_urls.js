@@ -13,15 +13,17 @@ import {
 export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
   const url = urlInfo.originalUrl
   const content = urlInfo.content
-  const { scenarios, referenceUtils } = context
   const htmlAst = parseHtmlString(content, {
-    storeOriginalPositions: scenarios.dev,
+    storeOriginalPositions: context.scenarios.dev,
   })
-  const actions = []
-  visitHtmlUrls({
+  const mentions = visitHtmlUrls({
     url,
     htmlAst,
-    onUrl: ({
+  })
+  const actions = []
+  const mutations = []
+  mentions.forEach(
+    ({
       type,
       subtype,
       expectedType,
@@ -31,10 +33,10 @@ export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
       originalColumn,
       node,
       attributeName,
+      debug,
       specifier,
     }) => {
       const { crossorigin, integrity } = readFetchMetas(node)
-
       const isResourceHint = [
         "preconnect",
         "dns-prefetch",
@@ -42,8 +44,9 @@ export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
         "preload",
         "modulepreload",
       ].includes(subtype)
-      const [reference] = referenceUtils.found({
+      const [reference] = context.referenceUtils.found({
         type,
+        subtype,
         expectedType,
         originalLine,
         originalColumn,
@@ -53,23 +56,26 @@ export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
         isResourceHint,
         crossorigin,
         integrity,
+        debug,
       })
       actions.push(async () => {
+        await context.referenceUtils.readGeneratedSpecifier(reference)
+      })
+      mutations.push(() => {
         setHtmlNodeAttributes(node, {
-          [attributeName]: await referenceUtils.readGeneratedSpecifier(
-            reference,
-          ),
+          [attributeName]: reference.generatedSpecifier,
         })
       })
     },
-  })
-  if (actions.length === 0) {
+  )
+  if (actions.length > 0) {
+    await Promise.all(actions.map((action) => action()))
+  }
+  if (mutations.length === 0) {
     return null
   }
-  await Promise.all(actions.map((action) => action()))
-  return {
-    content: stringifyHtmlAst(htmlAst),
-  }
+  mutations.forEach((mutation) => mutation())
+  return stringifyHtmlAst(htmlAst)
 }
 
 const crossOriginCompatibleTagNames = ["script", "link", "img", "source"]
@@ -87,8 +93,10 @@ const readFetchMetas = (node) => {
   return meta
 }
 
-const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
-  const addDependency = ({
+const visitHtmlUrls = ({ url, htmlAst }) => {
+  const mentions = []
+  const finalizeCallbacks = []
+  const addMention = ({
     type,
     subtype,
     expectedType,
@@ -111,7 +119,8 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
       column,
       // originalLine, originalColumn
     } = position
-    onUrl({
+    const debug = getHtmlNodeAttribute(node, "jsenv-debug") !== undefined
+    const mention = {
       type,
       subtype,
       expectedType,
@@ -121,7 +130,10 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
       specifier,
       node,
       attributeName,
-    })
+      debug,
+    }
+    mentions.push(mention)
+    return mention
   }
   const visitAttributeAsUrlSpecifier = ({ node, attributeName, ...rest }) => {
     const value = getHtmlNodeAttribute(node, attributeName)
@@ -130,9 +142,9 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
       if (jsenvPluginOwner === "jsenv:importmap") {
         // during build the importmap is inlined
         // and shoud not be considered as a dependency anymore
-        return
+        return null
       }
-      addDependency({
+      return addMention({
         ...rest,
         node,
         attributeName,
@@ -142,26 +154,29 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
             ? new URL(value, url).href
             : value,
       })
-    } else if (attributeName === "src") {
-      visitAttributeAsUrlSpecifier({
+    }
+    if (attributeName === "src") {
+      return visitAttributeAsUrlSpecifier({
         ...rest,
         node,
         attributeName: "inlined-from-src",
       })
-    } else if (attributeName === "href") {
-      visitAttributeAsUrlSpecifier({
+    }
+    if (attributeName === "href") {
+      return visitAttributeAsUrlSpecifier({
         ...rest,
         node,
         attributeName: "inlined-from-href",
       })
     }
+    return null
   }
   const visitSrcset = ({ type, node }) => {
     const srcset = getHtmlNodeAttribute(node, "srcset")
     if (srcset) {
       const srcCandidates = parseSrcSet(srcset)
       srcCandidates.forEach((srcCandidate) => {
-        addDependency({
+        addMention({
           type,
           node,
           attributeName: "srcset",
@@ -174,18 +189,20 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
     link: (node) => {
       const rel = getHtmlNodeAttribute(node, "rel")
       const type = getHtmlNodeAttribute(node, "type")
-      visitAttributeAsUrlSpecifier({
+      const mention = visitAttributeAsUrlSpecifier({
         type: "link_href",
         subtype: rel,
         node,
         attributeName: "href",
+        // https://developer.mozilla.org/en-US/docs/Web/HTML/Link_types/preload#including_a_mime_type
         expectedContentType: type,
-        expectedType: {
-          manifest: "webmanifest",
-          modulepreload: "js_module",
-          stylesheet: "css",
-        }[rel],
       })
+
+      if (mention) {
+        finalizeCallbacks.push(() => {
+          mention.expectedType = decideLinkExpectedType(mention, mentions)
+        })
+      }
     },
     // style: () => {},
     script: (node) => {
@@ -198,6 +215,7 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
       }
       visitAttributeAsUrlSpecifier({
         type: "script_src",
+        subtype: type,
         expectedType: type,
         node,
         attributeName: "src",
@@ -255,4 +273,43 @@ const visitHtmlUrls = ({ url, htmlAst, onUrl }) => {
       })
     },
   })
+  finalizeCallbacks.forEach((finalizeCallback) => {
+    finalizeCallback()
+  })
+  return mentions
+}
+
+const decideLinkExpectedType = (linkMention, mentions) => {
+  const rel = getHtmlNodeAttribute(linkMention.node, "rel")
+  if (rel === "webmanifest") {
+    return "webmanifest"
+  }
+  if (rel === "modulepreload") {
+    return "js_module"
+  }
+  if (rel === "stylesheet") {
+    return "css"
+  }
+  if (rel === "preload") {
+    // https://developer.mozilla.org/en-US/docs/Web/HTML/Link_types/preload#what_types_of_content_can_be_preloaded
+    const as = getHtmlNodeAttribute(linkMention.node, "as")
+    if (as === "document") {
+      return "html"
+    }
+    if (as === "style") {
+      return "css"
+    }
+    if (as === "script") {
+      const firstScriptOnThisUrl = mentions.find(
+        (mentionCandidate) =>
+          mentionCandidate.url === linkMention.url &&
+          mentionCandidate.type === "script_src",
+      )
+      if (firstScriptOnThisUrl) {
+        return firstScriptOnThisUrl.expectedType
+      }
+      return undefined
+    }
+  }
+  return undefined
 }

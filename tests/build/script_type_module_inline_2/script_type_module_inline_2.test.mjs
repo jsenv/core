@@ -35,16 +35,11 @@ const test = async (params) => {
 
 // support for <script type="module">
 await test({
-  runtimeCompat: {
-    chrome: "64",
-  },
+  runtimeCompat: { chrome: "64" },
 })
-
 // no support <script type="module">
 await test({
-  runtimeCompat: {
-    chrome: "60",
-  },
+  runtimeCompat: { chrome: "60" },
   // At some point generating sourcemap in this scenario was throwing an error
   // because the sourcemap for js module files where not generated
   // and in the end code was expecting to find sourcemapUrlInfo.content

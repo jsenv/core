@@ -9,7 +9,7 @@ import os, { networkInterfaces } from "node:os";
 import tty from "node:tty";
 import stringWidth from "string-width";
 import { createMagicSource, composeTwoSourcemaps, sourcemapConverter, getOriginalPosition, SOURCEMAP, generateSourcemapFileUrl, generateSourcemapDataUrl } from "@jsenv/sourcemap";
-import { parseHtmlString, stringifyHtmlAst, visitHtmlNodes, getHtmlNodeAttribute, analyzeScriptNode, setHtmlNodeAttributes, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, applyPostCss, postCssPluginUrlVisitor, parseJsUrls, getHtmlNodeText, setHtmlNodeText, applyBabelPlugins, injectScriptNodeAsEarlyAsPossible, createHtmlNode, findHtmlNode, removeHtmlNode, removeHtmlNodeText, transpileWithParcel, injectJsImport, minifyWithParcel, analyzeLinkNode } from "@jsenv/ast";
+import { parseHtmlString, stringifyHtmlAst, getHtmlNodeAttribute, visitHtmlNodes, analyzeScriptNode, setHtmlNodeAttributes, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, applyPostCss, postCssPluginUrlVisitor, parseJsUrls, getHtmlNodeText, setHtmlNodeText, applyBabelPlugins, injectScriptNodeAsEarlyAsPossible, createHtmlNode, findHtmlNode, removeHtmlNode, removeHtmlNodeText, transpileWithParcel, injectJsImport, minifyWithParcel, analyzeLinkNode } from "@jsenv/ast";
 import { createRequire } from "node:module";
 import babelParser from "@babel/parser";
 import { performance as performance$1 } from "node:perf_hooks";
@@ -383,15 +383,6 @@ const asUrlWithoutSearch = url => {
   urlObject.search = "";
   return urlObject.href;
 };
-const isValidUrl$1 = url => {
-  try {
-    // eslint-disable-next-line no-new
-    new URL(url);
-    return true;
-  } catch (e) {
-    return false;
-  }
-}; // normalize url search params:
 // Using URLSearchParams to alter the url search params
 // can result into "file:///file.css?css_module"
 // becoming "file:///file.css?css_module="
@@ -408,24 +399,6 @@ const normalizeUrl = url => {
   }
 
   return url;
-};
-const injectQueryParamsIntoSpecifier = (specifier, params) => {
-  if (isValidUrl$1(specifier)) {
-    return injectQueryParams(specifier, params);
-  }
-
-  const [beforeQuestion, afterQuestion = ""] = specifier.split("?");
-  const searchParams = new URLSearchParams(afterQuestion);
-  Object.keys(params).forEach(key => {
-    searchParams.set(key, params[key]);
-  });
-  const paramsString = searchParams.toString();
-
-  if (paramsString) {
-    return `${beforeQuestion}?${paramsString}`;
-  }
-
-  return specifier;
 };
 const injectQueryParams = (url, params) => {
   const urlObject = new URL(url);
@@ -473,20 +446,6 @@ const ensurePathnameTrailingSlash = url => {
     hash
   } = urlObject;
   return `${origin}${pathname}/${search}${hash}`;
-};
-const asUrlUntilPathname = url => {
-  const urlObject = new URL(url);
-  let {
-    origin,
-    pathname
-  } = urlObject; // origin is "null" for "file://" urls with Node.js
-
-  if (origin === "null" && urlObject.href.startsWith("file:")) {
-    origin = "file://";
-  }
-
-  const urlUntilPathname = `${origin}${pathname}`;
-  return urlUntilPathname;
 };
 
 const isFileSystemPath$1 = value => {
@@ -2592,6 +2551,13 @@ const createLogger = ({
 } = {}) => {
   if (logLevel === LOG_LEVEL_DEBUG) {
     return {
+      level: "debug",
+      levels: {
+        debug: true,
+        info: true,
+        warn: true,
+        error: true
+      },
       debug,
       info,
       warn,
@@ -2601,6 +2567,13 @@ const createLogger = ({
 
   if (logLevel === LOG_LEVEL_INFO) {
     return {
+      level: "info",
+      levels: {
+        debug: false,
+        info: true,
+        warn: true,
+        error: true
+      },
       debug: debugDisabled,
       info,
       warn,
@@ -2610,6 +2583,13 @@ const createLogger = ({
 
   if (logLevel === LOG_LEVEL_WARN) {
     return {
+      level: "warn",
+      levels: {
+        debug: false,
+        info: false,
+        warn: true,
+        error: true
+      },
       debug: debugDisabled,
       info: infoDisabled,
       warn,
@@ -2619,6 +2599,13 @@ const createLogger = ({
 
   if (logLevel === LOG_LEVEL_ERROR) {
     return {
+      level: "error",
+      levels: {
+        debug: false,
+        info: false,
+        warn: false,
+        error: true
+      },
       debug: debugDisabled,
       info: infoDisabled,
       warn: warnDisabled,
@@ -2628,6 +2615,13 @@ const createLogger = ({
 
   if (logLevel === LOG_LEVEL_OFF) {
     return {
+      level: "off",
+      levels: {
+        debug: false,
+        info: false,
+        warn: false,
+        error: false
+      },
       debug: debugDisabled,
       info: infoDisabled,
       warn: warnDisabled,
@@ -2661,24 +2655,6 @@ const warnDisabled = () => {};
 const error = (...args) => console.error(...args);
 
 const errorDisabled = () => {};
-
-const disabledMethods = {
-  debug: debugDisabled,
-  info: infoDisabled,
-  warn: warnDisabled,
-  error: errorDisabled
-};
-const loggerIsMethodEnabled = (logger, methodName) => {
-  return logger[methodName] !== disabledMethods[methodName];
-};
-const loggerToLevels = logger => {
-  return {
-    debug: loggerIsMethodEnabled(logger, "debug"),
-    info: loggerIsMethodEnabled(logger, "info"),
-    warn: loggerIsMethodEnabled(logger, "warn"),
-    error: loggerIsMethodEnabled(logger, "error")
-  };
-};
 
 function hasFlag(flag, argv = process$1.argv) {
   const prefix = flag.startsWith('-') ? '' : flag.length === 1 ? '-' : '--';
@@ -4032,6 +4008,7 @@ const createUrlInfo = url => {
     sourcemapIsWrong: false,
     generatedUrl: null,
     sourcemapGeneratedUrl: null,
+    injected: false,
     isInline: false,
     inlineUrlSite: null,
     jsQuote: null,
@@ -4046,62 +4023,67 @@ const createUrlInfo = url => {
 const parseAndTransformHtmlUrls = async (urlInfo, context) => {
   const url = urlInfo.originalUrl;
   const content = urlInfo.content;
-  const {
-    scenarios,
-    referenceUtils
-  } = context;
   const htmlAst = parseHtmlString(content, {
-    storeOriginalPositions: scenarios.dev
+    storeOriginalPositions: context.scenarios.dev
+  });
+  const mentions = visitHtmlUrls({
+    url,
+    htmlAst
   });
   const actions = [];
-  visitHtmlUrls({
-    url,
-    htmlAst,
-    onUrl: ({
+  const mutations = [];
+  mentions.forEach(({
+    type,
+    subtype,
+    expectedType,
+    line,
+    column,
+    originalLine,
+    originalColumn,
+    node,
+    attributeName,
+    debug,
+    specifier
+  }) => {
+    const {
+      crossorigin,
+      integrity
+    } = readFetchMetas(node);
+    const isResourceHint = ["preconnect", "dns-prefetch", "prefetch", "preload", "modulepreload"].includes(subtype);
+    const [reference] = context.referenceUtils.found({
       type,
       subtype,
       expectedType,
-      line,
-      column,
       originalLine,
       originalColumn,
-      node,
-      attributeName,
-      specifier
-    }) => {
-      const {
-        crossorigin,
-        integrity
-      } = readFetchMetas(node);
-      const isResourceHint = ["preconnect", "dns-prefetch", "prefetch", "preload", "modulepreload"].includes(subtype);
-      const [reference] = referenceUtils.found({
-        type,
-        expectedType,
-        originalLine,
-        originalColumn,
-        specifier,
-        specifierLine: line,
-        specifierColumn: column,
-        isResourceHint,
-        crossorigin,
-        integrity
+      specifier,
+      specifierLine: line,
+      specifierColumn: column,
+      isResourceHint,
+      crossorigin,
+      integrity,
+      debug
+    });
+    actions.push(async () => {
+      await context.referenceUtils.readGeneratedSpecifier(reference);
+    });
+    mutations.push(() => {
+      setHtmlNodeAttributes(node, {
+        [attributeName]: reference.generatedSpecifier
       });
-      actions.push(async () => {
-        setHtmlNodeAttributes(node, {
-          [attributeName]: await referenceUtils.readGeneratedSpecifier(reference)
-        });
-      });
-    }
+    });
   });
 
-  if (actions.length === 0) {
+  if (actions.length > 0) {
+    await Promise.all(actions.map(action => action()));
+  }
+
+  if (mutations.length === 0) {
     return null;
   }
 
-  await Promise.all(actions.map(action => action()));
-  return {
-    content: stringifyHtmlAst(htmlAst)
-  };
+  mutations.forEach(mutation => mutation());
+  return stringifyHtmlAst(htmlAst);
 };
 const crossOriginCompatibleTagNames = ["script", "link", "img", "source"];
 const integrityCompatibleTagNames = ["script", "link", "img", "source"];
@@ -4124,10 +4106,12 @@ const readFetchMetas = node => {
 
 const visitHtmlUrls = ({
   url,
-  htmlAst,
-  onUrl
+  htmlAst
 }) => {
-  const addDependency = ({
+  const mentions = [];
+  const finalizeCallbacks = [];
+
+  const addMention = ({
     type,
     subtype,
     expectedType,
@@ -4151,7 +4135,8 @@ const visitHtmlUrls = ({
       column // originalLine, originalColumn
 
     } = position;
-    onUrl({
+    const debug = getHtmlNodeAttribute(node, "jsenv-debug") !== undefined;
+    const mention = {
       type,
       subtype,
       expectedType,
@@ -4160,8 +4145,11 @@ const visitHtmlUrls = ({
       // originalLine, originalColumn
       specifier,
       node,
-      attributeName
-    });
+      attributeName,
+      debug
+    };
+    mentions.push(mention);
+    return mention;
   };
 
   const visitAttributeAsUrlSpecifier = ({
@@ -4177,25 +4165,31 @@ const visitHtmlUrls = ({
       if (jsenvPluginOwner === "jsenv:importmap") {
         // during build the importmap is inlined
         // and shoud not be considered as a dependency anymore
-        return;
+        return null;
       }
 
-      addDependency({ ...rest,
+      return addMention({ ...rest,
         node,
         attributeName,
         specifier: attributeName === "inlined-from-src" || attributeName === "inlined-from-href" ? new URL(value, url).href : value
       });
-    } else if (attributeName === "src") {
-      visitAttributeAsUrlSpecifier({ ...rest,
+    }
+
+    if (attributeName === "src") {
+      return visitAttributeAsUrlSpecifier({ ...rest,
         node,
         attributeName: "inlined-from-src"
       });
-    } else if (attributeName === "href") {
-      visitAttributeAsUrlSpecifier({ ...rest,
+    }
+
+    if (attributeName === "href") {
+      return visitAttributeAsUrlSpecifier({ ...rest,
         node,
         attributeName: "inlined-from-href"
       });
     }
+
+    return null;
   };
 
   const visitSrcset = ({
@@ -4207,7 +4201,7 @@ const visitHtmlUrls = ({
     if (srcset) {
       const srcCandidates = parseSrcSet(srcset);
       srcCandidates.forEach(srcCandidate => {
-        addDependency({
+        addMention({
           type,
           node,
           attributeName: "srcset",
@@ -4221,18 +4215,20 @@ const visitHtmlUrls = ({
     link: node => {
       const rel = getHtmlNodeAttribute(node, "rel");
       const type = getHtmlNodeAttribute(node, "type");
-      visitAttributeAsUrlSpecifier({
+      const mention = visitAttributeAsUrlSpecifier({
         type: "link_href",
         subtype: rel,
         node,
         attributeName: "href",
-        expectedContentType: type,
-        expectedType: {
-          manifest: "webmanifest",
-          modulepreload: "js_module",
-          stylesheet: "css"
-        }[rel]
+        // https://developer.mozilla.org/en-US/docs/Web/HTML/Link_types/preload#including_a_mime_type
+        expectedContentType: type
       });
+
+      if (mention) {
+        finalizeCallbacks.push(() => {
+          mention.expectedType = decideLinkExpectedType(mention, mentions);
+        });
+      }
     },
     // style: () => {},
     script: node => {
@@ -4249,6 +4245,7 @@ const visitHtmlUrls = ({
 
       visitAttributeAsUrlSpecifier({
         type: "script_src",
+        subtype: type,
         expectedType: type,
         node,
         attributeName: "src"
@@ -4306,6 +4303,51 @@ const visitHtmlUrls = ({
       });
     }
   });
+  finalizeCallbacks.forEach(finalizeCallback => {
+    finalizeCallback();
+  });
+  return mentions;
+};
+
+const decideLinkExpectedType = (linkMention, mentions) => {
+  const rel = getHtmlNodeAttribute(linkMention.node, "rel");
+
+  if (rel === "webmanifest") {
+    return "webmanifest";
+  }
+
+  if (rel === "modulepreload") {
+    return "js_module";
+  }
+
+  if (rel === "stylesheet") {
+    return "css";
+  }
+
+  if (rel === "preload") {
+    // https://developer.mozilla.org/en-US/docs/Web/HTML/Link_types/preload#what_types_of_content_can_be_preloaded
+    const as = getHtmlNodeAttribute(linkMention.node, "as");
+
+    if (as === "document") {
+      return "html";
+    }
+
+    if (as === "style") {
+      return "css";
+    }
+
+    if (as === "script") {
+      const firstScriptOnThisUrl = mentions.find(mentionCandidate => mentionCandidate.url === linkMention.url && mentionCandidate.type === "script_src");
+
+      if (firstScriptOnThisUrl) {
+        return firstScriptOnThisUrl.expectedType;
+      }
+
+      return undefined;
+    }
+  }
+
+  return undefined;
 };
 
 /*
@@ -4387,10 +4429,6 @@ const parseAndTransformJsUrls = async (urlInfo, context) => {
     isJsModule: urlInfo.type === "js_module",
     isWebWorker: isWebWorkerUrlInfo(urlInfo)
   });
-  const {
-    rootDirectoryUrl,
-    referenceUtils
-  } = context;
   const actions = [];
   const magicSource = createMagicSource(urlInfo.content);
   jsMentions.forEach(jsMention => {
@@ -4398,7 +4436,7 @@ const parseAndTransformJsUrls = async (urlInfo, context) => {
       urlInfo.data.usesImport = true;
     }
 
-    const [reference] = referenceUtils.found({
+    const [reference] = context.referenceUtils.found({
       type: jsMention.type,
       subtype: jsMention.subtype,
       expectedType: jsMention.expectedType,
@@ -4411,7 +4449,7 @@ const parseAndTransformJsUrls = async (urlInfo, context) => {
       data: jsMention.data,
       baseUrl: {
         "StringLiteral": jsMention.baseUrl,
-        "window.origin": rootDirectoryUrl,
+        "window.origin": context.rootDirectoryUrl,
         "import.meta.url": urlInfo.url,
         "context.meta.url": urlInfo.url,
         "document.currentScript.src": urlInfo.url
@@ -4421,7 +4459,7 @@ const parseAndTransformJsUrls = async (urlInfo, context) => {
       typePropertyNode: jsMention.typePropertyNode
     });
     actions.push(async () => {
-      const replacement = await referenceUtils.readGeneratedSpecifier(reference);
+      const replacement = await context.referenceUtils.readGeneratedSpecifier(reference);
       magicSource.replace({
         start: jsMention.specifierStart,
         end: jsMention.specifierEnd,
@@ -4786,6 +4824,7 @@ const jsenvPluginHtmlInlineContent = ({
     transformUrlContent: {
       html: async (urlInfo, context) => {
         const htmlAst = parseHtmlString(urlInfo.content);
+        const mutations = [];
         const actions = [];
         visitHtmlNodes(htmlAst, {
           style: styleNode => {
@@ -4795,41 +4834,45 @@ const jsenvPluginHtmlInlineContent = ({
               return;
             }
 
+            const {
+              line,
+              column,
+              lineEnd,
+              columnEnd,
+              isOriginal
+            } = getHtmlNodePosition(styleNode, {
+              preferOriginal: true
+            });
+            const inlineStyleUrl = generateInlineContentUrl({
+              url: urlInfo.url,
+              extension: ".css",
+              line,
+              column,
+              lineEnd,
+              columnEnd
+            });
+            const debug = getHtmlNodeAttribute(styleNode, "jsenv-debug") !== undefined;
+            const [inlineStyleReference, inlineStyleUrlInfo] = context.referenceUtils.foundInline({
+              node: styleNode,
+              type: "link_href",
+              expectedType: "css",
+              isOriginalPosition: isOriginal,
+              // we remove 1 to the line because imagine the following html:
+              // <style>body { color: red; }</style>
+              // -> content starts same line as <style>
+              specifierLine: line - 1,
+              specifierColumn: column,
+              specifier: inlineStyleUrl,
+              contentType: "text/css",
+              content: styleNodeText,
+              debug
+            });
             actions.push(async () => {
-              const {
-                line,
-                column,
-                lineEnd,
-                columnEnd,
-                isOriginal
-              } = getHtmlNodePosition(styleNode, {
-                preferOriginal: true
-              });
-              const inlineStyleUrl = generateInlineContentUrl({
-                url: urlInfo.url,
-                extension: ".css",
-                line,
-                column,
-                lineEnd,
-                columnEnd
-              });
-              const [inlineStyleReference, inlineStyleUrlInfo] = context.referenceUtils.foundInline({
-                node: styleNode,
-                type: "link_href",
-                expectedType: "css",
-                isOriginalPosition: isOriginal,
-                // we remove 1 to the line because imagine the following html:
-                // <style>body { color: red; }</style>
-                // -> content starts same line as <style>
-                specifierLine: line - 1,
-                specifierColumn: column,
-                specifier: inlineStyleUrl,
-                contentType: "text/css",
-                content: styleNodeText
-              });
               await context.cook(inlineStyleUrlInfo, {
                 reference: inlineStyleReference
               });
+            });
+            mutations.push(() => {
               setHtmlNodeText(styleNode, inlineStyleUrlInfo.content);
               setHtmlNodeAttributes(styleNode, {
                 "jsenv-plugin-owner": "jsenv:html_inline_content",
@@ -4857,46 +4900,50 @@ const jsenvPluginHtmlInlineContent = ({
               return;
             }
 
+            const {
+              type,
+              contentType,
+              extension
+            } = analyzeScriptNode(scriptNode);
+            const {
+              line,
+              column,
+              lineEnd,
+              columnEnd,
+              isOriginal
+            } = getHtmlNodePosition(scriptNode, {
+              preferOriginal: true
+            });
+            let inlineScriptUrl = generateInlineContentUrl({
+              url: urlInfo.url,
+              extension: extension || CONTENT_TYPE.asFileExtension(contentType),
+              line,
+              column,
+              lineEnd,
+              columnEnd
+            });
+            const debug = getHtmlNodeAttribute(scriptNode, "jsenv-debug") !== undefined;
+            const [inlineScriptReference, inlineScriptUrlInfo] = context.referenceUtils.foundInline({
+              node: scriptNode,
+              type: "script_src",
+              expectedType: type,
+              // we remove 1 to the line because imagine the following html:
+              // <script>console.log('ok')</script>
+              // -> content starts same line as <script>
+              specifierLine: line - 1,
+              specifierColumn: column,
+              isOriginalPosition: isOriginal,
+              specifier: inlineScriptUrl,
+              contentType,
+              content: scriptNodeText,
+              debug
+            });
             actions.push(async () => {
-              const {
-                type,
-                contentType,
-                extension
-              } = analyzeScriptNode(scriptNode);
-              const {
-                line,
-                column,
-                lineEnd,
-                columnEnd,
-                isOriginal
-              } = getHtmlNodePosition(scriptNode, {
-                preferOriginal: true
-              });
-              let inlineScriptUrl = generateInlineContentUrl({
-                url: urlInfo.url,
-                extension: extension || CONTENT_TYPE.asFileExtension(contentType),
-                line,
-                column,
-                lineEnd,
-                columnEnd
-              });
-              const [inlineScriptReference, inlineScriptUrlInfo] = context.referenceUtils.foundInline({
-                node: scriptNode,
-                type: "script_src",
-                expectedType: type,
-                // we remove 1 to the line because imagine the following html:
-                // <script>console.log('ok')</script>
-                // -> content starts same line as <script>
-                specifierLine: line - 1,
-                specifierColumn: column,
-                isOriginalPosition: isOriginal,
-                specifier: inlineScriptUrl,
-                contentType,
-                content: scriptNodeText
-              });
               await context.cook(inlineScriptUrlInfo, {
                 reference: inlineScriptReference
               });
+            });
+            mutations.push(() => {
               setHtmlNodeText(scriptNode, inlineScriptUrlInfo.content);
               setHtmlNodeAttributes(scriptNode, {
                 "jsenv-plugin-owner": "jsenv:html_inline_content",
@@ -4909,15 +4956,17 @@ const jsenvPluginHtmlInlineContent = ({
           }
         });
 
-        if (actions.length === 0) {
+        if (actions.length > 0) {
+          await Promise.all(actions.map(action => action()));
+        }
+
+        if (mutations.length === 0) {
           return null;
         }
 
-        await Promise.all(actions.map(action => action()));
+        mutations.forEach(mutation => mutation());
         const htmlModified = stringifyHtmlAst(htmlAst);
-        return {
-          content: htmlModified
-        };
+        return htmlModified;
       }
     }
   };
@@ -9960,8 +10009,7 @@ const convertJsModuleToJsClassic = async ({
   };
 };
 
-// and perform the conversion during fetchUrlContent
-
+// propagate ?as_js_classic to referenced urls
 const jsenvPluginAsJsClassicConversion = ({
   systemJsInjection,
   systemJsClientFileUrl,
@@ -9969,7 +10017,12 @@ const jsenvPluginAsJsClassicConversion = ({
 }) => {
   const shouldPropagateJsClassic = (reference, context) => {
     const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl);
-    return parentUrlInfo && new URL(parentUrlInfo.url).searchParams.has("as_js_classic");
+
+    if (!parentUrlInfo) {
+      return false;
+    }
+
+    return new URL(parentUrlInfo.url).searchParams.has("as_js_classic");
   };
 
   const markAsJsClassicProxy = reference => {
@@ -9988,39 +10041,25 @@ const jsenvPluginAsJsClassicConversion = ({
   return {
     name: "jsenv:as_js_classic_conversion",
     appliesDuring: "*",
-    redirectUrl: {
-      // We want to propagate transformation of js module to js classic to:
-      // - import specifier (static/dynamic import + re-export)
-      // - url specifier when inside System.register/_context.import()
-      //   (because it's the transpiled equivalent of static and dynamic imports)
-      // And not other references otherwise we could try to transform inline resources
-      // or specifiers inside new URL()...
-      js_import_export: (reference, context) => {
-        if (new URL(reference.url).searchParams.has("as_js_classic")) {
-          markAsJsClassicProxy(reference);
-          return null;
-        }
+    redirectUrl: (reference, context) => {
+      if (reference.searchParams.has("as_js_classic")) {
+        markAsJsClassicProxy(reference);
+        return null;
+      }
 
+      if (reference.type === "js_import_export" || reference.subtype === "system_register_arg" || reference.subtype === "system_import_arg") {
+        // We want to propagate transformation of js module to js classic to:
+        // - import specifier (static/dynamic import + re-export)
+        // - url specifier when inside System.register/_context.import()
+        //   (because it's the transpiled equivalent of static and dynamic imports)
+        // And not other references otherwise we could try to transform inline resources
+        // or specifiers inside new URL()...
         if (shouldPropagateJsClassic(reference, context)) {
           return turnIntoJsClassicProxy(reference);
         }
-
-        return null;
-      },
-      js_url_specifier: (reference, context) => {
-        if (reference.subtype === "system_register_arg" || reference.subtype === "system_import_arg") {
-          if (new URL(reference.url).searchParams.has("as_js_classic")) {
-            markAsJsClassicProxy(reference);
-            return null;
-          }
-
-          if (shouldPropagateJsClassic(reference, context)) {
-            return turnIntoJsClassicProxy(reference);
-          }
-        }
-
-        return null;
       }
+
+      return null;
     },
     fetchUrlContent: async (urlInfo, context) => {
       const [jsModuleReference, jsModuleUrlInfo] = context.getWithoutSearchParam({
@@ -10038,8 +10077,7 @@ const jsenvPluginAsJsClassicConversion = ({
       }
 
       await context.fetchUrlContent(jsModuleUrlInfo, {
-        reference: jsModuleReference,
-        cleanAfterFetch: true
+        reference: jsModuleReference
       });
 
       if (context.scenarios.dev) {
@@ -10049,6 +10087,8 @@ const jsenvPluginAsJsClassicConversion = ({
           specifier: jsModuleReference.url,
           expectedType: "js_module"
         });
+      } else if (context.scenarios.build && jsModuleUrlInfo.dependents.size === 0) {
+        context.urlGraph.deleteUrlInfo(jsModuleUrlInfo.url);
       }
 
       const {
@@ -10080,265 +10120,191 @@ const jsenvPluginAsJsClassicConversion = ({
  */
 const jsenvPluginAsJsClassicHtml = ({
   systemJsInjection,
-  systemJsClientFileUrl,
-  generateJsClassicFilename
+  systemJsClientFileUrl
 }) => {
+  let shouldTransformScriptTypeModule;
+
+  const turnIntoJsClassicProxy = reference => {
+    return injectQueryParams(reference.url, {
+      as_js_classic: ""
+    });
+  };
+
   return {
     name: "jsenv:as_js_classic_html",
     appliesDuring: "*",
-    transformUrlContent: {
+    init: context => {
+      shouldTransformScriptTypeModule = !context.isSupportedOnCurrentClients("script_type_module") || !context.isSupportedOnCurrentClients("import_dynamic") || !context.isSupportedOnCurrentClients("import_meta");
+    },
+    redirectUrl: {
+      link_href: reference => {
+        if (shouldTransformScriptTypeModule && reference.subtype === "modulepreload") {
+          return turnIntoJsClassicProxy(reference);
+        }
+
+        if (shouldTransformScriptTypeModule && reference.subtype === "preload" && reference.expectedType === "js_module") {
+          return turnIntoJsClassicProxy(reference);
+        }
+
+        return null;
+      },
+      script_src: reference => {
+        if (shouldTransformScriptTypeModule && reference.expectedType === "js_module") {
+          return turnIntoJsClassicProxy(reference);
+        }
+
+        return null;
+      }
+    },
+    finalizeUrlContent: {
       html: async (urlInfo, context) => {
-        const shouldTransformScriptTypeModule = !context.isSupportedOnCurrentClients("script_type_module") || !context.isSupportedOnCurrentClients("import_dynamic") || !context.isSupportedOnCurrentClients("import_meta");
         const htmlAst = parseHtmlString(urlInfo.content);
-        const preloadAsScriptNodes = [];
-        const modulePreloadNodes = [];
-        const moduleScriptNodes = [];
-        const classicScriptNodes = [];
-
-        const visitLinkNodes = node => {
-          const rel = getHtmlNodeAttribute(node, "rel");
-
-          if (rel === "modulepreload") {
-            modulePreloadNodes.push(node);
-            return;
-          }
-
-          if (rel === "preload") {
-            const asValue = getHtmlNodeAttribute(node, "as");
-
-            if (asValue === "script") {
-              preloadAsScriptNodes.push(node);
-            }
-
-            return;
-          }
-        };
-
-        const visitScriptNodes = node => {
-          const {
-            type
-          } = analyzeScriptNode(node);
-
-          if (type === "js_module") {
-            moduleScriptNodes.push(node);
-            return;
-          }
-
-          if (type === "js_classic") {
-            classicScriptNodes.push(node);
-            return;
-          }
-        };
-
+        const mutations = [];
         visitHtmlNodes(htmlAst, {
           link: node => {
-            visitLinkNodes(node);
-          },
-          script: node => {
-            visitScriptNodes(node);
-          }
-        });
-        const actions = [];
-        const jsModuleUrls = [];
-        const convertedUrls = [];
+            const rel = getHtmlNodeAttribute(node, "rel");
 
-        const getReferenceAsJsClassic = async (reference, {
-          // we don't cook resource hints
-          // because they might refer to resource that will be modified during build
-          // It also means something else HAVE to reference that url in order to cook it
-          // so that the preload is deleted by "resync_resource_hints.js" otherwise
-          cookIt = false
-        } = {}) => {
-          const newReferenceProps = {
-            expectedType: "js_classic",
-            specifier: injectQueryParamsIntoSpecifier(reference.specifier, {
-              as_js_classic: ""
-            }),
-            filename: generateJsClassicFilename(reference.url)
-          };
-          const [newReference, newUrlInfo] = context.referenceUtils.update(reference, newReferenceProps);
-          const convertedUrl = newUrlInfo.url;
-
-          if (!convertedUrls.includes(convertedUrl)) {
-            convertedUrls.push(convertedUrl);
-          }
-
-          if (cookIt) {
-            // during dev it means js modules will be cooked before server sends the HTML
-            // it's ok because:
-            // - during dev script_type_module are supported (dev use a recent browser)
-            // - even if browser is not supported it still works it's jus a bit slower
-            //   because it needs to decide if systemjs will be injected or not
-            await context.cook(newUrlInfo, {
-              reference: newReference
-            });
-          }
-
-          return [newReference, newUrlInfo];
-        };
-
-        classicScriptNodes.forEach(classicScriptNode => {
-          const src = getHtmlNodeAttribute(classicScriptNode, "src");
-
-          if (src !== undefined) {
-            const reference = context.referenceUtils.find(ref => ref.generatedSpecifier === src && ref.type === "script_src");
-            const urlObject = new URL(reference.url);
-
-            if (urlObject.searchParams.has("as_js_classic")) {
-              const convertedUrl = urlObject.href;
-              convertedUrls.push(convertedUrl);
-              urlObject.searchParams.delete("as_js_classic");
-              const jsModuleUrl = urlObject.href;
-              jsModuleUrls.push(jsModuleUrl);
-              actions.push(async () => {
-                const urlInfo = context.urlGraph.getUrlInfo(convertedUrl);
-                await context.cook(urlInfo, {
-                  reference
-                });
-              });
-            }
-          }
-        });
-        moduleScriptNodes.forEach(moduleScriptNode => {
-          const src = getHtmlNodeAttribute(moduleScriptNode, "src");
-
-          if (src !== undefined) {
-            const reference = context.referenceUtils.find(ref => ref.generatedSpecifier === src && ref.type === "script_src" && ref.expectedType === "js_module");
-            jsModuleUrls.push(reference.url);
-
-            if (shouldTransformScriptTypeModule) {
-              actions.push(async () => {
-                const [newReference] = await getReferenceAsJsClassic(reference, {
-                  cookIt: true
-                });
-                setHtmlNodeAttributes(moduleScriptNode, {
-                  type: undefined,
-                  src: newReference.generatedSpecifier
-                });
-              });
+            if (rel !== "modulepreload" && rel !== "preload") {
+              return;
             }
 
-            return;
-          }
+            const href = getHtmlNodeAttribute(node, "href");
 
-          if (shouldTransformScriptTypeModule) {
-            const htmlNodeText = getHtmlNodeText(moduleScriptNode);
-            actions.push(async () => {
-              const {
-                line,
-                column,
-                lineEnd,
-                columnEnd,
-                isOriginal
-              } = getHtmlNodePosition(moduleScriptNode, {
-                preferOriginal: true
-              });
-              let inlineScriptUrl = generateInlineContentUrl({
-                url: urlInfo.url,
-                extension: ".js",
-                line,
-                column,
-                lineEnd,
-                columnEnd
-              });
-              const [inlineReference] = context.referenceUtils.foundInline({
-                node: moduleScriptNode,
-                type: "script_src",
-                expectedType: "js_module",
-                isOriginalPosition: isOriginal,
-                // we remove 1 to the line because imagine the following html:
-                // <script>console.log('ok')</script>
-                // -> content starts same line as <script>
-                specifierLine: line - 1,
-                specifierColumn: column,
-                specifier: inlineScriptUrl,
-                contentType: "text/javascript",
-                content: htmlNodeText
-              });
-              const [, newUrlInfo] = await getReferenceAsJsClassic(inlineReference, {
-                cookIt: true
-              });
-              setHtmlNodeText(moduleScriptNode, newUrlInfo.content);
-              setHtmlNodeAttributes(moduleScriptNode, {
-                "type": undefined,
-                "jsenv-plugin-owner": "jsenv:as_js_classic_html",
-                "jsenv-plugin-action": "content_cooked"
-              });
-            });
-          }
-        });
+            if (!href) {
+              return;
+            }
 
-        if (shouldTransformScriptTypeModule) {
-          preloadAsScriptNodes.forEach(preloadAsScriptNode => {
-            const href = getHtmlNodeAttribute(preloadAsScriptNode, "href");
-            const reference = context.referenceUtils.find(ref => ref.generatedSpecifier === href && ref.type === "link_href" && ref.expectedType === undefined);
-            const expectedScriptType = jsModuleUrls.includes(reference.url) ? "module" : "classic";
+            const reference = context.referenceUtils.find(ref => ref.generatedSpecifier === href && ref.type === "link_href" && ref.subtype === rel);
 
-            if (expectedScriptType === "module") {
-              actions.push(async () => {
-                // reference modified by <script type="module"> conversion
-                let newReference;
+            if (!isOrWasExpectingJsModule(reference)) {
+              return;
+            }
 
-                if (reference.next) {
-                  newReference = reference.next;
-                } else {
-                  [newReference] = await getReferenceAsJsClassic(reference);
-                }
-
-                setHtmlNodeAttributes(preloadAsScriptNode, {
-                  href: newReference.generatedSpecifier,
+            if (rel === "modulepreload") {
+              mutations.push(() => {
+                setHtmlNodeAttributes(node, {
+                  rel: "preload",
+                  as: "script",
                   crossorigin: undefined
                 });
               });
             }
-          });
-          modulePreloadNodes.forEach(modulePreloadNode => {
-            const href = getHtmlNodeAttribute(modulePreloadNode, "href");
-            const reference = context.referenceUtils.find(ref => ref.generatedSpecifier === href && ref.type === "link_href" && ref.expectedType === "js_module");
-            actions.push(async () => {
-              let newReference;
 
-              if (reference.next) {
-                newReference = reference.next;
-              } else {
-                [newReference] = await getReferenceAsJsClassic(reference);
+            if (rel === "preload") {
+              mutations.push(() => {
+                setHtmlNodeAttributes(node, {
+                  crossorigin: undefined
+                });
+              });
+            }
+          },
+          script: node => {
+            const {
+              type
+            } = analyzeScriptNode(node);
+
+            if (type !== "js_module") {
+              return;
+            }
+
+            const src = getHtmlNodeAttribute(node, "src");
+
+            if (src) {
+              const reference = context.referenceUtils.find(ref => ref.generatedSpecifier === src && ref.type === "script_src" && ref.subtype === "js_module");
+
+              if (!reference) {
+                return;
               }
 
-              setHtmlNodeAttributes(modulePreloadNode, {
-                rel: "preload",
-                as: "script",
-                href: newReference.generatedSpecifier
+              if (reference.expectedType === "js_classic") {
+                mutations.push(() => {
+                  setHtmlNodeAttributes(node, {
+                    type: undefined
+                  });
+                });
+              }
+            } else if (shouldTransformScriptTypeModule) {
+              mutations.push(() => {
+                setHtmlNodeAttributes(node, {
+                  type: undefined
+                });
               });
-            });
-          });
-        }
-
-        if (actions.length === 0) {
-          return null;
-        }
-
-        await Promise.all(actions.map(action => action()));
+            }
+          }
+        });
 
         if (systemJsInjection) {
-          const needsSystemJs = convertedUrls.some(convertedUrl => context.urlGraph.getUrlInfo(convertedUrl).data.jsClassicFormat === "system");
+          let needsSystemJs = false;
+
+          for (const reference of urlInfo.references) {
+            if (reference.isResourceHint) {
+              // we don't cook resource hints
+              // because they might refer to resource that will be modified during build
+              // It also means something else HAVE to reference that url in order to cook it
+              // so that the preload is deleted by "resync_resource_hints.js" otherwise
+              continue;
+            }
+
+            if (isOrWasExpectingJsModule(reference)) {
+              const dependencyUrlInfo = context.urlGraph.getUrlInfo(reference.url);
+
+              try {
+                await context.cook(dependencyUrlInfo, {
+                  reference
+                });
+
+                if (dependencyUrlInfo.data.jsClassicFormat === "system") {
+                  needsSystemJs = true;
+                  break;
+                }
+              } catch (e) {
+                if (context.scenarios.dev) ; else {
+                  throw e;
+                }
+              }
+            }
+          }
 
           if (needsSystemJs) {
-            const [systemJsReference] = context.referenceUtils.inject({
-              type: "script_src",
-              expectedType: "js_classic",
-              specifier: systemJsClientFileUrl
+            mutations.push(() => {
+              const [systemJsReference] = context.referenceUtils.inject({
+                type: "script_src",
+                expectedType: "js_classic",
+                specifier: systemJsClientFileUrl
+              });
+              injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
+                tagName: "script",
+                src: systemJsReference.generatedSpecifier
+              }), "jsenv:as_js_classic_html");
             });
-            injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
-              tagName: "script",
-              src: systemJsReference.generatedSpecifier
-            }), "jsenv:as_js_classic_html");
           }
         }
 
+        if (mutations.length === 0) {
+          return null;
+        }
+
+        mutations.forEach(mutation => mutation());
         return stringifyHtmlAst(htmlAst);
       }
     }
   };
+};
+
+const isOrWasExpectingJsModule = reference => {
+  if (isExpectingJsModule(reference)) {
+    return true;
+  }
+
+  if (reference.original && isExpectingJsModule(reference.original)) {
+    return true;
+  }
+
+  return false;
+};
+
+const isExpectingJsModule = reference => {
+  return reference.expectedType === "js_module" || reference.searchParams.has("as_js_classic") || reference.searchParams.has("as_js_classic_library");
 };
 
 /*
@@ -10353,12 +10319,8 @@ const jsenvPluginAsJsClassicHtml = ({
  *   transformed into
  *   new SharedWorker("shared_worker.js?as_js_classic", { type: "classic" })
  */
-const jsenvPluginAsJsClassicWorkers = ({
-  generateJsClassicFilename
-}) => {
-  const updateReference = reference => {
-    reference.filename = generateJsClassicFilename(reference.url);
-
+const jsenvPluginAsJsClassicWorkers = () => {
+  const turnIntoJsClassicProxy = reference => {
     reference.mutation = magicSource => {
       magicSource.replace({
         start: reference.typePropertyNode.value.start,
@@ -10367,7 +10329,6 @@ const jsenvPluginAsJsClassicWorkers = ({
       });
     };
 
-    reference.expectedType = "js_classic";
     return injectQueryParams(reference.url, {
       as_js_classic: ""
     });
@@ -10387,7 +10348,7 @@ const jsenvPluginAsJsClassicWorkers = ({
             return null;
           }
 
-          return updateReference(reference);
+          return turnIntoJsClassicProxy(reference);
         }
 
         if (reference.expectedSubtype === "service_worker") {
@@ -10395,7 +10356,7 @@ const jsenvPluginAsJsClassicWorkers = ({
             return null;
           }
 
-          return updateReference(reference);
+          return turnIntoJsClassicProxy(reference);
         }
 
         if (reference.expectedSubtype === "shared_worker") {
@@ -10403,7 +10364,7 @@ const jsenvPluginAsJsClassicWorkers = ({
             return null;
           }
 
-          return updateReference(reference);
+          return turnIntoJsClassicProxy(reference);
         }
 
         return null;
@@ -10672,6 +10633,7 @@ const rollupPluginJsenv = ({
               bundleRelativeUrl: rollupFileInfo.fileName,
               usesImport: rollupFileInfo.imports.length > 0 || rollupFileInfo.dynamicImports.length > 0
             },
+            sourceUrls: Object.keys(rollupFileInfo.modules).map(id => fileUrlConverter.asFileUrl(id)),
             contentType: "text/javascript",
             content: rollupFileInfo.code,
             sourcemap: rollupFileInfo.map
@@ -10955,24 +10917,20 @@ const willBeInsideJsDirectory = ({
 
 const jsenvPluginAsJsClassicLibrary = ({
   systemJsInjection,
-  systemJsClientFileUrl
+  systemJsClientFileUrl,
+  generateJsClassicFilename
 }) => {
+  const markAsJsClassicLibraryProxy = reference => {
+    reference.expectedType = "js_classic";
+    reference.filename = generateJsClassicFilename(reference.url);
+  };
+
   return {
     name: "jsenv:as_js_classic_library",
-    // I think it applies both during dev and build
-    // otherwise it's strange
-    // we'll see as we tests
     appliesDuring: "*",
     redirectUrl: reference => {
-      const urlObject = new URL(reference.url);
-
-      if (urlObject.searchParams.has("as_js_classic_library")) {
-        urlObject.searchParams.delete("as_js_classic_library"); // TODO: inject reference to urlObject.href
-        // in order to get reload during dev
-
-        if (reference.type === "script_src" || reference.type === "js_url_specifier" && reference.subtype !== "system_import_arg" || reference.type === "js_import_export" && reference.subtype !== "import_dynamic") {
-          reference.isEntryPoint = true;
-        }
+      if (reference.searchParams.has("as_js_classic_library")) {
+        markAsJsClassicLibraryProxy(reference);
       }
     },
     fetchUrlContent: async (urlInfo, context) => {
@@ -10993,14 +10951,12 @@ const jsenvPluginAsJsClassicLibrary = ({
 
       await context.cook(jsModuleUrlInfo, {
         reference: jsModuleReference
-      }); // TODO: likely needs to "clean after cook":
-      // delete url info from graph to avoid having it generated in build directory?
-
+      });
       const loader = createUrlGraphLoader(context);
       loader.loadReferencedUrlInfos(jsModuleUrlInfo, {
-        // for dynamic import we ignore them yes
-        // but we must set something so that when they will be cooked
-        // they inherit as_js_classic_library behaviour
+        // we ignore dynamic import to cook lazyly (as browser request the server)
+        // these dynamic imports must inherit "?as_js_classic_library"
+        // This is done inside rollup for convenience
         ignoreDynamicImport: true
       });
       await loader.getAllLoadDonePromise();
@@ -11014,6 +10970,17 @@ const jsenvPluginAsJsClassicLibrary = ({
         }
       });
       const jsModuleBundledUrlInfo = bundleUrlInfos[jsModuleUrlInfo.url];
+
+      if (context.scenarios.dev) {
+        jsModuleBundledUrlInfo.sourceUrls.forEach(sourceUrl => {
+          context.referenceUtils.inject({
+            type: "js_url_specifier",
+            specifier: sourceUrl,
+            isImplicit: true
+          });
+        });
+      }
+
       const {
         content,
         sourcemap
@@ -11027,11 +10994,10 @@ const jsenvPluginAsJsClassicLibrary = ({
         content,
         contentType: "text/javascript",
         type: "js_classic",
-        originalUrl: jsModuleBundledUrlInfo.originalUrl,
-        originalContent: jsModuleBundledUrlInfo.originalContent,
+        originalUrl: jsModuleUrlInfo.originalUrl,
+        originalContent: jsModuleUrlInfo.originalContent,
         sourcemap
-      }; // TODO: ensure urlInfo contains all js modules in dependences
-      // so that is gets properly invalidated when a js module source file changes
+      };
     }
   };
 };
@@ -11049,48 +11015,48 @@ const jsenvPluginAsJsClassicLibrary = ({
  * and prefer to unique identifier based solely on the specifier basename for instance
  */
 const jsenvPluginAsJsClassic = ({
+  jsClassicLibrary,
   jsClassicFallback,
   systemJsInjection
 }) => {
   const systemJsClientFileUrl = new URL("./js/s.js", import.meta.url).href;
-  return [jsenvPluginAsJsClassicLibrary({
+
+  const generateJsClassicFilename = url => {
+    const filename = urlToFilename$1(url);
+    let [basename, extension] = splitFileExtension(filename);
+    const {
+      searchParams
+    } = new URL(url);
+
+    if (searchParams.has("as_json_module") || searchParams.has("as_css_module") || searchParams.has("as_text_module")) {
+      extension = ".js";
+    }
+
+    return `${basename}.nomodule${extension}`;
+  };
+
+  const splitFileExtension = filename => {
+    const dotLastIndex = filename.lastIndexOf(".");
+
+    if (dotLastIndex === -1) {
+      return [filename, ""];
+    }
+
+    return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)];
+  };
+
+  return [...(jsClassicLibrary ? [jsenvPluginAsJsClassicLibrary({
+    systemJsInjection,
+    systemJsClientFileUrl,
+    generateJsClassicFilename
+  })] : []), ...(jsClassicFallback ? [jsenvPluginAsJsClassicHtml({
     systemJsInjection,
     systemJsClientFileUrl
-  }), ...(jsClassicFallback ? [jsenvPluginAsJsClassicConversion({
+  }), jsenvPluginAsJsClassicWorkers(), jsenvPluginAsJsClassicConversion({
     systemJsInjection,
     systemJsClientFileUrl,
-    generateJsClassicFilename
-  }), jsenvPluginAsJsClassicHtml({
-    systemJsInjection,
-    systemJsClientFileUrl,
-    generateJsClassicFilename
-  }), jsenvPluginAsJsClassicWorkers({
     generateJsClassicFilename
   })] : [])];
-};
-
-const generateJsClassicFilename = url => {
-  const filename = urlToFilename$1(url);
-  let [basename, extension] = splitFileExtension$1(filename);
-  const {
-    searchParams
-  } = new URL(url);
-
-  if (searchParams.has("as_json_module") || searchParams.has("as_css_module") || searchParams.has("as_text_module")) {
-    extension = ".js";
-  }
-
-  return `${basename}.nomodule${extension}`;
-};
-
-const splitFileExtension$1 = filename => {
-  const dotLastIndex = filename.lastIndexOf(".");
-
-  if (dotLastIndex === -1) {
-    return [filename, ""];
-  }
-
-  return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)];
 };
 
 const jsenvPluginLeadingSlash = () => {
@@ -14469,7 +14435,7 @@ const jsenvPluginImportAssertions = ({
 
         const {
           searchParams
-        } = new URL(reference.url);
+        } = reference;
 
         if (searchParams.has("as_json_module") || searchParams.has("as_css_module") || searchParams.has("as_text_module")) {
           markAsJsModuleProxy(reference);
@@ -14507,8 +14473,7 @@ const jsenvPluginAsModules = () => {
       }
 
       await context.fetchUrlContent(jsonUrlInfo, {
-        reference: jsonReference,
-        cleanAfterFetch: true
+        reference: jsonReference
       });
 
       if (context.scenarios.dev) {
@@ -14518,6 +14483,8 @@ const jsenvPluginAsModules = () => {
           specifier: jsonReference.url,
           expectedType: "js_module"
         });
+      } else if (context.scenarios.build && jsonUrlInfo.dependents.size === 0) {
+        context.urlGraph.deleteUrlInfo(jsonUrlInfo.url);
       }
 
       const jsonText = JSON.stringify(jsonUrlInfo.content.trim());
@@ -14549,8 +14516,7 @@ const jsenvPluginAsModules = () => {
       }
 
       await context.fetchUrlContent(cssUrlInfo, {
-        reference: cssReference,
-        cleanAfterFetch: true
+        reference: cssReference
       });
 
       if (context.scenarios.dev) {
@@ -14560,6 +14526,8 @@ const jsenvPluginAsModules = () => {
           specifier: cssReference.url,
           expectedType: "js_module"
         });
+      } else if (context.scenarios.build && cssUrlInfo.dependents.size === 0) {
+        context.urlGraph.deleteUrlInfo(cssUrlInfo.url);
       }
 
       const cssText = JS_QUOTES.escapeSpecialChars(cssUrlInfo.content, {
@@ -14598,8 +14566,7 @@ const jsenvPluginAsModules = () => {
       }
 
       await context.fetchUrlContent(textUrlInfo, {
-        reference: textReference,
-        cleanAfterFetch: true
+        reference: textReference
       });
 
       if (context.scenarios.dev) {
@@ -14609,6 +14576,8 @@ const jsenvPluginAsModules = () => {
           specifier: textReference.url,
           expectedType: "js_module"
         });
+      } else if (context.scenarios.build && textUrlInfo.dependents.size === 0) {
+        context.urlGraph.deleteUrlInfo(textUrlInfo.url);
       }
 
       const textPlain = JS_QUOTES.escapeSpecialChars(urlInfo.content, {
@@ -14943,10 +14912,13 @@ const RUNTIME_COMPAT = {
     const featureCompat = getFeatureCompat(feature);
     const runtimeCompat = { ...originalRuntimeCompat
     };
-    Object.keys(featureCompat).forEach(runtimeName => {
-      const firstVersion = originalRuntimeCompat[runtimeName];
-      const secondVersion = featureCompat[runtimeName];
-      runtimeCompat[runtimeName] = firstVersion ? findHighestVersion(firstVersion, secondVersion) : secondVersion;
+    Object.keys(originalRuntimeCompat).forEach(runtimeName => {
+      const secondVersion = featureCompat[runtimeName]; // the version supported by the feature
+
+      if (secondVersion) {
+        const firstVersion = originalRuntimeCompat[runtimeName];
+        runtimeCompat[runtimeName] = findHighestVersion(firstVersion, secondVersion);
+      }
     });
     return runtimeCompat;
   },
@@ -15804,26 +15776,8 @@ const jsenvPluginBabel = ({
 } = {}) => {
   const transformWithBabel = async (urlInfo, context) => {
     const isJsModule = urlInfo.type === "js_module";
-    const isWorker = urlInfo.subtype === "worker";
-    const isServiceWorker = urlInfo.subtype === "service_worker";
-    const isSharedWorker = urlInfo.subtype === "shared_worker";
-    const isWorkerContext = isWorker || isServiceWorker || isSharedWorker;
-    let {
-      clientRuntimeCompat
-    } = context;
 
-    if (isWorker) {
-      clientRuntimeCompat = RUNTIME_COMPAT.add(clientRuntimeCompat, "worker");
-    } else if (isServiceWorker) {
-      // when code is executed by a service worker we can assume
-      // the execution context supports more than the default one
-      // for instance arrow function are supported
-      clientRuntimeCompat = RUNTIME_COMPAT.add(clientRuntimeCompat, "service_worker");
-    } else if (isSharedWorker) {
-      clientRuntimeCompat = RUNTIME_COMPAT.add(clientRuntimeCompat, "shared_worker");
-    }
-
-    const isSupported = feature => RUNTIME_COMPAT.isSupported(clientRuntimeCompat, feature);
+    const isSupported = feature => RUNTIME_COMPAT.isSupported(context.clientRuntimeCompat, feature);
 
     const getImportSpecifier = clientFileUrl => {
       const [reference] = context.referenceUtils.inject({
@@ -15837,7 +15791,6 @@ const jsenvPluginBabel = ({
     const babelPluginStructure = getBaseBabelPluginStructure({
       url: urlInfo.url,
       isSupported,
-      isWorkerContext,
       isJsModule,
       getImportSpecifier
     });
@@ -16015,6 +15968,7 @@ const babelPluginMetadataUsesTopLevelAwait = () => {
 const jsenvPluginTranspilation = ({
   importAssertions = true,
   css = true,
+  jsClassicLibrary = true,
   // build sets jsClassicFallback: false during first step of the build
   // and re-enable it in the second phase (when performing the bundling)
   // so that bundling is applied on js modules THEN it is converted to js classic if needed
@@ -16034,6 +15988,7 @@ const jsenvPluginTranspilation = ({
     getCustomBabelPlugins,
     babelHelpersAsImport
   }), jsenvPluginAsJsClassic({
+    jsClassicLibrary,
     jsClassicFallback,
     systemJsInjection
   }), // topLevelAwait must come after jsenvPluginAsJsClassic because it's related to the module format
@@ -16792,14 +16747,13 @@ const jsenvPluginHmr = () => {
     name: "jsenv:hmr",
     appliesDuring: "dev",
     redirectUrl: reference => {
-      const urlObject = new URL(reference.url);
-
-      if (!urlObject.searchParams.has("hmr")) {
+      if (!reference.searchParams.has("hmr")) {
         reference.data.hmr = false;
         return null;
       }
 
-      reference.data.hmr = true; // "hmr" search param goal is to mark url as enabling hmr:
+      reference.data.hmr = true;
+      const urlObject = new URL(reference.url); // "hmr" search param goal is to mark url as enabling hmr:
       // this goal is achieved when we reach this part of the code
       // We get rid of this params so that urlGraph and other parts of the code
       // recognize the url (it is not considered as a different url)
@@ -16839,6 +16793,7 @@ const jsenvPluginAutoreloadClient = () => {
         const htmlAst = parseHtmlString(htmlUrlInfo.content);
         const [autoreloadClientReference] = context.referenceUtils.inject({
           type: "script_src",
+          subtype: "js_module",
           expectedType: "js_module",
           specifier: autoreloadClientFileUrl
         });
@@ -17304,6 +17259,7 @@ const createPluginController = ({
   flatPlugins.forEach(plugin => {
     pushPlugin(plugin);
   });
+  let lastPluginUsed = null;
   let currentPlugin = null;
   let currentHookName = null;
 
@@ -17320,6 +17276,7 @@ const createPluginController = ({
       startTimestamp = performance$1.now();
     }
 
+    lastPluginUsed = hook.plugin;
     currentPlugin = hook.plugin;
     currentHookName = hook.name;
     let valueReturned = hookFn(info, context);
@@ -17347,6 +17304,7 @@ const createPluginController = ({
       startTimestamp = performance$1.now();
     }
 
+    lastPluginUsed = hook.plugin;
     currentPlugin = hook.plugin;
     currentHookName = hook.name;
     let valueReturned = await hookFn(info, context);
@@ -17369,7 +17327,7 @@ const createPluginController = ({
         const returnValue = callHook(hook, info, context);
 
         if (returnValue && callback) {
-          callback(returnValue);
+          callback(returnValue, hook.plugin);
         }
       }
     }
@@ -17384,7 +17342,7 @@ const createPluginController = ({
         const returnValue = await callAsyncHook(hook, info, context);
 
         if (returnValue && callback) {
-          await callback(returnValue);
+          await callback(returnValue, hook.plugin);
         }
       }, Promise.resolve());
     }
@@ -17449,6 +17407,7 @@ const createPluginController = ({
     callHooksUntil,
     callAsyncHooks,
     callAsyncHooksUntil,
+    getLastPluginUsed: () => lastPluginUsed,
     getCurrentPlugin: () => currentPlugin,
     getCurrentHookName: () => currentHookName
   };
@@ -17627,24 +17586,15 @@ const createUrlInfoTransformer = ({
   sourcemapsSourcesContent,
   sourcemapsRelativeSources,
   urlGraph,
-  clientRuntimeCompat,
   injectSourcemapPlaceholder,
   foundSourcemap
 }) => {
-  const runtimeNames = Object.keys(clientRuntimeCompat);
-  const chromeAsSingleRuntime = runtimeNames.length === 1 && runtimeNames[0] === "chrome";
-
   if (sourcemapsSourcesProtocol === undefined) {
     sourcemapsSourcesProtocol = "file:///";
   }
 
   if (sourcemapsSourcesContent === undefined) {
-    if (chromeAsSingleRuntime && sourcemapsSourcesProtocol === "file:///") {
-      // chrome is able to fetch source when referenced with "file:"
-      sourcemapsSourcesContent = false;
-    } else {
-      sourcemapsSourcesContent = true;
-    }
+    sourcemapsSourcesContent = true;
   }
 
   const sourcemapsEnabled = sourcemaps === "inline" || sourcemaps === "file" || sourcemaps === "programmatic";
@@ -17760,7 +17710,7 @@ const createUrlInfoTransformer = ({
     }
   };
 
-  const applyIntermediateTransformations = async (urlInfo, transformations) => {
+  const applyIntermediateTransformations = (urlInfo, transformations) => {
     if (!transformations) {
       return;
     }
@@ -17787,7 +17737,7 @@ const createUrlInfoTransformer = ({
 
     if (sourcemapsEnabled && sourcemap) {
       const sourcemapNormalized = normalizeSourcemap(urlInfo, sourcemap);
-      const finalSourcemap = await composeTwoSourcemaps(urlInfo.sourcemap, sourcemapNormalized);
+      const finalSourcemap = composeTwoSourcemaps(urlInfo.sourcemap, sourcemapNormalized);
       const finalSourcemapNormalized = normalizeSourcemap(urlInfo, finalSourcemap);
       urlInfo.sourcemap = finalSourcemapNormalized; // A plugin is allowed to modify url content
       // without returning a sourcemap
@@ -17803,9 +17753,9 @@ const createUrlInfoTransformer = ({
     }
   };
 
-  const applyFinalTransformations = async (urlInfo, transformations) => {
+  const applyFinalTransformations = (urlInfo, transformations) => {
     if (transformations) {
-      await applyIntermediateTransformations(urlInfo, transformations);
+      applyIntermediateTransformations(urlInfo, transformations);
     }
 
     if (sourcemapsEnabled && urlInfo.sourcemap && !urlInfo.generatedUrl.startsWith("data:")) {
@@ -18028,6 +17978,11 @@ const createFinalizeUrlContentError = ({
     "url reference trace": reference.trace.message,
     ...detailsFromPluginController(pluginController)
   }));
+
+  if (error && error instanceof Error) {
+    finalizeError.cause = error;
+  }
+
   finalizeError.name = "FINALIZE_URL_CONTENT_ERROR";
   finalizeError.reason = `An error occured during "finalizeUrlContent"`;
   return finalizeError;
@@ -18205,7 +18160,7 @@ const assertFetchedContentCompliance = ({
   } = reference;
 
   if (expectedContentType && urlInfo.contentType !== expectedContentType) {
-    throw new Error(`Unexpected content-type on url: got "${urlInfo.contentType}" instead of "${expectedContentType}"`);
+    throw new Error(`Unexpected content-type on url: "${expectedContentType}" was expected but got "${urlInfo.contentType}`);
   }
 
   const {
@@ -18213,7 +18168,7 @@ const assertFetchedContentCompliance = ({
   } = reference;
 
   if (expectedType && urlInfo.type !== expectedType) {
-    throw new Error(`Unexpected type on url: got "${urlInfo.type}" instead of "${expectedType}"`);
+    throw new Error(`Unexpected type on url: "${expectedType}" was expected but got "${urlInfo.type}"`);
   }
 
   const {
@@ -18305,7 +18260,8 @@ const createKitchen = ({
     contentType,
     assert,
     assertNode,
-    typePropertyNode
+    typePropertyNode,
+    debug = false
   }) => {
     if (typeof specifier !== "string") {
       throw new TypeError(`"specifier" must be a string, got ${specifier}`);
@@ -18354,16 +18310,17 @@ const createKitchen = ({
       assert,
       assertNode,
       typePropertyNode,
-      mutation: null
+      mutation: null,
+      debug
     }; // Object.preventExtensions(reference) // useful to ensure all properties are declared here
 
     return reference;
   };
 
-  const mutateReference = (reference, newReference) => {
+  const updateReference = (reference, newReference) => {
     reference.next = newReference;
+    newReference.original = reference.original || reference;
     newReference.prev = reference;
-    newReference.original = reference.original || reference; // newReference.isEntryPoint = reference.isEntryPoint
   };
 
   const resolveReference = (reference, context = kitchenContext) => {
@@ -18378,25 +18335,48 @@ const createKitchen = ({
         throw new Error(`NO_RESOLVE`);
       }
 
+      if (resolvedUrl.includes("?debug")) {
+        reference.debug = true;
+      }
+
       resolvedUrl = normalizeUrl(resolvedUrl);
+      let referencedUrlObject = new URL(resolvedUrl);
+      let searchParams = referencedUrlObject.searchParams;
       reference.url = resolvedUrl;
-      pluginController.callHooks("redirectUrl", reference, referenceContext, returnValue => {
+      reference.searchParams = searchParams;
+
+      if (reference.debug) {
+        logger.debug(`url resolved by "${pluginController.getLastPluginUsed().name}"
+${ANSI.color(reference.specifier, ANSI.GREY)} ->
+${ANSI.color(reference.url, ANSI.YELLOW)}
+`);
+      }
+
+      pluginController.callHooks("redirectUrl", reference, referenceContext, (returnValue, plugin) => {
         const normalizedReturnValue = normalizeUrl(returnValue);
 
         if (normalizedReturnValue === reference.url) {
           return;
         }
 
-        const previousReference = { ...reference
+        if (reference.debug) {
+          logger.debug(`url redirected by "${plugin.name}"
+${ANSI.color(reference.url, ANSI.GREY)} ->
+${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
+`);
+        }
+
+        const prevReference = { ...reference
         };
+        updateReference(prevReference, reference);
+        referencedUrlObject = new URL(normalizedReturnValue);
+        searchParams = referencedUrlObject.searchParams;
         reference.url = normalizedReturnValue;
-        mutateReference(previousReference, reference);
+        reference.searchParams = searchParams;
       });
-      const referenceUrlObject = new URL(reference.url);
-      reference.searchParams = referenceUrlObject.searchParams;
       reference.generatedUrl = reference.url;
 
-      if (reference.searchParams.has("entry_point")) {
+      if (searchParams.has("entry_point")) {
         reference.isEntryPoint = true;
       }
 
@@ -18410,14 +18390,14 @@ const createKitchen = ({
 
       pluginController.callHooks("transformUrlSearchParams", reference, referenceContext, returnValue => {
         Object.keys(returnValue).forEach(key => {
-          referenceUrlObject.searchParams.set(key, returnValue[key]);
+          searchParams.set(key, returnValue[key]);
         });
-        reference.generatedUrl = normalizeUrl(referenceUrlObject.href);
+        reference.generatedUrl = normalizeUrl(referencedUrlObject.href);
       });
       const returnValue = pluginController.callHooksUntil("formatUrl", reference, referenceContext);
       reference.generatedSpecifier = returnValue || reference.generatedUrl;
       reference.generatedSpecifier = urlSpecifierEncoding.encode(reference);
-      return urlInfo;
+      return [reference, urlInfo];
     } catch (error) {
       throw createResolveUrlError({
         pluginController,
@@ -18440,7 +18420,7 @@ const createKitchen = ({
       urlInfo,
       specifier
     }) => {
-      const sourcemapReference = createReference({
+      const [sourcemapReference, sourcemapUrlInfo] = resolveReference(createReference({
         trace: {
           message: `sourcemap comment placeholder`,
           url: urlInfo.url
@@ -18449,8 +18429,7 @@ const createKitchen = ({
         subtype: urlInfo.contentType === "text/javascript" ? "js" : "css",
         parentUrl: urlInfo.url,
         specifier
-      });
-      const sourcemapUrlInfo = resolveReference(sourcemapReference);
+      }));
       sourcemapUrlInfo.type = "sourcemap";
       return [sourcemapReference, sourcemapUrlInfo];
     },
@@ -18467,15 +18446,14 @@ const createKitchen = ({
         line: specifierLine,
         column: specifierColumn
       });
-      const sourcemapReference = createReference({
+      const [sourcemapReference, sourcemapUrlInfo] = resolveReference(createReference({
         trace: traceFromUrlSite(sourcemapUrlSite),
         type,
         parentUrl: urlInfo.url,
         specifier,
         specifierLine,
         specifierColumn
-      });
-      const sourcemapUrlInfo = resolveReference(sourcemapReference);
+      }));
       sourcemapUrlInfo.type = "sourcemap";
       return [sourcemapReference, sourcemapUrlInfo];
     }
@@ -18483,8 +18461,7 @@ const createKitchen = ({
 
   const fetchUrlContent = async (urlInfo, {
     reference,
-    contextDuringFetch,
-    cleanAfterFetch = false
+    contextDuringFetch
   }) => {
     try {
       const fetchUrlContentReturnValue = await pluginController.callAsyncHooksUntil("fetchUrlContent", urlInfo, contextDuringFetch);
@@ -18572,10 +18549,6 @@ const createKitchen = ({
       context: contextDuringFetch
     });
     await urlInfoTransformer.initTransformations(urlInfo, contextDuringFetch);
-
-    if (cleanAfterFetch && urlInfo.dependents.size === 0 && scenarios.build) {
-      contextDuringFetch.urlGraph.deleteUrlInfo(urlInfo.url);
-    }
   };
 
   kitchenContext.fetchUrlContent = fetchUrlContent;
@@ -18595,13 +18568,11 @@ const createKitchen = ({
     };
 
     context.fetchUrlContent = (urlInfo, {
-      reference,
-      cleanAfterFetch
+      reference
     }) => {
       return fetchUrlContent(urlInfo, {
         reference,
-        contextDuringFetch: context,
-        cleanAfterFetch
+        contextDuringFetch: context
       });
     };
 
@@ -18611,12 +18582,11 @@ const createKitchen = ({
       context.referenceUtils = {
         _references: references,
         add: props => {
-          const reference = createReference({
+          const [reference, referencedUrlInfo] = resolveReference(createReference({
             parentUrl: urlInfo.url,
             ...props
-          });
+          }), context);
           references.push(reference);
-          const referencedUrlInfo = resolveReference(reference, context);
           return [reference, referencedUrlInfo];
         },
         find: predicate => references.find(predicate),
@@ -18669,20 +18639,18 @@ const createKitchen = ({
             throw new Error(`reference do not exists`);
           }
 
-          const previousReference = currentReference;
-          const nextReference = createReference({ ...previousReference,
+          const [newReference, newUrlInfo] = resolveReference(createReference({ ...currentReference,
             ...newReferenceParams
-          });
-          references[index] = nextReference;
-          mutateReference(previousReference, nextReference);
-          const newUrlInfo = resolveReference(nextReference, context);
+          }), context);
+          updateReference(currentReference, newReference);
+          references[index] = newReference;
           const currentUrlInfo = context.urlGraph.getUrlInfo(currentReference.url);
 
           if (currentUrlInfo && currentUrlInfo !== newUrlInfo && currentUrlInfo.dependents.size === 0) {
             context.urlGraph.deleteUrlInfo(currentReference.url);
           }
 
-          return [nextReference, newUrlInfo];
+          return [newReference, newUrlInfo];
         },
         becomesInline: (reference, {
           isOriginalPosition,
@@ -18829,18 +18797,15 @@ const createKitchen = ({
   kitchenContext.cook = cook;
 
   const prepareEntryPoint = params => {
-    const entryReference = createReference(params);
-    entryReference.isEntryPoint = true;
-    const entryUrlInfo = resolveReference(entryReference);
-    return [entryReference, entryUrlInfo];
+    return resolveReference(createReference({ ...params,
+      isEntryPoint: true
+    }));
   };
 
   kitchenContext.prepareEntryPoint = prepareEntryPoint;
 
   const injectReference = params => {
-    const ref = createReference(params);
-    const urlInfo = resolveReference(ref);
-    return [ref, urlInfo];
+    return resolveReference(createReference(params));
   };
 
   kitchenContext.injectReference = injectReference;
@@ -18861,9 +18826,17 @@ const createKitchen = ({
     }
 
     searchParams.delete(searchParam);
-    const referenceWithoutSearchParam = { ...(context.reference.original || context.reference),
+    const originalRef = context.reference.original || context.reference;
+    const referenceWithoutSearchParam = { ...originalRef,
+      original: originalRef,
+      searchParams,
+      data: { ...originalRef.data
+      },
       expectedType,
-      url: urlObject.href
+      specifier: context.reference.specifier.replace(`?${searchParam}`, "").replace(`&${searchParam}`, ""),
+      url: urlObject.href,
+      generatedSpecifier: null,
+      generatedUrl: null
     };
     const urlInfoWithoutSearchParam = context.urlGraph.reuseOrCreateUrlInfo(referenceWithoutSearchParam.url);
 
@@ -18966,7 +18939,7 @@ const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
   Object.assign(urlInfo.timing, reference.timing);
 
   if (reference.injected) {
-    urlInfo.data.injected = true;
+    urlInfo.injected = true;
   }
 
   if (reference.filename) {
@@ -19577,22 +19550,6 @@ const determineDirectoryPath = ({
 };
 
 // https://bundlers.tooling.report/hashing/avoid-cascade/
-const injectGlobalVersionMapping = async ({
-  finalGraphKitchen,
-  finalGraph,
-  versionMappings
-}) => {
-  await Promise.all(GRAPH.map(finalGraph, async urlInfo => {
-    if (urlInfo.isEntryPoint) {
-      await injectVersionMappings({
-        urlInfo,
-        kitchen: finalGraphKitchen,
-        versionMappings
-      });
-    }
-  }));
-};
-
 const injectVersionMappings = async ({
   urlInfo,
   kitchen,
@@ -19604,10 +19561,10 @@ const injectVersionMappings = async ({
     const {
       content,
       sourcemap
-    } = injector(urlInfo, {
+    } = await injector(urlInfo, {
       versionMappings
     });
-    await kitchen.urlInfoTransformer.applyFinalTransformations(urlInfo, {
+    kitchen.urlInfoTransformer.applyFinalTransformations(urlInfo, {
       content,
       sourcemap
     });
@@ -19718,185 +19675,22 @@ const normalizeLineBreaksForBuffer = buffer => {
   return Buffer.from(int32ArrayWithLineBreaksNormalized);
 };
 
-const injectServiceWorkerUrls = async ({
-  finalGraph,
-  finalGraphKitchen,
-  lineBreakNormalization
-}) => {
-  const serviceWorkerEntryUrlInfos = GRAPH.filter(finalGraph, finalUrlInfo => {
-    return finalUrlInfo.subtype === "service_worker" && finalUrlInfo.isEntryPoint;
-  });
-
-  if (serviceWorkerEntryUrlInfos.length === 0) {
-    return;
-  }
-
-  const serviceWorkerUrls = {};
-  GRAPH.forEach(finalGraph, urlInfo => {
-    if (urlInfo.isInline || !urlInfo.shouldHandle) {
-      return;
-    }
-
-    if (!urlInfo.url.startsWith("file:")) {
-      return;
-    }
-
-    if (urlInfo.data.buildUrlIsVersioned) {
-      serviceWorkerUrls[urlInfo.data.buildUrlSpecifier] = {
-        versioned: true
-      };
-      return;
-    }
-
-    if (!urlInfo.data.version) {
-      // when url is not versioned we compute a "version" for that url anyway
-      // so that service worker source still changes and navigator
-      // detect there is a change
-      const versionGenerator = createVersionGenerator();
-      versionGenerator.augmentWithContent({
-        content: urlInfo.content,
-        contentType: urlInfo.contentType,
-        lineBreakNormalization
-      });
-      const version = versionGenerator.generate();
-      urlInfo.data.version = version;
-    }
-
-    serviceWorkerUrls[urlInfo.data.buildUrlSpecifier] = {
-      versioned: false,
-      version: urlInfo.data.version
-    };
-  });
-  await Promise.all(serviceWorkerEntryUrlInfos.map(async serviceWorkerEntryUrlInfo => {
-    const magicSource = createMagicSource(serviceWorkerEntryUrlInfo.content);
-    const urlsWithoutSelf = { ...serviceWorkerUrls
-    };
-    delete urlsWithoutSelf[serviceWorkerEntryUrlInfo.data.buildUrlSpecifier];
-    magicSource.prepend(generateClientCode(urlsWithoutSelf));
-    const {
-      content,
-      sourcemap
-    } = magicSource.toContentAndSourcemap();
-    await finalGraphKitchen.urlInfoTransformer.applyFinalTransformations(serviceWorkerEntryUrlInfo, {
-      content,
-      sourcemap
-    });
-  }));
-};
-
-const generateClientCode = serviceWorkerUrls => {
-  return `
-self.serviceWorkerUrls = ${JSON.stringify(serviceWorkerUrls, null, "  ")};
-`;
-};
-
 /*
- * Update <link rel="preload"> and friends after build (once we know everything)
+ * Build is split in 3 steps:
+ * 1. craft
+ * 2. shape
+ * 3. refine
  *
- * - Used to remove resource hint targeting an url that is no longer used:
- *   - Happens because of import assertions transpilation (file is inlined into JS)
- */
-const resyncResourceHints = async ({
-  logger,
-  finalGraphKitchen,
-  finalGraph,
-  rawUrls,
-  postBuildRedirections
-}) => {
-  const resourceHintActions = [];
-  GRAPH.forEach(finalGraph, urlInfo => {
-    if (urlInfo.type !== "html") {
-      return;
-    }
-
-    resourceHintActions.push(async () => {
-      const htmlAst = parseHtmlString(urlInfo.content, {
-        storeOriginalPositions: false
-      });
-      const actions = [];
-
-      const visitLinkWithHref = (linkNode, href) => {
-        if (!href || href.startsWith("data:")) {
-          return;
-        }
-
-        const rel = getHtmlNodeAttribute(linkNode, "rel");
-        const isresourceHint = ["preconnect", "dns-prefetch", "prefetch", "preload", "modulepreload"].includes(rel);
-
-        if (!isresourceHint) {
-          return;
-        }
-
-        let buildUrl;
-
-        for (const key of Object.keys(rawUrls)) {
-          if (rawUrls[key] === href) {
-            buildUrl = key;
-            break;
-          }
-        }
-
-        if (!buildUrl) {
-          logger.warn(`remove resource hint because cannot find "${href}"`);
-          actions.push(() => {
-            removeHtmlNode(linkNode);
-          });
-          return;
-        }
-
-        buildUrl = postBuildRedirections[buildUrl] || buildUrl;
-        const urlInfo = finalGraph.getUrlInfo(buildUrl);
-
-        if (!urlInfo) {
-          logger.warn(`remove resource hint because cannot find "${buildUrl}" in the graph`);
-          actions.push(() => {
-            removeHtmlNode(linkNode);
-          });
-          return;
-        }
-
-        if (urlInfo.dependents.size === 0) {
-          logger.info(`remove resource hint because "${href}" not used anymore`);
-          actions.push(() => {
-            removeHtmlNode(linkNode);
-          });
-          return;
-        }
-
-        actions.push(() => {
-          setHtmlNodeAttributes(linkNode, {
-            href: urlInfo.data.buildUrlSpecifier
-          });
-        });
-      };
-
-      visitHtmlNodes(htmlAst, {
-        link: node => {
-          const href = getHtmlNodeAttribute(node, "href");
-
-          if (href !== undefined) {
-            visitLinkWithHref(node, href);
-          }
-        }
-      });
-
-      if (actions.length) {
-        actions.forEach(action => action());
-        await finalGraphKitchen.urlInfoTransformer.applyFinalTransformations(urlInfo, {
-          content: stringifyHtmlAst(htmlAst)
-        });
-      }
-    });
-  });
-  await Promise.all(resourceHintActions.map(resourceHintAction => resourceHintAction()));
-};
-
-/*
- * Things hapenning here:
- * 1. load raw build files
- * 2. bundle files
- * 3. optimize files (minify mostly)
- * 4. urls versioning
+ * craft: prepare all the materials
+ *  - resolve, fetch and transform all source files into "rawGraph"
+ * shape: this step can drastically change url content and their relationships
+ *  - bundling
+ *  - optimizations (minification)
+ * refine: perform minor changes on the url contents
+ *  - cleaning html
+ *  - url versioning
+ *  - ressource hints
+ *  - injecting urls into service workers
  */
 // "we can keep <script type="module"> intact":
 // so script_type_module + dynamic_import + import_meta
@@ -20004,7 +19798,6 @@ const build = async ({
       logLevel
     });
     const buildOperation = Abort.startOperation();
-    const infoLogsAreDisabled = !loggerToLevels(logger).info;
     buildOperation.addAbortSignal(signal);
     const entryPointKeys = Object.keys(entryPoints);
 
@@ -20017,14 +19810,16 @@ build ${entryPointKeys.length} entry points`);
     }
 
     const useExplicitJsClassicConversion = entryPointKeys.some(key => entryPoints[key].includes("?as_js_classic"));
+    const rawRedirections = new Map();
+    const bundleRedirections = new Map();
+    const bundleInternalRedirections = new Map();
+    const finalRedirections = new Map();
+    const versioningRedirections = new Map();
+    const entryUrls = [];
     const rawGraph = createUrlGraph();
-    const prebuildTask = createTaskLog("prebuild", {
-      disabled: infoLogsAreDisabled
-    });
-    const prebuildRedirections = new Map();
     const rawGraphKitchen = createKitchen({
       signal,
-      logger,
+      logLevel,
       rootDirectoryUrl,
       urlGraph: rawGraph,
       scenarios: {
@@ -20035,7 +19830,7 @@ build ${entryPointKeys.length} entry points`);
         appliesDuring: "build",
         fetchUrlContent: (urlInfo, context) => {
           if (context.reference.original) {
-            prebuildRedirections.set(context.reference.original.url, context.reference.url);
+            rawRedirections.set(context.reference.original.url, context.reference.url);
           }
         },
         formatUrl: reference => {
@@ -20065,209 +19860,33 @@ build ${entryPointKeys.length} entry points`);
       writeGeneratedFiles,
       outDirectoryUrl: new URL(`.jsenv/build/`, rootDirectoryUrl)
     });
-    const entryUrls = [];
-
-    try {
-      if (writeGeneratedFiles) {
-        await ensureEmptyDirectory(new URL(`.jsenv/build/`, rootDirectoryUrl));
-      }
-
-      const rawUrlGraphLoader = createUrlGraphLoader(rawGraphKitchen.kitchenContext);
-      Object.keys(entryPoints).forEach(key => {
-        const [entryReference, entryUrlInfo] = rawGraphKitchen.kitchenContext.prepareEntryPoint({
-          trace: {
-            message: `"${key}" in entryPoints parameter`
-          },
-          parentUrl: rootDirectoryUrl,
-          type: "entry_point",
-          specifier: key
-        });
-        entryUrls.push(entryUrlInfo.url);
-        entryUrlInfo.filename = entryPoints[key];
-        rawUrlGraphLoader.load(entryUrlInfo, {
-          reference: entryReference
-        });
-      });
-      await rawUrlGraphLoader.getAllLoadDonePromise(buildOperation);
-    } catch (e) {
-      prebuildTask.fail();
-      throw e;
-    }
-
-    prebuildTask.done();
     const buildUrlsGenerator = createBuilUrlsGenerator({
       buildDirectoryUrl
     });
-    const rawUrls = {};
-    const bundleRedirections = {};
-    const buildUrls = {};
-    const bundleUrlInfos = {};
-    const bundlers = {};
-    rawGraphKitchen.pluginController.plugins.forEach(plugin => {
-      const bundle = plugin.bundle;
+    const buildToRawUrls = {}; // rename "buildDirectoryRedirections"?
 
-      if (!bundle) {
-        return;
+    const associateBuildUrlAndRawUrl = (buildUrl, rawUrl, reason) => {
+      if (urlIsInsideOf(rawUrl, buildDirectoryUrl)) {
+        throw new Error(`raw url must be inside rawGraph, got ${rawUrl}`);
       }
 
-      if (typeof bundle !== "object") {
-        throw new Error(`bundle must be an object, found "${bundle}" on plugin named "${plugin.name}"`);
-      }
-
-      Object.keys(bundle).forEach(type => {
-        const bundleFunction = bundle[type];
-
-        if (!bundleFunction) {
-          return;
-        }
-
-        const bundlerForThatType = bundlers[type];
-
-        if (bundlerForThatType) {
-          // first plugin to define a bundle hook wins
-          return;
-        }
-
-        bundlers[type] = {
-          plugin,
-          bundleFunction: bundle[type],
-          urlInfos: []
-        };
-      });
-    });
-
-    const addToBundlerIfAny = rawUrlInfo => {
-      const bundler = bundlers[rawUrlInfo.type];
-
-      if (bundler) {
-        bundler.urlInfos.push(rawUrlInfo);
-        return;
-      }
+      logger.debug(`build url generated (${reason})
+${ANSI.color(rawUrl, ANSI.GREY)} ->
+${ANSI.color(buildUrl, ANSI.MAGENTA)}
+`);
+      buildToRawUrls[buildUrl] = rawUrl;
     };
 
-    GRAPH.forEach(rawGraph, rawUrlInfo => {
-      if (rawUrlInfo.isEntryPoint) {
-        addToBundlerIfAny(rawUrlInfo);
-
-        if (rawUrlInfo.type === "html") {
-          rawUrlInfo.dependencies.forEach(dependencyUrl => {
-            const dependencyUrlInfo = rawGraph.getUrlInfo(dependencyUrl);
-
-            if (dependencyUrlInfo.isInline) {
-              if (dependencyUrlInfo.type === "js_module") {
-                // bundle inline script type module deps
-                dependencyUrlInfo.references.forEach(inlineScriptRef => {
-                  if (inlineScriptRef.type === "js_import_export") {
-                    const inlineUrlInfo = rawGraph.getUrlInfo(inlineScriptRef.url);
-                    addToBundlerIfAny(inlineUrlInfo);
-                  }
-                });
-              } // inline content cannot be bundled
-
-
-              return;
-            }
-
-            addToBundlerIfAny(dependencyUrlInfo);
-          });
-          rawUrlInfo.references.forEach(reference => {
-            if (reference.isResourceHint && reference.expectedType === "js_module") {
-              const referencedUrlInfo = rawGraph.getUrlInfo(reference.url);
-
-              if (referencedUrlInfo && // something else than the resource hint is using this url
-              referencedUrlInfo.dependents.size > 0) {
-                addToBundlerIfAny(referencedUrlInfo);
-              }
-            }
-          });
-          return;
-        }
-      } // File referenced with new URL('./file.js', import.meta.url)
-      // are entry points that can be bundled
-      // For instance we will bundle service worker/workers detected like this
-
-
-      if (rawUrlInfo.type === "js_module") {
-        rawUrlInfo.references.forEach(reference => {
-          if (reference.type === "js_url_specifier") {
-            const urlInfo = rawGraph.getUrlInfo(reference.url);
-            addToBundlerIfAny(urlInfo);
-          }
-        });
-      }
-    });
-    const bundleInternalRedirections = {};
-    await Object.keys(bundlers).reduce(async (previous, type) => {
-      await previous;
-      const bundler = bundlers[type];
-      const urlInfosToBundle = bundler.urlInfos;
-
-      if (urlInfosToBundle.length === 0) {
-        return;
-      }
-
-      const bundleTask = createTaskLog(`bundle "${type}"`, {
-        disabled: infoLogsAreDisabled
-      });
-
-      try {
-        const bundlerGeneratedUrlInfos = await rawGraphKitchen.pluginController.callAsyncHook({
-          plugin: bundler.plugin,
-          hookName: "bundle",
-          value: bundler.bundleFunction
-        }, urlInfosToBundle, { ...rawGraphKitchen.kitchenContext,
-          buildDirectoryUrl
-        });
-        Object.keys(bundlerGeneratedUrlInfos).forEach(url => {
-          const rawUrlInfo = rawGraph.getUrlInfo(url);
-          const bundlerGeneratedUrlInfo = bundlerGeneratedUrlInfos[url];
-          const bundleUrlInfo = {
-            type,
-            subtype: rawUrlInfo ? rawUrlInfo.subtype : undefined,
-            isEntryPoint: rawUrlInfo ? rawUrlInfo.isEntryPoint : undefined,
-            filename: rawUrlInfo ? rawUrlInfo.filename : undefined,
-            originalUrl: rawUrlInfo ? rawUrlInfo.originalUrl : undefined,
-            originalContent: rawUrlInfo ? rawUrlInfo.originalContent : undefined,
-            ...bundlerGeneratedUrlInfo,
-            data: { ...(rawUrlInfo ? rawUrlInfo.data : {}),
-              ...bundlerGeneratedUrlInfo.data,
-              fromBundle: true
-            }
-          };
-          const buildUrl = buildUrlsGenerator.generate(url, {
-            urlInfo: bundleUrlInfo
-          });
-          bundleRedirections[url] = buildUrl;
-          rawUrls[buildUrl] = url;
-          bundleUrlInfos[buildUrl] = bundleUrlInfo;
-
-          if (buildUrl.includes("?")) {
-            bundleUrlInfos[asUrlWithoutSearch(buildUrl)] = bundleUrlInfo;
-          }
-
-          if (bundlerGeneratedUrlInfo.data.bundleRelativeUrl) {
-            const urlForBundler = new URL(bundlerGeneratedUrlInfo.data.bundleRelativeUrl, buildDirectoryUrl).href;
-
-            if (urlForBundler !== buildUrl) {
-              bundleInternalRedirections[urlForBundler] = buildUrl;
-            }
-          }
-        });
-      } catch (e) {
-        bundleTask.fail();
-        throw e;
-      }
-
-      bundleTask.done();
-    }, Promise.resolve());
+    const buildUrls = new Map();
+    const bundleUrlInfos = {};
+    const bundlers = {};
+    const finalGraph = createUrlGraph();
     const urlAnalysisPlugin = jsenvPluginUrlAnalysis({
       rootDirectoryUrl,
       ...urlAnalysis
     });
-    const postBuildRedirections = {};
-    const finalGraph = createUrlGraph();
     const finalGraphKitchen = createKitchen({
-      logger,
+      logLevel,
       rootDirectoryUrl,
       urlGraph: finalGraph,
       scenarios: {
@@ -20275,101 +19894,52 @@ build ${entryPointKeys.length} entry points`);
       },
       runtimeCompat,
       plugins: [urlAnalysisPlugin, jsenvPluginAsJsClassic({
+        jsClassicLibrary: false,
         jsClassicFallback: true,
         systemJsInjection: true
       }), jsenvPluginInline({
         fetchInlineUrls: false
       }), {
-        name: "jsenv:postbuild",
+        name: "jsenv:build",
         appliesDuring: "build",
         resolveUrl: reference => {
-          const performInternalRedirections = url => {
-            const prebuildRedirection = prebuildRedirections.get(url);
-
-            if (prebuildRedirection) {
-              logger.debug(`\nprebuild redirection\n${url} ->\n${prebuildRedirection}\n`);
-              url = prebuildRedirection;
+          const getUrl = () => {
+            if (reference.type === "filesystem") {
+              const parentRawUrl = buildToRawUrls[reference.parentUrl];
+              const baseUrl = ensurePathnameTrailingSlash(parentRawUrl);
+              return new URL(reference.specifier, baseUrl).href;
             }
 
-            const bundleRedirection = bundleRedirections[url];
-
-            if (bundleRedirection) {
-              logger.debug(`\nbundler redirection\n${url} ->\n${bundleRedirection}\n`);
-              url = bundleRedirection;
+            if (reference.specifier[0] === "/") {
+              return new URL(reference.specifier.slice(1), buildDirectoryUrl).href;
             }
 
-            const bundleInternalRedirection = bundleInternalRedirections[url];
-
-            if (bundleInternalRedirection) {
-              logger.debug(`\nbundler internal redirection\n${url} ->\n${bundleInternalRedirection}\n`);
-              url = bundleInternalRedirection;
-            }
-
-            return url;
+            return new URL(reference.specifier, reference.baseUrl || reference.parentUrl).href;
           };
 
-          if (reference.type === "filesystem") {
-            const parentRawUrl = rawUrls[reference.parentUrl];
-            const baseUrl = ensurePathnameTrailingSlash(parentRawUrl);
-            return performInternalRedirections(new URL(reference.specifier, baseUrl).href);
-          }
+          let url = getUrl(); //  url = rawRedirections.get(url) || url
 
-          if (reference.specifier[0] === "/") {
-            return performInternalRedirections(new URL(reference.specifier.slice(1), buildDirectoryUrl).href);
-          }
-
-          return performInternalRedirections(new URL(reference.specifier, reference.baseUrl || reference.parentUrl).href);
+          url = bundleRedirections.get(url) || url;
+          url = bundleInternalRedirections.get(url) || url;
+          return url;
         },
         // redirecting urls into the build directory
         redirectUrl: reference => {
           if (!reference.url.startsWith("file:")) {
             return null;
+          } // referenced by resource hint
+          // -> keep it untouched, it will be handled by "resync_resource_hints"
+
+
+          if (reference.isResourceHint) {
+            return reference.original ? reference.original.url : null;
           } // already a build url
 
 
-          const rawUrl = rawUrls[reference.url];
+          const rawUrl = buildToRawUrls[reference.url];
 
           if (rawUrl) {
             return reference.url;
-          } // from "js_module_as_js_classic":
-          //   - injecting "?as_js_classic" for the first time
-          //   - injecting "?as_js_classic" because the parentUrl has it
-
-
-          if (reference.original) {
-            const referenceOriginalUrl = reference.original.url;
-            let originalBuildUrl;
-
-            if (urlIsInsideOf(referenceOriginalUrl, buildDirectoryUrl)) {
-              originalBuildUrl = referenceOriginalUrl;
-            } else {
-              originalBuildUrl = Object.keys(rawUrls).find(key => rawUrls[key] === referenceOriginalUrl);
-            }
-
-            let rawUrl;
-
-            if (urlIsInsideOf(reference.url, buildDirectoryUrl)) {
-              const originalBuildUrl = postBuildRedirections[referenceOriginalUrl];
-              rawUrl = originalBuildUrl ? rawUrls[originalBuildUrl] : reference.url;
-            } else {
-              rawUrl = reference.url;
-            } // the url info do not exists yet (it will be created after this "normalize" hook)
-            // And the content will be generated when url is cooked by url graph loader.
-            // Here we just want to reserve an url for that file
-
-
-            const buildUrl = buildUrlsGenerator.generate(rawUrl, {
-              urlInfo: {
-                data: reference.data,
-                isEntryPoint: reference.isEntryPoint || isWebWorkerEntryPointReference(reference),
-                type: reference.expectedType,
-                subtype: reference.expectedSubtype,
-                filename: reference.filename
-              }
-            });
-            postBuildRedirections[originalBuildUrl] = buildUrl;
-            rawUrls[buildUrl] = rawUrl;
-            return buildUrl;
           }
 
           if (reference.isInline) {
@@ -20401,7 +19971,44 @@ build ${entryPointKeys.length} entry points`);
               urlInfo: rawUrlInfo,
               parentUrlInfo
             });
-            rawUrls[buildUrl] = rawUrlInfo.url;
+            associateBuildUrlAndRawUrl(buildUrl, rawUrlInfo.url, "inline content");
+            return buildUrl;
+          } // from "js_module_as_js_classic":
+          //   - injecting "?as_js_classic" for the first time
+          //   - injecting "?as_js_classic" because the parentUrl has it
+
+
+          if (reference.original) {
+            const urlBeforeRedirect = reference.original.url;
+            const urlAfterRedirect = reference.url;
+            const isEntryPoint = reference.isEntryPoint || isWebWorkerEntryPointReference(reference); // the url info do not exists yet (it will be created after this "redirectUrl" hook)
+            // And the content will be generated when url is cooked by url graph loader.
+            // Here we just want to reserve an url for that file
+
+            const urlInfo = {
+              data: reference.data,
+              isEntryPoint,
+              type: reference.expectedType,
+              subtype: reference.expectedSubtype,
+              filename: reference.filename
+            };
+
+            if (urlIsInsideOf(urlBeforeRedirect, buildDirectoryUrl)) {
+              // the redirection happened on a build url, happens due to:
+              // 1. bundling
+              const buildUrl = buildUrlsGenerator.generate(urlAfterRedirect, {
+                urlInfo
+              });
+              finalRedirections.set(urlBeforeRedirect, buildUrl);
+              return buildUrl;
+            }
+
+            const rawUrl = urlAfterRedirect;
+            const buildUrl = buildUrlsGenerator.generate(rawUrl, {
+              urlInfo
+            });
+            finalRedirections.set(urlBeforeRedirect, buildUrl);
+            associateBuildUrlAndRawUrl(buildUrl, rawUrl, "redirected during postbuild");
             return buildUrl;
           } // from "js_module_as_js_classic":
           //   - to inject "s.js"
@@ -20414,7 +20021,8 @@ build ${entryPointKeys.length} entry points`);
                 type: "js_classic"
               }
             });
-            rawUrls[buildUrl] = reference.url;
+            associateBuildUrlAndRawUrl(buildUrl, reference.url, "injected during postbuild");
+            finalRedirections.set(buildUrl, buildUrl);
             return buildUrl;
           }
 
@@ -20422,14 +20030,16 @@ build ${entryPointKeys.length} entry points`);
           const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl); // files from root directory but not given to rollup nor postcss
 
           if (rawUrlInfo) {
-            const buildUrl = buildUrlsGenerator.generate(reference.url, {
+            const referencedUrlObject = new URL(reference.url);
+            referencedUrlObject.searchParams.delete("as_js_classic_library");
+            const buildUrl = buildUrlsGenerator.generate(referencedUrlObject.href, {
               urlInfo: rawUrlInfo,
               parentUrlInfo
             });
-            rawUrls[buildUrl] = rawUrlInfo.url;
+            associateBuildUrlAndRawUrl(buildUrl, rawUrlInfo.url, "raw file");
 
             if (buildUrl.includes("?")) {
-              rawUrls[asUrlWithoutSearch(buildUrl)] = rawUrlInfo.url;
+              associateBuildUrlAndRawUrl(asUrlWithoutSearch(buildUrl), rawUrlInfo.url, "raw file");
             }
 
             return buildUrl;
@@ -20460,30 +20070,35 @@ build ${entryPointKeys.length} entry points`);
             return null;
           }
 
+          if (reference.isResourceHint) {
+            return null;
+          }
+
           if (!urlIsInsideOf(reference.generatedUrl, buildDirectoryUrl)) {
             throw new Error(`urls should be inside build directory at this stage, found "${reference.url}"`);
           }
 
-          if (reference.isResourceHint) {
-            // return the raw url, we will resync at the end
-            return rawUrls[reference.url];
-          } // remove eventual search params and hash
-
-
-          const urlUntilPathname = asUrlUntilPathname(reference.generatedUrl);
+          const generatedUrlObject = new URL(reference.generatedUrl);
+          generatedUrlObject.searchParams.delete("as_js_classic");
+          generatedUrlObject.searchParams.delete("as_js_classic_library");
+          generatedUrlObject.searchParams.delete("as_json_module");
+          generatedUrlObject.searchParams.delete("as_css_module");
+          generatedUrlObject.searchParams.delete("as_text_module");
+          generatedUrlObject.hash = "";
+          const generatedUrl = generatedUrlObject.href;
           let specifier;
 
           if (baseUrl === "./") {
-            const relativeUrl = urlToRelativeUrl(urlUntilPathname, reference.parentUrl === rootDirectoryUrl ? buildDirectoryUrl : reference.parentUrl); // ensure "./" on relative url (otherwise it could be a "bare specifier")
+            const relativeUrl = urlToRelativeUrl(generatedUrl, reference.parentUrl === rootDirectoryUrl ? buildDirectoryUrl : reference.parentUrl); // ensure "./" on relative url (otherwise it could be a "bare specifier")
 
             specifier = relativeUrl[0] === "." ? relativeUrl : `./${relativeUrl}`;
           } else {
             // if a file is in the same directory we could prefer the relative notation
             // but to keep things simple let's keep the "absolutely relative" to baseUrl for now
-            specifier = `${baseUrl}${urlToRelativeUrl(urlUntilPathname, buildDirectoryUrl)}`;
+            specifier = `${baseUrl}${urlToRelativeUrl(generatedUrl, buildDirectoryUrl)}`;
           }
 
-          buildUrls[specifier] = reference.generatedUrl;
+          buildUrls.set(specifier, reference.generatedUrl);
           return specifier;
         },
         fetchUrlContent: async (finalUrlInfo, context) => {
@@ -20491,18 +20106,21 @@ build ${entryPointKeys.length} entry points`);
             const bundleUrlInfo = bundleUrlInfos[url];
 
             if (bundleUrlInfo) {
-              logger.debug(`fetching from bundle ${url}`);
+              // logger.debug(`fetching from bundle ${url}`)
               return bundleUrlInfo;
             }
 
-            const rawUrl = rawUrls[url] || url;
+            const rawUrl = buildToRawUrls[url] || url;
             const rawUrlInfo = rawGraph.getUrlInfo(rawUrl);
 
             if (!rawUrlInfo) {
-              throw new Error(`Cannot find url`);
-            }
+              throw new Error(createDetailedMessage$1(`Cannot find url`, {
+                url,
+                "raw urls": Object.values(buildToRawUrls),
+                "build urls": Object.keys(buildToRawUrls)
+              }));
+            } // logger.debug(`fetching from raw graph ${url}`)
 
-            logger.debug(`fetching from raw graph ${url}`);
 
             if (rawUrlInfo.isInline) {
               // Inline content, such as <script> inside html, is transformed during the previous phase.
@@ -20519,29 +20137,36 @@ build ${entryPointKeys.length} entry points`);
             }
 
             return rawUrlInfo;
-          }; // reference injected during "postbuild":
+          };
+
+          const {
+            reference
+          } = context; // reference injected during "postbuild":
           // - happens for "as_js_classic" injecting "s.js"
 
-
-          if (context.reference.injected) {
+          if (reference.injected) {
             const [ref, rawUrlInfo] = rawGraphKitchen.injectReference({
-              type: context.reference.type,
-              expectedType: context.reference.expectedType,
-              expectedSubtype: context.reference.expectedSubtype,
-              parentUrl: rawUrls[context.reference.parentUrl],
-              specifier: context.reference.specifier,
+              type: reference.type,
+              expectedType: reference.expectedType,
+              expectedSubtype: reference.expectedSubtype,
+              parentUrl: buildToRawUrls[reference.parentUrl],
+              specifier: reference.specifier,
               injected: true
             });
             await rawGraphKitchen.cook(rawUrlInfo, {
               reference: ref
             });
             return rawUrlInfo;
+          }
+
+          if (reference.isInline) {
+            return fromBundleOrRawGraph(reference.url);
           } // reference updated during "postbuild":
           // - happens for "as_js_classic"
 
 
-          if (context.reference.original) {
-            return fromBundleOrRawGraph(context.reference.original.url);
+          if (reference.original) {
+            return fromBundleOrRawGraph(reference.original.url);
           }
 
           return fromBundleOrRawGraph(finalUrlInfo.url);
@@ -20561,116 +20186,723 @@ build ${entryPointKeys.length} entry points`);
       writeGeneratedFiles,
       outDirectoryUrl: new URL(".jsenv/postbuild/", rootDirectoryUrl)
     });
-    const buildTask = createTaskLog("build", {
-      disabled: infoLogsAreDisabled
-    });
-    const postBuildEntryUrls = [];
+    const finalEntryUrls = [];
 
-    try {
-      if (writeGeneratedFiles) {
-        await ensureEmptyDirectory(new URL(`.jsenv/postbuild/`, rootDirectoryUrl));
+    {
+      const loadTask = createTaskLog("load", {
+        disabled: logger.levels.debug || !logger.levels.info
+      });
+
+      try {
+        if (writeGeneratedFiles) {
+          await ensureEmptyDirectory(new URL(`.jsenv/build/`, rootDirectoryUrl));
+        }
+
+        const rawUrlGraphLoader = createUrlGraphLoader(rawGraphKitchen.kitchenContext);
+        Object.keys(entryPoints).forEach(key => {
+          const [entryReference, entryUrlInfo] = rawGraphKitchen.kitchenContext.prepareEntryPoint({
+            trace: {
+              message: `"${key}" in entryPoints parameter`
+            },
+            parentUrl: rootDirectoryUrl,
+            type: "entry_point",
+            specifier: key
+          });
+          entryUrls.push(entryUrlInfo.url);
+          entryUrlInfo.filename = entryPoints[key];
+          rawUrlGraphLoader.load(entryUrlInfo, {
+            reference: entryReference
+          });
+        });
+        await rawUrlGraphLoader.getAllLoadDonePromise(buildOperation);
+      } catch (e) {
+        loadTask.fail();
+        throw e;
       }
 
-      const finalUrlGraphLoader = createUrlGraphLoader(finalGraphKitchen.kitchenContext);
-      entryUrls.forEach(entryUrl => {
-        const [postBuildEntryReference, postBuildEntryUrlInfo] = finalGraphKitchen.kitchenContext.prepareEntryPoint({
-          trace: {
-            message: `entryPoint`
-          },
-          parentUrl: rootDirectoryUrl,
-          type: "entry_point",
-          specifier: entryUrl
-        });
-        postBuildEntryUrls.push(postBuildEntryUrlInfo.url);
-        finalUrlGraphLoader.load(postBuildEntryUrlInfo, {
-          reference: postBuildEntryReference
-        });
-      });
-      await finalUrlGraphLoader.getAllLoadDonePromise(buildOperation);
-    } catch (e) {
-      buildTask.fail();
-      throw e;
+      loadTask.done();
     }
 
-    buildTask.done();
-    logger.debug(`graph urls pre-versioning:
-${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`);
+    {
+      {
+        rawGraphKitchen.pluginController.plugins.forEach(plugin => {
+          const bundle = plugin.bundle;
 
-    if (versioning) {
-      await applyUrlVersioning({
-        buildOperation,
-        logger,
-        infoLogsAreDisabled,
-        buildDirectoryUrl,
-        rawUrls,
-        buildUrls,
-        baseUrl,
-        postBuildEntryUrls,
-        sourcemaps,
-        sourcemapsSourcesContent,
-        runtimeCompat,
-        writeGeneratedFiles,
-        rawGraph,
-        urlAnalysisPlugin,
-        finalGraph,
-        finalGraphKitchen,
-        lineBreakNormalization,
-        versioningMethod
-      });
+          if (!bundle) {
+            return;
+          }
+
+          if (typeof bundle !== "object") {
+            throw new Error(`bundle must be an object, found "${bundle}" on plugin named "${plugin.name}"`);
+          }
+
+          Object.keys(bundle).forEach(type => {
+            const bundleFunction = bundle[type];
+
+            if (!bundleFunction) {
+              return;
+            }
+
+            const bundlerForThatType = bundlers[type];
+
+            if (bundlerForThatType) {
+              // first plugin to define a bundle hook wins
+              return;
+            }
+
+            bundlers[type] = {
+              plugin,
+              bundleFunction: bundle[type],
+              urlInfos: []
+            };
+          });
+        });
+
+        const addToBundlerIfAny = rawUrlInfo => {
+          const bundler = bundlers[rawUrlInfo.type];
+
+          if (bundler) {
+            bundler.urlInfos.push(rawUrlInfo);
+            return;
+          }
+        };
+
+        GRAPH.forEach(rawGraph, rawUrlInfo => {
+          if (rawUrlInfo.isEntryPoint) {
+            addToBundlerIfAny(rawUrlInfo);
+
+            if (rawUrlInfo.type === "html") {
+              rawUrlInfo.dependencies.forEach(dependencyUrl => {
+                const dependencyUrlInfo = rawGraph.getUrlInfo(dependencyUrl);
+
+                if (dependencyUrlInfo.isInline) {
+                  if (dependencyUrlInfo.type === "js_module") {
+                    // bundle inline script type module deps
+                    dependencyUrlInfo.references.forEach(inlineScriptRef => {
+                      if (inlineScriptRef.type === "js_import_export") {
+                        const inlineUrlInfo = rawGraph.getUrlInfo(inlineScriptRef.url);
+                        addToBundlerIfAny(inlineUrlInfo);
+                      }
+                    });
+                  } // inline content cannot be bundled
+
+
+                  return;
+                }
+
+                addToBundlerIfAny(dependencyUrlInfo);
+              });
+              rawUrlInfo.references.forEach(reference => {
+                if (reference.isResourceHint && reference.expectedType === "js_module") {
+                  const referencedUrlInfo = rawGraph.getUrlInfo(reference.url);
+
+                  if (referencedUrlInfo && // something else than the resource hint is using this url
+                  referencedUrlInfo.dependents.size > 0) {
+                    addToBundlerIfAny(referencedUrlInfo);
+                  }
+                }
+              });
+              return;
+            }
+          } // File referenced with new URL('./file.js', import.meta.url)
+          // are entry points that can be bundled
+          // For instance we will bundle service worker/workers detected like this
+
+
+          if (rawUrlInfo.type === "js_module") {
+            rawUrlInfo.references.forEach(reference => {
+              if (reference.type === "js_url_specifier") {
+                const urlInfo = rawGraph.getUrlInfo(reference.url);
+                addToBundlerIfAny(urlInfo);
+              }
+            });
+          }
+        });
+        await Object.keys(bundlers).reduce(async (previous, type) => {
+          await previous;
+          const bundler = bundlers[type];
+          const urlInfosToBundle = bundler.urlInfos;
+
+          if (urlInfosToBundle.length === 0) {
+            return;
+          }
+
+          const bundleTask = createTaskLog(`bundle "${type}"`, {
+            disabled: logger.levels.debug || !logger.levels.info
+          });
+
+          try {
+            const bundlerGeneratedUrlInfos = await rawGraphKitchen.pluginController.callAsyncHook({
+              plugin: bundler.plugin,
+              hookName: "bundle",
+              value: bundler.bundleFunction
+            }, urlInfosToBundle, { ...rawGraphKitchen.kitchenContext,
+              buildDirectoryUrl
+            });
+            Object.keys(bundlerGeneratedUrlInfos).forEach(url => {
+              const rawUrlInfo = rawGraph.getUrlInfo(url);
+              const bundlerGeneratedUrlInfo = bundlerGeneratedUrlInfos[url];
+              const bundleUrlInfo = {
+                type,
+                subtype: rawUrlInfo ? rawUrlInfo.subtype : undefined,
+                isEntryPoint: rawUrlInfo ? rawUrlInfo.isEntryPoint : undefined,
+                filename: rawUrlInfo ? rawUrlInfo.filename : undefined,
+                originalUrl: rawUrlInfo ? rawUrlInfo.originalUrl : undefined,
+                originalContent: rawUrlInfo ? rawUrlInfo.originalContent : undefined,
+                ...bundlerGeneratedUrlInfo,
+                data: { ...(rawUrlInfo ? rawUrlInfo.data : {}),
+                  ...bundlerGeneratedUrlInfo.data,
+                  fromBundle: true
+                }
+              };
+
+              if (bundlerGeneratedUrlInfo.sourceUrls) {
+                bundlerGeneratedUrlInfo.sourceUrls.forEach(sourceUrl => {
+                  const rawUrlInfo = rawGraph.getUrlInfo(sourceUrl);
+
+                  if (rawUrlInfo) {
+                    rawUrlInfo.data.bundled = true;
+                  }
+                });
+              }
+
+              const buildUrl = buildUrlsGenerator.generate(url, {
+                urlInfo: bundleUrlInfo
+              });
+              bundleRedirections.set(url, buildUrl);
+
+              if (urlIsInsideOf(url, buildDirectoryUrl)) {// chunk generated by rollup to share code
+              } else {
+                associateBuildUrlAndRawUrl(buildUrl, url, "bundle");
+              }
+
+              bundleUrlInfos[buildUrl] = bundleUrlInfo;
+
+              if (buildUrl.includes("?")) {
+                bundleUrlInfos[asUrlWithoutSearch(buildUrl)] = bundleUrlInfo;
+              }
+
+              if (bundlerGeneratedUrlInfo.data.bundleRelativeUrl) {
+                const urlForBundler = new URL(bundlerGeneratedUrlInfo.data.bundleRelativeUrl, buildDirectoryUrl).href;
+
+                if (urlForBundler !== buildUrl) {
+                  bundleInternalRedirections.set(urlForBundler, buildUrl);
+                }
+              }
+            });
+          } catch (e) {
+            bundleTask.fail();
+            throw e;
+          }
+
+          bundleTask.done();
+        }, Promise.resolve());
+      }
+
+      {
+        const buildTask = createTaskLog("build", {
+          disabled: logger.levels.debug || !logger.levels.info
+        });
+
+        try {
+          if (writeGeneratedFiles) {
+            await ensureEmptyDirectory(new URL(`.jsenv/postbuild/`, rootDirectoryUrl));
+          }
+
+          const finalUrlGraphLoader = createUrlGraphLoader(finalGraphKitchen.kitchenContext);
+          entryUrls.forEach(entryUrl => {
+            const [finalEntryReference, finalEntryUrlInfo] = finalGraphKitchen.kitchenContext.prepareEntryPoint({
+              trace: {
+                message: `entryPoint`
+              },
+              parentUrl: rootDirectoryUrl,
+              type: "entry_point",
+              specifier: entryUrl
+            });
+            finalEntryUrls.push(finalEntryUrlInfo.url);
+            finalUrlGraphLoader.load(finalEntryUrlInfo, {
+              reference: finalEntryReference
+            });
+          });
+          await finalUrlGraphLoader.getAllLoadDonePromise(buildOperation);
+        } catch (e) {
+          buildTask.fail();
+          throw e;
+        }
+
+        buildTask.done();
+      }
     }
 
-    GRAPH.forEach(finalGraph, urlInfo => {
-      if (!urlInfo.shouldHandle) {
-        return;
+    {
+      inject_version_in_urls: {
+        if (!versioning) {
+          break inject_version_in_urls;
+        }
+
+        const versioningTask = createTaskLog("inject version in urls", {
+          disabled: logger.levels.debug || !logger.levels.info
+        });
+
+        try {
+          const urlsSorted = sortByDependencies(finalGraph.toObject());
+          urlsSorted.forEach(url => {
+            if (url.startsWith("data:")) {
+              return;
+            }
+
+            const urlInfo = finalGraph.getUrlInfo(url);
+
+            if (urlInfo.type === "sourcemap") {
+              return;
+            } // ignore:
+            // - inline files:
+            //   they are already taken into account in the file where they appear
+            // - ignored files:
+            //   we don't know their content
+            // - unused files without reference
+            //   File updated such as style.css -> style.css.js or file.js->file.nomodule.js
+            //   Are used at some point just to be discarded later because they need to be converted
+            //   There is no need to version them and we could not because the file have been ignored
+            //   so their content is unknown
+
+
+            if (urlInfo.isInline) {
+              return;
+            }
+
+            if (!urlInfo.shouldHandle) {
+              return;
+            }
+
+            if (!urlInfo.isEntryPoint && urlInfo.dependents.size === 0) {
+              return;
+            }
+
+            const urlContent = urlInfo.type === "html" ? stringifyHtmlAst(parseHtmlString(urlInfo.content, {
+              storeOriginalPositions: false
+            }), {
+              cleanupJsenvAttributes: true
+            }) : urlInfo.content;
+            const versionGenerator = createVersionGenerator();
+            versionGenerator.augmentWithContent({
+              content: urlContent,
+              contentType: urlInfo.contentType,
+              lineBreakNormalization
+            });
+            urlInfo.dependencies.forEach(dependencyUrl => {
+              // this dependency is inline
+              if (dependencyUrl.startsWith("data:")) {
+                return;
+              }
+
+              const dependencyUrlInfo = finalGraph.getUrlInfo(dependencyUrl);
+
+              if ( // this content is part of the file, no need to take into account twice
+              dependencyUrlInfo.isInline || // this dependency content is not known
+              !dependencyUrlInfo.shouldHandle) {
+                return;
+              }
+
+              if (dependencyUrlInfo.data.version) {
+                versionGenerator.augmentWithDependencyVersion(dependencyUrlInfo.data.version);
+              } else {
+                // because all dependencies are know, if the dependency has no version
+                // it means there is a circular dependency between this file
+                // and it's dependency
+                // in that case we'll use the dependency content
+                versionGenerator.augmentWithContent({
+                  content: dependencyUrlInfo.content,
+                  contentType: dependencyUrlInfo.contentType,
+                  lineBreakNormalization
+                });
+              }
+            });
+            urlInfo.data.version = versionGenerator.generate();
+            const buildUrlObject = new URL(urlInfo.url); // remove ?as_js_classic as
+            // this information is already hold into ".nomodule"
+
+            buildUrlObject.searchParams.delete("as_js_classic");
+            buildUrlObject.searchParams.delete("as_js_classic_library");
+            buildUrlObject.searchParams.delete("as_json_module");
+            buildUrlObject.searchParams.delete("as_css_module");
+            buildUrlObject.searchParams.delete("as_text_module");
+            const buildUrl = buildUrlObject.href;
+            finalRedirections.set(urlInfo.url, buildUrl);
+            urlInfo.data.versionedUrl = normalizeUrl(injectVersionIntoBuildUrl({
+              buildUrl,
+              version: urlInfo.data.version,
+              versioningMethod
+            }));
+          });
+          const versionMappings = {};
+          const usedVersionMappings = new Set();
+          const versioningKitchen = createKitchen({
+            logLevel: logger.level,
+            rootDirectoryUrl: buildDirectoryUrl,
+            urlGraph: finalGraph,
+            scenarios: {
+              build: true
+            },
+            runtimeCompat,
+            plugins: [urlAnalysisPlugin, jsenvPluginInline({
+              fetchInlineUrls: false,
+              analyzeConvertedScripts: true,
+              // to be able to version their urls
+              allowEscapeForVersioning: true
+            }), {
+              name: "jsenv:versioning",
+              appliesDuring: "build",
+              resolveUrl: reference => {
+                const buildUrl = buildUrls.get(reference.specifier);
+
+                if (buildUrl) {
+                  return buildUrl;
+                }
+
+                const urlObject = new URL(reference.specifier, reference.baseUrl || reference.parentUrl);
+                const url = urlObject.href; // during versioning we revisit the deps
+                // but the code used to enforce trailing slash on directories
+                // is not applied because "jsenv:file_url_resolution" is not used
+                // so here we search if the url with a trailing slash exists
+
+                if (reference.type === "filesystem" && !urlObject.pathname.endsWith("/")) {
+                  const urlWithTrailingSlash = `${url}/`;
+                  const specifier = findKey(buildUrls, urlWithTrailingSlash);
+
+                  if (specifier) {
+                    return urlWithTrailingSlash;
+                  }
+                }
+
+                return url;
+              },
+              formatUrl: reference => {
+                if (!reference.shouldHandle) {
+                  if (reference.generatedUrl.startsWith("ignore:")) {
+                    return reference.generatedUrl.slice("ignore:".length);
+                  }
+
+                  return null;
+                }
+
+                if (reference.isInline || reference.url.startsWith("data:")) {
+                  return null;
+                }
+
+                if (reference.isResourceHint) {
+                  return null;
+                } // specifier comes from "normalize" hook done a bit earlier in this file
+                // we want to get back their build url to access their infos
+
+
+                const referencedUrlInfo = finalGraph.getUrlInfo(reference.url);
+
+                if (!canUseVersionedUrl(referencedUrlInfo)) {
+                  return reference.specifier;
+                }
+
+                if (!referencedUrlInfo.shouldHandle) {
+                  return null;
+                }
+
+                const versionedUrl = referencedUrlInfo.data.versionedUrl;
+
+                if (!versionedUrl) {
+                  // happens for sourcemap
+                  return `${baseUrl}${urlToRelativeUrl(referencedUrlInfo.url, buildDirectoryUrl)}`;
+                }
+
+                const versionedSpecifier = `${baseUrl}${urlToRelativeUrl(versionedUrl, buildDirectoryUrl)}`;
+                versionMappings[reference.specifier] = versionedSpecifier;
+                versioningRedirections.set(reference.url, versionedUrl);
+                buildUrls.set(versionedSpecifier, versionedUrl);
+                const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl);
+
+                if (parentUrlInfo.jsQuote) {
+                  // the url is inline inside js quotes
+                  usedVersionMappings.add(reference.specifier);
+                  return () => `${parentUrlInfo.jsQuote}+__v__(${JSON.stringify(reference.specifier)})+${parentUrlInfo.jsQuote}`;
+                }
+
+                if (reference.type === "js_url_specifier" || reference.subtype === "import_dynamic") {
+                  usedVersionMappings.add(reference.specifier);
+                  return () => `__v__(${JSON.stringify(reference.specifier)})`;
+                }
+
+                return versionedSpecifier;
+              },
+              fetchUrlContent: versionedUrlInfo => {
+                if (versionedUrlInfo.isInline) {
+                  const rawUrlInfo = rawGraph.getUrlInfo(buildToRawUrls[versionedUrlInfo.url]);
+                  const finalUrlInfo = finalGraph.getUrlInfo(versionedUrlInfo.url);
+                  return {
+                    content: versionedUrlInfo.content,
+                    contentType: versionedUrlInfo.contentType,
+                    originalContent: rawUrlInfo ? rawUrlInfo.originalContent : undefined,
+                    sourcemap: finalUrlInfo ? finalUrlInfo.sourcemap : undefined
+                  };
+                }
+
+                return versionedUrlInfo;
+              }
+            }],
+            sourcemaps,
+            sourcemapsSourcesContent,
+            sourcemapsRelativeSources: true,
+            writeGeneratedFiles,
+            outDirectoryUrl: new URL(".jsenv/postbuild/", finalGraphKitchen.rootDirectoryUrl)
+          });
+          const versioningUrlGraphLoader = createUrlGraphLoader(versioningKitchen.kitchenContext);
+          finalEntryUrls.forEach(finalEntryUrl => {
+            const [finalEntryReference, finalEntryUrlInfo] = finalGraphKitchen.kitchenContext.prepareEntryPoint({
+              trace: {
+                message: `entryPoint`
+              },
+              parentUrl: buildDirectoryUrl,
+              type: "entry_point",
+              specifier: finalEntryUrl
+            });
+            versioningUrlGraphLoader.load(finalEntryUrlInfo, {
+              reference: finalEntryReference
+            });
+          });
+          await versioningUrlGraphLoader.getAllLoadDonePromise(buildOperation);
+
+          if (usedVersionMappings.size) {
+            const versionMappingsNeeded = {};
+            usedVersionMappings.forEach(specifier => {
+              versionMappingsNeeded[specifier] = versionMappings[specifier];
+            });
+            const actions = [];
+            GRAPH.forEach(finalGraph, urlInfo => {
+              if (urlInfo.isEntryPoint) {
+                actions.push(async () => {
+                  await injectVersionMappings({
+                    urlInfo,
+                    kitchen: finalGraphKitchen,
+                    versionMappings: versionMappingsNeeded
+                  });
+                });
+              }
+            });
+            await Promise.all(actions.map(action => action()));
+          }
+        } catch (e) {
+          versioningTask.fail();
+          throw e;
+        }
+
+        versioningTask.done();
       }
 
-      if (!urlInfo.url.startsWith("file:")) {
-        return;
+      {
+        GRAPH.forEach(finalGraph, urlInfo => {
+          if (!urlInfo.shouldHandle) {
+            return;
+          }
+
+          if (!urlInfo.url.startsWith("file:")) {
+            return;
+          }
+
+          if (urlInfo.type === "html") {
+            const htmlAst = parseHtmlString(urlInfo.content, {
+              storeOriginalPositions: false
+            });
+            urlInfo.content = stringifyHtmlAst(htmlAst, {
+              cleanupJsenvAttributes: true
+            });
+          }
+        });
+      }
+      /*
+       * Update <link rel="preload"> and friends after build (once we know everything)
+       * - Used to remove resource hint targeting an url that is no longer used:
+       *   - Happens because of import assertions transpilation (file is inlined into JS)
+       */
+
+
+      {
+        const actions = [];
+        GRAPH.forEach(finalGraph, urlInfo => {
+          if (urlInfo.type !== "html") {
+            return;
+          }
+
+          actions.push(async () => {
+            const htmlAst = parseHtmlString(urlInfo.content, {
+              storeOriginalPositions: false
+            });
+            const mutations = [];
+            visitHtmlNodes(htmlAst, {
+              link: node => {
+                const href = getHtmlNodeAttribute(node, "href");
+
+                if (href === undefined || href.startsWith("data:")) {
+                  return;
+                }
+
+                const rel = getHtmlNodeAttribute(node, "rel");
+                const isResourceHint = ["preconnect", "dns-prefetch", "prefetch", "preload", "modulepreload"].includes(rel);
+
+                if (!isResourceHint) {
+                  return;
+                }
+
+                const onBuildUrl = buildUrl => {
+                  const buildUrlInfo = buildUrl ? finalGraph.getUrlInfo(buildUrl) : null;
+
+                  if (!buildUrlInfo) {
+                    logger.warn(`remove resource hint because cannot find "${href}" in the graph`);
+                    mutations.push(() => {
+                      removeHtmlNode(node);
+                    });
+                    return;
+                  }
+
+                  if (buildUrlInfo.dependents.size === 0) {
+                    logger.info(`remove resource hint because "${href}" not used anymore`);
+                    mutations.push(() => {
+                      removeHtmlNode(node);
+                    });
+                    return;
+                  }
+
+                  const buildUrlFormatted = versioningRedirections.get(buildUrlInfo.url) || buildUrlInfo.url;
+                  const buildSpecifierBeforeRedirect = findKey(buildUrls, buildUrlFormatted);
+                  mutations.push(() => {
+                    setHtmlNodeAttributes(node, {
+                      href: buildSpecifierBeforeRedirect,
+                      crossorigin: undefined
+                    });
+                  });
+                };
+
+                if (href.startsWith("file:")) {
+                  let url = href;
+                  url = rawRedirections.get(url) || url;
+                  const rawUrlInfo = rawGraph.getUrlInfo(url);
+
+                  if (rawUrlInfo && rawUrlInfo.data.bundled) {
+                    logger.info(`remove resource hint on "${href}" because it was bundled`);
+                    mutations.push(() => {
+                      removeHtmlNode(node);
+                    });
+                  } else {
+                    url = bundleRedirections.get(url) || url;
+                    url = bundleInternalRedirections.get(url) || url;
+                    url = finalRedirections.get(url) || url;
+                    onBuildUrl(url);
+                  }
+                } else {
+                  onBuildUrl(null);
+                }
+              }
+            });
+
+            if (mutations.length > 0) {
+              mutations.forEach(mutation => mutation());
+              await finalGraphKitchen.urlInfoTransformer.applyFinalTransformations(urlInfo, {
+                content: stringifyHtmlAst(htmlAst)
+              });
+            }
+          });
+        });
+        await Promise.all(actions.map(resourceHintAction => resourceHintAction()));
+        buildOperation.throwIfAborted();
       }
 
-      if (urlInfo.type === "html") {
-        const htmlAst = parseHtmlString(urlInfo.content, {
-          storeOriginalPositions: false
+      {
+        const actions = [];
+        GRAPH.forEach(finalGraph, urlInfo => {
+          // nothing uses this url anymore
+          // - versioning update inline content
+          // - file converted for import assertion or js_classic conversion
+          if (!urlInfo.isEntryPoint && urlInfo.type !== "sourcemap" && urlInfo.dependents.size === 0 && !urlInfo.injected // injected during postbuild
+          ) {
+            actions.push(() => {
+              finalGraph.deleteUrlInfo(urlInfo.url);
+            });
+          }
         });
-        urlInfo.content = stringifyHtmlAst(htmlAst, {
-          removeOriginalPositionAttributes: true
-        });
+        actions.forEach(action => action());
       }
 
-      const version = urlInfo.data.version;
-      const useVersionedUrl = version && canUseVersionedUrl(urlInfo);
-      const buildUrl = useVersionedUrl ? urlInfo.data.versionedUrl : urlInfo.url;
-      const buildUrlSpecifier = Object.keys(buildUrls).find(key => buildUrls[key] === buildUrl);
-      urlInfo.data.buildUrl = buildUrl;
-      urlInfo.data.buildUrlIsVersioned = useVersionedUrl;
-      urlInfo.data.buildUrlSpecifier = buildUrlSpecifier;
-    });
-    await resyncResourceHints({
-      logger,
-      finalGraphKitchen,
-      finalGraph,
-      rawUrls,
-      postBuildRedirections
-    });
-    buildOperation.throwIfAborted();
-    const cleanupActions = [];
-    GRAPH.forEach(finalGraph, urlInfo => {
-      // nothing uses this url anymore
-      // - versioning update inline content
-      // - file converted for import assertion or js_classic conversion
-      if (!urlInfo.isEntryPoint && urlInfo.type !== "sourcemap" && urlInfo.dependents.size === 0) {
-        cleanupActions.push(() => {
-          finalGraph.deleteUrlInfo(urlInfo.url);
+      {
+        const serviceWorkerEntryUrlInfos = GRAPH.filter(finalGraph, finalUrlInfo => {
+          return finalUrlInfo.subtype === "service_worker" && finalUrlInfo.isEntryPoint;
         });
+
+        if (serviceWorkerEntryUrlInfos.length > 0) {
+          const serviceWorkerUrls = {};
+          GRAPH.forEach(finalGraph, urlInfo => {
+            if (urlInfo.isInline || !urlInfo.shouldHandle) {
+              return;
+            }
+
+            if (!urlInfo.url.startsWith("file:")) {
+              return;
+            }
+
+            const versionedUrl = urlInfo.data.versionedUrl;
+
+            if (!versionedUrl) {
+              // when url is not versioned we compute a "version" for that url anyway
+              // so that service worker source still changes and navigator
+              // detect there is a change
+              const versionGenerator = createVersionGenerator();
+              versionGenerator.augmentWithContent({
+                content: urlInfo.content,
+                contentType: urlInfo.contentType,
+                lineBreakNormalization
+              });
+              const version = versionGenerator.generate();
+              urlInfo.data.version = version;
+              const specifier = findKey(buildUrls, urlInfo.url);
+              serviceWorkerUrls[specifier] = {
+                versioned: false,
+                version
+              };
+              return;
+            }
+
+            if (!canUseVersionedUrl(urlInfo)) {
+              const specifier = findKey(buildUrls, urlInfo.url);
+              serviceWorkerUrls[specifier] = {
+                versioned: false,
+                version: urlInfo.data.version
+              };
+              return;
+            }
+
+            const versionedSpecifier = findKey(buildUrls, versionedUrl);
+            serviceWorkerUrls[versionedSpecifier] = {
+              versioned: true
+            };
+          });
+          serviceWorkerEntryUrlInfos.forEach(serviceWorkerEntryUrlInfo => {
+            const magicSource = createMagicSource(serviceWorkerEntryUrlInfo.content);
+            const urlsWithoutSelf = { ...serviceWorkerUrls
+            };
+            const serviceWorkerSpecifier = findKey(buildUrls, serviceWorkerEntryUrlInfo.url);
+            delete urlsWithoutSelf[serviceWorkerSpecifier];
+            magicSource.prepend(`\nself.serviceWorkerUrls = ${JSON.stringify(urlsWithoutSelf, null, "  ")};\n`);
+            const {
+              content,
+              sourcemap
+            } = magicSource.toContentAndSourcemap();
+            finalGraphKitchen.urlInfoTransformer.applyFinalTransformations(serviceWorkerEntryUrlInfo, {
+              content,
+              sourcemap
+            });
+          });
+        }
+
+        buildOperation.throwIfAborted();
       }
-    });
-    cleanupActions.forEach(cleanupAction => cleanupAction());
-    await injectServiceWorkerUrls({
-      finalGraphKitchen,
-      finalGraph,
-      lineBreakNormalization
-    });
-    buildOperation.throwIfAborted();
+    }
+
     const buildManifest = {};
     const buildFileContents = {};
     const buildInlineContents = {};
@@ -20687,14 +20919,21 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`);
         return;
       }
 
-      const buildRelativeUrl = urlToRelativeUrl(urlInfo.data.buildUrl, buildDirectoryUrl);
-
       if (urlInfo.isInline) {
+        const buildRelativeUrl = urlToRelativeUrl(urlInfo.url, buildDirectoryUrl);
         buildInlineContents[buildRelativeUrl] = urlInfo.content;
       } else {
-        buildFileContents[buildRelativeUrl] = urlInfo.content;
-        const buildRelativeUrlWithoutVersioning = urlToRelativeUrl(urlInfo.url, buildDirectoryUrl);
-        buildManifest[buildRelativeUrlWithoutVersioning] = buildRelativeUrl;
+        const versionedUrl = urlInfo.data.versionedUrl;
+
+        if (versionedUrl && canUseVersionedUrl(urlInfo)) {
+          const buildRelativeUrl = urlToRelativeUrl(urlInfo.url, buildDirectoryUrl);
+          const versionedBuildRelativeUrl = urlToRelativeUrl(versionedUrl, buildDirectoryUrl);
+          buildFileContents[versionedBuildRelativeUrl] = urlInfo.content;
+          buildManifest[buildRelativeUrl] = versionedBuildRelativeUrl;
+        } else {
+          const buildRelativeUrl = urlToRelativeUrl(urlInfo.url, buildDirectoryUrl);
+          buildFileContents[buildRelativeUrl] = urlInfo.content;
+        }
       }
     });
 
@@ -20704,12 +20943,12 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`);
       }
 
       const buildRelativeUrls = Object.keys(buildFileContents);
-      await Promise.all(buildRelativeUrls.map(async buildRelativeUrl => {
-        await writeFile(new URL(buildRelativeUrl, buildDirectoryUrl), buildFileContents[buildRelativeUrl]);
-      }));
+      buildRelativeUrls.forEach(buildRelativeUrl => {
+        writeFileSync(new URL(buildRelativeUrl, buildDirectoryUrl), buildFileContents[buildRelativeUrl]);
+      });
 
       if (versioning && assetManifest && Object.keys(buildManifest).length) {
-        await writeFile(new URL(assetManifestFileRelativeUrl, buildDirectoryUrl), JSON.stringify(buildManifest, null, "  "));
+        writeFileSync(new URL(assetManifestFileRelativeUrl, buildDirectoryUrl), JSON.stringify(buildManifest, null, "  "));
       }
     }
 
@@ -20825,261 +21064,14 @@ ${Array.from(finalGraph.urlInfoMap.keys()).join("\n")}`);
   return stopWatchingClientFiles;
 };
 
-const applyUrlVersioning = async ({
-  buildOperation,
-  logger,
-  infoLogsAreDisabled,
-  buildDirectoryUrl,
-  rawUrls,
-  buildUrls,
-  baseUrl,
-  postBuildEntryUrls,
-  sourcemaps,
-  sourcemapsSourcesContent,
-  runtimeCompat,
-  writeGeneratedFiles,
-  rawGraph,
-  urlAnalysisPlugin,
-  finalGraph,
-  finalGraphKitchen,
-  lineBreakNormalization,
-  versioningMethod
-}) => {
-  const versioningTask = createTaskLog("inject version in urls", {
-    disabled: infoLogsAreDisabled
-  });
-
-  try {
-    const urlsSorted = sortByDependencies(finalGraph.toObject());
-    urlsSorted.forEach(url => {
-      if (url.startsWith("data:")) {
-        return;
-      }
-
-      const urlInfo = finalGraph.getUrlInfo(url);
-
-      if (urlInfo.type === "sourcemap") {
-        return;
-      } // ignore:
-      // - inline files:
-      //   they are already taken into account in the file where they appear
-      // - ignored files:
-      //   we don't know their content
-      // - unused files without reference
-      //   File updated such as style.css -> style.css.js or file.js->file.nomodule.js
-      //   Are used at some point just to be discarded later because they need to be converted
-      //   There is no need to version them and we could not because the file have been ignored
-      //   so their content is unknown
-
-
-      if (urlInfo.isInline) {
-        return;
-      }
-
-      if (!urlInfo.shouldHandle) {
-        return;
-      }
-
-      if (!urlInfo.isEntryPoint && urlInfo.dependents.size === 0) {
-        return;
-      }
-
-      const urlContent = urlInfo.type === "html" ? stringifyHtmlAst(parseHtmlString(urlInfo.content, {
-        storeOriginalPositions: false
-      }), {
-        removeOriginalPositionAttributes: true
-      }) : urlInfo.content;
-      const versionGenerator = createVersionGenerator();
-      versionGenerator.augmentWithContent({
-        content: urlContent,
-        contentType: urlInfo.contentType,
-        lineBreakNormalization
-      });
-      urlInfo.dependencies.forEach(dependencyUrl => {
-        // this dependency is inline
-        if (dependencyUrl.startsWith("data:")) {
-          return;
-        }
-
-        const dependencyUrlInfo = finalGraph.getUrlInfo(dependencyUrl);
-
-        if ( // this content is part of the file, no need to take into account twice
-        dependencyUrlInfo.isInline || // this dependency content is not known
-        !dependencyUrlInfo.shouldHandle) {
-          return;
-        }
-
-        if (dependencyUrlInfo.data.version) {
-          versionGenerator.augmentWithDependencyVersion(dependencyUrlInfo.data.version);
-        } else {
-          // because all dependencies are know, if the dependency has no version
-          // it means there is a circular dependency between this file
-          // and it's dependency
-          // in that case we'll use the dependency content
-          versionGenerator.augmentWithContent({
-            content: dependencyUrlInfo.content,
-            contentType: dependencyUrlInfo.contentType,
-            lineBreakNormalization
-          });
-        }
-      });
-      urlInfo.data.version = versionGenerator.generate();
-      urlInfo.data.versionedUrl = normalizeUrl(injectVersionIntoBuildUrl({
-        buildUrl: urlInfo.url,
-        version: urlInfo.data.version,
-        versioningMethod
-      }));
-    });
-    const versionMappings = {};
-    const usedVersionMappings = [];
-    const versioningKitchen = createKitchen({
-      logger,
-      rootDirectoryUrl: buildDirectoryUrl,
-      urlGraph: finalGraph,
-      scenarios: {
-        build: true
-      },
-      runtimeCompat,
-      plugins: [urlAnalysisPlugin, jsenvPluginInline({
-        fetchInlineUrls: false,
-        analyzeConvertedScripts: true,
-        // to be able to version their urls
-        allowEscapeForVersioning: true
-      }), {
-        name: "jsenv:versioning",
-        appliesDuring: "build",
-        resolveUrl: reference => {
-          const buildUrl = buildUrls[reference.specifier];
-
-          if (buildUrl) {
-            return buildUrl;
-          }
-
-          const urlObject = new URL(reference.specifier, reference.baseUrl || reference.parentUrl);
-          const url = urlObject.href; // during versioning we revisit the deps
-          // but the code used to enforce trailing slash on directories
-          // is not applied because "jsenv:file_url_resolution" is not used
-          // so here we search if the url with a trailing slash exists
-
-          if (reference.type === "filesystem" && !urlObject.pathname.endsWith("/")) {
-            const urlWithTrailingSlash = `${url}/`;
-            const specifier = Object.keys(buildUrls).find(key => buildUrls[key] === urlWithTrailingSlash);
-
-            if (specifier) {
-              return urlWithTrailingSlash;
-            }
-          }
-
-          return url;
-        },
-        formatUrl: reference => {
-          if (!reference.shouldHandle) {
-            if (reference.generatedUrl.startsWith("ignore:")) {
-              return reference.generatedUrl.slice("ignore:".length);
-            }
-
-            return null;
-          }
-
-          if (reference.isInline || reference.url.startsWith("data:")) {
-            return null;
-          }
-
-          if (reference.isResourceHint) {
-            return null;
-          } // specifier comes from "normalize" hook done a bit earlier in this file
-          // we want to get back their build url to access their infos
-
-
-          const referencedUrlInfo = finalGraph.getUrlInfo(reference.url);
-
-          if (!canUseVersionedUrl(referencedUrlInfo)) {
-            return reference.specifier;
-          }
-
-          if (!referencedUrlInfo.shouldHandle) {
-            return null;
-          }
-
-          const versionedUrl = referencedUrlInfo.data.versionedUrl;
-
-          if (!versionedUrl) {
-            // happens for sourcemap
-            return `${baseUrl}${urlToRelativeUrl(referencedUrlInfo.url, buildDirectoryUrl)}`;
-          }
-
-          const versionedSpecifier = `${baseUrl}${urlToRelativeUrl(versionedUrl, buildDirectoryUrl)}`;
-          versionMappings[reference.specifier] = versionedSpecifier;
-          buildUrls[versionedSpecifier] = versionedUrl;
-          const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl);
-
-          if (parentUrlInfo.jsQuote) {
-            // the url is inline inside js quotes
-            usedVersionMappings.push(reference.specifier);
-            return () => `${parentUrlInfo.jsQuote}+__v__(${JSON.stringify(reference.specifier)})+${parentUrlInfo.jsQuote}`;
-          }
-
-          if (reference.type === "js_url_specifier" || reference.subtype === "import_dynamic") {
-            usedVersionMappings.push(reference.specifier);
-            return () => `__v__(${JSON.stringify(reference.specifier)})`;
-          }
-
-          return versionedSpecifier;
-        },
-        fetchUrlContent: versionedUrlInfo => {
-          if (versionedUrlInfo.isInline) {
-            const rawUrlInfo = rawGraph.getUrlInfo(rawUrls[versionedUrlInfo.url]);
-            const finalUrlInfo = finalGraph.getUrlInfo(versionedUrlInfo.url);
-            return {
-              content: versionedUrlInfo.content,
-              contentType: versionedUrlInfo.contentType,
-              originalContent: rawUrlInfo ? rawUrlInfo.originalContent : undefined,
-              sourcemap: finalUrlInfo ? finalUrlInfo.sourcemap : undefined
-            };
-          }
-
-          return versionedUrlInfo;
-        }
-      }],
-      sourcemaps,
-      sourcemapsSourcesContent,
-      sourcemapsRelativeSources: true,
-      writeGeneratedFiles,
-      outDirectoryUrl: new URL(".jsenv/postbuild/", finalGraphKitchen.rootDirectoryUrl)
-    });
-    const versioningUrlGraphLoader = createUrlGraphLoader(versioningKitchen.kitchenContext);
-    postBuildEntryUrls.forEach(postBuildEntryUrl => {
-      const [postBuildEntryReference, postBuildEntryUrlInfo] = finalGraphKitchen.kitchenContext.prepareEntryPoint({
-        trace: {
-          message: `entryPoint`
-        },
-        parentUrl: buildDirectoryUrl,
-        type: "entry_point",
-        specifier: postBuildEntryUrl
-      });
-      versioningUrlGraphLoader.load(postBuildEntryUrlInfo, {
-        reference: postBuildEntryReference
-      });
-    });
-    await versioningUrlGraphLoader.getAllLoadDonePromise(buildOperation);
-
-    if (usedVersionMappings.length) {
-      const versionMappingsNeeded = {};
-      usedVersionMappings.forEach(specifier => {
-        versionMappingsNeeded[specifier] = versionMappings[specifier];
-      });
-      await injectGlobalVersionMapping({
-        finalGraphKitchen,
-        finalGraph,
-        versionMappings: versionMappingsNeeded
-      });
+const findKey = (map, value) => {
+  for (const [keyCandidate, valueCandidate] of map) {
+    if (valueCandidate === value) {
+      return keyCandidate;
     }
-  } catch (e) {
-    versioningTask.fail();
-    throw e;
   }
 
-  versioningTask.done();
+  return undefined;
 };
 
 const injectVersionIntoBuildUrl = ({
@@ -23897,7 +23889,7 @@ const startServer = async ({
       const websocketClients = new Set();
       const {
         WebSocketServer
-      } = await import("./js/ws.js");
+      } = await import("./js/ws.js?cjs_as_js_module=");
       let websocketServer = new WebSocketServer({
         noServer: true
       });
@@ -25101,6 +25093,7 @@ const jsenvPluginServerEventsClientInjection = () => {
         const htmlAst = parseHtmlString(htmlUrlInfo.content);
         const [serverEventsClientFileReference] = context.referenceUtils.inject({
           type: "script_src",
+          subtype: "js_module",
           expectedType: "js_module",
           specifier: serverEventsClientFileUrl
         });
@@ -25264,7 +25257,8 @@ const createFileService = ({
       sourcemaps,
       sourcemapsSourcesProtocol,
       sourcemapsSourcesContent,
-      writeGeneratedFiles
+      writeGeneratedFiles,
+      outDirectoryUrl: scenarios.dev ? `${rootDirectoryUrl}.jsenv/${runtimeName}@${runtimeVersion}/` : `${rootDirectoryUrl}.jsenv/${scenarios.test ? "test" : "build"}/${runtimeName}@${runtimeVersion}/`
     });
 
     urlGraph.createUrlInfoCallbackRef.current = urlInfo => {
@@ -25379,8 +25373,6 @@ const createFileService = ({
     }
 
     const {
-      runtimeName,
-      runtimeVersion,
       urlGraph,
       kitchen
     } = getOrCreateContext(request);
@@ -25440,8 +25432,7 @@ const createFileService = ({
 
       await kitchen.cook(urlInfo, {
         request,
-        reference,
-        outDirectoryUrl: scenarios.dev ? `${rootDirectoryUrl}.jsenv/${runtimeName}@${runtimeVersion}/` : `${rootDirectoryUrl}.jsenv/${scenarios.test ? "test" : "build"}/${runtimeName}@${runtimeVersion}/`
+        reference
       });
       let {
         response
@@ -25473,15 +25464,16 @@ const createFileService = ({
       return response;
     } catch (e) {
       urlInfo.error = e;
-      const code = e.code;
+      const originalError = e ? e.cause || e : e;
+      const code = originalError.code;
 
       if (code === "PARSE_ERROR") {
         return {
           url: reference.url,
           status: 200,
           // let the browser re-throw the syntax error
-          statusText: e.reason,
-          statusMessage: e.message,
+          statusText: originalError.reason,
+          statusMessage: originalError.message,
           headers: {
             "content-type": urlInfo.contentType,
             "content-length": Buffer.byteLength(urlInfo.content),
@@ -25505,7 +25497,7 @@ const createFileService = ({
         return {
           url: reference.url,
           status: 403,
-          statusText: e.reason
+          statusText: originalError.reason
         };
       }
 
@@ -25513,8 +25505,8 @@ const createFileService = ({
         return {
           url: reference.url,
           status: 404,
-          statusText: e.reason,
-          statusMessage: e.message
+          statusText: originalError.reason,
+          statusMessage: originalError.message
         };
       }
 
@@ -25845,7 +25837,7 @@ const startDevServer = async ({
   }
 
   const startDevServerTask = createTaskLog("start dev server", {
-    disabled: !loggerToLevels(logger).info
+    disabled: !logger.levels.info
   });
   const server = await startOmegaServer({
     logLevel: omegaServerLogLevel,
@@ -27303,8 +27295,8 @@ const executePlan = async (plan, {
       logger.debug(`Force completedExecutionLogMerging to false because process.stdout.isTTY is false`);
     }
 
-    const debugLogsEnabled = loggerToLevels(logger).debug;
-    const executionLogsEnabled = loggerToLevels(logger).info;
+    const debugLogsEnabled = logger.levels.debug;
+    const executionLogsEnabled = logger.levels.info;
     const executionSpinner = logRefresh && !debugLogsEnabled && executionLogsEnabled && process.stdout.isTTY && // if there is an error during execution npm will mess up the output
     // (happens when npm runs several command in a workspace)
     // so we enable spinner only when !process.exitCode (no error so far)
@@ -28679,7 +28671,7 @@ const EXIT_CODES = {
   SIGTERM: 128 + SIGTERM_SIGNAL_NUMBER
 };
 
-const CONTROLLABLE_CHILD_PROCESS_URL = new URL("./controllable_child_process.mjs", import.meta.url).href;
+const CONTROLLABLE_CHILD_PROCESS_URL = new URL("./controllable_child_process.mjs?entry_point=", import.meta.url).href;
 const nodeChildProcess = {
   type: "node",
   name: "node_child_process",
@@ -29029,7 +29021,7 @@ const onceChildProcessEvent = (childProcess, type, callback) => {
 };
 
 // https://github.com/avajs/ava/blob/576f534b345259055c95fa0c2b33bef10847a2af/lib/fork.js#L23
-const CONTROLLABLE_WORKER_THREAD_URL = new URL("./controllable_worker_thread.mjs", import.meta.url).href;
+const CONTROLLABLE_WORKER_THREAD_URL = new URL("./controllable_worker_thread.mjs?entry_point=", import.meta.url).href;
 const nodeWorkerThread = {
   type: "node",
   name: "node_worker_thread",
@@ -29455,7 +29447,7 @@ const startBuildServer = async ({
   }
 
   const startBuildServerTask = createTaskLog("start build server", {
-    disabled: !loggerToLevels(logger).info
+    disabled: !logger.levels.info
   });
   const server = await startServer({
     signal,

@@ -6,28 +6,19 @@ import { convertJsModuleToJsClassic } from "./convert_js_module_to_js_classic.js
 export const jsenvPluginAsJsClassicLibrary = ({
   systemJsInjection,
   systemJsClientFileUrl,
+  generateJsClassicFilename,
 }) => {
+  const markAsJsClassicLibraryProxy = (reference) => {
+    reference.expectedType = "js_classic"
+    reference.filename = generateJsClassicFilename(reference.url)
+  }
+
   return {
     name: "jsenv:as_js_classic_library",
-    // I think it applies both during dev and build
-    // otherwise it's strange
-    // we'll see as we tests
     appliesDuring: "*",
     redirectUrl: (reference) => {
-      const urlObject = new URL(reference.url)
-      if (urlObject.searchParams.has("as_js_classic_library")) {
-        urlObject.searchParams.delete("as_js_classic_library")
-        // TODO: inject reference to urlObject.href
-        // in order to get reload during dev
-        if (
-          reference.type === "script_src" ||
-          (reference.type === "js_url_specifier" &&
-            reference.subtype !== "system_import_arg") ||
-          (reference.type === "js_import_export" &&
-            reference.subtype !== "import_dynamic")
-        ) {
-          reference.isEntryPoint = true
-        }
+      if (reference.searchParams.has("as_js_classic_library")) {
+        markAsJsClassicLibraryProxy(reference)
       }
     },
     fetchUrlContent: async (urlInfo, context) => {
@@ -46,14 +37,11 @@ export const jsenvPluginAsJsClassicLibrary = ({
       }
       // cook it to get content + dependencies
       await context.cook(jsModuleUrlInfo, { reference: jsModuleReference })
-      // TODO: likely needs to "clean after cook":
-      // delete url info from graph to avoid having it generated in build directory?
-
       const loader = createUrlGraphLoader(context)
       loader.loadReferencedUrlInfos(jsModuleUrlInfo, {
-        // for dynamic import we ignore them yes
-        // but we must set something so that when they will be cooked
-        // they inherit as_js_classic_library behaviour
+        // we ignore dynamic import to cook lazyly (as browser request the server)
+        // these dynamic imports must inherit "?as_js_classic_library"
+        // This is done inside rollup for convenience
         ignoreDynamicImport: true,
       })
       await loader.getAllLoadDonePromise()
@@ -68,6 +56,15 @@ export const jsenvPluginAsJsClassicLibrary = ({
         },
       })
       const jsModuleBundledUrlInfo = bundleUrlInfos[jsModuleUrlInfo.url]
+      if (context.scenarios.dev) {
+        jsModuleBundledUrlInfo.sourceUrls.forEach((sourceUrl) => {
+          context.referenceUtils.inject({
+            type: "js_url_specifier",
+            specifier: sourceUrl,
+            isImplicit: true,
+          })
+        })
+      }
       const { content, sourcemap } = await convertJsModuleToJsClassic({
         systemJsInjection,
         systemJsClientFileUrl,
@@ -78,12 +75,10 @@ export const jsenvPluginAsJsClassicLibrary = ({
         content,
         contentType: "text/javascript",
         type: "js_classic",
-        originalUrl: jsModuleBundledUrlInfo.originalUrl,
-        originalContent: jsModuleBundledUrlInfo.originalContent,
+        originalUrl: jsModuleUrlInfo.originalUrl,
+        originalContent: jsModuleUrlInfo.originalContent,
         sourcemap,
       }
-      // TODO: ensure urlInfo contains all js modules in dependences
-      // so that is gets properly invalidated when a js module source file changes
     },
   }
 }

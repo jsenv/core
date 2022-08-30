@@ -5,12 +5,7 @@
  *   discover codebase progressively
  */
 
-export {
-  createLogger,
-  loggerIsMethodEnabled,
-  loggerToLevels,
-  loggerToLogLevel,
-} from "./logger.js"
+export { createLogger } from "./logger.js"
 
 // color and symbols
 export { ANSI } from "./ansi.js"

@@ -12,7 +12,10 @@ const test = async (options) => {
     entryPoints: {
       "./main.html": "main.html",
     },
+    // bundling: false,
     minification: false,
+    versioning: false,
+    writeGeneratedFiles: true,
     ...options,
   })
   const server = await startFileServer({

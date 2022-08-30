@@ -7,7 +7,7 @@ import {
   setUrlFilename,
 } from "@jsenv/urls"
 import { writeFileSync, ensureWindowsDriveLetter } from "@jsenv/filesystem"
-import { createLogger, createDetailedMessage } from "@jsenv/log"
+import { createLogger, createDetailedMessage, ANSI } from "@jsenv/log"
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js"
 
 import { createPluginController } from "../plugins/plugin_controller.js"
@@ -97,6 +97,7 @@ export const createKitchen = ({
     assert,
     assertNode,
     typePropertyNode,
+    debug = false,
   }) => {
     if (typeof specifier !== "string") {
       throw new TypeError(`"specifier" must be a string, got ${specifier}`)
@@ -145,15 +146,16 @@ export const createKitchen = ({
       assertNode,
       typePropertyNode,
       mutation: null,
+      debug,
     }
     // Object.preventExtensions(reference) // useful to ensure all properties are declared here
     return reference
   }
-  const mutateReference = (reference, newReference) => {
+  const updateReference = (reference, newReference) => {
     reference.next = newReference
-    newReference.prev = reference
     newReference.original = reference.original || reference
-    // newReference.isEntryPoint = reference.isEntryPoint
+
+    newReference.prev = reference
   }
   const resolveReference = (reference, context = kitchenContext) => {
     const referenceContext = {
@@ -170,27 +172,49 @@ export const createKitchen = ({
       if (!resolvedUrl) {
         throw new Error(`NO_RESOLVE`)
       }
+      if (resolvedUrl.includes("?debug")) {
+        reference.debug = true
+      }
       resolvedUrl = normalizeUrl(resolvedUrl)
+      let referencedUrlObject = new URL(resolvedUrl)
+      let searchParams = referencedUrlObject.searchParams
       reference.url = resolvedUrl
+      reference.searchParams = searchParams
+      if (reference.debug) {
+        logger.debug(`url resolved by "${
+          pluginController.getLastPluginUsed().name
+        }"
+${ANSI.color(reference.specifier, ANSI.GREY)} ->
+${ANSI.color(reference.url, ANSI.YELLOW)}
+`)
+      }
       pluginController.callHooks(
         "redirectUrl",
         reference,
         referenceContext,
-        (returnValue) => {
+        (returnValue, plugin) => {
           const normalizedReturnValue = normalizeUrl(returnValue)
           if (normalizedReturnValue === reference.url) {
             return
           }
-          const previousReference = { ...reference }
+          if (reference.debug) {
+            logger.debug(
+              `url redirected by "${plugin.name}"
+${ANSI.color(reference.url, ANSI.GREY)} ->
+${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
+`,
+            )
+          }
+          const prevReference = { ...reference }
+          updateReference(prevReference, reference)
+          referencedUrlObject = new URL(normalizedReturnValue)
+          searchParams = referencedUrlObject.searchParams
           reference.url = normalizedReturnValue
-          mutateReference(previousReference, reference)
+          reference.searchParams = searchParams
         },
       )
-
-      const referenceUrlObject = new URL(reference.url)
-      reference.searchParams = referenceUrlObject.searchParams
       reference.generatedUrl = reference.url
-      if (reference.searchParams.has("entry_point")) {
+      if (searchParams.has("entry_point")) {
         reference.isEntryPoint = true
       }
 
@@ -209,9 +233,9 @@ export const createKitchen = ({
         referenceContext,
         (returnValue) => {
           Object.keys(returnValue).forEach((key) => {
-            referenceUrlObject.searchParams.set(key, returnValue[key])
+            searchParams.set(key, returnValue[key])
           })
-          reference.generatedUrl = normalizeUrl(referenceUrlObject.href)
+          reference.generatedUrl = normalizeUrl(referencedUrlObject.href)
         },
       )
       const returnValue = pluginController.callHooksUntil(
@@ -221,7 +245,7 @@ export const createKitchen = ({
       )
       reference.generatedSpecifier = returnValue || reference.generatedUrl
       reference.generatedSpecifier = urlSpecifierEncoding.encode(reference)
-      return urlInfo
+      return [reference, urlInfo]
     } catch (error) {
       throw createResolveUrlError({
         pluginController,
@@ -241,17 +265,18 @@ export const createKitchen = ({
     sourcemapsRelativeSources,
     clientRuntimeCompat,
     injectSourcemapPlaceholder: ({ urlInfo, specifier }) => {
-      const sourcemapReference = createReference({
-        trace: {
-          message: `sourcemap comment placeholder`,
-          url: urlInfo.url,
-        },
-        type: "sourcemap_comment",
-        subtype: urlInfo.contentType === "text/javascript" ? "js" : "css",
-        parentUrl: urlInfo.url,
-        specifier,
-      })
-      const sourcemapUrlInfo = resolveReference(sourcemapReference)
+      const [sourcemapReference, sourcemapUrlInfo] = resolveReference(
+        createReference({
+          trace: {
+            message: `sourcemap comment placeholder`,
+            url: urlInfo.url,
+          },
+          type: "sourcemap_comment",
+          subtype: urlInfo.contentType === "text/javascript" ? "js" : "css",
+          parentUrl: urlInfo.url,
+          specifier,
+        }),
+      )
       sourcemapUrlInfo.type = "sourcemap"
       return [sourcemapReference, sourcemapUrlInfo]
     },
@@ -268,15 +293,16 @@ export const createKitchen = ({
         line: specifierLine,
         column: specifierColumn,
       })
-      const sourcemapReference = createReference({
-        trace: traceFromUrlSite(sourcemapUrlSite),
-        type,
-        parentUrl: urlInfo.url,
-        specifier,
-        specifierLine,
-        specifierColumn,
-      })
-      const sourcemapUrlInfo = resolveReference(sourcemapReference)
+      const [sourcemapReference, sourcemapUrlInfo] = resolveReference(
+        createReference({
+          trace: traceFromUrlSite(sourcemapUrlSite),
+          type,
+          parentUrl: urlInfo.url,
+          specifier,
+          specifierLine,
+          specifierColumn,
+        }),
+      )
       sourcemapUrlInfo.type = "sourcemap"
       return [sourcemapReference, sourcemapUrlInfo]
     },
@@ -284,7 +310,7 @@ export const createKitchen = ({
 
   const fetchUrlContent = async (
     urlInfo,
-    { reference, contextDuringFetch, cleanAfterFetch = false },
+    { reference, contextDuringFetch },
   ) => {
     try {
       const fetchUrlContentReturnValue =
@@ -376,9 +402,6 @@ export const createKitchen = ({
       context: contextDuringFetch,
     })
     await urlInfoTransformer.initTransformations(urlInfo, contextDuringFetch)
-    if (cleanAfterFetch && urlInfo.dependents.size === 0 && scenarios.build) {
-      contextDuringFetch.urlGraph.deleteUrlInfo(urlInfo.url)
-    }
   }
   kitchenContext.fetchUrlContent = fetchUrlContent
 
@@ -394,11 +417,10 @@ export const createKitchen = ({
         ...nestedDishContext,
       })
     }
-    context.fetchUrlContent = (urlInfo, { reference, cleanAfterFetch }) => {
+    context.fetchUrlContent = (urlInfo, { reference }) => {
       return fetchUrlContent(urlInfo, {
         reference,
         contextDuringFetch: context,
-        cleanAfterFetch,
       })
     }
 
@@ -408,12 +430,14 @@ export const createKitchen = ({
       context.referenceUtils = {
         _references: references,
         add: (props) => {
-          const reference = createReference({
-            parentUrl: urlInfo.url,
-            ...props,
-          })
+          const [reference, referencedUrlInfo] = resolveReference(
+            createReference({
+              parentUrl: urlInfo.url,
+              ...props,
+            }),
+            context,
+          )
           references.push(reference)
-          const referencedUrlInfo = resolveReference(reference, context)
           return [reference, referencedUrlInfo]
         },
         find: (predicate) => references.find(predicate),
@@ -466,14 +490,15 @@ export const createKitchen = ({
           if (index === -1) {
             throw new Error(`reference do not exists`)
           }
-          const previousReference = currentReference
-          const nextReference = createReference({
-            ...previousReference,
-            ...newReferenceParams,
-          })
-          references[index] = nextReference
-          mutateReference(previousReference, nextReference)
-          const newUrlInfo = resolveReference(nextReference, context)
+          const [newReference, newUrlInfo] = resolveReference(
+            createReference({
+              ...currentReference,
+              ...newReferenceParams,
+            }),
+            context,
+          )
+          updateReference(currentReference, newReference)
+          references[index] = newReference
           const currentUrlInfo = context.urlGraph.getUrlInfo(
             currentReference.url,
           )
@@ -484,7 +509,7 @@ export const createKitchen = ({
           ) {
             context.urlGraph.deleteUrlInfo(currentReference.url)
           }
-          return [nextReference, newUrlInfo]
+          return [newReference, newUrlInfo]
         },
         becomesInline: (
           reference,
@@ -650,17 +675,17 @@ export const createKitchen = ({
   kitchenContext.cook = cook
 
   const prepareEntryPoint = (params) => {
-    const entryReference = createReference(params)
-    entryReference.isEntryPoint = true
-    const entryUrlInfo = resolveReference(entryReference)
-    return [entryReference, entryUrlInfo]
+    return resolveReference(
+      createReference({
+        ...params,
+        isEntryPoint: true,
+      }),
+    )
   }
   kitchenContext.prepareEntryPoint = prepareEntryPoint
 
   const injectReference = (params) => {
-    const ref = createReference(params)
-    const urlInfo = resolveReference(ref)
-    return [ref, urlInfo]
+    return resolveReference(createReference(params))
   }
   kitchenContext.injectReference = injectReference
 
@@ -676,10 +701,19 @@ export const createKitchen = ({
       return [null, null]
     }
     searchParams.delete(searchParam)
+    const originalRef = context.reference.original || context.reference
     const referenceWithoutSearchParam = {
-      ...(context.reference.original || context.reference),
+      ...originalRef,
+      original: originalRef,
+      searchParams,
+      data: { ...originalRef.data },
       expectedType,
+      specifier: context.reference.specifier
+        .replace(`?${searchParam}`, "")
+        .replace(`&${searchParam}`, ""),
       url: urlObject.href,
+      generatedSpecifier: null,
+      generatedUrl: null,
     }
     const urlInfoWithoutSearchParam = context.urlGraph.reuseOrCreateUrlInfo(
       referenceWithoutSearchParam.url,
@@ -777,7 +811,7 @@ const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
   Object.assign(urlInfo.data, reference.data)
   Object.assign(urlInfo.timing, reference.timing)
   if (reference.injected) {
-    urlInfo.data.injected = true
+    urlInfo.injected = true
   }
   if (reference.filename) {
     urlInfo.filename = reference.filename

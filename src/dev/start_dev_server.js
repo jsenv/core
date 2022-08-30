@@ -4,7 +4,7 @@ import {
   registerDirectoryLifecycle,
 } from "@jsenv/filesystem"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
-import { createLogger, loggerToLevels, createTaskLog } from "@jsenv/log"
+import { createLogger, createTaskLog } from "@jsenv/log"
 import { getCallerPosition } from "@jsenv/urls"
 
 import { defaultRuntimeCompat } from "@jsenv/core/src/build/build.js"
@@ -140,7 +140,7 @@ export const startDevServer = async ({
   }
 
   const startDevServerTask = createTaskLog("start dev server", {
-    disabled: !loggerToLevels(logger).info,
+    disabled: !logger.levels.info,
   })
 
   const server = await startOmegaServer({

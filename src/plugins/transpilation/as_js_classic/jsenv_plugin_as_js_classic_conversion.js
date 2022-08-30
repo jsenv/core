@@ -1,8 +1,9 @@
+// propagate ?as_js_classic to referenced urls
+// and perform the conversion during fetchUrlContent
+
 import { injectQueryParams } from "@jsenv/urls"
 import { convertJsModuleToJsClassic } from "./convert_js_module_to_js_classic.js"
 
-// propagate ?as_js_classic to referenced urls
-// and perform the conversion during fetchUrlContent
 export const jsenvPluginAsJsClassicConversion = ({
   systemJsInjection,
   systemJsClientFileUrl,
@@ -10,10 +11,10 @@ export const jsenvPluginAsJsClassicConversion = ({
 }) => {
   const shouldPropagateJsClassic = (reference, context) => {
     const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl)
-    return (
-      parentUrlInfo &&
-      new URL(parentUrlInfo.url).searchParams.has("as_js_classic")
-    )
+    if (!parentUrlInfo) {
+      return false
+    }
+    return new URL(parentUrlInfo.url).searchParams.has("as_js_classic")
   }
   const markAsJsClassicProxy = (reference) => {
     reference.expectedType = "js_classic"
@@ -30,38 +31,27 @@ export const jsenvPluginAsJsClassicConversion = ({
   return {
     name: "jsenv:as_js_classic_conversion",
     appliesDuring: "*",
-    redirectUrl: {
-      // We want to propagate transformation of js module to js classic to:
-      // - import specifier (static/dynamic import + re-export)
-      // - url specifier when inside System.register/_context.import()
-      //   (because it's the transpiled equivalent of static and dynamic imports)
-      // And not other references otherwise we could try to transform inline resources
-      // or specifiers inside new URL()...
-      js_import_export: (reference, context) => {
-        if (new URL(reference.url).searchParams.has("as_js_classic")) {
-          markAsJsClassicProxy(reference)
-          return null
-        }
+    redirectUrl: (reference, context) => {
+      if (reference.searchParams.has("as_js_classic")) {
+        markAsJsClassicProxy(reference)
+        return null
+      }
+      if (
+        reference.type === "js_import_export" ||
+        reference.subtype === "system_register_arg" ||
+        reference.subtype === "system_import_arg"
+      ) {
+        // We want to propagate transformation of js module to js classic to:
+        // - import specifier (static/dynamic import + re-export)
+        // - url specifier when inside System.register/_context.import()
+        //   (because it's the transpiled equivalent of static and dynamic imports)
+        // And not other references otherwise we could try to transform inline resources
+        // or specifiers inside new URL()...
         if (shouldPropagateJsClassic(reference, context)) {
           return turnIntoJsClassicProxy(reference, context)
         }
-        return null
-      },
-      js_url_specifier: (reference, context) => {
-        if (
-          reference.subtype === "system_register_arg" ||
-          reference.subtype === "system_import_arg"
-        ) {
-          if (new URL(reference.url).searchParams.has("as_js_classic")) {
-            markAsJsClassicProxy(reference)
-            return null
-          }
-          if (shouldPropagateJsClassic(reference, context)) {
-            return turnIntoJsClassicProxy(reference, context)
-          }
-        }
-        return null
-      },
+      }
+      return null
     },
     fetchUrlContent: async (urlInfo, context) => {
       const [jsModuleReference, jsModuleUrlInfo] =
@@ -79,7 +69,6 @@ export const jsenvPluginAsJsClassicConversion = ({
       }
       await context.fetchUrlContent(jsModuleUrlInfo, {
         reference: jsModuleReference,
-        cleanAfterFetch: true,
       })
       if (context.scenarios.dev) {
         context.referenceUtils.found({
@@ -88,6 +77,11 @@ export const jsenvPluginAsJsClassicConversion = ({
           specifier: jsModuleReference.url,
           expectedType: "js_module",
         })
+      } else if (
+        context.scenarios.build &&
+        jsModuleUrlInfo.dependents.size === 0
+      ) {
+        context.urlGraph.deleteUrlInfo(jsModuleUrlInfo.url)
       }
       const { content, sourcemap } = await convertJsModuleToJsClassic({
         systemJsInjection,

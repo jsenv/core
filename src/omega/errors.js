@@ -168,6 +168,9 @@ export const createFinalizeUrlContentError = ({
       ...detailsFromPluginController(pluginController),
     }),
   )
+  if (error && error instanceof Error) {
+    finalizeError.cause = error
+  }
   finalizeError.name = "FINALIZE_URL_CONTENT_ERROR"
   finalizeError.reason = `An error occured during "finalizeUrlContent"`
   return finalizeError

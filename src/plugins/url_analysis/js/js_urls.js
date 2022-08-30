@@ -10,7 +10,6 @@ export const parseAndTransformJsUrls = async (urlInfo, context) => {
     isJsModule: urlInfo.type === "js_module",
     isWebWorker: isWebWorkerUrlInfo(urlInfo),
   })
-  const { rootDirectoryUrl, referenceUtils } = context
   const actions = []
   const magicSource = createMagicSource(urlInfo.content)
   jsMentions.forEach((jsMention) => {
@@ -20,7 +19,7 @@ export const parseAndTransformJsUrls = async (urlInfo, context) => {
     ) {
       urlInfo.data.usesImport = true
     }
-    const [reference] = referenceUtils.found({
+    const [reference] = context.referenceUtils.found({
       type: jsMention.type,
       subtype: jsMention.subtype,
       expectedType: jsMention.expectedType,
@@ -33,7 +32,7 @@ export const parseAndTransformJsUrls = async (urlInfo, context) => {
       data: jsMention.data,
       baseUrl: {
         "StringLiteral": jsMention.baseUrl,
-        "window.origin": rootDirectoryUrl,
+        "window.origin": context.rootDirectoryUrl,
         "import.meta.url": urlInfo.url,
         "context.meta.url": urlInfo.url,
         "document.currentScript.src": urlInfo.url,
@@ -43,7 +42,9 @@ export const parseAndTransformJsUrls = async (urlInfo, context) => {
       typePropertyNode: jsMention.typePropertyNode,
     })
     actions.push(async () => {
-      const replacement = await referenceUtils.readGeneratedSpecifier(reference)
+      const replacement = await context.referenceUtils.readGeneratedSpecifier(
+        reference,
+      )
       magicSource.replace({
         start: jsMention.specifierStart,
         end: jsMention.specifierEnd,
