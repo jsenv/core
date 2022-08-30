@@ -5652,7 +5652,8 @@ const defaultConfigValues = {
   inlineHelpers: false,
   minify: false,
   target: "es5",
-  topLevelAwait: "disabled"
+  topLevelAwait: "disabled",
+  asyncAwait: true
 };
 
 function readConfigKey(config, key) {
@@ -9759,6 +9760,10 @@ function default_1({
       },
 
       FunctionDeclaration(path) {
+        if (!readConfigKey(this.opts, 'asyncAwait')) {
+          return;
+        }
+
         const node = path.node;
 
         if (node.async) {
@@ -9793,6 +9798,10 @@ function default_1({
       },
 
       ArrowFunctionExpression(path) {
+        if (!readConfigKey(this.opts, 'asyncAwait')) {
+          return;
+        }
+
         const node = path.node;
 
         if (node.async) {
@@ -9804,6 +9813,10 @@ function default_1({
       },
 
       FunctionExpression(path) {
+        if (!readConfigKey(this.opts, 'asyncAwait')) {
+          return;
+        }
+
         if (path.node.async) {
           const id = path.node.id;
 
@@ -9882,6 +9895,10 @@ function default_1({
       },
 
       ClassMethod(path) {
+        if (!readConfigKey(this.opts, 'asyncAwait')) {
+          return;
+        }
+
         if (path.node.async) {
           const body = path.get("body");
 
@@ -9945,6 +9962,10 @@ function default_1({
       },
 
       ObjectMethod(path) {
+        if (!readConfigKey(this.opts, 'asyncAwait')) {
+          return;
+        }
+
         if (path.node.async) {
           if (path.node.kind === "method") {
             path.replaceWith(types.objectProperty(path.node.key, types.functionExpression(undefined, path.node.params, path.node.body, path.node.generator, path.node.async), path.node.computed, false, path.node.decorators));
@@ -9977,11 +9998,15 @@ const convertJsModuleToJsClassic = async ({
     code,
     map
   } = await applyBabelPlugins({
-    babelPlugins: [...(jsClassicFormat === "system" ? [// propposal-dynamic-import required with systemjs for babel8:
+    babelPlugins: [...(jsClassicFormat === "system" ? [// proposal-dynamic-import required with systemjs for babel8:
     // https://github.com/babel/babel/issues/10746
     requireFromJsenv("@babel/plugin-proposal-dynamic-import"), requireFromJsenv("@babel/plugin-transform-modules-systemjs"), [default_1, {
+      asyncAwait: false,
+      // already handled + we might not needs it at all
       topLevelAwait: "return"
     }]] : [[requireBabelPlugin("babel-plugin-transform-async-to-promises"), {
+      asyncAwait: false,
+      // already handled + we might not needs it at all
       topLevelAwait: "simple"
     }], babelPluginTransformImportMetaUrl, requireFromJsenv("@babel/plugin-transform-modules-umd")])],
     urlInfo: jsModuleUrlInfo
@@ -10720,6 +10745,10 @@ const rollupPluginJsenv = ({
         if (specifier[0] === "/") {
           urlObject = new URL(specifier.slice(1), rootDirectoryUrl);
         } else {
+          if (isFileSystemPath$1(importer)) {
+            importer = fileUrlConverter.asFileUrl(importer);
+          }
+
           urlObject = new URL(specifier, importer);
         }
 

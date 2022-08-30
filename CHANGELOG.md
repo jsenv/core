@@ -1,3 +1,22 @@
+# 28.2.0
+
+- add "?as_js_classic_library" to consume js modules with a regular script tag
+- it is now possible to use the following query params in source files:
+  - "?as_js_classic"
+  - "?as_json_module"
+  - "?as_css_module"
+  - "?as_text_module"
+  - "?as_js_classic_library"
+- Create a relationship with source file when a file is referenced with a query params from the list above (means hot reload and cache invalidation work as expected)
+- preserve preload links when css becomes js
+- update @jsenv/log to add logger.level
+- improve build debug logs
+- auto removal of preload link is now a "info" log instead of "warning" when it happens because file is bundled
+- use same transpilation levels between main thread and workers in case some code is shared
+- fix sourcemap source ENOENT on chrome
+- reference.searchParams is now available during "redirectUrl" hook
+- rework "as js classic" set of plugins to split how and when the query params are handled and the conversion is done
+
 # 28.1.3
 
 - fix error handling when runtine.run throw
