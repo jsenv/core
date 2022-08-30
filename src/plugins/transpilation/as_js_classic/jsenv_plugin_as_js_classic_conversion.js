@@ -77,6 +77,11 @@ export const jsenvPluginAsJsClassicConversion = ({
           specifier: jsModuleReference.url,
           expectedType: "js_module",
         })
+      } else if (
+        context.scenarios.build &&
+        jsModuleUrlInfo.dependents.size === 0
+      ) {
+        context.urlGraph.deleteUrlInfo(jsModuleUrlInfo.url)
       }
       const { content, sourcemap } = await convertJsModuleToJsClassic({
         systemJsInjection,
