@@ -1,21 +1,22 @@
 window.__supervisor__ = (() => {
   const notImplemented = () => {
-    throw new Error(`window.__supervisor__.setup() not called`)
-  }
-  const executionResults = {}
+    throw new Error(`window.__supervisor__.setup() not called`);
+  };
+
+  const executionResults = {};
   const supervisor = {
     reportError: notImplemented,
     superviseScript: notImplemented,
     reloadSupervisedScript: notImplemented,
     getDocumentExecutionResult: notImplemented,
-    executionResults,
-  }
+    executionResults
+  };
+  let navigationStartTime;
 
-  let navigationStartTime
   try {
-    navigationStartTime = window.performance.timing.navigationStart
+    navigationStartTime = window.performance.timing.navigationStart;
   } catch (e) {
-    navigationStartTime = Date.now()
+    navigationStartTime = Date.now();
   }
 
   supervisor.setupReportException = ({
@@ -23,23 +24,24 @@ window.__supervisor__ = (() => {
     errorNotification,
     errorOverlay,
     errorBaseUrl,
-    openInEditor,
+    openInEditor
   }) => {
-    const DYNAMIC_IMPORT_FETCH_ERROR = "dynamic_import_fetch_error"
-    const DYNAMIC_IMPORT_EXPORT_MISSING = "dynamic_import_export_missing"
-    const DYNAMIC_IMPORT_SYNTAX_ERROR = "dynamic_import_syntax_error"
+    const DYNAMIC_IMPORT_FETCH_ERROR = "dynamic_import_fetch_error";
+    const DYNAMIC_IMPORT_EXPORT_MISSING = "dynamic_import_export_missing";
+    const DYNAMIC_IMPORT_SYNTAX_ERROR = "dynamic_import_syntax_error";
 
     const createException = ({
       reason,
       reportedBy,
       url,
       line,
-      column,
+      column
     } = {}) => {
       const exception = {
         reason,
         reportedBy,
-        isError: false, // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/throw
+        isError: false,
+        // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/throw
         code: null,
         message: null,
         stack: null,
@@ -52,462 +54,526 @@ window.__supervisor__ = (() => {
           url: null,
           line: null,
           column: null,
-          originalUrl: null,
-        },
-      }
+          originalUrl: null
+        }
+      };
 
       const writeBasicProperties = () => {
         if (reason === undefined) {
-          exception.message = "undefined"
-          return
+          exception.message = "undefined";
+          return;
         }
+
         if (reason === null) {
-          exception.message = "null"
-          return
+          exception.message = "null";
+          return;
         }
+
         if (typeof reason === "string") {
-          exception.message = reason
-          return
+          exception.message = reason;
+          return;
         }
+
         if (reason instanceof Error) {
-          const error = reason
-          let message = error.message
-          exception.isError = true
+          const error = reason;
+          let message = error.message;
+          exception.isError = true;
+
           if (Error.captureStackTrace) {
             // stackTrace formatted by V8
-            exception.message = message
-            exception.stack = getErrorStackWithoutErrorMessage(error)
-            exception.stackFormatIsV8 = true
-            exception.stackSourcemapped = true
+            exception.message = message;
+            exception.stack = getErrorStackWithoutErrorMessage(error);
+            exception.stackFormatIsV8 = true;
+            exception.stackSourcemapped = true;
           } else {
-            exception.message = message
-            exception.stack = error.stack ? `  ${error.stack}` : null
-            exception.stackFormatIsV8 = false
-            exception.stackSourcemapped = false
+            exception.message = message;
+            exception.stack = error.stack ? `  ${error.stack}` : null;
+            exception.stackFormatIsV8 = false;
+            exception.stackSourcemapped = false;
           }
+
           if (error.reportedBy) {
-            exception.reportedBy = error.reportedBy
+            exception.reportedBy = error.reportedBy;
           }
+
           if (error.url) {
-            Object.assign(exception.site, resolveUrlSite({ url: error.url }))
+            Object.assign(exception.site, resolveUrlSite({
+              url: error.url
+            }));
           }
+
           if (error.needsReport) {
-            exception.needsReport = true
+            exception.needsReport = true;
           }
-          export_missing: {
+
+          {
             // chrome
             if (message.includes("does not provide an export named")) {
-              exception.code = DYNAMIC_IMPORT_EXPORT_MISSING
-              return
-            }
-            // firefox
-            if (message.startsWith("import not found:")) {
-              exception.code = DYNAMIC_IMPORT_EXPORT_MISSING
-              return
-            }
-            // safari
-            if (message.startsWith("import binding name")) {
-              exception.code = DYNAMIC_IMPORT_EXPORT_MISSING
-              return
-            }
-          }
-          js_syntax_error: {
-            if (error.name === "SyntaxError" && typeof line === "number") {
-              exception.code = DYNAMIC_IMPORT_SYNTAX_ERROR
-              return
-            }
-          }
-          return
-        }
-        if (typeof reason === "object") {
-          exception.code = reason.code
-          exception.message = reason.message
-          exception.stack = reason.stack
-          if (reason.reportedBy) {
-            exception.reportedBy = reason.reportedBy
-          }
-          if (reason.url) {
-            Object.assign(exception.site, resolveUrlSite({ url: reason.url }))
-          }
-          if (reason.needsReport) {
-            exception.needsReport = true
-          }
-          return
-        }
-        exception.message = JSON.stringify(reason)
-      }
-      writeBasicProperties()
+              exception.code = DYNAMIC_IMPORT_EXPORT_MISSING;
+              return;
+            } // firefox
 
-      // first create a version of the stack with file://
-      // (and use it to locate exception url+line+column)
-      if (exception.stack) {
-        exception.originalStack = exception.stack
-        exception.stack = replaceUrls(
-          exception.originalStack,
-          (serverUrlSite) => {
-            const fileUrlSite = resolveUrlSite(serverUrlSite)
-            if (exception.site.url === null) {
-              Object.assign(exception.site, fileUrlSite)
+
+            if (message.startsWith("import not found:")) {
+              exception.code = DYNAMIC_IMPORT_EXPORT_MISSING;
+              return;
+            } // safari
+
+
+            if (message.startsWith("import binding name")) {
+              exception.code = DYNAMIC_IMPORT_EXPORT_MISSING;
+              return;
             }
-            return stringifyUrlSite(fileUrlSite)
-          },
-        )
-      }
-      // then if it fails, use url+line+column passed
+          }
+
+          {
+            if (error.name === "SyntaxError" && typeof line === "number") {
+              exception.code = DYNAMIC_IMPORT_SYNTAX_ERROR;
+              return;
+            }
+          }
+
+          return;
+        }
+
+        if (typeof reason === "object") {
+          exception.code = reason.code;
+          exception.message = reason.message;
+          exception.stack = reason.stack;
+
+          if (reason.reportedBy) {
+            exception.reportedBy = reason.reportedBy;
+          }
+
+          if (reason.url) {
+            Object.assign(exception.site, resolveUrlSite({
+              url: reason.url
+            }));
+          }
+
+          if (reason.needsReport) {
+            exception.needsReport = true;
+          }
+
+          return;
+        }
+
+        exception.message = JSON.stringify(reason);
+      };
+
+      writeBasicProperties(); // first create a version of the stack with file://
+      // (and use it to locate exception url+line+column)
+
+      if (exception.stack) {
+        exception.originalStack = exception.stack;
+        exception.stack = replaceUrls(exception.originalStack, serverUrlSite => {
+          const fileUrlSite = resolveUrlSite(serverUrlSite);
+
+          if (exception.site.url === null) {
+            Object.assign(exception.site, fileUrlSite);
+          }
+
+          return stringifyUrlSite(fileUrlSite);
+        });
+      } // then if it fails, use url+line+column passed
+
+
       if (exception.site.url === null && url) {
         if (typeof line === "string") {
-          line = parseInt(line)
+          line = parseInt(line);
         }
+
         if (typeof column === "string") {
-          column = parseInt(column)
+          column = parseInt(column);
         }
-        const fileUrlSite = resolveUrlSite({ url, line, column })
-        if (
-          fileUrlSite.isInline &&
-          exception.code === DYNAMIC_IMPORT_SYNTAX_ERROR
-        ) {
+
+        const fileUrlSite = resolveUrlSite({
+          url,
+          line,
+          column
+        });
+
+        if (fileUrlSite.isInline && exception.code === DYNAMIC_IMPORT_SYNTAX_ERROR) {
           // syntax error on inline script need line-1 for some reason
           if (Error.captureStackTrace) {
-            fileUrlSite.line--
+            fileUrlSite.line--;
           } else {
             // firefox and safari need line-2
-            fileUrlSite.line -= 2
+            fileUrlSite.line -= 2;
           }
         }
-        Object.assign(exception.site, fileUrlSite)
-      }
-      exception.text = stringifyMessageAndStack(exception)
-      return exception
-    }
 
-    const stringifyMessageAndStack = ({ message, stack }) => {
+        Object.assign(exception.site, fileUrlSite);
+      }
+
+      exception.text = stringifyMessageAndStack(exception);
+      return exception;
+    };
+
+    const stringifyMessageAndStack = ({
+      message,
+      stack
+    }) => {
       if (message && stack) {
-        return `${message}\n${stack}`
+        return `${message}\n${stack}`;
       }
+
       if (stack) {
-        return stack
+        return stack;
       }
-      return message
-    }
 
-    const stringifyUrlSite = ({ url, line, column }) => {
-      return typeof line === "number" && typeof column === "number"
-        ? `${url}:${line}:${column}`
-        : typeof line === "number"
-        ? `${url}:${line}`
-        : url
-    }
+      return message;
+    };
 
-    const resolveUrlSite = ({ url, line, column }) => {
-      const inlineUrlMatch = url.match(
-        /@L([0-9]+)C([0-9]+)\-L([0-9]+)C([0-9]+)(\.[\w]+)$/,
-      )
+    const stringifyUrlSite = ({
+      url,
+      line,
+      column
+    }) => {
+      return typeof line === "number" && typeof column === "number" ? `${url}:${line}:${column}` : typeof line === "number" ? `${url}:${line}` : url;
+    };
+
+    const resolveUrlSite = ({
+      url,
+      line,
+      column
+    }) => {
+      const inlineUrlMatch = url.match(/@L([0-9]+)C([0-9]+)\-L([0-9]+)C([0-9]+)(\.[\w]+)$/);
+
       if (inlineUrlMatch) {
-        const htmlUrl = url.slice(0, inlineUrlMatch.index)
-        const tagLineStart = parseInt(inlineUrlMatch[1])
-        const tagColumnStart = parseInt(inlineUrlMatch[2])
-        const tagLineEnd = parseInt(inlineUrlMatch[3])
-        const tagColumnEnd = parseInt(inlineUrlMatch[4])
-        const extension = inlineUrlMatch[5]
-        url = htmlUrl
-        line = tagLineStart + (typeof line === "number" ? line : 0)
-        // stackTrace formatted by V8 (chrome)
+        const htmlUrl = url.slice(0, inlineUrlMatch.index);
+        const tagLineStart = parseInt(inlineUrlMatch[1]);
+        const tagColumnStart = parseInt(inlineUrlMatch[2]);
+        const tagLineEnd = parseInt(inlineUrlMatch[3]);
+        const tagColumnEnd = parseInt(inlineUrlMatch[4]);
+        const extension = inlineUrlMatch[5];
+        url = htmlUrl;
+        line = tagLineStart + (typeof line === "number" ? line : 0); // stackTrace formatted by V8 (chrome)
+
         if (Error.captureStackTrace) {
-          line--
+          line--;
         }
-        column = tagColumnStart + (typeof column === "number" ? column : 0)
-        const fileUrl = resolveFileUrl(url)
+
+        column = tagColumnStart + (typeof column === "number" ? column : 0);
+        const fileUrl = resolveFileUrl(url);
         return {
           isInline: true,
           serverUrl: url,
           originalUrl: `${fileUrl}@L${tagLineStart}C${tagColumnStart}-L${tagLineEnd}C${tagColumnEnd}${extension}`,
           url: fileUrl,
           line,
-          column,
-        }
+          column
+        };
       }
+
       return {
         isInline: false,
         serverUrl: url,
         url: resolveFileUrl(url),
         line,
-        column,
-      }
-    }
+        column
+      };
+    };
 
-    const getErrorStackWithoutErrorMessage = (error) => {
-      let stack = error.stack
-      const messageInStack = `${error.name}: ${error.message}`
+    const getErrorStackWithoutErrorMessage = error => {
+      let stack = error.stack;
+      const messageInStack = `${error.name}: ${error.message}`;
+
       if (stack.startsWith(messageInStack)) {
-        stack = stack.slice(messageInStack.length)
+        stack = stack.slice(messageInStack.length);
       }
-      const nextLineIndex = stack.indexOf("\n")
-      if (nextLineIndex > -1) {
-        stack = stack.slice(nextLineIndex + 1)
-      }
-      return stack
-    }
 
-    const resolveFileUrl = (url) => {
-      let urlObject = new URL(url)
-      if (urlObject.origin === window.origin) {
-        urlObject = new URL(
-          `${urlObject.pathname.slice(1)}${urlObject.search}`,
-          rootDirectoryUrl,
-        )
+      const nextLineIndex = stack.indexOf("\n");
+
+      if (nextLineIndex > -1) {
+        stack = stack.slice(nextLineIndex + 1);
       }
+
+      return stack;
+    };
+
+    const resolveFileUrl = url => {
+      let urlObject = new URL(url);
+
+      if (urlObject.origin === window.origin) {
+        urlObject = new URL(`${urlObject.pathname.slice(1)}${urlObject.search}`, rootDirectoryUrl);
+      }
+
       if (urlObject.href.startsWith("file:")) {
-        const atFsIndex = urlObject.pathname.indexOf("/@fs/")
+        const atFsIndex = urlObject.pathname.indexOf("/@fs/");
+
         if (atFsIndex > -1) {
-          const afterAtFs = urlObject.pathname.slice(atFsIndex + "/@fs/".length)
-          return new URL(afterAtFs, "file:///").href
+          const afterAtFs = urlObject.pathname.slice(atFsIndex + "/@fs/".length);
+          return new URL(afterAtFs, "file:///").href;
         }
       }
-      return urlObject.href
-    }
 
-    // `Error: yo
+      return urlObject.href;
+    }; // `Error: yo
     // at Object.execute (http://127.0.0.1:57300/build/src/__test__/file-throw.js:9:13)
     // at doExec (http://127.0.0.1:3000/src/__test__/file-throw.js:452:38)
     // at postOrderExec (http://127.0.0.1:3000/src/__test__/file-throw.js:448:16)
     // at http://127.0.0.1:3000/src/__test__/file-throw.js:399:18`.replace(/(?:https?|ftp|file):\/\/(.*+)$/gm, (...args) => {
     //   debugger
     // })
-    const replaceUrls = (source, replace) => {
-      return source.replace(/(?:https?|ftp|file):\/\/\S+/gm, (match) => {
-        let replacement = ""
-        const lastChar = match[match.length - 1]
 
-        // hotfix because our url regex sucks a bit
-        const endsWithSeparationChar = lastChar === ")" || lastChar === ":"
+
+    const replaceUrls = (source, replace) => {
+      return source.replace(/(?:https?|ftp|file):\/\/\S+/gm, match => {
+        let replacement = "";
+        const lastChar = match[match.length - 1]; // hotfix because our url regex sucks a bit
+
+        const endsWithSeparationChar = lastChar === ")" || lastChar === ":";
+
         if (endsWithSeparationChar) {
-          match = match.slice(0, -1)
+          match = match.slice(0, -1);
         }
 
-        const lineAndColumnPattern = /:([0-9]+):([0-9]+)$/
-        const lineAndColumMatch = match.match(lineAndColumnPattern)
+        const lineAndColumnPattern = /:([0-9]+):([0-9]+)$/;
+        const lineAndColumMatch = match.match(lineAndColumnPattern);
+
         if (lineAndColumMatch) {
-          const lineAndColumnString = lineAndColumMatch[0]
-          const lineString = lineAndColumMatch[1]
-          const columnString = lineAndColumMatch[2]
+          const lineAndColumnString = lineAndColumMatch[0];
+          const lineString = lineAndColumMatch[1];
+          const columnString = lineAndColumMatch[2];
           replacement = replace({
             url: match.slice(0, -lineAndColumnString.length),
             line: lineString ? parseInt(lineString) : null,
-            column: columnString ? parseInt(columnString) : null,
-          })
+            column: columnString ? parseInt(columnString) : null
+          });
         } else {
-          const linePattern = /:([0-9]+)$/
-          const lineMatch = match.match(linePattern)
+          const linePattern = /:([0-9]+)$/;
+          const lineMatch = match.match(linePattern);
+
           if (lineMatch) {
-            const lineString = lineMatch[0]
+            const lineString = lineMatch[0];
             replacement = replace({
               url: match.slice(0, -lineString.length),
-              line: lineString ? parseInt(lineString) : null,
-            })
+              line: lineString ? parseInt(lineString) : null
+            });
           } else {
             replacement = replace({
-              url: match,
-            })
+              url: match
+            });
           }
         }
-        if (endsWithSeparationChar) {
-          return `${replacement}${lastChar}`
-        }
-        return replacement
-      })
-    }
 
-    let formatError
-    error_formatter: {
-      formatError = (exceptionInfo) => {
+        if (endsWithSeparationChar) {
+          return `${replacement}${lastChar}`;
+        }
+
+        return replacement;
+      });
+    };
+
+    let formatError;
+
+    {
+      formatError = exceptionInfo => {
         const errorParts = {
           theme: "dark",
           title: "An error occured",
           text: "",
           tip: "",
-          errorDetailsPromise: null,
-        }
-        const tips = []
-        tips.push("Click outside to close.")
-        errorParts.tip = tips.join(`\n    <br />\n    `)
+          errorDetailsPromise: null
+        };
+        const tips = [];
+        tips.push("Click outside to close.");
+        errorParts.tip = tips.join(`\n    <br />\n    `);
 
-        const generateClickableText = (text) => {
+        const generateClickableText = text => {
           const textWithHtmlLinks = makeLinksClickable(text, {
-            createLink: ({ url, line, column }) => {
-              const urlSite = resolveUrlSite({ url, line, column })
+            createLink: ({
+              url,
+              line,
+              column
+            }) => {
+              const urlSite = resolveUrlSite({
+                url,
+                line,
+                column
+              });
+
               if (errorBaseUrl) {
                 if (urlSite.url.startsWith(rootDirectoryUrl)) {
-                  urlSite.url = `${errorBaseUrl}${urlSite.url.slice(
-                    rootDirectoryUrl.length,
-                  )}`
+                  urlSite.url = `${errorBaseUrl}${urlSite.url.slice(rootDirectoryUrl.length)}`;
                 } else {
-                  urlSite.url = "file:///mocked_for_snapshots"
+                  urlSite.url = "file:///mocked_for_snapshots";
                 }
               }
-              const urlWithLineAndColumn = stringifyUrlSite(urlSite)
+
+              const urlWithLineAndColumn = stringifyUrlSite(urlSite);
               return {
-                href:
-                  urlSite.url.startsWith("file:") && openInEditor
-                    ? `javascript:window.fetch('/__open_in_editor__/${encodeURIComponent(
-                        urlWithLineAndColumn,
-                      )}')`
-                    : urlSite.url,
-                text: urlWithLineAndColumn,
-              }
-            },
-          })
-          return textWithHtmlLinks
-        }
+                href: urlSite.url.startsWith("file:") && openInEditor ? `javascript:window.fetch('/__open_in_editor__/${encodeURIComponent(urlWithLineAndColumn)}')` : urlSite.url,
+                text: urlWithLineAndColumn
+              };
+            }
+          });
+          return textWithHtmlLinks;
+        };
 
         errorParts.text = stringifyMessageAndStack({
-          message: exceptionInfo.message
-            ? generateClickableText(exceptionInfo.message)
-            : "",
-          stack: exceptionInfo.stack
-            ? generateClickableText(exceptionInfo.stack)
-            : "",
-        })
+          message: exceptionInfo.message ? generateClickableText(exceptionInfo.message) : "",
+          stack: exceptionInfo.stack ? generateClickableText(exceptionInfo.stack) : ""
+        });
+
         if (exceptionInfo.site.url) {
           errorParts.errorDetailsPromise = (async () => {
             try {
-              if (
-                exceptionInfo.code === DYNAMIC_IMPORT_FETCH_ERROR ||
-                exceptionInfo.reportedBy === "script_error_event"
-              ) {
-                const response = await window.fetch(
-                  `/__get_error_cause__/${encodeURIComponent(
-                    exceptionInfo.site.isInline
-                      ? exceptionInfo.site.originalUrl
-                      : exceptionInfo.site.url,
-                  )}`,
-                )
+              if (exceptionInfo.code === DYNAMIC_IMPORT_FETCH_ERROR || exceptionInfo.reportedBy === "script_error_event") {
+                const response = await window.fetch(`/__get_error_cause__/${encodeURIComponent(exceptionInfo.site.isInline ? exceptionInfo.site.originalUrl : exceptionInfo.site.url)}`);
+
                 if (response.status !== 200) {
-                  return null
+                  return null;
                 }
-                const causeInfo = await response.json()
+
+                const causeInfo = await response.json();
+
                 if (!causeInfo) {
-                  return null
+                  return null;
                 }
-                const causeText =
-                  causeInfo.code === "NOT_FOUND"
-                    ? stringifyMessageAndStack({
-                        message: generateClickableText(causeInfo.reason),
-                        stack: generateClickableText(causeInfo.codeFrame),
-                      })
-                    : stringifyMessageAndStack({
-                        message: generateClickableText(causeInfo.stack),
-                        stack: generateClickableText(causeInfo.codeFrame),
-                      })
+
+                const causeText = causeInfo.code === "NOT_FOUND" ? stringifyMessageAndStack({
+                  message: generateClickableText(causeInfo.reason),
+                  stack: generateClickableText(causeInfo.codeFrame)
+                }) : stringifyMessageAndStack({
+                  message: generateClickableText(causeInfo.stack),
+                  stack: generateClickableText(causeInfo.codeFrame)
+                });
                 return {
-                  cause: causeText,
-                }
+                  cause: causeText
+                };
               }
-              if (
-                exceptionInfo.site.line !== undefined &&
-                // code frame showing internal window.reportError is pointless
-                !exceptionInfo.site.url.endsWith(
-                  `script_type_module_supervisor.js`,
-                )
-              ) {
-                const urlToFetch = new URL(
-                  `/__get_code_frame__/${encodeURIComponent(
-                    stringifyUrlSite(exceptionInfo.site),
-                  )}`,
-                  window.origin,
-                )
+
+              if (exceptionInfo.site.line !== undefined && // code frame showing internal window.reportError is pointless
+              !exceptionInfo.site.url.endsWith(`script_type_module_supervisor.js`)) {
+                const urlToFetch = new URL(`/__get_code_frame__/${encodeURIComponent(stringifyUrlSite(exceptionInfo.site))}`, window.origin);
+
                 if (!exceptionInfo.stackSourcemapped) {
-                  urlToFetch.searchParams.set("remap", "")
+                  urlToFetch.searchParams.set("remap", "");
                 }
-                const response = await window.fetch(urlToFetch)
+
+                const response = await window.fetch(urlToFetch);
+
                 if (response.status !== 200) {
-                  return null
+                  return null;
                 }
-                const codeFrame = await response.text()
+
+                const codeFrame = await response.text();
                 return {
-                  codeFrame: generateClickableText(codeFrame),
-                }
+                  codeFrame: generateClickableText(codeFrame)
+                };
               }
             } catch (e) {
               // happens if server is closed for instance
-              return null
+              return null;
             }
-            return null
-          })()
+
+            return null;
+          })();
         }
-        return errorParts
-      }
 
-      const makeLinksClickable = (
-        string,
-        { createLink = ({ url }) => url },
-      ) => {
+        return errorParts;
+      };
+
+      const makeLinksClickable = (string, {
+        createLink = ({
+          url
+        }) => url
+      }) => {
         // normalize line breaks
-        string = string.replace(/\n/g, "\n")
-        string = escapeHtml(string)
-        // render links
-        string = replaceUrls(string, ({ url, line, column }) => {
-          const { href, text } = createLink({ url, line, column })
-          return link({ href, text })
-        })
-        return string
-      }
+        string = string.replace(/\n/g, "\n");
+        string = escapeHtml(string); // render links
 
-      const escapeHtml = (string) => {
-        return string
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")
-          .replace(/"/g, "&quot;")
-          .replace(/'/g, "&#039;")
-      }
+        string = replaceUrls(string, ({
+          url,
+          line,
+          column
+        }) => {
+          const {
+            href,
+            text
+          } = createLink({
+            url,
+            line,
+            column
+          });
+          return link({
+            href,
+            text
+          });
+        });
+        return string;
+      };
 
-      const link = ({ href, text = href }) => `<a href="${href}">${text}</a>`
+      const escapeHtml = string => {
+        return string.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+      };
+
+      const link = ({
+        href,
+        text = href
+      }) => `<a href="${href}">${text}</a>`;
     }
 
-    let displayErrorNotification
-    error_notification: {
-      const { Notification } = window
-      displayErrorNotification =
-        typeof Notification === "function"
-          ? ({ title, text, icon }) => {
-              if (Notification.permission === "granted") {
-                const notification = new Notification(title, {
-                  lang: "en",
-                  body: text,
-                  icon,
-                })
-                notification.onclick = () => {
-                  window.focus()
-                }
-              }
-            }
-          : () => {}
+    let displayErrorNotification;
+
+    {
+      const {
+        Notification
+      } = window;
+      displayErrorNotification = typeof Notification === "function" ? ({
+        title,
+        text,
+        icon
+      }) => {
+        if (Notification.permission === "granted") {
+          const notification = new Notification(title, {
+            lang: "en",
+            body: text,
+            icon
+          });
+
+          notification.onclick = () => {
+            window.focus();
+          };
+        }
+      } : () => {};
     }
 
-    const JSENV_ERROR_OVERLAY_TAGNAME = "jsenv-error-overlay"
-    let displayJsenvErrorOverlay
-    error_overlay: {
-      displayJsenvErrorOverlay = (params) => {
-        let jsenvErrorOverlay = new JsenvErrorOverlay(params)
-        document
-          .querySelectorAll(JSENV_ERROR_OVERLAY_TAGNAME)
-          .forEach((node) => {
-            node.parentNode.removeChild(node)
-          })
-        document.body.appendChild(jsenvErrorOverlay)
+    const JSENV_ERROR_OVERLAY_TAGNAME = "jsenv-error-overlay";
+    let displayJsenvErrorOverlay;
+
+    {
+      displayJsenvErrorOverlay = params => {
+        let jsenvErrorOverlay = new JsenvErrorOverlay(params);
+        document.querySelectorAll(JSENV_ERROR_OVERLAY_TAGNAME).forEach(node => {
+          node.parentNode.removeChild(node);
+        });
+        document.body.appendChild(jsenvErrorOverlay);
+
         const removeErrorOverlay = () => {
           if (jsenvErrorOverlay && jsenvErrorOverlay.parentNode) {
-            document.body.removeChild(jsenvErrorOverlay)
-            jsenvErrorOverlay = null
+            document.body.removeChild(jsenvErrorOverlay);
+            jsenvErrorOverlay = null;
           }
-        }
-        return removeErrorOverlay
-      }
+        };
+
+        return removeErrorOverlay;
+      };
 
       class JsenvErrorOverlay extends HTMLElement {
-        constructor({ theme, title, text, tip, errorDetailsPromise }) {
-          super()
-          this.root = this.attachShadow({ mode: "open" })
+        constructor({
+          theme,
+          title,
+          text,
+          tip,
+          errorDetailsPromise
+        }) {
+          super();
+          this.root = this.attachShadow({
+            mode: "open"
+          });
           this.root.innerHTML = `
 <style>
   ${overlayCSS}
@@ -521,50 +587,60 @@ window.__supervisor__ = (() => {
   <div class="tip">
     ${tip}
   </div>
-</div>`
+</div>`;
+
           this.root.querySelector(".backdrop").onclick = () => {
             if (!this.parentNode) {
               // not in document anymore
-              return
+              return;
             }
-            this.root.querySelector(".backdrop").onclick = null
-            this.parentNode.removeChild(this)
-          }
+
+            this.root.querySelector(".backdrop").onclick = null;
+            this.parentNode.removeChild(this);
+          };
+
           if (errorDetailsPromise) {
-            errorDetailsPromise.then((errorDetails) => {
+            errorDetailsPromise.then(errorDetails => {
               if (!errorDetails || !this.parentNode) {
-                return
+                return;
               }
-              const { codeFrame, cause } = errorDetails
+
+              const {
+                codeFrame,
+                cause
+              } = errorDetails;
+
               if (codeFrame) {
-                this.root.querySelector(".text").innerHTML += `\n\n${codeFrame}`
+                this.root.querySelector(".text").innerHTML += `\n\n${codeFrame}`;
               }
+
               if (cause) {
-                const causeIndented = prefixRemainingLines(cause, "  ")
-                this.root.querySelector(
-                  ".text",
-                ).innerHTML += `\n  [cause]: ${causeIndented}`
+                const causeIndented = prefixRemainingLines(cause, "  ");
+                this.root.querySelector(".text").innerHTML += `\n  [cause]: ${causeIndented}`;
               }
-            })
+            });
           }
         }
+
       }
 
       const prefixRemainingLines = (text, prefix) => {
-        const lines = text.split(/\r?\n/)
-        const firstLine = lines.shift()
-        let result = firstLine
-        let i = 0
+        const lines = text.split(/\r?\n/);
+        const firstLine = lines.shift();
+        let result = firstLine;
+        let i = 0;
+
         while (i < lines.length) {
-          const line = lines[i]
-          i++
-          result += line.length ? `\n${prefix}${line}` : `\n`
+          const line = lines[i];
+          i++;
+          result += line.length ? `\n${prefix}${line}` : `\n`;
         }
-        return result
-      }
+
+        return result;
+      };
 
       if (customElements && !customElements.get(JSENV_ERROR_OVERLAY_TAGNAME)) {
-        customElements.define(JSENV_ERROR_OVERLAY_TAGNAME, JsenvErrorOverlay)
+        customElements.define(JSENV_ERROR_OVERLAY_TAGNAME, JsenvErrorOverlay);
       }
 
       const overlayCSS = `
@@ -641,13 +717,19 @@ window.__supervisor__ = (() => {
   
   pre a {
     color: inherit;
-  }`
+  }`;
     }
 
-    supervisor.createException = createException
-    supervisor.reportException = (exception) => {
-      const { theme, title, text, tip, errorDetailsPromise } =
-        formatError(exception)
+    supervisor.createException = createException;
+
+    supervisor.reportException = exception => {
+      const {
+        theme,
+        title,
+        text,
+        tip,
+        errorDetailsPromise
+      } = formatError(exception);
 
       if (errorOverlay) {
         const removeErrorOverlay = displayJsenvErrorOverlay({
@@ -655,30 +737,41 @@ window.__supervisor__ = (() => {
           title,
           text,
           tip,
-          errorDetailsPromise,
-        })
+          errorDetailsPromise
+        });
+
         if (window.__reloader__) {
           window.__reloader__.onstatuschange = () => {
             if (window.__reloader__.status === "reloading") {
-              removeErrorOverlay()
+              removeErrorOverlay();
             }
-          }
+          };
         }
       }
+
       if (errorNotification) {
         displayErrorNotification({
           title,
-          text,
-        })
+          text
+        });
       }
-      return exception
-    }
-    window.addEventListener("error", (errorEvent) => {
+
+      return exception;
+    };
+
+    window.addEventListener("error", errorEvent => {
       if (!errorEvent.isTrusted) {
         // ignore custom error event (not sent by browser)
-        return
+        return;
       }
-      const { error, message, filename, lineno, colno } = errorEvent
+
+      const {
+        error,
+        message,
+        filename,
+        lineno,
+        colno
+      } = errorEvent;
       const exception = supervisor.createException({
         // when error is reported within a worker error is null
         // but there is a message property on errorEvent
@@ -686,85 +779,107 @@ window.__supervisor__ = (() => {
         reportedBy: "window_error_event",
         url: filename,
         line: lineno,
-        column: colno,
-      })
-      supervisor.reportException(exception)
-    })
-    window.addEventListener("unhandledrejection", (event) => {
+        column: colno
+      });
+      supervisor.reportException(exception);
+    });
+    window.addEventListener("unhandledrejection", event => {
       if (event.defaultPrevented) {
-        return
+        return;
       }
+
       const exception = supervisor.createException({
         reason: event.reason,
-        reportedBy: "window_unhandledrejection_event",
-      })
-      supervisor.reportException(exception)
-    })
-  }
+        reportedBy: "window_unhandledrejection_event"
+      });
+      supervisor.reportException(exception);
+    });
+  };
 
   supervisor.setup = ({
     rootDirectoryUrl,
     logs,
     errorOverlay,
     errorBaseUrl,
-    openInEditor,
+    openInEditor
   }) => {
     supervisor.setupReportException({
       rootDirectoryUrl,
       errorOverlay,
       errorBaseUrl,
-      openInEditor,
-    })
-
-    const supervisedScripts = []
-    const pendingPromises = []
-    // respect execution order
+      openInEditor
+    });
+    const supervisedScripts = [];
+    const pendingPromises = []; // respect execution order
     // - wait for classic scripts to be done (non async)
     // - wait module script previous execution (non async)
     // see https://gist.github.com/jakub-g/385ee6b41085303a53ad92c7c8afd7a6#typemodule-vs-non-module-typetextjavascript-vs-script-nomodule
-    const executionQueue = []
-    let executing = false
-    const addToExecutionQueue = async (execution) => {
+
+    const executionQueue = [];
+    let executing = false;
+
+    const addToExecutionQueue = async execution => {
       if (execution.async) {
-        execution.start()
-        return
+        execution.start();
+        return;
       }
+
       if (executing) {
-        executionQueue.push(execution)
-        return
+        executionQueue.push(execution);
+        return;
       }
-      startThenDequeue(execution)
-    }
-    const startThenDequeue = async (execution) => {
-      executing = true
-      const promise = execution.start()
-      await promise
-      executing = false
+
+      startThenDequeue(execution);
+    };
+
+    const startThenDequeue = async execution => {
+      executing = true;
+      const promise = execution.start();
+      await promise;
+      executing = false;
+
       if (executionQueue.length) {
-        const nextExecution = executionQueue.shift()
-        startThenDequeue(nextExecution)
+        const nextExecution = executionQueue.shift();
+        startThenDequeue(nextExecution);
       }
-    }
-    supervisor.addExecution = ({ type, src, async, execute }) => {
+    };
+
+    supervisor.addExecution = ({
+      type,
+      src,
+      async,
+      execute
+    }) => {
       const execution = {
         type,
         src,
         async,
-        execute,
-      }
+        execute
+      };
+
       execution.start = () => {
-        return superviseExecution(execution, { isReload: false })
-      }
+        return superviseExecution(execution, {
+          isReload: false
+        });
+      };
+
       execution.reload = () => {
-        return superviseExecution(execution, { isReload: true })
-      }
-      supervisedScripts.push(execution)
-      return addToExecutionQueue(execution)
-    }
-    const superviseExecution = async (execution, { isReload }) => {
+        return superviseExecution(execution, {
+          isReload: true
+        });
+      };
+
+      supervisedScripts.push(execution);
+      return addToExecutionQueue(execution);
+    };
+
+    const superviseExecution = async (execution, {
+      isReload
+    }) => {
       if (logs) {
-        console.group(`[jsenv] loading ${execution.type} ${execution.src}`)
+        console.group(`[jsenv] loading ${execution.type} ${execution.src}`);
       }
+
       const executionResult = {
         status: "pending",
         loadDuration: null,
@@ -772,127 +887,141 @@ window.__supervisor__ = (() => {
         duration: null,
         exception: null,
         namespace: null,
-        coverage: null,
-      }
-      executionResults[execution.src] = executionResult
+        coverage: null
+      };
+      executionResults[execution.src] = executionResult;
 
       const monitorScriptLoad = () => {
-        const loadStartTime = Date.now()
-        let resolveScriptLoadPromise
-        const scriptLoadPromise = new Promise((resolve) => {
-          resolveScriptLoadPromise = resolve
-        })
-        pendingPromises.push(scriptLoadPromise)
+        const loadStartTime = Date.now();
+        let resolveScriptLoadPromise;
+        const scriptLoadPromise = new Promise(resolve => {
+          resolveScriptLoadPromise = resolve;
+        });
+        pendingPromises.push(scriptLoadPromise);
         return () => {
-          const loadEndTime = Date.now()
-          executionResult.loadDuration = loadEndTime - loadStartTime
-          resolveScriptLoadPromise()
-        }
-      }
+          const loadEndTime = Date.now();
+          executionResult.loadDuration = loadEndTime - loadStartTime;
+          resolveScriptLoadPromise();
+        };
+      };
+
       const monitorScriptExecution = () => {
-        const executionStartTime = Date.now()
-        let resolveExecutionPromise
-        const executionPromise = new Promise((resolve) => {
-          resolveExecutionPromise = resolve
-        })
-        pendingPromises.push(executionPromise)
+        const executionStartTime = Date.now();
+        let resolveExecutionPromise;
+        const executionPromise = new Promise(resolve => {
+          resolveExecutionPromise = resolve;
+        });
+        pendingPromises.push(executionPromise);
         return () => {
-          executionResult.coverage = window.__coverage__
-          executionResult.executionDuration = Date.now() - executionStartTime
-          executionResult.duration =
-            executionResult.loadDuration + executionResult.executionDuration
-          resolveExecutionPromise()
-        }
-      }
+          executionResult.coverage = window.__coverage__;
+          executionResult.executionDuration = Date.now() - executionStartTime;
+          executionResult.duration = executionResult.loadDuration + executionResult.executionDuration;
+          resolveExecutionPromise();
+        };
+      };
 
-      const onError = (e) => {
-        executionResult.status = "errored"
-        const exception = supervisor.createException({ reason: e })
+      const onError = e => {
+        executionResult.status = "errored";
+        const exception = supervisor.createException({
+          reason: e
+        });
+
         if (exception.needsReport) {
-          supervisor.reportException(exception)
+          supervisor.reportException(exception);
         }
-        executionResult.exception = exception
-      }
 
-      const scriptLoadDone = monitorScriptLoad()
+        executionResult.exception = exception;
+      };
+
+      const scriptLoadDone = monitorScriptLoad();
+
       try {
-        const result = await execution.execute({ isReload })
-        if (logs) {
-          console.log(`${execution.type} load ended`)
-          console.groupEnd()
-        }
-        executionResult.status = "loaded"
-        scriptLoadDone()
+        const result = await execution.execute({
+          isReload
+        });
 
-        const scriptExecutionDone = monitorScriptExecution()
+        if (logs) {
+          console.log(`${execution.type} load ended`);
+          console.groupEnd();
+        }
+
+        executionResult.status = "loaded";
+        scriptLoadDone();
+        const scriptExecutionDone = monitorScriptExecution();
+
         if (execution.type === "js_classic") {
-          executionResult.status = "completed"
-          scriptExecutionDone()
+          executionResult.status = "completed";
+          scriptExecutionDone();
         } else if (execution.type === "js_module") {
-          result.executionPromise.then(
-            (namespace) => {
-              executionResult.status = "completed"
-              executionResult.namespace = namespace
-              scriptExecutionDone()
-            },
-            (e) => {
-              onError(e)
-              scriptExecutionDone()
-            },
-          )
+          result.executionPromise.then(namespace => {
+            executionResult.status = "completed";
+            executionResult.namespace = namespace;
+            scriptExecutionDone();
+          }, e => {
+            onError(e);
+            scriptExecutionDone();
+          });
         }
       } catch (e) {
         if (logs) {
-          console.groupEnd()
+          console.groupEnd();
         }
-        onError(e)
-        scriptLoadDone()
-      }
-    }
 
-    supervisor.superviseScript = async ({ src, async }) => {
-      const { currentScript } = document
-      const parentNode = currentScript.parentNode
-      let nodeToReplace
-      let currentScriptClone
+        onError(e);
+        scriptLoadDone();
+      }
+    };
+
+    supervisor.superviseScript = async ({
+      src,
+      async
+    }) => {
+      const {
+        currentScript
+      } = document;
+      const parentNode = currentScript.parentNode;
+      let nodeToReplace;
+      let currentScriptClone;
       return supervisor.addExecution({
         src,
         type: "js_classic",
         async,
-        execute: async ({ isReload }) => {
-          const urlObject = new URL(src, window.location)
+        execute: async ({
+          isReload
+        }) => {
+          const urlObject = new URL(src, window.location);
           const loadPromise = new Promise((resolve, reject) => {
             // do not use script.cloneNode()
             // bcause https://stackoverflow.com/questions/28771542/why-dont-clonenode-script-tags-execute
-            currentScriptClone = document.createElement("script")
-            // browsers set async by default when creating script(s)
+            currentScriptClone = document.createElement("script"); // browsers set async by default when creating script(s)
             // we want an exact copy to preserves how code is executed
-            currentScriptClone.async = false
-            Array.from(currentScript.attributes).forEach((attribute) => {
-              currentScriptClone.setAttribute(
-                attribute.nodeName,
-                attribute.nodeValue,
-              )
-            })
+
+            currentScriptClone.async = false;
+            Array.from(currentScript.attributes).forEach(attribute => {
+              currentScriptClone.setAttribute(attribute.nodeName, attribute.nodeValue);
+            });
+
             if (isReload) {
-              urlObject.searchParams.set("hmr", Date.now())
-              nodeToReplace = currentScriptClone
-              currentScriptClone.src = urlObject.href
+              urlObject.searchParams.set("hmr", Date.now());
+              nodeToReplace = currentScriptClone;
+              currentScriptClone.src = urlObject.href;
             } else {
-              currentScriptClone.removeAttribute("jsenv-plugin-owner")
-              currentScriptClone.removeAttribute("jsenv-plugin-action")
-              currentScriptClone.removeAttribute("inlined-from-src")
-              currentScriptClone.removeAttribute("original-position")
-              currentScriptClone.removeAttribute("original-src-position")
-              nodeToReplace = currentScript
-              currentScriptClone.src = src
+              currentScriptClone.removeAttribute("jsenv-plugin-owner");
+              currentScriptClone.removeAttribute("jsenv-plugin-action");
+              currentScriptClone.removeAttribute("inlined-from-src");
+              currentScriptClone.removeAttribute("original-position");
+              currentScriptClone.removeAttribute("original-src-position");
+              nodeToReplace = currentScript;
+              currentScriptClone.src = src;
             }
-            currentScriptClone.addEventListener("error", reject)
-            currentScriptClone.addEventListener("load", resolve)
-            parentNode.replaceChild(currentScriptClone, nodeToReplace)
-          })
+
+            currentScriptClone.addEventListener("error", reject);
+            currentScriptClone.addEventListener("load", resolve);
+            parentNode.replaceChild(currentScriptClone, nodeToReplace);
+          });
+
           try {
-            await loadPromise
+            await loadPromise;
           } catch (e) {
             // eslint-disable-next-line no-throw-literal
             throw {
@@ -900,63 +1029,73 @@ window.__supervisor__ = (() => {
               reportedBy: "script_error_event",
               url: urlObject.href,
               // window.error won't be dispatched for this error
-              needsReport: true,
-            }
+              needsReport: true
+            };
           }
-        },
-      })
-    }
-    supervisor.reloadSupervisedScript = ({ type, src }) => {
-      const supervisedScript = supervisedScripts.find(
-        (supervisedScriptCandidate) => {
-          if (type && supervisedScriptCandidate.type !== type) {
-            return false
-          }
-          if (supervisedScriptCandidate.src !== src) {
-            return false
-          }
-          return true
-        },
-      )
+        }
+      });
+    };
+
+    supervisor.reloadSupervisedScript = ({
+      type,
+      src
+    }) => {
+      const supervisedScript = supervisedScripts.find(supervisedScriptCandidate => {
+        if (type && supervisedScriptCandidate.type !== type) {
+          return false;
+        }
+
+        if (supervisedScriptCandidate.src !== src) {
+          return false;
+        }
+
+        return true;
+      });
+
       if (supervisedScript) {
-        supervisedScript.reload()
+        supervisedScript.reload();
       }
-    }
+    };
+
     supervisor.getDocumentExecutionResult = async () => {
       // just to be super safe and ensure any <script type="module"> got a chance to execute
-      const documentReadyPromise = new Promise((resolve) => {
+      const documentReadyPromise = new Promise(resolve => {
         if (document.readyState === "complete") {
-          resolve()
-          return
+          resolve();
+          return;
         }
+
         const loadCallback = () => {
-          window.removeEventListener("load", loadCallback)
-          resolve()
-        }
-        window.addEventListener("load", loadCallback)
-      })
-      await documentReadyPromise
+          window.removeEventListener("load", loadCallback);
+          resolve();
+        };
+
+        window.addEventListener("load", loadCallback);
+      });
+      await documentReadyPromise;
+
       const waitScriptExecutions = async () => {
-        const numberOfPromises = pendingPromises.length
-        await Promise.all(pendingPromises)
-        // new scripts added while the other where executing
+        const numberOfPromises = pendingPromises.length;
+        await Promise.all(pendingPromises); // new scripts added while the other where executing
         // (should happen only on webkit where
         // script might be added after window load event)
-        await new Promise((resolve) => setTimeout(resolve))
-        if (pendingPromises.length > numberOfPromises) {
-          await waitScriptExecutions()
-        }
-      }
-      await waitScriptExecutions()
 
+        await new Promise(resolve => setTimeout(resolve));
+
+        if (pendingPromises.length > numberOfPromises) {
+          await waitScriptExecutions();
+        }
+      };
+
+      await waitScriptExecutions();
       return {
         status: "completed",
         executionResults,
         startTime: navigationStartTime,
-        endTime: Date.now(),
-      }
-    }
-  }
+        endTime: Date.now()
+      };
+    };
+  };
 
-  return supervisor
-})()
+  return supervisor;
+})();
