@@ -25778,7 +25778,9 @@ const startDevServer = async ({
   sourcemaps = "inline",
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
-  writeGeneratedFiles = true
+  // no real need to write files during github workflow
+  // and mitigates https://github.com/actions/runner-images/issues/3885
+  writeGeneratedFiles = !process.env.CI
 }) => {
   const logger = createLogger({
     logLevel
