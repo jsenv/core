@@ -1,5 +1,7 @@
-// propagate ?as_js_classic to referenced urls
-// and perform the conversion during fetchUrlContent
+/*
+ * - propagate ?as_js_classic to urls
+ * - perform conversion from js module to js classic when url uses ?as_js_classic
+ */
 
 import { injectQueryParams } from "@jsenv/urls"
 import { convertJsModuleToJsClassic } from "./convert_js_module_to_js_classic.js"

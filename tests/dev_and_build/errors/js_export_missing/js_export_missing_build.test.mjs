@@ -15,7 +15,7 @@ try {
   throw new Error("should throw")
 } catch (e) {
   const actual = e.message
-  const expected = `'answer' is not exported by tests/errors/js_export_missing/client/file.js, imported by tests/errors/js_export_missing/client/main.js
+  const expected = `'answer' is not exported by tests/dev_and_build/errors/js_export_missing/client/file.js, imported by tests/dev_and_build/errors/js_export_missing/client/main.js
 --- frame ---
 1: // eslint-disable-next-line import/named
 2: import { answer } from "${

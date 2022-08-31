@@ -12,7 +12,14 @@ const test = async ({ expectedServiceWorkerUrls, ...rest }) => {
     entryPoints: {
       "./main.html": "main.html",
     },
-    minification: false,
+
+    minification: {
+      // minify js classic to ensure version is predictable
+      // otherwise it's filesystem dependents because of systemjs infering variables
+      // name from import path
+      // see "something to keep in mind" inside "jsenv_plugin_as_js_classic.js"
+      js_classic: true,
+    },
     ...rest,
   })
   const server = await startFileServer({
@@ -35,7 +42,7 @@ if (process.platform === "darwin") {
   await test({
     runtimeCompat: { chrome: "80" },
     expectedServiceWorkerUrls: {
-      "/main.html": { versioned: false, version: "d7e3da44" },
+      "/main.html": { versioned: false, version: "6523cea2" },
       "/css/style.css?v=bd38451d": { versioned: true },
     },
   })
@@ -44,7 +51,7 @@ if (process.platform === "darwin") {
     runtimeCompat: { chrome: "80" },
     bundling: false,
     expectedServiceWorkerUrls: {
-      "/main.html": { versioned: false, version: "8229433b" },
+      "/main.html": { versioned: false, version: "0cf8c1ff" },
       "/css/style.css?v=0e312da1": { versioned: true },
       "/js/a.js?v=e9a31140": { versioned: true },
       "/js/b.js?v=e3b0c442": { versioned: true },
@@ -54,23 +61,19 @@ if (process.platform === "darwin") {
   await test({
     runtimeCompat: { chrome: "79" },
     expectedServiceWorkerUrls: {
-      "/main.html": { versioned: false, version: "a03ed51d" },
+      "/main.html": { versioned: false, version: "1074b6b7" },
       "/css/style.css?v=bd38451d": { versioned: true },
     },
   })
   // no support for { type: "module" } on service worker + no bundling
-  // disabled on github workflow + macos for now because hash differ
-  // we get "/js/a.nomodule.js?v=b6910aea" instead of "/js/a.nomodule.js?v=340fe042"
-  if (!process.env.CI || process.platform !== "darwin") {
-    await test({
-      runtimeCompat: { chrome: "79" },
-      bundling: false,
-      expectedServiceWorkerUrls: {
-        "/main.html": { versioned: false, version: "419f728b" },
-        "/css/style.css?v=0e312da1": { versioned: true },
-        "/js/a.nomodule.js?v=340fe042": { versioned: true },
-        "/js/b.nomodule.js?v=8f3fa8a4": { versioned: true },
-      },
-    })
-  }
+  await test({
+    runtimeCompat: { chrome: "79" },
+    bundling: false,
+    expectedServiceWorkerUrls: {
+      "/main.html": { versioned: false, version: "c9b03767" },
+      "/css/style.css?v=0e312da1": { versioned: true },
+      "/js/a.nomodule.js?v=217fbe28": { versioned: true },
+      "/js/b.nomodule.js?v=5d37f892": { versioned: true },
+    },
+  })
 }
