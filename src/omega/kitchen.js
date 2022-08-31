@@ -714,6 +714,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       url: urlObject.href,
       generatedSpecifier: null,
       generatedUrl: null,
+      filename: null,
     }
     const urlInfoWithoutSearchParam = context.urlGraph.reuseOrCreateUrlInfo(
       referenceWithoutSearchParam.url,
@@ -813,7 +814,7 @@ const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
   if (reference.injected) {
     urlInfo.injected = true
   }
-  if (reference.filename) {
+  if (reference.filename && !urlInfo.filename) {
     urlInfo.filename = reference.filename
   }
   if (reference.isInline) {

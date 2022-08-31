@@ -64,6 +64,13 @@ export const jsenvPluginAsJsClassicLibrary = ({
             isImplicit: true,
           })
         })
+      } else if (context.scenarios.build) {
+        jsModuleBundledUrlInfo.sourceUrls.forEach((sourceUrl) => {
+          const sourceUrlInfo = context.urlGraph.getUrlInfo(sourceUrl)
+          if (sourceUrlInfo.dependents.size === 0) {
+            context.urlGraph.deleteUrlInfo(sourceUrl)
+          }
+        })
       }
       const { content, sourcemap } = await convertJsModuleToJsClassic({
         systemJsInjection,
@@ -75,7 +82,7 @@ export const jsenvPluginAsJsClassicLibrary = ({
         content,
         contentType: "text/javascript",
         type: "js_classic",
-        originalUrl: jsModuleUrlInfo.originalUrl,
+        originalUrl: urlInfo.originalUrl,
         originalContent: jsModuleUrlInfo.originalContent,
         sourcemap,
       }

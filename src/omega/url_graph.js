@@ -12,6 +12,9 @@ export const createUrlGraph = () => {
     const urlInfo = urlInfoMap.get(url)
     if (urlInfo) {
       urlInfoMap.delete(url)
+      urlInfo.dependencies.forEach((dependencyUrl) => {
+        getUrlInfo(dependencyUrl).dependents.delete(url)
+      })
       if (urlInfo.sourcemapReference) {
         deleteUrlInfo(urlInfo.sourcemapReference.url)
       }

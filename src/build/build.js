@@ -264,7 +264,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     })
     const finalGraphKitchen = createKitchen({
       logLevel,
-      rootDirectoryUrl,
+      rootDirectoryUrl: buildDirectoryUrl,
       urlGraph: finalGraph,
       scenarios: { build: true },
       runtimeCompat,
@@ -643,6 +643,14 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           }
         }
         GRAPH.forEach(rawGraph, (rawUrlInfo) => {
+          // cleanup unused urls (avoid bundling things that are not actually used)
+          // happens for:
+          // - js import assertions
+          // - as_js_classic_library
+          if (!isUsed(rawUrlInfo)) {
+            rawGraph.deleteUrlInfo(rawUrlInfo.url)
+            return
+          }
           if (rawUrlInfo.isEntryPoint) {
             addToBundlerIfAny(rawUrlInfo)
             if (rawUrlInfo.type === "html") {
@@ -1216,15 +1224,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       delete_unused_urls: {
         const actions = []
         GRAPH.forEach(finalGraph, (urlInfo) => {
-          // nothing uses this url anymore
-          // - versioning update inline content
-          // - file converted for import assertion or js_classic conversion
-          if (
-            !urlInfo.isEntryPoint &&
-            urlInfo.type !== "sourcemap" &&
-            urlInfo.dependents.size === 0 &&
-            !urlInfo.injected // injected during postbuild
-          ) {
+          if (!isUsed(urlInfo)) {
             actions.push(() => {
               finalGraph.deleteUrlInfo(urlInfo.url)
             })
@@ -1499,6 +1499,25 @@ const assertEntryPoints = ({ entryPoints }) => {
       )
     }
   })
+}
+
+const isUsed = (urlInfo) => {
+  // nothing uses this url anymore
+  // - versioning update inline content
+  // - file converted for import assertion or js_classic conversion
+  if (urlInfo.isEntryPoint) {
+    return true
+  }
+  if (urlInfo.type === "sourcemap") {
+    return true
+  }
+  if (urlInfo.injected) {
+    return true
+  }
+  if (urlInfo.dependents.size > 0) {
+    return true
+  }
+  return false
 }
 
 const canUseVersionedUrl = (urlInfo) => {

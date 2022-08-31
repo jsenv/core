@@ -1,3 +1,8 @@
+# 28.2.1
+
+- fix build using "?as_js_classic_library" in entry points
+- auto update "create-jsenv" when "@jsenv/core" version is updated
+
 # 28.2.0
 
 - add "?as_js_classic_library" to consume js modules with a regular script tag

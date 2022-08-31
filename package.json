@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "28.2.0",
+  "version": "28.2.1",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "author": {
@@ -103,7 +103,7 @@
     "@jsenv/eslint-config": "16.2.1",
     "@jsenv/file-size-impact": "13.0.1",
     "@jsenv/https-local": "3.0.1",
-    "@jsenv/package-workspace": "0.4.1",
+    "@jsenv/package-workspace": "0.5.0",
     "@jsenv/performance-impact": "3.0.1",
     "eslint": "8.21.0",
     "eslint-plugin-html": "7.1.0",
