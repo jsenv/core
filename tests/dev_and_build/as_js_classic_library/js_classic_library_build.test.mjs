@@ -32,4 +32,5 @@ const test = async (params) => {
   assert({ actual, expected })
 }
 
-await test()
+// no support for spread operator
+await test({ runtimeCompat: { chrome: "55" } })

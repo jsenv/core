@@ -52,6 +52,7 @@ export const jsenvPluginAsJsClassicLibrary = ({
           buildDirectoryUrl: context.outDirectoryUrl,
         },
         options: {
+          babelHelpersChunk: false,
           preserveDynamicImport: true,
         },
       })
