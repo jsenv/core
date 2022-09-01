@@ -305,11 +305,11 @@ export const createFileService = ({
         url: reference.url,
         status: 200,
         headers: {
-          "content-length": Buffer.byteLength(urlInfo.content),
           "cache-control": `private,max-age=0,must-revalidate`,
           "eTag": urlInfoTargetedByCache.contentEtag,
           ...urlInfo.headers,
           "content-type": urlInfo.contentType,
+          "content-length": Buffer.byteLength(urlInfo.content),
         },
         body: urlInfo.content,
         timing: urlInfo.timing,

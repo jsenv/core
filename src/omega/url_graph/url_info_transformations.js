@@ -172,57 +172,60 @@ export const createUrlInfoTransformer = ({
     if (transformations) {
       applyIntermediateTransformations(urlInfo, transformations)
     }
-    if (
-      sourcemapsEnabled &&
-      urlInfo.sourcemap &&
-      !urlInfo.generatedUrl.startsWith("data:")
-    ) {
-      // during build this function can be called after the file is cooked
-      // - to update content and sourcemap after "optimize" hook
-      // - to inject versioning into the entry point content
-      // in this scenarion we don't want to call injectSourcemap
-      // just update the content and the
-      const sourcemapReference = urlInfo.sourcemapReference
-      const sourcemapUrlInfo = urlGraph.getUrlInfo(sourcemapReference.url)
-      sourcemapUrlInfo.contentType = "application/json"
-      const sourcemap = urlInfo.sourcemap
-      if (sourcemapsRelativeSources) {
-        sourcemap.sources = sourcemap.sources.map((source) => {
-          const sourceRelative = urlToRelativeUrl(source, urlInfo.url)
-          return sourceRelative || "."
-        })
-      }
-      if (sourcemapsSourcesProtocol !== "file:///") {
-        sourcemap.sources = sourcemap.sources.map((source) => {
-          if (source.startsWith("file:///")) {
-            return `${sourcemapsSourcesProtocol}${source.slice(
-              "file:///".length,
-            )}`
-          }
-          return source
-        })
-      }
-      sourcemapUrlInfo.content = JSON.stringify(sourcemap, null, "  ")
-      if (!urlInfo.sourcemapIsWrong) {
-        if (sourcemaps === "inline") {
-          sourcemapReference.generatedSpecifier =
-            generateSourcemapDataUrl(sourcemap)
-        }
-        if (sourcemaps === "file" || sourcemaps === "inline") {
-          urlInfo.content = SOURCEMAP.writeComment({
-            contentType: urlInfo.contentType,
-            content: urlInfo.content,
-            specifier:
-              sourcemaps === "file" && sourcemapsRelativeSources
-                ? urlToRelativeUrl(sourcemapReference.url, urlInfo.url)
-                : sourcemapReference.generatedSpecifier,
+    if (urlInfo.sourcemapReference) {
+      if (
+        sourcemapsEnabled &&
+        urlInfo.sourcemap &&
+        !urlInfo.generatedUrl.startsWith("data:")
+      ) {
+        // during build this function can be called after the file is cooked
+        // - to update content and sourcemap after "optimize" hook
+        // - to inject versioning into the entry point content
+        // in this scenarion we don't want to call injectSourcemap
+        // just update the content and the
+        const sourcemapReference = urlInfo.sourcemapReference
+        const sourcemapUrlInfo = urlGraph.getUrlInfo(sourcemapReference.url)
+        sourcemapUrlInfo.contentType = "application/json"
+        const sourcemap = urlInfo.sourcemap
+        if (sourcemapsRelativeSources) {
+          sourcemap.sources = sourcemap.sources.map((source) => {
+            const sourceRelative = urlToRelativeUrl(source, urlInfo.url)
+            return sourceRelative || "."
           })
         }
+        if (sourcemapsSourcesProtocol !== "file:///") {
+          sourcemap.sources = sourcemap.sources.map((source) => {
+            if (source.startsWith("file:///")) {
+              return `${sourcemapsSourcesProtocol}${source.slice(
+                "file:///".length,
+              )}`
+            }
+            return source
+          })
+        }
+        sourcemapUrlInfo.content = JSON.stringify(sourcemap, null, "  ")
+        if (!urlInfo.sourcemapIsWrong) {
+          if (sourcemaps === "inline") {
+            sourcemapReference.generatedSpecifier =
+              generateSourcemapDataUrl(sourcemap)
+          }
+          if (sourcemaps === "file" || sourcemaps === "inline") {
+            urlInfo.content = SOURCEMAP.writeComment({
+              contentType: urlInfo.contentType,
+              content: urlInfo.content,
+              specifier:
+                sourcemaps === "file" && sourcemapsRelativeSources
+                  ? urlToRelativeUrl(sourcemapReference.url, urlInfo.url)
+                  : sourcemapReference.generatedSpecifier,
+            })
+          }
+        }
+      } else {
+        // in the end we don't use the sourcemap placeholder
+        urlGraph.deleteUrlInfo(urlInfo.sourcemapReference.url)
       }
-    } else if (urlInfo.sourcemapReference) {
-      // in the end we don't use the sourcemap placeholder
-      urlGraph.deleteUrlInfo(urlInfo.sourcemapReference.url)
     }
+
     urlInfo.contentEtag =
       urlInfo.content === urlInfo.originalContent
         ? urlInfo.originalContentEtag

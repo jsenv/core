@@ -1,3 +1,8 @@
+# 28.3.1
+
+- prevent error when sourcemap is returned by a plugin for an html file
+- ensure content-length is overrided when plugin set custom response headers
+
 # 28.3.0
 
 - Export "replacePlaceHolders"
