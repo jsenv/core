@@ -86,9 +86,11 @@ export const createUrlInfoTransformer = ({
     // when jsenv is done cooking the file
     //   during build it's urlInfo.url to be inside the build
     //   but otherwise it's generatedUrl to be inside .jsenv/ directory
-    urlInfo.sourcemapGeneratedUrl = generateSourcemapFileUrl(
-      urlInfo.generatedUrl,
-    )
+    const generatedUrlObject = new URL(urlInfo.generatedUrl)
+    generatedUrlObject.searchParams.delete("as_js_classic")
+    generatedUrlObject.searchParams.delete("as_js_classic_library")
+    const urlForSourcemap = generatedUrlObject.href
+    urlInfo.sourcemapGeneratedUrl = generateSourcemapFileUrl(urlForSourcemap)
     const [sourcemapReference, sourcemapUrlInfo] = injectSourcemapPlaceholder({
       urlInfo,
       specifier: urlInfo.sourcemapGeneratedUrl,

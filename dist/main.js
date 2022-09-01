@@ -9986,16 +9986,19 @@ const convertJsModuleToJsClassic = async ({
   urlInfo,
   jsModuleUrlInfo
 }) => {
-  const jsClassicFormat = // in general html file are entry points, but js can be entry point when:
-  // - passed in entryPoints to build
-  // - is used by web worker
-  // - the reference contains ?entry_point
-  // When js is entry point there can be no HTML to inject systemjs
-  // and systemjs must be injected into the js file
-  urlInfo.isEntryPoint && // if it's an entry point without dependency (it does not use import)
-  // then we can use UMD, otherwise we have to use systemjs
-  // because it is imported by systemjs
-  !jsModuleUrlInfo.data.usesImport ? "umd" : "system";
+  let jsClassicFormat;
+
+  if (urlInfo.isEntryPoint && !jsModuleUrlInfo.data.usesImport) {
+    // if it's an entry point without dependency (it does not use import)
+    // then we can use UMD
+    jsClassicFormat = "umd";
+  } else {
+    // otherwise we have to use system in case it's imported
+    // by an other file (for entry points)
+    // or to be able to import when it uses import
+    jsClassicFormat = "system";
+  }
+
   urlInfo.data.jsClassicFormat = jsClassicFormat;
   const {
     code,
@@ -17706,7 +17709,11 @@ const createUrlInfoTransformer = ({
     //   but otherwise it's generatedUrl to be inside .jsenv/ directory
 
 
-    urlInfo.sourcemapGeneratedUrl = generateSourcemapFileUrl(urlInfo.generatedUrl);
+    const generatedUrlObject = new URL(urlInfo.generatedUrl);
+    generatedUrlObject.searchParams.delete("as_js_classic");
+    generatedUrlObject.searchParams.delete("as_js_classic_library");
+    const urlForSourcemap = generatedUrlObject.href;
+    urlInfo.sourcemapGeneratedUrl = generateSourcemapFileUrl(urlForSourcemap);
     const [sourcemapReference, sourcemapUrlInfo] = injectSourcemapPlaceholder({
       urlInfo,
       specifier: urlInfo.sourcemapGeneratedUrl

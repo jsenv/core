@@ -1,3 +1,11 @@
+# 28.2.3
+
+- Fix dist/s.js sourcemap comment
+
+# 28.2.2
+
+- Fix as_js_classic_library build error when babel helpers are used
+
 # 28.2.1
 
 - fix build using "?as_js_classic_library" in entry points

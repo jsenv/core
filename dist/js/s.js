@@ -1,3 +1,5 @@
+function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof2(obj); }
+
 (function (global, factory) {
   if (typeof define === "function" && define.amd) {
     define([], factory);
@@ -11,7 +13,104 @@
     global.s = mod.exports;
   }
 })(typeof globalThis !== "undefined" ? globalThis : typeof self !== "undefined" ? self : this, function () {
-  "use strict";
+  "use strict"; // eslint-disable-next-line consistent-return
+
+  var arrayWithHoles = function arrayWithHoles(arr) {
+    if (Array.isArray(arr)) return arr;
+  };
+
+  function _iterableToArrayLimit(arr, i) {
+    // this is an expanded form of \`for...of\` that properly supports abrupt completions of
+    // iterators etc. variable names have been minimised to reduce the size of this massive
+    // helper. sometimes spec compliance is annoying :(
+    //
+    // _n = _iteratorNormalCompletion
+    // _d = _didIteratorError
+    // _e = _iteratorError
+    // _i = _iterator
+    // _s = _step
+    var _i = arr == null ? null : typeof Symbol !== "undefined" && arr[Symbol.iterator] || arr["@@iterator"];
+
+    if (_i == null) return;
+    var _arr = [];
+    var _n = true;
+    var _d = false;
+
+    var _s, _e;
+
+    try {
+      for (_i = _i.call(arr); !(_n = (_s = _i.next()).done); _n = true) {
+        _arr.push(_s.value);
+
+        if (i && _arr.length === i) break;
+      }
+    } catch (err) {
+      _d = true;
+      _e = err;
+    } finally {
+      try {
+        if (!_n && _i["return"] != null) _i["return"]();
+      } finally {
+        if (_d) throw _e;
+      }
+    }
+
+    return _arr;
+  }
+  /* eslint-disable no-eq-null, eqeqeq */
+
+
+  function arrayLikeToArray(arr, len) {
+    if (len == null || len > arr.length) len = arr.length;
+    var arr2 = new Array(len);
+
+    for (var i = 0; i < len; i++) {
+      arr2[i] = arr[i];
+    }
+
+    return arr2;
+  }
+  /* eslint-disable consistent-return */
+
+
+  function unsupportedIterableToArray(o, minLen) {
+    if (!o) return;
+    if (typeof o === "string") return arrayLikeToArray(o, minLen);
+    var n = Object.prototype.toString.call(o).slice(8, -1);
+    if (n === "Object" && o.constructor) n = o.constructor.name;
+    if (n === "Map" || n === "Set") return Array.from(o);
+    if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return arrayLikeToArray(o, minLen);
+  }
+
+  var nonIterableRest = function nonIterableRest() {
+    throw new TypeError("Invalid attempt to destructure non-iterable instance.\\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+  };
+
+  var _slicedToArray = function _slicedToArray(arr, i) {
+    return arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || unsupportedIterableToArray(arr, i) || nonIterableRest();
+  };
+
+  var nativeTypeOf = function nativeTypeOf(obj) {
+    return _typeof2(obj);
+  };
+
+  var customTypeOf = function customTypeOf(obj) {
+    return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : _typeof2(obj);
+  };
+
+  var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? nativeTypeOf : customTypeOf;
+  /*
+   * This file is a modified version of https://github.com/systemjs/systemjs/blob/main/dist/s.js
+   * with the following changes:
+   *
+   * - Code can use aync/await, const, etc because this file is compiled (see dist/s.js)
+   * - Can use document.currentScript because we don't support IE
+   * - auto import inline System.register
+   * - auto import first System.register in web workers
+   * - queing events in web workers
+   * - no support for importmap because jsenv don't need it
+   */
+
 
   function _await(value, then, direct) {
     if (direct) {
@@ -69,77 +168,6 @@
     }
 
     return result;
-  }
-
-  function _slicedToArray(arr, i) {
-    return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest();
-  }
-
-  function _nonIterableRest() {
-    throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
-  }
-
-  function _unsupportedIterableToArray(o, minLen) {
-    if (!o) return;
-    if (typeof o === "string") return _arrayLikeToArray(o, minLen);
-    var n = Object.prototype.toString.call(o).slice(8, -1);
-    if (n === "Object" && o.constructor) n = o.constructor.name;
-    if (n === "Map" || n === "Set") return Array.from(o);
-    if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen);
-  }
-
-  function _arrayLikeToArray(arr, len) {
-    if (len == null || len > arr.length) len = arr.length;
-
-    for (var i = 0, arr2 = new Array(len); i < len; i++) {
-      arr2[i] = arr[i];
-    }
-
-    return arr2;
-  }
-
-  function _iterableToArrayLimit(arr, i) {
-    var _i = arr == null ? null : typeof Symbol !== "undefined" && arr[Symbol.iterator] || arr["@@iterator"];
-
-    if (_i == null) return;
-    var _arr = [];
-    var _n = true;
-    var _d = false;
-
-    var _s, _e;
-
-    try {
-      for (_i = _i.call(arr); !(_n = (_s = _i.next()).done); _n = true) {
-        _arr.push(_s.value);
-
-        if (i && _arr.length === i) break;
-      }
-    } catch (err) {
-      _d = true;
-      _e = err;
-    } finally {
-      try {
-        if (!_n && _i["return"] != null) _i["return"]();
-      } finally {
-        if (_d) throw _e;
-      }
-    }
-
-    return _arr;
-  }
-
-  function _arrayWithHoles(arr) {
-    if (Array.isArray(arr)) return arr;
-  }
-
-  function _typeof(obj) {
-    "@babel/helpers - typeof";
-
-    return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) {
-      return typeof obj;
-    } : function (obj) {
-      return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
-    }, _typeof(obj);
   }
 
   (function () {
@@ -626,4 +654,4 @@
     };
   })();
 });
-//# sourceMappingURL=s.js.map?as_js_classic
+//# sourceMappingURL=s.js.map

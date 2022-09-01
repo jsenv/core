@@ -67,8 +67,8 @@ await build({
   rootDirectoryUrl: jsenvRootDirectoryUrl,
   buildDirectoryUrl: new URL("js", jsenvDistDirectoryUrl),
   entryPoints: {
-    "./src/plugins/transpilation/as_js_classic/client/s.js":
-      "s.js?as_js_classic",
+    "./src/plugins/transpilation/as_js_classic/client/s.js?as_js_classic_library":
+      "s.js",
   },
   buildDirectoryClean: false,
   runtimeCompat: {
