@@ -1,3 +1,7 @@
+# 28.3.0
+
+- Export "replacePlaceHolders"
+
 # 28.2.3
 
 - Fix dist/s.js sourcemap comment

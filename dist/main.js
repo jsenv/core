@@ -29611,6 +29611,25 @@ const createBuildFilesService = ({
 
 const SECONDS_IN_30_DAYS = 60 * 60 * 24 * 30;
 
+const replacePlaceholders = (content, replacements) => {
+  const magicSource = createMagicSource(content);
+  Object.keys(replacements).forEach(key => {
+    let index = content.indexOf(key);
+
+    while (index !== -1) {
+      const start = index;
+      const end = index + key.length;
+      magicSource.replace({
+        start,
+        end,
+        replacement: replacements[key]
+      });
+      index = content.indexOf(key, end);
+    }
+  });
+  return magicSource.toContentAndSourcemap();
+};
+
 const execute = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
@@ -29783,4 +29802,4 @@ const jsenvPluginInjectGlobals = urlAssociations => {
   };
 };
 
-export { build, chromium, chromiumIsolatedTab, execute, executeTestPlan, firefox, firefoxIsolatedTab, jsenvPluginInjectGlobals, nodeChildProcess, nodeWorkerThread, pingServer, startBuildServer, startDevServer, webkit, webkitIsolatedTab };
+export { build, chromium, chromiumIsolatedTab, execute, executeTestPlan, firefox, firefoxIsolatedTab, jsenvPluginInjectGlobals, nodeChildProcess, nodeWorkerThread, pingServer, replacePlaceholders, startBuildServer, startDevServer, webkit, webkitIsolatedTab };
