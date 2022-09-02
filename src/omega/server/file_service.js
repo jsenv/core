@@ -280,7 +280,7 @@ export const createFileService = ({
     try {
       // urlInfo objects are reused, they must be "reset" before cooking them again
       if (
-        urlInfo.contentEtag &&
+        (urlInfo.error || urlInfo.contentEtag) &&
         !urlInfo.isInline &&
         urlInfo.type !== "sourcemap"
       ) {
