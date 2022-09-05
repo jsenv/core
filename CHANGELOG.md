@@ -1,3 +1,7 @@
+# 28.3.4
+
+- fix autoreload when inline script changes in an html file using search params
+
 # 28.3.3
 
 - updating files update all urls using search params too

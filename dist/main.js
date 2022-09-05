@@ -16998,28 +16998,36 @@ const jsenvPluginAutoreloadServer = ({
           url,
           event
         }) => {
-          const urlInfo = urlGraph.getUrlInfo(url); // file not part of dependency graph
+          const onUrlInfo = urlInfo => {
+            const relativeUrl = formatUrlForClient(url);
+            const hotUpdate = propagateUpdate(urlInfo);
 
-          if (!urlInfo) {
-            return;
-          }
+            if (hotUpdate.declined) {
+              notifyDeclined({
+                cause: `${relativeUrl} ${event}`,
+                reason: hotUpdate.reason,
+                declinedBy: hotUpdate.declinedBy
+              });
+            } else {
+              notifyAccepted({
+                cause: `${relativeUrl} ${event}`,
+                reason: hotUpdate.reason,
+                instructions: hotUpdate.instructions
+              });
+            }
+          };
 
-          const relativeUrl = formatUrlForClient(url);
-          const hotUpdate = propagateUpdate(urlInfo);
+          urlGraph.urlInfoMap.forEach(urlInfo => {
+            if (urlInfo.url === url) {
+              onUrlInfo(urlInfo);
+            } else {
+              const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
 
-          if (hotUpdate.declined) {
-            notifyDeclined({
-              cause: `${relativeUrl} ${event}`,
-              reason: hotUpdate.reason,
-              declinedBy: hotUpdate.declinedBy
-            });
-          } else {
-            notifyAccepted({
-              cause: `${relativeUrl} ${event}`,
-              reason: hotUpdate.reason,
-              instructions: hotUpdate.instructions
-            });
-          }
+              if (urlWithoutSearch === url) {
+                onUrlInfo(urlInfo);
+              }
+            }
+          });
         });
         clientFilesPruneCallbackList.push((prunedUrlInfos, firstUrlInfo) => {
           const mainHotUpdate = propagateUpdate(firstUrlInfo);

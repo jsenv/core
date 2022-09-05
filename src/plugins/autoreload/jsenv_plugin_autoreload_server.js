@@ -1,4 +1,8 @@
-import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls"
+import {
+  urlIsInsideOf,
+  urlToRelativeUrl,
+  asUrlWithoutSearch,
+} from "@jsenv/urls"
 
 export const jsenvPluginAutoreloadServer = ({
   clientFileChangeCallbackList,
@@ -113,26 +117,33 @@ export const jsenvPluginAutoreloadServer = ({
           return iterate(firstUrlInfo, seen)
         }
         clientFileChangeCallbackList.push(({ url, event }) => {
-          const urlInfo = urlGraph.getUrlInfo(url)
-          // file not part of dependency graph
-          if (!urlInfo) {
-            return
+          const onUrlInfo = (urlInfo) => {
+            const relativeUrl = formatUrlForClient(url)
+            const hotUpdate = propagateUpdate(urlInfo)
+            if (hotUpdate.declined) {
+              notifyDeclined({
+                cause: `${relativeUrl} ${event}`,
+                reason: hotUpdate.reason,
+                declinedBy: hotUpdate.declinedBy,
+              })
+            } else {
+              notifyAccepted({
+                cause: `${relativeUrl} ${event}`,
+                reason: hotUpdate.reason,
+                instructions: hotUpdate.instructions,
+              })
+            }
           }
-          const relativeUrl = formatUrlForClient(url)
-          const hotUpdate = propagateUpdate(urlInfo)
-          if (hotUpdate.declined) {
-            notifyDeclined({
-              cause: `${relativeUrl} ${event}`,
-              reason: hotUpdate.reason,
-              declinedBy: hotUpdate.declinedBy,
-            })
-          } else {
-            notifyAccepted({
-              cause: `${relativeUrl} ${event}`,
-              reason: hotUpdate.reason,
-              instructions: hotUpdate.instructions,
-            })
-          }
+          urlGraph.urlInfoMap.forEach((urlInfo) => {
+            if (urlInfo.url === url) {
+              onUrlInfo(urlInfo)
+            } else {
+              const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url)
+              if (urlWithoutSearch === url) {
+                onUrlInfo(urlInfo)
+              }
+            }
+          })
         })
         clientFilesPruneCallbackList.push((prunedUrlInfos, firstUrlInfo) => {
           const mainHotUpdate = propagateUpdate(firstUrlInfo)

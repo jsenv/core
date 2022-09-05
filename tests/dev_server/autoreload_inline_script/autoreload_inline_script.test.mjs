@@ -25,7 +25,7 @@ const devServer = await startDevServer({
 const browser = await chromium.launch({ headless: true })
 try {
   const page = await launchBrowserPage(browser)
-  await page.goto(`${devServer.origin}/main.html`)
+  await page.goto(`${devServer.origin}/main.html?foo`)
   const getResult = async () => {
     const result = await page.evaluate(
       /* eslint-disable no-undef */
@@ -40,25 +40,12 @@ try {
     const expected = 42
     assert({ actual, expected })
   }
-  htmlFileContent.update(`<!DOCTYPE html>
-<html>
-  <head>
-    <title>Title</title>
-    <meta charset="utf-8" />
-    <link rel="icon" href="data:," />
-  </head>
-
-  <body>
-    <script>
-      window.resultPromise = new Promise((resolve) => {
-        window.resolveResultPromise = resolve
-      })
-    </script>
-    <script type="module">
-      window.resolveResultPromise(43)
-    </script>
-  </body>
-</html>`)
+  htmlFileContent.update(
+    String(htmlFileContent.beforeTest).replace(
+      "window.resolveResultPromise(42)",
+      "window.resolveResultPromise(43)",
+    ),
+  )
   await page.waitForNavigation() // full reload
   {
     const actual = await getResult()
