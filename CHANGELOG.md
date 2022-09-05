@@ -1,3 +1,9 @@
+# 28.3.2
+
+- ensure inline script are properly updated on reload
+- fix a warning logger by server on 304
+- fix a bug keeping sourcemap when marked as broken by preact/react refresh
+
 # 28.3.1
 
 - prevent error when sourcemap is returned by a plugin for an html file

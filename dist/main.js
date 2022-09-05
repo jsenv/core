@@ -11940,7 +11940,7 @@ const jsenvPluginImportmap = () => {
           // We must precook the importmap to know its content and inline it into the HTML
           // In this situation the ref to the importmap was already discovered
           // when parsing the HTML
-          const importmapReference = context.referenceUtils.findByGeneratedSpecifier(src);
+          const importmapReference = context.referenceUtils.find(ref => ref.generatedSpecifier === src);
           const importmapUrlInfo = context.urlGraph.getUrlInfo(importmapReference.url);
           await context.cook(importmapUrlInfo, {
             reference: importmapReference
@@ -17800,7 +17800,7 @@ const createUrlInfoTransformer = ({
       // jsenv won't emit a warning and use the following strategy:
       // "no sourcemap is better than wrong sourcemap"
 
-      urlInfo.sourcemapIsWrong = sourcemapIsWrong;
+      urlInfo.sourcemapIsWrong = urlInfo.sourcemapIsWrong || sourcemapIsWrong;
     }
   };
 
@@ -17809,52 +17809,54 @@ const createUrlInfoTransformer = ({
       applyIntermediateTransformations(urlInfo, transformations);
     }
 
-    if (sourcemapsEnabled && urlInfo.sourcemap && !urlInfo.generatedUrl.startsWith("data:")) {
-      // during build this function can be called after the file is cooked
-      // - to update content and sourcemap after "optimize" hook
-      // - to inject versioning into the entry point content
-      // in this scenarion we don't want to call injectSourcemap
-      // just update the content and the
-      const sourcemapReference = urlInfo.sourcemapReference;
-      const sourcemapUrlInfo = urlGraph.getUrlInfo(sourcemapReference.url);
-      sourcemapUrlInfo.contentType = "application/json";
-      const sourcemap = urlInfo.sourcemap;
+    if (urlInfo.sourcemapReference) {
+      if (sourcemapsEnabled && urlInfo.sourcemap && !urlInfo.generatedUrl.startsWith("data:")) {
+        // during build this function can be called after the file is cooked
+        // - to update content and sourcemap after "optimize" hook
+        // - to inject versioning into the entry point content
+        // in this scenarion we don't want to call injectSourcemap
+        // just update the content and the
+        const sourcemapReference = urlInfo.sourcemapReference;
+        const sourcemapUrlInfo = urlGraph.getUrlInfo(sourcemapReference.url);
+        sourcemapUrlInfo.contentType = "application/json";
+        const sourcemap = urlInfo.sourcemap;
 
-      if (sourcemapsRelativeSources) {
-        sourcemap.sources = sourcemap.sources.map(source => {
-          const sourceRelative = urlToRelativeUrl(source, urlInfo.url);
-          return sourceRelative || ".";
-        });
-      }
-
-      if (sourcemapsSourcesProtocol !== "file:///") {
-        sourcemap.sources = sourcemap.sources.map(source => {
-          if (source.startsWith("file:///")) {
-            return `${sourcemapsSourcesProtocol}${source.slice("file:///".length)}`;
-          }
-
-          return source;
-        });
-      }
-
-      sourcemapUrlInfo.content = JSON.stringify(sourcemap, null, "  ");
-
-      if (!urlInfo.sourcemapIsWrong) {
-        if (sourcemaps === "inline") {
-          sourcemapReference.generatedSpecifier = generateSourcemapDataUrl(sourcemap);
-        }
-
-        if (sourcemaps === "file" || sourcemaps === "inline") {
-          urlInfo.content = SOURCEMAP.writeComment({
-            contentType: urlInfo.contentType,
-            content: urlInfo.content,
-            specifier: sourcemaps === "file" && sourcemapsRelativeSources ? urlToRelativeUrl(sourcemapReference.url, urlInfo.url) : sourcemapReference.generatedSpecifier
+        if (sourcemapsRelativeSources) {
+          sourcemap.sources = sourcemap.sources.map(source => {
+            const sourceRelative = urlToRelativeUrl(source, urlInfo.url);
+            return sourceRelative || ".";
           });
         }
+
+        if (sourcemapsSourcesProtocol !== "file:///") {
+          sourcemap.sources = sourcemap.sources.map(source => {
+            if (source.startsWith("file:///")) {
+              return `${sourcemapsSourcesProtocol}${source.slice("file:///".length)}`;
+            }
+
+            return source;
+          });
+        }
+
+        sourcemapUrlInfo.content = JSON.stringify(sourcemap, null, "  ");
+
+        if (!urlInfo.sourcemapIsWrong) {
+          if (sourcemaps === "inline") {
+            sourcemapReference.generatedSpecifier = generateSourcemapDataUrl(sourcemap);
+          }
+
+          if (sourcemaps === "file" || sourcemaps === "inline") {
+            urlInfo.content = SOURCEMAP.writeComment({
+              contentType: urlInfo.contentType,
+              content: urlInfo.content,
+              specifier: sourcemaps === "file" && sourcemapsRelativeSources ? urlToRelativeUrl(sourcemapReference.url, urlInfo.url) : sourcemapReference.generatedSpecifier
+            });
+          }
+        }
+      } else {
+        // in the end we don't use the sourcemap placeholder
+        urlGraph.deleteUrlInfo(urlInfo.sourcemapReference.url);
       }
-    } else if (urlInfo.sourcemapReference) {
-      // in the end we don't use the sourcemap placeholder
-      urlGraph.deleteUrlInfo(urlInfo.sourcemapReference.url);
     }
 
     urlInfo.contentEtag = urlInfo.content === urlInfo.originalContent ? urlInfo.originalContentEtag : bufferToEtag$1(Buffer.from(urlInfo.content));
@@ -18632,6 +18634,8 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       const references = [];
       context.referenceUtils = {
         _references: references,
+        find: predicate => references.find(predicate),
+        readGeneratedSpecifier,
         add: props => {
           const [reference, referencedUrlInfo] = resolveReference(createReference({
             parentUrl: urlInfo.url,
@@ -18640,8 +18644,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           references.push(reference);
           return [reference, referencedUrlInfo];
         },
-        find: predicate => references.find(predicate),
-        readGeneratedSpecifier,
         found: ({
           trace,
           ...rest
@@ -18703,6 +18705,29 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 
           return [newReference, newUrlInfo];
         },
+        inject: ({
+          trace,
+          ...rest
+        }) => {
+          if (trace === undefined) {
+            const {
+              url,
+              line,
+              column
+            } = getCallerPosition();
+            trace = traceFromUrlSite({
+              url,
+              line,
+              column
+            });
+          }
+
+          return context.referenceUtils.add({
+            trace,
+            injected: true,
+            ...rest
+          });
+        },
         becomesInline: (reference, {
           isOriginalPosition,
           specifier,
@@ -18729,37 +18754,8 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
             content
           });
         },
-        inject: ({
-          trace,
-          ...rest
-        }) => {
-          if (trace === undefined) {
-            const {
-              url,
-              line,
-              column
-            } = getCallerPosition();
-            trace = traceFromUrlSite({
-              url,
-              line,
-              column
-            });
-          }
-
-          return context.referenceUtils.add({
-            trace,
-            injected: true,
-            ...rest
-          });
-        },
-        findByGeneratedSpecifier: generatedSpecifier => {
-          const reference = references.find(ref => ref.generatedSpecifier === generatedSpecifier);
-
-          if (!reference) {
-            throw new Error(`No reference found using the following generatedSpecifier: "${generatedSpecifier}"`);
-          }
-
-          return reference;
+        becomesExternal: () => {
+          throw new Error("not implemented yet");
         }
       }; // "fetchUrlContent" hook
 
@@ -25486,22 +25482,30 @@ const createFileService = ({
     const urlInfoTargetedByCache = urlGraph.getParentIfInline(urlInfo);
 
     if (ifNoneMatch) {
-      if (urlInfoTargetedByCache.contentEtag === ifNoneMatch && urlInfoTargetedByCache.isValid()) {
+      const [clientOriginalContentEtag, clientContentEtag] = ifNoneMatch.split("_");
+
+      if (urlInfoTargetedByCache.originalContentEtag === clientOriginalContentEtag && urlInfoTargetedByCache.contentEtag === clientContentEtag && urlInfoTargetedByCache.isValid()) {
+        const headers = {
+          "cache-control": `private,max-age=0,must-revalidate`
+        };
+        Object.keys(urlInfo.headers).forEach(key => {
+          if (key !== "content-length") {
+            headers[key] = urlInfo.headers[key];
+          }
+        });
         return {
           status: 304,
-          headers: {
-            "cache-control": `private,max-age=0,must-revalidate`,
-            ...urlInfo.headers
-          }
+          headers
         };
       }
     }
 
     try {
       // urlInfo objects are reused, they must be "reset" before cooking them again
-      if (urlInfo.contentEtag && !urlInfo.isInline && urlInfo.type !== "sourcemap") {
+      if ((urlInfo.error || urlInfo.contentEtag) && !urlInfo.isInline && urlInfo.type !== "sourcemap") {
         urlInfo.error = null;
         urlInfo.sourcemap = null;
+        urlInfo.sourcemapIsWrong = null;
         urlInfo.sourcemapReference = null;
         urlInfo.content = null;
         urlInfo.originalContent = null;
@@ -25526,11 +25530,12 @@ const createFileService = ({
         url: reference.url,
         status: 200,
         headers: {
-          "content-length": Buffer.byteLength(urlInfo.content),
           "cache-control": `private,max-age=0,must-revalidate`,
-          "eTag": urlInfoTargetedByCache.contentEtag,
+          // it's safe to use "_" separator because etag is encoded with base64 (see https://stackoverflow.com/a/13195197)
+          "eTag": `${urlInfoTargetedByCache.originalContentEtag}_${urlInfoTargetedByCache.contentEtag}`,
           ...urlInfo.headers,
-          "content-type": urlInfo.contentType
+          "content-type": urlInfo.contentType,
+          "content-length": Buffer.byteLength(urlInfo.content)
         },
         body: urlInfo.content,
         timing: urlInfo.timing
