@@ -429,6 +429,8 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       const references = []
       context.referenceUtils = {
         _references: references,
+        find: (predicate) => references.find(predicate),
+        readGeneratedSpecifier,
         add: (props) => {
           const [reference, referencedUrlInfo] = resolveReference(
             createReference({
@@ -440,8 +442,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           references.push(reference)
           return [reference, referencedUrlInfo]
         },
-        find: (predicate) => references.find(predicate),
-        readGeneratedSpecifier,
         found: ({ trace, ...rest }) => {
           if (trace === undefined) {
             trace = traceFromUrlSite(
@@ -511,6 +511,21 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           }
           return [newReference, newUrlInfo]
         },
+        inject: ({ trace, ...rest }) => {
+          if (trace === undefined) {
+            const { url, line, column } = getCallerPosition()
+            trace = traceFromUrlSite({
+              url,
+              line,
+              column,
+            })
+          }
+          return context.referenceUtils.add({
+            trace,
+            injected: true,
+            ...rest,
+          })
+        },
         becomesInline: (
           reference,
           {
@@ -544,31 +559,8 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
             content,
           })
         },
-        inject: ({ trace, ...rest }) => {
-          if (trace === undefined) {
-            const { url, line, column } = getCallerPosition()
-            trace = traceFromUrlSite({
-              url,
-              line,
-              column,
-            })
-          }
-          return context.referenceUtils.add({
-            trace,
-            injected: true,
-            ...rest,
-          })
-        },
-        findByGeneratedSpecifier: (generatedSpecifier) => {
-          const reference = references.find(
-            (ref) => ref.generatedSpecifier === generatedSpecifier,
-          )
-          if (!reference) {
-            throw new Error(
-              `No reference found using the following generatedSpecifier: "${generatedSpecifier}"`,
-            )
-          }
-          return reference
+        becomesExternal: () => {
+          throw new Error("not implemented yet")
         },
       }
 

@@ -148,8 +148,9 @@ export const jsenvPluginImportmap = () => {
           // We must precook the importmap to know its content and inline it into the HTML
           // In this situation the ref to the importmap was already discovered
           // when parsing the HTML
-          const importmapReference =
-            context.referenceUtils.findByGeneratedSpecifier(src)
+          const importmapReference = context.referenceUtils.find(
+            (ref) => ref.generatedSpecifier === src,
+          )
           const importmapUrlInfo = context.urlGraph.getUrlInfo(
             importmapReference.url,
           )

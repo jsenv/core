@@ -264,16 +264,25 @@ export const createFileService = ({
     const urlInfoTargetedByCache = urlGraph.getParentIfInline(urlInfo)
 
     if (ifNoneMatch) {
+      const [clientOriginalContentEtag, clientContentEtag] =
+        ifNoneMatch.split("_")
       if (
-        urlInfoTargetedByCache.contentEtag === ifNoneMatch &&
+        urlInfoTargetedByCache.originalContentEtag ===
+          clientOriginalContentEtag &&
+        urlInfoTargetedByCache.contentEtag === clientContentEtag &&
         urlInfoTargetedByCache.isValid()
       ) {
+        const headers = {
+          "cache-control": `private,max-age=0,must-revalidate`,
+        }
+        Object.keys(urlInfo.headers).forEach((key) => {
+          if (key !== "content-length") {
+            headers[key] = urlInfo.headers[key]
+          }
+        })
         return {
           status: 304,
-          headers: {
-            "cache-control": `private,max-age=0,must-revalidate`,
-            ...urlInfo.headers,
-          },
+          headers,
         }
       }
     }
@@ -286,6 +295,7 @@ export const createFileService = ({
       ) {
         urlInfo.error = null
         urlInfo.sourcemap = null
+        urlInfo.sourcemapIsWrong = null
         urlInfo.sourcemapReference = null
         urlInfo.content = null
         urlInfo.originalContent = null
@@ -306,7 +316,8 @@ export const createFileService = ({
         status: 200,
         headers: {
           "cache-control": `private,max-age=0,must-revalidate`,
-          "eTag": urlInfoTargetedByCache.contentEtag,
+          // it's safe to use "_" separator because etag is encoded with base64 (see https://stackoverflow.com/a/13195197)
+          "eTag": `${urlInfoTargetedByCache.originalContentEtag}_${urlInfoTargetedByCache.contentEtag}`,
           ...urlInfo.headers,
           "content-type": urlInfo.contentType,
           "content-length": Buffer.byteLength(urlInfo.content),
