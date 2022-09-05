@@ -164,7 +164,7 @@ export const createUrlInfoTransformer = ({
       // is a nightmare no-one could solve in years so
       // jsenv won't emit a warning and use the following strategy:
       // "no sourcemap is better than wrong sourcemap"
-      urlInfo.sourcemapIsWrong = sourcemapIsWrong
+      urlInfo.sourcemapIsWrong = urlInfo.sourcemapIsWrong || sourcemapIsWrong
     }
   }
 
