@@ -78,6 +78,7 @@ try {
         "window.resolveResultPromise(43)",
       ),
     )
+    await new Promise((resolve) => setTimeout(resolve, 100))
     await page.reload()
     const responseForInlineJsFile = responses.find(
       (response) =>
