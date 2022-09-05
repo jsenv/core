@@ -268,12 +268,17 @@ export const createFileService = ({
         urlInfoTargetedByCache.contentEtag === ifNoneMatch &&
         urlInfoTargetedByCache.isValid()
       ) {
+        const headers = {
+          "cache-control": `private,max-age=0,must-revalidate`,
+        }
+        Object.keys(urlInfo.headers).forEach((key) => {
+          if (key !== "content-length") {
+            headers[key] = urlInfo.headers[key]
+          }
+        })
         return {
           status: 304,
-          headers: {
-            "cache-control": `private,max-age=0,must-revalidate`,
-            ...urlInfo.headers,
-          },
+          headers,
         }
       }
     }
@@ -286,6 +291,7 @@ export const createFileService = ({
       ) {
         urlInfo.error = null
         urlInfo.sourcemap = null
+        urlInfo.sourcemapIsWrong = null
         urlInfo.sourcemapReference = null
         urlInfo.content = null
         urlInfo.originalContent = null
