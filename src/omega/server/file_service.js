@@ -5,7 +5,7 @@ import {
   composeTwoResponses,
 } from "@jsenv/server"
 import { registerDirectoryLifecycle, bufferToEtag } from "@jsenv/filesystem"
-import { urlIsInsideOf, moveUrl } from "@jsenv/urls"
+import { urlIsInsideOf, moveUrl, asUrlWithoutSearch } from "@jsenv/urls"
 import { URL_META } from "@jsenv/url-meta"
 
 import { getCorePlugins } from "@jsenv/core/src/plugins/plugins.js"
@@ -95,10 +95,16 @@ export const createFileService = ({
     )
     const urlGraph = createUrlGraph()
     clientFileChangeCallbackList.push(({ url }) => {
-      const urlInfo = urlGraph.getUrlInfo(url)
-      if (urlInfo) {
-        urlGraph.considerModified(urlInfo)
-      }
+      urlGraph.urlInfoMap.forEach((urlInfo) => {
+        if (urlInfo.url === url) {
+          urlGraph.considerModified(urlInfo)
+        } else {
+          const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url)
+          if (urlWithoutSearch === url) {
+            urlGraph.considerModified(urlInfo)
+          }
+        }
+      })
     })
     const kitchen = createKitchen({
       signal,

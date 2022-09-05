@@ -29,7 +29,7 @@ try {
   page.on("response", (response) => {
     responses.push(response)
   })
-  await page.goto(`${devServer.origin}/main.html`)
+  await page.goto(`${devServer.origin}/main.html?foo`)
   const getResult = async () => {
     const result = await page.evaluate(
       /* eslint-disable no-undef */

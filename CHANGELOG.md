@@ -1,3 +1,7 @@
+# 28.3.3
+
+- updating files update all urls using search params too
+
 # 28.3.2
 
 - ensure inline script are properly updated on reload

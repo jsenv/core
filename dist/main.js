@@ -25301,11 +25301,17 @@ const createFileService = ({
     clientFileChangeCallbackList.push(({
       url
     }) => {
-      const urlInfo = urlGraph.getUrlInfo(url);
+      urlGraph.urlInfoMap.forEach(urlInfo => {
+        if (urlInfo.url === url) {
+          urlGraph.considerModified(urlInfo);
+        } else {
+          const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
 
-      if (urlInfo) {
-        urlGraph.considerModified(urlInfo);
-      }
+          if (urlWithoutSearch === url) {
+            urlGraph.considerModified(urlInfo);
+          }
+        }
+      });
     });
     const kitchen = createKitchen({
       signal,
