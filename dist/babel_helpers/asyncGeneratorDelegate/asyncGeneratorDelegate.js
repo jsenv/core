@@ -1,6 +1,9 @@
-export default function _asyncGeneratorDelegate(inner, awaitWrap) {
+/* @minVersion 7.0.0-beta.0 */
+import OverloadYield from "../overloadYield/overloadYield.js";
+export default function _asyncGeneratorDelegate(inner) {
   var iter = {},
-      waiting = false;
+      // See the comment in AsyncGenerator to understand what this is.
+  waiting = false;
 
   function pump(key, value) {
     waiting = true;
@@ -9,7 +12,9 @@ export default function _asyncGeneratorDelegate(inner, awaitWrap) {
     });
     return {
       done: false,
-      value: awaitWrap(value)
+      value: new OverloadYield(value,
+      /* kind: delegate */
+      1)
     };
   }
 
