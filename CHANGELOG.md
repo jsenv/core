@@ -1,3 +1,7 @@
+# 28.4.1
+
+- fix 28.4.0 not updating `@jsenv/ast`
+
 # 28.4.0
 
 - handle `window.location` in new URL() second arg
