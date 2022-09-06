@@ -1,3 +1,8 @@
+# 28.3.5
+
+- fix hotreload on preact/react when dev server is not in https (http)
+- reload and invalidate once for import assertions
+
 # 28.3.4
 
 - fix autoreload when inline script changes in an html file using search params
