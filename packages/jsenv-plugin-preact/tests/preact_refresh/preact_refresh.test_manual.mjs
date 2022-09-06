@@ -9,4 +9,11 @@ startDevServer({
   clientFiles: {
     "./**": true,
   },
+  explorer: {
+    groups: {
+      client: {
+        "./*.html": true,
+      },
+    },
+  },
 })

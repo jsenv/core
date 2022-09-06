@@ -7,4 +7,16 @@ await startDevServer({
     "./**": true,
     "./**/.*/": false,
   },
+  transpilation: {
+    importAssertions: {
+      css: true,
+    },
+  },
+  explorer: {
+    groups: {
+      client: {
+        "./*.html": true,
+      },
+    },
+  },
 })

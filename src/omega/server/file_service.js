@@ -95,15 +95,19 @@ export const createFileService = ({
     )
     const urlGraph = createUrlGraph()
     clientFileChangeCallbackList.push(({ url }) => {
+      const onUrlInfo = (urlInfo) => {
+        urlGraph.considerModified(urlInfo)
+      }
+      const exactUrlInfo = urlGraph.getUrlInfo(url)
+      if (exactUrlInfo) {
+        onUrlInfo(exactUrlInfo)
+      }
       urlGraph.urlInfoMap.forEach((urlInfo) => {
-        if (urlInfo.url === url) {
-          urlGraph.considerModified(urlInfo)
-        } else {
-          const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url)
-          if (urlWithoutSearch === url) {
-            urlGraph.considerModified(urlInfo)
-          }
-        }
+        if (urlInfo === exactUrlInfo) return
+        const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url)
+        if (urlWithoutSearch !== url) return
+        if (exactUrlInfo && exactUrlInfo.dependents.has(urlInfo.url)) return
+        onUrlInfo(urlInfo)
       })
     })
     const kitchen = createKitchen({

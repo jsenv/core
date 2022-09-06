@@ -118,7 +118,7 @@ export const jsenvPluginAutoreloadServer = ({
         }
         clientFileChangeCallbackList.push(({ url, event }) => {
           const onUrlInfo = (urlInfo) => {
-            const relativeUrl = formatUrlForClient(url)
+            const relativeUrl = formatUrlForClient(urlInfo.url)
             const hotUpdate = propagateUpdate(urlInfo)
             if (hotUpdate.declined) {
               notifyDeclined({
@@ -134,15 +134,16 @@ export const jsenvPluginAutoreloadServer = ({
               })
             }
           }
+          const exactUrlInfo = urlGraph.getUrlInfo(url)
+          if (exactUrlInfo) {
+            onUrlInfo(exactUrlInfo)
+          }
           urlGraph.urlInfoMap.forEach((urlInfo) => {
-            if (urlInfo.url === url) {
-              onUrlInfo(urlInfo)
-            } else {
-              const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url)
-              if (urlWithoutSearch === url) {
-                onUrlInfo(urlInfo)
-              }
-            }
+            if (urlInfo === exactUrlInfo) return
+            const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url)
+            if (urlWithoutSearch !== url) return
+            if (exactUrlInfo && exactUrlInfo.dependents.has(urlInfo.url)) return
+            onUrlInfo(urlInfo)
           })
         })
         clientFilesPruneCallbackList.push((prunedUrlInfos, firstUrlInfo) => {
