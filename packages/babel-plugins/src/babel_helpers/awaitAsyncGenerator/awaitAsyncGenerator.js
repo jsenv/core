@@ -1,5 +1,5 @@
-import AwaitValue from "../AwaitValue/AwaitValue.js"
+import OverloadYield from "../overloadYield/overloadYield.js";
 
-export default function (value) {
-  return new AwaitValue(value)
+export default function _awaitAsyncGenerator(value) {
+  return new OverloadYield(value, /* kind: await */ 0);
 }

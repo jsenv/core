@@ -2,6 +2,6 @@ import { createRuntimeFromPlaywright } from "./from_playwright.js"
 
 export const firefox = createRuntimeFromPlaywright({
   browserName: "firefox",
-  browserVersion: "102.0", // to update, check https://github.com/microsoft/playwright/releases
+  browserVersion: "103.0", // to update, check https://github.com/microsoft/playwright/releases
 })
 export const firefoxIsolatedTab = firefox.isolatedTab

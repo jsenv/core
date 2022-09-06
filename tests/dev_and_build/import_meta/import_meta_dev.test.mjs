@@ -31,6 +31,7 @@ const expected = {
   returnValue: {
     meta: {
       url: `${server.origin}/main.js`,
+      resolve: undefined,
       hot: {
         data: {},
         accept: undefined,

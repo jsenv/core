@@ -1,40 +1,55 @@
-export default function _asyncGeneratorDelegate(inner, awaitWrap) {
+/* @minVersion 7.0.0-beta.0 */
+
+import OverloadYield from "../overloadYield/overloadYield.js";
+
+export default function _asyncGeneratorDelegate(inner) {
   var iter = {},
-    waiting = false
+    // See the comment in AsyncGenerator to understand what this is.
+    waiting = false;
+
   function pump(key, value) {
-    waiting = true
+    waiting = true;
     value = new Promise(function (resolve) {
-      resolve(inner[key](value))
-    })
-    return { done: false, value: awaitWrap(value) }
+      resolve(inner[key](value));
+    });
+    return {
+      done: false,
+      value: new OverloadYield(value, /* kind: delegate */ 1),
+    };
   }
-  iter[(typeof Symbol !== "undefined" && Symbol.iterator) || "@@iterator"] = function () {
-    return this
-  }
+
+  iter[(typeof Symbol !== "undefined" && Symbol.iterator) || "@@iterator"] =
+    function () {
+      return this;
+    };
+
   iter.next = function (value) {
     if (waiting) {
-      waiting = false
-      return value
+      waiting = false;
+      return value;
     }
-    return pump("next", value)
-  }
+    return pump("next", value);
+  };
+
   if (typeof inner.throw === "function") {
     iter.throw = function (value) {
       if (waiting) {
-        waiting = false
-        throw value
+        waiting = false;
+        throw value;
       }
-      return pump("throw", value)
-    }
+      return pump("throw", value);
+    };
   }
+
   if (typeof inner.return === "function") {
     iter.return = function (value) {
       if (waiting) {
-        waiting = false
-        return value
+        waiting = false;
+        return value;
       }
-      return pump("return", value)
-    }
+      return pump("return", value);
+    };
   }
-  return iter
+
+  return iter;
 }
