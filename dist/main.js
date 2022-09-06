@@ -16810,9 +16810,18 @@ const jsenvPluginHmr = () => {
       return urlObject.href;
     },
     transformUrlSearchParams: (reference, context) => {
-      const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl);
+      if (reference.type === "package_json") {
+        // maybe the if above shoulb be .isImplicit but it's just a detail anyway
+        return null;
+      }
 
-      if (!parentUrlInfo || !parentUrlInfo.data.hmr) {
+      if (context.reference && !context.reference.data.hmr) {
+        // parent do not use hmr search param
+        return null;
+      }
+
+      if (!context.reference && !reference.data.hmr) {
+        // entry point do not use hmr search param
         return null;
       }
 
@@ -16999,7 +17008,7 @@ const jsenvPluginAutoreloadServer = ({
           event
         }) => {
           const onUrlInfo = urlInfo => {
-            const relativeUrl = formatUrlForClient(url);
+            const relativeUrl = formatUrlForClient(urlInfo.url);
             const hotUpdate = propagateUpdate(urlInfo);
 
             if (hotUpdate.declined) {
@@ -17017,16 +17026,18 @@ const jsenvPluginAutoreloadServer = ({
             }
           };
 
-          urlGraph.urlInfoMap.forEach(urlInfo => {
-            if (urlInfo.url === url) {
-              onUrlInfo(urlInfo);
-            } else {
-              const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
+          const exactUrlInfo = urlGraph.getUrlInfo(url);
 
-              if (urlWithoutSearch === url) {
-                onUrlInfo(urlInfo);
-              }
-            }
+          if (exactUrlInfo) {
+            onUrlInfo(exactUrlInfo);
+          }
+
+          urlGraph.urlInfoMap.forEach(urlInfo => {
+            if (urlInfo === exactUrlInfo) return;
+            const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
+            if (urlWithoutSearch !== url) return;
+            if (exactUrlInfo && exactUrlInfo.dependents.has(urlInfo.url)) return;
+            onUrlInfo(urlInfo);
           });
         });
         clientFilesPruneCallbackList.push((prunedUrlInfos, firstUrlInfo) => {
@@ -25309,16 +25320,22 @@ const createFileService = ({
     clientFileChangeCallbackList.push(({
       url
     }) => {
-      urlGraph.urlInfoMap.forEach(urlInfo => {
-        if (urlInfo.url === url) {
-          urlGraph.considerModified(urlInfo);
-        } else {
-          const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
+      const onUrlInfo = urlInfo => {
+        urlGraph.considerModified(urlInfo);
+      };
 
-          if (urlWithoutSearch === url) {
-            urlGraph.considerModified(urlInfo);
-          }
-        }
+      const exactUrlInfo = urlGraph.getUrlInfo(url);
+
+      if (exactUrlInfo) {
+        onUrlInfo(exactUrlInfo);
+      }
+
+      urlGraph.urlInfoMap.forEach(urlInfo => {
+        if (urlInfo === exactUrlInfo) return;
+        const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
+        if (urlWithoutSearch !== url) return;
+        if (exactUrlInfo && exactUrlInfo.dependents.has(urlInfo.url)) return;
+        onUrlInfo(urlInfo);
       });
     });
     const kitchen = createKitchen({
