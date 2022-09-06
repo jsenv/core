@@ -40,6 +40,7 @@ const test = async (params) => {
     returnValue: {
       meta: {
         url: `${server.origin}/js/main.js`,
+        resolve: undefined,
       },
       url: `${server.origin}/js/main.js`,
       urlDestructured: `${server.origin}/js/main.js`,
