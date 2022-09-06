@@ -1,3 +1,7 @@
+# 28.3.6
+
+- update dependencies
+
 # 28.3.5
 
 - fix hotreload on preact/react when dev server is not in https (http)
