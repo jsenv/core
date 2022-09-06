@@ -7,7 +7,6 @@ export const jsenvPluginHmr = () => {
         reference.data.hmr = false
         return null
       }
-
       reference.data.hmr = true
       const urlObject = new URL(reference.url)
       // "hmr" search param goal is to mark url as enabling hmr:
@@ -19,8 +18,16 @@ export const jsenvPluginHmr = () => {
       return urlObject.href
     },
     transformUrlSearchParams: (reference, context) => {
-      const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl)
-      if (!parentUrlInfo || !parentUrlInfo.data.hmr) {
+      if (reference.type === "package_json") {
+        // maybe the if above shoulb be .isImplicit but it's just a detail anyway
+        return null
+      }
+      if (context.reference && !context.reference.data.hmr) {
+        // parent do not use hmr search param
+        return null
+      }
+      if (!context.reference && !reference.data.hmr) {
+        // entry point do not use hmr search param
         return null
       }
       const urlInfo = context.urlGraph.getUrlInfo(reference.url)

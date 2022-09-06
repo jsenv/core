@@ -6,15 +6,11 @@ import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js"
 
 import { jsenvPluginPreact } from "@jsenv/plugin-preact"
 
-const countLabelJsxFileUrl = new URL(
-  "./client/count_label.jsx",
-  import.meta.url,
-)
-const countLabelJsxFileContent = {
-  beforeTest: readFileSync(countLabelJsxFileUrl),
-  update: (content) => writeFileSync(countLabelJsxFileUrl, content),
-  restore: () =>
-    writeFileSync(countLabelJsxFileUrl, countLabelJsxFileContent.beforeTest),
+const labelJsFileUrl = new URL("./client/label.js", import.meta.url)
+const labelJsFileContent = {
+  beforeTest: readFileSync(labelJsFileUrl),
+  update: (content) => writeFileSync(labelJsFileUrl, content),
+  restore: () => writeFileSync(labelJsFileUrl, labelJsFileContent.beforeTest),
 }
 
 const devServer = await startDevServer({
@@ -73,14 +69,7 @@ try {
     }
     assert({ actual, expected })
   }
-  countLabelJsxFileContent.update(`export const CountLabel = ({ count }) => {
-  return (
-    <span id="count_label" style="color: black">
-      tata: {count}
-    </span>
-  )
-}
-`)
+  labelJsFileContent.update(`export const label = "tata"`)
   await new Promise((resolve) => setTimeout(resolve, 500))
   {
     const actual = {
@@ -103,5 +92,5 @@ try {
   }
 } finally {
   browser.close()
-  countLabelJsxFileContent.restore()
+  labelJsFileContent.restore()
 }
