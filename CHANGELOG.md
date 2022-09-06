@@ -1,3 +1,7 @@
+# 28.4.2
+
+- prevent facade file during build by default, add `bundling.js_modules.strictExports` to configure that
+
 # 28.4.1
 
 - fix 28.4.0 not updating `@jsenv/ast`

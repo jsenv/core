@@ -39,6 +39,7 @@ export const bundleJsModules = async ({
     babelHelpersChunk = true,
     include,
     preserveDynamicImport = false,
+    strictExports = false,
   } = options
   const { jsModuleBundleUrlInfos } = await buildWithRollup({
     signal,
@@ -54,6 +55,7 @@ export const bundleJsModules = async ({
     include,
     babelHelpersChunk,
     preserveDynamicImport,
+    strictExports,
   })
   return jsModuleBundleUrlInfos
 }
@@ -69,6 +71,7 @@ const rollupPluginJsenv = ({
   include,
   babelHelpersChunk,
   preserveDynamicImport,
+  strictExports,
 
   resultRef,
 }) => {
@@ -116,7 +119,11 @@ const rollupPluginJsenv = ({
           implicitlyLoadedAfterOneOf: previousNonEntryPointModuleId
             ? [previousNonEntryPointModuleId]
             : null,
-          // preserveSignature: "allow-extension",
+          preserveSignature: strictExports
+            ? "strict"
+            : jsModuleUrlInfo.dependents.size < 2
+            ? "allow-extension"
+            : "strict",
         })
         previousNonEntryPointModuleId = id
       })

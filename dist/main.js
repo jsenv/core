@@ -10556,7 +10556,8 @@ const bundleJsModules = async ({
   const {
     babelHelpersChunk = true,
     include,
-    preserveDynamicImport = false
+    preserveDynamicImport = false,
+    strictExports = false
   } = options;
   const {
     jsModuleBundleUrlInfos
@@ -10571,7 +10572,8 @@ const bundleJsModules = async ({
     sourcemaps,
     include,
     babelHelpersChunk,
-    preserveDynamicImport
+    preserveDynamicImport,
+    strictExports
   });
   return jsModuleBundleUrlInfos;
 };
@@ -10586,6 +10588,7 @@ const rollupPluginJsenv = ({
   include,
   babelHelpersChunk,
   preserveDynamicImport,
+  strictExports,
   resultRef
 }) => {
   let _rollupEmitFile = () => {
@@ -10636,8 +10639,8 @@ const rollupPluginJsenv = ({
 
         emitChunk({
           id,
-          implicitlyLoadedAfterOneOf: previousNonEntryPointModuleId ? [previousNonEntryPointModuleId] : null // preserveSignature: "allow-extension",
-
+          implicitlyLoadedAfterOneOf: previousNonEntryPointModuleId ? [previousNonEntryPointModuleId] : null,
+          preserveSignature: strictExports ? "strict" : jsModuleUrlInfo.dependents.size < 2 ? "allow-extension" : "strict"
         });
         previousNonEntryPointModuleId = id;
       });
