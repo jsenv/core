@@ -32,6 +32,7 @@ export const parseAndTransformJsUrls = async (urlInfo, context) => {
       data: jsMention.data,
       baseUrl: {
         "StringLiteral": jsMention.baseUrl,
+        "window.location": urlInfo.url,
         "window.origin": context.rootDirectoryUrl,
         "import.meta.url": urlInfo.url,
         "context.meta.url": urlInfo.url,

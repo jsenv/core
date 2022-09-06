@@ -1,3 +1,7 @@
+# 28.4.0
+
+- handle `window.location` in new URL() second arg
+
 # 28.3.6
 
 - update dependencies

@@ -78,6 +78,9 @@ const analyzeUrlNodeType = (secondArgNode, { isJsModule }) => {
   if (isImportMetaUrl(secondArgNode)) {
     return "import.meta.url"
   }
+  if (isWindowLocation(secondArgNode)) {
+    return "window.location"
+  }
   if (isWindowOrigin(secondArgNode)) {
     return "window.origin"
   }
@@ -96,6 +99,16 @@ const isImportMetaUrl = (node) => {
     node.object.type === "MetaProperty" &&
     node.property.type === "Identifier" &&
     node.property.name === "url"
+  )
+}
+
+const isWindowLocation = (node) => {
+  return (
+    node.type === "MemberExpression" &&
+    node.object.type === "Identifier" &&
+    node.object.name === "window" &&
+    node.property.type === "Identifier" &&
+    node.property.name === "location"
   )
 }
 

@@ -30,6 +30,7 @@ const test = async (params) => {
   const expected = {
     textFileUrl: `${server.origin}/other/file.txt?v=64ec88ca`,
     absoluteUrl: `http://example.com/file.txt`,
+    windowLocationRelativeUrl: `${server.origin}/other/file.txt?v=64ec88ca`,
     windowOriginRelativeUrl: `${server.origin}/other/file.txt?v=64ec88ca`,
     absoluteBaseUrl: `http://jsenv.dev/file.txt`,
   }
@@ -37,17 +38,6 @@ const test = async (params) => {
 }
 
 // support for <script type="module">
-await test({
-  runtimeCompat: {
-    chrome: "64",
-  },
-  minification: true,
-})
-
+await test({ runtimeCompat: { chrome: "64" }, minification: true })
 // no support for <script type="module">
-await test({
-  runtimeCompat: {
-    chrome: "60",
-  },
-  minification: true,
-})
+await test({ runtimeCompat: { chrome: "60" }, minification: true })

@@ -187,11 +187,11 @@ const json = await response.json()
 console.log(json)
 ```
 
-Finally when js is inline into html, use `window.origin` instead of `document.currentScript.src`.
+Finally when js is inline into html, use `window.location` instead of `document.currentScript.src`.
 
 ```diff
 - const jsonUrl = new URL("./data.json", document.currentScript.src)
-+ const jsonUrl = new URL('./file.json', window.origin)
++ const jsonUrl = new URL('./file.json', window.location)
 ```
 
 <!-- Part below commented until the jsenv plugin for http urls is done -->
