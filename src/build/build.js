@@ -528,12 +528,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             // - happens for "as_js_classic" injecting "s.js"
             if (reference.injected) {
               const [ref, rawUrlInfo] = rawGraphKitchen.injectReference({
-                type: reference.type,
-                expectedType: reference.expectedType,
-                expectedSubtype: reference.expectedSubtype,
+                ...reference,
                 parentUrl: buildToRawUrls[reference.parentUrl],
-                specifier: reference.specifier,
-                injected: true,
               })
               await rawGraphKitchen.cook(rawUrlInfo, { reference: ref })
               return rawUrlInfo

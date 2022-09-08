@@ -5,6 +5,7 @@
  * - <link rel="modulepreload"> are converted to <link rel="preload">
  */
 
+import { readFileSync } from "node:fs"
 import {
   parseHtmlString,
   visitHtmlNodes,
@@ -160,17 +161,28 @@ export const jsenvPluginAsJsClassicHtml = ({
             }
           }
           if (needsSystemJs) {
-            mutations.push(() => {
-              const [systemJsReference] = context.referenceUtils.inject({
-                type: "script_src",
-                expectedType: "js_classic",
-                specifier: systemJsClientFileUrl,
+            mutations.push(async () => {
+              const systemJsFileContent = readFileSync(
+                new URL(systemJsClientFileUrl),
+                { encoding: "utf8" },
+              )
+              const [systemJsReference, systemJsUrlInfo] =
+                context.referenceUtils.inject({
+                  type: "script_src",
+                  expectedType: "js_classic",
+                  isInline: true,
+                  contentType: "text/javascript",
+                  content: systemJsFileContent,
+                  specifier: "s.js",
+                })
+              await context.cook(systemJsUrlInfo, {
+                reference: systemJsReference,
               })
               injectScriptNodeAsEarlyAsPossible(
                 htmlAst,
                 createHtmlNode({
                   tagName: "script",
-                  src: systemJsReference.generatedSpecifier,
+                  textContent: systemJsUrlInfo.content,
                 }),
                 "jsenv:as_js_classic_html",
               )
@@ -180,7 +192,7 @@ export const jsenvPluginAsJsClassicHtml = ({
         if (mutations.length === 0) {
           return null
         }
-        mutations.forEach((mutation) => mutation())
+        await Promise.all(mutations.map((mutation) => mutation()))
         return stringifyHtmlAst(htmlAst)
       },
     },

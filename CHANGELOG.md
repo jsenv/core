@@ -1,3 +1,7 @@
+# 28.5.0
+
+- s.js is now injected inline in html
+
 # 28.4.3
 
 - prevent error from supervisor when error.stack is undefined

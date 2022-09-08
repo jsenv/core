@@ -10301,15 +10301,24 @@ const jsenvPluginAsJsClassicHtml = ({
           }
 
           if (needsSystemJs) {
-            mutations.push(() => {
-              const [systemJsReference] = context.referenceUtils.inject({
+            mutations.push(async () => {
+              const systemJsFileContent = readFileSync$1(new URL(systemJsClientFileUrl), {
+                encoding: "utf8"
+              });
+              const [systemJsReference, systemJsUrlInfo] = context.referenceUtils.inject({
                 type: "script_src",
                 expectedType: "js_classic",
-                specifier: systemJsClientFileUrl
+                isInline: true,
+                contentType: "text/javascript",
+                content: systemJsFileContent,
+                specifier: "s.js"
+              });
+              await context.cook(systemJsUrlInfo, {
+                reference: systemJsReference
               });
               injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
                 tagName: "script",
-                src: systemJsReference.generatedSpecifier
+                textContent: systemJsUrlInfo.content
               }), "jsenv:as_js_classic_html");
             });
           }
@@ -10319,7 +10328,7 @@ const jsenvPluginAsJsClassicHtml = ({
           return null;
         }
 
-        mutations.forEach(mutation => mutation());
+        await Promise.all(mutations.map(mutation => mutation()));
         return stringifyHtmlAst(htmlAst);
       }
     }
@@ -20216,13 +20225,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           // - happens for "as_js_classic" injecting "s.js"
 
           if (reference.injected) {
-            const [ref, rawUrlInfo] = rawGraphKitchen.injectReference({
-              type: reference.type,
-              expectedType: reference.expectedType,
-              expectedSubtype: reference.expectedSubtype,
-              parentUrl: buildToRawUrls[reference.parentUrl],
-              specifier: reference.specifier,
-              injected: true
+            const [ref, rawUrlInfo] = rawGraphKitchen.injectReference({ ...reference,
+              parentUrl: buildToRawUrls[reference.parentUrl]
             });
             await rawGraphKitchen.cook(rawUrlInfo, {
               reference: ref
