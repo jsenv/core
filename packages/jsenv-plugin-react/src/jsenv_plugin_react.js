@@ -62,7 +62,10 @@ const jsenvPluginJsxAndRefresh = ({
           associations,
         })
         const jsxEnabled = urlMeta.jsx
-        const refreshEnabled = context.scenarios.dev ? urlMeta.refresh : false
+        const refreshEnabled = context.scenarios.dev
+          ? urlMeta.refresh &&
+            !urlInfo.content.includes("import.meta.hot.decline()")
+          : false
         const babelPlugins = [
           ...(jsxEnabled
             ? [

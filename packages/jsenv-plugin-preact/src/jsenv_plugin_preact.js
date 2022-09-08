@@ -82,7 +82,10 @@ import ${preactDevtoolsReference.generatedSpecifier}
           associations,
         })
         const jsxEnabled = urlMeta.jsx
-        const refreshEnabled = context.scenarios.dev ? urlMeta.refresh : false
+        const refreshEnabled = context.scenarios.dev
+          ? urlMeta.refresh &&
+            !urlInfo.content.includes("import.meta.hot.decline()")
+          : false
         const hookNamesEnabled =
           context.scenarios.dev &&
           urlMeta.hookNames &&
@@ -90,7 +93,6 @@ import ${preactDevtoolsReference.generatedSpecifier}
             urlInfo.content.includes("useReducer") ||
             urlInfo.content.includes("useRef") ||
             urlInfo.content.includes("useMemo"))
-
         const { code, map } = await applyBabelPlugins({
           babelPlugins: [
             ...(jsxEnabled
