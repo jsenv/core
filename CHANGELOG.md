@@ -1,3 +1,7 @@
+# 28.4.3
+
+- prevent error from supervisor when error.stack is undefined
+
 # 28.4.2
 
 - prevent facade file during build by default, add `bundling.js_modules.strictExports` to configure that

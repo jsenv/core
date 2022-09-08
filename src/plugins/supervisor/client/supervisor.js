@@ -237,6 +237,7 @@ window.__supervisor__ = (() => {
 
     const getErrorStackWithoutErrorMessage = (error) => {
       let stack = error.stack
+      if (!stack) return ""
       const messageInStack = `${error.name}: ${error.message}`
       if (stack.startsWith(messageInStack)) {
         stack = stack.slice(messageInStack.length)
