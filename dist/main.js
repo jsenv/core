@@ -3693,7 +3693,7 @@ const formatters = {
   },
   "css_@import": {
     encode: JSON.stringify,
-    code: JSON.stringify
+    decode: JSON.stringify
   },
   // https://github.com/webpack-contrib/css-loader/pull/627/files
   "css_url": {

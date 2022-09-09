@@ -1,3 +1,7 @@
+# 28.5.1
+
+- fix error when css contains @import
+
 # 28.5.0
 
 - s.js is now injected inline in html

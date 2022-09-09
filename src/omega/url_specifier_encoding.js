@@ -31,7 +31,7 @@ export const urlSpecifierEncoding = {
 const formatters = {
   "js_import_export": { encode: JSON.stringify, decode: JSON.parse },
   "js_url_specifier": { encode: JSON.stringify, decode: JSON.parse },
-  "css_@import": { encode: JSON.stringify, code: JSON.stringify },
+  "css_@import": { encode: JSON.stringify, decode: JSON.stringify },
   // https://github.com/webpack-contrib/css-loader/pull/627/files
   "css_url": {
     encode: (url) => {
