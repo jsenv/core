@@ -53,16 +53,7 @@ export const startDevServer = async ({
   nodeEsmResolution,
   fileSystemMagicResolution,
   transpilation,
-  explorer = {
-    groups: {
-      src: {
-        "./src/**/*.html": true,
-      },
-      tests: {
-        "./tests/**/*.test.html": true,
-      },
-    },
-  },
+  explorer = true, // see jsenv_plugin_explorer.js
   // toolbar = false,
 
   sourcemaps = "inline",
@@ -128,9 +119,6 @@ export const startDevServer = async ({
         worker.once("message", resolve)
       })
       const origin = await messagePromise
-      // if (!keepProcessAlive) {
-      //   worker.unref()
-      // }
       return {
         origin,
         stop: () => {

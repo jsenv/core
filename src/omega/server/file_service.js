@@ -144,9 +144,7 @@ export const createFileService = ({
       writeGeneratedFiles,
       outDirectoryUrl: scenarios.dev
         ? `${rootDirectoryUrl}.jsenv/${runtimeName}@${runtimeVersion}/`
-        : `${rootDirectoryUrl}.jsenv/${
-            scenarios.test ? "test" : "build"
-          }/${runtimeName}@${runtimeVersion}/`,
+        : `${rootDirectoryUrl}.jsenv/build/${runtimeName}@${runtimeVersion}/`,
     })
     urlGraph.createUrlInfoCallbackRef.current = (urlInfo) => {
       const { watch } = URL_META.applyAssociations({

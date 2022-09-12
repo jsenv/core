@@ -40,6 +40,9 @@ export const getCorePlugins = ({
   clientFilesPruneCallbackList,
   explorer,
 } = {}) => {
+  if (explorer === true) {
+    explorer = {}
+  }
   if (supervisor === true) {
     supervisor = {}
   }
