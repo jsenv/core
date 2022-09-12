@@ -32,6 +32,7 @@ export const createFileService = ({
   transpilation,
   clientAutoreload,
   clientFiles,
+  clientMainFileUrl,
   cooldownBetweenFileEvents,
   explorer,
   sourcemaps,
@@ -132,6 +133,7 @@ export const createFileService = ({
           fileSystemMagicResolution,
           transpilation,
 
+          clientMainFileUrl,
           clientAutoreload,
           clientFileChangeCallbackList,
           clientFilesPruneCallbackList,

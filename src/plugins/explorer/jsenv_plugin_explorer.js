@@ -3,10 +3,12 @@ import { DATA_URL } from "@jsenv/urls"
 import { collectFiles } from "@jsenv/filesystem"
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js"
 
-const explorerHtmlFileUrl = new URL("./client/explorer.html", import.meta.url)
+export const explorerHtmlFileUrl = new URL(
+  "./client/explorer.html",
+  import.meta.url,
+)
 
 export const jsenvPluginExplorer = ({
-  mainFileUrl = explorerHtmlFileUrl,
   groups = {
     src: {
       "./src/**/*.html": true,
@@ -21,14 +23,6 @@ export const jsenvPluginExplorer = ({
   return {
     name: "jsenv:explorer",
     appliesDuring: "dev",
-    resolveUrl: {
-      http_request: (reference) => {
-        if (reference.specifier === "/") {
-          return String(mainFileUrl)
-        }
-        return null
-      },
-    },
     transformUrlContent: {
       html: async (urlInfo, context) => {
         if (urlInfo.url !== explorerHtmlFileUrl) {

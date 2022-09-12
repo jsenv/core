@@ -6,6 +6,7 @@ await startDevServer({
     "./**": true,
     "./**/.*/": false,
   },
+  clientMainFileUrl: new URL("./client/main.html", import.meta.url),
   supervisor: {
     logs: true,
   },

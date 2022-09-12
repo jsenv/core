@@ -5,7 +5,7 @@ import { assert } from "@jsenv/assert"
 import { startDevServer } from "@jsenv/core"
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js"
 
-const mainJsFileUrl = new URL("./client/main.html", import.meta.url)
+const mainJsFileUrl = new URL("./client/main.js", import.meta.url)
 const mainJsFileContent = {
   beforeTest: readFileSync(mainJsFileUrl),
   update: (content) => writeFileSync(mainJsFileUrl, content),
@@ -25,7 +25,7 @@ const devServer = await startDevServer({
 const browser = await chromium.launch({ headless: true })
 try {
   const page = await launchBrowserPage(browser)
-  await page.goto(`${devServer.origin}/main.html`)
+  await page.goto(`${devServer.origin}/main.html?foo`)
   const getResult = async () => {
     const result = await page.evaluate(
       /* eslint-disable no-undef */

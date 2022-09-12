@@ -20,7 +20,10 @@ import { jsenvPluginImportMetaHot } from "./import_meta_hot/jsenv_plugin_import_
 import { jsenvPluginAutoreload } from "./autoreload/jsenv_plugin_autoreload.js"
 import { jsenvPluginCacheControl } from "./cache_control/jsenv_plugin_cache_control.js"
 // dev only
-import { jsenvPluginExplorer } from "./explorer/jsenv_plugin_explorer.js"
+import {
+  explorerHtmlFileUrl,
+  jsenvPluginExplorer,
+} from "./explorer/jsenv_plugin_explorer.js"
 
 export const getCorePlugins = ({
   rootDirectoryUrl,
@@ -35,6 +38,7 @@ export const getCorePlugins = ({
   minification = false,
   bundling = false,
 
+  clientMainFileUrl,
   clientAutoreload = false,
   clientFileChangeCallbackList,
   clientFilesPruneCallbackList,
@@ -55,6 +59,10 @@ export const getCorePlugins = ({
   if (clientAutoreload === true) {
     clientAutoreload = {}
   }
+  clientMainFileUrl =
+    clientMainFileUrl || explorer
+      ? explorerHtmlFileUrl
+      : new URL("./main.html", rootDirectoryUrl)
 
   return [
     jsenvPluginUrlAnalysis({ rootDirectoryUrl, ...urlAnalysis }),
@@ -72,7 +80,7 @@ export const getCorePlugins = ({
     jsenvPluginLeadingSlash(),
     // before url resolution to handle "js_import_export" resolution
     jsenvPluginNodeEsmResolution(nodeEsmResolution),
-    jsenvPluginUrlResolution(),
+    jsenvPluginUrlResolution({ clientMainFileUrl }),
     jsenvPluginUrlVersion(),
     jsenvPluginCommonJsGlobals(),
     jsenvPluginImportMetaScenarios(),
