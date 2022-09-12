@@ -99,7 +99,6 @@ export const jsenvPluginAutoreloadServer = ({
                 return dependentPropagationResult
               }
               // declined by absence of boundary, we can keep searching
-              continue
             }
             if (instructions.length === 0) {
               return {
