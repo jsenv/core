@@ -38,5 +38,7 @@ const test = async ({ runtime }) => {
 }
 
 await test({ runtime: chromium })
-await test({ runtime: firefox })
+if (process.platform !== "win32") {
+  await test({ runtime: firefox })
+}
 await test({ runtime: webkit })
