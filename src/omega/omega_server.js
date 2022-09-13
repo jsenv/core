@@ -30,9 +30,9 @@ export const startOmegaServer = async ({
 
   plugins,
   urlAnalysis,
+  urlResolution,
+  fileSystemMagicRedirection,
   supervisor,
-  nodeEsmResolution,
-  fileSystemMagicResolution,
   transpilation,
   clientAutoreload,
   clientFiles,
@@ -93,9 +93,9 @@ export const startOmegaServer = async ({
 
           plugins,
           urlAnalysis,
+          urlResolution,
+          fileSystemMagicRedirection,
           supervisor,
-          nodeEsmResolution,
-          fileSystemMagicResolution,
           transpilation,
           clientAutoreload,
           clientFiles,

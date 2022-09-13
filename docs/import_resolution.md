@@ -58,7 +58,7 @@ import { startDevServer } from "@jsenv/core"
 
 await startDevServer({
   rootDirectoryUrl: new URL('../', import.meta.url),
-+ fileSystemMagicResolution: false,
++ fileSystemMagicRedirection: false,
 })
 ```
 

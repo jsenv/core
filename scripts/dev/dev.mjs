@@ -3,9 +3,7 @@ import { requestCertificate } from "@jsenv/https-local"
 import { rootDirectoryUrl } from "@jsenv/core/jsenv.config.mjs"
 import { startDevServer } from "@jsenv/core"
 
-const { certificate, privateKey } = requestCertificate({
-  altNames: ["local"],
-})
+const { certificate, privateKey } = requestCertificate()
 await startDevServer({
   rootDirectoryUrl,
   // babelPluginMap: {},

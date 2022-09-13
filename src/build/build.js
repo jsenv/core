@@ -123,8 +123,8 @@ export const build = async ({
   sourcemaps = false,
   sourcemapsSourcesContent,
   urlAnalysis = {},
-  nodeEsmResolution = true,
-  fileSystemMagicResolution,
+  urlResolution,
+  fileSystemMagicRedirection,
   directoryReferenceAllowed,
   transpilation = {},
   bundling = true,
@@ -221,8 +221,8 @@ build ${entryPointKeys.length} entry points`)
           runtimeCompat,
 
           urlAnalysis,
-          nodeEsmResolution,
-          fileSystemMagicResolution,
+          urlResolution,
+          fileSystemMagicRedirection,
           directoryReferenceAllowed,
           transpilation: {
             ...transpilation,
@@ -326,10 +326,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 if (rawUrlInfo.content === reference.content) {
                   return true
                 }
-                if (rawUrlInfo.originalContent === reference.content) {
-                  return true
-                }
-                return false
+                return rawUrlInfo.originalContent === reference.content
               })
               const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
               if (!rawUrlInfo) {
@@ -635,7 +632,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           const bundler = bundlers[rawUrlInfo.type]
           if (bundler) {
             bundler.urlInfos.push(rawUrlInfo)
-            return
           }
         }
         GRAPH.forEach(rawGraph, (rawUrlInfo) => {
@@ -1510,18 +1506,12 @@ const isUsed = (urlInfo) => {
   if (urlInfo.injected) {
     return true
   }
-  if (urlInfo.dependents.size > 0) {
-    return true
-  }
-  return false
+  return urlInfo.dependents.size > 0
 }
 
 const canUseVersionedUrl = (urlInfo) => {
   if (urlInfo.isEntryPoint) {
     return false
   }
-  if (urlInfo.type === "webmanifest") {
-    return false
-  }
-  return true
+  return urlInfo.type !== "webmanifest"
 }

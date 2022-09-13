@@ -29,9 +29,9 @@ export const getCorePlugins = ({
 
   urlAnalysis = {},
   urlResolution = {},
-  supervisor,
-  fileSystemMagicResolution,
+  fileSystemMagicRedirection,
   directoryReferenceAllowed,
+  supervisor,
   transpilation = true,
   minification = false,
   bundling = false,
@@ -48,8 +48,8 @@ export const getCorePlugins = ({
   if (supervisor === true) {
     supervisor = {}
   }
-  if (fileSystemMagicResolution === true) {
-    fileSystemMagicResolution = {}
+  if (fileSystemMagicRedirection === true) {
+    fileSystemMagicRedirection = {}
   }
   if (clientAutoreload === true) {
     clientAutoreload = {}
@@ -70,7 +70,7 @@ export const getCorePlugins = ({
     jsenvPluginInline(), // before "file urls" to resolve and load inline urls
     jsenvPluginFileUrls({
       directoryReferenceAllowed,
-      ...fileSystemMagicResolution,
+      ...fileSystemMagicRedirection,
     }),
     jsenvPluginHttpUrls(),
     jsenvPluginUrlResolution({

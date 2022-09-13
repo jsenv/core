@@ -17172,6 +17172,7 @@ const SECONDS_IN_30_DAYS$1 = 60 * 60 * 24 * 30;
 
 const explorerHtmlFileUrl = new URL("./html/explorer.html", import.meta.url);
 const jsenvPluginExplorer = ({
+  clientMainFileUrl,
   groups = {
     src: {
       "./src/**/*.html": true
@@ -17187,7 +17188,7 @@ const jsenvPluginExplorer = ({
     appliesDuring: "dev",
     transformUrlContent: {
       html: async (urlInfo, context) => {
-        if (urlInfo.url !== explorerHtmlFileUrl) {
+        if (urlInfo.url !== clientMainFileUrl) {
           return null;
         }
 
@@ -17269,7 +17270,10 @@ const getCorePlugins = ({
     clientAutoreload = {};
   }
 
-  clientMainFileUrl = clientMainFileUrl || explorer ? explorerHtmlFileUrl : new URL("./index.html", rootDirectoryUrl);
+  if (clientMainFileUrl === undefined) {
+    clientMainFileUrl = explorer ? explorerHtmlFileUrl : new URL("./index.html", rootDirectoryUrl);
+  }
+
   return [jsenvPluginUrlAnalysis({
     rootDirectoryUrl,
     ...urlAnalysis
@@ -17288,7 +17292,10 @@ const getCorePlugins = ({
   }), jsenvPluginBundling(bundling), jsenvPluginMinification(minification), jsenvPluginImportMetaHot(), ...(clientAutoreload ? [jsenvPluginAutoreload({ ...clientAutoreload,
     clientFileChangeCallbackList,
     clientFilesPruneCallbackList
-  })] : []), jsenvPluginCacheControl(), ...(explorer ? [jsenvPluginExplorer(explorer)] : [])];
+  })] : []), jsenvPluginCacheControl(), ...(explorer ? [jsenvPluginExplorer({
+    clientMainFileUrl,
+    ...explorer
+  })] : [])];
 };
 
 const HOOK_NAMES$1 = ["init", "serve", // is called only during dev/tests
