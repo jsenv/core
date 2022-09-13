@@ -22551,7 +22551,18 @@ const writeHead = (responseStream, {
     return;
   }
 
-  responseStream.writeHead(status, statusText, nodeHeaders);
+  try {
+    responseStream.writeHead(status, statusText, nodeHeaders);
+  } catch (e) {
+    if (e.code === "ERR_INVALID_CHAR" && e.message.includes("Invalid character in statusMessage")) {
+      throw new Error(`Invalid character in statusMessage
+--- status message ---
+${statusText}`);
+    }
+
+    throw e;
+  }
+
   onHeadersSent({
     nodeHeaders,
     status,

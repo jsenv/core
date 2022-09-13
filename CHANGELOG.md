@@ -1,3 +1,7 @@
+# 29.0.1
+
+- update @jsenv/server to give more info on ERR_INVALID_CHAR
+
 # 29.0.0
 
 - **breaking change**: introduce urlResolution
