@@ -25,34 +25,6 @@ export const createNodeEsmResolver = ({ runtimeCompat, packageConditions }) => {
     "import",
   ]
 
-  const addRelationshipWithPackageJson = ({
-    context,
-    packageJsonUrl,
-    field,
-    hasVersioningEffect = false,
-  }) => {
-    const referenceFound = context.referenceUtils.find(
-      (ref) => ref.type === "package_json" && ref.subtype === field,
-    )
-    if (referenceFound) {
-      return
-    }
-    const [, packageJsonUrlInfo] = context.referenceUtils.inject({
-      type: "package_json",
-      subtype: field,
-      specifier: packageJsonUrl,
-      isImplicit: true,
-      hasVersioningEffect,
-    })
-    if (packageJsonUrlInfo.type === undefined) {
-      const packageJsonContentAsBuffer = readFileSync(new URL(packageJsonUrl))
-      packageJsonUrlInfo.type = "json"
-      packageJsonUrlInfo.content = String(packageJsonContentAsBuffer)
-      packageJsonUrlInfo.originalContentEtag = packageJsonUrlInfo.contentEtag =
-        bufferToEtag(packageJsonContentAsBuffer)
-    }
-  }
-
   return (reference, context) => {
     const { parentUrl, specifier } = reference
     const { url, type, packageUrl } = applyNodeEsmResolution({
@@ -78,8 +50,7 @@ export const createNodeEsmResolver = ({ runtimeCompat, packageConditions }) => {
             : "",
         })
       }
-
-      const packageDirectoryUrl = defaultLookupPackageScope(reference.url)
+      const packageDirectoryUrl = defaultLookupPackageScope(url)
       if (
         packageDirectoryUrl &&
         packageDirectoryUrl !== context.rootDirectoryUrl
@@ -100,5 +71,33 @@ export const createNodeEsmResolver = ({ runtimeCompat, packageConditions }) => {
       }
     }
     return url
+  }
+}
+
+const addRelationshipWithPackageJson = ({
+  context,
+  packageJsonUrl,
+  field,
+  hasVersioningEffect = false,
+}) => {
+  const referenceFound = context.referenceUtils.find(
+    (ref) => ref.type === "package_json" && ref.subtype === field,
+  )
+  if (referenceFound) {
+    return
+  }
+  const [, packageJsonUrlInfo] = context.referenceUtils.inject({
+    type: "package_json",
+    subtype: field,
+    specifier: packageJsonUrl,
+    isImplicit: true,
+    hasVersioningEffect,
+  })
+  if (packageJsonUrlInfo.type === undefined) {
+    const packageJsonContentAsBuffer = readFileSync(new URL(packageJsonUrl))
+    packageJsonUrlInfo.type = "json"
+    packageJsonUrlInfo.content = String(packageJsonContentAsBuffer)
+    packageJsonUrlInfo.originalContentEtag = packageJsonUrlInfo.contentEtag =
+      bufferToEtag(packageJsonContentAsBuffer)
   }
 }

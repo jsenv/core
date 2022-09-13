@@ -50,7 +50,7 @@ export const jsenvPluginUrlResolution = ({
 "${referenceType}" resolution value must be an object, got ${resolver}`,
       )
     }
-    let { web = true, node_esm, ...rest } = resolver
+    let { web, node_esm, ...rest } = resolver
     const unexpectedKey = Object.keys(rest)[0]
     if (unexpectedKey) {
       throw new Error(
@@ -60,8 +60,11 @@ export const jsenvPluginUrlResolution = ({
         }"`,
       )
     }
-    if (node_esm === undefined && referenceType === "js_import_export") {
-      node_esm = true
+    if (node_esm === undefined) {
+      node_esm = referenceType === "js_import_export"
+    }
+    if (web === undefined) {
+      web = true
     }
     if (node_esm) {
       if (node_esm === true) node_esm = {}
@@ -75,6 +78,9 @@ export const jsenvPluginUrlResolution = ({
     }
   })
 
+  if (!resolvers["js_import_export"]) {
+    resolvers.js_import_export = createNodeEsmResolver({ runtimeCompat })
+  }
   if (!resolvers["*"]) {
     resolvers["*"] = resolveUrlUsingWebResolution
   }
