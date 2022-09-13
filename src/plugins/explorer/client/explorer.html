@@ -365,7 +365,7 @@
         </section>
       </article>
     </div>
-    <script>
+    <script no-supervisor>
       // eslint-disable-next-line no-undef
       const { rootDirectoryUrl, groups, files } = SERVER_PARAMS
 
@@ -479,7 +479,7 @@
 
       document.querySelector("main").appendChild(fileListElement)
     </script>
-    <script>
+    <script no-supervisor>
       // make menu scrollable
       const getMenuWrapperSize = () => {
         return document.querySelector(".menu-wrapper").getBoundingClientRect()

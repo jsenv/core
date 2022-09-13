@@ -56,8 +56,10 @@ export const getCorePlugins = ({
   }
   if (clientMainFileUrl === undefined) {
     clientMainFileUrl = explorer
-      ? explorerHtmlFileUrl
-      : new URL("./index.html", rootDirectoryUrl)
+      ? String(explorerHtmlFileUrl)
+      : String(new URL("./index.html", rootDirectoryUrl))
+  } else {
+    clientMainFileUrl = String(clientMainFileUrl)
   }
 
   return [
@@ -74,8 +76,9 @@ export const getCorePlugins = ({
     }),
     jsenvPluginHttpUrls(),
     jsenvPluginUrlResolution({
-      urlResolution,
       runtimeCompat,
+      urlResolution,
+      clientMainFileUrl,
     }),
     jsenvPluginUrlVersion(),
     jsenvPluginCommonJsGlobals(),

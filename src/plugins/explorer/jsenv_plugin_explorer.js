@@ -29,50 +29,57 @@ export const jsenvPluginExplorer = ({
         if (urlInfo.url !== clientMainFileUrl) {
           return null
         }
-        const associationsForExplorable = {}
-        Object.keys(groups).forEach((groupName) => {
-          const groupConfig = groups[groupName]
-          associationsForExplorable[groupName] = {
-            "**/.jsenv/": false, // avoid visting .jsenv directory in jsenv itself
-            ...groupConfig,
-          }
-        })
-        const matchingFileResultArray = await collectFiles({
-          directoryUrl: context.rootDirectoryUrl,
-          associations: associationsForExplorable,
-          predicate: (meta) =>
-            Object.keys(meta).some((group) => Boolean(meta[group])),
-        })
-        const files = matchingFileResultArray.map(({ relativeUrl, meta }) => ({
-          relativeUrl,
-          meta,
-        }))
         let html = urlInfo.content
-        html = html.replace(
-          "ignore:FAVICON_HREF",
-          DATA_URL.stringify({
-            contentType: CONTENT_TYPE.fromUrlExtension(faviconClientFileUrl),
-            base64Flag: true,
-            data: readFileSync(new URL(faviconClientFileUrl)).toString(
-              "base64",
+        if (html.includes("ignore:FAVICON_HREF")) {
+          html = html.replace(
+            "ignore:FAVICON_HREF",
+            DATA_URL.stringify({
+              contentType: CONTENT_TYPE.fromUrlExtension(faviconClientFileUrl),
+              base64Flag: true,
+              data: readFileSync(new URL(faviconClientFileUrl)).toString(
+                "base64",
+              ),
+            }),
+          )
+        }
+        if (html.includes("SERVER_PARAMS")) {
+          const associationsForExplorable = {}
+          Object.keys(groups).forEach((groupName) => {
+            const groupConfig = groups[groupName]
+            associationsForExplorable[groupName] = {
+              "**/.jsenv/": false, // avoid visting .jsenv directory in jsenv itself
+              ...groupConfig,
+            }
+          })
+          const matchingFileResultArray = await collectFiles({
+            directoryUrl: context.rootDirectoryUrl,
+            associations: associationsForExplorable,
+            predicate: (meta) =>
+              Object.keys(meta).some((group) => Boolean(meta[group])),
+          })
+          const files = matchingFileResultArray.map(
+            ({ relativeUrl, meta }) => ({
+              relativeUrl,
+              meta,
+            }),
+          )
+
+          html = html.replace(
+            "SERVER_PARAMS",
+            JSON.stringify(
+              {
+                rootDirectoryUrl: context.rootDirectoryUrl,
+                groups,
+                files,
+              },
+              null,
+              "  ",
             ),
-          }),
-        )
-        html = html.replace(
-          "SERVER_PARAMS",
-          JSON.stringify(
-            {
-              rootDirectoryUrl: context.rootDirectoryUrl,
-              groups,
-              files,
-            },
-            null,
-            "  ",
-          ),
-        )
-        Object.assign(urlInfo.headers, {
-          "cache-control": "no-store",
-        })
+          )
+          Object.assign(urlInfo.headers, {
+            "cache-control": "no-store",
+          })
+        }
         return html
       },
     },
