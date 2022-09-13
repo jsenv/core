@@ -116,9 +116,6 @@ export const fetchUsingXHR = async (
     if (responseBodyType === "arrayBuffer") {
       return arrayBufferToText(responseBody)
     }
-    // if (responseBodyType === "text" || responseBodyType === 'searchParams') {
-    //   return body
-    // }
     return String(responseBody)
   }
 

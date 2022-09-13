@@ -197,11 +197,3 @@ window.__server_events__.listenEvents({
     reloader.addMessage(reloadServerEvent.data)
   },
 })
-
-// const findHotMetaUrl = (originalFileRelativeUrl) => {
-//   return Object.keys(urlHotMetas).find((compileUrl) => {
-//     return (
-//       parseCompiledUrl(compileUrl).fileRelativeUrl === originalFileRelativeUrl
-//     )
-//   })
-// }

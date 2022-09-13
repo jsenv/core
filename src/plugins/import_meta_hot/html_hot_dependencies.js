@@ -125,14 +125,9 @@ const htmlNodeCanHotReload = (node) => {
       return true
     }
     if (isResourceHint) {
-      // for resource hints html will be notified the underlying resource has changed
-      // but we won't do anything (if the resource is deleted we should?)
-      return true
+      return false
     }
-    if (rel === "icon") {
-      return true
-    }
-    return false
+    return rel === "icon"
   }
   return [
     // "script_src", // script src cannot hot reload
