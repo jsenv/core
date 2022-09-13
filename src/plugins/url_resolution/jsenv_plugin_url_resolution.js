@@ -1,3 +1,32 @@
+/*
+ * This plugin is responsible to resolve urls except for a few cases:
+ * - A custom plugin implements a resolveUrl hook returning something
+ * - The reference.type is "filesystem" -> it is handled by jsenv_plugin_file_urls.js
+ *
+ * By default node esm resolution applies inside js modules
+ * and the rest uses the web standard url resolution (new URL):
+ * - "http_request"
+ * - "entry_point"
+ * - "js_import_export"
+ * - "link_href"
+ * - "script_src"
+ * - "a_href"
+ * - "iframe_src
+ * - "img_src"
+ * - "img_srcset"
+ * - "source_src"
+ * - "source_srcset"
+ * - "image_href"
+ * - "use_href"
+ * - "css_@import"
+ * - "css_url"
+ * - "sourcemap_comment"
+ * - "js_url_specifier"
+ * - "js_inline_content"
+ * - "webmanifest_icon_src"
+ * - "package_json"
+ */
+
 import { createNodeEsmResolver } from "./node_esm_resolver.js"
 
 export const jsenvPluginUrlResolution = ({
