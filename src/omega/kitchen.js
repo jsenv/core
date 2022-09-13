@@ -134,6 +134,7 @@ export const createKitchen = ({
       isResourceHint,
       isImplicit,
       hasVersioningEffect,
+      version: null,
       injected,
       timing: {},
       // for inline resources the reference contains the content

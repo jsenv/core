@@ -14,14 +14,14 @@ export const jsenvPluginUrlVersion = () => {
       return urlObject.href
     },
     transformUrlSearchParams: (reference) => {
-      if (!reference.data.version) {
+      if (!reference.version) {
         return null
       }
       if (reference.searchParams.has("v")) {
         return null
       }
       return {
-        v: reference.data.version,
+        v: reference.version,
       }
     },
   }
