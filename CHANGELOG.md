@@ -1,3 +1,11 @@
+# 29.0.0
+
+- **breaking change**: introduce urlResolution
+  - replace nodeEsmResolution
+  - new way to disable node esm resolution visible here https://github.com/jsenv/jsenv-core/pull/309/files#diff-f1264f171aeba6139f3338d6682b28e466ef796ab84760d608ed8c69b3d80073R34-R36
+- **breaking change**: rename fileSystemMagicResolution in fileSystemMagicRedirection
+- fix explorer.html not served anymore after sarting dev server
+
 # 28.6.0
 
 - add clientMainFileUrl to startDevServer, can be used to send a custom
