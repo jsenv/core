@@ -1,3 +1,10 @@
+# 28.6.0
+
+- add clientMainFileUrl to startDevServer, can be used to send a custom
+  html file instead of jsenv explorer.html
+- fix dev server crashing on some parsing errors
+- explorer.html is now cooked (goes through plugins pipe) like everything else
+
 # 28.5.1
 
 - fix error when css contains @import

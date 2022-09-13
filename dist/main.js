@@ -4516,7 +4516,8 @@ const jsenvPluginUrlAnalysis = ({
   include,
   supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"]
 }) => {
-  let getIncludeInfo = () => undefined;
+  // eslint-disable-next-line no-unused-vars
+  let getIncludeInfo = url => undefined;
 
   if (include) {
     const associations = URL_META.resolveAssociations({
@@ -4570,7 +4571,6 @@ const jsenvPluginUrlAnalysis = ({
 
       if (protocolIsSupported) {
         reference.shouldHandle = true;
-        return;
       }
     },
     transformUrlContent: {
@@ -12022,7 +12022,9 @@ const jsenvPluginImportmap = () => {
   };
 };
 
-const jsenvPluginUrlResolution = () => {
+const jsenvPluginUrlResolution = ({
+  clientMainFileUrl
+}) => {
   const urlResolver = reference => {
     return new URL(reference.specifier, reference.baseUrl || reference.parentUrl).href;
   };
@@ -12031,8 +12033,13 @@ const jsenvPluginUrlResolution = () => {
     name: "jsenv:url_resolution",
     appliesDuring: "*",
     resolveUrl: {
-      "http_request": urlResolver,
-      // during dev
+      "http_request": reference => {
+        if (reference.specifier === "/") {
+          return String(clientMainFileUrl);
+        }
+
+        return urlResolver(reference);
+      },
       "entry_point": urlResolver,
       // during build
       "link_href": urlResolver,
@@ -13149,7 +13156,17 @@ const mainLegacyResolvers = {
     return null;
   },
   browser: (packageJson, packageUrl) => {
-    const browserMain = typeof packageJson.browser === "string" ? packageJson.browser : typeof packageJson.browser === "object" && packageJson.browser !== null ? packageJson.browser["."] : "";
+    const browserMain = (() => {
+      if (typeof packageJson.browser === "string") {
+        return packageJson.browser;
+      }
+
+      if (typeof packageJson.browser === "object" && packageJson.browser !== null) {
+        return packageJson.browser["."];
+      }
+
+      return "";
+    })();
 
     if (!browserMain) {
       if (typeof packageJson.module === "string") {
@@ -16561,16 +16578,10 @@ const htmlNodeCanHotReload = node => {
     }
 
     if (isResourceHint) {
-      // for resource hints html will be notified the underlying resource has changed
-      // but we won't do anything (if the resource is deleted we should?)
-      return true;
+      return false;
     }
 
-    if (rel === "icon") {
-      return true;
-    }
-
-    return false;
+    return rel === "icon";
   }
 
   return [// "script_src", // script src cannot hot reload
@@ -16994,8 +17005,6 @@ const jsenvPluginAutoreloadServer = ({
                 return dependentPropagationResult;
               } // declined by absence of boundary, we can keep searching
 
-
-              continue;
             }
 
             if (instructions.length === 0) {
@@ -17161,62 +17170,64 @@ const jsenvPluginCacheControl = () => {
 };
 const SECONDS_IN_30_DAYS$1 = 60 * 60 * 24 * 30;
 
+const explorerHtmlFileUrl = new URL("./html/explorer.html", import.meta.url);
 const jsenvPluginExplorer = ({
-  groups
+  groups = {
+    src: {
+      "./src/**/*.html": true
+    },
+    tests: {
+      "./tests/**/*.test.html": true
+    }
+  }
 }) => {
-  const htmlClientFileUrl = new URL("./html/explorer.html", import.meta.url);
   const faviconClientFileUrl = new URL("./other/jsenv.png", import.meta.url);
   return {
     name: "jsenv:explorer",
     appliesDuring: "dev",
-    serve: async (request, {
-      rootDirectoryUrl
-    }) => {
-      if (request.pathname !== "/") {
-        return null;
-      }
+    transformUrlContent: {
+      html: async (urlInfo, context) => {
+        if (urlInfo.url !== explorerHtmlFileUrl) {
+          return null;
+        }
 
-      const associationsForExplorable = {};
-      Object.keys(groups).forEach(groupName => {
-        const groupConfig = groups[groupName];
-        associationsForExplorable[groupName] = {
-          "**/.jsenv/": false,
-          // avoid visting .jsenv directory in jsenv itself
-          ...groupConfig
-        };
-      });
-      const matchingFileResultArray = await collectFiles({
-        directoryUrl: rootDirectoryUrl,
-        associations: associationsForExplorable,
-        predicate: meta => Object.keys(meta).some(group => Boolean(meta[group]))
-      });
-      const files = matchingFileResultArray.map(({
-        relativeUrl,
-        meta
-      }) => ({
-        relativeUrl,
-        meta
-      }));
-      let html = String(readFileSync$1(new URL(htmlClientFileUrl)));
-      html = html.replace("ignore:FAVICON_HREF", DATA_URL.stringify({
-        contentType: CONTENT_TYPE.fromUrlExtension(faviconClientFileUrl),
-        base64Flag: true,
-        data: readFileSync$1(new URL(faviconClientFileUrl)).toString("base64")
-      }));
-      html = html.replace("SERVER_PARAMS", JSON.stringify({
-        rootDirectoryUrl,
-        groups,
-        files
-      }, null, "  "));
-      return {
-        status: 200,
-        headers: {
-          "cache-control": "no-store",
-          "content-type": "text/html",
-          "content-length": Buffer.byteLength(html)
-        },
-        body: html
-      };
+        const associationsForExplorable = {};
+        Object.keys(groups).forEach(groupName => {
+          const groupConfig = groups[groupName];
+          associationsForExplorable[groupName] = {
+            "**/.jsenv/": false,
+            // avoid visting .jsenv directory in jsenv itself
+            ...groupConfig
+          };
+        });
+        const matchingFileResultArray = await collectFiles({
+          directoryUrl: context.rootDirectoryUrl,
+          associations: associationsForExplorable,
+          predicate: meta => Object.keys(meta).some(group => Boolean(meta[group]))
+        });
+        const files = matchingFileResultArray.map(({
+          relativeUrl,
+          meta
+        }) => ({
+          relativeUrl,
+          meta
+        }));
+        let html = urlInfo.content;
+        html = html.replace("ignore:FAVICON_HREF", DATA_URL.stringify({
+          contentType: CONTENT_TYPE.fromUrlExtension(faviconClientFileUrl),
+          base64Flag: true,
+          data: readFileSync$1(new URL(faviconClientFileUrl)).toString("base64")
+        }));
+        html = html.replace("SERVER_PARAMS", JSON.stringify({
+          rootDirectoryUrl: context.rootDirectoryUrl,
+          groups,
+          files
+        }, null, "  "));
+        Object.assign(urlInfo.headers, {
+          "cache-control": "no-store"
+        });
+        return html;
+      }
     }
   };
 };
@@ -17232,11 +17243,16 @@ const getCorePlugins = ({
   transpilation = true,
   minification = false,
   bundling = false,
+  clientMainFileUrl,
   clientAutoreload = false,
   clientFileChangeCallbackList,
   clientFilesPruneCallbackList,
   explorer
 } = {}) => {
+  if (explorer === true) {
+    explorer = {};
+  }
+
   if (supervisor === true) {
     supervisor = {};
   }
@@ -17253,6 +17269,7 @@ const getCorePlugins = ({
     clientAutoreload = {};
   }
 
+  clientMainFileUrl = clientMainFileUrl || explorer ? explorerHtmlFileUrl : new URL("./index.html", rootDirectoryUrl);
   return [jsenvPluginUrlAnalysis({
     rootDirectoryUrl,
     ...urlAnalysis
@@ -17264,7 +17281,9 @@ const getCorePlugins = ({
     directoryReferenceAllowed,
     ...fileSystemMagicResolution
   }), jsenvPluginHttpUrls(), jsenvPluginLeadingSlash(), // before url resolution to handle "js_import_export" resolution
-  jsenvPluginNodeEsmResolution(nodeEsmResolution), jsenvPluginUrlResolution(), jsenvPluginUrlVersion(), jsenvPluginCommonJsGlobals(), jsenvPluginImportMetaScenarios(), jsenvPluginNodeRuntime({
+  jsenvPluginNodeEsmResolution(nodeEsmResolution), jsenvPluginUrlResolution({
+    clientMainFileUrl
+  }), jsenvPluginUrlVersion(), jsenvPluginCommonJsGlobals(), jsenvPluginImportMetaScenarios(), jsenvPluginNodeRuntime({
     runtimeCompat
   }), jsenvPluginBundling(bundling), jsenvPluginMinification(minification), jsenvPluginImportMetaHot(), ...(clientAutoreload ? [jsenvPluginAutoreload({ ...clientAutoreload,
     clientFileChangeCallbackList,
@@ -23279,7 +23298,8 @@ const startServer = async ({
           preferIpv6
         });
         serverOrigins.externalip = createOrigin(firstExternalIp);
-      } else if (hostnameInfo.label === "loopback") {} else {
+      } else if (hostnameInfo.label === "loopback") {// nothing
+      } else {
         serverOrigins.local = createOrigin(hostname);
       }
     } else {
@@ -24020,6 +24040,10 @@ const startServer = async ({
       const removeUpgradeCallback = listenEvent(facadeServer, "upgrade", upgradeCallback);
       stopCallbackList.add(removeUpgradeCallback);
       stopCallbackList.add(() => {
+        websocketClients.forEach(websocketClient => {
+          websocketClient.close();
+        });
+        websocketClients.clear();
         websocketServer.close();
         websocketServer = null;
       });
@@ -25256,6 +25280,7 @@ const createFileService = ({
   transpilation,
   clientAutoreload,
   clientFiles,
+  clientMainFileUrl,
   cooldownBetweenFileEvents,
   explorer,
   sourcemaps,
@@ -25364,6 +25389,7 @@ const createFileService = ({
         nodeEsmResolution,
         fileSystemMagicResolution,
         transpilation,
+        clientMainFileUrl,
         clientAutoreload,
         clientFileChangeCallbackList,
         clientFilesPruneCallbackList,
@@ -25373,7 +25399,7 @@ const createFileService = ({
       sourcemapsSourcesProtocol,
       sourcemapsSourcesContent,
       writeGeneratedFiles,
-      outDirectoryUrl: scenarios.dev ? `${rootDirectoryUrl}.jsenv/${runtimeName}@${runtimeVersion}/` : `${rootDirectoryUrl}.jsenv/${scenarios.test ? "test" : "build"}/${runtimeName}@${runtimeVersion}/`
+      outDirectoryUrl: scenarios.dev ? `${rootDirectoryUrl}.jsenv/${runtimeName}@${runtimeVersion}/` : `${rootDirectoryUrl}.jsenv/build/${runtimeName}@${runtimeVersion}/`
     });
 
     urlGraph.createUrlInfoCallbackRef.current = urlInfo => {
@@ -25596,7 +25622,9 @@ const createFileService = ({
           url: reference.url,
           status: 200,
           // let the browser re-throw the syntax error
-          statusText: originalError.reason,
+          // reason becomes the http response statusText, it must not contain invalid chars
+          // https://github.com/nodejs/node/blob/0c27ca4bc9782d658afeaebcec85ec7b28f1cc35/lib/_http_common.js#L221
+          statusText: e.reason,
           statusMessage: originalError.message,
           headers: {
             "content-type": urlInfo.contentType,
@@ -25699,6 +25727,7 @@ const startOmegaServer = async ({
   transpilation,
   clientAutoreload,
   clientFiles,
+  clientMainFileUrl,
   cooldownBetweenFileEvents,
   explorer,
   sourcemaps,
@@ -25752,6 +25781,7 @@ const startOmegaServer = async ({
         transpilation,
         clientAutoreload,
         clientFiles,
+        clientMainFileUrl,
         cooldownBetweenFileEvents,
         explorer,
         sourcemaps,
@@ -25846,6 +25876,7 @@ const startDevServer = async ({
     "./jsenv.config.mjs": true
   },
   clientAutoreload = true,
+  clientMainFileUrl,
   devServerAutoreload = false,
   devServerMainFile = getCallerPosition().url,
   cooldownBetweenFileEvents,
@@ -25859,16 +25890,8 @@ const startDevServer = async ({
   nodeEsmResolution,
   fileSystemMagicResolution,
   transpilation,
-  explorer = {
-    groups: {
-      src: {
-        "./src/**/*.html": true
-      },
-      tests: {
-        "./tests/**/*.test.html": true
-      }
-    }
-  },
+  explorer = true,
+  // see jsenv_plugin_explorer.js
   // toolbar = false,
   sourcemaps = "inline",
   sourcemapsSourcesProtocol,
@@ -25948,10 +25971,7 @@ const startDevServer = async ({
       const messagePromise = new Promise(resolve => {
         worker.once("message", resolve);
       });
-      const origin = await messagePromise; // if (!keepProcessAlive) {
-      //   worker.unref()
-      // }
-
+      const origin = await messagePromise;
       return {
         origin,
         stop: () => {
@@ -25988,6 +26008,7 @@ const startDevServer = async ({
     fileSystemMagicResolution,
     transpilation,
     clientFiles,
+    clientMainFileUrl,
     clientAutoreload,
     cooldownBetweenFileEvents,
     explorer,
@@ -28293,7 +28314,6 @@ const createRuntimeFromPlaywright = ({
           });
         }
       });
-      return;
     };
 
     try {
@@ -28420,11 +28440,7 @@ const isTargetClosedError = error => {
     return true;
   }
 
-  if (error.message.includes("browserContext.close: Browser closed")) {
-    return true;
-  }
-
-  return false;
+  return error.message.includes("browserContext.close: Browser closed");
 };
 
 const extractTextFromConsoleMessage = consoleMessage => {

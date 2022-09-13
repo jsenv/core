@@ -62,7 +62,7 @@ export const getCorePlugins = ({
   clientMainFileUrl =
     clientMainFileUrl || explorer
       ? explorerHtmlFileUrl
-      : new URL("./main.html", rootDirectoryUrl)
+      : new URL("./index.html", rootDirectoryUrl)
 
   return [
     jsenvPluginUrlAnalysis({ rootDirectoryUrl, ...urlAnalysis }),
