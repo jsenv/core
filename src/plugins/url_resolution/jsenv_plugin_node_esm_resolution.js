@@ -16,7 +16,10 @@ import {
   readCustomConditionsFromProcessArgs,
 } from "@jsenv/node-esm-resolution"
 
-export const jsenvPluginNodeEsmResolution = ({ packageConditions }) => {
+export const jsenvPluginNodeEsmResolution = ({
+  referenceType,
+  packageConditions,
+}) => {
   const addRelationshipWithPackageJson = ({
     context,
     packageJsonUrl,
@@ -60,7 +63,7 @@ export const jsenvPluginNodeEsmResolution = ({ packageConditions }) => {
       ]
     },
     resolveUrl: {
-      js_import_export: (reference, context) => {
+      [referenceType]: (reference, context) => {
         const { parentUrl, specifier } = reference
         const { url, type, packageUrl } = applyNodeEsmResolution({
           conditions: packageConditions,
