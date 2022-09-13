@@ -11,7 +11,8 @@ export const jsenvPluginUrlAnalysis = ({
   include,
   supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"],
 }) => {
-  let getIncludeInfo = () => undefined
+  // eslint-disable-next-line no-unused-vars
+  let getIncludeInfo = (url) => undefined
   if (include) {
     const associations = URL_META.resolveAssociations(
       { include },
@@ -56,7 +57,6 @@ export const jsenvPluginUrlAnalysis = ({
       )
       if (protocolIsSupported) {
         reference.shouldHandle = true
-        return
       }
     },
     transformUrlContent: {

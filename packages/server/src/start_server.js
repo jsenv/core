@@ -207,6 +207,7 @@ export const startServer = async ({
         const firstExternalIp = ipGetters.getFirstExternalIp({ preferIpv6 })
         serverOrigins.externalip = createOrigin(firstExternalIp)
       } else if (hostnameInfo.label === "loopback") {
+        // nothing
       } else {
         serverOrigins.local = createOrigin(hostname)
       }
@@ -947,6 +948,10 @@ export const startServer = async ({
       )
       stopCallbackList.add(removeUpgradeCallback)
       stopCallbackList.add(() => {
+        websocketClients.forEach((websocketClient) => {
+          websocketClient.close()
+        })
+        websocketClients.clear()
         websocketServer.close()
         websocketServer = null
       })

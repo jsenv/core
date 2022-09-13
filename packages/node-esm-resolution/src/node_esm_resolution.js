@@ -788,13 +788,19 @@ const mainLegacyResolvers = {
     return null
   },
   browser: (packageJson, packageUrl) => {
-    const browserMain =
-      typeof packageJson.browser === "string"
-        ? packageJson.browser
-        : typeof packageJson.browser === "object" &&
-          packageJson.browser !== null
-        ? packageJson.browser["."]
-        : ""
+    const browserMain = (() => {
+      if (typeof packageJson.browser === "string") {
+        return packageJson.browser
+      }
+      if (
+        typeof packageJson.browser === "object" &&
+        packageJson.browser !== null
+      ) {
+        return packageJson.browser["."]
+      }
+      return ""
+    })()
+
     if (!browserMain) {
       if (typeof packageJson.module === "string") {
         return {

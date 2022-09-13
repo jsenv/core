@@ -191,11 +191,13 @@ window.__supervisor__ = (() => {
     }
 
     const stringifyUrlSite = ({ url, line, column }) => {
-      return typeof line === "number" && typeof column === "number"
-        ? `${url}:${line}:${column}`
-        : typeof line === "number"
-        ? `${url}:${line}`
-        : url
+      if (typeof line === "number" && typeof column === "number") {
+        return `${url}:${line}:${column}`
+      }
+      if (typeof line === "number") {
+        return `${url}:${line}`
+      }
+      return url
     }
 
     const resolveUrlSite = ({ url, line, column }) => {
@@ -913,10 +915,7 @@ window.__supervisor__ = (() => {
           if (type && supervisedScriptCandidate.type !== type) {
             return false
           }
-          if (supervisedScriptCandidate.src !== src) {
-            return false
-          }
-          return true
+          return supervisedScriptCandidate.src === src
         },
       )
       if (supervisedScript) {

@@ -32,6 +32,7 @@ export const createFileService = ({
   transpilation,
   clientAutoreload,
   clientFiles,
+  clientMainFileUrl,
   cooldownBetweenFileEvents,
   explorer,
   sourcemaps,
@@ -132,6 +133,7 @@ export const createFileService = ({
           fileSystemMagicResolution,
           transpilation,
 
+          clientMainFileUrl,
           clientAutoreload,
           clientFileChangeCallbackList,
           clientFilesPruneCallbackList,
@@ -144,9 +146,7 @@ export const createFileService = ({
       writeGeneratedFiles,
       outDirectoryUrl: scenarios.dev
         ? `${rootDirectoryUrl}.jsenv/${runtimeName}@${runtimeVersion}/`
-        : `${rootDirectoryUrl}.jsenv/${
-            scenarios.test ? "test" : "build"
-          }/${runtimeName}@${runtimeVersion}/`,
+        : `${rootDirectoryUrl}.jsenv/build/${runtimeName}@${runtimeVersion}/`,
     })
     urlGraph.createUrlInfoCallbackRef.current = (urlInfo) => {
       const { watch } = URL_META.applyAssociations({
@@ -352,7 +352,9 @@ export const createFileService = ({
         return {
           url: reference.url,
           status: 200, // let the browser re-throw the syntax error
-          statusText: originalError.reason,
+          // reason becomes the http response statusText, it must not contain invalid chars
+          // https://github.com/nodejs/node/blob/0c27ca4bc9782d658afeaebcec85ec7b28f1cc35/lib/_http_common.js#L221
+          statusText: e.reason,
           statusMessage: originalError.message,
           headers: {
             "content-type": urlInfo.contentType,

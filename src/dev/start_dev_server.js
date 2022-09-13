@@ -39,6 +39,7 @@ export const startDevServer = async ({
     "./jsenv.config.mjs": true,
   },
   clientAutoreload = true,
+  clientMainFileUrl,
   devServerAutoreload = false,
   devServerMainFile = getCallerPosition().url,
   cooldownBetweenFileEvents,
@@ -53,16 +54,7 @@ export const startDevServer = async ({
   nodeEsmResolution,
   fileSystemMagicResolution,
   transpilation,
-  explorer = {
-    groups: {
-      src: {
-        "./src/**/*.html": true,
-      },
-      tests: {
-        "./tests/**/*.test.html": true,
-      },
-    },
-  },
+  explorer = true, // see jsenv_plugin_explorer.js
   // toolbar = false,
 
   sourcemaps = "inline",
@@ -128,9 +120,6 @@ export const startDevServer = async ({
         worker.once("message", resolve)
       })
       const origin = await messagePromise
-      // if (!keepProcessAlive) {
-      //   worker.unref()
-      // }
       return {
         origin,
         stop: () => {
@@ -168,6 +157,7 @@ export const startDevServer = async ({
     fileSystemMagicResolution,
     transpilation,
     clientFiles,
+    clientMainFileUrl,
     clientAutoreload,
     cooldownBetweenFileEvents,
     explorer,

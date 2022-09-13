@@ -355,7 +355,6 @@ export const createRuntimeFromPlaywright = ({
           })
         }
       })
-      return
     }
 
     try {
@@ -479,10 +478,7 @@ const isTargetClosedError = (error) => {
   if (error.message.match(/Protocol error \(.*?\): Browser.*?closed/)) {
     return true
   }
-  if (error.message.includes("browserContext.close: Browser closed")) {
-    return true
-  }
-  return false
+  return error.message.includes("browserContext.close: Browser closed")
 }
 
 const extractTextFromConsoleMessage = (consoleMessage) => {

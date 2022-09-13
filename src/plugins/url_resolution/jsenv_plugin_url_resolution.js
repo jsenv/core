@@ -1,4 +1,4 @@
-export const jsenvPluginUrlResolution = () => {
+export const jsenvPluginUrlResolution = ({ clientMainFileUrl }) => {
   const urlResolver = (reference) => {
     return new URL(
       reference.specifier,
@@ -9,7 +9,12 @@ export const jsenvPluginUrlResolution = () => {
     name: "jsenv:url_resolution",
     appliesDuring: "*",
     resolveUrl: {
-      "http_request": urlResolver, // during dev
+      "http_request": (reference) => {
+        if (reference.specifier === "/") {
+          return String(clientMainFileUrl)
+        }
+        return urlResolver(reference)
+      },
       "entry_point": urlResolver, // during build
       "link_href": urlResolver,
       "script_src": urlResolver,
