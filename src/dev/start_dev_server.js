@@ -50,9 +50,9 @@ export const startDevServer = async ({
   runtimeCompat = defaultRuntimeCompat,
   plugins = [],
   urlAnalysis = {},
+  urlResolution,
   supervisor = true,
-  nodeEsmResolution,
-  fileSystemMagicResolution,
+  fileSystemMagicRedirection,
   transpilation,
   explorer = true, // see jsenv_plugin_explorer.js
   // toolbar = false,
@@ -152,9 +152,9 @@ export const startDevServer = async ({
 
     plugins,
     urlAnalysis,
+    urlResolution,
+    fileSystemMagicRedirection,
     supervisor,
-    nodeEsmResolution,
-    fileSystemMagicResolution,
     transpilation,
     clientFiles,
     clientMainFileUrl,

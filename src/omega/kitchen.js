@@ -134,6 +134,7 @@ export const createKitchen = ({
       isResourceHint,
       isImplicit,
       hasVersioningEffect,
+      version: null,
       injected,
       timing: {},
       // for inline resources the reference contains the content
@@ -936,53 +937,3 @@ const determineFileUrlForOutDirectory = ({ urlInfo, context }) => {
     preferAbsolute: true,
   })
 }
-
-// import { getOriginalPosition } from "@jsenv/core/src/utils/sourcemap/original_position.js"
-// const getUrlSite = async (
-//   urlInfo,
-//   { line, column, originalLine, originalColumn },
-// ) => {
-//   if (typeof originalLine === "number") {
-//     return {
-//       url: urlInfo.url,
-//       line: originalLine,
-//       column: originalColumn,
-//     }
-//   }
-//   if (urlInfo.content === urlInfo.originalContent) {
-//     return {
-//       url: urlInfo.url,
-//       line,
-//       column,
-//     }
-//   }
-//   // at this point things were transformed: line and column are generated
-//   // no sourcemap -> cannot map back to original file
-//   const { sourcemap } = urlInfo
-//   if (!sourcemap) {
-//     return {
-//       url: urlInfo.generatedUrl,
-//       content: urlInfo.content,
-//       line,
-//       column,
-//     }
-//   }
-//   const originalPosition = await getOriginalPosition({
-//     sourcemap,
-//     line,
-//     column,
-//   })
-//   // cannot map back to original file
-//   if (!originalPosition || originalPosition.line === null) {
-//     return {
-//       url: urlInfo.generatedUrl,
-//       line,
-//       column,
-//     }
-//   }
-//   return {
-//     url: urlInfo.url,
-//     line: originalPosition.line,
-//     column: originalPosition.column,
-//   }
-// }

@@ -98,7 +98,7 @@ ${fileURLToPath(rootDirectoryUrl)}`)
       )
     }
     logger.debug(`-> consider found because of scheme ${url}`)
-    return handleRemainingUrl(url)
+    return handleRemainingUrl()
   }
 
   const specifier = source

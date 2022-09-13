@@ -1,8 +1,6 @@
 import { jsenvPluginUrlAnalysis } from "../plugins/url_analysis/jsenv_plugin_url_analysis.js"
-import { jsenvPluginLeadingSlash } from "./leading_slash/jsenv_plugin_leading_slash.js"
 import { jsenvPluginImportmap } from "./importmap/jsenv_plugin_importmap.js"
 import { jsenvPluginUrlResolution } from "./url_resolution/jsenv_plugin_url_resolution.js"
-import { jsenvPluginNodeEsmResolution } from "./node_esm_resolution/jsenv_plugin_node_esm_resolution.js"
 import { jsenvPluginUrlVersion } from "./url_version/jsenv_plugin_url_version.js"
 import { jsenvPluginFileUrls } from "./file_urls/jsenv_plugin_file_urls.js"
 import { jsenvPluginHttpUrls } from "./http_urls/jsenv_plugin_http_urls.js"
@@ -30,10 +28,10 @@ export const getCorePlugins = ({
   runtimeCompat,
 
   urlAnalysis = {},
-  supervisor,
-  nodeEsmResolution = true,
-  fileSystemMagicResolution,
+  urlResolution = {},
+  fileSystemMagicRedirection,
   directoryReferenceAllowed,
+  supervisor,
   transpilation = true,
   minification = false,
   bundling = false,
@@ -50,19 +48,19 @@ export const getCorePlugins = ({
   if (supervisor === true) {
     supervisor = {}
   }
-  if (nodeEsmResolution === true) {
-    nodeEsmResolution = {}
-  }
-  if (fileSystemMagicResolution === true) {
-    fileSystemMagicResolution = {}
+  if (fileSystemMagicRedirection === true) {
+    fileSystemMagicRedirection = {}
   }
   if (clientAutoreload === true) {
     clientAutoreload = {}
   }
-  clientMainFileUrl =
-    clientMainFileUrl || explorer
-      ? explorerHtmlFileUrl
-      : new URL("./index.html", rootDirectoryUrl)
+  if (clientMainFileUrl === undefined) {
+    clientMainFileUrl = explorer
+      ? String(explorerHtmlFileUrl)
+      : String(new URL("./index.html", rootDirectoryUrl))
+  } else {
+    clientMainFileUrl = String(clientMainFileUrl)
+  }
 
   return [
     jsenvPluginUrlAnalysis({ rootDirectoryUrl, ...urlAnalysis }),
@@ -74,13 +72,14 @@ export const getCorePlugins = ({
     jsenvPluginInline(), // before "file urls" to resolve and load inline urls
     jsenvPluginFileUrls({
       directoryReferenceAllowed,
-      ...fileSystemMagicResolution,
+      ...fileSystemMagicRedirection,
     }),
     jsenvPluginHttpUrls(),
-    jsenvPluginLeadingSlash(),
-    // before url resolution to handle "js_import_export" resolution
-    jsenvPluginNodeEsmResolution(nodeEsmResolution),
-    jsenvPluginUrlResolution({ clientMainFileUrl }),
+    jsenvPluginUrlResolution({
+      runtimeCompat,
+      urlResolution,
+      clientMainFileUrl,
+    }),
     jsenvPluginUrlVersion(),
     jsenvPluginCommonJsGlobals(),
     jsenvPluginImportMetaScenarios(),
@@ -100,6 +99,13 @@ export const getCorePlugins = ({
         ]
       : []),
     jsenvPluginCacheControl(),
-    ...(explorer ? [jsenvPluginExplorer(explorer)] : []),
+    ...(explorer
+      ? [
+          jsenvPluginExplorer({
+            ...explorer,
+            clientMainFileUrl,
+          }),
+        ]
+      : []),
   ]
 }
