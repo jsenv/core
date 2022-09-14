@@ -19,7 +19,7 @@ const jsFileContent = {
 }
 const devServer = await startDevServer({
   logLevel: "off",
-  omegaServerLogLevel: "off",
+  serverLogLevel: "off",
   rootDirectoryUrl: new URL("./client/", import.meta.url),
   clientFiles: {
     "**/*": true,

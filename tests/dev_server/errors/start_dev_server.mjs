@@ -2,7 +2,7 @@ import { startDevServer } from "@jsenv/core"
 
 export const devServer = await startDevServer({
   logLevel: process.env.GENERATING_SNAPSHOTS ? "off" : undefined,
-  omegaServerLogLevel: process.env.GENERATING_SNAPSHOTS ? "off" : undefined,
+  serverLogLevel: process.env.GENERATING_SNAPSHOTS ? "off" : undefined,
   port: 3589,
   rootDirectoryUrl: new URL("./stories/", import.meta.url),
   supervisor: {

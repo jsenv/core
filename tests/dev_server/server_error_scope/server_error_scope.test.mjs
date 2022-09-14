@@ -10,7 +10,7 @@ import { startDevServer } from "@jsenv/core"
 
 const devServer = await startDevServer({
   logLevel: "off",
-  omegaServerLogLevel: "off",
+  serverLogLevel: "off",
   rootDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
   plugins: [

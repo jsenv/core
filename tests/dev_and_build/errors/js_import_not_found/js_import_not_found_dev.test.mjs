@@ -11,7 +11,7 @@ console.warn = (...args) => {
 try {
   const devServer = await startDevServer({
     logLevel: "warn",
-    omegaServerLogLevel: "warn",
+    serverLogLevel: "warn",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
     devServerAutoreload: false,
