@@ -8,9 +8,9 @@ import { registerDirectoryLifecycle, bufferToEtag } from "@jsenv/filesystem"
 import { urlIsInsideOf, moveUrl, asUrlWithoutSearch } from "@jsenv/urls"
 import { URL_META } from "@jsenv/url-meta"
 
+import { createUrlGraph } from "@jsenv/core/src/kitchen/url_graph.js"
+import { createKitchen } from "@jsenv/core/src/kitchen/kitchen.js"
 import { getCorePlugins } from "@jsenv/core/src/plugins/plugins.js"
-import { createUrlGraph } from "@jsenv/core/src/omega/url_graph.js"
-import { createKitchen } from "@jsenv/core/src/omega/kitchen.js"
 import { jsenvPluginServerEventsClientInjection } from "@jsenv/core/src/plugins/server_events/jsenv_plugin_server_events_client_injection.js"
 import { parseUserAgentHeader } from "./user_agent.js"
 
