@@ -1,3 +1,8 @@
+# 29.1.2
+
+- fix preact-debug injection
+- fix sourcemap resolution inside js modules
+
 # 29.1.1
 
 - allow plugins to set error.asResponse to control server response for that error

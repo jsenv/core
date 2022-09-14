@@ -98,8 +98,16 @@ export const jsenvPluginUrlResolution = ({
         return new URL(reference.specifier.slice(1), context.rootDirectoryUrl)
           .href
       }
-      const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl)
-      const urlType = parentUrlInfo ? parentUrlInfo.type : "entry_point"
+      if (reference.type === "sourcemap_comment") {
+        return resolveUrlUsingWebResolution(reference, context)
+      }
+      let urlType
+      if (reference.expectedType) {
+        urlType = reference.expectedType
+      } else {
+        const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl)
+        urlType = parentUrlInfo ? parentUrlInfo.type : "entry_point"
+      }
       const resolver = resolvers[urlType] || resolvers["*"]
       return resolver(reference, context)
     },
