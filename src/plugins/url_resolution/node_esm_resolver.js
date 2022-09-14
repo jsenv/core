@@ -29,11 +29,14 @@ export const createNodeEsmResolver = ({ runtimeCompat, packageConditions }) => {
     if (reference.type === "package_json") {
       return reference.specifier
     }
-    const { parentUrl, specifier } = reference
+    const parentUrl = reference.baseUrl || reference.parentUrl
+    if (!parentUrl.startsWith("file:")) {
+      return new URL(reference.specifier, parentUrl).href
+    }
     const { url, type, packageUrl } = applyNodeEsmResolution({
       conditions: packageConditions,
       parentUrl,
-      specifier,
+      specifier: reference.specifier,
     })
     if (context.scenarios.dev) {
       const dependsOnPackageJson =

@@ -81,10 +81,7 @@ export const jsenvPluginUrlResolution = ({
   })
 
   if (!resolvers.js_module) {
-    resolvers.js_module = createNodeEsmResolver({
-      runtimeCompat,
-      resolveUrlUsingWebResolution,
-    })
+    resolvers.js_module = createNodeEsmResolver({ runtimeCompat })
   }
   if (!resolvers["*"]) {
     resolvers["*"] = resolveUrlUsingWebResolution
@@ -101,7 +98,8 @@ export const jsenvPluginUrlResolution = ({
         return new URL(reference.specifier.slice(1), context.rootDirectoryUrl)
           .href
       }
-      const urlType = context.urlGraph.getUrlInfo(reference.parentUrl).type
+      const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl)
+      const urlType = parentUrlInfo ? parentUrlInfo.type : "entry_point"
       const resolver = resolvers[urlType] || resolvers["*"]
       return resolver(reference, context)
     },
