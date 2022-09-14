@@ -25709,6 +25709,7 @@ const startDevServer = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
   logLevel = "info",
+  serverLogLevel = "warn",
   protocol = "http",
   // it's better to use http1 by default because it allows to get statusText in devtools
   // which gives valuable information when there is errors
@@ -25852,7 +25853,7 @@ const startDevServer = async ({
     stopOnSIGINT: handleSIGINT,
     stopOnInternalError: false,
     keepProcessAlive,
-    logLevel,
+    logLevel: serverLogLevel,
     startLog: false,
     protocol,
     http2,
