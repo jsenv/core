@@ -33,7 +33,7 @@ export const startDevServer = async ({
   port = 3456,
   acceptAnyIp,
   keepProcessAlive = true,
-  services,
+  services = [],
   onStop = () => {},
 
   rootDirectoryUrl,
