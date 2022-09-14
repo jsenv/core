@@ -104,7 +104,7 @@ export const createTransformUrlContentError = ({
   }) => {
     const transformError = new Error(
       createDetailedMessage(
-        `Failed to transform url content of "${urlInfo.type}"`,
+        `"transformUrlContent" error on "${urlInfo.type}"`,
         {
           reason,
           ...details,
@@ -148,7 +148,7 @@ export const createTransformUrlContentError = ({
     return transformError
   }
   return createFailedToTransformError({
-    reason: `An error occured during "transformUrlContent"`,
+    reason: `"transformUrlContent" error on "${urlInfo.type}"`,
     ...detailsFromValueThrown(error),
   })
 }
@@ -160,8 +160,7 @@ export const createFinalizeUrlContentError = ({
   error,
 }) => {
   const finalizeError = new Error(
-    createDetailedMessage(`Failed to finalize ${urlInfo.type} url content`, {
-      "reason": `An error occured during "finalizeUrlContent"`,
+    createDetailedMessage(`"finalizeUrlContent" error on "${urlInfo.type}"`, {
       ...detailsFromValueThrown(error),
       "url": urlInfo.url,
       "url reference trace": reference.trace.message,
@@ -172,7 +171,7 @@ export const createFinalizeUrlContentError = ({
     finalizeError.cause = error
   }
   finalizeError.name = "FINALIZE_URL_CONTENT_ERROR"
-  finalizeError.reason = `An error occured during "finalizeUrlContent"`
+  finalizeError.reason = `"finalizeUrlContent" error on "${urlInfo.type}"`
   return finalizeError
 }
 
