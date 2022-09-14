@@ -15,9 +15,9 @@ import {
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js"
 
 import { createServerEventsDispatcher } from "@jsenv/core/src/plugins/server_events/server_events_dispatcher.js"
-import { createFileService } from "@jsenv/core/src/omega/server/file_service.js"
 import { defaultRuntimeCompat } from "@jsenv/core/src/build/build.js"
 import { createReloadableWorker } from "@jsenv/core/src/helpers/worker_reload.js"
+import { createFileService } from "./file_service.js"
 
 export const startDevServer = async ({
   signal = new AbortController().signal,
