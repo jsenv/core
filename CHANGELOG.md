@@ -1,3 +1,7 @@
+# 29.1.1
+
+- allow plugins to set error.asResponse to control server response for that error
+
 # 29.1.0
 
 - log only one url for dev server when hostname is passed

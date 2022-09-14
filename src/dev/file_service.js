@@ -347,6 +347,9 @@ export const createFileService = ({
     } catch (e) {
       urlInfo.error = e
       const originalError = e ? e.cause || e : e
+      if (originalError.asResponse) {
+        return originalError.asResponse()
+      }
       const code = originalError.code
       if (code === "PARSE_ERROR") {
         return {

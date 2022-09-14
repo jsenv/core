@@ -23,6 +23,7 @@ export const createResolveUrlError = ({
     resolveError.name = "RESOLVE_URL_ERROR"
     resolveError.code = code
     resolveError.reason = reason
+    resolveError.asResponse = error.asResponse
     return resolveError
   }
   if (error.message === "NO_RESOLVE") {
@@ -64,6 +65,7 @@ export const createFetchUrlContentError = ({
     fetchError.traceLine = reference.trace.line
     fetchError.traceColumn = reference.trace.column
     fetchError.traceMessage = reference.trace.message
+    fetchError.asResponse = error.asResponse
     return fetchError
   }
 
@@ -145,6 +147,7 @@ export const createTransformUrlContentError = ({
         })
       }
     }
+    transformError.asResponse = error.asResponse
     return transformError
   }
   return createFailedToTransformError({
@@ -172,6 +175,7 @@ export const createFinalizeUrlContentError = ({
   }
   finalizeError.name = "FINALIZE_URL_CONTENT_ERROR"
   finalizeError.reason = `"finalizeUrlContent" error on "${urlInfo.type}"`
+  finalizeError.asResponse = error.asResponse
   return finalizeError
 }
 
