@@ -9175,7 +9175,7 @@ const createTransformUrlContentError = ({
     transformError.traceMessage = reference.trace.message;
 
     if (code === "PARSE_ERROR") {
-      transformError.reason = error.message;
+      transformError.reason = reason;
 
       if (urlInfo.isInline) {
         transformError.traceLine = reference.trace.line + error.line - 1;
@@ -19843,7 +19843,7 @@ const jsenvPluginUrlResolution = ({
 
       let urlType;
 
-      if (reference.expectedType) {
+      if (reference.injected) {
         urlType = reference.expectedType;
       } else {
         const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl);

@@ -102,7 +102,7 @@ export const jsenvPluginUrlResolution = ({
         return resolveUrlUsingWebResolution(reference, context)
       }
       let urlType
-      if (reference.expectedType) {
+      if (reference.injected) {
         urlType = reference.expectedType
       } else {
         const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl)

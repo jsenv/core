@@ -126,7 +126,7 @@ export const createTransformUrlContentError = ({
     transformError.traceColumn = reference.trace.column
     transformError.traceMessage = reference.trace.message
     if (code === "PARSE_ERROR") {
-      transformError.reason = error.message
+      transformError.reason = reason
       if (urlInfo.isInline) {
         transformError.traceLine = reference.trace.line + error.line - 1
         transformError.traceColumn = reference.trace.column + error.column

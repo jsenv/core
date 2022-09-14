@@ -1,3 +1,8 @@
+# 29.1.5
+
+- fix parse error crashing dev server
+- fix node_esm applied for script type module in html
+
 # 29.1.2
 
 - fix preact-debug injection
