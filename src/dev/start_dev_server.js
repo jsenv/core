@@ -262,6 +262,10 @@ export const startDevServer = async ({
     },
   })
   startDevServerTask.done()
+  if (hostname) {
+    delete server.origins.localip
+    delete server.origins.externalip
+  }
   logger.info(``)
   Object.keys(server.origins).forEach((key) => {
     logger.info(`- ${server.origins[key]}`)
