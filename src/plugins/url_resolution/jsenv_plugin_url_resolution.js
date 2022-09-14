@@ -37,17 +37,19 @@ export const jsenvPluginUrlResolution = ({
   const resolveUrlUsingWebResolution = (reference) => {
     return new URL(
       reference.specifier,
+      // baseUrl happens second argument to new URL() is different from
+      // import.meta.url or document.currentScript.src
       reference.baseUrl || reference.parentUrl,
     ).href
   }
 
   const resolvers = {}
-  Object.keys(urlResolution).forEach((referenceType) => {
-    const resolver = urlResolution[referenceType]
+  Object.keys(urlResolution).forEach((urlType) => {
+    const resolver = urlResolution[urlType]
     if (typeof resolver !== "object") {
       throw new Error(
         `Unexpected urlResolution configuration:
-"${referenceType}" resolution value must be an object, got ${resolver}`,
+"${urlType}" resolution value must be an object, got ${resolver}`,
       )
     }
     let { web, node_esm, ...rest } = resolver
@@ -55,13 +57,13 @@ export const jsenvPluginUrlResolution = ({
     if (unexpectedKey) {
       throw new Error(
         `Unexpected urlResolution configuration:
-"${referenceType}" resolution key must be "web" or "node_esm", found "${
+"${urlType}" resolution key must be "web" or "node_esm", found "${
           Object.keys(rest)[0]
         }"`,
       )
     }
     if (node_esm === undefined) {
-      node_esm = referenceType === "js_import_export"
+      node_esm = urlType === "js_module"
     }
     if (web === undefined) {
       web = true
@@ -69,17 +71,17 @@ export const jsenvPluginUrlResolution = ({
     if (node_esm) {
       if (node_esm === true) node_esm = {}
       const { packageConditions } = node_esm
-      resolvers[referenceType] = createNodeEsmResolver({
+      resolvers[urlType] = createNodeEsmResolver({
         runtimeCompat,
         packageConditions,
       })
     } else if (web) {
-      resolvers[referenceType] = resolveUrlUsingWebResolution
+      resolvers[urlType] = resolveUrlUsingWebResolution
     }
   })
 
-  if (!resolvers["js_import_export"]) {
-    resolvers.js_import_export = createNodeEsmResolver({ runtimeCompat })
+  if (!resolvers.js_module) {
+    resolvers.js_module = createNodeEsmResolver({ runtimeCompat })
   }
   if (!resolvers["*"]) {
     resolvers["*"] = resolveUrlUsingWebResolution
@@ -96,7 +98,9 @@ export const jsenvPluginUrlResolution = ({
         return new URL(reference.specifier.slice(1), context.rootDirectoryUrl)
           .href
       }
-      const resolver = resolvers[reference.type] || resolvers["*"]
+      const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl)
+      const urlType = parentUrlInfo ? parentUrlInfo.type : "entry_point"
+      const resolver = resolvers[urlType] || resolvers["*"]
       return resolver(reference, context)
     },
     // when specifier is prefixed by "file:///@ignore/"

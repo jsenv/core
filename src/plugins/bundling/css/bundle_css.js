@@ -9,7 +9,7 @@
 import { createMagicSource } from "@jsenv/sourcemap"
 import { applyPostCss, postCssPluginUrlVisitor } from "@jsenv/ast"
 
-import { sortByDependencies } from "@jsenv/core/src/omega/url_graph/sort_by_dependencies.js"
+import { sortByDependencies } from "@jsenv/core/src/kitchen/url_graph/sort_by_dependencies.js"
 
 // Do not use until https://github.com/parcel-bundler/parcel-css/issues/181
 export const bundleCss = async ({ cssUrlInfos, context }) => {

@@ -6,7 +6,7 @@ import { createDetailedMessage } from "@jsenv/log"
 import { babelHelperNameFromUrl } from "@jsenv/babel-plugins"
 import { sourcemapConverter } from "@jsenv/sourcemap"
 
-import { fileUrlConverter } from "@jsenv/core/src/omega/file_url_converter.js"
+import { fileUrlConverter } from "@jsenv/core/src/kitchen/file_url_converter.js"
 
 const globalThisClientFileUrl = new URL(
   "../../transpilation/babel/global_this/client/global_this.js",

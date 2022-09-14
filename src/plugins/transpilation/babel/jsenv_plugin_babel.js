@@ -2,7 +2,7 @@ import { applyBabelPlugins } from "@jsenv/ast"
 import { URL_META } from "@jsenv/url-meta"
 
 import { babelPluginInstrument } from "@jsenv/core/src/test/coverage/babel_plugin_instrument.js"
-import { RUNTIME_COMPAT } from "@jsenv/core/src/omega/compat/runtime_compat.js"
+import { RUNTIME_COMPAT } from "@jsenv/core/src/kitchen/compat/runtime_compat.js"
 import { getBaseBabelPluginStructure } from "./helpers/babel_plugin_structure.js"
 import { babelPluginBabelHelpersAsJsenvImports } from "./helpers/babel_plugin_babel_helpers_as_jsenv_imports.js"
 import { babelPluginNewStylesheetAsJsenvImport } from "./new_stylesheet/babel_plugin_new_stylesheet_as_jsenv_import.js"

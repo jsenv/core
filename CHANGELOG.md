@@ -1,3 +1,8 @@
+# 29.1.0
+
+- log only one url for dev server when hostname is passed
+- urlResolution now applies on url type not reference type (js urls have node esm by default too)
+
 # 29.0.1
 
 - update @jsenv/server to give more info on ERR_INVALID_CHAR

@@ -32,7 +32,7 @@ import { startDevServer } from "@jsenv/core"
 await startDevServer({
   rootDirectoryUrl: new URL('../', import.meta.url),
 + urlResolution: {
-+    js_import_export: { node_esm: false },
++    js_module: { node_esm: false },
 + },
 })
 ```

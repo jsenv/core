@@ -50,16 +50,16 @@ import {
   removeHtmlNode,
 } from "@jsenv/ast"
 
-import { sortByDependencies } from "../omega/url_graph/sort_by_dependencies.js"
-import { createUrlGraph } from "../omega/url_graph.js"
+import { sortByDependencies } from "../kitchen/url_graph/sort_by_dependencies.js"
+import { createUrlGraph } from "../kitchen/url_graph.js"
+import { createKitchen } from "../kitchen/kitchen.js"
+import { createUrlGraphLoader } from "../kitchen/url_graph/url_graph_loader.js"
+import { createUrlGraphSummary } from "../kitchen/url_graph/url_graph_report.js"
+import { isWebWorkerEntryPointReference } from "../kitchen/web_workers.js"
 import { jsenvPluginUrlAnalysis } from "../plugins/url_analysis/jsenv_plugin_url_analysis.js"
 import { jsenvPluginInline } from "../plugins/inline/jsenv_plugin_inline.js"
 import { jsenvPluginAsJsClassic } from "../plugins/transpilation/as_js_classic/jsenv_plugin_as_js_classic.js"
 import { getCorePlugins } from "../plugins/plugins.js"
-import { createKitchen } from "../omega/kitchen.js"
-import { createUrlGraphLoader } from "../omega/url_graph/url_graph_loader.js"
-import { createUrlGraphSummary } from "../omega/url_graph/url_graph_report.js"
-import { isWebWorkerEntryPointReference } from "../omega/web_workers.js"
 
 import { GRAPH } from "./graph_utils.js"
 import { createBuilUrlsGenerator } from "./build_urls_generator.js"

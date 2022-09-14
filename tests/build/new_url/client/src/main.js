@@ -1,6 +1,6 @@
 import "./file.js"
 
-const textFileUrl = new URL("file.txt", import.meta.url).href
+const textFileUrl = new URL("./file.txt", import.meta.url).href
 console.log(textFileUrl)
 const absoluteUrl = new URL("http://example.com/file.txt", "https://jsenv.dev")
   .href
