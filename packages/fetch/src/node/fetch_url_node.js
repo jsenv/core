@@ -8,7 +8,7 @@ import { fetchFileSystem } from "@jsenv/server"
 import {
   isFileHandle,
   fileHandleToReadableStream,
-} from "@jsenv/server/src/internal/body.js"
+} from "@jsenv/server/src/interfacing_with_node/body.js"
 
 export const fetchUrl = async (
   url,

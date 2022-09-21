@@ -18,8 +18,8 @@ import {
   fromNodeRequest,
   createPushRequest,
   applyRedirectionToRequest,
-} from "./internal/request_factory.js"
-import { populateNodeResponse } from "./internal/populateNodeResponse.js"
+} from "./interfacing_with_node/request_factory.js"
+import { writeNodeResponse } from "./interfacing_with_node/write_node_response.js"
 import {
   statusToType,
   colorizeResponseStatus,
@@ -818,7 +818,7 @@ export const startServer = async ({
           await new Promise((resolve) => setTimeout(resolve))
         }
 
-        await populateNodeResponse(responseStream, responseProperties, {
+        await writeNodeResponse(responseStream, responseProperties, {
           signal,
           ignoreBody,
           onAbort: () => {

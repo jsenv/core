@@ -4,7 +4,7 @@ import { createObservable } from "./observable.js"
 
 const readableStreamLifetimeInSeconds = 120
 
-export const nodeStreamToObservable = (nodeStream) => {
+export const observableFromNodeStream = (nodeStream) => {
   const observable = createObservable(({ next, error, complete }) => {
     if (nodeStream.isPaused()) {
       nodeStream.resume()

@@ -2,7 +2,7 @@ import { Stream, Writable, Readable } from "node:stream"
 import { createReadStream } from "node:fs"
 
 import { isObservable, observableFromValue } from "./observable.js"
-import { nodeStreamToObservable } from "./nodeStreamToObservable.js"
+import { observableFromNodeStream } from "./observable_from_node_stream.js"
 
 export const normalizeBodyMethods = (body) => {
   if (isObservable(body)) {
@@ -23,7 +23,7 @@ export const normalizeBodyMethods = (body) => {
 
   if (isNodeStream(body)) {
     return {
-      asObservable: () => nodeStreamToObservable(body),
+      asObservable: () => observableFromNodeStream(body),
       destroy: () => {
         body.destroy()
       },
@@ -61,7 +61,7 @@ export const fileHandleToReadableStream = (fileHandle) => {
 }
 
 const fileHandleToObservable = (fileHandle) => {
-  return nodeStreamToObservable(fileHandleToReadableStream(fileHandle))
+  return observableFromNodeStream(fileHandleToReadableStream(fileHandle))
 }
 
 const isNodeStream = (value) => {
