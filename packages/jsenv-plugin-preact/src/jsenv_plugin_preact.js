@@ -27,6 +27,9 @@ export const jsenvPluginPreact = ({
   },
   preactDevtoolsDuringBuild = false,
 } = {}) => {
+  if (!refreshInclude) {
+    refreshInclude = {}
+  }
   const associations = URL_META.resolveAssociations(
     {
       jsx: jsxInclude,

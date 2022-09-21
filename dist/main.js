@@ -2855,8 +2855,9 @@ function isUnicodeSupported() {
   }
 
   return Boolean(process$1.env.CI) || Boolean(process$1.env.WT_SESSION) // Windows Terminal
+  || Boolean(process$1.env.TERMINUS_SUBLIME) // Terminus (<0.2.27)
   || process$1.env.ConEmuTask === '{cmd::Cmder}' // ConEmu and cmder
-  || process$1.env.TERM_PROGRAM === 'vscode' || process$1.env.TERM === 'xterm-256color' || process$1.env.TERM === 'alacritty' || process$1.env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
+  || process$1.env.TERM_PROGRAM === 'Terminus-Sublime' || process$1.env.TERM_PROGRAM === 'vscode' || process$1.env.TERM === 'xterm-256color' || process$1.env.TERM === 'alacritty' || process$1.env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
 }
 
 // see also https://github.com/sindresorhus/figures
@@ -3197,7 +3198,7 @@ const ESC = '\u001B[';
 const OSC = '\u001B]';
 const BEL = '\u0007';
 const SEP = ';';
-const isTerminalApp = process.env.TERM_PROGRAM === 'Apple_Terminal';
+const isTerminalApp = process$1.env.TERM_PROGRAM === 'Apple_Terminal';
 const ansiEscapes = {};
 
 ansiEscapes.cursorTo = (x, y) => {
@@ -3209,7 +3210,7 @@ ansiEscapes.cursorTo = (x, y) => {
     return ESC + (x + 1) + 'G';
   }
 
-  return ESC + (y + 1) + ';' + (x + 1) + 'H';
+  return ESC + (y + 1) + SEP + (x + 1) + 'H';
 };
 
 ansiEscapes.cursorMove = (x, y) => {
@@ -3274,16 +3275,14 @@ ansiEscapes.eraseScreen = ESC + '2J';
 ansiEscapes.scrollUp = ESC + 'S';
 ansiEscapes.scrollDown = ESC + 'T';
 ansiEscapes.clearScreen = '\u001Bc';
-ansiEscapes.clearTerminal = process.platform === 'win32' ? `${ansiEscapes.eraseScreen}${ESC}0f` : // 1. Erases the screen (Only done in case `2` is not supported)
+ansiEscapes.clearTerminal = process$1.platform === 'win32' ? `${ansiEscapes.eraseScreen}${ESC}0f` // 1. Erases the screen (Only done in case `2` is not supported)
 // 2. Erases the whole screen including scrollback buffer
 // 3. Moves cursor to the top-left position
 // More info: https://www.real-world-systems.com/docs/ANSIcode.html
-`${ansiEscapes.eraseScreen}${ESC}3J${ESC}H`;
+: `${ansiEscapes.eraseScreen}${ESC}3J${ESC}H`;
 ansiEscapes.beep = BEL;
 
-ansiEscapes.link = (text, url) => {
-  return [OSC, '8', SEP, SEP, url, BEL, text, OSC, '8', SEP, SEP, BEL].join('');
-};
+ansiEscapes.link = (text, url) => [OSC, '8', SEP, SEP, url, BEL, text, OSC, '8', SEP, SEP, BEL].join('');
 
 ansiEscapes.image = (buffer, options = {}) => {
   let returnValue = `${OSC}1337;File=inline=1`;
@@ -3304,8 +3303,9 @@ ansiEscapes.image = (buffer, options = {}) => {
 };
 
 ansiEscapes.iTerm = {
-  setCwd: (cwd = process.cwd()) => `${OSC}50;CurrentDir=${cwd}${BEL}`,
-  annotation: (message, options = {}) => {
+  setCwd: (cwd = process$1.cwd()) => `${OSC}50;CurrentDir=${cwd}${BEL}`,
+
+  annotation(message, options = {}) {
     let returnValue = `${OSC}1337;`;
     const hasX = typeof options.x !== 'undefined';
     const hasY = typeof options.y !== 'undefined';
@@ -3325,6 +3325,7 @@ ansiEscapes.iTerm = {
 
     return returnValue + BEL;
   }
+
 };
 
 /*

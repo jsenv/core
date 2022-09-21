@@ -10,4 +10,5 @@ startDevServer({
     "./": true,
     "./.jsenv/": false,
   },
+  clientMainFileUrl: new URL("./client/main.html", import.meta.url),
 })

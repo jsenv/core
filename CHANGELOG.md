@@ -1,3 +1,7 @@
+# 29.1.7
+
+- update playwright and other deps
+
 # 29.1.5
 
 - fix parse error crashing dev server
