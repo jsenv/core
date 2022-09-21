@@ -2,35 +2,43 @@ import { assert } from "@jsenv/assert"
 import { fetchUrl } from "@jsenv/fetch"
 
 import { startServer } from "@jsenv/server"
-import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js"
 
+let behaviour = "timeout"
 const server = await startServer({
-  logLevel: "info",
+  logLevel: "off",
   keepProcessAlive: false,
+  responseTimeout: 500,
+  requestBodyLifetime: 200,
   services: [
     {
-      handleRequest: (request) => {},
+      handleRequest: async () => {
+        if (behaviour === "timeout") {
+          await new Promise(() => {})
+        }
+        return { status: 200 }
+      },
     },
   ],
 })
 
-const response = await fetchUrl(server.origin)
-const actual = {
-  url: response.url,
-  status: response.status,
-  statusText: response.statusText,
-  headers: headersToObject(response.headers),
-  body: await response.text(),
+// first request timesout
+{
+  const response = await fetchUrl(server.origin)
+  const { status, statusText } = response
+  const actual = { status, statusText }
+  const expected = {
+    status: 504,
+    statusText: "server timeout after 0.5s waiting to handle request",
+  }
+  assert({ actual, expected })
 }
-const expected = {
-  url: `${origin}/`,
-  status: 501,
-  statusText: "Not Implemented",
-  headers: {
-    "connection": "close",
-    "date": actual.headers.date,
-    "transfer-encoding": "chunked",
-  },
-  body: "",
+
+// an other request if things are fixed should 200
+{
+  behaviour = "200"
+  const response = await fetchUrl(server.origin)
+  const { status } = response
+  const actual = { status }
+  const expected = { status: 200 }
+  assert({ actual, expected })
 }
-assert({ actual, expected })

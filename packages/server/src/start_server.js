@@ -87,6 +87,13 @@ export const startServer = async ({
       ),
     )
   },
+  // timeAllocated to start responding to a request
+  // after this delay the server will respond with 504
+  responseTimeout = 60_000 * 10, // 10s
+  // time allocated to server code to start reading the request body
+  // after this delay the underlying stream is destroyed, attempting to read it would throw
+  // if used the stream stays opened, it's only if the stream is not read at all that it gets destroyed
+  requestBodyLifetime = 60_000 * 2, // 2s
 } = {}) => {
   const logger = createLogger({ logLevel })
 
@@ -535,7 +542,8 @@ export const startServer = async ({
                 abortController.abort()
               } else if (!http2Stream.pushAllowed) {
                 abortController.abort()
-              } else if (responseProperties !== ABORTED_RESPONSE_PROPERTIES) {
+              } else if (responseProperties.requestAborted) {
+              } else {
                 const responseLength =
                   responseProperties.headers["content-length"] || 0
                 const { effectiveRecvDataLength, remoteWindowSize } =
@@ -609,75 +617,95 @@ export const startServer = async ({
         let handleRequestReturnValue
         let errorWhileHandlingRequest = null
         let handleRequestTimings = serverTiming ? {} : null
-        try {
-          handleRequestReturnValue =
-            await serviceController.callAsyncHooksUntil(
-              "handleRequest",
-              request,
-              {
-                timing: handleRequestTimings,
-                warn,
-                pushResponse: async ({ path, method }) => {
-                  if (typeof path !== "string" || path[0] !== "/") {
-                    addRequestLog(requestNode, {
-                      type: "warn",
-                      value: `response push ignored because path is invalid (must be a string starting with "/", found ${path})`,
-                    })
-                    return
-                  }
-                  if (!request.http2) {
-                    addRequestLog(requestNode, {
-                      type: "warn",
-                      value: `response push ignored because request is not http2`,
-                    })
-                    return
-                  }
-                  const canPushStream = testCanPushStream(nodeResponse.stream)
-                  if (!canPushStream.can) {
-                    addRequestLog(requestNode, {
-                      type: "debug",
-                      value: `response push ignored because ${canPushStream.reason}`,
-                    })
-                    return
-                  }
 
-                  let preventedByService = null
-                  const prevent = () => {
-                    preventedByService = serviceController.getCurrentService()
-                  }
-                  serviceController.callHooksUntil(
-                    "onResponsePush",
-                    { path, method },
-                    {
-                      request,
-                      warn,
-                      prevent,
-                    },
-                    () => preventedByService,
-                  )
-                  if (preventedByService) {
-                    addRequestLog(requestNode, {
-                      type: "debug",
-                      value: `response push prevented by "${preventedByService.name}" service`,
-                    })
-                    return
-                  }
+        let timeout
+        const timeoutPromise = new Promise((resolve) => {
+          timeout = setTimeout(() => {
+            resolve({
+              // the correct status code should be 500 because it's
+              // we don't really know what takes time
+              // in practice it's often because server is trying to reach an other server
+              // that is not responding so 504 is more correct
+              status: 504,
+              statusText: `server timeout after ${
+                responseTimeout / 1000
+              }s waiting to handle request`,
+            })
+          }, responseTimeout)
+        })
+        const handleRequestPromise = serviceController.callAsyncHooksUntil(
+          "handleRequest",
+          request,
+          {
+            timing: handleRequestTimings,
+            warn,
+            pushResponse: async ({ path, method }) => {
+              if (typeof path !== "string" || path[0] !== "/") {
+                addRequestLog(requestNode, {
+                  type: "warn",
+                  value: `response push ignored because path is invalid (must be a string starting with "/", found ${path})`,
+                })
+                return
+              }
+              if (!request.http2) {
+                addRequestLog(requestNode, {
+                  type: "warn",
+                  value: `response push ignored because request is not http2`,
+                })
+                return
+              }
+              const canPushStream = testCanPushStream(nodeResponse.stream)
+              if (!canPushStream.can) {
+                addRequestLog(requestNode, {
+                  type: "debug",
+                  value: `response push ignored because ${canPushStream.reason}`,
+                })
+                return
+              }
 
-                  const requestChildNode = { logs: [], children: [] }
-                  requestNode.children.push(requestChildNode)
-                  await pushResponse(
-                    { path, method },
-                    {
-                      requestNode: requestChildNode,
-                      parentHttp2Stream: nodeResponse.stream,
-                    },
-                  )
+              let preventedByService = null
+              const prevent = () => {
+                preventedByService = serviceController.getCurrentService()
+              }
+              serviceController.callHooksUntil(
+                "onResponsePush",
+                { path, method },
+                {
+                  request,
+                  warn,
+                  prevent,
                 },
-              },
-            )
-        } catch (error) {
-          errorWhileHandlingRequest = error
+                () => preventedByService,
+              )
+              if (preventedByService) {
+                addRequestLog(requestNode, {
+                  type: "debug",
+                  value: `response push prevented by "${preventedByService.name}" service`,
+                })
+                return
+              }
+
+              const requestChildNode = { logs: [], children: [] }
+              requestNode.children.push(requestChildNode)
+              await pushResponse(
+                { path, method },
+                {
+                  requestNode: requestChildNode,
+                  parentHttp2Stream: nodeResponse.stream,
+                },
+              )
+            },
+          },
+        )
+        try {
+          handleRequestReturnValue = await Promise.race([
+            timeoutPromise,
+            handleRequestPromise,
+          ])
+        } catch (e) {
+          errorWhileHandlingRequest = e
         }
+        clearTimeout(timeout)
 
         let responseProperties
         if (errorWhileHandlingRequest) {
@@ -685,7 +713,7 @@ export const startServer = async ({
             errorWhileHandlingRequest.name === "AbortError" &&
             request.signal.aborted
           ) {
-            responseProperties = ABORTED_RESPONSE_PROPERTIES
+            responseProperties = { requestAborted: true }
           } else {
             // internal error, create 500 response
             if (
@@ -927,6 +955,7 @@ export const startServer = async ({
             const request = fromNodeRequest(nodeRequest, {
               serverOrigin: websocketOrigin,
               signal: new AbortController().signal,
+              requestBodyLifetime,
             })
             serviceController.callAsyncHooksUntil(
               "handleWebsocket",
@@ -1038,8 +1067,6 @@ const testCanPushStream = (http2Stream) => {
     can: true,
   }
 }
-
-const ABORTED_RESPONSE_PROPERTIES = {}
 
 const PROCESS_TEARDOWN_EVENTS_MAP = {
   SIGHUP: STOP_REASON_PROCESS_SIGHUP,

@@ -1,3 +1,7 @@
+# 14.1.5
+
+- return 504 when server takes more than 10s to start responding
+
 # 14.1.0
 
 - request.ressource renamed request.resource

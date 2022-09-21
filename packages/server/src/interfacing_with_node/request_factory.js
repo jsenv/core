@@ -1,9 +1,14 @@
 import { observableFromNodeStream } from "./observable_from_node_stream.js"
 import { headersFromObject } from "../internal/headersFromObject.js"
 
-export const fromNodeRequest = (nodeRequest, { serverOrigin, signal }) => {
+export const fromNodeRequest = (
+  nodeRequest,
+  { serverOrigin, signal, requestBodyLifetime },
+) => {
   const headers = headersFromObject(nodeRequest.headers)
-  const body = observableFromNodeStream(nodeRequest)
+  const body = observableFromNodeStream(nodeRequest, {
+    readableStreamLifetime: requestBodyLifetime,
+  })
 
   let requestOrigin
   if (nodeRequest.upgrade) {
