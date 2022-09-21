@@ -4450,8 +4450,10 @@ const observableFromValue = value => {
 };
 
 // https://github.com/jamestalmage/stream-to-observable/blob/master/index.js
-const readableStreamLifetimeInSeconds = 120;
-const nodeStreamToObservable = nodeStream => {
+const observableFromNodeStream = (nodeStream, {
+  readableStreamLifetime = 120_000 // 2s
+
+} = {}) => {
   const observable = createObservable(({
     next,
     error,
@@ -4490,13 +4492,13 @@ const nodeStreamToObservable = nodeStream => {
     // safe measure, ensure the readable stream gets
     // used in the next ${readableStreamLifetimeInSeconds} otherwise destroys it
     const timeout = setTimeout(() => {
-      process.emitWarning(`Readable stream not used after ${readableStreamLifetimeInSeconds} seconds. It will be destroyed to release resources`, {
+      process.emitWarning(`Readable stream not used after ${readableStreamLifetime / 1000} seconds. It will be destroyed to release resources`, {
         CODE: "READABLE_STREAM_TIMEOUT",
         // url is for http client request
         detail: `path: ${nodeStream.path}, fd: ${nodeStream.fd}, url: ${nodeStream.url}`
       });
       nodeStream.destroy();
-    }, readableStreamLifetimeInSeconds * 1000);
+    }, readableStreamLifetime);
     observable.timeout = timeout;
     onceReadableStreamUsedOrClosed(nodeStream, () => {
       clearTimeout(timeout);
@@ -4550,10 +4552,13 @@ const headersFromObject = headersObject => {
 
 const fromNodeRequest = (nodeRequest, {
   serverOrigin,
-  signal
+  signal,
+  requestBodyLifetime
 }) => {
   const headers = headersFromObject(nodeRequest.headers);
-  const body = nodeStreamToObservable(nodeRequest);
+  const body = observableFromNodeStream(nodeRequest, {
+    readableStreamLifetime: requestBodyLifetime
+  });
   let requestOrigin;
 
   if (nodeRequest.upgrade) {
@@ -4671,7 +4676,7 @@ const normalizeBodyMethods = body => {
 
   if (isNodeStream(body)) {
     return {
-      asObservable: () => nodeStreamToObservable(body),
+      asObservable: () => observableFromNodeStream(body),
       destroy: () => {
         body.destroy();
       }
@@ -4702,7 +4707,7 @@ const fileHandleToReadableStream = fileHandle => {
 };
 
 const fileHandleToObservable = fileHandle => {
-  return nodeStreamToObservable(fileHandleToReadableStream(fileHandle));
+  return observableFromNodeStream(fileHandleToReadableStream(fileHandle));
 };
 
 const isNodeStream = value => {
@@ -4717,7 +4722,7 @@ const isNodeStream = value => {
   return false;
 };
 
-const populateNodeResponse = async (responseStream, {
+const writeNodeResponse = async (responseStream, {
   status,
   statusText,
   headers,
@@ -5487,7 +5492,16 @@ const startServer = async ({
       "request url": request.url,
       "request headers": JSON.stringify(request.headers, null, "  ")
     }));
-  }
+  },
+  // timeAllocated to start responding to a request
+  // after this delay the server will respond with 504
+  responseTimeout = 60_000 * 10,
+  // 10s
+  // time allocated to server code to start reading the request body
+  // after this delay the underlying stream is destroyed, attempting to read it would throw
+  // if used the stream stays opened, it's only if the stream is not read at all that it gets destroyed
+  requestBodyLifetime = 60_000 * 2 // 2s
+
 } = {}) => {
   const logger = createLogger({
     logLevel
@@ -5972,7 +5986,7 @@ const startServer = async ({
                 abortController.abort();
               } else if (!http2Stream.pushAllowed) {
                 abortController.abort();
-              } else if (responseProperties !== ABORTED_RESPONSE_PROPERTIES) {
+              } else if (responseProperties.requestAborted) {} else {
                 const responseLength = responseProperties.headers["content-length"] || 0;
                 const {
                   effectiveRecvDataLength,
@@ -6047,87 +6061,104 @@ const startServer = async ({
         let handleRequestReturnValue;
         let errorWhileHandlingRequest = null;
         let handleRequestTimings = serverTiming ? {} : null;
+        let timeout;
+        const timeoutPromise = new Promise(resolve => {
+          timeout = setTimeout(() => {
+            resolve({
+              // the correct status code should be 500 because it's
+              // we don't really know what takes time
+              // in practice it's often because server is trying to reach an other server
+              // that is not responding so 504 is more correct
+              status: 504,
+              statusText: `server timeout after ${responseTimeout / 1000}s waiting to handle request`
+            });
+          }, responseTimeout);
+        });
+        const handleRequestPromise = serviceController.callAsyncHooksUntil("handleRequest", request, {
+          timing: handleRequestTimings,
+          warn,
+          pushResponse: async ({
+            path,
+            method
+          }) => {
+            if (typeof path !== "string" || path[0] !== "/") {
+              addRequestLog(requestNode, {
+                type: "warn",
+                value: `response push ignored because path is invalid (must be a string starting with "/", found ${path})`
+              });
+              return;
+            }
 
-        try {
-          handleRequestReturnValue = await serviceController.callAsyncHooksUntil("handleRequest", request, {
-            timing: handleRequestTimings,
-            warn,
-            pushResponse: async ({
+            if (!request.http2) {
+              addRequestLog(requestNode, {
+                type: "warn",
+                value: `response push ignored because request is not http2`
+              });
+              return;
+            }
+
+            const canPushStream = testCanPushStream(nodeResponse.stream);
+
+            if (!canPushStream.can) {
+              addRequestLog(requestNode, {
+                type: "debug",
+                value: `response push ignored because ${canPushStream.reason}`
+              });
+              return;
+            }
+
+            let preventedByService = null;
+
+            const prevent = () => {
+              preventedByService = serviceController.getCurrentService();
+            };
+
+            serviceController.callHooksUntil("onResponsePush", {
               path,
               method
-            }) => {
-              if (typeof path !== "string" || path[0] !== "/") {
-                addRequestLog(requestNode, {
-                  type: "warn",
-                  value: `response push ignored because path is invalid (must be a string starting with "/", found ${path})`
-                });
-                return;
-              }
+            }, {
+              request,
+              warn,
+              prevent
+            }, () => preventedByService);
 
-              if (!request.http2) {
-                addRequestLog(requestNode, {
-                  type: "warn",
-                  value: `response push ignored because request is not http2`
-                });
-                return;
-              }
-
-              const canPushStream = testCanPushStream(nodeResponse.stream);
-
-              if (!canPushStream.can) {
-                addRequestLog(requestNode, {
-                  type: "debug",
-                  value: `response push ignored because ${canPushStream.reason}`
-                });
-                return;
-              }
-
-              let preventedByService = null;
-
-              const prevent = () => {
-                preventedByService = serviceController.getCurrentService();
-              };
-
-              serviceController.callHooksUntil("onResponsePush", {
-                path,
-                method
-              }, {
-                request,
-                warn,
-                prevent
-              }, () => preventedByService);
-
-              if (preventedByService) {
-                addRequestLog(requestNode, {
-                  type: "debug",
-                  value: `response push prevented by "${preventedByService.name}" service`
-                });
-                return;
-              }
-
-              const requestChildNode = {
-                logs: [],
-                children: []
-              };
-              requestNode.children.push(requestChildNode);
-              await pushResponse({
-                path,
-                method
-              }, {
-                requestNode: requestChildNode,
-                parentHttp2Stream: nodeResponse.stream
+            if (preventedByService) {
+              addRequestLog(requestNode, {
+                type: "debug",
+                value: `response push prevented by "${preventedByService.name}" service`
               });
+              return;
             }
-          });
-        } catch (error) {
-          errorWhileHandlingRequest = error;
+
+            const requestChildNode = {
+              logs: [],
+              children: []
+            };
+            requestNode.children.push(requestChildNode);
+            await pushResponse({
+              path,
+              method
+            }, {
+              requestNode: requestChildNode,
+              parentHttp2Stream: nodeResponse.stream
+            });
+          }
+        });
+
+        try {
+          handleRequestReturnValue = await Promise.race([timeoutPromise, handleRequestPromise]);
+        } catch (e) {
+          errorWhileHandlingRequest = e;
         }
 
+        clearTimeout(timeout);
         let responseProperties;
 
         if (errorWhileHandlingRequest) {
           if (errorWhileHandlingRequest.name === "AbortError" && request.signal.aborted) {
-            responseProperties = ABORTED_RESPONSE_PROPERTIES;
+            responseProperties = {
+              requestAborted: true
+            };
           } else {
             // internal error, create 500 response
             if ( // stopOnInternalError stops server only if requestToResponse generated
@@ -6237,7 +6268,7 @@ const startServer = async ({
           await new Promise(resolve => setTimeout(resolve));
         }
 
-        await populateNodeResponse(responseStream, responseProperties, {
+        await writeNodeResponse(responseStream, responseProperties, {
           signal,
           ignoreBody,
           onAbort: () => {
@@ -6348,7 +6379,8 @@ const startServer = async ({
           });
           const request = fromNodeRequest(nodeRequest, {
             serverOrigin: websocketOrigin,
-            signal: new AbortController().signal
+            signal: new AbortController().signal,
+            requestBodyLifetime
           });
           serviceController.callAsyncHooksUntil("handleWebsocket", websocket, {
             request
@@ -6456,7 +6488,6 @@ const testCanPushStream = http2Stream => {
   };
 };
 
-const ABORTED_RESPONSE_PROPERTIES = {};
 const PROCESS_TEARDOWN_EVENTS_MAP = {
   SIGHUP: STOP_REASON_PROCESS_SIGHUP,
   SIGTERM: STOP_REASON_PROCESS_SIGTERM,
