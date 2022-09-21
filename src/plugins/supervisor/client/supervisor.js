@@ -101,7 +101,10 @@ window.__supervisor__ = (() => {
               return
             }
             // firefox
-            if (message.startsWith("import not found:")) {
+            if (
+              message.startsWith("import not found:") ||
+              message.startsWith("ambiguous indirect export:")
+            ) {
               exception.code = DYNAMIC_IMPORT_EXPORT_MISSING
               return
             }
