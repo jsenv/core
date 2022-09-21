@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert"
 
 import { startServer } from "@jsenv/server"
-import { createObservable } from "@jsenv/server/src/internal/observable.js"
+import { createObservable } from "@jsenv/server/src/interfacing_with_node/observable.js"
 import {
   testServerCertificate,
   testServerCertificatePrivateKey,

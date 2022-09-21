@@ -3,7 +3,7 @@ import { assert } from "@jsenv/assert"
 import {
   createObservable,
   createCompositeProducer,
-} from "@jsenv/server/src/internal/observable.js"
+} from "@jsenv/server/src/interfacing_with_node/observable.js"
 
 const createObservableSource = () => {
   const observable = createObservable((callbacks) => {

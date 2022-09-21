@@ -3,7 +3,7 @@ import { createLogger } from "@jsenv/log"
 import {
   createObservable,
   createCompositeProducer,
-} from "@jsenv/server/src/internal/observable.js"
+} from "@jsenv/server/src/interfacing_with_node/observable.js"
 
 // https://www.html5rocks.com/en/tutorials/eventsource/basics/
 export const createSSERoom = ({

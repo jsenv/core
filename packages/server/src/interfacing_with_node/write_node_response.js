@@ -4,7 +4,7 @@ import { raceCallbacks } from "@jsenv/abort"
 
 import { normalizeBodyMethods } from "./body.js"
 
-export const populateNodeResponse = async (
+export const writeNodeResponse = async (
   responseStream,
   { status, statusText, headers, body, bodyEncoding },
   { signal, ignoreBody, onAbort, onError, onHeadersSent, onEnd } = {},

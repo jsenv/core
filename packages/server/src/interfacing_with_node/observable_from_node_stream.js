@@ -2,9 +2,12 @@
 import { Readable } from "node:stream"
 import { createObservable } from "./observable.js"
 
-const readableStreamLifetimeInSeconds = 120
-
-export const nodeStreamToObservable = (nodeStream) => {
+export const observableFromNodeStream = (
+  nodeStream,
+  {
+    readableStreamLifetime = 120_000, // 2s
+  } = {},
+) => {
   const observable = createObservable(({ next, error, complete }) => {
     if (nodeStream.isPaused()) {
       nodeStream.resume()
@@ -38,7 +41,9 @@ export const nodeStreamToObservable = (nodeStream) => {
     // used in the next ${readableStreamLifetimeInSeconds} otherwise destroys it
     const timeout = setTimeout(() => {
       process.emitWarning(
-        `Readable stream not used after ${readableStreamLifetimeInSeconds} seconds. It will be destroyed to release resources`,
+        `Readable stream not used after ${
+          readableStreamLifetime / 1000
+        } seconds. It will be destroyed to release resources`,
         {
           CODE: "READABLE_STREAM_TIMEOUT",
           // url is for http client request
@@ -46,7 +51,7 @@ export const nodeStreamToObservable = (nodeStream) => {
         },
       )
       nodeStream.destroy()
-    }, readableStreamLifetimeInSeconds * 1000)
+    }, readableStreamLifetime)
     observable.timeout = timeout
     onceReadableStreamUsedOrClosed(nodeStream, () => {
       clearTimeout(timeout)
