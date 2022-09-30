@@ -1,7 +1,7 @@
 # Import resolution
 
 Jsenv resolve url found in files like a browser would: `new URL(specifier, baseUrl)`.  
-Inside js modules, the url resolution is augmented with [Node ESM resolution algorithm](#node-esm-resolution-algorithm) and [FileSystem magic resolution](#filesystem-magic-resolution).
+Inside js modules, the url resolution is augmented with [Node ESM resolution algorithm](#node-esm-resolution-algorithm) and [FileSystem magic redirection](#filesystem-magic-redirection).
 
 ## Node ESM resolution algorithm
 
@@ -37,7 +37,7 @@ await startDevServer({
 })
 ```
 
-## FileSystem magic resolution
+## FileSystem magic redirection
 
 The code below would throw 404 in a browser (assuming there is no "file" but "file.js")
 
