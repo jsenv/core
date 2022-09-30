@@ -1,6 +1,6 @@
 # Import resolution
 
-Jsenv resolve url found in files like a browser would: `new URL(specifier, baseUrl)`.
+Jsenv resolve url found in files like a browser would: `new URL(specifier, baseUrl)`.  
 Inside js modules, the url resolution is augmented with [Node ESM resolution algorithm](#node-esm-resolution-algorithm) and [FileSystem magic resolution](#filesystem-magic-resolution).
 
 ## Node ESM resolution algorithm
@@ -63,4 +63,4 @@ await startDevServer({
 ```
 
 > **Warning**
-> File system magic resolution must be enabled if some dependencies are using import without extensions.
+> File system magic redirection must be enabled if some dependencies are using import without extensions.
