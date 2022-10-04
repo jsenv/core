@@ -41,7 +41,8 @@ export const jsenvPluginAsJsClassicConversion = ({
       if (
         reference.type === "js_import_export" ||
         reference.subtype === "system_register_arg" ||
-        reference.subtype === "system_import_arg"
+        reference.subtype === "system_import_arg" ||
+        reference.type === "js_url_specifier"
       ) {
         // We want to propagate transformation of js module to js classic to:
         // - import specifier (static/dynamic import + re-export)
