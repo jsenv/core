@@ -1,5 +1,9 @@
 import { readFileSync } from "@jsenv/filesystem"
-import { createMagicSource, composeTwoSourcemaps } from "@jsenv/sourcemap"
+import {
+  createMagicSource,
+  composeTwoSourcemaps,
+  SOURCEMAP,
+} from "@jsenv/sourcemap"
 import { applyBabelPlugins } from "@jsenv/ast"
 
 import { requireFromJsenv } from "@jsenv/core/src/require_from_jsenv.js"
@@ -67,8 +71,23 @@ export const convertJsModuleToJsClassic = async ({
     urlInfo.isEntryPoint
   ) {
     const magicSource = createMagicSource(code)
-    const systemjsCode = readFileSync(systemJsClientFileUrl, { as: "string" })
-    magicSource.prepend(`${systemjsCode}\n\n`)
+    let systemJsFileContent = readFileSync(systemJsClientFileUrl, {
+      as: "string",
+    })
+    const sourcemapFound = SOURCEMAP.readComment({
+      contentType: "text/javascript",
+      content: systemJsFileContent,
+    })
+    if (sourcemapFound) {
+      // for now let's remove s.js sourcemap
+      // because it would likely mess the sourcemap of the entry point itself
+      systemJsFileContent = SOURCEMAP.writeComment({
+        contentType: "text/javascript",
+        content: systemJsFileContent,
+        specifier: "",
+      })
+    }
+    magicSource.prepend(`${systemJsFileContent}\n\n`)
     const magicResult = magicSource.toContentAndSourcemap()
     sourcemap = await composeTwoSourcemaps(sourcemap, magicResult.sourcemap)
     return {
