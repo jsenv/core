@@ -562,7 +562,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       ],
       sourcemaps,
       sourcemapsSourcesContent,
-      sourcemapsRelativeSources: !versioning,
+      sourcemapsSourcesRelative: !versioning,
       writeGeneratedFiles,
       outDirectoryUrl: new URL(".jsenv/postbuild/", rootDirectoryUrl),
     })
@@ -1040,7 +1040,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             ],
             sourcemaps,
             sourcemapsSourcesContent,
-            sourcemapsRelativeSources: true,
+            sourcemapsSourcesRelative: true,
             writeGeneratedFiles,
             outDirectoryUrl: new URL(
               ".jsenv/postbuild/",
