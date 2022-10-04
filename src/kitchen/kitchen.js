@@ -652,6 +652,10 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       if (generatedUrl && generatedUrl.startsWith("file:")) {
         if (urlInfo.type === "directory") {
           // no need to write the directory
+        } else if (urlInfo.content === null) {
+          // Some error might lead to urlInfo.content to be null
+          // (error hapenning before urlInfo.content can be set, or 404 for instance)
+          // in that case we can't write anything
         } else {
           writeFileSync(new URL(generatedUrl), urlInfo.content)
           const { sourcemapGeneratedUrl, sourcemap } = urlInfo

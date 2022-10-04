@@ -11,7 +11,6 @@ import { chromium } from "playwright"
 import { assert } from "@jsenv/assert"
 
 import { startDevServer } from "@jsenv/core"
-import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js"
 
 const helperFileUrl = new URL("./client/helper.js", import.meta.url)
 const helperRenamedFileUrl = new URL("./client/helper_2.js", import.meta.url)
@@ -23,6 +22,7 @@ const jsFileContent = {
 }
 const devServer = await startDevServer({
   logLevel: "warn",
+  serverLogLevel: "error",
   rootDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
   clientAutoreload: false,
@@ -30,11 +30,14 @@ const devServer = await startDevServer({
 })
 const browser = await chromium.launch({ headless: true })
 try {
-  const page = await launchBrowserPage(browser)
-  const responses = []
-  page.on("response", (response) => {
-    responses.push(response)
+  const page = await browser.newPage({ ignoreHTTPSErrors: true })
+  const consoleErrors = []
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      consoleErrors.push(message.text())
+    }
   })
+
   await page.goto(`${devServer.origin}/main.html`)
   const getResult = async () => {
     const result = await page.evaluate(
@@ -58,10 +61,14 @@ try {
   jsFileContent.update(`import "./helper_2.js"`)
 
   // now reload and see what happens
-  responses.length = 0
   await page.reload()
+  const actual = consoleErrors
+  const expected = [
+    "Failed to load resource: the server responded with a status of 404 (no entry on filesystem)",
+  ]
+  assert({ actual, expected })
 } finally {
-  renameSync(helperRenamedFileUrl, helperFileUrl)
   jsFileContent.restore()
+  renameSync(helperRenamedFileUrl, helperFileUrl)
   browser.close()
 }
