@@ -77,7 +77,7 @@ await build({
   },
   baseUrl: "./",
   sourcemaps: "file",
-  sourcemapsSourcesContent: false, // we publish source files
+  sourcemapsSourcesContent: true,
   minification: false,
   versioning: false,
   assetManifest: false,

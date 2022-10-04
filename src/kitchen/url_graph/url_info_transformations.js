@@ -13,7 +13,7 @@ export const createUrlInfoTransformer = ({
   sourcemaps,
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
-  sourcemapsRelativeSources,
+  sourcemapsSourcesRelative,
   urlGraph,
   injectSourcemapPlaceholder,
   foundSourcemap,
@@ -187,7 +187,7 @@ export const createUrlInfoTransformer = ({
         const sourcemapUrlInfo = urlGraph.getUrlInfo(sourcemapReference.url)
         sourcemapUrlInfo.contentType = "application/json"
         const sourcemap = urlInfo.sourcemap
-        if (sourcemapsRelativeSources) {
+        if (sourcemapsSourcesRelative) {
           sourcemap.sources = sourcemap.sources.map((source) => {
             const sourceRelative = urlToRelativeUrl(source, urlInfo.url)
             return sourceRelative || "."
@@ -214,7 +214,7 @@ export const createUrlInfoTransformer = ({
               contentType: urlInfo.contentType,
               content: urlInfo.content,
               specifier:
-                sourcemaps === "file" && sourcemapsRelativeSources
+                sourcemaps === "file" && sourcemapsSourcesRelative
                   ? urlToRelativeUrl(sourcemapReference.url, urlInfo.url)
                   : sourcemapReference.generatedSpecifier,
             })
