@@ -27,7 +27,7 @@ const test = async (params) => {
     /* eslint-enable no-undef */
   })
   const actual = returnValue
-  const expected = `${server.origin}/js/main.nomodule.js?v=a2e917f6`
+  const expected = `${server.origin}/js/main.nomodule.js?v=5337168f`
   assert({ actual, expected })
 }
 

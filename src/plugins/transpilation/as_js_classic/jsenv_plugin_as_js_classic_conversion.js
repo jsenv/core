@@ -4,6 +4,7 @@
  */
 
 import { injectQueryParams } from "@jsenv/urls"
+import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js"
 import { convertJsModuleToJsClassic } from "./convert_js_module_to_js_classic.js"
 
 export const jsenvPluginAsJsClassicConversion = ({
@@ -11,12 +12,44 @@ export const jsenvPluginAsJsClassicConversion = ({
   systemJsClientFileUrl,
   generateJsClassicFilename,
 }) => {
-  const shouldPropagateJsClassic = (reference, context) => {
-    const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl)
-    if (!parentUrlInfo) {
-      return false
+  const isReferencingJsModule = (reference) => {
+    if (
+      reference.type === "js_import_export" ||
+      reference.subtype === "system_register_arg" ||
+      reference.subtype === "system_import_arg"
+    ) {
+      return true
     }
-    return new URL(parentUrlInfo.url).searchParams.has("as_js_classic")
+    if (reference.type === "js_url_specifier") {
+      if (reference.expectedType === "js_classic") {
+        return false
+      }
+      if (
+        reference.expectedType === undefined &&
+        CONTENT_TYPE.fromUrlExtension(reference.url) === "text/javascript"
+      ) {
+        // by default, js referenced by new URL is considered as "js_module"
+        // in case this is not desired code must use "?js_classic" like
+        // new URL('./file.js?js_classic', import.meta.url)
+        return true
+      }
+    }
+    return false
+  }
+
+  const shouldPropagateJsClassic = (reference, context) => {
+    if (isReferencingJsModule(reference, context)) {
+      const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl)
+      if (!parentUrlInfo) {
+        return false
+      }
+      if (parentUrlInfo.isEntryPoint) {
+        return true
+      }
+      return new URL(parentUrlInfo.url).searchParams.has("as_js_classic")
+    }
+
+    return false
   }
   const markAsJsClassicProxy = (reference) => {
     reference.expectedType = "js_classic"
@@ -38,21 +71,14 @@ export const jsenvPluginAsJsClassicConversion = ({
         markAsJsClassicProxy(reference)
         return null
       }
-      if (
-        reference.type === "js_import_export" ||
-        reference.subtype === "system_register_arg" ||
-        reference.subtype === "system_import_arg" ||
-        reference.type === "js_url_specifier"
-      ) {
-        // We want to propagate transformation of js module to js classic to:
-        // - import specifier (static/dynamic import + re-export)
-        // - url specifier when inside System.register/_context.import()
-        //   (because it's the transpiled equivalent of static and dynamic imports)
-        // And not other references otherwise we could try to transform inline resources
-        // or specifiers inside new URL()...
-        if (shouldPropagateJsClassic(reference, context)) {
-          return turnIntoJsClassicProxy(reference, context)
-        }
+      // We want to propagate transformation of js module to js classic to:
+      // - import specifier (static/dynamic import + re-export)
+      // - url specifier when inside System.register/_context.import()
+      //   (because it's the transpiled equivalent of static and dynamic imports)
+      // And not other references otherwise we could try to transform inline resources
+      // or specifiers inside new URL()...
+      if (shouldPropagateJsClassic(reference, context)) {
+        return turnIntoJsClassicProxy(reference, context)
       }
       return null
     },
