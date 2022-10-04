@@ -167,7 +167,15 @@ export const createFileService = ({
           return false
         }
         if (!watch) {
-          const fileContentAsBuffer = readFileSync(new URL(urlInfo.url))
+          let fileContentAsBuffer
+          try {
+            fileContentAsBuffer = readFileSync(new URL(urlInfo.url))
+          } catch (e) {
+            if (e.code === "ENOENT") {
+              return false
+            }
+            return false
+          }
           const fileContentEtag = bufferToEtag(fileContentAsBuffer)
           if (fileContentEtag !== urlInfo.originalContentEtag) {
             return false
@@ -273,30 +281,31 @@ export const createFileService = ({
     const ifNoneMatch = request.headers["if-none-match"]
     const urlInfoTargetedByCache = urlGraph.getParentIfInline(urlInfo)
 
-    if (ifNoneMatch) {
-      const [clientOriginalContentEtag, clientContentEtag] =
-        ifNoneMatch.split("_")
-      if (
-        urlInfoTargetedByCache.originalContentEtag ===
-          clientOriginalContentEtag &&
-        urlInfoTargetedByCache.contentEtag === clientContentEtag &&
-        urlInfoTargetedByCache.isValid()
-      ) {
-        const headers = {
-          "cache-control": `private,max-age=0,must-revalidate`,
-        }
-        Object.keys(urlInfo.headers).forEach((key) => {
-          if (key !== "content-length") {
-            headers[key] = urlInfo.headers[key]
+    try {
+      if (ifNoneMatch) {
+        const [clientOriginalContentEtag, clientContentEtag] =
+          ifNoneMatch.split("_")
+        if (
+          urlInfoTargetedByCache.originalContentEtag ===
+            clientOriginalContentEtag &&
+          urlInfoTargetedByCache.contentEtag === clientContentEtag &&
+          urlInfoTargetedByCache.isValid()
+        ) {
+          const headers = {
+            "cache-control": `private,max-age=0,must-revalidate`,
           }
-        })
-        return {
-          status: 304,
-          headers,
+          Object.keys(urlInfo.headers).forEach((key) => {
+            if (key !== "content-length") {
+              headers[key] = urlInfo.headers[key]
+            }
+          })
+          return {
+            status: 304,
+            headers,
+          }
         }
       }
-    }
-    try {
+
       // urlInfo objects are reused, they must be "reset" before cooking them again
       if (
         (urlInfo.error || urlInfo.contentEtag) &&
