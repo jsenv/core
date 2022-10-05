@@ -24907,7 +24907,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     url = bundleRedirections.get(url) || url;
                     url = bundleInternalRedirections.get(url) || url;
                     url = finalRedirections.get(url) || url;
-                    url = findKey(buildDirectoryRedirections, url);
+                    url = findKey(buildDirectoryRedirections, url) || url;
                     onBuildUrl(url);
                   }
                 } else {
