@@ -43,9 +43,9 @@ export const jsenvPluginAsJsClassicConversion = ({
       if (!parentUrlInfo) {
         return false
       }
-      if (parentUrlInfo.isEntryPoint) {
-        return true
-      }
+      // if (parentUrlInfo.isEntryPoint) {
+      //   return true
+      // }
       return new URL(parentUrlInfo.url).searchParams.has("as_js_classic")
     }
 
