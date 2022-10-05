@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "29.1.8",
+  "version": "29.1.7",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "author": {
@@ -89,7 +89,7 @@
     "istanbul-reports": "3.1.5",
     "launch-editor": "2.6.0",
     "pidtree": "0.6.0",
-    "rollup": "2.79.0",
+    "rollup": "2.79.1",
     "string-width": "5.1.2",
     "strip-ansi": "7.0.1",
     "terser": "5.15.0",
