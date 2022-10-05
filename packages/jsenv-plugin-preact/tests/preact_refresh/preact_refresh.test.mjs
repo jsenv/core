@@ -18,7 +18,11 @@ const devServer = await startDevServer({
   rootDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
   devServerAutoreload: false,
-  plugins: [jsenvPluginPreact()],
+  plugins: [
+    jsenvPluginPreact({
+      refresh: true,
+    }),
+  ],
   clientFiles: {
     "./**": true,
   },

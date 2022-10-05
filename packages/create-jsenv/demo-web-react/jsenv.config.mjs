@@ -11,4 +11,10 @@ import { jsenvPluginReact } from "@jsenv/plugin-react"
 
 export const rootDirectoryUrl = new URL("./", import.meta.url)
 
-export const plugins = [jsenvPluginReact()]
+export const plugins = [
+  jsenvPluginReact({
+    refresh: {
+      "./**/*.jsx": true,
+    },
+  }),
+]

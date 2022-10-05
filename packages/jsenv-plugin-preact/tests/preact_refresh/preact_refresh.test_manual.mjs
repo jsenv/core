@@ -4,7 +4,11 @@ import { jsenvPluginPreact } from "@jsenv/plugin-preact"
 startDevServer({
   port: 5678,
   rootDirectoryUrl: new URL("./client/", import.meta.url),
-  plugins: [jsenvPluginPreact()],
+  plugins: [
+    jsenvPluginPreact({
+      refresh: true,
+    }),
+  ],
   sourcemaps: "file",
   clientFiles: {
     "./**": true,
