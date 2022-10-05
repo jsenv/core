@@ -32,9 +32,7 @@ const test = async (params) => {
     pageLogs,
   }
   const expected = {
-    returnValue: {
-      fontSize: "20px",
-    },
+    returnValue: "20px",
     pageLogs: [],
   }
   assert({ actual, expected })
