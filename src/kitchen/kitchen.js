@@ -177,10 +177,16 @@ export const createKitchen = ({
         reference.debug = true
       }
       resolvedUrl = normalizeUrl(resolvedUrl)
-      let referencedUrlObject = new URL(resolvedUrl)
-      let searchParams = referencedUrlObject.searchParams
-      reference.url = resolvedUrl
-      reference.searchParams = searchParams
+      let referencedUrlObject
+      let searchParams
+      const onReferenceUrlChange = (referenceUrl) => {
+        referencedUrlObject = new URL(referenceUrl)
+        searchParams = referencedUrlObject.searchParams
+        reference.url = referenceUrl
+        reference.searchParams = searchParams
+      }
+      onReferenceUrlChange(resolvedUrl)
+
       if (reference.debug) {
         logger.debug(`url resolved by "${
           pluginController.getLastPluginUsed().name
@@ -208,16 +214,10 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           }
           const prevReference = { ...reference }
           updateReference(prevReference, reference)
-          referencedUrlObject = new URL(normalizedReturnValue)
-          searchParams = referencedUrlObject.searchParams
-          reference.url = normalizedReturnValue
-          reference.searchParams = searchParams
+          onReferenceUrlChange(normalizedReturnValue)
         },
       )
       reference.generatedUrl = reference.url
-      if (searchParams.has("entry_point")) {
-        reference.isEntryPoint = true
-      }
 
       const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url)
       applyReferenceEffectsOnUrlInfo(reference, urlInfo, context)
@@ -360,17 +360,8 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       urlInfo.contentType = contentType
       urlInfo.headers = headers
       urlInfo.type =
-        type ||
-        reference.expectedType ||
-        inferUrlInfoType({ url: urlInfo.url, contentType })
-      urlInfo.subtype =
-        subtype ||
-        reference.expectedSubtype ||
-        inferUrlInfoSubtype({
-          url: urlInfo.url,
-          type: urlInfo.type,
-          subtype: urlInfo.subtype,
-        })
+        type || reference.expectedType || inferUrlInfoType(contentType)
+      urlInfo.subtype = subtype || reference.expectedSubtype || ""
       // during build urls info are reused and load returns originalUrl/originalContent
       urlInfo.originalUrl = originalUrl || urlInfo.originalUrl
       urlInfo.originalContent =
@@ -875,7 +866,7 @@ const adjustUrlSite = (urlInfo, { urlGraph, url, line, column }) => {
   )
 }
 
-const inferUrlInfoType = ({ url, contentType }) => {
+const inferUrlInfoType = (contentType) => {
   if (contentType === "text/html") {
     return "html"
   }
@@ -883,10 +874,6 @@ const inferUrlInfoType = ({ url, contentType }) => {
     return "css"
   }
   if (contentType === "text/javascript") {
-    const urlObject = new URL(url)
-    if (urlObject.searchParams.has("js_classic")) {
-      return "js_classic"
-    }
     return "js_module"
   }
   if (contentType === "application/importmap+json") {
@@ -905,24 +892,6 @@ const inferUrlInfoType = ({ url, contentType }) => {
     return "text"
   }
   return "other"
-}
-
-const inferUrlInfoSubtype = ({ type, subtype, url }) => {
-  if (type === "js_classic" || type === "js_module") {
-    const urlObject = new URL(url)
-    if (urlObject.searchParams.has("worker")) {
-      return "worker"
-    }
-    if (urlObject.searchParams.has("service_worker")) {
-      return "service_worker"
-    }
-    if (urlObject.searchParams.has("shared_worker")) {
-      return "shared_worker"
-    }
-    // if we are currently inside a worker, all deps are consider inside worker too
-    return subtype
-  }
-  return ""
 }
 
 const determineFileUrlForOutDirectory = ({ urlInfo, context }) => {

@@ -1,6 +1,7 @@
 import { URL_META } from "@jsenv/url-meta"
 import { urlToRelativeUrl } from "@jsenv/urls"
 
+import { jsenvPluginReferenceExpectedTypes } from "./jsenv_plugin_reference_expected_types.js"
 import { parseAndTransformHtmlUrls } from "./html/html_urls.js"
 import { parseAndTransformCssUrls } from "./css/css_urls.js"
 import { parseAndTransformJsUrls } from "./js/js_urls.js"
@@ -24,69 +25,72 @@ export const jsenvPluginUrlAnalysis = ({
     }
   }
 
-  return {
-    name: "jsenv:url_analysis",
-    appliesDuring: "*",
-    redirectUrl: (reference) => {
-      if (reference.shouldHandle !== undefined) {
-        return
-      }
-      if (
-        reference.specifier[0] === "#" &&
-        // For Html, css and in general "#" refer to a resource in the page
-        // so that urls must be kept intact
-        // However for js import specifiers they have a different meaning and we want
-        // to resolve them (https://nodejs.org/api/packages.html#imports for instance)
-        reference.type !== "js_import_export"
-      ) {
-        reference.shouldHandle = false
-        return
-      }
-      const includeInfo = getIncludeInfo(reference.url)
-      if (includeInfo === true) {
-        reference.shouldHandle = true
-        return
-      }
-      if (includeInfo === false) {
-        reference.shouldHandle = false
-        return
-      }
-      const { protocol } = new URL(reference.url)
-      const protocolIsSupported = supportedProtocols.some(
-        (supportedProtocol) => protocol === supportedProtocol,
-      )
-      if (protocolIsSupported) {
-        reference.shouldHandle = true
-      }
-    },
-    transformUrlContent: {
-      html: parseAndTransformHtmlUrls,
-      css: parseAndTransformCssUrls,
-      js_classic: parseAndTransformJsUrls,
-      js_module: parseAndTransformJsUrls,
-      webmanifest: parseAndTransformWebmanifestUrls,
-      directory: (urlInfo, context) => {
-        const originalDirectoryReference = findOriginalDirectoryReference(
-          urlInfo,
-          context,
+  return [
+    {
+      name: "jsenv:url_analysis",
+      appliesDuring: "*",
+      redirectUrl: (reference) => {
+        if (reference.shouldHandle !== undefined) {
+          return
+        }
+        if (
+          reference.specifier[0] === "#" &&
+          // For Html, css and in general "#" refer to a resource in the page
+          // so that urls must be kept intact
+          // However for js import specifiers they have a different meaning and we want
+          // to resolve them (https://nodejs.org/api/packages.html#imports for instance)
+          reference.type !== "js_import_export"
+        ) {
+          reference.shouldHandle = false
+          return
+        }
+        const includeInfo = getIncludeInfo(reference.url)
+        if (includeInfo === true) {
+          reference.shouldHandle = true
+          return
+        }
+        if (includeInfo === false) {
+          reference.shouldHandle = false
+          return
+        }
+        const { protocol } = new URL(reference.url)
+        const protocolIsSupported = supportedProtocols.some(
+          (supportedProtocol) => protocol === supportedProtocol,
         )
-        const directoryRelativeUrl = urlToRelativeUrl(
-          urlInfo.url,
-          context.rootDirectoryUrl,
-        )
-        JSON.parse(urlInfo.content).forEach((directoryEntryName) => {
-          context.referenceUtils.found({
-            type: "filesystem",
-            subtype: "directory_entry",
-            specifier: directoryEntryName,
-            trace: {
-              message: `"${directoryRelativeUrl}${directoryEntryName}" entry in directory referenced by ${originalDirectoryReference.trace.message}`,
-            },
+        if (protocolIsSupported) {
+          reference.shouldHandle = true
+        }
+      },
+      transformUrlContent: {
+        html: parseAndTransformHtmlUrls,
+        css: parseAndTransformCssUrls,
+        js_classic: parseAndTransformJsUrls,
+        js_module: parseAndTransformJsUrls,
+        webmanifest: parseAndTransformWebmanifestUrls,
+        directory: (urlInfo, context) => {
+          const originalDirectoryReference = findOriginalDirectoryReference(
+            urlInfo,
+            context,
+          )
+          const directoryRelativeUrl = urlToRelativeUrl(
+            urlInfo.url,
+            context.rootDirectoryUrl,
+          )
+          JSON.parse(urlInfo.content).forEach((directoryEntryName) => {
+            context.referenceUtils.found({
+              type: "filesystem",
+              subtype: "directory_entry",
+              specifier: directoryEntryName,
+              trace: {
+                message: `"${directoryRelativeUrl}${directoryEntryName}" entry in directory referenced by ${originalDirectoryReference.trace.message}`,
+              },
+            })
           })
-        })
+        },
       },
     },
-  }
+    jsenvPluginReferenceExpectedTypes(),
+  ]
 }
 
 const findOriginalDirectoryReference = (urlInfo, context) => {
