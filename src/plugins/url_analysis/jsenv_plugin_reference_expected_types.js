@@ -6,7 +6,6 @@ export const jsenvPluginReferenceExpectedTypes = () => {
     const { searchParams } = urlObject
 
     if (searchParams.has("entry_point")) {
-      searchParams.delete("entry_point")
       reference.isEntryPoint = true
     }
     if (searchParams.has("js_classic")) {

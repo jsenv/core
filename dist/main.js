@@ -1563,7 +1563,7 @@ const collectFiles = async ({
       });
 
       if (directoryChildNodeStats.isDirectory()) {
-        const subDirectoryUrl = `${directoryChildNodeUrl}/`;
+        const subDirectoryUrl = `${decodeURIComponent(directoryChildNodeUrl)}/`;
 
         if (!URL_META.urlChildMayMatch({
           url: subDirectoryUrl,
@@ -1579,7 +1579,7 @@ const collectFiles = async ({
 
       if (directoryChildNodeStats.isFile()) {
         const meta = URL_META.applyAssociations({
-          url: directoryChildNodeUrl,
+          url: decodeURIComponent(directoryChildNodeUrl),
           associations
         });
         if (!predicate(meta)) return;
@@ -9645,10 +9645,17 @@ const createKitchen = ({
       }
 
       resolvedUrl = normalizeUrl(resolvedUrl);
-      let referencedUrlObject = new URL(resolvedUrl);
-      let searchParams = referencedUrlObject.searchParams;
-      reference.url = resolvedUrl;
-      reference.searchParams = searchParams;
+      let referencedUrlObject;
+      let searchParams;
+
+      const onReferenceUrlChange = referenceUrl => {
+        referencedUrlObject = new URL(referenceUrl);
+        searchParams = referencedUrlObject.searchParams;
+        reference.url = referenceUrl;
+        reference.searchParams = searchParams;
+      };
+
+      onReferenceUrlChange(resolvedUrl);
 
       if (reference.debug) {
         logger.debug(`url resolved by "${pluginController.getLastPluginUsed().name}"
@@ -9674,17 +9681,9 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         const prevReference = { ...reference
         };
         updateReference(prevReference, reference);
-        referencedUrlObject = new URL(normalizedReturnValue);
-        searchParams = referencedUrlObject.searchParams;
-        reference.url = normalizedReturnValue;
-        reference.searchParams = searchParams;
+        onReferenceUrlChange(normalizedReturnValue);
       });
       reference.generatedUrl = reference.url;
-
-      if (searchParams.has("entry_point")) {
-        reference.isEntryPoint = true;
-      }
-
       const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url);
       applyReferenceEffectsOnUrlInfo(reference, urlInfo, context); // This hook must touch reference.generatedUrl, NOT reference.url
       // And this is because this hook inject query params used to:
@@ -9809,15 +9808,8 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 
       urlInfo.contentType = contentType;
       urlInfo.headers = headers;
-      urlInfo.type = type || reference.expectedType || inferUrlInfoType({
-        url: urlInfo.url,
-        contentType
-      });
-      urlInfo.subtype = subtype || reference.expectedSubtype || inferUrlInfoSubtype({
-        url: urlInfo.url,
-        type: urlInfo.type,
-        subtype: urlInfo.subtype
-      }); // during build urls info are reused and load returns originalUrl/originalContent
+      urlInfo.type = type || reference.expectedType || inferUrlInfoType(contentType);
+      urlInfo.subtype = subtype || reference.expectedSubtype || ""; // during build urls info are reused and load returns originalUrl/originalContent
 
       urlInfo.originalUrl = originalUrl || urlInfo.originalUrl;
       urlInfo.originalContent = originalContent === undefined ? content : originalContent;
@@ -10299,10 +10291,7 @@ const adjustUrlSite = (urlInfo, {
   }, urlInfo);
 };
 
-const inferUrlInfoType = ({
-  url,
-  contentType
-}) => {
+const inferUrlInfoType = contentType => {
   if (contentType === "text/html") {
     return "html";
   }
@@ -10312,12 +10301,6 @@ const inferUrlInfoType = ({
   }
 
   if (contentType === "text/javascript") {
-    const urlObject = new URL(url);
-
-    if (urlObject.searchParams.has("js_classic")) {
-      return "js_classic";
-    }
-
     return "js_module";
   }
 
@@ -10342,33 +10325,6 @@ const inferUrlInfoType = ({
   }
 
   return "other";
-};
-
-const inferUrlInfoSubtype = ({
-  type,
-  subtype,
-  url
-}) => {
-  if (type === "js_classic" || type === "js_module") {
-    const urlObject = new URL(url);
-
-    if (urlObject.searchParams.has("worker")) {
-      return "worker";
-    }
-
-    if (urlObject.searchParams.has("service_worker")) {
-      return "service_worker";
-    }
-
-    if (urlObject.searchParams.has("shared_worker")) {
-      return "shared_worker";
-    } // if we are currently inside a worker, all deps are consider inside worker too
-
-
-    return subtype;
-  }
-
-  return "";
 };
 
 const determineFileUrlForOutDirectory = ({
@@ -10696,6 +10652,56 @@ const createRepartitionMessage = ({
   addPart("total", total);
   return `- ${parts.join(`
 - `)}`;
+};
+
+const jsenvPluginReferenceExpectedTypes = () => {
+  const redirectJsUrls = reference => {
+    const urlObject = new URL(reference.url);
+    const {
+      searchParams
+    } = urlObject;
+
+    if (searchParams.has("entry_point")) {
+      reference.isEntryPoint = true;
+    }
+
+    if (searchParams.has("js_classic")) {
+      searchParams.delete("js_classic");
+      reference.expectedType = "js_classic";
+    } else if (searchParams.has("as_js_classic") || searchParams.has("as_js_classic_library")) {
+      reference.expectedType = "js_classic";
+    } else if (searchParams.has("js_module")) {
+      searchParams.delete("js_module");
+      reference.expectedType = "js_module";
+    } else if (reference.type === "js_url_specifier" && reference.expectedType === undefined && CONTENT_TYPE.fromUrlExtension(reference.url) === "text/javascript") {
+      // by default, js referenced by new URL is considered as "js_module"
+      // in case this is not desired code must use "?js_classic" like
+      // new URL('./file.js?js_classic', import.meta.url)
+      reference.expectedType = "js_module";
+    }
+
+    if (searchParams.has("worker")) {
+      reference.expectedSubtype = "worker";
+      searchParams.delete("worker");
+    } else if (searchParams.has("service_worker")) {
+      reference.expectedSubtype = "service_worker";
+      searchParams.delete("service_worker");
+    } else if (searchParams.has("shared_worker")) {
+      reference.expectedSubtype = "shared_worker";
+      searchParams.delete("shared_worker");
+    }
+
+    return urlObject.href;
+  };
+
+  return {
+    name: "jsenv:reference_expected_types",
+    appliesDuring: "*",
+    redirectUrl: {
+      script_src: redirectJsUrls,
+      js_url_specifier: redirectJsUrls
+    }
+  };
 };
 
 const parseAndTransformHtmlUrls = async (urlInfo, context) => {
@@ -11179,7 +11185,7 @@ const jsenvPluginUrlAnalysis = ({
     };
   }
 
-  return {
+  return [{
     name: "jsenv:url_analysis",
     appliesDuring: "*",
     redirectUrl: reference => {
@@ -11238,7 +11244,7 @@ const jsenvPluginUrlAnalysis = ({
         });
       }
     }
-  };
+  }, jsenvPluginReferenceExpectedTypes()];
 };
 
 const findOriginalDirectoryReference = (urlInfo, context) => {
@@ -16521,17 +16527,8 @@ const jsenvPluginAsJsClassicConversion = ({
       return true;
     }
 
-    if (reference.type === "js_url_specifier") {
-      if (reference.expectedType === "js_classic") {
-        return false;
-      }
-
-      if (reference.expectedType === undefined && CONTENT_TYPE.fromUrlExtension(reference.url) === "text/javascript") {
-        // by default, js referenced by new URL is considered as "js_module"
-        // in case this is not desired code must use "?js_classic" like
-        // new URL('./file.js?js_classic', import.meta.url)
-        return true;
-      }
+    if (reference.type === "js_url_specifier" && reference.expectedType === "js_module") {
+      return true;
     }
 
     return false;
@@ -16543,12 +16540,10 @@ const jsenvPluginAsJsClassicConversion = ({
 
       if (!parentUrlInfo) {
         return false;
-      } // if (parentUrlInfo.isEntryPoint) {
-      //   return true
-      // }
+      }
 
-
-      return new URL(parentUrlInfo.url).searchParams.has("as_js_classic");
+      const parentGotAsJsClassic = new URL(parentUrlInfo.url).searchParams.has("as_js_classic");
+      return parentGotAsJsClassic;
     }
 
     return false;
@@ -16661,7 +16656,8 @@ const jsenvPluginAsJsClassicHtml = ({
     name: "jsenv:as_js_classic_html",
     appliesDuring: "*",
     init: context => {
-      shouldTransformScriptTypeModule = !context.isSupportedOnCurrentClients("script_type_module") || !context.isSupportedOnCurrentClients("import_dynamic") || !context.isSupportedOnCurrentClients("import_meta");
+      const nodeRuntimeEnabled = Object.keys(context.runtimeCompat).includes("node");
+      shouldTransformScriptTypeModule = nodeRuntimeEnabled ? false : !context.isSupportedOnCurrentClients("script_type_module") || !context.isSupportedOnCurrentClients("import_dynamic") || !context.isSupportedOnCurrentClients("import_meta");
     },
     redirectUrl: {
       link_href: reference => {
@@ -16676,6 +16672,13 @@ const jsenvPluginAsJsClassicHtml = ({
         return null;
       },
       script_src: reference => {
+        if (shouldTransformScriptTypeModule && reference.expectedType === "js_module") {
+          return turnIntoJsClassicProxy(reference);
+        }
+
+        return null;
+      },
+      js_url_specifier: reference => {
         if (shouldTransformScriptTypeModule && reference.expectedType === "js_module") {
           return turnIntoJsClassicProxy(reference);
         }

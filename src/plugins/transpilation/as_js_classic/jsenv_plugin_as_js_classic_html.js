@@ -33,10 +33,14 @@ export const jsenvPluginAsJsClassicHtml = ({
     name: "jsenv:as_js_classic_html",
     appliesDuring: "*",
     init: (context) => {
-      shouldTransformScriptTypeModule =
-        !context.isSupportedOnCurrentClients("script_type_module") ||
-        !context.isSupportedOnCurrentClients("import_dynamic") ||
-        !context.isSupportedOnCurrentClients("import_meta")
+      const nodeRuntimeEnabled = Object.keys(context.runtimeCompat).includes(
+        "node",
+      )
+      shouldTransformScriptTypeModule = nodeRuntimeEnabled
+        ? false
+        : !context.isSupportedOnCurrentClients("script_type_module") ||
+          !context.isSupportedOnCurrentClients("import_dynamic") ||
+          !context.isSupportedOnCurrentClients("import_meta")
     },
     redirectUrl: {
       link_href: (reference) => {

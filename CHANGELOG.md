@@ -1,3 +1,8 @@
+# 29.1.9
+
+- Fix new URL() update during js classic conversion
+- Properly handle unicode character during file url matching and logging
+
 # 29.1.8
 
 - Fix dev server crashing when file is renamed

@@ -45,7 +45,9 @@ export const collectFiles = async ({
         )
 
         if (directoryChildNodeStats.isDirectory()) {
-          const subDirectoryUrl = `${directoryChildNodeUrl}/`
+          const subDirectoryUrl = `${decodeURIComponent(
+            directoryChildNodeUrl,
+          )}/`
 
           if (
             !URL_META.urlChildMayMatch({
@@ -63,7 +65,7 @@ export const collectFiles = async ({
 
         if (directoryChildNodeStats.isFile()) {
           const meta = URL_META.applyAssociations({
-            url: directoryChildNodeUrl,
+            url: decodeURIComponent(directoryChildNodeUrl),
             associations,
           })
           if (!predicate(meta)) return
