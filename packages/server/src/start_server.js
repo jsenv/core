@@ -871,13 +871,16 @@ export const startServer = async ({
           onHeadersSent: ({ status, statusText }) => {
             const statusType = statusToType(status)
             addRequestLog(requestNode, {
-              type: {
-                information: "info",
-                success: "info",
-                redirection: "info",
-                client_error: "warn",
-                server_error: "error",
-              }[statusType],
+              type:
+                status === 404 && request.pathname === "/favicon.ico"
+                  ? "debug"
+                  : {
+                      information: "info",
+                      success: "info",
+                      redirection: "info",
+                      client_error: "warn",
+                      server_error: "error",
+                    }[statusType],
               value: `${colorizeResponseStatus(status)} ${
                 responseProperties.statusMessage || statusText
               }`,

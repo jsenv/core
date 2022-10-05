@@ -11,8 +11,8 @@ import { jsenvPluginReactRefreshPreamble } from "./jsenv_plugin_react_refresh_pr
 
 export const jsenvPluginReact = ({
   asJsModuleLogLevel,
-  jsxInclude,
-  refreshInclude,
+  jsx = true,
+  refresh = false,
 } = {}) => {
   return [
     jsenvPluginCommonJs({
@@ -27,27 +27,31 @@ export const jsenvPluginReact = ({
       },
     }),
     jsenvPluginReactRefreshPreamble(),
-    jsenvPluginJsxAndRefresh({
-      jsxInclude,
-      refreshInclude,
-    }),
+    jsenvPluginJsxAndRefresh({ jsx, refresh }),
   ]
 }
 
-const jsenvPluginJsxAndRefresh = ({
-  jsxInclude = {
-    "./**/*.jsx": true,
-    "./**/*.tsx": true,
-  },
-  refreshInclude = {
-    "./**/*.jsx": true,
-    "./**/*.tsx": true,
-  },
-}) => {
+const jsenvPluginJsxAndRefresh = ({ jsx, refresh }) => {
+  if (jsx === true) {
+    jsx = {
+      "./**/*.jsx": true,
+      "./**/*.tsx": true,
+    }
+  } else if (jsx === false) {
+    jsx = {}
+  }
+  if (refresh === true) {
+    refresh = {
+      "./**/*.jsx": true,
+      "./**/*.tsx": true,
+    }
+  } else if (refresh === false) {
+    refresh = {}
+  }
   const associations = URL_META.resolveAssociations(
     {
-      jsx: jsxInclude,
-      refresh: refreshInclude,
+      jsx,
+      refresh,
     },
     "file://",
   )

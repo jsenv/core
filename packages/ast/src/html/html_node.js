@@ -29,23 +29,42 @@ export const injectScriptNodeAsEarlyAsPossible = (
   const isJsModule = analyzeScriptNode(scriptNode).type === "js_module"
   if (isJsModule) {
     const firstImportmapScript = findHtmlNode(htmlAst, (node) => {
-      if (node.nodeName !== "script") return false
-      return analyzeScriptNode(node).type === "importmap"
-    })
-    if (firstImportmapScript) {
-      return insertAfter(
-        scriptNode,
-        firstImportmapScript.parentNode,
-        firstImportmapScript,
+      return (
+        node.nodeName === "script" &&
+        analyzeScriptNode(node).type === "importmap"
       )
+    })
+
+    if (firstImportmapScript) {
+      const importmapParent = firstImportmapScript.parentNode
+      const importmapSiblings = importmapParent.childNodes
+      const nextSiblings = importmapSiblings.slice(
+        importmapSiblings.indexOf(firstImportmapScript) + 1,
+      )
+      let after = firstImportmapScript
+      for (const nextSibling of nextSiblings) {
+        if (nextSibling.nodeName === "script") {
+          return insertBefore(scriptNode, importmapParent, nextSibling)
+        }
+        if (nextSibling.nodeName === "link") {
+          after = nextSibling
+        }
+      }
+      return insertAfter(scriptNode, importmapParent, after)
     }
   }
   const headNode = findChild(htmlAst, (node) => node.nodeName === "html")
     .childNodes[0]
-  const firstHeadScript = findChild(headNode, (node) => {
-    return node.nodeName === "script"
-  })
-  return insertBefore(scriptNode, headNode, firstHeadScript)
+  let after = headNode.childNodes[0]
+  for (const child of headNode.childNodes) {
+    if (child.nodeName === "script") {
+      return insertBefore(scriptNode, headNode, child)
+    }
+    if (child.nodeName === "link") {
+      after = child
+    }
+  }
+  return insertAfter(scriptNode, headNode, after)
 }
 
 const insertBefore = (nodeToInsert, futureParentNode, futureNextSibling) => {

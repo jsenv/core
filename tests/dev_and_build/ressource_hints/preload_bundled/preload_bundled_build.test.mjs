@@ -4,16 +4,21 @@ import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
 import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
 
+const warnCalls = []
+console.warn = (...args) => {
+  warnCalls.push(args.join(""))
+}
+
 const test = async (params) => {
+  warnCalls.length = 0
   await build({
-    logLevel: "error",
+    logLevel: "warn",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
       "./main.html": "main.html",
     },
     minification: false,
-    // versioning: false,
     writeGeneratedFiles: true,
     ...params,
   })
@@ -29,17 +34,23 @@ const test = async (params) => {
     /* eslint-enable no-undef */
   })
   const actual = {
+    warnCalls,
     returnValue,
     pageLogs,
   }
   const expected = {
-    returnValue: "Roboto",
+    warnCalls: [
+      `remove resource hint on "${
+        new URL("./client/file.js", import.meta.url).href
+      }" because it was bundled`,
+    ],
+    returnValue: 42,
     pageLogs: [],
   }
   assert({ actual, expected })
 }
 
 // support for <script type="module">
-await test({ runtimeCompat: { chrome: "64" }, bundling: true })
-// no support for <script type="module"> + no bundling
-await test({ runtimeCompat: { chrome: "60" }, bundling: false })
+await test({ runtimeCompat: { chrome: "64" } })
+// no support for <script type="module">
+await test({ runtimeCompat: { chrome: "60" } })

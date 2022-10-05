@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="preload" href="./main.js" as="script" crossorigin />
+    <link rel="preload" href="./file.js" as="script" crossorigin />
+  </head>
+
+  <body>
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve
+      })
+    </script>
+    <script type="module">
+      import("./main.js")
+    </script>
+  </body>
+</html>

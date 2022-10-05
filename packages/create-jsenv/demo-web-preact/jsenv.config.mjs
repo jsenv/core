@@ -8,4 +8,10 @@ import { jsenvPluginPreact } from "@jsenv/plugin-preact"
 
 export const rootDirectoryUrl = new URL("./", import.meta.url)
 
-export const plugins = [jsenvPluginPreact()]
+export const plugins = [
+  jsenvPluginPreact({
+    refresh: {
+      "./**/*.jsx": true,
+    },
+  }),
+]

@@ -6,7 +6,7 @@ import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
 
 const test = async (params) => {
   await build({
-    logLevel: "warn",
+    logLevel: "error",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
@@ -32,9 +32,7 @@ const test = async (params) => {
     pageLogs,
   }
   const expected = {
-    returnValue: {
-      fontSize: "20px",
-    },
+    returnValue: "20px",
     pageLogs: [],
   }
   assert({ actual, expected })

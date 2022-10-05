@@ -1,3 +1,11 @@
+# 29.1.8
+
+- Fix dev server crashing when file is renamed
+- Fix s.js.map not found during dev
+- Ensure new URL() on js is updated too during js classic conversion
+- Preserve resource hints targeting js imported dynamically
+- Prefer injecting script after resource hints when possible
+
 # 29.1.7
 
 - update playwright and other deps

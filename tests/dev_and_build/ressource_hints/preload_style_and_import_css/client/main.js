@@ -6,6 +6,4 @@ document.adoptedStyleSheets = [...document.adoptedStyleSheets, style]
 await new Promise((resolve) => {
   setTimeout(resolve, 5000)
 })
-window.resolveResultPromise({
-  fontSize: getComputedStyle(document.body).fontSize,
-})
+window.resolveResultPromise(getComputedStyle(document.body).fontSize)

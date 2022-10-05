@@ -38,7 +38,9 @@ export const executeInChromium = async ({
     await page.addScriptTag({ url: headScriptUrl })
   }
   try {
-    const returnValue = await page.evaluate(pageFunction, ...pageArguments)
+    const returnValue = pageFunction
+      ? await page.evaluate(pageFunction, ...pageArguments)
+      : undefined
     return {
       returnValue,
       pageErrors,

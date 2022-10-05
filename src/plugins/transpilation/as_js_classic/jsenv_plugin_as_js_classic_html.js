@@ -16,7 +16,8 @@ import {
   injectScriptNodeAsEarlyAsPossible,
   createHtmlNode,
 } from "@jsenv/ast"
-import { injectQueryParams } from "@jsenv/urls"
+import { injectQueryParams, urlToRelativeUrl } from "@jsenv/urls"
+import { SOURCEMAP } from "@jsenv/sourcemap"
 
 export const jsenvPluginAsJsClassicHtml = ({
   systemJsInjection,
@@ -162,10 +163,25 @@ export const jsenvPluginAsJsClassicHtml = ({
           }
           if (needsSystemJs) {
             mutations.push(async () => {
-              const systemJsFileContent = readFileSync(
+              let systemJsFileContent = readFileSync(
                 new URL(systemJsClientFileUrl),
                 { encoding: "utf8" },
               )
+              const sourcemapFound = SOURCEMAP.readComment({
+                contentType: "text/javascript",
+                content: systemJsFileContent,
+              })
+              if (sourcemapFound) {
+                const sourcemapFileUrl = new URL(
+                  sourcemapFound.specifier,
+                  systemJsClientFileUrl,
+                )
+                systemJsFileContent = SOURCEMAP.writeComment({
+                  contentType: "text/javascript",
+                  content: systemJsFileContent,
+                  specifier: urlToRelativeUrl(sourcemapFileUrl, urlInfo.url),
+                })
+              }
               const [systemJsReference, systemJsUrlInfo] =
                 context.referenceUtils.inject({
                   type: "script_src",

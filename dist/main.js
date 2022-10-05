@@ -6294,7 +6294,7 @@ const startServer = async ({
           }) => {
             const statusType = statusToType(status);
             addRequestLog(requestNode, {
-              type: {
+              type: status === 404 && request.pathname === "/favicon.ico" ? "debug" : {
                 information: "info",
                 success: "info",
                 redirection: "info",
@@ -8550,7 +8550,7 @@ const createUrlInfoTransformer = ({
   sourcemaps,
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
-  sourcemapsRelativeSources,
+  sourcemapsSourcesRelative,
   urlGraph,
   injectSourcemapPlaceholder,
   foundSourcemap
@@ -8740,7 +8740,7 @@ const createUrlInfoTransformer = ({
         sourcemapUrlInfo.contentType = "application/json";
         const sourcemap = urlInfo.sourcemap;
 
-        if (sourcemapsRelativeSources) {
+        if (sourcemapsSourcesRelative) {
           sourcemap.sources = sourcemap.sources.map(source => {
             const sourceRelative = urlToRelativeUrl(source, urlInfo.url);
             return sourceRelative || ".";
@@ -8768,7 +8768,7 @@ const createUrlInfoTransformer = ({
             urlInfo.content = SOURCEMAP.writeComment({
               contentType: urlInfo.contentType,
               content: urlInfo.content,
-              specifier: sourcemaps === "file" && sourcemapsRelativeSources ? urlToRelativeUrl(sourcemapReference.url, urlInfo.url) : sourcemapReference.generatedSpecifier
+              specifier: sourcemaps === "file" && sourcemapsSourcesRelative ? urlToRelativeUrl(sourcemapReference.url, urlInfo.url) : sourcemapReference.generatedSpecifier
             });
           }
         }
@@ -9503,7 +9503,7 @@ const createKitchen = ({
   // "programmatic" and "file" also allowed
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
-  sourcemapsRelativeSources,
+  sourcemapsSourcesRelative,
   writeGeneratedFiles,
   outDirectoryUrl
 }) => {
@@ -9719,7 +9719,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     sourcemaps,
     sourcemapsSourcesProtocol,
     sourcemapsSourcesContent,
-    sourcemapsRelativeSources,
+    sourcemapsSourcesRelative,
     clientRuntimeCompat,
     injectSourcemapPlaceholder: ({
       urlInfo,
@@ -10079,7 +10079,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       } = urlInfo;
 
       if (generatedUrl && generatedUrl.startsWith("file:")) {
-        if (urlInfo.type === "directory") ; else {
+        if (urlInfo.type === "directory") ; else if (urlInfo.content === null) ; else {
           writeFileSync(new URL(generatedUrl), urlInfo.content);
           const {
             sourcemapGeneratedUrl,
@@ -10285,8 +10285,8 @@ const adjustUrlSite = (urlInfo, {
       isOriginal: true,
       url: inlineUrlSite.url,
       content: inlineUrlSite.content,
-      line: inlineUrlSite.line + urlSite.line,
-      column: inlineUrlSite.column + urlSite.column
+      line: inlineUrlSite.line === undefined ? urlSite.line : inlineUrlSite.line + urlSite.line,
+      column: inlineUrlSite.column === undefined ? urlSite.column : inlineUrlSite.column + urlSite.column
     }, parentUrlInfo);
   };
 
@@ -16474,10 +16474,25 @@ const convertJsModuleToJsClassic = async ({
 
   if (systemJsInjection && jsClassicFormat === "system" && urlInfo.isEntryPoint) {
     const magicSource = createMagicSource(code);
-    const systemjsCode = readFileSync(systemJsClientFileUrl, {
+    let systemJsFileContent = readFileSync(systemJsClientFileUrl, {
       as: "string"
     });
-    magicSource.prepend(`${systemjsCode}\n\n`);
+    const sourcemapFound = SOURCEMAP.readComment({
+      contentType: "text/javascript",
+      content: systemJsFileContent
+    });
+
+    if (sourcemapFound) {
+      // for now let's remove s.js sourcemap
+      // because it would likely mess the sourcemap of the entry point itself
+      systemJsFileContent = SOURCEMAP.writeComment({
+        contentType: "text/javascript",
+        content: systemJsFileContent,
+        specifier: ""
+      });
+    }
+
+    magicSource.prepend(`${systemJsFileContent}\n\n`);
     const magicResult = magicSource.toContentAndSourcemap();
     sourcemap = await composeTwoSourcemaps(sourcemap, magicResult.sourcemap);
     return {
@@ -16501,14 +16516,42 @@ const jsenvPluginAsJsClassicConversion = ({
   systemJsClientFileUrl,
   generateJsClassicFilename
 }) => {
-  const shouldPropagateJsClassic = (reference, context) => {
-    const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl);
-
-    if (!parentUrlInfo) {
-      return false;
+  const isReferencingJsModule = reference => {
+    if (reference.type === "js_import_export" || reference.subtype === "system_register_arg" || reference.subtype === "system_import_arg") {
+      return true;
     }
 
-    return new URL(parentUrlInfo.url).searchParams.has("as_js_classic");
+    if (reference.type === "js_url_specifier") {
+      if (reference.expectedType === "js_classic") {
+        return false;
+      }
+
+      if (reference.expectedType === undefined && CONTENT_TYPE.fromUrlExtension(reference.url) === "text/javascript") {
+        // by default, js referenced by new URL is considered as "js_module"
+        // in case this is not desired code must use "?js_classic" like
+        // new URL('./file.js?js_classic', import.meta.url)
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  const shouldPropagateJsClassic = (reference, context) => {
+    if (isReferencingJsModule(reference)) {
+      const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl);
+
+      if (!parentUrlInfo) {
+        return false;
+      } // if (parentUrlInfo.isEntryPoint) {
+      //   return true
+      // }
+
+
+      return new URL(parentUrlInfo.url).searchParams.has("as_js_classic");
+    }
+
+    return false;
   };
 
   const markAsJsClassicProxy = reference => {
@@ -16531,18 +16574,16 @@ const jsenvPluginAsJsClassicConversion = ({
       if (reference.searchParams.has("as_js_classic")) {
         markAsJsClassicProxy(reference);
         return null;
-      }
+      } // We want to propagate transformation of js module to js classic to:
+      // - import specifier (static/dynamic import + re-export)
+      // - url specifier when inside System.register/_context.import()
+      //   (because it's the transpiled equivalent of static and dynamic imports)
+      // And not other references otherwise we could try to transform inline resources
+      // or specifiers inside new URL()...
 
-      if (reference.type === "js_import_export" || reference.subtype === "system_register_arg" || reference.subtype === "system_import_arg") {
-        // We want to propagate transformation of js module to js classic to:
-        // - import specifier (static/dynamic import + re-export)
-        // - url specifier when inside System.register/_context.import()
-        //   (because it's the transpiled equivalent of static and dynamic imports)
-        // And not other references otherwise we could try to transform inline resources
-        // or specifiers inside new URL()...
-        if (shouldPropagateJsClassic(reference, context)) {
-          return turnIntoJsClassicProxy(reference);
-        }
+
+      if (shouldPropagateJsClassic(reference, context)) {
+        return turnIntoJsClassicProxy(reference);
       }
 
       return null;
@@ -16753,9 +16794,23 @@ const jsenvPluginAsJsClassicHtml = ({
 
           if (needsSystemJs) {
             mutations.push(async () => {
-              const systemJsFileContent = readFileSync$1(new URL(systemJsClientFileUrl), {
+              let systemJsFileContent = readFileSync$1(new URL(systemJsClientFileUrl), {
                 encoding: "utf8"
               });
+              const sourcemapFound = SOURCEMAP.readComment({
+                contentType: "text/javascript",
+                content: systemJsFileContent
+              });
+
+              if (sourcemapFound) {
+                const sourcemapFileUrl = new URL(sourcemapFound.specifier, systemJsClientFileUrl);
+                systemJsFileContent = SOURCEMAP.writeComment({
+                  contentType: "text/javascript",
+                  content: systemJsFileContent,
+                  specifier: urlToRelativeUrl(sourcemapFileUrl, urlInfo.url)
+                });
+              }
+
               const [systemJsReference, systemJsUrlInfo] = context.referenceUtils.inject({
                 type: "script_src",
                 expectedType: "js_classic",
@@ -17029,24 +17084,34 @@ const rollupPluginJsenv = ({
         const rollupFileInfo = rollupResult[fileName]; // there is 3 types of file: "placeholder", "asset", "chunk"
 
         if (rollupFileInfo.type === "chunk") {
+          const sourceUrls = Object.keys(rollupFileInfo.modules).map(id => fileUrlConverter.asFileUrl(id));
           let url;
+          let originalUrl;
 
           if (rollupFileInfo.facadeModuleId) {
             url = fileUrlConverter.asFileUrl(rollupFileInfo.facadeModuleId);
+            originalUrl = url;
           } else {
             url = new URL(rollupFileInfo.fileName, buildDirectoryUrl).href;
+
+            if (rollupFileInfo.isDynamicEntry) {
+              originalUrl = sourceUrls[sourceUrls.length - 1];
+            } else {
+              originalUrl = url;
+            }
           }
 
           const jsModuleBundleUrlInfo = {
             url,
-            originalUrl: url,
+            originalUrl,
             type: format === "esm" ? "js_module" : "common_js",
             data: {
               generatedBy: "rollup",
               bundleRelativeUrl: rollupFileInfo.fileName,
-              usesImport: rollupFileInfo.imports.length > 0 || rollupFileInfo.dynamicImports.length > 0
+              usesImport: rollupFileInfo.imports.length > 0 || rollupFileInfo.dynamicImports.length > 0,
+              isDynamicEntry: rollupFileInfo.isDynamicEntry
             },
-            sourceUrls: Object.keys(rollupFileInfo.modules).map(id => fileUrlConverter.asFileUrl(id)),
+            sourceUrls,
             contentType: "text/javascript",
             content: rollupFileInfo.code,
             sourcemap: rollupFileInfo.map
@@ -23905,7 +23970,7 @@ build ${entryPointKeys.length} entry points`);
     const buildUrlsGenerator = createBuilUrlsGenerator({
       buildDirectoryUrl
     });
-    const buildToRawUrls = {}; // rename "buildDirectoryRedirections"?
+    const buildDirectoryRedirections = new Map();
 
     const associateBuildUrlAndRawUrl = (buildUrl, rawUrl, reason) => {
       if (urlIsInsideOf(rawUrl, buildDirectoryUrl)) {
@@ -23916,7 +23981,7 @@ build ${entryPointKeys.length} entry points`);
 ${ANSI.color(rawUrl, ANSI.GREY)} ->
 ${ANSI.color(buildUrl, ANSI.MAGENTA)}
 `);
-      buildToRawUrls[buildUrl] = rawUrl;
+      buildDirectoryRedirections.set(buildUrl, rawUrl);
     };
 
     const buildUrls = new Map();
@@ -23947,7 +24012,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         resolveUrl: reference => {
           const getUrl = () => {
             if (reference.type === "filesystem") {
-              const parentRawUrl = buildToRawUrls[reference.parentUrl];
+              const parentRawUrl = buildDirectoryRedirections.get(reference.parentUrl);
               const baseUrl = ensurePathnameTrailingSlash(parentRawUrl);
               return new URL(reference.specifier, baseUrl).href;
             }
@@ -23978,7 +24043,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           } // already a build url
 
 
-          const rawUrl = buildToRawUrls[reference.url];
+          const rawUrl = buildDirectoryRedirections.get(reference.url);
 
           if (rawUrl) {
             return reference.url;
@@ -24148,14 +24213,14 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               return bundleUrlInfo;
             }
 
-            const rawUrl = buildToRawUrls[url] || url;
+            const rawUrl = buildDirectoryRedirections.get(url) || url;
             const rawUrlInfo = rawGraph.getUrlInfo(rawUrl);
 
             if (!rawUrlInfo) {
               throw new Error(createDetailedMessage$1(`Cannot find url`, {
                 url,
-                "raw urls": Object.values(buildToRawUrls),
-                "build urls": Object.keys(buildToRawUrls)
+                "raw urls": Array.from(buildDirectoryRedirections.values()),
+                "build urls": Array.from(buildDirectoryRedirections.keys())
               }));
             } // logger.debug(`fetching from raw graph ${url}`)
 
@@ -24184,7 +24249,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
 
           if (reference.injected) {
             const [ref, rawUrlInfo] = rawGraphKitchen.injectReference({ ...reference,
-              parentUrl: buildToRawUrls[reference.parentUrl]
+              parentUrl: buildDirectoryRedirections.get(reference.parentUrl)
             });
             await rawGraphKitchen.cook(rawUrlInfo, {
               reference: ref
@@ -24215,7 +24280,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       }],
       sourcemaps,
       sourcemapsSourcesContent,
-      sourcemapsRelativeSources: !versioning,
+      sourcemapsSourcesRelative: !versioning,
       writeGeneratedFiles,
       outDirectoryUrl: new URL(".jsenv/postbuild/", rootDirectoryUrl)
     });
@@ -24399,10 +24464,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
 
               if (bundlerGeneratedUrlInfo.sourceUrls) {
                 bundlerGeneratedUrlInfo.sourceUrls.forEach(sourceUrl => {
-                  const rawUrlInfo = rawGraph.getUrlInfo(sourceUrl);
+                  const sourceRawUrlInfo = rawGraph.getUrlInfo(sourceUrl);
 
-                  if (rawUrlInfo) {
-                    rawUrlInfo.data.bundled = true;
+                  if (sourceRawUrlInfo) {
+                    sourceRawUrlInfo.data.bundled = true;
                   }
                 });
               }
@@ -24412,7 +24477,14 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               });
               bundleRedirections.set(url, buildUrl);
 
-              if (urlIsInsideOf(url, buildDirectoryUrl)) {// chunk generated by rollup to share code
+              if (urlIsInsideOf(url, buildDirectoryUrl)) {
+                if (bundlerGeneratedUrlInfo.data.isDynamicEntry) {
+                  const rawUrlInfo = rawGraph.getUrlInfo(bundlerGeneratedUrlInfo.originalUrl);
+                  rawUrlInfo.data.bundled = false;
+                  bundleRedirections.set(bundlerGeneratedUrlInfo.originalUrl, buildUrl);
+                  associateBuildUrlAndRawUrl(buildUrl, bundlerGeneratedUrlInfo.originalUrl, "bundle");
+                } else {// chunk generated by rollup to share code
+                }
               } else {
                 associateBuildUrlAndRawUrl(buildUrl, url, "bundle");
               }
@@ -24675,7 +24747,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               },
               fetchUrlContent: versionedUrlInfo => {
                 if (versionedUrlInfo.isInline) {
-                  const rawUrlInfo = rawGraph.getUrlInfo(buildToRawUrls[versionedUrlInfo.url]);
+                  const rawUrlInfo = rawGraph.getUrlInfo(buildDirectoryRedirections.get(versionedUrlInfo.url));
                   const finalUrlInfo = finalGraph.getUrlInfo(versionedUrlInfo.url);
                   return {
                     content: versionedUrlInfo.content,
@@ -24690,7 +24762,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             }],
             sourcemaps,
             sourcemapsSourcesContent,
-            sourcemapsRelativeSources: true,
+            sourcemapsSourcesRelative: true,
             writeGeneratedFiles,
             outDirectoryUrl: new URL(".jsenv/postbuild/", finalGraphKitchen.rootDirectoryUrl)
           });
@@ -24760,7 +24832,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       /*
        * Update <link rel="preload"> and friends after build (once we know everything)
        * - Used to remove resource hint targeting an url that is no longer used:
-       *   - Happens because of import assertions transpilation (file is inlined into JS)
+       *   - because of bundlings
+       *   - because of import assertions transpilation (file is inlined into JS)
        */
 
 
@@ -24803,7 +24876,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   }
 
                   if (buildUrlInfo.dependents.size === 0) {
-                    logger.info(`remove resource hint because "${href}" not used anymore`);
+                    logger.warn(`remove resource hint because "${href}" not used anymore`);
                     mutations.push(() => {
                       removeHtmlNode(node);
                     });
@@ -24826,7 +24899,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   const rawUrlInfo = rawGraph.getUrlInfo(url);
 
                   if (rawUrlInfo && rawUrlInfo.data.bundled) {
-                    logger.info(`remove resource hint on "${href}" because it was bundled`);
+                    logger.warn(`remove resource hint on "${href}" because it was bundled`);
                     mutations.push(() => {
                       removeHtmlNode(node);
                     });
@@ -24834,6 +24907,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     url = bundleRedirections.get(url) || url;
                     url = bundleInternalRedirections.get(url) || url;
                     url = finalRedirections.get(url) || url;
+                    url = findKey(buildDirectoryRedirections, url) || url;
                     onBuildUrl(url);
                   }
                 } else {
@@ -25455,7 +25529,18 @@ const createFileService = ({
         }
 
         if (!watch) {
-          const fileContentAsBuffer = readFileSync$1(new URL(urlInfo.url));
+          let fileContentAsBuffer;
+
+          try {
+            fileContentAsBuffer = readFileSync$1(new URL(urlInfo.url));
+          } catch (e) {
+            if (e.code === "ENOENT") {
+              return false;
+            }
+
+            return false;
+          }
+
           const fileContentEtag = bufferToEtag$1(fileContentAsBuffer);
 
           if (fileContentEtag !== urlInfo.originalContentEtag) {
@@ -25576,27 +25661,27 @@ const createFileService = ({
     const ifNoneMatch = request.headers["if-none-match"];
     const urlInfoTargetedByCache = urlGraph.getParentIfInline(urlInfo);
 
-    if (ifNoneMatch) {
-      const [clientOriginalContentEtag, clientContentEtag] = ifNoneMatch.split("_");
-
-      if (urlInfoTargetedByCache.originalContentEtag === clientOriginalContentEtag && urlInfoTargetedByCache.contentEtag === clientContentEtag && urlInfoTargetedByCache.isValid()) {
-        const headers = {
-          "cache-control": `private,max-age=0,must-revalidate`
-        };
-        Object.keys(urlInfo.headers).forEach(key => {
-          if (key !== "content-length") {
-            headers[key] = urlInfo.headers[key];
-          }
-        });
-        return {
-          status: 304,
-          headers
-        };
-      }
-    }
-
     try {
-      // urlInfo objects are reused, they must be "reset" before cooking them again
+      if (ifNoneMatch) {
+        const [clientOriginalContentEtag, clientContentEtag] = ifNoneMatch.split("_");
+
+        if (urlInfoTargetedByCache.originalContentEtag === clientOriginalContentEtag && urlInfoTargetedByCache.contentEtag === clientContentEtag && urlInfoTargetedByCache.isValid()) {
+          const headers = {
+            "cache-control": `private,max-age=0,must-revalidate`
+          };
+          Object.keys(urlInfo.headers).forEach(key => {
+            if (key !== "content-length") {
+              headers[key] = urlInfo.headers[key];
+            }
+          });
+          return {
+            status: 304,
+            headers
+          };
+        }
+      } // urlInfo objects are reused, they must be "reset" before cooking them again
+
+
       if ((urlInfo.error || urlInfo.contentEtag) && !urlInfo.isInline && urlInfo.type !== "sourcemap") {
         urlInfo.error = null;
         urlInfo.sourcemap = null;
@@ -29603,6 +29688,12 @@ const startBuildServer = async ({
     })]
   });
   startBuildServerTask.done();
+
+  if (hostname) {
+    delete server.origins.localip;
+    delete server.origins.externalip;
+  }
+
   logger.info(``);
   Object.keys(server.origins).forEach(key => {
     logger.info(`- ${server.origins[key]}`);

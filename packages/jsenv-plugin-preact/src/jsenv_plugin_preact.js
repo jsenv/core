@@ -14,27 +14,37 @@ import {
 } from "@jsenv/ast"
 
 export const jsenvPluginPreact = ({
-  jsxInclude = {
-    "./**/*.jsx": true,
-    "./**/*.tsx": true,
-  },
-  refreshInclude = {
-    "./**/*.jsx": true,
-    "./**/*.tsx": true,
-  },
-  hookNamesInclude = {
-    "./**/*": true,
-  },
+  jsx = true,
+  refresh = false,
+  inferHookNames = true,
   preactDevtoolsDuringBuild = false,
 } = {}) => {
-  if (!refreshInclude) {
-    refreshInclude = {}
+  if (jsx === true) {
+    jsx = {
+      "./**/*.jsx": true,
+      "./**/*.tsx": true,
+    }
+  } else if (jsx === false) {
+    jsx = {}
+  }
+  if (refresh === true) {
+    refresh = {
+      "./**/*.jsx": true,
+      "./**/*.tsx": true,
+    }
+  } else if (refresh === false) {
+    refresh = {}
+  }
+  if (inferHookNames === true) {
+    inferHookNames = { "./**": true }
+  } else {
+    inferHookNames = {}
   }
   const associations = URL_META.resolveAssociations(
     {
-      jsx: jsxInclude,
-      refresh: refreshInclude,
-      hookNames: hookNamesInclude,
+      jsx,
+      refresh,
+      inferHookNames,
     },
     "file://",
   )
@@ -91,7 +101,7 @@ import ${preactDevtoolsReference.generatedSpecifier}
           : false
         const hookNamesEnabled =
           context.scenarios.dev &&
-          urlMeta.hookNames &&
+          urlMeta.inferHookNames &&
           (urlInfo.content.includes("useState") ||
             urlInfo.content.includes("useReducer") ||
             urlInfo.content.includes("useRef") ||

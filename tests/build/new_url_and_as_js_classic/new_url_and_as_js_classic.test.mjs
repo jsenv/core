@@ -6,21 +6,19 @@ import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
 
 const test = async (params) => {
   await build({
-    logLevel: "error",
+    logLevel: "warn",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
       "./main.html": "main.html",
     },
-    minification: false,
-    // versioning: false,
     writeGeneratedFiles: true,
     ...params,
   })
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
   })
-  const { returnValue, pageLogs } = await executeInChromium({
+  const { returnValue } = await executeInChromium({
     url: `${server.origin}/main.html`,
     /* eslint-disable no-undef */
     pageFunction: async () => {
@@ -28,18 +26,10 @@ const test = async (params) => {
     },
     /* eslint-enable no-undef */
   })
-  const actual = {
-    returnValue,
-    pageLogs,
-  }
-  const expected = {
-    returnValue: "Roboto",
-    pageLogs: [],
-  }
+  const actual = returnValue
+  const expected = `${server.origin}/js/main.nomodule.js?v=5337168f`
   assert({ actual, expected })
 }
 
-// support for <script type="module">
-await test({ runtimeCompat: { chrome: "64" }, bundling: true })
-// no support for <script type="module"> + no bundling
-await test({ runtimeCompat: { chrome: "60" }, bundling: false })
+// no support for <script type="module">
+await test({ runtimeCompat: { chrome: "60" }, minification: true })
