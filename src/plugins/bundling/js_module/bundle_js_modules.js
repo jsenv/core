@@ -136,15 +136,27 @@ const rollupPluginJsenv = ({
         const rollupFileInfo = rollupResult[fileName]
         // there is 3 types of file: "placeholder", "asset", "chunk"
         if (rollupFileInfo.type === "chunk") {
+          const sourceUrls = Object.keys(rollupFileInfo.modules).map((id) =>
+            fileUrlConverter.asFileUrl(id),
+          )
+
           let url
+          let originalUrl
           if (rollupFileInfo.facadeModuleId) {
             url = fileUrlConverter.asFileUrl(rollupFileInfo.facadeModuleId)
+            originalUrl = url
           } else {
             url = new URL(rollupFileInfo.fileName, buildDirectoryUrl).href
+            if (rollupFileInfo.isDynamicEntry) {
+              originalUrl = sourceUrls[sourceUrls.length - 1]
+            } else {
+              originalUrl = url
+            }
           }
+
           const jsModuleBundleUrlInfo = {
             url,
-            originalUrl: url,
+            originalUrl,
             type: format === "esm" ? "js_module" : "common_js",
             data: {
               generatedBy: "rollup",
@@ -152,10 +164,9 @@ const rollupPluginJsenv = ({
               usesImport:
                 rollupFileInfo.imports.length > 0 ||
                 rollupFileInfo.dynamicImports.length > 0,
+              isDynamicEntry: rollupFileInfo.isDynamicEntry,
             },
-            sourceUrls: Object.keys(rollupFileInfo.modules).map((id) =>
-              fileUrlConverter.asFileUrl(id),
-            ),
+            sourceUrls,
             contentType: "text/javascript",
             content: rollupFileInfo.code,
             sourcemap: rollupFileInfo.map,

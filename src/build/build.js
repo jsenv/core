@@ -740,9 +740,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               }
               if (bundlerGeneratedUrlInfo.sourceUrls) {
                 bundlerGeneratedUrlInfo.sourceUrls.forEach((sourceUrl) => {
-                  const rawUrlInfo = rawGraph.getUrlInfo(sourceUrl)
-                  if (rawUrlInfo) {
-                    rawUrlInfo.data.bundled = true
+                  const sourceRawUrlInfo = rawGraph.getUrlInfo(sourceUrl)
+                  if (sourceRawUrlInfo) {
+                    sourceRawUrlInfo.data.bundled = true
                   }
                 })
               }
@@ -1109,7 +1109,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       /*
        * Update <link rel="preload"> and friends after build (once we know everything)
        * - Used to remove resource hint targeting an url that is no longer used:
-       *   - Happens because of import assertions transpilation (file is inlined into JS)
+       *   - because of bundlings
+       *   - because of import assertions transpilation (file is inlined into JS)
        */
       resync_resource_hints: {
         const actions = []
@@ -1180,7 +1181,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   url = rawRedirections.get(url) || url
                   const rawUrlInfo = rawGraph.getUrlInfo(url)
                   if (rawUrlInfo && rawUrlInfo.data.bundled) {
-                    logger.info(
+                    logger.warn(
                       `remove resource hint on "${href}" because it was bundled`,
                     )
                     mutations.push(() => {
