@@ -38,9 +38,7 @@
         setTimeout(resolve, 5000)
       })
       await document.fonts.ready
-      window.resolveResultPromise({
-        fontFamily: getComputedStyle(document.body).fontFamily,
-      })
+      window.resolveResultPromise(getComputedStyle(document.body).fontFamily)
     </script>
   </body>
 </html>

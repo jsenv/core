@@ -1172,7 +1172,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     return
                   }
                   if (buildUrlInfo.dependents.size === 0) {
-                    logger.info(
+                    logger.warn(
                       `remove resource hint because "${href}" not used anymore`,
                     )
                     mutations.push(() => {
@@ -1209,6 +1209,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     url = bundleRedirections.get(url) || url
                     url = bundleInternalRedirections.get(url) || url
                     url = finalRedirections.get(url) || url
+                    url = findKey(buildDirectoryRedirections, url)
                     onBuildUrl(url)
                   }
                 } else {
