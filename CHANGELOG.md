@@ -1,3 +1,7 @@
+# 29.1.10
+
+- Prevent duplicate files when file referenced by new URL() + dynamic import
+
 # 29.1.9
 
 - Fix new URL() update during js classic conversion

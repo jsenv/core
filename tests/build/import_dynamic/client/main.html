@@ -13,10 +13,7 @@
       })
     </script>
     <script>
-      const url = new URL(
-        "./feature/nested/nested_feature.js?js_module",
-        window.location,
-      )
+      const url = new URL("./feature/nested/nested_feature.js", window.location)
       window.nestedFeatureUrl = url.href
     </script>
     <script type="module">

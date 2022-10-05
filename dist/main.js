@@ -24414,15 +24414,37 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               return;
             }
           } // File referenced with new URL('./file.js', import.meta.url)
-          // are entry points that can be bundled
+          // are entry points that should be bundled
           // For instance we will bundle service worker/workers detected like this
 
 
           if (rawUrlInfo.type === "js_module") {
             rawUrlInfo.references.forEach(reference => {
-              if (reference.type === "js_url_specifier") {
-                const urlInfo = rawGraph.getUrlInfo(reference.url);
-                addToBundlerIfAny(urlInfo);
+              if (reference.type !== "js_url_specifier") {
+                return;
+              }
+
+              const referencedUrlInfo = rawGraph.getUrlInfo(reference.url);
+              const bundler = bundlers[referencedUrlInfo.type];
+
+              if (!bundler) {
+                return;
+              }
+
+              let willAlreadyBeBundled = true;
+
+              for (const dependent of referencedUrlInfo.dependents) {
+                const dependentUrlInfo = rawGraph.getUrlInfo(dependent);
+
+                for (const reference of dependentUrlInfo.references) {
+                  if (reference.url === referencedUrlInfo.url) {
+                    willAlreadyBeBundled = reference.type === "js_import_export" && reference.subtype === "import_dynamic" || reference.type === "script_src";
+                  }
+                }
+              }
+
+              if (!willAlreadyBeBundled) {
+                bundler.urlInfos.push(referencedUrlInfo);
               }
             });
           }
