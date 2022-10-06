@@ -20,7 +20,7 @@ const devServer = await startDevServer({
   devServerAutoreload: false,
   plugins: [
     jsenvPluginPreact({
-      refresh: true,
+      refreshInstrumentation: true,
     }),
   ],
   clientFiles: {

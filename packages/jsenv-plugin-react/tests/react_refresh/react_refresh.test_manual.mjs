@@ -11,7 +11,7 @@ await startDevServer({
   certificate,
   privateKey,
   rootDirectoryUrl: new URL("./client/", import.meta.url),
-  plugins: [jsenvPluginReact({ refresh: true })],
+  plugins: [jsenvPluginReact({ refreshInstrumentation: true })],
   explorer: {
     groups: {
       main: {

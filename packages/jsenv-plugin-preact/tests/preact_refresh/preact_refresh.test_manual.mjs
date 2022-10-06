@@ -6,7 +6,7 @@ startDevServer({
   rootDirectoryUrl: new URL("./client/", import.meta.url),
   plugins: [
     jsenvPluginPreact({
-      refresh: true,
+      refreshInstrumentation: true,
     }),
   ],
   sourcemaps: "file",

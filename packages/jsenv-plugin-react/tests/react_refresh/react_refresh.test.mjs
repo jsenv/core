@@ -21,7 +21,7 @@ if (process.platform !== "win32") {
     logLevel: "warn",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
-    plugins: [jsenvPluginReact({ refresh: true })],
+    plugins: [jsenvPluginReact({ refreshInstrumentation: true })],
     clientFiles: {
       "./**": true,
     },
