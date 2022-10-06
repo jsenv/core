@@ -11,8 +11,8 @@ import { jsenvPluginReactRefreshPreamble } from "./jsenv_plugin_react_refresh_pr
 
 export const jsenvPluginReact = ({
   asJsModuleLogLevel,
-  jsx = true,
-  refresh = false,
+  jsxTranspilation = true,
+  refreshInstrumentation = false,
 } = {}) => {
   return [
     jsenvPluginCommonJs({
@@ -27,31 +27,34 @@ export const jsenvPluginReact = ({
       },
     }),
     jsenvPluginReactRefreshPreamble(),
-    jsenvPluginJsxAndRefresh({ jsx, refresh }),
+    jsenvPluginJsxAndRefresh({ jsxTranspilation, refreshInstrumentation }),
   ]
 }
 
-const jsenvPluginJsxAndRefresh = ({ jsx, refresh }) => {
-  if (jsx === true) {
-    jsx = {
+const jsenvPluginJsxAndRefresh = ({
+  jsxTranspilation,
+  refreshInstrumentation,
+}) => {
+  if (jsxTranspilation === true) {
+    jsxTranspilation = {
       "./**/*.jsx": true,
       "./**/*.tsx": true,
     }
-  } else if (jsx === false) {
-    jsx = {}
+  } else if (jsxTranspilation === false) {
+    jsxTranspilation = {}
   }
-  if (refresh === true) {
-    refresh = {
+  if (refreshInstrumentation === true) {
+    refreshInstrumentation = {
       "./**/*.jsx": true,
       "./**/*.tsx": true,
     }
-  } else if (refresh === false) {
-    refresh = {}
+  } else if (refreshInstrumentation === false) {
+    refreshInstrumentation = {}
   }
   const associations = URL_META.resolveAssociations(
     {
-      jsx,
-      refresh,
+      jsxTranspilation,
+      refreshInstrumentation,
     },
     "file://",
   )
@@ -65,9 +68,9 @@ const jsenvPluginJsxAndRefresh = ({ jsx, refresh }) => {
           url: urlInfo.url,
           associations,
         })
-        const jsxEnabled = urlMeta.jsx
+        const jsxEnabled = urlMeta.jsxTranspilation
         const refreshEnabled = context.scenarios.dev
-          ? urlMeta.refresh &&
+          ? urlMeta.refreshInstrumentation &&
             !urlInfo.content.includes("import.meta.hot.decline()")
           : false
         const babelPlugins = [

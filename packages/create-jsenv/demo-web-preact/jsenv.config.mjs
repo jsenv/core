@@ -10,7 +10,7 @@ export const rootDirectoryUrl = new URL("./", import.meta.url)
 
 export const plugins = [
   jsenvPluginPreact({
-    refresh: {
+    refreshInstrumentation: {
       "./**/*.jsx": true,
     },
   }),

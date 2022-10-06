@@ -14,37 +14,37 @@ import {
 } from "@jsenv/ast"
 
 export const jsenvPluginPreact = ({
-  jsx = true,
-  refresh = false,
-  inferHookNames = true,
+  jsxTranspilation = true,
+  refreshInstrumentation = false,
+  hookNamesInstrumentation = true,
   preactDevtoolsDuringBuild = false,
 } = {}) => {
-  if (jsx === true) {
-    jsx = {
+  if (jsxTranspilation === true) {
+    jsxTranspilation = {
       "./**/*.jsx": true,
       "./**/*.tsx": true,
     }
-  } else if (jsx === false) {
-    jsx = {}
+  } else if (jsxTranspilation === false) {
+    jsxTranspilation = {}
   }
-  if (refresh === true) {
-    refresh = {
+  if (refreshInstrumentation === true) {
+    refreshInstrumentation = {
       "./**/*.jsx": true,
       "./**/*.tsx": true,
     }
-  } else if (refresh === false) {
-    refresh = {}
+  } else if (refreshInstrumentation === false) {
+    refreshInstrumentation = {}
   }
-  if (inferHookNames === true) {
-    inferHookNames = { "./**": true }
+  if (hookNamesInstrumentation === true) {
+    hookNamesInstrumentation = { "./**": true }
   } else {
-    inferHookNames = {}
+    hookNamesInstrumentation = {}
   }
   const associations = URL_META.resolveAssociations(
     {
-      jsx,
-      refresh,
-      inferHookNames,
+      jsxTranspilation,
+      refreshInstrumentation,
+      hookNamesInstrumentation,
     },
     "file://",
   )
@@ -94,14 +94,14 @@ import ${preactDevtoolsReference.generatedSpecifier}
           url: urlInfo.url,
           associations,
         })
-        const jsxEnabled = urlMeta.jsx
+        const jsxEnabled = urlMeta.jsxTranspilation
         const refreshEnabled = context.scenarios.dev
-          ? urlMeta.refresh &&
+          ? urlMeta.refreshInstrumentation &&
             !urlInfo.content.includes("import.meta.hot.decline()")
           : false
         const hookNamesEnabled =
           context.scenarios.dev &&
-          urlMeta.inferHookNames &&
+          urlMeta.hookNamesInstrumentation &&
           (urlInfo.content.includes("useState") ||
             urlInfo.content.includes("useReducer") ||
             urlInfo.content.includes("useRef") ||
