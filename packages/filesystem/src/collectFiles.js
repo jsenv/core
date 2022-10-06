@@ -76,7 +76,7 @@ export const collectFiles = async ({
           )
           matchingFileResultArray.push({
             url: new URL(relativeUrl, rootDirectoryUrl).href,
-            relativeUrl,
+            relativeUrl: decodeURIComponent(relativeUrl),
             meta,
             fileStats: directoryChildNodeStats,
           })

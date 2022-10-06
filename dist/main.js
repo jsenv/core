@@ -1586,7 +1586,7 @@ const collectFiles = async ({
         const relativeUrl = urlToRelativeUrl(directoryChildNodeUrl, rootDirectoryUrl);
         matchingFileResultArray.push({
           url: new URL(relativeUrl, rootDirectoryUrl).href,
-          relativeUrl,
+          relativeUrl: decodeURIComponent(relativeUrl),
           meta,
           fileStats: directoryChildNodeStats
         });
@@ -9144,10 +9144,19 @@ const createFetchUrlContentError = ({
     fetchError.code = code;
     fetchError.reason = reason;
     fetchError.url = urlInfo.url;
-    fetchError.traceUrl = reference.trace.url;
-    fetchError.traceLine = reference.trace.line;
-    fetchError.traceColumn = reference.trace.column;
-    fetchError.traceMessage = reference.trace.message;
+
+    if (code === "PARSE_ERROR") {
+      fetchError.traceUrl = error.traceUrl;
+      fetchError.traceLine = error.traceLine;
+      fetchError.traceColumn = error.traceColumn;
+      fetchError.traceMessage = error.traceMessage;
+    } else {
+      fetchError.traceUrl = reference.trace.url;
+      fetchError.traceLine = reference.trace.line;
+      fetchError.traceColumn = reference.trace.column;
+      fetchError.traceMessage = reference.trace.message;
+    }
+
     fetchError.asResponse = error.asResponse;
     return fetchError;
   };
@@ -9170,6 +9179,15 @@ const createFetchUrlContentError = ({
     return createFailedToFetchUrlContentError({
       code: "NOT_FOUND",
       reason: "no entry on filesystem"
+    });
+  }
+
+  if (error.code === "PARSE_ERROR") {
+    return createFailedToFetchUrlContentError({
+      "code": "PARSE_ERROR",
+      "reason": error.reason,
+      "parse error message": error.cause.message,
+      "parse error trace": error.traceMessage
     });
   }
 
@@ -9207,7 +9225,8 @@ const createTransformUrlContentError = ({
     transformError.traceMessage = reference.trace.message;
 
     if (code === "PARSE_ERROR") {
-      transformError.reason = reason;
+      transformError.reason = `parse error on ${urlInfo.type}`;
+      transformError.cause = error;
 
       if (urlInfo.isInline) {
         transformError.traceLine = reference.trace.line + error.line - 1;
@@ -16788,7 +16807,13 @@ const jsenvPluginAsJsClassicHtml = ({
                   break;
                 }
               } catch (e) {
-                if (context.scenarios.dev) ; else {
+                if (context.scenarios.dev) {
+                  needsSystemJs = true; // ignore cooking error, the browser will trigger it again on fetch
+                  // + disable cache for this html file because when browser will reload
+                  // the error might be gone and we might need to inject systemjs
+
+                  urlInfo.headers["cache-control"] = "no-store";
+                } else {
                   throw e;
                 }
               }
@@ -25763,17 +25788,32 @@ const createFileService = ({
       const code = originalError.code;
 
       if (code === "PARSE_ERROR") {
+        // when possible let browser re-throw the syntax error
+        // it's not possible to do that when url info content is not available
+        // (happens for as_js_classic library for instance)
+        if (urlInfo.content !== undefined) {
+          return {
+            url: reference.url,
+            status: 200,
+            // reason becomes the http response statusText, it must not contain invalid chars
+            // https://github.com/nodejs/node/blob/0c27ca4bc9782d658afeaebcec85ec7b28f1cc35/lib/_http_common.js#L221
+            statusText: e.reason,
+            statusMessage: originalError.message,
+            headers: {
+              "content-type": urlInfo.contentType,
+              "content-length": Buffer.byteLength(urlInfo.content),
+              "cache-control": "no-store"
+            },
+            body: urlInfo.content
+          };
+        }
+
         return {
           url: reference.url,
-          status: 200,
-          // let the browser re-throw the syntax error
-          // reason becomes the http response statusText, it must not contain invalid chars
-          // https://github.com/nodejs/node/blob/0c27ca4bc9782d658afeaebcec85ec7b28f1cc35/lib/_http_common.js#L221
+          status: 500,
           statusText: e.reason,
           statusMessage: originalError.message,
           headers: {
-            "content-type": urlInfo.contentType,
-            "content-length": Buffer.byteLength(urlInfo.content),
             "cache-control": "no-store"
           },
           body: urlInfo.content

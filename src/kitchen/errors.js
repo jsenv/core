@@ -61,10 +61,17 @@ export const createFetchUrlContentError = ({
     fetchError.code = code
     fetchError.reason = reason
     fetchError.url = urlInfo.url
-    fetchError.traceUrl = reference.trace.url
-    fetchError.traceLine = reference.trace.line
-    fetchError.traceColumn = reference.trace.column
-    fetchError.traceMessage = reference.trace.message
+    if (code === "PARSE_ERROR") {
+      fetchError.traceUrl = error.traceUrl
+      fetchError.traceLine = error.traceLine
+      fetchError.traceColumn = error.traceColumn
+      fetchError.traceMessage = error.traceMessage
+    } else {
+      fetchError.traceUrl = reference.trace.url
+      fetchError.traceLine = reference.trace.line
+      fetchError.traceColumn = reference.trace.column
+      fetchError.traceMessage = reference.trace.message
+    }
     fetchError.asResponse = error.asResponse
     return fetchError
   }
@@ -85,6 +92,14 @@ export const createFetchUrlContentError = ({
     return createFailedToFetchUrlContentError({
       code: "NOT_FOUND",
       reason: "no entry on filesystem",
+    })
+  }
+  if (error.code === "PARSE_ERROR") {
+    return createFailedToFetchUrlContentError({
+      "code": "PARSE_ERROR",
+      "reason": error.reason,
+      "parse error message": error.cause.message,
+      "parse error trace": error.traceMessage,
     })
   }
   return createFailedToFetchUrlContentError({
@@ -126,7 +141,8 @@ export const createTransformUrlContentError = ({
     transformError.traceColumn = reference.trace.column
     transformError.traceMessage = reference.trace.message
     if (code === "PARSE_ERROR") {
-      transformError.reason = reason
+      transformError.reason = `parse error on ${urlInfo.type}`
+      transformError.cause = error
       if (urlInfo.isInline) {
         transformError.traceLine = reference.trace.line + error.line - 1
         transformError.traceColumn = reference.trace.column + error.column

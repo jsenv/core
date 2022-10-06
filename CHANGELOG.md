@@ -1,3 +1,8 @@
+# 29.1.11
+
+- Gracefully handle syntax error occuring inside "as_js_classic_library"
+- Better handling of 404 inside "as_js_classic_library"
+
 # 29.1.10
 
 - Prevent duplicate files when file referenced by new URL() + dynamic import

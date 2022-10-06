@@ -167,7 +167,11 @@ export const jsenvPluginAsJsClassicHtml = ({
                 }
               } catch (e) {
                 if (context.scenarios.dev) {
+                  needsSystemJs = true
                   // ignore cooking error, the browser will trigger it again on fetch
+                  // + disable cache for this html file because when browser will reload
+                  // the error might be gone and we might need to inject systemjs
+                  urlInfo.headers["cache-control"] = "no-store"
                 } else {
                   throw e
                 }

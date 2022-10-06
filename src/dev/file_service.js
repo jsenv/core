@@ -361,16 +361,31 @@ export const createFileService = ({
       }
       const code = originalError.code
       if (code === "PARSE_ERROR") {
+        // when possible let browser re-throw the syntax error
+        // it's not possible to do that when url info content is not available
+        // (happens for as_js_classic library for instance)
+        if (urlInfo.content !== undefined) {
+          return {
+            url: reference.url,
+            status: 200,
+            // reason becomes the http response statusText, it must not contain invalid chars
+            // https://github.com/nodejs/node/blob/0c27ca4bc9782d658afeaebcec85ec7b28f1cc35/lib/_http_common.js#L221
+            statusText: e.reason,
+            statusMessage: originalError.message,
+            headers: {
+              "content-type": urlInfo.contentType,
+              "content-length": Buffer.byteLength(urlInfo.content),
+              "cache-control": "no-store",
+            },
+            body: urlInfo.content,
+          }
+        }
         return {
           url: reference.url,
-          status: 200, // let the browser re-throw the syntax error
-          // reason becomes the http response statusText, it must not contain invalid chars
-          // https://github.com/nodejs/node/blob/0c27ca4bc9782d658afeaebcec85ec7b28f1cc35/lib/_http_common.js#L221
+          status: 500,
           statusText: e.reason,
           statusMessage: originalError.message,
           headers: {
-            "content-type": urlInfo.contentType,
-            "content-length": Buffer.byteLength(urlInfo.content),
             "cache-control": "no-store",
           },
           body: urlInfo.content,
