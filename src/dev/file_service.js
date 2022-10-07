@@ -334,9 +334,13 @@ export const createFileService = ({
         url: reference.url,
         status: 200,
         headers: {
-          "cache-control": `private,max-age=0,must-revalidate`,
-          // it's safe to use "_" separator because etag is encoded with base64 (see https://stackoverflow.com/a/13195197)
-          "eTag": `${urlInfoTargetedByCache.originalContentEtag}_${urlInfoTargetedByCache.contentEtag}`,
+          ...(urlInfo.headers["cache-control"] === "no-store"
+            ? {}
+            : {
+                "cache-control": `private,max-age=0,must-revalidate`,
+                // it's safe to use "_" separator because etag is encoded with base64 (see https://stackoverflow.com/a/13195197)
+                "eTag": `${urlInfoTargetedByCache.originalContentEtag}_${urlInfoTargetedByCache.contentEtag}`,
+              }),
           ...urlInfo.headers,
           "content-type": urlInfo.contentType,
           "content-length": Buffer.byteLength(urlInfo.content),

@@ -1,3 +1,7 @@
+# 29.1.13
+
+- Do not send eTag when a plugin set cache-control:no-store
+
 # 29.1.12
 
 - Fix a bug when node imports subpath resolution is involved

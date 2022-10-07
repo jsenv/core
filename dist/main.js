@@ -7060,7 +7060,7 @@ const fetchFileSystem = async (filesystemUrl, {
 
     rootDirectoryUrl = rootDirectoryUrlString;
   } // here you might be tempted to add || cacheControl === 'no-cache'
-  // but no-cache means resource can be cache but must be revalidated (yeah naming is strange)
+  // but no-cache means resource can be cached but must be revalidated (yeah naming is strange)
   // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#Cacheability
 
 
@@ -25759,10 +25759,11 @@ const createFileService = ({
       response = {
         url: reference.url,
         status: 200,
-        headers: {
-          "cache-control": `private,max-age=0,must-revalidate`,
-          // it's safe to use "_" separator because etag is encoded with base64 (see https://stackoverflow.com/a/13195197)
-          "eTag": `${urlInfoTargetedByCache.originalContentEtag}_${urlInfoTargetedByCache.contentEtag}`,
+        headers: { ...(urlInfo.headers["cache-control"] === "no-store" ? {} : {
+            "cache-control": `private,max-age=0,must-revalidate`,
+            // it's safe to use "_" separator because etag is encoded with base64 (see https://stackoverflow.com/a/13195197)
+            "eTag": `${urlInfoTargetedByCache.originalContentEtag}_${urlInfoTargetedByCache.contentEtag}`
+          }),
           ...urlInfo.headers,
           "content-type": urlInfo.contentType,
           "content-length": Buffer.byteLength(urlInfo.content)

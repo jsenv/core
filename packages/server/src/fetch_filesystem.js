@@ -64,7 +64,7 @@ export const fetchFileSystem = async (
   }
 
   // here you might be tempted to add || cacheControl === 'no-cache'
-  // but no-cache means resource can be cache but must be revalidated (yeah naming is strange)
+  // but no-cache means resource can be cached but must be revalidated (yeah naming is strange)
   // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#Cacheability
   if (cacheControl === "no-store") {
     if (etagEnabled) {
