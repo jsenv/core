@@ -29978,7 +29978,7 @@ const jsenvPluginInjectGlobals = urlAssociations => {
   return {
     name: "jsenv:inject_globals",
     appliesDuring: "*",
-    transformUrlContent: async urlInfo => {
+    transformUrlContent: async (urlInfo, context) => {
       const url = Object.keys(urlAssociations).find(url => {
         return url === urlInfo.url;
       });
@@ -29990,7 +29990,7 @@ const jsenvPluginInjectGlobals = urlAssociations => {
       let globals = urlAssociations[url];
 
       if (typeof globals === "function") {
-        globals = await globals();
+        globals = await globals(urlInfo, context);
       }
 
       if (Object.keys(globals).length === 0) {

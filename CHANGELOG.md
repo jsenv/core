@@ -1,3 +1,7 @@
+# 29.1.17
+
+- Pass (urlInfo, context) to jsenvPluginGlobals
+
 # 29.1.16
 
 - Add "findDependent(urlInfo, callback)" to context.urlGraph
