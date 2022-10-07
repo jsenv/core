@@ -1,3 +1,7 @@
+# 29.1.14
+
+- Same as previous on cache-control:no-cache
+
 # 29.1.13
 
 - Do not send eTag when a plugin set cache-control:no-store

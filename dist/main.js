@@ -25759,7 +25759,12 @@ const createFileService = ({
       response = {
         url: reference.url,
         status: 200,
-        headers: { ...(urlInfo.headers["cache-control"] === "no-store" ? {} : {
+        headers: { // when we send eTag to the client the next request to the server
+          // will send etag in request headers.
+          // If they match jsenv bypass cooking and returns 304
+          // This must not happen when a plugin uses "no-store" or "no-cache" as it means
+          // plugin logic wants to happens for every request to this url
+          ...(urlInfo.headers["cache-control"] === "no-store" || urlInfo.headers["cache-control"] === "no-cache" ? {} : {
             "cache-control": `private,max-age=0,must-revalidate`,
             // it's safe to use "_" separator because etag is encoded with base64 (see https://stackoverflow.com/a/13195197)
             "eTag": `${urlInfoTargetedByCache.originalContentEtag}_${urlInfoTargetedByCache.contentEtag}`
