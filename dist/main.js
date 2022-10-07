@@ -7913,13 +7913,9 @@ const createUrlGraph = () => {
     return firstReferenceOnThatUrl;
   };
 
-  const visitDependents = (urlInfo, visitor) => {
+  const findDependent = (urlInfo, visitor) => {
     const seen = [urlInfo.url];
-    let stopped = false;
-
-    const stop = () => {
-      stopped = true;
-    };
+    let found = null;
 
     const iterate = currentUrlInfo => {
       for (const dependentUrl of currentUrlInfo.dependents) {
@@ -7927,21 +7923,27 @@ const createUrlGraph = () => {
           continue;
         }
 
+        if (found) {
+          break;
+        }
+
         seen.push(dependentUrl);
         const dependentUrlInfo = getUrlInfo(dependentUrl);
-        visitor(dependentUrlInfo, stop);
 
-        if (stopped) {
-          return dependentUrlInfo;
+        if (visitor(dependentUrlInfo)) {
+          found = dependentUrlInfo;
+        }
+
+        if (found) {
+          break;
         }
 
         iterate(dependentUrlInfo);
       }
-
-      return null;
     };
 
-    return iterate(urlInfo);
+    iterate(urlInfo);
+    return found;
   };
 
   const updateReferences = (urlInfo, references) => {
@@ -8092,7 +8094,7 @@ const createUrlGraph = () => {
     inferReference,
     updateReferences,
     considerModified,
-    visitDependents,
+    findDependent,
     toObject: () => {
       const data = {};
       urlInfoMap.forEach(urlInfo => {

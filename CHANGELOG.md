@@ -1,3 +1,7 @@
+# 29.1.16
+
+- Add "findDependent(urlInfo, callback)" to context.urlGraph
+
 # 29.1.15
 
 - Update s.js to fix a bug on concurrent async execution
