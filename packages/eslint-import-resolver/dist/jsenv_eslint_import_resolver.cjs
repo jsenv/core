@@ -8,17 +8,6 @@ var node_fs = require('fs');
 require('crypto');
 require('path');
 
-const urlToFileSystemPath = (url) => {
-  let urlString = String(url);
-  if (urlString[urlString.length - 1] === "/") {
-    // remove trailing / so that nodejs path becomes predictable otherwise it logs
-    // the trailing slash on linux but does not on windows
-    urlString = urlString.slice(0, -1);
-  }
-  const fileSystemPath = node_url.fileURLToPath(urlString);
-  return fileSystemPath
-};
-
 const ensurePathnameTrailingSlash = (url) => {
   const urlObject = new URL(url);
   const { pathname } = urlObject;
@@ -61,6 +50,17 @@ const fileSystemPathToUrl = (value) => {
     throw new Error(`value must be a filesystem path, got ${value}`)
   }
   return String(node_url.pathToFileURL(value))
+};
+
+const urlToFileSystemPath = (url) => {
+  let urlString = String(url);
+  if (urlString[urlString.length - 1] === "/") {
+    // remove trailing / so that nodejs path becomes predictable otherwise it logs
+    // the trailing slash on linux but does not on windows
+    urlString = urlString.slice(0, -1);
+  }
+  const fileSystemPath = node_url.fileURLToPath(urlString);
+  return fileSystemPath
 };
 
 const assertAndNormalizeDirectoryUrl = (value) => {
@@ -185,10 +185,10 @@ const ensureWindowsDriveLetter = (url, baseUrl) => {
   return `file:///${driveLetter}:${afterProtocol}`
 };
 
-const extractDriveLetter = (ressource) => {
+const extractDriveLetter = (resource) => {
   // we still have the windows drive letter
-  if (/[a-zA-Z]/.test(ressource[1]) && ressource[2] === ":") {
-    return ressource[1]
+  if (/[a-zA-Z]/.test(resource[1]) && resource[2] === ":") {
+    return resource[1]
   }
   return null
 };
@@ -368,24 +368,21 @@ const getParentUrl = (url) => {
   if (url.startsWith("file://")) {
     // With node.js new URL('../', 'file:///C:/').href
     // returns "file:///C:/" instead of "file:///"
-    const ressource = url.slice("file://".length);
-    const slashLastIndex = ressource.lastIndexOf("/");
+    const resource = url.slice("file://".length);
+    const slashLastIndex = resource.lastIndexOf("/");
     if (slashLastIndex === -1) {
       return url
     }
-    const lastCharIndex = ressource.length - 1;
+    const lastCharIndex = resource.length - 1;
     if (slashLastIndex === lastCharIndex) {
-      const slashBeforeLastIndex = ressource.lastIndexOf(
-        "/",
-        slashLastIndex - 1,
-      );
+      const slashBeforeLastIndex = resource.lastIndexOf("/", slashLastIndex - 1);
       if (slashBeforeLastIndex === -1) {
         return url
       }
-      return `file://${ressource.slice(0, slashBeforeLastIndex + 1)}`
+      return `file://${resource.slice(0, slashBeforeLastIndex + 1)}`
     }
 
-    return `file://${ressource.slice(0, slashLastIndex + 1)}`
+    return `file://${resource.slice(0, slashLastIndex + 1)}`
   }
   return new URL(url.endsWith("/") ? "../" : "./", url).href
 };
@@ -540,7 +537,7 @@ const readCustomConditionsFromProcessArgs = () => {
       packageConditions.push(packageCondition);
     }
     if (arg.includes("--conditions=")) {
-      const packageCondition = arg.slice(0, "--conditions=".length);
+      const packageCondition = arg.slice("--conditions=".length);
       packageConditions.push(packageCondition);
     }
   });
@@ -709,7 +706,7 @@ const applyBrowserFieldResolution = ({
   }
   if (url) {
     return {
-      type: "browser",
+      type: "field:browser",
       packageUrl,
       packageJson,
       url,
@@ -1050,7 +1047,7 @@ const applyPackageTargetResolution = ({
         })
       }
       return {
-        type: internal ? "imports_subpath" : "exports_subpath",
+        type: internal ? "field:imports" : "field:exports",
         packageUrl,
         packageJson,
         url: pattern
@@ -1303,7 +1300,7 @@ const applyLegacyMainResolution = ({ conditions, packageUrl, packageJson }) => {
     }
   }
   return {
-    type: "default",
+    type: "field:main", // the absence of "main" field
     packageUrl,
     packageJson,
     url: new URL("index.js", packageUrl).href,
@@ -1312,28 +1309,34 @@ const applyLegacyMainResolution = ({ conditions, packageUrl, packageJson }) => {
 const mainLegacyResolvers = {
   import: (packageJson) => {
     if (typeof packageJson.module === "string") {
-      return { type: "module", path: packageJson.module }
+      return { type: "field:module", path: packageJson.module }
     }
     if (typeof packageJson.jsnext === "string") {
-      return { type: "jsnext", path: packageJson.jsnext }
+      return { type: "field:jsnext", path: packageJson.jsnext }
     }
     if (typeof packageJson.main === "string") {
-      return { type: "main", path: packageJson.main }
+      return { type: "field:main", path: packageJson.main }
     }
     return null
   },
   browser: (packageJson, packageUrl) => {
-    const browserMain =
-      typeof packageJson.browser === "string"
-        ? packageJson.browser
-        : typeof packageJson.browser === "object" &&
-          packageJson.browser !== null
-        ? packageJson.browser["."]
-        : "";
+    const browserMain = (() => {
+      if (typeof packageJson.browser === "string") {
+        return packageJson.browser
+      }
+      if (
+        typeof packageJson.browser === "object" &&
+        packageJson.browser !== null
+      ) {
+        return packageJson.browser["."]
+      }
+      return ""
+    })();
+
     if (!browserMain) {
       if (typeof packageJson.module === "string") {
         return {
-          type: "module",
+          type: "field:module",
           path: packageJson.module,
         }
       }
@@ -1344,7 +1347,7 @@ const mainLegacyResolvers = {
       packageJson.module === browserMain
     ) {
       return {
-        type: "browser",
+        type: "field:browser",
         path: browserMain,
       }
     }
@@ -1356,19 +1359,19 @@ const mainLegacyResolvers = {
       /module\.exports\s*=/.test(content)
     ) {
       return {
-        type: "module",
+        type: "field:module",
         path: packageJson.module,
       }
     }
     return {
-      type: "browser",
+      type: "field:browser",
       path: browserMain,
     }
   },
   node: (packageJson) => {
     if (typeof packageJson.main === "string") {
       return {
-        type: "main",
+        type: "field:main",
         path: packageJson.main,
       }
     }
@@ -1377,10 +1380,10 @@ const mainLegacyResolvers = {
 };
 
 const comparePatternKeys = (keyA, keyB) => {
-  if (!keyA.endsWith("/") && !keyA.contains("*")) {
+  if (!keyA.endsWith("/") && !keyA.includes("*")) {
     throw new Error("Invalid package configuration")
   }
-  if (!keyB.endsWith("/") && !keyB.contains("*")) {
+  if (!keyB.endsWith("/") && !keyB.includes("*")) {
     throw new Error("Invalid package configuration")
   }
   const aStarIndex = keyA.indexOf("*");
@@ -1625,19 +1628,20 @@ const error = console.error;
 
 const errorDisabled = () => {};
 
+// duplicated from @jsenv/log to avoid the dependency
 const createDetailedMessage = (message, details = {}) => {
   let string = `${message}`;
 
   Object.keys(details).forEach((key) => {
     const value = details[key];
     string += `
---- ${key} ---
-${
-  Array.isArray(value)
-    ? value.join(`
-`)
-    : value
-}`;
+    --- ${key} ---
+    ${
+      Array.isArray(value)
+        ? value.join(`
+    `)
+        : value
+    }`;
   });
 
   return string

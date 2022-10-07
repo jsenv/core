@@ -1,3 +1,7 @@
+# 29.1.12
+
+- Fix a bug when node imports subpath resolution is involved
+
 # 29.1.11
 
 - Gracefully handle syntax error occuring inside "as_js_classic_library"
