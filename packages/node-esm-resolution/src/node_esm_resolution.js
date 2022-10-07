@@ -848,10 +848,10 @@ const mainLegacyResolvers = {
 }
 
 const comparePatternKeys = (keyA, keyB) => {
-  if (!keyA.endsWith("/") && !keyA.contains("*")) {
+  if (!keyA.endsWith("/") && !keyA.includes("*")) {
     throw new Error("Invalid package configuration")
   }
-  if (!keyB.endsWith("/") && !keyB.contains("*")) {
+  if (!keyB.endsWith("/") && !keyB.includes("*")) {
     throw new Error("Invalid package configuration")
   }
   const aStarIndex = keyA.indexOf("*")

@@ -1,0 +1,9 @@
+{
+  "name": "test",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#fire/*": "./fire/*",
+    "#water/*": "./water/*"
+  }
+}
