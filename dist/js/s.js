@@ -580,6 +580,8 @@ function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function"
       } // deps execute first, unless circular
 
 
+      var execute = load.execute;
+      load.execute = null;
       var depLoadPromises = [];
       load.dependencyLoads.forEach(function (dependencyLoad) {
         try {
@@ -591,7 +593,6 @@ function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function"
             depLoadPromises.push(depLoadPromise);
           }
         } catch (err) {
-          load.execute = null;
           load.error = err;
           throw err;
         }
@@ -604,7 +605,7 @@ function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function"
           }
         }, function () {
           try {
-            var executeReturnValue = load.execute.call(nullContext);
+            var executeReturnValue = execute.call(nullContext);
 
             if (executeReturnValue) {
               load.executePromise = executeReturnValue.then(function () {

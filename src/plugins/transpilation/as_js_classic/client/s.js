@@ -320,7 +320,7 @@
   const startExecution = async (load, importerUrl) => {
     load.completionPromise = (async () => {
       await instantiateAll(load, load, {})
-      await postOrderExec(load, importerUrl ? [importerUrl]: [])
+      await postOrderExec(load, importerUrl ? [importerUrl] : [])
       return load.namespace
     })()
     return load.completionPromise
@@ -365,6 +365,8 @@
     }
 
     // deps execute first, unless circular
+    const execute = load.execute
+    load.execute = null
     const depLoadPromises = []
     load.dependencyLoads.forEach((dependencyLoad) => {
       try {
@@ -375,7 +377,6 @@
           depLoadPromises.push(depLoadPromise)
         }
       } catch (err) {
-        load.execute = null
         load.error = err
         throw err
       }
@@ -386,9 +387,9 @@
         const allDepPromise = Promise.all(depLoadPromises)
         await allDepPromise
       }
-  
+
       try {
-        const executeReturnValue = load.execute.call(nullContext)
+        const executeReturnValue = execute.call(nullContext)
         if (executeReturnValue) {
           load.executePromise = executeReturnValue.then(
             () => {
@@ -435,4 +436,4 @@
           return namespace
         }
       : () => Object.create(null)
-})();
+})()

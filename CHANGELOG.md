@@ -1,3 +1,7 @@
+# 29.1.15
+
+- Update s.js to fix a bug on concurrent async execution
+
 # 29.1.14
 
 - Same as previous on cache-control:no-cache
