@@ -157,6 +157,9 @@ const isNewBlobCall = (node) => {
 }
 const analyzeNewBlobCall = (node, { onInlineContentInfo }) => {
   const firstArg = node.arguments[0]
+  if (!firstArg) {
+    return
+  }
   if (firstArg.type !== "ArrayExpression") {
     return
   }

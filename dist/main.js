@@ -11761,6 +11761,10 @@ const analyzeNewBlobCall = (node, {
 }) => {
   const firstArg = node.arguments[0];
 
+  if (!firstArg) {
+    return;
+  }
+
   if (firstArg.type !== "ArrayExpression") {
     return;
   }

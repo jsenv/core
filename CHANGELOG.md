@@ -1,3 +1,7 @@
+# 29.1.18
+
+- Do not throw when source code use new Blob() without argument
+
 # 29.1.17
 
 - Pass (urlInfo, context) to jsenvPluginGlobals
