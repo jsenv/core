@@ -1,20 +1,18 @@
 /* eslint-disable eqeqeq, no-eq-null */
-import unsupportedIterableToArray from "../unsupportedIterableToArray/unsupportedIterableToArray.js"; // s: start (create the iterator)
+import unsupportedIterableToArray from "../unsupportedIterableToArray/unsupportedIterableToArray.js";
+
+// s: start (create the iterator)
 // n: next
 // e: error (called whenever something throws)
 // f: finish (always called at the end)
-
 export default function _createForOfIteratorHelper(o, allowArrayLike) {
   var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"];
-
   if (!it) {
     // Fallback for engines without symbol support
     if (Array.isArray(o) || (it = unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") {
       if (it) o = it;
       var i = 0;
-
       var F = function () {};
-
       return {
         s: F,
         n: function () {
@@ -32,13 +30,11 @@ export default function _createForOfIteratorHelper(o, allowArrayLike) {
         f: F
       };
     }
-
     throw new TypeError("Invalid attempt to iterate non-iterable instance.\\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
   }
-
   var normalCompletion = true,
-      didErr = false,
-      err;
+    didErr = false,
+    err;
   return {
     s: function () {
       it = it.call(o);

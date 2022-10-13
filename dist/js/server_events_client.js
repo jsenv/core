@@ -16,23 +16,18 @@ const createConnectionManager = (attemptConnection, {
       if (value === readyState.value) {
         return;
       }
-
       readyState.value = value;
       readyState.onchange();
     },
     onchange: () => {}
   };
-
   let _disconnect = () => {};
-
   const connect = () => {
     if (readyState.value === READY_STATES.CONNECTING || readyState.value === READY_STATES.OPEN) {
       return;
     }
-
     let retryCount = 0;
     let msSpent = 0;
-
     const attempt = () => {
       readyState.goTo(READY_STATES.CONNECTING);
       _disconnect = attemptConnection({
@@ -42,26 +37,23 @@ const createConnectionManager = (attemptConnection, {
             console.info(`[jsenv] failed to connect to server`);
             return;
           }
-
           if (retryCount > retryMaxAttempt) {
             readyState.goTo(READY_STATES.CLOSED);
             console.info(`[jsenv] could not connect to server after ${retryMaxAttempt} attempt`);
             return;
           }
-
           if (retryAllocatedMs && msSpent > retryAllocatedMs) {
             readyState.goTo(READY_STATES.CLOSED);
             console.info(`[jsenv] could not connect to server in less than ${retryAllocatedMs}ms`);
             return;
-          } // if closed while open -> connection lost
+          }
+
+          // if closed while open -> connection lost
           // otherwise it's the attempt to connect for the first time
           // or to reconnect
-
-
           if (readyState.value === READY_STATES.OPEN) {
             console.info(`[jsenv] server connection lost; retrying to connect`);
           }
-
           retryCount++;
           setTimeout(() => {
             msSpent += retryAfter;
@@ -69,23 +61,21 @@ const createConnectionManager = (attemptConnection, {
           }, retryAfter);
         },
         onOpen: () => {
-          readyState.goTo(READY_STATES.OPEN); // console.info(`[jsenv] connected to server`)
+          readyState.goTo(READY_STATES.OPEN);
+          // console.info(`[jsenv] connected to server`)
         }
       });
     };
 
     attempt();
   };
-
   const disconnect = () => {
     if (readyState.value !== READY_STATES.CONNECTING && readyState.value !== READY_STATES.OPEN) {
       console.warn(`disconnect() ignored because connection is ${readyState.value}`);
       return null;
     }
-
     return _disconnect();
   };
-
   const removePageUnloadListener = listenPageUnload(() => {
     if (readyState.value === READY_STATES.CONNECTING || readyState.value === READY_STATES.OPEN) {
       _disconnect();
@@ -100,7 +90,9 @@ const createConnectionManager = (attemptConnection, {
       disconnect();
     }
   };
-}; // const listenPageMightFreeze = (callback) => {
+};
+
+// const listenPageMightFreeze = (callback) => {
 //   const removePageHideListener = listenEvent(window, "pagehide", (pageHideEvent) => {
 //     if (pageHideEvent.persisted === true) {
 //       callback(pageHideEvent)
@@ -108,12 +100,14 @@ const createConnectionManager = (attemptConnection, {
 //   })
 //   return removePageHideListener
 // }
+
 // const listenPageFreeze = (callback) => {
 //   const removeFreezeListener = listenEvent(document, "freeze", (freezeEvent) => {
 //     callback(freezeEvent)
 //   })
 //   return removeFreezeListener
 // }
+
 // const listenPageIsRestored = (callback) => {
 //   const removeResumeListener = listenEvent(document, "resume", (resumeEvent) => {
 //     removePageshowListener()
@@ -140,7 +134,6 @@ const listenPageUnload = callback => {
   });
   return removePageHideListener;
 };
-
 const listenEvent = (emitter, event, callback) => {
   emitter.addEventListener(event, callback);
   return () => {
@@ -153,28 +146,23 @@ const createEventsManager = ({
 } = {}) => {
   const callbacksMap = new Map();
   let cleanup;
-
   const addCallbacks = namedCallbacks => {
     let callbacksMapSize = callbacksMap.size;
     Object.keys(namedCallbacks).forEach(eventName => {
       const callback = namedCallbacks[eventName];
       const existingCallbacks = callbacksMap.get(eventName);
       let callbacks;
-
       if (existingCallbacks) {
         callbacks = existingCallbacks;
       } else {
         callbacks = [];
         callbacksMap.set(eventName, callbacks);
       }
-
       callbacks.push(callback);
     });
-
     if (effect && callbacksMapSize === 0 && callbacksMapSize.size > 0) {
       cleanup = effect();
     }
-
     let removed = false;
     return () => {
       if (removed) return;
@@ -183,13 +171,10 @@ const createEventsManager = ({
       Object.keys(namedCallbacks).forEach(eventName => {
         const callback = namedCallbacks[eventName];
         const callbacks = callbacksMap.get(eventName);
-
         if (callbacks) {
           const index = callbacks.indexOf(callback);
-
           if (index > -1) {
             callbacks.splice(index, 1);
-
             if (callbacks.length === 0) {
               callbacksMap.delete(eventName);
             }
@@ -197,33 +182,27 @@ const createEventsManager = ({
         }
       });
       namedCallbacks = null; // allow garbage collect
-
       if (cleanup && typeof cleanup === "function" && callbacksMapSize > 0 && callbacksMapSize.size === 0) {
         cleanup();
         cleanup = null;
       }
     };
   };
-
   const triggerCallbacks = event => {
     const callbacks = callbacksMap.get(event.type);
-
     if (callbacks) {
       callbacks.forEach(callback => {
         callback(event);
       });
     }
   };
-
   const destroy = () => {
     callbacksMap.clear();
-
     if (cleanup) {
       cleanup();
       cleanup = null;
     }
   };
-
   return {
     addCallbacks,
     triggerCallbacks,
@@ -245,7 +224,6 @@ const createWebSocketConnection = (websocketUrl, {
   }) => {
     let socket = new WebSocket(websocketUrl, protocols);
     let interval;
-
     const cleanup = () => {
       if (socket) {
         socket.onerror = null;
@@ -256,12 +234,10 @@ const createWebSocketConnection = (websocketUrl, {
         clearInterval(interval);
       }
     };
-
     socket.onerror = () => {
       cleanup();
       onClosed();
     };
-
     socket.onopen = () => {
       socket.onopen = null;
       onOpen();
@@ -269,17 +245,14 @@ const createWebSocketConnection = (websocketUrl, {
         socket.send('{"type":"ping"}');
       }, 30_000);
     };
-
     socket.onclose = () => {
       cleanup();
       onClosed();
     };
-
     socket.onmessage = messageEvent => {
       const event = JSON.parse(messageEvent.data);
       eventsManager.triggerCallbacks(event);
     };
-
     return () => {
       if (socket) {
         socket.close();
@@ -300,7 +273,6 @@ const createWebSocketConnection = (websocketUrl, {
           connectionManager.disconnect();
         };
       }
-
       return null;
     }
   });

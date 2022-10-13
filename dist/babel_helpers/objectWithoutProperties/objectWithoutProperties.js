@@ -4,10 +4,8 @@ export default ((source, excluded) => {
   var target = objectWithoutPropertiesLoose(source, excluded);
   var key;
   var i;
-
   if (Object.getOwnPropertySymbols) {
     var sourceSymbolKeys = Object.getOwnPropertySymbols(source);
-
     for (i = 0; i < sourceSymbolKeys.length; i++) {
       key = sourceSymbolKeys[i];
       if (excluded.indexOf(key) >= 0) continue;
@@ -15,6 +13,5 @@ export default ((source, excluded) => {
       target[key] = source[key];
     }
   }
-
   return target;
 });

@@ -1,3 +1,7 @@
+# 29.2.0
+
+- Update rollup to 3.1.0
+
 # 29.1.18
 
 - Do not throw when source code use new Blob() without argument

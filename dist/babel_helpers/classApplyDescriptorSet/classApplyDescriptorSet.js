@@ -8,7 +8,6 @@ export default function _classApplyDescriptorSet(receiver, descriptor, value) {
       // class bodies.
       throw new TypeError("attempted to set read only private field");
     }
-
     descriptor.value = value;
   }
 }

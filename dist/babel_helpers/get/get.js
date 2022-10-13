@@ -7,15 +7,12 @@ export default function _get() {
       var base = superPropBase(target, property);
       if (!base) return;
       var desc = Object.getOwnPropertyDescriptor(base, property);
-
       if (desc.get) {
         // STEP 3. If receiver is not present, then set receiver to target.
         return desc.get.call(arguments.length < 3 ? target : receiver);
       }
-
       return desc.value;
     };
   }
-
   return _get.apply(this, arguments);
 }
