@@ -43,7 +43,7 @@ jobs:
       - name: Install node modules
         run: npm install
       - name: Install playwright
-        run: npm run playwright-install
+        run: npm run playwright:install
       - name: Install certificate # needed for @jsenv/server tests
         if: runner.os == 'Linux'
         run: node ./packages/server/scripts/certificate_install.mjs

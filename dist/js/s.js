@@ -1,5 +1,4 @@
 function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof2(obj); }
-
 (function (global, factory) {
   if (typeof define === "function" && define.amd) {
     define([], factory);
@@ -13,12 +12,12 @@ function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function"
     global.s = mod.exports;
   }
 })(typeof globalThis !== "undefined" ? globalThis : typeof self !== "undefined" ? self : this, function () {
-  "use strict"; // eslint-disable-next-line consistent-return
+  "use strict";
 
+  // eslint-disable-next-line consistent-return
   var arrayWithHoles = function arrayWithHoles(arr) {
     if (Array.isArray(arr)) return arr;
   };
-
   function _iterableToArrayLimit(arr, i) {
     // this is an expanded form of \`for...of\` that properly supports abrupt completions of
     // iterators etc. variable names have been minimised to reduce the size of this massive
@@ -30,18 +29,14 @@ function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function"
     // _i = _iterator
     // _s = _step
     var _i = arr == null ? null : typeof Symbol !== "undefined" && arr[Symbol.iterator] || arr["@@iterator"];
-
     if (_i == null) return;
     var _arr = [];
     var _n = true;
     var _d = false;
-
     var _s, _e;
-
     try {
       for (_i = _i.call(arr); !(_n = (_s = _i.next()).done); _n = true) {
         _arr.push(_s.value);
-
         if (i && _arr.length === i) break;
       }
     } catch (err) {
@@ -54,25 +49,20 @@ function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function"
         if (_d) throw _e;
       }
     }
-
     return _arr;
   }
+
   /* eslint-disable no-eq-null, eqeqeq */
-
-
   function arrayLikeToArray(arr, len) {
     if (len == null || len > arr.length) len = arr.length;
     var arr2 = new Array(len);
-
     for (var i = 0; i < len; i++) {
       arr2[i] = arr[i];
     }
-
     return arr2;
   }
+
   /* eslint-disable consistent-return */
-
-
   function unsupportedIterableToArray(o, minLen) {
     if (!o) return;
     if (typeof o === "string") return arrayLikeToArray(o, minLen);
@@ -81,24 +71,20 @@ function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function"
     if (n === "Map" || n === "Set") return Array.from(o);
     if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return arrayLikeToArray(o, minLen);
   }
-
   var nonIterableRest = function nonIterableRest() {
     throw new TypeError("Invalid attempt to destructure non-iterable instance.\\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
   };
-
   var _slicedToArray = function _slicedToArray(arr, i) {
     return arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || unsupportedIterableToArray(arr, i) || nonIterableRest();
   };
-
   var nativeTypeOf = function nativeTypeOf(obj) {
     return _typeof2(obj);
   };
-
   var customTypeOf = function customTypeOf(obj) {
     return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : _typeof2(obj);
   };
-
   var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? nativeTypeOf : customTypeOf;
+
   /*
    * This file is a modified version of https://github.com/systemjs/systemjs/blob/main/dist/s.js
    * with the following changes:
@@ -111,25 +97,20 @@ function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function"
    * - no support for importmap because jsenv don't need it
    */
 
-
   function _await(value, then, direct) {
     if (direct) {
       return then ? then(value) : value;
     }
-
     if (!value || !value.then) {
       value = Promise.resolve(value);
     }
-
     return then ? value.then(then) : value;
   }
-
   function _async(f) {
     return function () {
       for (var args = [], i = 0; i < arguments.length; i++) {
         args[i] = arguments[i];
       }
-
       try {
         return Promise.resolve(f.apply(this, args));
       } catch (e) {
@@ -137,43 +118,34 @@ function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function"
       }
     };
   }
-
   function _empty() {}
-
   function _awaitIgnored(value, direct) {
     if (!direct) {
       return value && value.then ? value.then(_empty) : Promise.resolve();
     }
   }
-
   function _invoke(body, then) {
     var result = body();
-
     if (result && result.then) {
       return result.then(then);
     }
-
     return then(result);
   }
-
   function _catch(body, recover) {
     try {
       var result = body();
     } catch (e) {
       return recover(e);
     }
-
     if (result && result.then) {
       return result.then(void 0, recover);
     }
-
     return result;
   }
-
   (function () {
     /* eslint-env browser */
-
     /* globals self */
+
     var loadRegistry = Object.create(null);
     var registerRegistry = Object.create(null);
     var inlineScriptCount = 0;
@@ -185,48 +157,38 @@ function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function"
     envGlobal.System = System;
     var baseUrl = envGlobal.location.href.split("#")[0].split("?")[0];
     var lastSlashIndex = baseUrl.lastIndexOf("/");
-
     if (lastSlashIndex !== -1) {
       baseUrl = baseUrl.slice(0, lastSlashIndex + 1);
     }
-
     var resolveUrl = function resolveUrl(specifier, baseUrl) {
       return new URL(specifier, baseUrl).href;
     };
-
     if (hasDocument) {
       var baseElement = document.querySelector("base[href]");
-
       if (baseElement) {
         baseUrl = baseElement.href;
       }
-
       System.register = function (deps, declare) {
         if (!document.currentScript) {
           throw new Error("unexpected call to System.register (document.currentScript is undefined)");
         }
-
         if (document.currentScript.__s__) {
           registerRegistry[document.currentScript.src] = [deps, declare];
           return null;
         }
-
         var url = document.currentScript.src || "".concat(window.location.href, "__inline_script__").concat(++inlineScriptCount);
         registerRegistry[url] = [deps, declare];
         return _import2(url);
       };
-
       System.instantiate = function (url) {
         var script = createScript(url);
         return new Promise(function (resolve, reject) {
           var lastWindowErrorUrl;
           var lastWindowError;
-
           var windowErrorCallback = function windowErrorCallback(event) {
             lastWindowErrorUrl = event.filename;
             lastWindowError = event.error;
           };
-
           window.addEventListener("error", windowErrorCallback);
           script.addEventListener("error", function () {
             window.removeEventListener("error", windowErrorCallback);
@@ -234,9 +196,9 @@ function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function"
           });
           script.addEventListener("load", function () {
             window.removeEventListener("error", windowErrorCallback);
-            document.head.removeChild(script); // Note that if an error occurs that isn't caught by this if statement,
+            document.head.removeChild(script);
+            // Note that if an error occurs that isn't caught by this if statement,
             // that getRegister will return null and a "did not instantiate" error will be thrown.
-
             if (lastWindowErrorUrl === url) {
               reject(lastWindowError);
             } else {
@@ -246,23 +208,20 @@ function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function"
           document.head.appendChild(script);
         });
       };
-
       var createScript = function createScript(url) {
         var script = document.createElement("script");
-        script.async = true; // Only add cross origin for actual cross origin
+        script.async = true;
+        // Only add cross origin for actual cross origin
         // this is because Safari triggers for all
         // - https://bugs.webkit.org/show_bug.cgi?id=171566
-
         if (url.indexOf("".concat(self.location.origin, "/"))) {
           script.crossOrigin = "anonymous";
         }
-
         script.__s__ = true;
         script.src = url;
         return script;
       };
     }
-
     if (isWorker) {
       /*
        * SystemJs loads X files before executing the worker/service worker main file
@@ -273,7 +232,6 @@ function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function"
        * once the worker file is executed (the listeners are installed)
        */
       var firstImportCallbacks = [];
-
       if (isServiceWorker) {
         // for service worker there is more events to listen
         // and, to get rid of the warning, we override self.addEventListener
@@ -284,10 +242,8 @@ function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function"
         });
         eventsToCatch.forEach(function (eventName) {
           var eventsToDispatch = [];
-
           var eventCallback = function eventCallback(event) {
             var eventCallbackProxy = eventCallbackProxies[event.type];
-
             if (eventCallbackProxy) {
               eventCallbackProxy(event);
             } else {
@@ -295,42 +251,34 @@ function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function"
               event.waitUntil(firstImportPromise);
             }
           };
-
           self.addEventListener(eventName, eventCallback);
           firstImportCallbacks.push(function () {
             if (eventsToDispatch.length) {
               var eventCallbackProxy = eventCallbackProxies[eventsToDispatch[0].type];
-
               if (eventCallbackProxy) {
                 eventsToDispatch.forEach(function (event) {
                   eventCallbackProxy(event);
                 });
               }
-
               eventsToDispatch.length = 0;
             }
           });
         });
         var addEventListener = self.addEventListener;
-
         self.addEventListener = function (eventName, callback, options) {
           if (eventsToCatch.indexOf(eventName) > -1) {
             eventCallbackProxies[eventName] = callback;
             return null;
           }
-
           return addEventListener.call(self, eventName, callback, options);
         };
       } else {
         var _eventsToCatch = ["message"];
-
         _eventsToCatch.forEach(function (eventName) {
           var eventQueue = [];
-
           var eventCallback = function eventCallback(event) {
             eventQueue.push(event);
           };
-
           self.addEventListener(eventName, eventCallback);
           firstImportCallbacks.push(function () {
             self.removeEventListener(eventName, eventCallback);
@@ -341,12 +289,10 @@ function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function"
           });
         });
       }
-
       System.register = _async(function (deps, declare) {
         System.register = function () {
           throw new Error("unexpected call to System.register (called outside url instantiation)");
         };
-
         var url = self.location.href;
         registerRegistry[url] = [deps, declare];
         return _await(_import2(url), function (namespace) {
@@ -364,38 +310,30 @@ function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function"
           if (!response.ok) {
             throw Error("Failed to fetch module at ".concat(url));
           }
-
           return _await(response.text(), function (source) {
             if (source.indexOf("//# sourceURL=") < 0) {
               source += "\n//# sourceURL=".concat(url);
             }
-
             var register = System.register;
-
             System.register = function (deps, declare) {
               registerRegistry[url] = [deps, declare];
             };
-
             (0, self.eval)(source);
             System.register = register;
           });
         });
       });
     }
-
     var _import2 = function _import(specifier, parentUrl) {
       var url = resolveUrl(specifier, parentUrl);
       var load = getOrCreateLoad(url, parentUrl);
       return load.completionPromise || startExecution(load, parentUrl);
     };
-
     var getOrCreateLoad = function getOrCreateLoad(url, firstParentUrl) {
       var existingLoad = loadRegistry[url];
-
       if (existingLoad) {
         return existingLoad;
       }
-
       var namespace = createNamespace();
       var load = {
         url: url,
@@ -431,15 +369,12 @@ function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function"
             if (!registration) {
               throw new Error("System.register() not called after executing ".concat(url));
             }
-
             var _export = function _export(firstArg, secondArg) {
               load.hoistedExports = true;
               var changed = false;
-
               if (typeof firstArg === "string") {
                 var name = firstArg;
                 var value = secondArg;
-
                 if (!(name in namespace) || namespace[name] !== value) {
                   namespace[name] = value;
                   changed = true;
@@ -447,18 +382,15 @@ function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function"
               } else {
                 Object.keys(firstArg).forEach(function (name) {
                   var value = firstArg[name];
-
                   if (!(name in namespace) || namespace[name] !== value) {
                     namespace[name] = value;
                     changed = true;
                   }
                 });
-
                 if (firstArg && firstArg.__esModule) {
                   namespace.__esModule = firstArg.__esModule;
                 }
               }
-
               if (changed) {
                 load.importerSetters.forEach(function (importerSetter) {
                   if (importerSetter) {
@@ -466,25 +398,21 @@ function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function"
                   }
                 });
               }
-
               return secondArg;
             };
-
             var _registration = registration,
-                _registration2 = _slicedToArray(_registration, 2),
-                deps = _registration2[0],
-                declare = _registration2[1];
-
+              _registration2 = _slicedToArray(_registration, 2),
+              deps = _registration2[0],
+              declare = _registration2[1];
             var _declare = declare(_export, {
-              import: function _import(importId) {
-                return _import2(importId, url);
-              },
-              meta: createMeta(url)
-            }),
-                setters = _declare.setters,
-                _declare$execute = _declare.execute,
-                execute = _declare$execute === void 0 ? function () {} : _declare$execute;
-
+                import: function _import(importId) {
+                  return _import2(importId, url);
+                },
+                meta: createMeta(url)
+              }),
+              setters = _declare.setters,
+              _declare$execute = _declare.execute,
+              execute = _declare$execute === void 0 ? function () {} : _declare$execute;
             load.deps = deps;
             load.setters = setters;
             load.execute = execute;
@@ -507,12 +435,10 @@ function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function"
             }, function () {
               if (setter) {
                 dependencyLoad.importerSetters.push(setter);
-
                 if (dependencyLoad.hoistedExports || !dependencyLoad.instantiatePromise) {
                   setter(dependencyLoad.namespace);
                 }
               }
-
               return dependencyLoad;
             });
           }))), function (dependencyLoads) {
@@ -522,7 +448,6 @@ function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function"
       })();
       return load;
     };
-
     var startExecution = _async(function (load, importerUrl) {
       load.completionPromise = function () {
         return _await(instantiateAll(load, load, {}), function () {
@@ -531,15 +456,12 @@ function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function"
           });
         });
       }();
-
       return load.completionPromise;
     });
-
     var instantiateAll = _async(function (load, parent, loaded) {
       if (loaded[load.url]) {
         return;
       }
-
       loaded[load.url] = true;
       return _catch(function () {
         return _invoke(function () {
@@ -556,30 +478,25 @@ function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function"
         if (load.error) {
           throw error;
         }
-
         load.execute = null;
         throw error;
       });
     });
-
     var postOrderExec = function postOrderExec(load, importStack) {
       if (importStack.indexOf(load.url) > -1) {
         return undefined;
       }
-
       if (!load.execute) {
         if (load.error) {
           throw load.error;
         }
-
         if (load.executePromise) {
           return load.executePromise;
         }
-
         return undefined;
-      } // deps execute first, unless circular
+      }
 
-
+      // deps execute first, unless circular
       var execute = load.execute;
       load.execute = null;
       var depLoadPromises = [];
@@ -588,7 +505,6 @@ function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function"
           var depImportStack = importStack.slice();
           depImportStack.push(load.url);
           var depLoadPromise = postOrderExec(dependencyLoad, depImportStack);
-
           if (depLoadPromise) {
             depLoadPromises.push(depLoadPromise);
           }
@@ -606,7 +522,6 @@ function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function"
         }, function () {
           try {
             var executeReturnValue = execute.call(nullContext);
-
             if (executeReturnValue) {
               load.executePromise = executeReturnValue.then(function () {
                 load.executePromise = null;
@@ -618,7 +533,6 @@ function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function"
               });
               return;
             }
-
             load.instantiatePromise = null;
             load.linkPromise = null;
             load.completionPromise = load.namespace;
@@ -630,11 +544,10 @@ function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function"
           }
         });
       })();
-    }; // the closest we can get to call(undefined)
+    };
 
-
+    // the closest we can get to call(undefined)
     var nullContext = Object.freeze(Object.create(null));
-
     var createMeta = function createMeta(url) {
       return {
         url: url,
@@ -643,7 +556,6 @@ function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function"
         }
       };
     };
-
     var createNamespace = typeof Symbol !== "undefined" && Symbol.toStringTag ? function () {
       var namespace = Object.create(null);
       Object.defineProperty(namespace, Symbol.toStringTag, {

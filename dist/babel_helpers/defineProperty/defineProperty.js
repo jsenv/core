@@ -14,6 +14,5 @@ export default ((obj, key, value) => {
   } else {
     obj[key] = value;
   }
-
   return obj;
 });

@@ -18,7 +18,6 @@ const superviseScriptTypeModule = async ({
     execute
   });
 };
-
 const createExecuteWithScript = ({
   currentScript,
   src
@@ -31,14 +30,13 @@ const createExecuteWithScript = ({
   }) => {
     const urlObject = new URL(src, window.location);
     const loadPromise = new Promise((resolve, reject) => {
-      currentScriptClone = document.createElement("script"); // browsers set async by default when creating script(s)
+      currentScriptClone = document.createElement("script");
+      // browsers set async by default when creating script(s)
       // we want an exact copy to preserves how code is executed
-
       currentScriptClone.async = false;
       Array.from(currentScript.attributes).forEach(attribute => {
         currentScriptClone.setAttribute(attribute.nodeName, attribute.nodeValue);
       });
-
       if (isReload) {
         urlObject.searchParams.set("hmr", Date.now());
         nodeToReplace = currentScriptClone;
@@ -52,12 +50,10 @@ const createExecuteWithScript = ({
         nodeToReplace = currentScript;
         currentScriptClone.src = src;
       }
-
       currentScriptClone.addEventListener("error", reject);
       currentScriptClone.addEventListener("load", resolve);
       parentNode.replaceChild(currentScriptClone, nodeToReplace);
     });
-
     try {
       await loadPromise;
     } catch (e) {
@@ -70,7 +66,6 @@ const createExecuteWithScript = ({
         needsReport: true
       };
     }
-
     try {
       return {
         executionPromise: import(urlObject.href)
@@ -81,7 +76,6 @@ const createExecuteWithScript = ({
     }
   };
 };
-
 const createExecuteWithDynamicImport = ({
   src
 }) => {
@@ -89,26 +83,23 @@ const createExecuteWithDynamicImport = ({
     isReload
   }) => {
     const urlObject = new URL(src, window.location);
-
     if (isReload) {
       urlObject.searchParams.set("hmr", Date.now());
     }
-
     try {
       const namespace = await import(urlObject.href);
       return {
         executionPromise: Promise.resolve(namespace)
       };
     } catch (e) {
-      e.reportedBy = "dynamic_import"; // dynamic import would hide the error to the browser
+      e.reportedBy = "dynamic_import";
+      // dynamic import would hide the error to the browser
       // so it must be re-reported using window.reportError
-
       if (typeof window.reportError === "function") {
         window.reportError(e);
       } else {
         console.error(e);
       }
-
       throw e;
     }
   };

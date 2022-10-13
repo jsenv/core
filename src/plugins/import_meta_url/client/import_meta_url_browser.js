@@ -48,5 +48,4 @@ const getCurrentScriptSrc = () => {
 }
 
 const url = getCurrentScriptSrc()
-
-export default url
+export { url }

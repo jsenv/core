@@ -2,6 +2,7 @@
  * https://vitejs.dev/guide/api-hmr.html#hot-accept-deps-cb
  * https://modern-web.dev/docs/dev-server/plugins/hmr/
  */
+
 const urlHotMetas = {};
 const createImportMetaHot = importMetaUrl => {
   const data = {};
@@ -16,7 +17,6 @@ const createImportMetaHot = importMetaUrl => {
         });
         return;
       }
-
       if (typeof firstArg === "function") {
         addUrlMeta(url, {
           dependencies: [url],
@@ -24,7 +24,6 @@ const createImportMetaHot = importMetaUrl => {
         });
         return;
       }
-
       if (typeof firstArg === "string") {
         addUrlMeta(url, {
           dependencies: [firstArg],
@@ -32,7 +31,6 @@ const createImportMetaHot = importMetaUrl => {
         });
         return;
       }
-
       if (Array.isArray(firstArg)) {
         addUrlMeta(url, {
           dependencies: firstArg,
@@ -40,7 +38,6 @@ const createImportMetaHot = importMetaUrl => {
         });
         return;
       }
-
       throw new Error(`invalid call to import.meta.hot.accept(), received ${firstArg}`);
     },
     dispose: callback => {
@@ -62,22 +59,19 @@ const createImportMetaHot = importMetaUrl => {
     }
   };
 };
-
 const addUrlMeta = (url, meta) => {
-  urlHotMetas[url] = { ...urlHotMetas[url],
+  urlHotMetas[url] = {
+    ...urlHotMetas[url],
     ...meta
   };
 };
-
 const asUrlWithoutHmrQuery = url => {
   const urlObject = new URL(url);
-
   if (urlObject.searchParams.has("hmr")) {
     urlObject.searchParams.delete("hmr");
     urlObject.searchParams.delete("v");
     return urlObject.href;
   }
-
   return url;
 };
 

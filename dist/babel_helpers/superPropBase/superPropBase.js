@@ -5,6 +5,5 @@ export default function (object, property) {
     object = getPrototypeOf(object);
     if (object === null) break;
   }
-
   return object;
 }

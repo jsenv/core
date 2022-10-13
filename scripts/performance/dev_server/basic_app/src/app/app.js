@@ -2,7 +2,7 @@
  * The actual app UI, very simplified of course
  */
 
-import { greet } from "../app/greet.js"
+import { greet } from "./greet.js"
 
 const app = document.querySelector("#app")
 

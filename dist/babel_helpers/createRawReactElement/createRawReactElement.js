@@ -2,13 +2,12 @@
 export default function _createRawReactElement(type, props, key, children) {
   if (!REACT_ELEMENT_TYPE) {
     // eslint-disable-next-line no-native-reassign
-    REACT_ELEMENT_TYPE = typeof Symbol === "function" && // "for" is a reserved keyword in ES3 so escaping it here for backward compatibility
+    REACT_ELEMENT_TYPE = typeof Symbol === "function" &&
+    // "for" is a reserved keyword in ES3 so escaping it here for backward compatibility
     Symbol["for"] && Symbol["for"]("react.element") || 0xeac7;
   }
-
   var defaultProps = type && type.defaultProps;
   var childrenLength = arguments.length - 3;
-
   if (!props && childrenLength !== 0) {
     // If we're going to assign props.children, we create a new object now
     // to avoid mutating defaultProps.
@@ -16,19 +15,15 @@ export default function _createRawReactElement(type, props, key, children) {
       children: void 0
     };
   }
-
   if (childrenLength === 1) {
     props.children = children;
   } else if (childrenLength > 1) {
     var childArray = new Array(childrenLength);
-
     for (var i = 0; i < childrenLength; i++) {
       childArray[i] = arguments[i + 3];
     }
-
     props.children = childArray;
   }
-
   if (props && defaultProps) {
     for (var propName in defaultProps) {
       if (props[propName] === void 0) {
@@ -38,7 +33,6 @@ export default function _createRawReactElement(type, props, key, children) {
   } else if (!props) {
     props = defaultProps || {};
   }
-
   return {
     $$typeof: REACT_ELEMENT_TYPE,
     type: type,

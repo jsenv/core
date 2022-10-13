@@ -5,14 +5,12 @@ export default function (obj, descs) {
     desc.configurable = desc.enumerable = true;
     if ("value" in desc) desc.writable = true;
     Object.defineProperty(obj, key, desc);
-  } // Symbols are not enumerated over by for-in loops. If native
+  }
+  // Symbols are not enumerated over by for-in loops. If native
   // Symbols are available, fetch all of the descs object's own
   // symbol properties and define them on our target object too.
-
-
   if (Object.getOwnPropertySymbols) {
     var objectSymbols = Object.getOwnPropertySymbols(descs);
-
     for (var i = 0; i < objectSymbols.length; i++) {
       var sym = objectSymbols[i];
       var symbDesc = descs[sym];
@@ -21,6 +19,5 @@ export default function (obj, descs) {
       Object.defineProperty(obj, sym, symbDesc);
     }
   }
-
   return obj;
 }

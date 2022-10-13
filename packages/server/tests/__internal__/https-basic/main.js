@@ -1,4 +1,4 @@
 /* eslint-env browser */
-import value from "./dependency.js"
+import { answer } from "./dependency.js"
 
-window.ask = () => value
+window.ask = () => answer

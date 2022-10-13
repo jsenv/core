@@ -1,8 +1,8 @@
 /* @minVersion 7.0.0-beta.0 */
+
 import OverloadYield from "../overloadYield/overloadYield.js";
 export default function AsyncGenerator(gen) {
   var front, back;
-
   function send(key, arg) {
     return new Promise(function (resolve, reject) {
       var request = {
@@ -12,7 +12,6 @@ export default function AsyncGenerator(gen) {
         reject: reject,
         next: null
       };
-
       if (back) {
         back = back.next = request;
       } else {
@@ -21,7 +20,6 @@ export default function AsyncGenerator(gen) {
       }
     });
   }
-
   function resume(key, arg) {
     try {
       var result = gen[key](arg);
@@ -42,7 +40,6 @@ export default function AsyncGenerator(gen) {
           //      not visible to the (sync) yield*.
           //      The other part of this implementation is in asyncGeneratorDelegate.
           var nextKey = key === "return" ? "return" : "next";
-
           if (!value.k || arg.done) {
             // await or end of yield*
             return resume(nextKey, arg);
@@ -51,7 +48,6 @@ export default function AsyncGenerator(gen) {
             arg = gen[nextKey](arg).value;
           }
         }
-
         settle(result.done ? "return" : "normal", arg);
       }, function (err) {
         resume("throw", err);
@@ -60,7 +56,6 @@ export default function AsyncGenerator(gen) {
       settle("throw", err);
     }
   }
-
   function settle(type, value) {
     switch (type) {
       case "return":
@@ -69,11 +64,9 @@ export default function AsyncGenerator(gen) {
           done: true
         });
         break;
-
       case "throw":
         front.reject(value);
         break;
-
       default:
         front.resolve({
           value: value,
@@ -81,35 +74,29 @@ export default function AsyncGenerator(gen) {
         });
         break;
     }
-
     front = front.next;
-
     if (front) {
       resume(front.key, front.arg);
     } else {
       back = null;
     }
   }
+  this._invoke = send;
 
-  this._invoke = send; // Hide "return" method if generator return is not supported
-
+  // Hide "return" method if generator return is not supported
   if (typeof gen.return !== "function") {
     this.return = undefined;
   }
 }
-
 AsyncGenerator.prototype[typeof Symbol === "function" && Symbol.asyncIterator || "@@asyncIterator"] = function () {
   return this;
 };
-
 AsyncGenerator.prototype.next = function (arg) {
   return this._invoke("next", arg);
 };
-
 AsyncGenerator.prototype.throw = function (arg) {
   return this._invoke("throw", arg);
 };
-
 AsyncGenerator.prototype.return = function (arg) {
   return this._invoke("return", arg);
 };

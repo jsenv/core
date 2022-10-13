@@ -6,4 +6,4 @@ const url = filenameContainsBackSlashes
   ? `file:///${__filename.replace(/\\/g, "/")}`
   : `file://${__filename}`
 
-export default url
+export { url }

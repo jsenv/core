@@ -42,7 +42,7 @@ if (process.platform === "darwin") {
   await test({
     runtimeCompat: { chrome: "80" },
     expectedServiceWorkerUrls: {
-      "/main.html": { versioned: false, version: "6523cea2" },
+      "/main.html": { versioned: false, version: "e7351270" },
       "/css/style.css?v=bd38451d": { versioned: true },
     },
   })
@@ -51,7 +51,7 @@ if (process.platform === "darwin") {
     runtimeCompat: { chrome: "80" },
     bundling: false,
     expectedServiceWorkerUrls: {
-      "/main.html": { versioned: false, version: "0cf8c1ff" },
+      "/main.html": { versioned: false, version: "a13dd6e8" },
       "/css/style.css?v=0e312da1": { versioned: true },
       "/js/a.js?v=e9a31140": { versioned: true },
       "/js/b.js?v=e3b0c442": { versioned: true },
@@ -61,7 +61,7 @@ if (process.platform === "darwin") {
   await test({
     runtimeCompat: { chrome: "79" },
     expectedServiceWorkerUrls: {
-      "/main.html": { versioned: false, version: "1074b6b7" },
+      "/main.html": { versioned: false, version: "f0c1f42f" },
       "/css/style.css?v=bd38451d": { versioned: true },
     },
   })
@@ -70,7 +70,7 @@ if (process.platform === "darwin") {
     runtimeCompat: { chrome: "79" },
     bundling: false,
     expectedServiceWorkerUrls: {
-      "/main.html": { versioned: false, version: "c9b03767" },
+      "/main.html": { versioned: false, version: "35efb184" },
       "/css/style.css?v=0e312da1": { versioned: true },
       "/js/a.nomodule.js?v=217fbe28": { versioned: true },
       "/js/b.nomodule.js?v=5d37f892": { versioned: true },

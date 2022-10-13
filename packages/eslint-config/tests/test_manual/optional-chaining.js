@@ -5,4 +5,4 @@ const adventurer = {
   },
 }
 
-export default adventurer.dog?.name
+export const name = adventurer.dog?.name

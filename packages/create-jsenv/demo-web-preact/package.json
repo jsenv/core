@@ -19,7 +19,7 @@
     "@babel/plugin-syntax-import-assertions": "7.18.6",
     "@babel/plugin-transform-react-jsx": "7.19.0",
     "@jsenv/assert": "2.7.0",
-    "@jsenv/core": "29.1.19",
+    "@jsenv/core": "29.2.0",
     "@jsenv/plugin-preact": "1.1.0",
     "@jsenv/eslint-config": "16.2.5",
     "@jsenv/eslint-import-resolver": "0.3.1",

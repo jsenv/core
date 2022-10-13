@@ -1,1 +1,1 @@
-export default 42
+export const t = 42
