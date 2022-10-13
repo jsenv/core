@@ -1,1 +1,1 @@
-export default 1_000_000_000_000
+export const big = 1_000_000_000_000

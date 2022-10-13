@@ -1,4 +1,4 @@
-import { jsenvPluginUrlAnalysis } from "../plugins/url_analysis/jsenv_plugin_url_analysis.js"
+import { jsenvPluginUrlAnalysis } from "./url_analysis/jsenv_plugin_url_analysis.js"
 import { jsenvPluginImportmap } from "./importmap/jsenv_plugin_importmap.js"
 import { jsenvPluginUrlResolution } from "./url_resolution/jsenv_plugin_url_resolution.js"
 import { jsenvPluginUrlVersion } from "./url_version/jsenv_plugin_url_version.js"

@@ -23,5 +23,3 @@ if (typeof globalThis === "object") {
 
   globalObject.globalThis = globalObject
 }
-
-export default globalObject
