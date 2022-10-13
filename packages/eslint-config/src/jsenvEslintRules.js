@@ -152,7 +152,7 @@ export const jsenvEslintRules = {
   "no-iterator": ["error"],
   "no-label-var": ["error"],
   "no-labels": ["off"], // https://gist.github.com/getify/706e5e10822a298375da40f9cc1fa295
-  "no-lone-blocks": ["error"],
+  "no-lone-blocks": ["off"], // https://gist.github.com/getify/706e5e10822a298375da40f9cc1fa295
   "no-lonely-if": ["error"],
   "no-loop-func": ["error"],
   "no-magic-numbers": ["off"],
@@ -225,8 +225,27 @@ export const jsenvEslintRules = {
   "no-unused-labels": ["off"], // https://gist.github.com/getify/706e5e10822a298375da40f9cc1fa295
   "no-unused-private-class-members": ["error"],
   "no-unused-vars": ["error"],
-  // this rule is bad, too much false positive, annoying
-  "no-use-before-define": ["off", "nofunc"],
+  "no-use-before-define": [
+    "error",
+    /*
+     * "no-use-before-define" is great to prevent a common mistake
+     * where code tries to use a variable before it's actually available.
+     * In practice this rule fails even on valid code.
+     * Enabling the default options of this rule would
+     * force variables,functions and classes to be declared in specific order
+     * which is very annoying because:
+     * - code is valid in the first place
+     * - it's SUPER NICE to put variables and functions that are
+     *   implementation details at the bottom of the file to make
+     *   important code more accesible
+     */
+    {
+      functions: false,
+      variables: false,
+      classes: false,
+      allowNamedExports: true,
+    },
+  ],
   "no-useless-call": ["error"],
   "no-useless-concat": ["error"],
   "no-useless-constructor": ["error"],

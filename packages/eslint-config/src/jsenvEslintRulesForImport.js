@@ -40,4 +40,8 @@ export const jsenvEslintRulesForImport = {
       allowObject: true,
     },
   ],
+  "import/no-self-import": ["error"],
+  "import/no-cycle": ["error"],
+  "import/no-useless-path-segments": ["error"],
+  "import/no-default-export": ["error"],
 }
