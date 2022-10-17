@@ -1187,7 +1187,7 @@ export const createRollupPlugins = async ({
             await reference.ressource.getReadyPromise()
           }
           mutations.push((magicString) => {
-            magicString.overwrite(
+            magicString.update(
               importNode.start,
               importNode.end,
               referenceToCodeForRollup(reference),
@@ -1374,7 +1374,7 @@ export const createRollupPlugins = async ({
           }
 
           mutations.push((magicString) => {
-            magicString.overwrite(
+            magicString.update(
               importNode.source.start,
               importNode.source.end,
               `"${ressourceUrlAsJsModule}"`,
@@ -1543,7 +1543,7 @@ export const createRollupPlugins = async ({
             const code = rollupFileInfo.code
             const systemRegisterIndex = code.indexOf("System.register([")
             const magicString = new MagicString(code)
-            magicString.overwrite(
+            magicString.update(
               systemRegisterIndex,
               systemRegisterIndex + "System.register([".length,
               `System.register("${fileName}", [`,

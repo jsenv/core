@@ -43,7 +43,7 @@
   },
   "devDependencies": {
     "@babel/core": "7.19.3",
-    "@babel/preset-env": "7.19.3",
+    "@babel/preset-env": "7.19.4",
     "@babel/eslint-parser": "7.19.1",
     "@babel/plugin-syntax-decorators": "7.19.0",
     "@babel/plugin-syntax-jsx": "7.18.6",

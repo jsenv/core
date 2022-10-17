@@ -18,7 +18,7 @@ export const createMagicSource = (content) => {
     },
     replace: ({ start, end, replacement }) => {
       mutations.push((magicString) => {
-        magicString.overwrite(start, end, replacement)
+        magicString.update(start, end, replacement)
       })
     },
     remove: ({ start, end }) => {

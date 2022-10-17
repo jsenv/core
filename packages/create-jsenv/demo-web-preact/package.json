@@ -12,15 +12,15 @@
     "build:serve": "node ./scripts/start_build_server.mjs"
   },
   "dependencies": {
-    "preact": "10.11.1"
+    "preact": "10.11.2"
   },
   "devDependencies": {
     "@babel/eslint-parser": "7.19.1",
     "@babel/plugin-syntax-import-assertions": "7.18.6",
     "@babel/plugin-transform-react-jsx": "7.19.0",
     "@jsenv/assert": "2.7.0",
-    "@jsenv/core": "29.2.0",
-    "@jsenv/plugin-preact": "1.1.0",
+    "@jsenv/core": "29.2.1",
+    "@jsenv/plugin-preact": "1.1.1",
     "@jsenv/eslint-config": "16.2.5",
     "@jsenv/eslint-import-resolver": "0.3.1",
     "eslint": "8.25.0",

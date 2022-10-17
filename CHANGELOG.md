@@ -1,3 +1,7 @@
+# 29.2.1
+
+- Update deps
+
 # 29.2.0
 
 - Update rollup to 3.1.0

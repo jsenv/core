@@ -2762,17 +2762,17 @@ function initAsClient(websocket, address, protocols, options) {
     websocket._url = address;
   }
   const isSecure = parsedUrl.protocol === 'wss:';
-  const isUnixSocket = parsedUrl.protocol === 'ws+unix:';
-  let invalidURLMessage;
-  if (parsedUrl.protocol !== 'ws:' && !isSecure && !isUnixSocket) {
-    invalidURLMessage = 'The URL\'s protocol must be one of "ws:", "wss:", or "ws+unix:"';
-  } else if (isUnixSocket && !parsedUrl.pathname) {
-    invalidURLMessage = "The URL's pathname is empty";
+  const isIpcUrl = parsedUrl.protocol === 'ws+unix:';
+  let invalidUrlMessage;
+  if (parsedUrl.protocol !== 'ws:' && !isSecure && !isIpcUrl) {
+    invalidUrlMessage = 'The URL\'s protocol must be one of "ws:", "wss:", or "ws+unix:"';
+  } else if (isIpcUrl && !parsedUrl.pathname) {
+    invalidUrlMessage = "The URL's pathname is empty";
   } else if (parsedUrl.hash) {
-    invalidURLMessage = 'The URL contains a fragment identifier';
+    invalidUrlMessage = 'The URL contains a fragment identifier';
   }
-  if (invalidURLMessage) {
-    const err = new SyntaxError(invalidURLMessage);
+  if (invalidUrlMessage) {
+    const err = new SyntaxError(invalidUrlMessage);
     if (websocket._redirects === 0) {
       throw err;
     } else {
@@ -2823,7 +2823,7 @@ function initAsClient(websocket, address, protocols, options) {
   if (parsedUrl.username || parsedUrl.password) {
     opts.auth = `${parsedUrl.username}:${parsedUrl.password}`;
   }
-  if (isUnixSocket) {
+  if (isIpcUrl) {
     const parts = opts.path.split(':');
     opts.socketPath = parts[0];
     opts.path = parts[1];
@@ -2831,9 +2831,9 @@ function initAsClient(websocket, address, protocols, options) {
   let req;
   if (opts.followRedirects) {
     if (websocket._redirects === 0) {
-      websocket._originalUnixSocket = isUnixSocket;
+      websocket._originalIpc = isIpcUrl;
       websocket._originalSecure = isSecure;
-      websocket._originalHostOrSocketPath = isUnixSocket ? opts.socketPath : parsedUrl.host;
+      websocket._originalHostOrSocketPath = isIpcUrl ? opts.socketPath : parsedUrl.host;
       const headers = options && options.headers;
 
       //
@@ -2850,7 +2850,7 @@ function initAsClient(websocket, address, protocols, options) {
         }
       }
     } else if (websocket.listenerCount('redirect') === 0) {
-      const isSameHost = isUnixSocket ? websocket._originalUnixSocket ? opts.socketPath === websocket._originalHostOrSocketPath : false : websocket._originalUnixSocket ? false : parsedUrl.host === websocket._originalHostOrSocketPath;
+      const isSameHost = isIpcUrl ? websocket._originalIpc ? opts.socketPath === websocket._originalHostOrSocketPath : false : websocket._originalIpc ? false : parsedUrl.host === websocket._originalHostOrSocketPath;
       if (!isSameHost || websocket._originalSecure && !isSecure) {
         //
         // Match curl 7.77.0 behavior and drop the following headers. These
