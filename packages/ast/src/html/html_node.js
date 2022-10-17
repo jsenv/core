@@ -17,6 +17,16 @@ export const createHtmlNode = ({ tagName, textContent = "", ...rest }) => {
   return fragment.childNodes[0]
 }
 
+export const injectHtmlNode = (htmlAst, node, jsenvPluginName = "jsenv") => {
+  setHtmlNodeAttributes(node, {
+    "jsenv-plugin-owner": jsenvPluginName,
+    "jsenv-plugin-action": "injected",
+  })
+  const htmlHtmlNode = findChild(htmlAst, (node) => node.nodeName === "html")
+  const bodyNode = findChild(htmlHtmlNode, (node) => node.nodeName === "body")
+  return insertAfter(node, bodyNode)
+}
+
 export const injectScriptNodeAsEarlyAsPossible = (
   htmlAst,
   scriptNode,

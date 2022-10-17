@@ -20,6 +20,7 @@ export {
 export {
   removeHtmlNode,
   createHtmlNode,
+  injectHtmlNode,
   injectScriptNodeAsEarlyAsPossible,
 } from "./html/html_node.js"
 export {

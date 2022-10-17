@@ -132,6 +132,7 @@ export const build = async ({
   versioning = true,
   versioningMethod = "search_param", // "filename", "search_param"
   lineBreakNormalization = process.platform === "win32",
+  ribbon,
 
   clientFiles = {
     "./src/": true,
@@ -231,6 +232,7 @@ build ${entryPointKeys.length} entry points`)
           },
           minification,
           bundling,
+          ribbon,
         }),
       ],
       sourcemaps,
