@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Remaining tests</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <script type="module">
+      import { addWellKnownComposite } from "../src/internal/wellKnownValue.js"
+
+      if (typeof window === "object") {
+        const iframe = document.createElement("iframe")
+        iframe.setAttribute("sandbox", "")
+        document.body.appendChild(iframe)
+        try {
+          addWellKnownComposite(iframe.contentWindow)
+        } finally {
+          document.body.removeChild(iframe)
+        }
+      }
+    </script>
+  </body>
+</html>
