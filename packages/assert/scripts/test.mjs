@@ -30,6 +30,7 @@ try {
         },
         firefox: {
           runtime: firefox,
+          allocatedMs: 60_000,
         },
         webkit: {
           runtime: webkit,
