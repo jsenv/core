@@ -17,7 +17,7 @@ export const jsenvPluginPreact = ({
   jsxTranspilation = true,
   refreshInstrumentation = false,
   hookNamesInstrumentation = true,
-  preactDevtoolsDuringBuild = false,
+  preactDevtools = true,
 } = {}) => {
   if (jsxTranspilation === true) {
     jsxTranspilation = {
@@ -66,7 +66,10 @@ export const jsenvPluginPreact = ({
     },
     transformUrlContent: {
       html: (urlInfo, context) => {
-        if (!preactDevtoolsDuringBuild && context.scenarios.build) {
+        if (!preactDevtools) {
+          return null
+        }
+        if (context.scenarios.build && preactDevtools !== "dev_and_build") {
           return null
         }
         const htmlAst = parseHtmlString(urlInfo.content)

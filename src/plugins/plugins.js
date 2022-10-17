@@ -22,6 +22,8 @@ import {
   explorerHtmlFileUrl,
   jsenvPluginExplorer,
 } from "./explorer/jsenv_plugin_explorer.js"
+// other
+import { jsenvPluginRibbon } from "./ribbon/jsenv_plugin_ribbon.js"
 
 export const getCorePlugins = ({
   rootDirectoryUrl,
@@ -41,6 +43,7 @@ export const getCorePlugins = ({
   clientFileChangeCallbackList,
   clientFilesPruneCallbackList,
   explorer,
+  ribbon = false,
 } = {}) => {
   if (explorer === true) {
     explorer = {}
@@ -60,6 +63,14 @@ export const getCorePlugins = ({
       : String(new URL("./index.html", rootDirectoryUrl))
   } else {
     clientMainFileUrl = String(clientMainFileUrl)
+  }
+  if (ribbon === true) {
+    ribbon = {}
+  }
+  if (ribbon === "dev_and_build") {
+    ribbon = {
+      devAndBuild: true,
+    }
   }
 
   return [
@@ -100,12 +111,8 @@ export const getCorePlugins = ({
       : []),
     jsenvPluginCacheControl(),
     ...(explorer
-      ? [
-          jsenvPluginExplorer({
-            ...explorer,
-            clientMainFileUrl,
-          }),
-        ]
+      ? [jsenvPluginExplorer({ ...explorer, clientMainFileUrl })]
       : []),
+    ...(ribbon ? [jsenvPluginRibbon({ rootDirectoryUrl, ...ribbon })] : []),
   ]
 }

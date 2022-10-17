@@ -16,7 +16,7 @@ import { Readable, Stream, Writable } from "node:stream";
 import { Http2ServerResponse } from "node:http2";
 import { lookup } from "node:dns";
 import { SOURCEMAP, generateSourcemapFileUrl, composeTwoSourcemaps, generateSourcemapDataUrl, createMagicSource, sourcemapConverter, getOriginalPosition } from "@jsenv/sourcemap";
-import { parseHtmlString, stringifyHtmlAst, getHtmlNodeAttribute, visitHtmlNodes, analyzeScriptNode, setHtmlNodeAttributes, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, applyPostCss, postCssPluginUrlVisitor, parseJsUrls, getHtmlNodeText, setHtmlNodeText, applyBabelPlugins, injectScriptNodeAsEarlyAsPossible, createHtmlNode, findHtmlNode, removeHtmlNode, removeHtmlNodeText, transpileWithParcel, injectJsImport, minifyWithParcel, analyzeLinkNode } from "@jsenv/ast";
+import { parseHtmlString, stringifyHtmlAst, getHtmlNodeAttribute, visitHtmlNodes, analyzeScriptNode, setHtmlNodeAttributes, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, applyPostCss, postCssPluginUrlVisitor, parseJsUrls, getHtmlNodeText, setHtmlNodeText, applyBabelPlugins, injectScriptNodeAsEarlyAsPossible, createHtmlNode, findHtmlNode, removeHtmlNode, removeHtmlNodeText, transpileWithParcel, injectJsImport, minifyWithParcel, analyzeLinkNode, injectHtmlNode } from "@jsenv/ast";
 import { createRequire } from "node:module";
 import babelParser from "@babel/parser";
 import v8, { takeCoverage } from "node:v8";
@@ -8586,7 +8586,11 @@ const createKitchen = ({
     debug = false
   }) => {
     if (typeof specifier !== "string") {
-      throw new TypeError(`"specifier" must be a string, got ${specifier}`);
+      if (specifier instanceof URL) {
+        specifier = specifier.href;
+      } else {
+        throw new TypeError(`"specifier" must be a string, got ${specifier}`);
+      }
     }
     const reference = {
       original: null,
@@ -20655,6 +20659,59 @@ const jsenvPluginExplorer = ({
   };
 };
 
+const jsenvPluginRibbon = ({
+  rootDirectoryUrl,
+  htmlInclude = "**/*.html",
+  devAndBuild = false
+}) => {
+  const ribbonClientFileUrl = new URL("./js/ribbon.js", import.meta.url);
+  const associations = URL_META.resolveAssociations({
+    ribbon: {
+      [htmlInclude]: true
+    }
+  }, rootDirectoryUrl);
+  return {
+    name: "jsenv:ribbon",
+    appliesDuring: "*",
+    transformUrlContent: {
+      html: (urlInfo, context) => {
+        if (context.scenarios.build && !devAndBuild) {
+          return null;
+        }
+        const {
+          ribbon
+        } = URL_META.applyAssociations({
+          url: asUrlWithoutSearch(urlInfo.url),
+          associations
+        });
+        if (!ribbon) {
+          return null;
+        }
+        const htmlAst = parseHtmlString(urlInfo.content);
+        const [ribbonClientFileReference] = context.referenceUtils.inject({
+          type: "script_src",
+          subtype: "js_module",
+          expectedType: "js_module",
+          specifier: ribbonClientFileUrl.href
+        });
+        const paramsJson = JSON.stringify({
+          text: context.scenarios.dev ? "DEV" : "BUILD"
+        }, null, "  ");
+        const scriptNode = createHtmlNode({
+          tagName: "script",
+          type: "module",
+          textContent: `
+import { injectRibbon} from "${ribbonClientFileReference.generatedSpecifier}"
+
+injectRibbon(${paramsJson})`
+        });
+        injectHtmlNode(htmlAst, scriptNode, "jsenv:ribbon");
+        return stringifyHtmlAst(htmlAst);
+      }
+    }
+  };
+};
+
 const getCorePlugins = ({
   rootDirectoryUrl,
   runtimeCompat,
@@ -20670,7 +20727,8 @@ const getCorePlugins = ({
   clientAutoreload = false,
   clientFileChangeCallbackList,
   clientFilesPruneCallbackList,
-  explorer
+  explorer,
+  ribbon = false
 } = {}) => {
   if (explorer === true) {
     explorer = {};
@@ -20688,6 +20746,14 @@ const getCorePlugins = ({
     clientMainFileUrl = explorer ? String(explorerHtmlFileUrl) : String(new URL("./index.html", rootDirectoryUrl));
   } else {
     clientMainFileUrl = String(clientMainFileUrl);
+  }
+  if (ribbon === true) {
+    ribbon = {};
+  }
+  if (ribbon === "dev_and_build") {
+    ribbon = {
+      devAndBuild: true
+    };
   }
   return [jsenvPluginUrlAnalysis({
     rootDirectoryUrl,
@@ -20715,6 +20781,9 @@ const getCorePlugins = ({
   })] : []), jsenvPluginCacheControl(), ...(explorer ? [jsenvPluginExplorer({
     ...explorer,
     clientMainFileUrl
+  })] : []), ...(ribbon ? [jsenvPluginRibbon({
+    rootDirectoryUrl,
+    ...ribbon
   })] : [])];
 };
 
@@ -21077,6 +21146,7 @@ const build = async ({
   versioningMethod = "search_param",
   // "filename", "search_param"
   lineBreakNormalization = process.platform === "win32",
+  ribbon,
   clientFiles = {
     "./src/": true
   },
@@ -21166,7 +21236,8 @@ build ${entryPointKeys.length} entry points`);
           jsClassicFallback: false
         },
         minification,
-        bundling
+        bundling,
+        ribbon
       })],
       sourcemaps,
       sourcemapsSourcesContent,
@@ -22447,6 +22518,7 @@ const createFileService = ({
   clientMainFileUrl,
   cooldownBetweenFileEvents,
   explorer,
+  ribbon,
   sourcemaps,
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
@@ -22550,7 +22622,8 @@ const createFileService = ({
         clientAutoreload,
         clientFileChangeCallbackList,
         clientFilesPruneCallbackList,
-        explorer
+        explorer,
+        ribbon
       })],
       sourcemaps,
       sourcemapsSourcesProtocol,
@@ -22899,6 +22972,7 @@ const startDevServer = async ({
   transpilation,
   explorer = true,
   // see jsenv_plugin_explorer.js
+  ribbon = false,
   // toolbar = false,
 
   sourcemaps = "inline",
@@ -23039,6 +23113,7 @@ const startDevServer = async ({
         clientMainFileUrl,
         cooldownBetweenFileEvents,
         explorer,
+        ribbon,
         sourcemaps,
         sourcemapsSourcesProtocol,
         sourcemapsSourcesContent,

@@ -100,7 +100,11 @@ export const createKitchen = ({
     debug = false,
   }) => {
     if (typeof specifier !== "string") {
-      throw new TypeError(`"specifier" must be a string, got ${specifier}`)
+      if (specifier instanceof URL) {
+        specifier = specifier.href
+      } else {
+        throw new TypeError(`"specifier" must be a string, got ${specifier}`)
+      }
     }
     const reference = {
       original: null,
