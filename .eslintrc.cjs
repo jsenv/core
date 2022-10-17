@@ -120,6 +120,19 @@ const eslintConfig = composeEslintConfig(
     ],
   },
 
+  // browser and node
+  {
+    overrides: [
+      {
+        files: ["./packages/assert/**/*.js"],
+        env: {
+          browser: true,
+          node: true,
+        },
+      },
+    ],
+  },
+
   eslintConfigToPreferExplicitGlobals,
 
   // We are using prettier, disable all eslint rules
