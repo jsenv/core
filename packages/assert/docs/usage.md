@@ -22,7 +22,7 @@ import { assert } from "@jsenv/assert"
 
 ```html
 <script type="module">
-  import { assert } from "https://unpkg.com/@jsenv/assert@latest/dist/jsenv_assert.js"
+  import { assert } from "https://unpkg.com/@jsenv/assert@latest/src/main.js"
 </script>
 ```
 
