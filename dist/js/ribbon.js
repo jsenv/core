@@ -42,7 +42,7 @@ const injectRibbon = ({
   const html = /* html */`<div id="jsenv_ribbon_container">
       <style>${css}</style>
       <div id="jsenv_ribbon">
-        <div id="jsenv_ribbon_text">${text}</span>
+        <div id="jsenv_ribbon_text">${text}</div>
       </div>
     </div>`;
   const node = document.createElement("div");
