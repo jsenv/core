@@ -11,7 +11,7 @@
     "test:coverage": "npm run test -- --coverage"
   },
   "devDependencies": {
-    "@jsenv/assert": "2.7.0",
+    "@jsenv/assert": "2.7.1",
     "@jsenv/core": "29.2.1",
     "@jsenv/eslint-config": "16.2.5",
     "@jsenv/eslint-import-resolver": "0.3.1",
