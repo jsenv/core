@@ -15313,7 +15313,7 @@ const jsenvPluginAsJsClassicLibrary = ({
       } else if (context.scenarios.build) {
         jsModuleBundledUrlInfo.sourceUrls.forEach(sourceUrl => {
           const sourceUrlInfo = context.urlGraph.getUrlInfo(sourceUrl);
-          if (sourceUrlInfo.dependents.size === 0) {
+          if (sourceUrlInfo && sourceUrlInfo.dependents.size === 0) {
             context.urlGraph.deleteUrlInfo(sourceUrl);
           }
         });

@@ -1,3 +1,7 @@
+# 29.3.2
+
+- Fix error when building multiple js classic library files
+
 # 29.3.0
 
 - Add ribbon param to startDevServer
