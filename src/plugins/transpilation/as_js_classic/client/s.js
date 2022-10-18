@@ -207,7 +207,13 @@
   const _import = (specifier, parentUrl) => {
     const url = resolveUrl(specifier, parentUrl)
     const load = getOrCreateLoad(url, parentUrl)
-    return load.completionPromise || startExecution(load, parentUrl)
+    if (load.completionPromise) {
+      if (load.completionPromise === load.namespace) {
+        return Promise.resolve(load.namespace)
+      }
+      return load.completionPromise
+    }
+    return startExecution(load, parentUrl)
   }
 
   const getOrCreateLoad = (url, firstParentUrl) => {

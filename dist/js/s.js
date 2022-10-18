@@ -327,7 +327,13 @@ function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function"
     var _import2 = function _import(specifier, parentUrl) {
       var url = resolveUrl(specifier, parentUrl);
       var load = getOrCreateLoad(url, parentUrl);
-      return load.completionPromise || startExecution(load, parentUrl);
+      if (load.completionPromise) {
+        if (load.completionPromise === load.namespace) {
+          return Promise.resolve(load.namespace);
+        }
+        return load.completionPromise;
+      }
+      return startExecution(load, parentUrl);
     };
     var getOrCreateLoad = function getOrCreateLoad(url, firstParentUrl) {
       var existingLoad = loadRegistry[url];
