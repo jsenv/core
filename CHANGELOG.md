@@ -1,3 +1,7 @@
+# 29.4.0
+
+- build server sends "/index.html" when requested at "/" if file exists. This is configurable with buildIndexPath. When the file at buildIndexPath do not exists build server returns directory content.
+
 # 29.3.2
 
 - Fix error when building multiple js classic library files

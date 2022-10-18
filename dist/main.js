@@ -26332,7 +26332,7 @@ const startBuildServer = async ({
   keepProcessAlive = true,
   rootDirectoryUrl,
   buildDirectoryUrl,
-  buildIndexPath = "/index.html",
+  buildIndexPath = "index.html",
   buildServerFiles = {
     "./package.json": true,
     "./jsenv.config.mjs": true
@@ -26358,6 +26358,9 @@ const startBuildServer = async ({
         throw new Error(`buildIndexPath must be relative, got ${buildIndexPath}`);
       }
       buildIndexPath = buildIndexUrl.slice(buildDirectoryUrl.length);
+    }
+    if (!existsSync(new URL(buildIndexPath, buildDirectoryUrl))) {
+      buildIndexPath = null;
     }
   }
   const operation = Abort.startOperation();

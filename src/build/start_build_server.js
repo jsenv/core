@@ -13,6 +13,7 @@
  * we want to be in the user shoes and we should not alter build files.
  */
 
+import { existsSync } from "node:fs"
 import { parentPort } from "node:worker_threads"
 import {
   jsenvAccessControlAllowedHeaders,
@@ -48,7 +49,7 @@ export const startBuildServer = async ({
 
   rootDirectoryUrl,
   buildDirectoryUrl,
-  buildIndexPath = "/index.html",
+  buildIndexPath = "index.html",
   buildServerFiles = {
     "./package.json": true,
     "./jsenv.config.mjs": true,
@@ -76,6 +77,9 @@ export const startBuildServer = async ({
         )
       }
       buildIndexPath = buildIndexUrl.slice(buildDirectoryUrl.length)
+    }
+    if (!existsSync(new URL(buildIndexPath, buildDirectoryUrl))) {
+      buildIndexPath = null
     }
   }
 
