@@ -33,7 +33,7 @@ export const createNodeEsmResolver = ({ runtimeCompat, packageConditions }) => {
     if (!parentUrl.startsWith("file:")) {
       return new URL(reference.specifier, parentUrl).href
     }
-    const { url, type, packageUrl } = applyNodeEsmResolution({
+    const { url, type, packageDirectoryUrl } = applyNodeEsmResolution({
       conditions: packageConditions,
       parentUrl,
       specifier: reference.specifier,
@@ -50,7 +50,7 @@ export const createNodeEsmResolver = ({ runtimeCompat, packageConditions }) => {
         addRelationshipWithPackageJson({
           reference,
           context,
-          packageJsonUrl: `${packageUrl}package.json`,
+          packageJsonUrl: `${packageDirectoryUrl}package.json`,
           field: type.startsWith("field:")
             ? `#${type.slice("field:".length)}`
             : "",

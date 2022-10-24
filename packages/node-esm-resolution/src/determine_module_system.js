@@ -29,11 +29,11 @@ export const determineModuleSystem = (
     return "url"
   }
   if (ambiguousExtensions.includes(extension)) {
-    const packageUrl = defaultLookupPackageScope(url)
-    if (!packageUrl) {
+    const packageDirectoryUrl = defaultLookupPackageScope(url)
+    if (!packageDirectoryUrl) {
       return "commonjs"
     }
-    const packageJson = defaultReadPackageJson(packageUrl)
+    const packageJson = defaultReadPackageJson(packageDirectoryUrl)
     if (packageJson.type === "module") {
       return "module"
     }
