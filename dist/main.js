@@ -15,9 +15,11 @@ import { performance as performance$1 } from "node:perf_hooks";
 import { Readable, Stream, Writable } from "node:stream";
 import { Http2ServerResponse } from "node:http2";
 import { lookup } from "node:dns";
-import { SOURCEMAP, generateSourcemapFileUrl, composeTwoSourcemaps, generateSourcemapDataUrl, createMagicSource, sourcemapConverter, getOriginalPosition } from "@jsenv/sourcemap";
-import { parseHtmlString, stringifyHtmlAst, getHtmlNodeAttribute, visitHtmlNodes, analyzeScriptNode, setHtmlNodeAttributes, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, applyPostCss, postCssPluginUrlVisitor, parseJsUrls, getHtmlNodeText, setHtmlNodeText, applyBabelPlugins, injectScriptNodeAsEarlyAsPossible, createHtmlNode, findHtmlNode, removeHtmlNode, removeHtmlNodeText, transpileWithParcel, injectJsImport, minifyWithParcel, analyzeLinkNode, injectHtmlNode } from "@jsenv/ast";
+import MagicString from "magic-string";
 import { createRequire } from "node:module";
+import { parse, serialize, parseFragment } from "parse5";
+import { ancestor } from "acorn-walk";
+import { p as parseSrcSet } from "./js/html_src_set.js";
 import babelParser from "@babel/parser";
 import v8, { takeCoverage } from "node:v8";
 import wrapAnsi from "wrap-ansi";
@@ -6962,6 +6964,1962 @@ const createServerEventsDispatcher = () => {
       });
     }
   };
+};
+
+const createMagicSource = content => {
+  if (content === undefined) {
+    throw new Error("content missing");
+  }
+  const mutations = [];
+  return {
+    prepend: string => {
+      mutations.push(magicString => {
+        magicString.prepend(string);
+      });
+    },
+    append: string => {
+      mutations.push(magicString => {
+        magicString.append(string);
+      });
+    },
+    replace: ({
+      start,
+      end,
+      replacement
+    }) => {
+      mutations.push(magicString => {
+        magicString.overwrite(start, end, replacement);
+      });
+    },
+    remove: ({
+      start,
+      end
+    }) => {
+      mutations.push(magicString => {
+        magicString.remove(start, end);
+      });
+    },
+    toContentAndSourcemap: ({
+      source
+    } = {}) => {
+      if (mutations.length === 0) {
+        return {
+          content,
+          sourcemap: null
+        };
+      }
+      const magicString = new MagicString(content);
+      mutations.forEach(mutation => {
+        mutation(magicString);
+      });
+      const code = magicString.toString();
+      const map = magicString.generateMap({
+        hires: true,
+        includeContent: true,
+        source
+      });
+      return {
+        content: code,
+        sourcemap: map
+      };
+    }
+  };
+};
+
+const require$3 = createRequire(import.meta.url);
+// consider using https://github.com/7rulnik/source-map-js
+
+const requireSourcemap = () => {
+  const namespace = require$3("source-map-js");
+  return namespace;
+};
+
+/*
+ * https://github.com/mozilla/source-map#sourcemapgenerator
+ */
+const {
+  SourceMapConsumer,
+  SourceMapGenerator
+} = requireSourcemap();
+const composeTwoSourcemaps = (firstSourcemap, secondSourcemap) => {
+  if (!firstSourcemap && !secondSourcemap) {
+    return null;
+  }
+  if (!firstSourcemap) {
+    return secondSourcemap;
+  }
+  if (!secondSourcemap) {
+    return firstSourcemap;
+  }
+  const sourcemapGenerator = new SourceMapGenerator();
+  const firstSourcemapConsumer = new SourceMapConsumer(firstSourcemap);
+  const secondSourcemapConsumer = new SourceMapConsumer(secondSourcemap);
+  const firstMappings = readMappings(firstSourcemapConsumer);
+  firstMappings.forEach(mapping => {
+    sourcemapGenerator.addMapping(mapping);
+  });
+  const secondMappings = readMappings(secondSourcemapConsumer);
+  secondMappings.forEach(mapping => {
+    sourcemapGenerator.addMapping(mapping);
+  });
+  const sourcemap = sourcemapGenerator.toJSON();
+  const sources = [];
+  const sourcesContent = [];
+  const firstSourcesContent = firstSourcemap.sourcesContent;
+  const secondSourcesContent = secondSourcemap.sourcesContent;
+  sourcemap.sources.forEach(source => {
+    sources.push(source);
+    if (secondSourcesContent) {
+      const secondSourceIndex = secondSourcemap.sources.indexOf(source);
+      if (secondSourceIndex > -1) {
+        sourcesContent.push(secondSourcesContent[secondSourceIndex]);
+        return;
+      }
+    }
+    if (firstSourcesContent) {
+      const firstSourceIndex = firstSourcemap.sources.indexOf(source);
+      if (firstSourceIndex > -1) {
+        sourcesContent.push(firstSourcesContent[firstSourceIndex]);
+        return;
+      }
+    }
+    sourcesContent.push(null);
+  });
+  sourcemap.sources = sources;
+  sourcemap.sourcesContent = sourcesContent;
+  return sourcemap;
+};
+const readMappings = consumer => {
+  const mappings = [];
+  consumer.eachMapping(({
+    originalColumn,
+    originalLine,
+    generatedColumn,
+    generatedLine,
+    source,
+    name
+  }) => {
+    mappings.push({
+      original: typeof originalColumn === "number" ? {
+        column: originalColumn,
+        line: originalLine
+      } : undefined,
+      generated: {
+        column: generatedColumn,
+        line: generatedLine
+      },
+      source: typeof originalColumn === "number" ? source : undefined,
+      name
+    });
+  });
+  return mappings;
+};
+
+// https://github.com/mozilla/source-map#sourcemapconsumerprototypeoriginalpositionforgeneratedposition
+const getOriginalPosition = ({
+  sourcemap,
+  line,
+  column,
+  bias
+}) => {
+  const {
+    SourceMapConsumer
+  } = requireSourcemap();
+  const sourceMapConsumer = new SourceMapConsumer(sourcemap);
+  const originalPosition = sourceMapConsumer.originalPositionFor({
+    line,
+    column,
+    bias
+  });
+  return originalPosition;
+};
+
+const sourcemapConverter = {
+  toFileUrls: sourcemap => {
+    return {
+      ...sourcemap,
+      sources: sourcemap.sources.map(source => {
+        return isFileSystemPath$1(source) ? fileSystemPathToUrl$1(source) : source;
+      })
+    };
+  },
+  toFilePaths: sourcemap => {
+    return {
+      ...sourcemap,
+      sources: sourcemap.sources.map(source => {
+        return urlToFileSystemPath(source);
+      })
+    };
+  }
+};
+
+const generateSourcemapFileUrl = url => {
+  const urlObject = new URL(url);
+  let {
+    origin,
+    pathname,
+    search,
+    hash
+  } = urlObject;
+  // origin is "null" for "file://" urls with Node.js
+  if (origin === "null" && urlObject.href.startsWith("file:")) {
+    origin = "file://";
+  }
+  const sourcemapUrl = `${origin}${pathname}.map${search}${hash}`;
+  return sourcemapUrl;
+};
+const generateSourcemapDataUrl = sourcemap => {
+  const asBase64 = Buffer.from(JSON.stringify(sourcemap)).toString("base64");
+  return `data:application/json;charset=utf-8;base64,${asBase64}`;
+};
+
+const SOURCEMAP = {
+  enabledOnContentType: contentType => {
+    return ["text/javascript", "text/css"].includes(contentType);
+  },
+  readComment: ({
+    contentType,
+    content
+  }) => {
+    const read = {
+      "text/javascript": parseJavaScriptSourcemapComment,
+      "text/css": parseCssSourcemapComment
+    }[contentType];
+    return read ? read(content) : null;
+  },
+  writeComment: ({
+    contentType,
+    content,
+    specifier
+  }) => {
+    const write = {
+      "text/javascript": setJavaScriptSourceMappingUrl,
+      "text/css": setCssSourceMappingUrl
+    }[contentType];
+    return write ? write(content, specifier) : content;
+  }
+};
+const parseJavaScriptSourcemapComment = javaScriptSource => {
+  let sourceMappingUrl;
+  replaceSourceMappingUrl(javaScriptSource, javascriptSourceMappingUrlCommentRegexp, value => {
+    sourceMappingUrl = value;
+  });
+  if (!sourceMappingUrl) {
+    return null;
+  }
+  return {
+    type: "sourcemap_comment",
+    subtype: "js",
+    // we assume it's on last line
+    line: javaScriptSource.split(/\r?\n/).length,
+    // ${"//#"} is to avoid static analysis to think there is a sourceMappingUrl for this file
+    column: `${"//#"} sourceMappingURL=`.length + 1,
+    specifier: sourceMappingUrl
+  };
+};
+const setJavaScriptSourceMappingUrl = (javaScriptSource, sourceMappingFileUrl) => {
+  let replaced;
+  const sourceAfterReplace = replaceSourceMappingUrl(javaScriptSource, javascriptSourceMappingUrlCommentRegexp, () => {
+    replaced = true;
+    return sourceMappingFileUrl ? writeJavaScriptSourceMappingURL(sourceMappingFileUrl) : "";
+  });
+  if (replaced) {
+    return sourceAfterReplace;
+  }
+  return sourceMappingFileUrl ? `${javaScriptSource}
+${writeJavaScriptSourceMappingURL(sourceMappingFileUrl)}
+` : javaScriptSource;
+};
+const parseCssSourcemapComment = cssSource => {
+  let sourceMappingUrl;
+  replaceSourceMappingUrl(cssSource, cssSourceMappingUrlCommentRegExp, value => {
+    sourceMappingUrl = value;
+  });
+  if (!sourceMappingUrl) {
+    return null;
+  }
+  return {
+    type: "sourcemap_comment",
+    subtype: "css",
+    // we assume it's on last line
+    line: cssSource.split(/\r?\n/).length - 1,
+    // ${"//*#"} is to avoid static analysis to think there is a sourceMappingUrl for this file
+    column: `${"//*#"} sourceMappingURL=`.length + 1,
+    specifier: sourceMappingUrl
+  };
+};
+const setCssSourceMappingUrl = (cssSource, sourceMappingFileUrl) => {
+  let replaced;
+  const sourceAfterReplace = replaceSourceMappingUrl(cssSource, cssSourceMappingUrlCommentRegExp, () => {
+    replaced = true;
+    return sourceMappingFileUrl ? writeCssSourceMappingUrl(sourceMappingFileUrl) : "";
+  });
+  if (replaced) {
+    return sourceAfterReplace;
+  }
+  return sourceMappingFileUrl ? `${cssSource}
+${writeCssSourceMappingUrl(sourceMappingFileUrl)}
+` : cssSource;
+};
+const javascriptSourceMappingUrlCommentRegexp = /\/\/ ?# ?sourceMappingURL=([^\s'"]+)/g;
+const cssSourceMappingUrlCommentRegExp = /\/\*# ?sourceMappingURL=([^\s'"]+) \*\//g;
+
+// ${"//#"} is to avoid a parser thinking there is a sourceMappingUrl for this file
+const writeJavaScriptSourceMappingURL = value => `${"//#"} sourceMappingURL=${value}`;
+const writeCssSourceMappingUrl = value => `/*# sourceMappingURL=${value} */`;
+const replaceSourceMappingUrl = (source, regexp, callback) => {
+  let lastSourceMappingUrl;
+  let matchSourceMappingUrl;
+  while (matchSourceMappingUrl = regexp.exec(source)) {
+    lastSourceMappingUrl = matchSourceMappingUrl;
+  }
+  if (lastSourceMappingUrl) {
+    const index = lastSourceMappingUrl.index;
+    const before = source.slice(0, index);
+    const after = source.slice(index);
+    const mappedAfter = after.replace(regexp, (match, firstGroup) => {
+      return callback(firstGroup);
+    });
+    return `${before}${mappedAfter}`;
+  }
+  return source;
+};
+
+const getHtmlNodeAttribute = (htmlNode, attributeName) => {
+  const attribute = getHtmlAttributeByName(htmlNode, attributeName);
+  return attribute ? attribute.value || "" : undefined;
+};
+const setHtmlNodeAttributes = (htmlNode, attributesToAssign) => {
+  if (typeof attributesToAssign !== "object") {
+    throw new TypeError(`attributesToAssign must be an object`);
+  }
+  const {
+    attrs
+  } = htmlNode;
+  if (!attrs) return;
+  Object.keys(attributesToAssign).forEach(key => {
+    const existingAttributeIndex = attrs.findIndex(({
+      name
+    }) => name === key);
+    const value = attributesToAssign[key];
+    // remove no-op
+    if (existingAttributeIndex === -1 && value === undefined) {
+      return;
+    }
+    // add
+    if (existingAttributeIndex === -1 && value !== undefined) {
+      attrs.push({
+        name: key,
+        value
+      });
+      return;
+    }
+    // remove
+    if (value === undefined) {
+      attrs.splice(existingAttributeIndex, 1);
+      return;
+    }
+    // update
+    attrs[existingAttributeIndex].value = value;
+  });
+};
+const getHtmlAttributeByName = (htmlNode, attributeName) => {
+  const attrs = htmlNode.attrs;
+  const attribute = attrs ? attrs.find(attr => attr.name === attributeName) : null;
+  return attribute;
+};
+
+const storeHtmlNodePosition = node => {
+  const originalPositionAttributeName = `original-position`;
+  const originalPosition = getHtmlNodeAttribute(node, originalPositionAttributeName);
+  if (originalPosition !== undefined) {
+    return true;
+  }
+  const {
+    sourceCodeLocation
+  } = node;
+  if (!sourceCodeLocation) {
+    return false;
+  }
+  const {
+    startLine,
+    startCol,
+    endLine,
+    endCol
+  } = sourceCodeLocation;
+  setHtmlNodeAttributes(node, {
+    [originalPositionAttributeName]: `${startLine}:${startCol};${endLine}:${endCol}`
+  });
+  return true;
+};
+const storeHtmlNodeAttributePosition = (node, attributeName) => {
+  const {
+    sourceCodeLocation
+  } = node;
+  if (!sourceCodeLocation) {
+    return false;
+  }
+  const attributeValue = getHtmlNodeAttribute(node, attributeName);
+  if (attributeValue === undefined) {
+    return false;
+  }
+  const attributeLocation = sourceCodeLocation.attrs[attributeName];
+  if (!attributeLocation) {
+    return false;
+  }
+  const originalPositionAttributeName = `original-${attributeName}-position`;
+  const originalPosition = getHtmlNodeAttribute(node, originalPositionAttributeName);
+  if (originalPosition !== undefined) {
+    return true;
+  }
+  const {
+    startLine,
+    startCol,
+    endLine,
+    endCol
+  } = attributeLocation;
+  setHtmlNodeAttributes(node, {
+    [originalPositionAttributeName]: `${startLine}:${startCol};${endLine}:${endCol}`
+  });
+  return true;
+};
+const getHtmlNodePosition = (node, {
+  preferOriginal = false
+} = {}) => {
+  const position = {};
+  const {
+    sourceCodeLocation
+  } = node;
+  if (sourceCodeLocation) {
+    const {
+      startLine,
+      startCol,
+      endLine,
+      endCol
+    } = sourceCodeLocation;
+    Object.assign(position, {
+      line: startLine,
+      lineEnd: endLine,
+      column: startCol,
+      columnEnd: endCol
+    });
+  }
+  const originalPosition = getHtmlNodeAttribute(node, "original-position");
+  if (originalPosition === undefined) {
+    return position;
+  }
+  const [start, end] = originalPosition.split(";");
+  const [originalLine, originalColumn] = start.split(":");
+  const [originalLineEnd, originalColumnEnd] = end.split(":");
+  Object.assign(position, {
+    originalLine: parseInt(originalLine),
+    originalColumn: parseInt(originalColumn),
+    originalLineEnd: parseInt(originalLineEnd),
+    originalColumnEnd: parseInt(originalColumnEnd)
+  });
+  if (preferOriginal) {
+    position.line = position.originalLine;
+    position.column = position.originalColumn;
+    position.lineEnd = position.originalLineEnd;
+    position.columnEnd = position.originalColumnEnd;
+    position.isOriginal = true;
+  }
+  return position;
+};
+const getHtmlNodeAttributePosition = (node, attributeName) => {
+  const position = {};
+  const {
+    sourceCodeLocation
+  } = node;
+  if (sourceCodeLocation) {
+    const attributeLocation = sourceCodeLocation.attrs[attributeName];
+    if (attributeLocation) {
+      Object.assign(position, {
+        line: attributeLocation.startLine,
+        column: attributeLocation.startCol
+      });
+    }
+  }
+  const originalPositionAttributeName = attributeName === "inlined-from-src" ? "original-src-position" : attributeName === "inlined-from-href" ? "original-href-position" : `original-${attributeName}-position`;
+  const originalPosition = getHtmlNodeAttribute(node, originalPositionAttributeName);
+  if (originalPosition === undefined) {
+    return position;
+  }
+  const [start, end] = originalPosition.split(";");
+  const [originalLine, originalColumn] = start.split(":");
+  const [originalLineEnd, originalColumnEnd] = end.split(":");
+  Object.assign(position, {
+    originalLine: parseInt(originalLine),
+    originalColumn: parseInt(originalColumn),
+    originalLineEnd: parseInt(originalLineEnd),
+    originalColumnEnd: parseInt(originalColumnEnd)
+  });
+  return position;
+};
+
+const visitHtmlNodes = (htmlAst, visitors) => {
+  const visitNode = node => {
+    const visitor = visitors[node.nodeName] || visitors["*"];
+    if (visitor) {
+      const callbackReturnValue = visitor(node);
+      if (callbackReturnValue === "stop") {
+        return;
+      }
+    }
+    const {
+      childNodes
+    } = node;
+    if (childNodes) {
+      let i = 0;
+      while (i < childNodes.length) {
+        visitNode(childNodes[i++]);
+      }
+    }
+  };
+  visitNode(htmlAst);
+};
+const findHtmlNode = (htmlAst, predicate) => {
+  let nodeMatching = null;
+  visitHtmlNodes(htmlAst, {
+    "*": node => {
+      if (predicate(node)) {
+        nodeMatching = node;
+        return "stop";
+      }
+      return null;
+    }
+  });
+  return nodeMatching;
+};
+const findHtmlChildNode = (htmlNode, predicate) => {
+  const {
+    childNodes = []
+  } = htmlNode;
+  return childNodes.find(predicate);
+};
+
+const getHtmlNodeText = htmlNode => {
+  const textNode = getTextNode(htmlNode);
+  return textNode ? textNode.value : undefined;
+};
+const getTextNode = htmlNode => {
+  const firstChild = htmlNode.childNodes[0];
+  const textNode = firstChild && firstChild.nodeName === "#text" ? firstChild : null;
+  return textNode;
+};
+const removeHtmlNodeText = htmlNode => {
+  const textNode = getTextNode(htmlNode);
+  if (textNode) {
+    htmlNode.childNodes = [];
+  }
+};
+const setHtmlNodeText = (htmlNode, textContent) => {
+  const textNode = getTextNode(htmlNode);
+  if (textNode) {
+    textNode.value = textContent;
+  } else {
+    const newTextNode = {
+      nodeName: "#text",
+      value: textContent,
+      parentNode: htmlNode
+    };
+    htmlNode.childNodes.splice(0, 0, newTextNode);
+  }
+};
+
+const parseHtmlString = (htmlString, {
+  storeOriginalPositions = true
+} = {}) => {
+  const htmlAst = parse(htmlString, {
+    sourceCodeLocationInfo: true
+  });
+  if (storeOriginalPositions) {
+    const htmlNode = findHtmlChildNode(htmlAst, node => node.nodeName === "html");
+    const stored = getHtmlNodeAttribute(htmlNode, "original-position-stored");
+    if (stored === undefined) {
+      visitHtmlNodes(htmlAst, {
+        "*": node => {
+          if (node.nodeName === "script" || node.nodeName === "style") {
+            const htmlNodeText = getHtmlNodeText(node);
+            if (htmlNodeText !== undefined) {
+              storeHtmlNodePosition(node);
+            }
+          }
+          storeHtmlNodeAttributePosition(node, "src");
+          storeHtmlNodeAttributePosition(node, "href");
+        }
+      });
+      setHtmlNodeAttributes(htmlNode, {
+        "original-position-stored": ""
+      });
+    }
+  }
+  return htmlAst;
+};
+const stringifyHtmlAst = (htmlAst, {
+  cleanupJsenvAttributes = false
+} = {}) => {
+  if (cleanupJsenvAttributes) {
+    const htmlNode = findHtmlChildNode(htmlAst, node => node.nodeName === "html");
+    const storedAttribute = getHtmlNodeAttribute(htmlNode, "original-position-stored");
+    if (storedAttribute !== undefined) {
+      setHtmlNodeAttributes(htmlNode, {
+        "original-position-stored": undefined
+      });
+      visitHtmlNodes(htmlAst, {
+        "*": node => {
+          setHtmlNodeAttributes(node, {
+            "original-position": undefined,
+            "original-src-position": undefined,
+            "original-href-position": undefined,
+            "inlined-from-src": undefined,
+            "inlined-from-href": undefined,
+            "jsenv-plugin-owner": undefined,
+            "jsenv-plugin-action": undefined,
+            "jsenv-debug": undefined
+          });
+        }
+      });
+    }
+  }
+  const htmlString = serialize(htmlAst);
+  return htmlString;
+};
+
+const analyzeScriptNode = scriptNode => {
+  const typeAttribute = getHtmlNodeAttribute(scriptNode, "type");
+  if (typeAttribute === undefined || typeAttribute === "text/javascript") {
+    return {
+      type: "js_classic",
+      contentType: "text/javascript"
+    };
+  }
+  if (typeAttribute === "module") {
+    return {
+      type: "js_module",
+      contentType: "text/javascript"
+    };
+  }
+  if (typeAttribute === "importmap") {
+    return {
+      type: "importmap",
+      contentType: "application/importmap+json"
+    };
+  }
+  // jsx
+  if (typeAttribute === "text/jsx") {
+    return {
+      type: "js_classic",
+      contentType: "text/javascript",
+      extension: ".jsx"
+    };
+  }
+  if (typeAttribute === "module/jsx") {
+    return {
+      type: "js_module",
+      contentType: "text/javascript",
+      extension: ".jsx"
+    };
+  }
+  // typescript
+  if (typeAttribute === "text/ts") {
+    return {
+      type: "js_classic",
+      contentType: "text/javascript",
+      extension: ".ts"
+    };
+  }
+  if (typeAttribute === "module/ts") {
+    return {
+      type: "js_module",
+      contentType: "text/javascript",
+      extension: ".ts"
+    };
+  }
+  // typescript and jsx
+  if (typeAttribute === "text/tsx") {
+    return {
+      type: "js_classic",
+      contentType: "text/javascript",
+      extension: ".tsx"
+    };
+  }
+  if (typeAttribute === "module/tsx") {
+    return {
+      type: "js_module",
+      contentType: "text/javascript",
+      extension: ".tsx"
+    };
+  }
+  // from MDN about [type] attribute:
+  // "Any other value: The embedded content is treated as a data block
+  // which won't be processed by the browser. Developers must use a valid MIME type
+  // that is not a JavaScript MIME type to denote data blocks.
+  // The src attribute will be ignored."
+  // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#attr-type
+  return {
+    type: "text",
+    contentType: "text/plain"
+  };
+};
+const analyzeLinkNode = linkNode => {
+  const rel = getHtmlNodeAttribute(linkNode, "rel");
+  if (rel === "stylesheet") {
+    return {
+      isStylesheet: true
+    };
+  }
+  const isResourceHint = ["preconnect", "dns-prefetch", "prefetch", "preload", "modulepreload"].includes(rel);
+  return {
+    isResourceHint,
+    rel
+  };
+};
+
+const removeHtmlNode = htmlNode => {
+  const {
+    childNodes
+  } = htmlNode.parentNode;
+  childNodes.splice(childNodes.indexOf(htmlNode), 1);
+};
+const createHtmlNode = ({
+  tagName,
+  textContent = "",
+  ...rest
+}) => {
+  const html = `<${tagName} ${stringifyAttributes(rest)}>${textContent}</${tagName}>`;
+  const fragment = parseFragment(html);
+  return fragment.childNodes[0];
+};
+const injectHtmlNode = (htmlAst, node, jsenvPluginName = "jsenv") => {
+  setHtmlNodeAttributes(node, {
+    "jsenv-plugin-owner": jsenvPluginName,
+    "jsenv-plugin-action": "injected"
+  });
+  const htmlHtmlNode = findChild(htmlAst, node => node.nodeName === "html");
+  const bodyNode = findChild(htmlHtmlNode, node => node.nodeName === "body");
+  return insertAfter(node, bodyNode);
+};
+const injectScriptNodeAsEarlyAsPossible = (htmlAst, scriptNode, jsenvPluginName = "jsenv") => {
+  setHtmlNodeAttributes(scriptNode, {
+    "jsenv-plugin-owner": jsenvPluginName,
+    "jsenv-plugin-action": "injected"
+  });
+  const isJsModule = analyzeScriptNode(scriptNode).type === "js_module";
+  if (isJsModule) {
+    const firstImportmapScript = findHtmlNode(htmlAst, node => {
+      return node.nodeName === "script" && analyzeScriptNode(node).type === "importmap";
+    });
+    if (firstImportmapScript) {
+      const importmapParent = firstImportmapScript.parentNode;
+      const importmapSiblings = importmapParent.childNodes;
+      const nextSiblings = importmapSiblings.slice(importmapSiblings.indexOf(firstImportmapScript) + 1);
+      let after = firstImportmapScript;
+      for (const nextSibling of nextSiblings) {
+        if (nextSibling.nodeName === "script") {
+          return insertBefore(scriptNode, importmapParent, nextSibling);
+        }
+        if (nextSibling.nodeName === "link") {
+          after = nextSibling;
+        }
+      }
+      return insertAfter(scriptNode, importmapParent, after);
+    }
+  }
+  const headNode = findChild(htmlAst, node => node.nodeName === "html").childNodes[0];
+  let after = headNode.childNodes[0];
+  for (const child of headNode.childNodes) {
+    if (child.nodeName === "script") {
+      return insertBefore(scriptNode, headNode, child);
+    }
+    if (child.nodeName === "link") {
+      after = child;
+    }
+  }
+  return insertAfter(scriptNode, headNode, after);
+};
+const insertBefore = (nodeToInsert, futureParentNode, futureNextSibling) => {
+  const {
+    childNodes = []
+  } = futureParentNode;
+  const futureIndex = futureNextSibling ? childNodes.indexOf(futureNextSibling) : 0;
+  injectWithWhitespaces(nodeToInsert, futureParentNode, futureIndex);
+};
+const insertAfter = (nodeToInsert, futureParentNode, futurePrevSibling) => {
+  const {
+    childNodes = []
+  } = futureParentNode;
+  const futureIndex = futurePrevSibling ? childNodes.indexOf(futurePrevSibling) + 1 : childNodes.length;
+  injectWithWhitespaces(nodeToInsert, futureParentNode, futureIndex);
+};
+const injectWithWhitespaces = (nodeToInsert, futureParentNode, futureIndex) => {
+  const {
+    childNodes = []
+  } = futureParentNode;
+  const previousSiblings = childNodes.slice(0, futureIndex);
+  const nextSiblings = childNodes.slice(futureIndex);
+  const futureChildNodes = [];
+  const previousSibling = previousSiblings[0];
+  if (previousSibling) {
+    futureChildNodes.push(...previousSiblings);
+  }
+  if (!previousSibling || previousSibling.nodeName !== "#text") {
+    futureChildNodes.push({
+      nodeName: "#text",
+      value: "\n    ",
+      parentNode: futureParentNode
+    });
+  }
+  futureChildNodes.push(nodeToInsert);
+  const nextSibling = nextSiblings[0];
+  if (!nextSibling || nextSibling.nodeName !== "#text") {
+    futureChildNodes.push({
+      nodeName: "#text",
+      value: "\n    ",
+      parentNode: futureParentNode
+    });
+  }
+  if (nextSibling) {
+    futureChildNodes.push(...nextSiblings);
+  }
+  futureParentNode.childNodes = futureChildNodes;
+};
+const findChild = ({
+  childNodes = []
+}, predicate) => childNodes.find(predicate);
+const stringifyAttributes = object => {
+  return Object.keys(object).map(key => `${key}=${valueToHtmlAttributeValue(object[key])}`).join(" ");
+};
+const valueToHtmlAttributeValue = value => {
+  if (typeof value === "string") {
+    return JSON.stringify(value);
+  }
+  return `"${JSON.stringify(value)}"`;
+};
+
+const applyPostCss = async ({
+  sourcemaps = "comment",
+  plugins,
+  // https://github.com/postcss/postcss#options
+  options = {},
+  url,
+  map,
+  content
+}) => {
+  const {
+    default: postcss
+  } = await import("postcss");
+  try {
+    const cssFileUrl = urlToFileUrl(url);
+    const result = await postcss(plugins).process(content, {
+      collectUrls: true,
+      from: fileURLToPath(cssFileUrl),
+      to: fileURLToPath(cssFileUrl),
+      map: {
+        annotation: sourcemaps === "file",
+        inline: sourcemaps === "inline",
+        // https://postcss.org/api/#sourcemapoptions
+        ...(map ? {
+          prev: JSON.stringify(map)
+        } : {})
+      },
+      ...options
+    });
+    return {
+      postCssMessages: result.messages,
+      map: result.map.toJSON(),
+      content: result.css
+    };
+  } catch (error) {
+    if (error.name === "CssSyntaxError") {
+      console.error(String(error));
+      throw error;
+    }
+    throw error;
+  }
+};
+
+// the goal of this function is to take an url that is likely an http url
+// info a file:// url
+// for instance http://example.com/dir/file.js
+// must becomes file:///dir/file.js
+// but in windows it must be file://C:/dir/file.js
+const filesystemRootUrl = process.platform === "win32" ? `file:///${process.cwd()[0]}:/` : "file:///";
+const urlToFileUrl = url => {
+  const urlString = String(url);
+  if (urlString.startsWith("file:")) {
+    return urlString;
+  }
+  const origin = new URL(url).origin;
+  const afterOrigin = urlString.slice(origin.length);
+  return new URL(afterOrigin, filesystemRootUrl).href;
+};
+
+const require$2 = createRequire(import.meta.url);
+const transpileWithParcel = (urlInfo, context) => {
+  const css = require$2("@parcel/css");
+  const targets = runtimeCompatToTargets(context.runtimeCompat);
+  const {
+    code,
+    map
+  } = css.transform({
+    filename: fileURLToPath(urlInfo.originalUrl),
+    code: Buffer.from(urlInfo.content),
+    targets,
+    minify: false
+  });
+  return {
+    code,
+    map
+  };
+};
+const minifyWithParcel = (urlInfo, context) => {
+  const css = require$2("@parcel/css");
+  const targets = runtimeCompatToTargets(context.runtimeCompat);
+  const {
+    code,
+    map
+  } = css.transform({
+    filename: fileURLToPath(urlInfo.originalUrl),
+    code: Buffer.from(urlInfo.content),
+    targets,
+    minify: true
+  });
+  return {
+    code,
+    map
+  };
+};
+const runtimeCompatToTargets = runtimeCompat => {
+  const targets = {};
+  ["chrome", "firefox", "ie", "opera", "safari"].forEach(runtimeName => {
+    const version = runtimeCompat[runtimeName];
+    if (version) {
+      targets[runtimeName] = versionToBits(version);
+    }
+  });
+  return targets;
+};
+const versionToBits = version => {
+  const [major, minor = 0, patch = 0] = version.split("-")[0].split(".").map(v => parseInt(v, 10));
+  return major << 16 | minor << 8 | patch;
+};
+
+const require$1 = createRequire(import.meta.url);
+
+/**
+
+https://github.com/postcss/postcss/blob/master/docs/writing-a-plugin.md
+https://github.com/postcss/postcss/blob/master/docs/guidelines/plugin.md
+https://github.com/postcss/postcss/blob/master/docs/guidelines/runner.md#31-dont-show-js-stack-for-csssyntaxerror
+
+In case css sourcemap contains no%20source
+This is because of https://github.com/postcss/postcss/blob/fd30d3df5abc0954a0ec642a3cdc644ab2aacf9c/lib/map-generator.js#L231
+and it indicates a node has been replaced without passing source
+hence sourcemap cannot point the original source location
+
+*/
+const postCssPluginUrlVisitor = ({
+  urlVisitor = () => null
+}) => {
+  const parseCssValue = require$1("postcss-value-parser");
+  const stringifyCssNodes = parseCssValue.stringify;
+  return {
+    postcssPlugin: "url_visitor",
+    prepare: result => {
+      const {
+        from
+      } = result.opts;
+      const fromUrl = String(pathToFileURL(from));
+      const mutations = [];
+      return {
+        AtRule: {
+          import: (atImportNode, {
+            AtRule
+          }) => {
+            if (atImportNode.parent.type !== "root") {
+              atImportNode.warn(result, "`@import` should be top level");
+              return;
+            }
+            if (atImportNode.nodes) {
+              atImportNode.warn(result, "`@import` was not terminated correctly");
+              return;
+            }
+            const parsed = parseCssValue(atImportNode.params);
+            let [urlNode] = parsed.nodes;
+            if (!urlNode || urlNode.type !== "string" && urlNode.type !== "function") {
+              atImportNode.warn(result, `No URL in \`${atImportNode.toString()}\``);
+              return;
+            }
+            let url = "";
+            if (urlNode.type === "string") {
+              url = urlNode.value;
+            } else if (urlNode.type === "function") {
+              // Invalid function
+              if (!/^url$/i.test(urlNode.value)) {
+                atImportNode.warn(result, `Invalid \`url\` function in \`${atImportNode.toString()}\``);
+                return;
+              }
+              const firstNode = urlNode.nodes[0];
+              if (firstNode && firstNode.type === "string") {
+                urlNode = firstNode;
+                url = urlNode.value;
+              } else {
+                urlNode = urlNode.nodes;
+                url = stringifyCssNodes(urlNode.nodes);
+              }
+            }
+            url = url.trim();
+            if (url.length === 0) {
+              atImportNode.warn(result, `Empty URL in \`${atImportNode.toString()}\``);
+              return;
+            }
+            const specifier = url;
+            url = new URL(specifier, fromUrl).href;
+            if (url === fromUrl) {
+              atImportNode.warn(result, `\`@import\` loop in \`${atImportNode.toString()}\``);
+              return;
+            }
+            const atRuleStart = atImportNode.source.start.offset;
+            const atRuleEnd = atImportNode.source.end.offset + 1; // for the ";"
+            const atRuleRaw = atImportNode.source.input.css.slice(atRuleStart, atRuleEnd);
+            const specifierIndex = atRuleRaw.indexOf(atImportNode.params);
+            const specifierStart = atRuleStart + specifierIndex;
+            const specifierEnd = specifierStart + atImportNode.params.length;
+            const specifierLine = atImportNode.source.start.line;
+            const specifierColumn = atImportNode.source.start.column + specifierIndex;
+            urlVisitor({
+              declarationNode: atImportNode,
+              type: "@import",
+              atRuleStart,
+              atRuleEnd,
+              specifier,
+              specifierLine,
+              specifierColumn,
+              specifierStart,
+              specifierEnd,
+              replace: newUrlSpecifier => {
+                if (newUrlSpecifier === urlNode.value) {
+                  return;
+                }
+                urlNode.value = newUrlSpecifier;
+                const newParams = parsed.toString();
+                const newAtImportRule = new AtRule({
+                  name: "import",
+                  params: newParams,
+                  source: atImportNode.source
+                });
+                atImportNode.replaceWith(newAtImportRule);
+              }
+            });
+          }
+        },
+        Declaration: declarationNode => {
+          const parsed = parseCssValue(declarationNode.value);
+          const urlMutations = [];
+          walkUrls(parsed, {
+            stringifyCssNodes,
+            visitor: ({
+              url,
+              urlNode
+            }) => {
+              // Empty URL
+              if (!urlNode || url.length === 0) {
+                declarationNode.warn(result, `Empty URL in \`${declarationNode.toString()}\``);
+                return;
+              }
+              // Skip Data URI
+              if (isDataUrl(url)) {
+                return;
+              }
+              const specifier = url;
+              url = new URL(specifier, pathToFileURL(from));
+              const declarationNodeStart = declarationNode.source.start.offset;
+              const afterDeclarationNode = declarationNode.source.input.css.slice(declarationNodeStart);
+              const valueIndex = afterDeclarationNode.indexOf(declarationNode.value);
+              const valueStart = declarationNodeStart + valueIndex;
+              const specifierStart = valueStart + urlNode.sourceIndex;
+              const specifierEnd = specifierStart + (urlNode.type === "word" ? urlNode.value.length : urlNode.value.length + 2); // the quotes
+              // value raw
+              // declarationNode.source.input.css.slice(valueStart)
+              // specifier raw
+              // declarationNode.source.input.css.slice(specifierStart, specifierEnd)
+              const specifierLine = declarationNode.source.start.line;
+              const specifierColumn = declarationNode.source.start.column + (specifierStart - declarationNodeStart);
+              urlVisitor({
+                declarationNode,
+                type: "url",
+                specifier,
+                specifierLine,
+                specifierColumn,
+                specifierStart,
+                specifierEnd,
+                replace: newUrlSpecifier => {
+                  urlMutations.push(() => {
+                    // the specifier desires to be inside double quotes
+                    if (newUrlSpecifier[0] === `"`) {
+                      urlNode.type = "word";
+                      urlNode.value = newUrlSpecifier;
+                      return;
+                    }
+                    // the specifier desires to be inside simple quotes
+                    if (newUrlSpecifier[0] === `'`) {
+                      urlNode.type = "word";
+                      urlNode.value = newUrlSpecifier;
+                      return;
+                    }
+                    // the specifier desired to be just a word
+                    // for the "word" type so that newUrlSpecifier can opt-out of being between quotes
+                    // useful to inject __v__ calls for css inside js
+                    urlNode.type = "word";
+                    urlNode.value = newUrlSpecifier;
+                  });
+                }
+              });
+            }
+          });
+          if (urlMutations.length) {
+            mutations.push(() => {
+              urlMutations.forEach(urlMutation => {
+                urlMutation();
+              });
+              declarationNode.value = parsed.toString();
+            });
+          }
+        },
+        OnceExit: () => {
+          mutations.forEach(mutation => {
+            mutation();
+          });
+        }
+      };
+    }
+  };
+};
+postCssPluginUrlVisitor.postcss = true;
+const walkUrls = (parsed, {
+  stringifyCssNodes,
+  visitor
+}) => {
+  parsed.walk(node => {
+    // https://github.com/andyjansson/postcss-functions
+    if (isUrlFunctionNode(node)) {
+      const {
+        nodes
+      } = node;
+      const [urlNode] = nodes;
+      const url = urlNode && urlNode.type === "string" ? urlNode.value : stringifyCssNodes(nodes);
+      visitor({
+        url: url.trim(),
+        urlNode
+      });
+      return;
+    }
+    if (isImageSetFunctionNode(node)) {
+      Array.from(node.nodes).forEach(childNode => {
+        if (childNode.type === "string") {
+          visitor({
+            url: childNode.value.trim(),
+            urlNode: childNode
+          });
+          return;
+        }
+        if (isUrlFunctionNode(node)) {
+          const {
+            nodes
+          } = childNode;
+          const [urlNode] = nodes;
+          const url = urlNode && urlNode.type === "string" ? urlNode.value : stringifyCssNodes(nodes);
+          visitor({
+            url: url.trim(),
+            urlNode
+          });
+          return;
+        }
+      });
+    }
+  });
+};
+const isUrlFunctionNode = node => {
+  return node.type === "function" && /^url$/i.test(node.value);
+};
+const isImageSetFunctionNode = node => {
+  return node.type === "function" && /^(?:-webkit-)?image-set$/i.test(node.value);
+};
+const isDataUrl = url => {
+  return /data:[^\n\r;]+?(?:;charset=[^\n\r;]+?)?;base64,([\d+/A-Za-z]+={0,2})/.test(url);
+};
+
+const createJsParseError = ({
+  message,
+  reasonCode,
+  url,
+  line,
+  column
+}) => {
+  const parseError = new Error(message);
+  parseError.reasonCode = reasonCode;
+  parseError.code = "PARSE_ERROR";
+  parseError.url = url;
+  parseError.line = line;
+  parseError.column = column;
+  return parseError;
+};
+
+/*
+ * Useful when writin a babel plugin:
+ * - https://astexplorer.net/
+ * - https://bvaughn.github.io/babel-repl
+ */
+const applyBabelPlugins = async ({
+  babelPlugins,
+  urlInfo,
+  ast,
+  options = {}
+}) => {
+  const sourceType = {
+    js_module: "module",
+    js_classic: "classic",
+    [urlInfo.type]: undefined
+  }[urlInfo.type];
+  const url = urlInfo.originalUrl;
+  const generatedUrl = urlInfo.generatedUrl;
+  const content = urlInfo.content;
+  if (babelPlugins.length === 0) {
+    return {
+      code: content
+    };
+  }
+  const {
+    transformAsync,
+    transformFromAstAsync
+  } = await import("@babel/core");
+  const sourceFileName = url.startsWith("file:") ? fileURLToPath(url) : undefined;
+  options = {
+    ast: false,
+    // https://babeljs.io/docs/en/options#source-map-options
+    sourceMaps: true,
+    sourceFileName,
+    filename: generatedUrl ? generatedUrl.startsWith("file:") ? fileURLToPath(url) : undefined : sourceFileName,
+    configFile: false,
+    babelrc: false,
+    highlightCode: false,
+    // consider using startColumn and startLine for inline scripts?
+    // see https://github.com/babel/babel/blob/3ee9db7afe741f4d2f7933c519d8e7672fccb08d/packages/babel-parser/src/options.js#L36-L39
+    parserOpts: {
+      sourceType,
+      // allowAwaitOutsideFunction: true,
+      plugins: [
+      // "importMeta",
+      // "topLevelAwait",
+      "dynamicImport", "importAssertions", "jsx", "classProperties", "classPrivateProperties", "classPrivateMethods", ...(useTypeScriptExtension(url) ? ["typescript"] : []), ...(options.parserPlugins || [])].filter(Boolean)
+    },
+    generatorOpts: {
+      compact: false
+    },
+    plugins: babelPlugins,
+    ...options
+  };
+  try {
+    if (ast) {
+      const result = await transformFromAstAsync(ast, content, options);
+      return result;
+    }
+    const result = await transformAsync(content, options);
+    return result;
+  } catch (error) {
+    if (error && error.code === "BABEL_PARSE_ERROR") {
+      throw createJsParseError({
+        message: error.message,
+        reasonCode: error.reasonCode,
+        content,
+        url,
+        line: error.loc.line,
+        column: error.loc.column
+      });
+    }
+    throw error;
+  }
+};
+const useTypeScriptExtension = url => {
+  const {
+    pathname
+  } = new URL(url);
+  return pathname.endsWith(".ts") || pathname.endsWith(".tsx");
+};
+
+// const pattern = [
+//   "[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?\\u0007)",
+//   "(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-ntqry=><~]))",
+// ].join("|")
+// const ansiRegex = new RegExp(pattern, "g")
+
+// https://github.com/babel/babel/tree/master/packages/babel-helper-module-imports
+const injectJsImport = ({
+  programPath,
+  namespace,
+  name,
+  from,
+  nameHint,
+  sideEffect
+}) => {
+  const {
+    addNamespace,
+    addDefault,
+    addNamed,
+    addSideEffect
+  } = require$1("@babel/helper-module-imports");
+  if (namespace) {
+    return addNamespace(programPath, from, {
+      nameHint
+    });
+  }
+  if (name) {
+    return addNamed(programPath, name, from);
+  }
+  if (sideEffect) {
+    return addSideEffect(programPath, from);
+  }
+  return addDefault(programPath, from, {
+    nameHint
+  });
+};
+
+let AcornParser;
+let _getLineInfo;
+const parseJsWithAcorn = async ({
+  js,
+  url,
+  isJsModule
+}) => {
+  await initAcornParser();
+  try {
+    // https://github.com/acornjs/acorn/tree/master/acorn#interface
+    const jsAst = AcornParser.parse(js, {
+      locations: true,
+      allowAwaitOutsideFunction: true,
+      sourceType: isJsModule ? "module" : "script",
+      ecmaVersion: 2022
+    });
+    return jsAst;
+  } catch (e) {
+    if (e && e.name === "SyntaxError") {
+      const {
+        line,
+        column
+      } = _getLineInfo(js, e.raisedAt);
+      throw createJsParseError({
+        message: e.message,
+        url,
+        line,
+        column
+      });
+    }
+    throw e;
+  }
+};
+const initAcornParser = async () => {
+  if (AcornParser) {
+    return;
+  }
+  const {
+    Parser,
+    getLineInfo
+  } = await import("acorn");
+  const {
+    importAssertions
+  } = await import("acorn-import-assertions");
+  AcornParser = Parser.extend(importAssertions);
+  _getLineInfo = getLineInfo;
+};
+
+const getTypePropertyNode$1 = node => {
+  if (node.type !== "ObjectExpression") {
+    return null;
+  }
+  const {
+    properties
+  } = node;
+  return properties.find(property => {
+    return property.type === "Property" && property.key.type === "Identifier" && property.key.name === "type";
+  });
+};
+const isStringLiteralNode = node => {
+  return node.type === "Literal" && typeof node.value === "string";
+};
+
+const analyzeImportDeclaration = (node, {
+  onUrl
+}) => {
+  const specifierNode = node.source;
+  const assertionInfo = extractImportAssertionsInfo(node);
+  onUrl({
+    type: "js_import_export",
+    subtype: "import_static",
+    specifier: specifierNode.value,
+    specifierStart: specifierNode.start,
+    specifierEnd: specifierNode.end,
+    specifierLine: specifierNode.loc.start.line,
+    specifierColumn: specifierNode.loc.start.column,
+    expectedType: assertionInfo ? assertionInfo.assert.type : "js_module",
+    ...assertionInfo
+  });
+};
+const analyzeImportExpression = (node, {
+  onUrl
+}) => {
+  const specifierNode = node.source;
+  if (!isStringLiteralNode(specifierNode)) {
+    return;
+  }
+  const assertionInfo = extractImportAssertionsInfo(node);
+  onUrl({
+    type: "js_import_export",
+    subtype: "import_dynamic",
+    specifier: specifierNode.value,
+    specifierStart: specifierNode.start,
+    specifierEnd: specifierNode.end,
+    specifierLine: specifierNode.loc.start.line,
+    specifierColumn: specifierNode.loc.start.column,
+    expectedType: assertionInfo ? assertionInfo.assert.type : "js_module",
+    ...assertionInfo
+  });
+};
+const analyzeExportNamedDeclaration = (node, {
+  onUrl
+}) => {
+  const specifierNode = node.source;
+  if (!specifierNode) {
+    // This export has no "source", so it's probably
+    // a local variable or function, e.g.
+    // export { varName }
+    // export const constName = ...
+    // export function funcName() {}
+    return;
+  }
+  onUrl({
+    type: "js_import_export",
+    subtype: "export_named",
+    specifier: specifierNode.value,
+    specifierStart: specifierNode.start,
+    specifierEnd: specifierNode.end,
+    specifierLine: specifierNode.loc.start.line,
+    specifierColumn: specifierNode.loc.start.column
+  });
+};
+const analyzeExportAllDeclaration = (node, {
+  onUrl
+}) => {
+  const specifierNode = node.source;
+  onUrl({
+    type: "js_import_export",
+    subtype: "export_all",
+    specifier: specifierNode.value,
+    specifierStart: specifierNode.start,
+    specifierEnd: specifierNode.end,
+    specifierLine: specifierNode.loc.start.line,
+    specifierColumn: specifierNode.loc.start.column
+  });
+};
+const extractImportAssertionsInfo = node => {
+  if (node.type === "ImportDeclaration") {
+    // static import
+    const {
+      assertions
+    } = node;
+    if (!assertions) {
+      return null;
+    }
+    if (assertions.length === 0) {
+      return null;
+    }
+    const typeAssertionNode = assertions.find(assertion => assertion.key.name === "type");
+    if (!typeAssertionNode) {
+      return null;
+    }
+    const typeNode = typeAssertionNode.value;
+    if (!isStringLiteralNode(typeNode)) {
+      return null;
+    }
+    return {
+      assertNode: typeAssertionNode,
+      assert: {
+        type: typeNode.value
+      }
+    };
+  }
+  // dynamic import
+  const args = node.arguments;
+  if (!args) {
+    // acorn keeps node.arguments undefined for dynamic import without a second argument
+    return null;
+  }
+  const firstArgNode = args[0];
+  if (!firstArgNode) {
+    return null;
+  }
+  const {
+    properties
+  } = firstArgNode;
+  const assertProperty = properties.find(property => {
+    return property.key.name === "assert";
+  });
+  if (!assertProperty) {
+    return null;
+  }
+  const assertValueNode = assertProperty.value;
+  if (assertValueNode.type !== "ObjectExpression") {
+    return null;
+  }
+  const assertValueProperties = assertValueNode.properties;
+  const typePropertyNode = assertValueProperties.find(property => {
+    return property.key.name === "type";
+  });
+  if (!typePropertyNode) {
+    return null;
+  }
+  const typePropertyValue = typePropertyNode.value;
+  if (!isStringLiteralNode(typePropertyValue)) {
+    return null;
+  }
+  return {
+    assertNode: firstArgNode,
+    assert: {
+      type: typePropertyValue.value
+    }
+  };
+};
+
+const isNewUrlCall = node => {
+  return node.type === "NewExpression" && node.callee.type === "Identifier" && node.callee.name === "URL";
+};
+const analyzeNewUrlCall = (node, {
+  isJsModule,
+  onUrl
+}) => {
+  if (node.arguments.length === 1) {
+    const firstArgNode = node.arguments[0];
+    const urlType = analyzeUrlNodeType(firstArgNode, {
+      isJsModule
+    });
+    if (urlType === "StringLiteral") {
+      const specifierNode = firstArgNode;
+      onUrl({
+        type: "js_url_specifier",
+        subtype: "new_url_first_arg",
+        specifier: specifierNode.value,
+        specifierStart: specifierNode.start,
+        specifierEnd: specifierNode.end,
+        specifierLine: specifierNode.loc.start.line,
+        specifierColumn: specifierNode.loc.start.column
+      });
+    }
+    return;
+  }
+  if (node.arguments.length === 2) {
+    const firstArgNode = node.arguments[0];
+    const secondArgNode = node.arguments[1];
+    const baseUrlType = analyzeUrlNodeType(secondArgNode, {
+      isJsModule
+    });
+    if (baseUrlType) {
+      // we can understand the second argument
+      if (baseUrlType === "StringLiteral" && secondArgNode.value === "file:///") {
+        // ignore new URL(specifier, "file:///")
+        return;
+      }
+      const urlType = analyzeUrlNodeType(firstArgNode, {
+        isJsModule
+      });
+      if (urlType === "StringLiteral") {
+        // we can understand the first argument
+        const specifierNode = firstArgNode;
+        onUrl({
+          type: "js_url_specifier",
+          subtype: "new_url_first_arg",
+          specifier: specifierNode.value,
+          specifierStart: specifierNode.start,
+          specifierEnd: specifierNode.end,
+          specifierLine: specifierNode.loc.start.line,
+          specifierColumn: specifierNode.loc.start.column,
+          baseUrlType,
+          baseUrl: baseUrlType === "StringLiteral" ? secondArgNode.value : undefined
+        });
+      }
+      if (baseUrlType === "StringLiteral") {
+        const specifierNode = secondArgNode;
+        onUrl({
+          type: "js_url_specifier",
+          subtype: "new_url_second_arg",
+          specifier: specifierNode.value,
+          specifierStart: specifierNode.start,
+          specifierEnd: specifierNode.end,
+          specifierLine: specifierNode.loc.start.line,
+          specifierColumn: specifierNode.loc.start.column
+        });
+      }
+    }
+  }
+};
+const analyzeUrlNodeType = (secondArgNode, {
+  isJsModule
+}) => {
+  if (isStringLiteralNode(secondArgNode)) {
+    return "StringLiteral";
+  }
+  if (isImportMetaUrl(secondArgNode)) {
+    return "import.meta.url";
+  }
+  if (isWindowLocation(secondArgNode)) {
+    return "window.location";
+  }
+  if (isWindowOrigin(secondArgNode)) {
+    return "window.origin";
+  }
+  if (!isJsModule && isContextMetaUrlFromSystemJs(secondArgNode)) {
+    return "context.meta.url";
+  }
+  if (!isJsModule && isDocumentCurrentScriptSrc(secondArgNode)) {
+    return "document.currentScript.src";
+  }
+  return null;
+};
+const isImportMetaUrl = node => {
+  return node.type === "MemberExpression" && node.object.type === "MetaProperty" && node.property.type === "Identifier" && node.property.name === "url";
+};
+const isWindowLocation = node => {
+  return node.type === "MemberExpression" && node.object.type === "Identifier" && node.object.name === "window" && node.property.type === "Identifier" && node.property.name === "location";
+};
+const isWindowOrigin = node => {
+  return node.type === "MemberExpression" && node.object.type === "Identifier" && node.object.name === "window" && node.property.type === "Identifier" && node.property.name === "origin";
+};
+const isContextMetaUrlFromSystemJs = node => {
+  return node.type === "MemberExpression" && node.object.type === "MemberExpression" && node.object.object.type === "Identifier" &&
+  // because of minification we can't assume _context.
+  // so anything matching "*.meta.url" (in the context of new URL())
+  // will be assumed to be the equivalent to "import.meta.url"
+  // node.object.object.name === "_context" &&
+  node.object.property.type === "Identifier" && node.object.property.name === "meta" && node.property.type === "Identifier" && node.property.name === "url";
+};
+const isDocumentCurrentScriptSrc = node => {
+  return node.type === "MemberExpression" && node.object.type === "MemberExpression" && node.object.object.type === "Identifier" && node.object.object.name === "document" && node.object.property.type === "Identifier" && node.object.property.name === "currentScript" && node.property.type === "Identifier" && node.property.name === "src";
+};
+
+const isNewWorkerCall = node => {
+  return node.type === "NewExpression" && node.callee.type === "Identifier" && node.callee.name === "Worker";
+};
+const analyzeNewWorkerCall = (node, {
+  isJsModule,
+  onUrl
+}) => {
+  analyzeWorkerCallArguments(node, {
+    isJsModule,
+    onUrl,
+    referenceSubtype: "new_worker_first_arg",
+    expectedSubtype: "worker"
+  });
+};
+const isNewSharedWorkerCall = node => {
+  return node.type === "NewExpression" && node.callee.type === "Identifier" && node.callee.name === "SharedWorker";
+};
+const analyzeNewSharedWorkerCall = (node, {
+  isJsModule,
+  onUrl
+}) => {
+  analyzeWorkerCallArguments(node, {
+    isJsModule,
+    onUrl,
+    referenceSubtype: "new_shared_worker_first_arg",
+    expectedSubtype: "shared_worker"
+  });
+};
+const isServiceWorkerRegisterCall = node => {
+  if (node.type !== "CallExpression") {
+    return false;
+  }
+  const callee = node.callee;
+  if (callee.type === "MemberExpression" && callee.property.type === "Identifier" && callee.property.name === "register") {
+    const parentObject = callee.object;
+    if (parentObject.type === "MemberExpression") {
+      const parentProperty = parentObject.property;
+      if (parentProperty.type === "Identifier" && parentProperty.name === "serviceWorker") {
+        const grandParentObject = parentObject.object;
+        if (grandParentObject.type === "MemberExpression") {
+          // window.navigator.serviceWorker.register
+          const grandParentProperty = grandParentObject.property;
+          if (grandParentProperty.type === "Identifier" && grandParentProperty.name === "navigator") {
+            const ancestorObject = grandParentObject.object;
+            if (ancestorObject.type === "Identifier" && ancestorObject.name === "window") {
+              return true;
+            }
+          }
+        }
+        if (grandParentObject.type === "Identifier") {
+          // navigator.serviceWorker.register
+          if (grandParentObject.name === "navigator") {
+            return true;
+          }
+        }
+      }
+    }
+  }
+  return false;
+};
+const analyzeServiceWorkerRegisterCall = (node, {
+  isJsModule,
+  onUrl
+}) => {
+  analyzeWorkerCallArguments(node, {
+    isJsModule,
+    onUrl,
+    referenceSubtype: "service_worker_register_first_arg",
+    expectedSubtype: "service_worker"
+  });
+};
+const analyzeWorkerCallArguments = (node, {
+  isJsModule,
+  onUrl,
+  referenceSubtype,
+  expectedSubtype
+}) => {
+  let expectedType = "js_classic";
+  let typePropertyNode;
+  const secondArgNode = node.arguments[1];
+  if (secondArgNode) {
+    typePropertyNode = getTypePropertyNode$1(secondArgNode);
+    if (typePropertyNode) {
+      const typePropertyValueNode = typePropertyNode.value;
+      if (isStringLiteralNode(typePropertyValueNode)) {
+        const typePropertyValue = typePropertyValueNode.value;
+        if (typePropertyValue === "module") {
+          expectedType = "js_module";
+        }
+      }
+    }
+  }
+  const firstArgNode = node.arguments[0];
+  if (isStringLiteralNode(firstArgNode)) {
+    const specifierNode = firstArgNode;
+    onUrl({
+      type: "js_url_specifier",
+      subtype: referenceSubtype,
+      expectedType,
+      expectedSubtype,
+      typePropertyNode,
+      specifier: specifierNode.value,
+      specifierStart: specifierNode.start,
+      specifierEnd: specifierNode.end,
+      specifierLine: specifierNode.loc.start.line,
+      specifierColumn: specifierNode.loc.start.column
+    });
+    return;
+  }
+  if (isNewUrlCall(firstArgNode)) {
+    analyzeNewUrlCall(firstArgNode, {
+      isJsModule,
+      onUrl: mention => {
+        Object.assign(mention, {
+          expectedType,
+          expectedSubtype,
+          typePropertyNode
+        });
+        onUrl(mention);
+      }
+    });
+  }
+};
+
+const isImportScriptsCall = node => {
+  const callee = node.callee;
+  if (callee.type === "Identifier" && callee.name === "importScripts") {
+    return true;
+  }
+  return callee.type === "MemberExpression" && callee.object.type === "Identifier" && callee.object.name === "self" && callee.property.type === "Identifier" && callee.property.name === "importScripts";
+};
+const analyzeImportScriptCalls = (node, {
+  onUrl
+}) => {
+  node.arguments.forEach(arg => {
+    if (isStringLiteralNode(arg)) {
+      const specifierNode = arg;
+      onUrl({
+        type: "js_url_specifier",
+        subtype: "self_import_scripts_arg",
+        expectedType: "js_classic",
+        specifier: specifierNode.value,
+        specifierStart: specifierNode.start,
+        specifierEnd: specifierNode.end,
+        specifierLine: specifierNode.loc.start.line,
+        specifierColumn: specifierNode.loc.start.column
+      });
+    }
+  });
+};
+
+const isSystemRegisterCall = node => {
+  const callee = node.callee;
+  return callee.type === "MemberExpression" && callee.object.type === "Identifier" && callee.object.name === "System" && callee.property.type === "Identifier" && callee.property.name === "register";
+};
+const analyzeSystemRegisterCall = (node, {
+  onUrl
+}) => {
+  const firstArgNode = node.arguments[0];
+  if (firstArgNode.type === "ArrayExpression") {
+    analyzeSystemRegisterDeps(firstArgNode, {
+      onUrl
+    });
+    return;
+  }
+  if (isStringLiteralNode(firstArgNode)) {
+    const secondArgNode = node.arguments[1];
+    if (secondArgNode.type === "ArrayExpression") {
+      analyzeSystemRegisterDeps(secondArgNode, {
+        onUrl
+      });
+      return;
+    }
+  }
+};
+const analyzeSystemRegisterDeps = (node, {
+  onUrl
+}) => {
+  const elements = node.elements;
+  elements.forEach(element => {
+    if (isStringLiteralNode(element)) {
+      const specifierNode = element;
+      onUrl({
+        type: "js_url_specifier",
+        subtype: "system_register_arg",
+        expectedType: "js_classic",
+        specifier: specifierNode.value,
+        specifierStart: specifierNode.start,
+        specifierEnd: specifierNode.end,
+        specifierLine: specifierNode.loc.start.line,
+        specifierColumn: specifierNode.loc.start.column
+      });
+    }
+  });
+};
+const isSystemImportCall = node => {
+  const callee = node.callee;
+  return callee.type === "MemberExpression" && callee.object.type === "Identifier" &&
+  // because of minification we can't assume _context.
+  // so anything matching "*.import()"
+  // will be assumed to be the equivalent to "import()"
+  // callee.object.name === "_context" &&
+  callee.property.type === "Identifier" && callee.property.name === "import";
+};
+const analyzeSystemImportCall = (node, {
+  onUrl
+}) => {
+  const firstArgNode = node.arguments[0];
+  if (isStringLiteralNode(firstArgNode)) {
+    const specifierNode = firstArgNode;
+    onUrl({
+      type: "js_url_specifier",
+      subtype: "system_import_arg",
+      expectedType: "js_classic",
+      specifier: specifierNode.value,
+      specifierStart: specifierNode.start,
+      specifierEnd: specifierNode.end,
+      specifierLine: specifierNode.loc.start.line,
+      specifierColumn: specifierNode.loc.start.column
+    });
+  }
+};
+
+const parseJsUrls = async ({
+  js,
+  url,
+  isJsModule = false,
+  isWebWorker = false
+} = {}) => {
+  const jsUrls = [];
+  const jsAst = await parseJsWithAcorn({
+    js,
+    url,
+    isJsModule
+  });
+  const onUrl = jsUrl => {
+    jsUrls.push(jsUrl);
+  };
+  ancestor(jsAst, {
+    ImportDeclaration: node => {
+      analyzeImportDeclaration(node, {
+        onUrl
+      });
+    },
+    ImportExpression: node => {
+      analyzeImportExpression(node, {
+        onUrl
+      });
+    },
+    ExportNamedDeclaration: node => {
+      analyzeExportNamedDeclaration(node, {
+        onUrl
+      });
+    },
+    ExportAllDeclaration: node => {
+      analyzeExportAllDeclaration(node, {
+        onUrl
+      });
+    },
+    CallExpression: node => {
+      if (isServiceWorkerRegisterCall(node)) {
+        analyzeServiceWorkerRegisterCall(node, {
+          isJsModule,
+          onUrl
+        });
+        return;
+      }
+      if (isWebWorker && isImportScriptsCall(node)) {
+        analyzeImportScriptCalls(node, {
+          onUrl
+        });
+        return;
+      }
+      if (!isJsModule && isSystemRegisterCall(node)) {
+        analyzeSystemRegisterCall(node, {
+          onUrl
+        });
+        return;
+      }
+      if (!isJsModule && isSystemImportCall(node)) {
+        analyzeSystemImportCall(node, {
+          onUrl
+        });
+        return;
+      }
+    },
+    NewExpression: (node, ancestors) => {
+      if (isNewWorkerCall(node)) {
+        analyzeNewWorkerCall(node, {
+          isJsModule,
+          onUrl
+        });
+        return;
+      }
+      if (isNewSharedWorkerCall(node)) {
+        analyzeNewSharedWorkerCall(node, {
+          isJsModule,
+          onUrl
+        });
+        return;
+      }
+      if (isNewUrlCall(node)) {
+        const parent = ancestors[ancestors.length - 2];
+        if (parent && (isNewWorkerCall(parent) || isNewSharedWorkerCall(parent) || isServiceWorkerRegisterCall(parent))) {
+          return;
+        }
+        analyzeNewUrlCall(node, {
+          isJsModule,
+          onUrl
+        });
+        return;
+      }
+    }
+  });
+  return jsUrls;
 };
 
 const sortByDependencies = nodes => {
@@ -16266,62 +18224,55 @@ const defaultReadPackageJson = packageUrl => {
 };
 
 // https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/tools/node_modules/eslint/node_modules/%40babel/core/lib/vendor/import-meta-resolve.js#L2473
-const createInvalidModuleSpecifierError = ({
-  specifier,
-  parentUrl,
-  reason
+const createInvalidModuleSpecifierError = (reason, specifier, {
+  parentUrl
 }) => {
   const error = new Error(`Invalid module "${specifier}" ${reason} imported from ${fileURLToPath(parentUrl)}`);
   error.code = "INVALID_MODULE_SPECIFIER";
   return error;
 };
-const createInvalidPackageTargetError = ({
+const createInvalidPackageTargetError = (reason, target, {
   parentUrl,
-  packageUrl,
-  target,
+  packageDirectoryUrl,
   key,
-  isImport,
-  reason
+  isImport
 }) => {
   let message;
   if (key === ".") {
-    message = `Invalid "exports" main target defined in ${fileURLToPath(packageUrl)}package.json imported from ${fileURLToPath(parentUrl)}; ${reason}`;
+    message = `Invalid "exports" main target defined in ${fileURLToPath(packageDirectoryUrl)}package.json imported from ${fileURLToPath(parentUrl)}; ${reason}`;
   } else {
-    message = `Invalid "${isImport ? "imports" : "exports"}" target ${JSON.stringify(target)} defined for "${key}" in ${fileURLToPath(packageUrl)}package.json imported from ${fileURLToPath(parentUrl)}; ${reason}`;
+    message = `Invalid "${isImport ? "imports" : "exports"}" target ${JSON.stringify(target)} defined for "${key}" in ${fileURLToPath(packageDirectoryUrl)}package.json imported from ${fileURLToPath(parentUrl)}; ${reason}`;
   }
   const error = new Error(message);
   error.code = "INVALID_PACKAGE_TARGET";
   return error;
 };
-const createPackagePathNotExportedError = ({
-  subpath,
+const createPackagePathNotExportedError = (subpath, {
   parentUrl,
-  packageUrl
+  packageDirectoryUrl
 }) => {
   let message;
   if (subpath === ".") {
-    message = `No "exports" main defined in ${fileURLToPath(packageUrl)}package.json imported from ${fileURLToPath(parentUrl)}`;
+    message = `No "exports" main defined in ${fileURLToPath(packageDirectoryUrl)}package.json imported from ${fileURLToPath(parentUrl)}`;
   } else {
-    message = `Package subpath "${subpath}" is not defined by "exports" in ${fileURLToPath(packageUrl)}package.json imported from ${fileURLToPath(parentUrl)}`;
+    message = `Package subpath "${subpath}" is not defined by "exports" in ${fileURLToPath(packageDirectoryUrl)}package.json imported from ${fileURLToPath(parentUrl)}`;
   }
   const error = new Error(message);
   error.code = "PACKAGE_PATH_NOT_EXPORTED";
   return error;
 };
-const createModuleNotFoundError = ({
-  specifier,
+const createModuleNotFoundError = (specifier, {
   parentUrl
 }) => {
   const error = new Error(`Cannot find "${specifier}" imported from ${fileURLToPath(parentUrl)}`);
   error.code = "MODULE_NOT_FOUND";
   return error;
 };
-const createPackageImportNotDefinedError = ({
-  specifier,
-  packageUrl,
-  parentUrl
+const createPackageImportNotDefinedError = (specifier, {
+  parentUrl,
+  packageDirectoryUrl
 }) => {
-  const error = new Error(`Package import specifier "${specifier}" is not defined in ${fileURLToPath(packageUrl)}package.json imported from ${fileURLToPath(parentUrl)}`);
+  const error = new Error(`Package import specifier "${specifier}" is not defined in ${fileURLToPath(packageDirectoryUrl)}package.json imported from ${fileURLToPath(parentUrl)}`);
   error.code = "PACKAGE_IMPORT_NOT_DEFINED";
   return error;
 };
@@ -16354,51 +18305,41 @@ const readCustomConditionsFromProcessArgs = () => {
  *   or use the real path when inside
  */
 const applyNodeEsmResolution = ({
-  conditions = [...readCustomConditionsFromProcessArgs(), "node", "import"],
-  parentUrl,
   specifier,
+  parentUrl,
+  conditions = [...readCustomConditionsFromProcessArgs(), "node", "import"],
   lookupPackageScope = defaultLookupPackageScope,
-  readPackageJson = defaultReadPackageJson
+  readPackageJson = defaultReadPackageJson,
+  preservesSymlink = false
 }) => {
-  const resolution = applyPackageSpecifierResolution({
-    conditions,
+  const resolution = applyPackageSpecifierResolution(specifier, {
     parentUrl: String(parentUrl),
-    specifier,
+    conditions,
     lookupPackageScope,
-    readPackageJson
+    readPackageJson,
+    preservesSymlink
   });
   const {
     url
   } = resolution;
   if (url.startsWith("file:")) {
     if (url.includes("%2F") || url.includes("%5C")) {
-      throw createInvalidModuleSpecifierError({
-        specifier,
-        parentUrl,
-        reason: `must not include encoded "/" or "\\" characters`
+      throw createInvalidModuleSpecifierError(`must not include encoded "/" or "\\" characters`, specifier, {
+        parentUrl
       });
     }
     return resolution;
   }
   return resolution;
 };
-const applyPackageSpecifierResolution = ({
-  conditions,
-  parentUrl,
-  specifier,
-  lookupPackageScope,
-  readPackageJson
-}) => {
+const applyPackageSpecifierResolution = (specifier, resolutionContext) => {
+  const {
+    parentUrl
+  } = resolutionContext;
   // relative specifier
   if (specifier[0] === "/" || specifier.startsWith("./") || specifier.startsWith("../")) {
     if (specifier[0] !== "/") {
-      const browserFieldResolution = applyBrowserFieldResolution({
-        conditions,
-        parentUrl,
-        specifier,
-        lookupPackageScope,
-        readPackageJson
-      });
+      const browserFieldResolution = applyBrowserFieldResolution(specifier, resolutionContext);
       if (browserFieldResolution) {
         return browserFieldResolution;
       }
@@ -16409,13 +18350,7 @@ const applyPackageSpecifierResolution = ({
     };
   }
   if (specifier[0] === "#") {
-    return applyPackageImportsResolution({
-      conditions,
-      parentUrl,
-      specifier,
-      lookupPackageScope,
-      readPackageJson
-    });
+    return applyPackageImportsResolution(specifier, resolutionContext);
   }
   try {
     const urlObject = new URL(specifier);
@@ -16431,41 +18366,29 @@ const applyPackageSpecifierResolution = ({
     };
   } catch (e) {
     // bare specifier
-    const browserFieldResolution = applyBrowserFieldResolution({
-      conditions,
-      parentUrl,
-      packageSpecifier: specifier,
-      lookupPackageScope,
-      readPackageJson
-    });
+    const browserFieldResolution = applyBrowserFieldResolution(specifier, resolutionContext);
     if (browserFieldResolution) {
       return browserFieldResolution;
     }
-    return applyPackageResolve({
-      conditions,
-      parentUrl,
-      packageSpecifier: specifier,
-      lookupPackageScope,
-      readPackageJson
-    });
+    return applyPackageResolve(specifier, resolutionContext);
   }
 };
-const applyBrowserFieldResolution = ({
-  conditions,
-  parentUrl,
-  packageSpecifier,
-  lookupPackageScope,
-  readPackageJson
-}) => {
+const applyBrowserFieldResolution = (specifier, resolutionContext) => {
+  const {
+    parentUrl,
+    conditions,
+    lookupPackageScope,
+    readPackageJson
+  } = resolutionContext;
   const browserCondition = conditions.includes("browser");
   if (!browserCondition) {
     return null;
   }
-  const packageUrl = lookupPackageScope(parentUrl);
-  if (!packageUrl) {
+  const packageDirectoryUrl = lookupPackageScope(parentUrl);
+  if (!packageDirectoryUrl) {
     return null;
   }
-  const packageJson = readPackageJson(packageUrl);
+  const packageJson = readPackageJson(packageDirectoryUrl);
   if (!packageJson) {
     return null;
   }
@@ -16479,91 +18402,73 @@ const applyBrowserFieldResolution = ({
     return null;
   }
   let url;
-  if (packageSpecifier.startsWith(".")) {
-    const packageSpecifierUrl = new URL(packageSpecifier, parentUrl).href;
-    const packageSpecifierRelativeUrl = packageSpecifierUrl.slice(packageUrl.length);
-    const packageSpecifierRelativeNotation = `./${packageSpecifierRelativeUrl}`;
-    const browserMapping = browser[packageSpecifierRelativeNotation];
+  if (specifier.startsWith(".")) {
+    const specifierUrl = new URL(specifier, parentUrl).href;
+    const specifierRelativeUrl = specifierUrl.slice(packageDirectoryUrl.length);
+    const secifierRelativeNotation = `./${specifierRelativeUrl}`;
+    const browserMapping = browser[secifierRelativeNotation];
     if (typeof browserMapping === "string") {
-      url = new URL(browserMapping, packageUrl).href;
+      url = new URL(browserMapping, packageDirectoryUrl).href;
     } else if (browserMapping === false) {
-      url = `file:///@ignore/${packageSpecifierUrl.slice("file:///")}`;
+      url = `file:///@ignore/${specifierUrl.slice("file:///")}`;
     }
   } else {
-    const browserMapping = browser[packageSpecifier];
+    const browserMapping = browser[specifier];
     if (typeof browserMapping === "string") {
-      url = new URL(browserMapping, packageUrl).href;
+      url = new URL(browserMapping, packageDirectoryUrl).href;
     } else if (browserMapping === false) {
-      url = `file:///@ignore/${packageSpecifier}`;
+      url = `file:///@ignore/${specifier}`;
     }
   }
   if (url) {
     return {
       type: "field:browser",
-      packageUrl,
+      packageDirectoryUrl,
       packageJson,
       url
     };
   }
   return null;
 };
-const applyPackageImportsResolution = ({
-  conditions,
-  parentUrl,
-  specifier,
-  lookupPackageScope,
-  readPackageJson
-}) => {
-  if (!specifier.startsWith("#")) {
-    throw createInvalidModuleSpecifierError({
-      specifier,
-      parentUrl,
-      reason: "internal imports must start with #"
-    });
+const applyPackageImportsResolution = (internalSpecifier, resolutionContext) => {
+  const {
+    parentUrl,
+    lookupPackageScope,
+    readPackageJson
+  } = resolutionContext;
+  if (internalSpecifier === "#" || internalSpecifier.startsWith("#/")) {
+    throw createInvalidModuleSpecifierError("not a valid internal imports specifier name", internalSpecifier, resolutionContext);
   }
-  if (specifier === "#" || specifier.startsWith("#/")) {
-    throw createInvalidModuleSpecifierError({
-      specifier,
-      parentUrl,
-      reason: "not a valid internal imports specifier name"
-    });
-  }
-  const packageUrl = lookupPackageScope(parentUrl);
-  if (packageUrl !== null) {
-    const packageJson = readPackageJson(packageUrl);
+  const packageDirectoryUrl = lookupPackageScope(parentUrl);
+  if (packageDirectoryUrl !== null) {
+    const packageJson = readPackageJson(packageDirectoryUrl);
     const {
       imports
     } = packageJson;
     if (imports !== null && typeof imports === "object") {
-      const resolved = applyPackageImportsExportsResolution({
-        conditions,
-        parentUrl,
-        packageUrl,
+      const resolved = applyPackageImportsExportsResolution(internalSpecifier, {
+        ...resolutionContext,
+        packageDirectoryUrl,
         packageJson,
-        matchObject: imports,
-        matchKey: specifier,
-        isImports: true,
-        lookupPackageScope,
-        readPackageJson
+        isImport: true
       });
       if (resolved) {
         return resolved;
       }
     }
   }
-  throw createPackageImportNotDefinedError({
-    specifier,
-    packageUrl,
-    parentUrl
+  throw createPackageImportNotDefinedError(internalSpecifier, {
+    ...resolutionContext,
+    packageDirectoryUrl
   });
 };
-const applyPackageResolve = ({
-  conditions,
-  parentUrl,
-  packageSpecifier,
-  lookupPackageScope,
-  readPackageJson
-}) => {
+const applyPackageResolve = (packageSpecifier, resolutionContext) => {
+  const {
+    parentUrl,
+    conditions,
+    readPackageJson,
+    preservesSymlink
+  } = resolutionContext;
   if (packageSpecifier === "") {
     throw new Error("invalid module specifier");
   }
@@ -16578,79 +18483,60 @@ const applyPackageResolve = ({
     packageSubpath
   } = parsePackageSpecifier(packageSpecifier);
   if (packageName[0] === "." || packageName.includes("\\") || packageName.includes("%")) {
-    throw createInvalidModuleSpecifierError({
-      specifier: packageName,
-      parentUrl,
-      reason: `is not a valid package name`
-    });
+    throw createInvalidModuleSpecifierError(`is not a valid package name`, packageName, resolutionContext);
   }
   if (packageSubpath.endsWith("/")) {
     throw new Error("invalid module specifier");
   }
-  const selfResolution = applyPackageSelfResolution({
-    conditions,
-    parentUrl,
-    packageName,
-    packageSubpath,
-    lookupPackageScope,
-    readPackageJson
+  const selfResolution = applyPackageSelfResolution(packageSubpath, {
+    ...resolutionContext,
+    packageName
   });
   if (selfResolution) {
     return selfResolution;
   }
   let currentUrl = parentUrl;
   while (currentUrl !== "file:///") {
-    const packageUrl = new URL(`node_modules/${packageName}/`, currentUrl).href;
-    if (!existsSync(new URL(packageUrl))) {
+    const packageDirectoryFacadeUrl = new URL(`node_modules/${packageName}/`, currentUrl).href;
+    if (!existsSync(new URL(packageDirectoryFacadeUrl))) {
       currentUrl = getParentUrl(currentUrl);
       continue;
     }
-    const packageJson = readPackageJson(packageUrl);
+    const packageDirectoryUrl = preservesSymlink ? packageDirectoryFacadeUrl : resolvePackageSymlink(packageDirectoryFacadeUrl);
+    const packageJson = readPackageJson(packageDirectoryUrl);
     if (packageJson !== null) {
       const {
         exports
       } = packageJson;
       if (exports !== null && exports !== undefined) {
-        return applyPackageExportsResolution({
-          conditions,
-          parentUrl,
-          packageUrl,
+        return applyPackageExportsResolution(packageSubpath, {
+          ...resolutionContext,
+          packageDirectoryUrl,
           packageJson,
-          packageSubpath,
-          exports,
-          lookupPackageScope,
-          readPackageJson
+          exports
         });
       }
     }
-    return applyLegacySubpathResolution({
-      conditions,
-      parentUrl,
-      packageUrl,
-      packageJson,
-      packageSubpath,
-      lookupPackageScope,
-      readPackageJson
+    return applyLegacySubpathResolution(packageSubpath, {
+      ...resolutionContext,
+      packageDirectoryUrl,
+      packageJson
     });
   }
-  throw createModuleNotFoundError({
-    specifier: packageName,
-    parentUrl
-  });
+  throw createModuleNotFoundError(packageName, resolutionContext);
 };
-const applyPackageSelfResolution = ({
-  conditions,
-  parentUrl,
-  packageName,
-  packageSubpath,
-  lookupPackageScope,
-  readPackageJson
-}) => {
-  const packageUrl = lookupPackageScope(parentUrl);
-  if (!packageUrl) {
+const applyPackageSelfResolution = (packageSubpath, resolutionContext) => {
+  const {
+    parentUrl,
+    packageName,
+    lookupPackageScope,
+    readPackageJson
+  } = resolutionContext;
+  const packageDirectoryUrl = lookupPackageScope(parentUrl);
+  if (!packageDirectoryUrl) {
     return undefined;
   }
-  const packageJson = readPackageJson(packageUrl);
+  const packageJson = readPackageJson(packageDirectoryUrl);
   if (!packageJson) {
     return undefined;
   }
@@ -16661,123 +18547,63 @@ const applyPackageSelfResolution = ({
     exports
   } = packageJson;
   if (!exports) {
-    const subpathResolution = applyLegacySubpathResolution({
-      conditions,
-      parentUrl,
-      packageUrl,
-      packageJson,
-      packageSubpath,
-      lookupPackageScope,
-      readPackageJson
+    const subpathResolution = applyLegacySubpathResolution(packageSubpath, {
+      ...resolutionContext,
+      packageDirectoryUrl,
+      packageJson
     });
     if (subpathResolution && subpathResolution.type !== "subpath") {
       return subpathResolution;
     }
     return undefined;
   }
-  return applyPackageExportsResolution({
-    conditions,
-    parentUrl,
-    packageUrl,
-    packageJson,
-    packageSubpath,
-    exports,
-    lookupPackageScope,
-    readPackageJson
+  return applyPackageExportsResolution(packageSubpath, {
+    ...resolutionContext,
+    packageDirectoryUrl,
+    packageJson
   });
 };
 
 // https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/lib/internal/modules/esm/resolve.js#L642
-const applyPackageExportsResolution = ({
-  conditions,
-  parentUrl,
-  packageUrl,
-  packageJson,
-  packageSubpath,
-  exports,
-  lookupPackageScope,
-  readPackageJson
-}) => {
-  const exportsInfo = readExports({
-    exports,
-    packageUrl
-  });
+const applyPackageExportsResolution = (packageSubpath, resolutionContext) => {
   if (packageSubpath === ".") {
-    const mainExport = applyMainExportResolution({
-      exports,
-      exportsInfo
-    });
+    const mainExport = applyMainExportResolution(resolutionContext);
     if (!mainExport) {
-      throw createPackagePathNotExportedError({
-        subpath: packageSubpath,
-        parentUrl,
-        packageUrl
-      });
+      throw createPackagePathNotExportedError(packageSubpath, resolutionContext);
     }
-    const resolved = applyPackageTargetResolution({
-      conditions,
-      parentUrl,
-      packageUrl,
-      packageJson,
-      key: ".",
-      target: mainExport,
-      lookupPackageScope,
-      readPackageJson
+    const resolved = applyPackageTargetResolution(mainExport, {
+      ...resolutionContext,
+      key: "."
     });
     if (resolved) {
       return resolved;
     }
-    throw createPackagePathNotExportedError({
-      subpath: packageSubpath,
-      parentUrl,
-      packageUrl
-    });
+    throw createPackagePathNotExportedError(packageSubpath, resolutionContext);
   }
-  if (exportsInfo.type === "object" && exportsInfo.allKeysAreRelative) {
-    const resolved = applyPackageImportsExportsResolution({
-      conditions,
-      parentUrl,
-      packageUrl,
-      packageJson,
-      matchObject: exports,
-      matchKey: packageSubpath,
-      isImports: false,
-      lookupPackageScope,
-      readPackageJson
+  const packageExportsInfo = readExports(resolutionContext);
+  if (packageExportsInfo.type === "object" && packageExportsInfo.allKeysAreRelative) {
+    const resolved = applyPackageImportsExportsResolution(packageSubpath, {
+      ...resolutionContext,
+      isImport: false
     });
     if (resolved) {
       return resolved;
     }
   }
-  throw createPackagePathNotExportedError({
-    subpath: packageSubpath,
-    parentUrl,
-    packageUrl
-  });
+  throw createPackagePathNotExportedError(packageSubpath, resolutionContext);
 };
-const applyPackageImportsExportsResolution = ({
-  conditions,
-  parentUrl,
-  packageUrl,
-  packageJson,
-  matchObject,
-  matchKey,
-  isImports,
-  lookupPackageScope,
-  readPackageJson
-}) => {
+const applyPackageImportsExportsResolution = (matchKey, resolutionContext) => {
+  const {
+    packageJson,
+    isImport
+  } = resolutionContext;
+  const matchObject = isImport ? packageJson.imports : packageJson.exports;
   if (!matchKey.includes("*") && matchObject.hasOwnProperty(matchKey)) {
     const target = matchObject[matchKey];
-    return applyPackageTargetResolution({
-      conditions,
-      parentUrl,
-      packageUrl,
-      packageJson,
+    return applyPackageTargetResolution(target, {
+      ...resolutionContext,
       key: matchKey,
-      target,
-      internal: isImports,
-      lookupPackageScope,
-      readPackageJson
+      isImport
     });
   }
   const expansionKeys = Object.keys(matchObject).filter(key => key.split("*").length === 2).sort(comparePatternKeys);
@@ -16791,74 +18617,48 @@ const applyPackageImportsExportsResolution = ({
     }
     const target = matchObject[expansionKey];
     const subpath = matchKey.slice(patternBase.length, matchKey.length - patternTrailer.length);
-    return applyPackageTargetResolution({
-      conditions,
-      parentUrl,
-      packageUrl,
-      packageJson,
+    return applyPackageTargetResolution(target, {
+      ...resolutionContext,
       key: matchKey,
-      target,
       subpath,
       pattern: true,
-      internal: isImports,
-      lookupPackageScope,
-      readPackageJson
+      isImport
     });
   }
   return null;
 };
-const applyPackageTargetResolution = ({
-  conditions,
-  parentUrl,
-  packageUrl,
-  packageJson,
-  key,
-  target,
-  subpath = "",
-  pattern = false,
-  internal = false,
-  lookupPackageScope,
-  readPackageJson
-}) => {
+const applyPackageTargetResolution = (target, resolutionContext) => {
+  const {
+    conditions,
+    packageDirectoryUrl,
+    packageJson,
+    key,
+    subpath = "",
+    pattern = false,
+    isImport = false
+  } = resolutionContext;
   if (typeof target === "string") {
     if (pattern === false && subpath !== "" && !target.endsWith("/")) {
       throw new Error("invalid module specifier");
     }
     if (target.startsWith("./")) {
-      const targetUrl = new URL(target, packageUrl).href;
-      if (!targetUrl.startsWith(packageUrl)) {
-        throw createInvalidPackageTargetError({
-          parentUrl,
-          packageUrl,
-          target,
-          key,
-          isImport: internal,
-          reason: `target must be inside package`
-        });
+      const targetUrl = new URL(target, packageDirectoryUrl).href;
+      if (!targetUrl.startsWith(packageDirectoryUrl)) {
+        throw createInvalidPackageTargetError(`target must be inside package`, target, resolutionContext);
       }
       return {
-        type: internal ? "field:imports" : "field:exports",
-        packageUrl,
+        type: isImport ? "field:imports" : "field:exports",
+        packageDirectoryUrl,
         packageJson,
         url: pattern ? targetUrl.replaceAll("*", subpath) : new URL(subpath, targetUrl).href
       };
     }
-    if (!internal || target.startsWith("../") || isValidUrl(target)) {
-      throw createInvalidPackageTargetError({
-        parentUrl,
-        packageUrl,
-        target,
-        key,
-        isImport: internal,
-        reason: `target must starst with "./"`
-      });
+    if (!isImport || target.startsWith("../") || isValidUrl(target)) {
+      throw createInvalidPackageTargetError(`target must starst with "./"`, target, resolutionContext);
     }
-    return applyPackageResolve({
-      conditions,
-      parentUrl: packageUrl,
-      packageSpecifier: pattern ? target.replaceAll("*", subpath) : `${target}${subpath}`,
-      lookupPackageScope,
-      readPackageJson
+    return applyPackageResolve(pattern ? target.replaceAll("*", subpath) : `${target}${subpath}`, {
+      ...resolutionContext,
+      parentUrl: packageDirectoryUrl
     });
   }
   if (Array.isArray(target)) {
@@ -16871,18 +18671,12 @@ const applyPackageTargetResolution = ({
       const targetValue = target[i];
       i++;
       try {
-        const resolved = applyPackageTargetResolution({
-          conditions,
-          parentUrl,
-          packageUrl,
-          packageJson,
+        const resolved = applyPackageTargetResolution(targetValue, {
+          ...resolutionContext,
           key: `${key}[${i}]`,
-          target: targetValue,
           subpath,
           pattern,
-          internal,
-          lookupPackageScope,
-          readPackageJson
+          isImport
         });
         if (resolved) {
           return resolved;
@@ -16911,18 +18705,12 @@ const applyPackageTargetResolution = ({
       }
       if (key === "default" || conditions.includes(key)) {
         const targetValue = target[key];
-        const resolved = applyPackageTargetResolution({
-          conditions,
-          parentUrl,
-          packageUrl,
-          packageJson,
+        const resolved = applyPackageTargetResolution(targetValue, {
+          ...resolutionContext,
           key,
-          target: targetValue,
           subpath,
           pattern,
-          internal,
-          lookupPackageScope,
-          readPackageJson
+          isImport
         });
         if (resolved) {
           return resolved;
@@ -16931,29 +18719,23 @@ const applyPackageTargetResolution = ({
     }
     return null;
   }
-  throw createInvalidPackageTargetError({
-    parentUrl,
-    packageUrl,
-    target,
-    key,
-    isImport: internal,
-    reason: `target must be a string, array, object or null`
-  });
+  throw createInvalidPackageTargetError(`target must be a string, array, object or null`, target, resolutionContext);
 };
 const readExports = ({
-  exports,
-  packageUrl
+  packageDirectoryUrl,
+  packageJson
 }) => {
-  if (Array.isArray(exports)) {
+  const packageExports = packageJson.exports;
+  if (Array.isArray(packageExports)) {
     return {
       type: "array"
     };
   }
-  if (exports === null) {
+  if (packageExports === null) {
     return {};
   }
-  if (typeof exports === "object") {
-    const keys = Object.keys(exports);
+  if (typeof packageExports === "object") {
+    const keys = Object.keys(packageExports);
     const relativeKeys = [];
     const conditionalKeys = [];
     keys.forEach(availableKey => {
@@ -16968,8 +18750,8 @@ const readExports = ({
       throw new Error(`Invalid package configuration: cannot mix relative and conditional keys in package.exports
 --- unexpected keys ---
 ${conditionalKeys.map(key => `"${key}"`).join("\n")}
---- package.json ---
-${packageUrl}`);
+--- package directory url ---
+${packageDirectoryUrl}`);
     }
     return {
       type: "object",
@@ -16977,7 +18759,7 @@ ${packageUrl}`);
       allKeysAreRelative: relativeKeys.length === keys.length
     };
   }
-  if (typeof exports === "string") {
+  if (typeof packageExports === "string") {
     return {
       type: "string"
     };
@@ -17022,84 +18804,74 @@ const parsePackageSpecifier = packageSpecifier => {
     packageSubpath
   };
 };
-const applyMainExportResolution = ({
-  exports,
-  exportsInfo
-}) => {
-  if (exportsInfo.type === "array" || exportsInfo.type === "string") {
-    return exports;
+const applyMainExportResolution = resolutionContext => {
+  const {
+    packageJson
+  } = resolutionContext;
+  const packageExportsInfo = readExports(resolutionContext);
+  if (packageExportsInfo.type === "array" || packageExportsInfo.type === "string") {
+    return packageJson.exports;
   }
-  if (exportsInfo.type === "object") {
-    if (exportsInfo.hasRelativeKey) {
-      return exports["."];
+  if (packageExportsInfo.type === "object") {
+    if (packageExportsInfo.hasRelativeKey) {
+      return packageJson.exports["."];
     }
-    return exports;
+    return packageJson.exports;
   }
   return undefined;
 };
-const applyLegacySubpathResolution = ({
-  conditions,
-  parentUrl,
-  packageUrl,
-  packageJson,
-  packageSubpath,
-  lookupPackageScope,
-  readPackageJson
-}) => {
+const applyLegacySubpathResolution = (packageSubpath, resolutionContext) => {
+  const {
+    packageDirectoryUrl,
+    packageJson
+  } = resolutionContext;
   if (packageSubpath === ".") {
-    return applyLegacyMainResolution({
-      conditions,
-      packageUrl,
-      packageJson
-    });
+    return applyLegacyMainResolution(packageSubpath, resolutionContext);
   }
-  const browserFieldResolution = applyBrowserFieldResolution({
-    conditions,
-    parentUrl,
-    specifier: packageSubpath,
-    lookupPackageScope,
-    readPackageJson
-  });
+  const browserFieldResolution = applyBrowserFieldResolution(packageSubpath, resolutionContext);
   if (browserFieldResolution) {
     return browserFieldResolution;
   }
   return {
     type: "subpath",
-    packageUrl,
+    packageDirectoryUrl,
     packageJson,
-    url: new URL(packageSubpath, packageUrl).href
+    url: new URL(packageSubpath, packageDirectoryUrl).href
   };
 };
-const applyLegacyMainResolution = ({
-  conditions,
-  packageUrl,
-  packageJson
-}) => {
+const applyLegacyMainResolution = (packageSubpath, resolutionContext) => {
+  const {
+    conditions,
+    packageDirectoryUrl,
+    packageJson
+  } = resolutionContext;
   for (const condition of conditions) {
     const conditionResolver = mainLegacyResolvers[condition];
     if (!conditionResolver) {
       continue;
     }
-    const resolved = conditionResolver(packageJson, packageUrl);
+    const resolved = conditionResolver(resolutionContext);
     if (resolved) {
       return {
         type: resolved.type,
-        packageUrl,
+        packageDirectoryUrl,
         packageJson,
-        url: new URL(resolved.path, packageUrl).href
+        url: new URL(resolved.path, packageDirectoryUrl).href
       };
     }
   }
   return {
     type: "field:main",
     // the absence of "main" field
-    packageUrl,
+    packageDirectoryUrl,
     packageJson,
-    url: new URL("index.js", packageUrl).href
+    url: new URL("index.js", packageDirectoryUrl).href
   };
 };
 const mainLegacyResolvers = {
-  import: packageJson => {
+  import: ({
+    packageJson
+  }) => {
     if (typeof packageJson.module === "string") {
       return {
         type: "field:module",
@@ -17120,7 +18892,10 @@ const mainLegacyResolvers = {
     }
     return null;
   },
-  browser: (packageJson, packageUrl) => {
+  browser: ({
+    packageDirectoryUrl,
+    packageJson
+  }) => {
     const browserMain = (() => {
       if (typeof packageJson.browser === "string") {
         return packageJson.browser;
@@ -17145,7 +18920,7 @@ const mainLegacyResolvers = {
         path: browserMain
       };
     }
-    const browserMainUrlObject = new URL(browserMain, packageUrl);
+    const browserMainUrlObject = new URL(browserMain, packageDirectoryUrl);
     const content = readFileSync$1(browserMainUrlObject, "utf-8");
     if (/typeof exports\s*==/.test(content) && /typeof module\s*==/.test(content) || /module\.exports\s*=/.test(content)) {
       return {
@@ -17158,7 +18933,9 @@ const mainLegacyResolvers = {
       path: browserMain
     };
   },
-  node: packageJson => {
+  node: ({
+    packageJson
+  }) => {
     if (typeof packageJson.main === "string") {
       return {
         type: "field:main",
@@ -17198,6 +18975,11 @@ const comparePatternKeys = (keyA, keyB) => {
     return 1;
   }
   return 0;
+};
+const resolvePackageSymlink = packageDirectoryUrl => {
+  const packageDirectoryPath = realpathSync(new URL(packageDirectoryUrl));
+  const packageDirectoryResolvedUrl = pathToFileURL(packageDirectoryPath).href;
+  return `${packageDirectoryResolvedUrl}/`;
 };
 
 const applyFileSystemMagicResolution = (fileUrl, {
@@ -17309,7 +19091,7 @@ const createNodeEsmResolver = ({
     const {
       url,
       type,
-      packageUrl
+      packageDirectoryUrl
     } = applyNodeEsmResolution({
       conditions: packageConditions,
       parentUrl,
@@ -17324,7 +19106,7 @@ const createNodeEsmResolver = ({
         addRelationshipWithPackageJson({
           reference,
           context,
-          packageJsonUrl: `${packageUrl}package.json`,
+          packageJsonUrl: `${packageDirectoryUrl}package.json`,
           field: type.startsWith("field:") ? `#${type.slice("field:".length)}` : ""
         });
       }

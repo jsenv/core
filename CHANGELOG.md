@@ -1,3 +1,7 @@
+# 29.4.2
+
+- Prevent versioning during dev on symlinked node modules
+
 # 29.4.1
 
 - Ensure system.import always return a promise

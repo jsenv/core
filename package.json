@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "29.4.1",
+  "version": "29.4.2",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "author": {
@@ -72,7 +72,7 @@
     "@jsenv/importmap": "1.2.1",
     "@jsenv/integrity": "0.0.1",
     "@jsenv/log": "3.3.1",
-    "@jsenv/node-esm-resolution": "0.1.1",
+    "@jsenv/node-esm-resolution": "0.2.0",
     "@jsenv/server": "14.1.8",
     "@jsenv/sourcemap": "1.0.6",
     "@jsenv/uneval": "1.6.0",
