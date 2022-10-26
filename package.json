@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "29.4.2",
+  "version": "29.4.3",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "author": {
@@ -43,6 +43,7 @@
     "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",
     "dev": "node --conditions=development ./scripts/dev/dev.mjs",
     "test": "node --conditions=development ./scripts/test/test.mjs",
+    "test:resource_hints": "npm run test -- --only-resource-hints",
     "test:workspace": "npm run test --workspaces --if-present -- --workspace",
     "build": "node --conditions=development ./scripts/build/build.mjs",
     "workspace:versions": "node ./scripts/publish/workspace_versions.mjs",

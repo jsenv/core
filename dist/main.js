@@ -23849,8 +23849,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   const buildSpecifierBeforeRedirect = findKey(buildUrls, buildUrlFormatted);
                   mutations.push(() => {
                     setHtmlNodeAttributes(node, {
-                      href: buildSpecifierBeforeRedirect,
-                      crossorigin: undefined
+                      href: buildSpecifierBeforeRedirect
                     });
                   });
                 };

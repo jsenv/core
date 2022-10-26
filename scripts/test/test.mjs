@@ -5,38 +5,47 @@ await executeTestPlan({
   rootDirectoryUrl,
   runtimeCompat,
   logLevel: "info",
-  testPlan: {
-    "tests/**/*.test.mjs": {
-      node: {
-        runtime: nodeWorkerThread,
-        allocatedMs: 30_000,
+  testPlan: process.argv.includes("--only-resource-hints")
+    ? {
+        "tests/**/resource_hints/**/*.test.mjs": {
+           node: {
+            runtime: nodeWorkerThread,
+            allocatedMs: 30_000,
+          },
+        },
+      }
+    : {
+        "tests/**/*.test.mjs": {
+          node: {
+            runtime: nodeWorkerThread,
+            allocatedMs: 30_000,
+          },
+        },
+        "tests/**/coverage_universal.test.mjs": {
+          node: {
+            runtime: nodeWorkerThread,
+            allocatedMs: 60_000,
+          },
+        },
+        "tests/**/preload_js_module_build.test.mjs": {
+          node: {
+            runtime: nodeWorkerThread,
+            allocatedMs: 60_000,
+          },
+        },
+        "tests/**/*_browsers.test.mjs": {
+          node: {
+            runtime: nodeWorkerThread,
+            allocatedMs: 60_000,
+          },
+        },
+        "tests/**/*_snapshots.test.mjs": {
+          node: {
+            runtime: nodeWorkerThread,
+            allocatedMs: 180_000,
+          },
+        },
       },
-    },
-    "tests/**/coverage_universal.test.mjs": {
-      node: {
-        runtime: nodeWorkerThread,
-        allocatedMs: 60_000,
-      },
-    },
-    "tests/**/preload_js_module_build.test.mjs": {
-      node: {
-        runtime: nodeWorkerThread,
-        allocatedMs: 60_000,
-      },
-    },
-    "tests/**/*_browsers.test.mjs": {
-      node: {
-        runtime: nodeWorkerThread,
-        allocatedMs: 60_000,
-      },
-    },
-    "tests/**/*_snapshots.test.mjs": {
-      node: {
-        runtime: nodeWorkerThread,
-        allocatedMs: 180_000,
-      },
-    },
-  },
   // completedExecutionLogMerging: true,
   logMemoryHeapUsage: true,
   // completedExecutionLogMerging: true,

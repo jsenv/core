@@ -1,3 +1,7 @@
+# 29.4.3
+
+- preserve crossorigin on preload links during build
+
 # 29.4.2
 
 - Prevent versioning during dev on symlinked node modules

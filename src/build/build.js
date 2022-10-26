@@ -1212,7 +1212,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   mutations.push(() => {
                     setHtmlNodeAttributes(node, {
                       href: buildSpecifierBeforeRedirect,
-                      crossorigin: undefined,
                     })
                   })
                 }
