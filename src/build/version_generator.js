@@ -7,25 +7,21 @@ import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js"
 export const createVersionGenerator = () => {
   const hash = createHash("sha256")
 
-  const augmentWithContent = ({
-    content,
-    contentType = "application/octet-stream",
-    lineBreakNormalization = false,
-  }) => {
-    hash.update(
-      lineBreakNormalization && CONTENT_TYPE.isTextual(contentType)
-        ? normalizeLineBreaks(content)
-        : content,
-    )
-  }
-
-  const augmentWithDependencyVersion = (version) => {
-    hash.update(version)
-  }
-
   return {
-    augmentWithContent,
-    augmentWithDependencyVersion,
+    augmentWithContent: ({
+      content,
+      contentType = "application/octet-stream",
+      lineBreakNormalization = false,
+    }) => {
+      hash.update(
+        lineBreakNormalization && CONTENT_TYPE.isTextual(contentType)
+          ? normalizeLineBreaks(content)
+          : content,
+      )
+    },
+    augment: (value) => {
+      hash.update(value)
+    },
     generate: () => {
       return hash.digest("hex").slice(0, 8)
     },

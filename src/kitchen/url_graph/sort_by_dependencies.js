@@ -9,8 +9,9 @@ export const sortByDependencies = (nodes) => {
     }
     const isVisited = visited.includes(url)
     if (isVisited) {
-      circular.push(url)
-      sorted.push(url)
+      if (!circular.includes(url)) {
+        circular.push(url)
+      }
     } else {
       visited.push(url)
       nodes[url].dependencies.forEach((dependencyUrl) => {
