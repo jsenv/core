@@ -887,7 +887,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             if (!urlInfo.shouldHandle) {
               return
             }
-            if (!urlInfo.isEntryPoint && urlInfo.dependents.size === 0) {
+            if (urlInfo.dependents.size === 0 && !urlInfo.isEntryPoint) {
               return
             }
             const urlContent =
@@ -959,6 +959,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 })
                 version = versionGenerator.generate()
               }
+              versionMap.set(urlInfo.url, version)
               const buildUrlObject = new URL(urlInfo.url)
               // remove ?as_js_classic as
               // this information is already hold into ".nomodule"
@@ -1316,27 +1317,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             if (!urlInfo.url.startsWith("file:")) {
               return
             }
-            const versionedUrl = versionedUrlMap.get(urlInfo.url)
-            if (!versionedUrl) {
+            if (!canUseVersionedUrl(urlInfo)) {
               // when url is not versioned we compute a "version" for that url anyway
               // so that service worker source still changes and navigator
               // detect there is a change
-              const contentVersionGenerator = createVersionGenerator()
-              contentVersionGenerator.augmentWithContent({
-                content: urlInfo.content,
-                contentType: urlInfo.contentType,
-                lineBreakNormalization,
-              })
-              const contentVersion = contentVersionGenerator.generate()
-              versionMap.set(urlInfo.url, contentVersion)
-              const specifier = findKey(buildUrls, urlInfo.url)
-              serviceWorkerUrls[specifier] = {
-                versioned: false,
-                version: contentVersion,
-              }
-              return
-            }
-            if (!canUseVersionedUrl(urlInfo)) {
               const specifier = findKey(buildUrls, urlInfo.url)
               serviceWorkerUrls[specifier] = {
                 versioned: false,
@@ -1344,6 +1328,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               }
               return
             }
+            const versionedUrl = versionedUrlMap.get(urlInfo.url)
             const versionedSpecifier = findKey(buildUrls, versionedUrl)
             serviceWorkerUrls[versionedSpecifier] = { versioned: true }
           })

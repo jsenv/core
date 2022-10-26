@@ -33,9 +33,9 @@ const test = async (params) => {
   const expected = {
     order: ["before-a", "before-b", "b", "after-b", "after-a"],
     serviceWorkerUrls: {
-      "/main.html": { versioned: false, version: "beceae98" },
+      "/main.html": { versioned: false, version: "3a9e4d88" },
       "/css/style.css?v=65c914e7": { versioned: true },
-      "/js/a.js?v=255f3b95": { versioned: true },
+      "/js/a.js?v=07327beb": { versioned: true },
       "/js/b.js?v=2cc2d9e4": { versioned: true },
     },
   }
