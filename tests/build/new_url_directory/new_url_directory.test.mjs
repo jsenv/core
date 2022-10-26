@@ -36,7 +36,7 @@ const test = async (params) => {
   }
   const expected = {
     returnValue: {
-      directoryUrl: `${server.origin}/src/?v=82a2c375`,
+      directoryUrl: `${server.origin}/src/?v=7e881609`,
     },
     jsFileContent: `console.log("Hello");`,
   }
