@@ -12,7 +12,6 @@ const test = async ({ expectedServiceWorkerUrls, ...rest }) => {
     entryPoints: {
       "./main.html": "main.html",
     },
-
     minification: {
       // minify js classic to ensure version is predictable
       // otherwise it's filesystem dependents because of systemjs infering variables
@@ -42,7 +41,7 @@ if (process.platform === "darwin") {
   await test({
     runtimeCompat: { chrome: "80" },
     expectedServiceWorkerUrls: {
-      "/main.html": { versioned: false, version: "e7351270" },
+      "/main.html": { versioned: false, version: "1985706b" },
       "/css/style.css?v=bd38451d": { versioned: true },
     },
   })
@@ -51,9 +50,9 @@ if (process.platform === "darwin") {
     runtimeCompat: { chrome: "80" },
     bundling: false,
     expectedServiceWorkerUrls: {
-      "/main.html": { versioned: false, version: "a13dd6e8" },
+      "/main.html": { versioned: false, version: "1ee5fe50" },
       "/css/style.css?v=0e312da1": { versioned: true },
-      "/js/a.js?v=e9a31140": { versioned: true },
+      "/js/a.js?v=9c2ce306": { versioned: true },
       "/js/b.js?v=e3b0c442": { versioned: true },
     },
   })
@@ -61,7 +60,7 @@ if (process.platform === "darwin") {
   await test({
     runtimeCompat: { chrome: "79" },
     expectedServiceWorkerUrls: {
-      "/main.html": { versioned: false, version: "f0c1f42f" },
+      "/main.html": { versioned: false, version: "64ccea8c" },
       "/css/style.css?v=bd38451d": { versioned: true },
     },
   })
@@ -70,9 +69,9 @@ if (process.platform === "darwin") {
     runtimeCompat: { chrome: "79" },
     bundling: false,
     expectedServiceWorkerUrls: {
-      "/main.html": { versioned: false, version: "35efb184" },
+      "/main.html": { versioned: false, version: "0f66748c" },
       "/css/style.css?v=0e312da1": { versioned: true },
-      "/js/a.nomodule.js?v=217fbe28": { versioned: true },
+      "/js/a.nomodule.js?v=9f69cb0f": { versioned: true },
       "/js/b.nomodule.js?v=5d37f892": { versioned: true },
     },
   })

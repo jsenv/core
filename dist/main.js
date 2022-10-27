@@ -8922,34 +8922,6 @@ const parseJsUrls = async ({
   return jsUrls;
 };
 
-const sortByDependencies = nodes => {
-  const visited = [];
-  const sorted = [];
-  const circular = [];
-  const visit = url => {
-    const isSorted = sorted.includes(url);
-    if (isSorted) {
-      return;
-    }
-    const isVisited = visited.includes(url);
-    if (isVisited) {
-      circular.push(url);
-      sorted.push(url);
-    } else {
-      visited.push(url);
-      nodes[url].dependencies.forEach(dependencyUrl => {
-        visit(dependencyUrl);
-      });
-      sorted.push(url);
-    }
-  };
-  Object.keys(nodes).forEach(url => {
-    visit(url);
-  });
-  sorted.circular = circular;
-  return sorted;
-};
-
 const urlSpecifierEncoding = {
   encode: reference => {
     const {
@@ -21389,6 +21361,35 @@ const jsenvPluginNodeRuntime = ({
   };
 };
 
+const sortByDependencies = nodes => {
+  const visited = [];
+  const sorted = [];
+  const circular = [];
+  const visit = url => {
+    const isSorted = sorted.includes(url);
+    if (isSorted) {
+      return;
+    }
+    const isVisited = visited.includes(url);
+    if (isVisited) {
+      if (!circular.includes(url)) {
+        circular.push(url);
+      }
+    } else {
+      visited.push(url);
+      nodes[url].dependencies.forEach(dependencyUrl => {
+        visit(dependencyUrl);
+      });
+      sorted.push(url);
+    }
+  };
+  Object.keys(nodes).forEach(url => {
+    visit(url);
+  });
+  sorted.circular = circular;
+  return sorted;
+};
+
 /*
  * Each @import found in css is replaced by the file content
  * - There is no need to worry about urls (such as background-image: url())
@@ -22801,19 +22802,17 @@ ${globalName}.__v__ = function (specifier) {
 // https://github.com/rollup/rollup/blob/5a5391971d695c808eed0c5d7d2c6ccb594fc689/src/Chunk.ts#L870
 const createVersionGenerator = () => {
   const hash = createHash("sha256");
-  const augmentWithContent = ({
-    content,
-    contentType = "application/octet-stream",
-    lineBreakNormalization = false
-  }) => {
-    hash.update(lineBreakNormalization && CONTENT_TYPE.isTextual(contentType) ? normalizeLineBreaks(content) : content);
-  };
-  const augmentWithDependencyVersion = version => {
-    hash.update(version);
-  };
   return {
-    augmentWithContent,
-    augmentWithDependencyVersion,
+    augmentWithContent: ({
+      content,
+      contentType = "application/octet-stream",
+      lineBreakNormalization = false
+    }) => {
+      hash.update(lineBreakNormalization && CONTENT_TYPE.isTextual(contentType) ? normalizeLineBreaks(content) : content);
+    },
+    augment: value => {
+      hash.update(value);
+    },
     generate: () => {
       return hash.digest("hex").slice(0, 8);
     }
@@ -23550,6 +23549,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         buildTask.done();
       }
     }
+    const versionMap = new Map();
+    const versionedUrlMap = new Map();
     {
       inject_version_in_urls: {
         if (!versioning) {
@@ -23559,12 +23560,13 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           disabled: logger.levels.debug || !logger.levels.info
         });
         try {
-          const urlsSorted = sortByDependencies(finalGraph.toObject());
-          urlsSorted.forEach(url => {
-            if (url.startsWith("data:")) {
+          // see also https://github.com/rollup/rollup/pull/4543
+          const contentVersionMap = new Map();
+          const hashCallbacks = [];
+          GRAPH.forEach(finalGraph, urlInfo => {
+            if (urlInfo.url.startsWith("data:")) {
               return;
             }
-            const urlInfo = finalGraph.getUrlInfo(url);
             if (urlInfo.type === "sourcemap") {
               return;
             }
@@ -23584,7 +23586,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             if (!urlInfo.shouldHandle) {
               return;
             }
-            if (!urlInfo.isEntryPoint && urlInfo.dependents.size === 0) {
+            if (urlInfo.dependents.size === 0 && !urlInfo.isEntryPoint) {
               return;
             }
             const urlContent = urlInfo.type === "html" ? stringifyHtmlAst(parseHtmlString(urlInfo.content, {
@@ -23592,55 +23594,78 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             }), {
               cleanupJsenvAttributes: true
             }) : urlInfo.content;
-            const versionGenerator = createVersionGenerator();
-            versionGenerator.augmentWithContent({
+            const contentVersionGenerator = createVersionGenerator();
+            contentVersionGenerator.augmentWithContent({
               content: urlContent,
               contentType: urlInfo.contentType,
               lineBreakNormalization
             });
-            urlInfo.dependencies.forEach(dependencyUrl => {
-              // this dependency is inline
-              if (dependencyUrl.startsWith("data:")) {
-                return;
-              }
-              const dependencyUrlInfo = finalGraph.getUrlInfo(dependencyUrl);
-              if (
-              // this content is part of the file, no need to take into account twice
-              dependencyUrlInfo.isInline ||
-              // this dependency content is not known
-              !dependencyUrlInfo.shouldHandle) {
-                return;
-              }
-              if (dependencyUrlInfo.data.version) {
-                versionGenerator.augmentWithDependencyVersion(dependencyUrlInfo.data.version);
-              } else {
-                // because all dependencies are know, if the dependency has no version
-                // it means there is a circular dependency between this file
-                // and it's dependency
-                // in that case we'll use the dependency content
-                versionGenerator.augmentWithContent({
-                  content: dependencyUrlInfo.content,
-                  contentType: dependencyUrlInfo.contentType,
-                  lineBreakNormalization
+            const contentVersion = contentVersionGenerator.generate();
+            contentVersionMap.set(urlInfo.url, contentVersion);
+            const versionMutations = [];
+            const seen = new Set();
+            const visitReferences = urlInfo => {
+              urlInfo.references.forEach(reference => {
+                if (seen.has(reference)) return;
+                seen.add(reference);
+                const referencedUrlInfo = finalGraph.getUrlInfo(reference.url);
+                versionMutations.push(() => {
+                  const dependencyContentVersion = contentVersionMap.get(reference.url);
+                  if (!dependencyContentVersion) {
+                    // no content generated for this dependency
+                    // (inline, data:, sourcemap, shouldHandle is false, ...)
+                    return null;
+                  }
+                  const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl);
+                  if (parentUrlInfo.jsQuote) {
+                    // __v__() makes versioning dynamic: no need to take into account
+                    return null;
+                  }
+                  if (reference.type === "js_url_specifier" || reference.subtype === "import_dynamic") {
+                    // __v__() makes versioning dynamic: no need to take into account
+                    return null;
+                  }
+                  return dependencyContentVersion;
                 });
+                visitReferences(referencedUrlInfo);
+              });
+            };
+            visitReferences(urlInfo);
+            hashCallbacks.push(() => {
+              let version;
+              if (versionMutations.length === 0) {
+                version = contentVersion;
+              } else {
+                const versionGenerator = createVersionGenerator();
+                versionGenerator.augment(contentVersion);
+                versionMutations.forEach(versionMutation => {
+                  const value = versionMutation();
+                  if (value) {
+                    versionGenerator.augment(value);
+                  }
+                });
+                version = versionGenerator.generate();
               }
+              versionMap.set(urlInfo.url, version);
+              const buildUrlObject = new URL(urlInfo.url);
+              // remove ?as_js_classic as
+              // this information is already hold into ".nomodule"
+              buildUrlObject.searchParams.delete("as_js_classic");
+              buildUrlObject.searchParams.delete("as_js_classic_library");
+              buildUrlObject.searchParams.delete("as_json_module");
+              buildUrlObject.searchParams.delete("as_css_module");
+              buildUrlObject.searchParams.delete("as_text_module");
+              const buildUrl = buildUrlObject.href;
+              finalRedirections.set(urlInfo.url, buildUrl);
+              versionedUrlMap.set(urlInfo.url, normalizeUrl(injectVersionIntoBuildUrl({
+                buildUrl,
+                version,
+                versioningMethod
+              })));
             });
-            urlInfo.data.version = versionGenerator.generate();
-            const buildUrlObject = new URL(urlInfo.url);
-            // remove ?as_js_classic as
-            // this information is already hold into ".nomodule"
-            buildUrlObject.searchParams.delete("as_js_classic");
-            buildUrlObject.searchParams.delete("as_js_classic_library");
-            buildUrlObject.searchParams.delete("as_json_module");
-            buildUrlObject.searchParams.delete("as_css_module");
-            buildUrlObject.searchParams.delete("as_text_module");
-            const buildUrl = buildUrlObject.href;
-            finalRedirections.set(urlInfo.url, buildUrl);
-            urlInfo.data.versionedUrl = normalizeUrl(injectVersionIntoBuildUrl({
-              buildUrl,
-              version: urlInfo.data.version,
-              versioningMethod
-            }));
+          });
+          hashCallbacks.forEach(callback => {
+            callback();
           });
           const versionMappings = {};
           const usedVersionMappings = new Set();
@@ -23702,7 +23727,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 if (!referencedUrlInfo.shouldHandle) {
                   return null;
                 }
-                const versionedUrl = referencedUrlInfo.data.versionedUrl;
+                const versionedUrl = versionedUrlMap.get(reference.url);
                 if (!versionedUrl) {
                   // happens for sourcemap
                   return `${baseUrl}${urlToRelativeUrl(referencedUrlInfo.url, buildDirectoryUrl)}`;
@@ -23909,34 +23934,18 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             if (!urlInfo.url.startsWith("file:")) {
               return;
             }
-            const versionedUrl = urlInfo.data.versionedUrl;
-            if (!versionedUrl) {
+            if (!canUseVersionedUrl(urlInfo)) {
               // when url is not versioned we compute a "version" for that url anyway
               // so that service worker source still changes and navigator
               // detect there is a change
-              const versionGenerator = createVersionGenerator();
-              versionGenerator.augmentWithContent({
-                content: urlInfo.content,
-                contentType: urlInfo.contentType,
-                lineBreakNormalization
-              });
-              const version = versionGenerator.generate();
-              urlInfo.data.version = version;
               const specifier = findKey(buildUrls, urlInfo.url);
               serviceWorkerUrls[specifier] = {
                 versioned: false,
-                version
+                version: versionMap.get(urlInfo.url)
               };
               return;
             }
-            if (!canUseVersionedUrl(urlInfo)) {
-              const specifier = findKey(buildUrls, urlInfo.url);
-              serviceWorkerUrls[specifier] = {
-                versioned: false,
-                version: urlInfo.data.version
-              };
-              return;
-            }
+            const versionedUrl = versionedUrlMap.get(urlInfo.url);
             const versionedSpecifier = findKey(buildUrls, versionedUrl);
             serviceWorkerUrls[versionedSpecifier] = {
               versioned: true
@@ -23980,7 +23989,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         const buildRelativeUrl = urlToRelativeUrl(urlInfo.url, buildDirectoryUrl);
         buildInlineContents[buildRelativeUrl] = urlInfo.content;
       } else {
-        const versionedUrl = urlInfo.data.versionedUrl;
+        const versionedUrl = versionedUrlMap.get(urlInfo.url);
         if (versionedUrl && canUseVersionedUrl(urlInfo)) {
           const buildRelativeUrl = urlToRelativeUrl(urlInfo.url, buildDirectoryUrl);
           const versionedBuildRelativeUrl = urlToRelativeUrl(versionedUrl, buildDirectoryUrl);
