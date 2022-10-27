@@ -1,3 +1,7 @@
+# 29.4.4
+
+- fix url versioning during build
+
 # 29.4.3
 
 - preserve crossorigin on preload links during build
