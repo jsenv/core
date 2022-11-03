@@ -15,14 +15,19 @@ export default function _wrapRegExp() {
   inherits(BabelRegExp, RegExp);
   BabelRegExp.prototype.exec = function (str) {
     var result = _super.exec.call(this, str);
-    if (result) result.groups = buildGroups(result, this);
+    if (result) {
+      result.groups = buildGroups(result, this);
+      var indices = result.indices;
+      if (indices) indices.groups = buildGroups(indices, this);
+    }
     return result;
   };
   BabelRegExp.prototype[Symbol.replace] = function (str, substitution) {
     if (typeof substitution === "string") {
       var groups = _groups.get(this);
       return _super[Symbol.replace].call(this, str, substitution.replace(/\$<([^>]+)>/g, function (_, name) {
-        return "$" + groups[name];
+        var group = groups[name];
+        return "$" + (Array.isArray(group) ? group.join("$") : group);
       }));
     } else if (typeof substitution === "function") {
       var _this = this;
@@ -45,7 +50,15 @@ export default function _wrapRegExp() {
 
     var g = _groups.get(re);
     return Object.keys(g).reduce(function (groups, name) {
-      groups[name] = result[g[name]];
+      var i = g[name];
+      if (typeof i === "number") groups[name] = result[i];else {
+        // i is an array of indexes
+        var k = 0;
+        // if no group matched, we stop at k = i.length - 1 and then
+        // we store result[i[i.length - 1]] which is undefined.
+        while (result[i[k]] === undefined && k + 1 < i.length) k++;
+        groups[name] = result[i[k]];
+      }
       return groups;
     }, Object.create(null));
   }

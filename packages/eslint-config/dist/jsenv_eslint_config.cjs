@@ -472,10 +472,7 @@ const jsenvEslintRules = {
     // you can use the quoting style you want
     unnecessary: false
   }],
-  "semi": ["error",
-  // code is more readable without semicolon and eslint will help
-  // you for the only exotic use case where semi colon are required
-  "never"],
+  "semi": ["error", "always"],
   "semi-spacing": ["error", {
     before: false,
     after: true
