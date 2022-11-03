@@ -97,7 +97,6 @@ export const commonJsToJsModuleRaw = async ({
   const { rollup } = await import("rollup")
   const rollupBuild = await rollup({
     input: sourceFilePath,
-    inlineDynamicImports: true,
     external,
     plugins: [
       nodeResolveRollupPlugin,
@@ -127,7 +126,7 @@ export const commonJsToJsModuleRaw = async ({
     onwarn: (warning) => {
       if (
         warning.code === "UNRESOLVED_IMPORT" &&
-        warning.importer.endsWith("?commonjs-external")
+        warning.id.endsWith("?commonjs-external")
       ) {
         return
       }
@@ -153,6 +152,7 @@ export const commonJsToJsModuleRaw = async ({
   })
   const abstractDirUrl = new URL("./dist/", sourceFileUrl) // to help rollup generate property sourcemap paths
   const generateOptions = {
+    inlineDynamicImports: true,
     // https://rollupjs.org/guide/en#output-format
     format: "esm",
     // entryFileNames: `./[name].js`,

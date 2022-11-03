@@ -283,7 +283,7 @@ const kRun = Symbol('kRun');
  * A very simple job queue with adjustable concurrency. Adapted from
  * https://github.com/STRML/async-limiter
  */
-class Limiter$1 {
+let Limiter$1 = class Limiter {
   /**
    * Creates a new `Limiter`.
    *
@@ -324,7 +324,7 @@ class Limiter$1 {
       job(this[kDone]);
     }
   }
-}
+};
 var limiter = Limiter$1;
 const zlib = require$$0$1;
 const bufferUtil = bufferUtil$1.exports;
@@ -351,7 +351,7 @@ let zlibLimiter;
 /**
  * permessage-deflate implementation.
  */
-class PerMessageDeflate$4 {
+let PerMessageDeflate$4 = class PerMessageDeflate {
   /**
    * Creates a PerMessageDeflate instance.
    *
@@ -685,7 +685,7 @@ class PerMessageDeflate$4 {
       callback(null, data);
     });
   }
-}
+};
 var permessageDeflate = PerMessageDeflate$4;
 
 /**
@@ -873,7 +873,7 @@ const INFLATING = 5;
  *
  * @extends Writable
  */
-class Receiver$1 extends Writable {
+let Receiver$1 = class Receiver extends Writable {
   /**
    * Creates a Receiver instance.
    *
@@ -1264,7 +1264,7 @@ class Receiver$1 extends Writable {
     }
     this._state = GET_INFO;
   }
-}
+};
 var receiver = Receiver$1;
 
 /**
@@ -1308,7 +1308,7 @@ const maskBuffer = Buffer.alloc(4);
 /**
  * HyBi Sender implementation.
  */
-class Sender$1 {
+let Sender$1 = class Sender {
   /**
    * Creates a Sender instance.
    *
@@ -1700,7 +1700,7 @@ class Sender$1 {
       this._socket.write(list[0], cb);
     }
   }
-}
+};
 var sender = Sender$1;
 const {
   kForOnEventAttribute: kForOnEventAttribute$1,
@@ -2199,7 +2199,7 @@ const subprotocolRegex = /^[!#$%&'*+\-.0-9A-Z^_`|a-z~]+$/;
  *
  * @extends EventEmitter
  */
-class WebSocket$1 extends EventEmitter$1 {
+let WebSocket$1 = class WebSocket extends EventEmitter$1 {
   /**
    * Create a new `WebSocket`.
    *
@@ -2590,7 +2590,7 @@ class WebSocket$1 extends EventEmitter$1 {
       this._socket.destroy();
     }
   }
-}
+};
 
 /**
  * @constant {Number} CONNECTING

@@ -1,7 +1,5 @@
 'use strict';
 
-Object.defineProperty(exports, '__esModule', { value: true });
-
 const composeTwoObjects = (first, second, composerMap) => {
   const composed = {};
   const firstKeys = Object.keys(first);
@@ -16,12 +14,10 @@ const composeTwoObjects = (first, second, composerMap) => {
   });
   return composed;
 };
-
 const composeTwoValues = (firstValue, secondValue, composer) => {
   if (composer) {
     return composer(firstValue, secondValue);
   }
-
   return secondValue;
 };
 
@@ -31,25 +27,27 @@ const composeEslintConfig = (...eslintConfigs) => {
     return next;
   }, {});
 };
-
 const composeTwoEslintConfigs = (firstEslintConfig, secondEslintConfig) => {
   return composeTwoObjects(firstEslintConfig, secondEslintConfig, {
     parserOptions: (firstParserOptions, secondParserOptions) => {
       return composeTwoObjects(firstParserOptions, secondParserOptions, {
         ecmaFeatures: (firstEcmaFeatures, secondEcmaFeatures) => {
-          return { ...firstEcmaFeatures,
+          return {
+            ...firstEcmaFeatures,
             ...secondEcmaFeatures
           };
         }
       });
     },
     env: (firstEnv, secondEnv) => {
-      return { ...firstEnv,
+      return {
+        ...firstEnv,
         ...secondEnv
       };
     },
     globals: (firstGlobals, secondGlobals) => {
-      return { ...firstGlobals,
+      return {
+        ...firstGlobals,
         ...secondGlobals
       };
     },
@@ -64,7 +62,8 @@ const composeTwoEslintConfigs = (firstEslintConfig, secondEslintConfig) => {
       });
     },
     rules: (firstRules, secondRules) => {
-      return { ...firstRules,
+      return {
+        ...firstRules,
         ...secondRules
       };
     },
@@ -77,6 +76,7 @@ const composeTwoEslintConfigs = (firstEslintConfig, secondEslintConfig) => {
 /**
  * This super basic ESLint configuration to parse latest js
  */
+
 const eslintConfigBase = {
   parserOptions: {
     sourceType: "module"
@@ -95,6 +95,7 @@ const eslintConfigBase = {
  *
  * See also https://github.com/prettier/eslint-config-prettier/blob/master/index.js
  */
+
 const eslintConfigForPrettier = {
   rules: {
     "arrow-parens": ["off"],
@@ -151,6 +152,7 @@ const eslintConfigForPrettier = {
  * - https://github.com/sindresorhus/globals/blob/a1d32c7f76e4d1ac3c8883acf075db11bd4d44f9/globals.json#L1
  *
  */
+
 const eslintConfigToPreferExplicitGlobals = {
   globals: {
     alert: "off",
@@ -205,6 +207,7 @@ const eslintConfigToPreferExplicitGlobals = {
  * See also:
  * - https://eslint.org/docs/rules/
  */
+
 const jsenvEslintRules = {
   "accessor-pairs": ["error"],
   "array-bracket-spacing": ["error", "never"],
@@ -245,7 +248,6 @@ const jsenvEslintRules = {
   "grouped-accessor-pairs": ["error"],
   "guard-for-in": ["error"],
   "handle-callback-err": ["warn"],
-
   /**
    * "tab" is theorically a better option so that people can choose identation width.
    * Because it allow them to decide how much space a tab char takes (2, 4, 100) in their environment
@@ -456,9 +458,11 @@ const jsenvEslintRules = {
   "prefer-rest-params": ["warn"],
   "prefer-spread": ["warn"],
   "prefer-template": ["warn"],
-  "quote": [// disabled because it becomes painfull when switching
+  "quote": [
+  // disabled because it becomes painfull when switching
   // between "" and `` (template literals)
-  "off", // double because closer to .json, this it increase compatibility between .js and .json
+  "off",
+  // double because closer to .json, this it increase compatibility between .js and .json
   // also because ' are often used in english and '' would lead to 'I\'m' VS "I'm"
   "double"],
   "quote-props": ["error", "as-needed", {
@@ -468,9 +472,7 @@ const jsenvEslintRules = {
     // you can use the quoting style you want
     unnecessary: false
   }],
-  "semi": ["error", // code is more readable without semicolon and eslint will help
-  // you for the only exotic use case where semi colon are required
-  "never"],
+  "semi": ["error", "always"],
   "semi-spacing": ["error", {
     before: false,
     after: true
@@ -502,6 +504,7 @@ const jsenvEslintRules = {
  *
  * Check ./jsenvEslintRules.js to see the mindset used  to configure these rules
  */
+
 const jsenvEslintRulesForImport = {
   "import/default": ["error"],
   "import/no-unresolved": ["error", {
@@ -547,6 +550,7 @@ const jsenvEslintRulesForImport = {
  *
  * Check ./jsenvEslintRules.js to see the mindset used  to configure these rules
  */
+
 const jsenvEslintRulesForReact = {
   "react/display-name": ["error"],
   "react/jsx-key": ["error"],
