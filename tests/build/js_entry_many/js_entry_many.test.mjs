@@ -1,3 +1,4 @@
+import { copyFileSync } from "node:fs"
 import { assert } from "@jsenv/assert"
 
 import { build } from "@jsenv/core"
@@ -12,10 +13,17 @@ await build({
     "./a.js": "a.js",
     "./b.js": "b.js",
   },
-  baseUrl: "/dist/",
 })
+copyFileSync(
+  new URL("./a.html", import.meta.url),
+  new URL("./dist/a.html", import.meta.url),
+)
+copyFileSync(
+  new URL("./b.html", import.meta.url),
+  new URL("./dist/b.html", import.meta.url),
+)
 const server = await startFileServer({
-  rootDirectoryUrl: new URL("./", import.meta.url),
+  rootDirectoryUrl: new URL("./dist/", import.meta.url),
 })
 const aExecution = await executeInChromium({
   url: `${server.origin}/a.html`,
