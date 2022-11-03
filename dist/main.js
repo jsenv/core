@@ -22629,8 +22629,9 @@ const memoizeByFirstArgument = compute => {
   return fnWithMemoization;
 };
 
-const createBuilUrlsGenerator = ({
-  buildDirectoryUrl
+const createBuildUrlsGenerator = ({
+  buildDirectoryUrl,
+  assetsPath
 }) => {
   const cache = {};
   const getUrlName = (url, urlInfo) => {
@@ -22646,11 +22647,14 @@ const createBuilUrlsGenerator = ({
     urlInfo,
     parentUrlInfo
   }) => {
-    const directoryPath = determineDirectoryPath({
+    let directoryPath = determineDirectoryPath({
       buildDirectoryUrl,
       urlInfo,
       parentUrlInfo
     });
+    if (assetsPath && !urlInfo.isEntryPoint) {
+      directoryPath = `${assetsPath}${directoryPath}`;
+    }
     let names = cache[directoryPath];
     if (!names) {
       names = [];
@@ -22922,7 +22926,7 @@ const defaultRuntimeCompat = {
  *        Describe entry point paths and control their names in the build directory
  * @param {object} buildParameters.runtimeCompat
  *        Code generated will be compatible with these runtimes
- * @param {string} [buildParameters.baseUrl=buildDirectoryUrl]
+ * @param {string} [buildParameters.assetBuildPath="./"]
  *        Urls in build file contents will be relative to this url
  * @param {boolean|object} [buildParameters.minification=true]
  *        Minify build file contents
@@ -22946,8 +22950,9 @@ const build = async ({
   logLevel = "info",
   rootDirectoryUrl,
   buildDirectoryUrl,
+  assetsPath,
+  assetsPublicUrl,
   entryPoints = {},
-  baseUrl = buildDirectoryUrl,
   runtimeCompat = defaultRuntimeCompat,
   plugins = [],
   sourcemaps = false,
@@ -22969,7 +22974,7 @@ const build = async ({
   },
   cooldownBetweenFileEvents,
   watch = false,
-  directoryToClean = baseUrl,
+  directoryToClean,
   writeOnFileSystem = true,
   writeGeneratedFiles = false,
   assetManifest = versioningMethod === "filename",
@@ -22992,9 +22997,20 @@ const build = async ({
   if (!["filename", "search_param"].includes(versioningMethod)) {
     throw new Error(`Unexpected "versioningMethod": must be "filename", "search_param"; got ${versioning}`);
   }
-  baseUrl = String(baseUrl);
+  if (assetsPath) {
+    if (assetsPath[assetsPath.length - 1] !== "/") {
+      assetsPath = `${assetsPath}/`;
+    }
+  }
   const preferRelativeUrls = Object.keys(runtimeCompat).includes("node");
-  const asBuildUrlSpecifier = (generatedUrl, reference) => {
+  if (directoryToClean === undefined) {
+    if (assetsPath === undefined) {
+      directoryToClean = buildDirectoryUrl;
+    } else {
+      directoryToClean = new URL(assetsPath, buildDirectoryUrl).href;
+    }
+  }
+  const asFormattedBuildUrl = (generatedUrl, reference) => {
     if (preferRelativeUrls) {
       const urlRelativeToParent = urlToRelativeUrl(generatedUrl, reference.parentUrl === rootDirectoryUrl ? buildDirectoryUrl : reference.parentUrl);
       if (urlRelativeToParent[0] !== ".") {
@@ -23003,12 +23019,11 @@ const build = async ({
       }
       return urlRelativeToParent;
     }
-    const urlRelativeToBuildDirectory = urlToRelativeUrl(generatedUrl, buildDirectoryUrl);
-    const buildUrl = new URL(urlRelativeToBuildDirectory, baseUrl).href;
-    if (urlIsInsideOf(buildUrl, buildDirectoryUrl)) {
-      return `/${urlToRelativeUrl(buildUrl, buildDirectoryUrl)}`;
+    if (assetsPublicUrl) {
+      const urlRelativeToBuildDirectory = urlToRelativeUrl(generatedUrl, buildDirectoryUrl);
+      return new URL(urlRelativeToBuildDirectory, assetsPublicUrl).href;
     }
-    return buildUrl;
+    return `/${urlToRelativeUrl(generatedUrl, buildDirectoryUrl)}`;
   };
   const runBuild = async ({
     signal,
@@ -23079,8 +23094,9 @@ build ${entryPointKeys.length} entry points`);
       writeGeneratedFiles,
       outDirectoryUrl: new URL(`.jsenv/build/`, rootDirectoryUrl)
     });
-    const buildUrlsGenerator = createBuilUrlsGenerator({
-      buildDirectoryUrl
+    const buildUrlsGenerator = createBuildUrlsGenerator({
+      buildDirectoryUrl,
+      assetsPath
     });
     const buildDirectoryRedirections = new Map();
     const associateBuildUrlAndRawUrl = (buildUrl, rawUrl, reason) => {
@@ -23274,7 +23290,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           generatedUrlObject.searchParams.delete("as_text_module");
           generatedUrlObject.hash = "";
           const generatedUrl = generatedUrlObject.href;
-          const specifier = asBuildUrlSpecifier(generatedUrl, reference);
+          const specifier = asFormattedBuildUrl(generatedUrl, reference);
           buildUrls.set(specifier, reference.generatedUrl);
           return specifier;
         },
@@ -23371,6 +23387,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           });
           entryUrls.push(entryUrlInfo.url);
           entryUrlInfo.filename = entryPoints[key];
+          entryUrlInfo.isEntryPoint = true;
           rawUrlGraphLoader.load(entryUrlInfo, {
             reference: entryReference
           });
@@ -23777,7 +23794,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   // happens for sourcemap
                   return urlToRelativeUrl(referencedUrlInfo.url, reference.parentUrl);
                 }
-                const versionedSpecifier = asBuildUrlSpecifier(versionedUrl, reference);
+                const versionedSpecifier = asFormattedBuildUrl(versionedUrl, reference);
                 versionMappings[reference.specifier] = versionedSpecifier;
                 versioningRedirections.set(reference.url, versionedUrl);
                 buildUrls.set(versionedSpecifier, versionedUrl);
