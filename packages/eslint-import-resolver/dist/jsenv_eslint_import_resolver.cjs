@@ -1,7 +1,5 @@
 'use strict';
 
-Object.defineProperty(exports, '__esModule', { value: true });
-
 var node_module = require('module');
 var node_url = require('url');
 var node_fs = require('fs');
@@ -447,11 +445,11 @@ const defaultReadPackageJson = (packageUrl) => {
 
 // https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/tools/node_modules/eslint/node_modules/%40babel/core/lib/vendor/import-meta-resolve.js#L2473
 
-const createInvalidModuleSpecifierError = ({
-  specifier,
-  parentUrl,
+const createInvalidModuleSpecifierError = (
   reason,
-}) => {
+  specifier,
+  { parentUrl },
+) => {
   const error = new Error(
     `Invalid module "${specifier}" ${reason} imported from ${node_url.fileURLToPath(
       parentUrl,
@@ -461,24 +459,21 @@ const createInvalidModuleSpecifierError = ({
   return error
 };
 
-const createInvalidPackageTargetError = ({
-  parentUrl,
-  packageUrl,
-  target,
-  key,
-  isImport,
+const createInvalidPackageTargetError = (
   reason,
-}) => {
+  target,
+  { parentUrl, packageDirectoryUrl, key, isImport },
+) => {
   let message;
   if (key === ".") {
     message = `Invalid "exports" main target defined in ${node_url.fileURLToPath(
-      packageUrl,
+      packageDirectoryUrl,
     )}package.json imported from ${node_url.fileURLToPath(parentUrl)}; ${reason}`;
   } else {
     message = `Invalid "${
       isImport ? "imports" : "exports"
     }" target ${JSON.stringify(target)} defined for "${key}" in ${node_url.fileURLToPath(
-      packageUrl,
+      packageDirectoryUrl,
     )}package.json imported from ${node_url.fileURLToPath(parentUrl)}; ${reason}`;
   }
   const error = new Error(message);
@@ -486,19 +481,18 @@ const createInvalidPackageTargetError = ({
   return error
 };
 
-const createPackagePathNotExportedError = ({
+const createPackagePathNotExportedError = (
   subpath,
-  parentUrl,
-  packageUrl,
-}) => {
+  { parentUrl, packageDirectoryUrl },
+) => {
   let message;
   if (subpath === ".") {
     message = `No "exports" main defined in ${node_url.fileURLToPath(
-      packageUrl,
+      packageDirectoryUrl,
     )}package.json imported from ${node_url.fileURLToPath(parentUrl)}`;
   } else {
     message = `Package subpath "${subpath}" is not defined by "exports" in ${node_url.fileURLToPath(
-      packageUrl,
+      packageDirectoryUrl,
     )}package.json imported from ${node_url.fileURLToPath(parentUrl)}`;
   }
   const error = new Error(message);
@@ -506,7 +500,7 @@ const createPackagePathNotExportedError = ({
   return error
 };
 
-const createModuleNotFoundError = ({ specifier, parentUrl }) => {
+const createModuleNotFoundError = (specifier, { parentUrl }) => {
   const error = new Error(
     `Cannot find "${specifier}" imported from ${node_url.fileURLToPath(parentUrl)}`,
   );
@@ -514,14 +508,13 @@ const createModuleNotFoundError = ({ specifier, parentUrl }) => {
   return error
 };
 
-const createPackageImportNotDefinedError = ({
+const createPackageImportNotDefinedError = (
   specifier,
-  packageUrl,
-  parentUrl,
-}) => {
+  { parentUrl, packageDirectoryUrl },
+) => {
   const error = new Error(
     `Package import specifier "${specifier}" is not defined in ${node_url.fileURLToPath(
-      packageUrl,
+      packageDirectoryUrl,
     )}package.json imported from ${node_url.fileURLToPath(parentUrl)}`,
   );
   error.code = "PACKAGE_IMPORT_NOT_DEFINED";
@@ -557,40 +550,38 @@ const readCustomConditionsFromProcessArgs = () => {
  */
 
 const applyNodeEsmResolution = ({
-  conditions = [...readCustomConditionsFromProcessArgs(), "node", "import"],
-  parentUrl,
   specifier,
+  parentUrl,
+  conditions = [...readCustomConditionsFromProcessArgs(), "node", "import"],
   lookupPackageScope = defaultLookupPackageScope,
   readPackageJson = defaultReadPackageJson,
+  preservesSymlink = false,
 }) => {
-  const resolution = applyPackageSpecifierResolution({
-    conditions,
+  const resolution = applyPackageSpecifierResolution(specifier, {
     parentUrl: String(parentUrl),
-    specifier,
+    conditions,
     lookupPackageScope,
     readPackageJson,
+    preservesSymlink,
   });
   const { url } = resolution;
   if (url.startsWith("file:")) {
     if (url.includes("%2F") || url.includes("%5C")) {
-      throw createInvalidModuleSpecifierError({
+      throw createInvalidModuleSpecifierError(
+        `must not include encoded "/" or "\\" characters`,
         specifier,
-        parentUrl,
-        reason: `must not include encoded "/" or "\\" characters`,
-      })
+        {
+          parentUrl,
+        },
+      )
     }
     return resolution
   }
   return resolution
 };
 
-const applyPackageSpecifierResolution = ({
-  conditions,
-  parentUrl,
-  specifier,
-  lookupPackageScope,
-  readPackageJson,
-}) => {
+const applyPackageSpecifierResolution = (specifier, resolutionContext) => {
+  const { parentUrl } = resolutionContext;
   // relative specifier
   if (
     specifier[0] === "/" ||
@@ -598,13 +589,10 @@ const applyPackageSpecifierResolution = ({
     specifier.startsWith("../")
   ) {
     if (specifier[0] !== "/") {
-      const browserFieldResolution = applyBrowserFieldResolution({
-        conditions,
-        parentUrl,
+      const browserFieldResolution = applyBrowserFieldResolution(
         specifier,
-        lookupPackageScope,
-        readPackageJson,
-      });
+        resolutionContext,
+      );
       if (browserFieldResolution) {
         return browserFieldResolution
       }
@@ -615,13 +603,7 @@ const applyPackageSpecifierResolution = ({
     }
   }
   if (specifier[0] === "#") {
-    return applyPackageImportsResolution({
-      conditions,
-      parentUrl,
-      specifier,
-      lookupPackageScope,
-      readPackageJson,
-    })
+    return applyPackageImportsResolution(specifier, resolutionContext)
   }
   try {
     const urlObject = new URL(specifier);
@@ -637,42 +619,29 @@ const applyPackageSpecifierResolution = ({
     }
   } catch (e) {
     // bare specifier
-    const browserFieldResolution = applyBrowserFieldResolution({
-      conditions,
-      parentUrl,
-      packageSpecifier: specifier,
-      lookupPackageScope,
-      readPackageJson,
-    });
+    const browserFieldResolution = applyBrowserFieldResolution(
+      specifier,
+      resolutionContext,
+    );
     if (browserFieldResolution) {
       return browserFieldResolution
     }
-    return applyPackageResolve({
-      conditions,
-      parentUrl,
-      packageSpecifier: specifier,
-      lookupPackageScope,
-      readPackageJson,
-    })
+    return applyPackageResolve(specifier, resolutionContext)
   }
 };
 
-const applyBrowserFieldResolution = ({
-  conditions,
-  parentUrl,
-  packageSpecifier,
-  lookupPackageScope,
-  readPackageJson,
-}) => {
+const applyBrowserFieldResolution = (specifier, resolutionContext) => {
+  const { parentUrl, conditions, lookupPackageScope, readPackageJson } =
+    resolutionContext;
   const browserCondition = conditions.includes("browser");
   if (!browserCondition) {
     return null
   }
-  const packageUrl = lookupPackageScope(parentUrl);
-  if (!packageUrl) {
+  const packageDirectoryUrl = lookupPackageScope(parentUrl);
+  if (!packageDirectoryUrl) {
     return null
   }
-  const packageJson = readPackageJson(packageUrl);
+  const packageJson = readPackageJson(packageDirectoryUrl);
   if (!packageJson) {
     return null
   }
@@ -684,30 +653,28 @@ const applyBrowserFieldResolution = ({
     return null
   }
   let url;
-  if (packageSpecifier.startsWith(".")) {
-    const packageSpecifierUrl = new URL(packageSpecifier, parentUrl).href;
-    const packageSpecifierRelativeUrl = packageSpecifierUrl.slice(
-      packageUrl.length,
-    );
-    const packageSpecifierRelativeNotation = `./${packageSpecifierRelativeUrl}`;
-    const browserMapping = browser[packageSpecifierRelativeNotation];
+  if (specifier.startsWith(".")) {
+    const specifierUrl = new URL(specifier, parentUrl).href;
+    const specifierRelativeUrl = specifierUrl.slice(packageDirectoryUrl.length);
+    const secifierRelativeNotation = `./${specifierRelativeUrl}`;
+    const browserMapping = browser[secifierRelativeNotation];
     if (typeof browserMapping === "string") {
-      url = new URL(browserMapping, packageUrl).href;
+      url = new URL(browserMapping, packageDirectoryUrl).href;
     } else if (browserMapping === false) {
-      url = `file:///@ignore/${packageSpecifierUrl.slice("file:///")}`;
+      url = `file:///@ignore/${specifierUrl.slice("file:///")}`;
     }
   } else {
-    const browserMapping = browser[packageSpecifier];
+    const browserMapping = browser[specifier];
     if (typeof browserMapping === "string") {
-      url = new URL(browserMapping, packageUrl).href;
+      url = new URL(browserMapping, packageDirectoryUrl).href;
     } else if (browserMapping === false) {
-      url = `file:///@ignore/${packageSpecifier}`;
+      url = `file:///@ignore/${specifier}`;
     }
   }
   if (url) {
     return {
       type: "field:browser",
-      packageUrl,
+      packageDirectoryUrl,
       packageJson,
       url,
     }
@@ -715,62 +682,43 @@ const applyBrowserFieldResolution = ({
   return null
 };
 
-const applyPackageImportsResolution = ({
-  conditions,
-  parentUrl,
-  specifier,
-  lookupPackageScope,
-  readPackageJson,
-}) => {
-  if (!specifier.startsWith("#")) {
-    throw createInvalidModuleSpecifierError({
-      specifier,
-      parentUrl,
-      reason: "internal imports must start with #",
-    })
+const applyPackageImportsResolution = (
+  internalSpecifier,
+  resolutionContext,
+) => {
+  const { parentUrl, lookupPackageScope, readPackageJson } = resolutionContext;
+  if (internalSpecifier === "#" || internalSpecifier.startsWith("#/")) {
+    throw createInvalidModuleSpecifierError(
+      "not a valid internal imports specifier name",
+      internalSpecifier,
+      resolutionContext,
+    )
   }
-  if (specifier === "#" || specifier.startsWith("#/")) {
-    throw createInvalidModuleSpecifierError({
-      specifier,
-      parentUrl,
-      reason: "not a valid internal imports specifier name",
-    })
-  }
-  const packageUrl = lookupPackageScope(parentUrl);
-  if (packageUrl !== null) {
-    const packageJson = readPackageJson(packageUrl);
+  const packageDirectoryUrl = lookupPackageScope(parentUrl);
+  if (packageDirectoryUrl !== null) {
+    const packageJson = readPackageJson(packageDirectoryUrl);
     const { imports } = packageJson;
     if (imports !== null && typeof imports === "object") {
-      const resolved = applyPackageImportsExportsResolution({
-        conditions,
-        parentUrl,
-        packageUrl,
+      const resolved = applyPackageImportsExportsResolution(internalSpecifier, {
+        ...resolutionContext,
+        packageDirectoryUrl,
         packageJson,
-        matchObject: imports,
-        matchKey: specifier,
-        isImports: true,
-        lookupPackageScope,
-        readPackageJson,
+        isImport: true,
       });
       if (resolved) {
         return resolved
       }
     }
   }
-  throw createPackageImportNotDefinedError({
-    specifier,
-    packageUrl,
-    parentUrl,
+  throw createPackageImportNotDefinedError(internalSpecifier, {
+    ...resolutionContext,
+    packageDirectoryUrl,
   })
 };
 
-const applyPackageResolve = ({
-  conditions,
-  parentUrl,
-  packageSpecifier,
-  lookupPackageScope,
-  readPackageJson,
-}) => {
+const applyPackageResolve = (packageSpecifier, resolutionContext) => {
+  const { parentUrl, conditions, readPackageJson, preservesSymlink } =
+    resolutionContext;
   if (packageSpecifier === "") {
     throw new Error("invalid module specifier")
   }
@@ -790,78 +738,64 @@ const applyPackageResolve = ({
     packageName.includes("\\") ||
     packageName.includes("%")
   ) {
-    throw createInvalidModuleSpecifierError({
-      specifier: packageName,
-      parentUrl,
-      reason: `is not a valid package name`,
-    })
+    throw createInvalidModuleSpecifierError(
+      `is not a valid package name`,
+      packageName,
+      resolutionContext,
+    )
   }
   if (packageSubpath.endsWith("/")) {
     throw new Error("invalid module specifier")
   }
-  const selfResolution = applyPackageSelfResolution({
-    conditions,
-    parentUrl,
+  const selfResolution = applyPackageSelfResolution(packageSubpath, {
+    ...resolutionContext,
     packageName,
-    packageSubpath,
-    lookupPackageScope,
-    readPackageJson,
   });
   if (selfResolution) {
     return selfResolution
   }
   let currentUrl = parentUrl;
   while (currentUrl !== "file:///") {
-    const packageUrl = new URL(`node_modules/${packageName}/`, currentUrl).href;
-    if (!node_fs.existsSync(new URL(packageUrl))) {
+    const packageDirectoryFacadeUrl = new URL(
+      `node_modules/${packageName}/`,
+      currentUrl,
+    ).href;
+    if (!node_fs.existsSync(new URL(packageDirectoryFacadeUrl))) {
       currentUrl = getParentUrl(currentUrl);
       continue
     }
-    const packageJson = readPackageJson(packageUrl);
+    const packageDirectoryUrl = preservesSymlink
+      ? packageDirectoryFacadeUrl
+      : resolvePackageSymlink(packageDirectoryFacadeUrl);
+    const packageJson = readPackageJson(packageDirectoryUrl);
     if (packageJson !== null) {
       const { exports } = packageJson;
       if (exports !== null && exports !== undefined) {
-        return applyPackageExportsResolution({
-          conditions,
-          parentUrl,
-          packageUrl,
+        return applyPackageExportsResolution(packageSubpath, {
+          ...resolutionContext,
+          packageDirectoryUrl,
           packageJson,
-          packageSubpath,
           exports,
-          lookupPackageScope,
-          readPackageJson,
         })
       }
     }
-    return applyLegacySubpathResolution({
-      conditions,
-      parentUrl,
-      packageUrl,
+    return applyLegacySubpathResolution(packageSubpath, {
+      ...resolutionContext,
+      packageDirectoryUrl,
       packageJson,
-      packageSubpath,
-      lookupPackageScope,
-      readPackageJson,
     })
   }
-  throw createModuleNotFoundError({
-    specifier: packageName,
-    parentUrl,
-  })
+  throw createModuleNotFoundError(packageName, resolutionContext)
 };
 
-const applyPackageSelfResolution = ({
-  conditions,
-  parentUrl,
-  packageName,
-  packageSubpath,
-  lookupPackageScope,
-  readPackageJson,
-}) => {
-  const packageUrl = lookupPackageScope(parentUrl);
-  if (!packageUrl) {
+const applyPackageSelfResolution = (packageSubpath, resolutionContext) => {
+  const { parentUrl, packageName, lookupPackageScope, readPackageJson } =
+    resolutionContext;
+  const packageDirectoryUrl = lookupPackageScope(parentUrl);
+  if (!packageDirectoryUrl) {
     return undefined
   }
-  const packageJson = readPackageJson(packageUrl);
+  const packageJson = readPackageJson(packageDirectoryUrl);
   if (!packageJson) {
     return undefined
   }
@@ -870,118 +804,65 @@ const applyPackageSelfResolution = ({
   }
   const { exports } = packageJson;
   if (!exports) {
-    const subpathResolution = applyLegacySubpathResolution({
-      conditions,
-      parentUrl,
-      packageUrl,
+    const subpathResolution = applyLegacySubpathResolution(packageSubpath, {
+      ...resolutionContext,
+      packageDirectoryUrl,
       packageJson,
-      packageSubpath,
-      lookupPackageScope,
-      readPackageJson,
     });
     if (subpathResolution && subpathResolution.type !== "subpath") {
       return subpathResolution
     }
     return undefined
   }
-  return applyPackageExportsResolution({
-    conditions,
-    parentUrl,
-    packageUrl,
+  return applyPackageExportsResolution(packageSubpath, {
+    ...resolutionContext,
+    packageDirectoryUrl,
     packageJson,
-    packageSubpath,
-    exports,
-    lookupPackageScope,
-    readPackageJson,
   })
 };
 
 // https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/lib/internal/modules/esm/resolve.js#L642
-const applyPackageExportsResolution = ({
-  conditions,
-  parentUrl,
-  packageUrl,
-  packageJson,
-  packageSubpath,
-  exports,
-  lookupPackageScope,
-  readPackageJson,
-}) => {
-  const exportsInfo = readExports({ exports, packageUrl });
+const applyPackageExportsResolution = (packageSubpath, resolutionContext) => {
   if (packageSubpath === ".") {
-    const mainExport = applyMainExportResolution({ exports, exportsInfo });
+    const mainExport = applyMainExportResolution(resolutionContext);
     if (!mainExport) {
-      throw createPackagePathNotExportedError({
-        subpath: packageSubpath,
-        parentUrl,
-        packageUrl,
-      })
+      throw createPackagePathNotExportedError(packageSubpath, resolutionContext)
     }
-    const resolved = applyPackageTargetResolution({
-      conditions,
-      parentUrl,
-      packageUrl,
-      packageJson,
+    const resolved = applyPackageTargetResolution(mainExport, {
+      ...resolutionContext,
       key: ".",
-      target: mainExport,
-      lookupPackageScope,
-      readPackageJson,
     });
     if (resolved) {
       return resolved
     }
-    throw createPackagePathNotExportedError({
-      subpath: packageSubpath,
-      parentUrl,
-      packageUrl,
-    })
+    throw createPackagePathNotExportedError(packageSubpath, resolutionContext)
   }
-  if (exportsInfo.type === "object" && exportsInfo.allKeysAreRelative) {
-    const resolved = applyPackageImportsExportsResolution({
-      conditions,
-      parentUrl,
-      packageUrl,
-      packageJson,
-      matchObject: exports,
-      matchKey: packageSubpath,
-      isImports: false,
-      lookupPackageScope,
-      readPackageJson,
+  const packageExportsInfo = readExports(resolutionContext);
+  if (
+    packageExportsInfo.type === "object" &&
+    packageExportsInfo.allKeysAreRelative
+  ) {
+    const resolved = applyPackageImportsExportsResolution(packageSubpath, {
+      ...resolutionContext,
+      isImport: false,
     });
     if (resolved) {
       return resolved
     }
   }
-  throw createPackagePathNotExportedError({
-    subpath: packageSubpath,
-    parentUrl,
-    packageUrl,
-  })
+  throw createPackagePathNotExportedError(packageSubpath, resolutionContext)
 };
 
-const applyPackageImportsExportsResolution = ({
-  conditions,
-  parentUrl,
-  packageUrl,
-  packageJson,
-  matchObject,
-  matchKey,
-  isImports,
-  lookupPackageScope,
-  readPackageJson,
-}) => {
+const applyPackageImportsExportsResolution = (matchKey, resolutionContext) => {
+  const { packageJson, isImport } = resolutionContext;
+  const matchObject = isImport ? packageJson.imports : packageJson.exports;
+
   if (!matchKey.includes("*") && matchObject.hasOwnProperty(matchKey)) {
     const target = matchObject[matchKey];
-    return applyPackageTargetResolution({
-      conditions,
-      parentUrl,
-      packageUrl,
-      packageJson,
+    return applyPackageTargetResolution(target, {
+      ...resolutionContext,
       key: matchKey,
-      target,
-      internal: isImports,
-      lookupPackageScope,
-      readPackageJson,
+      isImport,
     })
   }
   const expansionKeys = Object.keys(matchObject)
@@ -1000,80 +881,64 @@ const applyPackageImportsExportsResolution = ({
       patternBase.length,
       matchKey.length - patternTrailer.length,
     );
-    return applyPackageTargetResolution({
-      conditions,
-      parentUrl,
-      packageUrl,
-      packageJson,
+    return applyPackageTargetResolution(target, {
+      ...resolutionContext,
       key: matchKey,
-      target,
       subpath,
       pattern: true,
-      internal: isImports,
-      lookupPackageScope,
-      readPackageJson,
+      isImport,
     })
   }
   return null
 };
 
-const applyPackageTargetResolution = ({
-  conditions,
-  parentUrl,
-  packageUrl,
-  packageJson,
-  key,
-  target,
-  subpath = "",
-  pattern = false,
-  internal = false,
-  lookupPackageScope,
-  readPackageJson,
-}) => {
+const applyPackageTargetResolution = (target, resolutionContext) => {
+  const {
+    conditions,
+    packageDirectoryUrl,
+    packageJson,
+    key,
+    subpath = "",
+    pattern = false,
+    isImport = false,
+  } = resolutionContext;
+
   if (typeof target === "string") {
     if (pattern === false && subpath !== "" && !target.endsWith("/")) {
       throw new Error("invalid module specifier")
     }
     if (target.startsWith("./")) {
-      const targetUrl = new URL(target, packageUrl).href;
-      if (!targetUrl.startsWith(packageUrl)) {
-        throw createInvalidPackageTargetError({
-          parentUrl,
-          packageUrl,
+      const targetUrl = new URL(target, packageDirectoryUrl).href;
+      if (!targetUrl.startsWith(packageDirectoryUrl)) {
+        throw createInvalidPackageTargetError(
+          `target must be inside package`,
           target,
-          key,
-          isImport: internal,
-          reason: `target must be inside package`,
-        })
+          resolutionContext,
+        )
       }
       return {
-        type: internal ? "field:imports" : "field:exports",
-        packageUrl,
+        type: isImport ? "field:imports" : "field:exports",
+        packageDirectoryUrl,
         packageJson,
         url: pattern
           ? targetUrl.replaceAll("*", subpath)
           : new URL(subpath, targetUrl).href,
       }
     }
-    if (!internal || target.startsWith("../") || isValidUrl(target)) {
-      throw createInvalidPackageTargetError({
-        parentUrl,
-        packageUrl,
+    if (!isImport || target.startsWith("../") || isValidUrl(target)) {
+      throw createInvalidPackageTargetError(
+        `target must starst with "./"`,
         target,
-        key,
-        isImport: internal,
-        reason: `target must starst with "./"`,
-      })
+        resolutionContext,
+      )
     }
-    return applyPackageResolve({
-      conditions,
-      parentUrl: packageUrl,
-      packageSpecifier: pattern
-        ? target.replaceAll("*", subpath)
-        : `${target}${subpath}`,
-      lookupPackageScope,
-      readPackageJson,
-    })
+    return applyPackageResolve(
+      pattern ? target.replaceAll("*", subpath) : `${target}${subpath}`,
+      {
+        ...resolutionContext,
+        parentUrl: packageDirectoryUrl,
+      },
+    )
   }
   if (Array.isArray(target)) {
     if (target.length === 0) {
@@ -1085,18 +950,12 @@ const applyPackageTargetResolution = ({
       const targetValue = target[i];
       i++;
       try {
-        const resolved = applyPackageTargetResolution({
-          conditions,
-          parentUrl,
-          packageUrl,
-          packageJson,
+        const resolved = applyPackageTargetResolution(targetValue, {
+          ...resolutionContext,
           key: `${key}[${i}]`,
-          target: targetValue,
           subpath,
           pattern,
-          internal,
-          lookupPackageScope,
-          readPackageJson,
+          isImport,
         });
         if (resolved) {
           return resolved
@@ -1125,18 +984,12 @@ const applyPackageTargetResolution = ({
       }
       if (key === "default" || conditions.includes(key)) {
         const targetValue = target[key];
-        const resolved = applyPackageTargetResolution({
-          conditions,
-          parentUrl,
-          packageUrl,
-          packageJson,
+        const resolved = applyPackageTargetResolution(targetValue, {
+          ...resolutionContext,
           key,
-          target: targetValue,
           subpath,
           pattern,
-          internal,
-          lookupPackageScope,
-          readPackageJson,
+          isImport,
         });
         if (resolved) {
           return resolved
@@ -1145,27 +998,25 @@ const applyPackageTargetResolution = ({
     }
     return null
   }
-  throw createInvalidPackageTargetError({
-    parentUrl,
-    packageUrl,
+  throw createInvalidPackageTargetError(
+    `target must be a string, array, object or null`,
     target,
-    key,
-    isImport: internal,
-    reason: `target must be a string, array, object or null`,
-  })
+    resolutionContext,
+  )
 };
 
-const readExports = ({ exports, packageUrl }) => {
-  if (Array.isArray(exports)) {
+const readExports = ({ packageDirectoryUrl, packageJson }) => {
+  const packageExports = packageJson.exports;
+  if (Array.isArray(packageExports)) {
     return {
       type: "array",
     }
   }
-  if (exports === null) {
+  if (packageExports === null) {
     return {}
   }
-  if (typeof exports === "object") {
-    const keys = Object.keys(exports);
+  if (typeof packageExports === "object") {
+    const keys = Object.keys(packageExports);
     const relativeKeys = [];
     const conditionalKeys = [];
     keys.forEach((availableKey) => {
@@ -1181,8 +1032,8 @@ const readExports = ({ exports, packageUrl }) => {
         `Invalid package configuration: cannot mix relative and conditional keys in package.exports
 --- unexpected keys ---
 ${conditionalKeys.map((key) => `"${key}"`).join("\n")}
---- package.json ---
-${packageUrl}`,
+--- package directory url ---
+${packageDirectoryUrl}`,
       )
     }
     return {
@@ -1191,7 +1042,7 @@ ${packageUrl}`,
       allKeysAreRelative: relativeKeys.length === keys.length,
     }
   }
-  if (typeof exports === "string") {
+  if (typeof packageExports === "string") {
     return { type: "string" }
   }
   return {}
@@ -1236,78 +1087,71 @@ const parsePackageSpecifier = (packageSpecifier) => {
   }
 };
 
-const applyMainExportResolution = ({ exports, exportsInfo }) => {
-  if (exportsInfo.type === "array" || exportsInfo.type === "string") {
-    return exports
+const applyMainExportResolution = (resolutionContext) => {
+  const { packageJson } = resolutionContext;
+  const packageExportsInfo = readExports(resolutionContext);
+  if (
+    packageExportsInfo.type === "array" ||
+    packageExportsInfo.type === "string"
+  ) {
+    return packageJson.exports
   }
-  if (exportsInfo.type === "object") {
-    if (exportsInfo.hasRelativeKey) {
-      return exports["."]
+  if (packageExportsInfo.type === "object") {
+    if (packageExportsInfo.hasRelativeKey) {
+      return packageJson.exports["."]
     }
-    return exports
+    return packageJson.exports
   }
   return undefined
 };
 
-const applyLegacySubpathResolution = ({
-  conditions,
-  parentUrl,
-  packageUrl,
-  packageJson,
-  packageSubpath,
-  lookupPackageScope,
-  readPackageJson,
-}) => {
+const applyLegacySubpathResolution = (packageSubpath, resolutionContext) => {
+  const { packageDirectoryUrl, packageJson } = resolutionContext;
+
   if (packageSubpath === ".") {
-    return applyLegacyMainResolution({
-      conditions,
-      packageUrl,
-      packageJson,
-    })
+    return applyLegacyMainResolution(packageSubpath, resolutionContext)
   }
-  const browserFieldResolution = applyBrowserFieldResolution({
-    conditions,
-    parentUrl,
-    specifier: packageSubpath,
-    lookupPackageScope,
-    readPackageJson,
-  });
+  const browserFieldResolution = applyBrowserFieldResolution(
+    packageSubpath,
+    resolutionContext,
+  );
   if (browserFieldResolution) {
     return browserFieldResolution
   }
   return {
     type: "subpath",
-    packageUrl,
+    packageDirectoryUrl,
     packageJson,
-    url: new URL(packageSubpath, packageUrl).href,
+    url: new URL(packageSubpath, packageDirectoryUrl).href,
   }
 };
 
-const applyLegacyMainResolution = ({ conditions, packageUrl, packageJson }) => {
+const applyLegacyMainResolution = (packageSubpath, resolutionContext) => {
+  const { conditions, packageDirectoryUrl, packageJson } = resolutionContext;
   for (const condition of conditions) {
     const conditionResolver = mainLegacyResolvers[condition];
     if (!conditionResolver) {
       continue
     }
-    const resolved = conditionResolver(packageJson, packageUrl);
+    const resolved = conditionResolver(resolutionContext);
     if (resolved) {
       return {
         type: resolved.type,
-        packageUrl,
+        packageDirectoryUrl,
         packageJson,
-        url: new URL(resolved.path, packageUrl).href,
+        url: new URL(resolved.path, packageDirectoryUrl).href,
       }
     }
   }
   return {
     type: "field:main", // the absence of "main" field
-    packageUrl,
+    packageDirectoryUrl,
     packageJson,
-    url: new URL("index.js", packageUrl).href,
+    url: new URL("index.js", packageDirectoryUrl).href,
   }
 };
 const mainLegacyResolvers = {
-  import: (packageJson) => {
+  import: ({ packageJson }) => {
     if (typeof packageJson.module === "string") {
       return { type: "field:module", path: packageJson.module }
     }
@@ -1319,7 +1163,7 @@ const mainLegacyResolvers = {
     }
     return null
   },
-  browser: (packageJson, packageUrl) => {
+  browser: ({ packageDirectoryUrl, packageJson }) => {
     const browserMain = (() => {
       if (typeof packageJson.browser === "string") {
         return packageJson.browser
@@ -1351,7 +1195,7 @@ const mainLegacyResolvers = {
         path: browserMain,
       }
     }
-    const browserMainUrlObject = new URL(browserMain, packageUrl);
+    const browserMainUrlObject = new URL(browserMain, packageDirectoryUrl);
     const content = node_fs.readFileSync(browserMainUrlObject, "utf-8");
     if (
       (/typeof exports\s*==/.test(content) &&
@@ -1368,7 +1212,7 @@ const mainLegacyResolvers = {
       path: browserMain,
     }
   },
-  node: (packageJson) => {
+  node: ({ packageJson }) => {
     if (typeof packageJson.main === "string") {
       return {
         type: "field:main",
@@ -1411,6 +1255,12 @@ const comparePatternKeys = (keyA, keyB) => {
   return 0
 };
 
+const resolvePackageSymlink = (packageDirectoryUrl) => {
+  const packageDirectoryPath = node_fs.realpathSync(new URL(packageDirectoryUrl));
+  const packageDirectoryResolvedUrl = node_url.pathToFileURL(packageDirectoryPath).href;
+  return `${packageDirectoryResolvedUrl}/`
+};
+
 // https://nodejs.org/dist/latest-v16.x/docs/api/packages.html#packages_determining_module_system)
 const determineModuleSystem = (
   url,
@@ -1439,11 +1289,11 @@ const determineModuleSystem = (
     return "url"
   }
   if (ambiguousExtensions.includes(extension)) {
-    const packageUrl = defaultLookupPackageScope(url);
-    if (!packageUrl) {
+    const packageDirectoryUrl = defaultLookupPackageScope(url);
+    if (!packageDirectoryUrl) {
       return "commonjs"
     }
-    const packageJson = defaultReadPackageJson(packageUrl);
+    const packageJson = defaultReadPackageJson(packageDirectoryUrl);
     if (packageJson.type === "module") {
       return "module"
     }
@@ -2533,3 +2383,4 @@ const isAbsoluteUrl = (url) => {
 
 exports.interfaceVersion = interfaceVersion;
 exports.resolve = resolve;
+//# sourceMappingURL=main.js.map
