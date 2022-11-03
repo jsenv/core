@@ -1,3 +1,10 @@
+# 29.5.0
+
+- build.baseUrl becomes build.assetsPath
+- introduce build.assetsPublicUrl
+- build.buildDirectoryClean renamed directoryToClean
+- fix new URL() usage for ?as_js_classic_library
+
 # 29.4.4
 
 - fix url versioning during build

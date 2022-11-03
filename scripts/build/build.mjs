@@ -10,7 +10,6 @@ await build({
   entryPoints: {
     "./src/main.js": "main.js",
   },
-  baseUrl: "./",
   minification: false,
   versioning: false,
   assetManifest: false,
@@ -70,12 +69,11 @@ await build({
     "./src/plugins/transpilation/as_js_classic/client/s.js?as_js_classic_library":
       "s.js",
   },
-  buildDirectoryClean: false,
+  directoryToClean: false,
   runtimeCompat: {
     chrome: "0",
     firefox: "0",
   },
-  baseUrl: "./",
   sourcemaps: "file",
   sourcemapsSourcesContent: true,
   minification: false,

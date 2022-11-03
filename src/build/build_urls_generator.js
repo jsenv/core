@@ -1,7 +1,7 @@
 import { urlToFilename, urlToRelativeUrl } from "@jsenv/urls"
 import { memoizeByFirstArgument } from "@jsenv/utils/src/memoize/memoize_by_first_argument.js"
 
-export const createBuilUrlsGenerator = ({ buildDirectoryUrl }) => {
+export const createBuildUrlsGenerator = ({ buildDirectoryUrl, assetsPath }) => {
   const cache = {}
 
   const getUrlName = (url, urlInfo) => {
@@ -15,11 +15,14 @@ export const createBuilUrlsGenerator = ({ buildDirectoryUrl }) => {
   }
 
   const generate = memoizeByFirstArgument((url, { urlInfo, parentUrlInfo }) => {
-    const directoryPath = determineDirectoryPath({
+    let directoryPath = determineDirectoryPath({
       buildDirectoryUrl,
       urlInfo,
       parentUrlInfo,
     })
+    if (assetsPath && !urlInfo.isEntryPoint) {
+      directoryPath = `${assetsPath}${directoryPath}`
+    }
     let names = cache[directoryPath]
     if (!names) {
       names = []

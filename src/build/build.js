@@ -61,7 +61,7 @@ import { jsenvPluginAsJsClassic } from "../plugins/transpilation/as_js_classic/j
 import { getCorePlugins } from "../plugins/plugins.js"
 
 import { GRAPH } from "./graph_utils.js"
-import { createBuilUrlsGenerator } from "./build_urls_generator.js"
+import { createBuildUrlsGenerator } from "./build_urls_generator.js"
 import { injectVersionMappings } from "./inject_global_version_mappings.js"
 import { createVersionGenerator } from "./version_generator.js"
 
@@ -90,8 +90,8 @@ export const defaultRuntimeCompat = {
  *        Describe entry point paths and control their names in the build directory
  * @param {object} buildParameters.runtimeCompat
  *        Code generated will be compatible with these runtimes
- * @param {string="/"} buildParameters.baseUrl
- *        All urls in build file contents are prefixed with this url
+ * @param {string} [buildParameters.assetBuildPath="./"]
+ *        Urls in build file contents will be relative to this url
  * @param {boolean|object} [buildParameters.minification=true]
  *        Minify build file contents
  * @param {boolean} [buildParameters.versioning=true]
@@ -114,8 +114,9 @@ export const build = async ({
   logLevel = "info",
   rootDirectoryUrl,
   buildDirectoryUrl,
+  assetsPath,
+  assetsPublicUrl,
   entryPoints = {},
-  baseUrl = "/",
 
   runtimeCompat = defaultRuntimeCompat,
   plugins = [],
@@ -139,10 +140,10 @@ export const build = async ({
   cooldownBetweenFileEvents,
   watch = false,
 
-  buildDirectoryClean = true,
+  directoryToClean,
   writeOnFileSystem = true,
   writeGeneratedFiles = false,
-  assetManifest = true,
+  assetManifest = versioningMethod === "filename",
   assetManifestFileRelativeUrl = "asset-manifest.json",
 }) => {
   const operation = Abort.startOperation()
@@ -165,6 +166,44 @@ export const build = async ({
     throw new Error(
       `Unexpected "versioningMethod": must be "filename", "search_param"; got ${versioning}`,
     )
+  }
+
+  if (assetsPath) {
+    if (assetsPath[assetsPath.length - 1] !== "/") {
+      assetsPath = `${assetsPath}/`
+    }
+  }
+
+  const preferRelativeUrls = Object.keys(runtimeCompat).includes("node")
+  if (directoryToClean === undefined) {
+    if (assetsPath === undefined) {
+      directoryToClean = buildDirectoryUrl
+    } else {
+      directoryToClean = new URL(assetsPath, buildDirectoryUrl).href
+    }
+  }
+  const asFormattedBuildUrl = (generatedUrl, reference) => {
+    if (preferRelativeUrls) {
+      const urlRelativeToParent = urlToRelativeUrl(
+        generatedUrl,
+        reference.parentUrl === rootDirectoryUrl
+          ? buildDirectoryUrl
+          : reference.parentUrl,
+      )
+      if (urlRelativeToParent[0] !== ".") {
+        // ensure "./" on relative url (otherwise it could be a "bare specifier")
+        return `./${urlRelativeToParent}`
+      }
+      return urlRelativeToParent
+    }
+    if (assetsPublicUrl) {
+      const urlRelativeToBuildDirectory = urlToRelativeUrl(
+        generatedUrl,
+        buildDirectoryUrl,
+      )
+      return new URL(urlRelativeToBuildDirectory, assetsPublicUrl).href
+    }
+    return `/${urlToRelativeUrl(generatedUrl, buildDirectoryUrl)}`
   }
 
   const runBuild = async ({ signal, logLevel }) => {
@@ -240,8 +279,9 @@ build ${entryPointKeys.length} entry points`)
       outDirectoryUrl: new URL(`.jsenv/build/`, rootDirectoryUrl),
     })
 
-    const buildUrlsGenerator = createBuilUrlsGenerator({
+    const buildUrlsGenerator = createBuildUrlsGenerator({
       buildDirectoryUrl,
+      assetsPath,
     })
     const buildDirectoryRedirections = new Map()
 
@@ -288,8 +328,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 const parentRawUrl = buildDirectoryRedirections.get(
                   reference.parentUrl,
                 )
-                const baseUrl = ensurePathnameTrailingSlash(parentRawUrl)
-                return new URL(reference.specifier, baseUrl).href
+                const parentUrl = ensurePathnameTrailingSlash(parentRawUrl)
+                return new URL(reference.specifier, parentUrl).href
               }
               if (reference.specifier[0] === "/") {
                 return new URL(reference.specifier.slice(1), buildDirectoryUrl)
@@ -467,25 +507,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             generatedUrlObject.searchParams.delete("as_text_module")
             generatedUrlObject.hash = ""
             const generatedUrl = generatedUrlObject.href
-            let specifier
-            if (baseUrl === "./") {
-              const relativeUrl = urlToRelativeUrl(
-                generatedUrl,
-                reference.parentUrl === rootDirectoryUrl
-                  ? buildDirectoryUrl
-                  : reference.parentUrl,
-              )
-              // ensure "./" on relative url (otherwise it could be a "bare specifier")
-              specifier =
-                relativeUrl[0] === "." ? relativeUrl : `./${relativeUrl}`
-            } else {
-              // if a file is in the same directory we could prefer the relative notation
-              // but to keep things simple let's keep the "absolutely relative" to baseUrl for now
-              specifier = `${baseUrl}${urlToRelativeUrl(
-                generatedUrl,
-                buildDirectoryUrl,
-              )}`
-            }
+            const specifier = asFormattedBuildUrl(generatedUrl, reference)
             buildUrls.set(specifier, reference.generatedUrl)
             return specifier
           },
@@ -592,6 +614,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             })
           entryUrls.push(entryUrlInfo.url)
           entryUrlInfo.filename = entryPoints[key]
+          entryUrlInfo.isEntryPoint = true
           rawUrlGraphLoader.load(entryUrlInfo, { reference: entryReference })
         })
         await rawUrlGraphLoader.getAllLoadDonePromise(buildOperation)
@@ -1055,15 +1078,15 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   const versionedUrl = versionedUrlMap.get(reference.url)
                   if (!versionedUrl) {
                     // happens for sourcemap
-                    return `${baseUrl}${urlToRelativeUrl(
+                    return urlToRelativeUrl(
                       referencedUrlInfo.url,
-                      buildDirectoryUrl,
-                    )}`
+                      reference.parentUrl,
+                    )
                   }
-                  const versionedSpecifier = `${baseUrl}${urlToRelativeUrl(
+                  const versionedSpecifier = asFormattedBuildUrl(
                     versionedUrl,
-                    buildDirectoryUrl,
-                  )}`
+                    reference,
+                  )
                   versionMappings[reference.specifier] = versionedSpecifier
                   versioningRedirections.set(reference.url, versionedUrl)
                   buildUrls.set(versionedSpecifier, versionedUrl)
@@ -1149,6 +1172,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     urlInfo,
                     kitchen: finalGraphKitchen,
                     versionMappings: versionMappingsNeeded,
+                    minification,
                   })
                 })
               }
@@ -1407,8 +1431,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       }
     })
     if (writeOnFileSystem) {
-      if (buildDirectoryClean) {
-        await ensureEmptyDirectory(buildDirectoryUrl)
+      if (directoryToClean) {
+        await ensureEmptyDirectory(directoryToClean)
       }
       const buildRelativeUrls = Object.keys(buildFileContents)
       buildRelativeUrls.forEach((buildRelativeUrl) => {
