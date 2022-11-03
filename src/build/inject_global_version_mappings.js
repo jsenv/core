@@ -14,10 +14,14 @@ export const injectVersionMappings = async ({
   urlInfo,
   kitchen,
   versionMappings,
+  minification,
 }) => {
   const injector = injectors[urlInfo.type]
   if (injector) {
-    const { content, sourcemap } = await injector(urlInfo, { versionMappings })
+    const { content, sourcemap } = await injector(urlInfo, {
+      versionMappings,
+      minification,
+    })
     kitchen.urlInfoTransformer.applyFinalTransformations(urlInfo, {
       content,
       sourcemap,
@@ -25,18 +29,8 @@ export const injectVersionMappings = async ({
   }
 }
 
-const jsInjector = (urlInfo, { versionMappings }) => {
-  const magicSource = createMagicSource(urlInfo.content)
-  magicSource.prepend(
-    generateClientCodeForVersionMappings(versionMappings, {
-      globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window",
-    }),
-  )
-  return magicSource.toContentAndSourcemap()
-}
-
 const injectors = {
-  html: (urlInfo, { versionMappings }) => {
+  html: (urlInfo, { versionMappings, minification }) => {
     // ideally we would inject an importmap but browser support is too low
     // (even worse for worker/service worker)
     // so for now we inject code into entry points
@@ -49,6 +43,7 @@ const injectors = {
         tagName: "script",
         textContent: generateClientCodeForVersionMappings(versionMappings, {
           globalName: "window",
+          minify: minification || minification.js_classic,
         }),
       }),
       "jsenv:versioning",
@@ -57,14 +52,40 @@ const injectors = {
       content: stringifyHtmlAst(htmlAst),
     }
   },
-  js_classic: jsInjector,
-  js_module: jsInjector,
+  js_classic: (urlInfo, { versionMappings, minification }) => {
+    return jsInjector(urlInfo, {
+      versionMappings,
+      minify: minification || minification.js_classic,
+    })
+  },
+  js_module: (urlInfo, { versionMappings, minification }) => {
+    return jsInjector(urlInfo, {
+      versionMappings,
+      minify: minification || minification.js_module,
+    })
+  },
+}
+
+const jsInjector = (urlInfo, { versionMappings, minify }) => {
+  const magicSource = createMagicSource(urlInfo.content)
+  magicSource.prepend(
+    generateClientCodeForVersionMappings(versionMappings, {
+      globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window",
+      minify,
+    }),
+  )
+  return magicSource.toContentAndSourcemap()
 }
 
 const generateClientCodeForVersionMappings = (
   versionMappings,
-  { globalName },
+  { globalName, minify },
 ) => {
+  if (minify) {
+    return `;(function(){var m = ${JSON.stringify(
+      versionMappings,
+    )}; ${globalName}.__v__ = function (s) { return m[s] || s }; })();`
+  }
   return `
 ;(function() {
 
