@@ -130,6 +130,7 @@ const jsenvPluginAsModules = () => {
         type: "js_module",
         originalUrl: jsonUrlInfo.originalUrl,
         originalContent: jsonUrlInfo.originalContent,
+        data: jsonUrlInfo.data,
       }
     },
   }
@@ -179,6 +180,7 @@ const jsenvPluginAsModules = () => {
         type: "js_module",
         originalUrl: cssUrlInfo.originalUrl,
         originalContent: cssUrlInfo.originalContent,
+        data: cssUrlInfo.data,
       }
     },
   }
@@ -226,6 +228,7 @@ export default inlineContent.text`,
         type: "js_module",
         originalUrl: textUrlInfo.originalUrl,
         originalContent: textUrlInfo.originalContent,
+        data: textUrlInfo.data,
       }
     },
   }

@@ -93,6 +93,7 @@ export const jsenvPluginCommonJs = ({
         originalUrl: commonJsUrlInfo.originalUrl,
         originalContent: commonJsUrlInfo.originalContent,
         sourcemap,
+        data: commonJsUrlInfo.data,
       }
     },
   }

@@ -86,6 +86,7 @@ export const jsenvPluginAsJsClassicLibrary = ({
         originalUrl: urlInfo.originalUrl,
         originalContent: jsModuleUrlInfo.originalContent,
         sourcemap,
+        data: jsModuleUrlInfo.data,
       }
     },
   }
