@@ -24,7 +24,7 @@ export const injectHtmlNode = (htmlAst, node, jsenvPluginName = "jsenv") => {
   })
   const htmlHtmlNode = findChild(htmlAst, (node) => node.nodeName === "html")
   const bodyNode = findChild(htmlHtmlNode, (node) => node.nodeName === "body")
-  return insertAfter(node, bodyNode)
+  return insertHtmlNodeAfter(node, bodyNode)
 }
 
 export const injectScriptNodeAsEarlyAsPossible = (
@@ -54,13 +54,13 @@ export const injectScriptNodeAsEarlyAsPossible = (
       let after = firstImportmapScript
       for (const nextSibling of nextSiblings) {
         if (nextSibling.nodeName === "script") {
-          return insertBefore(scriptNode, importmapParent, nextSibling)
+          return insertHtmlNodeBefore(scriptNode, importmapParent, nextSibling)
         }
         if (nextSibling.nodeName === "link") {
           after = nextSibling
         }
       }
-      return insertAfter(scriptNode, importmapParent, after)
+      return insertHtmlNodeAfter(scriptNode, importmapParent, after)
     }
   }
   const headNode = findChild(htmlAst, (node) => node.nodeName === "html")
@@ -68,16 +68,20 @@ export const injectScriptNodeAsEarlyAsPossible = (
   let after = headNode.childNodes[0]
   for (const child of headNode.childNodes) {
     if (child.nodeName === "script") {
-      return insertBefore(scriptNode, headNode, child)
+      return insertHtmlNodeBefore(scriptNode, headNode, child)
     }
     if (child.nodeName === "link") {
       after = child
     }
   }
-  return insertAfter(scriptNode, headNode, after)
+  return insertHtmlNodeAfter(scriptNode, headNode, after)
 }
 
-const insertBefore = (nodeToInsert, futureParentNode, futureNextSibling) => {
+export const insertHtmlNodeBefore = (
+  nodeToInsert,
+  futureParentNode,
+  futureNextSibling,
+) => {
   const { childNodes = [] } = futureParentNode
   const futureIndex = futureNextSibling
     ? childNodes.indexOf(futureNextSibling)
@@ -85,7 +89,11 @@ const insertBefore = (nodeToInsert, futureParentNode, futureNextSibling) => {
   injectWithWhitespaces(nodeToInsert, futureParentNode, futureIndex)
 }
 
-const insertAfter = (nodeToInsert, futureParentNode, futurePrevSibling) => {
+export const insertHtmlNodeAfter = (
+  nodeToInsert,
+  futureParentNode,
+  futurePrevSibling,
+) => {
   const { childNodes = [] } = futureParentNode
   const futureIndex = futurePrevSibling
     ? childNodes.indexOf(futurePrevSibling) + 1
@@ -127,9 +135,14 @@ const injectWithWhitespaces = (nodeToInsert, futureParentNode, futureIndex) => {
 const findChild = ({ childNodes = [] }, predicate) => childNodes.find(predicate)
 
 const stringifyAttributes = (object) => {
-  return Object.keys(object)
-    .map((key) => `${key}=${valueToHtmlAttributeValue(object[key])}`)
-    .join(" ")
+  let string = ""
+  Object.keys(object).forEach((key) => {
+    const value = object[key]
+    if (value === undefined) return
+    if (string !== "") string += " "
+    string += `${key}=${valueToHtmlAttributeValue(value)}`
+  })
+  return string
 }
 
 const valueToHtmlAttributeValue = (value) => {

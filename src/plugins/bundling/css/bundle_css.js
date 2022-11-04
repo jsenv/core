@@ -21,7 +21,7 @@ export const bundleCss = async ({ cssUrlInfos, context }) => {
   cssUrlInfos.forEach((cssUrlInfo) => {
     bundledCssUrlInfos[cssUrlInfo.url] = {
       data: {
-        generatedBy: "parcel",
+        bundlerName: "parcel",
       },
       contentType: "text/css",
       content: cssBundleInfos[cssUrlInfo.url].bundleContent,
