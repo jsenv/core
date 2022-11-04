@@ -8579,8 +8579,18 @@ const analyzeUrlNodeType = (secondArgNode, {
   if (!isJsModule && isContextMetaUrlFromSystemJs(secondArgNode)) {
     return "context.meta.url";
   }
-  if (!isJsModule && isDocumentCurrentScriptSrc(secondArgNode)) {
-    return "document.currentScript.src";
+  if (!isJsModule) {
+    if (isDocumentCurrentScriptSrc(secondArgNode)) {
+      return "document.currentScript.src";
+    }
+    // new URL('specifier', document.currentScript.src)
+    // becomes
+    // var _currentUrl = document.currentScript.src
+    // new URL('specifier', currentUrl)
+    // (search for scope.generateUidIdentifier("currentUrl")
+    if (secondArgNode.type === "Identifier") {
+      return "document.currentScript.src";
+    }
   }
   return null;
 };
@@ -16812,6 +16822,7 @@ const bundleJsModules = async ({
     logger,
     rootDirectoryUrl,
     buildDirectoryUrl,
+    assetsDirectory,
     urlGraph,
     runtimeCompat,
     sourcemaps
@@ -16829,6 +16840,7 @@ const bundleJsModules = async ({
     logger,
     rootDirectoryUrl,
     buildDirectoryUrl,
+    assetsDirectory,
     urlGraph,
     jsModuleUrlInfos,
     runtimeCompat,
@@ -16844,6 +16856,7 @@ const rollupPluginJsenv = ({
   // logger,
   rootDirectoryUrl,
   buildDirectoryUrl,
+  assetsDirectory,
   urlGraph,
   jsModuleUrlInfos,
   sourcemaps,
@@ -16968,7 +16981,7 @@ const rollupPluginJsenv = ({
             }
           }
           const name = nameFromUrlInfo || `${chunkInfo.name}.js`;
-          return insideJs ? `js/${name}` : `${name}`;
+          return insideJs ? `${assetsDirectory}js/${name}` : `${name}`;
         },
         manualChunks: id => {
           if (babelHelpersChunk) {
@@ -17076,6 +17089,7 @@ const buildWithRollup = async ({
   logger,
   rootDirectoryUrl,
   buildDirectoryUrl,
+  assetsDirectory,
   urlGraph,
   jsModuleUrlInfos,
   runtimeCompat,
@@ -17094,6 +17108,7 @@ const buildWithRollup = async ({
         logger,
         rootDirectoryUrl,
         buildDirectoryUrl,
+        assetsDirectory,
         urlGraph,
         jsModuleUrlInfos,
         runtimeCompat,
@@ -22619,8 +22634,9 @@ const memoizeByFirstArgument = compute => {
   return fnWithMemoization;
 };
 
-const createBuilUrlsGenerator = ({
-  buildDirectoryUrl
+const createBuildUrlsGenerator = ({
+  buildDirectoryUrl,
+  assetsDirectory
 }) => {
   const cache = {};
   const getUrlName = (url, urlInfo) => {
@@ -22638,6 +22654,7 @@ const createBuilUrlsGenerator = ({
   }) => {
     const directoryPath = determineDirectoryPath({
       buildDirectoryUrl,
+      assetsDirectory,
       urlInfo,
       parentUrlInfo
     });
@@ -22692,6 +22709,7 @@ const splitFileExtension = filename => {
 };
 const determineDirectoryPath = ({
   buildDirectoryUrl,
+  assetsDirectory,
   urlInfo,
   parentUrlInfo
 }) => {
@@ -22716,25 +22734,26 @@ const determineDirectoryPath = ({
     return "";
   }
   if (urlInfo.type === "html") {
-    return "html/";
+    return `${assetsDirectory}html/`;
   }
   if (urlInfo.type === "css") {
-    return "css/";
+    return `${assetsDirectory}css/`;
   }
   if (urlInfo.type === "js_module" || urlInfo.type === "js_classic") {
-    return "js/";
+    return `${assetsDirectory}js/`;
   }
   if (urlInfo.type === "json") {
-    return "json/";
+    return `${assetsDirectory}json/`;
   }
-  return "other/";
+  return `${assetsDirectory}other/`;
 };
 
 // https://bundlers.tooling.report/hashing/avoid-cascade/
 const injectVersionMappings = async ({
   urlInfo,
   kitchen,
-  versionMappings
+  versionMappings,
+  minification
 }) => {
   const injector = injectors[urlInfo.type];
   if (injector) {
@@ -22742,7 +22761,8 @@ const injectVersionMappings = async ({
       content,
       sourcemap
     } = await injector(urlInfo, {
-      versionMappings
+      versionMappings,
+      minification
     });
     kitchen.urlInfoTransformer.applyFinalTransformations(urlInfo, {
       content,
@@ -22750,18 +22770,10 @@ const injectVersionMappings = async ({
     });
   }
 };
-const jsInjector = (urlInfo, {
-  versionMappings
-}) => {
-  const magicSource = createMagicSource(urlInfo.content);
-  magicSource.prepend(generateClientCodeForVersionMappings(versionMappings, {
-    globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window"
-  }));
-  return magicSource.toContentAndSourcemap();
-};
 const injectors = {
   html: (urlInfo, {
-    versionMappings
+    versionMappings,
+    minification
   }) => {
     // ideally we would inject an importmap but browser support is too low
     // (even worse for worker/service worker)
@@ -22772,19 +22784,51 @@ const injectors = {
     injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
       tagName: "script",
       textContent: generateClientCodeForVersionMappings(versionMappings, {
-        globalName: "window"
+        globalName: "window",
+        minify: minification || minification.js_classic
       })
     }), "jsenv:versioning");
     return {
       content: stringifyHtmlAst(htmlAst)
     };
   },
-  js_classic: jsInjector,
-  js_module: jsInjector
+  js_classic: (urlInfo, {
+    versionMappings,
+    minification
+  }) => {
+    return jsInjector(urlInfo, {
+      versionMappings,
+      minify: minification || minification.js_classic
+    });
+  },
+  js_module: (urlInfo, {
+    versionMappings,
+    minification
+  }) => {
+    return jsInjector(urlInfo, {
+      versionMappings,
+      minify: minification || minification.js_module
+    });
+  }
+};
+const jsInjector = (urlInfo, {
+  versionMappings,
+  minify
+}) => {
+  const magicSource = createMagicSource(urlInfo.content);
+  magicSource.prepend(generateClientCodeForVersionMappings(versionMappings, {
+    globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window",
+    minify
+  }));
+  return magicSource.toContentAndSourcemap();
 };
 const generateClientCodeForVersionMappings = (versionMappings, {
-  globalName
+  globalName,
+  minify
 }) => {
+  if (minify) {
+    return `;(function(){var m = ${JSON.stringify(versionMappings)}; ${globalName}.__v__ = function (s) { return m[s] || s }; })();`;
+  }
   return `
 ;(function() {
 
@@ -22886,8 +22930,10 @@ const defaultRuntimeCompat = {
  *        Describe entry point paths and control their names in the build directory
  * @param {object} buildParameters.runtimeCompat
  *        Code generated will be compatible with these runtimes
- * @param {string="/"} buildParameters.baseUrl
- *        All urls in build file contents are prefixed with this url
+ * @param {string} [buildParameters.assetsDirectory=""]
+ *        Directory where asset files will be written
+ * @param {string|url} [buildParameters.base=""]
+ *        Urls in build file contents will be prefixed with this string
  * @param {boolean|object} [buildParameters.minification=true]
  *        Minify build file contents
  * @param {boolean} [buildParameters.versioning=true]
@@ -22910,8 +22956,9 @@ const build = async ({
   logLevel = "info",
   rootDirectoryUrl,
   buildDirectoryUrl,
+  assetsDirectory = "",
+  base,
   entryPoints = {},
-  baseUrl = "/",
   runtimeCompat = defaultRuntimeCompat,
   plugins = [],
   sourcemaps = false,
@@ -22933,10 +22980,10 @@ const build = async ({
   },
   cooldownBetweenFileEvents,
   watch = false,
-  buildDirectoryClean = true,
+  directoryToClean,
   writeOnFileSystem = true,
   writeGeneratedFiles = false,
-  assetManifest = true,
+  assetManifest = versioningMethod === "filename",
   assetManifestFileRelativeUrl = "asset-manifest.json"
 }) => {
   const operation = Abort.startOperation();
@@ -22956,6 +23003,32 @@ const build = async ({
   if (!["filename", "search_param"].includes(versioningMethod)) {
     throw new Error(`Unexpected "versioningMethod": must be "filename", "search_param"; got ${versioning}`);
   }
+  if (assetsDirectory && assetsDirectory[assetsDirectory.length - 1] !== "/") {
+    assetsDirectory = `${assetsDirectory}/`;
+  }
+  const forNode = Boolean(runtimeCompat.node);
+  if (base === undefined) {
+    base = forNode ? "./" : "/";
+  }
+  if (directoryToClean === undefined) {
+    if (assetsDirectory === undefined) {
+      directoryToClean = buildDirectoryUrl;
+    } else {
+      directoryToClean = new URL(assetsDirectory, buildDirectoryUrl).href;
+    }
+  }
+  const asFormattedBuildUrl = (generatedUrl, reference) => {
+    if (base === "./") {
+      const urlRelativeToParent = urlToRelativeUrl(generatedUrl, reference.parentUrl === rootDirectoryUrl ? buildDirectoryUrl : reference.parentUrl);
+      if (urlRelativeToParent[0] !== ".") {
+        // ensure "./" on relative url (otherwise it could be a "bare specifier")
+        return `./${urlRelativeToParent}`;
+      }
+      return urlRelativeToParent;
+    }
+    const urlRelativeToBuildDirectory = urlToRelativeUrl(generatedUrl, buildDirectoryUrl);
+    return `${base}${urlRelativeToBuildDirectory}`;
+  };
   const runBuild = async ({
     signal,
     logLevel
@@ -23025,8 +23098,9 @@ build ${entryPointKeys.length} entry points`);
       writeGeneratedFiles,
       outDirectoryUrl: new URL(`.jsenv/build/`, rootDirectoryUrl)
     });
-    const buildUrlsGenerator = createBuilUrlsGenerator({
-      buildDirectoryUrl
+    const buildUrlsGenerator = createBuildUrlsGenerator({
+      buildDirectoryUrl,
+      assetsDirectory
     });
     const buildDirectoryRedirections = new Map();
     const associateBuildUrlAndRawUrl = (buildUrl, rawUrl, reason) => {
@@ -23068,8 +23142,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           const getUrl = () => {
             if (reference.type === "filesystem") {
               const parentRawUrl = buildDirectoryRedirections.get(reference.parentUrl);
-              const baseUrl = ensurePathnameTrailingSlash(parentRawUrl);
-              return new URL(reference.specifier, baseUrl).href;
+              const parentUrl = ensurePathnameTrailingSlash(parentRawUrl);
+              return new URL(reference.specifier, parentUrl).href;
             }
             if (reference.specifier[0] === "/") {
               return new URL(reference.specifier.slice(1), buildDirectoryUrl).href;
@@ -23220,16 +23294,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           generatedUrlObject.searchParams.delete("as_text_module");
           generatedUrlObject.hash = "";
           const generatedUrl = generatedUrlObject.href;
-          let specifier;
-          if (baseUrl === "./") {
-            const relativeUrl = urlToRelativeUrl(generatedUrl, reference.parentUrl === rootDirectoryUrl ? buildDirectoryUrl : reference.parentUrl);
-            // ensure "./" on relative url (otherwise it could be a "bare specifier")
-            specifier = relativeUrl[0] === "." ? relativeUrl : `./${relativeUrl}`;
-          } else {
-            // if a file is in the same directory we could prefer the relative notation
-            // but to keep things simple let's keep the "absolutely relative" to baseUrl for now
-            specifier = `${baseUrl}${urlToRelativeUrl(generatedUrl, buildDirectoryUrl)}`;
-          }
+          const specifier = asFormattedBuildUrl(generatedUrl, reference);
           buildUrls.set(specifier, reference.generatedUrl);
           return specifier;
         },
@@ -23326,6 +23391,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           });
           entryUrls.push(entryUrlInfo.url);
           entryUrlInfo.filename = entryPoints[key];
+          entryUrlInfo.isEntryPoint = true;
           rawUrlGraphLoader.load(entryUrlInfo, {
             reference: entryReference
           });
@@ -23457,7 +23523,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               value: bundler.bundleFunction
             }, urlInfosToBundle, {
               ...rawGraphKitchen.kitchenContext,
-              buildDirectoryUrl
+              buildDirectoryUrl,
+              assetsDirectory
             });
             Object.keys(bundlerGeneratedUrlInfos).forEach(url => {
               const rawUrlInfo = rawGraph.getUrlInfo(url);
@@ -23730,9 +23797,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 const versionedUrl = versionedUrlMap.get(reference.url);
                 if (!versionedUrl) {
                   // happens for sourcemap
-                  return `${baseUrl}${urlToRelativeUrl(referencedUrlInfo.url, buildDirectoryUrl)}`;
+                  return urlToRelativeUrl(referencedUrlInfo.url, reference.parentUrl);
                 }
-                const versionedSpecifier = `${baseUrl}${urlToRelativeUrl(versionedUrl, buildDirectoryUrl)}`;
+                const versionedSpecifier = asFormattedBuildUrl(versionedUrl, reference);
                 versionMappings[reference.specifier] = versionedSpecifier;
                 versioningRedirections.set(reference.url, versionedUrl);
                 buildUrls.set(versionedSpecifier, versionedUrl);
@@ -23795,7 +23862,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   await injectVersionMappings({
                     urlInfo,
                     kitchen: finalGraphKitchen,
-                    versionMappings: versionMappingsNeeded
+                    versionMappings: versionMappingsNeeded,
+                    minification
                   });
                 });
               }
@@ -24002,8 +24070,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       }
     });
     if (writeOnFileSystem) {
-      if (buildDirectoryClean) {
-        await ensureEmptyDirectory(buildDirectoryUrl);
+      if (directoryToClean) {
+        await ensureEmptyDirectory(directoryToClean);
       }
       const buildRelativeUrls = Object.keys(buildFileContents);
       buildRelativeUrls.forEach(buildRelativeUrl => {

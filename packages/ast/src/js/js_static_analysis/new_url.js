@@ -87,8 +87,18 @@ const analyzeUrlNodeType = (secondArgNode, { isJsModule }) => {
   if (!isJsModule && isContextMetaUrlFromSystemJs(secondArgNode)) {
     return "context.meta.url"
   }
-  if (!isJsModule && isDocumentCurrentScriptSrc(secondArgNode)) {
-    return "document.currentScript.src"
+  if (!isJsModule) {
+    if (isDocumentCurrentScriptSrc(secondArgNode)) {
+      return "document.currentScript.src"
+    }
+    // new URL('specifier', document.currentScript.src)
+    // becomes
+    // var _currentUrl = document.currentScript.src
+    // new URL('specifier', currentUrl)
+    // (search for scope.generateUidIdentifier("currentUrl")
+    if (secondArgNode.type === "Identifier") {
+      return "document.currentScript.src"
+    }
   }
   return null
 }

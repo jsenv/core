@@ -64,7 +64,7 @@ export const startDevServer = async ({
   fileSystemMagicRedirection,
   transpilation,
   explorer = true, // see jsenv_plugin_explorer.js
-  ribbon = false,
+  ribbon = true,
   // toolbar = false,
 
   sourcemaps = "inline",

@@ -19,7 +19,6 @@ await build({
   runtimeCompat: {
     node: "16.14.0",
   },
-  baseUrl: "./",
   minification: false,
   versioning: false,
   assetManifest: false,
