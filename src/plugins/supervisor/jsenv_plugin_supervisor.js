@@ -281,8 +281,9 @@ export const jsenvPluginSupervisor = ({
               getHtmlNodeAttribute(node, "jsenv-cooked-by") ||
               getHtmlNodeAttribute(node, "jsenv-inlined-by") ||
               getHtmlNodeAttribute(node, "jsenv-injected-by")
-            )
+            ) {
               return
+            }
             const noSupervisor = getHtmlNodeAttribute(node, "no-supervisor")
             if (noSupervisor !== undefined) {
               return

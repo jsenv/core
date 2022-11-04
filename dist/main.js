@@ -11645,9 +11645,8 @@ const visitHtmlUrls = ({
     attributeName,
     specifier
   }) => {
-    const isContentCooked = getHtmlNodeAttribute(node, "jsenv-plugin-action") === "content_cooked";
     let position;
-    if (isContentCooked) {
+    if (getHtmlNodeAttribute(node, "jsenv-cooked-by")) {
       // when generated from inline content,
       // line, column is not "src" nor "inlined-from-src" but "original-position"
       position = getHtmlNodePosition(node);
@@ -11682,8 +11681,7 @@ const visitHtmlUrls = ({
   }) => {
     const value = getHtmlNodeAttribute(node, attributeName);
     if (value) {
-      const jsenvInlinedBy = getHtmlNodeAttribute(node, "jsenv-inlined-by");
-      if (jsenvInlinedBy === "jsenv:importmap") {
+      if (getHtmlNodeAttribute(node, "jsenv-inlined-by") === "jsenv:importmap") {
         // during build the importmap is inlined
         // and shoud not be considered as a dependency anymore
         return null;
@@ -12148,7 +12146,7 @@ const jsenvPluginHtmlInlineContent = ({
             if (!analyzeConvertedScripts && getHtmlNodeAttribute(scriptNode, "jsenv-injected-by") === "jsenv:as_js_classic_html") {
               return;
             }
-            if (getHtmlNodeAttribute(scriptNode, "jsenv-cooked-by") === "jsenv:supervisor" || getHtmlNodeAttribute(scriptNode, "jsenv-injected-by") === "jsenv:supervisor") {
+            if (getHtmlNodeAttribute(scriptNode, "jsenv-cooked-by") === "jsenv:supervisor" || getHtmlNodeAttribute(scriptNode, "jsenv-inlined-by") === "jsenv:supervisor" || getHtmlNodeAttribute(scriptNode, "jsenv-injected-by") === "jsenv:supervisor") {
               return;
             }
             const {
@@ -19743,7 +19741,9 @@ const jsenvPluginSupervisor = ({
             if (type !== "js_classic" && type !== "js_module") {
               return;
             }
-            if (getHtmlNodeAttribute(node, "jsenv-cooked-by") || getHtmlNodeAttribute(node, "jsenv-inlined-by") || getHtmlNodeAttribute(node, "jsenv-injected-by")) return;
+            if (getHtmlNodeAttribute(node, "jsenv-cooked-by") || getHtmlNodeAttribute(node, "jsenv-inlined-by") || getHtmlNodeAttribute(node, "jsenv-injected-by")) {
+              return;
+            }
             const noSupervisor = getHtmlNodeAttribute(node, "no-supervisor");
             if (noSupervisor !== undefined) {
               return;

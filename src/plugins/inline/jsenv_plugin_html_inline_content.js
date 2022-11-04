@@ -87,6 +87,8 @@ export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
             if (
               getHtmlNodeAttribute(scriptNode, "jsenv-cooked-by") ===
                 "jsenv:supervisor" ||
+              getHtmlNodeAttribute(scriptNode, "jsenv-inlined-by") ===
+                "jsenv:supervisor" ||
               getHtmlNodeAttribute(scriptNode, "jsenv-injected-by") ===
                 "jsenv:supervisor"
             ) {
