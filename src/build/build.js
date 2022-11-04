@@ -114,13 +114,13 @@ export const build = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
   logLevel = "info",
+  runtimeCompat = defaultRuntimeCompat,
   rootDirectoryUrl,
   buildDirectoryUrl,
   assetsDirectory = "",
-  base,
+  base = runtimeCompat.node ? "./" : "/",
   entryPoints = {},
 
-  runtimeCompat = defaultRuntimeCompat,
   plugins = [],
   sourcemaps = false,
   sourcemapsSourcesContent,
@@ -130,11 +130,10 @@ export const build = async ({
   directoryReferenceAllowed,
   transpilation = {},
   bundling = true,
-  minification = true,
-  versioning = true,
+  minification = !runtimeCompat.node,
+  versioning = !runtimeCompat.node,
   versioningMethod = "search_param", // "filename", "search_param"
   lineBreakNormalization = process.platform === "win32",
-  ribbon,
 
   clientFiles = {
     "./src/": true,
@@ -171,10 +170,6 @@ export const build = async ({
   }
   if (assetsDirectory && assetsDirectory[assetsDirectory.length - 1] !== "/") {
     assetsDirectory = `${assetsDirectory}/`
-  }
-  const forNode = Boolean(runtimeCompat.node)
-  if (base === undefined) {
-    base = forNode ? "./" : "/"
   }
   if (directoryToClean === undefined) {
     if (assetsDirectory === undefined) {
@@ -268,7 +263,6 @@ build ${entryPointKeys.length} entry points`)
           },
           minification,
           bundling,
-          ribbon,
         }),
       ],
       sourcemaps,

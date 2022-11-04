@@ -1,9 +1,10 @@
 # 29.5.0
 
-- build.baseUrl becomes build.assetsPath
-- introduce build.assetsPublicUrl
+- build.baseUrl becomes build.base
+- introduce build.assetsDirectory
 - build.buildDirectoryClean renamed directoryToClean
 - fix new URL() usage for ?as_js_classic_library
+- enable ribbon by default during dev
 
 # 29.4.4
 

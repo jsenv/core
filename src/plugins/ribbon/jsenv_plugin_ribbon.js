@@ -10,7 +10,6 @@ import { asUrlWithoutSearch } from "@jsenv/urls"
 export const jsenvPluginRibbon = ({
   rootDirectoryUrl,
   htmlInclude = "**/*.html",
-  devAndBuild = false,
 }) => {
   const ribbonClientFileUrl = new URL("./client/ribbon.js", import.meta.url)
   const associations = URL_META.resolveAssociations(
@@ -21,12 +20,9 @@ export const jsenvPluginRibbon = ({
   )
   return {
     name: "jsenv:ribbon",
-    appliesDuring: "*",
+    appliesDuring: "dev",
     transformUrlContent: {
       html: (urlInfo, context) => {
-        if (context.scenarios.build && !devAndBuild) {
-          return null
-        }
         const { ribbon } = URL_META.applyAssociations({
           url: asUrlWithoutSearch(urlInfo.url),
           associations,

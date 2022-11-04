@@ -43,7 +43,7 @@ export const getCorePlugins = ({
   clientFileChangeCallbackList,
   clientFilesPruneCallbackList,
   explorer,
-  ribbon = false,
+  ribbon = true,
 } = {}) => {
   if (explorer === true) {
     explorer = {}
@@ -66,11 +66,6 @@ export const getCorePlugins = ({
   }
   if (ribbon === true) {
     ribbon = {}
-  }
-  if (ribbon === "dev_and_build") {
-    ribbon = {
-      devAndBuild: true,
-    }
   }
 
   return [
