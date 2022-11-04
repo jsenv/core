@@ -42,8 +42,9 @@ const createExecuteWithScript = ({
         nodeToReplace = currentScriptClone;
         currentScriptClone.src = urlObject.href;
       } else {
-        currentScriptClone.removeAttribute("jsenv-plugin-owner");
-        currentScriptClone.removeAttribute("jsenv-plugin-action");
+        currentScriptClone.removeAttribute("jsenv-cooked-by");
+        currentScriptClone.removeAttribute("jsenv-inlined-by");
+        currentScriptClone.removeAttribute("jsenv-injected-by");
         currentScriptClone.removeAttribute("inlined-from-src");
         currentScriptClone.removeAttribute("original-position");
         currentScriptClone.removeAttribute("original-src-position");

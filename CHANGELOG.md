@@ -1,3 +1,7 @@
+# 29.6.0
+
+- Propagate resource hint on files injected during build
+
 # 29.5.0
 
 - build.baseUrl becomes build.base

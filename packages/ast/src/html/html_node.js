@@ -19,8 +19,7 @@ export const createHtmlNode = ({ tagName, textContent = "", ...rest }) => {
 
 export const injectHtmlNode = (htmlAst, node, jsenvPluginName = "jsenv") => {
   setHtmlNodeAttributes(node, {
-    "jsenv-plugin-owner": jsenvPluginName,
-    "jsenv-plugin-action": "injected",
+    "jsenv-injected-by": jsenvPluginName,
   })
   const htmlHtmlNode = findChild(htmlAst, (node) => node.nodeName === "html")
   const bodyNode = findChild(htmlHtmlNode, (node) => node.nodeName === "body")
@@ -33,8 +32,7 @@ export const injectScriptNodeAsEarlyAsPossible = (
   jsenvPluginName = "jsenv",
 ) => {
   setHtmlNodeAttributes(scriptNode, {
-    "jsenv-plugin-owner": jsenvPluginName,
-    "jsenv-plugin-action": "injected",
+    "jsenv-injected-by": jsenvPluginName,
   })
   const isJsModule = analyzeScriptNode(scriptNode).type === "js_module"
   if (isJsModule) {

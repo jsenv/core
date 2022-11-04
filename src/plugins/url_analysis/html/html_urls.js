@@ -138,8 +138,8 @@ const visitHtmlUrls = ({ url, htmlAst }) => {
   const visitAttributeAsUrlSpecifier = ({ node, attributeName, ...rest }) => {
     const value = getHtmlNodeAttribute(node, attributeName)
     if (value) {
-      const jsenvPluginOwner = getHtmlNodeAttribute(node, "jsenv-plugin-owner")
-      if (jsenvPluginOwner === "jsenv:importmap") {
+      const jsenvInlinedBy = getHtmlNodeAttribute(node, "jsenv-inlined-by")
+      if (jsenvInlinedBy === "jsenv:importmap") {
         // during build the importmap is inlined
         // and shoud not be considered as a dependency anymore
         return null
