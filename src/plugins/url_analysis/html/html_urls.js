@@ -104,10 +104,8 @@ const visitHtmlUrls = ({ url, htmlAst }) => {
     attributeName,
     specifier,
   }) => {
-    const isContentCooked =
-      getHtmlNodeAttribute(node, "jsenv-plugin-action") === "content_cooked"
     let position
-    if (isContentCooked) {
+    if (getHtmlNodeAttribute(node, "jsenv-cooked-by")) {
       // when generated from inline content,
       // line, column is not "src" nor "inlined-from-src" but "original-position"
       position = getHtmlNodePosition(node)
@@ -138,8 +136,9 @@ const visitHtmlUrls = ({ url, htmlAst }) => {
   const visitAttributeAsUrlSpecifier = ({ node, attributeName, ...rest }) => {
     const value = getHtmlNodeAttribute(node, attributeName)
     if (value) {
-      const jsenvInlinedBy = getHtmlNodeAttribute(node, "jsenv-inlined-by")
-      if (jsenvInlinedBy === "jsenv:importmap") {
+      if (
+        getHtmlNodeAttribute(node, "jsenv-inlined-by") === "jsenv:importmap"
+      ) {
         // during build the importmap is inlined
         // and shoud not be considered as a dependency anymore
         return null
