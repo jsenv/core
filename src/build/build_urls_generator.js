@@ -1,7 +1,10 @@
 import { urlToFilename, urlToRelativeUrl } from "@jsenv/urls"
 import { memoizeByFirstArgument } from "@jsenv/utils/src/memoize/memoize_by_first_argument.js"
 
-export const createBuildUrlsGenerator = ({ buildDirectoryUrl, assetsPath }) => {
+export const createBuildUrlsGenerator = ({
+  buildDirectoryUrl,
+  assetsDirectory,
+}) => {
   const cache = {}
 
   const getUrlName = (url, urlInfo) => {
@@ -15,14 +18,12 @@ export const createBuildUrlsGenerator = ({ buildDirectoryUrl, assetsPath }) => {
   }
 
   const generate = memoizeByFirstArgument((url, { urlInfo, parentUrlInfo }) => {
-    let directoryPath = determineDirectoryPath({
+    const directoryPath = determineDirectoryPath({
       buildDirectoryUrl,
+      assetsDirectory,
       urlInfo,
       parentUrlInfo,
     })
-    if (assetsPath && !urlInfo.isEntryPoint) {
-      directoryPath = `${assetsPath}${directoryPath}`
-    }
     let names = cache[directoryPath]
     if (!names) {
       names = []
@@ -74,6 +75,7 @@ const splitFileExtension = (filename) => {
 
 const determineDirectoryPath = ({
   buildDirectoryUrl,
+  assetsDirectory,
   urlInfo,
   parentUrlInfo,
 }) => {
@@ -101,16 +103,16 @@ const determineDirectoryPath = ({
     return ""
   }
   if (urlInfo.type === "html") {
-    return "html/"
+    return `${assetsDirectory}html/`
   }
   if (urlInfo.type === "css") {
-    return "css/"
+    return `${assetsDirectory}css/`
   }
   if (urlInfo.type === "js_module" || urlInfo.type === "js_classic") {
-    return "js/"
+    return `${assetsDirectory}js/`
   }
   if (urlInfo.type === "json") {
-    return "json/"
+    return `${assetsDirectory}json/`
   }
-  return "other/"
+  return `${assetsDirectory}other/`
 }

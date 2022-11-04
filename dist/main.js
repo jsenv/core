@@ -16822,6 +16822,7 @@ const bundleJsModules = async ({
     logger,
     rootDirectoryUrl,
     buildDirectoryUrl,
+    assetsDirectory,
     urlGraph,
     runtimeCompat,
     sourcemaps
@@ -16839,6 +16840,7 @@ const bundleJsModules = async ({
     logger,
     rootDirectoryUrl,
     buildDirectoryUrl,
+    assetsDirectory,
     urlGraph,
     jsModuleUrlInfos,
     runtimeCompat,
@@ -16854,6 +16856,7 @@ const rollupPluginJsenv = ({
   // logger,
   rootDirectoryUrl,
   buildDirectoryUrl,
+  assetsDirectory,
   urlGraph,
   jsModuleUrlInfos,
   sourcemaps,
@@ -16978,7 +16981,7 @@ const rollupPluginJsenv = ({
             }
           }
           const name = nameFromUrlInfo || `${chunkInfo.name}.js`;
-          return insideJs ? `js/${name}` : `${name}`;
+          return insideJs ? `${assetsDirectory}js/${name}` : `${name}`;
         },
         manualChunks: id => {
           if (babelHelpersChunk) {
@@ -17086,6 +17089,7 @@ const buildWithRollup = async ({
   logger,
   rootDirectoryUrl,
   buildDirectoryUrl,
+  assetsDirectory,
   urlGraph,
   jsModuleUrlInfos,
   runtimeCompat,
@@ -17104,6 +17108,7 @@ const buildWithRollup = async ({
         logger,
         rootDirectoryUrl,
         buildDirectoryUrl,
+        assetsDirectory,
         urlGraph,
         jsModuleUrlInfos,
         runtimeCompat,
@@ -22631,7 +22636,7 @@ const memoizeByFirstArgument = compute => {
 
 const createBuildUrlsGenerator = ({
   buildDirectoryUrl,
-  assetsPath
+  assetsDirectory
 }) => {
   const cache = {};
   const getUrlName = (url, urlInfo) => {
@@ -22647,14 +22652,12 @@ const createBuildUrlsGenerator = ({
     urlInfo,
     parentUrlInfo
   }) => {
-    let directoryPath = determineDirectoryPath({
+    const directoryPath = determineDirectoryPath({
       buildDirectoryUrl,
+      assetsDirectory,
       urlInfo,
       parentUrlInfo
     });
-    if (assetsPath && !urlInfo.isEntryPoint) {
-      directoryPath = `${assetsPath}${directoryPath}`;
-    }
     let names = cache[directoryPath];
     if (!names) {
       names = [];
@@ -22706,6 +22709,7 @@ const splitFileExtension = filename => {
 };
 const determineDirectoryPath = ({
   buildDirectoryUrl,
+  assetsDirectory,
   urlInfo,
   parentUrlInfo
 }) => {
@@ -22730,18 +22734,18 @@ const determineDirectoryPath = ({
     return "";
   }
   if (urlInfo.type === "html") {
-    return "html/";
+    return `${assetsDirectory}html/`;
   }
   if (urlInfo.type === "css") {
-    return "css/";
+    return `${assetsDirectory}css/`;
   }
   if (urlInfo.type === "js_module" || urlInfo.type === "js_classic") {
-    return "js/";
+    return `${assetsDirectory}js/`;
   }
   if (urlInfo.type === "json") {
-    return "json/";
+    return `${assetsDirectory}json/`;
   }
-  return "other/";
+  return `${assetsDirectory}other/`;
 };
 
 // https://bundlers.tooling.report/hashing/avoid-cascade/
@@ -22926,8 +22930,10 @@ const defaultRuntimeCompat = {
  *        Describe entry point paths and control their names in the build directory
  * @param {object} buildParameters.runtimeCompat
  *        Code generated will be compatible with these runtimes
- * @param {string} [buildParameters.assetBuildPath="./"]
- *        Urls in build file contents will be relative to this url
+ * @param {string} [buildParameters.assetsDirectory=""]
+ *        Directory where asset files will be written
+ * @param {string|url} [buildParameters.base=""]
+ *        Urls in build file contents will be prefixed with this string
  * @param {boolean|object} [buildParameters.minification=true]
  *        Minify build file contents
  * @param {boolean} [buildParameters.versioning=true]
@@ -22950,8 +22956,8 @@ const build = async ({
   logLevel = "info",
   rootDirectoryUrl,
   buildDirectoryUrl,
-  assetsPath,
-  assetsPublicUrl,
+  assetsDirectory = "",
+  base,
   entryPoints = {},
   runtimeCompat = defaultRuntimeCompat,
   plugins = [],
@@ -22997,21 +23003,22 @@ const build = async ({
   if (!["filename", "search_param"].includes(versioningMethod)) {
     throw new Error(`Unexpected "versioningMethod": must be "filename", "search_param"; got ${versioning}`);
   }
-  if (assetsPath) {
-    if (assetsPath[assetsPath.length - 1] !== "/") {
-      assetsPath = `${assetsPath}/`;
-    }
+  if (assetsDirectory && assetsDirectory[assetsDirectory.length - 1] !== "/") {
+    assetsDirectory = `${assetsDirectory}/`;
   }
-  const preferRelativeUrls = Object.keys(runtimeCompat).includes("node");
+  const forNode = Boolean(runtimeCompat.node);
+  if (base === undefined) {
+    base = forNode ? "./" : "/";
+  }
   if (directoryToClean === undefined) {
-    if (assetsPath === undefined) {
+    if (assetsDirectory === undefined) {
       directoryToClean = buildDirectoryUrl;
     } else {
-      directoryToClean = new URL(assetsPath, buildDirectoryUrl).href;
+      directoryToClean = new URL(assetsDirectory, buildDirectoryUrl).href;
     }
   }
   const asFormattedBuildUrl = (generatedUrl, reference) => {
-    if (preferRelativeUrls) {
+    if (base === "./") {
       const urlRelativeToParent = urlToRelativeUrl(generatedUrl, reference.parentUrl === rootDirectoryUrl ? buildDirectoryUrl : reference.parentUrl);
       if (urlRelativeToParent[0] !== ".") {
         // ensure "./" on relative url (otherwise it could be a "bare specifier")
@@ -23019,11 +23026,8 @@ const build = async ({
       }
       return urlRelativeToParent;
     }
-    if (assetsPublicUrl) {
-      const urlRelativeToBuildDirectory = urlToRelativeUrl(generatedUrl, buildDirectoryUrl);
-      return new URL(urlRelativeToBuildDirectory, assetsPublicUrl).href;
-    }
-    return `/${urlToRelativeUrl(generatedUrl, buildDirectoryUrl)}`;
+    const urlRelativeToBuildDirectory = urlToRelativeUrl(generatedUrl, buildDirectoryUrl);
+    return `${base}${urlRelativeToBuildDirectory}`;
   };
   const runBuild = async ({
     signal,
@@ -23096,7 +23100,7 @@ build ${entryPointKeys.length} entry points`);
     });
     const buildUrlsGenerator = createBuildUrlsGenerator({
       buildDirectoryUrl,
-      assetsPath
+      assetsDirectory
     });
     const buildDirectoryRedirections = new Map();
     const associateBuildUrlAndRawUrl = (buildUrl, rawUrl, reason) => {
@@ -23519,7 +23523,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               value: bundler.bundleFunction
             }, urlInfosToBundle, {
               ...rawGraphKitchen.kitchenContext,
-              buildDirectoryUrl
+              buildDirectoryUrl,
+              assetsDirectory
             });
             Object.keys(bundlerGeneratedUrlInfos).forEach(url => {
               const rawUrlInfo = rawGraph.getUrlInfo(url);

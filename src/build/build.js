@@ -90,8 +90,10 @@ export const defaultRuntimeCompat = {
  *        Describe entry point paths and control their names in the build directory
  * @param {object} buildParameters.runtimeCompat
  *        Code generated will be compatible with these runtimes
- * @param {string} [buildParameters.assetBuildPath="./"]
- *        Urls in build file contents will be relative to this url
+ * @param {string} [buildParameters.assetsDirectory=""]
+ *        Directory where asset files will be written
+ * @param {string|url} [buildParameters.base=""]
+ *        Urls in build file contents will be prefixed with this string
  * @param {boolean|object} [buildParameters.minification=true]
  *        Minify build file contents
  * @param {boolean} [buildParameters.versioning=true]
@@ -114,8 +116,8 @@ export const build = async ({
   logLevel = "info",
   rootDirectoryUrl,
   buildDirectoryUrl,
-  assetsPath,
-  assetsPublicUrl,
+  assetsDirectory = "",
+  base,
   entryPoints = {},
 
   runtimeCompat = defaultRuntimeCompat,
@@ -167,23 +169,22 @@ export const build = async ({
       `Unexpected "versioningMethod": must be "filename", "search_param"; got ${versioning}`,
     )
   }
-
-  if (assetsPath) {
-    if (assetsPath[assetsPath.length - 1] !== "/") {
-      assetsPath = `${assetsPath}/`
-    }
+  if (assetsDirectory && assetsDirectory[assetsDirectory.length - 1] !== "/") {
+    assetsDirectory = `${assetsDirectory}/`
   }
-
-  const preferRelativeUrls = Object.keys(runtimeCompat).includes("node")
+  const forNode = Boolean(runtimeCompat.node)
+  if (base === undefined) {
+    base = forNode ? "./" : "/"
+  }
   if (directoryToClean === undefined) {
-    if (assetsPath === undefined) {
+    if (assetsDirectory === undefined) {
       directoryToClean = buildDirectoryUrl
     } else {
-      directoryToClean = new URL(assetsPath, buildDirectoryUrl).href
+      directoryToClean = new URL(assetsDirectory, buildDirectoryUrl).href
     }
   }
   const asFormattedBuildUrl = (generatedUrl, reference) => {
-    if (preferRelativeUrls) {
+    if (base === "./") {
       const urlRelativeToParent = urlToRelativeUrl(
         generatedUrl,
         reference.parentUrl === rootDirectoryUrl
@@ -196,14 +197,11 @@ export const build = async ({
       }
       return urlRelativeToParent
     }
-    if (assetsPublicUrl) {
-      const urlRelativeToBuildDirectory = urlToRelativeUrl(
-        generatedUrl,
-        buildDirectoryUrl,
-      )
-      return new URL(urlRelativeToBuildDirectory, assetsPublicUrl).href
-    }
-    return `/${urlToRelativeUrl(generatedUrl, buildDirectoryUrl)}`
+    const urlRelativeToBuildDirectory = urlToRelativeUrl(
+      generatedUrl,
+      buildDirectoryUrl,
+    )
+    return `${base}${urlRelativeToBuildDirectory}`
   }
 
   const runBuild = async ({ signal, logLevel }) => {
@@ -281,7 +279,7 @@ build ${entryPointKeys.length} entry points`)
 
     const buildUrlsGenerator = createBuildUrlsGenerator({
       buildDirectoryUrl,
-      assetsPath,
+      assetsDirectory,
     })
     const buildDirectoryRedirections = new Map()
 
@@ -763,6 +761,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 {
                   ...rawGraphKitchen.kitchenContext,
                   buildDirectoryUrl,
+                  assetsDirectory,
                 },
               )
             Object.keys(bundlerGeneratedUrlInfos).forEach((url) => {

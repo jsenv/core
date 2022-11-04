@@ -31,6 +31,7 @@ export const bundleJsModules = async ({
     logger,
     rootDirectoryUrl,
     buildDirectoryUrl,
+    assetsDirectory,
     urlGraph,
     runtimeCompat,
     sourcemaps,
@@ -46,6 +47,7 @@ export const bundleJsModules = async ({
     logger,
     rootDirectoryUrl,
     buildDirectoryUrl,
+    assetsDirectory,
     urlGraph,
     jsModuleUrlInfos,
 
@@ -64,6 +66,7 @@ const rollupPluginJsenv = ({
   // logger,
   rootDirectoryUrl,
   buildDirectoryUrl,
+  assetsDirectory,
   urlGraph,
   jsModuleUrlInfos,
   sourcemaps,
@@ -208,7 +211,7 @@ const rollupPluginJsenv = ({
             }
           }
           const name = nameFromUrlInfo || `${chunkInfo.name}.js`
-          return insideJs ? `js/${name}` : `${name}`
+          return insideJs ? `${assetsDirectory}js/${name}` : `${name}`
         },
         manualChunks: (id) => {
           if (babelHelpersChunk) {
@@ -307,6 +310,7 @@ const buildWithRollup = async ({
   logger,
   rootDirectoryUrl,
   buildDirectoryUrl,
+  assetsDirectory,
   urlGraph,
   jsModuleUrlInfos,
 
@@ -326,6 +330,7 @@ const buildWithRollup = async ({
           logger,
           rootDirectoryUrl,
           buildDirectoryUrl,
+          assetsDirectory,
           urlGraph,
           jsModuleUrlInfos,
 
