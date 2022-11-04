@@ -92,6 +92,7 @@ const determineDirectoryPath = ({
   if (urlInfo.isInline) {
     const parentDirectoryPath = determineDirectoryPath({
       buildDirectoryUrl,
+      assetsDirectory,
       urlInfo: parentUrlInfo,
     })
     return parentDirectoryPath
