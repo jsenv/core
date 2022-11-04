@@ -7574,8 +7574,9 @@ const stringifyHtmlAst = (htmlAst, {
             "original-href-position": undefined,
             "inlined-from-src": undefined,
             "inlined-from-href": undefined,
-            "jsenv-plugin-owner": undefined,
-            "jsenv-plugin-action": undefined,
+            "jsenv-cooked-by": undefined,
+            "jsenv-inlined-by": undefined,
+            "jsenv-injected-by": undefined,
             "jsenv-debug": undefined
           });
         }
@@ -7693,17 +7694,15 @@ const createHtmlNode = ({
 };
 const injectHtmlNode = (htmlAst, node, jsenvPluginName = "jsenv") => {
   setHtmlNodeAttributes(node, {
-    "jsenv-plugin-owner": jsenvPluginName,
-    "jsenv-plugin-action": "injected"
+    "jsenv-injected-by": jsenvPluginName
   });
   const htmlHtmlNode = findChild(htmlAst, node => node.nodeName === "html");
   const bodyNode = findChild(htmlHtmlNode, node => node.nodeName === "body");
-  return insertAfter(node, bodyNode);
+  return insertHtmlNodeAfter(node, bodyNode);
 };
 const injectScriptNodeAsEarlyAsPossible = (htmlAst, scriptNode, jsenvPluginName = "jsenv") => {
   setHtmlNodeAttributes(scriptNode, {
-    "jsenv-plugin-owner": jsenvPluginName,
-    "jsenv-plugin-action": "injected"
+    "jsenv-injected-by": jsenvPluginName
   });
   const isJsModule = analyzeScriptNode(scriptNode).type === "js_module";
   if (isJsModule) {
@@ -7717,35 +7716,35 @@ const injectScriptNodeAsEarlyAsPossible = (htmlAst, scriptNode, jsenvPluginName 
       let after = firstImportmapScript;
       for (const nextSibling of nextSiblings) {
         if (nextSibling.nodeName === "script") {
-          return insertBefore(scriptNode, importmapParent, nextSibling);
+          return insertHtmlNodeBefore(scriptNode, importmapParent, nextSibling);
         }
         if (nextSibling.nodeName === "link") {
           after = nextSibling;
         }
       }
-      return insertAfter(scriptNode, importmapParent, after);
+      return insertHtmlNodeAfter(scriptNode, importmapParent, after);
     }
   }
   const headNode = findChild(htmlAst, node => node.nodeName === "html").childNodes[0];
   let after = headNode.childNodes[0];
   for (const child of headNode.childNodes) {
     if (child.nodeName === "script") {
-      return insertBefore(scriptNode, headNode, child);
+      return insertHtmlNodeBefore(scriptNode, headNode, child);
     }
     if (child.nodeName === "link") {
       after = child;
     }
   }
-  return insertAfter(scriptNode, headNode, after);
+  return insertHtmlNodeAfter(scriptNode, headNode, after);
 };
-const insertBefore = (nodeToInsert, futureParentNode, futureNextSibling) => {
+const insertHtmlNodeBefore = (nodeToInsert, futureParentNode, futureNextSibling) => {
   const {
     childNodes = []
   } = futureParentNode;
   const futureIndex = futureNextSibling ? childNodes.indexOf(futureNextSibling) : 0;
   injectWithWhitespaces(nodeToInsert, futureParentNode, futureIndex);
 };
-const insertAfter = (nodeToInsert, futureParentNode, futurePrevSibling) => {
+const insertHtmlNodeAfter = (nodeToInsert, futureParentNode, futurePrevSibling) => {
   const {
     childNodes = []
   } = futureParentNode;
@@ -7788,7 +7787,14 @@ const findChild = ({
   childNodes = []
 }, predicate) => childNodes.find(predicate);
 const stringifyAttributes = object => {
-  return Object.keys(object).map(key => `${key}=${valueToHtmlAttributeValue(object[key])}`).join(" ");
+  let string = "";
+  Object.keys(object).forEach(key => {
+    const value = object[key];
+    if (value === undefined) return;
+    if (string !== "") string += " ";
+    string += `${key}=${valueToHtmlAttributeValue(value)}`;
+  });
+  return string;
 };
 const valueToHtmlAttributeValue = value => {
   if (typeof value === "string") {
@@ -11639,9 +11645,8 @@ const visitHtmlUrls = ({
     attributeName,
     specifier
   }) => {
-    const isContentCooked = getHtmlNodeAttribute(node, "jsenv-plugin-action") === "content_cooked";
     let position;
-    if (isContentCooked) {
+    if (getHtmlNodeAttribute(node, "jsenv-cooked-by")) {
       // when generated from inline content,
       // line, column is not "src" nor "inlined-from-src" but "original-position"
       position = getHtmlNodePosition(node);
@@ -11676,8 +11681,7 @@ const visitHtmlUrls = ({
   }) => {
     const value = getHtmlNodeAttribute(node, attributeName);
     if (value) {
-      const jsenvPluginOwner = getHtmlNodeAttribute(node, "jsenv-plugin-owner");
-      if (jsenvPluginOwner === "jsenv:importmap") {
+      if (getHtmlNodeAttribute(node, "jsenv-inlined-by") === "jsenv:importmap") {
         // during build the importmap is inlined
         // and shoud not be considered as a dependency anymore
         return null;
@@ -12127,8 +12131,7 @@ const jsenvPluginHtmlInlineContent = ({
             mutations.push(() => {
               setHtmlNodeText(styleNode, inlineStyleUrlInfo.content);
               setHtmlNodeAttributes(styleNode, {
-                "jsenv-plugin-owner": "jsenv:html_inline_content",
-                "jsenv-plugin-action": "content_cooked"
+                "jsenv-cooked-by": "jsenv:html_inline_content"
               });
             });
           },
@@ -12140,11 +12143,10 @@ const jsenvPluginHtmlInlineContent = ({
             // If the inline script was already handled by an other plugin, ignore it
             // - we want to preserve inline scripts generated by html supervisor during dev
             // - we want to avoid cooking twice a script during build
-            const jsenvPluginOwner = getHtmlNodeAttribute(scriptNode, "jsenv-plugin-owner");
-            if (jsenvPluginOwner === "jsenv:as_js_classic_html" && !analyzeConvertedScripts) {
+            if (!analyzeConvertedScripts && getHtmlNodeAttribute(scriptNode, "jsenv-injected-by") === "jsenv:as_js_classic_html") {
               return;
             }
-            if (jsenvPluginOwner === "jsenv:supervisor") {
+            if (getHtmlNodeAttribute(scriptNode, "jsenv-cooked-by") === "jsenv:supervisor" || getHtmlNodeAttribute(scriptNode, "jsenv-inlined-by") === "jsenv:supervisor" || getHtmlNodeAttribute(scriptNode, "jsenv-injected-by") === "jsenv:supervisor") {
               return;
             }
             const {
@@ -12193,8 +12195,7 @@ const jsenvPluginHtmlInlineContent = ({
             mutations.push(() => {
               setHtmlNodeText(scriptNode, inlineScriptUrlInfo.content);
               setHtmlNodeAttributes(scriptNode, {
-                "jsenv-plugin-owner": "jsenv:html_inline_content",
-                "jsenv-plugin-action": "content_cooked",
+                "jsenv-cooked-by": "jsenv:html_inline_content",
                 ...(extension ? {
                   type: type === "js_module" ? "module" : undefined
                 } : {})
@@ -16504,7 +16505,8 @@ const jsenvPluginAsJsClassicConversion = ({
         type: "js_classic",
         originalUrl: jsModuleUrlInfo.originalUrl,
         originalContent: jsModuleUrlInfo.originalContent,
-        sourcemap
+        sourcemap,
+        data: jsModuleUrlInfo.data
       };
     }
   };
@@ -16936,7 +16938,7 @@ const rollupPluginJsenv = ({
             originalUrl,
             type: format === "esm" ? "js_module" : "common_js",
             data: {
-              generatedBy: "rollup",
+              bundlerName: "rollup",
               bundleRelativeUrl: rollupFileInfo.fileName,
               usesImport: rollupFileInfo.imports.length > 0 || rollupFileInfo.dynamicImports.length > 0,
               isDynamicEntry: rollupFileInfo.isDynamicEntry
@@ -17278,7 +17280,8 @@ const jsenvPluginAsJsClassicLibrary = ({
         type: "js_classic",
         originalUrl: urlInfo.originalUrl,
         originalContent: jsModuleUrlInfo.originalContent,
-        sourcemap
+        sourcemap,
+        data: jsModuleUrlInfo.data
       };
     }
   };
@@ -18045,8 +18048,7 @@ const jsenvPluginImportmap = () => {
           });
           setHtmlNodeText(importmap, inlineImportmapUrlInfo.content);
           setHtmlNodeAttributes(importmap, {
-            "jsenv-plugin-owner": "jsenv:importmap",
-            "jsenv-plugin-action": "content_cooked"
+            "jsenv-cooked-by": "jsenv:importmap"
           });
           onHtmlImportmapParsed(JSON.parse(inlineImportmapUrlInfo.content), htmlUrlInfo.url);
         };
@@ -18065,8 +18067,7 @@ const jsenvPluginImportmap = () => {
           setHtmlNodeText(importmap, importmapUrlInfo.content);
           setHtmlNodeAttributes(importmap, {
             "src": undefined,
-            "jsenv-plugin-owner": "jsenv:importmap",
-            "jsenv-plugin-action": "inlined",
+            "jsenv-inlined-by": "jsenv:importmap",
             "inlined-from-src": src
           });
           const {
@@ -19740,8 +19741,7 @@ const jsenvPluginSupervisor = ({
             if (type !== "js_classic" && type !== "js_module") {
               return;
             }
-            const jsenvPluginOwner = getHtmlNodeAttribute(node, "jsenv-plugin-owner");
-            if (jsenvPluginOwner !== undefined) {
+            if (getHtmlNodeAttribute(node, "jsenv-cooked-by") || getHtmlNodeAttribute(node, "jsenv-inlined-by") || getHtmlNodeAttribute(node, "jsenv-injected-by")) {
               return;
             }
             const noSupervisor = getHtmlNodeAttribute(node, "no-supervisor");
@@ -19817,15 +19817,13 @@ const jsenvPluginSupervisor = ({
           }
           if (src) {
             setHtmlNodeAttributes(node, {
-              "jsenv-plugin-owner": "jsenv:supervisor",
-              "jsenv-plugin-action": "inlined",
+              "jsenv-inlined-by": "jsenv:supervisor",
               "src": undefined,
               "inlined-from-src": src
             });
           } else {
             setHtmlNodeAttributes(node, {
-              "jsenv-plugin-owner": "jsenv:supervisor",
-              "jsenv-plugin-action": "content_cooked"
+              "jsenv-cooked-by": "jsenv:supervisor"
             });
           }
         });
@@ -20244,7 +20242,8 @@ const jsenvPluginAsModules = () => {
         contentType: "text/javascript",
         type: "js_module",
         originalUrl: jsonUrlInfo.originalUrl,
-        originalContent: jsonUrlInfo.originalContent
+        originalContent: jsonUrlInfo.originalContent,
+        data: jsonUrlInfo.data
       };
     }
   };
@@ -20290,7 +20289,8 @@ const jsenvPluginAsModules = () => {
         contentType: "text/javascript",
         type: "js_module",
         originalUrl: cssUrlInfo.originalUrl,
-        originalContent: cssUrlInfo.originalContent
+        originalContent: cssUrlInfo.originalContent,
+        data: cssUrlInfo.data
       };
     }
   };
@@ -20334,7 +20334,8 @@ export default inlineContent.text`,
         contentType: "text/javascript",
         type: "js_module",
         originalUrl: textUrlInfo.originalUrl,
-        originalContent: textUrlInfo.originalContent
+        originalContent: textUrlInfo.originalContent,
+        data: textUrlInfo.data
       };
     }
   };
@@ -21426,7 +21427,7 @@ const bundleCss = async ({
   cssUrlInfos.forEach(cssUrlInfo => {
     bundledCssUrlInfos[cssUrlInfo.url] = {
       data: {
-        generatedBy: "parcel"
+        bundlerName: "parcel"
       },
       contentType: "text/css",
       content: cssBundleInfos[cssUrlInfo.url].bundleContent
@@ -23548,7 +23549,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   bundleRedirections.set(bundlerGeneratedUrlInfo.originalUrl, buildUrl);
                   associateBuildUrlAndRawUrl(buildUrl, bundlerGeneratedUrlInfo.originalUrl, "bundle");
                 } else {
-                  // chunk generated by rollup to share code
+                  bundleUrlInfo.data.generatedToShareCode = true;
                 }
               } else {
                 associateBuildUrlAndRawUrl(buildUrl, url, "bundle");
@@ -23897,6 +23898,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               storeOriginalPositions: false
             });
             const mutations = [];
+            const hintsToInject = {};
             visitHtmlNodes(htmlAst, {
               link: node => {
                 const href = getHtmlNodeAttribute(node, "href");
@@ -23931,6 +23933,12 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                       href: buildSpecifierBeforeRedirect
                     });
                   });
+                  for (const dependencyUrl of buildUrlInfo.dependencies) {
+                    const dependencyUrlInfo = finalGraph.urlInfoMap.get(dependencyUrl);
+                    if (dependencyUrlInfo.data.generatedToShareCode) {
+                      hintsToInject[dependencyUrl] = node;
+                    }
+                  }
                 };
                 if (href.startsWith("file:")) {
                   let url = href;
@@ -23951,6 +23959,27 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 } else {
                   onBuildUrl(null);
                 }
+              }
+            });
+            Object.keys(hintsToInject).forEach(urlToHint => {
+              const hintNode = hintsToInject[urlToHint];
+              const urlFormatted = versioningRedirections.get(urlToHint) || urlToHint;
+              const specifierBeforeRedirect = findKey(buildUrls, urlFormatted);
+              const found = findHtmlNode(htmlAst, htmlNode => {
+                return htmlNode.nodeName === "link" && getHtmlNodeAttribute(htmlNode, "href") === specifierBeforeRedirect;
+              });
+              if (!found) {
+                mutations.push(() => {
+                  const nodeToInsert = createHtmlNode({
+                    tagName: "link",
+                    href: specifierBeforeRedirect,
+                    rel: getHtmlNodeAttribute(hintNode, "rel"),
+                    as: getHtmlNodeAttribute(hintNode, "as"),
+                    type: getHtmlNodeAttribute(hintNode, "type"),
+                    crossorigin: getHtmlNodeAttribute(hintNode, "crossorigin")
+                  });
+                  insertHtmlNodeAfter(nodeToInsert, hintNode.parentNode, hintNode);
+                });
               }
             });
             if (mutations.length > 0) {

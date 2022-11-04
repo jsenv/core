@@ -1,3 +1,11 @@
+# 29.6.1
+
+- Fix error introduced in 29.6.0 on dev server
+
+# 29.6.0
+
+- Propagate resource hint on files injected during build
+
 # 29.5.0
 
 - build.baseUrl becomes build.base

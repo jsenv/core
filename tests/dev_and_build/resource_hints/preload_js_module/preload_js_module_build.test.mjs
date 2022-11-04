@@ -32,17 +32,15 @@ const test = async (params) => {
     pageLogs,
   }
   const expected = {
-    returnValue: {
-      answer: 42,
-    },
+    returnValue: 42,
     pageLogs: [],
   }
   assert({ actual, expected })
 }
 
 // support for <script type="module">
-await test({ runtimeCompat: { chrome: "64" } })
+// await test({ runtimeCompat: { chrome: "64" } })
 // no support for <script type="module">
-await test({ runtimeCompat: { chrome: "60" } })
+// await test({ runtimeCompat: { chrome: "60" } })
 // no support + no versioning
 await test({ runtimeCompat: { chrome: "60" }, versioning: false })

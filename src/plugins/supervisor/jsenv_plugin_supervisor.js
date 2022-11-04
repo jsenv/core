@@ -277,11 +277,11 @@ export const jsenvPluginSupervisor = ({
             if (type !== "js_classic" && type !== "js_module") {
               return
             }
-            const jsenvPluginOwner = getHtmlNodeAttribute(
-              node,
-              "jsenv-plugin-owner",
-            )
-            if (jsenvPluginOwner !== undefined) {
+            if (
+              getHtmlNodeAttribute(node, "jsenv-cooked-by") ||
+              getHtmlNodeAttribute(node, "jsenv-inlined-by") ||
+              getHtmlNodeAttribute(node, "jsenv-injected-by")
+            ) {
               return
             }
             const noSupervisor = getHtmlNodeAttribute(node, "no-supervisor")
@@ -378,15 +378,13 @@ export const jsenvPluginSupervisor = ({
             }
             if (src) {
               setHtmlNodeAttributes(node, {
-                "jsenv-plugin-owner": "jsenv:supervisor",
-                "jsenv-plugin-action": "inlined",
+                "jsenv-inlined-by": "jsenv:supervisor",
                 "src": undefined,
                 "inlined-from-src": src,
               })
             } else {
               setHtmlNodeAttributes(node, {
-                "jsenv-plugin-owner": "jsenv:supervisor",
-                "jsenv-plugin-action": "content_cooked",
+                "jsenv-cooked-by": "jsenv:supervisor",
               })
             }
           },

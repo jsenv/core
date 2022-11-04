@@ -116,6 +116,7 @@ export const jsenvPluginAsJsClassicConversion = ({
         originalUrl: jsModuleUrlInfo.originalUrl,
         originalContent: jsModuleUrlInfo.originalContent,
         sourcemap,
+        data: jsModuleUrlInfo.data,
       }
     },
   }

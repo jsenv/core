@@ -162,7 +162,7 @@ const rollupPluginJsenv = ({
             originalUrl,
             type: format === "esm" ? "js_module" : "common_js",
             data: {
-              generatedBy: "rollup",
+              bundlerName: "rollup",
               bundleRelativeUrl: rollupFileInfo.fileName,
               usesImport:
                 rollupFileInfo.imports.length > 0 ||

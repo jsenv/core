@@ -22,6 +22,7 @@ export {
   createHtmlNode,
   injectHtmlNode,
   injectScriptNodeAsEarlyAsPossible,
+  insertHtmlNodeAfter,
 } from "./html/html_node.js"
 export {
   inlineScriptNode,
