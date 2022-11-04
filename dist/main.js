@@ -22459,8 +22459,7 @@ const jsenvPluginExplorer = ({
 
 const jsenvPluginRibbon = ({
   rootDirectoryUrl,
-  htmlInclude = "**/*.html",
-  devAndBuild = false
+  htmlInclude = "**/*.html"
 }) => {
   const ribbonClientFileUrl = new URL("./js/ribbon.js", import.meta.url);
   const associations = URL_META.resolveAssociations({
@@ -22470,12 +22469,9 @@ const jsenvPluginRibbon = ({
   }, rootDirectoryUrl);
   return {
     name: "jsenv:ribbon",
-    appliesDuring: "*",
+    appliesDuring: "dev",
     transformUrlContent: {
       html: (urlInfo, context) => {
-        if (context.scenarios.build && !devAndBuild) {
-          return null;
-        }
         const {
           ribbon
         } = URL_META.applyAssociations({
@@ -22526,7 +22522,7 @@ const getCorePlugins = ({
   clientFileChangeCallbackList,
   clientFilesPruneCallbackList,
   explorer,
-  ribbon = false
+  ribbon = true
 } = {}) => {
   if (explorer === true) {
     explorer = {};
@@ -22547,11 +22543,6 @@ const getCorePlugins = ({
   }
   if (ribbon === true) {
     ribbon = {};
-  }
-  if (ribbon === "dev_and_build") {
-    ribbon = {
-      devAndBuild: true
-    };
   }
   return [jsenvPluginUrlAnalysis({
     rootDirectoryUrl,
@@ -22723,6 +22714,7 @@ const determineDirectoryPath = ({
   if (urlInfo.isInline) {
     const parentDirectoryPath = determineDirectoryPath({
       buildDirectoryUrl,
+      assetsDirectory,
       urlInfo: parentUrlInfo
     });
     return parentDirectoryPath;
@@ -22954,12 +22946,12 @@ const build = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
   logLevel = "info",
+  runtimeCompat = defaultRuntimeCompat,
   rootDirectoryUrl,
   buildDirectoryUrl,
   assetsDirectory = "",
-  base,
+  base = runtimeCompat.node ? "./" : "/",
   entryPoints = {},
-  runtimeCompat = defaultRuntimeCompat,
   plugins = [],
   sourcemaps = false,
   sourcemapsSourcesContent,
@@ -22969,12 +22961,11 @@ const build = async ({
   directoryReferenceAllowed,
   transpilation = {},
   bundling = true,
-  minification = true,
-  versioning = true,
+  minification = !runtimeCompat.node,
+  versioning = !runtimeCompat.node,
   versioningMethod = "search_param",
   // "filename", "search_param"
   lineBreakNormalization = process.platform === "win32",
-  ribbon,
   clientFiles = {
     "./src/": true
   },
@@ -23005,10 +22996,6 @@ const build = async ({
   }
   if (assetsDirectory && assetsDirectory[assetsDirectory.length - 1] !== "/") {
     assetsDirectory = `${assetsDirectory}/`;
-  }
-  const forNode = Boolean(runtimeCompat.node);
-  if (base === undefined) {
-    base = forNode ? "./" : "/";
   }
   if (directoryToClean === undefined) {
     if (assetsDirectory === undefined) {
@@ -23090,8 +23077,7 @@ build ${entryPointKeys.length} entry points`);
           jsClassicFallback: false
         },
         minification,
-        bundling,
-        ribbon
+        bundling
       })],
       sourcemaps,
       sourcemapsSourcesContent,
@@ -24830,7 +24816,7 @@ const startDevServer = async ({
   transpilation,
   explorer = true,
   // see jsenv_plugin_explorer.js
-  ribbon = false,
+  ribbon = true,
   // toolbar = false,
 
   sourcemaps = "inline",

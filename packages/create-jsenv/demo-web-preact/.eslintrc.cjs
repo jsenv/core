@@ -91,6 +91,7 @@ const eslintConfig = composeEslintConfig(
     rules: {
       ...jsenvEslintRulesForReact,
       "react/jsx-filename-extension": ["error", { extensions: [".jsx"] }],
+      "react/react-in-jsx-scope": ["off"],
     },
   },
 
