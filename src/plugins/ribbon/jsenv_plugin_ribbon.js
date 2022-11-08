@@ -9,7 +9,7 @@ import { asUrlWithoutSearch } from "@jsenv/urls"
 
 export const jsenvPluginRibbon = ({
   rootDirectoryUrl,
-  htmlInclude = "**/*.html",
+  htmlInclude = "/**/*.html",
 }) => {
   const ribbonClientFileUrl = new URL("./client/ribbon.js", import.meta.url)
   const associations = URL_META.resolveAssociations(
