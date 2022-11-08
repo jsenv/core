@@ -19,6 +19,14 @@ import { defaultRuntimeCompat } from "@jsenv/core/src/build/build.js"
 import { createReloadableWorker } from "@jsenv/core/src/helpers/worker_reload.js"
 import { createFileService } from "./file_service.js"
 
+/**
+ * Start a server for source files:
+ * - cook source files according to jsenv plugins
+ * - inject code to autoreload the browser when a file is modified
+ * @param {Object} devServerParameters
+ * @param {string|url} devServerParameters.rootDirectoryUrl Root directory of the project
+ * @return {Object} A dev server object
+ */
 export const startDevServer = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
