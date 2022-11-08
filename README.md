@@ -7,6 +7,17 @@ It has naturally evolved to cover the core needs of a JavaScript project: develo
 - :sparkles: Dev, tests and build in a single tool
 - :ok_hand: Seamless integration with standard HTML, CSS and JS
 
+# Documentation
+
+| Link                                                                               | Description                                    |
+| ---------------------------------------------------------------------------------- | ---------------------------------------------- |
+| [Getting started](https://github.com/jsenv/jsenv-core/wiki//Getting-started)       | Showcasing jsenv usage in small demos          |
+| [Browser support](https://github.com/jsenv/jsenv-core/wiki//Browser-support)       | Documentation around browser support           |
+| [Assets and workers](https://github.com/jsenv/jsenv-core/wiki//Assets-and-workers) | How to reference files within a file           |
+| [Import resolution](https://github.com/jsenv/jsenv-core/wiki/Import-resolution)    | Import resolution inside js modules            |
+| [NPM package](https://github.com/jsenv/jsenv-core/wiki/NPM-package)                | How to use a NPM package (especially commonjs) |
+| [API](https://github.com/jsenv/jsenv-core/wiki/API)                                | jsenv main functions and parameters            |
+
 # Installation
 
 ```console
@@ -14,16 +25,6 @@ npm install --save-dev @jsenv/core
 ```
 
 _@jsenv/core_ is tested on Mac, Windows, Linux with Node.js 18.5.0. Other operating systems and Node.js versions are not tested.
-
-# Documentation
-
-| Link                                            | Description                                    |
-| ----------------------------------------------- | ---------------------------------------------- |
-| [Getting started](./wiki/Getting-started)       | Showcasing jsenv usage in small demos          |
-| [Browser support](./wiki/Browser-support)       | Documentation around browser support           |
-| [Assets and workers](./wiki/Assets-and-workers) | How to reference files within a file           |
-| [Import resolution](./wiki/Import-resolution)   | Import resolution inside js modules            |
-| [NPM package](./wiki/NPM-package)               | How to use a NPM package (especially commonjs) |
 
 # Name
 
