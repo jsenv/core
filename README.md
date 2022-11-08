@@ -7,27 +7,6 @@ It has naturally evolved to cover the core needs of a JavaScript project: develo
 - :sparkles: Dev, tests and build in a single tool
 - :ok_hand: Seamless integration with standard HTML, CSS and JS
 
-# Demo
-
-The following command can be used to create a jsenv project on a machine.
-
-```console
-npm create jsenv@latest
-```
-
-This command prompts to choose a demo from a list.
-Each demo contains preconfigured scripts:
-
-- `npm run dev`: starts a dev server with autoreload.
-- `npm run test`: execute test files on browsers(s) and/or Node.js.
-- `npm run build`: generate files optimized for production.
-
-> **Info**
-> Executing "npm install" in web demos can take time.
-> It is because in these demos tests are runned in headless browsers that needs to be installed first.
-
-See also [packages/create-jsenv](./packages/create-jsenv).
-
 # Installation
 
 ```console
@@ -38,12 +17,13 @@ _@jsenv/core_ is tested on Mac, Windows, Linux with Node.js 18.5.0. Other operat
 
 # Documentation
 
-| Link                                               | Description                                    |
-| -------------------------------------------------- | ---------------------------------------------- |
-| [Browser support](./docs/browser_support.md)       | Documentation around browser support           |
-| [Assets and workers](./docs/assets_and_workers.md) | How to reference files within a file           |
-| [Import resolution](./docs/import_resolution.md)   | Import resolution inside js modules            |
-| [NPM package](./docs/npm_package.md)               | How to use a NPM package (especially commonjs) |
+| Link                                            | Description                                    |
+| ----------------------------------------------- | ---------------------------------------------- |
+| [Getting started](./wiki/Getting-started)       | Showcasing jsenv usage in small demos          |
+| [Browser support](./wiki/Browser-support)       | Documentation around browser support           |
+| [Assets and workers](./wiki/Assets-and-workers) | How to reference files within a file           |
+| [Import resolution](./wiki/Import-resolution)   | Import resolution inside js modules            |
+| [NPM package](./wiki/NPM-package)               | How to use a NPM package (especially commonjs) |
 
 # Name
 
