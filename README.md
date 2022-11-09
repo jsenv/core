@@ -9,14 +9,7 @@ It has naturally evolved to cover the core needs of a JavaScript project: develo
 
 # Documentation
 
-| Link                                                                               | Description                                    |
-| ---------------------------------------------------------------------------------- | ---------------------------------------------- |
-| [Getting started](https://github.com/jsenv/jsenv-core/wiki//Getting-started)       | Showcasing jsenv usage in small demos          |
-| [Browser support](https://github.com/jsenv/jsenv-core/wiki//Browser-support)       | browser support during dev and after build     |
-| [Assets and workers](https://github.com/jsenv/jsenv-core/wiki//Assets-and-workers) | How to reference files within a file           |
-| [Import resolution](https://github.com/jsenv/jsenv-core/wiki/Import-resolution)    | Import resolution inside js modules            |
-| [NPM package](https://github.com/jsenv/jsenv-core/wiki/NPM-package)                | How to use a NPM package (especially commonjs) |
-| [API](https://github.com/jsenv/jsenv-core/wiki/API)                                | Functions and parameters                       |
+https://github.com/jsenv/jsenv-core/wiki
 
 # Installation
 
