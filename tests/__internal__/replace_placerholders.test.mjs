@@ -1,14 +1,17 @@
 import { assert } from "@jsenv/assert"
 
-import { replacePlaceholders } from "@jsenv/core"
+import { replacePlaceholders } from "@jsenv/core/src/plugins/placeholders/replace_placeholders.js"
 
 const result = replacePlaceholders(
-  `const foo = __FOO__
+  {
+    type: "js_module",
+    content: `const foo = __FOO__
 const t = __FOO__
 const bar = __BAR__`,
+  },
   {
-    __FOO__: JSON.stringify("hello"),
-    __BAR__: JSON.stringify("world"),
+    __FOO__: "hello",
+    __BAR__: "world",
   },
 )
 const actual = result.content

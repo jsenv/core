@@ -8,7 +8,14 @@ export const replacePlaceholders = (urlInfo, replacements) => {
     while (index !== -1) {
       const start = index
       const end = index + key.length
-      magicSource.replace({ start, end, replacement: replacements[key] })
+      magicSource.replace({
+        start,
+        end,
+        replacement:
+          urlInfo.type === "js_classic" || urlInfo.type === "js_module"
+            ? JSON.stringify(replacements[key], null, "  ")
+            : replacements[key],
+      })
       index = content.indexOf(key, end)
     }
   })
