@@ -23,8 +23,8 @@ export { startBuildServer } from "./build/start_build_server.js"
 
 // helpers
 export { pingServer } from "./ping_server.js"
-export { replacePlaceholders } from "./helpers/replace_placeholders.js"
 
 // advanced
-export { execute } from "./execute/execute.js"
 export { jsenvPluginInjectGlobals } from "./plugins/inject_globals/jsenv_plugin_inject_globals.js"
+export { jsenvPluginPlaceholders } from "./plugins/placeholders/jsenv_plugin_placeholders.js"
+export { execute } from "./execute/execute.js"
