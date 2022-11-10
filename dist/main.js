@@ -337,9 +337,12 @@ const pathnameToExtension$1 = pathname => {
 };
 
 const asUrlWithoutSearch = url => {
-  const urlObject = new URL(url);
-  urlObject.search = "";
-  return urlObject.href;
+  if (url.includes("?")) {
+    const urlObject = new URL(url);
+    urlObject.search = "";
+    return urlObject.href;
+  }
+  return url;
 };
 
 // normalize url search params:
@@ -19273,7 +19276,7 @@ const jsenvPluginUrlResolution = ({
 const jsenvPluginUrlVersion = () => {
   return {
     name: "jsenv:url_version",
-    appliesDuring: "*",
+    appliesDuring: "dev",
     redirectUrl: reference => {
       // "v" search param goal is to enable long-term cache
       // for server response headers
@@ -21708,27 +21711,30 @@ const jsenvPluginMinification = minification => {
     context,
     options: minification.json
   }) : null;
+  const cssOptimizer = minification.css ? (urlInfo, context) => minifyCss({
+    cssUrlInfo: urlInfo,
+    context,
+    options: minification.css
+  }) : null;
+  const jsClassicOptimizer = minification.js_classic ? (urlInfo, context) => minifyJs({
+    jsUrlInfo: urlInfo,
+    context,
+    options: minification.js_classic
+  }) : null;
+  const jsModuleOptimizer = minification.js_module ? (urlInfo, context) => minifyJs({
+    jsUrlInfo: urlInfo,
+    context,
+    options: minification.js_module
+  }) : null;
   return {
     name: "jsenv:minification",
     appliesDuring: "build",
     optimizeUrlContent: {
       html: htmlOptimizer,
       svg: htmlOptimizer,
-      css: minification.css ? (urlInfo, context) => minifyCss({
-        cssUrlInfo: urlInfo,
-        context,
-        options: minification.css
-      }) : null,
-      js_classic: minification.js_classic ? (urlInfo, context) => minifyJs({
-        jsUrlInfo: urlInfo,
-        context,
-        options: minification.js_classic
-      }) : null,
-      js_module: minification.js_module ? (urlInfo, context) => minifyJs({
-        jsUrlInfo: urlInfo,
-        context,
-        options: minification.js_module
-      }) : null,
+      css: cssOptimizer,
+      js_classic: jsClassicOptimizer,
+      js_module: jsModuleOptimizer,
       json: jsonOptimizer,
       importmap: jsonOptimizer,
       webmanifest: jsonOptimizer
@@ -22460,7 +22466,7 @@ const jsenvPluginExplorer = ({
 
 const jsenvPluginRibbon = ({
   rootDirectoryUrl,
-  htmlInclude = "**/*.html"
+  htmlInclude = "/**/*.html"
 }) => {
   const ribbonClientFileUrl = new URL("./js/ribbon.js", import.meta.url);
   const associations = URL_META.resolveAssociations({
@@ -24801,6 +24807,14 @@ const inferParentFromRequest = (request, rootDirectoryUrl) => {
   });
 };
 
+/**
+ * Start a server for source files:
+ * - cook source files according to jsenv plugins
+ * - inject code to autoreload the browser when a file is modified
+ * @param {Object} devServerParameters
+ * @param {string|url} devServerParameters.rootDirectoryUrl Root directory of the project
+ * @return {Object} A dev server object
+ */
 const startDevServer = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
@@ -28394,7 +28408,83 @@ const createBuildFilesService = ({
 };
 const SECONDS_IN_30_DAYS = 60 * 60 * 24 * 30;
 
-const replacePlaceholders = (content, replacements) => {
+const injectGlobals = (urlInfo, globals) => {
+  if (urlInfo.type === "html") {
+    return globalInjectorOnHtml(urlInfo, globals);
+  }
+  if (urlInfo.type === "js_classic" || urlInfo.type === "js_module") {
+    return globalsInjectorOnJs(urlInfo, globals);
+  }
+  throw new Error(`cannot inject globals into "${urlInfo.type}"`);
+};
+const globalInjectorOnHtml = async (urlInfo, globals) => {
+  // ideally we would inject an importmap but browser support is too low
+  // (even worse for worker/service worker)
+  // so for now we inject code into entry points
+  const htmlAst = parseHtmlString(urlInfo.content, {
+    storeOriginalPositions: false
+  });
+  const clientCode = generateClientCodeForGlobals({
+    globals,
+    isWebWorker: false
+  });
+  injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
+    tagName: "script",
+    textContent: clientCode
+  }), "jsenv:inject_globals");
+  return stringifyHtmlAst(htmlAst);
+};
+const globalsInjectorOnJs = async (urlInfo, globals) => {
+  const clientCode = generateClientCodeForGlobals({
+    globals,
+    isWebWorker: urlInfo.subtype === "worker" || urlInfo.subtype === "service_worker" || urlInfo.subtype === "shared_worker"
+  });
+  const magicSource = createMagicSource(urlInfo.content);
+  magicSource.prepend(clientCode);
+  return magicSource.toContentAndSourcemap();
+};
+const generateClientCodeForGlobals = ({
+  isWebWorker = false,
+  globals
+}) => {
+  const globalName = isWebWorker ? "self" : "window";
+  return `Object.assign(${globalName}, ${JSON.stringify(globals, null, "  ")});`;
+};
+
+const jsenvPluginInjectGlobals = rawAssociations => {
+  let resolvedAssociations;
+  return {
+    name: "jsenv:inject_globals",
+    appliesDuring: "*",
+    init: context => {
+      resolvedAssociations = URL_META.resolveAssociations({
+        injector: rawAssociations
+      }, context.rootDirectoryUrl);
+    },
+    transformUrlContent: async (urlInfo, context) => {
+      const {
+        injector
+      } = URL_META.applyAssociations({
+        url: asUrlWithoutSearch(urlInfo.url),
+        associations: resolvedAssociations
+      });
+      if (!injector) {
+        return null;
+      }
+      if (typeof injector !== "function") {
+        throw new TypeError("injector must be a function");
+      }
+      const globals = await injector(urlInfo, context);
+      if (!globals || Object.keys(globals).length === 0) {
+        return null;
+      }
+      return injectGlobals(urlInfo, globals);
+    }
+  };
+};
+
+const replacePlaceholders = (urlInfo, replacements) => {
+  const content = urlInfo.content;
   const magicSource = createMagicSource(content);
   Object.keys(replacements).forEach(key => {
     let index = content.indexOf(key);
@@ -28404,12 +28494,44 @@ const replacePlaceholders = (content, replacements) => {
       magicSource.replace({
         start,
         end,
-        replacement: replacements[key]
+        replacement: urlInfo.type === "js_classic" || urlInfo.type === "js_module" ? JSON.stringify(replacements[key], null, "  ") : replacements[key]
       });
       index = content.indexOf(key, end);
     }
   });
   return magicSource.toContentAndSourcemap();
+};
+
+const jsenvPluginPlaceholders = rawAssociations => {
+  let resolvedAssociations;
+  return {
+    name: "jsenv:placeholders",
+    appliesDuring: "*",
+    init: context => {
+      resolvedAssociations = URL_META.resolveAssociations({
+        replacer: rawAssociations
+      }, context.rootDirectoryUrl);
+    },
+    transformUrlContent: async (urlInfo, context) => {
+      const {
+        replacer
+      } = URL_META.applyAssociations({
+        url: asUrlWithoutSearch(urlInfo.url),
+        associations: resolvedAssociations
+      });
+      if (!replacer) {
+        return null;
+      }
+      if (typeof replacer !== "function") {
+        throw new TypeError("replacer must be a function");
+      }
+      const replacements = await replacer(urlInfo, context);
+      if (!replacements || Object.keys(replacements).length === 0) {
+        return null;
+      }
+      return replacePlaceholders(urlInfo, replacements);
+    }
+  };
 };
 
 const execute = async ({
@@ -28497,70 +28619,4 @@ const execute = async ({
   }
 };
 
-const injectGlobals = (urlInfo, globals) => {
-  if (urlInfo.type === "html") {
-    return globalInjectorOnHtml(urlInfo, globals);
-  }
-  if (urlInfo.type === "js_classic" || urlInfo.type === "js_module") {
-    return globalsInjectorOnJs(urlInfo, globals);
-  }
-  throw new Error(`cannot inject globals into "${urlInfo.type}"`);
-};
-const globalInjectorOnHtml = async (urlInfo, globals) => {
-  // ideally we would inject an importmap but browser support is too low
-  // (even worse for worker/service worker)
-  // so for now we inject code into entry points
-  const htmlAst = parseHtmlString(urlInfo.content, {
-    storeOriginalPositions: false
-  });
-  const clientCode = generateClientCodeForGlobals({
-    globals,
-    isWebWorker: false
-  });
-  injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
-    tagName: "script",
-    textContent: clientCode
-  }), "jsenv:inject_globals");
-  return stringifyHtmlAst(htmlAst);
-};
-const globalsInjectorOnJs = async (urlInfo, globals) => {
-  const clientCode = generateClientCodeForGlobals({
-    globals,
-    isWebWorker: urlInfo.subtype === "worker" || urlInfo.subtype === "service_worker" || urlInfo.subtype === "shared_worker"
-  });
-  const magicSource = createMagicSource(urlInfo.content);
-  magicSource.prepend(clientCode);
-  return magicSource.toContentAndSourcemap();
-};
-const generateClientCodeForGlobals = ({
-  isWebWorker = false,
-  globals
-}) => {
-  const globalName = isWebWorker ? "self" : "window";
-  return `Object.assign(${globalName}, ${JSON.stringify(globals, null, "  ")});`;
-};
-
-const jsenvPluginInjectGlobals = urlAssociations => {
-  return {
-    name: "jsenv:inject_globals",
-    appliesDuring: "*",
-    transformUrlContent: async (urlInfo, context) => {
-      const url = Object.keys(urlAssociations).find(url => {
-        return url === urlInfo.url;
-      });
-      if (!url) {
-        return null;
-      }
-      let globals = urlAssociations[url];
-      if (typeof globals === "function") {
-        globals = await globals(urlInfo, context);
-      }
-      if (Object.keys(globals).length === 0) {
-        return null;
-      }
-      return injectGlobals(urlInfo, globals);
-    }
-  };
-};
-
-export { build, chromium, chromiumIsolatedTab, execute, executeTestPlan, firefox, firefoxIsolatedTab, jsenvPluginInjectGlobals, nodeChildProcess, nodeWorkerThread, pingServer, replacePlaceholders, startBuildServer, startDevServer, webkit, webkitIsolatedTab };
+export { build, chromium, chromiumIsolatedTab, execute, executeTestPlan, firefox, firefoxIsolatedTab, jsenvPluginInjectGlobals, jsenvPluginPlaceholders, nodeChildProcess, nodeWorkerThread, pingServer, startBuildServer, startDevServer, webkit, webkitIsolatedTab };
