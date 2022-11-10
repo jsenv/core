@@ -12,7 +12,9 @@ export const replacePlaceholders = (urlInfo, replacements) => {
         start,
         end,
         replacement:
-          urlInfo.type === "js_classic" || urlInfo.type === "js_module"
+          urlInfo.type === "js_classic" ||
+          urlInfo.type === "js_module" ||
+          urlInfo.type === "html"
             ? JSON.stringify(replacements[key], null, "  ")
             : replacements[key],
       })

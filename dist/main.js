@@ -28494,7 +28494,7 @@ const replacePlaceholders = (urlInfo, replacements) => {
       magicSource.replace({
         start,
         end,
-        replacement: urlInfo.type === "js_classic" || urlInfo.type === "js_module" ? JSON.stringify(replacements[key], null, "  ") : replacements[key]
+        replacement: urlInfo.type === "js_classic" || urlInfo.type === "js_module" || urlInfo.type === "html" ? JSON.stringify(replacements[key], null, "  ") : replacements[key]
       });
       index = content.indexOf(key, end);
     }
