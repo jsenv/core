@@ -1,7 +1,7 @@
 export const jsenvPluginUrlVersion = () => {
   return {
     name: "jsenv:url_version",
-    appliesDuring: "*",
+    appliesDuring: "dev",
     redirectUrl: (reference) => {
       // "v" search param goal is to enable long-term cache
       // for server response headers
