@@ -1,3 +1,7 @@
+# 29.7.0
+
+- Export jsenvPluginPlaceholders
+
 # 29.6.1
 
 - Fix error introduced in 29.6.0 on dev server

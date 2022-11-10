@@ -24,6 +24,10 @@ export const jsenvPluginReact = ({
         "/**/node_modules/react/jsx-runtime/": { external: ["react"] },
         "/**/node_modules/react/jsx-dev-runtime": { external: ["react"] },
         "/**/react-refresh/": { external: ["react"] },
+        // in case redux is used
+        "/**/node_modules/react-is/": true,
+        "/**/node_modules/use-sync-external-store/": { external: ["react"] },
+        "/**/node_modules/hoist-non-react-statics/": { external: ["react-is"] },
       },
     }),
     jsenvPluginReactRefreshPreamble(),

@@ -37,6 +37,30 @@ export const jsenvPluginMinification = (minification) => {
           options: minification.json,
         })
     : null
+  const cssOptimizer = minification.css
+    ? (urlInfo, context) =>
+        minifyCss({
+          cssUrlInfo: urlInfo,
+          context,
+          options: minification.css,
+        })
+    : null
+  const jsClassicOptimizer = minification.js_classic
+    ? (urlInfo, context) =>
+        minifyJs({
+          jsUrlInfo: urlInfo,
+          context,
+          options: minification.js_classic,
+        })
+    : null
+  const jsModuleOptimizer = minification.js_module
+    ? (urlInfo, context) =>
+        minifyJs({
+          jsUrlInfo: urlInfo,
+          context,
+          options: minification.js_module,
+        })
+    : null
 
   return {
     name: "jsenv:minification",
@@ -44,30 +68,9 @@ export const jsenvPluginMinification = (minification) => {
     optimizeUrlContent: {
       html: htmlOptimizer,
       svg: htmlOptimizer,
-      css: minification.css
-        ? (urlInfo, context) =>
-            minifyCss({
-              cssUrlInfo: urlInfo,
-              context,
-              options: minification.css,
-            })
-        : null,
-      js_classic: minification.js_classic
-        ? (urlInfo, context) =>
-            minifyJs({
-              jsUrlInfo: urlInfo,
-              context,
-              options: minification.js_classic,
-            })
-        : null,
-      js_module: minification.js_module
-        ? (urlInfo, context) =>
-            minifyJs({
-              jsUrlInfo: urlInfo,
-              context,
-              options: minification.js_module,
-            })
-        : null,
+      css: cssOptimizer,
+      js_classic: jsClassicOptimizer,
+      js_module: jsModuleOptimizer,
       json: jsonOptimizer,
       importmap: jsonOptimizer,
       webmanifest: jsonOptimizer,
