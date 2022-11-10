@@ -1,4 +1,5 @@
 import { URL_META } from "@jsenv/url-meta"
+import { asUrlWithoutSearch } from "@jsenv/urls"
 
 import { replacePlaceholders } from "./replace_placeholders.js"
 
@@ -16,7 +17,7 @@ export const jsenvPluginPlaceholders = (rawAssociations) => {
     },
     transformUrlContent: async (urlInfo, context) => {
       const { replacer } = URL_META.applyAssociations({
-        url: urlInfo.url,
+        url: asUrlWithoutSearch(urlInfo.url),
         associations: resolvedAssociations,
       })
       if (!replacer) {

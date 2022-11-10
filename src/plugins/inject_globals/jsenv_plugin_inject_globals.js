@@ -1,4 +1,5 @@
 import { URL_META } from "@jsenv/url-meta"
+import { asUrlWithoutSearch } from "@jsenv/urls"
 
 import { injectGlobals } from "./inject_globals.js"
 
@@ -16,7 +17,7 @@ export const jsenvPluginInjectGlobals = (rawAssociations) => {
     },
     transformUrlContent: async (urlInfo, context) => {
       const { injector } = URL_META.applyAssociations({
-        url: urlInfo.url,
+        url: asUrlWithoutSearch(urlInfo.url),
         associations: resolvedAssociations,
       })
       if (!injector) {

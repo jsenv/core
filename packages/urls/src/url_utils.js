@@ -3,9 +3,12 @@ import { urlToExtension } from "./url_to_extension.js"
 import { urlToResource } from "./url_to_resource.js"
 
 export const asUrlWithoutSearch = (url) => {
-  const urlObject = new URL(url)
-  urlObject.search = ""
-  return urlObject.href
+  if (url.includes("?")) {
+    const urlObject = new URL(url)
+    urlObject.search = ""
+    return urlObject.href
+  }
+  return url
 }
 
 export const isValidUrl = (url) => {
