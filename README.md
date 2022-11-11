@@ -17,20 +17,14 @@ https://github.com/jsenv/jsenv-core/wiki
 npm install --save-dev @jsenv/core
 ```
 
-_@jsenv/core_ is tested on Mac, Windows, Linux with Node.js 18.5.0. Other operating systems and Node.js versions are not tested.
+_@jsenv/core_ is tested on Mac, Windows, Linux with Node.js 18.5.0.
+Other operating systems and Node.js versions are not tested.
 
 # Name
 
 The name "jsenv" stands for JavaScript environments.
 
-Maybe "jsenv" should be written "JSEnv"?
-No, it would be too painful to type:
-
-1. Hold `shift` on keyboard
-2. While holding `shift`, type `JSE`
-3. Release `shift`
-4. Finally, type `nv`.
-
+Maybe "jsenv" should be written "JSEnv", but it would be too painful to type.
 The prefered syntax is "jsenv".
 
 # Logo
