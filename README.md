@@ -1,6 +1,6 @@
 # @jsenv/core [![npm package](https://img.shields.io/npm/v/@jsenv/core.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/core)
 
-Jsenv was first created to write tests that could be executed in different runtimes.
+Jsenv was created to provide a tool that can be used both for the web and Node.js.
 It has naturally evolved to cover the core needs of a JavaScript project: developement, testing and building for production.
 
 - :exploding_head: Execute HTML files as tests
@@ -21,20 +21,23 @@ _@jsenv/core_ is tested on Mac, Windows, Linux with Node.js 18.5.0. Other operat
 
 # Name
 
-The name "jsenv" stands for JavaScript environments. This is because the original purpose of jsenv was to bring closer two JavaScript runtimes: web browsers and Node.js.
+The name "jsenv" stands for JavaScript environments.
 
-Maybe "jsenv" should be written "JSEnv"? That makes typing the name too complex:
+Maybe "jsenv" should be written "JSEnv"?
+No, it would be too painful to type:
 
 1. Hold `shift` on keyboard
 2. While holding `shift`, type `JSE`
 3. Release `shift`
 4. Finally, type `nv`.
 
-No one wants to do that: the prefered syntax is "jsenv".
+The prefered syntax is "jsenv".
 
 # Logo
 
-The logo is composed by the name at the center and two circles orbiting around it. One of the circle is web browsers, the other is Node.js. It represents the two JavaScript environments supported by jsenv.
+The logo is composed by the name at the center and two circles orbiting around it.
+One of the circle is web browsers, the other is Node.js.
+It represents the two JavaScript runtimes supported by jsenv.
 
 ![jsenv logo with legend](./docs/jsenv_logo_legend.png)
 
