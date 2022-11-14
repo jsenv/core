@@ -709,7 +709,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           // For instance we will bundle service worker/workers detected like this
           if (rawUrlInfo.type === "js_module") {
             rawUrlInfo.references.forEach((reference) => {
-              if (reference.type !== "js_url_specifier") {
+              if (reference.type !== "js_url") {
                 return
               }
               const referencedUrlInfo = rawGraph.getUrlInfo(reference.url)
@@ -950,7 +950,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     return null
                   }
                   if (
-                    reference.type === "js_url_specifier" ||
+                    reference.type === "js_url" ||
                     reference.subtype === "import_dynamic"
                   ) {
                     // __v__() makes versioning dynamic: no need to take into account
@@ -1099,7 +1099,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                       )})+${parentUrlInfo.jsQuote}`
                   }
                   if (
-                    reference.type === "js_url_specifier" ||
+                    reference.type === "js_url" ||
                     reference.subtype === "import_dynamic"
                   ) {
                     usedVersionMappings.add(reference.specifier)

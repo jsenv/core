@@ -29,7 +29,7 @@ export const jsenvPluginAsJsClassicWorkers = () => {
     name: "jsenv:as_js_classic_workers",
     appliesDuring: "*",
     redirectUrl: {
-      js_url_specifier: (reference, context) => {
+      js_url: (reference, context) => {
         if (reference.expectedType !== "js_module") {
           return null
         }

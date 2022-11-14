@@ -21,7 +21,7 @@
  * - "css_@import"
  * - "css_url"
  * - "sourcemap_comment"
- * - "js_url_specifier"
+ * - "js_url"
  * - "js_inline_content"
  * - "webmanifest_icon_src"
  * - "package_json"

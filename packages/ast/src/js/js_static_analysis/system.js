@@ -30,7 +30,7 @@ const analyzeSystemRegisterDeps = (node, { onUrl }) => {
     if (isStringLiteralNode(element)) {
       const specifierNode = element
       onUrl({
-        type: "js_url_specifier",
+        type: "js_url",
         subtype: "system_register_arg",
         expectedType: "js_classic",
         specifier: specifierNode.value,
@@ -61,7 +61,7 @@ export const analyzeSystemImportCall = (node, { onUrl }) => {
   if (isStringLiteralNode(firstArgNode)) {
     const specifierNode = firstArgNode
     onUrl({
-      type: "js_url_specifier",
+      type: "js_url",
       subtype: "system_import_arg",
       expectedType: "js_classic",
       specifier: specifierNode.value,

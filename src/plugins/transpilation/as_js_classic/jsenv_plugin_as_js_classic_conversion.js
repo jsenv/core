@@ -19,10 +19,7 @@ export const jsenvPluginAsJsClassicConversion = ({
     ) {
       return true
     }
-    if (
-      reference.type === "js_url_specifier" &&
-      reference.expectedType === "js_module"
-    ) {
+    if (reference.type === "js_url" && reference.expectedType === "js_module") {
       return true
     }
     return false

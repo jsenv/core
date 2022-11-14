@@ -18,7 +18,7 @@ export const analyzeImportScriptCalls = (node, { onUrl }) => {
     if (isStringLiteralNode(arg)) {
       const specifierNode = arg
       onUrl({
-        type: "js_url_specifier",
+        type: "js_url",
         subtype: "self_import_scripts_arg",
         expectedType: "js_classic",
         specifier: specifierNode.value,

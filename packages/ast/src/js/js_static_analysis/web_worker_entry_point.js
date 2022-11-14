@@ -114,7 +114,7 @@ const analyzeWorkerCallArguments = (
   if (isStringLiteralNode(firstArgNode)) {
     const specifierNode = firstArgNode
     onUrl({
-      type: "js_url_specifier",
+      type: "js_url",
       subtype: referenceSubtype,
       expectedType,
       expectedSubtype,

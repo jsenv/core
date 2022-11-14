@@ -68,7 +68,7 @@ export const jsenvPluginAsJsClassicHtml = ({
         }
         return null
       },
-      js_url_specifier: (reference) => {
+      js_url: (reference) => {
         if (
           shouldTransformScriptTypeModule &&
           reference.expectedType === "js_module"

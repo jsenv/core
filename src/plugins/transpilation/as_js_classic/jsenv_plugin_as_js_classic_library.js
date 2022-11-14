@@ -60,7 +60,7 @@ export const jsenvPluginAsJsClassicLibrary = ({
       if (context.scenarios.dev) {
         jsModuleBundledUrlInfo.sourceUrls.forEach((sourceUrl) => {
           context.referenceUtils.inject({
-            type: "js_url_specifier",
+            type: "js_url",
             specifier: sourceUrl,
             isImplicit: true,
           })
