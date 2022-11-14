@@ -97,7 +97,7 @@ const removeImportMetaHots = (urlInfo, importMetaHotPaths) => {
 const injectImportMetaHot = (urlInfo, context, importMetaHotClientFileUrl) => {
   const [importMetaHotClientFileReference] = context.referenceUtils.inject({
     parentUrl: urlInfo.url,
-    type: "js_import_export",
+    type: "js_import",
     expectedType: "js_module",
     specifier: importMetaHotClientFileUrl,
   })

@@ -64,7 +64,7 @@ export const jsenvPluginImportAssertions = ({
       }
     },
     redirectUrl: {
-      js_import_export: (reference, context) => {
+      js_import: (reference, context) => {
         if (!reference.assert) {
           return null
         }
@@ -112,7 +112,7 @@ const jsenvPluginAsModules = () => {
       })
       if (context.scenarios.dev) {
         context.referenceUtils.found({
-          type: "js_import_export",
+          type: "js_import",
           subtype: jsonReference.subtype,
           specifier: jsonReference.url,
           expectedType: "js_module",
@@ -153,7 +153,7 @@ const jsenvPluginAsModules = () => {
       })
       if (context.scenarios.dev) {
         context.referenceUtils.found({
-          type: "js_import_export",
+          type: "js_import",
           subtype: cssReference.subtype,
           specifier: cssReference.url,
           expectedType: "js_module",
@@ -203,7 +203,7 @@ const jsenvPluginAsModules = () => {
       })
       if (context.scenarios.dev) {
         context.referenceUtils.found({
-          type: "js_import_export",
+          type: "js_import",
           subtype: textReference.subtype,
           specifier: textReference.url,
           expectedType: "js_module",

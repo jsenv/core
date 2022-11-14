@@ -13,7 +13,7 @@ export const jsenvPluginAsJsClassicConversion = ({
 }) => {
   const isReferencingJsModule = (reference) => {
     if (
-      reference.type === "js_import_export" ||
+      reference.type === "js_import" ||
       reference.subtype === "system_register_arg" ||
       reference.subtype === "system_import_arg"
     ) {
@@ -89,7 +89,7 @@ export const jsenvPluginAsJsClassicConversion = ({
       })
       if (context.scenarios.dev) {
         context.referenceUtils.found({
-          type: "js_import_export",
+          type: "js_import",
           subtype: jsModuleReference.subtype,
           specifier: jsModuleReference.url,
           expectedType: "js_module",

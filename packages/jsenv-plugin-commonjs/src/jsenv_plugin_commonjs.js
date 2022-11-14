@@ -40,7 +40,7 @@ export const jsenvPluginCommonJs = ({
       )
     },
     redirectUrl: {
-      js_import_export: (reference) => {
+      js_import: (reference) => {
         if (reference.searchParams.has("cjs_as_js_module")) {
           markAsJsModuleProxy(reference)
           return null

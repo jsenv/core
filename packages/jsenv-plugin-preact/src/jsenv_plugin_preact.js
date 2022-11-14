@@ -53,7 +53,7 @@ export const jsenvPluginPreact = ({
     name: "jsenv:preact",
     appliesDuring: "*",
     resolveUrl: {
-      js_import_export: (reference, context) => {
+      js_import: (reference, context) => {
         if (
           reference.specifier === "react" ||
           reference.specifier === "react-dom"
@@ -74,7 +74,7 @@ export const jsenvPluginPreact = ({
         }
         const htmlAst = parseHtmlString(urlInfo.content)
         const [preactDevtoolsReference] = context.referenceUtils.inject({
-          type: "js_import_export",
+          type: "js_import",
           expectedType: "js_module",
           specifier: context.scenarios.dev ? "preact/debug" : "preact/devtools",
         })
@@ -149,7 +149,7 @@ import ${preactDevtoolsReference.generatedSpecifier}
             while (index > -1) {
               const specifier = importSpecifier.slice(1, -1)
               const [injectedReference] = context.referenceUtils.inject({
-                type: "js_import_export",
+                type: "js_import",
                 expectedType: "js_module",
                 specifier,
               })
@@ -168,7 +168,7 @@ import ${preactDevtoolsReference.generatedSpecifier}
           if (hasReg || hasSig) {
             const [preactRefreshClientReference] =
               context.referenceUtils.inject({
-                type: "js_import_export",
+                type: "js_import",
                 expectedType: "js_module",
                 specifier: "@jsenv/plugin-preact/src/client/preact_refresh.js",
               })

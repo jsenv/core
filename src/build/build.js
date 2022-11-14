@@ -673,7 +673,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   if (dependencyUrlInfo.type === "js_module") {
                     // bundle inline script type module deps
                     dependencyUrlInfo.references.forEach((inlineScriptRef) => {
-                      if (inlineScriptRef.type === "js_import_export") {
+                      if (inlineScriptRef.type === "js_import") {
                         const inlineUrlInfo = rawGraph.getUrlInfo(
                           inlineScriptRef.url,
                         )
@@ -724,7 +724,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 for (const reference of dependentUrlInfo.references) {
                   if (reference.url === referencedUrlInfo.url) {
                     willAlreadyBeBundled =
-                      (reference.type === "js_import_export" &&
+                      (reference.type === "js_import" &&
                         reference.subtype === "import_dynamic") ||
                       reference.type === "script_src"
                   }

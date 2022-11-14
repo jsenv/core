@@ -36,7 +36,7 @@ export const jsenvPluginTopLevelAwait = () => {
                 // externalHelpers: true,
                 // externalHelpersPath: JSON.parse(
                 //   context.referenceUtils.inject({
-                //     type: "js_import_export",
+                //     type: "js_import",
                 //     expectedType: "js_module",
                 //     specifier:
                 //       "babel-plugin-transform-async-to-promises/helpers.mjs",
