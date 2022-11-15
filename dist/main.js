@@ -8363,7 +8363,7 @@ const analyzeImportDeclaration = (node, {
   const specifierNode = node.source;
   const assertionInfo = extractImportAssertionsInfo(node);
   onUrl({
-    type: "js_import_export",
+    type: "js_import",
     subtype: "import_static",
     specifier: specifierNode.value,
     specifierStart: specifierNode.start,
@@ -8383,7 +8383,7 @@ const analyzeImportExpression = (node, {
   }
   const assertionInfo = extractImportAssertionsInfo(node);
   onUrl({
-    type: "js_import_export",
+    type: "js_import",
     subtype: "import_dynamic",
     specifier: specifierNode.value,
     specifierStart: specifierNode.start,
@@ -8407,7 +8407,7 @@ const analyzeExportNamedDeclaration = (node, {
     return;
   }
   onUrl({
-    type: "js_import_export",
+    type: "js_import",
     subtype: "export_named",
     specifier: specifierNode.value,
     specifierStart: specifierNode.start,
@@ -8421,7 +8421,7 @@ const analyzeExportAllDeclaration = (node, {
 }) => {
   const specifierNode = node.source;
   onUrl({
-    type: "js_import_export",
+    type: "js_import",
     subtype: "export_all",
     specifier: specifierNode.value,
     specifierStart: specifierNode.start,
@@ -8499,6 +8499,27 @@ const extractImportAssertionsInfo = node => {
   };
 };
 
+const isImportMetaResolveCall = node => {
+  return node.type === "CallExpression" && node.callee.type === "MemberExpression" && node.callee.object.type === "MetaProperty" && node.callee.property.type === "Identifier" && node.callee.property.name === "resolve";
+};
+const analyzeImportMetaResolveCall = (node, {
+  onUrl
+}) => {
+  const firstArg = node.arguments[0];
+  if (firstArg && isStringLiteralNode(firstArg)) {
+    onUrl({
+      node,
+      type: "js_import",
+      subtype: "import_meta_resolve",
+      specifier: firstArg.value,
+      specifierStart: firstArg.start,
+      specifierEnd: firstArg.end,
+      specifierLine: firstArg.loc.start.line,
+      specifierColumn: firstArg.loc.start.column
+    });
+  }
+};
+
 const isNewUrlCall = node => {
   return node.type === "NewExpression" && node.callee.type === "Identifier" && node.callee.name === "URL";
 };
@@ -8514,7 +8535,7 @@ const analyzeNewUrlCall = (node, {
     if (urlType === "StringLiteral") {
       const specifierNode = firstArgNode;
       onUrl({
-        type: "js_url_specifier",
+        type: "js_url",
         subtype: "new_url_first_arg",
         specifier: specifierNode.value,
         specifierStart: specifierNode.start,
@@ -8544,7 +8565,7 @@ const analyzeNewUrlCall = (node, {
         // we can understand the first argument
         const specifierNode = firstArgNode;
         onUrl({
-          type: "js_url_specifier",
+          type: "js_url",
           subtype: "new_url_first_arg",
           specifier: specifierNode.value,
           specifierStart: specifierNode.start,
@@ -8558,7 +8579,7 @@ const analyzeNewUrlCall = (node, {
       if (baseUrlType === "StringLiteral") {
         const specifierNode = secondArgNode;
         onUrl({
-          type: "js_url_specifier",
+          type: "js_url",
           subtype: "new_url_second_arg",
           specifier: specifierNode.value,
           specifierStart: specifierNode.start,
@@ -8720,7 +8741,7 @@ const analyzeWorkerCallArguments = (node, {
   if (isStringLiteralNode(firstArgNode)) {
     const specifierNode = firstArgNode;
     onUrl({
-      type: "js_url_specifier",
+      type: "js_url",
       subtype: referenceSubtype,
       expectedType,
       expectedSubtype,
@@ -8745,6 +8766,20 @@ const analyzeWorkerCallArguments = (node, {
         onUrl(mention);
       }
     });
+    return;
+  }
+  if (isJsModule && isImportMetaResolveCall(firstArgNode)) {
+    analyzeImportMetaResolveCall(firstArgNode, {
+      onUrl: mention => {
+        Object.assign(mention, {
+          expectedType,
+          expectedSubtype,
+          typePropertyNode
+        });
+        onUrl(mention);
+      }
+    });
+    return;
   }
 };
 
@@ -8762,7 +8797,7 @@ const analyzeImportScriptCalls = (node, {
     if (isStringLiteralNode(arg)) {
       const specifierNode = arg;
       onUrl({
-        type: "js_url_specifier",
+        type: "js_url",
         subtype: "self_import_scripts_arg",
         expectedType: "js_classic",
         specifier: specifierNode.value,
@@ -8807,7 +8842,7 @@ const analyzeSystemRegisterDeps = (node, {
     if (isStringLiteralNode(element)) {
       const specifierNode = element;
       onUrl({
-        type: "js_url_specifier",
+        type: "js_url",
         subtype: "system_register_arg",
         expectedType: "js_classic",
         specifier: specifierNode.value,
@@ -8835,9 +8870,35 @@ const analyzeSystemImportCall = (node, {
   if (isStringLiteralNode(firstArgNode)) {
     const specifierNode = firstArgNode;
     onUrl({
-      type: "js_url_specifier",
+      type: "js_url",
       subtype: "system_import_arg",
       expectedType: "js_classic",
+      specifier: specifierNode.value,
+      specifierStart: specifierNode.start,
+      specifierEnd: specifierNode.end,
+      specifierLine: specifierNode.loc.start.line,
+      specifierColumn: specifierNode.loc.start.column
+    });
+  }
+};
+const isSystemResolveCall = node => {
+  const callee = node.callee;
+  return callee.type === "MemberExpression" && callee.object.type === "MemberExpression" && callee.object.object.type === "Identifier" &&
+  // because of minification we can't assume _context.
+  // so anything matching "*.meta.resolve()"
+  // will be assumed to be the equivalent to "meta.resolve()"
+  // callee.object.object.name === "_context" &&
+  callee.object.property.type === "Identifier" && callee.object.property.name === "meta" && callee.property.type === "Identifier" && callee.property.name === "resolve";
+};
+const analyzeSystemResolveCall = (node, {
+  onUrl
+}) => {
+  const firstArgNode = node.arguments[0];
+  if (isStringLiteralNode(firstArgNode)) {
+    const specifierNode = firstArgNode;
+    onUrl({
+      type: "js_url",
+      subtype: "system_resolve_arg",
       specifier: specifierNode.value,
       specifierStart: specifierNode.start,
       specifierEnd: specifierNode.end,
@@ -8884,6 +8945,12 @@ const parseJsUrls = async ({
       });
     },
     CallExpression: node => {
+      if (isJsModule && isImportMetaResolveCall(node)) {
+        analyzeImportMetaResolveCall(node, {
+          onUrl
+        });
+        return;
+      }
       if (isServiceWorkerRegisterCall(node)) {
         analyzeServiceWorkerRegisterCall(node, {
           isJsModule,
@@ -8905,6 +8972,12 @@ const parseJsUrls = async ({
       }
       if (!isJsModule && isSystemImportCall(node)) {
         analyzeSystemImportCall(node, {
+          onUrl
+        });
+        return;
+      }
+      if (!isJsModule && isSystemResolveCall(node)) {
+        analyzeSystemResolveCall(node, {
           onUrl
         });
         return;
@@ -8970,11 +9043,11 @@ const urlSpecifierEncoding = {
   }
 };
 const formatters = {
-  "js_import_export": {
+  "js_import": {
     encode: JSON.stringify,
     decode: JSON.parse
   },
-  "js_url_specifier": {
+  "js_url": {
     encode: JSON.stringify,
     decode: JSON.parse
   },
@@ -9277,23 +9350,30 @@ const HOOK_NAMES = ["init", "serve",
 "cooked", "augmentResponse",
 // is called only during dev/tests
 "destroy"];
-const createPluginController = ({
-  plugins,
-  scenarios
-}) => {
-  const flatPlugins = flattenAndFilterPlugins(plugins, {
-    scenarios
-  });
+const createPluginController = kitchenContext => {
+  const plugins = [];
   // precompute a list of hooks per hookName for one major reason:
   // - When debugging, there is less iteration
   // also it should increase perf as there is less work to do
-
   const hookGroups = {};
   const addPlugin = (plugin, {
     position = "start"
   }) => {
+    if (plugin === null || typeof plugin !== "object") {
+      throw new TypeError(`plugin must be objects, got ${plugin}`);
+    }
+    if (!testAppliesDuring(plugin) || !initPlugin(plugin)) {
+      if (plugin.destroy) {
+        plugin.destroy();
+      }
+      return;
+    }
+    if (!plugin.name) {
+      plugin.name = "anonymous";
+    }
+    plugins.push(plugin);
     Object.keys(plugin).forEach(key => {
-      if (key === "name" || key === "appliesDuring" || key === "serverEvents") {
+      if (key === "name" || key === "appliesDuring" || key === "init" || key === "serverEvents") {
         return;
       }
       const isHook = HOOK_NAMES.includes(key);
@@ -9317,6 +9397,52 @@ const createPluginController = ({
       }
     });
   };
+  const testAppliesDuring = plugin => {
+    const {
+      appliesDuring
+    } = plugin;
+    if (appliesDuring === undefined) {
+      // console.debug(`"appliesDuring" is undefined on ${pluginEntry.name}`)
+      return true;
+    }
+    if (appliesDuring === "*") {
+      return true;
+    }
+    if (typeof appliesDuring === "string") {
+      if (appliesDuring !== "dev" && appliesDuring !== "build") {
+        throw new TypeError(`"appliesDuring" must be "dev" or "build", got ${appliesDuring}`);
+      }
+      if (kitchenContext.scenarios[appliesDuring]) {
+        return true;
+      }
+      return false;
+    }
+    if (typeof appliesDuring === "object") {
+      for (const key of Object.keys(appliesDuring)) {
+        if (!appliesDuring[key] && kitchenContext.scenarios[key]) {
+          return false;
+        }
+        if (appliesDuring[key] && kitchenContext.scenarios[key]) {
+          return true;
+        }
+      }
+      // throw new Error(`"appliesDuring" is empty`)
+      return false;
+    }
+    throw new TypeError(`"appliesDuring" must be an object or a string, got ${appliesDuring}`);
+  };
+  const initPlugin = plugin => {
+    if (plugin.init) {
+      const initReturnValue = plugin.init(kitchenContext);
+      if (initReturnValue === false) {
+        return false;
+      }
+      if (typeof initReturnValue === "function" && !plugin.destroy) {
+        plugin.destroy = initReturnValue;
+      }
+    }
+    return true;
+  };
   const pushPlugin = plugin => {
     addPlugin(plugin, {
       position: "start"
@@ -9327,9 +9453,6 @@ const createPluginController = ({
       position: "end"
     });
   };
-  flatPlugins.forEach(plugin => {
-    pushPlugin(plugin);
-  });
   let lastPluginUsed = null;
   let currentPlugin = null;
   let currentHookName = null;
@@ -9436,7 +9559,7 @@ const createPluginController = ({
     });
   };
   return {
-    plugins: flatPlugins,
+    plugins,
     pushPlugin,
     unshiftPlugin,
     getHookFunction,
@@ -9450,68 +9573,6 @@ const createPluginController = ({
     getCurrentPlugin: () => currentPlugin,
     getCurrentHookName: () => currentHookName
   };
-};
-const flattenAndFilterPlugins = (plugins, {
-  scenarios
-}) => {
-  const flatPlugins = [];
-  const visitPluginEntry = pluginEntry => {
-    if (Array.isArray(pluginEntry)) {
-      pluginEntry.forEach(value => visitPluginEntry(value));
-      return;
-    }
-    if (typeof pluginEntry === "object" && pluginEntry !== null) {
-      if (!pluginEntry.name) {
-        pluginEntry.name = "anonymous";
-      }
-      const {
-        appliesDuring
-      } = pluginEntry;
-      if (appliesDuring === undefined) {
-        // console.debug(`"appliesDuring" is undefined on ${pluginEntry.name}`)
-        flatPlugins.push(pluginEntry);
-        return;
-      }
-      if (appliesDuring === "*") {
-        flatPlugins.push(pluginEntry);
-        return;
-      }
-      if (typeof appliesDuring === "string") {
-        if (!["dev", "build"].includes(appliesDuring)) {
-          throw new Error(`"appliesDuring" must be "dev" or "build", got ${appliesDuring}`);
-        }
-        if (scenarios[appliesDuring]) {
-          flatPlugins.push(pluginEntry);
-          return;
-        }
-        return;
-      }
-      if (typeof appliesDuring !== "object") {
-        throw new Error(`"appliesDuring" must be an object or a string, got ${appliesDuring}`);
-      }
-      let applies;
-      for (const key of Object.keys(appliesDuring)) {
-        if (!appliesDuring[key] && scenarios[key]) {
-          applies = false;
-          break;
-        }
-        if (appliesDuring[key] && scenarios[key]) {
-          applies = true;
-        }
-      }
-      if (applies) {
-        flatPlugins.push(pluginEntry);
-        return;
-      }
-      if (pluginEntry.destroy) {
-        pluginEntry.destroy();
-      }
-      return;
-    }
-    throw new Error(`plugin must be objects, got ${pluginEntry}`);
-  };
-  plugins.forEach(plugin => visitPluginEntry(plugin));
-  return flatPlugins;
 };
 const getHookFunction = (hook,
 // can be undefined, reference, or urlInfo
@@ -9651,6 +9712,7 @@ const createUrlInfoTransformer = ({
     //   during build it's urlInfo.url to be inside the build
     //   but otherwise it's generatedUrl to be inside .jsenv/ directory
     const generatedUrlObject = new URL(urlInfo.generatedUrl);
+    generatedUrlObject.searchParams.delete("as_js_module");
     generatedUrlObject.searchParams.delete("as_js_classic");
     generatedUrlObject.searchParams.delete("as_js_classic_library");
     const urlForSourcemap = generatedUrlObject.href;
@@ -9872,7 +9934,7 @@ const findHighestVersion = (...values) => {
   });
 };
 
-const featureCompats = {
+const featuresCompatMap = {
   script_type_module: {
     edge: "16",
     firefox: "60",
@@ -9902,6 +9964,9 @@ const featureCompats = {
     opera: "51",
     safari: "11.1",
     samsung: "9.2"
+  },
+  import_meta_resolve: {
+    chrome: "107"
   },
   // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import#browser_compatibility
   import_dynamic: {
@@ -10029,7 +10094,7 @@ const featureCompats = {
 };
 
 const RUNTIME_COMPAT = {
-  featureCompats,
+  featuresCompatMap,
   add: (originalRuntimeCompat, feature) => {
     const featureCompat = getFeatureCompat(feature);
     const runtimeCompat = {
@@ -10058,7 +10123,7 @@ const RUNTIME_COMPAT = {
 };
 const getFeatureCompat = feature => {
   if (typeof feature === "string") {
-    const compat = featureCompats[feature];
+    const compat = featuresCompatMap[feature];
     if (!compat) {
       throw new Error(`"${feature}" feature is unknown`);
     }
@@ -10478,10 +10543,6 @@ const createKitchen = ({
   const logger = createLogger({
     logLevel
   });
-  const pluginController = createPluginController({
-    plugins,
-    scenarios
-  });
   const kitchenContext = {
     signal,
     logger,
@@ -10499,7 +10560,17 @@ const createKitchen = ({
     sourcemaps,
     outDirectoryUrl
   };
-  pluginController.callHooks("init", kitchenContext);
+  const pluginController = createPluginController(kitchenContext);
+  const pushPlugins = plugins => {
+    plugins.forEach(pluginEntry => {
+      if (Array.isArray(pluginEntry)) {
+        pushPlugins(pluginEntry);
+      } else {
+        pluginController.pushPlugin(pluginEntry);
+      }
+    });
+  };
+  pushPlugins(plugins);
   const createReference = ({
     data = {},
     node,
@@ -11527,10 +11598,12 @@ const jsenvPluginReferenceExpectedTypes = () => {
       reference.expectedType = "js_classic";
     } else if (searchParams.has("as_js_classic") || searchParams.has("as_js_classic_library")) {
       reference.expectedType = "js_classic";
+    } else if (searchParams.has("as_js_module")) {
+      reference.expectedType = "js_module";
     } else if (searchParams.has("js_module")) {
       searchParams.delete("js_module");
       reference.expectedType = "js_module";
-    } else if (reference.type === "js_url_specifier" && reference.expectedType === undefined && CONTENT_TYPE.fromUrlExtension(reference.url) === "text/javascript") {
+    } else if (reference.type === "js_url" && reference.expectedType === undefined && CONTENT_TYPE.fromUrlExtension(reference.url) === "text/javascript") {
       // by default, js referenced by new URL is considered as "js_module"
       // in case this is not desired code must use "?js_classic" like
       // new URL('./file.js?js_classic', import.meta.url)
@@ -11553,7 +11626,7 @@ const jsenvPluginReferenceExpectedTypes = () => {
     appliesDuring: "*",
     redirectUrl: {
       script_src: redirectJsUrls,
-      js_url_specifier: redirectJsUrls
+      js_url: redirectJsUrls
     }
   };
 };
@@ -11909,6 +11982,7 @@ const parseAndTransformJsUrls = async (urlInfo, context) => {
       urlInfo.data.usesImport = true;
     }
     const [reference] = context.referenceUtils.found({
+      node: jsMention.node,
       type: jsMention.type,
       subtype: jsMention.subtype,
       expectedType: jsMention.expectedType,
@@ -12010,7 +12084,7 @@ const jsenvPluginUrlAnalysis = ({
       // so that urls must be kept intact
       // However for js import specifiers they have a different meaning and we want
       // to resolve them (https://nodejs.org/api/packages.html#imports for instance)
-      reference.type !== "js_import_export") {
+      reference.type !== "js_import") {
         reference.shouldHandle = false;
         return;
       }
@@ -12805,6 +12879,27 @@ const generateExpressionAst = (expression, options) => {
   } = babelParser;
   const ast = parseExpression(expression, options);
   return ast;
+};
+
+const babelPluginTransformImportMetaResolve = () => {
+  return {
+    name: "transform-import-meta-resolve",
+    visitor: {
+      Program: programPath => {
+        programPath.traverse({
+          MemberExpression: path => {
+            const node = path.node;
+            if (node.object.type === "MetaProperty" && node.object.property.name === "meta" && node.property.name === "resolve") {
+              const firstArg = node.arguments[0];
+              if (firstArg && firstArg.type === "StringLiteral") {
+                path.replaceWithSourceString(`new URL(${firstArg.value}, document.currentScript.src).href`);
+              }
+            }
+          }
+        });
+      }
+    }
+  };
 };
 
 // eslint-disable-next-line import/no-default-export
@@ -16371,7 +16466,7 @@ const convertJsModuleToJsClassic = async ({
       asyncAwait: false,
       // already handled + we might not needs it at all
       topLevelAwait: "simple"
-    }], babelPluginTransformImportMetaUrl, requireFromJsenv("@babel/plugin-transform-modules-umd")])],
+    }], babelPluginTransformImportMetaUrl, babelPluginTransformImportMetaResolve, requireFromJsenv("@babel/plugin-transform-modules-umd")])],
     urlInfo: jsModuleUrlInfo
   });
   let sourcemap = jsModuleUrlInfo.sourcemap;
@@ -16418,10 +16513,10 @@ const jsenvPluginAsJsClassicConversion = ({
   generateJsClassicFilename
 }) => {
   const isReferencingJsModule = reference => {
-    if (reference.type === "js_import_export" || reference.subtype === "system_register_arg" || reference.subtype === "system_import_arg") {
+    if (reference.type === "js_import" || reference.subtype === "system_register_arg" || reference.subtype === "system_import_arg") {
       return true;
     }
-    if (reference.type === "js_url_specifier" && reference.expectedType === "js_module") {
+    if (reference.type === "js_url" && reference.expectedType === "js_module") {
       return true;
     }
     return false;
@@ -16485,7 +16580,7 @@ const jsenvPluginAsJsClassicConversion = ({
       });
       if (context.scenarios.dev) {
         context.referenceUtils.found({
-          type: "js_import_export",
+          type: "js_import",
           subtype: jsModuleReference.subtype,
           specifier: jsModuleReference.url,
           expectedType: "js_module"
@@ -16554,7 +16649,7 @@ const jsenvPluginAsJsClassicHtml = ({
         }
         return null;
       },
-      js_url_specifier: reference => {
+      js_url: reference => {
         if (shouldTransformScriptTypeModule && reference.expectedType === "js_module") {
           return turnIntoJsClassicProxy(reference);
         }
@@ -16744,7 +16839,7 @@ const jsenvPluginAsJsClassicWorkers = () => {
     name: "jsenv:as_js_classic_workers",
     appliesDuring: "*",
     redirectUrl: {
-      js_url_specifier: (reference, context) => {
+      js_url: (reference, context) => {
         if (reference.expectedType !== "js_module") {
           return null;
         }
@@ -17084,7 +17179,7 @@ const rollupPluginJsenv = ({
       const urlInfo = urlGraph.getUrlInfo(fileUrl);
       return {
         code: urlInfo.content,
-        map: urlInfo.sourcemap ? sourcemapConverter.toFilePaths(urlInfo.sourcemap) : null
+        map: (sourcemaps === "file" || sourcemaps === "inline") && urlInfo.sourcemap ? sourcemapConverter.toFilePaths(urlInfo.sourcemap) : null
       };
     }
   };
@@ -17255,7 +17350,7 @@ const jsenvPluginAsJsClassicLibrary = ({
       if (context.scenarios.dev) {
         jsModuleBundledUrlInfo.sourceUrls.forEach(sourceUrl => {
           context.referenceUtils.inject({
-            type: "js_url_specifier",
+            type: "js_url",
             specifier: sourceUrl,
             isImplicit: true
           });
@@ -17971,7 +18066,7 @@ const jsenvPluginImportmap = () => {
     name: "jsenv:importmap",
     appliesDuring: "*",
     resolveUrl: {
-      js_import_export: reference => {
+      js_import: reference => {
         if (!finalImportmap) {
           return null;
         }
@@ -19161,7 +19256,6 @@ const addRelationshipWithPackageJson = ({
  * and the rest uses the web standard url resolution (new URL):
  * - "http_request"
  * - "entry_point"
- * - "js_import_export"
  * - "link_href"
  * - "script_src"
  * - "a_href"
@@ -19174,9 +19268,10 @@ const addRelationshipWithPackageJson = ({
  * - "use_href"
  * - "css_@import"
  * - "css_url"
- * - "sourcemap_comment"
- * - "js_url_specifier"
+ * - "js_import"
+ * - "js_url"
  * - "js_inline_content"
+ * - "sourcemap_comment"
  * - "webmanifest_icon_src"
  * - "package_json"
  */
@@ -19764,7 +19859,7 @@ const jsenvPluginSupervisor = ({
           }
         });
         const [scriptTypeModuleSupervisorFileReference] = context.referenceUtils.inject({
-          type: "js_import_export",
+          type: "js_import",
           expectedType: "js_module",
           specifier: scriptTypeModuleSupervisorFileUrl
         });
@@ -20187,7 +20282,7 @@ const jsenvPluginImportAssertions = ({
       }
     },
     redirectUrl: {
-      js_import_export: (reference, context) => {
+      js_import: (reference, context) => {
         if (!reference.assert) {
           return null;
         }
@@ -20228,7 +20323,7 @@ const jsenvPluginAsModules = () => {
       });
       if (context.scenarios.dev) {
         context.referenceUtils.found({
-          type: "js_import_export",
+          type: "js_import",
           subtype: jsonReference.subtype,
           specifier: jsonReference.url,
           expectedType: "js_module"
@@ -20268,7 +20363,7 @@ const jsenvPluginAsModules = () => {
       });
       if (context.scenarios.dev) {
         context.referenceUtils.found({
-          type: "js_import_export",
+          type: "js_import",
           subtype: cssReference.subtype,
           specifier: cssReference.url,
           expectedType: "js_module"
@@ -20315,7 +20410,7 @@ const jsenvPluginAsModules = () => {
       });
       if (context.scenarios.dev) {
         context.referenceUtils.found({
-          type: "js_import_export",
+          type: "js_import",
           subtype: textReference.subtype,
           specifier: textReference.url,
           expectedType: "js_module"
@@ -20343,6 +20438,121 @@ export default inlineContent.text`,
     }
   };
   return [asJsonModule, asCssModule, asTextModule];
+};
+
+const convertJsClassicToJsModule = async ({
+  urlInfo,
+  jsClassicUrlInfo
+}) => {
+  const {
+    code,
+    map
+  } = await applyBabelPlugins({
+    babelPlugins: [[babelPluginReplaceTopLevelThis, {
+      isWebWorker: isWebWorkerUrlInfo(urlInfo)
+    }]],
+    urlInfo: jsClassicUrlInfo
+  });
+  const sourcemap = await composeTwoSourcemaps(jsClassicUrlInfo.sourcemap, map);
+  return {
+    content: code,
+    sourcemap
+  };
+};
+const babelPluginReplaceTopLevelThis = () => {
+  return {
+    name: "replace-top-level-this",
+    visitor: {
+      Program: (programPath, state) => {
+        const {
+          isWebWorker
+        } = state.opts;
+        programPath.traverse({
+          ThisExpression: path => {
+            const closestFunction = path.getFunctionParent();
+            if (!closestFunction) {
+              path.replaceWithSourceString(isWebWorker ? "self" : "window");
+            }
+          }
+        });
+      }
+    }
+  };
+};
+
+/*
+ * Js modules might not be able to import js meant to be loaded by <script>
+ * Among other things this happens for a top level this:
+ * - With <script> this is window
+ * - With an import this is undefined
+ * Example of this: https://github.com/video-dev/hls.js/issues/2911
+ *
+ * This plugin fix this issue by rewriting top level this into window
+ * and can be used like this for instance import("hls?as_js_module")
+ */
+const jsenvPluginAsJsModule = () => {
+  return {
+    name: "jsenv:as_js_module",
+    appliesDuring: "*",
+    redirectUrl: reference => {
+      if (reference.searchParams.has("as_js_module")) {
+        reference.expectedType = "js_module";
+        const filename = urlToFilename$1(reference.url);
+        const [basename] = splitFileExtension$1(filename);
+        reference.filename = `${basename}.mjs`;
+      }
+    },
+    fetchUrlContent: async (urlInfo, context) => {
+      const [jsClassicReference, jsClassicUrlInfo] = context.getWithoutSearchParam({
+        urlInfo,
+        context,
+        searchParam: "as_js_module",
+        // override the expectedType to "js_classic"
+        // because when there is ?as_js_module it means the underlying resource
+        // is js_classic
+        expectedType: "js_classic"
+      });
+      if (!jsClassicReference) {
+        return null;
+      }
+      await context.fetchUrlContent(jsClassicUrlInfo, {
+        reference: jsClassicReference
+      });
+      if (context.scenarios.dev) {
+        context.referenceUtils.found({
+          type: "js_import",
+          subtype: jsClassicReference.subtype,
+          specifier: jsClassicReference.url,
+          expectedType: "js_classic"
+        });
+      } else if (context.scenarios.build && jsClassicUrlInfo.dependents.size === 0) {
+        context.urlGraph.deleteUrlInfo(jsClassicUrlInfo.url);
+      }
+      const {
+        content,
+        sourcemap
+      } = await convertJsClassicToJsModule({
+        urlInfo,
+        jsClassicUrlInfo
+      });
+      return {
+        content,
+        contentType: "text/javascript",
+        type: "js_module",
+        originalUrl: jsClassicUrlInfo.originalUrl,
+        originalContent: jsClassicUrlInfo.originalContent,
+        sourcemap,
+        data: jsClassicUrlInfo.data
+      };
+    }
+  };
+};
+const splitFileExtension$1 = filename => {
+  const dotLastIndex = filename.lastIndexOf(".");
+  if (dotLastIndex === -1) {
+    return [filename, ""];
+  }
+  return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)];
 };
 
 // https://github.com/istanbuljs/babel-plugin-istanbul/blob/321740f7b25d803f881466ea819d870f7ed6a254/src/index.js
@@ -21166,7 +21376,7 @@ const jsenvPluginBabel = ({
     const isSupported = feature => RUNTIME_COMPAT.isSupported(context.clientRuntimeCompat, feature);
     const getImportSpecifier = clientFileUrl => {
       const [reference] = context.referenceUtils.inject({
-        type: "js_import_export",
+        type: "js_import",
         expectedType: "js_module",
         specifier: clientFileUrl
       });
@@ -21248,16 +21458,19 @@ const jsenvPluginTopLevelAwait = () => {
   return {
     name: "jsenv:top_level_await",
     appliesDuring: "*",
+    init: context => {
+      if (context.isSupportedOnCurrentClients("top_level_await")) {
+        return false;
+      }
+      // keep it untouched, systemjs will handle it
+      const willTransformJsModules = !context.isSupportedOnCurrentClients("script_type_module") || !context.isSupportedOnCurrentClients("import_dynamic") || !context.isSupportedOnCurrentClients("import_meta");
+      if (willTransformJsModules) {
+        return false;
+      }
+      return true;
+    },
     transformUrlContent: {
-      js_module: async (urlInfo, context) => {
-        if (context.isSupportedOnCurrentClients("top_level_await")) {
-          return null;
-        }
-        const willTransformJsModules = !context.isSupportedOnCurrentClients("script_type_module") || !context.isSupportedOnCurrentClients("import_dynamic") || !context.isSupportedOnCurrentClients("import_meta");
-        // keep it untouched, systemjs will handle it
-        if (willTransformJsModules) {
-          return null;
-        }
+      js_module: async urlInfo => {
         const usesTLA = await usesTopLevelAwait(urlInfo);
         if (!usesTLA) {
           return null;
@@ -21275,7 +21488,7 @@ const jsenvPluginTopLevelAwait = () => {
             // externalHelpers: true,
             // externalHelpersPath: JSON.parse(
             //   context.referenceUtils.inject({
-            //     type: "js_import_export",
+            //     type: "js_import",
             //     expectedType: "js_module",
             //     specifier:
             //       "babel-plugin-transform-async-to-promises/helpers.mjs",
@@ -21325,6 +21538,51 @@ const babelPluginMetadataUsesTopLevelAwait = () => {
   };
 };
 
+const jsenvPluginImportMetaResolve = () => {
+  return {
+    name: "jsenv:import_meta_resolve",
+    appliesDuring: "*",
+    init: context => {
+      if (context.isSupportedOnCurrentClients("import_meta_resolve")) {
+        return false;
+      }
+      const willTransformJsModules = !context.isSupportedOnCurrentClients("script_type_module") || !context.isSupportedOnCurrentClients("import_dynamic") || !context.isSupportedOnCurrentClients("import_meta");
+      // keep it untouched, systemjs will handle it
+      if (willTransformJsModules) {
+        return false;
+      }
+      return true;
+    },
+    transformUrlContent: {
+      js_module: async (urlInfo, context) => {
+        const magicSource = createMagicSource(urlInfo.content);
+        context.referenceUtils._references.forEach(ref => {
+          if (ref.subtype === "import_meta_resolve") {
+            const originalSpecifierLength = Buffer.byteLength(ref.specifier);
+            const specifierLength = Buffer.byteLength(ref.generatedSpecifier.slice(1, -1) // remove `"` around
+            );
+
+            const specifierLengthDiff = specifierLength - originalSpecifierLength;
+            const end = ref.node.end + specifierLengthDiff;
+            magicSource.replace({
+              start: ref.node.start,
+              end,
+              replacement: `new URL(${ref.generatedSpecifier}, import.meta.url).href`
+            });
+            const currentLengthBeforeSpecifier = "import.meta.resolve(".length;
+            const newLengthBeforeSpecifier = "new URL(".length;
+            const lengthDiff = currentLengthBeforeSpecifier - newLengthBeforeSpecifier;
+            ref.specifierColumn -= lengthDiff;
+            ref.specifierStart -= lengthDiff;
+            ref.specifierEnd = ref.specifierStart + Buffer.byteLength(ref.generatedSpecifier);
+          }
+        });
+        return magicSource.toContentAndSourcemap();
+      }
+    }
+  };
+};
+
 /*
  * Transforms code to make it compatible with browser that would not be able to
  * run it otherwise. For instance:
@@ -21343,13 +21601,14 @@ const jsenvPluginTranspilation = ({
   jsClassicFallback = true,
   systemJsInjection = true,
   topLevelAwait = true,
+  importMetaResolve = true,
   babelHelpersAsImport = true,
   getCustomBabelPlugins
 }) => {
   if (importAssertions === true) {
     importAssertions = {};
   }
-  return [...(importAssertions ? [jsenvPluginImportAssertions(importAssertions)] : []),
+  return [...(importMetaResolve ? [jsenvPluginImportMetaResolve()] : []), ...(importAssertions ? [jsenvPluginImportAssertions(importAssertions)] : []),
   // babel also so that rollup can bundle babel helpers for instance
   jsenvPluginBabel({
     topLevelAwait,
@@ -21359,7 +21618,7 @@ const jsenvPluginTranspilation = ({
     jsClassicLibrary,
     jsClassicFallback,
     systemJsInjection
-  }),
+  }), jsenvPluginAsJsModule(),
   // topLevelAwait must come after jsenvPluginAsJsClassic because it's related to the module format
   // so we want to wait to know the module format before transforming things related to top level await
   ...(topLevelAwait ? [jsenvPluginTopLevelAwait()] : []), ...(css ? [jsenvPluginCssParcel()] : [])];
@@ -22074,7 +22333,7 @@ const removeImportMetaHots = (urlInfo, importMetaHotPaths) => {
 const injectImportMetaHot = (urlInfo, context, importMetaHotClientFileUrl) => {
   const [importMetaHotClientFileReference] = context.referenceUtils.inject({
     parentUrl: urlInfo.url,
-    type: "js_import_export",
+    type: "js_import",
     expectedType: "js_module",
     specifier: importMetaHotClientFileUrl
   });
@@ -23282,6 +23541,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           const generatedUrlObject = new URL(reference.generatedUrl);
           generatedUrlObject.searchParams.delete("as_js_classic");
           generatedUrlObject.searchParams.delete("as_js_classic_library");
+          generatedUrlObject.searchParams.delete("as_js_module");
           generatedUrlObject.searchParams.delete("as_json_module");
           generatedUrlObject.searchParams.delete("as_css_module");
           generatedUrlObject.searchParams.delete("as_text_module");
@@ -23447,7 +23707,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   if (dependencyUrlInfo.type === "js_module") {
                     // bundle inline script type module deps
                     dependencyUrlInfo.references.forEach(inlineScriptRef => {
-                      if (inlineScriptRef.type === "js_import_export") {
+                      if (inlineScriptRef.type === "js_import") {
                         const inlineUrlInfo = rawGraph.getUrlInfo(inlineScriptRef.url);
                         addToBundlerIfAny(inlineUrlInfo);
                       }
@@ -23476,7 +23736,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           // For instance we will bundle service worker/workers detected like this
           if (rawUrlInfo.type === "js_module") {
             rawUrlInfo.references.forEach(reference => {
-              if (reference.type !== "js_url_specifier") {
+              if (reference.type !== "js_url") {
                 return;
               }
               const referencedUrlInfo = rawGraph.getUrlInfo(reference.url);
@@ -23489,7 +23749,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 const dependentUrlInfo = rawGraph.getUrlInfo(dependent);
                 for (const reference of dependentUrlInfo.references) {
                   if (reference.url === referencedUrlInfo.url) {
-                    willAlreadyBeBundled = reference.type === "js_import_export" && reference.subtype === "import_dynamic" || reference.type === "script_src";
+                    willAlreadyBeBundled = reference.type === "js_import" && reference.subtype === "import_dynamic" || reference.type === "script_src";
                   }
                 }
               }
@@ -23681,7 +23941,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     // __v__() makes versioning dynamic: no need to take into account
                     return null;
                   }
-                  if (reference.type === "js_url_specifier" || reference.subtype === "import_dynamic") {
+                  if (reference.type === "js_url" || reference.subtype === "import_dynamic") {
                     // __v__() makes versioning dynamic: no need to take into account
                     return null;
                   }
@@ -23712,6 +23972,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               // this information is already hold into ".nomodule"
               buildUrlObject.searchParams.delete("as_js_classic");
               buildUrlObject.searchParams.delete("as_js_classic_library");
+              buildUrlObject.searchParams.delete("as_js_module");
               buildUrlObject.searchParams.delete("as_json_module");
               buildUrlObject.searchParams.delete("as_css_module");
               buildUrlObject.searchParams.delete("as_text_module");
@@ -23802,7 +24063,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   usedVersionMappings.add(reference.specifier);
                   return () => `${parentUrlInfo.jsQuote}+__v__(${JSON.stringify(reference.specifier)})+${parentUrlInfo.jsQuote}`;
                 }
-                if (reference.type === "js_url_specifier" || reference.subtype === "import_dynamic") {
+                if (reference.type === "js_url" || reference.subtype === "import_dynamic" || reference.subtype === "import_meta_resolve") {
                   usedVersionMappings.add(reference.specifier);
                   return () => `__v__(${JSON.stringify(reference.specifier)})`;
                 }
