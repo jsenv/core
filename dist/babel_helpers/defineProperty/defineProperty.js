@@ -1,4 +1,6 @@
+import toPropertyKey from "../toPropertyKey/toPropertyKey.js";
 export default ((obj, key, value) => {
+  key = toPropertyKey(key);
   // Shortcircuit the slow defineProperty path when possible.
   // We are trying to avoid issues where setters defined on the
   // prototype cause side effects under the fast path of simple

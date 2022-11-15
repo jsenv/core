@@ -1,3 +1,7 @@
+# 29.8.1
+
+- Update deps
+
 # 29.8.0
 
 - Support import.meta.resolve during dev and build

@@ -1891,7 +1891,7 @@ const EventTarget = {
    * Register an event listener.
    *
    * @param {String} type A string representing the event type to listen for
-   * @param {Function} listener The listener to add
+   * @param {(Function|Object)} handler The listener to add
    * @param {Object} [options] An options object specifies characteristics about
    *     the event listener
    * @param {Boolean} [options.once=false] A `Boolean` indicating that the
@@ -1899,7 +1899,12 @@ const EventTarget = {
    *     the listener would be automatically removed when invoked.
    * @public
    */
-  addEventListener(type, listener, options = {}) {
+  addEventListener(type, handler, options = {}) {
+    for (const listener of this.listeners(type)) {
+      if (!options[kForOnEventAttribute$1] && listener[kListener$1] === handler && !listener[kForOnEventAttribute$1]) {
+        return;
+      }
+    }
     let wrapper;
     if (type === 'message') {
       wrapper = function onMessage(data, isBinary) {
@@ -1907,7 +1912,7 @@ const EventTarget = {
           data: isBinary ? data : data.toString()
         });
         event[kTarget] = this;
-        listener.call(this, event);
+        callListener(handler, this, event);
       };
     } else if (type === 'close') {
       wrapper = function onClose(code, message) {
@@ -1917,7 +1922,7 @@ const EventTarget = {
           wasClean: this._closeFrameReceived && this._closeFrameSent
         });
         event[kTarget] = this;
-        listener.call(this, event);
+        callListener(handler, this, event);
       };
     } else if (type === 'error') {
       wrapper = function onError(error) {
@@ -1926,19 +1931,19 @@ const EventTarget = {
           message: error.message
         });
         event[kTarget] = this;
-        listener.call(this, event);
+        callListener(handler, this, event);
       };
     } else if (type === 'open') {
       wrapper = function onOpen() {
         const event = new Event('open');
         event[kTarget] = this;
-        listener.call(this, event);
+        callListener(handler, this, event);
       };
     } else {
       return;
     }
     wrapper[kForOnEventAttribute$1] = !!options[kForOnEventAttribute$1];
-    wrapper[kListener$1] = listener;
+    wrapper[kListener$1] = handler;
     if (options.once) {
       this.once(type, wrapper);
     } else {
@@ -1949,7 +1954,7 @@ const EventTarget = {
    * Remove an event listener.
    *
    * @param {String} type A string representing the event type to remove
-   * @param {Function} handler The listener to remove
+   * @param {(Function|Object)} handler The listener to remove
    * @public
    */
   removeEventListener(type, handler) {
@@ -1968,6 +1973,22 @@ var eventTarget = {
   EventTarget,
   MessageEvent
 };
+
+/**
+ * Call an event listener
+ *
+ * @param {(Function|Object)} listener The listener to call
+ * @param {*} thisArg The value to use as `this`` when calling the listener
+ * @param {Event} event The event to pass to the listener
+ * @private
+ */
+function callListener(listener, thisArg, event) {
+  if (typeof listener === 'object' && listener.handleEvent) {
+    listener.handleEvent.call(listener, event);
+  } else {
+    listener.call(thisArg, event);
+  }
+}
 const {
   tokenChars: tokenChars$1
 } = validation.exports;
