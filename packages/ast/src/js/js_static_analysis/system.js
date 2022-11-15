@@ -72,3 +72,35 @@ export const analyzeSystemImportCall = (node, { onUrl }) => {
     })
   }
 }
+
+export const isSystemResolveCall = (node) => {
+  const callee = node.callee
+  return (
+    callee.type === "MemberExpression" &&
+    callee.object.type === "MemberExpression" &&
+    callee.object.object.type === "Identifier" &&
+    // because of minification we can't assume _context.
+    // so anything matching "*.meta.resolve()"
+    // will be assumed to be the equivalent to "meta.resolve()"
+    // callee.object.object.name === "_context" &&
+    callee.object.property.type === "Identifier" &&
+    callee.object.property.name === "meta" &&
+    callee.property.type === "Identifier" &&
+    callee.property.name === "resolve"
+  )
+}
+export const analyzeSystemResolveCall = (node, { onUrl }) => {
+  const firstArgNode = node.arguments[0]
+  if (isStringLiteralNode(firstArgNode)) {
+    const specifierNode = firstArgNode
+    onUrl({
+      type: "js_url",
+      subtype: "system_resolve_arg",
+      specifier: specifierNode.value,
+      specifierStart: specifierNode.start,
+      specifierEnd: specifierNode.end,
+      specifierLine: specifierNode.loc.start.line,
+      specifierColumn: specifierNode.loc.start.column,
+    })
+  }
+}

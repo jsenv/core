@@ -4,7 +4,7 @@ import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
 import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
 
-const test = async (params) => {
+const test = async ({ expectedFilename = "js/foo.js", ...rest }) => {
   await build({
     logLevel: "warn",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
@@ -14,7 +14,8 @@ const test = async (params) => {
     },
     minification: false,
     versioning: false,
-    ...params,
+    // writeGeneratedFiles: true,
+    ...rest,
   })
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
@@ -29,16 +30,23 @@ const test = async (params) => {
   })
   const actual = returnValue
   const expected = {
-    importMetaResolveReturnValue: `${server.origin}/js/foo.js`,
-    __TEST__: `${server.origin}/js/foo.js`,
+    importMetaResolveReturnValue: `${server.origin}/${expectedFilename}`,
+    __TEST__: `${server.origin}/${expectedFilename}`,
   }
   assert({ actual, expected })
 }
 
-await test()
-// import.meta.resolve supported
+// await test()
+// script module not supported
 await test({
   runtimeCompat: {
-    chrome: "107",
+    chrome: "60",
   },
+  expectedFilename: "js/foo.nomodule.js",
 })
+// import.meta.resolve supported
+// await test({
+//   runtimeCompat: {
+//     chrome: "107",
+//   },
+// })

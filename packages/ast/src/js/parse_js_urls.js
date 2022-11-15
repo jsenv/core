@@ -32,6 +32,8 @@ import {
   analyzeSystemRegisterCall,
   isSystemImportCall,
   analyzeSystemImportCall,
+  isSystemResolveCall,
+  analyzeSystemResolveCall,
 } from "./js_static_analysis/system.js"
 
 export const parseJsUrls = async ({
@@ -88,6 +90,12 @@ export const parseJsUrls = async ({
       }
       if (!isJsModule && isSystemImportCall(node)) {
         analyzeSystemImportCall(node, {
+          onUrl,
+        })
+        return
+      }
+      if (!isJsModule && isSystemResolveCall(node)) {
+        analyzeSystemResolveCall(node, {
           onUrl,
         })
         return
