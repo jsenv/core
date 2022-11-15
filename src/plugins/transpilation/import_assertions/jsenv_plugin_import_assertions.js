@@ -57,7 +57,7 @@ export const jsenvPluginImportAssertions = ({
       //     We would have to tell rollup to ignore import with assertion
       //   - means rollup can bundle more js file together
       //   - means url versioning can work for css inlined in js
-      if (context.scenarios.build) {
+      if (context.build) {
         transpilations.json = true
         transpilations.css = true
         transpilations.text = true
@@ -110,14 +110,14 @@ const jsenvPluginAsModules = () => {
       await context.fetchUrlContent(jsonUrlInfo, {
         reference: jsonReference,
       })
-      if (context.scenarios.dev) {
+      if (context.dev) {
         context.referenceUtils.found({
           type: "js_import",
           subtype: jsonReference.subtype,
           specifier: jsonReference.url,
           expectedType: "js_module",
         })
-      } else if (context.scenarios.build && jsonUrlInfo.dependents.size === 0) {
+      } else if (context.build && jsonUrlInfo.dependents.size === 0) {
         context.urlGraph.deleteUrlInfo(jsonUrlInfo.url)
       }
       const jsonText = JSON.stringify(jsonUrlInfo.content.trim())
@@ -151,14 +151,14 @@ const jsenvPluginAsModules = () => {
       await context.fetchUrlContent(cssUrlInfo, {
         reference: cssReference,
       })
-      if (context.scenarios.dev) {
+      if (context.dev) {
         context.referenceUtils.found({
           type: "js_import",
           subtype: cssReference.subtype,
           specifier: cssReference.url,
           expectedType: "js_module",
         })
-      } else if (context.scenarios.build && cssUrlInfo.dependents.size === 0) {
+      } else if (context.build && cssUrlInfo.dependents.size === 0) {
         context.urlGraph.deleteUrlInfo(cssUrlInfo.url)
       }
       const cssText = JS_QUOTES.escapeSpecialChars(cssUrlInfo.content, {
@@ -201,14 +201,14 @@ const jsenvPluginAsModules = () => {
       await context.fetchUrlContent(textUrlInfo, {
         reference: textReference,
       })
-      if (context.scenarios.dev) {
+      if (context.dev) {
         context.referenceUtils.found({
           type: "js_import",
           subtype: textReference.subtype,
           specifier: textReference.url,
           expectedType: "js_module",
         })
-      } else if (context.scenarios.build && textUrlInfo.dependents.size === 0) {
+      } else if (context.build && textUrlInfo.dependents.size === 0) {
         context.urlGraph.deleteUrlInfo(textUrlInfo.url)
       }
       const textPlain = JS_QUOTES.escapeSpecialChars(urlInfo.content, {

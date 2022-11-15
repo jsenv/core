@@ -38,7 +38,7 @@ export const createNodeEsmResolver = ({ runtimeCompat, packageConditions }) => {
       parentUrl,
       specifier: reference.specifier,
     })
-    if (context.scenarios.dev) {
+    if (context.dev) {
       const dependsOnPackageJson =
         type !== "relative_specifier" &&
         type !== "absolute_specifier" &&
@@ -57,7 +57,7 @@ export const createNodeEsmResolver = ({ runtimeCompat, packageConditions }) => {
         })
       }
     }
-    if (context.scenarios.dev) {
+    if (context.dev) {
       // without this check a file inside a project without package.json
       // could be considered as a node module if there is a ancestor package.json
       // but we want to version only node modules

@@ -28,14 +28,15 @@ export const createKitchen = ({
   logLevel,
 
   rootDirectoryUrl,
-  scenarios,
+  dev = false,
+  build = false,
   runtimeCompat,
   // during dev/test clientRuntimeCompat is a single runtime
   // during build clientRuntimeCompat is runtimeCompat
   clientRuntimeCompat = runtimeCompat,
   urlGraph,
   plugins,
-  sourcemaps = scenarios.dev ? "inline" : "none", // "programmatic" and "file" also allowed
+  sourcemaps = dev ? "inline" : "none", // "programmatic" and "file" also allowed
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
   sourcemapsSourcesRelative,
@@ -48,7 +49,8 @@ export const createKitchen = ({
     logger,
     rootDirectoryUrl,
     urlGraph,
-    scenarios,
+    dev,
+    build,
     runtimeCompat,
     clientRuntimeCompat,
     isSupportedOnCurrentClients: (feature) => {
@@ -828,7 +830,7 @@ const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
       column: reference.specifierColumn,
     }
     urlInfo.contentType = reference.contentType
-    urlInfo.originalContent = context.scenarios.build
+    urlInfo.originalContent = context.build
       ? urlInfo.originalContent === undefined
         ? reference.content
         : urlInfo.originalContent

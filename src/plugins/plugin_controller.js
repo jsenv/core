@@ -82,17 +82,17 @@ export const createPluginController = (kitchenContext) => {
           `"appliesDuring" must be "dev" or "build", got ${appliesDuring}`,
         )
       }
-      if (kitchenContext.scenarios[appliesDuring]) {
+      if (kitchenContext[appliesDuring]) {
         return true
       }
       return false
     }
     if (typeof appliesDuring === "object") {
       for (const key of Object.keys(appliesDuring)) {
-        if (!appliesDuring[key] && kitchenContext.scenarios[key]) {
+        if (!appliesDuring[key] && kitchenContext[key]) {
           return false
         }
-        if (appliesDuring[key] && kitchenContext.scenarios[key]) {
+        if (appliesDuring[key] && kitchenContext[key]) {
           return true
         }
       }

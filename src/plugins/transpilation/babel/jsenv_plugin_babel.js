@@ -33,7 +33,7 @@ export const jsenvPluginBabel = ({
       isJsModule,
       getImportSpecifier,
     })
-    if (context.scenarios.dev) {
+    if (context.dev) {
       const requestHeaders = context.request.headers
       if (requestHeaders["x-coverage-instanbul"]) {
         const coverageConfig = JSON.parse(

@@ -73,7 +73,7 @@ const jsenvPluginJsxAndRefresh = ({
           associations,
         })
         const jsxEnabled = urlMeta.jsxTranspilation
-        const refreshEnabled = context.scenarios.dev
+        const refreshEnabled = context.dev
           ? urlMeta.refreshInstrumentation &&
             !urlInfo.content.includes("import.meta.hot.decline()")
           : false
@@ -81,7 +81,7 @@ const jsenvPluginJsxAndRefresh = ({
           ...(jsxEnabled
             ? [
                 [
-                  context.scenarios.dev
+                  context.dev
                     ? "@babel/plugin-transform-react-jsx-development"
                     : "@babel/plugin-transform-react-jsx",
                   {

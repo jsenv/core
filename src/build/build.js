@@ -229,7 +229,7 @@ build ${entryPointKeys.length} entry points`)
       logLevel,
       rootDirectoryUrl,
       urlGraph: rawGraph,
-      scenarios: { build: true },
+      build: true,
       runtimeCompat,
       plugins: [
         ...plugins,
@@ -302,7 +302,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       logLevel,
       rootDirectoryUrl: buildDirectoryUrl,
       urlGraph: finalGraph,
-      scenarios: { build: true },
+      build: true,
       runtimeCompat,
       plugins: [
         urlAnalysisPlugin,
@@ -1013,7 +1013,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             logLevel: logger.level,
             rootDirectoryUrl: buildDirectoryUrl,
             urlGraph: finalGraph,
-            scenarios: { build: true },
+            build: true,
             runtimeCompat,
             plugins: [
               urlAnalysisPlugin,

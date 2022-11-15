@@ -69,14 +69,14 @@ export const jsenvPluginPreact = ({
         if (!preactDevtools) {
           return null
         }
-        if (context.scenarios.build && preactDevtools !== "dev_and_build") {
+        if (context.build && preactDevtools !== "dev_and_build") {
           return null
         }
         const htmlAst = parseHtmlString(urlInfo.content)
         const [preactDevtoolsReference] = context.referenceUtils.inject({
           type: "js_import",
           expectedType: "js_module",
-          specifier: context.scenarios.dev ? "preact/debug" : "preact/devtools",
+          specifier: context.dev ? "preact/debug" : "preact/devtools",
         })
         injectScriptNodeAsEarlyAsPossible(
           htmlAst,
@@ -98,12 +98,12 @@ import ${preactDevtoolsReference.generatedSpecifier}
           associations,
         })
         const jsxEnabled = urlMeta.jsxTranspilation
-        const refreshEnabled = context.scenarios.dev
+        const refreshEnabled = context.dev
           ? urlMeta.refreshInstrumentation &&
             !urlInfo.content.includes("import.meta.hot.decline()")
           : false
         const hookNamesEnabled =
-          context.scenarios.dev &&
+          context.dev &&
           urlMeta.hookNamesInstrumentation &&
           (urlInfo.content.includes("useState") ||
             urlInfo.content.includes("useReducer") ||
@@ -114,7 +114,7 @@ import ${preactDevtoolsReference.generatedSpecifier}
             ...(jsxEnabled
               ? [
                   [
-                    context.scenarios.dev
+                    context.dev
                       ? "@babel/plugin-transform-react-jsx-development"
                       : "@babel/plugin-transform-react-jsx",
                     {

@@ -38,7 +38,7 @@ export const jsenvPluginRibbon = ({
           specifier: ribbonClientFileUrl.href,
         })
         const paramsJson = JSON.stringify(
-          { text: context.scenarios.dev ? "DEV" : "BUILD" },
+          { text: context.dev ? "DEV" : "BUILD" },
           null,
           "  ",
         )

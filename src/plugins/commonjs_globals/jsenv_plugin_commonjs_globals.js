@@ -22,7 +22,7 @@ export const jsenvPluginCommonJsGlobals = () => {
     const isJsModule = urlInfo.type === "js_module"
     const replaceMap = {
       "process.env.NODE_ENV": `("${
-        context.scenarios.dev ? "development" : "production"
+        context.dev ? "development" : "production"
       }")`,
       "global": "globalThis",
       "__filename": isJsModule

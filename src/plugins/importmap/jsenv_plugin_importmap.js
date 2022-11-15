@@ -203,7 +203,7 @@ export const jsenvPluginImportmap = () => {
         // by "formatReferencedUrl" making the importmap presence useless.
         // In dev/test we keep importmap into the HTML to see it even if useless
         // Duing build we get rid of it
-        if (context.scenarios.build) {
+        if (context.build) {
           removeHtmlNode(importmap)
         }
         return {

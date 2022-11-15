@@ -80,7 +80,7 @@ export const jsenvPluginCommonJs = ({
         rootDirectoryUrl: context.rootDirectoryUrl,
         sourceFileUrl: commonJsUrlInfo.url,
         browsers: !nodeRuntimeEnabled,
-        processEnvNodeEnv: context.scenarios.dev ? "development" : "production",
+        processEnvNodeEnv: context.dev ? "development" : "production",
         ...urlInfo.data.commonjs,
       })
       if (isValid) {

@@ -42,17 +42,14 @@ export const jsenvPluginAsJsModule = () => {
       await context.fetchUrlContent(jsClassicUrlInfo, {
         reference: jsClassicReference,
       })
-      if (context.scenarios.dev) {
+      if (context.dev) {
         context.referenceUtils.found({
           type: "js_import",
           subtype: jsClassicReference.subtype,
           specifier: jsClassicReference.url,
           expectedType: "js_classic",
         })
-      } else if (
-        context.scenarios.build &&
-        jsClassicUrlInfo.dependents.size === 0
-      ) {
+      } else if (context.build && jsClassicUrlInfo.dependents.size === 0) {
         context.urlGraph.deleteUrlInfo(jsClassicUrlInfo.url)
       }
       const { content, sourcemap } = await convertJsClassicToJsModule({
