@@ -14,7 +14,7 @@ export const analyzeNewUrlCall = (node, { isJsModule, onUrl }) => {
     if (urlType === "StringLiteral") {
       const specifierNode = firstArgNode
       onUrl({
-        type: "js_url_specifier",
+        type: "js_url",
         subtype: "new_url_first_arg",
         specifier: specifierNode.value,
         specifierStart: specifierNode.start,
@@ -43,7 +43,7 @@ export const analyzeNewUrlCall = (node, { isJsModule, onUrl }) => {
         // we can understand the first argument
         const specifierNode = firstArgNode
         onUrl({
-          type: "js_url_specifier",
+          type: "js_url",
           subtype: "new_url_first_arg",
           specifier: specifierNode.value,
           specifierStart: specifierNode.start,
@@ -58,7 +58,7 @@ export const analyzeNewUrlCall = (node, { isJsModule, onUrl }) => {
       if (baseUrlType === "StringLiteral") {
         const specifierNode = secondArgNode
         onUrl({
-          type: "js_url_specifier",
+          type: "js_url",
           subtype: "new_url_second_arg",
           specifier: specifierNode.value,
           specifierStart: specifierNode.start,

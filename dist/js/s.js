@@ -557,8 +557,8 @@ function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function"
     var createMeta = function createMeta(url) {
       return {
         url: url,
-        resolve: function resolve(id, parentUrl) {
-          return resolveUrl(id, parentUrl);
+        resolve: function resolve(id) {
+          return resolveUrl(id, url);
         }
       };
     };

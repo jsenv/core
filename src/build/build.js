@@ -229,7 +229,7 @@ build ${entryPointKeys.length} entry points`)
       logLevel,
       rootDirectoryUrl,
       urlGraph: rawGraph,
-      scenarios: { build: true },
+      build: true,
       runtimeCompat,
       plugins: [
         ...plugins,
@@ -302,7 +302,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       logLevel,
       rootDirectoryUrl: buildDirectoryUrl,
       urlGraph: finalGraph,
-      scenarios: { build: true },
+      build: true,
       runtimeCompat,
       plugins: [
         urlAnalysisPlugin,
@@ -497,6 +497,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             const generatedUrlObject = new URL(reference.generatedUrl)
             generatedUrlObject.searchParams.delete("as_js_classic")
             generatedUrlObject.searchParams.delete("as_js_classic_library")
+            generatedUrlObject.searchParams.delete("as_js_module")
             generatedUrlObject.searchParams.delete("as_json_module")
             generatedUrlObject.searchParams.delete("as_css_module")
             generatedUrlObject.searchParams.delete("as_text_module")
@@ -673,7 +674,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   if (dependencyUrlInfo.type === "js_module") {
                     // bundle inline script type module deps
                     dependencyUrlInfo.references.forEach((inlineScriptRef) => {
-                      if (inlineScriptRef.type === "js_import_export") {
+                      if (inlineScriptRef.type === "js_import") {
                         const inlineUrlInfo = rawGraph.getUrlInfo(
                           inlineScriptRef.url,
                         )
@@ -709,7 +710,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           // For instance we will bundle service worker/workers detected like this
           if (rawUrlInfo.type === "js_module") {
             rawUrlInfo.references.forEach((reference) => {
-              if (reference.type !== "js_url_specifier") {
+              if (reference.type !== "js_url") {
                 return
               }
               const referencedUrlInfo = rawGraph.getUrlInfo(reference.url)
@@ -724,7 +725,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 for (const reference of dependentUrlInfo.references) {
                   if (reference.url === referencedUrlInfo.url) {
                     willAlreadyBeBundled =
-                      (reference.type === "js_import_export" &&
+                      (reference.type === "js_import" &&
                         reference.subtype === "import_dynamic") ||
                       reference.type === "script_src"
                   }
@@ -950,7 +951,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     return null
                   }
                   if (
-                    reference.type === "js_url_specifier" ||
+                    reference.type === "js_url" ||
                     reference.subtype === "import_dynamic"
                   ) {
                     // __v__() makes versioning dynamic: no need to take into account
@@ -984,6 +985,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               // this information is already hold into ".nomodule"
               buildUrlObject.searchParams.delete("as_js_classic")
               buildUrlObject.searchParams.delete("as_js_classic_library")
+              buildUrlObject.searchParams.delete("as_js_module")
               buildUrlObject.searchParams.delete("as_json_module")
               buildUrlObject.searchParams.delete("as_css_module")
               buildUrlObject.searchParams.delete("as_text_module")
@@ -1011,7 +1013,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             logLevel: logger.level,
             rootDirectoryUrl: buildDirectoryUrl,
             urlGraph: finalGraph,
-            scenarios: { build: true },
+            build: true,
             runtimeCompat,
             plugins: [
               urlAnalysisPlugin,
@@ -1099,8 +1101,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                       )})+${parentUrlInfo.jsQuote}`
                   }
                   if (
-                    reference.type === "js_url_specifier" ||
-                    reference.subtype === "import_dynamic"
+                    reference.type === "js_url" ||
+                    reference.subtype === "import_dynamic" ||
+                    reference.subtype === "import_meta_resolve"
                   ) {
                     usedVersionMappings.add(reference.specifier)
                     return () => `__v__(${JSON.stringify(reference.specifier)})`

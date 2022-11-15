@@ -1,9 +1,9 @@
 import { findHighestVersion } from "@jsenv/utils/src/semantic_versioning/highest_version.js"
 
-import { featureCompats } from "./features_compats.js"
+import { featuresCompatMap } from "./features_compatibility.js"
 
 export const RUNTIME_COMPAT = {
-  featureCompats,
+  featuresCompatMap,
 
   add: (originalRuntimeCompat, feature) => {
     const featureCompat = getFeatureCompat(feature)
@@ -41,7 +41,7 @@ export const RUNTIME_COMPAT = {
 
 const getFeatureCompat = (feature) => {
   if (typeof feature === "string") {
-    const compat = featureCompats[feature]
+    const compat = featuresCompatMap[feature]
     if (!compat) {
       throw new Error(`"${feature}" feature is unknown`)
     }

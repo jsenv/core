@@ -13,16 +13,13 @@ export const jsenvPluginAsJsClassicConversion = ({
 }) => {
   const isReferencingJsModule = (reference) => {
     if (
-      reference.type === "js_import_export" ||
+      reference.type === "js_import" ||
       reference.subtype === "system_register_arg" ||
       reference.subtype === "system_import_arg"
     ) {
       return true
     }
-    if (
-      reference.type === "js_url_specifier" &&
-      reference.expectedType === "js_module"
-    ) {
+    if (reference.type === "js_url" && reference.expectedType === "js_module") {
       return true
     }
     return false
@@ -90,17 +87,14 @@ export const jsenvPluginAsJsClassicConversion = ({
       await context.fetchUrlContent(jsModuleUrlInfo, {
         reference: jsModuleReference,
       })
-      if (context.scenarios.dev) {
+      if (context.dev) {
         context.referenceUtils.found({
-          type: "js_import_export",
+          type: "js_import",
           subtype: jsModuleReference.subtype,
           specifier: jsModuleReference.url,
           expectedType: "js_module",
         })
-      } else if (
-        context.scenarios.build &&
-        jsModuleUrlInfo.dependents.size === 0
-      ) {
+      } else if (context.build && jsModuleUrlInfo.dependents.size === 0) {
         context.urlGraph.deleteUrlInfo(jsModuleUrlInfo.url)
       }
       const { content, sourcemap } = await convertJsModuleToJsClassic({

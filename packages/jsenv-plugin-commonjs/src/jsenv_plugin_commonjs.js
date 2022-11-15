@@ -40,7 +40,7 @@ export const jsenvPluginCommonJs = ({
       )
     },
     redirectUrl: {
-      js_import_export: (reference) => {
+      js_import: (reference) => {
         if (reference.searchParams.has("cjs_as_js_module")) {
           markAsJsModuleProxy(reference)
           return null
@@ -80,7 +80,7 @@ export const jsenvPluginCommonJs = ({
         rootDirectoryUrl: context.rootDirectoryUrl,
         sourceFileUrl: commonJsUrlInfo.url,
         browsers: !nodeRuntimeEnabled,
-        processEnvNodeEnv: context.scenarios.dev ? "development" : "production",
+        processEnvNodeEnv: context.dev ? "development" : "production",
         ...urlInfo.data.commonjs,
       })
       if (isValid) {

@@ -68,7 +68,7 @@ export const jsenvPluginAsJsClassicHtml = ({
         }
         return null
       },
-      js_url_specifier: (reference) => {
+      js_url: (reference) => {
         if (
           shouldTransformScriptTypeModule &&
           reference.expectedType === "js_module"
@@ -166,7 +166,7 @@ export const jsenvPluginAsJsClassicHtml = ({
                   break
                 }
               } catch (e) {
-                if (context.scenarios.dev) {
+                if (context.dev) {
                   needsSystemJs = true
                   // ignore cooking error, the browser will trigger it again on fetch
                   // + disable cache for this html file because when browser will reload

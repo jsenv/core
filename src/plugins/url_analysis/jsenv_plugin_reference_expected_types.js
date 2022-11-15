@@ -16,11 +16,13 @@ export const jsenvPluginReferenceExpectedTypes = () => {
       searchParams.has("as_js_classic_library")
     ) {
       reference.expectedType = "js_classic"
+    } else if (searchParams.has("as_js_module")) {
+      reference.expectedType = "js_module"
     } else if (searchParams.has("js_module")) {
       searchParams.delete("js_module")
       reference.expectedType = "js_module"
     } else if (
-      reference.type === "js_url_specifier" &&
+      reference.type === "js_url" &&
       reference.expectedType === undefined &&
       CONTENT_TYPE.fromUrlExtension(reference.url) === "text/javascript"
     ) {
@@ -49,7 +51,7 @@ export const jsenvPluginReferenceExpectedTypes = () => {
     appliesDuring: "*",
     redirectUrl: {
       script_src: redirectJsUrls,
-      js_url_specifier: redirectJsUrls,
+      js_url: redirectJsUrls,
     },
   }
 }

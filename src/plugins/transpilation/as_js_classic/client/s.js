@@ -428,7 +428,7 @@
   const createMeta = (url) => {
     return {
       url,
-      resolve: (id, parentUrl) => resolveUrl(id, parentUrl),
+      resolve: (id) => resolveUrl(id, url),
     }
   }
 

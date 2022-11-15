@@ -8,6 +8,10 @@ import {
   analyzeExportAllDeclaration,
 } from "./js_static_analysis/import_export.js"
 import {
+  isImportMetaResolveCall,
+  analyzeImportMetaResolveCall,
+} from "./js_static_analysis/import_meta_resolve.js"
+import {
   isNewWorkerCall,
   analyzeNewWorkerCall,
   isNewSharedWorkerCall,
@@ -28,6 +32,8 @@ import {
   analyzeSystemRegisterCall,
   isSystemImportCall,
   analyzeSystemImportCall,
+  isSystemResolveCall,
+  analyzeSystemResolveCall,
 } from "./js_static_analysis/system.js"
 
 export const parseJsUrls = async ({
@@ -59,6 +65,10 @@ export const parseJsUrls = async ({
       analyzeExportAllDeclaration(node, { onUrl })
     },
     CallExpression: (node) => {
+      if (isJsModule && isImportMetaResolveCall(node)) {
+        analyzeImportMetaResolveCall(node, { onUrl })
+        return
+      }
       if (isServiceWorkerRegisterCall(node)) {
         analyzeServiceWorkerRegisterCall(node, {
           isJsModule,
@@ -80,6 +90,12 @@ export const parseJsUrls = async ({
       }
       if (!isJsModule && isSystemImportCall(node)) {
         analyzeSystemImportCall(node, {
+          onUrl,
+        })
+        return
+      }
+      if (!isJsModule && isSystemResolveCall(node)) {
+        analyzeSystemResolveCall(node, {
           onUrl,
         })
         return

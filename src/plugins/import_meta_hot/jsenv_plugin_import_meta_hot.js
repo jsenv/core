@@ -16,7 +16,7 @@ export const jsenvPluginImportMetaHot = () => {
     transformUrlContent: {
       html: (htmlUrlInfo, context) => {
         // during build we don't really care to parse html hot dependencies
-        if (context.scenarios.build) {
+        if (context.build) {
           return
         }
         const htmlAst = parseHtmlString(htmlUrlInfo.content)
@@ -69,7 +69,7 @@ export const jsenvPluginImportMetaHot = () => {
         if (importMetaHotPaths.length === 0) {
           return null
         }
-        if (context.scenarios.build) {
+        if (context.build) {
           return removeImportMetaHots(urlInfo, importMetaHotPaths)
         }
         return injectImportMetaHot(urlInfo, context, importMetaHotClientFileUrl)
@@ -97,7 +97,7 @@ const removeImportMetaHots = (urlInfo, importMetaHotPaths) => {
 const injectImportMetaHot = (urlInfo, context, importMetaHotClientFileUrl) => {
   const [importMetaHotClientFileReference] = context.referenceUtils.inject({
     parentUrl: urlInfo.url,
-    type: "js_import_export",
+    type: "js_import",
     expectedType: "js_module",
     specifier: importMetaHotClientFileUrl,
   })

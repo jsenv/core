@@ -14,7 +14,7 @@ export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
   const url = urlInfo.originalUrl
   const content = urlInfo.content
   const htmlAst = parseHtmlString(content, {
-    storeOriginalPositions: context.scenarios.dev,
+    storeOriginalPositions: context.dev,
   })
   const mentions = visitHtmlUrls({
     url,

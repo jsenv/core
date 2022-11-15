@@ -25,7 +25,7 @@ export const jsenvPluginToolbar = ({ logs = false } = {}) => {
         }
         const htmlAst = parseHtmlString(content)
         const [toolbarInjectorReference] = referenceUtils.inject({
-          type: "js_import_export",
+          type: "js_import",
           expectedType: "js_module",
           specifier: toolbarInjectorClientFileUrl,
         })

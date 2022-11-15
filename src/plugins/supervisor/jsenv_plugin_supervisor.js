@@ -302,7 +302,7 @@ export const jsenvPluginSupervisor = ({
         })
         const [scriptTypeModuleSupervisorFileReference] =
           context.referenceUtils.inject({
-            type: "js_import_export",
+            type: "js_import",
             expectedType: "js_module",
             specifier: scriptTypeModuleSupervisorFileUrl,
           })

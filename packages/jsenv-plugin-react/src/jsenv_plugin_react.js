@@ -73,7 +73,7 @@ const jsenvPluginJsxAndRefresh = ({
           associations,
         })
         const jsxEnabled = urlMeta.jsxTranspilation
-        const refreshEnabled = context.scenarios.dev
+        const refreshEnabled = context.dev
           ? urlMeta.refreshInstrumentation &&
             !urlInfo.content.includes("import.meta.hot.decline()")
           : false
@@ -81,7 +81,7 @@ const jsenvPluginJsxAndRefresh = ({
           ...(jsxEnabled
             ? [
                 [
-                  context.scenarios.dev
+                  context.dev
                     ? "@babel/plugin-transform-react-jsx-development"
                     : "@babel/plugin-transform-react-jsx",
                   {
@@ -118,7 +118,7 @@ const jsenvPluginJsxAndRefresh = ({
             while (index > -1) {
               const specifier = importSpecifier.slice(1, -1)
               const [injectedReference] = context.referenceUtils.inject({
-                type: "js_import_export",
+                type: "js_import",
                 expectedType: "js_module",
                 specifier,
               })
@@ -137,7 +137,7 @@ const jsenvPluginJsxAndRefresh = ({
           if (hasReg || hasSig) {
             const [reactRefreshClientReference] = context.referenceUtils.inject(
               {
-                type: "js_import_export",
+                type: "js_import",
                 expectedType: "js_module",
                 specifier: "@jsenv/plugin-react/src/client/react_refresh.js",
               },

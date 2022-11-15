@@ -57,15 +57,15 @@ export const jsenvPluginAsJsClassicLibrary = ({
         },
       })
       const jsModuleBundledUrlInfo = bundleUrlInfos[jsModuleUrlInfo.url]
-      if (context.scenarios.dev) {
+      if (context.dev) {
         jsModuleBundledUrlInfo.sourceUrls.forEach((sourceUrl) => {
           context.referenceUtils.inject({
-            type: "js_url_specifier",
+            type: "js_url",
             specifier: sourceUrl,
             isImplicit: true,
           })
         })
-      } else if (context.scenarios.build) {
+      } else if (context.build) {
         jsModuleBundledUrlInfo.sourceUrls.forEach((sourceUrl) => {
           const sourceUrlInfo = context.urlGraph.getUrlInfo(sourceUrl)
           if (sourceUrlInfo && sourceUrlInfo.dependents.size === 0) {

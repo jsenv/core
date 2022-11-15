@@ -20,7 +20,7 @@ export const jsenvPluginBabel = ({
       RUNTIME_COMPAT.isSupported(context.clientRuntimeCompat, feature)
     const getImportSpecifier = (clientFileUrl) => {
       const [reference] = context.referenceUtils.inject({
-        type: "js_import_export",
+        type: "js_import",
         expectedType: "js_module",
         specifier: clientFileUrl,
       })
@@ -33,7 +33,7 @@ export const jsenvPluginBabel = ({
       isJsModule,
       getImportSpecifier,
     })
-    if (context.scenarios.dev) {
+    if (context.dev) {
       const requestHeaders = context.request.headers
       if (requestHeaders["x-coverage-instanbul"]) {
         const coverageConfig = JSON.parse(

@@ -4,7 +4,7 @@ export const analyzeImportDeclaration = (node, { onUrl }) => {
   const specifierNode = node.source
   const assertionInfo = extractImportAssertionsInfo(node)
   onUrl({
-    type: "js_import_export",
+    type: "js_import",
     subtype: "import_static",
     specifier: specifierNode.value,
     specifierStart: specifierNode.start,
@@ -23,7 +23,7 @@ export const analyzeImportExpression = (node, { onUrl }) => {
   const assertionInfo = extractImportAssertionsInfo(node)
 
   onUrl({
-    type: "js_import_export",
+    type: "js_import",
     subtype: "import_dynamic",
     specifier: specifierNode.value,
     specifierStart: specifierNode.start,
@@ -45,7 +45,7 @@ export const analyzeExportNamedDeclaration = (node, { onUrl }) => {
     return
   }
   onUrl({
-    type: "js_import_export",
+    type: "js_import",
     subtype: "export_named",
     specifier: specifierNode.value,
     specifierStart: specifierNode.start,
@@ -57,7 +57,7 @@ export const analyzeExportNamedDeclaration = (node, { onUrl }) => {
 export const analyzeExportAllDeclaration = (node, { onUrl }) => {
   const specifierNode = node.source
   onUrl({
-    type: "js_import_export",
+    type: "js_import",
     subtype: "export_all",
     specifier: specifierNode.value,
     specifierStart: specifierNode.start,

@@ -7,7 +7,6 @@
  * and the rest uses the web standard url resolution (new URL):
  * - "http_request"
  * - "entry_point"
- * - "js_import_export"
  * - "link_href"
  * - "script_src"
  * - "a_href"
@@ -20,9 +19,10 @@
  * - "use_href"
  * - "css_@import"
  * - "css_url"
- * - "sourcemap_comment"
- * - "js_url_specifier"
+ * - "js_import"
+ * - "js_url"
  * - "js_inline_content"
+ * - "sourcemap_comment"
  * - "webmanifest_icon_src"
  * - "package_json"
  */

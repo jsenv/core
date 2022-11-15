@@ -21,7 +21,6 @@ export const createFileService = ({
   serverEventsDispatcher,
 
   rootDirectoryUrl,
-  scenarios,
   runtimeCompat,
 
   plugins,
@@ -116,7 +115,7 @@ export const createFileService = ({
       signal,
       logLevel,
       rootDirectoryUrl,
-      scenarios,
+      dev: true,
       runtimeCompat,
       clientRuntimeCompat: {
         [runtimeName]: runtimeVersion,
@@ -146,9 +145,7 @@ export const createFileService = ({
       sourcemapsSourcesProtocol,
       sourcemapsSourcesContent,
       writeGeneratedFiles,
-      outDirectoryUrl: scenarios.dev
-        ? `${rootDirectoryUrl}.jsenv/${runtimeName}@${runtimeVersion}/`
-        : `${rootDirectoryUrl}.jsenv/build/${runtimeName}@${runtimeVersion}/`,
+      outDirectoryUrl: `${rootDirectoryUrl}.jsenv/${runtimeName}@${runtimeVersion}/`,
     })
     urlGraph.createUrlInfoCallbackRef.current = (urlInfo) => {
       const { watch } = URL_META.applyAssociations({
@@ -218,7 +215,7 @@ export const createFileService = ({
           allServerEvents[serverEventName]({
             rootDirectoryUrl,
             urlGraph,
-            scenarios,
+            dev: true,
             sendServerEvent: (data) => {
               serverEventsDispatcher.dispatch({
                 type: serverEventName,
@@ -236,7 +233,7 @@ export const createFileService = ({
 
     const context = {
       rootDirectoryUrl,
-      scenarios,
+      dev: true,
       runtimeName,
       runtimeVersion,
       urlGraph,

@@ -39,7 +39,7 @@ export const jsenvPluginUrlAnalysis = ({
           // so that urls must be kept intact
           // However for js import specifiers they have a different meaning and we want
           // to resolve them (https://nodejs.org/api/packages.html#imports for instance)
-          reference.type !== "js_import_export"
+          reference.type !== "js_import"
         ) {
           reference.shouldHandle = false
           return

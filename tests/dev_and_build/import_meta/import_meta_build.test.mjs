@@ -4,7 +4,7 @@ import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
 import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
 
-const test = async (params) => {
+const test = async ({ expectedBuildPath, ...rest }) => {
   await build({
     logLevel: "warn",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
@@ -13,7 +13,7 @@ const test = async (params) => {
       "./main.html": "main.html",
     },
     minification: false,
-    ...params,
+    ...rest,
   })
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
@@ -26,55 +26,32 @@ const test = async (params) => {
     },
     /* eslint-enable no-undef */
   })
-  return { returnValue, server }
-}
-
-{
-  const { returnValue, server } = await test({
-    versioning: false,
-  })
-  const actual = {
-    returnValue,
-  }
+  const actual = returnValue
   const expected = {
-    returnValue: {
-      meta: {
-        url: `${server.origin}/js/main.js`,
-        resolve: undefined,
-      },
-      url: `${server.origin}/js/main.js`,
-      urlDestructured: `${server.origin}/js/main.js`,
-      importMetaDev: undefined,
-      importMetaTest: undefined,
-      importMetaBuild: true,
+    meta: {
+      url: `${server.origin}${expectedBuildPath}`,
+      resolve: undefined,
     },
+    url: `${server.origin}${expectedBuildPath}`,
+    urlDestructured: `${server.origin}${expectedBuildPath}`,
+    importMetaDev: undefined,
+    importMetaTest: undefined,
+    importMetaBuild: true,
   }
+
   assert({ actual, expected })
 }
+
+await test({
+  expectedBuildPath: "/js/main.js",
+  versioning: false,
+})
 
 // no support for <script type="module">
-{
-  const { returnValue, server } = await test({
-    versioning: false,
-    runtimeCompat: {
-      chrome: "60",
-    },
-  })
-  const actual = {
-    returnValue,
-  }
-  const expected = {
-    returnValue: {
-      meta: {
-        url: `${server.origin}/js/main.nomodule.js`,
-        resolve: undefined,
-      },
-      url: `${server.origin}/js/main.nomodule.js`,
-      urlDestructured: `${server.origin}/js/main.nomodule.js`,
-      importMetaDev: undefined,
-      importMetaTest: undefined,
-      importMetaBuild: true,
-    },
-  }
-  assert({ actual, expected })
-}
+await test({
+  expectedBuildPath: "/js/main.nomodule.js",
+  versioning: false,
+  runtimeCompat: {
+    chrome: "60",
+  },
+})

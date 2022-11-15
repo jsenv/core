@@ -1,3 +1,9 @@
+# 29.8.0
+
+- Support import.meta.resolve during dev and build
+- Add "?as_js_module" to be able to import js using top level this
+- Ignore plugin when plugin.init returns false
+
 # 29.7.0
 
 - Export jsenvPluginPlaceholders

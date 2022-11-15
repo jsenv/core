@@ -33,7 +33,7 @@ export const jsenvPluginImportMetaScenarios = () => {
         const replace = (path, value) => {
           replacements.push({ path, value })
         }
-        if (context.scenarios.build) {
+        if (context.build) {
           // during build ensure replacement for tree-shaking
           dev.forEach((path) => {
             replace(path, "undefined")

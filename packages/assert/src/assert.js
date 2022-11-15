@@ -13,32 +13,27 @@ export const assert = (...args) => {
       `assert must be called with { actual, expected }, missing first argument`,
     )
   }
-
   if (args.length > 1) {
     throw new Error(
       `assert must be called with { actual, expected }, received too many arguments`,
     )
   }
-
   const firstArg = args[0]
   if (typeof firstArg !== "object" || firstArg === null) {
     throw new Error(
       `assert must be called with { actual, expected }, received ${firstArg} as first argument instead of object`,
     )
   }
-
   if ("actual" in firstArg === false) {
     throw new Error(
       `assert must be called with { actual, expected }, missing actual property on first argument`,
     )
   }
-
   if ("expected" in firstArg === false) {
     throw new Error(
       `assert must be called with { actual, expected }, missing expected property on first argument`,
     )
   }
-
   const {
     actual,
     expected,
@@ -48,18 +43,21 @@ export const assert = (...args) => {
     // const value = assert.sortProperties(value)
     // const expected = assert.sortProperties({ foo: true, bar: true })
     checkPropertiesOrder = true,
+    context,
   } = firstArg
-
   const expectation = {
     actual,
     expected,
   }
-
   const comparison = compare(expectation, { checkPropertiesOrder })
   if (comparison.failed) {
-    const error = createAssertionError(
-      message || errorMessageFromComparison(comparison),
-    )
+    let errorMessage = message || errorMessageFromComparison(comparison)
+    if (context) {
+      errorMessage += `
+--- context ---
+${context}`
+    }
+    const error = createAssertionError(errorMessage)
     if (Error.captureStackTrace) {
       Error.captureStackTrace(error, assert)
     }
@@ -70,11 +68,9 @@ export const assert = (...args) => {
 assert.not = (value) => {
   return createNotExpectation(value)
 }
-
 assert.any = (Constructor) => {
   return createAnyExpectation(Constructor)
 }
-
 assert.matchesRegExp = (regexp) => {
   const isRegExp = regexp instanceof RegExp
   if (!isRegExp) {
@@ -84,7 +80,6 @@ assert.matchesRegExp = (regexp) => {
   }
   return createMatchesRegExpExpectation(regexp)
 }
-
 assert.asObjectWithoutPrototype = (object) => {
   const objectWithoutPrototype = Object.create(null)
   Object.assign(objectWithoutPrototype, object)
