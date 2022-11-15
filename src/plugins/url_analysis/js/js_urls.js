@@ -20,6 +20,7 @@ export const parseAndTransformJsUrls = async (urlInfo, context) => {
       urlInfo.data.usesImport = true
     }
     const [reference] = context.referenceUtils.found({
+      node: jsMention.node,
       type: jsMention.type,
       subtype: jsMention.subtype,
       expectedType: jsMention.expectedType,

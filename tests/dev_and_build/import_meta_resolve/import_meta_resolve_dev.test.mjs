@@ -34,5 +34,5 @@ const test = async ({ browserLauncher }) => {
   }
 }
 
-// await test({ browserLauncher: chromium })
+await test({ browserLauncher: chromium })
 await test({ browserLauncher: firefox })

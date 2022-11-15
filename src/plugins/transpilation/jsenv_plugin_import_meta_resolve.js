@@ -1,4 +1,4 @@
-import { applyBabelPlugins } from "@jsenv/ast"
+import { createMagicSource } from "@jsenv/sourcemap"
 
 export const jsenvPluginImportMetaResolve = () => {
   return {
@@ -20,51 +20,32 @@ export const jsenvPluginImportMetaResolve = () => {
     },
     transformUrlContent: {
       js_module: async (urlInfo, context) => {
-        if (!urlInfo.content.includes("import.meta.resolve(")) {
-          return null
-        }
-        const { code, map } = await applyBabelPlugins({
-          urlInfo,
-          babelPlugins: [
-            [
-              {
-                name: "transform-import-meta-resolve",
-                visitor: {
-                  Program: (programPath) => {
-                    programPath.traverse({
-                      CallExpression: (path) => {
-                        const node = path.node
-                        const callee = node.callee
-                        if (
-                          callee.type === "MemberExpression" &&
-                          callee.object.type === "MetaProperty" &&
-                          callee.property.type === "Identifier" &&
-                          callee.property.name === "resolve"
-                        ) {
-                          const firstArg = node.arguments[0]
-                          if (firstArg && firstArg.type === "StringLiteral") {
-                            const reference = context.referenceUtils.find(
-                              (ref) =>
-                                ref.subtype === "import_meta_resolve" &&
-                                ref.url === firstArg.value,
-                            )
-                            path.replaceWithSourceString(
-                              `new URL(${reference.generatedSpecifier}, window.location).href`,
-                            )
-                          }
-                        }
-                      },
-                    })
-                  },
-                },
-              },
-            ],
-          ],
+        const magicSource = createMagicSource(urlInfo.content)
+        context.referenceUtils._references.forEach((ref) => {
+          if (ref.subtype === "import_meta_resolve") {
+            const originalSpecifierLength = Buffer.byteLength(ref.specifier)
+            const specifierLength = Buffer.byteLength(
+              ref.generatedSpecifier.slice(1, -1), // remove `"` around
+            )
+            const specifierLengthDiff =
+              specifierLength - originalSpecifierLength
+            const end = ref.node.end + specifierLengthDiff
+            magicSource.replace({
+              start: ref.node.start,
+              end,
+              replacement: `new URL(${ref.generatedSpecifier}, import.meta.url).href`,
+            })
+            const currentLengthBeforeSpecifier = "import.meta.resolve(".length
+            const newLengthBeforeSpecifier = "new URL(".length
+            const lengthDiff =
+              currentLengthBeforeSpecifier - newLengthBeforeSpecifier
+            ref.specifierColumn -= lengthDiff
+            ref.specifierStart -= lengthDiff
+            ref.specifierEnd =
+              ref.specifierStart + Buffer.byteLength(ref.generatedSpecifier)
+          }
         })
-        return {
-          content: code,
-          sourcemap: map,
-        }
+        return magicSource.toContentAndSourcemap()
       },
     },
   }
