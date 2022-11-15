@@ -6,19 +6,22 @@ export const jsenvPluginTopLevelAwait = () => {
   return {
     name: "jsenv:top_level_await",
     appliesDuring: "*",
+    init: (context) => {
+      if (context.isSupportedOnCurrentClients("top_level_await")) {
+        return false
+      }
+      // keep it untouched, systemjs will handle it
+      const willTransformJsModules =
+        !context.isSupportedOnCurrentClients("script_type_module") ||
+        !context.isSupportedOnCurrentClients("import_dynamic") ||
+        !context.isSupportedOnCurrentClients("import_meta")
+      if (willTransformJsModules) {
+        return false
+      }
+      return true
+    },
     transformUrlContent: {
-      js_module: async (urlInfo, context) => {
-        if (context.isSupportedOnCurrentClients("top_level_await")) {
-          return null
-        }
-        const willTransformJsModules =
-          !context.isSupportedOnCurrentClients("script_type_module") ||
-          !context.isSupportedOnCurrentClients("import_dynamic") ||
-          !context.isSupportedOnCurrentClients("import_meta")
-        // keep it untouched, systemjs will handle it
-        if (willTransformJsModules) {
-          return null
-        }
+      js_module: async (urlInfo) => {
         const usesTLA = await usesTopLevelAwait(urlInfo)
         if (!usesTLA) {
           return null
