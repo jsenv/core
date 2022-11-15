@@ -38,7 +38,7 @@
     "@jsenv/log": "3.3.1",
     "@jsenv/url-meta": "7.0.0",
     "@jsenv/utils": "2.0.1",
-    "ws": "8.10.0"
+    "ws": "8.11.0"
   },
   "devDependencies": {
     "@jsenv/fetch": "../fetch/",
