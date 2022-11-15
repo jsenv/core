@@ -1100,7 +1100,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   }
                   if (
                     reference.type === "js_url" ||
-                    reference.subtype === "import_dynamic"
+                    reference.subtype === "import_dynamic" ||
+                    reference.subtype === "import_meta_resolve"
                   ) {
                     usedVersionMappings.add(reference.specifier)
                     return () => `__v__(${JSON.stringify(reference.specifier)})`
