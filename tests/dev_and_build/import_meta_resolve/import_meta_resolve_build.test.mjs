@@ -13,6 +13,7 @@ const test = async (params) => {
       "./main.html": "main.html",
     },
     minification: false,
+    versioning: false,
     ...params,
   })
   const server = await startFileServer({
@@ -28,10 +29,16 @@ const test = async (params) => {
   })
   const actual = returnValue
   const expected = {
-    importMetaResolveReturnValue: `${server.origin}/node_modules/foo/main.js?v=0.0.1`,
-    __TEST__: `${server.origin}/node_modules/foo/main.js?v=0.0.1`,
+    importMetaResolveReturnValue: `${server.origin}/js/foo.js`,
+    __TEST__: `${server.origin}/js/foo.js`,
   }
   assert({ actual, expected })
 }
 
 await test()
+// import.meta.resolve supported
+await test({
+  runtimeCompat: {
+    chrome: "107",
+  },
+})

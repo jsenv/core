@@ -8,6 +8,10 @@ import {
   analyzeExportAllDeclaration,
 } from "./js_static_analysis/import_export.js"
 import {
+  isImportMetaResolveCall,
+  analyzeImportMetaResolveCall,
+} from "./js_static_analysis/import_meta_resolve.js"
+import {
   isNewWorkerCall,
   analyzeNewWorkerCall,
   isNewSharedWorkerCall,
@@ -59,6 +63,10 @@ export const parseJsUrls = async ({
       analyzeExportAllDeclaration(node, { onUrl })
     },
     CallExpression: (node) => {
+      if (isJsModule && isImportMetaResolveCall(node)) {
+        analyzeImportMetaResolveCall(node, { onUrl })
+        return
+      }
       if (isServiceWorkerRegisterCall(node)) {
         analyzeServiceWorkerRegisterCall(node, {
           isJsModule,

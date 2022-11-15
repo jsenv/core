@@ -1,5 +1,9 @@
 import { getTypePropertyNode, isStringLiteralNode } from "./helpers.js"
 import { isNewUrlCall, analyzeNewUrlCall } from "./new_url.js"
+import {
+  isImportMetaResolveCall,
+  analyzeImportMetaResolveCall,
+} from "./import_meta_resolve.js"
 
 export const isNewWorkerCall = (node) => {
   return (
@@ -139,5 +143,19 @@ const analyzeWorkerCallArguments = (
         onUrl(mention)
       },
     })
+    return
+  }
+  if (isJsModule && isImportMetaResolveCall(firstArgNode)) {
+    analyzeImportMetaResolveCall(firstArgNode, {
+      onUrl: (mention) => {
+        Object.assign(mention, {
+          expectedType,
+          expectedSubtype,
+          typePropertyNode,
+        })
+        onUrl(mention)
+      },
+    })
+    return
   }
 }
