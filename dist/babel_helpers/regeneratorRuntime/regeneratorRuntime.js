@@ -16,6 +16,9 @@ export default function _regeneratorRuntime() {
   var exports = {};
   var Op = Object.prototype;
   var hasOwn = Op.hasOwnProperty;
+  var defineProperty = Object.defineProperty || function (obj, key, desc) {
+    obj[key] = desc.value;
+  };
   var undefined; // More compressible than void 0.
   var $Symbol = typeof Symbol === "function" ? Symbol : {};
   var iteratorSymbol = $Symbol.iterator || "@@iterator";
@@ -46,7 +49,9 @@ export default function _regeneratorRuntime() {
 
     // The ._invoke method unifies the implementations of the .next,
     // .throw, and .return methods.
-    generator._invoke = makeInvokeMethod(innerFn, self, context);
+    defineProperty(generator, "_invoke", {
+      value: makeInvokeMethod(innerFn, self, context)
+    });
     return generator;
   }
   exports.wrap = wrap;
@@ -106,8 +111,14 @@ export default function _regeneratorRuntime() {
   }
   var Gp = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(IteratorPrototype);
   GeneratorFunction.prototype = GeneratorFunctionPrototype;
-  define(Gp, "constructor", GeneratorFunctionPrototype);
-  define(GeneratorFunctionPrototype, "constructor", GeneratorFunction);
+  defineProperty(Gp, "constructor", {
+    value: GeneratorFunctionPrototype,
+    configurable: true
+  });
+  defineProperty(GeneratorFunctionPrototype, "constructor", {
+    value: GeneratorFunction,
+    configurable: true
+  });
   GeneratorFunction.displayName = define(GeneratorFunctionPrototype, toStringTagSymbol, "GeneratorFunction");
 
   // Helper for defining the .next, .throw, and .return methods of the
@@ -202,7 +213,9 @@ export default function _regeneratorRuntime() {
 
     // Define the unified helper method that is used to implement .next,
     // .throw, and .return (see defineIteratorMethods).
-    this._invoke = enqueue;
+    defineProperty(this, "_invoke", {
+      value: enqueue
+    });
   }
   defineIteratorMethods(AsyncIterator.prototype);
   define(AsyncIterator.prototype, asyncIteratorSymbol, function () {
@@ -289,27 +302,30 @@ export default function _regeneratorRuntime() {
   // delegate iterator, or by modifying context.method and context.arg,
   // setting context.delegate to null, and returning the ContinueSentinel.
   function maybeInvokeDelegate(delegate, context) {
-    var method = delegate.iterator[context.method];
+    var methodName = context.method;
+    var method = delegate.iterator[methodName];
     if (method === undefined) {
       // A .throw or .return when the delegate iterator has no .throw
-      // method always terminates the yield* loop.
+      // method, or a missing .next mehtod, always terminate the
+      // yield* loop.
       context.delegate = null;
-      if (context.method === "throw") {
-        // Note: ["return"] must be used for ES3 parsing compatibility.
-        if (delegate.iterator["return"]) {
-          // If the delegate iterator has a return method, give it a
-          // chance to clean up.
-          context.method = "return";
-          context.arg = undefined;
-          maybeInvokeDelegate(delegate, context);
-          if (context.method === "throw") {
-            // If maybeInvokeDelegate(context) changed context.method from
-            // "return" to "throw", let that override the TypeError below.
-            return ContinueSentinel;
-          }
+
+      // Note: ["return"] must be used for ES3 parsing compatibility.
+      if (methodName === "throw" && delegate.iterator["return"]) {
+        // If the delegate iterator has a return method, give it a
+        // chance to clean up.
+        context.method = "return";
+        context.arg = undefined;
+        maybeInvokeDelegate(delegate, context);
+        if (context.method === "throw") {
+          // If maybeInvokeDelegate(context) changed context.method from
+          // "return" to "throw", let that override the TypeError below.
+          return ContinueSentinel;
         }
+      }
+      if (methodName !== "return") {
         context.method = "throw";
-        context.arg = new TypeError("The iterator does not provide a 'throw' method");
+        context.arg = new TypeError("The iterator does not provide a '" + methodName + "' method");
       }
       return ContinueSentinel;
     }
@@ -401,7 +417,8 @@ export default function _regeneratorRuntime() {
     tryLocsList.forEach(pushTryEntry, this);
     this.reset(true);
   }
-  exports.keys = function (object) {
+  exports.keys = function (val) {
+    var object = Object(val);
     var keys = [];
     for (var key in object) {
       keys.push(key);
