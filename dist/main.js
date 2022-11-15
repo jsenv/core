@@ -9412,17 +9412,17 @@ const createPluginController = kitchenContext => {
       if (appliesDuring !== "dev" && appliesDuring !== "build") {
         throw new TypeError(`"appliesDuring" must be "dev" or "build", got ${appliesDuring}`);
       }
-      if (kitchenContext.scenarios[appliesDuring]) {
+      if (kitchenContext[appliesDuring]) {
         return true;
       }
       return false;
     }
     if (typeof appliesDuring === "object") {
       for (const key of Object.keys(appliesDuring)) {
-        if (!appliesDuring[key] && kitchenContext.scenarios[key]) {
+        if (!appliesDuring[key] && kitchenContext[key]) {
           return false;
         }
-        if (appliesDuring[key] && kitchenContext.scenarios[key]) {
+        if (appliesDuring[key] && kitchenContext[key]) {
           return true;
         }
       }
@@ -10525,14 +10525,15 @@ const createKitchen = ({
   signal,
   logLevel,
   rootDirectoryUrl,
-  scenarios,
+  dev = false,
+  build = false,
   runtimeCompat,
   // during dev/test clientRuntimeCompat is a single runtime
   // during build clientRuntimeCompat is runtimeCompat
   clientRuntimeCompat = runtimeCompat,
   urlGraph,
   plugins,
-  sourcemaps = scenarios.dev ? "inline" : "none",
+  sourcemaps = dev ? "inline" : "none",
   // "programmatic" and "file" also allowed
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
@@ -10548,7 +10549,8 @@ const createKitchen = ({
     logger,
     rootDirectoryUrl,
     urlGraph,
-    scenarios,
+    dev,
+    build,
     runtimeCompat,
     clientRuntimeCompat,
     isSupportedOnCurrentClients: feature => {
@@ -11235,7 +11237,7 @@ const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
       column: reference.specifierColumn
     };
     urlInfo.contentType = reference.contentType;
-    urlInfo.originalContent = context.scenarios.build ? urlInfo.originalContent === undefined ? reference.content : urlInfo.originalContent : reference.content;
+    urlInfo.originalContent = context.build ? urlInfo.originalContent === undefined ? reference.content : urlInfo.originalContent : reference.content;
     urlInfo.content = reference.content;
   }
 };
@@ -11635,7 +11637,7 @@ const parseAndTransformHtmlUrls = async (urlInfo, context) => {
   const url = urlInfo.originalUrl;
   const content = urlInfo.content;
   const htmlAst = parseHtmlString(content, {
-    storeOriginalPositions: context.scenarios.dev
+    storeOriginalPositions: context.dev
   });
   const mentions = visitHtmlUrls({
     url,
@@ -16578,14 +16580,14 @@ const jsenvPluginAsJsClassicConversion = ({
       await context.fetchUrlContent(jsModuleUrlInfo, {
         reference: jsModuleReference
       });
-      if (context.scenarios.dev) {
+      if (context.dev) {
         context.referenceUtils.found({
           type: "js_import",
           subtype: jsModuleReference.subtype,
           specifier: jsModuleReference.url,
           expectedType: "js_module"
         });
-      } else if (context.scenarios.build && jsModuleUrlInfo.dependents.size === 0) {
+      } else if (context.build && jsModuleUrlInfo.dependents.size === 0) {
         context.urlGraph.deleteUrlInfo(jsModuleUrlInfo.url);
       }
       const {
@@ -16741,7 +16743,7 @@ const jsenvPluginAsJsClassicHtml = ({
                   break;
                 }
               } catch (e) {
-                if (context.scenarios.dev) {
+                if (context.dev) {
                   needsSystemJs = true;
                   // ignore cooking error, the browser will trigger it again on fetch
                   // + disable cache for this html file because when browser will reload
@@ -17347,7 +17349,7 @@ const jsenvPluginAsJsClassicLibrary = ({
         }
       });
       const jsModuleBundledUrlInfo = bundleUrlInfos[jsModuleUrlInfo.url];
-      if (context.scenarios.dev) {
+      if (context.dev) {
         jsModuleBundledUrlInfo.sourceUrls.forEach(sourceUrl => {
           context.referenceUtils.inject({
             type: "js_url",
@@ -17355,7 +17357,7 @@ const jsenvPluginAsJsClassicLibrary = ({
             isImplicit: true
           });
         });
-      } else if (context.scenarios.build) {
+      } else if (context.build) {
         jsModuleBundledUrlInfo.sourceUrls.forEach(sourceUrl => {
           const sourceUrlInfo = context.urlGraph.getUrlInfo(sourceUrl);
           if (sourceUrlInfo && sourceUrlInfo.dependents.size === 0) {
@@ -18208,7 +18210,7 @@ const jsenvPluginImportmap = () => {
         // by "formatReferencedUrl" making the importmap presence useless.
         // In dev/test we keep importmap into the HTML to see it even if useless
         // Duing build we get rid of it
-        if (context.scenarios.build) {
+        if (context.build) {
           removeHtmlNode(importmap);
         }
         return {
@@ -19183,7 +19185,7 @@ const createNodeEsmResolver = ({
       parentUrl,
       specifier: reference.specifier
     });
-    if (context.scenarios.dev) {
+    if (context.dev) {
       const dependsOnPackageJson = type !== "relative_specifier" && type !== "absolute_specifier" && type !== "node_builtin_specifier";
       if (dependsOnPackageJson) {
         // this reference depends on package.json and node_modules
@@ -19197,7 +19199,7 @@ const createNodeEsmResolver = ({
         });
       }
     }
-    if (context.scenarios.dev) {
+    if (context.dev) {
       // without this check a file inside a project without package.json
       // could be considered as a node module if there is a ancestor package.json
       // but we want to version only node modules
@@ -19949,7 +19951,7 @@ const jsenvPluginCommonJsGlobals = () => {
     }
     const isJsModule = urlInfo.type === "js_module";
     const replaceMap = {
-      "process.env.NODE_ENV": `("${context.scenarios.dev ? "development" : "production"}")`,
+      "process.env.NODE_ENV": `("${context.dev ? "development" : "production"}")`,
       "global": "globalThis",
       "__filename": isJsModule ? `import.meta.url.slice('file:///'.length)` : `document.currentScript.src`,
       "__dirname": isJsModule ? `import.meta.url.slice('file:///'.length).replace(/[\\\/\\\\][^\\\/\\\\]*$/, '')` : `new URL('./', document.currentScript.src).href`
@@ -20119,7 +20121,7 @@ const jsenvPluginImportMetaScenarios = () => {
             value
           });
         };
-        if (context.scenarios.build) {
+        if (context.build) {
           // during build ensure replacement for tree-shaking
           dev.forEach(path => {
             replace(path, "undefined");
@@ -20275,7 +20277,7 @@ const jsenvPluginImportAssertions = ({
       //     We would have to tell rollup to ignore import with assertion
       //   - means rollup can bundle more js file together
       //   - means url versioning can work for css inlined in js
-      if (context.scenarios.build) {
+      if (context.build) {
         transpilations.json = true;
         transpilations.css = true;
         transpilations.text = true;
@@ -20321,14 +20323,14 @@ const jsenvPluginAsModules = () => {
       await context.fetchUrlContent(jsonUrlInfo, {
         reference: jsonReference
       });
-      if (context.scenarios.dev) {
+      if (context.dev) {
         context.referenceUtils.found({
           type: "js_import",
           subtype: jsonReference.subtype,
           specifier: jsonReference.url,
           expectedType: "js_module"
         });
-      } else if (context.scenarios.build && jsonUrlInfo.dependents.size === 0) {
+      } else if (context.build && jsonUrlInfo.dependents.size === 0) {
         context.urlGraph.deleteUrlInfo(jsonUrlInfo.url);
       }
       const jsonText = JSON.stringify(jsonUrlInfo.content.trim());
@@ -20361,14 +20363,14 @@ const jsenvPluginAsModules = () => {
       await context.fetchUrlContent(cssUrlInfo, {
         reference: cssReference
       });
-      if (context.scenarios.dev) {
+      if (context.dev) {
         context.referenceUtils.found({
           type: "js_import",
           subtype: cssReference.subtype,
           specifier: cssReference.url,
           expectedType: "js_module"
         });
-      } else if (context.scenarios.build && cssUrlInfo.dependents.size === 0) {
+      } else if (context.build && cssUrlInfo.dependents.size === 0) {
         context.urlGraph.deleteUrlInfo(cssUrlInfo.url);
       }
       const cssText = JS_QUOTES.escapeSpecialChars(cssUrlInfo.content, {
@@ -20408,14 +20410,14 @@ const jsenvPluginAsModules = () => {
       await context.fetchUrlContent(textUrlInfo, {
         reference: textReference
       });
-      if (context.scenarios.dev) {
+      if (context.dev) {
         context.referenceUtils.found({
           type: "js_import",
           subtype: textReference.subtype,
           specifier: textReference.url,
           expectedType: "js_module"
         });
-      } else if (context.scenarios.build && textUrlInfo.dependents.size === 0) {
+      } else if (context.build && textUrlInfo.dependents.size === 0) {
         context.urlGraph.deleteUrlInfo(textUrlInfo.url);
       }
       const textPlain = JS_QUOTES.escapeSpecialChars(urlInfo.content, {
@@ -20518,14 +20520,14 @@ const jsenvPluginAsJsModule = () => {
       await context.fetchUrlContent(jsClassicUrlInfo, {
         reference: jsClassicReference
       });
-      if (context.scenarios.dev) {
+      if (context.dev) {
         context.referenceUtils.found({
           type: "js_import",
           subtype: jsClassicReference.subtype,
           specifier: jsClassicReference.url,
           expectedType: "js_classic"
         });
-      } else if (context.scenarios.build && jsClassicUrlInfo.dependents.size === 0) {
+      } else if (context.build && jsClassicUrlInfo.dependents.size === 0) {
         context.urlGraph.deleteUrlInfo(jsClassicUrlInfo.url);
       }
       const {
@@ -21388,7 +21390,7 @@ const jsenvPluginBabel = ({
       isJsModule,
       getImportSpecifier
     });
-    if (context.scenarios.dev) {
+    if (context.dev) {
       const requestHeaders = context.request.headers;
       if (requestHeaders["x-coverage-instanbul"]) {
         const coverageConfig = JSON.parse(requestHeaders["x-coverage-instanbul"]);
@@ -22255,7 +22257,7 @@ const jsenvPluginImportMetaHot = () => {
     transformUrlContent: {
       html: (htmlUrlInfo, context) => {
         // during build we don't really care to parse html hot dependencies
-        if (context.scenarios.build) {
+        if (context.build) {
           return;
         }
         const htmlAst = parseHtmlString(htmlUrlInfo.content);
@@ -22306,7 +22308,7 @@ const jsenvPluginImportMetaHot = () => {
         if (importMetaHotPaths.length === 0) {
           return null;
         }
-        if (context.scenarios.build) {
+        if (context.build) {
           return removeImportMetaHots(urlInfo, importMetaHotPaths);
         }
         return injectImportMetaHot(urlInfo, context, importMetaHotClientFileUrl);
@@ -22755,7 +22757,7 @@ const jsenvPluginRibbon = ({
           specifier: ribbonClientFileUrl.href
         });
         const paramsJson = JSON.stringify({
-          text: context.scenarios.dev ? "DEV" : "BUILD"
+          text: context.dev ? "DEV" : "BUILD"
         }, null, "  ");
         const scriptNode = createHtmlNode({
           tagName: "script",
@@ -23312,9 +23314,7 @@ build ${entryPointKeys.length} entry points`);
       logLevel,
       rootDirectoryUrl,
       urlGraph: rawGraph,
-      scenarios: {
-        build: true
-      },
+      build: true,
       runtimeCompat,
       plugins: [...plugins, {
         appliesDuring: "build",
@@ -23377,9 +23377,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       logLevel,
       rootDirectoryUrl: buildDirectoryUrl,
       urlGraph: finalGraph,
-      scenarios: {
-        build: true
-      },
+      build: true,
       runtimeCompat,
       plugins: [urlAnalysisPlugin, jsenvPluginAsJsClassic({
         jsClassicLibrary: false,
@@ -23994,9 +23992,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             logLevel: logger.level,
             rootDirectoryUrl: buildDirectoryUrl,
             urlGraph: finalGraph,
-            scenarios: {
-              build: true
-            },
+            build: true,
             runtimeCompat,
             plugins: [urlAnalysisPlugin, jsenvPluginInline({
               fetchInlineUrls: false,
@@ -24645,7 +24641,6 @@ const createFileService = ({
   serverStopCallbacks,
   serverEventsDispatcher,
   rootDirectoryUrl,
-  scenarios,
   runtimeCompat,
   plugins,
   urlAnalysis,
@@ -24744,7 +24739,7 @@ const createFileService = ({
       signal,
       logLevel,
       rootDirectoryUrl,
-      scenarios,
+      dev: true,
       runtimeCompat,
       clientRuntimeCompat: {
         [runtimeName]: runtimeVersion
@@ -24769,7 +24764,7 @@ const createFileService = ({
       sourcemapsSourcesProtocol,
       sourcemapsSourcesContent,
       writeGeneratedFiles,
-      outDirectoryUrl: scenarios.dev ? `${rootDirectoryUrl}.jsenv/${runtimeName}@${runtimeVersion}/` : `${rootDirectoryUrl}.jsenv/build/${runtimeName}@${runtimeVersion}/`
+      outDirectoryUrl: `${rootDirectoryUrl}.jsenv/${runtimeName}@${runtimeVersion}/`
     });
     urlGraph.createUrlInfoCallbackRef.current = urlInfo => {
       const {
@@ -24843,7 +24838,7 @@ const createFileService = ({
           allServerEvents[serverEventName]({
             rootDirectoryUrl,
             urlGraph,
-            scenarios,
+            dev: true,
             sendServerEvent: data => {
               serverEventsDispatcher.dispatch({
                 type: serverEventName,
@@ -24858,7 +24853,7 @@ const createFileService = ({
     }
     const context = {
       rootDirectoryUrl,
-      scenarios,
+      dev: true,
       runtimeName,
       runtimeVersion,
       urlGraph,
@@ -25246,9 +25241,6 @@ const startDevServer = async ({
         serverStopCallbacks,
         serverEventsDispatcher,
         rootDirectoryUrl,
-        scenarios: {
-          dev: true
-        },
         runtimeCompat,
         plugins,
         urlAnalysis,
