@@ -36,7 +36,18 @@ const test = async ({ expectedFilename = "js/foo.js", ...rest }) => {
   assert({ actual, expected })
 }
 
-// await test()
+// module supported but import.meta.resolve is not
+await test({
+  runtimeCompat: {
+    chrome: "80",
+  },
+})
+// import.meta.resolve supported
+await test({
+  runtimeCompat: {
+    chrome: "107",
+  },
+})
 // script module not supported
 await test({
   runtimeCompat: {
@@ -44,9 +55,3 @@ await test({
   },
   expectedFilename: "js/foo.nomodule.js",
 })
-// import.meta.resolve supported
-// await test({
-//   runtimeCompat: {
-//     chrome: "107",
-//   },
-// })
