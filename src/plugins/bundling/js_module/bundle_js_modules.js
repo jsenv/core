@@ -297,9 +297,11 @@ const rollupPluginJsenv = ({
       const urlInfo = urlGraph.getUrlInfo(fileUrl)
       return {
         code: urlInfo.content,
-        map: urlInfo.sourcemap
-          ? sourcemapConverter.toFilePaths(urlInfo.sourcemap)
-          : null,
+        map:
+          (sourcemaps === "file" || sourcemaps === "inline") &&
+          urlInfo.sourcemap
+            ? sourcemapConverter.toFilePaths(urlInfo.sourcemap)
+            : null,
       }
     },
   }

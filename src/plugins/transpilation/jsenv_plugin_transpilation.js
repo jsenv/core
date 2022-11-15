@@ -10,6 +10,7 @@
 import { jsenvPluginCssParcel } from "./css_parcel/jsenv_plugin_css_parcel.js"
 import { jsenvPluginImportAssertions } from "./import_assertions/jsenv_plugin_import_assertions.js"
 import { jsenvPluginAsJsClassic } from "./as_js_classic/jsenv_plugin_as_js_classic.js"
+import { jsenvPluginAsJsModule } from "./as_js_module/jsenv_plugin_as_js_module.js"
 import { jsenvPluginBabel } from "./babel/jsenv_plugin_babel.js"
 import { jsenvPluginTopLevelAwait } from "./jsenv_plugin_top_level_await.js"
 import { jsenvPluginImportMetaResolve } from "./jsenv_plugin_import_meta_resolve.js"
@@ -46,6 +47,7 @@ export const jsenvPluginTranspilation = ({
       jsClassicFallback,
       systemJsInjection,
     }),
+    jsenvPluginAsJsModule(),
     // topLevelAwait must come after jsenvPluginAsJsClassic because it's related to the module format
     // so we want to wait to know the module format before transforming things related to top level await
     ...(topLevelAwait ? [jsenvPluginTopLevelAwait(topLevelAwait)] : []),
