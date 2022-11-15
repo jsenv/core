@@ -1,29 +1,34 @@
+import { chromium, firefox } from "playwright"
 import { assert } from "@jsenv/assert"
 
 import { startDevServer } from "@jsenv/core"
-import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
+import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js"
 
 const devServer = await startDevServer({
   logLevel: "warn",
   rootDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
 })
-const { returnValue } = await executeInChromium({
-  url: `${devServer.origin}/main.html`,
-  /* eslint-disable no-undef */
-  pageFunction: async () => {
-    return window.resultPromise
-  },
-  /* eslint-enable no-undef */
-})
-const actual = {
-  returnValue,
+
+const test = async ({ browserLauncher }) => {
+  const browser = await browserLauncher.launch({ headless: true })
+  try {
+    const page = await launchBrowserPage(browser)
+    await page.goto(`${devServer.origin}/main.html`)
+    const result = await page.evaluate(
+      /* eslint-disable no-undef */
+      () => {
+        return window.resultPromise
+      },
+      /* eslint-enable no-undef */
+    )
+    const actual = result
+    const expected = 42
+    assert({ actual, expected })
+  } finally {
+    browser.close()
+  }
 }
-const expected = {
-  returnValue: {
-    typeofCurrentScript: "object",
-    answer: 42,
-    url: `${devServer.origin}/main.js?as_js_classic`,
-  },
-}
-assert({ actual, expected })
+
+await test({ browserLauncher: chromium })
+await test({ browserLauncher: firefox })
