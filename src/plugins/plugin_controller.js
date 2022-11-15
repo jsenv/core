@@ -17,16 +17,33 @@ const HOOK_NAMES = [
   "destroy",
 ]
 
-export const createPluginController = ({ plugins, scenarios }) => {
-  const flatPlugins = flattenAndFilterPlugins(plugins, { scenarios })
+export const createPluginController = (kitchenContext) => {
+  const plugins = []
   // precompute a list of hooks per hookName for one major reason:
   // - When debugging, there is less iteration
   // also it should increase perf as there is less work to do
-
   const hookGroups = {}
   const addPlugin = (plugin, { position = "start" }) => {
+    if (plugin === null || typeof plugin !== "object") {
+      throw new TypeError(`plugin must be objects, got ${plugin}`)
+    }
+    if (!testAppliesDuring(plugin) || !initPlugin(plugin)) {
+      if (plugin.destroy) {
+        plugin.destroy()
+      }
+      return
+    }
+    if (!plugin.name) {
+      plugin.name = "anonymous"
+    }
+    plugins.push(plugin)
     Object.keys(plugin).forEach((key) => {
-      if (key === "name" || key === "appliesDuring" || key === "serverEvents") {
+      if (
+        key === "name" ||
+        key === "appliesDuring" ||
+        key === "init" ||
+        key === "serverEvents"
+      ) {
         return
       }
       const isHook = HOOK_NAMES.includes(key)
@@ -50,15 +67,60 @@ export const createPluginController = ({ plugins, scenarios }) => {
       }
     })
   }
+  const testAppliesDuring = (plugin) => {
+    const { appliesDuring } = plugin
+    if (appliesDuring === undefined) {
+      // console.debug(`"appliesDuring" is undefined on ${pluginEntry.name}`)
+      return true
+    }
+    if (appliesDuring === "*") {
+      return true
+    }
+    if (typeof appliesDuring === "string") {
+      if (appliesDuring !== "dev" && appliesDuring !== "build") {
+        throw new TypeError(
+          `"appliesDuring" must be "dev" or "build", got ${appliesDuring}`,
+        )
+      }
+      if (kitchenContext.scenarios[appliesDuring]) {
+        return true
+      }
+      return false
+    }
+    if (typeof appliesDuring === "object") {
+      for (const key of Object.keys(appliesDuring)) {
+        if (!appliesDuring[key] && kitchenContext.scenarios[key]) {
+          return false
+        }
+        if (appliesDuring[key] && kitchenContext.scenarios[key]) {
+          return true
+        }
+      }
+      // throw new Error(`"appliesDuring" is empty`)
+      return false
+    }
+    throw new TypeError(
+      `"appliesDuring" must be an object or a string, got ${appliesDuring}`,
+    )
+  }
+  const initPlugin = (plugin) => {
+    if (plugin.init) {
+      const initReturnValue = plugin.init(kitchenContext)
+      if (initReturnValue === false) {
+        return false
+      }
+      if (typeof initReturnValue === "function" && !plugin.destroy) {
+        plugin.destroy = initReturnValue
+      }
+    }
+    return true
+  }
   const pushPlugin = (plugin) => {
     addPlugin(plugin, { position: "start" })
   }
   const unshiftPlugin = (plugin) => {
     addPlugin(plugin, { position: "end" })
   }
-  flatPlugins.forEach((plugin) => {
-    pushPlugin(plugin)
-  })
 
   let lastPluginUsed = null
   let currentPlugin = null
@@ -172,7 +234,7 @@ export const createPluginController = ({ plugins, scenarios }) => {
   }
 
   return {
-    plugins: flatPlugins,
+    plugins,
     pushPlugin,
     unshiftPlugin,
     getHookFunction,
@@ -188,69 +250,6 @@ export const createPluginController = ({ plugins, scenarios }) => {
     getCurrentPlugin: () => currentPlugin,
     getCurrentHookName: () => currentHookName,
   }
-}
-
-const flattenAndFilterPlugins = (plugins, { scenarios }) => {
-  const flatPlugins = []
-  const visitPluginEntry = (pluginEntry) => {
-    if (Array.isArray(pluginEntry)) {
-      pluginEntry.forEach((value) => visitPluginEntry(value))
-      return
-    }
-    if (typeof pluginEntry === "object" && pluginEntry !== null) {
-      if (!pluginEntry.name) {
-        pluginEntry.name = "anonymous"
-      }
-      const { appliesDuring } = pluginEntry
-      if (appliesDuring === undefined) {
-        // console.debug(`"appliesDuring" is undefined on ${pluginEntry.name}`)
-        flatPlugins.push(pluginEntry)
-        return
-      }
-      if (appliesDuring === "*") {
-        flatPlugins.push(pluginEntry)
-        return
-      }
-      if (typeof appliesDuring === "string") {
-        if (!["dev", "build"].includes(appliesDuring)) {
-          throw new Error(
-            `"appliesDuring" must be "dev" or "build", got ${appliesDuring}`,
-          )
-        }
-        if (scenarios[appliesDuring]) {
-          flatPlugins.push(pluginEntry)
-          return
-        }
-        return
-      }
-      if (typeof appliesDuring !== "object") {
-        throw new Error(
-          `"appliesDuring" must be an object or a string, got ${appliesDuring}`,
-        )
-      }
-      let applies
-      for (const key of Object.keys(appliesDuring)) {
-        if (!appliesDuring[key] && scenarios[key]) {
-          applies = false
-          break
-        }
-        if (appliesDuring[key] && scenarios[key]) {
-          applies = true
-        }
-      }
-      if (applies) {
-        flatPlugins.push(pluginEntry)
-        return
-      }
-      if (pluginEntry.destroy) {
-        pluginEntry.destroy()
-      }
-      return
-    }
-    throw new Error(`plugin must be objects, got ${pluginEntry}`)
-  }
-  plugins.forEach((plugin) => visitPluginEntry(plugin))
-  return flatPlugins
 }
 
 const getHookFunction = (

@@ -43,10 +43,6 @@ export const createKitchen = ({
   outDirectoryUrl,
 }) => {
   const logger = createLogger({ logLevel })
-  const pluginController = createPluginController({
-    plugins,
-    scenarios,
-  })
   const kitchenContext = {
     signal,
     logger,
@@ -64,7 +60,18 @@ export const createKitchen = ({
     sourcemaps,
     outDirectoryUrl,
   }
-  pluginController.callHooks("init", kitchenContext)
+  const pluginController = createPluginController(kitchenContext)
+  const pushPlugins = (plugins) => {
+    plugins.forEach((pluginEntry) => {
+      if (Array.isArray(pluginEntry)) {
+        pushPlugins(pluginEntry)
+      } else {
+        pluginController.pushPlugin(pluginEntry)
+      }
+    })
+  }
+  pushPlugins(plugins)
+
   const createReference = ({
     data = {},
     node,
