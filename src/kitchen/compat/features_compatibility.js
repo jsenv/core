@@ -1,4 +1,4 @@
-export const featureCompats = {
+export const featuresCompatMap = {
   script_type_module: {
     edge: "16",
     firefox: "60",
@@ -28,6 +28,9 @@ export const featureCompats = {
     opera: "51",
     safari: "11.1",
     samsung: "9.2",
+  },
+  import_meta_resolve: {
+    chrome: "107",
   },
   // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import#browser_compatibility
   import_dynamic: {
