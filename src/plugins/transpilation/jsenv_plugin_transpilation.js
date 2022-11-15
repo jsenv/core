@@ -33,6 +33,7 @@ export const jsenvPluginTranspilation = ({
     importAssertions = {}
   }
   return [
+    ...(importMetaResolve ? [jsenvPluginImportMetaResolve()] : []),
     ...(importAssertions
       ? [jsenvPluginImportAssertions(importAssertions)]
       : []),
@@ -51,7 +52,6 @@ export const jsenvPluginTranspilation = ({
     // topLevelAwait must come after jsenvPluginAsJsClassic because it's related to the module format
     // so we want to wait to know the module format before transforming things related to top level await
     ...(topLevelAwait ? [jsenvPluginTopLevelAwait(topLevelAwait)] : []),
-    ...(importMetaResolve ? [jsenvPluginImportMetaResolve()] : []),
     ...(css ? [jsenvPluginCssParcel()] : []),
   ]
 }
