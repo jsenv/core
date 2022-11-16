@@ -13,7 +13,7 @@ const esToCjs = async ({ url, map, content }) => {
             return { id, external: true }
           }
           if (isFileSystemPath(id)) {
-            id = pathToFileURL(id)
+            id = String(pathToFileURL(id))
           }
           const url = await import.meta.resolve(id, pathToFileURL(importer))
           if (url.startsWith("node:")) {
