@@ -1,3 +1,7 @@
+# 29.8.2
+
+- Preserve search params during node esm resolution
+
 # 29.8.1
 
 - Update deps

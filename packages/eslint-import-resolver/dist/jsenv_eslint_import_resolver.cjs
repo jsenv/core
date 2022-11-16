@@ -626,7 +626,12 @@ const applyPackageSpecifierResolution = (specifier, resolutionContext) => {
     if (browserFieldResolution) {
       return browserFieldResolution
     }
-    return applyPackageResolve(specifier, resolutionContext)
+    const packageResolution = applyPackageResolve(specifier, resolutionContext);
+    const search = new URL(specifier, "file://").search;
+    if (search) {
+      packageResolution.url = `${packageResolution.url}${search}`;
+    }
+    return packageResolution
   }
 };
 
