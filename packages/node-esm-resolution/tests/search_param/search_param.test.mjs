@@ -12,6 +12,7 @@ const actual = {
 }
 const expected = {
   type: "field:main",
-  url: new URL("./root/node_modules/foo.js/entry.js", import.meta.url).href,
+  url: new URL("./root/node_modules/foo.js/entry.js?test", import.meta.url)
+    .href,
 }
 assert({ actual, expected })
