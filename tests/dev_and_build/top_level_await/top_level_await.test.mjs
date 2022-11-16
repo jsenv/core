@@ -40,7 +40,6 @@ await test({
     chrome: "89",
   },
 })
-
 // no support for top level await
 await test({
   runtimeCompat: {
