@@ -9,7 +9,6 @@ export const jsenvPluginReferenceExpectedTypes = () => {
       reference.isEntryPoint = true
     }
     if (searchParams.has("js_classic")) {
-      searchParams.delete("js_classic")
       reference.expectedType = "js_classic"
     } else if (
       searchParams.has("as_js_classic") ||
@@ -19,7 +18,6 @@ export const jsenvPluginReferenceExpectedTypes = () => {
     } else if (searchParams.has("as_js_module")) {
       reference.expectedType = "js_module"
     } else if (searchParams.has("js_module")) {
-      searchParams.delete("js_module")
       reference.expectedType = "js_module"
     } else if (
       reference.type === "js_url" &&
@@ -34,15 +32,11 @@ export const jsenvPluginReferenceExpectedTypes = () => {
 
     if (searchParams.has("worker")) {
       reference.expectedSubtype = "worker"
-      searchParams.delete("worker")
     } else if (searchParams.has("service_worker")) {
       reference.expectedSubtype = "service_worker"
-      searchParams.delete("service_worker")
     } else if (searchParams.has("shared_worker")) {
       reference.expectedSubtype = "shared_worker"
-      searchParams.delete("shared_worker")
     }
-
     return urlObject.href
   }
 
@@ -52,6 +46,7 @@ export const jsenvPluginReferenceExpectedTypes = () => {
     redirectUrl: {
       script_src: redirectJsUrls,
       js_url: redirectJsUrls,
+      js_import: redirectJsUrls,
     },
   }
 }

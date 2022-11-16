@@ -11596,14 +11596,12 @@ const jsenvPluginReferenceExpectedTypes = () => {
       reference.isEntryPoint = true;
     }
     if (searchParams.has("js_classic")) {
-      searchParams.delete("js_classic");
       reference.expectedType = "js_classic";
     } else if (searchParams.has("as_js_classic") || searchParams.has("as_js_classic_library")) {
       reference.expectedType = "js_classic";
     } else if (searchParams.has("as_js_module")) {
       reference.expectedType = "js_module";
     } else if (searchParams.has("js_module")) {
-      searchParams.delete("js_module");
       reference.expectedType = "js_module";
     } else if (reference.type === "js_url" && reference.expectedType === undefined && CONTENT_TYPE.fromUrlExtension(reference.url) === "text/javascript") {
       // by default, js referenced by new URL is considered as "js_module"
@@ -11613,13 +11611,10 @@ const jsenvPluginReferenceExpectedTypes = () => {
     }
     if (searchParams.has("worker")) {
       reference.expectedSubtype = "worker";
-      searchParams.delete("worker");
     } else if (searchParams.has("service_worker")) {
       reference.expectedSubtype = "service_worker";
-      searchParams.delete("service_worker");
     } else if (searchParams.has("shared_worker")) {
       reference.expectedSubtype = "shared_worker";
-      searchParams.delete("shared_worker");
     }
     return urlObject.href;
   };
@@ -11628,7 +11623,8 @@ const jsenvPluginReferenceExpectedTypes = () => {
     appliesDuring: "*",
     redirectUrl: {
       script_src: redirectJsUrls,
-      js_url: redirectJsUrls
+      js_url: redirectJsUrls,
+      js_import: redirectJsUrls
     }
   };
 };
@@ -20288,24 +20284,22 @@ const jsenvPluginImportAssertions = ({
         transpilations.text = true;
       }
     },
-    redirectUrl: {
-      js_import: (reference, context) => {
-        if (!reference.assert) {
-          return null;
-        }
-        const {
-          searchParams
-        } = reference;
-        if (searchParams.has("as_json_module") || searchParams.has("as_css_module") || searchParams.has("as_text_module")) {
-          markAsJsModuleProxy(reference);
-          return null;
-        }
-        const type = reference.assert.type;
-        if (shouldTranspileImportAssertion(context, type)) {
-          return turnIntoJsModuleProxy(reference, type);
-        }
+    redirectUrl: (reference, context) => {
+      if (!reference.assert) {
         return null;
       }
+      const {
+        searchParams
+      } = reference;
+      if (searchParams.has("as_json_module") || searchParams.has("as_css_module") || searchParams.has("as_text_module")) {
+        markAsJsModuleProxy(reference);
+        return null;
+      }
+      const type = reference.assert.type;
+      if (shouldTranspileImportAssertion(context, type)) {
+        return turnIntoJsModuleProxy(reference, type);
+      }
+      return null;
     }
   };
   return [importAssertions, ...jsenvPluginAsModules()];
@@ -23542,6 +23536,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             throw new Error(`urls should be inside build directory at this stage, found "${reference.url}"`);
           }
           const generatedUrlObject = new URL(reference.generatedUrl);
+          generatedUrlObject.searchParams.delete("js_classic");
+          generatedUrlObject.searchParams.delete("js_module");
           generatedUrlObject.searchParams.delete("as_js_classic");
           generatedUrlObject.searchParams.delete("as_js_classic_library");
           generatedUrlObject.searchParams.delete("as_js_module");
@@ -23752,7 +23748,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 const dependentUrlInfo = rawGraph.getUrlInfo(dependent);
                 for (const reference of dependentUrlInfo.references) {
                   if (reference.url === referencedUrlInfo.url) {
-                    willAlreadyBeBundled = reference.type === "js_import" && reference.subtype === "import_dynamic" || reference.type === "script_src";
+                    willAlreadyBeBundled = reference.subtype === "import_dynamic" || reference.type === "script_src";
                   }
                 }
               }

@@ -39,22 +39,20 @@ export const jsenvPluginCommonJs = ({
         rootDirectoryUrl,
       )
     },
-    redirectUrl: {
-      js_import: (reference) => {
-        if (reference.searchParams.has("cjs_as_js_module")) {
-          markAsJsModuleProxy(reference)
-          return null
-        }
-        const { commonjs } = URL_META.applyAssociations({
-          url: reference.url,
-          associations,
-        })
-        if (!commonjs) {
-          return null
-        }
-        reference.data.commonjs = commonjs
-        return turnIntoJsModuleProxy(reference)
-      },
+    redirectUrl: (reference) => {
+      if (reference.searchParams.has("cjs_as_js_module")) {
+        markAsJsModuleProxy(reference)
+        return null
+      }
+      const { commonjs } = URL_META.applyAssociations({
+        url: reference.url,
+        associations,
+      })
+      if (!commonjs) {
+        return null
+      }
+      reference.data.commonjs = commonjs
+      return turnIntoJsModuleProxy(reference)
     },
     fetchUrlContent: async (urlInfo, context) => {
       const [commonJsReference, commonJsUrlInfo] =

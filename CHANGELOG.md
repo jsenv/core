@@ -1,3 +1,7 @@
+# 29.8.3
+
+- Ensure ?js_classic applies on import.meta.resolve
+
 # 29.8.2
 
 - Preserve search params during node esm resolution

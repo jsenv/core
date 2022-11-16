@@ -495,6 +495,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               )
             }
             const generatedUrlObject = new URL(reference.generatedUrl)
+            generatedUrlObject.searchParams.delete("js_classic")
+            generatedUrlObject.searchParams.delete("js_module")
             generatedUrlObject.searchParams.delete("as_js_classic")
             generatedUrlObject.searchParams.delete("as_js_classic_library")
             generatedUrlObject.searchParams.delete("as_js_module")
@@ -725,8 +727,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 for (const reference of dependentUrlInfo.references) {
                   if (reference.url === referencedUrlInfo.url) {
                     willAlreadyBeBundled =
-                      (reference.type === "js_import" &&
-                        reference.subtype === "import_dynamic") ||
+                      reference.subtype === "import_dynamic" ||
                       reference.type === "script_src"
                   }
                 }

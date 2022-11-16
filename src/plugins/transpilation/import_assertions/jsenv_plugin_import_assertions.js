@@ -63,26 +63,24 @@ export const jsenvPluginImportAssertions = ({
         transpilations.text = true
       }
     },
-    redirectUrl: {
-      js_import: (reference, context) => {
-        if (!reference.assert) {
-          return null
-        }
-        const { searchParams } = reference
-        if (
-          searchParams.has("as_json_module") ||
-          searchParams.has("as_css_module") ||
-          searchParams.has("as_text_module")
-        ) {
-          markAsJsModuleProxy(reference)
-          return null
-        }
-        const type = reference.assert.type
-        if (shouldTranspileImportAssertion(context, type)) {
-          return turnIntoJsModuleProxy(reference, type)
-        }
+    redirectUrl: (reference, context) => {
+      if (!reference.assert) {
         return null
-      },
+      }
+      const { searchParams } = reference
+      if (
+        searchParams.has("as_json_module") ||
+        searchParams.has("as_css_module") ||
+        searchParams.has("as_text_module")
+      ) {
+        markAsJsModuleProxy(reference)
+        return null
+      }
+      const type = reference.assert.type
+      if (shouldTranspileImportAssertion(context, type)) {
+        return turnIntoJsModuleProxy(reference, type)
+      }
+      return null
     },
   }
   return [importAssertions, ...jsenvPluginAsModules()]
