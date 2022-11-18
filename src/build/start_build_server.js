@@ -32,6 +32,13 @@ import { getCallerPosition } from "@jsenv/urls"
 
 import { createReloadableWorker } from "@jsenv/core/src/helpers/worker_reload.js"
 
+/**
+ * Start a server for build files.
+ * @param {Object} buildServerParameters
+ * @param {string|url} buildServerParameters.rootDirectoryUrl Root directory of the project
+ * @param {string|url} buildServerParameters.buildDirectoryUrl Directory where build files are written
+ * @return {Object} A build server object
+ */
 export const startBuildServer = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
