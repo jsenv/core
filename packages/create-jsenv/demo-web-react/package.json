@@ -4,12 +4,13 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "start": "npm run dev -- --open",
     "dev": "node ./scripts/start_dev_server.mjs",
     "test": "node ./scripts/test.mjs",
     "test:coverage": "npm run test -- --coverage",
     "build": "node ./scripts/build.mjs",
     "build:watch": "npm run build -- --watch",
-    "build:serve": "node ./scripts/start_build_server.mjs"
+    "build:serve": "node ./scripts/start_build_server.mjs --open"
   },
   "dependencies": {
     "react": "18.2.0",
@@ -28,6 +29,7 @@
     "eslint-plugin-html": "7.1.0",
     "eslint-plugin-import": "2.26.0",
     "eslint-plugin-react": "7.31.10",
+    "open": "8.4.0",
     "playwright": "1.27.1",
     "prettier": "2.7.1"
   }

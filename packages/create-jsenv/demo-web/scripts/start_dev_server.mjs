@@ -1,8 +1,10 @@
 /*
  * Start a development server for files inside src/
  * - npm run dev
+ * - npm start
  */
 
+import open from "open"
 import { startDevServer } from "@jsenv/core"
 
 import { rootDirectoryUrl } from "../jsenv.config.mjs"
@@ -21,3 +23,6 @@ export const devServer = await startDevServer({
     },
   },
 })
+if (process.argv.includes("--open")) {
+  open(`${devServer.origin}/src/main.html`)
+}

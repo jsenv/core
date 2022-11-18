@@ -4,12 +4,16 @@
  * - npm run build:serve
  */
 
+import open from "open"
 import { startBuildServer } from "@jsenv/core"
 
 import { rootDirectoryUrl } from "../jsenv.config.mjs"
 
-await startBuildServer({
+const buildServer = await startBuildServer({
   rootDirectoryUrl,
   buildDirectoryUrl: new URL("./dist/", rootDirectoryUrl),
   port: 3500,
 })
+if (process.argv.includes("--open")) {
+  open(`${buildServer.origin}/index.html`)
+}

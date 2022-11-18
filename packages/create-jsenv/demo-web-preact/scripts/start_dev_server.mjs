@@ -3,6 +3,7 @@
  * - npm run dev
  */
 
+import open from "open"
 import { startDevServer } from "@jsenv/core"
 
 import { rootDirectoryUrl, plugins } from "../jsenv.config.mjs"
@@ -22,3 +23,6 @@ export const devServer = await startDevServer({
     },
   },
 })
+if (process.argv.includes("--open")) {
+  open(`${devServer.origin}/src/main.html`)
+}

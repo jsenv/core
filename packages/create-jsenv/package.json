@@ -1,7 +1,7 @@
 {
   "name": "create-jsenv",
-  "version": "1.3.11",
-  "description": "jsenv npm initializer",
+  "version": "1.4.0",
+  "description": "npm initializer for jsenv",
   "license": "MIT",
   "repository": {
     "type": "git",
