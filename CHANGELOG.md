@@ -1,3 +1,7 @@
+# 29.8.4
+
+- Update playwright (and ESLint)
+
 # 29.8.3
 
 - Ensure ?js_classic applies on import.meta.resolve
