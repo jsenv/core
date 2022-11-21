@@ -27580,7 +27580,7 @@ const registerEvent = ({
 
 const chromium = createRuntimeFromPlaywright({
   browserName: "chromium",
-  browserVersion: "105.0.5195.19",
+  browserVersion: "108.0.5359.29",
   // to update, check https://github.com/microsoft/playwright/releases
   coveragePlaywrightAPIAvailable: true
 });
@@ -27588,14 +27588,14 @@ const chromiumIsolatedTab = chromium.isolatedTab;
 
 const firefox = createRuntimeFromPlaywright({
   browserName: "firefox",
-  browserVersion: "103.0" // to update, check https://github.com/microsoft/playwright/releases
+  browserVersion: "106.0" // to update, check https://github.com/microsoft/playwright/releases
 });
 
 const firefoxIsolatedTab = firefox.isolatedTab;
 
 const webkit = createRuntimeFromPlaywright({
   browserName: "webkit",
-  browserVersion: "16.0",
+  browserVersion: "16.4",
   // to update, check https://github.com/microsoft/playwright/releases
   ignoreErrorHook: error => {
     // we catch error during execution but safari throw unhandled rejection
@@ -28456,6 +28456,14 @@ const onceWorkerThreadEvent = (worker, type, callback) => {
  * Conclusion:
  * "startBuildServer" must be as close as possible from a static file server because
  * we want to be in the user shoes and we should not alter build files.
+ */
+
+/**
+ * Start a server for build files.
+ * @param {Object} buildServerParameters
+ * @param {string|url} buildServerParameters.rootDirectoryUrl Root directory of the project
+ * @param {string|url} buildServerParameters.buildDirectoryUrl Directory where build files are written
+ * @return {Object} A build server object
  */
 const startBuildServer = async ({
   signal = new AbortController().signal,
