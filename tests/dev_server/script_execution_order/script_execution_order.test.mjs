@@ -44,12 +44,12 @@ const test = async ({ browserLauncher }) => {
     if (browserLauncher === chromium) {
       const actual = result
       const expected = correctOrder
-      assert({ actual, expected })
+      assert({ actual, expected, context: `chromium` })
     }
     if (browserLauncher === firefox) {
       const actual = result
       const expected = correctOrder
-      assert({ actual, expected })
+      assert({ actual, expected, context: `firefox` })
     }
     if (browserLauncher === webkit) {
       // window "load" event is not deterministic on webkit due to
@@ -68,7 +68,7 @@ const test = async ({ browserLauncher }) => {
         "js_module_a_after_top_level_await",
         "js_module_b",
       ]
-      assert({ actual, expected })
+      assert({ actual, expected, context: `webkit` })
     }
   } finally {
     browser.close()
