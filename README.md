@@ -3,9 +3,9 @@
 Jsenv was created to provide a tool that can be used both for the web and Node.js.
 It has naturally evolved to cover the core needs of a JavaScript project: developement, testing and building for production.
 
-- :exploding_head: Execute HTML files as tests
-- :sparkles: Dev, tests and build in a single tool
 - :ok_hand: Seamless integration with standard HTML, CSS and JS
+- :sparkles: Same tooling for dev tests and build
+- :exploding_head: Can execute tests on Chrome, Firefox, Safari and Node.js
 
 # Documentation
 
