@@ -22,9 +22,8 @@ Other operating systems and Node.js versions are not tested.
 
 # Name
 
-The name "jsenv" stands for JavaScript environments.
-Maybe "jsenv" should be written "JSEnv", but it would be too painful to type.
-The prefered syntax is "jsenv".
+The name "jsenv" stands for JavaScript environments.<br />
+"jsenv" without capital letter because "JSEnv" would be too painful to type.
 
 # Logo
 
