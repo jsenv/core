@@ -1,3 +1,7 @@
+# 29.8.5
+
+- Update deps
+
 # 29.8.4
 
 - Update playwright (and ESLint)
