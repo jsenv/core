@@ -8,7 +8,7 @@ await executeTestPlan({
   testPlan: process.argv.includes("--only-resource-hints")
     ? {
         "tests/**/resource_hints/**/*.test.mjs": {
-           node: {
+          node: {
             runtime: nodeWorkerThread,
             allocatedMs: 30_000,
           },

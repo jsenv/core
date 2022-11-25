@@ -90,10 +90,10 @@
     "istanbul-reports": "3.1.5",
     "launch-editor": "2.6.0",
     "pidtree": "0.6.0",
-    "rollup": "3.3.0",
+    "rollup": "3.4.0",
     "string-width": "5.1.2",
     "strip-ansi": "7.0.1",
-    "terser": "5.15.1",
+    "terser": "5.16.0",
     "v8-to-istanbul": "9.0.1",
     "wrap-ansi": "8.0.1"
   },
@@ -110,7 +110,7 @@
     "eslint-plugin-html": "7.1.0",
     "eslint-plugin-import": "2.26.0",
     "eslint-plugin-react": "7.31.11",
-    "playwright": "1.28.0",
-    "prettier": "2.7.1"
+    "playwright": "1.28.1",
+    "prettier": "2.8.0"
   }
 }
