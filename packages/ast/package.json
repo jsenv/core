@@ -33,7 +33,7 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "@babel/parser": "7.20.3",
+    "@babel/parser": "7.20.5",
     "@parcel/css": "1.14.0",
     "acorn": "8.8.1",
     "acorn-import-assertions": "1.8.0",
