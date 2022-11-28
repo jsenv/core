@@ -1,10 +1,12 @@
-export default function (arr, i) {
-  if (typeof Symbol === "undefined" || !(Symbol.iterator in Object(arr))) return;
+/* @minVersion 7.0.0-beta.0 */
+
+export default function _iterableToArrayLimitLoose(arr, i) {
+  var _i = arr && (typeof Symbol !== "undefined" && arr[Symbol.iterator] || arr["@@iterator"]);
+  if (_i == null) return;
   var _arr = [];
-  for (var _iterator = arr[Symbol.iterator](), _step; !(_step = _iterator.next()).done;) {
-    _arr.push(_step.value);
-    if (i && _arr.length === i) break;
+  var _s;
+  for (_i = _i.call(arr); arr.length < i && !(_s = _i.next()).done;) {
+    _arr.push(_s.value);
   }
-  // eslint-disable-next-line consistent-return
   return _arr;
 }
