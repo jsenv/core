@@ -1,1 +1,31 @@
-import{updateIframeOverflowOnParentWindow as t}from"/js/dom.js?v=4435f890";export const toggleTooltip=t=>{t.hasAttribute("data-tooltip-visible")?hideTooltip(t):showTooltip(t)};export const hideTooltip=o=>{o.removeAttribute("data-tooltip-visible"),o.removeAttribute("data-tooltip-auto-visible"),t()};export const showTooltip=o=>{o.setAttribute("data-tooltip-visible",""),t()};export const autoShowTooltip=o=>{o.setAttribute("data-tooltip-auto-visible",""),t()};export const removeAutoShowTooltip=o=>{o.removeAttribute("data-tooltip-auto-visible"),t()};export const hideAllTooltip=()=>{Array.from(document.querySelectorAll("[data-tooltip-visible]")).forEach((t=>{hideTooltip(t)}))};
+import { updateIframeOverflowOnParentWindow } from "./dom.js";
+export const toggleTooltip = element => {
+  if (element.hasAttribute("data-tooltip-visible")) {
+    hideTooltip(element);
+  } else {
+    showTooltip(element);
+  }
+};
+export const hideTooltip = element => {
+  element.removeAttribute("data-tooltip-visible");
+  element.removeAttribute("data-tooltip-auto-visible");
+  updateIframeOverflowOnParentWindow();
+};
+export const showTooltip = element => {
+  element.setAttribute("data-tooltip-visible", "");
+  updateIframeOverflowOnParentWindow();
+};
+export const autoShowTooltip = element => {
+  element.setAttribute("data-tooltip-auto-visible", "");
+  updateIframeOverflowOnParentWindow();
+};
+export const removeAutoShowTooltip = element => {
+  element.removeAttribute("data-tooltip-auto-visible");
+  updateIframeOverflowOnParentWindow();
+};
+export const hideAllTooltip = () => {
+  const elementsWithTooltip = Array.from(document.querySelectorAll("[data-tooltip-visible]"));
+  elementsWithTooltip.forEach(elementWithTooltip => {
+    hideTooltip(elementWithTooltip);
+  });
+};

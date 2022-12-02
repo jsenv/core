@@ -1,1 +1,53 @@
-export const enableVariant=(t,c)=>{Array.from(t.querySelectorAll("[".concat(r,"]"))).forEach((t=>{const n=t.getAttribute(r);e(n,c)&&a(t,r,o)}));Array.from(t.querySelectorAll("[".concat(o,"]"))).forEach((t=>{const n=t.getAttribute(o);e(n,c)||a(t,o,r)}))};const e=(e,r)=>{const o=t(e);return Object.keys(r).some((e=>o.key===e&&(void 0===o.value||o.value===r[e])))},t=e=>{const t=e.indexOf(":");return-1===t?{key:e,value:void 0}:{key:e.slice(0,t),value:e.slice(t+1)}},r="data-when",o="data-when-active",a=(e,t,r)=>{e.setAttribute(r,e.getAttribute(t)),e.removeAttribute(t)};
+export const enableVariant = (rootNode, variables) => {
+  const nodesNotMatching = Array.from(rootNode.querySelectorAll(`[${attributeIndicatingACondition}]`));
+  nodesNotMatching.forEach(nodeNotMatching => {
+    const conditionAttributeValue = nodeNotMatching.getAttribute(attributeIndicatingACondition);
+    const matches = testCondition(conditionAttributeValue, variables);
+    if (matches) {
+      renameAttribute(nodeNotMatching, attributeIndicatingACondition, attributeIndicatingAMatch);
+    }
+  });
+  const nodesMatching = Array.from(rootNode.querySelectorAll(`[${attributeIndicatingAMatch}]`));
+  nodesMatching.forEach(nodeMatching => {
+    const conditionAttributeValue = nodeMatching.getAttribute(attributeIndicatingAMatch);
+    const matches = testCondition(conditionAttributeValue, variables);
+    if (!matches) {
+      renameAttribute(nodeMatching, attributeIndicatingAMatch, attributeIndicatingACondition);
+    }
+  });
+};
+const testCondition = (conditionAttributeValue, variables) => {
+  const condition = parseCondition(conditionAttributeValue);
+  return Object.keys(variables).some(key => {
+    if (condition.key !== key) {
+      return false;
+    }
+    // the condition do not specify a value, any value is ok
+    if (condition.value === undefined) {
+      return true;
+    }
+    if (condition.value === variables[key]) {
+      return true;
+    }
+    return false;
+  });
+};
+const parseCondition = conditionAttributeValue => {
+  const colonIndex = conditionAttributeValue.indexOf(":");
+  if (colonIndex === -1) {
+    return {
+      key: conditionAttributeValue,
+      value: undefined
+    };
+  }
+  return {
+    key: conditionAttributeValue.slice(0, colonIndex),
+    value: conditionAttributeValue.slice(colonIndex + 1)
+  };
+};
+const attributeIndicatingACondition = `data-when`;
+const attributeIndicatingAMatch = `data-when-active`;
+const renameAttribute = (node, name, newName) => {
+  node.setAttribute(newName, node.getAttribute(name));
+  node.removeAttribute(name);
+};

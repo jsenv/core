@@ -6,6 +6,9 @@ build({
   entryPoints: {
     "./src/jsenv_plugin_toolbar.js": "jsenv_plugin_toolbar.js",
   },
+  runtimeCompat: {
+    node: "16.14",
+  },
   urlAnalysis: {
     include: {
       "/**/*": true,
@@ -13,4 +16,5 @@ build({
     },
   },
   minification: false,
+  versioning: false,
 })

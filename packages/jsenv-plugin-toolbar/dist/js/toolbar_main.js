@@ -1,1 +1,173 @@
-import{startJavaScriptAnimation as o}from"/js/animation.js?v=4334e3fc";import"/js/toolbar_focus.js?v=736c7e1c";import{setLinkHrefForParentWindow as t}from"/js/iframe_to_parent_href.js?v=22da964e";import{getToolbarIframe as e,deactivateToolbarSection as r,setStyles as n}from"/js/dom.js?v=4435f890";import{createPreference as i}from"/js/preferences.js?v=7075848a";import{hideTooltip as a,hideAllTooltip as s}from"/js/tooltip.js?v=50fd376b";import{renderToolbarSettings as m,hideSettings as l}from"/js/toolbar_settings.js?v=eab840ee";import{renderToolbarNotification as c}from"/js/toolbar_notification.js?v=6af14793";import{renderToolbarTheme as d}from"/js/toolbar_theme.js?v=53adf4a2";import{renderToolbarAnimation as b}from"/js/toolbar_animation.js?v=235402b4";import{renderExecutionInToolbar as u}from"/js/toolbar_execution.js?v=2b0e0322";import{initToolbarEventSource as p}from"/js/toolbar_eventsource.js?v=c264728b";import{makeToolbarResponsive as j}from"/js/toolbar_responsive.js?v=67fe61d7";const f=i("toolbar"),v=()=>{_()?g():y()},_=()=>document.documentElement.hasAttribute("data-toolbar-visible");let g=()=>{w("toolbar-visibility-change",!1)};const y=({animate:t=!0}={})=>{f.set(!0),t?document.documentElement.setAttribute("data-toolbar-animation",""):document.documentElement.removeAttribute("data-toolbar-animation"),document.documentElement.setAttribute("data-toolbar-visible",""),w("toolbar-visibility-change",!0);const r=e(),i=r.parentNode,s=window.parent,m="CSS1Compat"===s.document.compatMode?s.document.documentElement:s.document.body,l=m.scrollHeight-s.innerHeight,c=m.scrollTop,d=l-c;n(i,{"transition-property":"padding-bottom","transition-duration":"300ms"});const b=n(i,{"scroll-padding-bottom":"40px","padding-bottom":"40px"}),u=n(r,{height:"40px",visibility:"visible"});if(d<40&&l>0){const t=c+40;o({duration:300,onProgress:({progress:o})=>{const e=c+(t-c)*o;m.scrollTop=e}})}g=()=>{b(),u(),a(document.querySelector("#eventsource-indicator")),a(document.querySelector("#execution-indicator")),f.set(!1),t?document.documentElement.setAttribute("data-toolbar-animation",""):document.documentElement.removeAttribute("data-toolbar-animation"),document.documentElement.removeAttribute("data-toolbar-visible"),w("toolbar-visibility-change",!1)}},h=(o,t)=>{const e=e=>{const{data:r}=e;if("object"!=typeof r)return;const{__jsenv__:n}=r;n&&n.command===o&&t(...n.args)};return window.addEventListener("message",e),()=>{window.removeEventListener("message",e)}},w=(o,t)=>{window.parent.postMessage({__jsenv__:{event:o,data:t}},"*")};window.toolbar={show:y,hide:()=>g()},h("renderToolbar",(({logs:o})=>{(async()=>{document.querySelector("#toolbar-overlay").onclick=()=>{s(),l()},!f.has()||f.get()?y({animate:!1}):g({animate:!1}),t(document.querySelector(".toolbar-icon-wrapper"),"/"),c(),j(),m(),b(),d(),u(),r(document.querySelector("#file-list-link")),p(),document.querySelector("#button-close-toolbar").onclick=()=>v()})()})),h("showToolbar",(()=>{y()})),h("hideToolbar",(()=>{g()})),w("toolbar_ready");
+import { startJavaScriptAnimation } from "./animation.js";
+import "./toolbar_focus.js";
+import { setLinkHrefForParentWindow } from "./iframe_to_parent_href.js";
+import { getToolbarIframe, deactivateToolbarSection, setStyles } from "./dom.js";
+import { createPreference } from "./preferences.js";
+import { hideTooltip, hideAllTooltip } from "./tooltip.js";
+import { renderToolbarSettings, hideSettings } from "./toolbar_settings.js";
+import { renderToolbarNotification } from "./toolbar_notification.js";
+import { renderToolbarTheme } from "./toolbar_theme.js";
+import { renderToolbarAnimation } from "./toolbar_animation.js";
+import { renderExecutionInToolbar } from "./toolbar_execution.js";
+import { initToolbarEventSource } from "./toolbar_eventsource.js";
+import { makeToolbarResponsive } from "./toolbar_responsive.js";
+const toolbarVisibilityPreference = createPreference("toolbar");
+const renderToolbar = async () => {
+  const toolbarOverlay = document.querySelector("#toolbar-overlay");
+  toolbarOverlay.onclick = () => {
+    hideAllTooltip();
+    hideSettings();
+  };
+  const toolbarVisible = toolbarVisibilityPreference.has() ? toolbarVisibilityPreference.get() : true;
+  if (toolbarVisible) {
+    showToolbar({
+      animate: false
+    });
+  } else {
+    hideToolbar({
+      animate: false
+    });
+  }
+  setLinkHrefForParentWindow(document.querySelector(".toolbar-icon-wrapper"), "/");
+  renderToolbarNotification();
+  makeToolbarResponsive();
+  renderToolbarSettings();
+  renderToolbarAnimation();
+  renderToolbarTheme();
+  renderExecutionInToolbar();
+  // this might become active but we need to detect this somehow
+  deactivateToolbarSection(document.querySelector("#file-list-link"));
+  initToolbarEventSource();
+
+  // if user click enter or space quickly while closing toolbar
+  // it will cancel the closing
+  // that's why I used toggleToolbar and not hideToolbar
+  document.querySelector("#button-close-toolbar").onclick = () => toogleToolbar();
+};
+const toogleToolbar = () => {
+  if (toolbarIsVisible()) {
+    hideToolbar();
+  } else {
+    showToolbar();
+  }
+};
+const toolbarIsVisible = () => document.documentElement.hasAttribute("data-toolbar-visible");
+let hideToolbar = () => {
+  // toolbar hidden by default, nothing to do to hide it by default
+  sendEventToParent("toolbar-visibility-change", false);
+};
+
+// (by the way it might be cool to have the toolbar auto show when)
+// it has something to say (being disconnected from server)
+const showToolbar = ({
+  animate = true
+} = {}) => {
+  toolbarVisibilityPreference.set(true);
+  if (animate) {
+    document.documentElement.setAttribute("data-toolbar-animation", "");
+  } else {
+    document.documentElement.removeAttribute("data-toolbar-animation");
+  }
+  document.documentElement.setAttribute("data-toolbar-visible", "");
+  sendEventToParent("toolbar-visibility-change", true);
+  const toolbarIframe = getToolbarIframe();
+  const toolbarIframeParent = toolbarIframe.parentNode;
+  const parentWindow = window.parent;
+  const parentDocumentElement = parentWindow.document.compatMode === "CSS1Compat" ? parentWindow.document.documentElement : parentWindow.document.body;
+  const scrollYMax = parentDocumentElement.scrollHeight - parentWindow.innerHeight;
+  const scrollY = parentDocumentElement.scrollTop;
+  const scrollYRemaining = scrollYMax - scrollY;
+  setStyles(toolbarIframeParent, {
+    "transition-property": "padding-bottom",
+    "transition-duration": "300ms"
+  });
+  // maybe we should use js animation here because we would not conflict with css
+  const restoreToolbarIframeParentStyles = setStyles(toolbarIframeParent, {
+    "scroll-padding-bottom": "40px",
+    // same here we should add 40px
+    "padding-bottom": "40px" // if there is already one we should add 40px
+  });
+
+  const restoreToolbarIframeStyles = setStyles(toolbarIframe, {
+    height: "40px",
+    visibility: "visible"
+  });
+  if (scrollYRemaining < 40 && scrollYMax > 0) {
+    const scrollEnd = scrollY + 40;
+    startJavaScriptAnimation({
+      duration: 300,
+      onProgress: ({
+        progress
+      }) => {
+        const value = scrollY + (scrollEnd - scrollY) * progress;
+        parentDocumentElement.scrollTop = value;
+      }
+    });
+  }
+  hideToolbar = () => {
+    restoreToolbarIframeParentStyles();
+    restoreToolbarIframeStyles();
+    hideTooltip(document.querySelector("#eventsource-indicator"));
+    hideTooltip(document.querySelector("#execution-indicator"));
+    toolbarVisibilityPreference.set(false);
+    if (animate) {
+      document.documentElement.setAttribute("data-toolbar-animation", "");
+    } else {
+      document.documentElement.removeAttribute("data-toolbar-animation");
+    }
+    document.documentElement.removeAttribute("data-toolbar-visible");
+    sendEventToParent("toolbar-visibility-change", false);
+  };
+};
+const addExternalCommandCallback = (command, callback) => {
+  const messageEventCallback = messageEvent => {
+    const {
+      data
+    } = messageEvent;
+    if (typeof data !== "object") {
+      return;
+    }
+    const {
+      __jsenv__
+    } = data;
+    if (!__jsenv__) {
+      return;
+    }
+    if (__jsenv__.command !== command) {
+      return;
+    }
+    callback(...__jsenv__.args);
+  };
+  window.addEventListener("message", messageEventCallback);
+  return () => {
+    window.removeEventListener("message", messageEventCallback);
+  };
+};
+const sendEventToParent = (name, data) => {
+  window.parent.postMessage({
+    __jsenv__: {
+      event: name,
+      data
+    }
+  }, "*");
+};
+window.toolbar = {
+  show: showToolbar,
+  hide: () => hideToolbar()
+};
+
+// const { currentScript } = document
+addExternalCommandCallback("renderToolbar", ({
+  logs
+}) => {
+  renderToolbar({
+    logs
+  });
+});
+addExternalCommandCallback("showToolbar", () => {
+  showToolbar();
+});
+addExternalCommandCallback("hideToolbar", () => {
+  hideToolbar();
+});
+sendEventToParent("toolbar_ready");

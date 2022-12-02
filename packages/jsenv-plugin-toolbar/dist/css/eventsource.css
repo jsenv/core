@@ -1,1 +1,87 @@
-#eventsource-indicator button{position:relative}#eventsource-indicator button svg{width:40px;height:40px}#eventsource-indicator .event-source-autoreload{width:32px;height:32px;margin:4px;position:absolute;top:0;left:0}.event-source-autoreload[data-variant=enabled]{color:green}#eventsource-indicator .event-source-icon{width:40px;height:40px}.eventsource-circle{stroke:#000;stroke-width:0}.eventsource-circle[data-variant=off]{fill:#cecece}.eventsource-circle[data-variant=connecting]{fill:#cecece;transform-origin:50%;animation:1.2s ease-out infinite wink}@keyframes wink{0%{opacity:0}80%{opacity:1}to{opacity:0}}.eventsource-ring{stroke:rgba(206,206,206,.46);stroke-width:4px;fill:transparent;transform-origin:50%;animation:1.2s ease-out infinite pulse}@keyframes pulse{0%{opacity:0;transform:scale(0)}50%{opacity:1}to{opacity:0;transform:scale(1)}}.eventsource-circle[data-variant=connected]{fill:green}.eventsource-circle[data-variant=failed]{fill:#c00}
+#eventsource-indicator button {
+  position: relative;
+}
+
+#eventsource-indicator button svg {
+  width: 40px;
+  height: 40px;
+}
+
+#eventsource-indicator .event-source-autoreload {
+  width: 32px;
+  height: 32px;
+  margin: 4px;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.event-source-autoreload[data-variant="enabled"] {
+  color: green;
+}
+
+#eventsource-indicator .event-source-icon {
+  width: 40px;
+  height: 40px;
+}
+
+.eventsource-circle {
+  stroke: #000;
+  stroke-width: 0;
+}
+
+.eventsource-circle[data-variant="off"] {
+  fill: #cecece;
+}
+
+.eventsource-circle[data-variant="connecting"] {
+  fill: #cecece;
+  transform-origin: center;
+  animation: 1.2s ease-out infinite wink;
+}
+
+@keyframes wink {
+  0% {
+    opacity: 0;
+  }
+
+  80% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+.eventsource-ring {
+  stroke: #cecece75;
+  stroke-width: 4px;
+  fill: #0000;
+  transform-origin: center;
+  animation: 1.2s ease-out infinite pulse;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+.eventsource-circle[data-variant="connected"] {
+  fill: green;
+}
+
+.eventsource-circle[data-variant="failed"] {
+  fill: #c00;
+}

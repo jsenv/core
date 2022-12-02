@@ -1,1 +1,35 @@
-import{toolbarSectionIsActive as t,deactivateToolbarSection as e,activateToolbarSection as n,updateIframeOverflowOnParentWindow as o}from"/js/dom.js?v=4435f890";import{enableVariant as s}from"/js/variant.js?v=6ddde2cc";export const renderToolbarSettings=()=>{document.querySelector("#settings-button").onclick=r,document.querySelector("#button-close-settings").onclick=r,disableWarningStyle()};const r=()=>{settingsAreVisible()?hideSettings():showSettings()};export const enableWarningStyle=()=>{s(document.querySelector("#settings-button"),{has_warning:"yes"})};export const disableWarningStyle=()=>{s(document.querySelector("#settings-button"),{has_warning:"no"})};export const settingsAreVisible=()=>t(document.querySelector("#settings"));export const hideSettings=()=>{e(document.querySelector("#settings")),o()};export const showSettings=()=>{n(document.querySelector("#settings")),o()};
+import { toolbarSectionIsActive, deactivateToolbarSection, activateToolbarSection, updateIframeOverflowOnParentWindow } from "./dom.js";
+import { enableVariant } from "./variant.js";
+export const renderToolbarSettings = () => {
+  document.querySelector("#settings-button").onclick = toggleSettings;
+  document.querySelector("#button-close-settings").onclick = toggleSettings;
+  disableWarningStyle();
+};
+const toggleSettings = () => {
+  if (settingsAreVisible()) {
+    hideSettings();
+  } else {
+    showSettings();
+  }
+};
+export const enableWarningStyle = () => {
+  enableVariant(document.querySelector("#settings-button"), {
+    has_warning: "yes"
+  });
+};
+export const disableWarningStyle = () => {
+  enableVariant(document.querySelector("#settings-button"), {
+    has_warning: "no"
+  });
+};
+export const settingsAreVisible = () => {
+  return toolbarSectionIsActive(document.querySelector(`#settings`));
+};
+export const hideSettings = () => {
+  deactivateToolbarSection(document.querySelector(`#settings`));
+  updateIframeOverflowOnParentWindow();
+};
+export const showSettings = () => {
+  activateToolbarSection(document.querySelector(`#settings`));
+  updateIframeOverflowOnParentWindow();
+};

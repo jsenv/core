@@ -1,1 +1,96 @@
-import{removeForceHideElement as t}from"/js/dom.js?v=4435f890";import{enableVariant as e}from"/js/variant.js?v=6ddde2cc";import{toggleTooltip as o}from"/js/tooltip.js?v=50fd376b";import{notifyExecutionResult as n}from"/js/toolbar_notification.js?v=6af14793";export const renderExecutionInToolbar=async()=>{i(),t(document.querySelector("#execution-indicator"));const{status:e,startTime:o,endTime:s}=await window.parent.__supervisor__.getDocumentExecutionResult(),r={status:e,startTime:o,endTime:s};i(r);const c=window.location.href,a=sessionStorage.hasOwnProperty(c)?JSON.parse(sessionStorage.getItem(c)):void 0;n(c,r,a),sessionStorage.setItem(c,JSON.stringify(r))};const i=({status:t="running",startTime:n,endTime:i}={})=>{const r=document.querySelector("#execution-indicator");e(r,{execution:t});const c=r.querySelector("[data-when-active]");c.querySelector("button").onclick=()=>o(r),c.querySelector(".tooltip").textContent=s({status:t,startTime:n,endTime:i})},s=({status:t,startTime:e,endTime:o})=>"completed"===t?"Execution completed in ".concat(o-e,"ms"):"errored"===t?"Execution failed in ".concat(o-e,"ms"):"running"===t?"Executing...":"";
+import { removeForceHideElement } from "./dom.js";
+import { enableVariant } from "./variant.js";
+import { toggleTooltip } from "./tooltip.js";
+import { notifyExecutionResult } from "./toolbar_notification.js";
+export const renderExecutionInToolbar = async () => {
+  // reset file execution indicator ui
+  applyExecutionIndicator();
+  removeForceHideElement(document.querySelector("#execution-indicator"));
+  const {
+    status,
+    startTime,
+    endTime
+  } = await window.parent.__supervisor__.getDocumentExecutionResult();
+  const execution = {
+    status,
+    startTime,
+    endTime
+  };
+  applyExecutionIndicator(execution);
+  const executionStorageKey = window.location.href;
+  const previousExecution = sessionStorage.hasOwnProperty(executionStorageKey) ? JSON.parse(sessionStorage.getItem(executionStorageKey)) : undefined;
+  notifyExecutionResult(executionStorageKey, execution, previousExecution);
+  sessionStorage.setItem(executionStorageKey, JSON.stringify(execution));
+};
+
+// const changeLink = variantNode.querySelector(".eventsource-changes-link")
+// changeLink.innerHTML = reloadMessageCount
+// changeLink.onclick = () => {
+//   console.log(reloadMessages)
+//   // eslint-disable-next-line no-alert
+//   window.parent.alert(JSON.stringify(reloadMessages, null, "  "))
+// }
+
+// const someFailed = reloadMessages.some((m) => m.status === "failed")
+// const somePending = reloadMessages.some((m) => m.status === "pending")
+// const applyLink = variantNode.querySelector(".eventsource-reload-link")
+// applyLink.innerHTML = someFailed
+//   ? "failed"
+//   : somePending
+//   ? "applying..."
+//   : "apply changes"
+// applyLink.onclick = someFailed
+//   ? () => {
+//       parentEventSourceClient.applyReloadMessageEffects()
+//     }
+//   : somePending
+//   ? () => {}
+//   : () => {
+//       parentEventSourceClient.applyReloadMessageEffects()
+//     }
+
+// parentEventSourceClient.reloadMessagesSignal.onchange = () => {
+//   updateEventSourceIndicator()
+// }
+// const autoreloadCheckbox = document.querySelector("#toggle-autoreload")
+// autoreloadCheckbox.checked = parentEventSourceClient.isAutoreloadEnabled()
+// autoreloadCheckbox.onchange = () => {
+//   parentEventSourceClient.setAutoreloadPreference(autoreloadCheckbox.checked)
+//   updateEventSourceIndicator()
+// }
+
+const applyExecutionIndicator = ({
+  status = "running",
+  startTime,
+  endTime
+} = {}) => {
+  const executionIndicator = document.querySelector("#execution-indicator");
+  enableVariant(executionIndicator, {
+    execution: status
+  });
+  const variantNode = executionIndicator.querySelector("[data-when-active]");
+  variantNode.querySelector("button").onclick = () => toggleTooltip(executionIndicator);
+  variantNode.querySelector(".tooltip").textContent = computeText({
+    status,
+    startTime,
+    endTime
+  });
+};
+
+// relative time: https://github.com/tc39/proposal-intl-relative-time/issues/118
+const computeText = ({
+  status,
+  startTime,
+  endTime
+}) => {
+  if (status === "completed") {
+    return `Execution completed in ${endTime - startTime}ms`;
+  }
+  if (status === "errored") {
+    return `Execution failed in ${endTime - startTime}ms`;
+  }
+  if (status === "running") {
+    return "Executing...";
+  }
+  return "";
+};

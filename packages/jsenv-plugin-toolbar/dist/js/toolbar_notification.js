@@ -1,1 +1,155 @@
-import{createPreference as t}from"/js/preferences.js?v=7075848a";import{enableVariant as e}from"/js/variant.js?v=6ddde2cc";const o="function"==typeof window.Notification,i=t("notification"),n=[];export const renderToolbarNotification=()=>{o?c():r()};const c=()=>{const t=Notification.permission;"default"!==t?"denied"!==t?"granted"!==t||d():l():a()},s=document.querySelector("#toggle-notifs"),r=()=>{const t=document.querySelector(".settings-notification");t.setAttribute("data-disabled","true"),t.setAttribute("title","Notification not available in the browser"),s.disabled=!0},a=()=>{u();const t=document.querySelector(".settings-notification");t.removeAttribute("data-disabled"),t.removeAttribute("title")},l=()=>{u();const t=document.querySelector(".settings-notification");t.setAttribute("data-disabled","true"),t.setAttribute("title","Notification denied")},d=()=>{e(document.querySelector(".notification-text"),{notif_granted:"yes"}),s.disabled=!1,s.checked=f(),s.onchange=()=>{b(s.checked),s.checked||n.slice().forEach((t=>{t.close()}))}},u=()=>{e(document.querySelector(".notification-text"),{notif_granted:"no"}),s.disabled=!0,s.checked=!1,document.querySelector("a.request_notification_permission").onclick=()=>{x().then((()=>{b(!0),c()}))}};export const notifyExecutionResult=(t,e,o)=>{if(!f())return;const i={lang:"en",icon:m(),clickToFocus:!0,clickToClose:!0};"errored"===e.status?o?"completed"===o.status?g("Broken",{...i,body:"".concat(t," execution now failing.")}):g("Still failing",{...i,body:"".concat(t," execution still failing.")}):g("Failing",{...i,body:"".concat(t," execution failed.")}):o&&"errored"===o.status&&g("Fixed",{...i,body:"".concat(t," execution fixed.")})};const f=()=>!i.has()||i.get(),b=t=>i.set(t),m=()=>{const t=document.querySelector('link[rel="icon"]');return t?t.href:void 0};let y="default";const g=o?async(t,{clickToFocus:e=!1,clickToClose:o=!1,...i}={})=>{if("granted"!==y)return null;const c=new Notification(t,i);return n.push(c),c.onclick=()=>{e&&window.focus(),o&&c.close()},c.onclose=()=>{const t=n.indexOf(c);t>-1&&n.splice(t,1)},c}:()=>{};let k;const x=o?async()=>k||(k=Notification.requestPermission(),y=await k,k=void 0,y):()=>Promise.resolve("default");
+import { createPreference } from "./preferences.js";
+import { enableVariant } from "./variant.js";
+const notificationAvailable = typeof window.Notification === "function";
+const notificationPreference = createPreference("notification");
+const arrayOfOpenedNotifications = [];
+export const renderToolbarNotification = () => {
+  if (!notificationAvailable) {
+    applyNotificationNotAvailableEffects();
+    return;
+  }
+  updatePermission();
+};
+const updatePermission = () => {
+  const notifPermission = Notification.permission;
+  if (notifPermission === "default") {
+    applyNotificationDefaultEffects();
+    return;
+  }
+  if (notifPermission === "denied") {
+    applyNotificationDeniedEffects();
+    return;
+  }
+  if (notifPermission === "granted") {
+    applyNotificationGrantedEffects();
+    return;
+  }
+};
+const notifCheckbox = document.querySelector("#toggle-notifs");
+const applyNotificationNotAvailableEffects = () => {
+  const notifSetting = document.querySelector(".settings-notification");
+  notifSetting.setAttribute("data-disabled", "true");
+  notifSetting.setAttribute("title", `Notification not available in the browser`);
+  notifCheckbox.disabled = true;
+};
+const applyNotificationDefaultEffects = () => {
+  applyNotificationNOTGrantedEffects();
+  const notifSetting = document.querySelector(".settings-notification");
+  notifSetting.removeAttribute("data-disabled");
+  notifSetting.removeAttribute("title");
+};
+const applyNotificationDeniedEffects = () => {
+  applyNotificationNOTGrantedEffects();
+  const notifSetting = document.querySelector(".settings-notification");
+  notifSetting.setAttribute("data-disabled", "true");
+  notifSetting.setAttribute("title", `Notification denied`);
+};
+const applyNotificationGrantedEffects = () => {
+  enableVariant(document.querySelector(".notification-text"), {
+    notif_granted: "yes"
+  });
+  notifCheckbox.disabled = false;
+  notifCheckbox.checked = getNotificationPreference();
+  notifCheckbox.onchange = () => {
+    setNotificationPreference(notifCheckbox.checked);
+    if (!notifCheckbox.checked) {
+      // slice because arrayOfOpenedNotifications can be mutated while looping
+      arrayOfOpenedNotifications.slice().forEach(notification => {
+        notification.close();
+      });
+    }
+  };
+};
+const applyNotificationNOTGrantedEffects = () => {
+  enableVariant(document.querySelector(".notification-text"), {
+    notif_granted: "no"
+  });
+  notifCheckbox.disabled = true;
+  notifCheckbox.checked = false;
+  document.querySelector("a.request_notification_permission").onclick = () => {
+    requestPermission().then(() => {
+      setNotificationPreference(true);
+      updatePermission();
+    });
+  };
+};
+export const notifyExecutionResult = (executedFileRelativeUrl, execution, previousExecution) => {
+  const notificationEnabled = getNotificationPreference();
+  if (!notificationEnabled) return;
+  const notificationOptions = {
+    lang: "en",
+    icon: getFaviconHref(),
+    clickToFocus: true,
+    clickToClose: true
+  };
+  if (execution.status === "errored") {
+    if (previousExecution) {
+      if (previousExecution.status === "completed") {
+        notify("Broken", {
+          ...notificationOptions,
+          body: `${executedFileRelativeUrl} execution now failing.`
+        });
+      } else {
+        notify("Still failing", {
+          ...notificationOptions,
+          body: `${executedFileRelativeUrl} execution still failing.`
+        });
+      }
+    } else {
+      notify("Failing", {
+        ...notificationOptions,
+        body: `${executedFileRelativeUrl} execution failed.`
+      });
+    }
+  } else if (previousExecution && previousExecution.status === "errored") {
+    notify("Fixed", {
+      ...notificationOptions,
+      body: `${executedFileRelativeUrl} execution fixed.`
+    });
+  }
+};
+const getNotificationPreference = () => notificationPreference.has() ? notificationPreference.get() : true;
+const setNotificationPreference = value => notificationPreference.set(value);
+const getFaviconHref = () => {
+  const link = document.querySelector('link[rel="icon"]');
+  return link ? link.href : undefined;
+};
+let permission = "default";
+const notify = notificationAvailable ? async (title, {
+  clickToFocus = false,
+  clickToClose = false,
+  ...options
+} = {}) => {
+  if (permission !== "granted") {
+    return null;
+  }
+  const notification = new Notification(title, options);
+  arrayOfOpenedNotifications.push(notification);
+  notification.onclick = () => {
+    // but if the user navigated inbetween
+    // focusing window will show something else
+    // in that case it could be great to do something
+    // maybe like showing a message saying this execution
+    // is no longer visible
+    // we could also navigauate to this file execution but
+    // there is no guarantee re-executing the file would give same output
+    // and it would also trigger an other notification
+    if (clickToFocus) window.focus();
+    if (clickToClose) notification.close();
+  };
+  notification.onclose = () => {
+    const index = arrayOfOpenedNotifications.indexOf(notification);
+    if (index > -1) {
+      arrayOfOpenedNotifications.splice(index, 1);
+    }
+  };
+  return notification;
+} : () => {};
+let requestPromise;
+const requestPermission = notificationAvailable ? async () => {
+  if (requestPromise) return requestPromise;
+  requestPromise = Notification.requestPermission();
+  permission = await requestPromise;
+  requestPromise = undefined;
+  return permission;
+} : () => Promise.resolve("default");

@@ -1,1 +1,104 @@
-export const createHorizontalBreakpoint=e=>t(n,e);const e=()=>{const e=[];return{listen:n=>(e.push(n),()=>{const t=e.indexOf(n);t>-1&&e.splice(t,1)}),notify:(...n)=>{e.slice().forEach((e=>{e(...n)}))}}},n=(({compute:n,register:t})=>{let o=n();const i=e();let r=()=>{};return t&&(r=t((()=>{const e=n();if(e!==o){const n=e;o=e,i.notify(e,n)}}))),{get:()=>n(),changed:i,unregister:r}})({name:"window-width",compute:()=>window.innerWidth,register:e=>(window.addEventListener("resize",e),window.addEventListener("orientationchange",e),()=>{window.removeEventListener("resize",e),window.removeEventListener("orientationchange",e)})}),t=(n,t)=>{const o=()=>{const e=n.get();return e<t?"below":e>t?"above":"equals"};let i=o();const r=e();return n.changed.listen((()=>{const e=o();if(e!==i){const n=i;i=e,r.notify(e,n)}})),{isAbove:()=>n.get()>t,isBelow:()=>n.get()<t,changed:r}};
+export const createHorizontalBreakpoint = breakpointValue => {
+  return createBreakpoint(windowWidthMeasure, breakpointValue);
+};
+const createMeasure = ({
+  compute,
+  register
+}) => {
+  let currentValue = compute();
+  const get = () => compute();
+  const changed = createSignal();
+  let unregister = () => {};
+  if (register) {
+    unregister = register(() => {
+      const value = compute();
+      if (value !== currentValue) {
+        const previousValue = value;
+        currentValue = value;
+        changed.notify(value, previousValue);
+      }
+    });
+  }
+  return {
+    get,
+    changed,
+    unregister
+  };
+};
+const createSignal = () => {
+  const callbackArray = [];
+  const listen = callback => {
+    callbackArray.push(callback);
+    return () => {
+      const index = callbackArray.indexOf(callback);
+      if (index > -1) {
+        callbackArray.splice(index, 1);
+      }
+    };
+  };
+  const notify = (...args) => {
+    callbackArray.slice().forEach(callback => {
+      callback(...args);
+    });
+  };
+  return {
+    listen,
+    notify
+  };
+};
+const windowWidthMeasure = createMeasure({
+  name: "window-width",
+  compute: () => window.innerWidth,
+  register: onchange => {
+    window.addEventListener("resize", onchange);
+    window.addEventListener("orientationchange", onchange);
+    return () => {
+      window.removeEventListener("resize", onchange);
+      window.removeEventListener("orientationchange", onchange);
+    };
+  }
+});
+const createBreakpoint = (measure, breakpointValue) => {
+  const getBreakpointState = () => {
+    const value = measure.get();
+    if (value < breakpointValue) {
+      return "below";
+    }
+    if (value > breakpointValue) {
+      return "above";
+    }
+    return "equals";
+  };
+  let currentBreakpointState = getBreakpointState();
+  const isAbove = () => {
+    return measure.get() > breakpointValue;
+  };
+  const isBelow = () => {
+    return measure.get() < breakpointValue;
+  };
+  const breakpointChanged = createSignal();
+  measure.changed.listen(() => {
+    const breakpointState = getBreakpointState();
+    if (breakpointState !== currentBreakpointState) {
+      const breakpointStatePrevious = currentBreakpointState;
+      currentBreakpointState = breakpointState;
+      breakpointChanged.notify(breakpointState, breakpointStatePrevious);
+    }
+  });
+  return {
+    isAbove,
+    isBelow,
+    changed: breakpointChanged
+  };
+};
+
+// const windowScrollTop = createMeasure({
+//   name: "window-scroll-top",
+//   compute: () => window.scrollTop,
+//   register: (onchange) => {
+//     window.addEventListener("scroll", onchange)
+//     return () => {
+//       window.removeEventListener("scroll", onchange)
+//     }
+//   },
+// })

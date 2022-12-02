@@ -1,1 +1,43 @@
-import{removeForceHideElement as e}from"/js/dom.js?v=4435f890";import{enableVariant as t}from"/js/variant.js?v=6ddde2cc";import{toggleTooltip as o,removeAutoShowTooltip as c,autoShowTooltip as n}from"/js/tooltip.js?v=50fd376b";const r=window.parent.__jsenv_event_source_client__;export const initToolbarEventSource=()=>{e(document.querySelector("#eventsource-indicator")),r?(r.status.onchange=()=>{s()},s()):u()};const s=()=>{const e=document.querySelector("#eventsource-indicator"),s=r.status.value;t(e,{eventsource:s});const u=document.querySelector("#eventsource-indicator > [data-when-active]");u.querySelector("button").onclick=()=>{o(e)},"connecting"===s?u.querySelector("a").onclick=()=>{r.disconnect()}:"connected"===s?c(e):"disconnected"===s&&(n(e),u.querySelector("a").onclick=()=>{r.connect()})},u=()=>{document.querySelector(".settings-autoreload").setAttribute("data-disabled","true"),document.querySelector(".settings-autoreload").setAttribute("title","Autoreload not available: disabled by server"),document.querySelector("#toggle-autoreload").disabled=!0};
+import { removeForceHideElement } from "./dom.js";
+import { enableVariant } from "./variant.js";
+import { toggleTooltip, removeAutoShowTooltip, autoShowTooltip } from "./tooltip.js";
+const parentEventSourceClient = window.parent.__jsenv_event_source_client__;
+export const initToolbarEventSource = () => {
+  removeForceHideElement(document.querySelector("#eventsource-indicator"));
+  if (!parentEventSourceClient) {
+    disableAutoreloadSetting();
+    return;
+  }
+  parentEventSourceClient.status.onchange = () => {
+    updateEventSourceIndicator();
+  };
+  updateEventSourceIndicator();
+};
+const updateEventSourceIndicator = () => {
+  const eventSourceIndicator = document.querySelector("#eventsource-indicator");
+  const eventSourceConnectionState = parentEventSourceClient.status.value;
+  enableVariant(eventSourceIndicator, {
+    eventsource: eventSourceConnectionState
+  });
+  const variantNode = document.querySelector("#eventsource-indicator > [data-when-active]");
+  variantNode.querySelector("button").onclick = () => {
+    toggleTooltip(eventSourceIndicator);
+  };
+  if (eventSourceConnectionState === "connecting") {
+    variantNode.querySelector("a").onclick = () => {
+      parentEventSourceClient.disconnect();
+    };
+  } else if (eventSourceConnectionState === "connected") {
+    removeAutoShowTooltip(eventSourceIndicator);
+  } else if (eventSourceConnectionState === "disconnected") {
+    autoShowTooltip(eventSourceIndicator);
+    variantNode.querySelector("a").onclick = () => {
+      parentEventSourceClient.connect();
+    };
+  }
+};
+const disableAutoreloadSetting = () => {
+  document.querySelector(".settings-autoreload").setAttribute("data-disabled", "true");
+  document.querySelector(".settings-autoreload").setAttribute("title", `Autoreload not available: disabled by server`);
+  document.querySelector("#toggle-autoreload").disabled = true;
+};

@@ -1,1 +1,233 @@
-const e=new URL(__v__("/other/jsenv_logo.svg"),import.meta.url),t=async({toolbarUrl:t,logs:a=!1})=>{"complete"!==document.readyState&&await new Promise((e=>{window.addEventListener("load",e)})),await new Promise((e=>{window.requestIdleCallback?window.requestIdleCallback(e,{timeout:400}):window.requestAnimationFrame(e)}));const i=r(),d=document.createElement("iframe");var l,c;l=d,c={tabindex:-1,allowtransparency:!0},Object.keys(c).forEach((e=>{l.setAttribute(e,c[e])})),((e,t)=>{const n=e.style,o=Object.keys(t).map((e=>{let o;if(e in n){const t=n[e];o=()=>{n[e]=t}}else o=()=>{delete n[e]};return n[e]=t[e],o}))})(d,{position:"fixed",zIndex:1e3,bottom:0,left:0,width:"100%",height:0,visibility:"hidden","transition-duration":"300ms","transition-property":"height, visibility",border:"none"});const b=s(d);d.setAttribute("src",t),i.parentNode.replaceChild(d,i),n(d,"toolbar_ready",(()=>{o(d,"renderToolbar",{logs:a})})),await b,d.removeAttribute("tabindex");const m=document.createElement("div");m.innerHTML='\n<div id="jsenv-toolbar-trigger">\n  <svg id="jsenv-toolbar-trigger-icon">\n    <use xlink:href="'.concat(e,'#jsenv_logo"></use>\n  </svg>\n  <style>\n    #jsenv-toolbar-trigger {\n      display: block;\n      overflow: hidden;\n      position: fixed;\n      z-index: 1000;\n      bottom: -32px;\n      right: 20px;\n      height: 40px;\n      width: 40px;\n      padding: 0;\n      margin: 0;\n      border-radius: 5px 5px 0 0;\n      border: 1px solid rgba(0, 0, 0, 0.33);\n      border-bottom: none;\n      box-shadow: 0px 0px 6px 2px rgba(0, 0, 0, 0.46);\n      background: transparent;\n      text-align: center;\n      transition: 600ms;\n    }\n\n    #jsenv-toolbar-trigger:hover {\n      cursor: pointer;\n    }\n\n    #jsenv-toolbar-trigger[data-expanded] {\n      bottom: 0;\n    }\n\n    #jsenv-toolbar-trigger-icon {\n      width: 35px;\n      height: 35px;\n      opacity: 0;\n      transition: 600ms;\n    }\n\n    #jsenv-toolbar-trigger[data-expanded] #jsenv-toolbar-trigger-icon {\n      opacity: 1;\n    }\n  </style>\n</div>');const p=m.firstElementChild;let u;d.parentNode.appendChild(p),p.onmouseenter=()=>{p.setAttribute("data-animate",""),u=setTimeout(v,500)},p.onmouseleave=()=>{clearTimeout(u),w()},p.onfocus=()=>{p.removeAttribute("data-animate"),v()},p.onblur=()=>{p.removeAttribute("data-animate"),clearTimeout(u),w()},p.onclick=()=>{o(d,"showToolbar")};const g=()=>{p.style.display="none"},v=()=>{p.setAttribute("data-expanded","")},w=()=>{p.removeAttribute("data-expanded","")};return g(),n(d,"toolbar-visibility-change",(e=>{e?g():p.style.display="block"})),d},n=(e,t,n)=>{const o=e=>{const{data:o}=e;if("object"!=typeof o)return;const{__jsenv__:r}=o;r&&r.event===t&&n(r.data)};return window.addEventListener("message",o,!1),()=>{window.removeEventListener("message",o,!1)}},o=(e,t,...n)=>{e.contentWindow.postMessage({__jsenv__:{command:t,args:n}},window.origin)},r=()=>{const e=a();return e?document.body.contains(e)?e:(console.warn("element with [data-jsenv-toolbar-placeholder] must be inside document.body"),i()):i()},a=()=>document.querySelector("[data-jsenv-toolbar-placeholder]"),i=()=>{const e=document.createElement("span");return document.body.appendChild(e),e},s=e=>new Promise((t=>{const n=()=>{e.removeEventListener("load",n,!0),t()};e.addEventListener("load",n,!0)}));export{t as injectToolbar};
+const setStyles = (element, styles) => {
+  const elementStyle = element.style;
+  const restoreStyles = Object.keys(styles).map(styleName => {
+    let restore;
+    if (styleName in elementStyle) {
+      const currentStyle = elementStyle[styleName];
+      restore = () => {
+        elementStyle[styleName] = currentStyle;
+      };
+    } else {
+      restore = () => {
+        delete elementStyle[styleName];
+      };
+    }
+    elementStyle[styleName] = styles[styleName];
+    return restore;
+  });
+  return () => {
+    restoreStyles.forEach(restore => restore());
+  };
+};
+const setAttributes = (element, attributes) => {
+  Object.keys(attributes).forEach(name => {
+    element.setAttribute(name, attributes[name]);
+  });
+};
+
+const jsenvLogoSvgUrl = new URL("../other/jsenv_logo.svg", import.meta.url);
+const injectToolbar = async ({
+  toolbarUrl,
+  logs = false
+}) => {
+  if (document.readyState !== "complete") {
+    await new Promise(resolve => {
+      window.addEventListener("load", resolve);
+    });
+  }
+  await new Promise(resolve => {
+    if (window.requestIdleCallback) {
+      window.requestIdleCallback(resolve, {
+        timeout: 400
+      });
+    } else {
+      window.requestAnimationFrame(resolve);
+    }
+  });
+  const placeholder = getToolbarPlaceholder();
+  const iframe = document.createElement("iframe");
+  setAttributes(iframe, {
+    tabindex: -1,
+    // sandbox: "allow-forms allow-modals allow-pointer-lock allow-popups allow-presentation allow-same-origin allow-scripts allow-top-navigation-by-user-activation",
+    // allow: "accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; microphone; midi; payment; vr",
+    allowtransparency: true
+  });
+  setStyles(iframe, {
+    "position": "fixed",
+    "zIndex": 1000,
+    "bottom": 0,
+    "left": 0,
+    "width": "100%",
+    "height": 0,
+    /* ensure toolbar children are not focusable when hidden */
+    "visibility": "hidden",
+    "transition-duration": "300ms",
+    "transition-property": "height, visibility",
+    "border": "none"
+  });
+  const iframeLoadedPromise = iframeToLoadedPromise(iframe);
+  // set iframe src BEFORE putting it into the DOM (prevent firefox adding an history entry)
+  iframe.setAttribute("src", toolbarUrl);
+  placeholder.parentNode.replaceChild(iframe, placeholder);
+  addToolbarEventCallback(iframe, "toolbar_ready", () => {
+    sendCommandToToolbar(iframe, "renderToolbar", {
+      logs
+    });
+  });
+  await iframeLoadedPromise;
+  iframe.removeAttribute("tabindex");
+  const div = document.createElement("div");
+  div.innerHTML = `
+<div id="jsenv-toolbar-trigger">
+  <svg id="jsenv-toolbar-trigger-icon">
+    <use xlink:href="${jsenvLogoSvgUrl}#jsenv_logo"></use>
+  </svg>
+  <style>
+    #jsenv-toolbar-trigger {
+      display: block;
+      overflow: hidden;
+      position: fixed;
+      z-index: 1000;
+      bottom: -32px;
+      right: 20px;
+      height: 40px;
+      width: 40px;
+      padding: 0;
+      margin: 0;
+      border-radius: 5px 5px 0 0;
+      border: 1px solid rgba(0, 0, 0, 0.33);
+      border-bottom: none;
+      box-shadow: 0px 0px 6px 2px rgba(0, 0, 0, 0.46);
+      background: transparent;
+      text-align: center;
+      transition: 600ms;
+    }
+
+    #jsenv-toolbar-trigger:hover {
+      cursor: pointer;
+    }
+
+    #jsenv-toolbar-trigger[data-expanded] {
+      bottom: 0;
+    }
+
+    #jsenv-toolbar-trigger-icon {
+      width: 35px;
+      height: 35px;
+      opacity: 0;
+      transition: 600ms;
+    }
+
+    #jsenv-toolbar-trigger[data-expanded] #jsenv-toolbar-trigger-icon {
+      opacity: 1;
+    }
+  </style>
+</div>`;
+  const toolbarTrigger = div.firstElementChild;
+  iframe.parentNode.appendChild(toolbarTrigger);
+  let timer;
+  toolbarTrigger.onmouseenter = () => {
+    toolbarTrigger.setAttribute("data-animate", "");
+    timer = setTimeout(expandToolbarTrigger, 500);
+  };
+  toolbarTrigger.onmouseleave = () => {
+    clearTimeout(timer);
+    collapseToolbarTrigger();
+  };
+  toolbarTrigger.onfocus = () => {
+    toolbarTrigger.removeAttribute("data-animate");
+    expandToolbarTrigger();
+  };
+  toolbarTrigger.onblur = () => {
+    toolbarTrigger.removeAttribute("data-animate");
+    clearTimeout(timer);
+    collapseToolbarTrigger();
+  };
+  toolbarTrigger.onclick = () => {
+    sendCommandToToolbar(iframe, "showToolbar");
+  };
+  const showToolbarTrigger = () => {
+    toolbarTrigger.style.display = "block";
+  };
+  const hideToolbarTrigger = () => {
+    toolbarTrigger.style.display = "none";
+  };
+  const expandToolbarTrigger = () => {
+    toolbarTrigger.setAttribute("data-expanded", "");
+  };
+  const collapseToolbarTrigger = () => {
+    toolbarTrigger.removeAttribute("data-expanded", "");
+  };
+  hideToolbarTrigger();
+  addToolbarEventCallback(iframe, "toolbar-visibility-change", visible => {
+    if (visible) {
+      hideToolbarTrigger();
+    } else {
+      showToolbarTrigger();
+    }
+  });
+  return iframe;
+};
+const addToolbarEventCallback = (iframe, eventName, callback) => {
+  const messageEventCallback = messageEvent => {
+    const {
+      data
+    } = messageEvent;
+    if (typeof data !== "object") {
+      return;
+    }
+    const {
+      __jsenv__
+    } = data;
+    if (!__jsenv__) {
+      return;
+    }
+    if (__jsenv__.event !== eventName) {
+      return;
+    }
+    callback(__jsenv__.data);
+  };
+  window.addEventListener("message", messageEventCallback, false);
+  return () => {
+    window.removeEventListener("message", messageEventCallback, false);
+  };
+};
+const sendCommandToToolbar = (iframe, command, ...args) => {
+  iframe.contentWindow.postMessage({
+    __jsenv__: {
+      command,
+      args
+    }
+  }, window.origin);
+};
+const getToolbarPlaceholder = () => {
+  const placeholder = queryPlaceholder();
+  if (placeholder) {
+    if (document.body.contains(placeholder)) {
+      return placeholder;
+    }
+    // otherwise iframe would not be visible because in <head>
+    console.warn("element with [data-jsenv-toolbar-placeholder] must be inside document.body");
+    return createTooolbarPlaceholder();
+  }
+  return createTooolbarPlaceholder();
+};
+const queryPlaceholder = () => {
+  return document.querySelector("[data-jsenv-toolbar-placeholder]");
+};
+const createTooolbarPlaceholder = () => {
+  const placeholder = document.createElement("span");
+  document.body.appendChild(placeholder);
+  return placeholder;
+};
+const iframeToLoadedPromise = iframe => {
+  return new Promise(resolve => {
+    const onload = () => {
+      iframe.removeEventListener("load", onload, true);
+      resolve();
+    };
+    iframe.addEventListener("load", onload, true);
+  });
+};
+
+export { injectToolbar };
