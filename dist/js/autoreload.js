@@ -1,5 +1,5 @@
 import { urlHotMetas } from "./import_meta_hot.js";
-import { p as parseSrcSet, s as stringifySrcSet } from "./html_src_set.js";
+import { parseSrcSet, stringifySrcSet } from "@jsenv/ast/src/html/html_src_set.js";
 
 const isAutoreloadEnabled = () => {
   const value = window.localStorage.getItem("autoreload");

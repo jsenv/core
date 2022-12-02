@@ -16,7 +16,11 @@ import {
   defaultReadPackageJson,
 } from "@jsenv/node-esm-resolution"
 
-export const createNodeEsmResolver = ({ runtimeCompat, packageConditions }) => {
+export const createNodeEsmResolver = ({
+  runtimeCompat,
+  packageConditions,
+  preservesSymlink,
+}) => {
   const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node")
   // https://nodejs.org/api/esm.html#resolver-algorithm-specification
   packageConditions = packageConditions || [
@@ -37,6 +41,7 @@ export const createNodeEsmResolver = ({ runtimeCompat, packageConditions }) => {
       conditions: packageConditions,
       parentUrl,
       specifier: reference.specifier,
+      preservesSymlink,
     })
     if (context.dev) {
       const dependsOnPackageJson =

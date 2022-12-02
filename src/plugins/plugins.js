@@ -83,8 +83,8 @@ export const getCorePlugins = ({
     jsenvPluginHttpUrls(),
     jsenvPluginUrlResolution({
       runtimeCompat,
-      urlResolution,
       clientMainFileUrl,
+      urlResolution,
     }),
     jsenvPluginUrlVersion(),
     jsenvPluginCommonJsGlobals(),

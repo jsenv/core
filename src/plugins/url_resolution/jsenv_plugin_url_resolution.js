@@ -70,10 +70,11 @@ export const jsenvPluginUrlResolution = ({
     }
     if (node_esm) {
       if (node_esm === true) node_esm = {}
-      const { packageConditions } = node_esm
+      const { packageConditions, preservesSymlink } = node_esm
       resolvers[urlType] = createNodeEsmResolver({
         runtimeCompat,
         packageConditions,
+        preservesSymlink,
       })
     } else if (web) {
       resolvers[urlType] = resolveUrlUsingWebResolution
@@ -81,7 +82,10 @@ export const jsenvPluginUrlResolution = ({
   })
 
   if (!resolvers.js_module) {
-    resolvers.js_module = createNodeEsmResolver({ runtimeCompat })
+    resolvers.js_module = createNodeEsmResolver({
+      runtimeCompat,
+      preservesSymlink: true,
+    })
   }
   if (!resolvers["*"]) {
     resolvers["*"] = resolveUrlUsingWebResolution
