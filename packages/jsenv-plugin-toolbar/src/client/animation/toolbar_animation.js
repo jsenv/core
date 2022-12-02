@@ -1,6 +1,7 @@
+import { updateToolbarState } from "../toolbar_state.js"
 import { createPreference } from "../util/preferences.js"
 
-const animationPreference = createPreference("animation")
+const animationPreference = createPreference("jsenv_toolbar_animation")
 
 export const renderToolbarAnimation = () => {
   const animCheckbox = document.querySelector("#toggle-anims")
@@ -9,7 +10,7 @@ export const renderToolbarAnimation = () => {
     setAnimationPreference(animCheckbox.checked)
     onPreferenceChange(animCheckbox.checked)
   }
-  onPreferenceChange()
+  onPreferenceChange(getAnimationPreference())
 
   // enable toolbar transition only after first render
   setTimeout(() => {
@@ -17,12 +18,15 @@ export const renderToolbarAnimation = () => {
   })
 }
 
-const onPreferenceChange = (value = getAnimationPreference()) => {
+const onPreferenceChange = (value) => {
   if (value) {
     enableAnimation()
   } else {
     disableAnimation()
   }
+  updateToolbarState({
+    animationsEnabled: value,
+  })
 }
 
 const getAnimationPreference = () =>

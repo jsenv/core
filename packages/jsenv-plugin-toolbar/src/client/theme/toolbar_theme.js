@@ -2,7 +2,7 @@ import { createPreference } from "../util/preferences.js"
 
 const DARK_THEME = "dark"
 const LIGHT_THEME = "light"
-const themePreference = createPreference("theme")
+const themePreference = createPreference("jsenv_toolbar_theme")
 
 export const renderToolbarTheme = () => {
   const theme = getThemePreference()
