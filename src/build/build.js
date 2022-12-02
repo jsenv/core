@@ -669,43 +669,43 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           }
           if (rawUrlInfo.isEntryPoint) {
             addToBundlerIfAny(rawUrlInfo)
-            if (rawUrlInfo.type === "html") {
-              rawUrlInfo.dependencies.forEach((dependencyUrl) => {
-                const dependencyUrlInfo = rawGraph.getUrlInfo(dependencyUrl)
-                if (dependencyUrlInfo.isInline) {
-                  if (dependencyUrlInfo.type === "js_module") {
-                    // bundle inline script type module deps
-                    dependencyUrlInfo.references.forEach((inlineScriptRef) => {
-                      if (inlineScriptRef.type === "js_import") {
-                        const inlineUrlInfo = rawGraph.getUrlInfo(
-                          inlineScriptRef.url,
-                        )
-                        addToBundlerIfAny(inlineUrlInfo)
-                      }
-                    })
-                  }
-                  // inline content cannot be bundled
-                  return
+          }
+          if (rawUrlInfo.type === "html") {
+            rawUrlInfo.dependencies.forEach((dependencyUrl) => {
+              const dependencyUrlInfo = rawGraph.getUrlInfo(dependencyUrl)
+              if (dependencyUrlInfo.isInline) {
+                if (dependencyUrlInfo.type === "js_module") {
+                  // bundle inline script type module deps
+                  dependencyUrlInfo.references.forEach((inlineScriptRef) => {
+                    if (inlineScriptRef.type === "js_import") {
+                      const inlineUrlInfo = rawGraph.getUrlInfo(
+                        inlineScriptRef.url,
+                      )
+                      addToBundlerIfAny(inlineUrlInfo)
+                    }
+                  })
                 }
-                addToBundlerIfAny(dependencyUrlInfo)
-              })
-              rawUrlInfo.references.forEach((reference) => {
+                // inline content cannot be bundled
+                return
+              }
+              addToBundlerIfAny(dependencyUrlInfo)
+            })
+            rawUrlInfo.references.forEach((reference) => {
+              if (
+                reference.isResourceHint &&
+                reference.expectedType === "js_module"
+              ) {
+                const referencedUrlInfo = rawGraph.getUrlInfo(reference.url)
                 if (
-                  reference.isResourceHint &&
-                  reference.expectedType === "js_module"
+                  referencedUrlInfo &&
+                  // something else than the resource hint is using this url
+                  referencedUrlInfo.dependents.size > 0
                 ) {
-                  const referencedUrlInfo = rawGraph.getUrlInfo(reference.url)
-                  if (
-                    referencedUrlInfo &&
-                    // something else than the resource hint is using this url
-                    referencedUrlInfo.dependents.size > 0
-                  ) {
-                    addToBundlerIfAny(referencedUrlInfo)
-                  }
+                  addToBundlerIfAny(referencedUrlInfo)
                 }
-              })
-              return
-            }
+              }
+            })
+            return
           }
           // File referenced with new URL('./file.js', import.meta.url)
           // are entry points that should be bundled

@@ -212,8 +212,7 @@ const applyPackageResolve = (packageSpecifier, resolutionContext) => {
       url: `node:${packageSpecifier}`,
     }
   }
-  const { packageName, packageSubpath } =
-    parsePackageSpecifier(packageSpecifier)
+  let { packageName, packageSubpath } = parsePackageSpecifier(packageSpecifier)
   if (
     packageName[0] === "." ||
     packageName.includes("\\") ||
@@ -227,6 +226,10 @@ const applyPackageResolve = (packageSpecifier, resolutionContext) => {
   }
   if (packageSubpath.endsWith("/")) {
     throw new Error("invalid module specifier")
+  }
+  const questionCharIndex = packageName.indexOf("?")
+  if (questionCharIndex > -1) {
+    packageName = packageName.slice(0, questionCharIndex)
   }
   const selfResolution = applyPackageSelfResolution(packageSubpath, {
     ...resolutionContext,

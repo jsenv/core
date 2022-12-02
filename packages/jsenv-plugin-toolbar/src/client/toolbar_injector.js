@@ -42,7 +42,19 @@ export const injectToolbar = async ({ toolbarUrl, logs = false }) => {
   iframe.setAttribute("src", toolbarUrl)
   placeholder.parentNode.replaceChild(iframe, placeholder)
 
-  addToolbarEventCallback(iframe, "toolbar_ready", () => {
+  const listenToolbarStateChange = (callback) => {
+    return addToolbarEventCallback(iframe, "toolbar_state_change", callback)
+  }
+
+  listenToolbarStateChange(({ animationsEnabled }) => {
+    if (animationsEnabled) {
+      iframe.style.transitionDuration = "300ms"
+    } else {
+      iframe.style.transitionDuration = "0s"
+    }
+  })
+  const cleanupRenderOnFirstStateChange = listenToolbarStateChange(() => {
+    cleanupRenderOnFirstStateChange()
     sendCommandToToolbar(iframe, "renderToolbar", { logs })
   })
 
@@ -138,7 +150,7 @@ export const injectToolbar = async ({ toolbarUrl, logs = false }) => {
   }
 
   hideToolbarTrigger()
-  addToolbarEventCallback(iframe, "toolbar-visibility-change", (visible) => {
+  listenToolbarStateChange(({ visible }) => {
     if (visible) {
       hideToolbarTrigger()
     } else {

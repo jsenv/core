@@ -1,3 +1,5 @@
+import { updateToolbarState } from "./toolbar_state.js"
+import { addExternalCommandCallback } from "./communication/parent_window_communication.js"
 import { startJavaScriptAnimation } from "./util/animation.js"
 import "./focus/toolbar_focus.js"
 import { setLinkHrefForParentWindow } from "./util/iframe_to_parent_href.js"
@@ -12,14 +14,15 @@ import {
   renderToolbarSettings,
   hideSettings,
 } from "./settings/toolbar_settings.js"
+import { animationsAreEnabled } from "./animation/toolbar_animation_core.js"
 import { renderToolbarNotification } from "./notification/toolbar_notification.js"
 import { renderToolbarTheme } from "./theme/toolbar_theme.js"
-import { renderToolbarAnimation } from "./animation/toolbar_animation.js"
+import { renderToolbarAnimation } from "./animation/toolbar_animation_ui.js"
 import { renderExecutionInToolbar } from "./execution/toolbar_execution.js"
 import { initToolbarEventSource } from "./eventsource/toolbar_eventsource.js"
 import { makeToolbarResponsive } from "./responsive/toolbar_responsive.js"
 
-const toolbarVisibilityPreference = createPreference("toolbar")
+const toolbarVisibilityPreference = createPreference("jsenv_toolbar_visible")
 
 const renderToolbar = async () => {
   const toolbarOverlay = document.querySelector("#toolbar-overlay")
@@ -72,21 +75,25 @@ const toolbarIsVisible = () =>
 
 let hideToolbar = () => {
   // toolbar hidden by default, nothing to do to hide it by default
-  sendEventToParent("toolbar-visibility-change", false)
+  updateToolbarState({
+    visible: false,
+  })
 }
 
 // (by the way it might be cool to have the toolbar auto show when)
 // it has something to say (being disconnected from server)
-const showToolbar = ({ animate = true } = {}) => {
+const showToolbar = () => {
   toolbarVisibilityPreference.set(true)
-  if (animate) {
+  if (animationsAreEnabled()) {
     document.documentElement.setAttribute("data-toolbar-animation", "")
   } else {
     document.documentElement.removeAttribute("data-toolbar-animation")
   }
   document.documentElement.setAttribute("data-toolbar-visible", "")
 
-  sendEventToParent("toolbar-visibility-change", true)
+  updateToolbarState({
+    visible: true,
+  })
 
   const toolbarIframe = getToolbarIframe()
   const toolbarIframeParent = toolbarIframe.parentNode
@@ -103,7 +110,7 @@ const showToolbar = ({ animate = true } = {}) => {
 
   setStyles(toolbarIframeParent, {
     "transition-property": "padding-bottom",
-    "transition-duration": "300ms",
+    "transition-duration": animationsAreEnabled() ? "300ms" : "0s",
   })
   // maybe we should use js animation here because we would not conflict with css
   const restoreToolbarIframeParentStyles = setStyles(toolbarIframeParent, {
@@ -133,48 +140,16 @@ const showToolbar = ({ animate = true } = {}) => {
     hideTooltip(document.querySelector("#eventsource-indicator"))
     hideTooltip(document.querySelector("#execution-indicator"))
     toolbarVisibilityPreference.set(false)
-    if (animate) {
+    if (animationsAreEnabled()) {
       document.documentElement.setAttribute("data-toolbar-animation", "")
     } else {
       document.documentElement.removeAttribute("data-toolbar-animation")
     }
     document.documentElement.removeAttribute("data-toolbar-visible")
-    sendEventToParent("toolbar-visibility-change", false)
+    updateToolbarState({
+      visible: false,
+    })
   }
-}
-
-const addExternalCommandCallback = (command, callback) => {
-  const messageEventCallback = (messageEvent) => {
-    const { data } = messageEvent
-    if (typeof data !== "object") {
-      return
-    }
-    const { __jsenv__ } = data
-    if (!__jsenv__) {
-      return
-    }
-    if (__jsenv__.command !== command) {
-      return
-    }
-    callback(...__jsenv__.args)
-  }
-
-  window.addEventListener("message", messageEventCallback)
-  return () => {
-    window.removeEventListener("message", messageEventCallback)
-  }
-}
-
-const sendEventToParent = (name, data) => {
-  window.parent.postMessage(
-    {
-      __jsenv__: {
-        event: name,
-        data,
-      },
-    },
-    "*",
-  )
 }
 
 window.toolbar = {
@@ -194,4 +169,6 @@ addExternalCommandCallback("showToolbar", () => {
 addExternalCommandCallback("hideToolbar", () => {
   hideToolbar()
 })
-sendEventToParent("toolbar_ready")
+updateToolbarState({
+  ready: true,
+})
