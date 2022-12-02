@@ -1,0 +1,1 @@
+export const createPreference=e=>({has:()=>localStorage.hasOwnProperty(e),get:()=>localStorage.hasOwnProperty(e)?JSON.parse(localStorage.getItem(e)):void 0,set:t=>localStorage.setItem(e,JSON.stringify(t))});

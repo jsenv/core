@@ -1,0 +1,1 @@
+export const setLinkHrefForParentWindow=(e,t)=>{e.href=t,e.onclick=e=>{e.ctrlKey||e.metaKey||(e.preventDefault(),window.parent.location.href=t)}};

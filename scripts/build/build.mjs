@@ -18,12 +18,10 @@ await build({
   },
   directoryReferenceAllowed: true,
   urlAnalysis: {
-    // for now ignore all node_modules
-    // ideally later we'll selectively allow some node_modules
-    // to be bundled and move them to "@jsenv/core" devDependencies
     include: {
       "**/*": true,
       "**/node_modules/": false,
+      // selectively allow some node_modules
       "**/node_modules/@jsenv/abort/": true,
       "**/node_modules/@jsenv/ast/": false, // cannot inline "parse5", "@babel/core" and "postcss"
       "**/node_modules/@jsenv/babel-plugins/": true,
