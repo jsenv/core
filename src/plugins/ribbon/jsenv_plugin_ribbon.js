@@ -14,7 +14,9 @@ export const jsenvPluginRibbon = ({
   const ribbonClientFileUrl = new URL("./client/ribbon.js", import.meta.url)
   const associations = URL_META.resolveAssociations(
     {
-      ribbon: { [htmlInclude]: true },
+      ribbon: {
+        [htmlInclude]: true,
+      },
     },
     rootDirectoryUrl,
   )
@@ -23,6 +25,9 @@ export const jsenvPluginRibbon = ({
     appliesDuring: "dev",
     transformUrlContent: {
       html: (urlInfo, context) => {
+        if (urlInfo.data.noribbon) {
+          return null
+        }
         const { ribbon } = URL_META.applyAssociations({
           url: asUrlWithoutSearch(urlInfo.url),
           associations,

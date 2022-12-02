@@ -19,11 +19,12 @@ export const jsenvPluginToolbar = ({ logs = false } = {}) => {
     name: "jsenv:toolbar",
     appliesDuring: "dev",
     transformUrlContent: {
-      html: ({ url, content }, { referenceUtils }) => {
-        if (url === toolbarHtmlClientFileUrl) {
+      html: (urlInfo, { referenceUtils }) => {
+        urlInfo.data.noribbon = true
+        if (urlInfo.url === toolbarHtmlClientFileUrl) {
           return null
         }
-        const htmlAst = parseHtmlString(content)
+        const htmlAst = parseHtmlString(urlInfo.content)
         const [toolbarInjectorReference] = referenceUtils.inject({
           type: "js_import",
           expectedType: "js_module",
