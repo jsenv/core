@@ -1,10 +1,636 @@
-@import "./execution.css";
-@import "./focus.css";
-@import "./eventsource.css";
-@import "./overflow_menu.css";
-@import "./settings.css";
-@import "./light_theme.css";
-@import "./tooltip.css";
+#loader-icon {
+  width: 20px;
+  height: 20px;
+  color: #cecece;
+  margin: 10px;
+  transform: scaleX(-1);
+}
+
+#loader-icon[data-animate] {
+  opacity: 0;
+  transform-origin: center;
+  animation: 1s linear infinite rotateLoader !important;
+}
+
+@keyframes rotateLoader {
+  0% {
+    opacity: 1;
+    transform: scaleX(-1)rotate(360deg);
+  }
+
+  50% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+    transform: scaleX(-1)rotate(0);
+  }
+}
+
+#check-icon {
+  width: 25px;
+  height: 25px;
+  opacity: 0;
+  stroke-width: 5px;
+  margin: 7px;
+}
+
+#check-icon[data-animate] {
+  opacity: 1;
+}
+
+#check-icon[data-animate] path {
+  transform-origin: 50%;
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48px;
+  stroke: green;
+  animation: .5s cubic-bezier(.65, 0, .45, 1) forwards stroke;
+}
+
+@keyframes stroke {
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+#cross-icon {
+  width: 20px;
+  height: 20px;
+  opacity: 0;
+  stroke-width: 5px;
+  margin: 10px;
+}
+
+#cross-icon rect {
+  width: 33px;
+  height: 0;
+  fill: #d74640;
+}
+
+#cross-icon[data-animate] {
+  opacity: 1;
+}
+
+#cross-icon[data-animate] #cross_p1 {
+  animation: .5s cubic-bezier(.65, 0, .45, 1) forwards draw;
+}
+
+#cross-icon[data-animate] #cross_p2 {
+  animation: .5s cubic-bezier(.65, 0, .45, 1) .2s forwards draw;
+}
+
+@keyframes draw {
+  100% {
+    height: 376.964px;
+    width: 45px;
+  }
+}
+button:focus, a:focus, input:focus, [data-contains-hidden-input] input:focus + * {
+  outline-offset: -2px;
+  outline-style: none;
+}
+
+[data-contains-hidden-input] input:focus + * {
+  outline-offset: -2px;
+  outline-width: 4px;
+}
+
+html[data-last-interaction="keyboard"] button:focus, html[data-last-interaction="keyboard"] a:focus, html[data-last-interaction="keyboard"] input:focus, html[data-last-interaction="keyboard"] [data-contains-hidden-input] input:focus + * {
+  outline-style: auto;
+}
+
+html[data-last-interaction="keyboard"] [data-contains-hidden-input] input:focus + * {
+  outline-color: #0096ff;
+}
+
+@-moz-document url-prefix() {
+  html[data-last-interaction="keyboard"] button:focus, html[data-last-interaction="keyboard"] a:focus, html[data-last-interaction="keyboard"] input:focus, html[data-last-interaction="keyboard"] [data-input-customized] input:focus + * {
+    outline-offset: 0;
+    outline: 2px solid #0096ff;
+  }
+}
+
+::-moz-focus-inner {
+  border: 0;
+}
+#eventsource-indicator button {
+  position: relative;
+}
+
+#eventsource-indicator button svg {
+  width: 40px;
+  height: 40px;
+}
+
+#eventsource-indicator .event-source-autoreload {
+  width: 32px;
+  height: 32px;
+  margin: 4px;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.event-source-autoreload[data-variant="enabled"] {
+  color: green;
+}
+
+#eventsource-indicator .event-source-icon {
+  width: 40px;
+  height: 40px;
+}
+
+.eventsource-circle {
+  stroke: #000;
+  stroke-width: 0;
+}
+
+.eventsource-circle[data-variant="off"] {
+  fill: #cecece;
+}
+
+.eventsource-circle[data-variant="connecting"] {
+  fill: #cecece;
+  transform-origin: center;
+  animation: 1.2s ease-out infinite wink;
+}
+
+@keyframes wink {
+  0% {
+    opacity: 0;
+  }
+
+  80% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+.eventsource-ring {
+  stroke: #cecece75;
+  stroke-width: 4px;
+  fill: #0000;
+  transform-origin: center;
+  animation: 1.2s ease-out infinite pulse;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+.eventsource-circle[data-variant="connected"] {
+  fill: green;
+}
+
+.eventsource-circle[data-variant="failed"] {
+  fill: #c00;
+}
+#overflow-menu-button {
+  width: 40px;
+  background: #404040;
+  display: none;
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+#dotsIconSvg {
+  width: 25px;
+}
+
+#overflow-menu {
+  visibility: hidden;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  background: #404040;
+  display: none;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 100%;
+}
+
+#overflow-menu[data-animate] {
+  transition-property: left, opacity;
+  transition-duration: .3s;
+}
+
+#overflow-menu > * {
+  vertical-align: middle;
+  text-align: center;
+  display: table-cell;
+}
+
+#toolbar[data-overflow-menu-enabled] #overflow-menu-button {
+  display: block;
+}
+
+#toolbar[data-overflow-menu-visible] #overflow-menu-button {
+  background: #030713;
+}
+
+#toolbar[data-overflow-menu-enabled][data-overflow-menu-visible] #toolbar-wrapper {
+  visibility: hidden;
+}
+
+#toolbar[data-overflow-menu-visible] #overflow-menu {
+  visibility: visible;
+  opacity: 1;
+  margin-left: -40px;
+  display: block;
+  left: 0;
+}
+
+#toolbar[data-overflow-menu-enabled] #settings-box {
+  right: -40px;
+}
+#settings-button {
+  position: relative;
+}
+
+#settings-button[data-warning] svg {
+  fill: #cb5909;
+}
+
+#settings-button[data-warning] svg:hover {
+  fill: #ff8c00 !important;
+}
+
+#settings-box {
+  text-align: center;
+  color: #fff;
+  min-width: 250px;
+  min-height: 150px;
+  z-index: -1;
+  background-color: #030713;
+  border-radius: 5px 5px 0 0;
+  padding: 17px;
+  font-size: 14px;
+  display: none;
+  position: absolute;
+  bottom: 40px;
+  right: 0;
+}
+
+[data-active] #settings-box {
+  animation: .3s comeUp;
+  display: block;
+}
+
+@keyframes comeUp {
+  0% {
+    opacity: 0;
+    transform: translate(0, 90px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate(0);
+  }
+}
+
+#settings-box-body {
+  text-align: left;
+  max-height: 80vh;
+  width: 100vw;
+  justify-content: center;
+  padding: 18px 0;
+  display: flex;
+  overflow: auto;
+}
+
+.settings-box-items-wrapper {
+  max-width: 700px;
+  flex-wrap: wrap;
+  justify-content: center;
+  display: flex;
+}
+
+.settings-box-item {
+  width: 250px;
+  background: #0c111b;
+  margin: 9px 18px;
+  padding: 15px;
+}
+
+#settings-box-header .settings-icon {
+  fill: none;
+  stroke: #24b1b0;
+  stroke-width: 2px;
+  width: 22px;
+  height: 22px;
+  margin-right: 10px;
+  position: relative;
+  top: 4px;
+}
+
+#settings-box h3 {
+  color: #24b1b0;
+  margin: 10px 0;
+  font-size: 20px;
+  display: inline-block;
+}
+
+#button-close-settings {
+  float: right;
+  fill: #24b1b0;
+}
+
+#button-close-settings:hover {
+  opacity: .6;
+}
+
+label {
+  color: #a9a8a8;
+  padding-bottom: 3px;
+  font-size: 14px;
+  display: block;
+}
+
+#settings-box .category-title {
+  color: #24b1b0;
+  margin-top: 4px;
+  margin-bottom: 15px;
+  font-size: 16px;
+  display: inline-block;
+}
+
+#settings-box .category-title svg {
+  fill: currentColor;
+  vertical-align: top;
+  width: 18px;
+  height: 18px;
+  margin-right: 5px;
+}
+
+#settings-box .category-subtitle {
+  color: #a9a8a8;
+  max-width: 220px;
+  font-size: 14px;
+}
+
+.switch {
+  float: right;
+  width: 3.5em;
+  height: 2em;
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.switch .slider {
+  vertical-align: middle;
+  height: .3em;
+  background-color: #4c4c4c;
+  border-radius: .15em;
+  margin-top: -.15em;
+  transition: all .4s;
+  position: absolute;
+  top: 50%;
+  left: .5em;
+  right: .5em;
+}
+
+.switch .square {
+  content: "";
+  height: 1em;
+  width: 1em;
+  color: #030713;
+  background-color: #4c4c4c;
+  border-radius: .15em;
+  margin-top: -.5em;
+  transition: all .4s;
+  position: absolute;
+  top: 50%;
+  left: .5em;
+}
+
+.switch input + * {
+  width: 100%;
+  height: 100%;
+  border: 1px solid #0000;
+  position: relative;
+}
+
+.switch input:checked + * .slider {
+  background-color: #24b1b0;
+}
+
+.switch input:checked + * .square {
+  background-color: #24b1b0;
+  transform: translateX(1.6em);
+}
+
+.settings-box-item[data-disabled] {
+  cursor: default;
+  background-color: #0c111b66;
+}
+
+.settings-box-item[data-disabled] .category-title, .settings-box-item[data-disabled] .switch, .settings-box-item[data-disabled] .category-subtitle {
+  opacity: .4;
+}
+
+.settings-box-item[data-disabled] .category-title span, .settings-box-item[data-disabled] .category-subtitle {
+  text-decoration: line-through;
+}
+
+.settings-box-item[data-disabled] .switch {
+  cursor: default;
+}
+html[data-theme="light"] #toolbar {
+  background: #e8eff3;
+}
+
+html[data-theme="light"] .iconToolbar {
+  fill: #404040;
+}
+
+html[data-theme="light"] .iconToolbar:hover {
+  fill: #757575 !important;
+}
+
+html[data-theme="light"] #loader-icon {
+  color: #404040;
+}
+
+html[data-theme="light"] #settings-box, html[data-theme="light"] #settings[data-active] button {
+  background: #87acd3;
+}
+
+html[data-theme="light"] .settings-box-item {
+  background: #97b9da;
+}
+
+html[data-theme="light"] #settings-box-header .settings-icon {
+  stroke: #076570;
+}
+
+html[data-theme="light"] #button-close-settings {
+  fill: #076570;
+}
+
+html[data-theme="light"] #settings-box h3, html[data-theme="light"] #settings-box .category-title {
+  color: #076570;
+}
+
+html[data-theme="light"] #settings-box .category-title svg {
+  fill: #076570;
+}
+
+html[data-theme="light"] #settings-box .category-subtitle {
+  color: #5d5d5d;
+}
+
+html[data-theme="light"] label {
+  color: #002e33;
+}
+
+html[data-theme="light"] .switch input + * .slider, html[data-theme="light"] .switch input + * .square {
+  background-color: gray;
+}
+
+html[data-theme="light"] .switch input:checked + * .slider, html[data-theme="light"] .switch input:checked + * .square {
+  background-color: #076570;
+}
+
+html[data-theme="light"] .tooltip {
+  color: #fff;
+  background-color: #8a919a;
+}
+
+html[data-theme="light"] .tooltipAction {
+  border-color: #fff;
+}
+
+html[data-theme="light"] .tooltip:after {
+  border-color: #8a919a #0000 #0000;
+}
+
+html[data-theme="light"] #overflow-menu-button {
+  background: #e8eff3;
+}
+
+html[data-theme="light"] #toolbar[data-overflow-menu-visible] #overflow-menu-button {
+  background: #a5a9ad;
+}
+
+html[data-theme="light"] #overflow-menu {
+  background: #dfe4e7;
+}
+
+html[data-theme="light"] h2, html[data-theme="light"] h4 {
+  color: #076570;
+}
+
+html[data-theme="light"] #fileIconSvgConfig {
+  fill: #076570;
+}
+
+html[data-theme="light"] #explorables h2 span {
+  color: #ff8d00;
+}
+
+html[data-theme="light"] article[data-page="file-list"], html[data-theme="light"] #file-list-link[data-active] a {
+  background: #bbd5ea;
+}
+
+html[data-theme="light"] #explorables fieldset input:checked + * {
+  color: #ff8d00;
+  background: #bbd5ea;
+}
+
+html[data-theme="light"] #explorables #explorables-header, html[data-theme="light"] #explorables fieldset label input + * {
+  background: #ddf0ff;
+}
+
+html[data-theme="light"] .execution-link {
+  color: #076570;
+  background: #ddf0ff;
+}
+.tooltip {
+  color: #fff;
+  text-align: center;
+  max-width: 260px;
+  cursor: default;
+  background-color: #5e5e5e;
+  border-radius: 6px;
+  margin-left: -40px;
+  padding: 10px;
+  font-size: 14px;
+  display: none;
+  position: absolute;
+  bottom: 120%;
+}
+
+.tooltip:after {
+  content: "";
+  border: 5px solid #0000;
+  border-top-color: #5e5e5e;
+  margin-left: -5px;
+  position: absolute;
+  top: 100%;
+  left: 60px;
+}
+
+[data-tooltip-visible] .tooltip, [data-tooltip-auto-visible] .tooltip {
+  animation: .4s fadeIn;
+  display: block;
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+.tooltipAction {
+  border: 1px solid #a0a0a0;
+  border-radius: 3px;
+  margin-top: 6px;
+  padding: 3px 7px;
+  display: inline-block;
+}
+
+.tooltipAction a {
+  vertical-align: middle;
+  color: #fff;
+  text-decoration: none;
+}
+
+.tooltipIcon {
+  fill: #fff;
+  width: 20px;
+  height: 20px;
+  vertical-align: middle;
+}
 
 html[data-animation-disabled] * {
   transition: none !important;

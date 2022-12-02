@@ -1,3 +1,61 @@
+const updateIframeOverflowOnParentWindow = () => {
+  if (!window.parent) {
+    // can happen while parent iframe reloads
+    return;
+  }
+  const aTooltipIsOpened = document.querySelector("[data-tooltip-visible]") || document.querySelector("[data-tooltip-auto-visible]");
+  const settingsAreOpened = document.querySelector("#settings[data-active]");
+  if (aTooltipIsOpened || settingsAreOpened) {
+    enableIframeOverflowOnParentWindow();
+  } else {
+    disableIframeOverflowOnParentWindow();
+  }
+};
+let iframeOverflowEnabled = false;
+const enableIframeOverflowOnParentWindow = () => {
+  if (iframeOverflowEnabled) return;
+  iframeOverflowEnabled = true;
+  const iframe = getToolbarIframe();
+  const transitionDuration = iframe.style.transitionDuration;
+  setStyles(iframe, {
+    "height": "100%",
+    "transition-duration": "0ms"
+  });
+  if (transitionDuration) {
+    setTimeout(() => {
+      setStyles(iframe, {
+        "transition-duration": transitionDuration
+      });
+    });
+  }
+};
+const disableIframeOverflowOnParentWindow = () => {
+  if (!iframeOverflowEnabled) return;
+  iframeOverflowEnabled = false;
+  const iframe = getToolbarIframe();
+  const transitionDuration = iframe.style.transitionDuration;
+  setStyles(iframe, {
+    "height": "40px",
+    "transition-duration": "0ms"
+  });
+  if (transitionDuration) {
+    setTimeout(() => {
+      setStyles(iframe, {
+        "transition-duration": transitionDuration
+      });
+    });
+  }
+};
+const getToolbarIframe = () => {
+  const iframes = Array.from(window.parent.document.querySelectorAll("iframe"));
+  return iframes.find(iframe => iframe.contentWindow === window);
+};
+const forceHideElement = element => {
+  element.setAttribute("data-force-hide", "");
+};
+const removeForceHideElement = element => {
+  element.removeAttribute("data-force-hide");
+};
 const setStyles = (element, styles) => {
   const elementStyle = element.style;
   const restoreStyles = Object.keys(styles).map(styleName => {
@@ -23,6 +81,15 @@ const setAttributes = (element, attributes) => {
   Object.keys(attributes).forEach(name => {
     element.setAttribute(name, attributes[name]);
   });
+};
+const toolbarSectionIsActive = element => {
+  return element.hasAttribute("data-active");
+};
+const activateToolbarSection = element => {
+  element.setAttribute("data-active", "");
+};
+const deactivateToolbarSection = element => {
+  element.removeAttribute("data-active");
 };
 
 const jsenvLogoSvgUrl = new URL("../other/jsenv_logo.svg", import.meta.url);
@@ -230,4 +297,4 @@ const iframeToLoadedPromise = iframe => {
   });
 };
 
-export { injectToolbar };
+export { activateToolbarSection as a, deactivateToolbarSection as d, forceHideElement as f, getToolbarIframe as g, injectToolbar, removeForceHideElement as r, setStyles as s, toolbarSectionIsActive as t, updateIframeOverflowOnParentWindow as u };
