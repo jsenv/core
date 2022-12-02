@@ -14,9 +14,10 @@ import {
   renderToolbarSettings,
   hideSettings,
 } from "./settings/toolbar_settings.js"
+import { animationsAreEnabled } from "./animation/toolbar_animation_core.js"
 import { renderToolbarNotification } from "./notification/toolbar_notification.js"
 import { renderToolbarTheme } from "./theme/toolbar_theme.js"
-import { renderToolbarAnimation } from "./animation/toolbar_animation.js"
+import { renderToolbarAnimation } from "./animation/toolbar_animation_ui.js"
 import { renderExecutionInToolbar } from "./execution/toolbar_execution.js"
 import { initToolbarEventSource } from "./eventsource/toolbar_eventsource.js"
 import { makeToolbarResponsive } from "./responsive/toolbar_responsive.js"
@@ -81,9 +82,9 @@ let hideToolbar = () => {
 
 // (by the way it might be cool to have the toolbar auto show when)
 // it has something to say (being disconnected from server)
-const showToolbar = ({ animate = true } = {}) => {
+const showToolbar = () => {
   toolbarVisibilityPreference.set(true)
-  if (animate) {
+  if (animationsAreEnabled()) {
     document.documentElement.setAttribute("data-toolbar-animation", "")
   } else {
     document.documentElement.removeAttribute("data-toolbar-animation")
@@ -109,7 +110,7 @@ const showToolbar = ({ animate = true } = {}) => {
 
   setStyles(toolbarIframeParent, {
     "transition-property": "padding-bottom",
-    "transition-duration": "300ms",
+    "transition-duration": animationsAreEnabled() ? "300ms" : "0s",
   })
   // maybe we should use js animation here because we would not conflict with css
   const restoreToolbarIframeParentStyles = setStyles(toolbarIframeParent, {
@@ -139,7 +140,7 @@ const showToolbar = ({ animate = true } = {}) => {
     hideTooltip(document.querySelector("#eventsource-indicator"))
     hideTooltip(document.querySelector("#execution-indicator"))
     toolbarVisibilityPreference.set(false)
-    if (animate) {
+    if (animationsAreEnabled()) {
       document.documentElement.setAttribute("data-toolbar-animation", "")
     } else {
       document.documentElement.removeAttribute("data-toolbar-animation")
