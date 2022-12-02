@@ -16520,7 +16520,7 @@ const applyPackageResolve = (packageSpecifier, resolutionContext) => {
       url: `node:${packageSpecifier}`
     };
   }
-  const {
+  let {
     packageName,
     packageSubpath
   } = parsePackageSpecifier(packageSpecifier);
@@ -16529,6 +16529,10 @@ const applyPackageResolve = (packageSpecifier, resolutionContext) => {
   }
   if (packageSubpath.endsWith("/")) {
     throw new Error("invalid module specifier");
+  }
+  const questionCharIndex = packageName.indexOf("?");
+  if (questionCharIndex > -1) {
+    packageName = packageName.slice(0, questionCharIndex);
   }
   const selfResolution = applyPackageSelfResolution(packageSubpath, {
     ...resolutionContext,
@@ -20697,6 +20701,9 @@ const jsenvPluginRibbon = ({
     appliesDuring: "dev",
     transformUrlContent: {
       html: (urlInfo, context) => {
+        if (urlInfo.data.noribbon) {
+          return null;
+        }
         const {
           ribbon
         } = URL_META.applyAssociations({
@@ -21657,36 +21664,36 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           }
           if (rawUrlInfo.isEntryPoint) {
             addToBundlerIfAny(rawUrlInfo);
-            if (rawUrlInfo.type === "html") {
-              rawUrlInfo.dependencies.forEach(dependencyUrl => {
-                const dependencyUrlInfo = rawGraph.getUrlInfo(dependencyUrl);
-                if (dependencyUrlInfo.isInline) {
-                  if (dependencyUrlInfo.type === "js_module") {
-                    // bundle inline script type module deps
-                    dependencyUrlInfo.references.forEach(inlineScriptRef => {
-                      if (inlineScriptRef.type === "js_import") {
-                        const inlineUrlInfo = rawGraph.getUrlInfo(inlineScriptRef.url);
-                        addToBundlerIfAny(inlineUrlInfo);
-                      }
-                    });
-                  }
-                  // inline content cannot be bundled
-                  return;
+          }
+          if (rawUrlInfo.type === "html") {
+            rawUrlInfo.dependencies.forEach(dependencyUrl => {
+              const dependencyUrlInfo = rawGraph.getUrlInfo(dependencyUrl);
+              if (dependencyUrlInfo.isInline) {
+                if (dependencyUrlInfo.type === "js_module") {
+                  // bundle inline script type module deps
+                  dependencyUrlInfo.references.forEach(inlineScriptRef => {
+                    if (inlineScriptRef.type === "js_import") {
+                      const inlineUrlInfo = rawGraph.getUrlInfo(inlineScriptRef.url);
+                      addToBundlerIfAny(inlineUrlInfo);
+                    }
+                  });
                 }
-                addToBundlerIfAny(dependencyUrlInfo);
-              });
-              rawUrlInfo.references.forEach(reference => {
-                if (reference.isResourceHint && reference.expectedType === "js_module") {
-                  const referencedUrlInfo = rawGraph.getUrlInfo(reference.url);
-                  if (referencedUrlInfo &&
-                  // something else than the resource hint is using this url
-                  referencedUrlInfo.dependents.size > 0) {
-                    addToBundlerIfAny(referencedUrlInfo);
-                  }
+                // inline content cannot be bundled
+                return;
+              }
+              addToBundlerIfAny(dependencyUrlInfo);
+            });
+            rawUrlInfo.references.forEach(reference => {
+              if (reference.isResourceHint && reference.expectedType === "js_module") {
+                const referencedUrlInfo = rawGraph.getUrlInfo(reference.url);
+                if (referencedUrlInfo &&
+                // something else than the resource hint is using this url
+                referencedUrlInfo.dependents.size > 0) {
+                  addToBundlerIfAny(referencedUrlInfo);
                 }
-              });
-              return;
-            }
+              }
+            });
+            return;
           }
           // File referenced with new URL('./file.js', import.meta.url)
           // are entry points that should be bundled

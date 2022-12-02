@@ -1,3 +1,19 @@
+# 29.9.0
+
+- Add ability to resolve symlinks with `urlResolution.node_esm`
+  ```js
+  startDevServer({
+    urlResolution: {
+      node_esm: {
+        preservesSymlink: false,
+      },
+    },
+  })
+  ```
+- Preserve symlinks by default during node esm resolution
+- Ensure css and js is bundled when referenced by html itself referenced by js
+- Prepare things for @jsenv/plugin-toolbar
+
 # 29.8.6
 
 - Update deps
