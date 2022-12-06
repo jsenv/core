@@ -1,4 +1,4 @@
-#overflow-menu-button {
+#menu_overflow_button {
   display: none;
   position: absolute;
   top: 0;
@@ -7,11 +7,11 @@
   background: #404040;
 }
 
-#dotsIconSvg {
+#menu_overflow_icon {
   width: 25px;
 }
 
-#overflow-menu {
+#menu_overflow {
   visibility: hidden; /* disable keyboard navigation */
   display: none;
   position: absolute;
@@ -24,31 +24,30 @@
   opacity: 0;
 }
 
-#overflow-menu[data-animate] {
+#menu_overflow[data-animate] {
   transition-property: left, opacity;
   transition-duration: 0.3s;
 }
 
-#overflow-menu > * {
-  display: table-cell;
+#menu_overflow > * {
   vertical-align: middle;
   text-align: center;
 }
 
-#toolbar[data-overflow-menu-enabled] #overflow-menu-button {
+#toolbar[data-menu-overflow-enabled] #menu_overflow_button {
   display: block;
 }
 
-#toolbar[data-overflow-menu-visible] #overflow-menu-button {
+#toolbar[data-menu-overflow-opened] #menu_overflow_button {
   background: #030713;
 }
 
-#toolbar[data-overflow-menu-enabled][data-overflow-menu-visible]
+#toolbar[data-menu-overflow-enabled][data-menu-overflow-opened]
   #toolbar-wrapper {
   visibility: hidden; /* disable keyboard navigation */
 }
 
-#toolbar[data-overflow-menu-visible] #overflow-menu {
+#toolbar[data-menu-overflow-opened] #menu_overflow {
   visibility: visible; /* restore keyboard navigation */
   display: block;
   opacity: 1;
@@ -56,6 +55,6 @@
   margin-left: -40px;
 }
 
-#toolbar[data-overflow-menu-enabled] #settings-box {
+#toolbar[data-menu-overflow-enabled] #settings-box {
   right: -40px;
 }

@@ -18,9 +18,12 @@ export const initToolbarMenuOverflow = () => {
   handleOverflowMenuBreakpoint()
   overflowMenuBreakpoint.changed.listen(handleOverflowMenuBreakpoint)
 
-  // overflow menu
-  document.querySelector("#overflow-menu-button").onclick = () => {
-    toggleOverflowMenu()
+  document.querySelector("#menu_overflow_button").onclick = () => {
+    if (overflowMenuIsOpened()) {
+      closeOverflowMenu()
+    } else {
+      openOverflowMenu()
+    }
   }
 }
 
@@ -45,7 +48,7 @@ const enableOverflow = () => {
   const responsiveToolbarElements = document.querySelectorAll(
     "[data-responsive-toolbar-element]",
   )
-  const overflowMenu = document.querySelector("#overflow-menu")
+  const overflowMenu = document.querySelector("#menu_overflow")
 
   // keep a placeholder element to know where to move them back
   moves = Array.from(responsiveToolbarElements).map((element) => {
@@ -59,46 +62,37 @@ const enableOverflow = () => {
 
   document
     .querySelector("#toolbar")
-    .setAttribute("data-overflow-menu-enabled", "")
-  removeForceHideElement(document.querySelector("#overflow-menu-button"))
+    .setAttribute("data-menu-overflow-enabled", "")
+  removeForceHideElement(document.querySelector("#menu_overflow_button"))
 }
 
 const disableOverflow = () => {
   // close overflow menu in case it's open & unselect toggleOverflowMenu button in case it's selected
-  hideOverflowMenu()
-  deactivateToolbarSection(document.querySelector("#overflow-menu"))
+  closeOverflowMenu()
+  deactivateToolbarSection(document.querySelector("#menu_overflow"))
   moves.forEach(({ element, placeholder }) => {
     placeholder.parentNode.replaceChild(element, placeholder)
   })
   moves = []
-
   document
     .querySelector("#toolbar")
-    .removeAttribute("data-overflow-menu-enabled")
-  forceHideElement(document.querySelector("#overflow-menu-button"))
+    .removeAttribute("data-menu-overflow-enabled")
+  forceHideElement(document.querySelector("#menu_overflow_button"))
 }
 
-const toggleOverflowMenu = () => {
-  if (overflowMenuIsVisible()) {
-    hideOverflowMenu()
-  } else {
-    showOverflowMenu()
-  }
-}
-
-const overflowMenuIsVisible = () => {
+const overflowMenuIsOpened = () => {
   const toolbar = document.querySelector("#toolbar")
-  return toolbar.hasAttribute("data-overflow-menu-visible")
+  return toolbar.hasAttribute("data-menu-overflow-opened")
 }
 
-const showOverflowMenu = () => {
+const openOverflowMenu = () => {
   const toolbar = document.querySelector("#toolbar")
-  document.querySelector("#overflow-menu").setAttribute("data-animate", "")
-  toolbar.setAttribute("data-overflow-menu-visible", "")
+  document.querySelector("#menu_overflow").setAttribute("data-animate", "")
+  toolbar.setAttribute("data-menu-overflow-opened", "")
 }
 
-const hideOverflowMenu = () => {
+const closeOverflowMenu = () => {
   const toolbar = document.querySelector("#toolbar")
-  toolbar.removeAttribute("data-overflow-menu-visible")
-  document.querySelector("#overflow-menu").removeAttribute("data-animate")
+  toolbar.removeAttribute("data-menu-overflow-opened")
+  document.querySelector("#menu_overflow").removeAttribute("data-animate")
 }

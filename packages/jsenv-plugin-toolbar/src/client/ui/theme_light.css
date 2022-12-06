@@ -65,15 +65,15 @@ html[data-theme="light"] .tooltip::after {
 }
 
 /* overflow menu */
-html[data-theme="light"] #overflow-menu-button {
+html[data-theme="light"] #menu_overflow_button {
   background: #e8eff3;
 }
 html[data-theme="light"]
-  #toolbar[data-overflow-menu-visible]
-  #overflow-menu-button {
+  #toolbar[data-menu-overflow-opened]
+  #menu_overflow_button {
   background: #a5a9ad;
 }
-html[data-theme="light"] #overflow-menu {
+html[data-theme="light"] #menu_overflow {
   background: #dfe4e7;
 }
 
