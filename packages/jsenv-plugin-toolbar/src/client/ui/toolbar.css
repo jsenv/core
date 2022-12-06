@@ -6,8 +6,8 @@
 @import "./focus.css";
 @import "./execution_indicator/execution_indiactor.css";
 @import "./server_indicator/server_indicator.css";
-@import "./settings/settings.css";
-@import "./responsivness/menu_overflow.css";
+@import "./toolbar_settings/toolbar_settings.css";
+@import "./toolbar_menu_overflow/toolbar_menu_overflow.css";
 
 #toolbar button {
   background: none;

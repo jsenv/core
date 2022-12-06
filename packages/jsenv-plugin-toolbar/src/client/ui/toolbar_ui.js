@@ -1,13 +1,13 @@
 import { effect } from "../core/toolbar_state.js"
-import { animationsAreEnabled } from "../core/toolbar_animation.js"
+import { getAnimationsEnabled } from "../core/toolbar_animation.js"
 import { getToolbarIframe, setStyles } from "./util/dom.js"
 import { startJavaScriptAnimation } from "./util/animation.js"
 import { hideTooltip } from "./tooltip.js"
 import { initToolbarMenuOverflow } from "./toolbar_menu_overflow/toolbar_menu_overflow.js"
 import { renderToolbarOverlay } from "./toolbar_overlay/toolbar_overlay.js"
-import { renderToolbarDocumentIndexButton } from "./document_index_button/document_index_button.js"
+import { renderDocumentIndexLink } from "./document_index_link/document_index_link.js"
 import { renderDocumentExecutionIndicator } from "./document_execution_indicator/document_execution_indicator.js"
-import { renderServerConnectionIndicator } from "./server_connection_indicator/server_connection_indicator.js"
+import { renderServerIndicator } from "./server_indicator/server_indicator.js"
 import { renderToolbarSettings } from "./toolbar_settings/toolbar_settings.js"
 import { renderToolbarCloseButton } from "./toolbar_close_button/toolbar_close_button.js"
 
@@ -30,9 +30,9 @@ export const initToolbarUI = () => {
 
   initToolbarMenuOverflow()
   renderToolbarOverlay()
-  renderToolbarDocumentIndexButton()
+  renderDocumentIndexLink()
   renderDocumentExecutionIndicator()
-  renderServerConnectionIndicator()
+  renderServerIndicator()
   renderToolbarSettings()
   renderToolbarCloseButton()
 }
@@ -43,7 +43,7 @@ let restoreToolbarIframeStyles = () => {}
 const hideToolbar = () => {
   restoreToolbarIframeParentStyles()
   restoreToolbarIframeStyles()
-  hideTooltip(document.querySelector("#server_connection_indicator"))
+  hideTooltip(document.querySelector("#server_indicator"))
   hideTooltip(document.querySelector("#document_execution_indicator"))
   document.documentElement.removeAttribute("data-toolbar-visible")
 }
@@ -68,7 +68,7 @@ const showToolbar = () => {
 
   setStyles(toolbarIframeParent, {
     "transition-property": "padding-bottom",
-    "transition-duration": animationsAreEnabled() ? "300ms" : "0s",
+    "transition-duration": getAnimationsEnabled() ? "300ms" : "0s",
   })
   // maybe we should use js animation here because we would not conflict with css
   restoreToolbarIframeParentStyles = setStyles(toolbarIframeParent, {

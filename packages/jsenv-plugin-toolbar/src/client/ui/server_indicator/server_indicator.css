@@ -1,13 +1,13 @@
-#server_connection_indicator button {
+#server_indicator button {
   position: relative;
 }
 
-#server_connection_indicator button svg {
+#server_indicator button svg {
   width: 40px;
   height: 40px;
 }
 
-#server_connection_indicator .autoreload {
+#server_indicator .autoreload {
   position: absolute;
   width: 32px;
   height: 32px;
@@ -19,7 +19,7 @@
   color: green;
 }
 
-#server_connection_indicator .icon {
+#server_indicator .icon {
   width: 40px;
   height: 40px;
 }

@@ -29,7 +29,7 @@ export const initToolbarMenuOverflow = () => {
 
 const responsiveToolbar = (overflowMenuBreakpoint) => {
   // close all tooltips in case opened
-  hideTooltip(document.querySelector("#server_connection_indicator"))
+  hideTooltip(document.querySelector("#server_indicator"))
   hideTooltip(document.querySelector("#document_execution_indicator"))
   // close settings box in case opened
   deactivateToolbarSection(document.querySelector("#settings"))

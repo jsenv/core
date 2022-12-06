@@ -8,8 +8,8 @@ import {
 
 const parentEventSourceClient = window.parent.__jsenv_event_source_client__
 
-export const renderServerConnectionIndicator = () => {
-  removeForceHideElement(document.querySelector("#server_connection_indicator"))
+export const renderServerIndicator = () => {
+  removeForceHideElement(document.querySelector("#server_indicator"))
   if (!parentEventSourceClient) {
     disableAutoreloadSetting()
     return
@@ -21,11 +21,11 @@ export const renderServerConnectionIndicator = () => {
 }
 
 const updateEventSourceIndicator = () => {
-  const indicator = document.querySelector("#server_connection_indicator")
+  const indicator = document.querySelector("#server_indicator")
   const connectionState = parentEventSourceClient.status.value
   enableVariant(indicator, { connectionState })
   const variantNode = document.querySelector(
-    "#server_connection_indicator > [data-when-active]",
+    "#server_indicator > [data-when-active]",
   )
   variantNode.querySelector("button").onclick = () => {
     toggleTooltip(indicator)
