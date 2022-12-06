@@ -1,5 +1,7 @@
-import { effect } from "../core/toolbar_state.js"
-import { animationsEnabledSignal } from "../core/toolbar_animation.js"
+import { effect } from "@preact/signals"
+
+import { animationsEnabledSignal } from "../core/animation_signals.js"
+import { openedSignal } from "../core/toolbar_open_signals.js"
 import { getToolbarIframe, setStyles } from "./util/dom.js"
 import { startJavaScriptAnimation } from "./util/animation.js"
 import { hideAllTooltips } from "./tooltips/tooltips.js"
@@ -12,7 +14,8 @@ import { renderToolbarSettings } from "./toolbar_settings/toolbar_settings.js"
 import { renderToolbarCloseButton } from "./toolbar_close_button/toolbar_close_button.js"
 
 export const initToolbarUI = () => {
-  effect(({ animationsEnabled }) => {
+  effect(() => {
+    const animationsEnabled = animationsEnabledSignal.value
     if (animationsEnabled) {
       document.documentElement.setAttribute("data-toolbar-animation", "")
     } else {
@@ -20,7 +23,8 @@ export const initToolbarUI = () => {
     }
   })
 
-  effect(({ opened }) => {
+  effect(() => {
+    const opened = openedSignal.value
     if (opened) {
       showToolbar()
     } else {

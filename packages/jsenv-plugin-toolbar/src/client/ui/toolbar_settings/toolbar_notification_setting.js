@@ -1,40 +1,45 @@
 import { effect } from "@preact/signals"
+
 import {
   notificationsEnabledSignal,
   notificationPermissionSignal,
-  notificationAPIDetected,
+} from "../../core/notification_signals.js"
+import { notificationAPIDetected } from "../../core/notification_context.js"
+import {
   enableNotifications,
   disableNotifications,
   requestPermission,
-} from "../../core/toolbar_notification.js"
+} from "../../core/notification_actions.js"
 import { enableVariant } from "../variant.js"
 
-effect(() => {
-  const notificationsEnabled = notificationsEnabledSignal.value
-  const notificationPermission = notificationPermissionSignal.value
-  if (!notificationAPIDetected) {
-    applyNotificationNotAvailableEffects()
-    return
-  }
-  if (notificationPermission === "default") {
-    applyNotificationDefaultEffects()
-    return
-  }
-  if (notificationPermission === "denied") {
-    applyNotificationDeniedEffects()
-    return
-  }
-  if (notificationPermission === "granted") {
-    if (notificationsEnabled) {
+const notifCheckbox = document.querySelector("#toggle_notifs")
+
+export const renderToolbarNotificationSetting = () => {
+  effect(() => {
+    const notificationsEnabled = notificationsEnabledSignal.value
+    notifCheckbox.checked = notificationsEnabled
+  })
+
+  effect(() => {
+    const notificationPermission = notificationPermissionSignal.value
+    if (!notificationAPIDetected) {
+      applyNotificationNotAvailableEffects()
+      return
+    }
+    if (notificationPermission === "default") {
+      applyNotificationDefaultEffects()
+      return
+    }
+    if (notificationPermission === "denied") {
+      applyNotificationDeniedEffects()
+      return
+    }
+    if (notificationPermission === "granted") {
       applyNotificationGrantedEffects()
       return
     }
-    applyNotificationDisabledEffects()
-    return
-  }
-})
-
-const notifCheckbox = document.querySelector("#toggle_notifs")
+  })
+}
 
 const applyNotificationNotAvailableEffects = () => {
   const notifSetting = document.querySelector(".settings_notification")
@@ -62,7 +67,6 @@ const applyNotificationGrantedEffects = () => {
     notif_granted: "yes",
   })
   notifCheckbox.disabled = false
-  notifCheckbox.checked = notificationsEnabledSignal.value
   notifCheckbox.onchange = () => {
     if (notifCheckbox.checked) {
       enableNotifications()
@@ -71,7 +75,7 @@ const applyNotificationGrantedEffects = () => {
     }
   }
 }
-const applyNotificationDisabledEffects = () => {}
+
 const applyNotificationNOTGrantedEffects = () => {
   enableVariant(document.querySelector(".notification_text"), {
     notif_granted: "no",

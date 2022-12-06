@@ -1,8 +1,18 @@
 import { notificationAPIDetected } from "./notification_context.js"
-import { notificationsEnabledSignal } from "./notification_signals.js"
+import {
+  notificationsEnabledSignal,
+  notificationPermissionSignal,
+} from "./notification_signals.js"
+
+export const enableNotifications = () => {
+  notificationsEnabledSignal.value = true
+}
+
+export const disableNotifications = () => {
+  notificationsEnabledSignal.value = false
+}
 
 const arrayOfOpenedNotifications = []
-
 export const notify = notificationAPIDetected
   ? async (
       title,
@@ -56,12 +66,7 @@ export const requestPermission = notificationAPIDetected
       requestPromise = Notification.requestPermission()
       await requestPromise
       requestPromise = undefined
-      const permission = Notification.permission
-      if (permission === "granted") {
-        notificationsEnabledSignal.value = true
-      } else {
-        notificationsEnabledSignal.value = false
-      }
+      notificationPermissionSignal.value = Notification.permission
     }
   : () => Promise.resolve()
 
