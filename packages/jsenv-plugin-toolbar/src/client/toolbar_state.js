@@ -1,4 +1,4 @@
-import { sendEventToParent } from "./communication/parent_window_communication.js"
+import { sendEventToParent } from "./core/parent_window_communication.js"
 
 export const toolbarState = {
   ready: false,

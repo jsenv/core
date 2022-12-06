@@ -1,0 +1,29 @@
+html[data-animation-disabled] * {
+  transition: none !important;
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+}
+
+[data-when] {
+  display: none !important;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+html {
+  font-family: arial, sans;
+}
+
+/* global utils */
+[data-force-hide] {
+  display: none !important;
+}

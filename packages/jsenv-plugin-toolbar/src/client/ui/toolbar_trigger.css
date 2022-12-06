@@ -1,0 +1,43 @@
+/* re-open toolbar-trigger */
+#toolbar-trigger {
+  display: block;
+  overflow: hidden;
+  position: absolute;
+  bottom: -32px;
+  right: 20px;
+  height: 40px;
+  width: 40px;
+  padding: 0;
+  border-radius: 5px 5px 0 0;
+  border: 1px solid rgba(0, 0, 0, 0.33);
+  border-bottom: none;
+  box-shadow: 0px 0px 6px 2px rgba(0, 0, 0, 0.46);
+  background: transparent;
+}
+
+#toolbar-trigger[data-animate] {
+  transition: 600ms;
+}
+
+#toolbar-trigger #jsenvLogoSvg {
+  width: 35px;
+  height: 35px;
+  opacity: 0;
+  transition: 600ms;
+}
+
+html[data-toolbar-visible] #toolbar-trigger {
+  display: none;
+}
+
+#toolbar-trigger:hover {
+  cursor: pointer;
+}
+
+#toolbar-trigger[data-expanded] {
+  bottom: 0;
+}
+
+#toolbar-trigger[data-expanded] #jsenvLogoSvg {
+  opacity: 1;
+}
