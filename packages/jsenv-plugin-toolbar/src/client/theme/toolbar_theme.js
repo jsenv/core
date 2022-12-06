@@ -1,4 +1,4 @@
-import { createPreference } from "../core/util/preferences.js"
+import { createPreference } from "../core/preferences.js"
 
 const DARK_THEME = "dark"
 const LIGHT_THEME = "light"
