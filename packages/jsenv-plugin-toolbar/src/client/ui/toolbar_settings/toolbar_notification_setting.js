@@ -31,10 +31,10 @@ const updatePermission = () => {
   }
 }
 
-const notifCheckbox = document.querySelector("#toggle-notifs")
+const notifCheckbox = document.querySelector("#toggle_notifs")
 
 const applyNotificationNotAvailableEffects = () => {
-  const notifSetting = document.querySelector(".settings-notification")
+  const notifSetting = document.querySelector(".settings_notification")
   notifSetting.setAttribute("data-disabled", "true")
   notifSetting.setAttribute(
     "title",
@@ -44,18 +44,18 @@ const applyNotificationNotAvailableEffects = () => {
 }
 const applyNotificationDefaultEffects = () => {
   applyNotificationNOTGrantedEffects()
-  const notifSetting = document.querySelector(".settings-notification")
+  const notifSetting = document.querySelector(".settings_notification")
   notifSetting.removeAttribute("data-disabled")
   notifSetting.removeAttribute("title")
 }
 const applyNotificationDeniedEffects = () => {
   applyNotificationNOTGrantedEffects()
-  const notifSetting = document.querySelector(".settings-notification")
+  const notifSetting = document.querySelector(".settings_notification")
   notifSetting.setAttribute("data-disabled", "true")
   notifSetting.setAttribute("title", `Notification denied`)
 }
 const applyNotificationGrantedEffects = () => {
-  enableVariant(document.querySelector(".notification-text"), {
+  enableVariant(document.querySelector(".notification_text"), {
     notif_granted: "yes",
   })
   notifCheckbox.disabled = false
@@ -69,7 +69,7 @@ const applyNotificationGrantedEffects = () => {
   }
 }
 const applyNotificationNOTGrantedEffects = () => {
-  enableVariant(document.querySelector(".notification-text"), {
+  enableVariant(document.querySelector(".notification_text"), {
     notif_granted: "no",
   })
   notifCheckbox.disabled = true

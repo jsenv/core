@@ -196,9 +196,9 @@
         </section>
 
         <section id="settings" data-responsive-toolbar-element>
-          <div id="settings-box">
-            <div id="settings-box-header">
-              <button id="button-close-settings">
+          <div id="settings_box">
+            <div id="settings_box_header">
+              <button id="settings_close_button">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 24 24"
@@ -212,11 +212,11 @@
                 </svg>
               </button>
               <svg
+                class="settings_icon"
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
                 width="35px"
                 height="35px"
-                class="settings-icon"
               >
                 <path
                   d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"
@@ -224,9 +224,9 @@
               </svg>
               <h3>Settings</h3>
             </div>
-            <div id="settings-box-body">
-              <div class="settings-box-items-wrapper">
-                <div class="settings-box-item settings-autoreload">
+            <div id="settings_box_body">
+              <div class="settings_box_items_wrapper">
+                <div class="settings_box_item settings_autoreload">
                   <div class="category-title">
                     <svg width="20px" height="20px">
                       <use xlink:href="#loading_svg"></use>
@@ -234,18 +234,18 @@
                     <span>Autoreload</span>
                   </div>
                   <label class="switch" data-contains-hidden-input>
-                    <input id="toggle-autoreload" type="checkbox" />
+                    <input id="toggle_autoreload" type="checkbox" />
                     <div>
                       <div class="slider"></div>
                       <div class="square"></div>
                     </div>
                   </label>
-                  <div class="category-subtitle">
+                  <div class="category_subtitle">
                     Auto reload when a file is modified, deleted or created.
                   </div>
                 </div>
-                <div class="settings-box-item settings-notification">
-                  <div class="category-title">
+                <div class="settings_box_item settings_notification">
+                  <div class="category_title">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       viewBox="0 0 24 24"
@@ -259,15 +259,15 @@
                     Notifications
                   </div>
                   <label class="switch" data-contains-hidden-input>
-                    <input id="toggle-notifs" type="checkbox" />
+                    <input id="toggle_notifs" type="checkbox" />
                     <div>
                       <div class="slider"></div>
                       <div class="square"></div>
                     </div>
                   </label>
-                  <div class="category-subtitle">
+                  <div class="category_subtitle">
                     Send system notification when execution fails or is fixed.
-                    <div class="notification-text">
+                    <div class="notification_text">
                       <a
                         data-when="notif_granted:no"
                         class="request_notification_permission"
@@ -278,8 +278,8 @@
                   </div>
                 </div>
 
-                <div class="settings-box-item">
-                  <div class="category-title">
+                <div class="settings_box_item">
+                  <div class="category_title">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       viewBox="0 0 24 24"
@@ -294,18 +294,18 @@
                     Animations
                   </div>
                   <label class="switch" data-contains-hidden-input>
-                    <input id="toggle-anims" type="checkbox" />
+                    <input id="toggle_anims" type="checkbox" />
                     <div>
                       <div class="slider"></div>
                       <div class="square"></div>
                     </div>
                   </label>
-                  <div class="category-subtitle">
+                  <div class="category_subtitle">
                     Play toolbar animations and transitions.
                   </div>
                 </div>
-                <div class="settings-box-item">
-                  <div class="category-title">
+                <div class="settings_box_item">
+                  <div class="category_title">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       viewBox="0 0 24 24"
@@ -321,27 +321,27 @@
                     Dark mode
                   </div>
                   <label class="switch" data-contains-hidden-input>
-                    <input id="checkbox-dark-theme" type="checkbox" />
+                    <input id="checkbox_dark_theme" type="checkbox" />
                     <div>
                       <div class="slider"></div>
                       <div class="square"></div>
                     </div>
                   </label>
-                  <div class="category-subtitle">
+                  <div class="category_subtitle">
                     Choose between light and dark theme for jsenv toolbar.
                   </div>
                 </div>
               </div>
             </div>
           </div>
-          <button id="settings-button" class="toolbar_icon_wrapper">
+          <button id="settings_open_button" class="toolbar_icon_wrapper">
             <div data-when="has_warning:yes">
               <svg
+                class="toolbar_icon"
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 45.818 45.818"
                 width="20px"
                 height="20px"
-                class="toolbar_icon"
                 style="transform: rotate(180deg)"
               >
                 <path
@@ -354,11 +354,11 @@
             </div>
             <div data-when="has_warning:no">
               <svg
+                class="toolbar_icon"
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
                 width="24px"
                 height="24px"
-                class="toolbar_icon"
               >
                 <path
                   d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"
@@ -368,14 +368,14 @@
           </button>
         </section>
 
-        <section id="close" data-responsive-toolbar-element>
-          <button id="button-close-toolbar">
+        <section id="toolbar_close_section" data-responsive-toolbar-element>
+          <button id="toolbar_close_button">
             <div class="toolbar_icon_wrapper">
               <svg
+                id="toolbar_close_button_icon"
+                class="toolbar_icon"
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
-                id="crossIconSvg"
-                class="toolbar_icon"
                 width="35px"
                 height="35px"
               >

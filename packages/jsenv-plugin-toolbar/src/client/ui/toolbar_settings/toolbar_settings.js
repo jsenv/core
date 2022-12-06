@@ -10,8 +10,8 @@ import { renderToolbarNotificationSetting } from "./toolbar_notification_setting
 import { renderToolbarThemeSetting } from "./toolbar_theme_setting.js"
 
 export const renderToolbarSettings = () => {
-  document.querySelector("#settings-button").onclick = toggleSettings
-  document.querySelector("#button-close-settings").onclick = toggleSettings
+  document.querySelector("#settings_open_button").onclick = toggleSettings
+  document.querySelector("#settings_close_button").onclick = toggleSettings
   disableWarningStyle()
 
   renderToolbarAnimationSetting()
@@ -28,13 +28,13 @@ const toggleSettings = () => {
 }
 
 export const enableWarningStyle = () => {
-  enableVariant(document.querySelector("#settings-button"), {
+  enableVariant(document.querySelector("#settings_open_button"), {
     has_warning: "yes",
   })
 }
 
 export const disableWarningStyle = () => {
-  enableVariant(document.querySelector("#settings-button"), {
+  enableVariant(document.querySelector("#settings_open_button"), {
     has_warning: "no",
   })
 }

@@ -1,16 +1,16 @@
-#settings-button {
+#settings_button {
   position: relative;
 }
 
-#settings-button[data-warning] svg {
+#settings_button[data-warning] svg {
   fill: #cb5909;
 }
 
-#settings-button[data-warning] svg:hover {
+#settings_button[data-warning] svg:hover {
   fill: darkorange !important;
 }
 
-#settings-box {
+#settings_box {
   display: none;
   position: absolute;
   bottom: 40px;
@@ -26,7 +26,7 @@
   z-index: -1;
 }
 
-[data-active] #settings-box {
+[data-active] #settings_box {
   display: block;
   animation: comeUp ease 0.3s;
 }
@@ -42,7 +42,7 @@
   }
 }
 
-#settings-box-body {
+#settings_box_body {
   text-align: left;
   padding: 18px 0;
   max-height: 80vh;
@@ -52,21 +52,21 @@
   justify-content: center;
 }
 
-.settings-box-items-wrapper {
+.settings_box_items_wrapper {
   max-width: 700px;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
 }
 
-.settings-box-item {
+.settings_box_item {
   padding: 15px;
   background: #0c111b;
   width: 250px;
   margin: 9px 18px;
 }
 
-#settings-box-header .settings-icon {
+#settings_box_header .settings_icon {
   fill: none;
   stroke: #24b1b0;
   stroke-width: 2;
@@ -77,19 +77,18 @@
   top: 4px;
 }
 
-#settings-box h3 {
+#settings_box h3 {
   display: inline-block;
   font-size: 20px;
   margin: 10px 0;
   color: #24b1b0;
 }
 
-#button-close-settings {
+#settings_close_button {
   float: right;
   fill: #24b1b0;
 }
-
-#button-close-settings:hover {
+#settings_close_button:hover {
   opacity: 0.6;
 }
 
@@ -100,7 +99,7 @@ label {
   display: block;
 }
 
-#settings-box .category-title {
+#settings_box .category_title {
   color: #24b1b0;
   font-size: 16px;
   display: inline-block;
@@ -108,7 +107,7 @@ label {
   margin-top: 4px;
 }
 
-#settings-box .category-title svg {
+#settings_box .category_title svg {
   fill: currentColor;
   vertical-align: top;
   margin-right: 5px;
@@ -116,7 +115,7 @@ label {
   height: 18px;
 }
 
-#settings-box .category-subtitle {
+#settings_box .category_subtitle {
   color: #a9a8a8;
   font-size: 14px;
   max-width: 220px;
@@ -181,21 +180,21 @@ To be able to apply an outline to this element later*/
   background-color: #24b1b0;
 }
 
-.settings-box-item[data-disabled] {
+.settings_box_item[data-disabled] {
   background-color: rgba(12, 17, 27, 0.4);
   cursor: default;
 }
-.settings-box-item[data-disabled] .category-title,
-.settings-box-item[data-disabled] .switch,
-.settings-box-item[data-disabled] .category-subtitle {
+.settings_box_item[data-disabled] .category_title,
+.settings_box_item[data-disabled] .switch,
+.settings_box_item[data-disabled] .category_subtitle {
   opacity: 0.4;
 }
-.settings-box-item[data-disabled] .category-title span {
+.settings_box_item[data-disabled] .category_title span {
   text-decoration: line-through;
 }
-.settings-box-item[data-disabled] .category-subtitle {
+.settings_box_item[data-disabled] .category_subtitle {
   text-decoration: line-through;
 }
-.settings-box-item[data-disabled] .switch {
+.settings_box_item[data-disabled] .switch {
   cursor: default;
 }
