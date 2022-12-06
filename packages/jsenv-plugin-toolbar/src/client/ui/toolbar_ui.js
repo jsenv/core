@@ -6,7 +6,6 @@ import {
   renderToolbarSettings,
   hideSettings,
 } from "../settings/toolbar_settings.js"
-import { renderToolbarNotification } from "../notification/toolbar_notification.js"
 import { renderToolbarTheme } from "../theme/toolbar_theme.js"
 import { renderExecutionInToolbar } from "../execution/toolbar_execution.js"
 import { initToolbarEventSource } from "../eventsource/toolbar_eventsource.js"
@@ -19,6 +18,7 @@ import {
 } from "./util/dom.js"
 import { startJavaScriptAnimation } from "./util/animation.js"
 import { renderToolbarAnimationSetting } from "./toolbar_animation_setting.js"
+import { renderToolbarNotificationSetting } from "./toolbar_notification_setting.js"
 
 export const renderToolbar = async () => {
   const toolbarOverlay = document.querySelector("#toolbar-overlay")
@@ -41,11 +41,12 @@ export const renderToolbar = async () => {
     document.querySelector(".toolbar-icon-wrapper"),
     "/",
   )
-  renderToolbarNotification()
+
   makeToolbarResponsive()
+  renderToolbarTheme()
   renderToolbarSettings()
   renderToolbarAnimationSetting()
-  renderToolbarTheme()
+  renderToolbarNotificationSetting()
   renderExecutionInToolbar()
   // this might become active but we need to detect this somehow
   deactivateToolbarSection(document.querySelector("#file-list-link"))
