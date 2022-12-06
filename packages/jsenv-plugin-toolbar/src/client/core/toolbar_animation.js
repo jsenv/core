@@ -1,5 +1,5 @@
 import { toolbarState, updateToolbarState } from "../toolbar_state.js"
-import { createPreference } from "../util/preferences.js"
+import { createPreference } from "./util/preferences.js"
 
 const animationPreference = createPreference("jsenv_toolbar_animation")
 

@@ -1,30 +1,26 @@
-import { updateToolbarState } from "./toolbar_state.js"
-import { addExternalCommandCallback } from "./communication/parent_window_communication.js"
-import { startJavaScriptAnimation } from "./util/animation.js"
-import "./focus/toolbar_focus.js"
+import { updateToolbarState } from "../toolbar_state.js"
+import { animationsAreEnabled } from "../core/toolbar_animation.js"
+import { toolbarVisibilityPreference } from "../core/toolbar_visibility.js"
+import { hideAllTooltip, hideTooltip } from "../tooltip/tooltip.js"
+import {
+  renderToolbarSettings,
+  hideSettings,
+} from "../settings/toolbar_settings.js"
+import { renderToolbarNotification } from "../notification/toolbar_notification.js"
+import { renderToolbarTheme } from "../theme/toolbar_theme.js"
+import { renderExecutionInToolbar } from "../execution/toolbar_execution.js"
+import { initToolbarEventSource } from "../eventsource/toolbar_eventsource.js"
+import { makeToolbarResponsive } from "../responsive/toolbar_responsive.js"
 import { setLinkHrefForParentWindow } from "./util/iframe_to_parent_href.js"
 import {
   getToolbarIframe,
   deactivateToolbarSection,
   setStyles,
 } from "./util/dom.js"
-import { createPreference } from "./util/preferences.js"
-import { hideTooltip, hideAllTooltip } from "./tooltip/tooltip.js"
-import {
-  renderToolbarSettings,
-  hideSettings,
-} from "./settings/toolbar_settings.js"
-import { animationsAreEnabled } from "./animation/toolbar_animation_core.js"
-import { renderToolbarNotification } from "./notification/toolbar_notification.js"
-import { renderToolbarTheme } from "./theme/toolbar_theme.js"
-import { renderToolbarAnimation } from "./animation/toolbar_animation_ui.js"
-import { renderExecutionInToolbar } from "./execution/toolbar_execution.js"
-import { initToolbarEventSource } from "./eventsource/toolbar_eventsource.js"
-import { makeToolbarResponsive } from "./responsive/toolbar_responsive.js"
+import { startJavaScriptAnimation } from "./util/animation.js"
+import { renderToolbarAnimationSetting } from "./toolbar_animation_setting.js"
 
-const toolbarVisibilityPreference = createPreference("jsenv_toolbar_visible")
-
-const renderToolbar = async () => {
+export const renderToolbar = async () => {
   const toolbarOverlay = document.querySelector("#toolbar-overlay")
   toolbarOverlay.onclick = () => {
     hideAllTooltip()
@@ -48,7 +44,7 @@ const renderToolbar = async () => {
   renderToolbarNotification()
   makeToolbarResponsive()
   renderToolbarSettings()
-  renderToolbarAnimation()
+  renderToolbarAnimationSetting()
   renderToolbarTheme()
   renderExecutionInToolbar()
   // this might become active but we need to detect this somehow
@@ -156,19 +152,3 @@ window.toolbar = {
   show: showToolbar,
   hide: () => hideToolbar(),
 }
-
-// const { currentScript } = document
-addExternalCommandCallback("renderToolbar", ({ logs }) => {
-  renderToolbar({
-    logs,
-  })
-})
-addExternalCommandCallback("showToolbar", () => {
-  showToolbar()
-})
-addExternalCommandCallback("hideToolbar", () => {
-  hideToolbar()
-})
-updateToolbarState({
-  ready: true,
-})

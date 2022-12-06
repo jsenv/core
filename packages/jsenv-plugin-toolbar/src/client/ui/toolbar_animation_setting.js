@@ -2,9 +2,9 @@ import {
   animationsAreEnabled,
   enableAnimations,
   disableAnimations,
-} from "./toolbar_animation_core.js"
+} from "../core/toolbar_animation_core.js"
 
-export const renderToolbarAnimation = () => {
+export const renderToolbarAnimationSetting = () => {
   const animCheckbox = document.querySelector("#toggle-anims")
   animCheckbox.checked = animationsAreEnabled()
   animCheckbox.onchange = () => {

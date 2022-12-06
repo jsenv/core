@@ -1,6 +1,6 @@
-import { setAttributes, setStyles } from "./util/dom.js"
+import { setAttributes, setStyles } from "./ui/util/dom.js"
 
-const jsenvLogoSvgUrl = new URL("./jsenv_logo.svg", import.meta.url)
+const jsenvLogoSvgUrl = new URL("./ui/jsenv_logo.svg", import.meta.url)
 
 export const injectToolbar = async ({ toolbarUrl, logs = false }) => {
   if (document.readyState !== "complete") {
