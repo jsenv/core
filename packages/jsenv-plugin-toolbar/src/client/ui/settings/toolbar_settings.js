@@ -3,13 +3,20 @@ import {
   deactivateToolbarSection,
   activateToolbarSection,
   updateIframeOverflowOnParentWindow,
-} from "../ui/util/dom.js"
-import { enableVariant } from "../variant/variant.js"
+} from "../util/dom.js"
+import { enableVariant } from "../variant.js"
+import { renderToolbarAnimationSetting } from "./toolbar_animation_setting.js"
+import { renderToolbarNotificationSetting } from "./toolbar_notification_setting.js"
+import { renderToolbarThemeSetting } from "./toolbar_theme_setting.js"
 
 export const renderToolbarSettings = () => {
   document.querySelector("#settings-button").onclick = toggleSettings
   document.querySelector("#button-close-settings").onclick = toggleSettings
   disableWarningStyle()
+
+  renderToolbarAnimationSetting()
+  renderToolbarNotificationSetting()
+  renderToolbarThemeSetting()
 }
 
 const toggleSettings = () => {

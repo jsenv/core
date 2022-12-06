@@ -1,14 +1,13 @@
 import { updateToolbarState } from "../toolbar_state.js"
 import { animationsAreEnabled } from "../core/toolbar_animation.js"
 import { toolbarVisibilityPreference } from "../core/toolbar_visibility.js"
-import { hideAllTooltip, hideTooltip } from "../tooltip/tooltip.js"
+import { hideAllTooltip, hideTooltip } from "./tooltip.js"
 import {
   renderToolbarSettings,
   hideSettings,
-} from "../settings/toolbar_settings.js"
-import { renderToolbarTheme } from "../theme/toolbar_theme.js"
+} from "./settings/toolbar_settings.js"
 import { renderExecutionInToolbar } from "../execution/toolbar_execution.js"
-import { initToolbarEventSource } from "../eventsource/toolbar_eventsource.js"
+import { renderServerIndicator } from "./server_indicator/server_indicator.js"
 import { makeToolbarResponsive } from "../responsive/toolbar_responsive.js"
 import { setLinkHrefForParentWindow } from "./util/iframe_to_parent_href.js"
 import {
@@ -17,8 +16,6 @@ import {
   setStyles,
 } from "./util/dom.js"
 import { startJavaScriptAnimation } from "./util/animation.js"
-import { renderToolbarAnimationSetting } from "./toolbar_animation_setting.js"
-import { renderToolbarNotificationSetting } from "./toolbar_notification_setting.js"
 
 export const renderToolbar = async () => {
   const toolbarOverlay = document.querySelector("#toolbar-overlay")
@@ -43,14 +40,11 @@ export const renderToolbar = async () => {
   )
 
   makeToolbarResponsive()
-  renderToolbarTheme()
   renderToolbarSettings()
-  renderToolbarAnimationSetting()
-  renderToolbarNotificationSetting()
   renderExecutionInToolbar()
   // this might become active but we need to detect this somehow
   deactivateToolbarSection(document.querySelector("#file-list-link"))
-  initToolbarEventSource()
+  renderServerIndicator()
 
   // if user click enter or space quickly while closing toolbar
   // it will cancel the closing

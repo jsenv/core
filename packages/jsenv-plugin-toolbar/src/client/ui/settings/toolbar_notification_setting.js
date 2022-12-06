@@ -4,8 +4,8 @@ import {
   enableNotifications,
   disableNotifications,
   requestPermission,
-} from "../core/toolbar_notification.js"
-import { enableVariant } from "./variant.js"
+} from "../../core/toolbar_notification.js"
+import { enableVariant } from "../variant.js"
 
 export const renderToolbarNotificationSetting = () => {
   if (!notificationAPIDetected) {

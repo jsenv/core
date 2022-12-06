@@ -1,13 +1,13 @@
 @import "./globals.css";
 @import "./layout.css";
+@import "./theme_light.css";
 @import "./toolbar_trigger.css";
 @import "../execution/execution.css";
 @import "./focus.css";
 @import "../eventsource/eventsource.css";
 @import "../responsive/overflow_menu.css";
 @import "../settings/settings.css";
-@import "../theme/light_theme.css";
-@import "../tooltip/tooltip.css";
+@import "./tooltip.css";
 
 #toolbar button {
   background: none;

@@ -1,14 +1,14 @@
-import { removeForceHideElement } from "../ui/util/dom.js"
-import { enableVariant } from "../variant/variant.js"
+import { removeForceHideElement } from "../util/dom.js"
+import { enableVariant } from "../variant.js"
 import {
   toggleTooltip,
   removeAutoShowTooltip,
   autoShowTooltip,
-} from "../tooltip/tooltip.js"
+} from "../tooltip.js"
 
 const parentEventSourceClient = window.parent.__jsenv_event_source_client__
 
-export const initToolbarEventSource = () => {
+export const renderServerIndicator = () => {
   removeForceHideElement(document.querySelector("#eventsource-indicator"))
   if (!parentEventSourceClient) {
     disableAutoreloadSetting()
