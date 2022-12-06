@@ -1,13 +1,11 @@
-import { signal, effect } from "@preact/signals"
+import { effect } from "@preact/signals"
 
-export const animationsEnabledSignal = signal()
-export const enableAnimations = () => {
+import { stateFromLocalStorage } from "./toolbar_state_context.js"
+import { animationsEnabledSignal } from "./animation_signals.js"
+
+if (stateFromLocalStorage.animationsEnabled) {
   animationsEnabledSignal.value = true
 }
-export const disableAnimations = () => {
-  animationsEnabledSignal.value = false
-}
-
 effect(() => {
   const animationsEnabled = animationsEnabledSignal.value
   if (animationsEnabled) {

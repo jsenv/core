@@ -1,12 +1,12 @@
+import { themeSignal } from "../../core/theme_signals.js"
 import {
-  toolbarThemeSignal,
   switchToDefaultTheme,
   switchToLightTheme,
-} from "../../core/toolbar_theme.js"
+} from "../../core/theme_actions.js"
 
 export const renderToolbarThemeSetting = () => {
   const checkbox = document.querySelector("#checkbox_dark_theme")
-  checkbox.checked = toolbarThemeSignal.value === "dark"
+  checkbox.checked = themeSignal.value === "dark"
   checkbox.onchange = () => {
     if (checkbox.checked) {
       switchToDefaultTheme()

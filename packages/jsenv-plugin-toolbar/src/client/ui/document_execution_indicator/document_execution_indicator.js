@@ -1,4 +1,4 @@
-import { notifyExecutionResult } from "../../core/toolbar_notification.js"
+import { notifyExecutionResult } from "../../core/notification_actions.js"
 import { removeForceHideElement } from "../util/dom.js"
 import { enableVariant } from "../variant.js"
 import { toggleTooltip } from "../tooltips/tooltips.js"

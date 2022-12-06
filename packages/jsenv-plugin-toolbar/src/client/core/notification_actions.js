@@ -1,34 +1,20 @@
-import { signal, effect } from "@preact/signals"
-
-export const notificationsEnabledSignal = signal(false)
-export const enableNotifications = () => {
-  notificationsEnabledSignal.value = true
-}
-export const disableNotifications = () => {
-  notificationsEnabledSignal.value = false
-}
-export const notificationAPIDetected = typeof window.Notification === "function"
+import { notificationAPIDetected } from "./notification_context.js"
+import { notificationsEnabledSignal } from "./notification_signals.js"
 
 const arrayOfOpenedNotifications = []
-effect(() => {
-  const notificationsEnabled = notificationsEnabledSignal.value
-  if (!notificationsEnabled) {
-    // slice because arrayOfOpenedNotifications can be mutated while looping
-    arrayOfOpenedNotifications.slice().forEach((notification) => {
-      notification.close()
-    })
-  }
-})
 
 export const notify = notificationAPIDetected
   ? async (
       title,
       { clickToFocus = false, clickToClose = false, ...options } = {},
     ) => {
+      const notificationsEnabled = notificationsEnabledSignal.value
+      if (!notificationsEnabled) {
+        return null
+      }
       if (Notification.permission !== "granted") {
         return null
       }
-
       const notification = new Notification(title, options)
       arrayOfOpenedNotifications.push(notification)
       notification.onclick = () => {
@@ -53,6 +39,13 @@ export const notify = notificationAPIDetected
     }
   : () => {}
 
+export const closeAllNotifications = () => {
+  // slice because arrayOfOpenedNotifications can be mutated while looping
+  arrayOfOpenedNotifications.slice().forEach((notification) => {
+    notification.close()
+  })
+}
+
 let requestPromise
 export const requestPermission = notificationAPIDetected
   ? async () => {
@@ -63,24 +56,26 @@ export const requestPermission = notificationAPIDetected
       requestPromise = Notification.requestPermission()
       await requestPromise
       requestPromise = undefined
+      const permission = Notification.permission
+      if (permission === "granted") {
+        notificationsEnabledSignal.value = true
+      } else {
+        notificationsEnabledSignal.value = false
+      }
     }
-  : () => Promise.resolve("default")
+  : () => Promise.resolve()
 
 export const notifyExecutionResult = (
   executedFileRelativeUrl,
   execution,
   previousExecution,
 ) => {
-  const notificationEnabled = notificationsEnabledSignal.value
-  if (!notificationEnabled) return
-
   const notificationOptions = {
     lang: "en",
     icon: getFaviconHref(),
     clickToFocus: true,
     clickToClose: true,
   }
-
   if (execution.status === "errored") {
     if (previousExecution) {
       if (previousExecution.status === "completed") {

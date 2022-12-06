@@ -1,8 +1,8 @@
+import { animationsEnabledSignal } from "../../core/animation_signals.js"
 import {
-  animationsEnabledSignal,
   enableAnimations,
   disableAnimations,
-} from "../../core/toolbar_animation.js"
+} from "../../core/animation_actions.js"
 
 export const renderToolbarAnimationSetting = () => {
   const animCheckbox = document.querySelector("#toggle_anims")
