@@ -1,10 +1,10 @@
-@import "./execution/execution.css";
-@import "./focus/focus.css";
-@import "./eventsource/eventsource.css";
-@import "./responsive/overflow_menu.css";
-@import "./settings/settings.css";
-@import "./theme/light_theme.css";
-@import "./tooltip/tooltip.css";
+@import "../execution/execution.css";
+@import "../focus/focus.css";
+@import "../eventsource/eventsource.css";
+@import "../responsive/overflow_menu.css";
+@import "../settings/settings.css";
+@import "../theme/light_theme.css";
+@import "../tooltip/tooltip.css";
 
 html[data-animation-disabled] * {
   transition: none !important;
