@@ -2,7 +2,7 @@ import { setAttributes, setStyles } from "./ui/util/dom.js"
 
 const jsenvLogoSvgUrl = new URL("./ui/jsenv_logo.svg", import.meta.url)
 
-export const injectToolbar = async ({ toolbarUrl, logs = false }) => {
+export const injectToolbar = async ({ toolbarUrl, ...toolbarParams }) => {
   if (document.readyState !== "complete") {
     await new Promise((resolve) => {
       window.addEventListener("load", resolve)
@@ -55,7 +55,7 @@ export const injectToolbar = async ({ toolbarUrl, logs = false }) => {
   })
   const cleanupRenderOnFirstStateChange = listenToolbarStateChange(() => {
     cleanupRenderOnFirstStateChange()
-    sendCommandToToolbar(iframe, "renderToolbar", { logs })
+    sendCommandToToolbar(iframe, "initToolbar", toolbarParams)
   })
 
   await iframeLoadedPromise
@@ -130,7 +130,7 @@ export const injectToolbar = async ({ toolbarUrl, logs = false }) => {
     collapseToolbarTrigger()
   }
   toolbarTrigger.onclick = () => {
-    sendCommandToToolbar(iframe, "showToolbar")
+    sendCommandToToolbar(iframe, "openToolbar")
   }
 
   const showToolbarTrigger = () => {

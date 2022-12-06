@@ -2,13 +2,13 @@ import {
   forceHideElement,
   removeForceHideElement,
   deactivateToolbarSection,
-} from "../ui/util/dom.js"
-import { createHorizontalBreakpoint } from "../ui/util/responsive.js"
-import { hideTooltip } from "../tooltip/tooltip.js"
+} from "../util/dom.js"
+import { createHorizontalBreakpoint } from "../util/responsive.js"
+import { hideTooltip } from "../tooltip.js"
 
 const WINDOW_SMALL_WIDTH = 420
 
-export const makeToolbarResponsive = () => {
+export const initToolbarMenuOverflow = () => {
   // apply responsive design on toolbar icons if needed + add listener on resize screen
   // ideally we should listen breakpoint once, for now restore toolbar
   const overflowMenuBreakpoint = createHorizontalBreakpoint(WINDOW_SMALL_WIDTH)
@@ -19,14 +19,15 @@ export const makeToolbarResponsive = () => {
   overflowMenuBreakpoint.changed.listen(handleOverflowMenuBreakpoint)
 
   // overflow menu
-  document.querySelector("#overflow-menu-button").onclick = () =>
+  document.querySelector("#overflow-menu-button").onclick = () => {
     toggleOverflowMenu()
+  }
 }
 
 const responsiveToolbar = (overflowMenuBreakpoint) => {
   // close all tooltips in case opened
   hideTooltip(document.querySelector("#eventsource-indicator"))
-  hideTooltip(document.querySelector("#execution-indicator"))
+  hideTooltip(document.querySelector("#document_execution_indicator"))
   // close settings box in case opened
   deactivateToolbarSection(document.querySelector("#settings"))
 

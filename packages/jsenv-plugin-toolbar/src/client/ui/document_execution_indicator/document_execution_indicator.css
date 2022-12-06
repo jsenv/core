@@ -1,12 +1,11 @@
-/* Loader icon */
-#loader-icon {
+#execution_pending_icon {
   width: 20px;
   height: 20px;
   margin: 10px;
   transform: scaleX(-1);
   color: #cecece;
 }
-#loader-icon[data-animate] {
+#execution_pending_icon[data-animate] {
   opacity: 0;
   transform-origin: center;
   animation: rotateLoader 1s linear infinite !important;
@@ -25,18 +24,17 @@
   }
 }
 
-/* Check icon */
-#check-icon {
+#execution_completed_icon {
   width: 25px;
   height: 25px;
   margin: 7px;
   opacity: 0;
   stroke-width: 5;
 }
-#check-icon[data-animate] {
+#execution_completed_icon[data-animate] {
   opacity: 1;
 }
-#check-icon[data-animate] path {
+#execution_completed_icon[data-animate] path {
   transform-origin: 50% 50%;
   stroke-dasharray: 48;
   stroke-dashoffset: 48;
@@ -49,26 +47,25 @@
   }
 }
 
-/* Cross icon */
-#cross-icon {
+#execution_failed_icon {
   width: 20px;
   height: 20px;
   margin: 10px;
   opacity: 0;
   stroke-width: 5;
 }
-#cross-icon rect {
+#execution_failed_icon rect {
   width: 33px;
   height: 0;
   fill: #d74640;
 }
-#cross-icon[data-animate] {
+#execution_failed_icon[data-animate] {
   opacity: 1;
 }
-#cross-icon[data-animate] #cross_p1 {
+#execution_failed_icon[data-animate] #cross_p1 {
   animation: draw 0.5s cubic-bezier(0.65, 0, 0.45, 1) forwards;
 }
-#cross-icon[data-animate] #cross_p2 {
+#execution_failed_icon[data-animate] #cross_p2 {
   animation: draw 0.5s cubic-bezier(0.65, 0, 0.45, 1) forwards 0.2s;
 }
 @keyframes draw {

@@ -8,7 +8,7 @@ import {
 
 const parentEventSourceClient = window.parent.__jsenv_event_source_client__
 
-export const renderServerIndicator = () => {
+export const renderServerConnectionIndicator = () => {
   removeForceHideElement(document.querySelector("#eventsource-indicator"))
   if (!parentEventSourceClient) {
     disableAutoreloadSetting()

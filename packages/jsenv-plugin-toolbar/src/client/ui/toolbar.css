@@ -1,13 +1,13 @@
 @import "./globals.css";
 @import "./layout.css";
-@import "./theme_light.css";
 @import "./toolbar_trigger.css";
-@import "../execution/execution.css";
-@import "./focus.css";
-@import "../eventsource/eventsource.css";
-@import "../responsive/overflow_menu.css";
-@import "../settings/settings.css";
+@import "./theme_light.css";
 @import "./tooltip.css";
+@import "./focus.css";
+@import "./execution_indicator/execution_indiactor.css";
+@import "./server_indicator/server_indicator.css";
+@import "./settings/settings.css";
+@import "./responsivness/menu_overflow.css";
 
 #toolbar button {
   background: none;
@@ -25,18 +25,18 @@
 }
 
 /* file and settings icons */
-#fileIconSvg,
+#document_index_icon,
 .settings-icon {
   width: 20px;
 }
 
-.iconToolbar {
+.toolbar_icon {
   height: 40px;
   fill: #cecece;
   color: #cecece;
 }
 
-.iconToolbar:hover {
+.toolbar_icon:hover {
   fill: #909090 !important;
 }
 
@@ -45,10 +45,6 @@
   text-align: center;
   width: 40px;
   display: inline-block;
-}
-
-#file-list-link[data-active] a {
-  background: #1f262c;
 }
 
 #file[data-active] {

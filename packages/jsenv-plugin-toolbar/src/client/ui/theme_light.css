@@ -4,10 +4,10 @@ html[data-theme="light"] #toolbar {
 }
 
 /* icons */
-html[data-theme="light"] .iconToolbar {
+html[data-theme="light"] .toolbar_icon {
   fill: #404040;
 }
-html[data-theme="light"] .iconToolbar:hover {
+html[data-theme="light"] .toolbar_icon:hover {
   fill: #757575 !important;
 }
 
@@ -82,14 +82,13 @@ html[data-theme="light"] h2,
 html[data-theme="light"] h4 {
   color: #076570;
 }
-html[data-theme="light"] #fileIconSvgConfig {
+html[data-theme="light"] #explorables_icon {
   fill: #076570;
 }
 html[data-theme="light"] #explorables h2 span {
   color: #ff8d00;
 }
-html[data-theme="light"] article[data-page="file-list"],
-html[data-theme="light"] #file-list-link[data-active] a {
+html[data-theme="light"] article[data-page="file-list"] {
   background: #bbd5ea;
 }
 html[data-theme="light"] #explorables fieldset input:checked + * {

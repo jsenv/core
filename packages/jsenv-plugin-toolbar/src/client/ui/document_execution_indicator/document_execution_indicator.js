@@ -1,12 +1,14 @@
-import { removeForceHideElement } from "../ui/util/dom.js"
-import { enableVariant } from "../variant/variant.js"
-import { toggleTooltip } from "../tooltip/tooltip.js"
-import { notifyExecutionResult } from "../notification/toolbar_notification.js"
+import { notifyExecutionResult } from "../../core/toolbar_notification.js"
+import { removeForceHideElement } from "../util/dom.js"
+import { enableVariant } from "../variant.js"
+import { toggleTooltip } from "../tooltip.js"
 
-export const renderExecutionInToolbar = async () => {
+export const renderDocumentExecutionIndicator = async () => {
   // reset file execution indicator ui
   applyExecutionIndicator()
-  removeForceHideElement(document.querySelector("#execution-indicator"))
+  removeForceHideElement(
+    document.querySelector("#document_execution_indicator"),
+  )
 
   const { status, startTime, endTime } =
     await window.parent.__supervisor__.getDocumentExecutionResult()
@@ -61,7 +63,9 @@ const applyExecutionIndicator = ({
   startTime,
   endTime,
 } = {}) => {
-  const executionIndicator = document.querySelector("#execution-indicator")
+  const executionIndicator = document.querySelector(
+    "#document_execution_indicator",
+  )
   enableVariant(executionIndicator, { execution: status })
   const variantNode = executionIndicator.querySelector("[data-when-active]")
   variantNode.querySelector("button").onclick = () =>

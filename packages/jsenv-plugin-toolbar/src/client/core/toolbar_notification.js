@@ -1,17 +1,22 @@
-import { createPreference } from "./preferences.js"
+import { toolbarState, updateToolbarState } from "./toolbar_state.js"
+
+export const getNotificationsEnabled = () => {
+  return toolbarState.notificationsEnabled
+}
 
 export const notificationAPIDetected = typeof window.Notification === "function"
 
 const arrayOfOpenedNotifications = []
-const notificationPreference = createPreference("notification")
-export const notificationsAreEnabled = () => {
-  return notificationPreference.has() ? notificationPreference.get() : true
-}
+
 export const enableNotifications = () => {
-  notificationPreference.set(true)
+  updateToolbarState({
+    notificationsEnabled: true,
+  })
 }
 export const disableNotifications = () => {
-  notificationPreference.set(false)
+  updateToolbarState({
+    notificationsEnabled: false,
+  })
   // slice because arrayOfOpenedNotifications can be mutated while looping
   arrayOfOpenedNotifications.slice().forEach((notification) => {
     notification.close()
@@ -23,7 +28,7 @@ export const notifyExecutionResult = (
   execution,
   previousExecution,
 ) => {
-  const notificationEnabled = notificationsAreEnabled()
+  const notificationEnabled = toolbarState.notificationsEnabled
   if (!notificationEnabled) return
 
   const notificationOptions = {

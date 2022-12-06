@@ -1,20 +1,23 @@
-import { createPreference } from "./preferences.js"
+import { toolbarState, updateToolbarState } from "./toolbar_state.js"
 
 const THEME_DARK = "dark"
 const THEME_LIGHT = "light"
-const themePreference = createPreference("jsenv_toolbar_theme")
 
-export const getCurrentTheme = () => {
-  return themePreference.has() ? themePreference.get() : THEME_DARK
+export const getToolbarTheme = () => {
+  return toolbarState.theme
 }
 
 export const switchToLightTheme = () => {
-  themePreference.set(THEME_LIGHT)
+  updateToolbarState({
+    theme: THEME_LIGHT,
+  })
   setTheme(THEME_LIGHT)
 }
 
 export const switchToDefaultTheme = () => {
-  themePreference.set(THEME_DARK)
+  updateToolbarState({
+    theme: THEME_DARK,
+  })
   setTheme(THEME_DARK)
 }
 

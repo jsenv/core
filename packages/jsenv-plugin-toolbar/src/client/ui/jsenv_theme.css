@@ -1,8 +1,8 @@
 /* icons */
-html[data-theme="jsenv"] .iconToolbar {
+html[data-theme="jsenv"] .toolbar_icon {
   fill: #de5600;
 }
-html[data-theme="jsenv"] .iconToolbar:hover {
+html[data-theme="jsenv"] .toolbar_icon:hover {
   fill: #9a5300 !important;
 }
 
@@ -69,7 +69,7 @@ html[data-theme="jsenv"] .tooltip::after {
 html[data-theme="jsenv"] h2 {
   color: orange;
 }
-html[data-theme="jsenv"] #fileIconSvgConfig {
+html[data-theme="jsenv"] #explorables_icon {
   fill: orange;
 }
 html[data-theme="jsenv"] #explorables h2 span {

@@ -1,105 +1,57 @@
-import { updateToolbarState } from "../toolbar_state.js"
+import { effect } from "../core/toolbar_state.js"
 import { animationsAreEnabled } from "../core/toolbar_animation.js"
-import { toolbarVisibilityPreference } from "../core/toolbar_visibility.js"
-import { hideAllTooltip, hideTooltip } from "./tooltip.js"
-import {
-  renderToolbarSettings,
-  hideSettings,
-} from "./settings/toolbar_settings.js"
-import { renderExecutionInToolbar } from "../execution/toolbar_execution.js"
-import { renderServerIndicator } from "./server_indicator/server_indicator.js"
-import { makeToolbarResponsive } from "../responsive/toolbar_responsive.js"
-import { setLinkHrefForParentWindow } from "./util/iframe_to_parent_href.js"
-import {
-  getToolbarIframe,
-  deactivateToolbarSection,
-  setStyles,
-} from "./util/dom.js"
+import { getToolbarIframe, setStyles } from "./util/dom.js"
 import { startJavaScriptAnimation } from "./util/animation.js"
+import { hideTooltip } from "./tooltip.js"
+import { initToolbarMenuOverflow } from "./toolbar_menu_overflow/toolbar_menu_overflow.js"
+import { renderToolbarOverlay } from "./toolbar_overlay/toolbar_overlay.js"
+import { renderToolbarDocumentIndexButton } from "./document_index_button/document_index_button.js"
+import { renderDocumentExecutionIndicator } from "./document_execution_indicator/document_execution_indicator.js"
+import { renderServerConnectionIndicator } from "./server_connection_indicator/server_connection_indicator.js"
+import { renderToolbarSettings } from "./toolbar_settings/toolbar_settings.js"
+import { renderToolbarCloseButton } from "./toolbar_close_button/toolbar_close_button.js"
 
-export const renderToolbar = async () => {
-  const toolbarOverlay = document.querySelector("#toolbar-overlay")
-  toolbarOverlay.onclick = () => {
-    hideAllTooltip()
-    hideSettings()
-  }
+export const initToolbarUI = () => {
+  effect(({ animationsEnabled }) => {
+    if (animationsEnabled) {
+      document.documentElement.setAttribute("data-toolbar-animation", "")
+    } else {
+      document.documentElement.removeAttribute("data-toolbar-animation")
+    }
+  })
 
-  const toolbarVisible = toolbarVisibilityPreference.has()
-    ? toolbarVisibilityPreference.get()
-    : true
+  effect(({ opened }) => {
+    if (opened) {
+      showToolbar()
+    } else {
+      hideToolbar()
+    }
+  })
 
-  if (toolbarVisible) {
-    showToolbar({ animate: false })
-  } else {
-    hideToolbar({ animate: false })
-  }
-
-  setLinkHrefForParentWindow(
-    document.querySelector(".toolbar-icon-wrapper"),
-    "/",
-  )
-
-  makeToolbarResponsive()
+  initToolbarMenuOverflow()
+  renderToolbarOverlay()
+  renderToolbarDocumentIndexButton()
+  renderDocumentExecutionIndicator()
+  renderServerConnectionIndicator()
   renderToolbarSettings()
-  renderExecutionInToolbar()
-  // this might become active but we need to detect this somehow
-  deactivateToolbarSection(document.querySelector("#file-list-link"))
-  renderServerIndicator()
-
-  // if user click enter or space quickly while closing toolbar
-  // it will cancel the closing
-  // that's why I used toggleToolbar and not hideToolbar
-  document.querySelector("#button-close-toolbar").onclick = () => {
-    toogleToolbar()
-  }
+  renderToolbarCloseButton()
 }
-
-const toogleToolbar = () => {
-  if (toolbarIsVisible()) {
-    hideToolbar()
-  } else {
-    showToolbar()
-  }
-}
-
-const toolbarIsVisible = () =>
-  document.documentElement.hasAttribute("data-toolbar-visible")
 
 let restoreToolbarIframeParentStyles = () => {}
 let restoreToolbarIframeStyles = () => {}
 
-export const hideToolbar = () => {
+const hideToolbar = () => {
   restoreToolbarIframeParentStyles()
   restoreToolbarIframeStyles()
-
   hideTooltip(document.querySelector("#eventsource-indicator"))
-  hideTooltip(document.querySelector("#execution-indicator"))
-  toolbarVisibilityPreference.set(false)
-  if (animationsAreEnabled()) {
-    document.documentElement.setAttribute("data-toolbar-animation", "")
-  } else {
-    document.documentElement.removeAttribute("data-toolbar-animation")
-  }
+  hideTooltip(document.querySelector("#document_execution_indicator"))
   document.documentElement.removeAttribute("data-toolbar-visible")
-  updateToolbarState({
-    visible: false,
-  })
 }
 
 // (by the way it might be cool to have the toolbar auto show when)
 // it has something to say (being disconnected from server)
-export const showToolbar = () => {
-  toolbarVisibilityPreference.set(true)
-  if (animationsAreEnabled()) {
-    document.documentElement.setAttribute("data-toolbar-animation", "")
-  } else {
-    document.documentElement.removeAttribute("data-toolbar-animation")
-  }
+const showToolbar = () => {
   document.documentElement.setAttribute("data-toolbar-visible", "")
-
-  updateToolbarState({
-    visible: true,
-  })
 
   const toolbarIframe = getToolbarIframe()
   const toolbarIframeParent = toolbarIframe.parentNode
@@ -138,9 +90,4 @@ export const showToolbar = () => {
       },
     })
   }
-}
-
-window.toolbar = {
-  show: showToolbar,
-  hide: () => hideToolbar(),
 }

@@ -1,4 +1,4 @@
-import { updateIframeOverflowOnParentWindow } from "../ui/util/dom.js"
+import { updateIframeOverflowOnParentWindow } from "./util/dom.js"
 
 export const toggleTooltip = (element) => {
   if (element.hasAttribute("data-tooltip-visible")) {
