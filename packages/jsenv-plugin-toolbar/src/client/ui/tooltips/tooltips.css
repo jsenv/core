@@ -5,10 +5,10 @@
   text-align: center;
   border-radius: 6px;
   position: absolute;
-  bottom: 120%;
+  bottom: 100%;
+  margin-bottom: 6px;
   padding: 10px;
   font-size: 14px;
-  margin-left: -40px;
   max-width: 260px;
   cursor: default;
 }
@@ -17,11 +17,17 @@
   content: "";
   position: absolute;
   top: 100%;
-  left: 60px;
-  margin-left: -5px;
+  left: 14px;
   border-width: 5px;
   border-style: solid;
   border-color: rgb(94, 94, 94) transparent transparent transparent;
+}
+
+.tooltip[data-toolip-left] {
+  margin-right: 5px;
+}
+.tooltip[data-toolip-left]::after {
+  left: 15px;
 }
 
 [data-tooltip-visible] .tooltip,

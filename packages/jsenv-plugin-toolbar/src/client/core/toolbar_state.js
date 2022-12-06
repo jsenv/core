@@ -44,7 +44,7 @@ export const updateToolbarState = (properties) => {
   stateChangeCallbackSet.forEach((callback) => {
     callback(toolbarState, previousState)
   })
-  localStorage.set("jsenv_toolbar", JSON.stringify(toolbarState))
+  localStorage.setItem("jsenv_toolbar", JSON.stringify(toolbarState))
   if (!toolbarState.ready) {
     return
   }

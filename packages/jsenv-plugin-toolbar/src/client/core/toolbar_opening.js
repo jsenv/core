@@ -23,8 +23,3 @@ export const closeToolbar = () => {
 
 addExternalCommandCallback("openToolbar", openToolbar)
 addExternalCommandCallback("closeToolbar", closeToolbar)
-
-window.__jsenv__.toolbar = {
-  open: openToolbar,
-  close: closeToolbar,
-}

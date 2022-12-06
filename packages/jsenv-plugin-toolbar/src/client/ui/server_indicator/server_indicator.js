@@ -10,19 +10,19 @@ const parentEventSourceClient = window.parent.__jsenv_event_source_client__
 
 export const renderServerIndicator = () => {
   removeForceHideElement(document.querySelector("#server_indicator"))
+  updateEventSourceIndicator("connected")
   if (!parentEventSourceClient) {
     disableAutoreloadSetting()
     return
   }
   parentEventSourceClient.status.onchange = () => {
-    updateEventSourceIndicator()
+    updateEventSourceIndicator(parentEventSourceClient.status.value)
   }
-  updateEventSourceIndicator()
+  updateEventSourceIndicator(parentEventSourceClient.status.value)
 }
 
-const updateEventSourceIndicator = () => {
+const updateEventSourceIndicator = (connectionState) => {
   const indicator = document.querySelector("#server_indicator")
-  const connectionState = parentEventSourceClient.status.value
   enableVariant(indicator, { connectionState })
   const variantNode = document.querySelector(
     "#server_indicator > [data-when-active]",

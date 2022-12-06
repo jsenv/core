@@ -1,10 +1,9 @@
 @import "./globals.css";
-@import "./execution_indicator/execution_indicator.css";
+@import "./document_execution_indicator/document_execution_indicator.css";
 @import "./server_indicator/server_indicator.css";
 @import "./toolbar_settings/toolbar_settings.css";
 @import "./toolbar_menu_overflow/toolbar_menu_overflow.css";
 @import "./tooltips/tooltips.css";
-@import "./toolbar_trigger/toolbar_trigger.css";
 
 #toolbar button {
   background: none;
@@ -54,6 +53,14 @@
 
 #toolbar_close_button_icon {
   width: 18px;
+}
+
+#document_index_link {
+  display: flex;
+}
+
+#document_index_icon {
+  margin-left: 10px;
 }
 
 #toolbar a {

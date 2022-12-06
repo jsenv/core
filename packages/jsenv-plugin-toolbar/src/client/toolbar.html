@@ -8,10 +8,10 @@
     <link rel="stylesheet" type="text/css" href="./ui/toolbar.css" />
   </head>
   <body>
-    <div id="toolbar-overlay"></div>
+    <div id="toolbar_overlay"></div>
     <!-- toolbar -->
     <div id="toolbar">
-      <div id="toolbar-wrapper">
+      <div id="toolbar_wrapper">
         <section id="document_index_section" data-responsive-toolbar-element>
           <a id="document_index_link" href="javascript:void(0);">
             <svg
@@ -82,7 +82,7 @@
           </div>
         </section>
 
-        <section id="changes-indicator" data-when="autoreload:off">
+        <section id="changes_indicator" data-when="autoreload:off">
           <div data-when="changes:no"></div>
           <div data-when="changes:yes">
             <div class="tooltip">There is X changes to apply</div>
@@ -99,7 +99,7 @@
 
         <section id="server_indicator" data-responsive-toolbar-element>
           <div data-when="connectionState:default">
-            <div class="tooltip">Unknown state</div>
+            <div class="tooltip" data-toolip-left>Unknown state</div>
             <button>
               <svg>
                 <circle class="server_indicator_circle" cx="20" cy="20" r="5" />
@@ -107,7 +107,7 @@
             </button>
           </div>
           <div data-when="connectionState:connecting">
-            <div class="tooltip">
+            <div class="tooltip" data-toolip-left>
               Connecting to server...
               <br />
               <div class="tooltip_action">
@@ -140,7 +140,7 @@
             </button>
           </div>
           <div data-when="connectionState:disconnected">
-            <div class="tooltip">
+            <div class="tooltip" data-toolip-left>
               Disconnected from server
               <br />
               <div class="tooltip_action">
@@ -172,7 +172,7 @@
             </button>
           </div>
           <div data-when="connectionState:connected">
-            <div class="tooltip">Connected to server</div>
+            <div class="tooltip" data-toolip-left>Connected to server</div>
             <button>
               <svg class="autoreload toolbar_icon" data-variant="enabled">
                 <use xlink:href="#loading_svg"></use>

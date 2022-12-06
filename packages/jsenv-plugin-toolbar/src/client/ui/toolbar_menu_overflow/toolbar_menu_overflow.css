@@ -55,6 +55,6 @@
   margin-left: -40px;
 }
 
-#toolbar[data-menu-overflow-enabled] #settings-box {
+#toolbar[data-menu-overflow-enabled] #settings_box {
   right: -40px;
 }
