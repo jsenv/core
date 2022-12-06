@@ -69,8 +69,22 @@ const toogleToolbar = () => {
 const toolbarIsVisible = () =>
   document.documentElement.hasAttribute("data-toolbar-visible")
 
-let hideToolbar = () => {
-  // toolbar hidden by default, nothing to do to hide it by default
+let restoreToolbarIframeParentStyles = () => {}
+let restoreToolbarIframeStyles = () => {}
+
+export const hideToolbar = () => {
+  restoreToolbarIframeParentStyles()
+  restoreToolbarIframeStyles()
+
+  hideTooltip(document.querySelector("#eventsource-indicator"))
+  hideTooltip(document.querySelector("#execution-indicator"))
+  toolbarVisibilityPreference.set(false)
+  if (animationsAreEnabled()) {
+    document.documentElement.setAttribute("data-toolbar-animation", "")
+  } else {
+    document.documentElement.removeAttribute("data-toolbar-animation")
+  }
+  document.documentElement.removeAttribute("data-toolbar-visible")
   updateToolbarState({
     visible: false,
   })
@@ -78,7 +92,7 @@ let hideToolbar = () => {
 
 // (by the way it might be cool to have the toolbar auto show when)
 // it has something to say (being disconnected from server)
-const showToolbar = () => {
+export const showToolbar = () => {
   toolbarVisibilityPreference.set(true)
   if (animationsAreEnabled()) {
     document.documentElement.setAttribute("data-toolbar-animation", "")
@@ -109,11 +123,11 @@ const showToolbar = () => {
     "transition-duration": animationsAreEnabled() ? "300ms" : "0s",
   })
   // maybe we should use js animation here because we would not conflict with css
-  const restoreToolbarIframeParentStyles = setStyles(toolbarIframeParent, {
+  restoreToolbarIframeParentStyles = setStyles(toolbarIframeParent, {
     "scroll-padding-bottom": "40px", // same here we should add 40px
     "padding-bottom": "40px", // if there is already one we should add 40px
   })
-  const restoreToolbarIframeStyles = setStyles(toolbarIframe, {
+  restoreToolbarIframeStyles = setStyles(toolbarIframe, {
     height: "40px",
     visibility: "visible",
   })
@@ -126,24 +140,6 @@ const showToolbar = () => {
         const value = scrollY + (scrollEnd - scrollY) * progress
         parentDocumentElement.scrollTop = value
       },
-    })
-  }
-
-  hideToolbar = () => {
-    restoreToolbarIframeParentStyles()
-    restoreToolbarIframeStyles()
-
-    hideTooltip(document.querySelector("#eventsource-indicator"))
-    hideTooltip(document.querySelector("#execution-indicator"))
-    toolbarVisibilityPreference.set(false)
-    if (animationsAreEnabled()) {
-      document.documentElement.setAttribute("data-toolbar-animation", "")
-    } else {
-      document.documentElement.removeAttribute("data-toolbar-animation")
-    }
-    document.documentElement.removeAttribute("data-toolbar-visible")
-    updateToolbarState({
-      visible: false,
     })
   }
 }

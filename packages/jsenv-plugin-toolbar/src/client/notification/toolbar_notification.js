@@ -1,4 +1,4 @@
-import { createPreference } from "../util/preferences.js"
+import { createPreference } from "../core/util/preferences.js"
 import { enableVariant } from "../variant/variant.js"
 
 const notificationAvailable = typeof window.Notification === "function"

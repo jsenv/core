@@ -2,8 +2,8 @@ import {
   forceHideElement,
   removeForceHideElement,
   deactivateToolbarSection,
-} from "../util/dom.js"
-import { createHorizontalBreakpoint } from "../util/responsive.js"
+} from "../ui/util/dom.js"
+import { createHorizontalBreakpoint } from "../ui/util/responsive.js"
 import { hideTooltip } from "../tooltip/tooltip.js"
 
 const WINDOW_SMALL_WIDTH = 420

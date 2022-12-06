@@ -1,4 +1,4 @@
-import { removeForceHideElement } from "../util/dom.js"
+import { removeForceHideElement } from "../ui/util/dom.js"
 import { enableVariant } from "../variant/variant.js"
 import { toggleTooltip } from "../tooltip/tooltip.js"
 import { notifyExecutionResult } from "../notification/toolbar_notification.js"

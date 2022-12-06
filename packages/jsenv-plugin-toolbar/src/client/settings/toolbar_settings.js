@@ -3,7 +3,7 @@ import {
   deactivateToolbarSection,
   activateToolbarSection,
   updateIframeOverflowOnParentWindow,
-} from "../util/dom.js"
+} from "../ui/util/dom.js"
 import { enableVariant } from "../variant/variant.js"
 
 export const renderToolbarSettings = () => {

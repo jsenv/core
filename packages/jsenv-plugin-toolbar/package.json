@@ -25,6 +25,7 @@
     "@jsenv/ast": "1.4.7"
   },
   "scripts": {
+    "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",
     "build": "node ./scripts/build.mjs"
   }
 }

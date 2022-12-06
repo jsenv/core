@@ -1,7 +1,7 @@
 import { updateToolbarState } from "./toolbar_state.js"
 import { addExternalCommandCallback } from "./communication/parent_window_communication.js"
 import "./focus/toolbar_focus.js"
-import { renderToolbar } from "./toolbar_ui.js"
+import { renderToolbar, showToolbar, hideToolbar } from "./ui/toolbar_ui.js"
 
 // const { currentScript } = document
 addExternalCommandCallback("renderToolbar", ({ logs }) => {
