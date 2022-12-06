@@ -2,7 +2,7 @@ import { effect } from "../core/toolbar_state.js"
 import { getAnimationsEnabled } from "../core/toolbar_animation.js"
 import { getToolbarIframe, setStyles } from "./util/dom.js"
 import { startJavaScriptAnimation } from "./util/animation.js"
-import { hideTooltip } from "./tooltip.js"
+import { hideAllTooltips } from "./tooltips/tooltips.js"
 import { initToolbarMenuOverflow } from "./toolbar_menu_overflow/toolbar_menu_overflow.js"
 import { renderToolbarOverlay } from "./toolbar_overlay/toolbar_overlay.js"
 import { renderDocumentIndexLink } from "./document_index_link/document_index_link.js"
@@ -41,10 +41,9 @@ let restoreToolbarIframeParentStyles = () => {}
 let restoreToolbarIframeStyles = () => {}
 
 const hideToolbar = () => {
+  hideAllTooltips()
   restoreToolbarIframeParentStyles()
   restoreToolbarIframeStyles()
-  hideTooltip(document.querySelector("#server_indicator"))
-  hideTooltip(document.querySelector("#document_execution_indicator"))
   document.documentElement.removeAttribute("data-toolbar-visible")
 }
 

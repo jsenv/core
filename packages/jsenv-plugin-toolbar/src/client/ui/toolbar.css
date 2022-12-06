@@ -1,13 +1,10 @@
 @import "./globals.css";
-@import "./layout.css";
-@import "./toolbar_trigger.css";
-@import "./theme_light.css";
-@import "./tooltip.css";
-@import "./focus.css";
-@import "./execution_indicator/execution_indiactor.css";
+@import "./execution_indicator/execution_indicator.css";
 @import "./server_indicator/server_indicator.css";
 @import "./toolbar_settings/toolbar_settings.css";
 @import "./toolbar_menu_overflow/toolbar_menu_overflow.css";
+@import "./tooltips/tooltips.css";
+@import "./toolbar_trigger/toolbar_trigger.css";
 
 #toolbar button {
   background: none;
@@ -55,14 +52,9 @@
   background: #030713;
 }
 
-/* close icon */
 #toolbar_close_button_icon {
   width: 18px;
 }
-
-/* #jsenvLogo {
-  transition: 600ms;
-} */
 
 #toolbar a {
   color: inherit;

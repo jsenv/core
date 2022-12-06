@@ -1,6 +1,6 @@
 import { sendEventToParent } from "./parent_window_communication.js"
 
-const stateFromLocalStorage = localStorage.hasItem("jsenv_toolbar")
+const stateFromLocalStorage = localStorage.hasOwnProperty("jsenv_toolbar")
   ? JSON.parse(localStorage.getItem("jsenv_toolbar"))
   : {}
 

@@ -1,7 +1,7 @@
 import { notifyExecutionResult } from "../../core/toolbar_notification.js"
 import { removeForceHideElement } from "../util/dom.js"
 import { enableVariant } from "../variant.js"
-import { toggleTooltip } from "../tooltip.js"
+import { toggleTooltip } from "../tooltips/tooltips.js"
 
 export const renderDocumentExecutionIndicator = async () => {
   // reset file execution indicator ui

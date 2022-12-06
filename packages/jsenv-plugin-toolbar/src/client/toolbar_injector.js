@@ -63,12 +63,12 @@ export const injectToolbar = async ({ toolbarUrl, ...toolbarParams }) => {
 
   const div = document.createElement("div")
   div.innerHTML = `
-<div id="jsenv-toolbar-trigger">
-  <svg id="jsenv-toolbar-trigger-icon">
+<div id="jsenv_toolbar_trigger">
+  <svg id="jsenv_toolbar_trigger_icon">
     <use xlink:href="${jsenvLogoSvgUrl}#jsenv_logo"></use>
   </svg>
   <style>
-    #jsenv-toolbar-trigger {
+    #jsenv_toolbar_trigger {
       display: block;
       overflow: hidden;
       position: fixed;
@@ -88,22 +88,22 @@ export const injectToolbar = async ({ toolbarUrl, ...toolbarParams }) => {
       transition: 600ms;
     }
 
-    #jsenv-toolbar-trigger:hover {
+    #jsenv_toolbar_trigger:hover {
       cursor: pointer;
     }
 
-    #jsenv-toolbar-trigger[data-expanded] {
+    #jsenv_toolbar_trigger[data-expanded] {
       bottom: 0;
     }
 
-    #jsenv-toolbar-trigger-icon {
+    #jsenv_toolbar_trigger_icon {
       width: 35px;
       height: 35px;
       opacity: 0;
       transition: 600ms;
     }
 
-    #jsenv-toolbar-trigger[data-expanded] #jsenv-toolbar-trigger-icon {
+    #jsenv_toolbar_trigger[data-expanded] #jsenv_toolbar_trigger_icon {
       opacity: 1;
     }
   </style>

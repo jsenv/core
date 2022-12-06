@@ -1,4 +1,4 @@
-import { updateIframeOverflowOnParentWindow } from "./util/dom.js"
+import { updateIframeOverflowOnParentWindow } from "../util/dom.js"
 
 export const toggleTooltip = (element) => {
   if (element.hasAttribute("data-tooltip-visible")) {
@@ -29,7 +29,7 @@ export const removeAutoShowTooltip = (element) => {
   updateIframeOverflowOnParentWindow()
 }
 
-export const hideAllTooltip = () => {
+export const hideAllTooltips = () => {
   const elementsWithTooltip = Array.from(
     document.querySelectorAll("[data-tooltip-visible]"),
   )

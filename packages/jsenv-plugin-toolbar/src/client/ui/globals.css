@@ -1,29 +1,103 @@
-html[data-animation-disabled] * {
-  transition: none !important;
-  animation-duration: 0s !important;
-  animation-delay: 0s !important;
-}
-
-[data-when] {
-  display: none !important;
-}
-
 * {
   box-sizing: border-box;
 }
-
 html,
 body {
   margin: 0;
   padding: 0;
   height: 100%;
 }
-
 html {
   font-family: arial, sans;
 }
 
 /* global utils */
+html[data-animation-disabled] * {
+  transition: none !important;
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+}
+[data-when] {
+  display: none !important;
+}
 [data-force-hide] {
   display: none !important;
+}
+
+/* focus rules */
+button:focus,
+a:focus,
+input:focus,
+*[data-contains-hidden-input] input:focus + * {
+  outline-style: none;
+  outline-offset: -2px;
+}
+
+*[data-contains-hidden-input] input:focus + * {
+  outline-width: 4px;
+  outline-offset: -2px;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+*[data-contains-hidden-input] input:focus-visible + * {
+  outline-style: auto;
+}
+
+*[data-contains-hidden-input] input:focus-visible + * {
+  outline-color: rgb(0, 150, 255);
+}
+
+/*
+Don't try to replace @-moz-document url-prefix() this by
+
+-moz-outline or -moz-outline-color
+Because firefox would take into account outline instead of -moz-outline
+
+:moz-focus-ring
+Because for some element we set the focus outline on a div which would not match :focusring
+*/
+@-moz-document url-prefix() {
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  *[data-input-customized] input:focus-visible + * {
+    outline-width: 2px;
+    outline-offset: 0;
+    outline-style: solid;
+    /*
+    force a blue color for firefox otherwise
+    it uses outline-color: inherit
+    making it unpredictible and sometimes hard to see
+    */
+    outline-color: rgb(0, 150, 255);
+  }
+}
+::-moz-focus-inner {
+  border: 0;
+}
+
+/* Layout */
+#toolbar_wrapper {
+  display: flex;
+  justify-content: center;
+}
+
+#toolbar_overlay {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  filter: url(#better-blur);
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+#toolbar {
+  position: fixed;
+  bottom: 0;
+  height: 40px;
+  width: 100%;
+  background: #404040;
 }

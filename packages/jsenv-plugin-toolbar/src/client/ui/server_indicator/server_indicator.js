@@ -4,7 +4,7 @@ import {
   toggleTooltip,
   removeAutoShowTooltip,
   autoShowTooltip,
-} from "../tooltip.js"
+} from "../tooltips/tooltips.js"
 
 const parentEventSourceClient = window.parent.__jsenv_event_source_client__
 
