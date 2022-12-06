@@ -57,7 +57,7 @@ html[data-theme="light"] .tooltip {
   background-color: rgb(138, 145, 154);
   color: #fff;
 }
-html[data-theme="light"] .tooltipAction {
+html[data-theme="light"] .tooltip_action {
   border-color: #fff;
 }
 html[data-theme="light"] .tooltip::after {

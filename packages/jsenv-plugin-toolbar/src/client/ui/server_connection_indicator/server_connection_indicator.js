@@ -9,7 +9,7 @@ import {
 const parentEventSourceClient = window.parent.__jsenv_event_source_client__
 
 export const renderServerConnectionIndicator = () => {
-  removeForceHideElement(document.querySelector("#eventsource-indicator"))
+  removeForceHideElement(document.querySelector("#server_connection_indicator"))
   if (!parentEventSourceClient) {
     disableAutoreloadSetting()
     return
@@ -21,25 +21,23 @@ export const renderServerConnectionIndicator = () => {
 }
 
 const updateEventSourceIndicator = () => {
-  const eventSourceIndicator = document.querySelector("#eventsource-indicator")
-  const eventSourceConnectionState = parentEventSourceClient.status.value
-  enableVariant(eventSourceIndicator, {
-    eventsource: eventSourceConnectionState,
-  })
+  const indicator = document.querySelector("#server_connection_indicator")
+  const connectionState = parentEventSourceClient.status.value
+  enableVariant(indicator, { connectionState })
   const variantNode = document.querySelector(
-    "#eventsource-indicator > [data-when-active]",
+    "#server_connection_indicator > [data-when-active]",
   )
   variantNode.querySelector("button").onclick = () => {
-    toggleTooltip(eventSourceIndicator)
+    toggleTooltip(indicator)
   }
-  if (eventSourceConnectionState === "connecting") {
+  if (connectionState === "connecting") {
     variantNode.querySelector("a").onclick = () => {
       parentEventSourceClient.disconnect()
     }
-  } else if (eventSourceConnectionState === "connected") {
-    removeAutoShowTooltip(eventSourceIndicator)
-  } else if (eventSourceConnectionState === "disconnected") {
-    autoShowTooltip(eventSourceIndicator)
+  } else if (connectionState === "connected") {
+    removeAutoShowTooltip(indicator)
+  } else if (connectionState === "disconnected") {
+    autoShowTooltip(indicator)
     variantNode.querySelector("a").onclick = () => {
       parentEventSourceClient.connect()
     }
@@ -48,10 +46,10 @@ const updateEventSourceIndicator = () => {
 
 const disableAutoreloadSetting = () => {
   document
-    .querySelector(".settings-autoreload")
+    .querySelector(".settings_autoreload")
     .setAttribute("data-disabled", "true")
   document
-    .querySelector(".settings-autoreload")
+    .querySelector(".settings_autoreload")
     .setAttribute("title", `Autoreload not available: disabled by server`)
-  document.querySelector("#toggle-autoreload").disabled = true
+  document.querySelector("#toggle_autoreload").disabled = true
 }

@@ -43,7 +43,7 @@ let restoreToolbarIframeStyles = () => {}
 const hideToolbar = () => {
   restoreToolbarIframeParentStyles()
   restoreToolbarIframeStyles()
-  hideTooltip(document.querySelector("#eventsource-indicator"))
+  hideTooltip(document.querySelector("#server_connection_indicator"))
   hideTooltip(document.querySelector("#document_execution_indicator"))
   document.documentElement.removeAttribute("data-toolbar-visible")
 }

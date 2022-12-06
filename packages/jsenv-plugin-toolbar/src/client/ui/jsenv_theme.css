@@ -52,13 +52,13 @@ html[data-theme="jsenv"] .tooltip {
   background-color: #ffd390;
   color: #884900;
 }
-html[data-theme="jsenv"] .tooltipAction {
+html[data-theme="jsenv"] .tooltip_action {
   border-color: #884900;
 }
-html[data-theme="jsenv"] .tooltipAction a {
+html[data-theme="jsenv"] .tooltip_action a {
   color: #884900;
 }
-html[data-theme="jsenv"] .tooltipIcon {
+html[data-theme="jsenv"] .tooltip_icon {
   fill: #884900;
 }
 html[data-theme="jsenv"] .tooltip::after {

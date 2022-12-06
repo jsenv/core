@@ -5,7 +5,7 @@ export const renderToolbarCloseButton = () => {
   // if user click enter or space quickly while closing toolbar
   // it will cancel the closing
   // that's why I used toggleToolbar and not hideToolbar
-  document.querySelector("#button-close-toolbar").onclick = () => {
+  document.querySelector("#toolbar_close_button").onclick = () => {
     if (toolbarState.opened) {
       closeToolbar()
     } else {

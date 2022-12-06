@@ -39,7 +39,7 @@
   }
 }
 
-.tooltipAction {
+.tooltip_action {
   display: inline-block;
   border: 1px solid #a0a0a0;
   border-radius: 3px;
@@ -47,13 +47,13 @@
   margin-top: 6px;
 }
 
-.tooltipAction a {
+.tooltip_action a {
   vertical-align: middle;
   color: white;
   text-decoration: none;
 }
 
-.tooltipIcon {
+.tooltip_icon {
   fill: white;
   width: 20px;
   height: 20px;
