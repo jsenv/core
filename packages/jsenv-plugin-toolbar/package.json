@@ -22,7 +22,8 @@
   },
   "main": "./src/main.js",
   "dependencies": {
-    "@jsenv/ast": "1.4.7"
+    "@jsenv/ast": "1.4.7",
+    "@preact/signals": "1.1.2"
   },
   "scripts": {
     "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",

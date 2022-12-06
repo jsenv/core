@@ -1,52 +1,27 @@
+import { computed, effect } from "@preact/signals"
+
+import { toolbarOpenedSignal } from "./toolbar_opening.js"
+import { toolbarThemeSignal } from "./toolbar_theme.js"
+import { animationsEnabledSignal } from "./toolbar_animation.js"
+import { notificationsEnabledSignal } from "./toolbar_notification.js"
 import { sendEventToParent } from "./parent_window_communication.js"
 
-const stateFromLocalStorage = localStorage.hasOwnProperty("jsenv_toolbar")
-  ? JSON.parse(localStorage.getItem("jsenv_toolbar"))
-  : {}
+const toolbarStateSignal = computed(() => {
+  const toolbarOpened = toolbarOpenedSignal.value
+  const toolbarTheme = toolbarThemeSignal.value
+  const animationsEnabled = animationsEnabledSignal.value
+  const notificationsEnabled = notificationsEnabledSignal.value
 
-export const toolbarState = {
-  opened: false,
-  theme: "dark",
-  animationsEnabled: false,
-  notificationsEnabled: false,
-  ...stateFromLocalStorage,
-  ready: false,
-}
-
-const stateChangeCallbackSet = new Set()
-export const onStateChange = (callback) => {
-  stateChangeCallbackSet.add(callback)
-  return () => {
-    stateChangeCallbackSet.delete(callback)
+  return {
+    opened: toolbarOpened,
+    theme: toolbarTheme,
+    animationsEnabled,
+    notificationsEnabled,
   }
-}
+})
 
-export const effect = (callback) => {
-  callback(toolbarState)
-  onStateChange(callback)
-}
-
-export const onStateTransition = (predicate, callback) => {
-  return onStateChange((state, prevState) => {
-    if (typeof predicate === "string") {
-      if (prevState[predicate] !== state[predicate]) {
-        callback(state, prevState)
-      }
-    } else if (predicate(prevState, state)) {
-      callback(state)
-    }
-  })
-}
-
-export const updateToolbarState = (properties) => {
-  const previousState = { ...toolbarState }
-  Object.assign(toolbarState, properties)
-  stateChangeCallbackSet.forEach((callback) => {
-    callback(toolbarState, previousState)
-  })
+effect(() => {
+  const toolbarState = toolbarStateSignal.value
   localStorage.setItem("jsenv_toolbar", JSON.stringify(toolbarState))
-  if (!toolbarState.ready) {
-    return
-  }
   sendEventToParent("toolbar_state_change", toolbarState)
-}
+})

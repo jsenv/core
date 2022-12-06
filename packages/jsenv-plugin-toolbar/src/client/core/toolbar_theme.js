@@ -1,26 +1,19 @@
-import { toolbarState, updateToolbarState } from "./toolbar_state.js"
+import { signal, effect } from "@preact/signals"
 
 const THEME_DARK = "dark"
 const THEME_LIGHT = "light"
 
-export const getToolbarTheme = () => {
-  return toolbarState.theme
-}
+export const toolbarThemeSignal = signal(THEME_DARK)
 
 export const switchToLightTheme = () => {
-  updateToolbarState({
-    theme: THEME_LIGHT,
-  })
-  setTheme(THEME_LIGHT)
+  toolbarThemeSignal.value = THEME_LIGHT
 }
 
 export const switchToDefaultTheme = () => {
-  updateToolbarState({
-    theme: THEME_DARK,
-  })
-  setTheme(THEME_DARK)
+  toolbarThemeSignal.value = THEME_DARK
 }
 
-const setTheme = (theme) => {
-  document.querySelector("html").setAttribute("data-theme", theme)
-}
+effect(() => {
+  const toolbarTheme = toolbarThemeSignal.value
+  document.querySelector("html").setAttribute("data-theme", toolbarTheme)
+})

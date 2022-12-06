@@ -2,7 +2,13 @@ import { setAttributes, setStyles } from "./ui/util/dom.js"
 
 const jsenvLogoSvgUrl = new URL("./ui/jsenv_logo.svg", import.meta.url)
 
-export const injectToolbar = async ({ toolbarUrl, ...toolbarParams }) => {
+export const injectToolbar = async ({
+  toolbarUrl,
+  logs = false,
+  theme = "dark",
+  opened = false,
+  animationsEnabled = true,
+}) => {
   if (document.readyState !== "complete") {
     await new Promise((resolve) => {
       window.addEventListener("load", resolve)
@@ -53,10 +59,22 @@ export const injectToolbar = async ({ toolbarUrl, ...toolbarParams }) => {
       iframe.style.transitionDuration = "0s"
     }
   })
-  const cleanupRenderOnFirstStateChange = listenToolbarStateChange(() => {
-    cleanupRenderOnFirstStateChange()
-    sendCommandToToolbar(iframe, "initToolbar", toolbarParams)
-  })
+  const cleanupInitOnReady = addToolbarEventCallback(
+    iframe,
+    "toolbar_ready",
+    () => {
+      cleanupInitOnReady()
+      addToolbarEventCallback(iframe, "toolbar_core_ready", () => {
+        sendCommandToToolbar(iframe, "initToolbarUI")
+      })
+      sendCommandToToolbar(iframe, "initToolbarCore", {
+        logs,
+        theme,
+        opened,
+        animationsEnabled,
+      })
+    },
+  )
 
   await iframeLoadedPromise
   iframe.removeAttribute("tabindex")
@@ -149,9 +167,8 @@ export const injectToolbar = async ({ toolbarUrl, ...toolbarParams }) => {
     toolbarTrigger.removeAttribute("data-expanded", "")
   }
 
-  hideToolbarTrigger()
-  listenToolbarStateChange(({ visible }) => {
-    if (visible) {
+  listenToolbarStateChange(({ opened }) => {
+    if (opened) {
       hideToolbarTrigger()
     } else {
       showToolbarTrigger()

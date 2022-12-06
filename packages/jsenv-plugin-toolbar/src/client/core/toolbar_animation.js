@@ -1,19 +1,18 @@
-import { toolbarState, updateToolbarState } from "./toolbar_state.js"
+import { signal, effect } from "@preact/signals"
 
-export const getAnimationsEnabled = () => {
-  return toolbarState.animationsEnabled
-}
-
+export const animationsEnabledSignal = signal()
 export const enableAnimations = () => {
-  updateToolbarState({
-    animationsEnabled: true,
-  })
-  document.documentElement.removeAttribute("data-animation-disabled")
+  animationsEnabledSignal.value = true
+}
+export const disableAnimations = () => {
+  animationsEnabledSignal.value = false
 }
 
-export const disableAnimations = () => {
-  updateToolbarState({
-    animationsEnabled: false,
-  })
-  document.documentElement.setAttribute("data-animation-disabled", "")
-}
+effect(() => {
+  const animationsEnabled = animationsEnabledSignal.value
+  if (animationsEnabled) {
+    document.documentElement.removeAttribute("data-animation-disabled")
+  } else {
+    document.documentElement.setAttribute("data-animation-disabled", "")
+  }
+})

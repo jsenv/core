@@ -1,5 +1,5 @@
 import { effect } from "../core/toolbar_state.js"
-import { getAnimationsEnabled } from "../core/toolbar_animation.js"
+import { animationsEnabledSignal } from "../core/toolbar_animation.js"
 import { getToolbarIframe, setStyles } from "./util/dom.js"
 import { startJavaScriptAnimation } from "./util/animation.js"
 import { hideAllTooltips } from "./tooltips/tooltips.js"
@@ -67,7 +67,7 @@ const showToolbar = () => {
 
   setStyles(toolbarIframeParent, {
     "transition-property": "padding-bottom",
-    "transition-duration": getAnimationsEnabled() ? "300ms" : "0s",
+    "transition-duration": animationsEnabledSignal.value ? "300ms" : "0s",
   })
   // maybe we should use js animation here because we would not conflict with css
   restoreToolbarIframeParentStyles = setStyles(toolbarIframeParent, {

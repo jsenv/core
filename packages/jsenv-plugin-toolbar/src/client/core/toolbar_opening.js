@@ -1,24 +1,15 @@
-import { toolbarState, updateToolbarState } from "./toolbar_state.js"
+import { signal } from "@preact/signals"
+
 import { addExternalCommandCallback } from "./parent_window_communication.js"
 
-export const getToolbarIsOpened = () => {
-  return toolbarState.opened
-}
-
-export const getToolbarIsClosed = () => {
-  return !toolbarState.opened
-}
+export const toolbarOpenedSignal = signal(false)
 
 export const openToolbar = () => {
-  updateToolbarState({
-    opened: true,
-  })
+  toolbarOpenedSignal.value = true
 }
 
 export const closeToolbar = () => {
-  updateToolbarState({
-    opened: false,
-  })
+  toolbarOpenedSignal.value = false
 }
 
 addExternalCommandCallback("openToolbar", openToolbar)

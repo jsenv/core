@@ -1,5 +1,5 @@
 import {
-  getNotificationsEnabled,
+  notificationsEnabledSignal,
   notificationAPIDetected,
   enableNotifications,
   disableNotifications,
@@ -59,7 +59,7 @@ const applyNotificationGrantedEffects = () => {
     notif_granted: "yes",
   })
   notifCheckbox.disabled = false
-  notifCheckbox.checked = getNotificationsEnabled()
+  notifCheckbox.checked = notificationsEnabledSignal.value
   notifCheckbox.onchange = () => {
     if (notifCheckbox.checked) {
       enableNotifications()
