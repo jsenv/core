@@ -1,3 +1,5 @@
+import { effect } from "@preact/signals"
+
 import { animationsEnabledSignal } from "../../core/animation_signals.js"
 import {
   enableAnimations,
@@ -6,7 +8,11 @@ import {
 
 export const renderToolbarAnimationSetting = () => {
   const animCheckbox = document.querySelector("#toggle_anims")
-  animCheckbox.checked = animationsEnabledSignal.value
+
+  effect(() => {
+    const animationsEnabled = animationsEnabledSignal.value
+    animCheckbox.checked = animationsEnabled
+  })
   animCheckbox.onchange = () => {
     if (animCheckbox.checked) {
       enableAnimations()

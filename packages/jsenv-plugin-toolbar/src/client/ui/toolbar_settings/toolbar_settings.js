@@ -40,15 +40,15 @@ export const disableWarningStyle = () => {
 }
 
 export const settingsAreVisible = () => {
-  return toolbarSectionIsActive(document.querySelector(`#settings`))
+  return toolbarSectionIsActive(document.querySelector("#settings"))
 }
 
 export const hideSettings = () => {
-  deactivateToolbarSection(document.querySelector(`#settings`))
+  deactivateToolbarSection(document.querySelector("#settings"))
   updateIframeOverflowOnParentWindow()
 }
 
 export const showSettings = () => {
-  activateToolbarSection(document.querySelector(`#settings`))
+  activateToolbarSection(document.querySelector("#settings"))
   updateIframeOverflowOnParentWindow()
 }

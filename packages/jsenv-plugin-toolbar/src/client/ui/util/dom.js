@@ -3,12 +3,10 @@ export const updateIframeOverflowOnParentWindow = () => {
     // can happen while parent iframe reloads
     return
   }
-
   const aTooltipIsOpened =
     document.querySelector("[data-tooltip-visible]") ||
     document.querySelector("[data-tooltip-auto-visible]")
   const settingsAreOpened = document.querySelector("#settings[data-active]")
-
   if (aTooltipIsOpened || settingsAreOpened) {
     enableIframeOverflowOnParentWindow()
   } else {
@@ -16,14 +14,16 @@ export const updateIframeOverflowOnParentWindow = () => {
   }
 }
 
-let iframeOverflowEnabled = false
 const enableIframeOverflowOnParentWindow = () => {
-  if (iframeOverflowEnabled) return
-  iframeOverflowEnabled = true
-
   const iframe = getToolbarIframe()
+
   const transitionDuration = iframe.style.transitionDuration
-  setStyles(iframe, { "height": "100%", "transition-duration": "0ms" })
+  setStyles(iframe, {
+    "height": "100%",
+    // we don't want to animate height transition
+    // but if it was enabled, we'll restore it afterwards
+    "transition-duration": "0ms",
+  })
   if (transitionDuration) {
     setTimeout(() => {
       setStyles(iframe, { "transition-duration": transitionDuration })
@@ -32,12 +32,14 @@ const enableIframeOverflowOnParentWindow = () => {
 }
 
 const disableIframeOverflowOnParentWindow = () => {
-  if (!iframeOverflowEnabled) return
-  iframeOverflowEnabled = false
-
   const iframe = getToolbarIframe()
   const transitionDuration = iframe.style.transitionDuration
-  setStyles(iframe, { "height": "40px", "transition-duration": "0ms" })
+  setStyles(iframe, {
+    "height": "40px",
+    // we don't want to animate height transition
+    // but if it was enabled, we'll restore it afterwards
+    "transition-duration": "0ms",
+  })
   if (transitionDuration) {
     setTimeout(() => {
       setStyles(iframe, { "transition-duration": transitionDuration })

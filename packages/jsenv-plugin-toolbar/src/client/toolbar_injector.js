@@ -39,7 +39,7 @@ export const injectToolbar = async ({
     "height": 0,
     /* ensure toolbar children are not focusable when hidden */
     "visibility": "hidden",
-    "transition-duration": "300ms",
+    "transition-duration": "0",
     "transition-property": "height, visibility",
     "border": "none",
   })
@@ -60,19 +60,21 @@ export const injectToolbar = async ({
     return addToolbarEventCallback(iframe, "toolbar_state_change", callback)
   }
 
-  listenToolbarStateChange(({ animationsEnabled }) => {
-    if (animationsEnabled) {
-      iframe.style.transitionDuration = "300ms"
-    } else {
-      iframe.style.transitionDuration = "0s"
-    }
-  })
   const cleanupInitOnReady = addToolbarEventCallback(
     iframe,
     "toolbar_ready",
     () => {
       cleanupInitOnReady()
       sendCommandToToolbar(iframe, "initToolbar")
+      setTimeout(() => {
+        listenToolbarStateChange(({ animationsEnabled }) => {
+          if (animationsEnabled) {
+            iframe.style.transitionDuration = "300ms"
+          } else {
+            iframe.style.transitionDuration = "0s"
+          }
+        })
+      })
     },
   )
 
