@@ -4,10 +4,10 @@ const jsenvLogoSvgUrl = new URL("./ui/jsenv_logo.svg", import.meta.url)
 
 export const injectToolbar = async ({
   toolbarUrl,
-  logs = false,
-  theme = "dark",
-  opened = false,
-  animationsEnabled = true,
+  logLevel,
+  theme,
+  opened,
+  animationsEnabled,
 }) => {
   if (document.readyState !== "complete") {
     await new Promise((resolve) => {
@@ -46,7 +46,7 @@ export const injectToolbar = async ({
   const iframeLoadedPromise = iframeToLoadedPromise(iframe)
   iframe.name = encodeURIComponent(
     JSON.stringify({
-      logs,
+      logLevel,
       theme,
       opened,
       animationsEnabled,

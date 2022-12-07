@@ -5,7 +5,13 @@ import {
   createHtmlNode,
 } from "@jsenv/ast"
 
-export const jsenvPluginToolbar = ({ logs = false } = {}) => {
+export const jsenvPluginToolbar = ({
+  logLevel = "warn",
+  theme = "dark",
+  opened = false,
+  animationsEnabled = false,
+  notificationsEnabled = true,
+} = {}) => {
   const toolbarInjectorClientFileUrl = new URL(
     "./client/toolbar_injector.js",
     import.meta.url,
@@ -45,7 +51,11 @@ import { injectToolbar } from ${toolbarInjectorReference.generatedSpecifier}
 injectToolbar(${JSON.stringify(
               {
                 toolbarUrl: toolbarClientFileReference.generatedSpecifier,
-                logs,
+                logLevel,
+                theme,
+                opened,
+                animationsEnabled,
+                notificationsEnabled,
               },
               null,
               "  ",

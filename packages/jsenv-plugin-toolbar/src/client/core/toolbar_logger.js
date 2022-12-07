@@ -1,18 +1,17 @@
 import { paramsFromWindowName } from "./parent_window_context.js"
 
-const JSENV_LOG_ENABLED = paramsFromWindowName.logs
+const logLevel = paramsFromWindowName.logLevel
 
-export const jsenvLogger = {
-  log: (...args) => {
-    // prevent logs for now (do not mess with user logs)
-    if (JSENV_LOG_ENABLED) {
-      console.log(...prefixArgs(...args))
+export const logger = {
+  info: (...args) => {
+    if (logLevel === "warn" || logLevel === "info" || logLevel === "debug") {
+      console.info(...prefixArgs(...args))
     }
   },
 
   debug: (...args) => {
-    if (JSENV_LOG_ENABLED) {
-      console.log(...prefixArgs(...args))
+    if (logLevel === "debug") {
+      console.debug(...prefixArgs(...args))
     }
   },
 }

@@ -1,5 +1,6 @@
 import { effect } from "@preact/signals"
 
+import { logger } from "../core/toolbar_logger.js"
 import { animationsEnabledSignal } from "../core/animation_signals.js"
 import { openedSignal } from "../core/toolbar_open_signals.js"
 import { getToolbarIframe, setStyles } from "./util/dom.js"
@@ -36,6 +37,7 @@ let restoreToolbarIframeParentStyles = () => {}
 let restoreToolbarIframeStyles = () => {}
 
 const hideToolbar = () => {
+  logger.debug("hide toolbar")
   hideAllTooltips()
   restoreToolbarIframeParentStyles()
   restoreToolbarIframeStyles()
@@ -45,6 +47,8 @@ const hideToolbar = () => {
 // (by the way it might be cool to have the toolbar auto show when)
 // it has something to say (being disconnected from server)
 const showToolbar = () => {
+  const animationsEnabled = animationsEnabledSignal.peek()
+  logger.debug("show toolbar", { animationsEnabled })
   document.documentElement.setAttribute("data-toolbar-visible", "")
 
   const toolbarIframe = getToolbarIframe()
@@ -62,7 +66,7 @@ const showToolbar = () => {
 
   setStyles(toolbarIframeParent, {
     "transition-property": "padding-bottom",
-    "transition-duration": animationsEnabledSignal.value ? "300ms" : "0s",
+    "transition-duration": animationsEnabled ? "300ms" : "0s",
   })
   // maybe we should use js animation here because we would not conflict with css
   restoreToolbarIframeParentStyles = setStyles(toolbarIframeParent, {
