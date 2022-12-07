@@ -1,5 +1,3 @@
-import { setAttributes, setStyles } from "./ui/util/dom.js"
-
 const jsenvLogoSvgUrl = new URL("./ui/jsenv_logo.svg", import.meta.url)
 
 export const injectToolbar = async ({
@@ -24,13 +22,11 @@ export const injectToolbar = async ({
   const placeholder = getToolbarPlaceholder()
 
   const iframe = document.createElement("iframe")
-  setAttributes(iframe, {
-    tabindex: -1,
-    // sandbox: "allow-forms allow-modals allow-pointer-lock allow-popups allow-presentation allow-same-origin allow-scripts allow-top-navigation-by-user-activation",
-    // allow: "accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; microphone; midi; payment; vr",
-    allowtransparency: true,
-  })
-  setStyles(iframe, {
+  iframe.setAttribute("tabindex", -1)
+  iframe.setAttribute("allowtransparency", true)
+  // sandbox: "allow-forms allow-modals allow-pointer-lock allow-popups allow-presentation allow-same-origin allow-scripts allow-top-navigation-by-user-activation",
+  // allow: "accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; microphone; midi; payment; vr",
+  Object.assign(iframe.style, {
     "position": "fixed",
     "zIndex": 1000,
     "bottom": 0,

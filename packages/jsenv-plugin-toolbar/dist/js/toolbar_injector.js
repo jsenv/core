@@ -1,101 +1,10 @@
-const updateIframeOverflowOnParentWindow = () => {
-  if (!window.parent) {
-    // can happen while parent iframe reloads
-    return;
-  }
-  const aTooltipIsOpened = document.querySelector("[data-tooltip-visible]") || document.querySelector("[data-tooltip-auto-visible]");
-  const settingsAreOpened = document.querySelector("#settings[data-active]");
-  if (aTooltipIsOpened || settingsAreOpened) {
-    enableIframeOverflowOnParentWindow();
-  } else {
-    disableIframeOverflowOnParentWindow();
-  }
-};
-let iframeOverflowEnabled = false;
-const enableIframeOverflowOnParentWindow = () => {
-  if (iframeOverflowEnabled) return;
-  iframeOverflowEnabled = true;
-  const iframe = getToolbarIframe();
-  const transitionDuration = iframe.style.transitionDuration;
-  setStyles(iframe, {
-    "height": "100%",
-    "transition-duration": "0ms"
-  });
-  if (transitionDuration) {
-    setTimeout(() => {
-      setStyles(iframe, {
-        "transition-duration": transitionDuration
-      });
-    });
-  }
-};
-const disableIframeOverflowOnParentWindow = () => {
-  if (!iframeOverflowEnabled) return;
-  iframeOverflowEnabled = false;
-  const iframe = getToolbarIframe();
-  const transitionDuration = iframe.style.transitionDuration;
-  setStyles(iframe, {
-    "height": "40px",
-    "transition-duration": "0ms"
-  });
-  if (transitionDuration) {
-    setTimeout(() => {
-      setStyles(iframe, {
-        "transition-duration": transitionDuration
-      });
-    });
-  }
-};
-const getToolbarIframe = () => {
-  const iframes = Array.from(window.parent.document.querySelectorAll("iframe"));
-  return iframes.find(iframe => iframe.contentWindow === window);
-};
-const forceHideElement = element => {
-  element.setAttribute("data-force-hide", "");
-};
-const removeForceHideElement = element => {
-  element.removeAttribute("data-force-hide");
-};
-const setStyles = (element, styles) => {
-  const elementStyle = element.style;
-  const restoreStyles = Object.keys(styles).map(styleName => {
-    let restore;
-    if (styleName in elementStyle) {
-      const currentStyle = elementStyle[styleName];
-      restore = () => {
-        elementStyle[styleName] = currentStyle;
-      };
-    } else {
-      restore = () => {
-        delete elementStyle[styleName];
-      };
-    }
-    elementStyle[styleName] = styles[styleName];
-    return restore;
-  });
-  return () => {
-    restoreStyles.forEach(restore => restore());
-  };
-};
-const setAttributes = (element, attributes) => {
-  Object.keys(attributes).forEach(name => {
-    element.setAttribute(name, attributes[name]);
-  });
-};
-const toolbarSectionIsActive = element => {
-  return element.hasAttribute("data-active");
-};
-const activateToolbarSection = element => {
-  element.setAttribute("data-active", "");
-};
-const deactivateToolbarSection = element => {
-  element.removeAttribute("data-active");
-};
-
 const jsenvLogoSvgUrl = new URL("../other/jsenv_logo.svg", import.meta.url);
 const injectToolbar = async ({
   toolbarUrl,
-  logs = false
+  logLevel,
+  theme,
+  opened,
+  animationsEnabled
 }) => {
   if (document.readyState !== "complete") {
     await new Promise(resolve => {
@@ -113,13 +22,11 @@ const injectToolbar = async ({
   });
   const placeholder = getToolbarPlaceholder();
   const iframe = document.createElement("iframe");
-  setAttributes(iframe, {
-    tabindex: -1,
-    // sandbox: "allow-forms allow-modals allow-pointer-lock allow-popups allow-presentation allow-same-origin allow-scripts allow-top-navigation-by-user-activation",
-    // allow: "accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; microphone; midi; payment; vr",
-    allowtransparency: true
-  });
-  setStyles(iframe, {
+  iframe.setAttribute("tabindex", -1);
+  iframe.setAttribute("allowtransparency", true);
+  // sandbox: "allow-forms allow-modals allow-pointer-lock allow-popups allow-presentation allow-same-origin allow-scripts allow-top-navigation-by-user-activation",
+  // allow: "accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; microphone; midi; payment; vr",
+  Object.assign(iframe.style, {
     "position": "fixed",
     "zIndex": 1000,
     "bottom": 0,
@@ -128,29 +35,46 @@ const injectToolbar = async ({
     "height": 0,
     /* ensure toolbar children are not focusable when hidden */
     "visibility": "hidden",
-    "transition-duration": "300ms",
+    "transition-duration": "0",
     "transition-property": "height, visibility",
     "border": "none"
   });
   const iframeLoadedPromise = iframeToLoadedPromise(iframe);
+  iframe.name = encodeURIComponent(JSON.stringify({
+    logLevel,
+    theme,
+    opened,
+    animationsEnabled
+  }));
   // set iframe src BEFORE putting it into the DOM (prevent firefox adding an history entry)
   iframe.setAttribute("src", toolbarUrl);
   placeholder.parentNode.replaceChild(iframe, placeholder);
-  addToolbarEventCallback(iframe, "toolbar_ready", () => {
-    sendCommandToToolbar(iframe, "renderToolbar", {
-      logs
+  const listenToolbarStateChange = callback => {
+    return addToolbarEventCallback(iframe, "toolbar_state_change", callback);
+  };
+  const cleanupInitOnReady = addToolbarEventCallback(iframe, "toolbar_ready", () => {
+    cleanupInitOnReady();
+    sendCommandToToolbar(iframe, "initToolbar");
+    setTimeout(() => {
+      listenToolbarStateChange(({
+        animationsEnabled
+      }) => {
+        if (animationsEnabled) {
+          iframe.style.transitionDuration = "300ms";
+        } else {
+          iframe.style.transitionDuration = "0s";
+        }
+      });
     });
   });
-  await iframeLoadedPromise;
-  iframe.removeAttribute("tabindex");
   const div = document.createElement("div");
   div.innerHTML = `
-<div id="jsenv-toolbar-trigger">
-  <svg id="jsenv-toolbar-trigger-icon">
+<div id="jsenv_toolbar_trigger" style="display:none">
+  <svg id="jsenv_toolbar_trigger_icon">
     <use xlink:href="${jsenvLogoSvgUrl}#jsenv_logo"></use>
   </svg>
   <style>
-    #jsenv-toolbar-trigger {
+    #jsenv_toolbar_trigger {
       display: block;
       overflow: hidden;
       position: fixed;
@@ -170,22 +94,22 @@ const injectToolbar = async ({
       transition: 600ms;
     }
 
-    #jsenv-toolbar-trigger:hover {
+    #jsenv_toolbar_trigger:hover {
       cursor: pointer;
     }
 
-    #jsenv-toolbar-trigger[data-expanded] {
+    #jsenv_toolbar_trigger[data-expanded] {
       bottom: 0;
     }
 
-    #jsenv-toolbar-trigger-icon {
+    #jsenv_toolbar_trigger_icon {
       width: 35px;
       height: 35px;
       opacity: 0;
       transition: 600ms;
     }
 
-    #jsenv-toolbar-trigger[data-expanded] #jsenv-toolbar-trigger-icon {
+    #jsenv_toolbar_trigger[data-expanded] #jsenv_toolbar_trigger_icon {
       opacity: 1;
     }
   </style>
@@ -211,7 +135,7 @@ const injectToolbar = async ({
     collapseToolbarTrigger();
   };
   toolbarTrigger.onclick = () => {
-    sendCommandToToolbar(iframe, "showToolbar");
+    sendCommandToToolbar(iframe, "openToolbar");
   };
   const showToolbarTrigger = () => {
     toolbarTrigger.style.display = "block";
@@ -225,14 +149,17 @@ const injectToolbar = async ({
   const collapseToolbarTrigger = () => {
     toolbarTrigger.removeAttribute("data-expanded", "");
   };
-  hideToolbarTrigger();
-  addToolbarEventCallback(iframe, "toolbar-visibility-change", visible => {
-    if (visible) {
+  listenToolbarStateChange(({
+    opened
+  }) => {
+    if (opened) {
       hideToolbarTrigger();
     } else {
       showToolbarTrigger();
     }
   });
+  await iframeLoadedPromise;
+  iframe.removeAttribute("tabindex");
   return iframe;
 };
 const addToolbarEventCallback = (iframe, eventName, callback) => {
@@ -297,4 +224,4 @@ const iframeToLoadedPromise = iframe => {
   });
 };
 
-export { activateToolbarSection as a, deactivateToolbarSection as d, forceHideElement as f, getToolbarIframe as g, injectToolbar, removeForceHideElement as r, setStyles as s, toolbarSectionIsActive as t, updateIframeOverflowOnParentWindow as u };
+export { injectToolbar };

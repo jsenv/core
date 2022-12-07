@@ -21,12 +21,17 @@
     "./*": "./*"
   },
   "main": "./src/main.js",
+  "files": [
+    "/dist/",
+    "/src/"
+  ],
   "dependencies": {
     "@jsenv/ast": "1.4.7",
     "@preact/signals": "1.1.2"
   },
   "scripts": {
     "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",
-    "build": "node ./scripts/build.mjs"
+    "build": "node ./scripts/build.mjs",
+    "prepublishOnly": "npm run build"
   }
 }
