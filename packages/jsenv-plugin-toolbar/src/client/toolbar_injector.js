@@ -44,6 +44,14 @@ export const injectToolbar = async ({
     "border": "none",
   })
   const iframeLoadedPromise = iframeToLoadedPromise(iframe)
+  iframe.name = encodeURIComponent(
+    JSON.stringify({
+      logs,
+      theme,
+      opened,
+      animationsEnabled,
+    }),
+  )
   // set iframe src BEFORE putting it into the DOM (prevent firefox adding an history entry)
   iframe.setAttribute("src", toolbarUrl)
   placeholder.parentNode.replaceChild(iframe, placeholder)
@@ -64,24 +72,13 @@ export const injectToolbar = async ({
     "toolbar_ready",
     () => {
       cleanupInitOnReady()
-      addToolbarEventCallback(iframe, "toolbar_core_ready", () => {
-        sendCommandToToolbar(iframe, "initToolbarUI")
-      })
-      sendCommandToToolbar(iframe, "initToolbarCore", {
-        logs,
-        theme,
-        opened,
-        animationsEnabled,
-      })
+      sendCommandToToolbar(iframe, "initToolbar")
     },
   )
 
-  await iframeLoadedPromise
-  iframe.removeAttribute("tabindex")
-
   const div = document.createElement("div")
   div.innerHTML = `
-<div id="jsenv_toolbar_trigger">
+<div id="jsenv_toolbar_trigger" style="display:none">
   <svg id="jsenv_toolbar_trigger_icon">
     <use xlink:href="${jsenvLogoSvgUrl}#jsenv_logo"></use>
   </svg>
@@ -174,6 +171,9 @@ export const injectToolbar = async ({
       showToolbarTrigger()
     }
   })
+
+  await iframeLoadedPromise
+  iframe.removeAttribute("tabindex")
 
   return iframe
 }

@@ -1,4 +1,6 @@
-const JSENV_LOG_ENABLED = false
+import { paramsFromWindowName } from "./parent_window_context.js"
+
+const JSENV_LOG_ENABLED = paramsFromWindowName.logs
 
 export const jsenvLogger = {
   log: (...args) => {

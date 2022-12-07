@@ -15,15 +15,6 @@ import { renderToolbarCloseButton } from "./toolbar_close_button/toolbar_close_b
 
 export const initToolbarUI = () => {
   effect(() => {
-    const animationsEnabled = animationsEnabledSignal.value
-    if (animationsEnabled) {
-      document.documentElement.setAttribute("data-toolbar-animation", "")
-    } else {
-      document.documentElement.removeAttribute("data-toolbar-animation")
-    }
-  })
-
-  effect(() => {
     const opened = openedSignal.value
     if (opened) {
       showToolbar()
