@@ -182,7 +182,13 @@ const applyHotReload = async ({ hotInstructions }) => {
         return namespace
       }
       if (type === "html") {
-        if (!compareTwoUrlPaths(urlToFetch, window.location.href)) {
+        const isRootHtmlFile =
+          window.location.pathname === "/" &&
+          new URL(urlToFetch).pathname.slice(1).indexOf("/") === -1
+        if (
+          !isRootHtmlFile &&
+          !compareTwoUrlPaths(urlToFetch, window.location.href)
+        ) {
           // we are not in that HTML page
           return null
         }
