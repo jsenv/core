@@ -681,7 +681,7 @@ label {
   vertical-align: middle;
 }
 
-#toolbar button, #toolbar a {
+.toolbar_control {
   height: 40px;
   width: 40px;
   background: none;
@@ -692,7 +692,7 @@ label {
   display: flex;
 }
 
-#toolbar button:hover, #toolbar a:hover {
+.toolbar_control:hover {
   cursor: pointer;
 }
 

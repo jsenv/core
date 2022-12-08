@@ -608,12 +608,16 @@ function useSignal(t) {
   return F(() => c$1(t), []);
 }
 
-const paramsFromWindowName = JSON.parse(decodeURIComponent(window.name));
+const paramsFromParentWindow = {};
+const searchParams = new URLSearchParams(window.location.search);
+searchParams.forEach((value, key) => {
+  paramsFromParentWindow[key] = value;
+});
 const parentWindowReloader = window.parent.__reloader__;
 
 const stateFromLocalStorage = localStorage.hasOwnProperty("jsenv_toolbar") ? JSON.parse(localStorage.getItem("jsenv_toolbar")) : {};
 
-const animationsEnabledSignal = c$1(typeof stateFromLocalStorage.animationsEnabled === "boolean" ? stateFromLocalStorage.animationsEnabled : typeof paramsFromWindowName.animationsEnabled === "boolean" ? paramsFromWindowName.animationsEnabled : false);
+const animationsEnabledSignal = c$1(typeof stateFromLocalStorage.animationsEnabled === "boolean" ? stateFromLocalStorage.animationsEnabled : typeof paramsFromParentWindow.animationsEnabled === "boolean" ? paramsFromParentWindow.animationsEnabled : false);
 
 b(() => {
   const animationsEnabled = animationsEnabledSignal.value;
@@ -643,7 +647,7 @@ window.parent.__supervisor__.getDocumentExecutionResult().then(({
 
 const notificationAPIDetected = typeof window.Notification === "function";
 
-const notificationsEnabledSignal = c$1(typeof stateFromLocalStorage.notificationsEnabled === "boolean" ? stateFromLocalStorage.notificationsEnabled : typeof paramsFromWindowName.notificationsEnabled === "boolean" ? paramsFromWindowName.notificationsEnabled : false);
+const notificationsEnabledSignal = c$1(typeof stateFromLocalStorage.notificationsEnabled === "boolean" ? stateFromLocalStorage.notificationsEnabled : typeof paramsFromParentWindow.notificationsEnabled === "boolean" ? paramsFromParentWindow.notificationsEnabled : false);
 const notificationPermissionSignal = c$1(Notification.permission);
 
 const enableNotifications = () => {
@@ -832,7 +836,7 @@ const closeAllTooltips = () => {
   closeServerTooltip();
 };
 
-const openedSignal = c$1(typeof stateFromLocalStorage.opened === "boolean" ? stateFromLocalStorage.opened : typeof paramsFromWindowName.opened === "boolean" ? paramsFromWindowName.opened : false);
+const openedSignal = c$1(typeof stateFromLocalStorage.opened === "boolean" ? stateFromLocalStorage.opened : typeof paramsFromParentWindow.opened === "boolean" ? paramsFromParentWindow.opened : false);
 
 const getToolbarIframe = () => {
   const iframes = Array.from(window.parent.document.querySelectorAll("iframe"));
@@ -1176,6 +1180,8 @@ const closeSettings = () => {
   settingsOpenedSignal.value = false;
 };
 
+const changesTooltipOpenedSignal = c$1(false);
+
 const renderToolbarOverlay = () => {
   const toolbarOverlay = document.querySelector("#toolbar_overlay");
   toolbarOverlay.onclick = () => {
@@ -1189,12 +1195,13 @@ const renderToolbarOverlay = () => {
     }
     const opened = openedSignal.value;
     const settingsOpened = settingsOpenedSignal.value;
-    const serverTooltipOpened = serverTooltipOpenedSignal.value;
     const executionTooltipOpened = executionTooltipOpenedSignal.value;
+    const changesTooltipOpened = changesTooltipOpenedSignal.value;
+    const serverTooltipOpened = serverTooltipOpenedSignal.value;
     if (!opened) {
       return;
     }
-    if (settingsOpened || serverTooltipOpened || executionTooltipOpened) {
+    if (settingsOpened || executionTooltipOpened || changesTooltipOpened || serverTooltipOpened) {
       enableIframeOverflowOnParentWindow();
     } else {
       disableIframeOverflowOnParentWindow();
@@ -1375,33 +1382,69 @@ if (parentWindowReloader) {
   parentWindowReloader.status.onchange = () => {
     reloaderStatusSignal.value = parentWindowReloader.status.value;
   };
-  b(() => {
-    const reloaderStatus = reloaderStatusSignal.value;
-    if (reloaderStatus === "can_reload") {
-      changesSignal.value = parentWindowReloader.messages.length;
-    } else {
-      changesSignal.value = 0;
-    }
-  });
+  changesSignal.value = parentWindowReloader.changes.value;
+  parentWindowReloader.changes.onchange = () => {
+    changesSignal.value = [...parentWindowReloader.changes.value];
+  };
 }
 
-const changesIndicator = document.querySelector("#changes_indicator");
+const openChangesToolip = () => {
+  changesTooltipOpenedSignal.value = true;
+};
+const closeChangesToolip = () => {
+  changesTooltipOpenedSignal.value = false;
+};
 
-// TODO: connect the tooltip
-// + a button to perform the changes
+const changesIndicator = document.querySelector("#changes_indicator");
 const renderChangesIndicator = () => {
   b(() => {
-    autoreloadEnabledSignal.value;
-  });
-  b(() => {
+    const autoreloadEnabled = autoreloadEnabledSignal.value;
     const changes = changesSignal.value;
+    const changeCount = changes.length;
     enableVariant(changesIndicator, {
-      changes: changes ? "yes" : "no"
+      changes: !autoreloadEnabled && changeCount ? "yes" : "no"
     });
-    if (changes) {
-      changesIndicator.querySelector(".changes_text").innerHTML = changes;
+    if (changeCount) {
+      changesIndicator.querySelector(".tooltip_text").innerHTML = computeTooltipText({
+        changes
+      });
+      changesIndicator.querySelector(".tooltip_text a").onclick = () => {
+        // eslint-disable-next-line no-alert
+        window.alert(JSON.stringify(changes, null, "  "));
+        console.log(changes);
+      };
+      changesIndicator.querySelector(".changes_text").innerHTML = changeCount;
     }
   });
+  changesIndicator.querySelector(".tooltip_action").onclick = () => {
+    parentWindowReloader.reload();
+  };
+  b(() => {
+    const changesTooltipOpened = changesTooltipOpenedSignal.value;
+    if (changesTooltipOpened) {
+      changesIndicator.setAttribute("data-tooltip-visible", "");
+    } else {
+      changesIndicator.removeAttribute("data-tooltip-visible");
+    }
+  });
+  const button = changesIndicator.querySelector("button");
+  button.onclick = () => {
+    const changesTooltipOpened = changesTooltipOpenedSignal.value;
+    if (changesTooltipOpened) {
+      closeChangesToolip();
+    } else {
+      openChangesToolip();
+    }
+  };
+};
+const computeTooltipText = ({
+  changes
+}) => {
+  const changesCount = changes.length;
+  if (changesCount === 1) {
+    return `There is <a href="javascript:void(0)">1</a> change to apply`;
+  }
+  return `There is  <a href="javascript:void(0)">${changesCount}<a> changes to apply`;
 };
 
 const parentServerEvents = window.parent.__server_events__;
@@ -1611,7 +1654,7 @@ const applyNotificationNOTGrantedEffects = () => {
   };
 };
 
-const themeSignal = c$1(typeof stateFromLocalStorage.theme === "string" ? stateFromLocalStorage.theme : typeof paramsFromWindowName.theme === "string" ? paramsFromWindowName.theme : "dark");
+const themeSignal = c$1(typeof stateFromLocalStorage.theme === "string" ? stateFromLocalStorage.theme : typeof paramsFromParentWindow.theme === "string" ? paramsFromParentWindow.theme : "dark");
 
 const switchToLightTheme = () => {
   themeSignal.value = "light";
