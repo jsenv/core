@@ -1,25 +1,24 @@
-import { notifyExecutionResult } from "../../core/notification_actions.js"
+import {
+  executionSignal,
+  executionTooltipRequestedSignal,
+} from "../../core/execution_signals.js"
+import {
+  closeExecutionTooltip,
+  requestExecutionTooltip,
+} from "../../core/execution_actions.js"
+
 import { removeForceHideElement } from "../util/dom.js"
 import { enableVariant } from "../variant.js"
-import { toggleTooltip } from "../tooltips/tooltips.js"
+import { effect } from "@preact/signals"
 
 export const renderDocumentExecutionIndicator = async () => {
-  // reset file execution indicator ui
-  applyExecutionIndicator()
   removeForceHideElement(
     document.querySelector("#document_execution_indicator"),
   )
-
-  const { status, startTime, endTime } =
-    await window.parent.__supervisor__.getDocumentExecutionResult()
-  const execution = { status, startTime, endTime }
-  applyExecutionIndicator(execution)
-  const executionStorageKey = window.location.href
-  const previousExecution = sessionStorage.hasOwnProperty(executionStorageKey)
-    ? JSON.parse(sessionStorage.getItem(executionStorageKey))
-    : undefined
-  notifyExecutionResult(executionStorageKey, execution, previousExecution)
-  sessionStorage.setItem(executionStorageKey, JSON.stringify(execution))
+  effect(() => {
+    const execution = executionSignal.value
+    updateExecutionIndicator(execution)
+  })
 }
 
 // const changeLink = variantNode.querySelector(".eventsource-changes-link")
@@ -58,18 +57,20 @@ export const renderDocumentExecutionIndicator = async () => {
 //   updateEventSourceIndicator()
 // }
 
-const applyExecutionIndicator = ({
-  status = "running",
-  startTime,
-  endTime,
-} = {}) => {
+const updateExecutionIndicator = ({ status, startTime, endTime } = {}) => {
   const executionIndicator = document.querySelector(
     "#document_execution_indicator",
   )
   enableVariant(executionIndicator, { execution: status })
   const variantNode = executionIndicator.querySelector("[data-when-active]")
-  variantNode.querySelector("button").onclick = () =>
-    toggleTooltip(executionIndicator)
+  variantNode.querySelector("button").onclick = () => {
+    const executionTooltipRequested = executionTooltipRequestedSignal.value
+    if (executionTooltipRequested) {
+      closeExecutionTooltip()
+    } else {
+      requestExecutionTooltip()
+    }
+  }
   variantNode.querySelector(".tooltip").textContent = computeText({
     status,
     startTime,
