@@ -17,14 +17,19 @@ const changesIndicator = document.querySelector("#changes_indicator")
 export const renderChangesIndicator = () => {
   effect(() => {
     const autoreloadEnabled = autoreloadEnabledSignal.value
-    const changeCount = changesSignal.value.length
+    const changes = changesSignal.value
+    const changeCount = changes.length
     enableVariant(changesIndicator, {
-      changes: autoreloadEnabled && changeCount ? "yes" : "no",
+      changes: !autoreloadEnabled && changeCount ? "yes" : "no",
     })
     if (changeCount) {
-      changesIndicator.querySelector(
-        ".tooltip_text",
-      ).innerHTML = `There is ${changeCount} changes to apply`
+      changesIndicator.querySelector(".tooltip_text").innerHTML =
+        computeTooltipText({ changes })
+      changesIndicator.querySelector(".tooltip_text a").onclick = () => {
+        // eslint-disable-next-line no-alert
+        window.alert(JSON.stringify(changes, null, "  "))
+        console.log(changes)
+      }
       changesIndicator.querySelector(".changes_text").innerHTML = changeCount
     }
   })
@@ -50,4 +55,12 @@ export const renderChangesIndicator = () => {
       openChangesToolip()
     }
   }
+}
+
+const computeTooltipText = ({ changes }) => {
+  const changesCount = changes.length
+  if (changesCount === 1) {
+    return `There is <a href="javascript:void(0)">1</a> change to apply`
+  }
+  return `There is  <a href="javascript:void(0)">${changesCount}<a> changes to apply`
 }

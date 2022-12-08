@@ -4,8 +4,9 @@ import { openedSignal } from "../../core/toolbar_open_signals.js"
 import { settingsOpenedSignal } from "../../core/settings_signals.js"
 import { closeSettings } from "../../core/settings_actions.js"
 import { closeAllTooltips } from "../../core/tooltip_actions.js"
-import { serverTooltipOpenedSignal } from "../../core/server_signals.js"
 import { executionTooltipOpenedSignal } from "../../core/execution_signals.js"
+import { changesTooltipOpenedSignal } from "../../core/changes_signals.js"
+import { serverTooltipOpenedSignal } from "../../core/server_signals.js"
 import { getToolbarIframe, setStyles } from "../util/dom.js"
 
 export const renderToolbarOverlay = () => {
@@ -22,12 +23,18 @@ export const renderToolbarOverlay = () => {
     }
     const opened = openedSignal.value
     const settingsOpened = settingsOpenedSignal.value
-    const serverTooltipOpened = serverTooltipOpenedSignal.value
     const executionTooltipOpened = executionTooltipOpenedSignal.value
+    const changesTooltipOpened = changesTooltipOpenedSignal.value
+    const serverTooltipOpened = serverTooltipOpenedSignal.value
     if (!opened) {
       return
     }
-    if (settingsOpened || serverTooltipOpened || executionTooltipOpened) {
+    if (
+      settingsOpened ||
+      executionTooltipOpened ||
+      changesTooltipOpened ||
+      serverTooltipOpened
+    ) {
       enableIframeOverflowOnParentWindow()
     } else {
       disableIframeOverflowOnParentWindow()

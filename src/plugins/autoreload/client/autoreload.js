@@ -35,10 +35,21 @@ const reloader = {
     onchange: () => {},
     add: (reloadMessage) => {
       reloader.changes.value.push(reloadMessage)
+      reloader.changes.onchange()
       if (reloader.autoreload.enabled) {
         reloader.reload()
       } else {
         reloader.status.goTo("can_reload")
+      }
+    },
+    remove: (reloadMessage) => {
+      const index = reloader.changes.value.indexOf(reloadMessage)
+      if (index > -1) {
+        reloader.changes.value.splice(index, 1)
+        if (reloader.changes.value.length === 0) {
+          reloader.status.goTo("idle")
+        }
+        reloader.changes.onchange()
       }
     },
   },
@@ -53,11 +64,7 @@ const reloader = {
     }
     reloader.status.goTo("reloading")
     const onApplied = (reloadMessage) => {
-      const index = reloader.changes.value.indexOf(reloadMessage)
-      reloader.changes.value.splice(index, 1)
-      if (reloader.changes.value.length === 0) {
-        reloader.status.goTo("idle")
-      }
+      reloader.changes.remove(reloadMessage)
     }
     const setReloadMessagePromise = (reloadMessage, promise) => {
       promise.then(

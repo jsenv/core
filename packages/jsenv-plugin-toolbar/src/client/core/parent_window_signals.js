@@ -17,6 +17,6 @@ if (parentWindowReloader) {
   }
   changesSignal.value = parentWindowReloader.changes.value
   parentWindowReloader.changes.onchange = () => {
-    changesSignal.value = parentWindowReloader.changes.value
+    changesSignal.value = [...parentWindowReloader.changes.value]
   }
 }
