@@ -56,7 +56,6 @@ export const createConnectionManager = (
             )
             return
           }
-
           // if closed while open -> connection lost
           // otherwise it's the attempt to connect for the first time
           // or to reconnect

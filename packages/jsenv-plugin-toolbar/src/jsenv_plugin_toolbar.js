@@ -26,8 +26,8 @@ export const jsenvPluginToolbar = ({
     appliesDuring: "dev",
     transformUrlContent: {
       html: (urlInfo, context) => {
-        urlInfo.data.noribbon = true
         if (urlInfo.url === toolbarHtmlClientFileUrl) {
+          urlInfo.data.isJsenvToolbar = true
           return null
         }
         const htmlAst = parseHtmlString(urlInfo.content)

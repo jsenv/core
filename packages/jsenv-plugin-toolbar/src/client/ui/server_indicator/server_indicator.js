@@ -12,13 +12,14 @@ import { removeForceHideElement } from "../util/dom.js"
 import { enableVariant } from "../variant.js"
 
 const parentServerEvents = window.parent.__server_events__
+const serverEvents = window.__server_events__
 const serverIndicator = document.querySelector("#server_indicator")
 
 export const renderServerIndicator = () => {
   if (!parentServerEvents) {
     disableAutoreloadSetting()
-    return
   }
+
   removeForceHideElement(document.querySelector("#server_indicator"))
   effect(() => {
     const serverConnection = serverConnectionSignal.value
@@ -49,11 +50,17 @@ const updateServerIndicator = (connectionState) => {
   }
   if (connectionState === "connecting") {
     variantNode.querySelector("a").onclick = () => {
-      parentServerEvents.disconnect()
+      if (parentServerEvents) {
+        parentServerEvents.disconnect()
+      }
+      serverEvents.disconnect()
     }
   } else if (connectionState === "closed") {
     variantNode.querySelector("a").onclick = () => {
-      parentServerEvents.connect()
+      if (parentServerEvents) {
+        parentServerEvents.connect()
+      }
+      serverEvents.connect()
     }
   }
 }
