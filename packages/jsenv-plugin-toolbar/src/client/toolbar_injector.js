@@ -40,16 +40,14 @@ export const injectToolbar = async ({
     "border": "none",
   })
   const iframeLoadedPromise = iframeToLoadedPromise(iframe)
-  iframe.name = encodeURIComponent(
-    JSON.stringify({
-      logLevel,
-      theme,
-      opened,
-      animationsEnabled,
-    }),
-  )
+  const toolbarUrlObject = new URL(toolbarUrl, window.location.href)
+  toolbarUrlObject.searchParams.set("logLevel", logLevel)
+  toolbarUrlObject.searchParams.set("theme", theme)
+  toolbarUrlObject.searchParams.set("opened", opened)
+  toolbarUrlObject.searchParams.set("animationsEnabled", animationsEnabled)
   // set iframe src BEFORE putting it into the DOM (prevent firefox adding an history entry)
-  iframe.setAttribute("src", toolbarUrl)
+  iframe.setAttribute("src", toolbarUrlObject.href)
+  iframe.name = "jsenv toolbar"
   placeholder.parentNode.replaceChild(iframe, placeholder)
 
   const listenToolbarStateChange = (callback) => {

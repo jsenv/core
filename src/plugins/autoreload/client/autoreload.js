@@ -30,18 +30,21 @@ const reloader = {
       reloader.autoreload.onchange()
     },
   },
-  currentExecution: null,
-  messages: [],
-  addMessage: (reloadMessage) => {
-    reloader.messages.push(reloadMessage)
-    if (reloader.autoreload.enabled) {
-      reloader.reload()
-    } else {
-      reloader.status.goTo("can_reload")
-    }
+  changes: {
+    value: [],
+    onchange: () => {},
+    add: (reloadMessage) => {
+      reloader.changes.value.push(reloadMessage)
+      if (reloader.autoreload.enabled) {
+        reloader.reload()
+      } else {
+        reloader.status.goTo("can_reload")
+      }
+    },
   },
+  currentExecution: null,
   reload: () => {
-    const someEffectIsFullReload = reloader.messages.some(
+    const someEffectIsFullReload = reloader.changes.value.some(
       (reloadMessage) => reloadMessage.type === "full",
     )
     if (someEffectIsFullReload) {
@@ -50,9 +53,9 @@ const reloader = {
     }
     reloader.status.goTo("reloading")
     const onApplied = (reloadMessage) => {
-      const index = reloader.messages.indexOf(reloadMessage)
-      reloader.messages.splice(index, 1)
-      if (reloader.messages.length === 0) {
+      const index = reloader.changes.value.indexOf(reloadMessage)
+      reloader.changes.value.splice(index, 1)
+      if (reloader.changes.value.length === 0) {
         reloader.status.goTo("idle")
       }
     }
@@ -77,7 +80,7 @@ This could be due to syntax errors or importing non-existent modules (see errors
         },
       )
     }
-    reloader.messages.forEach((reloadMessage) => {
+    reloader.changes.value.forEach((reloadMessage) => {
       if (reloadMessage.type === "hot") {
         const promise = addToHotQueue(() => {
           return applyHotReload(reloadMessage)
@@ -204,6 +207,6 @@ const applyHotReload = async ({ hotInstructions }) => {
 window.__reloader__ = reloader
 window.__server_events__.listenEvents({
   reload: (reloadServerEvent) => {
-    reloader.addMessage(reloadServerEvent.data)
+    reloader.changes.add(reloadServerEvent.data)
   },
 })

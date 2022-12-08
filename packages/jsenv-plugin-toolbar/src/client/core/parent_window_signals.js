@@ -1,4 +1,4 @@
-import { effect, signal } from "@preact/signals"
+import { signal } from "@preact/signals"
 
 import { parentWindowReloader } from "./parent_window_context.js"
 
@@ -15,12 +15,8 @@ if (parentWindowReloader) {
   parentWindowReloader.status.onchange = () => {
     reloaderStatusSignal.value = parentWindowReloader.status.value
   }
-  effect(() => {
-    const reloaderStatus = reloaderStatusSignal.value
-    if (reloaderStatus === "can_reload") {
-      changesSignal.value = parentWindowReloader.messages.length
-    } else {
-      changesSignal.value = 0
-    }
-  })
+  changesSignal.value = parentWindowReloader.changes.value
+  parentWindowReloader.changes.onchange = () => {
+    changesSignal.value = parentWindowReloader.changes.value
+  }
 }

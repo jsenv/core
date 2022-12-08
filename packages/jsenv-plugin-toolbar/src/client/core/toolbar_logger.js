@@ -1,6 +1,6 @@
-import { paramsFromWindowName } from "./parent_window_context.js"
+import { paramsFromParentWindow } from "./parent_window_context.js"
 
-const logLevel = paramsFromWindowName.logLevel
+const logLevel = paramsFromParentWindow.logLevel
 
 export const logger = {
   info: (...args) => {

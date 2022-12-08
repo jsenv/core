@@ -5,8 +5,7 @@
 @import "./toolbar_menu_overflow/toolbar_menu_overflow.css";
 @import "./tooltips/tooltips.css";
 
-#toolbar button,
-#toolbar a {
+.toolbar_control {
   background: none;
   border: none;
   display: flex;
@@ -17,11 +16,7 @@
   padding: 0;
 }
 
-#toolbar button:hover {
-  cursor: pointer;
-}
-
-#toolbar a:hover {
+.toolbar_control:hover {
   cursor: pointer;
 }
 
