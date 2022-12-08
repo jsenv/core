@@ -1,19 +1,31 @@
+import { effect } from "@preact/signals"
+
+import { serverTooltipOpenedSignal } from "../../core/server_signals.js"
+import {
+  requestServerTooltip,
+  closeServerTooltip,
+} from "../../core/server_actions.js"
 import { removeForceHideElement } from "../util/dom.js"
 import { enableVariant } from "../variant.js"
-import {
-  toggleTooltip,
-  removeAutoShowTooltip,
-  autoShowTooltip,
-} from "../tooltips/tooltips.js"
 
 const parentServerEvents = window.parent.__server_events__
+const serverIndicator = document.querySelector("#server_indicator")
 
 export const renderServerIndicator = () => {
-  removeForceHideElement(document.querySelector("#server_indicator"))
+  effect(() => {
+    const serverTooltipOpened = serverTooltipOpenedSignal.value
+    if (serverTooltipOpened) {
+      serverIndicator.setAttribute("data-tooltip-visible", "")
+    } else {
+      serverIndicator.removeAttribute("data-tooltip-visible")
+    }
+  })
+
   if (!parentServerEvents) {
     disableAutoreloadSetting()
     return
   }
+  removeForceHideElement(document.querySelector("#server_indicator"))
   parentServerEvents.readyState.onchange = () => {
     updateEventSourceIndicator(parentServerEvents.readyState.value)
   }
@@ -21,22 +33,24 @@ export const renderServerIndicator = () => {
 }
 
 const updateEventSourceIndicator = (connectionState) => {
-  const indicator = document.querySelector("#server_indicator")
-  enableVariant(indicator, { connectionState })
+  enableVariant(serverIndicator, { connectionState })
   const variantNode = document.querySelector(
     "#server_indicator > [data-when-active]",
   )
   variantNode.querySelector("button").onclick = () => {
-    toggleTooltip(indicator)
+    const serverTooltipOpened = serverTooltipOpenedSignal.value
+    if (serverTooltipOpened) {
+      closeServerTooltip()
+    } else {
+      requestServerTooltip()
+    }
   }
   if (connectionState === "connecting") {
     variantNode.querySelector("a").onclick = () => {
       parentServerEvents.disconnect()
     }
   } else if (connectionState === "open") {
-    removeAutoShowTooltip(indicator)
   } else if (connectionState === "closed") {
-    autoShowTooltip(indicator)
     variantNode.querySelector("a").onclick = () => {
       parentServerEvents.connect()
     }

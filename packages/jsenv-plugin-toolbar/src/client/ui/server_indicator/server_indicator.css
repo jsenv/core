@@ -28,9 +28,6 @@
   stroke: black;
   stroke-width: 0;
 }
-.server_indicator_circle[data-variant="off"] {
-  fill: #cecece;
-}
 .server_indicator_circle[data-variant="connecting"] {
   fill: #cecece;
   animation: wink 1.2s ease-out infinite;
@@ -50,7 +47,7 @@
 .server_indicator_circle[data-variant="connected"] {
   fill: green;
 }
-.server_indicator_circle[data-variant="failed"] {
+.server_indicator_circle[data-variant="closed"] {
   fill: #cc0000;
 }
 
