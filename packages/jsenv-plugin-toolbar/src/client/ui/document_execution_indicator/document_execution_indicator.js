@@ -1,3 +1,5 @@
+import { effect } from "@preact/signals"
+
 import {
   executionSignal,
   executionTooltipOpenedSignal,
@@ -6,10 +8,8 @@ import {
   closeExecutionTooltip,
   openExecutionTooltip,
 } from "../../core/execution_actions.js"
-
 import { removeForceHideElement } from "../util/dom.js"
 import { enableVariant } from "../variant.js"
-import { effect } from "@preact/signals"
 
 const executionIndicator = document.querySelector(
   "#document_execution_indicator",

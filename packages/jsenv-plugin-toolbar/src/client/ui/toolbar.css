@@ -5,10 +5,15 @@
 @import "./toolbar_menu_overflow/toolbar_menu_overflow.css";
 @import "./tooltips/tooltips.css";
 
-#toolbar button {
+#toolbar button,
+#toolbar a {
   background: none;
   border: none;
-  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  width: 40px;
   padding: 0;
 }
 
@@ -55,14 +60,22 @@
   width: 18px;
 }
 
-#document_index_link {
-  display: flex;
-}
-
-#document_index_icon {
-  margin-left: 10px;
-}
-
 #toolbar a {
   color: inherit;
+}
+
+#changes_indicator button {
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  width: auto;
+}
+
+.changes_icon {
+  width: 32px;
+}
+
+.changes_text {
+  display: flex;
+  align-items: center;
 }
