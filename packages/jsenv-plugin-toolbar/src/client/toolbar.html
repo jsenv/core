@@ -98,7 +98,7 @@
         <div style="width: 100%"></div>
 
         <section id="server_indicator" data-responsive-toolbar-element>
-          <div data-when="connectionState:default">
+          <div data-when="connectionState:closing">
             <div class="tooltip" data-toolip-left>Unknown state</div>
             <button>
               <svg>
@@ -139,7 +139,7 @@
               </svg>
             </button>
           </div>
-          <div data-when="connectionState:disconnected">
+          <div data-when="connectionState:closed">
             <div class="tooltip" data-toolip-left>
               Disconnected from server
               <br />
@@ -171,7 +171,7 @@
               </svg>
             </button>
           </div>
-          <div data-when="connectionState:connected">
+          <div data-when="connectionState:open">
             <div class="tooltip" data-toolip-left>Connected to server</div>
             <button>
               <svg class="autoreload toolbar_icon" data-variant="enabled">

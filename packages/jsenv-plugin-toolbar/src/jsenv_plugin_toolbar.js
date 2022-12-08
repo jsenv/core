@@ -9,7 +9,7 @@ export const jsenvPluginToolbar = ({
   logLevel = "warn",
   theme = "dark",
   opened = false,
-  animationsEnabled = false,
+  animationsEnabled = true,
   notificationsEnabled = true,
 } = {}) => {
   const toolbarInjectorClientFileUrl = new URL(

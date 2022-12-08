@@ -6,19 +6,18 @@ import {
   autoShowTooltip,
 } from "../tooltips/tooltips.js"
 
-const parentEventSourceClient = window.parent.__jsenv_event_source_client__
+const parentServerEvents = window.parent.__server_events__
 
 export const renderServerIndicator = () => {
   removeForceHideElement(document.querySelector("#server_indicator"))
-  updateEventSourceIndicator("connected")
-  if (!parentEventSourceClient) {
+  if (!parentServerEvents) {
     disableAutoreloadSetting()
     return
   }
-  parentEventSourceClient.status.onchange = () => {
-    updateEventSourceIndicator(parentEventSourceClient.status.value)
+  parentServerEvents.readyState.onchange = () => {
+    updateEventSourceIndicator(parentServerEvents.readyState.value)
   }
-  updateEventSourceIndicator(parentEventSourceClient.status.value)
+  updateEventSourceIndicator(parentServerEvents.readyState.value)
 }
 
 const updateEventSourceIndicator = (connectionState) => {
@@ -32,14 +31,14 @@ const updateEventSourceIndicator = (connectionState) => {
   }
   if (connectionState === "connecting") {
     variantNode.querySelector("a").onclick = () => {
-      parentEventSourceClient.disconnect()
+      parentServerEvents.disconnect()
     }
-  } else if (connectionState === "connected") {
+  } else if (connectionState === "open") {
     removeAutoShowTooltip(indicator)
-  } else if (connectionState === "disconnected") {
+  } else if (connectionState === "closed") {
     autoShowTooltip(indicator)
     variantNode.querySelector("a").onclick = () => {
-      parentEventSourceClient.connect()
+      parentServerEvents.connect()
     }
   }
 }
