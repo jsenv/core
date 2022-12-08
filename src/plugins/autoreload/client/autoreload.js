@@ -17,7 +17,7 @@ const reloader = {
     },
   },
   autoreload: {
-    enabled: window.localStorage.getItem("autoreload") === "1",
+    enabled: ["1", null].includes(window.localStorage.getItem("autoreload")),
     onchange: () => {},
     enable: () => {
       reloader.autoreload.enabled = true
