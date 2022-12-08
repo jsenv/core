@@ -12,7 +12,9 @@ if (parentWindowReloader) {
     autoreloadEnabledSignal.value = parentWindowReloader.autoreload.enabled
   }
   reloaderStatusSignal.value = parentWindowReloader.status.value
+  const onchange = parentWindowReloader.status.onchange
   parentWindowReloader.status.onchange = () => {
+    onchange()
     reloaderStatusSignal.value = parentWindowReloader.status.value
   }
   changesSignal.value = parentWindowReloader.changes.value
