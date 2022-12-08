@@ -50,15 +50,15 @@
           </div>
         </section>
 
-        <section id="changes_indicator" data-when="autoreload:off">
+        <section id="changes_indicator">
           <div data-when="changes:no"></div>
           <div data-when="changes:yes">
             <div class="tooltip">There is X changes to apply</div>
             <button>
-              <svg>
+              <svg class="changes_icon">
                 <circle class="server_indicator_circle" cx="20" cy="20" r="5"></circle>
               </svg>
-              <span>X</span>
+              <span class="changes_text">X</span>
             </button>
           </div>
         </section>
@@ -66,7 +66,7 @@
         <div style="width: 100%"></div>
 
         <section id="server_indicator" data-responsive-toolbar-element="">
-          <div data-when="connectionState:default">
+          <div data-when="connectionState:closing">
             <div class="tooltip" data-toolip-left="">Unknown state</div>
             <button>
               <svg>
@@ -95,7 +95,7 @@
               </svg>
             </button>
           </div>
-          <div data-when="connectionState:disconnected">
+          <div data-when="connectionState:closed">
             <div class="tooltip" data-toolip-left="">
               Disconnected from server
               <br>
@@ -111,11 +111,11 @@
             </div>
             <button>
               <svg>
-                <circle class="server_indicator_circle" data-variant="off" cx="20" cy="20" r="5"></circle>
+                <circle class="server_indicator_circle" data-variant="closed" cx="20" cy="20" r="5"></circle>
               </svg>
             </button>
           </div>
-          <div data-when="connectionState:connected">
+          <div data-when="connectionState:open">
             <div class="tooltip" data-toolip-left="">Connected to server</div>
             <button>
               <svg class="autoreload toolbar_icon" data-variant="enabled">

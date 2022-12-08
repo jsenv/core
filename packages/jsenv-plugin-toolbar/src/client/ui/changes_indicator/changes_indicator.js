@@ -8,6 +8,8 @@ import { enableVariant } from "../variant.js"
 
 const changesIndicator = document.querySelector("#changes_indicator")
 
+// TODO: connect the tooltip
+// + a button to perform the changes
 export const renderChangesIndicator = () => {
   effect(() => {
     const autoreloadEnabled = autoreloadEnabledSignal.value

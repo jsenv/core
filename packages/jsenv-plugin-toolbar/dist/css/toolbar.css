@@ -108,7 +108,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, [data-contains-hidde
   height: 25px;
   opacity: 0;
   stroke-width: 5px;
-  margin: 7px;
 }
 
 #execution_completed_icon[data-animate] {
@@ -193,10 +192,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, [data-contains-hidde
   stroke-width: 0;
 }
 
-.server_indicator_circle[data-variant="off"] {
-  fill: #cecece;
-}
-
 .server_indicator_circle[data-variant="connecting"] {
   fill: #cecece;
   transform-origin: center;
@@ -221,7 +216,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, [data-contains-hidde
   fill: green;
 }
 
-.server_indicator_circle[data-variant="failed"] {
+.server_indicator_circle[data-variant="closed"] {
   fill: #c00;
 }
 
@@ -686,11 +681,15 @@ label {
   vertical-align: middle;
 }
 
-#toolbar button {
-  height: 100%;
+#toolbar button, #toolbar a {
+  height: 40px;
+  width: 40px;
   background: none;
   border: none;
+  justify-content: center;
+  align-items: center;
   padding: 0;
+  display: flex;
 }
 
 #toolbar button:hover, #toolbar a:hover {
@@ -730,14 +729,22 @@ label {
   width: 18px;
 }
 
-#document_index_link {
+#toolbar a {
+  color: inherit;
+}
+
+#changes_indicator button {
+  width: auto;
+  justify-content: center;
+  align-items: stretch;
   display: flex;
 }
 
-#document_index_icon {
-  margin-left: 10px;
+.changes_icon {
+  width: 32px;
 }
 
-#toolbar a {
-  color: inherit;
+.changes_text {
+  align-items: center;
+  display: flex;
 }

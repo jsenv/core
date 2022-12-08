@@ -4,7 +4,7 @@ const jsenvPluginToolbar = ({
   logLevel = "warn",
   theme = "dark",
   opened = false,
-  animationsEnabled = false,
+  animationsEnabled = true,
   notificationsEnabled = true
 } = {}) => {
   const toolbarInjectorClientFileUrl = new URL("./js/toolbar_injector.js", import.meta.url).href;
@@ -14,8 +14,8 @@ const jsenvPluginToolbar = ({
     appliesDuring: "dev",
     transformUrlContent: {
       html: (urlInfo, context) => {
-        urlInfo.data.noribbon = true;
         if (urlInfo.url === toolbarHtmlClientFileUrl) {
+          urlInfo.data.isJsenvToolbar = true;
           return null;
         }
         const htmlAst = parseHtmlString(urlInfo.content);
