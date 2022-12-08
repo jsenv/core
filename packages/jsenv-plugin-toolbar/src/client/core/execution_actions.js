@@ -1,12 +1,12 @@
-import { executionTooltipRequestedSignal } from "./execution_signals.js"
+import { executionTooltipOpenedSignal } from "./execution_signals.js"
 import { notify } from "./notification_actions.js"
 
-export const requestExecutionTooltip = () => {
-  executionTooltipRequestedSignal.value = true
+export const openExecutionTooltip = () => {
+  executionTooltipOpenedSignal.value = true
 }
 
 export const closeExecutionTooltip = () => {
-  executionTooltipRequestedSignal.value = false
+  executionTooltipOpenedSignal.value = false
 }
 
 export const notifyExecutionResult = (execution, previousExecution) => {

@@ -1,10 +1,12 @@
-import {
-  toolbarSectionIsActive,
-  deactivateToolbarSection,
-  activateToolbarSection,
-  updateIframeOverflowOnParentWindow,
-} from "../util/dom.js"
+import { effect } from "@preact/signals"
+
+import { settingsOpenedSignal } from "../../core/settings_signals.js"
+import { openSettings, closeSettings } from "../../core/settings_actions.js"
 import { enableVariant } from "../variant.js"
+import {
+  activateToolbarSection,
+  deactivateToolbarSection,
+} from "../util/dom.js"
 import { renderToolbarAnimationSetting } from "./toolbar_animation_setting.js"
 import { renderToolbarNotificationSetting } from "./toolbar_notification_setting.js"
 import { renderToolbarThemeSetting } from "./toolbar_theme_setting.js"
@@ -17,13 +19,23 @@ export const renderToolbarSettings = () => {
   renderToolbarAnimationSetting()
   renderToolbarNotificationSetting()
   renderToolbarThemeSetting()
+
+  effect(() => {
+    const settingsOpened = settingsOpenedSignal.value
+    if (settingsOpened) {
+      activateToolbarSection(document.querySelector("#settings"))
+    } else {
+      deactivateToolbarSection(document.querySelector("#settings"))
+    }
+  })
 }
 
 const toggleSettings = () => {
-  if (settingsAreVisible()) {
-    hideSettings()
+  const settingsOpened = settingsOpenedSignal.value
+  if (settingsOpened) {
+    closeSettings()
   } else {
-    showSettings()
+    openSettings()
   }
 }
 
@@ -37,18 +49,4 @@ export const disableWarningStyle = () => {
   enableVariant(document.querySelector("#settings_open_button"), {
     has_warning: "no",
   })
-}
-
-export const settingsAreVisible = () => {
-  return toolbarSectionIsActive(document.querySelector("#settings"))
-}
-
-export const hideSettings = () => {
-  deactivateToolbarSection(document.querySelector("#settings"))
-  updateIframeOverflowOnParentWindow()
-}
-
-export const showSettings = () => {
-  activateToolbarSection(document.querySelector("#settings"))
-  updateIframeOverflowOnParentWindow()
 }

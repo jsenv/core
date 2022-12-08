@@ -1,6 +1,6 @@
 import { signal } from "@preact/signals"
 
-export const executionTooltipRequestedSignal = signal(false)
+export const executionTooltipOpenedSignal = signal(false)
 
 export const executionSignal = signal({
   status: "running",

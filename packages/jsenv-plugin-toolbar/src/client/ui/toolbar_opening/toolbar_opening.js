@@ -1,21 +1,16 @@
 import { effect } from "@preact/signals"
 
+import { closeAllTooltips } from "../../core/tooltip_actions.js"
 import { animationsEnabledSignal } from "../../core/animation_signals.js"
 import { openedSignal } from "../../core/toolbar_open_signals.js"
-import {
-  getToolbarIframe,
-  setStyles,
-  updateIframeOverflowOnParentWindow,
-} from "../util/dom.js"
+import { getToolbarIframe, setStyles } from "../util/dom.js"
 import { startJavaScriptAnimation } from "../util/animation.js"
-import { hideAllTooltips } from "../tooltips/tooltips.js"
 
 export const initToolbarOpening = () => {
   effect(() => {
     const opened = openedSignal.value
     if (opened) {
       showToolbar()
-      updateIframeOverflowOnParentWindow()
     } else {
       hideToolbar()
     }
@@ -26,7 +21,7 @@ let restoreToolbarIframeParentStyles = () => {}
 let restoreToolbarIframeStyles = () => {}
 
 const hideToolbar = () => {
-  hideAllTooltips()
+  closeAllTooltips()
   restoreToolbarIframeParentStyles()
   restoreToolbarIframeStyles()
   document.documentElement.removeAttribute("data-toolbar-visible")

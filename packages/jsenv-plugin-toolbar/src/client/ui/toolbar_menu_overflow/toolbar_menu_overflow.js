@@ -1,10 +1,10 @@
+import { closeAllTooltips } from "../../core/tooltip_actions.js"
 import {
   forceHideElement,
   removeForceHideElement,
   deactivateToolbarSection,
 } from "../util/dom.js"
 import { createHorizontalBreakpoint } from "../util/responsive.js"
-import { hideTooltip } from "../tooltips/tooltips.js"
 
 const WINDOW_SMALL_WIDTH = 420
 
@@ -29,8 +29,7 @@ export const initToolbarMenuOverflow = () => {
 
 const responsiveToolbar = (overflowMenuBreakpoint) => {
   // close all tooltips in case opened
-  hideTooltip(document.querySelector("#server_indicator"))
-  hideTooltip(document.querySelector("#document_execution_indicator"))
+  closeAllTooltips()
   // close settings box in case opened
   deactivateToolbarSection(document.querySelector("#settings"))
 

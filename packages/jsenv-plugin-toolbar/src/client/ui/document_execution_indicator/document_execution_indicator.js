@@ -1,15 +1,19 @@
 import {
   executionSignal,
-  executionTooltipRequestedSignal,
+  executionTooltipOpenedSignal,
 } from "../../core/execution_signals.js"
 import {
   closeExecutionTooltip,
-  requestExecutionTooltip,
+  openExecutionTooltip,
 } from "../../core/execution_actions.js"
 
 import { removeForceHideElement } from "../util/dom.js"
 import { enableVariant } from "../variant.js"
 import { effect } from "@preact/signals"
+
+const executionIndicator = document.querySelector(
+  "#document_execution_indicator",
+)
 
 export const renderDocumentExecutionIndicator = async () => {
   removeForceHideElement(
@@ -18,6 +22,14 @@ export const renderDocumentExecutionIndicator = async () => {
   effect(() => {
     const execution = executionSignal.value
     updateExecutionIndicator(execution)
+  })
+  effect(() => {
+    const executionTooltipOpened = executionTooltipOpenedSignal.value
+    if (executionTooltipOpened) {
+      executionIndicator.setAttribute("data-tooltip-visible", "")
+    } else {
+      executionIndicator.removeAttribute("data-tooltip-visible")
+    }
   })
 }
 
@@ -58,17 +70,14 @@ export const renderDocumentExecutionIndicator = async () => {
 // }
 
 const updateExecutionIndicator = ({ status, startTime, endTime } = {}) => {
-  const executionIndicator = document.querySelector(
-    "#document_execution_indicator",
-  )
   enableVariant(executionIndicator, { execution: status })
   const variantNode = executionIndicator.querySelector("[data-when-active]")
   variantNode.querySelector("button").onclick = () => {
-    const executionTooltipRequested = executionTooltipRequestedSignal.value
-    if (executionTooltipRequested) {
+    const executionTooltipOpened = executionTooltipOpenedSignal.value
+    if (executionTooltipOpened) {
       closeExecutionTooltip()
     } else {
-      requestExecutionTooltip()
+      openExecutionTooltip()
     }
   }
   variantNode.querySelector(".tooltip").textContent = computeText({

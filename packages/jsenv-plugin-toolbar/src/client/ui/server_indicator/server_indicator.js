@@ -1,8 +1,11 @@
 import { effect } from "@preact/signals"
 
-import { serverTooltipOpenedSignal } from "../../core/server_signals.js"
 import {
-  requestServerTooltip,
+  serverConnectionSignal,
+  serverTooltipOpenedSignal,
+} from "../../core/server_signals.js"
+import {
+  openServerTooltip,
   closeServerTooltip,
 } from "../../core/server_actions.js"
 import { removeForceHideElement } from "../util/dom.js"
@@ -12,6 +15,15 @@ const parentServerEvents = window.parent.__server_events__
 const serverIndicator = document.querySelector("#server_indicator")
 
 export const renderServerIndicator = () => {
+  if (!parentServerEvents) {
+    disableAutoreloadSetting()
+    return
+  }
+  removeForceHideElement(document.querySelector("#server_indicator"))
+  effect(() => {
+    const serverConnection = serverConnectionSignal.value
+    updateServerIndicator(serverConnection)
+  })
   effect(() => {
     const serverTooltipOpened = serverTooltipOpenedSignal.value
     if (serverTooltipOpened) {
@@ -20,19 +32,9 @@ export const renderServerIndicator = () => {
       serverIndicator.removeAttribute("data-tooltip-visible")
     }
   })
-
-  if (!parentServerEvents) {
-    disableAutoreloadSetting()
-    return
-  }
-  removeForceHideElement(document.querySelector("#server_indicator"))
-  parentServerEvents.readyState.onchange = () => {
-    updateEventSourceIndicator(parentServerEvents.readyState.value)
-  }
-  updateEventSourceIndicator(parentServerEvents.readyState.value)
 }
 
-const updateEventSourceIndicator = (connectionState) => {
+const updateServerIndicator = (connectionState) => {
   enableVariant(serverIndicator, { connectionState })
   const variantNode = document.querySelector(
     "#server_indicator > [data-when-active]",
@@ -42,14 +44,13 @@ const updateEventSourceIndicator = (connectionState) => {
     if (serverTooltipOpened) {
       closeServerTooltip()
     } else {
-      requestServerTooltip()
+      openServerTooltip()
     }
   }
   if (connectionState === "connecting") {
     variantNode.querySelector("a").onclick = () => {
       parentServerEvents.disconnect()
     }
-  } else if (connectionState === "open") {
   } else if (connectionState === "closed") {
     variantNode.querySelector("a").onclick = () => {
       parentServerEvents.connect()
