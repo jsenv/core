@@ -16,10 +16,6 @@ const serverEvents = window.__server_events__
 const serverIndicator = document.querySelector("#server_indicator")
 
 export const renderServerIndicator = () => {
-  if (!parentServerEvents) {
-    disableAutoreloadSetting()
-  }
-
   removeForceHideElement(document.querySelector("#server_indicator"))
   effect(() => {
     const serverConnection = serverConnectionSignal.value
@@ -63,14 +59,4 @@ const updateServerIndicator = (connectionState) => {
       serverEvents.connect()
     }
   }
-}
-
-const disableAutoreloadSetting = () => {
-  document
-    .querySelector(".settings_autoreload")
-    .setAttribute("data-disabled", "true")
-  document
-    .querySelector(".settings_autoreload")
-    .setAttribute("title", `Autoreload not available: disabled by server`)
-  document.querySelector("#toggle_autoreload").disabled = true
 }

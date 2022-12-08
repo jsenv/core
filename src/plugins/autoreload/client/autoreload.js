@@ -1,8 +1,4 @@
 import { urlHotMetas } from "../../import_meta_hot/client/import_meta_hot.js"
-import {
-  isAutoreloadEnabled,
-  setAutoreloadPreference,
-} from "./autoreload_preference.js"
 import { compareTwoUrlPaths } from "./url_helpers.js"
 import {
   reloadHtmlPage,
@@ -12,22 +8,36 @@ import {
 
 const reloader = {
   urlHotMetas,
-  isAutoreloadEnabled,
-  setAutoreloadPreference,
-  status: "idle",
-  currentExecution: null,
-  onstatuschange: () => {},
-  setStatus: (status) => {
-    reloader.status = status
-    reloader.onstatuschange()
+  status: {
+    value: "idle",
+    onchange: () => {},
+    goTo: (value) => {
+      reloader.status.value = value
+      reloader.status.onchange()
+    },
   },
+  autoreload: {
+    enabled: window.localStorage.getItem("autoreload") === "1",
+    onchange: () => {},
+    enable: () => {
+      reloader.autoreload.enabled = true
+      window.localStorage.setItem("autoreload", "1")
+      reloader.autoreload.onchange()
+    },
+    disable: () => {
+      reloader.autoreload.enabled = false
+      window.localStorage.setItem("autoreload", "0")
+      reloader.autoreload.onchange()
+    },
+  },
+  currentExecution: null,
   messages: [],
   addMessage: (reloadMessage) => {
     reloader.messages.push(reloadMessage)
-    if (isAutoreloadEnabled()) {
+    if (reloader.autoreload.enabled) {
       reloader.reload()
     } else {
-      reloader.setStatus("can_reload")
+      reloader.status.goTo("can_reload")
     }
   },
   reload: () => {
@@ -38,12 +48,12 @@ const reloader = {
       reloadHtmlPage()
       return
     }
-    reloader.setStatus("reloading")
+    reloader.status.goTo("reloading")
     const onApplied = (reloadMessage) => {
       const index = reloader.messages.indexOf(reloadMessage)
       reloader.messages.splice(index, 1)
       if (reloader.messages.length === 0) {
-        reloader.setStatus("idle")
+        reloader.status.goTo("idle")
       }
     }
     const setReloadMessagePromise = (reloadMessage, promise) => {
@@ -53,7 +63,7 @@ const reloader = {
           reloader.currentExecution = null
         },
         (e) => {
-          reloader.setStatus("failed")
+          reloader.status.goTo("failed")
           if (typeof window.reportError === "function") {
             window.reportError(e)
           } else {

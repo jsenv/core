@@ -7,6 +7,7 @@ import {
   activateToolbarSection,
   deactivateToolbarSection,
 } from "../util/dom.js"
+import { renderToolbarAutoreloadSetting } from "./toolbar_autoreload_setting.js"
 import { renderToolbarAnimationSetting } from "./toolbar_animation_setting.js"
 import { renderToolbarNotificationSetting } from "./toolbar_notification_setting.js"
 import { renderToolbarThemeSetting } from "./toolbar_theme_setting.js"
@@ -16,6 +17,7 @@ export const renderToolbarSettings = () => {
   document.querySelector("#settings_close_button").onclick = toggleSettings
   disableWarningStyle()
 
+  renderToolbarAutoreloadSetting()
   renderToolbarAnimationSetting()
   renderToolbarNotificationSetting()
   renderToolbarThemeSetting()

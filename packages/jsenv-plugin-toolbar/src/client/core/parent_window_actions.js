@@ -1,3 +1,5 @@
+import { parentWindowReloader } from "./parent_window_context.js"
+
 export const sendEventToParent = (name, data) => {
   window.parent.postMessage(
     {
@@ -30,4 +32,12 @@ export const addExternalCommandCallback = (command, callback) => {
   return () => {
     window.removeEventListener("message", messageEventCallback)
   }
+}
+
+export const enableAutoreload = () => {
+  parentWindowReloader.autoreload.enable()
+}
+
+export const disableAutoreload = () => {
+  parentWindowReloader.autoreload.disable()
 }

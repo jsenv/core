@@ -33,42 +33,6 @@ export const renderDocumentExecutionIndicator = async () => {
   })
 }
 
-// const changeLink = variantNode.querySelector(".eventsource-changes-link")
-// changeLink.innerHTML = reloadMessageCount
-// changeLink.onclick = () => {
-//   console.log(reloadMessages)
-//   // eslint-disable-next-line no-alert
-//   window.parent.alert(JSON.stringify(reloadMessages, null, "  "))
-// }
-
-// const someFailed = reloadMessages.some((m) => m.status === "failed")
-// const somePending = reloadMessages.some((m) => m.status === "pending")
-// const applyLink = variantNode.querySelector(".eventsource-reload-link")
-// applyLink.innerHTML = someFailed
-//   ? "failed"
-//   : somePending
-//   ? "applying..."
-//   : "apply changes"
-// applyLink.onclick = someFailed
-//   ? () => {
-//       parentEventSourceClient.applyReloadMessageEffects()
-//     }
-//   : somePending
-//   ? () => {}
-//   : () => {
-//       parentEventSourceClient.applyReloadMessageEffects()
-//     }
-
-// parentEventSourceClient.reloadMessagesSignal.onchange = () => {
-//   updateEventSourceIndicator()
-// }
-// const autoreloadCheckbox = document.querySelector("#toggle-autoreload")
-// autoreloadCheckbox.checked = parentEventSourceClient.isAutoreloadEnabled()
-// autoreloadCheckbox.onchange = () => {
-//   parentEventSourceClient.setAutoreloadPreference(autoreloadCheckbox.checked)
-//   updateEventSourceIndicator()
-// }
-
 const updateExecutionIndicator = ({ status, startTime, endTime } = {}) => {
   enableVariant(executionIndicator, { execution: status })
   const variantNode = executionIndicator.querySelector("[data-when-active]")
