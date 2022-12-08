@@ -1,17 +1,18 @@
 import { effect } from "@preact/signals"
 
 import { openedSignal } from "../../core/toolbar_open_signals.js"
+import { settingsOpenedSignal } from "../../core/settings_signals.js"
+import { closeSettings } from "../../core/settings_actions.js"
 import { closeAllTooltips } from "../../core/tooltip_actions.js"
 import { serverTooltipOpenedSignal } from "../../core/server_signals.js"
 import { executionTooltipOpenedSignal } from "../../core/execution_signals.js"
-import { hideSettings } from "../toolbar_settings/toolbar_settings.js"
 import { getToolbarIframe, setStyles } from "../util/dom.js"
 
 export const renderToolbarOverlay = () => {
   const toolbarOverlay = document.querySelector("#toolbar_overlay")
   toolbarOverlay.onclick = () => {
     closeAllTooltips()
-    hideSettings()
+    closeSettings()
   }
 
   effect(() => {
@@ -20,12 +21,13 @@ export const renderToolbarOverlay = () => {
       return
     }
     const opened = openedSignal.value
+    const settingsOpened = settingsOpenedSignal.value
     const serverTooltipOpened = serverTooltipOpenedSignal.value
     const executionTooltipOpened = executionTooltipOpenedSignal.value
     if (!opened) {
       return
     }
-    if (serverTooltipOpened || executionTooltipOpened) {
+    if (settingsOpened || serverTooltipOpened || executionTooltipOpened) {
       enableIframeOverflowOnParentWindow()
     } else {
       disableIframeOverflowOnParentWindow()
