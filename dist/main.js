@@ -20701,7 +20701,7 @@ const jsenvPluginRibbon = ({
     appliesDuring: "dev",
     transformUrlContent: {
       html: (urlInfo, context) => {
-        if (urlInfo.data.noribbon) {
+        if (urlInfo.data.isJsenvToolbar || urlInfo.data.noribbon) {
           return null;
         }
         const {

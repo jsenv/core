@@ -10,4 +10,5 @@ await startDevServer({
   clientFiles: {
     "**/*": true,
   },
+  clientMainFileUrl: new URL("./client/main.html", import.meta.url),
 })

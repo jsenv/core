@@ -1,8 +1,4 @@
 import { urlHotMetas } from "../../import_meta_hot/client/import_meta_hot.js"
-import {
-  isAutoreloadEnabled,
-  setAutoreloadPreference,
-} from "./autoreload_preference.js"
 import { compareTwoUrlPaths } from "./url_helpers.js"
 import {
   reloadHtmlPage,
@@ -12,39 +8,63 @@ import {
 
 const reloader = {
   urlHotMetas,
-  isAutoreloadEnabled,
-  setAutoreloadPreference,
-  status: "idle",
+  status: {
+    value: "idle",
+    onchange: () => {},
+    goTo: (value) => {
+      reloader.status.value = value
+      reloader.status.onchange()
+    },
+  },
+  autoreload: {
+    enabled: ["1", null].includes(window.localStorage.getItem("autoreload")),
+    onchange: () => {},
+    enable: () => {
+      reloader.autoreload.enabled = true
+      window.localStorage.setItem("autoreload", "1")
+      reloader.autoreload.onchange()
+    },
+    disable: () => {
+      reloader.autoreload.enabled = false
+      window.localStorage.setItem("autoreload", "0")
+      reloader.autoreload.onchange()
+    },
+  },
+  changes: {
+    value: [],
+    onchange: () => {},
+    add: (reloadMessage) => {
+      reloader.changes.value.push(reloadMessage)
+      reloader.changes.onchange()
+      if (reloader.autoreload.enabled) {
+        reloader.reload()
+      } else {
+        reloader.status.goTo("can_reload")
+      }
+    },
+    remove: (reloadMessage) => {
+      const index = reloader.changes.value.indexOf(reloadMessage)
+      if (index > -1) {
+        reloader.changes.value.splice(index, 1)
+        if (reloader.changes.value.length === 0) {
+          reloader.status.goTo("idle")
+        }
+        reloader.changes.onchange()
+      }
+    },
+  },
   currentExecution: null,
-  onstatuschange: () => {},
-  setStatus: (status) => {
-    reloader.status = status
-    reloader.onstatuschange()
-  },
-  messages: [],
-  addMessage: (reloadMessage) => {
-    reloader.messages.push(reloadMessage)
-    if (isAutoreloadEnabled()) {
-      reloader.reload()
-    } else {
-      reloader.setStatus("can_reload")
-    }
-  },
   reload: () => {
-    const someEffectIsFullReload = reloader.messages.some(
+    const someEffectIsFullReload = reloader.changes.value.some(
       (reloadMessage) => reloadMessage.type === "full",
     )
     if (someEffectIsFullReload) {
       reloadHtmlPage()
       return
     }
-    reloader.setStatus("reloading")
+    reloader.status.goTo("reloading")
     const onApplied = (reloadMessage) => {
-      const index = reloader.messages.indexOf(reloadMessage)
-      reloader.messages.splice(index, 1)
-      if (reloader.messages.length === 0) {
-        reloader.setStatus("idle")
-      }
+      reloader.changes.remove(reloadMessage)
     }
     const setReloadMessagePromise = (reloadMessage, promise) => {
       promise.then(
@@ -53,7 +73,7 @@ const reloader = {
           reloader.currentExecution = null
         },
         (e) => {
-          reloader.setStatus("failed")
+          reloader.status.goTo("failed")
           if (typeof window.reportError === "function") {
             window.reportError(e)
           } else {
@@ -67,7 +87,7 @@ This could be due to syntax errors or importing non-existent modules (see errors
         },
       )
     }
-    reloader.messages.forEach((reloadMessage) => {
+    reloader.changes.value.forEach((reloadMessage) => {
       if (reloadMessage.type === "hot") {
         const promise = addToHotQueue(() => {
           return applyHotReload(reloadMessage)
@@ -162,7 +182,13 @@ const applyHotReload = async ({ hotInstructions }) => {
         return namespace
       }
       if (type === "html") {
-        if (!compareTwoUrlPaths(urlToFetch, window.location.href)) {
+        const isRootHtmlFile =
+          window.location.pathname === "/" &&
+          new URL(urlToFetch).pathname.slice(1).indexOf("/") === -1
+        if (
+          !isRootHtmlFile &&
+          !compareTwoUrlPaths(urlToFetch, window.location.href)
+        ) {
           // we are not in that HTML page
           return null
         }
@@ -194,6 +220,6 @@ const applyHotReload = async ({ hotInstructions }) => {
 window.__reloader__ = reloader
 window.__server_events__.listenEvents({
   reload: (reloadServerEvent) => {
-    reloader.addMessage(reloadServerEvent.data)
+    reloader.changes.add(reloadServerEvent.data)
   },
 })

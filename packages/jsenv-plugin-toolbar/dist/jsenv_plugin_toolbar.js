@@ -1,7 +1,12 @@
 import { parseHtmlString, injectScriptNodeAsEarlyAsPossible, createHtmlNode, stringifyHtmlAst } from "@jsenv/ast";
 
 const jsenvPluginToolbar = ({
-  logs = false
+  logLevel = "warn",
+  theme = "dark",
+  opened = false,
+  autoreload = true,
+  animationsEnabled = true,
+  notificationsEnabled = true
 } = {}) => {
   const toolbarInjectorClientFileUrl = new URL("./js/toolbar_injector.js", import.meta.url).href;
   const toolbarHtmlClientFileUrl = new URL("./html/toolbar.html", import.meta.url).href;
@@ -9,22 +14,18 @@ const jsenvPluginToolbar = ({
     name: "jsenv:toolbar",
     appliesDuring: "dev",
     transformUrlContent: {
-      html: ({
-        url,
-        content
-      }, {
-        referenceUtils
-      }) => {
-        if (url === toolbarHtmlClientFileUrl) {
+      html: (urlInfo, context) => {
+        if (urlInfo.url.startsWith(toolbarHtmlClientFileUrl)) {
+          urlInfo.data.isJsenvToolbar = true;
           return null;
         }
-        const htmlAst = parseHtmlString(content);
-        const [toolbarInjectorReference] = referenceUtils.inject({
+        const htmlAst = parseHtmlString(urlInfo.content);
+        const [toolbarInjectorReference] = context.referenceUtils.inject({
           type: "js_import",
           expectedType: "js_module",
           specifier: toolbarInjectorClientFileUrl
         });
-        const [toolbarClientFileReference] = referenceUtils.inject({
+        const [toolbarClientFileReference] = context.referenceUtils.inject({
           type: "iframe_src",
           expectedType: "html",
           specifier: toolbarHtmlClientFileUrl
@@ -36,7 +37,12 @@ const jsenvPluginToolbar = ({
 import { injectToolbar } from ${toolbarInjectorReference.generatedSpecifier}
 injectToolbar(${JSON.stringify({
             toolbarUrl: toolbarClientFileReference.generatedSpecifier,
-            logs
+            logLevel,
+            theme,
+            opened,
+            autoreload,
+            animationsEnabled,
+            notificationsEnabled
           }, null, "  ")})`
         }), "jsenv:toolbar");
         const htmlModified = stringifyHtmlAst(htmlAst);

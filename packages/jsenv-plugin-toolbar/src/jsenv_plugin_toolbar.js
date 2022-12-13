@@ -5,7 +5,14 @@ import {
   createHtmlNode,
 } from "@jsenv/ast"
 
-export const jsenvPluginToolbar = ({ logs = false } = {}) => {
+export const jsenvPluginToolbar = ({
+  logLevel = "warn",
+  theme = "dark",
+  opened = false,
+  autoreload = true,
+  animationsEnabled = true,
+  notificationsEnabled = true,
+} = {}) => {
   const toolbarInjectorClientFileUrl = new URL(
     "./client/toolbar_injector.js",
     import.meta.url,
@@ -19,18 +26,18 @@ export const jsenvPluginToolbar = ({ logs = false } = {}) => {
     name: "jsenv:toolbar",
     appliesDuring: "dev",
     transformUrlContent: {
-      html: (urlInfo, { referenceUtils }) => {
-        urlInfo.data.noribbon = true
-        if (urlInfo.url === toolbarHtmlClientFileUrl) {
+      html: (urlInfo, context) => {
+        if (urlInfo.url.startsWith(toolbarHtmlClientFileUrl)) {
+          urlInfo.data.isJsenvToolbar = true
           return null
         }
         const htmlAst = parseHtmlString(urlInfo.content)
-        const [toolbarInjectorReference] = referenceUtils.inject({
+        const [toolbarInjectorReference] = context.referenceUtils.inject({
           type: "js_import",
           expectedType: "js_module",
           specifier: toolbarInjectorClientFileUrl,
         })
-        const [toolbarClientFileReference] = referenceUtils.inject({
+        const [toolbarClientFileReference] = context.referenceUtils.inject({
           type: "iframe_src",
           expectedType: "html",
           specifier: toolbarHtmlClientFileUrl,
@@ -45,7 +52,12 @@ import { injectToolbar } from ${toolbarInjectorReference.generatedSpecifier}
 injectToolbar(${JSON.stringify(
               {
                 toolbarUrl: toolbarClientFileReference.generatedSpecifier,
-                logs,
+                logLevel,
+                theme,
+                opened,
+                autoreload,
+                animationsEnabled,
+                notificationsEnabled,
               },
               null,
               "  ",

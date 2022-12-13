@@ -4,10 +4,13 @@ export const compareTwoUrlPaths = (url, otherUrl) => {
   }
   const urlObject = new URL(url)
   const otherUrlObject = new URL(otherUrl)
-  return (
-    urlObject.origin === otherUrlObject.origin &&
-    urlObject.pathname === otherUrlObject.pathname
-  )
+  if (urlObject.origin !== otherUrlObject.origin) {
+    return false
+  }
+  if (urlObject.pathname !== otherUrlObject.pathname) {
+    return false
+  }
+  return true
 }
 
 export const injectQuery = (url, query) => {

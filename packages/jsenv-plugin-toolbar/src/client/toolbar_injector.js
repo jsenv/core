@@ -1,8 +1,14 @@
-import { setAttributes, setStyles } from "./util/dom.js"
+const jsenvLogoSvgUrl = new URL("./ui/jsenv_logo.svg", import.meta.url)
 
-const jsenvLogoSvgUrl = new URL("./jsenv_logo.svg", import.meta.url)
-
-export const injectToolbar = async ({ toolbarUrl, logs = false }) => {
+export const injectToolbar = async ({
+  toolbarUrl,
+  logLevel,
+  theme,
+  opened,
+  autoreload,
+  animationsEnabled,
+  notificationsEnabled,
+}) => {
   if (document.readyState !== "complete") {
     await new Promise((resolve) => {
       window.addEventListener("load", resolve)
@@ -18,13 +24,11 @@ export const injectToolbar = async ({ toolbarUrl, logs = false }) => {
   const placeholder = getToolbarPlaceholder()
 
   const iframe = document.createElement("iframe")
-  setAttributes(iframe, {
-    tabindex: -1,
-    // sandbox: "allow-forms allow-modals allow-pointer-lock allow-popups allow-presentation allow-same-origin allow-scripts allow-top-navigation-by-user-activation",
-    // allow: "accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; microphone; midi; payment; vr",
-    allowtransparency: true,
-  })
-  setStyles(iframe, {
+  iframe.setAttribute("tabindex", -1)
+  iframe.setAttribute("allowtransparency", true)
+  // sandbox: "allow-forms allow-modals allow-pointer-lock allow-popups allow-presentation allow-same-origin allow-scripts allow-top-navigation-by-user-activation",
+  // allow: "accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; microphone; midi; payment; vr",
+  Object.assign(iframe.style, {
     "position": "fixed",
     "zIndex": 1000,
     "bottom": 0,
@@ -33,42 +37,61 @@ export const injectToolbar = async ({ toolbarUrl, logs = false }) => {
     "height": 0,
     /* ensure toolbar children are not focusable when hidden */
     "visibility": "hidden",
-    "transition-duration": "300ms",
+    "transition-duration": "0",
     "transition-property": "height, visibility",
     "border": "none",
   })
   const iframeLoadedPromise = iframeToLoadedPromise(iframe)
+  const toolbarUrlObject = new URL(toolbarUrl, window.location.href)
+  toolbarUrlObject.searchParams.set("logLevel", logLevel)
+  toolbarUrlObject.searchParams.set("theme", theme)
+  if (opened) {
+    toolbarUrlObject.searchParams.set("opened", "")
+  }
+  if (autoreload) {
+    toolbarUrlObject.searchParams.set("autoreload", "")
+  }
+  if (animationsEnabled) {
+    toolbarUrlObject.searchParams.set("animationsEnabled", "")
+  }
+  if (notificationsEnabled) {
+    toolbarUrlObject.searchParams.set("notificationsEnabled", "")
+  }
   // set iframe src BEFORE putting it into the DOM (prevent firefox adding an history entry)
-  iframe.setAttribute("src", toolbarUrl)
+  iframe.setAttribute("src", toolbarUrlObject.href)
+  iframe.name = "jsenv toolbar"
   placeholder.parentNode.replaceChild(iframe, placeholder)
 
   const listenToolbarStateChange = (callback) => {
     return addToolbarEventCallback(iframe, "toolbar_state_change", callback)
   }
 
-  listenToolbarStateChange(({ animationsEnabled }) => {
-    if (animationsEnabled) {
-      iframe.style.transitionDuration = "300ms"
-    } else {
-      iframe.style.transitionDuration = "0s"
-    }
-  })
-  const cleanupRenderOnFirstStateChange = listenToolbarStateChange(() => {
-    cleanupRenderOnFirstStateChange()
-    sendCommandToToolbar(iframe, "renderToolbar", { logs })
-  })
-
-  await iframeLoadedPromise
-  iframe.removeAttribute("tabindex")
+  const cleanupInitOnReady = addToolbarEventCallback(
+    iframe,
+    "toolbar_ready",
+    () => {
+      cleanupInitOnReady()
+      sendCommandToToolbar(iframe, "initToolbar")
+      setTimeout(() => {
+        listenToolbarStateChange(({ animationsEnabled }) => {
+          if (animationsEnabled) {
+            iframe.style.transitionDuration = "300ms"
+          } else {
+            iframe.style.transitionDuration = "0s"
+          }
+        })
+      })
+    },
+  )
 
   const div = document.createElement("div")
   div.innerHTML = `
-<div id="jsenv-toolbar-trigger">
-  <svg id="jsenv-toolbar-trigger-icon">
+<div id="jsenv_toolbar_trigger" style="display:none">
+  <svg id="jsenv_toolbar_trigger_icon">
     <use xlink:href="${jsenvLogoSvgUrl}#jsenv_logo"></use>
   </svg>
   <style>
-    #jsenv-toolbar-trigger {
+    #jsenv_toolbar_trigger {
       display: block;
       overflow: hidden;
       position: fixed;
@@ -88,22 +111,22 @@ export const injectToolbar = async ({ toolbarUrl, logs = false }) => {
       transition: 600ms;
     }
 
-    #jsenv-toolbar-trigger:hover {
+    #jsenv_toolbar_trigger:hover {
       cursor: pointer;
     }
 
-    #jsenv-toolbar-trigger[data-expanded] {
+    #jsenv_toolbar_trigger[data-expanded] {
       bottom: 0;
     }
 
-    #jsenv-toolbar-trigger-icon {
+    #jsenv_toolbar_trigger_icon {
       width: 35px;
       height: 35px;
       opacity: 0;
       transition: 600ms;
     }
 
-    #jsenv-toolbar-trigger[data-expanded] #jsenv-toolbar-trigger-icon {
+    #jsenv_toolbar_trigger[data-expanded] #jsenv_toolbar_trigger_icon {
       opacity: 1;
     }
   </style>
@@ -130,7 +153,7 @@ export const injectToolbar = async ({ toolbarUrl, logs = false }) => {
     collapseToolbarTrigger()
   }
   toolbarTrigger.onclick = () => {
-    sendCommandToToolbar(iframe, "showToolbar")
+    sendCommandToToolbar(iframe, "openToolbar")
   }
 
   const showToolbarTrigger = () => {
@@ -149,14 +172,16 @@ export const injectToolbar = async ({ toolbarUrl, logs = false }) => {
     toolbarTrigger.removeAttribute("data-expanded", "")
   }
 
-  hideToolbarTrigger()
-  listenToolbarStateChange(({ visible }) => {
-    if (visible) {
+  listenToolbarStateChange(({ opened }) => {
+    if (opened) {
       hideToolbarTrigger()
     } else {
       showToolbarTrigger()
     }
   })
+
+  await iframeLoadedPromise
+  iframe.removeAttribute("tabindex")
 
   return iframe
 }

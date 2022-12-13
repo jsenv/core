@@ -34,7 +34,8 @@ export const createConnectionManager = (
     let msSpent = 0
     const attempt = () => {
       readyState.goTo(READY_STATES.CONNECTING)
-      _disconnect = attemptConnection({
+      let timeout
+      const cancelAttempt = attemptConnection({
         onClosed: () => {
           if (!retry) {
             readyState.goTo(READY_STATES.CLOSED)
@@ -55,7 +56,6 @@ export const createConnectionManager = (
             )
             return
           }
-
           // if closed while open -> connection lost
           // otherwise it's the attempt to connect for the first time
           // or to reconnect
@@ -63,7 +63,7 @@ export const createConnectionManager = (
             console.info(`[jsenv] server connection lost; retrying to connect`)
           }
           retryCount++
-          setTimeout(() => {
+          timeout = setTimeout(() => {
             msSpent += retryAfter
             attempt()
           }, retryAfter)
@@ -73,6 +73,11 @@ export const createConnectionManager = (
           // console.info(`[jsenv] connected to server`)
         },
       })
+      _disconnect = () => {
+        cancelAttempt()
+        clearTimeout(timeout)
+        readyState.goTo(READY_STATES.CLOSED)
+      }
     }
     attempt()
   }

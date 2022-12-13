@@ -17,7 +17,7 @@ https://github.com/jsenv/jsenv-core/wiki
 npm install --save-dev @jsenv/core
 ```
 
-_@jsenv/core_ is tested on Mac, Windows, Linux with Node.js 18.12.1.
+_@jsenv/core_ is tested on Mac, Windows, Linux with Node.js 18.
 Other operating systems and Node.js versions are not tested.
 
 # Name

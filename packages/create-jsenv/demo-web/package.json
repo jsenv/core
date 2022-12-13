@@ -16,7 +16,7 @@
     "@babel/eslint-parser": "7.19.1",
     "@babel/plugin-syntax-import-assertions": "7.20.0",
     "@jsenv/assert": "2.8.0",
-    "@jsenv/core": "29.9.0",
+    "@jsenv/core": "29.9.1",
     "@jsenv/eslint-config": "16.2.9",
     "@jsenv/eslint-import-resolver": "0.4.1",
     "eslint": "8.28.0",

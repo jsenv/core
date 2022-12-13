@@ -664,8 +664,10 @@ window.__supervisor__ = (() => {
           errorDetailsPromise,
         })
         if (window.__reloader__) {
-          window.__reloader__.onstatuschange = () => {
-            if (window.__reloader__.status === "reloading") {
+          const onchange = window.__reloader__.status.onchange
+          window.__reloader__.status.onchange = () => {
+            onchange()
+            if (window.__reloader__.status.value === "reloading") {
               removeErrorOverlay()
             }
           }
