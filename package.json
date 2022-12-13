@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "29.9.1",
+  "version": "29.9.2",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "author": {
@@ -67,15 +67,15 @@
     "@c88/v8-coverage": "0.1.1",
     "@financial-times/polyfill-useragent-normaliser": "1.10.2",
     "@jsenv/abort": "4.2.4",
-    "@jsenv/ast": "1.4.7",
+    "@jsenv/ast": "1.4.8",
     "@jsenv/babel-plugins": "1.1.0",
     "@jsenv/filesystem": "4.1.6",
     "@jsenv/importmap": "1.2.1",
     "@jsenv/integrity": "0.0.1",
-    "@jsenv/log": "3.3.1",
+    "@jsenv/log": "3.3.2",
     "@jsenv/node-esm-resolution": "1.0.1",
-    "@jsenv/server": "14.1.10",
-    "@jsenv/sourcemap": "1.0.7",
+    "@jsenv/server": "14.1.11",
+    "@jsenv/sourcemap": "1.0.8",
     "@jsenv/uneval": "1.6.0",
     "@jsenv/url-meta": "7.0.0",
     "@jsenv/urls": "1.2.8",
@@ -90,10 +90,10 @@
     "istanbul-reports": "3.1.5",
     "launch-editor": "2.6.0",
     "pidtree": "0.6.0",
-    "rollup": "3.5.0",
+    "rollup": "3.7.4",
     "string-width": "5.1.2",
     "strip-ansi": "7.0.1",
-    "terser": "5.16.0",
+    "terser": "5.16.1",
     "v8-to-istanbul": "9.0.1",
     "wrap-ansi": "8.0.1"
   },
@@ -106,11 +106,11 @@
     "@jsenv/https-local": "3.0.1",
     "@jsenv/package-workspace": "0.5.1",
     "@jsenv/performance-impact": "3.0.2",
-    "eslint": "8.28.0",
+    "eslint": "8.29.0",
     "eslint-plugin-html": "7.1.0",
     "eslint-plugin-import": "2.26.0",
     "eslint-plugin-react": "7.31.11",
     "playwright": "1.28.1",
-    "prettier": "2.8.0"
+    "prettier": "2.8.1"
   }
 }

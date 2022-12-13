@@ -21,16 +21,16 @@
     "@babel/plugin-syntax-import-assertions": "7.20.0",
     "@babel/plugin-transform-react-jsx": "7.19.0",
     "@jsenv/assert": "2.8.0",
-    "@jsenv/core": "29.9.1",
-    "@jsenv/plugin-react": "1.1.10",
+    "@jsenv/core": "29.9.2",
+    "@jsenv/plugin-react": "1.1.11",
     "@jsenv/eslint-config": "16.2.9",
     "@jsenv/eslint-import-resolver": "0.4.1",
-    "eslint": "8.28.0",
+    "eslint": "8.29.0",
     "eslint-plugin-html": "7.1.0",
     "eslint-plugin-import": "2.26.0",
     "eslint-plugin-react": "7.31.11",
     "open": "8.4.0",
     "playwright": "1.28.1",
-    "prettier": "2.8.0"
+    "prettier": "2.8.1"
   }
 }

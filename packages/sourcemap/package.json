@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/sourcemap",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@jsenv/urls": "1.2.8",
-    "magic-string": "0.26.7",
+    "magic-string": "0.27.0",
     "source-map-js": "1.0.2"
   }
 }
