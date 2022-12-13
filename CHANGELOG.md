@@ -1,3 +1,7 @@
+# 29.9.2
+
+- Update NPM dependencies
+
 # 29.9.0
 
 - Add ability to resolve symlinks with `urlResolution.node_esm`

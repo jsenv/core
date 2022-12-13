@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/log",
-  "version": "3.3.1",
+  "version": "3.3.2",
   "description": "Nice and dynamic logs in the terminal",
   "license": "MIT",
   "repository": {
