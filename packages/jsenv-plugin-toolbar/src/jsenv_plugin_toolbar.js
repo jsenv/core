@@ -9,6 +9,7 @@ export const jsenvPluginToolbar = ({
   logLevel = "warn",
   theme = "dark",
   opened = false,
+  autoreload = true,
   animationsEnabled = true,
   notificationsEnabled = true,
 } = {}) => {
@@ -54,6 +55,7 @@ injectToolbar(${JSON.stringify(
                 logLevel,
                 theme,
                 opened,
+                autoreload,
                 animationsEnabled,
                 notificationsEnabled,
               },

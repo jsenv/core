@@ -5,6 +5,7 @@ export const injectToolbar = async ({
   logLevel,
   theme,
   opened,
+  autoreload,
   animationsEnabled,
   notificationsEnabled,
 }) => {
@@ -46,6 +47,9 @@ export const injectToolbar = async ({
   toolbarUrlObject.searchParams.set("theme", theme)
   if (opened) {
     toolbarUrlObject.searchParams.set("opened", "")
+  }
+  if (autoreload) {
+    toolbarUrlObject.searchParams.set("autoreload", "")
   }
   if (animationsEnabled) {
     toolbarUrlObject.searchParams.set("animationsEnabled", "")

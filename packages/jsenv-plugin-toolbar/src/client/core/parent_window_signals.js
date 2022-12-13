@@ -1,13 +1,23 @@
 import { signal } from "@preact/signals"
 
-import { parentWindowReloader } from "./parent_window_context.js"
+import {
+  paramsFromParentWindow,
+  parentWindowReloader,
+} from "./parent_window_context.js"
 
 export const autoreloadEnabledSignal = signal(false)
 export const reloaderStatusSignal = signal("idle")
 export const changesSignal = signal(0)
 
 if (parentWindowReloader) {
-  autoreloadEnabledSignal.value = parentWindowReloader.autoreload.enabled
+  if (
+    !parentWindowReloader.autoreload.enabled &&
+    paramsFromParentWindow.autoreload
+  ) {
+    autoreloadEnabledSignal.value = true
+  } else {
+    autoreloadEnabledSignal.value = parentWindowReloader.autoreload.enabled
+  }
   parentWindowReloader.autoreload.onchange = () => {
     autoreloadEnabledSignal.value = parentWindowReloader.autoreload.enabled
   }
