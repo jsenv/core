@@ -4,7 +4,9 @@ const injectToolbar = async ({
   logLevel,
   theme,
   opened,
-  animationsEnabled
+  autoreload,
+  animationsEnabled,
+  notificationsEnabled
 }) => {
   if (document.readyState !== "complete") {
     await new Promise(resolve => {
@@ -43,8 +45,18 @@ const injectToolbar = async ({
   const toolbarUrlObject = new URL(toolbarUrl, window.location.href);
   toolbarUrlObject.searchParams.set("logLevel", logLevel);
   toolbarUrlObject.searchParams.set("theme", theme);
-  toolbarUrlObject.searchParams.set("opened", opened);
-  toolbarUrlObject.searchParams.set("animationsEnabled", animationsEnabled);
+  if (opened) {
+    toolbarUrlObject.searchParams.set("opened", "");
+  }
+  if (autoreload) {
+    toolbarUrlObject.searchParams.set("autoreload", "");
+  }
+  if (animationsEnabled) {
+    toolbarUrlObject.searchParams.set("animationsEnabled", "");
+  }
+  if (notificationsEnabled) {
+    toolbarUrlObject.searchParams.set("notificationsEnabled", "");
+  }
   // set iframe src BEFORE putting it into the DOM (prevent firefox adding an history entry)
   iframe.setAttribute("src", toolbarUrlObject.href);
   iframe.name = "jsenv toolbar";

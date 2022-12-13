@@ -7,7 +7,13 @@ const compareTwoUrlPaths = (url, otherUrl) => {
   }
   const urlObject = new URL(url);
   const otherUrlObject = new URL(otherUrl);
-  return urlObject.origin === otherUrlObject.origin && urlObject.pathname === otherUrlObject.pathname;
+  if (urlObject.origin !== otherUrlObject.origin) {
+    return false;
+  }
+  if (urlObject.pathname !== otherUrlObject.pathname) {
+    return false;
+  }
+  return true;
 };
 const injectQuery = (url, query) => {
   const urlObject = new URL(url);
@@ -310,7 +316,8 @@ const applyHotReload = async ({
       return namespace;
     }
     if (type === "html") {
-      if (!compareTwoUrlPaths(urlToFetch, window.location.href)) {
+      const isRootHtmlFile = window.location.pathname === "/" && new URL(urlToFetch).pathname.slice(1).indexOf("/") === -1;
+      if (!isRootHtmlFile && !compareTwoUrlPaths(urlToFetch, window.location.href)) {
         // we are not in that HTML page
         return null;
       }

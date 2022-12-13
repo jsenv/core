@@ -611,7 +611,7 @@ function useSignal(t) {
 const paramsFromParentWindow = {};
 const searchParams = new URLSearchParams(window.location.search);
 searchParams.forEach((value, key) => {
-  paramsFromParentWindow[key] = value;
+  paramsFromParentWindow[key] = value === "" ? true : value;
 });
 const parentWindowReloader = window.parent.__reloader__;
 
@@ -1374,12 +1374,18 @@ const autoreloadEnabledSignal = c$1(false);
 const reloaderStatusSignal = c$1("idle");
 const changesSignal = c$1(0);
 if (parentWindowReloader) {
-  autoreloadEnabledSignal.value = parentWindowReloader.autoreload.enabled;
+  if (!parentWindowReloader.autoreload.enabled && paramsFromParentWindow.autoreload) {
+    autoreloadEnabledSignal.value = true;
+  } else {
+    autoreloadEnabledSignal.value = parentWindowReloader.autoreload.enabled;
+  }
   parentWindowReloader.autoreload.onchange = () => {
     autoreloadEnabledSignal.value = parentWindowReloader.autoreload.enabled;
   };
   reloaderStatusSignal.value = parentWindowReloader.status.value;
+  const onchange = parentWindowReloader.status.onchange;
   parentWindowReloader.status.onchange = () => {
+    onchange();
     reloaderStatusSignal.value = parentWindowReloader.status.value;
   };
   changesSignal.value = parentWindowReloader.changes.value;
