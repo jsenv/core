@@ -41,25 +41,70 @@ export const bundleJsModules = async ({
     include,
     preserveDynamicImport = false,
     strictExports = false,
+    rollup,
+    rollupInput = {},
+    rollupOutput = {},
+    rollupPlugins = [],
   } = options
-  const { jsModuleBundleUrlInfos } = await buildWithRollup({
-    signal,
-    logger,
-    rootDirectoryUrl,
-    buildDirectoryUrl,
-    assetsDirectory,
-    urlGraph,
-    jsModuleUrlInfos,
 
-    runtimeCompat,
-    sourcemaps,
+  const resultRef = { current: null }
+  try {
+    await applyRollupPlugins({
+      rollup,
+      rollupPlugins: [
+        ...rollupPlugins,
+        rollupPluginJsenv({
+          signal,
+          logger,
+          rootDirectoryUrl,
+          buildDirectoryUrl,
+          assetsDirectory,
+          urlGraph,
+          jsModuleUrlInfos,
 
-    include,
-    babelHelpersChunk,
-    preserveDynamicImport,
-    strictExports,
-  })
-  return jsModuleBundleUrlInfos
+          runtimeCompat,
+          sourcemaps,
+          include,
+          babelHelpersChunk,
+          preserveDynamicImport,
+          strictExports,
+          resultRef,
+        }),
+      ],
+      rollupInput: {
+        input: [],
+        onwarn: (warning) => {
+          if (warning.code === "CIRCULAR_DEPENDENCY") {
+            return
+          }
+          if (
+            warning.code === "THIS_IS_UNDEFINED" &&
+            pathToFileURL(warning.id).href === globalThisClientFileUrl
+          ) {
+            return
+          }
+          if (warning.code === "EVAL") {
+            // ideally we should disable only for jsenv files
+            return
+          }
+          logger.warn(String(warning))
+        },
+        ...rollupInput,
+      },
+      rollupOutput: {
+        ...rollupOutput,
+      },
+    })
+    return resultRef.current
+  } catch (e) {
+    if (e.code === "MISSING_EXPORT") {
+      const detailedMessage = createDetailedMessage(e.message, {
+        frame: e.frame,
+      })
+      throw new Error(detailedMessage, { cause: e })
+    }
+    throw e
+  }
 }
 
 const rollupPluginJsenv = ({
@@ -307,91 +352,26 @@ const rollupPluginJsenv = ({
   }
 }
 
-const buildWithRollup = async ({
-  signal,
-  logger,
-  rootDirectoryUrl,
-  buildDirectoryUrl,
-  assetsDirectory,
-  urlGraph,
-  jsModuleUrlInfos,
-
-  runtimeCompat,
-  sourcemaps,
-
-  include,
-  babelHelpersChunk,
-  preserveDynamicImport,
-}) => {
-  const resultRef = { current: null }
-  try {
-    await applyRollupPlugins({
-      rollupPlugins: [
-        rollupPluginJsenv({
-          signal,
-          logger,
-          rootDirectoryUrl,
-          buildDirectoryUrl,
-          assetsDirectory,
-          urlGraph,
-          jsModuleUrlInfos,
-
-          runtimeCompat,
-          sourcemaps,
-          include,
-          babelHelpersChunk,
-          preserveDynamicImport,
-          resultRef,
-        }),
-      ],
-      inputOptions: {
-        input: [],
-        onwarn: (warning) => {
-          if (warning.code === "CIRCULAR_DEPENDENCY") {
-            return
-          }
-          if (
-            warning.code === "THIS_IS_UNDEFINED" &&
-            pathToFileURL(warning.id).href === globalThisClientFileUrl
-          ) {
-            return
-          }
-          if (warning.code === "EVAL") {
-            // ideally we should disable only for jsenv files
-            return
-          }
-          logger.warn(String(warning))
-        },
-      },
-    })
-    return resultRef.current
-  } catch (e) {
-    if (e.code === "MISSING_EXPORT") {
-      const detailedMessage = createDetailedMessage(e.message, {
-        frame: e.frame,
-      })
-      throw new Error(detailedMessage, { cause: e })
-    }
-    throw e
-  }
-}
-
 const applyRollupPlugins = async ({
+  rollup,
   rollupPlugins,
-  inputOptions = {},
-  outputOptions = {},
+  rollupInput,
+  rollupOutput,
 }) => {
-  const { rollup } = await import("rollup")
+  if (!rollup) {
+    const rollupModule = await import("rollup")
+    rollup = rollupModule.rollup
+  }
   const { importAssertions } = await import("acorn-import-assertions")
   const rollupReturnValue = await rollup({
-    ...inputOptions,
+    ...rollupInput,
     plugins: rollupPlugins,
     acornInjectPlugins: [
       importAssertions,
-      ...(inputOptions.acornInjectPlugins || []),
+      ...(rollupInput.acornInjectPlugins || []),
     ],
   })
-  const rollupOutputArray = await rollupReturnValue.generate(outputOptions)
+  const rollupOutputArray = await rollupReturnValue.generate(rollupOutput)
   return rollupOutputArray
 }
 
