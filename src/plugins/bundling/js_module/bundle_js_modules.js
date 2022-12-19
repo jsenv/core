@@ -95,7 +95,7 @@ export const bundleJsModules = async ({
         ...rollupOutput,
       },
     })
-    return resultRef.current
+    return resultRef.current.jsModuleBundleUrlInfos
   } catch (e) {
     if (e.code === "MISSING_EXPORT") {
       const detailedMessage = createDetailedMessage(e.message, {
