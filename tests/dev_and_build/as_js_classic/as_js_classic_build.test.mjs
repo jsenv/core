@@ -14,7 +14,6 @@ const test = async (params) => {
       "./main.js": "main.js?as_js_classic",
     },
     writeGeneratedFiles: true,
-    minification: false,
     ...params,
   })
   writeFileSync(

@@ -11,7 +11,6 @@ const test = async (params) => {
       "./main.js": "main.js",
     },
     bundling: true,
-    minification: false,
     ...params,
   })
   const actual = buildFileContents

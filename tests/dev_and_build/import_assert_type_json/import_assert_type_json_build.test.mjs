@@ -12,7 +12,6 @@ const test = async (options) => {
     entryPoints: {
       "./main.html": "main.html",
     },
-    minification: false,
     writeGeneratedFiles: true,
     ...options,
   })

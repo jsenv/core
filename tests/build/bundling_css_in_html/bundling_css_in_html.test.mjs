@@ -10,7 +10,6 @@ const { buildFileContents } = await build({
     "./main.js": "main.js",
   },
   bundling: true,
-  minification: false,
 })
 const actual = {
   numberOfCssFiles: Object.keys(buildFileContents).filter((key) =>

@@ -12,7 +12,6 @@ const test = async ({ expectedUrl, ...rest }) => {
     entryPoints: {
       "./main.html": "main.html",
     },
-    minification: false,
     writeGeneratedFiles: true,
     ...rest,
   })

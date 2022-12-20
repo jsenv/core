@@ -11,7 +11,6 @@ await build({
   entryPoints: {
     "./src/main.html": "index.html",
   },
-  minification: false,
 })
 const server = await startFileServer({
   rootDirectoryUrl: new URL("./dist/", import.meta.url),

@@ -10,7 +10,6 @@ try {
     entryPoints: {
       "./main.html": "main.html",
     },
-    minification: false,
   })
   throw new Error("should throw")
 } catch (e) {

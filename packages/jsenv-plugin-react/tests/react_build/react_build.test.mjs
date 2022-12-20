@@ -1,5 +1,6 @@
 import { assert } from "@jsenv/assert"
 
+import { jsenvPluginMinification } from "@jsenv/plugin-minification"
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
 import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
@@ -47,7 +48,6 @@ await test({
   runtimeCompat: {
     chrome: "64",
   },
-  minification: false,
 })
 
 // no support for <script type="module">
@@ -58,7 +58,6 @@ await test({
     firefox: "52",
     safari: "11",
   },
-  minification: false,
 })
 
 await test({
@@ -68,5 +67,5 @@ await test({
     firefox: "52",
     safari: "11",
   },
-  minification: true,
+  plugins: [jsenvPluginMinification()],
 })

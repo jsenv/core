@@ -12,7 +12,6 @@ const test = async (options) => {
     entryPoints: {
       "./main.js": "main.js",
     },
-    minification: false,
     ...options,
   })
 }

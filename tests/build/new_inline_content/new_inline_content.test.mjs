@@ -11,7 +11,6 @@ const { buildManifest } = await build({
   entryPoints: {
     "./main.html": "main.html",
   },
-  minification: false,
   transpilation: { css: false },
   writeGeneratedFiles: true,
 })

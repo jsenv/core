@@ -10,7 +10,6 @@ const { buildFileContents } = await build({
     "./elements.css": "elements.css",
   },
   bundling: true,
-  minification: false,
 })
 const actual = {
   cssFileContent: buildFileContents["elements.css"],

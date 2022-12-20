@@ -10,7 +10,6 @@ await build({
   entryPoints: {
     "./src/main.js": "main.js",
   },
-  minification: false,
   versioning: false,
   assetManifest: false,
   runtimeCompat: {
@@ -74,7 +73,6 @@ await build({
   },
   sourcemaps: "file",
   sourcemapsSourcesContent: true,
-  minification: false,
   versioning: false,
   assetManifest: false,
 })

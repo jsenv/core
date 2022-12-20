@@ -18,7 +18,6 @@ const test = async ({ expectedFileCount, ...params }) => {
       "./main.js": "main.js",
     },
     versioning: false,
-    minification: false,
     writeGeneratedFiles: true,
     ...params,
   })

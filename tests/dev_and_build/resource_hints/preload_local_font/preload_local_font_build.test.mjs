@@ -12,7 +12,6 @@ const test = async (params) => {
     entryPoints: {
       "./main.html": "main.html",
     },
-    minification: false,
     // versioning: false,
     writeGeneratedFiles: true,
     ...params,

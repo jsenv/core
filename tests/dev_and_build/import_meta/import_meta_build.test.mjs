@@ -12,7 +12,6 @@ const test = async ({ expectedBuildPath, ...rest }) => {
     entryPoints: {
       "./main.html": "main.html",
     },
-    minification: false,
     ...rest,
   })
   const server = await startFileServer({

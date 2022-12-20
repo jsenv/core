@@ -13,7 +13,6 @@ const test = async (params) => {
     entryPoints: {
       "./main.html": "main.html",
     },
-    minification: false,
     ...params,
   })
   const server = await startFileServer({

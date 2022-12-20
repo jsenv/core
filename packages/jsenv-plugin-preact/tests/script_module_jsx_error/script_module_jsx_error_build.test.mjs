@@ -9,7 +9,6 @@ const test = async (params) => {
     entryPoints: {
       "./main.noeslint.html": "main.html",
     },
-    minification: false,
     writeGeneratedFiles: true,
     ...params,
   })

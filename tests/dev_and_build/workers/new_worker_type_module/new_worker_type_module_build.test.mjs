@@ -15,7 +15,6 @@ const test = async (params) => {
     transpilation: {
       // topLevelAwait: "ignore",
     },
-    minification: false,
     ...params,
   })
   const server = await startFileServer({
