@@ -1,5 +1,6 @@
 import { assert } from "@jsenv/assert"
 import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
+import { jsenvPluginMinification } from "@jsenv/plugin-minification"
 
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
@@ -14,7 +15,7 @@ const test = async (params) => {
     entryPoints: {
       "./main.html": "main.html",
     },
-    plugins: [jsenvPluginBundling()],
+    plugins: [jsenvPluginBundling(), jsenvPluginMinification()],
     ...params,
   })
   const server = await startFileServer({
@@ -42,7 +43,7 @@ const test = async (params) => {
       "/js/a.js?v=07327beb": { versioned: true },
       "/js/b.js?v=2cc2d9e4": { versioned: true },
     },
-    buildFileContent: readDirectoryContent(
+    buildFileContents: readDirectoryContent(
       new URL("./expected/", import.meta.url),
     ),
   }
