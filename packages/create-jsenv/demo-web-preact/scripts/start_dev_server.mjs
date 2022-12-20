@@ -5,12 +5,15 @@
 
 import open from "open"
 import { startDevServer } from "@jsenv/core"
-
-import { rootDirectoryUrl, plugins } from "../jsenv.config.mjs"
+import { jsenvPluginPreact } from "@jsenv/plugin-preact"
 
 export const devServer = await startDevServer({
-  rootDirectoryUrl,
-  plugins,
+  rootDirectoryUrl: new URL("../", import.meta.url),
+  plugins: [
+    jsenvPluginPreact({
+      refreshInstrumentation: { "./**/*.jsx": true },
+    }),
+  ],
   port: 3401,
   explorer: {
     groups: {

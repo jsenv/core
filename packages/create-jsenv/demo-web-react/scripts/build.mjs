@@ -5,13 +5,18 @@
  */
 
 import { build } from "@jsenv/core"
-
-import { rootDirectoryUrl, plugins } from "../jsenv.config.mjs"
+import { jsenvPluginReact } from "@jsenv/plugin-react"
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
+import { jsenvPluginMinification } from "@jsenv/plugin-minification"
 
 await build({
-  rootDirectoryUrl,
-  plugins,
-  buildDirectoryUrl: new URL("./dist/", rootDirectoryUrl),
+  rootDirectoryUrl: new URL("../", import.meta.url),
+  plugins: [
+    jsenvPluginReact(),
+    jsenvPluginBundling(),
+    jsenvPluginMinification(),
+  ],
+  buildDirectoryUrl: new URL(".,/dist/", import.meta.url),
   entryPoints: {
     "./src/main.html": "index.html",
   },

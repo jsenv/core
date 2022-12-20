@@ -6,8 +6,6 @@
 
 import { pingServer, executeTestPlan, chromium, webkit } from "@jsenv/core"
 
-import { rootDirectoryUrl, plugins } from "../jsenv.config.mjs"
-
 const devServerOrigin = "http://localhost:3401"
 const devServerStarted = await pingServer(devServerOrigin)
 let devServerModule
@@ -16,9 +14,8 @@ if (!devServerStarted) {
 }
 try {
   await executeTestPlan({
-    rootDirectoryUrl,
+    rootDirectoryUrl: new URL("../", import.meta.url),
     devServerOrigin,
-    plugins,
     testPlan: {
       "./tests/**/*.test.html": {
         chromium: {
