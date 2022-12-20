@@ -1,4 +1,5 @@
 import { assert } from "@jsenv/assert"
+import { jsenvPluginMinification } from "@jsenv/plugin-minification"
 
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
@@ -35,7 +36,6 @@ const test = async (options) => {
 
 // support for <script type="module">
 await test({ runtimeCompat: { chrome: "65" } })
-
 // no bundling
 await test({ bundling: false, runtimeCompat: { chrome: "65" } })
 // no support for <script type="module">
@@ -50,15 +50,17 @@ await test({ runtimeCompat: { chrome: "60" } })
     entryPoints: {
       "./main.html": "main.html",
     },
-    minification: {
-      js: false,
-      css: true,
-    },
+    plugins: [
+      jsenvPluginMinification({
+        js: false,
+        css: true,
+      }),
+    ],
   })
   const cssKey = Object.keys(buildInlineContents).find((key) =>
     key.endsWith(".css"),
   )
   const actual = buildInlineContents[cssKey]
-  const expected = `body{background-color:red;background-image:url('+__v__("/other/jsenv.png")+')}`
+  const expected = `body{background-color:red;background-image:url("+__v__("/other/jsenv.png")+")}`
   assert({ actual, expected })
 }
