@@ -24,6 +24,9 @@ const test = async ({
         // otherwise it's filesystem dependents because of systemjs infering variables
         // name from import path
         // see "something to keep in mind" inside "jsenv_plugin_as_js_classic.js"
+        html: false,
+        css: false,
+        js_module: false,
         js_classic: true,
       }),
     ],
@@ -62,8 +65,8 @@ if (process.platform === "darwin") {
       new URL("./expected/1/", import.meta.url),
     ),
     expectedServiceWorkerUrls: {
-      "/main.html": { versioned: false, version: "698d361c" },
-      "/css/style.css?v=65c914e7": { versioned: true },
+      "/main.html": { versioned: false, version: "1985706b" },
+      "/css/style.css?v=bd38451d": { versioned: true },
     },
   })
   // support + no bundling
@@ -74,7 +77,7 @@ if (process.platform === "darwin") {
       new URL("./expected/2/", import.meta.url),
     ),
     expectedServiceWorkerUrls: {
-      "/main.html": { versioned: false, version: "23cfe64c" },
+      "/main.html": { versioned: false, version: "1ee5fe50" },
       "/css/style.css?v=0e312da1": { versioned: true },
       "/js/a.js?v=9c2ce306": { versioned: true },
       "/js/b.js?v=e3b0c442": { versioned: true },

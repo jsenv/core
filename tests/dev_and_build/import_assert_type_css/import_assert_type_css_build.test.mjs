@@ -52,7 +52,7 @@ await test({ runtimeCompat: { chrome: "60" } })
     },
     plugins: [
       jsenvPluginMinification({
-        js: false,
+        js_module: false,
         css: true,
       }),
     ],
@@ -61,6 +61,6 @@ await test({ runtimeCompat: { chrome: "60" } })
     key.endsWith(".css"),
   )
   const actual = buildInlineContents[cssKey]
-  const expected = `body{background-color:red;background-image:url("+__v__("/other/jsenv.png")+")}`
+  const expected = `body{background-color:red;background-image:url('+__v__("/other/jsenv.png")+')}`
   assert({ actual, expected })
 }
