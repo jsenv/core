@@ -1,9 +1,9 @@
 import { assert } from "@jsenv/assert"
-
 import { jsenvPluginMinification } from "@jsenv/plugin-minification"
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
 import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
+
 import { jsenvPluginReact } from "@jsenv/plugin-react"
 
 const test = async (params) => {
@@ -14,12 +14,13 @@ const test = async (params) => {
     entryPoints: {
       "./main.html": "main.html",
     },
+    ...params,
     plugins: [
       jsenvPluginReact({
         asJsModuleLogLevel: "warn",
       }),
+      ...(params.plugins || []),
     ],
-    ...params,
   })
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
@@ -44,12 +45,7 @@ const test = async (params) => {
 }
 
 // support for <script type="module">
-await test({
-  runtimeCompat: {
-    chrome: "64",
-  },
-})
-
+await test({ runtimeCompat: { chrome: "64" } })
 // no support for <script type="module">
 await test({
   runtimeCompat: {
@@ -59,7 +55,6 @@ await test({
     safari: "11",
   },
 })
-
 await test({
   runtimeCompat: {
     chrome: "55",
