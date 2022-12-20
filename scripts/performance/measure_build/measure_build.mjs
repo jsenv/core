@@ -5,8 +5,8 @@ const measures = startMeasures({
   memoryHeap: true,
   filesystem: true,
 })
-
 const { build } = await import("@jsenv/core")
+const { jsenvPluginMinification } = await import("@jsenv/plugin-minification")
 await build({
   logLevel: "warn",
   rootDirectoryUrl: new URL("./", import.meta.url),
@@ -15,9 +15,8 @@ await build({
   entryPoints: {
     "./main.html": "main.min.html",
   },
-  minify: true,
+  plugins: [jsenvPluginMinification()],
 })
-
 const { duration, memoryHeapTotal, memoryHeapUsed, fsRead, fsWrite } =
   measures.stop()
 
