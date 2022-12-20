@@ -1,4 +1,5 @@
 import { assert } from "@jsenv/assert"
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
 
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
@@ -11,6 +12,7 @@ const { buildFileContents } = await build({
   entryPoints: {
     "./main.html": "main.html",
   },
+  plugins: [jsenvPluginBundling()],
   versioning: false,
 })
 const server = await startFileServer({

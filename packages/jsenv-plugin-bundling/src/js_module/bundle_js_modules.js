@@ -6,20 +6,7 @@ import { createDetailedMessage } from "@jsenv/log"
 import { babelHelperNameFromUrl } from "@jsenv/babel-plugins"
 import { sourcemapConverter } from "@jsenv/sourcemap"
 
-import { fileUrlConverter } from "@jsenv/core/src/kitchen/file_url_converter.js"
-
-const globalThisClientFileUrl = new URL(
-  "../../transpilation/babel/global_this/client/global_this.js",
-  import.meta.url,
-).href
-const newStylesheetClientFileUrl = new URL(
-  "../../transpilation/babel/new_stylesheet/client/new_stylesheet.js",
-  import.meta.url,
-).href
-const regeneratorRuntimeClientFileUrl = new URL(
-  "../../transpilation/babel/regenerator_runtime/client/regenerator_runtime.js",
-  import.meta.url,
-).href
+import { fileUrlConverter } from "./file_url_converter.js"
 
 export const bundleJsModules = async ({
   jsModuleUrlInfos,
@@ -77,11 +64,11 @@ export const bundleJsModules = async ({
           if (warning.code === "CIRCULAR_DEPENDENCY") {
             return
           }
-          if (
-            warning.code === "THIS_IS_UNDEFINED" &&
-            pathToFileURL(warning.id).href === globalThisClientFileUrl
-          ) {
-            return
+          if (warning.code === "THIS_IS_UNDEFINED") {
+            const urlInfo = urlGraph.getUrlInfo(pathToFileURL(warning.id).href)
+            if (urlInfo && urlInfo.data.isBabelClientFile) {
+              return
+            }
           }
           if (warning.code === "EVAL") {
             // ideally we should disable only for jsenv files
@@ -271,13 +258,8 @@ const rollupPluginJsenv = ({
             if (babelHelperNameFromUrl(fileUrl)) {
               return "babel_helpers"
             }
-            if (fileUrl === globalThisClientFileUrl) {
-              return "babel_helpers"
-            }
-            if (fileUrl === newStylesheetClientFileUrl) {
-              return "babel_helpers"
-            }
-            if (fileUrl === regeneratorRuntimeClientFileUrl) {
+            const urlInfo = urlGraph.getUrlInfo(fileUrl)
+            if (urlInfo && urlInfo.data.isBabelClientFile) {
               return "babel_helpers"
             }
           }

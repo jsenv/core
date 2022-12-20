@@ -1,4 +1,5 @@
 import { assert } from "@jsenv/assert"
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
 
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
@@ -12,6 +13,7 @@ const test = async (params) => {
     entryPoints: {
       "./main.html": "main.html",
     },
+    plugins: [jsenvPluginBundling()],
     writeGeneratedFiles: true,
     ...params,
   })

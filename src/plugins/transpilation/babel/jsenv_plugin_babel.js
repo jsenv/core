@@ -5,9 +5,18 @@ import { babelPluginInstrument } from "@jsenv/core/src/test/coverage/babel_plugi
 import { RUNTIME_COMPAT } from "@jsenv/core/src/kitchen/compat/runtime_compat.js"
 import { getBaseBabelPluginStructure } from "./helpers/babel_plugin_structure.js"
 import { babelPluginBabelHelpersAsJsenvImports } from "./helpers/babel_plugin_babel_helpers_as_jsenv_imports.js"
-import { babelPluginNewStylesheetAsJsenvImport } from "./new_stylesheet/babel_plugin_new_stylesheet_as_jsenv_import.js"
-import { babelPluginGlobalThisAsJsenvImport } from "./global_this/babel_plugin_global_this_as_jsenv_import.js"
-import { babelPluginRegeneratorRuntimeAsJsenvImport } from "./regenerator_runtime/babel_plugin_regenerator_runtime_as_jsenv_import.js"
+import {
+  babelPluginNewStylesheetAsJsenvImport,
+  newStylesheetClientFileUrl,
+} from "./new_stylesheet/babel_plugin_new_stylesheet_as_jsenv_import.js"
+import {
+  babelPluginGlobalThisAsJsenvImport,
+  globalThisClientFileUrl,
+} from "./global_this/babel_plugin_global_this_as_jsenv_import.js"
+import {
+  babelPluginRegeneratorRuntimeAsJsenvImport,
+  regeneratorRuntimeClientFileUrl,
+} from "./regenerator_runtime/babel_plugin_regenerator_runtime_as_jsenv_import.js"
 
 export const jsenvPluginBabel = ({
   getCustomBabelPlugins,
@@ -106,6 +115,17 @@ export const jsenvPluginBabel = ({
   return {
     name: "jsenv:babel",
     appliesDuring: "*",
+    transformUrlContent: (urlInfo) => {
+      if (urlInfo.url === regeneratorRuntimeClientFileUrl) {
+        urlInfo.data.isBabelClientFile = true
+      }
+      if (urlInfo.url === globalThisClientFileUrl) {
+        urlInfo.data.isBabelClientFile = true
+      }
+      if (urlInfo.url === newStylesheetClientFileUrl) {
+        urlInfo.data.isBabelClientFile = true
+      }
+    },
     finalizeUrlContent: {
       js_classic: transformWithBabel,
       js_module: transformWithBabel,
