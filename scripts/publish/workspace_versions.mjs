@@ -4,10 +4,8 @@
 
 import { updateWorkspaceVersions } from "@jsenv/package-workspace"
 
-import { rootDirectoryUrl } from "@jsenv/core/jsenv.config.mjs"
-
 await updateWorkspaceVersions({
-  directoryUrl: rootDirectoryUrl,
+  directoryUrl: new URL("../../", import.meta.url),
   packagesRelations: {
     "create-jsenv": [
       "jsenv-demo-node-package",

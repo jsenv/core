@@ -1,9 +1,7 @@
 import { executeTestPlan, nodeWorkerThread } from "@jsenv/core"
-import { rootDirectoryUrl, runtimeCompat } from "@jsenv/core/jsenv.config.mjs"
 
 await executeTestPlan({
-  rootDirectoryUrl,
-  runtimeCompat,
+  rootDirectoryUrl: new URL("../../", import.meta.url),
   logLevel: "info",
   testPlan: process.argv.includes("--only-resource-hints")
     ? {
