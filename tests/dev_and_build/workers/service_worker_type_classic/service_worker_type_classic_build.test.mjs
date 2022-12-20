@@ -3,9 +3,10 @@ import { assert } from "@jsenv/assert"
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
 import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
+import { readDirectoryContent } from "@jsenv/core/tests/read_directory_content.js"
 
 const test = async (params) => {
-  await build({
+  const { buildFileContents } = await build({
     logLevel: "warn",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
@@ -29,6 +30,7 @@ const test = async (params) => {
   const actual = {
     order,
     serviceWorkerUrls,
+    buildFileContents,
   }
   const expected = {
     order: ["before-a", "before-b", "b", "after-b", "after-a"],
@@ -38,6 +40,9 @@ const test = async (params) => {
       "/js/a.js?v=07327beb": { versioned: true },
       "/js/b.js?v=2cc2d9e4": { versioned: true },
     },
+    buildFileContent: readDirectoryContent(
+      new URL("./expected/", import.meta.url),
+    ),
   }
   assert({ actual, expected })
 }
