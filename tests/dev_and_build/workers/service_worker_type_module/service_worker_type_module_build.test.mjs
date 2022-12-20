@@ -19,6 +19,7 @@ const test = async ({
     entryPoints: {
       "./main.html": "main.html",
     },
+    ...rest,
     plugins: [
       jsenvPluginMinification({
         // minify js classic to ensure version is predictable
@@ -30,8 +31,8 @@ const test = async ({
         js_module: false,
         js_classic: true,
       }),
+      ...(rest.plugins || []),
     ],
-    ...rest,
   })
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
@@ -99,7 +100,6 @@ if (process.platform === "darwin") {
   // no support for { type: "module" } on service worker + no bundling
   await test({
     runtimeCompat: { chrome: "79" },
-    plugins: [jsenvPluginBundling()],
     expectedBuildFileContents: readDirectoryContent(
       new URL("./expected/4/", import.meta.url),
     ),
