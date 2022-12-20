@@ -83,7 +83,6 @@
     "acorn-import-assertions": "1.8.0",
     "construct-style-sheets-polyfill": "3.1.0",
     "cuid": "2.1.8",
-    "html-minifier": "4.0.0",
     "istanbul-lib-coverage": "3.2.0",
     "istanbul-lib-instrument": "5.2.1",
     "istanbul-lib-report": "3.0.0",
@@ -93,7 +92,6 @@
     "rollup": "3.7.4",
     "string-width": "5.1.2",
     "strip-ansi": "7.0.1",
-    "terser": "5.16.1",
     "v8-to-istanbul": "9.0.1",
     "wrap-ansi": "8.0.1"
   },

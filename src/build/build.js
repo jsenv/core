@@ -98,8 +98,6 @@ export const defaultRuntimeCompat = {
  *        Directory where asset files will be written
  * @param {string|url} [buildParameters.base=""]
  *        Urls in build file contents will be prefixed with this string
- * @param {boolean|object} [buildParameters.minification=true]
- *        Minify build file contents
  * @param {boolean} [buildParameters.versioning=true]
  *        Controls if url in build file contents are versioned
  * @param {('search_param'|'filename')} [buildParameters.versioningMethod="search_param"]
@@ -134,7 +132,6 @@ export const build = async ({
   directoryReferenceAllowed,
   transpilation = {},
   bundling = true,
-  minification = !runtimeCompat.node,
   versioning = !runtimeCompat.node,
   versioningMethod = "search_param", // "filename", "search_param"
   lineBreakNormalization = process.platform === "win32",
@@ -265,7 +262,6 @@ build ${entryPointKeys.length} entry points`)
             babelHelpersAsImport: !useExplicitJsClassicConversion,
             jsClassicFallback: false,
           },
-          minification,
           bundling,
         }),
       ],
@@ -1173,7 +1169,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     urlInfo,
                     kitchen: finalGraphKitchen,
                     versionMappings: versionMappingsNeeded,
-                    minification,
+                    minification: true, // TODO: check if enabled in plugins
                   })
                 })
               }

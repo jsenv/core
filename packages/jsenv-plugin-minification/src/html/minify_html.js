@@ -1,10 +1,12 @@
-import { requireFromJsenv } from "@jsenv/core/src/require_from_jsenv.js"
+import { createRequire } from "node:module"
 
 // https://github.com/kangax/html-minifier#options-quick-reference
 export const minifyHtml = ({ htmlUrlInfo, options } = {}) => {
+  const require = createRequire(import.meta.url)
+  const { minify } = require("html-minifier")
+
   const { collapseWhitespace = true, removeComments = true } = options
 
-  const { minify } = requireFromJsenv("html-minifier")
   const htmlMinified = minify(htmlUrlInfo.content, {
     collapseWhitespace,
     removeComments,

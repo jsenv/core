@@ -12,7 +12,6 @@ import { jsenvPluginTranspilation } from "./transpilation/jsenv_plugin_transpila
 import { jsenvPluginNodeRuntime } from "./node_runtime/jsenv_plugin_node_runtime.js"
 // build only
 import { jsenvPluginBundling } from "./bundling/jsenv_plugin_bundling.js"
-import { jsenvPluginMinification } from "./minification/jsenv_plugin_minification.js"
 // autoreload
 import { jsenvPluginImportMetaHot } from "./import_meta_hot/jsenv_plugin_import_meta_hot.js"
 import { jsenvPluginAutoreload } from "./autoreload/jsenv_plugin_autoreload.js"
@@ -35,7 +34,6 @@ export const getCorePlugins = ({
   directoryReferenceAllowed,
   supervisor,
   transpilation = true,
-  minification = false,
   bundling = false,
 
   clientMainFileUrl,
@@ -92,7 +90,6 @@ export const getCorePlugins = ({
 
     jsenvPluginNodeRuntime({ runtimeCompat }),
     jsenvPluginBundling(bundling),
-    jsenvPluginMinification(minification),
 
     jsenvPluginImportMetaHot(),
     ...(clientAutoreload
