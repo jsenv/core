@@ -32,6 +32,7 @@ import {
   ensureEmptyDirectory,
   writeFileSync,
   registerDirectoryLifecycle,
+  comparePathnames,
 } from "@jsenv/filesystem"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 import {
@@ -1428,8 +1429,15 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     }
 
     const buildManifest = {}
-    const buildFileContents = {}
-    const buildInlineContents = {}
+    const buildContents = {}
+    const buildInlineRelativeUrls = []
+    const getBuildRelativeUrl = (url) => {
+      const urlObject = new URL(url)
+      urlObject.searchParams.delete("as_js_classic")
+      url = urlObject.href
+      const buildRelativeUrl = urlToRelativeUrl(url, buildDirectoryUrl)
+      return buildRelativeUrl
+    }
     GRAPH.forEach(finalGraph, (urlInfo) => {
       if (!urlInfo.shouldHandle) {
         return
@@ -1441,33 +1449,39 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         return
       }
       if (urlInfo.isInline) {
-        const buildRelativeUrl = urlToRelativeUrl(
-          urlInfo.url,
-          buildDirectoryUrl,
-        )
-        buildInlineContents[buildRelativeUrl] = urlInfo.content
+        const buildRelativeUrl = getBuildRelativeUrl(urlInfo.url)
+        buildContents[buildRelativeUrl] = urlInfo.content
+        buildInlineRelativeUrls.push(buildRelativeUrl)
       } else {
         const versionedUrl = versionedUrlMap.get(urlInfo.url)
         if (versionedUrl && canUseVersionedUrl(urlInfo)) {
-          const buildRelativeUrl = urlToRelativeUrl(
-            urlInfo.url,
-            buildDirectoryUrl,
-          )
-          const versionedBuildRelativeUrl = urlToRelativeUrl(
-            versionedUrl,
-            buildDirectoryUrl,
-          )
-          buildFileContents[versionedBuildRelativeUrl] = urlInfo.content
+          const buildRelativeUrl = getBuildRelativeUrl(urlInfo.url)
+          const versionedBuildRelativeUrl = getBuildRelativeUrl(versionedUrl)
+          if (versioningMethod === "search_param") {
+            buildContents[buildRelativeUrl] = urlInfo.content
+          } else {
+            buildContents[versionedBuildRelativeUrl] = urlInfo.content
+          }
           buildManifest[buildRelativeUrl] = versionedBuildRelativeUrl
         } else {
-          const buildRelativeUrl = urlToRelativeUrl(
-            urlInfo.url,
-            buildDirectoryUrl,
-          )
-          buildFileContents[buildRelativeUrl] = urlInfo.content
+          const buildRelativeUrl = getBuildRelativeUrl(urlInfo.url)
+          buildContents[buildRelativeUrl] = urlInfo.content
         }
       }
     })
+    const buildFileContents = {}
+    const buildInlineContents = {}
+    Object.keys(buildContents)
+      .sort((a, b) => comparePathnames(a, b))
+      .forEach((buildRelativeUrl) => {
+        if (buildInlineRelativeUrls.includes(buildRelativeUrl)) {
+          buildInlineContents[buildRelativeUrl] =
+            buildContents[buildRelativeUrl]
+        } else {
+          buildFileContents[buildRelativeUrl] = buildContents[buildRelativeUrl]
+        }
+      })
+
     if (writeOnFileSystem) {
       if (directoryToClean) {
         await ensureEmptyDirectory(directoryToClean)

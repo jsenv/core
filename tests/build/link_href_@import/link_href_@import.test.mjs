@@ -29,7 +29,7 @@ const actual = {
   returnValue,
 }
 const expected = {
-  buildFiles: ["main.html", "css/main.css"],
+  buildFiles: ["css/main.css", "main.html"],
   returnValue: {
     bodyBackgroundColor: "rgb(255, 0, 0)",
   },

@@ -1,0 +1,63 @@
+<!DOCTYPE html><html><head>
+    <title>Title</title>
+    <meta charset="utf-8">
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" type="text/css" href="/css/style.css?v=bd38451d">
+  </head>
+
+  <body>
+    <script>window.resultPromise=new Promise((e=>{window.resolveResultPromise=e}));</script>
+    <script type="module">function _await(value, then, direct) {
+  if (direct) {
+    return then ? then(value) : value;
+  }
+  if (!value || !value.then) {
+    value = Promise.resolve(value);
+  }
+  return then ? value.then(then) : value;
+}
+const testServiceWorker = _async(function (serviceWorker) {
+  return new Promise(resolve => {
+    const {
+      port1,
+      port2
+    } = new MessageChannel();
+    port1.onmessage = function (event) {
+      resolve(event.data);
+    };
+    serviceWorker.postMessage("inspect", [port2]);
+  });
+});
+function _async(f) {
+  return function () {
+    for (var args = [], i = 0; i < arguments.length; i++) {
+      args[i] = arguments[i];
+    }
+    try {
+      return Promise.resolve(f.apply(this, args));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  };
+}
+_await(window.navigator.serviceWorker.register(new URL("/sw.nomodule.js", import.meta.url), {
+  type: "classic"
+}).then(registration => {
+  const {
+    installing,
+    waiting,
+    active
+  } = registration;
+  return installing || waiting || active;
+}), function (serviceWorker) {
+  const _window = window,
+    _resolveResultPromise = _window.resolveResultPromise;
+  return _await(testServiceWorker(serviceWorker), function (_testServiceWorker) {
+    _resolveResultPromise.call(_window, {
+      inspectResponse: _testServiceWorker
+    });
+  });
+});</script>
+  
+
+</body></html>
