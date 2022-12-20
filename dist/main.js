@@ -15,10 +15,11 @@ import { performance as performance$1 } from "node:perf_hooks";
 import { Readable, Stream, Writable } from "node:stream";
 import { Http2ServerResponse } from "node:http2";
 import { lookup } from "node:dns";
-import { SOURCEMAP, generateSourcemapFileUrl, composeTwoSourcemaps, generateSourcemapDataUrl, createMagicSource, sourcemapConverter, getOriginalPosition } from "@jsenv/sourcemap";
+import { SOURCEMAP, generateSourcemapFileUrl, composeTwoSourcemaps, generateSourcemapDataUrl, createMagicSource, getOriginalPosition } from "@jsenv/sourcemap";
 import { parseHtmlString, stringifyHtmlAst, getHtmlNodeAttribute, visitHtmlNodes, analyzeScriptNode, setHtmlNodeAttributes, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, applyPostCss, postCssPluginUrlVisitor, parseJsUrls, getHtmlNodeText, setHtmlNodeText, applyBabelPlugins, injectScriptNodeAsEarlyAsPossible, createHtmlNode, findHtmlNode, removeHtmlNode, removeHtmlNodeText, transpileWithParcel, injectJsImport, analyzeLinkNode, injectHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
 import { createRequire } from "node:module";
 import babelParser from "@babel/parser";
+import { bundleJsModules } from "@jsenv/plugin-bundling";
 import v8, { takeCoverage } from "node:v8";
 import wrapAnsi from "wrap-ansi";
 import stripAnsi from "strip-ansi";
@@ -14825,411 +14826,6 @@ const jsenvPluginAsJsClassicWorkers = () => {
   };
 };
 
-/*
- * Generated helpers
- * - https://github.com/babel/babel/commits/main/packages/babel-helpers/src/helpers.ts
- * File helpers
- * - https://github.com/babel/babel/tree/main/packages/babel-helpers/src/helpers
- *
- */
-const babelHelperClientDirectoryUrl = new URL("./babel_helpers/", import.meta.url).href;
-
-// we cannot use "@jsenv/core/src/*" because babel helper might be injected
-// into node_modules not depending on "@jsenv/core"
-const getBabelHelperFileUrl = babelHelperName => {
-  const babelHelperFileUrl = new URL(`./${babelHelperName}/${babelHelperName}.js`, babelHelperClientDirectoryUrl).href;
-  return babelHelperFileUrl;
-};
-const babelHelperNameFromUrl = url => {
-  if (!url.startsWith(babelHelperClientDirectoryUrl)) {
-    return null;
-  }
-  const afterBabelHelperDirectory = url.slice(babelHelperClientDirectoryUrl.length);
-  const babelHelperName = afterBabelHelperDirectory.slice(0, afterBabelHelperDirectory.indexOf("/"));
-  return babelHelperName;
-};
-
-const fileUrlConverter = {
-  asFilePath: fileUrl => {
-    const filePath = urlToFileSystemPath(fileUrl);
-    const urlObject = new URL(fileUrl);
-    const {
-      searchParams
-    } = urlObject;
-    return `${filePath}${stringifyQuery(searchParams)}`;
-  },
-  asFileUrl: filePath => {
-    return decodeURIComponent(fileSystemPathToUrl$1(filePath)).replace(/[=](?=&|$)/g, "");
-  }
-};
-const stringifyQuery = searchParams => {
-  const search = searchParams.toString();
-  return search ? `?${search}` : "";
-};
-
-const globalThisClientFileUrl = new URL("./js/global_this.js", import.meta.url).href;
-const newStylesheetClientFileUrl = new URL("./js/new_stylesheet.js", import.meta.url).href;
-const regeneratorRuntimeClientFileUrl = new URL("./js/regenerator_runtime.js", import.meta.url).href;
-const bundleJsModules = async ({
-  jsModuleUrlInfos,
-  context,
-  options
-}) => {
-  const {
-    signal,
-    logger,
-    rootDirectoryUrl,
-    buildDirectoryUrl,
-    assetsDirectory,
-    urlGraph,
-    runtimeCompat,
-    sourcemaps
-  } = context;
-  const {
-    babelHelpersChunk = true,
-    include,
-    preserveDynamicImport = false,
-    strictExports = false,
-    rollup,
-    rollupInput = {},
-    rollupOutput = {},
-    rollupPlugins = []
-  } = options;
-  const resultRef = {
-    current: null
-  };
-  try {
-    await applyRollupPlugins({
-      rollup,
-      rollupPlugins: [...rollupPlugins, rollupPluginJsenv({
-        signal,
-        logger,
-        rootDirectoryUrl,
-        buildDirectoryUrl,
-        assetsDirectory,
-        urlGraph,
-        jsModuleUrlInfos,
-        runtimeCompat,
-        sourcemaps,
-        include,
-        babelHelpersChunk,
-        preserveDynamicImport,
-        strictExports,
-        resultRef
-      })],
-      rollupInput: {
-        input: [],
-        onwarn: warning => {
-          if (warning.code === "CIRCULAR_DEPENDENCY") {
-            return;
-          }
-          if (warning.code === "THIS_IS_UNDEFINED" && pathToFileURL(warning.id).href === globalThisClientFileUrl) {
-            return;
-          }
-          if (warning.code === "EVAL") {
-            // ideally we should disable only for jsenv files
-            return;
-          }
-          logger.warn(String(warning));
-        },
-        ...rollupInput
-      },
-      rollupOutput: {
-        ...rollupOutput
-      }
-    });
-    return resultRef.current.jsModuleBundleUrlInfos;
-  } catch (e) {
-    if (e.code === "MISSING_EXPORT") {
-      const detailedMessage = createDetailedMessage$1(e.message, {
-        frame: e.frame
-      });
-      throw new Error(detailedMessage, {
-        cause: e
-      });
-    }
-    throw e;
-  }
-};
-const rollupPluginJsenv = ({
-  // logger,
-  rootDirectoryUrl,
-  buildDirectoryUrl,
-  assetsDirectory,
-  urlGraph,
-  jsModuleUrlInfos,
-  sourcemaps,
-  include,
-  babelHelpersChunk,
-  preserveDynamicImport,
-  strictExports,
-  resultRef
-}) => {
-  let _rollupEmitFile = () => {
-    throw new Error("not implemented");
-  };
-  const format = jsModuleUrlInfos.some(jsModuleUrlInfo => jsModuleUrlInfo.filename.endsWith(".cjs")) ? "cjs" : "esm";
-  const emitChunk = chunk => {
-    return _rollupEmitFile({
-      type: "chunk",
-      ...chunk
-    });
-  };
-  let importCanBeBundled = () => true;
-  if (include) {
-    const associations = URL_META.resolveAssociations({
-      bundle: include
-    }, rootDirectoryUrl);
-    importCanBeBundled = url => {
-      return URL_META.applyAssociations({
-        url,
-        associations
-      }).bundle;
-    };
-  }
-  const urlImporters = {};
-  return {
-    name: "jsenv",
-    async buildStart() {
-      _rollupEmitFile = (...args) => this.emitFile(...args);
-      let previousNonEntryPointModuleId;
-      jsModuleUrlInfos.forEach(jsModuleUrlInfo => {
-        const id = jsModuleUrlInfo.url;
-        if (jsModuleUrlInfo.isEntryPoint) {
-          emitChunk({
-            id
-          });
-          return;
-        }
-        emitChunk({
-          id,
-          implicitlyLoadedAfterOneOf: previousNonEntryPointModuleId ? [previousNonEntryPointModuleId] : null,
-          preserveSignature: strictExports ? "strict" : jsModuleUrlInfo.dependents.size < 2 ? "allow-extension" : "strict"
-        });
-        previousNonEntryPointModuleId = id;
-      });
-    },
-    async generateBundle(outputOptions, rollupResult) {
-      _rollupEmitFile = (...args) => this.emitFile(...args);
-      const jsModuleBundleUrlInfos = {};
-      Object.keys(rollupResult).forEach(fileName => {
-        const rollupFileInfo = rollupResult[fileName];
-        // there is 3 types of file: "placeholder", "asset", "chunk"
-        if (rollupFileInfo.type === "chunk") {
-          const sourceUrls = Object.keys(rollupFileInfo.modules).map(id => fileUrlConverter.asFileUrl(id));
-          let url;
-          let originalUrl;
-          if (rollupFileInfo.facadeModuleId) {
-            url = fileUrlConverter.asFileUrl(rollupFileInfo.facadeModuleId);
-            originalUrl = url;
-          } else {
-            url = new URL(rollupFileInfo.fileName, buildDirectoryUrl).href;
-            if (rollupFileInfo.isDynamicEntry) {
-              originalUrl = sourceUrls[sourceUrls.length - 1];
-            } else {
-              originalUrl = url;
-            }
-          }
-          const jsModuleBundleUrlInfo = {
-            url,
-            originalUrl,
-            type: format === "esm" ? "js_module" : "common_js",
-            data: {
-              bundlerName: "rollup",
-              bundleRelativeUrl: rollupFileInfo.fileName,
-              usesImport: rollupFileInfo.imports.length > 0 || rollupFileInfo.dynamicImports.length > 0,
-              isDynamicEntry: rollupFileInfo.isDynamicEntry
-            },
-            sourceUrls,
-            contentType: "text/javascript",
-            content: rollupFileInfo.code,
-            sourcemap: rollupFileInfo.map
-          };
-          jsModuleBundleUrlInfos[url] = jsModuleBundleUrlInfo;
-        }
-      });
-      resultRef.current = {
-        jsModuleBundleUrlInfos
-      };
-    },
-    outputOptions: outputOptions => {
-      // const sourcemapFile = buildDirectoryUrl
-      Object.assign(outputOptions, {
-        format,
-        dir: fileUrlConverter.asFilePath(buildDirectoryUrl),
-        sourcemap: sourcemaps === "file" || sourcemaps === "inline",
-        // sourcemapFile,
-        sourcemapPathTransform: relativePath => {
-          return new URL(relativePath, buildDirectoryUrl).href;
-        },
-        entryFileNames: () => {
-          return `[name].js`;
-        },
-        chunkFileNames: chunkInfo => {
-          const insideJs = willBeInsideJsDirectory({
-            chunkInfo,
-            fileUrlConverter,
-            jsModuleUrlInfos
-          });
-          let nameFromUrlInfo;
-          if (chunkInfo.facadeModuleId) {
-            const url = fileUrlConverter.asFileUrl(chunkInfo.facadeModuleId);
-            const urlInfo = jsModuleUrlInfos.find(jsModuleUrlInfo => jsModuleUrlInfo.url === url);
-            if (urlInfo) {
-              nameFromUrlInfo = urlInfo.filename;
-            }
-          }
-          const name = nameFromUrlInfo || `${chunkInfo.name}.js`;
-          return insideJs ? `${assetsDirectory}js/${name}` : `${name}`;
-        },
-        manualChunks: id => {
-          if (babelHelpersChunk) {
-            const fileUrl = fileUrlConverter.asFileUrl(id);
-            if (fileUrl.endsWith("babel-plugin-transform-async-to-promises/helpers.mjs")) {
-              return "babel_helpers";
-            }
-            if (babelHelperNameFromUrl(fileUrl)) {
-              return "babel_helpers";
-            }
-            if (fileUrl === globalThisClientFileUrl) {
-              return "babel_helpers";
-            }
-            if (fileUrl === newStylesheetClientFileUrl) {
-              return "babel_helpers";
-            }
-            if (fileUrl === regeneratorRuntimeClientFileUrl) {
-              return "babel_helpers";
-            }
-          }
-          return null;
-        }
-        // https://rollupjs.org/guide/en/#outputpaths
-        // paths: (id) => {
-        //   return id
-        // },
-      });
-    },
-
-    // https://rollupjs.org/guide/en/#resolvedynamicimport
-    resolveDynamicImport: (specifier, importer) => {
-      if (preserveDynamicImport) {
-        let urlObject;
-        if (specifier[0] === "/") {
-          urlObject = new URL(specifier.slice(1), rootDirectoryUrl);
-        } else {
-          if (isFileSystemPath$1(importer)) {
-            importer = fileUrlConverter.asFileUrl(importer);
-          }
-          urlObject = new URL(specifier, importer);
-        }
-        urlObject.searchParams.set("as_js_classic_library", "");
-        return {
-          external: true,
-          id: urlObject.href
-        };
-      }
-      return null;
-    },
-    resolveId: (specifier, importer = rootDirectoryUrl) => {
-      if (isFileSystemPath$1(importer)) {
-        importer = fileUrlConverter.asFileUrl(importer);
-      }
-      let url;
-      if (specifier[0] === "/") {
-        url = new URL(specifier.slice(1), rootDirectoryUrl).href;
-      } else {
-        url = new URL(specifier, importer).href;
-      }
-      const existingImporter = urlImporters[url];
-      if (!existingImporter) {
-        urlImporters[url] = importer;
-      }
-      if (!url.startsWith("file:")) {
-        return {
-          id: url,
-          external: true
-        };
-      }
-      if (!importCanBeBundled(url)) {
-        return {
-          id: url,
-          external: true
-        };
-      }
-      const urlInfo = urlGraph.getUrlInfo(url);
-      if (!urlInfo) {
-        // happen when excluded by urlAnalysis.include
-        return {
-          id: url,
-          external: true
-        };
-      }
-      if (!urlInfo.shouldHandle) {
-        return {
-          id: url,
-          external: true
-        };
-      }
-      const filePath = fileUrlConverter.asFilePath(url);
-      return filePath;
-    },
-    async load(rollupId) {
-      const fileUrl = fileUrlConverter.asFileUrl(rollupId);
-      const urlInfo = urlGraph.getUrlInfo(fileUrl);
-      return {
-        code: urlInfo.content,
-        map: (sourcemaps === "file" || sourcemaps === "inline") && urlInfo.sourcemap ? sourcemapConverter.toFilePaths(urlInfo.sourcemap) : null
-      };
-    }
-  };
-};
-const applyRollupPlugins = async ({
-  rollup,
-  rollupPlugins,
-  rollupInput,
-  rollupOutput
-}) => {
-  if (!rollup) {
-    const rollupModule = await import("rollup");
-    rollup = rollupModule.rollup;
-  }
-  const {
-    importAssertions
-  } = await import("acorn-import-assertions");
-  const rollupReturnValue = await rollup({
-    ...rollupInput,
-    plugins: rollupPlugins,
-    acornInjectPlugins: [importAssertions, ...(rollupInput.acornInjectPlugins || [])]
-  });
-  const rollupOutputArray = await rollupReturnValue.generate(rollupOutput);
-  return rollupOutputArray;
-};
-const willBeInsideJsDirectory = ({
-  chunkInfo,
-  fileUrlConverter,
-  jsModuleUrlInfos
-}) => {
-  // if the chunk is generated dynamically by rollup
-  // for an entry point jsenv will put that file inside js/ directory
-  // if it's generated dynamically for a file already in js/ directory
-  // both will be inside the js/ directory
-  if (!chunkInfo.facadeModuleId) {
-    // generated by rollup
-    return true;
-  }
-  const url = fileUrlConverter.asFileUrl(chunkInfo.facadeModuleId);
-  const jsModuleUrlInfo = jsModuleUrlInfos.find(jsModuleUrlInfo => jsModuleUrlInfo.url === url);
-  if (!jsModuleUrlInfo) {
-    // generated by rollup
-    return true;
-  }
-  if (!jsModuleUrlInfo.isEntryPoint) {
-    // not an entry point, jsenv will put it inside js/ directory
-    return true;
-  }
-  return false;
-};
-
 const jsenvPluginAsJsClassicLibrary = ({
   systemJsInjection,
   systemJsClientFileUrl,
@@ -18552,6 +18148,30 @@ const babelPluginInstrument = (api, {
   };
 };
 
+/*
+ * Generated helpers
+ * - https://github.com/babel/babel/commits/main/packages/babel-helpers/src/helpers.ts
+ * File helpers
+ * - https://github.com/babel/babel/tree/main/packages/babel-helpers/src/helpers
+ *
+ */
+const babelHelperClientDirectoryUrl = new URL("./babel_helpers/", import.meta.url).href;
+
+// we cannot use "@jsenv/core/src/*" because babel helper might be injected
+// into node_modules not depending on "@jsenv/core"
+const getBabelHelperFileUrl = babelHelperName => {
+  const babelHelperFileUrl = new URL(`./${babelHelperName}/${babelHelperName}.js`, babelHelperClientDirectoryUrl).href;
+  return babelHelperFileUrl;
+};
+const babelHelperNameFromUrl = url => {
+  if (!url.startsWith(babelHelperClientDirectoryUrl)) {
+    return null;
+  }
+  const afterBabelHelperDirectory = url.slice(babelHelperClientDirectoryUrl.length);
+  const babelHelperName = afterBabelHelperDirectory.slice(0, afterBabelHelperDirectory.indexOf("/"));
+  return babelHelperName;
+};
+
 /* eslint-disable camelcase */
 // copied from
 // https://github.com/babel/babel/blob/e498bee10f0123bb208baa228ce6417542a2c3c4/packages/babel-compat-data/data/plugins.json#L1
@@ -19143,10 +18763,10 @@ const babelPluginBabelHelpersAsJsenvImports = (babel, {
   };
 };
 
+const newStylesheetClientFileUrl = new URL("./js/new_stylesheet.js", import.meta.url).href;
 const babelPluginNewStylesheetAsJsenvImport = (babel, {
   getImportSpecifier
 }) => {
-  const newStylesheetClientFileUrl = new URL("./js/new_stylesheet.js", import.meta.url).href;
   return {
     name: "new-stylesheet-as-jsenv-import",
     visitor: {
@@ -19255,10 +18875,10 @@ const getImportAssertionsDescriptor = importAssertions => {
   return importAssertionsDescriptor;
 };
 
+const globalThisClientFileUrl = new URL("./js/global_this.js", import.meta.url).href;
 const babelPluginGlobalThisAsJsenvImport = (babel, {
   getImportSpecifier
 }) => {
-  const globalThisClientFileUrl = new URL("./js/global_this.js", import.meta.url).href;
   return {
     name: "global-this-as-jsenv-import",
     visitor: {
@@ -19286,10 +18906,10 @@ const babelPluginGlobalThisAsJsenvImport = (babel, {
   };
 };
 
+const regeneratorRuntimeClientFileUrl = new URL("./js/regenerator_runtime.js", import.meta.url).href;
 const babelPluginRegeneratorRuntimeAsJsenvImport = (babel, {
   getImportSpecifier
 }) => {
-  const regeneratorRuntimeClientFileUrl = new URL("./js/regenerator_runtime.js", import.meta.url).href;
   return {
     name: "regenerator-runtime-as-jsenv-import",
     visitor: {
@@ -19396,6 +19016,17 @@ const jsenvPluginBabel = ({
   return {
     name: "jsenv:babel",
     appliesDuring: "*",
+    transformUrlContent: urlInfo => {
+      if (urlInfo.url === regeneratorRuntimeClientFileUrl) {
+        urlInfo.data.isBabelClientFile = true;
+      }
+      if (urlInfo.url === globalThisClientFileUrl) {
+        urlInfo.data.isBabelClientFile = true;
+      }
+      if (urlInfo.url === newStylesheetClientFileUrl) {
+        urlInfo.data.isBabelClientFile = true;
+      }
+    },
     finalizeUrlContent: {
       js_classic: transformWithBabel,
       js_module: transformWithBabel
@@ -19585,230 +19216,6 @@ const jsenvPluginNodeRuntime = ({
   return {
     name: "jsenv:node_runtime",
     appliesDuring: "*"
-  };
-};
-
-const sortByDependencies = nodes => {
-  const visited = [];
-  const sorted = [];
-  const circular = [];
-  const visit = url => {
-    const isSorted = sorted.includes(url);
-    if (isSorted) {
-      return;
-    }
-    const isVisited = visited.includes(url);
-    if (isVisited) {
-      if (!circular.includes(url)) {
-        circular.push(url);
-      }
-    } else {
-      visited.push(url);
-      nodes[url].dependencies.forEach(dependencyUrl => {
-        visit(dependencyUrl);
-      });
-      sorted.push(url);
-    }
-  };
-  Object.keys(nodes).forEach(url => {
-    visit(url);
-  });
-  sorted.circular = circular;
-  return sorted;
-};
-
-/*
- * Each @import found in css is replaced by the file content
- * - There is no need to worry about urls (such as background-image: url())
- *   because they are absolute (file://*) and will be made relative again by jsenv build
- * - The sourcemap are not generated but ideally they should be
- *   It can be quite challenging, see "bundle_sourcemap.js"
- */
-
-// Do not use until https://github.com/parcel-bundler/parcel-css/issues/181
-const bundleCss = async ({
-  cssUrlInfos,
-  context
-}) => {
-  const bundledCssUrlInfos = {};
-  const cssBundleInfos = await performCssBundling({
-    cssEntryUrlInfos: cssUrlInfos,
-    context
-  });
-  cssUrlInfos.forEach(cssUrlInfo => {
-    bundledCssUrlInfos[cssUrlInfo.url] = {
-      data: {
-        bundlerName: "parcel"
-      },
-      contentType: "text/css",
-      content: cssBundleInfos[cssUrlInfo.url].bundleContent
-    };
-  });
-  return bundledCssUrlInfos;
-};
-const performCssBundling = async ({
-  cssEntryUrlInfos,
-  context
-}) => {
-  const cssBundleInfos = await loadCssUrls({
-    cssEntryUrlInfos,
-    context
-  });
-  const cssUrlsSorted = sortByDependencies(cssBundleInfos);
-  cssUrlsSorted.forEach(cssUrl => {
-    const cssBundleInfo = cssBundleInfos[cssUrl];
-    const magicSource = createMagicSource(cssBundleInfo.content);
-    cssBundleInfo.cssUrls.forEach(cssUrl => {
-      if (cssUrl.type === "@import") {
-        magicSource.replace({
-          start: cssUrl.atRuleStart,
-          end: cssUrl.atRuleEnd,
-          replacement: cssBundleInfos[cssUrl.url].bundleContent
-        });
-      }
-    });
-    const {
-      content
-    } = magicSource.toContentAndSourcemap();
-    cssBundleInfo.bundleContent = content.trim();
-  });
-  return cssBundleInfos;
-};
-const parseCssUrls = async ({
-  css,
-  url
-}) => {
-  const cssUrls = [];
-  await applyPostCss({
-    sourcemaps: false,
-    plugins: [postCssPluginUrlVisitor({
-      urlVisitor: ({
-        type,
-        specifier,
-        specifierStart,
-        specifierEnd,
-        atRuleStart,
-        atRuleEnd
-      }) => {
-        cssUrls.push({
-          type,
-          url: new URL(specifier, url).href,
-          specifierStart,
-          specifierEnd,
-          atRuleStart,
-          atRuleEnd
-        });
-      }
-    })],
-    url,
-    content: css
-  });
-  return cssUrls;
-};
-const loadCssUrls = async ({
-  cssEntryUrlInfos,
-  context
-}) => {
-  const cssBundleInfos = {};
-  const promises = [];
-  const promiseMap = new Map();
-  const load = cssUrlInfo => {
-    const promiseFromData = promiseMap.get(cssUrlInfo.url);
-    if (promiseFromData) return promiseFromData;
-    const promise = _load(cssUrlInfo);
-    promises.push(promise);
-    promiseMap.set(cssUrlInfo.url, promise);
-    return promise;
-  };
-  const _load = async cssUrlInfo => {
-    const cssUrls = await parseCssUrls({
-      css: cssUrlInfo.content,
-      url: cssUrlInfo.url
-    });
-    const cssBundleInfo = {
-      content: cssUrlInfo.content,
-      cssUrls,
-      dependencies: []
-    };
-    cssBundleInfos[cssUrlInfo.url] = cssBundleInfo;
-    cssUrls.forEach(cssUrl => {
-      if (cssUrl.type === "@import") {
-        cssBundleInfo.dependencies.push(cssUrl.url);
-        const importedCssUrlInfo = context.urlGraph.getUrlInfo(cssUrl.url);
-        load(importedCssUrlInfo);
-      }
-    });
-  };
-  cssEntryUrlInfos.forEach(cssEntryUrlInfo => {
-    load(cssEntryUrlInfo);
-  });
-  const waitAll = async () => {
-    if (promises.length === 0) {
-      return;
-    }
-    const promisesToWait = promises.slice();
-    promises.length = 0;
-    await Promise.all(promisesToWait);
-    await waitAll();
-  };
-  await waitAll();
-  promiseMap.clear();
-  return cssBundleInfos;
-};
-
-/*
- * TODO:
- * for each js_classic where subtype is a worker
- * take the url info and find importScripts calls
- * and replace them with the corresponding url info file content
- * we'll ikely need to save the importScripts node location to be able to do that
- */
-
-// import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
-
-const bundleJsClassicWorkers = () => {
-  return {};
-};
-
-const jsenvPluginBundling = bundling => {
-  if (typeof bundling === "boolean") {
-    bundling = {
-      css: bundling,
-      js_classic_workers: bundling,
-      js_module: bundling
-    };
-  } else if (typeof bundling !== "object") {
-    throw new Error(`bundling must be a boolean or an object, got ${bundling}`);
-  }
-  Object.keys(bundling).forEach(key => {
-    if (bundling[key] === true) bundling[key] = {};
-  });
-  return {
-    name: "jsenv:bundling",
-    appliesDuring: "build",
-    bundle: {
-      css: bundling.css ? (cssUrlInfos, context) => {
-        return bundleCss({
-          cssUrlInfos,
-          context,
-          options: bundling.css
-        });
-      } : undefined,
-      js_classic: bundling.js_classic ? (jsClassicUrlInfos, context) => {
-        return bundleJsClassicWorkers({
-          jsClassicUrlInfos,
-          context,
-          options: bundling.js_classic_workers
-        });
-      } : undefined,
-      js_module: bundling.js_module ? (jsModuleUrlInfos, context) => {
-        return bundleJsModules({
-          jsModuleUrlInfos,
-          context,
-          options: bundling.js_module
-        });
-      } : undefined
-    }
   };
 };
 
@@ -20595,7 +20002,6 @@ const getCorePlugins = ({
   directoryReferenceAllowed,
   supervisor,
   transpilation = true,
-  bundling = false,
   clientMainFileUrl,
   clientAutoreload = false,
   clientFileChangeCallbackList,
@@ -20642,7 +20048,7 @@ const getCorePlugins = ({
     urlResolution
   }), jsenvPluginUrlVersion(), jsenvPluginCommonJsGlobals(), jsenvPluginImportMetaScenarios(), jsenvPluginNodeRuntime({
     runtimeCompat
-  }), jsenvPluginBundling(bundling), jsenvPluginImportMetaHot(), ...(clientAutoreload ? [jsenvPluginAutoreload({
+  }), jsenvPluginImportMetaHot(), ...(clientAutoreload ? [jsenvPluginAutoreload({
     ...clientAutoreload,
     clientFileChangeCallbackList,
     clientFilesPruneCallbackList
@@ -21037,7 +20443,6 @@ const build = async ({
   fileSystemMagicRedirection,
   directoryReferenceAllowed,
   transpilation = {},
-  bundling = true,
   versioning = !runtimeCompat.node,
   versioningMethod = "search_param",
   // "filename", "search_param"
@@ -21149,8 +20554,7 @@ build ${entryPointKeys.length} entry points`);
           ...transpilation,
           babelHelpersAsImport: !useExplicitJsClassicConversion,
           jsClassicFallback: false
-        },
-        bundling
+        }
       })],
       sourcemaps,
       sourcemapsSourcesContent,

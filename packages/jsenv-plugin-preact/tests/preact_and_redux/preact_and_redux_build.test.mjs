@@ -1,8 +1,9 @@
 import { assert } from "@jsenv/assert"
-
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
 import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
+
 import { plugins } from "./jsenv_config.mjs"
 
 const test = async (params) => {
@@ -13,7 +14,7 @@ const test = async (params) => {
     entryPoints: {
       "./main.html": "main.html",
     },
-    plugins,
+    plugins: [...plugins, jsenvPluginBundling()],
     writeGeneratedFiles: true,
     ...params,
   })
