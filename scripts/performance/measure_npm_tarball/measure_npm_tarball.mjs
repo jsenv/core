@@ -11,11 +11,16 @@ const npmPackInfo = await new Promise((resolve, reject) => {
 })
 const npmTarballInfo = npmPackInfo[0]
 
-export const packageTarballmetrics = {
-  "npm tarball size": { value: npmTarballInfo.size, unit: "byte" },
+export const tarballMetrics = {
+  "npm tarball size": {
+    value: npmTarballInfo.size,
+    unit: "byte",
+  },
   "npm tarball unpacked size": {
     value: npmTarballInfo.unpackedSize,
     unit: "byte",
   },
-  "npm tarball file count": { value: npmTarballInfo.entryCount },
+  "npm tarball file count": {
+    value: npmTarballInfo.entryCount,
+  },
 }

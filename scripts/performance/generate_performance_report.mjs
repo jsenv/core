@@ -14,7 +14,8 @@
 import { importMetricFromFiles } from "@jsenv/performance-impact"
 
 const {
-  packageTarballMetrics,
+  tarballMetrics,
+  importMetrics,
   devServerMetrics,
   buildMetrics,
   testPlanMetrics,
@@ -22,9 +23,14 @@ const {
   logLevel: process.argv.includes("--log") ? "info" : "warn",
   directoryUrl: new URL("./", import.meta.url),
   metricsDescriptions: {
-    packageTarballMetrics: {
-      file: "./measure_npm_tarball/measure_package_tarball.mjs#packageTarballmetrics",
+    tarballMetrics: {
+      file: "./measure_npm_tarball/measure_npm_tarball.mjs#tarballMetrics",
       iterations: 1,
+    },
+    importMetrics: {
+      file: "./measure_import/measure_import.mjs#importMetrics",
+      iterations: process.argv.includes("--once") ? 1 : 3,
+      msToWaitBetweenEachIteration: 500,
     },
     devServerMetrics: {
       file: "./dev_server/measure_dev_server.mjs#devServerMetrics",
@@ -45,8 +51,9 @@ const {
 })
 
 export const performanceReport = {
-  "package size metrics": {
-    ...packageTarballMetrics,
+  "package metrics": {
+    ...importMetrics,
+    ...tarballMetrics,
   },
   "dev server metrics": {
     ...devServerMetrics,

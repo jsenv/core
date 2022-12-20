@@ -2,8 +2,8 @@ import { startMeasures } from "@jsenv/performance-impact"
 
 const measures = startMeasures({
   gc: true,
-  memoryHeapUsage: true,
-  filesystemUsage: true,
+  memoryHeap: true,
+  filesystem: true,
 })
 
 const {
@@ -57,18 +57,13 @@ await executeTestPlan({
   coverageReportHtmlDirectory: false,
 })
 
-const {
-  duration,
-  heapUsed,
-  fileSystemReadOperationCount,
-  fileSystemWriteOperationCount,
-} = measures.stop()
+const { duration, memoryHeapUsed, memoryHeapTotal, fsRead, fsWrite } =
+  measures.stop()
 
 export const testPlanMetrics = {
   "test plan duration": { value: duration, unit: "ms" },
-  "test plan memory heap used": { value: heapUsed, unit: "byte" },
-  "number of fs read operation": { value: fileSystemReadOperationCount },
-  "number of fs write operation": {
-    value: fileSystemWriteOperationCount,
-  },
+  "test plan memory heap total": { value: memoryHeapTotal, unit: "byte" },
+  "test plan memory heap used": { value: memoryHeapUsed, unit: "byte" },
+  "number of fs read operation": { value: fsRead },
+  "number of fs write operation": { value: fsWrite },
 }
