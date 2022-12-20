@@ -39,6 +39,6 @@ const test = async (params) => {
 }
 
 // support for <script type="module">
-await test({ runtimeCompat: { chrome: "64" }, bundling: true })
+await test({ runtimeCompat: { chrome: "64" } })
 // no support for <script type="module"> + no bundling
-await test({ runtimeCompat: { chrome: "60" }, bundling: false })
+await test({ runtimeCompat: { chrome: "60" } })

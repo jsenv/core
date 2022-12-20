@@ -1,4 +1,5 @@
 import { assert } from "@jsenv/assert"
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
 import { jsenvPluginMinification } from "@jsenv/plugin-minification"
 
 import { build } from "@jsenv/core"
@@ -58,9 +59,10 @@ const test = async ({
 }
 
 if (process.platform === "darwin") {
-  // support
+  // support + bundling
   await test({
     runtimeCompat: { chrome: "80" },
+    plugins: [jsenvPluginBundling()],
     expectedBuildFileContents: readDirectoryContent(
       new URL("./expected/1/", import.meta.url),
     ),
@@ -72,7 +74,6 @@ if (process.platform === "darwin") {
   // support + no bundling
   await test({
     runtimeCompat: { chrome: "80" },
-    bundling: false,
     expectedBuildFileContents: readDirectoryContent(
       new URL("./expected/2/", import.meta.url),
     ),
@@ -86,6 +87,7 @@ if (process.platform === "darwin") {
   // no support for { type: "module" } on service worker
   await test({
     runtimeCompat: { chrome: "79" },
+    plugins: [jsenvPluginBundling()],
     expectedBuildFileContents: readDirectoryContent(
       new URL("./expected/3/", import.meta.url),
     ),
@@ -97,7 +99,7 @@ if (process.platform === "darwin") {
   // no support for { type: "module" } on service worker + no bundling
   await test({
     runtimeCompat: { chrome: "79" },
-    bundling: false,
+    plugins: [jsenvPluginBundling()],
     expectedBuildFileContents: readDirectoryContent(
       new URL("./expected/4/", import.meta.url),
     ),

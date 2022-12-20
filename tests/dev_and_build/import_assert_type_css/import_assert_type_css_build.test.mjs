@@ -1,4 +1,5 @@
 import { assert } from "@jsenv/assert"
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
 import { jsenvPluginMinification } from "@jsenv/plugin-minification"
 
 import { build } from "@jsenv/core"
@@ -35,11 +36,17 @@ const test = async (options) => {
 }
 
 // support for <script type="module">
-await test({ runtimeCompat: { chrome: "65" } })
+await test({
+  runtimeCompat: { chrome: "65" },
+  plugins: [jsenvPluginBundling()],
+})
 // no bundling
-await test({ bundling: false, runtimeCompat: { chrome: "65" } })
+await test({ runtimeCompat: { chrome: "65" } })
 // no support for <script type="module">
-await test({ runtimeCompat: { chrome: "60" } })
+await test({
+  runtimeCompat: { chrome: "60" },
+  plugins: [jsenvPluginBundling()],
+})
 
 // minification
 {
@@ -51,6 +58,7 @@ await test({ runtimeCompat: { chrome: "60" } })
       "./main.html": "main.html",
     },
     plugins: [
+      jsenvPluginBundling(),
       jsenvPluginMinification({
         js_module: false,
         css: true,

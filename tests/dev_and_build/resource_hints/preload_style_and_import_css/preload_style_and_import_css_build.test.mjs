@@ -1,4 +1,5 @@
 import { assert } from "@jsenv/assert"
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
 
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
@@ -38,6 +39,9 @@ const test = async (params) => {
 }
 
 // support for <script type="module">
-await test({ runtimeCompat: { chrome: "64" } })
+await test({
+  runtimeCompat: { chrome: "64" },
+  plugins: [jsenvPluginBundling()],
+})
 // no support for <script type="module"> + no bundling
-await test({ runtimeCompat: { chrome: "62" }, bundling: false })
+await test({ runtimeCompat: { chrome: "62" } })

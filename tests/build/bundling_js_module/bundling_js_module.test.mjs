@@ -1,4 +1,5 @@
 import { assert } from "@jsenv/assert"
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
 
 import { build } from "@jsenv/core"
 
@@ -10,7 +11,7 @@ const test = async (params) => {
     entryPoints: {
       "./main.js": "main.js",
     },
-    bundling: true,
+    plugins: [jsenvPluginBundling()],
     ...params,
   })
   const actual = buildFileContents

@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs"
 import { assert } from "@jsenv/assert"
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
 
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
@@ -41,8 +42,14 @@ const test = async (params) => {
 }
 
 // support for <script type="module">
-await test({ runtimeCompat: { chrome: "64" } })
+await test({
+  runtimeCompat: { chrome: "64" },
+  plugins: [jsenvPluginBundling()],
+})
 // support for <script type="module"> + no bundling
-await test({ runtimeCompat: { chrome: "64" }, bundling: false })
+await test({ runtimeCompat: { chrome: "64" } })
 // without support for <script type="module">
-await test({ runtimeCompat: { chrome: "55" } })
+await test({
+  runtimeCompat: { chrome: "55" },
+  plugins: [jsenvPluginBundling()],
+})

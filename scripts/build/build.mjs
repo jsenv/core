@@ -1,5 +1,6 @@
-import { build } from "@jsenv/core"
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
 import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs"
+import { build } from "@jsenv/core"
 
 const jsenvRootDirectoryUrl = new URL("../../", import.meta.url)
 const jsenvDistDirectoryUrl = new URL("./dist/", jsenvRootDirectoryUrl)
@@ -41,15 +42,15 @@ await build({
       "**/node_modules/ws/": true,
     },
   },
-  bundling: {
-    js_module: {
-      babelHelpersChunk: false,
-    },
-  },
   plugins: [
     jsenvPluginCommonJs({
       include: {
         "/**/node_modules/ws/": true,
+      },
+    }),
+    jsenvPluginBundling({
+      js_module: {
+        babelHelpersChunk: false,
       },
     }),
   ],

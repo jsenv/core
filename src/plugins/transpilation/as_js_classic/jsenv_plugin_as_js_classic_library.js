@@ -1,6 +1,6 @@
-import { createUrlGraphLoader } from "@jsenv/core/src/kitchen/url_graph/url_graph_loader.js"
-import { bundleJsModules } from "@jsenv/core/src/plugins/bundling/js_module/bundle_js_modules.js"
+import { bundleJsModules } from "@jsenv/plugin-bundling"
 
+import { createUrlGraphLoader } from "@jsenv/core/src/kitchen/url_graph/url_graph_loader.js"
 import { convertJsModuleToJsClassic } from "./convert_js_module_to_js_classic.js"
 
 export const jsenvPluginAsJsClassicLibrary = ({

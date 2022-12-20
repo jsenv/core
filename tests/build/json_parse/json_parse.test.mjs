@@ -12,7 +12,6 @@ const { buildInlineContents } = await build({
   entryPoints: {
     "./main.html": "main.html",
   },
-  bundling: false,
   versioning: false,
   plugins: [jsenvPluginMinification()],
 })

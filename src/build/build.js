@@ -131,7 +131,6 @@ export const build = async ({
   fileSystemMagicRedirection,
   directoryReferenceAllowed,
   transpilation = {},
-  bundling = true,
   versioning = !runtimeCompat.node,
   versioningMethod = "search_param", // "filename", "search_param"
   lineBreakNormalization = process.platform === "win32",
@@ -262,7 +261,6 @@ build ${entryPointKeys.length} entry points`)
             babelHelpersAsImport: !useExplicitJsClassicConversion,
             jsClassicFallback: false,
           },
-          bundling,
         }),
       ],
       sourcemaps,

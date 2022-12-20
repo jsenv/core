@@ -6,6 +6,7 @@
 // see https://github.com/rollup/rollup/blob/900fae0ddb2fd28dc0328b58f88b856aa3c10a35/test/chunking-form/samples/minChunkSize/merge-two-small-chunks-a/_config.js
 
 import { assert } from "@jsenv/assert"
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
 
 import { build } from "@jsenv/core"
 
@@ -30,12 +31,14 @@ const test = async ({ expectedFileCount, ...params }) => {
 //   expectedFileCount: 3,
 // })
 await test({
-  bundling: {
-    js_module: {
-      rollupOutput: {
-        experimentalMinChunkSize: 1000,
+  plugins: [
+    jsenvPluginBundling({
+      js_module: {
+        rollupOutput: {
+          experimentalMinChunkSize: 1000,
+        },
       },
-    },
-  },
+    }),
+  ],
   expectedFileCount: 2,
 })
