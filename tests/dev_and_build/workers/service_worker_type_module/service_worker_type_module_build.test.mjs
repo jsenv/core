@@ -1,4 +1,5 @@
 import { assert } from "@jsenv/assert"
+import { jsenvPluginMinification } from "@jsenv/plugin-minification"
 
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
@@ -17,13 +18,15 @@ const test = async ({
     entryPoints: {
       "./main.html": "main.html",
     },
-    minification: {
-      // minify js classic to ensure version is predictable
-      // otherwise it's filesystem dependents because of systemjs infering variables
-      // name from import path
-      // see "something to keep in mind" inside "jsenv_plugin_as_js_classic.js"
-      js_classic: true,
-    },
+    plugins: [
+      jsenvPluginMinification({
+        // minify js classic to ensure version is predictable
+        // otherwise it's filesystem dependents because of systemjs infering variables
+        // name from import path
+        // see "something to keep in mind" inside "jsenv_plugin_as_js_classic.js"
+        js_classic: true,
+      }),
+    ],
     ...rest,
   })
   const server = await startFileServer({
@@ -59,8 +62,8 @@ if (process.platform === "darwin") {
       new URL("./expected/1/", import.meta.url),
     ),
     expectedServiceWorkerUrls: {
-      "/main.html": { versioned: false, version: "1985706b" },
-      "/css/style.css?v=bd38451d": { versioned: true },
+      "/main.html": { versioned: false, version: "698d361c" },
+      "/css/style.css?v=65c914e7": { versioned: true },
     },
   })
   // support + no bundling
@@ -71,7 +74,7 @@ if (process.platform === "darwin") {
       new URL("./expected/2/", import.meta.url),
     ),
     expectedServiceWorkerUrls: {
-      "/main.html": { versioned: false, version: "1ee5fe50" },
+      "/main.html": { versioned: false, version: "23cfe64c" },
       "/css/style.css?v=0e312da1": { versioned: true },
       "/js/a.js?v=9c2ce306": { versioned: true },
       "/js/b.js?v=e3b0c442": { versioned: true },
