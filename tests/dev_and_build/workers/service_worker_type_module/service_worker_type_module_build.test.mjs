@@ -5,10 +5,13 @@ import { jsenvPluginMinification } from "@jsenv/plugin-minification"
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
 import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
-import { readDirectoryContent } from "@jsenv/core/tests/read_directory_content.js"
+import {
+  readSnapshotsFromDirectory,
+  writeSnapshotsIntoDirectory,
+} from "@jsenv/core/tests/snapshots_directory.js"
 
 const test = async ({
-  expectedBuildFileContents,
+  snapshotsDirectoryUrl,
   expectedServiceWorkerUrls,
   ...rest
 }) => {
@@ -47,14 +50,18 @@ const test = async ({
   })
   const { serviceWorkerUrls } = returnValue.inspectResponse
 
+  const expectedBuildFileContents = readSnapshotsFromDirectory(
+    snapshotsDirectoryUrl,
+  )
+  writeSnapshotsIntoDirectory(snapshotsDirectoryUrl, buildFileContents)
   assert({
     actual: {
-      buildFileContents,
       serviceWorkerUrls,
+      buildFileContents,
     },
     expected: {
-      buildFileContents: expectedBuildFileContents,
       serviceWorkerUrls: expectedServiceWorkerUrls,
+      buildFileContents: expectedBuildFileContents,
     },
   })
 }
@@ -64,9 +71,7 @@ if (process.platform === "darwin") {
   await test({
     runtimeCompat: { chrome: "80" },
     plugins: [jsenvPluginBundling()],
-    expectedBuildFileContents: readDirectoryContent(
-      new URL("./expected/1/", import.meta.url),
-    ),
+    snapshotsDirectoryUrl: new URL("./snapshots/1/", import.meta.url),
     expectedServiceWorkerUrls: {
       "/main.html": { versioned: false, version: "1985706b" },
       "/css/style.css?v=bd38451d": { versioned: true },
@@ -75,9 +80,7 @@ if (process.platform === "darwin") {
   // support + no bundling
   await test({
     runtimeCompat: { chrome: "80" },
-    expectedBuildFileContents: readDirectoryContent(
-      new URL("./expected/2/", import.meta.url),
-    ),
+    snapshotsDirectoryUrl: new URL("./snapshots/2/", import.meta.url),
     expectedServiceWorkerUrls: {
       "/main.html": { versioned: false, version: "1ee5fe50" },
       "/css/style.css?v=0e312da1": { versioned: true },
@@ -89,9 +92,7 @@ if (process.platform === "darwin") {
   await test({
     runtimeCompat: { chrome: "79" },
     plugins: [jsenvPluginBundling()],
-    expectedBuildFileContents: readDirectoryContent(
-      new URL("./expected/3/", import.meta.url),
-    ),
+    snapshotsDirectoryUrl: new URL("./snapshots/3/", import.meta.url),
     expectedServiceWorkerUrls: {
       "/main.html": { versioned: false, version: "64ccea8c" },
       "/css/style.css?v=bd38451d": { versioned: true },
@@ -100,9 +101,7 @@ if (process.platform === "darwin") {
   // no support for { type: "module" } on service worker + no bundling
   await test({
     runtimeCompat: { chrome: "79" },
-    expectedBuildFileContents: readDirectoryContent(
-      new URL("./expected/4/", import.meta.url),
-    ),
+    snapshotsDirectoryUrl: new URL("./snapshots/4/", import.meta.url),
     expectedServiceWorkerUrls: {
       "/main.html": { versioned: false, version: "0f66748c" },
       "/css/style.css?v=0e312da1": { versioned: true },

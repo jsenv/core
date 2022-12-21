@@ -5,7 +5,10 @@ import { jsenvPluginMinification } from "@jsenv/plugin-minification"
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
 import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
-import { readDirectoryContent } from "@jsenv/core/tests/read_directory_content.js"
+import {
+  readSnapshotsFromDirectory,
+  writeSnapshotsIntoDirectory,
+} from "@jsenv/core/tests/snapshots_directory.js"
 
 const test = async (params) => {
   const { buildFileContents } = await build({
@@ -30,6 +33,12 @@ const test = async (params) => {
     /* eslint-enable no-undef */
   })
   const { order, serviceWorkerUrls } = returnValue.inspectResponse
+  const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url)
+  const expectedBuildFileContents = readSnapshotsFromDirectory(
+    snapshotsDirectoryUrl,
+  )
+  writeSnapshotsIntoDirectory(snapshotsDirectoryUrl, buildFileContents)
+
   const actual = {
     order,
     serviceWorkerUrls,
@@ -43,9 +52,7 @@ const test = async (params) => {
       "/js/a.js?v=07327beb": { versioned: true },
       "/js/b.js?v=2cc2d9e4": { versioned: true },
     },
-    buildFileContents: readDirectoryContent(
-      new URL("./expected/", import.meta.url),
-    ),
+    buildFileContents: expectedBuildFileContents,
   }
   assert({ actual, expected })
 }

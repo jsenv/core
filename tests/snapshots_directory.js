@@ -1,8 +1,9 @@
 import { readdirSync, statSync, readFileSync } from "node:fs"
+import { writeFileSync } from "@jsenv/filesystem"
 import { urlToRelativeUrl } from "@jsenv/urls"
 
-export const readDirectoryContent = (directoryUrl) => {
-  const files = {}
+export const readSnapshotsFromDirectory = (directoryUrl) => {
+  const fileContents = {}
   directoryUrl = new URL(directoryUrl)
   const visitDirectory = (url) => {
     const directoryContent = readdirSync(url)
@@ -14,10 +15,17 @@ export const readDirectoryContent = (directoryUrl) => {
       } else {
         const content = readFileSync(contentUrl, "utf8")
         const relativeUrl = urlToRelativeUrl(contentUrl, directoryUrl)
-        files[relativeUrl] = content
+        fileContents[relativeUrl] = content
       }
     })
   }
   visitDirectory(directoryUrl)
-  return files
+  return fileContents
+}
+
+export const writeSnapshotsIntoDirectory = (directoryUrl, fileContents) => {
+  Object.keys(fileContents).forEach((relativeUrl) => {
+    const contentUrl = new URL(relativeUrl, directoryUrl)
+    writeFileSync(contentUrl, fileContents[relativeUrl])
+  })
 }

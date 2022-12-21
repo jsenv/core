@@ -15,7 +15,7 @@ node_modules/
 
 /tests/**/js_syntax_error.js
 /tests/**/js_module_inline_syntax_error/main.html
-/tests/**/expected/
+/tests/**/snapshots/
 
 /**/*.nomodule.js
 /**/*.jsx
