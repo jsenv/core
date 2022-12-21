@@ -1,3 +1,41 @@
+# 30.0.0
+
+- Bundling moves to a plugin
+
+  `bundling` param is gone, a plugin must be used instead as shown in code below.
+
+  ```diff
+  import { build} from "@jsenv/core"
+  + import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
+
+  build({
+  -  bundling: { js_module: true }
+  +  plugins: [jsenvPluginBundling({ js_module: true })]
+  })
+  ```
+
+  Bundling becomes opt-in enabling more modularity per project and ability to test other bundlers than rollup in the future.
+
+- Minification moves to a plugin
+
+  `minification` param is gone, a plugin must be used instead as shown in code below.
+
+  ```diff
+  import { build} from "@jsenv/core"
+  + import { jsenvPluginMinification } from "@jsenv/plugin-minification"
+
+  build({
+  -  minification: { js_module: true }
+  +  plugins: [jsenvPluginMinification({ js_module: true })]
+  })
+  ```
+
+  Minification becomes opt-in enabling more modularity per project and ability to test other minifiers in the future.
+
+- Small changes on `buildFileContents` and `buildInlineContents` returned by `build`
+  - Keys are sorted
+  - `?as_js_classic` is removed from values when used
+
 # 29.9.2
 
 - Update NPM dependencies
