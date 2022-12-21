@@ -1,15 +1,23 @@
 import { assert } from "@jsenv/assert"
-
 import { startDevServer } from "@jsenv/core"
 import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
-import { plugins } from "./jsenv_config.mjs"
+
+import { jsenvPluginPlaceholders } from "@jsenv/plugin-placeholders"
 
 const test = async (params) => {
   const devServer = await startDevServer({
     logLevel: "warn",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
-    plugins,
+    plugins: [
+      jsenvPluginPlaceholders({
+        "./main.js": (urlInfo, context) => {
+          return {
+            __DEMO__: context.dev ? "dev" : "build",
+          }
+        },
+      }),
+    ],
     ...params,
   })
   const { returnValue } = await executeInChromium({

@@ -1,9 +1,9 @@
 import { assert } from "@jsenv/assert"
-
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
 import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
-import { plugins } from "./jsenv_config.mjs"
+
+import { jsenvPluginPlaceholders } from "@jsenv/plugin-placeholders"
 
 const test = async (params) => {
   await build({
@@ -13,7 +13,15 @@ const test = async (params) => {
     entryPoints: {
       "./main.html": "main.html",
     },
-    plugins,
+    plugins: [
+      jsenvPluginPlaceholders({
+        "./main.js": (urlInfo, context) => {
+          return {
+            __DEMO__: context.dev ? "dev" : "build",
+          }
+        },
+      }),
+    ],
     ...params,
   })
   const server = await startFileServer({

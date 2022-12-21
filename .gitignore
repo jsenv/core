@@ -5,6 +5,7 @@
 /docs/**/package-lock.json
 /node_modules/
 /packages/node_modules/
+/packages/**/tests/**/dist/
 /scripts/**/dist/
 /secrets.json
 /yarn.lock

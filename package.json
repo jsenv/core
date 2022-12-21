@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "30.0.0-alpha.1",
+  "version": "30.0.0-alpha.2",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "author": {
@@ -102,13 +102,15 @@
     "@jsenv/file-size-impact": "13.0.2",
     "@jsenv/https-local": "3.0.1",
     "@jsenv/package-workspace": "0.5.1",
-    "@jsenv/plugin-minification": "1.0.0",
+    "@jsenv/plugin-minification": "./packages/jsenv-plugin-minification/",
+    "@jsenv/plugin-globals": "./packages/jsenv-plugin-globals/",
+    "@jsenv/plugin-placeholders": "./packages/jsenv-plugin-placeholders/",
     "@jsenv/performance-impact": "4.1.0",
-    "eslint": "8.29.0",
+    "eslint": "8.30.0",
     "eslint-plugin-html": "7.1.0",
     "eslint-plugin-import": "2.26.0",
     "eslint-plugin-react": "7.31.11",
-    "playwright": "1.28.1",
+    "playwright": "1.29.0",
     "prettier": "2.8.1"
   }
 }

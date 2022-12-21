@@ -1,0 +1,37 @@
+{
+  "name": "@jsenv/plugin-placeholders",
+  "version": "1.0.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/jsenv-core",
+    "directory": "packages/jsenv-plugin-placeholders"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/main.js"
+    },
+    "./*": "./*"
+  },
+  "files": [
+    "/src/"
+  ],
+  "scripts": {
+    "test": "node --conditions=development ./scripts/test.mjs"
+  },
+  "dependencies": {
+    "@jsenv/sourcemap": "1.0.8",
+    "@jsenv/url-meta": "7.0.0",
+    "@jsenv/urls": "1.2.8"
+  },
+  "peerDependencies": {
+    "@jsenv/core": "*"
+  },
+  "devDependencies": {
+    "@jsenv/core": "../../"
+  }
+}

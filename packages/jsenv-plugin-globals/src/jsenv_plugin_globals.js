@@ -3,11 +3,11 @@ import { asUrlWithoutSearch } from "@jsenv/urls"
 
 import { injectGlobals } from "./inject_globals.js"
 
-export const jsenvPluginInjectGlobals = (rawAssociations) => {
+export const jsenvPluginGlobals = (rawAssociations) => {
   let resolvedAssociations
 
   return {
-    name: "jsenv:inject_globals",
+    name: "jsenv:globals",
     appliesDuring: "*",
     init: (context) => {
       resolvedAssociations = URL_META.resolveAssociations(

@@ -1,14 +1,23 @@
 import { assert } from "@jsenv/assert"
-
 import { startDevServer } from "@jsenv/core"
 import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
-import { plugins } from "./jsenv_config.js"
+
+import { jsenvPluginGlobals } from "@jsenv/plugin-globals"
 
 const test = async (params) => {
   const devServer = await startDevServer({
     logLevel: "warn",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
+    plugins: [
+      jsenvPluginGlobals({
+        "./main.js": () => {
+          return {
+            __answer__: 42,
+          }
+        },
+      }),
+    ],
     ...params,
   })
   const { returnValue } = await executeInChromium({
@@ -23,13 +32,9 @@ const test = async (params) => {
     returnValue,
   }
   const expected = {
-    returnValue: {
-      answer: 42,
-    },
+    returnValue: { answer: 42 },
   }
   assert({ actual, expected })
 }
 
-await test({
-  plugins,
-})
+await test()
