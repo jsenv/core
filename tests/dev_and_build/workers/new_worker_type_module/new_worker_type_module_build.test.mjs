@@ -1,4 +1,5 @@
 import { assert } from "@jsenv/assert"
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
 
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
@@ -15,7 +16,6 @@ const test = async (params) => {
     transpilation: {
       // topLevelAwait: "ignore",
     },
-    minification: false,
     ...params,
   })
   const server = await startFileServer({
@@ -38,12 +38,21 @@ const test = async (params) => {
 }
 
 // support for {type: "module"} in new Worker
-await test({ runtimeCompat: { chrome: "81" } })
+await test({
+  runtimeCompat: { chrome: "81" },
+  plugins: [jsenvPluginBundling()],
+})
 // no support for {type: "module"} in new Worker
-await test({ runtimeCompat: { chrome: "79" } })
+await test({
+  runtimeCompat: { chrome: "79" },
+  plugins: [jsenvPluginBundling()],
+})
 // no support for <script type="modue">
-await test({ runtimeCompat: { chrome: "62" } })
+await test({
+  runtimeCompat: { chrome: "62" },
+  plugins: [jsenvPluginBundling()],
+})
 // support + no bundling
-await test({ runtimeCompat: { chrome: "81" }, bundling: false })
+await test({ runtimeCompat: { chrome: "81" } })
 // no support + no bundling
-await test({ runtimeCompat: { chrome: "79" }, bundling: false })
+await test({ runtimeCompat: { chrome: "79" } })

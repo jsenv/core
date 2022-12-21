@@ -1,11 +1,10 @@
 import { requestCertificate } from "@jsenv/https-local"
 
-import { rootDirectoryUrl } from "@jsenv/core/jsenv.config.mjs"
 import { startDevServer } from "@jsenv/core"
 
 const { certificate, privateKey } = requestCertificate()
 await startDevServer({
-  rootDirectoryUrl,
+  rootDirectoryUrl: new URL("../../", import.meta.url),
   // babelPluginMap: {},
   protocol: "https",
   http2: false,

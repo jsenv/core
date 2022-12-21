@@ -1,12 +1,17 @@
 import { assert } from "@jsenv/assert"
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
+import { jsenvPluginMinification } from "@jsenv/plugin-minification"
 
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
 import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
-import { readDirectoryContent } from "@jsenv/core/tests/read_directory_content.js"
+import {
+  readSnapshotsFromDirectory,
+  writeSnapshotsIntoDirectory,
+} from "@jsenv/core/tests/snapshots_directory.js"
 
 const test = async ({
-  expectedBuildFileContents,
+  snapshotsDirectoryUrl,
   expectedServiceWorkerUrls,
   ...rest
 }) => {
@@ -17,14 +22,20 @@ const test = async ({
     entryPoints: {
       "./main.html": "main.html",
     },
-    minification: {
-      // minify js classic to ensure version is predictable
-      // otherwise it's filesystem dependents because of systemjs infering variables
-      // name from import path
-      // see "something to keep in mind" inside "jsenv_plugin_as_js_classic.js"
-      js_classic: true,
-    },
     ...rest,
+    plugins: [
+      jsenvPluginMinification({
+        // minify js classic to ensure version is predictable
+        // otherwise it's filesystem dependents because of systemjs infering variables
+        // name from import path
+        // see "something to keep in mind" inside "jsenv_plugin_as_js_classic.js"
+        html: false,
+        css: false,
+        js_module: false,
+        js_classic: true,
+      }),
+      ...(rest.plugins || []),
+    ],
   })
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
@@ -39,25 +50,28 @@ const test = async ({
   })
   const { serviceWorkerUrls } = returnValue.inspectResponse
 
+  const expectedBuildFileContents = readSnapshotsFromDirectory(
+    snapshotsDirectoryUrl,
+  )
+  writeSnapshotsIntoDirectory(snapshotsDirectoryUrl, buildFileContents)
   assert({
     actual: {
-      buildFileContents,
       serviceWorkerUrls,
+      buildFileContents,
     },
     expected: {
-      buildFileContents: expectedBuildFileContents,
       serviceWorkerUrls: expectedServiceWorkerUrls,
+      buildFileContents: expectedBuildFileContents,
     },
   })
 }
 
 if (process.platform === "darwin") {
-  // support
+  // support + bundling
   await test({
     runtimeCompat: { chrome: "80" },
-    expectedBuildFileContents: readDirectoryContent(
-      new URL("./expected/1/", import.meta.url),
-    ),
+    plugins: [jsenvPluginBundling()],
+    snapshotsDirectoryUrl: new URL("./snapshots/1/", import.meta.url),
     expectedServiceWorkerUrls: {
       "/main.html": { versioned: false, version: "1985706b" },
       "/css/style.css?v=bd38451d": { versioned: true },
@@ -66,10 +80,7 @@ if (process.platform === "darwin") {
   // support + no bundling
   await test({
     runtimeCompat: { chrome: "80" },
-    bundling: false,
-    expectedBuildFileContents: readDirectoryContent(
-      new URL("./expected/2/", import.meta.url),
-    ),
+    snapshotsDirectoryUrl: new URL("./snapshots/2/", import.meta.url),
     expectedServiceWorkerUrls: {
       "/main.html": { versioned: false, version: "1ee5fe50" },
       "/css/style.css?v=0e312da1": { versioned: true },
@@ -80,9 +91,8 @@ if (process.platform === "darwin") {
   // no support for { type: "module" } on service worker
   await test({
     runtimeCompat: { chrome: "79" },
-    expectedBuildFileContents: readDirectoryContent(
-      new URL("./expected/3/", import.meta.url),
-    ),
+    plugins: [jsenvPluginBundling()],
+    snapshotsDirectoryUrl: new URL("./snapshots/3/", import.meta.url),
     expectedServiceWorkerUrls: {
       "/main.html": { versioned: false, version: "64ccea8c" },
       "/css/style.css?v=bd38451d": { versioned: true },
@@ -91,10 +101,7 @@ if (process.platform === "darwin") {
   // no support for { type: "module" } on service worker + no bundling
   await test({
     runtimeCompat: { chrome: "79" },
-    bundling: false,
-    expectedBuildFileContents: readDirectoryContent(
-      new URL("./expected/4/", import.meta.url),
-    ),
+    snapshotsDirectoryUrl: new URL("./snapshots/4/", import.meta.url),
     expectedServiceWorkerUrls: {
       "/main.html": { versioned: false, version: "0f66748c" },
       "/css/style.css?v=0e312da1": { versioned: true },

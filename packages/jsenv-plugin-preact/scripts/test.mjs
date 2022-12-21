@@ -11,5 +11,4 @@ await executeTestPlan({
   },
   failFast: process.argv.includes("--workspace"),
   completedExecutionLogMerging: process.argv.includes("--workspace"),
-  coverageEnabled: process.argv.includes("--coverage"),
 })

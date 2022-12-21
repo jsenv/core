@@ -1,15 +1,15 @@
 import { pathToFileURL } from "node:url"
 import { injectJsImport } from "@jsenv/ast"
 
+export const newStylesheetClientFileUrl = new URL(
+  "./client/new_stylesheet.js",
+  import.meta.url,
+).href
+
 export const babelPluginNewStylesheetAsJsenvImport = (
   babel,
   { getImportSpecifier },
 ) => {
-  const newStylesheetClientFileUrl = new URL(
-    "./client/new_stylesheet.js",
-    import.meta.url,
-  ).href
-
   return {
     name: "new-stylesheet-as-jsenv-import",
     visitor: {

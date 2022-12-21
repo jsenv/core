@@ -1,4 +1,5 @@
 import { assert } from "@jsenv/assert"
+import { jsenvPluginMinification } from "@jsenv/plugin-minification"
 
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
@@ -13,6 +14,7 @@ const test = async (params) => {
       "./main.html": "main.html",
     },
     writeGeneratedFiles: true,
+    plugins: [jsenvPluginMinification()],
     ...params,
   })
   const server = await startFileServer({
@@ -32,4 +34,4 @@ const test = async (params) => {
 }
 
 // no support for <script type="module">
-await test({ runtimeCompat: { chrome: "60" }, minification: true })
+await test({ runtimeCompat: { chrome: "60" } })

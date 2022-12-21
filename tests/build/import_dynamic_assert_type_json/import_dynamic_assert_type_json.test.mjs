@@ -13,7 +13,6 @@ const test = async (options) => {
       "./main.html": "main.html",
     },
     // bundling: false,
-    minification: false,
     versioning: false,
     writeGeneratedFiles: true,
     ...options,

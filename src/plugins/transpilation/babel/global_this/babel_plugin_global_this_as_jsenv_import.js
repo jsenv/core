@@ -1,15 +1,15 @@
 import { pathToFileURL } from "node:url"
 import { injectJsImport } from "@jsenv/ast"
 
+export const globalThisClientFileUrl = new URL(
+  "./client/global_this.js",
+  import.meta.url,
+).href
+
 export const babelPluginGlobalThisAsJsenvImport = (
   babel,
   { getImportSpecifier },
 ) => {
-  const globalThisClientFileUrl = new URL(
-    "./client/global_this.js",
-    import.meta.url,
-  ).href
-
   return {
     name: "global-this-as-jsenv-import",
     visitor: {

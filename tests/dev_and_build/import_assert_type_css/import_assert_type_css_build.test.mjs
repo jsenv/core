@@ -1,4 +1,6 @@
 import { assert } from "@jsenv/assert"
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
+import { jsenvPluginMinification } from "@jsenv/plugin-minification"
 
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
@@ -12,7 +14,6 @@ const test = async (options) => {
     entryPoints: {
       "./main.html": "main.html",
     },
-    minification: false,
     ...options,
   })
   const server = await startFileServer({
@@ -35,12 +36,17 @@ const test = async (options) => {
 }
 
 // support for <script type="module">
-await test({ runtimeCompat: { chrome: "65" } })
-
+await test({
+  runtimeCompat: { chrome: "65" },
+  plugins: [jsenvPluginBundling()],
+})
 // no bundling
-await test({ bundling: false, runtimeCompat: { chrome: "65" } })
+await test({ runtimeCompat: { chrome: "65" } })
 // no support for <script type="module">
-await test({ runtimeCompat: { chrome: "60" } })
+await test({
+  runtimeCompat: { chrome: "60" },
+  plugins: [jsenvPluginBundling()],
+})
 
 // minification
 {
@@ -51,10 +57,13 @@ await test({ runtimeCompat: { chrome: "60" } })
     entryPoints: {
       "./main.html": "main.html",
     },
-    minification: {
-      js: false,
-      css: true,
-    },
+    plugins: [
+      jsenvPluginBundling(),
+      jsenvPluginMinification({
+        js_module: false,
+        css: true,
+      }),
+    ],
   })
   const cssKey = Object.keys(buildInlineContents).find((key) =>
     key.endsWith(".css"),

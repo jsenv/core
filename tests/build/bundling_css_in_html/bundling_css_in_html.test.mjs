@@ -1,4 +1,5 @@
 import { assert } from "@jsenv/assert"
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
 
 import { build } from "@jsenv/core"
 
@@ -9,8 +10,7 @@ const { buildFileContents } = await build({
   entryPoints: {
     "./main.js": "main.js",
   },
-  bundling: true,
-  minification: false,
+  plugins: [jsenvPluginBundling()],
 })
 const actual = {
   numberOfCssFiles: Object.keys(buildFileContents).filter((key) =>

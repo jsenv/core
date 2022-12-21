@@ -14,7 +14,6 @@ const test = async (params) => {
       "./main.html": "main.html",
     },
     plugins: [jsenvPluginPreact()],
-    minification: false,
     writeGeneratedFiles: true,
     ...params,
   })

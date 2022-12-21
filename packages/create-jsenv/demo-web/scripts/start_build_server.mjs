@@ -7,11 +7,9 @@
 import open from "open"
 import { startBuildServer } from "@jsenv/core"
 
-import { rootDirectoryUrl } from "../jsenv.config.mjs"
-
 const buildServer = await startBuildServer({
-  rootDirectoryUrl,
-  buildDirectoryUrl: new URL("./dist/", rootDirectoryUrl),
+  rootDirectoryUrl: new URL("../", import.meta.url),
+  buildDirectoryUrl: new URL("../dist/", import.meta.url),
   port: 3500,
 })
 if (process.argv.includes("--open")) {

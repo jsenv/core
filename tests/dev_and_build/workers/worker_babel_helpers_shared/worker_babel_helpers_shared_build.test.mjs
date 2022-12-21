@@ -6,6 +6,7 @@
  */
 
 import { assert } from "@jsenv/assert"
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
 
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
@@ -19,10 +20,10 @@ const test = async (params) => {
     entryPoints: {
       "./main.html": "main.html",
     },
+    plugins: [jsenvPluginBundling()],
     transpilation: {
       // topLevelAwait: "ignore",
     },
-    minification: false,
     ...params,
   })
   const server = await startFileServer({
@@ -43,8 +44,4 @@ const test = async (params) => {
   assert({ actual, expected })
 }
 
-await test({
-  runtimeCompat: {
-    edge: "17", // force object-rest-spread
-  },
-})
+await test({ runtimeCompat: { edge: "17" } })

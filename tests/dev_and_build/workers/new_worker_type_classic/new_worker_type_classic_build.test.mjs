@@ -1,4 +1,5 @@
 import { assert } from "@jsenv/assert"
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
 
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
@@ -15,7 +16,6 @@ const test = async (params) => {
     transpilation: {
       // topLevelAwait: "ignore",
     },
-    minification: false,
     ...params,
   })
   const server = await startFileServer({
@@ -37,9 +37,9 @@ const test = async (params) => {
   assert({ actual, expected })
 }
 
-await test()
+await test({
+  plugins: [jsenvPluginBundling()],
+})
 
 // no bundling
-await test({
-  bundling: false,
-})
+await test()

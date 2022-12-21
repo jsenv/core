@@ -1,4 +1,5 @@
 import { assert } from "@jsenv/assert"
+import { jsenvPluginMinification } from "@jsenv/plugin-minification"
 
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
@@ -11,11 +12,8 @@ const { buildInlineContents } = await build({
   entryPoints: {
     "./main.html": "main.html",
   },
-  bundling: false,
   versioning: false,
-  minification: {
-    json: true,
-  },
+  plugins: [jsenvPluginMinification()],
 })
 const server = await startFileServer({
   rootDirectoryUrl: new URL("./dist/", import.meta.url),

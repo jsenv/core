@@ -7,10 +7,8 @@
 import open from "open"
 import { startDevServer } from "@jsenv/core"
 
-import { rootDirectoryUrl } from "../jsenv.config.mjs"
-
 export const devServer = await startDevServer({
-  rootDirectoryUrl,
+  rootDirectoryUrl: new URL("../", import.meta.url),
   port: 3400,
   explorer: {
     groups: {

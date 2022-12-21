@@ -1,15 +1,15 @@
 import { pathToFileURL } from "node:url"
 import { injectJsImport } from "@jsenv/ast"
 
+export const regeneratorRuntimeClientFileUrl = new URL(
+  "./client/regenerator_runtime.js",
+  import.meta.url,
+).href
+
 export const babelPluginRegeneratorRuntimeAsJsenvImport = (
   babel,
   { getImportSpecifier },
 ) => {
-  const regeneratorRuntimeClientFileUrl = new URL(
-    "./client/regenerator_runtime.js",
-    import.meta.url,
-  ).href
-
   return {
     name: "regenerator-runtime-as-jsenv-import",
     visitor: {

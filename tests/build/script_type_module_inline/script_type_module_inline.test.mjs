@@ -1,4 +1,5 @@
 import { assert } from "@jsenv/assert"
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
 
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
@@ -12,7 +13,6 @@ const test = async ({ expectedUrl, ...rest }) => {
     entryPoints: {
       "./main.html": "main.html",
     },
-    minification: false,
     writeGeneratedFiles: true,
     ...rest,
   })
@@ -39,28 +39,26 @@ const test = async ({ expectedUrl, ...rest }) => {
 // support + bundling
 await test({
   runtimeCompat: { chrome: "64" },
-  bundling: true,
+  plugins: [jsenvPluginBundling()],
   versioning: false,
   expectedUrl: "/main.html",
 })
 // no support + bundling
 await test({
   runtimeCompat: { chrome: "60" },
-  bundling: true,
+  plugins: [jsenvPluginBundling()],
   versioning: false,
   expectedUrl: "/main.html__inline_script__1",
 })
 // no support + no bundling
 await test({
   runtimeCompat: { chrome: "60" },
-  bundling: false,
   versioning: false,
   expectedUrl: "/main.html__inline_script__1",
 })
 // no support + no bundling + versioning
 await test({
   runtimeCompat: { chrome: "60" },
-  bundling: false,
   versioning: true,
   expectedUrl: "/main.html__inline_script__1",
 })

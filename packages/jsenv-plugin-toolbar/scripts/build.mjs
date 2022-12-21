@@ -15,6 +15,5 @@ build({
       "/**/node_modules/@jsenv/ast/": false, // cannot inline "parse5", "@babel/core" and "postcss"
     },
   },
-  minification: false,
   versioning: false,
 })

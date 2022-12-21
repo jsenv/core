@@ -12,7 +12,6 @@ const test = async (params) => {
     entryPoints: {
       "./main.html": "main.html",
     },
-    minification: false,
     writeGeneratedFiles: true,
     ...params,
   })
@@ -39,21 +38,9 @@ const test = async (params) => {
 }
 
 // support for top level await and <script type="module">
-await test({
-  runtimeCompat: {
-    chrome: "89",
-  },
-  bundling: false,
-})
-
+await test({ runtimeCompat: { chrome: "89" } })
 // no support for top <script type="module">
-await test({
-  runtimeCompat: {
-    chrome: "55",
-  },
-  bundling: false,
-  systemJsBug: true,
-})
+await test({ runtimeCompat: { chrome: "55" }, systemJsBug: true })
 
 // support for <script type="module"> but not TLA
 // Considering that TLA + export on old runtimes is not recommended:
@@ -62,12 +49,7 @@ await test({
 // -> Jsenv throw an error when TLA + exports is used and systemjs is not
 // (ideally jsenv would throw a custom error explaining all this)
 try {
-  await test({
-    runtimeCompat: {
-      chrome: "65",
-    },
-    bundling: false,
-  })
+  await test({ runtimeCompat: { chrome: "65" } })
   throw new Error("should throw")
 } catch (e) {
   const actual = e.message.includes(

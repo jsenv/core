@@ -9,7 +9,6 @@ const { buildFileContents } = await build({
   entryPoints: {
     "./main.html": "main.html",
   },
-  minification: false,
   writeGeneratedFiles: true,
 })
 const manifest = JSON.parse(buildFileContents["other/manifest.webmanifest"])

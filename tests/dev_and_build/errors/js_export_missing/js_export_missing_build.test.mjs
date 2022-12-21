@@ -1,4 +1,5 @@
 import { assert } from "@jsenv/assert"
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
 
 import { build } from "@jsenv/core"
 
@@ -10,7 +11,7 @@ try {
     entryPoints: {
       "./main.html": "main.html",
     },
-    minification: false,
+    plugins: [jsenvPluginBundling()],
   })
   throw new Error("should throw")
 } catch (e) {
