@@ -27,13 +27,15 @@ try {
       "tests/**/*.test.html": {
         chromium: {
           runtime: chromium,
+          allocatedMs: 90_000,
         },
         firefox: {
           runtime: firefox,
-          allocatedMs: 60_000,
+          allocatedMs: 90_000,
         },
         webkit: {
           runtime: webkit,
+          allocatedMs: 90_000,
         },
       },
     },
