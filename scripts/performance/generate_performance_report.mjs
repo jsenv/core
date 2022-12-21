@@ -29,7 +29,7 @@ const {
     },
     importMetrics: {
       file: "./measure_import/measure_import.mjs#importMetrics",
-      iterations: process.argv.includes("--once") ? 1 : 3,
+      iterations: process.argv.includes("--once") ? 1 : 7,
       msToWaitBetweenEachIteration: 500,
     },
     devServerMetrics: {
