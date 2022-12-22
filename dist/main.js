@@ -24813,7 +24813,7 @@ const registerEvent = ({
 
 const chromium = createRuntimeFromPlaywright({
   browserName: "chromium",
-  browserVersion: "108.0.5359.29",
+  browserVersion: "109.0.5414.46",
   // to update, check https://github.com/microsoft/playwright/releases
   coveragePlaywrightAPIAvailable: true
 });
@@ -24821,7 +24821,7 @@ const chromiumIsolatedTab = chromium.isolatedTab;
 
 const firefox = createRuntimeFromPlaywright({
   browserName: "firefox",
-  browserVersion: "106.0" // to update, check https://github.com/microsoft/playwright/releases
+  browserVersion: "107.0" // to update, check https://github.com/microsoft/playwright/releases
 });
 
 const firefoxIsolatedTab = firefox.isolatedTab;

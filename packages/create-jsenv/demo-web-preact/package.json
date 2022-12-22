@@ -20,7 +20,7 @@
     "@babel/plugin-syntax-import-assertions": "7.20.0",
     "@babel/plugin-transform-react-jsx": "7.19.0",
     "@jsenv/assert": "2.8.0",
-    "@jsenv/core": "30.0.0",
+    "@jsenv/core": "30.0.1",
     "@jsenv/plugin-preact": "1.2.8",
     "@jsenv/plugin-bundling": "1.0.0",
     "@jsenv/plugin-minification": "1.0.0",
