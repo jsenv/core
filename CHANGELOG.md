@@ -1,3 +1,7 @@
+# 30.0.5
+
+- Update all dependencies
+
 # 30.0.3
 
 - Properly handle file and directory containing url special characters (such as spaces)

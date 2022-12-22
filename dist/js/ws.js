@@ -148,8 +148,14 @@ function createWebSocketStream(ws, options) {
   return duplex;
 }
 var stream = createWebSocketStream;
+var bufferUtilExports = {};
 var bufferUtil$1 = {
-  exports: {}
+  get exports() {
+    return bufferUtilExports;
+  },
+  set exports(v) {
+    bufferUtilExports = v;
+  }
 };
 var constants = {
   BINARY_TYPES: ['nodebuffer', 'arraybuffer', 'fragments'],
@@ -266,10 +272,10 @@ bufferUtil$1.exports = {
 if (!process.env.WS_NO_BUFFER_UTIL) {
   try {
     const bufferUtil = require('bufferutil');
-    mask = bufferUtil$1.exports.mask = function (source, mask, output, offset, length) {
+    mask = bufferUtilExports.mask = function (source, mask, output, offset, length) {
       if (length < 48) _mask(source, mask, output, offset, length);else bufferUtil.mask(source, mask, output, offset, length);
     };
-    unmask$1 = bufferUtil$1.exports.unmask = function (buffer, mask) {
+    unmask$1 = bufferUtilExports.unmask = function (buffer, mask) {
       if (buffer.length < 32) _unmask(buffer, mask);else bufferUtil.unmask(buffer, mask);
     };
   } catch (e) {
@@ -327,7 +333,7 @@ let Limiter$1 = class Limiter {
 };
 var limiter = Limiter$1;
 const zlib = require$$0$1;
-const bufferUtil = bufferUtil$1.exports;
+const bufferUtil = bufferUtilExports;
 const Limiter = limiter;
 const {
   kStatusCode: kStatusCode$2
@@ -733,8 +739,14 @@ function inflateOnError(err) {
   err[kStatusCode$2] = 1007;
   this[kCallback](err);
 }
+var validationExports = {};
 var validation = {
-  exports: {}
+  get exports() {
+    return validationExports;
+  },
+  set exports(v) {
+    validationExports = v;
+  }
 };
 var isValidUTF8_1;
 
@@ -835,7 +847,7 @@ validation.exports = {
 if (!process.env.WS_NO_UTF_8_VALIDATE) {
   try {
     const isValidUTF8 = require('utf-8-validate');
-    isValidUTF8_1 = validation.exports.isValidUTF8 = function (buf) {
+    isValidUTF8_1 = validationExports.isValidUTF8 = function (buf) {
       return buf.length < 150 ? _isValidUTF8(buf) : isValidUTF8(buf);
     };
   } catch (e) {
@@ -856,11 +868,11 @@ const {
   concat,
   toArrayBuffer,
   unmask
-} = bufferUtil$1.exports;
+} = bufferUtilExports;
 const {
   isValidStatusCode: isValidStatusCode$1,
   isValidUTF8
-} = validation.exports;
+} = validationExports;
 const GET_INFO = 0;
 const GET_PAYLOAD_LENGTH_16 = 1;
 const GET_PAYLOAD_LENGTH_64 = 2;
@@ -1297,11 +1309,11 @@ const {
 } = constants;
 const {
   isValidStatusCode
-} = validation.exports;
+} = validationExports;
 const {
   mask: applyMask,
   toBuffer: toBuffer$1
-} = bufferUtil$1.exports;
+} = bufferUtilExports;
 const kByteLength = Symbol('kByteLength');
 const maskBuffer = Buffer.alloc(4);
 
@@ -1991,7 +2003,7 @@ function callListener(listener, thisArg, event) {
 }
 const {
   tokenChars: tokenChars$1
-} = validation.exports;
+} = validationExports;
 
 /**
  * Adds an offer to the map of extension offers or a parameter to the map of
@@ -2208,7 +2220,7 @@ const {
 } = extension$1;
 const {
   toBuffer
-} = bufferUtil$1.exports;
+} = bufferUtilExports;
 const closeTimeout = 30 * 1000;
 const kAborted = Symbol('kAborted');
 const protocolVersions = [8, 13];
@@ -3289,7 +3301,7 @@ function socketOnError$1() {
 }
 const {
   tokenChars
-} = validation.exports;
+} = validationExports;
 
 /**
  * Parses the `Sec-WebSocket-Protocol` header into a set of subprotocol names.

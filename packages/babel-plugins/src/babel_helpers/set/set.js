@@ -38,7 +38,7 @@ export default (target, property, value, receiver, isStrict) => {
   // eslint-disable-next-line no-obj-calls
   var s = reflectSet(target, property, value, receiver || target)
   if (!s && isStrict) {
-    throw new Error("failed to set property")
+    throw new TypeError("failed to set property")
   }
   return value
 }

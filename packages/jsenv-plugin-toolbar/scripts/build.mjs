@@ -1,4 +1,5 @@
 import { build } from "@jsenv/core"
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
 
 build({
   rootDirectoryUrl: new URL("../", import.meta.url),
@@ -15,5 +16,6 @@ build({
       "/**/node_modules/@jsenv/ast/": false, // cannot inline "parse5", "@babel/core" and "postcss"
     },
   },
+  plugins: [jsenvPluginBundling()],
   versioning: false,
 })

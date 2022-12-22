@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-minification",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -24,7 +24,7 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "@jsenv/ast": "1.4.8",
+    "@jsenv/ast": "1.4.9",
     "html-minifier": "4.0.0",
     "terser": "5.16.1"
   },
