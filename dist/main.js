@@ -21104,7 +21104,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     });
     const finalEntryUrls = [];
     {
-      const loadTask = createTaskLog("load", {
+      const generateSourceGraph = createTaskLog("generate source graph", {
         disabled: logger.levels.debug || !logger.levels.info
       });
       try {
@@ -21130,10 +21130,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         });
         await rawUrlGraphLoader.getAllLoadDonePromise(buildOperation);
       } catch (e) {
-        loadTask.fail();
+        generateSourceGraph.fail();
         throw e;
       }
-      loadTask.done();
+      generateSourceGraph.done();
     }
     {
       {
@@ -21318,7 +21318,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         }, Promise.resolve());
       }
       {
-        const buildTask = createTaskLog("build", {
+        const generateBuildGraph = createTaskLog("generate build graph", {
           disabled: logger.levels.debug || !logger.levels.info
         });
         try {
@@ -21342,10 +21342,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           });
           await finalUrlGraphLoader.getAllLoadDonePromise(buildOperation);
         } catch (e) {
-          buildTask.fail();
+          generateBuildGraph.fail();
           throw e;
         }
-        buildTask.done();
+        generateBuildGraph.done();
       }
     }
     const versionMap = new Map();

@@ -587,7 +587,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     const finalEntryUrls = []
 
     craft: {
-      const loadTask = createTaskLog("load", {
+      const generateSourceGraph = createTaskLog("generate source graph", {
         disabled: logger.levels.debug || !logger.levels.info,
       })
       try {
@@ -612,10 +612,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         })
         await rawUrlGraphLoader.getAllLoadDonePromise(buildOperation)
       } catch (e) {
-        loadTask.fail()
+        generateSourceGraph.fail()
         throw e
       }
-      loadTask.done()
+      generateSourceGraph.done()
     }
 
     shape: {
@@ -832,7 +832,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         }, Promise.resolve())
       }
       reload_in_build_directory: {
-        const buildTask = createTaskLog("build", {
+        const generateBuildGraph = createTaskLog("generate build graph", {
           disabled: logger.levels.debug || !logger.levels.info,
         })
         try {
@@ -859,10 +859,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           })
           await finalUrlGraphLoader.getAllLoadDonePromise(buildOperation)
         } catch (e) {
-          buildTask.fail()
+          generateBuildGraph.fail()
           throw e
         }
-        buildTask.done()
+        generateBuildGraph.done()
       }
     }
 
