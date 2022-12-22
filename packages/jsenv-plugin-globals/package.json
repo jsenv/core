@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-globals",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -26,7 +26,7 @@
   "dependencies": {
     "@jsenv/ast": "1.4.8",
     "@jsenv/sourcemap": "1.0.8",
-    "@jsenv/url-meta": "7.0.1",
+    "@jsenv/url-meta": "7.0.2",
     "@jsenv/urls": "1.2.8"
   },
   "peerDependencies": {

@@ -47,12 +47,12 @@ const resolveAssociations = (associations, baseUrl) => {
   return associationsResolved;
 };
 const normalizeUrlPattern = (urlPattern, baseUrl) => {
-  // starts with a scheme
-  if (/^[a-zA-Z]{2,}:/.test(urlPattern)) {
-    return new URL(urlPattern).href; // to perform url encoding of url resource
+  try {
+    return String(new URL(urlPattern, baseUrl));
+  } catch (e) {
+    // it's not really an url, no need to perform url resolution nor encoding
+    return urlPattern;
   }
-
-  return String(new URL(urlPattern, baseUrl));
 };
 
 const asFlatAssociations = associations => {
