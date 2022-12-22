@@ -13,7 +13,9 @@ export const collectFiles = async ({
   associations,
   predicate,
 }) => {
-  const rootDirectoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl)
+  const rootDirectoryUrl = decodeURIComponent(
+    assertAndNormalizeDirectoryUrl(directoryUrl),
+  )
   if (typeof predicate !== "function") {
     throw new TypeError(`predicate must be a function, got ${predicate}`)
   }

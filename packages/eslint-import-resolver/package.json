@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/eslint-import-resolver",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -34,7 +34,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@jsenv/filesystem": "4.1.6",
+    "@jsenv/filesystem": "4.1.7",
     "@jsenv/importmap": "1.2.1",
     "@jsenv/node-esm-resolution": "1.0.1"
   },

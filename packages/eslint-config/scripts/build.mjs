@@ -9,6 +9,7 @@
  */
 
 import { build } from "@jsenv/core"
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
 
 await build({
   rootDirectoryUrl: new URL("../", import.meta.url),
@@ -19,6 +20,7 @@ await build({
   runtimeCompat: {
     node: "16.14.0",
   },
+  plugins: [jsenvPluginBundling()],
   versioning: false,
   assetManifest: false,
   sourcemaps: true,
