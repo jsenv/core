@@ -13,9 +13,7 @@ export const collectFiles = async ({
   associations,
   predicate,
 }) => {
-  const rootDirectoryUrl = decodeURIComponent(
-    assertAndNormalizeDirectoryUrl(directoryUrl),
-  )
+  const rootDirectoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl)
   if (typeof predicate !== "function") {
     throw new TypeError(`predicate must be a function, got ${predicate}`)
   }
@@ -47,10 +45,7 @@ export const collectFiles = async ({
         )
 
         if (directoryChildNodeStats.isDirectory()) {
-          const subDirectoryUrl = `${decodeURIComponent(
-            directoryChildNodeUrl,
-          )}/`
-
+          const subDirectoryUrl = `${directoryChildNodeUrl}/`
           if (
             !URL_META.urlChildMayMatch({
               url: subDirectoryUrl,
@@ -60,14 +55,13 @@ export const collectFiles = async ({
           ) {
             return
           }
-
           await visitDirectory(subDirectoryUrl)
           return
         }
 
         if (directoryChildNodeStats.isFile()) {
           const meta = URL_META.applyAssociations({
-            url: decodeURIComponent(directoryChildNodeUrl),
+            url: directoryChildNodeUrl,
             associations,
           })
           if (!predicate(meta)) return

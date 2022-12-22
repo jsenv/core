@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-bundling",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -27,7 +27,7 @@
     "@jsenv/ast": "1.4.8",
     "@jsenv/babel-plugins": "1.1.0",
     "@jsenv/log": "3.3.2",
-    "@jsenv/url-meta": "7.0.0",
+    "@jsenv/url-meta": "7.0.1",
     "@jsenv/urls": "1.2.8",
     "@jsenv/sourcemap": "1.0.8",
     "acorn-import-assertions": "1.8.0",

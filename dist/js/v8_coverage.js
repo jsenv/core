@@ -49,8 +49,9 @@ const resolveAssociations = (associations, baseUrl) => {
 const normalizeUrlPattern = (urlPattern, baseUrl) => {
   // starts with a scheme
   if (/^[a-zA-Z]{2,}:/.test(urlPattern)) {
-    return urlPattern;
+    return new URL(urlPattern).href; // to perform url encoding of url resource
   }
+
   return String(new URL(urlPattern, baseUrl));
 };
 

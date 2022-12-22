@@ -1,3 +1,7 @@
+# 30.0.3
+
+- Properly handle file and directory containing url special characters (such as spaces)
+
 # 30.0.0
 
 - Bundling moves to a plugin
