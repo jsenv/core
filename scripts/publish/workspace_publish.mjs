@@ -1,9 +1,8 @@
 /*
- * Publish all package if needed (the local package version must not be published)
+ * Publish all package if needed (when version found in package file is not already published)
  */
 
 import { readFile } from "@jsenv/filesystem"
-
 import { publishWorkspace } from "@jsenv/package-workspace"
 
 if (!process.env.CI) {
