@@ -36,7 +36,6 @@ export {
 
 // css
 export { applyPostCss } from "./css/apply_post_css.js"
-export { transpileWithParcel, minifyWithParcel } from "./css/parcel_css.js"
 export { postCssPluginUrlVisitor } from "./css/postcss_plugin_url_visitor.js"
 
 // js

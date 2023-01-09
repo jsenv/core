@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "30.0.7",
+  "version": "30.1.0",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "author": {
@@ -67,9 +67,9 @@
     "@c88/v8-coverage": "0.1.1",
     "@financial-times/polyfill-useragent-normaliser": "1.10.2",
     "@jsenv/abort": "4.2.4",
-    "@jsenv/ast": "1.4.10",
+    "@jsenv/ast": "2.0.0",
     "@jsenv/babel-plugins": "1.1.2",
-    "@jsenv/plugin-bundling": "1.0.4",
+    "@jsenv/plugin-bundling": "1.0.5",
     "@jsenv/filesystem": "4.1.9",
     "@jsenv/importmap": "1.2.1",
     "@jsenv/integrity": "0.0.1",
@@ -88,6 +88,7 @@
     "istanbul-lib-report": "3.0.0",
     "istanbul-reports": "3.1.5",
     "launch-editor": "2.6.0",
+    "lightningcss": "1.18.0",
     "pidtree": "0.6.0",
     "string-width": "5.1.2",
     "strip-ansi": "7.0.1",

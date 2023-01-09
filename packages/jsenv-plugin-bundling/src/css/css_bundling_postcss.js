@@ -11,7 +11,6 @@ import { applyPostCss, postCssPluginUrlVisitor } from "@jsenv/ast"
 
 import { sortByDependencies } from "./sort_by_dependencies.js"
 
-// Do not use until https://github.com/parcel-bundler/parcel-css/issues/181
 export const bundleCss = async ({ cssUrlInfos, context }) => {
   const bundledCssUrlInfos = {}
   const cssBundleInfos = await performCssBundling({
@@ -21,7 +20,7 @@ export const bundleCss = async ({ cssUrlInfos, context }) => {
   cssUrlInfos.forEach((cssUrlInfo) => {
     bundledCssUrlInfos[cssUrlInfo.url] = {
       data: {
-        bundlerName: "parcel",
+        bundlerName: "postcss",
       },
       contentType: "text/css",
       content: cssBundleInfos[cssUrlInfo.url].bundleContent,

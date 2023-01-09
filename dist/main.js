@@ -16,7 +16,7 @@ import { Readable, Stream, Writable } from "node:stream";
 import { Http2ServerResponse } from "node:http2";
 import { lookup } from "node:dns";
 import { SOURCEMAP, generateSourcemapFileUrl, composeTwoSourcemaps, generateSourcemapDataUrl, createMagicSource, getOriginalPosition } from "@jsenv/sourcemap";
-import { parseHtmlString, stringifyHtmlAst, getHtmlNodeAttribute, visitHtmlNodes, analyzeScriptNode, setHtmlNodeAttributes, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, applyPostCss, postCssPluginUrlVisitor, parseJsUrls, getHtmlNodeText, setHtmlNodeText, applyBabelPlugins, injectScriptNodeAsEarlyAsPossible, createHtmlNode, findHtmlNode, removeHtmlNode, removeHtmlNodeText, transpileWithParcel, injectJsImport, analyzeLinkNode, injectHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
+import { parseHtmlString, stringifyHtmlAst, getHtmlNodeAttribute, visitHtmlNodes, analyzeScriptNode, setHtmlNodeAttributes, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, applyPostCss, postCssPluginUrlVisitor, parseJsUrls, getHtmlNodeText, setHtmlNodeText, applyBabelPlugins, injectScriptNodeAsEarlyAsPossible, createHtmlNode, findHtmlNode, removeHtmlNode, removeHtmlNodeText, injectJsImport, analyzeLinkNode, injectHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
 import { createRequire } from "node:module";
 import babelParser from "@babel/parser";
 import { bundleJsModules } from "@jsenv/plugin-bundling";
@@ -17750,17 +17750,16 @@ const babelPluginMetadataImportMetaScenarios = () => {
   };
 };
 
-// https://github.com/parcel-bundler/parcel-css
-const jsenvPluginCssParcel = () => {
+const jsenvPluginCssTranspilation = () => {
   return {
-    name: "jsenv:css_parcel",
+    name: "jsenv:css_transpilation",
     appliesDuring: "*",
     transformUrlContent: {
-      css: (urlInfo, context) => {
+      css: async (urlInfo, context) => {
         const {
           code,
           map
-        } = transpileWithParcel(urlInfo, context);
+        } = await transpileCss(urlInfo, context);
         return {
           content: String(code),
           sourcemap: map
@@ -17768,6 +17767,44 @@ const jsenvPluginCssParcel = () => {
       }
     }
   };
+};
+const transpileCss = async (urlInfo, context) => {
+  // https://lightningcss.dev/docs.html
+  const {
+    transform
+  } = await import("lightningcss");
+  const targets = runtimeCompatToTargets(context.runtimeCompat);
+  const {
+    code,
+    map
+  } = transform({
+    filename: fileURLToPath(urlInfo.originalUrl),
+    code: Buffer.from(urlInfo.content),
+    targets,
+    minify: false,
+    drafts: {
+      nesting: true,
+      customMedia: true
+    }
+  });
+  return {
+    code,
+    map
+  };
+};
+const runtimeCompatToTargets = runtimeCompat => {
+  const targets = {};
+  ["chrome", "firefox", "ie", "opera", "safari"].forEach(runtimeName => {
+    const version = runtimeCompat[runtimeName];
+    if (version) {
+      targets[runtimeName] = versionToBits(version);
+    }
+  });
+  return targets;
+};
+const versionToBits = version => {
+  const [major, minor = 0, patch = 0] = version.split("-")[0].split(".").map(v => parseInt(v, 10));
+  return major << 16 | minor << 8 | patch;
 };
 
 /*
@@ -19206,7 +19243,7 @@ const jsenvPluginTranspilation = ({
   }), jsenvPluginAsJsModule(),
   // topLevelAwait must come after jsenvPluginAsJsClassic because it's related to the module format
   // so we want to wait to know the module format before transforming things related to top level await
-  ...(topLevelAwait ? [jsenvPluginTopLevelAwait()] : []), ...(css ? [jsenvPluginCssParcel()] : [])];
+  ...(topLevelAwait ? [jsenvPluginTopLevelAwait()] : []), ...(css ? [jsenvPluginCssTranspilation()] : [])];
 };
 
 const jsenvPluginNodeRuntime = ({
