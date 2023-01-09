@@ -34,7 +34,6 @@
   },
   "dependencies": {
     "@babel/parser": "7.20.7",
-    "@parcel/css": "1.14.0",
     "acorn": "8.8.1",
     "acorn-import-assertions": "1.8.0",
     "acorn-walk": "8.2.0",

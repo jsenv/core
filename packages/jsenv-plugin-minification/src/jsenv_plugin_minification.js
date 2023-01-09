@@ -1,7 +1,7 @@
-import { minifyHtml } from "./html/minify_html.js"
-import { minifyCss } from "./css/minify_css.js"
-import { minifyJs } from "./js/minify_js.js"
-import { minifyJson } from "./json/minify_json.js"
+import { minifyHtml } from "./html/html_minification.js"
+import { minifyCss } from "./css/css_minification.js"
+import { minifyJs } from "./js/js_minification.js"
+import { minifyJson } from "./json/json_minification.js"
 
 export const jsenvPluginMinification = ({
   html = {},

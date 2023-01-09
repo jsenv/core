@@ -7,7 +7,7 @@
  * of this plugin
  */
 
-import { jsenvPluginCssParcel } from "./css_parcel/jsenv_plugin_css_parcel.js"
+import { jsenvPluginCssTranspilation } from "./css/jsenv_plugin_css_transpilation.js"
 import { jsenvPluginImportAssertions } from "./import_assertions/jsenv_plugin_import_assertions.js"
 import { jsenvPluginAsJsClassic } from "./as_js_classic/jsenv_plugin_as_js_classic.js"
 import { jsenvPluginAsJsModule } from "./as_js_module/jsenv_plugin_as_js_module.js"
@@ -52,6 +52,6 @@ export const jsenvPluginTranspilation = ({
     // topLevelAwait must come after jsenvPluginAsJsClassic because it's related to the module format
     // so we want to wait to know the module format before transforming things related to top level await
     ...(topLevelAwait ? [jsenvPluginTopLevelAwait(topLevelAwait)] : []),
-    ...(css ? [jsenvPluginCssParcel()] : []),
+    ...(css ? [jsenvPluginCssTranspilation()] : []),
   ]
 }
