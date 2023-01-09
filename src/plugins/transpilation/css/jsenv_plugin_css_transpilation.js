@@ -1,6 +1,5 @@
 import { fileURLToPath } from "node:url"
 
-// https://github.com/parcel-bundler/parcel-css
 export const jsenvPluginCssTranspilation = () => {
   return {
     name: "jsenv:css_transpilation",
@@ -18,6 +17,7 @@ export const jsenvPluginCssTranspilation = () => {
 }
 
 const transpileCss = async (urlInfo, context) => {
+  // https://lightningcss.dev/docs.html
   const { transform } = await import("lightningcss")
 
   const targets = runtimeCompatToTargets(context.runtimeCompat)

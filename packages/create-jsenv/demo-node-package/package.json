@@ -12,7 +12,7 @@
   },
   "devDependencies": {
     "@jsenv/assert": "2.8.0",
-    "@jsenv/core": "30.0.7",
+    "@jsenv/core": "30.1.0",
     "@jsenv/eslint-config": "16.3.2",
     "@jsenv/eslint-import-resolver": "0.4.4",
     "eslint": "8.31.0",

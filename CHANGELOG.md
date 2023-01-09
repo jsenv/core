@@ -1,3 +1,7 @@
+# 30.1.0
+
+- Replace "parcel/css" with "lightningcss"
+
 # 30.0.7
 
 - Update dependencies
