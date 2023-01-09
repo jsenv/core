@@ -31,7 +31,7 @@
     "@jsenv/urls": "1.2.8",
     "@jsenv/sourcemap": "1.0.8",
     "acorn-import-assertions": "1.8.0",
-    "rollup": "3.8.0"
+    "rollup": "3.9.1"
   },
   "peerDependencies": {
     "@jsenv/core": "*"
