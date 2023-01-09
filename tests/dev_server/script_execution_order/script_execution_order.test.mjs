@@ -53,8 +53,7 @@ const test = async ({ browserLauncher }) => {
     }
     if (browserLauncher === webkit) {
       // window "load" event is not deterministic on webkit due to
-      // the bug mentioned previously, so remove it and ensure only the
-      // js execution order is correct
+      // the bug mentioned previously so order is different
       const actual = result
       const expected = [
         "before_js_classic_inline",
