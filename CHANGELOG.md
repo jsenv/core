@@ -1,3 +1,7 @@
+# 30.0.7
+
+- Update dependencies
+
 # 30.0.5
 
 - Update all dependencies

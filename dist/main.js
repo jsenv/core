@@ -2264,16 +2264,16 @@ const writeFileSync = (destination, content = "") => {
   }
 };
 
-const LOG_LEVEL_OFF$1 = "off";
-const LOG_LEVEL_DEBUG$1 = "debug";
-const LOG_LEVEL_INFO$1 = "info";
-const LOG_LEVEL_WARN$1 = "warn";
-const LOG_LEVEL_ERROR$1 = "error";
+const LOG_LEVEL_OFF = "off";
+const LOG_LEVEL_DEBUG = "debug";
+const LOG_LEVEL_INFO = "info";
+const LOG_LEVEL_WARN = "warn";
+const LOG_LEVEL_ERROR = "error";
 
-const createLogger$1 = ({
-  logLevel = LOG_LEVEL_INFO$1
+const createLogger = ({
+  logLevel = LOG_LEVEL_INFO
 } = {}) => {
-  if (logLevel === LOG_LEVEL_DEBUG$1) {
+  if (logLevel === LOG_LEVEL_DEBUG) {
     return {
       level: "debug",
       levels: {
@@ -2282,13 +2282,13 @@ const createLogger$1 = ({
         warn: true,
         error: true
       },
-      debug: debug$1,
-      info: info$1,
-      warn: warn$1,
-      error: error$1
+      debug,
+      info,
+      warn,
+      error
     };
   }
-  if (logLevel === LOG_LEVEL_INFO$1) {
+  if (logLevel === LOG_LEVEL_INFO) {
     return {
       level: "info",
       levels: {
@@ -2297,13 +2297,13 @@ const createLogger$1 = ({
         warn: true,
         error: true
       },
-      debug: debugDisabled$1,
-      info: info$1,
-      warn: warn$1,
-      error: error$1
+      debug: debugDisabled,
+      info,
+      warn,
+      error
     };
   }
-  if (logLevel === LOG_LEVEL_WARN$1) {
+  if (logLevel === LOG_LEVEL_WARN) {
     return {
       level: "warn",
       levels: {
@@ -2312,13 +2312,13 @@ const createLogger$1 = ({
         warn: true,
         error: true
       },
-      debug: debugDisabled$1,
-      info: infoDisabled$1,
-      warn: warn$1,
-      error: error$1
+      debug: debugDisabled,
+      info: infoDisabled,
+      warn,
+      error
     };
   }
-  if (logLevel === LOG_LEVEL_ERROR$1) {
+  if (logLevel === LOG_LEVEL_ERROR) {
     return {
       level: "error",
       levels: {
@@ -2327,13 +2327,13 @@ const createLogger$1 = ({
         warn: false,
         error: true
       },
-      debug: debugDisabled$1,
-      info: infoDisabled$1,
-      warn: warnDisabled$1,
-      error: error$1
+      debug: debugDisabled,
+      info: infoDisabled,
+      warn: warnDisabled,
+      error
     };
   }
-  if (logLevel === LOG_LEVEL_OFF$1) {
+  if (logLevel === LOG_LEVEL_OFF) {
     return {
       level: "off",
       levels: {
@@ -2342,60 +2342,60 @@ const createLogger$1 = ({
         warn: false,
         error: false
       },
-      debug: debugDisabled$1,
-      info: infoDisabled$1,
-      warn: warnDisabled$1,
-      error: errorDisabled$1
+      debug: debugDisabled,
+      info: infoDisabled,
+      warn: warnDisabled,
+      error: errorDisabled
     };
   }
   throw new Error(`unexpected logLevel.
 --- logLevel ---
 ${logLevel}
 --- allowed log levels ---
-${LOG_LEVEL_OFF$1}
-${LOG_LEVEL_ERROR$1}
-${LOG_LEVEL_WARN$1}
-${LOG_LEVEL_INFO$1}
-${LOG_LEVEL_DEBUG$1}`);
+${LOG_LEVEL_OFF}
+${LOG_LEVEL_ERROR}
+${LOG_LEVEL_WARN}
+${LOG_LEVEL_INFO}
+${LOG_LEVEL_DEBUG}`);
 };
-const debug$1 = (...args) => console.debug(...args);
-const debugDisabled$1 = () => {};
-const info$1 = (...args) => console.info(...args);
-const infoDisabled$1 = () => {};
-const warn$1 = (...args) => console.warn(...args);
-const warnDisabled$1 = () => {};
-const error$1 = (...args) => console.error(...args);
-const errorDisabled$1 = () => {};
+const debug = (...args) => console.debug(...args);
+const debugDisabled = () => {};
+const info = (...args) => console.info(...args);
+const infoDisabled = () => {};
+const warn = (...args) => console.warn(...args);
+const warnDisabled = () => {};
+const error = (...args) => console.error(...args);
+const errorDisabled = () => {};
 
 // From: https://github.com/sindresorhus/has-flag/blob/main/index.js
 /// function hasFlag(flag, argv = globalThis.Deno?.args ?? process.argv) {
-function hasFlag$1(flag, argv = globalThis.Deno ? globalThis.Deno.args : process$1.argv) {
+function hasFlag(flag, argv = globalThis.Deno ? globalThis.Deno.args : process$1.argv) {
   const prefix = flag.startsWith('-') ? '' : flag.length === 1 ? '-' : '--';
   const position = argv.indexOf(prefix + flag);
   const terminatorPosition = argv.indexOf('--');
   return position !== -1 && (terminatorPosition === -1 || position < terminatorPosition);
 }
 const {
-  env: env$1
+  env
 } = process$1;
-let flagForceColor$1;
-if (hasFlag$1('no-color') || hasFlag$1('no-colors') || hasFlag$1('color=false') || hasFlag$1('color=never')) {
-  flagForceColor$1 = 0;
-} else if (hasFlag$1('color') || hasFlag$1('colors') || hasFlag$1('color=true') || hasFlag$1('color=always')) {
-  flagForceColor$1 = 1;
+let flagForceColor;
+if (hasFlag('no-color') || hasFlag('no-colors') || hasFlag('color=false') || hasFlag('color=never')) {
+  flagForceColor = 0;
+} else if (hasFlag('color') || hasFlag('colors') || hasFlag('color=true') || hasFlag('color=always')) {
+  flagForceColor = 1;
 }
-function envForceColor$1() {
-  if ('FORCE_COLOR' in env$1) {
-    if (env$1.FORCE_COLOR === 'true') {
+function envForceColor() {
+  if ('FORCE_COLOR' in env) {
+    if (env.FORCE_COLOR === 'true') {
       return 1;
     }
-    if (env$1.FORCE_COLOR === 'false') {
+    if (env.FORCE_COLOR === 'false') {
       return 0;
     }
-    return env$1.FORCE_COLOR.length === 0 ? 1 : Math.min(Number.parseInt(env$1.FORCE_COLOR, 10), 3);
+    return env.FORCE_COLOR.length === 0 ? 1 : Math.min(Number.parseInt(env.FORCE_COLOR, 10), 3);
   }
 }
-function translateLevel$1(level) {
+function translateLevel(level) {
   if (level === 0) {
     return false;
   }
@@ -2406,37 +2406,37 @@ function translateLevel$1(level) {
     has16m: level >= 3
   };
 }
-function _supportsColor$1(haveStream, {
+function _supportsColor(haveStream, {
   streamIsTTY,
   sniffFlags = true
 } = {}) {
-  const noFlagForceColor = envForceColor$1();
+  const noFlagForceColor = envForceColor();
   if (noFlagForceColor !== undefined) {
-    flagForceColor$1 = noFlagForceColor;
+    flagForceColor = noFlagForceColor;
   }
-  const forceColor = sniffFlags ? flagForceColor$1 : noFlagForceColor;
+  const forceColor = sniffFlags ? flagForceColor : noFlagForceColor;
   if (forceColor === 0) {
     return 0;
   }
   if (sniffFlags) {
-    if (hasFlag$1('color=16m') || hasFlag$1('color=full') || hasFlag$1('color=truecolor')) {
+    if (hasFlag('color=16m') || hasFlag('color=full') || hasFlag('color=truecolor')) {
       return 3;
     }
-    if (hasFlag$1('color=256')) {
+    if (hasFlag('color=256')) {
       return 2;
     }
   }
 
   // Check for Azure DevOps pipelines.
   // Has to be above the `!streamIsTTY` check.
-  if ('TF_BUILD' in env$1 && 'AGENT_NAME' in env$1) {
+  if ('TF_BUILD' in env && 'AGENT_NAME' in env) {
     return 1;
   }
   if (haveStream && !streamIsTTY && forceColor === undefined) {
     return 0;
   }
   const min = forceColor || 0;
-  if (env$1.TERM === 'dumb') {
+  if (env.TERM === 'dumb') {
     return min;
   }
   if (process$1.platform === 'win32') {
@@ -2448,27 +2448,27 @@ function _supportsColor$1(haveStream, {
     }
     return 1;
   }
-  if ('CI' in env$1) {
-    if ('GITHUB_ACTIONS' in env$1) {
+  if ('CI' in env) {
+    if ('GITHUB_ACTIONS' in env) {
       return 3;
     }
-    if (['TRAVIS', 'CIRCLECI', 'APPVEYOR', 'GITLAB_CI', 'BUILDKITE', 'DRONE'].some(sign => sign in env$1) || env$1.CI_NAME === 'codeship') {
+    if (['TRAVIS', 'CIRCLECI', 'APPVEYOR', 'GITLAB_CI', 'BUILDKITE', 'DRONE'].some(sign => sign in env) || env.CI_NAME === 'codeship') {
       return 1;
     }
     return min;
   }
-  if ('TEAMCITY_VERSION' in env$1) {
-    return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env$1.TEAMCITY_VERSION) ? 1 : 0;
+  if ('TEAMCITY_VERSION' in env) {
+    return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env.TEAMCITY_VERSION) ? 1 : 0;
   }
-  if (env$1.COLORTERM === 'truecolor') {
+  if (env.COLORTERM === 'truecolor') {
     return 3;
   }
-  if (env$1.TERM === 'xterm-kitty') {
+  if (env.TERM === 'xterm-kitty') {
     return 3;
   }
-  if ('TERM_PROGRAM' in env$1) {
-    const version = Number.parseInt((env$1.TERM_PROGRAM_VERSION || '').split('.')[0], 10);
-    switch (env$1.TERM_PROGRAM) {
+  if ('TERM_PROGRAM' in env) {
+    const version = Number.parseInt((env.TERM_PROGRAM_VERSION || '').split('.')[0], 10);
+    switch (env.TERM_PROGRAM) {
       case 'iTerm.app':
         {
           return version >= 3 ? 3 : 2;
@@ -2481,34 +2481,34 @@ function _supportsColor$1(haveStream, {
     }
   }
 
-  if (/-256(color)?$/i.test(env$1.TERM)) {
+  if (/-256(color)?$/i.test(env.TERM)) {
     return 2;
   }
-  if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env$1.TERM)) {
+  if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env.TERM)) {
     return 1;
   }
-  if ('COLORTERM' in env$1) {
+  if ('COLORTERM' in env) {
     return 1;
   }
   return min;
 }
-function createSupportsColor$1(stream, options = {}) {
-  const level = _supportsColor$1(stream, {
+function createSupportsColor(stream, options = {}) {
+  const level = _supportsColor(stream, {
     streamIsTTY: stream && stream.isTTY,
     ...options
   });
-  return translateLevel$1(level);
+  return translateLevel(level);
 }
 ({
-  stdout: createSupportsColor$1({
+  stdout: createSupportsColor({
     isTTY: tty.isatty(1)
   }),
-  stderr: createSupportsColor$1({
+  stderr: createSupportsColor({
     isTTY: tty.isatty(2)
   })
 });
 
-const processSupportsBasicColor = createSupportsColor$1(process.stdout).hasBasic;
+const processSupportsBasicColor = createSupportsColor(process.stdout).hasBasic;
 let canUseColors = processSupportsBasicColor;
 
 // GitHub workflow does support ANSI but "supports-color" returns false
@@ -2588,7 +2588,7 @@ const UNICODE = {
   supported: canUseUnicode
 };
 
-const createDetailedMessage$2 = (message, details = {}) => {
+const createDetailedMessage$1 = (message, details = {}) => {
   let string = `${message}`;
   Object.keys(details).forEach(key => {
     const value = details[key];
@@ -3208,269 +3208,6 @@ const createTaskLog = (label, {
       taskSpinner.stop(`${UNICODE.FAILURE} ${message}`);
     }
   };
-};
-
-const LOG_LEVEL_OFF = "off";
-const LOG_LEVEL_DEBUG = "debug";
-const LOG_LEVEL_INFO = "info";
-const LOG_LEVEL_WARN = "warn";
-const LOG_LEVEL_ERROR = "error";
-
-const createLogger = ({
-  logLevel = LOG_LEVEL_INFO
-} = {}) => {
-  if (logLevel === LOG_LEVEL_DEBUG) {
-    return {
-      level: "debug",
-      levels: {
-        debug: true,
-        info: true,
-        warn: true,
-        error: true
-      },
-      debug,
-      info,
-      warn,
-      error
-    };
-  }
-  if (logLevel === LOG_LEVEL_INFO) {
-    return {
-      level: "info",
-      levels: {
-        debug: false,
-        info: true,
-        warn: true,
-        error: true
-      },
-      debug: debugDisabled,
-      info,
-      warn,
-      error
-    };
-  }
-  if (logLevel === LOG_LEVEL_WARN) {
-    return {
-      level: "warn",
-      levels: {
-        debug: false,
-        info: false,
-        warn: true,
-        error: true
-      },
-      debug: debugDisabled,
-      info: infoDisabled,
-      warn,
-      error
-    };
-  }
-  if (logLevel === LOG_LEVEL_ERROR) {
-    return {
-      level: "error",
-      levels: {
-        debug: false,
-        info: false,
-        warn: false,
-        error: true
-      },
-      debug: debugDisabled,
-      info: infoDisabled,
-      warn: warnDisabled,
-      error
-    };
-  }
-  if (logLevel === LOG_LEVEL_OFF) {
-    return {
-      level: "off",
-      levels: {
-        debug: false,
-        info: false,
-        warn: false,
-        error: false
-      },
-      debug: debugDisabled,
-      info: infoDisabled,
-      warn: warnDisabled,
-      error: errorDisabled
-    };
-  }
-  throw new Error(`unexpected logLevel.
---- logLevel ---
-${logLevel}
---- allowed log levels ---
-${LOG_LEVEL_OFF}
-${LOG_LEVEL_ERROR}
-${LOG_LEVEL_WARN}
-${LOG_LEVEL_INFO}
-${LOG_LEVEL_DEBUG}`);
-};
-const debug = (...args) => console.debug(...args);
-const debugDisabled = () => {};
-const info = (...args) => console.info(...args);
-const infoDisabled = () => {};
-const warn = (...args) => console.warn(...args);
-const warnDisabled = () => {};
-const error = (...args) => console.error(...args);
-const errorDisabled = () => {};
-
-// From: https://github.com/sindresorhus/has-flag/blob/main/index.js
-function hasFlag(flag, argv = globalThis.Deno?.args ?? process$1.argv) {
-  const prefix = flag.startsWith('-') ? '' : flag.length === 1 ? '-' : '--';
-  const position = argv.indexOf(prefix + flag);
-  const terminatorPosition = argv.indexOf('--');
-  return position !== -1 && (terminatorPosition === -1 || position < terminatorPosition);
-}
-const {
-  env
-} = process$1;
-let flagForceColor;
-if (hasFlag('no-color') || hasFlag('no-colors') || hasFlag('color=false') || hasFlag('color=never')) {
-  flagForceColor = 0;
-} else if (hasFlag('color') || hasFlag('colors') || hasFlag('color=true') || hasFlag('color=always')) {
-  flagForceColor = 1;
-}
-function envForceColor() {
-  if ('FORCE_COLOR' in env) {
-    if (env.FORCE_COLOR === 'true') {
-      return 1;
-    }
-    if (env.FORCE_COLOR === 'false') {
-      return 0;
-    }
-    return env.FORCE_COLOR.length === 0 ? 1 : Math.min(Number.parseInt(env.FORCE_COLOR, 10), 3);
-  }
-}
-function translateLevel(level) {
-  if (level === 0) {
-    return false;
-  }
-  return {
-    level,
-    hasBasic: true,
-    has256: level >= 2,
-    has16m: level >= 3
-  };
-}
-function _supportsColor(haveStream, {
-  streamIsTTY,
-  sniffFlags = true
-} = {}) {
-  const noFlagForceColor = envForceColor();
-  if (noFlagForceColor !== undefined) {
-    flagForceColor = noFlagForceColor;
-  }
-  const forceColor = sniffFlags ? flagForceColor : noFlagForceColor;
-  if (forceColor === 0) {
-    return 0;
-  }
-  if (sniffFlags) {
-    if (hasFlag('color=16m') || hasFlag('color=full') || hasFlag('color=truecolor')) {
-      return 3;
-    }
-    if (hasFlag('color=256')) {
-      return 2;
-    }
-  }
-
-  // Check for Azure DevOps pipelines.
-  // Has to be above the `!streamIsTTY` check.
-  if ('TF_BUILD' in env && 'AGENT_NAME' in env) {
-    return 1;
-  }
-  if (haveStream && !streamIsTTY && forceColor === undefined) {
-    return 0;
-  }
-  const min = forceColor || 0;
-  if (env.TERM === 'dumb') {
-    return min;
-  }
-  if (process$1.platform === 'win32') {
-    // Windows 10 build 10586 is the first Windows release that supports 256 colors.
-    // Windows 10 build 14931 is the first release that supports 16m/TrueColor.
-    const osRelease = os.release().split('.');
-    if (Number(osRelease[0]) >= 10 && Number(osRelease[2]) >= 10_586) {
-      return Number(osRelease[2]) >= 14_931 ? 3 : 2;
-    }
-    return 1;
-  }
-  if ('CI' in env) {
-    if ('GITHUB_ACTIONS' in env) {
-      return 3;
-    }
-    if (['TRAVIS', 'CIRCLECI', 'APPVEYOR', 'GITLAB_CI', 'BUILDKITE', 'DRONE'].some(sign => sign in env) || env.CI_NAME === 'codeship') {
-      return 1;
-    }
-    return min;
-  }
-  if ('TEAMCITY_VERSION' in env) {
-    return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env.TEAMCITY_VERSION) ? 1 : 0;
-  }
-  if (env.COLORTERM === 'truecolor') {
-    return 3;
-  }
-  if (env.TERM === 'xterm-kitty') {
-    return 3;
-  }
-  if ('TERM_PROGRAM' in env) {
-    const version = Number.parseInt((env.TERM_PROGRAM_VERSION || '').split('.')[0], 10);
-    switch (env.TERM_PROGRAM) {
-      case 'iTerm.app':
-        return version >= 3 ? 3 : 2;
-      case 'Apple_Terminal':
-        return 2;
-      // No default
-    }
-  }
-
-  if (/-256(color)?$/i.test(env.TERM)) {
-    return 2;
-  }
-  if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env.TERM)) {
-    return 1;
-  }
-  if ('COLORTERM' in env) {
-    return 1;
-  }
-  return min;
-}
-function createSupportsColor(stream, options = {}) {
-  const level = _supportsColor(stream, {
-    streamIsTTY: stream && stream.isTTY,
-    ...options
-  });
-  return translateLevel(level);
-}
-({
-  stdout: createSupportsColor({
-    isTTY: tty.isatty(1)
-  }),
-  stderr: createSupportsColor({
-    isTTY: tty.isatty(2)
-  })
-});
-
-createSupportsColor(process.stdout).hasBasic;
-
-// GitHub workflow does support ANSI but "supports-color" returns false
-// because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
-if (process.env.GITHUB_WORKFLOW) {
-  // Check on FORCE_COLOR is to ensure it is prio over GitHub workflow check
-  if (process.env.FORCE_COLOR !== "false") ;
-}
-
-// see also https://github.com/sindresorhus/figures
-isUnicodeSupported();
-
-const createDetailedMessage$1 = (message, details = {}) => {
-  let string = `${message}`;
-  Object.keys(details).forEach(key => {
-    const value = details[key];
-    string += `
---- ${key} ---
-${Array.isArray(value) ? value.join(`
-`) : value}`;
-  });
-  return string;
 };
 
 const memoize = compute => {
@@ -8374,7 +8111,7 @@ const createResolveUrlError = ({
     reason,
     ...details
   }) => {
-    const resolveError = new Error(createDetailedMessage$2(`Failed to resolve url reference`, {
+    const resolveError = new Error(createDetailedMessage$1(`Failed to resolve url reference`, {
       reason,
       ...details,
       "specifier": `"${reference.specifier}"`,
@@ -8408,7 +8145,7 @@ const createFetchUrlContentError = ({
     reason,
     ...details
   }) => {
-    const fetchError = new Error(createDetailedMessage$2(`Failed to fetch url content`, {
+    const fetchError = new Error(createDetailedMessage$1(`Failed to fetch url content`, {
       reason,
       ...details,
       "url": urlInfo.url,
@@ -8475,7 +8212,7 @@ const createTransformUrlContentError = ({
     reason,
     ...details
   }) => {
-    const transformError = new Error(createDetailedMessage$2(`"transformUrlContent" error on "${urlInfo.type}"`, {
+    const transformError = new Error(createDetailedMessage$1(`"transformUrlContent" error on "${urlInfo.type}"`, {
       reason,
       ...details,
       "url": urlInfo.url,
@@ -8528,7 +8265,7 @@ const createFinalizeUrlContentError = ({
   urlInfo,
   error
 }) => {
-  const finalizeError = new Error(createDetailedMessage$2(`"finalizeUrlContent" error on "${urlInfo.type}"`, {
+  const finalizeError = new Error(createDetailedMessage$1(`"finalizeUrlContent" error on "${urlInfo.type}"`, {
     ...detailsFromValueThrown(error),
     "url": urlInfo.url,
     "url reference trace": reference.trace.message,
@@ -8770,7 +8507,7 @@ const createKitchen = ({
   writeGeneratedFiles,
   outDirectoryUrl
 }) => {
-  const logger = createLogger$1({
+  const logger = createLogger({
     logLevel
   });
   const kitchenContext = {
@@ -9030,7 +8767,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     try {
       const fetchUrlContentReturnValue = await pluginController.callAsyncHooksUntil("fetchUrlContent", urlInfo, contextDuringFetch);
       if (!fetchUrlContentReturnValue) {
-        logger.warn(createDetailedMessage$2(`no plugin has handled url during "fetchUrlContent" hook -> url will be ignored`, {
+        logger.warn(createDetailedMessage$1(`no plugin has handled url during "fetchUrlContent" hook -> url will be ignored`, {
           "url": urlInfo.url,
           "url reference trace": reference.trace.message
         }));
@@ -20769,7 +20506,7 @@ const build = async ({
     signal,
     logLevel
   }) => {
-    const logger = createLogger$1({
+    const logger = createLogger({
       logLevel
     });
     const buildOperation = Abort.startOperation();
@@ -21040,7 +20777,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             const rawUrl = buildDirectoryRedirections.get(url) || url;
             const rawUrlInfo = rawGraph.getUrlInfo(rawUrl);
             if (!rawUrlInfo) {
-              throw new Error(createDetailedMessage$2(`Cannot find url`, {
+              throw new Error(createDetailedMessage$1(`Cannot find url`, {
                 url,
                 "raw urls": Array.from(buildDirectoryRedirections.values()),
                 "build urls": Array.from(buildDirectoryRedirections.keys())
@@ -22627,7 +22364,7 @@ const startDevServer = async ({
   // and mitigates https://github.com/actions/runner-images/issues/3885
   writeGeneratedFiles = !process.env.CI
 }) => {
-  const logger = createLogger$1({
+  const logger = createLogger({
     logLevel
   });
   rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl);
@@ -22949,7 +22686,7 @@ const readNodeV8CoverageDirectory = async ({
             timeSpentTrying += 200;
             return tryReadJsonFile();
           }
-          console.warn(createDetailedMessage$2(`Error while reading coverage file`, {
+          console.warn(createDetailedMessage$1(`Error while reading coverage file`, {
             "error stack": e.stack,
             "file": dirEntryUrl
           }));
@@ -23110,7 +22847,7 @@ const composeV8AndIstanbul = (v8FileByFileCoverage, istanbulFileByFileCoverage, 
     const v8Coverage = v8FileByFileCoverage[key];
     if (v8Coverage) {
       if (coverageV8ConflictWarning) {
-        console.warn(createDetailedMessage$2(`Coverage conflict on "${key}", found two coverage that cannot be merged together: v8 and istanbul. The istanbul coverage will be ignored.`, {
+        console.warn(createDetailedMessage$1(`Coverage conflict on "${key}", found two coverage that cannot be merged together: v8 and istanbul. The istanbul coverage will be ignored.`, {
           details: `This happens when a file is executed on a runtime using v8 coverage (node or chromium) and on runtime using istanbul coverage (firefox or webkit)`,
           suggestion: "You can disable this warning with coverageV8ConflictWarning: false"
         }));
@@ -23612,7 +23349,7 @@ const generateFileExecutionSteps = ({
       return;
     }
     if (typeof stepConfig !== "object") {
-      throw new TypeError(createDetailedMessage$2(`found unexpected value in plan, they must be object`, {
+      throw new TypeError(createDetailedMessage$1(`found unexpected value in plan, they must be object`, {
         ["file relative path"]: fileRelativeUrl,
         ["execution name"]: executionName,
         ["value"]: stepConfig
@@ -24025,7 +23762,7 @@ const executePlan = async (plan, {
       }
     });
   });
-  logger.debug(createDetailedMessage$2(`Prepare executing plan`, {
+  logger.debug(createDetailedMessage$1(`Prepare executing plan`, {
     runtimes: JSON.stringify(runtimes, null, "  ")
   }));
   const multipleExecutionsOperation = Abort.startOperation();
@@ -24052,7 +23789,7 @@ const executePlan = async (plan, {
         await ensureEmptyDirectory(process.env.NODE_V8_COVERAGE);
       } else {
         coverageMethodForNodeJs = "Profiler";
-        logger.warn(createDetailedMessage$2(`process.env.NODE_V8_COVERAGE is required to generate coverage for Node.js subprocesses`, {
+        logger.warn(createDetailedMessage$1(`process.env.NODE_V8_COVERAGE is required to generate coverage for Node.js subprocesses`, {
           "suggestion": `set process.env.NODE_V8_COVERAGE`,
           "suggestion 2": `use coverageMethodForNodeJs: "Profiler". But it means coverage for child_process and worker_thread cannot be collected`
         }));
@@ -24485,7 +24222,7 @@ const executeTestPlan = async ({
   coverageReportJsonFile = process.env.CI ? null : "./.coverage/coverage.json",
   coverageReportHtmlDirectory = process.env.CI ? "./.coverage/" : null
 }) => {
-  const logger = createLogger$1({
+  const logger = createLogger({
     logLevel
   });
   rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl);
@@ -24517,7 +24254,7 @@ const executeTestPlan = async ({
       });
       if (patternsMatchingCoverAndExecute.length) {
         // It would be strange, for a given file to be both covered and executed
-        throw new Error(createDetailedMessage$2(`some file will be both covered and executed`, {
+        throw new Error(createDetailedMessage$1(`some file will be both covered and executed`, {
           patterns: patternsMatchingCoverAndExecute
         }));
       }
@@ -25017,7 +24754,7 @@ const importPlaywright = async ({
     return namespace;
   } catch (e) {
     if (e.code === "ERR_MODULE_NOT_FOUND") {
-      throw new Error(createDetailedMessage$2(`"playwright" not found. You need playwright in your dependencies to use "${browserName}"`, {
+      throw new Error(createDetailedMessage$1(`"playwright" not found. You need playwright in your dependencies to use "${browserName}"`, {
         suggestion: `npm install --save-dev playwright`
       }), {
         cause: e
@@ -25172,7 +24909,7 @@ const createChildExecOptions = async ({
   debugModeInheritBreak = true
 } = {}) => {
   if (typeof debugMode === "string" && AVAILABLE_DEBUG_MODE.indexOf(debugMode) === -1) {
-    throw new TypeError(createDetailedMessage$2(`unexpected debug mode.`, {
+    throw new TypeError(createDetailedMessage$1(`unexpected debug mode.`, {
       ["debug mode"]: debugMode,
       ["allowed debug mode"]: AVAILABLE_DEBUG_MODE
     }));
@@ -25438,7 +25175,7 @@ nodeChildProcess.run = async ({
     stdio: ["pipe", "pipe", "pipe", "ipc"],
     env: envForChildProcess
   });
-  logger.debug(createDetailedMessage$2(`child process forked (pid ${childProcess.pid})`, {
+  logger.debug(createDetailedMessage$1(`child process forked (pid ${childProcess.pid})`, {
     "execArgv": execArgv.join(`\n`),
     "custom env": JSON.stringify(env, null, "  ")
   }));
@@ -25991,7 +25728,7 @@ const startBuildServer = async ({
   buildServerMainFile = getCallerPosition().url,
   cooldownBetweenFileEvents
 }) => {
-  const logger = createLogger$1({
+  const logger = createLogger({
     logLevel
   });
   rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl);
@@ -26189,7 +25926,7 @@ const execute = async ({
   runtimeParams,
   ignoreError = false
 }) => {
-  const logger = createLogger$1({
+  const logger = createLogger({
     logLevel
   });
   rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl);

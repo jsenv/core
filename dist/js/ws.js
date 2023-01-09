@@ -1,11 +1,12 @@
 import require$$0 from "stream";
-import require$$0$2 from "events";
+import require$$0$3 from "events";
 import require$$2 from "http";
 import require$$1 from "https";
 import require$$3 from "net";
 import require$$4 from "tls";
 import require$$5 from "crypto";
 import require$$0$1 from "zlib";
+import require$$0$2 from "buffer";
 import require$$7 from "url";
 
 const {
@@ -172,6 +173,7 @@ var mask;
 const {
   EMPTY_BUFFER: EMPTY_BUFFER$3
 } = constants;
+const FastBuffer$2 = Buffer[Symbol.species];
 
 /**
  * Merges an array of buffers into a new buffer.
@@ -191,7 +193,9 @@ function concat$1(list, totalLength) {
     target.set(buf, offset);
     offset += buf.length;
   }
-  if (offset < totalLength) return target.slice(0, offset);
+  if (offset < totalLength) {
+    return new FastBuffer$2(target.buffer, target.byteOffset, offset);
+  }
   return target;
 }
 
@@ -232,10 +236,10 @@ function _unmask(buffer, mask) {
  * @public
  */
 function toArrayBuffer$1(buf) {
-  if (buf.byteLength === buf.buffer.byteLength) {
+  if (buf.length === buf.buffer.byteLength) {
     return buf.buffer;
   }
-  return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+  return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.length);
 }
 
 /**
@@ -251,9 +255,9 @@ function toBuffer$2(data) {
   if (Buffer.isBuffer(data)) return data;
   let buf;
   if (data instanceof ArrayBuffer) {
-    buf = Buffer.from(data);
+    buf = new FastBuffer$2(data);
   } else if (ArrayBuffer.isView(data)) {
-    buf = Buffer.from(data.buffer, data.byteOffset, data.byteLength);
+    buf = new FastBuffer$2(data.buffer, data.byteOffset, data.byteLength);
   } else {
     buf = Buffer.from(data);
     toBuffer$2.readOnly = false;
@@ -338,6 +342,7 @@ const Limiter = limiter;
 const {
   kStatusCode: kStatusCode$2
 } = constants;
+const FastBuffer$1 = Buffer[Symbol.species];
 const TRAILER = Buffer.from([0x00, 0x00, 0xff, 0xff]);
 const kPerMessageDeflate = Symbol('permessage-deflate');
 const kTotalLength = Symbol('total-length');
@@ -676,7 +681,9 @@ let PerMessageDeflate$4 = class PerMessageDeflate {
         return;
       }
       let data = bufferUtil.concat(this._deflate[kBuffers], this._deflate[kTotalLength]);
-      if (fin) data = data.slice(0, data.length - 4);
+      if (fin) {
+        data = new FastBuffer$1(data.buffer, data.byteOffset, data.length - 4);
+      }
 
       //
       // Ensure that the callback will not be called again in
@@ -749,6 +756,9 @@ var validation = {
   }
 };
 var isValidUTF8_1;
+const {
+  isUtf8
+} = require$$0$2;
 
 //
 // Allowed token characters:
@@ -842,13 +852,15 @@ validation.exports = {
   isValidUTF8: _isValidUTF8,
   tokenChars: tokenChars$2
 };
-
-/* istanbul ignore else  */
-if (!process.env.WS_NO_UTF_8_VALIDATE) {
+if (isUtf8) {
+  isValidUTF8_1 = validationExports.isValidUTF8 = function (buf) {
+    return buf.length < 24 ? _isValidUTF8(buf) : isUtf8(buf);
+  };
+} /* istanbul ignore else  */else if (!process.env.WS_NO_UTF_8_VALIDATE) {
   try {
     const isValidUTF8 = require('utf-8-validate');
     isValidUTF8_1 = validationExports.isValidUTF8 = function (buf) {
-      return buf.length < 150 ? _isValidUTF8(buf) : isValidUTF8(buf);
+      return buf.length < 32 ? _isValidUTF8(buf) : isValidUTF8(buf);
     };
   } catch (e) {
     // Continue regardless of the error.
@@ -873,6 +885,7 @@ const {
   isValidStatusCode: isValidStatusCode$1,
   isValidUTF8
 } = validationExports;
+const FastBuffer = Buffer[Symbol.species];
 const GET_INFO = 0;
 const GET_PAYLOAD_LENGTH_16 = 1;
 const GET_PAYLOAD_LENGTH_64 = 2;
@@ -950,8 +963,8 @@ let Receiver$1 = class Receiver extends Writable {
     if (n === this._buffers[0].length) return this._buffers.shift();
     if (n < this._buffers[0].length) {
       const buf = this._buffers[0];
-      this._buffers[0] = buf.slice(n);
-      return buf.slice(0, n);
+      this._buffers[0] = new FastBuffer(buf.buffer, buf.byteOffset + n, buf.length - n);
+      return new FastBuffer(buf.buffer, buf.byteOffset, n);
     }
     const dst = Buffer.allocUnsafe(n);
     do {
@@ -961,7 +974,7 @@ let Receiver$1 = class Receiver extends Writable {
         dst.set(this._buffers.shift(), offset);
       } else {
         dst.set(new Uint8Array(buf.buffer, buf.byteOffset, n), offset);
-        this._buffers[0] = buf.slice(n);
+        this._buffers[0] = new FastBuffer(buf.buffer, buf.byteOffset + n, buf.length - n);
       }
       n -= buf.length;
     } while (n > 0);
@@ -1052,7 +1065,7 @@ let Receiver$1 = class Receiver extends Writable {
         this._loop = false;
         return error(RangeError, 'RSV1 must be clear', true, 1002, 'WS_ERR_UNEXPECTED_RSV_1');
       }
-      if (this._payloadLength > 0x7d) {
+      if (this._payloadLength > 0x7d || this._opcode === 0x08 && this._payloadLength === 1) {
         this._loop = false;
         return error(RangeError, `invalid payload length ${this._payloadLength}`, true, 1002, 'WS_ERR_INVALID_CONTROL_PAYLOAD_LENGTH');
       }
@@ -1255,14 +1268,12 @@ let Receiver$1 = class Receiver extends Writable {
       if (data.length === 0) {
         this.emit('conclude', 1005, EMPTY_BUFFER$2);
         this.end();
-      } else if (data.length === 1) {
-        return error(RangeError, 'invalid payload length 1', true, 1002, 'WS_ERR_INVALID_CONTROL_PAYLOAD_LENGTH');
       } else {
         const code = data.readUInt16BE(0);
         if (!isValidStatusCode$1(code)) {
           return error(RangeError, `invalid status code ${code}`, true, 1002, 'WS_ERR_INVALID_CLOSE_CODE');
         }
-        const buf = data.slice(2);
+        const buf = new FastBuffer(data.buffer, data.byteOffset + 2, data.length - 2);
         if (!this._skipUTF8Validation && !isValidUTF8(buf)) {
           return error(Error, 'invalid UTF-8 sequence', true, 1007, 'WS_ERR_INVALID_UTF8');
         }
@@ -2183,7 +2194,7 @@ var extension$1 = {
 
 /* eslint no-unused-vars: ["error", { "varsIgnorePattern": "^Readable$" }] */
 
-const EventEmitter$1 = require$$0$2;
+const EventEmitter$1 = require$$0$3;
 const https = require$$1;
 const http$1 = require$$2;
 const net = require$$3;
@@ -2457,7 +2468,8 @@ let WebSocket$1 = class WebSocket extends EventEmitter$1 {
     if (this.readyState === WebSocket$1.CLOSED) return;
     if (this.readyState === WebSocket$1.CONNECTING) {
       const msg = 'WebSocket was closed before the connection was established';
-      return abortHandshake$1(this, this._req, msg);
+      abortHandshake$1(this, this._req, msg);
+      return;
     }
     if (this.readyState === WebSocket$1.CLOSING) {
       if (this._closeFrameSent && (this._closeFrameReceived || this._receiver._writableState.errorEmitted)) {
@@ -2616,7 +2628,8 @@ let WebSocket$1 = class WebSocket extends EventEmitter$1 {
     if (this.readyState === WebSocket$1.CLOSED) return;
     if (this.readyState === WebSocket$1.CONNECTING) {
       const msg = 'WebSocket was closed before the connection was established';
-      return abortHandshake$1(this, this._req, msg);
+      abortHandshake$1(this, this._req, msg);
+      return;
     }
     if (this._socket) {
       this._readyState = WebSocket$1.CLOSING;
@@ -3120,7 +3133,7 @@ function sendAfterClose(websocket, data, cb) {
   }
   if (cb) {
     const err = new Error(`WebSocket is not open: readyState ${websocket.readyState} ` + `(${readyStates[websocket.readyState]})`);
-    cb(err);
+    process.nextTick(cb, err);
   }
 }
 
@@ -3352,7 +3365,7 @@ var subprotocol$1 = {
 
 /* eslint no-unused-vars: ["error", { "varsIgnorePattern": "^net|tls|https$" }] */
 
-const EventEmitter = require$$0$2;
+const EventEmitter = require$$0$3;
 const http = require$$2;
 const {
   createHash
