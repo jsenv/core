@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "30.0.6",
+  "version": "30.0.7",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "author": {
@@ -62,20 +62,20 @@
   },
   "dependencies": {
     "@babel/plugin-proposal-dynamic-import": "7.18.6",
-    "@babel/plugin-transform-modules-systemjs": "7.19.6",
+    "@babel/plugin-transform-modules-systemjs": "7.20.11",
     "@babel/plugin-transform-modules-umd": "7.18.6",
     "@c88/v8-coverage": "0.1.1",
     "@financial-times/polyfill-useragent-normaliser": "1.10.2",
     "@jsenv/abort": "4.2.4",
-    "@jsenv/ast": "1.4.9",
-    "@jsenv/babel-plugins": "1.1.1",
-    "@jsenv/plugin-bundling": "1.0.3",
+    "@jsenv/ast": "1.4.10",
+    "@jsenv/babel-plugins": "1.1.2",
+    "@jsenv/plugin-bundling": "1.0.4",
     "@jsenv/filesystem": "4.1.9",
     "@jsenv/importmap": "1.2.1",
     "@jsenv/integrity": "0.0.1",
     "@jsenv/log": "3.3.3",
     "@jsenv/node-esm-resolution": "1.0.1",
-    "@jsenv/server": "14.1.14",
+    "@jsenv/server": "14.1.15",
     "@jsenv/sourcemap": "1.0.8",
     "@jsenv/uneval": "1.6.0",
     "@jsenv/url-meta": "7.0.2",
@@ -106,11 +106,11 @@
     "@jsenv/plugin-globals": "./packages/jsenv-plugin-globals/",
     "@jsenv/plugin-placeholders": "./packages/jsenv-plugin-placeholders/",
     "@jsenv/performance-impact": "4.1.0",
-    "eslint": "8.30.0",
+    "eslint": "8.31.0",
     "eslint-plugin-html": "7.1.0",
     "eslint-plugin-import": "2.26.0",
     "eslint-plugin-react": "7.31.11",
-    "playwright": "1.29.1",
-    "prettier": "2.8.1"
+    "playwright": "1.29.2",
+    "prettier": "2.8.2"
   }
 }

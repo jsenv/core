@@ -21,18 +21,18 @@
     "@babel/plugin-syntax-import-assertions": "7.20.0",
     "@babel/plugin-transform-react-jsx": "7.20.7",
     "@jsenv/assert": "2.8.0",
-    "@jsenv/core": "30.0.5",
-    "@jsenv/plugin-react": "1.2.0",
-    "@jsenv/plugin-bundling": "1.0.3",
-    "@jsenv/plugin-minification": "1.0.1",
+    "@jsenv/core": "30.0.7",
+    "@jsenv/plugin-react": "1.2.1",
+    "@jsenv/plugin-bundling": "1.0.4",
+    "@jsenv/plugin-minification": "1.0.2",
     "@jsenv/eslint-config": "16.3.2",
     "@jsenv/eslint-import-resolver": "0.4.4",
-    "eslint": "8.30.0",
+    "eslint": "8.31.0",
     "eslint-plugin-html": "7.1.0",
     "eslint-plugin-import": "2.26.0",
     "eslint-plugin-react": "7.31.11",
     "open": "8.4.0",
-    "playwright": "1.29.1",
-    "prettier": "2.8.1"
+    "playwright": "1.29.2",
+    "prettier": "2.8.2"
   }
 }
