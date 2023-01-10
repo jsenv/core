@@ -1,6 +1,7 @@
 import { readdirSync, statSync, readFileSync } from "node:fs"
-import { writeFileSync } from "@jsenv/filesystem"
+import { writeFileSync, comparePathnames } from "@jsenv/filesystem"
 import { urlToRelativeUrl } from "@jsenv/urls"
+import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js"
 
 export const readSnapshotsFromDirectory = (directoryUrl) => {
   const fileContents = {}
@@ -13,14 +14,25 @@ export const readSnapshotsFromDirectory = (directoryUrl) => {
       if (stat.isDirectory()) {
         visitDirectory(new URL(`${contentUrl}/`))
       } else {
-        const content = readFileSync(contentUrl, "utf8")
+        const content = readFileSync(
+          contentUrl,
+          CONTENT_TYPE.isTextual(CONTENT_TYPE.fromUrlExtension(contentUrl))
+            ? "utf8"
+            : null,
+        )
         const relativeUrl = urlToRelativeUrl(contentUrl, directoryUrl)
         fileContents[relativeUrl] = content
       }
     })
   }
   visitDirectory(directoryUrl)
-  return fileContents
+  const sortedFileContents = {}
+  Object.keys(fileContents)
+    .sort(comparePathnames)
+    .forEach((relativeUrl) => {
+      sortedFileContents[relativeUrl] = fileContents[relativeUrl]
+    })
+  return sortedFileContents
 }
 
 export const writeSnapshotsIntoDirectory = (directoryUrl, fileContents) => {
