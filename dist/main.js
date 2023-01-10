@@ -20361,36 +20361,16 @@ ${globalName}.__v__ = function (specifier) {
 `;
 };
 
-// https://github.com/rollup/rollup/blob/19e50af3099c2f627451a45a84e2fa90d20246d5/src/utils/FileEmitter.ts#L47
-// https://github.com/rollup/rollup/blob/5a5391971d695c808eed0c5d7d2c6ccb594fc689/src/Chunk.ts#L870
-const createVersionGenerator = () => {
-  const hash = createHash("sha256");
-  return {
-    augmentWithContent: ({
-      content,
-      contentType = "application/octet-stream",
-      lineBreakNormalization = false
-    }) => {
-      hash.update(lineBreakNormalization && CONTENT_TYPE.isTextual(contentType) ? normalizeLineBreaks(content) : content);
-    },
-    augment: value => {
-      hash.update(value);
-    },
-    generate: () => {
-      return hash.digest("hex").slice(0, 8);
-    }
-  };
-};
-const normalizeLineBreaks = stringOrBuffer => {
+const ensureUnixLineBreaks = stringOrBuffer => {
   if (typeof stringOrBuffer === "string") {
     const stringWithLinuxBreaks = stringOrBuffer.replace(/\r\n/g, "\n");
     return stringWithLinuxBreaks;
   }
-  return normalizeLineBreaksForBuffer(stringOrBuffer);
+  return ensureUnixLineBreaksOnBuffer(stringOrBuffer);
 };
 
 // https://github.com/nodejs/help/issues/1738#issuecomment-458460503
-const normalizeLineBreaksForBuffer = buffer => {
+const ensureUnixLineBreaksOnBuffer = buffer => {
   const int32Array = new Int32Array(buffer, 0, buffer.length);
   const int32ArrayWithLineBreaksNormalized = int32Array.filter((element, index, typedArray) => {
     if (element === 0x0d) {
@@ -20404,6 +20384,27 @@ const normalizeLineBreaksForBuffer = buffer => {
     return true;
   });
   return Buffer.from(int32ArrayWithLineBreaksNormalized);
+};
+
+// https://github.com/rollup/rollup/blob/19e50af3099c2f627451a45a84e2fa90d20246d5/src/utils/FileEmitter.ts#L47
+// https://github.com/rollup/rollup/blob/5a5391971d695c808eed0c5d7d2c6ccb594fc689/src/Chunk.ts#L870
+const createVersionGenerator = () => {
+  const hash = createHash("sha256");
+  return {
+    augmentWithContent: ({
+      content,
+      contentType = "application/octet-stream",
+      lineBreakNormalization = false
+    }) => {
+      hash.update(lineBreakNormalization && CONTENT_TYPE.isTextual(contentType) ? ensureUnixLineBreaks(content) : content);
+    },
+    augment: value => {
+      hash.update(value);
+    },
+    generate: () => {
+      return hash.digest("hex").slice(0, 8);
+    }
+  };
 };
 
 /*

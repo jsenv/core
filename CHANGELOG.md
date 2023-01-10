@@ -1,3 +1,7 @@
+# 30.2.0
+
+- Use lightningcss insteaf of postcss to bundle css
+
 # 30.1.0
 
 - Replace "parcel/css" with "lightningcss"
