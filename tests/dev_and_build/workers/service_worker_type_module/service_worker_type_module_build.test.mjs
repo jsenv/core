@@ -73,8 +73,8 @@ if (process.platform === "darwin") {
     plugins: [jsenvPluginBundling()],
     snapshotsDirectoryUrl: new URL("./snapshots/1/", import.meta.url),
     expectedServiceWorkerUrls: {
-      "/main.html": { versioned: false, version: "1985706b" },
-      "/css/style.css?v=bd38451d": { versioned: true },
+      "/main.html": { versioned: false, version: "3d5abac8" },
+      "/css/style.css?v=0e312da1": { versioned: true },
     },
   })
   // support + no bundling
@@ -82,7 +82,7 @@ if (process.platform === "darwin") {
     runtimeCompat: { chrome: "80" },
     snapshotsDirectoryUrl: new URL("./snapshots/2/", import.meta.url),
     expectedServiceWorkerUrls: {
-      "/main.html": { versioned: false, version: "1ee5fe50" },
+      "/main.html": { versioned: false, version: "0f66748c" },
       "/css/style.css?v=0e312da1": { versioned: true },
       "/js/a.js?v=9c2ce306": { versioned: true },
       "/js/b.js?v=e3b0c442": { versioned: true },
