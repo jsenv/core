@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-bundling",
-  "version": "1.0.5",
+  "version": "1.1.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -24,13 +24,13 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "@jsenv/ast": "2.0.0",
     "@jsenv/babel-plugins": "1.1.2",
     "@jsenv/log": "3.3.3",
     "@jsenv/url-meta": "7.0.2",
     "@jsenv/urls": "1.2.8",
     "@jsenv/sourcemap": "1.0.8",
     "acorn-import-assertions": "1.8.0",
+    "lightningcss": "1.18.0",
     "rollup": "3.9.1"
   },
   "peerDependencies": {

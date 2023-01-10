@@ -1,16 +1,39 @@
-import { fileURLToPath } from "node:url"
+import { fileURLToPath, pathToFileURL } from "node:url"
 
 // Do not use until https://github.com/parcel-bundler/parcel-css/issues/181
-export const bundleCss = async (urlInfo, context) => {
-  const { bundle } = await import("lightningcss")
-
+export const bundleCss = async ({ cssUrlInfos, context }) => {
+  const bundledCssUrlInfos = {}
+  const { bundleAsync } = await import("lightningcss")
   const targets = runtimeCompatToTargets(context.runtimeCompat)
-  const { code, map } = bundle({
-    filename: fileURLToPath(urlInfo.originalUrl),
-    targets,
-    minify: false,
-  })
-  return { code, map }
+  for (const cssUrlInfo of cssUrlInfos) {
+    const { code, map } = await bundleAsync({
+      filename: fileURLToPath(cssUrlInfo.originalUrl),
+      targets,
+      minify: false,
+      resolver: {
+        read: (specifier) => {
+          const fileUrlObject = pathToFileURL(specifier)
+          const fileUrl = String(fileUrlObject)
+          const urlInfo = context.urlGraph.getUrlInfo(fileUrl)
+          return urlInfo.content
+        },
+        resolve(specifier, from) {
+          const fileUrlObject = new URL(specifier, pathToFileURL(from))
+          const filePath = fileURLToPath(fileUrlObject)
+          return filePath
+        },
+      },
+    })
+    bundledCssUrlInfos[cssUrlInfo.url] = {
+      data: {
+        bundlerName: "lightningcss",
+      },
+      contentType: "text/css",
+      content: String(code),
+      sourcemap: map,
+    }
+  }
+  return bundledCssUrlInfos
 }
 
 const runtimeCompatToTargets = (runtimeCompat) => {
