@@ -24,7 +24,6 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "@jsenv/ast": "2.0.0",
     "@jsenv/babel-plugins": "1.1.2",
     "@jsenv/log": "3.3.3",
     "@jsenv/url-meta": "7.0.2",
