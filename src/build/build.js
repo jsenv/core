@@ -939,18 +939,14 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     // (inline, data:, sourcemap, shouldHandle is false, ...)
                     return null
                   }
-                  const parentUrlInfo = finalGraph.getUrlInfo(
-                    reference.parentUrl,
-                  )
-                  if (parentUrlInfo.jsQuote) {
-                    // __v__() makes versioning dynamic: no need to take into account
-                    return null
-                  }
                   if (
-                    reference.type === "js_url" ||
-                    reference.subtype === "import_dynamic"
+                    asFormattedSpecifier(reference, finalGraph) !==
+                    reference.specifier
                   ) {
-                    // __v__() makes versioning dynamic: no need to take into account
+                    // when versioning is dynamic no need to take into account
+                    // happend for:
+                    // - specifier mapped by window.__v__()
+                    // - specifier mapped by importmap
                     return null
                   }
                   return dependencyContentVersion
@@ -1085,24 +1081,13 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   versioningRedirections.set(reference.url, versionedUrl)
                   buildUrls.set(versionedSpecifier, versionedUrl)
 
-                  const parentUrlInfo = finalGraph.getUrlInfo(
-                    reference.parentUrl,
+                  const formattedSpecifier = asFormattedSpecifier(
+                    reference,
+                    finalGraph,
                   )
-                  if (parentUrlInfo.jsQuote) {
-                    // the url is inline inside js quotes
+                  if (formattedSpecifier !== reference.specifier) {
                     usedVersionMappings.add(reference.specifier)
-                    return () =>
-                      `${parentUrlInfo.jsQuote}+__v__(${JSON.stringify(
-                        reference.specifier,
-                      )})+${parentUrlInfo.jsQuote}`
-                  }
-                  if (
-                    reference.type === "js_url" ||
-                    reference.subtype === "import_dynamic" ||
-                    reference.subtype === "import_meta_resolve"
-                  ) {
-                    usedVersionMappings.add(reference.specifier)
-                    return () => `__v__(${JSON.stringify(reference.specifier)})`
+                    return formattedSpecifier
                   }
                   return versionedSpecifier
                 },
@@ -1647,4 +1632,26 @@ const canUseVersionedUrl = (urlInfo) => {
     return false
   }
   return urlInfo.type !== "webmanifest"
+}
+
+const asFormattedSpecifier = (reference, finalGraph) => {
+  const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
+  if (parentUrlInfo.jsQuote) {
+    return `${parentUrlInfo.jsQuote}+__v__(${JSON.stringify(
+      reference.specifier,
+    )})+${parentUrlInfo.jsQuote}`
+  }
+  if (reference.type === "js_url") {
+    return `__v__(${JSON.stringify(reference.specifier)})`
+  }
+  if (reference.type === "js_import") {
+    if (reference.subtype === "import_dynamic") {
+      return `__v__(${JSON.stringify(reference.specifier)})`
+    }
+    if (reference.subtype === "import_meta_resolve") {
+      return `__v__(${JSON.stringify(reference.specifier)})`
+    }
+    // here consider importmap
+  }
+  return reference.specifier
 }
