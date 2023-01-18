@@ -60,6 +60,9 @@ export const createKitchen = ({
       return RUNTIME_COMPAT.isSupported(runtimeCompat, feature)
     },
     sourcemaps,
+    minification: plugins.some(
+      (plugin) => plugin.name === "jsenv:minification",
+    ),
     outDirectoryUrl,
   }
   const pluginController = createPluginController(kitchenContext)

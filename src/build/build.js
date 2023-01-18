@@ -1194,9 +1194,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     urlInfo,
                     kitchen: finalGraphKitchen,
                     versionMappings: versionMappingsNeeded,
-                    minification: plugins.some(
-                      (plugin) => plugin.name === "jsenv:minification",
-                    ),
                   })
                 })
               }
