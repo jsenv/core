@@ -58,7 +58,10 @@ import { createUrlGraph } from "../kitchen/url_graph.js"
 import { createKitchen } from "../kitchen/kitchen.js"
 import { createUrlGraphLoader } from "../kitchen/url_graph/url_graph_loader.js"
 import { createUrlGraphSummary } from "../kitchen/url_graph/url_graph_report.js"
-import { isWebWorkerEntryPointReference } from "../kitchen/web_workers.js"
+import {
+  isWebWorkerEntryPointReference,
+  isWebWorkerUrlInfo,
+} from "../kitchen/web_workers.js"
 import { jsenvPluginUrlAnalysis } from "../plugins/url_analysis/jsenv_plugin_url_analysis.js"
 import { jsenvPluginInline } from "../plugins/inline/jsenv_plugin_inline.js"
 import { jsenvPluginAsJsClassic } from "../plugins/transpilation/as_js_classic/jsenv_plugin_as_js_classic.js"
@@ -877,6 +880,41 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           disabled: logger.levels.debug || !logger.levels.info,
         })
         try {
+          const canUseImportmap =
+            finalEntryUrls.every((finalEntryUrl) => {
+              const finalEntryUrlInfo = finalGraph.getUrlInfo(finalEntryUrl)
+              return finalEntryUrlInfo.type === "html"
+            }) &&
+            finalGraphKitchen.kitchenContext.isSupportedOnCurrentClients(
+              "importmap",
+            )
+          const preferWithoutVersioning = (reference) => {
+            const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
+            if (parentUrlInfo.jsQuote) {
+              return `${parentUrlInfo.jsQuote}+__v__(${JSON.stringify(
+                reference.specifier,
+              )})+${parentUrlInfo.jsQuote}`
+            }
+            if (reference.type === "js_url") {
+              return `__v__(${JSON.stringify(reference.specifier)})`
+            }
+            if (reference.type === "js_import") {
+              if (reference.subtype === "import_dynamic") {
+                return `__v__(${JSON.stringify(reference.specifier)})`
+              }
+              if (reference.subtype === "import_meta_resolve") {
+                return `__v__(${JSON.stringify(reference.specifier)})`
+              }
+              if (
+                canUseImportmap &&
+                !isReferencedByWorker(reference, finalGraph)
+              ) {
+                return reference.specifier
+              }
+            }
+            return null
+          }
+
           // see also https://github.com/rollup/rollup/pull/4543
           const contentVersionMap = new Map()
           const hashCallbacks = []
@@ -939,10 +977,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     // (inline, data:, sourcemap, shouldHandle is false, ...)
                     return null
                   }
-                  if (
-                    asFormattedSpecifier(reference, finalGraph) !==
-                    reference.specifier
-                  ) {
+                  if (preferWithoutVersioning(reference)) {
                     // when versioning is dynamic no need to take into account
                     // happend for:
                     // - specifier mapped by window.__v__()
@@ -1000,7 +1035,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           })
 
           const versionMappings = {}
-          const usedVersionMappings = new Set()
+          const versionMappingsOnGlobalMap = new Set()
+          const versionMappingsOnImportmap = new Set()
           const versioningKitchen = createKitchen({
             logLevel: logger.level,
             rootDirectoryUrl: buildDirectoryUrl,
@@ -1081,14 +1117,16 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   versioningRedirections.set(reference.url, versionedUrl)
                   buildUrls.set(versionedSpecifier, versionedUrl)
 
-                  const formattedSpecifier = asFormattedSpecifier(
-                    reference,
-                    finalGraph,
-                  )
-                  if (formattedSpecifier !== reference.specifier) {
-                    usedVersionMappings.add(reference.specifier)
-                    return formattedSpecifier
+                  const specifierWithoutVersioning =
+                    preferWithoutVersioning(reference)
+                  if (specifierWithoutVersioning) {
+                    if (specifierWithoutVersioning === reference.specifier) {
+                      versionMappingsOnImportmap.add(reference.specifier)
+                    } else {
+                      versionMappingsOnGlobalMap.add(reference.specifier)
+                    }
                   }
+
                   return versionedSpecifier
                 },
                 fetchUrlContent: (versionedUrlInfo) => {
@@ -1139,9 +1177,13 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             })
           })
           await versioningUrlGraphLoader.getAllLoadDonePromise(buildOperation)
-          if (usedVersionMappings.size) {
+          // TODO: inject an importmap for HTML
+          // by the way we must also check there is an HTML file
+          // where we can inject importmap and otherwise we disable the importmap
+          // feature
+          if (versionMappingsOnGlobalMap.size) {
             const versionMappingsNeeded = {}
-            usedVersionMappings.forEach((specifier) => {
+            versionMappingsOnGlobalMap.forEach((specifier) => {
               versionMappingsNeeded[specifier] = versionMappings[specifier]
             })
             const actions = []
@@ -1634,24 +1676,10 @@ const canUseVersionedUrl = (urlInfo) => {
   return urlInfo.type !== "webmanifest"
 }
 
-const asFormattedSpecifier = (reference, finalGraph) => {
-  const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
-  if (parentUrlInfo.jsQuote) {
-    return `${parentUrlInfo.jsQuote}+__v__(${JSON.stringify(
-      reference.specifier,
-    )})+${parentUrlInfo.jsQuote}`
-  }
-  if (reference.type === "js_url") {
-    return `__v__(${JSON.stringify(reference.specifier)})`
-  }
-  if (reference.type === "js_import") {
-    if (reference.subtype === "import_dynamic") {
-      return `__v__(${JSON.stringify(reference.specifier)})`
-    }
-    if (reference.subtype === "import_meta_resolve") {
-      return `__v__(${JSON.stringify(reference.specifier)})`
-    }
-    // here consider importmap
-  }
-  return reference.specifier
+const isReferencedByWorker = (reference, graph) => {
+  const urlInfo = graph.getUrlInfo(reference.url)
+  const dependentWorker = graph.findDependent(urlInfo, (dependentUrlInfo) => {
+    return isWebWorkerUrlInfo(dependentUrlInfo)
+  })
+  return Boolean(dependentWorker)
 }
