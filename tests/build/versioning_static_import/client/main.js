@@ -1,4 +1,4 @@
-const { answer } = await import("./file.js")
+import { answer } from "./file.js"
 
 console.log(answer)
 

@@ -36,7 +36,18 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
       entryPoints: {
         "./main.html": "main.html",
       },
-      plugins: [jsenvPluginBundling()],
+      plugins: [
+        // we could just disable bundling to achieve the same result
+        // but this allows to test versioning with bundling and include param
+        jsenvPluginBundling({
+          js_module: {
+            include: {
+              "**/*": true,
+              "./file.js": false,
+            },
+          },
+        }),
+      ],
       writeGeneratedFiles: true,
       ...rest,
     })
@@ -113,7 +124,7 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
 
 // importmap are not supported
 // await test({
-//   snapshotsDirectoryUrl: new URL("./snapshots/systemjs/", import.meta.url),
+//   snapshotsDirectoryUrl: new URL("./snapshots/systemjs /", import.meta.url),
 //   runtimeCompat: { chrome: "88" },
 // })
 
