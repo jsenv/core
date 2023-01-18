@@ -14,13 +14,12 @@ export const injectVersionMappings = async ({
   urlInfo,
   kitchen,
   versionMappings,
-  minification,
 }) => {
   const injector = injectors[urlInfo.type]
   if (injector) {
     const { content, sourcemap } = await injector(urlInfo, {
       versionMappings,
-      minification,
+      minification: kitchen.kitchenContext.minification,
     })
     kitchen.urlInfoTransformer.applyFinalTransformations(urlInfo, {
       content,
@@ -88,13 +87,10 @@ const generateClientCodeForVersionMappings = (
   }
   return `
 ;(function() {
-
-var __versionMappings__ = ${JSON.stringify(versionMappings, null, "  ")};
-${globalName}.__v__ = function (specifier) {
-  return __versionMappings__[specifier] || specifier
-};
-
+  var __versionMappings__ = ${JSON.stringify(versionMappings, null, "  ")};
+  ${globalName}.__v__ = function (specifier) {
+    return __versionMappings__[specifier] || specifier
+  };
 })();
-
 `
 }

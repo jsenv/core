@@ -23,7 +23,6 @@ import {
   readSnapshotsFromDirectory,
   writeSnapshotsIntoDirectory,
 } from "@jsenv/core/tests/snapshots_directory.js"
-
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js"
 

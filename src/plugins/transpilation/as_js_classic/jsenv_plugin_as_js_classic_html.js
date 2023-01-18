@@ -40,7 +40,8 @@ export const jsenvPluginAsJsClassicHtml = ({
         ? false
         : !context.isSupportedOnCurrentClients("script_type_module") ||
           !context.isSupportedOnCurrentClients("import_dynamic") ||
-          !context.isSupportedOnCurrentClients("import_meta")
+          !context.isSupportedOnCurrentClients("import_meta") ||
+          !context.isSupportedOnCurrentClients("importmap")
     },
     redirectUrl: {
       link_href: (reference) => {

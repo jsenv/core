@@ -3,7 +3,6 @@
  * as importmap are not supported in workers
  */
 
-import { chromium } from "playwright"
 import { assert } from "@jsenv/assert"
 
 import { build } from "@jsenv/core"
@@ -12,7 +11,7 @@ import {
   writeSnapshotsIntoDirectory,
 } from "@jsenv/core/tests/snapshots_directory.js"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
-import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js"
+import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
 
 const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
   const { buildFileContents } = await build({
@@ -39,14 +38,12 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
   })
-  const browser = await chromium.launch({ headless: true })
-  const page = await launchBrowserPage(browser)
-  await page.goto(`${server.origin}/main.html`)
-  const returnValue = await page.evaluate(
+  const { returnValue } = await executeInChromium({
+    url: `${server.origin}/main.html`,
     /* eslint-disable no-undef */
-    () => window.resultPromise,
+    pageFunction: () => window.resultPromise,
     /* eslint-enable no-undef */
-  )
+  })
   assert({
     actual: returnValue,
     expected: {

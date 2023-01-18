@@ -454,13 +454,13 @@
 })()
 
 
-System.register(["__v__(\"/js/ping.nomodule.js\")"], function (_export, _context) {
+System.register([__v__("/js/ping.nomodule.js")], function (_export, _context) {
   "use strict";
 
   var ping;
   return {
-    setters: [function (_fileUsersDMaillardDevJsenvJsenvCoreTestsDev_and_buildWorkersWorker_js_module_sharedClientPingJs) {
-      ping = _fileUsersDMaillardDevJsenvJsenvCoreTestsDev_and_buildWorkersWorker_js_module_sharedClientPingJs.ping;
+    setters: [function (_fileUsersDMaillardDevJsenvJsenvCoreTestsDev_and_buildWorkersWorker_versioning_importmapClientPingJs) {
+      ping = _fileUsersDMaillardDevJsenvJsenvCoreTestsDev_and_buildWorkersWorker_versioning_importmapClientPingJs.ping;
     }],
     execute: function () {
       /* globals self */
