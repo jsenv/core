@@ -60,6 +60,7 @@ export const featuresCompatMap = {
     chrome: "89",
     opera: "76",
     samsung: "15",
+    firefox: "108",
   },
   import_type_json: {
     chrome: "91",
