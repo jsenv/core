@@ -38,14 +38,13 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
     writeGeneratedFiles: true,
     ...rest,
   })
-  const snapshotsInitialUrl = new URL("./snapshots/", snapshotsDirectoryUrl)
-  const snapshotsInitialContent = readSnapshotsFromDirectory(
-    snapshotsDirectoryUrl,
-  )
-  writeSnapshotsIntoDirectory(snapshotsInitialUrl, buildFileContents)
+
+  // 1. Snapshots
+  const snapshotsContent = readSnapshotsFromDirectory(snapshotsDirectoryUrl)
+  writeSnapshotsIntoDirectory(snapshotsDirectoryUrl, buildFileContents)
   assert({
     actual: buildFileContents,
-    expected: snapshotsInitialContent,
+    expected: snapshotsContent,
   })
 
   // 2. Ensure file executes properly
@@ -73,9 +72,9 @@ await test({
   },
 })
 
-// await test({
-//   snapshotsDirectoryUrl: new URL("./snapshots/systemjs/", import.meta.url),
-//   runtimeCompat: {
-//     chrome: "88",
-//   },
-// })
+await test({
+  snapshotsDirectoryUrl: new URL("./snapshots/systemjs/", import.meta.url),
+  runtimeCompat: {
+    chrome: "88",
+  },
+})
