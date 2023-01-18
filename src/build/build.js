@@ -1125,8 +1125,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     } else {
                       versionMappingsOnGlobalMap.add(reference.specifier)
                     }
+                    return specifierWithoutVersioning
                   }
-
                   return versionedSpecifier
                 },
                 fetchUrlContent: (versionedUrlInfo) => {

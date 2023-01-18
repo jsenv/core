@@ -1,3 +1,1 @@
-const ping = "pong";
-
-export { ping as p };
+export const ping = "pong"

@@ -5,7 +5,6 @@
 
 import { chromium } from "playwright"
 import { assert } from "@jsenv/assert"
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
 
 import { build } from "@jsenv/core"
 import {
@@ -23,18 +22,7 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
     entryPoints: {
       "./main.html": "main.html",
     },
-    plugins: [
-      // we could just disable bundling to achieve the same result
-      // but this allows to test versioning with bundling and include param
-      jsenvPluginBundling({
-        js_module: {
-          include: {
-            "**/*": true,
-            "./file.js": false,
-          },
-        },
-      }),
-    ],
+    plugins: [],
     writeGeneratedFiles: true,
     ...rest,
   })
@@ -61,10 +49,14 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
   )
   assert({
     actual: returnValue,
-    expected: 42,
+    expected: {
+      ping: "pong",
+      workerResponse: "pong",
+    },
   })
 }
 
+// support importmap
 await test({
   snapshotsDirectoryUrl: new URL("./snapshots/importmap/", import.meta.url),
   runtimeCompat: {
@@ -72,6 +64,7 @@ await test({
   },
 })
 
+// does not support importmap
 await test({
   snapshotsDirectoryUrl: new URL("./snapshots/systemjs/", import.meta.url),
   runtimeCompat: {
