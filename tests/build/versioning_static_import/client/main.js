@@ -2,4 +2,4 @@ import { answer } from "./file.js"
 
 console.log(answer)
 
-window.resolveResultPromise(42)
+window.resolveResultPromise(answer)

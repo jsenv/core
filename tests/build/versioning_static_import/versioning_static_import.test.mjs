@@ -100,25 +100,29 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
   }
 
   // rebuild
-  jsFileContent.update(`export const answer = 43`)
-  const { buildFileContents } = await generateDist()
+  try {
+    jsFileContent.update(`export const answer = 43`)
+    const { buildFileContents } = await generateDist()
 
-  // test snapshots
-  {
-    const snapshotsModifiedUrl = new URL("./modified/", snapshotsDirectoryUrl)
-    const snapshotsModifiedContent = readSnapshotsFromDirectory(
-      snapshotsDirectoryUrl,
-    )
-    writeSnapshotsIntoDirectory(snapshotsModifiedUrl, buildFileContents)
-    assert({
-      actual: buildFileContents,
-      expected: snapshotsModifiedContent,
-    })
+    // test snapshots
+    {
+      const snapshotsModifiedUrl = new URL("./modified/", snapshotsDirectoryUrl)
+      const snapshotsModifiedContent =
+        readSnapshotsFromDirectory(snapshotsModifiedUrl)
+      writeSnapshotsIntoDirectory(snapshotsModifiedUrl, buildFileContents)
+      assert({
+        actual: buildFileContents,
+        expected: snapshotsModifiedContent,
+      })
+    }
+
+    // reload
+    responses.length = 0
+    await page.reload()
+  } finally {
+    jsFileContent.restore()
+    browser.close()
   }
-
-  // reload
-  responses.length = 0
-  await page.reload()
 }
 
 // importmap are not supported
