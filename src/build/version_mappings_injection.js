@@ -107,7 +107,7 @@ export const injectVersionMappingsAsImportmap = async ({
       ? JSON.stringify(versionMappings)
       : `  
       {${JSON.stringify(versionMappings, null, "        ").slice(1, -1)}      }
-  `,
+    `,
   })
   injectScriptNodeAsEarlyAsPossible(htmlAst, importmapNode, "jsenv:versioning")
   kitchen.urlInfoTransformer.applyFinalTransformations(urlInfo, {
