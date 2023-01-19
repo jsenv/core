@@ -104,9 +104,14 @@ export const injectVersionMappingsAsImportmap = async ({
     tagName: "script",
     type: "importmap",
     textContent: kitchen.kitchenContext.minification
-      ? JSON.stringify(versionMappings)
+      ? JSON.stringify({ imports: versionMappings })
       : `  
-      {${JSON.stringify(versionMappings, null, "        ").slice(1, -1)}      }
+      {
+        "imports": {${JSON.stringify(versionMappings, null, "          ").slice(
+          1,
+          -1,
+        )}        }
+      }
     `,
   })
   injectScriptNodeAsEarlyAsPossible(htmlAst, importmapNode, "jsenv:versioning")

@@ -57,9 +57,8 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
   {
     const { buildFileContents } = await generateDist()
     const snapshotsInitialUrl = new URL("./initial/", snapshotsDirectoryUrl)
-    const snapshotsInitialContent = readSnapshotsFromDirectory(
-      snapshotsDirectoryUrl,
-    )
+    const snapshotsInitialContent =
+      readSnapshotsFromDirectory(snapshotsInitialUrl)
     writeSnapshotsIntoDirectory(snapshotsInitialUrl, buildFileContents)
     assert({
       actual: buildFileContents,
