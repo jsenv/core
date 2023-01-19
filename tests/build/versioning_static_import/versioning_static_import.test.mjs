@@ -35,6 +35,7 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
       entryPoints: {
         "./main.html": "main.html",
       },
+      versioningMethod: "filename",
       plugins: [
         // we could just disable bundling to achieve the same result
         // but this allows to test versioning with bundling and include param

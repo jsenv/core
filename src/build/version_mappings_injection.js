@@ -10,7 +10,7 @@ import {
 
 import { isWebWorkerUrlInfo } from "@jsenv/core/src/kitchen/web_workers.js"
 
-export const injectVersionMappings = async ({
+export const injectVersionMappingsAsGlobal = async ({
   urlInfo,
   kitchen,
   versionMappings,
@@ -27,12 +27,8 @@ export const injectVersionMappings = async ({
     })
   }
 }
-
 const injectors = {
   html: (urlInfo, { versionMappings, minification }) => {
-    // ideally we would inject an importmap but browser support is too low
-    // (even worse for worker/service worker)
-    // so for now we inject code into entry points
     const htmlAst = parseHtmlString(urlInfo.content, {
       storeOriginalPositions: false,
     })
@@ -64,7 +60,6 @@ const injectors = {
     })
   },
 }
-
 const jsInjector = (urlInfo, { versionMappings, minify }) => {
   const magicSource = createMagicSource(urlInfo.content)
   magicSource.prepend(
@@ -75,7 +70,6 @@ const jsInjector = (urlInfo, { versionMappings, minify }) => {
   )
   return magicSource.toContentAndSourcemap()
 }
-
 const generateClientCodeForVersionMappings = (
   versionMappings,
   { globalName, minify },
@@ -93,4 +87,30 @@ const generateClientCodeForVersionMappings = (
   };
 })();
 `
+}
+
+export const injectVersionMappingsAsImportmap = async ({
+  urlInfo,
+  kitchen,
+  versionMappings,
+}) => {
+  const htmlAst = parseHtmlString(urlInfo.content, {
+    storeOriginalPositions: false,
+  })
+  // jsenv_plugin_importmap.js is removing importmap during build
+  // it means at this point we know HTML has no importmap in it
+  // we can safely inject one
+  const importmapNode = createHtmlNode({
+    tagName: "script",
+    type: "importmap",
+    textContent: kitchen.kitchenContext.minification
+      ? JSON.stringify(versionMappings)
+      : `  
+      {${JSON.stringify(versionMappings, null, "        ").slice(1, -1)}      }
+  `,
+  })
+  injectScriptNodeAsEarlyAsPossible(htmlAst, importmapNode, "jsenv:versioning")
+  kitchen.urlInfoTransformer.applyFinalTransformations(urlInfo, {
+    content: stringifyHtmlAst(htmlAst),
+  })
 }

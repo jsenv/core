@@ -69,7 +69,10 @@ import { getCorePlugins } from "../plugins/plugins.js"
 
 import { GRAPH } from "./graph_utils.js"
 import { createBuildUrlsGenerator } from "./build_urls_generator.js"
-import { injectVersionMappings } from "./inject_global_version_mappings.js"
+import {
+  injectVersionMappingsAsGlobal,
+  injectVersionMappingsAsImportmap,
+} from "./version_mappings_injection.js"
 import { createVersionGenerator } from "./version_generator.js"
 
 // default runtimeCompat corresponds to
@@ -891,25 +894,40 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           const preferWithoutVersioning = (reference) => {
             const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
             if (parentUrlInfo.jsQuote) {
-              return `${parentUrlInfo.jsQuote}+__v__(${JSON.stringify(
-                reference.specifier,
-              )})+${parentUrlInfo.jsQuote}`
+              return {
+                type: "global",
+                source: `${parentUrlInfo.jsQuote}+__v__(${JSON.stringify(
+                  reference.specifier,
+                )})+${parentUrlInfo.jsQuote}`,
+              }
             }
             if (reference.type === "js_url") {
-              return `__v__(${JSON.stringify(reference.specifier)})`
+              return {
+                type: "global",
+                source: `__v__(${JSON.stringify(reference.specifier)})`,
+              }
             }
             if (reference.type === "js_import") {
               if (reference.subtype === "import_dynamic") {
-                return `__v__(${JSON.stringify(reference.specifier)})`
+                return {
+                  type: "global",
+                  source: `__v__(${JSON.stringify(reference.specifier)})`,
+                }
               }
               if (reference.subtype === "import_meta_resolve") {
-                return `__v__(${JSON.stringify(reference.specifier)})`
+                return {
+                  type: "global",
+                  source: `__v__(${JSON.stringify(reference.specifier)})`,
+                }
               }
               if (
                 canUseImportmap &&
                 !isReferencedByWorker(reference, finalGraph)
               ) {
-                return reference.specifier
+                return {
+                  type: "importmap",
+                  source: JSON.stringify(reference.specifier),
+                }
               }
             }
             return null
@@ -1117,15 +1135,14 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   versioningRedirections.set(reference.url, versionedUrl)
                   buildUrls.set(versionedSpecifier, versionedUrl)
 
-                  const specifierWithoutVersioning =
-                    preferWithoutVersioning(reference)
-                  if (specifierWithoutVersioning) {
-                    if (specifierWithoutVersioning === reference.specifier) {
+                  const withoutVersioning = preferWithoutVersioning(reference)
+                  if (withoutVersioning) {
+                    if (withoutVersioning.type === "importmap") {
                       versionMappingsOnImportmap.add(reference.specifier)
                     } else {
                       versionMappingsOnGlobalMap.add(reference.specifier)
                     }
-                    return () => specifierWithoutVersioning
+                    return () => withoutVersioning.source
                   }
                   return versionedSpecifier
                 },
@@ -1177,20 +1194,17 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             })
           })
           await versioningUrlGraphLoader.getAllLoadDonePromise(buildOperation)
-          // TODO: inject an importmap for HTML
-          // by the way we must also check there is an HTML file
-          // where we can inject importmap and otherwise we disable the importmap
-          // feature
-          if (versionMappingsOnGlobalMap.size) {
+          const actions = []
+          const visitors = []
+          if (versionMappingsOnImportmap.size) {
             const versionMappingsNeeded = {}
-            versionMappingsOnGlobalMap.forEach((specifier) => {
+            versionMappingsOnImportmap.forEach((specifier) => {
               versionMappingsNeeded[specifier] = versionMappings[specifier]
             })
-            const actions = []
-            GRAPH.forEach(finalGraph, (urlInfo) => {
-              if (urlInfo.isEntryPoint) {
+            visitors.push((urlInfo) => {
+              if (urlInfo.type === "html" && urlInfo.isEntryPoint) {
                 actions.push(async () => {
-                  await injectVersionMappings({
+                  await injectVersionMappingsAsImportmap({
                     urlInfo,
                     kitchen: finalGraphKitchen,
                     versionMappings: versionMappingsNeeded,
@@ -1198,7 +1212,31 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 })
               }
             })
-            await Promise.all(actions.map((action) => action()))
+          }
+          if (versionMappingsOnGlobalMap.size) {
+            const versionMappingsNeeded = {}
+            versionMappingsOnGlobalMap.forEach((specifier) => {
+              versionMappingsNeeded[specifier] = versionMappings[specifier]
+            })
+            visitors.push((urlInfo) => {
+              if (urlInfo.isEntryPoint) {
+                actions.push(async () => {
+                  await injectVersionMappingsAsGlobal({
+                    urlInfo,
+                    kitchen: finalGraphKitchen,
+                    versionMappings: versionMappingsNeeded,
+                  })
+                })
+              }
+            })
+          }
+          if (visitors.length) {
+            GRAPH.forEach(finalGraph, (urlInfo) => {
+              visitors.forEach((visitor) => visitor(urlInfo))
+            })
+            if (actions.length) {
+              await Promise.all(actions.map((action) => action()))
+            }
           }
         } catch (e) {
           versioningTask.fail()

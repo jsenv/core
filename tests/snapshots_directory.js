@@ -1,4 +1,4 @@
-import { readdirSync, statSync, readFileSync } from "node:fs"
+import { readdirSync, statSync, readFileSync, rmSync } from "node:fs"
 import { writeFileSync, comparePathnames } from "@jsenv/filesystem"
 import { urlToRelativeUrl } from "@jsenv/urls"
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js"
@@ -38,6 +38,10 @@ export const readSnapshotsFromDirectory = (directoryUrl) => {
 }
 
 export const writeSnapshotsIntoDirectory = (directoryUrl, fileContents) => {
+  rmSync(new URL(directoryUrl), {
+    recursive: true,
+    force: true,
+  })
   Object.keys(fileContents).forEach((relativeUrl) => {
     const contentUrl = new URL(relativeUrl, directoryUrl)
     writeFileSync(contentUrl, fileContents[relativeUrl])
