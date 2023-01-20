@@ -67,16 +67,21 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
   }
 
   // 2. Ensure file executes properly
+  const serverRequests = []
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
     canUseLongTermCache: (request) => !request.url.endsWith(".html"),
+    services: [
+      {
+        name: "spy_request",
+        handleRequest: (request) => {
+          serverRequests.push(request)
+        },
+      },
+    ],
   })
   const browser = await chromium.launch({ headless: true })
   const page = await launchBrowserPage(browser)
-  const responses = []
-  page.on("response", (response) => {
-    responses.push(response)
-  })
   await page.goto(`${server.origin}/main.html`)
   {
     const returnValue = await page.evaluate(
@@ -118,12 +123,12 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
     }
 
     // reload then ensure the browser did not re-fetch app.js
-    responses.length = 0
+    serverRequests.length = 0
     await page.reload()
-    const responseForAppJs = responses.find((response) =>
-      response.url().includes("app"),
+    const responseForAppJs = serverRequests.find((request) =>
+      request.url.includes("app"),
     )
-    assert({ actual: responseForAppJs, expected: null })
+    assert({ actual: responseForAppJs, expected: undefined })
   } finally {
     jsFileContent.restore()
     browser.close()
