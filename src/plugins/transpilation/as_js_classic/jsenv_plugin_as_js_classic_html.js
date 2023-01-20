@@ -102,7 +102,10 @@ export const jsenvPluginAsJsClassicHtml = ({
             if (!isOrWasExpectingJsModule(reference)) {
               return
             }
-            if (rel === "modulepreload") {
+            if (
+              rel === "modulepreload" &&
+              reference.expectedType === "js_classic"
+            ) {
               mutations.push(() => {
                 setHtmlNodeAttributes(node, {
                   rel: "preload",
@@ -111,7 +114,7 @@ export const jsenvPluginAsJsClassicHtml = ({
                 })
               })
             }
-            if (rel === "preload") {
+            if (rel === "preload" && reference.expectedType === "js_classic") {
               mutations.push(() => {
                 setHtmlNodeAttributes(node, { crossorigin: undefined })
               })
