@@ -7,6 +7,7 @@ import {
 export const startFileServer = ({
   rootDirectoryUrl,
   debug = false,
+  canUseLongTermCache = () => false,
   ...rest
 }) => {
   return startServer({
@@ -24,6 +25,9 @@ export const startFileServer = ({
               rootDirectoryUrl,
               canReadDirectory: true,
               headers: request.headers,
+              cacheControl: canUseLongTermCache(request)
+                ? `private,max-age=3600,immutable` // 1hour
+                : "private,max-age=0,must-revalidate",
             },
           ),
       },

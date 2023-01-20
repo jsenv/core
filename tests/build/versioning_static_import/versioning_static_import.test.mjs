@@ -69,6 +69,7 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
   // 2. Ensure file executes properly
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
+    canUseLongTermCache: (request) => !request.url.endsWith(".html"),
   })
   const browser = await chromium.launch({ headless: true })
   const page = await launchBrowserPage(browser)
@@ -116,9 +117,13 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
       })
     }
 
-    // reload
+    // reload then ensure the browser did not re-fetch app.js
     responses.length = 0
     await page.reload()
+    const responseForAppJs = responses.find((response) =>
+      response.url().includes("app"),
+    )
+    assert({ actual: responseForAppJs, expected: null })
   } finally {
     jsFileContent.restore()
     browser.close()
@@ -126,10 +131,10 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
 }
 
 // importmap are not supported
-// await test({
-//   snapshotsDirectoryUrl: new URL("./snapshots/systemjs /", import.meta.url),
-//   runtimeCompat: { chrome: "88" },
-// })
+await test({
+  snapshotsDirectoryUrl: new URL("./snapshots/systemjs/", import.meta.url),
+  runtimeCompat: { chrome: "88" },
+})
 
 // importmap supported
 await test({
