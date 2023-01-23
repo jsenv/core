@@ -22,9 +22,7 @@ const test = async (params) => {
   const { returnValue } = await executeInChromium({
     url: `${server.origin}/main.html`,
     /* eslint-disable no-undef */
-    pageFunction: async () => {
-      return window.resultPromise
-    },
+    pageFunction: async () => window.resultPromise,
     /* eslint-enable no-undef */
   })
   const actual = returnValue
@@ -39,8 +37,8 @@ const test = async (params) => {
 
 // support for top level await and <script type="module">
 await test({ runtimeCompat: { chrome: "89" } })
-// no support for top <script type="module">
-await test({ runtimeCompat: { chrome: "55" }, systemJsBug: true })
+// no support for <script type="module">
+await test({ runtimeCompat: { chrome: "55" } })
 
 // support for <script type="module"> but not TLA
 // Considering that TLA + export on old runtimes is not recommended:
@@ -49,7 +47,7 @@ await test({ runtimeCompat: { chrome: "55" }, systemJsBug: true })
 // -> Jsenv throw an error when TLA + exports is used and systemjs is not
 // (ideally jsenv would throw a custom error explaining all this)
 try {
-  await test({ runtimeCompat: { chrome: "65" } })
+  await test({ runtimeCompat: { chrome: "65" }, versioning: false })
   throw new Error("should throw")
 } catch (e) {
   const actual = e.message.includes(

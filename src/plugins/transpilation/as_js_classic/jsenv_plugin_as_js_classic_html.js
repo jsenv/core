@@ -33,13 +33,13 @@ export const jsenvPluginAsJsClassicHtml = ({
     redirectUrl: {
       link_href: (reference, context) => {
         if (
-          context.systemJsTranpilation &&
+          context.systemJsTranspilation &&
           reference.subtype === "modulepreload"
         ) {
           return turnIntoJsClassicProxy(reference)
         }
         if (
-          context.systemJsTranpilation &&
+          context.systemJsTranspilation &&
           reference.subtype === "preload" &&
           reference.expectedType === "js_module"
         ) {
@@ -49,7 +49,7 @@ export const jsenvPluginAsJsClassicHtml = ({
       },
       script_src: (reference, context) => {
         if (
-          context.systemJsTranpilation &&
+          context.systemJsTranspilation &&
           reference.expectedType === "js_module"
         ) {
           return turnIntoJsClassicProxy(reference)
@@ -58,7 +58,7 @@ export const jsenvPluginAsJsClassicHtml = ({
       },
       js_url: (reference, context) => {
         if (
-          context.systemJsTranpilation &&
+          context.systemJsTranspilation &&
           reference.expectedType === "js_module"
         ) {
           return turnIntoJsClassicProxy(reference)
@@ -128,7 +128,7 @@ export const jsenvPluginAsJsClassicHtml = ({
                   setHtmlNodeAttributes(node, { type: undefined })
                 })
               }
-            } else if (context.systemJsTranpilation) {
+            } else if (context.systemJsTranspilation) {
               mutations.push(() => {
                 setHtmlNodeAttributes(node, { type: undefined })
               })

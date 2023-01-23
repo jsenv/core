@@ -11,7 +11,7 @@ export const jsenvPluginTopLevelAwait = () => {
         return false
       }
       // keep it untouched, systemjs will handle it
-      if (context.systemJsTranpilation) {
+      if (context.systemJsTranspilation) {
         return false
       }
       return true

@@ -28,13 +28,14 @@ export const createKitchen = ({
   logLevel,
 
   rootDirectoryUrl,
+  urlGraph,
   dev = false,
   build = false,
   runtimeCompat,
   // during dev/test clientRuntimeCompat is a single runtime
   // during build clientRuntimeCompat is runtimeCompat
   clientRuntimeCompat = runtimeCompat,
-  urlGraph,
+  systemJsTranspilation,
   plugins,
   minification,
   sourcemaps = dev ? "inline" : "none", // "programmatic" and "file" also allowed
@@ -54,6 +55,7 @@ export const createKitchen = ({
     build,
     runtimeCompat,
     clientRuntimeCompat,
+    systemJsTranspilation,
     isSupportedOnCurrentClients: (feature) => {
       return RUNTIME_COMPAT.isSupported(clientRuntimeCompat, feature)
     },
@@ -64,8 +66,6 @@ export const createKitchen = ({
     sourcemaps,
     outDirectoryUrl,
   }
-  kitchenContext.systemJsTranpilation =
-    shouldTranspileToSystemJs(kitchenContext)
   const pluginController = createPluginController(kitchenContext)
   const pushPlugins = (plugins) => {
     plugins.forEach((pluginEntry) => {
@@ -932,18 +932,4 @@ const determineFileUrlForOutDirectory = ({ urlInfo, context }) => {
     to: context.outDirectoryUrl,
     preferAbsolute: true,
   })
-}
-
-const shouldTranspileToSystemJs = ({
-  runtimeCompat,
-  build,
-  isSupportedOnCurrentClients,
-}) => {
-  const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node")
-  if (nodeRuntimeEnabled) return false
-  if (!isSupportedOnCurrentClients("script_type_module")) return true
-  if (!isSupportedOnCurrentClients("import_dynamic")) return true
-  if (!isSupportedOnCurrentClients("import_meta")) return true
-  if (build && !isSupportedOnCurrentClients("importmap")) return true
-  return false
 }

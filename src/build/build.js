@@ -56,6 +56,7 @@ import {
 
 import { createUrlGraph } from "../kitchen/url_graph.js"
 import { createKitchen } from "../kitchen/kitchen.js"
+import { RUNTIME_COMPAT } from "../kitchen/compat/runtime_compat.js"
 import { createUrlGraphLoader } from "../kitchen/url_graph/url_graph_loader.js"
 import { createUrlGraphSummary } from "../kitchen/url_graph/url_graph_report.js"
 import {
@@ -139,6 +140,7 @@ export const build = async ({
   transpilation = {},
   versioning = !runtimeCompat.node,
   versioningMethod = "search_param", // "filename", "search_param"
+  versioningViaImportmap = true,
   lineBreakNormalization = process.platform === "win32",
 
   clientFiles = {
@@ -227,9 +229,28 @@ build ${entryPointKeys.length} entry points`)
     const versioningRedirections = new Map()
     const entryUrls = []
     const rawGraph = createUrlGraph()
-    const minification = plugins.some(
-      (plugin) => plugin.name === "jsenv:minification",
-    )
+    const contextSharedDuringBuild = {
+      systemJsTranspilation: (() => {
+        const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node")
+        if (nodeRuntimeEnabled) return false
+        if (!RUNTIME_COMPAT.isSupported(runtimeCompat, "script_type_module"))
+          return true
+        if (!RUNTIME_COMPAT.isSupported(runtimeCompat, "import_dynamic"))
+          return true
+        if (!RUNTIME_COMPAT.isSupported(runtimeCompat, "import_meta"))
+          return true
+        if (
+          versioning &&
+          versioningViaImportmap &&
+          !RUNTIME_COMPAT.isSupported(runtimeCompat, "importmap")
+        )
+          return true
+        return false
+      })(),
+      minification: plugins.some(
+        (plugin) => plugin.name === "jsenv:minification",
+      ),
+    }
     const rawGraphKitchen = createKitchen({
       signal,
       logLevel,
@@ -237,6 +258,7 @@ build ${entryPointKeys.length} entry points`)
       urlGraph: rawGraph,
       build: true,
       runtimeCompat,
+      ...contextSharedDuringBuild,
       plugins: [
         ...plugins,
         {
@@ -272,7 +294,6 @@ build ${entryPointKeys.length} entry points`)
           },
         }),
       ],
-      minification,
       sourcemaps,
       sourcemapsSourcesContent,
       writeGeneratedFiles,
@@ -309,6 +330,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       urlGraph: finalGraph,
       build: true,
       runtimeCompat,
+      ...contextSharedDuringBuild,
       plugins: [
         urlAnalysisPlugin,
         jsenvPluginAsJsClassic({
@@ -588,7 +610,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           },
         },
       ],
-      minification,
       sourcemaps,
       sourcemapsSourcesContent,
       sourcemapsSourcesRelative: !versioning,
@@ -1066,6 +1087,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             urlGraph: finalGraph,
             build: true,
             runtimeCompat,
+            ...contextSharedDuringBuild,
             plugins: [
               urlAnalysisPlugin,
               jsenvPluginInline({
@@ -1174,7 +1196,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 },
               },
             ],
-            minification,
             sourcemaps,
             sourcemapsSourcesContent,
             sourcemapsSourcesRelative: true,
