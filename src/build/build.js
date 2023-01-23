@@ -910,6 +910,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         })
         try {
           const canUseImportmap =
+            versioningViaImportmap &&
             finalEntryUrls.every((finalEntryUrl) => {
               const finalEntryUrlInfo = finalGraph.getUrlInfo(finalEntryUrl)
               return finalEntryUrlInfo.type === "html"
