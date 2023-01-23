@@ -13,6 +13,7 @@ const { buildInlineContents } = await build({
     "./main.html": "main.html",
   },
   versioning: false,
+  runtimeCompat: { chrome: "89" },
   plugins: [jsenvPluginMinification()],
 })
 const server = await startFileServer({
@@ -40,7 +41,7 @@ const expected = {
   },
   buildInlineContents: {
     // this is to assert JSON string does not contain whitespaces
-    "js/main.js@L1C31-L1C53.json": '{"answer":42}',
+    "js/main.js@L1C31-L3C2.json": '{"answer":42}',
   },
 }
 assert({ actual, expected })
