@@ -38,7 +38,7 @@ const injectors = {
         tagName: "script",
         textContent: generateClientCodeForVersionMappings(versionMappings, {
           globalName: "window",
-          minify: minification || minification.js_classic,
+          minification,
         }),
       }),
       "jsenv:versioning",
@@ -47,34 +47,24 @@ const injectors = {
       content: stringifyHtmlAst(htmlAst),
     }
   },
-  js_classic: (urlInfo, { versionMappings, minification }) => {
-    return jsInjector(urlInfo, {
-      versionMappings,
-      minify: minification || minification.js_classic,
-    })
-  },
-  js_module: (urlInfo, { versionMappings, minification }) => {
-    return jsInjector(urlInfo, {
-      versionMappings,
-      minify: minification || minification.js_module,
-    })
-  },
+  js_classic: (...args) => jsInjector(...args),
+  js_module: (...args) => jsInjector(...args),
 }
-const jsInjector = (urlInfo, { versionMappings, minify }) => {
+const jsInjector = (urlInfo, { versionMappings, minification }) => {
   const magicSource = createMagicSource(urlInfo.content)
   magicSource.prepend(
     generateClientCodeForVersionMappings(versionMappings, {
       globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window",
-      minify,
+      minification,
     }),
   )
   return magicSource.toContentAndSourcemap()
 }
 const generateClientCodeForVersionMappings = (
   versionMappings,
-  { globalName, minify },
+  { globalName, minification },
 ) => {
-  if (minify) {
+  if (minification) {
     return `;(function(){var m = ${JSON.stringify(
       versionMappings,
     )}; ${globalName}.__v__ = function (s) { return m[s] || s }; })();`

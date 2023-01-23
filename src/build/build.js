@@ -227,6 +227,9 @@ build ${entryPointKeys.length} entry points`)
     const versioningRedirections = new Map()
     const entryUrls = []
     const rawGraph = createUrlGraph()
+    const minification = plugins.some(
+      (plugin) => plugin.name === "jsenv:minification",
+    )
     const rawGraphKitchen = createKitchen({
       signal,
       logLevel,
@@ -269,6 +272,7 @@ build ${entryPointKeys.length} entry points`)
           },
         }),
       ],
+      minification,
       sourcemaps,
       sourcemapsSourcesContent,
       writeGeneratedFiles,
@@ -584,6 +588,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           },
         },
       ],
+      minification,
       sourcemaps,
       sourcemapsSourcesContent,
       sourcemapsSourcesRelative: !versioning,
@@ -1169,6 +1174,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 },
               },
             ],
+            minification,
             sourcemaps,
             sourcemapsSourcesContent,
             sourcemapsSourcesRelative: true,

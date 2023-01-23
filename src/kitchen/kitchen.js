@@ -36,6 +36,7 @@ export const createKitchen = ({
   clientRuntimeCompat = runtimeCompat,
   urlGraph,
   plugins,
+  minification,
   sourcemaps = dev ? "inline" : "none", // "programmatic" and "file" also allowed
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
@@ -59,10 +60,8 @@ export const createKitchen = ({
     isSupportedOnFutureClients: (feature) => {
       return RUNTIME_COMPAT.isSupported(runtimeCompat, feature)
     },
+    minification,
     sourcemaps,
-    minification: plugins.some(
-      (plugin) => plugin.name === "jsenv:minification",
-    ),
     outDirectoryUrl,
   }
   kitchenContext.systemJsTranpilation =
