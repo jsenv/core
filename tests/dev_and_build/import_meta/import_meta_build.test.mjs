@@ -47,9 +47,8 @@ await test({
   expectedBuildPath: "/js/main.js",
   runtimeCompat: { chrome: "89" },
 })
-
 // cannot use <script type="module">
 await test({
   expectedBuildPath: "/js/main.nomodule.js",
-  runtimeCompat: { chrome: "88" },
+  runtimeCompat: { chrome: "60" },
 })
