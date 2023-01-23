@@ -13,6 +13,7 @@ const test = async ({ expectedUrl, ...rest }) => {
     entryPoints: {
       "./main.html": "main.html",
     },
+    versioning: false,
     writeGeneratedFiles: true,
     ...rest,
   })
@@ -36,23 +37,20 @@ const test = async ({ expectedUrl, ...rest }) => {
   assert({ actual, expected })
 }
 
-// support for <script type="module">
+// can use <script type="module">
 await test({
-  runtimeCompat: { chrome: "64" },
+  runtimeCompat: { chrome: "89" },
   plugins: [jsenvPluginBundling()],
-  versioning: false,
   expectedUrl: "/js/main.js",
 })
-// no support for <script type="module">
+// cannot use <script type="module">
 await test({
   runtimeCompat: { chrome: "60" },
   plugins: [jsenvPluginBundling()],
-  versioning: false,
   expectedUrl: "/js/main.nomodule.js",
 })
-// no support + no bundling
+// cannot use + no bundling
 await test({
   runtimeCompat: { chrome: "60" },
-  versioning: false,
   expectedUrl: `/js/main.nomodule.js`,
 })
