@@ -98,3 +98,9 @@ import { inspect } from "@jsenv/inspect"
   const expected = `"\`\\\"'"`
   assert({ actual, expected })
 }
+
+{
+  const actual = inspect(`""''`)
+  const expected = `\`""''\``
+  assert({ actual, expected })
+}
