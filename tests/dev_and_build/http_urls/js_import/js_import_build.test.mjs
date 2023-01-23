@@ -13,6 +13,7 @@ const test = async (params) => {
     entryPoints: {
       "./main.html": "main.html",
     },
+    runtimeCompat: { chrome: "89" },
     ...params,
   })
   const server = await startFileServer({
@@ -21,9 +22,7 @@ const test = async (params) => {
   const { returnValue } = await executeInChromium({
     url: `${server.origin}/main.html`,
     /* eslint-disable no-undef */
-    pageFunction: async () => {
-      return window.resultPromise
-    },
+    pageFunction: async () => window.resultPromise,
     /* eslint-enable no-undef */
   })
   const actual = returnValue
