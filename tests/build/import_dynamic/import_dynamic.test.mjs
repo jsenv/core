@@ -36,7 +36,7 @@ const test = async ({ expectedFilename, ...params }) => {
 
 // support for <script type="module">
 await test({
-  runtimeCompat: { chrome: "64" },
+  runtimeCompat: { chrome: "89" },
   versioning: false,
   expectedFilename: `nested_feature.js`,
 })

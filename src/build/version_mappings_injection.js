@@ -10,17 +10,16 @@ import {
 
 import { isWebWorkerUrlInfo } from "@jsenv/core/src/kitchen/web_workers.js"
 
-export const injectVersionMappings = async ({
+export const injectVersionMappingsAsGlobal = async ({
   urlInfo,
   kitchen,
   versionMappings,
-  minification,
 }) => {
   const injector = injectors[urlInfo.type]
   if (injector) {
     const { content, sourcemap } = await injector(urlInfo, {
       versionMappings,
-      minification,
+      minification: kitchen.kitchenContext.minification,
     })
     kitchen.urlInfoTransformer.applyFinalTransformations(urlInfo, {
       content,
@@ -28,12 +27,8 @@ export const injectVersionMappings = async ({
     })
   }
 }
-
 const injectors = {
   html: (urlInfo, { versionMappings, minification }) => {
-    // ideally we would inject an importmap but browser support is too low
-    // (even worse for worker/service worker)
-    // so for now we inject code into entry points
     const htmlAst = parseHtmlString(urlInfo.content, {
       storeOriginalPositions: false,
     })
@@ -43,7 +38,7 @@ const injectors = {
         tagName: "script",
         textContent: generateClientCodeForVersionMappings(versionMappings, {
           globalName: "window",
-          minify: minification || minification.js_classic,
+          minification,
         }),
       }),
       "jsenv:versioning",
@@ -52,49 +47,65 @@ const injectors = {
       content: stringifyHtmlAst(htmlAst),
     }
   },
-  js_classic: (urlInfo, { versionMappings, minification }) => {
-    return jsInjector(urlInfo, {
-      versionMappings,
-      minify: minification || minification.js_classic,
-    })
-  },
-  js_module: (urlInfo, { versionMappings, minification }) => {
-    return jsInjector(urlInfo, {
-      versionMappings,
-      minify: minification || minification.js_module,
-    })
-  },
+  js_classic: (...args) => jsInjector(...args),
+  js_module: (...args) => jsInjector(...args),
 }
-
-const jsInjector = (urlInfo, { versionMappings, minify }) => {
+const jsInjector = (urlInfo, { versionMappings, minification }) => {
   const magicSource = createMagicSource(urlInfo.content)
   magicSource.prepend(
     generateClientCodeForVersionMappings(versionMappings, {
       globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window",
-      minify,
+      minification,
     }),
   )
   return magicSource.toContentAndSourcemap()
 }
-
 const generateClientCodeForVersionMappings = (
   versionMappings,
-  { globalName, minify },
+  { globalName, minification },
 ) => {
-  if (minify) {
+  if (minification) {
     return `;(function(){var m = ${JSON.stringify(
       versionMappings,
     )}; ${globalName}.__v__ = function (s) { return m[s] || s }; })();`
   }
   return `
 ;(function() {
-
-var __versionMappings__ = ${JSON.stringify(versionMappings, null, "  ")};
-${globalName}.__v__ = function (specifier) {
-  return __versionMappings__[specifier] || specifier
-};
-
+  var __versionMappings__ = ${JSON.stringify(versionMappings, null, "  ")};
+  ${globalName}.__v__ = function (specifier) {
+    return __versionMappings__[specifier] || specifier
+  };
 })();
-
 `
+}
+
+export const injectVersionMappingsAsImportmap = async ({
+  urlInfo,
+  kitchen,
+  versionMappings,
+}) => {
+  const htmlAst = parseHtmlString(urlInfo.content, {
+    storeOriginalPositions: false,
+  })
+  // jsenv_plugin_importmap.js is removing importmap during build
+  // it means at this point we know HTML has no importmap in it
+  // we can safely inject one
+  const importmapNode = createHtmlNode({
+    tagName: "script",
+    type: "importmap",
+    textContent: kitchen.kitchenContext.minification
+      ? JSON.stringify({ imports: versionMappings })
+      : `  
+      {
+        "imports": {${JSON.stringify(versionMappings, null, "          ").slice(
+          1,
+          -1,
+        )}        }
+      }
+    `,
+  })
+  injectScriptNodeAsEarlyAsPossible(htmlAst, importmapNode, "jsenv:versioning")
+  kitchen.urlInfoTransformer.applyFinalTransformations(urlInfo, {
+    content: stringifyHtmlAst(htmlAst),
+  })
 }

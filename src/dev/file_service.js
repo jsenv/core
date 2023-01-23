@@ -10,6 +10,7 @@ import { URL_META } from "@jsenv/url-meta"
 
 import { createUrlGraph } from "@jsenv/core/src/kitchen/url_graph.js"
 import { createKitchen } from "@jsenv/core/src/kitchen/kitchen.js"
+import { RUNTIME_COMPAT } from "@jsenv/core/src/kitchen/compat/runtime_compat.js"
 import { getCorePlugins } from "@jsenv/core/src/plugins/plugins.js"
 import { jsenvPluginServerEventsClientInjection } from "@jsenv/core/src/plugins/server_events/jsenv_plugin_server_events_client_injection.js"
 import { parseUserAgentHeader } from "./user_agent.js"
@@ -111,16 +112,22 @@ export const createFileService = ({
         onUrlInfo(urlInfo)
       })
     })
+    const clientRuntimeCompat = { [runtimeName]: runtimeVersion }
     const kitchen = createKitchen({
       signal,
       logLevel,
       rootDirectoryUrl,
+      urlGraph,
       dev: true,
       runtimeCompat,
-      clientRuntimeCompat: {
-        [runtimeName]: runtimeVersion,
-      },
-      urlGraph,
+      clientRuntimeCompat,
+      systemJsTranspilation:
+        !RUNTIME_COMPAT.isSupported(
+          clientRuntimeCompat,
+          "script_type_module",
+        ) ||
+        !RUNTIME_COMPAT.isSupported(clientRuntimeCompat, "import_dynamic") ||
+        !RUNTIME_COMPAT.isSupported(clientRuntimeCompat, "import_meta"),
       plugins: [
         ...plugins,
         ...getCorePlugins({
@@ -141,6 +148,7 @@ export const createFileService = ({
           ribbon,
         }),
       ],
+      minification: false,
       sourcemaps,
       sourcemapsSourcesProtocol,
       sourcemapsSourcesContent,

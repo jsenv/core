@@ -56,9 +56,13 @@ import {
 
 import { createUrlGraph } from "../kitchen/url_graph.js"
 import { createKitchen } from "../kitchen/kitchen.js"
+import { RUNTIME_COMPAT } from "../kitchen/compat/runtime_compat.js"
 import { createUrlGraphLoader } from "../kitchen/url_graph/url_graph_loader.js"
 import { createUrlGraphSummary } from "../kitchen/url_graph/url_graph_report.js"
-import { isWebWorkerEntryPointReference } from "../kitchen/web_workers.js"
+import {
+  isWebWorkerEntryPointReference,
+  isWebWorkerUrlInfo,
+} from "../kitchen/web_workers.js"
 import { jsenvPluginUrlAnalysis } from "../plugins/url_analysis/jsenv_plugin_url_analysis.js"
 import { jsenvPluginInline } from "../plugins/inline/jsenv_plugin_inline.js"
 import { jsenvPluginAsJsClassic } from "../plugins/transpilation/as_js_classic/jsenv_plugin_as_js_classic.js"
@@ -66,7 +70,10 @@ import { getCorePlugins } from "../plugins/plugins.js"
 
 import { GRAPH } from "./graph_utils.js"
 import { createBuildUrlsGenerator } from "./build_urls_generator.js"
-import { injectVersionMappings } from "./inject_global_version_mappings.js"
+import {
+  injectVersionMappingsAsGlobal,
+  injectVersionMappingsAsImportmap,
+} from "./version_mappings_injection.js"
 import { createVersionGenerator } from "./version_generator.js"
 
 // default runtimeCompat corresponds to
@@ -116,13 +123,13 @@ export const build = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
   logLevel = "info",
-  runtimeCompat = defaultRuntimeCompat,
   rootDirectoryUrl,
   buildDirectoryUrl,
   assetsDirectory = "",
-  base = runtimeCompat.node ? "./" : "/",
   entryPoints = {},
 
+  runtimeCompat = defaultRuntimeCompat,
+  base = runtimeCompat.node ? "./" : "/",
   plugins = [],
   sourcemaps = false,
   sourcemapsSourcesContent,
@@ -133,6 +140,7 @@ export const build = async ({
   transpilation = {},
   versioning = !runtimeCompat.node,
   versioningMethod = "search_param", // "filename", "search_param"
+  versioningViaImportmap = true,
   lineBreakNormalization = process.platform === "win32",
 
   clientFiles = {
@@ -221,6 +229,28 @@ build ${entryPointKeys.length} entry points`)
     const versioningRedirections = new Map()
     const entryUrls = []
     const rawGraph = createUrlGraph()
+    const contextSharedDuringBuild = {
+      systemJsTranspilation: (() => {
+        const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node")
+        if (nodeRuntimeEnabled) return false
+        if (!RUNTIME_COMPAT.isSupported(runtimeCompat, "script_type_module"))
+          return true
+        if (!RUNTIME_COMPAT.isSupported(runtimeCompat, "import_dynamic"))
+          return true
+        if (!RUNTIME_COMPAT.isSupported(runtimeCompat, "import_meta"))
+          return true
+        if (
+          versioning &&
+          versioningViaImportmap &&
+          !RUNTIME_COMPAT.isSupported(runtimeCompat, "importmap")
+        )
+          return true
+        return false
+      })(),
+      minification: plugins.some(
+        (plugin) => plugin.name === "jsenv:minification",
+      ),
+    }
     const rawGraphKitchen = createKitchen({
       signal,
       logLevel,
@@ -228,6 +258,7 @@ build ${entryPointKeys.length} entry points`)
       urlGraph: rawGraph,
       build: true,
       runtimeCompat,
+      ...contextSharedDuringBuild,
       plugins: [
         ...plugins,
         {
@@ -299,6 +330,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       urlGraph: finalGraph,
       build: true,
       runtimeCompat,
+      ...contextSharedDuringBuild,
       plugins: [
         urlAnalysisPlugin,
         jsenvPluginAsJsClassic({
@@ -877,6 +909,75 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           disabled: logger.levels.debug || !logger.levels.info,
         })
         try {
+          const canUseImportmap =
+            versioningViaImportmap &&
+            finalEntryUrls.every((finalEntryUrl) => {
+              const finalEntryUrlInfo = finalGraph.getUrlInfo(finalEntryUrl)
+              return finalEntryUrlInfo.type === "html"
+            }) &&
+            finalGraphKitchen.kitchenContext.isSupportedOnCurrentClients(
+              "importmap",
+            )
+          const workerReferenceSet = new Set()
+          const isReferencedByWorker = (reference, graph) => {
+            if (workerReferenceSet.has(reference)) {
+              return true
+            }
+            const urlInfo = graph.getUrlInfo(reference.url)
+            const dependentWorker = graph.findDependent(
+              urlInfo,
+              (dependentUrlInfo) => {
+                return isWebWorkerUrlInfo(dependentUrlInfo)
+              },
+            )
+            if (dependentWorker) {
+              workerReferenceSet.add(reference)
+              return true
+            }
+            return Boolean(dependentWorker)
+          }
+          const preferWithoutVersioning = (reference) => {
+            const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
+            if (parentUrlInfo.jsQuote) {
+              return {
+                type: "global",
+                source: `${parentUrlInfo.jsQuote}+__v__(${JSON.stringify(
+                  reference.specifier,
+                )})+${parentUrlInfo.jsQuote}`,
+              }
+            }
+            if (reference.type === "js_url") {
+              return {
+                type: "global",
+                source: `__v__(${JSON.stringify(reference.specifier)})`,
+              }
+            }
+            if (reference.type === "js_import") {
+              if (reference.subtype === "import_dynamic") {
+                return {
+                  type: "global",
+                  source: `__v__(${JSON.stringify(reference.specifier)})`,
+                }
+              }
+              if (reference.subtype === "import_meta_resolve") {
+                return {
+                  type: "global",
+                  source: `__v__(${JSON.stringify(reference.specifier)})`,
+                }
+              }
+              if (
+                canUseImportmap &&
+                !isReferencedByWorker(reference, finalGraph)
+              ) {
+                return {
+                  type: "importmap",
+                  source: JSON.stringify(reference.specifier),
+                }
+              }
+            }
+            return null
+          }
+
           // see also https://github.com/rollup/rollup/pull/4543
           const contentVersionMap = new Map()
           const hashCallbacks = []
@@ -939,18 +1040,11 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     // (inline, data:, sourcemap, shouldHandle is false, ...)
                     return null
                   }
-                  const parentUrlInfo = finalGraph.getUrlInfo(
-                    reference.parentUrl,
-                  )
-                  if (parentUrlInfo.jsQuote) {
-                    // __v__() makes versioning dynamic: no need to take into account
-                    return null
-                  }
-                  if (
-                    reference.type === "js_url" ||
-                    reference.subtype === "import_dynamic"
-                  ) {
-                    // __v__() makes versioning dynamic: no need to take into account
+                  if (preferWithoutVersioning(reference)) {
+                    // when versioning is dynamic no need to take into account
+                    // happend for:
+                    // - specifier mapped by window.__v__()
+                    // - specifier mapped by importmap
                     return null
                   }
                   return dependencyContentVersion
@@ -1004,13 +1098,15 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           })
 
           const versionMappings = {}
-          const usedVersionMappings = new Set()
+          const versionMappingsOnGlobalMap = new Set()
+          const versionMappingsOnImportmap = new Set()
           const versioningKitchen = createKitchen({
             logLevel: logger.level,
             rootDirectoryUrl: buildDirectoryUrl,
             urlGraph: finalGraph,
             build: true,
             runtimeCompat,
+            ...contextSharedDuringBuild,
             plugins: [
               urlAnalysisPlugin,
               jsenvPluginInline({
@@ -1085,24 +1181,14 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   versioningRedirections.set(reference.url, versionedUrl)
                   buildUrls.set(versionedSpecifier, versionedUrl)
 
-                  const parentUrlInfo = finalGraph.getUrlInfo(
-                    reference.parentUrl,
-                  )
-                  if (parentUrlInfo.jsQuote) {
-                    // the url is inline inside js quotes
-                    usedVersionMappings.add(reference.specifier)
-                    return () =>
-                      `${parentUrlInfo.jsQuote}+__v__(${JSON.stringify(
-                        reference.specifier,
-                      )})+${parentUrlInfo.jsQuote}`
-                  }
-                  if (
-                    reference.type === "js_url" ||
-                    reference.subtype === "import_dynamic" ||
-                    reference.subtype === "import_meta_resolve"
-                  ) {
-                    usedVersionMappings.add(reference.specifier)
-                    return () => `__v__(${JSON.stringify(reference.specifier)})`
+                  const withoutVersioning = preferWithoutVersioning(reference)
+                  if (withoutVersioning) {
+                    if (withoutVersioning.type === "importmap") {
+                      versionMappingsOnImportmap.add(reference.specifier)
+                    } else {
+                      versionMappingsOnGlobalMap.add(reference.specifier)
+                    }
+                    return () => withoutVersioning.source
                   }
                   return versionedSpecifier
                 },
@@ -1154,27 +1240,50 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             })
           })
           await versioningUrlGraphLoader.getAllLoadDonePromise(buildOperation)
-          if (usedVersionMappings.size) {
+          workerReferenceSet.clear()
+          const actions = []
+          const visitors = []
+          if (versionMappingsOnImportmap.size) {
             const versionMappingsNeeded = {}
-            usedVersionMappings.forEach((specifier) => {
+            versionMappingsOnImportmap.forEach((specifier) => {
               versionMappingsNeeded[specifier] = versionMappings[specifier]
             })
-            const actions = []
-            GRAPH.forEach(finalGraph, (urlInfo) => {
-              if (urlInfo.isEntryPoint) {
+            visitors.push((urlInfo) => {
+              if (urlInfo.type === "html" && urlInfo.isEntryPoint) {
                 actions.push(async () => {
-                  await injectVersionMappings({
+                  await injectVersionMappingsAsImportmap({
                     urlInfo,
                     kitchen: finalGraphKitchen,
                     versionMappings: versionMappingsNeeded,
-                    minification: plugins.some(
-                      (plugin) => plugin.name === "jsenv:minification",
-                    ),
                   })
                 })
               }
             })
-            await Promise.all(actions.map((action) => action()))
+          }
+          if (versionMappingsOnGlobalMap.size) {
+            const versionMappingsNeeded = {}
+            versionMappingsOnGlobalMap.forEach((specifier) => {
+              versionMappingsNeeded[specifier] = versionMappings[specifier]
+            })
+            visitors.push((urlInfo) => {
+              if (urlInfo.isEntryPoint) {
+                actions.push(async () => {
+                  await injectVersionMappingsAsGlobal({
+                    urlInfo,
+                    kitchen: finalGraphKitchen,
+                    versionMappings: versionMappingsNeeded,
+                  })
+                })
+              }
+            })
+          }
+          if (visitors.length) {
+            GRAPH.forEach(finalGraph, (urlInfo) => {
+              visitors.forEach((visitor) => visitor(urlInfo))
+            })
+            if (actions.length) {
+              await Promise.all(actions.map((action) => action()))
+            }
           }
         } catch (e) {
           versioningTask.fail()

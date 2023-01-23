@@ -8,12 +8,8 @@ export const jsenvPluginImportMetaResolve = () => {
       if (context.isSupportedOnCurrentClients("import_meta_resolve")) {
         return false
       }
-      const willTransformJsModules =
-        !context.isSupportedOnCurrentClients("script_type_module") ||
-        !context.isSupportedOnCurrentClients("import_dynamic") ||
-        !context.isSupportedOnCurrentClients("import_meta")
       // keep it untouched, systemjs will handle it
-      if (willTransformJsModules) {
+      if (context.systemJsTranspilation) {
         return false
       }
       return true

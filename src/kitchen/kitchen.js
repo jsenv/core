@@ -28,14 +28,16 @@ export const createKitchen = ({
   logLevel,
 
   rootDirectoryUrl,
+  urlGraph,
   dev = false,
   build = false,
   runtimeCompat,
   // during dev/test clientRuntimeCompat is a single runtime
   // during build clientRuntimeCompat is runtimeCompat
   clientRuntimeCompat = runtimeCompat,
-  urlGraph,
+  systemJsTranspilation,
   plugins,
+  minification,
   sourcemaps = dev ? "inline" : "none", // "programmatic" and "file" also allowed
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
@@ -53,12 +55,14 @@ export const createKitchen = ({
     build,
     runtimeCompat,
     clientRuntimeCompat,
+    systemJsTranspilation,
     isSupportedOnCurrentClients: (feature) => {
       return RUNTIME_COMPAT.isSupported(clientRuntimeCompat, feature)
     },
     isSupportedOnFutureClients: (feature) => {
       return RUNTIME_COMPAT.isSupported(runtimeCompat, feature)
     },
+    minification,
     sourcemaps,
     outDirectoryUrl,
   }

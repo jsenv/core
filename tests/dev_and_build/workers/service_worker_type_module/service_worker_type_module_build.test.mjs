@@ -73,7 +73,7 @@ if (process.platform === "darwin") {
     plugins: [jsenvPluginBundling()],
     snapshotsDirectoryUrl: new URL("./snapshots/1/", import.meta.url),
     expectedServiceWorkerUrls: {
-      "/main.html": { versioned: false, version: "3d5abac8" },
+      "/main.html": { versioned: false, version: "57647127" },
       "/css/style.css?v=0e312da1": { versioned: true },
     },
   })
@@ -82,10 +82,10 @@ if (process.platform === "darwin") {
     runtimeCompat: { chrome: "80" },
     snapshotsDirectoryUrl: new URL("./snapshots/2/", import.meta.url),
     expectedServiceWorkerUrls: {
-      "/main.html": { versioned: false, version: "1ee5fe50" },
+      "/main.html": { versioned: false, version: "57647127" },
       "/css/style.css?v=0e312da1": { versioned: true },
-      "/js/a.js?v=9c2ce306": { versioned: true },
-      "/js/b.js?v=e3b0c442": { versioned: true },
+      "/js/a.nomodule.js?v=9f69cb0f": { versioned: true },
+      "/js/b.nomodule.js?v=5d37f892": { versioned: true },
     },
   })
   // no support for { type: "module" } on service worker
@@ -94,7 +94,7 @@ if (process.platform === "darwin") {
     plugins: [jsenvPluginBundling()],
     snapshotsDirectoryUrl: new URL("./snapshots/3/", import.meta.url),
     expectedServiceWorkerUrls: {
-      "/main.html": { versioned: false, version: "0f66748c" },
+      "/main.html": { versioned: false, version: "6d19697c" },
       "/css/style.css?v=0e312da1": { versioned: true },
     },
   })
@@ -103,7 +103,7 @@ if (process.platform === "darwin") {
     runtimeCompat: { chrome: "79" },
     snapshotsDirectoryUrl: new URL("./snapshots/4/", import.meta.url),
     expectedServiceWorkerUrls: {
-      "/main.html": { versioned: false, version: "0f66748c" },
+      "/main.html": { versioned: false, version: "6d19697c" },
       "/css/style.css?v=0e312da1": { versioned: true },
       "/js/a.nomodule.js?v=9f69cb0f": { versioned: true },
       "/js/b.nomodule.js?v=5d37f892": { versioned: true },

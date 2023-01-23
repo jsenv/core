@@ -104,11 +104,11 @@ const injectWithWhitespaces = (nodeToInsert, futureParentNode, futureIndex) => {
   const previousSiblings = childNodes.slice(0, futureIndex)
   const nextSiblings = childNodes.slice(futureIndex)
   const futureChildNodes = []
-  const previousSibling = previousSiblings[0]
+  const previousSibling = previousSiblings[previousSiblings.length - 1]
   if (previousSibling) {
     futureChildNodes.push(...previousSiblings)
   }
-  if (!previousSibling || previousSibling.nodeName !== "#text") {
+  if (!previousSibling || !isWhitespaceNode(previousSibling)) {
     futureChildNodes.push({
       nodeName: "#text",
       value: "\n    ",
@@ -117,7 +117,7 @@ const injectWithWhitespaces = (nodeToInsert, futureParentNode, futureIndex) => {
   }
   futureChildNodes.push(nodeToInsert)
   const nextSibling = nextSiblings[0]
-  if (!nextSibling || nextSibling.nodeName !== "#text") {
+  if (!nextSibling || !isWhitespaceNode(nextSibling)) {
     futureChildNodes.push({
       nodeName: "#text",
       value: "\n    ",
@@ -128,6 +128,12 @@ const injectWithWhitespaces = (nodeToInsert, futureParentNode, futureIndex) => {
     futureChildNodes.push(...nextSiblings)
   }
   futureParentNode.childNodes = futureChildNodes
+}
+
+const isWhitespaceNode = (node) => {
+  if (node.nodeName !== "#text") return false
+  if (node.value.length === 0) return false
+  return /^\s+$/.test(node.value)
 }
 
 const findChild = ({ childNodes = [] }, predicate) => childNodes.find(predicate)

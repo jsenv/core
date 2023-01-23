@@ -1,0 +1,1 @@
+import{ping as s}from"/js/ping.js?v=18c50581";self.addEventListener("message",(function(e){"ping"===e.data&&self.postMessage(s)}));

@@ -3,7 +3,7 @@ import { pathToFileURL, fileURLToPath } from "node:url";
 import { chmod, stat, lstat, readdir, promises, unlink, openSync, closeSync, rmdir, readFile as readFile$1, readFileSync as readFileSync$1, watch, readdirSync, statSync, writeFile as writeFile$1, writeFileSync as writeFileSync$1, mkdirSync, createReadStream, existsSync, realpathSync } from "node:fs";
 import crypto, { createHash } from "node:crypto";
 import { dirname, extname } from "node:path";
-import { U as URL_META, f as filterV8Coverage } from "./js/v8_coverage.js";
+import { URL_META, filterV8Coverage } from "./js/v8_coverage.js";
 import process$1, { memoryUsage } from "node:process";
 import os, { networkInterfaces } from "node:os";
 import tty from "node:tty";
@@ -7961,7 +7961,8 @@ const featuresCompatMap = {
     edge: "89",
     chrome: "89",
     opera: "76",
-    samsung: "15"
+    samsung: "15",
+    firefox: "108"
   },
   import_type_json: {
     chrome: "91",
@@ -8056,6 +8057,64 @@ const featuresCompatMap = {
     ios: "9",
     android: "4",
     node: "4"
+  },
+  arrow_function: {
+    chrome: "47",
+    opera: "34",
+    edge: "13",
+    firefox: "45",
+    safari: "10",
+    node: "6",
+    ios: "10",
+    samsung: "5",
+    electron: "0.36"
+  },
+  const_bindings: {
+    chrome: "41",
+    opera: "28",
+    edge: "12",
+    firefox: "46",
+    safari: "10",
+    node: "4",
+    ie: "11",
+    ios: "10",
+    samsung: "3.4",
+    electron: "0.22"
+  },
+  object_properties_shorthand: {
+    chrome: "43",
+    opera: "30",
+    edge: "12",
+    firefox: "33",
+    safari: "9",
+    node: "4",
+    ios: "9",
+    samsung: "4",
+    electron: "0.28"
+  },
+  reserved_words: {
+    chrome: "13",
+    opera: "10.50",
+    edge: "12",
+    firefox: "2",
+    safari: "3.1",
+    node: "0.10",
+    ie: "9",
+    android: "4.4",
+    ios: "6",
+    phantom: "2",
+    samsung: "1",
+    electron: "0.20"
+  },
+  symbols: {
+    chrome: "38",
+    opera: "25",
+    edge: "12",
+    firefox: "36",
+    safari: "9",
+    ios: "9",
+    samsung: "4",
+    node: "0.12"
   }
 };
 
@@ -8491,14 +8550,16 @@ const createKitchen = ({
   signal,
   logLevel,
   rootDirectoryUrl,
+  urlGraph,
   dev = false,
   build = false,
   runtimeCompat,
   // during dev/test clientRuntimeCompat is a single runtime
   // during build clientRuntimeCompat is runtimeCompat
   clientRuntimeCompat = runtimeCompat,
-  urlGraph,
+  systemJsTranspilation,
   plugins,
+  minification,
   sourcemaps = dev ? "inline" : "none",
   // "programmatic" and "file" also allowed
   sourcemapsSourcesProtocol,
@@ -8519,12 +8580,14 @@ const createKitchen = ({
     build,
     runtimeCompat,
     clientRuntimeCompat,
+    systemJsTranspilation,
     isSupportedOnCurrentClients: feature => {
       return RUNTIME_COMPAT.isSupported(clientRuntimeCompat, feature);
     },
     isSupportedOnFutureClients: feature => {
       return RUNTIME_COMPAT.isSupported(runtimeCompat, feature);
     },
+    minification,
     sourcemaps,
     outDirectoryUrl
   };
@@ -10867,7 +10930,7 @@ const babelPluginTransformImportMetaResolve = () => {
 };
 
 // eslint-disable-next-line import/no-default-export
-var helpers_string_1 = '// A type of promise-like that resolves synchronously and supports only one observer\nexport const _Pact = /*#__PURE__*/(function() {\n\tfunction _Pact() {}\n\t_Pact.prototype.then = function(onFulfilled, onRejected) {\n\t\tconst result = new _Pact();\n\t\tconst state = this.s;\n\t\tif (state) {\n\t\t\tconst callback = state & 1 ? onFulfilled : onRejected;\n\t\t\tif (callback) {\n\t\t\t\ttry {\n\t\t\t\t\t_settle(result, 1, callback(this.v));\n\t\t\t\t} catch (e) {\n\t\t\t\t\t_settle(result, 2, e);\n\t\t\t\t}\n\t\t\t\treturn result;\n\t\t\t} else {\n\t\t\t\treturn this;\n\t\t\t}\n\t\t}\n\t\tthis.o = function(_this) {\n\t\t\ttry {\n\t\t\t\tconst value = _this.v;\n\t\t\t\tif (_this.s & 1) {\n\t\t\t\t\t_settle(result, 1, onFulfilled ? onFulfilled(value) : value);\n\t\t\t\t} else if (onRejected) {\n\t\t\t\t\t_settle(result, 1, onRejected(value));\n\t\t\t\t} else {\n\t\t\t\t\t_settle(result, 2, value);\n\t\t\t\t}\n\t\t\t} catch (e) {\n\t\t\t\t_settle(result, 2, e);\n\t\t\t}\n\t\t};\n\t\treturn result;\n\t}\n\treturn _Pact;\n})();\n\n// Settles a pact synchronously\nexport function _settle(pact, state, value) {\n\tif (!pact.s) {\n\t\tif (value instanceof _Pact) {\n\t\t\tif (value.s) {\n\t\t\t\tif (state & 1) {\n\t\t\t\t\tstate = value.s;\n\t\t\t\t}\n\t\t\t\tvalue = value.v;\n\t\t\t} else {\n\t\t\t\tvalue.o = _settle.bind(null, pact, state);\n\t\t\t\treturn;\n\t\t\t}\n\t\t}\n\t\tif (value && value.then) {\n\t\t\tvalue.then(_settle.bind(null, pact, state), _settle.bind(null, pact, 2));\n\t\t\treturn;\n\t\t}\n\t\tpact.s = state;\n\t\tpact.v = value;\n\t\tconst observer = pact.o;\n\t\tif (observer) {\n\t\t\tobserver(pact);\n\t\t}\n\t}\n}\n\nexport function _isSettledPact(thenable) {\n\treturn thenable instanceof _Pact && thenable.s & 1;\n}\n\n// Converts argument to a function that always returns a Promise\nexport function _async(f) {\n\treturn function() {\n\t\tfor (var args = [], i = 0; i < arguments.length; i++) {\n\t\t\targs[i] = arguments[i];\n\t\t}\n\t\ttry {\n\t\t\treturn Promise.resolve(f.apply(this, args));\n\t\t} catch(e) {\n\t\t\treturn Promise.reject(e);\n\t\t}\n\t}\n}\n\n// Awaits on a value that may or may not be a Promise (equivalent to the await keyword in ES2015, with continuations passed explicitly)\nexport function _await(value, then, direct) {\n\tif (direct) {\n\t\treturn then ? then(value) : value;\n\t}\n\tif (!value || !value.then) {\n\t\tvalue = Promise.resolve(value);\n\t}\n\treturn then ? value.then(then) : value;\n}\n\n// Awaits on a value that may or may not be a Promise, then ignores it\nexport function _awaitIgnored(value, direct) {\n\tif (!direct) {\n\t\treturn value && value.then ? value.then(_empty) : Promise.resolve();\n\t}\n}\n\n// Proceeds after a value has resolved, or proceeds immediately if the value is not thenable\nexport function _continue(value, then) {\n\treturn value && value.then ? value.then(then) : then(value);\n}\n\n// Proceeds after a value has resolved, or proceeds immediately if the value is not thenable\nexport function _continueIgnored(value) {\n\tif (value && value.then) {\n\t\treturn value.then(_empty);\n\t}\n}\n\n// Asynchronously iterate through an object that has a length property, passing the index as the first argument to the callback (even as the length property changes)\nexport function _forTo(array, body, check) {\n\tvar i = -1, pact, reject;\n\tfunction _cycle(result) {\n\t\ttry {\n\t\t\twhile (++i < array.length && (!check || !check())) {\n\t\t\t\tresult = body(i);\n\t\t\t\tif (result && result.then) {\n\t\t\t\t\tif (_isSettledPact(result)) {\n\t\t\t\t\t\tresult = result.v;\n\t\t\t\t\t} else {\n\t\t\t\t\t\tresult.then(_cycle, reject || (reject = _settle.bind(null, pact = new _Pact(), 2)));\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t\tif (pact) {\n\t\t\t\t_settle(pact, 1, result);\n\t\t\t} else {\n\t\t\t\tpact = result;\n\t\t\t}\n\t\t} catch (e) {\n\t\t\t_settle(pact || (pact = new _Pact()), 2, e);\n\t\t}\n\t}\n\t_cycle();\n\treturn pact;\n}\n\n// Asynchronously iterate through an object\'s properties (including properties inherited from the prototype)\n// Uses a snapshot of the object\'s properties\nexport function _forIn(target, body, check) {\n\tvar keys = [];\n\tfor (var key in target) {\n\t\tkeys.push(key);\n\t}\n\treturn _forTo(keys, function(i) { return body(keys[i]); }, check);\n}\n\n// Asynchronously iterate through an object\'s own properties (excluding properties inherited from the prototype)\n// Uses a snapshot of the object\'s properties\nexport function _forOwn(target, body, check) {\n\tvar keys = [];\n\tfor (var key in target) {\n\t\tif (Object.prototype.hasOwnProperty.call(target, key)) {\n\t\t\tkeys.push(key);\n\t\t}\n\t}\n\treturn _forTo(keys, function(i) { return body(keys[i]); }, check);\n}\n\nexport const _iteratorSymbol = /*#__PURE__*/ typeof Symbol !== "undefined" ? (Symbol.iterator || (Symbol.iterator = Symbol("Symbol.iterator"))) : "@@iterator";\n\n// Asynchronously iterate through an object\'s values\n// Uses for...of if the runtime supports it, otherwise iterates until length on a copy\nexport function _forOf(target, body, check) {\n\tif (typeof target[_iteratorSymbol] === "function") {\n\t\tvar iterator = target[_iteratorSymbol](), step, pact, reject;\n\t\tfunction _cycle(result) {\n\t\t\ttry {\n\t\t\t\twhile (!(step = iterator.next()).done && (!check || !check())) {\n\t\t\t\t\tresult = body(step.value);\n\t\t\t\t\tif (result && result.then) {\n\t\t\t\t\t\tif (_isSettledPact(result)) {\n\t\t\t\t\t\t\tresult = result.v;\n\t\t\t\t\t\t} else {\n\t\t\t\t\t\t\tresult.then(_cycle, reject || (reject = _settle.bind(null, pact = new _Pact(), 2)));\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\tif (pact) {\n\t\t\t\t\t_settle(pact, 1, result);\n\t\t\t\t} else {\n\t\t\t\t\tpact = result;\n\t\t\t\t}\n\t\t\t} catch (e) {\n\t\t\t\t_settle(pact || (pact = new _Pact()), 2, e);\n\t\t\t}\n\t\t}\n\t\t_cycle();\n\t\tif (iterator.return) {\n\t\t\tvar _fixup = function(value) {\n\t\t\t\ttry {\n\t\t\t\t\tif (!step.done) {\n\t\t\t\t\t\titerator.return();\n\t\t\t\t\t}\n\t\t\t\t} catch(e) {\n\t\t\t\t}\n\t\t\t\treturn value;\n\t\t\t}\n\t\t\tif (pact && pact.then) {\n\t\t\t\treturn pact.then(_fixup, function(e) {\n\t\t\t\t\tthrow _fixup(e);\n\t\t\t\t});\n\t\t\t}\n\t\t\t_fixup();\n\t\t}\n\t\treturn pact;\n\t}\n\t// No support for Symbol.iterator\n\tif (!("length" in target)) {\n\t\tthrow new TypeError("Object is not iterable");\n\t}\n\t// Handle live collections properly\n\tvar values = [];\n\tfor (var i = 0; i < target.length; i++) {\n\t\tvalues.push(target[i]);\n\t}\n\treturn _forTo(values, function(i) { return body(values[i]); }, check);\n}\n\nexport const _asyncIteratorSymbol = /*#__PURE__*/ typeof Symbol !== "undefined" ? (Symbol.asyncIterator || (Symbol.asyncIterator = Symbol("Symbol.asyncIterator"))) : "@@asyncIterator";\n\n// Asynchronously iterate on a value using it\'s async iterator if present, or its synchronous iterator if missing\nexport function _forAwaitOf(target, body, check) {\n\tif (typeof target[_asyncIteratorSymbol] === "function") {\n\t\tvar pact = new _Pact();\n\t\tvar iterator = target[_asyncIteratorSymbol]();\n\t\titerator.next().then(_resumeAfterNext).then(void 0, _reject);\n\t\treturn pact;\n\t\tfunction _resumeAfterBody(result) {\n\t\t\tif (check && check()) {\n\t\t\t\treturn _settle(pact, 1, iterator.return ? iterator.return().then(function() { return result; }) : result);\n\t\t\t}\n\t\t\titerator.next().then(_resumeAfterNext).then(void 0, _reject);\n\t\t}\n\t\tfunction _resumeAfterNext(step) {\n\t\t\tif (step.done) {\n\t\t\t\t_settle(pact, 1);\n\t\t\t} else {\n\t\t\t\tPromise.resolve(body(step.value)).then(_resumeAfterBody).then(void 0, _reject);\n\t\t\t}\n\t\t}\n\t\tfunction _reject(error) {\n\t\t\t_settle(pact, 2, iterator.return ? iterator.return().then(function() { return error; }) : error);\n\t\t}\n\t}\n\treturn Promise.resolve(_forOf(target, function(value) { return Promise.resolve(value).then(body); }, check));\n}\n\n// Asynchronously implement a generic for loop\nexport function _for(test, update, body) {\n\tvar stage;\n\tfor (;;) {\n\t\tvar shouldContinue = test();\n\t\tif (_isSettledPact(shouldContinue)) {\n\t\t\tshouldContinue = shouldContinue.v;\n\t\t}\n\t\tif (!shouldContinue) {\n\t\t\treturn result;\n\t\t}\n\t\tif (shouldContinue.then) {\n\t\t\tstage = 0;\n\t\t\tbreak;\n\t\t}\n\t\tvar result = body();\n\t\tif (result && result.then) {\n\t\t\tif (_isSettledPact(result)) {\n\t\t\t\tresult = result.s;\n\t\t\t} else {\n\t\t\t\tstage = 1;\n\t\t\t\tbreak;\n\t\t\t}\n\t\t}\n\t\tif (update) {\n\t\t\tvar updateValue = update();\n\t\t\tif (updateValue && updateValue.then && !_isSettledPact(updateValue)) {\n\t\t\t\tstage = 2;\n\t\t\t\tbreak;\n\t\t\t}\n\t\t}\n\t}\n\tvar pact = new _Pact();\n\tvar reject = _settle.bind(null, pact, 2);\n\t(stage === 0 ? shouldContinue.then(_resumeAfterTest) : stage === 1 ? result.then(_resumeAfterBody) : updateValue.then(_resumeAfterUpdate)).then(void 0, reject);\n\treturn pact;\n\tfunction _resumeAfterBody(value) {\n\t\tresult = value;\n\t\tdo {\n\t\t\tif (update) {\n\t\t\t\tupdateValue = update();\n\t\t\t\tif (updateValue && updateValue.then && !_isSettledPact(updateValue)) {\n\t\t\t\t\tupdateValue.then(_resumeAfterUpdate).then(void 0, reject);\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t}\n\t\t\tshouldContinue = test();\n\t\t\tif (!shouldContinue || (_isSettledPact(shouldContinue) && !shouldContinue.v)) {\n\t\t\t\t_settle(pact, 1, result);\n\t\t\t\treturn;\n\t\t\t}\n\t\t\tif (shouldContinue.then) {\n\t\t\t\tshouldContinue.then(_resumeAfterTest).then(void 0, reject);\n\t\t\t\treturn;\n\t\t\t}\n\t\t\tresult = body();\n\t\t\tif (_isSettledPact(result)) {\n\t\t\t\tresult = result.v;\n\t\t\t}\n\t\t} while (!result || !result.then);\n\t\tresult.then(_resumeAfterBody).then(void 0, reject);\n\t}\n\tfunction _resumeAfterTest(shouldContinue) {\n\t\tif (shouldContinue) {\n\t\t\tresult = body();\n\t\t\tif (result && result.then) {\n\t\t\t\tresult.then(_resumeAfterBody).then(void 0, reject);\n\t\t\t} else {\n\t\t\t\t_resumeAfterBody(result);\n\t\t\t}\n\t\t} else {\n\t\t\t_settle(pact, 1, result);\n\t\t}\n\t}\n\tfunction _resumeAfterUpdate() {\n\t\tif (shouldContinue = test()) {\n\t\t\tif (shouldContinue.then) {\n\t\t\t\tshouldContinue.then(_resumeAfterTest).then(void 0, reject);\n\t\t\t} else {\n\t\t\t\t_resumeAfterTest(shouldContinue);\n\t\t\t}\n\t\t} else {\n\t\t\t_settle(pact, 1, result);\n\t\t}\n\t}\n}\n\n// Asynchronously implement a do ... while loop\nexport function _do(body, test) {\n\tvar awaitBody;\n\tdo {\n\t\tvar result = body();\n\t\tif (result && result.then) {\n\t\t\tif (_isSettledPact(result)) {\n\t\t\t\tresult = result.v;\n\t\t\t} else {\n\t\t\t\tawaitBody = true;\n\t\t\t\tbreak;\n\t\t\t}\n\t\t}\n\t\tvar shouldContinue = test();\n\t\tif (_isSettledPact(shouldContinue)) {\n\t\t\tshouldContinue = shouldContinue.v;\n\t\t}\n\t\tif (!shouldContinue) {\n\t\t\treturn result;\n\t\t}\n\t} while (!shouldContinue.then);\n\tconst pact = new _Pact();\n\tconst reject = _settle.bind(null, pact, 2);\n\t(awaitBody ? result.then(_resumeAfterBody) : shouldContinue.then(_resumeAfterTest)).then(void 0, reject);\n\treturn pact;\n\tfunction _resumeAfterBody(value) {\n\t\tresult = value;\n\t\tfor (;;) {\n\t\t\tshouldContinue = test();\n\t\t\tif (_isSettledPact(shouldContinue)) {\n\t\t\t\tshouldContinue = shouldContinue.v;\n\t\t\t}\n\t\t\tif (!shouldContinue) {\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\tif (shouldContinue.then) {\n\t\t\t\tshouldContinue.then(_resumeAfterTest).then(void 0, reject);\n\t\t\t\treturn;\n\t\t\t}\n\t\t\tresult = body();\n\t\t\tif (result && result.then) {\n\t\t\t\tif (_isSettledPact(result)) {\n\t\t\t\t\tresult = result.v;\n\t\t\t\t} else {\n\t\t\t\t\tresult.then(_resumeAfterBody).then(void 0, reject);\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\t_settle(pact, 1, result);\n\t}\n\tfunction _resumeAfterTest(shouldContinue) {\n\t\tif (shouldContinue) {\n\t\t\tdo {\n\t\t\t\tresult = body();\n\t\t\t\tif (result && result.then) {\n\t\t\t\t\tif (_isSettledPact(result)) {\n\t\t\t\t\t\tresult = result.v;\n\t\t\t\t\t} else {\n\t\t\t\t\t\tresult.then(_resumeAfterBody).then(void 0, reject);\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\tshouldContinue = test();\n\t\t\t\tif (_isSettledPact(shouldContinue)) {\n\t\t\t\t\tshouldContinue = shouldContinue.v;\n\t\t\t\t}\n\t\t\t\tif (!shouldContinue) {\n\t\t\t\t\t_settle(pact, 1, result);\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t} while (!shouldContinue.then);\n\t\t\tshouldContinue.then(_resumeAfterTest).then(void 0, reject);\n\t\t} else {\n\t\t\t_settle(pact, 1, result);\n\t\t}\n\t}\n}\n\n// Asynchronously implement a switch statement\nexport function _switch(discriminant, cases) {\n\tvar dispatchIndex = -1;\n\tvar awaitBody;\n\touter: {\n\t\tfor (var i = 0; i < cases.length; i++) {\n\t\t\tvar test = cases[i][0];\n\t\t\tif (test) {\n\t\t\t\tvar testValue = test();\n\t\t\t\tif (testValue && testValue.then) {\n\t\t\t\t\tbreak outer;\n\t\t\t\t}\n\t\t\t\tif (testValue === discriminant) {\n\t\t\t\t\tdispatchIndex = i;\n\t\t\t\t\tbreak;\n\t\t\t\t}\n\t\t\t} else {\n\t\t\t\t// Found the default case, set it as the pending dispatch case\n\t\t\t\tdispatchIndex = i;\n\t\t\t}\n\t\t}\n\t\tif (dispatchIndex !== -1) {\n\t\t\tdo {\n\t\t\t\tvar body = cases[dispatchIndex][1];\n\t\t\t\twhile (!body) {\n\t\t\t\t\tdispatchIndex++;\n\t\t\t\t\tbody = cases[dispatchIndex][1];\n\t\t\t\t}\n\t\t\t\tvar result = body();\n\t\t\t\tif (result && result.then) {\n\t\t\t\t\tawaitBody = true;\n\t\t\t\t\tbreak outer;\n\t\t\t\t}\n\t\t\t\tvar fallthroughCheck = cases[dispatchIndex][2];\n\t\t\t\tdispatchIndex++;\n\t\t\t} while (fallthroughCheck && !fallthroughCheck());\n\t\t\treturn result;\n\t\t}\n\t}\n\tconst pact = new _Pact();\n\tconst reject = _settle.bind(null, pact, 2);\n\t(awaitBody ? result.then(_resumeAfterBody) : testValue.then(_resumeAfterTest)).then(void 0, reject);\n\treturn pact;\n\tfunction _resumeAfterTest(value) {\n\t\tfor (;;) {\n\t\t\tif (value === discriminant) {\n\t\t\t\tdispatchIndex = i;\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\tif (++i === cases.length) {\n\t\t\t\tif (dispatchIndex !== -1) {\n\t\t\t\t\tbreak;\n\t\t\t\t} else {\n\t\t\t\t\t_settle(pact, 1, result);\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t}\n\t\t\ttest = cases[i][0];\n\t\t\tif (test) {\n\t\t\t\tvalue = test();\n\t\t\t\tif (value && value.then) {\n\t\t\t\t\tvalue.then(_resumeAfterTest).then(void 0, reject);\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t} else {\n\t\t\t\tdispatchIndex = i;\n\t\t\t}\n\t\t}\n\t\tdo {\n\t\t\tvar body = cases[dispatchIndex][1];\n\t\t\twhile (!body) {\n\t\t\t\tdispatchIndex++;\n\t\t\t\tbody = cases[dispatchIndex][1];\n\t\t\t}\n\t\t\tvar result = body();\n\t\t\tif (result && result.then) {\n\t\t\t\tresult.then(_resumeAfterBody).then(void 0, reject);\n\t\t\t\treturn;\n\t\t\t}\n\t\t\tvar fallthroughCheck = cases[dispatchIndex][2];\n\t\t\tdispatchIndex++;\n\t\t} while (fallthroughCheck && !fallthroughCheck());\n\t\t_settle(pact, 1, result);\n\t}\n\tfunction _resumeAfterBody(result) {\n\t\tfor (;;) {\n\t\t\tvar fallthroughCheck = cases[dispatchIndex][2];\n\t\t\tif (!fallthroughCheck || fallthroughCheck()) {\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\tdispatchIndex++;\n\t\t\tvar body = cases[dispatchIndex][1];\n\t\t\twhile (!body) {\n\t\t\t\tdispatchIndex++;\n\t\t\t\tbody = cases[dispatchIndex][1];\n\t\t\t}\n\t\t\tresult = body();\n\t\t\tif (result && result.then) {\n\t\t\t\tresult.then(_resumeAfterBody).then(void 0, reject);\n\t\t\t\treturn;\n\t\t\t}\n\t\t}\n\t\t_settle(pact, 1, result);\n\t}\n}\n\n// Asynchronously call a function and pass the result to explicitly passed continuations\nexport function _call(body, then, direct) {\n\tif (direct) {\n\t\treturn then ? then(body()) : body();\n\t}\n\ttry {\n\t\tvar result = Promise.resolve(body());\n\t\treturn then ? result.then(then) : result;\n\t} catch (e) {\n\t\treturn Promise.reject(e);\n\t}\n}\n\n// Asynchronously call a function and swallow the result\nexport function _callIgnored(body, direct) {\n\treturn _call(body, _empty, direct);\n}\n\n// Asynchronously call a function and pass the result to explicitly passed continuations\nexport function _invoke(body, then) {\n\tvar result = body();\n\tif (result && result.then) {\n\t\treturn result.then(then);\n\t}\n\treturn then(result);\n}\n\n// Asynchronously call a function and swallow the result\nexport function _invokeIgnored(body) {\n\tvar result = body();\n\tif (result && result.then) {\n\t\treturn result.then(_empty);\n\t}\n}\n\n// Asynchronously call a function and send errors to recovery continuation\nexport function _catch(body, recover) {\n\ttry {\n\t\tvar result = body();\n\t} catch(e) {\n\t\treturn recover(e);\n\t}\n\tif (result && result.then) {\n\t\treturn result.then(void 0, recover);\n\t}\n\treturn result;\n}\n\n// Asynchronously await a promise and pass the result to a finally continuation\nexport function _finallyRethrows(body, finalizer) {\n\ttry {\n\t\tvar result = body();\n\t} catch (e) {\n\t\treturn finalizer(true, e);\n\t}\n\tif (result && result.then) {\n\t\treturn result.then(finalizer.bind(null, false), finalizer.bind(null, true));\n\t}\n\treturn finalizer(false, result);\n}\n\n// Asynchronously await a promise and invoke a finally continuation that always overrides the result\nexport function _finally(body, finalizer) {\n\ttry {\n\t\tvar result = body();\n\t} catch (e) {\n\t\treturn finalizer();\n\t}\n\tif (result && result.then) {\n\t\treturn result.then(finalizer, finalizer);\n\t}\n\treturn finalizer();\n}\n\n// Rethrow or return a value from a finally continuation\nexport function _rethrow(thrown, value) {\n\tif (thrown)\n\t\tthrow value;\n\treturn value;\n}\n\n// Empty function to implement break and other control flow that ignores asynchronous results\nexport function _empty() {\n}\n\n// Sentinel value for early returns in generators \nexport const _earlyReturn = /*#__PURE__*/ {};\n\n// Asynchronously call a function and send errors to recovery continuation, skipping early returns\nexport function _catchInGenerator(body, recover) {\n\treturn _catch(body, function(e) {\n\t\tif (e === _earlyReturn) {\n\t\t\tthrow e;\n\t\t}\n\t\treturn recover(e);\n\t});\n}\n\n// Asynchronous generator class; accepts the entrypoint of the generator, to which it passes itself when the generator should start\nexport const _AsyncGenerator = /*#__PURE__*/(function() {\n\tfunction _AsyncGenerator(entry) {\n\t\tthis._entry = entry;\n\t\tthis._pact = null;\n\t\tthis._resolve = null;\n\t\tthis._return = null;\n\t\tthis._promise = null;\n\t}\n\n\tfunction _wrapReturnedValue(value) {\n\t\treturn { value: value, done: true };\n\t}\n\tfunction _wrapYieldedValue(value) {\n\t\treturn { value: value, done: false };\n\t}\n\n\t_AsyncGenerator.prototype._yield = function(value) {\n\t\t// Yield the value to the pending next call\n\t\tthis._resolve(value && value.then ? value.then(_wrapYieldedValue) : _wrapYieldedValue(value));\n\t\t// Return a pact for an upcoming next/return/throw call\n\t\treturn this._pact = new _Pact();\n\t};\n\t_AsyncGenerator.prototype.next = function(value) {\n\t\t// Advance the generator, starting it if it has yet to be started\n\t\tconst _this = this;\n\t\treturn _this._promise = new Promise(function (resolve) {\n\t\t\tconst _pact = _this._pact;\n\t\t\tif (_pact === null) {\n\t\t\t\tconst _entry = _this._entry;\n\t\t\t\tif (_entry === null) {\n\t\t\t\t\t// Generator is started, but not awaiting a yield expression\n\t\t\t\t\t// Abandon the next call!\n\t\t\t\t\treturn resolve(_this._promise);\n\t\t\t\t}\n\t\t\t\t// Start the generator\n\t\t\t\t_this._entry = null;\n\t\t\t\t_this._resolve = resolve;\n\t\t\t\tfunction returnValue(value) {\n\t\t\t\t\t_this._resolve(value && value.then ? value.then(_wrapReturnedValue) : _wrapReturnedValue(value));\n\t\t\t\t\t_this._pact = null;\n\t\t\t\t\t_this._resolve = null;\n\t\t\t\t}\n\t\t\t\tvar result = _entry(_this);\n\t\t\t\tif (result && result.then) {\n\t\t\t\t\tresult.then(returnValue, function(error) {\n\t\t\t\t\t\tif (error === _earlyReturn) {\n\t\t\t\t\t\t\treturnValue(_this._return);\n\t\t\t\t\t\t} else {\n\t\t\t\t\t\t\tconst pact = new _Pact();\n\t\t\t\t\t\t\t_this._resolve(pact);\n\t\t\t\t\t\t\t_this._pact = null;\n\t\t\t\t\t\t\t_this._resolve = null;\n\t\t\t\t\t\t\t_resolve(pact, 2, error);\n\t\t\t\t\t\t}\n\t\t\t\t\t});\n\t\t\t\t} else {\n\t\t\t\t\treturnValue(result);\n\t\t\t\t}\n\t\t\t} else {\n\t\t\t\t// Generator is started and a yield expression is pending, settle it\n\t\t\t\t_this._pact = null;\n\t\t\t\t_this._resolve = resolve;\n\t\t\t\t_settle(_pact, 1, value);\n\t\t\t}\n\t\t});\n\t};\n\t_AsyncGenerator.prototype.return = function(value) {\n\t\t// Early return from the generator if started, otherwise abandons the generator\n\t\tconst _this = this;\n\t\treturn _this._promise = new Promise(function (resolve) {\n\t\t\tconst _pact = _this._pact;\n\t\t\tif (_pact === null) {\n\t\t\t\tif (_this._entry === null) {\n\t\t\t\t\t// Generator is started, but not awaiting a yield expression\n\t\t\t\t\t// Abandon the return call!\n\t\t\t\t\treturn resolve(_this._promise);\n\t\t\t\t}\n\t\t\t\t// Generator is not started, abandon it and return the specified value\n\t\t\t\t_this._entry = null;\n\t\t\t\treturn resolve(value && value.then ? value.then(_wrapReturnedValue) : _wrapReturnedValue(value));\n\t\t\t}\n\t\t\t// Settle the yield expression with a rejected "early return" value\n\t\t\t_this._return = value;\n\t\t\t_this._resolve = resolve;\n\t\t\t_this._pact = null;\n\t\t\t_settle(_pact, 2, _earlyReturn);\n\t\t});\n\t};\n\t_AsyncGenerator.prototype.throw = function(error) {\n\t\t// Inject an exception into the pending yield expression\n\t\tconst _this = this;\n\t\treturn _this._promise = new Promise(function (resolve, reject) {\n\t\t\tconst _pact = _this._pact;\n\t\t\tif (_pact === null) {\n\t\t\t\tif (_this._entry === null) {\n\t\t\t\t\t// Generator is started, but not awaiting a yield expression\n\t\t\t\t\t// Abandon the throw call!\n\t\t\t\t\treturn resolve(_this._promise);\n\t\t\t\t}\n\t\t\t\t// Generator is not started, abandon it and return a rejected Promise containing the error\n\t\t\t\t_this._entry = null;\n\t\t\t\treturn reject(error);\n\t\t\t}\n\t\t\t// Settle the yield expression with the value as a rejection\n\t\t\t_this._resolve = resolve;\n\t\t\t_this._pact = null;\n\t\t\t_settle(_pact, 2, error);\n\t\t});\n\t};\n\n\t_AsyncGenerator.prototype[_asyncIteratorSymbol] = function() {\n\t\treturn this;\n\t};\n\t\n\treturn _AsyncGenerator;\n})();\n';
+const helpers_string_1 = '// A type of promise-like that resolves synchronously and supports only one observer\nexport const _Pact = /*#__PURE__*/(function() {\n\tfunction _Pact() {}\n\t_Pact.prototype.then = function(onFulfilled, onRejected) {\n\t\tconst result = new _Pact();\n\t\tconst state = this.s;\n\t\tif (state) {\n\t\t\tconst callback = state & 1 ? onFulfilled : onRejected;\n\t\t\tif (callback) {\n\t\t\t\ttry {\n\t\t\t\t\t_settle(result, 1, callback(this.v));\n\t\t\t\t} catch (e) {\n\t\t\t\t\t_settle(result, 2, e);\n\t\t\t\t}\n\t\t\t\treturn result;\n\t\t\t} else {\n\t\t\t\treturn this;\n\t\t\t}\n\t\t}\n\t\tthis.o = function(_this) {\n\t\t\ttry {\n\t\t\t\tconst value = _this.v;\n\t\t\t\tif (_this.s & 1) {\n\t\t\t\t\t_settle(result, 1, onFulfilled ? onFulfilled(value) : value);\n\t\t\t\t} else if (onRejected) {\n\t\t\t\t\t_settle(result, 1, onRejected(value));\n\t\t\t\t} else {\n\t\t\t\t\t_settle(result, 2, value);\n\t\t\t\t}\n\t\t\t} catch (e) {\n\t\t\t\t_settle(result, 2, e);\n\t\t\t}\n\t\t};\n\t\treturn result;\n\t}\n\treturn _Pact;\n})();\n\n// Settles a pact synchronously\nexport function _settle(pact, state, value) {\n\tif (!pact.s) {\n\t\tif (value instanceof _Pact) {\n\t\t\tif (value.s) {\n\t\t\t\tif (state & 1) {\n\t\t\t\t\tstate = value.s;\n\t\t\t\t}\n\t\t\t\tvalue = value.v;\n\t\t\t} else {\n\t\t\t\tvalue.o = _settle.bind(null, pact, state);\n\t\t\t\treturn;\n\t\t\t}\n\t\t}\n\t\tif (value && value.then) {\n\t\t\tvalue.then(_settle.bind(null, pact, state), _settle.bind(null, pact, 2));\n\t\t\treturn;\n\t\t}\n\t\tpact.s = state;\n\t\tpact.v = value;\n\t\tconst observer = pact.o;\n\t\tif (observer) {\n\t\t\tobserver(pact);\n\t\t}\n\t}\n}\n\nexport function _isSettledPact(thenable) {\n\treturn thenable instanceof _Pact && thenable.s & 1;\n}\n\n// Converts argument to a function that always returns a Promise\nexport function _async(f) {\n\treturn function() {\n\t\tfor (var args = [], i = 0; i < arguments.length; i++) {\n\t\t\targs[i] = arguments[i];\n\t\t}\n\t\ttry {\n\t\t\treturn Promise.resolve(f.apply(this, args));\n\t\t} catch(e) {\n\t\t\treturn Promise.reject(e);\n\t\t}\n\t}\n}\n\n// Awaits on a value that may or may not be a Promise (equivalent to the await keyword in ES2015, with continuations passed explicitly)\nexport function _await(value, then, direct) {\n\tif (direct) {\n\t\treturn then ? then(value) : value;\n\t}\n\tif (!value || !value.then) {\n\t\tvalue = Promise.resolve(value);\n\t}\n\treturn then ? value.then(then) : value;\n}\n\n// Awaits on a value that may or may not be a Promise, then ignores it\nexport function _awaitIgnored(value, direct) {\n\tif (!direct) {\n\t\treturn value && value.then ? value.then(_empty) : Promise.resolve();\n\t}\n}\n\n// Proceeds after a value has resolved, or proceeds immediately if the value is not thenable\nexport function _continue(value, then) {\n\treturn value && value.then ? value.then(then) : then(value);\n}\n\n// Proceeds after a value has resolved, or proceeds immediately if the value is not thenable\nexport function _continueIgnored(value) {\n\tif (value && value.then) {\n\t\treturn value.then(_empty);\n\t}\n}\n\n// Asynchronously iterate through an object that has a length property, passing the index as the first argument to the callback (even as the length property changes)\nexport function _forTo(array, body, check) {\n\tvar i = -1, pact, reject;\n\tfunction _cycle(result) {\n\t\ttry {\n\t\t\twhile (++i < array.length && (!check || !check())) {\n\t\t\t\tresult = body(i);\n\t\t\t\tif (result && result.then) {\n\t\t\t\t\tif (_isSettledPact(result)) {\n\t\t\t\t\t\tresult = result.v;\n\t\t\t\t\t} else {\n\t\t\t\t\t\tresult.then(_cycle, reject || (reject = _settle.bind(null, pact = new _Pact(), 2)));\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t\tif (pact) {\n\t\t\t\t_settle(pact, 1, result);\n\t\t\t} else {\n\t\t\t\tpact = result;\n\t\t\t}\n\t\t} catch (e) {\n\t\t\t_settle(pact || (pact = new _Pact()), 2, e);\n\t\t}\n\t}\n\t_cycle();\n\treturn pact;\n}\n\n// Asynchronously iterate through an object\'s properties (including properties inherited from the prototype)\n// Uses a snapshot of the object\'s properties\nexport function _forIn(target, body, check) {\n\tvar keys = [];\n\tfor (var key in target) {\n\t\tkeys.push(key);\n\t}\n\treturn _forTo(keys, function(i) { return body(keys[i]); }, check);\n}\n\n// Asynchronously iterate through an object\'s own properties (excluding properties inherited from the prototype)\n// Uses a snapshot of the object\'s properties\nexport function _forOwn(target, body, check) {\n\tvar keys = [];\n\tfor (var key in target) {\n\t\tif (Object.prototype.hasOwnProperty.call(target, key)) {\n\t\t\tkeys.push(key);\n\t\t}\n\t}\n\treturn _forTo(keys, function(i) { return body(keys[i]); }, check);\n}\n\nexport const _iteratorSymbol = /*#__PURE__*/ typeof Symbol !== "undefined" ? (Symbol.iterator || (Symbol.iterator = Symbol("Symbol.iterator"))) : "@@iterator";\n\n// Asynchronously iterate through an object\'s values\n// Uses for...of if the runtime supports it, otherwise iterates until length on a copy\nexport function _forOf(target, body, check) {\n\tif (typeof target[_iteratorSymbol] === "function") {\n\t\tvar iterator = target[_iteratorSymbol](), step, pact, reject;\n\t\tfunction _cycle(result) {\n\t\t\ttry {\n\t\t\t\twhile (!(step = iterator.next()).done && (!check || !check())) {\n\t\t\t\t\tresult = body(step.value);\n\t\t\t\t\tif (result && result.then) {\n\t\t\t\t\t\tif (_isSettledPact(result)) {\n\t\t\t\t\t\t\tresult = result.v;\n\t\t\t\t\t\t} else {\n\t\t\t\t\t\t\tresult.then(_cycle, reject || (reject = _settle.bind(null, pact = new _Pact(), 2)));\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\tif (pact) {\n\t\t\t\t\t_settle(pact, 1, result);\n\t\t\t\t} else {\n\t\t\t\t\tpact = result;\n\t\t\t\t}\n\t\t\t} catch (e) {\n\t\t\t\t_settle(pact || (pact = new _Pact()), 2, e);\n\t\t\t}\n\t\t}\n\t\t_cycle();\n\t\tif (iterator.return) {\n\t\t\tvar _fixup = function(value) {\n\t\t\t\ttry {\n\t\t\t\t\tif (!step.done) {\n\t\t\t\t\t\titerator.return();\n\t\t\t\t\t}\n\t\t\t\t} catch(e) {\n\t\t\t\t}\n\t\t\t\treturn value;\n\t\t\t}\n\t\t\tif (pact && pact.then) {\n\t\t\t\treturn pact.then(_fixup, function(e) {\n\t\t\t\t\tthrow _fixup(e);\n\t\t\t\t});\n\t\t\t}\n\t\t\t_fixup();\n\t\t}\n\t\treturn pact;\n\t}\n\t// No support for Symbol.iterator\n\tif (!("length" in target)) {\n\t\tthrow new TypeError("Object is not iterable");\n\t}\n\t// Handle live collections properly\n\tvar values = [];\n\tfor (var i = 0; i < target.length; i++) {\n\t\tvalues.push(target[i]);\n\t}\n\treturn _forTo(values, function(i) { return body(values[i]); }, check);\n}\n\nexport const _asyncIteratorSymbol = /*#__PURE__*/ typeof Symbol !== "undefined" ? (Symbol.asyncIterator || (Symbol.asyncIterator = Symbol("Symbol.asyncIterator"))) : "@@asyncIterator";\n\n// Asynchronously iterate on a value using it\'s async iterator if present, or its synchronous iterator if missing\nexport function _forAwaitOf(target, body, check) {\n\tif (typeof target[_asyncIteratorSymbol] === "function") {\n\t\tvar pact = new _Pact();\n\t\tvar iterator = target[_asyncIteratorSymbol]();\n\t\titerator.next().then(_resumeAfterNext).then(void 0, _reject);\n\t\treturn pact;\n\t\tfunction _resumeAfterBody(result) {\n\t\t\tif (check && check()) {\n\t\t\t\treturn _settle(pact, 1, iterator.return ? iterator.return().then(function() { return result; }) : result);\n\t\t\t}\n\t\t\titerator.next().then(_resumeAfterNext).then(void 0, _reject);\n\t\t}\n\t\tfunction _resumeAfterNext(step) {\n\t\t\tif (step.done) {\n\t\t\t\t_settle(pact, 1);\n\t\t\t} else {\n\t\t\t\tPromise.resolve(body(step.value)).then(_resumeAfterBody).then(void 0, _reject);\n\t\t\t}\n\t\t}\n\t\tfunction _reject(error) {\n\t\t\t_settle(pact, 2, iterator.return ? iterator.return().then(function() { return error; }) : error);\n\t\t}\n\t}\n\treturn Promise.resolve(_forOf(target, function(value) { return Promise.resolve(value).then(body); }, check));\n}\n\n// Asynchronously implement a generic for loop\nexport function _for(test, update, body) {\n\tvar stage;\n\tfor (;;) {\n\t\tvar shouldContinue = test();\n\t\tif (_isSettledPact(shouldContinue)) {\n\t\t\tshouldContinue = shouldContinue.v;\n\t\t}\n\t\tif (!shouldContinue) {\n\t\t\treturn result;\n\t\t}\n\t\tif (shouldContinue.then) {\n\t\t\tstage = 0;\n\t\t\tbreak;\n\t\t}\n\t\tvar result = body();\n\t\tif (result && result.then) {\n\t\t\tif (_isSettledPact(result)) {\n\t\t\t\tresult = result.s;\n\t\t\t} else {\n\t\t\t\tstage = 1;\n\t\t\t\tbreak;\n\t\t\t}\n\t\t}\n\t\tif (update) {\n\t\t\tvar updateValue = update();\n\t\t\tif (updateValue && updateValue.then && !_isSettledPact(updateValue)) {\n\t\t\t\tstage = 2;\n\t\t\t\tbreak;\n\t\t\t}\n\t\t}\n\t}\n\tvar pact = new _Pact();\n\tvar reject = _settle.bind(null, pact, 2);\n\t(stage === 0 ? shouldContinue.then(_resumeAfterTest) : stage === 1 ? result.then(_resumeAfterBody) : updateValue.then(_resumeAfterUpdate)).then(void 0, reject);\n\treturn pact;\n\tfunction _resumeAfterBody(value) {\n\t\tresult = value;\n\t\tdo {\n\t\t\tif (update) {\n\t\t\t\tupdateValue = update();\n\t\t\t\tif (updateValue && updateValue.then && !_isSettledPact(updateValue)) {\n\t\t\t\t\tupdateValue.then(_resumeAfterUpdate).then(void 0, reject);\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t}\n\t\t\tshouldContinue = test();\n\t\t\tif (!shouldContinue || (_isSettledPact(shouldContinue) && !shouldContinue.v)) {\n\t\t\t\t_settle(pact, 1, result);\n\t\t\t\treturn;\n\t\t\t}\n\t\t\tif (shouldContinue.then) {\n\t\t\t\tshouldContinue.then(_resumeAfterTest).then(void 0, reject);\n\t\t\t\treturn;\n\t\t\t}\n\t\t\tresult = body();\n\t\t\tif (_isSettledPact(result)) {\n\t\t\t\tresult = result.v;\n\t\t\t}\n\t\t} while (!result || !result.then);\n\t\tresult.then(_resumeAfterBody).then(void 0, reject);\n\t}\n\tfunction _resumeAfterTest(shouldContinue) {\n\t\tif (shouldContinue) {\n\t\t\tresult = body();\n\t\t\tif (result && result.then) {\n\t\t\t\tresult.then(_resumeAfterBody).then(void 0, reject);\n\t\t\t} else {\n\t\t\t\t_resumeAfterBody(result);\n\t\t\t}\n\t\t} else {\n\t\t\t_settle(pact, 1, result);\n\t\t}\n\t}\n\tfunction _resumeAfterUpdate() {\n\t\tif (shouldContinue = test()) {\n\t\t\tif (shouldContinue.then) {\n\t\t\t\tshouldContinue.then(_resumeAfterTest).then(void 0, reject);\n\t\t\t} else {\n\t\t\t\t_resumeAfterTest(shouldContinue);\n\t\t\t}\n\t\t} else {\n\t\t\t_settle(pact, 1, result);\n\t\t}\n\t}\n}\n\n// Asynchronously implement a do ... while loop\nexport function _do(body, test) {\n\tvar awaitBody;\n\tdo {\n\t\tvar result = body();\n\t\tif (result && result.then) {\n\t\t\tif (_isSettledPact(result)) {\n\t\t\t\tresult = result.v;\n\t\t\t} else {\n\t\t\t\tawaitBody = true;\n\t\t\t\tbreak;\n\t\t\t}\n\t\t}\n\t\tvar shouldContinue = test();\n\t\tif (_isSettledPact(shouldContinue)) {\n\t\t\tshouldContinue = shouldContinue.v;\n\t\t}\n\t\tif (!shouldContinue) {\n\t\t\treturn result;\n\t\t}\n\t} while (!shouldContinue.then);\n\tconst pact = new _Pact();\n\tconst reject = _settle.bind(null, pact, 2);\n\t(awaitBody ? result.then(_resumeAfterBody) : shouldContinue.then(_resumeAfterTest)).then(void 0, reject);\n\treturn pact;\n\tfunction _resumeAfterBody(value) {\n\t\tresult = value;\n\t\tfor (;;) {\n\t\t\tshouldContinue = test();\n\t\t\tif (_isSettledPact(shouldContinue)) {\n\t\t\t\tshouldContinue = shouldContinue.v;\n\t\t\t}\n\t\t\tif (!shouldContinue) {\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\tif (shouldContinue.then) {\n\t\t\t\tshouldContinue.then(_resumeAfterTest).then(void 0, reject);\n\t\t\t\treturn;\n\t\t\t}\n\t\t\tresult = body();\n\t\t\tif (result && result.then) {\n\t\t\t\tif (_isSettledPact(result)) {\n\t\t\t\t\tresult = result.v;\n\t\t\t\t} else {\n\t\t\t\t\tresult.then(_resumeAfterBody).then(void 0, reject);\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\t_settle(pact, 1, result);\n\t}\n\tfunction _resumeAfterTest(shouldContinue) {\n\t\tif (shouldContinue) {\n\t\t\tdo {\n\t\t\t\tresult = body();\n\t\t\t\tif (result && result.then) {\n\t\t\t\t\tif (_isSettledPact(result)) {\n\t\t\t\t\t\tresult = result.v;\n\t\t\t\t\t} else {\n\t\t\t\t\t\tresult.then(_resumeAfterBody).then(void 0, reject);\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\tshouldContinue = test();\n\t\t\t\tif (_isSettledPact(shouldContinue)) {\n\t\t\t\t\tshouldContinue = shouldContinue.v;\n\t\t\t\t}\n\t\t\t\tif (!shouldContinue) {\n\t\t\t\t\t_settle(pact, 1, result);\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t} while (!shouldContinue.then);\n\t\t\tshouldContinue.then(_resumeAfterTest).then(void 0, reject);\n\t\t} else {\n\t\t\t_settle(pact, 1, result);\n\t\t}\n\t}\n}\n\n// Asynchronously implement a switch statement\nexport function _switch(discriminant, cases) {\n\tvar dispatchIndex = -1;\n\tvar awaitBody;\n\touter: {\n\t\tfor (var i = 0; i < cases.length; i++) {\n\t\t\tvar test = cases[i][0];\n\t\t\tif (test) {\n\t\t\t\tvar testValue = test();\n\t\t\t\tif (testValue && testValue.then) {\n\t\t\t\t\tbreak outer;\n\t\t\t\t}\n\t\t\t\tif (testValue === discriminant) {\n\t\t\t\t\tdispatchIndex = i;\n\t\t\t\t\tbreak;\n\t\t\t\t}\n\t\t\t} else {\n\t\t\t\t// Found the default case, set it as the pending dispatch case\n\t\t\t\tdispatchIndex = i;\n\t\t\t}\n\t\t}\n\t\tif (dispatchIndex !== -1) {\n\t\t\tdo {\n\t\t\t\tvar body = cases[dispatchIndex][1];\n\t\t\t\twhile (!body) {\n\t\t\t\t\tdispatchIndex++;\n\t\t\t\t\tbody = cases[dispatchIndex][1];\n\t\t\t\t}\n\t\t\t\tvar result = body();\n\t\t\t\tif (result && result.then) {\n\t\t\t\t\tawaitBody = true;\n\t\t\t\t\tbreak outer;\n\t\t\t\t}\n\t\t\t\tvar fallthroughCheck = cases[dispatchIndex][2];\n\t\t\t\tdispatchIndex++;\n\t\t\t} while (fallthroughCheck && !fallthroughCheck());\n\t\t\treturn result;\n\t\t}\n\t}\n\tconst pact = new _Pact();\n\tconst reject = _settle.bind(null, pact, 2);\n\t(awaitBody ? result.then(_resumeAfterBody) : testValue.then(_resumeAfterTest)).then(void 0, reject);\n\treturn pact;\n\tfunction _resumeAfterTest(value) {\n\t\tfor (;;) {\n\t\t\tif (value === discriminant) {\n\t\t\t\tdispatchIndex = i;\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\tif (++i === cases.length) {\n\t\t\t\tif (dispatchIndex !== -1) {\n\t\t\t\t\tbreak;\n\t\t\t\t} else {\n\t\t\t\t\t_settle(pact, 1, result);\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t}\n\t\t\ttest = cases[i][0];\n\t\t\tif (test) {\n\t\t\t\tvalue = test();\n\t\t\t\tif (value && value.then) {\n\t\t\t\t\tvalue.then(_resumeAfterTest).then(void 0, reject);\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t} else {\n\t\t\t\tdispatchIndex = i;\n\t\t\t}\n\t\t}\n\t\tdo {\n\t\t\tvar body = cases[dispatchIndex][1];\n\t\t\twhile (!body) {\n\t\t\t\tdispatchIndex++;\n\t\t\t\tbody = cases[dispatchIndex][1];\n\t\t\t}\n\t\t\tvar result = body();\n\t\t\tif (result && result.then) {\n\t\t\t\tresult.then(_resumeAfterBody).then(void 0, reject);\n\t\t\t\treturn;\n\t\t\t}\n\t\t\tvar fallthroughCheck = cases[dispatchIndex][2];\n\t\t\tdispatchIndex++;\n\t\t} while (fallthroughCheck && !fallthroughCheck());\n\t\t_settle(pact, 1, result);\n\t}\n\tfunction _resumeAfterBody(result) {\n\t\tfor (;;) {\n\t\t\tvar fallthroughCheck = cases[dispatchIndex][2];\n\t\t\tif (!fallthroughCheck || fallthroughCheck()) {\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\tdispatchIndex++;\n\t\t\tvar body = cases[dispatchIndex][1];\n\t\t\twhile (!body) {\n\t\t\t\tdispatchIndex++;\n\t\t\t\tbody = cases[dispatchIndex][1];\n\t\t\t}\n\t\t\tresult = body();\n\t\t\tif (result && result.then) {\n\t\t\t\tresult.then(_resumeAfterBody).then(void 0, reject);\n\t\t\t\treturn;\n\t\t\t}\n\t\t}\n\t\t_settle(pact, 1, result);\n\t}\n}\n\n// Asynchronously call a function and pass the result to explicitly passed continuations\nexport function _call(body, then, direct) {\n\tif (direct) {\n\t\treturn then ? then(body()) : body();\n\t}\n\ttry {\n\t\tvar result = Promise.resolve(body());\n\t\treturn then ? result.then(then) : result;\n\t} catch (e) {\n\t\treturn Promise.reject(e);\n\t}\n}\n\n// Asynchronously call a function and swallow the result\nexport function _callIgnored(body, direct) {\n\treturn _call(body, _empty, direct);\n}\n\n// Asynchronously call a function and pass the result to explicitly passed continuations\nexport function _invoke(body, then) {\n\tvar result = body();\n\tif (result && result.then) {\n\t\treturn result.then(then);\n\t}\n\treturn then(result);\n}\n\n// Asynchronously call a function and swallow the result\nexport function _invokeIgnored(body) {\n\tvar result = body();\n\tif (result && result.then) {\n\t\treturn result.then(_empty);\n\t}\n}\n\n// Asynchronously call a function and send errors to recovery continuation\nexport function _catch(body, recover) {\n\ttry {\n\t\tvar result = body();\n\t} catch(e) {\n\t\treturn recover(e);\n\t}\n\tif (result && result.then) {\n\t\treturn result.then(void 0, recover);\n\t}\n\treturn result;\n}\n\n// Asynchronously await a promise and pass the result to a finally continuation\nexport function _finallyRethrows(body, finalizer) {\n\ttry {\n\t\tvar result = body();\n\t} catch (e) {\n\t\treturn finalizer(true, e);\n\t}\n\tif (result && result.then) {\n\t\treturn result.then(finalizer.bind(null, false), finalizer.bind(null, true));\n\t}\n\treturn finalizer(false, result);\n}\n\n// Asynchronously await a promise and invoke a finally continuation that always overrides the result\nexport function _finally(body, finalizer) {\n\ttry {\n\t\tvar result = body();\n\t} catch (e) {\n\t\treturn finalizer();\n\t}\n\tif (result && result.then) {\n\t\treturn result.then(finalizer, finalizer);\n\t}\n\treturn finalizer();\n}\n\n// Rethrow or return a value from a finally continuation\nexport function _rethrow(thrown, value) {\n\tif (thrown)\n\t\tthrow value;\n\treturn value;\n}\n\n// Empty function to implement break and other control flow that ignores asynchronous results\nexport function _empty() {\n}\n\n// Sentinel value for early returns in generators \nexport const _earlyReturn = /*#__PURE__*/ {};\n\n// Asynchronously call a function and send errors to recovery continuation, skipping early returns\nexport function _catchInGenerator(body, recover) {\n\treturn _catch(body, function(e) {\n\t\tif (e === _earlyReturn) {\n\t\t\tthrow e;\n\t\t}\n\t\treturn recover(e);\n\t});\n}\n\n// Asynchronous generator class; accepts the entrypoint of the generator, to which it passes itself when the generator should start\nexport const _AsyncGenerator = /*#__PURE__*/(function() {\n\tfunction _AsyncGenerator(entry) {\n\t\tthis._entry = entry;\n\t\tthis._pact = null;\n\t\tthis._resolve = null;\n\t\tthis._return = null;\n\t\tthis._promise = null;\n\t}\n\n\tfunction _wrapReturnedValue(value) {\n\t\treturn { value: value, done: true };\n\t}\n\tfunction _wrapYieldedValue(value) {\n\t\treturn { value: value, done: false };\n\t}\n\n\t_AsyncGenerator.prototype._yield = function(value) {\n\t\t// Yield the value to the pending next call\n\t\tthis._resolve(value && value.then ? value.then(_wrapYieldedValue) : _wrapYieldedValue(value));\n\t\t// Return a pact for an upcoming next/return/throw call\n\t\treturn this._pact = new _Pact();\n\t};\n\t_AsyncGenerator.prototype.next = function(value) {\n\t\t// Advance the generator, starting it if it has yet to be started\n\t\tconst _this = this;\n\t\treturn _this._promise = new Promise(function (resolve) {\n\t\t\tconst _pact = _this._pact;\n\t\t\tif (_pact === null) {\n\t\t\t\tconst _entry = _this._entry;\n\t\t\t\tif (_entry === null) {\n\t\t\t\t\t// Generator is started, but not awaiting a yield expression\n\t\t\t\t\t// Abandon the next call!\n\t\t\t\t\treturn resolve(_this._promise);\n\t\t\t\t}\n\t\t\t\t// Start the generator\n\t\t\t\t_this._entry = null;\n\t\t\t\t_this._resolve = resolve;\n\t\t\t\tfunction returnValue(value) {\n\t\t\t\t\t_this._resolve(value && value.then ? value.then(_wrapReturnedValue) : _wrapReturnedValue(value));\n\t\t\t\t\t_this._pact = null;\n\t\t\t\t\t_this._resolve = null;\n\t\t\t\t}\n\t\t\t\tvar result = _entry(_this);\n\t\t\t\tif (result && result.then) {\n\t\t\t\t\tresult.then(returnValue, function(error) {\n\t\t\t\t\t\tif (error === _earlyReturn) {\n\t\t\t\t\t\t\treturnValue(_this._return);\n\t\t\t\t\t\t} else {\n\t\t\t\t\t\t\tconst pact = new _Pact();\n\t\t\t\t\t\t\t_this._resolve(pact);\n\t\t\t\t\t\t\t_this._pact = null;\n\t\t\t\t\t\t\t_this._resolve = null;\n\t\t\t\t\t\t\t_resolve(pact, 2, error);\n\t\t\t\t\t\t}\n\t\t\t\t\t});\n\t\t\t\t} else {\n\t\t\t\t\treturnValue(result);\n\t\t\t\t}\n\t\t\t} else {\n\t\t\t\t// Generator is started and a yield expression is pending, settle it\n\t\t\t\t_this._pact = null;\n\t\t\t\t_this._resolve = resolve;\n\t\t\t\t_settle(_pact, 1, value);\n\t\t\t}\n\t\t});\n\t};\n\t_AsyncGenerator.prototype.return = function(value) {\n\t\t// Early return from the generator if started, otherwise abandons the generator\n\t\tconst _this = this;\n\t\treturn _this._promise = new Promise(function (resolve) {\n\t\t\tconst _pact = _this._pact;\n\t\t\tif (_pact === null) {\n\t\t\t\tif (_this._entry === null) {\n\t\t\t\t\t// Generator is started, but not awaiting a yield expression\n\t\t\t\t\t// Abandon the return call!\n\t\t\t\t\treturn resolve(_this._promise);\n\t\t\t\t}\n\t\t\t\t// Generator is not started, abandon it and return the specified value\n\t\t\t\t_this._entry = null;\n\t\t\t\treturn resolve(value && value.then ? value.then(_wrapReturnedValue) : _wrapReturnedValue(value));\n\t\t\t}\n\t\t\t// Settle the yield expression with a rejected "early return" value\n\t\t\t_this._return = value;\n\t\t\t_this._resolve = resolve;\n\t\t\t_this._pact = null;\n\t\t\t_settle(_pact, 2, _earlyReturn);\n\t\t});\n\t};\n\t_AsyncGenerator.prototype.throw = function(error) {\n\t\t// Inject an exception into the pending yield expression\n\t\tconst _this = this;\n\t\treturn _this._promise = new Promise(function (resolve, reject) {\n\t\t\tconst _pact = _this._pact;\n\t\t\tif (_pact === null) {\n\t\t\t\tif (_this._entry === null) {\n\t\t\t\t\t// Generator is started, but not awaiting a yield expression\n\t\t\t\t\t// Abandon the throw call!\n\t\t\t\t\treturn resolve(_this._promise);\n\t\t\t\t}\n\t\t\t\t// Generator is not started, abandon it and return a rejected Promise containing the error\n\t\t\t\t_this._entry = null;\n\t\t\t\treturn reject(error);\n\t\t\t}\n\t\t\t// Settle the yield expression with the value as a rejection\n\t\t\t_this._resolve = resolve;\n\t\t\t_this._pact = null;\n\t\t\t_settle(_pact, 2, error);\n\t\t});\n\t};\n\n\t_AsyncGenerator.prototype[_asyncIteratorSymbol] = function() {\n\t\treturn this;\n\t};\n\t\n\treturn _AsyncGenerator;\n})();\n';
 
 const require = createRequire(import.meta.url);
 const defaultConfigValues = {
@@ -14584,7 +14647,6 @@ const jsenvPluginAsJsClassicHtml = ({
   systemJsInjection,
   systemJsClientFileUrl
 }) => {
-  let shouldTransformScriptTypeModule;
   const turnIntoJsClassicProxy = reference => {
     return injectQueryParams(reference.url, {
       as_js_classic: ""
@@ -14593,28 +14655,24 @@ const jsenvPluginAsJsClassicHtml = ({
   return {
     name: "jsenv:as_js_classic_html",
     appliesDuring: "*",
-    init: context => {
-      const nodeRuntimeEnabled = Object.keys(context.runtimeCompat).includes("node");
-      shouldTransformScriptTypeModule = nodeRuntimeEnabled ? false : !context.isSupportedOnCurrentClients("script_type_module") || !context.isSupportedOnCurrentClients("import_dynamic") || !context.isSupportedOnCurrentClients("import_meta");
-    },
     redirectUrl: {
-      link_href: reference => {
-        if (shouldTransformScriptTypeModule && reference.subtype === "modulepreload") {
+      link_href: (reference, context) => {
+        if (context.systemJsTranspilation && reference.subtype === "modulepreload") {
           return turnIntoJsClassicProxy(reference);
         }
-        if (shouldTransformScriptTypeModule && reference.subtype === "preload" && reference.expectedType === "js_module") {
-          return turnIntoJsClassicProxy(reference);
-        }
-        return null;
-      },
-      script_src: reference => {
-        if (shouldTransformScriptTypeModule && reference.expectedType === "js_module") {
+        if (context.systemJsTranspilation && reference.subtype === "preload" && reference.expectedType === "js_module") {
           return turnIntoJsClassicProxy(reference);
         }
         return null;
       },
-      js_url: reference => {
-        if (shouldTransformScriptTypeModule && reference.expectedType === "js_module") {
+      script_src: (reference, context) => {
+        if (context.systemJsTranspilation && reference.expectedType === "js_module") {
+          return turnIntoJsClassicProxy(reference);
+        }
+        return null;
+      },
+      js_url: (reference, context) => {
+        if (context.systemJsTranspilation && reference.expectedType === "js_module") {
           return turnIntoJsClassicProxy(reference);
         }
         return null;
@@ -14638,7 +14696,7 @@ const jsenvPluginAsJsClassicHtml = ({
             if (!isOrWasExpectingJsModule(reference)) {
               return;
             }
-            if (rel === "modulepreload") {
+            if (rel === "modulepreload" && reference.expectedType === "js_classic") {
               mutations.push(() => {
                 setHtmlNodeAttributes(node, {
                   rel: "preload",
@@ -14647,7 +14705,7 @@ const jsenvPluginAsJsClassicHtml = ({
                 });
               });
             }
-            if (rel === "preload") {
+            if (rel === "preload" && reference.expectedType === "js_classic") {
               mutations.push(() => {
                 setHtmlNodeAttributes(node, {
                   crossorigin: undefined
@@ -14675,7 +14733,7 @@ const jsenvPluginAsJsClassicHtml = ({
                   });
                 });
               }
-            } else if (shouldTransformScriptTypeModule) {
+            } else if (context.systemJsTranspilation) {
               mutations.push(() => {
                 setHtmlNodeAttributes(node, {
                   type: undefined
@@ -19085,8 +19143,7 @@ const jsenvPluginTopLevelAwait = () => {
         return false;
       }
       // keep it untouched, systemjs will handle it
-      const willTransformJsModules = !context.isSupportedOnCurrentClients("script_type_module") || !context.isSupportedOnCurrentClients("import_dynamic") || !context.isSupportedOnCurrentClients("import_meta");
-      if (willTransformJsModules) {
+      if (context.systemJsTranspilation) {
         return false;
       }
       return true;
@@ -19168,9 +19225,8 @@ const jsenvPluginImportMetaResolve = () => {
       if (context.isSupportedOnCurrentClients("import_meta_resolve")) {
         return false;
       }
-      const willTransformJsModules = !context.isSupportedOnCurrentClients("script_type_module") || !context.isSupportedOnCurrentClients("import_dynamic") || !context.isSupportedOnCurrentClients("import_meta");
       // keep it untouched, systemjs will handle it
-      if (willTransformJsModules) {
+      if (context.systemJsTranspilation) {
         return false;
       }
       return true;
@@ -20268,11 +20324,10 @@ const determineDirectoryPath = ({
 };
 
 // https://bundlers.tooling.report/hashing/avoid-cascade/
-const injectVersionMappings = async ({
+const injectVersionMappingsAsGlobal = async ({
   urlInfo,
   kitchen,
-  versionMappings,
-  minification
+  versionMappings
 }) => {
   const injector = injectors[urlInfo.type];
   if (injector) {
@@ -20281,7 +20336,7 @@ const injectVersionMappings = async ({
       sourcemap
     } = await injector(urlInfo, {
       versionMappings,
-      minification
+      minification: kitchen.kitchenContext.minification
     });
     kitchen.urlInfoTransformer.applyFinalTransformations(urlInfo, {
       content,
@@ -20294,9 +20349,6 @@ const injectors = {
     versionMappings,
     minification
   }) => {
-    // ideally we would inject an importmap but browser support is too low
-    // (even worse for worker/service worker)
-    // so for now we inject code into entry points
     const htmlAst = parseHtmlString(urlInfo.content, {
       storeOriginalPositions: false
     });
@@ -20304,61 +20356,69 @@ const injectors = {
       tagName: "script",
       textContent: generateClientCodeForVersionMappings(versionMappings, {
         globalName: "window",
-        minify: minification || minification.js_classic
+        minification
       })
     }), "jsenv:versioning");
     return {
       content: stringifyHtmlAst(htmlAst)
     };
   },
-  js_classic: (urlInfo, {
-    versionMappings,
-    minification
-  }) => {
-    return jsInjector(urlInfo, {
-      versionMappings,
-      minify: minification || minification.js_classic
-    });
-  },
-  js_module: (urlInfo, {
-    versionMappings,
-    minification
-  }) => {
-    return jsInjector(urlInfo, {
-      versionMappings,
-      minify: minification || minification.js_module
-    });
-  }
+  js_classic: (...args) => jsInjector(...args),
+  js_module: (...args) => jsInjector(...args)
 };
 const jsInjector = (urlInfo, {
   versionMappings,
-  minify
+  minification
 }) => {
   const magicSource = createMagicSource(urlInfo.content);
   magicSource.prepend(generateClientCodeForVersionMappings(versionMappings, {
     globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window",
-    minify
+    minification
   }));
   return magicSource.toContentAndSourcemap();
 };
 const generateClientCodeForVersionMappings = (versionMappings, {
   globalName,
-  minify
+  minification
 }) => {
-  if (minify) {
+  if (minification) {
     return `;(function(){var m = ${JSON.stringify(versionMappings)}; ${globalName}.__v__ = function (s) { return m[s] || s }; })();`;
   }
   return `
 ;(function() {
-
-var __versionMappings__ = ${JSON.stringify(versionMappings, null, "  ")};
-${globalName}.__v__ = function (specifier) {
-  return __versionMappings__[specifier] || specifier
-};
-
+  var __versionMappings__ = ${JSON.stringify(versionMappings, null, "  ")};
+  ${globalName}.__v__ = function (specifier) {
+    return __versionMappings__[specifier] || specifier
+  };
 })();
-
 `;
+};
+const injectVersionMappingsAsImportmap = async ({
+  urlInfo,
+  kitchen,
+  versionMappings
+}) => {
+  const htmlAst = parseHtmlString(urlInfo.content, {
+    storeOriginalPositions: false
+  });
+  // jsenv_plugin_importmap.js is removing importmap during build
+  // it means at this point we know HTML has no importmap in it
+  // we can safely inject one
+  const importmapNode = createHtmlNode({
+    tagName: "script",
+    type: "importmap",
+    textContent: kitchen.kitchenContext.minification ? JSON.stringify({
+      imports: versionMappings
+    }) : `  
+      {
+        "imports": {${JSON.stringify(versionMappings, null, "          ").slice(1, -1)}        }
+      }
+    `
+  });
+  injectScriptNodeAsEarlyAsPossible(htmlAst, importmapNode, "jsenv:versioning");
+  kitchen.urlInfoTransformer.applyFinalTransformations(urlInfo, {
+    content: stringifyHtmlAst(htmlAst)
+  });
 };
 
 const ensureUnixLineBreaks = stringOrBuffer => {
@@ -20472,12 +20532,12 @@ const build = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
   logLevel = "info",
-  runtimeCompat = defaultRuntimeCompat,
   rootDirectoryUrl,
   buildDirectoryUrl,
   assetsDirectory = "",
-  base = runtimeCompat.node ? "./" : "/",
   entryPoints = {},
+  runtimeCompat = defaultRuntimeCompat,
+  base = runtimeCompat.node ? "./" : "/",
   plugins = [],
   sourcemaps = false,
   sourcemapsSourcesContent,
@@ -20489,6 +20549,7 @@ const build = async ({
   versioning = !runtimeCompat.node,
   versioningMethod = "search_param",
   // "filename", "search_param"
+  versioningViaImportmap = true,
   lineBreakNormalization = process.platform === "win32",
   clientFiles = {
     "./src/": true
@@ -20565,6 +20626,18 @@ build ${entryPointKeys.length} entry points`);
     const versioningRedirections = new Map();
     const entryUrls = [];
     const rawGraph = createUrlGraph();
+    const contextSharedDuringBuild = {
+      systemJsTranspilation: (() => {
+        const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
+        if (nodeRuntimeEnabled) return false;
+        if (!RUNTIME_COMPAT.isSupported(runtimeCompat, "script_type_module")) return true;
+        if (!RUNTIME_COMPAT.isSupported(runtimeCompat, "import_dynamic")) return true;
+        if (!RUNTIME_COMPAT.isSupported(runtimeCompat, "import_meta")) return true;
+        if (versioning && versioningViaImportmap && !RUNTIME_COMPAT.isSupported(runtimeCompat, "importmap")) return true;
+        return false;
+      })(),
+      minification: plugins.some(plugin => plugin.name === "jsenv:minification")
+    };
     const rawGraphKitchen = createKitchen({
       signal,
       logLevel,
@@ -20572,6 +20645,7 @@ build ${entryPointKeys.length} entry points`);
       urlGraph: rawGraph,
       build: true,
       runtimeCompat,
+      ...contextSharedDuringBuild,
       plugins: [...plugins, {
         appliesDuring: "build",
         fetchUrlContent: (urlInfo, context) => {
@@ -20633,6 +20707,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       urlGraph: finalGraph,
       build: true,
       runtimeCompat,
+      ...contextSharedDuringBuild,
       plugins: [urlAnalysisPlugin, jsenvPluginAsJsClassic({
         jsClassicLibrary: false,
         jsClassicFallback: true,
@@ -21134,6 +21209,62 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           disabled: logger.levels.debug || !logger.levels.info
         });
         try {
+          const canUseImportmap = versioningViaImportmap && finalEntryUrls.every(finalEntryUrl => {
+            const finalEntryUrlInfo = finalGraph.getUrlInfo(finalEntryUrl);
+            return finalEntryUrlInfo.type === "html";
+          }) && finalGraphKitchen.kitchenContext.isSupportedOnCurrentClients("importmap");
+          const workerReferenceSet = new Set();
+          const isReferencedByWorker = (reference, graph) => {
+            if (workerReferenceSet.has(reference)) {
+              return true;
+            }
+            const urlInfo = graph.getUrlInfo(reference.url);
+            const dependentWorker = graph.findDependent(urlInfo, dependentUrlInfo => {
+              return isWebWorkerUrlInfo(dependentUrlInfo);
+            });
+            if (dependentWorker) {
+              workerReferenceSet.add(reference);
+              return true;
+            }
+            return Boolean(dependentWorker);
+          };
+          const preferWithoutVersioning = reference => {
+            const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl);
+            if (parentUrlInfo.jsQuote) {
+              return {
+                type: "global",
+                source: `${parentUrlInfo.jsQuote}+__v__(${JSON.stringify(reference.specifier)})+${parentUrlInfo.jsQuote}`
+              };
+            }
+            if (reference.type === "js_url") {
+              return {
+                type: "global",
+                source: `__v__(${JSON.stringify(reference.specifier)})`
+              };
+            }
+            if (reference.type === "js_import") {
+              if (reference.subtype === "import_dynamic") {
+                return {
+                  type: "global",
+                  source: `__v__(${JSON.stringify(reference.specifier)})`
+                };
+              }
+              if (reference.subtype === "import_meta_resolve") {
+                return {
+                  type: "global",
+                  source: `__v__(${JSON.stringify(reference.specifier)})`
+                };
+              }
+              if (canUseImportmap && !isReferencedByWorker(reference, finalGraph)) {
+                return {
+                  type: "importmap",
+                  source: JSON.stringify(reference.specifier)
+                };
+              }
+            }
+            return null;
+          };
+
           // see also https://github.com/rollup/rollup/pull/4543
           const contentVersionMap = new Map();
           const hashCallbacks = [];
@@ -21190,13 +21321,11 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     // (inline, data:, sourcemap, shouldHandle is false, ...)
                     return null;
                   }
-                  const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl);
-                  if (parentUrlInfo.jsQuote) {
-                    // __v__() makes versioning dynamic: no need to take into account
-                    return null;
-                  }
-                  if (reference.type === "js_url" || reference.subtype === "import_dynamic") {
-                    // __v__() makes versioning dynamic: no need to take into account
+                  if (preferWithoutVersioning(reference)) {
+                    // when versioning is dynamic no need to take into account
+                    // happend for:
+                    // - specifier mapped by window.__v__()
+                    // - specifier mapped by importmap
                     return null;
                   }
                   return dependencyContentVersion;
@@ -21243,13 +21372,15 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             callback();
           });
           const versionMappings = {};
-          const usedVersionMappings = new Set();
+          const versionMappingsOnGlobalMap = new Set();
+          const versionMappingsOnImportmap = new Set();
           const versioningKitchen = createKitchen({
             logLevel: logger.level,
             rootDirectoryUrl: buildDirectoryUrl,
             urlGraph: finalGraph,
             build: true,
             runtimeCompat,
+            ...contextSharedDuringBuild,
             plugins: [urlAnalysisPlugin, jsenvPluginInline({
               fetchInlineUrls: false,
               analyzeConvertedScripts: true,
@@ -21309,15 +21440,14 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 versionMappings[reference.specifier] = versionedSpecifier;
                 versioningRedirections.set(reference.url, versionedUrl);
                 buildUrls.set(versionedSpecifier, versionedUrl);
-                const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl);
-                if (parentUrlInfo.jsQuote) {
-                  // the url is inline inside js quotes
-                  usedVersionMappings.add(reference.specifier);
-                  return () => `${parentUrlInfo.jsQuote}+__v__(${JSON.stringify(reference.specifier)})+${parentUrlInfo.jsQuote}`;
-                }
-                if (reference.type === "js_url" || reference.subtype === "import_dynamic" || reference.subtype === "import_meta_resolve") {
-                  usedVersionMappings.add(reference.specifier);
-                  return () => `__v__(${JSON.stringify(reference.specifier)})`;
+                const withoutVersioning = preferWithoutVersioning(reference);
+                if (withoutVersioning) {
+                  if (withoutVersioning.type === "importmap") {
+                    versionMappingsOnImportmap.add(reference.specifier);
+                  } else {
+                    versionMappingsOnGlobalMap.add(reference.specifier);
+                  }
+                  return () => withoutVersioning.source;
                 }
                 return versionedSpecifier;
               },
@@ -21356,25 +21486,50 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             });
           });
           await versioningUrlGraphLoader.getAllLoadDonePromise(buildOperation);
-          if (usedVersionMappings.size) {
+          workerReferenceSet.clear();
+          const actions = [];
+          const visitors = [];
+          if (versionMappingsOnImportmap.size) {
             const versionMappingsNeeded = {};
-            usedVersionMappings.forEach(specifier => {
+            versionMappingsOnImportmap.forEach(specifier => {
               versionMappingsNeeded[specifier] = versionMappings[specifier];
             });
-            const actions = [];
-            GRAPH.forEach(finalGraph, urlInfo => {
-              if (urlInfo.isEntryPoint) {
+            visitors.push(urlInfo => {
+              if (urlInfo.type === "html" && urlInfo.isEntryPoint) {
                 actions.push(async () => {
-                  await injectVersionMappings({
+                  await injectVersionMappingsAsImportmap({
                     urlInfo,
                     kitchen: finalGraphKitchen,
-                    versionMappings: versionMappingsNeeded,
-                    minification: plugins.some(plugin => plugin.name === "jsenv:minification")
+                    versionMappings: versionMappingsNeeded
                   });
                 });
               }
             });
-            await Promise.all(actions.map(action => action()));
+          }
+          if (versionMappingsOnGlobalMap.size) {
+            const versionMappingsNeeded = {};
+            versionMappingsOnGlobalMap.forEach(specifier => {
+              versionMappingsNeeded[specifier] = versionMappings[specifier];
+            });
+            visitors.push(urlInfo => {
+              if (urlInfo.isEntryPoint) {
+                actions.push(async () => {
+                  await injectVersionMappingsAsGlobal({
+                    urlInfo,
+                    kitchen: finalGraphKitchen,
+                    versionMappings: versionMappingsNeeded
+                  });
+                });
+              }
+            });
+          }
+          if (visitors.length) {
+            GRAPH.forEach(finalGraph, urlInfo => {
+              visitors.forEach(visitor => visitor(urlInfo));
+            });
+            if (actions.length) {
+              await Promise.all(actions.map(action => action()));
+            }
           }
         } catch (e) {
           versioningTask.fail();
@@ -22012,16 +22167,18 @@ const createFileService = ({
         onUrlInfo(urlInfo);
       });
     });
+    const clientRuntimeCompat = {
+      [runtimeName]: runtimeVersion
+    };
     const kitchen = createKitchen({
       signal,
       logLevel,
       rootDirectoryUrl,
+      urlGraph,
       dev: true,
       runtimeCompat,
-      clientRuntimeCompat: {
-        [runtimeName]: runtimeVersion
-      },
-      urlGraph,
+      clientRuntimeCompat,
+      systemJsTranspilation: !RUNTIME_COMPAT.isSupported(clientRuntimeCompat, "script_type_module") || !RUNTIME_COMPAT.isSupported(clientRuntimeCompat, "import_dynamic") || !RUNTIME_COMPAT.isSupported(clientRuntimeCompat, "import_meta"),
       plugins: [...plugins, ...getCorePlugins({
         rootDirectoryUrl,
         runtimeCompat,
@@ -22037,6 +22194,7 @@ const createFileService = ({
         explorer,
         ribbon
       })],
+      minification: false,
       sourcemaps,
       sourcemapsSourcesProtocol,
       sourcemapsSourcesContent,

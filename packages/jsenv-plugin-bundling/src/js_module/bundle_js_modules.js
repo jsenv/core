@@ -79,6 +79,18 @@ export const bundleJsModules = async ({
         ...rollupInput,
       },
       rollupOutput: {
+        compact: context.minification,
+        minifyInternalExports: context.minification,
+        generatedCode: {
+          arrowFunctions: context.isSupportedOnCurrentClients("arrow_function"),
+          constBindings: context.isSupportedOnCurrentClients("const_bindings"),
+          objectShorthand: context.isSupportedOnCurrentClients(
+            "object_properties_shorthand",
+          ),
+          reservedNamesAsProps:
+            context.isSupportedOnCurrentClients("reserved_words"),
+          symbols: context.isSupportedOnCurrentClients("symbols"),
+        },
         ...rollupOutput,
       },
     })

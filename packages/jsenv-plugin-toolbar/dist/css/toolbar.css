@@ -73,6 +73,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, [data-contains-hidde
   position: fixed;
   bottom: 0;
 }
+
 #execution_pending_icon {
   width: 20px;
   height: 20px;
@@ -160,6 +161,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, [data-contains-hidde
     width: 45px;
   }
 }
+
 #server_indicator button {
   position: relative;
 }
@@ -243,6 +245,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, [data-contains-hidde
     transform: scale(1);
   }
 }
+
 html[data-theme="light"] #toolbar {
   background: #e8eff3;
 }
@@ -554,6 +557,7 @@ label {
 .settings_box_item[data-disabled] .switch {
   cursor: default;
 }
+
 #menu_overflow_button {
   width: 40px;
   background: #404040;
@@ -613,6 +617,7 @@ label {
 #toolbar[data-menu-overflow-enabled] #settings_box {
   right: -40px;
 }
+
 .tooltip {
   color: #fff;
   text-align: center;

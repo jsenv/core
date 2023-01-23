@@ -17,9 +17,7 @@ const test = async ({ browserLauncher }) => {
     await page.goto(`${devServer.origin}/main.html`)
     const result = await page.evaluate(
       /* eslint-disable no-undef */
-      () => {
-        return window.resultPromise
-      },
+      () => window.resultPromise,
       /* eslint-enable no-undef */
     )
     const actual = result

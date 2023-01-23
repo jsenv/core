@@ -17,7 +17,7 @@ export const inspectString = (
       ? determineQuote(value, canUseTemplateString) || fallback
       : quote
   if (quote === BACKTICK) {
-    return escapeTemplateStringSpecialCharacters(value)
+    return `\`${escapeTemplateStringSpecialCharacters(value)}\``
   }
   return surroundStringWith(value, quote)
 }

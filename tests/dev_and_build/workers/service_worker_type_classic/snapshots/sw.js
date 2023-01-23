@@ -2,7 +2,7 @@
 self.serviceWorkerUrls = {
   "/main.html": {
     "versioned": false,
-    "version": "3a9e4d88"
+    "version": "37eb36a2"
   },
   "/css/style.css?v=65c914e7": {
     "versioned": true

@@ -1,0 +1,1 @@
+import{ping as e}from"/js/ping.js?v=18c50581";const s=new Worker("/worker.js",{type:"module"}),o=await(async e=>new Promise(((s,o)=>{e.onmessage=e=>{s(e.data)},e.onerror=e=>{o(e.message)},e.postMessage("ping")})))(s);window.resolveResultPromise({ping:e,workerResponse:o});

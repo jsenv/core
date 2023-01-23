@@ -12,6 +12,7 @@ const test = async ({ expectedBuildPath, ...rest }) => {
     entryPoints: {
       "./main.html": "main.html",
     },
+    versioning: false,
     ...rest,
   })
   const server = await startFileServer({
@@ -41,16 +42,13 @@ const test = async ({ expectedBuildPath, ...rest }) => {
   assert({ actual, expected })
 }
 
+// can use <script type="module">
 await test({
   expectedBuildPath: "/js/main.js",
-  versioning: false,
+  runtimeCompat: { chrome: "89" },
 })
-
-// no support for <script type="module">
+// cannot use <script type="module">
 await test({
   expectedBuildPath: "/js/main.nomodule.js",
-  versioning: false,
-  runtimeCompat: {
-    chrome: "60",
-  },
+  runtimeCompat: { chrome: "60" },
 })
