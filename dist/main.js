@@ -21209,10 +21209,25 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           disabled: logger.levels.debug || !logger.levels.info
         });
         try {
-          const canUseImportmap = finalEntryUrls.every(finalEntryUrl => {
+          const canUseImportmap = versioningViaImportmap && finalEntryUrls.every(finalEntryUrl => {
             const finalEntryUrlInfo = finalGraph.getUrlInfo(finalEntryUrl);
             return finalEntryUrlInfo.type === "html";
           }) && finalGraphKitchen.kitchenContext.isSupportedOnCurrentClients("importmap");
+          const workerReferenceSet = new Set();
+          const isReferencedByWorker = (reference, graph) => {
+            if (workerReferenceSet.has(reference)) {
+              return true;
+            }
+            const urlInfo = graph.getUrlInfo(reference.url);
+            const dependentWorker = graph.findDependent(urlInfo, dependentUrlInfo => {
+              return isWebWorkerUrlInfo(dependentUrlInfo);
+            });
+            if (dependentWorker) {
+              workerReferenceSet.add(reference);
+              return true;
+            }
+            return Boolean(dependentWorker);
+          };
           const preferWithoutVersioning = reference => {
             const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl);
             if (parentUrlInfo.jsQuote) {
@@ -21471,6 +21486,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             });
           });
           await versioningUrlGraphLoader.getAllLoadDonePromise(buildOperation);
+          workerReferenceSet.clear();
           const actions = [];
           const visitors = [];
           if (versionMappingsOnImportmap.size) {
@@ -21941,13 +21957,6 @@ const canUseVersionedUrl = urlInfo => {
     return false;
   }
   return urlInfo.type !== "webmanifest";
-};
-const isReferencedByWorker = (reference, graph) => {
-  const urlInfo = graph.getUrlInfo(reference.url);
-  const dependentWorker = graph.findDependent(urlInfo, dependentUrlInfo => {
-    return isWebWorkerUrlInfo(dependentUrlInfo);
-  });
-  return Boolean(dependentWorker);
 };
 
 // https://nodejs.org/api/worker_threads.html
