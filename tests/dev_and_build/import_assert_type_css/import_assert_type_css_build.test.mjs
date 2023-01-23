@@ -35,14 +35,14 @@ const test = async (options) => {
   assert({ actual, expected })
 }
 
-// support for <script type="module">
+// can use <script type="module">
 await test({
-  runtimeCompat: { chrome: "65" },
+  runtimeCompat: { chrome: "89" },
   plugins: [jsenvPluginBundling()],
 })
 // no bundling
 await test({ runtimeCompat: { chrome: "65" } })
-// no support for <script type="module">
+// cannot use <script type="module">
 await test({
   runtimeCompat: { chrome: "60" },
   plugins: [jsenvPluginBundling()],
@@ -69,6 +69,6 @@ await test({
     key.endsWith(".css"),
   )
   const actual = buildInlineContents[cssKey]
-  const expected = `body{background-color:red;background-image:url('+__v__("/other/jsenv.png")+')}`
+  const expected = `body{background-color:red;background-image:url("+__v__("/other/jsenv.png")+")}`
   assert({ actual, expected })
 }
