@@ -65,6 +65,8 @@ export const createKitchen = ({
     ),
     outDirectoryUrl,
   }
+  kitchenContext.systemJsTranpilation =
+    shouldTranspileToSystemJs(kitchenContext)
   const pluginController = createPluginController(kitchenContext)
   const pushPlugins = (plugins) => {
     plugins.forEach((pluginEntry) => {
@@ -931,4 +933,18 @@ const determineFileUrlForOutDirectory = ({ urlInfo, context }) => {
     to: context.outDirectoryUrl,
     preferAbsolute: true,
   })
+}
+
+const shouldTranspileToSystemJs = ({
+  runtimeCompat,
+  build,
+  isSupportedOnCurrentClients,
+}) => {
+  const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node")
+  if (nodeRuntimeEnabled) return false
+  if (!isSupportedOnCurrentClients("script_type_module")) return true
+  if (!isSupportedOnCurrentClients("import_dynamic")) return true
+  if (!isSupportedOnCurrentClients("import_meta")) return true
+  if (build && !isSupportedOnCurrentClients("importmap")) return true
+  return false
 }

@@ -23,8 +23,6 @@ export const jsenvPluginAsJsClassicHtml = ({
   systemJsInjection,
   systemJsClientFileUrl,
 }) => {
-  let shouldTransformScriptTypeModule
-
   const turnIntoJsClassicProxy = (reference) => {
     return injectQueryParams(reference.url, { as_js_classic: "" })
   }
@@ -32,27 +30,16 @@ export const jsenvPluginAsJsClassicHtml = ({
   return {
     name: "jsenv:as_js_classic_html",
     appliesDuring: "*",
-    init: (context) => {
-      const nodeRuntimeEnabled = Object.keys(context.runtimeCompat).includes(
-        "node",
-      )
-      shouldTransformScriptTypeModule = nodeRuntimeEnabled
-        ? false
-        : !context.isSupportedOnCurrentClients("script_type_module") ||
-          !context.isSupportedOnCurrentClients("import_dynamic") ||
-          !context.isSupportedOnCurrentClients("import_meta") ||
-          !context.isSupportedOnCurrentClients("importmap")
-    },
     redirectUrl: {
-      link_href: (reference) => {
+      link_href: (reference, context) => {
         if (
-          shouldTransformScriptTypeModule &&
+          context.systemJsTranpilation &&
           reference.subtype === "modulepreload"
         ) {
           return turnIntoJsClassicProxy(reference)
         }
         if (
-          shouldTransformScriptTypeModule &&
+          context.systemJsTranpilation &&
           reference.subtype === "preload" &&
           reference.expectedType === "js_module"
         ) {
@@ -60,18 +47,18 @@ export const jsenvPluginAsJsClassicHtml = ({
         }
         return null
       },
-      script_src: (reference) => {
+      script_src: (reference, context) => {
         if (
-          shouldTransformScriptTypeModule &&
+          context.systemJsTranpilation &&
           reference.expectedType === "js_module"
         ) {
           return turnIntoJsClassicProxy(reference)
         }
         return null
       },
-      js_url: (reference) => {
+      js_url: (reference, context) => {
         if (
-          shouldTransformScriptTypeModule &&
+          context.systemJsTranpilation &&
           reference.expectedType === "js_module"
         ) {
           return turnIntoJsClassicProxy(reference)
@@ -141,7 +128,7 @@ export const jsenvPluginAsJsClassicHtml = ({
                   setHtmlNodeAttributes(node, { type: undefined })
                 })
               }
-            } else if (shouldTransformScriptTypeModule) {
+            } else if (context.systemJsTranpilation) {
               mutations.push(() => {
                 setHtmlNodeAttributes(node, { type: undefined })
               })

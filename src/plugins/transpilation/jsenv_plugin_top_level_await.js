@@ -11,11 +11,7 @@ export const jsenvPluginTopLevelAwait = () => {
         return false
       }
       // keep it untouched, systemjs will handle it
-      const willTransformJsModules =
-        !context.isSupportedOnCurrentClients("script_type_module") ||
-        !context.isSupportedOnCurrentClients("import_dynamic") ||
-        !context.isSupportedOnCurrentClients("import_meta")
-      if (willTransformJsModules) {
+      if (context.systemJsTranpilation) {
         return false
       }
       return true
