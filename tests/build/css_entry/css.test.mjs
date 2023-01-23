@@ -1,5 +1,6 @@
 import { assert } from "@jsenv/assert"
 import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
+import { jsenvPluginMinification } from "@jsenv/plugin-minification"
 
 import { build } from "@jsenv/core"
 
@@ -10,8 +11,7 @@ const { buildFileContents } = await build({
   entryPoints: {
     "./main.css": "main.css",
   },
-  plugins: [jsenvPluginBundling()],
-  minification: true,
+  plugins: [jsenvPluginBundling(), jsenvPluginMinification()],
 })
 const actual = {
   mainCssFileContent: buildFileContents["main.css"],
