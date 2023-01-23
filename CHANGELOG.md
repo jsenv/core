@@ -1,3 +1,7 @@
+# 30.3.0
+
+- Use importmap or systemjs to prevent hash cascading https://github.com/jsenv/jsenv-core/pull/341
+
 # 30.2.0
 
 - Use lightningcss insteaf of postcss to bundle css
