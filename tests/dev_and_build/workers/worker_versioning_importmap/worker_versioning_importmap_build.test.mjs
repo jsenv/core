@@ -4,6 +4,7 @@
  */
 
 import { assert } from "@jsenv/assert"
+import { jsenvPluginMinification } from "@jsenv/plugin-minification"
 
 import { build } from "@jsenv/core"
 import {
@@ -21,7 +22,7 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
     entryPoints: {
       "./main.html": "main.html",
     },
-    plugins: [],
+    plugins: [jsenvPluginMinification()],
     writeGeneratedFiles: true,
     ...rest,
   })

@@ -17,6 +17,7 @@ import { writeFileSync, readFileSync } from "node:fs"
 import { chromium } from "playwright"
 import { assert } from "@jsenv/assert"
 import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
+import { jsenvPluginMinification } from "@jsenv/plugin-minification"
 
 import { build } from "@jsenv/core"
 import {
@@ -47,24 +48,15 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
             },
           },
         }),
+        jsenvPluginMinification(),
       ],
       writeGeneratedFiles: true,
       ...rest,
     })
   }
 
-  // 1. test snapshots
-  {
-    const { buildFileContents } = await generateDist()
-    const snapshotsInitialUrl = new URL("./initial/", snapshotsDirectoryUrl)
-    const snapshotsInitialContent =
-      readSnapshotsFromDirectory(snapshotsInitialUrl)
-    writeSnapshotsIntoDirectory(snapshotsInitialUrl, buildFileContents)
-    assert({
-      actual: buildFileContents,
-      expected: snapshotsInitialContent,
-    })
-  }
+  // 1. Generate a first build
+  const initialBuild = await generateDist()
 
   // 2. Ensure file executes properly
   const serverRequests = []
@@ -83,17 +75,11 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
   const browser = await chromium.launch({ headless: true })
   const page = await launchBrowserPage(browser)
   await page.goto(`${server.origin}/main.html`)
-  {
-    const returnValue = await page.evaluate(
-      /* eslint-disable no-undef */
-      () => window.resultPromise,
-      /* eslint-enable no-undef */
-    )
-    assert({
-      actual: returnValue,
-      expected: 42,
-    })
-  }
+  const initialReturnValue = await page.evaluate(
+    /* eslint-disable no-undef */
+    () => window.resultPromise,
+    /* eslint-enable no-undef */
+  )
 
   // Now update source file then rebuild testing that:
   // - snapshots are correct
@@ -108,19 +94,7 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
   // rebuild
   try {
     jsFileContent.update(`export const answer = 43`)
-    const { buildFileContents } = await generateDist()
-
-    // test snapshots
-    {
-      const snapshotsModifiedUrl = new URL("./modified/", snapshotsDirectoryUrl)
-      const snapshotsModifiedContent =
-        readSnapshotsFromDirectory(snapshotsModifiedUrl)
-      writeSnapshotsIntoDirectory(snapshotsModifiedUrl, buildFileContents)
-      assert({
-        actual: buildFileContents,
-        expected: snapshotsModifiedContent,
-      })
-    }
+    const modifiedBuild = await generateDist()
 
     // reload then ensure the browser did not re-fetch app.js
     serverRequests.length = 0
@@ -128,7 +102,42 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
     const responseForAppJs = serverRequests.find((request) =>
       request.url.includes("app"),
     )
-    assert({ actual: responseForAppJs, expected: undefined })
+    const modifiedReturnValue = await page.evaluate(
+      /* eslint-disable no-undef */
+      () => window.resultPromise,
+      /* eslint-enable no-undef */
+    )
+
+    const snapshotsInitialUrl = new URL("./initial/", snapshotsDirectoryUrl)
+    const snapshotsInitialContent =
+      readSnapshotsFromDirectory(snapshotsInitialUrl)
+    const snapshotsModifiedUrl = new URL("./modified/", snapshotsDirectoryUrl)
+    const snapshotsModifiedContent =
+      readSnapshotsFromDirectory(snapshotsModifiedUrl)
+    writeSnapshotsIntoDirectory(
+      snapshotsInitialUrl,
+      initialBuild.buildFileContents,
+    )
+    writeSnapshotsIntoDirectory(
+      snapshotsModifiedUrl,
+      modifiedBuild.buildFileContents,
+    )
+    assert({
+      actual: {
+        initial: initialBuild.buildFileContents,
+        initialReturnValue,
+        modified: modifiedBuild.buildFileContents,
+        modifiedReturnValue,
+        responseForAppJs,
+      },
+      expected: {
+        initial: snapshotsInitialContent,
+        initialReturnValue: 42,
+        modified: snapshotsModifiedContent,
+        modifiedReturnValue: 43,
+        responseForAppJs: undefined,
+      },
+    })
   } finally {
     jsFileContent.restore()
     browser.close()

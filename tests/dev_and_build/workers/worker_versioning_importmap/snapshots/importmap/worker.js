@@ -1,8 +1,1 @@
-/* globals self */
-import { ping } from "/js/ping.js?v=70ef69dd"
-
-self.addEventListener("message", function (e) {
-  if (e.data === "ping") {
-    self.postMessage(ping)
-  }
-})
+import{ping as s}from"/js/ping.js?v=18c50581";self.addEventListener("message",(function(e){"ping"===e.data&&self.postMessage(s)}));
