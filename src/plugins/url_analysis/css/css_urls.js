@@ -3,11 +3,34 @@
  */
 
 import { createMagicSource } from "@jsenv/sourcemap"
-import { applyPostCss, postCssPluginUrlVisitor } from "@jsenv/ast"
 
 export const parseAndTransformCssUrls = async (urlInfo, context) => {
-  const actions = []
+  const cssUrls = await parseCssUrlsUsingPostCSS(urlInfo)
+
   const magicSource = createMagicSource(urlInfo.content)
+  for (const cssUrl of cssUrls) {
+    const [reference] = context.referenceUtils.found({
+      type: cssUrl.type,
+      specifier: cssUrl.specifier,
+      specifierStart: cssUrl.start,
+      specifierEnd: cssUrl.end,
+      specifierLine: cssUrl.line,
+      specifierColumn: cssUrl.column,
+    })
+    magicSource.replace({
+      start: cssUrl.start,
+      end: cssUrl.end,
+      replacement: await context.referenceUtils.readGeneratedSpecifier(
+        reference,
+      ),
+    })
+  }
+  return magicSource.toContentAndSourcemap()
+}
+
+const parseCssUrlsUsingPostCSS = async (urlInfo) => {
+  const { applyPostCss, postCssPluginUrlVisitor } = await import("@jsenv/ast")
+  const cssUrls = []
   await applyPostCss({
     sourcemaps: false,
     plugins: [
@@ -20,22 +43,13 @@ export const parseAndTransformCssUrls = async (urlInfo, context) => {
           specifierLine,
           specifierColumn,
         }) => {
-          const [reference] = context.referenceUtils.found({
+          cssUrls.push({
             type: `css_${type}`,
             specifier,
-            specifierStart,
-            specifierEnd,
-            specifierLine,
-            specifierColumn,
-          })
-          actions.push(async () => {
-            magicSource.replace({
-              start: specifierStart,
-              end: specifierEnd,
-              replacement: await context.referenceUtils.readGeneratedSpecifier(
-                reference,
-              ),
-            })
+            start: specifierStart,
+            end: specifierEnd,
+            line: specifierLine,
+            column: specifierColumn,
           })
         },
       }),
@@ -43,6 +57,5 @@ export const parseAndTransformCssUrls = async (urlInfo, context) => {
     url: urlInfo.originalUrl,
     content: urlInfo.content,
   })
-  await Promise.all(actions.map((action) => action()))
-  return magicSource.toContentAndSourcemap()
+  return cssUrls
 }
