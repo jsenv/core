@@ -20,6 +20,9 @@
   "files": [
     "/src/"
   ],
+  "scripts": {
+    "test": "node --conditions=development ./scripts/test.mjs"
+  },
   "dependencies": {
     "@jsenv/filesystem": "4.1.9",
     "@jsenv/log": "3.3.3",

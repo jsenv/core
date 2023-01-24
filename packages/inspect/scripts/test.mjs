@@ -35,6 +35,8 @@ try {
         },
       },
     },
+    failFast: process.argv.includes("--workspace"),
+    completedExecutionLogMerging: process.argv.includes("--workspace"),
   })
 } finally {
   if (devServerModule) {
