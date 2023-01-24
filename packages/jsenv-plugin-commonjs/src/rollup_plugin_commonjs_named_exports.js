@@ -156,10 +156,7 @@ const generateCodeForExports = ({
   inputSummary,
   inputFileUrl,
 }) => {
-  const from =
-    process.platform === "win32"
-      ? inputFileUrl.slice("file:///".length)
-      : inputFileUrl.slice("file://".length)
+  const from = inputFileUrl.slice("file://".length)
   const lines = [
     ...(inputSummary.namespace ? [stringifyNamespaceReExport({ from })] : []),
     ...(inputSummary.default ? [stringifyDefaultReExport({ from })] : []),

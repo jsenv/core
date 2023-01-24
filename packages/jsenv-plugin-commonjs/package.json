@@ -11,22 +11,30 @@
     "access": "public"
   },
   "type": "module",
-  "main": "./main.js",
+  "exports": {
+    ".": {
+      "import": "./src/main.js"
+    },
+    "./*": "./*"
+  },
+  "files": [
+    "/src/"
+  ],
   "dependencies": {
     "@jsenv/filesystem": "4.1.9",
     "@jsenv/log": "3.3.3",
     "@jsenv/url-meta": "7.0.2",
     "@jsenv/urls": "1.2.8",
-    "@rollup/plugin-commonjs": "24.0.0",
+    "@rollup/plugin-commonjs": "24.0.1",
     "@rollup/plugin-json": "6.0.0",
     "@rollup/plugin-node-resolve": "15.0.1",
     "@rollup/plugin-replace": "5.0.2",
     "cjs-module-lexer": "1.2.2",
     "is-valid-identifier": "2.0.2",
     "resolve": "1.22.1",
-    "rollup": "3.9.1",
+    "rollup": "3.10.1",
     "rollup-plugin-node-globals": "1.4.0",
-    "rollup-plugin-polyfill-node": "0.11.0",
+    "rollup-plugin-polyfill-node": "0.12.0",
     "vm2": "3.9.13"
   },
   "devDependencies": {
