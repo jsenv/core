@@ -2,63 +2,71 @@
 
 import { readFileSync } from "node:fs"
 import { fileURLToPath, pathToFileURL } from "node:url"
+import path from "node:path"
 import { VM as VM2 } from "vm2"
 import resolve from "resolve"
 import isValidIdentifier from "is-valid-identifier"
 import { init, parse } from "cjs-module-lexer"
 
+const importWrapper = {
+  wrap: (specifier) => {
+    return `cjs_scan:${specifier}`
+  },
+  unwrap: (specifier) => {
+    return specifier.slice("cjs_scan:".length)
+  },
+  isWrapped: (specifier) => {
+    return specifier.startsWith("cjs_scan:")
+  },
+}
+
 export const rollupPluginCommonJsNamedExports = ({ logger }) => {
-  const inputSummaries = {}
-  const cjsScannedNamedExports = {}
+  const scanResults = {}
 
   return {
+    name: "scan_cjs_named_exports",
     async buildStart({ input }) {
       await init()
-
       Object.keys(input).forEach((key) => {
         const inputFilePath = input[key]
-        const inputFileUrl = pathToFileURL(inputFilePath)
-        inputSummaries[inputFileUrl] = {
+        const namedCjs =
+          detectStaticExports({ logger, filePath: inputFilePath }) ||
+          detectExportsUsingSandboxedRuntime({
+            logger,
+            filePath: inputFilePath,
+          })
+        scanResults[inputFilePath] = {
           all: true,
           default: true,
           namespace: true,
           named: [],
+          namedCjs,
         }
-
-        const cjsExports =
-          detectStaticExports({ logger, fileUrl: inputFileUrl }) ||
-          detectExportsUsingSandboxedRuntime({ logger, fileUrl: inputFileUrl })
-
-        if (cjsExports && cjsExports.length) {
-          cjsScannedNamedExports[inputFileUrl] = cjsExports
-        }
-        input[key] = `jsenv:${inputFileUrl}`
+        input[key] = importWrapper.wrap(inputFilePath)
       })
     },
-    resolveId(source) {
-      if (source.startsWith("jsenv:")) {
-        return source
+    resolveId(specifier) {
+      if (importWrapper.isWrapped(specifier)) {
+        return specifier
       }
-
       return null
     },
     load(id) {
-      if (!id.startsWith("jsenv:")) {
+      if (!importWrapper.isWrapped(id)) {
         return null
       }
-
-      const inputFileUrl = id.substring("jsenv:".length)
-      const inputSummary = inputSummaries[inputFileUrl]
-      let uniqueNamedExports = inputSummary.named
-      const scannedNamedExports = cjsScannedNamedExports[inputFileUrl]
-      if (scannedNamedExports) {
-        uniqueNamedExports = scannedNamedExports || []
-        inputSummary.default = true
+      const inputFilePath = importWrapper.unwrap(id)
+      const scanResult = scanResults[inputFilePath]
+      let uniqueNamedExports = scanResult.named
+      const namedCjs = scanResult.namedCjs
+      if (namedCjs) {
+        uniqueNamedExports = namedCjs || []
+        scanResult.default = true
       }
       const codeForExports = generateCodeForExports({
         uniqueNamedExports,
-        inputSummary,
-        inputFileUrl,
+        scanResult,
+        inputFilePath,
       })
       return codeForExports
     },
@@ -71,15 +79,15 @@ export const rollupPluginCommonJsNamedExports = ({ logger }) => {
  * same CJS export scanner that Node.js uses internally. Very fast, but only works on some modules,
  * depending on how they were build/written/compiled.
  */
-const detectStaticExports = ({ logger, fileUrl, visited = new Set() }) => {
+const detectStaticExports = ({ logger, filePath, visited = new Set() }) => {
   const isMainEntrypoint = visited.size === 0
   // Prevent infinite loops via circular dependencies.
-  if (visited.has(fileUrl)) {
+  if (visited.has(filePath)) {
     return []
   }
-  visited.add(fileUrl)
+  visited.add(filePath)
 
-  const fileContents = readFileSync(new URL(fileUrl), "utf8")
+  const fileContents = readFileSync(filePath, "utf8")
   try {
     const { exports, reexports } = parse(fileContents)
     // If re-exports were detected (`exports.foo = require(...)`) then resolve them here.
@@ -87,7 +95,7 @@ const detectStaticExports = ({ logger, fileUrl, visited = new Set() }) => {
     if (reexports.length > 0) {
       reexports.forEach((reexport) => {
         const reExportedFilePath = resolve.sync(reexport, {
-          basedir: fileURLToPath(new URL("./", fileUrl)),
+          basedir: fileURLToPath(new URL("./", pathToFileURL(filePath))),
         })
         const reExportedFileUrl = pathToFileURL(reExportedFilePath)
         const staticExports = detectStaticExports({
@@ -105,14 +113,14 @@ const detectStaticExports = ({ logger, fileUrl, visited = new Set() }) => {
     ).filter(isValidNamedExport)
 
     if (isMainEntrypoint && resolvedExports.length === 0) {
-      return undefined
+      return []
     }
 
     return resolvedExports
   } catch (err) {
     // Safe to ignore, this is usually due to the file not being CJS.
-    logger.debug(`detectStaticExports ${fileUrl}: ${err.message}`)
-    return undefined
+    logger.debug(`detectStaticExports ${filePath}: ${err.message}`)
+    return []
   }
 }
 
@@ -122,22 +130,22 @@ const detectStaticExports = ({ logger, fileUrl, visited = new Set() }) => {
  * Uses VM2 to run safely sandbox untrusted code (no access no Node.js primitives, just JS).
  * If nothing was detected, return undefined.
  */
-const detectExportsUsingSandboxedRuntime = ({ logger, fileUrl }) => {
+const detectExportsUsingSandboxedRuntime = ({ logger, filePath }) => {
   try {
-    const fileContents = readFileSync(new URL(fileUrl), "utf8")
+    const fileContents = readFileSync(filePath, "utf8")
     const vm = new VM2({ wasm: false, fixAsync: false })
     const codeToRun = wrapCodeToRunInVm(fileContents)
     const vmResult = vm.run(codeToRun)
     const exportsResult = Object.keys(vmResult)
     logger.debug(
-      `detectExportsUsingSandboxedRuntime success ${fileUrl}: ${exportsResult}`,
+      `detectExportsUsingSandboxedRuntime success ${filePath}: ${exportsResult}`,
     )
     return exportsResult.filter((identifier) => isValidIdentifier(identifier))
   } catch (err) {
     logger.debug(
-      `detectExportsUsingSandboxedRuntime error ${fileUrl}: ${err.message}`,
+      `detectExportsUsingSandboxedRuntime error ${filePath}: ${err.message}`,
     )
-    return undefined
+    return []
   }
 }
 
@@ -153,17 +161,14 @@ module.exports;`
 
 const generateCodeForExports = ({
   uniqueNamedExports,
-  inputSummary,
-  inputFileUrl,
+  scanResult,
+  inputFilePath,
 }) => {
-  const from = inputFileUrl.slice("file://".length)
+  const from = inputFilePath.split(path.win32.sep).join(path.posix.sep)
   const lines = [
-    ...(inputSummary.namespace ? [stringifyNamespaceReExport({ from })] : []),
-    ...(inputSummary.default ? [stringifyDefaultReExport({ from })] : []),
-    stringifyNamedReExports({
-      namedExports: uniqueNamedExports,
-      from,
-    }),
+    ...(scanResult.namespace ? [stringifyNamespaceReExport({ from })] : []),
+    ...(scanResult.default ? [stringifyDefaultReExport({ from })] : []),
+    stringifyNamedReExports({ namedExports: uniqueNamedExports, from }),
   ]
   return lines.join(`
 `)
