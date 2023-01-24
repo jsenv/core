@@ -59,8 +59,8 @@ export const rollupPluginCommonJsNamedExports = ({ logger }) => {
       const scanResult = scanResults[inputFilePath]
       let uniqueNamedExports = scanResult.named
       const namedCjs = scanResult.namedCjs
-      if (namedCjs) {
-        uniqueNamedExports = namedCjs || []
+      if (namedCjs.length) {
+        uniqueNamedExports = namedCjs
         scanResult.default = true
       }
       const codeForExports = generateCodeForExports({
@@ -97,10 +97,9 @@ const detectStaticExports = ({ logger, filePath, visited = new Set() }) => {
         const reExportedFilePath = resolve.sync(reexport, {
           basedir: fileURLToPath(new URL("./", pathToFileURL(filePath))),
         })
-        const reExportedFileUrl = pathToFileURL(reExportedFilePath)
         const staticExports = detectStaticExports({
           logger,
-          fileUrl: reExportedFileUrl,
+          filePath: reExportedFilePath,
           visited,
         })
         if (staticExports) {
@@ -168,7 +167,9 @@ const generateCodeForExports = ({
   const lines = [
     ...(scanResult.namespace ? [stringifyNamespaceReExport({ from })] : []),
     ...(scanResult.default ? [stringifyDefaultReExport({ from })] : []),
-    stringifyNamedReExports({ namedExports: uniqueNamedExports, from }),
+    ...(uniqueNamedExports.length
+      ? [stringifyNamedReExports({ namedExports: uniqueNamedExports, from })]
+      : []),
   ]
   return lines.join(`
 `)
