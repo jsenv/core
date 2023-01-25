@@ -35,9 +35,7 @@ try {
   const getErrorOverlayDisplayedOnPage = async (page) => {
     const errorOverlayHandle = await page.evaluate(
       /* eslint-disable no-undef */
-      () => {
-        return document.querySelector("jsenv-error-overlay")
-      },
+      () => document.querySelector("jsenv-error-overlay"),
       /* eslint-enable no-undef */
     )
     return Boolean(errorOverlayHandle)
