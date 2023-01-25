@@ -44,7 +44,7 @@ export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
             const [inlineStyleReference, inlineStyleUrlInfo] =
               context.referenceUtils.foundInline({
                 node: styleNode,
-                type: "link_href",
+                type: "style",
                 expectedType: "css",
                 isOriginalPosition: isOriginal,
                 // we remove 1 to the line because imagine the following html:
@@ -113,7 +113,7 @@ export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
             const [inlineScriptReference, inlineScriptUrlInfo] =
               context.referenceUtils.foundInline({
                 node: scriptNode,
-                type: "script_src",
+                type: "script_inline",
                 expectedType: type,
                 // we remove 1 to the line because imagine the following html:
                 // <script>console.log('ok')</script>

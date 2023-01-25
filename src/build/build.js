@@ -755,7 +755,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   if (reference.url === referencedUrlInfo.url) {
                     willAlreadyBeBundled =
                       reference.subtype === "import_dynamic" ||
-                      reference.type === "script_src"
+                      reference.type === "script"
                   }
                 }
               }

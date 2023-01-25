@@ -8,7 +8,8 @@
  * - "http_request"
  * - "entry_point"
  * - "link_href"
- * - "script_src"
+ * - "style"
+ * - "script"
  * - "a_href"
  * - "iframe_src
  * - "img_src"

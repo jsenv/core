@@ -121,7 +121,7 @@ export const jsenvPluginImportmap = () => {
           })
           const [inlineImportmapReference, inlineImportmapUrlInfo] =
             context.referenceUtils.foundInline({
-              type: "script_src",
+              type: "script",
               isOriginalPosition: isOriginal,
               specifierLine: line - 1,
               specifierColumn: column,

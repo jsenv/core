@@ -47,7 +47,7 @@ export const jsenvPluginAsJsClassicHtml = ({
         }
         return null
       },
-      script_src: (reference, context) => {
+      script: (reference, context) => {
         if (
           context.systemJsTranspilation &&
           reference.expectedType === "js_module"
@@ -117,7 +117,7 @@ export const jsenvPluginAsJsClassicHtml = ({
               const reference = context.referenceUtils.find(
                 (ref) =>
                   ref.generatedSpecifier === src &&
-                  ref.type === "script_src" &&
+                  ref.type === "script" &&
                   ref.subtype === "js_module",
               )
               if (!reference) {
@@ -192,7 +192,7 @@ export const jsenvPluginAsJsClassicHtml = ({
               }
               const [systemJsReference, systemJsUrlInfo] =
                 context.referenceUtils.inject({
-                  type: "script_src",
+                  type: "script",
                   expectedType: "js_classic",
                   isInline: true,
                   contentType: "text/javascript",

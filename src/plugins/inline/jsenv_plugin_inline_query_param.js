@@ -9,7 +9,8 @@ export const jsenvPluginInlineQueryParam = () => {
       // this should be done during dev and postbuild but not build
       // so that the bundled file gets inlined and not the entry point
       "link_href": () => null,
-      "script_src": () => null,
+      "style": () => null,
+      "script": () => null,
       // if the referenced url is a worker we could use
       // https://www.oreilly.com/library/view/web-workers/9781449322120/ch04.html
       // but maybe we should rather use ?object_url

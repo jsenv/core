@@ -44,7 +44,7 @@ export const jsenvPluginReferenceExpectedTypes = () => {
     name: "jsenv:reference_expected_types",
     appliesDuring: "*",
     redirectUrl: {
-      script_src: redirectJsUrls,
+      script: redirectJsUrls,
       js_url: redirectJsUrls,
       js_import: redirectJsUrls,
     },
