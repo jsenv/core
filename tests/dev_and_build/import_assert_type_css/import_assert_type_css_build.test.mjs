@@ -49,32 +49,34 @@ const test = async ({ snapshotsDirectoryName, ...rest }) => {
   assert({ actual, expected, context: snapshotsDirectoryName })
 }
 
-// can use <script type="module">
+// chrome 60 cannot use <script type="module"> nor constructable stylesheet
 await test({
-  snapshotsDirectoryName: "js_module",
-  runtimeCompat: { chrome: "89" },
-  plugins: [jsenvPluginBundling()],
-})
-// cannot use <script type="module">
-await test({
-  snapshotsDirectoryName: "js_classic",
+  snapshotsDirectoryName: "chrome_60",
   runtimeCompat: { chrome: "60" },
   plugins: [jsenvPluginBundling()],
 })
-// cannot use <script type="module"> + no bundling
+// chrome 60 + no bundling
 await test({
-  snapshotsDirectoryName: "js_classic_no_bundling",
+  snapshotsDirectoryName: "chrome_60_no_bundling",
   runtimeCompat: { chrome: "60" },
 })
-// cannot use <script type="module"> + minification
+// chrome 88 has constructables stylesheet
+// but cannot use js modules due to versioning via importmap (as it does not have importmap)
 await test({
-  snapshotsDirectoryName: "js_classic_css_minified",
-  runtimeCompat: { chrome: "60" },
+  snapshotsDirectoryName: "chrome_88_css_minified",
+  runtimeCompat: { chrome: "88" },
   plugins: [
     jsenvPluginBundling(),
     jsenvPluginMinification({
       js_module: false,
+      js_classic: false,
       css: true,
     }),
   ],
+})
+// chrome 89 can use js modules
+await test({
+  snapshotsDirectoryName: "chrome_89",
+  runtimeCompat: { chrome: "89" },
+  plugins: [jsenvPluginBundling()],
 })
