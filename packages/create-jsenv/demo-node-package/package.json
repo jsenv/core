@@ -15,8 +15,8 @@
     "@jsenv/core": "30.3.2",
     "@jsenv/eslint-config": "16.3.3",
     "@jsenv/eslint-import-resolver": "0.4.5",
-    "eslint": "8.31.0",
-    "eslint-plugin-import": "2.26.0",
-    "prettier": "2.8.2"
+    "eslint": "8.32.0",
+    "eslint-plugin-import": "2.27.5",
+    "prettier": "2.8.3"
   }
 }
