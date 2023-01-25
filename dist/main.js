@@ -16,7 +16,7 @@ import { Readable, Stream, Writable } from "node:stream";
 import { Http2ServerResponse } from "node:http2";
 import { lookup } from "node:dns";
 import { SOURCEMAP, generateSourcemapFileUrl, composeTwoSourcemaps, generateSourcemapDataUrl, createMagicSource, getOriginalPosition } from "@jsenv/sourcemap";
-import { parseHtmlString, stringifyHtmlAst, getHtmlNodeAttribute, visitHtmlNodes, analyzeScriptNode, setHtmlNodeAttributes, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, applyPostCss, postCssPluginUrlVisitor, parseJsUrls, getHtmlNodeText, setHtmlNodeText, applyBabelPlugins, injectScriptNodeAsEarlyAsPossible, createHtmlNode, findHtmlNode, removeHtmlNode, removeHtmlNodeText, injectJsImport, analyzeLinkNode, injectHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
+import { parseHtmlString, stringifyHtmlAst, getHtmlNodeAttribute, visitHtmlNodes, analyzeScriptNode, setHtmlNodeAttributes, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, parseCssUrls, parseJsUrls, getHtmlNodeText, setHtmlNodeText, applyBabelPlugins, injectScriptNodeAsEarlyAsPossible, createHtmlNode, findHtmlNode, removeHtmlNode, removeHtmlNodeText, injectJsImport, analyzeLinkNode, injectHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
 import { createRequire } from "node:module";
 import babelParser from "@babel/parser";
 import { bundleJsModules } from "@jsenv/plugin-bundling";
@@ -9668,21 +9668,22 @@ const parseAndTransformHtmlUrls = async (urlInfo, context) => {
     url,
     htmlAst
   });
-  const actions = [];
   const mutations = [];
-  mentions.forEach(({
-    type,
-    subtype,
-    expectedType,
-    line,
-    column,
-    originalLine,
-    originalColumn,
-    node,
-    attributeName,
-    debug,
-    specifier
-  }) => {
+  const actions = [];
+  for (const mention of mentions) {
+    const {
+      type,
+      subtype,
+      expectedType,
+      line,
+      column,
+      originalLine,
+      originalColumn,
+      node,
+      attributeName,
+      debug,
+      specifier
+    } = mention;
     const {
       crossorigin,
       integrity
@@ -9704,13 +9705,13 @@ const parseAndTransformHtmlUrls = async (urlInfo, context) => {
     });
     actions.push(async () => {
       await context.referenceUtils.readGeneratedSpecifier(reference);
-    });
-    mutations.push(() => {
-      setHtmlNodeAttributes(node, {
-        [attributeName]: reference.generatedSpecifier
+      mutations.push(() => {
+        setHtmlNodeAttributes(node, {
+          [attributeName]: reference.generatedSpecifier
+        });
       });
     });
-  });
+  }
   if (actions.length > 0) {
     await Promise.all(actions.map(action => action()));
   }
@@ -9958,40 +9959,33 @@ const decideLinkExpectedType = (linkMention, mentions) => {
  * https://github.com/parcel-bundler/parcel/blob/v2/packages/transformers/css/src/CSSTransformer.js
  */
 const parseAndTransformCssUrls = async (urlInfo, context) => {
+  const cssUrls = await parseCssUrls({
+    css: urlInfo.content,
+    url: urlInfo.originalUrl
+  });
   const actions = [];
   const magicSource = createMagicSource(urlInfo.content);
-  await applyPostCss({
-    sourcemaps: false,
-    plugins: [postCssPluginUrlVisitor({
-      urlVisitor: ({
-        type,
-        specifier,
-        specifierStart,
-        specifierEnd,
-        specifierLine,
-        specifierColumn
-      }) => {
-        const [reference] = context.referenceUtils.found({
-          type: `css_${type}`,
-          specifier,
-          specifierStart,
-          specifierEnd,
-          specifierLine,
-          specifierColumn
-        });
-        actions.push(async () => {
-          magicSource.replace({
-            start: specifierStart,
-            end: specifierEnd,
-            replacement: await context.referenceUtils.readGeneratedSpecifier(reference)
-          });
-        });
-      }
-    })],
-    url: urlInfo.originalUrl,
-    content: urlInfo.content
-  });
-  await Promise.all(actions.map(action => action()));
+  for (const cssUrl of cssUrls) {
+    const [reference] = context.referenceUtils.found({
+      type: cssUrl.type,
+      specifier: cssUrl.specifier,
+      specifierStart: cssUrl.start,
+      specifierEnd: cssUrl.end,
+      specifierLine: cssUrl.line,
+      specifierColumn: cssUrl.column
+    });
+    actions.push(async () => {
+      const replacement = await context.referenceUtils.readGeneratedSpecifier(reference);
+      magicSource.replace({
+        start: cssUrl.start,
+        end: cssUrl.end,
+        replacement
+      });
+    });
+  }
+  if (actions.length > 0) {
+    await Promise.all(actions.map(action => action()));
+  }
   return magicSource.toContentAndSourcemap();
 };
 
@@ -10004,7 +9998,7 @@ const parseAndTransformJsUrls = async (urlInfo, context) => {
   });
   const actions = [];
   const magicSource = createMagicSource(urlInfo.content);
-  jsMentions.forEach(jsMention => {
+  for (const jsMention of jsMentions) {
     if (jsMention.subtype === "import_static" || jsMention.subtype === "import_dynamic") {
       urlInfo.data.usesImport = true;
     }
@@ -10015,10 +10009,10 @@ const parseAndTransformJsUrls = async (urlInfo, context) => {
       expectedType: jsMention.expectedType,
       expectedSubtype: jsMention.expectedSubtype || urlInfo.subtype,
       specifier: jsMention.specifier,
-      specifierStart: jsMention.specifierStart,
-      specifierEnd: jsMention.specifierEnd,
-      specifierLine: jsMention.specifierLine,
-      specifierColumn: jsMention.specifierColumn,
+      specifierStart: jsMention.start,
+      specifierEnd: jsMention.end,
+      specifierLine: jsMention.line,
+      specifierColumn: jsMention.column,
       data: jsMention.data,
       baseUrl: {
         "StringLiteral": jsMention.baseUrl,
@@ -10035,16 +10029,18 @@ const parseAndTransformJsUrls = async (urlInfo, context) => {
     actions.push(async () => {
       const replacement = await context.referenceUtils.readGeneratedSpecifier(reference);
       magicSource.replace({
-        start: jsMention.specifierStart,
-        end: jsMention.specifierEnd,
+        start: jsMention.start,
+        end: jsMention.end,
         replacement
       });
       if (reference.mutation) {
         reference.mutation(magicSource);
       }
     });
-  });
-  await Promise.all(actions.map(action => action()));
+  }
+  if (actions.length > 0) {
+    await Promise.all(actions.map(action => action()));
+  }
   const {
     content,
     sourcemap
@@ -21735,6 +21731,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     const getBuildRelativeUrl = url => {
       const urlObject = new URL(url);
       urlObject.searchParams.delete("as_js_classic");
+      urlObject.searchParams.delete("as_css_module");
+      urlObject.searchParams.delete("as_json_module");
+      urlObject.searchParams.delete("as_text_module");
       url = urlObject.href;
       const buildRelativeUrl = urlToRelativeUrl(url, buildDirectoryUrl);
       return buildRelativeUrl;
