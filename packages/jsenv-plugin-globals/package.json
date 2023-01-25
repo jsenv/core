@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-globals",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -24,7 +24,7 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "@jsenv/ast": "2.0.1",
+    "@jsenv/ast": "3.0.0",
     "@jsenv/sourcemap": "1.0.8",
     "@jsenv/url-meta": "7.0.2",
     "@jsenv/urls": "1.2.8"
