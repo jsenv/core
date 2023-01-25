@@ -10,7 +10,7 @@ const { duration, memoryHeapTotal, memoryHeapUsed, fsRead } = measures.stop()
 
 export const importMetrics = {
   "import duration": { value: duration, unit: "ms" },
-  "import memory heap total": { value: memoryHeapTotal, unit: "byte" },
   "import memory heap used": { value: memoryHeapUsed, unit: "byte" },
+  "import memory heap total": { value: memoryHeapTotal, unit: "byte" },
   "import fs read operations": { value: fsRead },
 }

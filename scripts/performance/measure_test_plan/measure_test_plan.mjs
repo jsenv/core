@@ -62,8 +62,8 @@ const { duration, memoryHeapUsed, memoryHeapTotal, fsRead, fsWrite } =
 
 export const testPlanMetrics = {
   "test plan duration": { value: duration, unit: "ms" },
-  "test plan memory heap total": { value: memoryHeapTotal, unit: "byte" },
   "test plan memory heap used": { value: memoryHeapUsed, unit: "byte" },
+  "test plan memory heap total": { value: memoryHeapTotal, unit: "byte" },
   "number of fs read operation": { value: fsRead },
   "number of fs write operation": { value: fsWrite },
 }

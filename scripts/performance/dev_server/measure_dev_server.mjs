@@ -18,12 +18,12 @@ const devServer = await startDevServer({
 const readyMetrics = readyMeasures.stop()
 Object.assign(devServerMetrics, {
   "start duration": { value: readyMetrics.duration, unit: "ms" },
-  "start memory heap total": {
-    value: readyMetrics.memoryHeapTotal,
-    unit: "byte",
-  },
   "start memory heap used": {
     value: readyMetrics.memoryHeapUsed,
+    unit: "byte",
+  },
+  "start memory heap total": {
+    value: readyMetrics.memoryHeapTotal,
     unit: "byte",
   },
   "start fs read": { value: readyMetrics.fsRead },
