@@ -12,8 +12,9 @@ hence sourcemap cannot point the original source location
 */
 
 import { pathToFileURL } from "node:url"
+import { createRequire } from "node:module"
 
-import { require } from "../require.js"
+const require = createRequire(import.meta.url)
 
 export const postCssPluginUrlVisitor = ({ urlVisitor = () => null }) => {
   const parseCssValue = require("postcss-value-parser")

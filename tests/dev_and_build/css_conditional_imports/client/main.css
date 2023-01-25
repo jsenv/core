@@ -1,0 +1,6 @@
+@import "b.css" print;
+@import "c.css" supports(display: grid);
+
+.a {
+  color: red;
+}
