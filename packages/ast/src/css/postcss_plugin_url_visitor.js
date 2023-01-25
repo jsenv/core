@@ -101,7 +101,7 @@ export const postCssPluginUrlVisitor = ({ urlVisitor = () => null }) => {
             )
             const specifierIndex = atRuleRaw.indexOf(atImportNode.params)
             const specifierStart = atRuleStart + specifierIndex
-            const specifierEnd = specifierStart + atImportNode.params.length
+            const specifierEnd = specifierStart + parsed.nodes[0].sourceEndIndex
             const specifierLine = atImportNode.source.start.line
             const specifierColumn =
               atImportNode.source.start.column + specifierIndex
