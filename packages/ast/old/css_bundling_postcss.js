@@ -7,7 +7,9 @@
  */
 
 import { createMagicSource } from "@jsenv/sourcemap"
-import { applyPostCss, postCssPluginUrlVisitor } from "@jsenv/ast"
+
+import { applyPostCss } from "../src/css/apply_post_css.js"
+import { postCssPluginUrlVisitor } from "../src/css/postcss_plugin_url_visitor.js"
 
 import { sortByDependencies } from "./sort_by_dependencies.js"
 
