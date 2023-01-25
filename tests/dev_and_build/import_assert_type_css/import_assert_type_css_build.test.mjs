@@ -10,7 +10,7 @@ import {
   writeSnapshotsIntoDirectory,
 } from "@jsenv/core/tests/snapshots_directory.js"
 
-const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
+const test = async ({ snapshotsDirectoryName, ...rest }) => {
   const { buildFileContents, buildManifest } = await build({
     logLevel: "warn",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
@@ -29,6 +29,10 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
     pageFunction: async () => window.resultPromise,
     /* eslint-enable no-undef */
   })
+  const snapshotsDirectoryUrl = new URL(
+    `./snapshots/${snapshotsDirectoryName}/`,
+    import.meta.url,
+  )
   const snapshotsFileContent = readSnapshotsFromDirectory(snapshotsDirectoryUrl)
   writeSnapshotsIntoDirectory(snapshotsDirectoryUrl, buildFileContents)
   const actual = {
@@ -42,41 +46,35 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
       bodyBackgroundImage: `url("${server.origin}/${buildManifest["other/jsenv.png"]}")`,
     },
   }
-  assert({ actual, expected })
+  assert({ actual, expected, context: snapshotsDirectoryName })
 }
 
 // can use <script type="module">
 await test({
-  snapshotsDirectoryUrl: new URL("./snapshots/js_module/", import.meta.url),
+  snapshotsDirectoryName: "js_module",
   runtimeCompat: { chrome: "89" },
   plugins: [jsenvPluginBundling()],
 })
-// can use <script type="module"> + no bundling
-// await test({
-//   snapshotsDirectoryUrl: new URL(
-//     "./snapshots/js_module_no_bundling/",
-//     import.meta.url,
-//   ),
-//   runtimeCompat: { chrome: "65" },
-// })
-// // can use <script type="module"> + minification
-// await test({
-//   snapshotsDirectoryUrl: new URL(
-//     "./snapshots/js_module_css_minified/",
-//     import.meta.url,
-//   ),
-//   runtimeCompat: { chrome: "60" },
-//   plugins: [
-//     jsenvPluginBundling(),
-//     jsenvPluginMinification({
-//       js_module: false,
-//       css: true,
-//     }),
-//   ],
-// })
-// // cannot use <script type="module">
-// await test({
-//   snapshotsDirectoryUrl: new URL("./snapshots/systemjs/", import.meta.url),
-//   runtimeCompat: { chrome: "60" },
-//   plugins: [jsenvPluginBundling()],
-// })
+// cannot use <script type="module">
+await test({
+  snapshotsDirectoryName: "js_classic",
+  runtimeCompat: { chrome: "60" },
+  plugins: [jsenvPluginBundling()],
+})
+// cannot use <script type="module"> + no bundling
+await test({
+  snapshotsDirectoryName: "js_classic_no_bundling",
+  runtimeCompat: { chrome: "60" },
+})
+// cannot use <script type="module"> + minification
+await test({
+  snapshotsDirectoryName: "js_classic_css_minified",
+  runtimeCompat: { chrome: "60" },
+  plugins: [
+    jsenvPluginBundling(),
+    jsenvPluginMinification({
+      js_module: false,
+      css: true,
+    }),
+  ],
+})

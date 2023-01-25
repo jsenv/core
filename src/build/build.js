@@ -1539,6 +1539,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     const getBuildRelativeUrl = (url) => {
       const urlObject = new URL(url)
       urlObject.searchParams.delete("as_js_classic")
+      urlObject.searchParams.delete("as_css_module")
+      urlObject.searchParams.delete("as_json_module")
+      urlObject.searchParams.delete("as_text_module")
       url = urlObject.href
       const buildRelativeUrl = urlToRelativeUrl(url, buildDirectoryUrl)
       return buildRelativeUrl
