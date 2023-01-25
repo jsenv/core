@@ -1,15 +1,1 @@
-System.register([], function (_export, _context) {
-  "use strict";
-
-  function InlineContent(content, {
-    type = "text/plain"
-  }) {
-    this.text = content;
-    this.type = type;
-  }
-  _export("InlineContent", InlineContent);
-  return {
-    setters: [],
-    execute: function () {}
-  };
-});
+System.register([],(function(t,e){"use strict";return t("InlineContent",(function InlineContent(t,{type:e="text/plain"}){this.text=t,this.type=e})),{setters:[],execute:function(){}}}));

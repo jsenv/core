@@ -274,10 +274,25 @@ const getOriginalName = (path, name) => {
     return getOriginalName(path, importedName)
   }
   if (binding.path.type === "VariableDeclarator") {
-    const { init } = binding.path.node
+    const { node } = binding.path
+    const { init } = node
     if (init && init.type === "Identifier") {
       const previousName = init.name
       return getOriginalName(path, previousName)
+    }
+    if (node.id && node.id.type === "Identifier") {
+      const { constantViolations } = binding
+      if (constantViolations && constantViolations.length > 0) {
+        const lastViolation = constantViolations[constantViolations.length - 1]
+        if (
+          lastViolation &&
+          lastViolation.node.type === "AssignmentExpression" &&
+          lastViolation.node.right.type === "MemberExpression" &&
+          lastViolation.node.right.property.type === "Identifier"
+        ) {
+          return lastViolation.node.right.property.name
+        }
+      }
     }
   }
   return name
