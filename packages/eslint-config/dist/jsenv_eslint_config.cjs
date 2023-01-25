@@ -1,5 +1,7 @@
 'use strict';
 
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+
 const composeTwoObjects = (first, second, composerMap) => {
   const composed = {};
   const firstKeys = Object.keys(first);

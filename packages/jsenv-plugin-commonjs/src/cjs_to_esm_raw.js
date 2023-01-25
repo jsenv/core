@@ -74,6 +74,7 @@ export const commonJsToJsModuleRaw = async ({
   })
 
   const { default: commonjs } = await import("@rollup/plugin-commonjs")
+  // https://github.com/rollup/plugins/tree/master/packages/commonjs
   const commonJsRollupPlugin = commonjs({
     extensions: [".js", ".cjs"],
     // esmExternals: true,
@@ -89,7 +90,6 @@ export const commonJsToJsModuleRaw = async ({
   const commonJsNamedExportsRollupPlugin = rollupPluginCommonJsNamedExports({
     logger,
   })
-
   const { default: rollupPluginNodePolyfills } = await import(
     "rollup-plugin-polyfill-node"
   )

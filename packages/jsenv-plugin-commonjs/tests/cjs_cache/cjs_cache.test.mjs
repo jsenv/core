@@ -37,25 +37,18 @@ const browser = await chromium.launch({
 try {
   const page = await launchBrowserPage(browser)
   await page.goto(`${devServer.origin}/main.html`)
-
   const getResult = async () => {
     const result = await page.evaluate(
       /* eslint-disable no-undef */
-      () => {
-        return window.resultPromise
-      },
+      () => window.resultPromise,
       /* eslint-enable no-undef */
     )
     return result
   }
 
   {
-    const actual = {
-      result: await getResult(),
-    }
-    const expected = {
-      result: 42,
-    }
+    const actual = await getResult()
+    const expected = 42
     assert({ actual, expected })
   }
 
@@ -63,12 +56,8 @@ try {
   {
     cjsFileContent.update(`module.exports = 43`)
     await page.reload()
-    const actual = {
-      result: await getResult(),
-    }
-    const expected = {
-      result: 43,
-    }
+    const actual = await getResult()
+    const expected = 43
     assert({ actual, expected })
   }
 } finally {

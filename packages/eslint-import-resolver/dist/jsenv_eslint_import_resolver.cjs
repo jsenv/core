@@ -2352,8 +2352,8 @@ const handleFileUrl = (
     followLink: false,
   });
   const filePath = node_url.fileURLToPath(fileUrl);
-  const realFilePath = node_url.fileURLToPath(realFileUrl);
-  if (caseSensitive && realFileUrl !== fileUrl) {
+  const realFilePath = realFileUrl ? node_url.fileURLToPath(realFileUrl) : filePath;
+  if (caseSensitive && realFileUrl && realFileUrl !== fileUrl) {
     logger.warn(
       `WARNING: file found for ${filePath} but would not be found on a case sensitive filesystem.
 The real file path is ${realFilePath}.

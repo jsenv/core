@@ -6,7 +6,7 @@ let msDuration = 0
 let text = "Doing something"
 const spinner = startSpinner({
   log,
-  render: text,
+  render: () => text,
   effect: () => {
     const intervalId = setInterval(() => {
       msDuration = Date.now() - startMs
