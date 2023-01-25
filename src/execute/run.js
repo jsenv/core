@@ -1,4 +1,4 @@
-import cuid from "cuid"
+import { createId } from "@paralleldrive/cuid2"
 import { Abort, raceCallbacks } from "@jsenv/abort"
 import { ensureParentDirectories } from "@jsenv/filesystem"
 
@@ -62,7 +62,7 @@ export const run = async ({
   let coverageFileUrl
   if (coverageEnabled) {
     coverageFileUrl = new URL(
-      `./${runtime.name}/${cuid()}.json`,
+      `./${runtime.name}/${createId()}.json`,
       coverageTempDirectoryUrl,
     ).href
     await ensureParentDirectories(coverageFileUrl)

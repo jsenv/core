@@ -1,12 +1,11 @@
-/* eslint-disable no-void */
 export default function _applyDecoratedDescriptor(target, property, decorators, descriptor, context) {
   var desc = {};
   Object.keys(descriptor).forEach(function (key) {
     desc[key] = descriptor[key];
   });
-  desc.enumerable = Boolean(desc.enumerable);
-  desc.configurable = Boolean(desc.configurable);
-  if ("value" in desc || desc.initializer) {
+  desc.enumerable = !!desc.enumerable;
+  desc.configurable = !!desc.configurable;
+  if ('value' in desc || desc.initializer) {
     desc.writable = true;
   }
   desc = decorators.slice().reverse().reduce(function (desc, decorator) {

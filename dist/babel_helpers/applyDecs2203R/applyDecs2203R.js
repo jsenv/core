@@ -1,4 +1,4 @@
-/* @minVersion 7.19.0 */
+/* @minVersion 7.20.0 */
 
 /**
   Enums are used in this file, but not assigned to vars to avoid non-hoistable values
@@ -278,7 +278,8 @@ function applyMemberDec(ret, base, decInfo, name, kind, isStatic, isPrivate, ini
     }
   }
 }
-function applyMemberDecs(ret, Class, decInfos) {
+function applyMemberDecs(Class, decInfos) {
+  var ret = [];
   var protoInitializers;
   var staticInitializers;
   var existingProtoNonFields = new Map();
@@ -325,6 +326,7 @@ function applyMemberDecs(ret, Class, decInfos) {
   }
   pushInitializers(ret, protoInitializers);
   pushInitializers(ret, staticInitializers);
+  return ret;
 }
 function pushInitializers(ret, initializers) {
   if (initializers) {
@@ -336,7 +338,7 @@ function pushInitializers(ret, initializers) {
     });
   }
 }
-function applyClassDecs(ret, targetClass, classDecs) {
+function applyClassDecs(targetClass, classDecs) {
   if (classDecs.length > 0) {
     var initializers = [];
     var newClass = targetClass;
@@ -359,12 +361,14 @@ function applyClassDecs(ret, targetClass, classDecs) {
         newClass = nextNewClass;
       }
     }
-    ret.push(newClass, function () {
+    return [newClass, function () {
       for (var i = 0; i < initializers.length; i++) {
         initializers[i].call(newClass);
       }
-    });
+    }];
   }
+  // The transformer will not emit assignment when there are no class decorators,
+  // so we don't have to return an empty array here.
 }
 
 /**
@@ -512,9 +516,12 @@ function applyClassDecs(ret, targetClass, classDecs) {
 
   initializeClass(Class);
  */
-export default function applyDecs2203(targetClass, memberDecs, classDecs) {
-  var ret = [];
-  applyMemberDecs(ret, targetClass, memberDecs);
-  applyClassDecs(ret, targetClass, classDecs);
-  return ret;
+export default function applyDecs2203R(targetClass, memberDecs, classDecs) {
+  return {
+    e: applyMemberDecs(targetClass, memberDecs),
+    // Lazily apply class decorations so that member init locals can be properly bound.
+    get c() {
+      return applyClassDecs(targetClass, classDecs);
+    }
+  };
 }
