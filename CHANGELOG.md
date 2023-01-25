@@ -1,3 +1,7 @@
+# 30.3.6
+
+- Ensure inline content static analysis works in a corner case (transpilation to systemjs + minification without bundling)
+
 # 30.3.3
 
 - Update deps
