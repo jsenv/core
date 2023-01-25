@@ -124,10 +124,10 @@ const analyzeWorkerCallArguments = (
       expectedSubtype,
       typePropertyNode,
       specifier: specifierNode.value,
-      specifierStart: specifierNode.start,
-      specifierEnd: specifierNode.end,
-      specifierLine: specifierNode.loc.start.line,
-      specifierColumn: specifierNode.loc.start.column,
+      start: specifierNode.start,
+      end: specifierNode.end,
+      line: specifierNode.loc.start.line,
+      column: specifierNode.loc.start.column,
     })
     return
   }

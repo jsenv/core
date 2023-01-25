@@ -1,3 +1,8 @@
+# 30.3.2
+
+- Preserve conditions in CSS imports
+- Update @jsenv/ast
+
 # 30.3.0
 
 - Use importmap or systemjs to prevent hash cascading https://github.com/jsenv/jsenv-core/pull/341

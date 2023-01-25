@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "30.3.1",
+  "version": "30.3.2",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "author": {
@@ -67,7 +67,7 @@
     "@c88/v8-coverage": "0.1.1",
     "@financial-times/polyfill-useragent-normaliser": "1.10.2",
     "@jsenv/abort": "4.2.4",
-    "@jsenv/ast": "2.0.1",
+    "@jsenv/ast": "3.0.0",
     "@jsenv/babel-plugins": "1.1.2",
     "@jsenv/plugin-bundling": "1.1.1",
     "@jsenv/filesystem": "4.1.9",
@@ -100,18 +100,18 @@
     "@babel/plugin-syntax-import-assertions": "7.20.0",
     "@jsenv/assert": "./packages/assert/",
     "@jsenv/eslint-config": "./packages/eslint-config/",
-    "@jsenv/file-size-impact": "13.0.2",
-    "@jsenv/https-local": "3.0.5",
+    "@jsenv/file-size-impact": "14.0.0",
+    "@jsenv/https-local": "3.0.6",
     "@jsenv/package-workspace": "0.5.1",
     "@jsenv/plugin-minification": "./packages/jsenv-plugin-minification/",
     "@jsenv/plugin-globals": "./packages/jsenv-plugin-globals/",
     "@jsenv/plugin-placeholders": "./packages/jsenv-plugin-placeholders/",
     "@jsenv/performance-impact": "4.1.0",
-    "eslint": "8.31.0",
+    "eslint": "8.32.0",
     "eslint-plugin-html": "7.1.0",
-    "eslint-plugin-import": "2.26.0",
-    "eslint-plugin-react": "7.31.11",
+    "eslint-plugin-import": "2.27.5",
+    "eslint-plugin-react": "7.32.1",
     "playwright": "1.29.2",
-    "prettier": "2.8.2"
+    "prettier": "2.8.3"
   }
 }

@@ -35,8 +35,7 @@ export {
 } from "./html/html_node_position.js"
 
 // css
-export { applyPostCss } from "./css/apply_post_css.js"
-export { postCssPluginUrlVisitor } from "./css/postcss_plugin_url_visitor.js"
+export { parseCssUrls } from "./css/parse_css_urls.js"
 
 // js
 export { applyBabelPlugins } from "./js/apply_babel_plugins.js"

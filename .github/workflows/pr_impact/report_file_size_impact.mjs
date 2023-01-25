@@ -6,11 +6,11 @@
  */
 
 import {
-  reportFileSizeImpact,
+  reportFileSizeImpactInGitHubPullRequest,
   readGitHubWorkflowEnv,
 } from "@jsenv/file-size-impact"
 
-await reportFileSizeImpact({
+await reportFileSizeImpactInGitHubPullRequest({
   ...readGitHubWorkflowEnv(),
   logLevel: "debug",
   buildCommand: "npm run build",

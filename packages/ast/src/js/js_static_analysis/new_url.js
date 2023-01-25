@@ -17,10 +17,10 @@ export const analyzeNewUrlCall = (node, { isJsModule, onUrl }) => {
         type: "js_url",
         subtype: "new_url_first_arg",
         specifier: specifierNode.value,
-        specifierStart: specifierNode.start,
-        specifierEnd: specifierNode.end,
-        specifierLine: specifierNode.loc.start.line,
-        specifierColumn: specifierNode.loc.start.column,
+        start: specifierNode.start,
+        end: specifierNode.end,
+        line: specifierNode.loc.start.line,
+        column: specifierNode.loc.start.column,
       })
     }
     return
@@ -46,10 +46,10 @@ export const analyzeNewUrlCall = (node, { isJsModule, onUrl }) => {
           type: "js_url",
           subtype: "new_url_first_arg",
           specifier: specifierNode.value,
-          specifierStart: specifierNode.start,
-          specifierEnd: specifierNode.end,
-          specifierLine: specifierNode.loc.start.line,
-          specifierColumn: specifierNode.loc.start.column,
+          start: specifierNode.start,
+          end: specifierNode.end,
+          line: specifierNode.loc.start.line,
+          column: specifierNode.loc.start.column,
           baseUrlType,
           baseUrl:
             baseUrlType === "StringLiteral" ? secondArgNode.value : undefined,
@@ -61,10 +61,10 @@ export const analyzeNewUrlCall = (node, { isJsModule, onUrl }) => {
           type: "js_url",
           subtype: "new_url_second_arg",
           specifier: specifierNode.value,
-          specifierStart: specifierNode.start,
-          specifierEnd: specifierNode.end,
-          specifierLine: specifierNode.loc.start.line,
-          specifierColumn: specifierNode.loc.start.column,
+          start: specifierNode.start,
+          end: specifierNode.end,
+          line: specifierNode.loc.start.line,
+          column: specifierNode.loc.start.column,
         })
       }
     }

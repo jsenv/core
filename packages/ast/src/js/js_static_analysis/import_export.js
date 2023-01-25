@@ -7,10 +7,10 @@ export const analyzeImportDeclaration = (node, { onUrl }) => {
     type: "js_import",
     subtype: "import_static",
     specifier: specifierNode.value,
-    specifierStart: specifierNode.start,
-    specifierEnd: specifierNode.end,
-    specifierLine: specifierNode.loc.start.line,
-    specifierColumn: specifierNode.loc.start.column,
+    start: specifierNode.start,
+    end: specifierNode.end,
+    line: specifierNode.loc.start.line,
+    column: specifierNode.loc.start.column,
     expectedType: assertionInfo ? assertionInfo.assert.type : "js_module",
     ...assertionInfo,
   })
@@ -26,10 +26,10 @@ export const analyzeImportExpression = (node, { onUrl }) => {
     type: "js_import",
     subtype: "import_dynamic",
     specifier: specifierNode.value,
-    specifierStart: specifierNode.start,
-    specifierEnd: specifierNode.end,
-    specifierLine: specifierNode.loc.start.line,
-    specifierColumn: specifierNode.loc.start.column,
+    start: specifierNode.start,
+    end: specifierNode.end,
+    line: specifierNode.loc.start.line,
+    column: specifierNode.loc.start.column,
     expectedType: assertionInfo ? assertionInfo.assert.type : "js_module",
     ...assertionInfo,
   })
@@ -48,10 +48,10 @@ export const analyzeExportNamedDeclaration = (node, { onUrl }) => {
     type: "js_import",
     subtype: "export_named",
     specifier: specifierNode.value,
-    specifierStart: specifierNode.start,
-    specifierEnd: specifierNode.end,
-    specifierLine: specifierNode.loc.start.line,
-    specifierColumn: specifierNode.loc.start.column,
+    start: specifierNode.start,
+    end: specifierNode.end,
+    line: specifierNode.loc.start.line,
+    column: specifierNode.loc.start.column,
   })
 }
 export const analyzeExportAllDeclaration = (node, { onUrl }) => {
@@ -60,10 +60,10 @@ export const analyzeExportAllDeclaration = (node, { onUrl }) => {
     type: "js_import",
     subtype: "export_all",
     specifier: specifierNode.value,
-    specifierStart: specifierNode.start,
-    specifierEnd: specifierNode.end,
-    specifierLine: specifierNode.loc.start.line,
-    specifierColumn: specifierNode.loc.start.column,
+    start: specifierNode.start,
+    end: specifierNode.end,
+    line: specifierNode.loc.start.line,
+    column: specifierNode.loc.start.column,
   })
 }
 
