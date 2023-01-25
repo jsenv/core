@@ -2,86 +2,38 @@
  * https://github.com/parcel-bundler/parcel/blob/v2/packages/transformers/css/src/CSSTransformer.js
  */
 
-export const parseAndTransformCssUrls = async (urlInfo, context) => {
-  const { transform } = await import("lightningcss")
+import { parseCssUrls } from "@jsenv/ast"
+import { createMagicSource } from "@jsenv/sourcemap"
 
-  const css = urlInfo.content
-  const cssAsBuffer = Buffer.from(css)
-  const cssUrls = []
-  transform({
-    code: cssAsBuffer,
-    // see https://github.com/parcel-bundler/lightningcss/pull/25/files
-    // analyzeDependencies: true,
-    visitor: {
-      Rule(ruleNode) {
-        if (ruleNode.type === "import") {
-          cssUrls.push({
-            type: "import",
-            line: ruleNode.value.loc.line,
-            column: ruleNode.value.loc.column,
-            specifier: ruleNode.value.url,
-            replacement: null,
-          })
-        }
-        return ruleNode
-      },
-      Url(urlNode) {
-        cssUrls.push({
-          type: "url",
-          line: urlNode.loc.line,
-          column: urlNode.loc.column,
-          specifier: urlNode.url,
-          replacement: null,
-        })
-        return urlNode
-      },
-    },
+export const parseAndTransformCssUrls = async (urlInfo, context) => {
+  const cssUrls = await parseCssUrls({
+    css: urlInfo.content,
+    url: urlInfo.originalUrl,
   })
-  // create a reference for each css url
-  await Promise.all(
-    cssUrls.map(async (cssUrl) => {
-      const [reference] = context.referenceUtils.found({
-        type: cssUrl.type === "import" ? "css_@import" : "css_url",
-        specifier: cssUrl.specifier,
-      })
+  const actions = []
+  const magicSource = createMagicSource(urlInfo.content)
+  for (const cssUrl of cssUrls) {
+    const [reference] = context.referenceUtils.found({
+      type: cssUrl.type,
+      specifier: cssUrl.specifier,
+      specifierStart: cssUrl.start,
+      specifierEnd: cssUrl.end,
+      specifierLine: cssUrl.line,
+      specifierColumn: cssUrl.column,
+    })
+    actions.push(async () => {
       const replacement = await context.referenceUtils.readGeneratedSpecifier(
         reference,
       )
-      cssUrl.replacement = replacement.slice(1, -1)
-    }),
-  )
-  // replace them
-  const { code, map } = transform({
-    code: cssAsBuffer,
-    visitor: {
-      Rule(ruleNode) {
-        if (ruleNode.type === "import") {
-          const cssUrl = cssUrls.find((cssUrlCandidate) => {
-            return (
-              cssUrlCandidate.line === ruleNode.value.loc.line &&
-              cssUrlCandidate.column === ruleNode.value.loc.column &&
-              cssUrlCandidate.specifier === ruleNode.value.url
-            )
-          })
-          ruleNode.value.url = cssUrl.replacement
-        }
-        return ruleNode
-      },
-      Url(urlNode) {
-        const cssUrl = cssUrls.find((cssUrlCandidate) => {
-          return (
-            cssUrlCandidate.line === urlNode.line &&
-            cssUrlCandidate.column === urlNode.column &&
-            cssUrlCandidate.specifier === urlNode.url
-          )
-        })
-        urlNode.url = cssUrl.replacement
-        return urlNode
-      },
-    },
-  })
-
-  const content = String(code)
-  const sourcemap = JSON.parse(String(map))
-  return { content, sourcemap }
+      magicSource.replace({
+        start: cssUrl.start,
+        end: cssUrl.end,
+        replacement,
+      })
+    })
+  }
+  if (actions.length > 0) {
+    await Promise.all(actions.map((action) => action()))
+  }
+  return magicSource.toContentAndSourcemap()
 }

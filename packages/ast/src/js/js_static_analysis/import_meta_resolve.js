@@ -18,10 +18,10 @@ export const analyzeImportMetaResolveCall = (node, { onUrl }) => {
       type: "js_import",
       subtype: "import_meta_resolve",
       specifier: firstArg.value,
-      specifierStart: firstArg.start,
-      specifierEnd: firstArg.end,
-      specifierLine: firstArg.loc.start.line,
-      specifierColumn: firstArg.loc.start.column,
+      start: firstArg.start,
+      end: firstArg.end,
+      line: firstArg.loc.start.line,
+      column: firstArg.loc.start.column,
     })
   }
 }

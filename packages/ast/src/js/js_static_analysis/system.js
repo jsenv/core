@@ -34,10 +34,10 @@ const analyzeSystemRegisterDeps = (node, { onUrl }) => {
         subtype: "system_register_arg",
         expectedType: "js_classic",
         specifier: specifierNode.value,
-        specifierStart: specifierNode.start,
-        specifierEnd: specifierNode.end,
-        specifierLine: specifierNode.loc.start.line,
-        specifierColumn: specifierNode.loc.start.column,
+        start: specifierNode.start,
+        end: specifierNode.end,
+        line: specifierNode.loc.start.line,
+        column: specifierNode.loc.start.column,
       })
     }
   })
@@ -65,10 +65,10 @@ export const analyzeSystemImportCall = (node, { onUrl }) => {
       subtype: "system_import_arg",
       expectedType: "js_classic",
       specifier: specifierNode.value,
-      specifierStart: specifierNode.start,
-      specifierEnd: specifierNode.end,
-      specifierLine: specifierNode.loc.start.line,
-      specifierColumn: specifierNode.loc.start.column,
+      start: specifierNode.start,
+      end: specifierNode.end,
+      line: specifierNode.loc.start.line,
+      column: specifierNode.loc.start.column,
     })
   }
 }
@@ -97,10 +97,10 @@ export const analyzeSystemResolveCall = (node, { onUrl }) => {
       type: "js_url",
       subtype: "system_resolve_arg",
       specifier: specifierNode.value,
-      specifierStart: specifierNode.start,
-      specifierEnd: specifierNode.end,
-      specifierLine: specifierNode.loc.start.line,
-      specifierColumn: specifierNode.loc.start.column,
+      start: specifierNode.start,
+      end: specifierNode.end,
+      line: specifierNode.loc.start.line,
+      column: specifierNode.loc.start.column,
     })
   }
 }

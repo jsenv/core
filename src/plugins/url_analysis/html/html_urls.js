@@ -20,10 +20,10 @@ export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
     url,
     htmlAst,
   })
-  const actions = []
   const mutations = []
-  mentions.forEach(
-    ({
+  const actions = []
+  for (const mention of mentions) {
+    const {
       type,
       subtype,
       expectedType,
@@ -35,39 +35,38 @@ export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
       attributeName,
       debug,
       specifier,
-    }) => {
-      const { crossorigin, integrity } = readFetchMetas(node)
-      const isResourceHint = [
-        "preconnect",
-        "dns-prefetch",
-        "prefetch",
-        "preload",
-        "modulepreload",
-      ].includes(subtype)
-      const [reference] = context.referenceUtils.found({
-        type,
-        subtype,
-        expectedType,
-        originalLine,
-        originalColumn,
-        specifier,
-        specifierLine: line,
-        specifierColumn: column,
-        isResourceHint,
-        crossorigin,
-        integrity,
-        debug,
-      })
-      actions.push(async () => {
-        await context.referenceUtils.readGeneratedSpecifier(reference)
-      })
+    } = mention
+    const { crossorigin, integrity } = readFetchMetas(node)
+    const isResourceHint = [
+      "preconnect",
+      "dns-prefetch",
+      "prefetch",
+      "preload",
+      "modulepreload",
+    ].includes(subtype)
+    const [reference] = context.referenceUtils.found({
+      type,
+      subtype,
+      expectedType,
+      originalLine,
+      originalColumn,
+      specifier,
+      specifierLine: line,
+      specifierColumn: column,
+      isResourceHint,
+      crossorigin,
+      integrity,
+      debug,
+    })
+    actions.push(async () => {
+      await context.referenceUtils.readGeneratedSpecifier(reference)
       mutations.push(() => {
         setHtmlNodeAttributes(node, {
           [attributeName]: reference.generatedSpecifier,
         })
       })
-    },
-  )
+    })
+  }
   if (actions.length > 0) {
     await Promise.all(actions.map((action) => action()))
   }

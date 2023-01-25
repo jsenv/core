@@ -12,7 +12,7 @@ export const parseAndTransformJsUrls = async (urlInfo, context) => {
   })
   const actions = []
   const magicSource = createMagicSource(urlInfo.content)
-  jsMentions.forEach((jsMention) => {
+  for (const jsMention of jsMentions) {
     if (
       jsMention.subtype === "import_static" ||
       jsMention.subtype === "import_dynamic"
@@ -26,10 +26,10 @@ export const parseAndTransformJsUrls = async (urlInfo, context) => {
       expectedType: jsMention.expectedType,
       expectedSubtype: jsMention.expectedSubtype || urlInfo.subtype,
       specifier: jsMention.specifier,
-      specifierStart: jsMention.specifierStart,
-      specifierEnd: jsMention.specifierEnd,
-      specifierLine: jsMention.specifierLine,
-      specifierColumn: jsMention.specifierColumn,
+      specifierStart: jsMention.start,
+      specifierEnd: jsMention.end,
+      specifierLine: jsMention.line,
+      specifierColumn: jsMention.column,
       data: jsMention.data,
       baseUrl: {
         "StringLiteral": jsMention.baseUrl,
@@ -48,16 +48,18 @@ export const parseAndTransformJsUrls = async (urlInfo, context) => {
         reference,
       )
       magicSource.replace({
-        start: jsMention.specifierStart,
-        end: jsMention.specifierEnd,
+        start: jsMention.start,
+        end: jsMention.end,
         replacement,
       })
       if (reference.mutation) {
         reference.mutation(magicSource)
       }
     })
-  })
-  await Promise.all(actions.map((action) => action()))
+  }
+  if (actions.length > 0) {
+    await Promise.all(actions.map((action) => action()))
+  }
   const { content, sourcemap } = magicSource.toContentAndSourcemap()
   return { content, sourcemap }
 }

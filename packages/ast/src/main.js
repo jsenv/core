@@ -34,6 +34,9 @@ export {
   getHtmlNodeAttributePosition,
 } from "./html/html_node_position.js"
 
+// css
+export { parseCssUrls } from "./css/parse_css_urls.js"
+
 // js
 export { applyBabelPlugins } from "./js/apply_babel_plugins.js"
 export { injectJsImport } from "./js/babel_utils.js"
