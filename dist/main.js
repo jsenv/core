@@ -23,7 +23,7 @@ import { bundleJsModules } from "@jsenv/plugin-bundling";
 import v8, { takeCoverage } from "node:v8";
 import wrapAnsi from "wrap-ansi";
 import stripAnsi from "strip-ansi";
-import cuid from "cuid";
+import { createId } from "@paralleldrive/cuid2";
 import { runInNewContext } from "node:vm";
 import { fork } from "node:child_process";
 
@@ -23384,7 +23384,7 @@ const run = async ({
   // and they can be read later at "coverageFileUrl"
   let coverageFileUrl;
   if (coverageEnabled) {
-    coverageFileUrl = new URL(`./${runtime.name}/${cuid()}.json`, coverageTempDirectoryUrl).href;
+    coverageFileUrl = new URL(`./${runtime.name}/${createId()}.json`, coverageTempDirectoryUrl).href;
     await ensureParentDirectories(coverageFileUrl);
     if (coverageEnabled) {
       result.coverageFileUrl = coverageFileUrl;
@@ -25013,7 +25013,7 @@ const registerEvent = ({
 
 const chromium = createRuntimeFromPlaywright({
   browserName: "chromium",
-  browserVersion: "109.0.5414.46",
+  browserVersion: "110.0.5481.38",
   // to update, check https://github.com/microsoft/playwright/releases
   coveragePlaywrightAPIAvailable: true
 });
@@ -25021,7 +25021,7 @@ const chromiumIsolatedTab = chromium.isolatedTab;
 
 const firefox = createRuntimeFromPlaywright({
   browserName: "firefox",
-  browserVersion: "107.0" // to update, check https://github.com/microsoft/playwright/releases
+  browserVersion: "108.0.2" // to update, check https://github.com/microsoft/playwright/releases
 });
 
 const firefoxIsolatedTab = firefox.isolatedTab;
