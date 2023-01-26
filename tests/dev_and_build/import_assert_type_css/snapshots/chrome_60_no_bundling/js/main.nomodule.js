@@ -1,1 +1,55 @@
-function _async(e){return function(){for(var o=[],t=0;t<arguments.length;t++)o[t]=arguments[t];try{return Promise.resolve(e.apply(this,o))}catch(e){return Promise.reject(e)}}}function _await(e,o,t){return t?o?o(e):e:(e&&e.then||(e=Promise.resolve(e)),o?e.then(o):e)}System.register([__v__("/js/new_stylesheet.nomodule.js"),__v__("/js/main.nomodule2.js")],(function(e,o){"use strict";var t,n,r;return{setters:[function(e){},function(e){t=e.default}],execute:async function(){return document.adoptedStyleSheets=[...document.adoptedStyleSheets,t],_await(new Promise((e=>setTimeout(e,200))),(function(){return n=getComputedStyle(document.body).backgroundColor,console.log({bodyBackgroundColor:n}),_await(new Promise((e=>setTimeout(e,700))),(function(){r=getComputedStyle(document.body).backgroundImage,console.log({bodyBackgroundImage:r}),window.resolveResultPromise({bodyBackgroundColor:n,bodyBackgroundImage:r})}))}))}}}));
+function _async(f) {
+  return function () {
+    for (var args = [], i = 0; i < arguments.length; i++) {
+      args[i] = arguments[i];
+    }
+    try {
+      return Promise.resolve(f.apply(this, args));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  };
+}
+function _await(value, then, direct) {
+  if (direct) {
+    return then ? then(value) : value;
+  }
+  if (!value || !value.then) {
+    value = Promise.resolve(value);
+  }
+  return then ? value.then(then) : value;
+}
+System.register([__v__("/js/new_stylesheet.nomodule.js"), __v__("/js/main.nomodule2.js")], function (_export, _context) {
+  "use strict";
+
+  var sheet, bodyBackgroundColor, bodyBackgroundImage;
+  return {
+    setters: [function (_srcPluginsTranspilationBabelNew_stylesheetClientNew_stylesheetJs) {}, function (_clientSrcMainCssAs_css_module) {
+      sheet = _clientSrcMainCssAs_css_module.default;
+    }],
+    execute: async function () {
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+
+      // on firefox + webkit we have to wait a bit,
+      // it seems the styles are applied on next js event loop
+      return _await(new Promise(resolve => setTimeout(resolve, 200)), function () {
+        bodyBackgroundColor = getComputedStyle(document.body).backgroundColor;
+        console.log({
+          bodyBackgroundColor
+        });
+
+        // let 700ms for the background image to load
+        return _await(new Promise(resolve => setTimeout(resolve, 700)), function () {
+          bodyBackgroundImage = getComputedStyle(document.body).backgroundImage;
+          console.log({
+            bodyBackgroundImage
+          });
+          window.resolveResultPromise({
+            bodyBackgroundColor,
+            bodyBackgroundImage
+          });
+        });
+      });
+    }
+  };
+});

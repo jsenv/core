@@ -1,1 +1,8 @@
-System.register([],(function(e,t){"use strict";return{setters:[],execute:function(){}}}));
+System.register([], function (_export, _context) {
+  "use strict";
+
+  return {
+    setters: [],
+    execute: function () {}
+  };
+});

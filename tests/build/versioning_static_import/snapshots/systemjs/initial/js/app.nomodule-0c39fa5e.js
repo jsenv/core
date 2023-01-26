@@ -1,1 +1,0 @@
-System.register([__v__("/js/file.nomodule.js")],(function(e,s){"use strict";var t;return{setters:[function(e){t=e.answer}],execute:function(){console.log(t),window.resolveResultPromise(t)}}}));

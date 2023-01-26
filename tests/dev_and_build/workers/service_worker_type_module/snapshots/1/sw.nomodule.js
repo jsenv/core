@@ -2,10 +2,64 @@
 self.serviceWorkerUrls = {
   "/main.html": {
     "versioned": false,
-    "version": "57647127"
+    "version": "11f11490"
   },
   "/css/style.css?v=0e312da1": {
     "versioned": true
   }
 };
-!function(e,r){if("function"==typeof define&&define.amd)define([],r);else if("undefined"!=typeof exports)r();else{r(),e.sw={}}}("undefined"!=typeof globalThis?globalThis:"undefined"!=typeof self?self:this,(function(){"use strict";var e;self.order=[],self.addEventListener("message",(e=function(e){return"inspect"===e.data&&e.ports[0].postMessage({order:self.order,serviceWorkerUrls:self.serviceWorkerUrls}),n?s?s(r):r:(r&&r.then||(r=Promise.resolve(r)),s?r.then(s):r);var r,s,n},function(){for(var r=[],s=0;s<arguments.length;s++)r[s]=arguments[s];try{return Promise.resolve(e.apply(this,r))}catch(e){return Promise.reject(e)}}));(([e])=>{console.log(e)})(["a"])}));
+(function (global, factory) {
+  if (typeof define === "function" && define.amd) {
+    define([], factory);
+  } else if (typeof exports !== "undefined") {
+    factory();
+  } else {
+    var mod = {
+      exports: {}
+    };
+    factory();
+    global.sw = mod.exports;
+  }
+})(typeof globalThis !== "undefined" ? globalThis : typeof self !== "undefined" ? self : this, function () {
+  "use strict";
+
+  /* globals self */
+
+  function _await(value, then, direct) {
+    if (direct) {
+      return then ? then(value) : value;
+    }
+    if (!value || !value.then) {
+      value = Promise.resolve(value);
+    }
+    return then ? value.then(then) : value;
+  }
+  function _async(f) {
+    return function () {
+      for (var args = [], i = 0; i < arguments.length; i++) {
+        args[i] = arguments[i];
+      }
+      try {
+        return Promise.resolve(f.apply(this, args));
+      } catch (e) {
+        return Promise.reject(e);
+      }
+    };
+  }
+  self.order = [];
+  self.addEventListener("message", _async(function (messageEvent) {
+    if (messageEvent.data === "inspect") {
+      messageEvent.ports[0].postMessage({
+        order: self.order,
+        serviceWorkerUrls: self.serviceWorkerUrls
+      });
+    }
+    return _await();
+  }));
+
+  // trigger jsenv dynamic import for slicedToArray
+  const fn = ([a]) => {
+    console.log(a);
+  };
+  fn(["a"]);
+});

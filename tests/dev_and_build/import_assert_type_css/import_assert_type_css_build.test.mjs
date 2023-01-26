@@ -54,13 +54,13 @@ const test = async ({ snapshotsDirectoryName, ...rest }) => {
 await test({
   snapshotsDirectoryName: "chrome_60",
   runtimeCompat: { chrome: "60" },
-  plugins: [jsenvPluginBundling(), jsenvPluginMinification()],
+  plugins: [jsenvPluginBundling()],
 })
 // chrome 60 + no bundling
 await test({
   snapshotsDirectoryName: "chrome_60_no_bundling",
   runtimeCompat: { chrome: "60" },
-  plugins: [jsenvPluginMinification()],
+  plugins: [],
 })
 // chrome 88 has constructables stylesheet
 // but cannot use js modules due to versioning via importmap (as it does not have importmap)
@@ -80,5 +80,5 @@ await test({
 await test({
   snapshotsDirectoryName: "chrome_89",
   runtimeCompat: { chrome: "89" },
-  plugins: [jsenvPluginBundling(), jsenvPluginMinification()],
+  plugins: [jsenvPluginBundling()],
 })

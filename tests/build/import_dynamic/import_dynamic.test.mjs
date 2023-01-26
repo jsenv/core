@@ -21,9 +21,7 @@ const test = async ({ expectedFilename, ...params }) => {
   const { returnValue } = await executeInChromium({
     url: `${server.origin}/main.html`,
     /* eslint-disable no-undef */
-    pageFunction: async () => {
-      return window.resultPromise
-    },
+    pageFunction: async () => window.resultPromise,
     /* eslint-enable no-undef */
   })
   const actual = returnValue
@@ -34,13 +32,13 @@ const test = async ({ expectedFilename, ...params }) => {
   assert({ actual, expected })
 }
 
-// support for <script type="module">
+// can use <script type="module">
 await test({
   runtimeCompat: { chrome: "89" },
   versioning: false,
   expectedFilename: `nested_feature.js`,
 })
-// no support for <script type="module">
+// cannot use <script type="module">
 await test({
   runtimeCompat: { chrome: "62" },
   versioning: false,

@@ -1,3 +1,5 @@
+import { fileURLToPath } from "node:url"
+import { urlToRelativeUrl } from "@jsenv/urls"
 import { readFileSync } from "@jsenv/filesystem"
 import {
   createMagicSource,
@@ -15,7 +17,24 @@ import { babelPluginTransformImportMetaResolve } from "./helpers/babel_plugin_tr
 // because of https://github.com/rpetrich/babel-plugin-transform-async-to-promises/issues/84
 import customAsyncToPromises from "./async-to-promises.js"
 
+/*
+ * When systemjs format is used by babel, it will generated UID based on
+ * the import specifier:
+ * https://github.com/babel/babel/blob/97d1967826077f15e766778c0d64711399e9a72a/packages/babel-plugin-transform-modules-systemjs/src/index.ts#L498
+ * But at this stage import specifier are absolute file urls
+ * So without minification these specifier are long and dependent
+ * on where the files are on the filesystem.
+ * This can be mitigated by minification that will rename them.
+ * But to fix this issue once and for all I have copy-pasted
+ * "@babel/plugin-transform-modules-systemjs" to introduce
+ * "generateIdentifierHint" options and prevent that from hapenning
+ */
+const TRANSFORM_MODULES_SYSTEMJS_PATH = fileURLToPath(
+  new URL("./babel_plugin_transform_modules_systemjs.cjs", import.meta.url),
+)
+
 export const convertJsModuleToJsClassic = async ({
+  rootDirectoryUrl,
   systemJsInjection,
   systemJsClientFileUrl,
   urlInfo,
@@ -41,7 +60,18 @@ export const convertJsModuleToJsClassic = async ({
             // proposal-dynamic-import required with systemjs for babel8:
             // https://github.com/babel/babel/issues/10746
             requireFromJsenv("@babel/plugin-proposal-dynamic-import"),
-            requireFromJsenv("@babel/plugin-transform-modules-systemjs"),
+            [
+              // eslint-disable-next-line import/no-dynamic-require
+              requireFromJsenv(TRANSFORM_MODULES_SYSTEMJS_PATH),
+              {
+                generateIdentifierHint: (key) => {
+                  if (key.startsWith("file://")) {
+                    return urlToRelativeUrl(key, rootDirectoryUrl)
+                  }
+                  return key
+                },
+              },
+            ],
             [
               customAsyncToPromises,
               {

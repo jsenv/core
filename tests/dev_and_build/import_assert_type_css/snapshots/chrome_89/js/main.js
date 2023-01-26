@@ -1,1 +1,26 @@
-const e=new function InlineContent(e,{type:o="text/plain"}){this.text=e,this.type=o}("body{background-color:red;background-image:url("+__v__("/other/jsenv.png")+")}",{type:"text/css"}),o=new CSSStyleSheet;o.replaceSync(e.text),document.adoptedStyleSheets=[...document.adoptedStyleSheets,o],await new Promise((e=>setTimeout(e,200)));const t=getComputedStyle(document.body).backgroundColor;console.log({bodyBackgroundColor:t}),await new Promise((e=>setTimeout(e,700)));const n=getComputedStyle(document.body).backgroundImage;console.log({bodyBackgroundImage:n}),window.resolveResultPromise({bodyBackgroundColor:t,bodyBackgroundImage:n});
+function InlineContent(content, { type = "text/plain" }) {
+  this.text = content;
+  this.type = type;
+}
+
+const inlineContent = new InlineContent('body {\n  background-color: red;\n  background-image: url('+__v__("/other/jsenv.png")+');\n}\n', { type: "text/css" });
+  const stylesheet = new CSSStyleSheet();
+  stylesheet.replaceSync(inlineContent.text);
+
+document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
+
+// on firefox + webkit we have to wait a bit,
+// it seems the styles are applied on next js event loop
+await new Promise((resolve) => setTimeout(resolve, 200));
+const bodyBackgroundColor = getComputedStyle(document.body).backgroundColor;
+console.log({ bodyBackgroundColor });
+
+// let 700ms for the background image to load
+await new Promise((resolve) => setTimeout(resolve, 700));
+const bodyBackgroundImage = getComputedStyle(document.body).backgroundImage;
+console.log({ bodyBackgroundImage });
+
+window.resolveResultPromise({
+  bodyBackgroundColor,
+  bodyBackgroundImage,
+});

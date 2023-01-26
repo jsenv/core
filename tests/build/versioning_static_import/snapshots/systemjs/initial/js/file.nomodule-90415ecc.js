@@ -1,1 +1,0 @@
-System.register([],(function(e,t){"use strict";return{setters:[],execute:function(){e("answer",42)}}}));

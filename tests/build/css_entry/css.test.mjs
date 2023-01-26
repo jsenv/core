@@ -1,8 +1,11 @@
 import { assert } from "@jsenv/assert"
 import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
-import { jsenvPluginMinification } from "@jsenv/plugin-minification"
 
 import { build } from "@jsenv/core"
+import {
+  readSnapshotsFromDirectory,
+  writeSnapshotsIntoDirectory,
+} from "@jsenv/core/tests/snapshots_directory.js"
 
 const { buildFileContents } = await build({
   logLevel: "warn",
@@ -11,12 +14,13 @@ const { buildFileContents } = await build({
   entryPoints: {
     "./main.css": "main.css",
   },
-  plugins: [jsenvPluginBundling(), jsenvPluginMinification()],
+  plugins: [jsenvPluginBundling()],
 })
-const actual = {
-  mainCssFileContent: buildFileContents["main.css"],
-}
-const expected = {
-  mainCssFileContent: `body{filter:url(#better-blur);background:url(/other/jsenv.png?v=25e95a00) 100% 100% no-repeat,url(/other/jsenv.png?v=25e95a00)}`,
-}
+const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url)
+const expectedBuildFileContents = readSnapshotsFromDirectory(
+  snapshotsDirectoryUrl,
+)
+writeSnapshotsIntoDirectory(snapshotsDirectoryUrl, buildFileContents)
+const actual = buildFileContents
+const expected = expectedBuildFileContents
 assert({ actual, expected })

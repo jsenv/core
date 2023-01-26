@@ -14509,7 +14509,21 @@ function default_1({
   };
 }
 
+/*
+ * When systemjs format is used by babel, it will generated UID based on
+ * the import specifier:
+ * https://github.com/babel/babel/blob/97d1967826077f15e766778c0d64711399e9a72a/packages/babel-plugin-transform-modules-systemjs/src/index.ts#L498
+ * But at this stage import specifier are absolute file urls
+ * So without minification these specifier are long and dependent
+ * on where the files are on the filesystem.
+ * This can be mitigated by minification that will rename them.
+ * But to fix this issue once and for all I have copy-pasted
+ * "@babel/plugin-transform-modules-systemjs" to introduce
+ * "generateIdentifierHint" options and prevent that from hapenning
+ */
+const TRANSFORM_MODULES_SYSTEMJS_PATH = fileURLToPath(new URL("./js/babel_plugin_transform_modules_systemjs.cjs", import.meta.url));
 const convertJsModuleToJsClassic = async ({
+  rootDirectoryUrl,
   systemJsInjection,
   systemJsClientFileUrl,
   urlInfo,
@@ -14534,7 +14548,16 @@ const convertJsModuleToJsClassic = async ({
     babelPlugins: [...(jsClassicFormat === "system" ? [
     // proposal-dynamic-import required with systemjs for babel8:
     // https://github.com/babel/babel/issues/10746
-    requireFromJsenv("@babel/plugin-proposal-dynamic-import"), requireFromJsenv("@babel/plugin-transform-modules-systemjs"), [default_1, {
+    requireFromJsenv("@babel/plugin-proposal-dynamic-import"), [
+    // eslint-disable-next-line import/no-dynamic-require
+    requireFromJsenv(TRANSFORM_MODULES_SYSTEMJS_PATH), {
+      generateIdentifierHint: key => {
+        if (key.startsWith("file://")) {
+          return urlToRelativeUrl(key, rootDirectoryUrl);
+        }
+        return key;
+      }
+    }], [default_1, {
       asyncAwait: false,
       // already handled + we might not needs it at all
       topLevelAwait: "return"
@@ -14668,6 +14691,7 @@ const jsenvPluginAsJsClassicConversion = ({
         content,
         sourcemap
       } = await convertJsModuleToJsClassic({
+        rootDirectoryUrl: context.rootDirectoryUrl,
         systemJsInjection,
         systemJsClientFileUrl,
         urlInfo,
@@ -15012,6 +15036,7 @@ const jsenvPluginAsJsClassicLibrary = ({
         content,
         sourcemap
       } = await convertJsModuleToJsClassic({
+        rootDirectoryUrl: context.rootDirectoryUrl,
         systemJsInjection,
         systemJsClientFileUrl,
         urlInfo,
@@ -15030,18 +15055,6 @@ const jsenvPluginAsJsClassicLibrary = ({
   };
 };
 
-/*
- * Something to keep in mind:
- * When systemjs format is used by babel, it will generated UID based on
- * the import specifier:
- * https://github.com/babel/babel/blob/97d1967826077f15e766778c0d64711399e9a72a/packages/babel-plugin-transform-modules-systemjs/src/index.ts#L498
- * But at this stage import specifier are absolute file urls
- * So without minification these specifier are long and dependent
- * on where the files are on the filesystem.
- * This is mitigated by minification that will shorten them
- * But ideally babel should not generate this in the first place
- * and prefer to unique identifier based solely on the specifier basename for instance
- */
 const jsenvPluginAsJsClassic = ({
   jsClassicLibrary,
   jsClassicFallback,

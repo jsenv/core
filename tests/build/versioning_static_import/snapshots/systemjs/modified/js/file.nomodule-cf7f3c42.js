@@ -1,11 +1,11 @@
 System.register([], function (_export, _context) {
   "use strict";
 
-  var ping;
+  var answer;
   return {
     setters: [],
     execute: function () {
-      _export("ping", ping = "pong");
+      _export("answer", answer = 43);
     }
   };
 });
