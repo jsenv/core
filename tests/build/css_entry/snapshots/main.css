@@ -1,0 +1,7 @@
+body {
+  background: url(/other/jsenv.png?v=25e95a00) 100% 100% no-repeat, url(/other/jsenv.png?v=25e95a00);
+}
+
+body {
+  filter: url(#better-blur);
+}
