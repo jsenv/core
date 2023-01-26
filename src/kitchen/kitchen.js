@@ -593,8 +593,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           },
         )
       } catch (error) {
-        // ensure reference are up-to-date so that even in case of error
-        urlGraph.updateReferences(urlInfo, references)
+        urlGraph.updateReferences(urlInfo, references) // ensure reference are updated even in case of error
         const transformError = createTransformUrlContentError({
           pluginController,
           reference: context.reference,
