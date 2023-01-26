@@ -32,21 +32,17 @@ const page = await browser.newPage({ ignoreHTTPSErrors: true })
 
 try {
   await page.goto(`${devServer.origin}/main.html`)
-  const getErrorOverlayDisplayedOnPage = async (page) => {
-    const errorOverlayHandle = await page.evaluate(
+  const getDocumentBodyBackgroundColor = () => {
+    return page.evaluate(
       /* eslint-disable no-undef */
-      () => document.querySelector("jsenv-error-overlay"),
+      () => window.getComputedStyle(document.body).backgroundColor,
       /* eslint-enable no-undef */
     )
-    return Boolean(errorOverlayHandle)
   }
+
   {
-    const actual = {
-      displayed: await getErrorOverlayDisplayedOnPage(page),
-    }
-    const expected = {
-      displayed: false,
-    }
+    const actual = await getDocumentBodyBackgroundColor()
+    const expected = `rgb(255, 0, 0)`
     assert({ actual, expected })
   }
 
@@ -62,6 +58,7 @@ try {
       <style>
         body {
           background: red
+          color: blue;
         }
       </style>
     </body>
@@ -70,12 +67,8 @@ try {
     setTimeout(resolve, 500)
   })
   {
-    const actual = {
-      displayedAfterSyntaxError: await getErrorOverlayDisplayedOnPage(page),
-    }
-    const expected = {
-      displayedAfterSyntaxError: true,
-    }
+    const actual = await getDocumentBodyBackgroundColor()
+    const expected = `rgba(0, 0, 0, 0)`
     assert({ actual, expected })
   }
   htmlFileContent.restore()
@@ -83,14 +76,8 @@ try {
     setTimeout(resolve, 500)
   })
   {
-    const actual = {
-      displayedAfterFixAndAutoreload: await getErrorOverlayDisplayedOnPage(
-        page,
-      ),
-    }
-    const expected = {
-      displayedAfterFixAndAutoreload: false,
-    }
+    const actual = await getDocumentBodyBackgroundColor()
+    const expected = `rgb(255, 0, 0)`
     assert({ actual, expected })
   }
 } finally {
