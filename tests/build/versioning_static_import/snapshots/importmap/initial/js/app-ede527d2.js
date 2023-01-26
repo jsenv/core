@@ -1,1 +1,0 @@
-import{answer as o}from"/js/file.js";console.log(o),window.resolveResultPromise(o);

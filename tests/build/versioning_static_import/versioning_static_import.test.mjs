@@ -17,7 +17,6 @@ import { writeFileSync, readFileSync } from "node:fs"
 import { chromium } from "playwright"
 import { assert } from "@jsenv/assert"
 import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
-import { jsenvPluginMinification } from "@jsenv/plugin-minification"
 
 import { build } from "@jsenv/core"
 import {
@@ -48,7 +47,6 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
             },
           },
         }),
-        jsenvPluginMinification(),
       ],
       writeGeneratedFiles: true,
       ...rest,
