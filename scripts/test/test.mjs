@@ -49,6 +49,12 @@ await executeTestPlan({
             allocatedMs: 90_000,
           },
         },
+        "tests/**/autoreload_js_import_css.test.mjs": {
+          node: {
+            runtime: nodeWorkerThread,
+            allocatedMs: 90_000,
+          },
+        },
       },
   // completedExecutionLogMerging: true,
   logMemoryHeapUsage: true,
