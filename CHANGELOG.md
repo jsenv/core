@@ -1,3 +1,7 @@
+# 30.3.8
+
+- Prevent file path influence on variable names generated for systemjs during build. This issue was mitigate by minification but now it won't be a problem anymore, even with minification disabled.
+
 # 30.3.7
 
 - Gracefully handle css syntax error inside `<style>`. Thanks to this dev server properly autoreload even when there is a syntax error in css within html.
