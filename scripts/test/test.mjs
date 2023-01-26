@@ -43,6 +43,12 @@ await executeTestPlan({
             allocatedMs: 180_000,
           },
         },
+        "tests/**/import_assert_type_css_build.test": {
+          node: {
+            runtime: nodeWorkerThread,
+            allocatedMs: 90_000,
+          },
+        },
       },
   // completedExecutionLogMerging: true,
   logMemoryHeapUsage: true,
