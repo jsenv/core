@@ -8,12 +8,17 @@ export const createServerEventsDispatcher = () => {
       const firstClient = clients.shift()
       firstClient.close()
     }
-    return () => {
-      client.close()
+    const removeClient = () => {
       const index = clients.indexOf(client)
       if (index > -1) {
         clients.splice(index, 1)
       }
+    }
+    client.onclose = () => {
+      removeClient(client)
+    }
+    return () => {
+      client.close()
     }
   }
 
@@ -48,6 +53,10 @@ export const createServerEventsDispatcher = () => {
         },
       }
       client.sendEvent({ type: "welcome" })
+      websocket.onclose = () => {
+        client.onclose()
+      }
+      client.onclose = () => {}
       return addClient(client)
     },
     // we could add "addEventSource" and let clients connect using
