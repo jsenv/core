@@ -1,6 +1,5 @@
 import { assert } from "@jsenv/assert"
 import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
-import { jsenvPluginMinification } from "@jsenv/plugin-minification"
 
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
@@ -23,19 +22,7 @@ const test = async ({
       "./main.html": "main.html",
     },
     ...rest,
-    plugins: [
-      jsenvPluginMinification({
-        // minify js classic to ensure version is predictable
-        // otherwise it's filesystem dependents because of systemjs infering variables
-        // name from import path
-        // see "something to keep in mind" inside "jsenv_plugin_as_js_classic.js"
-        html: false,
-        css: false,
-        js_module: false,
-        js_classic: true,
-      }),
-      ...(rest.plugins || []),
-    ],
+    plugins: [...(rest.plugins || [])],
   })
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
@@ -43,9 +30,7 @@ const test = async ({
   const { returnValue } = await executeInChromium({
     url: `${server.origin}/main.html`,
     /* eslint-disable no-undef */
-    pageFunction: async () => {
-      return window.resultPromise
-    },
+    pageFunction: async () => window.resultPromise,
     /* eslint-enable no-undef */
   })
   const { serviceWorkerUrls } = returnValue.inspectResponse
@@ -73,7 +58,7 @@ if (process.platform === "darwin") {
     plugins: [jsenvPluginBundling()],
     snapshotsDirectoryUrl: new URL("./snapshots/1/", import.meta.url),
     expectedServiceWorkerUrls: {
-      "/main.html": { versioned: false, version: "57647127" },
+      "/main.html": { versioned: false, version: "11f11490" },
       "/css/style.css?v=0e312da1": { versioned: true },
     },
   })
@@ -82,10 +67,10 @@ if (process.platform === "darwin") {
     runtimeCompat: { chrome: "80" },
     snapshotsDirectoryUrl: new URL("./snapshots/2/", import.meta.url),
     expectedServiceWorkerUrls: {
-      "/main.html": { versioned: false, version: "57647127" },
+      "/main.html": { versioned: false, version: "11f11490" },
       "/css/style.css?v=0e312da1": { versioned: true },
-      "/js/a.nomodule.js?v=9f69cb0f": { versioned: true },
-      "/js/b.nomodule.js?v=5d37f892": { versioned: true },
+      "/js/a.nomodule.js?v=8345fcfc": { versioned: true },
+      "/js/b.nomodule.js?v=8f3fa8a4": { versioned: true },
     },
   })
   // no support for { type: "module" } on service worker
@@ -94,7 +79,7 @@ if (process.platform === "darwin") {
     plugins: [jsenvPluginBundling()],
     snapshotsDirectoryUrl: new URL("./snapshots/3/", import.meta.url),
     expectedServiceWorkerUrls: {
-      "/main.html": { versioned: false, version: "6d19697c" },
+      "/main.html": { versioned: false, version: "c92ad1aa" },
       "/css/style.css?v=0e312da1": { versioned: true },
     },
   })
@@ -103,10 +88,10 @@ if (process.platform === "darwin") {
     runtimeCompat: { chrome: "79" },
     snapshotsDirectoryUrl: new URL("./snapshots/4/", import.meta.url),
     expectedServiceWorkerUrls: {
-      "/main.html": { versioned: false, version: "6d19697c" },
+      "/main.html": { versioned: false, version: "c92ad1aa" },
       "/css/style.css?v=0e312da1": { versioned: true },
-      "/js/a.nomodule.js?v=9f69cb0f": { versioned: true },
-      "/js/b.nomodule.js?v=5d37f892": { versioned: true },
+      "/js/a.nomodule.js?v=8345fcfc": { versioned: true },
+      "/js/b.nomodule.js?v=8f3fa8a4": { versioned: true },
     },
   })
 }

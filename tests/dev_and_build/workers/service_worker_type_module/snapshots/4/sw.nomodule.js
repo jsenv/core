@@ -2,16 +2,499 @@
 self.serviceWorkerUrls = {
   "/main.html": {
     "versioned": false,
-    "version": "6d19697c"
+    "version": "c92ad1aa"
   },
   "/css/style.css?v=0e312da1": {
     "versioned": true
   },
-  "/js/a.nomodule.js?v=9f69cb0f": {
+  "/js/a.nomodule.js?v=8345fcfc": {
     "versioned": true
   },
-  "/js/b.nomodule.js?v=5d37f892": {
+  "/js/b.nomodule.js?v=8f3fa8a4": {
     "versioned": true
   }
 };
-;(function(){var m = {"/js/a.nomodule.js":"/js/a.nomodule.js?v=9f69cb0f","/js/b.nomodule.js":"/js/b.nomodule.js?v=5d37f892"}; self.__v__ = function (s) { return m[s] || s }; })();!function(){const e=Object.create(null),t=Object.create(null);let r=0;const n={},s="object"==typeof document,o=self,i=!s&&"function"==typeof o.WorkerGlobalScope&&o instanceof o.WorkerGlobalScope,c=i&&"function"==typeof self.skipWaiting;o.System=n;let l=o.location.href.split("#")[0].split("?")[0];const a=l.lastIndexOf("/");-1!==a&&(l=l.slice(0,a+1));const u=(e,t)=>new URL(e,t).href;if(s){const e=document.querySelector("base[href]");e&&(l=e.href),n.register=(e,n)=>{if(!document.currentScript)throw new Error("unexpected call to System.register (document.currentScript is undefined)");if(document.currentScript.__s__)return t[document.currentScript.src]=[e,n],null;const s=document.currentScript.src||`${window.location.href}__inline_script__${++r}`;return t[s]=[e,n],d(s)},n.instantiate=e=>{const t=s(e);return new Promise((function(r,n){let s,o;const i=e=>{s=e.filename,o=e.error};window.addEventListener("error",i),t.addEventListener("error",(()=>{window.removeEventListener("error",i),n(`An error occured while loading url with <script> for ${e}`)})),t.addEventListener("load",(()=>{window.removeEventListener("error",i),document.head.removeChild(t),s===e?n(o):r()})),document.head.appendChild(t)}))};const s=e=>{const t=document.createElement("script");return t.async=!0,e.indexOf(`${self.location.origin}/`)&&(t.crossOrigin="anonymous"),t.__s__=!0,t.src=e,t}}if(i){const e=[];if(c){const t=["message","install","activate","fetch"],r={},n=new Promise((t=>{e.push(t)}));t.forEach((t=>{const s=[];self.addEventListener(t,(e=>{const t=r[e.type];t?t(e):(s.push(e),e.waitUntil(n))})),e.push((()=>{if(s.length){const e=r[s[0].type];e&&s.forEach((t=>{e(t)})),s.length=0}}))}));const s=self.addEventListener;self.addEventListener=function(e,n,o){return t.indexOf(e)>-1?(r[e]=n,null):s.call(self,e,n,o)}}else{["message"].forEach((t=>{var r=[],n=e=>{r.push(e)};self.addEventListener(t,n),e.push((()=>{self.removeEventListener(t,n),r.forEach((function(e){self.dispatchEvent(e)})),r.length=0}))}))}n.register=async(r,s)=>{n.register=()=>{throw new Error("unexpected call to System.register (called outside url instantiation)")};const o=self.location.href;t[o]=[r,s];const i=await d(o);return e.forEach((e=>{e()})),e.length=0,i},n.instantiate=async e=>{const r=await self.fetch(e,{credentials:"same-origin"});if(!r.ok)throw Error(`Failed to fetch module at ${e}`);let s=await r.text();s.indexOf("//# sourceURL=")<0&&(s+=`\n//# sourceURL=${e}`);const o=n.register;n.register=(r,n)=>{t[e]=[r,n]},(0,self.eval)(s),n.register=o}}const d=(e,t)=>{const r=u(e,t),n=m(r,t);return n.completionPromise?n.completionPromise===n.namespace?Promise.resolve(n.namespace):n.completionPromise:f(n,t)},m=(r,s)=>{const o=e[r];if(o)return o;const i=P(),c={url:r,deps:[],dependencyLoads:[],instantiatePromise:null,linkPromise:null,executePromise:null,completionPromise:null,importerSetters:[],setters:[],execute:null,error:null,hoistedExports:!1,namespace:i};return e[r]=c,c.instantiatePromise=(async()=>{try{let e=t[r];if(!e){const o=n.instantiate(r,s);o&&await o,e=t[r]}if(!e)throw new Error(`System.register() not called after executing ${r}`);const o=(e,t)=>{c.hoistedExports=!0;let r=!1;if("string"==typeof e){const n=e,s=t;n in i&&i[n]===s||(i[n]=s,r=!0)}else Object.keys(e).forEach((t=>{const n=e[t];t in i&&i[t]===n||(i[t]=n,r=!0)})),e&&e.__esModule&&(i.__esModule=e.__esModule);return r&&c.importerSetters.forEach((e=>{e&&e(i)})),t},[l,a]=e,{setters:u,execute:m=(()=>{})}=a(o,{import:e=>d(e,r),meta:y(r)});c.deps=l,c.setters=u,c.execute=m}catch(e){c.error=e,c.execute=null}})(),c.linkPromise=(async()=>{await c.instantiatePromise;const e=await Promise.all(c.deps.map((async(e,t)=>{const n=c.setters[t],s=u(e,r),o=m(s,r);return o.instantiatePromise&&await o.instantiatePromise,n&&(o.importerSetters.push(n),!o.hoistedExports&&o.instantiatePromise||n(o.namespace)),o})));c.dependencyLoads=e})(),c},f=async(e,t)=>(e.completionPromise=(async()=>(await p(e,e,{}),await h(e,t?[t]:[]),e.namespace))(),e.completionPromise),p=async(e,t,r)=>{if(!r[e.url]){r[e.url]=!0;try{e.linkPromise&&await e.linkPromise,await Promise.all(e.dependencyLoads.map((e=>p(e,t,r))))}catch(t){if(e.error)throw t;throw e.execute=null,t}}},h=(e,t)=>{if(t.indexOf(e.url)>-1)return;if(!e.execute){if(e.error)throw e.error;return e.executePromise?e.executePromise:void 0}const r=e.execute;e.execute=null;const n=[];return e.dependencyLoads.forEach((r=>{try{const s=t.slice();s.push(e.url);const o=h(r,s);o&&n.push(o)}catch(t){throw e.error=t,t}})),(async()=>{if(n.length){const e=Promise.all(n);await e}try{const t=r.call(w);if(t)return void(e.executePromise=t.then((()=>{e.executePromise=null,e.completionPromise=e.namespace}),(t=>{throw e.executePromise=null,e.error=t,t})));e.instantiatePromise=null,e.linkPromise=null,e.completionPromise=e.namespace}catch(t){throw e.error=t,t}finally{e.execute=null}})()},w=Object.freeze(Object.create(null)),y=e=>({url:e,resolve:t=>u(t,e)}),P="undefined"!=typeof Symbol&&Symbol.toStringTag?()=>{const e=Object.create(null);return Object.defineProperty(e,Symbol.toStringTag,{value:"Module"}),e}:()=>Object.create(null)}(),System.register([__v__("/js/a.nomodule.js")],(function(e,t){"use strict";return{setters:[function(e){}],execute:function(){self.order=[],self.addEventListener("message",(async e=>{"inspect"===e.data&&e.ports[0].postMessage({order:self.order,serviceWorkerUrls:self.serviceWorkerUrls})})),(([e])=>{console.log(e)})(["a"])}}}));
+
+;(function() {
+  var __versionMappings__ = {
+  "/js/a.nomodule.js": "/js/a.nomodule.js?v=8345fcfc",
+  "/js/b.nomodule.js": "/js/b.nomodule.js?v=8f3fa8a4"
+};
+  self.__v__ = function (specifier) {
+    return __versionMappings__[specifier] || specifier
+  };
+})();
+/*
+ * This file is a modified version of https://github.com/systemjs/systemjs/blob/main/dist/s.js
+ * with the following changes:
+ *
+ * - Code can use aync/await, const, etc because this file is compiled (see dist/s.js)
+ * - Can use document.currentScript because we don't support IE
+ * - auto import inline System.register
+ * - auto import first System.register in web workers
+ * - queing events in web workers
+ * - no support for importmap because jsenv don't need it
+ */
+
+;(function () {
+  /* eslint-env browser */
+  /* globals self */
+
+  const loadRegistry = Object.create(null)
+  const registerRegistry = Object.create(null)
+  let inlineScriptCount = 0
+  const System = {}
+
+  const hasDocument = typeof document === "object"
+  const envGlobal = self
+  const isWorker =
+    !hasDocument &&
+    typeof envGlobal.WorkerGlobalScope === "function" &&
+    envGlobal instanceof envGlobal.WorkerGlobalScope
+  const isServiceWorker = isWorker && typeof self.skipWaiting === "function"
+  envGlobal.System = System
+
+  let baseUrl = envGlobal.location.href.split("#")[0].split("?")[0]
+  const lastSlashIndex = baseUrl.lastIndexOf("/")
+  if (lastSlashIndex !== -1) {
+    baseUrl = baseUrl.slice(0, lastSlashIndex + 1)
+  }
+
+  const resolveUrl = (specifier, baseUrl) => new URL(specifier, baseUrl).href
+
+  if (hasDocument) {
+    const baseElement = document.querySelector("base[href]")
+    if (baseElement) {
+      baseUrl = baseElement.href
+    }
+    System.register = (deps, declare) => {
+      if (!document.currentScript) {
+        throw new Error(
+          "unexpected call to System.register (document.currentScript is undefined)",
+        )
+      }
+      if (document.currentScript.__s__) {
+        registerRegistry[document.currentScript.src] = [deps, declare]
+        return null
+      }
+      const url =
+        document.currentScript.src ||
+        `${window.location.href}__inline_script__${++inlineScriptCount}`
+      registerRegistry[url] = [deps, declare]
+      return _import(url)
+    }
+    System.instantiate = (url) => {
+      const script = createScript(url)
+      return new Promise(function (resolve, reject) {
+        let lastWindowErrorUrl
+        let lastWindowError
+        const windowErrorCallback = (event) => {
+          lastWindowErrorUrl = event.filename
+          lastWindowError = event.error
+        }
+        window.addEventListener("error", windowErrorCallback)
+        script.addEventListener("error", () => {
+          window.removeEventListener("error", windowErrorCallback)
+          reject(`An error occured while loading url with <script> for ${url}`)
+        })
+        script.addEventListener("load", () => {
+          window.removeEventListener("error", windowErrorCallback)
+          document.head.removeChild(script)
+          // Note that if an error occurs that isn't caught by this if statement,
+          // that getRegister will return null and a "did not instantiate" error will be thrown.
+          if (lastWindowErrorUrl === url) {
+            reject(lastWindowError)
+          } else {
+            resolve()
+          }
+        })
+        document.head.appendChild(script)
+      })
+    }
+    const createScript = (url) => {
+      const script = document.createElement("script")
+      script.async = true
+      // Only add cross origin for actual cross origin
+      // this is because Safari triggers for all
+      // - https://bugs.webkit.org/show_bug.cgi?id=171566
+      if (url.indexOf(`${self.location.origin}/`)) {
+        script.crossOrigin = "anonymous"
+      }
+      script.__s__ = true
+      script.src = url
+      return script
+    }
+  }
+  if (isWorker) {
+    /*
+     * SystemJs loads X files before executing the worker/service worker main file
+     * It mean events dispatched during this phase could be missed
+     * A warning like the one below is displayed in chrome devtools:
+     * "Event handler of 'install' event must be added on the initial evaluation of worker script"
+     * To fix that code below listen for these events early and redispatch them later
+     * once the worker file is executed (the listeners are installed)
+     */
+    const firstImportCallbacks = []
+    if (isServiceWorker) {
+      // for service worker there is more events to listen
+      // and, to get rid of the warning, we override self.addEventListener
+      const eventsToCatch = ["message", "install", "activate", "fetch"]
+      const eventCallbackProxies = {}
+      const firstImportPromise = new Promise((resolve) => {
+        firstImportCallbacks.push(resolve)
+      })
+      eventsToCatch.forEach((eventName) => {
+        const eventsToDispatch = []
+        const eventCallback = (event) => {
+          const eventCallbackProxy = eventCallbackProxies[event.type]
+          if (eventCallbackProxy) {
+            eventCallbackProxy(event)
+          } else {
+            eventsToDispatch.push(event)
+            event.waitUntil(firstImportPromise)
+          }
+        }
+        self.addEventListener(eventName, eventCallback)
+        firstImportCallbacks.push(() => {
+          if (eventsToDispatch.length) {
+            const eventCallbackProxy =
+              eventCallbackProxies[eventsToDispatch[0].type]
+            if (eventCallbackProxy) {
+              eventsToDispatch.forEach((event) => {
+                eventCallbackProxy(event)
+              })
+            }
+            eventsToDispatch.length = 0
+          }
+        })
+      })
+
+      const addEventListener = self.addEventListener
+      self.addEventListener = function (eventName, callback, options) {
+        if (eventsToCatch.indexOf(eventName) > -1) {
+          eventCallbackProxies[eventName] = callback
+          return null
+        }
+        return addEventListener.call(self, eventName, callback, options)
+      }
+    } else {
+      const eventsToCatch = ["message"]
+      eventsToCatch.forEach((eventName) => {
+        var eventQueue = []
+        var eventCallback = (event) => {
+          eventQueue.push(event)
+        }
+        self.addEventListener(eventName, eventCallback)
+        firstImportCallbacks.push(() => {
+          self.removeEventListener(eventName, eventCallback)
+          eventQueue.forEach(function (event) {
+            self.dispatchEvent(event)
+          })
+          eventQueue.length = 0
+        })
+      })
+    }
+
+    System.register = async (deps, declare) => {
+      System.register = () => {
+        throw new Error(
+          "unexpected call to System.register (called outside url instantiation)",
+        )
+      }
+      const url = self.location.href
+      registerRegistry[url] = [deps, declare]
+      const namespace = await _import(url)
+      firstImportCallbacks.forEach((firstImportCallback) => {
+        firstImportCallback()
+      })
+      firstImportCallbacks.length = 0
+      return namespace
+    }
+    System.instantiate = async (url) => {
+      const response = await self.fetch(url, {
+        credentials: "same-origin",
+      })
+      if (!response.ok) {
+        throw Error(`Failed to fetch module at ${url}`)
+      }
+      let source = await response.text()
+      if (source.indexOf("//# sourceURL=") < 0) {
+        source += `\n//# sourceURL=${url}`
+      }
+      const register = System.register
+      System.register = (deps, declare) => {
+        registerRegistry[url] = [deps, declare]
+      }
+      ;(0, self.eval)(source)
+      System.register = register
+    }
+  }
+
+  const _import = (specifier, parentUrl) => {
+    const url = resolveUrl(specifier, parentUrl)
+    const load = getOrCreateLoad(url, parentUrl)
+    if (load.completionPromise) {
+      if (load.completionPromise === load.namespace) {
+        return Promise.resolve(load.namespace)
+      }
+      return load.completionPromise
+    }
+    return startExecution(load, parentUrl)
+  }
+
+  const getOrCreateLoad = (url, firstParentUrl) => {
+    const existingLoad = loadRegistry[url]
+    if (existingLoad) {
+      return existingLoad
+    }
+    const namespace = createNamespace()
+    const load = {
+      url,
+      deps: [],
+      dependencyLoads: [],
+      instantiatePromise: null,
+      linkPromise: null,
+      executePromise: null,
+      completionPromise: null,
+      importerSetters: [],
+      setters: [],
+      execute: null,
+      error: null,
+      hoistedExports: false,
+      namespace,
+    }
+    loadRegistry[url] = load
+    load.instantiatePromise = (async () => {
+      try {
+        let registration = registerRegistry[url]
+        if (!registration) {
+          const instantiateReturnValue = System.instantiate(url, firstParentUrl)
+          if (instantiateReturnValue) {
+            await instantiateReturnValue
+          }
+          registration = registerRegistry[url]
+        }
+        if (!registration) {
+          throw new Error(`System.register() not called after executing ${url}`)
+        }
+
+        const _export = (firstArg, secondArg) => {
+          load.hoistedExports = true
+          let changed = false
+          if (typeof firstArg === "string") {
+            const name = firstArg
+            const value = secondArg
+            if (!(name in namespace) || namespace[name] !== value) {
+              namespace[name] = value
+              changed = true
+            }
+          } else {
+            Object.keys(firstArg).forEach((name) => {
+              const value = firstArg[name]
+              if (!(name in namespace) || namespace[name] !== value) {
+                namespace[name] = value
+                changed = true
+              }
+            })
+            if (firstArg && firstArg.__esModule) {
+              namespace.__esModule = firstArg.__esModule
+            }
+          }
+          if (changed) {
+            load.importerSetters.forEach((importerSetter) => {
+              if (importerSetter) {
+                importerSetter(namespace)
+              }
+            })
+          }
+          return secondArg
+        }
+        const [deps, declare] = registration
+        const { setters, execute = () => {} } = declare(_export, {
+          import: (importId) => _import(importId, url),
+          meta: createMeta(url),
+        })
+        load.deps = deps
+        load.setters = setters
+        load.execute = execute
+      } catch (e) {
+        load.error = e
+        load.execute = null
+      }
+    })()
+    load.linkPromise = (async () => {
+      await load.instantiatePromise
+      const dependencyLoads = await Promise.all(
+        load.deps.map(async (dep, index) => {
+          const setter = load.setters[index]
+          const dependencyUrl = resolveUrl(dep, url)
+          const dependencyLoad = getOrCreateLoad(dependencyUrl, url)
+          if (dependencyLoad.instantiatePromise) {
+            await dependencyLoad.instantiatePromise
+          }
+          if (setter) {
+            dependencyLoad.importerSetters.push(setter)
+            if (
+              dependencyLoad.hoistedExports ||
+              !dependencyLoad.instantiatePromise
+            ) {
+              setter(dependencyLoad.namespace)
+            }
+          }
+          return dependencyLoad
+        }),
+      )
+      load.dependencyLoads = dependencyLoads
+    })()
+    return load
+  }
+
+  const startExecution = async (load, importerUrl) => {
+    load.completionPromise = (async () => {
+      await instantiateAll(load, load, {})
+      await postOrderExec(load, importerUrl ? [importerUrl] : [])
+      return load.namespace
+    })()
+    return load.completionPromise
+  }
+
+  const instantiateAll = async (load, parent, loaded) => {
+    if (loaded[load.url]) {
+      return
+    }
+    loaded[load.url] = true
+    try {
+      if (load.linkPromise) {
+        // load.linkPromise is null once instantiated
+        await load.linkPromise
+      }
+      await Promise.all(
+        load.dependencyLoads.map((dependencyLoad) => {
+          return instantiateAll(dependencyLoad, parent, loaded)
+        }),
+      )
+    } catch (error) {
+      if (load.error) {
+        throw error
+      }
+      load.execute = null
+      throw error
+    }
+  }
+
+  const postOrderExec = (load, importStack) => {
+    if (importStack.indexOf(load.url) > -1) {
+      return undefined
+    }
+    if (!load.execute) {
+      if (load.error) {
+        throw load.error
+      }
+      if (load.executePromise) {
+        return load.executePromise
+      }
+      return undefined
+    }
+
+    // deps execute first, unless circular
+    const execute = load.execute
+    load.execute = null
+    const depLoadPromises = []
+    load.dependencyLoads.forEach((dependencyLoad) => {
+      try {
+        const depImportStack = importStack.slice()
+        depImportStack.push(load.url)
+        const depLoadPromise = postOrderExec(dependencyLoad, depImportStack)
+        if (depLoadPromise) {
+          depLoadPromises.push(depLoadPromise)
+        }
+      } catch (err) {
+        load.error = err
+        throw err
+      }
+    })
+
+    return (async () => {
+      if (depLoadPromises.length) {
+        const allDepPromise = Promise.all(depLoadPromises)
+        await allDepPromise
+      }
+
+      try {
+        const executeReturnValue = execute.call(nullContext)
+        if (executeReturnValue) {
+          load.executePromise = executeReturnValue.then(
+            () => {
+              load.executePromise = null
+              load.completionPromise = load.namespace
+            },
+            (error) => {
+              load.executePromise = null
+              load.error = error
+              throw error
+            },
+          )
+          return
+        }
+        load.instantiatePromise = null
+        load.linkPromise = null
+        load.completionPromise = load.namespace
+      } catch (error) {
+        load.error = error
+        throw error
+      } finally {
+        load.execute = null
+      }
+    })()
+  }
+
+  // the closest we can get to call(undefined)
+  const nullContext = Object.freeze(Object.create(null))
+
+  const createMeta = (url) => {
+    return {
+      url,
+      resolve: (id) => resolveUrl(id, url),
+    }
+  }
+
+  const createNamespace =
+    typeof Symbol !== "undefined" && Symbol.toStringTag
+      ? () => {
+          const namespace = Object.create(null)
+          Object.defineProperty(namespace, Symbol.toStringTag, {
+            value: "Module",
+          })
+          return namespace
+        }
+      : () => Object.create(null)
+})()
+
+
+System.register([__v__("/js/a.nomodule.js")], function (_export, _context) {
+  "use strict";
+
+  var fn;
+  return {
+    setters: [function (_clientAJs) {}],
+    execute: function () {
+      /* globals self */
+
+      self.order = [];
+      self.addEventListener("message", async messageEvent => {
+        if (messageEvent.data === "inspect") {
+          messageEvent.ports[0].postMessage({
+            order: self.order,
+            serviceWorkerUrls: self.serviceWorkerUrls
+          });
+        }
+      });
+
+      // trigger jsenv dynamic import for slicedToArray
+      fn = ([a]) => {
+        console.log(a);
+      };
+      fn(["a"]);
+    }
+  };
+});
