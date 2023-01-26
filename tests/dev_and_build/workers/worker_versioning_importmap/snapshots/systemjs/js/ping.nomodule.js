@@ -1,1 +1,11 @@
-System.register([],(function(e,t){"use strict";return{setters:[],execute:function(){e("ping","pong")}}}));
+System.register([], function (_export, _context) {
+  "use strict";
+
+  var ping;
+  return {
+    setters: [],
+    execute: function () {
+      _export("ping", ping = "pong");
+    }
+  };
+});
