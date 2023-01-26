@@ -14509,7 +14509,9 @@ function default_1({
   };
 }
 
+const TRANSFORM_MODULES_SYSTEMJS_PATH = fileURLToPath(new URL("./js/babel_plugin_transform_modules_systemjs.cjs", import.meta.url));
 const convertJsModuleToJsClassic = async ({
+  rootDirectoryUrl,
   systemJsInjection,
   systemJsClientFileUrl,
   urlInfo,
@@ -14534,7 +14536,16 @@ const convertJsModuleToJsClassic = async ({
     babelPlugins: [...(jsClassicFormat === "system" ? [
     // proposal-dynamic-import required with systemjs for babel8:
     // https://github.com/babel/babel/issues/10746
-    requireFromJsenv("@babel/plugin-proposal-dynamic-import"), requireFromJsenv("@babel/plugin-transform-modules-systemjs"), [default_1, {
+    requireFromJsenv("@babel/plugin-proposal-dynamic-import"), [
+    // eslint-disable-next-line import/no-dynamic-require
+    requireFromJsenv(TRANSFORM_MODULES_SYSTEMJS_PATH), {
+      generateIdentifierHint: key => {
+        if (key.startsWith("file://")) {
+          return urlToRelativeUrl(key, rootDirectoryUrl);
+        }
+        return key;
+      }
+    }], [default_1, {
       asyncAwait: false,
       // already handled + we might not needs it at all
       topLevelAwait: "return"
@@ -14668,6 +14679,7 @@ const jsenvPluginAsJsClassicConversion = ({
         content,
         sourcemap
       } = await convertJsModuleToJsClassic({
+        rootDirectoryUrl: context.rootDirectoryUrl,
         systemJsInjection,
         systemJsClientFileUrl,
         urlInfo,
@@ -15012,6 +15024,7 @@ const jsenvPluginAsJsClassicLibrary = ({
         content,
         sourcemap
       } = await convertJsModuleToJsClassic({
+        rootDirectoryUrl: context.rootDirectoryUrl,
         systemJsInjection,
         systemJsClientFileUrl,
         urlInfo,

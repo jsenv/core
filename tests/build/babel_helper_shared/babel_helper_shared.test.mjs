@@ -23,26 +23,21 @@ const test = async (params) => {
   const { returnValue } = await executeInChromium({
     url: `${server.origin}/main.html`,
     /* eslint-disable no-undef */
-    pageFunction: async () => {
-      return window.resultPromise
-    },
+    pageFunction: async () => window.resultPromise,
     /* eslint-enable no-undef */
   })
-  const actual = {
-    returnValue,
-  }
-  const expected = {
-    returnValue: {
-      a: "a",
-      b: "b",
-    },
-  }
+  const actual = returnValue
+  const expected = { a: "a", b: "b" }
   assert({ actual, expected })
 }
 
-// support for <script type="module">
-await test({ runtimeCompat: { chrome: "64" } })
-// no support for <script type="module">
+// can use <script type="module">
+await test({
+  runtimeCompat: {
+    chrome: "89",
+  },
+})
+// cannot use <script type="module">
 await test({
   runtimeCompat: {
     chrome: "55",

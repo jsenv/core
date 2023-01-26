@@ -74,6 +74,7 @@ export const jsenvPluginAsJsClassicLibrary = ({
         })
       }
       const { content, sourcemap } = await convertJsModuleToJsClassic({
+        rootDirectoryUrl: context.rootDirectoryUrl,
         systemJsInjection,
         systemJsClientFileUrl,
         urlInfo,
