@@ -142,7 +142,7 @@ ${e.traceMessage}`)
             const [inlineScriptReference, inlineScriptUrlInfo] =
               context.referenceUtils.foundInline({
                 node: scriptNode,
-                type: "script_inline",
+                type: "script",
                 expectedType: type,
                 // we remove 1 to the line because imagine the following html:
                 // <script>console.log('ok')</script>
