@@ -11,11 +11,11 @@ import { assert } from "@jsenv/assert"
 
 import { startDevServer } from "@jsenv/core"
 
-const jsFileUrl = new URL("./client/main.js", import.meta.url)
-const jsFileContent = {
-  beforeTest: readFileSync(jsFileUrl),
-  update: (content) => writeFileSync(jsFileUrl, content),
-  restore: () => writeFileSync(jsFileUrl, jsFileContent.beforeTest),
+const htmlFileUrl = new URL("./client/main.html", import.meta.url)
+const htmlFileContent = {
+  beforeTest: readFileSync(htmlFileUrl),
+  update: (content) => writeFileSync(htmlFileUrl, content),
+  restore: () => writeFileSync(htmlFileUrl, htmlFileContent.beforeTest),
 }
 const devServer = await startDevServer({
   logLevel: "off",
@@ -52,7 +52,22 @@ try {
     assert({ actual, expected })
   }
 
-  jsFileContent.update(`const j = (`)
+  htmlFileContent.update(`<!DOCTYPE html>
+  <html>
+    <head>
+      <title>Title</title>
+      <meta charset="utf-8" />
+      <link rel="icon" href="data:," />
+    </head>
+  
+    <body>
+      <style>
+        body {
+          background: red
+        }
+      </style>
+    </body>
+  </html>`)
   await new Promise((resolve) => {
     setTimeout(resolve, 500)
   })
@@ -65,7 +80,7 @@ try {
     }
     assert({ actual, expected })
   }
-  jsFileContent.update(`const j = true`)
+  htmlFileContent.restore()
   await new Promise((resolve) => {
     setTimeout(resolve, 500)
   })
@@ -81,7 +96,7 @@ try {
     assert({ actual, expected })
   }
 } finally {
-  jsFileContent.restore()
+  htmlFileContent.restore()
   browser.close()
   devServer.stop() // required because for some reason the rooms are kept alive
 }

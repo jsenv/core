@@ -593,12 +593,16 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           },
         )
       } catch (error) {
-        throw createTransformUrlContentError({
+        // ensure reference are up-to-date so that even in case of error
+        urlGraph.updateReferences(urlInfo, references)
+        const transformError = createTransformUrlContentError({
           pluginController,
           reference: context.reference,
           urlInfo,
           error,
         })
+        urlInfo.error = transformError
+        throw transformError
       }
       // after "transform" all references from originalContent
       // and the one injected by plugin are known

@@ -233,7 +233,8 @@ export const createFileService = ({
           })
         })
         // "pushPlugin" so that event source client connection can be put as early as possible in html
-        kitchen.pluginController.pushPlugin(
+        // unshift until we pu an attribute to say "hey, keep this script first"
+        kitchen.pluginController.unshiftPlugin(
           jsenvPluginServerEventsClientInjection(),
         )
       }

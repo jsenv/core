@@ -88,6 +88,9 @@ export const getCorePlugins = ({
     jsenvPluginNodeRuntime({ runtimeCompat }),
 
     jsenvPluginImportMetaHot(),
+    // TODO: autoreloqd arrive trop tard si jamais y'a une erreur dans les plugins suivants
+    // donc faudrait le mettre en tout premier?? idealement oui je crois
+    // ou alors que ca se produise auqnd meme en cas d'erreur
     ...(clientAutoreload
       ? [
           jsenvPluginAutoreload({
