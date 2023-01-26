@@ -212,7 +212,7 @@ const visitHtmlUrls = ({ url, htmlAst }) => {
         return
       }
       visitAttributeAsUrlSpecifier({
-        type: "script_src",
+        type: "script",
         subtype: type,
         expectedType: type,
         node,
@@ -301,7 +301,7 @@ const decideLinkExpectedType = (linkMention, mentions) => {
       const firstScriptOnThisUrl = mentions.find(
         (mentionCandidate) =>
           mentionCandidate.url === linkMention.url &&
-          mentionCandidate.type === "script_src",
+          mentionCandidate.type === "script",
       )
       if (firstScriptOnThisUrl) {
         return firstScriptOnThisUrl.expectedType

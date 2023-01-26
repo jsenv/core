@@ -18,7 +18,7 @@ export const jsenvPluginReactRefreshPreamble = () => {
       html: (urlInfo, context) => {
         const htmlAst = parseHtmlString(urlInfo.content)
         const [reactRefreshPreambleReference] = context.referenceUtils.inject({
-          type: "script_src",
+          type: "script",
           subtype: "js_module",
           expectedType: "js_module",
           specifier: reactRefreshPreambleClientFileUrl,

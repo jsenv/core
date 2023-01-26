@@ -19,6 +19,7 @@ export const parseJsWithAcorn = async ({ js, url, isJsModule }) => {
       const { line, column } = _getLineInfo(js, e.raisedAt)
       throw createJsParseError({
         message: e.message,
+        reasonCode: e.message,
         url,
         line,
         column,

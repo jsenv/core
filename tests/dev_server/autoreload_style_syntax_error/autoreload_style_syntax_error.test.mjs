@@ -11,11 +11,11 @@ import { assert } from "@jsenv/assert"
 
 import { startDevServer } from "@jsenv/core"
 
-const jsFileUrl = new URL("./client/main.js", import.meta.url)
-const jsFileContent = {
-  beforeTest: readFileSync(jsFileUrl),
-  update: (content) => writeFileSync(jsFileUrl, content),
-  restore: () => writeFileSync(jsFileUrl, jsFileContent.beforeTest),
+const htmlFileUrl = new URL("./client/main.html", import.meta.url)
+const htmlFileContent = {
+  beforeTest: readFileSync(htmlFileUrl),
+  update: (content) => writeFileSync(htmlFileUrl, content),
+  restore: () => writeFileSync(htmlFileUrl, htmlFileContent.beforeTest),
 }
 const devServer = await startDevServer({
   logLevel: "off",
@@ -32,56 +32,56 @@ const page = await browser.newPage({ ignoreHTTPSErrors: true })
 
 try {
   await page.goto(`${devServer.origin}/main.html`)
-  const getErrorOverlayDisplayedOnPage = async (page) => {
-    const errorOverlayHandle = await page.evaluate(
+  const getDocumentBodyBackgroundColor = () => {
+    return page.evaluate(
       /* eslint-disable no-undef */
-      () => {
-        return document.querySelector("jsenv-error-overlay")
-      },
+      () => window.getComputedStyle(document.body).backgroundColor,
       /* eslint-enable no-undef */
     )
-    return Boolean(errorOverlayHandle)
   }
+
   {
-    const actual = {
-      displayed: await getErrorOverlayDisplayedOnPage(page),
-    }
-    const expected = {
-      displayed: false,
-    }
+    const actual = await getDocumentBodyBackgroundColor()
+    const expected = `rgb(255, 0, 0)`
     assert({ actual, expected })
   }
 
-  jsFileContent.update(`const j = (`)
+  htmlFileContent.update(`<!DOCTYPE html>
+  <html>
+    <head>
+      <title>Title</title>
+      <meta charset="utf-8" />
+      <link rel="icon" href="data:," />
+    </head>
+  
+    <body>
+      <style>
+        body {
+          background: red
+          color: blue;
+        }
+      </style>
+    </body>
+  </html>`)
   await new Promise((resolve) => {
     setTimeout(resolve, 500)
   })
   {
-    const actual = {
-      displayedAfterSyntaxError: await getErrorOverlayDisplayedOnPage(page),
-    }
-    const expected = {
-      displayedAfterSyntaxError: true,
-    }
+    const actual = await getDocumentBodyBackgroundColor()
+    const expected = `rgba(0, 0, 0, 0)`
     assert({ actual, expected })
   }
-  jsFileContent.update(`const j = true`)
+  htmlFileContent.restore()
   await new Promise((resolve) => {
     setTimeout(resolve, 500)
   })
   {
-    const actual = {
-      displayedAfterFixAndAutoreload: await getErrorOverlayDisplayedOnPage(
-        page,
-      ),
-    }
-    const expected = {
-      displayedAfterFixAndAutoreload: false,
-    }
+    const actual = await getDocumentBodyBackgroundColor()
+    const expected = `rgb(255, 0, 0)`
     assert({ actual, expected })
   }
 } finally {
-  jsFileContent.restore()
+  htmlFileContent.restore()
   browser.close()
   devServer.stop() // required because for some reason the rooms are kept alive
 }

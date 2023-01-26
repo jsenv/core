@@ -6905,12 +6905,17 @@ const createServerEventsDispatcher = () => {
       const firstClient = clients.shift();
       firstClient.close();
     }
-    return () => {
-      client.close();
+    const removeClient = () => {
       const index = clients.indexOf(client);
       if (index > -1) {
         clients.splice(index, 1);
       }
+    };
+    client.onclose = () => {
+      removeClient();
+    };
+    return () => {
+      client.close();
     };
   };
   return {
@@ -6946,6 +6951,10 @@ const createServerEventsDispatcher = () => {
       client.sendEvent({
         type: "welcome"
       });
+      websocket.onclose = () => {
+        client.onclose();
+      };
+      client.onclose = () => {};
       return addClient(client);
     },
     // we could add "addEventSource" and let clients connect using
@@ -9056,12 +9065,15 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           await urlInfoTransformer.applyIntermediateTransformations(urlInfo, transformReturnValue);
         });
       } catch (error) {
-        throw createTransformUrlContentError({
+        urlGraph.updateReferences(urlInfo, references); // ensure reference are updated even in case of error
+        const transformError = createTransformUrlContentError({
           pluginController,
           reference: context.reference,
           urlInfo,
           error
         });
+        urlInfo.error = transformError;
+        throw transformError;
       }
       // after "transform" all references from originalContent
       // and the one injected by plugin are known
@@ -9651,7 +9663,7 @@ const jsenvPluginReferenceExpectedTypes = () => {
     name: "jsenv:reference_expected_types",
     appliesDuring: "*",
     redirectUrl: {
-      script_src: redirectJsUrls,
+      script: redirectJsUrls,
       js_url: redirectJsUrls,
       js_import: redirectJsUrls
     }
@@ -9860,7 +9872,7 @@ const visitHtmlUrls = ({
         return;
       }
       visitAttributeAsUrlSpecifier({
-        type: "script_src",
+        type: "script",
         subtype: type,
         expectedType: type,
         node,
@@ -9945,7 +9957,7 @@ const decideLinkExpectedType = (linkMention, mentions) => {
       return "css";
     }
     if (as === "script") {
-      const firstScriptOnThisUrl = mentions.find(mentionCandidate => mentionCandidate.url === linkMention.url && mentionCandidate.type === "script_src");
+      const firstScriptOnThisUrl = mentions.find(mentionCandidate => mentionCandidate.url === linkMention.url && mentionCandidate.type === "script");
       if (firstScriptOnThisUrl) {
         return firstScriptOnThisUrl.expectedType;
       }
@@ -10176,6 +10188,28 @@ const findOriginalDirectoryReference = (urlInfo, context) => {
 const jsenvPluginHtmlInlineContent = ({
   analyzeConvertedScripts
 }) => {
+  const cookInlineContent = async ({
+    context,
+    inlineContentUrlInfo,
+    inlineContentReference
+  }) => {
+    try {
+      await context.cook(inlineContentUrlInfo, {
+        reference: inlineContentReference
+      });
+    } catch (e) {
+      if (e.code === "PARSE_ERROR") {
+        // When something like <style> or <script> contains syntax error
+        // the HTML in itself it still valid
+        // keep the syntax error and continue with the HTML
+        const messageStart = inlineContentUrlInfo.type === "css" ? `Syntax error on css declared inside <style>` : `Syntax error on js declared inside <script>`;
+        context.logger.error(`${messageStart}: ${e.cause.reasonCode}
+${e.traceMessage}`);
+      } else {
+        throw e;
+      }
+    }
+  };
   return {
     name: "jsenv:html_inline_content",
     appliesDuring: "*",
@@ -10210,7 +10244,7 @@ const jsenvPluginHtmlInlineContent = ({
             const debug = getHtmlNodeAttribute(styleNode, "jsenv-debug") !== undefined;
             const [inlineStyleReference, inlineStyleUrlInfo] = context.referenceUtils.foundInline({
               node: styleNode,
-              type: "link_href",
+              type: "style",
               expectedType: "css",
               isOriginalPosition: isOriginal,
               // we remove 1 to the line because imagine the following html:
@@ -10224,8 +10258,10 @@ const jsenvPluginHtmlInlineContent = ({
               debug
             });
             actions.push(async () => {
-              await context.cook(inlineStyleUrlInfo, {
-                reference: inlineStyleReference
+              await cookInlineContent({
+                context,
+                inlineContentUrlInfo: inlineStyleUrlInfo,
+                inlineContentReference: inlineStyleReference
               });
             });
             mutations.push(() => {
@@ -10274,7 +10310,7 @@ const jsenvPluginHtmlInlineContent = ({
             const debug = getHtmlNodeAttribute(scriptNode, "jsenv-debug") !== undefined;
             const [inlineScriptReference, inlineScriptUrlInfo] = context.referenceUtils.foundInline({
               node: scriptNode,
-              type: "script_src",
+              type: "script",
               expectedType: type,
               // we remove 1 to the line because imagine the following html:
               // <script>console.log('ok')</script>
@@ -10288,8 +10324,10 @@ const jsenvPluginHtmlInlineContent = ({
               debug
             });
             actions.push(async () => {
-              await context.cook(inlineScriptUrlInfo, {
-                reference: inlineScriptReference
+              await cookInlineContent({
+                context,
+                inlineContentUrlInfo: inlineScriptUrlInfo,
+                inlineContentReference: inlineScriptReference
               });
             });
             mutations.push(() => {
@@ -10814,7 +10852,8 @@ const jsenvPluginInlineQueryParam = () => {
       // this should be done during dev and postbuild but not build
       // so that the bundled file gets inlined and not the entry point
       "link_href": () => null,
-      "script_src": () => null,
+      "style": () => null,
+      "script": () => null,
       // if the referenced url is a worker we could use
       // https://www.oreilly.com/library/view/web-workers/9781449322120/ch04.html
       // but maybe we should rather use ?object_url
@@ -14675,7 +14714,7 @@ const jsenvPluginAsJsClassicHtml = ({
         }
         return null;
       },
-      script_src: (reference, context) => {
+      script: (reference, context) => {
         if (context.systemJsTranspilation && reference.expectedType === "js_module") {
           return turnIntoJsClassicProxy(reference);
         }
@@ -14732,7 +14771,7 @@ const jsenvPluginAsJsClassicHtml = ({
             }
             const src = getHtmlNodeAttribute(node, "src");
             if (src) {
-              const reference = context.referenceUtils.find(ref => ref.generatedSpecifier === src && ref.type === "script_src" && ref.subtype === "js_module");
+              const reference = context.referenceUtils.find(ref => ref.generatedSpecifier === src && ref.type === "script" && ref.subtype === "js_module");
               if (!reference) {
                 return;
               }
@@ -14803,7 +14842,7 @@ const jsenvPluginAsJsClassicHtml = ({
                 });
               }
               const [systemJsReference, systemJsUrlInfo] = context.referenceUtils.inject({
-                type: "script_src",
+                type: "script",
                 expectedType: "js_classic",
                 isInline: true,
                 contentType: "text/javascript",
@@ -15739,7 +15778,7 @@ const jsenvPluginImportmap = () => {
             columnEnd
           });
           const [inlineImportmapReference, inlineImportmapUrlInfo] = context.referenceUtils.foundInline({
-            type: "script_src",
+            type: "script",
             isOriginalPosition: isOriginal,
             specifierLine: line - 1,
             specifierColumn: column,
@@ -16874,7 +16913,8 @@ const addRelationshipWithPackageJson = ({
  * - "http_request"
  * - "entry_point"
  * - "link_href"
- * - "script_src"
+ * - "style"
+ * - "script"
  * - "a_href"
  * - "iframe_src
  * - "img_src"
@@ -17411,7 +17451,8 @@ const jsenvPluginSupervisor = ({
             columnEnd
           });
           const [inlineScriptReference] = context.referenceUtils.foundInline({
-            type: "script_src",
+            type: "script",
+            subtype: "inline",
             expectedType: type,
             isOriginalPosition: isOriginal,
             specifierLine: line - 1,
@@ -17484,7 +17525,7 @@ const jsenvPluginSupervisor = ({
           specifier: scriptTypeModuleSupervisorFileUrl
         });
         const [supervisorFileReference] = context.referenceUtils.inject({
-          type: "script_src",
+          type: "script",
           expectedType: "js_classic",
           specifier: supervisorFileUrl
         });
@@ -19464,7 +19505,7 @@ const htmlNodeCanHotReload = node => {
     return rel === "icon";
   }
   return [
-  // "script_src", // script src cannot hot reload
+  // "script", // script cannot hot reload
   "a",
   // Iframe will have their own event source client
   // and can hot reload independently
@@ -19723,7 +19764,7 @@ const jsenvPluginAutoreloadClient = () => {
       html: (htmlUrlInfo, context) => {
         const htmlAst = parseHtmlString(htmlUrlInfo.content);
         const [autoreloadClientReference] = context.referenceUtils.inject({
-          type: "script_src",
+          type: "script",
           subtype: "js_module",
           expectedType: "js_module",
           specifier: autoreloadClientFileUrl
@@ -20078,7 +20119,7 @@ const jsenvPluginRibbon = ({
         }
         const htmlAst = parseHtmlString(urlInfo.content);
         const [ribbonClientFileReference] = context.referenceUtils.inject({
-          type: "script_src",
+          type: "script",
           subtype: "js_module",
           expectedType: "js_module",
           specifier: ribbonClientFileUrl.href
@@ -21088,7 +21129,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 const dependentUrlInfo = rawGraph.getUrlInfo(dependent);
                 for (const reference of dependentUrlInfo.references) {
                   if (reference.url === referencedUrlInfo.url) {
-                    willAlreadyBeBundled = reference.subtype === "import_dynamic" || reference.type === "script_src";
+                    willAlreadyBeBundled = reference.subtype === "import_dynamic" || reference.type === "script";
                   }
                 }
               }
@@ -22036,7 +22077,7 @@ const jsenvPluginServerEventsClientInjection = () => {
       html: (htmlUrlInfo, context) => {
         const htmlAst = parseHtmlString(htmlUrlInfo.content);
         const [serverEventsClientFileReference] = context.referenceUtils.inject({
-          type: "script_src",
+          type: "script",
           subtype: "js_module",
           expectedType: "js_module",
           specifier: serverEventsClientFileUrl

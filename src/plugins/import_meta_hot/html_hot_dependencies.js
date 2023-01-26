@@ -130,7 +130,7 @@ const htmlNodeCanHotReload = (node) => {
     return rel === "icon"
   }
   return [
-    // "script_src", // script src cannot hot reload
+    // "script", // script cannot hot reload
     "a",
     // Iframe will have their own event source client
     // and can hot reload independently

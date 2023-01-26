@@ -232,7 +232,8 @@ export const jsenvPluginSupervisor = ({
             columnEnd,
           })
           const [inlineScriptReference] = context.referenceUtils.foundInline({
-            type: "script_src",
+            type: "script",
+            subtype: "inline",
             expectedType: type,
             isOriginalPosition: isOriginal,
             specifierLine: line - 1,
@@ -307,7 +308,7 @@ export const jsenvPluginSupervisor = ({
             specifier: scriptTypeModuleSupervisorFileUrl,
           })
         const [supervisorFileReference] = context.referenceUtils.inject({
-          type: "script_src",
+          type: "script",
           expectedType: "js_classic",
           specifier: supervisorFileUrl,
         })

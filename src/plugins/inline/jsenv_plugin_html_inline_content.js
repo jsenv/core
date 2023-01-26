@@ -13,6 +13,33 @@ import {
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js"
 
 export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
+  const cookInlineContent = async ({
+    context,
+    inlineContentUrlInfo,
+    inlineContentReference,
+  }) => {
+    try {
+      await context.cook(inlineContentUrlInfo, {
+        reference: inlineContentReference,
+      })
+    } catch (e) {
+      if (e.code === "PARSE_ERROR") {
+        // When something like <style> or <script> contains syntax error
+        // the HTML in itself it still valid
+        // keep the syntax error and continue with the HTML
+        const messageStart =
+          inlineContentUrlInfo.type === "css"
+            ? `Syntax error on css declared inside <style>`
+            : `Syntax error on js declared inside <script>`
+
+        context.logger.error(`${messageStart}: ${e.cause.reasonCode}
+${e.traceMessage}`)
+      } else {
+        throw e
+      }
+    }
+  }
+
   return {
     name: "jsenv:html_inline_content",
     appliesDuring: "*",
@@ -44,7 +71,7 @@ export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
             const [inlineStyleReference, inlineStyleUrlInfo] =
               context.referenceUtils.foundInline({
                 node: styleNode,
-                type: "link_href",
+                type: "style",
                 expectedType: "css",
                 isOriginalPosition: isOriginal,
                 // we remove 1 to the line because imagine the following html:
@@ -58,8 +85,10 @@ export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
                 debug,
               })
             actions.push(async () => {
-              await context.cook(inlineStyleUrlInfo, {
-                reference: inlineStyleReference,
+              await cookInlineContent({
+                context,
+                inlineContentUrlInfo: inlineStyleUrlInfo,
+                inlineContentReference: inlineStyleReference,
               })
             })
             mutations.push(() => {
@@ -113,7 +142,7 @@ export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
             const [inlineScriptReference, inlineScriptUrlInfo] =
               context.referenceUtils.foundInline({
                 node: scriptNode,
-                type: "script_src",
+                type: "script",
                 expectedType: type,
                 // we remove 1 to the line because imagine the following html:
                 // <script>console.log('ok')</script>
@@ -127,8 +156,10 @@ export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
                 debug,
               })
             actions.push(async () => {
-              await context.cook(inlineScriptUrlInfo, {
-                reference: inlineScriptReference,
+              await cookInlineContent({
+                context,
+                inlineContentUrlInfo: inlineScriptUrlInfo,
+                inlineContentReference: inlineScriptReference,
               })
             })
             mutations.push(() => {

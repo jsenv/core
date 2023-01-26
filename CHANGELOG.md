@@ -1,3 +1,7 @@
+# 30.3.7
+
+- Gracefully handle css syntax error inside `<style>`. Thanks to this dev server properly autoreload even when there is a syntax error in css within html.
+
 # 30.3.6
 
 - Ensure inline content static analysis works in a corner case (transpilation to systemjs + minification without bundling)

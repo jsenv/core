@@ -24,7 +24,7 @@ export const jsenvPluginServerEventsClientInjection = () => {
         const htmlAst = parseHtmlString(htmlUrlInfo.content)
         const [serverEventsClientFileReference] = context.referenceUtils.inject(
           {
-            type: "script_src",
+            type: "script",
             subtype: "js_module",
             expectedType: "js_module",
             specifier: serverEventsClientFileUrl,

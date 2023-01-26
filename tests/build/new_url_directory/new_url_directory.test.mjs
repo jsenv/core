@@ -14,7 +14,6 @@ const test = async (params) => {
       "./main.html": "main.html",
     },
     writeGeneratedFiles: true,
-
     ...params,
   })
   const server = await startFileServer({
@@ -23,9 +22,7 @@ const test = async (params) => {
   const { returnValue } = await executeInChromium({
     url: `${server.origin}/main.html`,
     /* eslint-disable no-undef */
-    pageFunction: async () => {
-      return window.resultPromise
-    },
+    pageFunction: async () => window.resultPromise,
     /* eslint-enable no-undef */
   })
   const actual = {
@@ -59,9 +56,7 @@ ${new URL("./client/main.html", import.meta.url)}:15:40
   14 |     <script type="module">
 > 15 |       const directoryUrl = new URL("./src/", import.meta.url).href
                                               ^
-  16 | 
---- plugin name ---
-"jsenv:file_url_fetching"`
+  16 | `
   assert({ actual, expected })
 }
 

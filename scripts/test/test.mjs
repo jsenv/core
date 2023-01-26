@@ -43,7 +43,13 @@ await executeTestPlan({
             allocatedMs: 180_000,
           },
         },
-        "tests/**/import_assert_type_css_build.test": {
+        "tests/**/import_assert_type_css_build.test.mjs": {
+          node: {
+            runtime: nodeWorkerThread,
+            allocatedMs: 90_000,
+          },
+        },
+        "tests/**/autoreload_js_import_css.test.mjs": {
           node: {
             runtime: nodeWorkerThread,
             allocatedMs: 90_000,
