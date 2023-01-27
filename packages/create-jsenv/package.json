@@ -1,6 +1,6 @@
 {
   "name": "create-jsenv",
-  "version": "1.4.30",
+  "version": "1.5.0",
   "description": "npm initializer for jsenv",
   "license": "MIT",
   "repository": {
@@ -29,6 +29,7 @@
     "demo-*"
   ],
   "dependencies": {
-    "prompts": "2.4.2"
+    "prompts": "2.4.2",
+    "@jsenv/log": "3.3.3"
   }
 }

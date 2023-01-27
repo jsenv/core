@@ -12,6 +12,7 @@ import {
 import { relative } from "node:path"
 import { pathToFileURL, fileURLToPath } from "node:url"
 import prompts from "prompts"
+import { UNICODE, createTaskLog } from "@jsenv/log"
 
 const copy = (fromUrl, toUrl) => {
   const stat = statSync(fromUrl)
@@ -81,10 +82,12 @@ const { cancelled, demoSourceDirectoryUrl, demoTargetDirectoryUrl } =
 
 if (cancelled) {
 } else if (existsSync(demoTargetDirectoryUrl)) {
-  console.log(`\n  directory exists at "${demoTargetDirectoryUrl.href}"`)
-} else {
   console.log(
-    `\n  copy "${demoSourceDirectoryUrl.href}" files into "${demoTargetDirectoryUrl.href}"`,
+    `${UNICODE.INFO} directory exists at "${demoTargetDirectoryUrl.href}"`,
+  )
+} else {
+  const copyTask = createTaskLog(
+    `copy demo files into "${demoTargetDirectoryUrl.href}"`,
   )
   mkdirSync(demoTargetDirectoryUrl, { recursive: true })
   const files = readdirSync(demoSourceDirectoryUrl)
@@ -96,19 +99,22 @@ if (cancelled) {
     )
     copy(fromUrl, toUrl)
   }
-  console.log(`\nDone.`)
+  copyTask.done()
 }
 
 if (!cancelled) {
-  console.log(`\nNow run:\n`)
+  const commands = []
   if (demoTargetDirectoryUrl.href !== cwdUrl.href) {
-    console.log(
+    commands.push(
       `cd ${relative(
         fileURLToPath(cwdUrl),
         fileURLToPath(demoTargetDirectoryUrl),
       )}`,
     )
   }
-  console.log(`npm install`)
-  console.log(`npm run dev`)
+  commands.push("npm install")
+  commands.push("npm run dev")
+  console.log(`----- commands to run -----
+${commands.join("\n")}
+---------------------------`)
 }
