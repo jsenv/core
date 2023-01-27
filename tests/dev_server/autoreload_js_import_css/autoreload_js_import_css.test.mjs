@@ -81,9 +81,7 @@ const test = async ({
     const getDocumentBodyBackgroundColor = () => {
       return page.evaluate(
         /* eslint-disable no-undef */
-        () => {
-          return window.getComputedStyle(document.body).backgroundColor
-        },
+        () => window.getComputedStyle(document.body).backgroundColor,
         /* eslint-enable no-undef */
       )
     }
@@ -103,9 +101,9 @@ const test = async ({
       }
       assert({ actual, expected })
     }
-    await new Promise((resolve) => setTimeout(resolve, 500))
+    await new Promise((resolve) => setTimeout(resolve, 1_000))
     cssFileContent.update(`body { background: green; }`)
-    await new Promise((resolve) => setTimeout(resolve, 500))
+    await new Promise((resolve) => setTimeout(resolve, 1_000))
     {
       const actual = {
         bodyBackgroundColor: await getDocumentBodyBackgroundColor(),
@@ -120,7 +118,7 @@ const test = async ({
     }
     // remove usage of the css file
     jsFileContent.update(`if (import.meta.hot) { import.meta.hot.accept() }`)
-    await new Promise((resolve) => setTimeout(resolve, 500))
+    await new Promise((resolve) => setTimeout(resolve, 1_000))
     {
       const actual = {
         bodyBackgroundColor: await getDocumentBodyBackgroundColor(),
@@ -139,7 +137,7 @@ const test = async ({
 if (import.meta.hot) {
   import.meta.hot.accept()
 }`)
-    await new Promise((resolve) => setTimeout(resolve, 500))
+    await new Promise((resolve) => setTimeout(resolve, 1_000))
     {
       const actual = {
         bodyBackgroundColor: await getDocumentBodyBackgroundColor(),
