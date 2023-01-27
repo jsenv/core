@@ -20223,6 +20223,44 @@ const getCorePlugins = ({
   })] : [])];
 };
 
+const ensureUnixLineBreaks = stringOrBuffer => {
+  if (typeof stringOrBuffer === "string") {
+    const stringWithLinuxBreaks = stringOrBuffer.replace(/\r\n/g, "\n");
+    return stringWithLinuxBreaks;
+  }
+  return ensureUnixLineBreaksOnBuffer(stringOrBuffer);
+};
+
+// https://github.com/nodejs/help/issues/1738#issuecomment-458460503
+const ensureUnixLineBreaksOnBuffer = buffer => {
+  const int32Array = new Int32Array(buffer, 0, buffer.length);
+  const int32ArrayWithLineBreaksNormalized = int32Array.filter((element, index, typedArray) => {
+    if (element === 0x0d) {
+      if (typedArray[index + 1] === 0x0a) {
+        // Windows -> Unix
+        return false;
+      }
+      // Mac OS -> Unix
+      typedArray[index] = 0x0a;
+    }
+    return true;
+  });
+  return Buffer.from(int32ArrayWithLineBreaksNormalized);
+};
+
+const jsenvPluginLineBreakNormalization = () => {
+  return {
+    name: "jsenv:line_break_normalizer",
+    appliesDuring: "build",
+    transformUrlContent: urlInfo => {
+      if (CONTENT_TYPE.isTextual(urlInfo.contentType)) {
+        return ensureUnixLineBreaks(urlInfo.content);
+      }
+      return null;
+    }
+  };
+};
+
 const GRAPH = {
   map: (graph, callback) => {
     const array = [];
@@ -20485,42 +20523,13 @@ const injectVersionMappingsAsImportmap = async ({
   });
 };
 
-const ensureUnixLineBreaks = stringOrBuffer => {
-  if (typeof stringOrBuffer === "string") {
-    const stringWithLinuxBreaks = stringOrBuffer.replace(/\r\n/g, "\n");
-    return stringWithLinuxBreaks;
-  }
-  return ensureUnixLineBreaksOnBuffer(stringOrBuffer);
-};
-
-// https://github.com/nodejs/help/issues/1738#issuecomment-458460503
-const ensureUnixLineBreaksOnBuffer = buffer => {
-  const int32Array = new Int32Array(buffer, 0, buffer.length);
-  const int32ArrayWithLineBreaksNormalized = int32Array.filter((element, index, typedArray) => {
-    if (element === 0x0d) {
-      if (typedArray[index + 1] === 0x0a) {
-        // Windows -> Unix
-        return false;
-      }
-      // Mac OS -> Unix
-      typedArray[index] = 0x0a;
-    }
-    return true;
-  });
-  return Buffer.from(int32ArrayWithLineBreaksNormalized);
-};
-
 // https://github.com/rollup/rollup/blob/19e50af3099c2f627451a45a84e2fa90d20246d5/src/utils/FileEmitter.ts#L47
 // https://github.com/rollup/rollup/blob/5a5391971d695c808eed0c5d7d2c6ccb594fc689/src/Chunk.ts#L870
 const createVersionGenerator = () => {
   const hash = createHash("sha256");
   return {
-    augmentWithContent: ({
-      content,
-      contentType = "application/octet-stream",
-      lineBreakNormalization = false
-    }) => {
-      hash.update(lineBreakNormalization && CONTENT_TYPE.isTextual(contentType) ? ensureUnixLineBreaks(content) : content);
+    augmentWithContent: content => {
+      hash.update(content);
     },
     augment: value => {
       hash.update(value);
@@ -20772,7 +20781,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       build: true,
       runtimeCompat,
       ...contextSharedDuringBuild,
-      plugins: [urlAnalysisPlugin, jsenvPluginAsJsClassic({
+      plugins: [urlAnalysisPlugin, ...(lineBreakNormalization ? [jsenvPluginLineBreakNormalization()] : []), jsenvPluginAsJsClassic({
         jsClassicLibrary: false,
         jsClassicFallback: true,
         systemJsInjection: true
@@ -21364,11 +21373,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               cleanupJsenvAttributes: true
             }) : urlInfo.content;
             const contentVersionGenerator = createVersionGenerator();
-            contentVersionGenerator.augmentWithContent({
-              content: urlContent,
-              contentType: urlInfo.contentType,
-              lineBreakNormalization
-            });
+            contentVersionGenerator.augmentWithContent(urlContent);
             const contentVersion = contentVersionGenerator.generate();
             contentVersionMap.set(urlInfo.url, contentVersion);
             const versionMutations = [];

@@ -67,6 +67,7 @@ import { jsenvPluginUrlAnalysis } from "../plugins/url_analysis/jsenv_plugin_url
 import { jsenvPluginInline } from "../plugins/inline/jsenv_plugin_inline.js"
 import { jsenvPluginAsJsClassic } from "../plugins/transpilation/as_js_classic/jsenv_plugin_as_js_classic.js"
 import { getCorePlugins } from "../plugins/plugins.js"
+import { jsenvPluginLineBreakNormalization } from "./jsenv_plugin_line_break_normalization.js"
 
 import { GRAPH } from "./graph_utils.js"
 import { createBuildUrlsGenerator } from "./build_urls_generator.js"
@@ -333,6 +334,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       ...contextSharedDuringBuild,
       plugins: [
         urlAnalysisPlugin,
+        ...(lineBreakNormalization
+          ? [jsenvPluginLineBreakNormalization()]
+          : []),
         jsenvPluginAsJsClassic({
           jsClassicLibrary: false,
           jsClassicFallback: true,
@@ -1017,11 +1021,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   )
                 : urlInfo.content
             const contentVersionGenerator = createVersionGenerator()
-            contentVersionGenerator.augmentWithContent({
-              content: urlContent,
-              contentType: urlInfo.contentType,
-              lineBreakNormalization,
-            })
+            contentVersionGenerator.augmentWithContent(urlContent)
             const contentVersion = contentVersionGenerator.generate()
             contentVersionMap.set(urlInfo.url, contentVersion)
             const versionMutations = []

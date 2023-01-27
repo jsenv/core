@@ -1,15 +1,16 @@
 import { assert } from "@jsenv/assert"
 import { readFile } from "@jsenv/filesystem"
+import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js"
 
 import { createVersionGenerator } from "@jsenv/core/src/build/version_generator.js"
+import { ensureUnixLineBreaks } from "@jsenv/core/src/build/line_break_unix.js"
 
 const test = ({ content, contentType, lineBreakNormalization }) => {
   const versionGenerator = createVersionGenerator()
-  versionGenerator.augmentWithContent({
-    content,
-    contentType,
-    lineBreakNormalization,
-  })
+  if (lineBreakNormalization && CONTENT_TYPE.isTextual(contentType)) {
+    content = ensureUnixLineBreaks(content)
+  }
+  versionGenerator.augmentWithContent(content)
   return versionGenerator.generate()
 }
 
