@@ -1,3 +1,15 @@
+/*
+ * Export a function capable to run a file on a runtime.
+ *
+ * - Used internally by "executeTestPlan" part of the documented API
+ * - Used internally by "execute" an advanced API not documented
+ * - logs generated during file execution can be collected
+ * - logs generated during file execution can be mirrored (re-logged to the console)
+ * - File is given allocatedMs to complete
+ * - Errors are collected
+ * - File execution result is returned, it contains status/errors/namespace/consoleCalls
+ */
+
 import { createId } from "@paralleldrive/cuid2"
 import { Abort, raceCallbacks } from "@jsenv/abort"
 import { ensureParentDirectories } from "@jsenv/filesystem"

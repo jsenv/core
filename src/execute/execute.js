@@ -1,3 +1,15 @@
+/*
+ * Export a function capable to execute a file on a runtime (browser or node) and return how it goes.
+ *
+ * - can be useful to execute a file in a browser/node.js programmatically
+ * - not documented
+ * - the most importants parts:
+ *   - fileRelativeUrl: the file to execute inside rootDirectoryUrl
+ *   - runtime: an object with a "run" method.
+ *   The run method will start a browser/node process and execute file in it
+ * - Most of the logic lives in "./run.js" used by executeTestPlan to run tests
+ */
+
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem"
 import { createLogger } from "@jsenv/log"
