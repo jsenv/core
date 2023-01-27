@@ -214,7 +214,7 @@ await ensureEmptyDirectory(tempDirectoryUrl)
 
   const unregister = registerDirectoryLifecycle(tempDirectoryUrl, {
     watchPatterns: { "dir/": "toto" },
-    cooldownBetweenFileEvents: 100,
+    cooldownBetweenFileEvents: 150,
     removed: (data) => {
       mutations.push({ name: "removed", ...data })
     },
@@ -223,13 +223,13 @@ await ensureEmptyDirectory(tempDirectoryUrl)
   })
   await removeEntry(fileUrl)
   await removeEntry(directoryUrl)
-  await wait(200)
+  await wait(400)
   await writeDirectory(directoryUrl)
   await writeFile(fileUrl)
-  await wait(200)
+  await wait(400)
   await removeEntry(fileUrl)
   await removeEntry(directoryUrl)
-  await wait(200)
+  await wait(400)
   const actual = mutations
   const expected = [
     {

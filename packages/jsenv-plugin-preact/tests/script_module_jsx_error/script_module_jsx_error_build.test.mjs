@@ -3,7 +3,7 @@ import { build } from "@jsenv/core"
 
 const test = async (params) => {
   await build({
-    logLevel: "warn",
+    logLevel: "off",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
