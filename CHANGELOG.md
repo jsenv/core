@@ -1,3 +1,7 @@
+# 30.3.9
+
+- Ensure build produce "\n" line breaks on windows by default
+
 # 30.3.8
 
 - Prevent file path influence on variable names generated for systemjs during build. This issue was mitigate by minification but now it won't be a problem anymore, even with minification disabled.
