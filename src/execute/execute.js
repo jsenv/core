@@ -51,13 +51,13 @@ export const execute = async ({
   if (runtime.type === "browser") {
     if (!devServerOrigin) {
       throw new TypeError(
-        `devServerOrigin is required when running tests on browser(s)`,
+        `devServerOrigin is required to execute file on a browser`,
       )
     }
     const devServerStarted = await pingServer(devServerOrigin)
     if (!devServerStarted) {
       throw new Error(
-        `dev server not started at ${devServerOrigin}. It is required to run tests`,
+        `no server listening at ${devServerOrigin}. It is required to execute file`,
       )
     }
   }
