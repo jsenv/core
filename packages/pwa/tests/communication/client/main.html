@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve
+      })
+    </script>
+    <script type="module">
+      import { createServiceWorkerScript } from "@jsenv/pwa"
+
+      const script = createServiceWorkerScript()
+      await script.setRegistrationPromise(
+        window.navigator.serviceWorker.register("./sw.js"),
+      )
+      const value = await script.sendMessage("ping")
+      window.resolveResultPromise(value)
+    </script>
+  </body>
+</html>

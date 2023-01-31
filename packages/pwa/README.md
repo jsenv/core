@@ -124,8 +124,9 @@ The raw service worker api offered by navigators is complex to implement. Especi
 </html>
 ```
 
+_demo.js_
+
 ```js
-// ./demo.js
 import { canUseServiceWorkers, createServiceWorkerScript } from "@jsenv/pwa"
 
 if (canUseServiceWorkers) {
