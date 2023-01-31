@@ -159,7 +159,7 @@ ${fileURLToPath(rootDirectoryUrl)}`)
     }
     throw new Error("not found")
   } catch (e) {
-    logger.debug(`Error while resolving "${source}" imported from "${file}"
+    logger.error(`Error while resolving "${source}" imported from "${file}"
 --- error stack ---
 ${e.stack}`)
     return {
@@ -179,7 +179,7 @@ const handleFileUrl = (
     magicExtensions: getExtensionsToTry(magicExtensions, importer),
   })
   if (!fileResolution.found) {
-    logger.debug(`-> file not found at ${fileUrl}`)
+    logger.warn(`-> file not found at ${fileUrl}`)
     return {
       found: false,
       path: fileURLToPath(fileUrl),
