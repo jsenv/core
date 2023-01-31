@@ -1,0 +1,47 @@
+{
+  "name": "@jsenv/pwa",
+  "version": "5.0.0",
+  "description": "Service worker and other progressive web application helpers",
+  "license": "MIT",
+  "author": {
+    "name": "dmail",
+    "email": "dmaillard06@gmail.com",
+    "url": "https://twitter.com/damienmaillard"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/jsenv-core",
+    "directory": "packages/pwas"
+  },
+  "engines": {
+    "node": ">=16.3.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./main.js"
+    },
+    "./*": "./*"
+  },
+  "main": "./main.js",
+  "files": [
+    "/src/",
+    "/main.js"
+  ],
+  "workspaces": [
+    "./packages/*"
+  ],
+  "scripts": {
+    "dev": "node ./script/dev/dev.mjs",
+    "eslint": "node ./node_modules/eslint/bin/eslint.js . --ext=.js,.mjs,.jsx,.html --ignore-path=.eslintignore",
+    "test": "node ./script/test/test.mjs",
+    "test-with-coverage": "npm run test -- --coverage",
+    "prettier": "prettier --write .",
+    "packages-install": "cd docs/react_example && npm install",
+    "certificate-install": "node ./script/dev/install_certificate.mjs"
+  },
+  "devDependencies": {}
+}

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <button id="check-update" disabled>Check update</button>
+    <p id="update-available"></p>
+    <button id="activate-update" disabled>Activate update</button>
+    <button id="unregister">Unregister</button>
+    <script type="module">
+      window.navigator.serviceWorker.register("./sw.js")
+
+      const buttonCheckUpdate = document.querySelector("#check-update")
+      buttonCheckUpdate.disabled = false
+      buttonCheckUpdate.onclick = async () => {
+        const found = await script.checkForUpdate()
+        if (!found) {
+          // eslint-disable-next-line no-alert
+          window.alert("no update found")
+        }
+      }
+      const textUpdateAvailable = document.querySelector("#update-available")
+      const buttonActivateUpdate = document.querySelector("#activate-update")
+      script.listenUpdateChange(() => {
+        const update = script.getUpdate()
+        if (update) {
+          textUpdateAvailable.innerHTML = "An update is available !"
+          buttonActivateUpdate.disabled = false
+          buttonActivateUpdate.onclick = () => {
+            buttonActivateUpdate.disabled = true
+            update.activate()
+          }
+        } else {
+          textUpdateAvailable.innerHTML = ""
+          buttonActivateUpdate.disabled = true
+        }
+      })
+
+      document.querySelector("#unregister").onclick = () => {
+        script.unregister()
+      }
+    </script>
+  </body>
+</html>
