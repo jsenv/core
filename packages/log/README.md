@@ -10,6 +10,8 @@ This package helps to:
 
 # Task log example
 
+(Click image to play the gif)
+
 ![img](./docs/demo_task.gif)
 
 Code used to produce these logs:
