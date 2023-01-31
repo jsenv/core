@@ -72,6 +72,7 @@ export const createServiceWorkerScript = ({
     hasRegistered: () => {
       return Boolean(registrationPromise)
     },
+    getRegistrationPromise: () => registrationPromise,
     setRegistrationPromise: async (promise) => {
       if (registered) {
         throw new Error(`setRegistrationPromise already called`)
@@ -217,6 +218,7 @@ export const createServiceWorkerScript = ({
         return false
       }
       const registration = await registrationPromise
+      log("checkForUpdate on service worker script")
       // await for the registration promise above can take some time
       // especially when the service worker is installing for the first time
       // because it is fetching a lot of urls to put into cache.

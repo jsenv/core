@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <script>
+      window.SW_SCRIPT_PROMISE = new Promise((resolve) => {
+        window.resolveSwScriptPromise = resolve
+      })
+    </script>
+    <script type="module">
+      import { createServiceWorkerScript } from "@jsenv/pwa"
+
+      const script = createServiceWorkerScript({
+        logsEnabled: true,
+      })
+      script.setRegistrationPromise(
+        window.navigator.serviceWorker.register("./sw.js"),
+      )
+      /* expose on window to let automated test do things */
+      window.resolveSwScriptPromise(script)
+    </script>
+  </body>
+</html>
