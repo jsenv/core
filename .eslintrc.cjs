@@ -102,6 +102,7 @@ const eslintConfig = composeEslintConfig(
           "**/browser/**/*.js",
           "**/babel_helpers/**/*.js",
           "test/dev_server/**/*.js",
+          "**/jsenv_service_worker.js",
         ],
         env: {
           browser: true,
