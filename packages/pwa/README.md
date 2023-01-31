@@ -264,7 +264,7 @@ _update_ is `null` if there is no update available. Otherwise it is an object li
 }
 ```
 
-_navigatorWillReload_ is true if auto reload feature is enabled. Auto reload is documented in [autoReloadAfterUpdate](#autoReloadAfterUpdate).
+_navigatorWillReload_ is true if auto reload feature is enabled. Auto reload is documented in [auto reload after update](#auto-reload-after-update).
 
 ### update.sendMessage
 
@@ -303,12 +303,10 @@ Once service worker is activated, update is considered as done which will certai
 
 ## Auto reload after update
 
-When a service worker updates, navigator might be using outdated ressources such as old images or old js files.
-When a new service worker becomes the worker controlling navigator, we must ensure outdated ressources are refreshed.
-The default behaviour is to reload all navigator tabs opened on your website to make them go through the new service worker.
-It is described as _"Approach #3"_ in [How to Fix the Refresh Button When Using Service Workers](https://redfin.engineering/how-to-fix-the-refresh-button-when-using-service-workers-a8e27af6df68). You might also want to check [Activate updated service worker on refresh](https://stackoverflow.com/questions/40100922/activate-updated-service-worker-on-refresh) on StackOverflow.
+When a new service worker becomes the worker controlling navigator it is mandatory to ensure any outdated resource is refreshed. For this reason, after an update all navigator tabs opened on the website are reloaded. This default behaviour ensure navigator go through the new service worker.
+It is described as _"Approach #3"_ in [How to Fix the Refresh Button When Using Service Workers](https://redfin.engineering/how-to-fix-the-refresh-button-when-using-service-workers-a8e27af6df68). It is also discussed in [Activate updated service worker on refresh](https://stackoverflow.com/questions/40100922/activate-updated-service-worker-on-refresh) on StackOverflow.
 
-If you want to control how the outdated ressources gets updated you can disable this behaviour using _autoReloadAfterUpdate_. This might happen when:
+It is possible to to control how the outdated resources gets updated using _autoReloadAfterUpdate_. This might happen when:
 
 - You want to control when and if tabs are reloaded
 - You want to let user control when tabs are reloaded. Maybe display a message like "Update done. Reload all active tabs to enable the new version"
