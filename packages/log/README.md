@@ -10,7 +10,7 @@ This package helps to:
 
 # Task log example
 
-<video src="./docs/demo_task.pm4"></video>
+![img](./docs/demo_task.gif)
 
 Code used to produce these logs:
 
