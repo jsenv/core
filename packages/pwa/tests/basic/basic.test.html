@@ -12,7 +12,12 @@
     <button id="activate-update" disabled>Activate update</button>
     <button id="unregister">Unregister</button>
     <script type="module">
-      window.navigator.serviceWorker.register("./sw.js")
+      import { createServiceWorkerScript } from "@jsenv/pwa"
+
+      const script = createServiceWorkerScript()
+      createServiceWorkerScript.seRegistrationPromise(
+        window.navigator.serviceWorker.register("./sw.js"),
+      )
 
       const buttonCheckUpdate = document.querySelector("#check-update")
       buttonCheckUpdate.disabled = false
