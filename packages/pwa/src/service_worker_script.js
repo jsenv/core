@@ -1,4 +1,3 @@
-import { createSignal } from "./internal/createSignal.js"
 import { listenEvent } from "./internal/listenEvent.js"
 import { sendMessageUsingChannel } from "./internal/sendMessageUsingChannel.js"
 
@@ -8,93 +7,174 @@ export const canUseServiceWorkers =
 
 export const createServiceWorkerScript = ({
   logsEnabled = false,
-  autoReloadAfterUpdate = true,
+  autoReloadAfterUpdateActivation = false,
 } = {}) => {
   const log = (...args) => {
     if (logsEnabled) {
       console.log(...args)
     }
   }
+
   if (!canUseServiceWorkers) {
     return {
-      hasRegistered: () => false,
-      setRegistrationPromise: () => {},
-      unregister: () => {},
-      sendMessage: () => {},
-      getUpdate: () => null,
-      listenUpdateChange: () => {},
-      checkForUpdate: () => {},
+      setRegisterPromise: () => undefined,
+      getServiceWorker: () => null,
+      unregister: () => undefined,
+      sendMessage: () => undefined,
+      addUpdateCallback: () => () => {},
+      checkForUpdates: () => false,
     }
   }
 
   /*
    * The current service worker used by the browser
-   * As soon as a service worker is found (installing, waiting, activating or activated)
-   * serviceWorker is stored to be able to communicate with it for instance
+   * As soon as a service worker update is found (installing, waiting, activating or activated)
+   * the serviceWorker object is stored into update.worker and it's possible to communicate with it.
    *
    * For the record, as soon as a new version of the service worker starts to activate
    * browser kills the old service worker
    */
-  let registered = null
-  const registeredSetter = (worker) => {
-    registered = worker
-  }
+  let serviceWorker = null
+  let serviceWorkerUpdate = null
   // https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerRegistration
-  let registrationPromise = null
+  let registerPromise = null
   const unregisterRef = { current: () => {} }
-
-  // An updating service worker
-  let updating = null
-  const updatingSignal = createSignal()
-  const updatingSetter = (worker) => {
-    if (updating && updating === worker) {
+  const updateCallbacks = new Set()
+  const onUpdateAvailable = (serviceWorkerCandidate) => {
+    if (serviceWorkerCandidate === serviceWorkerUpdate) {
       // we already know about this worker, no need to listen state changes.
-      // it happens for manual updates where we bot detect it
-      // from registration.update() return value
-      // and "updatefound" event
-      log("we already know this service worker is updating")
+      // Happens when code is notified both from
+      // registration.update() and "updatefound" event
+      // Which happens for manual updates (calls to registration.update())
+      log("we are already aware of this service worker update")
       return
     }
-    if (worker) {
-      log(`found a worker updating (worker state is: ${worker.state})`)
-    } else {
-      log(`set update to null`)
+    if (serviceWorkerCandidate.state === "installing") {
+      log(`a new version of the service worker script is installing`)
+    } else if (serviceWorkerCandidate.state === "waiting") {
+      log(
+        `a new version of the service worker script is waiting to be activated`,
+      )
     }
-    updating = worker
-    updatingSignal.emit()
+
+    serviceWorkerUpdate = serviceWorkerCandidate
+    const udpateInterface = {
+      activate: async ({
+        onActivating = () => {},
+        onActivated = () => {},
+        onBecomesNavigatorController = () => {},
+      } = {}) => {
+        if (!serviceWorkerUpdate) {
+          console.warn(
+            `Ignoring call to update.activate because there is no update available on the service worker script`,
+          )
+          return
+        }
+        const { state } = serviceWorkerUpdate
+        const waitUntilActivated = () => {
+          return new Promise((resolve) => {
+            const removeStateChangeListener = listenEvent(
+              serviceWorkerUpdate,
+              "statechange",
+              () => {
+                if (serviceWorkerUpdate.state === "activating") {
+                  serviceWorker = serviceWorkerUpdate
+                  onActivating()
+                }
+                if (serviceWorkerUpdate.state === "activated") {
+                  serviceWorker = serviceWorkerUpdate
+                  onActivated()
+                  removeStateChangeListener()
+                  resolve()
+                }
+              },
+            )
+          })
+        }
+
+        // worker must be waiting (meaning state must be "installed")
+        // to be able to call skipWaiting on it.
+        // If it's installing it's an error.
+        // If it's activating, we'll just skip the skipWaiting call
+        // If it's activated, we'll just return early
+        if (state === "installed" || state === "activating") {
+          if (state === "installed") {
+            sendMessageUsingChannel(serviceWorkerUpdate, {
+              action: "skipWaiting",
+            })
+          }
+          if (state === "activating") {
+            serviceWorker = serviceWorkerUpdate
+          }
+          await waitUntilActivated()
+
+          if (serviceWorkerAPI.controller === serviceWorker) {
+            const removeControllerChangeListener = listenEvent(
+              serviceWorkerAPI,
+              "controllerchange",
+              () => {
+                removeControllerChangeListener()
+                onBecomesNavigatorController()
+              },
+            )
+          }
+          serviceWorkerUpdate = null
+          if (autoReloadAfterUpdateActivation) {
+            reload()
+          }
+          return
+        }
+
+        serviceWorker = serviceWorkerUpdate
+        serviceWorkerUpdate = null
+        onBecomesNavigatorController()
+        if (autoReloadAfterUpdateActivation) {
+          reload()
+        }
+      },
+      sendMessage: async (message) => {
+        if (!serviceWorkerUpdate) {
+          console.warn(
+            `Ignoring call to update.sendMessage because there is no service worker script updating to communicate with`,
+          )
+          return undefined
+        }
+        return sendMessageUsingChannel(serviceWorkerUpdate, message)
+      },
+    }
+    updateCallbacks.forEach((updateCallback) => {
+      updateCallback(udpateInterface)
+    })
   }
 
-  if (autoReloadAfterUpdate) {
+  if (autoReloadAfterUpdateActivation) {
     listenEvent(serviceWorkerAPI, "controllerchange", reload)
   }
 
   return {
-    hasRegistered: () => {
-      return Boolean(registrationPromise)
-    },
-    getRegistrationPromise: () => registrationPromise,
-    setRegistrationPromise: async (promise) => {
-      if (registered) {
-        throw new Error(`setRegistrationPromise already called`)
+    setRegisterPromise: async (promise) => {
+      if (registerPromise) {
+        throw new Error(`setRegisterPromise() already called`)
       }
+      registerPromise = promise
       let unregisterCalled = false
       unregisterRef.current = () => {
         unregisterCalled = true
       }
-      registrationPromise = promise
-      const registration = await registrationPromise
+      const registration = await promise
       const { installing, waiting, active } = registration
-      registeredSetter(installing || waiting || active)
+      if (installing) {
+        serviceWorker = installing
+      } else if (waiting) {
+        serviceWorker = waiting
+      } else {
+        serviceWorker = active
+      }
       const removeUpdateFoundListener = listenEvent(
         registration,
         "updatefound",
         () => {
-          log("browser notifies use an worker is installing")
-          if (registration.installing === installing) {
-            log(`it's not an worker update, it's first time worker registers`)
-            return
-          }
-          updatingSetter(registration.installing)
+          onUpdateAvailable(registration.installing)
         },
       )
       if (unregisterCalled) {
@@ -107,118 +187,44 @@ export const createServiceWorkerScript = ({
         }
       }
     },
-    unregister: () => {
-      registeredSetter(null)
-      updatingSetter(null)
-      registrationPromise = null
-      unregisterRef.current()
+    getServiceWorker: async () => {
+      if (!serviceWorker) {
+        await registerPromise
+      }
+      return serviceWorker
     },
-    sendMessage: (message) => {
-      if (!registered) {
-        console.warn(`no service worker script to send message to`)
+    unregister: () => {
+      return unregisterRef.current()
+    },
+    sendMessage: async (message) => {
+      if (!registerPromise) {
+        console.warn(
+          `Ignoring call to sendMessage because there is no service worker script to communicate with (setRegisterPromise not called?)`,
+        )
         return undefined
       }
-      return sendMessageUsingChannel(registered, message)
+      if (!serviceWorker) {
+        await registerPromise
+      }
+      return sendMessageUsingChannel(serviceWorker, message)
     },
-
-    getUpdate: () => {
-      if (!updating) {
-        return null
-      }
-      const sendMessage = (message) => {
-        if (!updating) {
-          console.warn(
-            `ignore sendMessage call because service worker script is no longer updating`,
-          )
-          return undefined
-        }
-        return sendMessageUsingChannel(updating, message)
-      }
-
-      return {
-        shouldBecomeNavigatorController:
-          serviceWorkerAPI.controller === updating,
-        navigatorWillReload: autoReloadAfterUpdate,
-        sendMessage,
-        activate: async ({
-          onActivating = () => {},
-          onActivated = () => {},
-          onBecomesNavigatorController = () => {},
-        } = {}) => {
-          const { state } = updating
-          const waitUntilActivated = () => {
-            return new Promise((resolve) => {
-              const removeStateChangeListener = listenEvent(
-                updating,
-                "statechange",
-                () => {
-                  if (updating.state === "activating") {
-                    registeredSetter(updating)
-                    onActivating()
-                  }
-                  if (updating.state === "activated") {
-                    registeredSetter(updating)
-                    onActivated()
-                    removeStateChangeListener()
-                    resolve()
-                  }
-                },
-              )
-            })
-          }
-
-          // worker must be waiting (meaning state must be "installed")
-          // to be able to call skipWaiting on it.
-          // If it's installing it's an error.
-          // If it's activating, we'll just skip the skipWaiting call
-          // If it's activated, we'll just return early
-          if (state === "installed" || state === "activating") {
-            if (state === "installed") {
-              sendMessage({ action: "skipWaiting" })
-            }
-            if (state === "activating") {
-              registeredSetter(updating)
-            }
-            await waitUntilActivated()
-
-            if (serviceWorkerAPI.controller === registered) {
-              const removeControllerChangeListener = listenEvent(
-                serviceWorkerAPI,
-                "controllerchange",
-                () => {
-                  removeControllerChangeListener()
-                  onBecomesNavigatorController()
-                },
-              )
-            }
-            updatingSetter(null)
-            if (autoReloadAfterUpdate) {
-              reload()
-            }
-            return
-          }
-
-          registeredSetter(updating)
-          onBecomesNavigatorController()
-          updatingSetter(null)
-          if (autoReloadAfterUpdate) {
-            reload()
-          }
-        },
+    addUpdateCallback: (updateCallback) => {
+      updateCallbacks.add(updateCallback)
+      return () => {
+        updateCallbacks.delete(updateCallback)
       }
     },
-    listenUpdateChange: (callback) => {
-      return updatingSignal.listen(callback)
-    },
-    checkForUpdate: async () => {
-      if (!registrationPromise) {
+    checkForUpdates: async () => {
+      if (!registerPromise) {
         console.warn(
-          `"setRegistrationPromise" must be called before "checkForUpdate"`,
+          `"setRegisterPromise" must be called before "update.check()"`,
         )
         return false
       }
-      const registration = await registrationPromise
-      log("checkForUpdate on service worker script")
+      const registration = await registerPromise
+      log(
+        "calling registration.update() to ask browser to check if there is an update on that service worker script",
+      )
       // await for the registration promise above can take some time
       // especially when the service worker is installing for the first time
       // because it is fetching a lot of urls to put into cache.
@@ -226,16 +232,9 @@ export const createServiceWorkerScript = ({
       // Without this, UI seems to take ages to check for an update
       try {
         const updateRegistration = await registration.update()
-        const { installing } = updateRegistration
-        if (installing) {
-          log("a service worker script is installing")
-          updatingSetter(installing)
-          return true
-        }
-        const { waiting } = updateRegistration
-        if (waiting) {
-          log("a service worker script is waiting to activate")
-          updatingSetter(waiting)
+        const { installing, waiting } = updateRegistration
+        if (installing || waiting) {
+          onUpdateAvailable(installing || waiting)
           return true
         }
         log("no update found")
