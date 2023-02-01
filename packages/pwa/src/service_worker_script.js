@@ -1,3 +1,16 @@
+/*
+ * Don't forget about the advanced use case where
+ * update can be achieved manually
+ * (I'll create a custom worker for this capable to update one asset in place)
+ * we will need a 5. scenario once update is done
+ * but this is likely a message the
+ * service worker itself should send to the page
+ * to let the page handle what was modified
+ * and if page is able to handle that, then we won't reload
+ * but this means service worker must send a message to all pages
+ * and some pages might need a full reload, some pages might not
+ */
+
 import { listenEvent } from "./internal/listenEvent.js"
 import { sendMessageUsingChannel } from "./internal/sendMessageUsingChannel.js"
 
@@ -7,7 +20,7 @@ export const canUseServiceWorkers =
 
 export const createServiceWorkerScript = ({
   logsEnabled = false,
-  autoReloadAfterUpdateActivation = false,
+  autoReloadWhenUpdateActivates = true,
 } = {}) => {
   const log = (...args) => {
     if (logsEnabled) {
@@ -40,6 +53,17 @@ export const createServiceWorkerScript = ({
   let registerPromise = null
   const unregisterRef = { current: () => {} }
   const updateCallbacks = new Set()
+  // When an update is found UI would display something like this:
+  // 1. Nothing (there is no update available)
+  // 2. Message like "an update is installing" (update.installing is true)
+  //    There is nothing much more to do for now, we'll wait for the update to be installed
+  //    and go to 3.
+  // 3. Message like "an update is available" + a button to update (would call update.replace())
+  //    the button should explain that page will be reloaded
+  // 4. Message like "an update is hapenning"
+  //    happens during the worker "activate" event until the waitUntil resolves
+  //    the ui should not give any means to act but just inform about this
+  //    maybe the message could add something like "... page will reload once update is done"
   const onUpdateAvailable = (serviceWorkerCandidate) => {
     if (serviceWorkerCandidate === serviceWorkerUpdate) {
       // we already know about this worker, no need to listen state changes.
@@ -49,105 +73,149 @@ export const createServiceWorkerScript = ({
       log("we are already aware of this service worker update")
       return
     }
-    if (serviceWorkerCandidate.state === "installing") {
+    serviceWorkerUpdate = serviceWorkerCandidate
+
+    const sendMessage = async (message) => {
+      if (!serviceWorkerUpdate) {
+        console.warn(
+          `Ignoring call to update.sendMessage because there is no service worker script updating to communicate with`,
+        )
+        return undefined
+      }
+      return sendMessageUsingChannel(serviceWorkerUpdate, message)
+    }
+    const activate = (serviceWorkerUpdate) => {
+      if (!serviceWorkerUpdate) {
+        console.warn(
+          `there is no update available on the service worker script`,
+        )
+        return
+      }
+      if (serviceWorkerUpdate.state !== "installed") {
+        console.warn(
+          `service worker script state must be "installed", it is "${serviceWorkerUpdate.state}"`,
+        )
+      }
+      sendMessageUsingChannel(serviceWorkerUpdate, {
+        action: "skipWaiting",
+      })
+    }
+    // https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorker/state
+    const onInstalling = () => {
+      const update = {
+        installing: true,
+        installed: false,
+        activating: false,
+        activated: false,
+        sendMessage,
+        activate,
+      }
+      updateCallbacks.forEach((updateCallback) => {
+        updateCallback(update)
+      })
+      const removeStateChangeListener = listenEvent(
+        serviceWorkerUpdate,
+        "statechange",
+        () => {
+          if (serviceWorkerUpdate.state === "installed") {
+            removeStateChangeListener()
+            onInstalled()
+          }
+        },
+      )
+    }
+    const onInstalled = () => {
+      const update = {
+        installing: false,
+        installed: true,
+        activating: false,
+        activated: false,
+        sendMessage,
+        activate,
+      }
+      updateCallbacks.forEach((updateCallback) => {
+        updateCallback(update)
+      })
+      const removeStateChangeListener = listenEvent(
+        serviceWorkerUpdate,
+        "statechange",
+        () => {
+          if (serviceWorkerUpdate.state === "activating") {
+            removeStateChangeListener()
+            onActivating()
+          }
+        },
+      )
+    }
+    const onActivating = () => {
+      const update = {
+        installing: false,
+        installed: true,
+        activating: true,
+        activated: false,
+        sendMessage,
+        activate,
+      }
+      serviceWorker = serviceWorkerUpdate
+      serviceWorkerUpdate = null
+      updateCallbacks.forEach((updateCallback) => {
+        updateCallback(update)
+      })
+      const removeStateChangeListener = listenEvent(
+        serviceWorkerUpdate,
+        "statechange",
+        () => {
+          if (serviceWorkerUpdate.state === "activated") {
+            removeStateChangeListener()
+            onActivated()
+          }
+        },
+      )
+    }
+    const onActivated = () => {
+      const update = {
+        installing: false,
+        installed: true,
+        activating: false,
+        activated: true,
+        sendMessage,
+        activate,
+      }
+      updateCallbacks.forEach((updateCallback) => {
+        updateCallback(update)
+      })
+    }
+
+    if (serviceWorkerUpdate.state === "installing") {
       log(`a new version of the service worker script is installing`)
-    } else if (serviceWorkerCandidate.state === "waiting") {
+      onInstalling()
+      return
+    }
+    if (serviceWorkerUpdate.state === "installed") {
       log(
         `a new version of the service worker script is waiting to be activated`,
       )
+      onInstalled()
+      return
     }
-
-    serviceWorkerUpdate = serviceWorkerCandidate
-    const udpateInterface = {
-      activate: async ({
-        onActivating = () => {},
-        onActivated = () => {},
-        onBecomesNavigatorController = () => {},
-      } = {}) => {
-        if (!serviceWorkerUpdate) {
-          console.warn(
-            `Ignoring call to update.activate because there is no update available on the service worker script`,
-          )
-          return
-        }
-        const { state } = serviceWorkerUpdate
-        const waitUntilActivated = () => {
-          return new Promise((resolve) => {
-            const removeStateChangeListener = listenEvent(
-              serviceWorkerUpdate,
-              "statechange",
-              () => {
-                if (serviceWorkerUpdate.state === "activating") {
-                  serviceWorker = serviceWorkerUpdate
-                  onActivating()
-                }
-                if (serviceWorkerUpdate.state === "activated") {
-                  serviceWorker = serviceWorkerUpdate
-                  onActivated()
-                  removeStateChangeListener()
-                  resolve()
-                }
-              },
-            )
-          })
-        }
-
-        // worker must be waiting (meaning state must be "installed")
-        // to be able to call skipWaiting on it.
-        // If it's installing it's an error.
-        // If it's activating, we'll just skip the skipWaiting call
-        // If it's activated, we'll just return early
-        if (state === "installed" || state === "activating") {
-          if (state === "installed") {
-            sendMessageUsingChannel(serviceWorkerUpdate, {
-              action: "skipWaiting",
-            })
-          }
-          if (state === "activating") {
-            serviceWorker = serviceWorkerUpdate
-          }
-          await waitUntilActivated()
-
-          if (serviceWorkerAPI.controller === serviceWorker) {
-            const removeControllerChangeListener = listenEvent(
-              serviceWorkerAPI,
-              "controllerchange",
-              () => {
-                removeControllerChangeListener()
-                onBecomesNavigatorController()
-              },
-            )
-          }
-          serviceWorkerUpdate = null
-          if (autoReloadAfterUpdateActivation) {
-            reload()
-          }
-          return
-        }
-
-        serviceWorker = serviceWorkerUpdate
-        serviceWorkerUpdate = null
-        onBecomesNavigatorController()
-        if (autoReloadAfterUpdateActivation) {
-          reload()
-        }
-      },
-      sendMessage: async (message) => {
-        if (!serviceWorkerUpdate) {
-          console.warn(
-            `Ignoring call to update.sendMessage because there is no service worker script updating to communicate with`,
-          )
-          return undefined
-        }
-        return sendMessageUsingChannel(serviceWorkerUpdate, message)
-      },
+    if (serviceWorkerUpdate.state === "activating") {
+      log(`a new version of the service worker script is activating`)
+      onActivating()
+      return
     }
-    updateCallbacks.forEach((updateCallback) => {
-      updateCallback(udpateInterface)
-    })
+    if (serviceWorkerUpdate.state === "activated") {
+      serviceWorker = serviceWorkerUpdate
+      serviceWorkerUpdate = null
+      log(`a new version of the service worker script is activated`)
+      onActivated()
+      return
+    }
+    throw new Error(
+      `unexpected serviceWorker state ${serviceWorkerUpdate.state}`,
+    )
   }
 
-  if (autoReloadAfterUpdateActivation) {
+  if (autoReloadWhenUpdateActivates) {
     listenEvent(serviceWorkerAPI, "controllerchange", reload)
   }
 
