@@ -23,8 +23,7 @@ try {
       /* eslint-disable no-undef */
       async () => {
         const swScript = await window.SW_SCRIPT_PROMISE
-        await swScript.getRegistrationPromise()
-        return swScript.checkForUpdate()
+        return swScript.checkForUpdates()
       },
       /* eslint-enable no-undef */
     )
@@ -41,8 +40,7 @@ try {
       /* eslint-disable no-undef */
       async () => {
         const swScript = await window.SW_SCRIPT_PROMISE
-        await swScript.getRegistrationPromise()
-        return swScript.checkForUpdate()
+        return swScript.checkForUpdates()
       },
       /* eslint-enable no-undef */
     )

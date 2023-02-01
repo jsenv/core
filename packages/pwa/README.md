@@ -132,20 +132,19 @@ import { canUseServiceWorkers, createServiceWorkerScript } from "@jsenv/pwa"
 if (canUseServiceWorkers) {
   const script = createServiceWorkerScript()
   const registrationPromise = window.navigator.serviceWorker.register("./sw.js")
-  script.setRegistrationPromise(registrationPromise)
+  script.setRegisterPromise(registrationPromise)
 
   const buttonCheckUpdate = document.querySelector("#check-update")
   buttonCheckUpdate.disabled = false
   buttonCheckUpdate.onclick = async () => {
-    const found = await script.checkForUpdate()
+    const found = await script.checkForUpdates()
     if (!found) {
       alert("no update found")
     }
   }
   const textUpdateAvailable = document.querySelector("#update-available")
   const buttonActivateUpdate = document.querySelector("#activate-update")
-  script.listenUpdateChange(() => {
-    const update = script.getUpdate()
+  script.addUpdateCallback((update) => {
     if (update) {
       textUpdateAvailable.innerHTML = "An update is available !"
       buttonActivateUpdate.disabled = false
@@ -169,9 +168,7 @@ See also an example with react in [docs/react_example](./packages/react_example/
 import { createServiceWorkerScript } from "@jsenv/pwa"
 
 const script = createServiceWorkerScript()
-script.setRegistrationPromise(
-  window.navigator.serviceWorker.register("./sw.js"),
-)
+script.setRegisterPromise(window.navigator.serviceWorker.register("./sw.js"))
 ```
 
 This enables service worker on your navigator.
@@ -198,7 +195,7 @@ _Inside your website:_
 import { createServiceWorkerScript } from "@jsenv/pwa"
 
 const script = createServiceWorkerScript()
-await script.setRegistrationPromise(
+await script.setRegisterPromise(
   window.navigator.serviceWorker.register("./sw.js"),
 )
 const value = await script.sendMessage("ping")
@@ -213,7 +210,7 @@ The native browser API around service worker update is hard to implement. There 
 
 `@jsenv/pwa` helps to implement your user interface around service worker updates.
 
-### checkForUpdate
+### checkForUpdates
 
 An async function asking to the navigator to check if there is an update available for the service worker. It returns true if there is one and false otherwise.
 
@@ -221,36 +218,23 @@ An async function asking to the navigator to check if there is an update availab
 import { createServiceWorkerScript } from "@jsenv/pwa"
 
 const script = createServiceWorkerScript()
-script.setRegistrationPromise(
-  window.navigator.serviceWorker.register("./sw.js"),
-)
-const updateFound = await script.checkForUpdate()
+script.setRegisterPromise(window.navigator.serviceWorker.register("./sw.js"))
+const updateFound = await script.checkForUpdates()
 console.log(updateFound)
 ```
 
-### listenUpdateChange
+### addUpdateCallback
 
-_listenUpdateChange_ is a function that will call a callback when a service worker update becomes available or unavailable. An update is always detected by the navigator either periodically or because your called _checkForUpdate_.
+_addUpdateCallback_ is a function that will call a callback when a service worker update becomes available or unavailable. An update is always detected by the navigator either periodically or because your called _checkForUpdates_.
 
 ```js
 import { createServiceWorkerScript } from "@jsenv/pwa"
 
 const script = createServiceWorkerScript()
-script.listenUpdateChange(() => {
+script.addUpdateCallback((update) => {
   // an update for this service worker script becomes available
   // or unavailable (the new version is installed or discarded)
 })
-```
-
-### getUpdate
-
-_getUpdate_ is a function returning a value indicating if there is an update available.
-
-```js
-import { createServiceWorkerScript } from "@jsenv/pwa"
-
-const script = createServiceWorkerScript()
-const update = serviceWorker.getUpdate()
 ```
 
 _update_ is `null` if there is no update available. Otherwise it is an object like
@@ -263,8 +247,6 @@ _update_ is `null` if there is no update available. Otherwise it is an object li
   activate, // Function
 }
 ```
-
-_navigatorWillReload_ is true if auto reload feature is enabled. Auto reload is documented in [auto reload after update](#auto-reload-after-update).
 
 ### update.sendMessage
 
@@ -280,8 +262,7 @@ _update.activate_ is an async function telling navigator it can skip waiting and
 import { createServiceWorkerScript } from "@jsenv/pwa"
 
 const script = createServiceWorkerScript()
-script.listenUpdateChange(() => {
-  const update = script.getUpdate()
+script.addUpdateCallback((update) => {
   if (update) {
     await update.activate({
       onActivating: () => {

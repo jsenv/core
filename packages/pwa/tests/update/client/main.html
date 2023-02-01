@@ -18,7 +18,7 @@
       const script = createServiceWorkerScript({
         logsEnabled: true,
       })
-      script.setRegistrationPromise(
+      await script.setRegisterPromise(
         window.navigator.serviceWorker.register("./sw.js"),
       )
       /* expose on window to let automated test do things */
