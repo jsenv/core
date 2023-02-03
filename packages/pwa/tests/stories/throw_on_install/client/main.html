@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <div id="service_worker_ui">
+      <style></style>
+      <button id="register" disabled>Register</button>
+      <button id="unregister" disabled>Unregister</button>
+      <div>
+        <p>Service status: <span id="status"></span></p>
+        <p>Update status: <span id="update_status"></span></p>
+      </div>
+      <button id="check_for_updates" disabled>Chercher une mise a jour</button>
+      <div id="update_loading" style="display: none">
+        <p>Une mise a jour est en cours de téléchargement</p>
+      </div>
+      <div id="update_available" style="display: none">
+        <p>Une mise a jour est disponible</p>
+        <p>
+          Cette mise a jour s'activera automatiquement au prochain rechargement
+        </p>
+        <button id="activate_now" disabled>Activer maintenant</button>
+      </div>
+    </div>
+    <script>
+      window.SW_SCRIPT_PROMISE = new Promise((resolve) => {
+        window.resolveSwScriptPromise = resolve
+      })
+    </script>
+    <script type="module">
+      import {
+        createServiceWorkerScript,
+        canUseServiceWorkers,
+      } from "@jsenv/pwa"
+
+      const script = createServiceWorkerScript({
+        logsEnabled: true,
+      })
+
+      const registerButton = document.querySelector("#register")
+      const unregisterButton = document.querySelector("#unregister")
+      if (canUseServiceWorkers) {
+        script.addEffect(({ readyState }) => {
+          registerButton.disabled = readyState > 0
+        })
+        registerButton.onclick = () => {
+          script.setRegisterPromise(
+            window.navigator.serviceWorker.register("./sw.js"),
+          )
+        }
+        script.addEffect(({ readyState }) => {
+          unregisterButton.disabled = readyState === 0
+        })
+        unregisterButton.onclick = () => {
+          script.unregister()
+        }
+      }
+
+      const statusText = document.querySelector("#status")
+      script.addEffect(({ error, readyState }) => {
+        const text = error
+          ? `error`
+          : {
+              0: "not registered",
+              1: "registering",
+              2: "installing",
+              3: "installed",
+              4: "activating",
+              5: "activated",
+            }[readyState]
+        if (text === undefined) {
+          console.log(readyState)
+        }
+        statusText.innerHTML = text
+      })
+
+      const updateStatusText = document.querySelector("#update_status")
+      script.update.addEffect(({ error, readyState }) => {
+        updateStatusText.innerHTML = error
+          ? `An error occured ${error.message}`
+          : {
+              0: "nothing",
+              1: "fetching",
+              2: "installing",
+              3: "installed",
+              4: "activating",
+              5: "activated",
+            }[readyState]
+      })
+
+      const checkForUpdatesButton = document.querySelector("#check_for_updates")
+      script.addEffect(({ readyState }) => {
+        checkForUpdatesButton.disabled = readyState < 2
+      })
+      checkForUpdatesButton.onclick = async () => {
+        checkForUpdatesButton.disabled = true
+        const updateFound = await script.update.check()
+        checkForUpdatesButton.disabled = false
+        if (!updateFound) {
+          // eslint-disable-next-line no-alert
+          window.alert("no update found")
+        }
+      }
+
+      const updateAvailableDiv = document.querySelector("#update_available")
+      script.update.addEffect(({ readyState }) => {
+        if (readyState === 3) {
+          updateAvailableDiv.style.display = "block"
+          const activateNowButton = document.querySelector("#activate_now")
+          activateNowButton.disabled = false
+          activateNowButton.innerHTML = "Activer maintenant"
+          activateNowButton.onclick = async () => {
+            activateNowButton.disabled = true
+            await script.update.activate()
+          }
+        } else {
+          updateAvailableDiv.style.display = "none"
+        }
+      })
+    </script>
+  </body>
+</html>
