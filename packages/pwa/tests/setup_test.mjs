@@ -1,25 +1,14 @@
 import { chromium } from "playwright"
-import { requestCertificate } from "@jsenv/https-local"
-import { startDevServer } from "@jsenv/core"
+import { startTestServer } from "./start_test_server.mjs"
 
 export const setupTest = async ({ debug, ...rest }) => {
-  const { certificate, privateKey } = requestCertificate()
-  const testServer = await startDevServer({
-    logLevel: "warn",
-    protocol: "https",
-    certificate,
-    privateKey,
-    rootDirectoryUrl: new URL("./client/", import.meta.url),
+  const testServer = await startTestServer({
     keepProcessAlive: debug,
-    clientAutoreload: false,
-    supervisor: false,
     ...rest,
   })
-
   const browser = await chromium.launch({
     headless: !debug,
   })
-
   const page = await launchBrowserPage(browser)
 
   return { testServer, browser, page }
