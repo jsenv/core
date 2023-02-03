@@ -7,9 +7,7 @@ It has naturally evolved to cover the core needs of a JavaScript project: develo
 - :sparkles: Same tooling for dev, tests and build.
 - :exploding_head: Can execute tests on Chrome, Firefox, Safari and Node.js.
 
-# Documentation
-
-https://github.com/jsenv/jsenv-core/wiki
+[Documentation](https://github.com/jsenv/jsenv-core/wiki)
 
 # Installation
 
