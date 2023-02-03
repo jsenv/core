@@ -7,7 +7,7 @@ export const eslintConfigBase = {
     sourceType: "module",
   },
   env: {
-    es2021: true,
+    es2022: true,
   },
   settings: {
     extensions: [".js", ".mjs"],
