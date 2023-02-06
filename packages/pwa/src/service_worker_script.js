@@ -56,29 +56,39 @@ const readyStateFromServiceWorker = (serviceWorker) => {
 }
 
 export const createServiceWorkerScript = ({
-  logsEnabled = false,
+  logLevel = "info",
+  logBackgroundColor = "green",
+  logColor = "black",
   autoReloadWhenUpdateActivates = false,
   autoUnregisterOnError = false,
 } = {}) => {
-  // on devrait prendre le navigator.serviceWorker.controller au démarrage et considérer que c'est l'état
-  // de départ au lieu de NOTHING
-
   const logger = {
-    debug: logsEnabled
-      ? (...args) => console.debug(...prefixArgs(...args))
-      : () => {},
-    info: logsEnabled
-      ? (...args) => console.info(...prefixArgs(...args))
-      : () => {},
-    warn: logsEnabled
-      ? (...args) => console.warn(...prefixArgs(...args))
-      : () => {},
-    error: logsEnabled
-      ? (...args) => console.error(...prefixArgs(...args))
-      : () => {},
-    log: logsEnabled
-      ? (...args) => console.log(...prefixArgs(...args))
-      : () => {},
+    debug:
+      logLevel === "debug"
+        ? (...args) => console.info(...injectLogStyles(args))
+        : () => {},
+    info:
+      logLevel === "debug" || logLevel === "info"
+        ? (...args) => console.info(...injectLogStyles(args))
+        : () => {},
+    warn:
+      logLevel === "debug" || logLevel === "info" || logLevel === "warn"
+        ? (...args) => console.info(...injectLogStyles(args))
+        : () => {},
+    error:
+      logLevel === "debug" ||
+      logLevel === "info" ||
+      logLevel === "warn" ||
+      logLevel === "error"
+        ? (...args) => console.info(...injectLogStyles(args))
+        : () => {},
+  }
+  const injectLogStyles = (args) => {
+    return [
+      `%csw script`,
+      `background: ${logBackgroundColor}; color: ${logColor}; padding: 1px 3px; margin: 0 1px`,
+      ...args,
+    ]
   }
 
   /*
@@ -89,135 +99,146 @@ export const createServiceWorkerScript = ({
    * For the record, as soon as a new version of the service worker starts to activate
    * browser kills the old service worker
    */
-  let serviceWorker = null
-  let serviceWorkerUpdate = null
-  // https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerRegistration
-  let registerPromise = null
-  let registrationPromise = null
-  let unregisterCalled = false
-
-  const effects = new Set()
-  const triggerEffects = () => {
-    effects.forEach((effect) => {
-      effect(script)
-    })
-  }
-  const onReadyStateChange = (newValue) => {
-    script.readyState = newValue
-    triggerEffects()
-  }
-  const onError = (error) => {
-    script.error = error
-    triggerEffects()
-  }
-
-  let removeStateChangeListener = () => {}
-  let removeUpdateFoundListener = () => {}
-
+  // 1. state (readyState + error + addEffect)
   const script = {
     readyState: NOTHING,
     error: null,
-    addEffect: (effect) => {
-      effects.add(effect)
+  }
+  const callbacks = new Set()
+  const triggerCallbacks = () => {
+    callbacks.forEach((effect) => {
       effect(script)
+    })
+  }
+  const mutateProps = (newProps) => {
+    Object.assign(script, newProps)
+    triggerCallbacks()
+  }
+  Object.assign(script, {
+    addCallback: (callback) => {
+      callbacks.add(callback)
       return () => {
-        effects.delete(effect)
+        callbacks.delete(callback)
       }
     },
-    setRegisterPromise: async (promise) => {
+    addEffect: (effect) => {
+      effect(script)
+      return script.addCallback(effect)
+    },
+  })
+
+  // 2. registration (setRegisterPromise + unregister)
+  // https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerRegistration
+  let registrationPromise = null
+  let registration = null
+  let serviceWorker = null
+  let unregisterCalled = false
+  const onRegistrationPromise = async () => {
+    try {
+      registration = await registrationPromise
+      const { installing, waiting, active } = registration
+      if (installing) {
+        serviceWorker = installing
+      } else if (waiting) {
+        serviceWorker = waiting
+      } else {
+        serviceWorker = active
+      }
+
+      removeStateChangeListener = listenEvent(
+        serviceWorker,
+        "statechange",
+        () => {
+          applyStateEffect()
+        },
+      )
+      removeUpdateFoundListener = listenEvent(
+        registration,
+        "updatefound",
+        () => {
+          if (registration.installing === serviceWorker) {
+            // browser consider first install as an update...
+            return
+          }
+          onUpdateAvailable(registration.installing)
+        },
+      )
+      const applyStateEffect = () => {
+        const message = {
+          installing: `installing`,
+          installed: `installed (waiting to activate)`,
+          activating: `activating`,
+          activated: `activated`,
+          redundant: `redundant (unregistered by navigator)`,
+        }[serviceWorker.state]
+        logger.info(message)
+        mutateProps({
+          readyState: readyStateFromServiceWorker(serviceWorker),
+        })
+        if (serviceWorker.state === "redundant") {
+          removeStateChangeListener()
+          removeUpdateFoundListener()
+          registrationPromise = null
+          registration = null
+          serviceWorker = null
+        }
+      }
+      applyStateEffect()
+
+      if (unregisterCalled) {
+        unregisterCalled = false
+        script.unregister()
+        return
+      }
+    } catch (e) {
+      logger.error(`registration error`)
+      mutateProps({
+        error: e,
+      })
+    }
+  }
+  let removeStateChangeListener = () => {}
+  let removeUpdateFoundListener = () => {}
+  Object.assign(script, {
+    setRegisterPromise: (promise) => {
       if (document.location.protocol !== "https:") {
         logger.warn(
           `script will be registered but navigator won't use it because protocol is not https`,
         )
       }
-      if (registerPromise) {
-        throw new Error(`setRegisterPromise() already called`)
+      if (script.readyState !== NOTHING) {
+        throw new Error(`registration already exists`)
       }
-      registerPromise = promise
       registrationPromise = promise
       logger.info(`registering`)
-      onReadyStateChange(REGISTERING)
-      try {
-        const registration = await promise
-        const { installing, waiting, active } = registration
-        if (installing) {
-          serviceWorker = installing
-        } else if (waiting) {
-          serviceWorker = waiting
-        } else {
-          serviceWorker = active
-        }
-
-        if (unregisterCalled) {
-          unregisterCalled = false
-          script.unregister()
-          return
-        }
-
-        removeStateChangeListener = listenEvent(
-          serviceWorker,
-          "statechange",
-          () => {
-            applyStateEffect()
-          },
-        )
-        removeUpdateFoundListener = listenEvent(
-          registration,
-          "updatefound",
-          () => {
-            if (registration.installing === serviceWorker) {
-              // browser consider first install as an update...
-              return
-            }
-            onUpdateAvailable(registration.installing)
-          },
-        )
-        const applyStateEffect = () => {
-          const message = {
-            installing: `installing`,
-            installed: `installed (waiting to activate)`,
-            activating: `activating`,
-            activated: `activated`,
-            redundant: `unregistered by navigator`,
-          }[serviceWorker.state]
-          logger.info(message)
-          onReadyStateChange(readyStateFromServiceWorker(serviceWorker))
-          if (serviceWorker.state === "redundant") {
-            removeStateChangeListener()
-            removeUpdateFoundListener()
-            serviceWorker = null
-            registerPromise = null
-            registrationPromise = null
-          }
-        }
-        applyStateEffect()
-      } catch (e) {
-        logger.error(`registration error`)
-        onError(e)
-      }
+      mutateProps({
+        readyState: REGISTERING,
+      })
+      return onRegistrationPromise()
     },
     unregister: async () => {
+      if (script.readyState === NOTHING) {
+        return
+      }
       if (script.readyState === REGISTERING) {
         logger.debug("set unregisterCalled to true to unregister asap")
         unregisterCalled = true
         return
       }
-      if (registrationPromise) {
-        logger.info("unregistering")
-        removeStateChangeListener()
-        removeStateChangeListener = () => {}
-        removeUpdateFoundListener()
-        removeUpdateFoundListener = () => {}
-        serviceWorker = null
-        serviceWorkerUpdate = null
-        const registration = await registrationPromise
-        await registration.unregister()
-        registerPromise = null
-        registrationPromise = null
-        logger.info("unregistered")
-        onReadyStateChange(NOTHING)
+      removeUpdateFoundListener()
+      removeUpdateFoundListener = () => {}
+      if (!registration) {
+        await registrationPromise
       }
+      logger.info(
+        "registration.unregister() (navigator will kill service worker script)",
+      )
+      const unregisterPromise = registration.unregister()
+      await unregisterPromise
     },
+  })
+
+  Object.assign(script, {
     sendMessage: async (message) => {
       if (script.readyState === NOTHING) {
         logger.warn(
@@ -230,16 +251,49 @@ export const createServiceWorkerScript = ({
       }
       return sendMessageUsingChannel(serviceWorker, message)
     },
-  }
+  })
+
   if (serviceWorkerAPI.controller) {
+    logger.info("found on navigator.controller")
     // ça pose pas un souci si le site ne fait pas le call a register?
     // est ce que chrome part alors du principe qu'on utilise plus le service worker
-    script.readyState = readyStateFromServiceWorker(serviceWorkerAPI.controller)
-    registrationPromise = serviceWorkerAPI.ready
+    serviceWorker = serviceWorkerAPI.controller
+    script.readyState = readyStateFromServiceWorker(serviceWorker)
+    registrationPromise = serviceWorkerAPI.getRegistration()
+    onRegistrationPromise(registrationPromise)
   }
 
+  let updateServiceWorker = null
+  let updateRegistration = null
+  const update = {
+    readyState: NOTHING,
+    error: null,
+  }
+  const updateCallbacks = new Set()
+  const triggerUpdateCallbacks = () => {
+    updateCallbacks.forEach((updateCallback) => {
+      updateCallback(update)
+    })
+  }
+  const mutateUpdateProps = (newProps) => {
+    Object.assign(update, newProps)
+    triggerUpdateCallbacks()
+  }
+  Object.assign(update, {
+    addCallback: (updateCallback) => {
+      updateCallbacks.add(updateCallback)
+      return () => {
+        updateCallbacks.delete(updateCallback)
+      }
+    },
+    addEffect: (updateEffect) => {
+      updateEffect(update)
+      return update.addCallback(updateEffect)
+    },
+  })
+
   const onUpdateAvailable = (serviceWorkerCandidate) => {
-    if (serviceWorkerCandidate === serviceWorkerUpdate) {
+    if (serviceWorkerCandidate === updateServiceWorker) {
       // we already know about this worker, no need to listen state changes.
       // Happens when code is notified both from
       // registration.update() and "updatefound" event
@@ -247,11 +301,11 @@ export const createServiceWorkerScript = ({
       logger.debug("we are already aware of this service worker update")
       return
     }
-    serviceWorkerUpdate = serviceWorkerCandidate
+    updateServiceWorker = serviceWorkerCandidate
 
     // https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorker/state
     const removeStateChangeListener = listenEvent(
-      serviceWorkerUpdate,
+      updateServiceWorker,
       "statechange",
       () => {
         applyUpdateStateEffect()
@@ -263,54 +317,32 @@ export const createServiceWorkerScript = ({
         installed: `update installed (waiting to activate and replace current version)`,
         activating: `update is activating (navigator has killed the current version)`,
         activated: `update is activated (navigator is using the updated version)`,
-      }[serviceWorkerUpdate.state]
+      }[updateServiceWorker.state]
       logger.info(message)
-      update.status = serviceWorkerUpdate.state
-      if (serviceWorkerUpdate.state === "activating") {
-        serviceWorker = serviceWorkerUpdate
+      if (updateServiceWorker.state === "activating") {
+        serviceWorker = updateServiceWorker
       }
-      if (serviceWorkerUpdate.state === "activated") {
+      if (updateServiceWorker.state === "activated") {
         removeStateChangeListener()
-        serviceWorkerUpdate = null
+        updateServiceWorker = null
       }
-      triggerUpdateEffects()
+      mutateUpdateProps({
+        readyState: readyStateFromServiceWorker(updateServiceWorker),
+      })
     }
     applyUpdateStateEffect()
   }
-
-  const updateEffects = new Set()
-  const triggerUpdateEffects = () => {
-    updateEffects.forEach((updateEffect) => {
-      updateEffect(update)
-    })
-  }
-  const onUpdateReadyStateChange = (newValue) => {
-    update.readyState = newValue
-    triggerUpdateEffects()
-  }
-  const onUpdateError = (error) => {
-    update.error = error
-    triggerUpdateEffects()
-  }
-
-  const update = {
-    readyState: NOTHING,
-    error: null,
-    addEffect: (updateEffect) => {
-      updateEffects.add(updateEffect)
-      updateEffect(update)
-      return () => {
-        effects.delete(updateEffect)
-      }
-    },
+  Object.assign(update, {
     check: async () => {
-      if (script.readyState === 0) {
+      if (script.readyState === NOTHING) {
         logger.warn(`cannot check for an update, there is no script registered`)
         return false
       }
-      const registration = await registrationPromise
+      if (!registration) {
+        await registrationPromise
+      }
       logger.info(
-        "call registration.update() (navigator will check if there is an update)",
+        "registration.update() (navigator will check if there is an update)",
       )
       // await for the registration promise above can take some time
       // especially when the service worker is installing for the first time
@@ -318,48 +350,65 @@ export const createServiceWorkerScript = ({
       // In that scenario we might want to display something different ?
       // Without this, UI seems to take ages to check for an update
       try {
-        onUpdateReadyStateChange(REGISTERING)
-        const updateRegistration = await registration.update()
+        mutateUpdateProps({
+          readyState: REGISTERING,
+        })
+        updateRegistration = await registration.update()
         const { installing, waiting } = updateRegistration
         if (installing || waiting) {
           onUpdateAvailable(installing || waiting)
           return true
         }
         logger.info("no update found")
-        onUpdateReadyStateChange(NOTHING)
+        mutateUpdateProps({
+          readyState: NOTHING,
+        })
         return false
       } catch (e) {
         if (autoUnregisterOnError) {
           registration.unregister()
         }
         logger.error(`error while updating script`)
-        onUpdateError(e)
+        mutateUpdateProps({
+          error: e,
+        })
+
         return false
       }
     },
-    sendMessage: async (message) => {
-      if (!serviceWorkerUpdate || serviceWorkerUpdate.state === "activating") {
-        logger.warn(`no updated version to communicate with`)
-        return undefined
-      }
-      return sendMessageUsingChannel(serviceWorkerUpdate, message)
-    },
-    activate: (serviceWorkerUpdate) => {
-      if (!serviceWorkerUpdate) {
+    activate: () => {
+      if (!updateServiceWorker) {
         logger.warn(`no updated version to activate`)
         return
       }
-      if (serviceWorkerUpdate.readyState !== INSTALLED) {
+      if (updateServiceWorker.readyState !== INSTALLED) {
         console.warn(
-          `updated version is not ready to activate (readyState is "${serviceWorkerUpdate.readyState}")`,
+          `updated version is not ready to activate (readyState is "${updateServiceWorker.readyState}")`,
         )
         return
       }
-      sendMessageUsingChannel(serviceWorkerUpdate, {
+      sendMessageUsingChannel(updateServiceWorker, {
         action: "skipWaiting",
       })
     },
-  }
+  })
+
+  Object.assign(update, {
+    sendMessage: async (message) => {
+      if (!updateServiceWorker) {
+        logger.warn(`no updated version to communicate with`)
+        return undefined
+      }
+      if (updateServiceWorker.readyState === ACTIVATING) {
+        // TODO: check why we do this and what we can do to simplify
+        logger.warn(
+          `cannot communicate with service worker while it is activating (use script.sendMessage instead)`,
+        )
+        return undefined
+      }
+      return sendMessageUsingChannel(updateServiceWorker, message)
+    },
+  })
 
   script.update = update
   if (autoReloadWhenUpdateActivates) {
@@ -367,14 +416,6 @@ export const createServiceWorkerScript = ({
   }
 
   return script
-}
-
-const prefixArgs = (...args) => {
-  return [
-    `%csw script`,
-    `background: green; color: black; padding: 1px 3px; margin: 0 1px`,
-    ...args,
-  ]
 }
 
 let refreshing = false
