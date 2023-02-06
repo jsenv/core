@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <div id="service_worker_ui">
+      <style></style>
+      <button id="register_a">Register sw_a.js</button>
+      <button id="register_b">Register sw_b.js</button>
+      <button id="register_404">Register sw_404.js</button>
+      <button id="unregister" disabled>Unregister</button>
+      <div>
+        <p>Service status: <span id="status"></span></p>
+        <p>Update status: <span id="update_status"></span></p>
+      </div>
+      <button id="check_for_updates" disabled>Chercher une mise a jour</button>
+      <div id="update_loading" style="display: none">
+        <p>Une mise a jour est en cours de téléchargement</p>
+      </div>
+      <div id="update_available" style="display: none">
+        <p>Une mise a jour est disponible</p>
+        <p>
+          Cette mise a jour s'activera automatiquement au prochain rechargement
+        </p>
+        <button id="activate_now" disabled>Activer maintenant</button>
+      </div>
+    </div>
+    <script>
+      window.SW_SCRIPT_PROMISE = new Promise((resolve) => {
+        window.resolveSwScriptPromise = resolve
+      })
+    </script>
+    <script type="module">
+      import {
+        createServiceWorkerScript,
+        canUseServiceWorkers,
+      } from "@jsenv/pwa"
+
+      const script = createServiceWorkerScript({
+        logLevel: "debug",
+      })
+
+      const registerAButton = document.querySelector("#register_a")
+      const registerBButton = document.querySelector("#register_b")
+      const register404Button = document.querySelector("#register_404")
+      const unregisterButton = document.querySelector("#unregister")
+      if (canUseServiceWorkers) {
+        // script.addEffect(({ registered }) => {
+        //   registerAButton.disabled = registered
+        // })
+        script.register(window.navigator.serviceWorker.register("./sw_a.js"))
+        registerAButton.onclick = () => {
+          script.register(window.navigator.serviceWorker.register("./sw_a.js"))
+        }
+        registerBButton.onclick = () => {
+          script.register(window.navigator.serviceWorker.register("./sw_b.js"))
+        }
+        register404Button.onclick = () => {
+          script.register(
+            window.navigator.serviceWorker.register("./sw_404.js"),
+          )
+        }
+
+        script.addEffect(({ registered }) => {
+          unregisterButton.disabled = !registered
+        })
+        unregisterButton.onclick = () => {
+          script.unregister()
+        }
+      }
+
+      const statusText = document.querySelector("#status")
+      script.addEffect(({ error, state, url }) => {
+        const text = error ? `errored (${error.message})` : state
+        statusText.innerHTML = `${url} is ${text}`
+      })
+
+      const updateStatusText = document.querySelector("#update_status")
+      script.update.addEffect(({ error, state, url }) => {
+        const text = error ? `errored (${error.message})` : state
+        updateStatusText.innerHTML = `${url} is ${text}`
+      })
+
+      const checkForUpdatesButton = document.querySelector("#check_for_updates")
+      script.addEffect(({ registered }) => {
+        checkForUpdatesButton.disabled = !registered
+      })
+      checkForUpdatesButton.onclick = async () => {
+        checkForUpdatesButton.disabled = true
+        const updateFound = await script.update.check()
+        checkForUpdatesButton.disabled = false
+        if (!updateFound) {
+          // eslint-disable-next-line no-alert
+          window.alert("no update found")
+        }
+      }
+
+      const updateAvailableDiv = document.querySelector("#update_available")
+      script.update.addEffect(({ registered }) => {
+        if (registered) {
+          updateAvailableDiv.style.display = "block"
+          const activateNowButton = document.querySelector("#activate_now")
+          activateNowButton.disabled = false
+          activateNowButton.innerHTML = "Activer maintenant"
+          activateNowButton.onclick = async () => {
+            activateNowButton.disabled = true
+            await script.update.activate()
+          }
+        } else {
+          updateAvailableDiv.style.display = "none"
+        }
+      })
+    </script>
+  </body>
+</html>
