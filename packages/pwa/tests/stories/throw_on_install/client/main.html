@@ -48,6 +48,9 @@
         script.addEffect(({ readyState }) => {
           registerButton.disabled = readyState > 0
         })
+        script.setRegisterPromise(
+          window.navigator.serviceWorker.register("./sw.js"),
+        )
         registerButton.onclick = () => {
           script.setRegisterPromise(
             window.navigator.serviceWorker.register("./sw.js"),
