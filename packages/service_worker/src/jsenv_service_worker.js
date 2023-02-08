@@ -15,7 +15,6 @@
 */
 
 /* env serviceworker */
-/* globals self */
 
 self.initJsenvServiceWorker = ({
   /**

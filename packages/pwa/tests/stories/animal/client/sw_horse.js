@@ -16,6 +16,7 @@ const installPromise = new Promise((resolve, reject) => {
 self.addEventListener("message", ({ data }) => {
   if (data.action === "resolve_install") {
     _resolveInstallPromise(data.value)
+    self.skipWaiting()
   }
   if (data.action === "reject_install") {
     _rejectInstallPromise(data.value)
@@ -24,44 +25,30 @@ self.addEventListener("message", ({ data }) => {
 self.addEventListener("install", (installEvent) => {
   if (intrumentInstall) {
     installEvent.waitUntil(installPromise)
+  } else {
+    self.skipWaiting()
   }
 })
 
-let animalImageUrl = "cat.svg"
+let animalImageUrl = "horse.svg"
 self.addEventListener("message", async ({ data }) => {
   if (data.action === "set_animal_image_url") {
     animalImageUrl = data.value
   }
 })
 self.addEventListener("fetch", (fetchEvent) => {
-  if (fetchEvent.request.url.includes("cat.svg")) {
-    fetchEvent.respondWith(
-      fetch(redirectRequest(fetchEvent.request, animalImageUrl)),
-    )
+  const request = fetchEvent.request
+  if (request.mode === "navigate") {
+    return
   }
+  if (!request.url.includes("cat.svg")) {
+    fetchEvent.respondWith(fetch(request))
+    return
+  }
+  const requestRedirected = new Request(
+    new URL(animalImageUrl, self.location),
+    request,
+  )
+  const responsePromise = fetch(requestRedirected)
+  fetchEvent.respondWith(responsePromise)
 })
-const redirectRequest = async (request, url) => {
-  const { mode } = request
-  // see https://github.com/GoogleChrome/workbox/issues/1796
-  if (mode !== "navigate") {
-    return new Request(url, request)
-  }
-
-  const requestClone = request.clone()
-  const { body, credentials, headers, integrity, referrer, referrerPolicy } =
-    requestClone
-  const bodyPromise = body ? Promise.resolve(body) : requestClone.blob()
-  const bodyValue = await bodyPromise
-
-  const requestMutated = new Request(url, {
-    body: bodyValue,
-    credentials,
-    headers,
-    integrity,
-    referrer,
-    referrerPolicy,
-    mode: "same-origin",
-    redirect: "manual",
-  })
-  return requestMutated
-}

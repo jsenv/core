@@ -20,52 +20,77 @@ https://web.dev/service-worker-lifecycle/
     <div id="service_worker_ui">
       <fieldset>
         <legend>Service worker registration</legend>
-        <button id="register">register</button>
+        <button id="register_dog">register sw_dog.js</button>
+        <button id="register_horse">register sw_horse.js</button>
         <button id="update">check for updates</button>
         <button id="unregister">unregister</button>
       </fieldset>
-      <!-- <fieldset>
-        <legend>Service worker actions</legend>
-        <button id="enable_dog">Enable dog</button>
-        <button id="enable_horse">Enable horse</button>
-        <button id="enable_cat">Enable cat</button>
-      </fieldset> -->
     </div>
     <script>
       const serviceWorkerAPI = window.navigator.serviceWorker
-      const registerButton = document.querySelector("#register")
-      registerButton.onclick = async () => {
-        registerButton.disabled = true
-        try {
-          const registration = await serviceWorkerAPI.register("./sw.js")
+
+      const watchRegistration = (registration) => {
+        // setTimeout because of https://github.com/w3c/ServiceWorker/issues/515
+        setTimeout(() => {
           registration.onupdatefound = () => {
             const newServiceWorker = registration.installing
+            // si le installing c'est le meme alors on ignore?
+            // non pas nécéssairement
+            // comment faire?
+            // ça me plait pas ce updatefound qui se produit trop tot a mon gout
             console.log(`"updatefound" ${newServiceWorker.scriptURL}`)
           }
-          const { installing, waiting, active } = registration
-          if (installing) {
-            console.log(`service worker is installing...`)
-            installing.onstatechange = () => {
-              console.log(`installing "statechange" to ${installing.state}`)
-            }
-          } else if (waiting) {
-            console.log(`service worker is installed and waiting to activate`)
-            waiting.onstatechange = () => {
-              console.log(`waiting script "statechange" to ${waiting.state}`)
-            }
-            if (active) {
-              active.onstatechange = () => {
-                console.log(`active script "statechange" to ${waiting.state}`)
-              }
-            }
-          } else {
-            console.log(`service worker is active`)
+        })
+        const { installing, waiting, active } = registration
+        if (installing) {
+          console.log(`service worker is installing...`)
+          installing.onstatechange = () => {
+            console.log(`installing "statechange" to ${installing.state}`)
+          }
+        } else if (waiting) {
+          console.log(`service worker is installed and waiting to activate`)
+          waiting.onstatechange = () => {
+            console.log(`waiting script "statechange" to ${waiting.state}`)
+          }
+          if (active) {
             active.onstatechange = () => {
               console.log(`active script "statechange" to ${waiting.state}`)
             }
           }
+        } else {
+          console.log(`service worker is active`)
+          active.onstatechange = () => {
+            console.log(`active script "statechange" to ${active.state}`)
+          }
+        }
+      }
+      const init = async () => {
+        const registration = await serviceWorkerAPI.getRegistration()
+        if (registration) {
+          watchRegistration(registration)
+        }
+      }
+      init()
+
+      const registerDogButton = document.querySelector("#register_dog")
+      registerDogButton.onclick = async () => {
+        registerDogButton.disabled = true
+        try {
+          const registration = await serviceWorkerAPI.register("./sw_dog.js")
+          watchRegistration(registration)
         } finally {
-          registerButton.disabled = false
+          registerDogButton.disabled = false
+        }
+      }
+
+      const registerHorseButton = document.querySelector("#register_horse")
+      registerHorseButton.onclick = async () => {
+        registerHorseButton.disabled = true
+        try {
+          const registration = await serviceWorkerAPI.register("./sw_horse.js")
+          watchRegistration(registration)
+        } finally {
+          registerHorseButton.disabled = false
         }
       }
 
@@ -75,6 +100,7 @@ https://web.dev/service-worker-lifecycle/
         try {
           const registration = await serviceWorkerAPI.getRegistration()
           if (registration) {
+            console.log("calling registration.update()")
             registration.update()
           }
         } finally {
