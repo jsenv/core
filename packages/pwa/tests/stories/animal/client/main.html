@@ -1,0 +1,149 @@
+<!-- 
+https://web.dev/service-worker-lifecycle/
+-->
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <div id="animal_ui">
+      <fieldset>
+        <legend>Animal image <button id="refresh">refresh</button></legend>
+        <img style="display: block" height="200" src="./cat.svg" />
+      </fieldset>
+    </div>
+    <div id="service_worker_ui">
+      <fieldset>
+        <legend>Service worker registration</legend>
+        <button id="register">register</button>
+        <button id="update">check for updates</button>
+        <button id="unregister">unregister</button>
+      </fieldset>
+      <!-- <fieldset>
+        <legend>Service worker actions</legend>
+        <button id="enable_dog">Enable dog</button>
+        <button id="enable_horse">Enable horse</button>
+        <button id="enable_cat">Enable cat</button>
+      </fieldset> -->
+    </div>
+    <script>
+      const serviceWorkerAPI = window.navigator.serviceWorker
+      const registerButton = document.querySelector("#register")
+      registerButton.onclick = async () => {
+        registerButton.disabled = true
+        try {
+          const registration = await serviceWorkerAPI.register("./sw.js")
+          registration.onupdatefound = () => {
+            const newServiceWorker = registration.installing
+            console.log(`"updatefound" ${newServiceWorker.scriptURL}`)
+          }
+          const { installing, waiting, active } = registration
+          if (installing) {
+            console.log(`service worker is installing...`)
+            installing.onstatechange = () => {
+              console.log(`installing "statechange" to ${installing.state}`)
+            }
+          } else if (waiting) {
+            console.log(`service worker is installed and waiting to activate`)
+            waiting.onstatechange = () => {
+              console.log(`waiting script "statechange" to ${waiting.state}`)
+            }
+            if (active) {
+              active.onstatechange = () => {
+                console.log(`active script "statechange" to ${waiting.state}`)
+              }
+            }
+          } else {
+            console.log(`service worker is active`)
+            active.onstatechange = () => {
+              console.log(`active script "statechange" to ${waiting.state}`)
+            }
+          }
+        } finally {
+          registerButton.disabled = false
+        }
+      }
+
+      const updateButton = document.querySelector("#update")
+      updateButton.onclick = async () => {
+        updateButton.disabled = true
+        try {
+          const registration = await serviceWorkerAPI.getRegistration()
+          if (registration) {
+            registration.update()
+          }
+        } finally {
+          updateButton.disabled = false
+        }
+      }
+
+      const unregisterButton = document.querySelector("#unregister")
+      unregisterButton.onclick = async () => {
+        unregisterButton.disabled = true
+        try {
+          const registration = await serviceWorkerAPI.getRegistration()
+          if (registration) {
+            const unregistered = await registration.unregister()
+            if (unregistered) {
+              console.log("unregister done")
+            } else {
+              console.log("unregister failed")
+            }
+          }
+        } finally {
+          unregisterButton.disabled = false
+        }
+      }
+
+      const refreshButton = document.querySelector("#refresh")
+      const img = document.querySelector("img")
+      refreshButton.onclick = async () => {
+        refreshButton.disabled = true
+        try {
+          img.src = ""
+          const response = await window.fetch(`./cat.svg?t=${Date.now()}`)
+          const blob = await response.blob()
+          const objectUrl = URL.createObjectURL(blob)
+          await new Promise((resolve) => setTimeout(resolve, 150))
+          img.src = objectUrl
+        } finally {
+          refreshButton.disabled = false
+        }
+      }
+
+      // eslint-disable-next-line no-unused-vars
+      const postMessageToServiceWorker = async (message) => {
+        let serviceWorker
+        const controller = serviceWorkerAPI.controller
+        if (controller) {
+          serviceWorker = controller
+        } else {
+          const registration = await serviceWorkerAPI.getRegistration()
+          if (!registration) {
+            throw new Error("no service worker registered to communicate with")
+          }
+          serviceWorker =
+            registration.installing ||
+            registration.waiting ||
+            registration.active
+        }
+        const { port1, port2 } = new MessageChannel()
+        return new Promise((resolve, reject) => {
+          port1.onmessage = function (event) {
+            if (event.data.status === "rejected") {
+              reject(event.data.value)
+            } else {
+              resolve(event.data.value)
+            }
+          }
+          serviceWorker.postMessage(message, [port2])
+        })
+      }
+    </script>
+  </body>
+</html>

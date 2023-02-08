@@ -1,0 +1,223 @@
+<!-- 
+TODO:
+partir de cet exemple concret:
+
+https://web.dev/service-worker-lifecycle/
+ -->
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <div id="service_worker_ui">
+      <style></style>
+      <fieldset>
+        <legend>Actions</legend>
+        <button id="register_a">register("./sw_a.js")</button>
+        <button id="register_b">register("./sw_b.js")</button>
+        <button id="register_404">register("./sw_404.js")</button>
+
+        <br />
+        <br />
+        <button id="unregister">getRegistration().unregister()</button>
+        <button id="update">getRegistration().update()</button>
+      </fieldset>
+      <br />
+      <fieldset>
+        <legend>
+          List of registrations
+          <button id="registrations_button">rerender</button>
+        </legend>
+
+        <ul id="registrations_console"></ul>
+      </fieldset>
+      <br />
+      <fieldset>
+        <legend>Controller (navigator.serviceWorker.controller)</legend>
+        <!-- <button id="controller_button">Show</button> -->
+        <p id="controller_console"></p>
+      </fieldset>
+      <fieldset>
+        <legend>Events</legend>
+        <div id="events_console"></div>
+      </fieldset>
+    </div>
+    <script>
+      const eventsConsole = document.querySelector("#events_console")
+      const logEvent = (event) => {
+        eventsConsole.innerHTML += `${event}<br />`
+      }
+      window.navigator.serviceWorker.addEventListener(
+        "controllerchange",
+        () => {
+          logEvent(`"controllerchange"`)
+        },
+      )
+      // AH OUAIS GROSSE NEWS:
+      // on peut avoir un registration qui contient A LA FOIS
+      // active et waiting
+      // an active on a l'actuel et en waiting on a celui qui veut remplacer
+      // (qui attend le skipWaiting ou que les tabs soient fermés)
+      // donc en gros quand on fait .register() avec une autre URL ça tente de remplacer l'actuelle
+
+      const watchRegistration = (registration, { from }) => {
+        registration.addEventListener("updatefound", () => {
+          const { installing } = registration
+          logEvent(
+            `"updatefound" ${installing.scriptURL} <code>${installing.state}</code>`,
+          )
+        })
+
+        const stateName = registration.installing
+          ? "installing"
+          : registration.waiting
+          ? "waiting"
+          : "active"
+        const serviceWorker = registration[stateName]
+        logEvent(
+          `"${from}" contains "${serviceWorker.scriptURL}" <code>${serviceWorker.state}</code>`,
+        )
+        serviceWorker.onstatechange = () => {
+          logEvent(
+            `"statechange" on ${serviceWorker.scriptURL} <code>${serviceWorker.state}</code>`,
+          )
+        }
+      }
+      const register = async (url) => {
+        try {
+          const registration = await window.navigator.serviceWorker.register(
+            url,
+          )
+          watchRegistration(registration, { from: "click on register button" })
+        } catch (e) {
+          logEvent(`"registration_error" for ${url} ${e.stack}`)
+        }
+      }
+
+      actions: {
+        const registerAButton = document.querySelector("#register_a")
+        registerAButton.onclick = () => {
+          register("./sw_a.js")
+        }
+        const registerBButton = document.querySelector("#register_b")
+        registerBButton.onclick = () => {
+          register("./sw_b.js")
+        }
+        const register404Button = document.querySelector("#register_404")
+        register404Button.onclick = () => {
+          register("./sw_404.js")
+        }
+        const unregisterButton = document.querySelector("#unregister")
+        unregisterButton.onclick = async () => {
+          unregisterButton.disabled = true
+          const registration =
+            await window.navigator.serviceWorker.getRegistration()
+          unregisterButton.disabled = false
+          if (registration) {
+            registration.unregister()
+          }
+        }
+        const updateButton = document.querySelector("#update")
+        updateButton.onclick = async () => {
+          updateButton.disabled = true
+          const registration =
+            await window.navigator.serviceWorker.getRegistration()
+          updateButton.disabled = false
+          if (registration) {
+            const serviceWorker =
+              registration.installing ||
+              registration.waiting ||
+              registration.active
+            logEvent(
+              `try to update ${serviceWorker.scriptURL} ${serviceWorker.state}`,
+            )
+            try {
+              const updateRegistration = await registration.update()
+              const updateServiceWorker =
+                updateRegistration.installing || updateRegistration.waiting
+              if (!updateServiceWorker) {
+                logEvent(`no update for ${serviceWorker.scriptURL}`)
+                return
+              }
+              logEvent(
+                `found an update ${updateServiceWorker.scriptURL} ${updateServiceWorker.state}`,
+              )
+              watchRegistration(registration, { from: "update()" })
+            } catch (e) {
+              logEvent(
+                `update registration failure on ${serviceWorker.scriptURL} ${e.stack}`,
+              )
+            }
+          }
+        }
+      }
+
+      registrations: {
+        const renderRegistrations = async () => {
+          const registrationsConsole = document.querySelector(
+            "#registrations_console",
+          )
+          const registrations =
+            await window.navigator.serviceWorker.getRegistrations()
+          registrationsConsole.innerHTML = ""
+          if (registrations.length === 0) {
+            registrationsConsole.innerHTML = "none"
+          }
+          for (const registration of registrations) {
+            const li = document.createElement("li")
+            registrationsConsole.appendChild(li)
+            const serviceWorker =
+              registration.installing ||
+              registration.waiting ||
+              registration.active
+            li.innerHTML = `${serviceWorker.scriptURL} ${serviceWorker.state}`
+          }
+        }
+        renderRegistrations()
+        const logRegistrationsButton = document.querySelector(
+          "#registrations_button",
+        )
+        logRegistrationsButton.onclick = async () => {
+          logRegistrationsButton.disabled = true
+          await renderRegistrations()
+          logRegistrationsButton.disabled = false
+        }
+      }
+
+      controller: {
+        const renderController = () => {
+          const controller = window.navigator.serviceWorker.controller
+          const controllerConsole = document.querySelector(
+            "#controller_console",
+          )
+          if (controller) {
+            controllerConsole.innerHTML = `${controller.scriptURL} ${controller.state}`
+          } else {
+            controllerConsole.innerHTML = "null"
+          }
+        }
+        renderController()
+        window.navigator.serviceWorker.addEventListener(
+          "controllerchange",
+          () => {
+            renderController()
+          },
+        )
+        ;(async () => {
+          const registration =
+            await window.navigator.serviceWorker.getRegistration()
+          if (registration) {
+            watchRegistration(registration, {
+              from: "getRegistration() on page load",
+            })
+          }
+        })()
+      }
+    </script>
+  </body>
+</html>

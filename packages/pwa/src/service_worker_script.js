@@ -1,4 +1,12 @@
 /*
+ * Bon a priori on peut/doit faire plus simple
+ * il semblerais que les appels successif a register avec une autre url sont sans effet?
+ * il faut recharger la page pour pouvoir changer l'url du service worker?
+ * a priori il faut unregister pour register un nouveau ça doit etre ça
+ *
+ */
+
+/*
  * Donc au final:
  * - on aura pas besoin de passer l'url (seulement pendant register)
  * - il y a tout a tester
@@ -48,7 +56,7 @@ export const createServiceWorkerScript = ({
   }
   const injectLogStyles = (args) => {
     return [
-      `%csw script`,
+      `%csw`,
       `background: ${logBackgroundColor}; color: ${logColor}; padding: 1px 3px; margin: 0 1px`,
       ...args,
     ]
@@ -132,9 +140,6 @@ export const createServiceWorkerScript = ({
   let removeUpdateFoundListener = () => {}
   Object.assign(script, {
     register: async (registrationPromise) => {
-      if (script.registered) {
-        return true
-      }
       if (document.location.protocol !== "https:") {
         logger.warn(
           `script will be registered but navigator won't use it because protocol is not https`,
