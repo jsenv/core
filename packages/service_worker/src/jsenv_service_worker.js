@@ -187,50 +187,78 @@ self.initJsenvServiceWorker = ({
 
   // --- fetch implementation ---
   self.addEventListener("fetch", (fetchEvent) => {
-    const request = remapRequest(fetchEvent.request)
+    fetchEvent.waitUntil(handleFetchEvent(fetchEvent))
+  })
+  const handleFetchEvent = async (fetchEvent) => {
+    const initialRequest = fetchEvent.request
+    logger.debug(`received request for ${initialRequest.url}`)
+    let request
+    if (Object.prototype.hasOwnProperty.call(urlMapping, initialRequest.url)) {
+      const newUrl = urlMapping[initialRequest.url]
+      logger.debug(`redirect request to ${newUrl}`)
+      if (request.mode === "navigate") {
+        // see https://github.com/GoogleChrome/workbox/issues/1796
+        const requestClone = initialRequest.clone()
+        const {
+          body,
+          credentials,
+          headers,
+          integrity,
+          referrer,
+          referrerPolicy,
+        } = requestClone
+        const bodyPromise = body ? Promise.resolve(body) : requestClone.blob()
+        const bodyValue = await bodyPromise
+        request = new Request(newUrl, {
+          body: bodyValue,
+          credentials,
+          headers,
+          integrity,
+          referrer,
+          referrerPolicy,
+          mode: "same-origin",
+          redirect: "manual",
+        })
+      } else {
+        request = new Request(newUrl, request)
+      }
+    } else {
+      request = initialRequest
+    }
     if (
-      shouldHandleRequest(request, {
+      !shouldHandleRequest(request, {
         requestWasCachedOnInstall: urlsToCacheOnInstall.includes(request.url),
       })
     ) {
-      const responsePromise = handleRequest(request, fetchEvent)
-      if (responsePromise) {
-        fetchEvent.respondWith(responsePromise)
-      }
+      logger.debug(`request ignored`)
+      return
     }
-  })
-  const handleRequest = async (request, fetchEvent) => {
-    logger.debug(`received fetch event for ${request.url}`)
     try {
       const responseFromCache = await self.caches.match(request)
       if (responseFromCache) {
         logger.debug(`respond with response from cache for ${request.url}`)
-        return responseFromCache
+        fetchEvent.respondWith(responseFromCache)
+        return
       }
 
       const responsePreloaded = await fetchEvent.preloadResponse
       if (responsePreloaded) {
         logger.debug(`respond with preloaded response for ${request.url}`)
-        return responsePreloaded
+        fetchEvent.respondWith(responsePreloaded)
+        return
       }
     } catch (error) {
       logger.warn(
         `error while trying to use cache for ${request.url}`,
         error.stack,
       )
-      return fetch(request)
+      fetchEvent.respondWith(request)
+      return
     }
 
     logger.debug(`no cache for ${request.url}, fetching it`)
-    return fetchAndCache(request)
-  }
-  const remapRequest = (request) => {
-    if (Object.prototype.hasOwnProperty.call(urlMapping, request.url)) {
-      const newUrl = urlMapping[request.url]
-      logger.debug(`redirect request from ${request.url} to ${newUrl}`)
-      return redirectRequest(request, newUrl)
-    }
-    return request
+    fetchEvent.respondWith(fetchAndCache(request))
+    return
   }
 
   // --- activation phase ---
@@ -541,32 +569,6 @@ const createUrlActions = ({ urlsConfig, urlResolver }) => {
     urlsToReloadOnInstall,
     urlMapping,
   }
-}
-
-const redirectRequest = async (request, url) => {
-  const { mode } = request
-  // see https://github.com/GoogleChrome/workbox/issues/1796
-  if (mode !== "navigate") {
-    return new Request(url, request)
-  }
-
-  const requestClone = request.clone()
-  const { body, credentials, headers, integrity, referrer, referrerPolicy } =
-    requestClone
-  const bodyPromise = body ? Promise.resolve(body) : requestClone.blob()
-  const bodyValue = await bodyPromise
-
-  const requestMutated = new Request(url, {
-    body: bodyValue,
-    credentials,
-    headers,
-    integrity,
-    referrer,
-    referrerPolicy,
-    mode: "same-origin",
-    redirect: "manual",
-  })
-  return requestMutated
 }
 
 // const responseUsesLongTermCaching = (responseInCache) => {
