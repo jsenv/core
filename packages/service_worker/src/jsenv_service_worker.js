@@ -16,7 +16,37 @@
 
 /* env serviceworker */
 
-self.initJsenvServiceWorker = ({
+self.jsenvsw = {}
+
+const actions = {}
+self.addEventListener("message", async (messageEvent) => {
+  const { data } = messageEvent
+  if (typeof data !== "object") {
+    return
+  }
+  const { action } = data
+  const actionFn = actions[action]
+  if (!actionFn) {
+    return
+  }
+  const { payload } = data
+  let status
+  let value
+  try {
+    const actionFnReturnValue = await actionFn(payload)
+    status = "resolved"
+    value = actionFnReturnValue
+  } catch (e) {
+    status = "rejected"
+    value = e
+  }
+  messageEvent.ports[0].postMessage({ status, value })
+})
+self.jsenvsw.registerActions = (value) => {
+  Object.assign(actions, value)
+}
+
+self.jsenvsw.init = ({
   /**
    * logLevel can be "debug", "info", "warn", "error"
    */
@@ -50,8 +80,10 @@ self.initJsenvServiceWorker = ({
    * are handled by the service worker.
    */
   shouldHandleRequest = (request, { requestWasCachedOnInstall }) => {
-    if (request.method !== "GET" && request.method !== "HEAD") return false
-    return requestWasCachedOnInstall
+    return (
+      requestWasCachedOnInstall &&
+      (request.method === "GET" || request.method === "HEAD")
+    )
   },
 
   /*
@@ -251,10 +283,8 @@ self.initJsenvServiceWorker = ({
         `error while trying to use cache for ${request.url}`,
         error.stack,
       )
-      fetchEvent.respondWith(request)
       return
     }
-
     logger.debug(`no cache for ${request.url}, fetching it`)
     fetchEvent.respondWith(fetchAndCache(request))
     return
@@ -281,6 +311,9 @@ self.initJsenvServiceWorker = ({
       await self.registration.navigationPreload.enable()
     }
   }
+  // TODO; rething this because it is strange:
+  // why would we delete urls put into cache between "install" and "activate"`?
+  // -> pretty sure it's not required and should be removed
   const deleteOtherUrls = async () => {
     const cache = await self.caches.open(cacheName)
     const requestsInCache = await cache.keys()
@@ -313,30 +346,7 @@ self.initJsenvServiceWorker = ({
   }
 
   // --- postMessage communication ---
-  self.addEventListener("message", async (messageEvent) => {
-    const { data } = messageEvent
-    if (typeof data !== "object") {
-      return
-    }
-    const { action } = data
-    const actionFn = actions[action]
-    if (!actionFn) {
-      return
-    }
-    const { payload } = data
-    let status
-    let value
-    try {
-      const actionFnReturnValue = await actionFn(payload, { cacheName })
-      status = "resolved"
-      value = actionFnReturnValue
-    } catch (e) {
-      status = "rejected"
-      value = e
-    }
-    messageEvent.ports[0].postMessage({ status, value })
-  })
-  actions = {
+  self.jsenvsw.registerActions({
     skipWaiting: () => {
       self.skipWaiting()
     },
@@ -358,8 +368,8 @@ self.initJsenvServiceWorker = ({
       const deleted = await cache.delete(url)
       return deleted
     },
-    ...actions,
-  }
+  })
+  self.jsenvsw.registerActions(actions)
   const fetchAndCache = async (request, { oncache } = {}) => {
     const [response, cache] = await Promise.all([
       fetchUsingNetwork(request),

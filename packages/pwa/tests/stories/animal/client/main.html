@@ -14,34 +14,263 @@ https://web.dev/service-worker-lifecycle/
     <div id="animal_ui">
       <fieldset>
         <legend>Animal image <button id="refresh">refresh</button></legend>
-        <img style="display: block" height="200" src="./cat.svg" />
+        <img style="display: block" height="200" src="./animal.svg?v=cat" />
       </fieldset>
     </div>
     <div id="service_worker_ui">
       <fieldset>
         <legend>Service worker registration</legend>
-        <button id="register_dog">register sw_dog.js</button>
-        <button id="register_horse">register sw_horse.js</button>
+        <button id="register">register sw.js</button>
+        <!-- <button id="register_horse">register sw_horse.js</button> -->
         <button id="update">check for updates</button>
         <button id="unregister">unregister</button>
       </fieldset>
     </div>
+    <div id="trigger_file_changes">
+      <fieldset>
+        <legend>Upate files</legend>
+        <button id="build_dog">Build dog</button>
+        <button id="build_horse">Build horse</button>
+        <button id="build_cat">Build cat</button>
+        <button id="build_sw_script">Build sw script</button>
+    </div>
     <script>
+      /*
+      bon il reste a faire ceci:
+      - tester déja le cas du autoreload on update
+      - tester avec plusieurs onglet
+      - puis remettre hotResources afin de montrer qu'on sait autoreload l'image
+      et donc pas besoin de reload le browser
+
+      Ne pas oublier de tester ce qui se passe si on fait 2 "updatefound"
+      hot reloadable d'affilé, voir un 3eme
+      */
       const serviceWorkerAPI = window.navigator.serviceWorker
+
+      const img = document.querySelector("img")
+      const refreshImg = async () => {
+        img.src = ""
+        const response = await window.fetch(`./animal.svg`)
+        const blob = await response.blob()
+        const objectUrl = URL.createObjectURL(blob)
+        await new Promise((resolve) => setTimeout(resolve, 150))
+        img.src = objectUrl
+      }
+
+      const autoreloadOnActivate = true
+      const hotResources = {
+        // "animal.svg": {
+        //   update: refreshImg,
+        //   prune: () => URL.revokeObjectURL(img.src),
+        // },
+      }
+
+      const postMessageToServiceWorker = (serviceWorker, message) => {
+        const { port1, port2 } = new MessageChannel()
+        return new Promise((resolve, reject) => {
+          port1.onmessage = function (event) {
+            if (event.data.status === "rejected") {
+              reject(event.data.value)
+            } else {
+              resolve(event.data.value)
+            }
+          }
+          serviceWorker.postMessage(message, [port2])
+        })
+      }
+      // eslint-disable-next-line no-unused-vars
+      const postMessageToCurrentServiceWorker = async (message) => {
+        const controller = serviceWorkerAPI.controller
+        if (controller) {
+          return postMessageToServiceWorker(controller, message)
+        }
+        const registration = await serviceWorkerAPI.getRegistration()
+        if (!registration) {
+          throw new Error("no service worker registered to communicate with")
+        }
+        return postMessageToServiceWorker(
+          registration.installing ||
+            registration.waiting ||
+            registration.active,
+          message,
+        )
+      }
+      const inspectServiceWorker = async (serviceWorker) => {
+        let serviceWorkerResponse
+        const inspectPromise = postMessageToServiceWorker(serviceWorker, {
+          action: "inspect",
+        }).then((info) => {
+          serviceWorkerResponse = info
+        })
+        let timeout
+        let timeoutReached = false
+        const timeoutPromise = new Promise((resolve) => {
+          timeout = setTimeout(() => {
+            timeoutReached = true
+            resolve()
+          }, 300)
+        })
+        await Promise.race([inspectPromise, timeoutPromise])
+        clearTimeout(timeout)
+        if (timeoutReached) {
+          return null
+        }
+        return serviceWorkerResponse
+      }
+      const requestSkipWaiting = (serviceWorker) => {
+        return postMessageToServiceWorker(serviceWorker, {
+          action: "skipWaiting",
+        })
+      }
+      const claim = (serviceWorker) => {
+        return postMessageToServiceWorker(serviceWorker, {
+          action: "claim",
+        })
+      }
+
+      let currentSwInfoPromise = null
+      let newSwInfoPromise = null
+      let hotReloadingPromise
+      const startHotReloading = async () => {
+        hotReloadingPromise = null
+        const [currentSwInfo, newSwInfo] = await Promise.all([
+          currentSwInfoPromise,
+          newSwInfoPromise,
+        ])
+        const actions = []
+        if (!currentSwInfo || !currentSwInfo.resources) {
+          return
+        }
+        if (!newSwInfo || !newSwInfo.resources) {
+          return
+        }
+        const currentResources = currentSwInfo.resources
+        const newResources = newSwInfo.resources
+        for (const currentResource of currentResources) {
+          const hotResource = hotResources[currentResource.url]
+          if (!hotResource) {
+            return
+          }
+          const newResource = newResources.find(
+            (newResource) => newResource.url === currentResource.url,
+          )
+          if (newResource) {
+            if (!hotResource.replace) {
+              return
+            }
+            actions.push({
+              type: "replace",
+              url: currentResource.url,
+              fn: hotResource.replace,
+            })
+          }
+          if (!hotResource.remove) {
+            return
+          }
+          actions.push({
+            type: "remove",
+            url: currentResource.url,
+            fn: hotResource.remove,
+          })
+        }
+        for (const newResource of newResources) {
+          const hotResource = hotResources[newResource.url]
+          if (!hotResource) {
+            return
+          }
+          const currentResource = currentResources.find(
+            (currentResource) => currentResource.url === newResource.url,
+          )
+          if (currentResource) {
+            continue // already handled in previous loop
+          }
+          if (!hotResource.add) {
+            return
+          }
+          actions.push({
+            type: "add",
+            url: newResource.url,
+            fn: hotResource.add,
+          })
+        }
+
+        // if nothing has changed it means it's the worker implementation (the code)
+        // that has changed, so we need to reload
+        if (actions.length === 0) {
+          return
+        }
+
+        hotReloadingPromise = Promise.all(actions.map((action) => action()))
+      }
+
+      let refreshing = false
+      const reload = () => {
+        if (refreshing) {
+          return
+        }
+        refreshing = true
+        window.location.reload()
+      }
+
+      if (autoreloadOnActivate) {
+        serviceWorkerAPI.addEventListener("controllerchange", reload)
+      }
 
       const watchRegistration = (registration) => {
         // setTimeout because of https://github.com/w3c/ServiceWorker/issues/515
         setTimeout(() => {
-          registration.onupdatefound = () => {
+          registration.onupdatefound = async () => {
             const newServiceWorker = registration.installing
-            // si le installing c'est le meme alors on ignore?
-            // non pas nécéssairement
-            // comment faire?
-            // ça me plait pas ce updatefound qui se produit trop tot a mon gout
             console.log(`"updatefound" ${newServiceWorker.scriptURL}`)
+            newSwInfoPromise = inspectServiceWorker(newServiceWorker)
+
+            await newSwInfoPromise
+            await startHotReloading()
+            if (newServiceWorker.state === "installing") {
+              await new Promise((resolve) => {
+                newServiceWorker.onstatechange = () => {
+                  if (newServiceWorker.state === "installed") {
+                    resolve()
+                  }
+                }
+              })
+            }
+            const activatedPromise = await new Promise((resolve) => {
+              newServiceWorker.onstatechange = () => {
+                if (newServiceWorker.state === "activated") {
+                  resolve()
+                }
+              }
+            })
+            if (newServiceWorker.state === "installed") {
+              if (hotReloadingPromise) {
+                // we are hot reloading
+                await requestSkipWaiting()
+              } else if (autoreloadOnActivate) {
+                // we will autoreload navigator
+                await requestSkipWaiting()
+              }
+            }
+            if (newServiceWorker.state === "activating") {
+              await activatedPromise
+            }
+            if (hotReloadingPromise) {
+              await hotReloadingPromise
+              await claim()
+            }
+            if (autoreloadOnActivate) {
+              // TODO: tester si on a besoin de faire un reload ici
+              // mais je pense que le navigateur va emit "controllerchange"
+              // et donc ça devrait suffire?
+              // reload()
+            }
           }
         })
         const { installing, waiting, active } = registration
+        const serviceWorker = installing || waiting || active
+        serviceWorkerAPI.startMessages()
+
+        currentSwInfoPromise = inspectServiceWorker(serviceWorker)
         if (installing) {
           console.log(`service worker is installing...`)
           installing.onstatechange = () => {
@@ -63,6 +292,15 @@ https://web.dev/service-worker-lifecycle/
             console.log(`active script "statechange" to ${active.state}`)
           }
         }
+
+        // first install the client see a correct version of the resources
+        // so we can tell worker to skipWaiting and activate
+        // (we could also do nothing after all, there is no rush)
+        // skipWaiting + claim right now
+        // if (serviceWorker.state === 'installing' || serviceWorker.state === 'installed') {
+        //   await requestSkipWaiting()
+        // }
+        // await claim()
       }
       const init = async () => {
         const registration = await serviceWorkerAPI.getRegistration()
@@ -72,25 +310,27 @@ https://web.dev/service-worker-lifecycle/
       }
       init()
 
-      const registerDogButton = document.querySelector("#register_dog")
-      registerDogButton.onclick = async () => {
-        registerDogButton.disabled = true
-        try {
-          const registration = await serviceWorkerAPI.register("./sw_dog.js")
-          watchRegistration(registration)
-        } finally {
-          registerDogButton.disabled = false
-        }
+      const buildDogButton = document.querySelector('#build_dog')
+      buildDogButton.onclick = () => {
+        fetch('/update_animal_to_dog')
+      }
+      const buildHorseButton = document.querySelector('#build_horse')
+      buildHorseButton.onclick = () => {
+        fetch('/update_animal_to_horse')
+      }
+      const buildCatButton = document.querySelector('#build_cat')
+      buildCatButton.onclick = () => {
+        fetch('/update_animal_to_cat')
       }
 
-      const registerHorseButton = document.querySelector("#register_horse")
-      registerHorseButton.onclick = async () => {
-        registerHorseButton.disabled = true
+      const registerButton = document.querySelector("#register")
+      registerButton.onclick = async () => {
+        registerButton.disabled = true
         try {
-          const registration = await serviceWorkerAPI.register("./sw_horse.js")
+          const registration = await serviceWorkerAPI.register("./sw.js")
           watchRegistration(registration)
         } finally {
-          registerHorseButton.disabled = false
+          registerButton.disabled = false
         }
       }
 
@@ -127,48 +367,13 @@ https://web.dev/service-worker-lifecycle/
       }
 
       const refreshButton = document.querySelector("#refresh")
-      const img = document.querySelector("img")
       refreshButton.onclick = async () => {
         refreshButton.disabled = true
         try {
-          img.src = ""
-          const response = await window.fetch(`./cat.svg?t=${Date.now()}`)
-          const blob = await response.blob()
-          const objectUrl = URL.createObjectURL(blob)
-          await new Promise((resolve) => setTimeout(resolve, 150))
-          img.src = objectUrl
+          await refreshImg()
         } finally {
           refreshButton.disabled = false
         }
-      }
-
-      // eslint-disable-next-line no-unused-vars
-      const postMessageToServiceWorker = async (message) => {
-        let serviceWorker
-        const controller = serviceWorkerAPI.controller
-        if (controller) {
-          serviceWorker = controller
-        } else {
-          const registration = await serviceWorkerAPI.getRegistration()
-          if (!registration) {
-            throw new Error("no service worker registered to communicate with")
-          }
-          serviceWorker =
-            registration.installing ||
-            registration.waiting ||
-            registration.active
-        }
-        const { port1, port2 } = new MessageChannel()
-        return new Promise((resolve, reject) => {
-          port1.onmessage = function (event) {
-            if (event.data.status === "rejected") {
-              reject(event.data.value)
-            } else {
-              resolve(event.data.value)
-            }
-          }
-          serviceWorker.postMessage(message, [port2])
-        })
       }
     </script>
   </body>
