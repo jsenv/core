@@ -64,15 +64,15 @@ const updateAnimal = (name) => {
   writeFileSync(
     htmlFileUrl,
     htmlFileContent
-      .replace("animal.svg?v=cat", `animal.svg?v=${name}`)
-      .replace("animal.svg?v=dog", `animal.svg?v=${name}`)
-      .replace("animal.svg?v=horse", `animal.svg?v=${name}`),
+      .replaceAll("animal.svg?v=cat", `animal.svg?v=${name}`)
+      .replaceAll("animal.svg?v=dog", `animal.svg?v=${name}`)
+      .replaceAll("animal.svg?v=horse", `animal.svg?v=${name}`),
   )
   writeFileSync(
     swFileUrl,
     swFileContent
-      .replace("animal.svg?v=cat", `animal.svg?v=${name}`)
-      .replace("animal.svg?v=dog", `animal.svg?v=${name}`)
-      .replace("animal.svg?v=horse", `animal.svg?v=${name}`),
+      .replaceAll("animal.svg?v=cat", `animal.svg?v=${name}`)
+      .replaceAll("animal.svg?v=dog", `animal.svg?v=${name}`)
+      .replaceAll("animal.svg?v=horse", `animal.svg?v=${name}`),
   )
 }

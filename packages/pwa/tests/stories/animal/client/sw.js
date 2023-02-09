@@ -38,7 +38,7 @@ self.resources = [
   },
   {
     url: "animal.svg",
-    versionedUrl: "animal.svg?v=horse",
+    versionedUrl: "animal.svg?v=dog",
   },
 ]
 self.resources.forEach((resource) => {
