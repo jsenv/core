@@ -1,15 +1,19 @@
-export const jsenvPluginCacheControl = () => {
+export const jsenvPluginCacheControl = ({
+  versionedUrls = true,
+  maxAge = SECONDS_IN_30_DAYS,
+}) => {
   return {
     name: "jsenv:cache_control",
     appliesDuring: "dev",
     augmentResponse: ({ reference }) => {
       if (
+        versionedUrls &&
         reference.searchParams.has("v") &&
         !reference.searchParams.has("hmr")
       ) {
         return {
           headers: {
-            "cache-control": `private,max-age=${SECONDS_IN_30_DAYS},immutable`,
+            "cache-control": `private,max-age=${maxAge},immutable`,
           },
         }
       }

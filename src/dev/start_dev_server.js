@@ -72,6 +72,7 @@ export const startDevServer = async ({
   fileSystemMagicRedirection,
   transpilation,
   explorer = true, // see jsenv_plugin_explorer.js
+  cacheControl = true,
   ribbon = true,
   // toolbar = false,
 
@@ -209,6 +210,7 @@ export const startDevServer = async ({
           clientMainFileUrl,
           cooldownBetweenFileEvents,
           explorer,
+          cacheControl,
           ribbon,
           sourcemaps,
           sourcemapsSourcesProtocol,

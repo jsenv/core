@@ -28,14 +28,17 @@ const cacheName = (() => {
 
   const timestamp = new Date().getTime().toString(base)
   const random = `${randomBlock()}${randomBlock()}`
-  return `${cachePrefix}${timestamp}${random}`
+  return `${cachePrefix}_${timestamp}${random}`
 })()
 
 self.version = 2
 self.resources = [
   {
+    url: "main.html",
+  },
+  {
     url: "animal.svg",
-    versionedUrl: "animal.svg?v=cat",
+    versionedUrl: "animal.svg?v=horse",
   },
 ]
 self.resources.forEach((resource) => {
@@ -46,7 +49,7 @@ self.resources.forEach((resource) => {
 })
 self.addEventListener("message", ({ data, ports }) => {
   if (data.action === "inspect") {
-    ports.postMessage({
+    ports[0].postMessage({
       version: self.version,
       resources: self.resources,
     })
@@ -84,11 +87,16 @@ const handleInstallEvent = async () => {
   const cache = await self.caches.open(cacheName)
   for (const resource of self.resources) {
     const url = resource.versionedUrl || resource.url
-    const request = new Request(url)
+    const request = resource.versionedUrl
+      ? new Request(url)
+      : // A non versioned url must ignore navigator cache
+        // otherwise we might (99% chances) hit previous worker cache
+        // and miss the new version
+        new Request(url, { cache: "reload" })
     const response = await fetch(request)
     if (response.status === 200) {
       console.debug(
-        `fresh response found for ${request.url}, put it in cache and respond with it`,
+        `put "${asUrlRelativeToDocument(request.url)}" in cache during install`,
       )
       const responseToCache = await asResponseToPutInCache(response)
       await cache.put(request, responseToCache)
@@ -133,14 +141,14 @@ self.addEventListener("message", async ({ data }) => {
 self.addEventListener("activate", (activateEvent) => {
   const promiseToWait = claimPromise
     ? Promise.all([claimPromise, deleteOtherCaches()])
-    : claimPromise
+    : deleteOtherCaches()
   activateEvent.waitUntil(promiseToWait)
 })
 const deleteOtherCaches = async () => {
   const cacheKeys = await self.caches.keys()
   await Promise.all(
     cacheKeys.map(async (cacheKey) => {
-      if (cacheKey !== cacheName && cacheKey.startsWith(cachePrefix)) {
+      if (cacheKey !== cacheName && cacheKey.startsWith(`${cachePrefix}_`)) {
         console.info(`delete cache ${cacheKey}`)
         await self.caches.delete(cacheKey)
       }
@@ -149,32 +157,70 @@ const deleteOtherCaches = async () => {
 }
 
 self.addEventListener("fetch", async (fetchEvent) => {
-  const request = fetchEvent.request
-  if (request.mode === "navigate") {
-    return
-  }
-  fetchEvent.waitUntil(handleFetchEvent(fetchEvent))
+  fetchEvent.respondWith(handleFetchEvent(fetchEvent))
 })
 const handleFetchEvent = async (fetchEvent) => {
-  const request = fetchEvent.request
-  const responseFromCache = await self.caches.match(request)
-  if (responseFromCache) {
-    console.debug(`respond with response from cache for ${request.url}`)
-    fetchEvent.respondWith(responseFromCache)
-    return
+  const initialRequest = fetchEvent.request
+  let request
+
+  if (initialRequest.mode === "navigate") {
+    const requestClone = initialRequest.clone()
+    const {
+      method,
+      body,
+      credentials,
+      headers,
+      integrity,
+      referrer,
+      referrerPolicy,
+    } = requestClone
+    if (method === "GET" || method === "HEAD") {
+      request = new Request(initialRequest.url, {
+        credentials,
+        headers,
+        integrity,
+        referrer,
+        referrerPolicy,
+        mode: "same-origin",
+        redirect: "manual",
+      })
+    } else {
+      const bodyPromise = body ? Promise.resolve(body) : requestClone.blob()
+      const bodyValue = await bodyPromise
+      request = new Request(initialRequest.url, {
+        body: bodyValue,
+        credentials,
+        headers,
+        integrity,
+        referrer,
+        referrerPolicy,
+        mode: "same-origin",
+        redirect: "manual",
+      })
+    }
+  } else {
+    request = initialRequest
   }
+
   try {
     const responseFromCache = await self.caches.match(request)
     if (responseFromCache) {
-      console.debug(`respond with response from cache for ${request.url}`)
-      fetchEvent.respondWith(responseFromCache)
-      return
+      console.debug(`from cache -> "${asUrlRelativeToDocument(request.url)}"`)
+      return responseFromCache
     }
+    console.debug(`from network -> "${asUrlRelativeToDocument(request.url)}"`)
+    return self.fetch(request)
   } catch (error) {
     console.warn(
-      `error while trying to use cache for ${request.url}`,
+      `error while trying to use ${cacheName} cache on "${asUrlRelativeToDocument(
+        request.url,
+      )}"`,
       error.stack,
     )
-    return
+    return self.fetch(request)
   }
+}
+
+const asUrlRelativeToDocument = (url) => {
+  return url.slice(self.location.origin.length)
 }

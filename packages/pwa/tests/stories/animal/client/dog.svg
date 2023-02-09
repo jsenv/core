@@ -1,4 +1,8 @@
-<svg version="1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 95.2">
+<svg
+  id="dog"
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 100 95.2"
+>
   <path
     fill-rule="evenodd"
     clip-rule="evenodd"

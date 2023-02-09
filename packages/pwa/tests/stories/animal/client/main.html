@@ -14,7 +14,7 @@ https://web.dev/service-worker-lifecycle/
     <div id="animal_ui">
       <fieldset>
         <legend>Animal image <button id="refresh">refresh</button></legend>
-        <img style="display: block" height="200" src="./animal.svg?v=cat" />
+        <img style="display: block" height="200" src="./animal.svg?v=horse" />
       </fieldset>
     </div>
     <div id="service_worker_ui">
@@ -50,7 +50,7 @@ https://web.dev/service-worker-lifecycle/
       const img = document.querySelector("img")
       const refreshImg = async () => {
         img.src = ""
-        const response = await window.fetch(`./animal.svg`)
+        const response = await window.fetch('./animal.svg?v=horse')
         const blob = await response.blob()
         const objectUrl = URL.createObjectURL(blob)
         await new Promise((resolve) => setTimeout(resolve, 150))
@@ -118,11 +118,13 @@ https://web.dev/service-worker-lifecycle/
         return serviceWorkerResponse
       }
       const requestSkipWaiting = (serviceWorker) => {
+        console.log('send skipWaiting')
         return postMessageToServiceWorker(serviceWorker, {
           action: "skipWaiting",
         })
       }
       const claim = (serviceWorker) => {
+        console.log('send claim')
         return postMessageToServiceWorker(serviceWorker, {
           action: "claim",
         })
