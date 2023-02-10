@@ -1,9 +1,6 @@
 <!-- 
-TODO:
-partir de cet exemple concret:
-
 https://web.dev/service-worker-lifecycle/
- -->
+-->
 
 <!DOCTYPE html>
 <html>
@@ -14,209 +11,371 @@ https://web.dev/service-worker-lifecycle/
   </head>
 
   <body>
-    <div id="service_worker_ui">
-      <style></style>
+    <div id="animal_ui">
       <fieldset>
-        <legend>Actions</legend>
-        <button id="register_a">register("./sw_a.js")</button>
-        <button id="register_b">register("./sw_b.js")</button>
-        <button id="register_404">register("./sw_404.js")</button>
-
-        <br />
-        <br />
-        <button id="unregister">getRegistration().unregister()</button>
-        <button id="update">getRegistration().update()</button>
-      </fieldset>
-      <br />
-      <fieldset>
-        <legend>
-          List of registrations
-          <button id="registrations_button">rerender</button>
-        </legend>
-
-        <ul id="registrations_console"></ul>
-      </fieldset>
-      <br />
-      <fieldset>
-        <legend>Controller (navigator.serviceWorker.controller)</legend>
-        <!-- <button id="controller_button">Show</button> -->
-        <p id="controller_console"></p>
-      </fieldset>
-      <fieldset>
-        <legend>Events</legend>
-        <div id="events_console"></div>
+        <legend>Animal image <button id="refresh">refresh</button></legend>
+        <img style="display: block" height="200" src="./animal.svg?v=dog" />
       </fieldset>
     </div>
+    <div id="service_worker_ui">
+      <fieldset>
+        <legend>Service worker registration</legend>
+        <button id="register">register sw.js</button>
+        <!-- <button id="register_horse">register sw_horse.js</button> -->
+        <button id="update">check for updates</button>
+        <button id="unregister">unregister</button>
+      </fieldset>
+    </div>
+    <div id="trigger_file_changes">
+      <fieldset>
+        <legend>Upate files</legend>
+        <button id="build_dog">Build dog</button>
+        <button id="build_horse">Build horse</button>
+        <button id="build_cat">Build cat</button>
+        <button id="build_sw_script">Build sw script</button>
+    </div>
     <script>
-      const eventsConsole = document.querySelector("#events_console")
-      const logEvent = (event) => {
-        eventsConsole.innerHTML += `${event}<br />`
-      }
-      window.navigator.serviceWorker.addEventListener(
-        "controllerchange",
-        () => {
-          logEvent(`"controllerchange"`)
-        },
-      )
-      // AH OUAIS GROSSE NEWS:
-      // on peut avoir un registration qui contient A LA FOIS
-      // active et waiting
-      // an active on a l'actuel et en waiting on a celui qui veut remplacer
-      // (qui attend le skipWaiting ou que les tabs soient fermés)
-      // donc en gros quand on fait .register() avec une autre URL ça tente de remplacer l'actuelle
+      /*
+      bon il reste a faire ceci:
+      - tester déja le cas du autoreload on update
+      - tester avec plusieurs onglet
+      - puis remettre hotResources afin de montrer qu'on sait autoreload l'image
+      et donc pas besoin de reload le browser
 
-      const watchRegistration = (registration, { from }) => {
-        registration.addEventListener("updatefound", () => {
-          const { installing } = registration
-          logEvent(
-            `"updatefound" ${installing.scriptURL} <code>${installing.state}</code>`,
-          )
-        })
+      Ne pas oublier de tester ce qui se passe si on fait 2 "updatefound"
+      hot reloadable d'affilé, voir un 3eme
+      */
+      const serviceWorkerAPI = window.navigator.serviceWorker
 
-        const stateName = registration.installing
-          ? "installing"
-          : registration.waiting
-          ? "waiting"
-          : "active"
-        const serviceWorker = registration[stateName]
-        logEvent(
-          `"${from}" contains "${serviceWorker.scriptURL}" <code>${serviceWorker.state}</code>`,
-        )
-        serviceWorker.onstatechange = () => {
-          logEvent(
-            `"statechange" on ${serviceWorker.scriptURL} <code>${serviceWorker.state}</code>`,
-          )
-        }
-      }
-      const register = async (url) => {
-        try {
-          const registration = await window.navigator.serviceWorker.register(
-            url,
-          )
-          watchRegistration(registration, { from: "click on register button" })
-        } catch (e) {
-          logEvent(`"registration_error" for ${url} ${e.stack}`)
-        }
+      const img = document.querySelector("img")
+      const refreshImg = async () => {
+        img.src = ""
+        const response = await window.fetch('./animal.svg?v=dog')
+        const blob = await response.blob()
+        const objectUrl = URL.createObjectURL(blob)
+        await new Promise((resolve) => setTimeout(resolve, 150))
+        img.src = objectUrl
       }
 
-      actions: {
-        const registerAButton = document.querySelector("#register_a")
-        registerAButton.onclick = () => {
-          register("./sw_a.js")
-        }
-        const registerBButton = document.querySelector("#register_b")
-        registerBButton.onclick = () => {
-          register("./sw_b.js")
-        }
-        const register404Button = document.querySelector("#register_404")
-        register404Button.onclick = () => {
-          register("./sw_404.js")
-        }
-        const unregisterButton = document.querySelector("#unregister")
-        unregisterButton.onclick = async () => {
-          unregisterButton.disabled = true
-          const registration =
-            await window.navigator.serviceWorker.getRegistration()
-          unregisterButton.disabled = false
-          if (registration) {
-            registration.unregister()
-          }
-        }
-        const updateButton = document.querySelector("#update")
-        updateButton.onclick = async () => {
-          updateButton.disabled = true
-          const registration =
-            await window.navigator.serviceWorker.getRegistration()
-          updateButton.disabled = false
-          if (registration) {
-            const serviceWorker =
-              registration.installing ||
-              registration.waiting ||
-              registration.active
-            logEvent(
-              `try to update ${serviceWorker.scriptURL} ${serviceWorker.state}`,
-            )
-            try {
-              const updateRegistration = await registration.update()
-              const updateServiceWorker =
-                updateRegistration.installing || updateRegistration.waiting
-              if (!updateServiceWorker) {
-                logEvent(`no update for ${serviceWorker.scriptURL}`)
-                return
-              }
-              logEvent(
-                `found an update ${updateServiceWorker.scriptURL} ${updateServiceWorker.state}`,
-              )
-              watchRegistration(registration, { from: "update()" })
-            } catch (e) {
-              logEvent(
-                `update registration failure on ${serviceWorker.scriptURL} ${e.stack}`,
-              )
+      const autoreloadOnActivate = true
+      const hotResources = {
+        // "animal.svg": {
+        //   update: refreshImg,
+        //   prune: () => URL.revokeObjectURL(img.src),
+        // },
+      }
+
+      const postMessageToServiceWorker = (serviceWorker, message) => {
+        const { port1, port2 } = new MessageChannel()
+        return new Promise((resolve, reject) => {
+          port1.onmessage = function (event) {
+            if (event.data.status === "rejected") {
+              reject(event.data.value)
+            } else {
+              resolve(event.data.value)
             }
           }
+          serviceWorker.postMessage(message, [port2])
+        })
+      }
+      // eslint-disable-next-line no-unused-vars
+      const postMessageToCurrentServiceWorker = async (message) => {
+        const controller = serviceWorkerAPI.controller
+        if (controller) {
+          return postMessageToServiceWorker(controller, message)
         }
+        const registration = await serviceWorkerAPI.getRegistration()
+        if (!registration) {
+          throw new Error("no service worker registered to communicate with")
+        }
+        return postMessageToServiceWorker(
+          registration.installing ||
+            registration.waiting ||
+            registration.active,
+          message,
+        )
+      }
+      const inspectServiceWorker = async (serviceWorker) => {
+        let serviceWorkerResponse
+        const inspectPromise = postMessageToServiceWorker(serviceWorker, {
+          action: "inspect",
+        }).then((info) => {
+          serviceWorkerResponse = info
+        })
+        let timeout
+        let timeoutReached = false
+        const timeoutPromise = new Promise((resolve) => {
+          timeout = setTimeout(() => {
+            timeoutReached = true
+            resolve()
+          }, 300)
+        })
+        await Promise.race([inspectPromise, timeoutPromise])
+        clearTimeout(timeout)
+        if (timeoutReached) {
+          return null
+        }
+        return serviceWorkerResponse
+      }
+      const requestSkipWaiting = (serviceWorker) => {
+        console.log('send skipWaiting')
+        return postMessageToServiceWorker(serviceWorker, {
+          action: "skipWaiting",
+        })
+      }
+      const claim = (serviceWorker) => {
+        console.log('send claim')
+        return postMessageToServiceWorker(serviceWorker, {
+          action: "claim",
+        })
       }
 
-      registrations: {
-        const renderRegistrations = async () => {
-          const registrationsConsole = document.querySelector(
-            "#registrations_console",
+      let currentSwInfoPromise = null
+      let newSwInfoPromise = null
+      let hotReloadingPromise
+      const startHotReloading = async () => {
+        hotReloadingPromise = null
+        const [currentSwInfo, newSwInfo] = await Promise.all([
+          currentSwInfoPromise,
+          newSwInfoPromise,
+        ])
+        const actions = []
+        if (!currentSwInfo || !currentSwInfo.resources) {
+          return
+        }
+        if (!newSwInfo || !newSwInfo.resources) {
+          return
+        }
+        const currentResources = currentSwInfo.resources
+        const newResources = newSwInfo.resources
+        for (const currentResource of currentResources) {
+          const hotResource = hotResources[currentResource.url]
+          if (!hotResource) {
+            return
+          }
+          const newResource = newResources.find(
+            (newResource) => newResource.url === currentResource.url,
           )
-          const registrations =
-            await window.navigator.serviceWorker.getRegistrations()
-          registrationsConsole.innerHTML = ""
-          if (registrations.length === 0) {
-            registrationsConsole.innerHTML = "none"
-          }
-          for (const registration of registrations) {
-            const li = document.createElement("li")
-            registrationsConsole.appendChild(li)
-            const serviceWorker =
-              registration.installing ||
-              registration.waiting ||
-              registration.active
-            li.innerHTML = `${serviceWorker.scriptURL} ${serviceWorker.state}`
-          }
-        }
-        renderRegistrations()
-        const logRegistrationsButton = document.querySelector(
-          "#registrations_button",
-        )
-        logRegistrationsButton.onclick = async () => {
-          logRegistrationsButton.disabled = true
-          await renderRegistrations()
-          logRegistrationsButton.disabled = false
-        }
-      }
-
-      controller: {
-        const renderController = () => {
-          const controller = window.navigator.serviceWorker.controller
-          const controllerConsole = document.querySelector(
-            "#controller_console",
-          )
-          if (controller) {
-            controllerConsole.innerHTML = `${controller.scriptURL} ${controller.state}`
-          } else {
-            controllerConsole.innerHTML = "null"
-          }
-        }
-        renderController()
-        window.navigator.serviceWorker.addEventListener(
-          "controllerchange",
-          () => {
-            renderController()
-          },
-        )
-        ;(async () => {
-          const registration =
-            await window.navigator.serviceWorker.getRegistration()
-          if (registration) {
-            watchRegistration(registration, {
-              from: "getRegistration() on page load",
+          if (newResource) {
+            if (!hotResource.replace) {
+              return
+            }
+            actions.push({
+              type: "replace",
+              url: currentResource.url,
+              fn: hotResource.replace,
             })
           }
-        })()
+          if (!hotResource.remove) {
+            return
+          }
+          actions.push({
+            type: "remove",
+            url: currentResource.url,
+            fn: hotResource.remove,
+          })
+        }
+        for (const newResource of newResources) {
+          const hotResource = hotResources[newResource.url]
+          if (!hotResource) {
+            return
+          }
+          const currentResource = currentResources.find(
+            (currentResource) => currentResource.url === newResource.url,
+          )
+          if (currentResource) {
+            continue // already handled in previous loop
+          }
+          if (!hotResource.add) {
+            return
+          }
+          actions.push({
+            type: "add",
+            url: newResource.url,
+            fn: hotResource.add,
+          })
+        }
+
+        // if nothing has changed it means it's the worker implementation (the code)
+        // that has changed, so we need to reload
+        if (actions.length === 0) {
+          return
+        }
+
+        hotReloadingPromise = Promise.all(actions.map((action) => action()))
+      }
+
+      let refreshing = false
+      const reload = () => {
+        if (refreshing) {
+          return
+        }
+        refreshing = true
+        window.location.reload()
+      }
+
+      if (autoreloadOnActivate) {
+        serviceWorkerAPI.addEventListener("controllerchange", reload)
+      }
+
+      const watchRegistration = (registration) => {
+        // setTimeout because of https://github.com/w3c/ServiceWorker/issues/515
+        setTimeout(() => {
+          registration.onupdatefound = async () => {
+            const newServiceWorker = registration.installing
+            console.log(`"updatefound" ${newServiceWorker.scriptURL}`)
+            newSwInfoPromise = inspectServiceWorker(newServiceWorker)
+
+            await newSwInfoPromise
+            await startHotReloading()
+            if (newServiceWorker.state === "installing") {
+              await new Promise((resolve) => {
+                newServiceWorker.onstatechange = () => {
+                  if (newServiceWorker.state === "installed") {
+                    resolve()
+                  }
+                }
+              })
+            }
+            const activatedPromise = await new Promise((resolve) => {
+              newServiceWorker.onstatechange = () => {
+                if (newServiceWorker.state === "activated") {
+                  resolve()
+                }
+              }
+            })
+            if (newServiceWorker.state === "installed") {
+              if (hotReloadingPromise) {
+                // we are hot reloading
+                await requestSkipWaiting()
+              } else if (autoreloadOnActivate) {
+                // we will autoreload navigator
+                await requestSkipWaiting()
+              }
+            }
+            if (newServiceWorker.state === "activating") {
+              await activatedPromise
+            }
+            if (hotReloadingPromise) {
+              await hotReloadingPromise
+              await claim()
+            }
+            if (autoreloadOnActivate) {
+              // TODO: tester si on a besoin de faire un reload ici
+              // mais je pense que le navigateur va emit "controllerchange"
+              // et donc ça devrait suffire?
+              // reload()
+            }
+          }
+        })
+        const { installing, waiting, active } = registration
+        const serviceWorker = installing || waiting || active
+        serviceWorkerAPI.startMessages()
+
+        currentSwInfoPromise = inspectServiceWorker(serviceWorker)
+        if (installing) {
+          console.log(`service worker is installing...`)
+          installing.onstatechange = () => {
+            console.log(`installing "statechange" to ${installing.state}`)
+          }
+        } else if (waiting) {
+          console.log(`service worker is installed and waiting to activate`)
+          waiting.onstatechange = () => {
+            console.log(`waiting script "statechange" to ${waiting.state}`)
+          }
+          if (active) {
+            active.onstatechange = () => {
+              console.log(`active script "statechange" to ${waiting.state}`)
+            }
+          }
+        } else {
+          console.log(`service worker is active`)
+          active.onstatechange = () => {
+            console.log(`active script "statechange" to ${active.state}`)
+          }
+        }
+
+        // first install the client see a correct version of the resources
+        // so we can tell worker to skipWaiting and activate
+        // (we could also do nothing after all, there is no rush)
+        // skipWaiting + claim right now
+        // if (serviceWorker.state === 'installing' || serviceWorker.state === 'installed') {
+        //   await requestSkipWaiting()
+        // }
+        // await claim()
+      }
+      const init = async () => {
+        const registration = await serviceWorkerAPI.getRegistration()
+        if (registration) {
+          watchRegistration(registration)
+        }
+      }
+      init()
+
+      const buildDogButton = document.querySelector('#build_dog')
+      buildDogButton.onclick = () => {
+        fetch('/update_animal_to_dog')
+      }
+      const buildHorseButton = document.querySelector('#build_horse')
+      buildHorseButton.onclick = () => {
+        fetch('/update_animal_to_horse')
+      }
+      const buildCatButton = document.querySelector('#build_cat')
+      buildCatButton.onclick = () => {
+        fetch('/update_animal_to_cat')
+      }
+
+      const registerButton = document.querySelector("#register")
+      registerButton.onclick = async () => {
+        registerButton.disabled = true
+        try {
+          const registration = await serviceWorkerAPI.register("./sw.js")
+          watchRegistration(registration)
+        } finally {
+          registerButton.disabled = false
+        }
+      }
+
+      const updateButton = document.querySelector("#update")
+      updateButton.onclick = async () => {
+        updateButton.disabled = true
+        try {
+          const registration = await serviceWorkerAPI.getRegistration()
+          if (registration) {
+            console.log("calling registration.update()")
+            registration.update()
+          }
+        } finally {
+          updateButton.disabled = false
+        }
+      }
+
+      const unregisterButton = document.querySelector("#unregister")
+      unregisterButton.onclick = async () => {
+        unregisterButton.disabled = true
+        try {
+          const registration = await serviceWorkerAPI.getRegistration()
+          if (registration) {
+            const unregistered = await registration.unregister()
+            if (unregistered) {
+              console.log("unregister done")
+            } else {
+              console.log("unregister failed")
+            }
+          }
+        } finally {
+          unregisterButton.disabled = false
+        }
+      }
+
+      const refreshButton = document.querySelector("#refresh")
+      refreshButton.onclick = async () => {
+        refreshButton.disabled = true
+        try {
+          await refreshImg()
+        } finally {
+          refreshButton.disabled = false
+        }
       }
     </script>
   </body>
