@@ -356,7 +356,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         type,
         subtype,
         originalUrl,
-        originalContent,
+        originalContent = content,
         sourcemap,
         filename,
 
@@ -381,8 +381,13 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       urlInfo.subtype = subtype || reference.expectedSubtype || ""
       // during build urls info are reused and load returns originalUrl/originalContent
       urlInfo.originalUrl = originalUrl || urlInfo.originalUrl
-      urlInfo.originalContent =
-        originalContent === undefined ? content : originalContent
+      if (originalContent !== urlInfo.originalContent) {
+        urlInfo.originalContentEtag = undefined // set by "initTransformations"
+      }
+      if (content !== urlInfo.content) {
+        urlInfo.contentEtag = undefined // set by "applyFinalTransformations"
+      }
+      urlInfo.originalContent = originalContent
       urlInfo.content = content
       urlInfo.sourcemap = sourcemap
       if (data) {

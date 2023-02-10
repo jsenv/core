@@ -175,18 +175,25 @@ export const createFileService = ({
           // when file is modified
           return false
         }
-        if (!watch) {
+        if (!watch && urlInfo.contentEtag) {
+          // file is not watched, check the filesystem
           let fileContentAsBuffer
           try {
             fileContentAsBuffer = readFileSync(new URL(urlInfo.url))
           } catch (e) {
             if (e.code === "ENOENT") {
+              // we should consider calling urlGraph.deleteUrlInfo(urlInfo)
+              urlInfo.originalContentEtag = undefined
+              urlInfo.contentEtag = undefined
               return false
             }
             return false
           }
           const fileContentEtag = bufferToEtag(fileContentAsBuffer)
           if (fileContentEtag !== urlInfo.originalContentEtag) {
+            // we should consider calling urlGraph.considerModified(urlInfo)
+            urlInfo.originalContentEtag = undefined
+            urlInfo.contentEtag = undefined
             return false
           }
         }
@@ -289,11 +296,6 @@ export const createFileService = ({
     const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url)
     const ifNoneMatch = request.headers["if-none-match"]
     const urlInfoTargetedByCache = urlGraph.getParentIfInline(urlInfo)
-
-    if (!urlInfoTargetedByCache.isWatched) {
-      urlInfoTargetedByCache.originalContentEtag = null
-      urlInfoTargetedByCache.contentEtag = null
-    }
 
     try {
       if (ifNoneMatch) {
