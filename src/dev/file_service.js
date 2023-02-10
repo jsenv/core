@@ -290,6 +290,11 @@ export const createFileService = ({
     const ifNoneMatch = request.headers["if-none-match"]
     const urlInfoTargetedByCache = urlGraph.getParentIfInline(urlInfo)
 
+    if (!urlInfoTargetedByCache.isWatched) {
+      urlInfoTargetedByCache.originalContentEtag = null
+      urlInfoTargetedByCache.contentEtag = null
+    }
+
     try {
       if (ifNoneMatch) {
         const [clientOriginalContentEtag, clientContentEtag] =
