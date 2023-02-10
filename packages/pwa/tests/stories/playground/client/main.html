@@ -1,5 +1,22 @@
 <!-- 
 https://web.dev/service-worker-lifecycle/
+
+comment on fait pour reload les autres tabs?
+est ce que un autre tab reçoit aussi le "updatefound"
+est ce alors une bonne idée de détecter que c'est un tab en background?
+ou alors il veut mieux que ce soit le tab actif qui lui dise quoi faire?
+ou alors que un tab inactif juste se reload lorsqu'il devient actif pour éviter ce souci? 
+(ça a l'air bien ça)
+
+bon il reste a faire ceci:
+- tester déja le cas du autoreload on update
+- tester avec plusieurs onglet
+- puis remettre hotResources afin de montrer qu'on sait autoreload l'image
+et donc pas besoin de reload le browser
+
+Ne pas oublier de tester ce qui se passe si on fait 2 "updatefound"
+hot reloadable d'affilé, voir un 3eme
+      
 -->
 
 <!DOCTYPE html>
@@ -20,10 +37,17 @@ https://web.dev/service-worker-lifecycle/
     <div id="service_worker_ui">
       <fieldset>
         <legend>Service worker registration</legend>
-        <button id="register">register sw.js</button>
-        <!-- <button id="register_horse">register sw_horse.js</button> -->
-        <button id="update">check for updates</button>
-        <button id="unregister">unregister</button>
+        <button id="register" disabled>register sw.js</button>
+        <button id="unregister" disabled>unregister</button>
+        <br />
+        <button id="update_check_button" disabled>Check for updates</button>
+        <div id="update_downloading_message" style="display: none">
+          Downloading update...
+        </div>
+        <button id="update_by_restart_button" disabled>
+          Restart to update
+        </button>
+        <button id="update_now_button" disabled>Apply update</button>
       </fieldset>
     </div>
     <div id="trigger_file_changes">
@@ -33,37 +57,11 @@ https://web.dev/service-worker-lifecycle/
         <button id="build_horse">Build horse</button>
         <button id="build_cat">Build cat</button>
         <button id="build_sw_script">Build sw script</button>
+      </fieldset>
     </div>
+
     <script>
-      /*
-      bon il reste a faire ceci:
-      - tester déja le cas du autoreload on update
-      - tester avec plusieurs onglet
-      - puis remettre hotResources afin de montrer qu'on sait autoreload l'image
-      et donc pas besoin de reload le browser
-
-      Ne pas oublier de tester ce qui se passe si on fait 2 "updatefound"
-      hot reloadable d'affilé, voir un 3eme
-      */
       const serviceWorkerAPI = window.navigator.serviceWorker
-
-      const img = document.querySelector("img")
-      const refreshImg = async () => {
-        img.src = ""
-        const response = await window.fetch('./animal.svg?v=dog')
-        const blob = await response.blob()
-        const objectUrl = URL.createObjectURL(blob)
-        await new Promise((resolve) => setTimeout(resolve, 150))
-        img.src = objectUrl
-      }
-
-      const autoreloadOnActivate = true
-      const hotResources = {
-        // "animal.svg": {
-        //   update: refreshImg,
-        //   prune: () => URL.revokeObjectURL(img.src),
-        // },
-      }
 
       const postMessageToServiceWorker = (serviceWorker, message) => {
         const { port1, port2 } = new MessageChannel()
@@ -118,13 +116,13 @@ https://web.dev/service-worker-lifecycle/
         return serviceWorkerResponse
       }
       const requestSkipWaiting = (serviceWorker) => {
-        console.log('send skipWaiting')
+        console.log("send skipWaiting")
         return postMessageToServiceWorker(serviceWorker, {
           action: "skipWaiting",
         })
       }
       const claim = (serviceWorker) => {
-        console.log('send claim')
+        console.log("send claim")
         return postMessageToServiceWorker(serviceWorker, {
           action: "claim",
         })
@@ -132,33 +130,27 @@ https://web.dev/service-worker-lifecycle/
 
       let currentSwInfoPromise = null
       let newSwInfoPromise = null
-      let hotReloadingPromise
-      const startHotReloading = async () => {
-        hotReloadingPromise = null
-        const [currentSwInfo, newSwInfo] = await Promise.all([
-          currentSwInfoPromise,
-          newSwInfoPromise,
-        ])
+      const createApplyUpdate = ({ updateInfo, currentInfo }) => {
         const actions = []
-        if (!currentSwInfo || !currentSwInfo.resources) {
-          return
+        if (!currentInfo || !currentInfo.resources) {
+          return null
         }
-        if (!newSwInfo || !newSwInfo.resources) {
-          return
+        if (!updateInfo || !updateInfo.resources) {
+          return null
         }
-        const currentResources = currentSwInfo.resources
-        const newResources = newSwInfo.resources
+        const currentResources = currentInfo.resources
+        const newResources = updateInfo.resources
         for (const currentResource of currentResources) {
           const hotResource = hotResources[currentResource.url]
           if (!hotResource) {
-            return
+            return null
           }
           const newResource = newResources.find(
             (newResource) => newResource.url === currentResource.url,
           )
           if (newResource) {
             if (!hotResource.replace) {
-              return
+              return null
             }
             actions.push({
               type: "replace",
@@ -167,7 +159,7 @@ https://web.dev/service-worker-lifecycle/
             })
           }
           if (!hotResource.remove) {
-            return
+            return null
           }
           actions.push({
             type: "remove",
@@ -178,7 +170,7 @@ https://web.dev/service-worker-lifecycle/
         for (const newResource of newResources) {
           const hotResource = hotResources[newResource.url]
           if (!hotResource) {
-            return
+            return null
           }
           const currentResource = currentResources.find(
             (currentResource) => currentResource.url === newResource.url,
@@ -187,7 +179,7 @@ https://web.dev/service-worker-lifecycle/
             continue // already handled in previous loop
           }
           if (!hotResource.add) {
-            return
+            return null
           }
           actions.push({
             type: "add",
@@ -199,73 +191,107 @@ https://web.dev/service-worker-lifecycle/
         // if nothing has changed it means it's the worker implementation (the code)
         // that has changed, so we need to reload
         if (actions.length === 0) {
-          return
+          return null
         }
-
-        hotReloadingPromise = Promise.all(actions.map((action) => action()))
+        return async () => {
+          await Promise.all(actions.map((action) => action()))
+        }
       }
 
-      let refreshing = false
-      const reload = () => {
-        if (refreshing) {
-          return
-        }
-        refreshing = true
-        window.location.reload()
-      }
+      const updateDownloadingMessage = document.querySelector(
+        "#update_downloading_message",
+      )
+      const onUpdateFound = async (newServiceWorker) => {
+        console.log(`"updatefound" ${newServiceWorker.scriptURL}`)
+        newSwInfoPromise = inspectServiceWorker(newServiceWorker)
+        const currentInfo = await currentSwInfoPromise
+        const updateInfo = await newSwInfoPromise
+        const applyUpdate = createApplyUpdate({ updateInfo, currentInfo })
+        const reloadRequired = !applyUpdate
 
-      if (autoreloadOnActivate) {
-        serviceWorkerAPI.addEventListener("controllerchange", reload)
+        if (newServiceWorker.state === "installing") {
+          onUpdateInstalling({
+            updateInfo,
+            currentInfo,
+            reloadRequired,
+          })
+          const installedPromise = new Promise((resolve) => {
+            newServiceWorker.onstatechange = () => {
+              if (newServiceWorker.state === "installed") {
+                resolve()
+              }
+            }
+          })
+          await installedPromise
+        }
+        if (newServiceWorker.state === "installed") {
+          onUpdateWaiting({
+            updateInfo,
+            currentInfo,
+            reloadRequired,
+            apply: async () => {
+              if (newServiceWorker.state === "installing") {
+                await requestSkipWaiting()
+                const activatedPromise = await new Promise((resolve) => {
+                  newServiceWorker.onstatechange = () => {
+                    if (newServiceWorker.state === "activated") {
+                      resolve()
+                    }
+                  }
+                })
+                await activatedPromise
+              }
+              if (newServiceWorker.state === "activated") {
+                if (serviceWorkerAPI.controller !== newServiceWorker) {
+                  await claim()
+                }
+                if (applyUpdate) {
+                  console.log("applying update")
+                  await applyUpdate()
+                } else {
+                  console.log("reloading browser")
+                  // the other tabs should reload
+                  // how can we achieve this???
+                  reload()
+                }
+              }
+              throw new Error(
+                `unexpected state on service worker update ${newServiceWorker.state}`,
+              )
+            },
+          })
+        }
+      }
+      const onUpdateInstalling = ({ updateInfo }) => {
+        updateDownloadingMessage.style.display = "block"
+        updateDownloadingMessage.innerHTML = `Downloading update ${updateInfo.version} ...`
+      }
+      const onUpdateWaiting = ({ reloadRequired, apply }) => {
+        updateDownloadingMessage.style.display = "none"
+        const updateByRestartButton = document.querySelector(
+          "#update_by_restart_button",
+        )
+        updateByRestartButton.disabled = !reloadRequired
+        updateByRestartButton.onclick = async () => {
+          updateByRestartButton.disabled = true
+          // idéalement update le message du boutton pendant qu'il est
+          // désactivé pour dire ce qu'il se passe (activating, ...)
+          await apply()
+        }
+        const updateNowButton = document.querySelector("#update_now_button")
+        updateNowButton.disabled = reloadRequired
+        updateNowButton.onclick = async () => {
+          updateNowButton.disabled = true
+          // idéalement update le message du bouton pendant que apply se produit
+          await apply()
+        }
       }
 
       const watchRegistration = (registration) => {
         // setTimeout because of https://github.com/w3c/ServiceWorker/issues/515
         setTimeout(() => {
           registration.onupdatefound = async () => {
-            const newServiceWorker = registration.installing
-            console.log(`"updatefound" ${newServiceWorker.scriptURL}`)
-            newSwInfoPromise = inspectServiceWorker(newServiceWorker)
-
-            await newSwInfoPromise
-            await startHotReloading()
-            if (newServiceWorker.state === "installing") {
-              await new Promise((resolve) => {
-                newServiceWorker.onstatechange = () => {
-                  if (newServiceWorker.state === "installed") {
-                    resolve()
-                  }
-                }
-              })
-            }
-            const activatedPromise = await new Promise((resolve) => {
-              newServiceWorker.onstatechange = () => {
-                if (newServiceWorker.state === "activated") {
-                  resolve()
-                }
-              }
-            })
-            if (newServiceWorker.state === "installed") {
-              if (hotReloadingPromise) {
-                // we are hot reloading
-                await requestSkipWaiting()
-              } else if (autoreloadOnActivate) {
-                // we will autoreload navigator
-                await requestSkipWaiting()
-              }
-            }
-            if (newServiceWorker.state === "activating") {
-              await activatedPromise
-            }
-            if (hotReloadingPromise) {
-              await hotReloadingPromise
-              await claim()
-            }
-            if (autoreloadOnActivate) {
-              // TODO: tester si on a besoin de faire un reload ici
-              // mais je pense que le navigateur va emit "controllerchange"
-              // et donc ça devrait suffire?
-              // reload()
-            }
+            onUpdateFound(registration.installing)
           }
         })
         const { installing, waiting, active } = registration
@@ -294,16 +320,34 @@ https://web.dev/service-worker-lifecycle/
             console.log(`active script "statechange" to ${active.state}`)
           }
         }
-
-        // first install the client see a correct version of the resources
-        // so we can tell worker to skipWaiting and activate
-        // (we could also do nothing after all, there is no rush)
-        // skipWaiting + claim right now
-        // if (serviceWorker.state === 'installing' || serviceWorker.state === 'installed') {
-        //   await requestSkipWaiting()
-        // }
-        // await claim()
       }
+
+      const img = document.querySelector("img")
+      const refreshImg = async () => {
+        img.src = ""
+        const response = await window.fetch("./animal.svg?v=dog")
+        const blob = await response.blob()
+        const objectUrl = URL.createObjectURL(blob)
+        await new Promise((resolve) => setTimeout(resolve, 150))
+        img.src = objectUrl
+      }
+
+      const hotResources = {
+        // "animal.svg": {
+        //   update: refreshImg,
+        //   prune: () => URL.revokeObjectURL(img.src),
+        // },
+      }
+
+      let refreshing = false
+      const reload = () => {
+        if (refreshing) {
+          return
+        }
+        refreshing = true
+        window.location.reload()
+      }
+
       const init = async () => {
         const registration = await serviceWorkerAPI.getRegistration()
         if (registration) {
@@ -312,20 +356,21 @@ https://web.dev/service-worker-lifecycle/
       }
       init()
 
-      const buildDogButton = document.querySelector('#build_dog')
+      const buildDogButton = document.querySelector("#build_dog")
       buildDogButton.onclick = () => {
-        fetch('/update_animal_to_dog')
+        fetch("/update_animal_to_dog")
       }
-      const buildHorseButton = document.querySelector('#build_horse')
+      const buildHorseButton = document.querySelector("#build_horse")
       buildHorseButton.onclick = () => {
-        fetch('/update_animal_to_horse')
+        fetch("/update_animal_to_horse")
       }
-      const buildCatButton = document.querySelector('#build_cat')
+      const buildCatButton = document.querySelector("#build_cat")
       buildCatButton.onclick = () => {
-        fetch('/update_animal_to_cat')
+        fetch("/update_animal_to_cat")
       }
 
       const registerButton = document.querySelector("#register")
+      registerButton.disabled = false
       registerButton.onclick = async () => {
         registerButton.disabled = true
         try {
@@ -336,21 +381,27 @@ https://web.dev/service-worker-lifecycle/
         }
       }
 
-      const updateButton = document.querySelector("#update")
-      updateButton.onclick = async () => {
-        updateButton.disabled = true
+      const updateCheckButton = document.querySelector("#update_check_button")
+      updateCheckButton.disabled = false
+      updateCheckButton.onclick = async () => {
+        updateCheckButton.disabled = true
         try {
           const registration = await serviceWorkerAPI.getRegistration()
           if (registration) {
             console.log("calling registration.update()")
             registration.update()
+          } else {
+            // eslint-disable-next-line no-alert
+            window.alert("there is no update available")
           }
         } finally {
-          updateButton.disabled = false
+          updateCheckButton.disabled = false
         }
       }
 
+      // in practice there will be no such UI, it's only for dev 99% of the time
       const unregisterButton = document.querySelector("#unregister")
+      unregisterButton.disabled = false
       unregisterButton.onclick = async () => {
         unregisterButton.disabled = true
         try {
