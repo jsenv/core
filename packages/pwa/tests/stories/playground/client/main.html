@@ -291,19 +291,34 @@ hot reloadable d'affilé, voir un 3eme
                   console.log(
                     "update activated, let it claim to be navigator controller",
                   )
-                  await requestClaim(newServiceWorker)
-                  console.log("claim resolved")
-                  // we should wait for controllerchange to become the one we want
+                  const becomesControllerPromise = new Promise((resolve) => {
+                    const oncontrollerchange = () => {
+                      if (serviceWorkerAPI.controller === newServiceWorker) {
+                        serviceWorkerAPI.removeEventListener(
+                          "controllerchange",
+                          oncontrollerchange,
+                        )
+                        resolve()
+                      }
+                    }
+                    serviceWorkerAPI.addEventListener(
+                      "controllerchange",
+                      oncontrollerchange,
+                    )
+                  })
+                  requestClaim(newServiceWorker)
+                  await becomesControllerPromise
                 }
                 if (applyUpdate) {
                   console.log("applying update")
                   await applyUpdate()
-                } else {
-                  console.log("reloading browser")
-                  // the other tabs should reload
-                  // how can we achieve this???
-                  reloadPage()
+                  return
                 }
+                console.log("reloading browser")
+                // the other tabs should reload
+                // how can we achieve this???
+                reloadPage()
+                return
               }
               throw new Error(
                 `unexpected state on service worker update: "${newServiceWorker.state}"`,
