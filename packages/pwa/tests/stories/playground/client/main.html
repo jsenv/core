@@ -36,9 +36,10 @@ hot reloadable d'affilé, voir un 3eme
     </div>
     <div id="service_worker_ui">
       <fieldset>
-        <legend>Service worker registration</legend>
+        <legend>Service worker script</legend>
         <button id="register" disabled>register sw.js</button>
         <button id="unregister" disabled>unregister</button>
+        <br />
         <br />
         <button id="update_check_button" disabled>Check for updates</button>
         <div id="update_downloading_message" style="display: none">
@@ -52,7 +53,7 @@ hot reloadable d'affilé, voir un 3eme
     </div>
     <div id="trigger_file_changes">
       <fieldset>
-        <legend>Upate files</legend>
+        <legend>Update files</legend>
         <button id="build_dog">Build dog</button>
         <button id="build_horse">Build horse</button>
         <button id="build_cat">Build cat</button>
@@ -68,9 +69,9 @@ hot reloadable d'affilé, voir un 3eme
         return new Promise((resolve, reject) => {
           port1.onmessage = function (event) {
             if (event.data.status === "rejected") {
-              reject(event.data.value)
+              reject(event.data.payload)
             } else {
-              resolve(event.data.value)
+              resolve(event.data.payload)
             }
           }
           serviceWorker.postMessage(message, [port2])
@@ -95,9 +96,11 @@ hot reloadable d'affilé, voir un 3eme
       }
       const inspectServiceWorker = async (serviceWorker) => {
         let serviceWorkerResponse
+        console.log(`inspect ${serviceWorker.scriptURL}`)
         const inspectPromise = postMessageToServiceWorker(serviceWorker, {
           action: "inspect",
         }).then((info) => {
+          console.log(`${serviceWorker.scriptURL} inspect result ->`, info)
           serviceWorkerResponse = info
         })
         let timeout
@@ -106,7 +109,7 @@ hot reloadable d'affilé, voir un 3eme
           timeout = setTimeout(() => {
             timeoutReached = true
             resolve()
-          }, 300)
+          }, 1000)
         })
         await Promise.race([inspectPromise, timeoutPromise])
         clearTimeout(timeout)
@@ -121,7 +124,7 @@ hot reloadable d'affilé, voir un 3eme
           action: "skipWaiting",
         })
       }
-      const claim = (serviceWorker) => {
+      const requestClaim = (serviceWorker) => {
         console.log("send claim")
         return postMessageToServiceWorker(serviceWorker, {
           action: "claim",
@@ -129,7 +132,6 @@ hot reloadable d'affilé, voir un 3eme
       }
 
       let currentSwInfoPromise = null
-      let newSwInfoPromise = null
       const createApplyUpdate = ({ updateInfo, currentInfo }) => {
         const actions = []
         if (!currentInfo || !currentInfo.resources) {
@@ -201,11 +203,25 @@ hot reloadable d'affilé, voir un 3eme
       const updateDownloadingMessage = document.querySelector(
         "#update_downloading_message",
       )
+      const checkForUpdates = async () => {
+        const registration = await serviceWorkerAPI.getRegistration()
+        if (!registration) {
+          return false
+        }
+        const updateRegistration = await registration.update()
+        if (!updateRegistration.installing && !updateRegistration.waiting) {
+          console.log(
+            "no update found on registration.installing and registration.waiting",
+          )
+          return false
+        }
+        return true
+      }
       const onUpdateFound = async (newServiceWorker) => {
         console.log(`"updatefound" ${newServiceWorker.scriptURL}`)
-        newSwInfoPromise = inspectServiceWorker(newServiceWorker)
         const currentInfo = await currentSwInfoPromise
-        const updateInfo = await newSwInfoPromise
+        const updateInfo = await inspectServiceWorker(newServiceWorker)
+        console.log(updateInfo)
         const applyUpdate = createApplyUpdate({ updateInfo, currentInfo })
         const reloadRequired = !applyUpdate
 
@@ -230,20 +246,22 @@ hot reloadable d'affilé, voir un 3eme
             currentInfo,
             reloadRequired,
             apply: async () => {
-              if (newServiceWorker.state === "installing") {
-                await requestSkipWaiting()
+              if (newServiceWorker.state === "installed") {
                 const activatedPromise = await new Promise((resolve) => {
                   newServiceWorker.onstatechange = () => {
+                    console.log(`statechange to ${newServiceWorker.state}`)
                     if (newServiceWorker.state === "activated") {
                       resolve()
                     }
                   }
                 })
+                await requestSkipWaiting(newServiceWorker)
+                console.log("wait for worker to be activated")
                 await activatedPromise
               }
               if (newServiceWorker.state === "activated") {
                 if (serviceWorkerAPI.controller !== newServiceWorker) {
-                  await claim()
+                  await requestClaim(newServiceWorker)
                 }
                 if (applyUpdate) {
                   console.log("applying update")
@@ -252,11 +270,11 @@ hot reloadable d'affilé, voir un 3eme
                   console.log("reloading browser")
                   // the other tabs should reload
                   // how can we achieve this???
-                  reload()
+                  reloadPage()
                 }
               }
               throw new Error(
-                `unexpected state on service worker update ${newServiceWorker.state}`,
+                `unexpected state on service worker update: "${newServiceWorker.state}"`,
               )
             },
           })
@@ -340,7 +358,7 @@ hot reloadable d'affilé, voir un 3eme
       }
 
       let refreshing = false
-      const reload = () => {
+      const reloadPage = () => {
         if (refreshing) {
           return
         }
@@ -386,11 +404,8 @@ hot reloadable d'affilé, voir un 3eme
       updateCheckButton.onclick = async () => {
         updateCheckButton.disabled = true
         try {
-          const registration = await serviceWorkerAPI.getRegistration()
-          if (registration) {
-            console.log("calling registration.update()")
-            registration.update()
-          } else {
+          const update = await checkForUpdates()
+          if (!update) {
             // eslint-disable-next-line no-alert
             window.alert("there is no update available")
           }

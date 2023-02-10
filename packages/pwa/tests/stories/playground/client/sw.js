@@ -50,8 +50,11 @@ self.resources.forEach((resource) => {
 self.addEventListener("message", ({ data, ports }) => {
   if (data.action === "inspect") {
     ports[0].postMessage({
-      version: self.version,
-      resources: self.resources,
+      status: "resolved",
+      payload: {
+        version: self.version,
+        resources: self.resources,
+      },
     })
   }
 })
