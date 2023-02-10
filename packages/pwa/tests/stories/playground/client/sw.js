@@ -31,7 +31,7 @@ const cacheName = (() => {
   return `${cachePrefix}_${timestamp}${random}`
 })()
 
-self.version = 2
+self.version = "v=dog"
 self.resources = [
   {
     url: "main.html",

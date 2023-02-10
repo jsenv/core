@@ -49,6 +49,14 @@ hot reloadable d'affilé, voir un 3eme
           Restart to update
         </button>
         <button id="update_now_button" disabled>Apply update</button>
+
+        <br />
+        <br />
+        Navigator controller: <span id="controller"></span>
+        <br />
+        Current version: <span id="current_version"></span>
+        <br />
+        Update version: <span id="update_version"></span>
       </fieldset>
     </div>
     <div id="trigger_file_changes">
@@ -63,6 +71,21 @@ hot reloadable d'affilé, voir un 3eme
 
     <script>
       const serviceWorkerAPI = window.navigator.serviceWorker
+
+      let currentSwInfoPromise = null
+      const controllerSpan = document.querySelector("#controller")
+      const updateController = () => {
+        const { controller } = serviceWorkerAPI
+        if (controller) {
+          controllerSpan.innerHTML = "yes"
+        } else {
+          controllerSpan.innerHTML = "no"
+        }
+      }
+      updateController()
+      serviceWorkerAPI.addEventListener("controllerchange", () => {
+        updateController()
+      })
 
       const postMessageToServiceWorker = (serviceWorker, message) => {
         const { port1, port2 } = new MessageChannel()
@@ -120,7 +143,7 @@ hot reloadable d'affilé, voir un 3eme
       }
       const requestSkipWaiting = (serviceWorker) => {
         console.log("send skipWaiting")
-        return postMessageToServiceWorker(serviceWorker, {
+        postMessageToServiceWorker(serviceWorker, {
           action: "skipWaiting",
         })
       }
@@ -131,7 +154,6 @@ hot reloadable d'affilé, voir un 3eme
         })
       }
 
-      let currentSwInfoPromise = null
       const createApplyUpdate = ({ updateInfo, currentInfo }) => {
         const actions = []
         if (!currentInfo || !currentInfo.resources) {
@@ -221,7 +243,8 @@ hot reloadable d'affilé, voir un 3eme
         console.log(`"updatefound" ${newServiceWorker.scriptURL}`)
         const currentInfo = await currentSwInfoPromise
         const updateInfo = await inspectServiceWorker(newServiceWorker)
-        console.log(updateInfo)
+        document.querySelector("#update_version").innerHTML = updateInfo.version
+
         const applyUpdate = createApplyUpdate({ updateInfo, currentInfo })
         const reloadRequired = !applyUpdate
 
@@ -247,21 +270,30 @@ hot reloadable d'affilé, voir un 3eme
             reloadRequired,
             apply: async () => {
               if (newServiceWorker.state === "installed") {
-                const activatedPromise = await new Promise((resolve) => {
+                const activatedPromise = new Promise((resolve) => {
                   newServiceWorker.onstatechange = () => {
                     console.log(`statechange to ${newServiceWorker.state}`)
                     if (newServiceWorker.state === "activated") {
+                      console.log("resolving")
                       resolve()
                     }
                   }
                 })
+                console.log("update is installed, send skipWaiting")
                 await requestSkipWaiting(newServiceWorker)
-                console.log("wait for worker to be activated")
+                console.log("skipWaiting done, wait for worker to be activated")
                 await activatedPromise
               }
               if (newServiceWorker.state === "activated") {
-                if (serviceWorkerAPI.controller !== newServiceWorker) {
+                if (serviceWorkerAPI.controller === newServiceWorker) {
+                  console.log("update activated and controlling navigator")
+                } else {
+                  console.log(
+                    "update activated, let it claim to be navigator controller",
+                  )
                   await requestClaim(newServiceWorker)
+                  console.log("claim resolved")
+                  // we should wait for controllerchange to become the one we want
                 }
                 if (applyUpdate) {
                   console.log("applying update")
@@ -317,6 +349,10 @@ hot reloadable d'affilé, voir un 3eme
         serviceWorkerAPI.startMessages()
 
         currentSwInfoPromise = inspectServiceWorker(serviceWorker)
+        currentSwInfoPromise.then((currentinfo) => {
+          document.querySelector("#current_version").innerHTML =
+            currentinfo.version
+        })
         if (installing) {
           console.log(`service worker is installing...`)
           installing.onstatechange = () => {
