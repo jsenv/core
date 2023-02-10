@@ -143,11 +143,11 @@ self.addEventListener("message", async ({ data }) => {
 
 self.addEventListener("activate", (activateEvent) => {
   const promiseToWait = claimPromise
-    ? Promise.all([claimPromise, deleteOtherCaches()])
-    : deleteOtherCaches()
+    ? Promise.all([claimPromise, deleteOldCaches()])
+    : deleteOldCaches()
   activateEvent.waitUntil(promiseToWait)
 })
-const deleteOtherCaches = async () => {
+const deleteOldCaches = async () => {
   const cacheKeys = await self.caches.keys()
   await Promise.all(
     cacheKeys.map(async (cacheKey) => {
