@@ -23,6 +23,7 @@ export const createServiceWorkerScript = ({
   onUpdateInstalling = () => {},
   onUpdateAvailable = () => {},
   hotUpdateHandlers = {},
+  scope = "/",
 } = {}) => {
   const logger = {
     debug:
@@ -176,7 +177,7 @@ export const createServiceWorkerScript = ({
   }
 
   const init = async () => {
-    const registration = await serviceWorkerAPI.getRegistration()
+    const registration = await serviceWorkerAPI.getRegistration(scope)
     if (registration) {
       watchRegistration(registration)
     }
@@ -212,7 +213,7 @@ export const createServiceWorkerScript = ({
     },
     checkForUpdates: async () => {
       logger.debugGroupCollapsed("checkForUpdates()")
-      const registration = await serviceWorkerAPI.getRegistration()
+      const registration = await serviceWorkerAPI.getRegistration(scope)
       if (!registration) {
         logger.debugGroupEnd("no registration found")
         return false
@@ -229,7 +230,7 @@ export const createServiceWorkerScript = ({
       return true
     },
     unregister: async () => {
-      const registration = await serviceWorkerAPI.getRegistration()
+      const registration = await serviceWorkerAPI.getRegistration(scope)
       if (!registration) {
         return false
       }
