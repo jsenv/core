@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <div id="animal_ui">
+      <fieldset>
+        <legend>Animal image <button id="refresh">refresh</button></legend>
+        <img style="display: block" height="200" src="./animal.svg?v=dog" />
+      </fieldset>
+    </div>
+    <div id="service_worker_ui">
+      <fieldset>
+        <legend>Service worker script</legend>
+        <button id="register" disabled>register sw.js</button>
+        <button id="unregister" disabled>unregister</button>
+        <br />
+        <br />
+        <button id="update_check_button" disabled>Check for updates</button>
+        <div id="update_downloading_message" style="display: none">
+          Downloading update...
+        </div>
+        <button id="update_by_restart_button" disabled>
+          Restart to update
+        </button>
+        <button id="update_now_button" disabled>Apply update</button>
+
+        <br />
+        <br />
+        Navigator controller: <span id="controller"></span>
+      </fieldset>
+    </div>
+    <div id="trigger_file_changes">
+      <fieldset>
+        <legend>Update files</legend>
+        <button id="build_dog">Build dog</button>
+        <button id="build_horse">Build horse</button>
+        <button id="build_cat">Build cat</button>
+        <button id="build_sw_script">Build sw script</button>
+      </fieldset>
+    </div>
+
+    <script type="module">
+      import {
+        pwaLogger,
+        serviceWorkerControllerSignal,
+        createServiceWorkerScript,
+      } from "@jsenv/pwa"
+
+      pwaLogger.setOptions({
+        logLevel: "debug",
+      })
+
+      const img = document.querySelector("img")
+      const refreshImg = async () => {
+        img.src = ""
+        const response = await window.fetch("./animal.svg?v=dog")
+        const blob = await response.blob()
+        const objectUrl = URL.createObjectURL(blob)
+        await new Promise((resolve) => setTimeout(resolve, 150))
+        img.src = objectUrl
+      }
+
+      const refreshButton = document.querySelector("#refresh")
+      refreshButton.onclick = async () => {
+        refreshButton.disabled = true
+        try {
+          await refreshImg()
+        } finally {
+          refreshButton.disabled = false
+        }
+      }
+
+      const controllerSpan = document.querySelector("#controller")
+      serviceWorkerControllerSignal.effect((controller) => {
+        if (controller) {
+          controllerSpan.innerHTML = `${controller.scriptMeta.version}`
+        } else {
+          controllerSpan.innerHTML = "no"
+        }
+      })
+
+      const updateDownloadingMessage = document.querySelector(
+        "#update_downloading_message",
+      )
+      const topLevelSwScript = createServiceWorkerScript({
+        onUpdateInstalling: (update) => {
+          updateDownloadingMessage.style.display = "block"
+          updateDownloadingMessage.innerHTML = `Downloading update ${update.toScriptMeta.version} ...`
+        },
+        onUpdateWaiting: (update) => {
+          updateDownloadingMessage.style.display = "none"
+          const updateByRestartButton = document.querySelector(
+            "#update_by_restart_button",
+          )
+          updateByRestartButton.disabled = !update.reloadRequired
+          updateByRestartButton.innerHTML = `Restart to update to ${update.toScriptMeta.version}`
+          updateByRestartButton.onclick = async () => {
+            updateByRestartButton.disabled = true
+            // idéalement update le message du boutton pendant qu'il est
+            // désactivé pour dire ce qu'il se passe (activating, ...)
+            await update.activate()
+          }
+          const updateNowButton = document.querySelector("#update_now_button")
+          updateNowButton.disabled = update.reloadRequired
+          updateNowButton.innerHTML = `Apply update ${update.toScriptMeta.version}`
+          updateNowButton.onclick = async () => {
+            updateNowButton.disabled = true
+            // idéalement update le message du bouton pendant que apply se produit
+            await update.activate()
+          }
+        },
+        hotUpdateHandlers: {
+          "animal.svg": {
+            replace: refreshImg,
+            prune: () => URL.revokeObjectURL(img.src),
+          },
+        },
+      })
+      const registerButton = document.querySelector("#register")
+      registerButton.disabled = false
+      registerButton.onclick = async () => {
+        registerButton.disabled = true
+        try {
+          await topLevelSwScript.setRegistationPromise(
+            window.navigator.serviceWorker.register("./sw.js"),
+          )
+        } finally {
+          registerButton.disabled = false
+        }
+      }
+      // in practice there will be no such UI, it's only for dev 99% of the time
+      const unregisterButton = document.querySelector("#unregister")
+      unregisterButton.disabled = false
+      unregisterButton.onclick = async () => {
+        unregisterButton.disabled = true
+        try {
+          await topLevelSwScript.unregister()
+        } finally {
+          unregisterButton.disabled = false
+        }
+      }
+
+      const buildDogButton = document.querySelector("#build_dog")
+      buildDogButton.onclick = () => {
+        fetch("/update_animal_to_dog")
+      }
+      const buildHorseButton = document.querySelector("#build_horse")
+      buildHorseButton.onclick = () => {
+        fetch("/update_animal_to_horse")
+      }
+      const buildCatButton = document.querySelector("#build_cat")
+      buildCatButton.onclick = () => {
+        fetch("/update_animal_to_cat")
+      }
+
+      const updateCheckButton = document.querySelector("#update_check_button")
+      updateCheckButton.disabled = false
+      updateCheckButton.onclick = async () => {
+        updateCheckButton.disabled = true
+        try {
+          const update = await topLevelSwScript.checkForUpdates()
+          if (!update) {
+            // eslint-disable-next-line no-alert
+            window.alert("there is no update available")
+          }
+        } finally {
+          updateCheckButton.disabled = false
+        }
+      }
+    </script>
+  </body>
+</html>

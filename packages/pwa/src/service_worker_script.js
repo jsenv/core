@@ -1,7 +1,10 @@
 /*
  * https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerRegistration
+ *
+ * TODO: logs inside the service worker should be prefixed with [sw]
  */
 
+import { pwaLogger } from "./pwa_logger.js"
 import { serviceWorkerAPI } from "./internal/service_worker_api.js"
 import {
   inspectServiceWorker,
@@ -11,9 +14,6 @@ import {
 import { createUpdateHotHandler } from "./internal/service_worker_hot_update.js"
 
 export const createServiceWorkerScript = ({
-  logLevel = "info",
-  logBackgroundColor = "green",
-  logColor = "black",
   onError = () => {},
   onInstalling = () => {},
   onInstalled = () => {},
@@ -21,48 +21,18 @@ export const createServiceWorkerScript = ({
   onActivated = () => {},
   onRedundant = () => {},
   onUpdateInstalling = () => {},
-  onUpdateAvailable = () => {},
+  onUpdateWaiting = () => {},
   hotUpdateHandlers = {},
   scope = "/",
 } = {}) => {
-  const logger = {
-    debug:
-      logLevel === "debug"
-        ? (...args) => console.info(...injectLogStyles(args))
-        : () => {},
-    info:
-      logLevel === "debug" || logLevel === "info"
-        ? (...args) => console.info(...injectLogStyles(args))
-        : () => {},
-    warn:
-      logLevel === "debug" || logLevel === "info" || logLevel === "warn"
-        ? (...args) => console.info(...injectLogStyles(args))
-        : () => {},
-    error:
-      logLevel === "debug" ||
-      logLevel === "info" ||
-      logLevel === "warn" ||
-      logLevel === "error"
-        ? (...args) => console.info(...injectLogStyles(args))
-        : () => {},
-    debugGroupCollapsed:
-      logLevel === "debug"
-        ? (...args) => console.group(...injectLogStyles(args))
-        : () => {},
-    debugGroupEnd:
-      logLevel === "debug"
-        ? (...args) => console.groupEnd(...injectLogStyles(args))
-        : () => {},
-  }
-  const injectLogStyles = (args) => {
-    return [
-      `%csw`,
-      `background: ${logBackgroundColor}; color: ${logColor}; padding: 1px 3px; margin: 0 1px`,
-      ...args,
-    ]
-  }
-
   let fromInspectPromise = null
+
+  const hotUpdatesHandlersResolved = {}
+  Object.keys(hotUpdateHandlers).forEach((url) => {
+    const urlResolved = new URL(url, document.location).href
+    hotUpdatesHandlersResolved[urlResolved] = hotUpdateHandlers[url]
+  })
+  hotUpdateHandlers = hotUpdatesHandlersResolved
 
   const onUpdateFound = async (toServiceWorker) => {
     const fromScriptMeta = await fromInspectPromise
@@ -85,7 +55,7 @@ export const createServiceWorkerScript = ({
         return
       }
       if (toServiceWorker.state === "installed") {
-        onUpdateAvailable({
+        onUpdateWaiting({
           fromScriptMeta,
           toScriptMeta,
           reloadRequired,
@@ -99,9 +69,11 @@ export const createServiceWorkerScript = ({
                   }
                 }
               })
-              logger.info("update is installed, send skipWaiting")
+              pwaLogger.info("update is installed, send skipWaiting")
               await requestSkipWaitingOnServiceWorker(toServiceWorker)
-              logger.info("skipWaiting done, wait for worker to be activated")
+              pwaLogger.info(
+                "skipWaiting done, wait for worker to be activated",
+              )
               await activatedPromise
             }
             if (toServiceWorker.state === "activated") {
@@ -120,12 +92,12 @@ export const createServiceWorkerScript = ({
           "statechange",
           applyUpdateStateEffects,
         )
-        await ensureIsControllingNavigator()
+        await ensureIsControllingNavigator(toServiceWorker)
         if (updateHotHandler) {
-          logger.info("apply update without reloading")
+          pwaLogger.info("apply update without reloading")
           await updateHotHandler()
         } else {
-          logger.info("reloading browser")
+          pwaLogger.info("reloading browser")
           // the other tabs should reload
           // how can we achieve this???
           reloadPage()
@@ -184,25 +156,7 @@ export const createServiceWorkerScript = ({
   }
   init()
 
-  const [controllerSignal] = createSignalController(null)
-  const applyControllerEffect = async () => {
-    const { controller } = serviceWorkerAPI.controller
-    if (controller) {
-      const controllerScriptMeta = await inspectServiceWorker(
-        serviceWorkerAPI.controller,
-      )
-      controllerSignal.value = {
-        scriptMeta: controllerScriptMeta,
-      }
-    } else {
-      controllerSignal.value = null
-    }
-  }
-  applyControllerEffect()
-  serviceWorkerAPI.addEventListener("controllerchange", applyControllerEffect)
-
   return {
-    controllerSignal,
     setRegistationPromise: async (registrationPromise) => {
       try {
         const registration = await registrationPromise
@@ -212,21 +166,25 @@ export const createServiceWorkerScript = ({
       }
     },
     checkForUpdates: async () => {
-      logger.debugGroupCollapsed("checkForUpdates()")
+      pwaLogger.debugGroupCollapsed("checkForUpdates()")
       const registration = await serviceWorkerAPI.getRegistration(scope)
       if (!registration) {
-        logger.debugGroupEnd("no registration found")
+        pwaLogger.debug("no registration found")
+        pwaLogger.groupEnd()
         return false
       }
-      logger.debugGroup("call registration.update()")
+      pwaLogger.debug("call registration.update()")
       const updateRegistration = await registration.update()
       if (!updateRegistration.installing && !updateRegistration.waiting) {
-        logger.debugGroupEnd(
+        pwaLogger.debug(
           "no update found on registration.installing and registration.waiting",
         )
+        pwaLogger.groupEnd()
+
         return false
       }
-      logger.debugGroupEnd("service worker found on registration")
+      pwaLogger.debug("service worker found on registration")
+      pwaLogger.groupEnd()
       return true
     },
     unregister: async () => {
@@ -236,54 +194,11 @@ export const createServiceWorkerScript = ({
       }
       const unregistered = await registration.unregister()
       if (unregistered) {
-        logger.info("unregister done")
+        pwaLogger.info("unregister done")
         return true
       }
-      logger.warn("unregister failed")
+      pwaLogger.warn("unregister failed")
       return false
-    },
-  }
-}
-
-const createSignalController = (initialValue) => {
-  const channel = createChannel()
-  const signal = createSignal(initialValue, channel)
-  return [signal, channel]
-}
-
-const createSignal = (initialValue, channel) => {
-  let value = initialValue
-
-  return {
-    get value() {
-      return value
-    },
-    set value(newValue) {
-      if (value !== newValue) {
-        value = newValue
-        channel.post(newValue)
-      }
-    },
-    effect: (callback) => {
-      callback(value)
-      return channel.listen()
-    },
-  }
-}
-
-const createChannel = () => {
-  const callbackSet = new Set()
-  return {
-    listen: (callback) => {
-      callbackSet.add(callback)
-      return () => {
-        callbackSet.delete(callback)
-      }
-    },
-    post: (value) => {
-      callbackSet.forEach((callback) => {
-        callback(value)
-      })
     },
   }
 }
