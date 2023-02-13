@@ -1,18 +1,40 @@
 <!-- 
 https://web.dev/service-worker-lifecycle/
 
+Test a faire:
+- 2 tabs + reload required 
+- same on firefox
+- same on safari
+- 1 tab reload de l'image
+- comme le précédant mais on en fait plusieurs pour voir que ça marche
+- 2 tab reload de l'image
+- erreur pendant top level pendant register initial
+- erreur pendant le install initial
+- erreur pendant le activate ininitial
+  -> tous ces cas a priori on veut juste qu'on puisse le savoir + un log
+  mais rien de plus
+- erreur top level dans l'update
+- erreur install dans l'update
+- erreur activate dans l'update
+  -> ici par contre on veut plus d'info pour que la ui puisse choisir de l'afficher
+  a piori une promesse comme ça on a le unhandled rejection si la ui s'en fou
+  mais sinon elle peut réagir
+  ou alors une fonction onError, si elle est pas passé on throw, sinon on l'apelle -> mieux oui
+- erreur dans la fonction qui permet d'apply l'update 
+  (a priori on indique l'erreur + indique que c'est méga grave et il faut recharger la page pour fixer)
+- erreur 404 pendant register initial
+
+Quand on en sera la il sera temps de tester avec le vrai build de jsenv
+Et aussi il faudra un test ou on renomme le script du worker
+et donc l'éxecution du html va register un nouveau script
+on voudras voir comment ça se comporte
+
 comment on fait pour reload les autres tabs?
 est ce que un autre tab reçoit aussi le "updatefound"
 est ce alors une bonne idée de détecter que c'est un tab en background?
 ou alors il veut mieux que ce soit le tab actif qui lui dise quoi faire?
 ou alors que un tab inactif juste se reload lorsqu'il devient actif pour éviter ce souci? 
 (ça a l'air bien ça)
-
-bon il reste a faire ceci:
-- tester déja le cas du autoreload on update
-- tester avec plusieurs onglet
-- puis remettre hotResources afin de montrer qu'on sait autoreload l'image
-et donc pas besoin de reload le browser
 
 Ne pas oublier de tester ce qui se passe si on fait 2 "updatefound"
 hot reloadable d'affilé, voir un 3eme
@@ -248,90 +270,115 @@ hot reloadable d'affilé, voir un 3eme
         const applyUpdate = createApplyUpdate({ updateInfo, currentInfo })
         const reloadRequired = !applyUpdate
 
-        if (newServiceWorker.state === "installing") {
-          onUpdateInstalling({
-            updateInfo,
-            currentInfo,
-            reloadRequired,
-          })
-          const installedPromise = new Promise((resolve) => {
-            newServiceWorker.onstatechange = () => {
-              if (newServiceWorker.state === "installed") {
-                resolve()
-              }
-            }
-          })
-          await installedPromise
-        }
-        if (newServiceWorker.state === "installed") {
-          onUpdateWaiting({
-            updateInfo,
-            currentInfo,
-            reloadRequired,
-            apply: async () => {
-              if (newServiceWorker.state === "installed") {
-                const activatedPromise = new Promise((resolve) => {
-                  newServiceWorker.onstatechange = () => {
-                    console.log(`statechange to ${newServiceWorker.state}`)
-                    if (newServiceWorker.state === "activated") {
-                      console.log("resolving")
-                      resolve()
-                    }
-                  }
-                })
-                console.log("update is installed, send skipWaiting")
-                await requestSkipWaiting(newServiceWorker)
-                console.log("skipWaiting done, wait for worker to be activated")
-                await activatedPromise
-              }
-              if (newServiceWorker.state === "activated") {
-                if (serviceWorkerAPI.controller === newServiceWorker) {
-                  console.log("update activated and controlling navigator")
-                } else {
-                  console.log(
-                    "update activated, let it claim to be navigator controller",
-                  )
-                  const becomesControllerPromise = new Promise((resolve) => {
-                    const oncontrollerchange = () => {
-                      if (serviceWorkerAPI.controller === newServiceWorker) {
-                        serviceWorkerAPI.removeEventListener(
-                          "controllerchange",
-                          oncontrollerchange,
-                        )
+        const checkState = async () => {
+          if (newServiceWorker.state === "installing") {
+            onUpdateInstalling({
+              updateInfo,
+              currentInfo,
+              reloadRequired,
+            })
+          }
+          if (newServiceWorker.state === "installed") {
+            onUpdateWaiting({
+              updateInfo,
+              currentInfo,
+              reloadRequired,
+              activate: async () => {
+                if (newServiceWorker.state === "installed") {
+                  const activatedPromise = new Promise((resolve) => {
+                    newServiceWorker.onstatechange = () => {
+                      console.log(`statechange to ${newServiceWorker.state}`)
+                      if (newServiceWorker.state === "activated") {
+                        console.log("resolving")
                         resolve()
                       }
                     }
-                    serviceWorkerAPI.addEventListener(
+                  })
+                  console.log("update is installed, send skipWaiting")
+                  await requestSkipWaiting(newServiceWorker)
+                  console.log(
+                    "skipWaiting done, wait for worker to be activated",
+                  )
+                  await activatedPromise
+                }
+                if (newServiceWorker.state === "activated") {
+                  if (serviceWorkerAPI.controller === newServiceWorker) {
+                    console.log("update activated and controlling navigator")
+                  } else {
+                    console.log(
+                      "update activated, let it claim to be navigator controller",
+                    )
+                    const becomesControllerPromise = new Promise((resolve) => {
+                      const oncontrollerchange = () => {
+                        if (serviceWorkerAPI.controller === newServiceWorker) {
+                          serviceWorkerAPI.removeEventListener(
+                            "controllerchange",
+                            oncontrollerchange,
+                          )
+                          resolve()
+                        }
+                      }
+                      serviceWorkerAPI.addEventListener(
+                        "controllerchange",
+                        oncontrollerchange,
+                      )
+                    })
+                    requestClaim(newServiceWorker)
+                    await becomesControllerPromise
+                  }
+                  return
+                }
+                throw new Error(
+                  `unexpected state on service worker update: "${newServiceWorker.state}"`,
+                )
+              },
+            })
+          }
+          if (newServiceWorker.state === "activated") {
+            newServiceWorker.removeEventListener("statechange", checkState)
+            if (serviceWorkerAPI.controller === newServiceWorker) {
+              console.log("update activated and controlling navigator")
+            } else {
+              console.log(
+                "update activated, let it claim to be navigator controller",
+              )
+              const becomesControllerPromise = new Promise((resolve) => {
+                const oncontrollerchange = () => {
+                  if (serviceWorkerAPI.controller === newServiceWorker) {
+                    serviceWorkerAPI.removeEventListener(
                       "controllerchange",
                       oncontrollerchange,
                     )
-                  })
-                  requestClaim(newServiceWorker)
-                  await becomesControllerPromise
+                    resolve()
+                  }
                 }
-                if (applyUpdate) {
-                  console.log("applying update")
-                  await applyUpdate()
-                  return
-                }
-                console.log("reloading browser")
-                // the other tabs should reload
-                // how can we achieve this???
-                reloadPage()
-                return
-              }
-              throw new Error(
-                `unexpected state on service worker update: "${newServiceWorker.state}"`,
-              )
-            },
-          })
+                serviceWorkerAPI.addEventListener(
+                  "controllerchange",
+                  oncontrollerchange,
+                )
+              })
+              requestClaim(newServiceWorker)
+              await becomesControllerPromise
+            }
+            if (applyUpdate) {
+              console.log("apply update without reloading")
+              await applyUpdate()
+            } else {
+              console.log("reloading browser")
+              // the other tabs should reload
+              // how can we achieve this???
+              reloadPage()
+            }
+          }
         }
+        checkState()
+        newServiceWorker.addEventListener("statechange", checkState)
       }
       const onUpdateInstalling = ({ updateInfo }) => {
         updateDownloadingMessage.style.display = "block"
         updateDownloadingMessage.innerHTML = `Downloading update ${updateInfo.version} ...`
       }
-      const onUpdateWaiting = ({ reloadRequired, apply }) => {
+      const onUpdateWaiting = ({ reloadRequired, activate }) => {
         updateDownloadingMessage.style.display = "none"
         const updateByRestartButton = document.querySelector(
           "#update_by_restart_button",
@@ -341,14 +388,14 @@ hot reloadable d'affilé, voir un 3eme
           updateByRestartButton.disabled = true
           // idéalement update le message du boutton pendant qu'il est
           // désactivé pour dire ce qu'il se passe (activating, ...)
-          await apply()
+          await activate()
         }
         const updateNowButton = document.querySelector("#update_now_button")
         updateNowButton.disabled = reloadRequired
         updateNowButton.onclick = async () => {
           updateNowButton.disabled = true
           // idéalement update le message du bouton pendant que apply se produit
-          await apply()
+          await activate()
         }
       }
 
