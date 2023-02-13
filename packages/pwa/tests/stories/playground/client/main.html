@@ -2,12 +2,9 @@
 https://web.dev/service-worker-lifecycle/
 
 Test a faire:
-- 2 tabs + reload required 
-- same on firefox
-- same on safari
-- 1 tab reload de l'image
+- 1 tab hot reload de l'image
 - comme le précédant mais on en fait plusieurs pour voir que ça marche
-- 2 tab reload de l'image
+- 2 tab hot reload de l'image
 - erreur pendant top level pendant register initial
 - erreur pendant le install initial
 - erreur pendant le activate ininitial
@@ -53,7 +50,7 @@ hot reloadable d'affilé, voir un 3eme
     <div id="animal_ui">
       <fieldset>
         <legend>Animal image <button id="refresh">refresh</button></legend>
-        <img style="display: block" height="200" src="./animal.svg?v=dog" />
+        <img style="display: block" height="200" src="./animal.svg?v=cat" />
       </fieldset>
     </div>
     <div id="service_worker_ui">
@@ -186,51 +183,69 @@ hot reloadable d'affilé, voir un 3eme
         }
         const currentResources = currentInfo.resources
         const newResources = updateInfo.resources
-        for (const currentResource of currentResources) {
-          const hotResource = hotResources[currentResource.url]
+
+        const getUpdateHandler = ({ url, info, newInfo }) => {
+          let hotResource = hotResources[url]
           if (!hotResource) {
             return null
           }
-          const newResource = newResources.find(
-            (newResource) => newResource.url === currentResource.url,
-          )
-          if (newResource) {
-            if (!hotResource.replace) {
+          if (typeof hotResource === "function") {
+            return hotResource({ url, info, newInfo })
+          }
+          if (!newInfo) {
+            return hotResource.remove || null
+          }
+          if (!info) {
+            return hotResource.add || null
+          }
+          return hotResource.replace || null
+        }
+
+        const currentUrls = Object.keys(currentResources)
+        const newUrls = Object.keys(newResources)
+        for (const url of currentUrls) {
+          const info = currentResources[url]
+          const newInfo = newResources[url]
+          // remove
+          if (!newInfo) {
+            const updateHandler = getUpdateHandler({ url, info, newInfo: null })
+            if (!updateHandler) {
+              return null
+            }
+            actions.push({
+              type: "remove",
+              url,
+              fn: updateHandler,
+            })
+            continue
+          }
+          // replace
+          if (newInfo.version !== info.version) {
+            const updateHandler = getUpdateHandler({ url, info, newInfo })
+            if (!updateHandler) {
               return null
             }
             actions.push({
               type: "replace",
-              url: currentResource.url,
-              fn: hotResource.replace,
+              url,
+              fn: updateHandler,
             })
           }
-          if (!hotResource.remove) {
-            return null
-          }
-          actions.push({
-            type: "remove",
-            url: currentResource.url,
-            fn: hotResource.remove,
-          })
         }
-        for (const newResource of newResources) {
-          const hotResource = hotResources[newResource.url]
-          if (!hotResource) {
-            return null
-          }
-          const currentResource = currentResources.find(
-            (currentResource) => currentResource.url === newResource.url,
-          )
-          if (currentResource) {
+        // add
+        for (const url of newUrls) {
+          if (currentUrls.includes(url)) {
             continue // already handled in previous loop
           }
-          if (!hotResource.add) {
+          const newInfo = newResources[url]
+          const updateHandler = getUpdateHandler({ url, info: null, newInfo })
+          if (!updateHandler) {
             return null
           }
           actions.push({
             type: "add",
-            url: newResource.url,
-            fn: hotResource.add,
+            url,
+            fn: updateHandler,
           })
         }
 
@@ -240,7 +255,11 @@ hot reloadable d'affilé, voir un 3eme
           return null
         }
         return async () => {
-          await Promise.all(actions.map((action) => action()))
+          await Promise.all(
+            actions.map(async (action) => {
+              await action.fn()
+            }),
+          )
         }
       }
 
@@ -441,19 +460,25 @@ hot reloadable d'affilé, voir un 3eme
       const img = document.querySelector("img")
       const refreshImg = async () => {
         img.src = ""
-        const response = await window.fetch("./animal.svg?v=dog")
+        const response = await window.fetch("./animal.svg?v=cat")
         const blob = await response.blob()
         const objectUrl = URL.createObjectURL(blob)
         await new Promise((resolve) => setTimeout(resolve, 150))
         img.src = objectUrl
       }
 
-      const hotResources = {
-        // "animal.svg": {
-        //   update: refreshImg,
-        //   prune: () => URL.revokeObjectURL(img.src),
-        // },
+      let hotResources = {
+        "animal.svg": {
+          replace: refreshImg,
+          prune: () => URL.revokeObjectURL(img.src),
+        },
       }
+      const hotResourcesResolved = {}
+      Object.keys(hotResources).forEach((url) => {
+        const absoluteUrl = new URL(url, document.location).href
+        hotResourcesResolved[absoluteUrl] = hotResources[url]
+      })
+      hotResources = hotResourcesResolved
 
       let refreshing = false
       const reloadPage = () => {

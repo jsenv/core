@@ -31,22 +31,26 @@ const cacheName = (() => {
   return `${cachePrefix}_${timestamp}${random}`
 })()
 
-self.version = "v=dog"
-self.resources = [
-  {
-    url: "main.html",
+self.version = "v=cat"
+self.resources = {
+  "main.html": {
+    version: "fixed",
   },
-  {
-    url: "animal.svg",
-    versionedUrl: "animal.svg?v=dog",
+  "animal.svg": {
+    versionedUrl: "animal.svg?v=cat",
+    version: "v=cat",
   },
-]
-self.resources.forEach((resource) => {
-  resource.url = new URL(resource.url, self.location).href
-  if (resource.versionedUrl) {
-    resource.versionedUrl = new URL(resource.versionedUrl, self.location).href
+}
+var r = {}
+Object.keys(self.resources).forEach((url) => {
+  const info = self.resources[url]
+  url = new URL(url, self.location).href
+  if (info.versionedUrl) {
+    info.versionedUrl = new URL(info.versionedUrl, self.location).href
   }
+  r[url] = info
 })
+self.resources = r
 self.addEventListener("message", ({ data, ports }) => {
   if (data.action === "inspect") {
     ports[0].postMessage({
@@ -88,14 +92,15 @@ self.addEventListener("install", (installEvent) => {
 })
 const handleInstallEvent = async () => {
   const cache = await self.caches.open(cacheName)
-  for (const resource of self.resources) {
-    const url = resource.versionedUrl || resource.url
+  for (const url of Object.keys(self.resources)) {
+    const resource = self.resources[url]
+    const urlToFetch = resource.versionedUrl || url
     const request = resource.versionedUrl
-      ? new Request(url)
+      ? new Request(urlToFetch)
       : // A non versioned url must ignore navigator cache
         // otherwise we might (99% chances) hit previous worker cache
         // and miss the new version
-        new Request(url, { cache: "reload" })
+        new Request(urlToFetch, { cache: "reload" })
     const response = await fetch(request)
     if (response.status === 200) {
       console.debug(
