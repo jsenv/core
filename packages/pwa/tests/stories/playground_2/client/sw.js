@@ -31,6 +31,58 @@ const cacheName = (() => {
   return `${cachePrefix}_${timestamp}${random}`
 })()
 
+let logLevel = "warn"
+let logBackgroundColor = "grey"
+let logColor = "white"
+const logger = {
+  setOptions: (options) => {
+    logLevel = options.logLevel || logLevel
+    logBackgroundColor = options.logBackgroundColor || logBackgroundColor
+    logColor = options.logColor || logColor
+  },
+  debug: (...args) => {
+    if (logLevel === "debug") {
+      console.info(...injectLogStyles(args))
+    }
+  },
+  info: (...args) => {
+    if (logLevel === "debug" || logLevel === "info") {
+      console.info(...injectLogStyles(args))
+    }
+  },
+  warn: (...args) => {
+    if (logLevel === "debug" || logLevel === "info" || logLevel === "warn") {
+      console.info(...injectLogStyles(args))
+    }
+  },
+  error: (...args) => {
+    if (
+      logLevel === "debug" ||
+      logLevel === "info" ||
+      logLevel === "warn" ||
+      logLevel === "error"
+    ) {
+      console.info(...injectLogStyles(args))
+    }
+  },
+  debugGroupCollapsed: (...args) => {
+    if (logLevel === "debug") {
+      console.group(...injectLogStyles(args))
+    }
+  },
+
+  groupEnd: () => console.groupEnd(),
+}
+
+const injectLogStyles = (args) => {
+  return [
+    `%cjsenv %csw`,
+    `background: orange; color: white; padding: 1px 3px; margin: 0 1px`,
+    `background: ${logBackgroundColor}; color: ${logColor}; padding: 1px 3px; margin: 0 1px`,
+    ...args,
+  ]
+}
+
 self.version = "v=dog"
 self.resources = {
   "main.html": {
@@ -103,13 +155,13 @@ const handleInstallEvent = async () => {
         new Request(urlToFetch, { cache: "reload" })
     const response = await fetch(request)
     if (response.status === 200) {
-      console.debug(
+      logger.debug(
         `put "${asUrlRelativeToDocument(request.url)}" in cache during install`,
       )
       const responseToCache = await asResponseToPutInCache(response)
       await cache.put(request, responseToCache)
     } else {
-      console.warn(
+      logger.warn(
         `cannot put ${request.url} in cache due to response status (${response.status})`,
       )
     }
@@ -157,7 +209,7 @@ const deleteOldCaches = async () => {
   await Promise.all(
     cacheKeys.map(async (cacheKey) => {
       if (cacheKey !== cacheName && cacheKey.startsWith(`${cachePrefix}_`)) {
-        console.info(`delete cache ${cacheKey}`)
+        logger.info(`delete cache ${cacheKey}`)
         await self.caches.delete(cacheKey)
       }
     }),
@@ -213,13 +265,13 @@ const handleFetchEvent = async (fetchEvent) => {
   try {
     const responseFromCache = await self.caches.match(request)
     if (responseFromCache) {
-      console.debug(`from cache -> "${asUrlRelativeToDocument(request.url)}"`)
+      logger.debug(`from cache -> "${asUrlRelativeToDocument(request.url)}"`)
       return responseFromCache
     }
-    console.debug(`from network -> "${asUrlRelativeToDocument(request.url)}"`)
+    logger.debug(`from network -> "${asUrlRelativeToDocument(request.url)}"`)
     return self.fetch(request)
   } catch (error) {
-    console.warn(
+    logger.warn(
       `error while trying to use ${cacheName} cache on "${asUrlRelativeToDocument(
         request.url,
       )}"`,

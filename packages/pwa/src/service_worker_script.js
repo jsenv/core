@@ -1,7 +1,15 @@
 /*
  * https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerRegistration
  *
- * TODO: logs inside the service worker should be prefixed with [sw]
+ *
+ * TODO:
+ * - en priorité: avoir des erreurs dans tous les cas un par un
+ * pour voir ce qu'on voudrait dans l'api
+ *   - top level error first register
+ *   - error during install event
+ *   - error during activate event
+ *   - top level error after update
+ *   - etc...
  */
 
 import { pwaLogger } from "./pwa_logger.js"
@@ -14,12 +22,15 @@ import {
 import { createUpdateHotHandler } from "./internal/service_worker_hot_update.js"
 
 export const createServiceWorkerScript = ({
+  // TODO: replace with something like .effect()
+  // sachant que hormis onError, les autres sont pas vraiment important
   onError = () => {},
   onInstalling = () => {},
   onInstalled = () => {},
   onActivating = () => {},
   onActivated = () => {},
   onRedundant = () => {},
+  // TODO: replace with something like update.effect()
   onUpdateInstalling = () => {},
   onUpdateWaiting = () => {},
   hotUpdateHandlers = {},

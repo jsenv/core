@@ -1,4 +1,4 @@
-let logLevel = "info"
+let logLevel = "warn"
 let logBackgroundColor = "green"
 let logColor = "black"
 
@@ -45,7 +45,8 @@ export const pwaLogger = {
 
 const injectLogStyles = (args) => {
   return [
-    `%cpwa`,
+    `%cjsenv %cpwa`,
+    `background: orange; color: white; padding: 1px 3px; margin: 0 1px`,
     `background: ${logBackgroundColor}; color: ${logColor}; padding: 1px 3px; margin: 0 1px`,
     ...args,
   ]
