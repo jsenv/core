@@ -16,6 +16,17 @@
     <div id="service_worker_ui">
       <fieldset>
         <legend>Service worker script</legend>
+        <div>
+          <button id="resolve_install" disabled>Resolve install promise</button>
+          <button id="reject_install" disabled>Reject install promise</button>
+        </div>
+        <div>
+          <button id="resolve_activate" disabled>
+            Resolve activate promise
+          </button>
+          <button id="reject_activate" disabled>Reject activate promise</button>
+        </div>
+
         <button id="register" disabled>register sw.js</button>
         <button id="unregister" disabled>unregister</button>
         <br />
@@ -88,6 +99,16 @@
         "#update_downloading_message",
       )
       const topLevelSwScript = createServiceWorkerScript({
+        onInstalling: ({ installInstrumentation, activateInstrumentation }) => {
+          if (installInstrumentation) {
+            installResolveButton.disabled = false
+            installRejectButton.disabled = false
+          }
+          if (activateInstrumentation) {
+            activateResolveButton.disabled = false
+            activateRejectButton.disabled = false
+          }
+        },
         onUpdateInstalling: (update) => {
           updateDownloadingMessage.style.display = "block"
           updateDownloadingMessage.innerHTML = `Downloading update ${update.toScriptMeta.version} ...`
@@ -123,12 +144,34 @@
       })
       const registerButton = document.querySelector("#register")
       registerButton.disabled = false
+
+      // install instrumentation
+      const installResolveButton = document.querySelector("#resolve_install")
+      installResolveButton.onclick = () => {
+        topLevelSwScript.postMessage({ action: "resolve_install" })
+      }
+      const installRejectButton = document.querySelector("#reject_install")
+      installRejectButton.onclick = () => {
+        topLevelSwScript.postMessage({ action: "reject_install" })
+      }
+
+      // activate instrumentation
+      const activateResolveButton = document.querySelector("#resolve_activate")
+      activateResolveButton.onclick = () => {
+        topLevelSwScript.postMessage({ action: "resolve_activate" })
+      }
+      const activateRejectButton = document.querySelector("#reject_activate")
+      activateRejectButton.onclick = () => {
+        topLevelSwScript.postMessage({ action: "reject_activate" })
+      }
+
       registerButton.onclick = async () => {
         registerButton.disabled = true
         try {
-          await topLevelSwScript.setRegistationPromise(
-            window.navigator.serviceWorker.register("./sw.js"),
-          )
+          const registrationPromise =
+            window.navigator.serviceWorker.register("./sw.js")
+          topLevelSwScript.setRegistationPromise(registrationPromise)
+          await registrationPromise
         } finally {
           registerButton.disabled = false
         }

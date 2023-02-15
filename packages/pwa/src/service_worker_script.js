@@ -18,6 +18,7 @@ import {
   inspectServiceWorker,
   requestSkipWaitingOnServiceWorker,
   requestClaimOnServiceWorker,
+  postMessageToServiceWorker,
 } from "./internal/service_worker_communication.js"
 import { createUpdateHotHandler } from "./internal/service_worker_hot_update.js"
 
@@ -134,6 +135,7 @@ export const createServiceWorkerScript = ({
     const fromScriptMeta = await fromInspectPromise
 
     const applyStateEffect = () => {
+      console.log("got state", fromServiceWorker.state, fromScriptMeta)
       if (fromServiceWorker.state === "installing") {
         onInstalling(fromScriptMeta)
         return
@@ -201,15 +203,32 @@ export const createServiceWorkerScript = ({
     unregister: async () => {
       const registration = await serviceWorkerAPI.getRegistration(scope)
       if (!registration) {
+        pwaLogger.debug("nothing to unregister")
         return false
       }
+      pwaLogger.infoGroupCollapsed("registration.unregister()")
       const unregistered = await registration.unregister()
       if (unregistered) {
         pwaLogger.info("unregister done")
+        pwaLogger.groupEnd()
         return true
       }
       pwaLogger.warn("unregister failed")
+      pwaLogger.groupEnd()
       return false
+    },
+    postMessage: async (message) => {
+      const registration = await serviceWorkerAPI.getRegistration(scope)
+      if (!registration) {
+        pwaLogger.warn(`no service worker script to communicate with`)
+        return undefined
+      }
+      const serviceWorker =
+        registration.active || registration.waiting || registration.installing
+      pwaLogger.info(
+        `postMessage(${JSON.stringify(message)}) on ${serviceWorker.scriptURL}`,
+      )
+      return postMessageToServiceWorker(serviceWorker, message)
     },
   }
 }

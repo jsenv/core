@@ -110,6 +110,8 @@ self.addEventListener("message", ({ data, ports }) => {
       payload: {
         version: self.version,
         resources: self.resources,
+        installInstrumentation,
+        activateInstrumentation,
       },
     })
   }
@@ -120,7 +122,7 @@ self.addEventListener("message", async ({ data }) => {
     self.skipWaiting()
   }
 })
-let instrumentInstall = false
+let installInstrumentation = true
 let _resolveInstallPromise
 let _rejectInstallPromise
 const installPromise = new Promise((resolve, reject) => {
@@ -137,9 +139,10 @@ self.addEventListener("message", ({ data }) => {
   }
 })
 self.addEventListener("install", (installEvent) => {
-  const promiseToWait = instrumentInstall
-    ? Promise.all([installPromise, handleInstallEvent(installEvent)])
-    : handleInstallEvent(installEvent)
+  const promiseToWait = Promise.all([
+    ...(installInstrumentation ? [installPromise] : []),
+    handleInstallEvent(installEvent),
+  ])
   installEvent.waitUntil(promiseToWait)
 })
 const handleInstallEvent = async () => {
@@ -198,10 +201,28 @@ self.addEventListener("message", async ({ data }) => {
   }
 })
 
+let activateInstrumentation = true
+let _resolveActivatePromise
+let _rejectActivatePromise
+const activatePromise = new Promise((resolve, reject) => {
+  _resolveActivatePromise = resolve
+  _rejectActivatePromise = reject
+})
+self.addEventListener("message", ({ data }) => {
+  if (data.action === "resolve_activate") {
+    _resolveActivatePromise(data.value)
+    self.skipWaiting()
+  }
+  if (data.action === "reject_activate") {
+    _rejectActivatePromise(data.value)
+  }
+})
 self.addEventListener("activate", (activateEvent) => {
-  const promiseToWait = claimPromise
-    ? Promise.all([claimPromise, deleteOldCaches()])
-    : deleteOldCaches()
+  const promiseToWait = Promise.all([
+    ...(claimPromise ? [claimPromise] : []),
+    ...(activateInstrumentation ? [activatePromise] : []),
+    deleteOldCaches(),
+  ])
   activateEvent.waitUntil(promiseToWait)
 })
 const deleteOldCaches = async () => {

@@ -11,7 +11,7 @@ export const pwaLogger = {
 
   debug: (...args) => {
     if (logLevel === "debug") {
-      console.info(...injectLogStyles(args))
+      console.debug(...injectLogStyles(args))
     }
   },
   info: (...args) => {
@@ -21,7 +21,7 @@ export const pwaLogger = {
   },
   warn: (...args) => {
     if (logLevel === "debug" || logLevel === "info" || logLevel === "warn") {
-      console.info(...injectLogStyles(args))
+      console.warn(...injectLogStyles(args))
     }
   },
   error: (...args) => {
@@ -31,7 +31,12 @@ export const pwaLogger = {
       logLevel === "warn" ||
       logLevel === "error"
     ) {
-      console.info(...injectLogStyles(args))
+      console.error(...injectLogStyles(args))
+    }
+  },
+  infoGroupCollapsed: (...args) => {
+    if (logLevel === "debug" || logLevel === "info") {
+      console.group(...injectLogStyles(args))
     }
   },
   debugGroupCollapsed: (...args) => {
@@ -45,8 +50,8 @@ export const pwaLogger = {
 
 const injectLogStyles = (args) => {
   return [
-    `%cjsenv %cpwa`,
-    `background: orange; color: white; padding: 1px 3px; margin: 0 1px`,
+    `%cjsenv%cpwa`,
+    `background: orange; color: rgb(55, 7, 7); padding: 1px 3px; margin: 0 1px`,
     `background: ${logBackgroundColor}; color: ${logColor}; padding: 1px 3px; margin: 0 1px`,
     ...args,
   ]
