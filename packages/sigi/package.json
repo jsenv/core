@@ -1,5 +1,5 @@
 {
-  "name": "@jsenv/state",
+  "name": "@jsenv/sigi",
   "version": "0.0.1",
   "description": "State management",
   "license": "MIT",
@@ -11,7 +11,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/jsenv-core",
-    "directory": "packages/state"
+    "directory": "packages/sigi"
   },
   "engines": {
     "node": ">=16.13.0"
