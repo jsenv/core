@@ -16,7 +16,7 @@ export const inspectServiceWorker = async (serviceWorker) => {
   await Promise.race([inspectPromise, timeoutPromise])
   clearTimeout(timeout)
   if (timeoutReached) {
-    return null
+    return {}
   }
   return serviceWorkerResponse
 }

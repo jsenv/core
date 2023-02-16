@@ -42,5 +42,8 @@
     "packages-install": "cd docs/react_example && npm install",
     "certificate-install": "node ./script/dev/install_certificate.mjs"
   },
+  "dependencies": {
+    "@jsenv/sigi": "0.0.1"
+  },
   "devDependencies": {}
 }

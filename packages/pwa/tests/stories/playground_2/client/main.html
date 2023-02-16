@@ -95,46 +95,7 @@
         }
       })
 
-      const updateDownloadingMessage = document.querySelector(
-        "#update_downloading_message",
-      )
       const topLevelSwScript = createServiceWorkerScript({
-        onInstalling: ({ installInstrumentation, activateInstrumentation }) => {
-          if (installInstrumentation) {
-            installResolveButton.disabled = false
-            installRejectButton.disabled = false
-          }
-          if (activateInstrumentation) {
-            activateResolveButton.disabled = false
-            activateRejectButton.disabled = false
-          }
-        },
-        onUpdateInstalling: (update) => {
-          updateDownloadingMessage.style.display = "block"
-          updateDownloadingMessage.innerHTML = `Downloading update ${update.toScriptMeta.version} ...`
-        },
-        onUpdateWaiting: (update) => {
-          updateDownloadingMessage.style.display = "none"
-          const updateByRestartButton = document.querySelector(
-            "#update_by_restart_button",
-          )
-          updateByRestartButton.disabled = !update.reloadRequired
-          updateByRestartButton.innerHTML = `Restart to update to ${update.toScriptMeta.version}`
-          updateByRestartButton.onclick = async () => {
-            updateByRestartButton.disabled = true
-            // idéalement update le message du boutton pendant qu'il est
-            // désactivé pour dire ce qu'il se passe (activating, ...)
-            await update.activate()
-          }
-          const updateNowButton = document.querySelector("#update_now_button")
-          updateNowButton.disabled = update.reloadRequired
-          updateNowButton.innerHTML = `Apply update ${update.toScriptMeta.version}`
-          updateNowButton.onclick = async () => {
-            updateNowButton.disabled = true
-            // idéalement update le message du bouton pendant que apply se produit
-            await update.activate()
-          }
-        },
         hotUpdateHandlers: {
           "animal.svg": {
             replace: refreshImg,
@@ -145,24 +106,51 @@
       const registerButton = document.querySelector("#register")
       registerButton.disabled = false
 
+      const updateDownloadingMessage = document.querySelector(
+        "#update_downloading_message",
+      )
+      topLevelSwScript.subscribe(({ update }) => {
+        if (update.readyState === "installing") {
+          updateDownloadingMessage.style.display = "block"
+          updateDownloadingMessage.innerHTML = `Downloading update ${update.meta.version} ...`
+        } else {
+          updateDownloadingMessage.style.display = "none"
+        }
+      })
+
       // install instrumentation
-      const installResolveButton = document.querySelector("#resolve_install")
-      installResolveButton.onclick = () => {
-        topLevelSwScript.postMessage({ action: "resolve_install" })
-      }
-      const installRejectButton = document.querySelector("#reject_install")
-      installRejectButton.onclick = () => {
-        topLevelSwScript.postMessage({ action: "reject_install" })
+      {
+        const installResolveButton = document.querySelector("#resolve_install")
+        installResolveButton.onclick = () => {
+          topLevelSwScript.postMessage({ action: "resolve_install" })
+        }
+        const installRejectButton = document.querySelector("#reject_install")
+        installRejectButton.onclick = () => {
+          topLevelSwScript.postMessage({ action: "reject_install" })
+        }
+        topLevelSwScript.subscribe(({ meta }) => {
+          const { installInstrumentation } = meta
+          installResolveButton.disabled = !installInstrumentation
+          installRejectButton.disabled = !installInstrumentation
+        })
       }
 
       // activate instrumentation
-      const activateResolveButton = document.querySelector("#resolve_activate")
-      activateResolveButton.onclick = () => {
-        topLevelSwScript.postMessage({ action: "resolve_activate" })
-      }
-      const activateRejectButton = document.querySelector("#reject_activate")
-      activateRejectButton.onclick = () => {
-        topLevelSwScript.postMessage({ action: "reject_activate" })
+      {
+        const activateResolveButton =
+          document.querySelector("#resolve_activate")
+        activateResolveButton.onclick = () => {
+          topLevelSwScript.postMessage({ action: "resolve_activate" })
+        }
+        const activateRejectButton = document.querySelector("#reject_activate")
+        activateRejectButton.onclick = () => {
+          topLevelSwScript.postMessage({ action: "reject_activate" })
+        }
+        topLevelSwScript.subscribe(({ meta }) => {
+          const { activateInstrumentation } = meta
+          activateResolveButton.disabled = !activateInstrumentation
+          activateRejectButton.disabled = !activateInstrumentation
+        })
       }
 
       registerButton.onclick = async () => {
@@ -215,6 +203,33 @@
           updateCheckButton.disabled = false
         }
       }
+
+      const updateByRestartButton = document.querySelector(
+        "#update_by_restart_button",
+      )
+      updateByRestartButton.onclick = async () => {
+        updateByRestartButton.disabled = true
+        // idéalement update le message du boutton pendant qu'il est
+        // désactivé pour dire ce qu'il se passe (activating, ...)
+        await topLevelSwScript.activateUpdate()
+      }
+      const updateNowButton = document.querySelector("#update_now_button")
+      updateNowButton.onclick = async () => {
+        updateNowButton.disabled = true
+        // idéalement update le message du bouton pendant que apply se produit
+        await topLevelSwScript.activateUpdate()
+      }
+      topLevelSwScript.subscribe(({ update }) => {
+        if (update.readyState === "installed") {
+          updateByRestartButton.innerHTML = `Restart to update to ${update.meta.version}`
+          updateByRestartButton.disabled = update.reloadRequired
+          updateNowButton.innerHTML = `Apply update ${update.meta.version}`
+          updateNowButton.disabled = !update.reloadRequired
+        } else {
+          updateByRestartButton.disabled = true
+          updateNowButton.disabled = true
+        }
+      })
     </script>
   </body>
 </html>

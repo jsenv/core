@@ -12,6 +12,8 @@
  *   - etc...
  */
 
+import { sigi } from "@jsenv/sigi"
+
 import { pwaLogger } from "./pwa_logger.js"
 import { serviceWorkerAPI } from "./internal/service_worker_api.js"
 import {
@@ -23,21 +25,31 @@ import {
 import { createUpdateHotHandler } from "./internal/service_worker_hot_update.js"
 
 export const createServiceWorkerScript = ({
-  // TODO: replace with something like .effect()
-  // sachant que hormis onError, les autres sont pas vraiment important
   onError = () => {},
   onInstalling = () => {},
   onInstalled = () => {},
   onActivating = () => {},
   onActivated = () => {},
   onRedundant = () => {},
-  // TODO: replace with something like update.effect()
-  onUpdateInstalling = () => {},
-  onUpdateWaiting = () => {},
   hotUpdateHandlers = {},
   scope = "/",
 } = {}) => {
   let fromInspectPromise = null
+
+  const {
+    // internalState,
+    externalState,
+    subscribe,
+    mutate,
+  } = sigi({
+    readyState: "", // installing, installed, activating, activated
+    meta: {},
+    update: {
+      readyState: "", // installing, installed, activating, activated
+      meta: {},
+      reloadRequired: true,
+    },
+  })
 
   const hotUpdatesHandlersResolved = {}
   Object.keys(hotUpdateHandlers).forEach((url) => {
@@ -55,47 +67,24 @@ export const createServiceWorkerScript = ({
       fromScriptMeta,
       toScriptMeta,
     })
-    const reloadRequired = !updateHotHandler
+    mutate({
+      meta: fromScriptMeta,
+      update: {
+        meta: toScriptMeta,
+        reloadRequired: !updateHotHandler,
+      },
+    })
 
     const applyUpdateStateEffects = async () => {
       if (toServiceWorker.state === "installing") {
-        onUpdateInstalling({
-          fromScriptMeta,
-          toScriptMeta,
-          reloadRequired,
+        mutate({
+          update: { readyState: "installing" },
         })
         return
       }
       if (toServiceWorker.state === "installed") {
-        onUpdateWaiting({
-          fromScriptMeta,
-          toScriptMeta,
-          reloadRequired,
-          activate: async () => {
-            if (toServiceWorker.state === "installed") {
-              const activatedPromise = new Promise((resolve) => {
-                toServiceWorker.onstatechange = () => {
-                  if (toServiceWorker.state === "activated") {
-                    toServiceWorker.onstatechange = null
-                    resolve()
-                  }
-                }
-              })
-              pwaLogger.info("update is installed, send skipWaiting")
-              await requestSkipWaitingOnServiceWorker(toServiceWorker)
-              pwaLogger.info(
-                "skipWaiting done, wait for worker to be activated",
-              )
-              await activatedPromise
-            }
-            if (toServiceWorker.state === "activated") {
-              await ensureIsControllingNavigator(toServiceWorker)
-              return
-            }
-            throw new Error(
-              `unexpected state on service worker update: "${toServiceWorker.state}"`,
-            )
-          },
+        mutate({
+          update: { readyState: "installed" },
         })
         return
       }
@@ -123,7 +112,7 @@ export const createServiceWorkerScript = ({
   const watchRegistration = async (registration) => {
     // setTimeout because of https://github.com/w3c/ServiceWorker/issues/515
     setTimeout(() => {
-      registration.onupdatefound = async () => {
+      registration.onupdatefound = () => {
         onUpdateFound(registration.installing)
       }
     })
@@ -170,6 +159,8 @@ export const createServiceWorkerScript = ({
   init()
 
   return {
+    state: externalState,
+    subscribe,
     setRegistationPromise: async (registrationPromise) => {
       try {
         const registration = await registrationPromise
@@ -199,6 +190,35 @@ export const createServiceWorkerScript = ({
       pwaLogger.debug("service worker found on registration")
       pwaLogger.groupEnd()
       return true
+    },
+    activateUpdate: async () => {
+      pwaLogger.infoGroupCollapsed("activateUpdate()")
+      const registration = await serviceWorkerAPI.getRegistration(scope)
+      if (!registration) {
+        pwaLogger.warn("no registration found")
+        pwaLogger.groupEnd()
+        return
+      }
+      const { installing } = registration
+      if (!installing) {
+        pwaLogger.warn("no update found on registration.installing")
+        pwaLogger.groupEnd()
+        return
+      }
+
+      const activatedPromise = new Promise((resolve) => {
+        installing.onstatechange = () => {
+          if (installing.state === "activated") {
+            installing.onstatechange = null
+            resolve()
+          }
+        }
+      })
+      pwaLogger.info("update is installed, send skipWaiting")
+      await requestSkipWaitingOnServiceWorker(installing)
+      pwaLogger.info("skipWaiting done, wait for worker to be activated")
+      await activatedPromise
+      await ensureIsControllingNavigator(installing)
     },
     unregister: async () => {
       const registration = await serviceWorkerAPI.getRegistration(scope)
