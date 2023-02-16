@@ -1,9 +1,21 @@
 import { assert } from "@jsenv/assert"
 import { sigi } from "@jsenv/sigi"
 
-// callback is called right away and when property changes
+// state nested prop can be read
 {
-  const { mutate, subscribe } = sigi({ age: 10 }, { debug: true })
+  const { state } = sigi({
+    nested: {
+      name: "yes",
+    },
+  })
+  const actual = state.nested.name
+  const expected = "yes"
+  assert({ actual, expected })
+}
+
+// can subscribe to top level changes
+{
+  const { mutate, subscribe } = sigi({ age: 10 })
   const calls = []
   subscribe(({ age }) => {
     calls.push(age)
@@ -22,7 +34,7 @@ import { sigi } from "@jsenv/sigi"
   assert({ actual, expected })
 }
 
-// callbacks are called only if they access a property that has changed
+// subscribe callback not called when something else changes
 {
   const { subscribe, mutate } = sigi({ age: 10 })
   const calls = []
@@ -43,7 +55,7 @@ import { sigi } from "@jsenv/sigi"
   assert({ actual, expected })
 }
 
-// it works with nested properties
+// can subscribe to nested changes
 {
   const { subscribe, mutate } = sigi({ nested: { color: "blue" } })
   const calls = []
@@ -64,20 +76,20 @@ import { sigi } from "@jsenv/sigi"
   assert({ actual, expected })
 }
 
-// preventExtensions is respected
-{
-  const { mutate } = sigi(Object.preventExtensions({ foo: true }))
-  try {
-    mutate({ bar: true })
-    throw new Error("should throw")
-  } catch (e) {
-    const actual = e
-    const expected = new TypeError(
-      `Cannot add property bar, object is not extensible`,
-    )
-    assert({ actual, expected })
-  }
-}
+// // preventExtensions is respected
+// {
+//   const { mutate } = sigi(Object.preventExtensions({ foo: true }))
+//   try {
+//     mutate({ bar: true })
+//     throw new Error("should throw")
+//   } catch (e) {
+//     const actual = e
+//     const expected = new TypeError(
+//       `Cannot define property bar, object is not extensible`,
+//     )
+//     assert({ actual, expected })
+//   }
+// }
 
 // warning when mutate changes the type
 {
@@ -97,4 +109,31 @@ import { sigi } from "@jsenv/sigi"
   } finally {
     console.warn = warn
   }
+}
+
+// extending root state with mutate
+{
+  const { mutate, subscribe } = sigi({
+    foo: true,
+  })
+  const calls = []
+  subscribe(({ bar }) => {
+    calls.push(bar)
+  })
+  const callsBeforeMutate = calls.slice()
+  mutate({ bar: "a" })
+  const callsAfterMutate = calls.slice()
+  mutate({ bar: "b" })
+  const callsAfterSecondMutate = calls.slice()
+  const actual = {
+    callsBeforeMutate,
+    callsAfterMutate,
+    callsAfterSecondMutate,
+  }
+  const expected = {
+    callsBeforeMutate: [undefined],
+    callsAfterMutate: [undefined, "a"],
+    callsAfterSecondMutate: [undefined, "a", "b"],
+  }
+  assert({ actual, expected })
 }

@@ -8,123 +8,158 @@ const isDev =
   (typeof process === "object" &&
     process.execArgv.includes("--conditions=development"))
 
-export const sigi = (valueAtStart) => {
-  if (!isObject(valueAtStart)) {
-    throw new Error(
-      `sigi first argument must be an object, got ${valueAtStart}`,
-    )
+export const sigi = (values) => {
+  if (!isObject(values)) {
+    throw new Error(`sigi first argument must be an object, got ${values}`)
   }
 
-  let stateToMutate
-  const visitKeysToMutate = (object, trace = []) => {
-    const keys = Object.keys(object)
-    let i = 0
-    const j = keys.length
-    while (i < j) {
-      const key = keys[i]
-      i++
-      const value = object[key]
-      if (isObject(value)) {
-        stateToMutate = stateToMutate[key]
-        visitKeysToMutate(value, isDev ? [...trace, key] : null)
-      } else {
-        if (isDev) {
-          warnOnTypeChange({
-            object: stateToMutate,
-            key,
-            toValue: value,
-            trace,
-          })
-        }
-        stateToMutate[key] = value
-      }
-    }
-  }
+  // les signals c'est ce qu'on voudras accéder de l'extérieur
+  // mais il faut aussi un moyen de set la valeur associée
+  const proxies = {}
+  const signals = {}
+  const proxy = createStateProxy(proxies, signals)
+  const fromValues = {}
+  mutateValues({
+    proxies,
+    signals,
+    proxy,
+    fromValues,
+    toValues: values,
+  })
 
-  const internalState = {}
-  const externalState = {}
-  const mutate = (mutationDescriptor) => {
-    batch(() => {
-      stateToMutate = internalState
-      visitKeysToMutate(mutationDescriptor)
-      stateToMutate = null
-    })
-  }
   const subscribe = (callback) => {
     return effect(() => {
-      callback(externalState)
+      callback(proxy)
     })
   }
 
-  let internalStateCurrent = internalState
-  let externalStateCurrent = externalState
-  const visitKeysToInit = (object) => {
-    const keys = Object.keys(object)
-    let i = 0
-    const j = keys.length
-    while (i < j) {
-      const key = keys[i]
-      i++
-      const value = object[key]
-      if (isObject(value)) {
-        internalStateCurrent = internalStateCurrent[key] = {}
-        externalStateCurrent = externalStateCurrent[key] = {}
-        visitKeysToInit(value)
-        if (!Object.isExtensible(value)) {
-          Object.preventExtensions(internalStateCurrent)
-          Object.preventExtensions(externalStateCurrent)
-        }
-      } else {
-        const signalForThatValue = signal(value)
-        Object.defineProperty(internalStateCurrent, key, {
-          enumerable: true,
-          configurable: false,
-          get: () => signalForThatValue.peek(),
-          set: (value) => {
-            signalForThatValue.value = value
-          },
-        })
-        // externalState is meant to be exposed to the outside
-        // and we don't want code from outside to be able to mutate the state
-        // so only has a getter
-        Object.defineProperty(externalStateCurrent, key, {
-          enumerable: true,
-          configurable: false,
-          get: () => signalForThatValue.value,
-        })
-      }
-    }
+  const mutate = (toValues) => {
+    batch(() => {
+      mutateValues({
+        proxies,
+        signals,
+        proxy,
+        fromValues,
+        toValues,
+      })
+    })
   }
-  visitKeysToInit(valueAtStart)
-  if (!Object.isExtensible(valueAtStart)) {
-    Object.preventExtensions(internalState)
-    Object.preventExtensions(externalState)
-  }
-  internalStateCurrent = null
-  externalStateCurrent = null
 
   return {
-    internalState,
-    externalState,
+    state: proxy,
     mutate,
     subscribe,
   }
 }
 
-const warnOnTypeChange = ({ object, key, toValue, trace }) => {
-  if (Object.hasOwn(object, key)) {
-    const fromValue = object[key]
-    const fromType = typeof fromValue
-    const toType = typeof toValue
-    if (fromType !== toType) {
-      console.warn(
-        `A value type will change from "${fromType}" to "${toType}" at state.${[
-          ...trace,
-          key,
-        ].join(".")}`,
-      )
+const PLACEHOLDER = Symbol.for("signal_placeholder")
+
+const createStateProxy = (proxies, signals) => {
+  const target = {}
+  const stateProxy = new Proxy(target, {
+    getOwnPropertyDescriptor: (target, key) => {
+      if (Object.hasOwn(signals, key)) {
+        return Object.getOwnPropertyDescriptor(signals, key)
+      }
+      return null
+    },
+    get: (target, key) => {
+      if (!Object.hasOwn(signals, key)) {
+        const propertySignal = signal(PLACEHOLDER)
+        signals[key] = propertySignal
+        // eslint-disable-next-line no-unused-expressions
+        propertySignal.value
+        return undefined
+      }
+      const proxy = proxies[key]
+      if (proxy) {
+        return proxy
+      }
+      return signals[key].value
+    },
+    set: () => {
+      throw new Error(`state cannot be mutated`)
+    },
+  })
+  Object.preventExtensions(stateProxy)
+  return stateProxy
+}
+
+const mutateValues = ({ proxies, signals, proxy, toValues, trace }) => {
+  const keys = Object.keys(toValues)
+  let i = 0
+  const j = keys.length
+  while (i < j) {
+    const key = keys[i]
+    i++
+    if (isDev) {
+      trace = trace ? [...trace, key] : [key]
+    }
+    const toValue = toValues[key]
+    if (Object.hasOwn(signals, key)) {
+      if (isDev) {
+        const propertySignal = signals[key]
+        const fromValue = isPlainObject(propertySignal)
+          ? propertySignal
+          : propertySignal.peek()
+        if (fromValue !== PLACEHOLDER) {
+          const fromType = typeof fromValue
+          const toType = typeof toValue
+          if (fromType !== toType) {
+            console.warn(
+              `A value type will change from "${fromType}" to "${toType}" at state.${trace.join(
+                ".",
+              )}`,
+            )
+          }
+        }
+      }
+      if (isObject(toValue)) {
+        mutateValues({
+          proxies: proxies[key],
+          signals: signals[key],
+          proxy: proxy[key],
+          toValues: toValue,
+          trace,
+        })
+      } else {
+        signals[key].value = toValue
+      }
+    } else {
+      if (!Object.isExtensible({})) {
+        throw new TypeError(
+          `Cannot define property ${key}, object is not extensible`,
+        )
+      }
+      if (isObject(toValue)) {
+        const childProxies = {}
+        const childSignals = {}
+        const childProxy = createStateProxy(childProxies, childSignals)
+        const childFromValues = {}
+        proxies[key] = childProxy
+        signals[key] = childSignals
+
+        mutateValues({
+          proxies: childProxies,
+          proxy: childProxy,
+          signals: childSignals,
+          fromValues: childFromValues,
+          toValues: toValue,
+          trace,
+        })
+        if (!Object.isExtensible(toValue)) {
+          Object.preventExtensions(childSignals)
+          Object.preventExtensions(childFromValues)
+        }
+      } else {
+        signals[key] = signal(toValue)
+      }
     }
   }
+}
+
+const isPlainObject = (value) => {
+  return value && Object.getPrototypeOf(value) === Object.prototype
 }
 
 const isObject = (value) => {
