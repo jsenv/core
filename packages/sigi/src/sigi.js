@@ -1,4 +1,11 @@
-// https://github.com/preactjs/signals/blob/main/packages/core/src/index.ts
+/*
+ * https://github.com/preactjs/signals/blob/main/packages/core/src/index.ts
+ * TODO:
+ * - respecter preventExtensions (et aussi pas besoin de le repréciser dans mutate, le state initial
+ * sert de modele)
+ * - mettre a jour rootStateObject histoire d'etre cohérent
+ * (pourra aussi servir a lire le state sans subscribe)
+ */
 
 import { signal, effect, batch } from "@preact/signals"
 
@@ -8,84 +15,49 @@ const isDev =
   (typeof process === "object" &&
     process.execArgv.includes("--conditions=development"))
 
-export const sigi = (values) => {
-  if (!isObject(values)) {
-    throw new Error(`sigi first argument must be an object, got ${values}`)
+export const sigi = (rootStateObject) => {
+  if (!isObject(rootStateObject)) {
+    throw new Error(
+      `sigi first argument must be an object, got ${rootStateObject}`,
+    )
   }
 
-  // les signals c'est ce qu'on voudras accéder de l'extérieur
-  // mais il faut aussi un moyen de set la valeur associée
-  const proxies = {}
-  const signals = {}
-  const proxy = createStateProxy(proxies, signals)
-  const fromValues = {}
+  const rootPropertiesMetaMap = new Map()
+  // stateProxy is the public way to interact with the state
+  // - it register dynamically callback dependencies thanks to a custon handler
+  //   called when a property is accessed
+  // - it ensure state cannot be mutated from outside (throw when trying to set/define/delete
+  //   a property
+  const rootStateProxy = createStateProxy(rootPropertiesMetaMap)
   mutateValues({
-    proxies,
-    signals,
-    proxy,
-    fromValues,
-    toValues: values,
+    propertiesMetaMap: rootPropertiesMetaMap,
+    toValues: rootStateObject,
+    initial: true,
   })
 
   const subscribe = (callback) => {
     return effect(() => {
-      callback(proxy)
+      callback(rootStateProxy)
     })
   }
 
   const mutate = (toValues) => {
     batch(() => {
       mutateValues({
-        proxies,
-        signals,
-        proxy,
-        fromValues,
+        propertiesMetaMap: rootPropertiesMetaMap,
         toValues,
       })
     })
   }
 
   return {
-    state: proxy,
+    state: rootStateProxy,
     mutate,
     subscribe,
   }
 }
 
-const PLACEHOLDER = Symbol.for("signal_placeholder")
-
-const createStateProxy = (proxies, signals) => {
-  const target = {}
-  const stateProxy = new Proxy(target, {
-    getOwnPropertyDescriptor: (target, key) => {
-      if (Object.hasOwn(signals, key)) {
-        return Object.getOwnPropertyDescriptor(signals, key)
-      }
-      return null
-    },
-    get: (target, key) => {
-      if (!Object.hasOwn(signals, key)) {
-        const propertySignal = signal(PLACEHOLDER)
-        signals[key] = propertySignal
-        // eslint-disable-next-line no-unused-expressions
-        propertySignal.value
-        return undefined
-      }
-      const proxy = proxies[key]
-      if (proxy) {
-        return proxy
-      }
-      return signals[key].value
-    },
-    set: () => {
-      throw new Error(`state cannot be mutated`)
-    },
-  })
-  Object.preventExtensions(stateProxy)
-  return stateProxy
-}
-
-const mutateValues = ({ proxies, signals, proxy, toValues, trace }) => {
+const mutateValues = ({ propertiesMetaMap, toValues, initial, trace }) => {
   const keys = Object.keys(toValues)
   let i = 0
   const j = keys.length
@@ -95,71 +67,155 @@ const mutateValues = ({ proxies, signals, proxy, toValues, trace }) => {
     if (isDev) {
       trace = trace ? [...trace, key] : [key]
     }
-    const toValue = toValues[key]
-    if (Object.hasOwn(signals, key)) {
-      if (isDev) {
-        const propertySignal = signals[key]
-        const fromValue = isPlainObject(propertySignal)
-          ? propertySignal
-          : propertySignal.peek()
-        if (fromValue !== PLACEHOLDER) {
-          const fromType = typeof fromValue
-          const toType = typeof toValue
-          if (fromType !== toType) {
-            console.warn(
-              `A value type will change from "${fromType}" to "${toType}" at state.${trace.join(
-                ".",
-              )}`,
-            )
-          }
-        }
-      }
-      if (isObject(toValue)) {
-        mutateValues({
-          proxies: proxies[key],
-          signals: signals[key],
-          proxy: proxy[key],
-          toValues: toValue,
-          trace,
-        })
-      } else {
-        signals[key].value = toValue
-      }
-    } else {
-      if (!Object.isExtensible({})) {
-        throw new TypeError(
-          `Cannot define property ${key}, object is not extensible`,
-        )
-      }
-      if (isObject(toValue)) {
-        const childProxies = {}
-        const childSignals = {}
-        const childProxy = createStateProxy(childProxies, childSignals)
-        const childFromValues = {}
-        proxies[key] = childProxy
-        signals[key] = childSignals
+    const propertyToValue = toValues[key]
+    const propertyMeta = propertiesMetaMap.get(key)
+    const fromUnset = !propertyMeta
+    const fromSet = Boolean(propertyMeta)
+    const fromObject = fromSet && Boolean(propertyMeta.proxy)
+    const fromPrimitive = fromSet && !fromObject
+    const toObject = isObject(propertyToValue)
+    const toPrimitive = !toObject
 
-        mutateValues({
-          proxies: childProxies,
-          proxy: childProxy,
-          signals: childSignals,
-          fromValues: childFromValues,
-          toValues: toValue,
-          trace,
-        })
-        if (!Object.isExtensible(toValue)) {
-          Object.preventExtensions(childSignals)
-          Object.preventExtensions(childFromValues)
+    // warn when property type changes (dev only)
+    if (fromSet && isDev) {
+      const propertyFromValue = propertyMeta.proxy
+        ? propertyMeta.proxy
+        : propertyMeta.signal.peek()
+      // it's ok for PLACEHOLDER to go from undefined to something else
+      if (propertyFromValue !== PLACEHOLDER) {
+        const propertyFromValueType = typeof propertyFromValue
+        const propertyToValueType = typeof propertyToValue
+        if (propertyFromValueType !== propertyToValueType) {
+          console.warn(
+            `A value type will change from "${propertyFromValueType}" to "${propertyToValueType}" at state.${trace.join(
+              ".",
+            )}`,
+          )
         }
-      } else {
-        signals[key] = signal(toValue)
       }
     }
+
+    // from unset to object
+    if (fromUnset && toObject) {
+      const childPropertiesMetaMap = new Map()
+      const childProxy = createStateProxy(childPropertiesMetaMap)
+      propertiesMetaMap.set(key, {
+        proxy: childProxy,
+        propertiesMetaMap: childPropertiesMetaMap,
+      })
+      mutateValues({
+        propertiesMetaMap: childPropertiesMetaMap,
+        toValues: propertyToValue,
+        initial,
+        trace,
+      })
+      return
+    }
+    // from unset to primitive
+    if (fromUnset && toPrimitive) {
+      propertiesMetaMap.set(key, {
+        signal: signal(propertyToValue),
+      })
+      return
+    }
+    // from object to object
+    if (fromObject && toObject) {
+      mutateValues({
+        propertiesMetaMap: propertyMeta.propertiesMetaMap,
+        toValues: propertyToValue,
+        initial,
+        trace,
+      })
+      return
+    }
+    // from object to primitive
+    if (fromObject && toPrimitive) {
+      propertiesMetaMap.set(key, {
+        signal: signal(propertyToValue),
+      })
+      return
+    }
+    // from primitive to object
+    if (fromPrimitive && toObject) {
+      const childPropertiesMetaMap = new Map()
+      const childProxy = createStateProxy(childPropertiesMetaMap)
+      propertiesMetaMap.set(key, {
+        proxy: childProxy,
+        propertiesMetaMap: childPropertiesMetaMap,
+      })
+      mutateValues({
+        propertiesMetaMap: childPropertiesMetaMap,
+        toValues: propertyToValue,
+        initial,
+        trace,
+      })
+      return
+    }
+    // from primitive to primitive
+    propertyMeta.signal.value = propertyToValue
   }
 }
 
-const isPlainObject = (value) => {
-  return value && Object.getPrototypeOf(value) === Object.prototype
+const PLACEHOLDER = Symbol.for("signal_placeholder")
+
+const createStateProxy = (propertiesMetaMap) => {
+  const target = {}
+  const stateProxy = new Proxy(target, {
+    getOwnPropertyDescriptor: (_, key) => {
+      const propertyMeta = propertiesMetaMap.get(key)
+      if (propertyMeta) {
+        return {
+          value: propertyMeta.proxy
+            ? propertyMeta.proxy
+            : propertyMeta.signal.value,
+          writable: false,
+          configurable: false,
+          enumerable: true,
+        }
+      }
+      return null
+    },
+    get: (_, key) => {
+      let propertyMeta = propertiesMetaMap.get(key)
+      if (!propertyMeta) {
+        const propertySignal = signal(PLACEHOLDER)
+        propertyMeta = {
+          signal: propertySignal,
+        }
+        propertiesMetaMap.set(key, propertyMeta)
+        // eslint-disable-next-line no-unused-expressions
+        propertySignal.value
+        return undefined
+      }
+      // if there is a proxy it means it's an object
+      const propertyProxy = propertyMeta.proxy
+      if (propertyProxy) {
+        return propertyProxy
+      }
+      // otherwise it's a primitive
+      const propertySignal = propertyMeta.signal
+      const propertyValue = propertySignal.value
+      if (propertyValue === PLACEHOLDER) return undefined
+      return propertyValue
+    },
+    defineProperty: (_, key) => {
+      throw new Error(
+        `Invalid attempt to define "${key}", cannot mutate state from outside`,
+      )
+    },
+    deleteProperty: (_, key) => {
+      throw new Error(
+        `Invalid attempt to delete "${key}", cannot mutate state from outside`,
+      )
+    },
+    set: (_, key) => {
+      throw new Error(
+        `Invalid attempt to set "${key}", cannot mutate state from outside`,
+      )
+    },
+  })
+  Object.preventExtensions(stateProxy)
+  return stateProxy
 }
 
 const isObject = (value) => {
