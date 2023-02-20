@@ -67,16 +67,38 @@ const mutateValues = ({
   initial,
   trace,
 }) => {
-  const propertyNames = Object.keys(toValues)
+  const propertyNames = Object.getOwnPropertyNames(toValues)
   let i = 0
   const j = propertyNames.length
   while (i < j) {
     const propertyName = propertyNames[i]
+    const propertyDescriptor = Object.getOwnPropertyDescriptor(
+      toValues,
+      propertyName,
+    )
     i++
+    if (propertyDescriptor.get || propertyDescriptor.set) {
+      throw new Error(
+        `Cannot set "${propertyName}", property must not use getter/setter`,
+      )
+    }
+    if (!propertyDescriptor.configurable) {
+      throw new Error(
+        `Cannot set "${propertyName}", property must be configurable`,
+      )
+    }
+    if (!propertyDescriptor.enumerable) {
+      throw new Error(
+        `Cannot set "${propertyName}", property must be enumerable`,
+      )
+    }
+    if (!propertyDescriptor.writable) {
+      throw new Error(`Cannot set "${propertyName}", property must be writable`)
+    }
     if (isDev) {
       trace = trace ? [...trace, propertyName] : [propertyName]
     }
-    const toValue = toValues[propertyName]
+    const toValue = propertyDescriptor.value
     const propertyMeta = propertiesMetaMap.get(propertyName)
     const fromUnset = !propertyMeta
     const fromSet = Boolean(propertyMeta)
@@ -177,22 +199,35 @@ const PLACEHOLDER = Symbol.for("signal_placeholder")
 
 const createStateProxy = (stateObject, propertiesMetaMap) => {
   const stateProxy = new Proxy(stateObject, {
-    // has: (_, key) => {
+    // has is not required, we can use the original state
+    // has: (_, key) => {},
+    // same for getOwnPropertyDescriptor, let's just return the original descriptor
+    // getOwnPropertyDescriptor: (_, key) => {
+    //   const propertyMeta = propertiesMetaMap.get(key)
+    //   if (!propertyMeta) {
+    //     return undefined
+    //   }
+    //   const propertyProxy = propertyMeta.proxy
+    //   if (propertyProxy) {
+    //     return {
+    //       value: propertyProxy,
+    //       writable: true,
+    //       configurable: true,
+    //       enumerable: true,
+    //     }
+    //   }
+    //   const propertySignal = propertyMeta.signal
+    //   const value = propertySignal.value
+    //   if (value === PLACEHOLDER) {
+    //     return undefined
+    //   }
+    //   return {
+    //     value,
+    //     writable: true,
+    //     configurable: true,
+    //     enumerable: true,
+    //   }
     // },
-    getOwnPropertyDescriptor: (_, key) => {
-      const propertyMeta = propertiesMetaMap.get(key)
-      if (propertyMeta) {
-        return {
-          value: propertyMeta.proxy
-            ? propertyMeta.proxy
-            : propertyMeta.signal.value,
-          writable: false,
-          configurable: false,
-          enumerable: true,
-        }
-      }
-      return null
-    },
     get: (_, key) => {
       let propertyMeta = propertiesMetaMap.get(key)
       if (!propertyMeta) {

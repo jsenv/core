@@ -44,6 +44,47 @@ import { sigi } from "@jsenv/sigi"
 //   }
 // }
 
+// in operator
+{
+  const { state } = sigi({ foo: true })
+  const foo = "foo" in state
+  const bar = "bar" in state
+  const actual = { foo, bar }
+  const expected = { foo: true, bar: false }
+  assert({ actual, expected })
+}
+
+// Object.getOwnPropertyDescriptor
+{
+  const { state } = sigi({ foo: true })
+  const fooDescriptor = Object.getOwnPropertyDescriptor(state, "foo")
+  const barDescriptor = Object.getOwnPropertyDescriptor(state, "bar")
+  const actual = {
+    fooDescriptor,
+    barDescriptor,
+  }
+  const expected = {
+    fooDescriptor: {
+      value: true,
+      writable: true,
+      enumerable: true,
+      configurable: true,
+    },
+    barDescriptor: undefined,
+  }
+  assert({ actual, expected })
+}
+
+// Object.hasOwn
+{
+  const { state } = sigi({ foo: true })
+  const foo = Object.hasOwn(state, "foo")
+  const bar = Object.hasOwn(state, "bar")
+  const actual = { foo, bar }
+  const expected = { foo: true, bar: false }
+  assert({ actual, expected })
+}
+
 // Object.isExtensible
 {
   const extensible = sigi({})
@@ -65,4 +106,24 @@ import { sigi } from "@jsenv/sigi"
   const actual = Object.getPrototypeOf(state)
   const expected = null
   assert({ actual, expected })
+}
+
+// throw if initial state is not configurable
+{
+  const stateObject = {}
+  Object.defineProperty(stateObject, "foo", {
+    value: true,
+    configurable: false,
+    enumerable: true,
+  })
+  try {
+    sigi(stateObject)
+    throw new Error("should throw")
+  } catch (e) {
+    const actual = e
+    const expected = new Error(
+      `Cannot set "foo", property must be configurable`,
+    )
+    assert({ actual, expected })
+  }
 }
