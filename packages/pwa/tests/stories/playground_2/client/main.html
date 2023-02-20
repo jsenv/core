@@ -58,7 +58,7 @@
     <script type="module">
       import {
         pwaLogger,
-        serviceWorkerControllerSignal,
+        navigatorController,
         createServiceWorkerScript,
       } from "@jsenv/pwa"
 
@@ -87,9 +87,9 @@
       }
 
       const controllerSpan = document.querySelector("#controller")
-      serviceWorkerControllerSignal.effect((controller) => {
+      navigatorController.subscribe((controller) => {
         if (controller) {
-          controllerSpan.innerHTML = `${controller.scriptMeta.version}`
+          controllerSpan.innerHTML = `${controller.meta.version}`
         } else {
           controllerSpan.innerHTML = "no"
         }

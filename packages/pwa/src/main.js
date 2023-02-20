@@ -1,5 +1,5 @@
 export { pwaLogger } from "./pwa_logger.js"
-export { serviceWorkerControllerSignal } from "./service_worker_controller_signal.js"
+export { navigatorController } from "./navigator_controller.js"
 export { createServiceWorkerScript } from "./service_worker_script.js"
 export { addToHomescreen } from "./add_to_home_screen.js"
 export { displayModeStandalone } from "./display_mode_standalone.js"
