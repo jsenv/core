@@ -4,6 +4,7 @@ import { sigi } from "@jsenv/sigi"
 // state nested prop can be read
 {
   const { state } = sigi({
+    foo: true,
     nested: {
       name: "yes",
     },

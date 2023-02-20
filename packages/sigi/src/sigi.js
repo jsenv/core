@@ -149,7 +149,7 @@ const mutateValues = ({
         trace,
       })
       stateObject[propertyName] = toValue
-      return
+      continue
     }
     // from unset to primitive
     if (fromUnset && toPrimitive) {
@@ -157,7 +157,7 @@ const mutateValues = ({
         signal: signal(toValue),
       })
       stateObject[propertyName] = toValue
-      return
+      continue
     }
     // from object to object
     if (fromObject && toObject) {
@@ -168,7 +168,7 @@ const mutateValues = ({
         isExtensible: propertyMeta.isExtensible,
         trace,
       })
-      return
+      continue
     }
     // from object to primitive
     if (fromObject && toPrimitive) {
@@ -176,7 +176,7 @@ const mutateValues = ({
         signal: signal(toValue),
       })
       stateObject[propertyName] = toValue
-      return
+      continue
     }
     // from primitive to object
     if (fromPrimitive && toObject) {
@@ -196,7 +196,7 @@ const mutateValues = ({
         trace,
       })
       stateObject[propertyName] = toValue
-      return
+      continue
     }
     // from primitive to primitive
     propertyMeta.signal.value = toValue
