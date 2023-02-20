@@ -1,8 +1,6 @@
 /*
  * https://github.com/preactjs/signals/blob/main/packages/core/src/index.ts
- * TODO:
- * - respecter preventExtensions (et aussi pas besoin de le repréciser dans mutate, le state initial
- * sert de modele)
+ * TOOD: "fix" array being objects
  */
 
 import { signal, effect, batch } from "@preact/signals"
@@ -30,11 +28,12 @@ export const sigi = (rootStateObject) => {
     rootStateObject,
     rootPropertiesMetaMap,
   )
+  const isExtensible = Object.isExtensible(rootStateObject)
   mutateValues({
     toValues: rootStateObject,
     propertiesMetaMap: rootPropertiesMetaMap,
     stateObject: rootStateObject,
-    initial: true,
+    isExtensible: true,
   })
 
   const subscribe = (callback) => {
@@ -49,6 +48,7 @@ export const sigi = (rootStateObject) => {
         toValues,
         propertiesMetaMap: rootPropertiesMetaMap,
         stateObject: rootStateObject,
+        isExtensible,
       })
     })
   }
@@ -64,7 +64,7 @@ const mutateValues = ({
   toValues,
   propertiesMetaMap,
   stateObject,
-  initial,
+  isExtensible,
   trace,
 }) => {
   const propertyNames = Object.getOwnPropertyNames(toValues)
@@ -125,20 +125,27 @@ const mutateValues = ({
         }
       }
     }
+    if (fromUnset && !isExtensible) {
+      throw new Error(
+        `Cannot add property "${propertyName}", state is not extensible`,
+      )
+    }
 
     // from unset to object
     if (fromUnset && toObject) {
       const childPropertiesMetaMap = new Map()
       const childProxy = createStateProxy(toValue, childPropertiesMetaMap)
+      const childIsExtensible = Object.isExtensible(toValue)
       propertiesMetaMap.set(propertyName, {
         proxy: childProxy,
         propertiesMetaMap: childPropertiesMetaMap,
+        isExtensible: childIsExtensible,
       })
       mutateValues({
         toValues: toValue,
         propertiesMetaMap: childPropertiesMetaMap,
         stateObject: toValue,
-        initial,
+        isExtensible: true,
         trace,
       })
       stateObject[propertyName] = toValue
@@ -158,7 +165,7 @@ const mutateValues = ({
         toValues: toValue,
         propertiesMetaMap: propertyMeta.propertiesMetaMap,
         stateObject: stateObject[propertyName],
-        initial,
+        isExtensible: propertyMeta.isExtensible,
         trace,
       })
       return
@@ -175,15 +182,17 @@ const mutateValues = ({
     if (fromPrimitive && toObject) {
       const childPropertiesMetaMap = new Map()
       const childProxy = createStateProxy(childPropertiesMetaMap)
+      const childIsExtensible = Object.isExtensible(toValue)
       propertiesMetaMap.set(propertyName, {
         proxy: childProxy,
         propertiesMetaMap: childPropertiesMetaMap,
+        isExtensible: childIsExtensible,
       })
       mutateValues({
         toValues: toValue,
         propertiesMetaMap: childPropertiesMetaMap,
         stateObject: toValue,
-        initial,
+        isExtensible: true,
         trace,
       })
       stateObject[propertyName] = toValue
@@ -198,6 +207,7 @@ const mutateValues = ({
 const PLACEHOLDER = Symbol.for("signal_placeholder")
 
 const createStateProxy = (stateObject, propertiesMetaMap) => {
+  const isExtensible = Object.isExtensible(stateObject)
   const stateProxy = new Proxy(stateObject, {
     // has is not required, we can use the original state
     // has: (_, key) => {},
@@ -231,6 +241,14 @@ const createStateProxy = (stateObject, propertiesMetaMap) => {
     get: (_, key) => {
       let propertyMeta = propertiesMetaMap.get(key)
       if (!propertyMeta) {
+        if (!isExtensible) {
+          if (isDev) {
+            console.warn(
+              `no property named "${key}" exists on state and state is not extensible`,
+            )
+          }
+          return undefined
+        }
         const propertySignal = signal(PLACEHOLDER)
         propertyMeta = {
           signal: propertySignal,
@@ -271,5 +289,5 @@ const createStateProxy = (stateObject, propertiesMetaMap) => {
 }
 
 const isObject = (value) => {
-  return value !== null && typeof value === "object"
+  return value !== null && typeof value === "object" && !Array.isArray(value)
 }

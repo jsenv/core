@@ -29,20 +29,45 @@ import { sigi } from "@jsenv/sigi"
   }
 }
 
+// warning when on get property that does not exists + state is not extensible
+{
+  const { state } = sigi(Object.preventExtensions({ foo: true }))
+  const consoleWarnings = []
+  const { warn } = console
+  console.warn = (warning) => {
+    consoleWarnings.push(warning)
+  }
+  try {
+    // eslint-disable-next-line no-unused-expressions
+    state.bar
+    const actual = consoleWarnings
+    const expected = [
+      `no property named "bar" exists on state and state is not extensible`,
+    ]
+    assert({ actual, expected })
+  } finally {
+    console.warn = warn
+  }
+}
+
 // preventExtensions is respected
-// {
-//   const { mutate } = sigi(Object.preventExtensions({ foo: true }))
-//   try {
-//     mutate({ bar: true })
-//     throw new Error("should throw")
-//   } catch (e) {
-//     const actual = e
-//     const expected = new TypeError(
-//       `Cannot define property bar, object is not extensible`,
-//     )
-//     assert({ actual, expected })
-//   }
-// }
+{
+  const { mutate } = sigi(
+    Object.preventExtensions({
+      nested: Object.preventExtensions({ foo: true }),
+    }),
+  )
+  try {
+    mutate({ nested: { foo: true, bar: true } })
+    throw new Error("should throw")
+  } catch (e) {
+    const actual = e
+    const expected = new Error(
+      `Cannot add property "bar", state is not extensible`,
+    )
+    assert({ actual, expected })
+  }
+}
 
 // in operator
 {

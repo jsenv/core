@@ -103,6 +103,24 @@ import { sigi } from "@jsenv/sigi"
   assert({ actual, expected })
 }
 
+// array are primitives
+// it means you cannot update one item of the array
+// the entire array is watched as a primitive (like a string/number/boolean,...)
+{
+  const { subscribe, mutate } = sigi({ users: ["a", "b"] })
+  const calls = []
+  subscribe(({ users }) => {
+    calls.push(users)
+  })
+  mutate({ users: ["a", "b", "c"] })
+  const actual = calls
+  const expected = [
+    ["a", "b"],
+    ["a", "b", "c"],
+  ]
+  assert({ actual, expected })
+}
+
 // reading non existent prop twice
 {
   const { state } = sigi({
