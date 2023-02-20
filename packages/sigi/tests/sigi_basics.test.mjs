@@ -1,7 +1,3 @@
-/*
-- s'assurer que le state passer a sigi est mis a jour par mutate()
-*/
-
 import { assert } from "@jsenv/assert"
 import { sigi } from "@jsenv/sigi"
 
@@ -165,4 +161,26 @@ import { sigi } from "@jsenv/sigi"
     )
     assert({ actual, expected })
   }
+}
+
+// original state kept in sync by mutate
+// -- TO KEEP IN MIND WHEN USING ORIGINAL STATE ---
+// Can be used to read state but not to write (use mutate for that)
+// Trying to write on original state would not call subscribers
+{
+  const originalState = { nested: { foo: true } }
+  const originalNested = originalState.nested
+  const { mutate } = sigi(originalState)
+  mutate({ nested: { foo: false } })
+  const nestedPreserved = originalNested === originalState.nested
+  const foo = originalState.nested.foo
+  const actual = {
+    nestedPreserved,
+    foo,
+  }
+  const expected = {
+    nestedPreserved: true,
+    foo: false,
+  }
+  assert({ actual, expected })
 }

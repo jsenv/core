@@ -3,8 +3,6 @@
  * TODO:
  * - respecter preventExtensions (et aussi pas besoin de le repréciser dans mutate, le state initial
  * sert de modele)
- * - mettre a jour rootStateObject histoire d'etre cohérent
- * (pourra aussi servir a lire le state sans subscribe)
  */
 
 import { signal, effect, batch } from "@preact/signals"
@@ -24,8 +22,8 @@ export const sigi = (rootStateObject) => {
 
   const rootPropertiesMetaMap = new Map()
   // stateProxy is the public way to interact with the state
-  // - it register dynamically callback dependencies thanks to a custon handler
-  //   called when a property is accessed
+  // - it register dependencies (of callbacks passed to subscribe) dynamically
+  //   thanks to a get handler
   // - it ensure state cannot be mutated from outside (throw when trying to set/define/delete
   //   a property
   const rootStateProxy = createStateProxy(
@@ -33,8 +31,9 @@ export const sigi = (rootStateObject) => {
     rootPropertiesMetaMap,
   )
   mutateValues({
-    propertiesMetaMap: rootPropertiesMetaMap,
     toValues: rootStateObject,
+    propertiesMetaMap: rootPropertiesMetaMap,
+    stateObject: rootStateObject,
     initial: true,
   })
 
@@ -47,8 +46,9 @@ export const sigi = (rootStateObject) => {
   const mutate = (toValues) => {
     batch(() => {
       mutateValues({
-        propertiesMetaMap: rootPropertiesMetaMap,
         toValues,
+        propertiesMetaMap: rootPropertiesMetaMap,
+        stateObject: rootStateObject,
       })
     })
   }
@@ -60,37 +60,43 @@ export const sigi = (rootStateObject) => {
   }
 }
 
-const mutateValues = ({ propertiesMetaMap, toValues, initial, trace }) => {
-  const keys = Object.keys(toValues)
+const mutateValues = ({
+  toValues,
+  propertiesMetaMap,
+  stateObject,
+  initial,
+  trace,
+}) => {
+  const propertyNames = Object.keys(toValues)
   let i = 0
-  const j = keys.length
+  const j = propertyNames.length
   while (i < j) {
-    const key = keys[i]
+    const propertyName = propertyNames[i]
     i++
     if (isDev) {
-      trace = trace ? [...trace, key] : [key]
+      trace = trace ? [...trace, propertyName] : [propertyName]
     }
-    const propertyToValue = toValues[key]
-    const propertyMeta = propertiesMetaMap.get(key)
+    const toValue = toValues[propertyName]
+    const propertyMeta = propertiesMetaMap.get(propertyName)
     const fromUnset = !propertyMeta
     const fromSet = Boolean(propertyMeta)
     const fromObject = fromSet && Boolean(propertyMeta.proxy)
     const fromPrimitive = fromSet && !fromObject
-    const toObject = isObject(propertyToValue)
+    const toObject = isObject(toValue)
     const toPrimitive = !toObject
 
     // warn when property type changes (dev only)
     if (fromSet && isDev) {
-      const propertyFromValue = propertyMeta.proxy
+      const fromValue = propertyMeta.proxy
         ? propertyMeta.proxy
         : propertyMeta.signal.peek()
       // it's ok for PLACEHOLDER to go from undefined to something else
-      if (propertyFromValue !== PLACEHOLDER) {
-        const propertyFromValueType = typeof propertyFromValue
-        const propertyToValueType = typeof propertyToValue
-        if (propertyFromValueType !== propertyToValueType) {
+      if (fromValue !== PLACEHOLDER) {
+        const fromValueType = typeof fromValue
+        const toValueType = typeof toValue
+        if (fromValueType !== toValueType) {
           console.warn(
-            `A value type will change from "${propertyFromValueType}" to "${propertyToValueType}" at state.${trace.join(
+            `A value type will change from "${fromValueType}" to "${toValueType}" at state.${trace.join(
               ".",
             )}`,
           )
@@ -101,34 +107,35 @@ const mutateValues = ({ propertiesMetaMap, toValues, initial, trace }) => {
     // from unset to object
     if (fromUnset && toObject) {
       const childPropertiesMetaMap = new Map()
-      const childProxy = createStateProxy(
-        propertyToValue,
-        childPropertiesMetaMap,
-      )
-      propertiesMetaMap.set(key, {
+      const childProxy = createStateProxy(toValue, childPropertiesMetaMap)
+      propertiesMetaMap.set(propertyName, {
         proxy: childProxy,
         propertiesMetaMap: childPropertiesMetaMap,
       })
       mutateValues({
+        toValues: toValue,
         propertiesMetaMap: childPropertiesMetaMap,
-        toValues: propertyToValue,
+        stateObject: toValue,
         initial,
         trace,
       })
+      stateObject[propertyName] = toValue
       return
     }
     // from unset to primitive
     if (fromUnset && toPrimitive) {
-      propertiesMetaMap.set(key, {
-        signal: signal(propertyToValue),
+      propertiesMetaMap.set(propertyName, {
+        signal: signal(toValue),
       })
+      stateObject[propertyName] = toValue
       return
     }
     // from object to object
     if (fromObject && toObject) {
       mutateValues({
+        toValues: toValue,
         propertiesMetaMap: propertyMeta.propertiesMetaMap,
-        toValues: propertyToValue,
+        stateObject: stateObject[propertyName],
         initial,
         trace,
       })
@@ -136,29 +143,33 @@ const mutateValues = ({ propertiesMetaMap, toValues, initial, trace }) => {
     }
     // from object to primitive
     if (fromObject && toPrimitive) {
-      propertiesMetaMap.set(key, {
-        signal: signal(propertyToValue),
+      propertiesMetaMap.set(propertyName, {
+        signal: signal(toValue),
       })
+      stateObject[propertyName] = toValue
       return
     }
     // from primitive to object
     if (fromPrimitive && toObject) {
       const childPropertiesMetaMap = new Map()
       const childProxy = createStateProxy(childPropertiesMetaMap)
-      propertiesMetaMap.set(key, {
+      propertiesMetaMap.set(propertyName, {
         proxy: childProxy,
         propertiesMetaMap: childPropertiesMetaMap,
       })
       mutateValues({
+        toValues: toValue,
         propertiesMetaMap: childPropertiesMetaMap,
-        toValues: propertyToValue,
+        stateObject: toValue,
         initial,
         trace,
       })
+      stateObject[propertyName] = toValue
       return
     }
     // from primitive to primitive
-    propertyMeta.signal.value = propertyToValue
+    propertyMeta.signal.value = toValue
+    stateObject[propertyName] = toValue
   }
 }
 
@@ -166,6 +177,8 @@ const PLACEHOLDER = Symbol.for("signal_placeholder")
 
 const createStateProxy = (stateObject, propertiesMetaMap) => {
   const stateProxy = new Proxy(stateObject, {
+    // has: (_, key) => {
+    // },
     getOwnPropertyDescriptor: (_, key) => {
       const propertyMeta = propertiesMetaMap.get(key)
       if (propertyMeta) {
