@@ -28,7 +28,10 @@ export const sigi = (rootStateObject) => {
   //   called when a property is accessed
   // - it ensure state cannot be mutated from outside (throw when trying to set/define/delete
   //   a property
-  const rootStateProxy = createStateProxy(rootPropertiesMetaMap)
+  const rootStateProxy = createStateProxy(
+    rootStateObject,
+    rootPropertiesMetaMap,
+  )
   mutateValues({
     propertiesMetaMap: rootPropertiesMetaMap,
     toValues: rootStateObject,
@@ -98,7 +101,10 @@ const mutateValues = ({ propertiesMetaMap, toValues, initial, trace }) => {
     // from unset to object
     if (fromUnset && toObject) {
       const childPropertiesMetaMap = new Map()
-      const childProxy = createStateProxy(childPropertiesMetaMap)
+      const childProxy = createStateProxy(
+        propertyToValue,
+        childPropertiesMetaMap,
+      )
       propertiesMetaMap.set(key, {
         proxy: childProxy,
         propertiesMetaMap: childPropertiesMetaMap,
@@ -158,9 +164,8 @@ const mutateValues = ({ propertiesMetaMap, toValues, initial, trace }) => {
 
 const PLACEHOLDER = Symbol.for("signal_placeholder")
 
-const createStateProxy = (propertiesMetaMap) => {
-  const target = {}
-  const stateProxy = new Proxy(target, {
+const createStateProxy = (stateObject, propertiesMetaMap) => {
+  const stateProxy = new Proxy(stateObject, {
     getOwnPropertyDescriptor: (_, key) => {
       const propertyMeta = propertiesMetaMap.get(key)
       if (propertyMeta) {
@@ -214,7 +219,6 @@ const createStateProxy = (propertiesMetaMap) => {
       )
     },
   })
-  Object.preventExtensions(stateProxy)
   return stateProxy
 }
 

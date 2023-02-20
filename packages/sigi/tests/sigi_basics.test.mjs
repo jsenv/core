@@ -1,5 +1,4 @@
 /*
-- accéder 2 fois a une prop en placeholder (undefined les 2 fois)
 - s'assurer que le state passer a sigi est mis a jour par mutate()
 */
 
@@ -105,6 +104,19 @@ import { sigi } from "@jsenv/sigi"
     callsAfterMutate: [undefined, "a"],
     callsAfterSecondMutate: [undefined, "a", "b"],
   }
+  assert({ actual, expected })
+}
+
+// reading non existent prop twice
+{
+  const { state } = sigi({
+    foo: true,
+  })
+  const values = []
+  values.push(state.value)
+  values.push(state.value)
+  const actual = values
+  const expected = [undefined, undefined]
   assert({ actual, expected })
 }
 

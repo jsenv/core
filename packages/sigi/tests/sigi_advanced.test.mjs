@@ -30,16 +30,39 @@ import { sigi } from "@jsenv/sigi"
 }
 
 // preventExtensions is respected
+// {
+//   const { mutate } = sigi(Object.preventExtensions({ foo: true }))
+//   try {
+//     mutate({ bar: true })
+//     throw new Error("should throw")
+//   } catch (e) {
+//     const actual = e
+//     const expected = new TypeError(
+//       `Cannot define property bar, object is not extensible`,
+//     )
+//     assert({ actual, expected })
+//   }
+// }
+
+// Object.isExtensible
 {
-  const { mutate } = sigi(Object.preventExtensions({ foo: true }))
-  try {
-    mutate({ bar: true })
-    throw new Error("should throw")
-  } catch (e) {
-    const actual = e
-    const expected = new TypeError(
-      `Cannot define property bar, object is not extensible`,
-    )
-    assert({ actual, expected })
+  const extensible = sigi({})
+  const nonExtensible = sigi(Object.preventExtensions({}))
+  const actual = {
+    extensible: Object.isExtensible(extensible.state),
+    nonExtensible: Object.isExtensible(nonExtensible.state),
   }
+  const expected = {
+    extensible: true,
+    nonExtensible: false,
+  }
+  assert({ actual, expected })
+}
+
+// Object.create(null)
+{
+  const { state } = sigi(Object.create(null))
+  const actual = Object.getPrototypeOf(state)
+  const expected = null
+  assert({ actual, expected })
 }
