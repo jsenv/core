@@ -26,11 +26,6 @@ import { createUpdateHotHandler } from "./internal/service_worker_hot_update.js"
 
 export const createServiceWorkerScript = ({
   onError = () => {},
-  onInstalling = () => {},
-  onInstalled = () => {},
-  onActivating = () => {},
-  onActivated = () => {},
-  onRedundant = () => {},
   hotUpdateHandlers = {},
   scope = "/",
 } = {}) => {
@@ -121,24 +116,24 @@ export const createServiceWorkerScript = ({
     const applyStateEffect = () => {
       console.log("got state", fromServiceWorker.state, fromScriptMeta)
       if (fromServiceWorker.state === "installing") {
-        onInstalling(fromScriptMeta)
+        mutate({ readyState: "installing", meta: fromScriptMeta })
         return
       }
       if (fromServiceWorker.state === "installed") {
-        onInstalled(fromScriptMeta)
+        mutate({ readyState: "installed", meta: fromScriptMeta })
         return
       }
       if (fromServiceWorker.state === "activating") {
-        onActivating(fromScriptMeta)
+        mutate({ readyState: "activating", meta: fromScriptMeta })
         return
       }
       if (fromServiceWorker.state === "activated") {
-        onActivated(fromScriptMeta)
+        mutate({ readyState: "activated", meta: fromScriptMeta })
         return
       }
       if (fromServiceWorker.state === "redundant") {
         fromServiceWorker.removeEventListener("statechange", applyStateEffect)
-        onRedundant(fromScriptMeta)
+        mutate({ readyState: "redundant", meta: fromScriptMeta })
       }
     }
     applyStateEffect()
