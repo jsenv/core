@@ -36,12 +36,7 @@ export const createServiceWorkerScript = ({
 } = {}) => {
   let fromInspectPromise = null
 
-  const {
-    // internalState,
-    externalState,
-    subscribe,
-    mutate,
-  } = sigi({
+  const { state, subscribe, mutate } = sigi({
     readyState: "", // installing, installed, activating, activated
     meta: {},
     update: {
@@ -159,7 +154,7 @@ export const createServiceWorkerScript = ({
   init()
 
   return {
-    state: externalState,
+    state,
     subscribe,
     setRegistationPromise: async (registrationPromise) => {
       try {
