@@ -1,10 +1,6 @@
 /*
-a faire:
-- renommer un peu tout pour clarifier de quoi on parle
-(object vs property)
+- accéder 2 fois a une prop en placeholder (undefined les 2 fois)
 - s'assurer que le state passer a sigi est mis a jour par mutate()
-to test:
-- try to set, define, delete property on state (it must throw)
 */
 
 import { assert } from "@jsenv/assert"
@@ -110,4 +106,51 @@ import { sigi } from "@jsenv/sigi"
     callsAfterSecondMutate: [undefined, "a", "b"],
   }
   assert({ actual, expected })
+}
+
+// throw if attempt to set prop
+{
+  const { state } = sigi({ foo: true })
+  try {
+    state.foo = false
+    throw new Error("should throw")
+  } catch (e) {
+    const actual = e
+    const expected = new Error(
+      `Invalid attempt to set "foo", cannot mutate state from outside`,
+    )
+    assert({ actual, expected })
+  }
+}
+
+// throw if attempt to delete prop
+{
+  const { state } = sigi({ foo: true })
+  try {
+    delete state.foo
+    throw new Error("should throw")
+  } catch (e) {
+    const actual = e
+    const expected = new Error(
+      `Invalid attempt to delete "foo", cannot mutate state from outside`,
+    )
+    assert({ actual, expected })
+  }
+}
+
+// throw if attempt to define prop
+{
+  const { state } = sigi({ foo: true })
+  try {
+    Object.defineProperty(state, "foo", {
+      value: false,
+    })
+    throw new Error("should throw")
+  } catch (e) {
+    const actual = e
+    const expected = new Error(
+      `Invalid attempt to define "foo", cannot mutate state from outside`,
+    )
+    assert({ actual, expected })
+  }
 }

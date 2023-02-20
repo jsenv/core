@@ -1,3 +1,11 @@
+/*
+ * - prevent extensions
+ * - ne pas mettre de placeholder lorsque preventExtensions se produit
+ * - tester qu'on a pas besoin de repréciser preventExtension a mutate
+ *   de sorte que le state initial sers de modele et mutate ne peut
+ *   pas rerender le state extensible
+ */
+
 import { assert } from "@jsenv/assert"
 import { sigi } from "@jsenv/sigi"
 
