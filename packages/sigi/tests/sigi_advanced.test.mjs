@@ -9,26 +9,6 @@
 import { assert } from "@jsenv/assert"
 import { sigi } from "@jsenv/sigi"
 
-// warning when mutate changes the type
-{
-  const consoleWarnings = []
-  const { warn } = console
-  console.warn = (warning) => {
-    consoleWarnings.push(warning)
-  }
-  try {
-    const { mutate } = sigi({ isLogged: true })
-    mutate({ isLogged: 1 })
-    const actual = consoleWarnings
-    const expected = [
-      `A value type will change from "boolean" to "number" at state.isLogged`,
-    ]
-    assert({ actual, expected })
-  } finally {
-    console.warn = warn
-  }
-}
-
 // warning when on get property that does not exists + state is not extensible
 {
   const { state } = sigi(Object.preventExtensions({ foo: true }))
@@ -150,5 +130,25 @@ import { sigi } from "@jsenv/sigi"
       `Cannot set "foo", property must be configurable`,
     )
     assert({ actual, expected })
+  }
+}
+
+// warning when mutate changes the type
+{
+  const consoleWarnings = []
+  const { warn } = console
+  console.warn = (warning) => {
+    consoleWarnings.push(warning)
+  }
+  try {
+    const { mutate } = sigi({ isLogged: true }, { strict: true })
+    mutate({ isLogged: 1 })
+    const actual = consoleWarnings
+    const expected = [
+      `A value type will change from "boolean" to "number" at state.isLogged`,
+    ]
+    assert({ actual, expected })
+  } finally {
+    console.warn = warn
   }
 }

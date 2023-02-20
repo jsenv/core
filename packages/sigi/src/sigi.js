@@ -11,7 +11,7 @@ const isDev =
   (typeof process === "object" &&
     process.execArgv.includes("--conditions=development"))
 
-export const sigi = (rootStateObject) => {
+export const sigi = (rootStateObject, { strict = false } = {}) => {
   if (!isObject(rootStateObject)) {
     throw new Error(
       `sigi first argument must be an object, got ${rootStateObject}`,
@@ -34,6 +34,7 @@ export const sigi = (rootStateObject) => {
     propertiesMetaMap: rootPropertiesMetaMap,
     stateObject: rootStateObject,
     isExtensible: true,
+    strict: false,
   })
 
   const subscribe = (callback) => {
@@ -49,6 +50,7 @@ export const sigi = (rootStateObject) => {
         propertiesMetaMap: rootPropertiesMetaMap,
         stateObject: rootStateObject,
         isExtensible,
+        strict,
       })
     })
   }
@@ -65,6 +67,7 @@ const mutateValues = ({
   propertiesMetaMap,
   stateObject,
   isExtensible,
+  strict,
   trace,
 }) => {
   const propertyNames = Object.getOwnPropertyNames(toValues)
@@ -98,31 +101,33 @@ const mutateValues = ({
     if (isDev) {
       trace = trace ? [...trace, propertyName] : [propertyName]
     }
-    const toValue = propertyDescriptor.value
-    const propertyMeta = propertiesMetaMap.get(propertyName)
-    const fromUnset = !propertyMeta
-    const fromSet = Boolean(propertyMeta)
-    const fromObject = fromSet && Boolean(propertyMeta.proxy)
+
+    const existingPropertyMeta = propertiesMetaMap.get(propertyName)
+    const fromUnset = !existingPropertyMeta
+    const fromSet = Boolean(existingPropertyMeta)
+    const fromValue = fromSet ? existingPropertyMeta.signal.peek() : undefined
+    const fromObject = fromSet && existingPropertyMeta.type === "object"
     const fromPrimitive = fromSet && !fromObject
+    const toValue = propertyDescriptor.value
     const toObject = isObject(toValue)
     const toPrimitive = !toObject
 
     // warn when property type changes (dev only)
-    if (fromSet && isDev) {
-      const fromValue = propertyMeta.proxy
-        ? propertyMeta.proxy
-        : propertyMeta.signal.peek()
+    if (
+      fromSet &&
+      isDev &&
+      strict &&
       // it's ok for PLACEHOLDER to go from undefined to something else
-      if (fromValue !== PLACEHOLDER) {
-        const fromValueType = typeof fromValue
-        const toValueType = typeof toValue
-        if (fromValueType !== toValueType) {
-          console.warn(
-            `A value type will change from "${fromValueType}" to "${toValueType}" at state.${trace.join(
-              ".",
-            )}`,
-          )
-        }
+      fromValue !== PLACEHOLDER
+    ) {
+      const fromValueType = fromValue === null ? "null" : typeof fromValue
+      const toValueType = toValue === null ? "null" : typeof toValue
+      if (fromValueType !== toValueType) {
+        console.warn(
+          `A value type will change from "${fromValueType}" to "${toValueType}" at state.${trace.join(
+            ".",
+          )}`,
+        )
       }
     }
     if (fromUnset && !isExtensible) {
@@ -136,16 +141,19 @@ const mutateValues = ({
       const childPropertiesMetaMap = new Map()
       const childProxy = createStateProxy(toValue, childPropertiesMetaMap)
       const childIsExtensible = Object.isExtensible(toValue)
-      propertiesMetaMap.set(propertyName, {
-        proxy: childProxy,
+      const propertyMeta = {
+        type: "object",
+        signal: signal(childProxy),
         propertiesMetaMap: childPropertiesMetaMap,
         isExtensible: childIsExtensible,
-      })
+      }
+      propertiesMetaMap.set(propertyName, propertyMeta)
       mutateValues({
         toValues: toValue,
         propertiesMetaMap: childPropertiesMetaMap,
         stateObject: toValue,
         isExtensible: true,
+        strict,
         trace,
       })
       stateObject[propertyName] = toValue
@@ -153,9 +161,13 @@ const mutateValues = ({
     }
     // from unset to primitive
     if (fromUnset && toPrimitive) {
-      propertiesMetaMap.set(propertyName, {
+      const propertyMeta = {
+        type: "primitive",
         signal: signal(toValue),
-      })
+        propertiesMetaMap: null,
+        isExtensible: null,
+      }
+      propertiesMetaMap.set(propertyName, propertyMeta)
       stateObject[propertyName] = toValue
       continue
     }
@@ -163,43 +175,45 @@ const mutateValues = ({
     if (fromObject && toObject) {
       mutateValues({
         toValues: toValue,
-        propertiesMetaMap: propertyMeta.propertiesMetaMap,
+        propertiesMetaMap: existingPropertyMeta.propertiesMetaMap,
         stateObject: stateObject[propertyName],
-        isExtensible: propertyMeta.isExtensible,
+        isExtensible: existingPropertyMeta.isExtensible,
+        strict,
         trace,
       })
       continue
     }
     // from object to primitive
     if (fromObject && toPrimitive) {
-      propertiesMetaMap.set(propertyName, {
-        signal: signal(toValue),
-      })
+      existingPropertyMeta.type = "primitive"
+      existingPropertyMeta.signal.value = toValue
+      existingPropertyMeta.propertiesMetaMap = null
+      existingPropertyMeta.isExtensible = null
       stateObject[propertyName] = toValue
       continue
     }
     // from primitive to object
     if (fromPrimitive && toObject) {
       const childPropertiesMetaMap = new Map()
-      const childProxy = createStateProxy(childPropertiesMetaMap)
+      const childProxy = createStateProxy(toValue, childPropertiesMetaMap)
       const childIsExtensible = Object.isExtensible(toValue)
-      propertiesMetaMap.set(propertyName, {
-        proxy: childProxy,
-        propertiesMetaMap: childPropertiesMetaMap,
-        isExtensible: childIsExtensible,
-      })
+      existingPropertyMeta.type = "object"
+      existingPropertyMeta.signal.value = childProxy
+      existingPropertyMeta.propertiesMetaMap = childPropertiesMetaMap
+      existingPropertyMeta.isExtensible = childIsExtensible
       mutateValues({
         toValues: toValue,
         propertiesMetaMap: childPropertiesMetaMap,
         stateObject: toValue,
         isExtensible: true,
+        strict,
         trace,
       })
       stateObject[propertyName] = toValue
       continue
     }
     // from primitive to primitive
-    propertyMeta.signal.value = toValue
+    existingPropertyMeta.signal.value = toValue
     stateObject[propertyName] = toValue
   }
 }

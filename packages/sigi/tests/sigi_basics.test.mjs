@@ -14,6 +14,60 @@ import { sigi } from "@jsenv/sigi"
   assert({ actual, expected })
 }
 
+// from primitive to object
+{
+  const { mutate, subscribe } = sigi({
+    foo: null,
+  })
+  const calls = []
+  subscribe(({ foo }) => {
+    if (foo) {
+      calls.push(foo.version)
+    } else {
+      calls.push(foo)
+    }
+  })
+  const callsBeforeMutate = calls.slice()
+  mutate({ foo: { version: 1 } })
+  const callsAfterMutate = calls.slice()
+  const actual = {
+    callsBeforeMutate,
+    callsAfterMutate,
+  }
+  const expected = {
+    callsBeforeMutate: [null],
+    callsAfterMutate: [null, 1],
+  }
+  assert({ actual, expected })
+}
+
+// from object to primitive
+{
+  const { mutate, subscribe } = sigi({
+    foo: { version: 1 },
+  })
+  const calls = []
+  subscribe(({ foo }) => {
+    if (foo) {
+      calls.push(foo.version)
+    } else {
+      calls.push(foo)
+    }
+  })
+  const callsBeforeMutate = calls.slice()
+  mutate({ foo: null })
+  const callsAfterMutate = calls.slice()
+  const actual = {
+    callsBeforeMutate,
+    callsAfterMutate,
+  }
+  const expected = {
+    callsBeforeMutate: [1],
+    callsAfterMutate: [1, null],
+  }
+  assert({ actual, expected })
+}
+
 // can subscribe to top level changes
 {
   const { mutate, subscribe } = sigi({ age: 10 })
