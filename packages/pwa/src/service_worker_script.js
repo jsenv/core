@@ -25,16 +25,17 @@ import {
 import { createUpdateHotHandler } from "./internal/service_worker_hot_update.js"
 
 export const createServiceWorkerScript = ({
-  onError = () => {},
   hotUpdateHandlers = {},
   scope = "/",
 } = {}) => {
   let fromInspectPromise = null
 
   const { state, subscribe, mutate } = sigi({
-    readyState: "", // installing, installed, activating, activated
+    error: null,
+    readyState: "", // registering, installing, installed, activating, activated
     meta: {},
     update: {
+      error: null,
       readyState: "", // installing, installed, activating, activated
       meta: {},
       reloadRequired: true,
@@ -66,34 +67,48 @@ export const createServiceWorkerScript = ({
     })
 
     const applyUpdateStateEffects = async () => {
-      if (toServiceWorker.state === "installing") {
-        mutate({
-          update: { readyState: "installing" },
-        })
-        return
+      const effects = {
+        installing: () => {
+          mutate({
+            update: { readyState: "installing" },
+          })
+        },
+        installed: () => {
+          mutate({
+            update: { readyState: "installed" },
+          })
+        },
+        activating: () => {
+          mutate({
+            update: { readyState: "activating" },
+          })
+        },
+        activated: async () => {
+          mutate({
+            update: { readyState: "activated" },
+          })
+          await ensureIsControllingNavigator(toServiceWorker)
+          if (updateHotHandler) {
+            pwaLogger.info("apply update without reloading")
+            await updateHotHandler()
+          } else {
+            pwaLogger.info("reloading browser")
+            // the other tabs should reload
+            // how can we achieve this???
+            reloadPage()
+          }
+        },
+        redundant: () => {
+          toServiceWorker.removeEventListener(
+            "statechange",
+            applyUpdateStateEffects,
+          )
+          mutate({
+            update: { readyState: "redundant" },
+          })
+        },
       }
-      if (toServiceWorker.state === "installed") {
-        mutate({
-          update: { readyState: "installed" },
-        })
-        return
-      }
-      if (toServiceWorker.state === "activated") {
-        toServiceWorker.removeEventListener(
-          "statechange",
-          applyUpdateStateEffects,
-        )
-        await ensureIsControllingNavigator(toServiceWorker)
-        if (updateHotHandler) {
-          pwaLogger.info("apply update without reloading")
-          await updateHotHandler()
-        } else {
-          pwaLogger.info("reloading browser")
-          // the other tabs should reload
-          // how can we achieve this???
-          reloadPage()
-        }
-      }
+      await effects[toServiceWorker.state]()
     }
     applyUpdateStateEffects()
     toServiceWorker.addEventListener("statechange", applyUpdateStateEffects)
@@ -113,31 +128,39 @@ export const createServiceWorkerScript = ({
     fromInspectPromise = inspectServiceWorker(fromServiceWorker)
     const fromScriptMeta = await fromInspectPromise
 
-    const applyStateEffect = () => {
+    const applyStateChangeEffect = () => {
       console.log("got state", fromServiceWorker.state, fromScriptMeta)
-      if (fromServiceWorker.state === "installing") {
-        mutate({ readyState: "installing", meta: fromScriptMeta })
-        return
+      const effects = {
+        installing: () => {
+          mutate({ readyState: "installing", meta: fromScriptMeta })
+        },
+        installed: () => {
+          mutate({ readyState: "installed", meta: fromScriptMeta })
+        },
+        activating: () => {
+          mutate({ readyState: "activating", meta: fromScriptMeta })
+        },
+        activated: () => {
+          mutate({ readyState: "activated", meta: fromScriptMeta })
+        },
+        redundant: () => {
+          fromServiceWorker.removeEventListener(
+            "statechange",
+            applyStateChangeEffect,
+          )
+          fromServiceWorker.removeEventListener("error", onError)
+          mutate({ readyState: "redundant", meta: fromScriptMeta })
+        },
       }
-      if (fromServiceWorker.state === "installed") {
-        mutate({ readyState: "installed", meta: fromScriptMeta })
-        return
-      }
-      if (fromServiceWorker.state === "activating") {
-        mutate({ readyState: "activating", meta: fromScriptMeta })
-        return
-      }
-      if (fromServiceWorker.state === "activated") {
-        mutate({ readyState: "activated", meta: fromScriptMeta })
-        return
-      }
-      if (fromServiceWorker.state === "redundant") {
-        fromServiceWorker.removeEventListener("statechange", applyStateEffect)
-        mutate({ readyState: "redundant", meta: fromScriptMeta })
-      }
+      effects[fromServiceWorker.state]()
     }
-    applyStateEffect()
-    fromServiceWorker.addEventListener("statechange", applyStateEffect)
+    const onError = (errorEvent) => {
+      debugger
+      mutate({ error: errorEvent })
+    }
+    applyStateChangeEffect()
+    fromServiceWorker.addEventListener("error", onError)
+    fromServiceWorker.addEventListener("statechange", applyStateChangeEffect)
   }
 
   const init = async () => {
@@ -153,10 +176,11 @@ export const createServiceWorkerScript = ({
     subscribe,
     setRegistationPromise: async (registrationPromise) => {
       try {
+        mutate({ error: null, readyState: "registering" })
         const registration = await registrationPromise
         watchRegistration(registration)
       } catch (e) {
-        onError(e)
+        mutate({ error: e })
       }
     },
     checkForUpdates: async () => {
@@ -174,7 +198,6 @@ export const createServiceWorkerScript = ({
           "no update found on registration.installing and registration.waiting",
         )
         pwaLogger.groupEnd()
-
         return false
       }
       pwaLogger.debug("service worker found on registration")

@@ -14,35 +14,84 @@
       </fieldset>
     </div>
     <div id="service_worker_ui">
-      <fieldset>
-        <legend>Service worker script</legend>
-        <div>
-          <button id="resolve_install" disabled>Resolve install promise</button>
-          <button id="reject_install" disabled>Reject install promise</button>
-        </div>
-        <div>
-          <button id="resolve_activate" disabled>
-            Resolve activate promise
-          </button>
-          <button id="reject_activate" disabled>Reject activate promise</button>
-        </div>
+      <fieldset name="controller">
+        <legend>Navigator controller</legend>
 
-        <button id="register" disabled>register sw.js</button>
-        <button id="unregister" disabled>unregister</button>
-        <br />
-        <br />
-        <button id="update_check_button" disabled>Check for updates</button>
-        <div id="update_downloading_message" style="display: none">
-          Downloading update...
-        </div>
-        <button id="update_by_restart_button" disabled>
-          Restart to update
+        <span id="controller"></span>
+      </fieldset>
+      <fieldset name="registration">
+        <legend>Service worker script registration</legend>
+
+        <button id="register" disabled>
+          <span>register sw.js</span>
         </button>
-        <button id="update_now_button" disabled>Apply update</button>
+        <button id="unregister" disabled>
+          <span>unregister</span>
+        </button>
+        <br />
+        <br />
+        <div id="installing" style="display: none">
+          <span>installing...</span>
+          <button id="resolve_install" disabled>
+            <span>Resolve install promise</span>
+          </button>
+          <button id="reject_install" disabled>
+            <span>Reject install promise</span>
+          </button>
+        </div>
+        <div id="installed" style="display: none">
+          <span>installed</span>
+        </div>
+        <div id="activating" style="display: none">
+          <span>activating....</span>
+          <button id="resolve_activate" disabled>
+            <span>Resolve activate promise</span>
+          </button>
+          <button id="reject_activate" disabled>
+            <span>Reject activate promise</span>
+          </button>
+        </div>
+        <div id="activated" style="display: none">
+          <span>activated</span>
+        </div>
+      </fieldset>
+      <fieldset name="update">
+        <legend>Service worker script update</legend>
 
+        <button id="update_check_button" disabled>Check for updates</button>
         <br />
         <br />
-        Navigator controller: <span id="controller"></span>
+
+        <div id="update_installing" style="display: none">
+          <span>update installing...</span>
+          <button id="update_resolve_install" disabled>
+            <span>Resolve install promise</span>
+          </button>
+          <button id="update_reject_install" disabled>
+            <span>Reject install promise</span>
+          </button>
+        </div>
+        <div id="update_installed" style="display: none">
+          <span>update installed</span>
+          <button id="update_by_restart_button" disabled>
+            <span>Restart to update</span>
+          </button>
+          <button id="update_now_button" disabled>
+            <span>Apply update</span>
+          </button>
+        </div>
+        <div id="update_activating" style="display: none">
+          <span>update activating....</span>
+          <button id="update_resolve_activate" disabled>
+            <span>Resolve activate promise</span>
+          </button>
+          <button id="update_reject_activate" disabled>
+            <span>Reject activate promise</span>
+          </button>
+        </div>
+        <div id="update_activated" style="display: none">
+          <span>activated</span>
+        </div>
       </fieldset>
     </div>
     <div id="trigger_file_changes">
@@ -103,23 +152,78 @@
           },
         },
       })
-      const registerButton = document.querySelector("#register")
-      registerButton.disabled = false
 
-      const updateDownloadingMessage = document.querySelector(
-        "#update_downloading_message",
-      )
-      topLevelSwScript.subscribe(({ update }) => {
-        if (update.readyState === "installing") {
-          updateDownloadingMessage.style.display = "block"
-          updateDownloadingMessage.innerHTML = `Downloading update ${update.meta.version} ...`
-        } else {
-          updateDownloadingMessage.style.display = "none"
+      registration: {
+        const registerButton = document.querySelector("#register")
+        registerButton.disabled = false
+        registerButton.onclick = async () => {
+          registerButton.disabled = true
+          try {
+            const registrationPromise =
+              window.navigator.serviceWorker.register("./sw.js")
+            topLevelSwScript.setRegistationPromise(registrationPromise)
+            await registrationPromise
+          } finally {
+            registerButton.disabled = false
+          }
         }
-      })
 
-      // install instrumentation
-      {
+        // in practice there will be no such UI, it's only for dev 99% of the time
+        const unregisterButton = document.querySelector("#unregister")
+        unregisterButton.disabled = false
+        unregisterButton.onclick = async () => {
+          unregisterButton.disabled = true
+          try {
+            await topLevelSwScript.unregister()
+          } finally {
+            unregisterButton.disabled = false
+          }
+        }
+
+        // toggle ui based on readyState
+        const installingUI = document.querySelector("#installing")
+        topLevelSwScript.subscribe(({ readyState, meta }) => {
+          console.log("readyState", readyState)
+          installingUI.style.display =
+            readyState === "installing" ? "block" : "none"
+          if (readyState === "installing") {
+            installingUI.querySelector(
+              "span",
+            ).innerHTML = `installing ${meta.version}...`
+          }
+        })
+        const installedUI = document.querySelector("#installed")
+        topLevelSwScript.subscribe(({ readyState, meta }) => {
+          installedUI.style.display =
+            readyState === "installed" ? "block" : "none"
+          if (readyState === "installed") {
+            installedUI.querySelector(
+              "span",
+            ).innerHTML = `${meta.version} installed`
+          }
+        })
+        const activating = document.querySelector("#activating")
+        topLevelSwScript.subscribe(({ readyState, meta }) => {
+          activating.style.display =
+            readyState === "activating" ? "block" : "none"
+          if (readyState === "activating") {
+            activating.querySelector(
+              "span",
+            ).innerHTML = `activating ${meta.version}...`
+          }
+        })
+        const activated = document.querySelector("#activated")
+        topLevelSwScript.subscribe(({ readyState, meta }) => {
+          activated.style.display =
+            readyState === "activated" ? "block" : "none"
+          if (readyState === "activated") {
+            activated.querySelector(
+              "span",
+            ).innerHTML = `${meta.version} activated`
+          }
+        })
+
+        // install instrumentation
         const installResolveButton = document.querySelector("#resolve_install")
         installResolveButton.onclick = () => {
           topLevelSwScript.postMessage({ action: "resolve_install" })
@@ -133,10 +237,8 @@
           installResolveButton.disabled = !installInstrumentation
           installRejectButton.disabled = !installInstrumentation
         })
-      }
 
-      // activate instrumentation
-      {
+        // activate instrumentation
         const activateResolveButton =
           document.querySelector("#resolve_activate")
         activateResolveButton.onclick = () => {
@@ -153,27 +255,8 @@
         })
       }
 
-      registerButton.onclick = async () => {
-        registerButton.disabled = true
-        try {
-          const registrationPromise =
-            window.navigator.serviceWorker.register("./sw.js")
-          topLevelSwScript.setRegistationPromise(registrationPromise)
-          await registrationPromise
-        } finally {
-          registerButton.disabled = false
-        }
-      }
-      // in practice there will be no such UI, it's only for dev 99% of the time
-      const unregisterButton = document.querySelector("#unregister")
-      unregisterButton.disabled = false
-      unregisterButton.onclick = async () => {
-        unregisterButton.disabled = true
-        try {
-          await topLevelSwScript.unregister()
-        } finally {
-          unregisterButton.disabled = false
-        }
+      update: {
+        // TODO
       }
 
       const buildDogButton = document.querySelector("#build_dog")

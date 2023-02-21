@@ -31,7 +31,7 @@ const cacheName = (() => {
   return `${cachePrefix}_${timestamp}${random}`
 })()
 
-let logLevel = "warn"
+let logLevel = "debug"
 let logBackgroundColor = "grey"
 let logColor = "white"
 const logger = {
@@ -238,53 +238,16 @@ const deleteOldCaches = async () => {
 }
 
 self.addEventListener("fetch", async (fetchEvent) => {
-  fetchEvent.respondWith(handleFetchEvent(fetchEvent))
+  const request = fetchEvent.request
+  if (request.mode !== "navigate") {
+    fetchEvent.respondWith(handleFetchEvent(fetchEvent))
+  }
 })
 const handleFetchEvent = async (fetchEvent) => {
-  const initialRequest = fetchEvent.request
-  let request
-
-  if (initialRequest.mode === "navigate") {
-    const requestClone = initialRequest.clone()
-    const {
-      method,
-      body,
-      credentials,
-      headers,
-      integrity,
-      referrer,
-      referrerPolicy,
-    } = requestClone
-    if (method === "GET" || method === "HEAD") {
-      request = new Request(initialRequest.url, {
-        credentials,
-        headers,
-        integrity,
-        referrer,
-        referrerPolicy,
-        mode: "same-origin",
-        redirect: "manual",
-      })
-    } else {
-      const bodyPromise = body ? Promise.resolve(body) : requestClone.blob()
-      const bodyValue = await bodyPromise
-      request = new Request(initialRequest.url, {
-        body: bodyValue,
-        credentials,
-        headers,
-        integrity,
-        referrer,
-        referrerPolicy,
-        mode: "same-origin",
-        redirect: "manual",
-      })
-    }
-  } else {
-    request = initialRequest
-  }
-
+  const request = fetchEvent.request
   try {
-    const responseFromCache = await self.caches.match(request)
+    const cache = await self.caches.open(cacheName)
+    const responseFromCache = await cache.match(request)
     if (responseFromCache) {
       logger.debug(`from cache -> "${asUrlRelativeToDocument(request.url)}"`)
       return responseFromCache
@@ -305,3 +268,39 @@ const handleFetchEvent = async (fetchEvent) => {
 const asUrlRelativeToDocument = (url) => {
   return url.slice(self.location.origin.length)
 }
+
+// const cloneNavRequest = async (request) => {
+//   const requestClone = request.clone()
+//   const {
+//     method,
+//     body,
+//     credentials,
+//     headers,
+//     integrity,
+//     referrer,
+//     referrerPolicy,
+//   } = requestClone
+//   if (method === "GET" || method === "HEAD") {
+//     return new Request(request.url, {
+//       credentials,
+//       headers,
+//       integrity,
+//       referrer,
+//       referrerPolicy,
+//       mode: "same-origin",
+//       redirect: "manual",
+//     })
+//   }
+//   const bodyPromise = body ? Promise.resolve(body) : requestClone.blob()
+//   const bodyValue = await bodyPromise
+//   return new Request(request.url, {
+//     body: bodyValue,
+//     credentials,
+//     headers,
+//     integrity,
+//     referrer,
+//     referrerPolicy,
+//     mode: "same-origin",
+//     redirect: "manual",
+//   })
+// }
