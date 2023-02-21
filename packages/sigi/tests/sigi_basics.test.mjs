@@ -176,6 +176,26 @@ import { sigi } from "@jsenv/sigi"
   assert({ actual, expected })
 }
 
+// "complex objects" are primitive
+{
+  class User {
+    constructor(name) {
+      this.name = name
+    }
+  }
+  const userA = new User("a")
+  const userB = new User("b")
+  const { subscribe, mutate } = sigi({ user: userA })
+  const calls = []
+  subscribe(({ user }) => {
+    calls.push(user)
+  })
+  mutate({ user: userB })
+  const actual = calls
+  const expected = [userA, userB]
+  assert({ actual, expected })
+}
+
 // reading non existent prop twice
 {
   const { state } = sigi({

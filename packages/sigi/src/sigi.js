@@ -14,7 +14,7 @@ const isDev =
 export const sigi = (rootStateObject, { strict = false } = {}) => {
   if (!isObject(rootStateObject)) {
     throw new Error(
-      `sigi first argument must be an object, got ${rootStateObject}`,
+      `sigi first argument must be a basic object, got ${rootStateObject}`,
     )
   }
 
@@ -302,6 +302,32 @@ const createStateProxy = (stateObject, propertiesMetaMap) => {
   return stateProxy
 }
 
+const getPreciseType = (value) => {
+  if (value === null) {
+    return "null"
+  }
+  if (value === undefined) {
+    return "undefined"
+  }
+  const type = typeof value
+  if (type === "object") {
+    const toStringResult = toString.call(value)
+    // returns format is '[object ${tagName}]';
+    // and we want ${tagName}
+    const tagName = toStringResult.slice("[object ".length, -1)
+    if (tagName === "Object") {
+      const objectConstructorName = value.constructor.name
+      if (objectConstructorName === "Object") {
+        return "object"
+      }
+      return objectConstructorName
+    }
+    return tagName
+  }
+  return type
+}
+const { toString } = Object.prototype
+
 const isObject = (value) => {
-  return value !== null && typeof value === "object" && !Array.isArray(value)
+  return getPreciseType(value) === "object"
 }
