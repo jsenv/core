@@ -1,30 +1,19 @@
-import { sigi } from "@jsenv/sigi"
+import { sigref } from "@jsenv/sigi"
 
 import { serviceWorkerAPI } from "./internal/service_worker_api.js"
 import { inspectServiceWorker } from "./internal/service_worker_communication.js"
 
-const controllerSigi = sigi({
-  current: null,
-})
+const [controllerRef, controllerSetter] = sigref(null)
 
 const applyControllerEffect = async () => {
   const { controller } = serviceWorkerAPI
   if (controller) {
     const meta = await inspectServiceWorker(serviceWorkerAPI.controller)
-    controllerSigi.mutate({ current: { meta } })
+    controllerSetter({ meta })
   } else {
-    controllerSigi.mutate({ current: null })
+    controllerSetter(null)
   }
 }
 applyControllerEffect()
 serviceWorkerAPI.addEventListener("controllerchange", applyControllerEffect)
-export const navigatorController = {
-  get current() {
-    return controllerSigi.state.current
-  },
-  subscribe: (callback) => {
-    return controllerSigi.subscribe(() => {
-      callback(controllerSigi.state.current)
-    })
-  },
-}
+export const navigatorController = controllerRef
