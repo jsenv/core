@@ -138,7 +138,7 @@ self.addEventListener("message", ({ data }) => {
     _resolveInstallPromise(data.value)
   }
   if (data.action === "reject_install") {
-    _rejectInstallPromise(data.value)
+    _rejectInstallPromise(data.value || new Error("not specified"))
   }
 })
 self.addEventListener("install", (installEvent) => {
@@ -228,7 +228,9 @@ self.addEventListener("message", ({ data }) => {
     _resolveActivatePromise(data.value)
   }
   if (data.action === "reject_activate") {
-    _rejectActivatePromise(data.value)
+    _rejectActivatePromise(
+      data.value || new Error("rejection reason not specified"),
+    )
   }
 })
 self.addEventListener("activate", (activateEvent) => {

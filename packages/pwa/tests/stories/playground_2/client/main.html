@@ -101,6 +101,9 @@
         <div id="update_activated" style="display: none">
           <span>activated</span>
         </div>
+        <div id="update_redundant" style="display: none">
+          <span>redundant</span>
+        </div>
       </fieldset>
     </div>
     <div id="trigger_file_changes">
@@ -380,6 +383,17 @@
             udpateActivated.querySelector(
               "span",
             ).innerHTML = `${update.meta.version} activated`
+          }
+        })
+
+        const udpateRedundant = document.querySelector("#update_redundant")
+        topLevelSw.subscribe(({ update }) => {
+          udpateRedundant.style.display =
+            update.readyState === "redundant" ? "block" : "none"
+          if (update.readyState === "redundant") {
+            udpateRedundant.querySelector(
+              "span",
+            ).innerHTML = `${update.meta.version} redundant`
           }
         })
       }

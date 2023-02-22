@@ -122,16 +122,18 @@ export const createServiceWorkerInterface = ({
   }
 
   const watchRegistration = async (registration) => {
-    // setTimeout because of https://github.com/w3c/ServiceWorker/issues/515
-    setTimeout(() => {
-      registration.onupdatefound = () => {
-        onUpdateFound(registration.installing)
-      }
-    })
     const { installing, waiting, active } = registration
     const fromServiceWorker = installing || waiting || active
+    registration.onupdatefound = () => {
+      // https://github.com/w3c/ServiceWorker/issues/515
+      // and listening onupdatefound after a setTimeout is not enough
+      // as firefox will trigger "updatefound" when the worker is activating as well
+      if (registration.installing === fromServiceWorker) {
+        return
+      }
+      onUpdateFound(registration.installing)
+    }
     serviceWorkerAPI.startMessages() // is it useful?
-
     fromInspectPromise = inspectServiceWorker(fromServiceWorker)
     const fromScriptMeta = await fromInspectPromise
 
