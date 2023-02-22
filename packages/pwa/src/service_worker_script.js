@@ -27,6 +27,7 @@ import { createUpdateHotHandler } from "./internal/service_worker_hot_update.js"
 export const createServiceWorkerScript = ({
   hotUpdateHandlers = {},
   scope = "/",
+  autoclaimOnFirstActivation = false,
 } = {}) => {
   let fromInspectPromise = null
 
@@ -92,11 +93,12 @@ export const createServiceWorkerScript = ({
             update: { readyState: "activated" },
           })
           await ensureIsControllingNavigator(toServiceWorker)
+          pwaLogger.info("update is controlling navigator")
           if (updateHotHandler) {
             pwaLogger.info("apply update without reloading")
             await updateHotHandler()
           } else {
-            pwaLogger.info("reloading browser")
+            pwaLogger.info("reloading page")
             // the other tabs should reload
             // how can we achieve this???
             reloadPage()
@@ -138,7 +140,6 @@ export const createServiceWorkerScript = ({
     }
     fromServiceWorker.addEventListener("error", onError)
     const applyStateChangeEffect = () => {
-      console.log("got state", fromServiceWorker.state, fromScriptMeta)
       const effects = {
         installing: () => {
           mutate({ readyState: "installing", meta: fromScriptMeta })
@@ -151,6 +152,9 @@ export const createServiceWorkerScript = ({
         },
         activated: () => {
           mutate({ readyState: "activated", meta: fromScriptMeta })
+          if (autoclaimOnFirstActivation && !serviceWorkerAPI.controller) {
+            requestClaimOnServiceWorker(fromServiceWorker)
+          }
         },
         redundant: () => {
           fromServiceWorker.removeEventListener(
@@ -241,9 +245,7 @@ export const createServiceWorkerScript = ({
         return
       }
       if (serviceWorker.state === "installing") {
-        pwaLogger.info(
-          "a service worker is installing, wait for it to be installed",
-        )
+        pwaLogger.info("an update is installing, wait for it to be installed")
         await new Promise((resolve) => {
           serviceWorker.onstatechange = () => {
             if (serviceWorker.state === "installed") {
@@ -253,7 +255,7 @@ export const createServiceWorkerScript = ({
           }
         })
       } else {
-        pwaLogger.info("a service worker is waiting to activate")
+        pwaLogger.info("an update is waiting to activate")
       }
       const activatedPromise = new Promise((resolve) => {
         serviceWorker.onstatechange = () => {

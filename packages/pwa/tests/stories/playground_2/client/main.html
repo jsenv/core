@@ -9,7 +9,10 @@
   <body>
     <div id="animal_ui">
       <fieldset>
-        <legend>Animal image <button id="refresh">refresh</button></legend>
+        <legend>
+          <span>Animal image</span>
+          <!-- <button id="refresh">refresh</button> -->
+        </legend>
         <img style="display: block" height="200" src="./animal.svg?v=dog" />
       </fieldset>
     </div>
@@ -119,24 +122,16 @@
       })
 
       const img = document.querySelector("img")
-      const refreshImg = async () => {
-        img.src = ""
-        const response = await window.fetch("./animal.svg?v=dog")
-        const blob = await response.blob()
-        const objectUrl = URL.createObjectURL(blob)
-        await new Promise((resolve) => setTimeout(resolve, 150))
-        img.src = objectUrl
-      }
 
-      const refreshButton = document.querySelector("#refresh")
-      refreshButton.onclick = async () => {
-        refreshButton.disabled = true
-        try {
-          await refreshImg()
-        } finally {
-          refreshButton.disabled = false
-        }
-      }
+      // const refreshButton = document.querySelector("#refresh")
+      // refreshButton.onclick = async () => {
+      //   refreshButton.disabled = true
+      //   try {
+      //     await refreshImg()
+      //   } finally {
+      //     refreshButton.disabled = false
+      //   }
+      // }
 
       const controllerSpan = document.querySelector("#controller")
       navigatorController.subscribe((controller) => {
@@ -148,9 +143,17 @@
       })
 
       const topLevelSwScript = createServiceWorkerScript({
+        autoclaimOnFirstActivation: true,
         hotUpdateHandlers: {
           "animal.svg": {
-            replace: refreshImg,
+            replace: async ({ toUrl }) => {
+              img.src = ""
+              const response = await window.fetch(toUrl)
+              const blob = await response.blob()
+              const objectUrl = URL.createObjectURL(blob)
+              await new Promise((resolve) => setTimeout(resolve, 150))
+              img.src = objectUrl
+            },
             prune: () => URL.revokeObjectURL(img.src),
           },
         },

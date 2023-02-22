@@ -16,26 +16,35 @@ export const createUpdateHotHandler = ({
   const toResources = toScriptMeta.resources
 
   const getOneUpdateHotHandler = ({
+    url,
     fromUrl,
     toUrl,
-    fromUrlMeta,
-    toUrlMeta,
+    fromVersion,
+    toVersion,
   }) => {
-    const url = fromUrl || toUrl
     let handler = hotUpdateHandlers[url]
     if (!handler) {
       return null
     }
     if (typeof handler === "function") {
-      return handler({ fromUrl, toUrl, fromUrlMeta, toUrlMeta })
+      return handler({ fromUrl, toUrl, fromVersion, toVersion })
     }
-    if (!toUrlMeta) {
-      return handler.remove || null
+    if (!toUrl) {
+      if (handler.remove) {
+        return () => handler.remove({ fromUrl, toUrl, fromVersion, toVersion })
+      }
+      return null
     }
-    if (!fromUrlMeta) {
-      return handler.add || null
+    if (!fromUrl) {
+      if (handler.add) {
+        return () => handler.add({ fromUrl, toUrl, fromVersion, toVersion })
+      }
+      return null
     }
-    return handler.replace || null
+    if (handler.replace) {
+      return () => handler.replace({ fromUrl, toUrl, fromVersion, toVersion })
+    }
+    return null
   }
 
   const fromUrls = Object.keys(fromResources)
@@ -46,10 +55,11 @@ export const createUpdateHotHandler = ({
     // remove
     if (!toUrlMeta) {
       const updateHandler = getOneUpdateHotHandler({
-        fromUrl,
-        fromUrlMeta,
+        url: fromUrl,
+        fromUrl: fromUrlMeta.versionedUrl || fromUrl,
         toUrl: null,
-        toUrlMeta: null,
+        fromVersion: fromUrlMeta.version || null,
+        toVersion: null,
       })
       if (!updateHandler) {
         return null
@@ -64,10 +74,11 @@ export const createUpdateHotHandler = ({
     // replace
     if (toUrlMeta.version !== fromUrlMeta.version) {
       const updateHandler = getOneUpdateHotHandler({
-        fromUrl,
-        fromUrlMeta,
-        toUrl: fromUrl,
-        toUrlMeta,
+        url: fromUrl,
+        fromUrl: fromUrlMeta.versionedUrl || fromUrl,
+        toUrl: toUrlMeta.versionedUrl || fromUrl,
+        fromVersion: fromUrlMeta.version || null,
+        toVersion: toUrlMeta.version || null,
       })
       if (!updateHandler) {
         return null
@@ -86,10 +97,11 @@ export const createUpdateHotHandler = ({
     }
     const toUrlMeta = toResources[toUrl]
     const updateHandler = getOneUpdateHotHandler({
+      url: toUrl,
       fromUrl: null,
-      fromUrlMeta: null,
-      toUrl,
-      toUrlMeta,
+      toUrl: toUrlMeta.versionedUrl || toUrl,
+      fromVersion: null,
+      toVersion: toUrlMeta.version || null,
     })
     if (!updateHandler) {
       return null

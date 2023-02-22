@@ -67,10 +67,14 @@ const logger = {
   },
   debugGroupCollapsed: (...args) => {
     if (logLevel === "debug") {
-      console.group(...injectLogStyles(args))
+      console.groupCollapsed(...injectLogStyles(args))
     }
   },
-
+  infoGroupCollapsed: (...args) => {
+    if (logLevel === "debug" || logLevel === "info") {
+      console.groupCollapsed(...injectLogStyles(args))
+    }
+  },
   groupEnd: () => console.groupEnd(),
 }
 
@@ -138,13 +142,18 @@ self.addEventListener("message", ({ data }) => {
   }
 })
 self.addEventListener("install", (installEvent) => {
+  logger.infoGroupCollapsed(`install (${self.version}/${cacheName})`)
   const promiseToWait = Promise.all([
     ...(installInstrumentation ? [installPromise] : []),
     handleInstallEvent(installEvent),
   ])
   installEvent.waitUntil(promiseToWait)
+  promiseToWait.then(() => {
+    logger.groupEnd()
+  })
 })
 const handleInstallEvent = async () => {
+  logger.info(`open cache`)
   const cache = await self.caches.open(cacheName)
   for (const url of Object.keys(self.resources)) {
     const resource = self.resources[url]
@@ -157,14 +166,12 @@ const handleInstallEvent = async () => {
         new Request(urlToFetch, { cache: "reload" })
     const response = await fetch(request)
     if (response.status === 200) {
-      logger.debug(
-        `put "${asUrlRelativeToDocument(request.url)}" in cache during install`,
-      )
+      logger.info(`put "${asUrlRelativeToDocument(request.url)}" into cache`)
       const responseToCache = await asResponseToPutInCache(response)
       await cache.put(request, responseToCache)
     } else {
       logger.warn(
-        `cannot put ${request.url} in cache due to response status (${response.status})`,
+        `cannot put ${request.url} into cache due to response status (${response.status})`,
       )
     }
   }
@@ -216,19 +223,23 @@ self.addEventListener("message", ({ data }) => {
   }
 })
 self.addEventListener("activate", (activateEvent) => {
+  logger.infoGroupCollapsed(`activate (${self.version}/${cacheName})`)
   const promiseToWait = Promise.all([
     ...(claimPromise ? [claimPromise] : []),
     ...(activateInstrumentation ? [activatePromise] : []),
     deleteOldCaches(),
   ])
   activateEvent.waitUntil(promiseToWait)
+  promiseToWait.then(() => {
+    logger.groupEnd()
+  })
 })
 const deleteOldCaches = async () => {
   const cacheKeys = await self.caches.keys()
   await Promise.all(
     cacheKeys.map(async (cacheKey) => {
       if (cacheKey !== cacheName && cacheKey.startsWith(`${cachePrefix}_`)) {
-        logger.info(`delete cache ${cacheKey}`)
+        logger.info(`delete old cache "${cacheKey}"`)
         await self.caches.delete(cacheKey)
       }
     }),
@@ -236,30 +247,63 @@ const deleteOldCaches = async () => {
 }
 
 self.addEventListener("fetch", async (fetchEvent) => {
-  const request = fetchEvent.request
-  if (request.mode !== "navigate") {
-    fetchEvent.respondWith(handleFetchEvent(fetchEvent))
-  }
+  fetchEvent.respondWith(handleFetchEvent(fetchEvent))
 })
 const handleFetchEvent = async (fetchEvent) => {
   const request = fetchEvent.request
+  const relativeUrl = asUrlRelativeToDocument(request.url)
+  logger.infoGroupCollapsed(
+    `fetch ${relativeUrl} (${self.version}/${cacheName})`,
+  )
+
+  if (request.mode === "navigate") {
+    const preloadResponsePromise = fetchEvent.preloadResponse
+    if (preloadResponsePromise) {
+      logger.info(
+        "preloadResponse available on navigation request, try to use it",
+      )
+      const preloadResponse = await getPreloadResponse(preloadResponsePromise)
+      if (preloadResponse) {
+        logger.info(`-> use preloaded response`)
+        logger.groupEnd()
+        return preloadResponse
+      }
+      logger.info("cannot use preloadResponse")
+    }
+  }
+
   try {
+    const request = fetchEvent.request
+    logger.info(`open ${cacheName} cache`)
     const cache = await self.caches.open(cacheName)
+    logger.info(`search response matching this request in cache`)
     const responseFromCache = await cache.match(request)
     if (responseFromCache) {
-      logger.debug(`from cache -> "${asUrlRelativeToDocument(request.url)}"`)
+      logger.info(`found -> use cache`)
+      logger.groupEnd()
       return responseFromCache
     }
-    logger.debug(`from network -> "${asUrlRelativeToDocument(request.url)}"`)
+    logger.info(`not found -> delegate to navigator`)
+    logger.groupEnd()
     return self.fetch(request)
-  } catch (error) {
-    logger.warn(
-      `error while trying to use ${cacheName} cache on "${asUrlRelativeToDocument(
-        request.url,
-      )}"`,
-      error.stack,
-    )
+  } catch (e) {
+    logger.warn(`error while trying to use cache`, e.stack)
+    logger.warn("delegate to navigator")
+    logger.groupEnd()
     return self.fetch(request)
+  }
+}
+
+const getPreloadResponse = async (preloadResponse) => {
+  // see https://github.com/GoogleChrome/workbox/issues/3134
+  try {
+    const response = await preloadResponse
+    if (response && response.type === "error") {
+      return null
+    }
+    return response
+  } catch (e) {
+    return null
   }
 }
 
