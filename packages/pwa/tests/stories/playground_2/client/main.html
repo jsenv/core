@@ -33,6 +33,9 @@
         </button>
         <br />
         <br />
+        <div id="error" style="display: none">
+          <span>error</span>
+        </div>
         <div id="installing" style="display: none">
           <span>installing...</span>
           <button id="resolve_install" disabled>
@@ -187,6 +190,11 @@
         }
 
         // toggle ui based on readyState
+        const errorUI = document.querySelector("#error")
+        topLevelSw.subscribe(({ error }) => {
+          errorUI.style.display = error ? "block" : "none"
+          errorUI.innerHTML = error ? error.stack : ""
+        })
         const installingUI = document.querySelector("#installing")
         topLevelSw.subscribe(({ readyState, meta }) => {
           installingUI.style.display =
