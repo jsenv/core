@@ -206,6 +206,15 @@ self.addEventListener("message", async ({ data }) => {
     claimPromise = self.clients.claim()
   }
 })
+self.addEventListener("message", async ({ data }) => {
+  // https://github.com/GoogleChrome/workbox/issues/1120
+  if (data.action === "reload_clients") {
+    const matchingClients = await self.clients.matchAll()
+    matchingClients.forEach((matchingClient) => {
+      matchingClient.postMessage("reload_page")
+    })
+  }
+})
 
 let activateInstrumentation = true
 let _resolveActivatePromise
@@ -259,7 +268,7 @@ const handleFetchEvent = async (fetchEvent) => {
   if (request.mode === "navigate") {
     const preloadResponsePromise = fetchEvent.preloadResponse
     if (preloadResponsePromise) {
-      logger.info(
+      logger.debug(
         "preloadResponse available on navigation request, try to use it",
       )
       const preloadResponse = await getPreloadResponse(preloadResponsePromise)
@@ -268,15 +277,15 @@ const handleFetchEvent = async (fetchEvent) => {
         logger.groupEnd()
         return preloadResponse
       }
-      logger.info("cannot use preloadResponse")
+      logger.debug("cannot use preloadResponse")
     }
   }
 
   try {
     const request = fetchEvent.request
-    logger.info(`open ${cacheName} cache`)
+    logger.debug(`open ${cacheName} cache`)
     const cache = await self.caches.open(cacheName)
-    logger.info(`search response matching this request in cache`)
+    logger.debug(`search response matching this request in cache`)
     const responseFromCache = await cache.match(request)
     if (responseFromCache) {
       logger.info(`found -> use cache`)

@@ -3,8 +3,15 @@
  *
  *
  * TODO:
- * - en priorité: avoir des erreurs dans tous les cas un par un
- * pour voir ce qu'on voudrait dans l'api
+ * - navigateur doit reload + 2 onglets
+ * - tester le cas du hot reload + 2 onglets
+ * - a tester (on build 2 fois et chaque fois on peut hot reload)
+ *   - register until becomes controller
+ *   - build a new version
+ *   - apply update with hot reload
+ *   - build a new version
+ *   - apply update with hot reload
+ * - ensuite les cas d'erreur:
  *   - top level error first register
  *   - error during install event
  *   - error during activate event
@@ -99,8 +106,9 @@ export const createServiceWorkerScript = ({
             await updateHotHandler()
           } else {
             pwaLogger.info("reloading page")
-            // the other tabs should reload
-            // how can we achieve this???
+            postMessageToServiceWorker(toServiceWorker, {
+              action: "reload_clients",
+            })
             reloadPage()
           }
         },
@@ -329,6 +337,13 @@ const ensureIsControllingNavigator = (serviceWorker) => {
   requestClaimOnServiceWorker(serviceWorker)
   return becomesControllerPromise
 }
+
+// https://github.com/GoogleChrome/workbox/issues/1120
+serviceWorkerAPI.addEventListener("message", (event) => {
+  if (event.data === "reload_page") {
+    reloadPage()
+  }
+})
 
 let reloading = false
 const reloadPage = () => {

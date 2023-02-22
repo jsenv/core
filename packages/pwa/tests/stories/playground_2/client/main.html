@@ -145,17 +145,17 @@
       const topLevelSwScript = createServiceWorkerScript({
         autoclaimOnFirstActivation: true,
         hotUpdateHandlers: {
-          "animal.svg": {
-            replace: async ({ toUrl }) => {
-              img.src = ""
-              const response = await window.fetch(toUrl)
-              const blob = await response.blob()
-              const objectUrl = URL.createObjectURL(blob)
-              await new Promise((resolve) => setTimeout(resolve, 150))
-              img.src = objectUrl
-            },
-            prune: () => URL.revokeObjectURL(img.src),
-          },
+          // "animal.svg": {
+          //   replace: async ({ toUrl }) => {
+          //     img.src = ""
+          //     const response = await window.fetch(toUrl)
+          //     const blob = await response.blob()
+          //     const objectUrl = URL.createObjectURL(blob)
+          //     await new Promise((resolve) => setTimeout(resolve, 150))
+          //     img.src = objectUrl
+          //   },
+          //   prune: () => URL.revokeObjectURL(img.src),
+          // },
         },
       })
 
