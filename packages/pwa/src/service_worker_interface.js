@@ -139,7 +139,7 @@ export const createServiceWorkerInterface = ({
     })
     const { installing, waiting, active } = registration
     const fromServiceWorker = installing || waiting || active
-    serviceWorkerAPI.startMessages()
+    serviceWorkerAPI.startMessages() // is it useful?
 
     fromInspectPromise = inspectServiceWorker(fromServiceWorker)
     const fromScriptMeta = await fromInspectPromise
@@ -188,6 +188,16 @@ export const createServiceWorkerInterface = ({
   }
   init()
 
+  serviceWorkerAPI.addEventListener("controllerchange", async () => {
+    const controller = serviceWorkerAPI.controller
+    // happens when an other tab register the service worker and
+    // make it control the navigator (when autoclaimOnFirstActivation is true)
+    if (controller && state.readyState === "") {
+      const registration = await serviceWorkerAPI.getRegistration()
+      watchRegistration(registration)
+    }
+  })
+
   return {
     state,
     subscribe,
@@ -218,10 +228,10 @@ export const createServiceWorkerInterface = ({
       return false
     },
     checkForUpdates: async () => {
-      pwaLogger.debugGroupCollapsed("checkForUpdates()")
+      pwaLogger.infoGroupCollapsed("checkForUpdates()")
       const registration = await serviceWorkerAPI.getRegistration(scope)
       if (!registration) {
-        pwaLogger.debug("no registration found")
+        pwaLogger.info("no registration found")
         pwaLogger.groupEnd()
         return false
       }
@@ -229,13 +239,13 @@ export const createServiceWorkerInterface = ({
       // on devrait try/catch update? (si l'update contient une erreur top level?)
       const updateRegistration = await registration.update()
       if (!updateRegistration.installing && !updateRegistration.waiting) {
-        pwaLogger.debug(
+        pwaLogger.info(
           "no update found on registration.installing and registration.waiting",
         )
         pwaLogger.groupEnd()
         return false
       }
-      pwaLogger.debug("service worker found on registration")
+      pwaLogger.info("service worker found on registration")
       pwaLogger.groupEnd()
       return true
     },
