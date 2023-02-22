@@ -329,14 +329,11 @@
           updateInstalledUI.style.display =
             update.readyState === "installed" ? "block" : "none"
           if (update.readyState === "installed") {
-            updateByRestartButton.disabled = update.reloadRequired
-            updateNowButton.disabled = !update.reloadRequired
+            updateByRestartButton.disabled = !update.reloadRequired
+            updateNowButton.disabled = update.reloadRequired
             updateInstalledUI.querySelector(
               "span",
             ).innerHTML = `${update.meta.version} installed`
-          } else {
-            updateByRestartButton.disabled = true
-            updateNowButton.disabled = true
           }
         })
 

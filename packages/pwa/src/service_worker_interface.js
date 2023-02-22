@@ -1,16 +1,7 @@
 /*
  * https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerRegistration
  *
- *
  * TODO:
- * - navigateur doit reload + 2 onglets
- * - tester le cas du hot reload + 2 onglets
- * - a tester (on build 2 fois et chaque fois on peut hot reload)
- *   - register until becomes controller
- *   - build a new version
- *   - apply update with hot reload
- *   - build a new version
- *   - apply update with hot reload
  * - ensuite les cas d'erreur:
  *   - top level error first register
  *   - error during install event
