@@ -54,6 +54,9 @@
         <div id="activated" style="display: none">
           <span>activated</span>
         </div>
+        <div id="redundant" style="display: none">
+          <span>redundant</span>
+        </div>
       </fieldset>
       <fieldset name="update">
         <legend>Service worker script update</legend>
@@ -183,7 +186,6 @@
         // toggle ui based on readyState
         const installingUI = document.querySelector("#installing")
         topLevelSwScript.subscribe(({ readyState, meta }) => {
-          console.log("readyState", readyState)
           installingUI.style.display =
             readyState === "installing" ? "block" : "none"
           if (readyState === "installing") {
@@ -222,6 +224,16 @@
             ).innerHTML = `${meta.version} activated`
           }
         })
+        const redundant = document.querySelector("#redundant")
+        topLevelSwScript.subscribe(({ readyState, meta }) => {
+          redundant.style.display =
+            readyState === "redundant" ? "block" : "none"
+          if (readyState === "redundant") {
+            redundant.querySelector(
+              "span",
+            ).innerHTML = `${meta.version} redundant`
+          }
+        })
 
         // install instrumentation
         const installResolveButton = document.querySelector("#resolve_install")
@@ -256,63 +268,128 @@
       }
 
       update: {
-        // TODO
-      }
-
-      const buildDogButton = document.querySelector("#build_dog")
-      buildDogButton.onclick = () => {
-        fetch("/update_animal_to_dog")
-      }
-      const buildHorseButton = document.querySelector("#build_horse")
-      buildHorseButton.onclick = () => {
-        fetch("/update_animal_to_horse")
-      }
-      const buildCatButton = document.querySelector("#build_cat")
-      buildCatButton.onclick = () => {
-        fetch("/update_animal_to_cat")
-      }
-
-      const updateCheckButton = document.querySelector("#update_check_button")
-      updateCheckButton.disabled = false
-      updateCheckButton.onclick = async () => {
-        updateCheckButton.disabled = true
-        try {
-          const update = await topLevelSwScript.checkForUpdates()
-          if (!update) {
-            // eslint-disable-next-line no-alert
-            window.alert("there is no update available")
+        const updateCheckButton = document.querySelector("#update_check_button")
+        updateCheckButton.disabled = false
+        updateCheckButton.onclick = async () => {
+          updateCheckButton.disabled = true
+          try {
+            const update = await topLevelSwScript.checkForUpdates()
+            if (!update) {
+              // eslint-disable-next-line no-alert
+              window.alert("there is no update available")
+            }
+          } finally {
+            updateCheckButton.disabled = false
           }
-        } finally {
-          updateCheckButton.disabled = false
         }
+
+        const updateInstallingUI = document.querySelector("#update_installing")
+        const updateResolveInstallButton = document.querySelector(
+          "#update_resolve_install",
+        )
+        const updateRejectInstallButton = document.querySelector(
+          "#update_reject_install",
+        )
+        updateResolveInstallButton.onclick = () => {
+          topLevelSwScript.postMessage({ action: "resolve_install" })
+        }
+        updateRejectInstallButton.onclick = () => {
+          topLevelSwScript.postMessage({ action: "reject_install" })
+        }
+        topLevelSwScript.subscribe(({ update }) => {
+          updateInstallingUI.style.display =
+            update.readyState === "installing" ? "block" : "none"
+          if (update.readyState === "installing") {
+            updateInstallingUI.querySelector(
+              "span",
+            ).innerHTML = `${update.meta.version} is installing...`
+            updateResolveInstallButton.disabled =
+              !update.meta.installInstrumentation
+            updateRejectInstallButton.disabled =
+              !update.meta.installInstrumentation
+          }
+        })
+
+        const updateInstalledUI = document.querySelector("#update_installed")
+        const updateByRestartButton = document.querySelector(
+          "#update_by_restart_button",
+        )
+        updateByRestartButton.onclick = async () => {
+          updateByRestartButton.disabled = true
+          await topLevelSwScript.activateUpdate()
+        }
+        const updateNowButton = document.querySelector("#update_now_button")
+        updateNowButton.onclick = async () => {
+          await topLevelSwScript.activateUpdate()
+        }
+        topLevelSwScript.subscribe(({ update }) => {
+          updateInstalledUI.style.display =
+            update.readyState === "installed" ? "block" : "none"
+          if (update.readyState === "installed") {
+            updateByRestartButton.disabled = update.reloadRequired
+            updateNowButton.disabled = !update.reloadRequired
+            updateInstalledUI.querySelector(
+              "span",
+            ).innerHTML = `${update.meta.version} installed`
+          } else {
+            updateByRestartButton.disabled = true
+            updateNowButton.disabled = true
+          }
+        })
+
+        const updateActivating = document.querySelector("#update_activating")
+        const updateResolveActivateButton = document.querySelector(
+          "#update_resolve_activate",
+        )
+        const updateRejectActivateButton = document.querySelector(
+          "#update_reject_activate",
+        )
+        updateResolveActivateButton.onclick = () => {
+          topLevelSwScript.postMessage({ action: "resolve_activate" })
+        }
+        updateRejectActivateButton.onclick = () => {
+          topLevelSwScript.postMessage({ action: "reject_activate" })
+        }
+        topLevelSwScript.subscribe(({ update }) => {
+          updateActivating.style.display =
+            update.readyState === "activating" ? "block" : "none"
+          if (update.readyState === "activating") {
+            updateActivating.querySelector(
+              "span",
+            ).innerHTML = `activating ${update.meta.version}...`
+            updateResolveActivateButton.disabled =
+              !update.meta.activateInstrumentation
+            updateRejectActivateButton.disabled =
+              !update.meta.activateInstrumentation
+          }
+        })
+
+        const udpateActivated = document.querySelector("#update_activated")
+        topLevelSwScript.subscribe(({ update }) => {
+          udpateActivated.style.display =
+            update.readyState === "activated" ? "block" : "none"
+          if (update.readyState === "activated") {
+            udpateActivated.querySelector(
+              "span",
+            ).innerHTML = `${update.meta.version} activated`
+          }
+        })
       }
 
-      const updateByRestartButton = document.querySelector(
-        "#update_by_restart_button",
-      )
-      updateByRestartButton.onclick = async () => {
-        updateByRestartButton.disabled = true
-        // idéalement update le message du boutton pendant qu'il est
-        // désactivé pour dire ce qu'il se passe (activating, ...)
-        await topLevelSwScript.activateUpdate()
-      }
-      const updateNowButton = document.querySelector("#update_now_button")
-      updateNowButton.onclick = async () => {
-        updateNowButton.disabled = true
-        // idéalement update le message du bouton pendant que apply se produit
-        await topLevelSwScript.activateUpdate()
-      }
-      topLevelSwScript.subscribe(({ update }) => {
-        if (update.readyState === "installed") {
-          updateByRestartButton.innerHTML = `Restart to update to ${update.meta.version}`
-          updateByRestartButton.disabled = update.reloadRequired
-          updateNowButton.innerHTML = `Apply update ${update.meta.version}`
-          updateNowButton.disabled = !update.reloadRequired
-        } else {
-          updateByRestartButton.disabled = true
-          updateNowButton.disabled = true
+      build: {
+        const buildDogButton = document.querySelector("#build_dog")
+        buildDogButton.onclick = () => {
+          fetch("/update_animal_to_dog")
         }
-      })
+        const buildHorseButton = document.querySelector("#build_horse")
+        buildHorseButton.onclick = () => {
+          fetch("/update_animal_to_horse")
+        }
+        const buildCatButton = document.querySelector("#build_cat")
+        buildCatButton.onclick = () => {
+          fetch("/update_animal_to_cat")
+        }
+      }
     </script>
   </body>
 </html>

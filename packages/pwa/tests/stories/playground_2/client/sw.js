@@ -132,7 +132,6 @@ const installPromise = new Promise((resolve, reject) => {
 self.addEventListener("message", ({ data }) => {
   if (data.action === "resolve_install") {
     _resolveInstallPromise(data.value)
-    self.skipWaiting()
   }
   if (data.action === "reject_install") {
     _rejectInstallPromise(data.value)
@@ -211,7 +210,6 @@ const activatePromise = new Promise((resolve, reject) => {
 self.addEventListener("message", ({ data }) => {
   if (data.action === "resolve_activate") {
     _resolveActivatePromise(data.value)
-    self.skipWaiting()
   }
   if (data.action === "reject_activate") {
     _rejectActivatePromise(data.value)

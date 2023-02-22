@@ -66,6 +66,10 @@ export const createServiceWorkerScript = ({
       },
     })
 
+    const onUpdateError = (errorEvent) => {
+      mutate({ error: errorEvent })
+    }
+    toServiceWorker.addEventListener("error", onUpdateError)
     const applyUpdateStateEffects = async () => {
       const effects = {
         installing: () => {
@@ -99,6 +103,7 @@ export const createServiceWorkerScript = ({
           }
         },
         redundant: () => {
+          toServiceWorker.removeEventListener("error", onUpdateError)
           toServiceWorker.removeEventListener(
             "statechange",
             applyUpdateStateEffects,
@@ -128,6 +133,10 @@ export const createServiceWorkerScript = ({
     fromInspectPromise = inspectServiceWorker(fromServiceWorker)
     const fromScriptMeta = await fromInspectPromise
 
+    const onError = (errorEvent) => {
+      mutate({ error: errorEvent })
+    }
+    fromServiceWorker.addEventListener("error", onError)
     const applyStateChangeEffect = () => {
       console.log("got state", fromServiceWorker.state, fromScriptMeta)
       const effects = {
@@ -154,12 +163,7 @@ export const createServiceWorkerScript = ({
       }
       effects[fromServiceWorker.state]()
     }
-    const onError = (errorEvent) => {
-      debugger
-      mutate({ error: errorEvent })
-    }
     applyStateChangeEffect()
-    fromServiceWorker.addEventListener("error", onError)
     fromServiceWorker.addEventListener("statechange", applyStateChangeEffect)
   }
 
@@ -183,56 +187,6 @@ export const createServiceWorkerScript = ({
         mutate({ error: e })
       }
     },
-    checkForUpdates: async () => {
-      pwaLogger.debugGroupCollapsed("checkForUpdates()")
-      const registration = await serviceWorkerAPI.getRegistration(scope)
-      if (!registration) {
-        pwaLogger.debug("no registration found")
-        pwaLogger.groupEnd()
-        return false
-      }
-      pwaLogger.debug("call registration.update()")
-      const updateRegistration = await registration.update()
-      if (!updateRegistration.installing && !updateRegistration.waiting) {
-        pwaLogger.debug(
-          "no update found on registration.installing and registration.waiting",
-        )
-        pwaLogger.groupEnd()
-        return false
-      }
-      pwaLogger.debug("service worker found on registration")
-      pwaLogger.groupEnd()
-      return true
-    },
-    activateUpdate: async () => {
-      pwaLogger.infoGroupCollapsed("activateUpdate()")
-      const registration = await serviceWorkerAPI.getRegistration(scope)
-      if (!registration) {
-        pwaLogger.warn("no registration found")
-        pwaLogger.groupEnd()
-        return
-      }
-      const { installing } = registration
-      if (!installing) {
-        pwaLogger.warn("no update found on registration.installing")
-        pwaLogger.groupEnd()
-        return
-      }
-
-      const activatedPromise = new Promise((resolve) => {
-        installing.onstatechange = () => {
-          if (installing.state === "activated") {
-            installing.onstatechange = null
-            resolve()
-          }
-        }
-      })
-      pwaLogger.info("update is installed, send skipWaiting")
-      await requestSkipWaitingOnServiceWorker(installing)
-      pwaLogger.info("skipWaiting done, wait for worker to be activated")
-      await activatedPromise
-      await ensureIsControllingNavigator(installing)
-    },
     unregister: async () => {
       const registration = await serviceWorkerAPI.getRegistration(scope)
       if (!registration) {
@@ -250,6 +204,74 @@ export const createServiceWorkerScript = ({
       pwaLogger.groupEnd()
       return false
     },
+    checkForUpdates: async () => {
+      pwaLogger.debugGroupCollapsed("checkForUpdates()")
+      const registration = await serviceWorkerAPI.getRegistration(scope)
+      if (!registration) {
+        pwaLogger.debug("no registration found")
+        pwaLogger.groupEnd()
+        return false
+      }
+      pwaLogger.debug("call registration.update()")
+      // on devrait try/catch update? (si l'update contient une erreur top level?)
+      const updateRegistration = await registration.update()
+      if (!updateRegistration.installing && !updateRegistration.waiting) {
+        pwaLogger.debug(
+          "no update found on registration.installing and registration.waiting",
+        )
+        pwaLogger.groupEnd()
+        return false
+      }
+      pwaLogger.debug("service worker found on registration")
+      pwaLogger.groupEnd()
+      return true
+    },
+    activateUpdate: async () => {
+      pwaLogger.infoGroupCollapsed("activateUpdate()")
+      const registration = await serviceWorkerAPI.getRegistration(scope)
+      if (!registration) {
+        pwaLogger.warn("no registration")
+        pwaLogger.groupEnd()
+        return
+      }
+      const serviceWorker = registration.installing || registration.waiting
+      if (!serviceWorker) {
+        pwaLogger.warn("no service worker update")
+        pwaLogger.groupEnd()
+        return
+      }
+      if (serviceWorker.state === "installing") {
+        pwaLogger.info(
+          "a service worker is installing, wait for it to be installed",
+        )
+        await new Promise((resolve) => {
+          serviceWorker.onstatechange = () => {
+            if (serviceWorker.state === "installed") {
+              serviceWorker.onstatechange = null
+              resolve()
+            }
+          }
+        })
+      } else {
+        pwaLogger.info("a service worker is waiting to activate")
+      }
+      const activatedPromise = new Promise((resolve) => {
+        serviceWorker.onstatechange = () => {
+          if (serviceWorker.state === "activated") {
+            serviceWorker.onstatechange = null
+            resolve()
+          }
+        }
+      })
+      pwaLogger.info("send skipWaiting")
+      await requestSkipWaitingOnServiceWorker(serviceWorker)
+      pwaLogger.info(`skipWaiting done, wait for update to switch to activated`)
+      await activatedPromise
+      pwaLogger.info("update is activated")
+      await ensureIsControllingNavigator(serviceWorker)
+      pwaLogger.info("update is controlling navigator")
+      pwaLogger.groupEnd()
+    },
     postMessage: async (message) => {
       const registration = await serviceWorkerAPI.getRegistration(scope)
       if (!registration) {
@@ -257,11 +279,30 @@ export const createServiceWorkerScript = ({
         return undefined
       }
       const serviceWorker =
-        registration.active || registration.waiting || registration.installing
+        registration.installing || registration.waiting || registration.active
+      // registration.active || registration.waiting || registration.installing
       pwaLogger.info(
         `postMessage(${JSON.stringify(message)}) on ${serviceWorker.scriptURL}`,
       )
       return postMessageToServiceWorker(serviceWorker, message)
+    },
+    postMessageToUpdate: async (message) => {
+      const registration = await serviceWorkerAPI.getRegistration(scope)
+      if (!registration) {
+        pwaLogger.warn("no update to communicate with")
+        return undefined
+      }
+      const { installing } = registration
+      if (!installing) {
+        pwaLogger.warn("no update found on registration.installing")
+        return undefined
+      }
+      pwaLogger.info(
+        `update postMessage(${JSON.stringify(message)}) on ${
+          installing.scriptURL
+        }`,
+      )
+      return postMessageToServiceWorker(installing, message)
     },
   }
 }
@@ -282,6 +323,7 @@ const ensureIsControllingNavigator = (serviceWorker) => {
     }
     serviceWorkerAPI.addEventListener("controllerchange", oncontrollerchange)
   })
+  pwaLogger.info("request claim")
   requestClaimOnServiceWorker(serviceWorker)
   return becomesControllerPromise
 }
