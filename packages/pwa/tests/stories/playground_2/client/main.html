@@ -114,7 +114,7 @@
       import {
         pwaLogger,
         navigatorController,
-        createServiceWorkerScript,
+        createServiceWorkerInterface,
       } from "@jsenv/pwa"
 
       pwaLogger.setOptions({
@@ -142,7 +142,7 @@
         }
       })
 
-      const topLevelSwScript = createServiceWorkerScript({
+      const topLevelSw = createServiceWorkerInterface({
         autoclaimOnFirstActivation: true,
         hotUpdateHandlers: {
           // "animal.svg": {
@@ -167,7 +167,7 @@
           try {
             const registrationPromise =
               window.navigator.serviceWorker.register("./sw.js")
-            topLevelSwScript.setRegistationPromise(registrationPromise)
+            topLevelSw.setRegistationPromise(registrationPromise)
             await registrationPromise
           } finally {
             registerButton.disabled = false
@@ -180,7 +180,7 @@
         unregisterButton.onclick = async () => {
           unregisterButton.disabled = true
           try {
-            await topLevelSwScript.unregister()
+            await topLevelSw.unregister()
           } finally {
             unregisterButton.disabled = false
           }
@@ -188,7 +188,7 @@
 
         // toggle ui based on readyState
         const installingUI = document.querySelector("#installing")
-        topLevelSwScript.subscribe(({ readyState, meta }) => {
+        topLevelSw.subscribe(({ readyState, meta }) => {
           installingUI.style.display =
             readyState === "installing" ? "block" : "none"
           if (readyState === "installing") {
@@ -198,7 +198,7 @@
           }
         })
         const installedUI = document.querySelector("#installed")
-        topLevelSwScript.subscribe(({ readyState, meta }) => {
+        topLevelSw.subscribe(({ readyState, meta }) => {
           installedUI.style.display =
             readyState === "installed" ? "block" : "none"
           if (readyState === "installed") {
@@ -208,7 +208,7 @@
           }
         })
         const activating = document.querySelector("#activating")
-        topLevelSwScript.subscribe(({ readyState, meta }) => {
+        topLevelSw.subscribe(({ readyState, meta }) => {
           activating.style.display =
             readyState === "activating" ? "block" : "none"
           if (readyState === "activating") {
@@ -218,7 +218,7 @@
           }
         })
         const activated = document.querySelector("#activated")
-        topLevelSwScript.subscribe(({ readyState, meta }) => {
+        topLevelSw.subscribe(({ readyState, meta }) => {
           activated.style.display =
             readyState === "activated" ? "block" : "none"
           if (readyState === "activated") {
@@ -228,7 +228,7 @@
           }
         })
         const redundant = document.querySelector("#redundant")
-        topLevelSwScript.subscribe(({ readyState, meta }) => {
+        topLevelSw.subscribe(({ readyState, meta }) => {
           redundant.style.display =
             readyState === "redundant" ? "block" : "none"
           if (readyState === "redundant") {
@@ -241,13 +241,13 @@
         // install instrumentation
         const installResolveButton = document.querySelector("#resolve_install")
         installResolveButton.onclick = () => {
-          topLevelSwScript.postMessage({ action: "resolve_install" })
+          topLevelSw.postMessage({ action: "resolve_install" })
         }
         const installRejectButton = document.querySelector("#reject_install")
         installRejectButton.onclick = () => {
-          topLevelSwScript.postMessage({ action: "reject_install" })
+          topLevelSw.postMessage({ action: "reject_install" })
         }
-        topLevelSwScript.subscribe(({ meta }) => {
+        topLevelSw.subscribe(({ meta }) => {
           const { installInstrumentation } = meta
           installResolveButton.disabled = !installInstrumentation
           installRejectButton.disabled = !installInstrumentation
@@ -257,13 +257,13 @@
         const activateResolveButton =
           document.querySelector("#resolve_activate")
         activateResolveButton.onclick = () => {
-          topLevelSwScript.postMessage({ action: "resolve_activate" })
+          topLevelSw.postMessage({ action: "resolve_activate" })
         }
         const activateRejectButton = document.querySelector("#reject_activate")
         activateRejectButton.onclick = () => {
-          topLevelSwScript.postMessage({ action: "reject_activate" })
+          topLevelSw.postMessage({ action: "reject_activate" })
         }
-        topLevelSwScript.subscribe(({ meta }) => {
+        topLevelSw.subscribe(({ meta }) => {
           const { activateInstrumentation } = meta
           activateResolveButton.disabled = !activateInstrumentation
           activateRejectButton.disabled = !activateInstrumentation
@@ -276,7 +276,7 @@
         updateCheckButton.onclick = async () => {
           updateCheckButton.disabled = true
           try {
-            const update = await topLevelSwScript.checkForUpdates()
+            const update = await topLevelSw.checkForUpdates()
             if (!update) {
               // eslint-disable-next-line no-alert
               window.alert("there is no update available")
@@ -294,12 +294,12 @@
           "#update_reject_install",
         )
         updateResolveInstallButton.onclick = () => {
-          topLevelSwScript.postMessage({ action: "resolve_install" })
+          topLevelSw.postMessage({ action: "resolve_install" })
         }
         updateRejectInstallButton.onclick = () => {
-          topLevelSwScript.postMessage({ action: "reject_install" })
+          topLevelSw.postMessage({ action: "reject_install" })
         }
-        topLevelSwScript.subscribe(({ update }) => {
+        topLevelSw.subscribe(({ update }) => {
           updateInstallingUI.style.display =
             update.readyState === "installing" ? "block" : "none"
           if (update.readyState === "installing") {
@@ -319,13 +319,13 @@
         )
         updateByRestartButton.onclick = async () => {
           updateByRestartButton.disabled = true
-          await topLevelSwScript.activateUpdate()
+          await topLevelSw.activateUpdate()
         }
         const updateNowButton = document.querySelector("#update_now_button")
         updateNowButton.onclick = async () => {
-          await topLevelSwScript.activateUpdate()
+          await topLevelSw.activateUpdate()
         }
-        topLevelSwScript.subscribe(({ update }) => {
+        topLevelSw.subscribe(({ update }) => {
           updateInstalledUI.style.display =
             update.readyState === "installed" ? "block" : "none"
           if (update.readyState === "installed") {
@@ -348,12 +348,12 @@
           "#update_reject_activate",
         )
         updateResolveActivateButton.onclick = () => {
-          topLevelSwScript.postMessage({ action: "resolve_activate" })
+          topLevelSw.postMessage({ action: "resolve_activate" })
         }
         updateRejectActivateButton.onclick = () => {
-          topLevelSwScript.postMessage({ action: "reject_activate" })
+          topLevelSw.postMessage({ action: "reject_activate" })
         }
-        topLevelSwScript.subscribe(({ update }) => {
+        topLevelSw.subscribe(({ update }) => {
           updateActivating.style.display =
             update.readyState === "activating" ? "block" : "none"
           if (update.readyState === "activating") {
@@ -368,7 +368,7 @@
         })
 
         const udpateActivated = document.querySelector("#update_activated")
-        topLevelSwScript.subscribe(({ update }) => {
+        topLevelSw.subscribe(({ update }) => {
           udpateActivated.style.display =
             update.readyState === "activated" ? "block" : "none"
           if (update.readyState === "activated") {

@@ -31,7 +31,7 @@ import {
 } from "./internal/service_worker_communication.js"
 import { createUpdateHotHandler } from "./internal/service_worker_hot_update.js"
 
-export const createServiceWorkerScript = ({
+export const createServiceWorkerInterface = ({
   hotUpdateHandlers = {},
   scope = "/",
   autoclaimOnFirstActivation = false,
@@ -103,11 +103,12 @@ export const createServiceWorkerScript = ({
           pwaLogger.info("update is controlling navigator")
           if (updateHotHandler) {
             pwaLogger.info("apply update without reloading")
-            await updateHotHandler()
+            updateHotHandler()
           } else {
             pwaLogger.info("reloading page")
             postMessageToServiceWorker(toServiceWorker, {
-              action: "reload_clients",
+              action: "post_message_to_clients",
+              payload: "reload_after_update_activation",
             })
             reloadPage()
           }
@@ -340,7 +341,7 @@ const ensureIsControllingNavigator = (serviceWorker) => {
 
 // https://github.com/GoogleChrome/workbox/issues/1120
 serviceWorkerAPI.addEventListener("message", (event) => {
-  if (event.data === "reload_page") {
+  if (event.data === "reload_after_update_activation") {
     reloadPage()
   }
 })

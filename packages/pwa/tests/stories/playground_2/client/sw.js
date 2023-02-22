@@ -208,10 +208,10 @@ self.addEventListener("message", async ({ data }) => {
 })
 self.addEventListener("message", async ({ data }) => {
   // https://github.com/GoogleChrome/workbox/issues/1120
-  if (data.action === "reload_clients") {
+  if (data.action === "post_message_to_clients") {
     const matchingClients = await self.clients.matchAll()
     matchingClients.forEach((matchingClient) => {
-      matchingClient.postMessage("reload_page")
+      matchingClient.postMessage(data.payload)
     })
   }
 })
