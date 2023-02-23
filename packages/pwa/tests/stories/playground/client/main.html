@@ -1,43 +1,3 @@
-<!-- 
-https://web.dev/service-worker-lifecycle/
-
-Test a faire:
-- 1 tab hot reload de l'image
-- comme le précédant mais on en fait plusieurs pour voir que ça marche
-- 2 tab hot reload de l'image
-- erreur pendant top level pendant register initial
-- erreur pendant le install initial
-- erreur pendant le activate ininitial
-  -> tous ces cas a priori on veut juste qu'on puisse le savoir + un log
-  mais rien de plus
-- erreur top level dans l'update
-- erreur install dans l'update
-- erreur activate dans l'update
-  -> ici par contre on veut plus d'info pour que la ui puisse choisir de l'afficher
-  a piori une promesse comme ça on a le unhandled rejection si la ui s'en fou
-  mais sinon elle peut réagir
-  ou alors une fonction onError, si elle est pas passé on throw, sinon on l'apelle -> mieux oui
-- erreur dans la fonction qui permet d'apply l'update 
-  (a priori on indique l'erreur + indique que c'est méga grave et il faut recharger la page pour fixer)
-- erreur 404 pendant register initial
-
-Quand on en sera la il sera temps de tester avec le vrai build de jsenv
-Et aussi il faudra un test ou on renomme le script du worker
-et donc l'éxecution du html va register un nouveau script
-on voudras voir comment ça se comporte
-
-comment on fait pour reload les autres tabs?
-est ce que un autre tab reçoit aussi le "updatefound"
-est ce alors une bonne idée de détecter que c'est un tab en background?
-ou alors il veut mieux que ce soit le tab actif qui lui dise quoi faire?
-ou alors que un tab inactif juste se reload lorsqu'il devient actif pour éviter ce souci? 
-(ça a l'air bien ça)
-
-Ne pas oublier de tester ce qui se passe si on fait 2 "updatefound"
-hot reloadable d'affilé, voir un 3eme
-      
--->
-
 <!DOCTYPE html>
 <html>
   <head>
@@ -49,33 +9,101 @@ hot reloadable d'affilé, voir un 3eme
   <body>
     <div id="animal_ui">
       <fieldset>
-        <legend>Animal image <button id="refresh">refresh</button></legend>
-        <img style="display: block" height="200" src="./animal.svg?v=cat" />
+        <legend>
+          <span>Animal image</span>
+          <!-- <button id="refresh">refresh</button> -->
+        </legend>
+        <img style="display: block" height="200" src="./animal.svg?v=dog" />
       </fieldset>
     </div>
     <div id="service_worker_ui">
-      <fieldset>
-        <legend>Service worker script</legend>
-        <button id="register" disabled>register sw.js</button>
-        <button id="unregister" disabled>unregister</button>
-        <br />
-        <br />
-        <button id="update_check_button" disabled>Check for updates</button>
-        <div id="update_downloading_message" style="display: none">
-          Downloading update...
-        </div>
-        <button id="update_by_restart_button" disabled>
-          Restart to update
-        </button>
-        <button id="update_now_button" disabled>Apply update</button>
+      <fieldset name="controller">
+        <legend>Navigator controller</legend>
 
+        <span id="controller"></span>
+      </fieldset>
+      <fieldset name="registration">
+        <legend>Service worker script registration</legend>
+
+        <button id="register" disabled>
+          <span>register sw.js</span>
+        </button>
+        <button id="unregister" disabled>
+          <span>unregister</span>
+        </button>
         <br />
         <br />
-        Navigator controller: <span id="controller"></span>
+        <div id="error" style="display: none">
+          <span>error</span>
+        </div>
+        <div id="installing" style="display: none">
+          <span>installing...</span>
+          <button id="resolve_install" disabled>
+            <span>Resolve install promise</span>
+          </button>
+          <button id="reject_install" disabled>
+            <span>Reject install promise</span>
+          </button>
+        </div>
+        <div id="installed" style="display: none">
+          <span>installed</span>
+        </div>
+        <div id="activating" style="display: none">
+          <span>activating....</span>
+          <button id="resolve_activate" disabled>
+            <span>Resolve activate promise</span>
+          </button>
+          <button id="reject_activate" disabled>
+            <span>Reject activate promise</span>
+          </button>
+        </div>
+        <div id="activated" style="display: none">
+          <span>activated</span>
+        </div>
+        <div id="redundant" style="display: none">
+          <span>redundant</span>
+        </div>
+      </fieldset>
+      <fieldset name="update">
+        <legend>Service worker script update</legend>
+
+        <button id="update_check_button" disabled>Check for updates</button>
         <br />
-        Current version: <span id="current_version"></span>
         <br />
-        Update version: <span id="update_version"></span>
+
+        <div id="update_installing" style="display: none">
+          <span>update installing...</span>
+          <button id="update_resolve_install" disabled>
+            <span>Resolve install promise</span>
+          </button>
+          <button id="update_reject_install" disabled>
+            <span>Reject install promise</span>
+          </button>
+        </div>
+        <div id="update_installed" style="display: none">
+          <span>update installed</span>
+          <button id="update_by_restart_button" disabled>
+            <span>Restart to update</span>
+          </button>
+          <button id="update_now_button" disabled>
+            <span>Apply update</span>
+          </button>
+        </div>
+        <div id="update_activating" style="display: none">
+          <span>update activating....</span>
+          <button id="update_resolve_activate" disabled>
+            <span>Resolve activate promise</span>
+          </button>
+          <button id="update_reject_activate" disabled>
+            <span>Reject activate promise</span>
+          </button>
+        </div>
+        <div id="update_activated" style="display: none">
+          <span>activated</span>
+        </div>
+        <div id="update_redundant" style="display: none">
+          <span>redundant</span>
+        </div>
       </fieldset>
     </div>
     <div id="trigger_file_changes">
@@ -88,482 +116,300 @@ hot reloadable d'affilé, voir un 3eme
       </fieldset>
     </div>
 
-    <script>
-      const serviceWorkerAPI = window.navigator.serviceWorker
+    <script type="module">
+      import {
+        pwaLogger,
+        navigatorControllerRef,
+        createServiceWorkerFacade,
+      } from "@jsenv/pwa"
 
-      let currentSwInfoPromise = null
+      pwaLogger.setOptions({
+        logLevel: "debug",
+      })
+
+      const img = document.querySelector("img")
+
+      // const refreshButton = document.querySelector("#refresh")
+      // refreshButton.onclick = async () => {
+      //   refreshButton.disabled = true
+      //   try {
+      //     await refreshImg()
+      //   } finally {
+      //     refreshButton.disabled = false
+      //   }
+      // }
+
       const controllerSpan = document.querySelector("#controller")
-      const updateController = () => {
-        const { controller } = serviceWorkerAPI
+      navigatorControllerRef.subscribe((controller) => {
         if (controller) {
-          controllerSpan.innerHTML = "yes"
+          controllerSpan.innerHTML = `${controller.meta.version}`
         } else {
           controllerSpan.innerHTML = "no"
         }
-      }
-      updateController()
-      serviceWorkerAPI.addEventListener("controllerchange", () => {
-        updateController()
       })
 
-      const postMessageToServiceWorker = (serviceWorker, message) => {
-        const { port1, port2 } = new MessageChannel()
-        return new Promise((resolve, reject) => {
-          port1.onmessage = function (event) {
-            if (event.data.status === "rejected") {
-              reject(event.data.payload)
-            } else {
-              resolve(event.data.payload)
-            }
+      const swFacade = createServiceWorkerFacade({
+        autoclaimOnFirstActivation: true,
+        hotUpdateHandlers: {
+          "animal.svg": {
+            replace: async ({ toUrl }) => {
+              img.src = ""
+              const response = await window.fetch(toUrl)
+              const blob = await response.blob()
+              const objectUrl = URL.createObjectURL(blob)
+              await new Promise((resolve) => setTimeout(resolve, 150))
+              img.src = objectUrl
+            },
+            prune: () => URL.revokeObjectURL(img.src),
+          },
+        },
+      })
+
+      registration: {
+        const registerButton = document.querySelector("#register")
+        registerButton.disabled = false
+        registerButton.onclick = async () => {
+          registerButton.disabled = true
+          try {
+            const registrationPromise =
+              window.navigator.serviceWorker.register("./sw.js")
+            swFacade.setRegistationPromise(registrationPromise)
+            await registrationPromise
+          } finally {
+            registerButton.disabled = false
           }
-          serviceWorker.postMessage(message, [port2])
+        }
+
+        // in practice there will be no such UI, it's only for dev 99% of the time
+        const unregisterButton = document.querySelector("#unregister")
+        unregisterButton.disabled = false
+        unregisterButton.onclick = async () => {
+          unregisterButton.disabled = true
+          try {
+            await swFacade.unregister()
+          } finally {
+            unregisterButton.disabled = false
+          }
+        }
+
+        // toggle ui based on readyState
+        const errorUI = document.querySelector("#error")
+        swFacade.subscribe(({ error }) => {
+          errorUI.style.display = error ? "block" : "none"
+          errorUI.innerHTML = error ? error.stack : ""
+        })
+        const installingUI = document.querySelector("#installing")
+        swFacade.subscribe(({ readyState, meta }) => {
+          installingUI.style.display =
+            readyState === "installing" ? "block" : "none"
+          if (readyState === "installing") {
+            installingUI.querySelector(
+              "span",
+            ).innerHTML = `installing ${meta.version}...`
+          }
+        })
+        const installedUI = document.querySelector("#installed")
+        swFacade.subscribe(({ readyState, meta }) => {
+          installedUI.style.display =
+            readyState === "installed" ? "block" : "none"
+          if (readyState === "installed") {
+            installedUI.querySelector(
+              "span",
+            ).innerHTML = `${meta.version} installed`
+          }
+        })
+        const activating = document.querySelector("#activating")
+        swFacade.subscribe(({ readyState, meta }) => {
+          activating.style.display =
+            readyState === "activating" ? "block" : "none"
+          if (readyState === "activating") {
+            activating.querySelector(
+              "span",
+            ).innerHTML = `activating ${meta.version}...`
+          }
+        })
+        const activated = document.querySelector("#activated")
+        swFacade.subscribe(({ readyState, meta }) => {
+          activated.style.display =
+            readyState === "activated" ? "block" : "none"
+          if (readyState === "activated") {
+            activated.querySelector(
+              "span",
+            ).innerHTML = `${meta.version} activated`
+          }
+        })
+        const redundant = document.querySelector("#redundant")
+        swFacade.subscribe(({ readyState, meta }) => {
+          redundant.style.display =
+            readyState === "redundant" ? "block" : "none"
+          if (readyState === "redundant") {
+            redundant.querySelector(
+              "span",
+            ).innerHTML = `${meta.version} redundant`
+          }
+        })
+
+        // install instrumentation
+        const installResolveButton = document.querySelector("#resolve_install")
+        installResolveButton.onclick = () => {
+          swFacade.sendMessage({ action: "resolve_install" })
+        }
+        const installRejectButton = document.querySelector("#reject_install")
+        installRejectButton.onclick = () => {
+          swFacade.sendMessage({ action: "reject_install" })
+        }
+        swFacade.subscribe(({ meta }) => {
+          const { installInstrumentation } = meta
+          installResolveButton.disabled = !installInstrumentation
+          installRejectButton.disabled = !installInstrumentation
+        })
+
+        // activate instrumentation
+        const activateResolveButton =
+          document.querySelector("#resolve_activate")
+        activateResolveButton.onclick = () => {
+          swFacade.sendMessage({ action: "resolve_activate" })
+        }
+        const activateRejectButton = document.querySelector("#reject_activate")
+        activateRejectButton.onclick = () => {
+          swFacade.sendMessage({ action: "reject_activate" })
+        }
+        swFacade.subscribe(({ meta }) => {
+          const { activateInstrumentation } = meta
+          activateResolveButton.disabled = !activateInstrumentation
+          activateRejectButton.disabled = !activateInstrumentation
         })
       }
-      // eslint-disable-next-line no-unused-vars
-      const postMessageToCurrentServiceWorker = async (message) => {
-        const controller = serviceWorkerAPI.controller
-        if (controller) {
-          return postMessageToServiceWorker(controller, message)
+
+      update: {
+        const updateCheckButton = document.querySelector("#update_check_button")
+        updateCheckButton.disabled = false
+        updateCheckButton.onclick = async () => {
+          updateCheckButton.disabled = true
+          try {
+            const update = await swFacade.checkForUpdates()
+            if (!update) {
+              // eslint-disable-next-line no-alert
+              window.alert("there is no update available")
+            }
+          } finally {
+            updateCheckButton.disabled = false
+          }
         }
-        const registration = await serviceWorkerAPI.getRegistration()
-        if (!registration) {
-          throw new Error("no service worker registered to communicate with")
-        }
-        return postMessageToServiceWorker(
-          registration.installing ||
-            registration.waiting ||
-            registration.active,
-          message,
+
+        const updateInstallingUI = document.querySelector("#update_installing")
+        const updateResolveInstallButton = document.querySelector(
+          "#update_resolve_install",
         )
-      }
-      const inspectServiceWorker = async (serviceWorker) => {
-        let serviceWorkerResponse
-        console.log(`inspect ${serviceWorker.scriptURL}`)
-        const inspectPromise = postMessageToServiceWorker(serviceWorker, {
-          action: "inspect",
-        }).then((info) => {
-          console.log(`${serviceWorker.scriptURL} inspect result ->`, info)
-          serviceWorkerResponse = info
+        const updateRejectInstallButton = document.querySelector(
+          "#update_reject_install",
+        )
+        updateResolveInstallButton.onclick = () => {
+          swFacade.sendMessage({ action: "resolve_install" })
+        }
+        updateRejectInstallButton.onclick = () => {
+          swFacade.sendMessage({ action: "reject_install" })
+        }
+        swFacade.subscribe(({ update }) => {
+          updateInstallingUI.style.display =
+            update.readyState === "installing" ? "block" : "none"
+          if (update.readyState === "installing") {
+            updateInstallingUI.querySelector(
+              "span",
+            ).innerHTML = `${update.meta.version} is installing...`
+            updateResolveInstallButton.disabled =
+              !update.meta.installInstrumentation
+            updateRejectInstallButton.disabled =
+              !update.meta.installInstrumentation
+          }
         })
-        let timeout
-        let timeoutReached = false
-        const timeoutPromise = new Promise((resolve) => {
-          timeout = setTimeout(() => {
-            timeoutReached = true
-            resolve()
-          }, 1000)
-        })
-        await Promise.race([inspectPromise, timeoutPromise])
-        clearTimeout(timeout)
-        if (timeoutReached) {
-          return null
-        }
-        return serviceWorkerResponse
-      }
-      const requestSkipWaiting = (serviceWorker) => {
-        console.log("send skipWaiting")
-        postMessageToServiceWorker(serviceWorker, {
-          action: "skipWaiting",
-        })
-      }
-      const requestClaim = (serviceWorker) => {
-        console.log("send claim")
-        return postMessageToServiceWorker(serviceWorker, {
-          action: "claim",
-        })
-      }
 
-      const createApplyUpdate = ({ updateInfo, currentInfo }) => {
-        const actions = []
-        if (!currentInfo || !currentInfo.resources) {
-          return null
-        }
-        if (!updateInfo || !updateInfo.resources) {
-          return null
-        }
-        const currentResources = currentInfo.resources
-        const newResources = updateInfo.resources
-
-        const getUpdateHandler = ({ url, info, newInfo }) => {
-          let hotResource = hotResources[url]
-          if (!hotResource) {
-            return null
-          }
-          if (typeof hotResource === "function") {
-            return hotResource({ url, info, newInfo })
-          }
-          if (!newInfo) {
-            return hotResource.remove || null
-          }
-          if (!info) {
-            return hotResource.add || null
-          }
-          return hotResource.replace || null
-        }
-
-        const currentUrls = Object.keys(currentResources)
-        const newUrls = Object.keys(newResources)
-        for (const url of currentUrls) {
-          const info = currentResources[url]
-          const newInfo = newResources[url]
-          // remove
-          if (!newInfo) {
-            const updateHandler = getUpdateHandler({ url, info, newInfo: null })
-            if (!updateHandler) {
-              return null
-            }
-            actions.push({
-              type: "remove",
-              url,
-              fn: updateHandler,
-            })
-            continue
-          }
-          // replace
-          if (newInfo.version !== info.version) {
-            const updateHandler = getUpdateHandler({ url, info, newInfo })
-            if (!updateHandler) {
-              return null
-            }
-            actions.push({
-              type: "replace",
-              url,
-              fn: updateHandler,
-            })
-          }
-        }
-        // add
-        for (const url of newUrls) {
-          if (currentUrls.includes(url)) {
-            continue // already handled in previous loop
-          }
-          const newInfo = newResources[url]
-          const updateHandler = getUpdateHandler({ url, info: null, newInfo })
-          if (!updateHandler) {
-            return null
-          }
-          actions.push({
-            type: "add",
-            url,
-            fn: updateHandler,
-          })
-        }
-
-        // if nothing has changed it means it's the worker implementation (the code)
-        // that has changed, so we need to reload
-        if (actions.length === 0) {
-          return null
-        }
-        return async () => {
-          await Promise.all(
-            actions.map(async (action) => {
-              await action.fn()
-            }),
-          )
-        }
-      }
-
-      const updateDownloadingMessage = document.querySelector(
-        "#update_downloading_message",
-      )
-      const checkForUpdates = async () => {
-        const registration = await serviceWorkerAPI.getRegistration()
-        if (!registration) {
-          return false
-        }
-        const updateRegistration = await registration.update()
-        if (!updateRegistration.installing && !updateRegistration.waiting) {
-          console.log(
-            "no update found on registration.installing and registration.waiting",
-          )
-          return false
-        }
-        return true
-      }
-      const onUpdateFound = async (newServiceWorker) => {
-        console.log(`"updatefound" ${newServiceWorker.scriptURL}`)
-        const currentInfo = await currentSwInfoPromise
-        const updateInfo = await inspectServiceWorker(newServiceWorker)
-        document.querySelector("#update_version").innerHTML = updateInfo.version
-
-        const applyUpdate = createApplyUpdate({ updateInfo, currentInfo })
-        const reloadRequired = !applyUpdate
-
-        const checkState = async () => {
-          if (newServiceWorker.state === "installing") {
-            onUpdateInstalling({
-              updateInfo,
-              currentInfo,
-              reloadRequired,
-            })
-          }
-          if (newServiceWorker.state === "installed") {
-            onUpdateWaiting({
-              updateInfo,
-              currentInfo,
-              reloadRequired,
-              activate: async () => {
-                if (newServiceWorker.state === "installed") {
-                  const activatedPromise = new Promise((resolve) => {
-                    newServiceWorker.onstatechange = () => {
-                      console.log(`statechange to ${newServiceWorker.state}`)
-                      if (newServiceWorker.state === "activated") {
-                        console.log("resolving")
-                        resolve()
-                      }
-                    }
-                  })
-                  console.log("update is installed, send skipWaiting")
-                  await requestSkipWaiting(newServiceWorker)
-                  console.log(
-                    "skipWaiting done, wait for worker to be activated",
-                  )
-                  await activatedPromise
-                }
-                if (newServiceWorker.state === "activated") {
-                  if (serviceWorkerAPI.controller === newServiceWorker) {
-                    console.log("update activated and controlling navigator")
-                  } else {
-                    console.log(
-                      "update activated, let it claim to be navigator controller",
-                    )
-                    const becomesControllerPromise = new Promise((resolve) => {
-                      const oncontrollerchange = () => {
-                        if (serviceWorkerAPI.controller === newServiceWorker) {
-                          serviceWorkerAPI.removeEventListener(
-                            "controllerchange",
-                            oncontrollerchange,
-                          )
-                          resolve()
-                        }
-                      }
-                      serviceWorkerAPI.addEventListener(
-                        "controllerchange",
-                        oncontrollerchange,
-                      )
-                    })
-                    requestClaim(newServiceWorker)
-                    await becomesControllerPromise
-                  }
-                  return
-                }
-                throw new Error(
-                  `unexpected state on service worker update: "${newServiceWorker.state}"`,
-                )
-              },
-            })
-          }
-          if (newServiceWorker.state === "activated") {
-            newServiceWorker.removeEventListener("statechange", checkState)
-            if (serviceWorkerAPI.controller === newServiceWorker) {
-              console.log("update activated and controlling navigator")
-            } else {
-              console.log(
-                "update activated, let it claim to be navigator controller",
-              )
-              const becomesControllerPromise = new Promise((resolve) => {
-                const oncontrollerchange = () => {
-                  if (serviceWorkerAPI.controller === newServiceWorker) {
-                    serviceWorkerAPI.removeEventListener(
-                      "controllerchange",
-                      oncontrollerchange,
-                    )
-                    resolve()
-                  }
-                }
-                serviceWorkerAPI.addEventListener(
-                  "controllerchange",
-                  oncontrollerchange,
-                )
-              })
-              requestClaim(newServiceWorker)
-              await becomesControllerPromise
-            }
-            if (applyUpdate) {
-              console.log("apply update without reloading")
-              await applyUpdate()
-            } else {
-              console.log("reloading browser")
-              // the other tabs should reload
-              // how can we achieve this???
-              reloadPage()
-            }
-          }
-        }
-        checkState()
-        newServiceWorker.addEventListener("statechange", checkState)
-      }
-      const onUpdateInstalling = ({ updateInfo }) => {
-        updateDownloadingMessage.style.display = "block"
-        updateDownloadingMessage.innerHTML = `Downloading update ${updateInfo.version} ...`
-      }
-      const onUpdateWaiting = ({ reloadRequired, activate }) => {
-        updateDownloadingMessage.style.display = "none"
+        const updateInstalledUI = document.querySelector("#update_installed")
         const updateByRestartButton = document.querySelector(
           "#update_by_restart_button",
         )
-        updateByRestartButton.disabled = !reloadRequired
         updateByRestartButton.onclick = async () => {
           updateByRestartButton.disabled = true
-          // idéalement update le message du boutton pendant qu'il est
-          // désactivé pour dire ce qu'il se passe (activating, ...)
-          await activate()
+          await swFacade.activateUpdate()
         }
         const updateNowButton = document.querySelector("#update_now_button")
-        updateNowButton.disabled = reloadRequired
         updateNowButton.onclick = async () => {
-          updateNowButton.disabled = true
-          // idéalement update le message du bouton pendant que apply se produit
-          await activate()
+          await swFacade.activateUpdate()
         }
-      }
-
-      const watchRegistration = (registration) => {
-        // setTimeout because of https://github.com/w3c/ServiceWorker/issues/515
-        setTimeout(() => {
-          registration.onupdatefound = async () => {
-            onUpdateFound(registration.installing)
+        swFacade.subscribe(({ update }) => {
+          updateInstalledUI.style.display =
+            update.readyState === "installed" ? "block" : "none"
+          if (update.readyState === "installed") {
+            updateByRestartButton.disabled = !update.reloadRequired
+            updateNowButton.disabled = update.reloadRequired
+            updateInstalledUI.querySelector(
+              "span",
+            ).innerHTML = `${update.meta.version} installed`
           }
         })
-        const { installing, waiting, active } = registration
-        const serviceWorker = installing || waiting || active
-        serviceWorkerAPI.startMessages()
 
-        currentSwInfoPromise = inspectServiceWorker(serviceWorker)
-        currentSwInfoPromise.then((currentinfo) => {
-          document.querySelector("#current_version").innerHTML =
-            currentinfo.version
+        const updateActivating = document.querySelector("#update_activating")
+        const updateResolveActivateButton = document.querySelector(
+          "#update_resolve_activate",
+        )
+        const updateRejectActivateButton = document.querySelector(
+          "#update_reject_activate",
+        )
+        updateResolveActivateButton.onclick = () => {
+          swFacade.sendMessage({ action: "resolve_activate" })
+        }
+        updateRejectActivateButton.onclick = () => {
+          swFacade.sendMessage({ action: "reject_activate" })
+        }
+        swFacade.subscribe(({ update }) => {
+          updateActivating.style.display =
+            update.readyState === "activating" ? "block" : "none"
+          if (update.readyState === "activating") {
+            updateActivating.querySelector(
+              "span",
+            ).innerHTML = `activating ${update.meta.version}...`
+            updateResolveActivateButton.disabled =
+              !update.meta.activateInstrumentation
+            updateRejectActivateButton.disabled =
+              !update.meta.activateInstrumentation
+          }
         })
-        if (installing) {
-          console.log(`service worker is installing...`)
-          installing.onstatechange = () => {
-            console.log(`installing "statechange" to ${installing.state}`)
+
+        const udpateActivated = document.querySelector("#update_activated")
+        swFacade.subscribe(({ update }) => {
+          udpateActivated.style.display =
+            update.readyState === "activated" ? "block" : "none"
+          if (update.readyState === "activated") {
+            udpateActivated.querySelector(
+              "span",
+            ).innerHTML = `${update.meta.version} activated`
           }
-        } else if (waiting) {
-          console.log(`service worker is installed and waiting to activate`)
-          waiting.onstatechange = () => {
-            console.log(`waiting script "statechange" to ${waiting.state}`)
+        })
+
+        const udpateRedundant = document.querySelector("#update_redundant")
+        swFacade.subscribe(({ update }) => {
+          udpateRedundant.style.display =
+            update.readyState === "redundant" ? "block" : "none"
+          if (update.readyState === "redundant") {
+            udpateRedundant.querySelector(
+              "span",
+            ).innerHTML = `${update.meta.version} redundant`
           }
-          if (active) {
-            active.onstatechange = () => {
-              console.log(`active script "statechange" to ${waiting.state}`)
-            }
-          }
-        } else {
-          console.log(`service worker is active`)
-          active.onstatechange = () => {
-            console.log(`active script "statechange" to ${active.state}`)
-          }
+        })
+      }
+
+      build: {
+        const buildDogButton = document.querySelector("#build_dog")
+        buildDogButton.onclick = () => {
+          fetch("/update_animal_to_dog")
         }
-      }
-
-      const img = document.querySelector("img")
-      const refreshImg = async () => {
-        img.src = ""
-        const response = await window.fetch("./animal.svg?v=cat")
-        const blob = await response.blob()
-        const objectUrl = URL.createObjectURL(blob)
-        await new Promise((resolve) => setTimeout(resolve, 150))
-        img.src = objectUrl
-      }
-
-      let hotResources = {
-        "animal.svg": {
-          replace: refreshImg,
-          prune: () => URL.revokeObjectURL(img.src),
-        },
-      }
-      const hotResourcesResolved = {}
-      Object.keys(hotResources).forEach((url) => {
-        const absoluteUrl = new URL(url, document.location).href
-        hotResourcesResolved[absoluteUrl] = hotResources[url]
-      })
-      hotResources = hotResourcesResolved
-
-      let refreshing = false
-      const reloadPage = () => {
-        if (refreshing) {
-          return
+        const buildHorseButton = document.querySelector("#build_horse")
+        buildHorseButton.onclick = () => {
+          fetch("/update_animal_to_horse")
         }
-        refreshing = true
-        window.location.reload()
-      }
-
-      const init = async () => {
-        const registration = await serviceWorkerAPI.getRegistration()
-        if (registration) {
-          watchRegistration(registration)
-        }
-      }
-      init()
-
-      const buildDogButton = document.querySelector("#build_dog")
-      buildDogButton.onclick = () => {
-        fetch("/update_animal_to_dog")
-      }
-      const buildHorseButton = document.querySelector("#build_horse")
-      buildHorseButton.onclick = () => {
-        fetch("/update_animal_to_horse")
-      }
-      const buildCatButton = document.querySelector("#build_cat")
-      buildCatButton.onclick = () => {
-        fetch("/update_animal_to_cat")
-      }
-
-      const registerButton = document.querySelector("#register")
-      registerButton.disabled = false
-      registerButton.onclick = async () => {
-        registerButton.disabled = true
-        try {
-          const registration = await serviceWorkerAPI.register("./sw.js")
-          watchRegistration(registration)
-        } finally {
-          registerButton.disabled = false
-        }
-      }
-
-      const updateCheckButton = document.querySelector("#update_check_button")
-      updateCheckButton.disabled = false
-      updateCheckButton.onclick = async () => {
-        updateCheckButton.disabled = true
-        try {
-          const update = await checkForUpdates()
-          if (!update) {
-            // eslint-disable-next-line no-alert
-            window.alert("there is no update available")
-          }
-        } finally {
-          updateCheckButton.disabled = false
-        }
-      }
-
-      // in practice there will be no such UI, it's only for dev 99% of the time
-      const unregisterButton = document.querySelector("#unregister")
-      unregisterButton.disabled = false
-      unregisterButton.onclick = async () => {
-        unregisterButton.disabled = true
-        try {
-          const registration = await serviceWorkerAPI.getRegistration()
-          if (registration) {
-            const unregistered = await registration.unregister()
-            if (unregistered) {
-              console.log("unregister done")
-            } else {
-              console.log("unregister failed")
-            }
-          }
-        } finally {
-          unregisterButton.disabled = false
-        }
-      }
-
-      const refreshButton = document.querySelector("#refresh")
-      refreshButton.onclick = async () => {
-        refreshButton.disabled = true
-        try {
-          await refreshImg()
-        } finally {
-          refreshButton.disabled = false
+        const buildCatButton = document.querySelector("#build_cat")
+        buildCatButton.onclick = () => {
+          fetch("/update_animal_to_cat")
         }
       }
     </script>

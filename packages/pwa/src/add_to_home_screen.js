@@ -23,11 +23,33 @@
   To avoid that we store the event on window.beforeinstallpromptEvent.
 */
 
+import { sigref } from "@jsenv/sigi"
+
 import { listenEvent } from "./internal/listenEvent.js"
 import { listenAppInstalled } from "./listen_app_installed.js"
-import { displayModeStandalone } from "./display_mode_standalone.js"
+import { displayModeStandaloneRef } from "./display_mode_standalone_ref.js"
 
 let appInstalledEvent = false
+
+const listenBeforeInstallPrompt = (callback) =>
+  listenEvent(window, "beforeinstallprompt", callback)
+
+const isAvailable = () => {
+  if (!window.beforeinstallpromptEvent) {
+    return false
+  }
+  if (displayModeStandaloneRef.value) {
+    return false
+  }
+  if (appInstalledEvent) {
+    return false
+  }
+  return true
+}
+const [availableRef, availableSetter] = sigref(isAvailable())
+const checkAvailabilityChange = () => {
+  availableSetter(isAvailable())
+}
 
 listenAppInstalled(() => {
   // prompt "becomes" unavailable if user installs app
@@ -35,60 +57,18 @@ listenAppInstalled(() => {
   // in that case there is no point showing the install
   // button in the ui
   appInstalledEvent = true
+  checkAvailabilityChange()
+})
+listenBeforeInstallPrompt((beforeinstallpromptEvent) => {
+  window.beforeinstallpromptEvent = beforeinstallpromptEvent
+  checkAvailabilityChange()
+})
+displayModeStandaloneRef.subscribe(() => {
+  checkAvailabilityChange()
 })
 
 export const addToHomescreen = {
-  isAvailable: () => {
-    if (!window.beforeinstallpromptEvent) {
-      return false
-    }
-    if (displayModeStandalone.get()) {
-      return false
-    }
-    if (appInstalledEvent) {
-      return false
-    }
-    return true
-  },
-
-  listenAvailabilityChange: (callback) => {
-    let availablePrevious = addToHomescreen.isAvailable()
-
-    const checkAvailabilityChange = () => {
-      const available = addToHomescreen.isAvailable()
-      if (available !== availablePrevious) {
-        availablePrevious = available
-        callback(available)
-      }
-    }
-
-    const removeBeforeInstallPromptListener = listenBeforeInstallPrompt(
-      (beforeinstallpromptEvent) => {
-        window.beforeinstallpromptEvent = beforeinstallpromptEvent
-        checkAvailabilityChange()
-      },
-    )
-
-    const removeDisplayModeListener = displayModeStandalone.listen(() => {
-      checkAvailabilityChange()
-    })
-
-    const removeAppInstalledListener = listenAppInstalled(() => {
-      // prompt "becomes" unavailable if user installs app
-      // it can happen if user installs app manually from browser toolbar
-      // in that case there is no point showing the install
-      // button in the ui
-      appInstalledEvent = true
-      checkAvailabilityChange()
-    })
-
-    return () => {
-      removeBeforeInstallPromptListener()
-      removeDisplayModeListener()
-      removeAppInstalledListener()
-    }
-  },
-
+  availableRef,
   prompt: async () => {
     if (!window.beforeinstallpromptEvent) {
       console.warn(
@@ -104,6 +84,3 @@ export const addToHomescreen = {
     return false
   },
 }
-
-const listenBeforeInstallPrompt = (callback) =>
-  listenEvent(window, "beforeinstallprompt", callback)

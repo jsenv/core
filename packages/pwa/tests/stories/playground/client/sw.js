@@ -31,14 +31,70 @@ const cacheName = (() => {
   return `${cachePrefix}_${timestamp}${random}`
 })()
 
-self.version = "v=cat"
+let logLevel = "debug"
+let logBackgroundColor = "grey"
+let logColor = "white"
+const logger = {
+  setOptions: (options) => {
+    logLevel = options.logLevel || logLevel
+    logBackgroundColor = options.logBackgroundColor || logBackgroundColor
+    logColor = options.logColor || logColor
+  },
+  debug: (...args) => {
+    if (logLevel === "debug") {
+      console.info(...injectLogStyles(args))
+    }
+  },
+  info: (...args) => {
+    if (logLevel === "debug" || logLevel === "info") {
+      console.info(...injectLogStyles(args))
+    }
+  },
+  warn: (...args) => {
+    if (logLevel === "debug" || logLevel === "info" || logLevel === "warn") {
+      console.info(...injectLogStyles(args))
+    }
+  },
+  error: (...args) => {
+    if (
+      logLevel === "debug" ||
+      logLevel === "info" ||
+      logLevel === "warn" ||
+      logLevel === "error"
+    ) {
+      console.info(...injectLogStyles(args))
+    }
+  },
+  debugGroupCollapsed: (...args) => {
+    if (logLevel === "debug") {
+      console.groupCollapsed(...injectLogStyles(args))
+    }
+  },
+  infoGroupCollapsed: (...args) => {
+    if (logLevel === "debug" || logLevel === "info") {
+      console.groupCollapsed(...injectLogStyles(args))
+    }
+  },
+  groupEnd: () => console.groupEnd(),
+}
+
+const injectLogStyles = (args) => {
+  return [
+    `%cjsenv %csw`,
+    `background: orange; color: white; padding: 1px 3px; margin: 0 1px`,
+    `background: ${logBackgroundColor}; color: ${logColor}; padding: 1px 3px; margin: 0 1px`,
+    ...args,
+  ]
+}
+
+self.version = "v=dog"
 self.resources = {
   "main.html": {
     version: "fixed",
   },
   "animal.svg": {
-    versionedUrl: "animal.svg?v=cat",
-    version: "v=cat",
+    versionedUrl: "animal.svg?v=dog",
+    version: "v=dog",
   },
 }
 var r = {}
@@ -58,6 +114,8 @@ self.addEventListener("message", ({ data, ports }) => {
       payload: {
         version: self.version,
         resources: self.resources,
+        installInstrumentation,
+        activateInstrumentation,
       },
     })
   }
@@ -68,7 +126,7 @@ self.addEventListener("message", async ({ data }) => {
     self.skipWaiting()
   }
 })
-let instrumentInstall = false
+let installInstrumentation = true
 let _resolveInstallPromise
 let _rejectInstallPromise
 const installPromise = new Promise((resolve, reject) => {
@@ -78,19 +136,24 @@ const installPromise = new Promise((resolve, reject) => {
 self.addEventListener("message", ({ data }) => {
   if (data.action === "resolve_install") {
     _resolveInstallPromise(data.value)
-    self.skipWaiting()
   }
   if (data.action === "reject_install") {
-    _rejectInstallPromise(data.value)
+    _rejectInstallPromise(data.value || new Error("not specified"))
   }
 })
 self.addEventListener("install", (installEvent) => {
-  const promiseToWait = instrumentInstall
-    ? Promise.all([installPromise, handleInstallEvent(installEvent)])
-    : handleInstallEvent(installEvent)
+  logger.infoGroupCollapsed(`install (${self.version}/${cacheName})`)
+  const promiseToWait = Promise.all([
+    ...(installInstrumentation ? [installPromise] : []),
+    handleInstallEvent(installEvent),
+  ])
   installEvent.waitUntil(promiseToWait)
+  promiseToWait.then(() => {
+    logger.groupEnd()
+  })
 })
 const handleInstallEvent = async () => {
+  logger.info(`open cache`)
   const cache = await self.caches.open(cacheName)
   for (const url of Object.keys(self.resources)) {
     const resource = self.resources[url]
@@ -103,14 +166,12 @@ const handleInstallEvent = async () => {
         new Request(urlToFetch, { cache: "reload" })
     const response = await fetch(request)
     if (response.status === 200) {
-      console.debug(
-        `put "${asUrlRelativeToDocument(request.url)}" in cache during install`,
-      )
+      logger.info(`put "${asUrlRelativeToDocument(request.url)}" into cache`)
       const responseToCache = await asResponseToPutInCache(response)
       await cache.put(request, responseToCache)
     } else {
-      console.warn(
-        `cannot put ${request.url} in cache due to response status (${response.status})`,
+      logger.warn(
+        `cannot put ${request.url} into cache due to response status (${response.status})`,
       )
     }
   }
@@ -145,19 +206,51 @@ self.addEventListener("message", async ({ data }) => {
     claimPromise = self.clients.claim()
   }
 })
+self.addEventListener("message", async ({ data }) => {
+  // https://github.com/GoogleChrome/workbox/issues/1120
+  if (data.action === "post_message_to_clients") {
+    const matchingClients = await self.clients.matchAll()
+    matchingClients.forEach((matchingClient) => {
+      matchingClient.postMessage(data.payload)
+    })
+  }
+})
 
+let activateInstrumentation = true
+let _resolveActivatePromise
+let _rejectActivatePromise
+const activatePromise = new Promise((resolve, reject) => {
+  _resolveActivatePromise = resolve
+  _rejectActivatePromise = reject
+})
+self.addEventListener("message", ({ data }) => {
+  if (data.action === "resolve_activate") {
+    _resolveActivatePromise(data.value)
+  }
+  if (data.action === "reject_activate") {
+    _rejectActivatePromise(
+      data.value || new Error("rejection reason not specified"),
+    )
+  }
+})
 self.addEventListener("activate", (activateEvent) => {
-  const promiseToWait = claimPromise
-    ? Promise.all([claimPromise, deleteOldCaches()])
-    : deleteOldCaches()
+  logger.infoGroupCollapsed(`activate (${self.version}/${cacheName})`)
+  const promiseToWait = Promise.all([
+    ...(claimPromise ? [claimPromise] : []),
+    ...(activateInstrumentation ? [activatePromise] : []),
+    deleteOldCaches(),
+  ])
   activateEvent.waitUntil(promiseToWait)
+  promiseToWait.then(() => {
+    logger.groupEnd()
+  })
 })
 const deleteOldCaches = async () => {
   const cacheKeys = await self.caches.keys()
   await Promise.all(
     cacheKeys.map(async (cacheKey) => {
       if (cacheKey !== cacheName && cacheKey.startsWith(`${cachePrefix}_`)) {
-        console.info(`delete cache ${cacheKey}`)
+        logger.info(`delete old cache "${cacheKey}"`)
         await self.caches.delete(cacheKey)
       }
     }),
@@ -168,67 +261,99 @@ self.addEventListener("fetch", async (fetchEvent) => {
   fetchEvent.respondWith(handleFetchEvent(fetchEvent))
 })
 const handleFetchEvent = async (fetchEvent) => {
-  const initialRequest = fetchEvent.request
-  let request
+  const request = fetchEvent.request
+  const relativeUrl = asUrlRelativeToDocument(request.url)
+  logger.infoGroupCollapsed(
+    `fetch ${relativeUrl} (${self.version}/${cacheName})`,
+  )
 
-  if (initialRequest.mode === "navigate") {
-    const requestClone = initialRequest.clone()
-    const {
-      method,
-      body,
-      credentials,
-      headers,
-      integrity,
-      referrer,
-      referrerPolicy,
-    } = requestClone
-    if (method === "GET" || method === "HEAD") {
-      request = new Request(initialRequest.url, {
-        credentials,
-        headers,
-        integrity,
-        referrer,
-        referrerPolicy,
-        mode: "same-origin",
-        redirect: "manual",
-      })
-    } else {
-      const bodyPromise = body ? Promise.resolve(body) : requestClone.blob()
-      const bodyValue = await bodyPromise
-      request = new Request(initialRequest.url, {
-        body: bodyValue,
-        credentials,
-        headers,
-        integrity,
-        referrer,
-        referrerPolicy,
-        mode: "same-origin",
-        redirect: "manual",
-      })
+  if (request.mode === "navigate") {
+    const preloadResponsePromise = fetchEvent.preloadResponse
+    if (preloadResponsePromise) {
+      logger.debug(
+        "preloadResponse available on navigation request, try to use it",
+      )
+      const preloadResponse = await getPreloadResponse(preloadResponsePromise)
+      if (preloadResponse) {
+        logger.info(`-> use preloaded response`)
+        logger.groupEnd()
+        return preloadResponse
+      }
+      logger.debug("cannot use preloadResponse")
     }
-  } else {
-    request = initialRequest
   }
 
   try {
-    const responseFromCache = await self.caches.match(request)
+    const request = fetchEvent.request
+    logger.debug(`open ${cacheName} cache`)
+    const cache = await self.caches.open(cacheName)
+    logger.debug(`search response matching this request in cache`)
+    const responseFromCache = await cache.match(request)
     if (responseFromCache) {
-      console.debug(`from cache -> "${asUrlRelativeToDocument(request.url)}"`)
+      logger.info(`found -> use cache`)
+      logger.groupEnd()
       return responseFromCache
     }
-    console.debug(`from network -> "${asUrlRelativeToDocument(request.url)}"`)
+    logger.info(`not found -> delegate to navigator`)
+    logger.groupEnd()
     return self.fetch(request)
-  } catch (error) {
-    console.warn(
-      `error while trying to use ${cacheName} cache on "${asUrlRelativeToDocument(
-        request.url,
-      )}"`,
-      error.stack,
-    )
+  } catch (e) {
+    logger.warn(`error while trying to use cache`, e.stack)
+    logger.warn("delegate to navigator")
+    logger.groupEnd()
     return self.fetch(request)
+  }
+}
+
+const getPreloadResponse = async (preloadResponse) => {
+  // see https://github.com/GoogleChrome/workbox/issues/3134
+  try {
+    const response = await preloadResponse
+    if (response && response.type === "error") {
+      return null
+    }
+    return response
+  } catch (e) {
+    return null
   }
 }
 
 const asUrlRelativeToDocument = (url) => {
   return url.slice(self.location.origin.length)
 }
+
+// const cloneNavRequest = async (request) => {
+//   const requestClone = request.clone()
+//   const {
+//     method,
+//     body,
+//     credentials,
+//     headers,
+//     integrity,
+//     referrer,
+//     referrerPolicy,
+//   } = requestClone
+//   if (method === "GET" || method === "HEAD") {
+//     return new Request(request.url, {
+//       credentials,
+//       headers,
+//       integrity,
+//       referrer,
+//       referrerPolicy,
+//       mode: "same-origin",
+//       redirect: "manual",
+//     })
+//   }
+//   const bodyPromise = body ? Promise.resolve(body) : requestClone.blob()
+//   const bodyValue = await bodyPromise
+//   return new Request(request.url, {
+//     body: bodyValue,
+//     credentials,
+//     headers,
+//     integrity,
+//     referrer,
+//     referrerPolicy,
+//     mode: "same-origin",
+//     redirect: "manual",
+//   })
+// }
