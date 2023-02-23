@@ -1,5 +1,4 @@
 /* eslint-env serviceworker */
-
 /**
  * https://web.dev/service-worker-caching-and-http-caching/
  * https://stackoverflow.com/questions/33262385/service-worker-force-update-of-new-assets/64880568#64880568
@@ -19,8 +18,8 @@
 self.__jsenv__ = { sw: {} }
 
 const sw = self.__jsenv__sw
-
-actions: {
+// define self.__jsenv__.sw.registerActions()
+{
   const actions = {}
   self.addEventListener("message", async (messageEvent) => {
     const { data, ports } = messageEvent
@@ -50,9 +49,16 @@ actions: {
   }
 }
 
-init: {
+// define self.__jsenv__.sw.init()
+{
   sw.init = ({
     version = "1",
+    /**
+     * logLevel can be "debug", "info", "warn", "error"
+     */
+    logLevel = "warn",
+    logBackgroundColor = "#ffdc00", // nice yellow
+    logColor = "white",
     /*
      * When installed, service worker will try to put a list of urls into browser cache.
      * This is done in "install" function
@@ -61,7 +67,6 @@ init: {
     resources = {
       "/": {},
     },
-
     /*
      * cachePrefix is used to generate a unique cache name in the navigator such as:
      * "jsenvjld2cjxh0000qzrmn831i7rn"
@@ -71,66 +76,12 @@ init: {
     cachePrefix = "jsenv",
 
     /**
-     * logLevel can be "debug", "info", "warn", "error"
-     */
-    logLevel = "warn",
-    logsBackgroundColor = "#ffdc00", // nice yellow
-    logColor = "white",
-
-    install = () => {},
-    activate = () => {},
-
-    /*
-     * Decides if the request will be handled by the service worker or not.
-     * When returning true, the response for that request will come from cache. If not cached
-     * response is fetched from network and put into cache.
-     * When returning false, the default navigator behaviour applies, as if there was no service worker.
-     *
-     * The implementation below means only GET or HEAD requests cached during install
-     * are handled by the service worker.
-     */
-    shouldHandleRequest = (request, { requestWasCachedOnInstall }) => {
-      return (
-        requestWasCachedOnInstall &&
-        (request.method === "GET" || request.method === "HEAD")
-      )
-    },
-
-    /*
-     * Whenever you change something in this file browser reinstalls the service worker.
-     * When service worker activates, it is responsible to clean the cache
-     * used by the previous service worker version.
-     *
-     * This logic must be implemented using config.shouldCleanOnActivate
-     * function below.
-     *
-     * shouldCleanOnActivate(response, request)
-     *
-     * It is a function that will be used to decide if a cached response must be deleted
-     * when service worker activates.
-     *
-     * The implementation below tells to delete cache for any request not cached during install.
-     * It means that every request where "shouldHandleRequest" returned true
-     * in the previous worker but false in the new worker, that request cached is deleted.
-     */
-    shouldCleanOnActivate = (
-      response,
-      request,
-      { requestWasCachedOnInstall },
-    ) => {
-      return !requestWasCachedOnInstall
-    },
-
-    /**
-     * navigationPreloadEnabled is experimental
-     */
-    navigationPreloadEnabled = false,
-
-    /**
      * actions can be used to create code that can be executed in the service worker
      * when parent page ask him to do so. It's for super advanced use cases.
      */
     actions = {},
+    install = () => {},
+    activate = () => {},
   } = {}) => {
     if (typeof resources !== "object") {
       throw new TypeError(`resources should be an object, got ${resources}`)
@@ -141,32 +92,20 @@ init: {
     if (cachePrefix.length === 0) {
       throw new TypeError(`cachePrefix must not be empty`)
     }
-    if (typeof shouldCleanOnActivate !== "function") {
-      throw new TypeError(
-        `shouldCleanOnActivate should be a function, got ${shouldCleanOnActivate}`,
-      )
-    }
-    if (typeof shouldHandleRequest !== "function") {
-      throw new TypeError(
-        `shouldHandleRequest should be a function, got ${shouldHandleRequest}`,
-      )
-    }
     if (typeof logLevel !== "string") {
       throw new TypeError(`logLevel should be a boolean, got ${logLevel}`)
     }
-    if (typeof logsBackgroundColor !== "string") {
+    if (typeof logBackgroundColor !== "string") {
       throw new TypeError(
-        `logsBackgroundColor should be a string, got ${logsBackgroundColor}`,
+        `logBackgroundColor should be a string, got ${logBackgroundColor}`,
       )
     }
-    if (typeof navigationPreloadEnabled !== "boolean") {
-      throw new TypeError(
-        `navigationPreloadEnabled should be a boolean, got ${navigationPreloadEnabled}`,
-      )
+    if (typeof logColor !== "string") {
+      throw new TypeError(`logColor should be a string, got ${logColor}`)
     }
 
     const cacheName = createCacheName(cachePrefix)
-    const logger = createLogger({ logLevel, logsBackgroundColor, logColor })
+    const logger = createLogger({ logLevel, logBackgroundColor, logColor })
     resources = resolveResources(resources)
 
     // --- init phase ---
@@ -314,6 +253,9 @@ init: {
       })
       const handleFetchEvent = async (fetchEvent) => {
         const request = fetchEvent.request
+        if (request.method !== "GET" && request.method !== "HEAD") {
+          return self.fetch(request)
+        }
         const resource = resources[request.url]
         const requestWasCachedOnInstall = Boolean(resource)
         if (!requestWasCachedOnInstall) {
