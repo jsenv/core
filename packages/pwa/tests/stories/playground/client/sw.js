@@ -208,10 +208,10 @@ self.addEventListener("message", async ({ data }) => {
 })
 self.addEventListener("message", async ({ data }) => {
   // https://github.com/GoogleChrome/workbox/issues/1120
-  if (data.action === "post_message_to_clients") {
+  if (data.action === "postReloadAfterUpdateToClients") {
     const matchingClients = await self.clients.matchAll()
     matchingClients.forEach((matchingClient) => {
-      matchingClient.postMessage(data.payload)
+      matchingClient.postMessage("reload_after_update")
     })
   }
 })
@@ -321,39 +321,3 @@ const getPreloadResponse = async (preloadResponse) => {
 const asUrlRelativeToDocument = (url) => {
   return url.slice(self.location.origin.length)
 }
-
-// const cloneNavRequest = async (request) => {
-//   const requestClone = request.clone()
-//   const {
-//     method,
-//     body,
-//     credentials,
-//     headers,
-//     integrity,
-//     referrer,
-//     referrerPolicy,
-//   } = requestClone
-//   if (method === "GET" || method === "HEAD") {
-//     return new Request(request.url, {
-//       credentials,
-//       headers,
-//       integrity,
-//       referrer,
-//       referrerPolicy,
-//       mode: "same-origin",
-//       redirect: "manual",
-//     })
-//   }
-//   const bodyPromise = body ? Promise.resolve(body) : requestClone.blob()
-//   const bodyValue = await bodyPromise
-//   return new Request(request.url, {
-//     body: bodyValue,
-//     credentials,
-//     headers,
-//     integrity,
-//     referrer,
-//     referrerPolicy,
-//     mode: "same-origin",
-//     redirect: "manual",
-//   })
-// }

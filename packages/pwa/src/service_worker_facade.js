@@ -90,8 +90,7 @@ export const createServiceWorkerFacade = ({
           } else {
             pwaLogger.info("reloading page")
             postMessageToServiceWorker(toServiceWorker, {
-              action: "post_message_to_clients",
-              payload: "reload_after_update_activation",
+              action: "postReloadAfterUpdateToClients",
             })
             reloadPage()
           }
@@ -318,7 +317,7 @@ const ensureIsControllingNavigator = (serviceWorker) => {
 
 // https://github.com/GoogleChrome/workbox/issues/1120
 serviceWorkerAPI.addEventListener("message", (event) => {
-  if (event.data === "reload_after_update_activation") {
+  if (event.data === "reload_after_update") {
     reloadPage()
   }
 })
