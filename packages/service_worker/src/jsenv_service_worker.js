@@ -15,10 +15,10 @@
  * ./file.js would be resolved against the project root
 */
 
-self.__jsenv__ = { sw: {} }
+self.__sw__ = {}
 
-const sw = self.__jsenv__sw
-// define self.__jsenv__.sw.registerActions()
+const sw = self.__sw__
+// define self.__sw__.registerActions()
 {
   const actions = {}
   self.addEventListener("message", async (messageEvent) => {
@@ -49,7 +49,7 @@ const sw = self.__jsenv__sw
   }
 }
 
-// define self.__jsenv__.sw.init()
+// define self.__sw__.init()
 {
   sw.init = ({
     version = "1",
