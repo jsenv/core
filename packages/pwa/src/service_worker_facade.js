@@ -1,13 +1,5 @@
 /*
  * https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerRegistration
- *
- * TODO:
- * - ensuite les cas d'erreur:
- *   - top level error first register
- *   - error during install event
- *   - error during activate event
- *   - top level error after update
- *   - etc...
  */
 
 import { sigi } from "@jsenv/sigi"
@@ -22,7 +14,7 @@ import {
 } from "./internal/service_worker_communication.js"
 import { createUpdateHotHandler } from "./internal/service_worker_hot_update.js"
 
-export const createServiceWorkerInterface = ({
+export const createServiceWorkerFacade = ({
   hotUpdateHandlers = {},
   scope = "/",
   autoclaimOnFirstActivation = false,
@@ -286,7 +278,7 @@ export const createServiceWorkerInterface = ({
       pwaLogger.info("update is controlling navigator")
       pwaLogger.groupEnd()
     },
-    postMessage: async (message) => {
+    sendMessage: async (message) => {
       const registration = await serviceWorkerAPI.getRegistration(scope)
       if (!registration) {
         pwaLogger.warn(`no service worker script to communicate with`)
@@ -299,24 +291,6 @@ export const createServiceWorkerInterface = ({
         `postMessage(${JSON.stringify(message)}) on ${serviceWorker.scriptURL}`,
       )
       return postMessageToServiceWorker(serviceWorker, message)
-    },
-    postMessageToUpdate: async (message) => {
-      const registration = await serviceWorkerAPI.getRegistration(scope)
-      if (!registration) {
-        pwaLogger.warn("no update to communicate with")
-        return undefined
-      }
-      const { installing } = registration
-      if (!installing) {
-        pwaLogger.warn("no update found on registration.installing")
-        return undefined
-      }
-      pwaLogger.info(
-        `update postMessage(${JSON.stringify(message)}) on ${
-          installing.scriptURL
-        }`,
-      )
-      return postMessageToServiceWorker(installing, message)
     },
   }
 }

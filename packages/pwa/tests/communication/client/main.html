@@ -13,13 +13,13 @@
       })
     </script>
     <script type="module">
-      import { createServiceWorkerScript } from "@jsenv/pwa"
+      import { createServiceWorkerFacade } from "@jsenv/pwa"
 
-      const script = createServiceWorkerScript()
-      await script.setRegisterPromise(
+      const swFacade = createServiceWorkerFacade()
+      await swFacade.setRegistationPromise(
         window.navigator.serviceWorker.register("./sw.js"),
       )
-      const value = await script.sendMessage("ping")
+      const value = await swFacade.sendMessage("ping")
       window.resolveResultPromise(value)
     </script>
   </body>

@@ -1,6 +1,6 @@
 export { pwaLogger } from "./pwa_logger.js"
 export { navigatorController } from "./navigator_controller.js"
-export { createServiceWorkerInterface } from "./service_worker_interface.js"
+export { createServiceWorkerFacade } from "./service_worker_facade.js"
 export { addToHomescreen } from "./add_to_home_screen.js"
 export { displayModeStandalone } from "./display_mode_standalone.js"
 export { listenAppInstalled } from "./listen_app_installed.js"

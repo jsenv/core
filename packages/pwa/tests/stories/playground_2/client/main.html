@@ -120,7 +120,7 @@
       import {
         pwaLogger,
         navigatorController,
-        createServiceWorkerInterface,
+        createServiceWorkerFacade,
       } from "@jsenv/pwa"
 
       pwaLogger.setOptions({
@@ -148,7 +148,7 @@
         }
       })
 
-      const topLevelSw = createServiceWorkerInterface({
+      const swFacade = createServiceWorkerFacade({
         autoclaimOnFirstActivation: true,
         hotUpdateHandlers: {
           "animal.svg": {
@@ -173,7 +173,7 @@
           try {
             const registrationPromise =
               window.navigator.serviceWorker.register("./sw.js")
-            topLevelSw.setRegistationPromise(registrationPromise)
+            swFacade.setRegistationPromise(registrationPromise)
             await registrationPromise
           } finally {
             registerButton.disabled = false
@@ -186,7 +186,7 @@
         unregisterButton.onclick = async () => {
           unregisterButton.disabled = true
           try {
-            await topLevelSw.unregister()
+            await swFacade.unregister()
           } finally {
             unregisterButton.disabled = false
           }
@@ -194,12 +194,12 @@
 
         // toggle ui based on readyState
         const errorUI = document.querySelector("#error")
-        topLevelSw.subscribe(({ error }) => {
+        swFacade.subscribe(({ error }) => {
           errorUI.style.display = error ? "block" : "none"
           errorUI.innerHTML = error ? error.stack : ""
         })
         const installingUI = document.querySelector("#installing")
-        topLevelSw.subscribe(({ readyState, meta }) => {
+        swFacade.subscribe(({ readyState, meta }) => {
           installingUI.style.display =
             readyState === "installing" ? "block" : "none"
           if (readyState === "installing") {
@@ -209,7 +209,7 @@
           }
         })
         const installedUI = document.querySelector("#installed")
-        topLevelSw.subscribe(({ readyState, meta }) => {
+        swFacade.subscribe(({ readyState, meta }) => {
           installedUI.style.display =
             readyState === "installed" ? "block" : "none"
           if (readyState === "installed") {
@@ -219,7 +219,7 @@
           }
         })
         const activating = document.querySelector("#activating")
-        topLevelSw.subscribe(({ readyState, meta }) => {
+        swFacade.subscribe(({ readyState, meta }) => {
           activating.style.display =
             readyState === "activating" ? "block" : "none"
           if (readyState === "activating") {
@@ -229,7 +229,7 @@
           }
         })
         const activated = document.querySelector("#activated")
-        topLevelSw.subscribe(({ readyState, meta }) => {
+        swFacade.subscribe(({ readyState, meta }) => {
           activated.style.display =
             readyState === "activated" ? "block" : "none"
           if (readyState === "activated") {
@@ -239,7 +239,7 @@
           }
         })
         const redundant = document.querySelector("#redundant")
-        topLevelSw.subscribe(({ readyState, meta }) => {
+        swFacade.subscribe(({ readyState, meta }) => {
           redundant.style.display =
             readyState === "redundant" ? "block" : "none"
           if (readyState === "redundant") {
@@ -252,13 +252,13 @@
         // install instrumentation
         const installResolveButton = document.querySelector("#resolve_install")
         installResolveButton.onclick = () => {
-          topLevelSw.postMessage({ action: "resolve_install" })
+          swFacade.sendMessage({ action: "resolve_install" })
         }
         const installRejectButton = document.querySelector("#reject_install")
         installRejectButton.onclick = () => {
-          topLevelSw.postMessage({ action: "reject_install" })
+          swFacade.sendMessage({ action: "reject_install" })
         }
-        topLevelSw.subscribe(({ meta }) => {
+        swFacade.subscribe(({ meta }) => {
           const { installInstrumentation } = meta
           installResolveButton.disabled = !installInstrumentation
           installRejectButton.disabled = !installInstrumentation
@@ -268,13 +268,13 @@
         const activateResolveButton =
           document.querySelector("#resolve_activate")
         activateResolveButton.onclick = () => {
-          topLevelSw.postMessage({ action: "resolve_activate" })
+          swFacade.sendMessage({ action: "resolve_activate" })
         }
         const activateRejectButton = document.querySelector("#reject_activate")
         activateRejectButton.onclick = () => {
-          topLevelSw.postMessage({ action: "reject_activate" })
+          swFacade.sendMessage({ action: "reject_activate" })
         }
-        topLevelSw.subscribe(({ meta }) => {
+        swFacade.subscribe(({ meta }) => {
           const { activateInstrumentation } = meta
           activateResolveButton.disabled = !activateInstrumentation
           activateRejectButton.disabled = !activateInstrumentation
@@ -287,7 +287,7 @@
         updateCheckButton.onclick = async () => {
           updateCheckButton.disabled = true
           try {
-            const update = await topLevelSw.checkForUpdates()
+            const update = await swFacade.checkForUpdates()
             if (!update) {
               // eslint-disable-next-line no-alert
               window.alert("there is no update available")
@@ -305,12 +305,12 @@
           "#update_reject_install",
         )
         updateResolveInstallButton.onclick = () => {
-          topLevelSw.postMessage({ action: "resolve_install" })
+          swFacade.sendMessage({ action: "resolve_install" })
         }
         updateRejectInstallButton.onclick = () => {
-          topLevelSw.postMessage({ action: "reject_install" })
+          swFacade.sendMessage({ action: "reject_install" })
         }
-        topLevelSw.subscribe(({ update }) => {
+        swFacade.subscribe(({ update }) => {
           updateInstallingUI.style.display =
             update.readyState === "installing" ? "block" : "none"
           if (update.readyState === "installing") {
@@ -330,13 +330,13 @@
         )
         updateByRestartButton.onclick = async () => {
           updateByRestartButton.disabled = true
-          await topLevelSw.activateUpdate()
+          await swFacade.activateUpdate()
         }
         const updateNowButton = document.querySelector("#update_now_button")
         updateNowButton.onclick = async () => {
-          await topLevelSw.activateUpdate()
+          await swFacade.activateUpdate()
         }
-        topLevelSw.subscribe(({ update }) => {
+        swFacade.subscribe(({ update }) => {
           updateInstalledUI.style.display =
             update.readyState === "installed" ? "block" : "none"
           if (update.readyState === "installed") {
@@ -356,12 +356,12 @@
           "#update_reject_activate",
         )
         updateResolveActivateButton.onclick = () => {
-          topLevelSw.postMessage({ action: "resolve_activate" })
+          swFacade.sendMessage({ action: "resolve_activate" })
         }
         updateRejectActivateButton.onclick = () => {
-          topLevelSw.postMessage({ action: "reject_activate" })
+          swFacade.sendMessage({ action: "reject_activate" })
         }
-        topLevelSw.subscribe(({ update }) => {
+        swFacade.subscribe(({ update }) => {
           updateActivating.style.display =
             update.readyState === "activating" ? "block" : "none"
           if (update.readyState === "activating") {
@@ -376,7 +376,7 @@
         })
 
         const udpateActivated = document.querySelector("#update_activated")
-        topLevelSw.subscribe(({ update }) => {
+        swFacade.subscribe(({ update }) => {
           udpateActivated.style.display =
             update.readyState === "activated" ? "block" : "none"
           if (update.readyState === "activated") {
@@ -387,7 +387,7 @@
         })
 
         const udpateRedundant = document.querySelector("#update_redundant")
-        topLevelSw.subscribe(({ update }) => {
+        swFacade.subscribe(({ update }) => {
           udpateRedundant.style.display =
             update.readyState === "redundant" ? "block" : "none"
           if (update.readyState === "redundant") {

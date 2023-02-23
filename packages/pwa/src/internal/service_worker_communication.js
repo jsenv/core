@@ -33,11 +33,16 @@ export const requestClaimOnServiceWorker = (serviceWorker) => {
 export const postMessageToServiceWorker = (serviceWorker, message) => {
   const { port1, port2 } = new MessageChannel()
   return new Promise((resolve, reject) => {
-    port1.onmessage = function (event) {
-      if (event.data.status === "rejected") {
-        reject(event.data.payload)
+    port1.onmessage = (messageEvent) => {
+      const { data } = messageEvent
+      if (data && typeof data === "object" && typeof data.status === "string") {
+        if (data.status === "rejected") {
+          reject(data.payload)
+        } else {
+          resolve(data.payload)
+        }
       } else {
-        resolve(event.data.payload)
+        resolve(data)
       }
     }
     serviceWorker.postMessage(message, [port2])
