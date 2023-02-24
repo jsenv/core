@@ -1,8 +1,4 @@
 /*
- * TODO:
- * generate a jsenv build that is using jsenv service worker
- * ensure the worker is properly instrumented for install and activate
- *
  * start a build server
  * open a chrome on that build server (playwright)
  * open 2 tabs on that same html page

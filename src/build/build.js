@@ -1506,17 +1506,19 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             const magicSource = createMagicSource(
               serviceWorkerEntryUrlInfo.content,
             )
-            const serviceWorkerResourcesWithoutSelf = {
+            const serviceWorkerResourcesWithoutSwScriptItSelf = {
               ...serviceWorkerResources,
             }
             const serviceWorkerSpecifier = findKey(
               buildUrls,
               serviceWorkerEntryUrlInfo.url,
             )
-            delete serviceWorkerResourcesWithoutSelf[serviceWorkerSpecifier]
+            delete serviceWorkerResourcesWithoutSwScriptItSelf[
+              serviceWorkerSpecifier
+            ]
             magicSource.prepend(
               `\nself.resourcesFromJsenvBuild = ${JSON.stringify(
-                serviceWorkerResourcesWithoutSelf,
+                serviceWorkerResourcesWithoutSwScriptItSelf,
                 null,
                 "  ",
               )};\n`,

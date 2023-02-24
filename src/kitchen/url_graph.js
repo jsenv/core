@@ -37,12 +37,25 @@ export const createUrlGraph = () => {
     if (!parentUrlInfo) {
       return null
     }
-    const firstReferenceOnThatUrl = parentUrlInfo.references.find(
-      (reference) => {
+    const search = (urlInfo) => {
+      const firstReferenceFound = urlInfo.references.find((reference) => {
         return urlSpecifierEncoding.decode(reference) === specifier
-      },
-    )
-    return firstReferenceOnThatUrl
+      })
+      if (firstReferenceFound) {
+        return firstReferenceFound
+      }
+      for (const dependencyUrl of parentUrlInfo.dependencies) {
+        const dependencyUrlInfo = getUrlInfo(dependencyUrl)
+        if (dependencyUrlInfo.isInline) {
+          const firstRef = search(dependencyUrlInfo)
+          if (firstRef) {
+            return firstRef
+          }
+        }
+      }
+      return null
+    }
+    return search(parentUrlInfo)
   }
   const findDependent = (urlInfo, visitor) => {
     const seen = [urlInfo.url]

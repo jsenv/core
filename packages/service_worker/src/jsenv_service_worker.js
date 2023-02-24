@@ -53,6 +53,7 @@ const sw = self.__sw__
 {
   sw.init = ({
     version = "1",
+    meta = {},
     /**
      * logLevel can be "debug", "info", "warn", "error"
      */
@@ -116,6 +117,7 @@ const sw = self.__sw__
           return {
             version,
             resources,
+            ...meta,
           }
         },
         refreshCacheKey: async (url) => {
@@ -167,7 +169,7 @@ const sw = self.__sw__
       const handleInstallEvent = async () => {
         logger.info(`open cache`)
         const cache = await self.caches.open(cacheName)
-        const urlsToCache = Object.keys(self.resources)
+        const urlsToCache = Object.keys(resources)
         const total = urlsToCache.length
         let installed = 0
         await Promise.all(
