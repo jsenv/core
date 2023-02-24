@@ -32,17 +32,17 @@ const sw = self.__sw__
       return
     }
     const { payload } = data
-    let status
-    let value
+    let actionResultStatus
+    let actionResultValue
     try {
       const actionFnReturnValue = await actionFn(payload)
-      status = "resolved"
-      value = actionFnReturnValue
+      actionResultStatus = "resolved"
+      actionResultValue = actionFnReturnValue
     } catch (e) {
-      status = "rejected"
-      value = e
+      actionResultStatus = "rejected"
+      actionResultValue = e
     }
-    ports[0].postMessage({ status, value })
+    ports[0].postMessage({ actionResultStatus, actionResultValue })
   })
   sw.registerActions = (value) => {
     Object.assign(actions, value)

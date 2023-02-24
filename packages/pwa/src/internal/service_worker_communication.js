@@ -3,6 +3,11 @@ export const inspectServiceWorker = async (serviceWorker) => {
   const inspectPromise = postMessageToServiceWorker(serviceWorker, {
     action: "inspect",
   }).then((info) => {
+    if (typeof info !== "object") {
+      throw new TypeError(
+        `service worker script must send an object in response to inspect`,
+      )
+    }
     serviceWorkerResponse = info
   })
   let timeout
@@ -35,11 +40,15 @@ export const postMessageToServiceWorker = (serviceWorker, message) => {
   return new Promise((resolve, reject) => {
     port1.onmessage = (messageEvent) => {
       const { data } = messageEvent
-      if (data && typeof data === "object" && typeof data.status === "string") {
-        if (data.status === "rejected") {
-          reject(data.payload)
+      if (
+        data &&
+        typeof data === "object" &&
+        typeof data.actionResultStatus === "string"
+      ) {
+        if (data.actionResultStatus === "rejected") {
+          reject(data.actionResultValue)
         } else {
-          resolve(data.payload)
+          resolve(data.actionResultValue)
         }
       } else {
         resolve(data)
