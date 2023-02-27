@@ -1,13 +1,4 @@
 /*
- * now regen a new build updating the animal url
- * call check for updates on tab 1
- * take a screenshot of both tabs
- * resolve install
- * take a screenshot (we should see that update can be activated and page will reload)
- * activate it
- * ensure both tabs are reloaded
- * take a screenshot of both tabs
- *
  * now check the checkbox to allow hot update
  * rebuild a new animal and recheck everything is fine
  *
@@ -48,6 +39,15 @@ const takePageUIScreenshot = async (page, { name }) => {
     sceenshotBuffer,
   )
 }
+const clickToBuildAnimal = async (page, animalName) => {
+  const buildButton = await page.locator(`button#build_${animalName}`)
+  await buildButton.click()
+  await new Promise((resolve) => setTimeout(resolve, 1_000))
+}
+const clickToCheckUpdate = async (page) => {
+  const updateCheckButton = await page.locator("button#update_check_button")
+  await updateCheckButton.click()
+}
 
 try {
   await ensureEmptyDirectory(new URL("./screenshots/", import.meta.url))
@@ -69,13 +69,8 @@ try {
   await Promise.all([pageA.reload(), pageB.reload()])
   await takeScreenshots("after_reload.png")
 
-  const pageABuildCatButton = await pageA.locator("button#build_cat")
-  await pageABuildCatButton.click()
-  await new Promise((resolve) => setTimeout(resolve, 1_000))
-  const pageAUpdateCheckButton = await pageA.locator(
-    "button#update_check_button",
-  )
-  await pageAUpdateCheckButton.click()
+  await clickToBuildAnimal(pageA, "cat")
+  await clickToCheckUpdate(pageA)
   await takeScreenshots("update_by_reload_available.png")
   const pageARestartButton = await pageA.locator(
     "button#update_by_restart_button",
@@ -86,6 +81,15 @@ try {
   await pageAReloadPromise
   await pageBReloadPromise
   await takeScreenshots("after_update_by_reload.png")
+
+  const pageAHotUpdateCheckbox = await pageA.locator("input#image_hot_update")
+  await pageAHotUpdateCheckbox.click()
+  await clickToBuildAnimal(pageA, "horse")
+  await clickToCheckUpdate(pageA)
+  await takeScreenshots("update_by_click_available.png")
+  // TODO: do the update
+  // take screenshots
+  // then rebuild again to ensure we can update hot twice in a row
 } finally {
   if (!debug) {
     browser.close()
