@@ -2,7 +2,11 @@
 
 self.importScripts("../../../src/jsenv_service_worker.js")
 
-let installInstrumentation = true
+// do not enable install/activate instrumentation during tests
+// to keep them simpler
+let installInstrumentation = false
+let activateInstrumentation = false
+
 let _resolveInstallPromise
 let _rejectInstallPromise
 const installPromise = new Promise((resolve, reject) => {
@@ -13,7 +17,6 @@ self.__sw__.registerActions({
   resolve_install: _resolveInstallPromise,
   reject_instal: _rejectInstallPromise,
 })
-let activateInstrumentation = true
 let _resolveActivatePromise
 let _rejectActivatePromise
 const activatePromise = new Promise((resolve, reject) => {
@@ -36,6 +39,6 @@ self.__sw__.init({
     installInstrumentation,
     activateInstrumentation,
   },
-  install: () => installPromise,
-  activate: () => activatePromise,
+  install: () => (installInstrumentation ? installPromise : null),
+  activate: () => (activateInstrumentation ? activatePromise : null),
 })

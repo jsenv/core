@@ -1,24 +1,58 @@
-import { startTestServer } from "@jsenv/pwa/tests/start_test_server.mjs"
+import { build, startBuildServer } from "@jsenv/core"
+import { requestCertificate } from "@jsenv/https-local"
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
 
-await startTestServer({
+const buildAnimal = async (name) => {
+  await build({
+    logLevel: "warn",
+    rootDirectoryUrl: new URL("./project/src/", import.meta.url),
+    buildDirectoryUrl: new URL("./project/dist/", import.meta.url),
+    entryPoints: {
+      "./main.html": "main.html",
+    },
+    plugins: [
+      jsenvPluginBundling(),
+      {
+        resolveUrl: (reference) => {
+          if (reference.specifier.includes("animal.svg")) {
+            return new URL(`./project/src/${name}.svg`, import.meta.url)
+          }
+          return null
+        },
+      },
+    ],
+  })
+}
+
+await buildAnimal("dog")
+
+const { certificate, privateKey } = requestCertificate()
+await startBuildServer({
   logLevel: "info",
   serverLogLevel: "info",
+  protocol: "https",
+  certificate,
+  privateKey,
   rootDirectoryUrl: new URL("./project/src/", import.meta.url),
-  supervisor: false,
-  clientFiles: {
-    "./**": true,
-    "./**/.*/": false,
-    "./**/main.html": false,
-    "./**/animal.svg": false,
-    "./**/sw.js": false,
-  },
-  clientAutoreload: false,
-  cacheControl: false,
-  explorer: {
-    groups: {
-      client: {
-        "./*.html": true,
+  buildDirectoryUrl: new URL("./project/dist/", import.meta.url),
+  buildIndexPath: "main.html",
+  services: [
+    {
+      handleRequest: async (request) => {
+        if (request.pathname === "/update_animal_to_dog") {
+          await buildAnimal("dog")
+          return { status: 200 }
+        }
+        if (request.pathname === "/update_animal_to_horse") {
+          await buildAnimal("horse")
+          return { status: 200 }
+        }
+        if (request.pathname === "/update_animal_to_cat") {
+          await buildAnimal("cat")
+          return { status: 200 }
+        }
+        return null
       },
     },
-  },
+  ],
 })

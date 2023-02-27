@@ -1499,7 +1499,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             const versionedSpecifier = findKey(buildUrls, versionedUrl)
             serviceWorkerResources[versionedSpecifier] = {
               version: versionMap.get(urlInfo.url),
-              versionedUrl,
+              versionedUrl: versionedSpecifier,
             }
           })
           serviceWorkerEntryUrlInfos.forEach((serviceWorkerEntryUrlInfo) => {

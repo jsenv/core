@@ -401,16 +401,22 @@
 
       build: {
         const buildDogButton = document.querySelector("#build_dog")
-        buildDogButton.onclick = () => {
-          fetch("/update_animal_to_dog")
+        buildDogButton.onclick = async () => {
+          buildDogButton.disabled = true
+          await fetch("/update_animal_to_dog")
+          buildDogButton.disabled = false
         }
         const buildHorseButton = document.querySelector("#build_horse")
-        buildHorseButton.onclick = () => {
-          fetch("/update_animal_to_horse")
+        buildHorseButton.onclick = async () => {
+          buildHorseButton.disabled = true
+          await fetch("/update_animal_to_horse")
+          buildHorseButton.disabled = false
         }
         const buildCatButton = document.querySelector("#build_cat")
-        buildCatButton.onclick = () => {
-          fetch("/update_animal_to_cat")
+        buildCatButton.onclick = async () => {
+          buildCatButton.disabled = true
+          await fetch("/update_animal_to_cat")
+          buildCatButton.disabled = false
         }
       }
     </script>
