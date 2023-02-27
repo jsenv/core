@@ -1,6 +1,7 @@
 import { build, startBuildServer } from "@jsenv/core"
 import { requestCertificate } from "@jsenv/https-local"
 import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
+import { jsenvPluginGlobals } from "@jsenv/plugin-globals"
 
 const buildAnimal = async (name) => {
   await build({
@@ -20,6 +21,11 @@ const buildAnimal = async (name) => {
           return null
         },
       },
+      jsenvPluginGlobals({
+        "**/sw.js": () => ({
+          VERSION: name,
+        }),
+      }),
     ],
   })
 }

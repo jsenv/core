@@ -51,8 +51,9 @@ const takePageUIScreenshot = async (page, { name }) => {
 
 try {
   await ensureEmptyDirectory(new URL("./screenshots/", import.meta.url))
-  const pageA = await openPage(`${buildServer.origin}/main.html`)
-  const pageB = await openPage(`${buildServer.origin}/main.html`)
+  const htmlUrl = `${buildServer.origin}/main.html`
+  const pageA = await openPage(htmlUrl)
+  const pageB = await openPage(htmlUrl)
   let screenshotCount = 0
   const takeScreenshots = async (name) => {
     screenshotCount++
@@ -75,7 +76,16 @@ try {
     "button#update_check_button",
   )
   await pageAUpdateCheckButton.click()
-  await takeScreenshots("restart_to_update.png")
+  await takeScreenshots("update_by_reload_available.png")
+  const pageARestartButton = await pageA.locator(
+    "button#update_by_restart_button",
+  )
+  const pageAReloadPromise = pageA.waitForNavigation()
+  const pageBReloadPromise = pageB.waitForNavigation()
+  await pageARestartButton.click()
+  await pageAReloadPromise
+  await pageBReloadPromise
+  await takeScreenshots("after_update_by_reload.png")
 } finally {
   if (!debug) {
     browser.close()
