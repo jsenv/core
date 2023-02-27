@@ -220,18 +220,25 @@ export const createServiceWorkerFacade = ({
         return false
       }
       pwaLogger.debug("call registration.update()")
-      // on devrait try/catch update? (si l'update contient une erreur top level?)
       const updateRegistration = await registration.update()
-      if (!updateRegistration.installing && !updateRegistration.waiting) {
-        pwaLogger.info(
-          "no update found on registration.installing and registration.waiting",
-        )
+      if (updateRegistration.waiting) {
+        pwaLogger.info("update found on registration.waiting")
         pwaLogger.groupEnd()
-        return false
+        onUpdateFound(updateRegistration.waiting)
+        return true
       }
-      pwaLogger.info("service worker found on registration")
+      // when installing, no need to call onUpdateFound, browser does it for us
+      if (updateRegistration.installing) {
+        pwaLogger.info("service worker found on registration.installing")
+        pwaLogger.groupEnd()
+        return true
+      }
+
+      pwaLogger.info(
+        "no update found on registration.installing and registration.waiting",
+      )
       pwaLogger.groupEnd()
-      return true
+      return false
     },
     activateUpdate: async () => {
       pwaLogger.infoGroupCollapsed("activateUpdate()")
