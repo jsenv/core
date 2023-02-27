@@ -1,8 +1,4 @@
 /*
- * start a build server
- * wait a bit then take a screenshot of both tabs
- * refresh + take a new screenshot
- *
  * now regen a new build updating the animal url
  * call check for updates on tab 1
  * take a screenshot of both tabs
@@ -24,6 +20,7 @@
  */
 
 import { writeFileSync } from "node:fs"
+import { ensureEmptyDirectory } from "@jsenv/filesystem"
 import { chromium } from "playwright"
 import { buildServer } from "./screenshot_build_server.mjs"
 
@@ -53,19 +50,32 @@ const takePageUIScreenshot = async (page, { name }) => {
 }
 
 try {
+  await ensureEmptyDirectory(new URL("./screenshots/", import.meta.url))
   const pageA = await openPage(`${buildServer.origin}/main.html`)
   const pageB = await openPage(`${buildServer.origin}/main.html`)
-  await takePageUIScreenshot(pageA, { name: "0_a_before_register.png" })
-  await takePageUIScreenshot(pageB, { name: "0_b_before_register.png" })
+  let screenshotCount = 0
+  const takeScreenshots = async (name) => {
+    screenshotCount++
+    await takePageUIScreenshot(pageA, { name: `${screenshotCount}_a_${name}` })
+    await takePageUIScreenshot(pageB, { name: `${screenshotCount}_b_${name}` })
+  }
 
+  await takeScreenshots("before_register.png")
   const pageARegisterButton = await pageA.locator("button#register")
   await pageARegisterButton.click()
   await new Promise((resolve) => setTimeout(resolve, 1_000))
-  await takePageUIScreenshot(pageA, { name: "1_a_after_register.png" })
-  await takePageUIScreenshot(pageB, { name: "1_b_after_register.png" })
+  await takeScreenshots("after_register.png")
   await Promise.all([pageA.reload(), pageB.reload()])
-  await takePageUIScreenshot(pageA, { name: "2_a_after_reload.png" })
-  await takePageUIScreenshot(pageB, { name: "2_b_after_reload.png" })
+  await takeScreenshots("after_reload.png")
+
+  const pageABuildCatButton = await pageA.locator("button#build_cat")
+  await pageABuildCatButton.click()
+  await new Promise((resolve) => setTimeout(resolve, 1_000))
+  const pageAUpdateCheckButton = await pageA.locator(
+    "button#update_check_button",
+  )
+  await pageAUpdateCheckButton.click()
+  await takeScreenshots("restart_to_update.png")
 } finally {
   if (!debug) {
     browser.close()
