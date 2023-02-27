@@ -62,3 +62,4 @@ export const buildServer = await startBuildServer({
     },
   ],
 })
+console.log(buildServer.origin)
