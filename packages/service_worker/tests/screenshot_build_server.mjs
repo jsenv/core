@@ -27,8 +27,8 @@ const buildAnimal = async (name) => {
 await buildAnimal("dog")
 
 const { certificate, privateKey } = requestCertificate()
-await startBuildServer({
-  logLevel: "info",
+export const buildServer = await startBuildServer({
+  logLevel: "warn",
   serverLogLevel: "info",
   protocol: "https",
   certificate,
