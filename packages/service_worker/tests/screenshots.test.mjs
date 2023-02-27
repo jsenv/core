@@ -1,4 +1,7 @@
 /*
+ * TODO: version must be used to represent sw script code
+ * name could be used to represent something for debug purposes
+ *
  * now check the checkbox to allow hot update
  * rebuild a new animal and recheck everything is fine
  *
@@ -11,8 +14,9 @@
  */
 
 import { writeFileSync } from "node:fs"
-import { ensureEmptyDirectory } from "@jsenv/filesystem"
 import { chromium } from "playwright"
+import { ensureEmptyDirectory } from "@jsenv/filesystem"
+import { createTaskLog } from "@jsenv/log"
 import { buildServer } from "./screenshot_build_server.mjs"
 
 const debug = false
@@ -33,11 +37,15 @@ const openPage = async (url) => {
   return page
 }
 const takePageUIScreenshot = async (page, { name }) => {
+  const task = createTaskLog(`screenshot ${name} on chromium`, {
+    disabled: process.env.FROM_TESTS,
+  })
   const sceenshotBuffer = await page.locator("#ui").screenshot()
   writeFileSync(
     new URL(`./screenshots/${name}`, import.meta.url),
     sceenshotBuffer,
   )
+  task.done()
 }
 const clickToBuildAnimal = async (page, animalName) => {
   const buildButton = await page.locator(`button#build_${animalName}`)
@@ -86,9 +94,10 @@ try {
   await pageAHotUpdateCheckbox.click()
   await clickToBuildAnimal(pageA, "horse")
   await clickToCheckUpdate(pageA)
-  await takeScreenshots("update_by_click_available.png")
-  // TODO: do the update
-  // take screenshots
+  await takeScreenshots("update_now_available.png")
+  const pageAUpdateNowButton = await pageA.locator("#update_now_button")
+  await pageAUpdateNowButton.click()
+  await takeScreenshots("update_now_applied.png")
   // then rebuild again to ensure we can update hot twice in a row
 } finally {
   if (!debug) {

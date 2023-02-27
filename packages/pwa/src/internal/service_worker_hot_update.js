@@ -1,3 +1,5 @@
+import { pwaLogger } from "../pwa_logger.js"
+
 export const createUpdateHotHandler = ({
   hotUpdateHandlers,
   fromScriptMeta,
@@ -5,11 +7,17 @@ export const createUpdateHotHandler = ({
 }) => {
   const actions = []
   if (!fromScriptMeta || !fromScriptMeta.resources) {
-    // service worker current script do not expose meta
+    pwaLogger.debug("current sw script does not expose resources")
     return null
   }
   if (!toScriptMeta || !toScriptMeta.resources) {
-    // service worker update script do not expose meta
+    pwaLogger.debug("new sw script does not expose resources")
+    return null
+  }
+  const fromVersion = fromScriptMeta.version
+  const toVersion = toScriptMeta.version
+  if (fromVersion !== toVersion) {
+    pwaLogger.debug(`script version changed ${fromVersion}->${toVersion}`)
     return null
   }
   const fromResources = fromScriptMeta.resources
@@ -62,6 +70,7 @@ export const createUpdateHotHandler = ({
         toVersion: null,
       })
       if (!updateHandler) {
+        pwaLogger.debug(`nothing capable to handle removal of ${fromUrl}`)
         return null
       }
       actions.push({
@@ -81,6 +90,7 @@ export const createUpdateHotHandler = ({
         toVersion: toUrlMeta.version || null,
       })
       if (!updateHandler) {
+        pwaLogger.debug(`nothing capable to handle update of ${fromUrl}`)
         return null
       }
       actions.push({
@@ -104,6 +114,7 @@ export const createUpdateHotHandler = ({
       toVersion: toUrlMeta.version || null,
     })
     if (!updateHandler) {
+      pwaLogger.debug(`nothing capable to handle introduction of ${toUrl}`)
       return null
     }
     actions.push({
@@ -116,6 +127,7 @@ export const createUpdateHotHandler = ({
   // if nothing has changed it means it's the worker implementation (the code)
   // that has changed, so we need to reload
   if (actions.length === 0) {
+    pwaLogger.debug(`resources are the same`)
     return null
   }
   return async () => {

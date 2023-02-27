@@ -52,6 +52,19 @@ const sw = self.__sw__
 // define self.__sw__.init()
 {
   sw.init = ({
+    /*
+     * name will be used to generate a unique cache name in the navigator such as:
+     * "jsenv_jld2cjxh0000qzrmn831i7rn"
+     * The prefix is used to identify which cache have been created by this service worker
+     * so that the next service worker can cleanup cache.
+     */
+    name = "jsenv",
+    /*
+     * Version is useful in case hot update is enabled but the new version of the script
+     * does not want to be hot-updated. This new version want to control navigator from the start.
+     * In that case the version must be updated (incremented for instance)
+     * to ensure hot update is cancelled.
+     */
     version = "1",
     meta = {},
     /**
@@ -68,13 +81,6 @@ const sw = self.__sw__
     resources = {
       "/": {},
     },
-    /*
-     * cachePrefix is used to generate a unique cache name in the navigator such as:
-     * "jsenvjld2cjxh0000qzrmn831i7rn"
-     * The prefix is used to identify which cache have been created by this service worker
-     * so that the next service worker can cleanup cache.
-     */
-    cachePrefix = "jsenv",
 
     /**
      * actions can be used to create code that can be executed in the service worker
@@ -87,11 +93,11 @@ const sw = self.__sw__
     if (typeof resources !== "object") {
       throw new TypeError(`resources should be an object, got ${resources}`)
     }
-    if (typeof cachePrefix !== "string") {
-      throw new TypeError(`cachePrefix should be a string, got ${cachePrefix}`)
+    if (typeof name !== "string") {
+      throw new TypeError(`name should be a string, got ${name}`)
     }
-    if (cachePrefix.length === 0) {
-      throw new TypeError(`cachePrefix must not be empty`)
+    if (name.length === 0) {
+      throw new TypeError(`name must not be empty`)
     }
     if (typeof logLevel !== "string") {
       throw new TypeError(`logLevel should be a boolean, got ${logLevel}`)
@@ -105,16 +111,18 @@ const sw = self.__sw__
       throw new TypeError(`logColor should be a string, got ${logColor}`)
     }
 
-    const cacheName = createCacheName(cachePrefix)
+    const cacheName = createCacheName(name)
+    const label = `${name}@${version}(${cacheName})`
     const logger = createLogger({ logLevel, logBackgroundColor, logColor })
     resources = resolveResources(resources)
 
     // --- init phase ---
     {
-      logger.info(`init (${version}/${cacheName})`)
+      logger.info(`init ${label}`)
       sw.registerActions({
         inspect: () => {
           return {
+            name,
             version,
             resources,
             ...meta,
@@ -150,7 +158,7 @@ const sw = self.__sw__
         },
       })
       self.addEventListener("install", (installEvent) => {
-        logger.infoGroupCollapsed(`install (${version}/${cacheName})`)
+        logger.infoGroupCollapsed(`install ${label}`)
         const installPromise = Promise.all([
           handleInstallEvent(installEvent),
           install(installEvent),
@@ -211,7 +219,7 @@ const sw = self.__sw__
     // --- activation phase ---
     {
       self.addEventListener("activate", (activateEvent) => {
-        logger.infoGroupCollapsed(`activate (${self.version}/${cacheName})`)
+        logger.infoGroupCollapsed(`activate (${label})`)
         const activatePromise = Promise.all([
           handleActivateEvent(activateEvent),
           activate(activateEvent),
@@ -236,10 +244,7 @@ const sw = self.__sw__
         const cacheKeys = await self.caches.keys()
         await Promise.all(
           cacheKeys.map(async (cacheKey) => {
-            if (
-              cacheKey !== cacheName &&
-              cacheKey.startsWith(`${cachePrefix}_`)
-            ) {
+            if (cacheKey !== cacheName && cacheKey.startsWith(`${name}_`)) {
               logger.info(`delete old cache "${cacheKey}"`)
               await self.caches.delete(cacheKey)
             }
@@ -264,9 +269,7 @@ const sw = self.__sw__
           return self.fetch(request)
         }
         const relativeUrl = asRelativeUrl(request.url)
-        logger.infoGroupCollapsed(
-          `fetch ${relativeUrl} (${self.version}/${cacheName})`,
-        )
+        logger.infoGroupCollapsed(`fetch ${relativeUrl} (${label})`)
         if (request.mode === "navigate") {
           const preloadResponsePromise = fetchEvent.preloadResponse
           if (preloadResponsePromise) {

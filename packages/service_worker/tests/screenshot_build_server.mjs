@@ -23,7 +23,7 @@ const buildAnimal = async (name) => {
       },
       jsenvPluginGlobals({
         "**/sw.js": () => ({
-          VERSION: name,
+          NAME: name,
         }),
       }),
     ],

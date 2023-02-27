@@ -29,8 +29,7 @@ self.__sw__.registerActions({
 })
 
 self.__sw__.init({
-  cachePrefix: "test",
-  version: self.VERSION || "dog",
+  name: self.NAME || "dog",
   resources: {
     "/": {},
     ...(self.resourcesFromJsenvBuild || {}),

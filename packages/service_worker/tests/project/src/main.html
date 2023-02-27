@@ -138,7 +138,7 @@
       const controllerSpan = document.querySelector("#controller")
       navigatorControllerRef.subscribe((controller) => {
         if (controller) {
-          controllerSpan.innerHTML = `${controller.meta.version}`
+          controllerSpan.innerHTML = `${controller.meta.name}`
         } else {
           controllerSpan.innerHTML = "no"
         }
@@ -208,7 +208,7 @@
           if (readyState === "installing") {
             installingUI.querySelector(
               "span",
-            ).innerHTML = `installing ${meta.version}...`
+            ).innerHTML = `installing ${meta.name}...`
           }
         })
         const installedUI = document.querySelector("#installed")
@@ -218,7 +218,7 @@
           if (readyState === "installed") {
             installedUI.querySelector(
               "span",
-            ).innerHTML = `${meta.version} installed`
+            ).innerHTML = `${meta.name} installed`
           }
         })
         const activating = document.querySelector("#activating")
@@ -228,7 +228,7 @@
           if (readyState === "activating") {
             activating.querySelector(
               "span",
-            ).innerHTML = `activating ${meta.version}...`
+            ).innerHTML = `activating ${meta.name}...`
           }
         })
         const activated = document.querySelector("#activated")
@@ -236,9 +236,7 @@
           activated.style.display =
             readyState === "activated" ? "block" : "none"
           if (readyState === "activated") {
-            activated.querySelector(
-              "span",
-            ).innerHTML = `${meta.version} activated`
+            activated.querySelector("span").innerHTML = `${meta.name} activated`
           }
         })
         const redundant = document.querySelector("#redundant")
@@ -246,9 +244,7 @@
           redundant.style.display =
             readyState === "redundant" ? "block" : "none"
           if (readyState === "redundant") {
-            redundant.querySelector(
-              "span",
-            ).innerHTML = `${meta.version} redundant`
+            redundant.querySelector("span").innerHTML = `${meta.name} redundant`
           }
         })
 
@@ -319,7 +315,7 @@
           if (update.readyState === "installing") {
             updateInstallingUI.querySelector(
               "span",
-            ).innerHTML = `${update.meta.version} is installing...`
+            ).innerHTML = `${update.meta.name} is installing...`
             updateResolveInstallButton.disabled =
               !update.meta.installInstrumentation
             updateRejectInstallButton.disabled =
@@ -347,7 +343,7 @@
             updateNowButton.disabled = update.reloadRequired
             updateInstalledUI.querySelector(
               "span",
-            ).innerHTML = `${update.meta.version} installed`
+            ).innerHTML = `${update.meta.name} installed`
           }
         })
 
@@ -370,7 +366,7 @@
           if (update.readyState === "activating") {
             updateActivating.querySelector(
               "span",
-            ).innerHTML = `activating ${update.meta.version}...`
+            ).innerHTML = `activating ${update.meta.name}...`
             updateResolveActivateButton.disabled =
               !update.meta.activateInstrumentation
             updateRejectActivateButton.disabled =
@@ -385,7 +381,7 @@
           if (update.readyState === "activated") {
             udpateActivated.querySelector(
               "span",
-            ).innerHTML = `${update.meta.version} activated`
+            ).innerHTML = `${update.meta.name} activated`
           }
         })
 
@@ -396,7 +392,7 @@
           if (update.readyState === "redundant") {
             udpateRedundant.querySelector(
               "span",
-            ).innerHTML = `${update.meta.version} redundant`
+            ).innerHTML = `${update.meta.name} redundant`
           }
         })
       }
