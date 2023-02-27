@@ -1,9 +1,5 @@
 /*
  * start a build server
- * open a chrome on that build server (playwright)
- * open 2 tabs on that same html page
- * take a screenshot of both tabs
- * register the worker
  * wait a bit then take a screenshot of both tabs
  * refresh + take a new screenshot
  *
@@ -33,8 +29,9 @@ import { buildServer } from "./screenshot_build_server.mjs"
 
 const debug = false
 const browser = await chromium.launch({ headless: !debug })
+const context = await browser.newContext()
 const openPage = async (url) => {
-  const page = await browser.newPage({ ignoreHTTPSErrors: true })
+  const page = await context.newPage({ ignoreHTTPSErrors: true })
   await page.setViewportSize({ width: 400, height: 200 }) // set a relatively small and predicatble size
   page.on("console", (message) => {
     if (message.type() === "error") {
@@ -58,9 +55,17 @@ const takePageUIScreenshot = async (page, { name }) => {
 try {
   const pageA = await openPage(`${buildServer.origin}/main.html`)
   const pageB = await openPage(`${buildServer.origin}/main.html`)
-
   await takePageUIScreenshot(pageA, { name: "0_a_before_register.png" })
   await takePageUIScreenshot(pageB, { name: "0_b_before_register.png" })
+
+  const pageARegisterButton = await pageA.locator("button#register")
+  await pageARegisterButton.click()
+  await new Promise((resolve) => setTimeout(resolve, 1_000))
+  await takePageUIScreenshot(pageA, { name: "1_a_after_register.png" })
+  await takePageUIScreenshot(pageB, { name: "1_b_after_register.png" })
+  await Promise.all([pageA.reload(), pageB.reload()])
+  await takePageUIScreenshot(pageA, { name: "2_a_after_reload.png" })
+  await takePageUIScreenshot(pageB, { name: "2_b_after_reload.png" })
 } finally {
   if (!debug) {
     browser.close()
