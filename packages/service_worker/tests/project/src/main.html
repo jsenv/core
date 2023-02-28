@@ -121,44 +121,8 @@
         <button id="build_sw_script">Build sw script</button>
       </fieldset>
     </div>
-
     <script type="module">
-      import { pwaLogger, navigatorControllerRef } from "@jsenv/pwa"
-
-      pwaLogger.setOptions({
-        logLevel: "debug",
-      })
-
-      const controllerSpan = document.querySelector("#controller")
-      navigatorControllerRef.subscribe((controller) => {
-        if (controller) {
-          controllerSpan.innerHTML = `${controller.meta.name}`
-        } else {
-          controllerSpan.innerHTML = "no"
-        }
-      })
-
-      build: {
-        const buildDogButton = document.querySelector("#build_dog")
-        buildDogButton.onclick = async () => {
-          buildDogButton.disabled = true
-          await fetch("/update_animal_to_dog")
-          buildDogButton.disabled = false
-        }
-        const buildHorseButton = document.querySelector("#build_horse")
-        buildHorseButton.onclick = async () => {
-          buildHorseButton.disabled = true
-          await fetch("/update_animal_to_horse")
-          buildHorseButton.disabled = false
-        }
-        const buildCatButton = document.querySelector("#build_cat")
-        buildCatButton.onclick = async () => {
-          buildCatButton.disabled = true
-          await fetch("/update_animal_to_cat")
-          buildCatButton.disabled = false
-        }
-      }
+      import("./main.js")
     </script>
-    <script type="module" src="main.js"></script>
   </body>
 </html>

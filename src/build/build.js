@@ -1042,7 +1042,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   }
                   if (preferWithoutVersioning(reference)) {
                     // when versioning is dynamic no need to take into account
-                    // happend for:
+                    // happens for:
                     // - specifier mapped by window.__v__()
                     // - specifier mapped by importmap
                     return null

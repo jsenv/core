@@ -1,10 +1,47 @@
 /* eslint-env browser */
+import {
+  pwaLogger,
+  navigatorControllerRef,
+  createServiceWorkerFacade,
+} from "@jsenv/pwa"
 
-import { createServiceWorkerFacade } from "@jsenv/pwa"
+pwaLogger.setOptions({
+  logLevel: "debug",
+})
 
 export const swFacade = createServiceWorkerFacade({
   autoclaimOnFirstActivation: true,
 })
+
+const controllerSpan = document.querySelector("#controller")
+navigatorControllerRef.subscribe((controller) => {
+  if (controller) {
+    controllerSpan.innerHTML = `${controller.meta.name}`
+  } else {
+    controllerSpan.innerHTML = "no"
+  }
+})
+
+build: {
+  const buildDogButton = document.querySelector("#build_dog")
+  buildDogButton.onclick = async () => {
+    buildDogButton.disabled = true
+    await fetch("/update_animal_to_dog")
+    buildDogButton.disabled = false
+  }
+  const buildHorseButton = document.querySelector("#build_horse")
+  buildHorseButton.onclick = async () => {
+    buildHorseButton.disabled = true
+    await fetch("/update_animal_to_horse")
+    buildHorseButton.disabled = false
+  }
+  const buildCatButton = document.querySelector("#build_cat")
+  buildCatButton.onclick = async () => {
+    buildCatButton.disabled = true
+    await fetch("/update_animal_to_cat")
+    buildCatButton.disabled = false
+  }
+}
 
 registration: {
   const registerButton = document.querySelector("#register")
