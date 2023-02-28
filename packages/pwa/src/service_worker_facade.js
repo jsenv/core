@@ -12,10 +12,9 @@ import {
   requestClaimOnServiceWorker,
   postMessageToServiceWorker,
 } from "./internal/service_worker_communication.js"
-import { createUpdateHotHandler } from "./internal/service_worker_hot_update.js"
+import { createServiceWorkerHotReplacer } from "./internal/service_worker_hot_replacement.js"
 
 export const createServiceWorkerFacade = ({
-  hotUpdateHandlers = {},
   scope = "/",
   autoclaimOnFirstActivation = false,
 } = {}) => {
@@ -33,19 +32,14 @@ export const createServiceWorkerFacade = ({
     },
   })
 
-  const hotUpdatesHandlersResolved = {}
-  Object.keys(hotUpdateHandlers).forEach((url) => {
-    const urlResolved = new URL(url, document.location).href
-    hotUpdatesHandlersResolved[urlResolved] = hotUpdateHandlers[url]
-  })
-  hotUpdateHandlers = hotUpdatesHandlersResolved
+  const resourceUpdateHandlers = {}
 
   const onUpdateFound = async (toServiceWorker) => {
     const fromScriptMeta = await fromInspectPromise
     const toScriptMeta = await inspectServiceWorker(toServiceWorker)
 
-    const updateHotHandler = createUpdateHotHandler({
-      hotUpdateHandlers,
+    const serviceWorkerHotReplacer = createServiceWorkerHotReplacer({
+      resourceUpdateHandlers,
       fromScriptMeta,
       toScriptMeta,
     })
@@ -53,7 +47,7 @@ export const createServiceWorkerFacade = ({
       meta: fromScriptMeta,
       update: {
         meta: toScriptMeta,
-        reloadRequired: !updateHotHandler,
+        reloadRequired: !serviceWorkerHotReplacer,
       },
     })
 
@@ -84,9 +78,9 @@ export const createServiceWorkerFacade = ({
           })
           await ensureIsControllingNavigator(toServiceWorker)
           pwaLogger.info("update is controlling navigator")
-          if (updateHotHandler) {
-            pwaLogger.info("apply update without reloading")
-            updateHotHandler()
+          if (serviceWorkerHotReplacer) {
+            pwaLogger.info("hot replace service worker")
+            serviceWorkerHotReplacer()
           } else {
             pwaLogger.info("reloading page")
             postMessageToServiceWorker(toServiceWorker, {
@@ -297,6 +291,10 @@ export const createServiceWorkerFacade = ({
         `postMessage(${JSON.stringify(message)}) on ${serviceWorker.scriptURL}`,
       )
       return postMessageToServiceWorker(serviceWorker, message)
+    },
+    defineResourceUpdateHandler: (url, handler) => {
+      const urlResolved = new URL(url, document.location).href
+      resourceUpdateHandlers[urlResolved] = handler
     },
   }
 }

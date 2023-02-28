@@ -1,7 +1,7 @@
 import { pwaLogger } from "../pwa_logger.js"
 
-export const createUpdateHotHandler = ({
-  hotUpdateHandlers,
+export const createServiceWorkerHotReplacer = ({
+  resourceUpdateHandlers,
   fromScriptMeta,
   toScriptMeta,
 }) => {
@@ -30,27 +30,40 @@ export const createUpdateHotHandler = ({
     fromVersion,
     toVersion,
   }) => {
-    let handler = hotUpdateHandlers[url]
-    if (!handler) {
+    let resourceUpdateHandler = resourceUpdateHandlers[url]
+    if (!resourceUpdateHandler) {
       return null
     }
-    if (typeof handler === "function") {
-      return handler({ fromUrl, toUrl, fromVersion, toVersion })
+    if (typeof resourceUpdateHandler === "function") {
+      return resourceUpdateHandler({ fromUrl, toUrl, fromVersion, toVersion })
     }
     if (!toUrl) {
-      if (handler.remove) {
-        return () => handler.remove({ fromUrl, toUrl, fromVersion, toVersion })
+      if (resourceUpdateHandler.remove) {
+        return () =>
+          resourceUpdateHandler.remove({
+            fromUrl,
+            toUrl,
+            fromVersion,
+            toVersion,
+          })
       }
       return null
     }
     if (!fromUrl) {
-      if (handler.add) {
-        return () => handler.add({ fromUrl, toUrl, fromVersion, toVersion })
+      if (resourceUpdateHandler.add) {
+        return () =>
+          resourceUpdateHandler.add({ fromUrl, toUrl, fromVersion, toVersion })
       }
       return null
     }
-    if (handler.replace) {
-      return () => handler.replace({ fromUrl, toUrl, fromVersion, toVersion })
+    if (resourceUpdateHandler.replace) {
+      return () =>
+        resourceUpdateHandler.replace({
+          fromUrl,
+          toUrl,
+          fromVersion,
+          toVersion,
+        })
     }
     return null
   }
