@@ -124,13 +124,14 @@ try {
   }
   await new Promise((resolve) => setTimeout(resolve, 1_500))
   await takeScreenshots("horse_activated_after_hot_replace.png")
-  await clickToBuildAnimal(pageA, "cat")
-  await takeScreenshots("cat_found.png")
-  {
-    const pageAUpdateNowButton = await pageA.locator("#update_now_button")
-    await pageAUpdateNowButton.click()
-  }
-  await takeScreenshots("cat_activated_after_hot_replace.png")
+  await clickToBuildAnimal(pageA, "bear")
+  await clickToCheckUpdate(pageA)
+  await takeScreenshots("bear_found.png")
+  // {
+  //   const pageAUpdateNowButton = await pageA.locator("#update_now_button")
+  //   await pageAUpdateNowButton.click()
+  // }
+  // await takeScreenshots("bear_activated_after_hot_replace.png")
 } finally {
   if (!debug) {
     browser.close()

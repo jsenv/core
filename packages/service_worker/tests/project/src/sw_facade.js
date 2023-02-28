@@ -41,6 +41,12 @@ build: {
     await fetch("/update_animal_to_cat")
     buildCatButton.disabled = false
   }
+  const buildBearButton = document.querySelector("#build_bear")
+  buildBearButton.onclick = async () => {
+    buildBearButton.disabled = true
+    await fetch("/update_animal_to_bear")
+    buildBearButton.disabled = false
+  }
 }
 
 registration: {

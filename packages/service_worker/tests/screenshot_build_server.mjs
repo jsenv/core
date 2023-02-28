@@ -59,6 +59,10 @@ export const buildServer = await startBuildServer({
           await buildAnimal("cat")
           return { status: 200 }
         }
+        if (request.pathname === "/update_animal_to_bear") {
+          await buildAnimal("bear")
+          return { status: 200 }
+        }
         return null
       },
     },
