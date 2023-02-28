@@ -4,6 +4,8 @@ import { ensureEmptyDirectory } from "@jsenv/filesystem"
 import { createTaskLog } from "@jsenv/log"
 import { buildServer } from "./screenshot_build_server.mjs"
 
+await ensureEmptyDirectory(new URL("./screenshots/a/", import.meta.url))
+await ensureEmptyDirectory(new URL("./screenshots/b/", import.meta.url))
 const debug = true
 const browser = await chromium.launch({ headless: !debug })
 const context = await browser.newContext()
@@ -32,8 +34,6 @@ const clickToCheckUpdate = async (page) => {
 }
 
 try {
-  await ensureEmptyDirectory(new URL("./screenshots/a/", import.meta.url))
-  await ensureEmptyDirectory(new URL("./screenshots/b/", import.meta.url))
   const htmlUrl = `${buildServer.origin}/main.html`
   const pageA = await openPage(htmlUrl)
   const pageB = await openPage(htmlUrl)

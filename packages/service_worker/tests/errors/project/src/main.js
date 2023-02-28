@@ -86,7 +86,7 @@ registration: {
   const errorUI = document.querySelector("#error")
   swFacade.subscribe(({ error }) => {
     errorUI.style.display = error ? "block" : "none"
-    errorUI.innerHTML = error ? error.stack : ""
+    errorUI.innerHTML = error ? "Failed to register service worker script" : ""
   })
   const installingUI = document.querySelector("#installing")
   swFacade.subscribe(({ readyState, meta }) => {
@@ -178,7 +178,7 @@ update: {
     const isUpdateError = update.error && update.readyState === ""
     updateRegisterErrorUI.style.display = isUpdateError ? "block" : "none"
     if (isUpdateError) {
-      updateRegisterErrorUI.innerHTML = `Error while trying to register updated version of service worker script: ${update.error.stack}`
+      updateRegisterErrorUI.innerHTML = `Error while trying to register updated version of service worker script`
     }
   })
 
