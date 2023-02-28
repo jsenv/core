@@ -1,9 +1,4 @@
 /*
- * TODO: version must be used to represent sw script code
- * name could be used to represent something for debug purposes
- *
- * now check the checkbox to allow hot update
- * rebuild a new animal and recheck everything is fine
  *
  * TO BE TESTED TOO (somewhere else)
  * when there is an error during install/activate
