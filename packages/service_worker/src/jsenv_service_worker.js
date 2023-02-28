@@ -72,7 +72,7 @@ const sw = self.__sw__
      */
     logLevel = "warn",
     logBackgroundColor = "#ffdc00", // nice yellow
-    logColor = "white",
+    logColor = "#000000",
     /*
      * When installed, service worker will try to put a list of urls into browser cache.
      * This is done in "install" function
@@ -112,7 +112,7 @@ const sw = self.__sw__
     }
 
     const cacheName = createCacheName(name)
-    const label = `${name}@${version}(${cacheName})`
+    const label = cacheName
     const logger = createLogger({ logLevel, logBackgroundColor, logColor })
     resources = resolveResources(resources)
 
@@ -158,21 +158,12 @@ const sw = self.__sw__
         },
       })
       self.addEventListener("install", (installEvent) => {
-        logger.infoGroupCollapsed(`install ${label}`)
+        logger.info(`"${label}" install`)
         const installPromise = Promise.all([
           handleInstallEvent(installEvent),
           install(installEvent),
         ])
         installEvent.waitUntil(installPromise)
-        installPromise.then(
-          () => {
-            logger.groupEnd()
-          },
-          (error) => {
-            logger.error(error)
-            logger.groupEnd()
-          },
-        )
       })
       const handleInstallEvent = async () => {
         logger.info(`open cache`)
@@ -219,15 +210,12 @@ const sw = self.__sw__
     // --- activation phase ---
     {
       self.addEventListener("activate", (activateEvent) => {
-        logger.infoGroupCollapsed(`activate ${label}`)
+        logger.info(`"${label}" activate`)
         const activatePromise = Promise.all([
           handleActivateEvent(activateEvent),
           activate(activateEvent),
         ])
         activateEvent.waitUntil(activatePromise)
-        activatePromise.then(() => {
-          logger.groupEnd()
-        })
       })
       sw.registerActions({
         claim: async () => {
@@ -269,7 +257,7 @@ const sw = self.__sw__
           return self.fetch(request)
         }
         const relativeUrl = asRelativeUrl(request.url)
-        logger.infoGroupCollapsed(`fetch ${relativeUrl} (${label})`)
+        logger.debug(`"${label}" fetch ${relativeUrl}`)
         if (request.mode === "navigate") {
           const preloadResponsePromise = fetchEvent.preloadResponse
           if (preloadResponsePromise) {
@@ -280,8 +268,7 @@ const sw = self.__sw__
               preloadResponsePromise,
             )
             if (preloadResponse) {
-              logger.info(`-> use preloaded response`)
-              logger.groupEnd()
+              logger.info(`${relativeUrl} -> use preloaded response`)
               return preloadResponse
             }
             logger.debug("cannot use preloadResponse")
@@ -294,17 +281,16 @@ const sw = self.__sw__
           logger.debug(`search response matching this request in cache`)
           const responseFromCache = await cache.match(request)
           if (responseFromCache) {
-            logger.info(`found -> use cache`)
-            logger.groupEnd()
+            logger.info(`${relativeUrl} -> use cache`)
             return responseFromCache
           }
-          logger.info(`not found -> delegate to navigator`)
-          logger.groupEnd()
+          logger.info(`${relativeUrl} -> delegate to navigator`)
           return self.fetch(request)
         } catch (e) {
-          logger.warn(`error while trying to use cache`, e.stack)
-          logger.warn("delegate to navigator")
-          logger.groupEnd()
+          logger.warn(
+            `error while trying to use cache for ${relativeUrl} -> delegate to navigator`,
+            e.stack,
+          )
           return self.fetch(request)
         }
       }
@@ -359,8 +345,8 @@ const createCacheName = (() => {
 const createLogger = ({ logLevel, logBackgroundColor, logColor }) => {
   const injectLogStyles = (args) => {
     return [
-      `%cjsenv %csw`,
-      `background: orange; color: white; padding: 1px 3px; margin: 0 1px`,
+      `%cjsenv%csw`,
+      `background: orange; color: rgb(55, 7, 7); padding: 1px 3px; margin: 0 1px`,
       `background: ${logBackgroundColor}; color: ${logColor}; padding: 1px 3px; margin: 0 1px`,
       ...args,
     ]

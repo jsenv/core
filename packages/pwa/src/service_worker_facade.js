@@ -207,58 +207,61 @@ export const createServiceWorkerFacade = ({
         pwaLogger.debug("nothing to unregister")
         return false
       }
-      pwaLogger.infoGroupCollapsed("registration.unregister()")
       const unregistered = await registration.unregister()
       if (unregistered) {
-        pwaLogger.info("unregister done")
-        pwaLogger.groupEnd()
+        pwaLogger.info("registration.unregister() done")
         return true
       }
-      pwaLogger.warn("unregister failed")
-      pwaLogger.groupEnd()
+      pwaLogger.info("registration.unregister() failed")
       return false
     },
     checkForUpdates: async () => {
-      pwaLogger.infoGroupCollapsed("checkForUpdates()")
       const registration = await serviceWorkerAPI.getRegistration(scope)
       if (!registration) {
-        pwaLogger.info("no registration found")
-        pwaLogger.groupEnd()
+        pwaLogger.info("nothing to update")
         return false
       }
-      pwaLogger.debug("call registration.update()")
-      const updateRegistration = await registration.update()
+      mutate({
+        update: {
+          error: null,
+          readyState: "",
+        },
+      })
+      let updateRegistration
+      try {
+        updateRegistration = await registration.update()
+      } catch (e) {
+        mutate({
+          update: {
+            error: e,
+          },
+        })
+        return false
+      }
       if (updateRegistration.waiting) {
-        pwaLogger.info("update found on registration.waiting")
-        pwaLogger.groupEnd()
+        pwaLogger.info("registration.update() -> found on registration.waiting")
         onUpdateFound(updateRegistration.waiting)
         return true
       }
       // when installing, no need to call onUpdateFound, browser does it for us
       if (updateRegistration.installing) {
-        pwaLogger.info("service worker found on registration.installing")
-        pwaLogger.groupEnd()
+        pwaLogger.info(
+          "registration.update() -> found on registration.installing",
+        )
         return true
       }
-
-      pwaLogger.info(
-        "no update found on registration.installing and registration.waiting",
-      )
-      pwaLogger.groupEnd()
+      pwaLogger.info("registration.update() -> no update found")
       return false
     },
     activateUpdate: async () => {
-      pwaLogger.infoGroupCollapsed("activateUpdate()")
       const registration = await serviceWorkerAPI.getRegistration(scope)
       if (!registration) {
-        pwaLogger.warn("no registration")
-        pwaLogger.groupEnd()
+        pwaLogger.warn("nothing to activate")
         return
       }
       const serviceWorker = registration.installing || registration.waiting
       if (!serviceWorker) {
-        pwaLogger.warn("no service worker update")
-        pwaLogger.groupEnd()
+        pwaLogger.warn("no update to activate")
         return
       }
       if (serviceWorker.state === "installing") {
@@ -289,7 +292,6 @@ export const createServiceWorkerFacade = ({
       pwaLogger.info("update is activated")
       await ensureIsControllingNavigator(serviceWorker)
       pwaLogger.info("update is controlling navigator")
-      pwaLogger.groupEnd()
     },
     sendMessage: async (message) => {
       const registration = await serviceWorkerAPI.getRegistration(scope)

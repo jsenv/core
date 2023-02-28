@@ -1,6 +1,6 @@
 /* eslint-env serviceworker */
 
-self.importScripts("../../../src/jsenv_service_worker.js")
+self.importScripts("../../../../src/jsenv_service_worker.js")
 
 // do not enable install/activate instrumentation during tests
 // to keep them simpler
