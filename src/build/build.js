@@ -1495,9 +1495,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               }
               return
             }
+            const specifier = findKey(buildUrls, urlInfo.url)
             const versionedUrl = versionedUrlMap.get(urlInfo.url)
             const versionedSpecifier = findKey(buildUrls, versionedUrl)
-            serviceWorkerResources[versionedSpecifier] = {
+            serviceWorkerResources[specifier] = {
               version: versionMap.get(urlInfo.url),
               versionedUrl: versionedSpecifier,
             }
