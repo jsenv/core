@@ -53,6 +53,20 @@ try {
   const pageA = await openPage(htmlUrl)
   const pageB = await openPage(htmlUrl)
 
+  const waitForPagesReady = async () => {
+    const pageAReadyPromise = pageA.evaluate(
+      /* eslint-disable no-undef */
+      () => window.readyPromise,
+      /* eslint-enable no-undef */
+    )
+    const pageBReadyPromise = pageA.evaluate(
+      /* eslint-disable no-undef */
+      () => window.readyPromise,
+      /* eslint-enable no-undef */
+    )
+    await Promise.all([pageAReadyPromise, pageBReadyPromise])
+  }
+
   const takeScreenshot = async (page, name) => {
     const dirname = page === pageA ? "a" : "b"
     const sceenshotBuffer = await page.locator("#ui").screenshot()
@@ -73,12 +87,14 @@ try {
     task.done()
   }
 
+  await waitForPagesReady()
   await takeScreenshots("dog_after_load.png")
   const pageARegisterButton = await pageA.locator("button#register")
   await pageARegisterButton.click()
   await new Promise((resolve) => setTimeout(resolve, 1_000))
   await takeScreenshots("dog_after_register.png")
   await Promise.all([pageA.reload(), pageB.reload()])
+  await waitForPagesReady()
   await takeScreenshots("dog_after_reload.png")
 
   await clickToBuildAnimal(pageA, "cat")
@@ -92,6 +108,7 @@ try {
   await pageARestartButton.click()
   await pageAReloadPromise
   await pageBReloadPromise
+  await waitForPagesReady()
   await takeScreenshots("cat_activated_after_reload.png")
 
   const pageAHotUpdateCheckbox = await pageA.locator("input#image_hot_update")

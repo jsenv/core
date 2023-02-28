@@ -121,8 +121,14 @@
         <button id="build_sw_script">Build sw script</button>
       </fieldset>
     </div>
+    <script>
+      window.readyPromise = new Promise((resolve) => {
+        window.resolveReadyPromise = resolve
+      })
+    </script>
     <script type="module">
-      import("./main.js")
+      await import("./main.js")
+      window.resolveReadyPromise()
     </script>
   </body>
 </html>
