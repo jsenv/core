@@ -6,7 +6,7 @@ import { buildServer } from "./screenshot_build_server.mjs"
 
 await ensureEmptyDirectory(new URL("./screenshots/a/", import.meta.url))
 await ensureEmptyDirectory(new URL("./screenshots/b/", import.meta.url))
-const debug = true
+const debug = false
 const browser = await chromium.launch({ headless: !debug })
 const context = await browser.newContext()
 const openPage = async (url) => {
@@ -78,11 +78,11 @@ try {
     // - time for service worker to switch from "installed" to "activated"
     //   (execution of "activate" event)
     // - time for service_worker_facade to hot replace (a fetch request to new url)
-    await new Promise((resolve) => setTimeout(resolve, 1_000))
+    await new Promise((resolve) => setTimeout(resolve, 2_000))
   }
 
   await waitForPagesReady()
-  await takeScreenshots("dog_after_load.png")
+  await takeScreenshots("after_load.png")
   const pageARegisterButton = await pageA.locator("button#register")
   await pageARegisterButton.click()
   await new Promise((resolve) => setTimeout(resolve, 1_000))
