@@ -19,12 +19,12 @@ import { ensureEmptyDirectory } from "@jsenv/filesystem"
 import { createTaskLog } from "@jsenv/log"
 import { buildServer } from "./screenshot_build_server.mjs"
 
-const debug = false
+const debug = true
 const browser = await chromium.launch({ headless: !debug })
 const context = await browser.newContext()
 const openPage = async (url) => {
   const page = await context.newPage({ ignoreHTTPSErrors: true })
-  await page.setViewportSize({ width: 400, height: 200 }) // set a relatively small and predicatble size
+  await page.setViewportSize({ width: 640, height: 480 }) // set a relatively small and predicatble size
   page.on("console", (message) => {
     if (message.type() === "error") {
       console.error(message.text())
@@ -35,17 +35,6 @@ const openPage = async (url) => {
   })
   await page.goto(url)
   return page
-}
-const takePageUIScreenshot = async (page, { name }) => {
-  const task = createTaskLog(`screenshot ${name} on chromium`, {
-    disabled: process.env.FROM_TESTS,
-  })
-  const sceenshotBuffer = await page.locator("#ui").screenshot()
-  writeFileSync(
-    new URL(`./screenshots/${name}`, import.meta.url),
-    sceenshotBuffer,
-  )
-  task.done()
 }
 const clickToBuildAnimal = async (page, animalName) => {
   const buildButton = await page.locator(`button#build_${animalName}`)
@@ -58,28 +47,43 @@ const clickToCheckUpdate = async (page) => {
 }
 
 try {
-  await ensureEmptyDirectory(new URL("./screenshots/", import.meta.url))
+  await ensureEmptyDirectory(new URL("./screenshots/a/", import.meta.url))
+  await ensureEmptyDirectory(new URL("./screenshots/b/", import.meta.url))
   const htmlUrl = `${buildServer.origin}/main.html`
   const pageA = await openPage(htmlUrl)
   const pageB = await openPage(htmlUrl)
+
+  const takeScreenshot = async (page, name) => {
+    const dirname = page === pageA ? "a" : "b"
+    const sceenshotBuffer = await page.locator("#ui").screenshot()
+    writeFileSync(
+      new URL(`./screenshots/${dirname}/${name}`, import.meta.url),
+      sceenshotBuffer,
+    )
+  }
   let screenshotCount = 0
   const takeScreenshots = async (name) => {
+    name = `${screenshotCount}_${name}`
     screenshotCount++
-    await takePageUIScreenshot(pageA, { name: `${screenshotCount}_a_${name}` })
-    await takePageUIScreenshot(pageB, { name: `${screenshotCount}_b_${name}` })
+    const task = createTaskLog(`screenshot ${name} on chromium`, {
+      disabled: process.env.FROM_TESTS,
+    })
+    await takeScreenshot(pageA, name)
+    await takeScreenshot(pageB, name)
+    task.done()
   }
 
-  await takeScreenshots("before_register.png")
+  await takeScreenshots("dog_after_load.png")
   const pageARegisterButton = await pageA.locator("button#register")
   await pageARegisterButton.click()
   await new Promise((resolve) => setTimeout(resolve, 1_000))
-  await takeScreenshots("after_register.png")
+  await takeScreenshots("dog_after_register.png")
   await Promise.all([pageA.reload(), pageB.reload()])
-  await takeScreenshots("after_reload.png")
+  await takeScreenshots("dog_after_reload.png")
 
   await clickToBuildAnimal(pageA, "cat")
   await clickToCheckUpdate(pageA)
-  await takeScreenshots("update_by_reload_available.png")
+  await takeScreenshots("cat_found.png")
   const pageARestartButton = await pageA.locator(
     "button#update_by_restart_button",
   )
@@ -88,17 +92,28 @@ try {
   await pageARestartButton.click()
   await pageAReloadPromise
   await pageBReloadPromise
-  await takeScreenshots("after_update_by_reload.png")
+  await takeScreenshots("cat_activated_after_reload.png")
 
   const pageAHotUpdateCheckbox = await pageA.locator("input#image_hot_update")
   await pageAHotUpdateCheckbox.click()
+  const pageBHotUpdateCheckbox = await pageB.locator("input#image_hot_update")
+  await pageBHotUpdateCheckbox.click()
   await clickToBuildAnimal(pageA, "horse")
   await clickToCheckUpdate(pageA)
-  await takeScreenshots("update_now_available.png")
-  const pageAUpdateNowButton = await pageA.locator("#update_now_button")
-  await pageAUpdateNowButton.click()
-  await takeScreenshots("update_now_applied.png")
-  // then rebuild again to ensure we can update hot twice in a row
+  await takeScreenshots("horse_found.png")
+  {
+    const pageAUpdateNowButton = await pageA.locator("#update_now_button")
+    await pageAUpdateNowButton.click()
+  }
+  await new Promise((resolve) => setTimeout(resolve, 1_500))
+  await takeScreenshots("horse_activated_after_hot_replace.png")
+  await clickToBuildAnimal(pageA, "cat")
+  await takeScreenshots("cat_found.png")
+  {
+    const pageAUpdateNowButton = await pageA.locator("#update_now_button")
+    await pageAUpdateNowButton.click()
+  }
+  await takeScreenshots("cat_activated_after_hot_replace.png")
 } finally {
   if (!debug) {
     browser.close()
