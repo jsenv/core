@@ -29,6 +29,7 @@ self.__sw__.registerActions({
 })
 
 self.__sw__.init({
+  logLevel: "debug",
   name: self.NAME || "dog",
   resources: {
     "/": {},

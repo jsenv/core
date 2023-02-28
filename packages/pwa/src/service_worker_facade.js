@@ -34,9 +34,23 @@ export const createServiceWorkerFacade = ({
 
   const resourceUpdateHandlers = {}
 
+  const getCurrentServiceWorker = async () => {
+    const { controller } = serviceWorkerAPI
+    if (controller) {
+      return controller
+    }
+    const reg = await serviceWorkerAPI.getRegistration()
+    return reg.waiting || reg.installing
+  }
+
   const onUpdateFound = async (toServiceWorker) => {
-    const fromScriptMeta = await fromInspectPromise
-    const toScriptMeta = await inspectServiceWorker(toServiceWorker)
+    const fromServiceWorker = await getCurrentServiceWorker()
+    const [fromScriptMeta, toScriptMeta] = await Promise.all([
+      inspectServiceWorker(fromServiceWorker),
+      inspectServiceWorker(toServiceWorker),
+    ])
+
+    pwaLogger.info(`update from`, fromScriptMeta, `to`, toScriptMeta)
 
     const serviceWorkerHotReplacer = createServiceWorkerHotReplacer({
       resourceUpdateHandlers,
@@ -82,11 +96,10 @@ export const createServiceWorkerFacade = ({
             pwaLogger.info("hot replace service worker")
             serviceWorkerHotReplacer()
           } else {
-            pwaLogger.info("reloading page")
+            pwaLogger.info("post reload after update to clients")
             postMessageToServiceWorker(toServiceWorker, {
               action: "postReloadAfterUpdateToClients",
             })
-            reloadPage()
           }
         },
         redundant: () => {
@@ -293,6 +306,11 @@ export const createServiceWorkerFacade = ({
       return postMessageToServiceWorker(serviceWorker, message)
     },
     defineResourceUpdateHandler: (url, handler) => {
+      if (typeof handler !== "function" && typeof handler !== "object") {
+        throw new TypeError(
+          `handle must be a function or an object, got ${handler}`,
+        )
+      }
       const urlResolved = new URL(url, document.location).href
       resourceUpdateHandlers[urlResolved] = handler
     },
@@ -323,6 +341,9 @@ const ensureIsControllingNavigator = (serviceWorker) => {
 // https://github.com/GoogleChrome/workbox/issues/1120
 serviceWorkerAPI.addEventListener("message", (event) => {
   if (event.data === "reload_after_update") {
+    pwaLogger.info(
+      '"reload_after_update" received from service worker -> reload page',
+    )
     reloadPage()
   }
 })

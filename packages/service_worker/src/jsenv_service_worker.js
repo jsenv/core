@@ -219,7 +219,7 @@ const sw = self.__sw__
     // --- activation phase ---
     {
       self.addEventListener("activate", (activateEvent) => {
-        logger.infoGroupCollapsed(`activate (${label})`)
+        logger.infoGroupCollapsed(`activate ${label}`)
         const activatePromise = Promise.all([
           handleActivateEvent(activateEvent),
           activate(activateEvent),

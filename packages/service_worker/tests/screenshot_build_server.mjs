@@ -5,6 +5,7 @@ import { jsenvPluginGlobals } from "@jsenv/plugin-globals"
 
 const buildAnimal = async (name) => {
   await build({
+    handleSIGINT: false,
     logLevel: "warn",
     rootDirectoryUrl: new URL("./project/src/", import.meta.url),
     buildDirectoryUrl: new URL("./project/dist/", import.meta.url),
@@ -16,6 +17,7 @@ const buildAnimal = async (name) => {
       {
         resolveUrl: (reference) => {
           if (reference.specifier.includes("animal.svg")) {
+            reference.filename = "animal.svg"
             return new URL(`./project/src/${name}.svg`, import.meta.url)
           }
           return null

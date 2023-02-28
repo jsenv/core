@@ -23,6 +23,32 @@ export const createServiceWorkerHotReplacer = ({
   const fromResources = fromScriptMeta.resources
   const toResources = toScriptMeta.resources
 
+  const getResourceUpdateHandler = (url) => {
+    const resourceUpdateHandler = resourceUpdateHandlers[url]
+    if (resourceUpdateHandler) {
+      return resourceUpdateHandler
+    }
+    // defineResourceUpdateHandler might be called with the versioned url (in case import.meta.url is used)
+    // so we'll try to find the non versioned url instead
+    const fromVersionedUrl = fromResources[url]
+      ? fromResources[url].versionedUrl
+      : ""
+    if (fromVersionedUrl) {
+      const fromHandler = resourceUpdateHandlers[fromVersionedUrl]
+      if (fromHandler) {
+        return fromHandler
+      }
+    }
+    const toVersionedUrl = toResources[url] ? toResources[url].versionedUrl : ""
+    if (toVersionedUrl) {
+      const toHandler = resourceUpdateHandlers[toVersionedUrl]
+      if (toHandler) {
+        return toHandler
+      }
+    }
+    return null
+  }
+
   const getOneUpdateHotHandler = ({
     url,
     fromUrl,
@@ -30,12 +56,22 @@ export const createServiceWorkerHotReplacer = ({
     fromVersion,
     toVersion,
   }) => {
-    let resourceUpdateHandler = resourceUpdateHandlers[url]
-    if (!resourceUpdateHandler) {
-      return null
-    }
+    let resourceUpdateHandler = getResourceUpdateHandler(url)
     if (typeof resourceUpdateHandler === "function") {
-      return resourceUpdateHandler({ fromUrl, toUrl, fromVersion, toVersion })
+      resourceUpdateHandler = resourceUpdateHandler({
+        fromUrl,
+        toUrl,
+        fromVersion,
+        toVersion,
+      })
+      if (typeof resourceUpdateHandler !== "object") {
+        throw new TypeError(
+          `resource uupdate hanler must be an object, got ${resourceUpdateHandler}`,
+        )
+      }
+    }
+    if (resourceUpdateHandler === null || resourceUpdateHandler === undefined) {
+      return null
     }
     if (!toUrl) {
       if (resourceUpdateHandler.remove) {
@@ -103,6 +139,12 @@ export const createServiceWorkerHotReplacer = ({
         toVersion: toUrlMeta.version || null,
       })
       if (!updateHandler) {
+        console.log({
+          fromUrl,
+          fromResources,
+          toResources,
+          availableHandlers: Object.keys(resourceUpdateHandlers),
+        })
         pwaLogger.debug(`nothing capable to handle update of ${fromUrl}`)
         return null
       }
@@ -146,6 +188,7 @@ export const createServiceWorkerHotReplacer = ({
   return async () => {
     await Promise.all(
       actions.map(async (action) => {
+        pwaLogger.debug(`call "${action.type}" handler for ${action.url}`)
         await action.fn()
       }),
     )
