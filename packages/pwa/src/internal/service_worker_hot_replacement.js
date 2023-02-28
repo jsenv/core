@@ -36,6 +36,7 @@ export const createServiceWorkerHotReplacer = ({
     if (fromVersionedUrl) {
       const fromHandler = resourceUpdateHandlers[fromVersionedUrl]
       if (fromHandler) {
+        resourceUpdateHandlers[url] = fromHandler
         return fromHandler
       }
     }
@@ -140,6 +141,8 @@ export const createServiceWorkerHotReplacer = ({
       })
       if (!updateHandler) {
         console.log({
+          fromScriptMeta,
+          toScriptMeta,
           fromUrl,
           fromResources,
           toResources,

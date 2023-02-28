@@ -86,6 +86,15 @@ try {
     await takeScreenshot(pageB, name)
     task.done()
   }
+  const clickToHotReplace = async () => {
+    const pageAUpdateNowButton = await pageA.locator("#update_now_button")
+    await pageAUpdateNowButton.click()
+    // wait a bit, corresponds to:
+    // - time for service worker to switch from "installed" to "activated"
+    //   (execution of "activate" event)
+    // - time for service_worker_facade to hot replace (a fetch request to new url)
+    await new Promise((resolve) => setTimeout(resolve, 1_000))
+  }
 
   await waitForPagesReady()
   await takeScreenshots("dog_after_load.png")
@@ -109,7 +118,7 @@ try {
   await pageAReloadPromise
   await pageBReloadPromise
   await waitForPagesReady()
-  await takeScreenshots("cat_activated_after_reload.png")
+  await takeScreenshots("cat_after_reload.png")
 
   const pageAHotUpdateCheckbox = await pageA.locator("input#image_hot_update")
   await pageAHotUpdateCheckbox.click()
@@ -118,20 +127,20 @@ try {
   await clickToBuildAnimal(pageA, "horse")
   await clickToCheckUpdate(pageA)
   await takeScreenshots("horse_found.png")
-  {
-    const pageAUpdateNowButton = await pageA.locator("#update_now_button")
-    await pageAUpdateNowButton.click()
-  }
-  await new Promise((resolve) => setTimeout(resolve, 1_500))
-  await takeScreenshots("horse_activated_after_hot_replace.png")
+  await clickToHotReplace(pageA)
+
+  await takeScreenshots("horse_after_hot_replace.png")
   await clickToBuildAnimal(pageA, "bear")
   await clickToCheckUpdate(pageA)
   await takeScreenshots("bear_found.png")
-  // {
-  //   const pageAUpdateNowButton = await pageA.locator("#update_now_button")
-  //   await pageAUpdateNowButton.click()
-  // }
-  // await takeScreenshots("bear_activated_after_hot_replace.png")
+  await clickToHotReplace(pageA)
+  await takeScreenshots("bear_after_hot_replace.png")
+
+  // ensure going back to horse is possible
+  await clickToBuildAnimal(pageA, "horse")
+  await clickToCheckUpdate(pageA)
+  await clickToHotReplace(pageA)
+  await takeScreenshots("back_to_horse.png")
 } finally {
   if (!debug) {
     browser.close()
