@@ -47,11 +47,13 @@ const takeSnapshots = async ([pageA, pageB], name) => {
 }
 const takeSnapshot = async (page, name) => {
   const uiLocator = await page.locator("#ui")
-  const uiScreenshotBuffer = await uiLocator.screenshot()
-  writeFileSync(
-    new URL(`./snapshots/screen/${name}.png`, import.meta.url),
-    uiScreenshotBuffer,
-  )
+  if (!process.env.FROM_TESTS) {
+    const uiScreenshotBuffer = await uiLocator.screenshot()
+    writeFileSync(
+      new URL(`./snapshots/screen/${name}.png`, import.meta.url),
+      uiScreenshotBuffer,
+    )
+  }
   const uiHtml = await page.evaluate(
     /* eslint-disable no-undef */
     async () => {
