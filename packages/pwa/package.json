@@ -34,13 +34,9 @@
     "./packages/*"
   ],
   "scripts": {
-    "dev": "node ./script/dev/dev.mjs",
-    "eslint": "node ./node_modules/eslint/bin/eslint.js . --ext=.js,.mjs,.jsx,.html --ignore-path=.eslintignore",
-    "test": "node ./script/test/test.mjs",
-    "test-with-coverage": "npm run test -- --coverage",
-    "prettier": "prettier --write .",
-    "packages-install": "cd docs/react_example && npm install",
-    "certificate-install": "node ./script/dev/install_certificate.mjs"
+    "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",
+    "test": "node ./scripts/test.mjs",
+    "prettier": "prettier --write ."
   },
   "dependencies": {
     "@jsenv/sigi": "0.0.1"
