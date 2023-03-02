@@ -33,98 +33,53 @@
       })
     </script>
     <script type="module">
-      import {
-        createServiceWorkerScript,
-        canUseServiceWorkers,
-      } from "@jsenv/pwa"
+      import { createServiceWorkerFacade } from "@jsenv/pwa"
 
-      const script = createServiceWorkerScript({
+      const swFacade = createServiceWorkerFacade({
         logLevel: "debug",
       })
 
       const registerButton = document.querySelector("#register")
       const unregisterButton = document.querySelector("#unregister")
-      if (canUseServiceWorkers) {
-        script.addEffect(({ readyState }) => {
-          registerButton.disabled = readyState > 0
-        })
-        script.setRegisterPromise(
+
+      swFacade.setRegistrationPromise(
+        window.navigator.serviceWorker.register("./sw.js"),
+      )
+      registerButton.onclick = () => {
+        swFacade.setRegistrationPromise(
           window.navigator.serviceWorker.register("./sw.js"),
         )
-        registerButton.onclick = () => {
-          script.setRegisterPromise(
-            window.navigator.serviceWorker.register("./sw.js"),
-          )
-        }
-        script.addEffect(({ readyState }) => {
-          unregisterButton.disabled = readyState === 0
-        })
-        unregisterButton.onclick = () => {
-          script.unregister()
-        }
+      }
+      swFacade.subscribe(({ readyState }) => {
+        unregisterButton.disabled = readyState === ""
+      })
+      unregisterButton.onclick = () => {
+        swFacade.unregister()
       }
 
       const statusText = document.querySelector("#status")
-      script.addEffect(({ error, readyState }) => {
-        const text = error
-          ? `error`
-          : {
-              0: "not registered",
-              1: "registering",
-              2: "installing",
-              3: "installed",
-              4: "activating",
-              5: "activated",
-            }[readyState]
-        if (text === undefined) {
-          console.log(readyState)
-        }
+      swFacade.subscribe(({ error, readyState }) => {
+        const text = error ? `error` : readyState
         statusText.innerHTML = text
       })
 
       const updateStatusText = document.querySelector("#update_status")
-      script.update.addEffect(({ error, readyState }) => {
-        updateStatusText.innerHTML = error
-          ? `An error occured ${error.message}`
-          : {
-              0: "nothing",
-              1: "fetching",
-              2: "installing",
-              3: "installed",
-              4: "activating",
-              5: "activated",
-            }[readyState]
+      swFacade.subscribe(({ update }) => {
+        updateStatusText.innerHTML = update.error
+          ? `An error occured ${update.error.message}`
+          : update.readyState
       })
 
       const checkForUpdatesButton = document.querySelector("#check_for_updates")
-      script.addEffect(({ readyState }) => {
-        checkForUpdatesButton.disabled = readyState < 2
-      })
       checkForUpdatesButton.onclick = async () => {
         checkForUpdatesButton.disabled = true
-        const updateFound = await script.update.check()
+        const updateFound = await swFacade.checkForUpdates()
         checkForUpdatesButton.disabled = false
         if (!updateFound) {
           // eslint-disable-next-line no-alert
           window.alert("no update found")
         }
       }
-
-      const updateAvailableDiv = document.querySelector("#update_available")
-      script.update.addEffect(({ readyState }) => {
-        if (readyState === 3) {
-          updateAvailableDiv.style.display = "block"
-          const activateNowButton = document.querySelector("#activate_now")
-          activateNowButton.disabled = false
-          activateNowButton.innerHTML = "Activer maintenant"
-          activateNowButton.onclick = async () => {
-            activateNowButton.disabled = true
-            await script.update.activate()
-          }
-        } else {
-          updateAvailableDiv.style.display = "none"
-        }
-      })
     </script>
   </body>
 </html>
