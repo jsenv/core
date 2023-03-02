@@ -31,8 +31,9 @@
       })
     </script>
     <script type="module">
-      import { createServiceWorkerFacade } from "@jsenv/pwa"
+      import { pwaLogger, createServiceWorkerFacade } from "@jsenv/pwa"
 
+      pwaLogger.setOptions({ logLevel: "info" })
       const swFacade = createServiceWorkerFacade()
       /* expose on window to let automated test do things */
       window.registerServiceWorkerScript = () => {
