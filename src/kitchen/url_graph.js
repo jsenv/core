@@ -37,6 +37,7 @@ export const createUrlGraph = () => {
     if (!parentUrlInfo) {
       return null
     }
+    const seen = []
     const search = (urlInfo) => {
       const firstReferenceFound = urlInfo.references.find((reference) => {
         return urlSpecifierEncoding.decode(reference) === specifier
@@ -45,6 +46,10 @@ export const createUrlGraph = () => {
         return firstReferenceFound
       }
       for (const dependencyUrl of parentUrlInfo.dependencies) {
+        if (seen.includes(dependencyUrl)) {
+          continue
+        }
+        seen.push(dependencyUrl)
         const dependencyUrlInfo = getUrlInfo(dependencyUrl)
         if (dependencyUrlInfo.isInline) {
           const firstRef = search(dependencyUrlInfo)

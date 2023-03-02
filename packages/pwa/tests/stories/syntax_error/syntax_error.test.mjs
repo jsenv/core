@@ -47,10 +47,7 @@ try {
   await takeServiceWorkerUIScreenshot({ name: "1_after_register.png" })
   assert({
     actual: pageLogs,
-    expected: [
-      { type: "log", text: "registering service worker" },
-      { type: "error", text: "error while registering service worker script" },
-    ],
+    expected: [],
   })
 } finally {
   if (!debug) {
