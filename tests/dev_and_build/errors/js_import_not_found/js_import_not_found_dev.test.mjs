@@ -35,7 +35,7 @@ try {
     errorMessage: returnValue.executionResults["/main.js"].exception.message,
   }
   const expected = {
-    serverWarnOutput: `GET ${devServer.origin}/foo.js
+    serverWarnOutput: `GET ${devServer.origin}/not_found.js
   [33m404[0m Failed to fetch url content
   --- reason ---
   no entry on filesystem
