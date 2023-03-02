@@ -16,7 +16,7 @@
       import { createServiceWorkerFacade } from "@jsenv/pwa"
 
       const swFacade = createServiceWorkerFacade()
-      await swFacade.setRegistationPromise(
+      await swFacade.setRegistrationPromise(
         window.navigator.serviceWorker.register("./sw.js"),
       )
       const value = await swFacade.sendMessage("ping")

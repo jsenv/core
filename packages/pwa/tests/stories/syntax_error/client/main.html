@@ -38,7 +38,7 @@
       })
       /* expose on window to let automated test do things */
       window.registerServiceWorkerScript = () => {
-        return swFacade.setRegistationPromise(
+        return swFacade.setRegistrationPromise(
           window.navigator.serviceWorker.register("./sw.js"),
         )
       }

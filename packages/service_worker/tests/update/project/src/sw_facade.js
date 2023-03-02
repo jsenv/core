@@ -57,7 +57,7 @@ registration: {
     try {
       const registrationPromise =
         window.navigator.serviceWorker.register("./sw.js")
-      swFacade.setRegistationPromise(registrationPromise)
+      swFacade.setRegistrationPromise(registrationPromise)
       await registrationPromise
     } finally {
       registerButton.disabled = false

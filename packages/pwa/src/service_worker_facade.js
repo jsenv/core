@@ -192,7 +192,7 @@ export const createServiceWorkerFacade = ({
   return {
     state,
     subscribe,
-    setRegistationPromise: async (registrationPromise) => {
+    setRegistrationPromise: async (registrationPromise) => {
       try {
         mutate({ error: null, readyState: "registering" })
         const registration = await registrationPromise
