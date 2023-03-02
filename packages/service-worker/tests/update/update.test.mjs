@@ -2,7 +2,7 @@ import { writeFileSync } from "node:fs"
 import { chromium } from "playwright"
 import { ensureEmptyDirectory } from "@jsenv/filesystem"
 import { createTaskLog } from "@jsenv/log"
-import { buildServer } from "./screenshot_build_server.mjs"
+import { buildServer } from "./update_build_server.mjs"
 
 await ensureEmptyDirectory(new URL("./screenshots/a/", import.meta.url))
 await ensureEmptyDirectory(new URL("./screenshots/b/", import.meta.url))
