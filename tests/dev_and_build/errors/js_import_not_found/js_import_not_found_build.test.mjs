@@ -18,11 +18,11 @@ try {
 --- reason ---
 no entry on filesystem
 --- url ---
-${new URL("./client/foo.js", import.meta.url).href}
+${new URL("./client/not_found.js", import.meta.url).href}
 --- url reference trace ---
 ${new URL("./client/intermediate.js", import.meta.url).href}:2:7
   1 | // eslint-disable-next-line import/no-unresolved
-> 2 | import "./foo.js"
+> 2 | import "./not_found.js"
             ^
   3 | 
 --- plugin name ---

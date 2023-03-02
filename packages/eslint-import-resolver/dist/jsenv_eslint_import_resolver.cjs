@@ -2210,6 +2210,27 @@ ${file}
 --- root directory path ---
 ${node_url.fileURLToPath(rootDirectoryUrl)}`);
 
+  const triggerNotFoundWarning = ({ resolver, specifier, importer, url }) => {
+    const logLevel =
+      importer.includes(".xtest.js") || specifier.includes("/not_found.js")
+        ? "debug"
+        : "warn";
+
+    if (resolver === "esm") {
+      logger[logLevel](
+        `esm module resolution failed for "${specifier}" imported by ${importer}`,
+      );
+    } else if (resolver === "commonjs") {
+      logger[logLevel](
+        `commonjs module resolution failed for "${specifier}" imported by ${importer}`,
+      );
+    } else {
+      logger[logLevel](
+        `filesystem resolution failed for "${specifier}" imported by ${importer} (file not found at ${url})`,
+      );
+    }
+  };
+
   packageConditions = [
     ...readCustomConditionsFromProcessArgs(),
     ...packageConditions,
@@ -2244,11 +2265,13 @@ ${node_url.fileURLToPath(rootDirectoryUrl)}`);
       }
 
       return handleFileUrl(url, {
+        specifier,
         importer,
         logger,
         caseSensitive,
         magicDirectoryIndex,
         magicExtensions,
+        triggerNotFoundWarning,
       })
     }
     if (url.startsWith("node:") && !nodeInPackageConditions) {
@@ -2301,7 +2324,11 @@ ${node_url.fileURLToPath(rootDirectoryUrl)}`);
         url = requireForImporter.resolve(specifier);
       } catch (e) {
         if (e.code === "MODULE_NOT_FOUND") {
-          logger.warn(`-> commonjs module resolution failed for "${specifier}"`);
+          triggerNotFoundWarning({
+            resolver: "commonjs",
+            specifier,
+            importer,
+          });
           return { found: false, path: specifier }
         }
         throw e
@@ -2320,7 +2347,11 @@ ${node_url.fileURLToPath(rootDirectoryUrl)}`);
         });
       } catch (e) {
         if (e.code === "MODULE_NOT_FOUND") {
-          logger.warn(`-> esm module resolution failed for "${specifier}"`);
+          triggerNotFoundWarning({
+            resolver: "esm",
+            specifier,
+            importer,
+          });
           return { found: false, path: specifier }
         }
         throw e
@@ -2350,7 +2381,15 @@ ${e.stack}`);
 
 const handleFileUrl = (
   fileUrl,
-  { importer, logger, magicDirectoryIndex, magicExtensions, caseSensitive },
+  {
+    specifier,
+    importer,
+    logger,
+    magicDirectoryIndex,
+    magicExtensions,
+    caseSensitive,
+    triggerNotFoundWarning,
+  },
 ) => {
   fileUrl = `file://${new URL(fileUrl).pathname}`; // remove query params from url
   const fileResolution = applyFileSystemMagicResolution(fileUrl, {
@@ -2358,11 +2397,13 @@ const handleFileUrl = (
     magicExtensions: getExtensionsToTry(magicExtensions, importer),
   });
   if (!fileResolution.found) {
-    logger.warn(`-> file not found at ${fileUrl}`);
-    return {
-      found: false,
-      path: node_url.fileURLToPath(fileUrl),
-    }
+    triggerNotFoundWarning({
+      resolver: "filesystem",
+      specifier,
+      importer,
+      url: fileUrl,
+    });
+    return { found: false, path: node_url.fileURLToPath(fileUrl) }
   }
   fileUrl = fileResolution.url;
   const realFileUrl = getRealFileSystemUrlSync(fileUrl, {
