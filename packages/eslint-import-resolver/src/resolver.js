@@ -56,7 +56,6 @@ ${fileURLToPath(rootDirectoryUrl)}`)
       importer.includes(".xtest.js") || specifier.includes("/not_found.js")
         ? "debug"
         : "warn"
-
     if (resolver === "esm") {
       logger[logLevel](
         `esm module resolution failed for "${specifier}" imported by ${importer}`,
