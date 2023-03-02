@@ -33,18 +33,17 @@
       })
     </script>
     <script type="module">
-      import { createServiceWorkerFacade } from "@jsenv/pwa"
+      import { pwaLogger, createServiceWorkerFacade } from "@jsenv/pwa"
 
-      const swFacade = createServiceWorkerFacade({
+      pwaLogger.setOptions({
         logLevel: "debug",
       })
+      const swFacade = createServiceWorkerFacade()
 
       const registerButton = document.querySelector("#register")
       const unregisterButton = document.querySelector("#unregister")
 
-      swFacade.setRegistrationPromise(
-        window.navigator.serviceWorker.register("./sw.js"),
-      )
+      registerButton.disabled = false
       registerButton.onclick = () => {
         swFacade.setRegistrationPromise(
           window.navigator.serviceWorker.register("./sw.js"),

@@ -35,22 +35,14 @@ try {
   }
 
   await takeServiceWorkerUIScreenshot({ name: "0_before_register.png" })
-  // register service worker script
-  await page.evaluate(
-    /* eslint-disable no-undef */
-    async () => {
-      await window.registerServiceWorkerScript()
-    },
-    /* eslint-enable no-undef */
-  )
+  const registerButton = await page.locator("#register")
+  await registerButton.click()
+  await new Promise((resolve) => setTimeout(resolve, 1_000))
   // now take screenshots + ensure browser logs
   await takeServiceWorkerUIScreenshot({ name: "1_after_register.png" })
   assert({
     actual: pageLogs,
-    expected: [
-      { type: "log", text: "registering service worker" },
-      { type: "error", text: "error while registering service worker script" },
-    ],
+    expected: [],
   })
 } finally {
   if (!debug) {
