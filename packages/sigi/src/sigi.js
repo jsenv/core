@@ -316,6 +316,7 @@ const getPreciseType = (value) => {
     // and we want ${tagName}
     const tagName = toStringResult.slice("[object ".length, -1)
     if (tagName === "Object") {
+      if (!value.constructor) return "object" // Object.create(null)
       const objectConstructorName = value.constructor.name
       if (objectConstructorName === "Object") {
         return "object"
