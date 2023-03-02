@@ -1,5 +1,3 @@
-/* globals self */
-
 import "./a.js"
 
 self.order = []

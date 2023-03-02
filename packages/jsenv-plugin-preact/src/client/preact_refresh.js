@@ -1,5 +1,3 @@
-/* globals self */
-
 import "@prefresh/core"
 import { flush } from "@prefresh/utils"
 

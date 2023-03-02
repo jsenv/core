@@ -1,4 +1,4 @@
-/* globals self, importScripts */
+/* globals importScripts */
 
 self.order = []
 self.order.push("before-a")

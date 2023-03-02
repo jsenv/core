@@ -2295,16 +2295,37 @@ ${node_url.fileURLToPath(rootDirectoryUrl)}`);
       ambiguousExtensions,
     });
     if (moduleSystem === "commonjs") {
-      return onUrl(node_module.createRequire(importer).resolve(specifier), {
+      const requireForImporter = node_module.createRequire(importer);
+      let url;
+      try {
+        url = requireForImporter.resolve();
+      } catch (e) {
+        if (e.code === "MODULE_NOT_FOUND") {
+          return {
+            found: false,
+            path: specifier,
+          }
+        }
+        throw e
+      }
+      return onUrl(url, {
         resolvedBy: "commonjs",
       })
     }
     if (moduleSystem === "module") {
-      const nodeResolution = applyNodeEsmResolution({
-        conditions: packageConditions,
-        parentUrl: importer,
-        specifier,
-      });
+      let nodeResolution;
+      try {
+        nodeResolution = applyNodeEsmResolution({
+          conditions: packageConditions,
+          parentUrl: importer,
+          specifier,
+        });
+      } catch (e) {
+        if (e.code === "MODULE_NOT_FOUND") {
+          return { found: false, path: specifier }
+        }
+        throw e
+      }
       if (nodeResolution) {
         return onUrl(nodeResolution.url, {
           resolvedBy: "node_esm",

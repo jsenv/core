@@ -1,4 +1,3 @@
-/* globals self */
 console.log({
   ...{ answer: 42 },
 })
