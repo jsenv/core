@@ -2298,13 +2298,11 @@ ${node_url.fileURLToPath(rootDirectoryUrl)}`);
       const requireForImporter = node_module.createRequire(importer);
       let url;
       try {
-        url = requireForImporter.resolve();
+        url = requireForImporter.resolve(specifier);
       } catch (e) {
         if (e.code === "MODULE_NOT_FOUND") {
-          return {
-            found: false,
-            path: specifier,
-          }
+          logger.warn(`-> commonjs module resolution failed for "${specifier}"`);
+          return { found: false, path: specifier }
         }
         throw e
       }
@@ -2322,6 +2320,7 @@ ${node_url.fileURLToPath(rootDirectoryUrl)}`);
         });
       } catch (e) {
         if (e.code === "MODULE_NOT_FOUND") {
+          logger.warn(`-> esm module resolution failed for "${specifier}"`);
           return { found: false, path: specifier }
         }
         throw e

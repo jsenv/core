@@ -1,5 +1,3 @@
-/* globals self */
-
 import { createWebSocketConnection } from "./web_socket_connection.js"
 
 const websocketScheme = self.location.protocol === "https:" ? "wss" : "ws"

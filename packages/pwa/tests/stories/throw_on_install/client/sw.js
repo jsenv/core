@@ -1,6 +1,6 @@
 /* eslint-env serviceworker */
 
-self.addEventListener("install", (installEvent) => {
+self.addEventListener("install", () => {
   // throw new Error("here")
   //   installEvent.waitUntil(
   //     new Promise((resolve, reject) => {
