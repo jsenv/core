@@ -11,7 +11,7 @@ import {
 
 const test = async ({
   snapshotsDirectoryUrl,
-  expectedServiceWorkerUrls,
+  expectedResourcesFromJsenvBuild,
   ...rest
 }) => {
   const { buildFileContents } = await build({
@@ -33,7 +33,7 @@ const test = async ({
     pageFunction: async () => window.resultPromise,
     /* eslint-enable no-undef */
   })
-  const { serviceWorkerUrls } = returnValue.inspectResponse
+  const { resourcesFromJsenvBuild } = returnValue.inspectResponse
 
   const expectedBuildFileContents = readSnapshotsFromDirectory(
     snapshotsDirectoryUrl,
@@ -41,11 +41,11 @@ const test = async ({
   writeSnapshotsIntoDirectory(snapshotsDirectoryUrl, buildFileContents)
   assert({
     actual: {
-      serviceWorkerUrls,
+      resourcesFromJsenvBuild,
       buildFileContents,
     },
     expected: {
-      serviceWorkerUrls: expectedServiceWorkerUrls,
+      resourcesFromJsenvBuild: expectedResourcesFromJsenvBuild,
       buildFileContents: expectedBuildFileContents,
     },
   })
@@ -57,20 +57,32 @@ if (process.platform === "darwin") {
     runtimeCompat: { chrome: "80" },
     plugins: [jsenvPluginBundling()],
     snapshotsDirectoryUrl: new URL("./snapshots/1/", import.meta.url),
-    expectedServiceWorkerUrls: {
-      "/main.html": { versioned: false, version: "11f11490" },
-      "/css/style.css?v=0e312da1": { versioned: true },
+    expectedResourcesFromJsenvBuild: {
+      "/main.html": { version: "f5eb87e5" },
+      "/css/style.css": {
+        version: "0e312da1",
+        versionedUrl: "/css/style.css?v=0e312da1",
+      },
     },
   })
   // support + no bundling
   await test({
     runtimeCompat: { chrome: "80" },
     snapshotsDirectoryUrl: new URL("./snapshots/2/", import.meta.url),
-    expectedServiceWorkerUrls: {
-      "/main.html": { versioned: false, version: "11f11490" },
-      "/css/style.css?v=0e312da1": { versioned: true },
-      "/js/a.nomodule.js?v=8345fcfc": { versioned: true },
-      "/js/b.nomodule.js?v=8f3fa8a4": { versioned: true },
+    expectedResourcesFromJsenvBuild: {
+      "/main.html": { version: "f5eb87e5" },
+      "/css/style.css": {
+        version: "0e312da1",
+        versionedUrl: "/css/style.css?v=0e312da1",
+      },
+      "/js/a.nomodule.js": {
+        version: "8345fcfc",
+        versionedUrl: "/js/a.nomodule.js?v=8345fcfc",
+      },
+      "/js/b.nomodule.js": {
+        version: "8f3fa8a4",
+        versionedUrl: "/js/b.nomodule.js?v=8f3fa8a4",
+      },
     },
   })
   // no support for { type: "module" } on service worker
@@ -78,20 +90,32 @@ if (process.platform === "darwin") {
     runtimeCompat: { chrome: "79" },
     plugins: [jsenvPluginBundling()],
     snapshotsDirectoryUrl: new URL("./snapshots/3/", import.meta.url),
-    expectedServiceWorkerUrls: {
-      "/main.html": { versioned: false, version: "c92ad1aa" },
-      "/css/style.css?v=0e312da1": { versioned: true },
+    expectedResourcesFromJsenvBuild: {
+      "/main.html": { version: "0f58deaa" },
+      "/css/style.css": {
+        version: "0e312da1",
+        versionedUrl: "/css/style.css?v=0e312da1",
+      },
     },
   })
   // no support for { type: "module" } on service worker + no bundling
   await test({
     runtimeCompat: { chrome: "79" },
     snapshotsDirectoryUrl: new URL("./snapshots/4/", import.meta.url),
-    expectedServiceWorkerUrls: {
-      "/main.html": { versioned: false, version: "c92ad1aa" },
-      "/css/style.css?v=0e312da1": { versioned: true },
-      "/js/a.nomodule.js?v=8345fcfc": { versioned: true },
-      "/js/b.nomodule.js?v=8f3fa8a4": { versioned: true },
+    expectedResourcesFromJsenvBuild: {
+      "/main.html": { version: "0f58deaa" },
+      "/css/style.css": {
+        version: "0e312da1",
+        versionedUrl: "/css/style.css?v=0e312da1",
+      },
+      "/js/a.nomodule.js": {
+        version: "8345fcfc",
+        versionedUrl: "/js/a.nomodule.js?v=8345fcfc",
+      },
+      "/js/b.nomodule.js": {
+        version: "8f3fa8a4",
+        versionedUrl: "/js/b.nomodule.js?v=8f3fa8a4",
+      },
     },
   })
 }

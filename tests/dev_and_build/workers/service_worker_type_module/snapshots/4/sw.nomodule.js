@@ -1,17 +1,19 @@
 
-self.serviceWorkerUrls = {
+self.resourcesFromJsenvBuild = {
   "/main.html": {
-    "versioned": false,
-    "version": "c92ad1aa"
+    "version": "0f58deaa"
   },
-  "/css/style.css?v=0e312da1": {
-    "versioned": true
+  "/css/style.css": {
+    "version": "0e312da1",
+    "versionedUrl": "/css/style.css?v=0e312da1"
   },
-  "/js/a.nomodule.js?v=8345fcfc": {
-    "versioned": true
+  "/js/a.nomodule.js": {
+    "version": "8345fcfc",
+    "versionedUrl": "/js/a.nomodule.js?v=8345fcfc"
   },
-  "/js/b.nomodule.js?v=8f3fa8a4": {
-    "versioned": true
+  "/js/b.nomodule.js": {
+    "version": "8f3fa8a4",
+    "versionedUrl": "/js/b.nomodule.js?v=8f3fa8a4"
   }
 };
 
@@ -38,7 +40,6 @@ self.serviceWorkerUrls = {
 
 ;(function () {
   /* eslint-env browser */
-  /* globals self */
 
   const loadRegistry = Object.create(null)
   const registerRegistry = Object.create(null)
@@ -478,14 +479,12 @@ System.register([__v__("/js/a.nomodule.js")], function (_export, _context) {
   return {
     setters: [function (_clientAJs) {}],
     execute: function () {
-      /* globals self */
-
       self.order = [];
       self.addEventListener("message", async messageEvent => {
         if (messageEvent.data === "inspect") {
           messageEvent.ports[0].postMessage({
             order: self.order,
-            serviceWorkerUrls: self.serviceWorkerUrls
+            resourcesFromJsenvBuild: self.resourcesFromJsenvBuild
           });
         }
       });
