@@ -36,7 +36,7 @@ self.addEventListener("message", async messageEvent => {
   if (messageEvent.data === "inspect") {
     messageEvent.ports[0].postMessage({
       order: self.order,
-      serviceWorkerUrls: self.serviceWorkerUrls
+      resourcesFromJsenvBuild: self.resourcesFromJsenvBuild
     });
   }
 });

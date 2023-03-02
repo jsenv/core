@@ -29,7 +29,7 @@ const test = async (params) => {
     pageFunction: async () => window.resultPromise,
     /* eslint-enable no-undef */
   })
-  const { order, serviceWorkerUrls } = returnValue.inspectResponse
+  const { order, resourcesFromJsenvBuild } = returnValue.inspectResponse
   const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url)
   const expectedBuildFileContents = readSnapshotsFromDirectory(
     snapshotsDirectoryUrl,
@@ -38,16 +38,25 @@ const test = async (params) => {
 
   const actual = {
     order,
-    serviceWorkerUrls,
+    resourcesFromJsenvBuild,
     buildFileContents,
   }
   const expected = {
     order: ["before-a", "before-b", "b", "after-b", "after-a"],
-    serviceWorkerUrls: {
-      "/main.html": { versioned: false, version: "ceb7c6c8" },
-      "/css/style.css?v=0e312da1": { versioned: true },
-      "/js/a.js?v=acc03e99": { versioned: true },
-      "/js/b.js?v=7342c38c": { versioned: true },
+    resourcesFromJsenvBuild: {
+      "/main.html": { version: "f78edba7" },
+      "/css/style.css": {
+        version: "0e312da1",
+        versionedUrl: "/css/style.css?v=0e312da1",
+      },
+      "/js/a.js": {
+        version: "766d14d0",
+        versionedUrl: "/js/a.js?v=766d14d0",
+      },
+      "/js/b.js": {
+        version: "2cc2d9e4",
+        versionedUrl: "/js/b.js?v=2cc2d9e4",
+      },
     },
     buildFileContents: expectedBuildFileContents,
   }
