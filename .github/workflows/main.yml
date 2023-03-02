@@ -46,7 +46,7 @@ jobs:
         run: npm run playwright:install
       - name: Install certificate # needed for @jsenv/server and @jsenv/service-worker tests
         if: runner.os == 'Linux' || runner.os == 'macOS' # https://docs.github.com/en/actions/learn-github-actions/contexts#runner-context
-        run: node ./scripts/certificate_install.mjs
+        run: node ./scripts/test/certificate_install.mjs
       - name: Run ESLint
         run: npm run eslint
       - name: Run packages tests
