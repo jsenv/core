@@ -62,6 +62,7 @@ const takeSnapshot = async (page, name) => {
         .replace(/&gt;/g, ">")
         .replace(/&quot;/g, `"`)
         .replace(/&#039;/g, `'`)
+        .replace(/src="blob:https.*?"/, `src="blob:replaced_for_snapshot"`)
     },
     /* eslint-enable no-undef */
   )
