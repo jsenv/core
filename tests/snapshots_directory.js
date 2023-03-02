@@ -1,10 +1,15 @@
 import { readdirSync, statSync, readFileSync, rmSync } from "node:fs"
-import { writeFileSync, comparePathnames } from "@jsenv/filesystem"
+import {
+  assertAndNormalizeDirectoryUrl,
+  writeFileSync,
+  comparePathnames,
+} from "@jsenv/filesystem"
 import { urlToRelativeUrl } from "@jsenv/urls"
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js"
 import { ensureUnixLineBreaks } from "@jsenv/core/src/build/line_break_unix.js"
 
 export const readSnapshotsFromDirectory = (directoryUrl) => {
+  directoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl)
   const fileContents = {}
   directoryUrl = new URL(directoryUrl)
   const visitDirectory = (url) => {
