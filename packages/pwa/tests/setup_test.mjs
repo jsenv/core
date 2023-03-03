@@ -9,7 +9,11 @@ export const setupTest = async ({ debug, ...rest }) => {
   const browser = await chromium.launch({
     headless: !debug,
     // needed because https-localhost fails to trust cert on chrome + linux (ubuntu 20.04)
-    args: ["--unsafely-treat-insecure-origin-as-secure=https://localhost/"],
+    args: [
+      "--ignore-certificate-errors",
+      // `--unsafely-treat-insecure-origin-as-secure=https://localhost:3456`,
+      // `--user-data-dir=${}`,
+    ],
   })
   const page = await launchBrowserPage(browser)
 
@@ -17,7 +21,9 @@ export const setupTest = async ({ debug, ...rest }) => {
 }
 
 const launchBrowserPage = async (browser) => {
-  const page = await browser.newPage({ ignoreHTTPSErrors: true })
+  const page = await browser.newPage({
+    ignoreHTTPSErrors: true,
+  })
   page.on("console", (message) => {
     if (message.type() === "error") {
       console.error(message.text())

@@ -15,7 +15,11 @@ import { buildServer } from "./errors_build_server.mjs"
 const snapshotsDirectoryUrl = new URL("./snapshots/html/", import.meta.url)
 await ensureEmptyDirectory(snapshotsDirectoryUrl)
 const debug = false
-const browser = await chromium.launch({ headless: !debug })
+const browser = await chromium.launch({
+  headless: !debug,
+  // needed because https-localhost fails to trust cert on chrome + linux (ubuntu 20.04)
+  args: ["--ignore-certificate-errors"],
+})
 const context = await browser.newContext()
 const openPage = async (url) => {
   const page = await context.newPage({ ignoreHTTPSErrors: true })

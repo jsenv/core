@@ -9,7 +9,10 @@ await ensureEmptyDirectory(new URL("./snapshots/html/b/", import.meta.url))
 await ensureEmptyDirectory(new URL("./snapshots/screen/a/", import.meta.url))
 await ensureEmptyDirectory(new URL("./snapshots/screen/b/", import.meta.url))
 const debug = false
-const browser = await chromium.launch({ headless: !debug })
+const browser = await chromium.launch({
+  headless: !debug, // needed because https-localhost fails to trust cert on chrome + linux (ubuntu 20.04)
+  args: ["--ignore-certificate-errors"],
+})
 const context = await browser.newContext()
 const openPage = async (url) => {
   const page = await context.newPage({ ignoreHTTPSErrors: true })
@@ -33,6 +36,8 @@ const clickToBuildAnimal = async (page, animalName) => {
 const clickToCheckUpdate = async (page) => {
   const updateCheckButton = await page.locator("button#update_check_button")
   await updateCheckButton.click()
+  // wait a bit so that service worker is "installed" (and not installing)
+  await new Promise((resolve) => setTimeout(resolve, 500))
 }
 let snapshotCount = 0
 const takeSnapshots = async ([pageA, pageB], name) => {
