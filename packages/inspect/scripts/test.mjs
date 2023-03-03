@@ -29,6 +29,7 @@ try {
         },
         firefox: {
           runtime: firefox,
+          allocatedMs: process.platform === "win32" ? 60_000 : 30_000,
         },
         webkit: {
           runtime: webkit,
