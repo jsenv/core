@@ -83,46 +83,60 @@ registration: {
   }
 
   // toggle ui based on readyState
+  const setReadyStateUI = (element) => {
+    const readyStateUIContainer = document.querySelector("#ready_state")
+    readyStateUIContainer.innerHTML = ""
+    readyStateUIContainer.appendChild(element.cloneNode(true))
+  }
   const errorUI = document.querySelector("#error")
   swFacade.subscribe(({ error }) => {
-    errorUI.style.display = error ? "block" : "none"
     errorUI.innerHTML = error ? "Failed to register service worker script" : ""
+    if (error) {
+      setReadyStateUI(errorUI)
+    }
   })
   const installingUI = document.querySelector("#installing")
   swFacade.subscribe(({ readyState, meta }) => {
-    installingUI.style.display = readyState === "installing" ? "block" : "none"
     if (readyState === "installing") {
       installingUI.querySelector(
         "span",
       ).innerHTML = `installing ${meta.name}...`
+      setReadyStateUI(installingUI)
     }
   })
   const installedUI = document.querySelector("#installed")
   swFacade.subscribe(({ readyState, meta }) => {
-    installedUI.style.display = readyState === "installed" ? "block" : "none"
     if (readyState === "installed") {
       installedUI.querySelector("span").innerHTML = `${meta.name} installed`
+      setReadyStateUI(installedUI)
     }
   })
-  const activating = document.querySelector("#activating")
+  const activatingUI = document.querySelector("#activating")
   swFacade.subscribe(({ readyState, meta }) => {
-    activating.style.display = readyState === "activating" ? "block" : "none"
     if (readyState === "activating") {
-      activating.querySelector("span").innerHTML = `activating ${meta.name}...`
+      activatingUI.querySelector(
+        "span",
+      ).innerHTML = `activating ${meta.name}...`
+      setReadyStateUI(activatingUI)
     }
   })
-  const activated = document.querySelector("#activated")
+  const activatedUI = document.querySelector("#activated")
   swFacade.subscribe(({ readyState, meta }) => {
-    activated.style.display = readyState === "activated" ? "block" : "none"
     if (readyState === "activated") {
-      activated.querySelector("span").innerHTML = `${meta.name} activated`
+      activatedUI.querySelector("span").innerHTML = `${meta.name} activated`
+      setReadyStateUI(activatedUI)
     }
   })
-  const redundant = document.querySelector("#redundant")
+  const redundantUI = document.querySelector("#redundant")
   swFacade.subscribe(({ readyState, meta }) => {
-    redundant.style.display = readyState === "redundant" ? "block" : "none"
     if (readyState === "redundant") {
-      redundant.querySelector("span").innerHTML = `${meta.name} redundant`
+      redundantUI.querySelector("span").innerHTML = `${meta.name} redundant`
+      setReadyStateUI(redundantUI)
+    }
+  })
+  swFacade.subscribe(({ readyState }) => {
+    if (readyState === "") {
+      setReadyStateUI(document.createTextNode(""))
     }
   })
 
@@ -173,12 +187,20 @@ update: {
     }
   }
 
+  const setUpdateReadyStateUI = (element) => {
+    const updateReadyStateUIContainer = document.querySelector(
+      "#update_ready_state",
+    )
+    updateReadyStateUIContainer.innerHTML = ""
+    updateReadyStateUIContainer.appendChild(element.cloneNode(true))
+  }
+
   const updateRegisterErrorUI = document.querySelector("#update_error")
   swFacade.subscribe(({ update }) => {
     const isUpdateError = update.error && update.readyState === ""
-    updateRegisterErrorUI.style.display = isUpdateError ? "block" : "none"
     if (isUpdateError) {
       updateRegisterErrorUI.innerHTML = `Error while trying to register updated version of service worker script`
+      setUpdateReadyStateUI(updateRegisterErrorUI)
     }
   })
 
@@ -195,15 +217,15 @@ update: {
   updateRejectInstallButton.onclick = () => {
     swFacade.sendMessage({ action: "reject_install" })
   }
+
   swFacade.subscribe(({ update }) => {
-    updateInstallingUI.style.display =
-      update.readyState === "installing" ? "block" : "none"
     if (update.readyState === "installing") {
       updateInstallingUI.querySelector(
         "span",
       ).innerHTML = `${update.meta.name} is installing...`
       updateResolveInstallButton.disabled = !update.meta.installInstrumentation
       updateRejectInstallButton.disabled = !update.meta.installInstrumentation
+      setUpdateReadyStateUI(updateInstallingUI)
     }
   })
 
@@ -220,18 +242,17 @@ update: {
     await swFacade.activateUpdate()
   }
   swFacade.subscribe(({ update }) => {
-    updateInstalledUI.style.display =
-      update.readyState === "installed" ? "block" : "none"
     if (update.readyState === "installed") {
       updateByRestartButton.disabled = !update.reloadRequired
       updateNowButton.disabled = update.reloadRequired
       updateInstalledUI.querySelector(
         "span",
       ).innerHTML = `${update.meta.name} installed`
+      setUpdateReadyStateUI(updateInstalledUI)
     }
   })
 
-  const updateActivating = document.querySelector("#update_activating")
+  const updateActivatingUI = document.querySelector("#update_activating")
   const updateResolveActivateButton = document.querySelector(
     "#update_resolve_activate",
   )
@@ -245,37 +266,40 @@ update: {
     swFacade.sendMessage({ action: "reject_activate" })
   }
   swFacade.subscribe(({ update }) => {
-    updateActivating.style.display =
-      update.readyState === "activating" ? "block" : "none"
     if (update.readyState === "activating") {
-      updateActivating.querySelector(
+      updateActivatingUI.querySelector(
         "span",
       ).innerHTML = `activating ${update.meta.name}...`
       updateResolveActivateButton.disabled =
         !update.meta.activateInstrumentation
       updateRejectActivateButton.disabled = !update.meta.activateInstrumentation
+      setUpdateReadyStateUI(updateActivatingUI)
     }
   })
 
-  const udpateActivated = document.querySelector("#update_activated")
+  const udpateActivatedUI = document.querySelector("#update_activated")
   swFacade.subscribe(({ update }) => {
-    udpateActivated.style.display =
-      update.readyState === "activated" ? "block" : "none"
     if (update.readyState === "activated") {
-      udpateActivated.querySelector(
+      udpateActivatedUI.querySelector(
         "span",
       ).innerHTML = `${update.meta.name} activated`
+      setUpdateReadyStateUI(udpateActivatedUI)
     }
   })
 
-  const udpateRedundant = document.querySelector("#update_redundant")
+  const udpateRedundantUI = document.querySelector("#update_redundant")
   swFacade.subscribe(({ update }) => {
-    udpateRedundant.style.display =
-      update.readyState === "redundant" ? "block" : "none"
     if (update.readyState === "redundant") {
-      udpateRedundant.querySelector(
+      udpateRedundantUI.querySelector(
         "span",
       ).innerHTML = `${update.meta.name} redundant`
+      setUpdateReadyStateUI(udpateRedundantUI)
+    }
+  })
+
+  swFacade.subscribe(({ update }) => {
+    if (update.readyState === "") {
+      setUpdateReadyStateUI(document.createTextNode(""))
     }
   })
 }
