@@ -2,7 +2,9 @@ import { createRuntimeFromPlaywright } from "./from_playwright.js"
 
 export const webkit = createRuntimeFromPlaywright({
   browserName: "webkit",
-  browserVersion: "16.4", // to update, check https://github.com/microsoft/playwright/releases
+  // browserVersion will be set by "browser._initializer.version"
+  // see also https://github.com/microsoft/playwright/releases
+  browserVersion: "unset",
   ignoreErrorHook: (error) => {
     // we catch error during execution but safari throw unhandled rejection
     // in a non-deterministic way.

@@ -67,6 +67,9 @@ export const createRuntimeFromPlaywright = ({
             executablePath,
           },
         })
+        if (browser._initializer.version) {
+          runtime.version = browser._initializer.version
+        }
         const browserContext = await browser.newContext({ ignoreHTTPSErrors })
         return { browser, browserContext }
       })()
