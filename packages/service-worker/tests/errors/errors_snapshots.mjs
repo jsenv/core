@@ -35,7 +35,7 @@ const openPage = async (url) => {
 const clickToBuildStory = async (page, name) => {
   const buildButton = await page.locator(`button#build_${name}`)
   await buildButton.click()
-  await new Promise((resolve) => setTimeout(resolve, 1_000))
+  await new Promise((resolve) => setTimeout(resolve, 2_000))
 }
 const clickToCheckUpdate = async (page) => {
   const updateCheckButton = await page.locator("button#update_check_button")
