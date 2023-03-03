@@ -98,6 +98,8 @@ try {
   {
     const registerButton = await page.locator("button#register")
     await registerButton.click()
+    // let time for browser to fetch/parse/execute
+    await new Promise((resolve) => setTimeout(resolve, 1_000))
   }
   await takeSnapshots(page, "error_during_register")
   await page.reload()
