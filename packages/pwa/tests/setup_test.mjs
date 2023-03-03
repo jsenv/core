@@ -8,6 +8,8 @@ export const setupTest = async ({ debug, ...rest }) => {
   })
   const browser = await chromium.launch({
     headless: !debug,
+    // needed because https-localhost fails to trust cert on chrome + linux (ubuntu 20.04)
+    args: ["--unsafely-treat-insecure-origin-as-secure=https://localhost/"],
   })
   const page = await launchBrowserPage(browser)
 
