@@ -1,5 +1,6 @@
 import { writeFileSync } from "node:fs"
 import { chromium } from "playwright"
+import { fetchUrl } from "@jsenv/fetch"
 import { ensureEmptyDirectory } from "@jsenv/filesystem"
 import { createTaskLog } from "@jsenv/log"
 import { buildServer } from "./update_build_server.mjs"
@@ -13,9 +14,9 @@ const browser = await chromium.launch({
   headless: !debug, // needed because https-localhost fails to trust cert on chrome + linux (ubuntu 20.04)
   args: ["--ignore-certificate-errors"],
 })
-const context = await browser.newContext()
+const context = await browser.newContext({ ignoreHTTPSErrors: true })
 const openPage = async (url) => {
-  const page = await context.newPage({ ignoreHTTPSErrors: true })
+  const page = await context.newPage()
   await page.setViewportSize({ width: 640, height: 480 }) // set a relatively small and predicatble size
   page.on("console", (message) => {
     if (message.type() === "error") {
@@ -28,10 +29,10 @@ const openPage = async (url) => {
   await page.goto(url)
   return page
 }
-const clickToBuildAnimal = async (page, animalName) => {
-  const buildButton = await page.locator(`button#build_${animalName}`)
-  await buildButton.click()
-  await new Promise((resolve) => setTimeout(resolve, 1_000))
+const buildStory = async (animalName) => {
+  await fetchUrl(`${buildServer.origin}/update_animal_to_${animalName}`, {
+    ignoreHttpsError: true,
+  })
 }
 const clickToCheckUpdate = async (page) => {
   const updateCheckButton = await page.locator("button#update_check_button")
@@ -117,7 +118,7 @@ try {
   await waitForPagesReady()
   await takeSnapshots([pageA, pageB], "dog_after_reload")
 
-  await clickToBuildAnimal(pageA, "cat")
+  await buildStory("cat")
   await clickToCheckUpdate(pageA)
   await takeSnapshots([pageA, pageB], "cat_found")
   const pageARestartButton = await pageA.locator(
@@ -135,20 +136,20 @@ try {
   await pageAHotUpdateCheckbox.click()
   const pageBHotUpdateCheckbox = await pageB.locator("input#image_hot_update")
   await pageBHotUpdateCheckbox.click()
-  await clickToBuildAnimal(pageA, "horse")
+  await buildStory("horse")
   await clickToCheckUpdate(pageA)
   await takeSnapshots([pageA, pageB], "horse_found")
   await clickToHotReplace(pageA)
 
   await takeSnapshots([pageA, pageB], "horse_after_hot_replace")
-  await clickToBuildAnimal(pageA, "bear")
+  await buildStory("bear")
   await clickToCheckUpdate(pageA)
   await takeSnapshots([pageA, pageB], "bear_found")
   await clickToHotReplace(pageA)
   await takeSnapshots([pageA, pageB], "bear_after_hot_replace")
 
   // ensure going back to horse is possible
-  await clickToBuildAnimal(pageA, "horse")
+  await buildStory("horse")
   await clickToCheckUpdate(pageA)
   await clickToHotReplace(pageA)
   await takeSnapshots([pageA, pageB], "back_to_horse")

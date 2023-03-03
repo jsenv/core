@@ -8,6 +8,7 @@
 
 import { writeFileSync } from "node:fs"
 import { chromium } from "playwright"
+import { fetchUrl } from "@jsenv/fetch"
 import { ensureEmptyDirectory } from "@jsenv/filesystem"
 import { createTaskLog } from "@jsenv/log"
 import { buildServer } from "./errors_build_server.mjs"
@@ -20,9 +21,9 @@ const browser = await chromium.launch({
   // needed because https-localhost fails to trust cert on chrome + linux (ubuntu 20.04)
   args: ["--ignore-certificate-errors"],
 })
-const context = await browser.newContext()
+const context = await browser.newContext({ ignoreHTTPSErrors: true })
 const openPage = async (url) => {
-  const page = await context.newPage({ ignoreHTTPSErrors: true })
+  const page = await context.newPage()
   await page.setViewportSize({ width: 640, height: 480 }) // set a relatively small and predicatble size
   page.on("console", (message) => {
     if (message.type() === "error") {
@@ -32,14 +33,15 @@ const openPage = async (url) => {
   await page.goto(url)
   return page
 }
-const clickToBuildStory = async (page, name) => {
-  const buildButton = await page.locator(`button#build_${name}`)
-  await buildButton.click()
-  await new Promise((resolve) => setTimeout(resolve, 2_000))
+const buildStory = async (name) => {
+  await fetchUrl(`${buildServer.origin}/build_${name}`, {
+    ignoreHttpsError: true,
+  })
 }
 const clickToCheckUpdate = async (page) => {
   const updateCheckButton = await page.locator("button#update_check_button")
   await updateCheckButton.click()
+  await new Promise((resolve) => setTimeout(resolve, 1_000))
 }
 const waitForPageReady = async (page) => {
   const pageReadyPromise = page.evaluate(
@@ -92,7 +94,7 @@ try {
   await takeSnapshots(page, "after_load")
 
   // error during first register
-  await clickToBuildStory(page, "error_during_register")
+  await buildStory("error_during_register")
   {
     const registerButton = await page.locator("button#register")
     await registerButton.click()
@@ -102,13 +104,13 @@ try {
   await waitForPageReady(page)
 
   // register a version without error
-  await clickToBuildStory(page, "no_error")
+  await buildStory("no_error")
   {
     const registerButton = await page.locator("button#register")
     await registerButton.click()
   }
   // try to update no_error -> error_during_register
-  await clickToBuildStory(page, "error_during_register")
+  await buildStory("error_during_register")
   await clickToCheckUpdate(page)
   await takeSnapshots(page, "error_during_register_found")
 } finally {
