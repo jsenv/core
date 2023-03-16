@@ -1,7 +1,7 @@
 {
   "name": "@jsenv/service-worker",
-  "version": "0.0.1",
-  "description": "Service worker in symbiosis with jsenv build",
+  "version": "1.0.0",
+  "description": "Service worker that can be integrated with jsenv build",
   "license": "MIT",
   "author": {
     "name": "dmail",

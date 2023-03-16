@@ -31,7 +31,7 @@ self.importScripts(
 )
 
 self.__sw__.init({
-  cachePrefix: "product-name",
+  name: "product-name",
   // service worker will cache "/" and the "roboto" font
   resources: {
     "/": {},
@@ -60,7 +60,7 @@ When service worker updates it will refetch all url from network and put them in
 
 ```diff
 self.__sw__.init({
-  cachePrefix: "product-name",
+  name: "product-name",
   resources: {
     "/": true,
 -   "https://fonts.googleapis.com/css2?family=Roboto": {}
@@ -71,13 +71,15 @@ self.__sw__.init({
 
 # Symbiosis with jsenv build
 
-The list of urls to cache can be automatically generated when building files with `@jsenv/core`. This is possible because `self.generatedUrlsConfig` is injected into the script during build. This is documented in [jsenv service worker](https://github.com/jsenv/jsenv-core/blob/master/docs/building/readme.md#jsenv-service-worker)
+During build jsenv injects urls to cache at the top of service worker file(s) under a global variable: `self.resourcesFromJsenvBuild`.
 
 ```js
-self.importScripts("./node_modules/@jsenv/pwa/src/jsenv_service_worker.js")
+self.importScripts(
+  "./node_modules/@jsenv/service-worker/src/jsenv_service_worker.js",
+)
 
 self.__sw__.init({
-  cachePrefix: "product-name",
+  name: "product-name",
   resources: {
     "/": true,
     ...(self.resourcesFromJsenvBuild || {}),
