@@ -7093,10 +7093,30 @@ const createUrlGraph = () => {
     if (!parentUrlInfo) {
       return null;
     }
-    const firstReferenceOnThatUrl = parentUrlInfo.references.find(reference => {
-      return urlSpecifierEncoding.decode(reference) === specifier;
-    });
-    return firstReferenceOnThatUrl;
+    const seen = [];
+    const search = urlInfo => {
+      const firstReferenceFound = urlInfo.references.find(reference => {
+        return urlSpecifierEncoding.decode(reference) === specifier;
+      });
+      if (firstReferenceFound) {
+        return firstReferenceFound;
+      }
+      for (const dependencyUrl of parentUrlInfo.dependencies) {
+        if (seen.includes(dependencyUrl)) {
+          continue;
+        }
+        seen.push(dependencyUrl);
+        const dependencyUrlInfo = getUrlInfo(dependencyUrl);
+        if (dependencyUrlInfo.isInline) {
+          const firstRef = search(dependencyUrlInfo);
+          if (firstRef) {
+            return firstRef;
+          }
+        }
+      }
+      return null;
+    };
+    return search(parentUrlInfo);
   };
   const findDependent = (urlInfo, visitor) => {
     const seen = [urlInfo.url];
@@ -8852,7 +8872,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         type,
         subtype,
         originalUrl,
-        originalContent,
+        originalContent = content,
         sourcemap,
         filename,
         status = 200,
@@ -8875,7 +8895,15 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       urlInfo.subtype = subtype || reference.expectedSubtype || "";
       // during build urls info are reused and load returns originalUrl/originalContent
       urlInfo.originalUrl = originalUrl || urlInfo.originalUrl;
-      urlInfo.originalContent = originalContent === undefined ? content : originalContent;
+      if (originalContent !== urlInfo.originalContent) {
+        urlInfo.originalContentEtag = undefined; // set by "initTransformations"
+      }
+
+      if (content !== urlInfo.content) {
+        urlInfo.contentEtag = undefined; // set by "applyFinalTransformations"
+      }
+
+      urlInfo.originalContent = originalContent;
       urlInfo.content = content;
       urlInfo.sourcemap = sourcemap;
       if (data) {
@@ -20017,17 +20045,20 @@ const jsenvPluginAutoreload = ({
   })];
 };
 
-const jsenvPluginCacheControl = () => {
+const jsenvPluginCacheControl = ({
+  versionedUrls = true,
+  maxAge = SECONDS_IN_30_DAYS$1
+}) => {
   return {
     name: "jsenv:cache_control",
     appliesDuring: "dev",
     augmentResponse: ({
       reference
     }) => {
-      if (reference.searchParams.has("v") && !reference.searchParams.has("hmr")) {
+      if (versionedUrls && reference.searchParams.has("v") && !reference.searchParams.has("hmr")) {
         return {
           headers: {
-            "cache-control": `private,max-age=${SECONDS_IN_30_DAYS$1},immutable`
+            "cache-control": `private,max-age=${maxAge},immutable`
           }
         };
       }
@@ -20169,10 +20200,14 @@ const getCorePlugins = ({
   clientFileChangeCallbackList,
   clientFilesPruneCallbackList,
   explorer,
+  cacheControl,
   ribbon = true
 } = {}) => {
   if (explorer === true) {
     explorer = {};
+  }
+  if (cacheControl === true) {
+    cacheControl = {};
   }
   if (supervisor === true) {
     supervisor = {};
@@ -20214,7 +20249,7 @@ const getCorePlugins = ({
     ...clientAutoreload,
     clientFileChangeCallbackList,
     clientFilesPruneCallbackList
-  })] : []), jsenvPluginCacheControl(), ...(explorer ? [jsenvPluginExplorer({
+  })] : []), ...(cacheControl ? [jsenvPluginCacheControl(cacheControl)] : []), ...(explorer ? [jsenvPluginExplorer({
     ...explorer,
     clientMainFileUrl
   })] : []), ...(ribbon ? [jsenvPluginRibbon({
@@ -21392,7 +21427,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   }
                   if (preferWithoutVersioning(reference)) {
                     // when versioning is dynamic no need to take into account
-                    // happend for:
+                    // happens for:
                     // - specifier mapped by window.__v__()
                     // - specifier mapped by importmap
                     return null;
@@ -21752,7 +21787,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           return finalUrlInfo.subtype === "service_worker" && finalUrlInfo.isEntryPoint;
         });
         if (serviceWorkerEntryUrlInfos.length > 0) {
-          const serviceWorkerUrls = {};
+          const serviceWorkerResources = {};
           GRAPH.forEach(finalGraph, urlInfo => {
             if (urlInfo.isInline || !urlInfo.shouldHandle) {
               return;
@@ -21765,26 +21800,27 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               // so that service worker source still changes and navigator
               // detect there is a change
               const specifier = findKey(buildUrls, urlInfo.url);
-              serviceWorkerUrls[specifier] = {
-                versioned: false,
+              serviceWorkerResources[specifier] = {
                 version: versionMap.get(urlInfo.url)
               };
               return;
             }
+            const specifier = findKey(buildUrls, urlInfo.url);
             const versionedUrl = versionedUrlMap.get(urlInfo.url);
             const versionedSpecifier = findKey(buildUrls, versionedUrl);
-            serviceWorkerUrls[versionedSpecifier] = {
-              versioned: true
+            serviceWorkerResources[specifier] = {
+              version: versionMap.get(urlInfo.url),
+              versionedUrl: versionedSpecifier
             };
           });
           serviceWorkerEntryUrlInfos.forEach(serviceWorkerEntryUrlInfo => {
             const magicSource = createMagicSource(serviceWorkerEntryUrlInfo.content);
-            const urlsWithoutSelf = {
-              ...serviceWorkerUrls
+            const serviceWorkerResourcesWithoutSwScriptItSelf = {
+              ...serviceWorkerResources
             };
             const serviceWorkerSpecifier = findKey(buildUrls, serviceWorkerEntryUrlInfo.url);
-            delete urlsWithoutSelf[serviceWorkerSpecifier];
-            magicSource.prepend(`\nself.serviceWorkerUrls = ${JSON.stringify(urlsWithoutSelf, null, "  ")};\n`);
+            delete serviceWorkerResourcesWithoutSwScriptItSelf[serviceWorkerSpecifier];
+            magicSource.prepend(`\nself.resourcesFromJsenvBuild = ${JSON.stringify(serviceWorkerResourcesWithoutSwScriptItSelf, null, "  ")};\n`);
             const {
               content,
               sourcemap
@@ -22157,6 +22193,7 @@ const createFileService = ({
   clientMainFileUrl,
   cooldownBetweenFileEvents,
   explorer,
+  cacheControl,
   ribbon,
   sourcemaps,
   sourcemapsSourcesProtocol,
@@ -22264,6 +22301,7 @@ const createFileService = ({
         clientFileChangeCallbackList,
         clientFilesPruneCallbackList,
         explorer,
+        cacheControl,
         ribbon
       })],
       minification: false,
@@ -22293,18 +22331,25 @@ const createFileService = ({
           // when file is modified
           return false;
         }
-        if (!watch) {
+        if (!watch && urlInfo.contentEtag) {
+          // file is not watched, check the filesystem
           let fileContentAsBuffer;
           try {
             fileContentAsBuffer = readFileSync$1(new URL(urlInfo.url));
           } catch (e) {
             if (e.code === "ENOENT") {
+              // we should consider calling urlGraph.deleteUrlInfo(urlInfo)
+              urlInfo.originalContentEtag = undefined;
+              urlInfo.contentEtag = undefined;
               return false;
             }
             return false;
           }
           const fileContentEtag = bufferToEtag$1(fileContentAsBuffer);
           if (fileContentEtag !== urlInfo.originalContentEtag) {
+            // we should consider calling urlGraph.considerModified(urlInfo)
+            urlInfo.originalContentEtag = undefined;
+            urlInfo.contentEtag = undefined;
             return false;
           }
         }
@@ -22622,6 +22667,7 @@ const startDevServer = async ({
   transpilation,
   explorer = true,
   // see jsenv_plugin_explorer.js
+  cacheControl = true,
   ribbon = true,
   // toolbar = false,
 
@@ -22760,6 +22806,7 @@ const startDevServer = async ({
         clientMainFileUrl,
         cooldownBetweenFileEvents,
         explorer,
+        cacheControl,
         ribbon,
         sourcemaps,
         sourcemapsSourcesProtocol,
@@ -23394,6 +23441,17 @@ const getCoverageFromReport = async ({
 };
 const isV8Coverage = coverage => Boolean(coverage.result);
 
+/*
+ * Export a function capable to run a file on a runtime.
+ *
+ * - Used internally by "executeTestPlan" part of the documented API
+ * - Used internally by "execute" an advanced API not documented
+ * - logs generated during file execution can be collected
+ * - logs generated during file execution can be mirrored (re-logged to the console)
+ * - File is given allocatedMs to complete
+ * - Errors are collected
+ * - File execution result is returned, it contains status/errors/namespace/consoleCalls
+ */
 const run = async ({
   signal = new AbortController().signal,
   logger,
@@ -24244,6 +24302,7 @@ const executePlan = async (plan, {
         }
         const afterExecutionInfo = {
           ...beforeExecutionInfo,
+          runtimeVersion: runtime.version,
           endMs: Date.now(),
           executionResult
         };
@@ -24636,8 +24695,8 @@ const createRuntimeFromPlaywright = ({
     stopSignal,
     keepRunning,
     onConsole,
-    executablePath,
     headful = keepRunning,
+    playwrightLaunchOptions = {},
     ignoreHTTPSErrors = true
   }) => {
     const cleanupCallbackList = createCallbackListNotifiedOnce();
@@ -24653,11 +24712,14 @@ const createRuntimeFromPlaywright = ({
           signal,
           browserName,
           stopOnExit: true,
-          playwrightOptions: {
-            headless: !headful,
-            executablePath
+          playwrightLaunchOptions: {
+            ...playwrightLaunchOptions,
+            headless: !headful
           }
         });
+        if (browser._initializer.version) {
+          runtime.version = browser._initializer.version;
+        }
         const browserContext = await browser.newContext({
           ignoreHTTPSErrors
         });
@@ -24974,7 +25036,7 @@ const launchBrowserUsingPlaywright = async ({
   signal,
   browserName,
   stopOnExit,
-  playwrightOptions
+  playwrightLaunchOptions
 }) => {
   const launchBrowserOperation = Abort.startOperation();
   launchBrowserOperation.addAbortSignal(signal);
@@ -24995,7 +25057,7 @@ const launchBrowserUsingPlaywright = async ({
   const browserClass = playwright[browserName];
   try {
     const browser = await browserClass.launch({
-      ...playwrightOptions,
+      ...playwrightLaunchOptions,
       // let's handle them to close properly browser + remove listener
       // instead of relying on playwright to do so
       handleSIGINT: false,
@@ -25086,23 +25148,26 @@ const registerEvent = ({
 
 const chromium = createRuntimeFromPlaywright({
   browserName: "chromium",
-  browserVersion: "110.0.5481.38",
-  // to update, check https://github.com/microsoft/playwright/releases
+  // browserVersion will be set by "browser._initializer.version"
+  // see also https://github.com/microsoft/playwright/releases
+  browserVersion: "unset",
   coveragePlaywrightAPIAvailable: true
 });
 const chromiumIsolatedTab = chromium.isolatedTab;
 
 const firefox = createRuntimeFromPlaywright({
   browserName: "firefox",
-  browserVersion: "108.0.2" // to update, check https://github.com/microsoft/playwright/releases
+  // browserVersion will be set by "browser._initializer.version"
+  // see also https://github.com/microsoft/playwright/releases
+  browserVersion: "unset"
 });
-
 const firefoxIsolatedTab = firefox.isolatedTab;
 
 const webkit = createRuntimeFromPlaywright({
   browserName: "webkit",
-  browserVersion: "16.4",
-  // to update, check https://github.com/microsoft/playwright/releases
+  // browserVersion will be set by "browser._initializer.version"
+  // see also https://github.com/microsoft/playwright/releases
+  browserVersion: "unset",
   ignoreErrorHook: error => {
     // we catch error during execution but safari throw unhandled rejection
     // in a non-deterministic way.
@@ -26176,6 +26241,17 @@ const createBuildFilesService = ({
 };
 const SECONDS_IN_30_DAYS = 60 * 60 * 24 * 30;
 
+/*
+ * Export a function capable to execute a file on a runtime (browser or node) and return how it goes.
+ *
+ * - can be useful to execute a file in a browser/node.js programmatically
+ * - not documented
+ * - the most importants parts:
+ *   - fileRelativeUrl: the file to execute inside rootDirectoryUrl
+ *   - runtime: an object with a "run" method.
+ *   The run method will start a browser/node process and execute file in it
+ * - Most of the logic lives in "./run.js" used by executeTestPlan to run tests
+ */
 const execute = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
@@ -26216,11 +26292,11 @@ const execute = async ({
   };
   if (runtime.type === "browser") {
     if (!devServerOrigin) {
-      throw new TypeError(`devServerOrigin is required when running tests on browser(s)`);
+      throw new TypeError(`devServerOrigin is required to execute file on a browser`);
     }
     const devServerStarted = await pingServer(devServerOrigin);
     if (!devServerStarted) {
-      throw new Error(`dev server not started at ${devServerOrigin}. It is required to run tests`);
+      throw new Error(`no server listening at ${devServerOrigin}. It is required to execute file`);
     }
   }
   let result = await run({

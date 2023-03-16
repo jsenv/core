@@ -1416,73 +1416,78 @@ const LOG_LEVEL_ERROR = "error";
 const createLogger = ({ logLevel = LOG_LEVEL_INFO } = {}) => {
   if (logLevel === LOG_LEVEL_DEBUG) {
     return {
+      level: "debug",
+      levels: { debug: true, info: true, warn: true, error: true },
       debug,
       info,
       warn,
       error,
     }
   }
-
   if (logLevel === LOG_LEVEL_INFO) {
     return {
+      level: "info",
+      levels: { debug: false, info: true, warn: true, error: true },
       debug: debugDisabled,
       info,
       warn,
       error,
     }
   }
-
   if (logLevel === LOG_LEVEL_WARN) {
     return {
+      level: "warn",
+      levels: { debug: false, info: false, warn: true, error: true },
       debug: debugDisabled,
       info: infoDisabled,
       warn,
       error,
     }
   }
-
   if (logLevel === LOG_LEVEL_ERROR) {
     return {
+      level: "error",
+      levels: { debug: false, info: false, warn: false, error: true },
       debug: debugDisabled,
       info: infoDisabled,
       warn: warnDisabled,
       error,
     }
   }
-
   if (logLevel === LOG_LEVEL_OFF) {
     return {
+      level: "off",
+      levels: { debug: false, info: false, warn: false, error: false },
       debug: debugDisabled,
       info: infoDisabled,
       warn: warnDisabled,
       error: errorDisabled,
     }
   }
-
   throw new Error(`unexpected logLevel.
-  --- logLevel ---
-  ${logLevel}
-  --- allowed log levels ---
-  ${LOG_LEVEL_OFF}
-  ${LOG_LEVEL_ERROR}
-  ${LOG_LEVEL_WARN}
-  ${LOG_LEVEL_INFO}
-  ${LOG_LEVEL_DEBUG}`)
+--- logLevel ---
+${logLevel}
+--- allowed log levels ---
+${LOG_LEVEL_OFF}
+${LOG_LEVEL_ERROR}
+${LOG_LEVEL_WARN}
+${LOG_LEVEL_INFO}
+${LOG_LEVEL_DEBUG}`)
 };
 
-const debug = console.debug;
+const debug = (...args) => console.debug(...args);
 
 const debugDisabled = () => {};
 
-const info = console.info;
+const info = (...args) => console.info(...args);
 
 const infoDisabled = () => {};
 
-const warn = console.warn;
+const warn = (...args) => console.warn(...args);
 
 const warnDisabled = () => {};
 
-const error = console.error;
+const error = (...args) => console.error(...args);
 
 const errorDisabled = () => {};
 
@@ -2215,7 +2220,6 @@ ${node_url.fileURLToPath(rootDirectoryUrl)}`);
       importer.includes(".xtest.js") || specifier.includes("/not_found.js")
         ? "debug"
         : "warn";
-
     if (resolver === "esm") {
       logger[logLevel](
         `esm module resolution failed for "${specifier}" imported by ${importer}`,

@@ -159,7 +159,6 @@ function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function"
   }
   (function () {
     /* eslint-env browser */
-    /* globals self */
 
     var loadRegistry = Object.create(null);
     var registerRegistry = Object.create(null);
