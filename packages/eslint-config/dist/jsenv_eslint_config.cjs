@@ -84,7 +84,7 @@ const eslintConfigBase = {
     sourceType: "module"
   },
   env: {
-    es2021: true
+    es2022: true
   },
   settings: {
     extensions: [".js", ".mjs"]
@@ -184,7 +184,6 @@ const eslintConfigToPreferExplicitGlobals = {
     print: "off",
     screen: "off",
     scroll: "off",
-    self: "off",
     status: "off",
     stop: "off",
     top: "off",

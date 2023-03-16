@@ -51,6 +51,26 @@ ${file}
 --- root directory path ---
 ${fileURLToPath(rootDirectoryUrl)}`)
 
+  const triggerNotFoundWarning = ({ resolver, specifier, importer, url }) => {
+    const logLevel =
+      importer.includes(".xtest.js") || specifier.includes("/not_found.js")
+        ? "debug"
+        : "warn"
+    if (resolver === "esm") {
+      logger[logLevel](
+        `esm module resolution failed for "${specifier}" imported by ${importer}`,
+      )
+    } else if (resolver === "commonjs") {
+      logger[logLevel](
+        `commonjs module resolution failed for "${specifier}" imported by ${importer}`,
+      )
+    } else {
+      logger[logLevel](
+        `filesystem resolution failed for "${specifier}" imported by ${importer} (file not found at ${url})`,
+      )
+    }
+  }
+
   packageConditions = [
     ...readCustomConditionsFromProcessArgs(),
     ...packageConditions,
@@ -85,11 +105,13 @@ ${fileURLToPath(rootDirectoryUrl)}`)
       }
 
       return handleFileUrl(url, {
+        specifier,
         importer,
         logger,
         caseSensitive,
         magicDirectoryIndex,
         magicExtensions,
+        triggerNotFoundWarning,
       })
     }
     if (url.startsWith("node:") && !nodeInPackageConditions) {
@@ -136,16 +158,44 @@ ${fileURLToPath(rootDirectoryUrl)}`)
       ambiguousExtensions,
     })
     if (moduleSystem === "commonjs") {
-      return onUrl(createRequire(importer).resolve(specifier), {
+      const requireForImporter = createRequire(importer)
+      let url
+      try {
+        url = requireForImporter.resolve(specifier)
+      } catch (e) {
+        if (e.code === "MODULE_NOT_FOUND") {
+          triggerNotFoundWarning({
+            resolver: "commonjs",
+            specifier,
+            importer,
+          })
+          return { found: false, path: specifier }
+        }
+        throw e
+      }
+      return onUrl(url, {
         resolvedBy: "commonjs",
       })
     }
     if (moduleSystem === "module") {
-      const nodeResolution = applyNodeEsmResolution({
-        conditions: packageConditions,
-        parentUrl: importer,
-        specifier,
-      })
+      let nodeResolution
+      try {
+        nodeResolution = applyNodeEsmResolution({
+          conditions: packageConditions,
+          parentUrl: importer,
+          specifier,
+        })
+      } catch (e) {
+        if (e.code === "MODULE_NOT_FOUND") {
+          triggerNotFoundWarning({
+            resolver: "esm",
+            specifier,
+            importer,
+          })
+          return { found: false, path: specifier }
+        }
+        throw e
+      }
       if (nodeResolution) {
         return onUrl(nodeResolution.url, {
           resolvedBy: "node_esm",
@@ -159,7 +209,7 @@ ${fileURLToPath(rootDirectoryUrl)}`)
     }
     throw new Error("not found")
   } catch (e) {
-    logger.debug(`Error while resolving "${source}" imported from "${file}"
+    logger.error(`Error while resolving "${source}" imported from "${file}"
 --- error stack ---
 ${e.stack}`)
     return {
@@ -171,7 +221,15 @@ ${e.stack}`)
 
 const handleFileUrl = (
   fileUrl,
-  { importer, logger, magicDirectoryIndex, magicExtensions, caseSensitive },
+  {
+    specifier,
+    importer,
+    logger,
+    magicDirectoryIndex,
+    magicExtensions,
+    caseSensitive,
+    triggerNotFoundWarning,
+  },
 ) => {
   fileUrl = `file://${new URL(fileUrl).pathname}` // remove query params from url
   const fileResolution = applyFileSystemMagicResolution(fileUrl, {
@@ -179,11 +237,13 @@ const handleFileUrl = (
     magicExtensions: getExtensionsToTry(magicExtensions, importer),
   })
   if (!fileResolution.found) {
-    logger.debug(`-> file not found at ${fileUrl}`)
-    return {
-      found: false,
-      path: fileURLToPath(fileUrl),
-    }
+    triggerNotFoundWarning({
+      resolver: "filesystem",
+      specifier,
+      importer,
+      url: fileUrl,
+    })
+    return { found: false, path: fileURLToPath(fileUrl) }
   }
   fileUrl = fileResolution.url
   const realFileUrl = getRealFileSystemUrlSync(fileUrl, {

@@ -1416,73 +1416,78 @@ const LOG_LEVEL_ERROR = "error";
 const createLogger = ({ logLevel = LOG_LEVEL_INFO } = {}) => {
   if (logLevel === LOG_LEVEL_DEBUG) {
     return {
+      level: "debug",
+      levels: { debug: true, info: true, warn: true, error: true },
       debug,
       info,
       warn,
       error,
     }
   }
-
   if (logLevel === LOG_LEVEL_INFO) {
     return {
+      level: "info",
+      levels: { debug: false, info: true, warn: true, error: true },
       debug: debugDisabled,
       info,
       warn,
       error,
     }
   }
-
   if (logLevel === LOG_LEVEL_WARN) {
     return {
+      level: "warn",
+      levels: { debug: false, info: false, warn: true, error: true },
       debug: debugDisabled,
       info: infoDisabled,
       warn,
       error,
     }
   }
-
   if (logLevel === LOG_LEVEL_ERROR) {
     return {
+      level: "error",
+      levels: { debug: false, info: false, warn: false, error: true },
       debug: debugDisabled,
       info: infoDisabled,
       warn: warnDisabled,
       error,
     }
   }
-
   if (logLevel === LOG_LEVEL_OFF) {
     return {
+      level: "off",
+      levels: { debug: false, info: false, warn: false, error: false },
       debug: debugDisabled,
       info: infoDisabled,
       warn: warnDisabled,
       error: errorDisabled,
     }
   }
-
   throw new Error(`unexpected logLevel.
-  --- logLevel ---
-  ${logLevel}
-  --- allowed log levels ---
-  ${LOG_LEVEL_OFF}
-  ${LOG_LEVEL_ERROR}
-  ${LOG_LEVEL_WARN}
-  ${LOG_LEVEL_INFO}
-  ${LOG_LEVEL_DEBUG}`)
+--- logLevel ---
+${logLevel}
+--- allowed log levels ---
+${LOG_LEVEL_OFF}
+${LOG_LEVEL_ERROR}
+${LOG_LEVEL_WARN}
+${LOG_LEVEL_INFO}
+${LOG_LEVEL_DEBUG}`)
 };
 
-const debug = console.debug;
+const debug = (...args) => console.debug(...args);
 
 const debugDisabled = () => {};
 
-const info = console.info;
+const info = (...args) => console.info(...args);
 
 const infoDisabled = () => {};
 
-const warn = console.warn;
+const warn = (...args) => console.warn(...args);
 
 const warnDisabled = () => {};
 
-const error = console.error;
+const error = (...args) => console.error(...args);
 
 const errorDisabled = () => {};
 
@@ -2210,6 +2215,26 @@ ${file}
 --- root directory path ---
 ${node_url.fileURLToPath(rootDirectoryUrl)}`);
 
+  const triggerNotFoundWarning = ({ resolver, specifier, importer, url }) => {
+    const logLevel =
+      importer.includes(".xtest.js") || specifier.includes("/not_found.js")
+        ? "debug"
+        : "warn";
+    if (resolver === "esm") {
+      logger[logLevel](
+        `esm module resolution failed for "${specifier}" imported by ${importer}`,
+      );
+    } else if (resolver === "commonjs") {
+      logger[logLevel](
+        `commonjs module resolution failed for "${specifier}" imported by ${importer}`,
+      );
+    } else {
+      logger[logLevel](
+        `filesystem resolution failed for "${specifier}" imported by ${importer} (file not found at ${url})`,
+      );
+    }
+  };
+
   packageConditions = [
     ...readCustomConditionsFromProcessArgs(),
     ...packageConditions,
@@ -2244,11 +2269,13 @@ ${node_url.fileURLToPath(rootDirectoryUrl)}`);
       }
 
       return handleFileUrl(url, {
+        specifier,
         importer,
         logger,
         caseSensitive,
         magicDirectoryIndex,
         magicExtensions,
+        triggerNotFoundWarning,
       })
     }
     if (url.startsWith("node:") && !nodeInPackageConditions) {
@@ -2295,16 +2322,44 @@ ${node_url.fileURLToPath(rootDirectoryUrl)}`);
       ambiguousExtensions,
     });
     if (moduleSystem === "commonjs") {
-      return onUrl(node_module.createRequire(importer).resolve(specifier), {
+      const requireForImporter = node_module.createRequire(importer);
+      let url;
+      try {
+        url = requireForImporter.resolve(specifier);
+      } catch (e) {
+        if (e.code === "MODULE_NOT_FOUND") {
+          triggerNotFoundWarning({
+            resolver: "commonjs",
+            specifier,
+            importer,
+          });
+          return { found: false, path: specifier }
+        }
+        throw e
+      }
+      return onUrl(url, {
         resolvedBy: "commonjs",
       })
     }
     if (moduleSystem === "module") {
-      const nodeResolution = applyNodeEsmResolution({
-        conditions: packageConditions,
-        parentUrl: importer,
-        specifier,
-      });
+      let nodeResolution;
+      try {
+        nodeResolution = applyNodeEsmResolution({
+          conditions: packageConditions,
+          parentUrl: importer,
+          specifier,
+        });
+      } catch (e) {
+        if (e.code === "MODULE_NOT_FOUND") {
+          triggerNotFoundWarning({
+            resolver: "esm",
+            specifier,
+            importer,
+          });
+          return { found: false, path: specifier }
+        }
+        throw e
+      }
       if (nodeResolution) {
         return onUrl(nodeResolution.url, {
           resolvedBy: "node_esm",
@@ -2318,7 +2373,7 @@ ${node_url.fileURLToPath(rootDirectoryUrl)}`);
     }
     throw new Error("not found")
   } catch (e) {
-    logger.debug(`Error while resolving "${source}" imported from "${file}"
+    logger.error(`Error while resolving "${source}" imported from "${file}"
 --- error stack ---
 ${e.stack}`);
     return {
@@ -2330,7 +2385,15 @@ ${e.stack}`);
 
 const handleFileUrl = (
   fileUrl,
-  { importer, logger, magicDirectoryIndex, magicExtensions, caseSensitive },
+  {
+    specifier,
+    importer,
+    logger,
+    magicDirectoryIndex,
+    magicExtensions,
+    caseSensitive,
+    triggerNotFoundWarning,
+  },
 ) => {
   fileUrl = `file://${new URL(fileUrl).pathname}`; // remove query params from url
   const fileResolution = applyFileSystemMagicResolution(fileUrl, {
@@ -2338,11 +2401,13 @@ const handleFileUrl = (
     magicExtensions: getExtensionsToTry(magicExtensions, importer),
   });
   if (!fileResolution.found) {
-    logger.debug(`-> file not found at ${fileUrl}`);
-    return {
-      found: false,
-      path: node_url.fileURLToPath(fileUrl),
-    }
+    triggerNotFoundWarning({
+      resolver: "filesystem",
+      specifier,
+      importer,
+      url: fileUrl,
+    });
+    return { found: false, path: node_url.fileURLToPath(fileUrl) }
   }
   fileUrl = fileResolution.url;
   const realFileUrl = getRealFileSystemUrlSync(fileUrl, {

@@ -21,7 +21,6 @@
 
 ;(function () {
   /* eslint-env browser */
-  /* globals self */
 
   const loadRegistry = Object.create(null)
   const registerRegistry = Object.create(null)
@@ -463,8 +462,6 @@ System.register([__v__("/js/ping.nomodule.js")], function (_export, _context) {
       ping = _clientPingJs.ping;
     }],
     execute: function () {
-      /* globals self */
-
       self.addEventListener("message", function (e) {
         if (e.data === "ping") {
           self.postMessage(ping);

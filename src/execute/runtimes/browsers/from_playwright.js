@@ -46,8 +46,8 @@ export const createRuntimeFromPlaywright = ({
     keepRunning,
     onConsole,
 
-    executablePath,
     headful = keepRunning,
+    playwrightLaunchOptions = {},
     ignoreHTTPSErrors = true,
   }) => {
     const cleanupCallbackList = createCallbackListNotifiedOnce()
@@ -62,11 +62,14 @@ export const createRuntimeFromPlaywright = ({
           signal,
           browserName,
           stopOnExit: true,
-          playwrightOptions: {
+          playwrightLaunchOptions: {
+            ...playwrightLaunchOptions,
             headless: !headful,
-            executablePath,
           },
         })
+        if (browser._initializer.version) {
+          runtime.version = browser._initializer.version
+        }
         const browserContext = await browser.newContext({ ignoreHTTPSErrors })
         return { browser, browserContext }
       })()
@@ -409,7 +412,7 @@ const launchBrowserUsingPlaywright = async ({
   signal,
   browserName,
   stopOnExit,
-  playwrightOptions,
+  playwrightLaunchOptions,
 }) => {
   const launchBrowserOperation = Abort.startOperation()
   launchBrowserOperation.addAbortSignal(signal)
@@ -431,7 +434,7 @@ const launchBrowserUsingPlaywright = async ({
   const browserClass = playwright[browserName]
   try {
     const browser = await browserClass.launch({
-      ...playwrightOptions,
+      ...playwrightLaunchOptions,
       // let's handle them to close properly browser + remove listener
       // instead of relying on playwright to do so
       handleSIGINT: false,

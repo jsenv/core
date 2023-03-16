@@ -1042,7 +1042,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   }
                   if (preferWithoutVersioning(reference)) {
                     // when versioning is dynamic no need to take into account
-                    // happend for:
+                    // happens for:
                     // - specifier mapped by window.__v__()
                     // - specifier mapped by importmap
                     return null
@@ -1477,7 +1477,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           },
         )
         if (serviceWorkerEntryUrlInfos.length > 0) {
-          const serviceWorkerUrls = {}
+          const serviceWorkerResources = {}
           GRAPH.forEach(finalGraph, (urlInfo) => {
             if (urlInfo.isInline || !urlInfo.shouldHandle) {
               return
@@ -1490,31 +1490,36 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               // so that service worker source still changes and navigator
               // detect there is a change
               const specifier = findKey(buildUrls, urlInfo.url)
-              serviceWorkerUrls[specifier] = {
-                versioned: false,
+              serviceWorkerResources[specifier] = {
                 version: versionMap.get(urlInfo.url),
               }
               return
             }
+            const specifier = findKey(buildUrls, urlInfo.url)
             const versionedUrl = versionedUrlMap.get(urlInfo.url)
             const versionedSpecifier = findKey(buildUrls, versionedUrl)
-            serviceWorkerUrls[versionedSpecifier] = { versioned: true }
+            serviceWorkerResources[specifier] = {
+              version: versionMap.get(urlInfo.url),
+              versionedUrl: versionedSpecifier,
+            }
           })
           serviceWorkerEntryUrlInfos.forEach((serviceWorkerEntryUrlInfo) => {
             const magicSource = createMagicSource(
               serviceWorkerEntryUrlInfo.content,
             )
-            const urlsWithoutSelf = {
-              ...serviceWorkerUrls,
+            const serviceWorkerResourcesWithoutSwScriptItSelf = {
+              ...serviceWorkerResources,
             }
             const serviceWorkerSpecifier = findKey(
               buildUrls,
               serviceWorkerEntryUrlInfo.url,
             )
-            delete urlsWithoutSelf[serviceWorkerSpecifier]
+            delete serviceWorkerResourcesWithoutSwScriptItSelf[
+              serviceWorkerSpecifier
+            ]
             magicSource.prepend(
-              `\nself.serviceWorkerUrls = ${JSON.stringify(
-                urlsWithoutSelf,
+              `\nself.resourcesFromJsenvBuild = ${JSON.stringify(
+                serviceWorkerResourcesWithoutSwScriptItSelf,
                 null,
                 "  ",
               )};\n`,

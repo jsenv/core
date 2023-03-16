@@ -44,15 +44,15 @@ jobs:
         run: npm install
       - name: Install playwright
         run: npm run playwright:install
-      - name: Install certificate # needed for @jsenv/server tests
-        if: runner.os == 'Linux'
-        run: node ./packages/server/scripts/certificate_install.mjs
+      - name: Install certificate # needed for @jsenv/server and @jsenv/service-worker tests
+        if: runner.os == 'Linux' # https://docs.github.com/en/actions/learn-github-actions/contexts#runner-context
+        run: node ./scripts/test/certificate_install.mjs
       - name: Run ESLint
         run: npm run eslint
       - name: Run packages tests
         # env:
         #   NODE_V8_COVERAGE: .coverage/packages
-        run: npm run test:workspace
+        run: npm run workspace:test
       - name: Run core tests
         run: npm test
       # - name: Run core tests

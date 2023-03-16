@@ -1,3 +1,21 @@
+# 30.4.0
+
+- `@jsenv/core`
+  - Dev server properly invalidate cache of files that are not watched
+  - browser version now read from playwright after first run
+  - Rename globals injected into service worker during build from `serviceWorkerUrls` to `resourcesFromJsenvBuild`
+  - Fix dev server crach during url inference on circular dependency
+  - Add cacheControl param to dev server (can be used to disable cache control headers on dev server)
+- `@jsenv/pwa`
+  - Move into this monorepo
+  - Split `@jsenv/pwa` into `@jsenv/pwa` + `@jsenv/service-worker`
+  - Write automated tests around service worker and build
+  - `@jsenv/pwa` full revamp of service worker part
+- `@jsenv/eslint-import-resolver`
+  - improve logs when resolution fails
+- `@jsenv/sigi`
+  - add this new package in the monorepo
+
 # 30.3.9
 
 - Ensure build produce "\n" line breaks on windows by default

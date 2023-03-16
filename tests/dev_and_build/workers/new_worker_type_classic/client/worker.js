@@ -1,5 +1,3 @@
-/* globals self */
-
 self.importScripts("./ping.js")
 
 self.addEventListener("message", (e) => {

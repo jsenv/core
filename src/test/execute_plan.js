@@ -326,6 +326,7 @@ export const executePlan = async (
 
         const afterExecutionInfo = {
           ...beforeExecutionInfo,
+          runtimeVersion: runtime.version,
           endMs: Date.now(),
           executionResult,
         }

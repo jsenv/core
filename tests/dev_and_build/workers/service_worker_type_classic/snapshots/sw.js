@@ -1,30 +1,32 @@
 
-self.serviceWorkerUrls = {
+self.resourcesFromJsenvBuild = {
   "/main.html": {
-    "versioned": false,
-    "version": "ceb7c6c8"
+    "version": "f78edba7"
   },
-  "/css/style.css?v=0e312da1": {
-    "versioned": true
+  "/css/style.css": {
+    "version": "0e312da1",
+    "versionedUrl": "/css/style.css?v=0e312da1"
   },
-  "/js/a.js?v=acc03e99": {
-    "versioned": true
+  "/js/a.js": {
+    "version": "766d14d0",
+    "versionedUrl": "/js/a.js?v=766d14d0"
   },
-  "/js/b.js?v=7342c38c": {
-    "versioned": true
+  "/js/b.js": {
+    "version": "2cc2d9e4",
+    "versionedUrl": "/js/b.js?v=2cc2d9e4"
   }
 };
 
 ;(function() {
   var __versionMappings__ = {
-  "/js/a.js": "/js/a.js?v=acc03e99",
-  "/js/b.js": "/js/b.js?v=7342c38c"
+  "/js/a.js": "/js/a.js?v=766d14d0",
+  "/js/b.js": "/js/b.js?v=2cc2d9e4"
 };
   self.__v__ = function (specifier) {
     return __versionMappings__[specifier] || specifier
   };
 })();
-/* globals self, importScripts */
+/* globals importScripts */
 
 self.order = [];
 self.order.push("before-a");
@@ -34,7 +36,7 @@ self.addEventListener("message", async messageEvent => {
   if (messageEvent.data === "inspect") {
     messageEvent.ports[0].postMessage({
       order: self.order,
-      serviceWorkerUrls: self.serviceWorkerUrls
+      resourcesFromJsenvBuild: self.resourcesFromJsenvBuild
     });
   }
 });

@@ -12,7 +12,6 @@
 
 ;(function () {
   /* eslint-env browser */
-  /* globals self */
 
   const loadRegistry = Object.create(null)
   const registerRegistry = Object.create(null)

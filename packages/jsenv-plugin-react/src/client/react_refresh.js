@@ -1,5 +1,3 @@
-/* globals self */
-
 import RefreshRuntime from "react-refresh"
 
 export const installReactRefresh = (url) => {

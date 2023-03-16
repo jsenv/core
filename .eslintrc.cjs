@@ -36,7 +36,6 @@ const eslintConfig = composeEslintConfig(
       "import/resolver": {
         "@jsenv/eslint-import-resolver": {
           rootDirectoryUrl: __dirname,
-          // logLevel: "debug",
           packageConditions: ["node", "development", "import"],
         },
       },
@@ -102,6 +101,8 @@ const eslintConfig = composeEslintConfig(
           "**/browser/**/*.js",
           "**/babel_helpers/**/*.js",
           "test/dev_server/**/*.js",
+          "./packages/pwa/**/*.js",
+          "**/jsenv_service_worker.js",
         ],
         env: {
           browser: true,

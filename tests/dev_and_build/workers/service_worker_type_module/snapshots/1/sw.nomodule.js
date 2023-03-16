@@ -1,11 +1,11 @@
 
-self.serviceWorkerUrls = {
+self.resourcesFromJsenvBuild = {
   "/main.html": {
-    "versioned": false,
-    "version": "11f11490"
+    "version": "f5eb87e5"
   },
-  "/css/style.css?v=0e312da1": {
-    "versioned": true
+  "/css/style.css": {
+    "version": "0e312da1",
+    "versionedUrl": "/css/style.css?v=0e312da1"
   }
 };
 (function (global, factory) {
@@ -22,8 +22,6 @@ self.serviceWorkerUrls = {
   }
 })(typeof globalThis !== "undefined" ? globalThis : typeof self !== "undefined" ? self : this, function () {
   "use strict";
-
-  /* globals self */
 
   function _await(value, then, direct) {
     if (direct) {
@@ -51,7 +49,7 @@ self.serviceWorkerUrls = {
     if (messageEvent.data === "inspect") {
       messageEvent.ports[0].postMessage({
         order: self.order,
-        serviceWorkerUrls: self.serviceWorkerUrls
+        resourcesFromJsenvBuild: self.resourcesFromJsenvBuild
       });
     }
     return _await();

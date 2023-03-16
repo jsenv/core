@@ -1,0 +1,103 @@
+<div id="ui">
+      <div id="animal_ui">
+        <fieldset>
+          <legend>
+            <span>Animal image</span>
+          </legend>
+          <img style="display: block" height="200" src="blob:replaced_for_snapshot">
+        </fieldset>
+      </div>
+      <div id="service_worker_ui">
+        <fieldset name="controller">
+          <legend>Navigator controller</legend>
+
+          <span id="controller">horse</span>
+        </fieldset>
+        <fieldset name="registration">
+          <legend>Service worker script registration</legend>
+
+          <button id="register">
+            <span>register sw.js</span>
+          </button>
+          <button id="unregister">
+            <span>unregister</span>
+          </button>
+          <br>
+          <br>
+          <div id="error" style="display: none"></div>
+          <div id="installing" style="display: none">
+            <span>installing...</span>
+            <button id="resolve_install" disabled="">
+              <span>Resolve install promise</span>
+            </button>
+            <button id="reject_install" disabled="">
+              <span>Reject install promise</span>
+            </button>
+          </div>
+          <div id="installed" style="display: none">
+            <span>installed</span>
+          </div>
+          <div id="activating" style="display: none">
+            <span>activating....</span>
+            <button id="resolve_activate" disabled="">
+              <span>Resolve activate promise</span>
+            </button>
+            <button id="reject_activate" disabled="">
+              <span>Reject activate promise</span>
+            </button>
+          </div>
+          <div id="activated" style="display: none;">
+            <span>cat activated</span>
+          </div>
+          <div id="redundant" style="display: block;">
+            <span>horse redundant</span>
+          </div>
+        </fieldset>
+        <fieldset name="update">
+          <legend>Service worker script update</legend>
+
+          <button id="update_check_button">Check for updates</button>
+          <br>
+          <label>
+            Allow image hot update
+            <input type="checkbox" id="image_hot_update">
+          </label>
+          <br>
+          <br>
+
+          <div id="update_installing" style="display: none;">
+            <span>bear is installing...</span>
+            <button id="update_resolve_install" disabled="">
+              <span>Resolve install promise</span>
+            </button>
+            <button id="update_reject_install" disabled="">
+              <span>Reject install promise</span>
+            </button>
+          </div>
+          <div id="update_installed" style="display: block;">
+            <span>bear installed</span>
+            <button id="update_by_restart_button" disabled="">
+              <span>Restart to update</span>
+            </button>
+            <button id="update_now_button">
+              <span>Apply update</span>
+            </button>
+          </div>
+          <div id="update_activating" style="display: none;">
+            <span>activating horse...</span>
+            <button id="update_resolve_activate" disabled="">
+              <span>Resolve activate promise</span>
+            </button>
+            <button id="update_reject_activate" disabled="">
+              <span>Reject activate promise</span>
+            </button>
+          </div>
+          <div id="update_activated" style="display: none;">
+            <span>horse activated</span>
+          </div>
+          <div id="update_redundant" style="display: none">
+            <span>redundant</span>
+          </div>
+        </fieldset>
+      </div>
+    </div>

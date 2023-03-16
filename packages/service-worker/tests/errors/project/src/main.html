@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <div id="ui">
+      <div id="service_worker_ui">
+        <fieldset name="controller">
+          <legend>Navigator controller</legend>
+
+          <span id="controller"></span>
+        </fieldset>
+        <fieldset name="registration">
+          <legend>Service worker script registration</legend>
+
+          <button id="register" disabled>
+            <span>register sw.js</span>
+          </button>
+          <button id="unregister" disabled>
+            <span>unregister</span>
+          </button>
+          <br />
+          <br />
+          <div id="ready_state"></div>
+        </fieldset>
+        <fieldset name="update">
+          <legend>Service worker script update</legend>
+
+          <button id="update_check_button" disabled>Check for updates</button>
+          <div id="update_ready_state"></div>
+        </fieldset>
+      </div>
+      <div id="trigger_file_changes">
+        <fieldset>
+          <legend>Generate sw script</legend>
+          <button id="build_no_error">No error</button>
+          <button id="build_error_during_register">During register</button>
+          <button id="build_error_during_install">During install</button>
+          <button id="build_error_during_activate">During activate</button>
+        </fieldset>
+      </div>
+    </div>
+    <div style="display: none">
+      <div id="error">
+        <span>error</span>
+      </div>
+      <div id="installing">
+        <span>installing...</span>
+        <button id="resolve_install" disabled>
+          <span>Resolve install promise</span>
+        </button>
+        <button id="reject_install" disabled>
+          <span>Reject install promise</span>
+        </button>
+      </div>
+      <div id="installed">
+        <span>installed</span>
+      </div>
+      <div id="activating">
+        <span>activating....</span>
+        <button id="resolve_activate" disabled>
+          <span>Resolve activate promise</span>
+        </button>
+        <button id="reject_activate" disabled>
+          <span>Reject activate promise</span>
+        </button>
+      </div>
+      <div id="activated">
+        <span>activated</span>
+      </div>
+      <div id="redundant">
+        <span>redundant</span>
+      </div>
+    </div>
+    <div style="display: none">
+      <div id="update_error"></div>
+      <div id="update_installing">
+        <span>update installing...</span>
+        <button id="update_resolve_install" disabled>
+          <span>Resolve install promise</span>
+        </button>
+        <button id="update_reject_install" disabled>
+          <span>Reject install promise</span>
+        </button>
+      </div>
+      <div id="update_installed">
+        <span>update installed</span>
+        <button id="update_by_restart_button" disabled>
+          <span>Restart to update</span>
+        </button>
+        <button id="update_now_button" disabled>
+          <span>Apply update</span>
+        </button>
+      </div>
+      <div id="update_activating">
+        <span>update activating....</span>
+        <button id="update_resolve_activate" disabled>
+          <span>Resolve activate promise</span>
+        </button>
+        <button id="update_reject_activate" disabled>
+          <span>Reject activate promise</span>
+        </button>
+      </div>
+      <div id="update_activated">
+        <span>activated</span>
+      </div>
+      <div id="update_redundant">
+        <span>redundant</span>
+      </div>
+    </div>
+    <script>
+      window.readyPromise = new Promise((resolve) => {
+        window.resolveReadyPromise = resolve
+      })
+    </script>
+    <script type="module">
+      await import("./main.js")
+      window.resolveReadyPromise()
+    </script>
+  </body>
+</html>

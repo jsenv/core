@@ -38,10 +38,14 @@ export const getCorePlugins = ({
   clientFileChangeCallbackList,
   clientFilesPruneCallbackList,
   explorer,
+  cacheControl,
   ribbon = true,
 } = {}) => {
   if (explorer === true) {
     explorer = {}
+  }
+  if (cacheControl === true) {
+    cacheControl = {}
   }
   if (supervisor === true) {
     supervisor = {}
@@ -59,6 +63,7 @@ export const getCorePlugins = ({
   } else {
     clientMainFileUrl = String(clientMainFileUrl)
   }
+
   if (ribbon === true) {
     ribbon = {}
   }
@@ -97,7 +102,7 @@ export const getCorePlugins = ({
           }),
         ]
       : []),
-    jsenvPluginCacheControl(),
+    ...(cacheControl ? [jsenvPluginCacheControl(cacheControl)] : []),
     ...(explorer
       ? [jsenvPluginExplorer({ ...explorer, clientMainFileUrl })]
       : []),

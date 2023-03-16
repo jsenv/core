@@ -1,4 +1,3 @@
-/* globals self */
 import { pingResponse } from "./ping.js"
 
 self.addEventListener("message", function (e) {

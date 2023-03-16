@@ -35,6 +35,7 @@ export const createFileService = ({
   clientMainFileUrl,
   cooldownBetweenFileEvents,
   explorer,
+  cacheControl,
   ribbon,
   sourcemaps,
   sourcemapsSourcesProtocol,
@@ -145,6 +146,7 @@ export const createFileService = ({
           clientFileChangeCallbackList,
           clientFilesPruneCallbackList,
           explorer,
+          cacheControl,
           ribbon,
         }),
       ],
@@ -173,18 +175,25 @@ export const createFileService = ({
           // when file is modified
           return false
         }
-        if (!watch) {
+        if (!watch && urlInfo.contentEtag) {
+          // file is not watched, check the filesystem
           let fileContentAsBuffer
           try {
             fileContentAsBuffer = readFileSync(new URL(urlInfo.url))
           } catch (e) {
             if (e.code === "ENOENT") {
+              // we should consider calling urlGraph.deleteUrlInfo(urlInfo)
+              urlInfo.originalContentEtag = undefined
+              urlInfo.contentEtag = undefined
               return false
             }
             return false
           }
           const fileContentEtag = bufferToEtag(fileContentAsBuffer)
           if (fileContentEtag !== urlInfo.originalContentEtag) {
+            // we should consider calling urlGraph.considerModified(urlInfo)
+            urlInfo.originalContentEtag = undefined
+            urlInfo.contentEtag = undefined
             return false
           }
         }

@@ -38,7 +38,6 @@ export const eslintConfigToPreferExplicitGlobals = {
     print: "off",
     screen: "off",
     scroll: "off",
-    self: "off",
     status: "off",
     stop: "off",
     top: "off",

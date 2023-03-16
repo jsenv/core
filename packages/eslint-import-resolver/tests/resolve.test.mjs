@@ -9,47 +9,88 @@ import {
 import * as resolver from "@jsenv/eslint-import-resolver"
 
 const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url)
+const spyConsoleWarn = () => {
+  const consoleWarnCalls = []
+  const { warn } = console
+  console.warn = (message) => {
+    consoleWarnCalls.push(message)
+  }
+  return [
+    consoleWarnCalls,
+    () => {
+      console.warn = warn
+    },
+  ]
+}
 
 // import starting with /
 {
-  await ensureEmptyDirectory(tempDirectoryUrl)
-  const importerFileUrl = resolveUrl("dir/foo.js", tempDirectoryUrl)
-  const resolvedFileUrl = `${tempDirectoryUrl}file.js`
-  const actual = resolver.resolve(
-    "/file.js",
-    urlToFileSystemPath(importerFileUrl),
-    {
-      rootDirectoryUrl: tempDirectoryUrl,
-    },
-  )
-  const expected = {
-    found: false,
-    path: urlToFileSystemPath(resolvedFileUrl),
+  const [consoleWarnCalls, removeConsoleWarnSpy] = spyConsoleWarn()
+  try {
+    await ensureEmptyDirectory(tempDirectoryUrl)
+    const importerFileUrl = resolveUrl("dir/foo.js", tempDirectoryUrl)
+    const resolvedFileUrl = `${tempDirectoryUrl}file.js`
+    const resolveResult = resolver.resolve(
+      "/file.js",
+      urlToFileSystemPath(importerFileUrl),
+      {
+        rootDirectoryUrl: tempDirectoryUrl,
+      },
+    )
+    const actual = {
+      consoleWarnCalls,
+      resolveResult,
+    }
+    const expected = {
+      consoleWarnCalls: [
+        `filesystem resolution failed for "/file.js" imported by ${importerFileUrl} (file not found at ${resolvedFileUrl})`,
+      ],
+      resolveResult: {
+        found: false,
+        path: urlToFileSystemPath(resolvedFileUrl),
+      },
+    }
+    assert({ actual, expected })
+  } finally {
+    removeConsoleWarnSpy()
   }
-  assert({ actual, expected })
 }
 
 // import starting with / (node style)
 {
-  await ensureEmptyDirectory(tempDirectoryUrl)
-  const importerFileUrl = resolveUrl("dir/foo.js", tempDirectoryUrl)
-  const resolvedFileUrl = ensureWindowsDriveLetter(
-    resolveUrl("/file.js", tempDirectoryUrl),
-    tempDirectoryUrl,
-  )
-  const actual = resolver.resolve(
-    "/file.js",
-    urlToFileSystemPath(importerFileUrl),
-    {
-      rootDirectoryUrl: tempDirectoryUrl,
-      packageConditions: ["node", "import"],
-    },
-  )
-  const expected = {
-    found: false,
-    path: urlToFileSystemPath(resolvedFileUrl),
+  const [consoleWarnCalls, removeConsoleWarnSpy] = spyConsoleWarn()
+  try {
+    await ensureEmptyDirectory(tempDirectoryUrl)
+    const importerFileUrl = resolveUrl("dir/foo.js", tempDirectoryUrl)
+    const resolvedFileUrl = ensureWindowsDriveLetter(
+      resolveUrl("/file.js", tempDirectoryUrl),
+      tempDirectoryUrl,
+    )
+    const resolveResult = resolver.resolve(
+      "/file.js",
+      urlToFileSystemPath(importerFileUrl),
+      {
+        rootDirectoryUrl: tempDirectoryUrl,
+        packageConditions: ["node", "import"],
+      },
+    )
+    const actual = {
+      consoleWarnCalls,
+      resolveResult,
+    }
+    const expected = {
+      consoleWarnCalls: [
+        `filesystem resolution failed for "/file.js" imported by ${importerFileUrl} (file not found at ${resolvedFileUrl})`,
+      ],
+      resolveResult: {
+        found: false,
+        path: urlToFileSystemPath(resolvedFileUrl),
+      },
+    }
+    assert({ actual, expected })
+  } finally {
+    removeConsoleWarnSpy()
   }
-  assert({ actual, expected })
 }
 
 // import containing query param
@@ -124,69 +165,107 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url)
 
 // bare specifier remapped
 {
-  const importerFileUrl = resolveUrl("src/babelTest.js", tempDirectoryUrl)
-  const resolvedFileUrl = resolveUrl(
-    "node_modules/@babel/plugin-proposal-object-rest-spread/lib/index.js",
-    tempDirectoryUrl,
-  )
-  const importmapFileUrl = resolveUrl("import-map.importmap", tempDirectoryUrl)
-  await writeFile(
-    importmapFileUrl,
-    JSON.stringify({
-      imports: {
-        "@babel/plugin-proposal-object-rest-spread":
-          "./node_modules/@babel/plugin-proposal-object-rest-spread/lib/index.js",
-      },
-    }),
-  )
+  const [consoleWarnCalls, removeConsoleWarnSpy] = spyConsoleWarn()
+  try {
+    const importerFileUrl = resolveUrl("src/babelTest.js", tempDirectoryUrl)
+    const resolvedFileUrl = resolveUrl(
+      "node_modules/@babel/plugin-proposal-object-rest-spread/lib/index.js",
+      tempDirectoryUrl,
+    )
+    const importmapFileUrl = resolveUrl(
+      "import-map.importmap",
+      tempDirectoryUrl,
+    )
+    await writeFile(
+      importmapFileUrl,
+      JSON.stringify({
+        imports: {
+          "@babel/plugin-proposal-object-rest-spread":
+            "./node_modules/@babel/plugin-proposal-object-rest-spread/lib/index.js",
+        },
+      }),
+    )
 
-  const actual = resolver.resolve(
-    "@babel/plugin-proposal-object-rest-spread",
-    urlToFileSystemPath(importerFileUrl),
-    {
-      rootDirectoryUrl: tempDirectoryUrl,
-      importmapFileRelativeUrl: "import-map.importmap",
-    },
-  )
-  const expected = {
-    found: false,
-    path: urlToFileSystemPath(resolvedFileUrl),
+    const resolveResult = resolver.resolve(
+      "@babel/plugin-proposal-object-rest-spread",
+      urlToFileSystemPath(importerFileUrl),
+      {
+        rootDirectoryUrl: tempDirectoryUrl,
+        importmapFileRelativeUrl: "import-map.importmap",
+      },
+    )
+    const actual = {
+      consoleWarnCalls,
+      resolveResult,
+    }
+    const expected = {
+      consoleWarnCalls: [
+        `filesystem resolution failed for "@babel/plugin-proposal-object-rest-spread" imported by ${importerFileUrl} (file not found at ${resolvedFileUrl})`,
+      ],
+      resolveResult: {
+        found: false,
+        path: urlToFileSystemPath(resolvedFileUrl),
+      },
+    }
+    assert({ actual, expected })
+  } finally {
+    removeConsoleWarnSpy()
   }
-  assert({ actual, expected })
 }
 
 // bare specifier remapped by scope
 {
-  await ensureEmptyDirectory(tempDirectoryUrl)
-  const importerFileUrl = resolveUrl(
-    "node_modules/use-scoped-foo/index.js",
-    tempDirectoryUrl,
-  )
-  const resolvedFileUrl = resolveUrl(
-    "node_modules/use-scoped-foo/node_modules/foo/index.js",
-    tempDirectoryUrl,
-  )
-  const importmapFileUrl = resolveUrl("import-map.importmap", tempDirectoryUrl)
-  await writeFile(
-    importmapFileUrl,
-    JSON.stringify({
-      scopes: {
-        "./node_modules/use-scoped-foo/": {
-          foo: "./node_modules/use-scoped-foo/node_modules/foo/index.js",
+  const [consoleWarnCalls, removeConsoleWarnSpy] = spyConsoleWarn()
+  try {
+    await ensureEmptyDirectory(tempDirectoryUrl)
+    const importerFileUrl = resolveUrl(
+      "node_modules/use-scoped-foo/index.js",
+      tempDirectoryUrl,
+    )
+    const resolvedFileUrl = resolveUrl(
+      "node_modules/use-scoped-foo/node_modules/foo/index.js",
+      tempDirectoryUrl,
+    )
+    const importmapFileUrl = resolveUrl(
+      "import-map.importmap",
+      tempDirectoryUrl,
+    )
+    await writeFile(
+      importmapFileUrl,
+      JSON.stringify({
+        scopes: {
+          "./node_modules/use-scoped-foo/": {
+            foo: "./node_modules/use-scoped-foo/node_modules/foo/index.js",
+          },
         },
-      },
-    }),
-  )
+      }),
+    )
 
-  const actual = resolver.resolve("foo", urlToFileSystemPath(importerFileUrl), {
-    rootDirectoryUrl: tempDirectoryUrl,
-    importmapFileRelativeUrl: "import-map.importmap",
-  })
-  const expected = {
-    found: false,
-    path: urlToFileSystemPath(resolvedFileUrl),
+    const resolveResult = resolver.resolve(
+      "foo",
+      urlToFileSystemPath(importerFileUrl),
+      {
+        rootDirectoryUrl: tempDirectoryUrl,
+        importmapFileRelativeUrl: "import-map.importmap",
+      },
+    )
+    const actual = {
+      consoleWarnCalls,
+      resolveResult,
+    }
+    const expected = {
+      consoleWarnCalls: [
+        `filesystem resolution failed for "foo" imported by ${importerFileUrl} (file not found at ${resolvedFileUrl})`,
+      ],
+      resolveResult: {
+        found: false,
+        path: urlToFileSystemPath(resolvedFileUrl),
+      },
+    }
+    assert({ actual, expected })
+  } finally {
+    removeConsoleWarnSpy()
   }
-  assert({ actual, expected })
 }
 
 // import an http url

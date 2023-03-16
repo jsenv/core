@@ -15,11 +15,11 @@ await build({
   },
 })
 copyFileSync(
-  new URL("./a.html", import.meta.url),
+  new URL("./client/a.html", import.meta.url),
   new URL("./dist/a.html", import.meta.url),
 )
 copyFileSync(
-  new URL("./b.html", import.meta.url),
+  new URL("./client/b.html", import.meta.url),
   new URL("./dist/b.html", import.meta.url),
 )
 const server = await startFileServer({
