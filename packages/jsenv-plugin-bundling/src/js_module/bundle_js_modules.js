@@ -3,8 +3,11 @@ import { pathToFileURL } from "node:url"
 import { URL_META } from "@jsenv/url-meta"
 import { isFileSystemPath } from "@jsenv/urls"
 import { createDetailedMessage } from "@jsenv/log"
-import { babelHelperNameFromUrl } from "@jsenv/babel-plugins"
+import { babelHelperClientDirectoryUrl } from "@jsenv/babel-plugins"
 import { sourcemapConverter } from "@jsenv/sourcemap"
+import { newStylesheetClientFileUrl } from "@jsenv/core/src/plugins/transpilation/babel/new_stylesheet/babel_plugin_new_stylesheet_as_jsenv_import.js"
+import { globalThisClientFileUrl } from "@jsenv/core/src/plugins/transpilation/babel/global_this/babel_plugin_global_this_as_jsenv_import.js"
+import { regeneratorRuntimeClientFileUrl } from "@jsenv/core/src/plugins/transpilation/babel/regenerator_runtime/babel_plugin_regenerator_runtime_as_jsenv_import.js"
 
 import { fileUrlConverter } from "./file_url_converter.js"
 
@@ -24,7 +27,9 @@ export const bundleJsModules = async ({
     sourcemaps,
   } = context
   const {
+    vendorsChunk = true,
     babelHelpersChunk = true,
+    customChunks = {},
     include,
     preserveDynamicImport = false,
     strictExports = false,
@@ -33,6 +38,54 @@ export const bundleJsModules = async ({
     rollupOutput = {},
     rollupPlugins = [],
   } = options
+
+  const chunksAssociations = {
+    ...(vendorsChunk
+      ? {
+          vendors: {
+            "./**/node_modules/": true,
+            [newStylesheetClientFileUrl]: true,
+            [globalThisClientFileUrl]: true,
+            [regeneratorRuntimeClientFileUrl]: true,
+          },
+        }
+      : {}),
+    ...(babelHelpersChunk
+      ? {
+          babel_helpers: {
+            [babelHelperClientDirectoryUrl]: true,
+            [newStylesheetClientFileUrl]: true,
+            [globalThisClientFileUrl]: true,
+            [regeneratorRuntimeClientFileUrl]: true,
+            "./**/babel-plugin-transform-async-to-promises/helpers.mjs": true,
+          },
+        }
+      : {}),
+    ...customChunks,
+  }
+
+  let manualChunks
+  if (
+    typeof customChunks === "object" &&
+    Object.keys(chunksAssociations).length
+  ) {
+    const associations = URL_META.resolveAssociations(
+      chunksAssociations,
+      rootDirectoryUrl,
+    )
+    manualChunks = (id) => {
+      if (rollupOutput.manualChunks) {
+        const manualChunkName = rollupOutput.manualChunks(id)
+        if (manualChunkName) {
+          return manualChunkName
+        }
+      }
+      const url = fileUrlConverter.asFileUrl(id)
+      const meta = URL_META.applyAssociations({ url, associations })
+      const chunkName = Object.keys(meta).find((key) => meta[key])
+      return chunkName || null
+    }
+  }
 
   const resultRef = { current: null }
   try {
@@ -52,7 +105,6 @@ export const bundleJsModules = async ({
           runtimeCompat,
           sourcemaps,
           include,
-          babelHelpersChunk,
           preserveDynamicImport,
           strictExports,
           resultRef,
@@ -92,6 +144,7 @@ export const bundleJsModules = async ({
           symbols: context.isSupportedOnCurrentClients("symbols"),
         },
         ...rollupOutput,
+        manualChunks,
       },
     })
     return resultRef.current.jsModuleBundleUrlInfos
@@ -116,7 +169,6 @@ const rollupPluginJsenv = ({
   sourcemaps,
 
   include,
-  babelHelpersChunk,
   preserveDynamicImport,
   strictExports,
 
@@ -256,26 +308,6 @@ const rollupPluginJsenv = ({
           }
           const name = nameFromUrlInfo || `${chunkInfo.name}.js`
           return insideJs ? `${assetsDirectory}js/${name}` : `${name}`
-        },
-        manualChunks: (id) => {
-          if (babelHelpersChunk) {
-            const fileUrl = fileUrlConverter.asFileUrl(id)
-            if (
-              fileUrl.endsWith(
-                "babel-plugin-transform-async-to-promises/helpers.mjs",
-              )
-            ) {
-              return "babel_helpers"
-            }
-            if (babelHelperNameFromUrl(fileUrl)) {
-              return "babel_helpers"
-            }
-            const urlInfo = urlGraph.getUrlInfo(fileUrl)
-            if (urlInfo && urlInfo.data.isBabelClientFile) {
-              return "babel_helpers"
-            }
-          }
-          return null
         },
         // https://rollupjs.org/guide/en/#outputpaths
         // paths: (id) => {

@@ -21,9 +21,7 @@ const test = async (params) => {
   const { returnValue } = await executeInChromium({
     url: `${server.origin}/main.html`,
     /* eslint-disable no-undef */
-    pageFunction: async () => {
-      return window.answer
-    },
+    pageFunction: () => window.answer,
     /* eslint-enable no-undef */
   })
   const actual = returnValue
