@@ -118,7 +118,7 @@ const sw = self.__sw__
 
     // --- init phase ---
     {
-      logger.info(`init ${label}`)
+      logger.info(`init (${label})`)
       sw.registerActions({
         inspect: () => {
           return {
@@ -158,7 +158,7 @@ const sw = self.__sw__
         },
       })
       self.addEventListener("install", (installEvent) => {
-        logger.info(`"${label}" install`)
+        logger.info(`install (${label})`)
         const installPromise = Promise.all([
           handleInstallEvent(installEvent),
           install(installEvent),
@@ -166,7 +166,7 @@ const sw = self.__sw__
         installEvent.waitUntil(installPromise)
       })
       const handleInstallEvent = async () => {
-        logger.info(`open cache`)
+        logger.debug(`open cache`)
         const cache = await self.caches.open(cacheName)
         const urlsToCache = Object.keys(resources)
         const total = urlsToCache.length
@@ -210,7 +210,7 @@ const sw = self.__sw__
     // --- activation phase ---
     {
       self.addEventListener("activate", (activateEvent) => {
-        logger.info(`"${label}" activate`)
+        logger.info(`activate (${label})`)
         const activatePromise = Promise.all([
           handleActivateEvent(activateEvent),
           activate(activateEvent),
@@ -251,13 +251,23 @@ const sw = self.__sw__
         if (request.method !== "GET" && request.method !== "HEAD") {
           return self.fetch(request)
         }
+        let requestWasCachedOnInstall = false
         const resource = resources[request.url]
-        const requestWasCachedOnInstall = Boolean(resource)
+        if (resource) {
+          requestWasCachedOnInstall = true
+        } else {
+          for (const url of Object.keys(resources)) {
+            if (resources[url].versionedUrl === request.url) {
+              requestWasCachedOnInstall = true
+              break
+            }
+          }
+        }
         if (!requestWasCachedOnInstall) {
           return self.fetch(request)
         }
         const relativeUrl = asRelativeUrl(request.url)
-        logger.debug(`"${label}" fetch ${relativeUrl}`)
+        logger.debug(`fetch "${relativeUrl}" (${label})`)
         if (request.mode === "navigate") {
           const preloadResponsePromise = fetchEvent.preloadResponse
           if (preloadResponsePromise) {

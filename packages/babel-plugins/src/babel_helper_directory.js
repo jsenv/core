@@ -5,7 +5,7 @@
  * - https://github.com/babel/babel/tree/main/packages/babel-helpers/src/helpers
  *
  */
-const babelHelperClientDirectoryUrl = new URL(
+export const babelHelperClientDirectoryUrl = new URL(
   "./babel_helpers/",
   import.meta.url,
 ).href

@@ -19,7 +19,7 @@ function _await(value, then, direct) {
   }
   return then ? value.then(then) : value;
 }
-System.register([__v__("/js/babel_helpers.nomodule.js")], function (_export, _context) {
+System.register([__v__("/js/vendors.nomodule.js")], function (_export, _context) {
   "use strict";
 
   var inlineContent, stylesheet, bodyBackgroundColor, bodyBackgroundImage;
@@ -30,7 +30,7 @@ System.register([__v__("/js/babel_helpers.nomodule.js")], function (_export, _co
     this.type = type;
   }
   return {
-    setters: [function (_babel_helpersJs) {}],
+    setters: [function (_vendorsJs) {}],
     execute: async function () {
       inlineContent = new InlineContent('body {\n  background-color: red;\n  background-image: url('+__v__("/other/jsenv.png")+');\n}\n', {
         type: "text/css"

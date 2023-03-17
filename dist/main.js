@@ -19208,17 +19208,6 @@ const jsenvPluginBabel = ({
   return {
     name: "jsenv:babel",
     appliesDuring: "*",
-    transformUrlContent: urlInfo => {
-      if (urlInfo.url === regeneratorRuntimeClientFileUrl) {
-        urlInfo.data.isBabelClientFile = true;
-      }
-      if (urlInfo.url === globalThisClientFileUrl) {
-        urlInfo.data.isBabelClientFile = true;
-      }
-      if (urlInfo.url === newStylesheetClientFileUrl) {
-        urlInfo.data.isBabelClientFile = true;
-      }
-    },
     finalizeUrlContent: {
       js_classic: transformWithBabel,
       js_module: transformWithBabel
