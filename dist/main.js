@@ -753,7 +753,7 @@ const getPermissionOrComputeDefault = (action, subject, permissions) => {
  * - stats object documentation on Node.js
  *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
  */
-const isWindows$2 = process.platform === "win32";
+const isWindows$3 = process.platform === "win32";
 const readEntryStat = async (source, {
   nullIfNotFound = false,
   followLink = true
@@ -767,7 +767,7 @@ const readEntryStat = async (source, {
   return readStat(sourcePath, {
     followLink,
     ...handleNotFoundOption,
-    ...(isWindows$2 ? {
+    ...(isWindows$3 ? {
       // Windows can EPERM on stat
       handlePermissionDeniedError: async error => {
         console.error(`trying to fix windows EPERM after stats on ${sourcePath}`);
@@ -1715,7 +1715,7 @@ const ensureParentDirectories = async destination => {
   });
 };
 
-const isWindows$1 = process.platform === "win32";
+const isWindows$2 = process.platform === "win32";
 const baseUrlFallback = fileSystemPathToUrl$1(process.cwd());
 
 /**
@@ -1737,7 +1737,7 @@ const ensureWindowsDriveLetter = (url, baseUrl) => {
   } catch (e) {
     throw new Error(`absolute url expected but got ${url}`);
   }
-  if (!isWindows$1) {
+  if (!isWindows$2) {
     return url;
   }
   try {
@@ -1834,10 +1834,10 @@ const guardTooFastSecondCallPerFile = (callback, cooldownBetweenFileEvents = 40)
   };
 };
 
-const isWindows = process.platform === "win32";
+const isWindows$1 = process.platform === "win32";
 const createWatcher = (sourcePath, options) => {
   const watcher = watch(sourcePath, options);
-  if (isWindows) {
+  if (isWindows$1) {
     watcher.on("error", async error => {
       // https://github.com/joyent/node/issues/4337
       if (error.code === "EPERM") {
@@ -2856,7 +2856,14 @@ const ESC = '\u001B[';
 const OSC = '\u001B]';
 const BEL = '\u0007';
 const SEP = ';';
-const isTerminalApp = process$1.env.TERM_PROGRAM === 'Apple_Terminal';
+
+/* global window */
+const isBrowser = typeof window !== 'undefined' && typeof window.document !== 'undefined';
+const isTerminalApp = !isBrowser && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
+const isWindows = !isBrowser && process$1.platform === 'win32';
+const cwdFunction = isBrowser ? () => {
+  throw new Error('`process.cwd()` only works in Node.js, not the browser.');
+} : process$1.cwd;
 const ansiEscapes = {};
 ansiEscapes.cursorTo = (x, y) => {
   if (typeof x !== 'number') {
@@ -2915,7 +2922,7 @@ ansiEscapes.eraseScreen = ESC + '2J';
 ansiEscapes.scrollUp = ESC + 'S';
 ansiEscapes.scrollDown = ESC + 'T';
 ansiEscapes.clearScreen = '\u001Bc';
-ansiEscapes.clearTerminal = process$1.platform === 'win32' ? `${ansiEscapes.eraseScreen}${ESC}0f`
+ansiEscapes.clearTerminal = isWindows ? `${ansiEscapes.eraseScreen}${ESC}0f`
 // 1. Erases the screen (Only done in case `2` is not supported)
 // 2. Erases the whole screen including scrollback buffer
 // 3. Moves cursor to the top-left position
@@ -2937,7 +2944,7 @@ ansiEscapes.image = (buffer, options = {}) => {
   return returnValue + ':' + buffer.toString('base64') + BEL;
 };
 ansiEscapes.iTerm = {
-  setCwd: (cwd = process$1.cwd()) => `${OSC}50;CurrentDir=${cwd}${BEL}`,
+  setCwd: (cwd = cwdFunction()) => `${OSC}50;CurrentDir=${cwd}${BEL}`,
   annotation(message, options = {}) {
     let returnValue = `${OSC}1337;`;
     const hasX = typeof options.x !== 'undefined';

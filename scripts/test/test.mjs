@@ -43,6 +43,12 @@ await executeTestPlan({
             allocatedMs: 180_000,
           },
         },
+        "tests/**/import_assert_type_css_dev.test.mjs": {
+          node: {
+            runtime: nodeWorkerThread,
+            allocatedMs: 60_000,
+          },
+        },
         "tests/**/import_assert_type_css_build.test.mjs": {
           node: {
             runtime: nodeWorkerThread,
@@ -53,6 +59,12 @@ await executeTestPlan({
           node: {
             runtime: nodeWorkerThread,
             allocatedMs: 90_000,
+          },
+        },
+        "tests/**/preload_local_font_build.test.mjs": {
+          node: {
+            runtime: nodeWorkerThread,
+            allocatedMs: 60_000,
           },
         },
       },
