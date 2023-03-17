@@ -251,8 +251,18 @@ const sw = self.__sw__
         if (request.method !== "GET" && request.method !== "HEAD") {
           return self.fetch(request)
         }
+        let requestWasCachedOnInstall = false
         const resource = resources[request.url]
-        const requestWasCachedOnInstall = Boolean(resource)
+        if (resource) {
+          requestWasCachedOnInstall = true
+        } else {
+          for (const url of Object.keys(resources)) {
+            if (resources[url].versionedUrl === request.url) {
+              requestWasCachedOnInstall = true
+              break
+            }
+          }
+        }
         if (!requestWasCachedOnInstall) {
           return self.fetch(request)
         }
