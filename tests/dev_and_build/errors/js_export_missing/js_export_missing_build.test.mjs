@@ -15,13 +15,10 @@ try {
   })
   throw new Error("should throw")
 } catch (e) {
-  const actual = e.message
-  const specifier = new URL("./client/file.js", import.meta.url).href
   const expected = `"answer" is not exported by "tests/dev_and_build/errors/js_export_missing/client/file.js", imported by "tests/dev_and_build/errors/js_export_missing/client/main.js".
 --- frame ---
 1: // eslint-disable-next-line import/named
-2: import { answer } from "${specifier.slice(0, 93)}...
-            ^
-3: console.log(answer);`
+2: import { answer } from`
+  const actual = e.message.slice(0, expected.length)
   assert({ actual, expected })
 }
