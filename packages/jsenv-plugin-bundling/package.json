@@ -24,11 +24,11 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "@jsenv/babel-plugins": "1.1.4",
-    "@jsenv/log": "3.3.3",
+    "@jsenv/babel-plugins": "1.1.5",
+    "@jsenv/log": "3.3.4",
     "@jsenv/url-meta": "7.0.2",
     "@jsenv/urls": "1.2.8",
-    "@jsenv/sourcemap": "1.0.8",
+    "@jsenv/sourcemap": "1.0.9",
     "acorn-import-assertions": "1.8.0",
     "lightningcss": "1.19.0",
     "rollup": "3.19.1"

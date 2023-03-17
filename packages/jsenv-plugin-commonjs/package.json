@@ -25,7 +25,7 @@
   },
   "dependencies": {
     "@jsenv/filesystem": "4.1.9",
-    "@jsenv/log": "3.3.3",
+    "@jsenv/log": "3.3.4",
     "@jsenv/url-meta": "7.0.2",
     "@jsenv/urls": "1.2.8",
     "@rollup/plugin-commonjs": "24.0.1",

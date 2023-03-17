@@ -5,7 +5,7 @@ import { createObservable } from "@jsenv/server/src/interfacing_with_node/observ
 import {
   testServerCertificate,
   testServerCertificatePrivateKey,
-} from "@jsenv/server/tests/test_certificate.js"
+} from "../../server/tests/test_certificate.js"
 
 import { fetchUrl } from "@jsenv/fetch"
 

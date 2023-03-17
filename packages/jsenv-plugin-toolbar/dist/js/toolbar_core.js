@@ -1,14 +1,14 @@
 var l$2;
 l$2 = {
   __e: function (n, l, u, i) {
-    for (var t, o, r; l = l.__;) if ((t = l.__c) && !t.__) try {
-      if ((o = t.constructor) && null != o.getDerivedStateFromError && (t.setState(o.getDerivedStateFromError(n)), r = t.__d), null != t.componentDidCatch && (t.componentDidCatch(n, i || {}), r = t.__d), r) return t.__E = t;
+    for (var t, r, o; l = l.__;) if ((t = l.__c) && !t.__) try {
+      if ((r = t.constructor) && null != r.getDerivedStateFromError && (t.setState(r.getDerivedStateFromError(n)), o = t.__d), null != t.componentDidCatch && (t.componentDidCatch(n, i || {}), o = t.__d), o) return t.__E = t;
     } catch (l) {
       n = l;
     }
     throw n;
   }
-};
+}, "function" == typeof Promise ? Promise.prototype.then.bind(Promise.resolve()) : setTimeout;
 
 var t$1,
   r$1,
