@@ -51,6 +51,7 @@ await build({
     jsenvPluginBundling({
       js_module: {
         babelHelpersChunk: false,
+        vendorsChunk: false,
       },
     }),
   ],

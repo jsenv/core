@@ -117,8 +117,8 @@ export const bundleJsModules = async ({
             return
           }
           if (warning.code === "THIS_IS_UNDEFINED") {
-            const urlInfo = urlGraph.getUrlInfo(pathToFileURL(warning.id).href)
-            if (urlInfo && urlInfo.data.isBabelClientFile) {
+            const fileUrl = pathToFileURL(warning.id).href
+            if (fileUrl === globalThisClientFileUrl) {
               return
             }
           }
