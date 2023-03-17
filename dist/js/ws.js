@@ -1479,7 +1479,7 @@ let Sender$1 = class Sender {
     if (this._deflating) {
       this.enqueue([this.dispatch, buf, false, options, cb]);
     } else {
-      this.sendFrame(Sender$1.frame(buf, options), cb);
+      this.sendFrame(Sender.frame(buf, options), cb);
     }
   }
 
@@ -1518,7 +1518,7 @@ let Sender$1 = class Sender {
     if (this._deflating) {
       this.enqueue([this.dispatch, data, false, options, cb]);
     } else {
-      this.sendFrame(Sender$1.frame(data, options), cb);
+      this.sendFrame(Sender.frame(data, options), cb);
     }
   }
 
@@ -1557,7 +1557,7 @@ let Sender$1 = class Sender {
     if (this._deflating) {
       this.enqueue([this.dispatch, data, false, options, cb]);
     } else {
-      this.sendFrame(Sender$1.frame(data, options), cb);
+      this.sendFrame(Sender.frame(data, options), cb);
     }
   }
 
@@ -1619,7 +1619,7 @@ let Sender$1 = class Sender {
         this.dispatch(data, this._compress, opts, cb);
       }
     } else {
-      this.sendFrame(Sender$1.frame(data, {
+      this.sendFrame(Sender.frame(data, {
         [kByteLength]: byteLength,
         fin: options.fin,
         generateMask: this._generateMask,
@@ -1657,7 +1657,7 @@ let Sender$1 = class Sender {
    */
   dispatch(data, compress, options, cb) {
     if (!compress) {
-      this.sendFrame(Sender$1.frame(data, options), cb);
+      this.sendFrame(Sender.frame(data, options), cb);
       return;
     }
     const perMessageDeflate = this._extensions[PerMessageDeflate$2.extensionName];
@@ -1677,7 +1677,7 @@ let Sender$1 = class Sender {
       this._bufferedBytes -= options[kByteLength];
       this._deflating = false;
       options.readOnly = false;
-      this.sendFrame(Sender$1.frame(buf, options), cb);
+      this.sendFrame(Sender.frame(buf, options), cb);
       this.dequeue();
     });
   }
@@ -2262,7 +2262,7 @@ let WebSocket$1 = class WebSocket extends EventEmitter$1 {
     this._extensions = {};
     this._paused = false;
     this._protocol = '';
-    this._readyState = WebSocket$1.CONNECTING;
+    this._readyState = WebSocket.CONNECTING;
     this._receiver = null;
     this._sender = null;
     this._socket = null;
@@ -2421,7 +2421,7 @@ let WebSocket$1 = class WebSocket extends EventEmitter$1 {
     socket.on('data', socketOnData);
     socket.on('end', socketOnEnd);
     socket.on('error', socketOnError$1);
-    this._readyState = WebSocket$1.OPEN;
+    this._readyState = WebSocket.OPEN;
     this.emit('open');
   }
 
@@ -2432,7 +2432,7 @@ let WebSocket$1 = class WebSocket extends EventEmitter$1 {
    */
   emitClose() {
     if (!this._socket) {
-      this._readyState = WebSocket$1.CLOSED;
+      this._readyState = WebSocket.CLOSED;
       this.emit('close', this._closeCode, this._closeMessage);
       return;
     }
@@ -2440,7 +2440,7 @@ let WebSocket$1 = class WebSocket extends EventEmitter$1 {
       this._extensions[PerMessageDeflate$1.extensionName].cleanup();
     }
     this._receiver.removeAllListeners();
-    this._readyState = WebSocket$1.CLOSED;
+    this._readyState = WebSocket.CLOSED;
     this.emit('close', this._closeCode, this._closeMessage);
   }
 
@@ -2465,19 +2465,19 @@ let WebSocket$1 = class WebSocket extends EventEmitter$1 {
    * @public
    */
   close(code, data) {
-    if (this.readyState === WebSocket$1.CLOSED) return;
-    if (this.readyState === WebSocket$1.CONNECTING) {
+    if (this.readyState === WebSocket.CLOSED) return;
+    if (this.readyState === WebSocket.CONNECTING) {
       const msg = 'WebSocket was closed before the connection was established';
       abortHandshake$1(this, this._req, msg);
       return;
     }
-    if (this.readyState === WebSocket$1.CLOSING) {
+    if (this.readyState === WebSocket.CLOSING) {
       if (this._closeFrameSent && (this._closeFrameReceived || this._receiver._writableState.errorEmitted)) {
         this._socket.end();
       }
       return;
     }
-    this._readyState = WebSocket$1.CLOSING;
+    this._readyState = WebSocket.CLOSING;
     this._sender.close(code, data, !this._isServer, err => {
       //
       // This error is handled by the `'error'` listener on the socket. We only
@@ -2502,7 +2502,7 @@ let WebSocket$1 = class WebSocket extends EventEmitter$1 {
    * @public
    */
   pause() {
-    if (this.readyState === WebSocket$1.CONNECTING || this.readyState === WebSocket$1.CLOSED) {
+    if (this.readyState === WebSocket.CONNECTING || this.readyState === WebSocket.CLOSED) {
       return;
     }
     this._paused = true;
@@ -2518,7 +2518,7 @@ let WebSocket$1 = class WebSocket extends EventEmitter$1 {
    * @public
    */
   ping(data, mask, cb) {
-    if (this.readyState === WebSocket$1.CONNECTING) {
+    if (this.readyState === WebSocket.CONNECTING) {
       throw new Error('WebSocket is not open: readyState 0 (CONNECTING)');
     }
     if (typeof data === 'function') {
@@ -2529,7 +2529,7 @@ let WebSocket$1 = class WebSocket extends EventEmitter$1 {
       mask = undefined;
     }
     if (typeof data === 'number') data = data.toString();
-    if (this.readyState !== WebSocket$1.OPEN) {
+    if (this.readyState !== WebSocket.OPEN) {
       sendAfterClose(this, data, cb);
       return;
     }
@@ -2546,7 +2546,7 @@ let WebSocket$1 = class WebSocket extends EventEmitter$1 {
    * @public
    */
   pong(data, mask, cb) {
-    if (this.readyState === WebSocket$1.CONNECTING) {
+    if (this.readyState === WebSocket.CONNECTING) {
       throw new Error('WebSocket is not open: readyState 0 (CONNECTING)');
     }
     if (typeof data === 'function') {
@@ -2557,7 +2557,7 @@ let WebSocket$1 = class WebSocket extends EventEmitter$1 {
       mask = undefined;
     }
     if (typeof data === 'number') data = data.toString();
-    if (this.readyState !== WebSocket$1.OPEN) {
+    if (this.readyState !== WebSocket.OPEN) {
       sendAfterClose(this, data, cb);
       return;
     }
@@ -2571,7 +2571,7 @@ let WebSocket$1 = class WebSocket extends EventEmitter$1 {
    * @public
    */
   resume() {
-    if (this.readyState === WebSocket$1.CONNECTING || this.readyState === WebSocket$1.CLOSED) {
+    if (this.readyState === WebSocket.CONNECTING || this.readyState === WebSocket.CLOSED) {
       return;
     }
     this._paused = false;
@@ -2594,7 +2594,7 @@ let WebSocket$1 = class WebSocket extends EventEmitter$1 {
    * @public
    */
   send(data, options, cb) {
-    if (this.readyState === WebSocket$1.CONNECTING) {
+    if (this.readyState === WebSocket.CONNECTING) {
       throw new Error('WebSocket is not open: readyState 0 (CONNECTING)');
     }
     if (typeof options === 'function') {
@@ -2602,7 +2602,7 @@ let WebSocket$1 = class WebSocket extends EventEmitter$1 {
       options = {};
     }
     if (typeof data === 'number') data = data.toString();
-    if (this.readyState !== WebSocket$1.OPEN) {
+    if (this.readyState !== WebSocket.OPEN) {
       sendAfterClose(this, data, cb);
       return;
     }
@@ -2625,14 +2625,14 @@ let WebSocket$1 = class WebSocket extends EventEmitter$1 {
    * @public
    */
   terminate() {
-    if (this.readyState === WebSocket$1.CLOSED) return;
-    if (this.readyState === WebSocket$1.CONNECTING) {
+    if (this.readyState === WebSocket.CLOSED) return;
+    if (this.readyState === WebSocket.CONNECTING) {
       const msg = 'WebSocket was closed before the connection was established';
       abortHandshake$1(this, this._req, msg);
       return;
     }
     if (this._socket) {
-      this._readyState = WebSocket$1.CLOSING;
+      this._readyState = WebSocket.CLOSING;
       this._socket.destroy();
     }
   }
@@ -3035,7 +3035,11 @@ function initAsClient(websocket, address, protocols, options) {
       skipUTF8Validation: opts.skipUTF8Validation
     });
   });
-  req.end();
+  if (opts.finishRequest) {
+    opts.finishRequest(req, websocket);
+  } else {
+    req.end();
+  }
 }
 
 /**
