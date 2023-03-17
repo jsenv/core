@@ -18,14 +18,15 @@
   CLASS = 10; // only used in assertValidReturnValue
 */
 
-function createAddInitializerMethod(initializers, decoratorFinishedRef) {
+function applyDecs2203RFactory() {
+  function createAddInitializerMethod(initializers, decoratorFinishedRef) {
     return function addInitializer(initializer) {
       assertNotFinished(decoratorFinishedRef, "addInitializer");
       assertCallable(initializer, "An initializer");
       initializers.push(initializer);
     };
   }
-  
+
   function memberDec(
     dec,
     name,
@@ -37,7 +38,7 @@ function createAddInitializerMethod(initializers, decoratorFinishedRef) {
     value
   ) {
     var kindStr;
-  
+
     switch (kind) {
       case 1 /* ACCESSOR */:
         kindStr = "accessor";
@@ -54,23 +55,23 @@ function createAddInitializerMethod(initializers, decoratorFinishedRef) {
       default:
         kindStr = "field";
     }
-  
+
     var ctx = {
       kind: kindStr,
       name: isPrivate ? "#" + name : name,
       static: isStatic,
       private: isPrivate,
     };
-  
+
     var decoratorFinishedRef = { v: false };
-  
+
     if (kind !== 0 /* FIELD */) {
       ctx.addInitializer = createAddInitializerMethod(
         initializers,
         decoratorFinishedRef
       );
     }
-  
+
     var get, set;
     if (kind === 0 /* FIELD */) {
       if (isPrivate) {
@@ -95,7 +96,7 @@ function createAddInitializerMethod(initializers, decoratorFinishedRef) {
           return desc.get.call(this);
         };
       }
-  
+
       if (kind === 1 /* ACCESSOR */ || kind === 4 /* SETTER */) {
         set = function (v) {
           desc.set.call(this, v);
@@ -104,14 +105,14 @@ function createAddInitializerMethod(initializers, decoratorFinishedRef) {
     }
     ctx.access =
       get && set ? { get: get, set: set } : get ? { get: get } : { set: set };
-  
+
     try {
       return dec(value, ctx);
     } finally {
       decoratorFinishedRef.v = true;
     }
   }
-  
+
   function assertNotFinished(decoratorFinishedRef, fnName) {
     if (decoratorFinishedRef.v) {
       throw new Error(
@@ -119,16 +120,16 @@ function createAddInitializerMethod(initializers, decoratorFinishedRef) {
       );
     }
   }
-  
+
   function assertCallable(fn, hint) {
     if (typeof fn !== "function") {
       throw new TypeError(hint + " must be a function");
     }
   }
-  
+
   function assertValidReturnValue(kind, value) {
     var type = typeof value;
-  
+
     if (kind === 1 /* ACCESSOR */) {
       if (type !== "object" || value === null) {
         throw new TypeError(
@@ -153,10 +154,12 @@ function createAddInitializerMethod(initializers, decoratorFinishedRef) {
       } else {
         hint = "method";
       }
-      throw new TypeError(hint + " decorators must return a function or void 0");
+      throw new TypeError(
+        hint + " decorators must return a function or void 0"
+      );
     }
   }
-  
+
   function applyMemberDec(
     ret,
     base,
@@ -168,9 +171,9 @@ function createAddInitializerMethod(initializers, decoratorFinishedRef) {
     initializers
   ) {
     var decs = decInfo[0];
-  
+
     var desc, init, value;
-  
+
     if (isPrivate) {
       if (kind === 0 /* FIELD */ || kind === 1 /* ACCESSOR */) {
         desc = {
@@ -193,7 +196,7 @@ function createAddInitializerMethod(initializers, decoratorFinishedRef) {
     } else if (kind !== 0 /* FIELD */) {
       desc = Object.getOwnPropertyDescriptor(base, name);
     }
-  
+
     if (kind === 1 /* ACCESSOR */) {
       value = {
         get: desc.get,
@@ -206,9 +209,9 @@ function createAddInitializerMethod(initializers, decoratorFinishedRef) {
     } else if (kind === 4 /* SETTER */) {
       value = desc.set;
     }
-  
+
     var newValue, get, set;
-  
+
     if (typeof decs === "function") {
       newValue = memberDec(
         decs,
@@ -220,17 +223,17 @@ function createAddInitializerMethod(initializers, decoratorFinishedRef) {
         isPrivate,
         value
       );
-  
+
       if (newValue !== void 0) {
         assertValidReturnValue(kind, newValue);
-  
+
         if (kind === 0 /* FIELD */) {
           init = newValue;
         } else if (kind === 1 /* ACCESSOR */) {
           init = newValue.init;
           get = newValue.get || value.get;
           set = newValue.set || value.set;
-  
+
           value = { get: get, set: set };
         } else {
           value = newValue;
@@ -239,7 +242,7 @@ function createAddInitializerMethod(initializers, decoratorFinishedRef) {
     } else {
       for (var i = decs.length - 1; i >= 0; i--) {
         var dec = decs[i];
-  
+
         newValue = memberDec(
           dec,
           name,
@@ -250,23 +253,23 @@ function createAddInitializerMethod(initializers, decoratorFinishedRef) {
           isPrivate,
           value
         );
-  
+
         if (newValue !== void 0) {
           assertValidReturnValue(kind, newValue);
           var newInit;
-  
+
           if (kind === 0 /* FIELD */) {
             newInit = newValue;
           } else if (kind === 1 /* ACCESSOR */) {
             newInit = newValue.init;
             get = newValue.get || value.get;
             set = newValue.set || value.set;
-  
+
             value = { get: get, set: set };
           } else {
             value = newValue;
           }
-  
+
           if (newInit !== void 0) {
             if (init === void 0) {
               init = newInit;
@@ -279,7 +282,7 @@ function createAddInitializerMethod(initializers, decoratorFinishedRef) {
         }
       }
     }
-  
+
     if (kind === 0 /* FIELD */ || kind === 1 /* ACCESSOR */) {
       if (init === void 0) {
         // If the initializer was void 0, sub in a dummy initializer
@@ -288,27 +291,27 @@ function createAddInitializerMethod(initializers, decoratorFinishedRef) {
         };
       } else if (typeof init !== "function") {
         var ownInitializers = init;
-  
+
         init = function (instance, init) {
           var value = init;
-  
+
           for (var i = 0; i < ownInitializers.length; i++) {
             value = ownInitializers[i].call(instance, value);
           }
-  
+
           return value;
         };
       } else {
         var originalInitializer = init;
-  
+
         init = function (instance, init) {
           return originalInitializer.call(instance, init);
         };
       }
-  
+
       ret.push(init);
     }
-  
+
     if (kind !== 0 /* FIELD */) {
       if (kind === 1 /* ACCESSOR */) {
         desc.get = value.get;
@@ -320,7 +323,7 @@ function createAddInitializerMethod(initializers, decoratorFinishedRef) {
       } else if (kind === 4 /* SETTER */) {
         desc.set = value;
       }
-  
+
       if (isPrivate) {
         if (kind === 1 /* ACCESSOR */) {
           ret.push(function (instance, args) {
@@ -341,29 +344,29 @@ function createAddInitializerMethod(initializers, decoratorFinishedRef) {
       }
     }
   }
-  
+
   function applyMemberDecs(Class, decInfos) {
     var ret = [];
     var protoInitializers;
     var staticInitializers;
-  
+
     var existingProtoNonFields = new Map();
     var existingStaticNonFields = new Map();
-  
+
     for (var i = 0; i < decInfos.length; i++) {
       var decInfo = decInfos[i];
-  
+
       // skip computed property names
       if (!Array.isArray(decInfo)) continue;
-  
+
       var kind = decInfo[1];
       var name = decInfo[2];
       var isPrivate = decInfo.length > 3;
-  
+
       var isStatic = kind >= 5; /* STATIC */
       var base;
       var initializers;
-  
+
       if (isStatic) {
         base = Class;
         kind = kind - 5 /* STATIC */;
@@ -380,14 +383,14 @@ function createAddInitializerMethod(initializers, decoratorFinishedRef) {
           initializers = protoInitializers;
         }
       }
-  
+
       if (kind !== 0 /* FIELD */ && !isPrivate) {
         var existingNonFields = isStatic
           ? existingStaticNonFields
           : existingProtoNonFields;
-  
+
         var existingKind = existingNonFields.get(name) || 0;
-  
+
         if (
           existingKind === true ||
           (existingKind === 3 /* GETTER */ && kind !== 4) /* SETTER */ ||
@@ -403,7 +406,7 @@ function createAddInitializerMethod(initializers, decoratorFinishedRef) {
           existingNonFields.set(name, true);
         }
       }
-  
+
       applyMemberDec(
         ret,
         base,
@@ -415,12 +418,12 @@ function createAddInitializerMethod(initializers, decoratorFinishedRef) {
         initializers
       );
     }
-  
+
     pushInitializers(ret, protoInitializers);
     pushInitializers(ret, staticInitializers);
     return ret;
   }
-  
+
   function pushInitializers(ret, initializers) {
     if (initializers) {
       ret.push(function (instance) {
@@ -431,16 +434,16 @@ function createAddInitializerMethod(initializers, decoratorFinishedRef) {
       });
     }
   }
-  
+
   function applyClassDecs(targetClass, classDecs) {
     if (classDecs.length > 0) {
       var initializers = [];
       var newClass = targetClass;
       var name = targetClass.name;
-  
+
       for (var i = classDecs.length - 1; i >= 0; i--) {
         var decoratorFinishedRef = { v: false };
-  
+
         try {
           var nextNewClass = classDecs[i](newClass, {
             kind: "class",
@@ -453,13 +456,13 @@ function createAddInitializerMethod(initializers, decoratorFinishedRef) {
         } finally {
           decoratorFinishedRef.v = true;
         }
-  
+
         if (nextNewClass !== undefined) {
           assertValidReturnValue(10 /* CLASS */, nextNewClass);
           newClass = nextNewClass;
         }
       }
-  
+
       return [
         newClass,
         function () {
@@ -472,153 +475,154 @@ function createAddInitializerMethod(initializers, decoratorFinishedRef) {
     // The transformer will not emit assignment when there are no class decorators,
     // so we don't have to return an empty array here.
   }
-  
+
   /**
-    Basic usage:
-  
-    applyDecs(
-      Class,
+  Basic usage:
+
+  applyDecs(
+    Class,
+    [
+      // member decorators
       [
-        // member decorators
-        [
-          dec,                // dec or array of decs
-          0,                  // kind of value being decorated
-          'prop',             // name of public prop on class containing the value being decorated,
-          '#p',               // the name of the private property (if is private, void 0 otherwise),
-        ]
-      ],
-      [
-        // class decorators
-        dec1, dec2
+        dec,                // dec or array of decs
+        0,                  // kind of value being decorated
+        'prop',             // name of public prop on class containing the value being decorated,
+        '#p',               // the name of the private property (if is private, void 0 otherwise),
       ]
-    )
-    ```
-  
-    Fully transpiled example:
-  
-    ```js
+    ],
+    [
+      // class decorators
+      dec1, dec2
+    ]
+  )
+  ```
+
+  Fully transpiled example:
+
+  ```js
+  @dec
+  class Class {
     @dec
-    class Class {
-      @dec
-      a = 123;
-  
-      @dec
-      #a = 123;
-  
-      @dec
-      @dec2
-      accessor b = 123;
-  
-      @dec
-      accessor #b = 123;
-  
-      @dec
-      c() { console.log('c'); }
-  
-      @dec
-      #c() { console.log('privC'); }
-  
-      @dec
-      get d() { console.log('d'); }
-  
-      @dec
-      get #d() { console.log('privD'); }
-  
-      @dec
-      set e(v) { console.log('e'); }
-  
-      @dec
-      set #e(v) { console.log('privE'); }
+    a = 123;
+
+    @dec
+    #a = 123;
+
+    @dec
+    @dec2
+    accessor b = 123;
+
+    @dec
+    accessor #b = 123;
+
+    @dec
+    c() { console.log('c'); }
+
+    @dec
+    #c() { console.log('privC'); }
+
+    @dec
+    get d() { console.log('d'); }
+
+    @dec
+    get #d() { console.log('privD'); }
+
+    @dec
+    set e(v) { console.log('e'); }
+
+    @dec
+    set #e(v) { console.log('privE'); }
+  }
+
+
+  // becomes
+  let initializeInstance;
+  let initializeClass;
+
+  let initA;
+  let initPrivA;
+
+  let initB;
+  let initPrivB, getPrivB, setPrivB;
+
+  let privC;
+  let privD;
+  let privE;
+
+  let Class;
+  class _Class {
+    static {
+      let ret = applyDecs(
+        this,
+        [
+          [dec, 0, 'a'],
+          [dec, 0, 'a', (i) => i.#a, (i, v) => i.#a = v],
+          [[dec, dec2], 1, 'b'],
+          [dec, 1, 'b', (i) => i.#privBData, (i, v) => i.#privBData = v],
+          [dec, 2, 'c'],
+          [dec, 2, 'c', () => console.log('privC')],
+          [dec, 3, 'd'],
+          [dec, 3, 'd', () => console.log('privD')],
+          [dec, 4, 'e'],
+          [dec, 4, 'e', () => console.log('privE')],
+        ],
+        [
+          dec
+        ]
+      )
+
+      initA = ret[0];
+
+      initPrivA = ret[1];
+
+      initB = ret[2];
+
+      initPrivB = ret[3];
+      getPrivB = ret[4];
+      setPrivB = ret[5];
+
+      privC = ret[6];
+
+      privD = ret[7];
+
+      privE = ret[8];
+
+      initializeInstance = ret[9];
+
+      Class = ret[10]
+
+      initializeClass = ret[11];
     }
-  
-  
-    // becomes
-    let initializeInstance;
-    let initializeClass;
-  
-    let initA;
-    let initPrivA;
-  
-    let initB;
-    let initPrivB, getPrivB, setPrivB;
-  
-    let privC;
-    let privD;
-    let privE;
-  
-    let Class;
-    class _Class {
-      static {
-        let ret = applyDecs(
-          this,
-          [
-            [dec, 0, 'a'],
-            [dec, 0, 'a', (i) => i.#a, (i, v) => i.#a = v],
-            [[dec, dec2], 1, 'b'],
-            [dec, 1, 'b', (i) => i.#privBData, (i, v) => i.#privBData = v],
-            [dec, 2, 'c'],
-            [dec, 2, 'c', () => console.log('privC')],
-            [dec, 3, 'd'],
-            [dec, 3, 'd', () => console.log('privD')],
-            [dec, 4, 'e'],
-            [dec, 4, 'e', () => console.log('privE')],
-          ],
-          [
-            dec
-          ]
-        )
-  
-        initA = ret[0];
-  
-        initPrivA = ret[1];
-  
-        initB = ret[2];
-  
-        initPrivB = ret[3];
-        getPrivB = ret[4];
-        setPrivB = ret[5];
-  
-        privC = ret[6];
-  
-        privD = ret[7];
-  
-        privE = ret[8];
-  
-        initializeInstance = ret[9];
-  
-        Class = ret[10]
-  
-        initializeClass = ret[11];
-      }
-  
-      a = (initializeInstance(this), initA(this, 123));
-  
-      #a = initPrivA(this, 123);
-  
-      #bData = initB(this, 123);
-      get b() { return this.#bData }
-      set b(v) { this.#bData = v }
-  
-      #privBData = initPrivB(this, 123);
-      get #b() { return getPrivB(this); }
-      set #b(v) { setPrivB(this, v); }
-  
-      c() { console.log('c'); }
-  
-      #c(...args) { return privC(this, ...args) }
-  
-      get d() { console.log('d'); }
-  
-      get #d() { return privD(this); }
-  
-      set e(v) { console.log('e'); }
-  
-      set #e(v) { privE(this, v); }
-    }
-  
-    initializeClass(Class);
-   */
-  export default function applyDecs2203R(targetClass, memberDecs, classDecs) {
+
+    a = (initializeInstance(this), initA(this, 123));
+
+    #a = initPrivA(this, 123);
+
+    #bData = initB(this, 123);
+    get b() { return this.#bData }
+    set b(v) { this.#bData = v }
+
+    #privBData = initPrivB(this, 123);
+    get #b() { return getPrivB(this); }
+    set #b(v) { setPrivB(this, v); }
+
+    c() { console.log('c'); }
+
+    #c(...args) { return privC(this, ...args) }
+
+    get d() { console.log('d'); }
+
+    get #d() { return privD(this); }
+
+    set e(v) { console.log('e'); }
+
+    set #e(v) { privE(this, v); }
+  }
+
+  initializeClass(Class);
+ */
+
+  return function applyDecs2203R(targetClass, memberDecs, classDecs) {
     return {
       e: applyMemberDecs(targetClass, memberDecs),
       // Lazily apply class decorations so that member init locals can be properly bound.
@@ -626,4 +630,13 @@ function createAddInitializerMethod(initializers, decoratorFinishedRef) {
         return applyClassDecs(targetClass, classDecs);
       },
     };
-  }
+  };
+}
+
+export default function applyDecs2203R(targetClass, memberDecs, classDecs) {
+  return (applyDecs2203R = applyDecs2203RFactory())(
+    targetClass,
+    memberDecs,
+    classDecs
+  );
+}

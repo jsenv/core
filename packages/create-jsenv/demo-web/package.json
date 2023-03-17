@@ -13,7 +13,7 @@
     "build:serve": "node ./scripts/start_build_server.mjs --open"
   },
   "devDependencies": {
-    "@babel/eslint-parser": "7.19.1",
+    "@babel/eslint-parser": "7.21.3",
     "@babel/plugin-syntax-import-assertions": "7.20.0",
     "@jsenv/assert": "2.8.1",
     "@jsenv/core": "30.4.1",
@@ -21,11 +21,11 @@
     "@jsenv/plugin-minification": "1.2.0",
     "@jsenv/eslint-config": "16.3.4",
     "@jsenv/eslint-import-resolver": "0.4.6",
-    "eslint": "8.35.0",
+    "eslint": "8.36.0",
     "eslint-plugin-html": "7.1.0",
     "eslint-plugin-import": "2.27.5",
-    "open": "8.4.0",
-    "playwright": "1.30.0",
-    "prettier": "2.8.3"
+    "open": "8.4.2",
+    "playwright": "1.31.2",
+    "prettier": "2.8.4"
   }
 }
