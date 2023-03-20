@@ -9,7 +9,6 @@ import {
 import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js"
 
 const server = await startServer({
-  protocol: "http",
   logLevel: "off",
   keepProcessAlive: false,
   services: [

@@ -16,10 +16,7 @@ const { certificate, privateKey } = requestCertificate()
 await startDevServer({
   rootDirectoryUrl: new URL("./basic_app/", import.meta.url),
   logLevel: "info",
-  protocol: "https",
-  // http2: false,
-  certificate,
-  privateKey,
+  https: { certificate, privateKey },
   port: 6789,
   toolbar: false,
 })

@@ -2,9 +2,10 @@ import { readFileSync } from "node:fs"
 import { startServer } from "@jsenv/server"
 
 await startServer({
-  protocol: "https",
-  certificate: readFileSyncAsString("./server.crt"),
-  privateKey: readFileSyncAsString("./server.key"),
+  https: {
+    certificate: readFileSyncAsString("./server.crt"),
+    privateKey: readFileSyncAsString("./server.key"),
+  },
   allowHttpRequestOnHttps: true,
   requestToResponse: (request) => {
     const clientUsesHttp = request.origin.startsWith("http:")

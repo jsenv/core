@@ -12,7 +12,6 @@ const { chromium } = require("playwright-chromium")
 const server = await startServer({
   logLevel: "warn",
   keepProcessAlive: false,
-  protocol: "https",
   http2: true,
   port: 3456,
   requestToResponse: (request) => {

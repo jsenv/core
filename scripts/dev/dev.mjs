@@ -6,10 +6,8 @@ const { certificate, privateKey } = requestCertificate()
 await startDevServer({
   rootDirectoryUrl: new URL("../../", import.meta.url),
   // babelPluginMap: {},
-  protocol: "https",
+  https: { certificate, privateKey },
   http2: false,
-  certificate,
-  privateKey,
   // importMapInWebWorkers: true,
   // livereloadLogLevel: "debug",
   // jsenvToolbar: false,

@@ -6,7 +6,6 @@
 import { startServer } from "@jsenv/server"
 
 await startServer({
-  protocol: "http",
   port: 8080,
   services: [
     {
@@ -73,9 +72,10 @@ import { readFileSync } from "node:fs"
 import { startServer } from "@jsenv/server"
 
 await startServer({
-  protocol: "https",
-  certificate: readFileSync(new URL("./server.crt", import.meta.url), "utf8"),
-  privateKey: readFileSync(new URL("./server.key", import.meta.url), "utf8"),
+  https: {
+    certificate: readFileSync(new URL("./server.crt", import.meta.url), "utf8"),
+    privateKey: readFileSync(new URL("./server.key", import.meta.url), "utf8"),
+  },
   allowHttpRequestOnHttps: true,
   services: [
     {

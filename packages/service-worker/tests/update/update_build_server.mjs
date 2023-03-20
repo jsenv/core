@@ -38,9 +38,7 @@ const { certificate, privateKey } = requestCertificate()
 export const buildServer = await startBuildServer({
   logLevel: "warn",
   serverLogLevel: "warn",
-  protocol: "https",
-  certificate,
-  privateKey,
+  https: { certificate, privateKey },
   rootDirectoryUrl: new URL("./project/src/", import.meta.url),
   buildDirectoryUrl: new URL("./project/dist/", import.meta.url),
   buildIndexPath: "main.html",

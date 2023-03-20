@@ -11,9 +11,7 @@ let resourceBeforeAlias
 let resource
 const { origin } = await startServer({
   logLevel: "error",
-  protocol: "http",
   keepProcessAlive: false,
-
   services: [
     jsenvServiceRequestAliases({
       "/alias.json": "/data.json",

@@ -6,10 +6,8 @@ import { jsenvPluginReact } from "@jsenv/plugin-react"
 const { certificate, privateKey } = requestCertificate({ altNames: ["local"] })
 await startDevServer({
   port: 3589,
-  protocol: "https",
+  https: { certificate, privateKey },
   acceptAnyIp: true,
-  certificate,
-  privateKey,
   rootDirectoryUrl: new URL("./client/", import.meta.url),
   plugins: [jsenvPluginReact({ refreshInstrumentation: true })],
   explorer: {

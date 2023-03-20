@@ -5,11 +5,9 @@ import { startServer, fetchFileSystem } from "@jsenv/server"
 const { certificate, privateKey } = requestCertificate()
 await startServer({
   logLevel: "info",
-  protocol: "https",
   port: 3679,
   http2: true,
-  privateKey,
-  certificate,
+  https: { certificate, privateKey },
   sendErrorDetails: true,
   services: [
     {

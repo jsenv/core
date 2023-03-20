@@ -5,7 +5,6 @@ import { startServer } from "@jsenv/server"
 
 const { origin } = await startServer({
   logLevel: "warn",
-  protocol: "http",
   keepProcessAlive: false,
   services: [
     {

@@ -12,11 +12,9 @@ if (process.platform === "linux") {
   const { certificate, privateKey } = requestCertificate()
   const server = await startServer({
     logLevel: "warn",
-    protocol: "https",
     port: 3679,
     http2: true,
-    privateKey,
-    certificate,
+    https: { certificate, privateKey },
     sendErrorDetails: true,
     keepProcessAlive: false,
     services: [

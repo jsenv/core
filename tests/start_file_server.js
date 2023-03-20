@@ -13,7 +13,6 @@ export const startFileServer = ({
 }) => {
   return startServer({
     logLevel: debug ? "info" : "error",
-    protocol: "http",
     keepProcessAlive: debug,
     port: debug ? 9777 : 0,
     services: [

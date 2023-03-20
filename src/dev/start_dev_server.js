@@ -90,15 +90,13 @@ export const startDevServer = async ({
     const unexpectedParamNames = Object.keys(rest)
     if (unexpectedParamNames.length > 0) {
       throw new TypeError(
-        `${unexpectedParamNames.join(
-          ",",
-        )}: there is no such params to this function`,
+        `${unexpectedParamNames.join(",")}: there is no such param`,
       )
     }
     const rootDirectoryUrlValidation = validateDirectoryUrl(rootDirectoryUrl)
     if (!rootDirectoryUrlValidation.valid) {
       throw new TypeError(
-        `rootDirectoryUrl is invalid, it ${rootDirectoryUrlValidation.message} (got ${rootDirectoryUrl})`,
+        `rootDirectoryUrl ${rootDirectoryUrlValidation.message}, got ${rootDirectoryUrl}`,
       )
     }
     rootDirectoryUrl = rootDirectoryUrlValidation.value

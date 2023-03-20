@@ -12,9 +12,10 @@ import { fetchUrl } from "@jsenv/fetch"
 let serverResponsePromise
 const server = await startServer({
   logLevel: "warn",
-  protocol: "https",
-  certificate: testServerCertificate,
-  privateKey: testServerCertificatePrivateKey,
+  https: {
+    certificate: testServerCertificate,
+    privateKey: testServerCertificatePrivateKey,
+  },
   keepProcessAlive: false,
   port: 8998,
   services: [

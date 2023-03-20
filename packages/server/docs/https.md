@@ -16,9 +16,10 @@ import { readFileSync } from "node:fs"
 import { startServer } from "@jsenv/server"
 
 const server = await startServer({
-  protocol: "https",
-  certificate: String(readFileSync(new URL("./server.crt", import.meta.url)),
-  privateKey: String(readFileSync(new URL("./server.key", import.meta.url)),
+  https: {
+    certificate: String(readFileSync(new URL("./server.crt", import.meta.url)),
+    privateKey: String(readFileSync(new URL("./server.key", import.meta.url)),
+  },
 })
 server.origin.startsWith("https://") // true
 ```
@@ -33,9 +34,7 @@ import { startServer } from "@jsenv/server"
 
 const { certificate, privateKey } = requestCertificate()
 const server = await startServer({
-  protocol: "https",
-  certificate,
-  privateKey,
+  https: { certificate, privateKey },
 })
 server.origin.startsWith("https://") // true
 ```
@@ -52,9 +51,7 @@ import { startServer } from "@jsenv/server"
 
 const { certificate, privateKey } = requestCertificate()
 await startServer({
-  protocol: "https",
-  certificate,
-  privateKey,
+  https: { certificate, privateKey },
   redirectHttpToHttps: false,
 })
 ```
@@ -67,9 +64,7 @@ import { startServer } from "@jsenv/server"
 
 const { certificate, privateKey } = requestCertificate()
 await startServer({
-  protocol: "https",
-  certificate,
-  privateKey,
+  https: { certificate, privateKey },
   redirectHttpToHttps: false,
   allowHttpRequestOnHttps: true,
   services: [
@@ -100,9 +95,7 @@ import { startServer } from "@jsenv/server"
 
 const { certificate, privateKey } = requestCertificate()
 await startServer({
-  protocol: "https",
-  certificate,
-  privateKey,
+  https: { certificate, privateKey },
   http2: true,
 })
 ```
@@ -116,9 +109,7 @@ import { startServer } from "@jsenv/server"
 
 const { certificate, privateKey } = requestCertificate()
 await startServer({
-  protocol: "https",
-  certificate,
-  privateKey,
+  https: { certificate, privateKey },
   http2: true,
   http1Allowed: false,
 })

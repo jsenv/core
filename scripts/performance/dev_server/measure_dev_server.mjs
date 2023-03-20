@@ -12,7 +12,6 @@ const { startDevServer } = await import("@jsenv/core")
 const devServer = await startDevServer({
   rootDirectoryUrl: new URL("./basic_app/", import.meta.url),
   logLevel: "warn",
-  protocol: "http",
   keepProcessAlive: false,
 })
 const readyMetrics = readyMeasures.stop()

@@ -5,7 +5,6 @@ import { startServer, jsenvServiceCORS } from "@jsenv/server"
 import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js"
 
 const server = await startServer({
-  protocol: "http",
   logLevel: "warn",
   keepProcessAlive: false,
   services: [
