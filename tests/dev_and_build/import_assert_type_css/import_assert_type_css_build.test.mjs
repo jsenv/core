@@ -27,7 +27,7 @@ const test = async ({ snapshotsDirectoryName, ...rest }) => {
   const { returnValue } = await executeInChromium({
     url: `${server.origin}/main.html`,
     /* eslint-disable no-undef */
-    pageFunction: async () => window.resultPromise,
+    pageFunction: () => window.resultPromise,
     /* eslint-enable no-undef */
   })
   const snapshotsDirectoryUrl = new URL(
