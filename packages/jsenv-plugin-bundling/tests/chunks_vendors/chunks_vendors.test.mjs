@@ -27,17 +27,20 @@ const test = async ({ name, ...rest }) => {
 }
 
 await test({
-  name: "vendor_chunk",
+  name: "chunks_default",
   plugins: [jsenvPluginBundling()],
 })
 
 await test({
-  name: "vendor_chunk_disabled",
+  name: "chunks_vendors",
   plugins: [
     jsenvPluginBundling({
       js_module: {
         chunks: {
-          vendors: null,
+          vendors: {
+            "**/node_modules/": true,
+            "./a.js": true,
+          },
         },
       },
     }),
