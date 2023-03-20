@@ -47,18 +47,15 @@ try {
   assert({ actual, expected })
 }
 
-try {
-  asFlatAssociations({
+{
+  const actual = asFlatAssociations({
     visible: "foo",
     whatever: {
       "file:///a.js": true,
     },
   })
-  throw new Error("shoud crash")
-} catch (error) {
-  const actual = error
-  const expected = new TypeError(
-    `all associations value must be objects, found "visible": foo`,
-  )
+  const expected = {
+    "file:///a.js": { whatever: true },
+  }
   assert({ actual, expected })
 }
