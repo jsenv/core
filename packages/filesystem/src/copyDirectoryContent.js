@@ -1,7 +1,7 @@
 import { Abort } from "@jsenv/abort"
 import { urlToFileSystemPath, resolveUrl } from "@jsenv/urls"
 
-import { assertAndNormalizeDirectoryUrl } from "./assertAndNormalizeDirectoryUrl.js"
+import { assertAndNormalizeDirectoryUrl } from "./directory_url_validation.js"
 import { readEntryStat } from "./readEntryStat.js"
 import { readSymbolicLink } from "./readSymbolicLink.js"
 import { readDirectory } from "./readDirectory.js"

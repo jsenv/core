@@ -6,7 +6,7 @@ import {
   isFileSystemPath,
 } from "@jsenv/urls"
 
-import { assertAndNormalizeFileUrl } from "./assertAndNormalizeFileUrl.js"
+import { assertAndNormalizeFileUrl } from "./file_url_validation.js"
 import { ensureParentDirectories } from "./ensureParentDirectories.js"
 import { readEntryStat } from "./readEntryStat.js"
 import { readSymbolicLink } from "./readSymbolicLink.js"

@@ -6,7 +6,7 @@ import {
   resolveUrl,
 } from "@jsenv/urls"
 
-import { assertAndNormalizeFileUrl } from "./assertAndNormalizeFileUrl.js"
+import { assertAndNormalizeFileUrl } from "./file_url_validation.js"
 import { readEntryStat } from "./readEntryStat.js"
 import { readDirectory } from "./readDirectory.js"
 

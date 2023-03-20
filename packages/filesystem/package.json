@@ -18,13 +18,12 @@
   "type": "module",
   "exports": {
     ".": {
-      "import": "./main.js"
+      "import": "./src/main.js"
     },
     "./*": "./*"
   },
   "files": [
-    "/src/",
-    "/main.js"
+    "/src/"
   ],
   "scripts": {
     "test": "node --conditions=development ./scripts/test.mjs"

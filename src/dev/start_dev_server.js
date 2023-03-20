@@ -83,6 +83,13 @@ export const startDevServer = async ({
   // and mitigates https://github.com/actions/runner-images/issues/3885
   writeGeneratedFiles = !process.env.CI,
 }) => {
+  // params type checking
+  {
+    throw new TypeError(
+      `rootDirectoryUrl must be a string or an url, got ${rootDirectoryUrl}`,
+    )
+  }
+
   const logger = createLogger({ logLevel })
   rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
   const operation = Abort.startOperation()

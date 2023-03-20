@@ -1,7 +1,7 @@
 import { promises } from "node:fs"
 import { urlToFileSystemPath } from "@jsenv/urls"
 
-import { assertAndNormalizeDirectoryUrl } from "./assertAndNormalizeDirectoryUrl.js"
+import { assertAndNormalizeDirectoryUrl } from "./directory_url_validation.js"
 import { statsToType } from "./internal/statsToType.js"
 import { readEntryStat } from "./readEntryStat.js"
 

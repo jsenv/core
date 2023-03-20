@@ -1,6 +1,6 @@
 import { writeFile as writeFileNode } from "node:fs"
 
-import { assertAndNormalizeFileUrl } from "./assertAndNormalizeFileUrl.js"
+import { assertAndNormalizeFileUrl } from "./file_url_validation.js"
 import { ensureParentDirectories } from "./ensureParentDirectories.js"
 
 export const writeFile = async (destination, content = "") => {

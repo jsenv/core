@@ -2,7 +2,7 @@ import { readdirSync, statSync } from "node:fs"
 import { URL_META } from "@jsenv/url-meta"
 import { urlToFileSystemPath, urlToRelativeUrl } from "@jsenv/urls"
 
-import { assertAndNormalizeDirectoryUrl } from "./assertAndNormalizeDirectoryUrl.js"
+import { assertAndNormalizeDirectoryUrl } from "./directory_url_validation.js"
 import { statsToType } from "./internal/statsToType.js"
 import { guardTooFastSecondCallPerFile } from "./internal/guard_second_call.js"
 import { createWatcher } from "./internal/createWatcher.js"
