@@ -1,3 +1,9 @@
+# 31.0.0
+
+- Major update on dependencies
+- Update how to start dev server in https
+- More validation on public function params (type errors thrown on unexpected params)
+
 # 30.4.0
 
 - `@jsenv/core`
