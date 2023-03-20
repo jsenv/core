@@ -51,10 +51,7 @@ export const jsenvPluginAsJsClassicLibrary = ({
           ...context,
           buildDirectoryUrl: context.outDirectoryUrl,
         },
-        options: {
-          babelHelpersChunk: false,
-          preserveDynamicImport: true,
-        },
+        preserveDynamicImport: true,
       })
       const jsModuleBundledUrlInfo = bundleUrlInfos[jsModuleUrlInfo.url]
       if (context.dev) {

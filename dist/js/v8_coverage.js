@@ -35,14 +35,18 @@ const resolveAssociations = (associations, baseUrl) => {
   assertUrlLike(baseUrl, "baseUrl");
   const associationsResolved = {};
   Object.keys(associations).forEach(key => {
-    const valueMap = associations[key];
-    const valueMapResolved = {};
-    Object.keys(valueMap).forEach(pattern => {
-      const value = valueMap[pattern];
-      const patternResolved = normalizeUrlPattern(pattern, baseUrl);
-      valueMapResolved[patternResolved] = value;
-    });
-    associationsResolved[key] = valueMapResolved;
+    const value = associations[key];
+    if (typeof value === "object" && value !== null) {
+      const valueMapResolved = {};
+      Object.keys(value).forEach(pattern => {
+        const valueAssociated = value[pattern];
+        const patternResolved = normalizeUrlPattern(pattern, baseUrl);
+        valueMapResolved[patternResolved] = valueAssociated;
+      });
+      associationsResolved[key] = valueMapResolved;
+    } else {
+      associationsResolved[key] = value;
+    }
   });
   return associationsResolved;
 };
@@ -60,21 +64,24 @@ const asFlatAssociations = associations => {
     throw new TypeError(`associations must be a plain object, got ${associations}`);
   }
   const flatAssociations = {};
-  Object.keys(associations).forEach(key => {
-    const valueMap = associations[key];
-    if (!isPlainObject(valueMap)) {
-      throw new TypeError(`all associations value must be objects, found "${key}": ${valueMap}`);
+  Object.keys(associations).forEach(associationName => {
+    const associationValue = associations[associationName];
+    if (isPlainObject(associationValue)) {
+      Object.keys(associationValue).forEach(pattern => {
+        const patternValue = associationValue[pattern];
+        const previousValue = flatAssociations[pattern];
+        if (isPlainObject(previousValue)) {
+          flatAssociations[pattern] = {
+            ...previousValue,
+            [associationName]: patternValue
+          };
+        } else {
+          flatAssociations[pattern] = {
+            [associationName]: patternValue
+          };
+        }
+      });
     }
-    Object.keys(valueMap).forEach(pattern => {
-      const value = valueMap[pattern];
-      const previousValue = flatAssociations[pattern];
-      flatAssociations[pattern] = previousValue ? {
-        ...previousValue,
-        [key]: value
-      } : {
-        [key]: value
-      };
-    });
   });
   return flatAssociations;
 };

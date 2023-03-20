@@ -48,12 +48,7 @@ await build({
         "/**/node_modules/ws/": true,
       },
     }),
-    jsenvPluginBundling({
-      js_module: {
-        babelHelpersChunk: false,
-        vendorsChunk: false,
-      },
-    }),
+    jsenvPluginBundling(),
   ],
   // writeGeneratedFiles: true,
 })

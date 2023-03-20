@@ -4983,7 +4983,7 @@ const startServer = async ({
   // 2s
   ...rest
 } = {}) => {
-  // params validation
+  // param validations
   {
     const unexpectedParamNames = Object.keys(rest);
     if (unexpectedParamNames.length > 0) {
@@ -5008,20 +5008,23 @@ const startServer = async ({
   const logger = createLogger({
     logLevel
   });
-  if (redirectHttpToHttps === undefined && https && !allowHttpRequestOnHttps) {
-    redirectHttpToHttps = true;
-  }
-  if (redirectHttpToHttps && !https) {
-    logger.warn(`redirectHttpToHttps ignored because protocol is http`);
-    redirectHttpToHttps = false;
-  }
-  if (allowHttpRequestOnHttps && redirectHttpToHttps) {
-    logger.warn(`redirectHttpToHttps ignored because allowHttpRequestOnHttps is enabled`);
-    redirectHttpToHttps = false;
-  }
-  if (allowHttpRequestOnHttps && !https) {
-    logger.warn(`allowHttpRequestOnHttps ignored because protocol is http`);
-    allowHttpRequestOnHttps = false;
+  // param warnings and normalization
+  {
+    if (redirectHttpToHttps === undefined && https && !allowHttpRequestOnHttps) {
+      redirectHttpToHttps = true;
+    }
+    if (redirectHttpToHttps && !https) {
+      logger.warn(`redirectHttpToHttps ignored because protocol is http`);
+      redirectHttpToHttps = false;
+    }
+    if (allowHttpRequestOnHttps && redirectHttpToHttps) {
+      logger.warn(`redirectHttpToHttps ignored because allowHttpRequestOnHttps is enabled`);
+      redirectHttpToHttps = false;
+    }
+    if (allowHttpRequestOnHttps && !https) {
+      logger.warn(`allowHttpRequestOnHttps ignored because protocol is http`);
+      allowHttpRequestOnHttps = false;
+    }
   }
   const server = {};
   const serviceController = createServiceController(services);
@@ -15103,10 +15106,7 @@ const jsenvPluginAsJsClassicLibrary = ({
           ...context,
           buildDirectoryUrl: context.outDirectoryUrl
         },
-        options: {
-          babelHelpersChunk: false,
-          preserveDynamicImport: true
-        }
+        preserveDynamicImport: true
       });
       const jsModuleBundledUrlInfo = bundleUrlInfos[jsModuleUrlInfo.url];
       if (context.dev) {
@@ -20722,8 +20722,26 @@ const build = async ({
   writeOnFileSystem = true,
   writeGeneratedFiles = false,
   assetManifest = versioningMethod === "filename",
-  assetManifestFileRelativeUrl = "asset-manifest.json"
+  assetManifestFileRelativeUrl = "asset-manifest.json",
+  ...rest
 }) => {
+  // param validation
+  {
+    const unexpectedParamNames = Object.keys(rest);
+    if (unexpectedParamNames.length > 0) {
+      throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param`);
+    }
+    const rootDirectoryUrlValidation = validateDirectoryUrl(rootDirectoryUrl);
+    if (!rootDirectoryUrlValidation.valid) {
+      throw new TypeError(`rootDirectoryUrl ${rootDirectoryUrlValidation.message}, got ${rootDirectoryUrl}`);
+    }
+    rootDirectoryUrl = rootDirectoryUrlValidation.value;
+    const buildDirectoryUrlValidation = validateDirectoryUrl(buildDirectoryUrl);
+    if (!buildDirectoryUrlValidation.valid) {
+      throw new TypeError(`buildDirectoryUrl ${buildDirectoryUrlValidation.message}, got ${buildDirectoryUrlValidation}`);
+    }
+    buildDirectoryUrl = buildDirectoryUrlValidation.value;
+  }
   const operation = Abort.startOperation();
   operation.addAbortSignal(signal);
   if (handleSIGINT) {
@@ -20733,8 +20751,6 @@ const build = async ({
       }, abort);
     });
   }
-  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl);
-  buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl);
   assertEntryPoints({
     entryPoints
   });
@@ -22919,14 +22935,14 @@ const startDevServer = async ({
     // default error handling
     jsenvServiceErrorHandler({
       sendErrorDetails: true
-    })],
-    onStop: reason => {
-      onStop();
-      serverStopCallbacks.forEach(serverStopCallback => {
-        serverStopCallback(reason);
-      });
-      serverStopCallbacks.length = 0;
-    }
+    })]
+  });
+  server.stoppedPromise.then(reason => {
+    onStop();
+    serverStopCallbacks.forEach(serverStopCallback => {
+      serverStopCallback(reason);
+    });
+    serverStopCallbacks.length = 0;
   });
   startDevServerTask.done();
   if (hostname) {
