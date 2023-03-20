@@ -61,7 +61,7 @@ const urlToFileSystemPath = (url) => {
   return fileSystemPath
 };
 
-const assertAndNormalizeDirectoryUrl = (value) => {
+const validateDirectoryUrl = (value) => {
   let urlString;
 
   if (value instanceof URL) {
@@ -73,25 +73,42 @@ const assertAndNormalizeDirectoryUrl = (value) => {
       try {
         urlString = String(new URL(value));
       } catch (e) {
-        throw new TypeError(
-          `directoryUrl must be a valid url, received ${value}`,
-        )
+        return {
+          valid: false,
+          value,
+          message: `must be a valid url`,
+        }
       }
     }
   } else {
-    throw new TypeError(
-      `directoryUrl must be a string or an url, received ${value}`,
-    )
+    return {
+      valid: false,
+      value,
+      message: `must be a string or an url`,
+    }
   }
-
   if (!urlString.startsWith("file://")) {
-    throw new Error(`directoryUrl must starts with file://, received ${value}`)
+    return {
+      valid: false,
+      value,
+      message: 'must start with "file://"',
+    }
   }
-
-  return ensurePathnameTrailingSlash(urlString)
+  return {
+    valid: true,
+    value: ensurePathnameTrailingSlash(urlString),
+  }
 };
 
-const assertAndNormalizeFileUrl = (value, baseUrl) => {
+const assertAndNormalizeDirectoryUrl = (directoryUrl) => {
+  const { valid, message, value } = validateDirectoryUrl(directoryUrl);
+  if (!valid) {
+    throw new TypeError(`directoryUrl ${message}, got ${value}`)
+  }
+  return value
+};
+
+const validateFileUrl = (value, baseUrl) => {
   let urlString;
 
   if (value instanceof URL) {
@@ -103,18 +120,41 @@ const assertAndNormalizeFileUrl = (value, baseUrl) => {
       try {
         urlString = String(new URL(value, baseUrl));
       } catch (e) {
-        throw new TypeError(`fileUrl must be a valid url, received ${value}`)
+        return {
+          valid: false,
+          value,
+          message: "must be a valid url",
+        }
       }
     }
   } else {
-    throw new TypeError(`fileUrl must be a string or an url, received ${value}`)
+    return {
+      valid: false,
+      value,
+      message: "must be a string or an url",
+    }
   }
 
   if (!urlString.startsWith("file://")) {
-    throw new Error(`fileUrl must starts with file://, received ${value}`)
+    return {
+      valid: false,
+      value,
+      message: 'must start with "file://"',
+    }
   }
 
-  return urlString
+  return {
+    valid: true,
+    value: urlString,
+  }
+};
+
+const assertAndNormalizeFileUrl = (fileUrl, baseUrl) => {
+  const { valid, message, value } = validateFileUrl(fileUrl, baseUrl);
+  if (!valid) {
+    throw new TypeError(`fileUrl ${message}, got ${fileUrl}`)
+  }
+  return value
 };
 
 /*
