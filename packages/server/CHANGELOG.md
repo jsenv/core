@@ -1,3 +1,29 @@
+# 15.0.0
+
+- Change how to enable https
+
+  **14.1.6**
+
+  ```js
+  import { startServer } from "@jsenv/server"
+
+  await startServer({
+    protocol: "https",
+    certificate: "",
+    privateKey: "",
+  })
+  ```
+
+  **15.0.0**
+
+  ```js
+  import { startServer } from "@jsenv/server"
+
+  await startServer({
+    https: { certificate: "", privateKey: "" },
+  })
+  ```
+
 # 14.1.5
 
 - return 504 when server takes more than 10s to start responding
