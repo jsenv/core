@@ -13,17 +13,13 @@ const test = async (params) => {
   const { returnValue } = await executeInChromium({
     url: `${devServer.origin}/main.html`,
     /* eslint-disable no-undef */
-    pageFunction: async () => {
-      return window.resultPromise
-    },
+    pageFunction: () => window.resultPromise,
     /* eslint-enable no-undef */
   })
   return { returnValue, server: devServer }
 }
 
-const { returnValue, server } = await test({
-  versioning: false,
-})
+const { returnValue, server } = await test()
 const actual = {
   returnValue,
 }
