@@ -1,6 +1,6 @@
 import { parentPort } from "node:worker_threads"
 import {
-  assertAndNormalizeDirectoryUrl,
+  validateDirectoryUrl,
   registerDirectoryLifecycle,
 } from "@jsenv/filesystem"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
@@ -85,13 +85,16 @@ export const startDevServer = async ({
 }) => {
   // params type checking
   {
-    throw new TypeError(
-      `rootDirectoryUrl must be a string or an url, got ${rootDirectoryUrl}`,
-    )
+    const rootDirectoryUrlValidation = validateDirectoryUrl(rootDirectoryUrl)
+    if (!rootDirectoryUrlValidation.valid) {
+      throw new TypeError(
+        `rootDirectoryUrl ${rootDirectoryUrlValidation.message}, got ${rootDirectoryUrl}`,
+      )
+    }
+    rootDirectoryUrl = rootDirectoryUrlValidation.value
   }
 
   const logger = createLogger({ logLevel })
-  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
   const operation = Abort.startOperation()
   operation.addAbortSignal(signal)
   if (handleSIGINT) {
