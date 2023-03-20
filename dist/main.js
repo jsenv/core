@@ -605,6 +605,7 @@ const validateDirectoryUrl = value => {
       } catch (e) {
         return {
           valid: false,
+          value,
           message: `must be a valid url`
         };
       }
@@ -612,12 +613,14 @@ const validateDirectoryUrl = value => {
   } else {
     return {
       valid: false,
+      value,
       message: `must be a string or an url`
     };
   }
   if (!urlString.startsWith("file://")) {
     return {
       valid: false,
+      value,
       message: 'must start with "file://"'
     };
   }
@@ -633,7 +636,7 @@ const assertAndNormalizeDirectoryUrl = directoryUrl => {
     value
   } = validateDirectoryUrl(directoryUrl);
   if (!valid) {
-    throw new TypeError(`invalid directoryUrl: ${message}, got ${value}`);
+    throw new TypeError(`directoryUrl ${message}, got ${value}`);
   }
   return value;
 };
@@ -651,6 +654,7 @@ const validateFileUrl = (value, baseUrl) => {
       } catch (e) {
         return {
           valid: false,
+          value,
           message: "must be a valid url"
         };
       }
@@ -658,12 +662,14 @@ const validateFileUrl = (value, baseUrl) => {
   } else {
     return {
       valid: false,
+      value,
       message: "must be a string or an url"
     };
   }
   if (!urlString.startsWith("file://")) {
     return {
       valid: false,
+      value,
       message: 'must start with "file://"'
     };
   }
@@ -679,7 +685,7 @@ const assertAndNormalizeFileUrl = (fileUrl, baseUrl) => {
     value
   } = validateFileUrl(fileUrl, baseUrl);
   if (!valid) {
-    throw new TypeError(`invalid fileUrl: ${message}, received ${fileUrl}`);
+    throw new TypeError(`fileUrl ${message}, got ${fileUrl}`);
   }
   return value;
 };
@@ -23634,7 +23640,7 @@ const run = async ({
             cb(runResult);
           } catch (e) {
             cb({
-              status: "errored",
+              status: "failed",
               errors: [e]
             });
           }
@@ -23665,7 +23671,7 @@ const run = async ({
         result.status = "aborted";
       }
     } else {
-      result.status = "errored";
+      result.status = "failed";
       result.errors.push(e);
     }
   } finally {
@@ -23772,7 +23778,7 @@ const EXECUTION_COLORS = {
   executing: ANSI.BLUE,
   aborted: ANSI.MAGENTA,
   timedout: ANSI.MAGENTA,
-  errored: ANSI.RED,
+  failed: ANSI.RED,
   completed: ANSI.GREEN,
   cancelled: ANSI.GREY
 };
@@ -23905,8 +23911,8 @@ const createStatusSummary = ({
   if (counters.timedout === counters.total) {
     return `all ${ANSI.color(`timed out`, EXECUTION_COLORS.timedout)}`;
   }
-  if (counters.errored === counters.total) {
-    return `all ${ANSI.color(`errored`, EXECUTION_COLORS.errored)}`;
+  if (counters.failed === counters.total) {
+    return `all ${ANSI.color(`failed`, EXECUTION_COLORS.failed)}`;
   }
   if (counters.completed === counters.total) {
     return `all ${ANSI.color(`completed`, EXECUTION_COLORS.completed)}`;
@@ -23925,8 +23931,8 @@ const createMixedDetails = ({
   if (counters.timedout) {
     parts.push(`${counters.timedout} ${ANSI.color(`timed out`, EXECUTION_COLORS.timedout)}`);
   }
-  if (counters.errored) {
-    parts.push(`${counters.errored} ${ANSI.color(`errored`, EXECUTION_COLORS.errored)}`);
+  if (counters.failed) {
+    parts.push(`${counters.failed} ${ANSI.color(`failed`, EXECUTION_COLORS.failed)}`);
   }
   if (counters.completed) {
     parts.push(`${counters.completed} ${ANSI.color(`completed`, EXECUTION_COLORS.completed)}`);
@@ -23959,11 +23965,11 @@ const descriptionFormatters = {
   }) => {
     return ANSI.color(`${UNICODE.FAILURE_RAW} execution ${index + 1} of ${total} timeout after ${executionParams.allocatedMs}ms`, EXECUTION_COLORS.timedout);
   },
-  errored: ({
+  efailedrrored: ({
     index,
     total
   }) => {
-    return ANSI.color(`${UNICODE.FAILURE_RAW} execution ${index + 1} of ${total} errored`, EXECUTION_COLORS.errored);
+    return ANSI.color(`${UNICODE.FAILURE_RAW} execution ${index + 1} of ${total} failed`, EXECUTION_COLORS.failed);
   },
   completed: ({
     index,
@@ -24282,7 +24288,7 @@ const executePlan = async (plan, {
       total: executionSteps.length,
       aborted: 0,
       timedout: 0,
-      errored: 0,
+      failed: 0,
       completed: 0,
       done: 0
     };
@@ -24365,7 +24371,7 @@ const executePlan = async (plan, {
           });
         } else {
           executionResult = {
-            status: "errored",
+            status: "failed",
             errors: [new Error(`No file at ${fileRelativeUrl} for execution "${executionName}"`)]
           };
         }
@@ -24389,8 +24395,8 @@ const executePlan = async (plan, {
           counters.aborted++;
         } else if (executionResult.status === "timedout") {
           counters.timedout++;
-        } else if (executionResult.status === "errored") {
-          counters.errored++;
+        } else if (executionResult.status === "failed") {
+          counters.failed++;
         } else if (executionResult.status === "completed") {
           counters.completed++;
         }
@@ -24625,45 +24631,57 @@ const executeTestPlan = async ({
   coverageReportSkipFull = false,
   coverageReportTextLog = true,
   coverageReportJsonFile = process.env.CI ? null : "./.coverage/coverage.json",
-  coverageReportHtmlDirectory = process.env.CI ? "./.coverage/" : null
+  coverageReportHtmlDirectory = process.env.CI ? "./.coverage/" : null,
+  ...rest
 }) => {
+  // param validation
+  {
+    const unexpectedParamNames = Object.keys(rest);
+    if (unexpectedParamNames.length > 0) {
+      throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param`);
+    }
+    const rootDirectoryUrlValidation = validateDirectoryUrl(rootDirectoryUrl);
+    if (!rootDirectoryUrlValidation.valid) {
+      throw new TypeError(`rootDirectoryUrl ${rootDirectoryUrlValidation.message}, got ${rootDirectoryUrl}`);
+    }
+    rootDirectoryUrl = rootDirectoryUrlValidation.value;
+    if (typeof testPlan !== "object") {
+      throw new Error(`testPlan must be an object, got ${testPlan}`);
+    }
+    if (coverageEnabled) {
+      if (typeof coverageConfig !== "object") {
+        throw new TypeError(`coverageConfig must be an object, got ${coverageConfig}`);
+      }
+      if (!coverageAndExecutionAllowed) {
+        const associationsForExecute = URL_META.resolveAssociations({
+          execute: testPlan
+        }, "file:///");
+        const associationsForCover = URL_META.resolveAssociations({
+          cover: coverageConfig
+        }, "file:///");
+        const patternsMatchingCoverAndExecute = Object.keys(associationsForExecute.execute).filter(testPlanPattern => {
+          const {
+            cover
+          } = URL_META.applyAssociations({
+            url: testPlanPattern,
+            associations: associationsForCover
+          });
+          return cover;
+        });
+        if (patternsMatchingCoverAndExecute.length) {
+          // It would be strange, for a given file to be both covered and executed
+          throw new Error(createDetailedMessage$1(`some file will be both covered and executed`, {
+            patterns: patternsMatchingCoverAndExecute
+          }));
+        }
+      }
+    }
+  }
   const logger = createLogger({
     logLevel
   });
-  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl);
-  if (typeof testPlan !== "object") {
-    throw new Error(`testPlan must be an object, got ${testPlan}`);
-  }
-  if (coverageEnabled) {
-    if (typeof coverageConfig !== "object") {
-      throw new TypeError(`coverageConfig must be an object, got ${coverageConfig}`);
-    }
-    if (Object.keys(coverageConfig).length === 0) {
-      logger.warn(`coverageConfig is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`);
-    }
-    if (!coverageAndExecutionAllowed) {
-      const associationsForExecute = URL_META.resolveAssociations({
-        execute: testPlan
-      }, "file:///");
-      const associationsForCover = URL_META.resolveAssociations({
-        cover: coverageConfig
-      }, "file:///");
-      const patternsMatchingCoverAndExecute = Object.keys(associationsForExecute.execute).filter(testPlanPattern => {
-        const {
-          cover
-        } = URL_META.applyAssociations({
-          url: testPlanPattern,
-          associations: associationsForCover
-        });
-        return cover;
-      });
-      if (patternsMatchingCoverAndExecute.length) {
-        // It would be strange, for a given file to be both covered and executed
-        throw new Error(createDetailedMessage$1(`some file will be both covered and executed`, {
-          patterns: patternsMatchingCoverAndExecute
-        }));
-      }
-    }
+  if (Object.keys(coverageConfig).length === 0) {
+    logger.warn(`coverageConfig is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`);
   }
   const result = await executePlan(testPlan, {
     signal,
@@ -25044,12 +25062,12 @@ const createRuntimeFromPlaywright = ({
       }
       if (winner.name === "error") {
         let error = winner.data;
-        result.status = "errored";
+        result.status = "failed";
         result.errors.push(error);
         return;
       }
       if (winner.name === "closed") {
-        result.status = "errored";
+        result.status = "failed";
         result.errors.push(isBrowserDedicatedToExecution ? new Error(`browser disconnected during execution`) : new Error(`page closed during execution`));
         return;
       }
@@ -25061,8 +25079,8 @@ const createRuntimeFromPlaywright = ({
       result.namespace = executionResults;
       Object.keys(executionResults).forEach(key => {
         const executionResult = executionResults[key];
-        if (executionResult.status === "errored") {
-          result.status = "errored";
+        if (executionResult.status === "failed") {
+          result.status = "failed";
           result.errors.push({
             ...executionResult.exception,
             stack: executionResult.exception.text
@@ -25080,7 +25098,7 @@ const createRuntimeFromPlaywright = ({
         await callback();
       }, Promise.resolve());
     } catch (e) {
-      result.status = "errored";
+      result.status = "failed";
       result.errors = [e];
     }
     if (keepRunning) {
@@ -25709,7 +25727,7 @@ nodeChildProcess.run = async ({
     if (winner.name === "error") {
       const error = winner.data;
       removeOutputListener();
-      result.status = "errored";
+      result.status = "failed";
       result.errors.push(error);
       return;
     }
@@ -25719,18 +25737,18 @@ nodeChildProcess.run = async ({
       } = winner.data;
       await cleanup("process exit");
       if (code === 12) {
-        result.status = "errored";
+        result.status = "failed";
         result.errors.push(new Error(`node process exited with 12 (the forked child process wanted to use a non-available port for debug)`));
         return;
       }
       if (code === null || code === 0 || code === EXIT_CODES.SIGINT || code === EXIT_CODES.SIGTERM || code === EXIT_CODES.SIGABORT) {
-        result.status = "errored";
+        result.status = "failed";
         result.errors.push(new Error(`node process exited during execution`));
         return;
       }
       // process.exit(1) in child process or process.exitCode = 1 + process.exit()
       // means there was an error even if we don't know exactly what.
-      result.status = "errored";
+      result.status = "failed";
       result.errors.push(new Error(`node process exited with code ${code} during execution`));
       return;
     }
@@ -25739,7 +25757,7 @@ nodeChildProcess.run = async ({
       value
     } = winner.data;
     if (status === "action-failed") {
-      result.status = "errored";
+      result.status = "failed";
       result.errors.push(value);
       return;
     }
@@ -25756,7 +25774,7 @@ nodeChildProcess.run = async ({
   try {
     await writeResult();
   } catch (e) {
-    result.status = "errored";
+    result.status = "failed";
     result.errors.push(e);
   }
   if (keepRunning) {
@@ -25982,7 +26000,7 @@ nodeWorkerThread.run = async ({
     if (winner.name === "error") {
       const error = winner.data;
       removeOutputListener();
-      result.status = "errored";
+      result.status = "failed";
       result.errors.push(error);
       return;
     }
@@ -25992,18 +26010,18 @@ nodeWorkerThread.run = async ({
       } = winner.data;
       await cleanup("process exit");
       if (code === 12) {
-        result.status = "errored";
+        result.status = "failed";
         result.errors.push(new Error(`node process exited with 12 (the forked child process wanted to use a non-available port for debug)`));
         return;
       }
       if (code === null || code === 0 || code === EXIT_CODES.SIGINT || code === EXIT_CODES.SIGTERM || code === EXIT_CODES.SIGABORT) {
-        result.status = "errored";
+        result.status = "failed";
         result.errors.push(new Error(`node worker thread exited during execution`));
         return;
       }
       // process.exit(1) in child process or process.exitCode = 1 + process.exit()
       // means there was an error even if we don't know exactly what.
-      result.status = "errored";
+      result.status = "failed";
       result.errors.push(new Error(`node worker thread exited with code ${code} during execution`));
     }
     const {
@@ -26011,7 +26029,7 @@ nodeWorkerThread.run = async ({
       value
     } = winner.data;
     if (status === "action-failed") {
-      result.status = "errored";
+      result.status = "failed";
       result.errors.push(value);
       return;
     }
@@ -26028,7 +26046,7 @@ nodeWorkerThread.run = async ({
   try {
     await writeResult();
   } catch (e) {
-    result.status = "errored";
+    result.status = "failed";
     result.errors.push(e);
   }
   if (keepRunning) {
@@ -26388,7 +26406,7 @@ const execute = async ({
   });
   result = resultTransformer(result);
   try {
-    if (result.status === "errored") {
+    if (result.status === "failed") {
       if (ignoreError) {
         return result;
       }

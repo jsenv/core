@@ -812,7 +812,7 @@ window.__supervisor__ = (() => {
         };
       };
       const onError = e => {
-        executionResult.status = "errored";
+        executionResult.status = "failed";
         const exception = supervisor.createException({
           reason: e
         });
