@@ -219,7 +219,7 @@ nodeChildProcess.run = async ({
     if (winner.name === "error") {
       const error = winner.data
       removeOutputListener()
-      result.status = "errored"
+      result.status = "failed"
       result.errors.push(error)
       return
     }
@@ -227,7 +227,7 @@ nodeChildProcess.run = async ({
       const { code } = winner.data
       await cleanup("process exit")
       if (code === 12) {
-        result.status = "errored"
+        result.status = "failed"
         result.errors.push(
           new Error(
             `node process exited with 12 (the forked child process wanted to use a non-available port for debug)`,
@@ -242,13 +242,13 @@ nodeChildProcess.run = async ({
         code === EXIT_CODES.SIGTERM ||
         code === EXIT_CODES.SIGABORT
       ) {
-        result.status = "errored"
+        result.status = "failed"
         result.errors.push(new Error(`node process exited during execution`))
         return
       }
       // process.exit(1) in child process or process.exitCode = 1 + process.exit()
       // means there was an error even if we don't know exactly what.
-      result.status = "errored"
+      result.status = "failed"
       result.errors.push(
         new Error(`node process exited with code ${code} during execution`),
       )
@@ -256,7 +256,7 @@ nodeChildProcess.run = async ({
     }
     const { status, value } = winner.data
     if (status === "action-failed") {
-      result.status = "errored"
+      result.status = "failed"
       result.errors.push(value)
       return
     }
@@ -270,7 +270,7 @@ nodeChildProcess.run = async ({
   try {
     await writeResult()
   } catch (e) {
-    result.status = "errored"
+    result.status = "failed"
     result.errors.push(e)
   }
   if (keepRunning) {

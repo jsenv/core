@@ -35,7 +35,7 @@ const expected = {
       total: 2,
       aborted: 0,
       timedout: 0,
-      errored: 0,
+      failed: 0,
       completed: 2,
       done: 2,
       cancelled: 0,

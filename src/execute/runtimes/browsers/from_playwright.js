@@ -331,12 +331,12 @@ export const createRuntimeFromPlaywright = ({
       }
       if (winner.name === "error") {
         let error = winner.data
-        result.status = "errored"
+        result.status = "failed"
         result.errors.push(error)
         return
       }
       if (winner.name === "closed") {
-        result.status = "errored"
+        result.status = "failed"
         result.errors.push(
           isBrowserDedicatedToExecution
             ? new Error(`browser disconnected during execution`)
@@ -350,8 +350,8 @@ export const createRuntimeFromPlaywright = ({
       result.namespace = executionResults
       Object.keys(executionResults).forEach((key) => {
         const executionResult = executionResults[key]
-        if (executionResult.status === "errored") {
-          result.status = "errored"
+        if (executionResult.status === "failed") {
+          result.status = "failed"
           result.errors.push({
             ...executionResult.exception,
             stack: executionResult.exception.text,
@@ -370,7 +370,7 @@ export const createRuntimeFromPlaywright = ({
         await callback()
       }, Promise.resolve())
     } catch (e) {
-      result.status = "errored"
+      result.status = "failed"
       result.errors = [e]
     }
     if (keepRunning) {

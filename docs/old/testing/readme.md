@@ -61,26 +61,26 @@ await import("file:///file.test.js")
 ```
 
 If dynamic import resolves, execution is considered _completed_.<br />
-If dynamic import rejects, execution is considered _errored_.<br />
+If dynamic import rejects, execution is considered _failed_.<br />
 If dynamic import takes too long to settle, execution is considered _timedout_.<br />
 
 An execution is considered done when it is in one of the following status:
 
 - _timedout_
-- _errored_
+- _failed_
 - _completed_
 
-Once execution is done, jsenv stops the runtime launched to execute the test. This step is part of the execution, if an error occur while stopping the runtime, execution is considered as "errored". For node there is a special behaviour: jsenv sends `SIGTERM` signal to the node process executing your test. After 8s, if the node process has not exited by its own it is killed by force.
+Once execution is done, jsenv stops the runtime launched to execute the test. This step is part of the execution, if an error occur while stopping the runtime, execution is considered as "failed". For node there is a special behaviour: jsenv sends `SIGTERM` signal to the node process executing your test. After 8s, if the node process has not exited by its own it is killed by force.
 
-## Execution error example
+## Execution failure example
 
-Any value thrown during file execution sets execution status to errored and test is considered as failed.
+Any value thrown during file execution sets execution status to failed and test is considered as failed.
 
 ```js
 throw new Error("here")
 ```
 
-If the browser or node process stops during execution, the execution is also considered as errored and test as failed.
+If the browser or node process stops during execution, the execution is also considered as failed.
 
 ## Execution timeout example
 
@@ -268,7 +268,7 @@ file: docs/testing/demo/abbreviation/a.spec.js
 runtime: node/16.13.0
 duration: 0.3 seconds
 
-✖ execution 2 of 4 errored (1 errored, 1 completed)
+✖ execution 2 of 4 failed (1 failed, 1 completed)
 file: docs/testing/demo/abbreviation/b.spec.js
 runtime: node/16.13.0
 duration: 0.23 seconds
@@ -276,19 +276,19 @@ error: Error: here
     at file:///Users/dmail/jsenv-core/docs/testing/demo/abbreviation/b.spec.js:1:7
     at ModuleJob.run (node:internal/modules/esm/module_job:185:25)
 
-✔ execution 3 of 4 completed (1 errored, 2 completed)
+✔ execution 3 of 4 completed (1 failed, 2 completed)
 file: docs/testing/demo/abbreviation/c.spec.js
 runtime: node/16.13.0
 duration: 0.25 seconds
 
-✔ execution 4 of 4 completed (1 errored, 3 completed)
+✔ execution 4 of 4 completed (1 failed, 3 completed)
 file: docs/testing/demo/abbreviation/d.spec.js
 runtime: node/16.13.0
 duration: 0.24 seconds
 
 
 -------------- summary -----------------
-4 executions: 1 errored, 3 completed
+4 executions: 1 failed, 3 completed
 total duration: 1 second
 ----------------------------------------
 ```
@@ -300,7 +300,7 @@ Becomes
 
 ✔ execution 1 of 4 completed (all completed)
 
-✖ execution 2 of 4 errored (1 errored, 1 completed)
+✖ execution 2 of 4 failed (1 failed, 1 completed)
 file: docs/testing/demo/abbreviation/b.spec.js
 runtime: node/16.13.0
 duration: 0.18 seconds
@@ -308,12 +308,12 @@ error: Error: here
     at file:///Users/dmail/jsenv-core/docs/testing/demo/abbreviation/b.spec.js:1:7
     at ModuleJob.run (node:internal/modules/esm/module_job:185:25)
 
-✔ execution 3 of 4 completed (1 errored, 2 completed)
+✔ execution 3 of 4 completed (1 failed, 2 completed)
 
-✔ execution 4 of 4 completed (1 errored, 3 completed)
+✔ execution 4 of 4 completed (1 failed, 3 completed)
 
 -------------- summary -----------------
-4 executions: 1 errored, 3 completed
+4 executions: 1 failed, 3 completed
 total duration: 0.84 seconds
 ----------------------------------------
 ```
@@ -329,7 +329,7 @@ _completedExecutionLogMerging_ parameter is a boolean controlling if completed e
 
 ✔ execution 1 of 4 completed (all completed)
 
-✖ execution 2 of 4 errored (1 errored, 1 completed)
+✖ execution 2 of 4 failed (1 failed, 1 completed)
 file: docs/testing/demo/abbreviation/b.spec.js
 runtime: node/16.13.0
 duration: 0.18 seconds
@@ -337,12 +337,12 @@ error: Error: here
     at file:///Users/dmail/jsenv-core/docs/testing/demo/abbreviation/b.spec.js:1:7
     at ModuleJob.run (node:internal/modules/esm/module_job:185:25)
 
-✔ execution 3 of 4 completed (1 errored, 2 completed)
+✔ execution 3 of 4 completed (1 failed, 2 completed)
 
-✔ execution 4 of 4 completed (1 errored, 3 completed)
+✔ execution 4 of 4 completed (1 failed, 3 completed)
 
 -------------- summary -----------------
-4 executions: 1 errored, 3 completed
+4 executions: 1 failed, 3 completed
 total duration: 0.84 seconds
 ----------------------------------------
 ```
@@ -352,7 +352,7 @@ Becomes
 ```console
 ❯ node ./docs/testing/demo/abbreviation/demo_abbreviation_and_merge.mjs
 
-✖ execution 2 of 4 errored (1 errored, 1 completed)
+✖ execution 2 of 4 failed (1 failed, 1 completed)
 file: docs/testing/demo/abbreviation/b.spec.js
 runtime: node/16.13.0
 duration: 0.23 seconds
@@ -360,10 +360,10 @@ error: Error: here
     at file:///Users/dmail/jsenv-core/docs/testing/demo/abbreviation/b.spec.js:1:7
     at ModuleJob.run (node:internal/modules/esm/module_job:185:25)
 
-✔ execution 4 of 4 completed (1 errored, 3 completed)
+✔ execution 4 of 4 completed (1 failed, 3 completed)
 
 -------------- summary -----------------
-4 executions: 1 errored, 3 completed
+4 executions: 1 failed, 3 completed
 total duration: 0.95 seconds
 ----------------------------------------
 ```
@@ -458,7 +458,7 @@ _testPlanSummary_ is an object like this one:
   executionCount: 0,
   abortedCount: 0,
   timedoutCount: 0,
-  erroredCount: 0,
+  failedCount: 0,
   completedCount: 0,
   cancelledCount: 0
 }

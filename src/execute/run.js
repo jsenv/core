@@ -119,7 +119,7 @@ export const run = async ({
               cb(runResult)
             } catch (e) {
               cb({
-                status: "errored",
+                status: "failed",
                 errors: [e],
               })
             }
@@ -147,7 +147,7 @@ export const run = async ({
         result.status = "aborted"
       }
     } else {
-      result.status = "errored"
+      result.status = "failed"
       result.errors.push(e)
     }
   } finally {

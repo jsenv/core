@@ -32,7 +32,7 @@ const test = async ({ runtime }) => {
     consoleCalls,
   }
   const expected = {
-    status: "errored",
+    status: "failed",
     errorMessage: "SPECIAL_STRING_UNLIKELY_TO_COLLIDE",
     consoleCalls: [],
   }
