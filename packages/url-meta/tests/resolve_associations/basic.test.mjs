@@ -21,6 +21,23 @@ import { URL_META } from "@jsenv/url-meta"
   assert({ actual, expected })
 }
 
+{
+  const actual = URL_META.resolveAssociations(
+    {
+      a: {
+        "a.js": true,
+      },
+      whatever: null,
+    },
+    "file:///",
+  )
+  const expected = {
+    a: { "file:///a.js": true },
+    whatever: null,
+  }
+  assert({ actual, expected })
+}
+
 // ensure resolveAssociations does not sort by length
 {
   const actual = URL_META.resolveAssociations(

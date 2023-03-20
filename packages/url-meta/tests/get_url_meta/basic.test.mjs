@@ -2,81 +2,80 @@ import { assert } from "@jsenv/assert"
 
 import { URL_META } from "@jsenv/url-meta"
 
+// associate "foo.js" to { a: true }
 {
-  const url = "file:///file"
-  const associations = {
-    "/file": true,
-  }
-  try {
+  const test = (url) =>
     URL_META.applyAssociations({
       url,
-      associations,
+      associations: {
+        a: {
+          "file:///foo.js": true,
+        },
+      },
     })
-  } catch (actual) {
-    const expected = new TypeError(
-      `all associations value must be objects, found "/file": true`,
-    )
-    assert({ actual, expected })
+  const actual = {
+    fooJs: test("file:///foo.js"),
+    fileJs: test("file:///file.js"),
   }
+  const expected = {
+    fooJs: { a: true },
+    fileJs: {},
+  }
+  assert({ actual, expected })
 }
 
+// associate "*.js" to {whatever: true}
+// and "file.js" to {whatever: null}
 {
-  const url = "file:///"
-  const associations = {
-    "file:///foo": true,
-  }
-  try {
+  const test = (url) =>
     URL_META.applyAssociations({
       url,
-      associations,
+      associations: {
+        whatever: {
+          "file:///*.js": true,
+          "file:///file.js": null,
+        },
+      },
     })
-  } catch (actual) {
-    const expected = new TypeError(
-      `all associations value must be objects, found "file:///foo": true`,
-    )
-    assert({ actual, expected })
+  const actual = {
+    file: test("file:///file"),
+    fooJs: test("file:///foo.js"),
+    fileJs: test("file:///file.js"),
   }
+  const expected = {
+    file: {},
+    fooJs: { whatever: true },
+    fileJs: { whatever: null },
+  }
+  assert({ actual, expected })
 }
 
+// ignore associations that are not plain object
 {
-  const url = "file:///file"
-  const associations = {
-    whatever: {
-      "file:///*.js": true,
-      "file:///file.js": null,
-    },
-  }
-  const actual = URL_META.applyAssociations({
-    url,
-    associations,
-  })
+  const test = (url) =>
+    URL_META.applyAssociations({
+      url,
+      associations: {
+        whatever: null,
+      },
+    })
+  const actual = test("file:///file.js")
   const expected = {}
   assert({ actual, expected })
 }
 
 {
-  const actual = URL_META.applyAssociations({
-    url: "file:///",
-    associations: {
-      a: {
-        "file:///foo": true,
+  const test = (url) =>
+    URL_META.applyAssociations({
+      url,
+      associations: {
+        a: {
+          "file:///foo": true,
+        },
       },
-    },
-  })
+    })
+  const actual = test("file:///")
   const expected = {}
-  assert({ actual, expected })
-}
-
-{
-  const actual = URL_META.applyAssociations({
-    url: "file:///foo",
-    associations: {
-      a: {
-        "file:///foo": true,
-      },
-    },
-  })
-  const expected = { a: true }
   assert({ actual, expected })
 }
 

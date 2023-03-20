@@ -7,22 +7,24 @@ export const asFlatAssociations = (associations) => {
     )
   }
   const flatAssociations = {}
-  Object.keys(associations).forEach((key) => {
-    const valueMap = associations[key]
-    if (!isPlainObject(valueMap)) {
-      throw new TypeError(
-        `all associations value must be objects, found "${key}": ${valueMap}`,
-      )
-    }
-    Object.keys(valueMap).forEach((pattern) => {
-      const value = valueMap[pattern]
-      const previousValue = flatAssociations[pattern]
-      flatAssociations[pattern] = previousValue
-        ? { ...previousValue, [key]: value }
-        : {
-            [key]: value,
+  Object.keys(associations).forEach((associationName) => {
+    const associationValue = associations[associationName]
+    if (isPlainObject(associationValue)) {
+      Object.keys(associationValue).forEach((pattern) => {
+        const patternValue = associationValue[pattern]
+        const previousValue = flatAssociations[pattern]
+        if (isPlainObject(previousValue)) {
+          flatAssociations[pattern] = {
+            ...previousValue,
+            [associationName]: patternValue,
           }
-    })
+        } else {
+          flatAssociations[pattern] = {
+            [associationName]: patternValue,
+          }
+        }
+      })
+    }
   })
   return flatAssociations
 }
