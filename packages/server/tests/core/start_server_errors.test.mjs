@@ -4,42 +4,54 @@ import { startServer } from "@jsenv/server"
 
 try {
   await startServer({
-    protocol: "toto",
+    htt: true,
   })
   throw new Error("should throw")
 } catch (actual) {
-  const expected = new Error("protocol must be http or https, got toto")
+  const expected = new TypeError("htt: there is no such param")
   assert({ actual, expected })
 }
 
 try {
   await startServer({
-    protocol: "https",
+    https: "toto",
   })
   throw new Error("should throw")
 } catch (actual) {
-  const expected = new Error("missing certificate for https server")
+  const expected = new TypeError("https must be an object, got toto")
   assert({ actual, expected })
 }
 
 try {
   await startServer({
-    protocol: "https",
-    certificate: "toto",
+    https: {},
   })
   throw new Error("should throw")
 } catch (actual) {
-  const expected = new Error("missing privateKey for https server")
+  const expected = new TypeError(
+    "https must be an object with { certificate, privateKey }",
+  )
   assert({ actual, expected })
 }
 
 try {
   await startServer({
-    protocol: "http",
+    https: { certificate: "" },
+  })
+  throw new Error("should throw")
+} catch (actual) {
+  const expected = new TypeError(
+    "https must be an object with { certificate, privateKey }",
+  )
+  assert({ actual, expected })
+}
+
+try {
+  await startServer({
     http2: true,
   })
   throw new Error("should throw")
 } catch (actual) {
-  const expected = new Error(`http2 needs "https" but protocol is "http"`)
+  const expected = new Error(`http2 needs https`)
   assert({ actual, expected })
 }

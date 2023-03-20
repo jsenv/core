@@ -32,13 +32,10 @@ export const startDevServer = async ({
   handleSIGINT = true,
   logLevel = "info",
   serverLogLevel = "warn",
-  // serverMiddlewares = []
-  protocol = "http",
+  https,
   // it's better to use http1 by default because it allows to get statusText in devtools
   // which gives valuable information when there is errors
   http2 = false,
-  certificate,
-  privateKey,
   hostname,
   port = 3456,
   acceptAnyIp,
@@ -185,10 +182,8 @@ export const startDevServer = async ({
     logLevel: serverLogLevel,
     startLog: false,
 
-    protocol,
+    https,
     http2,
-    certificate,
-    privateKey,
     acceptAnyIp,
     hostname,
     port,
