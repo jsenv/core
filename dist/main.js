@@ -9,9 +9,9 @@ import os, { networkInterfaces } from "node:os";
 import tty from "node:tty";
 import stringWidth from "string-width";
 import net, { createServer, isIP } from "node:net";
-import http from "node:http";
 import cluster from "node:cluster";
 import { performance as performance$1 } from "node:perf_hooks";
+import http from "node:http";
 import { Readable, Stream, Writable } from "node:stream";
 import { Http2ServerResponse } from "node:http2";
 import { lookup } from "node:dns";
@@ -592,7 +592,7 @@ const urlToFileSystemPath = url => {
   return fileSystemPath;
 };
 
-const assertAndNormalizeDirectoryUrl = value => {
+const validateDirectoryUrl = value => {
   let urlString;
   if (value instanceof URL) {
     urlString = value.href;
@@ -603,19 +603,42 @@ const assertAndNormalizeDirectoryUrl = value => {
       try {
         urlString = String(new URL(value));
       } catch (e) {
-        throw new TypeError(`directoryUrl must be a valid url, received ${value}`);
+        return {
+          valid: false,
+          message: `must be a valid url`
+        };
       }
     }
   } else {
-    throw new TypeError(`directoryUrl must be a string or an url, received ${value}`);
+    return {
+      valid: false,
+      message: `must be a string or an url`
+    };
   }
   if (!urlString.startsWith("file://")) {
-    throw new Error(`directoryUrl must starts with file://, received ${value}`);
+    return {
+      valid: false,
+      message: 'must start with "file://"'
+    };
   }
-  return ensurePathnameTrailingSlash(urlString);
+  return {
+    valid: true,
+    value: ensurePathnameTrailingSlash(urlString)
+  };
+};
+const assertAndNormalizeDirectoryUrl = directoryUrl => {
+  const {
+    valid,
+    message,
+    value
+  } = validateDirectoryUrl(directoryUrl);
+  if (!valid) {
+    throw new TypeError(`invalid directoryUrl: ${message}, got ${value}`);
+  }
+  return value;
 };
 
-const assertAndNormalizeFileUrl = (value, baseUrl) => {
+const validateFileUrl = (value, baseUrl) => {
   let urlString;
   if (value instanceof URL) {
     urlString = value.href;
@@ -626,16 +649,39 @@ const assertAndNormalizeFileUrl = (value, baseUrl) => {
       try {
         urlString = String(new URL(value, baseUrl));
       } catch (e) {
-        throw new TypeError(`fileUrl must be a valid url, received ${value}`);
+        return {
+          valid: false,
+          message: "must be a valid url"
+        };
       }
     }
   } else {
-    throw new TypeError(`fileUrl must be a string or an url, received ${value}`);
+    return {
+      valid: false,
+      message: "must be a string or an url"
+    };
   }
   if (!urlString.startsWith("file://")) {
-    throw new Error(`fileUrl must starts with file://, received ${value}`);
+    return {
+      valid: false,
+      message: 'must start with "file://"'
+    };
   }
-  return urlString;
+  return {
+    valid: true,
+    value: urlString
+  };
+};
+const assertAndNormalizeFileUrl = (fileUrl, baseUrl) => {
+  const {
+    valid,
+    message,
+    value
+  } = validateFileUrl(fileUrl, baseUrl);
+  if (!valid) {
+    throw new TypeError(`invalid fileUrl: ${message}, received ${fileUrl}`);
+  }
+  return value;
 };
 
 const statsToType = stats => {
@@ -4892,7 +4938,7 @@ const startServer = async ({
   logLevel,
   startLog = true,
   serverName = "server",
-  protocol = "http",
+  https = false,
   http2 = false,
   http1Allowed = true,
   redirectHttpToHttps,
@@ -4903,8 +4949,6 @@ const startServer = async ({
   port = 0,
   // assign a random available port
   portHint,
-  privateKey,
-  certificate,
   // when inside a worker, we should not try to stop server on SIGINT
   // otherwise it can create an EPIPE error while primary process tries
   // to kill the server
@@ -4935,29 +4979,39 @@ const startServer = async ({
   // time allocated to server code to start reading the request body
   // after this delay the underlying stream is destroyed, attempting to read it would throw
   // if used the stream stays opened, it's only if the stream is not read at all that it gets destroyed
-  requestBodyLifetime = 60_000 * 2 // 2s
+  requestBodyLifetime = 60_000 * 2,
+  // 2s
+  ...rest
 } = {}) => {
+  // params validation
+  {
+    const unexpectedParamNames = Object.keys(rest);
+    if (unexpectedParamNames.length > 0) {
+      throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param`);
+    }
+    if (https) {
+      if (typeof https !== "object") {
+        throw new TypeError(`https must be an object, got ${https}`);
+      }
+      const {
+        certificate,
+        privateKey
+      } = https;
+      if (!certificate || !privateKey) {
+        throw new TypeError(`https must be an object with { certificate, privateKey }`);
+      }
+    }
+    if (http2 && !https) {
+      throw new Error(`http2 needs https`);
+    }
+  }
   const logger = createLogger({
     logLevel
   });
-  if (protocol !== "http" && protocol !== "https") {
-    throw new Error(`protocol must be http or https, got ${protocol}`);
-  }
-  if (protocol === "https") {
-    if (!certificate) {
-      throw new Error(`missing certificate for https server`);
-    }
-    if (!privateKey) {
-      throw new Error(`missing privateKey for https server`);
-    }
-  }
-  if (http2 && protocol !== "https") {
-    throw new Error(`http2 needs "https" but protocol is "${protocol}"`);
-  }
-  if (redirectHttpToHttps === undefined && protocol === "https" && !allowHttpRequestOnHttps) {
+  if (redirectHttpToHttps === undefined && https && !allowHttpRequestOnHttps) {
     redirectHttpToHttps = true;
   }
-  if (redirectHttpToHttps && protocol === "http") {
+  if (redirectHttpToHttps && !https) {
     logger.warn(`redirectHttpToHttps ignored because protocol is http`);
     redirectHttpToHttps = false;
   }
@@ -4965,7 +5019,7 @@ const startServer = async ({
     logger.warn(`redirectHttpToHttps ignored because allowHttpRequestOnHttps is enabled`);
     redirectHttpToHttps = false;
   }
-  if (allowHttpRequestOnHttps && protocol === "http") {
+  if (allowHttpRequestOnHttps && !https) {
     logger.warn(`allowHttpRequestOnHttps ignored because protocol is http`);
     allowHttpRequestOnHttps = false;
   }
@@ -4998,11 +5052,9 @@ const startServer = async ({
     });
     startServerOperation.throwIfAborted();
     nodeServer = await createNodeServer({
-      protocol,
+      https,
       redirectHttpToHttps,
       allowHttpRequestOnHttps,
-      certificate,
-      privateKey,
       http2,
       http1Allowed
     });
@@ -5013,6 +5065,7 @@ const startServer = async ({
       nodeServer.unref();
     }
     const createOrigin = hostname => {
+      const protocol = https ? "https" : "http";
       if (isIP(hostname) === 6) {
         return `${protocol}://[${hostname}]`;
       }
@@ -5727,7 +5780,7 @@ const startServer = async ({
       let websocketServer = new WebSocketServer({
         noServer: true
       });
-      const websocketOrigin = protocol === "https" ? `wss://${hostname}:${port}` : `ws://${hostname}:${port}`;
+      const websocketOrigin = https ? `wss://${hostname}:${port}` : `ws://${hostname}:${port}`;
       server.websocketOrigin = websocketOrigin;
       const upgradeCallback = (nodeRequest, socket, head) => {
         websocketServer.handleUpgrade(nodeRequest, socket, head, async websocket => {
@@ -5786,32 +5839,37 @@ const startServer = async ({
   return server;
 };
 const createNodeServer = async ({
-  protocol,
+  https,
   redirectHttpToHttps,
   allowHttpRequestOnHttps,
-  certificate,
-  privateKey,
   http2,
   http1Allowed
 }) => {
-  if (protocol === "http") {
-    return http.createServer();
-  }
-  if (redirectHttpToHttps || allowHttpRequestOnHttps) {
-    return createPolyglotServer({
+  if (https) {
+    const {
       certificate,
-      privateKey,
-      http2,
-      http1Allowed
+      privateKey
+    } = https;
+    if (redirectHttpToHttps || allowHttpRequestOnHttps) {
+      return createPolyglotServer({
+        certificate,
+        privateKey,
+        http2,
+        http1Allowed
+      });
+    }
+    const {
+      createServer
+    } = await import("node:https");
+    return createServer({
+      cert: certificate,
+      key: privateKey
     });
   }
   const {
     createServer
-  } = await import("node:https");
-  return createServer({
-    cert: certificate,
-    key: privateKey
-  });
+  } = await import("node:http");
+  return createServer();
 };
 const testCanPushStream = http2Stream => {
   if (!http2Stream.pushAllowed) {
@@ -22624,12 +22682,10 @@ const startDevServer = async ({
   handleSIGINT = true,
   logLevel = "info",
   serverLogLevel = "warn",
-  protocol = "http",
+  https,
   // it's better to use http1 by default because it allows to get statusText in devtools
   // which gives valuable information when there is errors
   http2 = false,
-  certificate,
-  privateKey,
   hostname,
   port = 3456,
   acceptAnyIp,
@@ -22672,12 +22728,24 @@ const startDevServer = async ({
   sourcemapsSourcesContent,
   // no real need to write files during github workflow
   // and mitigates https://github.com/actions/runner-images/issues/3885
-  writeGeneratedFiles = !process.env.CI
+  writeGeneratedFiles = !process.env.CI,
+  ...rest
 }) => {
+  // params type checking
+  {
+    const unexpectedParamNames = Object.keys(rest);
+    if (unexpectedParamNames.length > 0) {
+      throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param`);
+    }
+    const rootDirectoryUrlValidation = validateDirectoryUrl(rootDirectoryUrl);
+    if (!rootDirectoryUrlValidation.valid) {
+      throw new TypeError(`rootDirectoryUrl ${rootDirectoryUrlValidation.message}, got ${rootDirectoryUrl}`);
+    }
+    rootDirectoryUrl = rootDirectoryUrlValidation.value;
+  }
   const logger = createLogger({
     logLevel
   });
-  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl);
   const operation = Abort.startOperation();
   operation.addAbortSignal(signal);
   if (handleSIGINT) {
@@ -22767,10 +22835,8 @@ const startDevServer = async ({
     keepProcessAlive,
     logLevel: serverLogLevel,
     startLog: false,
-    protocol,
+    https,
     http2,
-    certificate,
-    privateKey,
     acceptAnyIp,
     hostname,
     port,
@@ -26037,10 +26103,8 @@ const startBuildServer = async ({
   handleSIGINT = true,
   logLevel,
   serverLogLevel = "warn",
-  protocol = "http",
+  https,
   http2,
-  certificate,
-  privateKey,
   acceptAnyIp,
   hostname,
   port = 9779,
@@ -26167,10 +26231,8 @@ const startBuildServer = async ({
     keepProcessAlive,
     logLevel: serverLogLevel,
     startLog: false,
-    protocol,
+    https,
     http2,
-    certificate,
-    privateKey,
     acceptAnyIp,
     hostname,
     port,
