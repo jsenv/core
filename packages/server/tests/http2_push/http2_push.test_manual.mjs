@@ -1,6 +1,10 @@
 import { requestCertificate } from "@jsenv/https-local"
 
-import { startServer, fetchFileSystem } from "@jsenv/server"
+import {
+  startServer,
+  fetchFileSystem,
+  jsenvServiceErrorHandler,
+} from "@jsenv/server"
 
 const { certificate, privateKey } = requestCertificate()
 await startServer({
@@ -8,7 +12,6 @@ await startServer({
   port: 3679,
   http2: true,
   https: { certificate, privateKey },
-  sendErrorDetails: true,
   services: [
     {
       handleRequest: (request, { pushResponse }) => {
@@ -26,5 +29,6 @@ await startServer({
         )
       },
     },
+    jsenvServiceErrorHandler({ sendErrorDetails: true }),
   ],
 })

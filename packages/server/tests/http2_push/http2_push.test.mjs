@@ -5,7 +5,11 @@ import { requestCertificate } from "@jsenv/https-local"
 import { assert } from "@jsenv/assert"
 import { readFile } from "@jsenv/filesystem"
 
-import { startServer, fetchFileSystem } from "@jsenv/server"
+import {
+  startServer,
+  fetchFileSystem,
+  jsenvServiceErrorHandler,
+} from "@jsenv/server"
 
 // certificates only generated on linux
 if (process.platform === "linux") {
@@ -15,7 +19,7 @@ if (process.platform === "linux") {
     port: 3679,
     http2: true,
     https: { certificate, privateKey },
-    sendErrorDetails: true,
+
     keepProcessAlive: false,
     services: [
       {
@@ -34,6 +38,9 @@ if (process.platform === "linux") {
           )
         },
       },
+      jsenvServiceErrorHandler({
+        sendErrorDetails: true,
+      }),
     ],
   })
 
