@@ -1,5 +1,4 @@
 import { isIP } from "node:net"
-import http from "node:http"
 import cluster from "node:cluster"
 import { createDetailedMessage, createLogger } from "@jsenv/log"
 import {
@@ -50,7 +49,7 @@ export const startServer = async ({
   startLog = true,
   serverName = "server",
 
-  protocol = "http",
+  https = false,
   http2 = false,
   http1Allowed = true,
   redirectHttpToHttps,
@@ -60,8 +59,6 @@ export const startServer = async ({
   hostname = "localhost",
   port = 0, // assign a random available port
   portHint,
-  privateKey,
-  certificate,
 
   // when inside a worker, we should not try to stop server on SIGINT
   // otherwise it can create an EPIPE error while primary process tries
@@ -94,32 +91,37 @@ export const startServer = async ({
   // after this delay the underlying stream is destroyed, attempting to read it would throw
   // if used the stream stays opened, it's only if the stream is not read at all that it gets destroyed
   requestBodyLifetime = 60_000 * 2, // 2s
+  ...rest
 } = {}) => {
+  // params validation
+  {
+    const unexpectedParamNames = Object.keys(rest)
+    if (unexpectedParamNames.length > 0) {
+      throw new TypeError(
+        `${unexpectedParamNames.join(",")}: there is no such param`,
+      )
+    }
+    if (https) {
+      if (typeof https !== "object") {
+        throw new TypeError(`https must be an object, got ${https}`)
+      }
+      const { certificate, privateKey } = https
+      if (!certificate || !privateKey) {
+        throw new TypeError(
+          `https must be an object with { certificate, privateKey }`,
+        )
+      }
+    }
+    if (http2 && !https) {
+      throw new Error(`http2 needs https`)
+    }
+  }
+
   const logger = createLogger({ logLevel })
-
-  if (protocol !== "http" && protocol !== "https") {
-    throw new Error(`protocol must be http or https, got ${protocol}`)
-  }
-  if (protocol === "https") {
-    if (!certificate) {
-      throw new Error(`missing certificate for https server`)
-    }
-    if (!privateKey) {
-      throw new Error(`missing privateKey for https server`)
-    }
-  }
-  if (http2 && protocol !== "https") {
-    throw new Error(`http2 needs "https" but protocol is "${protocol}"`)
-  }
-
-  if (
-    redirectHttpToHttps === undefined &&
-    protocol === "https" &&
-    !allowHttpRequestOnHttps
-  ) {
+  if (redirectHttpToHttps === undefined && https && !allowHttpRequestOnHttps) {
     redirectHttpToHttps = true
   }
-  if (redirectHttpToHttps && protocol === "http") {
+  if (redirectHttpToHttps && !https) {
     logger.warn(`redirectHttpToHttps ignored because protocol is http`)
     redirectHttpToHttps = false
   }
@@ -130,7 +132,7 @@ export const startServer = async ({
     redirectHttpToHttps = false
   }
 
-  if (allowHttpRequestOnHttps && protocol === "http") {
+  if (allowHttpRequestOnHttps && !https) {
     logger.warn(`allowHttpRequestOnHttps ignored because protocol is http`)
     allowHttpRequestOnHttps = false
   }
@@ -164,11 +166,9 @@ export const startServer = async ({
     })
     startServerOperation.throwIfAborted()
     nodeServer = await createNodeServer({
-      protocol,
+      https,
       redirectHttpToHttps,
       allowHttpRequestOnHttps,
-      certificate,
-      privateKey,
       http2,
       http1Allowed,
     })
@@ -180,6 +180,7 @@ export const startServer = async ({
     }
 
     const createOrigin = (hostname) => {
+      const protocol = https ? "https" : "http"
       if (isIP(hostname) === 6) {
         return `${protocol}://[${hostname}]`
       }
@@ -940,10 +941,9 @@ export const startServer = async ({
       const websocketClients = new Set()
       const { WebSocketServer } = await import("ws")
       let websocketServer = new WebSocketServer({ noServer: true })
-      const websocketOrigin =
-        protocol === "https"
-          ? `wss://${hostname}:${port}`
-          : `ws://${hostname}:${port}`
+      const websocketOrigin = https
+        ? `wss://${hostname}:${port}`
+        : `ws://${hostname}:${port}`
       server.websocketOrigin = websocketOrigin
       const upgradeCallback = (nodeRequest, socket, head) => {
         websocketServer.handleUpgrade(
@@ -1020,32 +1020,30 @@ export const startServer = async ({
 }
 
 const createNodeServer = async ({
-  protocol,
+  https,
   redirectHttpToHttps,
   allowHttpRequestOnHttps,
-  certificate,
-  privateKey,
   http2,
   http1Allowed,
 }) => {
-  if (protocol === "http") {
-    return http.createServer()
-  }
-
-  if (redirectHttpToHttps || allowHttpRequestOnHttps) {
-    return createPolyglotServer({
-      certificate,
-      privateKey,
-      http2,
-      http1Allowed,
+  if (https) {
+    const { certificate, privateKey } = https
+    if (redirectHttpToHttps || allowHttpRequestOnHttps) {
+      return createPolyglotServer({
+        certificate,
+        privateKey,
+        http2,
+        http1Allowed,
+      })
+    }
+    const { createServer } = await import("node:https")
+    return createServer({
+      cert: certificate,
+      key: privateKey,
     })
   }
-
-  const { createServer } = await import("node:https")
-  return createServer({
-    cert: certificate,
-    key: privateKey,
-  })
+  const { createServer } = await import("node:http")
+  return createServer()
 }
 
 const testCanPushStream = (http2Stream) => {
