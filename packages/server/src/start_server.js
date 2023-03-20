@@ -93,7 +93,7 @@ export const startServer = async ({
   requestBodyLifetime = 60_000 * 2, // 2s
   ...rest
 } = {}) => {
-  // params validation
+  // param validations
   {
     const unexpectedParamNames = Object.keys(rest)
     if (unexpectedParamNames.length > 0) {
@@ -116,30 +116,35 @@ export const startServer = async ({
       throw new Error(`http2 needs https`)
     }
   }
-
   const logger = createLogger({ logLevel })
-  if (redirectHttpToHttps === undefined && https && !allowHttpRequestOnHttps) {
-    redirectHttpToHttps = true
-  }
-  if (redirectHttpToHttps && !https) {
-    logger.warn(`redirectHttpToHttps ignored because protocol is http`)
-    redirectHttpToHttps = false
-  }
-  if (allowHttpRequestOnHttps && redirectHttpToHttps) {
-    logger.warn(
-      `redirectHttpToHttps ignored because allowHttpRequestOnHttps is enabled`,
-    )
-    redirectHttpToHttps = false
-  }
+  // param warnings and normalization
+  {
+    if (
+      redirectHttpToHttps === undefined &&
+      https &&
+      !allowHttpRequestOnHttps
+    ) {
+      redirectHttpToHttps = true
+    }
+    if (redirectHttpToHttps && !https) {
+      logger.warn(`redirectHttpToHttps ignored because protocol is http`)
+      redirectHttpToHttps = false
+    }
+    if (allowHttpRequestOnHttps && redirectHttpToHttps) {
+      logger.warn(
+        `redirectHttpToHttps ignored because allowHttpRequestOnHttps is enabled`,
+      )
+      redirectHttpToHttps = false
+    }
 
-  if (allowHttpRequestOnHttps && !https) {
-    logger.warn(`allowHttpRequestOnHttps ignored because protocol is http`)
-    allowHttpRequestOnHttps = false
+    if (allowHttpRequestOnHttps && !https) {
+      logger.warn(`allowHttpRequestOnHttps ignored because protocol is http`)
+      allowHttpRequestOnHttps = false
+    }
   }
 
   const server = {}
   const serviceController = createServiceController(services)
-
   const processTeardownEvents = {
     SIGHUP: stopOnExit,
     SIGTERM: stopOnExit,

@@ -278,13 +278,13 @@ export const startDevServer = async ({
         sendErrorDetails: true,
       }),
     ],
-    onStop: (reason) => {
-      onStop()
-      serverStopCallbacks.forEach((serverStopCallback) => {
-        serverStopCallback(reason)
-      })
-      serverStopCallbacks.length = 0
-    },
+  })
+  server.stoppedPromise.then((reason) => {
+    onStop()
+    serverStopCallbacks.forEach((serverStopCallback) => {
+      serverStopCallback(reason)
+    })
+    serverStopCallbacks.length = 0
   })
   startDevServerTask.done()
   if (hostname) {
