@@ -18,6 +18,7 @@ export const validateDirectoryUrl = (value) => {
       } catch (e) {
         return {
           valid: false,
+          value,
           message: `must be a valid url`,
         }
       }
@@ -25,12 +26,14 @@ export const validateDirectoryUrl = (value) => {
   } else {
     return {
       valid: false,
+      value,
       message: `must be a string or an url`,
     }
   }
   if (!urlString.startsWith("file://")) {
     return {
       valid: false,
+      value,
       message: 'must start with "file://"',
     }
   }
@@ -43,7 +46,7 @@ export const validateDirectoryUrl = (value) => {
 export const assertAndNormalizeDirectoryUrl = (directoryUrl) => {
   const { valid, message, value } = validateDirectoryUrl(directoryUrl)
   if (!valid) {
-    throw new TypeError(`invalid directoryUrl: ${message}, got ${value}`)
+    throw new TypeError(`directoryUrl ${message}, got ${value}`)
   }
   return value
 }

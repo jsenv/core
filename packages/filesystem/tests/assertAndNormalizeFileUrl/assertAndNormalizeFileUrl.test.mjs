@@ -9,7 +9,7 @@ try {
   throw new Error("should throw")
 } catch (actual) {
   const expected = new TypeError(
-    "fileUrl must be a string or an url, received undefined",
+    "fileUrl must be a string or an url, got undefined",
   )
   assert({ actual, expected })
 }
@@ -18,8 +18,8 @@ try {
   assertAndNormalizeFileUrl("http://example.com")
   throw new Error("should throw")
 } catch (actual) {
-  const expected = new Error(
-    `fileUrl must starts with file://, received http://example.com`,
+  const expected = new TypeError(
+    `fileUrl must start with "file://", got http://example.com`,
   )
   assert({ actual, expected })
 }

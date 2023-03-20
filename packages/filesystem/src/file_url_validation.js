@@ -14,6 +14,7 @@ export const validateFileUrl = (value, baseUrl) => {
       } catch (e) {
         return {
           valid: false,
+          value,
           message: "must be a valid url",
         }
       }
@@ -21,6 +22,7 @@ export const validateFileUrl = (value, baseUrl) => {
   } else {
     return {
       valid: false,
+      value,
       message: "must be a string or an url",
     }
   }
@@ -28,6 +30,7 @@ export const validateFileUrl = (value, baseUrl) => {
   if (!urlString.startsWith("file://")) {
     return {
       valid: false,
+      value,
       message: 'must start with "file://"',
     }
   }
@@ -41,7 +44,7 @@ export const validateFileUrl = (value, baseUrl) => {
 export const assertAndNormalizeFileUrl = (fileUrl, baseUrl) => {
   const { valid, message, value } = validateFileUrl(fileUrl, baseUrl)
   if (!valid) {
-    throw new TypeError(`invalid fileUrl: ${message}, received ${fileUrl}`)
+    throw new TypeError(`fileUrl ${message}, got ${fileUrl}`)
   }
   return value
 }
