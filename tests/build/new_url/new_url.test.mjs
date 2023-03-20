@@ -1,4 +1,5 @@
 import { assert } from "@jsenv/assert"
+import { jsenvPluginMinification } from "@jsenv/plugin-minification"
 
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
@@ -13,6 +14,7 @@ const test = async (params) => {
       "./main.html": "main.html",
     },
     writeGeneratedFiles: true,
+    plugins: [jsenvPluginMinification()],
     ...params,
   })
   const server = await startFileServer({
@@ -21,9 +23,7 @@ const test = async (params) => {
   const { returnValue } = await executeInChromium({
     url: `${server.origin}/main.html`,
     /* eslint-disable no-undef */
-    pageFunction: async () => {
-      return window.resultPromise
-    },
+    pageFunction: () => window.resultPromise,
     /* eslint-enable no-undef */
   })
   const actual = returnValue
@@ -38,6 +38,6 @@ const test = async (params) => {
 }
 
 // support for <script type="module">
-await test({ runtimeCompat: { chrome: "64" }, minification: true })
+await test({ runtimeCompat: { chrome: "64" } })
 // no support for <script type="module">
-await test({ runtimeCompat: { chrome: "60" }, minification: true })
+await test({ runtimeCompat: { chrome: "60" } })

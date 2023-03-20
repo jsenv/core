@@ -2,7 +2,7 @@ import { statSync } from "node:fs"
 import { dirname, basename } from "node:path"
 import { urlToFileSystemPath } from "@jsenv/urls"
 
-import { assertAndNormalizeFileUrl } from "./assertAndNormalizeFileUrl.js"
+import { assertAndNormalizeFileUrl } from "./file_url_validation.js"
 import { guardTooFastSecondCall } from "./internal/guard_second_call.js"
 import { statsToType } from "./internal/statsToType.js"
 import { createWatcher } from "./internal/createWatcher.js"

@@ -11,7 +11,6 @@ await build({
   logLevel: "warn",
   rootDirectoryUrl: new URL("./", import.meta.url),
   buildDirectoryUrl: new URL("./dist/", import.meta.url),
-  buildDirectoryClean: true,
   entryPoints: {
     "./main.html": "main.min.html",
   },

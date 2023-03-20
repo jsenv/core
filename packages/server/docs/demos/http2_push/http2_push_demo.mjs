@@ -11,11 +11,9 @@ import {
 const { certificate, privateKey } = requestCertificate()
 await startServer({
   logLevel: "info",
-  protocol: "https",
   port: 3679,
+  https: { certificate, privateKey },
   http2: true,
-  privateKey,
-  certificate,
   serverTiming: true,
   services: [
     jsenvServiceCORS({

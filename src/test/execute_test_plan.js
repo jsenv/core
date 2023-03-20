@@ -5,10 +5,7 @@ import {
   urlIsInsideOf,
   urlToRelativeUrl,
 } from "@jsenv/urls"
-import {
-  ensureEmptyDirectory,
-  assertAndNormalizeDirectoryUrl,
-} from "@jsenv/filesystem"
+import { ensureEmptyDirectory, validateDirectoryUrl } from "@jsenv/filesystem"
 import { createLogger, createDetailedMessage } from "@jsenv/log"
 
 import { generateCoverageJsonFile } from "./coverage/coverage_reporter_json_file.js"
@@ -82,51 +79,72 @@ export const executeTestPlan = async ({
   coverageReportTextLog = true,
   coverageReportJsonFile = process.env.CI ? null : "./.coverage/coverage.json",
   coverageReportHtmlDirectory = process.env.CI ? "./.coverage/" : null,
+  ...rest
 }) => {
-  const logger = createLogger({ logLevel })
-  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
-  if (typeof testPlan !== "object") {
-    throw new Error(`testPlan must be an object, got ${testPlan}`)
-  }
-  if (coverageEnabled) {
-    if (typeof coverageConfig !== "object") {
+  // param validation
+  {
+    const unexpectedParamNames = Object.keys(rest)
+    if (unexpectedParamNames.length > 0) {
       throw new TypeError(
-        `coverageConfig must be an object, got ${coverageConfig}`,
+        `${unexpectedParamNames.join(",")}: there is no such param`,
       )
     }
-    if (Object.keys(coverageConfig).length === 0) {
-      logger.warn(
-        `coverageConfig is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`,
+    const rootDirectoryUrlValidation = validateDirectoryUrl(rootDirectoryUrl)
+    if (!rootDirectoryUrlValidation.valid) {
+      throw new TypeError(
+        `rootDirectoryUrl ${rootDirectoryUrlValidation.message}, got ${rootDirectoryUrl}`,
       )
     }
-    if (!coverageAndExecutionAllowed) {
-      const associationsForExecute = URL_META.resolveAssociations(
-        { execute: testPlan },
-        "file:///",
-      )
-      const associationsForCover = URL_META.resolveAssociations(
-        { cover: coverageConfig },
-        "file:///",
-      )
-      const patternsMatchingCoverAndExecute = Object.keys(
-        associationsForExecute.execute,
-      ).filter((testPlanPattern) => {
-        const { cover } = URL_META.applyAssociations({
-          url: testPlanPattern,
-          associations: associationsForCover,
-        })
-        return cover
-      })
-      if (patternsMatchingCoverAndExecute.length) {
-        // It would be strange, for a given file to be both covered and executed
-        throw new Error(
-          createDetailedMessage(`some file will be both covered and executed`, {
-            patterns: patternsMatchingCoverAndExecute,
-          }),
+    rootDirectoryUrl = rootDirectoryUrlValidation.value
+    if (typeof testPlan !== "object") {
+      throw new Error(`testPlan must be an object, got ${testPlan}`)
+    }
+    if (coverageEnabled) {
+      if (typeof coverageConfig !== "object") {
+        throw new TypeError(
+          `coverageConfig must be an object, got ${coverageConfig}`,
         )
+      }
+      if (!coverageAndExecutionAllowed) {
+        const associationsForExecute = URL_META.resolveAssociations(
+          { execute: testPlan },
+          "file:///",
+        )
+        const associationsForCover = URL_META.resolveAssociations(
+          { cover: coverageConfig },
+          "file:///",
+        )
+        const patternsMatchingCoverAndExecute = Object.keys(
+          associationsForExecute.execute,
+        ).filter((testPlanPattern) => {
+          const { cover } = URL_META.applyAssociations({
+            url: testPlanPattern,
+            associations: associationsForCover,
+          })
+          return cover
+        })
+        if (patternsMatchingCoverAndExecute.length) {
+          // It would be strange, for a given file to be both covered and executed
+          throw new Error(
+            createDetailedMessage(
+              `some file will be both covered and executed`,
+              {
+                patterns: patternsMatchingCoverAndExecute,
+              },
+            ),
+          )
+        }
       }
     }
   }
+
+  const logger = createLogger({ logLevel })
+  if (Object.keys(coverageConfig).length === 0) {
+    logger.warn(
+      `coverageConfig is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`,
+    )
+  }
+
   const result = await executePlan(testPlan, {
     signal,
     handleSIGINT,

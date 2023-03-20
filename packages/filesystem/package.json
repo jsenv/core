@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/filesystem",
-  "version": "4.1.9",
+  "version": "4.2.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -18,20 +18,19 @@
   "type": "module",
   "exports": {
     ".": {
-      "import": "./main.js"
+      "import": "./src/main.js"
     },
     "./*": "./*"
   },
   "files": [
-    "/src/",
-    "/main.js"
+    "/src/"
   ],
   "scripts": {
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
     "@jsenv/urls": "1.2.8",
-    "@jsenv/url-meta": "7.0.2",
+    "@jsenv/url-meta": "7.1.0",
     "@jsenv/abort": "4.2.4"
   }
 }

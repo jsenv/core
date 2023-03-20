@@ -9,9 +9,9 @@ import os, { networkInterfaces } from "node:os";
 import tty from "node:tty";
 import stringWidth from "string-width";
 import net, { createServer, isIP } from "node:net";
-import http from "node:http";
 import cluster from "node:cluster";
 import { performance as performance$1 } from "node:perf_hooks";
+import http from "node:http";
 import { Readable, Stream, Writable } from "node:stream";
 import { Http2ServerResponse } from "node:http2";
 import { lookup } from "node:dns";
@@ -592,7 +592,7 @@ const urlToFileSystemPath = url => {
   return fileSystemPath;
 };
 
-const assertAndNormalizeDirectoryUrl = value => {
+const validateDirectoryUrl = value => {
   let urlString;
   if (value instanceof URL) {
     urlString = value.href;
@@ -603,19 +603,45 @@ const assertAndNormalizeDirectoryUrl = value => {
       try {
         urlString = String(new URL(value));
       } catch (e) {
-        throw new TypeError(`directoryUrl must be a valid url, received ${value}`);
+        return {
+          valid: false,
+          value,
+          message: `must be a valid url`
+        };
       }
     }
   } else {
-    throw new TypeError(`directoryUrl must be a string or an url, received ${value}`);
+    return {
+      valid: false,
+      value,
+      message: `must be a string or an url`
+    };
   }
   if (!urlString.startsWith("file://")) {
-    throw new Error(`directoryUrl must starts with file://, received ${value}`);
+    return {
+      valid: false,
+      value,
+      message: 'must start with "file://"'
+    };
   }
-  return ensurePathnameTrailingSlash(urlString);
+  return {
+    valid: true,
+    value: ensurePathnameTrailingSlash(urlString)
+  };
+};
+const assertAndNormalizeDirectoryUrl = directoryUrl => {
+  const {
+    valid,
+    message,
+    value
+  } = validateDirectoryUrl(directoryUrl);
+  if (!valid) {
+    throw new TypeError(`directoryUrl ${message}, got ${value}`);
+  }
+  return value;
 };
 
-const assertAndNormalizeFileUrl = (value, baseUrl) => {
+const validateFileUrl = (value, baseUrl) => {
   let urlString;
   if (value instanceof URL) {
     urlString = value.href;
@@ -626,16 +652,42 @@ const assertAndNormalizeFileUrl = (value, baseUrl) => {
       try {
         urlString = String(new URL(value, baseUrl));
       } catch (e) {
-        throw new TypeError(`fileUrl must be a valid url, received ${value}`);
+        return {
+          valid: false,
+          value,
+          message: "must be a valid url"
+        };
       }
     }
   } else {
-    throw new TypeError(`fileUrl must be a string or an url, received ${value}`);
+    return {
+      valid: false,
+      value,
+      message: "must be a string or an url"
+    };
   }
   if (!urlString.startsWith("file://")) {
-    throw new Error(`fileUrl must starts with file://, received ${value}`);
+    return {
+      valid: false,
+      value,
+      message: 'must start with "file://"'
+    };
   }
-  return urlString;
+  return {
+    valid: true,
+    value: urlString
+  };
+};
+const assertAndNormalizeFileUrl = (fileUrl, baseUrl) => {
+  const {
+    valid,
+    message,
+    value
+  } = validateFileUrl(fileUrl, baseUrl);
+  if (!valid) {
+    throw new TypeError(`fileUrl ${message}, got ${fileUrl}`);
+  }
+  return value;
 };
 
 const statsToType = stats => {
@@ -4892,7 +4944,7 @@ const startServer = async ({
   logLevel,
   startLog = true,
   serverName = "server",
-  protocol = "http",
+  https = false,
   http2 = false,
   http1Allowed = true,
   redirectHttpToHttps,
@@ -4903,8 +4955,6 @@ const startServer = async ({
   port = 0,
   // assign a random available port
   portHint,
-  privateKey,
-  certificate,
   // when inside a worker, we should not try to stop server on SIGINT
   // otherwise it can create an EPIPE error while primary process tries
   // to kill the server
@@ -4935,39 +4985,52 @@ const startServer = async ({
   // time allocated to server code to start reading the request body
   // after this delay the underlying stream is destroyed, attempting to read it would throw
   // if used the stream stays opened, it's only if the stream is not read at all that it gets destroyed
-  requestBodyLifetime = 60_000 * 2 // 2s
+  requestBodyLifetime = 60_000 * 2,
+  // 2s
+  ...rest
 } = {}) => {
+  // param validations
+  {
+    const unexpectedParamNames = Object.keys(rest);
+    if (unexpectedParamNames.length > 0) {
+      throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param`);
+    }
+    if (https) {
+      if (typeof https !== "object") {
+        throw new TypeError(`https must be an object, got ${https}`);
+      }
+      const {
+        certificate,
+        privateKey
+      } = https;
+      if (!certificate || !privateKey) {
+        throw new TypeError(`https must be an object with { certificate, privateKey }`);
+      }
+    }
+    if (http2 && !https) {
+      throw new Error(`http2 needs https`);
+    }
+  }
   const logger = createLogger({
     logLevel
   });
-  if (protocol !== "http" && protocol !== "https") {
-    throw new Error(`protocol must be http or https, got ${protocol}`);
-  }
-  if (protocol === "https") {
-    if (!certificate) {
-      throw new Error(`missing certificate for https server`);
+  // param warnings and normalization
+  {
+    if (redirectHttpToHttps === undefined && https && !allowHttpRequestOnHttps) {
+      redirectHttpToHttps = true;
     }
-    if (!privateKey) {
-      throw new Error(`missing privateKey for https server`);
+    if (redirectHttpToHttps && !https) {
+      logger.warn(`redirectHttpToHttps ignored because protocol is http`);
+      redirectHttpToHttps = false;
     }
-  }
-  if (http2 && protocol !== "https") {
-    throw new Error(`http2 needs "https" but protocol is "${protocol}"`);
-  }
-  if (redirectHttpToHttps === undefined && protocol === "https" && !allowHttpRequestOnHttps) {
-    redirectHttpToHttps = true;
-  }
-  if (redirectHttpToHttps && protocol === "http") {
-    logger.warn(`redirectHttpToHttps ignored because protocol is http`);
-    redirectHttpToHttps = false;
-  }
-  if (allowHttpRequestOnHttps && redirectHttpToHttps) {
-    logger.warn(`redirectHttpToHttps ignored because allowHttpRequestOnHttps is enabled`);
-    redirectHttpToHttps = false;
-  }
-  if (allowHttpRequestOnHttps && protocol === "http") {
-    logger.warn(`allowHttpRequestOnHttps ignored because protocol is http`);
-    allowHttpRequestOnHttps = false;
+    if (allowHttpRequestOnHttps && redirectHttpToHttps) {
+      logger.warn(`redirectHttpToHttps ignored because allowHttpRequestOnHttps is enabled`);
+      redirectHttpToHttps = false;
+    }
+    if (allowHttpRequestOnHttps && !https) {
+      logger.warn(`allowHttpRequestOnHttps ignored because protocol is http`);
+      allowHttpRequestOnHttps = false;
+    }
   }
   const server = {};
   const serviceController = createServiceController(services);
@@ -4998,11 +5061,9 @@ const startServer = async ({
     });
     startServerOperation.throwIfAborted();
     nodeServer = await createNodeServer({
-      protocol,
+      https,
       redirectHttpToHttps,
       allowHttpRequestOnHttps,
-      certificate,
-      privateKey,
       http2,
       http1Allowed
     });
@@ -5013,6 +5074,7 @@ const startServer = async ({
       nodeServer.unref();
     }
     const createOrigin = hostname => {
+      const protocol = https ? "https" : "http";
       if (isIP(hostname) === 6) {
         return `${protocol}://[${hostname}]`;
       }
@@ -5727,7 +5789,7 @@ const startServer = async ({
       let websocketServer = new WebSocketServer({
         noServer: true
       });
-      const websocketOrigin = protocol === "https" ? `wss://${hostname}:${port}` : `ws://${hostname}:${port}`;
+      const websocketOrigin = https ? `wss://${hostname}:${port}` : `ws://${hostname}:${port}`;
       server.websocketOrigin = websocketOrigin;
       const upgradeCallback = (nodeRequest, socket, head) => {
         websocketServer.handleUpgrade(nodeRequest, socket, head, async websocket => {
@@ -5786,32 +5848,37 @@ const startServer = async ({
   return server;
 };
 const createNodeServer = async ({
-  protocol,
+  https,
   redirectHttpToHttps,
   allowHttpRequestOnHttps,
-  certificate,
-  privateKey,
   http2,
   http1Allowed
 }) => {
-  if (protocol === "http") {
-    return http.createServer();
-  }
-  if (redirectHttpToHttps || allowHttpRequestOnHttps) {
-    return createPolyglotServer({
+  if (https) {
+    const {
       certificate,
-      privateKey,
-      http2,
-      http1Allowed
+      privateKey
+    } = https;
+    if (redirectHttpToHttps || allowHttpRequestOnHttps) {
+      return createPolyglotServer({
+        certificate,
+        privateKey,
+        http2,
+        http1Allowed
+      });
+    }
+    const {
+      createServer
+    } = await import("node:https");
+    return createServer({
+      cert: certificate,
+      key: privateKey
     });
   }
   const {
     createServer
-  } = await import("node:https");
-  return createServer({
-    cert: certificate,
-    key: privateKey
-  });
+  } = await import("node:http");
+  return createServer();
 };
 const testCanPushStream = http2Stream => {
   if (!http2Stream.pushAllowed) {
@@ -15045,10 +15112,7 @@ const jsenvPluginAsJsClassicLibrary = ({
           ...context,
           buildDirectoryUrl: context.outDirectoryUrl
         },
-        options: {
-          babelHelpersChunk: false,
-          preserveDynamicImport: true
-        }
+        preserveDynamicImport: true
       });
       const jsModuleBundledUrlInfo = bundleUrlInfos[jsModuleUrlInfo.url];
       if (context.dev) {
@@ -20664,8 +20728,26 @@ const build = async ({
   writeOnFileSystem = true,
   writeGeneratedFiles = false,
   assetManifest = versioningMethod === "filename",
-  assetManifestFileRelativeUrl = "asset-manifest.json"
+  assetManifestFileRelativeUrl = "asset-manifest.json",
+  ...rest
 }) => {
+  // param validation
+  {
+    const unexpectedParamNames = Object.keys(rest);
+    if (unexpectedParamNames.length > 0) {
+      throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param`);
+    }
+    const rootDirectoryUrlValidation = validateDirectoryUrl(rootDirectoryUrl);
+    if (!rootDirectoryUrlValidation.valid) {
+      throw new TypeError(`rootDirectoryUrl ${rootDirectoryUrlValidation.message}, got ${rootDirectoryUrl}`);
+    }
+    rootDirectoryUrl = rootDirectoryUrlValidation.value;
+    const buildDirectoryUrlValidation = validateDirectoryUrl(buildDirectoryUrl);
+    if (!buildDirectoryUrlValidation.valid) {
+      throw new TypeError(`buildDirectoryUrl ${buildDirectoryUrlValidation.message}, got ${buildDirectoryUrlValidation}`);
+    }
+    buildDirectoryUrl = buildDirectoryUrlValidation.value;
+  }
   const operation = Abort.startOperation();
   operation.addAbortSignal(signal);
   if (handleSIGINT) {
@@ -20675,8 +20757,6 @@ const build = async ({
       }, abort);
     });
   }
-  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl);
-  buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl);
   assertEntryPoints({
     entryPoints
   });
@@ -22624,12 +22704,10 @@ const startDevServer = async ({
   handleSIGINT = true,
   logLevel = "info",
   serverLogLevel = "warn",
-  protocol = "http",
+  https,
   // it's better to use http1 by default because it allows to get statusText in devtools
   // which gives valuable information when there is errors
   http2 = false,
-  certificate,
-  privateKey,
   hostname,
   port = 3456,
   acceptAnyIp,
@@ -22672,12 +22750,24 @@ const startDevServer = async ({
   sourcemapsSourcesContent,
   // no real need to write files during github workflow
   // and mitigates https://github.com/actions/runner-images/issues/3885
-  writeGeneratedFiles = !process.env.CI
+  writeGeneratedFiles = !process.env.CI,
+  ...rest
 }) => {
+  // params type checking
+  {
+    const unexpectedParamNames = Object.keys(rest);
+    if (unexpectedParamNames.length > 0) {
+      throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param`);
+    }
+    const rootDirectoryUrlValidation = validateDirectoryUrl(rootDirectoryUrl);
+    if (!rootDirectoryUrlValidation.valid) {
+      throw new TypeError(`rootDirectoryUrl ${rootDirectoryUrlValidation.message}, got ${rootDirectoryUrl}`);
+    }
+    rootDirectoryUrl = rootDirectoryUrlValidation.value;
+  }
   const logger = createLogger({
     logLevel
   });
-  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl);
   const operation = Abort.startOperation();
   operation.addAbortSignal(signal);
   if (handleSIGINT) {
@@ -22767,10 +22857,8 @@ const startDevServer = async ({
     keepProcessAlive,
     logLevel: serverLogLevel,
     startLog: false,
-    protocol,
+    https,
     http2,
-    certificate,
-    privateKey,
     acceptAnyIp,
     hostname,
     port,
@@ -22853,14 +22941,14 @@ const startDevServer = async ({
     // default error handling
     jsenvServiceErrorHandler({
       sendErrorDetails: true
-    })],
-    onStop: reason => {
-      onStop();
-      serverStopCallbacks.forEach(serverStopCallback => {
-        serverStopCallback(reason);
-      });
-      serverStopCallbacks.length = 0;
-    }
+    })]
+  });
+  server.stoppedPromise.then(reason => {
+    onStop();
+    serverStopCallbacks.forEach(serverStopCallback => {
+      serverStopCallback(reason);
+    });
+    serverStopCallbacks.length = 0;
   });
   startDevServerTask.done();
   if (hostname) {
@@ -23552,7 +23640,7 @@ const run = async ({
             cb(runResult);
           } catch (e) {
             cb({
-              status: "errored",
+              status: "failed",
               errors: [e]
             });
           }
@@ -23583,7 +23671,7 @@ const run = async ({
         result.status = "aborted";
       }
     } else {
-      result.status = "errored";
+      result.status = "failed";
       result.errors.push(e);
     }
   } finally {
@@ -23690,7 +23778,7 @@ const EXECUTION_COLORS = {
   executing: ANSI.BLUE,
   aborted: ANSI.MAGENTA,
   timedout: ANSI.MAGENTA,
-  errored: ANSI.RED,
+  failed: ANSI.RED,
   completed: ANSI.GREEN,
   cancelled: ANSI.GREY
 };
@@ -23823,8 +23911,8 @@ const createStatusSummary = ({
   if (counters.timedout === counters.total) {
     return `all ${ANSI.color(`timed out`, EXECUTION_COLORS.timedout)}`;
   }
-  if (counters.errored === counters.total) {
-    return `all ${ANSI.color(`errored`, EXECUTION_COLORS.errored)}`;
+  if (counters.failed === counters.total) {
+    return `all ${ANSI.color(`failed`, EXECUTION_COLORS.failed)}`;
   }
   if (counters.completed === counters.total) {
     return `all ${ANSI.color(`completed`, EXECUTION_COLORS.completed)}`;
@@ -23843,8 +23931,8 @@ const createMixedDetails = ({
   if (counters.timedout) {
     parts.push(`${counters.timedout} ${ANSI.color(`timed out`, EXECUTION_COLORS.timedout)}`);
   }
-  if (counters.errored) {
-    parts.push(`${counters.errored} ${ANSI.color(`errored`, EXECUTION_COLORS.errored)}`);
+  if (counters.failed) {
+    parts.push(`${counters.failed} ${ANSI.color(`failed`, EXECUTION_COLORS.failed)}`);
   }
   if (counters.completed) {
     parts.push(`${counters.completed} ${ANSI.color(`completed`, EXECUTION_COLORS.completed)}`);
@@ -23877,11 +23965,11 @@ const descriptionFormatters = {
   }) => {
     return ANSI.color(`${UNICODE.FAILURE_RAW} execution ${index + 1} of ${total} timeout after ${executionParams.allocatedMs}ms`, EXECUTION_COLORS.timedout);
   },
-  errored: ({
+  efailedrrored: ({
     index,
     total
   }) => {
-    return ANSI.color(`${UNICODE.FAILURE_RAW} execution ${index + 1} of ${total} errored`, EXECUTION_COLORS.errored);
+    return ANSI.color(`${UNICODE.FAILURE_RAW} execution ${index + 1} of ${total} failed`, EXECUTION_COLORS.failed);
   },
   completed: ({
     index,
@@ -24200,7 +24288,7 @@ const executePlan = async (plan, {
       total: executionSteps.length,
       aborted: 0,
       timedout: 0,
-      errored: 0,
+      failed: 0,
       completed: 0,
       done: 0
     };
@@ -24283,7 +24371,7 @@ const executePlan = async (plan, {
           });
         } else {
           executionResult = {
-            status: "errored",
+            status: "failed",
             errors: [new Error(`No file at ${fileRelativeUrl} for execution "${executionName}"`)]
           };
         }
@@ -24307,8 +24395,8 @@ const executePlan = async (plan, {
           counters.aborted++;
         } else if (executionResult.status === "timedout") {
           counters.timedout++;
-        } else if (executionResult.status === "errored") {
-          counters.errored++;
+        } else if (executionResult.status === "failed") {
+          counters.failed++;
         } else if (executionResult.status === "completed") {
           counters.completed++;
         }
@@ -24543,45 +24631,57 @@ const executeTestPlan = async ({
   coverageReportSkipFull = false,
   coverageReportTextLog = true,
   coverageReportJsonFile = process.env.CI ? null : "./.coverage/coverage.json",
-  coverageReportHtmlDirectory = process.env.CI ? "./.coverage/" : null
+  coverageReportHtmlDirectory = process.env.CI ? "./.coverage/" : null,
+  ...rest
 }) => {
+  // param validation
+  {
+    const unexpectedParamNames = Object.keys(rest);
+    if (unexpectedParamNames.length > 0) {
+      throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param`);
+    }
+    const rootDirectoryUrlValidation = validateDirectoryUrl(rootDirectoryUrl);
+    if (!rootDirectoryUrlValidation.valid) {
+      throw new TypeError(`rootDirectoryUrl ${rootDirectoryUrlValidation.message}, got ${rootDirectoryUrl}`);
+    }
+    rootDirectoryUrl = rootDirectoryUrlValidation.value;
+    if (typeof testPlan !== "object") {
+      throw new Error(`testPlan must be an object, got ${testPlan}`);
+    }
+    if (coverageEnabled) {
+      if (typeof coverageConfig !== "object") {
+        throw new TypeError(`coverageConfig must be an object, got ${coverageConfig}`);
+      }
+      if (!coverageAndExecutionAllowed) {
+        const associationsForExecute = URL_META.resolveAssociations({
+          execute: testPlan
+        }, "file:///");
+        const associationsForCover = URL_META.resolveAssociations({
+          cover: coverageConfig
+        }, "file:///");
+        const patternsMatchingCoverAndExecute = Object.keys(associationsForExecute.execute).filter(testPlanPattern => {
+          const {
+            cover
+          } = URL_META.applyAssociations({
+            url: testPlanPattern,
+            associations: associationsForCover
+          });
+          return cover;
+        });
+        if (patternsMatchingCoverAndExecute.length) {
+          // It would be strange, for a given file to be both covered and executed
+          throw new Error(createDetailedMessage$1(`some file will be both covered and executed`, {
+            patterns: patternsMatchingCoverAndExecute
+          }));
+        }
+      }
+    }
+  }
   const logger = createLogger({
     logLevel
   });
-  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl);
-  if (typeof testPlan !== "object") {
-    throw new Error(`testPlan must be an object, got ${testPlan}`);
-  }
-  if (coverageEnabled) {
-    if (typeof coverageConfig !== "object") {
-      throw new TypeError(`coverageConfig must be an object, got ${coverageConfig}`);
-    }
-    if (Object.keys(coverageConfig).length === 0) {
-      logger.warn(`coverageConfig is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`);
-    }
-    if (!coverageAndExecutionAllowed) {
-      const associationsForExecute = URL_META.resolveAssociations({
-        execute: testPlan
-      }, "file:///");
-      const associationsForCover = URL_META.resolveAssociations({
-        cover: coverageConfig
-      }, "file:///");
-      const patternsMatchingCoverAndExecute = Object.keys(associationsForExecute.execute).filter(testPlanPattern => {
-        const {
-          cover
-        } = URL_META.applyAssociations({
-          url: testPlanPattern,
-          associations: associationsForCover
-        });
-        return cover;
-      });
-      if (patternsMatchingCoverAndExecute.length) {
-        // It would be strange, for a given file to be both covered and executed
-        throw new Error(createDetailedMessage$1(`some file will be both covered and executed`, {
-          patterns: patternsMatchingCoverAndExecute
-        }));
-      }
-    }
+  if (Object.keys(coverageConfig).length === 0) {
+    logger.warn(`coverageConfig is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`);
   }
   const result = await executePlan(testPlan, {
     signal,
@@ -24962,12 +25062,12 @@ const createRuntimeFromPlaywright = ({
       }
       if (winner.name === "error") {
         let error = winner.data;
-        result.status = "errored";
+        result.status = "failed";
         result.errors.push(error);
         return;
       }
       if (winner.name === "closed") {
-        result.status = "errored";
+        result.status = "failed";
         result.errors.push(isBrowserDedicatedToExecution ? new Error(`browser disconnected during execution`) : new Error(`page closed during execution`));
         return;
       }
@@ -24979,8 +25079,8 @@ const createRuntimeFromPlaywright = ({
       result.namespace = executionResults;
       Object.keys(executionResults).forEach(key => {
         const executionResult = executionResults[key];
-        if (executionResult.status === "errored") {
-          result.status = "errored";
+        if (executionResult.status === "failed") {
+          result.status = "failed";
           result.errors.push({
             ...executionResult.exception,
             stack: executionResult.exception.text
@@ -24998,7 +25098,7 @@ const createRuntimeFromPlaywright = ({
         await callback();
       }, Promise.resolve());
     } catch (e) {
-      result.status = "errored";
+      result.status = "failed";
       result.errors = [e];
     }
     if (keepRunning) {
@@ -25627,7 +25727,7 @@ nodeChildProcess.run = async ({
     if (winner.name === "error") {
       const error = winner.data;
       removeOutputListener();
-      result.status = "errored";
+      result.status = "failed";
       result.errors.push(error);
       return;
     }
@@ -25637,18 +25737,18 @@ nodeChildProcess.run = async ({
       } = winner.data;
       await cleanup("process exit");
       if (code === 12) {
-        result.status = "errored";
+        result.status = "failed";
         result.errors.push(new Error(`node process exited with 12 (the forked child process wanted to use a non-available port for debug)`));
         return;
       }
       if (code === null || code === 0 || code === EXIT_CODES.SIGINT || code === EXIT_CODES.SIGTERM || code === EXIT_CODES.SIGABORT) {
-        result.status = "errored";
+        result.status = "failed";
         result.errors.push(new Error(`node process exited during execution`));
         return;
       }
       // process.exit(1) in child process or process.exitCode = 1 + process.exit()
       // means there was an error even if we don't know exactly what.
-      result.status = "errored";
+      result.status = "failed";
       result.errors.push(new Error(`node process exited with code ${code} during execution`));
       return;
     }
@@ -25657,7 +25757,7 @@ nodeChildProcess.run = async ({
       value
     } = winner.data;
     if (status === "action-failed") {
-      result.status = "errored";
+      result.status = "failed";
       result.errors.push(value);
       return;
     }
@@ -25674,7 +25774,7 @@ nodeChildProcess.run = async ({
   try {
     await writeResult();
   } catch (e) {
-    result.status = "errored";
+    result.status = "failed";
     result.errors.push(e);
   }
   if (keepRunning) {
@@ -25900,7 +26000,7 @@ nodeWorkerThread.run = async ({
     if (winner.name === "error") {
       const error = winner.data;
       removeOutputListener();
-      result.status = "errored";
+      result.status = "failed";
       result.errors.push(error);
       return;
     }
@@ -25910,18 +26010,18 @@ nodeWorkerThread.run = async ({
       } = winner.data;
       await cleanup("process exit");
       if (code === 12) {
-        result.status = "errored";
+        result.status = "failed";
         result.errors.push(new Error(`node process exited with 12 (the forked child process wanted to use a non-available port for debug)`));
         return;
       }
       if (code === null || code === 0 || code === EXIT_CODES.SIGINT || code === EXIT_CODES.SIGTERM || code === EXIT_CODES.SIGABORT) {
-        result.status = "errored";
+        result.status = "failed";
         result.errors.push(new Error(`node worker thread exited during execution`));
         return;
       }
       // process.exit(1) in child process or process.exitCode = 1 + process.exit()
       // means there was an error even if we don't know exactly what.
-      result.status = "errored";
+      result.status = "failed";
       result.errors.push(new Error(`node worker thread exited with code ${code} during execution`));
     }
     const {
@@ -25929,7 +26029,7 @@ nodeWorkerThread.run = async ({
       value
     } = winner.data;
     if (status === "action-failed") {
-      result.status = "errored";
+      result.status = "failed";
       result.errors.push(value);
       return;
     }
@@ -25946,7 +26046,7 @@ nodeWorkerThread.run = async ({
   try {
     await writeResult();
   } catch (e) {
-    result.status = "errored";
+    result.status = "failed";
     result.errors.push(e);
   }
   if (keepRunning) {
@@ -26037,10 +26137,8 @@ const startBuildServer = async ({
   handleSIGINT = true,
   logLevel,
   serverLogLevel = "warn",
-  protocol = "http",
+  https,
   http2,
-  certificate,
-  privateKey,
   acceptAnyIp,
   hostname,
   port = 9779,
@@ -26167,10 +26265,8 @@ const startBuildServer = async ({
     keepProcessAlive,
     logLevel: serverLogLevel,
     startLog: false,
-    protocol,
+    https,
     http2,
-    certificate,
-    privateKey,
     acceptAnyIp,
     hostname,
     port,
@@ -26310,7 +26406,7 @@ const execute = async ({
   });
   result = resultTransformer(result);
   try {
-    if (result.status === "errored") {
+    if (result.status === "failed") {
       if (ignoreError) {
         return result;
       }

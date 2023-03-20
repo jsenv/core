@@ -17,7 +17,7 @@ export const notifyExecutionResult = (execution, previousExecution) => {
     clickToFocus: true,
     clickToClose: true,
   }
-  if (execution.status === "errored") {
+  if (execution.status === "failed") {
     if (previousExecution) {
       if (previousExecution.status === "completed") {
         notify("Broken", {
@@ -36,7 +36,7 @@ export const notifyExecutionResult = (execution, previousExecution) => {
         body: `${executedFileRelativeUrl} execution failed.`,
       })
     }
-  } else if (previousExecution && previousExecution.status === "errored") {
+  } else if (previousExecution && previousExecution.status === "failed") {
     notify("Fixed", {
       ...notificationOptions,
       body: `${executedFileRelativeUrl} execution fixed.`,

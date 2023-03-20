@@ -63,8 +63,6 @@ await test()
 if (process.platform === "linux") {
   const { certificate, privateKey } = requestCertificate()
   await test({
-    protocol: "https",
-    certificate,
-    privateKey,
+    https: { certificate, privateKey },
   })
 }

@@ -147,8 +147,8 @@ const createStatusSummary = ({ counters }) => {
   if (counters.timedout === counters.total) {
     return `all ${ANSI.color(`timed out`, EXECUTION_COLORS.timedout)}`
   }
-  if (counters.errored === counters.total) {
-    return `all ${ANSI.color(`errored`, EXECUTION_COLORS.errored)}`
+  if (counters.failed === counters.total) {
+    return `all ${ANSI.color(`failed`, EXECUTION_COLORS.failed)}`
   }
   if (counters.completed === counters.total) {
     return `all ${ANSI.color(`completed`, EXECUTION_COLORS.completed)}`
@@ -171,9 +171,9 @@ const createMixedDetails = ({ counters }) => {
       )}`,
     )
   }
-  if (counters.errored) {
+  if (counters.failed) {
     parts.push(
-      `${counters.errored} ${ANSI.color(`errored`, EXECUTION_COLORS.errored)}`,
+      `${counters.failed} ${ANSI.color(`failed`, EXECUTION_COLORS.failed)}`,
     )
   }
   if (counters.completed) {
@@ -221,10 +221,10 @@ const descriptionFormatters = {
       EXECUTION_COLORS.timedout,
     )
   },
-  errored: ({ index, total }) => {
+  efailedrrored: ({ index, total }) => {
     return ANSI.color(
-      `${UNICODE.FAILURE_RAW} execution ${index + 1} of ${total} errored`,
-      EXECUTION_COLORS.errored,
+      `${UNICODE.FAILURE_RAW} execution ${index + 1} of ${total} failed`,
+      EXECUTION_COLORS.failed,
     )
   },
   completed: ({ index, total }) => {

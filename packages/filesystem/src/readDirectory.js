@@ -1,5 +1,5 @@
 import { readdir } from "node:fs"
-import { assertAndNormalizeDirectoryUrl } from "./assertAndNormalizeDirectoryUrl.js"
+import { assertAndNormalizeDirectoryUrl } from "./directory_url_validation.js"
 
 export const readDirectory = async (url, { emfileMaxWait = 1000 } = {}) => {
   const directoryUrl = assertAndNormalizeDirectoryUrl(url)

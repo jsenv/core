@@ -9,7 +9,6 @@ setInterval(() => {
 
 startServer({
   logLevel: "warn",
-  protocol: "https",
   port: 3456,
   requestToResponse: (request) => {
     const { accept = "" } = request.headers

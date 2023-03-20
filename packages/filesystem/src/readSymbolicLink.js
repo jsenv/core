@@ -6,7 +6,7 @@
 import { readlink } from "node:fs"
 import { isFileSystemPath, fileSystemPathToUrl } from "@jsenv/urls"
 
-import { assertAndNormalizeFileUrl } from "./assertAndNormalizeFileUrl.js"
+import { assertAndNormalizeFileUrl } from "./file_url_validation.js"
 
 export const readSymbolicLink = (url) => {
   const symbolicLinkUrl = assertAndNormalizeFileUrl(url)

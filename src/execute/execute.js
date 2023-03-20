@@ -90,7 +90,7 @@ export const execute = async ({
   result = resultTransformer(result)
 
   try {
-    if (result.status === "errored") {
+    if (result.status === "failed") {
       if (ignoreError) {
         return result
       }

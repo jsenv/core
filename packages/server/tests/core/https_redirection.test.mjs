@@ -13,9 +13,10 @@ import {
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    protocol: "https",
-    certificate: testServerCertificate,
-    privateKey: testServerCertificatePrivateKey,
+    https: {
+      certificate: testServerCertificate,
+      privateKey: testServerCertificatePrivateKey,
+    },
     services: [
       {
         handleRequest: () => {
@@ -76,9 +77,10 @@ import {
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    protocol: "https",
-    certificate: testServerCertificate,
-    privateKey: testServerCertificatePrivateKey,
+    https: {
+      certificate: testServerCertificate,
+      privateKey: testServerCertificatePrivateKey,
+    },
     http2: true,
     services: [
       {
@@ -140,9 +142,10 @@ import {
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    protocol: "https",
-    certificate: testServerCertificate,
-    privateKey: testServerCertificatePrivateKey,
+    https: {
+      certificate: testServerCertificate,
+      privateKey: testServerCertificatePrivateKey,
+    },
     redirectHttpToHttps: false,
   })
 
@@ -173,9 +176,10 @@ import {
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    protocol: "https",
-    certificate: testServerCertificate,
-    privateKey: testServerCertificatePrivateKey,
+    https: {
+      certificate: testServerCertificate,
+      privateKey: testServerCertificatePrivateKey,
+    },
     allowHttpRequestOnHttps: true,
     services: [
       {

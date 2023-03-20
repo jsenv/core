@@ -1,3 +1,22 @@
+# 2.0.0
+
+- Remove `js_module.customChunks`
+- Remove `js_module.babelHelpersChunk`
+- Remove `js_module.vendorsChunk`
+- Vendor chunk is no longer auto generated, it must be done explicitely as follows
+
+  ```js
+  jsenvPluginBundling({
+    js_module: {
+      chunks: {
+        vendors: {
+          "./**/node_modules/": true,
+        },
+      },
+    },
+  })
+  ```
+
 # 1.3.0
 
 - Introduce `js_module.customChunks`

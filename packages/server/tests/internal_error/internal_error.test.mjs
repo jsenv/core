@@ -8,7 +8,6 @@ import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js"
 {
   const { origin, stop } = await startServer({
     logLevel: "off",
-    protocol: "http",
     keepProcessAlive: false,
     services: [
       jsenvServiceErrorHandler(),
@@ -59,7 +58,6 @@ import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js"
 {
   const { origin, stop } = await startServer({
     logLevel: "off",
-    protocol: "http",
     keepProcessAlive: false,
     services: [
       jsenvServiceErrorHandler(),

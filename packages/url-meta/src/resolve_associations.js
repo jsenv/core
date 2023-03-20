@@ -4,14 +4,18 @@ export const resolveAssociations = (associations, baseUrl) => {
   assertUrlLike(baseUrl, "baseUrl")
   const associationsResolved = {}
   Object.keys(associations).forEach((key) => {
-    const valueMap = associations[key]
-    const valueMapResolved = {}
-    Object.keys(valueMap).forEach((pattern) => {
-      const value = valueMap[pattern]
-      const patternResolved = normalizeUrlPattern(pattern, baseUrl)
-      valueMapResolved[patternResolved] = value
-    })
-    associationsResolved[key] = valueMapResolved
+    const value = associations[key]
+    if (typeof value === "object" && value !== null) {
+      const valueMapResolved = {}
+      Object.keys(value).forEach((pattern) => {
+        const valueAssociated = value[pattern]
+        const patternResolved = normalizeUrlPattern(pattern, baseUrl)
+        valueMapResolved[patternResolved] = valueAssociated
+      })
+      associationsResolved[key] = valueMapResolved
+    } else {
+      associationsResolved[key] = value
+    }
   })
   return associationsResolved
 }

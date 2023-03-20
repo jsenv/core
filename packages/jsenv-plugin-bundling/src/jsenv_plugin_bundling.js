@@ -7,37 +7,40 @@ export const jsenvPluginBundling = ({
   js_classic = {},
   js_module = {},
 } = {}) => {
+  const bundle = {}
+
+  if (css) {
+    bundle.css = (cssUrlInfos, context) => {
+      return bundleCss({
+        cssUrlInfos,
+        context,
+      })
+    }
+  }
+  if (js_classic) {
+    bundle.js_classic = (jsClassicUrlInfos, context) => {
+      return bundleJsClassicWorkers({
+        jsClassicUrlInfos,
+        context,
+      })
+    }
+  }
+  if (js_module) {
+    if (js_module === true) {
+      js_module = {}
+    }
+    bundle.js_module = (jsModuleUrlInfos, context) => {
+      return bundleJsModules({
+        jsModuleUrlInfos,
+        context,
+        ...js_module,
+      })
+    }
+  }
+
   return {
     name: "jsenv:bundling",
     appliesDuring: "build",
-    bundle: {
-      css: css
-        ? (cssUrlInfos, context) => {
-            return bundleCss({
-              cssUrlInfos,
-              context,
-              options: css === true ? {} : css,
-            })
-          }
-        : undefined,
-      js_classic: js_classic
-        ? (jsClassicUrlInfos, context) => {
-            return bundleJsClassicWorkers({
-              jsClassicUrlInfos,
-              context,
-              options: js_classic === true ? {} : js_classic,
-            })
-          }
-        : undefined,
-      js_module: js_module
-        ? (jsModuleUrlInfos, context) => {
-            return bundleJsModules({
-              jsModuleUrlInfos,
-              context,
-              options: js_module === true ? {} : js_module,
-            })
-          }
-        : undefined,
-    },
+    bundle,
   }
 }

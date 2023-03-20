@@ -1,7 +1,7 @@
 import { dirname } from "node:path"
 import { urlToFileSystemPath } from "@jsenv/urls"
 
-import { assertAndNormalizeFileUrl } from "./assertAndNormalizeFileUrl.js"
+import { assertAndNormalizeFileUrl } from "./file_url_validation.js"
 import { writeDirectory } from "./writeDirectory.js"
 
 export const ensureParentDirectories = async (destination) => {

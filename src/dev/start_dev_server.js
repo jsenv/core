@@ -1,6 +1,6 @@
 import { parentPort } from "node:worker_threads"
 import {
-  assertAndNormalizeDirectoryUrl,
+  validateDirectoryUrl,
   registerDirectoryLifecycle,
 } from "@jsenv/filesystem"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
@@ -32,12 +32,10 @@ export const startDevServer = async ({
   handleSIGINT = true,
   logLevel = "info",
   serverLogLevel = "warn",
-  protocol = "http",
+  https,
   // it's better to use http1 by default because it allows to get statusText in devtools
   // which gives valuable information when there is errors
   http2 = false,
-  certificate,
-  privateKey,
   hostname,
   port = 3456,
   acceptAnyIp,
@@ -82,9 +80,26 @@ export const startDevServer = async ({
   // no real need to write files during github workflow
   // and mitigates https://github.com/actions/runner-images/issues/3885
   writeGeneratedFiles = !process.env.CI,
+  ...rest
 }) => {
+  // params type checking
+  {
+    const unexpectedParamNames = Object.keys(rest)
+    if (unexpectedParamNames.length > 0) {
+      throw new TypeError(
+        `${unexpectedParamNames.join(",")}: there is no such param`,
+      )
+    }
+    const rootDirectoryUrlValidation = validateDirectoryUrl(rootDirectoryUrl)
+    if (!rootDirectoryUrlValidation.valid) {
+      throw new TypeError(
+        `rootDirectoryUrl ${rootDirectoryUrlValidation.message}, got ${rootDirectoryUrl}`,
+      )
+    }
+    rootDirectoryUrl = rootDirectoryUrlValidation.value
+  }
+
   const logger = createLogger({ logLevel })
-  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
   const operation = Abort.startOperation()
   operation.addAbortSignal(signal)
   if (handleSIGINT) {
@@ -167,10 +182,8 @@ export const startDevServer = async ({
     logLevel: serverLogLevel,
     startLog: false,
 
-    protocol,
+    https,
     http2,
-    certificate,
-    privateKey,
     acceptAnyIp,
     hostname,
     port,
@@ -265,13 +278,13 @@ export const startDevServer = async ({
         sendErrorDetails: true,
       }),
     ],
-    onStop: (reason) => {
-      onStop()
-      serverStopCallbacks.forEach((serverStopCallback) => {
-        serverStopCallback(reason)
-      })
-      serverStopCallbacks.length = 0
-    },
+  })
+  server.stoppedPromise.then((reason) => {
+    onStop()
+    serverStopCallbacks.forEach((serverStopCallback) => {
+      serverStopCallback(reason)
+    })
+    serverStopCallbacks.length = 0
   })
   startDevServerTask.done()
   if (hostname) {

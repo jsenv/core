@@ -108,7 +108,7 @@ To avoid duplication some parameter are linked to a generic documentation.
 <details>
   <summary>status</summary>
 
-`status` is a string describing how the file execution went. The possible `status` are `"completed"`, `"errored"`, `"timedout"`, `"disconnected"`. The meaning of these status was already docummented in [How test is executed](../testing/readme.md#How-test-is-executed).
+`status` is a string describing how the file execution went. The possible `status` are `"completed"`, `"failed"`, `"timedout"`, `"disconnected"`. The meaning of these status was already docummented in [How test is executed](../testing/readme.md#How-test-is-executed).
 
 ```js
 import { execute } from "@jsenv/core"

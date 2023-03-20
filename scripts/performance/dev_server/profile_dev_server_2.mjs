@@ -31,11 +31,8 @@ await startServer({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   logLevel: "info",
-  protocol: "https",
   http2: true,
-  // http2: false,
-  certificate,
-  privateKey,
+  https: { certificate, privateKey },
   port: 6789,
   serverTiming: true,
   services: [

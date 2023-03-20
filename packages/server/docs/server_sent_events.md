@@ -15,7 +15,6 @@ setInterval(() => {
 }, 1000)
 
 startServer({
-  protocol: "https",
   port: 3456,
   services: [
     {

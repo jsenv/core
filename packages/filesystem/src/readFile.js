@@ -1,6 +1,6 @@
 import { readFile as readFileNode } from "node:fs"
 
-import { assertAndNormalizeFileUrl } from "./assertAndNormalizeFileUrl.js"
+import { assertAndNormalizeFileUrl } from "./file_url_validation.js"
 
 export const readFile = async (value, { as = "buffer" } = {}) => {
   const fileUrl = assertAndNormalizeFileUrl(value)

@@ -5,19 +5,21 @@ import { requestCertificate } from "@jsenv/https-local"
 import { assert } from "@jsenv/assert"
 import { readFile } from "@jsenv/filesystem"
 
-import { startServer, fetchFileSystem } from "@jsenv/server"
+import {
+  startServer,
+  fetchFileSystem,
+  jsenvServiceErrorHandler,
+} from "@jsenv/server"
 
 // certificates only generated on linux
 if (process.platform === "linux") {
   const { certificate, privateKey } = requestCertificate()
   const server = await startServer({
     logLevel: "warn",
-    protocol: "https",
     port: 3679,
     http2: true,
-    privateKey,
-    certificate,
-    sendErrorDetails: true,
+    https: { certificate, privateKey },
+
     keepProcessAlive: false,
     services: [
       {
@@ -36,6 +38,9 @@ if (process.platform === "linux") {
           )
         },
       },
+      jsenvServiceErrorHandler({
+        sendErrorDetails: true,
+      }),
     ],
   })
 

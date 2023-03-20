@@ -225,7 +225,7 @@ export const executePlan = async (
       total: executionSteps.length,
       aborted: 0,
       timedout: 0,
-      errored: 0,
+      failed: 0,
       completed: 0,
       done: 0,
     }
@@ -306,7 +306,7 @@ export const executePlan = async (
           })
         } else {
           executionResult = {
-            status: "errored",
+            status: "failed",
             errors: [
               new Error(
                 `No file at ${fileRelativeUrl} for execution "${executionName}"`,
@@ -336,8 +336,8 @@ export const executePlan = async (
           counters.aborted++
         } else if (executionResult.status === "timedout") {
           counters.timedout++
-        } else if (executionResult.status === "errored") {
-          counters.errored++
+        } else if (executionResult.status === "failed") {
+          counters.failed++
         } else if (executionResult.status === "completed") {
           counters.completed++
         }

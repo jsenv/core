@@ -4,7 +4,7 @@ import { urlToFileSystemPath, resolveUrl } from "@jsenv/urls"
 
 import { urlTargetsSameFileSystemPath } from "./internal/urlTargetsSameFileSystemPath.js"
 import { statsToType } from "./internal/statsToType.js"
-import { assertAndNormalizeFileUrl } from "./assertAndNormalizeFileUrl.js"
+import { assertAndNormalizeFileUrl } from "./file_url_validation.js"
 import { ensureParentDirectories } from "./ensureParentDirectories.js"
 import { removeEntry } from "./removeEntry.js"
 import { copyEntry } from "./copyEntry.js"

@@ -20,7 +20,6 @@ const deterministicStackTrace = `Error: test
 const generateInternalErrorHtmlFile = async (htmlFilename, serverParams) => {
   const { origin, stop } = await startServer({
     logLevel: "off",
-    protocol: "http",
     keepProcessAlive: false,
     ...serverParams,
   })

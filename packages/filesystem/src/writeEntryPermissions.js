@@ -1,7 +1,7 @@
 import { chmod } from "node:fs"
 
 import { permissionsToBinaryFlags } from "./internal/permissions.js"
-import { assertAndNormalizeFileUrl } from "./assertAndNormalizeFileUrl.js"
+import { assertAndNormalizeFileUrl } from "./file_url_validation.js"
 
 export const writeEntryPermissions = async (source, permissions) => {
   const sourceUrl = assertAndNormalizeFileUrl(source)

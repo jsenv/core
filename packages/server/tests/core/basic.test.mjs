@@ -7,7 +7,6 @@ import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js"
 {
   const server = await startServer({
     logLevel: "warn",
-    protocol: "http",
     keepProcessAlive: false,
     port: 8998,
     services: [

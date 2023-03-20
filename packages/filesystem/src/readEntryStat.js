@@ -6,7 +6,7 @@
 import { lstat, stat } from "node:fs"
 import { urlToFileSystemPath } from "@jsenv/urls"
 
-import { assertAndNormalizeFileUrl } from "./assertAndNormalizeFileUrl.js"
+import { assertAndNormalizeFileUrl } from "./file_url_validation.js"
 import { writeEntryPermissions } from "./writeEntryPermissions.js"
 
 const isWindows = process.platform === "win32"
