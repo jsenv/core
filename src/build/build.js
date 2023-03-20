@@ -28,7 +28,7 @@ import {
   urlToRelativeUrl,
 } from "@jsenv/urls"
 import {
-  assertAndNormalizeDirectoryUrl,
+  validateDirectoryUrl,
   ensureEmptyDirectory,
   writeFileSync,
   registerDirectoryLifecycle,
@@ -155,7 +155,32 @@ export const build = async ({
   writeGeneratedFiles = false,
   assetManifest = versioningMethod === "filename",
   assetManifestFileRelativeUrl = "asset-manifest.json",
+  ...rest
 }) => {
+  // param validation
+  {
+    const unexpectedParamNames = Object.keys(rest)
+    if (unexpectedParamNames.length > 0) {
+      throw new TypeError(
+        `${unexpectedParamNames.join(",")}: there is no such param`,
+      )
+    }
+    const rootDirectoryUrlValidation = validateDirectoryUrl(rootDirectoryUrl)
+    if (!rootDirectoryUrlValidation.valid) {
+      throw new TypeError(
+        `rootDirectoryUrl ${rootDirectoryUrlValidation.message}, got ${rootDirectoryUrl}`,
+      )
+    }
+    rootDirectoryUrl = rootDirectoryUrlValidation.value
+    const buildDirectoryUrlValidation = validateDirectoryUrl(buildDirectoryUrl)
+    if (!buildDirectoryUrlValidation.valid) {
+      throw new TypeError(
+        `buildDirectoryUrl ${buildDirectoryUrlValidation.message}, got ${buildDirectoryUrlValidation}`,
+      )
+    }
+    buildDirectoryUrl = buildDirectoryUrlValidation.value
+  }
+
   const operation = Abort.startOperation()
   operation.addAbortSignal(signal)
   if (handleSIGINT) {
@@ -169,8 +194,6 @@ export const build = async ({
     })
   }
 
-  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
-  buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl)
   assertEntryPoints({ entryPoints })
   if (!["filename", "search_param"].includes(versioningMethod)) {
     throw new Error(

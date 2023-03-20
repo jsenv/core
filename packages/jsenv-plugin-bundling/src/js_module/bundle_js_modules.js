@@ -27,9 +27,7 @@ export const bundleJsModules = async ({
     sourcemaps,
   } = context
   const {
-    vendorsChunk = true,
-    babelHelpersChunk = true,
-    customChunks = {},
+    chunks = {},
     include,
     preserveDynamicImport = false,
     strictExports = false,
@@ -40,35 +38,24 @@ export const bundleJsModules = async ({
   } = options
 
   const chunksAssociations = {
-    ...(vendorsChunk
-      ? {
-          vendors: {
-            "./**/node_modules/": true,
-            [newStylesheetClientFileUrl]: true,
-            [globalThisClientFileUrl]: true,
-            [regeneratorRuntimeClientFileUrl]: true,
-          },
-        }
-      : {}),
-    ...(babelHelpersChunk
-      ? {
-          babel_helpers: {
-            [babelHelperClientDirectoryUrl]: true,
-            [newStylesheetClientFileUrl]: true,
-            [globalThisClientFileUrl]: true,
-            [regeneratorRuntimeClientFileUrl]: true,
-            "./**/babel-plugin-transform-async-to-promises/helpers.mjs": true,
-          },
-        }
-      : {}),
-    ...customChunks,
+    vendors: {
+      "./**/node_modules/": true,
+      [newStylesheetClientFileUrl]: true,
+      [globalThisClientFileUrl]: true,
+      [regeneratorRuntimeClientFileUrl]: true,
+    },
+    babel_helpers: {
+      [babelHelperClientDirectoryUrl]: true,
+      [newStylesheetClientFileUrl]: true,
+      [globalThisClientFileUrl]: true,
+      [regeneratorRuntimeClientFileUrl]: true,
+      "./**/babel-plugin-transform-async-to-promises/helpers.mjs": true,
+    },
+    ...chunks,
   }
 
   let manualChunks
-  if (
-    typeof customChunks === "object" &&
-    Object.keys(chunksAssociations).length
-  ) {
+  if (Object.keys(chunksAssociations).length) {
     const associations = URL_META.resolveAssociations(
       chunksAssociations,
       rootDirectoryUrl,
