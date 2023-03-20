@@ -32,6 +32,7 @@ export const startDevServer = async ({
   handleSIGINT = true,
   logLevel = "info",
   serverLogLevel = "warn",
+  // serverMiddlewares = []
   protocol = "http",
   // it's better to use http1 by default because it allows to get statusText in devtools
   // which gives valuable information when there is errors
@@ -82,13 +83,22 @@ export const startDevServer = async ({
   // no real need to write files during github workflow
   // and mitigates https://github.com/actions/runner-images/issues/3885
   writeGeneratedFiles = !process.env.CI,
+  ...rest
 }) => {
   // params type checking
   {
+    const unexpectedParamNames = Object.keys(rest)
+    if (unexpectedParamNames.length > 0) {
+      throw new TypeError(
+        `${unexpectedParamNames.join(
+          ",",
+        )}: there is no such params to this function`,
+      )
+    }
     const rootDirectoryUrlValidation = validateDirectoryUrl(rootDirectoryUrl)
     if (!rootDirectoryUrlValidation.valid) {
       throw new TypeError(
-        `rootDirectoryUrl ${rootDirectoryUrlValidation.message}, got ${rootDirectoryUrl}`,
+        `rootDirectoryUrl is invalid, it ${rootDirectoryUrlValidation.message} (got ${rootDirectoryUrl})`,
       )
     }
     rootDirectoryUrl = rootDirectoryUrlValidation.value
