@@ -368,7 +368,7 @@
     </div>
     <script no-supervisor>
       // eslint-disable-next-line no-undef
-      const { rootDirectoryUrl, groups, files } = SERVER_PARAMS
+      const { sourceDirectoryUrl, groups, files } = SERVER_PARAMS
 
       const groupPreference = {
         has: () => localStorage.hasOwnProperty("explorer_active_group"),
@@ -395,9 +395,9 @@
       const fileListElement = document
         .querySelector(`[data-page="file-list"]`)
         .cloneNode(true)
-      const directoryName = directoryNameFromUrl(rootDirectoryUrl)
+      const directoryName = directoryNameFromUrl(sourceDirectoryUrl)
       const span = fileListElement.querySelector("#directory_relative_url")
-      span.title = rootDirectoryUrl
+      span.title = sourceDirectoryUrl
       span.textContent = directoryName
 
       const h4 = fileListElement.querySelector("h4")

@@ -19,7 +19,7 @@ window.__supervisor__ = (() => {
   }
 
   supervisor.setupReportException = ({
-    rootDirectoryUrl,
+    sourceDirectoryUrl,
     errorNotification,
     errorOverlay,
     errorBaseUrl,
@@ -259,7 +259,7 @@ window.__supervisor__ = (() => {
       if (urlObject.origin === window.origin) {
         urlObject = new URL(
           `${urlObject.pathname.slice(1)}${urlObject.search}`,
-          rootDirectoryUrl,
+          sourceDirectoryUrl,
         )
       }
       if (urlObject.href.startsWith("file:")) {
@@ -342,9 +342,9 @@ window.__supervisor__ = (() => {
             createLink: ({ url, line, column }) => {
               const urlSite = resolveUrlSite({ url, line, column })
               if (errorBaseUrl) {
-                if (urlSite.url.startsWith(rootDirectoryUrl)) {
+                if (urlSite.url.startsWith(sourceDirectoryUrl)) {
                   urlSite.url = `${errorBaseUrl}${urlSite.url.slice(
-                    rootDirectoryUrl.length,
+                    sourceDirectoryUrl.length,
                   )}`
                 } else {
                   urlSite.url = "file:///mocked_for_snapshots"
@@ -711,14 +711,14 @@ window.__supervisor__ = (() => {
   }
 
   supervisor.setup = ({
-    rootDirectoryUrl,
+    sourceDirectoryUrl,
     logs,
     errorOverlay,
     errorBaseUrl,
     openInEditor,
   }) => {
     supervisor.setupReportException({
-      rootDirectoryUrl,
+      sourceDirectoryUrl,
       errorOverlay,
       errorBaseUrl,
       openInEditor,

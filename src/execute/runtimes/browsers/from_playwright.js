@@ -30,7 +30,7 @@ export const createRuntimeFromPlaywright = ({
   runtime.run = async ({
     signal = new AbortController().signal,
     logger,
-    rootDirectoryUrl,
+    sourceDirectoryUrl,
     fileRelativeUrl,
     devServerOrigin,
 
@@ -145,7 +145,7 @@ export const createRuntimeFromPlaywright = ({
               const fsUrl = moveUrl({
                 url: v8CoveragesWithWebUrl.url,
                 from: `${devServerOrigin}/`,
-                to: rootDirectoryUrl,
+                to: sourceDirectoryUrl,
                 preferAbsolute: true,
               })
               return {
@@ -157,7 +157,7 @@ export const createRuntimeFromPlaywright = ({
           const coverage = await filterV8Coverage(
             { result: v8CoveragesWithFsUrls },
             {
-              rootDirectoryUrl,
+              sourceDirectoryUrl,
               coverageConfig,
             },
           )

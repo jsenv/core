@@ -100,7 +100,7 @@ export const jsenvPluginUrlResolution = ({
         return String(clientMainFileUrl)
       }
       if (reference.specifier[0] === "/") {
-        return new URL(reference.specifier.slice(1), context.rootDirectoryUrl)
+        return new URL(reference.specifier.slice(1), context.sourceDirectoryUrl)
           .href
       }
       if (reference.type === "sourcemap_comment") {

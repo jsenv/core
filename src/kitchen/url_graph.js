@@ -229,14 +229,14 @@ export const createUrlGraph = () => {
       })
       return data
     },
-    toJSON: (rootDirectoryUrl) => {
+    toJSON: (sourceDirectoryUrl) => {
       const data = {}
       urlInfoMap.forEach((urlInfo) => {
         const dependencyUrls = Array.from(urlInfo.dependencies)
         if (dependencyUrls.length) {
-          const relativeUrl = urlToRelativeUrl(urlInfo.url, rootDirectoryUrl)
+          const relativeUrl = urlToRelativeUrl(urlInfo.url, sourceDirectoryUrl)
           data[relativeUrl] = dependencyUrls.map((dependencyUrl) =>
-            urlToRelativeUrl(dependencyUrl, rootDirectoryUrl),
+            urlToRelativeUrl(dependencyUrl, sourceDirectoryUrl),
           )
         }
       })

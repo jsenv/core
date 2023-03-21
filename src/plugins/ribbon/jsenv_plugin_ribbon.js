@@ -8,7 +8,7 @@ import { URL_META } from "@jsenv/url-meta"
 import { asUrlWithoutSearch } from "@jsenv/urls"
 
 export const jsenvPluginRibbon = ({
-  rootDirectoryUrl,
+  sourceDirectoryUrl,
   htmlInclude = "/**/*.html",
 }) => {
   const ribbonClientFileUrl = new URL("./client/ribbon.js", import.meta.url)
@@ -18,7 +18,7 @@ export const jsenvPluginRibbon = ({
         [htmlInclude]: true,
       },
     },
-    rootDirectoryUrl,
+    sourceDirectoryUrl,
   )
   return {
     name: "jsenv:ribbon",

@@ -24,7 +24,7 @@ import {
 import { jsenvPluginRibbon } from "./ribbon/jsenv_plugin_ribbon.js"
 
 export const getCorePlugins = ({
-  rootDirectoryUrl,
+  sourceDirectoryUrl,
   runtimeCompat,
 
   urlAnalysis = {},
@@ -61,7 +61,7 @@ export const getCorePlugins = ({
   if (clientMainFileUrl === undefined) {
     clientMainFileUrl = explorer
       ? String(explorerHtmlFileUrl)
-      : String(new URL("./index.html", rootDirectoryUrl))
+      : String(new URL("./index.html", sourceDirectoryUrl))
   } else {
     clientMainFileUrl = String(clientMainFileUrl)
   }
@@ -71,7 +71,7 @@ export const getCorePlugins = ({
   }
 
   return [
-    jsenvPluginUrlAnalysis({ rootDirectoryUrl, ...urlAnalysis }),
+    jsenvPluginUrlAnalysis({ sourceDirectoryUrl, ...urlAnalysis }),
     jsenvPluginTranspilation(transpilation),
     ...(supervisor ? [jsenvPluginSupervisor(supervisor)] : []), // before inline as it turns inline <script> into <script src>
     jsenvPluginImportmap(),
@@ -109,6 +109,6 @@ export const getCorePlugins = ({
     ...(explorer
       ? [jsenvPluginExplorer({ ...explorer, clientMainFileUrl })]
       : []),
-    ...(ribbon ? [jsenvPluginRibbon({ rootDirectoryUrl, ...ribbon })] : []),
+    ...(ribbon ? [jsenvPluginRibbon({ sourceDirectoryUrl, ...ribbon })] : []),
   ]
 }

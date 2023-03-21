@@ -21,7 +21,7 @@ export const execute = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
   logLevel,
-  rootDirectoryUrl,
+  sourceDirectoryUrl,
   devServerOrigin,
 
   fileRelativeUrl,
@@ -39,7 +39,7 @@ export const execute = async ({
   ignoreError = false,
 }) => {
   const logger = createLogger({ logLevel })
-  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
+  sourceDirectoryUrl = assertAndNormalizeDirectoryUrl(sourceDirectoryUrl)
   const executeOperation = Abort.startOperation()
   executeOperation.addAbortSignal(signal)
   if (handleSIGINT) {
@@ -55,7 +55,7 @@ export const execute = async ({
 
   let resultTransformer = (result) => result
   runtimeParams = {
-    rootDirectoryUrl,
+    sourceDirectoryUrl,
     devServerOrigin,
     fileRelativeUrl,
     ...runtimeParams,

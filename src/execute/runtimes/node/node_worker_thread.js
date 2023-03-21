@@ -28,7 +28,7 @@ export const nodeWorkerThread = {
 nodeWorkerThread.run = async ({
   signal = new AbortController().signal,
   // logger,
-  rootDirectoryUrl,
+  sourceDirectoryUrl,
   fileRelativeUrl,
 
   keepRunning,
@@ -152,8 +152,8 @@ nodeWorkerThread.run = async ({
       data: {
         actionType: "execute-using-dynamic-import",
         actionParams: {
-          rootDirectoryUrl,
-          fileUrl: new URL(fileRelativeUrl, rootDirectoryUrl).href,
+          sourceDirectoryUrl,
+          fileUrl: new URL(fileRelativeUrl, sourceDirectoryUrl).href,
           collectPerformance,
           coverageEnabled,
           coverageConfig,

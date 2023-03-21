@@ -128,10 +128,10 @@ export const jsenvPluginFileUrls = ({
         if (!reference.generatedUrl.startsWith("file:")) {
           return null
         }
-        if (urlIsInsideOf(reference.generatedUrl, context.rootDirectoryUrl)) {
+        if (urlIsInsideOf(reference.generatedUrl, context.sourceDirectoryUrl)) {
           return `/${urlToRelativeUrl(
             reference.generatedUrl,
-            context.rootDirectoryUrl,
+            context.sourceDirectoryUrl,
           )}`
         }
         return `/@fs/${reference.generatedUrl.slice("file:///".length)}`

@@ -44,11 +44,7 @@ export const startDevServer = async ({
   onStop = () => {},
 
   rootDirectoryUrl,
-  clientFiles = {
-    "./src/": true,
-    "./tests/": true,
-    "./package.json": true,
-  },
+  sourceDirectoryPath = "src/",
   devServerFiles = {
     "./package.json": true,
     "./jsenv.config.mjs": true,
@@ -99,6 +95,7 @@ export const startDevServer = async ({
     rootDirectoryUrl = rootDirectoryUrlValidation.value
   }
 
+  const sourceDirectoryUrl = new URL(sourceDirectoryPath, rootDirectoryUrl).href
   const logger = createLogger({ logLevel })
   const operation = Abort.startOperation()
   operation.addAbortSignal(signal)
@@ -212,6 +209,7 @@ export const startDevServer = async ({
           contextCache,
 
           rootDirectoryUrl,
+          sourceDirectoryUrl,
           runtimeCompat,
 
           plugins,
@@ -221,7 +219,6 @@ export const startDevServer = async ({
           supervisor,
           transpilation,
           clientAutoreload,
-          clientFiles,
           clientMainFileUrl,
           cooldownBetweenFileEvents,
           explorer,
