@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-bundling",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -31,7 +31,7 @@
     "@jsenv/sourcemap": "1.0.9",
     "acorn-import-assertions": "1.8.0",
     "lightningcss": "1.19.0",
-    "rollup": "3.19.1"
+    "rollup": "3.20.0"
   },
   "peerDependencies": {
     "@jsenv/core": "*"

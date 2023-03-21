@@ -1,3 +1,8 @@
+# 2.1.0
+
+- Disable exports minification by rollup (it breaks inline content static analysis)
+- Update rollup to 3.20.0
+
 # 2.0.0
 
 - Remove `js_module.customChunks`
