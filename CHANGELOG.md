@@ -1,3 +1,9 @@
+# 31.0.2
+
+- Fix urls not versioned when minification + vendors chunk is used
+- Fix crash on failed test execution
+- Params check on startBuildServer
+
 # 31.0.0
 
 - Major update on dependencies

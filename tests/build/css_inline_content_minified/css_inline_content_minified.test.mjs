@@ -8,6 +8,7 @@ import {
   writeSnapshotsIntoDirectory,
 } from "@jsenv/core/tests/snapshots_directory.js"
 
+const jsenvSrcDirectoryUrl = new URL("../../../src/", import.meta.url)
 const { buildFileContents } = await build({
   logLevel: "warn",
   rootDirectoryUrl: new URL("./client/", import.meta.url),
@@ -25,7 +26,10 @@ const { buildFileContents } = await build({
     jsenvPluginBundling({
       js_module: {
         chunks: {
-          vendors: { "**/node_modules/": true },
+          vendors: {
+            "**/node_modules/": true,
+            [jsenvSrcDirectoryUrl]: true,
+          },
         },
       },
     }),
@@ -36,4 +40,4 @@ const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url)
 const expected = readSnapshotsFromDirectory(snapshotsDirectoryUrl)
 writeSnapshotsIntoDirectory(snapshotsDirectoryUrl, buildFileContents)
 const actual = buildFileContents
-// assert({ actual, expected })
+assert({ actual, expected })

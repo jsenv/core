@@ -1,0 +1,1 @@
+System.register([],(function(t,e){"use strict";return t("InlineContent",(function InlineContent(t,{type:e="text/plain"}){this.text=t,this.type=e})),{setters:[],execute:function(){}}}));

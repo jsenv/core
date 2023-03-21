@@ -23975,7 +23975,7 @@ const descriptionFormatters = {
   }) => {
     return ANSI.color(`${UNICODE.FAILURE_RAW} execution ${index + 1} of ${total} timeout after ${executionParams.allocatedMs}ms`, EXECUTION_COLORS.timedout);
   },
-  efailedrrored: ({
+  failed: ({
     index,
     total
   }) => {
