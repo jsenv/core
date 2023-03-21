@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "31.0.1",
+  "version": "31.1.2",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "author": {
@@ -113,6 +113,6 @@
     "eslint-plugin-import": "2.27.5",
     "eslint-plugin-react": "7.32.2",
     "playwright": "1.31.2",
-    "prettier": "2.8.4"
+    "prettier": "2.8.6"
   }
 }

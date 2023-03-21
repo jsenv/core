@@ -221,7 +221,7 @@ const descriptionFormatters = {
       EXECUTION_COLORS.timedout,
     )
   },
-  efailedrrored: ({ index, total }) => {
+  failed: ({ index, total }) => {
     return ANSI.color(
       `${UNICODE.FAILURE_RAW} execution ${index + 1} of ${total} failed`,
       EXECUTION_COLORS.failed,

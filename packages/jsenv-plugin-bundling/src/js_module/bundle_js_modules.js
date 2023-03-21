@@ -93,7 +93,11 @@ export const bundleJsModules = async ({
       },
       rollupOutput: {
         compact: context.minification,
-        minifyInternalExports: context.minification,
+        // cannot be enabled otherwise:
+        // - rollup rename InlineContent export into one letter export like "n"
+        // - inline content detection cannot detect new InlineContent() calls
+        // -> inline content is not detected, among other things url are not versioned
+        minifyInternalExports: false, // context.minification,
         generatedCode: {
           arrowFunctions: context.isSupportedOnCurrentClients("arrow_function"),
           constBindings: context.isSupportedOnCurrentClients("const_bindings"),

@@ -31,3 +31,4 @@ if (import.meta.hot) {
     })
   })
 }
+window.resolveReadyPromise()

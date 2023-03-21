@@ -17977,6 +17977,49 @@ const babelPluginMetadataImportMetaScenarios = () => {
   };
 };
 
+const replacePlaceholders = (urlInfo, replacements) => {
+  const content = urlInfo.content;
+  const magicSource = createMagicSource(content);
+  Object.keys(replacements).forEach(key => {
+    let index = content.indexOf(key);
+    while (index !== -1) {
+      const start = index;
+      const end = index + key.length;
+      magicSource.replace({
+        start,
+        end,
+        replacement: urlInfo.type === "js_classic" || urlInfo.type === "js_module" || urlInfo.type === "html" ? JSON.stringify(replacements[key], null, "  ") : replacements[key]
+      });
+      index = content.indexOf(key, end);
+    }
+  });
+  return magicSource.toContentAndSourcemap();
+};
+
+/*
+ * Source code can contain the following
+ * - __dev__
+ * - __build__
+ * A global will be injected with true/false when needed
+ */
+const jsenvPluginGlobalScenarios = () => {
+  const transformIfNeeded = (urlInfo, context) => {
+    return replacePlaceholders(urlInfo, {
+      __DEV__: context.dev,
+      __BUILD__: context.build
+    });
+  };
+  return {
+    name: "jsenv:global_scenario",
+    appliesDuring: "*",
+    transformUrlContent: {
+      js_classic: transformIfNeeded,
+      js_module: transformIfNeeded,
+      html: transformIfNeeded
+    }
+  };
+};
+
 const jsenvPluginCssTranspilation = () => {
   return {
     name: "jsenv:css_transpilation",
@@ -20267,6 +20310,7 @@ const getCorePlugins = ({
   clientFilesPruneCallbackList,
   explorer,
   cacheControl,
+  scenarioPlaceholders = true,
   ribbon = true
 } = {}) => {
   if (explorer === true) {
@@ -20309,7 +20353,7 @@ const getCorePlugins = ({
     runtimeCompat,
     clientMainFileUrl,
     urlResolution
-  }), jsenvPluginUrlVersion(), jsenvPluginCommonJsGlobals(), jsenvPluginImportMetaScenarios(), jsenvPluginNodeRuntime({
+  }), jsenvPluginUrlVersion(), jsenvPluginCommonJsGlobals(), jsenvPluginImportMetaScenarios(), ...(scenarioPlaceholders ? [jsenvPluginGlobalScenarios()] : []), jsenvPluginNodeRuntime({
     runtimeCompat
   }), jsenvPluginImportMetaHot(), ...(clientAutoreload ? [jsenvPluginAutoreload({
     ...clientAutoreload,
@@ -20719,6 +20763,7 @@ const build = async ({
   urlResolution,
   fileSystemMagicRedirection,
   directoryReferenceAllowed,
+  scenarioPlaceholders,
   transpilation = {},
   versioning = !runtimeCompat.node,
   versioningMethod = "search_param",
@@ -20861,7 +20906,8 @@ build ${entryPointKeys.length} entry points`);
           ...transpilation,
           babelHelpersAsImport: !useExplicitJsClassicConversion,
           jsClassicFallback: false
-        }
+        },
+        scenarioPlaceholders
       })],
       sourcemaps,
       sourcemapsSourcesContent,
@@ -23975,7 +24021,7 @@ const descriptionFormatters = {
   }) => {
     return ANSI.color(`${UNICODE.FAILURE_RAW} execution ${index + 1} of ${total} timeout after ${executionParams.allocatedMs}ms`, EXECUTION_COLORS.timedout);
   },
-  efailedrrored: ({
+  failed: ({
     index,
     total
   }) => {

@@ -7,6 +7,7 @@ import {
 } from "@jsenv/ast"
 
 export const injectGlobals = (urlInfo, globals) => {
+  if (Object.keys(globals).length === 0) return null
   if (urlInfo.type === "html") {
     return globalInjectorOnHtml(urlInfo, globals)
   }

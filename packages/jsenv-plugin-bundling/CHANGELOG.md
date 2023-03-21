@@ -9,9 +9,7 @@
   jsenvPluginBundling({
     js_module: {
       chunks: {
-        vendors: {
-          "./**/node_modules/": true,
-        },
+        vendors: { "./**/node_modules/": true },
       },
     },
   })
