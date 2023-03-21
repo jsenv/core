@@ -9225,7 +9225,13 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       } = urlInfo;
       if (generatedUrl && generatedUrl.startsWith("file:")) {
         if (urlInfo.type === "directory") ; else if (urlInfo.content === null) ; else {
-          writeFileSync(new URL(generatedUrl), urlInfo.content);
+          let contentIsInlined = urlInfo.isInline;
+          if (contentIsInlined && context.supervisor && urlGraph.getUrlInfo(urlInfo.inlineUrlSite.url).type === "html") {
+            contentIsInlined = false;
+          }
+          if (!contentIsInlined) {
+            writeFileSync(new URL(generatedUrl), urlInfo.content);
+          }
           const {
             sourcemapGeneratedUrl,
             sourcemap
@@ -22256,6 +22262,7 @@ const createFileService = ({
   logLevel,
   serverStopCallbacks,
   serverEventsDispatcher,
+  contextCache,
   rootDirectoryUrl,
   runtimeCompat,
   plugins,
@@ -22319,7 +22326,6 @@ const createFileService = ({
     }
   });
   serverStopCallbacks.push(stopWatchingClientFiles);
-  const contextCache = new Map();
   const getOrCreateContext = request => {
     const {
       runtimeName,
@@ -22380,6 +22386,7 @@ const createFileService = ({
         cacheControl,
         ribbon
       })],
+      supervisor,
       minification: false,
       sourcemaps,
       sourcemapsSourcesProtocol,
@@ -22849,6 +22856,7 @@ const startDevServer = async ({
   serverStopCallbacks.push(() => {
     serverEventsDispatcher.destroy();
   });
+  const contextCache = new Map();
   const server = await startServer({
     signal,
     stopOnExit: false,
@@ -22877,6 +22885,7 @@ const startDevServer = async ({
         logLevel,
         serverStopCallbacks,
         serverEventsDispatcher,
+        contextCache,
         rootDirectoryUrl,
         runtimeCompat,
         plugins,
@@ -22967,7 +22976,8 @@ const startDevServer = async ({
     origin: server.origin,
     stop: () => {
       server.stop();
-    }
+    },
+    contextCache
   };
 };
 
@@ -26153,30 +26163,46 @@ const startBuildServer = async ({
   },
   buildServerAutoreload = false,
   buildServerMainFile = getCallerPosition().url,
-  cooldownBetweenFileEvents
+  cooldownBetweenFileEvents,
+  ...rest
 }) => {
+  // params validation
+  {
+    const unexpectedParamNames = Object.keys(rest);
+    if (unexpectedParamNames.length > 0) {
+      throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param`);
+    }
+    const rootDirectoryUrlValidation = validateDirectoryUrl(rootDirectoryUrl);
+    if (!rootDirectoryUrlValidation.valid) {
+      throw new TypeError(`rootDirectoryUrl ${rootDirectoryUrlValidation.message}, got ${rootDirectoryUrl}`);
+    }
+    rootDirectoryUrl = rootDirectoryUrlValidation.value;
+    const buildDirectoryUrlValidation = validateDirectoryUrl(buildDirectoryUrl);
+    if (!buildDirectoryUrlValidation.valid) {
+      throw new TypeError(`buildDirectoryUrl ${buildDirectoryUrlValidation.message}, got ${buildDirectoryUrlValidation}`);
+    }
+    buildDirectoryUrl = buildDirectoryUrlValidation.value;
+    if (buildIndexPath) {
+      if (typeof buildIndexPath !== "string") {
+        throw new TypeError(`buildIndexPath must be a string, got ${buildIndexPath}`);
+      }
+      if (buildIndexPath[0] === "/") {
+        buildIndexPath = buildIndexPath.slice(1);
+      } else {
+        const buildIndexUrl = new URL(buildIndexPath, buildDirectoryUrl).href;
+        if (!buildIndexUrl.startsWith(buildDirectoryUrl)) {
+          throw new Error(`buildIndexPath must be relative, got ${buildIndexPath}`);
+        }
+        buildIndexPath = buildIndexUrl.slice(buildDirectoryUrl.length);
+      }
+      if (!existsSync(new URL(buildIndexPath, buildDirectoryUrl))) {
+        buildIndexPath = null;
+      }
+    }
+  }
   const logger = createLogger({
     logLevel
   });
-  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl);
-  buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl);
-  if (buildIndexPath) {
-    if (typeof buildIndexPath !== "string") {
-      throw new TypeError(`buildIndexPath must be a string, got ${buildIndexPath}`);
-    }
-    if (buildIndexPath[0] === "/") {
-      buildIndexPath = buildIndexPath.slice(1);
-    } else {
-      const buildIndexUrl = new URL(buildIndexPath, buildDirectoryUrl).href;
-      if (!buildIndexUrl.startsWith(buildDirectoryUrl)) {
-        throw new Error(`buildIndexPath must be relative, got ${buildIndexPath}`);
-      }
-      buildIndexPath = buildIndexUrl.slice(buildDirectoryUrl.length);
-    }
-    if (!existsSync(new URL(buildIndexPath, buildDirectoryUrl))) {
-      buildIndexPath = null;
-    }
-  }
   const operation = Abort.startOperation();
   operation.addAbortSignal(signal);
   if (handleSIGINT) {

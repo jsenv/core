@@ -13,7 +13,13 @@ await build({
   rootDirectoryUrl: new URL("../", import.meta.url),
   plugins: [
     jsenvPluginPreact(),
-    jsenvPluginBundling(),
+    jsenvPluginBundling({
+      js_module: {
+        chunks: {
+          vendors: { "**/node_modules/": true },
+        },
+      },
+    }),
     jsenvPluginMinification(),
   ],
   buildDirectoryUrl: new URL("../dist/", import.meta.url),

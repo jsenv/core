@@ -21,7 +21,7 @@
     "@babel/plugin-syntax-import-assertions": "7.20.0",
     "@babel/plugin-transform-react-jsx": "7.21.0",
     "@jsenv/assert": "2.8.1",
-    "@jsenv/core": "31.0.0",
+    "@jsenv/core": "31.0.1",
     "@jsenv/plugin-react": "1.2.9",
     "@jsenv/plugin-bundling": "2.0.0",
     "@jsenv/plugin-minification": "1.2.1",
@@ -31,8 +31,8 @@
     "eslint-plugin-html": "7.1.0",
     "eslint-plugin-import": "2.27.5",
     "eslint-plugin-react": "7.32.2",
-    "open": "8.4.2",
+    "open": "9.0.0",
     "playwright": "1.31.2",
-    "prettier": "2.8.4"
+    "prettier": "2.8.6"
   }
 }

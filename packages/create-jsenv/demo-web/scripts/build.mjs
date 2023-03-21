@@ -14,6 +14,15 @@ await build({
   entryPoints: {
     "./src/main.html": "index.html",
   },
-  plugins: [jsenvPluginBundling(), jsenvPluginMinification()],
+  plugins: [
+    jsenvPluginBundling({
+      js_module: {
+        chunks: {
+          vendors: { "**/node_modules/": true },
+        },
+      },
+    }),
+    jsenvPluginMinification(),
+  ],
   watch: process.argv.includes("--watch"),
 })
