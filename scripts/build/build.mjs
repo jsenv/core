@@ -31,6 +31,7 @@ await build({
       "**/node_modules/@jsenv/log/": true,
       "**/node_modules/@jsenv/node-esm-resolution/": true,
       "**/node_modules/@jsenv/server/": true,
+      "**/node_modules/@jsenv/plugin-placeholders/": true,
       "**/node_modules/@jsenv/sourcemap/": false, // cannot inline "source-map"
       "**/node_modules/@jsenv/uneval/": true,
       "**/node_modules/@jsenv/url-meta/": true,
