@@ -138,6 +138,7 @@ export const build = async ({
   urlResolution,
   fileSystemMagicRedirection,
   directoryReferenceAllowed,
+  scenarioPlaceholders,
   transpilation = {},
   versioning = !runtimeCompat.node,
   versioningMethod = "search_param", // "filename", "search_param"
@@ -316,6 +317,7 @@ build ${entryPointKeys.length} entry points`)
             babelHelpersAsImport: !useExplicitJsClassicConversion,
             jsClassicFallback: false,
           },
+          scenarioPlaceholders,
         }),
       ],
       sourcemaps,

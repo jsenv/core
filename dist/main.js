@@ -18005,8 +18005,8 @@ const replacePlaceholders = (urlInfo, replacements) => {
 const jsenvPluginGlobalScenarios = () => {
   const transformIfNeeded = (urlInfo, context) => {
     return replacePlaceholders(urlInfo, {
-      false: context.dev,
-      true: context.build
+      __DEV__: context.dev,
+      __BUILD__: context.build
     });
   };
   return {
@@ -20310,6 +20310,7 @@ const getCorePlugins = ({
   clientFilesPruneCallbackList,
   explorer,
   cacheControl,
+  scenarioPlaceholders = true,
   ribbon = true
 } = {}) => {
   if (explorer === true) {
@@ -20352,7 +20353,7 @@ const getCorePlugins = ({
     runtimeCompat,
     clientMainFileUrl,
     urlResolution
-  }), jsenvPluginUrlVersion(), jsenvPluginCommonJsGlobals(), jsenvPluginImportMetaScenarios(), jsenvPluginGlobalScenarios(), jsenvPluginNodeRuntime({
+  }), jsenvPluginUrlVersion(), jsenvPluginCommonJsGlobals(), jsenvPluginImportMetaScenarios(), ...(scenarioPlaceholders ? [jsenvPluginGlobalScenarios()] : []), jsenvPluginNodeRuntime({
     runtimeCompat
   }), jsenvPluginImportMetaHot(), ...(clientAutoreload ? [jsenvPluginAutoreload({
     ...clientAutoreload,
@@ -20762,6 +20763,7 @@ const build = async ({
   urlResolution,
   fileSystemMagicRedirection,
   directoryReferenceAllowed,
+  scenarioPlaceholders,
   transpilation = {},
   versioning = !runtimeCompat.node,
   versioningMethod = "search_param",
@@ -20904,7 +20906,8 @@ build ${entryPointKeys.length} entry points`);
           ...transpilation,
           babelHelpersAsImport: !useExplicitJsClassicConversion,
           jsClassicFallback: false
-        }
+        },
+        scenarioPlaceholders
       })],
       sourcemaps,
       sourcemapsSourcesContent,

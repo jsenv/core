@@ -40,6 +40,7 @@ export const getCorePlugins = ({
   clientFilesPruneCallbackList,
   explorer,
   cacheControl,
+  scenarioPlaceholders = true,
   ribbon = true,
 } = {}) => {
   if (explorer === true) {
@@ -90,7 +91,7 @@ export const getCorePlugins = ({
     jsenvPluginUrlVersion(),
     jsenvPluginCommonJsGlobals(),
     jsenvPluginImportMetaScenarios(),
-    jsenvPluginGlobalScenarios(),
+    ...(scenarioPlaceholders ? [jsenvPluginGlobalScenarios()] : []),
 
     jsenvPluginNodeRuntime({ runtimeCompat }),
 

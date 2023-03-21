@@ -17,6 +17,7 @@ await build({
     node: "16.14",
   },
   directoryReferenceAllowed: true,
+  scenarioPlaceholders: false,
   urlAnalysis: {
     include: {
       "**/*": true,
