@@ -1,4 +1,6 @@
+/* globals __DEV__, __BUILD__ */
+
 window.resolveResultPromise({
-  dev: window.__dev__,
-  build: window.__build__,
+  dev: __DEV__,
+  build: __BUILD__,
 })

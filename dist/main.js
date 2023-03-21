@@ -20,6 +20,7 @@ import { parseHtmlString, stringifyHtmlAst, getHtmlNodeAttribute, visitHtmlNodes
 import { createRequire } from "node:module";
 import babelParser from "@babel/parser";
 import { bundleJsModules } from "@jsenv/plugin-bundling";
+import { replacePlaceholders } from "@jsenv/plugin-placeholders";
 import v8, { takeCoverage } from "node:v8";
 import wrapAnsi from "wrap-ansi";
 import stripAnsi from "strip-ansi";
@@ -17977,6 +17978,30 @@ const babelPluginMetadataImportMetaScenarios = () => {
   };
 };
 
+/*
+ * Source code can contain the following
+ * - __dev__
+ * - __build__
+ * A global will be injected with true/false when needed
+ */
+const jsenvPluginGlobalScenarios = () => {
+  const transformIfNeeded = (urlInfo, context) => {
+    return replacePlaceholders(urlInfo, {
+      false: context.dev,
+      true: context.build
+    });
+  };
+  return {
+    name: "jsenv:global_scenario",
+    appliesDuring: "*",
+    transformUrlContent: {
+      js_classic: transformIfNeeded,
+      js_module: transformIfNeeded,
+      html: transformIfNeeded
+    }
+  };
+};
+
 const jsenvPluginCssTranspilation = () => {
   return {
     name: "jsenv:css_transpilation",
@@ -20309,7 +20334,7 @@ const getCorePlugins = ({
     runtimeCompat,
     clientMainFileUrl,
     urlResolution
-  }), jsenvPluginUrlVersion(), jsenvPluginCommonJsGlobals(), jsenvPluginImportMetaScenarios(), jsenvPluginNodeRuntime({
+  }), jsenvPluginUrlVersion(), jsenvPluginCommonJsGlobals(), jsenvPluginImportMetaScenarios(), jsenvPluginGlobalScenarios(), jsenvPluginNodeRuntime({
     runtimeCompat
   }), jsenvPluginImportMetaHot(), ...(clientAutoreload ? [jsenvPluginAutoreload({
     ...clientAutoreload,
