@@ -1,3 +1,7 @@
+# 31.2.0
+
+- Ensure webmanifest url is coherent during dev/build
+
 # 31.1.2
 
 - Code can use `__DEV__` and `__BUILD__` to know if code is executed during dev or after build
