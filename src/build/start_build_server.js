@@ -23,7 +23,7 @@ import {
   jsenvServiceErrorHandler,
 } from "@jsenv/server"
 import {
-  assertAndNormalizeDirectoryUrl,
+  validateDirectoryUrl,
   registerDirectoryLifecycle,
 } from "@jsenv/filesystem"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
@@ -62,32 +62,55 @@ export const startBuildServer = async ({
   buildServerAutoreload = false,
   buildServerMainFile = getCallerPosition().url,
   cooldownBetweenFileEvents,
+  ...rest
 }) => {
-  const logger = createLogger({ logLevel })
-  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
-  buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl)
-  if (buildIndexPath) {
-    if (typeof buildIndexPath !== "string") {
+  // params validation
+  {
+    const unexpectedParamNames = Object.keys(rest)
+    if (unexpectedParamNames.length > 0) {
       throw new TypeError(
-        `buildIndexPath must be a string, got ${buildIndexPath}`,
+        `${unexpectedParamNames.join(",")}: there is no such param`,
       )
     }
-    if (buildIndexPath[0] === "/") {
-      buildIndexPath = buildIndexPath.slice(1)
-    } else {
-      const buildIndexUrl = new URL(buildIndexPath, buildDirectoryUrl).href
-      if (!buildIndexUrl.startsWith(buildDirectoryUrl)) {
-        throw new Error(
-          `buildIndexPath must be relative, got ${buildIndexPath}`,
+    const rootDirectoryUrlValidation = validateDirectoryUrl(rootDirectoryUrl)
+    if (!rootDirectoryUrlValidation.valid) {
+      throw new TypeError(
+        `rootDirectoryUrl ${rootDirectoryUrlValidation.message}, got ${rootDirectoryUrl}`,
+      )
+    }
+    rootDirectoryUrl = rootDirectoryUrlValidation.value
+    const buildDirectoryUrlValidation = validateDirectoryUrl(buildDirectoryUrl)
+    if (!buildDirectoryUrlValidation.valid) {
+      throw new TypeError(
+        `buildDirectoryUrl ${buildDirectoryUrlValidation.message}, got ${buildDirectoryUrlValidation}`,
+      )
+    }
+    buildDirectoryUrl = buildDirectoryUrlValidation.value
+
+    if (buildIndexPath) {
+      if (typeof buildIndexPath !== "string") {
+        throw new TypeError(
+          `buildIndexPath must be a string, got ${buildIndexPath}`,
         )
       }
-      buildIndexPath = buildIndexUrl.slice(buildDirectoryUrl.length)
-    }
-    if (!existsSync(new URL(buildIndexPath, buildDirectoryUrl))) {
-      buildIndexPath = null
+      if (buildIndexPath[0] === "/") {
+        buildIndexPath = buildIndexPath.slice(1)
+      } else {
+        const buildIndexUrl = new URL(buildIndexPath, buildDirectoryUrl).href
+        if (!buildIndexUrl.startsWith(buildDirectoryUrl)) {
+          throw new Error(
+            `buildIndexPath must be relative, got ${buildIndexPath}`,
+          )
+        }
+        buildIndexPath = buildIndexUrl.slice(buildDirectoryUrl.length)
+      }
+      if (!existsSync(new URL(buildIndexPath, buildDirectoryUrl))) {
+        buildIndexPath = null
+      }
     }
   }
 
+  const logger = createLogger({ logLevel })
   const operation = Abort.startOperation()
   operation.addAbortSignal(signal)
   if (handleSIGINT) {
