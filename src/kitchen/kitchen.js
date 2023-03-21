@@ -673,7 +673,17 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           // (error hapenning before urlInfo.content can be set, or 404 for instance)
           // in that case we can't write anything
         } else {
-          writeFileSync(new URL(generatedUrl), urlInfo.content)
+          let contentIsInlined = urlInfo.isInline
+          if (
+            contentIsInlined &&
+            context.supervisor &&
+            urlGraph.getUrlInfo(urlInfo.inlineUrlSite.url).type === "html"
+          ) {
+            contentIsInlined = false
+          }
+          if (!contentIsInlined) {
+            writeFileSync(new URL(generatedUrl), urlInfo.content)
+          }
           const { sourcemapGeneratedUrl, sourcemap } = urlInfo
           if (sourcemapGeneratedUrl && sourcemap) {
             writeFileSync(

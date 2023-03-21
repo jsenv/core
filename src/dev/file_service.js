@@ -20,6 +20,7 @@ export const createFileService = ({
   logLevel,
   serverStopCallbacks,
   serverEventsDispatcher,
+  contextCache,
 
   rootDirectoryUrl,
   runtimeCompat,
@@ -82,7 +83,6 @@ export const createFileService = ({
   })
   serverStopCallbacks.push(stopWatchingClientFiles)
 
-  const contextCache = new Map()
   const getOrCreateContext = (request) => {
     const { runtimeName, runtimeVersion } = parseUserAgentHeader(
       request.headers["user-agent"],
@@ -150,6 +150,7 @@ export const createFileService = ({
           ribbon,
         }),
       ],
+      supervisor,
       minification: false,
       sourcemaps,
       sourcemapsSourcesProtocol,

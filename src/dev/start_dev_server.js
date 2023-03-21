@@ -173,6 +173,7 @@ export const startDevServer = async ({
   serverStopCallbacks.push(() => {
     serverEventsDispatcher.destroy()
   })
+  const contextCache = new Map()
   const server = await startServer({
     signal,
     stopOnExit: false,
@@ -208,6 +209,7 @@ export const startDevServer = async ({
           logLevel,
           serverStopCallbacks,
           serverEventsDispatcher,
+          contextCache,
 
           rootDirectoryUrl,
           runtimeCompat,
@@ -304,5 +306,6 @@ export const startDevServer = async ({
     stop: () => {
       server.stop()
     },
+    contextCache,
   }
 }

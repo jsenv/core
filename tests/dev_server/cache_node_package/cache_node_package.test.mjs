@@ -9,6 +9,10 @@ import { assert } from "@jsenv/assert"
 
 import { startDevServer } from "@jsenv/core"
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js"
+import {
+  readSnapshotsFromDirectory,
+  writeSnapshotsIntoDirectory,
+} from "@jsenv/core/tests/snapshots_directory.js"
 
 const debug = false // true to have browser UI + keep it open after test
 const fooPackageFileUrl = new URL(
@@ -43,6 +47,7 @@ const devServer = await startDevServer({
       },
     },
   ],
+  ribbon: false,
   clientAutoreload: false,
   supervisor: false,
 })
@@ -53,9 +58,7 @@ try {
   const getResult = async () => {
     const result = await page.evaluate(
       /* eslint-disable no-undef */
-      () => {
-        return window.resultPromise
-      },
+      () => window.resultPromise,
       /* eslint-enable no-undef */
     )
     return result
@@ -65,12 +68,23 @@ try {
       return request.pathname.startsWith("/node_modules/foo/")
     })
   }
+  const takeDevFilesSnapshot = (name) => {
+    const runtimeId = Array.from(devServer.contextCache.keys())[0]
+    const devFileContents = readSnapshotsFromDirectory(
+      new URL(`./client/.jsenv/${runtimeId}/`, import.meta.url),
+    )
+    writeSnapshotsIntoDirectory(
+      new URL(`./snapshots/${name}/`, import.meta.url),
+      devFileContents,
+    )
+  }
 
   {
     const actual = {
       result: await getResult(),
       serverRequestedForFoo: getServerRequestedForFoo(),
     }
+    takeDevFilesSnapshot("1_first_run")
     const expected = {
       result: 42,
       serverRequestedForFoo: true,
@@ -116,6 +130,7 @@ try {
       result: await getResult(),
       serverRequestedForFoo: getServerRequestedForFoo(),
     }
+    takeDevFilesSnapshot("2_after_package_update")
     const expected = {
       result: 43,
       serverRequestedForFoo: true,
