@@ -1,5 +1,7 @@
-# 31.0.2
+# 31.1.0
 
+- Code can use `__DEV__` and `__BUILD__` to know if code is executed during dev or after build
+  This is complementary to `import.meta.dev/build` for js_classic and workers
 - Fix urls not versioned when minification + vendors chunk is used
 - Fix crash on failed test execution
 - Params check on startBuildServer
