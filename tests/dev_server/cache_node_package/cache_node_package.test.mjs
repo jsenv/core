@@ -50,6 +50,7 @@ const devServer = await startDevServer({
   ribbon: false,
   clientAutoreload: false,
   supervisor: false,
+  writeGeneratedFiles: true,
 })
 const browser = await chromium.launch({ headless: !debug })
 try {
