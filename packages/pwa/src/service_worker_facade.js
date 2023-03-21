@@ -15,7 +15,7 @@ import {
 import { createServiceWorkerHotReplacer } from "./internal/service_worker_hot_replacement.js"
 
 export const createServiceWorkerFacade = ({
-  scope = "/",
+  scope,
   autoclaimOnFirstActivation = false,
 } = {}) => {
   let fromInspectPromise = null
