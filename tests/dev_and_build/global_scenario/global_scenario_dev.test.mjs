@@ -6,8 +6,7 @@ import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
 const test = async (params) => {
   const devServer = await startDevServer({
     logLevel: "warn",
-    rootDirectoryUrl: new URL("./", import.meta.url),
-    sourceDirectoryPath: "client/",
+    sourceDirectoryUrl: new URL("client/", import.meta.url),
     keepProcessAlive: false,
     ...params,
   })
@@ -17,17 +16,12 @@ const test = async (params) => {
     pageFunction: () => window.resultPromise,
     /* eslint-enable no-undef */
   })
-  return { returnValue, server: devServer }
-}
-
-const { returnValue } = await test()
-const actual = {
-  returnValue,
-}
-const expected = {
-  returnValue: {
+  const actual = returnValue
+  const expected = {
     dev: true,
     build: false,
-  },
+  }
+  assert({ actual, expected })
 }
-assert({ actual, expected })
+
+await test()

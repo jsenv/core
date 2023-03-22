@@ -97,10 +97,11 @@ export const defaultRuntimeCompat = {
  * @param {Object} buildParameters
  * @param {string|url} buildParameters.sourceDirectoryUrl
  *        Directory containing source files
+ * @param {object} buildParameters.entryPoints
+ *        Object where keys are paths to source files and values are their future name in the build directory.
+ *        Keys are relative to sourceDirectoryUrl
  * @param {string|url} buildParameters.buildDirectoryUrl
  *        Directory where optimized files will be written
- * @param {object} buildParameters.entryPoints
- *        Describe entry point paths and control their names in the build directory
  * @param {object} buildParameters.runtimeCompat
  *        Code generated will be compatible with these runtimes
  * @param {string} [buildParameters.assetsDirectory=""]
@@ -126,9 +127,9 @@ export const build = async ({
   handleSIGINT = true,
   logLevel = "info",
   sourceDirectoryUrl,
+  entryPoints = {},
   buildDirectoryUrl,
   assetsDirectory = "",
-  entryPoints = {},
 
   runtimeCompat = defaultRuntimeCompat,
   base = runtimeCompat.node ? "./" : "/",
@@ -173,6 +174,30 @@ export const build = async ({
       )
     }
     sourceDirectoryUrl = sourceDirectoryUrlValidation.value
+
+    if (typeof entryPoints !== "object" || entryPoints === null) {
+      throw new TypeError(`entryPoints must be an object, got ${entryPoints}`)
+    }
+    const keys = Object.keys(entryPoints)
+    keys.forEach((key) => {
+      if (!key.startsWith("./")) {
+        throw new TypeError(
+          `entryPoints keys must start with "./", found ${key}`,
+        )
+      }
+      const value = entryPoints[key]
+      if (typeof value !== "string") {
+        throw new TypeError(
+          `entryPoints values must be strings, found "${value}" on key "${key}"`,
+        )
+      }
+      if (value.includes("/")) {
+        throw new TypeError(
+          `entryPoints values must be plain strings (no "/"), found "${value}" on key "${key}"`,
+        )
+      }
+    })
+
     const buildDirectoryUrlValidation = validateDirectoryUrl(buildDirectoryUrl)
     if (!buildDirectoryUrlValidation.valid) {
       throw new TypeError(
@@ -180,6 +205,12 @@ export const build = async ({
       )
     }
     buildDirectoryUrl = buildDirectoryUrlValidation.value
+
+    if (!["filename", "search_param"].includes(versioningMethod)) {
+      throw new TypeError(
+        `versioningMethod must be "filename" or "search_param", got ${versioning}`,
+      )
+    }
   }
 
   const operation = Abort.startOperation()
@@ -195,12 +226,6 @@ export const build = async ({
     })
   }
 
-  assertEntryPoints({ entryPoints })
-  if (!["filename", "search_param"].includes(versioningMethod)) {
-    throw new Error(
-      `Unexpected "versioningMethod": must be "filename", "search_param"; got ${versioning}`,
-    )
-  }
   if (assetsDirectory && assetsDirectory[assetsDirectory.length - 1] !== "/") {
     assetsDirectory = `${assetsDirectory}/`
   }
@@ -1747,31 +1772,6 @@ const injectVersionIntoBuildUrl = ({ buildUrl, version, versioningMethod }) => {
   const versionedFilename = `${basename}-${version}${extension}`
   const versionedUrl = setUrlFilename(buildUrl, versionedFilename)
   return versionedUrl
-}
-
-const assertEntryPoints = ({ entryPoints }) => {
-  if (typeof entryPoints !== "object" || entryPoints === null) {
-    throw new TypeError(`entryPoints must be an object, got ${entryPoints}`)
-  }
-  const keys = Object.keys(entryPoints)
-  keys.forEach((key) => {
-    if (!key.startsWith("./")) {
-      throw new TypeError(
-        `unexpected key in entryPoints, all keys must start with ./ but found ${key}`,
-      )
-    }
-    const value = entryPoints[key]
-    if (typeof value !== "string") {
-      throw new TypeError(
-        `unexpected value in entryPoints, all values must be strings found ${value} for key ${key}`,
-      )
-    }
-    if (value.includes("/")) {
-      throw new TypeError(
-        `unexpected value in entryPoints, all values must be plain strings (no "/") but found ${value} for key ${key}`,
-      )
-    }
-  })
 }
 
 const isUsed = (urlInfo) => {
