@@ -17,7 +17,7 @@ try {
     sourceDirectoryUrl: new URL("../", import.meta.url),
     devServerOrigin,
     testPlan: {
-      "./tests/**/*.test.html": {
+      "./**/*.test.html": {
         chromium: {
           runtime: chromium,
         },
