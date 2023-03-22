@@ -1,7 +1,7 @@
 import { executeTestPlan, nodeChildProcess } from "@jsenv/core"
 
 await executeTestPlan({
-  roottDirectoryUrl: new URL("./", import.meta.url),
+  sourceDirectoryUrl: new URL("./", import.meta.url),
   logLevel: "info",
   testPlan: {
     "*.spec.js": {
