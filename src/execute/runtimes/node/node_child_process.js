@@ -28,7 +28,7 @@ nodeChildProcess.run = async ({
   signal = new AbortController().signal,
   logger,
   logProcessCommand = false,
-  sourceDirectoryUrl,
+  rootDirectoryUrl,
   fileRelativeUrl,
 
   keepRunning,
@@ -200,8 +200,8 @@ nodeChildProcess.run = async ({
       data: {
         actionType: "execute-using-dynamic-import",
         actionParams: {
-          sourceDirectoryUrl,
-          fileUrl: new URL(fileRelativeUrl, sourceDirectoryUrl).href,
+          rootDirectoryUrl,
+          fileUrl: new URL(fileRelativeUrl, rootDirectoryUrl).href,
           collectPerformance,
           coverageEnabled,
           coverageConfig,
