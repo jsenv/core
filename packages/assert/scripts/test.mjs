@@ -19,12 +19,12 @@ try {
     sourceDirectoryUrl: new URL("../", import.meta.url),
     devServerOrigin,
     testPlan: {
-      "tests/**/*.test.mjs": {
+      "**/*.test.mjs": {
         node: {
           runtime: nodeWorkerThread,
         },
       },
-      "tests/**/*.test.html": {
+      "**/*.test.html": {
         chromium: {
           runtime: chromium,
           allocatedMs: 90_000,
