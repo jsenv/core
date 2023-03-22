@@ -13,13 +13,9 @@ const htmlFileContent = {
 }
 const devServer = await startDevServer({
   logLevel: "warn",
-  rootDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
   clientAutoreload: false,
-  clientFiles: {
-    "./**": true,
-    "./**/.*/": false,
-  },
   supervisor: true,
 })
 const browser = await chromium.launch({ headless: true })
@@ -33,9 +29,7 @@ try {
   const getResult = async () => {
     const result = await page.evaluate(
       /* eslint-disable no-undef */
-      () => {
-        return window.resultPromise
-      },
+      () => window.resultPromise,
       /* eslint-enable no-undef */
     )
     return result

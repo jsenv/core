@@ -11,7 +11,7 @@ import { startDevServer } from "@jsenv/core"
 const devServer = await startDevServer({
   logLevel: "off",
   serverLogLevel: "off",
-  rootDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
   plugins: [
     {
@@ -36,17 +36,13 @@ try {
   await pageUnrelated.goto(`${devServer.origin}/unrelated.html`)
   await pageUnrelated.evaluate(
     /* eslint-disable no-undef */
-    () => {
-      return window.resultPromise
-    },
+    () => window.resultPromise,
     /* eslint-enable no-undef */
   )
   const getErrorOverlayDisplayedOnPage = async (page) => {
     const errorOverlayHandle = await page.evaluate(
       /* eslint-disable no-undef */
-      () => {
-        return document.querySelector("jsenv-error-overlay")
-      },
+      () => document.querySelector("jsenv-error-overlay"),
       /* eslint-enable no-undef */
     )
     return Boolean(errorOverlayHandle)

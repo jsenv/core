@@ -14,11 +14,11 @@ const test = async (params) => {
   warnCalls.length = 0
   await build({
     logLevel: "warn",
-    rootDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
+    sourceDirectoryUrl: new URL("./client/", import.meta.url),
     entryPoints: {
       "./main.html": "main.html",
     },
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     plugins: [jsenvPluginBundling()],
     writeGeneratedFiles: true,
     ...params,
@@ -29,9 +29,7 @@ const test = async (params) => {
   const { returnValue, pageLogs } = await executeInChromium({
     url: `${server.origin}/main.html`,
     /* eslint-disable no-undef */
-    pageFunction: async () => {
-      return window.resultPromise
-    },
+    pageFunction: () => window.resultPromise,
     /* eslint-enable no-undef */
   })
   const actual = {

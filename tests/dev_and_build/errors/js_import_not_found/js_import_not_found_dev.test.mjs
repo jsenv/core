@@ -12,7 +12,7 @@ try {
   const devServer = await startDevServer({
     logLevel: "warn",
     serverLogLevel: "warn",
-    rootDirectoryUrl: new URL("./client/", import.meta.url),
+    sourceDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
     devServerAutoreload: false,
     port: 0,
@@ -22,9 +22,7 @@ try {
     collectConsole: true,
     collectErrors: true,
     /* eslint-disable no-undef */
-    pageFunction: async () => {
-      return window.__supervisor__.getDocumentExecutionResult()
-    },
+    pageFunction: () => window.__supervisor__.getDocumentExecutionResult(),
     /* eslint-enable no-undef */
   })
 

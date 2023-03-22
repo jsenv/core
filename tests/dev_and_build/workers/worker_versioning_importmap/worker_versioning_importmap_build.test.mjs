@@ -16,11 +16,11 @@ import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
 const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
   const { buildFileContents } = await build({
     logLevel: "warn",
-    rootDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
+    sourceDirectoryUrl: new URL("./client/", import.meta.url),
     entryPoints: {
       "./main.html": "main.html",
     },
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     writeGeneratedFiles: true,
     ...rest,
   })

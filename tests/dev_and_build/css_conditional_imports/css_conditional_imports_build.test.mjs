@@ -9,11 +9,11 @@ import {
 const test = async (params) => {
   const { buildFileContents } = await build({
     logLevel: "warn",
-    rootDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
+    sourceDirectoryUrl: new URL("./client/", import.meta.url),
     entryPoints: {
       "./main.css": "main.css",
     },
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     writeGeneratedFiles: true,
     ...params,
   })

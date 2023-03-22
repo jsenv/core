@@ -2,7 +2,7 @@ import { startDevServer } from "@jsenv/core"
 
 startDevServer({
   logLevel: "info",
-  rootDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl: new URL("./client/", import.meta.url),
   clientAutoreload: true,
   clientFiles: {
     "./*/**": true,

@@ -10,7 +10,7 @@ import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js"
 
 const devServer = await startDevServer({
   logLevel: "warn",
-  rootDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
 })
 
@@ -21,9 +21,7 @@ const test = async ({ browserLauncher }) => {
     await page.goto(`${devServer.origin}/main.html`)
     const result = await page.evaluate(
       /* eslint-disable no-undef */
-      () => {
-        return window.resultPromise
-      },
+      () => window.resultPromise,
       /* eslint-enable no-undef */
     )
     // this should be the order found in each browser

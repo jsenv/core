@@ -7,7 +7,7 @@ import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js"
 const debug = false // true to have browser UI + keep it open after test
 const devServer = await startDevServer({
   logLevel: "warn",
-  rootDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
   clientAutoreload: false,
   supervisor: false,
@@ -20,9 +20,7 @@ try {
   {
     const actual = await page.evaluate(
       /* eslint-disable no-undef */
-      () => {
-        return window.askPromise
-      },
+      () => window.askPromise,
       /* eslint-enable no-undef */
     )
     const expected = 42
