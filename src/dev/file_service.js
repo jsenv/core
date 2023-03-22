@@ -48,6 +48,7 @@ export const createFileService = ({
     })
   }
   const watchPatterns = {
+    "**/*": true,
     ".jsenv/": false,
   }
   const stopWatchingClientFiles = registerDirectoryLifecycle(
