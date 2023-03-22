@@ -4,13 +4,13 @@ import { executeTestPlan, chromium, startDevServer } from "@jsenv/core"
 
 const devServer = await startDevServer({
   logLevel: "warn",
-  rootDirectoryUrl: new URL("./", import.meta.url),
+  sourceDirectoryUrl: new URL("./", import.meta.url),
   keepProcessAlive: false,
   port: 0,
 })
 const { testPlanCoverage } = await executeTestPlan({
   logLevel: "warn",
-  rootDirectoryUrl: new URL("./", import.meta.url),
+  sourceDirectoryUrl: new URL("./", import.meta.url),
   devServerOrigin: devServer.origin,
   testPlan: {
     "./main.html": {

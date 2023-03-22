@@ -32,7 +32,7 @@ export const executePlan = async (
     logFileRelativeUrl,
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
-    rootDirectoryUrl,
+    sourceDirectoryUrl,
     devServerOrigin,
 
     keepRunning,
@@ -106,7 +106,7 @@ export const executePlan = async (
   try {
     const coverageTempDirectoryUrl = new URL(
       coverageTempDirectoryRelativeUrl,
-      rootDirectoryUrl,
+      sourceDirectoryUrl,
     ).href
     if (
       someNodeRuntime &&
@@ -152,7 +152,7 @@ export const executePlan = async (
           const planCoverage = await reportToCoverage(report, {
             signal: multipleExecutionsOperation.signal,
             logger,
-            rootDirectoryUrl,
+            rootDirectoryUrl: sourceDirectoryUrl,
             coverageConfig,
             coverageIncludeMissing,
             coverageMethodForBrowsers,
@@ -169,7 +169,7 @@ export const executePlan = async (
     }
 
     let runtimeParams = {
-      rootDirectoryUrl,
+      rootDirectoryUrl: sourceDirectoryUrl,
       devServerOrigin,
       coverageEnabled,
       coverageConfig,
@@ -195,7 +195,7 @@ export const executePlan = async (
     const executionSteps = await getExecutionAsSteps({
       plan,
       multipleExecutionsOperation,
-      rootDirectoryUrl,
+      rootDirectoryUrl: sourceDirectoryUrl,
     })
     logger.debug(`${executionSteps.length} executions planned`)
     if (completedExecutionLogMerging && !process.stdout.isTTY) {
@@ -286,7 +286,7 @@ export const executePlan = async (
         }
         beforeExecutionCallback(beforeExecutionInfo)
 
-        const fileUrl = `${rootDirectoryUrl}${fileRelativeUrl}`
+        const fileUrl = `${sourceDirectoryUrl}${fileRelativeUrl}`
         let executionResult
         if (existsSync(new URL(fileUrl))) {
           executionResult = await run({
@@ -412,7 +412,7 @@ export const executePlan = async (
       logger.info(summaryLog)
     }
     if (summary.counters.total !== summary.counters.completed) {
-      const logFileUrl = new URL(logFileRelativeUrl, rootDirectoryUrl).href
+      const logFileUrl = new URL(logFileRelativeUrl, sourceDirectoryUrl).href
       writeFileSync(logFileUrl, rawOutput)
       logger.info(`-> ${urlToFileSystemPath(logFileUrl)}`)
     }

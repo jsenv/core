@@ -9,7 +9,7 @@ import {
 const test = async (params) => {
   const { testPlanCoverage } = await executeTestPlan({
     logLevel: "warn",
-    rootDirectoryUrl: new URL("./", import.meta.url),
+    sourceDirectoryUrl: new URL("./", import.meta.url),
     testPlan: {
       "./node_client/main.js": {
         node: {

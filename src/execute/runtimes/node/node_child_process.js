@@ -99,7 +99,6 @@ nodeChildProcess.run = async ({
   })
   logger.debug(
     createDetailedMessage(`child process forked (pid ${childProcess.pid})`, {
-      "execArgv": execArgv.join(`\n`),
       "custom env": JSON.stringify(env, null, "  "),
     }),
   )

@@ -16,7 +16,7 @@ import { executePlan } from "./execute_plan.js"
 /**
  * Execute a list of files and log how it goes.
  * @param {Object} testPlanParameters
- * @param {string|url} testPlanParameters.rootDirectoryUrl Root directory of the project
+ * @param {string|url} testPlanParameters.sourceDirectoryUrl Directory containing source and test files
  * @param {string|url} [testPlanParameters.serverOrigin=undefined] Jsenv dev server origin; required when executing test on browsers
  * @param {Object} testPlanParameters.testPlan Object associating patterns leading to files to runtimes where they should be executed
  * @param {boolean} [testPlanParameters.completedExecutionLogAbbreviation=false] Abbreviate completed execution information to shorten terminal output
@@ -43,7 +43,7 @@ export const executeTestPlan = async ({
   logFileRelativeUrl = ".jsenv/test_plan_debug.txt",
   completedExecutionLogAbbreviation = false,
   completedExecutionLogMerging = false,
-  rootDirectoryUrl,
+  sourceDirectoryUrl,
   devServerOrigin,
 
   testPlan,
@@ -89,13 +89,14 @@ export const executeTestPlan = async ({
         `${unexpectedParamNames.join(",")}: there is no such param`,
       )
     }
-    const rootDirectoryUrlValidation = validateDirectoryUrl(rootDirectoryUrl)
-    if (!rootDirectoryUrlValidation.valid) {
+    const sourceDirectoryUrlValidation =
+      validateDirectoryUrl(sourceDirectoryUrl)
+    if (!sourceDirectoryUrlValidation.valid) {
       throw new TypeError(
-        `rootDirectoryUrl ${rootDirectoryUrlValidation.message}, got ${rootDirectoryUrl}`,
+        `sourceDirectoryUrl ${sourceDirectoryUrlValidation.message}, got ${sourceDirectoryUrl}`,
       )
     }
-    rootDirectoryUrl = rootDirectoryUrlValidation.value
+    sourceDirectoryUrl = sourceDirectoryUrlValidation.value
     if (typeof testPlan !== "object") {
       throw new Error(`testPlan must be an object, got ${testPlan}`)
     }
@@ -158,7 +159,7 @@ export const executeTestPlan = async ({
     logFileRelativeUrl,
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
-    rootDirectoryUrl,
+    sourceDirectoryUrl,
     devServerOrigin,
 
     maxExecutionsInParallel,
@@ -192,11 +193,11 @@ export const executeTestPlan = async ({
     if (coverageEnabled && coverageReportHtmlDirectory) {
       const coverageHtmlDirectoryUrl = resolveDirectoryUrl(
         coverageReportHtmlDirectory,
-        rootDirectoryUrl,
+        sourceDirectoryUrl,
       )
-      if (!urlIsInsideOf(coverageHtmlDirectoryUrl, rootDirectoryUrl)) {
+      if (!urlIsInsideOf(coverageHtmlDirectoryUrl, sourceDirectoryUrl)) {
         throw new Error(
-          `coverageReportHtmlDirectory must be inside rootDirectoryUrl`,
+          `coverageReportHtmlDirectory must be inside sourceDirectoryUrl`,
         )
       }
       await ensureEmptyDirectory(coverageHtmlDirectoryUrl)
@@ -206,10 +207,10 @@ export const executeTestPlan = async ({
       )
       promises.push(
         generateCoverageHtmlDirectory(planCoverage, {
-          rootDirectoryUrl,
+          rootDirectoryUrl: sourceDirectoryUrl,
           coverageHtmlDirectoryRelativeUrl: urlToRelativeUrl(
             coverageHtmlDirectoryUrl,
-            rootDirectoryUrl,
+            sourceDirectoryUrl,
           ),
           coverageReportSkipEmpty,
           coverageReportSkipFull,
@@ -219,7 +220,7 @@ export const executeTestPlan = async ({
     if (coverageEnabled && coverageReportJsonFile) {
       const coverageJsonFileUrl = new URL(
         coverageReportJsonFile,
-        rootDirectoryUrl,
+        sourceDirectoryUrl,
       ).href
       promises.push(
         generateCoverageJsonFile({

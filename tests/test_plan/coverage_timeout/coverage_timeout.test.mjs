@@ -16,7 +16,7 @@ const testPlan = {
 }
 const { testPlanCoverage } = await executeTestPlan({
   logLevel: "error",
-  rootDirectoryUrl: new URL("./", import.meta.url),
+  sourceDirectoryUrl: new URL("./", import.meta.url),
   testPlan,
   coverageEnabled: true,
   coverageAndExecutionAllowed: true,

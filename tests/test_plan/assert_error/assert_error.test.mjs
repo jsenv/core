@@ -14,17 +14,17 @@ import {
 } from "@jsenv/core"
 
 const test = async ({ runtime }) => {
-  const rootDirectoryUrl = new URL("./client/", import.meta.url)
+  const sourceDirectoryUrl = new URL("./client/", import.meta.url)
   const devServer = await startDevServer({
     logLevel: "warn",
-    rootDirectoryUrl,
+    sourceDirectoryUrl,
     keepProcessAlive: false,
     port: 0,
   })
   const { testPlanReport } = await executeTestPlan({
     logLevel: "warn",
     logRefresh: false,
-    rootDirectoryUrl,
+    sourceDirectoryUrl,
     devServerOrigin: devServer.origin,
     testPlan: {
       "./main.html": {
@@ -70,22 +70,22 @@ const test = async ({ runtime }) => {
   /* eslint-disable no-regex-spaces */
   if (runtime === chromium) {
     const expected = {
-      inlineErrorStackLastUrl: `${rootDirectoryUrl}main.html:13:12`,
-      errorStackLastUrl: `${rootDirectoryUrl}main.js:3:1`,
+      inlineErrorStackLastUrl: `${sourceDirectoryUrl}main.html:13:12`,
+      errorStackLastUrl: `${sourceDirectoryUrl}main.js:3:1`,
     }
     assert({ actual, expected })
   } else if (runtime === firefox) {
     const expected = {
       // not as good as chrome but good enough for now
-      inlineErrorStackLastUrl: `${rootDirectoryUrl}main.html:12:12`,
-      errorStackLastUrl: `${rootDirectoryUrl}main.js:2:7`,
+      inlineErrorStackLastUrl: `${sourceDirectoryUrl}main.html:12:12`,
+      errorStackLastUrl: `${sourceDirectoryUrl}main.js:2:7`,
     }
     assert({ actual, expected })
   } else if (runtime === webkit) {
     const expected = {
       // not as good as chrome but good enough for now
-      inlineErrorStackLastUrl: `${rootDirectoryUrl}main.html:12:12`,
-      errorStackLastUrl: `${rootDirectoryUrl}main.js:2:7`,
+      inlineErrorStackLastUrl: `${sourceDirectoryUrl}main.html:12:12`,
+      errorStackLastUrl: `${sourceDirectoryUrl}main.js:2:7`,
     }
     assert({ actual, expected })
   }
