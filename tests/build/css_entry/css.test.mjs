@@ -9,11 +9,11 @@ import {
 
 const { buildFileContents } = await build({
   logLevel: "warn",
-  rootDirectoryUrl: new URL("./client/", import.meta.url),
-  buildDirectoryUrl: new URL("./dist/", import.meta.url),
+  sourceDirectoryUrl: new URL("./client/", import.meta.url),
   entryPoints: {
     "./main.css": "main.css",
   },
+  buildDirectoryUrl: new URL("./dist/", import.meta.url),
   plugins: [jsenvPluginBundling()],
 })
 const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url)

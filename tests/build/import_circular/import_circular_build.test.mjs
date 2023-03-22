@@ -8,11 +8,11 @@ import { build } from "@jsenv/core"
 const test = async (options) => {
   await build({
     logLevel: "warn",
-    rootDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
+    sourceDirectoryUrl: new URL("./client/", import.meta.url),
     entryPoints: {
       "./main.js": "main.js",
     },
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     ...options,
   })
 }

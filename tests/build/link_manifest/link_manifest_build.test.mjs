@@ -4,11 +4,11 @@ import { build } from "@jsenv/core"
 
 const { buildFileContents } = await build({
   logLevel: "warn",
-  rootDirectoryUrl: new URL("./client/", import.meta.url),
-  buildDirectoryUrl: new URL("./dist/", import.meta.url),
+  sourceDirectoryUrl: new URL("./client/", import.meta.url),
   entryPoints: {
     "./src/main.html": "main.html",
   },
+  buildDirectoryUrl: new URL("./dist/", import.meta.url),
   writeGeneratedFiles: true,
 })
 const { start_url, icons } = JSON.parse(
