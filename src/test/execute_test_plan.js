@@ -61,9 +61,7 @@ export const executeTestPlan = async ({
   gcBetweenExecutions = logMemoryHeapUsage,
 
   coverageEnabled = process.argv.includes("--coverage"),
-  coverageConfig = {
-    "./src/": true,
-  },
+  coverageConfig = { "./**/*": true },
   coverageIncludeMissing = true,
   coverageAndExecutionAllowed = false,
   coverageMethodForNodeJs = process.env.NODE_V8_COVERAGE
@@ -138,6 +136,8 @@ export const executeTestPlan = async ({
       }
     }
   }
+
+  testPlan = { ...testPlan, "**/.jsenv/": false }
 
   const logger = createLogger({ logLevel })
   if (Object.keys(coverageConfig).length === 0) {

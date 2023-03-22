@@ -75,7 +75,7 @@ const eslintConfig = composeEslintConfig(
   {
     overrides: [
       {
-        files: ["./src/**", "./tests/**", "./docs/**/src/**"],
+        files: ["./src/**"],
         env: {
           browser: true,
           node: false,
@@ -83,7 +83,7 @@ const eslintConfig = composeEslintConfig(
         settings: {
           "import/resolver": {
             "@jsenv/eslint-import-resolver": {
-              rootDirectoryUrl: __dirname,
+              rootDirectoryUrl: `${__dirname}/src/`,
               packageConditions: ["browser", "import"],
             },
           },
