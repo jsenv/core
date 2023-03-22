@@ -5,7 +5,7 @@ import { assert } from "@jsenv/assert"
 import { startDevServer } from "@jsenv/core"
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js"
 
-const debug = false // true to have browser UI + keep it open after test
+const debug = false // true to have browser UI + keep it open after test to inspect things
 const devServer = await startDevServer({
   logLevel: "warn",
   sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -65,6 +65,7 @@ try {
 
   {
     jsFileContent.update(`export const answer = 43`)
+    await new Promise((resolve) => setTimeout(resolve, 150))
     await page.reload()
     const actual = await getResult()
     const expected = 43
