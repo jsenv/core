@@ -3,14 +3,13 @@ import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs"
 import { build } from "@jsenv/core"
 
 const jsenvRootDirectoryUrl = new URL("../../", import.meta.url)
-const jsenvDistDirectoryUrl = new URL("./dist/", jsenvRootDirectoryUrl)
 
 await build({
-  rootDirectoryUrl: jsenvRootDirectoryUrl,
-  buildDirectoryUrl: jsenvDistDirectoryUrl,
+  sourceDirectoryUrl: new URL("src/", jsenvRootDirectoryUrl),
   entryPoints: {
     "./src/main.js": "main.js",
   },
+  buildDirectoryUrl: new URL("dist/", jsenvRootDirectoryUrl),
   versioning: false,
   assetManifest: false,
   runtimeCompat: {
@@ -59,10 +58,10 @@ await build({
 // so we convert async/await, arrow function, ... to be compatible with
 // old browsers
 await build({
-  rootDirectoryUrl: jsenvRootDirectoryUrl,
-  buildDirectoryUrl: new URL("js", jsenvDistDirectoryUrl),
+  sourceDirectoryUrl: new URL("src/", jsenvRootDirectoryUrl),
+  buildDirectoryUrl: new URL("dist/js/", jsenvRootDirectoryUrl),
   entryPoints: {
-    "./src/plugins/transpilation/as_js_classic/client/s.js?as_js_classic_library":
+    "./plugins/transpilation/as_js_classic/client/s.js?as_js_classic_library":
       "s.js",
   },
   directoryToClean: false,
