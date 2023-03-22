@@ -15,15 +15,15 @@ if (!devServerStarted) {
 }
 try {
   await executeTestPlan({
-    sourceDirectoryUrl: new URL("../", import.meta.url),
+    sourceDirectoryUrl: new URL("../src/", import.meta.url),
     devServerOrigin,
     testPlan: {
-      "tests/**/*.test.js": {
+      "**/*.test.js": {
         node: {
           runtime: nodeWorkerThread,
         },
       },
-      "tests/**/*.test.html": {
+      "**/*.test.html": {
         chromium: {
           runtime: chromium,
         },
