@@ -137,7 +137,7 @@ export const executeTestPlan = async ({
     }
   }
 
-  testPlan = { ...testPlan, "**/.jsenv/": false }
+  testPlan = { ...testPlan, "**/.jsenv/": null }
 
   const logger = createLogger({ logLevel })
   if (Object.keys(coverageConfig).length === 0) {

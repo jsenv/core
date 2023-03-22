@@ -16,7 +16,7 @@ if (!devServerStarted) {
 
 try {
   await executeTestPlan({
-    sourceDirectoryUrl: new URL("../", import.meta.url),
+    sourceDirectoryUrl: new URL("../src/", import.meta.url),
     devServerOrigin,
     testPlan: {
       "**/*.test.mjs": {

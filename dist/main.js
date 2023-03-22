@@ -24251,6 +24251,7 @@ const executePlan = async (plan, {
   const runtimes = {};
   Object.keys(plan).forEach(filePattern => {
     const filePlan = plan[filePattern];
+    if (!filePlan) return;
     Object.keys(filePlan).forEach(executionName => {
       const executionConfig = filePlan[executionName];
       const {
@@ -24711,7 +24712,7 @@ const executeTestPlan = async ({
   gcBetweenExecutions = logMemoryHeapUsage,
   coverageEnabled = process.argv.includes("--coverage"),
   coverageConfig = {
-    "./src/": true
+    "./**/*": true
   },
   coverageIncludeMissing = true,
   coverageAndExecutionAllowed = false,
@@ -24772,6 +24773,10 @@ const executeTestPlan = async ({
       }
     }
   }
+  testPlan = {
+    ...testPlan,
+    "**/.jsenv/": null
+  };
   const logger = createLogger({
     logLevel
   });

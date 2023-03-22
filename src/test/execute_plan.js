@@ -64,6 +64,7 @@ export const executePlan = async (
   const runtimes = {}
   Object.keys(plan).forEach((filePattern) => {
     const filePlan = plan[filePattern]
+    if (!filePlan) return
     Object.keys(filePlan).forEach((executionName) => {
       const executionConfig = filePlan[executionName]
       const { runtime } = executionConfig
