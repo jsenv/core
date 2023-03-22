@@ -52,7 +52,7 @@ export const jsenvPluginExplorer = ({
             }
           })
           const matchingFileResultArray = await collectFiles({
-            directoryUrl: context.sourceDirectoryUrl,
+            directoryUrl: context.rootDirectoryUrl,
             associations: associationsForExplorable,
             predicate: (meta) =>
               Object.keys(meta).some((group) => Boolean(meta[group])),
@@ -68,7 +68,7 @@ export const jsenvPluginExplorer = ({
             "SERVER_PARAMS",
             JSON.stringify(
               {
-                sourceDirectoryUrl: context.sourceDirectoryUrl,
+                rootDirectoryUrl: context.rootDirectoryUrl,
                 groups,
                 files,
               },

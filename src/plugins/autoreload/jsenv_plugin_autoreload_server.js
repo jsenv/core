@@ -12,10 +12,10 @@ export const jsenvPluginAutoreloadServer = ({
     name: "jsenv:autoreload_server",
     appliesDuring: "dev",
     serverEvents: {
-      reload: ({ sendServerEvent, sourceDirectoryUrl, urlGraph }) => {
+      reload: ({ sendServerEvent, rootDirectoryUrl, urlGraph }) => {
         const formatUrlForClient = (url) => {
-          if (urlIsInsideOf(url, sourceDirectoryUrl)) {
-            return urlToRelativeUrl(url, sourceDirectoryUrl)
+          if (urlIsInsideOf(url, rootDirectoryUrl)) {
+            return urlToRelativeUrl(url, rootDirectoryUrl)
           }
           if (url.startsWith("file:")) {
             return `/@fs/${url.slice("file:///".length)}`
@@ -187,9 +187,9 @@ export const jsenvPluginAutoreloadServer = ({
         })
       },
     },
-    serve: (request, { sourceDirectoryUrl, urlGraph }) => {
+    serve: (request, { rootDirectoryUrl, urlGraph }) => {
       if (request.pathname === "/__graph__") {
-        const graphJson = JSON.stringify(urlGraph.toJSON(sourceDirectoryUrl))
+        const graphJson = JSON.stringify(urlGraph.toJSON(rootDirectoryUrl))
         return {
           status: 200,
           headers: {

@@ -98,7 +98,7 @@ export const jsenvPluginAsJsClassicConversion = ({
         context.urlGraph.deleteUrlInfo(jsModuleUrlInfo.url)
       }
       const { content, sourcemap } = await convertJsModuleToJsClassic({
-        rootDirectoryUrl: context.sourceDirectoryUrl,
+        rootDirectoryUrl: context.rootDirectoryUrl,
         systemJsInjection,
         systemJsClientFileUrl,
         urlInfo,

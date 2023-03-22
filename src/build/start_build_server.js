@@ -35,8 +35,8 @@ import { createReloadableWorker } from "@jsenv/core/src/helpers/worker_reload.js
 /**
  * Start a server for build files.
  * @param {Object} buildServerParameters
- * @param {string|url} buildServerParameters.rootDirectoryUrl Root directory of the project
  * @param {string|url} buildServerParameters.buildDirectoryUrl Directory where build files are written
+ * @param {string|url} buildServerParameters.sourceDirectoryUrl Directory containing source files
  * @return {Object} A build server object
  */
 export const startBuildServer = async ({
@@ -52,9 +52,10 @@ export const startBuildServer = async ({
   services = [],
   keepProcessAlive = true,
 
-  rootDirectoryUrl,
   buildDirectoryUrl,
   buildIndexPath = "index.html",
+
+  sourceDirectoryUrl,
   buildServerFiles = {
     "./package.json": true,
     "./jsenv.config.mjs": true,
@@ -72,13 +73,16 @@ export const startBuildServer = async ({
         `${unexpectedParamNames.join(",")}: there is no such param`,
       )
     }
-    const rootDirectoryUrlValidation = validateDirectoryUrl(rootDirectoryUrl)
-    if (!rootDirectoryUrlValidation.valid) {
-      throw new TypeError(
-        `rootDirectoryUrl ${rootDirectoryUrlValidation.message}, got ${rootDirectoryUrl}`,
-      )
+    if (sourceDirectoryUrl) {
+      const sourceDirectoryUrlValidation =
+        validateDirectoryUrl(sourceDirectoryUrl)
+      if (!sourceDirectoryUrlValidation.valid) {
+        throw new TypeError(
+          `rootDirectoryUrl ${sourceDirectoryUrlValidation.message}, got ${sourceDirectoryUrl}`,
+        )
+      }
+      sourceDirectoryUrl = sourceDirectoryUrlValidation.value
     }
-    rootDirectoryUrl = rootDirectoryUrlValidation.value
     const buildDirectoryUrlValidation = validateDirectoryUrl(buildDirectoryUrl)
     if (!buildDirectoryUrlValidation.valid) {
       throw new TypeError(
@@ -129,17 +133,16 @@ export const startBuildServer = async ({
     reloadableWorker = createReloadableWorker(buildServerMainFile)
     if (reloadableWorker.isPrimary) {
       const buildServerFileChangeCallback = ({ relativeUrl, event }) => {
-        const url = new URL(relativeUrl, rootDirectoryUrl).href
+        const url = new URL(relativeUrl, sourceDirectoryUrl).href
         logger.info(`file ${event} ${url} -> restarting server...`)
         reloadableWorker.reload()
       }
       const stopWatchingBuildServerFiles = registerDirectoryLifecycle(
-        rootDirectoryUrl,
+        sourceDirectoryUrl,
         {
           watchPatterns: {
             ...buildServerFiles,
             [buildServerMainFile]: true,
-            ".jsenv/": false,
           },
           cooldownBetweenFileEvents,
           keepProcessAlive: false,

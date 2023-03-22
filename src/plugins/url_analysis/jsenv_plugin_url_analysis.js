@@ -8,7 +8,7 @@ import { parseAndTransformJsUrls } from "./js/js_urls.js"
 import { parseAndTransformWebmanifestUrls } from "./webmanifest/webmanifest_urls.js"
 
 export const jsenvPluginUrlAnalysis = ({
-  sourceDirectoryUrl,
+  rootDirectoryUrl,
   include,
   supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"],
 }) => {
@@ -17,7 +17,7 @@ export const jsenvPluginUrlAnalysis = ({
   if (include) {
     const associations = URL_META.resolveAssociations(
       { include },
-      sourceDirectoryUrl,
+      rootDirectoryUrl,
     )
     getIncludeInfo = (url) => {
       const { include } = URL_META.applyAssociations({ url, associations })

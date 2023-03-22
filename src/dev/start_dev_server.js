@@ -43,8 +43,7 @@ export const startDevServer = async ({
   services = [],
   onStop = () => {},
 
-  rootDirectoryUrl,
-  sourceDirectoryPath = "src/",
+  sourceDirectoryUrl,
   devServerFiles = {
     "./package.json": true,
     "./jsenv.config.mjs": true,
@@ -86,16 +85,16 @@ export const startDevServer = async ({
         `${unexpectedParamNames.join(",")}: there is no such param`,
       )
     }
-    const rootDirectoryUrlValidation = validateDirectoryUrl(rootDirectoryUrl)
-    if (!rootDirectoryUrlValidation.valid) {
+    const sourceDirectoryUrlValidation =
+      validateDirectoryUrl(sourceDirectoryUrl)
+    if (!sourceDirectoryUrlValidation.valid) {
       throw new TypeError(
-        `rootDirectoryUrl ${rootDirectoryUrlValidation.message}, got ${rootDirectoryUrl}`,
+        `sourceDirectoryUrl ${sourceDirectoryUrlValidation.message}, got ${sourceDirectoryUrl}`,
       )
     }
-    rootDirectoryUrl = rootDirectoryUrlValidation.value
+    sourceDirectoryUrl = sourceDirectoryUrlValidation.value
   }
 
-  const sourceDirectoryUrl = new URL(sourceDirectoryPath, rootDirectoryUrl).href
   const logger = createLogger({ logLevel })
   const operation = Abort.startOperation()
   operation.addAbortSignal(signal)
@@ -115,12 +114,12 @@ export const startDevServer = async ({
     reloadableWorker = createReloadableWorker(devServerMainFile)
     if (reloadableWorker.isPrimary) {
       const devServerFileChangeCallback = ({ relativeUrl, event }) => {
-        const url = new URL(relativeUrl, rootDirectoryUrl).href
+        const url = new URL(relativeUrl, sourceDirectoryUrl).href
         logger.info(`file ${event} ${url} -> restarting server...`)
         reloadableWorker.reload()
       }
       const stopWatchingDevServerFiles = registerDirectoryLifecycle(
-        rootDirectoryUrl,
+        sourceDirectoryUrl,
         {
           watchPatterns: {
             ...devServerFiles.include,
@@ -208,8 +207,7 @@ export const startDevServer = async ({
           serverEventsDispatcher,
           contextCache,
 
-          rootDirectoryUrl,
-          sourceDirectoryUrl,
+          rootDirectoryUrl: sourceDirectoryUrl,
           runtimeCompat,
 
           plugins,

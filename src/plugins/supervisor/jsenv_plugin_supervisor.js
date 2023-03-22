@@ -319,7 +319,7 @@ export const jsenvPluginSupervisor = ({
             textContent: `
       window.__supervisor__.setup(${JSON.stringify(
         {
-          sourceDirectoryUrl: context.sourceDirectoryUrl,
+          rootDirectoryUrl: context.rootDirectoryUrl,
           errorBaseUrl,
           logs,
           measurePerf,

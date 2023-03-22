@@ -76,6 +76,7 @@ export const jsenvPluginCommonJs = ({
       const { content, sourcemap, isValid } = await commonJsToJsModule({
         logLevel,
         rootDirectoryUrl: context.rootDirectoryUrl,
+        jsenvInternalDirectoryUrl: context.jsenvInternalDirectoryUrl,
         sourceFileUrl: commonJsUrlInfo.url,
         browsers: !nodeRuntimeEnabled,
         processEnvNodeEnv: context.dev ? "development" : "production",

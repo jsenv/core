@@ -41,7 +41,7 @@ export const jsenvPluginBabel = ({
         )
         const associations = URL_META.resolveAssociations(
           { cover: coverageConfig },
-          context.sourceDirectoryUrl,
+          context.rootDirectoryUrl,
         )
         if (
           URL_META.applyAssociations({ url: urlInfo.url, associations }).cover

@@ -54,6 +54,7 @@ import {
   findHtmlNode,
 } from "@jsenv/ast"
 
+import { determineJsenvInternalDirectoryUrl } from "../jsenv_internal_directory.js"
 import { createUrlGraph } from "../kitchen/url_graph.js"
 import { createKitchen } from "../kitchen/kitchen.js"
 import { RUNTIME_COMPAT } from "../kitchen/compat/runtime_compat.js"
@@ -94,7 +95,7 @@ export const defaultRuntimeCompat = {
 /**
  * Generate an optimized version of source files into a directory
  * @param {Object} buildParameters
- * @param {string|url} buildParameters.rootDirectoryUrl
+ * @param {string|url} buildParameters.sourceDirectoryUrl
  *        Directory containing source files
  * @param {string|url} buildParameters.buildDirectoryUrl
  *        Directory where optimized files will be written
@@ -124,7 +125,7 @@ export const build = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
   logLevel = "info",
-  rootDirectoryUrl,
+  sourceDirectoryUrl,
   buildDirectoryUrl,
   assetsDirectory = "",
   entryPoints = {},
@@ -145,9 +146,7 @@ export const build = async ({
   versioningViaImportmap = true,
   lineBreakNormalization = process.platform === "win32",
 
-  clientFiles = {
-    "./src/": true,
-  },
+  clientFiles = {},
   cooldownBetweenFileEvents,
   watch = false,
 
@@ -166,13 +165,14 @@ export const build = async ({
         `${unexpectedParamNames.join(",")}: there is no such param`,
       )
     }
-    const rootDirectoryUrlValidation = validateDirectoryUrl(rootDirectoryUrl)
-    if (!rootDirectoryUrlValidation.valid) {
+    const sourceDirectoryUrlValidation =
+      validateDirectoryUrl(sourceDirectoryUrl)
+    if (!sourceDirectoryUrlValidation.valid) {
       throw new TypeError(
-        `rootDirectoryUrl ${rootDirectoryUrlValidation.message}, got ${rootDirectoryUrl}`,
+        `sourceDirectoryUrl ${sourceDirectoryUrlValidation.message}, got ${sourceDirectoryUrl}`,
       )
     }
-    rootDirectoryUrl = rootDirectoryUrlValidation.value
+    sourceDirectoryUrl = sourceDirectoryUrlValidation.value
     const buildDirectoryUrlValidation = validateDirectoryUrl(buildDirectoryUrl)
     if (!buildDirectoryUrlValidation.valid) {
       throw new TypeError(
@@ -211,11 +211,14 @@ export const build = async ({
       directoryToClean = new URL(assetsDirectory, buildDirectoryUrl).href
     }
   }
+  const jsenvInternalDirectoryUrl =
+    determineJsenvInternalDirectoryUrl(sourceDirectoryUrl)
+
   const asFormattedBuildUrl = (generatedUrl, reference) => {
     if (base === "./") {
       const urlRelativeToParent = urlToRelativeUrl(
         generatedUrl,
-        reference.parentUrl === rootDirectoryUrl
+        reference.parentUrl === sourceDirectoryUrl
           ? buildDirectoryUrl
           : reference.parentUrl,
       )
@@ -279,7 +282,8 @@ build ${entryPointKeys.length} entry points`)
     const rawGraphKitchen = createKitchen({
       signal,
       logLevel,
-      rootDirectoryUrl,
+      rootDirectoryUrl: sourceDirectoryUrl,
+      jsenvInternalDirectoryUrl,
       urlGraph: rawGraph,
       build: true,
       runtimeCompat,
@@ -304,7 +308,7 @@ build ${entryPointKeys.length} entry points`)
           },
         },
         ...getCorePlugins({
-          rootDirectoryUrl,
+          rootDirectoryUrl: sourceDirectoryUrl,
           urlGraph: rawGraph,
           runtimeCompat,
 
@@ -323,7 +327,7 @@ build ${entryPointKeys.length} entry points`)
       sourcemaps,
       sourcemapsSourcesContent,
       writeGeneratedFiles,
-      outDirectoryUrl: new URL(`.jsenv/build/`, rootDirectoryUrl),
+      outDirectoryUrl: new URL("build/", jsenvInternalDirectoryUrl),
     })
 
     const buildUrlsGenerator = createBuildUrlsGenerator({
@@ -347,12 +351,13 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     const bundlers = {}
     const finalGraph = createUrlGraph()
     const urlAnalysisPlugin = jsenvPluginUrlAnalysis({
-      rootDirectoryUrl,
+      rootDirectoryUrl: sourceDirectoryUrl,
       ...urlAnalysis,
     })
     const finalGraphKitchen = createKitchen({
       logLevel,
       rootDirectoryUrl: buildDirectoryUrl,
+      jsenvInternalDirectoryUrl,
       urlGraph: finalGraph,
       build: true,
       runtimeCompat,
@@ -643,7 +648,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       sourcemapsSourcesContent,
       sourcemapsSourcesRelative: !versioning,
       writeGeneratedFiles,
-      outDirectoryUrl: new URL(".jsenv/postbuild/", rootDirectoryUrl),
+      outDirectoryUrl: new URL("postbuild/", jsenvInternalDirectoryUrl),
     })
     const finalEntryUrls = []
 
@@ -653,7 +658,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       })
       try {
         if (writeGeneratedFiles) {
-          await ensureEmptyDirectory(new URL(`.jsenv/build/`, rootDirectoryUrl))
+          await ensureEmptyDirectory(new URL(`build/`, sourceDirectoryUrl))
         }
         const rawUrlGraphLoader = createUrlGraphLoader(
           rawGraphKitchen.kitchenContext,
@@ -662,7 +667,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           const [entryReference, entryUrlInfo] =
             rawGraphKitchen.kitchenContext.prepareEntryPoint({
               trace: { message: `"${key}" in entryPoints parameter` },
-              parentUrl: rootDirectoryUrl,
+              parentUrl: sourceDirectoryUrl,
               type: "entry_point",
               specifier: key,
             })
@@ -899,7 +904,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         try {
           if (writeGeneratedFiles) {
             await ensureEmptyDirectory(
-              new URL(`.jsenv/postbuild/`, rootDirectoryUrl),
+              new URL(`postbuild/`, jsenvInternalDirectoryUrl),
             )
           }
           const finalUrlGraphLoader = createUrlGraphLoader(
@@ -909,7 +914,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             const [finalEntryReference, finalEntryUrlInfo] =
               finalGraphKitchen.kitchenContext.prepareEntryPoint({
                 trace: { message: `entryPoint` },
-                parentUrl: rootDirectoryUrl,
+                parentUrl: sourceDirectoryUrl,
                 type: "entry_point",
                 specifier: entryUrl,
               })
@@ -1128,6 +1133,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           const versioningKitchen = createKitchen({
             logLevel: logger.level,
             rootDirectoryUrl: buildDirectoryUrl,
+            jsenvInternalDirectoryUrl,
             urlGraph: finalGraph,
             build: true,
             runtimeCompat,
@@ -1244,10 +1250,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             sourcemapsSourcesContent,
             sourcemapsSourcesRelative: true,
             writeGeneratedFiles,
-            outDirectoryUrl: new URL(
-              ".jsenv/postbuild/",
-              finalGraphKitchen.rootDirectoryUrl,
-            ),
+            outDirectoryUrl: new URL("postbuild/", jsenvInternalDirectoryUrl),
           })
           const versioningUrlGraphLoader = createUrlGraphLoader(
             versioningKitchen.kitchenContext,
@@ -1687,9 +1690,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
   startBuild()
   let startTimeout
   const clientFileChangeCallback = ({ relativeUrl, event }) => {
-    const url = new URL(relativeUrl, rootDirectoryUrl).href
+    const url = new URL(relativeUrl, sourceDirectoryUrl).href
     if (watchFilesTask) {
-      watchFilesTask.happen(`${url.slice(rootDirectoryUrl.length)} ${event}`)
+      watchFilesTask.happen(`${url.slice(sourceDirectoryUrl.length)} ${event}`)
       watchFilesTask = null
     }
     buildAbortController.abort()
@@ -1699,21 +1702,24 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     clearTimeout(startTimeout)
     startTimeout = setTimeout(startBuild, 20)
   }
-  const stopWatchingClientFiles = registerDirectoryLifecycle(rootDirectoryUrl, {
-    watchPatterns: clientFiles,
-    cooldownBetweenFileEvents,
-    keepProcessAlive: true,
-    recursive: true,
-    added: ({ relativeUrl }) => {
-      clientFileChangeCallback({ relativeUrl, event: "added" })
+  const stopWatchingClientFiles = registerDirectoryLifecycle(
+    sourceDirectoryUrl,
+    {
+      watchPatterns: clientFiles,
+      cooldownBetweenFileEvents,
+      keepProcessAlive: true,
+      recursive: true,
+      added: ({ relativeUrl }) => {
+        clientFileChangeCallback({ relativeUrl, event: "added" })
+      },
+      updated: ({ relativeUrl }) => {
+        clientFileChangeCallback({ relativeUrl, event: "modified" })
+      },
+      removed: ({ relativeUrl }) => {
+        clientFileChangeCallback({ relativeUrl, event: "removed" })
+      },
     },
-    updated: ({ relativeUrl }) => {
-      clientFileChangeCallback({ relativeUrl, event: "modified" })
-    },
-    removed: ({ relativeUrl }) => {
-      clientFileChangeCallback({ relativeUrl, event: "removed" })
-    },
-  })
+  )
   operation.addAbortCallback(() => {
     stopWatchingClientFiles()
   })

@@ -28,7 +28,7 @@ export const createKitchen = ({
   logLevel,
 
   rootDirectoryUrl,
-  sourceDirectoryUrl,
+  jsenvInternalDirectoryUrl,
   urlGraph,
   dev = false,
   build = false,
@@ -51,7 +51,7 @@ export const createKitchen = ({
     signal,
     logger,
     rootDirectoryUrl,
-    sourceDirectoryUrl,
+    jsenvInternalDirectoryUrl,
     urlGraph,
     dev,
     build,
@@ -939,16 +939,16 @@ const determineFileUrlForOutDirectory = ({ urlInfo, context }) => {
     return urlInfo.url
   }
   let url = urlInfo.url
-  if (!urlIsInsideOf(urlInfo.url, context.sourceDirectoryUrl)) {
+  if (!urlIsInsideOf(urlInfo.url, context.rootDirectoryUrl)) {
     const fsRootUrl = ensureWindowsDriveLetter("file:///", urlInfo.url)
-    url = `${context.sourceDirectoryUrl}@fs/${url.slice(fsRootUrl.length)}`
+    url = `${context.rootDirectoryUrl}@fs/${url.slice(fsRootUrl.length)}`
   }
   if (urlInfo.filename) {
     url = setUrlFilename(url, urlInfo.filename)
   }
   return moveUrl({
     url,
-    from: context.sourceDirectoryUrl,
+    from: context.rootDirectoryUrl,
     to: context.outDirectoryUrl,
     preferAbsolute: true,
   })

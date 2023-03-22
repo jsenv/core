@@ -4,6 +4,7 @@ import { registerDirectoryLifecycle, bufferToEtag } from "@jsenv/filesystem"
 import { moveUrl, asUrlWithoutSearch } from "@jsenv/urls"
 import { URL_META } from "@jsenv/url-meta"
 
+import { determineJsenvInternalDirectoryUrl } from "../jsenv_internal_directory.js"
 import { createUrlGraph } from "@jsenv/core/src/kitchen/url_graph.js"
 import { createKitchen } from "@jsenv/core/src/kitchen/kitchen.js"
 import { RUNTIME_COMPAT } from "@jsenv/core/src/kitchen/compat/runtime_compat.js"
@@ -18,7 +19,6 @@ export const createFileService = ({
   serverEventsDispatcher,
   contextCache,
 
-  rootDirectoryUrl,
   sourceDirectoryUrl,
   runtimeCompat,
 
@@ -41,40 +41,42 @@ export const createFileService = ({
 }) => {
   const clientFileChangeCallbackList = []
   const clientFilesPruneCallbackList = []
-  const clientFilePatterns = {
-    [sourceDirectoryUrl]: true,
-    ".jsenv/": false,
-  }
 
   const onFileChange = (url) => {
     clientFileChangeCallbackList.forEach((callback) => {
       callback(url)
     })
   }
-  const stopWatchingClientFiles = registerDirectoryLifecycle(rootDirectoryUrl, {
-    watchPatterns: clientFilePatterns,
-    cooldownBetweenFileEvents,
-    keepProcessAlive: false,
-    recursive: true,
-    added: ({ relativeUrl }) => {
-      onFileChange({
-        url: new URL(relativeUrl, rootDirectoryUrl).href,
-        event: "added",
-      })
+  const watchPatterns = {
+    ".jsenv/": false,
+  }
+  const stopWatchingClientFiles = registerDirectoryLifecycle(
+    sourceDirectoryUrl,
+    {
+      watchPatterns,
+      cooldownBetweenFileEvents,
+      keepProcessAlive: false,
+      recursive: true,
+      added: ({ relativeUrl }) => {
+        onFileChange({
+          url: new URL(relativeUrl, sourceDirectoryUrl).href,
+          event: "added",
+        })
+      },
+      updated: ({ relativeUrl }) => {
+        onFileChange({
+          url: new URL(relativeUrl, sourceDirectoryUrl).href,
+          event: "modified",
+        })
+      },
+      removed: ({ relativeUrl }) => {
+        onFileChange({
+          url: new URL(relativeUrl, sourceDirectoryUrl).href,
+          event: "removed",
+        })
+      },
     },
-    updated: ({ relativeUrl }) => {
-      onFileChange({
-        url: new URL(relativeUrl, rootDirectoryUrl).href,
-        event: "modified",
-      })
-    },
-    removed: ({ relativeUrl }) => {
-      onFileChange({
-        url: new URL(relativeUrl, rootDirectoryUrl).href,
-        event: "removed",
-      })
-    },
-  })
+  )
   serverStopCallbacks.push(stopWatchingClientFiles)
 
   const getOrCreateContext = (request) => {
@@ -87,8 +89,8 @@ export const createFileService = ({
       return existingContext
     }
     const watchAssociations = URL_META.resolveAssociations(
-      { watch: clientFilePatterns },
-      rootDirectoryUrl,
+      { watch: watchPatterns },
+      sourceDirectoryUrl,
     )
     const urlGraph = createUrlGraph()
     clientFileChangeCallbackList.push(({ url }) => {
@@ -108,11 +110,13 @@ export const createFileService = ({
       })
     })
     const clientRuntimeCompat = { [runtimeName]: runtimeVersion }
+    const jsenvInternalDirectoryUrl =
+      determineJsenvInternalDirectoryUrl(sourceDirectoryUrl)
     const kitchen = createKitchen({
       signal,
       logLevel,
-      rootDirectoryUrl,
-      sourceDirectoryUrl,
+      rootDirectoryUrl: sourceDirectoryUrl,
+      jsenvInternalDirectoryUrl,
       urlGraph,
       dev: true,
       runtimeCompat,
@@ -151,7 +155,10 @@ export const createFileService = ({
       sourcemapsSourcesProtocol,
       sourcemapsSourcesContent,
       writeGeneratedFiles,
-      outDirectoryUrl: `${rootDirectoryUrl}.jsenv/${runtimeName}@${runtimeVersion}/`,
+      outDirectoryUrl: new URL(
+        `${runtimeName}@${runtimeVersion}/`,
+        jsenvInternalDirectoryUrl,
+      ),
     })
     urlGraph.createUrlInfoCallbackRef.current = (urlInfo) => {
       const { watch } = URL_META.applyAssociations({
@@ -226,7 +233,7 @@ export const createFileService = ({
       if (serverEventNames.length > 0) {
         Object.keys(allServerEvents).forEach((serverEventName) => {
           allServerEvents[serverEventName]({
-            rootDirectoryUrl,
+            rootDirectoryUrl: sourceDirectoryUrl,
             urlGraph,
             dev: true,
             sendServerEvent: (data) => {
@@ -245,8 +252,7 @@ export const createFileService = ({
     }
 
     const context = {
-      rootDirectoryUrl,
-      sourceDirectoryUrl,
+      rootDirectoryUrl: sourceDirectoryUrl,
       dev: true,
       runtimeName,
       runtimeVersion,
@@ -412,7 +418,7 @@ export const createFileService = ({
             accept: "text/html",
           },
           canReadDirectory: true,
-          rootDirectoryUrl,
+          rootDirectoryUrl: sourceDirectoryUrl,
         })
       }
       if (code === "NOT_ALLOWED") {
