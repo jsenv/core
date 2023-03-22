@@ -131,7 +131,7 @@ export const createFileService = ({
       plugins: [
         ...plugins,
         ...getCorePlugins({
-          sourceDirectoryUrl,
+          rootDirectoryUrl: sourceDirectoryUrl,
           runtimeCompat,
 
           urlAnalysis,

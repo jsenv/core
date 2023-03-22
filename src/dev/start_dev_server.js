@@ -207,7 +207,7 @@ export const startDevServer = async ({
           serverEventsDispatcher,
           contextCache,
 
-          rootDirectoryUrl: sourceDirectoryUrl,
+          sourceDirectoryUrl,
           runtimeCompat,
 
           plugins,

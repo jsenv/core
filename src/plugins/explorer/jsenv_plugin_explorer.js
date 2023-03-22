@@ -11,10 +11,11 @@ export const explorerHtmlFileUrl = new URL(
 export const jsenvPluginExplorer = ({
   groups = {
     src: {
-      "./src/**/*.html": true,
+      "./**/*.html": true,
+      "./**/*.test.html": false,
     },
     tests: {
-      "./tests/**/*.test.html": true,
+      "./**/*.test.html": true,
     },
   },
   clientMainFileUrl,
