@@ -12,5 +12,5 @@ export const devServer = await startDevServer({
   port: 3400,
 })
 if (process.argv.includes("--open")) {
-  open(`${devServer.origin}/src/main.html`)
+  open(`${devServer.origin}/main.html`)
 }
