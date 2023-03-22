@@ -8,7 +8,7 @@ import { startDevServer } from "@jsenv/core"
 import { jsenvPluginReact } from "@jsenv/plugin-react"
 
 export const devServer = await startDevServer({
-  sourcDirectoryUrl: new URL("../src/", import.meta.url),
+  sourceDirectoryUrl: new URL("../src/", import.meta.url),
   plugins: [
     jsenvPluginReact({
       refreshInstrumentation: { "file://**/*.jsx": true },
