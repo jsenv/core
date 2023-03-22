@@ -9,11 +9,11 @@ import { jsenvPluginReact } from "@jsenv/plugin-react"
 const test = async (params) => {
   await build({
     logLevel: "warn",
-    rootDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
+    sourceDirectoryUrl: new URL("./client/", import.meta.url),
     entryPoints: {
       "./main.html": "main.html",
     },
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     ...params,
     plugins: [
       jsenvPluginReact({
@@ -28,19 +28,11 @@ const test = async (params) => {
   const { returnValue } = await executeInChromium({
     url: `${server.origin}/main.html`,
     /* eslint-disable no-undef */
-    pageFunction: async () => {
-      return window.resultPromise
-    },
+    pageFunction: () => window.resultPromise,
     /* eslint-enable no-undef */
   })
-  const actual = {
-    returnValue,
-  }
-  const expected = {
-    returnValue: {
-      spanContent: "Hello world",
-    },
-  }
+  const actual = returnValue
+  const expected = { spanContent: "Hello world" }
   assert({ actual, expected })
 }
 
