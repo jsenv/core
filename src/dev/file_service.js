@@ -5,6 +5,7 @@ import { moveUrl, asUrlWithoutSearch } from "@jsenv/urls"
 import { URL_META } from "@jsenv/url-meta"
 
 import { determineJsenvInternalDirectoryUrl } from "../jsenv_internal_directory.js"
+import { explorerHtmlFileUrl } from "@jsenv/core/src/plugins/explorer/jsenv_plugin_explorer.js"
 import { createUrlGraph } from "@jsenv/core/src/kitchen/url_graph.js"
 import { createKitchen } from "@jsenv/core/src/kitchen/kitchen.js"
 import { RUNTIME_COMPAT } from "@jsenv/core/src/kitchen/compat/runtime_compat.js"
@@ -20,6 +21,7 @@ export const createFileService = ({
   contextCache,
 
   sourceDirectoryUrl,
+  sourceMainFilePath,
   runtimeCompat,
 
   plugins,
@@ -29,7 +31,6 @@ export const createFileService = ({
   supervisor,
   transpilation,
   clientAutoreload,
-  clientMainFileUrl,
   cooldownBetweenFileEvents,
   explorer,
   cacheControl,
@@ -113,6 +114,15 @@ export const createFileService = ({
     const clientRuntimeCompat = { [runtimeName]: runtimeVersion }
     const jsenvInternalDirectoryUrl =
       determineJsenvInternalDirectoryUrl(sourceDirectoryUrl)
+
+    let mainFileUrl
+    if (sourceMainFilePath === undefined) {
+      mainFileUrl = explorer
+        ? String(explorerHtmlFileUrl)
+        : String(new URL("./index.html", sourceDirectoryUrl))
+    } else {
+      mainFileUrl = String(new URL(sourceMainFilePath, sourceDirectoryUrl))
+    }
     const kitchen = createKitchen({
       signal,
       logLevel,
@@ -133,6 +143,7 @@ export const createFileService = ({
         ...plugins,
         ...getCorePlugins({
           rootDirectoryUrl: sourceDirectoryUrl,
+          mainFileUrl,
           runtimeCompat,
 
           urlAnalysis,
@@ -141,7 +152,6 @@ export const createFileService = ({
           supervisor,
           transpilation,
 
-          clientMainFileUrl,
           clientAutoreload,
           clientFileChangeCallbackList,
           clientFilesPruneCallbackList,

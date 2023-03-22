@@ -53,7 +53,7 @@ export const startBuildServer = async ({
   keepProcessAlive = true,
 
   buildDirectoryUrl,
-  buildIndexPath = "index.html",
+  buildMainFilePath = "index.html",
 
   sourceDirectoryUrl,
   buildServerFiles = {
@@ -91,25 +91,26 @@ export const startBuildServer = async ({
     }
     buildDirectoryUrl = buildDirectoryUrlValidation.value
 
-    if (buildIndexPath) {
-      if (typeof buildIndexPath !== "string") {
+    if (buildMainFilePath) {
+      if (typeof buildMainFilePath !== "string") {
         throw new TypeError(
-          `buildIndexPath must be a string, got ${buildIndexPath}`,
+          `buildMainFilePath must be a string, got ${buildMainFilePath}`,
         )
       }
-      if (buildIndexPath[0] === "/") {
-        buildIndexPath = buildIndexPath.slice(1)
+      if (buildMainFilePath[0] === "/") {
+        buildMainFilePath = buildMainFilePath.slice(1)
       } else {
-        const buildIndexUrl = new URL(buildIndexPath, buildDirectoryUrl).href
-        if (!buildIndexUrl.startsWith(buildDirectoryUrl)) {
+        const buildMainFileUrl = new URL(buildMainFilePath, buildDirectoryUrl)
+          .href
+        if (!buildMainFileUrl.startsWith(buildDirectoryUrl)) {
           throw new Error(
-            `buildIndexPath must be relative, got ${buildIndexPath}`,
+            `buildMainFilePath must be relative, got ${buildMainFilePath}`,
           )
         }
-        buildIndexPath = buildIndexUrl.slice(buildDirectoryUrl.length)
+        buildMainFilePath = buildMainFileUrl.slice(buildDirectoryUrl.length)
       }
-      if (!existsSync(new URL(buildIndexPath, buildDirectoryUrl))) {
-        buildIndexPath = null
+      if (!existsSync(new URL(buildMainFilePath, buildDirectoryUrl))) {
+        buildMainFilePath = null
       }
     }
   }
@@ -214,7 +215,7 @@ export const startBuildServer = async ({
         name: "jsenv:build_files_service",
         handleRequest: createBuildFilesService({
           buildDirectoryUrl,
-          buildIndexPath,
+          buildMainFilePath,
         }),
       },
       jsenvServiceErrorHandler({
@@ -243,13 +244,13 @@ export const startBuildServer = async ({
   }
 }
 
-const createBuildFilesService = ({ buildDirectoryUrl, buildIndexPath }) => {
+const createBuildFilesService = ({ buildDirectoryUrl, buildMainFilePath }) => {
   return (request) => {
     const urlIsVersioned = new URL(request.url).searchParams.has("v")
-    if (buildIndexPath && request.resource === "/") {
+    if (buildMainFilePath && request.resource === "/") {
       request = {
         ...request,
-        resource: `/${buildIndexPath}`,
+        resource: `/${buildMainFilePath}`,
       }
     }
     return fetchFileSystem(

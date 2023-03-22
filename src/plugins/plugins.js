@@ -16,15 +16,13 @@ import { jsenvPluginImportMetaHot } from "./import_meta_hot/jsenv_plugin_import_
 import { jsenvPluginAutoreload } from "./autoreload/jsenv_plugin_autoreload.js"
 import { jsenvPluginCacheControl } from "./cache_control/jsenv_plugin_cache_control.js"
 // dev only
-import {
-  explorerHtmlFileUrl,
-  jsenvPluginExplorer,
-} from "./explorer/jsenv_plugin_explorer.js"
+import { jsenvPluginExplorer } from "./explorer/jsenv_plugin_explorer.js"
 // other
 import { jsenvPluginRibbon } from "./ribbon/jsenv_plugin_ribbon.js"
 
 export const getCorePlugins = ({
   rootDirectoryUrl,
+  mainFileUrl,
   runtimeCompat,
 
   urlAnalysis = {},
@@ -34,7 +32,6 @@ export const getCorePlugins = ({
   supervisor,
   transpilation = true,
 
-  clientMainFileUrl,
   clientAutoreload = false,
   clientFileChangeCallbackList,
   clientFilesPruneCallbackList,
@@ -58,13 +55,6 @@ export const getCorePlugins = ({
   if (clientAutoreload === true) {
     clientAutoreload = {}
   }
-  if (clientMainFileUrl === undefined) {
-    clientMainFileUrl = explorer
-      ? String(explorerHtmlFileUrl)
-      : String(new URL("./index.html", rootDirectoryUrl))
-  } else {
-    clientMainFileUrl = String(clientMainFileUrl)
-  }
 
   if (ribbon === true) {
     ribbon = {}
@@ -85,7 +75,7 @@ export const getCorePlugins = ({
     jsenvPluginHttpUrls(),
     jsenvPluginUrlResolution({
       runtimeCompat,
-      clientMainFileUrl,
+      mainFileUrl,
       urlResolution,
     }),
     jsenvPluginUrlVersion(),
@@ -106,9 +96,7 @@ export const getCorePlugins = ({
         ]
       : []),
     ...(cacheControl ? [jsenvPluginCacheControl(cacheControl)] : []),
-    ...(explorer
-      ? [jsenvPluginExplorer({ ...explorer, clientMainFileUrl })]
-      : []),
+    ...(explorer ? [jsenvPluginExplorer({ ...explorer, mainFileUrl })] : []),
     ...(ribbon ? [jsenvPluginRibbon({ rootDirectoryUrl, ...ribbon })] : []),
   ]
 }

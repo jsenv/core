@@ -44,12 +44,12 @@ export const startDevServer = async ({
   onStop = () => {},
 
   sourceDirectoryUrl,
+  sourceMainFilePath,
   devServerFiles = {
     "./package.json": true,
     "./jsenv.config.mjs": true,
   },
   clientAutoreload = true,
-  clientMainFileUrl,
   devServerAutoreload = false,
   devServerMainFile = getCallerPosition().url,
   cooldownBetweenFileEvents,
@@ -208,6 +208,7 @@ export const startDevServer = async ({
           contextCache,
 
           sourceDirectoryUrl,
+          sourceMainFilePath,
           runtimeCompat,
 
           plugins,
@@ -217,7 +218,6 @@ export const startDevServer = async ({
           supervisor,
           transpilation,
           clientAutoreload,
-          clientMainFileUrl,
           cooldownBetweenFileEvents,
           explorer,
           cacheControl,
