@@ -2,7 +2,7 @@ import { workerData, Worker, parentPort } from "node:worker_threads";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { chmod, stat, lstat, readdir, promises, unlink, openSync, closeSync, rmdir, readFile as readFile$1, readFileSync as readFileSync$1, watch, readdirSync, statSync, writeFile as writeFile$1, writeFileSync as writeFileSync$1, mkdirSync, createReadStream, existsSync, realpathSync } from "node:fs";
 import crypto, { createHash } from "node:crypto";
-import { dirname, extname } from "node:path";
+import { dirname, extname, basename } from "node:path";
 import { URL_META, filterV8Coverage } from "./js/v8_coverage.js";
 import process$1, { memoryUsage } from "node:process";
 import os, { networkInterfaces } from "node:os";
@@ -7063,6 +7063,47 @@ const createServerEventsDispatcher = () => {
   };
 };
 
+const determineJsenvInternalDirectoryUrl = rootDirectoryUrl => {
+  const immediateNodeModuleDirectoryUrl = `${rootDirectoryUrl}node_modules/`;
+  if (testDirectoryPresence(immediateNodeModuleDirectoryUrl)) {
+    return `${immediateNodeModuleDirectoryUrl}.jsenv/${getDirectoryName(rootDirectoryUrl)}/`;
+  }
+  const parentUrl = getParentUrl$1(rootDirectoryUrl);
+  const parentNodeModuleDirectoryUrl = `${parentUrl}node_modules/`;
+  if (testDirectoryPresence(parentNodeModuleDirectoryUrl)) {
+    return `${parentNodeModuleDirectoryUrl}.jsenv/${getDirectoryName(parentUrl)}`;
+  }
+  return `${rootDirectoryUrl}.jsenv/`;
+};
+const getDirectoryName = directoryUrl => {
+  const {
+    pathname
+  } = new URL(directoryUrl);
+  return basename(pathname);
+};
+const testDirectoryPresence = directoryUrl => existsSync(new URL(directoryUrl));
+const getParentUrl$1 = url => {
+  if (url.startsWith("file://")) {
+    // With node.js new URL('../', 'file:///C:/').href
+    // returns "file:///C:/" instead of "file:///"
+    const resource = url.slice("file://".length);
+    const slashLastIndex = resource.lastIndexOf("/");
+    if (slashLastIndex === -1) {
+      return url;
+    }
+    const lastCharIndex = resource.length - 1;
+    if (slashLastIndex === lastCharIndex) {
+      const slashBeforeLastIndex = resource.lastIndexOf("/", slashLastIndex - 1);
+      if (slashBeforeLastIndex === -1) {
+        return url;
+      }
+      return `file://${resource.slice(0, slashBeforeLastIndex + 1)}`;
+    }
+    return `file://${resource.slice(0, slashLastIndex + 1)}`;
+  }
+  return new URL(url.endsWith("/") ? "../" : "./", url).href;
+};
+
 const urlSpecifierEncoding = {
   encode: reference => {
     const {
@@ -8653,6 +8694,7 @@ const createKitchen = ({
   signal,
   logLevel,
   rootDirectoryUrl,
+  jsenvInternalDirectoryUrl,
   urlGraph,
   dev = false,
   build = false,
@@ -8678,6 +8720,7 @@ const createKitchen = ({
     signal,
     logger,
     rootDirectoryUrl,
+    jsenvInternalDirectoryUrl,
     urlGraph,
     dev,
     build,
@@ -17063,7 +17106,7 @@ const addRelationshipWithPackageJson = ({
  */
 const jsenvPluginUrlResolution = ({
   runtimeCompat,
-  clientMainFileUrl,
+  mainFileUrl,
   urlResolution
 }) => {
   const resolveUrlUsingWebResolution = reference => {
@@ -17124,7 +17167,7 @@ const jsenvPluginUrlResolution = ({
     appliesDuring: "*",
     resolveUrl: (reference, context) => {
       if (reference.specifier === "/") {
-        return String(clientMainFileUrl);
+        return String(mainFileUrl);
       }
       if (reference.specifier[0] === "/") {
         return new URL(reference.specifier.slice(1), context.rootDirectoryUrl).href;
@@ -20192,13 +20235,14 @@ const explorerHtmlFileUrl = new URL("./html/explorer.html", import.meta.url);
 const jsenvPluginExplorer = ({
   groups = {
     src: {
-      "./src/**/*.html": true
+      "./**/*.html": true,
+      "./**/*.test.html": false
     },
     tests: {
-      "./tests/**/*.test.html": true
+      "./**/*.test.html": true
     }
   },
-  clientMainFileUrl
+  mainFileUrl
 }) => {
   const faviconClientFileUrl = new URL("./other/jsenv.png", import.meta.url);
   return {
@@ -20206,7 +20250,7 @@ const jsenvPluginExplorer = ({
     appliesDuring: "dev",
     transformUrlContent: {
       html: async (urlInfo, context) => {
-        if (urlInfo.url !== clientMainFileUrl) {
+        if (urlInfo.url !== mainFileUrl) {
           return null;
         }
         let html = urlInfo.content;
@@ -20308,6 +20352,7 @@ injectRibbon(${paramsJson})`
 
 const getCorePlugins = ({
   rootDirectoryUrl,
+  mainFileUrl,
   runtimeCompat,
   urlAnalysis = {},
   urlResolution = {},
@@ -20315,7 +20360,6 @@ const getCorePlugins = ({
   directoryReferenceAllowed,
   supervisor,
   transpilation = true,
-  clientMainFileUrl,
   clientAutoreload = false,
   clientFileChangeCallbackList,
   clientFilesPruneCallbackList,
@@ -20339,11 +20383,6 @@ const getCorePlugins = ({
   if (clientAutoreload === true) {
     clientAutoreload = {};
   }
-  if (clientMainFileUrl === undefined) {
-    clientMainFileUrl = explorer ? String(explorerHtmlFileUrl) : String(new URL("./index.html", rootDirectoryUrl));
-  } else {
-    clientMainFileUrl = String(clientMainFileUrl);
-  }
   if (ribbon === true) {
     ribbon = {};
   }
@@ -20362,7 +20401,7 @@ const getCorePlugins = ({
     ...fileSystemMagicRedirection
   }), jsenvPluginHttpUrls(), jsenvPluginUrlResolution({
     runtimeCompat,
-    clientMainFileUrl,
+    mainFileUrl,
     urlResolution
   }), jsenvPluginUrlVersion(), jsenvPluginCommonJsGlobals(), jsenvPluginImportMetaScenarios(), ...(scenarioPlaceholders ? [jsenvPluginGlobalScenarios()] : []), jsenvPluginNodeRuntime({
     runtimeCompat
@@ -20372,7 +20411,7 @@ const getCorePlugins = ({
     clientFilesPruneCallbackList
   })] : []), ...(cacheControl ? [jsenvPluginCacheControl(cacheControl)] : []), ...(explorer ? [jsenvPluginExplorer({
     ...explorer,
-    clientMainFileUrl
+    mainFileUrl
   })] : []), ...(ribbon ? [jsenvPluginRibbon({
     rootDirectoryUrl,
     ...ribbon
@@ -20731,12 +20770,13 @@ const defaultRuntimeCompat = {
 /**
  * Generate an optimized version of source files into a directory
  * @param {Object} buildParameters
- * @param {string|url} buildParameters.rootDirectoryUrl
+ * @param {string|url} buildParameters.sourceDirectoryUrl
  *        Directory containing source files
+ * @param {object} buildParameters.entryPoints
+ *        Object where keys are paths to source files and values are their future name in the build directory.
+ *        Keys are relative to sourceDirectoryUrl
  * @param {string|url} buildParameters.buildDirectoryUrl
  *        Directory where optimized files will be written
- * @param {object} buildParameters.entryPoints
- *        Describe entry point paths and control their names in the build directory
  * @param {object} buildParameters.runtimeCompat
  *        Code generated will be compatible with these runtimes
  * @param {string} [buildParameters.assetsDirectory=""]
@@ -20761,10 +20801,10 @@ const build = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
   logLevel = "info",
-  rootDirectoryUrl,
+  sourceDirectoryUrl,
+  entryPoints = {},
   buildDirectoryUrl,
   assetsDirectory = "",
-  entryPoints = {},
   runtimeCompat = defaultRuntimeCompat,
   base = runtimeCompat.node ? "./" : "/",
   plugins = [],
@@ -20781,9 +20821,7 @@ const build = async ({
   // "filename", "search_param"
   versioningViaImportmap = true,
   lineBreakNormalization = process.platform === "win32",
-  clientFiles = {
-    "./src/": true
-  },
+  clientFiles = {},
   cooldownBetweenFileEvents,
   watch = false,
   directoryToClean,
@@ -20799,16 +20837,35 @@ const build = async ({
     if (unexpectedParamNames.length > 0) {
       throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param`);
     }
-    const rootDirectoryUrlValidation = validateDirectoryUrl(rootDirectoryUrl);
-    if (!rootDirectoryUrlValidation.valid) {
-      throw new TypeError(`rootDirectoryUrl ${rootDirectoryUrlValidation.message}, got ${rootDirectoryUrl}`);
+    const sourceDirectoryUrlValidation = validateDirectoryUrl(sourceDirectoryUrl);
+    if (!sourceDirectoryUrlValidation.valid) {
+      throw new TypeError(`sourceDirectoryUrl ${sourceDirectoryUrlValidation.message}, got ${sourceDirectoryUrl}`);
     }
-    rootDirectoryUrl = rootDirectoryUrlValidation.value;
+    sourceDirectoryUrl = sourceDirectoryUrlValidation.value;
+    if (typeof entryPoints !== "object" || entryPoints === null) {
+      throw new TypeError(`entryPoints must be an object, got ${entryPoints}`);
+    }
+    const keys = Object.keys(entryPoints);
+    keys.forEach(key => {
+      if (!key.startsWith("./")) {
+        throw new TypeError(`entryPoints keys must start with "./", found ${key}`);
+      }
+      const value = entryPoints[key];
+      if (typeof value !== "string") {
+        throw new TypeError(`entryPoints values must be strings, found "${value}" on key "${key}"`);
+      }
+      if (value.includes("/")) {
+        throw new TypeError(`entryPoints values must be plain strings (no "/"), found "${value}" on key "${key}"`);
+      }
+    });
     const buildDirectoryUrlValidation = validateDirectoryUrl(buildDirectoryUrl);
     if (!buildDirectoryUrlValidation.valid) {
       throw new TypeError(`buildDirectoryUrl ${buildDirectoryUrlValidation.message}, got ${buildDirectoryUrlValidation}`);
     }
     buildDirectoryUrl = buildDirectoryUrlValidation.value;
+    if (!["filename", "search_param"].includes(versioningMethod)) {
+      throw new TypeError(`versioningMethod must be "filename" or "search_param", got ${versioning}`);
+    }
   }
   const operation = Abort.startOperation();
   operation.addAbortSignal(signal);
@@ -20818,12 +20875,6 @@ const build = async ({
         SIGINT: true
       }, abort);
     });
-  }
-  assertEntryPoints({
-    entryPoints
-  });
-  if (!["filename", "search_param"].includes(versioningMethod)) {
-    throw new Error(`Unexpected "versioningMethod": must be "filename", "search_param"; got ${versioning}`);
   }
   if (assetsDirectory && assetsDirectory[assetsDirectory.length - 1] !== "/") {
     assetsDirectory = `${assetsDirectory}/`;
@@ -20835,9 +20886,10 @@ const build = async ({
       directoryToClean = new URL(assetsDirectory, buildDirectoryUrl).href;
     }
   }
+  const jsenvInternalDirectoryUrl = determineJsenvInternalDirectoryUrl(sourceDirectoryUrl);
   const asFormattedBuildUrl = (generatedUrl, reference) => {
     if (base === "./") {
-      const urlRelativeToParent = urlToRelativeUrl(generatedUrl, reference.parentUrl === rootDirectoryUrl ? buildDirectoryUrl : reference.parentUrl);
+      const urlRelativeToParent = urlToRelativeUrl(generatedUrl, reference.parentUrl === sourceDirectoryUrl ? buildDirectoryUrl : reference.parentUrl);
       if (urlRelativeToParent[0] !== ".") {
         // ensure "./" on relative url (otherwise it could be a "bare specifier")
         return `./${urlRelativeToParent}`;
@@ -20887,7 +20939,8 @@ build ${entryPointKeys.length} entry points`);
     const rawGraphKitchen = createKitchen({
       signal,
       logLevel,
-      rootDirectoryUrl,
+      rootDirectoryUrl: sourceDirectoryUrl,
+      jsenvInternalDirectoryUrl,
       urlGraph: rawGraph,
       build: true,
       runtimeCompat,
@@ -20906,7 +20959,7 @@ build ${entryPointKeys.length} entry points`);
           return null;
         }
       }, ...getCorePlugins({
-        rootDirectoryUrl,
+        rootDirectoryUrl: sourceDirectoryUrl,
         urlGraph: rawGraph,
         runtimeCompat,
         urlAnalysis,
@@ -20923,7 +20976,7 @@ build ${entryPointKeys.length} entry points`);
       sourcemaps,
       sourcemapsSourcesContent,
       writeGeneratedFiles,
-      outDirectoryUrl: new URL(`.jsenv/build/`, rootDirectoryUrl)
+      outDirectoryUrl: new URL("build/", jsenvInternalDirectoryUrl)
     });
     const buildUrlsGenerator = createBuildUrlsGenerator({
       buildDirectoryUrl,
@@ -20945,12 +20998,13 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     const bundlers = {};
     const finalGraph = createUrlGraph();
     const urlAnalysisPlugin = jsenvPluginUrlAnalysis({
-      rootDirectoryUrl,
+      rootDirectoryUrl: sourceDirectoryUrl,
       ...urlAnalysis
     });
     const finalGraphKitchen = createKitchen({
       logLevel,
       rootDirectoryUrl: buildDirectoryUrl,
+      jsenvInternalDirectoryUrl,
       urlGraph: finalGraph,
       build: true,
       runtimeCompat,
@@ -21197,7 +21251,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       sourcemapsSourcesContent,
       sourcemapsSourcesRelative: !versioning,
       writeGeneratedFiles,
-      outDirectoryUrl: new URL(".jsenv/postbuild/", rootDirectoryUrl)
+      outDirectoryUrl: new URL("postbuild/", jsenvInternalDirectoryUrl)
     });
     const finalEntryUrls = [];
     {
@@ -21206,7 +21260,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       });
       try {
         if (writeGeneratedFiles) {
-          await ensureEmptyDirectory(new URL(`.jsenv/build/`, rootDirectoryUrl));
+          await ensureEmptyDirectory(new URL(`build/`, sourceDirectoryUrl));
         }
         const rawUrlGraphLoader = createUrlGraphLoader(rawGraphKitchen.kitchenContext);
         Object.keys(entryPoints).forEach(key => {
@@ -21214,7 +21268,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             trace: {
               message: `"${key}" in entryPoints parameter`
             },
-            parentUrl: rootDirectoryUrl,
+            parentUrl: sourceDirectoryUrl,
             type: "entry_point",
             specifier: key
           });
@@ -21420,7 +21474,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         });
         try {
           if (writeGeneratedFiles) {
-            await ensureEmptyDirectory(new URL(`.jsenv/postbuild/`, rootDirectoryUrl));
+            await ensureEmptyDirectory(new URL(`postbuild/`, jsenvInternalDirectoryUrl));
           }
           const finalUrlGraphLoader = createUrlGraphLoader(finalGraphKitchen.kitchenContext);
           entryUrls.forEach(entryUrl => {
@@ -21428,7 +21482,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               trace: {
                 message: `entryPoint`
               },
-              parentUrl: rootDirectoryUrl,
+              parentUrl: sourceDirectoryUrl,
               type: "entry_point",
               specifier: entryUrl
             });
@@ -21620,6 +21674,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           const versioningKitchen = createKitchen({
             logLevel: logger.level,
             rootDirectoryUrl: buildDirectoryUrl,
+            jsenvInternalDirectoryUrl,
             urlGraph: finalGraph,
             build: true,
             runtimeCompat,
@@ -21712,7 +21767,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             sourcemapsSourcesContent,
             sourcemapsSourcesRelative: true,
             writeGeneratedFiles,
-            outDirectoryUrl: new URL(".jsenv/postbuild/", finalGraphKitchen.rootDirectoryUrl)
+            outDirectoryUrl: new URL("postbuild/", jsenvInternalDirectoryUrl)
           });
           const versioningUrlGraphLoader = createUrlGraphLoader(versioningKitchen.kitchenContext);
           finalEntryUrls.forEach(finalEntryUrl => {
@@ -22092,9 +22147,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     relativeUrl,
     event
   }) => {
-    const url = new URL(relativeUrl, rootDirectoryUrl).href;
+    const url = new URL(relativeUrl, sourceDirectoryUrl).href;
     if (watchFilesTask) {
-      watchFilesTask.happen(`${url.slice(rootDirectoryUrl.length)} ${event}`);
+      watchFilesTask.happen(`${url.slice(sourceDirectoryUrl.length)} ${event}`);
       watchFilesTask = null;
     }
     buildAbortController.abort();
@@ -22104,7 +22159,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     clearTimeout(startTimeout);
     startTimeout = setTimeout(startBuild, 20);
   };
-  const stopWatchingClientFiles = registerDirectoryLifecycle(rootDirectoryUrl, {
+  const stopWatchingClientFiles = registerDirectoryLifecycle(sourceDirectoryUrl, {
     watchPatterns: clientFiles,
     cooldownBetweenFileEvents,
     keepProcessAlive: true,
@@ -22163,26 +22218,6 @@ const injectVersionIntoBuildUrl = ({
   const versionedFilename = `${basename}-${version}${extension}`;
   const versionedUrl = setUrlFilename(buildUrl, versionedFilename);
   return versionedUrl;
-};
-const assertEntryPoints = ({
-  entryPoints
-}) => {
-  if (typeof entryPoints !== "object" || entryPoints === null) {
-    throw new TypeError(`entryPoints must be an object, got ${entryPoints}`);
-  }
-  const keys = Object.keys(entryPoints);
-  keys.forEach(key => {
-    if (!key.startsWith("./")) {
-      throw new TypeError(`unexpected key in entryPoints, all keys must start with ./ but found ${key}`);
-    }
-    const value = entryPoints[key];
-    if (typeof value !== "string") {
-      throw new TypeError(`unexpected value in entryPoints, all values must be strings found ${value} for key ${key}`);
-    }
-    if (value.includes("/")) {
-      throw new TypeError(`unexpected value in entryPoints, all values must be plain strings (no "/") but found ${value} for key ${key}`);
-    }
-  });
 };
 const isUsed = urlInfo => {
   // nothing uses this url anymore
@@ -22320,7 +22355,8 @@ const createFileService = ({
   serverStopCallbacks,
   serverEventsDispatcher,
   contextCache,
-  rootDirectoryUrl,
+  sourceDirectoryUrl,
+  sourceMainFilePath,
   runtimeCompat,
   plugins,
   urlAnalysis,
@@ -22329,8 +22365,6 @@ const createFileService = ({
   supervisor,
   transpilation,
   clientAutoreload,
-  clientFiles,
-  clientMainFileUrl,
   cooldownBetweenFileEvents,
   explorer,
   cacheControl,
@@ -22340,20 +22374,19 @@ const createFileService = ({
   sourcemapsSourcesContent,
   writeGeneratedFiles
 }) => {
-  const jsenvDirectoryUrl = new URL(".jsenv/", rootDirectoryUrl).href;
   const clientFileChangeCallbackList = [];
   const clientFilesPruneCallbackList = [];
-  const clientFilePatterns = {
-    ...clientFiles,
-    ".jsenv/": false
-  };
   const onFileChange = url => {
     clientFileChangeCallbackList.forEach(callback => {
       callback(url);
     });
   };
-  const stopWatchingClientFiles = registerDirectoryLifecycle(rootDirectoryUrl, {
-    watchPatterns: clientFilePatterns,
+  const watchPatterns = {
+    "**/*": true,
+    ".jsenv/": false
+  };
+  const stopWatchingClientFiles = registerDirectoryLifecycle(sourceDirectoryUrl, {
+    watchPatterns,
     cooldownBetweenFileEvents,
     keepProcessAlive: false,
     recursive: true,
@@ -22361,7 +22394,7 @@ const createFileService = ({
       relativeUrl
     }) => {
       onFileChange({
-        url: new URL(relativeUrl, rootDirectoryUrl).href,
+        url: new URL(relativeUrl, sourceDirectoryUrl).href,
         event: "added"
       });
     },
@@ -22369,7 +22402,7 @@ const createFileService = ({
       relativeUrl
     }) => {
       onFileChange({
-        url: new URL(relativeUrl, rootDirectoryUrl).href,
+        url: new URL(relativeUrl, sourceDirectoryUrl).href,
         event: "modified"
       });
     },
@@ -22377,7 +22410,7 @@ const createFileService = ({
       relativeUrl
     }) => {
       onFileChange({
-        url: new URL(relativeUrl, rootDirectoryUrl).href,
+        url: new URL(relativeUrl, sourceDirectoryUrl).href,
         event: "removed"
       });
     }
@@ -22394,8 +22427,8 @@ const createFileService = ({
       return existingContext;
     }
     const watchAssociations = URL_META.resolveAssociations({
-      watch: clientFilePatterns
-    }, rootDirectoryUrl);
+      watch: watchPatterns
+    }, sourceDirectoryUrl);
     const urlGraph = createUrlGraph();
     clientFileChangeCallbackList.push(({
       url
@@ -22418,24 +22451,32 @@ const createFileService = ({
     const clientRuntimeCompat = {
       [runtimeName]: runtimeVersion
     };
+    const jsenvInternalDirectoryUrl = determineJsenvInternalDirectoryUrl(sourceDirectoryUrl);
+    let mainFileUrl;
+    if (sourceMainFilePath === undefined) {
+      mainFileUrl = explorer ? String(explorerHtmlFileUrl) : String(new URL("./index.html", sourceDirectoryUrl));
+    } else {
+      mainFileUrl = String(new URL(sourceMainFilePath, sourceDirectoryUrl));
+    }
     const kitchen = createKitchen({
       signal,
       logLevel,
-      rootDirectoryUrl,
+      rootDirectoryUrl: sourceDirectoryUrl,
+      jsenvInternalDirectoryUrl,
       urlGraph,
       dev: true,
       runtimeCompat,
       clientRuntimeCompat,
       systemJsTranspilation: !RUNTIME_COMPAT.isSupported(clientRuntimeCompat, "script_type_module") || !RUNTIME_COMPAT.isSupported(clientRuntimeCompat, "import_dynamic") || !RUNTIME_COMPAT.isSupported(clientRuntimeCompat, "import_meta"),
       plugins: [...plugins, ...getCorePlugins({
-        rootDirectoryUrl,
+        rootDirectoryUrl: sourceDirectoryUrl,
+        mainFileUrl,
         runtimeCompat,
         urlAnalysis,
         urlResolution,
         fileSystemMagicRedirection,
         supervisor,
         transpilation,
-        clientMainFileUrl,
         clientAutoreload,
         clientFileChangeCallbackList,
         clientFilesPruneCallbackList,
@@ -22449,7 +22490,7 @@ const createFileService = ({
       sourcemapsSourcesProtocol,
       sourcemapsSourcesContent,
       writeGeneratedFiles,
-      outDirectoryUrl: `${rootDirectoryUrl}.jsenv/${runtimeName}@${runtimeVersion}/`
+      outDirectoryUrl: new URL(`${runtimeName}@${runtimeVersion}/`, jsenvInternalDirectoryUrl)
     });
     urlGraph.createUrlInfoCallbackRef.current = urlInfo => {
       const {
@@ -22528,7 +22569,7 @@ const createFileService = ({
       if (serverEventNames.length > 0) {
         Object.keys(allServerEvents).forEach(serverEventName => {
           allServerEvents[serverEventName]({
-            rootDirectoryUrl,
+            rootDirectoryUrl: sourceDirectoryUrl,
             urlGraph,
             dev: true,
             sendServerEvent: data => {
@@ -22544,7 +22585,7 @@ const createFileService = ({
       }
     }
     const context = {
-      rootDirectoryUrl,
+      rootDirectoryUrl: sourceDirectoryUrl,
       dev: true,
       runtimeName,
       runtimeVersion,
@@ -22555,13 +22596,6 @@ const createFileService = ({
     return context;
   };
   return async request => {
-    // serve file inside ".jsenv" directory
-    const requestFileUrl = new URL(request.resource.slice(1), rootDirectoryUrl).href;
-    if (urlIsInsideOf(requestFileUrl, jsenvDirectoryUrl)) {
-      return fetchFileSystem(requestFileUrl, {
-        headers: request.headers
-      });
-    }
     const {
       urlGraph,
       kitchen
@@ -22571,16 +22605,16 @@ const createFileService = ({
       return responseFromPlugin;
     }
     let reference;
-    const parentUrl = inferParentFromRequest(request, rootDirectoryUrl);
+    const parentUrl = inferParentFromRequest(request, sourceDirectoryUrl);
     if (parentUrl) {
       reference = urlGraph.inferReference(request.resource, parentUrl);
     }
     if (!reference) {
       const entryPoint = kitchen.injectReference({
         trace: {
-          message: parentUrl || rootDirectoryUrl
+          message: parentUrl || sourceDirectoryUrl
         },
-        parentUrl: parentUrl || rootDirectoryUrl,
+        parentUrl: parentUrl || sourceDirectoryUrl,
         type: "http_request",
         specifier: request.resource
       });
@@ -22702,7 +22736,7 @@ const createFileService = ({
             accept: "text/html"
           },
           canReadDirectory: true,
-          rootDirectoryUrl
+          rootDirectoryUrl: sourceDirectoryUrl
         });
       }
       if (code === "NOT_ALLOWED") {
@@ -22729,7 +22763,7 @@ const createFileService = ({
     }
   };
 };
-const inferParentFromRequest = (request, rootDirectoryUrl) => {
+const inferParentFromRequest = (request, sourceDirectoryUrl) => {
   const {
     referer
   } = request.headers;
@@ -22750,7 +22784,7 @@ const inferParentFromRequest = (request, rootDirectoryUrl) => {
   return moveUrl({
     url: referer,
     from: `${request.origin}/`,
-    to: rootDirectoryUrl,
+    to: sourceDirectoryUrl,
     preferAbsolute: true
   });
 };
@@ -22778,18 +22812,13 @@ const startDevServer = async ({
   keepProcessAlive = true,
   services = [],
   onStop = () => {},
-  rootDirectoryUrl,
-  clientFiles = {
-    "./src/": true,
-    "./tests/": true,
-    "./package.json": true
-  },
+  sourceDirectoryUrl,
+  sourceMainFilePath,
   devServerFiles = {
     "./package.json": true,
     "./jsenv.config.mjs": true
   },
   clientAutoreload = true,
-  clientMainFileUrl,
   devServerAutoreload = false,
   devServerMainFile = getCallerPosition().url,
   cooldownBetweenFileEvents,
@@ -22823,11 +22852,11 @@ const startDevServer = async ({
     if (unexpectedParamNames.length > 0) {
       throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param`);
     }
-    const rootDirectoryUrlValidation = validateDirectoryUrl(rootDirectoryUrl);
-    if (!rootDirectoryUrlValidation.valid) {
-      throw new TypeError(`rootDirectoryUrl ${rootDirectoryUrlValidation.message}, got ${rootDirectoryUrl}`);
+    const sourceDirectoryUrlValidation = validateDirectoryUrl(sourceDirectoryUrl);
+    if (!sourceDirectoryUrlValidation.valid) {
+      throw new TypeError(`sourceDirectoryUrl ${sourceDirectoryUrlValidation.message}, got ${sourceDirectoryUrl}`);
     }
-    rootDirectoryUrl = rootDirectoryUrlValidation.value;
+    sourceDirectoryUrl = sourceDirectoryUrlValidation.value;
   }
   const logger = createLogger({
     logLevel
@@ -22849,11 +22878,11 @@ const startDevServer = async ({
         relativeUrl,
         event
       }) => {
-        const url = new URL(relativeUrl, rootDirectoryUrl).href;
+        const url = new URL(relativeUrl, sourceDirectoryUrl).href;
         logger.info(`file ${event} ${url} -> restarting server...`);
         reloadableWorker.reload();
       };
-      const stopWatchingDevServerFiles = registerDirectoryLifecycle(rootDirectoryUrl, {
+      const stopWatchingDevServerFiles = registerDirectoryLifecycle(sourceDirectoryUrl, {
         watchPatterns: {
           ...devServerFiles.include,
           [devServerMainFile]: true,
@@ -22943,7 +22972,8 @@ const startDevServer = async ({
         serverStopCallbacks,
         serverEventsDispatcher,
         contextCache,
-        rootDirectoryUrl,
+        sourceDirectoryUrl,
+        sourceMainFilePath,
         runtimeCompat,
         plugins,
         urlAnalysis,
@@ -22952,8 +22982,6 @@ const startDevServer = async ({
         supervisor,
         transpilation,
         clientAutoreload,
-        clientFiles,
-        clientMainFileUrl,
         cooldownBetweenFileEvents,
         explorer,
         cacheControl,
@@ -24194,7 +24222,7 @@ const executePlan = async (plan, {
   logFileRelativeUrl,
   completedExecutionLogMerging,
   completedExecutionLogAbbreviation,
-  rootDirectoryUrl,
+  sourceDirectoryUrl,
   devServerOrigin,
   keepRunning,
   defaultMsAllocatedPerExecution,
@@ -24259,7 +24287,7 @@ const executePlan = async (plan, {
     multipleExecutionsOperation.addAbortSignal(failFastAbortController.signal);
   }
   try {
-    const coverageTempDirectoryUrl = new URL(coverageTempDirectoryRelativeUrl, rootDirectoryUrl).href;
+    const coverageTempDirectoryUrl = new URL(coverageTempDirectoryRelativeUrl, sourceDirectoryUrl).href;
     if (someNodeRuntime && coverageEnabled && coverageMethodForNodeJs === "NODE_V8_COVERAGE") {
       if (process.env.NODE_V8_COVERAGE) {
         // when runned multiple times, we don't want to keep previous files in this directory
@@ -24294,7 +24322,7 @@ const executePlan = async (plan, {
           const planCoverage = await reportToCoverage(report, {
             signal: multipleExecutionsOperation.signal,
             logger,
-            rootDirectoryUrl,
+            rootDirectoryUrl: sourceDirectoryUrl,
             coverageConfig,
             coverageIncludeMissing,
             coverageMethodForBrowsers,
@@ -24310,7 +24338,7 @@ const executePlan = async (plan, {
       });
     }
     let runtimeParams = {
-      rootDirectoryUrl,
+      rootDirectoryUrl: sourceDirectoryUrl,
       devServerOrigin,
       coverageEnabled,
       coverageConfig,
@@ -24331,7 +24359,7 @@ const executePlan = async (plan, {
     const executionSteps = await getExecutionAsSteps({
       plan,
       multipleExecutionsOperation,
-      rootDirectoryUrl
+      rootDirectoryUrl: sourceDirectoryUrl
     });
     logger.debug(`${executionSteps.length} executions planned`);
     if (completedExecutionLogMerging && !process.stdout.isTTY) {
@@ -24417,7 +24445,7 @@ const executePlan = async (plan, {
           });
         }
         beforeExecutionCallback(beforeExecutionInfo);
-        const fileUrl = `${rootDirectoryUrl}${fileRelativeUrl}`;
+        const fileUrl = `${sourceDirectoryUrl}${fileRelativeUrl}`;
         let executionResult;
         if (existsSync(new URL(fileUrl))) {
           executionResult = await run({
@@ -24534,7 +24562,7 @@ const executePlan = async (plan, {
       logger.info(summaryLog);
     }
     if (summary.counters.total !== summary.counters.completed) {
-      const logFileUrl = new URL(logFileRelativeUrl, rootDirectoryUrl).href;
+      const logFileUrl = new URL(logFileRelativeUrl, sourceDirectoryUrl).href;
       writeFileSync(logFileUrl, rawOutput);
       logger.info(`-> ${urlToFileSystemPath(logFileUrl)}`);
     }
@@ -24639,7 +24667,7 @@ const executeInParallel = async ({
 /**
  * Execute a list of files and log how it goes.
  * @param {Object} testPlanParameters
- * @param {string|url} testPlanParameters.rootDirectoryUrl Root directory of the project
+ * @param {string|url} testPlanParameters.sourceDirectoryUrl Directory containing source and test files
  * @param {string|url} [testPlanParameters.serverOrigin=undefined] Jsenv dev server origin; required when executing test on browsers
  * @param {Object} testPlanParameters.testPlan Object associating patterns leading to files to runtimes where they should be executed
  * @param {boolean} [testPlanParameters.completedExecutionLogAbbreviation=false] Abbreviate completed execution information to shorten terminal output
@@ -24666,7 +24694,7 @@ const executeTestPlan = async ({
   logFileRelativeUrl = ".jsenv/test_plan_debug.txt",
   completedExecutionLogAbbreviation = false,
   completedExecutionLogMerging = false,
-  rootDirectoryUrl,
+  sourceDirectoryUrl,
   devServerOrigin,
   testPlan,
   updateProcessExitCode = true,
@@ -24707,11 +24735,11 @@ const executeTestPlan = async ({
     if (unexpectedParamNames.length > 0) {
       throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param`);
     }
-    const rootDirectoryUrlValidation = validateDirectoryUrl(rootDirectoryUrl);
-    if (!rootDirectoryUrlValidation.valid) {
-      throw new TypeError(`rootDirectoryUrl ${rootDirectoryUrlValidation.message}, got ${rootDirectoryUrl}`);
+    const sourceDirectoryUrlValidation = validateDirectoryUrl(sourceDirectoryUrl);
+    if (!sourceDirectoryUrlValidation.valid) {
+      throw new TypeError(`sourceDirectoryUrl ${sourceDirectoryUrlValidation.message}, got ${sourceDirectoryUrl}`);
     }
-    rootDirectoryUrl = rootDirectoryUrlValidation.value;
+    sourceDirectoryUrl = sourceDirectoryUrlValidation.value;
     if (typeof testPlan !== "object") {
       throw new Error(`testPlan must be an object, got ${testPlan}`);
     }
@@ -24763,7 +24791,7 @@ const executeTestPlan = async ({
     logFileRelativeUrl,
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
-    rootDirectoryUrl,
+    sourceDirectoryUrl,
     devServerOrigin,
     maxExecutionsInParallel,
     defaultMsAllocatedPerExecution,
@@ -24790,22 +24818,22 @@ const executeTestPlan = async ({
     // and in case coverage json file gets written in the same directory
     // it must be done before
     if (coverageEnabled && coverageReportHtmlDirectory) {
-      const coverageHtmlDirectoryUrl = resolveDirectoryUrl(coverageReportHtmlDirectory, rootDirectoryUrl);
-      if (!urlIsInsideOf(coverageHtmlDirectoryUrl, rootDirectoryUrl)) {
-        throw new Error(`coverageReportHtmlDirectory must be inside rootDirectoryUrl`);
+      const coverageHtmlDirectoryUrl = resolveDirectoryUrl(coverageReportHtmlDirectory, sourceDirectoryUrl);
+      if (!urlIsInsideOf(coverageHtmlDirectoryUrl, sourceDirectoryUrl)) {
+        throw new Error(`coverageReportHtmlDirectory must be inside sourceDirectoryUrl`);
       }
       await ensureEmptyDirectory(coverageHtmlDirectoryUrl);
       const htmlCoverageDirectoryIndexFileUrl = `${coverageHtmlDirectoryUrl}index.html`;
       logger.info(`-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`);
       promises.push(generateCoverageHtmlDirectory(planCoverage, {
-        rootDirectoryUrl,
-        coverageHtmlDirectoryRelativeUrl: urlToRelativeUrl(coverageHtmlDirectoryUrl, rootDirectoryUrl),
+        rootDirectoryUrl: sourceDirectoryUrl,
+        coverageHtmlDirectoryRelativeUrl: urlToRelativeUrl(coverageHtmlDirectoryUrl, sourceDirectoryUrl),
         coverageReportSkipEmpty,
         coverageReportSkipFull
       }));
     }
     if (coverageEnabled && coverageReportJsonFile) {
-      const coverageJsonFileUrl = new URL(coverageReportJsonFile, rootDirectoryUrl).href;
+      const coverageJsonFileUrl = new URL(coverageReportJsonFile, sourceDirectoryUrl).href;
       promises.push(generateCoverageJsonFile({
         coverage: result.planCoverage,
         coverageJsonFileUrl,
@@ -25672,7 +25700,6 @@ nodeChildProcess.run = async ({
     env: envForChildProcess
   });
   logger.debug(createDetailedMessage$1(`child process forked (pid ${childProcess.pid})`, {
-    "execArgv": execArgv.join(`\n`),
     "custom env": JSON.stringify(env, null, "  ")
   }));
   // if we pass stream, pipe them https://github.com/sindresorhus/execa/issues/81
@@ -26195,8 +26222,8 @@ const onceWorkerThreadEvent = (worker, type, callback) => {
 /**
  * Start a server for build files.
  * @param {Object} buildServerParameters
- * @param {string|url} buildServerParameters.rootDirectoryUrl Root directory of the project
  * @param {string|url} buildServerParameters.buildDirectoryUrl Directory where build files are written
+ * @param {string|url} buildServerParameters.sourceDirectoryUrl Directory containing source files
  * @return {Object} A build server object
  */
 const startBuildServer = async ({
@@ -26211,9 +26238,9 @@ const startBuildServer = async ({
   port = 9779,
   services = [],
   keepProcessAlive = true,
-  rootDirectoryUrl,
   buildDirectoryUrl,
-  buildIndexPath = "index.html",
+  buildMainFilePath = "index.html",
+  sourceDirectoryUrl,
   buildServerFiles = {
     "./package.json": true,
     "./jsenv.config.mjs": true
@@ -26229,31 +26256,33 @@ const startBuildServer = async ({
     if (unexpectedParamNames.length > 0) {
       throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param`);
     }
-    const rootDirectoryUrlValidation = validateDirectoryUrl(rootDirectoryUrl);
-    if (!rootDirectoryUrlValidation.valid) {
-      throw new TypeError(`rootDirectoryUrl ${rootDirectoryUrlValidation.message}, got ${rootDirectoryUrl}`);
+    if (sourceDirectoryUrl) {
+      const sourceDirectoryUrlValidation = validateDirectoryUrl(sourceDirectoryUrl);
+      if (!sourceDirectoryUrlValidation.valid) {
+        throw new TypeError(`rootDirectoryUrl ${sourceDirectoryUrlValidation.message}, got ${sourceDirectoryUrl}`);
+      }
+      sourceDirectoryUrl = sourceDirectoryUrlValidation.value;
     }
-    rootDirectoryUrl = rootDirectoryUrlValidation.value;
     const buildDirectoryUrlValidation = validateDirectoryUrl(buildDirectoryUrl);
     if (!buildDirectoryUrlValidation.valid) {
       throw new TypeError(`buildDirectoryUrl ${buildDirectoryUrlValidation.message}, got ${buildDirectoryUrlValidation}`);
     }
     buildDirectoryUrl = buildDirectoryUrlValidation.value;
-    if (buildIndexPath) {
-      if (typeof buildIndexPath !== "string") {
-        throw new TypeError(`buildIndexPath must be a string, got ${buildIndexPath}`);
+    if (buildMainFilePath) {
+      if (typeof buildMainFilePath !== "string") {
+        throw new TypeError(`buildMainFilePath must be a string, got ${buildMainFilePath}`);
       }
-      if (buildIndexPath[0] === "/") {
-        buildIndexPath = buildIndexPath.slice(1);
+      if (buildMainFilePath[0] === "/") {
+        buildMainFilePath = buildMainFilePath.slice(1);
       } else {
-        const buildIndexUrl = new URL(buildIndexPath, buildDirectoryUrl).href;
-        if (!buildIndexUrl.startsWith(buildDirectoryUrl)) {
-          throw new Error(`buildIndexPath must be relative, got ${buildIndexPath}`);
+        const buildMainFileUrl = new URL(buildMainFilePath, buildDirectoryUrl).href;
+        if (!buildMainFileUrl.startsWith(buildDirectoryUrl)) {
+          throw new Error(`buildMainFilePath must be relative, got ${buildMainFilePath}`);
         }
-        buildIndexPath = buildIndexUrl.slice(buildDirectoryUrl.length);
+        buildMainFilePath = buildMainFileUrl.slice(buildDirectoryUrl.length);
       }
-      if (!existsSync(new URL(buildIndexPath, buildDirectoryUrl))) {
-        buildIndexPath = null;
+      if (!existsSync(new URL(buildMainFilePath, buildDirectoryUrl))) {
+        buildMainFilePath = null;
       }
     }
   }
@@ -26277,15 +26306,14 @@ const startBuildServer = async ({
         relativeUrl,
         event
       }) => {
-        const url = new URL(relativeUrl, rootDirectoryUrl).href;
+        const url = new URL(relativeUrl, sourceDirectoryUrl).href;
         logger.info(`file ${event} ${url} -> restarting server...`);
         reloadableWorker.reload();
       };
-      const stopWatchingBuildServerFiles = registerDirectoryLifecycle(rootDirectoryUrl, {
+      const stopWatchingBuildServerFiles = registerDirectoryLifecycle(sourceDirectoryUrl, {
         watchPatterns: {
           ...buildServerFiles,
-          [buildServerMainFile]: true,
-          ".jsenv/": false
+          [buildServerMainFile]: true
         },
         cooldownBetweenFileEvents,
         keepProcessAlive: false,
@@ -26366,7 +26394,7 @@ const startBuildServer = async ({
       name: "jsenv:build_files_service",
       handleRequest: createBuildFilesService({
         buildDirectoryUrl,
-        buildIndexPath
+        buildMainFilePath
       })
     }, jsenvServiceErrorHandler({
       sendErrorDetails: true
@@ -26394,14 +26422,14 @@ const startBuildServer = async ({
 };
 const createBuildFilesService = ({
   buildDirectoryUrl,
-  buildIndexPath
+  buildMainFilePath
 }) => {
   return request => {
     const urlIsVersioned = new URL(request.url).searchParams.has("v");
-    if (buildIndexPath && request.resource === "/") {
+    if (buildMainFilePath && request.resource === "/") {
       request = {
         ...request,
-        resource: `/${buildIndexPath}`
+        resource: `/${buildMainFilePath}`
       };
     }
     return fetchFileSystem(new URL(request.resource.slice(1), buildDirectoryUrl), {
