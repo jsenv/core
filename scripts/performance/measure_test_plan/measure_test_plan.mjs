@@ -54,7 +54,7 @@ await executeTestPlan({
   coverageMethodForNodeJs: "Profiler",
   coverageV8ConflictWarning: false,
   coverageReportTextLog: false,
-  coverageReportHtmlDirectory: false,
+  coverageReportHtml: false,
 })
 
 const { duration, memoryHeapUsed, memoryHeapTotal, fsRead, fsWrite } =

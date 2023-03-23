@@ -141,6 +141,11 @@ export const executeTestPlan = async ({
       }
       let devServerStarted = await pingServer(devServerOrigin)
       if (!devServerStarted) {
+        if (!devServerModuleUrl) {
+          throw new TypeError(
+            `devServerModuleUrl is required when dev server is not started in order to run tests on browser(s)`,
+          )
+        }
         try {
           process.env.IMPORTED_BY_TEST_PLAN = "1"
           await import(devServerModuleUrl)

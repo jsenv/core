@@ -38,7 +38,7 @@ const { testPlanCoverage } = await executeTestPlan({
     "./js_syntax_error.js": true,
   },
   coverageReportTextLog: false,
-  coverageReportHtmlDirectoryUrl: false,
+  coverageReportHtml: false,
 })
 const actual = testPlanCoverage
 const expected = {

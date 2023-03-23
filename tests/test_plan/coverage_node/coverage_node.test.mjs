@@ -26,7 +26,7 @@ const test = async (params) => {
     coverageMethodForNodeJs: "Profiler",
     coverageIncludeMissing: false,
     coverageReportTextLog: false,
-    coverageReportHtmlDirectoryUrl: false,
+    coverageReportHtml: false,
   })
   const actual = testPlanCoverage
   const expected = {

@@ -10,7 +10,7 @@ const devServer = await startDevServer({
 })
 const { testPlanCoverage } = await executeTestPlan({
   logLevel: "warn",
-  sourceDirectoryUrl: new URL("./", import.meta.url),
+  testDirectoryUrl: new URL("./", import.meta.url),
   devServerOrigin: devServer.origin,
   testPlan: {
     "./main.html": {
@@ -29,7 +29,7 @@ const { testPlanCoverage } = await executeTestPlan({
     "./file.js": true,
   },
   coverageReportTextLog: false,
-  coverageReportHtmlDirectory: false,
+  coverageReportHtml: false,
 })
 const actual = testPlanCoverage
 const expected = {

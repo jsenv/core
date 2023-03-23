@@ -22,7 +22,7 @@ const { testPlanCoverage } = await executeTestPlan({
   coverageAndExecutionAllowed: true,
   coverageReportTextLog: false,
   coverageConfig: {
-    ["main.js"]: true,
+    "main.js": true,
   },
 })
 const actual = testPlanCoverage
