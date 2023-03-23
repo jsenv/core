@@ -31,7 +31,7 @@ export const startDevServer = async ({
   // it's better to use http1 by default because it allows to get statusText in devtools
   // which gives valuable information when there is errors
   http2 = false,
-  logLevel = "info",
+  logLevel = process.env.IMPORTED_BY_TEST_PLAN ? "warn" : "info",
   serverLogLevel = "warn",
   services = [],
 
@@ -168,6 +168,27 @@ export const startDevServer = async ({
           if (request.headers["sec-websocket-protocol"] === "jsenv") {
             serverEventsDispatcher.addWebsocket(websocket, request)
           }
+        },
+      },
+      {
+        handleRequest: (request) => {
+          if (request.pathname === "/__server_params__.json") {
+            const json = JSON.stringify({
+              sourceDirectoryUrl,
+            })
+            return {
+              status: 200,
+              headers: {
+                "content-type": "application/json",
+                "content-length": Buffer.byteLength(json),
+              },
+              body: json,
+            }
+          }
+          if (request.pathname === "/__stop__") {
+            server.stop()
+          }
+          return null
         },
       },
       {

@@ -1,9 +1,15 @@
+import { fetchUrl } from "@jsenv/fetch"
 import { URL_META } from "@jsenv/url-meta"
-import { urlToFileSystemPath, urlToRelativeUrl } from "@jsenv/urls"
+import {
+  urlToFileSystemPath,
+  urlToRelativeUrl,
+  urlIsInsideOf,
+} from "@jsenv/urls"
 import { ensureEmptyDirectory, validateDirectoryUrl } from "@jsenv/filesystem"
 import { createLogger, createDetailedMessage } from "@jsenv/log"
 
 import { lookupPackageDirectory } from "../lookup_package_directory.js"
+import { pingServer } from "../ping_server.js"
 import { generateCoverageJsonFile } from "./coverage/coverage_reporter_json_file.js"
 import { generateCoverageHtmlDirectory } from "./coverage/coverage_reporter_html_directory.js"
 import { generateCoverageTextLog } from "./coverage/coverage_reporter_text_log.js"
@@ -40,6 +46,7 @@ export const executeTestPlan = async ({
   completedExecutionLogAbbreviation = false,
   completedExecutionLogMerging = false,
   testDirectoryUrl,
+  devServerModuleUrl,
   devServerOrigin,
 
   testPlan,
@@ -76,6 +83,10 @@ export const executeTestPlan = async ({
   coverageReportHtmlDirectoryUrl,
   ...rest
 }) => {
+  let someNeedsServer = false
+  let someNodeRuntime = false
+  let stopDevServerNeeded = false
+  const runtimes = {}
   // param validation
   {
     const unexpectedParamNames = Object.keys(rest)
@@ -94,6 +105,68 @@ export const executeTestPlan = async ({
     if (typeof testPlan !== "object") {
       throw new Error(`testPlan must be an object, got ${testPlan}`)
     }
+
+    Object.keys(testPlan).forEach((filePattern) => {
+      const filePlan = testPlan[filePattern]
+      if (!filePlan) return
+      Object.keys(filePlan).forEach((executionName) => {
+        const executionConfig = filePlan[executionName]
+        const { runtime } = executionConfig
+        if (runtime) {
+          runtimes[runtime.name] = runtime.version
+          if (runtime.type === "browser") {
+            someNeedsServer = true
+          }
+          if (runtime.type === "node") {
+            someNodeRuntime = true
+          }
+        }
+      })
+    })
+
+    if (someNeedsServer) {
+      if (!devServerOrigin) {
+        throw new TypeError(
+          `devServerOrigin is required when running tests on browser(s)`,
+        )
+      }
+      let devServerStarted = await pingServer(devServerOrigin)
+      if (!devServerStarted) {
+        try {
+          process.env.IMPORTED_BY_TEST_PLAN = "1"
+          await import(devServerModuleUrl)
+          delete process.env.IMPORTED_BY_TEST_PLAN
+        } catch (e) {
+          if (e.code === "MODULE_NOT_FOUND") {
+            throw new Error(
+              `Cannot find file responsible to start dev server at "${devServerModuleUrl}"`,
+            )
+          }
+          throw e
+        }
+        devServerStarted = await pingServer(devServerOrigin)
+        if (!devServerStarted) {
+          throw new Error(
+            `dev server not started after importing "${devServerModuleUrl}", ensure this module file is starting a server at "${devServerOrigin}"`,
+          )
+        }
+        stopDevServerNeeded = true
+      }
+      const devServerParamsResponse = await fetchUrl(
+        `${devServerOrigin}/__server_params__.json`,
+      )
+      const devServerParams = await devServerParamsResponse.json()
+      const { sourceDirectoryUrl } = devServerParams
+      if (
+        testDirectoryUrl !== sourceDirectoryUrl &&
+        !urlIsInsideOf(testDirectoryUrl, sourceDirectoryUrl)
+      ) {
+        throw new Error(
+          `testDirectoryUrl must be inside sourceDirectoryUrl when running tests on browser(s)`,
+        )
+      }
+    }
+
     if (coverageEnabled) {
       if (typeof coverageConfig !== "object") {
         throw new TypeError(
@@ -132,9 +205,22 @@ export const executeTestPlan = async ({
       }
     }
   }
+
+  const logger = createLogger({ logLevel })
+  logger.debug(
+    createDetailedMessage(`Prepare executing plan`, {
+      runtimes: JSON.stringify(runtimes, null, "  "),
+    }),
+  )
+
   // param normalization
   {
     if (coverageEnabled) {
+      if (Object.keys(coverageConfig).length === 0) {
+        logger.warn(
+          `coverageConfig is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`,
+        )
+      }
       if (coverageReportRootDirectoryUrl === undefined) {
         coverageReportRootDirectoryUrl =
           lookupPackageDirectory(testDirectoryUrl)
@@ -158,17 +244,31 @@ export const executeTestPlan = async ({
           coverageReportRootDirectoryUrl,
         )
       }
+      if (
+        someNodeRuntime &&
+        coverageEnabled &&
+        coverageMethodForNodeJs === "NODE_V8_COVERAGE"
+      ) {
+        if (process.env.NODE_V8_COVERAGE) {
+          // when runned multiple times, we don't want to keep previous files in this directory
+          await ensureEmptyDirectory(process.env.NODE_V8_COVERAGE)
+        } else {
+          coverageMethodForNodeJs = "Profiler"
+          logger.warn(
+            createDetailedMessage(
+              `process.env.NODE_V8_COVERAGE is required to generate coverage for Node.js subprocesses`,
+              {
+                "suggestion": `set process.env.NODE_V8_COVERAGE`,
+                "suggestion 2": `use coverageMethodForNodeJs: "Profiler". But it means coverage for child_process and worker_thread cannot be collected`,
+              },
+            ),
+          )
+        }
+      }
     }
   }
 
   testPlan = { ...testPlan, "**/.jsenv/": null }
-
-  const logger = createLogger({ logLevel })
-  if (Object.keys(coverageConfig).length === 0) {
-    logger.warn(
-      `coverageConfig is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`,
-    )
-  }
 
   const result = await executePlan(testPlan, {
     signal,
@@ -201,6 +301,9 @@ export const executeTestPlan = async ({
     coverageV8ConflictWarning,
     coverageTempDirectoryUrl,
   })
+  if (stopDevServerNeeded) {
+    fetchUrl(`${devServerOrigin}/__stop__`)
+  }
   if (
     updateProcessExitCode &&
     result.planSummary.counters.total !== result.planSummary.counters.completed

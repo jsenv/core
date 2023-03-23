@@ -5,14 +5,13 @@ import wrapAnsi from "wrap-ansi"
 import stripAnsi from "strip-ansi"
 
 import { urlToFileSystemPath } from "@jsenv/urls"
-import { createDetailedMessage, createLog, startSpinner } from "@jsenv/log"
+import { createLog, startSpinner } from "@jsenv/log"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 import { ensureEmptyDirectory, writeFileSync } from "@jsenv/filesystem"
 
 import { reportToCoverage } from "./coverage/report_to_coverage.js"
 import { run } from "@jsenv/core/src/execute/run.js"
 
-import { pingServer } from "../ping_server.js"
 import { ensureGlobalGc } from "./gc.js"
 import { generateExecutionSteps } from "./execution_steps.js"
 import { createExecutionLog, createSummaryLog } from "./logs_file_execution.js"
@@ -59,31 +58,6 @@ export const executePlan = async (
   const callbacks = []
   const stopAfterAllSignal = { notify: () => {} }
 
-  let someNeedsServer = false
-  let someNodeRuntime = false
-  const runtimes = {}
-  Object.keys(plan).forEach((filePattern) => {
-    const filePlan = plan[filePattern]
-    if (!filePlan) return
-    Object.keys(filePlan).forEach((executionName) => {
-      const executionConfig = filePlan[executionName]
-      const { runtime } = executionConfig
-      if (runtime) {
-        runtimes[runtime.name] = runtime.version
-        if (runtime.type === "browser") {
-          someNeedsServer = true
-        }
-        if (runtime.type === "node") {
-          someNodeRuntime = true
-        }
-      }
-    })
-  })
-  logger.debug(
-    createDetailedMessage(`Prepare executing plan`, {
-      runtimes: JSON.stringify(runtimes, null, "  "),
-    }),
-  )
   const multipleExecutionsOperation = Abort.startOperation()
   multipleExecutionsOperation.addAbortSignal(signal)
   if (handleSIGINT) {
@@ -105,28 +79,6 @@ export const executePlan = async (
   }
 
   try {
-    if (
-      someNodeRuntime &&
-      coverageEnabled &&
-      coverageMethodForNodeJs === "NODE_V8_COVERAGE"
-    ) {
-      if (process.env.NODE_V8_COVERAGE) {
-        // when runned multiple times, we don't want to keep previous files in this directory
-        await ensureEmptyDirectory(process.env.NODE_V8_COVERAGE)
-      } else {
-        coverageMethodForNodeJs = "Profiler"
-        logger.warn(
-          createDetailedMessage(
-            `process.env.NODE_V8_COVERAGE is required to generate coverage for Node.js subprocesses`,
-            {
-              "suggestion": `set process.env.NODE_V8_COVERAGE`,
-              "suggestion 2": `use coverageMethodForNodeJs: "Profiler". But it means coverage for child_process and worker_thread cannot be collected`,
-            },
-          ),
-        )
-      }
-    }
-
     if (gcBetweenExecutions) {
       ensureGlobalGc()
     }
@@ -173,19 +125,6 @@ export const executePlan = async (
       coverageMethodForBrowsers,
       coverageMethodForNodeJs,
       stopAfterAllSignal,
-    }
-    if (someNeedsServer) {
-      if (!devServerOrigin) {
-        throw new TypeError(
-          `devServerOrigin is required when running tests on browser(s)`,
-        )
-      }
-      const devServerStarted = await pingServer(devServerOrigin)
-      if (!devServerStarted) {
-        throw new Error(
-          `dev server not started at ${devServerOrigin}. It is required to run tests`,
-        )
-      }
     }
 
     logger.debug(`Generate executions`)
