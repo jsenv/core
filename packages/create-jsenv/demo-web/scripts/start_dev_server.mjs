@@ -8,19 +8,9 @@ import open from "open"
 import { startDevServer } from "@jsenv/core"
 
 export const devServer = await startDevServer({
-  rootDirectoryUrl: new URL("../", import.meta.url),
+  sourceDirectoryUrl: new URL("../src/", import.meta.url),
   port: 3400,
-  explorer: {
-    groups: {
-      src: {
-        "./src/main.html": true,
-      },
-      tests: {
-        "tests/**/*.test.html": true,
-      },
-    },
-  },
 })
 if (process.argv.includes("--open")) {
-  open(`${devServer.origin}/src/main.html`)
+  open(`${devServer.origin}/main.html`)
 }

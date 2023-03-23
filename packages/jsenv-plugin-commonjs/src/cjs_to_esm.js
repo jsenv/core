@@ -1,8 +1,5 @@
 import { readFileSync } from "node:fs"
-import {
-  assertAndNormalizeDirectoryUrl,
-  ensureWindowsDriveLetter,
-} from "@jsenv/filesystem"
+import { ensureWindowsDriveLetter } from "@jsenv/filesystem"
 
 import {
   setUrlExtension,
@@ -19,15 +16,15 @@ export const commonJsToJsModule = ({
   logLevel,
   filesystemCache = true,
   rootDirectoryUrl,
+  jsenvInternalDirectoryUrl,
   sourceFileUrl,
   processEnvNodeEnv,
   ...rest
 }) => {
   if (filesystemCache) {
-    rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
     const compileDirectoryUrl = new URL(
-      "./.jsenv/cjs_to_esm/",
-      rootDirectoryUrl,
+      "cjs_to_esm/",
+      jsenvInternalDirectoryUrl,
     )
     const compiledFileUrl = determineCompiledFileUrl({
       url: sourceFileUrl,

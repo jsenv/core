@@ -11,8 +11,8 @@ const test = ({ pattern, url }) => {
 
 {
   const actual = test({
-    pattern: "./dist/cdn/*photon.*.js",
-    url: "./dist/cdn/photon.hash.js",
+    pattern: "./dist/cdn/*flag.*.js",
+    url: "./dist/cdn/flag.hash.js",
   })
   const expected = false
   assert({ actual, expected })
@@ -20,8 +20,8 @@ const test = ({ pattern, url }) => {
 
 {
   const actual = test({
-    pattern: "./dist/cdn/*photon.*.js",
-    url: "./dist/cdn/photon_startscreen.hash.js",
+    pattern: "./dist/cdn/*flag.*.js",
+    url: "./dist/cdn/flag_startscreen.hash.js",
   })
   const expected = false
   assert({ actual, expected })
@@ -29,8 +29,8 @@ const test = ({ pattern, url }) => {
 
 {
   const actual = test({
-    pattern: "file:///dist/cdn/**photon**.*.js",
-    url: "./dist/cdn/photon.hash.js",
+    pattern: "file:///dist/cdn/**flag**.*.js",
+    url: "./dist/cdn/flag.hash.js",
   })
   const expected = true
   assert({ actual, expected })
@@ -38,8 +38,8 @@ const test = ({ pattern, url }) => {
 
 {
   const actual = test({
-    pattern: "file:///dist/cdn/**photon**.*.js",
-    url: "./dist/cdn/photon_startscreen.hash.js",
+    pattern: "file:///dist/cdn/**flag**.*.js",
+    url: "./dist/cdn/flag_startscreen.hash.js",
   })
   const expected = true
   assert({ actual, expected })

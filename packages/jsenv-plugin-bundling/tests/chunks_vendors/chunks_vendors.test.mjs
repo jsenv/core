@@ -11,11 +11,11 @@ const test = async ({ name, ...rest }) => {
   const snapshotsDirectoryUrl = new URL(`./snapshots/${name}/`, import.meta.url)
   const { buildFileContents } = await build({
     logLevel: "warn",
-    rootDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
+    sourceDirectoryUrl: new URL("./client/", import.meta.url),
     entryPoints: {
       "./main.html": "main.html",
     },
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     runtimeCompat: { chrome: "90" },
     writeGeneratedFiles: true,
     ...rest,
@@ -38,7 +38,7 @@ await test({
       js_module: {
         chunks: {
           vendors: {
-            "**/node_modules/": true,
+            "file://**/node_modules/": true,
             "./a.js": true,
           },
         },

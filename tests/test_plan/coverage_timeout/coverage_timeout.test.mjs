@@ -16,13 +16,13 @@ const testPlan = {
 }
 const { testPlanCoverage } = await executeTestPlan({
   logLevel: "error",
-  rootDirectoryUrl: new URL("./", import.meta.url),
+  testDirectoryUrl: new URL("./", import.meta.url),
   testPlan,
   coverageEnabled: true,
   coverageAndExecutionAllowed: true,
   coverageReportTextLog: false,
   coverageConfig: {
-    ["main.js"]: true,
+    "main.js": true,
   },
 })
 const actual = testPlanCoverage

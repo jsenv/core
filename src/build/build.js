@@ -28,10 +28,9 @@ import {
   urlToRelativeUrl,
 } from "@jsenv/urls"
 import {
-  validateDirectoryUrl,
+  assertAndNormalizeDirectoryUrl,
   ensureEmptyDirectory,
   writeFileSync,
-  registerDirectoryLifecycle,
   comparePathnames,
 } from "@jsenv/filesystem"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
@@ -54,6 +53,8 @@ import {
   findHtmlNode,
 } from "@jsenv/ast"
 
+import { determineJsenvInternalDirectoryUrl } from "../jsenv_internal_directory.js"
+import { watchSourceFiles } from "../watch_source_files.js"
 import { createUrlGraph } from "../kitchen/url_graph.js"
 import { createKitchen } from "../kitchen/kitchen.js"
 import { RUNTIME_COMPAT } from "../kitchen/compat/runtime_compat.js"
@@ -94,12 +95,13 @@ export const defaultRuntimeCompat = {
 /**
  * Generate an optimized version of source files into a directory
  * @param {Object} buildParameters
- * @param {string|url} buildParameters.rootDirectoryUrl
+ * @param {string|url} buildParameters.sourceDirectoryUrl
  *        Directory containing source files
+ * @param {object} buildParameters.entryPoints
+ *        Object where keys are paths to source files and values are their future name in the build directory.
+ *        Keys are relative to sourceDirectoryUrl
  * @param {string|url} buildParameters.buildDirectoryUrl
  *        Directory where optimized files will be written
- * @param {object} buildParameters.entryPoints
- *        Describe entry point paths and control their names in the build directory
  * @param {object} buildParameters.runtimeCompat
  *        Code generated will be compatible with these runtimes
  * @param {string} [buildParameters.assetsDirectory=""]
@@ -124,10 +126,10 @@ export const build = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
   logLevel = "info",
-  rootDirectoryUrl,
+  sourceDirectoryUrl,
+  entryPoints = {},
   buildDirectoryUrl,
   assetsDirectory = "",
-  entryPoints = {},
 
   runtimeCompat = defaultRuntimeCompat,
   base = runtimeCompat.node ? "./" : "/",
@@ -145,9 +147,7 @@ export const build = async ({
   versioningViaImportmap = true,
   lineBreakNormalization = process.platform === "win32",
 
-  clientFiles = {
-    "./src/": true,
-  },
+  sourceFilesConfig = {},
   cooldownBetweenFileEvents,
   watch = false,
 
@@ -166,20 +166,42 @@ export const build = async ({
         `${unexpectedParamNames.join(",")}: there is no such param`,
       )
     }
-    const rootDirectoryUrlValidation = validateDirectoryUrl(rootDirectoryUrl)
-    if (!rootDirectoryUrlValidation.valid) {
+    sourceDirectoryUrl = assertAndNormalizeDirectoryUrl(
+      sourceDirectoryUrl,
+      "sourceDirectoryUrl",
+    )
+
+    if (typeof entryPoints !== "object" || entryPoints === null) {
+      throw new TypeError(`entryPoints must be an object, got ${entryPoints}`)
+    }
+    const keys = Object.keys(entryPoints)
+    keys.forEach((key) => {
+      if (!key.startsWith("./")) {
+        throw new TypeError(
+          `entryPoints keys must start with "./", found ${key}`,
+        )
+      }
+      const value = entryPoints[key]
+      if (typeof value !== "string") {
+        throw new TypeError(
+          `entryPoints values must be strings, found "${value}" on key "${key}"`,
+        )
+      }
+      if (value.includes("/")) {
+        throw new TypeError(
+          `entryPoints values must be plain strings (no "/"), found "${value}" on key "${key}"`,
+        )
+      }
+    })
+    buildDirectoryUrl = assertAndNormalizeDirectoryUrl(
+      buildDirectoryUrl,
+      "buildDirectoryUrl",
+    )
+    if (!["filename", "search_param"].includes(versioningMethod)) {
       throw new TypeError(
-        `rootDirectoryUrl ${rootDirectoryUrlValidation.message}, got ${rootDirectoryUrl}`,
+        `versioningMethod must be "filename" or "search_param", got ${versioning}`,
       )
     }
-    rootDirectoryUrl = rootDirectoryUrlValidation.value
-    const buildDirectoryUrlValidation = validateDirectoryUrl(buildDirectoryUrl)
-    if (!buildDirectoryUrlValidation.valid) {
-      throw new TypeError(
-        `buildDirectoryUrl ${buildDirectoryUrlValidation.message}, got ${buildDirectoryUrlValidation}`,
-      )
-    }
-    buildDirectoryUrl = buildDirectoryUrlValidation.value
   }
 
   const operation = Abort.startOperation()
@@ -195,12 +217,6 @@ export const build = async ({
     })
   }
 
-  assertEntryPoints({ entryPoints })
-  if (!["filename", "search_param"].includes(versioningMethod)) {
-    throw new Error(
-      `Unexpected "versioningMethod": must be "filename", "search_param"; got ${versioning}`,
-    )
-  }
   if (assetsDirectory && assetsDirectory[assetsDirectory.length - 1] !== "/") {
     assetsDirectory = `${assetsDirectory}/`
   }
@@ -211,11 +227,14 @@ export const build = async ({
       directoryToClean = new URL(assetsDirectory, buildDirectoryUrl).href
     }
   }
+  const jsenvInternalDirectoryUrl =
+    determineJsenvInternalDirectoryUrl(sourceDirectoryUrl)
+
   const asFormattedBuildUrl = (generatedUrl, reference) => {
     if (base === "./") {
       const urlRelativeToParent = urlToRelativeUrl(
         generatedUrl,
-        reference.parentUrl === rootDirectoryUrl
+        reference.parentUrl === sourceDirectoryUrl
           ? buildDirectoryUrl
           : reference.parentUrl,
       )
@@ -279,7 +298,8 @@ build ${entryPointKeys.length} entry points`)
     const rawGraphKitchen = createKitchen({
       signal,
       logLevel,
-      rootDirectoryUrl,
+      rootDirectoryUrl: sourceDirectoryUrl,
+      jsenvInternalDirectoryUrl,
       urlGraph: rawGraph,
       build: true,
       runtimeCompat,
@@ -304,7 +324,7 @@ build ${entryPointKeys.length} entry points`)
           },
         },
         ...getCorePlugins({
-          rootDirectoryUrl,
+          rootDirectoryUrl: sourceDirectoryUrl,
           urlGraph: rawGraph,
           runtimeCompat,
 
@@ -323,7 +343,7 @@ build ${entryPointKeys.length} entry points`)
       sourcemaps,
       sourcemapsSourcesContent,
       writeGeneratedFiles,
-      outDirectoryUrl: new URL(`.jsenv/build/`, rootDirectoryUrl),
+      outDirectoryUrl: new URL("build/", jsenvInternalDirectoryUrl),
     })
 
     const buildUrlsGenerator = createBuildUrlsGenerator({
@@ -347,12 +367,13 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     const bundlers = {}
     const finalGraph = createUrlGraph()
     const urlAnalysisPlugin = jsenvPluginUrlAnalysis({
-      rootDirectoryUrl,
+      rootDirectoryUrl: sourceDirectoryUrl,
       ...urlAnalysis,
     })
     const finalGraphKitchen = createKitchen({
       logLevel,
       rootDirectoryUrl: buildDirectoryUrl,
+      jsenvInternalDirectoryUrl,
       urlGraph: finalGraph,
       build: true,
       runtimeCompat,
@@ -643,7 +664,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       sourcemapsSourcesContent,
       sourcemapsSourcesRelative: !versioning,
       writeGeneratedFiles,
-      outDirectoryUrl: new URL(".jsenv/postbuild/", rootDirectoryUrl),
+      outDirectoryUrl: new URL("postbuild/", jsenvInternalDirectoryUrl),
     })
     const finalEntryUrls = []
 
@@ -653,7 +674,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       })
       try {
         if (writeGeneratedFiles) {
-          await ensureEmptyDirectory(new URL(`.jsenv/build/`, rootDirectoryUrl))
+          await ensureEmptyDirectory(new URL(`build/`, sourceDirectoryUrl))
         }
         const rawUrlGraphLoader = createUrlGraphLoader(
           rawGraphKitchen.kitchenContext,
@@ -662,7 +683,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           const [entryReference, entryUrlInfo] =
             rawGraphKitchen.kitchenContext.prepareEntryPoint({
               trace: { message: `"${key}" in entryPoints parameter` },
-              parentUrl: rootDirectoryUrl,
+              parentUrl: sourceDirectoryUrl,
               type: "entry_point",
               specifier: key,
             })
@@ -899,7 +920,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         try {
           if (writeGeneratedFiles) {
             await ensureEmptyDirectory(
-              new URL(`.jsenv/postbuild/`, rootDirectoryUrl),
+              new URL(`postbuild/`, jsenvInternalDirectoryUrl),
             )
           }
           const finalUrlGraphLoader = createUrlGraphLoader(
@@ -909,7 +930,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             const [finalEntryReference, finalEntryUrlInfo] =
               finalGraphKitchen.kitchenContext.prepareEntryPoint({
                 trace: { message: `entryPoint` },
-                parentUrl: rootDirectoryUrl,
+                parentUrl: sourceDirectoryUrl,
                 type: "entry_point",
                 specifier: entryUrl,
               })
@@ -1128,6 +1149,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           const versioningKitchen = createKitchen({
             logLevel: logger.level,
             rootDirectoryUrl: buildDirectoryUrl,
+            jsenvInternalDirectoryUrl,
             urlGraph: finalGraph,
             build: true,
             runtimeCompat,
@@ -1244,10 +1266,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             sourcemapsSourcesContent,
             sourcemapsSourcesRelative: true,
             writeGeneratedFiles,
-            outDirectoryUrl: new URL(
-              ".jsenv/postbuild/",
-              finalGraphKitchen.rootDirectoryUrl,
-            ),
+            outDirectoryUrl: new URL("postbuild/", jsenvInternalDirectoryUrl),
           })
           const versioningUrlGraphLoader = createUrlGraphLoader(
             versioningKitchen.kitchenContext,
@@ -1686,39 +1705,33 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
 
   startBuild()
   let startTimeout
-  const clientFileChangeCallback = ({ relativeUrl, event }) => {
-    const url = new URL(relativeUrl, rootDirectoryUrl).href
-    if (watchFilesTask) {
-      watchFilesTask.happen(`${url.slice(rootDirectoryUrl.length)} ${event}`)
-      watchFilesTask = null
-    }
-    buildAbortController.abort()
-    // setTimeout is to ensure the abortController.abort() above
-    // is properly taken into account so that logs about abort comes first
-    // then logs about re-running the build happens
-    clearTimeout(startTimeout)
-    startTimeout = setTimeout(startBuild, 20)
-  }
-  const stopWatchingClientFiles = registerDirectoryLifecycle(rootDirectoryUrl, {
-    watchPatterns: clientFiles,
-    cooldownBetweenFileEvents,
-    keepProcessAlive: true,
-    recursive: true,
-    added: ({ relativeUrl }) => {
-      clientFileChangeCallback({ relativeUrl, event: "added" })
+  const stopWatchingSourceFiles = watchSourceFiles(
+    sourceDirectoryUrl,
+    ({ url, event }) => {
+      if (watchFilesTask) {
+        watchFilesTask.happen(
+          `${url.slice(sourceDirectoryUrl.length)} ${event}`,
+        )
+        watchFilesTask = null
+      }
+      buildAbortController.abort()
+      // setTimeout is to ensure the abortController.abort() above
+      // is properly taken into account so that logs about abort comes first
+      // then logs about re-running the build happens
+      clearTimeout(startTimeout)
+      startTimeout = setTimeout(startBuild, 20)
     },
-    updated: ({ relativeUrl }) => {
-      clientFileChangeCallback({ relativeUrl, event: "modified" })
+    {
+      sourceFilesConfig,
+      keepProcessAlive: true,
+      cooldownBetweenFileEvents,
     },
-    removed: ({ relativeUrl }) => {
-      clientFileChangeCallback({ relativeUrl, event: "removed" })
-    },
-  })
+  )
   operation.addAbortCallback(() => {
-    stopWatchingClientFiles()
+    stopWatchingSourceFiles()
   })
   await firstBuildPromise
-  return stopWatchingClientFiles
+  return stopWatchingSourceFiles
 }
 
 const findKey = (map, value) => {
@@ -1741,31 +1754,6 @@ const injectVersionIntoBuildUrl = ({ buildUrl, version, versioningMethod }) => {
   const versionedFilename = `${basename}-${version}${extension}`
   const versionedUrl = setUrlFilename(buildUrl, versionedFilename)
   return versionedUrl
-}
-
-const assertEntryPoints = ({ entryPoints }) => {
-  if (typeof entryPoints !== "object" || entryPoints === null) {
-    throw new TypeError(`entryPoints must be an object, got ${entryPoints}`)
-  }
-  const keys = Object.keys(entryPoints)
-  keys.forEach((key) => {
-    if (!key.startsWith("./")) {
-      throw new TypeError(
-        `unexpected key in entryPoints, all keys must start with ./ but found ${key}`,
-      )
-    }
-    const value = entryPoints[key]
-    if (typeof value !== "string") {
-      throw new TypeError(
-        `unexpected value in entryPoints, all values must be strings found ${value} for key ${key}`,
-      )
-    }
-    if (value.includes("/")) {
-      throw new TypeError(
-        `unexpected value in entryPoints, all values must be plain strings (no "/") but found ${value} for key ${key}`,
-      )
-    }
-  })
 }
 
 const isUsed = (urlInfo) => {

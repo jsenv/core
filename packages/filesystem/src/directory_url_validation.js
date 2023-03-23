@@ -43,10 +43,13 @@ export const validateDirectoryUrl = (value) => {
   }
 }
 
-export const assertAndNormalizeDirectoryUrl = (directoryUrl) => {
+export const assertAndNormalizeDirectoryUrl = (
+  directoryUrl,
+  name = "directoryUrl",
+) => {
   const { valid, message, value } = validateDirectoryUrl(directoryUrl)
   if (!valid) {
-    throw new TypeError(`directoryUrl ${message}, got ${value}`)
+    throw new TypeError(`${name} ${message}, got ${value}`)
   }
   return value
 }

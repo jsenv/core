@@ -8,11 +8,11 @@ import { jsenvPluginGlobals } from "@jsenv/plugin-globals"
 const test = async (params) => {
   await build({
     logLevel: "warn",
-    rootDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
+    sourceDirectoryUrl: new URL("./client/", import.meta.url),
     entryPoints: {
       "./main.html": "main.html",
     },
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     plugins: [
       jsenvPluginGlobals({
         "./main.js": () => {
@@ -30,17 +30,11 @@ const test = async (params) => {
   const { returnValue } = await executeInChromium({
     url: `${server.origin}/main.html`,
     /* eslint-disable no-undef */
-    pageFunction: async () => {
-      return window.resultPromise
-    },
+    pageFunction: () => window.resultPromise,
     /* eslint-enable no-undef */
   })
-  const actual = {
-    returnValue,
-  }
-  const expected = {
-    returnValue: { answer: 42 },
-  }
+  const actual = returnValue
+  const expected = { answer: 42 }
   assert({ actual, expected })
 }
 

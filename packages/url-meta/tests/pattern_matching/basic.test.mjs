@@ -98,3 +98,16 @@ try {
   }
   assert({ actual, expected })
 }
+
+{
+  const pattern = "file:///**/Z*"
+  const url = "file:///aZb"
+  const actual = URL_META.applyPatternMatching({ pattern, url })
+  const expected = {
+    matched: false,
+    patternIndex: 8,
+    urlIndex: 8,
+    matchGroups: [],
+  }
+  assert({ actual, expected })
+}

@@ -4,7 +4,7 @@ export const devServer = await startDevServer({
   logLevel: process.env.GENERATING_SNAPSHOTS ? "off" : undefined,
   serverLogLevel: process.env.GENERATING_SNAPSHOTS ? "off" : undefined,
   port: 3589,
-  rootDirectoryUrl: new URL("./stories/", import.meta.url),
+  sourceDirectoryUrl: new URL("./stories/", import.meta.url),
   supervisor: {
     errorBaseUrl: process.env.GENERATING_SNAPSHOTS ? "file:///" : undefined,
   },
@@ -34,9 +34,6 @@ export const devServer = await startDevServer({
   ],
   // sourcemaps: "file",
   // sourcemapsSourcesProtocol: "source-maps://",
-  clientFiles: {
-    "./**": true,
-  },
   explorer: {
     groups: {
       stories: {

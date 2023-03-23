@@ -9,7 +9,7 @@ import {
 const test = async (params) => {
   const { testPlanCoverage } = await executeTestPlan({
     logLevel: "warn",
-    rootDirectoryUrl: new URL("./", import.meta.url),
+    testDirectoryUrl: new URL("./", import.meta.url),
     testPlan: {
       "./node_client/main.js": {
         node: {
@@ -26,7 +26,7 @@ const test = async (params) => {
     coverageMethodForNodeJs: "Profiler",
     coverageIncludeMissing: false,
     coverageReportTextLog: false,
-    coverageReportHtmlDirectory: false,
+    coverageReportHtml: false,
   })
   const actual = testPlanCoverage
   const expected = {

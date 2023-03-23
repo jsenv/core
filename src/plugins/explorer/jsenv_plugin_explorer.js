@@ -11,13 +11,14 @@ export const explorerHtmlFileUrl = new URL(
 export const jsenvPluginExplorer = ({
   groups = {
     src: {
-      "./src/**/*.html": true,
+      "./**/*.html": true,
+      "./**/*.test.html": false,
     },
     tests: {
-      "./tests/**/*.test.html": true,
+      "./**/*.test.html": true,
     },
   },
-  clientMainFileUrl,
+  mainFileUrl,
 }) => {
   const faviconClientFileUrl = new URL("./client/jsenv.png", import.meta.url)
 
@@ -26,7 +27,7 @@ export const jsenvPluginExplorer = ({
     appliesDuring: "dev",
     transformUrlContent: {
       html: async (urlInfo, context) => {
-        if (urlInfo.url !== clientMainFileUrl) {
+        if (urlInfo.url !== mainFileUrl) {
           return null
         }
         let html = urlInfo.content

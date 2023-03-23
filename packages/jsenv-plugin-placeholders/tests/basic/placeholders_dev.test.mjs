@@ -7,7 +7,7 @@ import { jsenvPluginPlaceholders } from "@jsenv/plugin-placeholders"
 const test = async (params) => {
   const devServer = await startDevServer({
     logLevel: "warn",
-    rootDirectoryUrl: new URL("./client/", import.meta.url),
+    sourceDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
     plugins: [
       jsenvPluginPlaceholders({
@@ -23,9 +23,7 @@ const test = async (params) => {
   const { returnValue } = await executeInChromium({
     url: `${devServer.origin}/main.html`,
     /* eslint-disable no-undef */
-    pageFunction: async () => {
-      return window.resultPromise
-    },
+    pageFunction: () => window.resultPromise,
     /* eslint-enable no-undef */
   })
 

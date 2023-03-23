@@ -9,16 +9,16 @@ import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
 import { jsenvPluginMinification } from "@jsenv/plugin-minification"
 
 await build({
-  rootDirectoryUrl: new URL("../", import.meta.url),
-  buildDirectoryUrl: new URL("../dist/", import.meta.url),
+  sourceDirectoryUrl: new URL("../src/", import.meta.url),
   entryPoints: {
-    "./src/main.html": "index.html",
+    "./main.html": "index.html",
   },
+  buildDirectoryUrl: new URL("../dist/", import.meta.url),
   plugins: [
     jsenvPluginBundling({
       js_module: {
         chunks: {
-          vendors: { "**/node_modules/": true },
+          vendors: { "file://**/node_modules/": true },
         },
       },
     }),

@@ -6,7 +6,7 @@ import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
 const test = async (params) => {
   const devServer = await startDevServer({
     logLevel: "warn",
-    rootDirectoryUrl: new URL("./client/", import.meta.url),
+    sourceDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
     ...params,
   })
@@ -15,9 +15,7 @@ const test = async (params) => {
     collectConsole: true,
     collectErrors: true,
     /* eslint-disable no-undef */
-    pageFunction: async () => {
-      return window.__supervisor__.getDocumentExecutionResult()
-    },
+    pageFunction: () => window.__supervisor__.getDocumentExecutionResult(),
     /* eslint-enable no-undef */
   })
   const errorText = returnValue.executionResults["/main.js"].exception.text

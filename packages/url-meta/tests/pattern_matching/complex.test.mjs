@@ -152,7 +152,7 @@ import { URL_META } from "@jsenv/url-meta"
   const expected = {
     matched: false,
     patternIndex: pattern.indexOf("."),
-    urlIndex: url.length,
+    urlIndex: 12,
     matchGroups: [""],
   }
   assert({ actual, expected })

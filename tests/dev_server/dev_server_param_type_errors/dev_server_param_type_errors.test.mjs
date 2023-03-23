@@ -3,21 +3,21 @@ import { assert } from "@jsenv/assert"
 import { startDevServer } from "@jsenv/core"
 
 try {
-  await startDevServer({ rootDirectoryUl: new URL("./", import.meta.url) })
+  await startDevServer({ sourceDirectoryUl: new URL("./", import.meta.url) })
   throw new Error("should throw")
 } catch (e) {
   const actual = e
-  const expected = new TypeError(`rootDirectoryUl: there is no such param`)
+  const expected = new TypeError(`sourceDirectoryUl: there is no such param`)
   assert({ actual, expected })
 }
 
 try {
-  await startDevServer({ rootDirectoryUrl: undefined })
+  await startDevServer({ sourceDirectoryUrl: undefined })
   throw new Error("should throw")
 } catch (e) {
   const actual = e
   const expected = new TypeError(
-    `rootDirectoryUrl must be a string or an url, got undefined`,
+    `sourceDirectoryUrl must be a string or an url, got undefined`,
   )
   assert({ actual, expected })
 }

@@ -5,10 +5,10 @@ import { assert } from "@jsenv/assert"
 import { startDevServer } from "@jsenv/core"
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js"
 
-const debug = false // true to have browser UI + keep it open after test
+const debug = false // true to have browser UI + keep it open after test to inspect things
 const devServer = await startDevServer({
   logLevel: "warn",
-  rootDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
   clientAutoreload: false,
   supervisor: false,
@@ -30,9 +30,7 @@ try {
   const getResult = async () => {
     const result = await page.evaluate(
       /* eslint-disable no-undef */
-      () => {
-        return window.answer
-      },
+      () => window.answer,
       /* eslint-enable no-undef */
     )
     return result
@@ -67,6 +65,7 @@ try {
 
   {
     jsFileContent.update(`export const answer = 43`)
+    await new Promise((resolve) => setTimeout(resolve, 150))
     await page.reload()
     const actual = await getResult()
     const expected = 43

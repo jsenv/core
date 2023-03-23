@@ -1,3 +1,21 @@
+# 32.0.0
+
+- Dev server is now designed to run on a directory containing only source files
+  It's still possible to start dev server in a directory containing files that are not meant to be executed in the browser but this is no longer the recommended way to use it
+- Update startDevServer params
+  - rootDirectoryUrl -> sourceDirectoryUrl
+  - clientMainFileUrl -> sourceMainFilePath
+- Update build params
+  - rootDirectoryUrl -> sourceDirectoryUrl
+- Update startBuildServer params
+  - buildIndexPath -> buildMainFilePath
+- Update executeTestPlan params
+  - rootDirectoryUrl -> testDirectoryUrl
+  - Introduce devServerModuleUrl
+- executeTestPlan is now able to start dev server
+- executeTestPlan enforce testDirectoryUrl to be inside the sourceDirectoryUrl passed to dev server when tests are executed on browsers
+- Use node 19
+
 # 31.2.0
 
 - Ensure webmanifest url is coherent during dev/build

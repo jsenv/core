@@ -7,11 +7,11 @@ import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
 const test = async (params) => {
   const { buildManifest } = await build({
     logLevel: "warn",
-    rootDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
+    sourceDirectoryUrl: new URL("./client/", import.meta.url),
     entryPoints: {
       "./main.html": "main.html",
     },
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     transpilation: { css: false },
     writeGeneratedFiles: true,
     ...params,
@@ -24,13 +24,11 @@ const test = async (params) => {
     /* eslint-disable no-undef */
     pageFunction: async (jsRelativeUrl) => {
       const namespace = await import(jsRelativeUrl)
-
       // let 500ms for the background image to load
       await new Promise((resolve) => setTimeout(resolve, 500))
       const bodyBackgroundImage = getComputedStyle(
         document.body,
       ).backgroundImage
-
       return {
         ...namespace,
         bodyBackgroundImage,

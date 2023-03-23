@@ -2,7 +2,7 @@ import appStyleSheet from "./app.css" assert { type: "css" }
 
 document.adoptedStyleSheets = [...document.adoptedStyleSheets, appStyleSheet]
 
-const jsenvLogoUrl = new URL("/src/jsenv_logo.svg", import.meta.url)
+const jsenvLogoUrl = new URL("/jsenv_logo.svg", import.meta.url)
 
 document.querySelector("#app").innerHTML = `
   <h1>Hello world!</h1>

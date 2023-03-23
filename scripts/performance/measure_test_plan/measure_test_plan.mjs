@@ -17,12 +17,12 @@ const {
 
 const devServer = await startDevServer({
   logLevel: "warn",
-  rootDirectoryUrl: new URL("./", import.meta.url),
+  sourceDirectoryUrl: new URL("./", import.meta.url),
   keepProcessAlive: false,
 })
 
 await executeTestPlan({
-  rootDirectoryUrl: new URL("./", import.meta.url),
+  sourceDirectoryUrl: new URL("./", import.meta.url),
   devServerOrigin: devServer.origin,
   testPlan: {
     "./animals.test.html": {
@@ -54,7 +54,7 @@ await executeTestPlan({
   coverageMethodForNodeJs: "Profiler",
   coverageV8ConflictWarning: false,
   coverageReportTextLog: false,
-  coverageReportHtmlDirectory: false,
+  coverageReportHtml: false,
 })
 
 const { duration, memoryHeapUsed, memoryHeapTotal, fsRead, fsWrite } =

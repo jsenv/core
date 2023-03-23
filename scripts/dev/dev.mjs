@@ -4,7 +4,7 @@ import { startDevServer } from "@jsenv/core"
 
 const { certificate, privateKey } = requestCertificate()
 await startDevServer({
-  rootDirectoryUrl: new URL("../../", import.meta.url),
+  sourceDirectoryUrl: new URL("../../", import.meta.url),
   // babelPluginMap: {},
   https: { certificate, privateKey },
   http2: false,
@@ -33,14 +33,5 @@ await startDevServer({
         "./tests/**/client/main.html": true,
       },
     },
-  },
-  clientFiles: {
-    "./**": true,
-    "./**/.*/": false, // any folder starting with a dot is ignored (includes .git,.jsenv for instance)
-    "./**/dist/": false,
-    "./**/docs/": false,
-    "./**/experiments/": false,
-    "./**/node_modules/": false,
-    "./**/packages/": false,
   },
 })

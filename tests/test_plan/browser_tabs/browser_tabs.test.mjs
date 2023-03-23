@@ -8,13 +8,13 @@ import { startDevServer, executeTestPlan, chromium } from "@jsenv/core"
 
 const devServer = await startDevServer({
   logLevel: "warn",
-  rootDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
   port: 0,
 })
 const result = await executeTestPlan({
   logLevel: "warn",
-  rootDirectoryUrl: new URL("./client/", import.meta.url),
+  testDirectoryUrl: new URL("./client/", import.meta.url),
   devServerOrigin: devServer.origin,
   testPlan: {
     "./*.html": {

@@ -6,11 +6,11 @@ import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
 
 await build({
   logLevel: "warn",
-  rootDirectoryUrl: new URL("./client/", import.meta.url),
-  buildDirectoryUrl: new URL("./dist/", import.meta.url),
+  sourceDirectoryUrl: new URL("./client/", import.meta.url),
   entryPoints: {
     "./src/main.html": "index.html",
   },
+  buildDirectoryUrl: new URL("./dist/", import.meta.url),
 })
 const server = await startFileServer({
   rootDirectoryUrl: new URL("./dist/", import.meta.url),
@@ -18,9 +18,7 @@ const server = await startFileServer({
 const { returnValue } = await executeInChromium({
   url: `${server.origin}/index.html`,
   /* eslint-disable no-undef */
-  pageFunction: async () => {
-    return window.resultPromise
-  },
+  pageFunction: () => window.resultPromise,
   /* eslint-enable no-undef */
 })
 const actual = returnValue

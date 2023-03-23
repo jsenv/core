@@ -12,7 +12,7 @@ await ensureEmptyDirectory(
 const debug = false // true to have browser UI + keep it open after test
 const devServer = await startDevServer({
   logLevel: "warn",
-  rootDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
   plugins: [
     jsenvPluginCommonJs({

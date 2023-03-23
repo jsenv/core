@@ -1,13 +1,12 @@
 import { readFileSync } from "node:fs"
-import {
-  fetchFileSystem,
-  serveDirectory,
-  composeTwoResponses,
-} from "@jsenv/server"
-import { registerDirectoryLifecycle, bufferToEtag } from "@jsenv/filesystem"
-import { urlIsInsideOf, moveUrl, asUrlWithoutSearch } from "@jsenv/urls"
+import { serveDirectory, composeTwoResponses } from "@jsenv/server"
+import { bufferToEtag } from "@jsenv/filesystem"
+import { moveUrl, asUrlWithoutSearch } from "@jsenv/urls"
 import { URL_META } from "@jsenv/url-meta"
 
+import { determineJsenvInternalDirectoryUrl } from "../jsenv_internal_directory.js"
+import { watchSourceFiles } from "../watch_source_files.js"
+import { explorerHtmlFileUrl } from "@jsenv/core/src/plugins/explorer/jsenv_plugin_explorer.js"
 import { createUrlGraph } from "@jsenv/core/src/kitchen/url_graph.js"
 import { createKitchen } from "@jsenv/core/src/kitchen/kitchen.js"
 import { RUNTIME_COMPAT } from "@jsenv/core/src/kitchen/compat/runtime_compat.js"
@@ -22,7 +21,9 @@ export const createFileService = ({
   serverEventsDispatcher,
   contextCache,
 
-  rootDirectoryUrl,
+  sourceDirectoryUrl,
+  sourceMainFilePath,
+  sourceFilesConfig,
   runtimeCompat,
 
   plugins,
@@ -32,8 +33,6 @@ export const createFileService = ({
   supervisor,
   transpilation,
   clientAutoreload,
-  clientFiles,
-  clientMainFileUrl,
   cooldownBetweenFileEvents,
   explorer,
   cacheControl,
@@ -43,45 +42,22 @@ export const createFileService = ({
   sourcemapsSourcesContent,
   writeGeneratedFiles,
 }) => {
-  const jsenvDirectoryUrl = new URL(".jsenv/", rootDirectoryUrl).href
-
   const clientFileChangeCallbackList = []
   const clientFilesPruneCallbackList = []
-  const clientFilePatterns = {
-    ...clientFiles,
-    ".jsenv/": false,
-  }
-
-  const onFileChange = (url) => {
-    clientFileChangeCallbackList.forEach((callback) => {
-      callback(url)
-    })
-  }
-  const stopWatchingClientFiles = registerDirectoryLifecycle(rootDirectoryUrl, {
-    watchPatterns: clientFilePatterns,
-    cooldownBetweenFileEvents,
-    keepProcessAlive: false,
-    recursive: true,
-    added: ({ relativeUrl }) => {
-      onFileChange({
-        url: new URL(relativeUrl, rootDirectoryUrl).href,
-        event: "added",
+  const stopWatchingSourceFiles = watchSourceFiles(
+    sourceDirectoryUrl,
+    (fileInfo) => {
+      clientFileChangeCallbackList.forEach((callback) => {
+        callback(fileInfo)
       })
     },
-    updated: ({ relativeUrl }) => {
-      onFileChange({
-        url: new URL(relativeUrl, rootDirectoryUrl).href,
-        event: "modified",
-      })
+    {
+      sourceFilesConfig,
+      keepProcessAlive: false,
+      cooldownBetweenFileEvents,
     },
-    removed: ({ relativeUrl }) => {
-      onFileChange({
-        url: new URL(relativeUrl, rootDirectoryUrl).href,
-        event: "removed",
-      })
-    },
-  })
-  serverStopCallbacks.push(stopWatchingClientFiles)
+  )
+  serverStopCallbacks.push(stopWatchingSourceFiles)
 
   const getOrCreateContext = (request) => {
     const { runtimeName, runtimeVersion } = parseUserAgentHeader(
@@ -93,8 +69,8 @@ export const createFileService = ({
       return existingContext
     }
     const watchAssociations = URL_META.resolveAssociations(
-      { watch: clientFilePatterns },
-      rootDirectoryUrl,
+      { watch: stopWatchingSourceFiles.watchPatterns },
+      sourceDirectoryUrl,
     )
     const urlGraph = createUrlGraph()
     clientFileChangeCallbackList.push(({ url }) => {
@@ -114,10 +90,22 @@ export const createFileService = ({
       })
     })
     const clientRuntimeCompat = { [runtimeName]: runtimeVersion }
+    const jsenvInternalDirectoryUrl =
+      determineJsenvInternalDirectoryUrl(sourceDirectoryUrl)
+
+    let mainFileUrl
+    if (sourceMainFilePath === undefined) {
+      mainFileUrl = explorer
+        ? String(explorerHtmlFileUrl)
+        : String(new URL("./index.html", sourceDirectoryUrl))
+    } else {
+      mainFileUrl = String(new URL(sourceMainFilePath, sourceDirectoryUrl))
+    }
     const kitchen = createKitchen({
       signal,
       logLevel,
-      rootDirectoryUrl,
+      rootDirectoryUrl: sourceDirectoryUrl,
+      jsenvInternalDirectoryUrl,
       urlGraph,
       dev: true,
       runtimeCompat,
@@ -132,7 +120,8 @@ export const createFileService = ({
       plugins: [
         ...plugins,
         ...getCorePlugins({
-          rootDirectoryUrl,
+          rootDirectoryUrl: sourceDirectoryUrl,
+          mainFileUrl,
           runtimeCompat,
 
           urlAnalysis,
@@ -141,7 +130,6 @@ export const createFileService = ({
           supervisor,
           transpilation,
 
-          clientMainFileUrl,
           clientAutoreload,
           clientFileChangeCallbackList,
           clientFilesPruneCallbackList,
@@ -156,7 +144,10 @@ export const createFileService = ({
       sourcemapsSourcesProtocol,
       sourcemapsSourcesContent,
       writeGeneratedFiles,
-      outDirectoryUrl: `${rootDirectoryUrl}.jsenv/${runtimeName}@${runtimeVersion}/`,
+      outDirectoryUrl: new URL(
+        `${runtimeName}@${runtimeVersion}/`,
+        jsenvInternalDirectoryUrl,
+      ),
     })
     urlGraph.createUrlInfoCallbackRef.current = (urlInfo) => {
       const { watch } = URL_META.applyAssociations({
@@ -231,7 +222,7 @@ export const createFileService = ({
       if (serverEventNames.length > 0) {
         Object.keys(allServerEvents).forEach((serverEventName) => {
           allServerEvents[serverEventName]({
-            rootDirectoryUrl,
+            rootDirectoryUrl: sourceDirectoryUrl,
             urlGraph,
             dev: true,
             sendServerEvent: (data) => {
@@ -250,7 +241,7 @@ export const createFileService = ({
     }
 
     const context = {
-      rootDirectoryUrl,
+      rootDirectoryUrl: sourceDirectoryUrl,
       dev: true,
       runtimeName,
       runtimeVersion,
@@ -262,14 +253,6 @@ export const createFileService = ({
   }
 
   return async (request) => {
-    // serve file inside ".jsenv" directory
-    const requestFileUrl = new URL(request.resource.slice(1), rootDirectoryUrl)
-      .href
-    if (urlIsInsideOf(requestFileUrl, jsenvDirectoryUrl)) {
-      return fetchFileSystem(requestFileUrl, {
-        headers: request.headers,
-      })
-    }
     const { urlGraph, kitchen } = getOrCreateContext(request)
     const responseFromPlugin =
       await kitchen.pluginController.callAsyncHooksUntil(
@@ -281,14 +264,14 @@ export const createFileService = ({
       return responseFromPlugin
     }
     let reference
-    const parentUrl = inferParentFromRequest(request, rootDirectoryUrl)
+    const parentUrl = inferParentFromRequest(request, sourceDirectoryUrl)
     if (parentUrl) {
       reference = urlGraph.inferReference(request.resource, parentUrl)
     }
     if (!reference) {
       const entryPoint = kitchen.injectReference({
-        trace: { message: parentUrl || rootDirectoryUrl },
-        parentUrl: parentUrl || rootDirectoryUrl,
+        trace: { message: parentUrl || sourceDirectoryUrl },
+        parentUrl: parentUrl || sourceDirectoryUrl,
         type: "http_request",
         specifier: request.resource,
       })
@@ -424,7 +407,7 @@ export const createFileService = ({
             accept: "text/html",
           },
           canReadDirectory: true,
-          rootDirectoryUrl,
+          rootDirectoryUrl: sourceDirectoryUrl,
         })
       }
       if (code === "NOT_ALLOWED") {
@@ -452,7 +435,7 @@ export const createFileService = ({
   }
 }
 
-const inferParentFromRequest = (request, rootDirectoryUrl) => {
+const inferParentFromRequest = (request, sourceDirectoryUrl) => {
   const { referer } = request.headers
   if (!referer) {
     return null
@@ -468,7 +451,7 @@ const inferParentFromRequest = (request, rootDirectoryUrl) => {
   return moveUrl({
     url: referer,
     from: `${request.origin}/`,
-    to: rootDirectoryUrl,
+    to: sourceDirectoryUrl,
     preferAbsolute: true,
   })
 }

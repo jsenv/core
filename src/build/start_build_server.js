@@ -14,7 +14,6 @@
  */
 
 import { existsSync } from "node:fs"
-import { parentPort } from "node:worker_threads"
 import {
   jsenvAccessControlAllowedHeaders,
   startServer,
@@ -22,46 +21,32 @@ import {
   jsenvServiceCORS,
   jsenvServiceErrorHandler,
 } from "@jsenv/server"
-import {
-  validateDirectoryUrl,
-  registerDirectoryLifecycle,
-} from "@jsenv/filesystem"
+import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 import { createLogger, createTaskLog } from "@jsenv/log"
-import { getCallerPosition } from "@jsenv/urls"
-
-import { createReloadableWorker } from "@jsenv/core/src/helpers/worker_reload.js"
 
 /**
  * Start a server for build files.
  * @param {Object} buildServerParameters
- * @param {string|url} buildServerParameters.rootDirectoryUrl Root directory of the project
  * @param {string|url} buildServerParameters.buildDirectoryUrl Directory where build files are written
  * @return {Object} A build server object
  */
 export const startBuildServer = async ({
-  signal = new AbortController().signal,
-  handleSIGINT = true,
-  logLevel,
-  serverLogLevel = "warn",
-  https,
-  http2,
-  acceptAnyIp,
-  hostname,
+  buildDirectoryUrl,
+  buildMainFilePath = "index.html",
   port = 9779,
   services = [],
+  acceptAnyIp,
+  hostname,
+  https,
+  http2,
+  logLevel,
+  serverLogLevel = "warn",
+
+  signal = new AbortController().signal,
+  handleSIGINT = true,
   keepProcessAlive = true,
 
-  rootDirectoryUrl,
-  buildDirectoryUrl,
-  buildIndexPath = "index.html",
-  buildServerFiles = {
-    "./package.json": true,
-    "./jsenv.config.mjs": true,
-  },
-  buildServerAutoreload = false,
-  buildServerMainFile = getCallerPosition().url,
-  cooldownBetweenFileEvents,
   ...rest
 }) => {
   // params validation
@@ -72,40 +57,31 @@ export const startBuildServer = async ({
         `${unexpectedParamNames.join(",")}: there is no such param`,
       )
     }
-    const rootDirectoryUrlValidation = validateDirectoryUrl(rootDirectoryUrl)
-    if (!rootDirectoryUrlValidation.valid) {
-      throw new TypeError(
-        `rootDirectoryUrl ${rootDirectoryUrlValidation.message}, got ${rootDirectoryUrl}`,
-      )
-    }
-    rootDirectoryUrl = rootDirectoryUrlValidation.value
-    const buildDirectoryUrlValidation = validateDirectoryUrl(buildDirectoryUrl)
-    if (!buildDirectoryUrlValidation.valid) {
-      throw new TypeError(
-        `buildDirectoryUrl ${buildDirectoryUrlValidation.message}, got ${buildDirectoryUrlValidation}`,
-      )
-    }
-    buildDirectoryUrl = buildDirectoryUrlValidation.value
+    buildDirectoryUrl = assertAndNormalizeDirectoryUrl(
+      buildDirectoryUrl,
+      "buildDirectoryUrl",
+    )
 
-    if (buildIndexPath) {
-      if (typeof buildIndexPath !== "string") {
+    if (buildMainFilePath) {
+      if (typeof buildMainFilePath !== "string") {
         throw new TypeError(
-          `buildIndexPath must be a string, got ${buildIndexPath}`,
+          `buildMainFilePath must be a string, got ${buildMainFilePath}`,
         )
       }
-      if (buildIndexPath[0] === "/") {
-        buildIndexPath = buildIndexPath.slice(1)
+      if (buildMainFilePath[0] === "/") {
+        buildMainFilePath = buildMainFilePath.slice(1)
       } else {
-        const buildIndexUrl = new URL(buildIndexPath, buildDirectoryUrl).href
-        if (!buildIndexUrl.startsWith(buildDirectoryUrl)) {
+        const buildMainFileUrl = new URL(buildMainFilePath, buildDirectoryUrl)
+          .href
+        if (!buildMainFileUrl.startsWith(buildDirectoryUrl)) {
           throw new Error(
-            `buildIndexPath must be relative, got ${buildIndexPath}`,
+            `buildMainFilePath must be relative, got ${buildMainFilePath}`,
           )
         }
-        buildIndexPath = buildIndexUrl.slice(buildDirectoryUrl.length)
+        buildMainFilePath = buildMainFileUrl.slice(buildDirectoryUrl.length)
       }
-      if (!existsSync(new URL(buildIndexPath, buildDirectoryUrl))) {
-        buildIndexPath = null
+      if (!existsSync(new URL(buildMainFilePath, buildDirectoryUrl))) {
+        buildMainFilePath = null
       }
     }
   }
@@ -122,59 +98,6 @@ export const startBuildServer = async ({
         abort,
       )
     })
-  }
-
-  let reloadableWorker
-  if (buildServerAutoreload) {
-    reloadableWorker = createReloadableWorker(buildServerMainFile)
-    if (reloadableWorker.isPrimary) {
-      const buildServerFileChangeCallback = ({ relativeUrl, event }) => {
-        const url = new URL(relativeUrl, rootDirectoryUrl).href
-        logger.info(`file ${event} ${url} -> restarting server...`)
-        reloadableWorker.reload()
-      }
-      const stopWatchingBuildServerFiles = registerDirectoryLifecycle(
-        rootDirectoryUrl,
-        {
-          watchPatterns: {
-            ...buildServerFiles,
-            [buildServerMainFile]: true,
-            ".jsenv/": false,
-          },
-          cooldownBetweenFileEvents,
-          keepProcessAlive: false,
-          recursive: true,
-          added: ({ relativeUrl }) => {
-            buildServerFileChangeCallback({ relativeUrl, event: "added" })
-          },
-          updated: ({ relativeUrl }) => {
-            buildServerFileChangeCallback({ relativeUrl, event: "modified" })
-          },
-          removed: ({ relativeUrl }) => {
-            buildServerFileChangeCallback({ relativeUrl, event: "removed" })
-          },
-        },
-      )
-      operation.addAbortCallback(() => {
-        stopWatchingBuildServerFiles()
-        reloadableWorker.terminate()
-      })
-      const worker = await reloadableWorker.load()
-      const messagePromise = new Promise((resolve) => {
-        worker.once("message", resolve)
-      })
-      const origin = await messagePromise
-      // if (!keepProcessAlive) {
-      //   worker.unref()
-      // }
-      return {
-        origin,
-        stop: () => {
-          stopWatchingBuildServerFiles()
-          reloadableWorker.terminate()
-        },
-      }
-    }
   }
 
   const startBuildServerTask = createTaskLog("start build server", {
@@ -211,7 +134,7 @@ export const startBuildServer = async ({
         name: "jsenv:build_files_service",
         handleRequest: createBuildFilesService({
           buildDirectoryUrl,
-          buildIndexPath,
+          buildMainFilePath,
         }),
       },
       jsenvServiceErrorHandler({
@@ -229,9 +152,6 @@ export const startBuildServer = async ({
     logger.info(`- ${server.origins[key]}`)
   })
   logger.info(``)
-  if (reloadableWorker && reloadableWorker.isWorker) {
-    parentPort.postMessage(server.origin)
-  }
   return {
     origin: server.origin,
     stop: () => {
@@ -240,13 +160,13 @@ export const startBuildServer = async ({
   }
 }
 
-const createBuildFilesService = ({ buildDirectoryUrl, buildIndexPath }) => {
+const createBuildFilesService = ({ buildDirectoryUrl, buildMainFilePath }) => {
   return (request) => {
     const urlIsVersioned = new URL(request.url).searchParams.has("v")
-    if (buildIndexPath && request.resource === "/") {
+    if (buildMainFilePath && request.resource === "/") {
       request = {
         ...request,
-        resource: `/${buildIndexPath}`,
+        resource: `/${buildMainFilePath}`,
       }
     }
     return fetchFileSystem(

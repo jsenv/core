@@ -6,7 +6,7 @@ import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js"
 
 const devServer = await startDevServer({
   logLevel: "warn",
-  rootDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
 })
 

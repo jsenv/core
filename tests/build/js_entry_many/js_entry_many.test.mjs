@@ -7,12 +7,12 @@ import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
 
 await build({
   logLevel: "warn",
-  rootDirectoryUrl: new URL("./client/", import.meta.url),
-  buildDirectoryUrl: new URL("./dist/", import.meta.url),
+  sourceDirectoryUrl: new URL("./client/", import.meta.url),
   entryPoints: {
     "./a.js": "a.js",
     "./b.js": "b.js",
   },
+  buildDirectoryUrl: new URL("./dist/", import.meta.url),
 })
 copyFileSync(
   new URL("./client/a.html", import.meta.url),
@@ -28,17 +28,13 @@ const server = await startFileServer({
 const aExecution = await executeInChromium({
   url: `${server.origin}/a.html`,
   /* eslint-disable no-undef */
-  pageFunction: async () => {
-    return window.resultPromise
-  },
+  pageFunction: () => window.resultPromise,
   /* eslint-enable no-undef */
 })
 const bExecution = await executeInChromium({
   url: `${server.origin}/b.html`,
   /* eslint-disable no-undef */
-  pageFunction: async () => {
-    return window.resultPromise
-  },
+  pageFunction: () => window.resultPromise,
   /* eslint-enable no-undef */
 })
 const actual = {

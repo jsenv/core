@@ -3,14 +3,13 @@ import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs"
 import { build } from "@jsenv/core"
 
 const jsenvRootDirectoryUrl = new URL("../../", import.meta.url)
-const jsenvDistDirectoryUrl = new URL("./dist/", jsenvRootDirectoryUrl)
 
 await build({
-  rootDirectoryUrl: jsenvRootDirectoryUrl,
-  buildDirectoryUrl: jsenvDistDirectoryUrl,
+  sourceDirectoryUrl: new URL("src/", jsenvRootDirectoryUrl),
   entryPoints: {
-    "./src/main.js": "main.js",
+    "./main.js": "main.js",
   },
+  buildDirectoryUrl: new URL("dist/", jsenvRootDirectoryUrl),
   versioning: false,
   assetManifest: false,
   runtimeCompat: {
@@ -20,28 +19,28 @@ await build({
   scenarioPlaceholders: false,
   urlAnalysis: {
     include: {
-      "**/*": true,
-      "**/node_modules/": false,
+      "file://**/*": true,
+      "file://**/node_modules/": false,
       // selectively allow some node_modules
-      "**/node_modules/@jsenv/abort/": true,
-      "**/node_modules/@jsenv/ast/": false, // cannot inline "parse5", "@babel/core" and "postcss"
-      "**/node_modules/@jsenv/babel-plugins/": true,
-      "**/node_modules/@jsenv/filesystem/": true,
-      "**/node_modules/@jsenv/importmap/": true,
-      "**/node_modules/@jsenv/integrity/": true,
-      "**/node_modules/@jsenv/log/": true,
-      "**/node_modules/@jsenv/node-esm-resolution/": true,
-      "**/node_modules/@jsenv/server/": true,
-      "**/node_modules/@jsenv/plugin-placeholders/": true,
-      "**/node_modules/@jsenv/sourcemap/": false, // cannot inline "source-map"
-      "**/node_modules/@jsenv/uneval/": true,
-      "**/node_modules/@jsenv/url-meta/": true,
-      "**/node_modules/@jsenv/urls/": true,
-      "**/node_modules/@jsenv/utils/": true,
-      "**/node_modules/ansi-escapes/": true,
-      "**/node_modules/is-unicode-supported/": true,
-      "**/node_modules/supports-color/": true,
-      "**/node_modules/ws/": true,
+      "file://**/node_modules/@jsenv/abort/": true,
+      "file://**/node_modules/@jsenv/ast/": false, // cannot inline "parse5", "@babel/core" and "postcss"
+      "file://**/node_modules/@jsenv/babel-plugins/": true,
+      "file://**/node_modules/@jsenv/filesystem/": true,
+      "file://**/node_modules/@jsenv/importmap/": true,
+      "file://**/node_modules/@jsenv/integrity/": true,
+      "file://**/node_modules/@jsenv/log/": true,
+      "file://**/node_modules/@jsenv/node-esm-resolution/": true,
+      "file://**/node_modules/@jsenv/server/": true,
+      "file://**/node_modules/@jsenv/plugin-placeholders/": true,
+      "file://**/node_modules/@jsenv/sourcemap/": false, // cannot inline "source-map"
+      "file://**/node_modules/@jsenv/uneval/": true,
+      "file://**/node_modules/@jsenv/url-meta/": true,
+      "file://**/node_modules/@jsenv/urls/": true,
+      "file://**/node_modules/@jsenv/utils/": true,
+      "file://**/node_modules/ansi-escapes/": true,
+      "file://**/node_modules/is-unicode-supported/": true,
+      "file://**/node_modules/supports-color/": true,
+      "file://**/node_modules/ws/": true,
     },
   },
   plugins: [
@@ -59,10 +58,10 @@ await build({
 // so we convert async/await, arrow function, ... to be compatible with
 // old browsers
 await build({
-  rootDirectoryUrl: jsenvRootDirectoryUrl,
-  buildDirectoryUrl: new URL("js", jsenvDistDirectoryUrl),
+  sourceDirectoryUrl: new URL("src/", jsenvRootDirectoryUrl),
+  buildDirectoryUrl: new URL("dist/js/", jsenvRootDirectoryUrl),
   entryPoints: {
-    "./src/plugins/transpilation/as_js_classic/client/s.js?as_js_classic_library":
+    "./plugins/transpilation/as_js_classic/client/s.js?as_js_classic_library":
       "s.js",
   },
   directoryToClean: false,

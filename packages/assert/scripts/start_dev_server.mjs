@@ -1,14 +1,7 @@
 import { startDevServer } from "@jsenv/core"
 
 export const devServer = await startDevServer({
-  rootDirectoryUrl: new URL("../", import.meta.url),
+  sourceDirectoryUrl: new URL("../src/", import.meta.url),
   port: 3457,
   clientAutoreload: false,
-  explorer: {
-    groups: {
-      tests: {
-        "tests/**/*.html": true,
-      },
-    },
-  },
 })

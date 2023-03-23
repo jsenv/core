@@ -22,7 +22,7 @@ const jsFileContent = {
 }
 const devServer = await startDevServer({
   logLevel: "warn",
-  rootDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
   clientAutoreload: false,
   supervisor: false,
@@ -38,9 +38,7 @@ try {
   const getResult = async () => {
     const result = await page.evaluate(
       /* eslint-disable no-undef */
-      () => {
-        return window.resultPromise
-      },
+      () => window.resultPromise,
       /* eslint-enable no-undef */
     )
     return result
@@ -77,6 +75,7 @@ try {
   {
     responses.length = 0
     jsFileContent.update(`window.resolveResultPromise(43)`)
+    await new Promise((resolve) => setTimeout(resolve, 500))
     await page.reload()
     const responseForJsFile = responses.find(
       (response) => response.url() === `${devServer.origin}/main.js`,

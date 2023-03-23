@@ -19,14 +19,10 @@ if (process.platform !== "win32") {
 
   const devServer = await startDevServer({
     logLevel: "warn",
-    rootDirectoryUrl: new URL("./client/", import.meta.url),
+    sourceDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
     plugins: [jsenvPluginReact({ refreshInstrumentation: true })],
-    clientFiles: {
-      "./**": true,
-    },
     cooldownBetweenFileEvents: 150,
-    devServerAutoreload: false,
   })
   const browser = await chromium.launch({
     headless: true,

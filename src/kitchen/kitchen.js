@@ -28,6 +28,7 @@ export const createKitchen = ({
   logLevel,
 
   rootDirectoryUrl,
+  jsenvInternalDirectoryUrl,
   urlGraph,
   dev = false,
   build = false,
@@ -50,6 +51,7 @@ export const createKitchen = ({
     signal,
     logger,
     rootDirectoryUrl,
+    jsenvInternalDirectoryUrl,
     urlGraph,
     dev,
     build,

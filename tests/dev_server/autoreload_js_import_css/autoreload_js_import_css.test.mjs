@@ -55,13 +55,9 @@ const test = async ({
 
   const devServer = await startDevServer({
     logLevel: "warn",
-    rootDirectoryUrl: new URL("./client/", import.meta.url),
+    sourceDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
     cooldownBetweenFileEvents: 250,
-    clientFiles: {
-      "./**": true,
-      "./**/.*/": false,
-    },
     ...rest,
   })
   const browser = await browserLauncher.launch({ headless: true })

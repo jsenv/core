@@ -16,7 +16,7 @@ console.warn = (...args) => {
 try {
   const devServer = await startDevServer({
     logLevel: "warn",
-    rootDirectoryUrl: new URL("./client/", import.meta.url),
+    sourceDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
   })
   const { pageLogs } = await executeInChromium({

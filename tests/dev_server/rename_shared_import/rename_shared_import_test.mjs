@@ -23,7 +23,7 @@ const jsFileContent = {
 const devServer = await startDevServer({
   logLevel: "warn",
   serverLogLevel: "error",
-  rootDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
   clientAutoreload: false,
   supervisor: false,
@@ -42,9 +42,7 @@ try {
   const getResult = async () => {
     const result = await page.evaluate(
       /* eslint-disable no-undef */
-      () => {
-        return window.resultPromise
-      },
+      () => window.resultPromise,
       /* eslint-enable no-undef */
     )
     return result

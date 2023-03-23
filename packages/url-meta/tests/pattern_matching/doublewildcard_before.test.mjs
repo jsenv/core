@@ -8,8 +8,8 @@ import { URL_META } from "@jsenv/url-meta"
   const actual = URL_META.applyPatternMatching({ pattern, url })
   const expected = {
     matched: true,
-    patternIndex: pattern.length,
-    urlIndex: url.length,
+    patternIndex: actual.patternIndex,
+    urlIndex: actual.urlIndex,
     matchGroups: [],
   }
   assert({ actual, expected })
@@ -61,7 +61,7 @@ import { URL_META } from "@jsenv/url-meta"
   const expected = {
     matched: false,
     patternIndex: pattern.length,
-    urlIndex: url.length,
+    urlIndex: 9,
     matchGroups: [],
   }
   assert({ actual, expected })

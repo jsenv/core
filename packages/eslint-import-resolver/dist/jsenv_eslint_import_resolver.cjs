@@ -100,10 +100,13 @@ const validateDirectoryUrl = (value) => {
   }
 };
 
-const assertAndNormalizeDirectoryUrl = (directoryUrl) => {
+const assertAndNormalizeDirectoryUrl = (
+  directoryUrl,
+  name = "directoryUrl",
+) => {
   const { valid, message, value } = validateDirectoryUrl(directoryUrl);
   if (!valid) {
-    throw new TypeError(`directoryUrl ${message}, got ${value}`)
+    throw new TypeError(`${name} ${message}, got ${value}`)
   }
   return value
 };
@@ -149,10 +152,14 @@ const validateFileUrl = (value, baseUrl) => {
   }
 };
 
-const assertAndNormalizeFileUrl = (fileUrl, baseUrl) => {
+const assertAndNormalizeFileUrl = (
+  fileUrl,
+  baseUrl,
+  name = "fileUrl",
+) => {
   const { valid, message, value } = validateFileUrl(fileUrl, baseUrl);
   if (!valid) {
-    throw new TypeError(`fileUrl ${message}, got ${fileUrl}`)
+    throw new TypeError(`${name} ${message}, got ${fileUrl}`)
   }
   return value
 };
@@ -2244,7 +2251,10 @@ const resolve = (
     magicExtensions,
   },
 ) => {
-  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl);
+  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(
+    rootDirectoryUrl,
+    "rootDirectoryUrl",
+  );
   const logger = createLogger({ logLevel });
   logger.debug(`
 resolve import.

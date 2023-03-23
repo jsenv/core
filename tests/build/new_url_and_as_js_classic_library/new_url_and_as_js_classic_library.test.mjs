@@ -8,12 +8,12 @@ import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
 const test = async (params) => {
   await build({
     logLevel: "warn",
-    rootDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
-    assetsDirectory: "foo/",
+    sourceDirectoryUrl: new URL("./client/", import.meta.url),
     entryPoints: {
       "./main.js?as_js_classic_library": "main.js",
     },
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
+    assetsDirectory: "foo/",
     writeGeneratedFiles: true,
     ...params,
   })
@@ -27,9 +27,7 @@ const test = async (params) => {
   const { returnValue } = await executeInChromium({
     url: `${server.origin}/main.html`,
     /* eslint-disable no-undef */
-    pageFunction: async () => {
-      return window.resultPromise
-    },
+    pageFunction: () => window.resultPromise,
     /* eslint-enable no-undef */
   })
   const actual = returnValue

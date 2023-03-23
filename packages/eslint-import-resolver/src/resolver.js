@@ -40,7 +40,10 @@ export const resolve = (
     magicExtensions,
   },
 ) => {
-  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
+  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(
+    rootDirectoryUrl,
+    "rootDirectoryUrl",
+  )
   const logger = createLogger({ logLevel })
   logger.debug(`
 resolve import.

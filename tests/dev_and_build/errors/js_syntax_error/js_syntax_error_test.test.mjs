@@ -10,13 +10,13 @@ import {
 
 const devServer = await startDevServer({
   logLevel: "warn",
-  rootDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
   port: 0,
 })
 const { testPlanCoverage } = await executeTestPlan({
   logLevel: "off",
-  rootDirectoryUrl: new URL("./client/", import.meta.url),
+  testDirectoryUrl: new URL("./client/", import.meta.url),
   devServerOrigin: devServer.origin,
   testPlan: {
     "./main.html": {
@@ -38,7 +38,7 @@ const { testPlanCoverage } = await executeTestPlan({
     "./js_syntax_error.js": true,
   },
   coverageReportTextLog: false,
-  coverageReportHtmlDirectory: false,
+  coverageReportHtml: false,
 })
 const actual = testPlanCoverage
 const expected = {
