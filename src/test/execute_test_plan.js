@@ -1,5 +1,4 @@
 import { existsSync } from "node:fs"
-import { fetchUrl } from "@jsenv/fetch"
 import { URL_META } from "@jsenv/url-meta"
 import {
   urlToFileSystemPath,
@@ -11,6 +10,7 @@ import { createLogger, createDetailedMessage } from "@jsenv/log"
 
 import { lookupPackageDirectory } from "../lookup_package_directory.js"
 import { pingServer } from "../ping_server.js"
+import { basicFetch } from "../basic_fetch.js"
 import { generateCoverageJsonFile } from "./coverage/coverage_reporter_json_file.js"
 import { generateCoverageHtmlDirectory } from "./coverage/coverage_reporter_html_directory.js"
 import { generateCoverageTextLog } from "./coverage/coverage_reporter_text_log.js"
@@ -158,11 +158,9 @@ export const executeTestPlan = async ({
         }
         stopDevServerNeeded = true
       }
-      const devServerParamsResponse = await fetchUrl(
+      const { sourceDirectoryUrl } = await basicFetch(
         `${devServerOrigin}/__server_params__.json`,
       )
-      const devServerParams = await devServerParamsResponse.json()
-      const { sourceDirectoryUrl } = devServerParams
       if (
         testDirectoryUrl !== sourceDirectoryUrl &&
         !urlIsInsideOf(testDirectoryUrl, sourceDirectoryUrl)
@@ -308,7 +306,7 @@ export const executeTestPlan = async ({
     coverageTempDirectoryUrl,
   })
   if (stopDevServerNeeded) {
-    fetchUrl(`${devServerOrigin}/__stop__`)
+    basicFetch(`${devServerOrigin}/__stop__`)
   }
   if (
     updateProcessExitCode &&

@@ -1,4 +1,3 @@
-import { workerData, Worker, parentPort } from "node:worker_threads";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { chmod, stat, lstat, readdir, promises, unlink, openSync, closeSync, rmdir, readFile as readFile$1, readFileSync as readFileSync$1, watch, readdirSync, statSync, writeFile as writeFile$1, writeFileSync as writeFileSync$1, mkdirSync, createReadStream, existsSync, realpathSync } from "node:fs";
 import crypto, { createHash } from "node:crypto";
@@ -26,6 +25,7 @@ import stripAnsi from "strip-ansi";
 import { createId } from "@paralleldrive/cuid2";
 import { runInNewContext } from "node:vm";
 import { fork } from "node:child_process";
+import { Worker } from "node:worker_threads";
 
 /*
  * data:[<mediatype>][;base64],<data>
@@ -452,11 +452,6 @@ const resolveUrl$1 = (specifier, baseUrl) => {
     throw new TypeError(`baseUrl missing to resolve ${specifier}`);
   }
   return String(new URL(specifier, baseUrl));
-};
-
-const resolveDirectoryUrl = (specifier, baseUrl) => {
-  const url = resolveUrl$1(specifier, baseUrl);
-  return ensurePathnameTrailingSlash(url);
 };
 
 const getCommonPathname = (pathname, otherPathname) => {
@@ -7063,25 +7058,16 @@ const createServerEventsDispatcher = () => {
   };
 };
 
-const determineJsenvInternalDirectoryUrl = rootDirectoryUrl => {
-  const immediateNodeModuleDirectoryUrl = `${rootDirectoryUrl}node_modules/`;
-  if (testDirectoryPresence(immediateNodeModuleDirectoryUrl)) {
-    return `${immediateNodeModuleDirectoryUrl}.jsenv/${getDirectoryName(rootDirectoryUrl)}/`;
+const lookupPackageDirectory = currentUrl => {
+  if (currentUrl === "file:///") {
+    return null;
   }
-  const parentUrl = getParentUrl$1(rootDirectoryUrl);
-  const parentNodeModuleDirectoryUrl = `${parentUrl}node_modules/`;
-  if (testDirectoryPresence(parentNodeModuleDirectoryUrl)) {
-    return `${parentNodeModuleDirectoryUrl}.jsenv/${getDirectoryName(parentUrl)}`;
+  const packageJsonFileUrl = `${currentUrl}package.json`;
+  if (existsSync(new URL(packageJsonFileUrl))) {
+    return currentUrl;
   }
-  return `${rootDirectoryUrl}.jsenv/`;
+  return lookupPackageDirectory(getParentUrl$1(currentUrl));
 };
-const getDirectoryName = directoryUrl => {
-  const {
-    pathname
-  } = new URL(directoryUrl);
-  return basename(pathname);
-};
-const testDirectoryPresence = directoryUrl => existsSync(new URL(directoryUrl));
 const getParentUrl$1 = url => {
   if (url.startsWith("file://")) {
     // With node.js new URL('../', 'file:///C:/').href
@@ -7102,6 +7088,20 @@ const getParentUrl$1 = url => {
     return `file://${resource.slice(0, slashLastIndex + 1)}`;
   }
   return new URL(url.endsWith("/") ? "../" : "./", url).href;
+};
+
+const determineJsenvInternalDirectoryUrl = currentUrl => {
+  const packageDirectoryUrl = lookupPackageDirectory(currentUrl);
+  if (packageDirectoryUrl) {
+    return `${packageDirectoryUrl}.jsenv/${getDirectoryName(packageDirectoryUrl)}/`;
+  }
+  return `${currentUrl}.jsenv/`;
+};
+const getDirectoryName = directoryUrl => {
+  const {
+    pathname
+  } = new URL(directoryUrl);
+  return basename(pathname);
 };
 
 const urlSpecifierEncoding = {
@@ -22241,57 +22241,6 @@ const canUseVersionedUrl = urlInfo => {
   return urlInfo.type !== "webmanifest";
 };
 
-// https://nodejs.org/api/worker_threads.html
-const createReloadableWorker = (workerFileUrl, options = {}) => {
-  const workerFilePath = fileURLToPath(workerFileUrl);
-  const isPrimary = !workerData || workerData.workerFilePath !== workerFilePath;
-  let worker;
-  const terminate = async () => {
-    if (worker) {
-      let _worker = worker;
-      worker = null;
-      const exitPromise = new Promise(resolve => {
-        _worker.once("exit", resolve);
-      });
-      _worker.terminate();
-      await exitPromise;
-    }
-  };
-  const load = async () => {
-    if (!isPrimary) {
-      throw new Error(`worker can be loaded from primary file only`);
-    }
-    worker = new Worker(workerFilePath, {
-      ...options,
-      workerData: {
-        ...options.workerData,
-        workerFilePath
-      }
-    });
-    worker.once("error", error => {
-      console.error(error);
-    });
-    worker.once("exit", () => {
-      worker = null;
-    });
-    await new Promise(resolve => {
-      worker.once("online", resolve);
-    });
-    return worker;
-  };
-  const reload = async () => {
-    await terminate();
-    await load();
-  };
-  return {
-    isPrimary,
-    isWorker: !isPrimary,
-    load,
-    reload,
-    terminate
-  };
-};
-
 /*
  * This plugin is very special because it is here
  * to provide "serverEvents" used by other plugins
@@ -22381,10 +22330,22 @@ const createFileService = ({
       callback(url);
     });
   };
+  // Project should use a dedicated directory (usually "src/")
+  // passed to the dev server via "sourceDirectoryUrl" param
+  // In that case all files inside the source directory should be watched
+  // But some project might want to use their root directory as source directory
+  // In that case source directory might contain files matching "node_modules/*" or ".git/*"
+  // And jsenv should not consider these as source files and watch them (to not hurt performances)
   const watchPatterns = {
     "**/*": true,
-    ".jsenv/": false
+    // by default watch everything inside the source directory
+    "**/.*": false,
+    // file starting with a dot -> do not watch
+    "**/.*/": false,
+    // directory starting with a dot -> do not watch
+    "**/node_modules/": false // node_modules directory -> do not watch
   };
+
   const stopWatchingClientFiles = registerDirectoryLifecycle(sourceDirectoryUrl, {
     watchPatterns,
     cooldownBetweenFileEvents,
@@ -22794,33 +22755,27 @@ const inferParentFromRequest = (request, sourceDirectoryUrl) => {
  * - cook source files according to jsenv plugins
  * - inject code to autoreload the browser when a file is modified
  * @param {Object} devServerParameters
- * @param {string|url} devServerParameters.rootDirectoryUrl Root directory of the project
+ * @param {string|url} devServerParameters.sourceDirectoryUrl Root directory of the project
  * @return {Object} A dev server object
  */
 const startDevServer = async ({
-  signal = new AbortController().signal,
-  handleSIGINT = true,
-  logLevel = "info",
-  serverLogLevel = "warn",
+  sourceDirectoryUrl,
+  sourceMainFilePath,
+  port = 3456,
+  hostname,
+  acceptAnyIp,
   https,
   // it's better to use http1 by default because it allows to get statusText in devtools
   // which gives valuable information when there is errors
   http2 = false,
-  hostname,
-  port = 3456,
-  acceptAnyIp,
-  keepProcessAlive = true,
+  logLevel = process.env.IMPORTED_BY_TEST_PLAN ? "warn" : "info",
+  serverLogLevel = "warn",
   services = [],
+  signal = new AbortController().signal,
+  handleSIGINT = true,
+  keepProcessAlive = true,
   onStop = () => {},
-  sourceDirectoryUrl,
-  sourceMainFilePath,
-  devServerFiles = {
-    "./package.json": true,
-    "./jsenv.config.mjs": true
-  },
   clientAutoreload = true,
-  devServerAutoreload = false,
-  devServerMainFile = getCallerPosition().url,
   cooldownBetweenFileEvents,
   // runtimeCompat is the runtimeCompat for the build
   // when specified, dev server use it to warn in case
@@ -22870,70 +22825,6 @@ const startDevServer = async ({
       }, abort);
     });
   }
-  let reloadableWorker;
-  if (devServerAutoreload) {
-    reloadableWorker = createReloadableWorker(devServerMainFile);
-    if (reloadableWorker.isPrimary) {
-      const devServerFileChangeCallback = ({
-        relativeUrl,
-        event
-      }) => {
-        const url = new URL(relativeUrl, sourceDirectoryUrl).href;
-        logger.info(`file ${event} ${url} -> restarting server...`);
-        reloadableWorker.reload();
-      };
-      const stopWatchingDevServerFiles = registerDirectoryLifecycle(sourceDirectoryUrl, {
-        watchPatterns: {
-          ...devServerFiles.include,
-          [devServerMainFile]: true,
-          ".jsenv/": false
-        },
-        cooldownBetweenFileEvents,
-        keepProcessAlive: false,
-        recursive: true,
-        added: ({
-          relativeUrl
-        }) => {
-          devServerFileChangeCallback({
-            relativeUrl,
-            event: "added"
-          });
-        },
-        updated: ({
-          relativeUrl
-        }) => {
-          devServerFileChangeCallback({
-            relativeUrl,
-            event: "modified"
-          });
-        },
-        removed: ({
-          relativeUrl
-        }) => {
-          devServerFileChangeCallback({
-            relativeUrl,
-            event: "removed"
-          });
-        }
-      });
-      operation.addAbortCallback(() => {
-        stopWatchingDevServerFiles();
-        reloadableWorker.terminate();
-      });
-      const worker = await reloadableWorker.load();
-      const messagePromise = new Promise(resolve => {
-        worker.once("message", resolve);
-      });
-      const origin = await messagePromise;
-      return {
-        origin,
-        stop: () => {
-          stopWatchingDevServerFiles();
-          reloadableWorker.terminate();
-        }
-      };
-    }
-  }
   const startDevServerTask = createTaskLog("start dev server", {
     disabled: !logger.levels.info
   });
@@ -22964,7 +22855,27 @@ const startDevServer = async ({
       accessControlAllowedRequestHeaders: [...jsenvAccessControlAllowedHeaders, "x-jsenv-execution-id"],
       accessControlAllowCredentials: true,
       timingAllowOrigin: true
-    }), ...services, {
+    }), {
+      handleRequest: request => {
+        if (request.pathname === "/__server_params__.json") {
+          const json = JSON.stringify({
+            sourceDirectoryUrl
+          });
+          return {
+            status: 200,
+            headers: {
+              "content-type": "application/json",
+              "content-length": Buffer.byteLength(json)
+            },
+            body: json
+          };
+        }
+        if (request.pathname === "/__stop__") {
+          server.stop();
+        }
+        return null;
+      }
+    }, ...services, {
       name: "jsenv:omega_file_service",
       handleRequest: createFileService({
         signal,
@@ -23054,9 +22965,6 @@ const startDevServer = async ({
     logger.info(`- ${server.origins[key]}`);
   });
   logger.info(``);
-  if (reloadableWorker && reloadableWorker.isWorker) {
-    parentPort.postMessage(server.origin);
-  }
   return {
     origin: server.origin,
     stop: () => {
@@ -23064,6 +22972,77 @@ const startDevServer = async ({
     },
     contextCache
   };
+};
+
+const pingServer = async url => {
+  const server = createServer();
+  const {
+    hostname,
+    port
+  } = new URL(url);
+  try {
+    await new Promise((resolve, reject) => {
+      server.on("error", reject);
+      server.on("listening", () => {
+        resolve();
+      });
+      server.listen(port, hostname);
+    });
+  } catch (error) {
+    if (error && error.code === "EADDRINUSE") {
+      return true;
+    }
+    if (error && error.code === "EACCES") {
+      return true;
+    }
+    throw error;
+  }
+  await new Promise((resolve, reject) => {
+    server.on("error", reject);
+    server.on("close", resolve);
+    server.close();
+  });
+  return false;
+};
+
+const basicFetch = async (url, {
+  method = "GET",
+  headers = {}
+}) => {
+  let requestModule;
+  if (url.startsWith("http:")) {
+    requestModule = await import("node:http");
+  } else {
+    requestModule = await import("node:https");
+  }
+  const {
+    request
+  } = requestModule;
+  const urlObject = new URL(url);
+  return new Promise((resolve, reject) => {
+    const req = request({
+      hostname: urlObject.hostname,
+      port: urlObject.port,
+      path: urlObject.pathname,
+      method,
+      headers
+    }, response => {
+      let responseBody = "";
+      response.setEncoding("utf8");
+      response.on("data", chunk => {
+        responseBody += chunk;
+      });
+      response.on("end", () => {
+        if (response.headers["content-type"] === "application/json") {
+          resolve(JSON.parse(responseBody));
+        } else {
+          resolve(responseBody);
+        }
+      });
+    });
+    req.on("error", reject);
+    req.end();
+  });
 };
 
 const generateCoverageJsonFile = async ({
@@ -23778,37 +23757,6 @@ const run = async ({
   return result;
 };
 
-const pingServer = async url => {
-  const server = createServer();
-  const {
-    hostname,
-    port
-  } = new URL(url);
-  try {
-    await new Promise((resolve, reject) => {
-      server.on("error", reject);
-      server.on("listening", () => {
-        resolve();
-      });
-      server.listen(port, hostname);
-    });
-  } catch (error) {
-    if (error && error.code === "EADDRINUSE") {
-      return true;
-    }
-    if (error && error.code === "EACCES") {
-      return true;
-    }
-    throw error;
-  }
-  await new Promise((resolve, reject) => {
-    server.on("error", reject);
-    server.on("close", resolve);
-    server.close();
-  });
-  return false;
-};
-
 const ensureGlobalGc = () => {
   if (!global.gc) {
     v8.setFlagsFromString("--expose_gc");
@@ -24222,7 +24170,7 @@ const executePlan = async (plan, {
   logFileRelativeUrl,
   completedExecutionLogMerging,
   completedExecutionLogAbbreviation,
-  sourceDirectoryUrl,
+  rootDirectoryUrl,
   devServerOrigin,
   keepRunning,
   defaultMsAllocatedPerExecution,
@@ -24236,7 +24184,7 @@ const executePlan = async (plan, {
   coverageMethodForBrowsers,
   coverageMethodForNodeJs,
   coverageV8ConflictWarning,
-  coverageTempDirectoryRelativeUrl,
+  coverageTempDirectoryUrl,
   beforeExecutionCallback = () => {},
   afterExecutionCallback = () => {}
 } = {}) => {
@@ -24246,31 +24194,6 @@ const executePlan = async (plan, {
   const stopAfterAllSignal = {
     notify: () => {}
   };
-  let someNeedsServer = false;
-  let someNodeRuntime = false;
-  const runtimes = {};
-  Object.keys(plan).forEach(filePattern => {
-    const filePlan = plan[filePattern];
-    if (!filePlan) return;
-    Object.keys(filePlan).forEach(executionName => {
-      const executionConfig = filePlan[executionName];
-      const {
-        runtime
-      } = executionConfig;
-      if (runtime) {
-        runtimes[runtime.name] = runtime.version;
-        if (runtime.type === "browser") {
-          someNeedsServer = true;
-        }
-        if (runtime.type === "node") {
-          someNodeRuntime = true;
-        }
-      }
-    });
-  });
-  logger.debug(createDetailedMessage$1(`Prepare executing plan`, {
-    runtimes: JSON.stringify(runtimes, null, "  ")
-  }));
   const multipleExecutionsOperation = Abort.startOperation();
   multipleExecutionsOperation.addAbortSignal(signal);
   if (handleSIGINT) {
@@ -24288,19 +24211,6 @@ const executePlan = async (plan, {
     multipleExecutionsOperation.addAbortSignal(failFastAbortController.signal);
   }
   try {
-    const coverageTempDirectoryUrl = new URL(coverageTempDirectoryRelativeUrl, sourceDirectoryUrl).href;
-    if (someNodeRuntime && coverageEnabled && coverageMethodForNodeJs === "NODE_V8_COVERAGE") {
-      if (process.env.NODE_V8_COVERAGE) {
-        // when runned multiple times, we don't want to keep previous files in this directory
-        await ensureEmptyDirectory(process.env.NODE_V8_COVERAGE);
-      } else {
-        coverageMethodForNodeJs = "Profiler";
-        logger.warn(createDetailedMessage$1(`process.env.NODE_V8_COVERAGE is required to generate coverage for Node.js subprocesses`, {
-          "suggestion": `set process.env.NODE_V8_COVERAGE`,
-          "suggestion 2": `use coverageMethodForNodeJs: "Profiler". But it means coverage for child_process and worker_thread cannot be collected`
-        }));
-      }
-    }
     if (gcBetweenExecutions) {
       ensureGlobalGc();
     }
@@ -24323,7 +24233,7 @@ const executePlan = async (plan, {
           const planCoverage = await reportToCoverage(report, {
             signal: multipleExecutionsOperation.signal,
             logger,
-            rootDirectoryUrl: sourceDirectoryUrl,
+            rootDirectoryUrl,
             coverageConfig,
             coverageIncludeMissing,
             coverageMethodForBrowsers,
@@ -24339,7 +24249,7 @@ const executePlan = async (plan, {
       });
     }
     let runtimeParams = {
-      rootDirectoryUrl: sourceDirectoryUrl,
+      rootDirectoryUrl,
       devServerOrigin,
       coverageEnabled,
       coverageConfig,
@@ -24347,20 +24257,11 @@ const executePlan = async (plan, {
       coverageMethodForNodeJs,
       stopAfterAllSignal
     };
-    if (someNeedsServer) {
-      if (!devServerOrigin) {
-        throw new TypeError(`devServerOrigin is required when running tests on browser(s)`);
-      }
-      const devServerStarted = await pingServer(devServerOrigin);
-      if (!devServerStarted) {
-        throw new Error(`dev server not started at ${devServerOrigin}. It is required to run tests`);
-      }
-    }
     logger.debug(`Generate executions`);
     const executionSteps = await getExecutionAsSteps({
       plan,
       multipleExecutionsOperation,
-      rootDirectoryUrl: sourceDirectoryUrl
+      rootDirectoryUrl
     });
     logger.debug(`${executionSteps.length} executions planned`);
     if (completedExecutionLogMerging && !process.stdout.isTTY) {
@@ -24446,13 +24347,13 @@ const executePlan = async (plan, {
           });
         }
         beforeExecutionCallback(beforeExecutionInfo);
-        const fileUrl = `${sourceDirectoryUrl}${fileRelativeUrl}`;
+        const fileUrl = `${rootDirectoryUrl}${fileRelativeUrl}`;
         let executionResult;
         if (existsSync(new URL(fileUrl))) {
           executionResult = await run({
             signal: multipleExecutionsOperation.signal,
             logger,
-            allocatedMs: executionParams.allocatedMs,
+            allocatedMs: typeof executionParams.allocatedMs === "function" ? executionParams.allocatedMs(beforeExecutionInfo) : executionParams.allocatedMs,
             keepRunning,
             mirrorConsole: false,
             // file are executed in parallel, log would be a mess to read
@@ -24563,7 +24464,7 @@ const executePlan = async (plan, {
       logger.info(summaryLog);
     }
     if (summary.counters.total !== summary.counters.completed) {
-      const logFileUrl = new URL(logFileRelativeUrl, sourceDirectoryUrl).href;
+      const logFileUrl = new URL(logFileRelativeUrl, rootDirectoryUrl).href;
       writeFileSync(logFileUrl, rawOutput);
       logger.info(`-> ${urlToFileSystemPath(logFileUrl)}`);
     }
@@ -24668,8 +24569,8 @@ const executeInParallel = async ({
 /**
  * Execute a list of files and log how it goes.
  * @param {Object} testPlanParameters
- * @param {string|url} testPlanParameters.sourceDirectoryUrl Directory containing source and test files
- * @param {string|url} [testPlanParameters.serverOrigin=undefined] Jsenv dev server origin; required when executing test on browsers
+ * @param {string|url} testPlanParameters.testDirectoryUrl Directory containing test files
+ * @param {string|url} [testPlanParameters.devServerOrigin=undefined] Jsenv dev server origin; required when executing test on browsers
  * @param {Object} testPlanParameters.testPlan Object associating patterns leading to files to runtimes where they should be executed
  * @param {boolean} [testPlanParameters.completedExecutionLogAbbreviation=false] Abbreviate completed execution information to shorten terminal output
  * @param {boolean} [testPlanParameters.completedExecutionLogMerging=false] Merge completed execution logs to shorten terminal output
@@ -24695,7 +24596,8 @@ const executeTestPlan = async ({
   logFileRelativeUrl = ".jsenv/test_plan_debug.txt",
   completedExecutionLogAbbreviation = false,
   completedExecutionLogMerging = false,
-  sourceDirectoryUrl,
+  testDirectoryUrl,
+  devServerModuleUrl,
   devServerOrigin,
   testPlan,
   updateProcessExitCode = true,
@@ -24720,29 +24622,85 @@ const executeTestPlan = async ({
   coverageMethodForBrowsers = "playwright_api",
   // "istanbul" also accepted
   coverageV8ConflictWarning = true,
-  coverageTempDirectoryRelativeUrl = "./.coverage/tmp/",
+  coverageTempDirectoryUrl,
+  coverageReportRootDirectoryUrl,
   // skip empty means empty files won't appear in the coverage reports (json and html)
   coverageReportSkipEmpty = false,
   // skip full means file with 100% coverage won't appear in coverage reports (json and html)
   coverageReportSkipFull = false,
   coverageReportTextLog = true,
-  coverageReportJsonFile = process.env.CI ? null : "./.coverage/coverage.json",
-  coverageReportHtmlDirectory = process.env.CI ? "./.coverage/" : null,
+  coverageReportJsonFileUrl,
+  coverageReportHtmlDirectoryUrl,
   ...rest
 }) => {
+  let someNeedsServer = false;
+  let someNodeRuntime = false;
+  let stopDevServerNeeded = false;
+  const runtimes = {};
   // param validation
   {
     const unexpectedParamNames = Object.keys(rest);
     if (unexpectedParamNames.length > 0) {
       throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param`);
     }
-    const sourceDirectoryUrlValidation = validateDirectoryUrl(sourceDirectoryUrl);
-    if (!sourceDirectoryUrlValidation.valid) {
-      throw new TypeError(`sourceDirectoryUrl ${sourceDirectoryUrlValidation.message}, got ${sourceDirectoryUrl}`);
+    const testDirectoryUrlValidation = validateDirectoryUrl(testDirectoryUrl);
+    if (!testDirectoryUrlValidation.valid) {
+      throw new TypeError(`testDirectoryUrl ${testDirectoryUrlValidation.message}, got ${testDirectoryUrl}`);
     }
-    sourceDirectoryUrl = sourceDirectoryUrlValidation.value;
+    testDirectoryUrl = testDirectoryUrlValidation.value;
+    if (!existsSync(new URL(testDirectoryUrl))) {
+      throw new Error(`ENOENT while trying to access testDirectoryUrl at ${testDirectoryUrl}`);
+    }
     if (typeof testPlan !== "object") {
       throw new Error(`testPlan must be an object, got ${testPlan}`);
+    }
+    Object.keys(testPlan).forEach(filePattern => {
+      const filePlan = testPlan[filePattern];
+      if (!filePlan) return;
+      Object.keys(filePlan).forEach(executionName => {
+        const executionConfig = filePlan[executionName];
+        const {
+          runtime
+        } = executionConfig;
+        if (runtime) {
+          runtimes[runtime.name] = runtime.version;
+          if (runtime.type === "browser") {
+            someNeedsServer = true;
+          }
+          if (runtime.type === "node") {
+            someNodeRuntime = true;
+          }
+        }
+      });
+    });
+    if (someNeedsServer) {
+      if (!devServerOrigin) {
+        throw new TypeError(`devServerOrigin is required when running tests on browser(s)`);
+      }
+      let devServerStarted = await pingServer(devServerOrigin);
+      if (!devServerStarted) {
+        try {
+          process.env.IMPORTED_BY_TEST_PLAN = "1";
+          await import(devServerModuleUrl);
+          delete process.env.IMPORTED_BY_TEST_PLAN;
+        } catch (e) {
+          if (e.code === "MODULE_NOT_FOUND") {
+            throw new Error(`Cannot find file responsible to start dev server at "${devServerModuleUrl}"`);
+          }
+          throw e;
+        }
+        devServerStarted = await pingServer(devServerOrigin);
+        if (!devServerStarted) {
+          throw new Error(`dev server not started after importing "${devServerModuleUrl}", ensure this module file is starting a server at "${devServerOrigin}"`);
+        }
+        stopDevServerNeeded = true;
+      }
+      const {
+        sourceDirectoryUrl
+      } = await basicFetch(`${devServerOrigin}/__server_params__.json`);
+      if (testDirectoryUrl !== sourceDirectoryUrl && !urlIsInsideOf(testDirectoryUrl, sourceDirectoryUrl)) {
+        throw new Error(`testDirectoryUrl must be inside sourceDirectoryUrl when running tests on browser(s)`);
+      }
     }
     if (coverageEnabled) {
       if (typeof coverageConfig !== "object") {
@@ -24773,16 +24731,51 @@ const executeTestPlan = async ({
       }
     }
   }
+  const logger = createLogger({
+    logLevel
+  });
+  logger.debug(createDetailedMessage$1(`Prepare executing plan`, {
+    runtimes: JSON.stringify(runtimes, null, "  ")
+  }));
+
+  // param normalization
+  {
+    if (coverageEnabled) {
+      if (Object.keys(coverageConfig).length === 0) {
+        logger.warn(`coverageConfig is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`);
+      }
+      if (coverageReportRootDirectoryUrl === undefined) {
+        coverageReportRootDirectoryUrl = lookupPackageDirectory(testDirectoryUrl);
+        // decide one that make sense: same as jsenv internal url
+      }
+
+      if (coverageTempDirectoryUrl === undefined) {
+        coverageTempDirectoryUrl = new URL("./.coverage/tmp/", coverageReportRootDirectoryUrl);
+      }
+      if (coverageReportJsonFileUrl === undefined && !process.env.CI) {
+        coverageReportJsonFileUrl = new URL("./.coverage/coverage.json", coverageReportRootDirectoryUrl);
+      }
+      if (coverageReportHtmlDirectoryUrl === undefined && process.env.CI) {
+        coverageReportHtmlDirectoryUrl = new URL("./.coverage/", coverageReportRootDirectoryUrl);
+      }
+      if (someNodeRuntime && coverageEnabled && coverageMethodForNodeJs === "NODE_V8_COVERAGE") {
+        if (process.env.NODE_V8_COVERAGE) {
+          // when runned multiple times, we don't want to keep previous files in this directory
+          await ensureEmptyDirectory(process.env.NODE_V8_COVERAGE);
+        } else {
+          coverageMethodForNodeJs = "Profiler";
+          logger.warn(createDetailedMessage$1(`process.env.NODE_V8_COVERAGE is required to generate coverage for Node.js subprocesses`, {
+            "suggestion": `set process.env.NODE_V8_COVERAGE`,
+            "suggestion 2": `use coverageMethodForNodeJs: "Profiler". But it means coverage for child_process and worker_thread cannot be collected`
+          }));
+        }
+      }
+    }
+  }
   testPlan = {
     ...testPlan,
     "**/.jsenv/": null
   };
-  const logger = createLogger({
-    logLevel
-  });
-  if (Object.keys(coverageConfig).length === 0) {
-    logger.warn(`coverageConfig is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`);
-  }
   const result = await executePlan(testPlan, {
     signal,
     handleSIGINT,
@@ -24796,7 +24789,7 @@ const executeTestPlan = async ({
     logFileRelativeUrl,
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
-    sourceDirectoryUrl,
+    rootDirectoryUrl: testDirectoryUrl,
     devServerOrigin,
     maxExecutionsInParallel,
     defaultMsAllocatedPerExecution,
@@ -24810,8 +24803,11 @@ const executeTestPlan = async ({
     coverageMethodForBrowsers,
     coverageMethodForNodeJs,
     coverageV8ConflictWarning,
-    coverageTempDirectoryRelativeUrl
+    coverageTempDirectoryUrl
   });
+  if (stopDevServerNeeded) {
+    basicFetch(`${devServerOrigin}/__stop__`);
+  }
   if (updateProcessExitCode && result.planSummary.counters.total !== result.planSummary.counters.completed) {
     process.exitCode = 1;
   }
@@ -24822,26 +24818,21 @@ const executeTestPlan = async ({
     // keep this one first because it does ensureEmptyDirectory
     // and in case coverage json file gets written in the same directory
     // it must be done before
-    if (coverageEnabled && coverageReportHtmlDirectory) {
-      const coverageHtmlDirectoryUrl = resolveDirectoryUrl(coverageReportHtmlDirectory, sourceDirectoryUrl);
-      if (!urlIsInsideOf(coverageHtmlDirectoryUrl, sourceDirectoryUrl)) {
-        throw new Error(`coverageReportHtmlDirectory must be inside sourceDirectoryUrl`);
-      }
-      await ensureEmptyDirectory(coverageHtmlDirectoryUrl);
-      const htmlCoverageDirectoryIndexFileUrl = `${coverageHtmlDirectoryUrl}index.html`;
+    if (coverageEnabled && coverageReportHtmlDirectoryUrl) {
+      await ensureEmptyDirectory(coverageReportHtmlDirectoryUrl);
+      const htmlCoverageDirectoryIndexFileUrl = `${coverageReportHtmlDirectoryUrl}index.html`;
       logger.info(`-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`);
       promises.push(generateCoverageHtmlDirectory(planCoverage, {
-        rootDirectoryUrl: sourceDirectoryUrl,
-        coverageHtmlDirectoryRelativeUrl: urlToRelativeUrl(coverageHtmlDirectoryUrl, sourceDirectoryUrl),
+        rootDirectoryUrl: coverageReportRootDirectoryUrl,
+        coverageHtmlDirectoryRelativeUrl: urlToRelativeUrl(coverageReportHtmlDirectoryUrl, coverageReportRootDirectoryUrl),
         coverageReportSkipEmpty,
         coverageReportSkipFull
       }));
     }
-    if (coverageEnabled && coverageReportJsonFile) {
-      const coverageJsonFileUrl = new URL(coverageReportJsonFile, sourceDirectoryUrl).href;
+    if (coverageEnabled && coverageReportJsonFileUrl) {
       promises.push(generateCoverageJsonFile({
         coverage: result.planCoverage,
-        coverageJsonFileUrl,
+        coverageJsonFileUrl: coverageReportJsonFileUrl,
         logger
       }));
     }
@@ -26232,27 +26223,19 @@ const onceWorkerThreadEvent = (worker, type, callback) => {
  * @return {Object} A build server object
  */
 const startBuildServer = async ({
-  signal = new AbortController().signal,
-  handleSIGINT = true,
-  logLevel,
-  serverLogLevel = "warn",
-  https,
-  http2,
-  acceptAnyIp,
-  hostname,
-  port = 9779,
-  services = [],
-  keepProcessAlive = true,
   buildDirectoryUrl,
   buildMainFilePath = "index.html",
-  sourceDirectoryUrl,
-  buildServerFiles = {
-    "./package.json": true,
-    "./jsenv.config.mjs": true
-  },
-  buildServerAutoreload = false,
-  buildServerMainFile = getCallerPosition().url,
-  cooldownBetweenFileEvents,
+  port = 9779,
+  services = [],
+  acceptAnyIp,
+  hostname,
+  https,
+  http2,
+  logLevel,
+  serverLogLevel = "warn",
+  signal = new AbortController().signal,
+  handleSIGINT = true,
+  keepProcessAlive = true,
   ...rest
 }) => {
   // params validation
@@ -26260,13 +26243,6 @@ const startBuildServer = async ({
     const unexpectedParamNames = Object.keys(rest);
     if (unexpectedParamNames.length > 0) {
       throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param`);
-    }
-    if (sourceDirectoryUrl) {
-      const sourceDirectoryUrlValidation = validateDirectoryUrl(sourceDirectoryUrl);
-      if (!sourceDirectoryUrlValidation.valid) {
-        throw new TypeError(`rootDirectoryUrl ${sourceDirectoryUrlValidation.message}, got ${sourceDirectoryUrl}`);
-      }
-      sourceDirectoryUrl = sourceDirectoryUrlValidation.value;
     }
     const buildDirectoryUrlValidation = validateDirectoryUrl(buildDirectoryUrl);
     if (!buildDirectoryUrlValidation.valid) {
@@ -26302,72 +26278,6 @@ const startBuildServer = async ({
         SIGINT: true
       }, abort);
     });
-  }
-  let reloadableWorker;
-  if (buildServerAutoreload) {
-    reloadableWorker = createReloadableWorker(buildServerMainFile);
-    if (reloadableWorker.isPrimary) {
-      const buildServerFileChangeCallback = ({
-        relativeUrl,
-        event
-      }) => {
-        const url = new URL(relativeUrl, sourceDirectoryUrl).href;
-        logger.info(`file ${event} ${url} -> restarting server...`);
-        reloadableWorker.reload();
-      };
-      const stopWatchingBuildServerFiles = registerDirectoryLifecycle(sourceDirectoryUrl, {
-        watchPatterns: {
-          ...buildServerFiles,
-          [buildServerMainFile]: true
-        },
-        cooldownBetweenFileEvents,
-        keepProcessAlive: false,
-        recursive: true,
-        added: ({
-          relativeUrl
-        }) => {
-          buildServerFileChangeCallback({
-            relativeUrl,
-            event: "added"
-          });
-        },
-        updated: ({
-          relativeUrl
-        }) => {
-          buildServerFileChangeCallback({
-            relativeUrl,
-            event: "modified"
-          });
-        },
-        removed: ({
-          relativeUrl
-        }) => {
-          buildServerFileChangeCallback({
-            relativeUrl,
-            event: "removed"
-          });
-        }
-      });
-      operation.addAbortCallback(() => {
-        stopWatchingBuildServerFiles();
-        reloadableWorker.terminate();
-      });
-      const worker = await reloadableWorker.load();
-      const messagePromise = new Promise(resolve => {
-        worker.once("message", resolve);
-      });
-      const origin = await messagePromise;
-      // if (!keepProcessAlive) {
-      //   worker.unref()
-      // }
-      return {
-        origin,
-        stop: () => {
-          stopWatchingBuildServerFiles();
-          reloadableWorker.terminate();
-        }
-      };
-    }
   }
   const startBuildServerTask = createTaskLog("start build server", {
     disabled: !logger.levels.info
@@ -26415,9 +26325,6 @@ const startBuildServer = async ({
     logger.info(`- ${server.origins[key]}`);
   });
   logger.info(``);
-  if (reloadableWorker && reloadableWorker.isWorker) {
-    parentPort.postMessage(server.origin);
-  }
   return {
     origin: server.origin,
     stop: () => {
