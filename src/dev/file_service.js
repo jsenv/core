@@ -48,9 +48,17 @@ export const createFileService = ({
       callback(url)
     })
   }
+  // Project should use a dedicated directory (usually "src/")
+  // passed to the dev server via "sourceDirectoryUrl" param
+  // In that case all files inside the source directory should be watched
+  // But some project might want to use their root directory as source directory
+  // In that case source directory might contain files matching "node_modules/*" or ".git/*"
+  // And jsenv should not consider these as source files and watch them (to not hurt performances)
   const watchPatterns = {
-    "**/*": true,
-    ".jsenv/": false,
+    "**/*": true, // by default watch everything inside the source directory
+    "**/.*": false, // file starting with a dot -> do not watch
+    "**/.*/": false, // directory starting with a dot -> do not watch
+    "**/node_modules/": false, // node_modules directory -> do not watch
   }
   const stopWatchingClientFiles = registerDirectoryLifecycle(
     sourceDirectoryUrl,
