@@ -1,12 +1,12 @@
-import appStyleSheet from "./app.css" assert { type: "css" }
+import mainStyleSheet from "./main.css" assert { type: "css" }
 
-document.adoptedStyleSheets = [...document.adoptedStyleSheets, appStyleSheet]
+document.adoptedStyleSheets = [...document.adoptedStyleSheets, mainStyleSheet]
 
 const jsenvLogoUrl = new URL("/jsenv_logo.svg", import.meta.url)
 
-document.querySelector("#app").innerHTML = `
+document.querySelector("#root").innerHTML = `
   <h1>Hello world!</h1>
-  <img class="app_logo" src=${jsenvLogoUrl} className="app_logo" alt="logo" />
+  <img class="logo" src=${jsenvLogoUrl} alt="logo" />
   <p>
     Edit <code>jsenv_logo.svg</code> and save to test HMR updates.
   </p>
@@ -18,7 +18,7 @@ if (import.meta.hot) {
   import.meta.hot.dispose(() => {
     document.querySelector("#app").innerHTML = ""
     document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
-      (s) => s !== appStyleSheet,
+      (s) => s !== mainStyleSheet,
     )
   })
 }

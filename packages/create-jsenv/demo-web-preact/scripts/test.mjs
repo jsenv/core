@@ -7,8 +7,6 @@
 import { executeTestPlan, chromium, webkit } from "@jsenv/core"
 
 await executeTestPlan({
-  devServerOrigin: "http://localhost:3401",
-  devServerModuleUrl: new URL("./start_dev_server.mjs", import.meta.url),
   testDirectoryUrl: new URL("../src/", import.meta.url),
   testPlan: {
     "./**/*.test.html": {
@@ -20,6 +18,8 @@ await executeTestPlan({
       },
     },
   },
+  devServerOrigin: "http://localhost:3401",
+  devServerModuleUrl: new URL("./start_dev_server.mjs", import.meta.url),
   coverageEnabled: process.argv.includes("--coverage"),
   coverageMethodForBrowsers: "istanbul",
 })

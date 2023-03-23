@@ -2,7 +2,7 @@ import { useState, useLayoutEffect } from "react"
 
 import appStyleSheet from "./app.css" assert { type: "css" }
 
-const reactLogoUrl = new URL("./react_logo.svg", import.meta.url)
+const reactLogoUrl = new URL("../react_logo.svg", import.meta.url)
 
 export const App = () => {
   const [count, setCount] = useState(0)

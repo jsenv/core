@@ -2,7 +2,7 @@ import { useState, useLayoutEffect } from "preact/hooks"
 
 import appStyleSheet from "./app.css" assert { type: "css" }
 
-const preactLogoUrl = new URL("./preact_logo.svg", import.meta.url)
+const preactLogoUrl = new URL("../preact_logo.svg", import.meta.url)
 
 export const App = () => {
   const [count, setCount] = useState(0)
