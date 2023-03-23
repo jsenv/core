@@ -33,8 +33,10 @@ export const readNodeV8CoverageDirectory = async ({
     operation.throwIfAborted()
     const dirContent = await tryReadDirectory()
 
-    const coverageDirectoryUrl =
-      assertAndNormalizeDirectoryUrl(NODE_V8_COVERAGE)
+    const coverageDirectoryUrl = assertAndNormalizeDirectoryUrl(
+      NODE_V8_COVERAGE,
+      "NODE_V8_COVERAGE",
+    )
 
     await dirContent.reduce(async (previous, dirEntry) => {
       operation.throwIfAborted()

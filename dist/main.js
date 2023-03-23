@@ -624,14 +624,14 @@ const validateDirectoryUrl = value => {
     value: ensurePathnameTrailingSlash(urlString)
   };
 };
-const assertAndNormalizeDirectoryUrl = directoryUrl => {
+const assertAndNormalizeDirectoryUrl = (directoryUrl, name = "directoryUrl") => {
   const {
     valid,
     message,
     value
   } = validateDirectoryUrl(directoryUrl);
   if (!valid) {
-    throw new TypeError(`directoryUrl ${message}, got ${value}`);
+    throw new TypeError(`${name} ${message}, got ${value}`);
   }
   return value;
 };
@@ -673,14 +673,14 @@ const validateFileUrl = (value, baseUrl) => {
     value: urlString
   };
 };
-const assertAndNormalizeFileUrl = (fileUrl, baseUrl) => {
+const assertAndNormalizeFileUrl = (fileUrl, baseUrl, name = "fileUrl") => {
   const {
     valid,
     message,
     value
   } = validateFileUrl(fileUrl, baseUrl);
   if (!valid) {
-    throw new TypeError(`fileUrl ${message}, got ${fileUrl}`);
+    throw new TypeError(`${name} ${message}, got ${fileUrl}`);
   }
   return value;
 };
@@ -7102,6 +7102,62 @@ const getDirectoryName = directoryUrl => {
     pathname
   } = new URL(directoryUrl);
   return basename(pathname);
+};
+
+const watchSourceFiles = (sourceDirectoryUrl, callback, {
+  sourceFileConfig = {},
+  keepProcessAlive,
+  cooldownBetweenFileEvents
+}) => {
+  // Project should use a dedicated directory (usually "src/")
+  // passed to the dev server via "sourceDirectoryUrl" param
+  // In that case all files inside the source directory should be watched
+  // But some project might want to use their root directory as source directory
+  // In that case source directory might contain files matching "node_modules/*" or ".git/*"
+  // And jsenv should not consider these as source files and watch them (to not hurt performances)
+  const watchPatterns = {
+    "**/*": true,
+    // by default watch everything inside the source directory
+    "**/.*": false,
+    // file starting with a dot -> do not watch
+    "**/.*/": false,
+    // directory starting with a dot -> do not watch
+    "**/node_modules/": false,
+    // node_modules directory -> do not watch
+    ...sourceFileConfig
+  };
+  const stopWatchingSourceFiles = registerDirectoryLifecycle(sourceDirectoryUrl, {
+    watchPatterns,
+    cooldownBetweenFileEvents,
+    keepProcessAlive,
+    recursive: true,
+    added: ({
+      relativeUrl
+    }) => {
+      callback({
+        url: new URL(relativeUrl, sourceDirectoryUrl).href,
+        event: "added"
+      });
+    },
+    updated: ({
+      relativeUrl
+    }) => {
+      callback({
+        url: new URL(relativeUrl, sourceDirectoryUrl).href,
+        event: "modified"
+      });
+    },
+    removed: ({
+      relativeUrl
+    }) => {
+      callback({
+        url: new URL(relativeUrl, sourceDirectoryUrl).href,
+        event: "removed"
+      });
+    }
+  });
+  stopWatchingSourceFiles.watchPatterns = watchPatterns;
+  return stopWatchingSourceFiles;
 };
 
 const urlSpecifierEncoding = {
@@ -20821,7 +20877,7 @@ const build = async ({
   // "filename", "search_param"
   versioningViaImportmap = true,
   lineBreakNormalization = process.platform === "win32",
-  clientFiles = {},
+  sourceFilesConfig = {},
   cooldownBetweenFileEvents,
   watch = false,
   directoryToClean,
@@ -20837,11 +20893,7 @@ const build = async ({
     if (unexpectedParamNames.length > 0) {
       throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param`);
     }
-    const sourceDirectoryUrlValidation = validateDirectoryUrl(sourceDirectoryUrl);
-    if (!sourceDirectoryUrlValidation.valid) {
-      throw new TypeError(`sourceDirectoryUrl ${sourceDirectoryUrlValidation.message}, got ${sourceDirectoryUrl}`);
-    }
-    sourceDirectoryUrl = sourceDirectoryUrlValidation.value;
+    sourceDirectoryUrl = assertAndNormalizeDirectoryUrl(sourceDirectoryUrl, "sourceDirectoryUrl");
     if (typeof entryPoints !== "object" || entryPoints === null) {
       throw new TypeError(`entryPoints must be an object, got ${entryPoints}`);
     }
@@ -20858,11 +20910,7 @@ const build = async ({
         throw new TypeError(`entryPoints values must be plain strings (no "/"), found "${value}" on key "${key}"`);
       }
     });
-    const buildDirectoryUrlValidation = validateDirectoryUrl(buildDirectoryUrl);
-    if (!buildDirectoryUrlValidation.valid) {
-      throw new TypeError(`buildDirectoryUrl ${buildDirectoryUrlValidation.message}, got ${buildDirectoryUrlValidation}`);
-    }
-    buildDirectoryUrl = buildDirectoryUrlValidation.value;
+    buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl, "buildDirectoryUrl");
     if (!["filename", "search_param"].includes(versioningMethod)) {
       throw new TypeError(`versioningMethod must be "filename" or "search_param", got ${versioning}`);
     }
@@ -22143,11 +22191,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
   };
   startBuild();
   let startTimeout;
-  const clientFileChangeCallback = ({
-    relativeUrl,
+  const stopWatchingSourceFiles = watchSourceFiles(sourceDirectoryUrl, ({
+    url,
     event
   }) => {
-    const url = new URL(relativeUrl, sourceDirectoryUrl).href;
     if (watchFilesTask) {
       watchFilesTask.happen(`${url.slice(sourceDirectoryUrl.length)} ${event}`);
       watchFilesTask = null;
@@ -22158,42 +22205,16 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     // then logs about re-running the build happens
     clearTimeout(startTimeout);
     startTimeout = setTimeout(startBuild, 20);
-  };
-  const stopWatchingClientFiles = registerDirectoryLifecycle(sourceDirectoryUrl, {
-    watchPatterns: clientFiles,
-    cooldownBetweenFileEvents,
+  }, {
+    sourceFilesConfig,
     keepProcessAlive: true,
-    recursive: true,
-    added: ({
-      relativeUrl
-    }) => {
-      clientFileChangeCallback({
-        relativeUrl,
-        event: "added"
-      });
-    },
-    updated: ({
-      relativeUrl
-    }) => {
-      clientFileChangeCallback({
-        relativeUrl,
-        event: "modified"
-      });
-    },
-    removed: ({
-      relativeUrl
-    }) => {
-      clientFileChangeCallback({
-        relativeUrl,
-        event: "removed"
-      });
-    }
+    cooldownBetweenFileEvents
   });
   operation.addAbortCallback(() => {
-    stopWatchingClientFiles();
+    stopWatchingSourceFiles();
   });
   await firstBuildPromise;
-  return stopWatchingClientFiles;
+  return stopWatchingSourceFiles;
 };
 const findKey = (map, value) => {
   for (const [keyCandidate, valueCandidate] of map) {
@@ -22306,6 +22327,7 @@ const createFileService = ({
   contextCache,
   sourceDirectoryUrl,
   sourceMainFilePath,
+  sourceFilesConfig,
   runtimeCompat,
   plugins,
   urlAnalysis,
@@ -22325,58 +22347,18 @@ const createFileService = ({
 }) => {
   const clientFileChangeCallbackList = [];
   const clientFilesPruneCallbackList = [];
-  const onFileChange = url => {
+  const stopWatchingSourceFiles = watchSourceFiles(sourceDirectoryUrl, ({
+    url
+  }) => {
     clientFileChangeCallbackList.forEach(callback => {
       callback(url);
     });
-  };
-  // Project should use a dedicated directory (usually "src/")
-  // passed to the dev server via "sourceDirectoryUrl" param
-  // In that case all files inside the source directory should be watched
-  // But some project might want to use their root directory as source directory
-  // In that case source directory might contain files matching "node_modules/*" or ".git/*"
-  // And jsenv should not consider these as source files and watch them (to not hurt performances)
-  const watchPatterns = {
-    "**/*": true,
-    // by default watch everything inside the source directory
-    "**/.*": false,
-    // file starting with a dot -> do not watch
-    "**/.*/": false,
-    // directory starting with a dot -> do not watch
-    "**/node_modules/": false // node_modules directory -> do not watch
-  };
-
-  const stopWatchingClientFiles = registerDirectoryLifecycle(sourceDirectoryUrl, {
-    watchPatterns,
-    cooldownBetweenFileEvents,
+  }, {
+    sourceFilesConfig,
     keepProcessAlive: false,
-    recursive: true,
-    added: ({
-      relativeUrl
-    }) => {
-      onFileChange({
-        url: new URL(relativeUrl, sourceDirectoryUrl).href,
-        event: "added"
-      });
-    },
-    updated: ({
-      relativeUrl
-    }) => {
-      onFileChange({
-        url: new URL(relativeUrl, sourceDirectoryUrl).href,
-        event: "modified"
-      });
-    },
-    removed: ({
-      relativeUrl
-    }) => {
-      onFileChange({
-        url: new URL(relativeUrl, sourceDirectoryUrl).href,
-        event: "removed"
-      });
-    }
+    cooldownBetweenFileEvents
   });
-  serverStopCallbacks.push(stopWatchingClientFiles);
+  serverStopCallbacks.push(stopWatchingSourceFiles);
   const getOrCreateContext = request => {
     const {
       runtimeName,
@@ -22388,7 +22370,7 @@ const createFileService = ({
       return existingContext;
     }
     const watchAssociations = URL_META.resolveAssociations({
-      watch: watchPatterns
+      watch: stopWatchingSourceFiles.watchPatterns
     }, sourceDirectoryUrl);
     const urlGraph = createUrlGraph();
     clientFileChangeCallbackList.push(({
@@ -22775,6 +22757,7 @@ const startDevServer = async ({
   handleSIGINT = true,
   keepProcessAlive = true,
   onStop = () => {},
+  sourceFilesConfig,
   clientAutoreload = true,
   cooldownBetweenFileEvents,
   // runtimeCompat is the runtimeCompat for the build
@@ -22807,11 +22790,7 @@ const startDevServer = async ({
     if (unexpectedParamNames.length > 0) {
       throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param`);
     }
-    const sourceDirectoryUrlValidation = validateDirectoryUrl(sourceDirectoryUrl);
-    if (!sourceDirectoryUrlValidation.valid) {
-      throw new TypeError(`sourceDirectoryUrl ${sourceDirectoryUrlValidation.message}, got ${sourceDirectoryUrl}`);
-    }
-    sourceDirectoryUrl = sourceDirectoryUrlValidation.value;
+    sourceDirectoryUrl = assertAndNormalizeDirectoryUrl("sourceDirectoryUrl", sourceDirectoryUrl);
   }
   const logger = createLogger({
     logLevel
@@ -22885,6 +22864,7 @@ const startDevServer = async ({
         contextCache,
         sourceDirectoryUrl,
         sourceMainFilePath,
+        sourceFilesConfig,
         runtimeCompat,
         plugins,
         urlAnalysis,
@@ -24629,7 +24609,9 @@ const executeTestPlan = async ({
   // skip full means file with 100% coverage won't appear in coverage reports (json and html)
   coverageReportSkipFull = false,
   coverageReportTextLog = true,
+  coverageReportJson = process.env.CI,
   coverageReportJsonFileUrl,
+  coverageReportHtml = !process.env.CI,
   coverageReportHtmlDirectoryUrl,
   ...rest
 }) => {
@@ -24643,11 +24625,7 @@ const executeTestPlan = async ({
     if (unexpectedParamNames.length > 0) {
       throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param`);
     }
-    const testDirectoryUrlValidation = validateDirectoryUrl(testDirectoryUrl);
-    if (!testDirectoryUrlValidation.valid) {
-      throw new TypeError(`testDirectoryUrl ${testDirectoryUrlValidation.message}, got ${testDirectoryUrl}`);
-    }
-    testDirectoryUrl = testDirectoryUrlValidation.value;
+    testDirectoryUrl = assertAndNormalizeDirectoryUrl("testDirectoryUrl", testDirectoryUrl);
     if (!existsSync(new URL(testDirectoryUrl))) {
       throw new Error(`ENOENT while trying to access testDirectoryUrl at ${testDirectoryUrl}`);
     }
@@ -24679,6 +24657,9 @@ const executeTestPlan = async ({
       }
       let devServerStarted = await pingServer(devServerOrigin);
       if (!devServerStarted) {
+        if (!devServerModuleUrl) {
+          throw new TypeError(`devServerModuleUrl is required when dev server is not started in order to run tests on browser(s)`);
+        }
         try {
           process.env.IMPORTED_BY_TEST_PLAN = "1";
           await import(devServerModuleUrl);
@@ -24729,6 +24710,30 @@ const executeTestPlan = async ({
           }));
         }
       }
+      if (coverageReportRootDirectoryUrl === undefined) {
+        coverageReportRootDirectoryUrl = lookupPackageDirectory(testDirectoryUrl);
+      } else {
+        coverageReportRootDirectoryUrl = assertAndNormalizeDirectoryUrl(coverageReportRootDirectoryUrl, "coverageReportRootDirectoryUrl");
+      }
+      if (coverageTempDirectoryUrl === undefined) {
+        coverageTempDirectoryUrl = new URL("./.coverage/tmp/", coverageReportRootDirectoryUrl);
+      } else {
+        coverageTempDirectoryUrl = assertAndNormalizeDirectoryUrl(coverageTempDirectoryUrl, "coverageTempDirectoryUrl");
+      }
+      if (coverageReportJson) {
+        if (coverageReportJsonFileUrl === undefined) {
+          coverageReportJsonFileUrl = new URL("./.coverage/coverage.json", coverageReportRootDirectoryUrl);
+        } else {
+          coverageReportJsonFileUrl = assertAndNormalizeFileUrl(coverageReportJsonFileUrl, "coverageReportJsonFileUrl");
+        }
+      }
+      if (coverageReportHtml) {
+        if (coverageReportHtmlDirectoryUrl === undefined) {
+          coverageReportHtmlDirectoryUrl = new URL("./.coverage/", coverageReportRootDirectoryUrl);
+        } else {
+          coverageReportHtmlDirectoryUrl = assertAndNormalizeDirectoryUrl(coverageReportHtmlDirectoryUrl, "coverageReportHtmlDirectoryUrl");
+        }
+      }
     }
   }
   const logger = createLogger({
@@ -24743,20 +24748,6 @@ const executeTestPlan = async ({
     if (coverageEnabled) {
       if (Object.keys(coverageConfig).length === 0) {
         logger.warn(`coverageConfig is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`);
-      }
-      if (coverageReportRootDirectoryUrl === undefined) {
-        coverageReportRootDirectoryUrl = lookupPackageDirectory(testDirectoryUrl);
-        // decide one that make sense: same as jsenv internal url
-      }
-
-      if (coverageTempDirectoryUrl === undefined) {
-        coverageTempDirectoryUrl = new URL("./.coverage/tmp/", coverageReportRootDirectoryUrl);
-      }
-      if (coverageReportJsonFileUrl === undefined && !process.env.CI) {
-        coverageReportJsonFileUrl = new URL("./.coverage/coverage.json", coverageReportRootDirectoryUrl);
-      }
-      if (coverageReportHtmlDirectoryUrl === undefined && process.env.CI) {
-        coverageReportHtmlDirectoryUrl = new URL("./.coverage/", coverageReportRootDirectoryUrl);
       }
       if (someNodeRuntime && coverageEnabled && coverageMethodForNodeJs === "NODE_V8_COVERAGE") {
         if (process.env.NODE_V8_COVERAGE) {
@@ -24818,7 +24809,7 @@ const executeTestPlan = async ({
     // keep this one first because it does ensureEmptyDirectory
     // and in case coverage json file gets written in the same directory
     // it must be done before
-    if (coverageEnabled && coverageReportHtmlDirectoryUrl) {
+    if (coverageEnabled && coverageReportHtml) {
       await ensureEmptyDirectory(coverageReportHtmlDirectoryUrl);
       const htmlCoverageDirectoryIndexFileUrl = `${coverageReportHtmlDirectoryUrl}index.html`;
       logger.info(`-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`);
@@ -24829,7 +24820,7 @@ const executeTestPlan = async ({
         coverageReportSkipFull
       }));
     }
-    if (coverageEnabled && coverageReportJsonFileUrl) {
+    if (coverageEnabled && coverageReportJson) {
       promises.push(generateCoverageJsonFile({
         coverage: result.planCoverage,
         coverageJsonFileUrl: coverageReportJsonFileUrl,
@@ -26244,11 +26235,7 @@ const startBuildServer = async ({
     if (unexpectedParamNames.length > 0) {
       throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param`);
     }
-    const buildDirectoryUrlValidation = validateDirectoryUrl(buildDirectoryUrl);
-    if (!buildDirectoryUrlValidation.valid) {
-      throw new TypeError(`buildDirectoryUrl ${buildDirectoryUrlValidation.message}, got ${buildDirectoryUrlValidation}`);
-    }
-    buildDirectoryUrl = buildDirectoryUrlValidation.value;
+    buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl, "buildDirectoryUrl");
     if (buildMainFilePath) {
       if (typeof buildMainFilePath !== "string") {
         throw new TypeError(`buildMainFilePath must be a string, got ${buildMainFilePath}`);

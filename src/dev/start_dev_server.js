@@ -76,8 +76,8 @@ export const startDevServer = async ({
       )
     }
     sourceDirectoryUrl = assertAndNormalizeDirectoryUrl(
-      "sourceDirectoryUrl",
       sourceDirectoryUrl,
+      "sourceDirectoryUrl",
     )
   }
 

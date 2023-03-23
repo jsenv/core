@@ -1,4 +1,7 @@
-export const basicFetch = async (url, { method = "GET", headers = {} }) => {
+export const basicFetch = async (
+  url,
+  { method = "GET", headers = {} } = {},
+) => {
   let requestModule
   if (url.startsWith("http:")) {
     requestModule = await import("node:http")

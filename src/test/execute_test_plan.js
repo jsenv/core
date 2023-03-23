@@ -103,8 +103,8 @@ export const executeTestPlan = async ({
       )
     }
     testDirectoryUrl = assertAndNormalizeDirectoryUrl(
-      "testDirectoryUrl",
       testDirectoryUrl,
+      "testDirectoryUrl",
     )
     if (!existsSync(new URL(testDirectoryUrl))) {
       throw new Error(

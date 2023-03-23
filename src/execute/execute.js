@@ -39,7 +39,10 @@ export const execute = async ({
   ignoreError = false,
 }) => {
   const logger = createLogger({ logLevel })
-  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl)
+  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(
+    rootDirectoryUrl,
+    "rootDirectoryUrl",
+  )
   const executeOperation = Abort.startOperation()
   executeOperation.addAbortSignal(signal)
   if (handleSIGINT) {
