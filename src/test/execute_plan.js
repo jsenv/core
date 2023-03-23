@@ -32,7 +32,7 @@ export const executePlan = async (
     logFileRelativeUrl,
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
-    sourceDirectoryUrl,
+    rootDirectoryUrl,
     devServerOrigin,
 
     keepRunning,
@@ -48,7 +48,7 @@ export const executePlan = async (
     coverageMethodForBrowsers,
     coverageMethodForNodeJs,
     coverageV8ConflictWarning,
-    coverageTempDirectoryRelativeUrl,
+    coverageTempDirectoryUrl,
 
     beforeExecutionCallback = () => {},
     afterExecutionCallback = () => {},
@@ -105,10 +105,6 @@ export const executePlan = async (
   }
 
   try {
-    const coverageTempDirectoryUrl = new URL(
-      coverageTempDirectoryRelativeUrl,
-      sourceDirectoryUrl,
-    ).href
     if (
       someNodeRuntime &&
       coverageEnabled &&
@@ -153,7 +149,7 @@ export const executePlan = async (
           const planCoverage = await reportToCoverage(report, {
             signal: multipleExecutionsOperation.signal,
             logger,
-            rootDirectoryUrl: sourceDirectoryUrl,
+            rootDirectoryUrl,
             coverageConfig,
             coverageIncludeMissing,
             coverageMethodForBrowsers,
@@ -170,7 +166,7 @@ export const executePlan = async (
     }
 
     let runtimeParams = {
-      rootDirectoryUrl: sourceDirectoryUrl,
+      rootDirectoryUrl,
       devServerOrigin,
       coverageEnabled,
       coverageConfig,
@@ -196,7 +192,7 @@ export const executePlan = async (
     const executionSteps = await getExecutionAsSteps({
       plan,
       multipleExecutionsOperation,
-      rootDirectoryUrl: sourceDirectoryUrl,
+      rootDirectoryUrl,
     })
     logger.debug(`${executionSteps.length} executions planned`)
     if (completedExecutionLogMerging && !process.stdout.isTTY) {
@@ -287,7 +283,7 @@ export const executePlan = async (
         }
         beforeExecutionCallback(beforeExecutionInfo)
 
-        const fileUrl = `${sourceDirectoryUrl}${fileRelativeUrl}`
+        const fileUrl = `${rootDirectoryUrl}${fileRelativeUrl}`
         let executionResult
         if (existsSync(new URL(fileUrl))) {
           executionResult = await run({
@@ -413,7 +409,7 @@ export const executePlan = async (
       logger.info(summaryLog)
     }
     if (summary.counters.total !== summary.counters.completed) {
-      const logFileUrl = new URL(logFileRelativeUrl, sourceDirectoryUrl).href
+      const logFileUrl = new URL(logFileRelativeUrl, rootDirectoryUrl).href
       writeFileSync(logFileUrl, rawOutput)
       logger.info(`-> ${urlToFileSystemPath(logFileUrl)}`)
     }
