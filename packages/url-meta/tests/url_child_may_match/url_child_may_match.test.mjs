@@ -164,3 +164,30 @@ import { URL_META } from "@jsenv/url-meta"
   const expected = true
   assert({ actual, expected })
 }
+
+{
+  const test = (url) =>
+    URL_META.urlChildMayMatch({
+      url,
+      associations: {
+        whatever: {
+          "file:///**/*": true,
+          "file:///**/.*": false,
+          "file:///**/.*/": false,
+          "file:///**/node_modules/": false,
+        },
+      },
+      predicate: ({ whatever }) => whatever,
+    })
+  const actual = {
+    appDirectory: test("file:///app/"),
+    nodeModuleDirectory: test("file:///node_modules/"),
+    gitDirectory: test("file:///.git/"),
+  }
+  const expected = {
+    appDirectory: true,
+    nodeModuleDirectory: false,
+    gitDirectory: false,
+  }
+  assert({ actual, expected })
+}

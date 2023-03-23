@@ -84,6 +84,34 @@ import { URL_META } from "@jsenv/url-meta"
     URL_META.applyAssociations({
       url,
       associations: {
+        whatever: {
+          "file:///**/*": true,
+          "file:///**/.*": false,
+          "file:///**/.*/": false,
+          "file:///**/node_modules/": false,
+        },
+      },
+    })
+  const actual = {
+    jsFile: test("file:///a.js"),
+    gitignore: test("file:///.gitignore"),
+    nodeModuleFile: test("file:///node_modules/a.js"),
+    insideGitDirectory: test("file:///.git/a.js"),
+  }
+  const expected = {
+    jsFile: { whatever: true },
+    gitignore: { whatever: false },
+    nodeModuleFile: { whatever: false },
+    insideGitDirectory: { whatever: false },
+  }
+  assert({ actual, expected })
+}
+
+{
+  const test = (url) =>
+    URL_META.applyAssociations({
+      url,
+      associations: {
         a: {
           "file:///foo": true,
         },
