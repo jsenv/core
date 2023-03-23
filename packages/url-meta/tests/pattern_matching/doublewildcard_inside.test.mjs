@@ -21,8 +21,8 @@ import { URL_META } from "@jsenv/url-meta"
   const actual = URL_META.applyPatternMatching({ pattern, url })
   const expected = {
     matched: true,
-    patternIndex: pattern.length,
-    urlIndex: url.length,
+    patternIndex: 13,
+    urlIndex: 12,
     matchGroups: [],
   }
   assert({ actual, expected })

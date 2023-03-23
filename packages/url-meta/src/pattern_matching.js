@@ -127,24 +127,30 @@ const applyMatching = (pattern, string) => {
     // pattern leading **
     if (remainingPattern.slice(0, 2) === "**") {
       consumePattern(2) // consumes "**"
+      let skipAllowed = true
       if (remainingPattern[0] === "/") {
         consumePattern(1) // consumes "/"
+        if (!remainingString.includes("/")) {
+          skipAllowed = false
+        }
       }
       // pattern ending with "**" or "**/" always match remaining string
       if (remainingPattern === "") {
         consumeRemainingString()
         return true
       }
-      const skipResult = skipUntilMatch({
-        pattern: remainingPattern,
-        string: remainingString,
-        canSkipSlash: true,
-      })
-      groups.push(...skipResult.groups)
-      consumePattern(skipResult.patternIndex)
-      consumeRemainingString()
-      restoreIndexes = false
-      return skipResult.matched
+      if (skipAllowed) {
+        const skipResult = skipUntilMatch({
+          pattern: remainingPattern,
+          string: remainingString,
+          canSkipSlash: true,
+        })
+        groups.push(...skipResult.groups)
+        consumePattern(skipResult.patternIndex)
+        consumeRemainingString()
+        restoreIndexes = false
+        return skipResult.matched
+      }
     }
     if (remainingPattern[0] === "*") {
       consumePattern(1) // consumes "*"

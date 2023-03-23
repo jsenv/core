@@ -224,24 +224,24 @@ import { URL_META } from "@jsenv/url-meta"
   assert({ actual, expected })
 }
 
-// {
-//   const test = (url) =>
-//     URL_META.applyAssociations({
-//       url,
-//       associations: {
-//         a: {
-//           "file:///**/*": true,
-//           "file:///**/.*": false,
-//         },
-//       },
-//     })
-//   const actual = {
-//     jsFile: test("file:///main.js"),
-//     gitIgnore: test("file:///.gitignore"),
-//   }
-//   const expected = {
-//     jsFile: { a: true },
-//     gitIgnore: { a: false },
-//   }
-//   assert({ actual, expected })
-// }
+{
+  const test = (url) =>
+    URL_META.applyAssociations({
+      url,
+      associations: {
+        a: {
+          "file:///**/*": true,
+          "file:///**/.*": false,
+        },
+      },
+    })
+  const actual = {
+    jsFile: test("file:///main.js"),
+    gitIgnore: test("file:///.gitignore"),
+  }
+  const expected = {
+    jsFile: { a: true },
+    gitIgnore: { a: false },
+  }
+  assert({ actual, expected })
+}
