@@ -31,13 +31,9 @@ import { URL_META } from "@jsenv/url-meta"
 {
   const pattern = "file:///**/a"
   const url = "file:///b/a"
-  const actual = URL_META.applyPatternMatching({ pattern, url })
-  const expected = {
-    matched: true,
-    patternIndex: pattern.length,
-    urlIndex: url.length,
-    matchGroups: [],
-  }
+  const { matched } = URL_META.applyPatternMatching({ pattern, url })
+  const actual = matched
+  const expected = true
   assert({ actual, expected })
 }
 

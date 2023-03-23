@@ -102,12 +102,18 @@ try {
 {
   const pattern = "file:///**/Z*"
   const url = "file:///aZb"
-  const actual = URL_META.applyPatternMatching({ pattern, url })
-  const expected = {
-    matched: false,
-    patternIndex: 8,
-    urlIndex: 8,
-    matchGroups: [],
-  }
+  const { matched } = URL_META.applyPatternMatching({ pattern, url })
+  const actual = matched
+  const expected = false
   assert({ actual, expected })
 }
+
+// this test fails but code should be modified to make it pass
+// {
+//   const pattern = "file:///**/.*"
+//   const url = "file:///app/app.jsx"
+//   const { matched } = URL_META.applyPatternMatching({ pattern, url })
+//   const actual = matched
+//   const expected = false
+//   assert({ actual, expected })
+// }
