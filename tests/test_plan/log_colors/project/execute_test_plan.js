@@ -4,7 +4,7 @@ await executeTestPlan({
   logLevel: "info",
   logEachDuration: false,
   logSummary: false,
-  sourceDirectoryUrl: new URL("./", import.meta.url),
+  testDirectoryUrl: new URL("./", import.meta.url),
   testPlan: {
     "./file.js": {
       node: {
