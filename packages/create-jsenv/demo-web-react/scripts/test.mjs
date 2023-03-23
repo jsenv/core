@@ -7,7 +7,7 @@
 import { executeTestPlan, chromium, webkit } from "@jsenv/core"
 
 await executeTestPlan({
-  sourceDirectoryUrl: new URL("../", import.meta.url),
+  testDirectoryUrl: new URL("../src/", import.meta.url),
   devServerOrigin: "http://localhost:3401",
   devServerModuleUrl: new URL("./start_dev_server.mjs", import.meta.url),
   testPlan: {

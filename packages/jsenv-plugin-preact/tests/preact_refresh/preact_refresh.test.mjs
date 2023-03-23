@@ -15,21 +15,14 @@ const labelJsFileContent = {
 
 const devServer = await startDevServer({
   logLevel: "warn",
-  rootDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
-  devServerAutoreload: false,
   plugins: [
     jsenvPluginPreact({
       refreshInstrumentation: true,
     }),
   ],
-  clientFiles: {
-    "./**": true,
-  },
   cooldownBetweenFileEvents: 250,
-  clientAutoreload: {
-    // debug: true,
-  },
 })
 const browser = await chromium.launch({
   headless: true,

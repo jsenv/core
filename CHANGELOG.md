@@ -11,6 +11,9 @@
   - buildIndexPath -> buildMainFilePath
 - Update executeTestPlan params
   - rootDirectoryUrl -> testDirectoryUrl
+  - Introduce devServerModuleUrl
+- executeTestPlan is now able to start dev server
+- executeTestPlan enforce testDirectoryUrl to be inside the sourceDirectoryUrl passed to dev server when tests are executed on browsers
 - Use node 19
 
 # 31.2.0
