@@ -1,11 +1,6 @@
-import { parentPort } from "node:worker_threads"
-import {
-  validateDirectoryUrl,
-  registerDirectoryLifecycle,
-} from "@jsenv/filesystem"
+import { validateDirectoryUrl } from "@jsenv/filesystem"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 import { createLogger, createTaskLog } from "@jsenv/log"
-import { getCallerPosition } from "@jsenv/urls"
 import {
   jsenvAccessControlAllowedHeaders,
   startServer,
@@ -16,7 +11,6 @@ import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/in
 
 import { createServerEventsDispatcher } from "@jsenv/core/src/plugins/server_events/server_events_dispatcher.js"
 import { defaultRuntimeCompat } from "@jsenv/core/src/build/build.js"
-import { createReloadableWorker } from "@jsenv/core/src/helpers/worker_reload.js"
 import { createFileService } from "./file_service.js"
 
 /**
@@ -24,34 +18,29 @@ import { createFileService } from "./file_service.js"
  * - cook source files according to jsenv plugins
  * - inject code to autoreload the browser when a file is modified
  * @param {Object} devServerParameters
- * @param {string|url} devServerParameters.rootDirectoryUrl Root directory of the project
+ * @param {string|url} devServerParameters.sourceDirectoryUrl Root directory of the project
  * @return {Object} A dev server object
  */
 export const startDevServer = async ({
-  signal = new AbortController().signal,
-  handleSIGINT = true,
-  logLevel = "info",
-  serverLogLevel = "warn",
+  sourceDirectoryUrl,
+  sourceMainFilePath,
+  port = 3456,
+  hostname,
+  acceptAnyIp,
   https,
   // it's better to use http1 by default because it allows to get statusText in devtools
   // which gives valuable information when there is errors
   http2 = false,
-  hostname,
-  port = 3456,
-  acceptAnyIp,
-  keepProcessAlive = true,
+  logLevel = "info",
+  serverLogLevel = "warn",
   services = [],
+
+  signal = new AbortController().signal,
+  handleSIGINT = true,
+  keepProcessAlive = true,
   onStop = () => {},
 
-  sourceDirectoryUrl,
-  sourceMainFilePath,
-  devServerFiles = {
-    "./package.json": true,
-    "./jsenv.config.mjs": true,
-  },
   clientAutoreload = true,
-  devServerAutoreload = false,
-  devServerMainFile = getCallerPosition().url,
   cooldownBetweenFileEvents,
 
   // runtimeCompat is the runtimeCompat for the build
@@ -108,58 +97,6 @@ export const startDevServer = async ({
       )
     })
   }
-
-  let reloadableWorker
-  if (devServerAutoreload) {
-    reloadableWorker = createReloadableWorker(devServerMainFile)
-    if (reloadableWorker.isPrimary) {
-      const devServerFileChangeCallback = ({ relativeUrl, event }) => {
-        const url = new URL(relativeUrl, sourceDirectoryUrl).href
-        logger.info(`file ${event} ${url} -> restarting server...`)
-        reloadableWorker.reload()
-      }
-      const stopWatchingDevServerFiles = registerDirectoryLifecycle(
-        sourceDirectoryUrl,
-        {
-          watchPatterns: {
-            ...devServerFiles.include,
-            [devServerMainFile]: true,
-            ".jsenv/": false,
-          },
-          cooldownBetweenFileEvents,
-          keepProcessAlive: false,
-          recursive: true,
-          added: ({ relativeUrl }) => {
-            devServerFileChangeCallback({ relativeUrl, event: "added" })
-          },
-          updated: ({ relativeUrl }) => {
-            devServerFileChangeCallback({ relativeUrl, event: "modified" })
-          },
-          removed: ({ relativeUrl }) => {
-            devServerFileChangeCallback({ relativeUrl, event: "removed" })
-          },
-        },
-      )
-      operation.addAbortCallback(() => {
-        stopWatchingDevServerFiles()
-        reloadableWorker.terminate()
-      })
-
-      const worker = await reloadableWorker.load()
-      const messagePromise = new Promise((resolve) => {
-        worker.once("message", resolve)
-      })
-      const origin = await messagePromise
-      return {
-        origin,
-        stop: () => {
-          stopWatchingDevServerFiles()
-          reloadableWorker.terminate()
-        },
-      }
-    }
-  }
-
   const startDevServerTask = createTaskLog("start dev server", {
     disabled: !logger.levels.info,
   })
@@ -293,9 +230,6 @@ export const startDevServer = async ({
     logger.info(`- ${server.origins[key]}`)
   })
   logger.info(``)
-  if (reloadableWorker && reloadableWorker.isWorker) {
-    parentPort.postMessage(server.origin)
-  }
   return {
     origin: server.origin,
     stop: () => {
