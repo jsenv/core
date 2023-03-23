@@ -130,7 +130,7 @@ const applyMatching = (pattern, string) => {
       if (remainingPattern[0] === "/") {
         consumePattern(1) // consumes "/"
       }
-      // pattern ending with ** always match remaining string
+      // pattern ending with "**" or "**/" always match remaining string
       if (remainingPattern === "") {
         consumeRemainingString()
         return true
@@ -194,7 +194,7 @@ const applyMatching = (pattern, string) => {
 const skipUntilMatch = ({ pattern, string, canSkipSlash }) => {
   let index = 0
   let remainingString = string
-  let longestMatchRange = null
+  let longestAttemptRange = null
   const tryToMatch = () => {
     const matchAttempt = applyMatching(pattern, remainingString)
     if (matchAttempt.matched) {
@@ -211,20 +211,28 @@ const skipUntilMatch = ({ pattern, string, canSkipSlash }) => {
         },
       }
     }
-    const matchAttemptIndex = matchAttempt.index
-    const matchRange = {
+    const attemptIndex = matchAttempt.index
+    const attemptRange = {
       patternIndex: matchAttempt.patternIndex,
       index,
-      length: matchAttemptIndex,
+      length: attemptIndex,
       groups: matchAttempt.groups,
     }
-    if (!longestMatchRange || longestMatchRange.length < matchRange.length) {
-      longestMatchRange = matchRange
+    if (
+      !longestAttemptRange ||
+      longestAttemptRange.length < attemptRange.length
+    ) {
+      longestAttemptRange = attemptRange
     }
-    const nextIndex = matchAttemptIndex + 1
-    const canSkip =
-      nextIndex < remainingString.length &&
-      (canSkipSlash || remainingString[0] !== "/")
+    const nextIndex = attemptIndex + 1
+    let canSkip
+    if (nextIndex >= remainingString.length) {
+      canSkip = false
+    } else if (remainingString[0] === "/" && !canSkipSlash) {
+      canSkip = false
+    } else {
+      canSkip = true
+    }
     if (canSkip) {
       // search against the next unattempted string
       index += nextIndex
@@ -233,11 +241,11 @@ const skipUntilMatch = ({ pattern, string, canSkipSlash }) => {
     }
     return {
       matched: false,
-      patternIndex: longestMatchRange.patternIndex,
-      index: longestMatchRange.index + longestMatchRange.length,
-      groups: longestMatchRange.groups,
+      patternIndex: longestAttemptRange.patternIndex,
+      index: longestAttemptRange.index + longestAttemptRange.length,
+      groups: longestAttemptRange.groups,
       group: {
-        string: string.slice(0, longestMatchRange.index),
+        string: string.slice(0, longestAttemptRange.index),
       },
     }
   }

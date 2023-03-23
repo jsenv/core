@@ -64,6 +64,21 @@ import { URL_META } from "@jsenv/url-meta"
   assert({ actual, expected })
 }
 
+// ensure getUrlMeta overrides in order (without sorting specifier keys by length)
+{
+  const actual = URL_META.applyAssociations({
+    url: "file:///abcd/",
+    associations: {
+      whatever: {
+        "file:///a*/": 41,
+        "file:///abcd/": 42,
+      },
+    },
+  })
+  const expected = { whatever: 42 }
+  assert({ actual, expected })
+}
+
 {
   const test = (url) =>
     URL_META.applyAssociations({
@@ -209,17 +224,24 @@ import { URL_META } from "@jsenv/url-meta"
   assert({ actual, expected })
 }
 
-// ensure getUrlMeta overrides in order (without sorting specifier keys by length)
-{
-  const actual = URL_META.applyAssociations({
-    url: "file:///abcd/",
-    associations: {
-      whatever: {
-        "file:///a*/": 41,
-        "file:///abcd/": 42,
-      },
-    },
-  })
-  const expected = { whatever: 42 }
-  assert({ actual, expected })
-}
+// {
+//   const test = (url) =>
+//     URL_META.applyAssociations({
+//       url,
+//       associations: {
+//         a: {
+//           "file:///**/*": true,
+//           "file:///**/.*": false,
+//         },
+//       },
+//     })
+//   const actual = {
+//     jsFile: test("file:///main.js"),
+//     gitIgnore: test("file:///.gitignore"),
+//   }
+//   const expected = {
+//     jsFile: { a: true },
+//     gitIgnore: { a: false },
+//   }
+//   assert({ actual, expected })
+// }
