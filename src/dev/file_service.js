@@ -46,9 +46,9 @@ export const createFileService = ({
   const clientFilesPruneCallbackList = []
   const stopWatchingSourceFiles = watchSourceFiles(
     sourceDirectoryUrl,
-    ({ url }) => {
+    (fileInfo) => {
       clientFileChangeCallbackList.forEach((callback) => {
-        callback(url)
+        callback(fileInfo)
       })
     },
     {
