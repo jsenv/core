@@ -134,6 +134,27 @@ export const startDevServer = async ({
         accessControlAllowCredentials: true,
         timingAllowOrigin: true,
       }),
+      {
+        handleRequest: (request) => {
+          if (request.pathname === "/__server_params__.json") {
+            const json = JSON.stringify({
+              sourceDirectoryUrl,
+            })
+            return {
+              status: 200,
+              headers: {
+                "content-type": "application/json",
+                "content-length": Buffer.byteLength(json),
+              },
+              body: json,
+            }
+          }
+          if (request.pathname === "/__stop__") {
+            server.stop()
+          }
+          return null
+        },
+      },
       ...services,
       {
         name: "jsenv:omega_file_service",
@@ -168,27 +189,6 @@ export const startDevServer = async ({
           if (request.headers["sec-websocket-protocol"] === "jsenv") {
             serverEventsDispatcher.addWebsocket(websocket, request)
           }
-        },
-      },
-      {
-        handleRequest: (request) => {
-          if (request.pathname === "/__server_params__.json") {
-            const json = JSON.stringify({
-              sourceDirectoryUrl,
-            })
-            return {
-              status: 200,
-              headers: {
-                "content-type": "application/json",
-                "content-length": Buffer.byteLength(json),
-              },
-              body: json,
-            }
-          }
-          if (request.pathname === "/__stop__") {
-            server.stop()
-          }
-          return null
         },
       },
       {

@@ -16,8 +16,7 @@ if (process.platform !== "win32") {
     logLevel: "warn",
     // serverLogLevel: "debug",
     buildDirectoryUrl: new URL("./build/", import.meta.url),
-    buildIndexPath: "./main.html",
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    buildMainFilePath: "./main.html",
     keepProcessAlive: false,
   })
   const response = await fetchUrl(buildServer.origin)

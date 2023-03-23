@@ -14,7 +14,6 @@ try {
     serverLogLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
-    devServerAutoreload: false,
     port: 0,
   })
   const { returnValue, pageLogs, pageErrors } = await executeInChromium({

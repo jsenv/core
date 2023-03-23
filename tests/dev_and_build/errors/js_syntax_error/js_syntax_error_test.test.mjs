@@ -16,7 +16,7 @@ const devServer = await startDevServer({
 })
 const { testPlanCoverage } = await executeTestPlan({
   logLevel: "off",
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
+  testDirectoryUrl: new URL("./client/", import.meta.url),
   devServerOrigin: devServer.origin,
   testPlan: {
     "./main.html": {
@@ -38,7 +38,7 @@ const { testPlanCoverage } = await executeTestPlan({
     "./js_syntax_error.js": true,
   },
   coverageReportTextLog: false,
-  coverageReportHtmlDirectory: false,
+  coverageReportHtmlDirectoryUrl: false,
 })
 const actual = testPlanCoverage
 const expected = {

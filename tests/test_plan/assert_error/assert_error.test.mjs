@@ -24,7 +24,7 @@ const test = async ({ runtime }) => {
   const { testPlanReport } = await executeTestPlan({
     logLevel: "warn",
     logRefresh: false,
-    sourceDirectoryUrl,
+    testDirectoryUrl: sourceDirectoryUrl,
     devServerOrigin: devServer.origin,
     testPlan: {
       "./main.html": {
