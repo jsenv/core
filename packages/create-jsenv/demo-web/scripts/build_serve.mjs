@@ -12,5 +12,5 @@ const buildServer = await startBuildServer({
   port: 3500,
 })
 if (process.argv.includes("--open")) {
-  open(`${buildServer.origin}/index.html`)
+  open(buildServer.origin)
 }

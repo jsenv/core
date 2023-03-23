@@ -16,7 +16,7 @@ document.querySelector("#root").innerHTML = `
 if (import.meta.hot) {
   import.meta.hot.accept()
   import.meta.hot.dispose(() => {
-    document.querySelector("#app").innerHTML = ""
+    document.querySelector("#root").innerHTML = ""
     document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
       (s) => s !== mainStyleSheet,
     )
