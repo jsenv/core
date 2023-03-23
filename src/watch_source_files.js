@@ -13,7 +13,9 @@ export const watchSourceFiles = (
   // And jsenv should not consider these as source files and watch them (to not hurt performances)
   const watchPatterns = {
     "**/*": true, // by default watch everything inside the source directory
-    "**/.*": false, // file starting with a dot -> do not watch
+    // line below is commented until @jsenv/url-meta fixes the fact that is matches
+    // any file with an extension
+    // "**/.*": false, // file starting with a dot -> do not watch
     "**/.*/": false, // directory starting with a dot -> do not watch
     "**/node_modules/": false, // node_modules directory -> do not watch
     ...sourceFileConfig,

@@ -331,8 +331,8 @@ const skipUntilMatch = ({
     let canSkip;
     if (nextIndex >= remainingString.length) {
       canSkip = false;
-    } else if (remainingString[0] === "/" && !canSkipSlash) {
-      canSkip = false;
+    } else if (remainingString[0] === "/") {
+      canSkip = canSkipSlash;
     } else {
       canSkip = true;
     }
