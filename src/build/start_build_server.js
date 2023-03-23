@@ -29,7 +29,6 @@ import { createLogger, createTaskLog } from "@jsenv/log"
  * Start a server for build files.
  * @param {Object} buildServerParameters
  * @param {string|url} buildServerParameters.buildDirectoryUrl Directory where build files are written
- * @param {string|url} buildServerParameters.sourceDirectoryUrl Directory containing source files
  * @return {Object} A build server object
  */
 export const startBuildServer = async ({

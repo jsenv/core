@@ -39,6 +39,6 @@
     "@jsenv/node-esm-resolution": "1.0.1"
   },
   "devDependencies": {
-    "rollup": "3.19.1"
+    "rollup": "3.20.1"
   }
 }
