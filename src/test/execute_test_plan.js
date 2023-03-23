@@ -5,7 +5,11 @@ import {
   urlToRelativeUrl,
   urlIsInsideOf,
 } from "@jsenv/urls"
-import { ensureEmptyDirectory, validateDirectoryUrl } from "@jsenv/filesystem"
+import {
+  ensureEmptyDirectory,
+  assertAndNormalizeDirectoryUrl,
+  assertAndNormalizeFileUrl,
+} from "@jsenv/filesystem"
 import { createLogger, createDetailedMessage } from "@jsenv/log"
 
 import { lookupPackageDirectory } from "../lookup_package_directory.js"
@@ -80,7 +84,9 @@ export const executeTestPlan = async ({
   // skip full means file with 100% coverage won't appear in coverage reports (json and html)
   coverageReportSkipFull = false,
   coverageReportTextLog = true,
+  coverageReportJson = process.env.CI,
   coverageReportJsonFileUrl,
+  coverageReportHtml = !process.env.CI,
   coverageReportHtmlDirectoryUrl,
   ...rest
 }) => {
@@ -96,13 +102,10 @@ export const executeTestPlan = async ({
         `${unexpectedParamNames.join(",")}: there is no such param`,
       )
     }
-    const testDirectoryUrlValidation = validateDirectoryUrl(testDirectoryUrl)
-    if (!testDirectoryUrlValidation.valid) {
-      throw new TypeError(
-        `testDirectoryUrl ${testDirectoryUrlValidation.message}, got ${testDirectoryUrl}`,
-      )
-    }
-    testDirectoryUrl = testDirectoryUrlValidation.value
+    testDirectoryUrl = assertAndNormalizeDirectoryUrl(
+      "testDirectoryUrl",
+      testDirectoryUrl,
+    )
     if (!existsSync(new URL(testDirectoryUrl))) {
       throw new Error(
         `ENOENT while trying to access testDirectoryUrl at ${testDirectoryUrl}`,
@@ -207,6 +210,52 @@ export const executeTestPlan = async ({
           )
         }
       }
+      if (coverageReportRootDirectoryUrl === undefined) {
+        coverageReportRootDirectoryUrl =
+          lookupPackageDirectory(testDirectoryUrl)
+      } else {
+        coverageReportRootDirectoryUrl = assertAndNormalizeDirectoryUrl(
+          coverageReportRootDirectoryUrl,
+          "coverageReportRootDirectoryUrl",
+        )
+      }
+      if (coverageTempDirectoryUrl === undefined) {
+        coverageTempDirectoryUrl = new URL(
+          "./.coverage/tmp/",
+          coverageReportRootDirectoryUrl,
+        )
+      } else {
+        coverageTempDirectoryUrl = assertAndNormalizeDirectoryUrl(
+          coverageTempDirectoryUrl,
+          "coverageTempDirectoryUrl",
+        )
+      }
+      if (coverageReportJson) {
+        if (coverageReportJsonFileUrl === undefined) {
+          coverageReportJsonFileUrl = new URL(
+            "./.coverage/coverage.json",
+            coverageReportRootDirectoryUrl,
+          )
+        } else {
+          coverageReportJsonFileUrl = assertAndNormalizeFileUrl(
+            coverageReportJsonFileUrl,
+            "coverageReportJsonFileUrl",
+          )
+        }
+      }
+      if (coverageReportHtml) {
+        if (coverageReportHtmlDirectoryUrl === undefined) {
+          coverageReportHtmlDirectoryUrl = new URL(
+            "./.coverage/",
+            coverageReportRootDirectoryUrl,
+          )
+        } else {
+          coverageReportHtmlDirectoryUrl = assertAndNormalizeDirectoryUrl(
+            coverageReportHtmlDirectoryUrl,
+            "coverageReportHtmlDirectoryUrl",
+          )
+        }
+      }
     }
   }
 
@@ -223,29 +272,6 @@ export const executeTestPlan = async ({
       if (Object.keys(coverageConfig).length === 0) {
         logger.warn(
           `coverageConfig is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`,
-        )
-      }
-      if (coverageReportRootDirectoryUrl === undefined) {
-        coverageReportRootDirectoryUrl =
-          lookupPackageDirectory(testDirectoryUrl)
-        // decide one that make sense: same as jsenv internal url
-      }
-      if (coverageTempDirectoryUrl === undefined) {
-        coverageTempDirectoryUrl = new URL(
-          "./.coverage/tmp/",
-          coverageReportRootDirectoryUrl,
-        )
-      }
-      if (coverageReportJsonFileUrl === undefined && !process.env.CI) {
-        coverageReportJsonFileUrl = new URL(
-          "./.coverage/coverage.json",
-          coverageReportRootDirectoryUrl,
-        )
-      }
-      if (coverageReportHtmlDirectoryUrl === undefined && process.env.CI) {
-        coverageReportHtmlDirectoryUrl = new URL(
-          "./.coverage/",
-          coverageReportRootDirectoryUrl,
         )
       }
       if (
@@ -321,7 +347,7 @@ export const executeTestPlan = async ({
     // keep this one first because it does ensureEmptyDirectory
     // and in case coverage json file gets written in the same directory
     // it must be done before
-    if (coverageEnabled && coverageReportHtmlDirectoryUrl) {
+    if (coverageEnabled && coverageReportHtml) {
       await ensureEmptyDirectory(coverageReportHtmlDirectoryUrl)
       const htmlCoverageDirectoryIndexFileUrl = `${coverageReportHtmlDirectoryUrl}index.html`
       logger.info(
@@ -339,7 +365,7 @@ export const executeTestPlan = async ({
         }),
       )
     }
-    if (coverageEnabled && coverageReportJsonFileUrl) {
+    if (coverageEnabled && coverageReportJson) {
       promises.push(
         generateCoverageJsonFile({
           coverage: result.planCoverage,

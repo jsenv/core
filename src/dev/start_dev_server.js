@@ -1,4 +1,4 @@
-import { validateDirectoryUrl } from "@jsenv/filesystem"
+import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 import { createLogger, createTaskLog } from "@jsenv/log"
 import {
@@ -40,6 +40,7 @@ export const startDevServer = async ({
   keepProcessAlive = true,
   onStop = () => {},
 
+  sourceFilesConfig,
   clientAutoreload = true,
   cooldownBetweenFileEvents,
 
@@ -74,14 +75,10 @@ export const startDevServer = async ({
         `${unexpectedParamNames.join(",")}: there is no such param`,
       )
     }
-    const sourceDirectoryUrlValidation =
-      validateDirectoryUrl(sourceDirectoryUrl)
-    if (!sourceDirectoryUrlValidation.valid) {
-      throw new TypeError(
-        `sourceDirectoryUrl ${sourceDirectoryUrlValidation.message}, got ${sourceDirectoryUrl}`,
-      )
-    }
-    sourceDirectoryUrl = sourceDirectoryUrlValidation.value
+    sourceDirectoryUrl = assertAndNormalizeDirectoryUrl(
+      "sourceDirectoryUrl",
+      sourceDirectoryUrl,
+    )
   }
 
   const logger = createLogger({ logLevel })
@@ -167,6 +164,7 @@ export const startDevServer = async ({
 
           sourceDirectoryUrl,
           sourceMainFilePath,
+          sourceFilesConfig,
           runtimeCompat,
 
           plugins,

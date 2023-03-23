@@ -47,7 +47,7 @@ const { testPlanCoverage } = await executeTestPlan({
   },
   coverageMethodForNodeJs: "Profiler",
   coverageReportTextLog: false,
-  coverageReportHtmlDirectory: false,
+  coverageReportHtml: false,
   coverageV8ConflictWarning: false,
 })
 const actual = testPlanCoverage

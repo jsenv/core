@@ -21,7 +21,7 @@ import {
   jsenvServiceCORS,
   jsenvServiceErrorHandler,
 } from "@jsenv/server"
-import { validateDirectoryUrl } from "@jsenv/filesystem"
+import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 import { createLogger, createTaskLog } from "@jsenv/log"
 
@@ -58,13 +58,10 @@ export const startBuildServer = async ({
         `${unexpectedParamNames.join(",")}: there is no such param`,
       )
     }
-    const buildDirectoryUrlValidation = validateDirectoryUrl(buildDirectoryUrl)
-    if (!buildDirectoryUrlValidation.valid) {
-      throw new TypeError(
-        `buildDirectoryUrl ${buildDirectoryUrlValidation.message}, got ${buildDirectoryUrlValidation}`,
-      )
-    }
-    buildDirectoryUrl = buildDirectoryUrlValidation.value
+    buildDirectoryUrl = assertAndNormalizeDirectoryUrl(
+      buildDirectoryUrl,
+      "buildDirectoryUrl",
+    )
 
     if (buildMainFilePath) {
       if (typeof buildMainFilePath !== "string") {
