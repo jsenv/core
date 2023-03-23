@@ -148,6 +148,7 @@ export const startDevServer = async ({
           }
           if (request.pathname === "/__stop__") {
             server.stop()
+            return { status: 200 }
           }
           return null
         },

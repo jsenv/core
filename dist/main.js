@@ -22347,11 +22347,9 @@ const createFileService = ({
 }) => {
   const clientFileChangeCallbackList = [];
   const clientFilesPruneCallbackList = [];
-  const stopWatchingSourceFiles = watchSourceFiles(sourceDirectoryUrl, ({
-    url
-  }) => {
+  const stopWatchingSourceFiles = watchSourceFiles(sourceDirectoryUrl, fileInfo => {
     clientFileChangeCallbackList.forEach(callback => {
-      callback(url);
+      callback(fileInfo);
     });
   }, {
     sourceFilesConfig,
@@ -22790,7 +22788,7 @@ const startDevServer = async ({
     if (unexpectedParamNames.length > 0) {
       throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param`);
     }
-    sourceDirectoryUrl = assertAndNormalizeDirectoryUrl("sourceDirectoryUrl", sourceDirectoryUrl);
+    sourceDirectoryUrl = assertAndNormalizeDirectoryUrl(sourceDirectoryUrl, "sourceDirectoryUrl");
   }
   const logger = createLogger({
     logLevel
@@ -22851,6 +22849,9 @@ const startDevServer = async ({
         }
         if (request.pathname === "/__stop__") {
           server.stop();
+          return {
+            status: 200
+          };
         }
         return null;
       }
@@ -22988,7 +22989,7 @@ const pingServer = async url => {
 const basicFetch = async (url, {
   method = "GET",
   headers = {}
-}) => {
+} = {}) => {
   let requestModule;
   if (url.startsWith("http:")) {
     requestModule = await import("node:http");
@@ -23006,13 +23007,16 @@ const basicFetch = async (url, {
       path: urlObject.pathname,
       method,
       headers
-    }, response => {
+    });
+    req.on("response", response => {
+      req.setTimeout(0);
       let responseBody = "";
       response.setEncoding("utf8");
       response.on("data", chunk => {
         responseBody += chunk;
       });
       response.on("end", () => {
+        req.destroy();
         if (response.headers["content-type"] === "application/json") {
           resolve(JSON.parse(responseBody));
         } else {
@@ -23114,7 +23118,7 @@ const readNodeV8CoverageDirectory = async ({
   try {
     operation.throwIfAborted();
     const dirContent = await tryReadDirectory();
-    const coverageDirectoryUrl = assertAndNormalizeDirectoryUrl(NODE_V8_COVERAGE);
+    const coverageDirectoryUrl = assertAndNormalizeDirectoryUrl(NODE_V8_COVERAGE, "NODE_V8_COVERAGE");
     await dirContent.reduce(async (previous, dirEntry) => {
       operation.throwIfAborted();
       await previous;
@@ -24625,9 +24629,9 @@ const executeTestPlan = async ({
     if (unexpectedParamNames.length > 0) {
       throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param`);
     }
-    testDirectoryUrl = assertAndNormalizeDirectoryUrl("testDirectoryUrl", testDirectoryUrl);
+    testDirectoryUrl = assertAndNormalizeDirectoryUrl(testDirectoryUrl, "testDirectoryUrl");
     if (!existsSync(new URL(testDirectoryUrl))) {
-      throw new Error(`ENOENT while trying to access testDirectoryUrl at ${testDirectoryUrl}`);
+      throw new Error(`ENOENT on testDirectoryUrl at ${testDirectoryUrl}`);
     }
     if (typeof testPlan !== "object") {
       throw new Error(`testPlan must be an object, got ${testPlan}`);
@@ -24797,7 +24801,13 @@ const executeTestPlan = async ({
     coverageTempDirectoryUrl
   });
   if (stopDevServerNeeded) {
-    basicFetch(`${devServerOrigin}/__stop__`);
+    // we are expecting ECONNRESET because server will be stopped by the request
+    basicFetch(`${devServerOrigin}/__stop__`).catch(e => {
+      if (e.code === "ECONNRESET") {
+        return;
+      }
+      throw e;
+    });
   }
   if (updateProcessExitCode && result.planSummary.counters.total !== result.planSummary.counters.completed) {
     process.exitCode = 1;
@@ -26210,7 +26220,6 @@ const onceWorkerThreadEvent = (worker, type, callback) => {
  * Start a server for build files.
  * @param {Object} buildServerParameters
  * @param {string|url} buildServerParameters.buildDirectoryUrl Directory where build files are written
- * @param {string|url} buildServerParameters.sourceDirectoryUrl Directory containing source files
  * @return {Object} A build server object
  */
 const startBuildServer = async ({
@@ -26375,7 +26384,7 @@ const execute = async ({
   const logger = createLogger({
     logLevel
   });
-  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl);
+  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl, "rootDirectoryUrl");
   const executeOperation = Abort.startOperation();
   executeOperation.addAbortSignal(signal);
   if (handleSIGINT) {

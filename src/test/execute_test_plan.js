@@ -107,9 +107,7 @@ export const executeTestPlan = async ({
       "testDirectoryUrl",
     )
     if (!existsSync(new URL(testDirectoryUrl))) {
-      throw new Error(
-        `ENOENT while trying to access testDirectoryUrl at ${testDirectoryUrl}`,
-      )
+      throw new Error(`ENOENT on testDirectoryUrl at ${testDirectoryUrl}`)
     }
     if (typeof testPlan !== "object") {
       throw new Error(`testPlan must be an object, got ${testPlan}`)
@@ -337,7 +335,13 @@ export const executeTestPlan = async ({
     coverageTempDirectoryUrl,
   })
   if (stopDevServerNeeded) {
-    basicFetch(`${devServerOrigin}/__stop__`)
+    // we are expecting ECONNRESET because server will be stopped by the request
+    basicFetch(`${devServerOrigin}/__stop__`).catch((e) => {
+      if (e.code === "ECONNRESET") {
+        return
+      }
+      throw e
+    })
   }
   if (
     updateProcessExitCode &&
