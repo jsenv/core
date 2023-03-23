@@ -28,10 +28,9 @@ import {
   urlToRelativeUrl,
 } from "@jsenv/urls"
 import {
-  validateDirectoryUrl,
+  assertAndNormalizeDirectoryUrl,
   ensureEmptyDirectory,
   writeFileSync,
-  registerDirectoryLifecycle,
   comparePathnames,
 } from "@jsenv/filesystem"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
@@ -55,6 +54,7 @@ import {
 } from "@jsenv/ast"
 
 import { determineJsenvInternalDirectoryUrl } from "../jsenv_internal_directory.js"
+import { watchSourceFiles } from "../watch_source_files.js"
 import { createUrlGraph } from "../kitchen/url_graph.js"
 import { createKitchen } from "../kitchen/kitchen.js"
 import { RUNTIME_COMPAT } from "../kitchen/compat/runtime_compat.js"
@@ -147,7 +147,7 @@ export const build = async ({
   versioningViaImportmap = true,
   lineBreakNormalization = process.platform === "win32",
 
-  clientFiles = {},
+  sourceFilesConfig = {},
   cooldownBetweenFileEvents,
   watch = false,
 
@@ -166,14 +166,10 @@ export const build = async ({
         `${unexpectedParamNames.join(",")}: there is no such param`,
       )
     }
-    const sourceDirectoryUrlValidation =
-      validateDirectoryUrl(sourceDirectoryUrl)
-    if (!sourceDirectoryUrlValidation.valid) {
-      throw new TypeError(
-        `sourceDirectoryUrl ${sourceDirectoryUrlValidation.message}, got ${sourceDirectoryUrl}`,
-      )
-    }
-    sourceDirectoryUrl = sourceDirectoryUrlValidation.value
+    sourceDirectoryUrl = assertAndNormalizeDirectoryUrl(
+      sourceDirectoryUrl,
+      "sourceDirectoryUrl",
+    )
 
     if (typeof entryPoints !== "object" || entryPoints === null) {
       throw new TypeError(`entryPoints must be an object, got ${entryPoints}`)
@@ -197,15 +193,10 @@ export const build = async ({
         )
       }
     })
-
-    const buildDirectoryUrlValidation = validateDirectoryUrl(buildDirectoryUrl)
-    if (!buildDirectoryUrlValidation.valid) {
-      throw new TypeError(
-        `buildDirectoryUrl ${buildDirectoryUrlValidation.message}, got ${buildDirectoryUrlValidation}`,
-      )
-    }
-    buildDirectoryUrl = buildDirectoryUrlValidation.value
-
+    buildDirectoryUrl = assertAndNormalizeDirectoryUrl(
+      buildDirectoryUrl,
+      "buildDirectoryUrl",
+    )
     if (!["filename", "search_param"].includes(versioningMethod)) {
       throw new TypeError(
         `versioningMethod must be "filename" or "search_param", got ${versioning}`,
@@ -1714,42 +1705,33 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
 
   startBuild()
   let startTimeout
-  const clientFileChangeCallback = ({ relativeUrl, event }) => {
-    const url = new URL(relativeUrl, sourceDirectoryUrl).href
-    if (watchFilesTask) {
-      watchFilesTask.happen(`${url.slice(sourceDirectoryUrl.length)} ${event}`)
-      watchFilesTask = null
-    }
-    buildAbortController.abort()
-    // setTimeout is to ensure the abortController.abort() above
-    // is properly taken into account so that logs about abort comes first
-    // then logs about re-running the build happens
-    clearTimeout(startTimeout)
-    startTimeout = setTimeout(startBuild, 20)
-  }
-  const stopWatchingClientFiles = registerDirectoryLifecycle(
+  const stopWatchingSourceFiles = watchSourceFiles(
     sourceDirectoryUrl,
+    ({ url, event }) => {
+      if (watchFilesTask) {
+        watchFilesTask.happen(
+          `${url.slice(sourceDirectoryUrl.length)} ${event}`,
+        )
+        watchFilesTask = null
+      }
+      buildAbortController.abort()
+      // setTimeout is to ensure the abortController.abort() above
+      // is properly taken into account so that logs about abort comes first
+      // then logs about re-running the build happens
+      clearTimeout(startTimeout)
+      startTimeout = setTimeout(startBuild, 20)
+    },
     {
-      watchPatterns: clientFiles,
-      cooldownBetweenFileEvents,
+      sourceFilesConfig,
       keepProcessAlive: true,
-      recursive: true,
-      added: ({ relativeUrl }) => {
-        clientFileChangeCallback({ relativeUrl, event: "added" })
-      },
-      updated: ({ relativeUrl }) => {
-        clientFileChangeCallback({ relativeUrl, event: "modified" })
-      },
-      removed: ({ relativeUrl }) => {
-        clientFileChangeCallback({ relativeUrl, event: "removed" })
-      },
+      cooldownBetweenFileEvents,
     },
   )
   operation.addAbortCallback(() => {
-    stopWatchingClientFiles()
+    stopWatchingSourceFiles()
   })
   await firstBuildPromise
-  return stopWatchingClientFiles
+  return stopWatchingSourceFiles
 }
 
 const findKey = (map, value) => {

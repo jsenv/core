@@ -1,10 +1,11 @@
 import { readFileSync } from "node:fs"
 import { serveDirectory, composeTwoResponses } from "@jsenv/server"
-import { registerDirectoryLifecycle, bufferToEtag } from "@jsenv/filesystem"
+import { bufferToEtag } from "@jsenv/filesystem"
 import { moveUrl, asUrlWithoutSearch } from "@jsenv/urls"
 import { URL_META } from "@jsenv/url-meta"
 
 import { determineJsenvInternalDirectoryUrl } from "../jsenv_internal_directory.js"
+import { watchSourceFiles } from "../watch_source_files.js"
 import { explorerHtmlFileUrl } from "@jsenv/core/src/plugins/explorer/jsenv_plugin_explorer.js"
 import { createUrlGraph } from "@jsenv/core/src/kitchen/url_graph.js"
 import { createKitchen } from "@jsenv/core/src/kitchen/kitchen.js"
@@ -22,6 +23,7 @@ export const createFileService = ({
 
   sourceDirectoryUrl,
   sourceMainFilePath,
+  sourceFilesConfig,
   runtimeCompat,
 
   plugins,
@@ -42,52 +44,20 @@ export const createFileService = ({
 }) => {
   const clientFileChangeCallbackList = []
   const clientFilesPruneCallbackList = []
-
-  const onFileChange = (url) => {
-    clientFileChangeCallbackList.forEach((callback) => {
-      callback(url)
-    })
-  }
-  // Project should use a dedicated directory (usually "src/")
-  // passed to the dev server via "sourceDirectoryUrl" param
-  // In that case all files inside the source directory should be watched
-  // But some project might want to use their root directory as source directory
-  // In that case source directory might contain files matching "node_modules/*" or ".git/*"
-  // And jsenv should not consider these as source files and watch them (to not hurt performances)
-  const watchPatterns = {
-    "**/*": true, // by default watch everything inside the source directory
-    "**/.*": false, // file starting with a dot -> do not watch
-    "**/.*/": false, // directory starting with a dot -> do not watch
-    "**/node_modules/": false, // node_modules directory -> do not watch
-  }
-  const stopWatchingClientFiles = registerDirectoryLifecycle(
+  const stopWatchingSourceFiles = watchSourceFiles(
     sourceDirectoryUrl,
+    ({ url }) => {
+      clientFileChangeCallbackList.forEach((callback) => {
+        callback(url)
+      })
+    },
     {
-      watchPatterns,
-      cooldownBetweenFileEvents,
+      sourceFilesConfig,
       keepProcessAlive: false,
-      recursive: true,
-      added: ({ relativeUrl }) => {
-        onFileChange({
-          url: new URL(relativeUrl, sourceDirectoryUrl).href,
-          event: "added",
-        })
-      },
-      updated: ({ relativeUrl }) => {
-        onFileChange({
-          url: new URL(relativeUrl, sourceDirectoryUrl).href,
-          event: "modified",
-        })
-      },
-      removed: ({ relativeUrl }) => {
-        onFileChange({
-          url: new URL(relativeUrl, sourceDirectoryUrl).href,
-          event: "removed",
-        })
-      },
+      cooldownBetweenFileEvents,
     },
   )
-  serverStopCallbacks.push(stopWatchingClientFiles)
+  serverStopCallbacks.push(stopWatchingSourceFiles)
 
   const getOrCreateContext = (request) => {
     const { runtimeName, runtimeVersion } = parseUserAgentHeader(
@@ -99,7 +69,7 @@ export const createFileService = ({
       return existingContext
     }
     const watchAssociations = URL_META.resolveAssociations(
-      { watch: watchPatterns },
+      { watch: stopWatchingSourceFiles.watchPatterns },
       sourceDirectoryUrl,
     )
     const urlGraph = createUrlGraph()
