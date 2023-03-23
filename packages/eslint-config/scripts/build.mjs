@@ -12,11 +12,11 @@ import { build } from "@jsenv/core"
 import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
 
 await build({
-  rootDirectoryUrl: new URL("../", import.meta.url),
-  buildDirectoryUrl: new URL("../dist/", import.meta.url),
+  sourceDirectoryUrl: new URL("../src/", import.meta.url),
   entryPoints: {
-    "./src/main.js": "jsenv_eslint_config.cjs",
+    "./main.js": "jsenv_eslint_config.cjs",
   },
+  buildDirectoryUrl: new URL("../dist/", import.meta.url),
   runtimeCompat: {
     node: "16.14.0",
   },
