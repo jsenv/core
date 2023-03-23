@@ -228,7 +228,10 @@ export const executePlan = async (
           executionResult = await run({
             signal: multipleExecutionsOperation.signal,
             logger,
-            allocatedMs: executionParams.allocatedMs,
+            allocatedMs:
+              typeof executionParams.allocatedMs === "function"
+                ? executionParams.allocatedMs(beforeExecutionInfo)
+                : executionParams.allocatedMs,
             keepRunning,
             mirrorConsole: false, // file are executed in parallel, log would be a mess to read
             collectConsole: executionParams.collectConsole,

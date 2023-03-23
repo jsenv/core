@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs"
 import { fetchUrl } from "@jsenv/fetch"
 import { URL_META } from "@jsenv/url-meta"
 import {
@@ -102,6 +103,11 @@ export const executeTestPlan = async ({
       )
     }
     testDirectoryUrl = testDirectoryUrlValidation.value
+    if (!existsSync(new URL(testDirectoryUrl))) {
+      throw new Error(
+        `ENOENT while trying to access testDirectoryUrl at ${testDirectoryUrl}`,
+      )
+    }
     if (typeof testPlan !== "object") {
       throw new Error(`testPlan must be an object, got ${testPlan}`)
     }
