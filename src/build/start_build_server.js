@@ -14,7 +14,6 @@
  */
 
 import { existsSync } from "node:fs"
-import { parentPort } from "node:worker_threads"
 import {
   jsenvAccessControlAllowedHeaders,
   startServer,
@@ -22,15 +21,9 @@ import {
   jsenvServiceCORS,
   jsenvServiceErrorHandler,
 } from "@jsenv/server"
-import {
-  validateDirectoryUrl,
-  registerDirectoryLifecycle,
-} from "@jsenv/filesystem"
+import { validateDirectoryUrl } from "@jsenv/filesystem"
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 import { createLogger, createTaskLog } from "@jsenv/log"
-import { getCallerPosition } from "@jsenv/urls"
-
-import { createReloadableWorker } from "@jsenv/core/src/helpers/worker_reload.js"
 
 /**
  * Start a server for build files.
@@ -40,29 +33,21 @@ import { createReloadableWorker } from "@jsenv/core/src/helpers/worker_reload.js
  * @return {Object} A build server object
  */
 export const startBuildServer = async ({
-  signal = new AbortController().signal,
-  handleSIGINT = true,
-  logLevel,
-  serverLogLevel = "warn",
-  https,
-  http2,
-  acceptAnyIp,
-  hostname,
-  port = 9779,
-  services = [],
-  keepProcessAlive = true,
-
   buildDirectoryUrl,
   buildMainFilePath = "index.html",
+  port = 9779,
+  services = [],
+  acceptAnyIp,
+  hostname,
+  https,
+  http2,
+  logLevel,
+  serverLogLevel = "warn",
 
-  sourceDirectoryUrl,
-  buildServerFiles = {
-    "./package.json": true,
-    "./jsenv.config.mjs": true,
-  },
-  buildServerAutoreload = false,
-  buildServerMainFile = getCallerPosition().url,
-  cooldownBetweenFileEvents,
+  signal = new AbortController().signal,
+  handleSIGINT = true,
+  keepProcessAlive = true,
+
   ...rest
 }) => {
   // params validation
@@ -72,16 +57,6 @@ export const startBuildServer = async ({
       throw new TypeError(
         `${unexpectedParamNames.join(",")}: there is no such param`,
       )
-    }
-    if (sourceDirectoryUrl) {
-      const sourceDirectoryUrlValidation =
-        validateDirectoryUrl(sourceDirectoryUrl)
-      if (!sourceDirectoryUrlValidation.valid) {
-        throw new TypeError(
-          `rootDirectoryUrl ${sourceDirectoryUrlValidation.message}, got ${sourceDirectoryUrl}`,
-        )
-      }
-      sourceDirectoryUrl = sourceDirectoryUrlValidation.value
     }
     const buildDirectoryUrlValidation = validateDirectoryUrl(buildDirectoryUrl)
     if (!buildDirectoryUrlValidation.valid) {
@@ -127,58 +102,6 @@ export const startBuildServer = async ({
         abort,
       )
     })
-  }
-
-  let reloadableWorker
-  if (buildServerAutoreload) {
-    reloadableWorker = createReloadableWorker(buildServerMainFile)
-    if (reloadableWorker.isPrimary) {
-      const buildServerFileChangeCallback = ({ relativeUrl, event }) => {
-        const url = new URL(relativeUrl, sourceDirectoryUrl).href
-        logger.info(`file ${event} ${url} -> restarting server...`)
-        reloadableWorker.reload()
-      }
-      const stopWatchingBuildServerFiles = registerDirectoryLifecycle(
-        sourceDirectoryUrl,
-        {
-          watchPatterns: {
-            ...buildServerFiles,
-            [buildServerMainFile]: true,
-          },
-          cooldownBetweenFileEvents,
-          keepProcessAlive: false,
-          recursive: true,
-          added: ({ relativeUrl }) => {
-            buildServerFileChangeCallback({ relativeUrl, event: "added" })
-          },
-          updated: ({ relativeUrl }) => {
-            buildServerFileChangeCallback({ relativeUrl, event: "modified" })
-          },
-          removed: ({ relativeUrl }) => {
-            buildServerFileChangeCallback({ relativeUrl, event: "removed" })
-          },
-        },
-      )
-      operation.addAbortCallback(() => {
-        stopWatchingBuildServerFiles()
-        reloadableWorker.terminate()
-      })
-      const worker = await reloadableWorker.load()
-      const messagePromise = new Promise((resolve) => {
-        worker.once("message", resolve)
-      })
-      const origin = await messagePromise
-      // if (!keepProcessAlive) {
-      //   worker.unref()
-      // }
-      return {
-        origin,
-        stop: () => {
-          stopWatchingBuildServerFiles()
-          reloadableWorker.terminate()
-        },
-      }
-    }
   }
 
   const startBuildServerTask = createTaskLog("start build server", {
@@ -233,9 +156,6 @@ export const startBuildServer = async ({
     logger.info(`- ${server.origins[key]}`)
   })
   logger.info(``)
-  if (reloadableWorker && reloadableWorker.isWorker) {
-    parentPort.postMessage(server.origin)
-  }
   return {
     origin: server.origin,
     stop: () => {
