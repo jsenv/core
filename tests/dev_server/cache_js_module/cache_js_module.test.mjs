@@ -75,6 +75,7 @@ try {
   {
     responses.length = 0
     jsFileContent.update(`window.resolveResultPromise(43)`)
+    await new Promise((resolve) => setTimeout(resolve, 500))
     await page.reload()
     const responseForJsFile = responses.find(
       (response) => response.url() === `${devServer.origin}/main.js`,
