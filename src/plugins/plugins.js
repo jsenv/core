@@ -28,7 +28,7 @@ export const getCorePlugins = ({
   urlAnalysis = {},
   urlResolution = {},
   fileSystemMagicRedirection,
-  shouldBuildDirectoryReference,
+  directoryReferenceAllowed,
   supervisor,
   transpilation = true,
 
@@ -69,7 +69,7 @@ export const getCorePlugins = ({
     // + before node esm to handle importmap before inline content
     jsenvPluginInline(), // before "file urls" to resolve and load inline urls
     jsenvPluginFileUrls({
-      shouldBuildDirectoryReference,
+      directoryReferenceAllowed,
       ...fileSystemMagicRedirection,
     }),
     jsenvPluginHttpUrls(),

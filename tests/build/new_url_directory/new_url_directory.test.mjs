@@ -48,12 +48,8 @@ try {
   throw new Error("should throw")
 } catch (e) {
   const actual = e.message
-  const expected = `Failed to fetch url content
---- reason ---
-found a directory on filesystem
---- url ---
-${new URL("./client/src", import.meta.url).href}
---- url reference trace ---
+  const expected = `Reference leads to a directory
+--- reference trace ---
 ${new URL("./client/main.html", import.meta.url)}:15:40
   14 |     <script type="module">
 > 15 |       const directoryUrl = new URL("./src/", import.meta.url).href
@@ -64,4 +60,4 @@ ${new URL("./client/main.html", import.meta.url)}:15:40
 
 // but it can be allowed explicitely and it will copy the directory content
 // in the build directory and update the url accorindgly
-await test({ shouldBuildDirectoryReference: true })
+await test({ directoryReferenceAllowed: true })

@@ -109,6 +109,7 @@ export const createKitchen = ({
     assert,
     assertNode,
     typePropertyNode,
+    leadsToADirectory = false,
     debug = false,
   }) => {
     if (typeof specifier !== "string") {
@@ -162,6 +163,7 @@ export const createKitchen = ({
       assert,
       assertNode,
       typePropertyNode,
+      leadsToADirectory,
       mutation: null,
       debug,
     }

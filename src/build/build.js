@@ -138,7 +138,7 @@ export const build = async ({
   urlAnalysis = {},
   urlResolution,
   fileSystemMagicRedirection,
-  shouldBuildDirectoryReference,
+  directoryReferenceAllowed,
   scenarioPlaceholders,
   transpilation = {},
   versioning = !runtimeCompat.node,
@@ -327,7 +327,7 @@ build ${entryPointKeys.length} entry points`)
           urlAnalysis,
           urlResolution,
           fileSystemMagicRedirection,
-          shouldBuildDirectoryReference,
+          directoryReferenceAllowed,
           transpilation: {
             ...transpilation,
             babelHelpersAsImport: !useExplicitJsClassicConversion,

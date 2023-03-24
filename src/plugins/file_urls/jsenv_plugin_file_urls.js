@@ -16,7 +16,7 @@ export const jsenvPluginFileUrls = ({
   magicExtensions = ["inherit", ".js"],
   magicDirectoryIndex = true,
   preserveSymlinks = false,
-  shouldBuildDirectoryReference = false,
+  directoryReferenceAllowed = false,
 }) => {
   return [
     {
@@ -46,10 +46,10 @@ export const jsenvPluginFileUrls = ({
         const pathnameUsesTrailingSlash = pathname.endsWith("/")
         urlObject.search = ""
         urlObject.hash = ""
-        const foundADirectory = stat && stat.isDirectory()
-        const foundSomething = stat && !foundADirectory
+        reference.leadsToADirectory = stat && stat.isDirectory()
+        const foundSomething = stat && !reference.leadsToADirectory
         // force trailing slash on directories
-        if (foundADirectory && !pathnameUsesTrailingSlash) {
+        if (reference.leadsToADirectory && !pathnameUsesTrailingSlash) {
           urlObject.pathname = `${pathname}/`
         }
         // otherwise remove trailing slash if any
@@ -58,57 +58,52 @@ export const jsenvPluginFileUrls = ({
           urlObject.pathname = pathname.slice(0, -1)
         }
 
-        const resolveSymlinkIfEnabled = (facadeUrl) => {
-          const urlRaw = preserveSymlinks
-            ? facadeUrl
-            : resolveSymlink(facadeUrl)
-          const resolvedUrl = `${urlRaw}${search}${hash}`
-          return resolvedUrl
-        }
-
-        if (foundADirectory) {
-          if (
-            // ignore new URL second arg
-            reference.subtype === "new_url_second_arg" ||
+        let url = urlObject.href
+        const shouldPreserve =
+          reference.leadsToADirectory &&
+          // ignore new URL second arg
+          (reference.subtype === "new_url_second_arg" ||
             // ignore root file url
-            reference.url === "file:///"
-          ) {
-            reference.shouldHandle = false
-            return "file:///"
+            reference.url === "file:///" ||
+            (reference.subtype === "new_url_first_arg" &&
+              reference.specifier === "./"))
+
+        if (shouldPreserve) {
+          reference.shouldHandle = false
+        } else {
+          const shouldApplyDilesystemMagicResolution =
+            reference.type !== "js_url"
+          if (shouldApplyDilesystemMagicResolution) {
+            const filesystemResolution = applyFileSystemMagicResolution(url, {
+              fileStat: stat,
+              magicDirectoryIndex,
+              magicExtensions: getExtensionsToTry(
+                magicExtensions,
+                reference.parentUrl,
+              ),
+            })
+            if (!filesystemResolution.found) {
+              return null
+            }
+            reference.leadsToADirectory = filesystemResolution.isDirectory
+            url = filesystemResolution.url
           }
-          if (
-            reference.subtype === "new_url_first_arg" &&
-            reference.specifier === "./"
-          ) {
-            reference.shouldHandle = false
-            return resolveSymlinkIfEnabled(urlObject.href)
+          if (reference.leadsToADirectory) {
+            const directoryAllowed =
+              reference.type === "filesystem" ||
+              (typeof directoryReferenceAllowed === "function" &&
+                directoryReferenceAllowed(reference)) ||
+              directoryReferenceAllowed
+            if (!directoryAllowed) {
+              const error = new Error("Reference leads to a directory")
+              error.code = "DIRECTORY_REFERENCE_NOT_ALLOWED"
+              throw error
+            }
           }
-          reference.data.foundADirectory = true
-          if (reference.type === "filesystem") {
-            reference.data.shouldBuild = true
-          } else if (typeof shouldBuildDirectoryReference === "function") {
-            reference.data.shouldBuild =
-              shouldBuildDirectoryReference(reference)
-          } else {
-            reference.data.shouldBuild = Boolean(shouldBuildDirectoryReference)
-          }
-          return resolveSymlinkIfEnabled(urlObject.href)
         }
-        const url = urlObject.href
-        const filesystemResolution = applyFileSystemMagicResolution(url, {
-          fileStat: stat,
-          magicDirectoryIndex,
-          magicExtensions: getExtensionsToTry(
-            magicExtensions,
-            reference.parentUrl,
-          ),
-        })
-        if (!filesystemResolution.found) {
-          reference.data.foundADirectory = foundADirectory
-          return null
-        }
-        reference.data.foundADirectory = filesystemResolution.isDirectory
-        return resolveSymlinkIfEnabled(filesystemResolution.url)
+        const urlRaw = preserveSymlinks ? url : resolveSymlink(url)
+        const resolvedUrl = `${urlRaw}${search}${hash}`
+        return resolvedUrl
       },
     },
     {
@@ -160,28 +155,23 @@ export const jsenvPluginFileUrls = ({
           return null
         }
         const urlObject = new URL(urlInfo.url)
-        if (context.reference.data.foundADirectory) {
-          if (context.reference.data.shouldBuild) {
-            const directoryEntries = readdirSync(urlObject)
-            let filename
-            if (context.reference.type === "filesystem") {
-              const parentUrlInfo = context.urlGraph.getUrlInfo(
-                context.reference.parentUrl,
-              )
-              filename = `${parentUrlInfo.filename}${context.reference.specifier}/`
-            } else {
-              filename = `${urlToFilename(urlInfo.url)}/`
-            }
-            return {
-              type: "directory",
-              contentType: "application/json",
-              content: JSON.stringify(directoryEntries, null, "  "),
-              filename,
-            }
+        if (context.reference.leadsToADirectory) {
+          const directoryEntries = readdirSync(urlObject)
+          let filename
+          if (context.reference.type === "filesystem") {
+            const parentUrlInfo = context.urlGraph.getUrlInfo(
+              context.reference.parentUrl,
+            )
+            filename = `${parentUrlInfo.filename}${context.reference.specifier}/`
+          } else {
+            filename = `${urlToFilename(urlInfo.url)}/`
           }
-          const error = new Error("found a directory on filesystem")
-          error.code = "DIRECTORY_REFERENCE_NOT_ALLOWED"
-          throw error
+          return {
+            type: "directory",
+            contentType: "application/json",
+            content: JSON.stringify(directoryEntries, null, "  "),
+            filename,
+          }
         }
         const fileBuffer = readFileSync(urlObject)
         const contentType = CONTENT_TYPE.fromUrlExtension(urlInfo.url)
