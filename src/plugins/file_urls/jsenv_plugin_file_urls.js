@@ -71,7 +71,7 @@ export const jsenvPluginFileUrls = ({
           reference.shouldHandle = false
         } else {
           const shouldApplyDilesystemMagicResolution =
-            reference.type !== "js_url"
+            reference.type === "js_import"
           if (shouldApplyDilesystemMagicResolution) {
             const filesystemResolution = applyFileSystemMagicResolution(url, {
               fileStat: stat,
@@ -81,8 +81,8 @@ export const jsenvPluginFileUrls = ({
                 reference.parentUrl,
               ),
             })
-            stat = filesystemResolution.stat
-            if (stat) {
+            if (filesystemResolution.stat) {
+              stat = filesystemResolution.stat
               url = filesystemResolution.url
             }
           }
