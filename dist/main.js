@@ -24664,7 +24664,7 @@ const executeTestPlan = async ({
           await import(devServerModuleUrl);
           delete process.env.IMPORTED_BY_TEST_PLAN;
         } catch (e) {
-          if (e.code === "MODULE_NOT_FOUND") {
+          if (e.code === "ERR_MODULE_NOT_FOUND") {
             throw new Error(`Cannot find file responsible to start dev server at "${devServerModuleUrl}"`);
           }
           throw e;
