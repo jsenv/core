@@ -130,11 +130,14 @@ const applyMatching = (pattern, string) => {
       let skipAllowed = true
       if (remainingPattern[0] === "/") {
         consumePattern(1) // consumes "/"
+        // when remainingPattern was preceeded by "**/"
+        // and remainingString have no "/"
+        // then skip is not allowed, a regular match will be performed
         if (!remainingString.includes("/")) {
           skipAllowed = false
         }
       }
-      // pattern ending with "**" or "**/" always match remaining string
+      // pattern ending with "**" or "**/" match remaining string
       if (remainingPattern === "") {
         consumeRemainingString()
         return true
@@ -155,7 +158,7 @@ const applyMatching = (pattern, string) => {
     if (remainingPattern[0] === "*") {
       consumePattern(1) // consumes "*"
       if (remainingPattern === "") {
-        // matches everything except '/'
+        // matches everything except "/"
         const slashIndex = remainingString.indexOf("/")
         if (slashIndex === -1) {
           groups.push({ string: consumeRemainingString() })
@@ -201,6 +204,20 @@ const skipUntilMatch = ({ pattern, string, canSkipSlash }) => {
   let index = 0
   let remainingString = string
   let longestAttemptRange = null
+  let isLastAttempt = false
+
+  const failure = () => {
+    return {
+      matched: false,
+      patternIndex: longestAttemptRange.patternIndex,
+      index: longestAttemptRange.index + longestAttemptRange.length,
+      groups: longestAttemptRange.groups,
+      group: {
+        string: string.slice(0, longestAttemptRange.index),
+      },
+    }
+  }
+
   const tryToMatch = () => {
     const matchAttempt = applyMatching(pattern, remainingString)
     if (matchAttempt.matched) {
@@ -230,30 +247,26 @@ const skipUntilMatch = ({ pattern, string, canSkipSlash }) => {
     ) {
       longestAttemptRange = attemptRange
     }
+    if (isLastAttempt) {
+      return failure()
+    }
     const nextIndex = attemptIndex + 1
-    let canSkip
     if (nextIndex >= remainingString.length) {
-      canSkip = false
-    } else if (remainingString[0] === "/") {
-      canSkip = canSkipSlash
-    } else {
-      canSkip = true
+      return failure()
     }
-    if (canSkip) {
-      // search against the next unattempted string
-      index += nextIndex
-      remainingString = remainingString.slice(nextIndex)
-      return tryToMatch()
+    if (remainingString[0] === "/") {
+      if (!canSkipSlash) {
+        return failure()
+      }
+      // when it's the last slash, the next attempt is the last
+      if (remainingString.indexOf("/", 1) === -1) {
+        isLastAttempt = true
+      }
     }
-    return {
-      matched: false,
-      patternIndex: longestAttemptRange.patternIndex,
-      index: longestAttemptRange.index + longestAttemptRange.length,
-      groups: longestAttemptRange.groups,
-      group: {
-        string: string.slice(0, longestAttemptRange.index),
-      },
-    }
+    // search against the next unattempted string
+    index += nextIndex
+    remainingString = remainingString.slice(nextIndex)
+    return tryToMatch()
   }
   return tryToMatch()
 }
