@@ -46,21 +46,29 @@ export const jsenvPluginFileUrls = ({
         const pathnameUsesTrailingSlash = pathname.endsWith("/")
         urlObject.search = ""
         urlObject.hash = ""
-        reference.leadsToADirectory = stat && stat.isDirectory()
-        const foundSomething = stat && !reference.leadsToADirectory
+        let filesystemEntryType = stat
+          ? stat.isDirectory()
+            ? "directory"
+            : "other"
+          : null
+
         // force trailing slash on directories
-        if (reference.leadsToADirectory && !pathnameUsesTrailingSlash) {
+        if (filesystemEntryType === "directory" && !pathnameUsesTrailingSlash) {
           urlObject.pathname = `${pathname}/`
         }
         // otherwise remove trailing slash if any
-        if (foundSomething && pathnameUsesTrailingSlash) {
+        if (
+          filesystemEntryType &&
+          filesystemEntryType !== "directory" &&
+          pathnameUsesTrailingSlash
+        ) {
           // a warning here? (because it's strange to reference a file with a trailing slash)
           urlObject.pathname = pathname.slice(0, -1)
         }
 
         let url = urlObject.href
         const shouldPreserve =
-          reference.leadsToADirectory &&
+          filesystemEntryType === "directory" &&
           // ignore new URL second arg
           (reference.subtype === "new_url_second_arg" ||
             // ignore root file url
@@ -83,12 +91,15 @@ export const jsenvPluginFileUrls = ({
               ),
             })
             if (!filesystemResolution.found) {
+              reference.leadsToADirectory = filesystemEntryType === "directory"
               return null
             }
-            reference.leadsToADirectory = filesystemResolution.isDirectory
+            filesystemEntryType = filesystemResolution.isDirectory
+              ? "directory"
+              : "something"
             url = filesystemResolution.url
           }
-          if (reference.leadsToADirectory) {
+          if (filesystemEntryType === "directory") {
             const directoryAllowed =
               reference.type === "filesystem" ||
               (typeof directoryReferenceAllowed === "function" &&
@@ -101,9 +112,12 @@ export const jsenvPluginFileUrls = ({
             }
           }
         }
-        const urlRaw = preserveSymlinks ? url : resolveSymlink(url)
-        const resolvedUrl = `${urlRaw}${search}${hash}`
-        return resolvedUrl
+        if (filesystemEntryType) {
+          const urlRaw = preserveSymlinks ? url : resolveSymlink(url)
+          const resolvedUrl = `${urlRaw}${search}${hash}`
+          return resolvedUrl
+        }
+        return null
       },
     },
     {
