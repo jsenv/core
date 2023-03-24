@@ -21,8 +21,9 @@ export const applyFileSystemMagicResolution = (
       if (e.code === "ENOENT") {
         result.lastENOENTError = e
         fileStat = null
+      } else {
+        throw e
       }
-      throw e
     }
   }
 

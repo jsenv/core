@@ -6965,6 +6965,38 @@ const generateAccessControlHeaders = ({
   };
 };
 
+const lookupPackageDirectory = currentUrl => {
+  if (currentUrl === "file:///") {
+    return null;
+  }
+  const packageJsonFileUrl = `${currentUrl}package.json`;
+  if (existsSync(new URL(packageJsonFileUrl))) {
+    return currentUrl;
+  }
+  return lookupPackageDirectory(getParentUrl$1(currentUrl));
+};
+const getParentUrl$1 = url => {
+  if (url.startsWith("file://")) {
+    // With node.js new URL('../', 'file:///C:/').href
+    // returns "file:///C:/" instead of "file:///"
+    const resource = url.slice("file://".length);
+    const slashLastIndex = resource.lastIndexOf("/");
+    if (slashLastIndex === -1) {
+      return url;
+    }
+    const lastCharIndex = resource.length - 1;
+    if (slashLastIndex === lastCharIndex) {
+      const slashBeforeLastIndex = resource.lastIndexOf("/", slashLastIndex - 1);
+      if (slashBeforeLastIndex === -1) {
+        return url;
+      }
+      return `file://${resource.slice(0, slashBeforeLastIndex + 1)}`;
+    }
+    return `file://${resource.slice(0, slashLastIndex + 1)}`;
+  }
+  return new URL(url.endsWith("/") ? "../" : "./", url).href;
+};
+
 const createServerEventsDispatcher = () => {
   const clients = [];
   const MAX_CLIENTS = 100;
@@ -16068,7 +16100,7 @@ const asDirectoryUrl = url => {
   }
   return new URL("./", url).href;
 };
-const getParentUrl$1 = url => {
+const getParentUrl = url => {
   if (url.startsWith("file://")) {
     // With node.js new URL('../', 'file:///C:/').href
     // returns "file:///C:/" instead of "file:///"
@@ -16126,7 +16158,7 @@ const defaultLookupPackageScope = url => {
     if (existsSync(packageJsonUrlObject)) {
       return scopeUrl;
     }
-    scopeUrl = getParentUrl$1(scopeUrl);
+    scopeUrl = getParentUrl(scopeUrl);
   }
   return null;
 };
@@ -16427,7 +16459,7 @@ const applyPackageResolve = (packageSpecifier, resolutionContext) => {
   while (currentUrl !== "file:///") {
     const packageDirectoryFacadeUrl = new URL(`node_modules/${packageName}/`, currentUrl).href;
     if (!existsSync(new URL(packageDirectoryFacadeUrl))) {
-      currentUrl = getParentUrl$1(currentUrl);
+      currentUrl = getParentUrl(currentUrl);
       continue;
     }
     const packageDirectoryUrl = preservesSymlink ? packageDirectoryFacadeUrl : resolvePackageSymlink(packageDirectoryFacadeUrl);
@@ -16915,67 +16947,72 @@ const applyFileSystemMagicResolution = (fileUrl, {
   magicDirectoryIndex,
   magicExtensions
 }) => {
-  let lastENOENTError = null;
-  const fileStatOrNull = url => {
+  const result = {
+    stat: null,
+    url: fileUrl,
+    magicExtension: "",
+    magicDirectoryIndex: false,
+    lastENOENTError: null
+  };
+  if (fileStat === undefined) {
     try {
-      return statSync(new URL(url));
+      fileStat = statSync(new URL(fileUrl));
     } catch (e) {
       if (e.code === "ENOENT") {
-        lastENOENTError = e;
-        return null;
+        result.lastENOENTError = e;
+        fileStat = null;
       }
       throw e;
     }
-  };
-  fileStat = fileStat === undefined ? fileStatOrNull(fileUrl) : fileStat;
+  }
   if (fileStat && fileStat.isFile()) {
-    return {
-      found: true,
-      url: fileUrl
-    };
+    result.stat = fileStat;
+    result.url = fileUrl;
+    return result;
   }
   if (fileStat && fileStat.isDirectory()) {
     if (magicDirectoryIndex) {
       const indexFileSuffix = fileUrl.endsWith("/") ? "index" : "/index";
       const indexFileUrl = `${fileUrl}${indexFileSuffix}`;
-      const result = applyFileSystemMagicResolution(indexFileUrl, {
+      const subResult = applyFileSystemMagicResolution(indexFileUrl, {
         magicDirectoryIndex: false,
         magicExtensions
       });
       return {
         ...result,
+        ...subResult,
         magicDirectoryIndex: true
       };
     }
-    return {
-      found: true,
-      url: fileUrl,
-      isDirectory: true
-    };
+    result.stat = fileStat;
+    result.url = fileUrl;
+    return result;
   }
   if (magicExtensions && magicExtensions.length) {
     const parentUrl = new URL("./", fileUrl).href;
     const urlFilename = urlToFilename(fileUrl);
-    const extensionLeadingToFile = magicExtensions.find(extensionToTry => {
+    for (const extensionToTry of magicExtensions) {
       const urlCandidate = `${parentUrl}${urlFilename}${extensionToTry}`;
-      const stat = fileStatOrNull(urlCandidate);
-      return stat;
-    });
-    if (extensionLeadingToFile) {
-      // magic extension worked
-      return {
-        found: true,
-        url: `${fileUrl}${extensionLeadingToFile}`,
-        magicExtension: extensionLeadingToFile
-      };
+      let stat;
+      try {
+        stat = statSync(new URL(urlCandidate));
+      } catch (e) {
+        if (e.code === "ENOENT") {
+          stat = null;
+        } else {
+          throw e;
+        }
+      }
+      if (stat) {
+        result.stat = stat;
+        result.url = `${fileUrl}${extensionToTry}`;
+        result.magicExtension = extensionToTry;
+        return result;
+      }
     }
   }
   // magic extension not found
-  return {
-    found: false,
-    url: fileUrl,
-    lastENOENTError
-  };
+  return result;
 };
 const getExtensionsToTry = (magicExtensions, importer) => {
   if (!magicExtensions) {
@@ -17288,19 +17325,17 @@ const jsenvPluginFileUrls = ({
       const pathnameUsesTrailingSlash = pathname.endsWith("/");
       urlObject.search = "";
       urlObject.hash = "";
-      reference.leadsToADirectory = stat && stat.isDirectory();
-      const foundSomething = stat && !reference.leadsToADirectory;
       // force trailing slash on directories
-      if (reference.leadsToADirectory && !pathnameUsesTrailingSlash) {
+      if (stat && stat.isDirectory() && !pathnameUsesTrailingSlash) {
         urlObject.pathname = `${pathname}/`;
       }
       // otherwise remove trailing slash if any
-      if (foundSomething && pathnameUsesTrailingSlash) {
+      if (stat && !stat.isDirectory() && pathnameUsesTrailingSlash) {
         // a warning here? (because it's strange to reference a file with a trailing slash)
         urlObject.pathname = pathname.slice(0, -1);
       }
       let url = urlObject.href;
-      const shouldPreserve = reference.leadsToADirectory && (
+      const shouldPreserve = stat && stat.isDirectory() && (
       // ignore new URL second arg
       reference.subtype === "new_url_second_arg" ||
       // ignore root file url
@@ -17308,20 +17343,19 @@ const jsenvPluginFileUrls = ({
       if (shouldPreserve) {
         reference.shouldHandle = false;
       } else {
-        const shouldApplyDilesystemMagicResolution = reference.type !== "js_url";
+        const shouldApplyDilesystemMagicResolution = !stat && reference.type !== "js_url";
         if (shouldApplyDilesystemMagicResolution) {
           const filesystemResolution = applyFileSystemMagicResolution(url, {
             fileStat: stat,
             magicDirectoryIndex,
             magicExtensions: getExtensionsToTry(magicExtensions, reference.parentUrl)
           });
-          if (!filesystemResolution.found) {
-            return null;
+          stat = filesystemResolution.stat;
+          if (stat) {
+            url = filesystemResolution.url;
           }
-          reference.leadsToADirectory = filesystemResolution.isDirectory;
-          url = filesystemResolution.url;
         }
-        if (reference.leadsToADirectory) {
+        if (stat && stat.isDirectory()) {
           const directoryAllowed = reference.type === "filesystem" || typeof directoryReferenceAllowed === "function" && directoryReferenceAllowed(reference) || directoryReferenceAllowed;
           if (!directoryAllowed) {
             const error = new Error("Reference leads to a directory");
@@ -17330,9 +17364,13 @@ const jsenvPluginFileUrls = ({
           }
         }
       }
-      const urlRaw = preserveSymlinks ? url : resolveSymlink(url);
-      const resolvedUrl = `${urlRaw}${search}${hash}`;
-      return resolvedUrl;
+      reference.leadsToADirectory = stat && stat.isDirectory();
+      if (stat) {
+        const urlRaw = preserveSymlinks ? url : resolveSymlink(url);
+        const resolvedUrl = `${urlRaw}${search}${hash}`;
+        return resolvedUrl;
+      }
+      return null;
     }
   }, {
     name: "jsenv:filesystem_resolution",
@@ -22737,6 +22775,14 @@ const startDevServer = async ({
       throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param`);
     }
     sourceDirectoryUrl = assertAndNormalizeDirectoryUrl(sourceDirectoryUrl, "sourceDirectoryUrl");
+    if (outDirectoryUrl === undefined) {
+      const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);
+      if (packageDirectoryUrl) {
+        outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`;
+      }
+    } else {
+      outDirectoryUrl = assertAndNormalizeDirectoryUrl(outDirectoryUrl, "outDirectoryUrl");
+    }
   }
   const logger = createLogger({
     logLevel
@@ -22901,38 +22947,6 @@ const startDevServer = async ({
     },
     contextCache
   };
-};
-
-const lookupPackageDirectory = currentUrl => {
-  if (currentUrl === "file:///") {
-    return null;
-  }
-  const packageJsonFileUrl = `${currentUrl}package.json`;
-  if (existsSync(new URL(packageJsonFileUrl))) {
-    return currentUrl;
-  }
-  return lookupPackageDirectory(getParentUrl(currentUrl));
-};
-const getParentUrl = url => {
-  if (url.startsWith("file://")) {
-    // With node.js new URL('../', 'file:///C:/').href
-    // returns "file:///C:/" instead of "file:///"
-    const resource = url.slice("file://".length);
-    const slashLastIndex = resource.lastIndexOf("/");
-    if (slashLastIndex === -1) {
-      return url;
-    }
-    const lastCharIndex = resource.length - 1;
-    if (slashLastIndex === lastCharIndex) {
-      const slashBeforeLastIndex = resource.lastIndexOf("/", slashLastIndex - 1);
-      if (slashBeforeLastIndex === -1) {
-        return url;
-      }
-      return `file://${resource.slice(0, slashBeforeLastIndex + 1)}`;
-    }
-    return `file://${resource.slice(0, slashLastIndex + 1)}`;
-  }
-  return new URL(url.endsWith("/") ? "../" : "./", url).href;
 };
 
 const pingServer = async url => {
