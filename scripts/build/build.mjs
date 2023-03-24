@@ -51,7 +51,6 @@ await build({
     }),
     jsenvPluginBundling(),
   ],
-  // writeGeneratedFiles: true,
 })
 
 // "s.js" is used in the build files, it must be compatible as much as possible

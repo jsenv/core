@@ -19,7 +19,7 @@ const test = async ({ expectedFileCount, ...params }) => {
       "./main.js": "main.js",
     },
     versioning: false,
-    writeGeneratedFiles: true,
+    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
   })
   const actual = Object.keys(buildFileContents).length

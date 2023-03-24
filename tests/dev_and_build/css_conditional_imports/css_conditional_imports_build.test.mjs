@@ -14,7 +14,7 @@ const test = async (params) => {
       "./main.css": "main.css",
     },
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
-    writeGeneratedFiles: true,
+    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
   })
   const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url)

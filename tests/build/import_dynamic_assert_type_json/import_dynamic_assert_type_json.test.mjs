@@ -14,7 +14,7 @@ const test = async (options) => {
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
     // bundling: false,
     versioning: false,
-    writeGeneratedFiles: true,
+    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...options,
   })
   const server = await startFileServer({

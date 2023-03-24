@@ -20,7 +20,7 @@ const test = async (params) => {
     },
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
     plugins: [jsenvPluginBundling()],
-    writeGeneratedFiles: true,
+    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
   })
   const server = await startFileServer({

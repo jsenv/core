@@ -9,16 +9,14 @@ const test = async (params) => {
     entryPoints: {
       "./main.noeslint.html": "main.html",
     },
-    writeGeneratedFiles: true,
+    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
   })
 }
 
 try {
   await test({
-    runtimeCompat: {
-      chrome: "64",
-    },
+    runtimeCompat: { chrome: "64" },
   })
   throw new Error("should throw")
 } catch (e) {
