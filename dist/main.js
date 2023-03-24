@@ -16961,8 +16961,9 @@ const applyFileSystemMagicResolution = (fileUrl, {
       if (e.code === "ENOENT") {
         result.lastENOENTError = e;
         fileStat = null;
+      } else {
+        throw e;
       }
-      throw e;
     }
   }
   if (fileStat && fileStat.isFile()) {
@@ -17343,15 +17344,15 @@ const jsenvPluginFileUrls = ({
       if (shouldPreserve) {
         reference.shouldHandle = false;
       } else {
-        const shouldApplyDilesystemMagicResolution = !stat && reference.type !== "js_url";
+        const shouldApplyDilesystemMagicResolution = reference.type === "js_import";
         if (shouldApplyDilesystemMagicResolution) {
           const filesystemResolution = applyFileSystemMagicResolution(url, {
             fileStat: stat,
             magicDirectoryIndex,
             magicExtensions: getExtensionsToTry(magicExtensions, reference.parentUrl)
           });
-          stat = filesystemResolution.stat;
-          if (stat) {
+          if (filesystemResolution.stat) {
+            stat = filesystemResolution.stat;
             url = filesystemResolution.url;
           }
         }
