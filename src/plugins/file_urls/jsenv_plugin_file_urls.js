@@ -46,29 +46,20 @@ export const jsenvPluginFileUrls = ({
         const pathnameUsesTrailingSlash = pathname.endsWith("/")
         urlObject.search = ""
         urlObject.hash = ""
-        let filesystemEntryType = stat
-          ? stat.isDirectory()
-            ? "directory"
-            : "other"
-          : null
-
         // force trailing slash on directories
-        if (filesystemEntryType === "directory" && !pathnameUsesTrailingSlash) {
+        if (stat && stat.isDirectory() && !pathnameUsesTrailingSlash) {
           urlObject.pathname = `${pathname}/`
         }
         // otherwise remove trailing slash if any
-        if (
-          filesystemEntryType &&
-          filesystemEntryType !== "directory" &&
-          pathnameUsesTrailingSlash
-        ) {
+        if (stat && !stat.isDirectory() && pathnameUsesTrailingSlash) {
           // a warning here? (because it's strange to reference a file with a trailing slash)
           urlObject.pathname = pathname.slice(0, -1)
         }
 
         let url = urlObject.href
         const shouldPreserve =
-          filesystemEntryType === "directory" &&
+          stat &&
+          stat.isDirectory() &&
           // ignore new URL second arg
           (reference.subtype === "new_url_second_arg" ||
             // ignore root file url
@@ -80,7 +71,7 @@ export const jsenvPluginFileUrls = ({
           reference.shouldHandle = false
         } else {
           const shouldApplyDilesystemMagicResolution =
-            reference.type !== "js_url"
+            !stat && reference.type !== "js_url"
           if (shouldApplyDilesystemMagicResolution) {
             const filesystemResolution = applyFileSystemMagicResolution(url, {
               fileStat: stat,
@@ -90,16 +81,12 @@ export const jsenvPluginFileUrls = ({
                 reference.parentUrl,
               ),
             })
-            if (!filesystemResolution.found) {
-              reference.leadsToADirectory = filesystemEntryType === "directory"
-              return null
+            stat = filesystemResolution.stat
+            if (stat) {
+              url = filesystemResolution.url
             }
-            filesystemEntryType = filesystemResolution.isDirectory
-              ? "directory"
-              : "something"
-            url = filesystemResolution.url
           }
-          if (filesystemEntryType === "directory") {
+          if (stat && stat.isDirectory()) {
             const directoryAllowed =
               reference.type === "filesystem" ||
               (typeof directoryReferenceAllowed === "function" &&
@@ -112,7 +99,8 @@ export const jsenvPluginFileUrls = ({
             }
           }
         }
-        if (filesystemEntryType) {
+        reference.leadsToADirectory = stat && stat.isDirectory()
+        if (stat) {
           const urlRaw = preserveSymlinks ? url : resolveSymlink(url)
           const resolvedUrl = `${urlRaw}${search}${hash}`
           return resolvedUrl

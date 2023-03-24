@@ -239,7 +239,7 @@ const handleFileUrl = (
     magicDirectoryIndex,
     magicExtensions: getExtensionsToTry(magicExtensions, importer),
   })
-  if (!fileResolution.found) {
+  if (!fileResolution.stat) {
     triggerNotFoundWarning({
       resolver: "filesystem",
       specifier,
