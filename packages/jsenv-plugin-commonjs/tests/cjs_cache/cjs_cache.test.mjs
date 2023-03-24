@@ -8,9 +8,7 @@ import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js"
 import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs"
 
 const debug = false // true to have browser UI + keep it open after test
-await ensureEmptyDirectory(
-  new URL("./client/.jsenv/cjs_to_esm", import.meta.url),
-)
+await ensureEmptyDirectory(new URL("../../.cache/", import.meta.url))
 const cjsFileUrl = new URL("./client/dep.cjs", import.meta.url)
 const cjsFileContent = {
   beforeTest: readFileSync(cjsFileUrl),
@@ -23,9 +21,7 @@ const devServer = await startDevServer({
   keepProcessAlive: false,
   plugins: [
     jsenvPluginCommonJs({
-      include: {
-        "./file.cjs": true,
-      },
+      include: { "./file.cjs": true },
     }),
   ],
   clientAutoreload: false,

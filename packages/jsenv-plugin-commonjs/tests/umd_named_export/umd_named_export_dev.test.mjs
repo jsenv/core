@@ -16,9 +16,7 @@ const devServer = await startDevServer({
   keepProcessAlive: false,
   plugins: [
     jsenvPluginCommonJs({
-      include: {
-        "./lib.js": true,
-      },
+      include: { "./lib.js": true },
     }),
   ],
   clientAutoreload: false,

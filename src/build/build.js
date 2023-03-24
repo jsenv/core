@@ -53,7 +53,6 @@ import {
   findHtmlNode,
 } from "@jsenv/ast"
 
-import { determineJsenvInternalDirectoryUrl } from "../jsenv_internal_directory.js"
 import { watchSourceFiles } from "../watch_source_files.js"
 import { createUrlGraph } from "../kitchen/url_graph.js"
 import { createKitchen } from "../kitchen/kitchen.js"
@@ -227,8 +226,6 @@ export const build = async ({
       directoryToClean = new URL(assetsDirectory, buildDirectoryUrl).href
     }
   }
-  const jsenvInternalDirectoryUrl =
-    determineJsenvInternalDirectoryUrl(sourceDirectoryUrl)
 
   const asFormattedBuildUrl = (generatedUrl, reference) => {
     if (base === "./") {
@@ -299,7 +296,6 @@ build ${entryPointKeys.length} entry points`)
       signal,
       logLevel,
       rootDirectoryUrl: sourceDirectoryUrl,
-      jsenvInternalDirectoryUrl,
       urlGraph: rawGraph,
       build: true,
       runtimeCompat,
@@ -342,7 +338,9 @@ build ${entryPointKeys.length} entry points`)
       ],
       sourcemaps,
       sourcemapsSourcesContent,
-      outDirectoryUrl: new URL("build/", jsenvInternalDirectoryUrl),
+      outDirectoryUrl: outDirectoryUrl
+        ? new URL("build/", outDirectoryUrl)
+        : undefined,
     })
 
     const buildUrlsGenerator = createBuildUrlsGenerator({
@@ -372,7 +370,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     const finalGraphKitchen = createKitchen({
       logLevel,
       rootDirectoryUrl: buildDirectoryUrl,
-      jsenvInternalDirectoryUrl,
       urlGraph: finalGraph,
       build: true,
       runtimeCompat,
@@ -662,7 +659,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       sourcemaps,
       sourcemapsSourcesContent,
       sourcemapsSourcesRelative: !versioning,
-      outDirectoryUrl: new URL("postbuild/", jsenvInternalDirectoryUrl),
+      outDirectoryUrl: outDirectoryUrl
+        ? new URL("postbuild/", outDirectoryUrl)
+        : undefined,
     })
     const finalEntryUrls = []
 
@@ -1145,7 +1144,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           const versioningKitchen = createKitchen({
             logLevel: logger.level,
             rootDirectoryUrl: buildDirectoryUrl,
-            jsenvInternalDirectoryUrl,
             urlGraph: finalGraph,
             build: true,
             runtimeCompat,
@@ -1261,7 +1259,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             sourcemaps,
             sourcemapsSourcesContent,
             sourcemapsSourcesRelative: true,
-            outDirectoryUrl: new URL("postbuild/", outDirectoryUrl),
+            outDirectoryUrl: outDirectoryUrl
+              ? new URL("postbuild/", outDirectoryUrl)
+              : undefined,
           })
           const versioningUrlGraphLoader = createUrlGraphLoader(
             versioningKitchen.kitchenContext,
