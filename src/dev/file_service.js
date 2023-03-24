@@ -40,7 +40,7 @@ export const createFileService = ({
   sourcemaps,
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
-  writeGeneratedFiles,
+  outDirectoryUrl,
 }) => {
   const clientFileChangeCallbackList = []
   const clientFilesPruneCallbackList = []
@@ -143,10 +143,9 @@ export const createFileService = ({
       sourcemaps,
       sourcemapsSourcesProtocol,
       sourcemapsSourcesContent,
-      writeGeneratedFiles,
       outDirectoryUrl: new URL(
         `${runtimeName}@${runtimeVersion}/`,
-        jsenvInternalDirectoryUrl,
+        outDirectoryUrl,
       ),
     })
     urlGraph.createUrlInfoCallbackRef.current = (urlInfo) => {

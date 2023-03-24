@@ -153,7 +153,7 @@ export const build = async ({
 
   directoryToClean,
   writeOnFileSystem = true,
-  writeGeneratedFiles = false,
+  outDirectoryUrl,
   assetManifest = versioningMethod === "filename",
   assetManifestFileRelativeUrl = "asset-manifest.json",
   ...rest
@@ -342,7 +342,6 @@ build ${entryPointKeys.length} entry points`)
       ],
       sourcemaps,
       sourcemapsSourcesContent,
-      writeGeneratedFiles,
       outDirectoryUrl: new URL("build/", jsenvInternalDirectoryUrl),
     })
 
@@ -663,7 +662,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       sourcemaps,
       sourcemapsSourcesContent,
       sourcemapsSourcesRelative: !versioning,
-      writeGeneratedFiles,
       outDirectoryUrl: new URL("postbuild/", jsenvInternalDirectoryUrl),
     })
     const finalEntryUrls = []
@@ -673,8 +671,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         disabled: logger.levels.debug || !logger.levels.info,
       })
       try {
-        if (writeGeneratedFiles) {
-          await ensureEmptyDirectory(new URL(`build/`, sourceDirectoryUrl))
+        if (outDirectoryUrl) {
+          await ensureEmptyDirectory(new URL(`build/`, outDirectoryUrl))
         }
         const rawUrlGraphLoader = createUrlGraphLoader(
           rawGraphKitchen.kitchenContext,
@@ -918,10 +916,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           disabled: logger.levels.debug || !logger.levels.info,
         })
         try {
-          if (writeGeneratedFiles) {
-            await ensureEmptyDirectory(
-              new URL(`postbuild/`, jsenvInternalDirectoryUrl),
-            )
+          if (outDirectoryUrl) {
+            await ensureEmptyDirectory(new URL(`postbuild/`, outDirectoryUrl))
           }
           const finalUrlGraphLoader = createUrlGraphLoader(
             finalGraphKitchen.kitchenContext,
@@ -1265,8 +1261,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             sourcemaps,
             sourcemapsSourcesContent,
             sourcemapsSourcesRelative: true,
-            writeGeneratedFiles,
-            outDirectoryUrl: new URL("postbuild/", jsenvInternalDirectoryUrl),
+            outDirectoryUrl: new URL("postbuild/", outDirectoryUrl),
           })
           const versioningUrlGraphLoader = createUrlGraphLoader(
             versioningKitchen.kitchenContext,

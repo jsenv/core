@@ -43,7 +43,6 @@ export const createKitchen = ({
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
   sourcemapsSourcesRelative,
-  writeGeneratedFiles,
   outDirectoryUrl,
 }) => {
   const logger = createLogger({ logLevel })
@@ -658,7 +657,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     )
   }
   const cook = memoizeCook(async (urlInfo, context) => {
-    if (!writeGeneratedFiles || !outDirectoryUrl) {
+    if (!outDirectoryUrl) {
       await _cook(urlInfo, context)
       return
     }

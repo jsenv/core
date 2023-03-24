@@ -62,9 +62,7 @@ export const startDevServer = async ({
   sourcemaps = "inline",
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
-  // no real need to write files during github workflow
-  // and mitigates https://github.com/actions/runner-images/issues/3885
-  writeGeneratedFiles = !process.env.CI,
+  outDirectoryUrl,
   ...rest
 }) => {
   // params type checking
@@ -182,7 +180,7 @@ export const startDevServer = async ({
           sourcemaps,
           sourcemapsSourcesProtocol,
           sourcemapsSourcesContent,
-          writeGeneratedFiles,
+          outDirectoryUrl,
         }),
         handleWebsocket: (websocket, { request }) => {
           if (request.headers["sec-websocket-protocol"] === "jsenv") {
