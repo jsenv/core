@@ -16,7 +16,7 @@ export const jsenvPluginFileUrls = ({
   magicExtensions = ["inherit", ".js"],
   magicDirectoryIndex = true,
   preserveSymlinks = false,
-  directoryReferenceAllowed = false,
+  shouldBuildDirectoryReference = false,
 }) => {
   return [
     {
@@ -57,7 +57,16 @@ export const jsenvPluginFileUrls = ({
           // a warning here? (because it's strange to reference a file with a trailing slash)
           urlObject.pathname = pathname.slice(0, -1)
         }
-        if (foundADirectory && directoryReferenceAllowed) {
+
+        const resolveSymlinkIfEnabled = (facadeUrl) => {
+          const urlRaw = preserveSymlinks
+            ? facadeUrl
+            : resolveSymlink(facadeUrl)
+          const resolvedUrl = `${urlRaw}${search}${hash}`
+          return resolvedUrl
+        }
+
+        if (foundADirectory) {
           if (
             // ignore new URL second arg
             reference.subtype === "new_url_second_arg" ||
@@ -65,14 +74,25 @@ export const jsenvPluginFileUrls = ({
             reference.url === "file:///"
           ) {
             reference.shouldHandle = false
+            return "file:///"
+          }
+          if (
+            reference.subtype === "new_url_first_arg" &&
+            reference.specifier === "./"
+          ) {
+            reference.shouldHandle = false
+            return resolveSymlinkIfEnabled(urlObject.href)
           }
           reference.data.foundADirectory = true
-          const directoryFacadeUrl = urlObject.href
-          const directoryUrlRaw = preserveSymlinks
-            ? directoryFacadeUrl
-            : resolveSymlink(directoryFacadeUrl)
-          const directoryUrl = `${directoryUrlRaw}${search}${hash}`
-          return directoryUrl
+          if (reference.type === "filesystem") {
+            reference.data.shouldBuild = true
+          } else if (typeof shouldBuildDirectoryReference === "function") {
+            reference.data.shouldBuild =
+              shouldBuildDirectoryReference(reference)
+          } else {
+            reference.data.shouldBuild = Boolean(shouldBuildDirectoryReference)
+          }
+          return resolveSymlinkIfEnabled(urlObject.href)
         }
         const url = urlObject.href
         const filesystemResolution = applyFileSystemMagicResolution(url, {
@@ -88,12 +108,7 @@ export const jsenvPluginFileUrls = ({
           return null
         }
         reference.data.foundADirectory = filesystemResolution.isDirectory
-        const fileFacadeUrl = filesystemResolution.url
-        const fileUrlRaw = preserveSymlinks
-          ? fileFacadeUrl
-          : resolveSymlink(fileFacadeUrl)
-        const fileUrl = `${fileUrlRaw}${search}${hash}`
-        return fileUrl
+        return resolveSymlinkIfEnabled(filesystemResolution.url)
       },
     },
     {
@@ -146,7 +161,7 @@ export const jsenvPluginFileUrls = ({
         }
         const urlObject = new URL(urlInfo.url)
         if (context.reference.data.foundADirectory) {
-          if (directoryReferenceAllowed) {
+          if (context.reference.data.shouldBuild) {
             const directoryEntries = readdirSync(urlObject)
             let filename
             if (context.reference.type === "filesystem") {

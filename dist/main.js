@@ -1,7 +1,7 @@
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { chmod, stat, lstat, readdir, promises, unlink, openSync, closeSync, rmdir, readFile as readFile$1, readFileSync as readFileSync$1, watch, readdirSync, statSync, writeFile as writeFile$1, writeFileSync as writeFileSync$1, mkdirSync, createReadStream, existsSync, realpathSync } from "node:fs";
 import crypto, { createHash } from "node:crypto";
-import { dirname, extname, basename } from "node:path";
+import { dirname, extname } from "node:path";
 import { URL_META, filterV8Coverage } from "./js/v8_coverage.js";
 import process$1, { memoryUsage } from "node:process";
 import os, { networkInterfaces } from "node:os";
@@ -7058,52 +7058,6 @@ const createServerEventsDispatcher = () => {
   };
 };
 
-const lookupPackageDirectory = currentUrl => {
-  if (currentUrl === "file:///") {
-    return null;
-  }
-  const packageJsonFileUrl = `${currentUrl}package.json`;
-  if (existsSync(new URL(packageJsonFileUrl))) {
-    return currentUrl;
-  }
-  return lookupPackageDirectory(getParentUrl$1(currentUrl));
-};
-const getParentUrl$1 = url => {
-  if (url.startsWith("file://")) {
-    // With node.js new URL('../', 'file:///C:/').href
-    // returns "file:///C:/" instead of "file:///"
-    const resource = url.slice("file://".length);
-    const slashLastIndex = resource.lastIndexOf("/");
-    if (slashLastIndex === -1) {
-      return url;
-    }
-    const lastCharIndex = resource.length - 1;
-    if (slashLastIndex === lastCharIndex) {
-      const slashBeforeLastIndex = resource.lastIndexOf("/", slashLastIndex - 1);
-      if (slashBeforeLastIndex === -1) {
-        return url;
-      }
-      return `file://${resource.slice(0, slashBeforeLastIndex + 1)}`;
-    }
-    return `file://${resource.slice(0, slashLastIndex + 1)}`;
-  }
-  return new URL(url.endsWith("/") ? "../" : "./", url).href;
-};
-
-const determineJsenvInternalDirectoryUrl = currentUrl => {
-  const packageDirectoryUrl = lookupPackageDirectory(currentUrl);
-  if (packageDirectoryUrl) {
-    return `${packageDirectoryUrl}.jsenv/${getDirectoryName(packageDirectoryUrl)}/`;
-  }
-  return `${currentUrl}.jsenv/`;
-};
-const getDirectoryName = directoryUrl => {
-  const {
-    pathname
-  } = new URL(directoryUrl);
-  return basename(pathname);
-};
-
 const watchSourceFiles = (sourceDirectoryUrl, callback, {
   sourceFileConfig = {},
   keepProcessAlive,
@@ -8751,7 +8705,6 @@ const createKitchen = ({
   signal,
   logLevel,
   rootDirectoryUrl,
-  jsenvInternalDirectoryUrl,
   urlGraph,
   dev = false,
   build = false,
@@ -8767,7 +8720,6 @@ const createKitchen = ({
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
   sourcemapsSourcesRelative,
-  writeGeneratedFiles,
   outDirectoryUrl
 }) => {
   const logger = createLogger({
@@ -8777,7 +8729,6 @@ const createKitchen = ({
     signal,
     logger,
     rootDirectoryUrl,
-    jsenvInternalDirectoryUrl,
     urlGraph,
     dev,
     build,
@@ -9312,7 +9263,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     });
   };
   const cook = memoizeCook(async (urlInfo, context) => {
-    if (!writeGeneratedFiles || !outDirectoryUrl) {
+    if (!outDirectoryUrl) {
       await _cook(urlInfo, context);
       return;
     }
@@ -10275,17 +10226,6 @@ const parseAndTransformWebmanifestUrls = async (urlInfo, context) => {
   const content = urlInfo.content;
   const manifest = JSON.parse(content);
   const actions = [];
-  const {
-    start_url
-  } = manifest;
-  if (start_url) {
-    if (context.build) {
-      manifest.start_url = "/";
-    } else {
-      const parentUrl = context.reference.parentUrl;
-      manifest.start_url = `${parentUrl.slice(context.rootDirectoryUrl.length)}`;
-    }
-  }
   const {
     icons = []
   } = manifest;
@@ -15227,7 +15167,7 @@ const jsenvPluginAsJsClassicLibrary = ({
         jsModuleUrlInfos: [jsModuleUrlInfo],
         context: {
           ...context,
-          buildDirectoryUrl: context.outDirectoryUrl
+          buildDirectoryUrl: new URL("./", import.meta.url)
         },
         preserveDynamicImport: true
       });
@@ -16109,7 +16049,7 @@ const asDirectoryUrl = url => {
   }
   return new URL("./", url).href;
 };
-const getParentUrl = url => {
+const getParentUrl$1 = url => {
   if (url.startsWith("file://")) {
     // With node.js new URL('../', 'file:///C:/').href
     // returns "file:///C:/" instead of "file:///"
@@ -16167,7 +16107,7 @@ const defaultLookupPackageScope = url => {
     if (existsSync(packageJsonUrlObject)) {
       return scopeUrl;
     }
-    scopeUrl = getParentUrl(scopeUrl);
+    scopeUrl = getParentUrl$1(scopeUrl);
   }
   return null;
 };
@@ -16468,7 +16408,7 @@ const applyPackageResolve = (packageSpecifier, resolutionContext) => {
   while (currentUrl !== "file:///") {
     const packageDirectoryFacadeUrl = new URL(`node_modules/${packageName}/`, currentUrl).href;
     if (!existsSync(new URL(packageDirectoryFacadeUrl))) {
-      currentUrl = getParentUrl(currentUrl);
+      currentUrl = getParentUrl$1(currentUrl);
       continue;
     }
     const packageDirectoryUrl = preservesSymlink ? packageDirectoryFacadeUrl : resolvePackageSymlink(packageDirectoryFacadeUrl);
@@ -17295,7 +17235,7 @@ const jsenvPluginFileUrls = ({
   magicExtensions = ["inherit", ".js"],
   magicDirectoryIndex = true,
   preserveSymlinks = false,
-  directoryReferenceAllowed = false
+  shouldBuildDirectoryReference = false
 }) => {
   return [{
     name: "jsenv:file_url_resolution",
@@ -17340,19 +17280,33 @@ const jsenvPluginFileUrls = ({
         // a warning here? (because it's strange to reference a file with a trailing slash)
         urlObject.pathname = pathname.slice(0, -1);
       }
-      if (foundADirectory && directoryReferenceAllowed) {
+      const resolveSymlinkIfEnabled = facadeUrl => {
+        const urlRaw = preserveSymlinks ? facadeUrl : resolveSymlink(facadeUrl);
+        const resolvedUrl = `${urlRaw}${search}${hash}`;
+        return resolvedUrl;
+      };
+      if (foundADirectory) {
         if (
         // ignore new URL second arg
         reference.subtype === "new_url_second_arg" ||
         // ignore root file url
         reference.url === "file:///") {
           reference.shouldHandle = false;
+          return "file:///";
+        }
+        if (reference.subtype === "new_url_first_arg" && reference.specifier === "./") {
+          reference.shouldHandle = false;
+          return resolveSymlinkIfEnabled(urlObject.href);
         }
         reference.data.foundADirectory = true;
-        const directoryFacadeUrl = urlObject.href;
-        const directoryUrlRaw = preserveSymlinks ? directoryFacadeUrl : resolveSymlink(directoryFacadeUrl);
-        const directoryUrl = `${directoryUrlRaw}${search}${hash}`;
-        return directoryUrl;
+        if (reference.type === "filesystem") {
+          reference.data.shouldBuild = true;
+        } else if (typeof shouldBuildDirectoryReference === "function") {
+          reference.data.shouldBuild = shouldBuildDirectoryReference(reference);
+        } else {
+          reference.data.shouldBuild = Boolean(shouldBuildDirectoryReference);
+        }
+        return resolveSymlinkIfEnabled(urlObject.href);
       }
       const url = urlObject.href;
       const filesystemResolution = applyFileSystemMagicResolution(url, {
@@ -17365,10 +17319,7 @@ const jsenvPluginFileUrls = ({
         return null;
       }
       reference.data.foundADirectory = filesystemResolution.isDirectory;
-      const fileFacadeUrl = filesystemResolution.url;
-      const fileUrlRaw = preserveSymlinks ? fileFacadeUrl : resolveSymlink(fileFacadeUrl);
-      const fileUrl = `${fileUrlRaw}${search}${hash}`;
-      return fileUrl;
+      return resolveSymlinkIfEnabled(filesystemResolution.url);
     }
   }, {
     name: "jsenv:filesystem_resolution",
@@ -17414,7 +17365,7 @@ const jsenvPluginFileUrls = ({
       }
       const urlObject = new URL(urlInfo.url);
       if (context.reference.data.foundADirectory) {
-        if (directoryReferenceAllowed) {
+        if (context.reference.data.shouldBuild) {
           const directoryEntries = readdirSync(urlObject);
           let filename;
           if (context.reference.type === "filesystem") {
@@ -20414,7 +20365,7 @@ const getCorePlugins = ({
   urlAnalysis = {},
   urlResolution = {},
   fileSystemMagicRedirection,
-  directoryReferenceAllowed,
+  shouldBuildDirectoryReference,
   supervisor,
   transpilation = true,
   clientAutoreload = false,
@@ -20454,7 +20405,7 @@ const getCorePlugins = ({
   jsenvPluginInline(),
   // before "file urls" to resolve and load inline urls
   jsenvPluginFileUrls({
-    directoryReferenceAllowed,
+    shouldBuildDirectoryReference,
     ...fileSystemMagicRedirection
   }), jsenvPluginHttpUrls(), jsenvPluginUrlResolution({
     runtimeCompat,
@@ -20870,7 +20821,7 @@ const build = async ({
   urlAnalysis = {},
   urlResolution,
   fileSystemMagicRedirection,
-  directoryReferenceAllowed,
+  shouldBuildDirectoryReference,
   scenarioPlaceholders,
   transpilation = {},
   versioning = !runtimeCompat.node,
@@ -20883,7 +20834,7 @@ const build = async ({
   watch = false,
   directoryToClean,
   writeOnFileSystem = true,
-  writeGeneratedFiles = false,
+  outDirectoryUrl,
   assetManifest = versioningMethod === "filename",
   assetManifestFileRelativeUrl = "asset-manifest.json",
   ...rest
@@ -20935,7 +20886,6 @@ const build = async ({
       directoryToClean = new URL(assetsDirectory, buildDirectoryUrl).href;
     }
   }
-  const jsenvInternalDirectoryUrl = determineJsenvInternalDirectoryUrl(sourceDirectoryUrl);
   const asFormattedBuildUrl = (generatedUrl, reference) => {
     if (base === "./") {
       const urlRelativeToParent = urlToRelativeUrl(generatedUrl, reference.parentUrl === sourceDirectoryUrl ? buildDirectoryUrl : reference.parentUrl);
@@ -20989,7 +20939,6 @@ build ${entryPointKeys.length} entry points`);
       signal,
       logLevel,
       rootDirectoryUrl: sourceDirectoryUrl,
-      jsenvInternalDirectoryUrl,
       urlGraph: rawGraph,
       build: true,
       runtimeCompat,
@@ -21014,7 +20963,7 @@ build ${entryPointKeys.length} entry points`);
         urlAnalysis,
         urlResolution,
         fileSystemMagicRedirection,
-        directoryReferenceAllowed,
+        shouldBuildDirectoryReference,
         transpilation: {
           ...transpilation,
           babelHelpersAsImport: !useExplicitJsClassicConversion,
@@ -21024,8 +20973,7 @@ build ${entryPointKeys.length} entry points`);
       })],
       sourcemaps,
       sourcemapsSourcesContent,
-      writeGeneratedFiles,
-      outDirectoryUrl: new URL("build/", jsenvInternalDirectoryUrl)
+      outDirectoryUrl: outDirectoryUrl ? new URL("build/", outDirectoryUrl) : undefined
     });
     const buildUrlsGenerator = createBuildUrlsGenerator({
       buildDirectoryUrl,
@@ -21053,7 +21001,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     const finalGraphKitchen = createKitchen({
       logLevel,
       rootDirectoryUrl: buildDirectoryUrl,
-      jsenvInternalDirectoryUrl,
       urlGraph: finalGraph,
       build: true,
       runtimeCompat,
@@ -21299,8 +21246,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       sourcemaps,
       sourcemapsSourcesContent,
       sourcemapsSourcesRelative: !versioning,
-      writeGeneratedFiles,
-      outDirectoryUrl: new URL("postbuild/", jsenvInternalDirectoryUrl)
+      outDirectoryUrl: outDirectoryUrl ? new URL("postbuild/", outDirectoryUrl) : undefined
     });
     const finalEntryUrls = [];
     {
@@ -21308,8 +21254,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         disabled: logger.levels.debug || !logger.levels.info
       });
       try {
-        if (writeGeneratedFiles) {
-          await ensureEmptyDirectory(new URL(`build/`, sourceDirectoryUrl));
+        if (outDirectoryUrl) {
+          await ensureEmptyDirectory(new URL(`build/`, outDirectoryUrl));
         }
         const rawUrlGraphLoader = createUrlGraphLoader(rawGraphKitchen.kitchenContext);
         Object.keys(entryPoints).forEach(key => {
@@ -21522,8 +21468,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           disabled: logger.levels.debug || !logger.levels.info
         });
         try {
-          if (writeGeneratedFiles) {
-            await ensureEmptyDirectory(new URL(`postbuild/`, jsenvInternalDirectoryUrl));
+          if (outDirectoryUrl) {
+            await ensureEmptyDirectory(new URL(`postbuild/`, outDirectoryUrl));
           }
           const finalUrlGraphLoader = createUrlGraphLoader(finalGraphKitchen.kitchenContext);
           entryUrls.forEach(entryUrl => {
@@ -21723,7 +21669,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           const versioningKitchen = createKitchen({
             logLevel: logger.level,
             rootDirectoryUrl: buildDirectoryUrl,
-            jsenvInternalDirectoryUrl,
             urlGraph: finalGraph,
             build: true,
             runtimeCompat,
@@ -21815,8 +21760,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             sourcemaps,
             sourcemapsSourcesContent,
             sourcemapsSourcesRelative: true,
-            writeGeneratedFiles,
-            outDirectoryUrl: new URL("postbuild/", jsenvInternalDirectoryUrl)
+            outDirectoryUrl: outDirectoryUrl ? new URL("postbuild/", outDirectoryUrl) : undefined
           });
           const versioningUrlGraphLoader = createUrlGraphLoader(versioningKitchen.kitchenContext);
           finalEntryUrls.forEach(finalEntryUrl => {
@@ -22344,7 +22288,7 @@ const createFileService = ({
   sourcemaps,
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
-  writeGeneratedFiles
+  outDirectoryUrl
 }) => {
   const clientFileChangeCallbackList = [];
   const clientFilesPruneCallbackList = [];
@@ -22393,7 +22337,6 @@ const createFileService = ({
     const clientRuntimeCompat = {
       [runtimeName]: runtimeVersion
     };
-    const jsenvInternalDirectoryUrl = determineJsenvInternalDirectoryUrl(sourceDirectoryUrl);
     let mainFileUrl;
     if (sourceMainFilePath === undefined) {
       mainFileUrl = explorer ? String(explorerHtmlFileUrl) : String(new URL("./index.html", sourceDirectoryUrl));
@@ -22404,7 +22347,6 @@ const createFileService = ({
       signal,
       logLevel,
       rootDirectoryUrl: sourceDirectoryUrl,
-      jsenvInternalDirectoryUrl,
       urlGraph,
       dev: true,
       runtimeCompat,
@@ -22431,8 +22373,7 @@ const createFileService = ({
       sourcemaps,
       sourcemapsSourcesProtocol,
       sourcemapsSourcesContent,
-      writeGeneratedFiles,
-      outDirectoryUrl: new URL(`${runtimeName}@${runtimeVersion}/`, jsenvInternalDirectoryUrl)
+      outDirectoryUrl: outDirectoryUrl ? new URL(`${runtimeName}@${runtimeVersion}/`, outDirectoryUrl) : undefined
     });
     urlGraph.createUrlInfoCallbackRef.current = urlInfo => {
       const {
@@ -22778,9 +22719,7 @@ const startDevServer = async ({
   sourcemaps = "inline",
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
-  // no real need to write files during github workflow
-  // and mitigates https://github.com/actions/runner-images/issues/3885
-  writeGeneratedFiles = !process.env.CI,
+  outDirectoryUrl,
   ...rest
 }) => {
   // params type checking
@@ -22882,7 +22821,7 @@ const startDevServer = async ({
         sourcemaps,
         sourcemapsSourcesProtocol,
         sourcemapsSourcesContent,
-        writeGeneratedFiles
+        outDirectoryUrl
       }),
       handleWebsocket: (websocket, {
         request
@@ -22954,6 +22893,38 @@ const startDevServer = async ({
     },
     contextCache
   };
+};
+
+const lookupPackageDirectory = currentUrl => {
+  if (currentUrl === "file:///") {
+    return null;
+  }
+  const packageJsonFileUrl = `${currentUrl}package.json`;
+  if (existsSync(new URL(packageJsonFileUrl))) {
+    return currentUrl;
+  }
+  return lookupPackageDirectory(getParentUrl(currentUrl));
+};
+const getParentUrl = url => {
+  if (url.startsWith("file://")) {
+    // With node.js new URL('../', 'file:///C:/').href
+    // returns "file:///C:/" instead of "file:///"
+    const resource = url.slice("file://".length);
+    const slashLastIndex = resource.lastIndexOf("/");
+    if (slashLastIndex === -1) {
+      return url;
+    }
+    const lastCharIndex = resource.length - 1;
+    if (slashLastIndex === lastCharIndex) {
+      const slashBeforeLastIndex = resource.lastIndexOf("/", slashLastIndex - 1);
+      if (slashBeforeLastIndex === -1) {
+        return url;
+      }
+      return `file://${resource.slice(0, slashBeforeLastIndex + 1)}`;
+    }
+    return `file://${resource.slice(0, slashLastIndex + 1)}`;
+  }
+  return new URL(url.endsWith("/") ? "../" : "./", url).href;
 };
 
 const pingServer = async url => {

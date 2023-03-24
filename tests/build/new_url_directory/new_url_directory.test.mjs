@@ -14,6 +14,7 @@ const test = async (params) => {
     },
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
+    runtimeCompat: { chrome: "98" },
     ...params,
   })
   const server = await startFileServer({
@@ -33,9 +34,10 @@ const test = async (params) => {
   }
   const expected = {
     returnValue: {
-      directoryUrl: `${server.origin}/src/?v=7e881609`,
+      directoryUrl: `${server.origin}/src/?v=4ab9eae5`,
     },
-    jsFileContent: `console.log("Hello");`,
+    jsFileContent: `console.log("Hello")
+`,
   }
   assert({ actual, expected })
 }
@@ -50,7 +52,7 @@ try {
 --- reason ---
 found a directory on filesystem
 --- url ---
-${new URL("./client/src/", import.meta.url).href}
+${new URL("./client/src", import.meta.url).href}
 --- url reference trace ---
 ${new URL("./client/main.html", import.meta.url)}:15:40
   14 |     <script type="module">
@@ -62,4 +64,4 @@ ${new URL("./client/main.html", import.meta.url)}:15:40
 
 // but it can be allowed explicitely and it will copy the directory content
 // in the build directory and update the url accorindgly
-await test({ directoryReferenceAllowed: true })
+await test({ shouldBuildDirectoryReference: true })

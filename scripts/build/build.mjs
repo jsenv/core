@@ -15,7 +15,9 @@ await build({
   runtimeCompat: {
     node: "16.14",
   },
-  directoryReferenceAllowed: true,
+  shouldBuildDirectoryReference: (reference) => {
+    return reference.url.includes("/babel_helpers/")
+  },
   scenarioPlaceholders: false,
   urlAnalysis: {
     include: {
