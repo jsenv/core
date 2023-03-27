@@ -20893,6 +20893,15 @@ const build = async ({
       throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param`);
     }
     sourceDirectoryUrl = assertAndNormalizeDirectoryUrl(sourceDirectoryUrl, "sourceDirectoryUrl");
+    buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl, "buildDirectoryUrl");
+    if (outDirectoryUrl === undefined) {
+      const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);
+      if (packageDirectoryUrl) {
+        outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`;
+      }
+    } else {
+      outDirectoryUrl = assertAndNormalizeDirectoryUrl(outDirectoryUrl, "outDirectoryUrl");
+    }
     if (typeof entryPoints !== "object" || entryPoints === null) {
       throw new TypeError(`entryPoints must be an object, got ${entryPoints}`);
     }
@@ -20909,7 +20918,6 @@ const build = async ({
         throw new TypeError(`entryPoints values must be plain strings (no "/"), found "${value}" on key "${key}"`);
       }
     });
-    buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl, "buildDirectoryUrl");
     if (!["filename", "search_param"].includes(versioningMethod)) {
       throw new TypeError(`versioningMethod must be "filename" or "search_param", got ${versioning}`);
     }
