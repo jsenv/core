@@ -26,9 +26,7 @@ npm install @jsenv/worker
 2. Create _service_worker.js_
 
 ```js
-self.importScripts(
-  "./node_modules/@jsenv/service-worker/src/jsenv_service_worker.js",
-)
+self.importScripts("@jsenv/service-worker/src/jsenv_service_worker.js")
 
 self.__sw__.init({
   name: "product-name",
@@ -74,9 +72,7 @@ self.__sw__.init({
 During build jsenv injects urls to cache at the top of service worker file(s) under a global variable: `self.resourcesFromJsenvBuild`.
 
 ```js
-self.importScripts(
-  "./node_modules/@jsenv/service-worker/src/jsenv_service_worker.js",
-)
+self.importScripts("@jsenv/service-worker/src/jsenv_service_worker.js")
 
 self.__sw__.init({
   name: "product-name",

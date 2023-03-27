@@ -72,7 +72,7 @@ try {
   const takeDevFilesSnapshot = (name) => {
     const runtimeId = Array.from(devServer.contextCache.keys())[0]
     const devFileContents = readSnapshotsFromDirectory(
-      new URL(`./client/.jsenv/${runtimeId}/`, import.meta.url),
+      new URL(`./.jsenv/${runtimeId}/`, import.meta.url),
     )
     writeSnapshotsIntoDirectory(
       new URL(`./snapshots/${name}/`, import.meta.url),
