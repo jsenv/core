@@ -7467,6 +7467,8 @@ const createUrlInfo = url => {
     // "html", "css", "js_classic", "js_module", "importmap", "json", "webmanifest", ...
     subtype: undefined,
     // "worker", "service_worker", "shared_worker" for js, otherwise undefined
+    typeHint: undefined,
+    subtypeHint: undefined,
     contentType: "",
     // "text/html", "text/css", "text/javascript", "application/json", ...
     url,
@@ -7488,7 +7490,8 @@ const createUrlInfo = url => {
     // maybe move to inlineUrlSite?
 
     timing: {},
-    headers: {}
+    headers: {},
+    debug: false
   };
   // Object.preventExtensions(urlInfo) // useful to ensure all properties are declared here
   return urlInfo;
@@ -9067,8 +9070,8 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       }
       urlInfo.contentType = contentType;
       urlInfo.headers = headers;
-      urlInfo.type = type || reference.expectedType || inferUrlInfoType(contentType);
-      urlInfo.subtype = subtype || reference.expectedSubtype || "";
+      urlInfo.type = type || reference.expectedType || inferUrlInfoType(urlInfo);
+      urlInfo.subtype = subtype || reference.expectedSubtype || urlInfo.subtypeHint || "";
       // during build urls info are reused and load returns originalUrl/originalContent
       urlInfo.originalUrl = originalUrl || urlInfo.originalUrl;
       if (originalContent !== urlInfo.originalContent) {
@@ -9491,6 +9494,15 @@ const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
     urlInfo.originalContent = context.build ? urlInfo.originalContent === undefined ? reference.content : urlInfo.originalContent : reference.content;
     urlInfo.content = reference.content;
   }
+  if (reference.debug) {
+    urlInfo.debug = true;
+  }
+  if (reference.expectedType) {
+    urlInfo.typeHint = reference.expectedType;
+  }
+  if (reference.expectedSubtype) {
+    urlInfo.subtypeHint = reference.expectedSubtype;
+  }
 };
 const adjustUrlSite = (urlInfo, {
   urlGraph,
@@ -9524,7 +9536,10 @@ const adjustUrlSite = (urlInfo, {
     column
   }, urlInfo);
 };
-const inferUrlInfoType = contentType => {
+const inferUrlInfoType = urlInfo => {
+  const {
+    contentType
+  } = urlInfo;
   if (contentType === "text/html") {
     return "html";
   }
@@ -9532,6 +9547,7 @@ const inferUrlInfoType = contentType => {
     return "css";
   }
   if (contentType === "text/javascript") {
+    if (urlInfo.typeHint === "js_classic") return "js_classic";
     return "js_module";
   }
   if (contentType === "application/importmap+json") {

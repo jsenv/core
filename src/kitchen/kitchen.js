@@ -377,9 +377,9 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       }
       urlInfo.contentType = contentType
       urlInfo.headers = headers
-      urlInfo.type =
-        type || reference.expectedType || inferUrlInfoType(contentType)
-      urlInfo.subtype = subtype || reference.expectedSubtype || ""
+      urlInfo.type = type || reference.expectedType || inferUrlInfoType(urlInfo)
+      urlInfo.subtype =
+        subtype || reference.expectedSubtype || urlInfo.subtypeHint || ""
       // during build urls info are reused and load returns originalUrl/originalContent
       urlInfo.originalUrl = originalUrl || urlInfo.originalUrl
       if (originalContent !== urlInfo.originalContent) {
@@ -860,6 +860,16 @@ const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
       : reference.content
     urlInfo.content = reference.content
   }
+
+  if (reference.debug) {
+    urlInfo.debug = true
+  }
+  if (reference.expectedType) {
+    urlInfo.typeHint = reference.expectedType
+  }
+  if (reference.expectedSubtype) {
+    urlInfo.subtypeHint = reference.expectedSubtype
+  }
 }
 
 const adjustUrlSite = (urlInfo, { urlGraph, url, line, column }) => {
@@ -902,7 +912,8 @@ const adjustUrlSite = (urlInfo, { urlGraph, url, line, column }) => {
   )
 }
 
-const inferUrlInfoType = (contentType) => {
+const inferUrlInfoType = (urlInfo) => {
+  const { contentType } = urlInfo
   if (contentType === "text/html") {
     return "html"
   }
@@ -910,6 +921,7 @@ const inferUrlInfoType = (contentType) => {
     return "css"
   }
   if (contentType === "text/javascript") {
+    if (urlInfo.typeHint === "js_classic") return "js_classic"
     return "js_module"
   }
   if (contentType === "application/importmap+json") {

@@ -1,3 +1,9 @@
+# 32.2.3
+
+- Ensure web worker urls type is correct during dev
+  - This fix ensure node resolution also on `self.importScripts`
+- Give a better name to jsenv dist file ("jsenv.js" instead of "main.js")
+
 # 32.2.0
 
 - Enable node esm resolution by default on `self.importScripts`

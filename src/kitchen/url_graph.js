@@ -260,6 +260,8 @@ const createUrlInfo = (url) => {
     implicitUrls: new Set(),
     type: undefined, // "html", "css", "js_classic", "js_module", "importmap", "json", "webmanifest", ...
     subtype: undefined, // "worker", "service_worker", "shared_worker" for js, otherwise undefined
+    typeHint: undefined,
+    subtypeHint: undefined,
     contentType: "", // "text/html", "text/css", "text/javascript", "application/json", ...
     url,
     originalUrl: undefined,
@@ -283,6 +285,7 @@ const createUrlInfo = (url) => {
 
     timing: {},
     headers: {},
+    debug: false,
   }
   // Object.preventExtensions(urlInfo) // useful to ensure all properties are declared here
   return urlInfo

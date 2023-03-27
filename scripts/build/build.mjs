@@ -7,7 +7,7 @@ const jsenvRootDirectoryUrl = new URL("../../", import.meta.url)
 await build({
   sourceDirectoryUrl: new URL("./src/", jsenvRootDirectoryUrl),
   entryPoints: {
-    "./main.js": "main.js",
+    "./main.js": "jsenv.js",
   },
   buildDirectoryUrl: new URL("./dist/", jsenvRootDirectoryUrl),
   versioning: false,
