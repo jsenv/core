@@ -1374,68 +1374,76 @@ const applyFileSystemMagicResolution = (
   fileUrl,
   { fileStat, magicDirectoryIndex, magicExtensions },
 ) => {
-  let lastENOENTError = null;
-  const fileStatOrNull = (url) => {
+  const result = {
+    stat: null,
+    url: fileUrl,
+    magicExtension: "",
+    magicDirectoryIndex: false,
+    lastENOENTError: null,
+  };
+
+  if (fileStat === undefined) {
     try {
-      return node_fs.statSync(new URL(url))
+      fileStat = node_fs.statSync(new URL(fileUrl));
     } catch (e) {
       if (e.code === "ENOENT") {
-        lastENOENTError = e;
-        return null
+        result.lastENOENTError = e;
+        fileStat = null;
+      } else {
+        throw e
       }
-      throw e
     }
-  };
-  fileStat = fileStat === undefined ? fileStatOrNull(fileUrl) : fileStat;
+  }
 
   if (fileStat && fileStat.isFile()) {
-    return {
-      found: true,
-      url: fileUrl,
-    }
+    result.stat = fileStat;
+    result.url = fileUrl;
+    return result
   }
   if (fileStat && fileStat.isDirectory()) {
     if (magicDirectoryIndex) {
       const indexFileSuffix = fileUrl.endsWith("/") ? "index" : "/index";
       const indexFileUrl = `${fileUrl}${indexFileSuffix}`;
-      const result = applyFileSystemMagicResolution(indexFileUrl, {
+      const subResult = applyFileSystemMagicResolution(indexFileUrl, {
         magicDirectoryIndex: false,
         magicExtensions,
       });
       return {
         ...result,
+        ...subResult,
         magicDirectoryIndex: true,
       }
     }
-    return {
-      found: true,
-      url: fileUrl,
-      isDirectory: true,
-    }
+    result.stat = fileStat;
+    result.url = fileUrl;
+    return result
   }
+
   if (magicExtensions && magicExtensions.length) {
     const parentUrl = new URL("./", fileUrl).href;
     const urlFilename = urlToFilename(fileUrl);
-    const extensionLeadingToFile = magicExtensions.find((extensionToTry) => {
+    for (const extensionToTry of magicExtensions) {
       const urlCandidate = `${parentUrl}${urlFilename}${extensionToTry}`;
-      const stat = fileStatOrNull(urlCandidate);
-      return stat
-    });
-    if (extensionLeadingToFile) {
-      // magic extension worked
-      return {
-        found: true,
-        url: `${fileUrl}${extensionLeadingToFile}`,
-        magicExtension: extensionLeadingToFile,
+      let stat;
+      try {
+        stat = node_fs.statSync(new URL(urlCandidate));
+      } catch (e) {
+        if (e.code === "ENOENT") {
+          stat = null;
+        } else {
+          throw e
+        }
+      }
+      if (stat) {
+        result.stat = stat;
+        result.url = `${fileUrl}${extensionToTry}`;
+        result.magicExtension = extensionToTry;
+        return result
       }
     }
   }
   // magic extension not found
-  return {
-    found: false,
-    url: fileUrl,
-    lastENOENTError,
-  }
+  return result
 };
 
 const getExtensionsToTry = (magicExtensions, importer) => {
@@ -2450,7 +2458,7 @@ const handleFileUrl = (
     magicDirectoryIndex,
     magicExtensions: getExtensionsToTry(magicExtensions, importer),
   });
-  if (!fileResolution.found) {
+  if (!fileResolution.stat) {
     triggerNotFoundWarning({
       resolver: "filesystem",
       specifier,

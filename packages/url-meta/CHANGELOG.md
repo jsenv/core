@@ -1,3 +1,7 @@
+# 8.1.0
+
+- Fix pattern matching behaviour not working on some pattern involving `"**/"`
+
 # 7.1.0
 
 - Allow `null` in associations

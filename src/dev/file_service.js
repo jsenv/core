@@ -4,7 +4,6 @@ import { bufferToEtag } from "@jsenv/filesystem"
 import { moveUrl, asUrlWithoutSearch } from "@jsenv/urls"
 import { URL_META } from "@jsenv/url-meta"
 
-import { determineJsenvInternalDirectoryUrl } from "../jsenv_internal_directory.js"
 import { watchSourceFiles } from "../watch_source_files.js"
 import { explorerHtmlFileUrl } from "@jsenv/core/src/plugins/explorer/jsenv_plugin_explorer.js"
 import { createUrlGraph } from "@jsenv/core/src/kitchen/url_graph.js"
@@ -40,7 +39,7 @@ export const createFileService = ({
   sourcemaps,
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
-  writeGeneratedFiles,
+  outDirectoryUrl,
 }) => {
   const clientFileChangeCallbackList = []
   const clientFilesPruneCallbackList = []
@@ -90,8 +89,6 @@ export const createFileService = ({
       })
     })
     const clientRuntimeCompat = { [runtimeName]: runtimeVersion }
-    const jsenvInternalDirectoryUrl =
-      determineJsenvInternalDirectoryUrl(sourceDirectoryUrl)
 
     let mainFileUrl
     if (sourceMainFilePath === undefined) {
@@ -105,7 +102,6 @@ export const createFileService = ({
       signal,
       logLevel,
       rootDirectoryUrl: sourceDirectoryUrl,
-      jsenvInternalDirectoryUrl,
       urlGraph,
       dev: true,
       runtimeCompat,
@@ -143,11 +139,9 @@ export const createFileService = ({
       sourcemaps,
       sourcemapsSourcesProtocol,
       sourcemapsSourcesContent,
-      writeGeneratedFiles,
-      outDirectoryUrl: new URL(
-        `${runtimeName}@${runtimeVersion}/`,
-        jsenvInternalDirectoryUrl,
-      ),
+      outDirectoryUrl: outDirectoryUrl
+        ? new URL(`${runtimeName}@${runtimeVersion}/`, outDirectoryUrl)
+        : undefined,
     })
     urlGraph.createUrlInfoCallbackRef.current = (urlInfo) => {
       const { watch } = URL_META.applyAssociations({

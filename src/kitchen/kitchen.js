@@ -28,7 +28,6 @@ export const createKitchen = ({
   logLevel,
 
   rootDirectoryUrl,
-  jsenvInternalDirectoryUrl,
   urlGraph,
   dev = false,
   build = false,
@@ -43,7 +42,6 @@ export const createKitchen = ({
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
   sourcemapsSourcesRelative,
-  writeGeneratedFiles,
   outDirectoryUrl,
 }) => {
   const logger = createLogger({ logLevel })
@@ -51,7 +49,6 @@ export const createKitchen = ({
     signal,
     logger,
     rootDirectoryUrl,
-    jsenvInternalDirectoryUrl,
     urlGraph,
     dev,
     build,
@@ -112,6 +109,7 @@ export const createKitchen = ({
     assert,
     assertNode,
     typePropertyNode,
+    leadsToADirectory = false,
     debug = false,
   }) => {
     if (typeof specifier !== "string") {
@@ -165,6 +163,7 @@ export const createKitchen = ({
       assert,
       assertNode,
       typePropertyNode,
+      leadsToADirectory,
       mutation: null,
       debug,
     }
@@ -658,7 +657,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     )
   }
   const cook = memoizeCook(async (urlInfo, context) => {
-    if (!writeGeneratedFiles || !outDirectoryUrl) {
+    if (!outDirectoryUrl) {
       await _cook(urlInfo, context)
       return
     }

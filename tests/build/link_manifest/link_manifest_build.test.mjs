@@ -9,7 +9,7 @@ const { buildFileContents } = await build({
     "./src/main.html": "main.html",
   },
   buildDirectoryUrl: new URL("./dist/", import.meta.url),
-  writeGeneratedFiles: true,
+  outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
 })
 const { start_url, icons } = JSON.parse(
   buildFileContents["other/manifest.webmanifest"],

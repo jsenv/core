@@ -1,7 +1,7 @@
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { chmod, stat, lstat, readdir, promises, unlink, openSync, closeSync, rmdir, readFile as readFile$1, readFileSync as readFileSync$1, watch, readdirSync, statSync, writeFile as writeFile$1, writeFileSync as writeFileSync$1, mkdirSync, createReadStream, existsSync, realpathSync } from "node:fs";
 import crypto, { createHash } from "node:crypto";
-import { dirname, extname, basename } from "node:path";
+import { dirname, extname } from "node:path";
 import { URL_META, filterV8Coverage } from "./js/v8_coverage.js";
 import process$1, { memoryUsage } from "node:process";
 import os, { networkInterfaces } from "node:os";
@@ -6965,6 +6965,38 @@ const generateAccessControlHeaders = ({
   };
 };
 
+const lookupPackageDirectory = currentUrl => {
+  if (currentUrl === "file:///") {
+    return null;
+  }
+  const packageJsonFileUrl = `${currentUrl}package.json`;
+  if (existsSync(new URL(packageJsonFileUrl))) {
+    return currentUrl;
+  }
+  return lookupPackageDirectory(getParentUrl$1(currentUrl));
+};
+const getParentUrl$1 = url => {
+  if (url.startsWith("file://")) {
+    // With node.js new URL('../', 'file:///C:/').href
+    // returns "file:///C:/" instead of "file:///"
+    const resource = url.slice("file://".length);
+    const slashLastIndex = resource.lastIndexOf("/");
+    if (slashLastIndex === -1) {
+      return url;
+    }
+    const lastCharIndex = resource.length - 1;
+    if (slashLastIndex === lastCharIndex) {
+      const slashBeforeLastIndex = resource.lastIndexOf("/", slashLastIndex - 1);
+      if (slashBeforeLastIndex === -1) {
+        return url;
+      }
+      return `file://${resource.slice(0, slashBeforeLastIndex + 1)}`;
+    }
+    return `file://${resource.slice(0, slashLastIndex + 1)}`;
+  }
+  return new URL(url.endsWith("/") ? "../" : "./", url).href;
+};
+
 const createServerEventsDispatcher = () => {
   const clients = [];
   const MAX_CLIENTS = 100;
@@ -7056,52 +7088,6 @@ const createServerEventsDispatcher = () => {
       });
     }
   };
-};
-
-const lookupPackageDirectory = currentUrl => {
-  if (currentUrl === "file:///") {
-    return null;
-  }
-  const packageJsonFileUrl = `${currentUrl}package.json`;
-  if (existsSync(new URL(packageJsonFileUrl))) {
-    return currentUrl;
-  }
-  return lookupPackageDirectory(getParentUrl$1(currentUrl));
-};
-const getParentUrl$1 = url => {
-  if (url.startsWith("file://")) {
-    // With node.js new URL('../', 'file:///C:/').href
-    // returns "file:///C:/" instead of "file:///"
-    const resource = url.slice("file://".length);
-    const slashLastIndex = resource.lastIndexOf("/");
-    if (slashLastIndex === -1) {
-      return url;
-    }
-    const lastCharIndex = resource.length - 1;
-    if (slashLastIndex === lastCharIndex) {
-      const slashBeforeLastIndex = resource.lastIndexOf("/", slashLastIndex - 1);
-      if (slashBeforeLastIndex === -1) {
-        return url;
-      }
-      return `file://${resource.slice(0, slashBeforeLastIndex + 1)}`;
-    }
-    return `file://${resource.slice(0, slashLastIndex + 1)}`;
-  }
-  return new URL(url.endsWith("/") ? "../" : "./", url).href;
-};
-
-const determineJsenvInternalDirectoryUrl = currentUrl => {
-  const packageDirectoryUrl = lookupPackageDirectory(currentUrl);
-  if (packageDirectoryUrl) {
-    return `${packageDirectoryUrl}.jsenv/${getDirectoryName(packageDirectoryUrl)}/`;
-  }
-  return `${currentUrl}.jsenv/`;
-};
-const getDirectoryName = directoryUrl => {
-  const {
-    pathname
-  } = new URL(directoryUrl);
-  return basename(pathname);
 };
 
 const watchSourceFiles = (sourceDirectoryUrl, callback, {
@@ -7884,18 +7870,19 @@ const createUrlInfoTransformer = ({
     generatedUrlObject.searchParams.delete("as_js_classic_library");
     const urlForSourcemap = generatedUrlObject.href;
     urlInfo.sourcemapGeneratedUrl = generateSourcemapFileUrl(urlForSourcemap);
-    const [sourcemapReference, sourcemapUrlInfo] = injectSourcemapPlaceholder({
-      urlInfo,
-      specifier: urlInfo.sourcemapGeneratedUrl
-    });
-    urlInfo.sourcemapReference = sourcemapReference;
-    sourcemapUrlInfo.isInline = sourcemaps === "inline";
 
     // already loaded during "load" hook (happens during build)
     if (urlInfo.sourcemap) {
+      const [sourcemapReference, sourcemapUrlInfo] = injectSourcemapPlaceholder({
+        urlInfo,
+        specifier: urlInfo.sourcemapGeneratedUrl
+      });
+      sourcemapUrlInfo.isInline = sourcemaps === "inline";
+      urlInfo.sourcemapReference = sourcemapReference;
       urlInfo.sourcemap = normalizeSourcemap(urlInfo, urlInfo.sourcemap);
       return;
     }
+
     // check for existing sourcemap for this content
     const sourcemapFound = SOURCEMAP.readComment({
       contentType: urlInfo.contentType,
@@ -7919,6 +7906,7 @@ const createUrlInfoTransformer = ({
         await context.cook(sourcemapUrlInfo, {
           reference: sourcemapReference
         });
+        sourcemapUrlInfo.isInline = sourcemaps === "inline";
         const sourcemapRaw = JSON.parse(sourcemapUrlInfo.content);
         const sourcemap = normalizeSourcemap(urlInfo, sourcemapRaw);
         urlInfo.sourcemap = sourcemap;
@@ -7926,6 +7914,12 @@ const createUrlInfoTransformer = ({
         logger.error(`Error while handling existing sourcemap: ${e.message}`);
         return;
       }
+    } else {
+      const [, sourcemapUrlInfo] = injectSourcemapPlaceholder({
+        urlInfo,
+        specifier: urlInfo.sourcemapGeneratedUrl
+      });
+      sourcemapUrlInfo.isInline = sourcemaps === "inline";
     }
   };
   const applyIntermediateTransformations = (urlInfo, transformations) => {
@@ -8389,6 +8383,12 @@ const createResolveUrlError = ({
       reason: `no plugin has handled the specifier during "resolveUrl" hook`
     });
   }
+  if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
+    error.message = createDetailedMessage$1(error.message, {
+      "reference trace": reference.trace.message
+    });
+    return error;
+  }
   return createFailedToResolveUrlError({
     reason: `An error occured during specifier resolution`,
     ...detailsFromValueThrown(error)
@@ -8467,6 +8467,9 @@ const createTransformUrlContentError = ({
   urlInfo,
   error
 }) => {
+  if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
+    return error;
+  }
   const createFailedToTransformError = ({
     code = error.code || "TRANSFORM_URL_CONTENT_ERROR",
     reason,
@@ -8751,7 +8754,6 @@ const createKitchen = ({
   signal,
   logLevel,
   rootDirectoryUrl,
-  jsenvInternalDirectoryUrl,
   urlGraph,
   dev = false,
   build = false,
@@ -8767,7 +8769,6 @@ const createKitchen = ({
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
   sourcemapsSourcesRelative,
-  writeGeneratedFiles,
   outDirectoryUrl
 }) => {
   const logger = createLogger({
@@ -8777,7 +8778,6 @@ const createKitchen = ({
     signal,
     logger,
     rootDirectoryUrl,
-    jsenvInternalDirectoryUrl,
     urlGraph,
     dev,
     build,
@@ -8837,6 +8837,7 @@ const createKitchen = ({
     assert,
     assertNode,
     typePropertyNode,
+    leadsToADirectory = false,
     debug = false
   }) => {
     if (typeof specifier !== "string") {
@@ -8890,6 +8891,7 @@ const createKitchen = ({
       assert,
       assertNode,
       typePropertyNode,
+      leadsToADirectory,
       mutation: null,
       debug
     };
@@ -9312,7 +9314,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     });
   };
   const cook = memoizeCook(async (urlInfo, context) => {
-    if (!writeGeneratedFiles || !outDirectoryUrl) {
+    if (!outDirectoryUrl) {
       await _cook(urlInfo, context);
       return;
     }
@@ -10275,17 +10277,6 @@ const parseAndTransformWebmanifestUrls = async (urlInfo, context) => {
   const content = urlInfo.content;
   const manifest = JSON.parse(content);
   const actions = [];
-  const {
-    start_url
-  } = manifest;
-  if (start_url) {
-    if (context.build) {
-      manifest.start_url = "/";
-    } else {
-      const parentUrl = context.reference.parentUrl;
-      manifest.start_url = `${parentUrl.slice(context.rootDirectoryUrl.length)}`;
-    }
-  }
   const {
     icons = []
   } = manifest;
@@ -15227,7 +15218,7 @@ const jsenvPluginAsJsClassicLibrary = ({
         jsModuleUrlInfos: [jsModuleUrlInfo],
         context: {
           ...context,
-          buildDirectoryUrl: context.outDirectoryUrl
+          buildDirectoryUrl: new URL("./", import.meta.url)
         },
         preserveDynamicImport: true
       });
@@ -16956,67 +16947,73 @@ const applyFileSystemMagicResolution = (fileUrl, {
   magicDirectoryIndex,
   magicExtensions
 }) => {
-  let lastENOENTError = null;
-  const fileStatOrNull = url => {
+  const result = {
+    stat: null,
+    url: fileUrl,
+    magicExtension: "",
+    magicDirectoryIndex: false,
+    lastENOENTError: null
+  };
+  if (fileStat === undefined) {
     try {
-      return statSync(new URL(url));
+      fileStat = statSync(new URL(fileUrl));
     } catch (e) {
       if (e.code === "ENOENT") {
-        lastENOENTError = e;
-        return null;
+        result.lastENOENTError = e;
+        fileStat = null;
+      } else {
+        throw e;
       }
-      throw e;
     }
-  };
-  fileStat = fileStat === undefined ? fileStatOrNull(fileUrl) : fileStat;
+  }
   if (fileStat && fileStat.isFile()) {
-    return {
-      found: true,
-      url: fileUrl
-    };
+    result.stat = fileStat;
+    result.url = fileUrl;
+    return result;
   }
   if (fileStat && fileStat.isDirectory()) {
     if (magicDirectoryIndex) {
       const indexFileSuffix = fileUrl.endsWith("/") ? "index" : "/index";
       const indexFileUrl = `${fileUrl}${indexFileSuffix}`;
-      const result = applyFileSystemMagicResolution(indexFileUrl, {
+      const subResult = applyFileSystemMagicResolution(indexFileUrl, {
         magicDirectoryIndex: false,
         magicExtensions
       });
       return {
         ...result,
+        ...subResult,
         magicDirectoryIndex: true
       };
     }
-    return {
-      found: true,
-      url: fileUrl,
-      isDirectory: true
-    };
+    result.stat = fileStat;
+    result.url = fileUrl;
+    return result;
   }
   if (magicExtensions && magicExtensions.length) {
     const parentUrl = new URL("./", fileUrl).href;
     const urlFilename = urlToFilename(fileUrl);
-    const extensionLeadingToFile = magicExtensions.find(extensionToTry => {
+    for (const extensionToTry of magicExtensions) {
       const urlCandidate = `${parentUrl}${urlFilename}${extensionToTry}`;
-      const stat = fileStatOrNull(urlCandidate);
-      return stat;
-    });
-    if (extensionLeadingToFile) {
-      // magic extension worked
-      return {
-        found: true,
-        url: `${fileUrl}${extensionLeadingToFile}`,
-        magicExtension: extensionLeadingToFile
-      };
+      let stat;
+      try {
+        stat = statSync(new URL(urlCandidate));
+      } catch (e) {
+        if (e.code === "ENOENT") {
+          stat = null;
+        } else {
+          throw e;
+        }
+      }
+      if (stat) {
+        result.stat = stat;
+        result.url = `${fileUrl}${extensionToTry}`;
+        result.magicExtension = extensionToTry;
+        return result;
+      }
     }
   }
   // magic extension not found
-  return {
-    found: false,
-    url: fileUrl,
-    lastENOENTError
-  };
+  return result;
 };
 const getExtensionsToTry = (magicExtensions, importer) => {
   if (!magicExtensions) {
@@ -17329,46 +17326,52 @@ const jsenvPluginFileUrls = ({
       const pathnameUsesTrailingSlash = pathname.endsWith("/");
       urlObject.search = "";
       urlObject.hash = "";
-      const foundADirectory = stat && stat.isDirectory();
-      const foundSomething = stat && !foundADirectory;
       // force trailing slash on directories
-      if (foundADirectory && !pathnameUsesTrailingSlash) {
+      if (stat && stat.isDirectory() && !pathnameUsesTrailingSlash) {
         urlObject.pathname = `${pathname}/`;
       }
       // otherwise remove trailing slash if any
-      if (foundSomething && pathnameUsesTrailingSlash) {
+      if (stat && !stat.isDirectory() && pathnameUsesTrailingSlash) {
         // a warning here? (because it's strange to reference a file with a trailing slash)
         urlObject.pathname = pathname.slice(0, -1);
       }
-      if (foundADirectory && directoryReferenceAllowed) {
-        if (
-        // ignore new URL second arg
-        reference.subtype === "new_url_second_arg" ||
-        // ignore root file url
-        reference.url === "file:///") {
-          reference.shouldHandle = false;
+      let url = urlObject.href;
+      const shouldPreserve = stat && stat.isDirectory() && (
+      // ignore new URL second arg
+      reference.subtype === "new_url_second_arg" ||
+      // ignore root file url
+      reference.url === "file:///" || reference.subtype === "new_url_first_arg" && reference.specifier === "./");
+      if (shouldPreserve) {
+        reference.shouldHandle = false;
+      } else {
+        const shouldApplyDilesystemMagicResolution = reference.type === "js_import";
+        if (shouldApplyDilesystemMagicResolution) {
+          const filesystemResolution = applyFileSystemMagicResolution(url, {
+            fileStat: stat,
+            magicDirectoryIndex,
+            magicExtensions: getExtensionsToTry(magicExtensions, reference.parentUrl)
+          });
+          if (filesystemResolution.stat) {
+            stat = filesystemResolution.stat;
+            url = filesystemResolution.url;
+          }
         }
-        reference.data.foundADirectory = true;
-        const directoryFacadeUrl = urlObject.href;
-        const directoryUrlRaw = preserveSymlinks ? directoryFacadeUrl : resolveSymlink(directoryFacadeUrl);
-        const directoryUrl = `${directoryUrlRaw}${search}${hash}`;
-        return directoryUrl;
+        if (stat && stat.isDirectory()) {
+          const directoryAllowed = reference.type === "filesystem" || typeof directoryReferenceAllowed === "function" && directoryReferenceAllowed(reference) || directoryReferenceAllowed;
+          if (!directoryAllowed) {
+            const error = new Error("Reference leads to a directory");
+            error.code = "DIRECTORY_REFERENCE_NOT_ALLOWED";
+            throw error;
+          }
+        }
       }
-      const url = urlObject.href;
-      const filesystemResolution = applyFileSystemMagicResolution(url, {
-        fileStat: stat,
-        magicDirectoryIndex,
-        magicExtensions: getExtensionsToTry(magicExtensions, reference.parentUrl)
-      });
-      if (!filesystemResolution.found) {
-        reference.data.foundADirectory = foundADirectory;
-        return null;
+      reference.leadsToADirectory = stat && stat.isDirectory();
+      if (stat) {
+        const urlRaw = preserveSymlinks ? url : resolveSymlink(url);
+        const resolvedUrl = `${urlRaw}${search}${hash}`;
+        return resolvedUrl;
       }
-      reference.data.foundADirectory = filesystemResolution.isDirectory;
-      const fileFacadeUrl = filesystemResolution.url;
-      const fileUrlRaw = preserveSymlinks ? fileFacadeUrl : resolveSymlink(fileFacadeUrl);
-      const fileUrl = `${fileUrlRaw}${search}${hash}`;
-      return fileUrl;
+      return null;
     }
   }, {
     name: "jsenv:filesystem_resolution",
@@ -17413,26 +17416,21 @@ const jsenvPluginFileUrls = ({
         return null;
       }
       const urlObject = new URL(urlInfo.url);
-      if (context.reference.data.foundADirectory) {
-        if (directoryReferenceAllowed) {
-          const directoryEntries = readdirSync(urlObject);
-          let filename;
-          if (context.reference.type === "filesystem") {
-            const parentUrlInfo = context.urlGraph.getUrlInfo(context.reference.parentUrl);
-            filename = `${parentUrlInfo.filename}${context.reference.specifier}/`;
-          } else {
-            filename = `${urlToFilename$1(urlInfo.url)}/`;
-          }
-          return {
-            type: "directory",
-            contentType: "application/json",
-            content: JSON.stringify(directoryEntries, null, "  "),
-            filename
-          };
+      if (context.reference.leadsToADirectory) {
+        const directoryEntries = readdirSync(urlObject);
+        let filename;
+        if (context.reference.type === "filesystem") {
+          const parentUrlInfo = context.urlGraph.getUrlInfo(context.reference.parentUrl);
+          filename = `${parentUrlInfo.filename}${context.reference.specifier}/`;
+        } else {
+          filename = `${urlToFilename$1(urlInfo.url)}/`;
         }
-        const error = new Error("found a directory on filesystem");
-        error.code = "DIRECTORY_REFERENCE_NOT_ALLOWED";
-        throw error;
+        return {
+          type: "directory",
+          contentType: "application/json",
+          content: JSON.stringify(directoryEntries, null, "  "),
+          filename
+        };
       }
       const fileBuffer = readFileSync$1(urlObject);
       const contentType = CONTENT_TYPE.fromUrlExtension(urlInfo.url);
@@ -20883,7 +20881,7 @@ const build = async ({
   watch = false,
   directoryToClean,
   writeOnFileSystem = true,
-  writeGeneratedFiles = false,
+  outDirectoryUrl,
   assetManifest = versioningMethod === "filename",
   assetManifestFileRelativeUrl = "asset-manifest.json",
   ...rest
@@ -20895,6 +20893,17 @@ const build = async ({
       throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param`);
     }
     sourceDirectoryUrl = assertAndNormalizeDirectoryUrl(sourceDirectoryUrl, "sourceDirectoryUrl");
+    buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl, "buildDirectoryUrl");
+    if (outDirectoryUrl === undefined) {
+      if (!process.env.CI) {
+        const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);
+        if (packageDirectoryUrl) {
+          outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`;
+        }
+      }
+    } else if (outDirectoryUrl !== null && outDirectoryUrl !== false) {
+      outDirectoryUrl = assertAndNormalizeDirectoryUrl(outDirectoryUrl, "outDirectoryUrl");
+    }
     if (typeof entryPoints !== "object" || entryPoints === null) {
       throw new TypeError(`entryPoints must be an object, got ${entryPoints}`);
     }
@@ -20911,7 +20920,6 @@ const build = async ({
         throw new TypeError(`entryPoints values must be plain strings (no "/"), found "${value}" on key "${key}"`);
       }
     });
-    buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl, "buildDirectoryUrl");
     if (!["filename", "search_param"].includes(versioningMethod)) {
       throw new TypeError(`versioningMethod must be "filename" or "search_param", got ${versioning}`);
     }
@@ -20935,7 +20943,6 @@ const build = async ({
       directoryToClean = new URL(assetsDirectory, buildDirectoryUrl).href;
     }
   }
-  const jsenvInternalDirectoryUrl = determineJsenvInternalDirectoryUrl(sourceDirectoryUrl);
   const asFormattedBuildUrl = (generatedUrl, reference) => {
     if (base === "./") {
       const urlRelativeToParent = urlToRelativeUrl(generatedUrl, reference.parentUrl === sourceDirectoryUrl ? buildDirectoryUrl : reference.parentUrl);
@@ -20989,7 +20996,6 @@ build ${entryPointKeys.length} entry points`);
       signal,
       logLevel,
       rootDirectoryUrl: sourceDirectoryUrl,
-      jsenvInternalDirectoryUrl,
       urlGraph: rawGraph,
       build: true,
       runtimeCompat,
@@ -21024,8 +21030,7 @@ build ${entryPointKeys.length} entry points`);
       })],
       sourcemaps,
       sourcemapsSourcesContent,
-      writeGeneratedFiles,
-      outDirectoryUrl: new URL("build/", jsenvInternalDirectoryUrl)
+      outDirectoryUrl: outDirectoryUrl ? new URL("build/", outDirectoryUrl) : undefined
     });
     const buildUrlsGenerator = createBuildUrlsGenerator({
       buildDirectoryUrl,
@@ -21053,7 +21058,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     const finalGraphKitchen = createKitchen({
       logLevel,
       rootDirectoryUrl: buildDirectoryUrl,
-      jsenvInternalDirectoryUrl,
       urlGraph: finalGraph,
       build: true,
       runtimeCompat,
@@ -21299,8 +21303,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       sourcemaps,
       sourcemapsSourcesContent,
       sourcemapsSourcesRelative: !versioning,
-      writeGeneratedFiles,
-      outDirectoryUrl: new URL("postbuild/", jsenvInternalDirectoryUrl)
+      outDirectoryUrl: outDirectoryUrl ? new URL("postbuild/", outDirectoryUrl) : undefined
     });
     const finalEntryUrls = [];
     {
@@ -21308,8 +21311,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         disabled: logger.levels.debug || !logger.levels.info
       });
       try {
-        if (writeGeneratedFiles) {
-          await ensureEmptyDirectory(new URL(`build/`, sourceDirectoryUrl));
+        if (outDirectoryUrl) {
+          await ensureEmptyDirectory(new URL(`build/`, outDirectoryUrl));
         }
         const rawUrlGraphLoader = createUrlGraphLoader(rawGraphKitchen.kitchenContext);
         Object.keys(entryPoints).forEach(key => {
@@ -21522,8 +21525,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           disabled: logger.levels.debug || !logger.levels.info
         });
         try {
-          if (writeGeneratedFiles) {
-            await ensureEmptyDirectory(new URL(`postbuild/`, jsenvInternalDirectoryUrl));
+          if (outDirectoryUrl) {
+            await ensureEmptyDirectory(new URL(`postbuild/`, outDirectoryUrl));
           }
           const finalUrlGraphLoader = createUrlGraphLoader(finalGraphKitchen.kitchenContext);
           entryUrls.forEach(entryUrl => {
@@ -21723,7 +21726,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           const versioningKitchen = createKitchen({
             logLevel: logger.level,
             rootDirectoryUrl: buildDirectoryUrl,
-            jsenvInternalDirectoryUrl,
             urlGraph: finalGraph,
             build: true,
             runtimeCompat,
@@ -21815,8 +21817,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             sourcemaps,
             sourcemapsSourcesContent,
             sourcemapsSourcesRelative: true,
-            writeGeneratedFiles,
-            outDirectoryUrl: new URL("postbuild/", jsenvInternalDirectoryUrl)
+            outDirectoryUrl: outDirectoryUrl ? new URL("postbuild/", outDirectoryUrl) : undefined
           });
           const versioningUrlGraphLoader = createUrlGraphLoader(versioningKitchen.kitchenContext);
           finalEntryUrls.forEach(finalEntryUrl => {
@@ -22344,7 +22345,7 @@ const createFileService = ({
   sourcemaps,
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
-  writeGeneratedFiles
+  outDirectoryUrl
 }) => {
   const clientFileChangeCallbackList = [];
   const clientFilesPruneCallbackList = [];
@@ -22393,7 +22394,6 @@ const createFileService = ({
     const clientRuntimeCompat = {
       [runtimeName]: runtimeVersion
     };
-    const jsenvInternalDirectoryUrl = determineJsenvInternalDirectoryUrl(sourceDirectoryUrl);
     let mainFileUrl;
     if (sourceMainFilePath === undefined) {
       mainFileUrl = explorer ? String(explorerHtmlFileUrl) : String(new URL("./index.html", sourceDirectoryUrl));
@@ -22404,7 +22404,6 @@ const createFileService = ({
       signal,
       logLevel,
       rootDirectoryUrl: sourceDirectoryUrl,
-      jsenvInternalDirectoryUrl,
       urlGraph,
       dev: true,
       runtimeCompat,
@@ -22431,8 +22430,7 @@ const createFileService = ({
       sourcemaps,
       sourcemapsSourcesProtocol,
       sourcemapsSourcesContent,
-      writeGeneratedFiles,
-      outDirectoryUrl: new URL(`${runtimeName}@${runtimeVersion}/`, jsenvInternalDirectoryUrl)
+      outDirectoryUrl: outDirectoryUrl ? new URL(`${runtimeName}@${runtimeVersion}/`, outDirectoryUrl) : undefined
     });
     urlGraph.createUrlInfoCallbackRef.current = urlInfo => {
       const {
@@ -22778,9 +22776,7 @@ const startDevServer = async ({
   sourcemaps = "inline",
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
-  // no real need to write files during github workflow
-  // and mitigates https://github.com/actions/runner-images/issues/3885
-  writeGeneratedFiles = !process.env.CI,
+  outDirectoryUrl,
   ...rest
 }) => {
   // params type checking
@@ -22790,6 +22786,16 @@ const startDevServer = async ({
       throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param`);
     }
     sourceDirectoryUrl = assertAndNormalizeDirectoryUrl(sourceDirectoryUrl, "sourceDirectoryUrl");
+    if (outDirectoryUrl === undefined) {
+      if (!process.env.CI) {
+        const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);
+        if (packageDirectoryUrl) {
+          outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`;
+        }
+      }
+    } else if (outDirectoryUrl !== null && outDirectoryUrl !== false) {
+      outDirectoryUrl = assertAndNormalizeDirectoryUrl(outDirectoryUrl, "outDirectoryUrl");
+    }
   }
   const logger = createLogger({
     logLevel
@@ -22882,7 +22888,7 @@ const startDevServer = async ({
         sourcemaps,
         sourcemapsSourcesProtocol,
         sourcemapsSourcesContent,
-        writeGeneratedFiles
+        outDirectoryUrl
       }),
       handleWebsocket: (websocket, {
         request
@@ -24670,7 +24676,7 @@ const executeTestPlan = async ({
           await import(devServerModuleUrl);
           delete process.env.IMPORTED_BY_TEST_PLAN;
         } catch (e) {
-          if (e.code === "MODULE_NOT_FOUND") {
+          if (e.code === "ERR_MODULE_NOT_FOUND") {
             throw new Error(`Cannot find file responsible to start dev server at "${devServerModuleUrl}"`);
           }
           throw e;

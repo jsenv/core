@@ -19,7 +19,7 @@ await executeTestPlan({
     },
   },
   devServerOrigin: "http://localhost:3401",
-  devServerModuleUrl: new URL("./start_dev_server.mjs", import.meta.url),
+  devServerModuleUrl: new URL("./dev.mjs", import.meta.url),
   coverageEnabled: process.argv.includes("--coverage"),
   coverageMethodForBrowsers: "istanbul",
 })

@@ -9,6 +9,7 @@ import {
 } from "@jsenv/server"
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js"
 
+import { lookupPackageDirectory } from "../lookup_package_directory.js"
 import { createServerEventsDispatcher } from "@jsenv/core/src/plugins/server_events/server_events_dispatcher.js"
 import { defaultRuntimeCompat } from "@jsenv/core/src/build/build.js"
 import { createFileService } from "./file_service.js"
@@ -62,9 +63,7 @@ export const startDevServer = async ({
   sourcemaps = "inline",
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
-  // no real need to write files during github workflow
-  // and mitigates https://github.com/actions/runner-images/issues/3885
-  writeGeneratedFiles = !process.env.CI,
+  outDirectoryUrl,
   ...rest
 }) => {
   // params type checking
@@ -79,6 +78,19 @@ export const startDevServer = async ({
       sourceDirectoryUrl,
       "sourceDirectoryUrl",
     )
+    if (outDirectoryUrl === undefined) {
+      if (!process.env.CI) {
+        const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl)
+        if (packageDirectoryUrl) {
+          outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`
+        }
+      }
+    } else if (outDirectoryUrl !== null && outDirectoryUrl !== false) {
+      outDirectoryUrl = assertAndNormalizeDirectoryUrl(
+        outDirectoryUrl,
+        "outDirectoryUrl",
+      )
+    }
   }
 
   const logger = createLogger({ logLevel })
@@ -182,7 +194,7 @@ export const startDevServer = async ({
           sourcemaps,
           sourcemapsSourcesProtocol,
           sourcemapsSourcesContent,
-          writeGeneratedFiles,
+          outDirectoryUrl,
         }),
         handleWebsocket: (websocket, { request }) => {
           if (request.headers["sec-websocket-protocol"] === "jsenv") {

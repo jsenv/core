@@ -17,7 +17,7 @@ const test = async ({ name, ...rest }) => {
     },
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
     runtimeCompat: { chrome: "90" },
-    writeGeneratedFiles: true,
+    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...rest,
   })
   const expected = readSnapshotsFromDirectory(snapshotsDirectoryUrl)

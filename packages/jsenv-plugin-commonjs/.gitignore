@@ -1,3 +1,4 @@
+/.cache/**
 /.jsenv/
 /.coverage/
 /node_modules/

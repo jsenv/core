@@ -5,17 +5,19 @@ import { build } from "@jsenv/core"
 const jsenvRootDirectoryUrl = new URL("../../", import.meta.url)
 
 await build({
-  sourceDirectoryUrl: new URL("src/", jsenvRootDirectoryUrl),
+  sourceDirectoryUrl: new URL("./src/", jsenvRootDirectoryUrl),
   entryPoints: {
     "./main.js": "main.js",
   },
-  buildDirectoryUrl: new URL("dist/", jsenvRootDirectoryUrl),
+  buildDirectoryUrl: new URL("./dist/", jsenvRootDirectoryUrl),
   versioning: false,
   assetManifest: false,
   runtimeCompat: {
     node: "16.14",
   },
-  directoryReferenceAllowed: true,
+  directoryReferenceAllowed: (reference) => {
+    return reference.url.includes("/babel_helpers/")
+  },
   scenarioPlaceholders: false,
   urlAnalysis: {
     include: {
@@ -51,15 +53,14 @@ await build({
     }),
     jsenvPluginBundling(),
   ],
-  // writeGeneratedFiles: true,
 })
 
 // "s.js" is used in the build files, it must be compatible as much as possible
 // so we convert async/await, arrow function, ... to be compatible with
 // old browsers
 await build({
-  sourceDirectoryUrl: new URL("src/", jsenvRootDirectoryUrl),
-  buildDirectoryUrl: new URL("dist/js/", jsenvRootDirectoryUrl),
+  sourceDirectoryUrl: new URL("./src/", jsenvRootDirectoryUrl),
+  buildDirectoryUrl: new URL("./dist/js/", jsenvRootDirectoryUrl),
   entryPoints: {
     "./plugins/transpilation/as_js_classic/client/s.js?as_js_classic_library":
       "s.js",

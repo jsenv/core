@@ -13,7 +13,7 @@ const test = async (params) => {
     },
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
     versioning: false,
-    writeGeneratedFiles: true,
+    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
   })
   const server = await startFileServer({

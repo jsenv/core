@@ -18,66 +18,49 @@ import { URL_META } from "@jsenv/url-meta"
 }
 
 {
-  const associations = {
-    whatever: {
-      "file:///a/b/": 42,
-    },
-  }
-
-  {
-    const actual = URL_META.urlChildMayMatch({
-      url: "file:///a/",
-      associations,
+  const test = (url) =>
+    URL_META.urlChildMayMatch({
+      url,
+      associations: {
+        whatever: {
+          "file:///a/b/": 42,
+        },
+      },
       predicate: ({ whatever }) => whatever === 42,
     })
-    const expected = true
-    assert({ actual, expected })
+  const actual = {
+    one: test("file:///a/"),
+    two: test("file:///a/b/"),
+    three: test("file:///a/c/"),
   }
-  {
-    const actual = URL_META.urlChildMayMatch({
-      url: "file:///a/b/",
-      associations,
-      predicate: ({ whatever }) => whatever === 42,
-    })
-    const expected = true
-    assert({ actual, expected })
+  const expected = {
+    one: true,
+    two: true,
+    three: false,
   }
-  {
-    const actual = URL_META.urlChildMayMatch({
-      url: "file:///a/c/",
-      associations,
-      predicate: ({ whatever }) => whatever === 42,
-    })
-    const expected = false
-    assert({ actual, expected })
-  }
+  assert({ actual, expected })
 }
 
 {
-  const associations = {
-    whatever: {
-      "file:///a/b*/c/": 42,
-    },
-  }
-
-  {
-    const actual = URL_META.urlChildMayMatch({
-      url: "file:///a/bZ/",
-      associations,
+  const test = (url) =>
+    URL_META.urlChildMayMatch({
+      url,
+      associations: {
+        whatever: {
+          "file:///a/b*/c/": 42,
+        },
+      },
       predicate: ({ whatever }) => whatever === 42,
     })
-    const expected = true
-    assert({ actual, expected })
+  const actual = {
+    one: test("file:///a/bZ/"),
+    two: test("file:///a/bZ/c/"),
   }
-  {
-    const actual = URL_META.urlChildMayMatch({
-      url: "file:///a/bZ/c/",
-      associations,
-      predicate: ({ whatever }) => whatever === 42,
-    })
-    const expected = true
-    assert({ actual, expected })
+  const expected = {
+    one: true,
+    two: true,
   }
+  assert({ actual, expected })
 }
 
 {
@@ -125,30 +108,25 @@ import { URL_META } from "@jsenv/url-meta"
 }
 
 {
-  const associations = {
-    whatever: {
-      "file:///**/*.js": 42,
-    },
-  }
-
-  {
-    const actual = URL_META.urlChildMayMatch({
-      url: "file:///src/folder/",
-      associations,
+  const test = (url) =>
+    URL_META.urlChildMayMatch({
+      url,
+      associations: {
+        whatever: {
+          "file:///**/*.js": 42,
+        },
+      },
       predicate: ({ whatever }) => whatever === 42,
     })
-    const expected = true
-    assert({ actual, expected })
+  const actual = {
+    one: test("file:///src/folder/"),
+    two: test("file:///src/folder/subfolder/"),
   }
-  {
-    const actual = URL_META.urlChildMayMatch({
-      url: "file:///src/folder/subfolder/",
-      associations,
-      predicate: ({ whatever }) => whatever === 42,
-    })
-    const expected = true
-    assert({ actual, expected })
+  const expected = {
+    one: true,
+    two: true,
   }
+  assert({ actual, expected })
 }
 
 {

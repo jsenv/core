@@ -4,8 +4,6 @@ import { ensureWindowsDriveLetter } from "@jsenv/filesystem"
 import {
   setUrlExtension,
   setUrlFilename,
-  urlIsInsideOf,
-  moveUrl,
   urlToExtension,
   urlToBasename,
 } from "@jsenv/urls"
@@ -15,33 +13,26 @@ import { reuseOrCreateCompiledFile } from "./compile_cache/compiled_file_cache.j
 export const commonJsToJsModule = ({
   logLevel,
   filesystemCache = true,
-  rootDirectoryUrl,
-  jsenvInternalDirectoryUrl,
+  compileCacheDirectoryUrl,
   sourceFileUrl,
   processEnvNodeEnv,
   ...rest
 }) => {
   if (filesystemCache) {
-    const compileDirectoryUrl = new URL(
-      "cjs_to_esm/",
-      jsenvInternalDirectoryUrl,
-    )
     const compiledFileUrl = determineCompiledFileUrl({
       url: sourceFileUrl,
-      rootDirectoryUrl,
-      compileDirectoryUrl,
+      compileCacheDirectoryUrl,
       processEnvNodeEnv,
     })
 
     return reuseOrCreateCompiledFile({
       logLevel,
-      compileDirectoryUrl,
+      compileCacheDirectoryUrl,
       sourceFileUrl,
       compiledFileUrl,
       compile: async () => {
         const { content, sourcemap } = await commonJsToJsModuleRaw({
           logLevel,
-          rootDirectoryUrl,
           sourceFileUrl,
           processEnvNodeEnv,
           ...rest,
@@ -63,7 +54,6 @@ export const commonJsToJsModule = ({
   }
   return commonJsToJsModuleRaw({
     logLevel,
-    rootDirectoryUrl,
     sourceFileUrl,
     ...rest,
   })
@@ -107,23 +97,15 @@ const extractCompileAssets = ({
 
 const determineCompiledFileUrl = ({
   url,
-  rootDirectoryUrl,
-  compileDirectoryUrl,
+  compileCacheDirectoryUrl,
   processEnvNodeEnv,
 }) => {
-  if (!urlIsInsideOf(url, rootDirectoryUrl)) {
-    const fsRootUrl = ensureWindowsDriveLetter("file:///", url)
-    url = `${rootDirectoryUrl}@fs/${url.slice(fsRootUrl.length)}`
-  }
   if (processEnvNodeEnv) {
     const basename = urlToBasename(url)
     const extension = urlToExtension(url)
     url = setUrlFilename(url, `${basename}.${processEnvNodeEnv}${extension}`)
   }
-  return moveUrl({
-    url,
-    from: rootDirectoryUrl,
-    to: compileDirectoryUrl,
-    preferAbsolute: true,
-  })
+  const fsRootUrl = ensureWindowsDriveLetter("file:///", url)
+  url = `${compileCacheDirectoryUrl}@fs/${url.slice(fsRootUrl.length)}`
+  return url
 }

@@ -48,7 +48,7 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
           },
         }),
       ],
-      writeGeneratedFiles: true,
+      outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
       ...rest,
     })
   }

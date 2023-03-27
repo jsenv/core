@@ -53,7 +53,7 @@ import {
   findHtmlNode,
 } from "@jsenv/ast"
 
-import { determineJsenvInternalDirectoryUrl } from "../jsenv_internal_directory.js"
+import { lookupPackageDirectory } from "../lookup_package_directory.js"
 import { watchSourceFiles } from "../watch_source_files.js"
 import { createUrlGraph } from "../kitchen/url_graph.js"
 import { createKitchen } from "../kitchen/kitchen.js"
@@ -153,7 +153,7 @@ export const build = async ({
 
   directoryToClean,
   writeOnFileSystem = true,
-  writeGeneratedFiles = false,
+  outDirectoryUrl,
   assetManifest = versioningMethod === "filename",
   assetManifestFileRelativeUrl = "asset-manifest.json",
   ...rest
@@ -170,6 +170,23 @@ export const build = async ({
       sourceDirectoryUrl,
       "sourceDirectoryUrl",
     )
+    buildDirectoryUrl = assertAndNormalizeDirectoryUrl(
+      buildDirectoryUrl,
+      "buildDirectoryUrl",
+    )
+    if (outDirectoryUrl === undefined) {
+      if (!process.env.CI) {
+        const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl)
+        if (packageDirectoryUrl) {
+          outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`
+        }
+      }
+    } else if (outDirectoryUrl !== null && outDirectoryUrl !== false) {
+      outDirectoryUrl = assertAndNormalizeDirectoryUrl(
+        outDirectoryUrl,
+        "outDirectoryUrl",
+      )
+    }
 
     if (typeof entryPoints !== "object" || entryPoints === null) {
       throw new TypeError(`entryPoints must be an object, got ${entryPoints}`)
@@ -193,10 +210,6 @@ export const build = async ({
         )
       }
     })
-    buildDirectoryUrl = assertAndNormalizeDirectoryUrl(
-      buildDirectoryUrl,
-      "buildDirectoryUrl",
-    )
     if (!["filename", "search_param"].includes(versioningMethod)) {
       throw new TypeError(
         `versioningMethod must be "filename" or "search_param", got ${versioning}`,
@@ -227,8 +240,6 @@ export const build = async ({
       directoryToClean = new URL(assetsDirectory, buildDirectoryUrl).href
     }
   }
-  const jsenvInternalDirectoryUrl =
-    determineJsenvInternalDirectoryUrl(sourceDirectoryUrl)
 
   const asFormattedBuildUrl = (generatedUrl, reference) => {
     if (base === "./") {
@@ -299,7 +310,6 @@ build ${entryPointKeys.length} entry points`)
       signal,
       logLevel,
       rootDirectoryUrl: sourceDirectoryUrl,
-      jsenvInternalDirectoryUrl,
       urlGraph: rawGraph,
       build: true,
       runtimeCompat,
@@ -342,8 +352,9 @@ build ${entryPointKeys.length} entry points`)
       ],
       sourcemaps,
       sourcemapsSourcesContent,
-      writeGeneratedFiles,
-      outDirectoryUrl: new URL("build/", jsenvInternalDirectoryUrl),
+      outDirectoryUrl: outDirectoryUrl
+        ? new URL("build/", outDirectoryUrl)
+        : undefined,
     })
 
     const buildUrlsGenerator = createBuildUrlsGenerator({
@@ -373,7 +384,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     const finalGraphKitchen = createKitchen({
       logLevel,
       rootDirectoryUrl: buildDirectoryUrl,
-      jsenvInternalDirectoryUrl,
       urlGraph: finalGraph,
       build: true,
       runtimeCompat,
@@ -663,8 +673,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       sourcemaps,
       sourcemapsSourcesContent,
       sourcemapsSourcesRelative: !versioning,
-      writeGeneratedFiles,
-      outDirectoryUrl: new URL("postbuild/", jsenvInternalDirectoryUrl),
+      outDirectoryUrl: outDirectoryUrl
+        ? new URL("postbuild/", outDirectoryUrl)
+        : undefined,
     })
     const finalEntryUrls = []
 
@@ -673,8 +684,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         disabled: logger.levels.debug || !logger.levels.info,
       })
       try {
-        if (writeGeneratedFiles) {
-          await ensureEmptyDirectory(new URL(`build/`, sourceDirectoryUrl))
+        if (outDirectoryUrl) {
+          await ensureEmptyDirectory(new URL(`build/`, outDirectoryUrl))
         }
         const rawUrlGraphLoader = createUrlGraphLoader(
           rawGraphKitchen.kitchenContext,
@@ -918,10 +929,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           disabled: logger.levels.debug || !logger.levels.info,
         })
         try {
-          if (writeGeneratedFiles) {
-            await ensureEmptyDirectory(
-              new URL(`postbuild/`, jsenvInternalDirectoryUrl),
-            )
+          if (outDirectoryUrl) {
+            await ensureEmptyDirectory(new URL(`postbuild/`, outDirectoryUrl))
           }
           const finalUrlGraphLoader = createUrlGraphLoader(
             finalGraphKitchen.kitchenContext,
@@ -1149,7 +1158,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           const versioningKitchen = createKitchen({
             logLevel: logger.level,
             rootDirectoryUrl: buildDirectoryUrl,
-            jsenvInternalDirectoryUrl,
             urlGraph: finalGraph,
             build: true,
             runtimeCompat,
@@ -1265,8 +1273,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             sourcemaps,
             sourcemapsSourcesContent,
             sourcemapsSourcesRelative: true,
-            writeGeneratedFiles,
-            outDirectoryUrl: new URL("postbuild/", jsenvInternalDirectoryUrl),
+            outDirectoryUrl: outDirectoryUrl
+              ? new URL("postbuild/", outDirectoryUrl)
+              : undefined,
           })
           const versioningUrlGraphLoader = createUrlGraphLoader(
             versioningKitchen.kitchenContext,

@@ -13,7 +13,7 @@ const { lockForResource } = createLockRegistry()
 
 export const reuseOrCreateCompiledFile = async ({
   logLevel,
-  compileDirectoryUrl,
+  compileCacheDirectoryUrl,
   sourceFileUrl,
   compiledFileUrl,
   compileCacheStrategy,
@@ -21,7 +21,7 @@ export const reuseOrCreateCompiledFile = async ({
   compile,
 }) => {
   const logger = createLogger({ logLevel })
-  await initCompileDirectory({ logger, compileDirectoryUrl })
+  await initCompileCacheDirectory({ logger, compileCacheDirectoryUrl })
   sourceFileUrl = assertAndNormalizeFileUrl(sourceFileUrl)
   if (typeof compile !== "function") {
     throw new TypeError(`compile must be a function, got ${compile}`)
@@ -107,15 +107,18 @@ export const reuseOrCreateCompiledFile = async ({
 }
 
 const initalized = {}
-const initCompileDirectory = async ({ logger, compileDirectoryUrl }) => {
-  if (initalized[compileDirectoryUrl]) {
+const initCompileCacheDirectory = async ({
+  logger,
+  compileCacheDirectoryUrl,
+}) => {
+  if (initalized[compileCacheDirectoryUrl]) {
     return
   }
-  initalized[compileDirectoryUrl] = true
-  logger.debug(`check compile directory at ${compileDirectoryUrl}`)
+  initalized[compileCacheDirectoryUrl] = true
+  logger.debug(`check compile directory at ${compileCacheDirectoryUrl}`)
   const compileContextJsonFileUrl = new URL(
     "./__compile_context__.json",
-    compileDirectoryUrl,
+    compileCacheDirectoryUrl,
   )
   const version = JSON.parse(
     readFileSync(new URL("../../package.json", import.meta.url)),
@@ -132,7 +135,7 @@ const initCompileDirectory = async ({ logger, compileDirectoryUrl }) => {
     } else {
       logger.debug(`${UNICODE.INFO} create an empty directory`)
     }
-    await ensureEmptyDirectory(compileDirectoryUrl)
+    await ensureEmptyDirectory(compileCacheDirectoryUrl)
     writeFileSync(
       compileContextJsonFileUrl,
       JSON.stringify({ version }, null, "  "),

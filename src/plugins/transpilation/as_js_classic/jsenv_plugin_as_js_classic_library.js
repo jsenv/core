@@ -49,7 +49,7 @@ export const jsenvPluginAsJsClassicLibrary = ({
         jsModuleUrlInfos: [jsModuleUrlInfo],
         context: {
           ...context,
-          buildDirectoryUrl: context.outDirectoryUrl,
+          buildDirectoryUrl: new URL("./", import.meta.url),
         },
         preserveDynamicImport: true,
       })

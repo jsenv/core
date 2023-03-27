@@ -4,21 +4,19 @@ import { build } from "@jsenv/core"
 const test = async (params) => {
   await build({
     logLevel: "off",
-    rootDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
+    sourceDirectoryUrl: new URL("./client/", import.meta.url),
     entryPoints: {
       "./main.noeslint.html": "main.html",
     },
-    writeGeneratedFiles: true,
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
+    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
   })
 }
 
 try {
   await test({
-    runtimeCompat: {
-      chrome: "64",
-    },
+    runtimeCompat: { chrome: "64" },
   })
   throw new Error("should throw")
 } catch (e) {

@@ -13,7 +13,7 @@ const test = async ({ expectedUrl, ...rest }) => {
       "./main.html": "main.html",
     },
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
-    writeGeneratedFiles: true,
+    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     versioning: false,
     ...rest,
   })

@@ -13,7 +13,8 @@ const test = async (params) => {
       "./main.html": "main.html",
     },
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
-    writeGeneratedFiles: true,
+    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
+    runtimeCompat: { chrome: "98" },
     ...params,
   })
   const server = await startFileServer({
@@ -33,9 +34,10 @@ const test = async (params) => {
   }
   const expected = {
     returnValue: {
-      directoryUrl: `${server.origin}/src/?v=7e881609`,
+      directoryUrl: `${server.origin}/src/?v=4ab9eae5`,
     },
-    jsFileContent: `console.log("Hello");`,
+    jsFileContent: `console.log("Hello")
+`,
   }
   assert({ actual, expected })
 }
@@ -46,12 +48,8 @@ try {
   throw new Error("should throw")
 } catch (e) {
   const actual = e.message
-  const expected = `Failed to fetch url content
---- reason ---
-found a directory on filesystem
---- url ---
-${new URL("./client/src/", import.meta.url).href}
---- url reference trace ---
+  const expected = `Reference leads to a directory
+--- reference trace ---
 ${new URL("./client/main.html", import.meta.url)}:15:40
   14 |     <script type="module">
 > 15 |       const directoryUrl = new URL("./src/", import.meta.url).href

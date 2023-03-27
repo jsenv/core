@@ -92,18 +92,21 @@ export const createUrlInfoTransformer = ({
     generatedUrlObject.searchParams.delete("as_js_classic_library")
     const urlForSourcemap = generatedUrlObject.href
     urlInfo.sourcemapGeneratedUrl = generateSourcemapFileUrl(urlForSourcemap)
-    const [sourcemapReference, sourcemapUrlInfo] = injectSourcemapPlaceholder({
-      urlInfo,
-      specifier: urlInfo.sourcemapGeneratedUrl,
-    })
-    urlInfo.sourcemapReference = sourcemapReference
-    sourcemapUrlInfo.isInline = sourcemaps === "inline"
 
     // already loaded during "load" hook (happens during build)
     if (urlInfo.sourcemap) {
+      const [sourcemapReference, sourcemapUrlInfo] = injectSourcemapPlaceholder(
+        {
+          urlInfo,
+          specifier: urlInfo.sourcemapGeneratedUrl,
+        },
+      )
+      sourcemapUrlInfo.isInline = sourcemaps === "inline"
+      urlInfo.sourcemapReference = sourcemapReference
       urlInfo.sourcemap = normalizeSourcemap(urlInfo, urlInfo.sourcemap)
       return
     }
+
     // check for existing sourcemap for this content
     const sourcemapFound = SOURCEMAP.readComment({
       contentType: urlInfo.contentType,
@@ -120,6 +123,7 @@ export const createUrlInfoTransformer = ({
       })
       try {
         await context.cook(sourcemapUrlInfo, { reference: sourcemapReference })
+        sourcemapUrlInfo.isInline = sourcemaps === "inline"
         const sourcemapRaw = JSON.parse(sourcemapUrlInfo.content)
         const sourcemap = normalizeSourcemap(urlInfo, sourcemapRaw)
         urlInfo.sourcemap = sourcemap
@@ -127,6 +131,12 @@ export const createUrlInfoTransformer = ({
         logger.error(`Error while handling existing sourcemap: ${e.message}`)
         return
       }
+    } else {
+      const [, sourcemapUrlInfo] = injectSourcemapPlaceholder({
+        urlInfo,
+        specifier: urlInfo.sourcemapGeneratedUrl,
+      })
+      sourcemapUrlInfo.isInline = sourcemaps === "inline"
     }
   }
 

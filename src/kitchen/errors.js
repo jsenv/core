@@ -31,6 +31,12 @@ export const createResolveUrlError = ({
       reason: `no plugin has handled the specifier during "resolveUrl" hook`,
     })
   }
+  if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
+    error.message = createDetailedMessage(error.message, {
+      "reference trace": reference.trace.message,
+    })
+    return error
+  }
   return createFailedToResolveUrlError({
     reason: `An error occured during specifier resolution`,
     ...detailsFromValueThrown(error),
@@ -114,6 +120,9 @@ export const createTransformUrlContentError = ({
   urlInfo,
   error,
 }) => {
+  if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
+    return error
+  }
   const createFailedToTransformError = ({
     code = error.code || "TRANSFORM_URL_CONTENT_ERROR",
     reason,

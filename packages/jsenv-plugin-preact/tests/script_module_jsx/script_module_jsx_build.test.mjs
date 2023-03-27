@@ -8,13 +8,13 @@ import { jsenvPluginPreact } from "@jsenv/plugin-preact"
 const test = async (params) => {
   await build({
     logLevel: "warn",
-    rootDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
+    sourceDirectoryUrl: new URL("./client/", import.meta.url),
     entryPoints: {
       "./main.html": "main.html",
     },
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     plugins: [jsenvPluginPreact()],
-    writeGeneratedFiles: true,
+    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
   })
   const server = await startFileServer({
@@ -23,9 +23,7 @@ const test = async (params) => {
   const { returnValue } = await executeInChromium({
     url: `${server.origin}/main.html`,
     /* eslint-disable no-undef */
-    pageFunction: async () => {
-      return window.resultPromise
-    },
+    pageFunction: () => window.resultPromise,
     /* eslint-enable no-undef */
   })
   const actual = returnValue
@@ -35,7 +33,5 @@ const test = async (params) => {
 
 // support for <script type="module">
 await test({
-  runtimeCompat: {
-    chrome: "64",
-  },
+  runtimeCompat: { chrome: "64" },
 })

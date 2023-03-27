@@ -1,3 +1,11 @@
+# 32.1.0
+
+- Allow filesystem magic resolution only while resolving js imports
+- outDirectoryUrl becomes optional
+- directoryReferenceAllowed param can now be a function
+- Improve error when directory is referenced
+- Fix error logged while handling existing sourcemap
+
 # 32.0.0
 
 - Dev server is now designed to run on a directory containing only source files

@@ -4,6 +4,8 @@ import { defaultLookupPackageScope } from "@jsenv/node-esm-resolution"
 
 import { commonJsToJsModule } from "./cjs_to_esm.js"
 
+const compileCacheDirectoryUrl = new URL("../.cache/", import.meta.url)
+
 export const jsenvPluginCommonJs = ({
   name = "jsenv:commonjs",
   logLevel,
@@ -75,8 +77,7 @@ export const jsenvPluginCommonJs = ({
       )
       const { content, sourcemap, isValid } = await commonJsToJsModule({
         logLevel,
-        rootDirectoryUrl: context.rootDirectoryUrl,
-        jsenvInternalDirectoryUrl: context.jsenvInternalDirectoryUrl,
+        compileCacheDirectoryUrl,
         sourceFileUrl: commonJsUrlInfo.url,
         browsers: !nodeRuntimeEnabled,
         processEnvNodeEnv: context.dev ? "development" : "production",

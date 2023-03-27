@@ -13,7 +13,7 @@ const test = async (params) => {
       "./main.js?as_js_classic_library": "main.js",
     },
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
-    writeGeneratedFiles: true,
+    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
   })
   writeFileSync(

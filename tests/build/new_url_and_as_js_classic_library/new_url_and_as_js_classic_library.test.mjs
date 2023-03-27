@@ -14,7 +14,7 @@ const test = async (params) => {
     },
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
     assetsDirectory: "foo/",
-    writeGeneratedFiles: true,
+    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
   })
   copyFileSync(

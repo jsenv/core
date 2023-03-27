@@ -50,7 +50,7 @@ const devServer = await startDevServer({
   ribbon: false,
   clientAutoreload: false,
   supervisor: false,
-  writeGeneratedFiles: true,
+  outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
 })
 const browser = await chromium.launch({ headless: !debug })
 try {
