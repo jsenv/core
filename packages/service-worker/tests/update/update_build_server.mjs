@@ -7,11 +7,11 @@ const buildStory = async (name) => {
   await build({
     handleSIGINT: false,
     logLevel: "warn",
-    rootDirectoryUrl: new URL("./project/src/", import.meta.url),
-    buildDirectoryUrl: new URL("./project/dist/", import.meta.url),
+    sourceDirectoryUrl: new URL("./project/src/", import.meta.url),
     entryPoints: {
       "./main.html": "main.html",
     },
+    buildDirectoryUrl: new URL("./project/dist/", import.meta.url),
     plugins: [
       jsenvPluginBundling(),
       {
@@ -39,9 +39,8 @@ export const buildServer = await startBuildServer({
   logLevel: "warn",
   serverLogLevel: "warn",
   https: { certificate, privateKey },
-  rootDirectoryUrl: new URL("./project/src/", import.meta.url),
   buildDirectoryUrl: new URL("./project/dist/", import.meta.url),
-  buildIndexPath: "main.html",
+  buildMainFilePath: "main.html",
   services: [
     {
       handleRequest: async (request) => {
