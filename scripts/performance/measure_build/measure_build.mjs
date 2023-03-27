@@ -7,14 +7,15 @@ const measures = startMeasures({
 })
 const { build } = await import("@jsenv/core")
 const { jsenvPluginMinification } = await import("@jsenv/plugin-minification")
+const { jsenvPluginBundling } = await import("@jsenv/plugin-bundling")
 await build({
   logLevel: "warn",
-  rootDirectoryUrl: new URL("./", import.meta.url),
-  buildDirectoryUrl: new URL("./dist/", import.meta.url),
+  sourceDirectoryUrl: new URL("./", import.meta.url),
   entryPoints: {
     "./main.html": "main.min.html",
   },
-  plugins: [jsenvPluginMinification()],
+  buildDirectoryUrl: new URL("./dist/", import.meta.url),
+  plugins: [jsenvPluginMinification(), jsenvPluginBundling()],
 })
 const { duration, memoryHeapTotal, memoryHeapUsed, fsRead, fsWrite } =
   measures.stop()

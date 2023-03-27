@@ -10,7 +10,7 @@ const readyMeasures = startMeasures({
 })
 const { startDevServer } = await import("@jsenv/core")
 const devServer = await startDevServer({
-  rootDirectoryUrl: new URL("./basic_app/", import.meta.url),
+  sourceDirectoryUrl: new URL("./basic_app/", import.meta.url),
   logLevel: "warn",
   keepProcessAlive: false,
 })

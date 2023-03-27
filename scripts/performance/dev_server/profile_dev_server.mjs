@@ -14,7 +14,7 @@ import { startDevServer } from "@jsenv/core"
 
 const { certificate, privateKey } = requestCertificate()
 await startDevServer({
-  rootDirectoryUrl: new URL("./basic_app/", import.meta.url),
+  sourceDirectoryUrl: new URL("./basic_app/", import.meta.url),
   logLevel: "info",
   https: { certificate, privateKey },
   port: 6789,
