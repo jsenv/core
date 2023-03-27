@@ -6,7 +6,7 @@ import { setupTest } from "@jsenv/pwa/tests/setup_test.mjs"
 if (process.platform === "linux") {
   const debug = false
   const { testServer, page, browser } = await setupTest({
-    rootDirectoryUrl: new URL("./client/", import.meta.url),
+    sourceDirectoryUrl: new URL("./client/", import.meta.url),
     debug,
   })
   try {
