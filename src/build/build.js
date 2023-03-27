@@ -53,6 +53,7 @@ import {
   findHtmlNode,
 } from "@jsenv/ast"
 
+import { lookupPackageDirectory } from "../lookup_package_directory.js"
 import { watchSourceFiles } from "../watch_source_files.js"
 import { createUrlGraph } from "../kitchen/url_graph.js"
 import { createKitchen } from "../kitchen/kitchen.js"
@@ -169,6 +170,21 @@ export const build = async ({
       sourceDirectoryUrl,
       "sourceDirectoryUrl",
     )
+    buildDirectoryUrl = assertAndNormalizeDirectoryUrl(
+      buildDirectoryUrl,
+      "buildDirectoryUrl",
+    )
+    if (outDirectoryUrl === undefined) {
+      const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl)
+      if (packageDirectoryUrl) {
+        outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`
+      }
+    } else {
+      outDirectoryUrl = assertAndNormalizeDirectoryUrl(
+        outDirectoryUrl,
+        "outDirectoryUrl",
+      )
+    }
 
     if (typeof entryPoints !== "object" || entryPoints === null) {
       throw new TypeError(`entryPoints must be an object, got ${entryPoints}`)
@@ -192,10 +208,6 @@ export const build = async ({
         )
       }
     })
-    buildDirectoryUrl = assertAndNormalizeDirectoryUrl(
-      buildDirectoryUrl,
-      "buildDirectoryUrl",
-    )
     if (!["filename", "search_param"].includes(versioningMethod)) {
       throw new TypeError(
         `versioningMethod must be "filename" or "search_param", got ${versioning}`,
