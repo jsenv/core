@@ -1,0 +1,1 @@
+self.pingResponse = "pong"

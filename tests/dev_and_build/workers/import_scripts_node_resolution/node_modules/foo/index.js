@@ -1,0 +1,1 @@
+self.answer = 42

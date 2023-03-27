@@ -50,22 +50,20 @@ export const jsenvPluginUrlResolution = ({
     const resolver = urlResolution[urlType]
     if (typeof resolver !== "object") {
       throw new Error(
-        `Unexpected urlResolution configuration:
-"${urlType}" resolution value must be an object, got ${resolver}`,
+        `urlResolution values must be objects, got ${resolver} on "${urlType}"`,
       )
     }
     let { web, node_esm, ...rest } = resolver
-    const unexpectedKey = Object.keys(rest)[0]
-    if (unexpectedKey) {
-      throw new Error(
-        `Unexpected urlResolution configuration:
-"${urlType}" resolution key must be "web" or "node_esm", found "${
-          Object.keys(rest)[0]
-        }"`,
+    const unexpectedKeys = Object.keys(rest)
+    if (unexpectedKeys.length) {
+      throw new TypeError(
+        `${unexpectedKeys.join(
+          ",",
+        )}: there is no such configuration on "${urlType}"`,
       )
     }
     if (node_esm === undefined) {
-      node_esm = urlType === "js_import" || urlType === "js_import_script"
+      node_esm = urlType === "js_import"
     }
     if (web === undefined) {
       web = true
@@ -83,11 +81,20 @@ export const jsenvPluginUrlResolution = ({
     }
   })
 
+  const nodeEsmResolverDefault = createNodeEsmResolver({
+    runtimeCompat,
+    preservesSymlink: true,
+  })
   if (!resolvers.js_module) {
-    resolvers.js_module = createNodeEsmResolver({
-      runtimeCompat,
-      preservesSymlink: true,
-    })
+    resolvers.js_module = nodeEsmResolverDefault
+  }
+  if (!resolvers.js_classic) {
+    resolvers.js_classic = (reference, context) => {
+      if (reference.subtype === "self_import_scripts_arg") {
+        return nodeEsmResolverDefault(reference, context)
+      }
+      return resolveUrlUsingWebResolution(reference, context)
+    }
   }
   if (!resolvers["*"]) {
     resolvers["*"] = resolveUrlUsingWebResolution
@@ -107,19 +114,13 @@ export const jsenvPluginUrlResolution = ({
       if (reference.type === "sourcemap_comment") {
         return resolveUrlUsingWebResolution(reference, context)
       }
-
-      let type
-      let subtype
-      const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl)
+      let urlType
       if (reference.injected) {
-        type = reference.expectedType
-        subtype = reference.expectedSubtype
+        urlType = reference.expectedType
       } else {
-        type = parentUrlInfo ? parentUrlInfo.type : "entry_point"
-        subtype = parentUrlInfo ? parentUrlInfo.subtype : ""
+        const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl)
+        urlType = parentUrlInfo ? parentUrlInfo.type : "entry_point"
       }
-      const urlType =
-        subtype === "self_import_scripts_arg" ? "js_import_script" : type
       const resolver = resolvers[urlType] || resolvers["*"]
       return resolver(reference, context)
     },
