@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-commonjs",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -24,9 +24,9 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "@jsenv/filesystem": "4.2.1",
+    "@jsenv/filesystem": "4.2.2",
     "@jsenv/log": "3.3.4",
-    "@jsenv/url-meta": "8.0.0",
+    "@jsenv/url-meta": "8.1.0",
     "@jsenv/urls": "1.2.8",
     "@rollup/plugin-commonjs": "24.0.1",
     "@rollup/plugin-json": "6.0.0",

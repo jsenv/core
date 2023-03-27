@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "32.0.1",
+  "version": "32.1.0",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "author": {
@@ -69,16 +69,16 @@
     "@jsenv/abort": "4.2.4",
     "@jsenv/ast": "3.0.3",
     "@jsenv/babel-plugins": "1.1.5",
-    "@jsenv/filesystem": "4.2.1",
+    "@jsenv/filesystem": "4.2.2",
     "@jsenv/importmap": "1.2.1",
     "@jsenv/integrity": "0.0.1",
     "@jsenv/log": "3.3.4",
     "@jsenv/node-esm-resolution": "1.0.1",
-    "@jsenv/plugin-bundling": "2.1.1",
-    "@jsenv/server": "15.0.1",
+    "@jsenv/plugin-bundling": "2.1.2",
+    "@jsenv/server": "15.0.2",
     "@jsenv/sourcemap": "1.0.9",
     "@jsenv/uneval": "1.6.0",
-    "@jsenv/url-meta": "8.0.0",
+    "@jsenv/url-meta": "8.1.0",
     "@jsenv/urls": "1.2.8",
     "@jsenv/utils": "2.0.1",
     "@paralleldrive/cuid2": "2.2.0",
@@ -112,7 +112,7 @@
     "eslint-plugin-html": "7.1.0",
     "eslint-plugin-import": "2.27.5",
     "eslint-plugin-react": "7.32.2",
-    "playwright": "1.31.2",
-    "prettier": "2.8.6"
+    "playwright": "1.32.1",
+    "prettier": "2.8.7"
   }
 }
