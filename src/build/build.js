@@ -174,7 +174,7 @@ export const build = async ({
       buildDirectoryUrl,
       "buildDirectoryUrl",
     )
-    if (outDirectoryUrl === undefined) {
+    if (outDirectoryUrl === undefined && !process.env.CI) {
       const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl)
       if (packageDirectoryUrl) {
         outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`

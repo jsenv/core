@@ -78,7 +78,7 @@ export const startDevServer = async ({
       sourceDirectoryUrl,
       "sourceDirectoryUrl",
     )
-    if (outDirectoryUrl === undefined) {
+    if (outDirectoryUrl === undefined && !process.env.CI) {
       const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl)
       if (packageDirectoryUrl) {
         outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`

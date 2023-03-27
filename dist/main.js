@@ -20894,7 +20894,7 @@ const build = async ({
     }
     sourceDirectoryUrl = assertAndNormalizeDirectoryUrl(sourceDirectoryUrl, "sourceDirectoryUrl");
     buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl, "buildDirectoryUrl");
-    if (outDirectoryUrl === undefined) {
+    if (outDirectoryUrl === undefined && !process.env.CI) {
       const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);
       if (packageDirectoryUrl) {
         outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`;
@@ -22784,7 +22784,7 @@ const startDevServer = async ({
       throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param`);
     }
     sourceDirectoryUrl = assertAndNormalizeDirectoryUrl(sourceDirectoryUrl, "sourceDirectoryUrl");
-    if (outDirectoryUrl === undefined) {
+    if (outDirectoryUrl === undefined && !process.env.CI) {
       const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);
       if (packageDirectoryUrl) {
         outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`;
