@@ -1,3 +1,7 @@
+# 32.2.0
+
+- Enable node esm resolution by default on `self.importScripts`
+
 # 32.1.0
 
 - Allow filesystem magic resolution only while resolving js imports

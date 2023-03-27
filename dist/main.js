@@ -17152,6 +17152,7 @@ const addRelationshipWithPackageJson = ({
  * - "css_@import"
  * - "css_url"
  * - "js_import"
+ * - "js_import_script"
  * - "js_url"
  * - "js_inline_content"
  * - "sourcemap_comment"
@@ -17187,7 +17188,7 @@ const jsenvPluginUrlResolution = ({
 "${urlType}" resolution key must be "web" or "node_esm", found "${Object.keys(rest)[0]}"`);
     }
     if (node_esm === undefined) {
-      node_esm = urlType === "js_module";
+      node_esm = urlType === "js_import" || urlType === "js_import_script";
     }
     if (web === undefined) {
       web = true;
@@ -17229,13 +17230,17 @@ const jsenvPluginUrlResolution = ({
       if (reference.type === "sourcemap_comment") {
         return resolveUrlUsingWebResolution(reference);
       }
-      let urlType;
+      let type;
+      let subtype;
+      const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl);
       if (reference.injected) {
-        urlType = reference.expectedType;
+        type = reference.expectedType;
+        subtype = reference.expectedSubtype;
       } else {
-        const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl);
-        urlType = parentUrlInfo ? parentUrlInfo.type : "entry_point";
+        type = parentUrlInfo ? parentUrlInfo.type : "entry_point";
+        subtype = parentUrlInfo ? parentUrlInfo.subtype : "";
       }
+      const urlType = subtype === "self_import_scripts_arg" ? "js_import_script" : type;
       const resolver = resolvers[urlType] || resolvers["*"];
       return resolver(reference, context);
     },
