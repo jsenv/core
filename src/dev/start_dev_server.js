@@ -78,12 +78,14 @@ export const startDevServer = async ({
       sourceDirectoryUrl,
       "sourceDirectoryUrl",
     )
-    if (outDirectoryUrl === undefined && !process.env.CI) {
-      const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl)
-      if (packageDirectoryUrl) {
-        outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`
+    if (outDirectoryUrl === undefined) {
+      if (!process.env.CI) {
+        const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl)
+        if (packageDirectoryUrl) {
+          outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`
+        }
       }
-    } else {
+    } else if (outDirectoryUrl !== null && outDirectoryUrl !== false) {
       outDirectoryUrl = assertAndNormalizeDirectoryUrl(
         outDirectoryUrl,
         "outDirectoryUrl",

@@ -20894,12 +20894,14 @@ const build = async ({
     }
     sourceDirectoryUrl = assertAndNormalizeDirectoryUrl(sourceDirectoryUrl, "sourceDirectoryUrl");
     buildDirectoryUrl = assertAndNormalizeDirectoryUrl(buildDirectoryUrl, "buildDirectoryUrl");
-    if (outDirectoryUrl === undefined && !process.env.CI) {
-      const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);
-      if (packageDirectoryUrl) {
-        outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`;
+    if (outDirectoryUrl === undefined) {
+      if (!process.env.CI) {
+        const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);
+        if (packageDirectoryUrl) {
+          outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`;
+        }
       }
-    } else {
+    } else if (outDirectoryUrl !== null && outDirectoryUrl !== false) {
       outDirectoryUrl = assertAndNormalizeDirectoryUrl(outDirectoryUrl, "outDirectoryUrl");
     }
     if (typeof entryPoints !== "object" || entryPoints === null) {
@@ -22784,12 +22786,14 @@ const startDevServer = async ({
       throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param`);
     }
     sourceDirectoryUrl = assertAndNormalizeDirectoryUrl(sourceDirectoryUrl, "sourceDirectoryUrl");
-    if (outDirectoryUrl === undefined && !process.env.CI) {
-      const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);
-      if (packageDirectoryUrl) {
-        outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`;
+    if (outDirectoryUrl === undefined) {
+      if (!process.env.CI) {
+        const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);
+        if (packageDirectoryUrl) {
+          outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`;
+        }
       }
-    } else {
+    } else if (outDirectoryUrl !== null && outDirectoryUrl !== false) {
       outDirectoryUrl = assertAndNormalizeDirectoryUrl(outDirectoryUrl, "outDirectoryUrl");
     }
   }
