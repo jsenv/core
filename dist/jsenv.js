@@ -540,7 +540,7 @@ const moveUrl = ({
   url,
   from,
   to,
-  preferAbsolute = false
+  preferRelative
 }) => {
   let relativeUrl = urlToRelativeUrl(url, from);
   if (relativeUrl.slice(0, 2) === "//") {
@@ -548,10 +548,10 @@ const moveUrl = ({
     relativeUrl = new URL(relativeUrl, url).href;
   }
   const absoluteUrl = new URL(relativeUrl, to).href;
-  if (preferAbsolute) {
-    return absoluteUrl;
+  if (preferRelative) {
+    return urlToRelativeUrl(absoluteUrl, to);
   }
-  return urlToRelativeUrl(absoluteUrl, to);
+  return absoluteUrl;
 };
 
 const urlIsInsideOf = (url, otherUrl) => {
@@ -7106,7 +7106,8 @@ const watchSourceFiles = (sourceDirectoryUrl, callback, {
     // by default watch everything inside the source directory
     // line below is commented until @jsenv/url-meta fixes the fact that is matches
     // any file with an extension
-    // "**/.*": false, // file starting with a dot -> do not watch
+    "**/.*": false,
+    // file starting with a dot -> do not watch
     "**/.*/": false,
     // directory starting with a dot -> do not watch
     "**/node_modules/": false,
@@ -9588,8 +9589,7 @@ const determineFileUrlForOutDirectory = ({
   return moveUrl({
     url,
     from: context.rootDirectoryUrl,
-    to: context.outDirectoryUrl,
-    preferAbsolute: true
+    to: context.outDirectoryUrl
   });
 };
 
@@ -22748,8 +22748,7 @@ const inferParentFromRequest = (request, sourceDirectoryUrl) => {
   return moveUrl({
     url: referer,
     from: `${request.origin}/`,
-    to: sourceDirectoryUrl,
-    preferAbsolute: true
+    to: sourceDirectoryUrl
   });
 };
 
@@ -23122,6 +23121,72 @@ const generateCoverageTextLog = (coverage, {
     skipFull: coverageReportSkipFull
   });
   report.execute(context);
+};
+
+const executionStepsFromTestPlan = async ({
+  signal,
+  rootDirectoryUrl,
+  testPlan
+}) => {
+  try {
+    const fileResultArray = await collectFiles({
+      signal,
+      directoryUrl: rootDirectoryUrl,
+      associations: {
+        testPlan
+      },
+      predicate: ({
+        testPlan
+      }) => testPlan
+    });
+    const executionSteps = [];
+    fileResultArray.forEach(({
+      relativeUrl,
+      meta
+    }) => {
+      const fileExecutionSteps = generateFileExecutionSteps({
+        fileRelativeUrl: relativeUrl,
+        filePlan: meta.testPlan
+      });
+      executionSteps.push(...fileExecutionSteps);
+    });
+    return executionSteps;
+  } catch (e) {
+    if (Abort.isAbortError(e)) {
+      return {
+        aborted: true,
+        planSummary: {},
+        planReport: {},
+        planCoverage: null
+      };
+    }
+    throw e;
+  }
+};
+const generateFileExecutionSteps = ({
+  fileRelativeUrl,
+  filePlan
+}) => {
+  const fileExecutionSteps = [];
+  Object.keys(filePlan).forEach(executionName => {
+    const stepConfig = filePlan[executionName];
+    if (stepConfig === null || stepConfig === undefined) {
+      return;
+    }
+    if (typeof stepConfig !== "object") {
+      throw new TypeError(createDetailedMessage$1(`found unexpected value in plan, they must be object`, {
+        ["file relative path"]: fileRelativeUrl,
+        ["execution name"]: executionName,
+        ["value"]: stepConfig
+      }));
+    }
+    fileExecutionSteps.push({
+      executionName,
+      fileRelativeUrl,
+      ...stepConfig
+    });
+  });
+  return fileExecutionSteps;
 };
 
 const readNodeV8CoverageDirectory = async ({
@@ -23781,59 +23846,6 @@ const ensureGlobalGc = () => {
   }
 };
 
-const generateExecutionSteps = async (plan, {
-  signal,
-  rootDirectoryUrl
-}) => {
-  const fileResultArray = await collectFiles({
-    signal,
-    directoryUrl: rootDirectoryUrl,
-    associations: {
-      filePlan: plan
-    },
-    predicate: ({
-      filePlan
-    }) => filePlan
-  });
-  const executionSteps = [];
-  fileResultArray.forEach(({
-    relativeUrl,
-    meta
-  }) => {
-    const fileExecutionSteps = generateFileExecutionSteps({
-      fileRelativeUrl: relativeUrl,
-      filePlan: meta.filePlan
-    });
-    executionSteps.push(...fileExecutionSteps);
-  });
-  return executionSteps;
-};
-const generateFileExecutionSteps = ({
-  fileRelativeUrl,
-  filePlan
-}) => {
-  const fileExecutionSteps = [];
-  Object.keys(filePlan).forEach(executionName => {
-    const stepConfig = filePlan[executionName];
-    if (stepConfig === null || stepConfig === undefined) {
-      return;
-    }
-    if (typeof stepConfig !== "object") {
-      throw new TypeError(createDetailedMessage$1(`found unexpected value in plan, they must be object`, {
-        ["file relative path"]: fileRelativeUrl,
-        ["execution name"]: executionName,
-        ["value"]: stepConfig
-      }));
-    }
-    fileExecutionSteps.push({
-      executionName,
-      fileRelativeUrl,
-      ...stepConfig
-    });
-  });
-  return fileExecutionSteps;
-};
-
 const EXECUTION_COLORS = {
   executing: ANSI.BLUE,
   aborted: ANSI.MAGENTA,
@@ -24174,7 +24186,7 @@ ${key}: ${details[key]}`;
   return message;
 };
 
-const executePlan = async (plan, {
+const executeSteps = async (executionSteps, {
   signal,
   handleSIGINT,
   logger,
@@ -24189,6 +24201,7 @@ const executePlan = async (plan, {
   completedExecutionLogAbbreviation,
   rootDirectoryUrl,
   devServerOrigin,
+  sourceDirectoryUrl,
   keepRunning,
   defaultMsAllocatedPerExecution,
   maxExecutionsInParallel,
@@ -24268,19 +24281,13 @@ const executePlan = async (plan, {
     let runtimeParams = {
       rootDirectoryUrl,
       devServerOrigin,
+      sourceDirectoryUrl,
       coverageEnabled,
       coverageConfig,
       coverageMethodForBrowsers,
       coverageMethodForNodeJs,
       stopAfterAllSignal
     };
-    logger.debug(`Generate executions`);
-    const executionSteps = await getExecutionAsSteps({
-      plan,
-      multipleExecutionsOperation,
-      rootDirectoryUrl
-    });
-    logger.debug(`${executionSteps.length} executions planned`);
     if (completedExecutionLogMerging && !process.stdout.isTTY) {
       completedExecutionLogMerging = false;
       logger.debug(`Force completedExecutionLogMerging to false because process.stdout.isTTY is false`);
@@ -24497,29 +24504,6 @@ const executePlan = async (plan, {
     await multipleExecutionsOperation.end();
   }
 };
-const getExecutionAsSteps = async ({
-  plan,
-  multipleExecutionsOperation,
-  rootDirectoryUrl
-}) => {
-  try {
-    const executionSteps = await generateExecutionSteps(plan, {
-      signal: multipleExecutionsOperation.signal,
-      rootDirectoryUrl
-    });
-    return executionSteps;
-  } catch (e) {
-    if (Abort.isAbortError(e)) {
-      return {
-        aborted: true,
-        planSummary: {},
-        planReport: {},
-        planCoverage: null
-      };
-    }
-    throw e;
-  }
-};
 const canOverwriteLogGetter = ({
   completedExecutionLogMerging,
   executionResult
@@ -24586,9 +24570,9 @@ const executeInParallel = async ({
 /**
  * Execute a list of files and log how it goes.
  * @param {Object} testPlanParameters
- * @param {string|url} testPlanParameters.testDirectoryUrl Directory containing test files
+ * @param {string|url} testPlanParameters.rootDirectoryUrl Directory containing test files;
  * @param {string|url} [testPlanParameters.devServerOrigin=undefined] Jsenv dev server origin; required when executing test on browsers
- * @param {Object} testPlanParameters.testPlan Object associating patterns leading to files to runtimes where they should be executed
+ * @param {Object} testPlanParameters.testPlan Object associating files with runtimes where they will be executed
  * @param {boolean} [testPlanParameters.completedExecutionLogAbbreviation=false] Abbreviate completed execution information to shorten terminal output
  * @param {boolean} [testPlanParameters.completedExecutionLogMerging=false] Merge completed execution logs to shorten terminal output
  * @param {number} [testPlanParameters.maxExecutionsInParallel=1] Maximum amount of execution in parallel
@@ -24613,7 +24597,7 @@ const executeTestPlan = async ({
   logFileRelativeUrl = ".jsenv/test_plan_debug.txt",
   completedExecutionLogAbbreviation = false,
   completedExecutionLogMerging = false,
-  testDirectoryUrl,
+  rootDirectoryUrl,
   devServerModuleUrl,
   devServerOrigin,
   testPlan,
@@ -24631,7 +24615,14 @@ const executeTestPlan = async ({
   gcBetweenExecutions = logMemoryHeapUsage,
   coverageEnabled = process.argv.includes("--coverage"),
   coverageConfig = {
-    "./**/*": true
+    "**/*": true,
+    "**/.*": false,
+    "**/.*/": false,
+    "**/node_modules/": false,
+    "**/tests/": false,
+    "**/*.test.html": false,
+    "**/*.test.js": false,
+    "**/*.test.mjs": false
   },
   coverageIncludeMissing = true,
   coverageAndExecutionAllowed = false,
@@ -24640,7 +24631,6 @@ const executeTestPlan = async ({
   // "istanbul" also accepted
   coverageV8ConflictWarning = true,
   coverageTempDirectoryUrl,
-  coverageReportRootDirectoryUrl,
   // skip empty means empty files won't appear in the coverage reports (json and html)
   coverageReportSkipEmpty = false,
   // skip full means file with 100% coverage won't appear in coverage reports (json and html)
@@ -24655,6 +24645,7 @@ const executeTestPlan = async ({
   let someNeedsServer = false;
   let someNodeRuntime = false;
   let stopDevServerNeeded = false;
+  let sourceDirectoryUrl;
   const runtimes = {};
   // param validation
   {
@@ -24662,9 +24653,9 @@ const executeTestPlan = async ({
     if (unexpectedParamNames.length > 0) {
       throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param`);
     }
-    testDirectoryUrl = assertAndNormalizeDirectoryUrl(testDirectoryUrl, "testDirectoryUrl");
-    if (!existsSync(new URL(testDirectoryUrl))) {
-      throw new Error(`ENOENT on testDirectoryUrl at ${testDirectoryUrl}`);
+    rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl, "rootDirectoryUrl");
+    if (!existsSync(new URL(rootDirectoryUrl))) {
+      throw new Error(`ENOENT on rootDirectoryUrl at ${rootDirectoryUrl}`);
     }
     if (typeof testPlan !== "object") {
       throw new Error(`testPlan must be an object, got ${testPlan}`);
@@ -24713,14 +24704,10 @@ const executeTestPlan = async ({
         }
         stopDevServerNeeded = true;
       }
-      const {
-        sourceDirectoryUrl
-      } = await basicFetch(`${devServerOrigin}/__server_params__.json`, {
+      const devServerParams = await basicFetch(`${devServerOrigin}/__server_params__.json`, {
         rejectUnauthorized: false
       });
-      if (testDirectoryUrl !== sourceDirectoryUrl && !urlIsInsideOf(testDirectoryUrl, sourceDirectoryUrl)) {
-        throw new Error(`testDirectoryUrl must be inside sourceDirectoryUrl when running tests on browser(s)`);
-      }
+      sourceDirectoryUrl = devServerParams.sourceDirectoryUrl;
     }
     if (coverageEnabled) {
       if (typeof coverageConfig !== "object") {
@@ -24749,26 +24736,21 @@ const executeTestPlan = async ({
           }));
         }
       }
-      if (coverageReportRootDirectoryUrl === undefined) {
-        coverageReportRootDirectoryUrl = lookupPackageDirectory(testDirectoryUrl);
-      } else {
-        coverageReportRootDirectoryUrl = assertAndNormalizeDirectoryUrl(coverageReportRootDirectoryUrl, "coverageReportRootDirectoryUrl");
-      }
       if (coverageTempDirectoryUrl === undefined) {
-        coverageTempDirectoryUrl = new URL("./.coverage/tmp/", coverageReportRootDirectoryUrl);
+        coverageTempDirectoryUrl = new URL("./.coverage/tmp/", rootDirectoryUrl);
       } else {
         coverageTempDirectoryUrl = assertAndNormalizeDirectoryUrl(coverageTempDirectoryUrl, "coverageTempDirectoryUrl");
       }
       if (coverageReportJson) {
         if (coverageReportJsonFileUrl === undefined) {
-          coverageReportJsonFileUrl = new URL("./.coverage/coverage.json", coverageReportRootDirectoryUrl);
+          coverageReportJsonFileUrl = new URL("./.coverage/coverage.json", rootDirectoryUrl);
         } else {
           coverageReportJsonFileUrl = assertAndNormalizeFileUrl(coverageReportJsonFileUrl, "coverageReportJsonFileUrl");
         }
       }
       if (coverageReportHtml) {
         if (coverageReportHtmlDirectoryUrl === undefined) {
-          coverageReportHtmlDirectoryUrl = new URL("./.coverage/", coverageReportRootDirectoryUrl);
+          coverageReportHtmlDirectoryUrl = new URL("./.coverage/", rootDirectoryUrl);
         } else {
           coverageReportHtmlDirectoryUrl = assertAndNormalizeDirectoryUrl(coverageReportHtmlDirectoryUrl, "coverageReportHtmlDirectoryUrl");
         }
@@ -24806,7 +24788,14 @@ const executeTestPlan = async ({
     ...testPlan,
     "**/.jsenv/": null
   };
-  const result = await executePlan(testPlan, {
+  logger.debug(`Generate executions`);
+  const executionSteps = await executionStepsFromTestPlan({
+    signal,
+    testPlan,
+    rootDirectoryUrl
+  });
+  logger.debug(`${executionSteps.length} executions planned`);
+  const result = await executeSteps(executionSteps, {
     signal,
     handleSIGINT,
     logger,
@@ -24819,8 +24808,9 @@ const executeTestPlan = async ({
     logFileRelativeUrl,
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
-    rootDirectoryUrl: testDirectoryUrl,
+    rootDirectoryUrl,
     devServerOrigin,
+    sourceDirectoryUrl,
     maxExecutionsInParallel,
     defaultMsAllocatedPerExecution,
     failFast,
@@ -24861,8 +24851,8 @@ const executeTestPlan = async ({
       const htmlCoverageDirectoryIndexFileUrl = `${coverageReportHtmlDirectoryUrl}index.html`;
       logger.info(`-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`);
       promises.push(generateCoverageHtmlDirectory(planCoverage, {
-        rootDirectoryUrl: coverageReportRootDirectoryUrl,
-        coverageHtmlDirectoryRelativeUrl: urlToRelativeUrl(coverageReportHtmlDirectoryUrl, coverageReportRootDirectoryUrl),
+        rootDirectoryUrl,
+        coverageHtmlDirectoryRelativeUrl: urlToRelativeUrl(coverageReportHtmlDirectoryUrl, rootDirectoryUrl),
         coverageReportSkipEmpty,
         coverageReportSkipFull
       }));
@@ -24910,6 +24900,7 @@ const createRuntimeFromPlaywright = ({
     rootDirectoryUrl,
     fileRelativeUrl,
     devServerOrigin,
+    sourceDirectoryUrl,
     // measurePerformance,
     collectPerformance,
     coverageEnabled = false,
@@ -25016,8 +25007,7 @@ const createRuntimeFromPlaywright = ({
             const fsUrl = moveUrl({
               url: v8CoveragesWithWebUrl.url,
               from: `${devServerOrigin}/`,
-              to: rootDirectoryUrl,
-              preferAbsolute: true
+              to: sourceDirectoryUrl
             });
             return {
               ...v8CoveragesWithWebUrl,
@@ -25079,8 +25069,19 @@ const createRuntimeFromPlaywright = ({
         result.performance = performance;
       });
     }
-    const fileClientUrl = new URL(fileRelativeUrl, `${devServerOrigin}/`).href;
-
+    const fileUrl = new URL(fileRelativeUrl, rootDirectoryUrl).href;
+    if (!urlIsInsideOf(fileUrl, sourceDirectoryUrl)) {
+      throw new Error(`Cannot execute file that is outside source directory
+--- file --- 
+${fileUrl}
+--- source directory ---
+${sourceDirectoryUrl}`);
+    }
+    const fileDevServerUrl = moveUrl({
+      url: fileUrl,
+      from: sourceDirectoryUrl,
+      to: `${devServerOrigin}/`
+    });
     // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-console
     const removeConsoleListener = registerEvent({
       object: page,
@@ -25163,7 +25164,7 @@ const createRuntimeFromPlaywright = ({
         },
         response: async cb => {
           try {
-            await page.goto(fileClientUrl, {
+            await page.goto(fileDevServerUrl, {
               timeout: 0
             });
             const returnValue = await page.evaluate( /* eslint-disable no-undef */
@@ -26405,6 +26406,7 @@ const execute = async ({
   handleSIGINT = true,
   logLevel,
   rootDirectoryUrl,
+  sourceDirectoryUrl = rootDirectoryUrl,
   devServerOrigin,
   fileRelativeUrl,
   allocatedMs,
@@ -26434,6 +26436,7 @@ const execute = async ({
   let resultTransformer = result => result;
   runtimeParams = {
     rootDirectoryUrl,
+    sourceDirectoryUrl,
     devServerOrigin,
     fileRelativeUrl,
     ...runtimeParams
