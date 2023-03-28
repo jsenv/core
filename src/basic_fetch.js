@@ -1,6 +1,6 @@
 export const basicFetch = async (
   url,
-  { method = "GET", headers = {} } = {},
+  { rejectUnauthorized = true, method = "GET", headers = {} } = {},
 ) => {
   let requestModule
   if (url.startsWith("http:")) {
@@ -14,6 +14,7 @@ export const basicFetch = async (
 
   return new Promise((resolve, reject) => {
     const req = request({
+      rejectUnauthorized,
       hostname: urlObject.hostname,
       port: urlObject.port,
       path: urlObject.pathname,

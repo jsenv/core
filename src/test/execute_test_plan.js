@@ -166,6 +166,7 @@ export const executeTestPlan = async ({
       }
       const { sourceDirectoryUrl } = await basicFetch(
         `${devServerOrigin}/__server_params__.json`,
+        { rejectUnauthorized: false },
       )
       if (
         testDirectoryUrl !== sourceDirectoryUrl &&
@@ -336,7 +337,9 @@ export const executeTestPlan = async ({
   })
   if (stopDevServerNeeded) {
     // we are expecting ECONNRESET because server will be stopped by the request
-    basicFetch(`${devServerOrigin}/__stop__`).catch((e) => {
+    basicFetch(`${devServerOrigin}/__stop__`, {
+      rejectUnauthorized: false,
+    }).catch((e) => {
       if (e.code === "ECONNRESET") {
         return
       }

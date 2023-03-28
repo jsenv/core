@@ -23018,6 +23018,7 @@ const pingServer = async url => {
 };
 
 const basicFetch = async (url, {
+  rejectUnauthorized = true,
   method = "GET",
   headers = {}
 } = {}) => {
@@ -23033,6 +23034,7 @@ const basicFetch = async (url, {
   const urlObject = new URL(url);
   return new Promise((resolve, reject) => {
     const req = request({
+      rejectUnauthorized,
       hostname: urlObject.hostname,
       port: urlObject.port,
       path: urlObject.pathname,
@@ -24713,7 +24715,9 @@ const executeTestPlan = async ({
       }
       const {
         sourceDirectoryUrl
-      } = await basicFetch(`${devServerOrigin}/__server_params__.json`);
+      } = await basicFetch(`${devServerOrigin}/__server_params__.json`, {
+        rejectUnauthorized: false
+      });
       if (testDirectoryUrl !== sourceDirectoryUrl && !urlIsInsideOf(testDirectoryUrl, sourceDirectoryUrl)) {
         throw new Error(`testDirectoryUrl must be inside sourceDirectoryUrl when running tests on browser(s)`);
       }
@@ -24833,7 +24837,9 @@ const executeTestPlan = async ({
   });
   if (stopDevServerNeeded) {
     // we are expecting ECONNRESET because server will be stopped by the request
-    basicFetch(`${devServerOrigin}/__stop__`).catch(e => {
+    basicFetch(`${devServerOrigin}/__stop__`, {
+      rejectUnauthorized: false
+    }).catch(e => {
       if (e.code === "ECONNRESET") {
         return;
       }
