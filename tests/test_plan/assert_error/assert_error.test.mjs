@@ -32,7 +32,7 @@ const test = async ({ runtime }) => {
     },
     devServerOrigin: devServer.origin,
   })
-  const namespace = testPlanReport["main.html"].browser.namespace
+  const namespace = testPlanReport["client/main.html"].browser.namespace
 
   const getErrorStackLastUrl = (executionResult) => {
     const exception = executionResult.exception

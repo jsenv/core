@@ -43,7 +43,7 @@ const expected = {
     duration: assert.any(Number),
   },
   testPlanReport: {
-    "main.html": {
+    "client/main.html": {
       a: assert.any(Object),
       b: assert.any(Object),
     },
