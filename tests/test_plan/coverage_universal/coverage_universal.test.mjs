@@ -17,10 +17,10 @@ const devServer = await startDevServer({
 })
 const { testPlanCoverage } = await executeTestPlan({
   logLevel: "warn",
-  testDirectoryUrl: new URL("./", import.meta.url),
+  rootDirectoryUrl: new URL("./", import.meta.url),
   devServerOrigin: devServer.origin,
   testPlan: {
-    "./main.html": {
+    "./client/main.test.html": {
       chromium: {
         runtime: chromium,
       },
@@ -31,7 +31,7 @@ const { testPlanCoverage } = await executeTestPlan({
         runtime: webkit,
       },
     },
-    "./main.js": {
+    "./client/main.test.js": {
       node: {
         runtime: nodeWorkerThread,
       },
@@ -43,7 +43,7 @@ const { testPlanCoverage } = await executeTestPlan({
   // keepRunning: true,
   coverageEnabled: true,
   coverageConfig: {
-    "./file.js": true,
+    "./client/file.js": true,
   },
   coverageMethodForNodeJs: "Profiler",
   coverageReportTextLog: false,
@@ -52,9 +52,9 @@ const { testPlanCoverage } = await executeTestPlan({
 })
 const actual = testPlanCoverage
 const expected = {
-  "./file.js": {
-    ...actual["./file.js"],
-    path: "./file.js",
+  "./client/file.js": {
+    ...actual["./client/file.js"],
+    path: "./client/file.js",
     s: {
       0: 3,
       1: 3,
