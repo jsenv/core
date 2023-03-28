@@ -1,3 +1,7 @@
+# 33.0.0
+
+- testDirectoryUrl -> rootDirectoryUrl
+
 # 32.2.3
 
 - Ensure web worker urls type is correct during dev

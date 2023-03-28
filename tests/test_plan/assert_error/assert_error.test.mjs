@@ -24,13 +24,13 @@ const test = async ({ runtime }) => {
   const { testPlanReport } = await executeTestPlan({
     logLevel: "warn",
     logRefresh: false,
-    testDirectoryUrl: sourceDirectoryUrl,
-    devServerOrigin: devServer.origin,
+    rootDirectoryUrl: new URL("./", import.meta.url),
     testPlan: {
-      "./main.html": {
+      "./client/main.html": {
         browser: { runtime },
       },
     },
+    devServerOrigin: devServer.origin,
   })
   const namespace = testPlanReport["main.html"].browser.namespace
 

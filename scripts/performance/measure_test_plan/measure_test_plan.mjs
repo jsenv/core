@@ -22,8 +22,8 @@ const devServer = await startDevServer({
 })
 
 await executeTestPlan({
-  testDirectoryUrl: new URL("./", import.meta.url),
   devServerOrigin: devServer.origin,
+  rootDirectoryUrl: new URL("./", import.meta.url),
   testPlan: {
     "./animals.test.html": {
       chromium: {
@@ -39,7 +39,7 @@ await executeTestPlan({
         captureConsole: false,
       },
     },
-    "animals.test.js": {
+    "./animals.test.js": {
       node: {
         runtime: nodeWorkerThread,
         captureConsole: false,

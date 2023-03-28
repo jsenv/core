@@ -7,16 +7,14 @@ import {
 } from "@jsenv/core"
 
 await executeTestPlan({
-  testDirectoryUrl: new URL("../src/", import.meta.url),
-  devServerOrigin: "http://localhost:3456",
-  devServerModuleUrl: new URL("./dev.mjs", import.meta.url),
+  rootDirectoryUrl: new URL("../", import.meta.url),
   testPlan: {
-    "**/*.test.js": {
+    "./src/**/*.test.js": {
       node: {
         runtime: nodeWorkerThread,
       },
     },
-    "**/*.test.html": {
+    "./src/**/*.test.html": {
       chromium: {
         runtime: chromium,
       },
@@ -29,6 +27,8 @@ await executeTestPlan({
       },
     },
   },
+  devServerOrigin: "http://localhost:3456",
+  devServerModuleUrl: new URL("./dev.mjs", import.meta.url),
   failFast: process.argv.includes("--workspace"),
   completedExecutionLogMerging: process.argv.includes("--workspace"),
 })

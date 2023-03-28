@@ -16,15 +16,14 @@ const devServer = await startDevServer({
 })
 const { testPlanCoverage } = await executeTestPlan({
   logLevel: "off",
-  testDirectoryUrl: new URL("./client/", import.meta.url),
-  devServerOrigin: devServer.origin,
+  rootDirectoryUrl: new URL("./", import.meta.url),
   testPlan: {
-    "./main.html": {
+    "./client/main.html": {
       chromium: {
         runtime: chromium,
       },
     },
-    "./main.js": {
+    "./client/main.js": {
       node_child_process: {
         runtime: nodeChildProcess,
       },
@@ -33,17 +32,18 @@ const { testPlanCoverage } = await executeTestPlan({
       },
     },
   },
+  devServerOrigin: devServer.origin,
   coverageEnabled: true,
   coverageConfig: {
-    "./js_syntax_error.js": true,
+    "./client/js_syntax_error.js": true,
   },
   coverageReportTextLog: false,
   coverageReportHtml: false,
 })
 const actual = testPlanCoverage
 const expected = {
-  "./js_syntax_error.js": {
-    ...actual["./js_syntax_error.js"],
+  "./client/js_syntax_error.js": {
+    ...actual["./client/js_syntax_error.js"],
     s: {},
   },
 }

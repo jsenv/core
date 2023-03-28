@@ -14,10 +14,9 @@ const devServer = await startDevServer({
 })
 const result = await executeTestPlan({
   logLevel: "warn",
-  testDirectoryUrl: new URL("./client/", import.meta.url),
-  devServerOrigin: devServer.origin,
+  rootDirectoryUrl: new URL("./", import.meta.url),
   testPlan: {
-    "./*.html": {
+    "./client/*.html": {
       a: {
         runtime: chromium,
       },
@@ -26,6 +25,7 @@ const result = await executeTestPlan({
       },
     },
   },
+  devServerOrigin: devServer.origin,
 })
 const actual = result
 const expected = {

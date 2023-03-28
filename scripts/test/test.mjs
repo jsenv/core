@@ -2,10 +2,10 @@ import { executeTestPlan, nodeWorkerThread } from "@jsenv/core"
 
 await executeTestPlan({
   logLevel: "info",
-  testDirectoryUrl: new URL("../../tests/", import.meta.url),
+  rootDirectoryUrl: new URL("../../", import.meta.url),
   testPlan: process.argv.includes("--only-resource-hints")
     ? {
-        "**/resource_hints/**/*.test.mjs": {
+        "./tests/**/resource_hints/**/*.test.mjs": {
           node: {
             runtime: nodeWorkerThread,
             allocatedMs: 30_000,
@@ -13,7 +13,7 @@ await executeTestPlan({
         },
       }
     : {
-        "**/*.test.mjs": {
+        "./tests/**/*.test.mjs": {
           node: {
             runtime: nodeWorkerThread,
             allocatedMs: ({ fileRelativeUrl }) => {

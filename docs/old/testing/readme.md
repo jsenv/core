@@ -174,15 +174,15 @@ _executeTestPlan_ is an async function executing test files in one or several ru
 import { executeTestPlan, nodeRuntime, chromiumTabRuntime } from "@jsenv/core"
 
 await executeTestPlan({
-  testDirectoryUrl: new URL("./", import.meta.url),
+  rootDirectoryUrl: new URL("./", import.meta.url),
   testPlan: {
-    "./test/**/*.test.html": {
+    "./tests/**/*.test.html": {
       chromium: {
         runtime: chromiumTabRuntime,
         allocatedMs: 7000,
       },
     },
-    "./test/**/*.test.mjs": {
+    "./tests/**/*.test.mjs": {
       node: {
         runtime: nodeRuntime,
         allocatedMs: 5000,
@@ -446,7 +446,7 @@ _testPlanSummary_ is an object describing quickly how the testPlan execution wen
 
 ```js
 const { testPlanSummary } = await executeTestPlan({
-  testDirectoryUrl: new URL("./", import.meta.url),
+  rootDirectoryUrl: new URL("./", import.meta.url),
   testPlan: {},
 })
 ```
@@ -470,9 +470,9 @@ _testPlanReport_ is an object containing information about every test plan file 
 
 ```js
 const { testPlanReport } = await executeTestPlan({
-  testDirectoryUrl: new URL("./", import.meta.url),
+  rootDirectoryUrl: new URL("./", import.meta.url),
   testPlan: {
-    "./test/file.test.js": {
+    "./tests/file.test.js": {
       node: {
         runtime: nodeRuntime.
       },
@@ -503,7 +503,7 @@ _testPlanCoverage_ is an object is the coverage of your test plan, it aggregates
 
 ```js
 const { testPlanCoverage } = await executeTestPlan({
-  testDirectoryUrl: new URL("./tests/", import.meta.url),
+  rootDirectoryUrl: new URL("./tests/", import.meta.url),
   testPlan: {
     "./file.test.js": {
       node: {
