@@ -9,7 +9,7 @@ const devServer = await startDevServer({
   port: 0,
 })
 const { testPlanCoverage } = await executeTestPlan({
-  logLevel: "debug",
+  logLevel: "warn",
   rootDirectoryUrl: new URL("./", import.meta.url),
   devServerOrigin: devServer.origin,
   testPlan: {

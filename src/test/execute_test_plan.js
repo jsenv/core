@@ -65,7 +65,16 @@ export const executeTestPlan = async ({
   gcBetweenExecutions = logMemoryHeapUsage,
 
   coverageEnabled = process.argv.includes("--coverage"),
-  coverageConfig = { "./**/*": true },
+  coverageConfig = {
+    "**/*": true,
+    "**/.*": false,
+    "**/.*/": false,
+    "**/node_modules/": false,
+    "**/tests/": false,
+    "**/*.test.html": false,
+    "**/*.test.js": false,
+    "**/*.test.mjs": false,
+  },
   coverageIncludeMissing = true,
   coverageAndExecutionAllowed = false,
   coverageMethodForNodeJs = process.env.NODE_V8_COVERAGE

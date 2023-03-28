@@ -146,7 +146,7 @@ export const createRuntimeFromPlaywright = ({
               const fsUrl = moveUrl({
                 url: v8CoveragesWithWebUrl.url,
                 from: `${devServerOrigin}/`,
-                to: rootDirectoryUrl,
+                to: sourceDirectoryUrl,
               })
               return {
                 ...v8CoveragesWithWebUrl,
