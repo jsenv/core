@@ -7,7 +7,7 @@ import {
   raceProcessTeardownEvents,
   raceCallbacks,
 } from "@jsenv/abort"
-import { moveUrl } from "@jsenv/urls"
+import { moveUrl, urlIsInsideOf } from "@jsenv/urls"
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js"
 
 import { filterV8Coverage } from "@jsenv/core/src/test/coverage/v8_coverage.js"
@@ -33,6 +33,7 @@ export const createRuntimeFromPlaywright = ({
     rootDirectoryUrl,
     fileRelativeUrl,
     devServerOrigin,
+    sourceDirectoryUrl,
 
     // measurePerformance,
     collectPerformance,
@@ -146,7 +147,6 @@ export const createRuntimeFromPlaywright = ({
                 url: v8CoveragesWithWebUrl.url,
                 from: `${devServerOrigin}/`,
                 to: rootDirectoryUrl,
-                preferAbsolute: true,
               })
               return {
                 ...v8CoveragesWithWebUrl,
@@ -218,8 +218,19 @@ export const createRuntimeFromPlaywright = ({
       })
     }
 
-    const fileClientUrl = new URL(fileRelativeUrl, `${devServerOrigin}/`).href
-
+    const fileUrl = new URL(fileRelativeUrl, rootDirectoryUrl).href
+    if (!urlIsInsideOf(fileUrl, sourceDirectoryUrl)) {
+      throw new Error(`Cannot execute file that is outside source directory
+--- file --- 
+${fileUrl}
+--- source directory ---
+${sourceDirectoryUrl}`)
+    }
+    const fileDevServerUrl = moveUrl({
+      url: fileUrl,
+      from: sourceDirectoryUrl,
+      to: `${devServerOrigin}/`,
+    })
     // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-console
     const removeConsoleListener = registerEvent({
       object: page,
@@ -301,7 +312,7 @@ export const createRuntimeFromPlaywright = ({
           },
           response: async (cb) => {
             try {
-              await page.goto(fileClientUrl, { timeout: 0 })
+              await page.goto(fileDevServerUrl, { timeout: 0 })
               const returnValue = await page.evaluate(
                 /* eslint-disable no-undef */
                 /* istanbul ignore next */

@@ -9,11 +9,11 @@ const devServer = await startDevServer({
   port: 0,
 })
 const { testPlanCoverage } = await executeTestPlan({
-  logLevel: "warn",
-  testDirectoryUrl: new URL("./client/", import.meta.url),
+  logLevel: "debug",
+  rootDirectoryUrl: new URL("./", import.meta.url),
   devServerOrigin: devServer.origin,
   testPlan: {
-    "./main.html": {
+    "./client/tests/main.test.html": {
       chrome: {
         runtime: chromium,
         runtimeParams: {
@@ -25,7 +25,6 @@ const { testPlanCoverage } = await executeTestPlan({
   },
   // keepRunning: true,
   coverageEnabled: true,
-  coverageRootDirectoryUrl: new URL("./", import.meta.url),
   coverageConfig: {
     "./client/file.js": true,
   },

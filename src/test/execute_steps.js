@@ -13,11 +13,10 @@ import { reportToCoverage } from "./coverage/report_to_coverage.js"
 import { run } from "@jsenv/core/src/execute/run.js"
 
 import { ensureGlobalGc } from "./gc.js"
-import { generateExecutionSteps } from "./execution_steps.js"
 import { createExecutionLog, createSummaryLog } from "./logs_file_execution.js"
 
-export const executePlan = async (
-  plan,
+export const executeSteps = async (
+  executionSteps,
   {
     signal,
     handleSIGINT,
@@ -33,6 +32,7 @@ export const executePlan = async (
     completedExecutionLogAbbreviation,
     rootDirectoryUrl,
     devServerOrigin,
+    sourceDirectoryUrl,
 
     keepRunning,
     defaultMsAllocatedPerExecution,
@@ -120,6 +120,8 @@ export const executePlan = async (
     let runtimeParams = {
       rootDirectoryUrl,
       devServerOrigin,
+      sourceDirectoryUrl,
+
       coverageEnabled,
       coverageConfig,
       coverageMethodForBrowsers,
@@ -127,13 +129,6 @@ export const executePlan = async (
       stopAfterAllSignal,
     }
 
-    logger.debug(`Generate executions`)
-    const executionSteps = await getExecutionAsSteps({
-      plan,
-      multipleExecutionsOperation,
-      rootDirectoryUrl,
-    })
-    logger.debug(`${executionSteps.length} executions planned`)
     if (completedExecutionLogMerging && !process.stdout.isTTY) {
       completedExecutionLogMerging = false
       logger.debug(
@@ -365,30 +360,6 @@ export const executePlan = async (
     return executePlanReturnValue
   } finally {
     await multipleExecutionsOperation.end()
-  }
-}
-
-const getExecutionAsSteps = async ({
-  plan,
-  multipleExecutionsOperation,
-  rootDirectoryUrl,
-}) => {
-  try {
-    const executionSteps = await generateExecutionSteps(plan, {
-      signal: multipleExecutionsOperation.signal,
-      rootDirectoryUrl,
-    })
-    return executionSteps
-  } catch (e) {
-    if (Abort.isAbortError(e)) {
-      return {
-        aborted: true,
-        planSummary: {},
-        planReport: {},
-        planCoverage: null,
-      }
-    }
-    throw e
   }
 }
 
