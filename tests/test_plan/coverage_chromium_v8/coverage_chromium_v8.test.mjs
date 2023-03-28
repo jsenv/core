@@ -4,13 +4,13 @@ import { executeTestPlan, chromium, startDevServer } from "@jsenv/core"
 
 const devServer = await startDevServer({
   logLevel: "warn",
-  sourceDirectoryUrl: new URL("./", import.meta.url),
+  sourceDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
   port: 0,
 })
 const { testPlanCoverage } = await executeTestPlan({
   logLevel: "warn",
-  testDirectoryUrl: new URL("./", import.meta.url),
+  testDirectoryUrl: new URL("./client/", import.meta.url),
   devServerOrigin: devServer.origin,
   testPlan: {
     "./main.html": {
@@ -25,17 +25,18 @@ const { testPlanCoverage } = await executeTestPlan({
   },
   // keepRunning: true,
   coverageEnabled: true,
+  coverageRootDirectoryUrl: new URL("./", import.meta.url),
   coverageConfig: {
-    "./file.js": true,
+    "./client/file.js": true,
   },
   coverageReportTextLog: false,
   coverageReportHtml: false,
 })
 const actual = testPlanCoverage
 const expected = {
-  "./file.js": {
-    ...actual["./file.js"],
-    path: `./file.js`,
+  "./client/file.js": {
+    ...actual["./client/file.js"],
+    path: `./client/file.js`,
     s: {
       0: 1,
       1: 1,
