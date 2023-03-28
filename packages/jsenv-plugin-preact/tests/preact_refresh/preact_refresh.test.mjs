@@ -6,12 +6,7 @@ import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js"
 
 import { jsenvPluginPreact } from "@jsenv/plugin-preact"
 
-const labelJsFileUrl = new URL("./client/label.js", import.meta.url)
-const labelJsFileContent = {
-  beforeTest: readFileSync(labelJsFileUrl),
-  update: (content) => writeFileSync(labelJsFileUrl, content),
-  restore: () => writeFileSync(labelJsFileUrl, labelJsFileContent.beforeTest),
-}
+const labelClientFileUrl = new URL("./client/label.js", import.meta.url)
 
 const devServer = await startDevServer({
   logLevel: "warn",
@@ -66,7 +61,10 @@ try {
     }
     assert({ actual, expected })
   }
-  labelJsFileContent.update(`export const label = "tata"`)
+  writeFileSync(
+    labelClientFileUrl,
+    readFileSync(new URL("./fixtures/label_1.js", import.meta.url)),
+  )
   await new Promise((resolve) => setTimeout(resolve, 500))
   {
     const actual = {
@@ -89,5 +87,8 @@ try {
   }
 } finally {
   browser.close()
-  labelJsFileContent.restore()
+  writeFileSync(
+    labelClientFileUrl,
+    readFileSync(new URL("./fixtures/label_0.js", import.meta.url)),
+  )
 }

@@ -5,17 +5,11 @@ import { assert } from "@jsenv/assert"
 import { startDevServer } from "@jsenv/core"
 import { jsenvPluginReact } from "@jsenv/plugin-react"
 
-if (process.platform !== "win32") {
-  const countLabelJsxFileUrl = new URL(
+const test = async () => {
+  const countLabelClientFileUrl = new URL(
     "./client/count_label.jsx",
     import.meta.url,
   )
-  const countLabelJsxFileContent = {
-    beforeTest: readFileSync(countLabelJsxFileUrl),
-    update: (content) => writeFileSync(countLabelJsxFileUrl, content),
-    restore: () =>
-      writeFileSync(countLabelJsxFileUrl, countLabelJsxFileContent.beforeTest),
-  }
 
   const devServer = await startDevServer({
     logLevel: "warn",
@@ -65,14 +59,10 @@ if (process.platform !== "win32") {
       }
       assert({ actual, expected })
     }
-    countLabelJsxFileContent.update(`export const CountLabel = ({ count }) => {
-  return (
-    <span id="count_label" style={{ color: "black" }}>
-      tata: {count}
-    </span>
-  )
-}
-`)
+    writeFileSync(
+      countLabelClientFileUrl,
+      readFileSync(new URL("./fixtures/count_label_1.jsx", import.meta.url)),
+    )
     await new Promise((resolve) => setTimeout(resolve, 500))
     {
       const actual = {
@@ -95,6 +85,13 @@ if (process.platform !== "win32") {
     }
   } finally {
     browser.close()
-    countLabelJsxFileContent.restore()
+    writeFileSync(
+      countLabelClientFileUrl,
+      readFileSync(new URL("./fixtures/count_label_0.jsx", import.meta.url)),
+    )
   }
+}
+
+if (process.platform !== "win32") {
+  await test()
 }
