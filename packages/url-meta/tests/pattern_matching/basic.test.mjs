@@ -108,7 +108,6 @@ try {
   assert({ actual, expected })
 }
 
-// this test fails but code should be modified to make it pass
 {
   const pattern = "file:///**/.*"
   const url = "file:///app/app.jsx"
