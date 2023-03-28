@@ -1,10 +1,6 @@
 import { existsSync } from "node:fs"
 import { URL_META } from "@jsenv/url-meta"
-import {
-  urlToFileSystemPath,
-  urlToRelativeUrl,
-  urlIsInsideOf,
-} from "@jsenv/urls"
+import { urlToFileSystemPath, urlToRelativeUrl } from "@jsenv/urls"
 import {
   ensureEmptyDirectory,
   assertAndNormalizeDirectoryUrl,
@@ -12,20 +8,20 @@ import {
 } from "@jsenv/filesystem"
 import { createLogger, createDetailedMessage } from "@jsenv/log"
 
-import { lookupPackageDirectory } from "../lookup_package_directory.js"
 import { pingServer } from "../ping_server.js"
 import { basicFetch } from "../basic_fetch.js"
 import { generateCoverageJsonFile } from "./coverage/coverage_reporter_json_file.js"
 import { generateCoverageHtmlDirectory } from "./coverage/coverage_reporter_html_directory.js"
 import { generateCoverageTextLog } from "./coverage/coverage_reporter_text_log.js"
-import { executePlan } from "./execute_plan.js"
+import { executionStepsFromTestPlan } from "./execution_steps.js"
+import { executeSteps } from "./execute_steps.js"
 
 /**
  * Execute a list of files and log how it goes.
  * @param {Object} testPlanParameters
- * @param {string|url} testPlanParameters.testDirectoryUrl Directory containing test files
+ * @param {string|url} testPlanParameters.rootDirectoryUrl Directory containing test files;
  * @param {string|url} [testPlanParameters.devServerOrigin=undefined] Jsenv dev server origin; required when executing test on browsers
- * @param {Object} testPlanParameters.testPlan Object associating patterns leading to files to runtimes where they should be executed
+ * @param {Object} testPlanParameters.testPlan Object associating files with runtimes where they will be executed
  * @param {boolean} [testPlanParameters.completedExecutionLogAbbreviation=false] Abbreviate completed execution information to shorten terminal output
  * @param {boolean} [testPlanParameters.completedExecutionLogMerging=false] Merge completed execution logs to shorten terminal output
  * @param {number} [testPlanParameters.maxExecutionsInParallel=1] Maximum amount of execution in parallel
@@ -50,7 +46,7 @@ export const executeTestPlan = async ({
   logFileRelativeUrl = ".jsenv/test_plan_debug.txt",
   completedExecutionLogAbbreviation = false,
   completedExecutionLogMerging = false,
-  testDirectoryUrl,
+  rootDirectoryUrl,
   devServerModuleUrl,
   devServerOrigin,
 
@@ -69,7 +65,16 @@ export const executeTestPlan = async ({
   gcBetweenExecutions = logMemoryHeapUsage,
 
   coverageEnabled = process.argv.includes("--coverage"),
-  coverageConfig = { "./**/*": true },
+  coverageConfig = {
+    "**/*": true,
+    "**/.*": false,
+    "**/.*/": false,
+    "**/node_modules/": false,
+    "**/tests/": false,
+    "**/*.test.html": false,
+    "**/*.test.js": false,
+    "**/*.test.mjs": false,
+  },
   coverageIncludeMissing = true,
   coverageAndExecutionAllowed = false,
   coverageMethodForNodeJs = process.env.NODE_V8_COVERAGE
@@ -78,7 +83,6 @@ export const executeTestPlan = async ({
   coverageMethodForBrowsers = "playwright_api", // "istanbul" also accepted
   coverageV8ConflictWarning = true,
   coverageTempDirectoryUrl,
-  coverageReportRootDirectoryUrl,
   // skip empty means empty files won't appear in the coverage reports (json and html)
   coverageReportSkipEmpty = false,
   // skip full means file with 100% coverage won't appear in coverage reports (json and html)
@@ -93,6 +97,7 @@ export const executeTestPlan = async ({
   let someNeedsServer = false
   let someNodeRuntime = false
   let stopDevServerNeeded = false
+  let sourceDirectoryUrl
   const runtimes = {}
   // param validation
   {
@@ -102,12 +107,12 @@ export const executeTestPlan = async ({
         `${unexpectedParamNames.join(",")}: there is no such param`,
       )
     }
-    testDirectoryUrl = assertAndNormalizeDirectoryUrl(
-      testDirectoryUrl,
-      "testDirectoryUrl",
+    rootDirectoryUrl = assertAndNormalizeDirectoryUrl(
+      rootDirectoryUrl,
+      "rootDirectoryUrl",
     )
-    if (!existsSync(new URL(testDirectoryUrl))) {
-      throw new Error(`ENOENT on testDirectoryUrl at ${testDirectoryUrl}`)
+    if (!existsSync(new URL(rootDirectoryUrl))) {
+      throw new Error(`ENOENT on rootDirectoryUrl at ${rootDirectoryUrl}`)
     }
     if (typeof testPlan !== "object") {
       throw new Error(`testPlan must be an object, got ${testPlan}`)
@@ -164,18 +169,12 @@ export const executeTestPlan = async ({
         }
         stopDevServerNeeded = true
       }
-      const { sourceDirectoryUrl } = await basicFetch(
+
+      const devServerParams = await basicFetch(
         `${devServerOrigin}/__server_params__.json`,
         { rejectUnauthorized: false },
       )
-      if (
-        testDirectoryUrl !== sourceDirectoryUrl &&
-        !urlIsInsideOf(testDirectoryUrl, sourceDirectoryUrl)
-      ) {
-        throw new Error(
-          `testDirectoryUrl must be inside sourceDirectoryUrl when running tests on browser(s)`,
-        )
-      }
+      sourceDirectoryUrl = devServerParams.sourceDirectoryUrl
     }
 
     if (coverageEnabled) {
@@ -214,20 +213,9 @@ export const executeTestPlan = async ({
           )
         }
       }
-      if (coverageReportRootDirectoryUrl === undefined) {
-        coverageReportRootDirectoryUrl =
-          lookupPackageDirectory(testDirectoryUrl)
-      } else {
-        coverageReportRootDirectoryUrl = assertAndNormalizeDirectoryUrl(
-          coverageReportRootDirectoryUrl,
-          "coverageReportRootDirectoryUrl",
-        )
-      }
+
       if (coverageTempDirectoryUrl === undefined) {
-        coverageTempDirectoryUrl = new URL(
-          "./.coverage/tmp/",
-          coverageReportRootDirectoryUrl,
-        )
+        coverageTempDirectoryUrl = new URL("./.coverage/tmp/", rootDirectoryUrl)
       } else {
         coverageTempDirectoryUrl = assertAndNormalizeDirectoryUrl(
           coverageTempDirectoryUrl,
@@ -238,7 +226,7 @@ export const executeTestPlan = async ({
         if (coverageReportJsonFileUrl === undefined) {
           coverageReportJsonFileUrl = new URL(
             "./.coverage/coverage.json",
-            coverageReportRootDirectoryUrl,
+            rootDirectoryUrl,
           )
         } else {
           coverageReportJsonFileUrl = assertAndNormalizeFileUrl(
@@ -251,7 +239,7 @@ export const executeTestPlan = async ({
         if (coverageReportHtmlDirectoryUrl === undefined) {
           coverageReportHtmlDirectoryUrl = new URL(
             "./.coverage/",
-            coverageReportRootDirectoryUrl,
+            rootDirectoryUrl,
           )
         } else {
           coverageReportHtmlDirectoryUrl = assertAndNormalizeDirectoryUrl(
@@ -303,8 +291,15 @@ export const executeTestPlan = async ({
   }
 
   testPlan = { ...testPlan, "**/.jsenv/": null }
+  logger.debug(`Generate executions`)
+  const executionSteps = await executionStepsFromTestPlan({
+    signal,
+    testPlan,
+    rootDirectoryUrl,
+  })
+  logger.debug(`${executionSteps.length} executions planned`)
 
-  const result = await executePlan(testPlan, {
+  const result = await executeSteps(executionSteps, {
     signal,
     handleSIGINT,
     logger,
@@ -317,8 +312,9 @@ export const executeTestPlan = async ({
     logFileRelativeUrl,
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
-    rootDirectoryUrl: testDirectoryUrl,
+    rootDirectoryUrl,
     devServerOrigin,
+    sourceDirectoryUrl,
 
     maxExecutionsInParallel,
     defaultMsAllocatedPerExecution,
@@ -367,10 +363,10 @@ export const executeTestPlan = async ({
       )
       promises.push(
         generateCoverageHtmlDirectory(planCoverage, {
-          rootDirectoryUrl: coverageReportRootDirectoryUrl,
+          rootDirectoryUrl,
           coverageHtmlDirectoryRelativeUrl: urlToRelativeUrl(
             coverageReportHtmlDirectoryUrl,
-            coverageReportRootDirectoryUrl,
+            rootDirectoryUrl,
           ),
           coverageReportSkipEmpty,
           coverageReportSkipFull,

@@ -446,6 +446,5 @@ const inferParentFromRequest = (request, sourceDirectoryUrl) => {
     url: referer,
     from: `${request.origin}/`,
     to: sourceDirectoryUrl,
-    preferAbsolute: true,
   })
 }

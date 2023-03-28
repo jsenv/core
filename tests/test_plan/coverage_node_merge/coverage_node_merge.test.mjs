@@ -9,7 +9,7 @@ import { executeTestPlan, nodeWorkerThread } from "@jsenv/core"
 
 const { testPlanCoverage } = await executeTestPlan({
   logLevel: "warn",
-  testDirectoryUrl: new URL("./", import.meta.url),
+  rootDirectoryUrl: new URL("./", import.meta.url),
   testPlan: {
     "./main.js": {
       node: {

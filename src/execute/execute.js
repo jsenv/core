@@ -22,6 +22,7 @@ export const execute = async ({
   handleSIGINT = true,
   logLevel,
   rootDirectoryUrl,
+  sourceDirectoryUrl = rootDirectoryUrl,
   devServerOrigin,
 
   fileRelativeUrl,
@@ -59,6 +60,7 @@ export const execute = async ({
   let resultTransformer = (result) => result
   runtimeParams = {
     rootDirectoryUrl,
+    sourceDirectoryUrl,
     devServerOrigin,
     fileRelativeUrl,
     ...runtimeParams,

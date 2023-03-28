@@ -1,25 +1,39 @@
+import { Abort } from "@jsenv/abort"
 import { collectFiles } from "@jsenv/filesystem"
 import { createDetailedMessage } from "@jsenv/log"
 
-export const generateExecutionSteps = async (
-  plan,
-  { signal, rootDirectoryUrl },
-) => {
-  const fileResultArray = await collectFiles({
-    signal,
-    directoryUrl: rootDirectoryUrl,
-    associations: { filePlan: plan },
-    predicate: ({ filePlan }) => filePlan,
-  })
-  const executionSteps = []
-  fileResultArray.forEach(({ relativeUrl, meta }) => {
-    const fileExecutionSteps = generateFileExecutionSteps({
-      fileRelativeUrl: relativeUrl,
-      filePlan: meta.filePlan,
+export const executionStepsFromTestPlan = async ({
+  signal,
+  rootDirectoryUrl,
+  testPlan,
+}) => {
+  try {
+    const fileResultArray = await collectFiles({
+      signal,
+      directoryUrl: rootDirectoryUrl,
+      associations: { testPlan },
+      predicate: ({ testPlan }) => testPlan,
     })
-    executionSteps.push(...fileExecutionSteps)
-  })
-  return executionSteps
+    const executionSteps = []
+    fileResultArray.forEach(({ relativeUrl, meta }) => {
+      const fileExecutionSteps = generateFileExecutionSteps({
+        fileRelativeUrl: relativeUrl,
+        filePlan: meta.testPlan,
+      })
+      executionSteps.push(...fileExecutionSteps)
+    })
+    return executionSteps
+  } catch (e) {
+    if (Abort.isAbortError(e)) {
+      return {
+        aborted: true,
+        planSummary: {},
+        planReport: {},
+        planCoverage: null,
+      }
+    }
+    throw e
+  }
 }
 
 export const generateFileExecutionSteps = ({ fileRelativeUrl, filePlan }) => {

@@ -961,6 +961,5 @@ const determineFileUrlForOutDirectory = ({ urlInfo, context }) => {
     url,
     from: context.rootDirectoryUrl,
     to: context.outDirectoryUrl,
-    preferAbsolute: true,
   })
 }

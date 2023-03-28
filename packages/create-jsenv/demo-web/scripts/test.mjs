@@ -7,9 +7,9 @@
 import { executeTestPlan, chromium } from "@jsenv/core"
 
 await executeTestPlan({
-  testDirectoryUrl: new URL("../src/", import.meta.url),
+  rootDirectoryUrl: new URL("../", import.meta.url),
   testPlan: {
-    "./**/*.test.html": {
+    "./src/**/*.test.html": {
       firefox: {
         runtime: chromium,
       },
