@@ -10,6 +10,7 @@ import {
 import { moveUrl, urlIsInsideOf } from "@jsenv/urls"
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js"
 
+import { instrumentJsExecution } from "@jsenv/core/src/test/js_execution_instrumentation.js"
 import { filterV8Coverage } from "@jsenv/core/src/test/coverage/v8_coverage.js"
 import { composeTwoFileByFileIstanbulCoverages } from "@jsenv/core/src/test/coverage/istanbul_coverage_composition.js"
 
@@ -52,6 +53,20 @@ export const createRuntimeFromPlaywright = ({
     playwrightLaunchOptions = {},
     ignoreHTTPSErrors = true,
   }) => {
+    const fileUrl = new URL(fileRelativeUrl, rootDirectoryUrl).href
+    if (!urlIsInsideOf(fileUrl, serverRootDirectoryUrl)) {
+      throw new Error(`Cannot execute file that is outside source directory
+--- file --- 
+${fileUrl}
+--- server root directory url ---
+${serverRootDirectoryUrl}`)
+    }
+    const fileServerUrl = moveUrl({
+      url: fileUrl,
+      from: serverRootDirectoryUrl,
+      to: `${serverOrigin}/`,
+    })
+
     const cleanupCallbackList = createCallbackListNotifiedOnce()
     const cleanup = memoize(async (reason) => {
       await cleanupCallbackList.notify({ reason })
@@ -113,6 +128,7 @@ export const createRuntimeFromPlaywright = ({
           : {}),
       },
     })
+    await initJsExecutionMiddleware(page, { fileUrl, fileServerUrl })
     const closePage = async () => {
       try {
         await page.close()
@@ -219,19 +235,6 @@ export const createRuntimeFromPlaywright = ({
       })
     }
 
-    const fileUrl = new URL(fileRelativeUrl, rootDirectoryUrl).href
-    if (!urlIsInsideOf(fileUrl, serverRootDirectoryUrl)) {
-      throw new Error(`Cannot execute file that is outside source directory
---- file --- 
-${fileUrl}
---- server root directory url ---
-${serverRootDirectoryUrl}`)
-    }
-    const fileServerUrl = moveUrl({
-      url: fileUrl,
-      from: serverRootDirectoryUrl,
-      to: `${serverOrigin}/`,
-    })
     // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-console
     const removeConsoleListener = registerEvent({
       object: page,
@@ -628,6 +631,27 @@ const extractTextFromConsoleMessage = (consoleMessage) => {
   //     return `${previous} ${string}`
   //   }, "")
   //   return text
+}
+
+const initJsExecutionMiddleware = async (page, { fileUrl, fileServerUrl }) => {
+  await page.route(fileServerUrl, async (route) => {
+    // Fetch original response.
+    const response = await route.fetch()
+    // Add a prefix to the title.
+    const originalBody = await response.text()
+    const bodyInstrumented = await instrumentJsExecution({
+      code: originalBody,
+      url: fileUrl,
+    })
+    route.fulfill({
+      response,
+      body: bodyInstrumented,
+      headers: {
+        ...response.headers(),
+        "content-length": Buffer.byteLength(bodyInstrumented),
+      },
+    })
+  })
 }
 
 const registerEvent = ({ object, eventType, callback }) => {

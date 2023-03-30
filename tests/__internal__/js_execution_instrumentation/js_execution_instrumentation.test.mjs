@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs"
 import { assert } from "@jsenv/assert"
 import { urlToRelativeUrl } from "@jsenv/urls"
 
-import { instrumentJsExecution } from "@jsenv/core/src/test/js_execution_instrumentation.js"
+import { instrumentJsExecution } from "@jsenv/core/src/execute/js_execution_instrumentation.js"
 import {
   readSnapshotsFromDirectory,
   writeSnapshotsIntoDirectory,
