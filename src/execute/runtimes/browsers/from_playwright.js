@@ -32,8 +32,8 @@ export const createRuntimeFromPlaywright = ({
     logger,
     rootDirectoryUrl,
     fileRelativeUrl,
-    devServerOrigin,
-    sourceDirectoryUrl,
+    serverOrigin,
+    serverRootDirectoryUrl,
 
     // measurePerformance,
     collectPerformance,
@@ -145,8 +145,8 @@ export const createRuntimeFromPlaywright = ({
             (v8CoveragesWithWebUrl) => {
               const fsUrl = moveUrl({
                 url: v8CoveragesWithWebUrl.url,
-                from: `${devServerOrigin}/`,
-                to: sourceDirectoryUrl,
+                from: `${serverOrigin}/`,
+                to: serverRootDirectoryUrl,
               })
               return {
                 ...v8CoveragesWithWebUrl,
@@ -219,17 +219,17 @@ export const createRuntimeFromPlaywright = ({
     }
 
     const fileUrl = new URL(fileRelativeUrl, rootDirectoryUrl).href
-    if (!urlIsInsideOf(fileUrl, sourceDirectoryUrl)) {
+    if (!urlIsInsideOf(fileUrl, serverRootDirectoryUrl)) {
       throw new Error(`Cannot execute file that is outside source directory
 --- file --- 
 ${fileUrl}
---- source directory ---
-${sourceDirectoryUrl}`)
+--- server root directory url ---
+${serverRootDirectoryUrl}`)
     }
-    const fileDevServerUrl = moveUrl({
+    const fileServerUrl = moveUrl({
       url: fileUrl,
-      from: sourceDirectoryUrl,
-      to: `${devServerOrigin}/`,
+      from: serverRootDirectoryUrl,
+      to: `${serverOrigin}/`,
     })
     // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-console
     const removeConsoleListener = registerEvent({
@@ -312,7 +312,7 @@ ${sourceDirectoryUrl}`)
           },
           response: async (cb) => {
             try {
-              await page.goto(fileDevServerUrl, { timeout: 0 })
+              await page.goto(fileServerUrl, { timeout: 0 })
               const returnValue = await page.evaluate(
                 /* eslint-disable no-undef */
                 /* istanbul ignore next */

@@ -48,6 +48,7 @@ export const executeTestPlan = async ({
   rootDirectoryUrl,
   serverModuleUrl,
   serverOrigin,
+  serverRootDirectoryUrl,
 
   testPlan,
   updateProcessExitCode = true,
@@ -139,6 +140,10 @@ export const executeTestPlan = async ({
           `serverOrigin is required when running tests on browser(s)`,
         )
       }
+      serverRootDirectoryUrl = assertAndNormalizeDirectoryUrl(
+        serverRootDirectoryUrl,
+        "serverRootDirectoryUrl",
+      )
       let serverOriginIsListened = await pingServer(serverOrigin)
       if (!serverOriginIsListened) {
         if (!serverModuleUrl) {
@@ -309,6 +314,7 @@ export const executeTestPlan = async ({
     completedExecutionLogAbbreviation,
     rootDirectoryUrl,
     serverOrigin,
+    serverRootDirectoryUrl,
 
     maxExecutionsInParallel,
     defaultMsAllocatedPerExecution,
