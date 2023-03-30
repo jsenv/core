@@ -869,6 +869,7 @@ window.__supervisor__ = (() => {
       const parentNode = currentScript.parentNode
       let nodeToReplace
       let currentScriptClone
+
       return supervisor.addExecution({
         src,
         type: "js_classic",
@@ -965,6 +966,44 @@ window.__supervisor__ = (() => {
       await waitScriptExecutions()
       endTime = Date.now()
     })()
+
+    const supervisedJsModules = {}
+    supervisor.jsModuleStart = (url) => {
+      const executionPromise = new Promise((resolve, reject) => {
+        supervisedJsModules[url] = { resolve, reject }
+      })
+      supervisor.addExecution({
+        src: url,
+        type: "js_module",
+        execute: () => {
+          return { executionPromise }
+        },
+      })
+    }
+    supervisor.jsModuleEnd = (url) => {
+      supervisedJsModules[url].resolve()
+    }
+    supervisor.jsModuleError = (url, error) => {
+      supervisedJsModules[url].reject(error)
+    }
+
+    const supervisedJsClassics = {}
+    supervisor.jsClassicStart = (url) => {
+      const executionPromise = new Promise((resolve, reject) => {
+        supervisedJsClassics[url] = { resolve, reject }
+      })
+      supervisor.addExecution({
+        src: url,
+        type: "js_classic",
+        execute: () => executionPromise,
+      })
+    }
+    supervisor.jsClassicEnd = (url) => {
+      supervisedJsClassics[url].resolve()
+    }
+    supervisor.jsClassicError = (url, error) => {
+      supervisedJsClassics[url].reject(error)
+    }
 
     supervisor.getDocumentExecutionResult = async () => {
       await documentExecutionPromise

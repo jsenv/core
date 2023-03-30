@@ -1,8 +1,8 @@
-window.reportJsModuleStart(import.meta.url);
+window.__supervisor__.jsModuleStart(import.meta.url);
 import "./a.js";
 try {
   await 42;
-  window.reportJsModuleEnd(import.meta.url);
+  window.__supervisor__.jsModuleEnd(import.meta.url);
 } catch (e) {
-  window.reportJsModuleError(import.meta.url, e);
+  window.__supervisor__.jsModuleError(import.meta.url, e);
 }

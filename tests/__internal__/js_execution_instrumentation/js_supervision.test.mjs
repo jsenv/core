@@ -1,16 +1,17 @@
 import { readFileSync } from "node:fs"
 import { assert } from "@jsenv/assert"
 import { urlToRelativeUrl } from "@jsenv/urls"
+import { comparePathnames } from "@jsenv/filesystem"
 
-import { instrumentJsExecution } from "@jsenv/core/src/execute/js_execution_instrumentation.js"
+import { superviseJs } from "@jsenv/core/src/execute/js_supervision.js"
 import {
   readSnapshotsFromDirectory,
   writeSnapshotsIntoDirectory,
 } from "@jsenv/core/tests/snapshots_directory.js"
 
-const files = {}
+let files = {}
 const transformFile = async (url, { isJsModule } = {}) => {
-  const code = await instrumentJsExecution({
+  const code = await superviseJs({
     code: readFileSync(url, "utf8"),
     url: String(url),
     isJsModule,
@@ -19,7 +20,16 @@ const transformFile = async (url, { isJsModule } = {}) => {
     url,
     new URL("./fixtures/", import.meta.url),
   )
+
   files[relativeUrl] = code
+  const filesSorted = {}
+  Object.keys(files)
+    .sort(comparePathnames)
+    .forEach((relativeUrl) => {
+      filesSorted[relativeUrl] = files[relativeUrl]
+    })
+  files = filesSorted
+
   return code
 }
 await transformFile(new URL("./fixtures/main.js", import.meta.url))

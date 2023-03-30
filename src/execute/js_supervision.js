@@ -15,13 +15,10 @@ import {
   generateInlineContentUrl,
   urlToFilename,
 } from "@jsenv/urls"
+
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js"
 
-export const instrumentJsExecution = async ({
-  code,
-  url,
-  isJsModule = true,
-}) => {
+export const superviseJs = async ({ code, url, isJsModule = true }) => {
   const extension = urlToExtension(url)
   if (extension === ".html") {
     return instrumentInlineJsExecution({
@@ -147,20 +144,20 @@ const babelPluginJsModuleExecutionInstrumenter = (babel) => {
         state.file.metadata.jsExecutionInstrumented = true
 
         const urlNode = createJsModuleUrlNode(t, filename)
-        const reportStartNode = createReportCall({
+        const startCallNode = createSupervisionCall({
           t,
           urlNode,
-          methodName: "reportJsModuleStart",
+          methodName: "jsModuleStart",
         })
-        const reportEndNode = createReportCall({
+        const endCallNode = createSupervisionCall({
           t,
           urlNode,
-          methodName: "reportJsModuleEnd",
+          methodName: "jsModuleEnd",
         })
-        const reportErrorNode = createReportCall({
+        const errorCallNode = createSupervisionCall({
           t,
           urlNode,
-          methodName: "reportJsModuleError",
+          methodName: "jsModuleError",
           args: [t.identifier("e")],
         })
 
@@ -181,13 +178,13 @@ const babelPluginJsModuleExecutionInstrumenter = (babel) => {
           }
         }
         const tryCatchNode = t.tryStatement(
-          t.blockStatement([...topLevelNodes, reportEndNode]),
-          t.catchClause(t.identifier("e"), t.blockStatement([reportErrorNode])),
+          t.blockStatement([...topLevelNodes, endCallNode]),
+          t.catchClause(t.identifier("e"), t.blockStatement([errorCallNode])),
         )
         programPath.replaceWith(
           t.program([
             // prettier-ignore-next
-            reportStartNode,
+            startCallNode,
             ...importNodes,
             tryCatchNode,
           ]),
@@ -209,30 +206,30 @@ const babelPluginJsClassicExecutionInstrumenter = (babel) => {
         state.file.metadata.jsExecutionInstrumented = true
 
         const urlNode = createJsClassicUrlNode(t, filename)
-        const reportStartNode = createReportCall({
+        const startCallNode = createSupervisionCall({
           t,
           urlNode,
-          methodName: "reportJsClassicStart",
+          methodName: "jsClassicStart",
         })
-        const reportEndNode = createReportCall({
+        const endCallNode = createSupervisionCall({
           t,
           urlNode,
-          methodName: "reportJsClassicEnd",
+          methodName: "jsClassicEnd",
         })
-        const reportErrorNode = createReportCall({
+        const errorCallNode = createSupervisionCall({
           t,
           urlNode,
-          methodName: "reportJsClassicError",
+          methodName: "jsClassicError",
           args: [t.identifier("e")],
         })
 
         const topLevelNodes = programPath.node.body
         const tryCatchNode = t.tryStatement(
-          t.blockStatement([...topLevelNodes, reportEndNode]),
-          t.catchClause(t.identifier("e"), t.blockStatement([reportErrorNode])),
+          t.blockStatement([...topLevelNodes, endCallNode]),
+          t.catchClause(t.identifier("e"), t.blockStatement([errorCallNode])),
         )
 
-        programPath.replaceWith(t.program([reportStartNode, tryCatchNode]))
+        programPath.replaceWith(t.program([startCallNode, tryCatchNode]))
       },
     },
   }
@@ -270,10 +267,16 @@ const createJsClassicUrlNode = (t, filename) => {
   return documentCurrentScriptSrcNode
 }
 
-const createReportCall = ({ t, methodName, urlNode, args = [] }) => {
+const createSupervisionCall = ({ t, methodName, urlNode, args = [] }) => {
   return t.expressionStatement(
     t.callExpression(
-      t.memberExpression(t.identifier("window"), t.identifier(methodName)),
+      t.memberExpression(
+        t.memberExpression(
+          t.identifier("window"),
+          t.identifier("__supervisor__"),
+        ),
+        t.identifier(methodName),
+      ),
       [urlNode, ...args],
     ),
     [],

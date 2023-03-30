@@ -13,7 +13,7 @@ import { memoize } from "@jsenv/utils/src/memoize/memoize.js"
 
 import { filterV8Coverage } from "@jsenv/core/src/test/coverage/v8_coverage.js"
 import { composeTwoFileByFileIstanbulCoverages } from "@jsenv/core/src/test/coverage/istanbul_coverage_composition.js"
-import { instrumentJsExecution } from "../../js_execution_instrumentation.js"
+import { superviseJs } from "../../js_supervision.js"
 import { supervisorFileUrl } from "../../../plugins/supervisor/jsenv_plugin_supervisor.js"
 
 export const createRuntimeFromPlaywright = ({
@@ -602,7 +602,7 @@ const initJsExecutionMiddleware = async (page, { fileUrl, fileServerUrl }) => {
     const response = await route.fetch()
     // Add a prefix to the title.
     const originalBody = await response.text()
-    const bodyInstrumented = await instrumentJsExecution({
+    const bodyInstrumented = await superviseJs({
       code: originalBody,
       url: fileUrl,
     })

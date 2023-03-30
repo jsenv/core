@@ -5,15 +5,14 @@
   </head>
 
   <body>
-    <script type="module" original-position="10:5;15:14" jsenv-cooked-by="jsenv:js_instrumenter">
-window.reportJsModuleStart(new URL("main.html@L10C5-L15C14.js", import.meta.url));
+    <script type="module" original-position="10:5;15:14" jsenv-cooked-by="jsenv:js_instrumenter">window.__supervisor__.jsModuleStart(new URL("main.html@L10C5-L15C14.js", import.meta.url));
 import "./a.js";
 try {
   await new Promise(resolve => setTimeout(resolve, 50));
   await 42;
-  window.reportJsModuleEnd(new URL("main.html@L10C5-L15C14.js", import.meta.url));
+  window.__supervisor__.jsModuleEnd(new URL("main.html@L10C5-L15C14.js", import.meta.url));
 } catch (e) {
-  window.reportJsModuleError(new URL("main.html@L10C5-L15C14.js", import.meta.url), e);
+  window.__supervisor__.jsModuleError(new URL("main.html@L10C5-L15C14.js", import.meta.url), e);
 }</script>
   
 

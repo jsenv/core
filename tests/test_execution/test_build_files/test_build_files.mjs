@@ -21,9 +21,10 @@ const result = await executeTestPlan({
       },
     },
   },
-  keepRunning: true,
+  // keepRunning: true,
   serverOrigin: buildServer.origin,
   serverRootDirectoryUrl: new URL("./project/src/", import.meta.url),
 })
 
+// TODO: assert on result
 console.log(result)
