@@ -63,6 +63,11 @@ import { getOriginalPosition } from "@jsenv/sourcemap"
 
 import { requireFromJsenv } from "@jsenv/core/src/require_from_jsenv.js"
 
+export const supervisorFileUrl = new URL(
+  "./client/supervisor.js",
+  import.meta.url,
+).href
+
 export const jsenvPluginSupervisor = ({
   logs = false,
   measurePerf = false,
@@ -70,8 +75,6 @@ export const jsenvPluginSupervisor = ({
   openInEditor = true,
   errorBaseUrl,
 }) => {
-  const supervisorFileUrl = new URL("./client/supervisor.js", import.meta.url)
-    .href
   const scriptTypeModuleSupervisorFileUrl = new URL(
     "./client/script_type_module_supervisor.js",
     import.meta.url,
@@ -320,6 +323,7 @@ export const jsenvPluginSupervisor = ({
       window.__supervisor__.setup(${JSON.stringify(
         {
           rootDirectoryUrl: context.rootDirectoryUrl,
+          serverIsJsenvDevServer: true,
           errorBaseUrl,
           logs,
           measurePerf,

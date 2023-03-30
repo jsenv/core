@@ -168,14 +168,12 @@ export const executeTestPlan = async ({
           )
         }
       }
-      const { status, json } = await basicFetch(
-        `${serverOrigin}/__params__.json`,
-        {
-          rejectUnauthorized: false,
-        },
-      )
-      if (status === 200) {
+      const { headers } = await basicFetch(serverOrigin)
+      if (headers["x-jsenv-dev-server"]) {
         serverIsJsenvDevServer = true
+        const { json } = await basicFetch(`${serverOrigin}/__params__.json`, {
+          rejectUnauthorized: false,
+        })
         if (serverRootDirectoryUrl === undefined) {
           const jsenvDevServerParams = await json()
           serverRootDirectoryUrl = jsenvDevServerParams.sourceDirectoryUrl

@@ -1,4 +1,5 @@
-import { writeFileSync } from "node:fs"
+import { writeFileSync, readFileSync } from "node:fs"
+import { fileURLToPath } from "node:url"
 
 import { createDetailedMessage } from "@jsenv/log"
 import {
@@ -10,9 +11,10 @@ import {
 import { moveUrl, urlIsInsideOf } from "@jsenv/urls"
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js"
 
-import { instrumentJsExecution } from "@jsenv/core/src/test/js_execution_instrumentation.js"
 import { filterV8Coverage } from "@jsenv/core/src/test/coverage/v8_coverage.js"
 import { composeTwoFileByFileIstanbulCoverages } from "@jsenv/core/src/test/coverage/istanbul_coverage_composition.js"
+import { instrumentJsExecution } from "../../js_execution_instrumentation.js"
+import { supervisorFileUrl } from "../../../plugins/supervisor/jsenv_plugin_supervisor.js"
 
 export const createRuntimeFromPlaywright = ({
   browserName,
@@ -128,7 +130,9 @@ ${serverRootDirectoryUrl}`)
           : {}),
       },
     })
-    await initJsExecutionMiddleware(page, { fileUrl, fileServerUrl })
+    if (!serverIsJsenvDevServer) {
+      await initJsExecutionMiddleware(page, { fileUrl, fileServerUrl })
+    }
     const closePage = async () => {
       try {
         await page.close()
@@ -320,102 +324,44 @@ ${serverRootDirectoryUrl}`)
           },
           response: async (cb) => {
             try {
-              await page.goto(fileServerUrl, { timeout: 0 })
-              let returnValue
-              if (serverIsJsenvDevServer) {
-                returnValue = await page.evaluate(
-                  /* eslint-disable no-undef */
-                  /* istanbul ignore next */
-                  async () => {
-                    let startTime
-                    try {
-                      startTime = window.performance.timing.navigationStart
-                    } catch (e) {
-                      startTime = Date.now()
-                    }
-                    if (!window.__supervisor__) {
-                      throw new Error("window.__supervisor__ is undefined")
-                    }
-                    const executionResultFromJsenvSupervisor =
-                      await window.__supervisor__.getDocumentExecutionResult()
-                    return {
-                      type: "window_supervisor",
-                      startTime,
-                      endTime: Date.now(),
-                      executionResults:
-                        executionResultFromJsenvSupervisor.executionResults,
-                    }
-                  },
-                  /* eslint-enable no-undef */
-                )
-              } else {
-                returnValue = await page.evaluate(
-                  /* eslint-disable no-undef */
-                  /* istanbul ignore next */
-                  async () => {
-                    let startTime
-                    try {
-                      startTime = window.performance.timing.navigationStart
-                    } catch (e) {
-                      startTime = Date.now()
-                    }
-                    if (window.executionPromise) {
-                      try {
-                        const executionPromiseValue =
-                          await window.executionPromise
-                        return {
-                          type: "window_execution_promise",
-                          startTime,
-                          endTime: Date.now(),
-                          executionResults: {
-                            [window.location.pathname]: {
-                              duration: Date.now() - startTime,
-                              status: "completed",
-                              value: executionPromiseValue,
-                            },
-                          },
-                        }
-                      } catch (e) {
-                        return {
-                          type: "window_execution_promise",
-                          startTime,
-                          endTime: Date.now(),
-                          executionResults: {
-                            [window.location.pathname]: {
-                              duration: Date.now() - startTime,
-                              status: "failed",
-                              error: e,
-                            },
-                          },
-                        }
-                      }
-                    }
-                    await new Promise((resolve) => {
-                      if (document.readyState === "complete") {
-                        resolve()
-                        return
-                      }
-                      const loadCallback = () => {
-                        window.removeEventListener("load", loadCallback)
-                        resolve()
-                      }
-                      window.addEventListener("load", loadCallback)
-                    })
-                    return {
-                      type: "window_load",
-                      startTime,
-                      endTime: Date.now(),
-                      executionResults: {
-                        [window.location.pathname]: {
-                          duration: Date.now() - startTime,
-                          status: "completed",
-                        },
-                      },
-                    }
-                  },
-                  /* eslint-enable no-undef */
-                )
+              if (!serverIsJsenvDevServer) {
+                await page.addInitScript({
+                  content: `${readFileSync(fileURLToPath(supervisorFileUrl))}
+                  window.__supervisor__.setup(${JSON.stringify(
+                    {
+                      rootDirectoryUrl: serverRootDirectoryUrl,
+                    },
+                    null,
+                    "        ",
+                  )})`,
+                })
               }
+              await page.goto(fileServerUrl, { timeout: 0 })
+              const returnValue = await page.evaluate(
+                /* eslint-disable no-undef */
+                /* istanbul ignore next */
+                async () => {
+                  let startTime
+                  try {
+                    startTime = window.performance.timing.navigationStart
+                  } catch (e) {
+                    startTime = Date.now()
+                  }
+                  if (!window.__supervisor__) {
+                    throw new Error("window.__supervisor__ is undefined")
+                  }
+                  const executionResultFromJsenvSupervisor =
+                    await window.__supervisor__.getDocumentExecutionResult()
+                  return {
+                    type: "window_supervisor",
+                    startTime,
+                    endTime: Date.now(),
+                    executionResults:
+                      executionResultFromJsenvSupervisor.executionResults,
+                  }
+                },
+                /* eslint-enable no-undef */
+              )
               cb(returnValue)
             } catch (e) {
               reject(e)
@@ -634,7 +580,24 @@ const extractTextFromConsoleMessage = (consoleMessage) => {
 }
 
 const initJsExecutionMiddleware = async (page, { fileUrl, fileServerUrl }) => {
-  await page.route(fileServerUrl, async (route) => {
+  const isFileOrDirectDependency = (request) => {
+    const url = request.url()
+    if (url === fileServerUrl) {
+      return true
+    }
+    // imported by the main file, like <script type="module" src="./main.js">
+    const { referer } = request.headers
+    if (referer === fileServerUrl) {
+      return true
+    }
+    return false
+  }
+
+  await page.route("**", async (route) => {
+    if (!isFileOrDirectDependency(route.request())) {
+      route.fallback()
+      return
+    }
     // Fetch original response.
     const response = await route.fetch()
     // Add a prefix to the title.

@@ -24,7 +24,7 @@ export const basicFetch = async (
     req.on("response", (response) => {
       resolve({
         status: response.statusCode,
-        headers: response.headers["content-type"],
+        headers: response.headers,
         json: () => {
           req.setTimeout(0)
           req.destroy()

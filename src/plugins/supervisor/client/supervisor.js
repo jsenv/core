@@ -20,6 +20,7 @@ window.__supervisor__ = (() => {
 
   supervisor.setupReportException = ({
     rootDirectoryUrl,
+    serverIsJsenvDevServer,
     errorNotification,
     errorOverlay,
     errorBaseUrl,
@@ -375,6 +376,9 @@ window.__supervisor__ = (() => {
         })
         if (exceptionInfo.site.url) {
           errorParts.errorDetailsPromise = (async () => {
+            if (!serverIsJsenvDevServer) {
+              return null
+            }
             try {
               if (
                 exceptionInfo.code === DYNAMIC_IMPORT_FETCH_ERROR ||
@@ -712,12 +716,14 @@ window.__supervisor__ = (() => {
 
   supervisor.setup = ({
     rootDirectoryUrl,
+    serverIsJsenvDevServer,
     logs,
     errorOverlay,
     errorBaseUrl,
     openInEditor,
   }) => {
     supervisor.setupReportException({
+      serverIsJsenvDevServer,
       rootDirectoryUrl,
       errorOverlay,
       errorBaseUrl,

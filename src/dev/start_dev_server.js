@@ -134,6 +134,11 @@ export const startDevServer = async ({
     port,
     requestWaitingMs: 60_000,
     services: [
+      {
+        injectResponseHeaders: () => {
+          return { "x-jsenv-dev-server": "1" }
+        },
+      },
       jsenvServiceCORS({
         accessControlAllowRequestOrigin: true,
         accessControlAllowRequestMethod: true,
