@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <script type="module">
+      import "./a.js"
+
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      await 42
+    </script>
+  </body>
+</html>

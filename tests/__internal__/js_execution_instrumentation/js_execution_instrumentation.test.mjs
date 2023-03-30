@@ -26,6 +26,9 @@ await transformFile(new URL("./fixtures/main.js", import.meta.url))
 await transformFile(new URL("./fixtures/classic.js", import.meta.url), {
   isJsModule: false,
 })
+await transformFile(new URL("./fixtures/main.html", import.meta.url), {
+  isJsModule: false,
+})
 
 const actual = files
 const expected = readSnapshotsFromDirectory(
