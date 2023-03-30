@@ -2,27 +2,30 @@ import { readFileSync } from "node:fs"
 import { assert } from "@jsenv/assert"
 import { urlToRelativeUrl } from "@jsenv/urls"
 
-import { instrumentTopLevelAwait } from "@jsenv/core/src/test/top_level_await/instrument_top_level_await.js"
+import { instrumentJsExecution } from "@jsenv/core/src/test/js_execution_instrumentation.js"
 import {
   readSnapshotsFromDirectory,
   writeSnapshotsIntoDirectory,
 } from "@jsenv/core/tests/snapshots_directory.js"
 
 const files = {}
-const transformFile = async (url) => {
-  const code = await instrumentTopLevelAwait({
+const transformFile = async (url, { isJsModule } = {}) => {
+  const code = await instrumentJsExecution({
     code: readFileSync(url, "utf8"),
     url: String(url),
+    isJsModule,
   })
   const relativeUrl = urlToRelativeUrl(
     url,
     new URL("./fixtures/", import.meta.url),
   )
   files[relativeUrl] = code
-
   return code
 }
 await transformFile(new URL("./fixtures/main.js", import.meta.url))
+await transformFile(new URL("./fixtures/classic.js", import.meta.url), {
+  isJsModule: false,
+})
 
 const actual = files
 const expected = readSnapshotsFromDirectory(
