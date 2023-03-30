@@ -12,7 +12,8 @@ const test = async ({ runtime }) => {
   const { status, namespace, consoleCalls } = await execute({
     // logLevel: "debug",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
-    devServerOrigin: devServer.origin,
+    serverOrigin: devServer.origin,
+    serverRootDirectoryUrl: new URL("./client/", import.meta.url),
     fileRelativeUrl: `./main.html`,
     runtime,
     // runtimeParams: {

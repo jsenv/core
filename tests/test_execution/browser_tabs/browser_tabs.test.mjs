@@ -25,7 +25,8 @@ const result = await executeTestPlan({
       },
     },
   },
-  devServerOrigin: devServer.origin,
+  serverOrigin: devServer.origin,
+  serverRootDirectoryUrl: new URL("./client/", import.meta.url),
 })
 const actual = result
 const expected = {

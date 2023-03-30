@@ -17,7 +17,7 @@ export const createRuntimeFromPlaywright = ({
   browserName,
   browserVersion,
   coveragePlaywrightAPIAvailable = false,
-  ignoreErrorHook = () => false,
+  shouldIgnoreError = () => false,
   transformErrorHook = (error) => error,
   isolatedTab = false,
 }) => {
@@ -34,6 +34,7 @@ export const createRuntimeFromPlaywright = ({
     fileRelativeUrl,
     serverOrigin,
     serverRootDirectoryUrl,
+    serverIsJsenvDevServer,
 
     // measurePerformance,
     collectPerformance,
@@ -247,6 +248,7 @@ ${serverRootDirectoryUrl}`)
     cleanupCallbackList.add(removeConsoleListener)
     const actionOperation = Abort.startOperation()
     actionOperation.addAbortSignal(signal)
+
     const winnerPromise = new Promise((resolve, reject) => {
       raceCallbacks(
         {
@@ -259,7 +261,7 @@ ${serverRootDirectoryUrl}`)
               object: page,
               eventType: "error",
               callback: (error) => {
-                if (ignoreErrorHook(error)) {
+                if (shouldIgnoreError(error, "error")) {
                   return
                 }
                 cb(transformErrorHook(error))
@@ -272,7 +274,10 @@ ${serverRootDirectoryUrl}`)
               object: page,
               eventType: "pageerror",
               callback: (error) => {
-                if (ignoreErrorHook(error)) {
+                if (
+                  serverIsJsenvDevServer ||
+                  shouldIgnoreError(error, "pageerror")
+                ) {
                   return
                 }
                 result.errors.push(transformErrorHook(error))
@@ -480,7 +485,7 @@ ${serverRootDirectoryUrl}`)
       browserName,
       browserVersion,
       coveragePlaywrightAPIAvailable,
-      ignoreErrorHook,
+      shouldIgnoreError,
       transformErrorHook,
       isolatedTab: true,
     })

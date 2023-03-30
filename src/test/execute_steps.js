@@ -33,6 +33,7 @@ export const executeSteps = async (
     rootDirectoryUrl,
     serverOrigin,
     serverRootDirectoryUrl,
+    serverIsJsenvDevServer,
 
     keepRunning,
     defaultMsAllocatedPerExecution,
@@ -121,6 +122,7 @@ export const executeSteps = async (
       rootDirectoryUrl,
       serverOrigin,
       serverRootDirectoryUrl,
+      serverIsJsenvDevServer,
 
       coverageEnabled,
       coverageConfig,

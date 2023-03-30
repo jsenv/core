@@ -11,7 +11,8 @@ const test = async ({ runtime }) => {
   })
   const { status, namespace, performance } = await execute({
     rootDirectoryUrl: new URL("./client/", import.meta.url),
-    devServerOrigin: devServer.origin,
+    serverOrigin: devServer.origin,
+    serverSourceDirectoryUrl: new URL("./client/", import.meta.url),
     fileRelativeUrl: `./main.html`,
     runtime,
     mirrorConsole: false,

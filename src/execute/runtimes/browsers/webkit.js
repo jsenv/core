@@ -5,7 +5,7 @@ export const webkit = createRuntimeFromPlaywright({
   // browserVersion will be set by "browser._initializer.version"
   // see also https://github.com/microsoft/playwright/releases
   browserVersion: "unset",
-  ignoreErrorHook: (error) => {
+  shouldIgnoreError: (error) => {
     // we catch error during execution but safari throw unhandled rejection
     // in a non-deterministic way.
     // I suppose it's due to some race condition to decide if the promise is catched or not

@@ -20,5 +20,5 @@ await executeTestPlan({
       },
     },
   },
-  devServerOrigin: devServer.origin,
+  serverOrigin: devServer.origin,
 })

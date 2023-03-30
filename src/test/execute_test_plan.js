@@ -9,6 +9,7 @@ import {
 import { createLogger, createDetailedMessage } from "@jsenv/log"
 
 import { pingServer } from "../ping_server.js"
+import { basicFetch } from "../basic_fetch.js"
 import { generateCoverageJsonFile } from "./coverage/coverage_reporter_json_file.js"
 import { generateCoverageHtmlDirectory } from "./coverage/coverage_reporter_html_directory.js"
 import { generateCoverageTextLog } from "./coverage/coverage_reporter_text_log.js"
@@ -96,6 +97,7 @@ export const executeTestPlan = async ({
 }) => {
   let someNeedsServer = false
   let someNodeRuntime = false
+  let serverIsJsenvDevServer = false
   const runtimes = {}
   // param validation
   {
@@ -140,10 +142,6 @@ export const executeTestPlan = async ({
           `serverOrigin is required when running tests on browser(s)`,
         )
       }
-      serverRootDirectoryUrl = assertAndNormalizeDirectoryUrl(
-        serverRootDirectoryUrl,
-        "serverRootDirectoryUrl",
-      )
       let serverOriginIsListened = await pingServer(serverOrigin)
       if (!serverOriginIsListened) {
         if (!serverModuleUrl) {
@@ -167,6 +165,24 @@ export const executeTestPlan = async ({
         if (!serverOriginIsListened) {
           throw new Error(
             `server not started after importing "${serverModuleUrl}", ensure this module file is starting a server at "${serverOrigin}"`,
+          )
+        }
+      }
+      const { status, json } = await basicFetch(
+        `${serverOrigin}/__params__.json`,
+        {
+          rejectUnauthorized: false,
+        },
+      )
+      if (status === 200) {
+        serverIsJsenvDevServer = true
+        if (serverRootDirectoryUrl === undefined) {
+          const jsenvDevServerParams = await json()
+          serverRootDirectoryUrl = jsenvDevServerParams.sourceDirectoryUrl
+        } else {
+          serverRootDirectoryUrl = assertAndNormalizeDirectoryUrl(
+            serverRootDirectoryUrl,
+            "serverRootDirectoryUrl",
           )
         }
       }
@@ -315,6 +331,7 @@ export const executeTestPlan = async ({
     rootDirectoryUrl,
     serverOrigin,
     serverRootDirectoryUrl,
+    serverIsJsenvDevServer,
 
     maxExecutionsInParallel,
     defaultMsAllocatedPerExecution,

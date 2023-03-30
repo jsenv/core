@@ -145,6 +145,24 @@ export const startDevServer = async ({
         accessControlAllowCredentials: true,
         timingAllowOrigin: true,
       }),
+      {
+        handleRequest: (request) => {
+          if (request.pathname === "/__params__.json") {
+            const json = JSON.stringify({
+              sourceDirectoryUrl,
+            })
+            return {
+              status: 200,
+              headers: {
+                "content-type": "application/json",
+                "content-length": Buffer.byteLength(json),
+              },
+              body: json,
+            }
+          }
+          return null
+        },
+      },
       ...services,
       {
         name: "jsenv:omega_file_service",

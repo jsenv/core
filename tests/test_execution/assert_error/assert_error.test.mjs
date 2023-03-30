@@ -30,7 +30,7 @@ const test = async ({ runtime }) => {
         browser: { runtime },
       },
     },
-    devServerOrigin: devServer.origin,
+    serverOrigin: devServer.origin,
   })
   const namespace = testPlanReport["client/main.html"].browser.namespace
 

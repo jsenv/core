@@ -12,7 +12,8 @@ const test = async ({ runtime }) => {
   const { errors } = await execute({
     // logLevel: "debug"
     rootDirectoryUrl: new URL("./client/", import.meta.url),
-    devServerOrigin: devServer.origin,
+    serverOrigin: devServer.origin,
+    serverRootDirectoryUrl: new URL("./client/", import.meta.url),
     fileRelativeUrl: `./main.html`,
     runtime,
     mirrorConsole: false,
@@ -31,7 +32,7 @@ const test = async ({ runtime }) => {
     assert({ actual, expected })
   }
   if (runtime === webkit) {
-    const actual = errors[0].message
+    const actual = errors[0].reason
     const expected = `Unexpected end of script`
     assert({ actual, expected })
   }
