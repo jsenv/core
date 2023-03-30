@@ -267,18 +267,18 @@ ${serverRootDirectoryUrl}`)
             })
           },
           // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
-          // pageerror: () => {
-          //   return registerEvent({
-          //     object: page,
-          //     eventType: "pageerror",
-          //     callback: (error) => {
-          //       if (ignoreErrorHook(error)) {
-          //         return
-          //       }
-          //       result.errors.push(transformErrorHook(error))
-          //     },
-          //   })
-          // },
+          pageerror: () => {
+            return registerEvent({
+              object: page,
+              eventType: "pageerror",
+              callback: (error) => {
+                if (ignoreErrorHook(error)) {
+                  return
+                }
+                result.errors.push(transformErrorHook(error))
+              },
+            })
+          },
           closed: (cb) => {
             // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
             if (isBrowserDedicatedToExecution) {
@@ -316,14 +316,84 @@ ${serverRootDirectoryUrl}`)
               const returnValue = await page.evaluate(
                 /* eslint-disable no-undef */
                 /* istanbul ignore next */
-                () => {
-                  if (!window.__supervisor__) {
-                    throw new Error(`window.__supervisor__ not found`)
+                async () => {
+                  let startTime
+                  try {
+                    startTime = window.performance.timing.navigationStart
+                  } catch (e) {
+                    startTime = Date.now()
                   }
-                  return window.__supervisor__.getDocumentExecutionResult()
+
+                  if (window.__supervisor__) {
+                    const executionResultFromJsenvSupervisor =
+                      await window.__supervisor__.getDocumentExecutionResult()
+                    return {
+                      type: "window_supervisor",
+                      startTime,
+                      endTime: Date.now(),
+                      executionResults:
+                        executionResultFromJsenvSupervisor.executionResults,
+                    }
+                  }
+                  if (window.executionPromise) {
+                    try {
+                      const executionPromiseValue =
+                        await window.executionPromise
+                      return {
+                        type: "window_execution_promise",
+                        startTime,
+                        endTime: Date.now(),
+                        executionResults: {
+                          [window.location.pathname]: {
+                            duration: Date.now() - startTime,
+                            status: "completed",
+                            value: executionPromiseValue,
+                          },
+                        },
+                      }
+                    } catch (e) {
+                      return {
+                        type: "window_execution_promise",
+                        startTime,
+                        endTime: Date.now(),
+                        executionResults: {
+                          [window.location.pathname]: {
+                            duration: Date.now() - startTime,
+                            status: "failed",
+                            error: e,
+                          },
+                        },
+                      }
+                    }
+                  }
+                  await new Promise((resolve) => {
+                    if (document.readyState === "complete") {
+                      resolve()
+                      return
+                    }
+                    const loadCallback = () => {
+                      window.removeEventListener("load", loadCallback)
+                      resolve()
+                    }
+                    window.addEventListener("load", loadCallback)
+                  })
+                  return {
+                    type: "window_load",
+                    startTime,
+                    endTime: Date.now(),
+                    executionResults: {
+                      [window.location.pathname]: {
+                        duration: Date.now() - startTime,
+                        status: "completed",
+                      },
+                    },
+                  }
                 },
                 /* eslint-enable no-undef */
               )
+              await new Promise((resolve) => {
+                setTimeout(resolve, 50)
+              })
               cb(returnValue)
             } catch (e) {
               reject(e)
@@ -346,6 +416,12 @@ ${serverRootDirectoryUrl}`)
         result.errors.push(error)
         return
       }
+      if (winner.name === "pageerror") {
+        let error = winner.data
+        result.status = "failed"
+        result.errors.push(error)
+        return
+      }
       if (winner.name === "closed") {
         result.status = "failed"
         result.errors.push(
@@ -355,7 +431,7 @@ ${serverRootDirectoryUrl}`)
         )
         return
       }
-      // winner.name = 'response'
+      // winner.name === "response"
       const { executionResults } = winner.data
       result.status = "completed"
       result.namespace = executionResults
@@ -363,10 +439,17 @@ ${serverRootDirectoryUrl}`)
         const executionResult = executionResults[key]
         if (executionResult.status === "failed") {
           result.status = "failed"
-          result.errors.push({
-            ...executionResult.exception,
-            stack: executionResult.exception.text,
-          })
+          if (executionResult.exception) {
+            result.errors.push({
+              ...executionResult.exception,
+              stack: executionResult.exception.text,
+            })
+          } else {
+            result.errors.push({
+              ...executionResult.error,
+              stack: executionResult.error.stack,
+            })
+          }
         }
       })
     }
