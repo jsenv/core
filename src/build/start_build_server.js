@@ -108,8 +108,9 @@ export const startBuildServer = async ({
     stopOnExit: false,
     stopOnSIGINT: false,
     stopOnInternalError: false,
-    // the worker should be kept alive by the parent otherwise
-    keepProcessAlive,
+    keepProcessAlive: process.env.IMPORTED_BY_TEST_PLAN
+      ? false
+      : keepProcessAlive,
     logLevel: serverLogLevel,
     startLog: false,
 

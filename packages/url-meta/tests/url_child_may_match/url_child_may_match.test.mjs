@@ -169,3 +169,28 @@ import { URL_META } from "@jsenv/url-meta"
   }
   assert({ actual, expected })
 }
+
+{
+  const test = (url) =>
+    URL_META.urlChildMayMatch({
+      url,
+      associations: {
+        whatever: {
+          "file:///**/node_modules/": false,
+          "file:///**/.test.mjs": true,
+        },
+      },
+      predicate: ({ whatever }) => whatever,
+    })
+  const actual = {
+    a: test("file:///node_modules/"),
+    b: test("file:///project/src/"),
+    c: test("file:///project/node_modules/"),
+  }
+  const expected = {
+    a: false,
+    b: true,
+    c: false,
+  }
+  assert({ actual, expected })
+}
