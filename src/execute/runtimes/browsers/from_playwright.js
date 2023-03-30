@@ -318,18 +318,21 @@ ${serverRootDirectoryUrl}`)
           response: async (cb) => {
             try {
               await page.goto(fileServerUrl, { timeout: 0 })
-              const returnValue = await page.evaluate(
-                /* eslint-disable no-undef */
-                /* istanbul ignore next */
-                async () => {
-                  let startTime
-                  try {
-                    startTime = window.performance.timing.navigationStart
-                  } catch (e) {
-                    startTime = Date.now()
-                  }
-
-                  if (window.__supervisor__) {
+              let returnValue
+              if (serverIsJsenvDevServer) {
+                returnValue = await page.evaluate(
+                  /* eslint-disable no-undef */
+                  /* istanbul ignore next */
+                  async () => {
+                    let startTime
+                    try {
+                      startTime = window.performance.timing.navigationStart
+                    } catch (e) {
+                      startTime = Date.now()
+                    }
+                    if (!window.__supervisor__) {
+                      throw new Error("window.__supervisor__ is undefined")
+                    }
                     const executionResultFromJsenvSupervisor =
                       await window.__supervisor__.getDocumentExecutionResult()
                     return {
@@ -339,66 +342,77 @@ ${serverRootDirectoryUrl}`)
                       executionResults:
                         executionResultFromJsenvSupervisor.executionResults,
                     }
-                  }
-                  if (window.executionPromise) {
+                  },
+                  /* eslint-enable no-undef */
+                )
+              } else {
+                returnValue = await page.evaluate(
+                  /* eslint-disable no-undef */
+                  /* istanbul ignore next */
+                  async () => {
+                    let startTime
                     try {
-                      const executionPromiseValue =
-                        await window.executionPromise
-                      return {
-                        type: "window_execution_promise",
-                        startTime,
-                        endTime: Date.now(),
-                        executionResults: {
-                          [window.location.pathname]: {
-                            duration: Date.now() - startTime,
-                            status: "completed",
-                            value: executionPromiseValue,
-                          },
-                        },
-                      }
+                      startTime = window.performance.timing.navigationStart
                     } catch (e) {
-                      return {
-                        type: "window_execution_promise",
-                        startTime,
-                        endTime: Date.now(),
-                        executionResults: {
-                          [window.location.pathname]: {
-                            duration: Date.now() - startTime,
-                            status: "failed",
-                            error: e,
+                      startTime = Date.now()
+                    }
+                    if (window.executionPromise) {
+                      try {
+                        const executionPromiseValue =
+                          await window.executionPromise
+                        return {
+                          type: "window_execution_promise",
+                          startTime,
+                          endTime: Date.now(),
+                          executionResults: {
+                            [window.location.pathname]: {
+                              duration: Date.now() - startTime,
+                              status: "completed",
+                              value: executionPromiseValue,
+                            },
                           },
-                        },
+                        }
+                      } catch (e) {
+                        return {
+                          type: "window_execution_promise",
+                          startTime,
+                          endTime: Date.now(),
+                          executionResults: {
+                            [window.location.pathname]: {
+                              duration: Date.now() - startTime,
+                              status: "failed",
+                              error: e,
+                            },
+                          },
+                        }
                       }
                     }
-                  }
-                  await new Promise((resolve) => {
-                    if (document.readyState === "complete") {
-                      resolve()
-                      return
-                    }
-                    const loadCallback = () => {
-                      window.removeEventListener("load", loadCallback)
-                      resolve()
-                    }
-                    window.addEventListener("load", loadCallback)
-                  })
-                  return {
-                    type: "window_load",
-                    startTime,
-                    endTime: Date.now(),
-                    executionResults: {
-                      [window.location.pathname]: {
-                        duration: Date.now() - startTime,
-                        status: "completed",
+                    await new Promise((resolve) => {
+                      if (document.readyState === "complete") {
+                        resolve()
+                        return
+                      }
+                      const loadCallback = () => {
+                        window.removeEventListener("load", loadCallback)
+                        resolve()
+                      }
+                      window.addEventListener("load", loadCallback)
+                    })
+                    return {
+                      type: "window_load",
+                      startTime,
+                      endTime: Date.now(),
+                      executionResults: {
+                        [window.location.pathname]: {
+                          duration: Date.now() - startTime,
+                          status: "completed",
+                        },
                       },
-                    },
-                  }
-                },
-                /* eslint-enable no-undef */
-              )
-              await new Promise((resolve) => {
-                setTimeout(resolve, 50)
-              })
+                    }
+                  },
+                  /* eslint-enable no-undef */
+                )
+              }
               cb(returnValue)
             } catch (e) {
               reject(e)

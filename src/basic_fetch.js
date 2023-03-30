@@ -22,12 +22,12 @@ export const basicFetch = async (
       headers,
     })
     req.on("response", (response) => {
-      req.setTimeout(0)
-      req.destroy()
       resolve({
         status: response.statusCode,
         headers: response.headers["content-type"],
         json: () => {
+          req.setTimeout(0)
+          req.destroy()
           return new Promise((resolve) => {
             if (response.headers["content-type"] !== "application/json") {
               console.warn("not json")
@@ -39,6 +39,9 @@ export const basicFetch = async (
             })
             response.on("end", () => {
               resolve(JSON.parse(responseBody))
+            })
+            response.on("error", (e) => {
+              reject(e)
             })
           })
         },
