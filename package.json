@@ -43,7 +43,6 @@
     "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",
     "dev": "node --conditions=development ./scripts/dev/dev.mjs",
     "test": "node --conditions=development ./scripts/test/test.mjs",
-    "test:resource_hints": "npm run test -- --only-resource-hints",
     "build": "node --conditions=development ./scripts/build/build.mjs",
     "workspace:test": "npm run test --workspaces --if-present -- --workspace",
     "workspace:versions": "node ./scripts/publish/workspace_versions.mjs",

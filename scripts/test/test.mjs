@@ -3,46 +3,34 @@ import { executeTestPlan, nodeWorkerThread } from "@jsenv/core"
 await executeTestPlan({
   logLevel: "info",
   rootDirectoryUrl: new URL("../../", import.meta.url),
-  testPlan: process.argv.includes("--only-resource-hints")
-    ? {
-        "./tests/**/resource_hints/**/*.test.mjs": {
-          node: {
-            runtime: nodeWorkerThread,
-            allocatedMs: 30_000,
-          },
-        },
-      }
-    : {
-        "./tests/**/*.test.mjs": {
-          node: {
-            runtime: nodeWorkerThread,
-            allocatedMs: ({ fileRelativeUrl }) => {
-              if (fileRelativeUrl.endsWith("_snapshots.test.mjs")) {
-                return 180_000
-              }
-              if (
-                fileRelativeUrl.endsWith(
-                  "import_assert_type_css_build.test.mjs",
-                ) ||
-                fileRelativeUrl.endsWith("autoreload_js_import_css.test.mjs")
-              ) {
-                return 90_000
-              }
-              if (
-                fileRelativeUrl.endsWith("coverage_universal.test.mjs") ||
-                fileRelativeUrl.endsWith("preload_js_module_build.test.mjs") ||
-                fileRelativeUrl.endsWith("_browsers.test.mjs") ||
-                fileRelativeUrl.endsWith(
-                  "import_assert_type_css_dev.test.mjs",
-                ) ||
-                fileRelativeUrl.endsWith("preload_local_font_build.test.mjs")
-              ) {
-                return 60_000
-              }
-              return 30_000
-            },
-          },
+  testPlan: {
+    "./tests/**/*.test.mjs": {
+      node: {
+        runtime: nodeWorkerThread,
+        allocatedMs: ({ fileRelativeUrl }) => {
+          if (fileRelativeUrl.endsWith("_snapshots.test.mjs")) {
+            return 180_000
+          }
+          if (
+            fileRelativeUrl.endsWith("import_assert_type_css_build.test.mjs") ||
+            fileRelativeUrl.endsWith("autoreload_js_import_css.test.mjs")
+          ) {
+            return 90_000
+          }
+          if (
+            fileRelativeUrl.endsWith("coverage_universal.test.mjs") ||
+            fileRelativeUrl.endsWith("preload_js_module_build.test.mjs") ||
+            fileRelativeUrl.endsWith("_browsers.test.mjs") ||
+            fileRelativeUrl.endsWith("import_assert_type_css_dev.test.mjs") ||
+            fileRelativeUrl.endsWith("preload_local_font_build.test.mjs")
+          ) {
+            return 60_000
+          }
+          return 30_000
         },
       },
+    },
+  },
   logMemoryHeapUsage: true,
+  completedExecutionLogAbbreviation: process.env.CI,
 })
