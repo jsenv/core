@@ -74,7 +74,7 @@ const babelPluginMetadataUsesTopLevelAwait = () => {
         programPath.traverse({
           AwaitExpression: (path) => {
             const closestFunction = path.getFunctionParent()
-            if (!closestFunction) {
+            if (!closestFunction || closestFunction.type === "Program") {
               usesTopLevelAwait = true
               path.stop()
             }
