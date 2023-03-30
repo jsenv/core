@@ -928,8 +928,22 @@ window.__supervisor__ = (() => {
         supervisedScript.reload()
       }
     }
-    supervisor.getDocumentExecutionResult = async () => {
-      // just to be super safe and ensure any <script type="module"> got a chance to execute
+
+    const waitScriptExecutions = async () => {
+      const numberOfPromises = pendingPromises.length
+      await Promise.all(pendingPromises)
+      // new scripts added while the other where executing
+      // (should happen only on webkit where
+      // script might be added after window load event)
+      await new Promise((resolve) => setTimeout(resolve))
+      if (pendingPromises.length > numberOfPromises) {
+        await waitScriptExecutions()
+      }
+    }
+
+    let endTime
+    const documentExecutionPromise = (async () => {
+      // to be super safe and ensure any <script type="module"> got a chance to execute
       const documentReadyPromise = new Promise((resolve) => {
         if (document.readyState === "complete") {
           resolve()
@@ -942,24 +956,21 @@ window.__supervisor__ = (() => {
         window.addEventListener("load", loadCallback)
       })
       await documentReadyPromise
-      const waitScriptExecutions = async () => {
-        const numberOfPromises = pendingPromises.length
-        await Promise.all(pendingPromises)
-        // new scripts added while the other where executing
-        // (should happen only on webkit where
-        // script might be added after window load event)
-        await new Promise((resolve) => setTimeout(resolve))
-        if (pendingPromises.length > numberOfPromises) {
-          await waitScriptExecutions()
-        }
-      }
       await waitScriptExecutions()
+      endTime = Date.now()
+    })()
 
+    supervisor.getDocumentExecutionResult = async () => {
+      await documentExecutionPromise
+      if (pendingPromises.length) {
+        await waitScriptExecutions()
+        endTime = Date.now()
+      }
       return {
         status: "completed",
         executionResults,
         startTime: navigationStartTime,
-        endTime: Date.now(),
+        endTime,
       }
     }
   }
