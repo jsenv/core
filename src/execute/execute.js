@@ -14,8 +14,7 @@ import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem"
 import { createLogger } from "@jsenv/log"
 
-import { pingServer } from "../ping_server.js"
-import { basicFetch } from "../basic_fetch.js"
+import { assertAndNormalizeWebServer } from "./web_server_param.js"
 import { run } from "./run.js"
 
 export const execute = async ({
@@ -23,8 +22,7 @@ export const execute = async ({
   handleSIGINT = true,
   logLevel,
   rootDirectoryUrl,
-  serverOrigin,
-  serverRootDirectoryUrl = rootDirectoryUrl,
+  webServer,
 
   fileRelativeUrl,
   allocatedMs,
@@ -58,33 +56,14 @@ export const execute = async ({
     })
   }
 
-  let serverIsJsenvDevServer = false
   if (runtime.type === "browser") {
-    if (!serverOrigin) {
-      throw new TypeError(
-        `serverOrigin is required to execute file on a browser`,
-      )
-    }
-    const serverStarted = await pingServer(serverOrigin)
-    if (!serverStarted) {
-      throw new Error(
-        `no server listening at ${serverOrigin}. It is required to execute file`,
-      )
-    }
-    const { status } = await basicFetch(`${serverOrigin}/__params__.json`, {
-      rejectUnauthorized: false,
-    })
-    if (status === 200) {
-      serverIsJsenvDevServer = true
-    }
+    await assertAndNormalizeWebServer(webServer)
   }
 
   let resultTransformer = (result) => result
   runtimeParams = {
     rootDirectoryUrl,
-    serverRootDirectoryUrl,
-    serverOrigin,
-    serverIsJsenvDevServer,
+    webServer,
     fileRelativeUrl,
     ...runtimeParams,
   }

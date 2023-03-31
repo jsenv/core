@@ -34,10 +34,8 @@ export const createRuntimeFromPlaywright = ({
     signal = new AbortController().signal,
     logger,
     rootDirectoryUrl,
+    webServer,
     fileRelativeUrl,
-    serverOrigin,
-    serverRootDirectoryUrl,
-    serverIsJsenvDevServer,
 
     // measurePerformance,
     collectPerformance,
@@ -56,17 +54,17 @@ export const createRuntimeFromPlaywright = ({
     ignoreHTTPSErrors = true,
   }) => {
     const fileUrl = new URL(fileRelativeUrl, rootDirectoryUrl).href
-    if (!urlIsInsideOf(fileUrl, serverRootDirectoryUrl)) {
-      throw new Error(`Cannot execute file that is outside source directory
+    if (!urlIsInsideOf(fileUrl, webServer.rootDirectoryUrl)) {
+      throw new Error(`Cannot execute file that is outside web server root directory
 --- file --- 
 ${fileUrl}
---- server root directory url ---
-${serverRootDirectoryUrl}`)
+--- web server root directory url ---
+${webServer.rootDirectoryUrl}`)
     }
     const fileServerUrl = moveUrl({
       url: fileUrl,
-      from: serverRootDirectoryUrl,
-      to: `${serverOrigin}/`,
+      from: webServer.rootDirectoryUrl,
+      to: `${webServer.origin}/`,
     })
 
     const cleanupCallbackList = createCallbackListNotifiedOnce()
@@ -166,8 +164,8 @@ ${serverRootDirectoryUrl}`)
             (v8CoveragesWithWebUrl) => {
               const fsUrl = moveUrl({
                 url: v8CoveragesWithWebUrl.url,
-                from: `${serverOrigin}/`,
-                to: serverRootDirectoryUrl,
+                from: `${webServer.origin}/`,
+                to: webServer.rootDirectoryUrl,
               })
               return {
                 ...v8CoveragesWithWebUrl,
@@ -324,18 +322,6 @@ ${serverRootDirectoryUrl}`)
           },
           response: async (cb) => {
             try {
-              if (!serverIsJsenvDevServer) {
-                await page.addInitScript({
-                  content: `${readFileSync(fileURLToPath(supervisorFileUrl))}
-                  window.__supervisor__.setup(${JSON.stringify(
-                    {
-                      rootDirectoryUrl: serverRootDirectoryUrl,
-                    },
-                    null,
-                    "        ",
-                  )})`,
-                })
-              }
               await page.goto(fileServerUrl, { timeout: 0 })
               const returnValue = await page.evaluate(
                 /* eslint-disable no-undef */

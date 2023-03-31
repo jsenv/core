@@ -8,8 +8,7 @@ import {
 } from "@jsenv/filesystem"
 import { createLogger, createDetailedMessage } from "@jsenv/log"
 
-import { pingServer } from "../ping_server.js"
-import { basicFetch } from "../basic_fetch.js"
+import { assertAndNormalizeWebServer } from "../execute/web_server_param.js"
 import { generateCoverageJsonFile } from "./coverage/coverage_reporter_json_file.js"
 import { generateCoverageHtmlDirectory } from "./coverage/coverage_reporter_html_directory.js"
 import { generateCoverageTextLog } from "./coverage/coverage_reporter_text_log.js"
@@ -20,7 +19,7 @@ import { executeSteps } from "./execute_steps.js"
  * Execute a list of files and log how it goes.
  * @param {Object} testPlanParameters
  * @param {string|url} testPlanParameters.rootDirectoryUrl Directory containing test files;
- * @param {string|url} [testPlanParameters.serverOrigin=undefined] Url listened by a server serving file; required when executing test on browsers
+ * @param {Object} [testPlanParameters.webServer] Web server info; required when executing test on browsers
  * @param {Object} testPlanParameters.testPlan Object associating files with runtimes where they will be executed
  * @param {boolean} [testPlanParameters.completedExecutionLogAbbreviation=false] Abbreviate completed execution information to shorten terminal output
  * @param {boolean} [testPlanParameters.completedExecutionLogMerging=false] Merge completed execution logs to shorten terminal output
@@ -46,11 +45,9 @@ export const executeTestPlan = async ({
   logFileRelativeUrl = ".jsenv/test_plan_debug.txt",
   completedExecutionLogAbbreviation = false,
   completedExecutionLogMerging = false,
-  rootDirectoryUrl,
-  serverModuleUrl,
-  serverOrigin,
-  serverRootDirectoryUrl,
 
+  rootDirectoryUrl,
+  webServer,
   testPlan,
   updateProcessExitCode = true,
   maxExecutionsInParallel = 1,
@@ -97,7 +94,6 @@ export const executeTestPlan = async ({
 }) => {
   let someNeedsServer = false
   let someNodeRuntime = false
-  let serverIsJsenvDevServer = false
   const runtimes = {}
   // param validation
   {
@@ -137,53 +133,7 @@ export const executeTestPlan = async ({
     })
 
     if (someNeedsServer) {
-      if (!serverOrigin) {
-        throw new TypeError(
-          `serverOrigin is required when running tests on browser(s)`,
-        )
-      }
-      let serverOriginIsListened = await pingServer(serverOrigin)
-      if (!serverOriginIsListened) {
-        if (!serverModuleUrl) {
-          throw new TypeError(
-            `serverModuleUrl is required when server is not started in order to run tests on browser(s)`,
-          )
-        }
-        try {
-          process.env.IMPORTED_BY_TEST_PLAN = "1"
-          await import(serverModuleUrl)
-          delete process.env.IMPORTED_BY_TEST_PLAN
-        } catch (e) {
-          if (e.code === "ERR_MODULE_NOT_FOUND") {
-            throw new Error(
-              `Cannot find file responsible to start server at "${serverModuleUrl}"`,
-            )
-          }
-          throw e
-        }
-        serverOriginIsListened = await pingServer(serverOrigin)
-        if (!serverOriginIsListened) {
-          throw new Error(
-            `server not started after importing "${serverModuleUrl}", ensure this module file is starting a server at "${serverOrigin}"`,
-          )
-        }
-      }
-      const { headers } = await basicFetch(serverOrigin)
-      if (headers["x-server-name"] === "jsenv_dev_server") {
-        serverIsJsenvDevServer = true
-        const { json } = await basicFetch(`${serverOrigin}/__params__.json`, {
-          rejectUnauthorized: false,
-        })
-        if (serverRootDirectoryUrl === undefined) {
-          const jsenvDevServerParams = await json()
-          serverRootDirectoryUrl = jsenvDevServerParams.sourceDirectoryUrl
-        } else {
-          serverRootDirectoryUrl = assertAndNormalizeDirectoryUrl(
-            serverRootDirectoryUrl,
-            "serverRootDirectoryUrl",
-          )
-        }
-      }
+      await assertAndNormalizeWebServer(webServer)
     }
 
     if (coverageEnabled) {
@@ -327,9 +277,7 @@ export const executeTestPlan = async ({
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
     rootDirectoryUrl,
-    serverOrigin,
-    serverRootDirectoryUrl,
-    serverIsJsenvDevServer,
+    webServer,
 
     maxExecutionsInParallel,
     defaultMsAllocatedPerExecution,

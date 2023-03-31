@@ -7,7 +7,7 @@ import { startBuildServer, executeTestPlan, chromium } from "@jsenv/core"
 
 const buildServer = await startBuildServer({
   logLevel: "warn",
-  buildDirectoryUrl: new URL("./project/src/", import.meta.url),
+  buildDirectoryUrl: new URL("./project/public/", import.meta.url),
   keepProcessAlive: false,
 })
 
@@ -22,8 +22,10 @@ const result = await executeTestPlan({
     },
   },
   // keepRunning: true,
-  serverOrigin: buildServer.origin,
-  serverRootDirectoryUrl: new URL("./project/src/", import.meta.url),
+  webServer: {
+    origin: buildServer.origin,
+    rootDirectoryUrl: new URL("./project/public/", import.meta.url),
+  },
 })
 
 // TODO: assert on result

@@ -12,8 +12,10 @@ const test = async ({ runtime }) => {
   const { errors } = await execute({
     // logLevel: "debug"
     rootDirectoryUrl: new URL("./client/", import.meta.url),
-    serverOrigin: devServer.origin,
-    serverRootDirectoryUrl: new URL("./client/", import.meta.url),
+    webServer: {
+      origin: devServer.origin,
+      rootDirectoryUrl: new URL("./client/", import.meta.url),
+    },
     fileRelativeUrl: `./main.html`,
     runtime,
     mirrorConsole: false,

@@ -31,9 +31,7 @@ export const executeSteps = async (
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
     rootDirectoryUrl,
-    serverOrigin,
-    serverRootDirectoryUrl,
-    serverIsJsenvDevServer,
+    webServer,
 
     keepRunning,
     defaultMsAllocatedPerExecution,
@@ -120,9 +118,7 @@ export const executeSteps = async (
 
     let runtimeParams = {
       rootDirectoryUrl,
-      serverOrigin,
-      serverRootDirectoryUrl,
-      serverIsJsenvDevServer,
+      webServer,
 
       coverageEnabled,
       coverageConfig,
