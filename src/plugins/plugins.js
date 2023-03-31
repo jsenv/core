@@ -63,11 +63,11 @@ export const getCorePlugins = ({
   return [
     jsenvPluginUrlAnalysis({ rootDirectoryUrl, ...urlAnalysis }),
     jsenvPluginTranspilation(transpilation),
-    ...(supervisor ? [jsenvPluginSupervisor(supervisor)] : []), // before inline as it turns inline <script> into <script src>
     jsenvPluginImportmap(),
     // before node esm to handle bare specifiers
     // + before node esm to handle importmap before inline content
     jsenvPluginInline(), // before "file urls" to resolve and load inline urls
+    ...(supervisor ? [jsenvPluginSupervisor(supervisor)] : []), // after inline as it needs inline script to be cooked
     jsenvPluginFileUrls({
       directoryReferenceAllowed,
       ...fileSystemMagicRedirection,

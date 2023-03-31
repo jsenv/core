@@ -1,3 +1,58 @@
+/*
+ * Jsenv needs to track js execution in order to:
+ * 1. report errors
+ * 2. wait for all js execution inside an HTML page before killing the browser
+ *
+ * A naive approach would rely on "load" events on window but:
+ * scenario                                    | covered by window "load"
+ * ------------------------------------------- | -------------------------
+ * js referenced by <script src>               | yes
+ * js inlined into <script>                    | yes
+ * js referenced by <script type="module" src> | partially (not for import and top level await)
+ * js inlined into <script type="module">      | not at all
+ * Same for "error" event on window who is not enough
+ *
+ * <script src="file.js">
+ * becomes
+ * <script>
+ *   window.__supervisor__.superviseScript('file.js')
+ * </script>
+ *
+ * <script>
+ *    console.log(42)
+ * </script>
+ * becomes
+ * <script>
+ *   window.__supervisor__.jsClassicStart('main.html@L10-L13.js')
+ *   try {
+ *     console.log(42)
+ *     window.__supervisor__.jsClassicEnd('main.html@L10-L13.js')
+ *   } catch(e) {
+ *     window.__supervisor__.jsClassicError('main.html@L10-L13.js', e)
+ *   }
+ * </script>
+ *
+ * <script type="module" src="module.js"></script>
+ * becomes
+ * <script type="module">
+ *   window.__supervisor__.superviseScriptTypeModule('module.js')
+ * </script>
+ *
+ * <script type="module">
+ *   console.log(42)
+ * </script>
+ * becomes
+ * <script type="module">
+ *   window.__supervisor__.jsModuleStart('main.html@L10-L13.js')
+ *   try {
+ *     console.log(42)
+ *     window.__supervisor__.jsModuleEnd('main.html@L10-L13.js')
+ *   } catch(e) {
+ *     window.__supervisor__.jsModuleError('main.html@L10-L13.js', e)
+ *   }
+ * </script>
+ */
+
 import {
   parseHtmlString,
   stringifyHtmlAst,
@@ -53,6 +108,7 @@ export const injectSupervisorIntoHTML = async (
         columnEnd,
       })
       const inlineScriptSrc = generateInlineScriptSrc({
+        type,
         textContent,
         inlineScriptUrl,
         isOriginal,
@@ -83,6 +139,11 @@ export const injectSupervisorIntoHTML = async (
       })
       mutations.push(() => {
         setHtmlNodeText(scriptNode, remoteJsSupervised)
+        setHtmlNodeAttributes(scriptNode, {
+          "jsenv-cooked-by": "jsenv:supervisor",
+          "src": undefined,
+          "inlined-from-src": src,
+        })
       })
     }
     visitHtmlNodes(htmlAst, {
@@ -91,17 +152,14 @@ export const injectSupervisorIntoHTML = async (
         if (type !== "js_classic" && type !== "js_module") {
           return
         }
-        if (
-          getHtmlNodeAttribute(scriptNode, "jsenv-cooked-by") ||
-          getHtmlNodeAttribute(scriptNode, "jsenv-inlined-by") ||
-          getHtmlNodeAttribute(scriptNode, "jsenv-injected-by")
-        ) {
+        if (getHtmlNodeAttribute(scriptNode, "jsenv-injected-by")) {
           return
         }
         const noSupervisor = getHtmlNodeAttribute(scriptNode, "no-supervisor")
         if (noSupervisor !== undefined) {
           return
         }
+
         const scriptNodeText = getHtmlNodeText(scriptNode)
         if (scriptNodeText) {
           handleInlineScript(scriptNode, {

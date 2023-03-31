@@ -1,66 +1,12 @@
 /*
- * Jsenv needs to wait for all js execution inside an HTML page before killing the browser.
- * A naive approach would consider execution done when "load" event is dispatched on window but:
- *
- * scenario                                    | covered by window "load"
- * ------------------------------------------- | -------------------------
- * js referenced by <script src>               | yes
- * js inlined into <script>                    | yes
- * js referenced by <script type="module" src> | partially (not for import and top level await)
- * js inlined into <script type="module">      | not at all
- *
  * This plugin provides a way for jsenv to know when js execution is done
- * As a side effect this plugin enables ability to hot reload js inlined into <script hot-accept>
- *
- * <script src="file.js">
- * becomes
- * <script>
- *   window.__supervisor__.superviseScript({ src: 'file.js' })
- * </script>
- *
- * <script>
- *    console.log(42)
- * </script>
- * becomes
- * <script>
- *   window.__supervisor__.superviseScript({ src: 'main.html@L10-L13.js' })
- * </script>
- *
- * <script type="module" src="module.js"></script>
- * becomes
- * <script type="module">
- *   import { superviseScriptTypeModule } from 'supervisor'
- *   superviseScriptTypeModule({ src: "module.js" })
- * </script>
- *
- * <script type="module">
- *   console.log(42)
- * </script>
- * becomes
- * <script type="module">
- *   import { superviseScriptTypeModule } from 'supervisor'
- *   superviseScriptTypeModule({ src: 'main.html@L10-L13.js' })
- * </script>
  */
 
 import { fileURLToPath } from "node:url"
-import {
-  parseHtmlString,
-  stringifyHtmlAst,
-  visitHtmlNodes,
-  getHtmlNodeAttribute,
-  setHtmlNodeAttributes,
-  analyzeScriptNode,
-  injectScriptNodeAsEarlyAsPossible,
-  createHtmlNode,
-  getHtmlNodePosition,
-  getHtmlNodeText,
-  removeHtmlNodeText,
-  setHtmlNodeText,
-} from "@jsenv/ast"
-import { generateInlineContentUrl, stringifyUrlSite } from "@jsenv/urls"
 import { getOriginalPosition } from "@jsenv/sourcemap"
+import { stringifyUrlSite } from "@jsenv/urls"
 
+import { injectSupervisorIntoHTML } from "./html_supervisor_injection.js"
 import { requireFromJsenv } from "@jsenv/core/src/require_from_jsenv.js"
 
 export const supervisorFileUrl = new URL(
@@ -75,11 +21,6 @@ export const jsenvPluginSupervisor = ({
   openInEditor = true,
   errorBaseUrl,
 }) => {
-  const scriptTypeModuleSupervisorFileUrl = new URL(
-    "./client/script_type_module_supervisor.js",
-    import.meta.url,
-  ).href
-
   return {
     name: "jsenv:supervisor",
     appliesDuring: "dev",
@@ -219,185 +160,52 @@ export const jsenvPluginSupervisor = ({
     },
     transformUrlContent: {
       html: ({ url, content }, context) => {
-        const htmlAst = parseHtmlString(content)
-        const scriptsToSupervise = []
-
-        const handleInlineScript = (node, htmlNodeText) => {
-          const { type, extension } = analyzeScriptNode(node)
-          const { line, column, lineEnd, columnEnd, isOriginal } =
-            getHtmlNodePosition(node, { preferOriginal: true })
-          let inlineScriptUrl = generateInlineContentUrl({
-            url,
-            extension: extension || ".js",
-            line,
-            column,
-            lineEnd,
-            columnEnd,
-          })
-          const [inlineScriptReference] = context.referenceUtils.foundInline({
-            type: "script",
-            subtype: "inline",
-            expectedType: type,
-            isOriginalPosition: isOriginal,
-            specifierLine: line - 1,
-            specifierColumn: column,
-            specifier: inlineScriptUrl,
-            contentType: "text/javascript",
-            content: htmlNodeText,
-          })
-          removeHtmlNodeText(node)
-          if (extension) {
-            setHtmlNodeAttributes(node, {
-              type: type === "js_module" ? "module" : undefined,
-            })
-          }
-          scriptsToSupervise.push({
-            node,
-            isInline: true,
-            type,
-            src: inlineScriptReference.generatedSpecifier,
-          })
-        }
-        const handleScriptWithSrc = (node, src) => {
-          const { type } = analyzeScriptNode(node)
-          const integrity = getHtmlNodeAttribute(node, "integrity")
-          const crossorigin =
-            getHtmlNodeAttribute(node, "crossorigin") !== undefined
-          const defer = getHtmlNodeAttribute(node, "defer") !== undefined
-          const async = getHtmlNodeAttribute(node, "async") !== undefined
-          scriptsToSupervise.push({
-            node,
-            type,
-            src,
-            defer,
-            async,
-            integrity,
-            crossorigin,
-          })
-        }
-        visitHtmlNodes(htmlAst, {
-          script: (node) => {
-            const { type } = analyzeScriptNode(node)
-            if (type !== "js_classic" && type !== "js_module") {
-              return
-            }
-            if (
-              getHtmlNodeAttribute(node, "jsenv-cooked-by") ||
-              getHtmlNodeAttribute(node, "jsenv-inlined-by") ||
-              getHtmlNodeAttribute(node, "jsenv-injected-by")
-            ) {
-              return
-            }
-            const noSupervisor = getHtmlNodeAttribute(node, "no-supervisor")
-            if (noSupervisor !== undefined) {
-              return
-            }
-            const htmlNodeText = getHtmlNodeText(node)
-            if (htmlNodeText) {
-              handleInlineScript(node, htmlNodeText)
-              return
-            }
-            const src = getHtmlNodeAttribute(node, "src")
-            if (src) {
-              handleScriptWithSrc(node, src)
-              return
-            }
-          },
-        })
-        const [scriptTypeModuleSupervisorFileReference] =
-          context.referenceUtils.inject({
-            type: "js_import",
-            expectedType: "js_module",
-            specifier: scriptTypeModuleSupervisorFileUrl,
-          })
         const [supervisorFileReference] = context.referenceUtils.inject({
           type: "script",
           expectedType: "js_classic",
           specifier: supervisorFileUrl,
         })
-        injectScriptNodeAsEarlyAsPossible(
-          htmlAst,
-          createHtmlNode({
-            tagName: "script",
-            textContent: `
-      window.__supervisor__.setup(${JSON.stringify(
-        {
-          rootDirectoryUrl: context.rootDirectoryUrl,
-          serverIsJsenvDevServer: true,
-          errorBaseUrl,
-          logs,
-          measurePerf,
-          errorOverlay,
-          openInEditor,
-        },
-        null,
-        "        ",
-      )})
-    `,
-          }),
-          "jsenv:supervisor",
-        )
-        injectScriptNodeAsEarlyAsPossible(
-          htmlAst,
-          createHtmlNode({
-            tagName: "script",
-            src: supervisorFileReference.generatedSpecifier,
-          }),
-          "jsenv:supervisor",
-        )
 
-        scriptsToSupervise.forEach(
-          ({
-            node,
-            isInline,
-            type,
-            src,
-            defer,
-            async,
-            integrity,
-            crossorigin,
-          }) => {
-            const paramsAsJson = JSON.stringify({
-              src,
-              isInline,
-              defer,
-              async,
-              integrity,
-              crossorigin,
-            })
-            if (type === "js_module") {
-              setHtmlNodeText(
-                node,
-                `
-      import { superviseScriptTypeModule } from ${scriptTypeModuleSupervisorFileReference.generatedSpecifier}
-      superviseScriptTypeModule(${paramsAsJson})
-        `,
-              )
-            } else {
-              setHtmlNodeText(
-                node,
-                `
-      window.__supervisor__.superviseScript(${paramsAsJson})
-        `,
-              )
-            }
-            if (src) {
-              setHtmlNodeAttributes(node, {
-                "jsenv-inlined-by": "jsenv:supervisor",
-                "src": undefined,
-                "inlined-from-src": src,
-              })
-            } else {
-              setHtmlNodeAttributes(node, {
-                "jsenv-cooked-by": "jsenv:supervisor",
-              })
-            }
+        return injectSupervisorIntoHTML(
+          {
+            content,
+            url,
+          },
+          {
+            errorBaseUrl,
+            logs,
+            measurePerf,
+            errorOverlay,
+            openInEditor,
+            webServer: {
+              rootDirectoryUrl: context.rootDirectoryUrl,
+              isJsenvDevServer: true,
+            },
+            supervisorScriptSrc: supervisorFileReference.generatedSpecifier,
+            generateInlineScriptSrc: ({
+              type,
+              textContent,
+              inlineScriptUrl,
+              isOriginal,
+              line,
+              column,
+            }) => {
+              const [inlineScriptReference] =
+                context.referenceUtils.foundInline({
+                  type: "script",
+                  subtype: "inline",
+                  expectedType: type,
+                  isOriginalPosition: isOriginal,
+                  specifierLine: line - 1,
+                  specifierColumn: column,
+                  specifier: inlineScriptUrl,
+                  contentType: "text/javascript",
+                  content: textContent,
+                })
+              return inlineScriptReference.generatedSpecifier
+            },
           },
         )
-        const htmlModified = stringifyHtmlAst(htmlAst)
-        return {
-          content: htmlModified,
-        }
       },
     },
   }

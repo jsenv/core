@@ -39,7 +39,9 @@ const transformFixtureFile = async (fixtureFilename) => {
 }
 
 await transformFixtureFile("script_inline.html")
+await transformFixtureFile("script_src.html")
 await transformFixtureFile("script_type_module_inline.html")
+await transformFixtureFile("script_type_module_src.html")
 
 const actual = files
 const expected = readSnapshotsFromDirectory(

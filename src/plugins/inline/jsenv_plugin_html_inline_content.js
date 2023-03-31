@@ -1,3 +1,9 @@
+/*
+ * This plugin ensure content inlined inside HTML is cooked (inline <script> for instance)
+ * For <script hot-accept> the script content will be moved to a virtual file
+ * to enable hot reloading
+ */
+
 import { generateInlineContentUrl } from "@jsenv/urls"
 import {
   parseHtmlString,
@@ -8,6 +14,7 @@ import {
   analyzeScriptNode,
   setHtmlNodeAttributes,
   setHtmlNodeText,
+  removeHtmlNodeText,
   getHtmlNodeAttribute,
 } from "@jsenv/ast"
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js"
@@ -113,16 +120,9 @@ ${e.traceMessage}`)
             ) {
               return
             }
-            if (
-              getHtmlNodeAttribute(scriptNode, "jsenv-cooked-by") ===
-                "jsenv:supervisor" ||
-              getHtmlNodeAttribute(scriptNode, "jsenv-inlined-by") ===
-                "jsenv:supervisor" ||
-              getHtmlNodeAttribute(scriptNode, "jsenv-injected-by") ===
-                "jsenv:supervisor"
-            ) {
-              return
-            }
+
+            const hotAccept =
+              getHtmlNodeAttribute(scriptNode, "hot-accept") !== undefined
             const { type, contentType, extension } =
               analyzeScriptNode(scriptNode)
             const { line, column, lineEnd, columnEnd, isOriginal } =
@@ -163,13 +163,25 @@ ${e.traceMessage}`)
               })
             })
             mutations.push(() => {
-              setHtmlNodeText(scriptNode, inlineScriptUrlInfo.content)
-              setHtmlNodeAttributes(scriptNode, {
+              const attributes = {
                 "jsenv-cooked-by": "jsenv:html_inline_content",
+                // 1. <script type="jsx"> becomes <script>
+                // 2. <script type="module/jsx"> becomes <script type="module">
                 ...(extension
                   ? { type: type === "js_module" ? "module" : undefined }
                   : {}),
-              })
+              }
+              if (hotAccept) {
+                removeHtmlNodeText(scriptNode)
+                setHtmlNodeAttributes(scriptNode, {
+                  ...attributes,
+                })
+              } else {
+                setHtmlNodeText(scriptNode, inlineScriptUrlInfo.content)
+                setHtmlNodeAttributes(scriptNode, {
+                  ...attributes,
+                })
+              }
             })
           },
         })
