@@ -27,8 +27,10 @@ await executeTestPlan({
       },
     },
   },
-  devServerOrigin: "http://localhost:3456",
-  devServerModuleUrl: new URL("./dev.mjs", import.meta.url),
+  webServer: {
+    origin: "http://localhost:3456",
+    moduleUrl: new URL("./dev.mjs", import.meta.url),
+  },
   failFast: process.argv.includes("--workspace"),
   completedExecutionLogMerging: process.argv.includes("--workspace"),
 })
