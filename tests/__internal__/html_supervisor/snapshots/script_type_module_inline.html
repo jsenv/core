@@ -10,7 +10,7 @@
                 {
                         "type": "js_module",
                         "isInline": true,
-                        "src": "script_type_module_inline.html@L10C5-L18C14.js"
+                        "src": "script_type_module_inline.html@L10C5-L34C14.js"
                 }
         ]
       })
@@ -18,18 +18,43 @@
   </head>
 
   <body>
-    <script type="module" original-position="10:5;18:14" jsenv-cooked-by="jsenv:supervisor">
-window.__supervisor__.jsModuleStart("script_type_module_inline.html@L10C5-L18C14.js");
-import { getAnswer } from "./answer.js";
+    <script type="module" original-position="10:5;34:14" jsenv-cooked-by="jsenv:supervisor">
+window.__supervisor__.jsModuleStart("script_type_module_inline.html@L10C5-L34C14.js");
 try {
+  await import("./answer.js");
+  const {
+    getAnswer
+  } = await import("./answer.js");
+  const {
+    getAnswer: getAnswerAlias
+  } = await import("./answer.js");
+  const {
+    default: toto
+  } = await import("./answer.js");
+  const namespace = await import("./answer.js");
+  const {
+    default: toto2,
+    getAnswer: getAnswerAlias2
+  } = await import("./answer.js");
+  const namespace2 = await import("./answer.js");
+  const toto3 = namespace2.default;
+  /* eslint-enable import/no-duplicates */
+
+  window.toto = toto;
+  window.getAnswerAlias = getAnswerAlias;
+  window.namespace = namespace;
+  window.toto2 = toto2;
+  window.getAnswerAlias2 = getAnswerAlias2;
+  window.toto3 = toto3;
+  window.namespace2 = namespace2;
   const actual = await getAnswer();
   const expected = 42;
   if (actual !== expected) {
     throw new Error(`getAnswer should return 42, got ${actual}`);
   }
-  window.__supervisor__.jsModuleEnd("script_type_module_inline.html@L10C5-L18C14.js");
+  window.__supervisor__.jsModuleEnd("script_type_module_inline.html@L10C5-L34C14.js");
 } catch (e) {
-  window.__supervisor__.jsModuleError("script_type_module_inline.html@L10C5-L18C14.js", e);
+  window.__supervisor__.jsModuleError("script_type_module_inline.html@L10C5-L34C14.js", e);
 }
 </script>
   

@@ -8,7 +8,23 @@
 
   <body>
     <script type="module">
+      /* eslint-disable import/no-duplicates */
+      import "./answer.js"
       import { getAnswer } from "./answer.js"
+      import { getAnswer as getAnswerAlias } from "./answer.js"
+      import toto from "./answer.js"
+      import * as namespace from "./answer.js"
+      import toto2, { getAnswer as getAnswerAlias2 } from "./answer.js"
+      import toto3, * as namespace2 from "./answer.js"
+      /* eslint-enable import/no-duplicates */
+
+      window.toto = toto
+      window.getAnswerAlias = getAnswerAlias
+      window.namespace = namespace
+      window.toto2 = toto2
+      window.getAnswerAlias2 = getAnswerAlias2
+      window.toto3 = toto3
+      window.namespace2 = namespace2
 
       const actual = await getAnswer()
       const expected = 42
