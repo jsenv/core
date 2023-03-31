@@ -3,18 +3,17 @@ import { assert } from "@jsenv/assert"
 import { urlToRelativeUrl } from "@jsenv/urls"
 import { comparePathnames } from "@jsenv/filesystem"
 
-import { superviseJs } from "@jsenv/core/src/execute/js_supervision.js"
+import { injectSupervisorIntoHTML } from "@jsenv/core/src/plugins/supervisor/html_supervisor_injection.js"
 import {
   readSnapshotsFromDirectory,
   writeSnapshotsIntoDirectory,
 } from "@jsenv/core/tests/snapshots_directory.js"
 
 let files = {}
-const transformFile = async (url, { isJsModule } = {}) => {
-  const code = await superviseJs({
+const transformFile = async (url) => {
+  const code = await injectSupervisorIntoHTML({
     code: readFileSync(url, "utf8"),
     url: String(url),
-    isJsModule,
   })
   const relativeUrl = urlToRelativeUrl(
     url,
@@ -32,13 +31,8 @@ const transformFile = async (url, { isJsModule } = {}) => {
 
   return code
 }
-await transformFile(new URL("./fixtures/main.js", import.meta.url))
-await transformFile(new URL("./fixtures/classic.js", import.meta.url), {
-  isJsModule: false,
-})
-await transformFile(new URL("./fixtures/main.html", import.meta.url), {
-  isJsModule: false,
-})
+
+await transformFile(new URL("./fixtures/main.html", import.meta.url))
 
 const actual = files
 const expected = readSnapshotsFromDirectory(
