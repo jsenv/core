@@ -6,20 +6,32 @@
     <script jsenv-injected-by="jsenv:supervisor">
       window.__supervisor__.setup({
         "rootDirectoryUrl": "file:///Users/d.maillard/dev/jsenv/jsenv-core/tests/__internal__/html_supervisor/fixtures/",
-        "jsUrls": [
-                "main.html@L10C5-L15C14.js"
+        "scriptInfos": [
+                {
+                        "type": "js_module",
+                        "isInline": true,
+                        "src": "script_type_module_inline.html@L10C5-L18C14.js"
+                }
         ]
       })
       </script>
   </head>
 
   <body>
-    <script type="module" original-position="10:5;15:14" jsenv-inlined-by="jsenv:supervisor" inlined-from-src="main.html@L10C5-L15C14.js">
-        window.__supervisor__.superviseScriptTypeModule({
-          "src": "main.html@L10C5-L15C14.js",
-          "isInline": true
-        }, (url) => import(url));
-    </script>
+    <script type="module" original-position="10:5;18:14" jsenv-cooked-by="jsenv:supervisor">
+window.__supervisor__.jsModuleStart("script_type_module_inline.html@L10C5-L18C14.js");
+import { getAnswer } from "./answer.js";
+try {
+  const actual = await getAnswer();
+  const expected = 42;
+  if (actual !== expected) {
+    throw new Error(`getAnswer should return 42, got ${actual}`);
+  }
+  window.__supervisor__.jsModuleEnd("script_type_module_inline.html@L10C5-L18C14.js");
+} catch (e) {
+  window.__supervisor__.jsModuleError("script_type_module_inline.html@L10C5-L18C14.js", e);
+}
+</script>
   
 
 </body></html>

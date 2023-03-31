@@ -35,8 +35,7 @@ export const injectSupervisorIntoHTML = async (
   const mutations = []
   const actions = []
 
-  const scriptInlineIds = []
-  const scriptRemoteIds = []
+  const scriptInfos = []
   // 1. Find inline and remote scripts
   {
     const handleInlineScript = (
@@ -60,16 +59,16 @@ export const injectSupervisorIntoHTML = async (
         line,
         column,
       })
-      scriptInlineIds.push(inlineScriptSrc)
+      scriptInfos.push({ type, isInline: true, src: inlineScriptSrc })
       actions.push(async () => {
         const inlineJsSupervised = await injectSupervisorIntoJs({
-          code: textContent,
+          content: textContent,
           url: inlineScriptUrl,
           filename: urlToFilename(inlineScriptUrl),
-          isJsModule: type === "js_module",
+          type,
         })
         mutations.push(() => {
-          setHtmlNodeText(scriptNode, inlineJsSupervised)
+          setHtmlNodeText(scriptNode, `\n${inlineJsSupervised}\n`)
           setHtmlNodeAttributes(scriptNode, {
             "jsenv-cooked-by": "jsenv:supervisor",
           })
@@ -77,12 +76,13 @@ export const injectSupervisorIntoHTML = async (
       })
     }
     const handleScriptWithSrc = (scriptNode, { type, src }) => {
-      scriptRemoteIds.push(src)
+      scriptInfos.push({ type, id: src })
+      const remoteJsSupervised = generateCodeToSuperviseScriptWithSrc({
+        type,
+        src,
+      })
       mutations.push(() => {
-        setHtmlNodeText(
-          scriptNode,
-          generateCodeToSuperviseScriptWithSrc({ type, src }),
-        )
+        setHtmlNodeText(scriptNode, remoteJsSupervised)
       })
     }
     visitHtmlNodes(htmlAst, {
@@ -124,8 +124,7 @@ export const injectSupervisorIntoHTML = async (
     const setupParamsSource = stringifyParams(
       {
         rootDirectoryUrl: webServer.rootDirectoryUrl,
-        scriptInlineIds,
-        scriptRemoteIds,
+        scriptInfos,
       },
       "        ",
     )

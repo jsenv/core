@@ -4,16 +4,17 @@ export const injectSupervisorIntoJs = async ({
   content,
   url,
   filename,
-  isJsModule,
+  type,
 }) => {
-  const babelPluginJsSupervisor = isJsModule
-    ? babelPluginJsModuleSupervisor
-    : babelPluginJsClassicSupervisor
+  const babelPluginJsSupervisor =
+    type === "js_module"
+      ? babelPluginJsModuleSupervisor
+      : babelPluginJsClassicSupervisor
   const result = await applyBabelPlugins({
     urlInfo: {
       content,
       originalUrl: url,
-      type: isJsModule ? "js_module" : "js_classic",
+      type,
     },
     babelPlugins: [[babelPluginJsSupervisor, { filename }]],
   })
@@ -124,35 +125,11 @@ const babelPluginJsClassicSupervisor = (babel) => {
 }
 
 const createJsModuleUrlNode = (t, filename) => {
-  const importMetaUrlNode = t.memberExpression(
-    t.memberExpression(t.identifier("import"), t.identifier("meta")),
-    t.identifier("url"),
-  )
-  if (filename) {
-    const urlIdentifier = t.identifier("URL")
-    const firstArg = t.stringLiteral(filename)
-    const newExpression = t.newExpression(urlIdentifier, [
-      firstArg,
-      importMetaUrlNode,
-    ])
-    return newExpression
-  }
-  return importMetaUrlNode
+  return t.stringLiteral(filename)
 }
 
 const createJsClassicUrlNode = (t, filename) => {
-  const documentCurrentScriptSrcNode = t.memberExpression(
-    t.memberExpression(t.identifier("document"), t.identifier("currentScript")),
-    t.identifier("src"),
-  )
-  if (filename) {
-    const newUrlNode = t.newExpression(t.identifier("URL"), [
-      t.stringLiteral(filename),
-      documentCurrentScriptSrcNode,
-    ])
-    return newUrlNode
-  }
-  return documentCurrentScriptSrcNode
+  return t.stringLiteral(filename)
 }
 
 const createSupervisionCall = ({ t, methodName, urlNode, args = [] }) => {
