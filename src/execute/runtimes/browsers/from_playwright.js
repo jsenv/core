@@ -1,5 +1,4 @@
-import { writeFileSync, readFileSync } from "node:fs"
-import { fileURLToPath } from "node:url"
+import { writeFileSync } from "node:fs"
 
 import { createDetailedMessage } from "@jsenv/log"
 import {
@@ -13,8 +12,7 @@ import { memoize } from "@jsenv/utils/src/memoize/memoize.js"
 
 import { filterV8Coverage } from "@jsenv/core/src/test/coverage/v8_coverage.js"
 import { composeTwoFileByFileIstanbulCoverages } from "@jsenv/core/src/test/coverage/istanbul_coverage_composition.js"
-import { superviseJs } from "../../js_supervision.js"
-import { supervisorFileUrl } from "../../../plugins/supervisor/jsenv_plugin_supervisor.js"
+import { injectSupervisorIntoHTML } from "../../../plugins/supervisor/html_supervisor_injection.js"
 
 export const createRuntimeFromPlaywright = ({
   browserName,
@@ -128,8 +126,12 @@ ${webServer.rootDirectoryUrl}`)
           : {}),
       },
     })
-    if (!serverIsJsenvDevServer) {
-      await initJsExecutionMiddleware(page, { fileUrl, fileServerUrl })
+    if (!webServer.isJsenvDevServer) {
+      await initJsExecutionMiddleware(page, {
+        webServer,
+        fileUrl,
+        fileServerUrl,
+      })
     }
     const closePage = async () => {
       try {
@@ -274,21 +276,21 @@ ${webServer.rootDirectoryUrl}`)
             })
           },
           // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
-          pageerror: () => {
-            return registerEvent({
-              object: page,
-              eventType: "pageerror",
-              callback: (error) => {
-                if (
-                  serverIsJsenvDevServer ||
-                  shouldIgnoreError(error, "pageerror")
-                ) {
-                  return
-                }
-                result.errors.push(transformErrorHook(error))
-              },
-            })
-          },
+          // pageerror: () => {
+          //   return registerEvent({
+          //     object: page,
+          //     eventType: "pageerror",
+          //     callback: (error) => {
+          //       if (
+          //         webServer.isJsenvDevServer ||
+          //         shouldIgnoreError(error, "pageerror")
+          //       ) {
+          //         return
+          //       }
+          //       result.errors.push(transformErrorHook(error))
+          //     },
+          //   })
+          // },
           closed: (cb) => {
             // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
             if (isBrowserDedicatedToExecution) {
@@ -565,22 +567,13 @@ const extractTextFromConsoleMessage = (consoleMessage) => {
   //   return text
 }
 
-const initJsExecutionMiddleware = async (page, { fileUrl, fileServerUrl }) => {
-  const isFileOrDirectDependency = (request) => {
-    const url = request.url()
-    if (url === fileServerUrl) {
-      return true
-    }
-    // imported by the main file, like <script type="module" src="./main.js">
-    const { referer } = request.headers
-    if (referer === fileServerUrl) {
-      return true
-    }
-    return false
-  }
-
+const initJsExecutionMiddleware = async (
+  page,
+  { webServer, fileUrl, fileServerUrl },
+) => {
   await page.route("**", async (route) => {
-    if (!isFileOrDirectDependency(route.request())) {
+    const url = route.request.url()
+    if (url !== fileServerUrl) {
       route.fallback()
       return
     }
@@ -588,16 +581,21 @@ const initJsExecutionMiddleware = async (page, { fileUrl, fileServerUrl }) => {
     const response = await route.fetch()
     // Add a prefix to the title.
     const originalBody = await response.text()
-    const bodyInstrumented = await superviseJs({
-      code: originalBody,
-      url: fileUrl,
-    })
+    const injectionResult = await injectSupervisorIntoHTML(
+      {
+        content: originalBody,
+        url: fileUrl,
+      },
+      {
+        webServer,
+      },
+    )
     route.fulfill({
       response,
-      body: bodyInstrumented,
+      body: injectionResult.content,
       headers: {
         ...response.headers(),
-        "content-length": Buffer.byteLength(bodyInstrumented),
+        "content-length": Buffer.byteLength(injectionResult.content),
       },
     })
   })

@@ -31,15 +31,51 @@ window.__supervisor__ = (() => {
     const promises = []
     let remainingScriptCount = scriptInfos.length
 
+    // respect execution order
+    // - wait for classic scripts to be done (non async)
+    // - wait module script previous execution (non async)
+    // see https://gist.github.com/jakub-g/385ee6b41085303a53ad92c7c8afd7a6#typemodule-vs-non-module-typetextjavascript-vs-script-nomodule
+    const executionQueue = []
+    let executing = false
+    const addToExecutionQueue = async (execution) => {
+      if (execution.async) {
+        execution.execute()
+        return
+      }
+      if (executing) {
+        executionQueue.push(execution)
+        return
+      }
+      execThenDequeue(execution)
+    }
+    const execThenDequeue = async (execution) => {
+      executing = true
+      // start next js module execution as soon as current js module starts to execute
+      // (do not wait in case of top level await)
+      let resolveExecutingPromise
+      const executingPromise = new Promise((resolve) => {
+        resolveExecutingPromise = resolve
+      })
+      const promise = execution.execute({
+        onExecuting: () => resolveExecutingPromise(),
+      })
+      await Promise.race([promise, executingPromise])
+      executing = false
+      if (executionQueue.length) {
+        const nextExecution = executionQueue.shift()
+        execThenDequeue(nextExecution)
+      }
+    }
+
     const asExecutionId = (src) => {
       const url = new URL(src, window.location).href
       if (url.startsWith(window.location.origin)) {
-        return url.slice(window.location.origin.length + 1)
+        return src
       }
       return url
     }
 
-    const createExecutionController = (id, type) => {
+    const createExecutionController = (src, type) => {
       let startTime
       const result = {
         status: "pending",
@@ -54,7 +90,7 @@ window.__supervisor__ = (() => {
         resolve = _resolve
       })
       promises.push(promise)
-      executionResults[id] = result
+      executionResults[src] = result
 
       const start = () => {
         result.duration = null
@@ -62,7 +98,7 @@ window.__supervisor__ = (() => {
         result.status = "started"
         result.exception = null
         if (logs) {
-          console.group(`[jsenv] ${id} execution started (${type})`)
+          console.group(`[jsenv] ${src} execution started (${type})`)
         }
       }
       const end = () => {
@@ -94,11 +130,11 @@ window.__supervisor__ = (() => {
       return { result, start, complete, fail }
     }
 
-    const prepareJsClassicRemoteExecution = (id) => {
-      const urlObject = new URL(id, window.location)
+    const prepareJsClassicRemoteExecution = (src) => {
+      const urlObject = new URL(src, window.location)
       const url = urlObject.href
       const { result, start, complete, fail } = createExecutionController(
-        id,
+        src,
         "js_classic",
       )
 
@@ -109,6 +145,7 @@ window.__supervisor__ = (() => {
       const init = () => {
         currentScript = document.currentScript
         parentNode = currentScript.parentNode
+        executions[src].async = currentScript.async
       }
       const execute = async ({ isReload } = {}) => {
         start()
@@ -158,12 +195,11 @@ window.__supervisor__ = (() => {
           return result
         }
       }
-
-      executions[id] = { init, execute }
+      executions[src] = { init, execute }
     }
-    const prepareJsClassicInlineExecution = (id) => {
+    const prepareJsClassicInlineExecution = (src) => {
       const { start, complete, fail } = createExecutionController(
-        id,
+        src,
         "js_classic",
       )
       const end = complete
@@ -172,22 +208,27 @@ window.__supervisor__ = (() => {
         reportErrorBackToBrowser(e)
         fail(e)
       }
-      executions[id] = { isInline: true, start, end, error }
+      executions[src] = { isInline: true, start, end, error }
     }
 
     const isWebkitOrSafari =
       typeof window.webkitConvertPointFromNodeToPage === "function"
     // https://twitter.com/damienmaillard/status/1554752482273787906
-    const prepareJsModuleExecutionWithDynamicImport = (id) => {
-      const urlObject = new URL(id, window.location)
+    const prepareJsModuleExecutionWithDynamicImport = (src) => {
+      const urlObject = new URL(src, window.location)
       const { result, start, complete, fail } = createExecutionController(
-        id,
+        src,
         "js_classic",
       )
 
       let importFn
+      let currentScript
       const init = (_importFn) => {
         importFn = _importFn
+        currentScript = document.querySelector(
+          `script[type="module"][inlined-from-src="${src}"]`,
+        )
+        executions[src].async = currentScript.async
       }
       const execute = async ({ isReload } = {}) => {
         start()
@@ -210,12 +251,12 @@ window.__supervisor__ = (() => {
           return result
         }
       }
-      executions[id] = { init, execute }
+      executions[src] = { init, execute }
     }
-    const prepareJsModuleExecutionWithScriptThenDynamicImport = (id) => {
-      const urlObject = new URL(id, window.location)
+    const prepareJsModuleExecutionWithScriptThenDynamicImport = (src) => {
+      const urlObject = new URL(src, window.location)
       const { result, start, complete, fail } = createExecutionController(
-        id,
+        src,
         "js_module",
       )
 
@@ -227,11 +268,12 @@ window.__supervisor__ = (() => {
       const init = (_importFn) => {
         importFn = _importFn
         currentScript = document.querySelector(
-          `script[type="module"][src="${id}"]`,
+          `script[type="module"][inlined-from-src="${src}"]`,
         )
         parentNode = currentScript.parentNode
+        executions[src].async = currentScript.async
       }
-      const execute = async ({ isReload } = {}) => {
+      const execute = async ({ isReload, onExecuting = () => {} } = {}) => {
         start()
 
         const loadPromise = new Promise((resolve, reject) => {
@@ -275,6 +317,7 @@ window.__supervisor__ = (() => {
           })
           return result
         }
+        onExecuting()
         result.status = "executing"
         if (logs) {
           console.log(`load ended`)
@@ -294,14 +337,14 @@ window.__supervisor__ = (() => {
           return result
         }
       }
-      executions[id] = { init, execute }
+      executions[src] = { init, execute }
     }
     const prepareJsModuleRemoteExecution = isWebkitOrSafari
       ? prepareJsModuleExecutionWithDynamicImport
       : prepareJsModuleExecutionWithScriptThenDynamicImport
-    const prepareJsModuleInlineExecution = (id) => {
+    const prepareJsModuleInlineExecution = (src) => {
       const { start, complete, fail } = createExecutionController(
-        id,
+        src,
         "js_module",
       )
       const end = complete
@@ -310,7 +353,7 @@ window.__supervisor__ = (() => {
         reportErrorBackToBrowser(e)
         fail(e)
       }
-      executions[id] = { isInline: true, start, end, error }
+      executions[src] = { isInline: true, start, end, error }
     }
 
     supervisor.setupReportException({
@@ -322,17 +365,17 @@ window.__supervisor__ = (() => {
     })
 
     scriptInfos.forEach((scriptInfo) => {
-      const { type, id, isInline } = scriptInfo
+      const { type, src, isInline } = scriptInfo
       if (type === "js_module") {
         if (isInline) {
-          prepareJsModuleInlineExecution(id)
+          prepareJsModuleInlineExecution(src)
         } else {
-          prepareJsModuleRemoteExecution(id)
+          prepareJsModuleRemoteExecution(src)
         }
       } else if (isInline) {
-        prepareJsClassicInlineExecution(id)
+        prepareJsClassicInlineExecution(src)
       } else {
-        prepareJsClassicRemoteExecution(id)
+        prepareJsClassicRemoteExecution(src)
       }
     })
 
@@ -349,7 +392,7 @@ window.__supervisor__ = (() => {
     supervisor.superviseScript = (src) => {
       const execution = executions[asExecutionId(src)]
       execution.init()
-      return execution.execute()
+      return addToExecutionQueue(execution)
     }
     // js module
     supervisor.jsModuleStart = (inlineSrc) => {
@@ -364,7 +407,7 @@ window.__supervisor__ = (() => {
     supervisor.superviseScriptTypeModule = (src, importFn) => {
       const execution = executions[asExecutionId(src)]
       execution.init(importFn)
-      return execution.execute()
+      return addToExecutionQueue(execution)
     }
 
     supervisor.reloadSupervisedScript = (src) => {

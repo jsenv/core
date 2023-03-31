@@ -3,8 +3,8 @@ import { applyBabelPlugins } from "@jsenv/ast"
 export const injectSupervisorIntoJs = async ({
   content,
   url,
-  filename,
   type,
+  inlineSrc,
 }) => {
   const babelPluginJsSupervisor =
     type === "js_module"
@@ -16,7 +16,7 @@ export const injectSupervisorIntoJs = async ({
       originalUrl: url,
       type,
     },
-    babelPlugins: [[babelPluginJsSupervisor, { filename }]],
+    babelPlugins: [[babelPluginJsSupervisor, { inlineSrc }]],
   })
   return result.code
 }
@@ -28,11 +28,11 @@ const babelPluginJsModuleSupervisor = (babel) => {
     name: "js-module-supervisor",
     visitor: {
       Program: (programPath, state) => {
-        const { filename } = state.opts
+        const { inlineSrc } = state.opts
         if (state.file.metadata.jsExecutionInstrumented) return
         state.file.metadata.jsExecutionInstrumented = true
 
-        const urlNode = createJsModuleUrlNode(t, filename)
+        const urlNode = t.stringLiteral(inlineSrc)
         const startCallNode = createSupervisionCall({
           t,
           urlNode,
@@ -180,11 +180,11 @@ const babelPluginJsClassicSupervisor = (babel) => {
     name: "js-classic-supervisor",
     visitor: {
       Program: (programPath, state) => {
-        const { filename } = state.opts
+        const { inlineSrc } = state.opts
         if (state.file.metadata.jsExecutionInstrumented) return
         state.file.metadata.jsExecutionInstrumented = true
 
-        const urlNode = createJsClassicUrlNode(t, filename)
+        const urlNode = t.stringLiteral(inlineSrc)
         const startCallNode = createSupervisionCall({
           t,
           urlNode,
@@ -212,14 +212,6 @@ const babelPluginJsClassicSupervisor = (babel) => {
       },
     },
   }
-}
-
-const createJsModuleUrlNode = (t, filename) => {
-  return t.stringLiteral(filename)
-}
-
-const createJsClassicUrlNode = (t, filename) => {
-  return t.stringLiteral(filename)
 }
 
 const createSupervisionCall = ({ t, methodName, urlNode, args = [] }) => {

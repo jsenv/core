@@ -66,11 +66,7 @@ import {
   getHtmlNodeText,
   setHtmlNodeText,
 } from "@jsenv/ast"
-import {
-  generateInlineContentUrl,
-  urlToRelativeUrl,
-  urlToFilename,
-} from "@jsenv/urls"
+import { generateInlineContentUrl, urlToRelativeUrl } from "@jsenv/urls"
 
 import { injectSupervisorIntoJs } from "./js_supervisor_injection.js"
 
@@ -115,13 +111,13 @@ export const injectSupervisorIntoHTML = async (
         line,
         column,
       })
-      scriptInfos.push({ type, isInline: true, src: inlineScriptSrc })
+      scriptInfos.push({ type, src: inlineScriptSrc, isInline: true })
       actions.push(async () => {
         const inlineJsSupervised = await injectSupervisorIntoJs({
           content: textContent,
           url: inlineScriptUrl,
-          filename: urlToFilename(inlineScriptUrl),
           type,
+          inlineSrc: inlineScriptSrc,
         })
         mutations.push(() => {
           setHtmlNodeText(scriptNode, `\n${inlineJsSupervised}\n`)
@@ -132,7 +128,7 @@ export const injectSupervisorIntoHTML = async (
       })
     }
     const handleScriptWithSrc = (scriptNode, { type, src }) => {
-      scriptInfos.push({ type, id: src })
+      scriptInfos.push({ type, src })
       const remoteJsSupervised = generateCodeToSuperviseScriptWithSrc({
         type,
         src,
