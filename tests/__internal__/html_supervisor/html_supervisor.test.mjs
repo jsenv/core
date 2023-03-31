@@ -10,17 +10,25 @@ import {
 } from "@jsenv/core/tests/snapshots_directory.js"
 
 let files = {}
-const transformFile = async (url) => {
-  const code = await injectSupervisorIntoHTML({
-    code: readFileSync(url, "utf8"),
-    url: String(url),
-  })
+const transformFixtureFile = async (fixtureFilename) => {
+  const url = new URL(`./fixtures/${fixtureFilename}`, import.meta.url)
+  const { content } = await injectSupervisorIntoHTML(
+    {
+      content: readFileSync(url, "utf8"),
+      url: String(url),
+    },
+    {
+      webServer: {
+        rootDirectoryUrl: new URL("./fixtures/", import.meta.url),
+      },
+    },
+  )
   const relativeUrl = urlToRelativeUrl(
     url,
     new URL("./fixtures/", import.meta.url),
   )
 
-  files[relativeUrl] = code
+  files[relativeUrl] = content
   const filesSorted = {}
   Object.keys(files)
     .sort(comparePathnames)
@@ -28,11 +36,10 @@ const transformFile = async (url) => {
       filesSorted[relativeUrl] = files[relativeUrl]
     })
   files = filesSorted
-
-  return code
 }
 
-await transformFile(new URL("./fixtures/main.html", import.meta.url))
+await transformFixtureFile("script_inline.html")
+await transformFixtureFile("script_type_module_inline.html")
 
 const actual = files
 const expected = readSnapshotsFromDirectory(

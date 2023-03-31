@@ -7,11 +7,8 @@
   </head>
 
   <body>
-    <script type="module">
-      import "./a.js"
-
-      await new Promise((resolve) => setTimeout(resolve, 50))
-      await 42
+    <script>
+      throw new Error("here")
     </script>
   </body>
 </html>
