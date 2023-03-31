@@ -11,12 +11,13 @@ window.__supervisor__ = (() => {
     executionResults,
   }
 
-  let navigationStartTime
+  let documentExecutionStartTime
   try {
-    navigationStartTime = window.performance.timing.navigationStart
+    documentExecutionStartTime = window.performance.timing.navigationStart
   } catch (e) {
-    navigationStartTime = Date.now()
+    documentExecutionStartTime = Date.now()
   }
+  let documentExecutionEndTime
 
   supervisor.setupReportException = ({
     rootDirectoryUrl,
@@ -723,13 +724,10 @@ window.__supervisor__ = (() => {
     errorBaseUrl,
     openInEditor,
   }) => {
-    const reportErrorBackToBrowser = (error) => {
-      if (typeof window.reportError === "function") {
-        window.reportError(error)
-      } else {
-        console.error(error)
-      }
-    }
+    const executions = {}
+    const executionResults = {}
+    const promises = []
+    let remainingScriptCount = scriptInfos.length
 
     const createExecutionController = (id, type) => {
       let startTime
@@ -740,6 +738,14 @@ window.__supervisor__ = (() => {
         exception: null,
         value: null,
       }
+
+      let resolve
+      const promise = new Promise((_resolve) => {
+        resolve = _resolve
+      })
+      promises.push(promise)
+      executionResults[id] = result
+
       const start = () => {
         result.duration = null
         result.coverage = null
@@ -749,42 +755,47 @@ window.__supervisor__ = (() => {
           console.group(`[jsenv] ${id} execution started (${type})`)
         }
       }
-      const complete = () => {
-        result.duration = Date.now() - startTime
+      const end = () => {
+        const now = Date.now()
+        remainingScriptCount--
+        result.duration = now - startTime
         result.coverage = window.__coverage__
-        result.status = "completed"
         if (logs) {
-          console.log(`execution completed`)
+          console.log(`execution ${result.status}`)
           console.groupEnd()
         }
+        if (remainingScriptCount === 0) {
+          documentExecutionEndTime = now
+        }
+        resolve()
+      }
+      const complete = () => {
+        result.status = "completed"
+        end()
       }
       const fail = (error) => {
-        result.duration = Date.now() - startTime
-        result.coverage = window.__coverage__
         result.status = "failed"
         const exception = supervisor.createException({ reason: error })
         result.exception = exception
         supervisor.reportException(exception)
+        end()
       }
+
       return { result, start, complete, fail }
     }
 
-    const prepareJsClassicRemoteExecution = ({ id }) => {
+    const prepareJsClassicRemoteExecution = (id) => {
       const urlObject = new URL(id, window.location)
       const url = urlObject.href
       const { result, start, complete, fail } = createExecutionController(
         id,
         "js_classic",
       )
+
       let parentNode
       let currentScript
       let nodeToReplace
       let currentScriptClone
-
-      let resolve
-      const promise = new Promise((res) => {
-        resolve = res
-      })
       const init = () => {
         currentScript = document.currentScript
         parentNode = currentScript.parentNode
@@ -825,9 +836,6 @@ window.__supervisor__ = (() => {
         try {
           await loadPromise
           complete()
-          if (!isReload) {
-            resolve()
-          }
           return result
         } catch (e) {
           fail({
@@ -837,46 +845,24 @@ window.__supervisor__ = (() => {
             // window.error won't be dispatched for this error
             needsReport: true,
           })
-          if (!isReload) {
-            resolve()
-          }
           return result
         }
       }
 
-      return {
-        promise,
-        init,
-        execute,
-        result,
-      }
+      executions[id] = { init, execute }
     }
-    const prepareJsClassicInlineExecution = ({ id }) => {
-      const { result, start, complete, fail } = createExecutionController(
+    const prepareJsClassicInlineExecution = (id) => {
+      const { start, complete, fail } = createExecutionController(
         id,
         "js_classic",
       )
-      let resolve
-      const promise = new Promise((res) => {
-        resolve = res
-      })
-      return {
-        promise,
-        start: () => {
-          start()
-        },
-        end: () => {
-          complete()
-          resolve()
-        },
-        error: (e) => {
-          // supervision shallowed the error, report back to browser
-          reportErrorBackToBrowser(e)
-          fail(e)
-          resolve()
-        },
-        result,
+      const end = complete
+      const error = (e) => {
+        // supervision shallowed the error, report back to browser
+        reportErrorBackToBrowser(e)
+        fail(e)
       }
+      executions[id] = { isInline: true, start, end, error }
     }
 
     const isWebkitOrSafari =
@@ -890,11 +876,6 @@ window.__supervisor__ = (() => {
       )
 
       let importFn
-      let resolve
-      const promise = new Promise((res) => {
-        resolve = res
-      })
-
       const init = (_importFn) => {
         importFn = _importFn
       }
@@ -906,9 +887,6 @@ window.__supervisor__ = (() => {
         try {
           const namespace = await importFn(urlObject.href)
           complete(namespace)
-          if (!isReload) {
-            resolve()
-          }
           return result
         } catch (e) {
           // dynamic import hides error from browser
@@ -919,41 +897,23 @@ window.__supervisor__ = (() => {
             url: urlObject.href,
             needsReport: true,
           })
-          if (!isReload) {
-            resolve()
-          }
           return result
         }
       }
-
-      return {
-        promise,
-        result,
-        init,
-        execute,
-      }
+      executions[id] = { init, execute }
     }
     const prepareJsModuleExecutionWithScriptThenDynamicImport = (id) => {
       const urlObject = new URL(id, window.location)
+      const { result, start, complete, fail } = createExecutionController(
+        id,
+        "js_module",
+      )
+
       let importFn
       let currentScript
       let parentNode
       let nodeToReplace
       let currentScriptClone
-
-      let resolve
-      const promise = new Promise((res) => {
-        resolve = res
-      })
-      const result = {
-        status: "pending",
-        duration: null,
-        exception: null,
-        namespace: null,
-        coverage: null,
-      }
-      let startTime
-
       const init = (_importFn) => {
         importFn = _importFn
         currentScript = document.querySelector(
@@ -961,17 +921,8 @@ window.__supervisor__ = (() => {
         )
         parentNode = currentScript.parentNode
       }
-
       const execute = async ({ isReload } = {}) => {
-        startTime = Date.now()
-        result.duration = null
-        result.coverage = null
-        result.status = "started"
-        result.exception = null
-        result.namespace = null
-        if (logs) {
-          console.group(`[jsenv] ${id} execution started (js_module)`)
-        }
+        start()
 
         const loadPromise = new Promise((resolve, reject) => {
           currentScriptClone = document.createElement("script")
@@ -1005,82 +956,52 @@ window.__supervisor__ = (() => {
         try {
           await loadPromise
         } catch (e) {
-          result.duration = Date.now() - startTime
-          result.coverage = window.__coverage__
-          result.status = "failed"
-          const loadError = {
+          fail({
             message: `Error while loading module: ${urlObject.href}`,
             reportedBy: "script_error_event",
             url: urlObject.href,
             // window.error won't be dispatched for this error
             needsReport: true,
-          }
-          const exception = supervisor.createException({ reason: loadError })
-          result.exception = exception
-          supervisor.reportException(exception)
-          if (logs) {
-            console.groupEnd()
-          }
-          if (!isReload) {
-            resolve()
-          }
+          })
           return result
         }
         result.status = "executing"
-        console.log(`load ended`)
+        if (logs) {
+          console.log(`load ended`)
+        }
         try {
           const namespace = await importFn(urlObject.href)
-          result.duration = Date.now() - startTime
-          result.coverage = window.__coverage__
-          result.namespace = namespace
-          result.status = "completed"
-          if (logs) {
-            console.log(`execution completed`)
-            console.groupEnd()
-          }
-          if (!isReload) {
-            resolve()
-          }
+          complete(namespace)
           return result
         } catch (e) {
-          result.duration = Date.now() - startTime
-          result.coverage = window.__coverage__
-          result.status = "failed"
-          const dynamicImportError = {
+          reportErrorBackToBrowser(e) // dynamic import hides error from browser
+          fail({
             message: `Error while importing module: ${urlObject.href}`,
             reportedBy: "dynamic_import",
             url: urlObject.href,
-            // window.error won't be dispatched for this error
             needsReport: true,
-          }
-          const exception = supervisor.createException({
-            reason: dynamicImportError,
           })
-          result.exception = exception
-          supervisor.reportException(exception)
-          // dynamic import would hide the error to the browser
-          reportErrorBackToBrowser(e)
-          if (logs) {
-            console.groupEnd()
-          }
-          if (!isReload) {
-            resolve()
-          }
           return result
         }
       }
-
-      return {
-        promise,
-        result,
-        init,
-        execute,
-      }
+      executions[id] = { init, execute }
     }
-
-    const prepareJsModuleExecution = isWebkitOrSafari
+    const prepareJsModuleRemoteExecution = isWebkitOrSafari
       ? prepareJsModuleExecutionWithDynamicImport
       : prepareJsModuleExecutionWithScriptThenDynamicImport
+    const prepareJsModuleInlineExecution = (id) => {
+      const { start, complete, fail } = createExecutionController(
+        id,
+        "js_module",
+      )
+      const end = complete
+      const error = (e) => {
+        // supervision shallowed the error, report back to browser
+        reportErrorBackToBrowser(e)
+        fail(e)
+      }
+      executions[id] = { isInline: true, start, end, error }
+    }
 
     supervisor.setupReportException({
       serverIsJsenvDevServer,
@@ -1090,58 +1011,53 @@ window.__supervisor__ = (() => {
       openInEditor,
     })
 
-    const jsClassicExecutions = {}
-    const jsModuleExecutions = {}
-    const executionOrder = new Set()
     scriptInfos.forEach((scriptInfo) => {
       const { type, id, isInline } = scriptInfo
       if (type === "js_module") {
-        jsModuleExecutions[id] = prepareJsModuleExecution({ id })
+        if (isInline) {
+          prepareJsModuleInlineExecution(id)
+        } else {
+          prepareJsModuleRemoteExecution(id)
+        }
+      } else if (isInline) {
+        prepareJsClassicInlineExecution(id)
       } else {
-        jsClassicExecutions[id] = isInline
-          ? prepareJsClassicInlineExecution({ id })
-          : prepareJsClassicRemoteExecution({ id })
+        prepareJsClassicRemoteExecution(id)
       }
     })
 
+    // js classic
     supervisor.jsClassicStart = (inlineSrc) => {
-      executionOrder.add(inlineSrc)
-      jsClassicExecutions[inlineSrc].start()
-      return jsClassicExecutions[inlineSrc]
+      executions[inlineSrc].start()
     }
     supervisor.jsClassicEnd = (inlineSrc) => {
-      jsClassicExecutions[inlineSrc].end()
+      executions[inlineSrc].end()
     }
     supervisor.jsClassicError = (inlineSrc, e) => {
-      jsClassicExecutions[inlineSrc].error(e)
+      executions[inlineSrc].error(e)
     }
     supervisor.superviseScript = (src) => {
-      executionOrder.add(src)
-      const execution = jsClassicExecutions[src]
+      const execution = executions[src]
       execution.init()
       return execution.execute()
     }
-
+    // js module
     supervisor.jsModuleStart = (inlineSrc) => {
-      executionOrder.add(inlineSrc)
-      jsModuleExecutions[inlineSrc].start()
-      return jsClassicExecutions[inlineSrc]
+      executions[inlineSrc].start()
     }
     supervisor.jsModuleEnd = (inlineSrc) => {
-      jsModuleExecutions[inlineSrc].end()
+      executions[inlineSrc].end()
     }
     supervisor.jsModuleError = (inlineSrc, e) => {
-      jsModuleExecutions[inlineSrc].error(e)
+      executions[inlineSrc].error(e)
     }
     supervisor.superviseScriptTypeModule = (src, importFn) => {
-      const execution = jsModuleExecutions[src]
+      const execution = executions[src]
       execution.init(importFn)
       return execution.execute()
     }
 
-    supervisor.reloadSupervisedScript = ({ type, src }) => {
-      const executions =
-        type === "js_module" ? jsModuleExecutions : jsClassicExecutions
+    supervisor.reloadSupervisedScript = (src) => {
       const execution = executions[src]
       if (!execution) {
         throw new Error(`no execution for ${src}`)
@@ -1152,49 +1068,22 @@ window.__supervisor__ = (() => {
       return execution.execute({ isReload: true })
     }
 
-    const waitScriptExecutions = async () => {
-      const numberOfPromises = pendingPromises.length
-      await Promise.all(pendingPromises)
-      // new scripts added while the other where executing
-      // (should happen only on webkit where
-      // script might be added after window load event)
-      await new Promise((resolve) => setTimeout(resolve))
-      if (pendingPromises.length > numberOfPromises) {
-        await waitScriptExecutions()
-      }
-    }
-
-    let endTime
-    const documentExecutionPromise = (async () => {
-      // to be super safe and ensure any <script type="module"> got a chance to execute
-      const documentReadyPromise = new Promise((resolve) => {
-        if (document.readyState === "complete") {
-          resolve()
-          return
-        }
-        const loadCallback = () => {
-          window.removeEventListener("load", loadCallback)
-          resolve()
-        }
-        window.addEventListener("load", loadCallback)
-      })
-      await documentReadyPromise
-      await waitScriptExecutions()
-      endTime = Date.now()
-    })()
-
     supervisor.getDocumentExecutionResult = async () => {
-      await documentExecutionPromise
-      if (pendingPromises.length) {
-        await waitScriptExecutions()
-        endTime = Date.now()
-      }
+      await Promise.all(promises)
       return {
+        startTime: documentExecutionStartTime,
+        endTime: documentExecutionEndTime,
         status: "completed",
         executionResults,
-        startTime: navigationStartTime,
-        endTime,
       }
+    }
+  }
+
+  const reportErrorBackToBrowser = (error) => {
+    if (typeof window.reportError === "function") {
+      window.reportError(error)
+    } else {
+      console.error(error)
     }
   }
 
