@@ -169,7 +169,7 @@ export const executeTestPlan = async ({
         }
       }
       const { headers } = await basicFetch(serverOrigin)
-      if (headers["x-jsenv-dev-server"]) {
+      if (headers["x-server-name"] === "jsenv_dev_server") {
         serverIsJsenvDevServer = true
         const { json } = await basicFetch(`${serverOrigin}/__params__.json`, {
           rejectUnauthorized: false,

@@ -136,7 +136,7 @@ export const startDevServer = async ({
     services: [
       {
         injectResponseHeaders: () => {
-          return { "x-jsenv-dev-server": "1" }
+          return { "x-server-name": "jsenv_dev_server" }
         },
       },
       jsenvServiceCORS({
