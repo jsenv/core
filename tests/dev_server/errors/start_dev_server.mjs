@@ -42,4 +42,6 @@ export const devServer = await startDevServer({
       },
     },
   },
+  ribbon: false,
+  clientAutoreload: false,
 })

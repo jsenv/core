@@ -114,19 +114,32 @@ export const injectSupervisorIntoHTML = async (
       })
       scriptInfos.push({ type, src: inlineScriptSrc, isInline: true })
       actions.push(async () => {
-        const inlineJsSupervised = await injectSupervisorIntoJs({
-          webServer,
-          content: textContent,
-          url: inlineScriptUrl,
-          type,
-          inlineSrc: inlineScriptSrc,
-        })
-        mutations.push(() => {
-          setHtmlNodeText(scriptNode, inlineJsSupervised)
-          setHtmlNodeAttributes(scriptNode, {
-            "jsenv-cooked-by": "jsenv:supervisor",
+        try {
+          const inlineJsSupervised = await injectSupervisorIntoJs({
+            webServer,
+            content: textContent,
+            url: inlineScriptUrl,
+            type,
+            inlineSrc: inlineScriptSrc,
           })
-        })
+          mutations.push(() => {
+            setHtmlNodeText(scriptNode, inlineJsSupervised)
+            setHtmlNodeAttributes(scriptNode, {
+              "jsenv-cooked-by": "jsenv:supervisor",
+            })
+          })
+        } catch (e) {
+          if (e.code === "PARSE_ERROR") {
+            // mutations.push(() => {
+            //   setHtmlNodeAttributes(scriptNode, {
+            //     "jsenv-cooked-by": "jsenv:supervisor",
+            //   })
+            // })
+            // on touche a rien
+            return
+          }
+          throw e
+        }
       })
     }
     const handleScriptWithSrc = (scriptNode, { type, src }) => {
@@ -207,9 +220,6 @@ export const injectSupervisorIntoHTML = async (
   // 3. Perform actions (transforming inline script content) and html mutations
   if (actions.length > 0) {
     await Promise.all(actions.map((action) => action()))
-  }
-  if (mutations.length === 0) {
-    return null
   }
   mutations.forEach((mutation) => mutation())
   const htmlModified = stringifyHtmlAst(htmlAst)

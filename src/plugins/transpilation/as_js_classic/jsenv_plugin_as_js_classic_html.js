@@ -157,7 +157,7 @@ export const jsenvPluginAsJsClassicHtml = ({
                   break
                 }
               } catch (e) {
-                if (context.dev) {
+                if (context.dev && e.code !== "PARSE_ERROR") {
                   needsSystemJs = true
                   // ignore cooking error, the browser will trigger it again on fetch
                   // + disable cache for this html file because when browser will reload

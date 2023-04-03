@@ -161,27 +161,27 @@ ${e.traceMessage}`)
                 inlineContentUrlInfo: inlineScriptUrlInfo,
                 inlineContentReference: inlineScriptReference,
               })
-            })
-            mutations.push(() => {
-              const attributes = {
-                "jsenv-cooked-by": "jsenv:html_inline_content",
-                // 1. <script type="jsx"> becomes <script>
-                // 2. <script type="module/jsx"> becomes <script type="module">
-                ...(extension
-                  ? { type: type === "js_module" ? "module" : undefined }
-                  : {}),
-              }
-              if (hotAccept) {
-                removeHtmlNodeText(scriptNode)
-                setHtmlNodeAttributes(scriptNode, {
-                  ...attributes,
-                })
-              } else {
-                setHtmlNodeText(scriptNode, inlineScriptUrlInfo.content)
-                setHtmlNodeAttributes(scriptNode, {
-                  ...attributes,
-                })
-              }
+              mutations.push(() => {
+                const attributes = {
+                  "jsenv-cooked-by": "jsenv:html_inline_content",
+                  // 1. <script type="jsx"> becomes <script>
+                  // 2. <script type="module/jsx"> becomes <script type="module">
+                  ...(extension
+                    ? { type: type === "js_module" ? "module" : undefined }
+                    : {}),
+                }
+                if (hotAccept) {
+                  removeHtmlNodeText(scriptNode)
+                  setHtmlNodeAttributes(scriptNode, {
+                    ...attributes,
+                  })
+                } else {
+                  setHtmlNodeText(scriptNode, inlineScriptUrlInfo.content)
+                  setHtmlNodeAttributes(scriptNode, {
+                    ...attributes,
+                  })
+                }
+              })
             })
           },
         })
