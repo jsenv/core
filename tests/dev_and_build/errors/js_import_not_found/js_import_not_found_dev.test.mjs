@@ -53,7 +53,7 @@ try {
       },
     ],
     pageErrors: [],
-    errorMessage: `Failed to fetch module: ${devServer.origin}/main.js`,
+    errorMessage: `Error while loading module: ${devServer.origin}/main.js`,
   }
   assert({ actual, expected })
 } finally {

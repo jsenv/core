@@ -35,7 +35,7 @@ const test = async ({ runtime }) => {
   }
   if (runtime === webkit) {
     const actual = errors[0].reason
-    const expected = `Unexpected end of script`
+    const expected = `SyntaxError: Unexpected end of script\nundefined`
     assert({ actual, expected })
   }
 }

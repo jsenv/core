@@ -222,9 +222,6 @@ window.__supervisor__ = (() => {
           complete(namespace)
           return result
         } catch (e) {
-          if (!isWebkitOrSafari) {
-            reportErrorBackToBrowser(e)
-          }
           fail(e, {
             message: `Error while importing module: ${urlObject.href}`,
             reportedBy: "dynamic_import",
@@ -274,9 +271,9 @@ window.__supervisor__ = (() => {
         const { detectedBy, failed, error } = await scriptLoadResultPromise
 
         if (failed) {
-          if (detectedBy === "script_error_event") {
-            reportErrorBackToBrowser(error)
-          }
+          // if (detectedBy === "script_error_event") {
+          //   reportErrorBackToBrowser(error)
+          // }
           fail(error, {
             message: `Error while loading module: ${urlObject.href}`,
             reportedBy: "script_error_event",
