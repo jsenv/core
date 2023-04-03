@@ -1,3 +1,41 @@
+/*
+ * ```js
+ * console.log(42)
+ * ```
+ * becomes
+ * ```js
+ * window.__supervisor__.jsClassicStart('main.html@L10-L13.js')
+ * try {
+ *   console.log(42)
+ *   window.__supervisor__.jsClassicEnd('main.html@L10-L13.js')
+ * } catch(e) {
+ *   window.__supervisor__.jsClassicError('main.html@L10-L13.js', e)
+ * }
+ * ```
+ *
+ * ```js
+ * import value from "./file.js"
+ * console.log(value)
+ * ```
+ * becomes
+ * ```js
+ * window.__supervisor__.jsModuleStart('main.html@L10-L13.js')
+ * try {
+ *   const value = await import("./file.js")
+ *   console.log(value)
+ *   window.__supervisor__.jsModuleEnd('main.html@L10-L13.js')
+ * } catch(e) {
+ *   window.__supervisor__.jsModuleError('main.html@L10-L13.js', e)
+ * }
+ * ```
+ *
+ * -> TO KEEP IN MIND:
+ * Static import can throw errors like
+ * The requested module '/js_module_export_not_found/foo.js' does not provide an export named 'answerr'
+ * While dynamic import will work just fine
+ * and create a variable named "undefined"
+ */
+
 import { applyBabelPlugins } from "@jsenv/ast"
 import { SOURCEMAP, generateSourcemapDataUrl } from "@jsenv/sourcemap"
 
@@ -97,13 +135,6 @@ const babelPluginJsModuleSupervisor = (babel) => {
   }
 }
 
-/*
- * One thing to note:
- * Static import can throw errors like
- * The requested module '/js_module_export_not_found/foo.js' does not provide an export named 'answerr'
- * While dynamic import will work just fine
- * and create a variable named "undefined"
- */
 const convertStaticImportIntoDynamicImport = (staticImportNode, t) => {
   const awaitExpression = t.awaitExpression(
     t.callExpression(t.import(), [

@@ -22,14 +22,8 @@
  *    console.log(42)
  * </script>
  * becomes
- * <script>
- *   window.__supervisor__.jsClassicStart('main.html@L10-L13.js')
- *   try {
- *     console.log(42)
- *     window.__supervisor__.jsClassicEnd('main.html@L10-L13.js')
- *   } catch(e) {
- *     window.__supervisor__.jsClassicError('main.html@L10-L13.js', e)
- *   }
+ * <script inlined-from-src="main.html@L10-C5.js">
+ *   window.__supervisor.__superviseScript("main.html@L10-C5.js")
  * </script>
  *
  * <script type="module" src="module.js"></script>
@@ -42,26 +36,13 @@
  *   console.log(42)
  * </script>
  * becomes
- * <script type="module">
- *   window.__supervisor__.jsModuleStart('main.html@L10-L13.js')
- *   try {
- *     console.log(42)
- *     window.__supervisor__.jsModuleEnd('main.html@L10-L13.js')
- *   } catch(e) {
- *     window.__supervisor__.jsModuleError('main.html@L10-L13.js', e)
- *   }
+ * <script type="module" inlined-from-src="main.html@L10-C5.js">
+ *   window.__supervisor__.superviseScriptTypeModule('main.html@L10-C5.js')
  * </script>
  *
- * Plusieurs choses qui fonctionne moyen:
- *
- * - Une erreur de syntaxe: on ne peut plus instrumenter le script
- *   -> idéalement il faudrait alors l'externaliser, en tous cas wrap son evaluation
- *   dans le try/catch, chiant
- *   -> export not found ne throw plus d'erreur
- *
- * Mais pour playwright je suppose qu'on aura l'info
- * via les erreur browsers
- * et pour jsenv on peut reprendre le concept de load un fichier
+ * Why Inline scripts are converted to files dynamically?
+ * -> No changes required on js source code, it's only the HTML that is modified
+ *   - Also allow to catch syntax errors and export missing
  */
 
 import {
