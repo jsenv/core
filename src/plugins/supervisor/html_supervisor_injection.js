@@ -51,6 +51,17 @@
  *     window.__supervisor__.jsModuleError('main.html@L10-L13.js', e)
  *   }
  * </script>
+ *
+ * Plusieurs choses qui fonctionne moyen:
+ *
+ * - Une erreur de syntaxe: on ne peut plus instrumenter le script
+ *   -> idéalement il faudrait alors l'externaliser, en tous cas wrap son evaluation
+ *   dans le try/catch, chiant
+ *   -> export not found ne throw plus d'erreur
+ *
+ * Mais pour playwright je suppose qu'on aura l'info
+ * via les erreur browsers
+ * et pour jsenv on peut reprendre le concept de load un fichier
  */
 
 import {
@@ -112,6 +123,24 @@ export const injectSupervisorIntoHTML = async (
         line,
         column,
       })
+      if (webServer.isJsenvDevServer) {
+        // prefere la version src
+        scriptInfos.push({ type, src: inlineScriptSrc })
+        const remoteJsSupervised = generateCodeToSuperviseScriptWithSrc({
+          type,
+          src: inlineScriptSrc,
+        })
+        mutations.push(() => {
+          setHtmlNodeText(scriptNode, remoteJsSupervised)
+          setHtmlNodeAttributes(scriptNode, {
+            "jsenv-cooked-by": "jsenv:supervisor",
+            "src": undefined,
+            "inlined-from-src": inlineScriptSrc,
+          })
+        })
+        return
+      }
+
       scriptInfos.push({ type, src: inlineScriptSrc, isInline: true })
       actions.push(async () => {
         try {

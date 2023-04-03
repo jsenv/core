@@ -272,6 +272,8 @@ window.__supervisor__ = (() => {
       const execute = async ({ isReload, onExecuting = () => {} } = {}) => {
         start()
 
+        let windowError = false
+        let removeWindowErrorEventCallback
         const loadPromise = new Promise((resolve, reject) => {
           currentScriptClone = document.createElement("script")
           // browsers set async by default when creating script(s)
@@ -299,12 +301,25 @@ window.__supervisor__ = (() => {
           }
           currentScriptClone.addEventListener("error", reject)
           currentScriptClone.addEventListener("load", resolve)
+          const windowErrorEventCallback = (errorEvent) => {
+            if (errorEvent.filename === urlObject.href) {
+              windowError = true
+              reject(errorEvent)
+            }
+          }
+          window.addEventListener("error", windowErrorEventCallback)
+          removeWindowErrorEventCallback = () =>
+            window.removeEventListener("error", windowErrorEventCallback)
           parentNode.replaceChild(currentScriptClone, nodeToReplace)
         })
         try {
           await loadPromise
+          removeWindowErrorEventCallback()
         } catch (e) {
-          reportErrorBackToBrowser(e) // window.error won't be dispatched for this error
+          removeWindowErrorEventCallback()
+          if (!windowError) {
+            reportErrorBackToBrowser(e)
+          }
           fail(e, {
             message: `Error while loading module: ${urlObject.href}`,
             reportedBy: "script_error_event",
