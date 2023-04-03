@@ -6,6 +6,7 @@ export const devServer = await startDevServer({
   port: 3589,
   sourceDirectoryUrl: new URL("./stories/", import.meta.url),
   supervisor: {
+    logs: true,
     errorBaseUrl: process.env.GENERATING_SNAPSHOTS ? "file:///" : undefined,
   },
   plugins: [

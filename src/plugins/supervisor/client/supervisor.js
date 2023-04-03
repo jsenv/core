@@ -119,9 +119,9 @@ window.__supervisor__ = (() => {
         result.status = "completed"
         end()
       }
-      const fail = (error) => {
+      const fail = (error, info) => {
         result.status = "failed"
-        const exception = supervisor.createException({ reason: error })
+        const exception = supervisor.createException(error, info)
         result.exception = exception
         supervisor.reportException(exception)
         end()
@@ -185,12 +185,12 @@ window.__supervisor__ = (() => {
           complete()
           return result
         } catch (e) {
-          fail({
+          // window.error won't be dispatched for this error
+          // reportErrorBackToBrowser(e)
+          fail(e, {
             message: `Error while loading script: ${urlObject.href}`,
             reportedBy: "script_error_event",
             url: urlObject.href,
-            // window.error won't be dispatched for this error
-            needsReport: true,
           })
           return result
         }
@@ -204,8 +204,7 @@ window.__supervisor__ = (() => {
       )
       const end = complete
       const error = (e) => {
-        // supervision shallowed the error, report back to browser
-        reportErrorBackToBrowser(e)
+        reportErrorBackToBrowser(e) // supervision shallowed the error, report back to browser
         fail(e)
       }
       executions[src] = { isInline: true, start, end, error }
@@ -240,13 +239,11 @@ window.__supervisor__ = (() => {
           complete(namespace)
           return result
         } catch (e) {
-          // dynamic import hides error from browser
-          reportErrorBackToBrowser(e)
-          fail({
+          // reportErrorBackToBrowser(e) // dynamic import hides error from browser
+          fail(e, {
             message: `Error while importing module: ${urlObject.href}`,
             reportedBy: "dynamic_import",
             url: urlObject.href,
-            needsReport: true,
           })
           return result
         }
@@ -308,12 +305,11 @@ window.__supervisor__ = (() => {
         try {
           await loadPromise
         } catch (e) {
-          fail({
+          reportErrorBackToBrowser(e) // window.error won't be dispatched for this error
+          fail(e, {
             message: `Error while loading module: ${urlObject.href}`,
             reportedBy: "script_error_event",
             url: urlObject.href,
-            // window.error won't be dispatched for this error
-            needsReport: true,
           })
           return result
         }
@@ -327,12 +323,11 @@ window.__supervisor__ = (() => {
           complete(namespace)
           return result
         } catch (e) {
-          reportErrorBackToBrowser(e) // dynamic import hides error from browser
-          fail({
+          // reportErrorBackToBrowser(e) // dynamic import hides error from browser
+          fail(e, {
             message: `Error while importing module: ${urlObject.href}`,
             reportedBy: "dynamic_import",
             url: urlObject.href,
-            needsReport: true,
           })
           return result
         }
@@ -357,6 +352,7 @@ window.__supervisor__ = (() => {
     }
 
     supervisor.setupReportException({
+      logs,
       serverIsJsenvDevServer,
       rootDirectoryUrl,
       errorOverlay,
@@ -440,6 +436,7 @@ window.__supervisor__ = (() => {
   }
 
   supervisor.setupReportException = ({
+    logs,
     rootDirectoryUrl,
     serverIsJsenvDevServer,
     errorNotification,
@@ -451,17 +448,14 @@ window.__supervisor__ = (() => {
     const DYNAMIC_IMPORT_EXPORT_MISSING = "dynamic_import_export_missing"
     const DYNAMIC_IMPORT_SYNTAX_ERROR = "dynamic_import_syntax_error"
 
-    const createException = ({
-      reason,
-      reportedBy,
-      url,
-      line,
-      column,
-    } = {}) => {
+    const createException = (
+      reason, // can be error, string, object
+      { reportedBy, url, line, column } = {},
+    ) => {
       const exception = {
         reason,
-        reportedBy,
         isError: false, // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/throw
+        reportedBy,
         code: null,
         message: null,
         stack: null,
@@ -513,9 +507,6 @@ window.__supervisor__ = (() => {
           if (error.url) {
             Object.assign(exception.site, resolveUrlSite({ url: error.url }))
           }
-          if (error.needsReport) {
-            exception.needsReport = true
-          }
           export_missing: {
             // chrome
             if (message.includes("does not provide an export named")) {
@@ -553,9 +544,6 @@ window.__supervisor__ = (() => {
           }
           if (reason.url) {
             Object.assign(exception.site, resolveUrlSite({ url: reason.url }))
-          }
-          if (reason.needsReport) {
-            exception.needsReport = true
           }
           return
         }
@@ -836,9 +824,7 @@ window.__supervisor__ = (() => {
               if (
                 exceptionInfo.site.line !== undefined &&
                 // code frame showing internal window.reportError is pointless
-                !exceptionInfo.site.url.endsWith(
-                  `script_type_module_supervisor.js`,
-                )
+                !exceptionInfo.site.url.endsWith(`supervisor.js`)
               ) {
                 const urlToFetch = new URL(
                   `/__get_code_frame__/${encodeURIComponent(
@@ -919,6 +905,9 @@ window.__supervisor__ = (() => {
     let displayJsenvErrorOverlay
     error_overlay: {
       displayJsenvErrorOverlay = (params) => {
+        if (logs) {
+          console.log("display jsenv error overlay", params)
+        }
         let jsenvErrorOverlay = new JsenvErrorOverlay(params)
         document
           .querySelectorAll(JSENV_ERROR_OVERLAY_TAGNAME)
@@ -1112,10 +1101,9 @@ window.__supervisor__ = (() => {
         return
       }
       const { error, message, filename, lineno, colno } = errorEvent
-      const exception = supervisor.createException({
+      const exception = supervisor.createException(error || message, {
         // when error is reported within a worker error is null
         // but there is a message property on errorEvent
-        reason: error || message,
         reportedBy: "window_error_event",
         url: filename,
         line: lineno,
@@ -1127,8 +1115,7 @@ window.__supervisor__ = (() => {
       if (event.defaultPrevented) {
         return
       }
-      const exception = supervisor.createException({
-        reason: event.reason,
+      const exception = supervisor.createException(event.reason, {
         reportedBy: "window_unhandledrejection_event",
       })
       supervisor.reportException(exception)
