@@ -3,6 +3,7 @@
  * than jsenv
  */
 
+import { assert } from "@jsenv/assert"
 import { startBuildServer, executeTestPlan, chromium } from "@jsenv/core"
 
 const buildServer = await startBuildServer({
@@ -15,7 +16,7 @@ const result = await executeTestPlan({
   logLevel: "info",
   rootDirectoryUrl: new URL("./project/", import.meta.url),
   testPlan: {
-    "./src/**/*.test.html": {
+    "./public/**/*.test.html": {
       chromium: {
         runtime: chromium,
       },
@@ -28,5 +29,13 @@ const result = await executeTestPlan({
   },
 })
 
-// TODO: assert on result
-console.log(result)
+const chromiumResult = result.testPlanReport["public/main.test.html"].chromium
+const actual = {
+  status: chromiumResult.status,
+  errorMessage: chromiumResult.errors[0].message,
+}
+const expected = {
+  status: "failed",
+  errorMessage: "answer should be 42, got 43",
+}
+assert({ actual, expected })

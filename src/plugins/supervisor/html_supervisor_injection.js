@@ -45,6 +45,7 @@
  *   - Also allow to catch syntax errors and export missing
  */
 
+import { readFileSync } from "node:fs"
 import {
   parseHtmlString,
   stringifyHtmlAst,
@@ -69,8 +70,10 @@ export const injectSupervisorIntoHTML = async (
   { content, url },
   {
     supervisorScriptSrc = supervisorFileUrl,
+    supervisorScriptInline,
     supervisorOptions,
     webServer,
+    onInlineScript = () => {},
     generateInlineScriptSrc = ({ inlineScriptUrl }) =>
       urlToRelativeUrl(inlineScriptUrl, webServer.rootDirectoryUrl),
     inlineAsRemote,
@@ -104,6 +107,15 @@ export const injectSupervisorIntoHTML = async (
         isOriginal,
         line,
         column,
+      })
+      onInlineScript({
+        type,
+        textContent,
+        url: inlineScriptUrl,
+        isOriginal,
+        line,
+        column,
+        src: inlineScriptSrc,
       })
       if (inlineAsRemote) {
         // prefere la version src
@@ -221,9 +233,22 @@ export const injectSupervisorIntoHTML = async (
       }),
       "jsenv:supervisor",
     )
+    const supervisorScript = supervisorScriptInline
+      ? createHtmlNode({
+          tagName: "script",
+          textContent: readFileSync(new URL(supervisorScriptSrc), "utf8"),
+        })
+      : createHtmlNode({
+          tagName: "script",
+          src: urlToRelativeUrl(
+            supervisorScriptSrc,
+            webServer.rootDirectoryUrl,
+          ),
+        })
+
     injectScriptNodeAsEarlyAsPossible(
       htmlAst,
-      createHtmlNode({ tagName: "script", src: supervisorScriptSrc }),
+      supervisorScript,
       "jsenv:supervisor",
     )
   }

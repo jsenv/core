@@ -7,7 +7,7 @@ import {
   raceProcessTeardownEvents,
   raceCallbacks,
 } from "@jsenv/abort"
-import { moveUrl, urlIsInsideOf } from "@jsenv/urls"
+import { moveUrl, urlIsInsideOf, urlToExtension } from "@jsenv/urls"
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js"
 
 import { filterV8Coverage } from "@jsenv/core/src/test/coverage/v8_coverage.js"
@@ -571,14 +571,9 @@ const initJsExecutionMiddleware = async (
   page,
   { webServer, fileUrl, fileServerUrl },
 ) => {
-  // TODO: get the inline js code urls+content to serve
-  // them to the browser when it will request them
-  await page.route("**", async (route) => {
-    const url = route.request.url()
-    if (url !== fileServerUrl) {
-      route.fallback()
-      return
-    }
+  const inlineScriptContents = new Map()
+
+  const interceptHtmlToExecute = async ({ route }) => {
     // Fetch original response.
     const response = await route.fetch()
     // Add a prefix to the title.
@@ -589,9 +584,14 @@ const initJsExecutionMiddleware = async (
         url: fileUrl,
       },
       {
+        supervisorScriptInline: true,
         supervisorOptions: {},
         inlineAsRemote: true,
         webServer,
+        onInlineScript: ({ src, textContent }) => {
+          const inlineScriptWebUrl = new URL(src, `${webServer.origin}/`).href
+          inlineScriptContents.set(inlineScriptWebUrl, textContent)
+        },
       },
     )
     route.fulfill({
@@ -602,6 +602,40 @@ const initJsExecutionMiddleware = async (
         "content-length": Buffer.byteLength(injectionResult.content),
       },
     })
+  }
+
+  const inerceptInlineScript = ({ url, route }) => {
+    const inlineScriptContent = inlineScriptContents.get(url)
+    route.fulfill({
+      status: 200,
+      body: inlineScriptContent,
+      headers: {
+        "content-type": "text/javascript",
+        "content-length": Buffer.byteLength(inlineScriptContent),
+      },
+    })
+  }
+
+  await page.route("**", async (route) => {
+    const request = route.request()
+    const url = request.url()
+    if (url === fileServerUrl && urlToExtension(url) === ".html") {
+      interceptHtmlToExecute({
+        url,
+        request,
+        route,
+      })
+      return
+    }
+    if (inlineScriptContents.has(url)) {
+      inerceptInlineScript({
+        url,
+        request,
+        route,
+      })
+      return
+    }
+    route.fallback()
   })
 }
 
