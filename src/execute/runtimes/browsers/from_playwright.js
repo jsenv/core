@@ -571,6 +571,8 @@ const initJsExecutionMiddleware = async (
   page,
   { webServer, fileUrl, fileServerUrl },
 ) => {
+  // TODO: get the inline js code urls+content to serve
+  // them to the browser when it will request them
   await page.route("**", async (route) => {
     const url = route.request.url()
     if (url !== fileServerUrl) {

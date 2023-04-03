@@ -1,6 +1,6 @@
 /*
  * The goal here is to ensure test plan can be used with an other server
- * than jsenvs
+ * than jsenv
  */
 
 import { startBuildServer, executeTestPlan, chromium } from "@jsenv/core"
