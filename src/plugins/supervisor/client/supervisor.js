@@ -298,7 +298,6 @@ window.__supervisor__ = (() => {
           complete(namespace)
           return result
         } catch (e) {
-          reportErrorBackToBrowser(e)
           fail(e, {
             message: `Error while importing module: ${urlObject.href}`,
             reportedBy: "dynamic_import",
