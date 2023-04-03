@@ -551,12 +551,8 @@ window.__supervisor__ = (() => {
           exception.code === DYNAMIC_IMPORT_SYNTAX_ERROR
         ) {
           // syntax error on inline script need line-1 for some reason
-          if (Error.captureStackTrace) {
-            fileUrlSite.line--
-          } else {
-            // firefox and safari need line-2
-            fileUrlSite.line -= 2
-          }
+
+          fileUrlSite.line = fileUrlSite.line - 1
         }
         Object.assign(exception.site, fileUrlSite)
       }
@@ -597,7 +593,7 @@ window.__supervisor__ = (() => {
         const extension = inlineUrlMatch[5]
         url = htmlUrl
         line = tagLineStart + (typeof line === "number" ? line : 0)
-        line = line - 1
+        line = line - 1 // sauf pour les erreur de syntaxe
         column = tagColumnStart + (typeof column === "number" ? column : 0)
         const fileUrl = resolveFileUrl(url)
         return {

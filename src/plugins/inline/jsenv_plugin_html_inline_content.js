@@ -147,7 +147,7 @@ ${e.traceMessage}`)
                 // we remove 1 to the line because imagine the following html:
                 // <script>console.log('ok')</script>
                 // -> content starts same line as <script>
-                specifierLine: line,
+                specifierLine: line - 1,
                 specifierColumn: column,
                 isOriginalPosition: isOriginal,
                 specifier: inlineScriptUrl,
