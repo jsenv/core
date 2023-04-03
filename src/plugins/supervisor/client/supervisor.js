@@ -640,7 +640,7 @@ window.__supervisor__ = (() => {
         line = tagLineStart + (typeof line === "number" ? line : 0)
         // stackTrace formatted by V8 (chrome)
         if (Error.captureStackTrace) {
-          line--
+          line = line - 2
         }
         column = tagColumnStart + (typeof column === "number" ? column : 0)
         const fileUrl = resolveFileUrl(url)
@@ -677,7 +677,7 @@ window.__supervisor__ = (() => {
     }
 
     const resolveFileUrl = (url) => {
-      let urlObject = new URL(url)
+      let urlObject = new URL(url, window.origin)
       if (urlObject.origin === window.origin) {
         urlObject = new URL(
           `${urlObject.pathname.slice(1)}${urlObject.search}`,

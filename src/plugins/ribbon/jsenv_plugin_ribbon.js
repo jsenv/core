@@ -51,9 +51,10 @@ export const jsenvPluginRibbon = ({
           tagName: "script",
           type: "module",
           textContent: `
-import { injectRibbon} from "${ribbonClientFileReference.generatedSpecifier}"
+import { injectRibbon } from "${ribbonClientFileReference.generatedSpecifier}"
 
-injectRibbon(${paramsJson})`,
+injectRibbon(${paramsJson})
+`,
         })
         injectHtmlNode(htmlAst, scriptNode, "jsenv:ribbon")
         return stringifyHtmlAst(htmlAst)

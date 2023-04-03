@@ -76,8 +76,9 @@ const supervisorFileUrl = new URL("./client/supervisor.js", import.meta.url)
 export const injectSupervisorIntoHTML = async (
   { content, url },
   {
-    webServer,
     supervisorScriptSrc = supervisorFileUrl,
+    supervisorOptions,
+    webServer,
     generateInlineScriptSrc = ({ inlineScriptUrl }) =>
       urlToRelativeUrl(inlineScriptUrl, webServer.rootDirectoryUrl),
   },
@@ -114,13 +115,14 @@ export const injectSupervisorIntoHTML = async (
       scriptInfos.push({ type, src: inlineScriptSrc, isInline: true })
       actions.push(async () => {
         const inlineJsSupervised = await injectSupervisorIntoJs({
+          webServer,
           content: textContent,
           url: inlineScriptUrl,
           type,
           inlineSrc: inlineScriptSrc,
         })
         mutations.push(() => {
-          setHtmlNodeText(scriptNode, `\n${inlineJsSupervised}\n`)
+          setHtmlNodeText(scriptNode, inlineJsSupervised)
           setHtmlNodeAttributes(scriptNode, {
             "jsenv-cooked-by": "jsenv:supervisor",
           })
@@ -177,6 +179,8 @@ export const injectSupervisorIntoHTML = async (
   {
     const setupParamsSource = stringifyParams(
       {
+        ...supervisorOptions,
+        serverIsJsenvDevServer: webServer.isJsenvDevServer,
         rootDirectoryUrl: webServer.rootDirectoryUrl,
         scriptInfos,
       },

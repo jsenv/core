@@ -172,16 +172,18 @@ export const jsenvPluginSupervisor = ({
             url,
           },
           {
-            errorBaseUrl,
-            logs,
-            measurePerf,
-            errorOverlay,
-            openInEditor,
+            supervisorScriptSrc: supervisorFileReference.generatedSpecifier,
+            supervisorOptions: {
+              errorBaseUrl,
+              logs,
+              measurePerf,
+              errorOverlay,
+              openInEditor,
+            },
             webServer: {
               rootDirectoryUrl: context.rootDirectoryUrl,
               isJsenvDevServer: true,
             },
-            supervisorScriptSrc: supervisorFileReference.generatedSpecifier,
             generateInlineScriptSrc: ({
               type,
               textContent,
@@ -196,7 +198,7 @@ export const jsenvPluginSupervisor = ({
                   subtype: "inline",
                   expectedType: type,
                   isOriginalPosition: isOriginal,
-                  specifierLine: line - 1,
+                  specifierLine: line,
                   specifierColumn: column,
                   specifier: inlineScriptUrl,
                   contentType: "text/javascript",

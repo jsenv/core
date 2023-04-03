@@ -1,4 +1,5 @@
 import { applyBabelPlugins } from "@jsenv/ast"
+import { SOURCEMAP, generateSourcemapDataUrl } from "@jsenv/sourcemap"
 
 export const injectSupervisorIntoJs = async ({
   content,
@@ -18,7 +19,17 @@ export const injectSupervisorIntoJs = async ({
     },
     babelPlugins: [[babelPluginJsSupervisor, { inlineSrc }]],
   })
-  return result.code
+  let code = result.code
+  let map = result.map
+  const sourcemapDataUrl = generateSourcemapDataUrl(map)
+  code = SOURCEMAP.writeComment({
+    contentType: "text/javascript",
+    content: code,
+    specifier: sourcemapDataUrl,
+  })
+  code = `${code}
+//# sourceURL=${url}`
+  return code
 }
 
 const babelPluginJsModuleSupervisor = (babel) => {

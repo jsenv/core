@@ -18,6 +18,7 @@ const transformFixtureFile = async (fixtureFilename) => {
       url: String(url),
     },
     {
+      supervisorOptions: {},
       webServer: {
         rootDirectoryUrl: new URL("./fixtures/", import.meta.url),
       },

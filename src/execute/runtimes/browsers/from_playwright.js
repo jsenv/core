@@ -587,6 +587,7 @@ const initJsExecutionMiddleware = async (
         url: fileUrl,
       },
       {
+        supervisorOptions: {},
         webServer,
       },
     )
