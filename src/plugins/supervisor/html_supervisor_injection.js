@@ -240,10 +240,7 @@ export const injectSupervisorIntoHTML = async (
         })
       : createHtmlNode({
           tagName: "script",
-          src: urlToRelativeUrl(
-            supervisorScriptSrc,
-            webServer.rootDirectoryUrl,
-          ),
+          src: supervisorScriptSrc,
         })
 
     injectScriptNodeAsEarlyAsPossible(

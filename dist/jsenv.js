@@ -8163,7 +8163,8 @@ const featuresCompatMap = {
     chrome: "89",
     opera: "76",
     samsung: "15",
-    firefox: "108"
+    firefox: "108",
+    safari: "16.4"
   },
   import_type_json: {
     chrome: "91",
@@ -17770,8 +17771,10 @@ const injectSupervisorIntoHTML = async ({
   url
 }, {
   supervisorScriptSrc = supervisorFileUrl$1,
+  supervisorScriptInline,
   supervisorOptions,
   webServer,
+  onInlineScript = () => {},
   generateInlineScriptSrc = ({
     inlineScriptUrl
   }) => urlToRelativeUrl(inlineScriptUrl, webServer.rootDirectoryUrl),
@@ -17812,6 +17815,15 @@ const injectSupervisorIntoHTML = async ({
         isOriginal,
         line,
         column
+      });
+      onInlineScript({
+        type,
+        textContent,
+        url: inlineScriptUrl,
+        isOriginal,
+        line,
+        column,
+        src: inlineScriptSrc
       });
       if (inlineAsRemote) {
         // prefere la version src
@@ -17940,10 +17952,14 @@ const injectSupervisorIntoHTML = async ({
       })
       `
     }), "jsenv:supervisor");
-    injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
+    const supervisorScript = supervisorScriptInline ? createHtmlNode({
+      tagName: "script",
+      textContent: readFileSync$1(new URL(supervisorScriptSrc), "utf8")
+    }) : createHtmlNode({
       tagName: "script",
       src: supervisorScriptSrc
-    }), "jsenv:supervisor");
+    });
+    injectScriptNodeAsEarlyAsPossible(htmlAst, supervisorScript, "jsenv:supervisor");
   }
   // 3. Perform actions (transforming inline script content) and html mutations
   if (actions.length > 0) {
@@ -25762,12 +25778,10 @@ const initJsExecutionMiddleware = async (page, {
   fileUrl,
   fileServerUrl
 }) => {
-  await page.route("**", async route => {
-    const url = route.request.url();
-    if (url !== fileServerUrl) {
-      route.fallback();
-      return;
-    }
+  const inlineScriptContents = new Map();
+  const interceptHtmlToExecute = async ({
+    route
+  }) => {
     // Fetch original response.
     const response = await route.fetch();
     // Add a prefix to the title.
@@ -25776,9 +25790,17 @@ const initJsExecutionMiddleware = async (page, {
       content: originalBody,
       url: fileUrl
     }, {
+      supervisorScriptInline: true,
       supervisorOptions: {},
       inlineAsRemote: true,
-      webServer
+      webServer,
+      onInlineScript: ({
+        src,
+        textContent
+      }) => {
+        const inlineScriptWebUrl = new URL(src, `${webServer.origin}/`).href;
+        inlineScriptContents.set(inlineScriptWebUrl, textContent);
+      }
     });
     route.fulfill({
       response,
@@ -25788,6 +25810,41 @@ const initJsExecutionMiddleware = async (page, {
         "content-length": Buffer.byteLength(injectionResult.content)
       }
     });
+  };
+  const inerceptInlineScript = ({
+    url,
+    route
+  }) => {
+    const inlineScriptContent = inlineScriptContents.get(url);
+    route.fulfill({
+      status: 200,
+      body: inlineScriptContent,
+      headers: {
+        "content-type": "text/javascript",
+        "content-length": Buffer.byteLength(inlineScriptContent)
+      }
+    });
+  };
+  await page.route("**", async route => {
+    const request = route.request();
+    const url = request.url();
+    if (url === fileServerUrl && urlToExtension$1(url) === ".html") {
+      interceptHtmlToExecute({
+        url,
+        request,
+        route
+      });
+      return;
+    }
+    if (inlineScriptContents.has(url)) {
+      inerceptInlineScript({
+        url,
+        request,
+        route
+      });
+      return;
+    }
+    route.fallback();
   });
 };
 const registerEvent = ({
