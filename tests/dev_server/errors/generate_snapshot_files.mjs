@@ -84,9 +84,9 @@ const test = async ({ browserLauncher, browserName }) => {
     await generateHtmlForStory({
       story: "js_module_import_not_found",
     })
-    // await generateHtmlForStory({
-    //   story: "js_module_inline_export_not_found",
-    // })
+    await generateHtmlForStory({
+      story: "js_module_inline_export_not_found",
+    })
     await generateHtmlForStory({
       story: "js_module_inline_import_not_found",
     })

@@ -33,6 +33,7 @@ export const devServer = await startDevServer({
       },
     },
   ],
+  outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
   // sourcemaps: "file",
   // sourcemapsSourcesProtocol: "source-maps://",
   explorer: {

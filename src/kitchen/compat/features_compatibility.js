@@ -31,6 +31,8 @@ export const featuresCompatMap = {
   },
   import_meta_resolve: {
     chrome: "107",
+    edge: "105",
+    firefox: "106",
   },
   // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import#browser_compatibility
   import_dynamic: {

@@ -97,6 +97,11 @@ export const jsenvPluginBabel = ({
     const { code, map } = await applyBabelPlugins({
       babelPlugins,
       urlInfo,
+      options: {
+        generatorOpts: {
+          retainLines: context.dev,
+        },
+      },
     })
     return {
       content: code,

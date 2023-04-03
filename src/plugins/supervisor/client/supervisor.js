@@ -222,12 +222,12 @@ window.__supervisor__ = (() => {
           complete(namespace)
           return result
         } catch (e) {
-          reportErrorBackToBrowser(e)
           fail(e, {
             message: `Error while importing module: ${urlObject.href}`,
             reportedBy: "dynamic_import",
             url: urlObject.href,
           })
+          supervisor.reportException(result.exception)
           return result
         }
       }
@@ -420,7 +420,7 @@ window.__supervisor__ = (() => {
 
     const createException = (
       reason, // can be error, string, object
-      { reportedBy, url, line, column } = {},
+      { message, reportedBy, url, line, column } = {},
     ) => {
       const exception = {
         reason,
@@ -506,8 +506,9 @@ window.__supervisor__ = (() => {
           return
         }
         if (typeof reason === "object") {
+          // happens when reason is an Event for instance
           exception.code = reason.code
-          exception.message = reason.message
+          exception.message = reason.message || message
           exception.stack = reason.stack
           if (reason.reportedBy) {
             exception.reportedBy = reason.reportedBy
@@ -596,10 +597,7 @@ window.__supervisor__ = (() => {
         const extension = inlineUrlMatch[5]
         url = htmlUrl
         line = tagLineStart + (typeof line === "number" ? line : 0)
-        // stackTrace formatted by V8 (chrome)
-        if (Error.captureStackTrace) {
-          line = line - 1
-        }
+        line = line - 1
         column = tagColumnStart + (typeof column === "number" ? column : 0)
         const fileUrl = resolveFileUrl(url)
         return {

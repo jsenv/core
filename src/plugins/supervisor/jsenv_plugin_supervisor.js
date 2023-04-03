@@ -199,7 +199,7 @@ export const jsenvPluginSupervisor = ({
                   subtype: "inline",
                   expectedType: type,
                   isOriginalPosition: isOriginal,
-                  specifierLine: line,
+                  specifierLine: line - 1,
                   specifierColumn: column,
                   specifier: inlineScriptUrl,
                   contentType: "text/javascript",

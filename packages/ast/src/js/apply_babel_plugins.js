@@ -63,6 +63,7 @@ export const applyBabelPlugins = async ({
     },
     generatorOpts: {
       compact: false,
+      ...(options.generatorOpts || {}),
     },
     plugins: babelPlugins,
     ...options,
