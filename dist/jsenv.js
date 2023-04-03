@@ -15,7 +15,7 @@ import { Readable, Stream, Writable } from "node:stream";
 import { Http2ServerResponse } from "node:http2";
 import { lookup } from "node:dns";
 import { SOURCEMAP, generateSourcemapFileUrl, composeTwoSourcemaps, generateSourcemapDataUrl, createMagicSource, getOriginalPosition } from "@jsenv/sourcemap";
-import { parseHtmlString, stringifyHtmlAst, getHtmlNodeAttribute, visitHtmlNodes, analyzeScriptNode, setHtmlNodeAttributes, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, parseCssUrls, parseJsUrls, getHtmlNodeText, setHtmlNodeText, applyBabelPlugins, injectScriptNodeAsEarlyAsPossible, createHtmlNode, findHtmlNode, removeHtmlNode, removeHtmlNodeText, injectJsImport, analyzeLinkNode, injectHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
+import { parseHtmlString, stringifyHtmlAst, getHtmlNodeAttribute, visitHtmlNodes, analyzeScriptNode, setHtmlNodeAttributes, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, parseCssUrls, parseJsUrls, getHtmlNodeText, setHtmlNodeText, removeHtmlNodeText, applyBabelPlugins, injectScriptNodeAsEarlyAsPossible, createHtmlNode, findHtmlNode, removeHtmlNode, injectJsImport, analyzeLinkNode, injectHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
 import { createRequire } from "node:module";
 import babelParser from "@babel/parser";
 import { bundleJsModules } from "@jsenv/plugin-bundling";
@@ -8131,7 +8131,9 @@ const featuresCompatMap = {
     samsung: "9.2"
   },
   import_meta_resolve: {
-    chrome: "107"
+    chrome: "107",
+    edge: "105",
+    firefox: "106"
   },
   // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import#browser_compatibility
   import_dynamic: {
@@ -10411,6 +10413,11 @@ const findOriginalDirectoryReference = (urlInfo, context) => {
   return ref;
 };
 
+/*
+ * This plugin ensure content inlined inside HTML is cooked (inline <script> for instance)
+ * For <script hot-accept> the script content will be moved to a virtual file
+ * to enable hot reloading
+ */
 const jsenvPluginHtmlInlineContent = ({
   analyzeConvertedScripts
 }) => {
@@ -10508,9 +10515,7 @@ ${e.traceMessage}`);
             if (!analyzeConvertedScripts && getHtmlNodeAttribute(scriptNode, "jsenv-injected-by") === "jsenv:as_js_classic_html") {
               return;
             }
-            if (getHtmlNodeAttribute(scriptNode, "jsenv-cooked-by") === "jsenv:supervisor" || getHtmlNodeAttribute(scriptNode, "jsenv-inlined-by") === "jsenv:supervisor" || getHtmlNodeAttribute(scriptNode, "jsenv-injected-by") === "jsenv:supervisor") {
-              return;
-            }
+            const hotAccept = getHtmlNodeAttribute(scriptNode, "hot-accept") !== undefined;
             const {
               type,
               contentType,
@@ -10555,14 +10560,26 @@ ${e.traceMessage}`);
                 inlineContentUrlInfo: inlineScriptUrlInfo,
                 inlineContentReference: inlineScriptReference
               });
-            });
-            mutations.push(() => {
-              setHtmlNodeText(scriptNode, inlineScriptUrlInfo.content);
-              setHtmlNodeAttributes(scriptNode, {
-                "jsenv-cooked-by": "jsenv:html_inline_content",
-                ...(extension ? {
-                  type: type === "js_module" ? "module" : undefined
-                } : {})
+              mutations.push(() => {
+                const attributes = {
+                  "jsenv-cooked-by": "jsenv:html_inline_content",
+                  // 1. <script type="jsx"> becomes <script>
+                  // 2. <script type="module/jsx"> becomes <script type="module">
+                  ...(extension ? {
+                    type: type === "js_module" ? "module" : undefined
+                  } : {})
+                };
+                if (hotAccept) {
+                  removeHtmlNodeText(scriptNode);
+                  setHtmlNodeAttributes(scriptNode, {
+                    ...attributes
+                  });
+                } else {
+                  setHtmlNodeText(scriptNode, inlineScriptUrlInfo.content);
+                  setHtmlNodeAttributes(scriptNode, {
+                    ...attributes
+                  });
+                }
               });
             });
           }
@@ -15062,7 +15079,7 @@ const jsenvPluginAsJsClassicHtml = ({
                   break;
                 }
               } catch (e) {
-                if (context.dev) {
+                if (context.dev && e.code !== "PARSE_ERROR") {
                   needsSystemJs = true;
                   // ignore cooking error, the browser will trigger it again on fetch
                   // + disable cache for this html file because when browser will reload
@@ -17484,49 +17501,490 @@ const jsenvPluginHttpUrls = () => {
 };
 
 /*
- * Jsenv needs to wait for all js execution inside an HTML page before killing the browser.
- * A naive approach would consider execution done when "load" event is dispatched on window but:
+ * ```js
+ * console.log(42)
+ * ```
+ * becomes
+ * ```js
+ * window.__supervisor__.jsClassicStart('main.html@L10-L13.js')
+ * try {
+ *   console.log(42)
+ *   window.__supervisor__.jsClassicEnd('main.html@L10-L13.js')
+ * } catch(e) {
+ *   window.__supervisor__.jsClassicError('main.html@L10-L13.js', e)
+ * }
+ * ```
  *
+ * ```js
+ * import value from "./file.js"
+ * console.log(value)
+ * ```
+ * becomes
+ * ```js
+ * window.__supervisor__.jsModuleStart('main.html@L10-L13.js')
+ * try {
+ *   const value = await import("./file.js")
+ *   console.log(value)
+ *   window.__supervisor__.jsModuleEnd('main.html@L10-L13.js')
+ * } catch(e) {
+ *   window.__supervisor__.jsModuleError('main.html@L10-L13.js', e)
+ * }
+ * ```
+ *
+ * -> TO KEEP IN MIND:
+ * Static import can throw errors like
+ * The requested module '/js_module_export_not_found/foo.js' does not provide an export named 'answerr'
+ * While dynamic import will work just fine
+ * and create a variable named "undefined"
+ */
+const injectSupervisorIntoJs = async ({
+  content,
+  url,
+  type,
+  inlineSrc
+}) => {
+  const babelPluginJsSupervisor = type === "js_module" ? babelPluginJsModuleSupervisor : babelPluginJsClassicSupervisor;
+  const result = await applyBabelPlugins({
+    urlInfo: {
+      content,
+      originalUrl: url,
+      type
+    },
+    babelPlugins: [[babelPluginJsSupervisor, {
+      inlineSrc
+    }]]
+  });
+  let code = result.code;
+  let map = result.map;
+  const sourcemapDataUrl = generateSourcemapDataUrl(map);
+  code = SOURCEMAP.writeComment({
+    contentType: "text/javascript",
+    content: code,
+    specifier: sourcemapDataUrl
+  });
+  code = `${code}
+//# sourceURL=${url}`;
+  return code;
+};
+const babelPluginJsModuleSupervisor = babel => {
+  const t = babel.types;
+  return {
+    name: "js-module-supervisor",
+    visitor: {
+      Program: (programPath, state) => {
+        const {
+          inlineSrc
+        } = state.opts;
+        if (state.file.metadata.jsExecutionInstrumented) return;
+        state.file.metadata.jsExecutionInstrumented = true;
+        const urlNode = t.stringLiteral(inlineSrc);
+        const startCallNode = createSupervisionCall({
+          t,
+          urlNode,
+          methodName: "jsModuleStart"
+        });
+        const endCallNode = createSupervisionCall({
+          t,
+          urlNode,
+          methodName: "jsModuleEnd"
+        });
+        const errorCallNode = createSupervisionCall({
+          t,
+          urlNode,
+          methodName: "jsModuleError",
+          args: [t.identifier("e")]
+        });
+        const bodyPath = programPath.get("body");
+        const importNodes = [];
+        const topLevelNodes = [];
+        for (const topLevelNodePath of bodyPath) {
+          const topLevelNode = topLevelNodePath.node;
+          if (t.isImportDeclaration(topLevelNode)) {
+            importNodes.push(topLevelNode);
+          } else {
+            topLevelNodes.push(topLevelNode);
+          }
+        }
+
+        // replace all import nodes with dynamic imports
+        const dynamicImports = [];
+        importNodes.forEach(importNode => {
+          const dynamicImportConversion = convertStaticImportIntoDynamicImport(importNode, t);
+          if (Array.isArray(dynamicImportConversion)) {
+            dynamicImports.push(...dynamicImportConversion);
+          } else {
+            dynamicImports.push(dynamicImportConversion);
+          }
+        });
+        const tryCatchNode = t.tryStatement(t.blockStatement([...dynamicImports, ...topLevelNodes, endCallNode]), t.catchClause(t.identifier("e"), t.blockStatement([errorCallNode])));
+        programPath.replaceWith(t.program([startCallNode, tryCatchNode]));
+      }
+    }
+  };
+};
+const convertStaticImportIntoDynamicImport = (staticImportNode, t) => {
+  const awaitExpression = t.awaitExpression(t.callExpression(t.import(), [t.stringLiteral(staticImportNode.source.value)]));
+
+  // import "./file.js" -> await import("./file.js")
+  if (staticImportNode.specifiers.length === 0) {
+    return t.expressionStatement(awaitExpression);
+  }
+  if (staticImportNode.specifiers.length === 1) {
+    const [firstSpecifier] = staticImportNode.specifiers;
+    if (firstSpecifier.type === "ImportNamespaceSpecifier") {
+      return t.variableDeclaration("const", [t.variableDeclarator(t.identifier(firstSpecifier.local.name), awaitExpression)]);
+    }
+  }
+  if (staticImportNode.specifiers.length === 2) {
+    const [first, second] = staticImportNode.specifiers;
+    if (first.type === "ImportDefaultSpecifier" && second.type === "ImportNamespaceSpecifier") {
+      const namespaceDeclaration = t.variableDeclaration("const", [t.variableDeclarator(t.identifier(second.local.name), awaitExpression)]);
+      const defaultDeclaration = t.variableDeclaration("const", [t.variableDeclarator(t.identifier(first.local.name), t.memberExpression(t.identifier(second.local.name), t.identifier("default")))]);
+      return [namespaceDeclaration, defaultDeclaration];
+    }
+  }
+
+  // import { name } from "./file.js" -> const { name } = await import("./file.js")
+  // import toto, { name } from "./file.js" -> const { name, default as toto } = await import("./file.js")
+  const objectPattern = t.objectPattern(staticImportNode.specifiers.map(specifier => {
+    if (specifier.type === "ImportDefaultSpecifier") {
+      return t.objectProperty(t.identifier("default"), t.identifier(specifier.local.name), false,
+      // computed
+      false // shorthand
+      );
+    }
+    // if (specifier.type === "ImportNamespaceSpecifier") {
+    //   return t.restElement(t.identifier(specifier.local.name))
+    // }
+    const isRenamed = specifier.imported.name !== specifier.local.name;
+    if (isRenamed) {
+      return t.objectProperty(t.identifier(specifier.imported.name), t.identifier(specifier.local.name), false,
+      // computed
+      false // shorthand
+      );
+    }
+    // shorthand must be true
+    return t.objectProperty(t.identifier(specifier.local.name), t.identifier(specifier.local.name), false,
+    // computed
+    true // shorthand
+    );
+  }));
+
+  const variableDeclarator = t.variableDeclarator(objectPattern, awaitExpression);
+  const variableDeclaration = t.variableDeclaration("const", [variableDeclarator]);
+  return variableDeclaration;
+};
+const babelPluginJsClassicSupervisor = babel => {
+  const t = babel.types;
+  return {
+    name: "js-classic-supervisor",
+    visitor: {
+      Program: (programPath, state) => {
+        const {
+          inlineSrc
+        } = state.opts;
+        if (state.file.metadata.jsExecutionInstrumented) return;
+        state.file.metadata.jsExecutionInstrumented = true;
+        const urlNode = t.stringLiteral(inlineSrc);
+        const startCallNode = createSupervisionCall({
+          t,
+          urlNode,
+          methodName: "jsClassicStart"
+        });
+        const endCallNode = createSupervisionCall({
+          t,
+          urlNode,
+          methodName: "jsClassicEnd"
+        });
+        const errorCallNode = createSupervisionCall({
+          t,
+          urlNode,
+          methodName: "jsClassicError",
+          args: [t.identifier("e")]
+        });
+        const topLevelNodes = programPath.node.body;
+        const tryCatchNode = t.tryStatement(t.blockStatement([...topLevelNodes, endCallNode]), t.catchClause(t.identifier("e"), t.blockStatement([errorCallNode])));
+        programPath.replaceWith(t.program([startCallNode, tryCatchNode]));
+      }
+    }
+  };
+};
+const createSupervisionCall = ({
+  t,
+  methodName,
+  urlNode,
+  args = []
+}) => {
+  return t.expressionStatement(t.callExpression(t.memberExpression(t.memberExpression(t.identifier("window"), t.identifier("__supervisor__")), t.identifier(methodName)), [urlNode, ...args]), [], null);
+};
+
+/*
+ * Jsenv needs to track js execution in order to:
+ * 1. report errors
+ * 2. wait for all js execution inside an HTML page before killing the browser
+ *
+ * A naive approach would rely on "load" events on window but:
  * scenario                                    | covered by window "load"
  * ------------------------------------------- | -------------------------
  * js referenced by <script src>               | yes
  * js inlined into <script>                    | yes
  * js referenced by <script type="module" src> | partially (not for import and top level await)
  * js inlined into <script type="module">      | not at all
- *
- * This plugin provides a way for jsenv to know when js execution is done
- * As a side effect this plugin enables ability to hot reload js inlined into <script hot-accept>
+ * Same for "error" event on window who is not enough
  *
  * <script src="file.js">
  * becomes
  * <script>
- *   window.__supervisor__.superviseScript({ src: 'file.js' })
+ *   window.__supervisor__.superviseScript('file.js')
  * </script>
  *
  * <script>
  *    console.log(42)
  * </script>
  * becomes
- * <script>
- *   window.__supervisor__.superviseScript({ src: 'main.html@L10-L13.js' })
+ * <script inlined-from-src="main.html@L10-C5.js">
+ *   window.__supervisor.__superviseScript("main.html@L10-C5.js")
  * </script>
  *
  * <script type="module" src="module.js"></script>
  * becomes
  * <script type="module">
- *   import { superviseScriptTypeModule } from 'supervisor'
- *   superviseScriptTypeModule({ src: "module.js" })
+ *   window.__supervisor__.superviseScriptTypeModule('module.js')
  * </script>
  *
  * <script type="module">
  *   console.log(42)
  * </script>
  * becomes
- * <script type="module">
- *   import { superviseScriptTypeModule } from 'supervisor'
- *   superviseScriptTypeModule({ src: 'main.html@L10-L13.js' })
+ * <script type="module" inlined-from-src="main.html@L10-C5.js">
+ *   window.__supervisor__.superviseScriptTypeModule('main.html@L10-C5.js')
  * </script>
+ *
+ * Why Inline scripts are converted to files dynamically?
+ * -> No changes required on js source code, it's only the HTML that is modified
+ *   - Also allow to catch syntax errors and export missing
  */
+const supervisorFileUrl$1 = new URL("./js/supervisor.js", import.meta.url).href;
+const injectSupervisorIntoHTML = async ({
+  content,
+  url
+}, {
+  supervisorScriptSrc = supervisorFileUrl$1,
+  supervisorOptions,
+  webServer,
+  generateInlineScriptSrc = ({
+    inlineScriptUrl
+  }) => urlToRelativeUrl(inlineScriptUrl, webServer.rootDirectoryUrl),
+  inlineAsRemote
+}) => {
+  const htmlAst = parseHtmlString(content);
+  const mutations = [];
+  const actions = [];
+  const scriptInfos = [];
+  // 1. Find inline and remote scripts
+  {
+    const handleInlineScript = (scriptNode, {
+      type,
+      extension,
+      textContent
+    }) => {
+      const {
+        line,
+        column,
+        lineEnd,
+        columnEnd,
+        isOriginal
+      } = getHtmlNodePosition(scriptNode, {
+        preferOriginal: true
+      });
+      const inlineScriptUrl = generateInlineContentUrl({
+        url,
+        extension: extension || ".js",
+        line,
+        column,
+        lineEnd,
+        columnEnd
+      });
+      const inlineScriptSrc = generateInlineScriptSrc({
+        type,
+        textContent,
+        inlineScriptUrl,
+        isOriginal,
+        line,
+        column
+      });
+      if (inlineAsRemote) {
+        // prefere la version src
+        scriptInfos.push({
+          type,
+          src: inlineScriptSrc
+        });
+        const remoteJsSupervised = generateCodeToSuperviseScriptWithSrc({
+          type,
+          src: inlineScriptSrc
+        });
+        mutations.push(() => {
+          setHtmlNodeText(scriptNode, remoteJsSupervised);
+          setHtmlNodeAttributes(scriptNode, {
+            "jsenv-cooked-by": "jsenv:supervisor",
+            "src": undefined,
+            "inlined-from-src": inlineScriptSrc
+          });
+        });
+      } else {
+        scriptInfos.push({
+          type,
+          src: inlineScriptSrc,
+          isInline: true
+        });
+        actions.push(async () => {
+          try {
+            const inlineJsSupervised = await injectSupervisorIntoJs({
+              webServer,
+              content: textContent,
+              url: inlineScriptUrl,
+              type,
+              inlineSrc: inlineScriptSrc
+            });
+            mutations.push(() => {
+              setHtmlNodeText(scriptNode, inlineJsSupervised);
+              setHtmlNodeAttributes(scriptNode, {
+                "jsenv-cooked-by": "jsenv:supervisor"
+              });
+            });
+          } catch (e) {
+            if (e.code === "PARSE_ERROR") {
+              // mutations.push(() => {
+              //   setHtmlNodeAttributes(scriptNode, {
+              //     "jsenv-cooked-by": "jsenv:supervisor",
+              //   })
+              // })
+              // on touche a rien
+              return;
+            }
+            throw e;
+          }
+        });
+      }
+    };
+    const handleScriptWithSrc = (scriptNode, {
+      type,
+      src
+    }) => {
+      scriptInfos.push({
+        type,
+        src
+      });
+      const remoteJsSupervised = generateCodeToSuperviseScriptWithSrc({
+        type,
+        src
+      });
+      mutations.push(() => {
+        setHtmlNodeText(scriptNode, remoteJsSupervised);
+        setHtmlNodeAttributes(scriptNode, {
+          "jsenv-cooked-by": "jsenv:supervisor",
+          "src": undefined,
+          "inlined-from-src": src
+        });
+      });
+    };
+    visitHtmlNodes(htmlAst, {
+      script: scriptNode => {
+        const {
+          type,
+          extension
+        } = analyzeScriptNode(scriptNode);
+        if (type !== "js_classic" && type !== "js_module") {
+          return;
+        }
+        if (getHtmlNodeAttribute(scriptNode, "jsenv-injected-by")) {
+          return;
+        }
+        const noSupervisor = getHtmlNodeAttribute(scriptNode, "no-supervisor");
+        if (noSupervisor !== undefined) {
+          return;
+        }
+        const scriptNodeText = getHtmlNodeText(scriptNode);
+        if (scriptNodeText) {
+          handleInlineScript(scriptNode, {
+            type,
+            extension,
+            textContent: scriptNodeText
+          });
+          return;
+        }
+        const src = getHtmlNodeAttribute(scriptNode, "src");
+        if (src) {
+          handleScriptWithSrc(scriptNode, {
+            type,
+            src
+          });
+          return;
+        }
+      }
+    });
+  }
+  // 2. Inject supervisor js file + setup call
+  {
+    const setupParamsSource = stringifyParams({
+      ...supervisorOptions,
+      serverIsJsenvDevServer: webServer.isJsenvDevServer,
+      rootDirectoryUrl: webServer.rootDirectoryUrl,
+      scriptInfos
+    }, "        ");
+    injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
+      tagName: "script",
+      textContent: `
+      window.__supervisor__.setup({
+        ${setupParamsSource}
+      })
+      `
+    }), "jsenv:supervisor");
+    injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
+      tagName: "script",
+      src: supervisorScriptSrc
+    }), "jsenv:supervisor");
+  }
+  // 3. Perform actions (transforming inline script content) and html mutations
+  if (actions.length > 0) {
+    await Promise.all(actions.map(action => action()));
+  }
+  mutations.forEach(mutation => mutation());
+  const htmlModified = stringifyHtmlAst(htmlAst);
+  return {
+    content: htmlModified
+  };
+};
+const stringifyParams = (params, prefix = "") => {
+  const source = JSON.stringify(params, null, prefix);
+  if (prefix.length) {
+    // remove leading "{\n"
+    // remove leading prefix
+    // remove trailing "\n}"
+    return source.slice(2 + prefix.length, -2);
+  }
+  // remove leading "{"
+  // remove trailing "}"
+  return source.slice(1, -1);
+};
+const generateCodeToSuperviseScriptWithSrc = ({
+  type,
+  src
+}) => {
+  if (type === "js_module") {
+    return `
+        window.__supervisor__.superviseScriptTypeModule(${JSON.stringify(src)}, (url) => import(url));
+    `;
+  }
+  return `
+        window.__supervisor__.superviseScript(${JSON.stringify(src)});
+    `;
+};
+
+/*
+ * This plugin provides a way for jsenv to know when js execution is done
+ */
+const supervisorFileUrl = new URL("./js/supervisor.js", import.meta.url).href;
 const jsenvPluginSupervisor = ({
   logs = false,
   measurePerf = false,
@@ -17534,8 +17992,6 @@ const jsenvPluginSupervisor = ({
   openInEditor = true,
   errorBaseUrl
 }) => {
-  const supervisorFileUrl = new URL("./js/supervisor.js", import.meta.url).href;
-  const scriptTypeModuleSupervisorFileUrl = new URL("./js/script_type_module_supervisor.js", import.meta.url).href;
   return {
     name: "jsenv:supervisor",
     appliesDuring: "dev",
@@ -17677,170 +18133,50 @@ const jsenvPluginSupervisor = ({
         url,
         content
       }, context) => {
-        const htmlAst = parseHtmlString(content);
-        const scriptsToSupervise = [];
-        const handleInlineScript = (node, htmlNodeText) => {
-          const {
-            type,
-            extension
-          } = analyzeScriptNode(node);
-          const {
-            line,
-            column,
-            lineEnd,
-            columnEnd,
-            isOriginal
-          } = getHtmlNodePosition(node, {
-            preferOriginal: true
-          });
-          let inlineScriptUrl = generateInlineContentUrl({
-            url,
-            extension: extension || ".js",
-            line,
-            column,
-            lineEnd,
-            columnEnd
-          });
-          const [inlineScriptReference] = context.referenceUtils.foundInline({
-            type: "script",
-            subtype: "inline",
-            expectedType: type,
-            isOriginalPosition: isOriginal,
-            specifierLine: line - 1,
-            specifierColumn: column,
-            specifier: inlineScriptUrl,
-            contentType: "text/javascript",
-            content: htmlNodeText
-          });
-          removeHtmlNodeText(node);
-          if (extension) {
-            setHtmlNodeAttributes(node, {
-              type: type === "js_module" ? "module" : undefined
-            });
-          }
-          scriptsToSupervise.push({
-            node,
-            isInline: true,
-            type,
-            src: inlineScriptReference.generatedSpecifier
-          });
-        };
-        const handleScriptWithSrc = (node, src) => {
-          const {
-            type
-          } = analyzeScriptNode(node);
-          const integrity = getHtmlNodeAttribute(node, "integrity");
-          const crossorigin = getHtmlNodeAttribute(node, "crossorigin") !== undefined;
-          const defer = getHtmlNodeAttribute(node, "defer") !== undefined;
-          const async = getHtmlNodeAttribute(node, "async") !== undefined;
-          scriptsToSupervise.push({
-            node,
-            type,
-            src,
-            defer,
-            async,
-            integrity,
-            crossorigin
-          });
-        };
-        visitHtmlNodes(htmlAst, {
-          script: node => {
-            const {
-              type
-            } = analyzeScriptNode(node);
-            if (type !== "js_classic" && type !== "js_module") {
-              return;
-            }
-            if (getHtmlNodeAttribute(node, "jsenv-cooked-by") || getHtmlNodeAttribute(node, "jsenv-inlined-by") || getHtmlNodeAttribute(node, "jsenv-injected-by")) {
-              return;
-            }
-            const noSupervisor = getHtmlNodeAttribute(node, "no-supervisor");
-            if (noSupervisor !== undefined) {
-              return;
-            }
-            const htmlNodeText = getHtmlNodeText(node);
-            if (htmlNodeText) {
-              handleInlineScript(node, htmlNodeText);
-              return;
-            }
-            const src = getHtmlNodeAttribute(node, "src");
-            if (src) {
-              handleScriptWithSrc(node, src);
-              return;
-            }
-          }
-        });
-        const [scriptTypeModuleSupervisorFileReference] = context.referenceUtils.inject({
-          type: "js_import",
-          expectedType: "js_module",
-          specifier: scriptTypeModuleSupervisorFileUrl
-        });
         const [supervisorFileReference] = context.referenceUtils.inject({
           type: "script",
           expectedType: "js_classic",
           specifier: supervisorFileUrl
         });
-        injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
-          tagName: "script",
-          textContent: `
-      window.__supervisor__.setup(${JSON.stringify({
-            rootDirectoryUrl: context.rootDirectoryUrl,
+        return injectSupervisorIntoHTML({
+          content,
+          url
+        }, {
+          supervisorScriptSrc: supervisorFileReference.generatedSpecifier,
+          supervisorOptions: {
             errorBaseUrl,
             logs,
             measurePerf,
             errorOverlay,
             openInEditor
-          }, null, "        ")})
-    `
-        }), "jsenv:supervisor");
-        injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
-          tagName: "script",
-          src: supervisorFileReference.generatedSpecifier
-        }), "jsenv:supervisor");
-        scriptsToSupervise.forEach(({
-          node,
-          isInline,
-          type,
-          src,
-          defer,
-          async,
-          integrity,
-          crossorigin
-        }) => {
-          const paramsAsJson = JSON.stringify({
-            src,
-            isInline,
-            defer,
-            async,
-            integrity,
-            crossorigin
-          });
-          if (type === "js_module") {
-            setHtmlNodeText(node, `
-      import { superviseScriptTypeModule } from ${scriptTypeModuleSupervisorFileReference.generatedSpecifier}
-      superviseScriptTypeModule(${paramsAsJson})
-        `);
-          } else {
-            setHtmlNodeText(node, `
-      window.__supervisor__.superviseScript(${paramsAsJson})
-        `);
-          }
-          if (src) {
-            setHtmlNodeAttributes(node, {
-              "jsenv-inlined-by": "jsenv:supervisor",
-              "src": undefined,
-              "inlined-from-src": src
+          },
+          webServer: {
+            rootDirectoryUrl: context.rootDirectoryUrl,
+            isJsenvDevServer: true
+          },
+          inlineAsRemote: true,
+          generateInlineScriptSrc: ({
+            type,
+            textContent,
+            inlineScriptUrl,
+            isOriginal,
+            line,
+            column
+          }) => {
+            const [inlineScriptReference] = context.referenceUtils.foundInline({
+              type: "script",
+              subtype: "inline",
+              expectedType: type,
+              isOriginalPosition: isOriginal,
+              specifierLine: line - 1,
+              specifierColumn: column,
+              specifier: inlineScriptUrl,
+              contentType: "text/javascript",
+              content: textContent
             });
-          } else {
-            setHtmlNodeAttributes(node, {
-              "jsenv-cooked-by": "jsenv:supervisor"
-            });
+            return inlineScriptReference.generatedSpecifier;
           }
         });
-        const htmlModified = stringifyHtmlAst(htmlAst);
-        return {
-          content: htmlModified
-        };
       }
     }
   };
@@ -19451,7 +19787,12 @@ const jsenvPluginBabel = ({
       map
     } = await applyBabelPlugins({
       babelPlugins,
-      urlInfo
+      urlInfo,
+      options: {
+        generatorOpts: {
+          retainLines: context.dev
+        }
+      }
     });
     return {
       content: code,
@@ -19539,7 +19880,7 @@ const babelPluginMetadataUsesTopLevelAwait = () => {
         programPath.traverse({
           AwaitExpression: path => {
             const closestFunction = path.getFunctionParent();
-            if (!closestFunction) {
+            if (!closestFunction || closestFunction.type === "Program") {
               usesTopLevelAwait = true;
               path.stop();
             }
@@ -20418,9 +20759,10 @@ const jsenvPluginRibbon = ({
           tagName: "script",
           type: "module",
           textContent: `
-import { injectRibbon} from "${ribbonClientFileReference.generatedSpecifier}"
+import { injectRibbon } from "${ribbonClientFileReference.generatedSpecifier}"
 
-injectRibbon(${paramsJson})`
+injectRibbon(${paramsJson})
+`
         });
         injectHtmlNode(htmlAst, scriptNode, "jsenv:ribbon");
         return stringifyHtmlAst(htmlAst);
@@ -20468,13 +20810,13 @@ const getCorePlugins = ({
   return [jsenvPluginUrlAnalysis({
     rootDirectoryUrl,
     ...urlAnalysis
-  }), jsenvPluginTranspilation(transpilation), ...(supervisor ? [jsenvPluginSupervisor(supervisor)] : []),
-  // before inline as it turns inline <script> into <script src>
-  jsenvPluginImportmap(),
+  }), jsenvPluginTranspilation(transpilation), jsenvPluginImportmap(),
   // before node esm to handle bare specifiers
   // + before node esm to handle importmap before inline content
   jsenvPluginInline(),
   // before "file urls" to resolve and load inline urls
+  ...(supervisor ? [jsenvPluginSupervisor(supervisor)] : []),
+  // after inline as it needs inline script to be cooked
   jsenvPluginFileUrls({
     directoryReferenceAllowed,
     ...fileSystemMagicRedirection
@@ -22387,7 +22729,7 @@ const createFileService = ({
     const {
       runtimeName,
       runtimeVersion
-    } = parseUserAgentHeader(request.headers["user-agent"]);
+    } = parseUserAgentHeader(request.headers["user-agent"] || "");
     const runtimeId = `${runtimeName}@${runtimeVersion}`;
     const existingContext = contextCache.get(runtimeId);
     if (existingContext) {
@@ -22846,7 +23188,7 @@ const startDevServer = async ({
     stopOnExit: false,
     stopOnSIGINT: handleSIGINT,
     stopOnInternalError: false,
-    keepProcessAlive,
+    keepProcessAlive: process.env.IMPORTED_BY_TEST_PLAN ? false : keepProcessAlive,
     logLevel: serverLogLevel,
     startLog: false,
     https,
@@ -22855,7 +23197,13 @@ const startDevServer = async ({
     hostname,
     port,
     requestWaitingMs: 60_000,
-    services: [jsenvServiceCORS({
+    services: [{
+      injectResponseHeaders: () => {
+        return {
+          "x-server-name": "jsenv_dev_server"
+        };
+      }
+    }, jsenvServiceCORS({
       accessControlAllowRequestOrigin: true,
       accessControlAllowRequestMethod: true,
       accessControlAllowRequestHeaders: true,
@@ -22864,7 +23212,7 @@ const startDevServer = async ({
       timingAllowOrigin: true
     }), {
       handleRequest: request => {
-        if (request.pathname === "/__server_params__.json") {
+        if (request.pathname === "/__params__.json") {
           const json = JSON.stringify({
             sourceDirectoryUrl
           });
@@ -22875,12 +23223,6 @@ const startDevServer = async ({
               "content-length": Buffer.byteLength(json)
             },
             body: json
-          };
-        }
-        if (request.pathname === "/__stop__") {
-          server.stop();
-          return {
-            status: 200
           };
         }
         return null;
@@ -23041,24 +23383,85 @@ const basicFetch = async (url, {
       headers
     });
     req.on("response", response => {
-      req.setTimeout(0);
-      let responseBody = "";
-      response.setEncoding("utf8");
-      response.on("data", chunk => {
-        responseBody += chunk;
-      });
-      response.on("end", () => {
-        req.destroy();
-        if (response.headers["content-type"] === "application/json") {
-          resolve(JSON.parse(responseBody));
-        } else {
-          resolve(responseBody);
+      resolve({
+        status: response.statusCode,
+        headers: response.headers,
+        json: () => {
+          req.setTimeout(0);
+          req.destroy();
+          return new Promise(resolve => {
+            if (response.headers["content-type"] !== "application/json") {
+              console.warn("not json");
+            }
+            let responseBody = "";
+            response.setEncoding("utf8");
+            response.on("data", chunk => {
+              responseBody += chunk;
+            });
+            response.on("end", () => {
+              resolve(JSON.parse(responseBody));
+            });
+            response.on("error", e => {
+              reject(e);
+            });
+          });
         }
       });
     });
     req.on("error", reject);
     req.end();
   });
+};
+
+const assertAndNormalizeWebServer = async webServer => {
+  if (!webServer) {
+    throw new TypeError(`webServer is required when running tests on browser(s)`);
+  }
+  const unexpectedParamNames = Object.keys(webServer).filter(key => {
+    return !["origin", "moduleUrl", "rootDirectoryUrl"].includes(key);
+  });
+  if (unexpectedParamNames.length > 0) {
+    throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param to webServer`);
+  }
+  let aServerIsListening = await pingServer(webServer.origin);
+  if (!aServerIsListening) {
+    if (!webServer.moduleUrl) {
+      throw new TypeError(`webServer.moduleUrl is required as there is no server listening "${webServer.origin}"`);
+    }
+    try {
+      process.env.IMPORTED_BY_TEST_PLAN = "1";
+      await import(webServer.moduleUrl);
+      delete process.env.IMPORTED_BY_TEST_PLAN;
+    } catch (e) {
+      if (e.code === "ERR_MODULE_NOT_FOUND") {
+        throw new Error(`webServer.moduleUrl does not lead to a file at "${webServer.moduleUrl}"`);
+      }
+      throw e;
+    }
+    aServerIsListening = await pingServer(webServer.origin);
+    if (!aServerIsListening) {
+      throw new Error(`webServer.moduleUrl did not start a server listening at "${webServer.origin}", check file at "${webServer.moduleUrl}"`);
+    }
+  }
+  const {
+    headers
+  } = await basicFetch(webServer.origin);
+  if (headers["x-server-name"] === "jsenv_dev_server") {
+    webServer.isJsenvDevServer = true;
+    const {
+      json
+    } = await basicFetch(`${webServer.origin}/__params__.json`, {
+      rejectUnauthorized: false
+    });
+    if (webServer.rootDirectoryUrl === undefined) {
+      const jsenvDevServerParams = await json();
+      webServer.rootDirectoryUrl = jsenvDevServerParams.sourceDirectoryUrl;
+    } else {
+      webServer.rootDirectoryUrl = assertAndNormalizeDirectoryUrl(webServer.rootDirectoryUrl, "webServer.rootDirectoryUrl");
+    }
+  } else {
+    webServer.rootDirectoryUrl = assertAndNormalizeDirectoryUrl(webServer.rootDirectoryUrl, "webServer.rootDirectoryUrl");
+  }
 };
 
 const generateCoverageJsonFile = async ({
@@ -24200,8 +24603,7 @@ const executeSteps = async (executionSteps, {
   completedExecutionLogMerging,
   completedExecutionLogAbbreviation,
   rootDirectoryUrl,
-  devServerOrigin,
-  sourceDirectoryUrl,
+  webServer,
   keepRunning,
   defaultMsAllocatedPerExecution,
   maxExecutionsInParallel,
@@ -24280,8 +24682,7 @@ const executeSteps = async (executionSteps, {
     }
     let runtimeParams = {
       rootDirectoryUrl,
-      devServerOrigin,
-      sourceDirectoryUrl,
+      webServer,
       coverageEnabled,
       coverageConfig,
       coverageMethodForBrowsers,
@@ -24571,7 +24972,7 @@ const executeInParallel = async ({
  * Execute a list of files and log how it goes.
  * @param {Object} testPlanParameters
  * @param {string|url} testPlanParameters.rootDirectoryUrl Directory containing test files;
- * @param {string|url} [testPlanParameters.devServerOrigin=undefined] Jsenv dev server origin; required when executing test on browsers
+ * @param {Object} [testPlanParameters.webServer] Web server info; required when executing test on browsers
  * @param {Object} testPlanParameters.testPlan Object associating files with runtimes where they will be executed
  * @param {boolean} [testPlanParameters.completedExecutionLogAbbreviation=false] Abbreviate completed execution information to shorten terminal output
  * @param {boolean} [testPlanParameters.completedExecutionLogMerging=false] Merge completed execution logs to shorten terminal output
@@ -24598,8 +24999,7 @@ const executeTestPlan = async ({
   completedExecutionLogAbbreviation = false,
   completedExecutionLogMerging = false,
   rootDirectoryUrl,
-  devServerModuleUrl,
-  devServerOrigin,
+  webServer,
   testPlan,
   updateProcessExitCode = true,
   maxExecutionsInParallel = 1,
@@ -24644,8 +25044,6 @@ const executeTestPlan = async ({
 }) => {
   let someNeedsServer = false;
   let someNodeRuntime = false;
-  let stopDevServerNeeded = false;
-  let sourceDirectoryUrl;
   const runtimes = {};
   // param validation
   {
@@ -24680,34 +25078,7 @@ const executeTestPlan = async ({
       });
     });
     if (someNeedsServer) {
-      if (!devServerOrigin) {
-        throw new TypeError(`devServerOrigin is required when running tests on browser(s)`);
-      }
-      let devServerStarted = await pingServer(devServerOrigin);
-      if (!devServerStarted) {
-        if (!devServerModuleUrl) {
-          throw new TypeError(`devServerModuleUrl is required when dev server is not started in order to run tests on browser(s)`);
-        }
-        try {
-          process.env.IMPORTED_BY_TEST_PLAN = "1";
-          await import(devServerModuleUrl);
-          delete process.env.IMPORTED_BY_TEST_PLAN;
-        } catch (e) {
-          if (e.code === "ERR_MODULE_NOT_FOUND") {
-            throw new Error(`Cannot find file responsible to start dev server at "${devServerModuleUrl}"`);
-          }
-          throw e;
-        }
-        devServerStarted = await pingServer(devServerOrigin);
-        if (!devServerStarted) {
-          throw new Error(`dev server not started after importing "${devServerModuleUrl}", ensure this module file is starting a server at "${devServerOrigin}"`);
-        }
-        stopDevServerNeeded = true;
-      }
-      const devServerParams = await basicFetch(`${devServerOrigin}/__server_params__.json`, {
-        rejectUnauthorized: false
-      });
-      sourceDirectoryUrl = devServerParams.sourceDirectoryUrl;
+      await assertAndNormalizeWebServer(webServer);
     }
     if (coverageEnabled) {
       if (typeof coverageConfig !== "object") {
@@ -24785,6 +25156,8 @@ const executeTestPlan = async ({
     }
   }
   testPlan = {
+    "file:///**/node_modules/": null,
+    "**/*./": null,
     ...testPlan,
     "**/.jsenv/": null
   };
@@ -24809,8 +25182,7 @@ const executeTestPlan = async ({
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
     rootDirectoryUrl,
-    devServerOrigin,
-    sourceDirectoryUrl,
+    webServer,
     maxExecutionsInParallel,
     defaultMsAllocatedPerExecution,
     failFast,
@@ -24825,17 +25197,6 @@ const executeTestPlan = async ({
     coverageV8ConflictWarning,
     coverageTempDirectoryUrl
   });
-  if (stopDevServerNeeded) {
-    // we are expecting ECONNRESET because server will be stopped by the request
-    basicFetch(`${devServerOrigin}/__stop__`, {
-      rejectUnauthorized: false
-    }).catch(e => {
-      if (e.code === "ECONNRESET") {
-        return;
-      }
-      throw e;
-    });
-  }
   if (updateProcessExitCode && result.planSummary.counters.total !== result.planSummary.counters.completed) {
     process.exitCode = 1;
   }
@@ -24884,7 +25245,7 @@ const createRuntimeFromPlaywright = ({
   browserName,
   browserVersion,
   coveragePlaywrightAPIAvailable = false,
-  ignoreErrorHook = () => false,
+  shouldIgnoreError = () => false,
   transformErrorHook = error => error,
   isolatedTab = false
 }) => {
@@ -24898,9 +25259,8 @@ const createRuntimeFromPlaywright = ({
     signal = new AbortController().signal,
     logger,
     rootDirectoryUrl,
+    webServer,
     fileRelativeUrl,
-    devServerOrigin,
-    sourceDirectoryUrl,
     // measurePerformance,
     collectPerformance,
     coverageEnabled = false,
@@ -24915,6 +25275,19 @@ const createRuntimeFromPlaywright = ({
     playwrightLaunchOptions = {},
     ignoreHTTPSErrors = true
   }) => {
+    const fileUrl = new URL(fileRelativeUrl, rootDirectoryUrl).href;
+    if (!urlIsInsideOf(fileUrl, webServer.rootDirectoryUrl)) {
+      throw new Error(`Cannot execute file that is outside web server root directory
+--- file --- 
+${fileUrl}
+--- web server root directory url ---
+${webServer.rootDirectoryUrl}`);
+    }
+    const fileServerUrl = moveUrl({
+      url: fileUrl,
+      from: webServer.rootDirectoryUrl,
+      to: `${webServer.origin}/`
+    });
     const cleanupCallbackList = createCallbackListNotifiedOnce();
     const cleanup = memoize(async reason => {
       await cleanupCallbackList.notify({
@@ -24978,6 +25351,13 @@ const createRuntimeFromPlaywright = ({
         } : {})
       }
     });
+    if (!webServer.isJsenvDevServer) {
+      await initJsExecutionMiddleware(page, {
+        webServer,
+        fileUrl,
+        fileServerUrl
+      });
+    }
     const closePage = async () => {
       try {
         await page.close();
@@ -25006,8 +25386,8 @@ const createRuntimeFromPlaywright = ({
           const v8CoveragesWithFsUrls = v8CoveragesWithWebUrls.map(v8CoveragesWithWebUrl => {
             const fsUrl = moveUrl({
               url: v8CoveragesWithWebUrl.url,
-              from: `${devServerOrigin}/`,
-              to: sourceDirectoryUrl
+              from: `${webServer.origin}/`,
+              to: webServer.rootDirectoryUrl
             });
             return {
               ...v8CoveragesWithWebUrl,
@@ -25069,19 +25449,7 @@ const createRuntimeFromPlaywright = ({
         result.performance = performance;
       });
     }
-    const fileUrl = new URL(fileRelativeUrl, rootDirectoryUrl).href;
-    if (!urlIsInsideOf(fileUrl, sourceDirectoryUrl)) {
-      throw new Error(`Cannot execute file that is outside source directory
---- file --- 
-${fileUrl}
---- source directory ---
-${sourceDirectoryUrl}`);
-    }
-    const fileDevServerUrl = moveUrl({
-      url: fileUrl,
-      from: sourceDirectoryUrl,
-      to: `${devServerOrigin}/`
-    });
+
     // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-console
     const removeConsoleListener = registerEvent({
       object: page,
@@ -25109,7 +25477,7 @@ ${sourceDirectoryUrl}`);
             object: page,
             eventType: "error",
             callback: error => {
-              if (ignoreErrorHook(error)) {
+              if (shouldIgnoreError(error, "error")) {
                 return;
               }
               cb(transformErrorHook(error));
@@ -25122,7 +25490,10 @@ ${sourceDirectoryUrl}`);
         //     object: page,
         //     eventType: "pageerror",
         //     callback: (error) => {
-        //       if (ignoreErrorHook(error)) {
+        //       if (
+        //         webServer.isJsenvDevServer ||
+        //         shouldIgnoreError(error, "pageerror")
+        //       ) {
         //         return
         //       }
         //       result.errors.push(transformErrorHook(error))
@@ -25164,16 +25535,28 @@ ${sourceDirectoryUrl}`);
         },
         response: async cb => {
           try {
-            await page.goto(fileDevServerUrl, {
+            await page.goto(fileServerUrl, {
               timeout: 0
             });
             const returnValue = await page.evaluate( /* eslint-disable no-undef */
             /* istanbul ignore next */
-            () => {
-              if (!window.__supervisor__) {
-                throw new Error(`window.__supervisor__ not found`);
+            async () => {
+              let startTime;
+              try {
+                startTime = window.performance.timing.navigationStart;
+              } catch (e) {
+                startTime = Date.now();
               }
-              return window.__supervisor__.getDocumentExecutionResult();
+              if (!window.__supervisor__) {
+                throw new Error("window.__supervisor__ is undefined");
+              }
+              const executionResultFromJsenvSupervisor = await window.__supervisor__.getDocumentExecutionResult();
+              return {
+                type: "window_supervisor",
+                startTime,
+                endTime: Date.now(),
+                executionResults: executionResultFromJsenvSupervisor.executionResults
+              };
             }
             /* eslint-enable no-undef */);
 
@@ -25196,12 +25579,18 @@ ${sourceDirectoryUrl}`);
         result.errors.push(error);
         return;
       }
+      if (winner.name === "pageerror") {
+        let error = winner.data;
+        result.status = "failed";
+        result.errors.push(error);
+        return;
+      }
       if (winner.name === "closed") {
         result.status = "failed";
         result.errors.push(isBrowserDedicatedToExecution ? new Error(`browser disconnected during execution`) : new Error(`page closed during execution`));
         return;
       }
-      // winner.name = 'response'
+      // winner.name === "response"
       const {
         executionResults
       } = winner.data;
@@ -25211,10 +25600,17 @@ ${sourceDirectoryUrl}`);
         const executionResult = executionResults[key];
         if (executionResult.status === "failed") {
           result.status = "failed";
-          result.errors.push({
-            ...executionResult.exception,
-            stack: executionResult.exception.text
-          });
+          if (executionResult.exception) {
+            result.errors.push({
+              ...executionResult.exception,
+              stack: executionResult.exception.text
+            });
+          } else {
+            result.errors.push({
+              ...executionResult.error,
+              stack: executionResult.error.stack
+            });
+          }
         }
       });
     };
@@ -25243,7 +25639,7 @@ ${sourceDirectoryUrl}`);
       browserName,
       browserVersion,
       coveragePlaywrightAPIAvailable,
-      ignoreErrorHook,
+      shouldIgnoreError,
       transformErrorHook,
       isolatedTab: true
     });
@@ -25361,6 +25757,39 @@ const extractTextFromConsoleMessage = consoleMessage => {
   //   return text
 };
 
+const initJsExecutionMiddleware = async (page, {
+  webServer,
+  fileUrl,
+  fileServerUrl
+}) => {
+  await page.route("**", async route => {
+    const url = route.request.url();
+    if (url !== fileServerUrl) {
+      route.fallback();
+      return;
+    }
+    // Fetch original response.
+    const response = await route.fetch();
+    // Add a prefix to the title.
+    const originalBody = await response.text();
+    const injectionResult = await injectSupervisorIntoHTML({
+      content: originalBody,
+      url: fileUrl
+    }, {
+      supervisorOptions: {},
+      inlineAsRemote: true,
+      webServer
+    });
+    route.fulfill({
+      response,
+      body: injectionResult.content,
+      headers: {
+        ...response.headers(),
+        "content-length": Buffer.byteLength(injectionResult.content)
+      }
+    });
+  });
+};
 const registerEvent = ({
   object,
   eventType,
@@ -25394,7 +25823,7 @@ const webkit = createRuntimeFromPlaywright({
   // browserVersion will be set by "browser._initializer.version"
   // see also https://github.com/microsoft/playwright/releases
   browserVersion: "unset",
-  ignoreErrorHook: error => {
+  shouldIgnoreError: error => {
     // we catch error during execution but safari throw unhandled rejection
     // in a non-deterministic way.
     // I suppose it's due to some race condition to decide if the promise is catched or not
@@ -26321,8 +26750,7 @@ const startBuildServer = async ({
     stopOnExit: false,
     stopOnSIGINT: false,
     stopOnInternalError: false,
-    // the worker should be kept alive by the parent otherwise
-    keepProcessAlive,
+    keepProcessAlive: process.env.IMPORTED_BY_TEST_PLAN ? false : keepProcessAlive,
     logLevel: serverLogLevel,
     startLog: false,
     https,
@@ -26406,8 +26834,7 @@ const execute = async ({
   handleSIGINT = true,
   logLevel,
   rootDirectoryUrl,
-  sourceDirectoryUrl = rootDirectoryUrl,
-  devServerOrigin,
+  webServer,
   fileRelativeUrl,
   allocatedMs,
   mirrorConsole = true,
@@ -26433,23 +26860,16 @@ const execute = async ({
       }, abort);
     });
   }
+  if (runtime.type === "browser") {
+    await assertAndNormalizeWebServer(webServer);
+  }
   let resultTransformer = result => result;
   runtimeParams = {
     rootDirectoryUrl,
-    sourceDirectoryUrl,
-    devServerOrigin,
+    webServer,
     fileRelativeUrl,
     ...runtimeParams
   };
-  if (runtime.type === "browser") {
-    if (!devServerOrigin) {
-      throw new TypeError(`devServerOrigin is required to execute file on a browser`);
-    }
-    const devServerStarted = await pingServer(devServerOrigin);
-    if (!devServerStarted) {
-      throw new Error(`no server listening at ${devServerOrigin}. It is required to execute file`);
-    }
-  }
   let result = await run({
     signal: executeOperation.signal,
     logger,
