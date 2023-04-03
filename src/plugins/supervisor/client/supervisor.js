@@ -222,12 +222,17 @@ window.__supervisor__ = (() => {
           complete(namespace)
           return result
         } catch (e) {
+          if (!isWebkitOrSafari) {
+            reportErrorBackToBrowser(e)
+          }
           fail(e, {
             message: `Error while importing module: ${urlObject.href}`,
             reportedBy: "dynamic_import",
             url: urlObject.href,
           })
-          supervisor.reportException(result.exception)
+          if (isWebkitOrSafari) {
+            supervisor.reportException(result.exception)
+          }
           return result
         }
       }
@@ -496,6 +501,10 @@ window.__supervisor__ = (() => {
               exception.code = DYNAMIC_IMPORT_EXPORT_MISSING
               return
             }
+            if (message.includes("Importing a module script failed")) {
+              exception.code = DYNAMIC_IMPORT_FETCH_ERROR
+              return
+            }
           }
           js_syntax_error: {
             if (error.name === "SyntaxError" && typeof line === "number") {
@@ -551,7 +560,6 @@ window.__supervisor__ = (() => {
           exception.code === DYNAMIC_IMPORT_SYNTAX_ERROR
         ) {
           // syntax error on inline script need line-1 for some reason
-
           fileUrlSite.line = fileUrlSite.line - 1
         }
         Object.assign(exception.site, fileUrlSite)
