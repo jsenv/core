@@ -148,51 +148,35 @@ window.__supervisor__ = (() => {
       }
       const execute = async ({ isReload } = {}) => {
         start()
-        const loadPromise = new Promise((resolve, reject) => {
-          // do not use script.cloneNode()
-          // bcause https://stackoverflow.com/questions/28771542/why-dont-clonenode-script-tags-execute
-          currentScriptClone = document.createElement("script")
-          // browsers set async by default when creating script(s)
-          // we want an exact copy to preserves how code is executed
-          currentScriptClone.async = false
-          Array.from(currentScript.attributes).forEach((attribute) => {
-            currentScriptClone.setAttribute(
-              attribute.nodeName,
-              attribute.nodeValue,
-            )
-          })
-          if (isReload) {
-            urlObject.searchParams.set("hmr", Date.now())
-            nodeToReplace = currentScriptClone
-            currentScriptClone.src = urlObject.href
-          } else {
-            currentScriptClone.removeAttribute("jsenv-cooked-by")
-            currentScriptClone.removeAttribute("jsenv-inlined-by")
-            currentScriptClone.removeAttribute("jsenv-injected-by")
-            currentScriptClone.removeAttribute("inlined-from-src")
-            currentScriptClone.removeAttribute("original-position")
-            currentScriptClone.removeAttribute("original-src-position")
-            nodeToReplace = currentScript
-            currentScriptClone.src = url
+        currentScriptClone = prepareScriptToLoad(currentScript)
+        if (isReload) {
+          urlObject.searchParams.set("hmr", Date.now())
+          nodeToReplace = currentScriptClone
+          currentScriptClone.src = urlObject.href
+        } else {
+          nodeToReplace = currentScript
+          currentScriptClone.src = url
+        }
+        const scriptLoadPromise = getScriptLoadPromise(currentScriptClone)
+        parentNode.replaceChild(currentScriptClone, nodeToReplace)
+        const { detectedBy, failed, error } = await scriptLoadPromise
+        if (failed) {
+          if (detectedBy === "script_error_event") {
+            // window.error won't be dispatched for this error
+            reportErrorBackToBrowser(error)
           }
-          currentScriptClone.addEventListener("error", reject)
-          currentScriptClone.addEventListener("load", resolve)
-          parentNode.replaceChild(currentScriptClone, nodeToReplace)
-        })
-        try {
-          await loadPromise
-          complete()
-          return result
-        } catch (e) {
-          // window.error won't be dispatched for this error
-          reportErrorBackToBrowser(e)
-          fail(e, {
+          fail(error, {
             message: `Error while loading script: ${urlObject.href}`,
             reportedBy: "script_error_event",
             url: urlObject.href,
           })
-          return result
+          if (detectedBy === "script_error_event") {
+            supervisor.reportException(result.exception)
+          }
+        } else {
+          complete()
         }
+        return result
       }
       executions[src] = { init, execute }
     }
@@ -271,62 +255,34 @@ window.__supervisor__ = (() => {
       }
       const execute = async ({ isReload, onExecuting = () => {} } = {}) => {
         start()
+        currentScriptClone = prepareScriptToLoad(currentScript)
+        if (isReload) {
+          urlObject.searchParams.set("hmr", Date.now())
+          nodeToReplace = currentScriptClone
+          currentScriptClone.src = urlObject.href
+        } else {
+          nodeToReplace = currentScript
+          currentScriptClone.src = urlObject.href
+        }
+        const scriptLoadResultPromise = getScriptLoadPromise(currentScriptClone)
+        parentNode.replaceChild(currentScriptClone, nodeToReplace)
+        const { detectedBy, failed, error } = await scriptLoadResultPromise
 
-        let windowError = false
-        let removeWindowErrorEventCallback
-        const loadPromise = new Promise((resolve, reject) => {
-          currentScriptClone = document.createElement("script")
-          // browsers set async by default when creating script(s)
-          // we want an exact copy to preserves how code is executed
-          currentScriptClone.async = false
-          Array.from(currentScript.attributes).forEach((attribute) => {
-            currentScriptClone.setAttribute(
-              attribute.nodeName,
-              attribute.nodeValue,
-            )
-          })
-          if (isReload) {
-            urlObject.searchParams.set("hmr", Date.now())
-            nodeToReplace = currentScriptClone
-            currentScriptClone.src = urlObject.href
-          } else {
-            currentScriptClone.removeAttribute("jsenv-cooked-by")
-            currentScriptClone.removeAttribute("jsenv-inlined-by")
-            currentScriptClone.removeAttribute("jsenv-injected-by")
-            currentScriptClone.removeAttribute("inlined-from-src")
-            currentScriptClone.removeAttribute("original-position")
-            currentScriptClone.removeAttribute("original-src-position")
-            nodeToReplace = currentScript
-            currentScriptClone.src = urlObject.href
+        if (failed) {
+          if (detectedBy === "script_error_event") {
+            reportErrorBackToBrowser(error)
           }
-          currentScriptClone.addEventListener("error", reject)
-          currentScriptClone.addEventListener("load", resolve)
-          const windowErrorEventCallback = (errorEvent) => {
-            if (errorEvent.filename === urlObject.href) {
-              windowError = true
-              reject(errorEvent)
-            }
-          }
-          window.addEventListener("error", windowErrorEventCallback)
-          removeWindowErrorEventCallback = () =>
-            window.removeEventListener("error", windowErrorEventCallback)
-          parentNode.replaceChild(currentScriptClone, nodeToReplace)
-        })
-        try {
-          await loadPromise
-          removeWindowErrorEventCallback()
-        } catch (e) {
-          removeWindowErrorEventCallback()
-          if (!windowError) {
-            reportErrorBackToBrowser(e)
-          }
-          fail(e, {
+          fail(error, {
             message: `Error while loading module: ${urlObject.href}`,
             reportedBy: "script_error_event",
             url: urlObject.href,
           })
+          if (detectedBy === "script_error_event") {
+            supervisor.reportException(result.exception)
+          }
           return result
         }
+
         onExecuting()
         result.status = "executing"
         if (logs) {
@@ -642,7 +598,7 @@ window.__supervisor__ = (() => {
         line = tagLineStart + (typeof line === "number" ? line : 0)
         // stackTrace formatted by V8 (chrome)
         if (Error.captureStackTrace) {
-          line = line - 2
+          line = line - 1
         }
         column = tagColumnStart + (typeof column === "number" ? column : 0)
         const fileUrl = resolveFileUrl(url)
@@ -835,11 +791,7 @@ window.__supervisor__ = (() => {
                   cause: causeText,
                 }
               }
-              if (
-                exceptionInfo.site.line !== undefined &&
-                // code frame showing internal window.reportError is pointless
-                !exceptionInfo.site.url.endsWith(`supervisor.js`)
-              ) {
+              if (exceptionInfo.site.line !== undefined) {
                 const urlToFetch = new URL(
                   `/__get_code_frame__/${encodeURIComponent(
                     stringifyUrlSite(exceptionInfo.site),
@@ -1139,6 +1091,59 @@ window.__supervisor__ = (() => {
         reportedBy: "window_unhandledrejection_event",
       })
       supervisor.reportException(exception)
+    })
+  }
+
+  const prepareScriptToLoad = (script) => {
+    // do not use script.cloneNode()
+    // bcause https://stackoverflow.com/questions/28771542/why-dont-clonenode-script-tags-execute
+    const scriptClone = document.createElement("script")
+    // browsers set async by default when creating script(s)
+    // we want an exact copy to preserves how code is executed
+    scriptClone.async = false
+    Array.from(script.attributes).forEach((attribute) => {
+      scriptClone.setAttribute(attribute.nodeName, attribute.nodeValue)
+    })
+    scriptClone.removeAttribute("jsenv-cooked-by")
+    scriptClone.removeAttribute("jsenv-inlined-by")
+    scriptClone.removeAttribute("jsenv-injected-by")
+    scriptClone.removeAttribute("inlined-from-src")
+    scriptClone.removeAttribute("original-position")
+    scriptClone.removeAttribute("original-src-position")
+
+    return scriptClone
+  }
+
+  const getScriptLoadPromise = async (script) => {
+    return new Promise((resolve) => {
+      const windowErrorEventCallback = (errorEvent) => {
+        if (errorEvent.filename === script.src) {
+          removeWindowErrorEventCallback()
+          resolve({
+            detectedBy: "window_error_event",
+            failed: true,
+            error: errorEvent,
+          })
+        }
+      }
+      const removeWindowErrorEventCallback = () => {
+        window.removeEventListener("error", windowErrorEventCallback)
+      }
+      window.addEventListener("error", windowErrorEventCallback)
+      script.addEventListener("error", (errorEvent) => {
+        removeWindowErrorEventCallback()
+        resolve({
+          detectedBy: "script_error_event",
+          failed: true,
+          error: errorEvent,
+        })
+      })
+      script.addEventListener("load", () => {
+        removeWindowErrorEventCallback()
+        resolve({
+          detectedBy: "script_load_event",
+        })
+      })
     })
   }
 

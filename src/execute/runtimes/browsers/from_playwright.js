@@ -588,6 +588,7 @@ const initJsExecutionMiddleware = async (
       },
       {
         supervisorOptions: {},
+        inlineAsRemote: true,
         webServer,
       },
     )

@@ -184,6 +184,7 @@ export const jsenvPluginSupervisor = ({
               rootDirectoryUrl: context.rootDirectoryUrl,
               isJsenvDevServer: true,
             },
+            inlineAsRemote: true,
             generateInlineScriptSrc: ({
               type,
               textContent,

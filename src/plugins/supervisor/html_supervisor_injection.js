@@ -92,6 +92,7 @@ export const injectSupervisorIntoHTML = async (
     webServer,
     generateInlineScriptSrc = ({ inlineScriptUrl }) =>
       urlToRelativeUrl(inlineScriptUrl, webServer.rootDirectoryUrl),
+    inlineAsRemote,
   },
 ) => {
   const htmlAst = parseHtmlString(content)
@@ -123,7 +124,7 @@ export const injectSupervisorIntoHTML = async (
         line,
         column,
       })
-      if (webServer.isJsenvDevServer) {
+      if (inlineAsRemote) {
         // prefere la version src
         scriptInfos.push({ type, src: inlineScriptSrc })
         const remoteJsSupervised = generateCodeToSuperviseScriptWithSrc({
@@ -138,38 +139,37 @@ export const injectSupervisorIntoHTML = async (
             "inlined-from-src": inlineScriptSrc,
           })
         })
-        return
-      }
-
-      scriptInfos.push({ type, src: inlineScriptSrc, isInline: true })
-      actions.push(async () => {
-        try {
-          const inlineJsSupervised = await injectSupervisorIntoJs({
-            webServer,
-            content: textContent,
-            url: inlineScriptUrl,
-            type,
-            inlineSrc: inlineScriptSrc,
-          })
-          mutations.push(() => {
-            setHtmlNodeText(scriptNode, inlineJsSupervised)
-            setHtmlNodeAttributes(scriptNode, {
-              "jsenv-cooked-by": "jsenv:supervisor",
+      } else {
+        scriptInfos.push({ type, src: inlineScriptSrc, isInline: true })
+        actions.push(async () => {
+          try {
+            const inlineJsSupervised = await injectSupervisorIntoJs({
+              webServer,
+              content: textContent,
+              url: inlineScriptUrl,
+              type,
+              inlineSrc: inlineScriptSrc,
             })
-          })
-        } catch (e) {
-          if (e.code === "PARSE_ERROR") {
-            // mutations.push(() => {
-            //   setHtmlNodeAttributes(scriptNode, {
-            //     "jsenv-cooked-by": "jsenv:supervisor",
-            //   })
-            // })
-            // on touche a rien
-            return
+            mutations.push(() => {
+              setHtmlNodeText(scriptNode, inlineJsSupervised)
+              setHtmlNodeAttributes(scriptNode, {
+                "jsenv-cooked-by": "jsenv:supervisor",
+              })
+            })
+          } catch (e) {
+            if (e.code === "PARSE_ERROR") {
+              // mutations.push(() => {
+              //   setHtmlNodeAttributes(scriptNode, {
+              //     "jsenv-cooked-by": "jsenv:supervisor",
+              //   })
+              // })
+              // on touche a rien
+              return
+            }
+            throw e
           }
-          throw e
-        }
-      })
+        })
+      }
     }
     const handleScriptWithSrc = (scriptNode, { type, src }) => {
       scriptInfos.push({ type, src })
