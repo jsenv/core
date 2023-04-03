@@ -123,7 +123,6 @@ window.__supervisor__ = (() => {
         result.status = "failed"
         const exception = supervisor.createException(error, info)
         result.exception = exception
-        supervisor.reportException(exception)
         end()
       }
 
@@ -186,7 +185,7 @@ window.__supervisor__ = (() => {
           return result
         } catch (e) {
           // window.error won't be dispatched for this error
-          // reportErrorBackToBrowser(e)
+          reportErrorBackToBrowser(e)
           fail(e, {
             message: `Error while loading script: ${urlObject.href}`,
             reportedBy: "script_error_event",
@@ -239,7 +238,7 @@ window.__supervisor__ = (() => {
           complete(namespace)
           return result
         } catch (e) {
-          // reportErrorBackToBrowser(e) // dynamic import hides error from browser
+          reportErrorBackToBrowser(e)
           fail(e, {
             message: `Error while importing module: ${urlObject.href}`,
             reportedBy: "dynamic_import",
@@ -323,7 +322,7 @@ window.__supervisor__ = (() => {
           complete(namespace)
           return result
         } catch (e) {
-          // reportErrorBackToBrowser(e) // dynamic import hides error from browser
+          reportErrorBackToBrowser(e)
           fail(e, {
             message: `Error while importing module: ${urlObject.href}`,
             reportedBy: "dynamic_import",
@@ -1098,7 +1097,13 @@ window.__supervisor__ = (() => {
     window.addEventListener("error", (errorEvent) => {
       if (!errorEvent.isTrusted) {
         // ignore custom error event (not sent by browser)
+        if (logs) {
+          console.log("ignore non trusted error event", errorEvent)
+        }
         return
+      }
+      if (logs) {
+        console.log('window "error" event received', errorEvent)
       }
       const { error, message, filename, lineno, colno } = errorEvent
       const exception = supervisor.createException(error || message, {

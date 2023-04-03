@@ -97,6 +97,13 @@ const babelPluginJsModuleSupervisor = (babel) => {
   }
 }
 
+/*
+ * One thing to note:
+ * Static import can throw errors like
+ * The requested module '/js_module_export_not_found/foo.js' does not provide an export named 'answerr'
+ * While dynamic import will work just fine
+ * and create a variable named "undefined"
+ */
 const convertStaticImportIntoDynamicImport = (staticImportNode, t) => {
   const awaitExpression = t.awaitExpression(
     t.callExpression(t.import(), [
