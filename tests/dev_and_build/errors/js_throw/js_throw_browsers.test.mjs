@@ -46,20 +46,20 @@ const test = async ({ runtime }) => {
     const actual = error.originalStack
     const expected = `    at triggerError (${devServer.origin}/trigger_error.js:2:9)
     at ${devServer.origin}/main.js:3:1`
-    assert({ actual, expected })
+    assert({ actual, expected, context: "chromium" })
   }
   if (runtime === firefox) {
     const actual = error.originalStack
     const expected = `  triggerError@${devServer.origin}/trigger_error.js:2:9
-@${devServer.origin}/main.js:2:1
+@${devServer.origin}/main.js:3:1
 `
-    assert({ actual, expected })
+    assert({ actual, expected, context: "firefox" })
   }
   if (runtime === webkit) {
     const expected = `  triggerError@${devServer.origin}/trigger_error.js:2:18
-module code@${devServer.origin}/main.js:2:13`
+module code@${devServer.origin}/main.js:3:13`
     const actual = error.originalStack.slice(0, expected.length)
-    assert({ actual, expected })
+    assert({ actual, expected, context: "webkit" })
   }
 }
 
