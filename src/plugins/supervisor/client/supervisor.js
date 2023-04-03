@@ -76,7 +76,6 @@ window.__supervisor__ = (() => {
     }
 
     const createExecutionController = (src, type) => {
-      let startTime
       const result = {
         status: "pending",
         duration: null,
@@ -104,7 +103,7 @@ window.__supervisor__ = (() => {
       const end = () => {
         const now = Date.now()
         remainingScriptCount--
-        result.duration = now - startTime
+        result.duration = now - documentExecutionStartTime
         result.coverage = window.__coverage__
         if (logs) {
           console.log(`execution ${result.status}`)

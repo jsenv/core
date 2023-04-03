@@ -36,11 +36,9 @@ const test = async ({ runtime }) => {
     namespace: {
       "/main.js": {
         status: "completed",
-        loadDuration: assert.any(Number),
-        executionDuration: assert.any(Number),
         duration: assert.any(Number),
         exception: null,
-        namespace: {},
+        value: null,
       },
     },
     // there is also the html supervisor logs

@@ -18,7 +18,9 @@ const devServer = await startDevServer({
 const { testPlanCoverage } = await executeTestPlan({
   logLevel: "warn",
   rootDirectoryUrl: new URL("./", import.meta.url),
-  serverOrigin: devServer.origin,
+  webServer: {
+    origin: devServer.origin,
+  },
   testPlan: {
     "./client/main.test.html": {
       chromium: {
