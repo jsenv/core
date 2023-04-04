@@ -36,10 +36,12 @@
  * and create a variable named "undefined"
  */
 
+import { urlToRelativeUrl } from "@jsenv/urls"
 import { applyBabelPlugins } from "@jsenv/ast"
 import { SOURCEMAP, generateSourcemapDataUrl } from "@jsenv/sourcemap"
 
 export const injectSupervisorIntoJs = async ({
+  webServer,
   content,
   url,
   type,
@@ -66,7 +68,7 @@ export const injectSupervisorIntoJs = async ({
     specifier: sourcemapDataUrl,
   })
   code = `${code}
-//# sourceURL=${url}`
+//# sourceURL=${urlToRelativeUrl(url, webServer.rootDirectoryUrl)}`
   return code
 }
 
