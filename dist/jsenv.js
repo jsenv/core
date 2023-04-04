@@ -14753,21 +14753,7 @@ function default_1({
   };
 }
 
-/*
- * When systemjs format is used by babel, it will generated UID based on
- * the import specifier:
- * https://github.com/babel/babel/blob/97d1967826077f15e766778c0d64711399e9a72a/packages/babel-plugin-transform-modules-systemjs/src/index.ts#L498
- * But at this stage import specifier are absolute file urls
- * So without minification these specifier are long and dependent
- * on where the files are on the filesystem.
- * This can be mitigated by minification that will rename them.
- * But to fix this issue once and for all I have copy-pasted
- * "@babel/plugin-transform-modules-systemjs" to introduce
- * "generateIdentifierHint" options and prevent that from hapenning
- */
-const TRANSFORM_MODULES_SYSTEMJS_PATH = fileURLToPath(new URL("./js/babel_plugin_transform_modules_systemjs.cjs", import.meta.url));
 const convertJsModuleToJsClassic = async ({
-  rootDirectoryUrl,
   systemJsInjection,
   systemJsClientFileUrl,
   urlInfo,
@@ -14792,15 +14778,8 @@ const convertJsModuleToJsClassic = async ({
     babelPlugins: [...(jsClassicFormat === "system" ? [
     // proposal-dynamic-import required with systemjs for babel8:
     // https://github.com/babel/babel/issues/10746
-    requireFromJsenv("@babel/plugin-proposal-dynamic-import"), [
-    // eslint-disable-next-line import/no-dynamic-require
-    requireFromJsenv(TRANSFORM_MODULES_SYSTEMJS_PATH), {
-      generateIdentifierHint: key => {
-        if (key.startsWith("file://")) {
-          return urlToRelativeUrl(key, rootDirectoryUrl);
-        }
-        return key;
-      }
+    requireFromJsenv("@babel/plugin-proposal-dynamic-import"), requireFromJsenv("@babel/plugin-transform-modules-systemjs"), [babelPluginRelativeImports, {
+      rootUrl: jsModuleUrlInfo.url
     }], [default_1, {
       asyncAwait: false,
       // already handled + we might not needs it at all
@@ -14809,7 +14788,9 @@ const convertJsModuleToJsClassic = async ({
       asyncAwait: false,
       // already handled + we might not needs it at all
       topLevelAwait: "simple"
-    }], babelPluginTransformImportMetaUrl, babelPluginTransformImportMetaResolve, requireFromJsenv("@babel/plugin-transform-modules-umd")])],
+    }], babelPluginTransformImportMetaUrl, babelPluginTransformImportMetaResolve, requireFromJsenv("@babel/plugin-transform-modules-umd"), [babelPluginRelativeImports, {
+      rootUrl: jsModuleUrlInfo.url
+    }]])],
     urlInfo: jsModuleUrlInfo
   });
   let sourcemap = jsModuleUrlInfo.sourcemap;
@@ -14843,6 +14824,68 @@ const convertJsModuleToJsClassic = async ({
   return {
     content: code,
     sourcemap
+  };
+};
+
+/*
+ * When systemjs or umd format is used by babel, it will generated UID based on
+ * the import specifier:
+ * https://github.com/babel/babel/blob/97d1967826077f15e766778c0d64711399e9a72a/packages/babel-plugin-transform-modules-systemjs/src/index.ts#L498
+ * But at this stage import specifier are absolute file urls
+ * This can be mitigated by minification that will rename them.
+ * But to fix this issue once and for all there is babelPluginRelativeImports below
+ */
+const babelPluginRelativeImports = babel => {
+  const t = babel.types;
+  const replaceSpecifierAtPath = (path, state) => {
+    const specifier = path.node.value;
+    if (specifier.startsWith("file://")) {
+      const specifierRelative = urlToRelativeUrl(specifier, state.opts.rootUrl);
+      path.replaceWith(t.stringLiteral(specifierRelative));
+    }
+  };
+  return {
+    name: "relative-imports",
+    visitor: {
+      CallExpression: (path, state) => {
+        if (path.node.callee.type !== "Import") {
+          // Some other function call, not import();
+          return;
+        }
+        if (path.node.arguments[0].type !== "StringLiteral") {
+          // Non-string argument, probably a variable or expression, e.g.
+          // import(moduleId)
+          // import('./' + moduleName)
+          return;
+        }
+        const sourcePath = path.get("arguments")[0];
+        if (sourcePath.node.type === "StringLiteral") {
+          replaceSpecifierAtPath(sourcePath, state);
+        }
+      },
+      ImportDeclaration: (path, state) => {
+        const sourcePath = path.get("source");
+        replaceSpecifierAtPath(sourcePath, state);
+      },
+      ExportAllDeclaration: (path, state) => {
+        const sourcePath = path.get("source");
+        replaceSpecifierAtPath(sourcePath, state);
+      },
+      ExportNamedDeclaration: (path, state) => {
+        if (!path.node.source) {
+          // This export has no "source", so it's probably
+          // a local variable or function, e.g.
+          // export { varName }
+          // export const constName = ...
+          // export function funcName() {}
+          return;
+        }
+        const sourcePath = path.get("source");
+        if (sourcePath.node.type === "StringLiteral") {
+          replaceSpecifierAtPath(sourcePath, state);
+        }
+      }
+    }
   };
 };
 
@@ -17539,6 +17582,7 @@ const jsenvPluginHttpUrls = () => {
  * and create a variable named "undefined"
  */
 const injectSupervisorIntoJs = async ({
+  webServer,
   content,
   url,
   type,
@@ -17564,7 +17608,7 @@ const injectSupervisorIntoJs = async ({
     specifier: sourcemapDataUrl
   });
   code = `${code}
-//# sourceURL=${url}`;
+//# sourceURL=${urlToRelativeUrl(url, webServer.rootDirectoryUrl)}`;
   return code;
 };
 const babelPluginJsModuleSupervisor = babel => {

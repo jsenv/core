@@ -12,7 +12,6 @@ node_modules/
 **/babel_helpers/
 **/client/regenerator_runtime.js
 **/async-to-promises.js
-**/babel_plugin_transform_modules_systemjs.cjs
 **/syntax_error/client/*.js
 
 /tests/**/js_syntax_error.js

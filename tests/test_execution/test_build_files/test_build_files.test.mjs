@@ -13,7 +13,7 @@ const buildServer = await startBuildServer({
 })
 
 const result = await executeTestPlan({
-  logLevel: "info",
+  logLevel: "warn",
   rootDirectoryUrl: new URL("./project/", import.meta.url),
   testPlan: {
     "./public/**/*.test.html": {
