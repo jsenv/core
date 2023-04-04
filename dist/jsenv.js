@@ -20,10 +20,10 @@ import { createRequire } from "node:module";
 import babelParser from "@babel/parser";
 import { bundleJsModules } from "@jsenv/plugin-bundling";
 import v8, { takeCoverage } from "node:v8";
-import wrapAnsi from "wrap-ansi";
 import stripAnsi from "strip-ansi";
 import { createId } from "@paralleldrive/cuid2";
 import { runInNewContext } from "node:vm";
+import wrapAnsi from "wrap-ansi";
 import { fork } from "node:child_process";
 import { Worker } from "node:worker_threads";
 
@@ -17771,7 +17771,6 @@ const injectSupervisorIntoHTML = async ({
   url
 }, {
   supervisorScriptSrc = supervisorFileUrl$1,
-  supervisorScriptInline,
   supervisorOptions,
   webServer,
   onInlineScript = () => {},
@@ -17952,10 +17951,7 @@ const injectSupervisorIntoHTML = async ({
       })
       `
     }), "jsenv:supervisor");
-    const supervisorScript = supervisorScriptInline ? createHtmlNode({
-      tagName: "script",
-      textContent: readFileSync$1(new URL(supervisorScriptSrc), "utf8")
-    }) : createHtmlNode({
+    const supervisorScript = createHtmlNode({
       tagName: "script",
       src: supervisorScriptSrc
     });
@@ -24306,29 +24302,49 @@ const createExecutionLog = ({
     timeEllapsed,
     memoryHeap
   });
+  let log;
   if (completedExecutionLogAbbreviation && status === "completed") {
-    return `${description}${summary}`;
+    log = `${description}${summary}`;
+  } else {
+    const {
+      consoleCalls = [],
+      errors = []
+    } = executionResult;
+    const consoleOutput = formatConsoleCalls(consoleCalls);
+    const errorsOutput = formatErrors(errors);
+    log = formatExecution({
+      label: `${description}${summary}`,
+      details: {
+        file: fileRelativeUrl,
+        ...(logRuntime ? {
+          runtime: `${runtimeName}/${runtimeVersion}`
+        } : {}),
+        ...(logEachDuration ? {
+          duration: status === "executing" ? msAsEllapsedTime(Date.now() - startMs) : msAsDuration(endMs - startMs)
+        } : {})
+      },
+      consoleOutput,
+      errorsOutput
+    });
   }
   const {
-    consoleCalls = [],
-    errors = []
-  } = executionResult;
-  const consoleOutput = formatConsoleCalls(consoleCalls);
-  const errorsOutput = formatErrors(errors);
-  return formatExecution({
-    label: `${description}${summary}`,
-    details: {
-      file: fileRelativeUrl,
-      ...(logRuntime ? {
-        runtime: `${runtimeName}/${runtimeVersion}`
-      } : {}),
-      ...(logEachDuration ? {
-        duration: status === "executing" ? msAsEllapsedTime(Date.now() - startMs) : msAsDuration(endMs - startMs)
-      } : {})
-    },
-    consoleOutput,
-    errorsOutput
+    columns = 80
+  } = process.stdout;
+  log = wrapAnsi(log, columns, {
+    trim: false,
+    hard: true,
+    wordWrap: false
   });
+  if (endMs) {
+    if (completedExecutionLogAbbreviation) {
+      return `${log}\n`;
+    }
+    if (executionIndex === counters.total - 1) {
+      return `${log}\n`;
+    }
+    return `${log}\n\n`;
+  }
+  return log;
 };
 const formatErrors = errors => {
   if (errors.length === 0) {
@@ -24441,39 +24457,51 @@ const descriptionFormatters = {
     index,
     total
   }) => {
-    return ANSI.color(`executing ${index + 1} of ${total}`, EXECUTION_COLORS.executing);
+    return ANSI.color(`executing ${padNumber(index, total)} of ${total}`, EXECUTION_COLORS.executing);
   },
   aborted: ({
     index,
     total
   }) => {
-    return ANSI.color(`${UNICODE.FAILURE_RAW} execution ${index + 1} of ${total} aborted`, EXECUTION_COLORS.aborted);
+    return ANSI.color(`${UNICODE.FAILURE_RAW} execution ${padNumber(index, total)} of ${total} aborted`, EXECUTION_COLORS.aborted);
   },
   timedout: ({
     index,
     total,
     executionParams
   }) => {
-    return ANSI.color(`${UNICODE.FAILURE_RAW} execution ${index + 1} of ${total} timeout after ${executionParams.allocatedMs}ms`, EXECUTION_COLORS.timedout);
+    return ANSI.color(`${UNICODE.FAILURE_RAW} execution ${padNumber(index, total)} of ${total} timeout after ${executionParams.allocatedMs}ms`, EXECUTION_COLORS.timedout);
   },
   failed: ({
     index,
     total
   }) => {
-    return ANSI.color(`${UNICODE.FAILURE_RAW} execution ${index + 1} of ${total} failed`, EXECUTION_COLORS.failed);
+    return ANSI.color(`${UNICODE.FAILURE_RAW} execution ${padNumber(index, total)} of ${total} failed`, EXECUTION_COLORS.failed);
   },
   completed: ({
     index,
     total
   }) => {
-    return ANSI.color(`${UNICODE.OK_RAW} execution ${index + 1} of ${total} completed`, EXECUTION_COLORS.completed);
+    return ANSI.color(`${UNICODE.OK_RAW} execution ${padNumber(index, total)} of ${total} completed`, EXECUTION_COLORS.completed);
   },
   cancelled: ({
     index,
     total
   }) => {
-    return ANSI.color(`${UNICODE.FAILURE_RAW} execution ${index + 1} of ${total} cancelled`, EXECUTION_COLORS.cancelled);
+    return ANSI.color(`${UNICODE.FAILURE_RAW} execution ${padNumber(index, total)} of ${total} cancelled`, EXECUTION_COLORS.cancelled);
   }
+};
+const padNumber = (index, total) => {
+  const number = index + 1;
+  const numberWidth = String(number).length;
+  const totalWith = String(total).length;
+  let missingWidth = totalWith - numberWidth;
+  let padded = "";
+  while (missingWidth--) {
+    padded += "0";
+  }
+  padded += number;
+  return padded;
 };
 const formatConsoleCalls = consoleCalls => {
   if (consoleCalls.length === 0) {
@@ -24842,7 +24870,7 @@ const executeSteps = async (executionSteps, {
           global.gc();
         }
         if (executionLogsEnabled) {
-          let log = createExecutionLog(afterExecutionInfo, {
+          const log = createExecutionLog(afterExecutionInfo, {
             completedExecutionLogAbbreviation,
             counters,
             logRuntime,
@@ -24854,18 +24882,6 @@ const executeSteps = async (executionSteps, {
               memoryHeap: memoryUsage().heapUsed
             } : {})
           });
-          log = `${log}
-  
-`;
-          const {
-            columns = 80
-          } = process.stdout;
-          log = wrapAnsi(log, columns, {
-            trim: false,
-            hard: true,
-            wordWrap: false
-          });
-
           // replace spinner with this execution result
           if (spinner) spinner.stop();
           executionLog.write(log);
@@ -24883,7 +24899,12 @@ const executeSteps = async (executionSteps, {
             });
           }
         }
-        if (failFast && executionResult.status !== "completed" && counters.done < counters.total) {
+        const isLastExecutionLog = executionIndex === executionSteps.length - 1;
+        const cancelRemaining = failFast && executionResult.status !== "completed" && counters.done < counters.total;
+        if (isLastExecutionLog) {
+          executionLog.write("\n");
+        }
+        if (cancelRemaining) {
           logger.info(`"failFast" enabled -> cancel remaining executions`);
           failFastAbortController.abort();
         }
@@ -25790,7 +25811,7 @@ const initJsExecutionMiddleware = async (page, {
       content: originalBody,
       url: fileUrl
     }, {
-      supervisorScriptInline: true,
+      supervisorScriptSrc: `/@fs/${supervisorFileUrl$1.slice("file:///".length)}`,
       supervisorOptions: {},
       inlineAsRemote: true,
       webServer,
@@ -25811,7 +25832,7 @@ const initJsExecutionMiddleware = async (page, {
       }
     });
   };
-  const inerceptInlineScript = ({
+  const interceptInlineScript = ({
     url,
     route
   }) => {
@@ -25822,6 +25843,23 @@ const initJsExecutionMiddleware = async (page, {
       headers: {
         "content-type": "text/javascript",
         "content-length": Buffer.byteLength(inlineScriptContent)
+      }
+    });
+  };
+  const interceptFileSystemUrl = ({
+    url,
+    route
+  }) => {
+    const relativeUrl = url.slice(webServer.origin.length);
+    const fsPath = relativeUrl.slice("/@fs/".length);
+    const fsUrl = `file:///${fsPath}`;
+    const fileContent = readFileSync$1(new URL(fsUrl), "utf8");
+    route.fulfill({
+      status: 200,
+      body: fileContent,
+      headers: {
+        "content-type": "text/javascript",
+        "content-length": Buffer.byteLength(fileContent)
       }
     });
   };
@@ -25837,7 +25875,16 @@ const initJsExecutionMiddleware = async (page, {
       return;
     }
     if (inlineScriptContents.has(url)) {
-      inerceptInlineScript({
+      interceptInlineScript({
+        url,
+        request,
+        route
+      });
+      return;
+    }
+    const fsServerUrl = new URL("/@fs/", webServer.origin);
+    if (url.startsWith(fsServerUrl)) {
+      interceptFileSystemUrl({
         url,
         request,
         route
