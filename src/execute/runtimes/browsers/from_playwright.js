@@ -1,4 +1,4 @@
-import { writeFileSync } from "node:fs"
+import { readFileSync, writeFileSync } from "node:fs"
 
 import { createDetailedMessage } from "@jsenv/log"
 import {
@@ -12,7 +12,10 @@ import { memoize } from "@jsenv/utils/src/memoize/memoize.js"
 
 import { filterV8Coverage } from "@jsenv/core/src/test/coverage/v8_coverage.js"
 import { composeTwoFileByFileIstanbulCoverages } from "@jsenv/core/src/test/coverage/istanbul_coverage_composition.js"
-import { injectSupervisorIntoHTML } from "../../../plugins/supervisor/html_supervisor_injection.js"
+import {
+  injectSupervisorIntoHTML,
+  supervisorFileUrl,
+} from "../../../plugins/supervisor/html_supervisor_injection.js"
 
 export const createRuntimeFromPlaywright = ({
   browserName,
@@ -584,7 +587,9 @@ const initJsExecutionMiddleware = async (
         url: fileUrl,
       },
       {
-        supervisorScriptInline: true,
+        supervisorScriptSrc: `/@fs/${supervisorFileUrl.slice(
+          "file:///".length,
+        )}`,
         supervisorOptions: {},
         inlineAsRemote: true,
         webServer,
@@ -604,7 +609,7 @@ const initJsExecutionMiddleware = async (
     })
   }
 
-  const inerceptInlineScript = ({ url, route }) => {
+  const interceptInlineScript = ({ url, route }) => {
     const inlineScriptContent = inlineScriptContents.get(url)
     route.fulfill({
       status: 200,
@@ -612,6 +617,21 @@ const initJsExecutionMiddleware = async (
       headers: {
         "content-type": "text/javascript",
         "content-length": Buffer.byteLength(inlineScriptContent),
+      },
+    })
+  }
+
+  const interceptFileSystemUrl = ({ url, route }) => {
+    const relativeUrl = url.slice(webServer.origin.length)
+    const fsPath = relativeUrl.slice("/@fs/".length)
+    const fsUrl = `file:///${fsPath}`
+    const fileContent = readFileSync(new URL(fsUrl), "utf8")
+    route.fulfill({
+      status: 200,
+      body: fileContent,
+      headers: {
+        "content-type": "text/javascript",
+        "content-length": Buffer.byteLength(fileContent),
       },
     })
   }
@@ -628,11 +648,16 @@ const initJsExecutionMiddleware = async (
       return
     }
     if (inlineScriptContents.has(url)) {
-      inerceptInlineScript({
+      interceptInlineScript({
         url,
         request,
         route,
       })
+      return
+    }
+    const fsServerUrl = new URL("/@fs/", webServer.origin)
+    if (url.startsWith(fsServerUrl)) {
+      interceptFileSystemUrl({ url, request, route })
       return
     }
     route.fallback()
