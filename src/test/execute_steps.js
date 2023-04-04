@@ -1,7 +1,6 @@
 import { existsSync } from "node:fs"
 import { memoryUsage } from "node:process"
 import { takeCoverage } from "node:v8"
-import wrapAnsi from "wrap-ansi"
 import stripAnsi from "strip-ansi"
 
 import { urlToFileSystemPath } from "@jsenv/urls"
@@ -31,8 +30,7 @@ export const executeSteps = async (
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
     rootDirectoryUrl,
-    devServerOrigin,
-    sourceDirectoryUrl,
+    webServer,
 
     keepRunning,
     defaultMsAllocatedPerExecution,
@@ -119,8 +117,7 @@ export const executeSteps = async (
 
     let runtimeParams = {
       rootDirectoryUrl,
-      devServerOrigin,
-      sourceDirectoryUrl,
+      webServer,
 
       coverageEnabled,
       coverageConfig,
@@ -279,7 +276,7 @@ export const executeSteps = async (
           global.gc()
         }
         if (executionLogsEnabled) {
-          let log = createExecutionLog(afterExecutionInfo, {
+          const log = createExecutionLog(afterExecutionInfo, {
             completedExecutionLogAbbreviation,
             counters,
             logRuntime,
@@ -293,16 +290,6 @@ export const executeSteps = async (
               ? { memoryHeap: memoryUsage().heapUsed }
               : {}),
           })
-          log = `${log}
-  
-`
-          const { columns = 80 } = process.stdout
-          log = wrapAnsi(log, columns, {
-            trim: false,
-            hard: true,
-            wordWrap: false,
-          })
-
           // replace spinner with this execution result
           if (spinner) spinner.stop()
           executionLog.write(log)
@@ -319,11 +306,16 @@ export const executeSteps = async (
             executionLog = createLog({ newLine: "" })
           }
         }
-        if (
+        const isLastExecutionLog = executionIndex === executionSteps.length - 1
+        const cancelRemaining =
           failFast &&
           executionResult.status !== "completed" &&
           counters.done < counters.total
-        ) {
+        if (isLastExecutionLog) {
+          executionLog.write("\n")
+        }
+
+        if (cancelRemaining) {
           logger.info(`"failFast" enabled -> cancel remaining executions`)
           failFastAbortController.abort()
         }

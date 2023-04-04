@@ -34,7 +34,7 @@ const test = async (params) => {
         },
       ),
     ],
-    errorMessage: `The requested module '/file.js' does not provide an export named 'answer'`,
+    errorMessage: `Uncaught SyntaxError: The requested module '/file.js' does not provide an export named 'answer'`,
   }
   assert({ actual, expected })
 }

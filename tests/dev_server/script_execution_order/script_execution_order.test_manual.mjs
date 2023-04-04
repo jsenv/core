@@ -10,6 +10,7 @@ import { startDevServer } from "@jsenv/core"
 
 await startDevServer({
   logLevel: "info",
-  rootDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceMainFilePath: "main.html",
   keepProcessAlive: true,
 })

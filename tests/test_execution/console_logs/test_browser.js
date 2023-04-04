@@ -20,5 +20,7 @@ await executeTestPlan({
       },
     },
   },
-  devServerOrigin: devServer.origin,
+  webServer: {
+    origin: devServer.origin,
+  },
 })

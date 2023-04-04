@@ -1,4 +1,4 @@
-import { writeFileSync } from "node:fs"
+import { readFileSync, writeFileSync } from "node:fs"
 
 import { createDetailedMessage } from "@jsenv/log"
 import {
@@ -7,17 +7,21 @@ import {
   raceProcessTeardownEvents,
   raceCallbacks,
 } from "@jsenv/abort"
-import { moveUrl, urlIsInsideOf } from "@jsenv/urls"
+import { moveUrl, urlIsInsideOf, urlToExtension } from "@jsenv/urls"
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js"
 
 import { filterV8Coverage } from "@jsenv/core/src/test/coverage/v8_coverage.js"
 import { composeTwoFileByFileIstanbulCoverages } from "@jsenv/core/src/test/coverage/istanbul_coverage_composition.js"
+import {
+  injectSupervisorIntoHTML,
+  supervisorFileUrl,
+} from "../../../plugins/supervisor/html_supervisor_injection.js"
 
 export const createRuntimeFromPlaywright = ({
   browserName,
   browserVersion,
   coveragePlaywrightAPIAvailable = false,
-  ignoreErrorHook = () => false,
+  shouldIgnoreError = () => false,
   transformErrorHook = (error) => error,
   isolatedTab = false,
 }) => {
@@ -31,9 +35,8 @@ export const createRuntimeFromPlaywright = ({
     signal = new AbortController().signal,
     logger,
     rootDirectoryUrl,
+    webServer,
     fileRelativeUrl,
-    devServerOrigin,
-    sourceDirectoryUrl,
 
     // measurePerformance,
     collectPerformance,
@@ -51,6 +54,20 @@ export const createRuntimeFromPlaywright = ({
     playwrightLaunchOptions = {},
     ignoreHTTPSErrors = true,
   }) => {
+    const fileUrl = new URL(fileRelativeUrl, rootDirectoryUrl).href
+    if (!urlIsInsideOf(fileUrl, webServer.rootDirectoryUrl)) {
+      throw new Error(`Cannot execute file that is outside web server root directory
+--- file --- 
+${fileUrl}
+--- web server root directory url ---
+${webServer.rootDirectoryUrl}`)
+    }
+    const fileServerUrl = moveUrl({
+      url: fileUrl,
+      from: webServer.rootDirectoryUrl,
+      to: `${webServer.origin}/`,
+    })
+
     const cleanupCallbackList = createCallbackListNotifiedOnce()
     const cleanup = memoize(async (reason) => {
       await cleanupCallbackList.notify({ reason })
@@ -112,6 +129,13 @@ export const createRuntimeFromPlaywright = ({
           : {}),
       },
     })
+    if (!webServer.isJsenvDevServer) {
+      await initJsExecutionMiddleware(page, {
+        webServer,
+        fileUrl,
+        fileServerUrl,
+      })
+    }
     const closePage = async () => {
       try {
         await page.close()
@@ -145,8 +169,8 @@ export const createRuntimeFromPlaywright = ({
             (v8CoveragesWithWebUrl) => {
               const fsUrl = moveUrl({
                 url: v8CoveragesWithWebUrl.url,
-                from: `${devServerOrigin}/`,
-                to: sourceDirectoryUrl,
+                from: `${webServer.origin}/`,
+                to: webServer.rootDirectoryUrl,
               })
               return {
                 ...v8CoveragesWithWebUrl,
@@ -218,19 +242,6 @@ export const createRuntimeFromPlaywright = ({
       })
     }
 
-    const fileUrl = new URL(fileRelativeUrl, rootDirectoryUrl).href
-    if (!urlIsInsideOf(fileUrl, sourceDirectoryUrl)) {
-      throw new Error(`Cannot execute file that is outside source directory
---- file --- 
-${fileUrl}
---- source directory ---
-${sourceDirectoryUrl}`)
-    }
-    const fileDevServerUrl = moveUrl({
-      url: fileUrl,
-      from: sourceDirectoryUrl,
-      to: `${devServerOrigin}/`,
-    })
     // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-console
     const removeConsoleListener = registerEvent({
       object: page,
@@ -247,6 +258,7 @@ ${sourceDirectoryUrl}`)
     cleanupCallbackList.add(removeConsoleListener)
     const actionOperation = Abort.startOperation()
     actionOperation.addAbortSignal(signal)
+
     const winnerPromise = new Promise((resolve, reject) => {
       raceCallbacks(
         {
@@ -259,7 +271,7 @@ ${sourceDirectoryUrl}`)
               object: page,
               eventType: "error",
               callback: (error) => {
-                if (ignoreErrorHook(error)) {
+                if (shouldIgnoreError(error, "error")) {
                   return
                 }
                 cb(transformErrorHook(error))
@@ -272,7 +284,10 @@ ${sourceDirectoryUrl}`)
           //     object: page,
           //     eventType: "pageerror",
           //     callback: (error) => {
-          //       if (ignoreErrorHook(error)) {
+          //       if (
+          //         webServer.isJsenvDevServer ||
+          //         shouldIgnoreError(error, "pageerror")
+          //       ) {
           //         return
           //       }
           //       result.errors.push(transformErrorHook(error))
@@ -312,15 +327,29 @@ ${sourceDirectoryUrl}`)
           },
           response: async (cb) => {
             try {
-              await page.goto(fileDevServerUrl, { timeout: 0 })
+              await page.goto(fileServerUrl, { timeout: 0 })
               const returnValue = await page.evaluate(
                 /* eslint-disable no-undef */
                 /* istanbul ignore next */
-                () => {
-                  if (!window.__supervisor__) {
-                    throw new Error(`window.__supervisor__ not found`)
+                async () => {
+                  let startTime
+                  try {
+                    startTime = window.performance.timing.navigationStart
+                  } catch (e) {
+                    startTime = Date.now()
                   }
-                  return window.__supervisor__.getDocumentExecutionResult()
+                  if (!window.__supervisor__) {
+                    throw new Error("window.__supervisor__ is undefined")
+                  }
+                  const executionResultFromJsenvSupervisor =
+                    await window.__supervisor__.getDocumentExecutionResult()
+                  return {
+                    type: "window_supervisor",
+                    startTime,
+                    endTime: Date.now(),
+                    executionResults:
+                      executionResultFromJsenvSupervisor.executionResults,
+                  }
                 },
                 /* eslint-enable no-undef */
               )
@@ -346,6 +375,12 @@ ${sourceDirectoryUrl}`)
         result.errors.push(error)
         return
       }
+      if (winner.name === "pageerror") {
+        let error = winner.data
+        result.status = "failed"
+        result.errors.push(error)
+        return
+      }
       if (winner.name === "closed") {
         result.status = "failed"
         result.errors.push(
@@ -355,7 +390,7 @@ ${sourceDirectoryUrl}`)
         )
         return
       }
-      // winner.name = 'response'
+      // winner.name === "response"
       const { executionResults } = winner.data
       result.status = "completed"
       result.namespace = executionResults
@@ -363,10 +398,17 @@ ${sourceDirectoryUrl}`)
         const executionResult = executionResults[key]
         if (executionResult.status === "failed") {
           result.status = "failed"
-          result.errors.push({
-            ...executionResult.exception,
-            stack: executionResult.exception.text,
-          })
+          if (executionResult.exception) {
+            result.errors.push({
+              ...executionResult.exception,
+              stack: executionResult.exception.text,
+            })
+          } else {
+            result.errors.push({
+              ...executionResult.error,
+              stack: executionResult.error.stack,
+            })
+          }
         }
       })
     }
@@ -397,7 +439,7 @@ ${sourceDirectoryUrl}`)
       browserName,
       browserVersion,
       coveragePlaywrightAPIAvailable,
-      ignoreErrorHook,
+      shouldIgnoreError,
       transformErrorHook,
       isolatedTab: true,
     })
@@ -526,6 +568,100 @@ const extractTextFromConsoleMessage = (consoleMessage) => {
   //     return `${previous} ${string}`
   //   }, "")
   //   return text
+}
+
+const initJsExecutionMiddleware = async (
+  page,
+  { webServer, fileUrl, fileServerUrl },
+) => {
+  const inlineScriptContents = new Map()
+
+  const interceptHtmlToExecute = async ({ route }) => {
+    // Fetch original response.
+    const response = await route.fetch()
+    // Add a prefix to the title.
+    const originalBody = await response.text()
+    const injectionResult = await injectSupervisorIntoHTML(
+      {
+        content: originalBody,
+        url: fileUrl,
+      },
+      {
+        supervisorScriptSrc: `/@fs/${supervisorFileUrl.slice(
+          "file:///".length,
+        )}`,
+        supervisorOptions: {},
+        inlineAsRemote: true,
+        webServer,
+        onInlineScript: ({ src, textContent }) => {
+          const inlineScriptWebUrl = new URL(src, `${webServer.origin}/`).href
+          inlineScriptContents.set(inlineScriptWebUrl, textContent)
+        },
+      },
+    )
+    route.fulfill({
+      response,
+      body: injectionResult.content,
+      headers: {
+        ...response.headers(),
+        "content-length": Buffer.byteLength(injectionResult.content),
+      },
+    })
+  }
+
+  const interceptInlineScript = ({ url, route }) => {
+    const inlineScriptContent = inlineScriptContents.get(url)
+    route.fulfill({
+      status: 200,
+      body: inlineScriptContent,
+      headers: {
+        "content-type": "text/javascript",
+        "content-length": Buffer.byteLength(inlineScriptContent),
+      },
+    })
+  }
+
+  const interceptFileSystemUrl = ({ url, route }) => {
+    const relativeUrl = url.slice(webServer.origin.length)
+    const fsPath = relativeUrl.slice("/@fs/".length)
+    const fsUrl = `file:///${fsPath}`
+    const fileContent = readFileSync(new URL(fsUrl), "utf8")
+    route.fulfill({
+      status: 200,
+      body: fileContent,
+      headers: {
+        "content-type": "text/javascript",
+        "content-length": Buffer.byteLength(fileContent),
+      },
+    })
+  }
+
+  await page.route("**", async (route) => {
+    const request = route.request()
+    const url = request.url()
+    if (url === fileServerUrl && urlToExtension(url) === ".html") {
+      interceptHtmlToExecute({
+        url,
+        request,
+        route,
+      })
+      return
+    }
+    if (inlineScriptContents.has(url)) {
+      interceptInlineScript({
+        url,
+        request,
+        route,
+      })
+      return
+    }
+    const fsServerUrl = new URL("/@fs/", webServer.origin)
+    if (url.startsWith(fsServerUrl)) {
+      interceptFileSystemUrl({ url, request, route })
+      return
+    }
+    route.fallback()
+  })
 }
 
 const registerEvent = ({ object, eventType, callback }) => {

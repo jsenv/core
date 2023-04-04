@@ -121,7 +121,9 @@ export const startDevServer = async ({
     stopOnExit: false,
     stopOnSIGINT: handleSIGINT,
     stopOnInternalError: false,
-    keepProcessAlive,
+    keepProcessAlive: process.env.IMPORTED_BY_TEST_PLAN
+      ? false
+      : keepProcessAlive,
     logLevel: serverLogLevel,
     startLog: false,
 
@@ -132,6 +134,11 @@ export const startDevServer = async ({
     port,
     requestWaitingMs: 60_000,
     services: [
+      {
+        injectResponseHeaders: () => {
+          return { "x-server-name": "jsenv_dev_server" }
+        },
+      },
       jsenvServiceCORS({
         accessControlAllowRequestOrigin: true,
         accessControlAllowRequestMethod: true,
@@ -145,7 +152,7 @@ export const startDevServer = async ({
       }),
       {
         handleRequest: (request) => {
-          if (request.pathname === "/__server_params__.json") {
+          if (request.pathname === "/__params__.json") {
             const json = JSON.stringify({
               sourceDirectoryUrl,
             })
@@ -157,10 +164,6 @@ export const startDevServer = async ({
               },
               body: json,
             }
-          }
-          if (request.pathname === "/__stop__") {
-            server.stop()
-            return { status: 200 }
           }
           return null
         },

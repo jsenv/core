@@ -7,6 +7,11 @@
   </head>
 
   <body>
+    <script>
+      window.addEventListener("error", () => {
+        console.log("window error dispatched")
+      })
+    </script>
     <script type="module" src="./main.js"></script>
   </body>
 </html>

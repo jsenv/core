@@ -1,3 +1,18 @@
+# 34.0.0
+
+- Test execution becomes compatible with any web server
+  - Remove devServerOrigin, devServerModuleUrl
+  - Introduce webServer: { origin, rootDirectoryUrl, moduleUrl }
+- Exclude some files from test plan by default
+  - File inside node modules
+  - File inside directory starting with a dot (like ".git/")
+- Update test execution logs
+  - Less line breaks when completedExecutionAbbreviation is enabled
+  - Pad execution number with 0 like "execution 01 of 10" instead of "execution 1 of 10"
+- Add edge and firefox version supporting `import.meta.resolve`
+- Add safari version supporting import maps
+- Change how server are stopped after test plan is done
+
 # 33.0.0
 
 - testDirectoryUrl -> rootDirectoryUrl

@@ -22,19 +22,29 @@ export const basicFetch = async (
       headers,
     })
     req.on("response", (response) => {
-      req.setTimeout(0)
-      let responseBody = ""
-      response.setEncoding("utf8")
-      response.on("data", (chunk) => {
-        responseBody += chunk
-      })
-      response.on("end", () => {
-        req.destroy()
-        if (response.headers["content-type"] === "application/json") {
-          resolve(JSON.parse(responseBody))
-        } else {
-          resolve(responseBody)
-        }
+      resolve({
+        status: response.statusCode,
+        headers: response.headers,
+        json: () => {
+          req.setTimeout(0)
+          req.destroy()
+          return new Promise((resolve) => {
+            if (response.headers["content-type"] !== "application/json") {
+              console.warn("not json")
+            }
+            let responseBody = ""
+            response.setEncoding("utf8")
+            response.on("data", (chunk) => {
+              responseBody += chunk
+            })
+            response.on("end", () => {
+              resolve(JSON.parse(responseBody))
+            })
+            response.on("error", (e) => {
+              reject(e)
+            })
+          })
+        },
       })
     })
     req.on("error", reject)

@@ -1,0 +1,18 @@
+<!DOCTYPE html><html><head>
+    <title>Title</title>
+    <meta charset="utf-8">
+  </head>
+
+  <body>
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve
+      })
+    </script>
+    <script type="module">
+      const answer = await 42
+      window.resolveResultPromise({ answer })
+    </script>
+  
+
+</body></html>

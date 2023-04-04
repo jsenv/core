@@ -11,7 +11,10 @@ const test = async ({ runtime }) => {
   })
   const { status, namespace, performance } = await execute({
     rootDirectoryUrl: new URL("./client/", import.meta.url),
-    devServerOrigin: devServer.origin,
+    webServer: {
+      origin: devServer.origin,
+      rootDirectoryUrl: new URL("./client/", import.meta.url),
+    },
     fileRelativeUrl: `./main.html`,
     runtime,
     mirrorConsole: false,
@@ -29,11 +32,9 @@ const test = async ({ runtime }) => {
     namespace: {
       "/main.js": {
         status: "completed",
-        loadDuration: assert.any(Number),
-        executionDuration: assert.any(Number),
         duration: assert.any(Number),
         exception: null,
-        namespace: {},
+        value: null,
       },
     },
     performance: {

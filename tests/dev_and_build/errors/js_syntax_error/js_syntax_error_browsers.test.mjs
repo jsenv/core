@@ -12,7 +12,10 @@ const test = async ({ runtime }) => {
   const { errors } = await execute({
     // logLevel: "debug"
     rootDirectoryUrl: new URL("./client/", import.meta.url),
-    devServerOrigin: devServer.origin,
+    webServer: {
+      origin: devServer.origin,
+      rootDirectoryUrl: new URL("./client/", import.meta.url),
+    },
     fileRelativeUrl: `./main.html`,
     runtime,
     mirrorConsole: false,
@@ -31,8 +34,8 @@ const test = async ({ runtime }) => {
     assert({ actual, expected })
   }
   if (runtime === webkit) {
-    const actual = errors[0].message
-    const expected = `Unexpected end of script`
+    const actual = errors[0].reason
+    const expected = `SyntaxError: Unexpected end of script\nundefined`
     assert({ actual, expected })
   }
 }

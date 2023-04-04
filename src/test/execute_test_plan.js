@@ -8,8 +8,7 @@ import {
 } from "@jsenv/filesystem"
 import { createLogger, createDetailedMessage } from "@jsenv/log"
 
-import { pingServer } from "../ping_server.js"
-import { basicFetch } from "../basic_fetch.js"
+import { assertAndNormalizeWebServer } from "../execute/web_server_param.js"
 import { generateCoverageJsonFile } from "./coverage/coverage_reporter_json_file.js"
 import { generateCoverageHtmlDirectory } from "./coverage/coverage_reporter_html_directory.js"
 import { generateCoverageTextLog } from "./coverage/coverage_reporter_text_log.js"
@@ -20,7 +19,7 @@ import { executeSteps } from "./execute_steps.js"
  * Execute a list of files and log how it goes.
  * @param {Object} testPlanParameters
  * @param {string|url} testPlanParameters.rootDirectoryUrl Directory containing test files;
- * @param {string|url} [testPlanParameters.devServerOrigin=undefined] Jsenv dev server origin; required when executing test on browsers
+ * @param {Object} [testPlanParameters.webServer] Web server info; required when executing test on browsers
  * @param {Object} testPlanParameters.testPlan Object associating files with runtimes where they will be executed
  * @param {boolean} [testPlanParameters.completedExecutionLogAbbreviation=false] Abbreviate completed execution information to shorten terminal output
  * @param {boolean} [testPlanParameters.completedExecutionLogMerging=false] Merge completed execution logs to shorten terminal output
@@ -46,10 +45,9 @@ export const executeTestPlan = async ({
   logFileRelativeUrl = ".jsenv/test_plan_debug.txt",
   completedExecutionLogAbbreviation = false,
   completedExecutionLogMerging = false,
-  rootDirectoryUrl,
-  devServerModuleUrl,
-  devServerOrigin,
 
+  rootDirectoryUrl,
+  webServer,
   testPlan,
   updateProcessExitCode = true,
   maxExecutionsInParallel = 1,
@@ -96,8 +94,6 @@ export const executeTestPlan = async ({
 }) => {
   let someNeedsServer = false
   let someNodeRuntime = false
-  let stopDevServerNeeded = false
-  let sourceDirectoryUrl
   const runtimes = {}
   // param validation
   {
@@ -137,44 +133,7 @@ export const executeTestPlan = async ({
     })
 
     if (someNeedsServer) {
-      if (!devServerOrigin) {
-        throw new TypeError(
-          `devServerOrigin is required when running tests on browser(s)`,
-        )
-      }
-      let devServerStarted = await pingServer(devServerOrigin)
-      if (!devServerStarted) {
-        if (!devServerModuleUrl) {
-          throw new TypeError(
-            `devServerModuleUrl is required when dev server is not started in order to run tests on browser(s)`,
-          )
-        }
-        try {
-          process.env.IMPORTED_BY_TEST_PLAN = "1"
-          await import(devServerModuleUrl)
-          delete process.env.IMPORTED_BY_TEST_PLAN
-        } catch (e) {
-          if (e.code === "ERR_MODULE_NOT_FOUND") {
-            throw new Error(
-              `Cannot find file responsible to start dev server at "${devServerModuleUrl}"`,
-            )
-          }
-          throw e
-        }
-        devServerStarted = await pingServer(devServerOrigin)
-        if (!devServerStarted) {
-          throw new Error(
-            `dev server not started after importing "${devServerModuleUrl}", ensure this module file is starting a server at "${devServerOrigin}"`,
-          )
-        }
-        stopDevServerNeeded = true
-      }
-
-      const devServerParams = await basicFetch(
-        `${devServerOrigin}/__server_params__.json`,
-        { rejectUnauthorized: false },
-      )
-      sourceDirectoryUrl = devServerParams.sourceDirectoryUrl
+      await assertAndNormalizeWebServer(webServer)
     }
 
     if (coverageEnabled) {
@@ -290,7 +249,12 @@ export const executeTestPlan = async ({
     }
   }
 
-  testPlan = { ...testPlan, "**/.jsenv/": null }
+  testPlan = {
+    "file:///**/node_modules/": null,
+    "**/*./": null,
+    ...testPlan,
+    "**/.jsenv/": null,
+  }
   logger.debug(`Generate executions`)
   const executionSteps = await executionStepsFromTestPlan({
     signal,
@@ -313,8 +277,7 @@ export const executeTestPlan = async ({
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
     rootDirectoryUrl,
-    devServerOrigin,
-    sourceDirectoryUrl,
+    webServer,
 
     maxExecutionsInParallel,
     defaultMsAllocatedPerExecution,
@@ -331,17 +294,6 @@ export const executeTestPlan = async ({
     coverageV8ConflictWarning,
     coverageTempDirectoryUrl,
   })
-  if (stopDevServerNeeded) {
-    // we are expecting ECONNRESET because server will be stopped by the request
-    basicFetch(`${devServerOrigin}/__stop__`, {
-      rejectUnauthorized: false,
-    }).catch((e) => {
-      if (e.code === "ECONNRESET") {
-        return
-      }
-      throw e
-    })
-  }
   if (
     updateProcessExitCode &&
     result.planSummary.counters.total !== result.planSummary.counters.completed

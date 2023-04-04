@@ -60,7 +60,7 @@ export const createFileService = ({
 
   const getOrCreateContext = (request) => {
     const { runtimeName, runtimeVersion } = parseUserAgentHeader(
-      request.headers["user-agent"],
+      request.headers["user-agent"] || "",
     )
     const runtimeId = `${runtimeName}@${runtimeVersion}`
     const existingContext = contextCache.get(runtimeId)

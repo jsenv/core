@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "33.0.2",
+  "version": "34.0.0",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "author": {
@@ -43,7 +43,6 @@
     "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",
     "dev": "node --conditions=development ./scripts/dev/dev.mjs",
     "test": "node --conditions=development ./scripts/test/test.mjs",
-    "test:resource_hints": "npm run test -- --only-resource-hints",
     "build": "node --conditions=development ./scripts/build/build.mjs",
     "workspace:test": "npm run test --workspaces --if-present -- --workspace",
     "workspace:versions": "node ./scripts/publish/workspace_versions.mjs",
@@ -67,7 +66,7 @@
     "@c88/v8-coverage": "0.1.1",
     "@financial-times/polyfill-useragent-normaliser": "1.10.2",
     "@jsenv/abort": "4.2.4",
-    "@jsenv/ast": "3.0.3",
+    "@jsenv/ast": "3.0.4",
     "@jsenv/babel-plugins": "1.1.5",
     "@jsenv/filesystem": "4.2.3",
     "@jsenv/importmap": "1.2.1",

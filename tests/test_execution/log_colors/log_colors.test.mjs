@@ -34,7 +34,7 @@ if (process.platform !== "win32") {
 ✔ execution 1 of 1 completed (all completed)
 file: file.js
 runtime: node_worker_thread/${process.version.slice(1)}
-  
+
 `
     assert({ actual, expected })
   }
@@ -47,7 +47,7 @@ runtime: node_worker_thread/${process.version.slice(1)}
 [32m✔ execution 1 of 1 completed[0m (all [32mcompleted[0m)
 file: file.js
 runtime: node_worker_thread/${process.version.slice(1)}
-  
+
 `
     assert({ actual, expected })
   }

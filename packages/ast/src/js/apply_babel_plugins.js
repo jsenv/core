@@ -14,9 +14,9 @@ export const applyBabelPlugins = async ({
   options = {},
 }) => {
   const sourceType = {
+    [urlInfo.type]: undefined,
     js_module: "module",
     js_classic: "classic",
-    [urlInfo.type]: undefined,
   }[urlInfo.type]
   const url = urlInfo.originalUrl
   const generatedUrl = urlInfo.generatedUrl
@@ -50,8 +50,9 @@ export const applyBabelPlugins = async ({
       plugins: [
         // "importMeta",
         // "topLevelAwait",
-        "dynamicImport",
-        "importAssertions",
+        ...(sourceType === "module"
+          ? ["dynamicImport", "importAssertions"]
+          : []),
         "jsx",
         "classProperties",
         "classPrivateProperties",
@@ -62,6 +63,7 @@ export const applyBabelPlugins = async ({
     },
     generatorOpts: {
       compact: false,
+      ...(options.generatorOpts || {}),
     },
     plugins: babelPlugins,
     ...options,

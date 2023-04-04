@@ -88,10 +88,7 @@ const getDOMNodesUsingUrl = urlToReload => {
       if (shouldReloadUrl(inlinedFromUrl)) {
         nodes.push({
           node: script,
-          reload: () => window.__supervisor__.reloadSupervisedScript({
-            type: script.type,
-            src: inlinedFromSrc
-          })
+          reload: () => window.__supervisor__.reloadSupervisedScript(inlinedFromSrc)
         });
       }
     }

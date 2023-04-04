@@ -22,7 +22,9 @@ const devServer = await startDevServer({
 })
 
 await executeTestPlan({
-  devServerOrigin: devServer.origin,
+  webServer: {
+    origin: devServer.origin,
+  },
   rootDirectoryUrl: new URL("./", import.meta.url),
   testPlan: {
     "./animals.test.html": {

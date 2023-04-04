@@ -18,7 +18,10 @@ const test = async ({ runtime }) => {
   const result = await execute({
     logLevel: "warn",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
-    devServerOrigin: devServer.origin,
+    webServer: {
+      origin: devServer.origin,
+      rootDirectoryUrl: new URL("./client/", import.meta.url),
+    },
     fileRelativeUrl: `./main.html`,
     runtime,
     allocatedMs: 5_000,

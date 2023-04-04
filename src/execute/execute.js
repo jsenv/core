@@ -14,7 +14,7 @@ import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
 import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem"
 import { createLogger } from "@jsenv/log"
 
-import { pingServer } from "../ping_server.js"
+import { assertAndNormalizeWebServer } from "./web_server_param.js"
 import { run } from "./run.js"
 
 export const execute = async ({
@@ -22,8 +22,7 @@ export const execute = async ({
   handleSIGINT = true,
   logLevel,
   rootDirectoryUrl,
-  sourceDirectoryUrl = rootDirectoryUrl,
-  devServerOrigin,
+  webServer,
 
   fileRelativeUrl,
   allocatedMs,
@@ -57,26 +56,16 @@ export const execute = async ({
     })
   }
 
+  if (runtime.type === "browser") {
+    await assertAndNormalizeWebServer(webServer)
+  }
+
   let resultTransformer = (result) => result
   runtimeParams = {
     rootDirectoryUrl,
-    sourceDirectoryUrl,
-    devServerOrigin,
+    webServer,
     fileRelativeUrl,
     ...runtimeParams,
-  }
-  if (runtime.type === "browser") {
-    if (!devServerOrigin) {
-      throw new TypeError(
-        `devServerOrigin is required to execute file on a browser`,
-      )
-    }
-    const devServerStarted = await pingServer(devServerOrigin)
-    if (!devServerStarted) {
-      throw new Error(
-        `no server listening at ${devServerOrigin}. It is required to execute file`,
-      )
-    }
   }
 
   let result = await run({

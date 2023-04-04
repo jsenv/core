@@ -6,6 +6,7 @@ export const devServer = await startDevServer({
   port: 3589,
   sourceDirectoryUrl: new URL("./stories/", import.meta.url),
   supervisor: {
+    // logs: true,
     errorBaseUrl: process.env.GENERATING_SNAPSHOTS ? "file:///" : undefined,
   },
   plugins: [
@@ -32,6 +33,7 @@ export const devServer = await startDevServer({
       },
     },
   ],
+  outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
   // sourcemaps: "file",
   // sourcemapsSourcesProtocol: "source-maps://",
   explorer: {
@@ -41,4 +43,6 @@ export const devServer = await startDevServer({
       },
     },
   },
+  ribbon: false,
+  clientAutoreload: false,
 })
