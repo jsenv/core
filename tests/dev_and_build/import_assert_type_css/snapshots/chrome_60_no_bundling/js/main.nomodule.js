@@ -33,12 +33,11 @@ System.register([__v__("/js/new_stylesheet.nomodule.js"), __v__("/js/main.nomodu
       // on firefox + webkit we have to wait a bit,
       // it seems the styles are applied on next js event loop
       return _await(new Promise(resolve => setTimeout(resolve, 200)), function () {
+        // let 700ms for the background image to load
         bodyBackgroundColor = getComputedStyle(document.body).backgroundColor;
         console.log({
           bodyBackgroundColor
         });
-
-        // let 700ms for the background image to load
         return _await(new Promise(resolve => setTimeout(resolve, 700)), function () {
           bodyBackgroundImage = getComputedStyle(document.body).backgroundImage;
           console.log({
