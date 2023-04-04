@@ -7,14 +7,14 @@ import {
 } from "@jsenv/core"
 
 await executeTestPlan({
-  rootDirectoryUrl: new URL("../", import.meta.url),
+  rootDirectoryUrl: new URL("../src/", import.meta.url),
   testPlan: {
-    "./src/**/*.test.js": {
+    "./**/*.test.js": {
       node: {
         runtime: nodeWorkerThread,
       },
     },
-    "./src/**/*.test.html": {
+    "./**/*.test.html": {
       chromium: {
         runtime: chromium,
       },
