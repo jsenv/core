@@ -1,3 +1,4 @@
+import wrapAnsi from "wrap-ansi"
 import {
   ANSI,
   UNICODE,
@@ -41,29 +42,48 @@ export const createExecutionLog = (
     timeEllapsed,
     memoryHeap,
   })
+  let log
   if (completedExecutionLogAbbreviation && status === "completed") {
-    return `${description}${summary}`
+    log = `${description}${summary}`
+  } else {
+    const { consoleCalls = [], errors = [] } = executionResult
+    const consoleOutput = formatConsoleCalls(consoleCalls)
+    const errorsOutput = formatErrors(errors)
+    log = formatExecution({
+      label: `${description}${summary}`,
+      details: {
+        file: fileRelativeUrl,
+        ...(logRuntime ? { runtime: `${runtimeName}/${runtimeVersion}` } : {}),
+        ...(logEachDuration
+          ? {
+              duration:
+                status === "executing"
+                  ? msAsEllapsedTime(Date.now() - startMs)
+                  : msAsDuration(endMs - startMs),
+            }
+          : {}),
+      },
+      consoleOutput,
+      errorsOutput,
+    })
   }
-  const { consoleCalls = [], errors = [] } = executionResult
-  const consoleOutput = formatConsoleCalls(consoleCalls)
-  const errorsOutput = formatErrors(errors)
-  return formatExecution({
-    label: `${description}${summary}`,
-    details: {
-      file: fileRelativeUrl,
-      ...(logRuntime ? { runtime: `${runtimeName}/${runtimeVersion}` } : {}),
-      ...(logEachDuration
-        ? {
-            duration:
-              status === "executing"
-                ? msAsEllapsedTime(Date.now() - startMs)
-                : msAsDuration(endMs - startMs),
-          }
-        : {}),
-    },
-    consoleOutput,
-    errorsOutput,
+
+  const { columns = 80 } = process.stdout
+  log = wrapAnsi(log, columns, {
+    trim: false,
+    hard: true,
+    wordWrap: false,
   })
+  if (endMs) {
+    if (completedExecutionLogAbbreviation) {
+      return `${log}\n`
+    }
+    if (executionIndex === counters.total - 1) {
+      return `${log}\n`
+    }
+    return `${log}\n\n`
+  }
+  return log
 }
 
 const formatErrors = (errors) => {
@@ -203,42 +223,68 @@ const createMixedDetails = ({ counters }) => {
 const descriptionFormatters = {
   executing: ({ index, total }) => {
     return ANSI.color(
-      `executing ${index + 1} of ${total}`,
+      `executing ${padNumber(index, total)} of ${total}`,
       EXECUTION_COLORS.executing,
     )
   },
   aborted: ({ index, total }) => {
     return ANSI.color(
-      `${UNICODE.FAILURE_RAW} execution ${index + 1} of ${total} aborted`,
+      `${UNICODE.FAILURE_RAW} execution ${padNumber(
+        index,
+        total,
+      )} of ${total} aborted`,
       EXECUTION_COLORS.aborted,
     )
   },
   timedout: ({ index, total, executionParams }) => {
     return ANSI.color(
-      `${UNICODE.FAILURE_RAW} execution ${
-        index + 1
-      } of ${total} timeout after ${executionParams.allocatedMs}ms`,
+      `${UNICODE.FAILURE_RAW} execution ${padNumber(
+        index,
+        total,
+      )} of ${total} timeout after ${executionParams.allocatedMs}ms`,
       EXECUTION_COLORS.timedout,
     )
   },
   failed: ({ index, total }) => {
     return ANSI.color(
-      `${UNICODE.FAILURE_RAW} execution ${index + 1} of ${total} failed`,
+      `${UNICODE.FAILURE_RAW} execution ${padNumber(
+        index,
+        total,
+      )} of ${total} failed`,
       EXECUTION_COLORS.failed,
     )
   },
   completed: ({ index, total }) => {
     return ANSI.color(
-      `${UNICODE.OK_RAW} execution ${index + 1} of ${total} completed`,
+      `${UNICODE.OK_RAW} execution ${padNumber(
+        index,
+        total,
+      )} of ${total} completed`,
       EXECUTION_COLORS.completed,
     )
   },
   cancelled: ({ index, total }) => {
     return ANSI.color(
-      `${UNICODE.FAILURE_RAW} execution ${index + 1} of ${total} cancelled`,
+      `${UNICODE.FAILURE_RAW} execution ${padNumber(
+        index,
+        total,
+      )} of ${total} cancelled`,
       EXECUTION_COLORS.cancelled,
     )
   },
+}
+
+const padNumber = (index, total) => {
+  const number = index + 1
+  const numberWidth = String(number).length
+  const totalWith = String(total).length
+  let missingWidth = totalWith - numberWidth
+  let padded = ""
+  while (missingWidth--) {
+    padded += "0"
+  }
+  padded += number
+  return padded
 }
 
 const formatConsoleCalls = (consoleCalls) => {

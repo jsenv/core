@@ -40,7 +40,7 @@ file: client/main.html
 ◆ verbose log
   la
 -------------------------
-  
+
 `
   assert({ actual, expected })
 }
@@ -64,7 +64,7 @@ file: client/main.js
   verbose log
   la
 -------------------------
-  
+
 `
   assert({ actual, expected })
 }
