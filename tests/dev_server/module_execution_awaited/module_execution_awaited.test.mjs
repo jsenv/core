@@ -36,8 +36,8 @@ const test = async ({ browserLauncher }) => {
   }
 }
 
-// firefox super slow sometimes on windows
-if (process.platform !== "win32") {
+// firefox super slow sometimes on windows/mac
+if (process.env.CI) {
   await test({ browserLauncher: firefox })
 }
 await test({ browserLauncher: webkit })
