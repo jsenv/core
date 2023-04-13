@@ -1,3 +1,7 @@
+# 34.0.2
+
+- Update deps
+
 # 34.0.0
 
 - Test execution becomes compatible with any web server

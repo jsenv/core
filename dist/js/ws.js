@@ -9,6 +9,9 @@ import require$$0$1 from "zlib";
 import require$$0$2 from "buffer";
 import require$$7 from "url";
 
+function getDefaultExportFromCjs(x) {
+  return x && x.__esModule && Object.prototype.hasOwnProperty.call(x, 'default') ? x['default'] : x;
+}
 const {
   Duplex
 } = require$$0;
@@ -149,14 +152,9 @@ function createWebSocketStream(ws, options) {
   return duplex;
 }
 var stream = createWebSocketStream;
-var bufferUtilExports = {};
+var stream$1 = /*@__PURE__*/getDefaultExportFromCjs(stream);
 var bufferUtil$1 = {
-  get exports() {
-    return bufferUtilExports;
-  },
-  set exports(v) {
-    bufferUtilExports = v;
-  }
+  exports: {}
 };
 var constants = {
   BINARY_TYPES: ['nodebuffer', 'arraybuffer', 'fragments'],
@@ -276,16 +274,17 @@ bufferUtil$1.exports = {
 if (!process.env.WS_NO_BUFFER_UTIL) {
   try {
     const bufferUtil = require('bufferutil');
-    mask = bufferUtilExports.mask = function (source, mask, output, offset, length) {
+    mask = bufferUtil$1.exports.mask = function (source, mask, output, offset, length) {
       if (length < 48) _mask(source, mask, output, offset, length);else bufferUtil.mask(source, mask, output, offset, length);
     };
-    unmask$1 = bufferUtilExports.unmask = function (buffer, mask) {
+    unmask$1 = bufferUtil$1.exports.unmask = function (buffer, mask) {
       if (buffer.length < 32) _unmask(buffer, mask);else bufferUtil.unmask(buffer, mask);
     };
   } catch (e) {
     // Continue regardless of the error.
   }
 }
+var bufferUtilExports = bufferUtil$1.exports;
 const kDone = Symbol('kDone');
 const kRun = Symbol('kRun');
 
@@ -746,14 +745,8 @@ function inflateOnError(err) {
   err[kStatusCode$2] = 1007;
   this[kCallback](err);
 }
-var validationExports = {};
 var validation = {
-  get exports() {
-    return validationExports;
-  },
-  set exports(v) {
-    validationExports = v;
-  }
+  exports: {}
 };
 var isValidUTF8_1;
 const {
@@ -853,19 +846,20 @@ validation.exports = {
   tokenChars: tokenChars$2
 };
 if (isUtf8) {
-  isValidUTF8_1 = validationExports.isValidUTF8 = function (buf) {
+  isValidUTF8_1 = validation.exports.isValidUTF8 = function (buf) {
     return buf.length < 24 ? _isValidUTF8(buf) : isUtf8(buf);
   };
 } /* istanbul ignore else  */else if (!process.env.WS_NO_UTF_8_VALIDATE) {
   try {
     const isValidUTF8 = require('utf-8-validate');
-    isValidUTF8_1 = validationExports.isValidUTF8 = function (buf) {
+    isValidUTF8_1 = validation.exports.isValidUTF8 = function (buf) {
       return buf.length < 32 ? _isValidUTF8(buf) : isValidUTF8(buf);
     };
   } catch (e) {
     // Continue regardless of the error.
   }
 }
+var validationExports = validation.exports;
 const {
   Writable
 } = require$$0;
@@ -1309,6 +1303,7 @@ function error(ErrorCtor, message, prefix, statusCode, errorCode) {
   err[kStatusCode$1] = statusCode;
   return err;
 }
+var receiver$1 = /*@__PURE__*/getDefaultExportFromCjs(receiver);
 
 /* eslint no-unused-vars: ["error", { "varsIgnorePattern": "^net|tls$" }] */
 const {
@@ -1725,6 +1720,7 @@ let Sender$1 = class Sender {
   }
 };
 var sender = Sender$1;
+var sender$1 = /*@__PURE__*/getDefaultExportFromCjs(sender);
 const {
   kForOnEventAttribute: kForOnEventAttribute$1,
   kListener: kListener$1
@@ -3316,6 +3312,7 @@ function socketOnError$1() {
     this.destroy();
   }
 }
+var WebSocket$2 = /*@__PURE__*/getDefaultExportFromCjs(websocket);
 const {
   tokenChars
 } = validationExports;
@@ -3801,5 +3798,6 @@ function abortHandshakeOrEmitwsClientError(server, req, socket, code, message) {
     abortHandshake(socket, code, message);
   }
 }
+var websocketServer$1 = /*@__PURE__*/getDefaultExportFromCjs(websocketServer);
 
-export { receiver as Receiver, sender as Sender, websocket as WebSocket, websocketServer as WebSocketServer, stream as createWebSocketStream, websocket as default };
+export { receiver$1 as Receiver, sender$1 as Sender, WebSocket$2 as WebSocket, websocketServer$1 as WebSocketServer, stream$1 as createWebSocketStream, WebSocket$2 as default };

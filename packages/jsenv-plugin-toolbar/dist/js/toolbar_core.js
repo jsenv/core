@@ -115,23 +115,23 @@ function t() {
   }
   let i,
     t = !1;
-  while (void 0 !== n) {
-    let s = n;
-    n = void 0;
+  while (void 0 !== s) {
+    let n = s;
+    s = void 0;
     f++;
-    while (void 0 !== s) {
-      const o = s.o;
-      s.o = void 0;
-      s.f &= -3;
-      if (!(8 & s.f) && v(s)) try {
-        s.c();
-      } catch (s) {
+    while (void 0 !== n) {
+      const o = n.o;
+      n.o = void 0;
+      n.f &= -3;
+      if (!(8 & n.f) && d$1(n)) try {
+        n.c();
+      } catch (n) {
         if (!t) {
-          i = s;
+          i = n;
           t = !0;
         }
       }
-      s = o;
+      n = o;
     }
   }
   f = 0;
@@ -139,7 +139,7 @@ function t() {
   if (t) throw i;
 }
 let o,
-  n,
+  s,
   h$1 = 0,
   f = 0,
   r = 0;
@@ -194,26 +194,26 @@ c$1.prototype.S = function (i) {
 c$1.prototype.U = function (i) {
   if (void 0 !== this.t) {
     const t = i.e,
-      s = i.x;
+      n = i.x;
     if (void 0 !== t) {
-      t.x = s;
+      t.x = n;
       i.e = void 0;
     }
-    if (void 0 !== s) {
-      s.e = t;
+    if (void 0 !== n) {
+      n.e = t;
       i.x = void 0;
     }
-    if (i === this.t) this.t = s;
+    if (i === this.t) this.t = n;
   }
 };
 c$1.prototype.subscribe = function (i) {
   const t = this;
-  return p$1(function () {
-    const s = t.value,
+  return b(function () {
+    const n = t.value,
       o = 32 & this.f;
     this.f &= -33;
     try {
-      i(s);
+      i(n);
     } finally {
       this.f |= o;
     }
@@ -225,6 +225,9 @@ c$1.prototype.valueOf = function () {
 c$1.prototype.toString = function () {
   return this.value + "";
 };
+c$1.prototype.toJSON = function () {
+  return this.value;
+};
 c$1.prototype.peek = function () {
   return this.v;
 };
@@ -234,10 +237,13 @@ Object.defineProperty(c$1.prototype, "value", {
     if (void 0 !== i) i.i = this.i;
     return this.v;
   },
-  set(s) {
-    if (s !== this.v) {
+  set(n) {
+    if (o instanceof a$1) !function () {
+      throw new Error("Computed cannot have side-effects");
+    }();
+    if (n !== this.v) {
       if (f > 100) i();
-      this.v = s;
+      this.v = n;
       this.i++;
       r++;
       h$1++;
@@ -252,14 +258,14 @@ Object.defineProperty(c$1.prototype, "value", {
 function u(i) {
   return new c$1(i);
 }
-function v(i) {
+function d$1(i) {
   for (let t = i.s; void 0 !== t; t = t.n) if (t.S.i !== t.i || !t.S.h() || t.S.i !== t.i) return !0;
   return !1;
 }
-function d$1(i) {
+function v(i) {
   for (let t = i.s; void 0 !== t; t = t.n) {
-    const s = t.S.n;
-    if (void 0 !== s) t.r = s;
+    const n = t.S.n;
+    if (void 0 !== n) t.r = n;
     t.S.n = t;
     t.i = -1;
     if (void 0 === t.n) {
@@ -270,17 +276,17 @@ function d$1(i) {
 }
 function l(i) {
   let t,
-    s = i.s;
-  while (void 0 !== s) {
-    const i = s.p;
-    if (-1 === s.i) {
-      s.S.U(s);
-      if (void 0 !== i) i.n = s.n;
-      if (void 0 !== s.n) s.n.p = i;
-    } else t = s;
-    s.S.n = s.r;
-    if (void 0 !== s.r) s.r = void 0;
-    s = i;
+    n = i.s;
+  while (void 0 !== n) {
+    const i = n.p;
+    if (-1 === n.i) {
+      n.S.U(n);
+      if (void 0 !== i) i.n = n.n;
+      if (void 0 !== n.n) n.n.p = i;
+    } else t = n;
+    n.S.n = n.r;
+    if (void 0 !== n.r) n.r = void 0;
+    n = i;
   }
   i.s = t;
 }
@@ -299,13 +305,13 @@ function a$1(i) {
   if (this.g === r) return !0;
   this.g = r;
   this.f |= 1;
-  if (this.i > 0 && !v(this)) {
+  if (this.i > 0 && !d$1(this)) {
     this.f &= -2;
     return !0;
   }
   const i = o;
   try {
-    d$1(this);
+    v(this);
     o = this;
     const i = this.x();
     if (16 & this.f || this.v !== i || 0 === this.i) {
@@ -364,21 +370,21 @@ function w(i) {
   return new a$1(i);
 }
 function y(i) {
-  const s = i.u;
+  const n = i.u;
   i.u = void 0;
-  if ("function" == typeof s) {
+  if ("function" == typeof n) {
     h$1++;
-    const n = o;
+    const s = o;
     o = void 0;
     try {
-      s();
+      n();
     } catch (t) {
       i.f &= -2;
       i.f |= 8;
       _(i);
       throw t;
     } finally {
-      o = n;
+      o = s;
       t();
     }
   }
@@ -389,7 +395,7 @@ function _(i) {
   i.s = void 0;
   y(i);
 }
-function g(i) {
+function p$1(i) {
   if (o !== this) throw new Error("Out-of-order effect");
   l(this);
   o = i;
@@ -397,45 +403,48 @@ function g(i) {
   if (8 & this.f) _(this);
   t();
 }
-function b(i) {
+function g(i) {
   this.x = i;
   this.u = void 0;
   this.s = void 0;
   this.o = void 0;
   this.f = 32;
 }
-b.prototype.c = function () {
+g.prototype.c = function () {
   const i = this.S();
   try {
-    if (!(8 & this.f) && void 0 !== this.x) this.u = this.x();
+    if (8 & this.f) return;
+    if (void 0 === this.x) return;
+    const t = this.x();
+    if ("function" == typeof t) this.u = t;
   } finally {
     i();
   }
 };
-b.prototype.S = function () {
+g.prototype.S = function () {
   if (1 & this.f) i();
   this.f |= 1;
   this.f &= -9;
   y(this);
-  d$1(this);
+  v(this);
   h$1++;
   const t = o;
   o = this;
-  return g.bind(this, t);
+  return p$1.bind(this, t);
 };
-b.prototype.N = function () {
+g.prototype.N = function () {
   if (!(2 & this.f)) {
     this.f |= 2;
-    this.o = n;
-    n = this;
+    this.o = s;
+    s = this;
   }
 };
-b.prototype.d = function () {
+g.prototype.d = function () {
   this.f |= 8;
   if (!(1 & this.f)) _(this);
 };
-function p$1(i) {
-  const t = new b(i);
+function b(i) {
+  const t = new g(i);
   try {
     t.c();
   } catch (i) {
@@ -522,7 +531,7 @@ c("__r", (t, i) => {
     e = n.__$u;
     if (void 0 === e) n.__$u = e = function (t) {
       let i;
-      p$1(function () {
+      b(function () {
         i = this;
       });
       i.c = () => {
@@ -577,7 +586,7 @@ function h(t, i, e, n) {
       r.value = t;
       n = i;
     },
-    d: p$1(() => {
+    d: b(() => {
       const e = r.value.value;
       if (n[i] !== e) {
         n[i] = e;
@@ -630,7 +639,7 @@ const stateFromLocalStorage = localStorage.hasOwnProperty("jsenv_toolbar") ? JSO
 
 const animationsEnabledSignal = u(typeof stateFromLocalStorage.animationsEnabled === "boolean" ? stateFromLocalStorage.animationsEnabled : typeof paramsFromParentWindow.animationsEnabled === "boolean" ? paramsFromParentWindow.animationsEnabled : false);
 
-p$1(() => {
+b(() => {
   const animationsEnabled = animationsEnabledSignal.value;
   if (animationsEnabled) {
     document.documentElement.removeAttribute("data-animation-disabled");
@@ -765,13 +774,13 @@ const getFaviconHref = () => {
   return link ? link.href : undefined;
 };
 
-p$1(() => {
+b(() => {
   const execution = executionSignal.value;
   if (execution) {
     sessionStorage.setItem(window.location.href, JSON.stringify(execution));
   }
 });
-p$1(() => {
+b(() => {
   const execution = executionSignal.value;
   const previousExecution = previousExecutionSignal.value;
   if (execution) {
@@ -779,7 +788,7 @@ p$1(() => {
   }
 });
 
-p$1(() => {
+b(() => {
   const notificationsEnabled = notificationsEnabledSignal.value;
   if (!notificationsEnabled) {
     closeAllNotifications();
@@ -939,7 +948,7 @@ const startJavaScriptAnimation = ({
 };
 
 const initToolbarOpening = () => {
-  p$1(() => {
+  b(() => {
     const opened = openedSignal.value;
     if (opened) {
       showToolbar();
@@ -1199,7 +1208,7 @@ const renderToolbarOverlay = () => {
     closeAllTooltips();
     closeSettings();
   };
-  p$1(() => {
+  b(() => {
     if (!window.parent) {
       // can happen while parent iframe reloads
       return;
@@ -1326,11 +1335,11 @@ const renameAttribute = (node, name, newName) => {
 const executionIndicator = document.querySelector("#document_execution_indicator");
 const renderDocumentExecutionIndicator = async () => {
   removeForceHideElement(document.querySelector("#document_execution_indicator"));
-  p$1(() => {
+  b(() => {
     const execution = executionSignal.value;
     updateExecutionIndicator(execution);
   });
-  p$1(() => {
+  b(() => {
     const executionTooltipOpened = executionTooltipOpenedSignal.value;
     if (executionTooltipOpened) {
       executionIndicator.setAttribute("data-tooltip-visible", "");
@@ -1414,7 +1423,7 @@ const closeChangesToolip = () => {
 
 const changesIndicator = document.querySelector("#changes_indicator");
 const renderChangesIndicator = () => {
-  p$1(() => {
+  b(() => {
     const autoreloadEnabled = autoreloadEnabledSignal.value;
     const changes = changesSignal.value;
     const changeCount = changes.length;
@@ -1436,7 +1445,7 @@ const renderChangesIndicator = () => {
   changesIndicator.querySelector(".tooltip_action").onclick = () => {
     parentWindowReloader.reload();
   };
-  p$1(() => {
+  b(() => {
     const changesTooltipOpened = changesTooltipOpenedSignal.value;
     if (changesTooltipOpened) {
       changesIndicator.setAttribute("data-tooltip-visible", "");
@@ -1469,11 +1478,11 @@ const serverEvents = window.__server_events__;
 const serverIndicator = document.querySelector("#server_indicator");
 const renderServerIndicator = () => {
   removeForceHideElement(document.querySelector("#server_indicator"));
-  p$1(() => {
+  b(() => {
     const serverConnection = serverConnectionSignal.value;
     updateServerIndicator(serverConnection);
   });
-  p$1(() => {
+  b(() => {
     const serverTooltipOpened = serverTooltipOpenedSignal.value;
     if (serverTooltipOpened) {
       serverIndicator.setAttribute("data-tooltip-visible", "");
@@ -1519,7 +1528,7 @@ const renderToolbarAutoreloadSetting = () => {
     return;
   }
   const autoreloadCheckbox = document.querySelector("#toggle_autoreload");
-  p$1(() => {
+  b(() => {
     const autoreloadEnabled = autoreloadEnabledSignal.value;
     if (autoreloadEnabled) {
       autoreloadCheckbox.checked = true;
@@ -1586,7 +1595,7 @@ const disableAnimations = () => {
 
 const renderToolbarAnimationSetting = () => {
   const animCheckbox = document.querySelector("#toggle_anims");
-  p$1(() => {
+  b(() => {
     const animationsEnabled = animationsEnabledSignal.value;
     animCheckbox.checked = animationsEnabled;
   });
@@ -1605,11 +1614,11 @@ const renderToolbarAnimationSetting = () => {
 
 const notifCheckbox = document.querySelector("#toggle_notifs");
 const renderToolbarNotificationSetting = () => {
-  p$1(() => {
+  b(() => {
     const notificationsEnabled = notificationsEnabledSignal.value;
     notifCheckbox.checked = notificationsEnabled;
   });
-  p$1(() => {
+  b(() => {
     const notificationPermission = notificationPermissionSignal.value;
     if (!notificationAPIDetected) {
       applyNotificationNotAvailableEffects();
@@ -1700,7 +1709,7 @@ const renderToolbarSettings = () => {
   renderToolbarAnimationSetting();
   renderToolbarNotificationSetting();
   renderToolbarThemeSetting();
-  p$1(() => {
+  b(() => {
     const settingsOpened = settingsOpenedSignal.value;
     if (settingsOpened) {
       activateToolbarSection(document.querySelector("#settings"));
@@ -1768,14 +1777,14 @@ addExternalCommandCallback("initToolbar", () => {
 });
 sendEventToParent("toolbar_ready");
 
-p$1(() => {
+b(() => {
   const serverConnection = serverConnectionSignal.value;
   if (serverConnection === "connecting" || serverConnection === "closed") {
     openServerTooltip();
   }
 });
 
-p$1(() => {
+b(() => {
   const theme = themeSignal.value;
   document.querySelector("html").setAttribute("data-theme", theme);
 });
@@ -1796,7 +1805,7 @@ const toolbarStateSignal = w(() => {
   };
 });
 
-p$1(() => {
+b(() => {
   const toolbarState = toolbarStateSignal.value;
   localStorage.setItem("jsenv_toolbar", JSON.stringify(toolbarState));
   sendEventToParent("toolbar_state_change", toolbarState);
