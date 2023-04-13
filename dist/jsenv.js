@@ -7910,7 +7910,6 @@ const createUrlInfoTransformer = ({
         await context.cook(sourcemapUrlInfo, {
           reference: sourcemapReference
         });
-        sourcemapUrlInfo.isInline = sourcemaps === "inline";
         const sourcemapRaw = JSON.parse(sourcemapUrlInfo.content);
         const sourcemap = normalizeSourcemap(urlInfo, sourcemapRaw);
         urlInfo.sourcemap = sourcemap;
@@ -9003,6 +9002,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           url: urlInfo.url
         },
         type: "sourcemap_comment",
+        expectedType: "sourcemap",
         subtype: urlInfo.contentType === "text/javascript" ? "js" : "css",
         parentUrl: urlInfo.url,
         specifier
@@ -9026,11 +9026,15 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       const [sourcemapReference, sourcemapUrlInfo] = resolveReference(createReference({
         trace: traceFromUrlSite(sourcemapUrlSite),
         type,
+        expectedType: "sourcemap",
         parentUrl: urlInfo.url,
         specifier,
         specifierLine,
         specifierColumn
       }));
+      if (sourcemapReference.isInline) {
+        sourcemapUrlInfo.isInline = true;
+      }
       sourcemapUrlInfo.type = "sourcemap";
       return [sourcemapReference, sourcemapUrlInfo];
     }
@@ -9541,6 +9545,12 @@ const adjustUrlSite = (urlInfo, {
   }, urlInfo);
 };
 const inferUrlInfoType = urlInfo => {
+  const {
+    type
+  } = urlInfo;
+  if (type === "sourcemap") {
+    return "sourcemap";
+  }
   const {
     contentType
   } = urlInfo;

@@ -123,7 +123,6 @@ export const createUrlInfoTransformer = ({
       })
       try {
         await context.cook(sourcemapUrlInfo, { reference: sourcemapReference })
-        sourcemapUrlInfo.isInline = sourcemaps === "inline"
         const sourcemapRaw = JSON.parse(sourcemapUrlInfo.content)
         const sourcemap = normalizeSourcemap(urlInfo, sourcemapRaw)
         urlInfo.sourcemap = sourcemap

@@ -291,6 +291,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
             url: urlInfo.url,
           },
           type: "sourcemap_comment",
+          expectedType: "sourcemap",
           subtype: urlInfo.contentType === "text/javascript" ? "js" : "css",
           parentUrl: urlInfo.url,
           specifier,
@@ -316,12 +317,16 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         createReference({
           trace: traceFromUrlSite(sourcemapUrlSite),
           type,
+          expectedType: "sourcemap",
           parentUrl: urlInfo.url,
           specifier,
           specifierLine,
           specifierColumn,
         }),
       )
+      if (sourcemapReference.isInline) {
+        sourcemapUrlInfo.isInline = true
+      }
       sourcemapUrlInfo.type = "sourcemap"
       return [sourcemapReference, sourcemapUrlInfo]
     },
@@ -913,6 +918,10 @@ const adjustUrlSite = (urlInfo, { urlGraph, url, line, column }) => {
 }
 
 const inferUrlInfoType = (urlInfo) => {
+  const { type } = urlInfo
+  if (type === "sourcemap") {
+    return "sourcemap"
+  }
   const { contentType } = urlInfo
   if (contentType === "text/html") {
     return "html"

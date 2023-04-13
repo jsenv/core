@@ -60,6 +60,7 @@ const eslintConfig = composeEslintConfig(
       // Example of code changing the ESLint configuration to enable a rule:
       "camelcase": ["off"],
       "dot-notation": ["off"],
+      "spaced-comment": ["off"],
     },
   },
 
