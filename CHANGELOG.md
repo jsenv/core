@@ -1,3 +1,11 @@
+# 34.1.0
+
+- Update coverage behaviour
+  - Instrument only _.js, _.jsx, _.ts, _.tsx
+  - Move istanbul instrumentation from jsenv dev server to a playwright middleware
+  - Make fallback on istanbul for coverage more explicit in the code
+- Remove first line break from logs during test execution
+
 # 34.0.2
 
 - Update deps

@@ -30,8 +30,7 @@ if (process.platform !== "win32") {
   {
     process.env.FORCE_COLOR = "false"
     const actual = await getLogs()
-    const expected = `
-✔ execution 1 of 1 completed (all completed)
+    const expected = `✔ execution 1 of 1 completed (all completed)
 file: file.js
 runtime: node_worker_thread/${process.version.slice(1)}
 
@@ -43,8 +42,7 @@ runtime: node_worker_thread/${process.version.slice(1)}
   {
     process.env.FORCE_COLOR = "true"
     const actual = await getLogs()
-    const expected = `
-[32m✔ execution 1 of 1 completed[0m (all [32mcompleted[0m)
+    const expected = `[32m✔ execution 1 of 1 completed[0m (all [32mcompleted[0m)
 file: file.js
 runtime: node_worker_thread/${process.version.slice(1)}
 

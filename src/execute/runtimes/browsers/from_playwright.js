@@ -1,5 +1,4 @@
-import { readFileSync, writeFileSync } from "node:fs"
-
+import { writeFileSync } from "node:fs"
 import { createDetailedMessage } from "@jsenv/log"
 import {
   Abort,
@@ -7,15 +6,13 @@ import {
   raceProcessTeardownEvents,
   raceCallbacks,
 } from "@jsenv/abort"
-import { moveUrl, urlIsInsideOf, urlToExtension } from "@jsenv/urls"
+import { moveUrl, urlIsInsideOf } from "@jsenv/urls"
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js"
 
+import { initJsSupervisorMiddleware } from "./middleware_js_supervisor.js"
+import { initIstanbulMiddleware } from "./middleware_istanbul.js"
 import { filterV8Coverage } from "@jsenv/core/src/test/coverage/v8_coverage.js"
 import { composeTwoFileByFileIstanbulCoverages } from "@jsenv/core/src/test/coverage/istanbul_coverage_composition.js"
-import {
-  injectSupervisorIntoHTML,
-  supervisorFileUrl,
-} from "../../../plugins/supervisor/html_supervisor_injection.js"
 
 export const createRuntimeFromPlaywright = ({
   browserName,
@@ -29,6 +26,9 @@ export const createRuntimeFromPlaywright = ({
     type: "browser",
     name: browserName,
     version: browserVersion,
+    capabilities: {
+      coverageV8: coveragePlaywrightAPIAvailable,
+    },
   }
   let browserAndContextPromise
   runtime.run = async ({
@@ -116,21 +116,22 @@ ${webServer.rootDirectoryUrl}`)
       }
       await disconnected
     }
-    const coverageInHeaders =
+
+    const page = await browserContext.newPage()
+
+    const istanbulInstrumentationEnabled =
       coverageEnabled &&
-      (!coveragePlaywrightAPIAvailable ||
-        coverageMethodForBrowsers !== "playwright_api")
-    const page = await browserContext.newPage({
-      extraHTTPHeaders: {
-        ...(coverageInHeaders
-          ? {
-              "x-coverage-istanbul": JSON.stringify(coverageConfig),
-            }
-          : {}),
-      },
-    })
+      (!runtime.capabilities.coverageV8 ||
+        coverageMethodForBrowsers === "istanbul")
+    if (istanbulInstrumentationEnabled) {
+      await initIstanbulMiddleware(page, {
+        webServer,
+        rootDirectoryUrl,
+        coverageConfig,
+      })
+    }
     if (!webServer.isJsenvDevServer) {
-      await initJsExecutionMiddleware(page, {
+      await initJsSupervisorMiddleware(page, {
         webServer,
         fileUrl,
         fileServerUrl,
@@ -155,8 +156,8 @@ ${webServer.rootDirectoryUrl}`)
     const callbacks = []
     if (coverageEnabled) {
       if (
-        coveragePlaywrightAPIAvailable &&
-        coverageMethodForBrowsers === "playwright_api"
+        runtime.capabilities.coverageV8 &&
+        coverageMethodForBrowsers === "playwright"
       ) {
         await page.coverage.startJSCoverage({
           // reportAnonymousScripts: true,
@@ -568,100 +569,6 @@ const extractTextFromConsoleMessage = (consoleMessage) => {
   //     return `${previous} ${string}`
   //   }, "")
   //   return text
-}
-
-const initJsExecutionMiddleware = async (
-  page,
-  { webServer, fileUrl, fileServerUrl },
-) => {
-  const inlineScriptContents = new Map()
-
-  const interceptHtmlToExecute = async ({ route }) => {
-    // Fetch original response.
-    const response = await route.fetch()
-    // Add a prefix to the title.
-    const originalBody = await response.text()
-    const injectionResult = await injectSupervisorIntoHTML(
-      {
-        content: originalBody,
-        url: fileUrl,
-      },
-      {
-        supervisorScriptSrc: `/@fs/${supervisorFileUrl.slice(
-          "file:///".length,
-        )}`,
-        supervisorOptions: {},
-        inlineAsRemote: true,
-        webServer,
-        onInlineScript: ({ src, textContent }) => {
-          const inlineScriptWebUrl = new URL(src, `${webServer.origin}/`).href
-          inlineScriptContents.set(inlineScriptWebUrl, textContent)
-        },
-      },
-    )
-    route.fulfill({
-      response,
-      body: injectionResult.content,
-      headers: {
-        ...response.headers(),
-        "content-length": Buffer.byteLength(injectionResult.content),
-      },
-    })
-  }
-
-  const interceptInlineScript = ({ url, route }) => {
-    const inlineScriptContent = inlineScriptContents.get(url)
-    route.fulfill({
-      status: 200,
-      body: inlineScriptContent,
-      headers: {
-        "content-type": "text/javascript",
-        "content-length": Buffer.byteLength(inlineScriptContent),
-      },
-    })
-  }
-
-  const interceptFileSystemUrl = ({ url, route }) => {
-    const relativeUrl = url.slice(webServer.origin.length)
-    const fsPath = relativeUrl.slice("/@fs/".length)
-    const fsUrl = `file:///${fsPath}`
-    const fileContent = readFileSync(new URL(fsUrl), "utf8")
-    route.fulfill({
-      status: 200,
-      body: fileContent,
-      headers: {
-        "content-type": "text/javascript",
-        "content-length": Buffer.byteLength(fileContent),
-      },
-    })
-  }
-
-  await page.route("**", async (route) => {
-    const request = route.request()
-    const url = request.url()
-    if (url === fileServerUrl && urlToExtension(url) === ".html") {
-      interceptHtmlToExecute({
-        url,
-        request,
-        route,
-      })
-      return
-    }
-    if (inlineScriptContents.has(url)) {
-      interceptInlineScript({
-        url,
-        request,
-        route,
-      })
-      return
-    }
-    const fsServerUrl = new URL("/@fs/", webServer.origin)
-    if (url.startsWith(fsServerUrl)) {
-      interceptFileSystemUrl({ url, request, route })
-      return
-    }
-    route.fallback()
-  })
 }
 
 const registerEvent = ({ object, eventType, callback }) => {

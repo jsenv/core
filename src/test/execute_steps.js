@@ -146,8 +146,6 @@ export const executeSteps = async (
 
     const startMs = Date.now()
     let rawOutput = ""
-
-    logger.info("")
     let executionLog = createLog({ newLine: "" })
     const counters = {
       total: executionSteps.length,

@@ -26,8 +26,7 @@ const getLogs = async (params) => {
   const actual = await getLogs({
     fileRelativeUrl: "./test_browser.js",
   })
-  const expected = `
-✔ execution 1 of 1 completed (all completed)
+  const expected = `✔ execution 1 of 1 completed (all completed)
 file: client/main.html
 -------- console (✖ 1 ⚠ 3 ℹ 1 ◆ 1) --------
 ⚠ toto
@@ -50,8 +49,7 @@ if (process.platform !== "win32") {
   const actual = await getLogs({
     fileRelativeUrl: "./test_node.js",
   })
-  const expected = `
-✔ execution 1 of 1 completed (all completed)
+  const expected = `✔ execution 1 of 1 completed (all completed)
 file: client/main.js
 -------- console (✖ 4) --------
 ✖ toto

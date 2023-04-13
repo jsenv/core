@@ -18947,54 +18947,6 @@ const splitFileExtension$1 = filename => {
   return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)];
 };
 
-// https://github.com/istanbuljs/babel-plugin-istanbul/blob/321740f7b25d803f881466ea819d870f7ed6a254/src/index.js
-
-const babelPluginInstrument = (api, {
-  useInlineSourceMaps = false
-}) => {
-  const {
-    programVisitor
-  } = requireFromJsenv("istanbul-lib-instrument");
-  const {
-    types
-  } = api;
-  return {
-    name: "transform-instrument",
-    visitor: {
-      Program: {
-        enter(path) {
-          const {
-            file
-          } = this;
-          const {
-            opts
-          } = file;
-          let inputSourceMap;
-          if (useInlineSourceMaps) {
-            // https://github.com/istanbuljs/babel-plugin-istanbul/commit/a9e15643d249a2985e4387e4308022053b2cd0ad#diff-1fdf421c05c1140f6d71444ea2b27638R65
-            inputSourceMap = opts.inputSourceMap || file.inputMap ? file.inputMap.sourcemap : null;
-          } else {
-            inputSourceMap = opts.inputSourceMap;
-          }
-          this.__dv__ = programVisitor(types, opts.filenameRelative || opts.filename, {
-            coverageVariable: "__coverage__",
-            inputSourceMap
-          });
-          this.__dv__.enter(path);
-        },
-        exit(path) {
-          if (!this.__dv__) {
-            return;
-          }
-          const object = this.__dv__.exit(path);
-          // object got two properties: fileCoverage and sourceMappingURL
-          this.file.metadata.coverage = object.fileCoverage;
-        }
-      }
-    }
-  };
-};
-
 /*
  * Generated helpers
  * - https://github.com/babel/babel/commits/main/packages/babel-helpers/src/helpers.ts
@@ -19804,21 +19756,6 @@ const jsenvPluginBabel = ({
       isJsModule,
       getImportSpecifier
     });
-    if (context.dev) {
-      const requestHeaders = context.request.headers;
-      if (requestHeaders["x-coverage-instanbul"]) {
-        const coverageConfig = JSON.parse(requestHeaders["x-coverage-instanbul"]);
-        const associations = URL_META.resolveAssociations({
-          cover: coverageConfig
-        }, context.rootDirectoryUrl);
-        if (URL_META.applyAssociations({
-          url: urlInfo.url,
-          associations
-        }).cover) {
-          babelPluginStructure["transform-instrument"] = [babelPluginInstrument];
-        }
-      }
-    }
     if (getCustomBabelPlugins) {
       Object.assign(babelPluginStructure, getCustomBabelPlugins(context));
     }
@@ -23921,6 +23858,54 @@ const listRelativeFileUrlToCover = async ({
   }) => relativeUrl);
 };
 
+// https://github.com/istanbuljs/babel-plugin-istanbul/blob/321740f7b25d803f881466ea819d870f7ed6a254/src/index.js
+
+const babelPluginInstrument = (api, {
+  useInlineSourceMaps = false
+}) => {
+  const {
+    programVisitor
+  } = requireFromJsenv("istanbul-lib-instrument");
+  const {
+    types
+  } = api;
+  return {
+    name: "transform-instrument",
+    visitor: {
+      Program: {
+        enter(path) {
+          const {
+            file
+          } = this;
+          const {
+            opts
+          } = file;
+          let inputSourceMap;
+          if (useInlineSourceMaps) {
+            // https://github.com/istanbuljs/babel-plugin-istanbul/commit/a9e15643d249a2985e4387e4308022053b2cd0ad#diff-1fdf421c05c1140f6d71444ea2b27638R65
+            inputSourceMap = opts.inputSourceMap || file.inputMap ? file.inputMap.sourcemap : null;
+          } else {
+            inputSourceMap = opts.inputSourceMap;
+          }
+          this.__dv__ = programVisitor(types, opts.filenameRelative || opts.filename, {
+            coverageVariable: "__coverage__",
+            inputSourceMap
+          });
+          this.__dv__.enter(path);
+        },
+        exit(path) {
+          if (!this.__dv__) {
+            return;
+          }
+          const object = this.__dv__.exit(path);
+          // object got two properties: fileCoverage and sourceMappingURL
+          this.file.metadata.coverage = object.fileCoverage;
+        }
+      }
+    }
+  };
+};
+
 const relativeUrlToEmptyCoverage = async (relativeUrl, {
   signal,
   rootDirectoryUrl
@@ -24800,7 +24785,6 @@ const executeSteps = async (executionSteps, {
     process.exitCode !== 1;
     const startMs = Date.now();
     let rawOutput = "";
-    logger.info("");
     let executionLog = createLog({
       newLine: ""
     });
@@ -25109,7 +25093,10 @@ const executeTestPlan = async ({
     "file:///**/.*": false,
     "file:///**/.*/": false,
     "file:///**/node_modules/": false,
-    "./**/src/": true,
+    "./**/src/**/*.js": true,
+    "./**/src/**/*.ts": true,
+    "./**/src/**/*.jsx": true,
+    "./**/src/**/*.tsx": true,
     "./**/tests/": false,
     "./**/*.test.html": false,
     "./**/*.test.js": false,
@@ -25118,8 +25105,15 @@ const executeTestPlan = async ({
   coverageIncludeMissing = true,
   coverageAndExecutionAllowed = false,
   coverageMethodForNodeJs = process.env.NODE_V8_COVERAGE ? "NODE_V8_COVERAGE" : "Profiler",
-  coverageMethodForBrowsers = "playwright_api",
-  // "istanbul" also accepted
+  // - When chromium only -> coverage generated by v8
+  // - When chromium + node -> coverage generated by v8 are merged
+  // - When firefox only -> coverage generated by babel+istanbul
+  // - When chromium + firefox
+  //   -> by default only coverage from chromium is used
+  //   and a warning is logged according to coverageV8ConflictWarning
+  //   -> to collect coverage from both browsers, pass coverageMethodForBrowsers: "istanbul"
+  coverageMethodForBrowsers,
+  // undefined | "playwright" | "istanbul"
   coverageV8ConflictWarning = true,
   coverageTempDirectoryUrl,
   // skip empty means empty files won't appear in the coverage reports (json and html)
@@ -25134,6 +25128,7 @@ const executeTestPlan = async ({
   ...rest
 }) => {
   let someNeedsServer = false;
+  let someHasCoverageV8 = false;
   let someNodeRuntime = false;
   const runtimes = {};
   // param validation
@@ -25160,6 +25155,9 @@ const executeTestPlan = async ({
         if (runtime) {
           runtimes[runtime.name] = runtime.version;
           if (runtime.type === "browser") {
+            if (runtime.capabilities && runtime.capabilities.coverageV8) {
+              someHasCoverageV8 = true;
+            }
             someNeedsServer = true;
           }
           if (runtime.type === "node") {
@@ -25172,6 +25170,9 @@ const executeTestPlan = async ({
       await assertAndNormalizeWebServer(webServer);
     }
     if (coverageEnabled) {
+      if (coverageMethodForBrowsers === undefined) {
+        coverageMethodForBrowsers = someHasCoverageV8 ? "playwright" : "istanbul";
+      }
       if (typeof coverageConfig !== "object") {
         throw new TypeError(`coverageConfig must be an object, got ${coverageConfig}`);
       }
@@ -25332,6 +25333,172 @@ const executeTestPlan = async ({
   };
 };
 
+const initJsSupervisorMiddleware = async (page, {
+  webServer,
+  fileUrl,
+  fileServerUrl
+}) => {
+  const inlineScriptContents = new Map();
+  const interceptHtmlToExecute = async ({
+    route
+  }) => {
+    const response = await route.fetch();
+    const originalBody = await response.text();
+    const injectionResult = await injectSupervisorIntoHTML({
+      content: originalBody,
+      url: fileUrl
+    }, {
+      supervisorScriptSrc: `/@fs/${supervisorFileUrl$1.slice("file:///".length)}`,
+      supervisorOptions: {},
+      inlineAsRemote: true,
+      webServer,
+      onInlineScript: ({
+        src,
+        textContent
+      }) => {
+        const inlineScriptWebUrl = new URL(src, `${webServer.origin}/`).href;
+        inlineScriptContents.set(inlineScriptWebUrl, textContent);
+      }
+    });
+    route.fulfill({
+      response,
+      body: injectionResult.content,
+      headers: {
+        ...response.headers(),
+        "content-length": Buffer.byteLength(injectionResult.content)
+      }
+    });
+  };
+  const interceptInlineScript = ({
+    url,
+    route
+  }) => {
+    const inlineScriptContent = inlineScriptContents.get(url);
+    route.fulfill({
+      status: 200,
+      body: inlineScriptContent,
+      headers: {
+        "content-type": "text/javascript",
+        "content-length": Buffer.byteLength(inlineScriptContent)
+      }
+    });
+  };
+  const interceptFileSystemUrl = ({
+    url,
+    route
+  }) => {
+    const relativeUrl = url.slice(webServer.origin.length);
+    const fsPath = relativeUrl.slice("/@fs/".length);
+    const fsUrl = `file:///${fsPath}`;
+    const fileContent = readFileSync$1(new URL(fsUrl), "utf8");
+    route.fulfill({
+      status: 200,
+      body: fileContent,
+      headers: {
+        "content-type": "text/javascript",
+        "content-length": Buffer.byteLength(fileContent)
+      }
+    });
+  };
+  await page.route("**", async route => {
+    const request = route.request();
+    const url = request.url();
+    if (url === fileServerUrl && urlToExtension$1(url) === ".html") {
+      interceptHtmlToExecute({
+        url,
+        request,
+        route
+      });
+      return;
+    }
+    if (inlineScriptContents.has(url)) {
+      interceptInlineScript({
+        url,
+        request,
+        route
+      });
+      return;
+    }
+    const fsServerUrl = new URL("/@fs/", webServer.origin);
+    if (url.startsWith(fsServerUrl)) {
+      interceptFileSystemUrl({
+        url,
+        request,
+        route
+      });
+      return;
+    }
+    route.fallback();
+  });
+};
+
+const initIstanbulMiddleware = async (page, {
+  webServer,
+  rootDirectoryUrl,
+  coverageConfig
+}) => {
+  const associations = URL_META.resolveAssociations({
+    cover: coverageConfig
+  }, rootDirectoryUrl);
+  await page.route("**", async route => {
+    const request = route.request();
+    const url = request.url(); // transform into a local url
+    const fileUrl = moveUrl({
+      url,
+      from: `${webServer.origin}/`,
+      to: rootDirectoryUrl
+    });
+    const needsInstrumentation = URL_META.applyAssociations({
+      url: fileUrl,
+      associations
+    }).cover;
+    if (!needsInstrumentation) {
+      route.fallback();
+      return;
+    }
+    const response = await route.fetch();
+    const originalBody = await response.text();
+    try {
+      const result = await applyBabelPlugins({
+        babelPlugins: [babelPluginInstrument],
+        urlInfo: {
+          originalUrl: fileUrl,
+          // jsenv server could send info to know it's a js module or js classic
+          // but in the end it's not super important
+          // - it's ok to parse js classic as js module considering it's only for istanbul instrumentation
+          type: "js_module",
+          content: originalBody
+        }
+      });
+      let code = result.code;
+      code = SOURCEMAP.writeComment({
+        contentType: "text/javascript",
+        content: code,
+        specifier: generateSourcemapDataUrl(result.map)
+      });
+      route.fulfill({
+        response,
+        body: code,
+        headers: {
+          ...response.headers(),
+          "content-length": Buffer.byteLength(code)
+        }
+      });
+    } catch (e) {
+      if (e.code === "PARSE_ERROR") {
+        route.fulfill({
+          response
+        });
+      } else {
+        console.error(e);
+        route.fulfill({
+          response
+        });
+      }
+    }
+  });
+};
+
 const createRuntimeFromPlaywright = ({
   browserName,
   browserVersion,
@@ -25343,7 +25510,10 @@ const createRuntimeFromPlaywright = ({
   const runtime = {
     type: "browser",
     name: browserName,
-    version: browserVersion
+    version: browserVersion,
+    capabilities: {
+      coverageV8: coveragePlaywrightAPIAvailable
+    }
   };
   let browserAndContextPromise;
   runtime.run = async ({
@@ -25434,16 +25604,17 @@ ${webServer.rootDirectoryUrl}`);
       }
       await disconnected;
     };
-    const coverageInHeaders = coverageEnabled && (!coveragePlaywrightAPIAvailable || coverageMethodForBrowsers !== "playwright_api");
-    const page = await browserContext.newPage({
-      extraHTTPHeaders: {
-        ...(coverageInHeaders ? {
-          "x-coverage-istanbul": JSON.stringify(coverageConfig)
-        } : {})
-      }
-    });
+    const page = await browserContext.newPage();
+    const istanbulInstrumentationEnabled = coverageEnabled && (!runtime.capabilities.coverageV8 || coverageMethodForBrowsers === "istanbul");
+    if (istanbulInstrumentationEnabled) {
+      await initIstanbulMiddleware(page, {
+        webServer,
+        rootDirectoryUrl,
+        coverageConfig
+      });
+    }
     if (!webServer.isJsenvDevServer) {
-      await initJsExecutionMiddleware(page, {
+      await initJsSupervisorMiddleware(page, {
         webServer,
         fileUrl,
         fileServerUrl
@@ -25466,7 +25637,7 @@ ${webServer.rootDirectoryUrl}`);
     };
     const callbacks = [];
     if (coverageEnabled) {
-      if (coveragePlaywrightAPIAvailable && coverageMethodForBrowsers === "playwright_api") {
+      if (runtime.capabilities.coverageV8 && coverageMethodForBrowsers === "playwright") {
         await page.coverage.startJSCoverage({
           // reportAnonymousScripts: true,
         });
@@ -25848,106 +26019,6 @@ const extractTextFromConsoleMessage = consoleMessage => {
   //   return text
 };
 
-const initJsExecutionMiddleware = async (page, {
-  webServer,
-  fileUrl,
-  fileServerUrl
-}) => {
-  const inlineScriptContents = new Map();
-  const interceptHtmlToExecute = async ({
-    route
-  }) => {
-    // Fetch original response.
-    const response = await route.fetch();
-    // Add a prefix to the title.
-    const originalBody = await response.text();
-    const injectionResult = await injectSupervisorIntoHTML({
-      content: originalBody,
-      url: fileUrl
-    }, {
-      supervisorScriptSrc: `/@fs/${supervisorFileUrl$1.slice("file:///".length)}`,
-      supervisorOptions: {},
-      inlineAsRemote: true,
-      webServer,
-      onInlineScript: ({
-        src,
-        textContent
-      }) => {
-        const inlineScriptWebUrl = new URL(src, `${webServer.origin}/`).href;
-        inlineScriptContents.set(inlineScriptWebUrl, textContent);
-      }
-    });
-    route.fulfill({
-      response,
-      body: injectionResult.content,
-      headers: {
-        ...response.headers(),
-        "content-length": Buffer.byteLength(injectionResult.content)
-      }
-    });
-  };
-  const interceptInlineScript = ({
-    url,
-    route
-  }) => {
-    const inlineScriptContent = inlineScriptContents.get(url);
-    route.fulfill({
-      status: 200,
-      body: inlineScriptContent,
-      headers: {
-        "content-type": "text/javascript",
-        "content-length": Buffer.byteLength(inlineScriptContent)
-      }
-    });
-  };
-  const interceptFileSystemUrl = ({
-    url,
-    route
-  }) => {
-    const relativeUrl = url.slice(webServer.origin.length);
-    const fsPath = relativeUrl.slice("/@fs/".length);
-    const fsUrl = `file:///${fsPath}`;
-    const fileContent = readFileSync$1(new URL(fsUrl), "utf8");
-    route.fulfill({
-      status: 200,
-      body: fileContent,
-      headers: {
-        "content-type": "text/javascript",
-        "content-length": Buffer.byteLength(fileContent)
-      }
-    });
-  };
-  await page.route("**", async route => {
-    const request = route.request();
-    const url = request.url();
-    if (url === fileServerUrl && urlToExtension$1(url) === ".html") {
-      interceptHtmlToExecute({
-        url,
-        request,
-        route
-      });
-      return;
-    }
-    if (inlineScriptContents.has(url)) {
-      interceptInlineScript({
-        url,
-        request,
-        route
-      });
-      return;
-    }
-    const fsServerUrl = new URL("/@fs/", webServer.origin);
-    if (url.startsWith(fsServerUrl)) {
-      interceptFileSystemUrl({
-        url,
-        request,
-        route
-      });
-      return;
-    }
-    route.fallback();
-  });
-};
 const registerEvent = ({
   object,
   eventType,

@@ -1,7 +1,5 @@
 import { applyBabelPlugins } from "@jsenv/ast"
-import { URL_META } from "@jsenv/url-meta"
 
-import { babelPluginInstrument } from "@jsenv/core/src/test/coverage/babel_plugin_instrument.js"
 import { RUNTIME_COMPAT } from "@jsenv/core/src/kitchen/compat/runtime_compat.js"
 import { getBaseBabelPluginStructure } from "./helpers/babel_plugin_structure.js"
 import { babelPluginBabelHelpersAsJsenvImports } from "./helpers/babel_plugin_babel_helpers_as_jsenv_imports.js"
@@ -33,23 +31,6 @@ export const jsenvPluginBabel = ({
       isJsModule,
       getImportSpecifier,
     })
-    if (context.dev) {
-      const requestHeaders = context.request.headers
-      if (requestHeaders["x-coverage-instanbul"]) {
-        const coverageConfig = JSON.parse(
-          requestHeaders["x-coverage-instanbul"],
-        )
-        const associations = URL_META.resolveAssociations(
-          { cover: coverageConfig },
-          context.rootDirectoryUrl,
-        )
-        if (
-          URL_META.applyAssociations({ url: urlInfo.url, associations }).cover
-        ) {
-          babelPluginStructure["transform-instrument"] = [babelPluginInstrument]
-        }
-      }
-    }
     if (getCustomBabelPlugins) {
       Object.assign(babelPluginStructure, getCustomBabelPlugins(context))
     }
