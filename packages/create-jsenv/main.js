@@ -77,7 +77,7 @@ const getParamsFromProcessAndPrompts = async () => {
   }
 }
 
-const { cancelled, demoSourceDirectoryUrl, demoTargetDirectoryUrl } =
+const { cancelled, demoName, demoSourceDirectoryUrl, demoTargetDirectoryUrl } =
   await getParamsFromProcessAndPrompts()
 
 if (cancelled) {
@@ -113,7 +113,9 @@ if (!cancelled) {
     )
   }
   commands.push("npm install")
-  commands.push("npm run dev")
+  if (demoName.includes("web")) {
+    commands.push("npm start")
+  }
   console.log(`----- commands to run -----
 ${commands.join("\n")}
 ---------------------------`)
