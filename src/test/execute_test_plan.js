@@ -64,9 +64,9 @@ export const executeTestPlan = async ({
 
   coverageEnabled = process.argv.includes("--coverage"),
   coverageConfig = {
-    "file:///**/.*": false,
-    "file:///**/.*/": false,
     "file:///**/node_modules/": false,
+    "./**/.*": false,
+    "./**/.*/": false,
     "./**/src/**/*.js": true,
     "./**/src/**/*.ts": true,
     "./**/src/**/*.jsx": true,

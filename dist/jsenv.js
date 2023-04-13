@@ -22633,6 +22633,35 @@ const canUseVersionedUrl = urlInfo => {
   return urlInfo.type !== "webmanifest";
 };
 
+const WEB_URL_CONVERTER = {
+  asWebUrl: (fileUrl, webServer) => {
+    if (urlIsInsideOf(fileUrl, webServer.rootDirectoryUrl)) {
+      return moveUrl({
+        url: fileUrl,
+        from: webServer.rootDirectoryUrl,
+        to: `${webServer.origin}/`
+      });
+    }
+    const fsRootUrl = ensureWindowsDriveLetter("file:///", fileUrl);
+    return `${webServer.origin}/@fs/${fileUrl.slice(fsRootUrl.length)}`;
+  },
+  asFileUrl: (webUrl, webServer) => {
+    const {
+      pathname,
+      search
+    } = new URL(webUrl);
+    if (pathname.startsWith("/@fs/")) {
+      const fsRootRelativeUrl = pathname.slice("/@fs/".length);
+      return `file:///${fsRootRelativeUrl}${search}`;
+    }
+    return moveUrl({
+      url: webUrl,
+      from: `${webServer.origin}/`,
+      to: webServer.rootDirectoryUrl
+    });
+  }
+};
+
 /*
  * This plugin is very special because it is here
  * to provide "serverEvents" used by other plugins
@@ -23082,18 +23111,9 @@ const inferParentFromRequest = (request, sourceDirectoryUrl) => {
   const refererUrlObject = new URL(referer);
   refererUrlObject.searchParams.delete("hmr");
   refererUrlObject.searchParams.delete("v");
-  const {
-    pathname,
-    search
-  } = refererUrlObject;
-  if (pathname.startsWith("/@fs/")) {
-    const fsRootRelativeUrl = pathname.slice("/@fs/".length);
-    return `file:///${fsRootRelativeUrl}${search}`;
-  }
-  return moveUrl({
-    url: referer,
-    from: `${request.origin}/`,
-    to: sourceDirectoryUrl
+  return WEB_URL_CONVERTER.asFileUrl(referer, {
+    origin: request.origin,
+    rootDirectoryUrl: sourceDirectoryUrl
   });
 };
 
@@ -25090,9 +25110,9 @@ const executeTestPlan = async ({
   gcBetweenExecutions = logMemoryHeapUsage,
   coverageEnabled = process.argv.includes("--coverage"),
   coverageConfig = {
-    "file:///**/.*": false,
-    "file:///**/.*/": false,
     "file:///**/node_modules/": false,
+    "./**/.*": false,
+    "./**/.*/": false,
     "./**/src/**/*.js": true,
     "./**/src/**/*.ts": true,
     "./**/src/**/*.jsx": true,
@@ -25443,11 +25463,7 @@ const initIstanbulMiddleware = async (page, {
   await page.route("**", async route => {
     const request = route.request();
     const url = request.url(); // transform into a local url
-    const fileUrl = moveUrl({
-      url,
-      from: `${webServer.origin}/`,
-      to: rootDirectoryUrl
-    });
+    const fileUrl = WEB_URL_CONVERTER.asFileUrl(url, webServer);
     const needsInstrumentation = URL_META.applyAssociations({
       url: fileUrl,
       associations
@@ -25544,11 +25560,7 @@ ${fileUrl}
 --- web server root directory url ---
 ${webServer.rootDirectoryUrl}`);
     }
-    const fileServerUrl = moveUrl({
-      url: fileUrl,
-      from: webServer.rootDirectoryUrl,
-      to: `${webServer.origin}/`
-    });
+    const fileServerUrl = WEB_URL_CONVERTER.asWebUrl(fileUrl, webServer);
     const cleanupCallbackList = createCallbackListNotifiedOnce();
     const cleanup = memoize(async reason => {
       await cleanupCallbackList.notify({
@@ -25646,11 +25658,7 @@ ${webServer.rootDirectoryUrl}`);
           // we convert urls starting with http:// to file:// because we later
           // convert the url to filesystem path in istanbulCoverageFromV8Coverage function
           const v8CoveragesWithFsUrls = v8CoveragesWithWebUrls.map(v8CoveragesWithWebUrl => {
-            const fsUrl = moveUrl({
-              url: v8CoveragesWithWebUrl.url,
-              from: `${webServer.origin}/`,
-              to: webServer.rootDirectoryUrl
-            });
+            const fsUrl = WEB_URL_CONVERTER.asFileUrl(v8CoveragesWithWebUrl.url, webServer);
             return {
               ...v8CoveragesWithWebUrl,
               url: fsUrl

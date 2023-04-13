@@ -56,7 +56,7 @@ if (!process.env.CI) {
     rootDirectoryUrl: new URL("./.coverage/", import.meta.url),
   })
   await page.goto(`${fileServer.origin}/file.js.html`)
-  await page.setViewportSize({ width: 640, height: 700 }) // generate smaller screenshots
+  await page.setViewportSize({ width: 640, height: 670 }) // generate smaller screenshots
   const screenshotBuffer = await page.screenshot()
   writeFileSync(
     new URL("./screenshots/file.js.html.png", import.meta.url),

@@ -1,8 +1,8 @@
 import { URL_META } from "@jsenv/url-meta"
-import { moveUrl } from "@jsenv/urls"
 import { applyBabelPlugins } from "@jsenv/ast"
 import { SOURCEMAP, generateSourcemapDataUrl } from "@jsenv/sourcemap"
 
+import { WEB_URL_CONVERTER } from "../../../web_url_converter.js"
 import { babelPluginInstrument } from "../../../test/coverage/babel_plugin_instrument.js"
 
 export const initIstanbulMiddleware = async (
@@ -16,11 +16,7 @@ export const initIstanbulMiddleware = async (
   await page.route("**", async (route) => {
     const request = route.request()
     const url = request.url() // transform into a local url
-    const fileUrl = moveUrl({
-      url,
-      from: `${webServer.origin}/`,
-      to: rootDirectoryUrl,
-    })
+    const fileUrl = WEB_URL_CONVERTER.asFileUrl(url, webServer)
     const needsInstrumentation = URL_META.applyAssociations({
       url: fileUrl,
       associations,

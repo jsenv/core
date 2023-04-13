@@ -1,9 +1,10 @@
 import { readFileSync } from "node:fs"
 import { serveDirectory, composeTwoResponses } from "@jsenv/server"
 import { bufferToEtag } from "@jsenv/filesystem"
-import { moveUrl, asUrlWithoutSearch } from "@jsenv/urls"
+import { asUrlWithoutSearch } from "@jsenv/urls"
 import { URL_META } from "@jsenv/url-meta"
 
+import { WEB_URL_CONVERTER } from "../web_url_converter.js"
 import { watchSourceFiles } from "../watch_source_files.js"
 import { explorerHtmlFileUrl } from "@jsenv/core/src/plugins/explorer/jsenv_plugin_explorer.js"
 import { createUrlGraph } from "@jsenv/core/src/kitchen/url_graph.js"
@@ -437,14 +438,8 @@ const inferParentFromRequest = (request, sourceDirectoryUrl) => {
   const refererUrlObject = new URL(referer)
   refererUrlObject.searchParams.delete("hmr")
   refererUrlObject.searchParams.delete("v")
-  const { pathname, search } = refererUrlObject
-  if (pathname.startsWith("/@fs/")) {
-    const fsRootRelativeUrl = pathname.slice("/@fs/".length)
-    return `file:///${fsRootRelativeUrl}${search}`
-  }
-  return moveUrl({
-    url: referer,
-    from: `${request.origin}/`,
-    to: sourceDirectoryUrl,
+  return WEB_URL_CONVERTER.asFileUrl(referer, {
+    origin: request.origin,
+    rootDirectoryUrl: sourceDirectoryUrl,
   })
 }

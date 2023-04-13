@@ -6,9 +6,10 @@ import {
   raceProcessTeardownEvents,
   raceCallbacks,
 } from "@jsenv/abort"
-import { moveUrl, urlIsInsideOf } from "@jsenv/urls"
+import { urlIsInsideOf } from "@jsenv/urls"
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js"
 
+import { WEB_URL_CONVERTER } from "../../../web_url_converter.js"
 import { initJsSupervisorMiddleware } from "./middleware_js_supervisor.js"
 import { initIstanbulMiddleware } from "./middleware_istanbul.js"
 import { filterV8Coverage } from "@jsenv/core/src/test/coverage/v8_coverage.js"
@@ -62,12 +63,7 @@ ${fileUrl}
 --- web server root directory url ---
 ${webServer.rootDirectoryUrl}`)
     }
-    const fileServerUrl = moveUrl({
-      url: fileUrl,
-      from: webServer.rootDirectoryUrl,
-      to: `${webServer.origin}/`,
-    })
-
+    const fileServerUrl = WEB_URL_CONVERTER.asWebUrl(fileUrl, webServer)
     const cleanupCallbackList = createCallbackListNotifiedOnce()
     const cleanup = memoize(async (reason) => {
       await cleanupCallbackList.notify({ reason })
@@ -168,11 +164,10 @@ ${webServer.rootDirectoryUrl}`)
           // convert the url to filesystem path in istanbulCoverageFromV8Coverage function
           const v8CoveragesWithFsUrls = v8CoveragesWithWebUrls.map(
             (v8CoveragesWithWebUrl) => {
-              const fsUrl = moveUrl({
-                url: v8CoveragesWithWebUrl.url,
-                from: `${webServer.origin}/`,
-                to: webServer.rootDirectoryUrl,
-              })
+              const fsUrl = WEB_URL_CONVERTER.asFileUrl(
+                v8CoveragesWithWebUrl.url,
+                webServer,
+              )
               return {
                 ...v8CoveragesWithWebUrl,
                 url: fsUrl,
