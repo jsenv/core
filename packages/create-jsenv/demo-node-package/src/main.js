@@ -5,4 +5,4 @@
  *   discover codebase progressively
  */
 
-export { getMessage, getMessageAsync } from "./message.js"
+export { getMessage, getMessageAsync } from "./message.js";

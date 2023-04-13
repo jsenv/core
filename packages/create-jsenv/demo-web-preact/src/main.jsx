@@ -1,5 +1,5 @@
-import { render } from "preact"
+import { render } from "preact";
 
-import { App } from "./app/app.jsx"
+import { App } from "./app/app.jsx";
 
-render(<App />, document.querySelector("#root"))
+render(<App />, document.querySelector("#root"));

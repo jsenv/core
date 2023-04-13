@@ -4,9 +4,9 @@
  * - npm run build:watch
  */
 
-import { build } from "@jsenv/core"
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
-import { jsenvPluginMinification } from "@jsenv/plugin-minification"
+import { build } from "@jsenv/core";
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
+import { jsenvPluginMinification } from "@jsenv/plugin-minification";
 
 await build({
   sourceDirectoryUrl: new URL("../src/", import.meta.url),
@@ -25,4 +25,4 @@ await build({
     jsenvPluginMinification(),
   ],
   watch: process.argv.includes("--watch"),
-})
+});

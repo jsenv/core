@@ -1,23 +1,23 @@
-import { useState, useLayoutEffect } from "preact/hooks"
+import { useState, useLayoutEffect } from "preact/hooks";
 
-import appStyleSheet from "./app.css" assert { type: "css" }
+import appStyleSheet from "./app.css" assert { type: "css" };
 
-const preactLogoUrl = new URL("../preact_logo.svg", import.meta.url)
+const preactLogoUrl = new URL("../preact_logo.svg", import.meta.url);
 
 export const App = () => {
-  const [count, setCount] = useState(0)
+  const [count, setCount] = useState(0);
 
   useLayoutEffect(() => {
     document.adoptedStyleSheets = [
       ...document.adoptedStyleSheets,
       appStyleSheet,
-    ]
+    ];
     return () => {
       document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
         (s) => s !== appStyleSheet,
-      )
-    }
-  }, [])
+      );
+    };
+  }, []);
 
   return (
     <div className="app">
@@ -46,5 +46,5 @@ export const App = () => {
         </p>
       </header>
     </div>
-  )
-}
+  );
+};

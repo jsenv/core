@@ -3,9 +3,9 @@
  * - npm run dev
  */
 
-import open from "open"
-import { startDevServer } from "@jsenv/core"
-import { jsenvPluginReact } from "@jsenv/plugin-react"
+import open from "open";
+import { startDevServer } from "@jsenv/core";
+import { jsenvPluginReact } from "@jsenv/plugin-react";
 
 export const devServer = await startDevServer({
   sourceDirectoryUrl: new URL("../src/", import.meta.url),
@@ -15,7 +15,7 @@ export const devServer = await startDevServer({
     }),
   ],
   port: 3401,
-})
+});
 if (process.argv.includes("--open")) {
-  open(`${devServer.origin}/main.html`)
+  open(`${devServer.origin}/main.html`);
 }

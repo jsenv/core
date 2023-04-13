@@ -3,9 +3,9 @@
  */
 
 export const getMessage = () => {
-  return "Hello dev!"
-}
+  return "Hello dev!";
+};
 
 export const getMessageAsync = async () => {
-  return "Hello dev async!"
-}
+  return "Hello dev async!";
+};

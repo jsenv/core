@@ -4,7 +4,7 @@
  * - npm test:coverage
  */
 
-import { executeTestPlan, nodeWorkerThread } from "@jsenv/core"
+import { executeTestPlan, nodeWorkerThread } from "@jsenv/core";
 
 await executeTestPlan({
   rootDirectoryUrl: new URL("../", import.meta.url),
@@ -17,4 +17,4 @@ await executeTestPlan({
   },
   coverageEnabled: process.argv.includes("--coverage"),
   coverageMethodForNodeJs: "Profiler",
-})
+});

@@ -11,22 +11,22 @@ This file is testing a "countDogs" function implemented in "animals.js"
 
   <body>
     <script type="module">
-      import { assert } from "@jsenv/assert"
-      import { countDogs } from "/animals.js"
+      import { assert } from "@jsenv/assert";
+      import { countDogs } from "/animals.js";
 
       {
-        const actual = countDogs(["dog", "dog"])
-        const expected = 2
-        assert({ actual, expected })
+        const actual = countDogs(["dog", "dog"]);
+        const expected = 2;
+        assert({ actual, expected });
       }
 
       {
-        const actual = countDogs(["dog", "cat"])
-        const expected = 1
-        assert({ actual, expected })
+        const actual = countDogs(["dog", "cat"]);
+        const expected = 1;
+        assert({ actual, expected });
       }
 
-      document.body.appendChild(document.createTextNode("ok"))
+      document.body.appendChild(document.createTextNode("ok"));
     </script>
   </body>
 </html>
