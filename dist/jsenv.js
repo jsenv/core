@@ -7215,7 +7215,9 @@ const formatters = {
   }
 };
 
-const createUrlGraph = () => {
+const createUrlGraph = ({
+  name = "anonymous"
+} = {}) => {
   const createUrlInfoCallbackRef = {
     current: () => {}
   };
@@ -7419,6 +7421,7 @@ const createUrlGraph = () => {
     iterate(urlInfo);
   };
   return {
+    name,
     createUrlInfoCallbackRef,
     prunedUrlInfosCallbackRef,
     urlInfoMap,
@@ -20457,6 +20460,12 @@ const jsenvPluginAutoreloadServer = ({
           });
         };
         const propagateUpdate = firstUrlInfo => {
+          if (!urlGraph.getUrlInfo(firstUrlInfo.url)) {
+            return {
+              declined: true,
+              reason: `url not in the url graph`
+            };
+          }
           const iterate = (urlInfo, seen) => {
             if (urlInfo.data.hotAcceptSelf) {
               return {
@@ -22770,7 +22779,9 @@ const createFileService = ({
     const watchAssociations = URL_META.resolveAssociations({
       watch: stopWatchingSourceFiles.watchPatterns
     }, sourceDirectoryUrl);
-    const urlGraph = createUrlGraph();
+    const urlGraph = createUrlGraph({
+      name: runtimeId
+    });
     clientFileChangeCallbackList.push(({
       url
     }) => {

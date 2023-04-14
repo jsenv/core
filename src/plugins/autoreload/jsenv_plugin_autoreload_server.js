@@ -40,6 +40,12 @@ export const jsenvPluginAutoreloadServer = ({
           })
         }
         const propagateUpdate = (firstUrlInfo) => {
+          if (!urlGraph.getUrlInfo(firstUrlInfo.url)) {
+            return {
+              declined: true,
+              reason: `url not in the url graph`,
+            }
+          }
           const iterate = (urlInfo, seen) => {
             if (urlInfo.data.hotAcceptSelf) {
               return {

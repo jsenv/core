@@ -72,7 +72,9 @@ export const createFileService = ({
       { watch: stopWatchingSourceFiles.watchPatterns },
       sourceDirectoryUrl,
     )
-    const urlGraph = createUrlGraph()
+    const urlGraph = createUrlGraph({
+      name: runtimeId,
+    })
     clientFileChangeCallbackList.push(({ url }) => {
       const onUrlInfo = (urlInfo) => {
         urlGraph.considerModified(urlInfo)

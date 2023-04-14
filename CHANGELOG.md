@@ -1,3 +1,7 @@
+# 34.1.3
+
+- Fix error 500 when url not in url graph is modified
+
 # 34.1.0
 
 - Update coverage behaviour

@@ -2,7 +2,7 @@ import { urlToRelativeUrl } from "@jsenv/urls"
 
 import { urlSpecifierEncoding } from "./url_specifier_encoding.js"
 
-export const createUrlGraph = () => {
+export const createUrlGraph = ({ name = "anonymous" } = {}) => {
   const createUrlInfoCallbackRef = { current: () => {} }
   const prunedUrlInfosCallbackRef = { current: () => {} }
 
@@ -208,6 +208,7 @@ export const createUrlGraph = () => {
   }
 
   return {
+    name,
     createUrlInfoCallbackRef,
     prunedUrlInfosCallbackRef,
 
