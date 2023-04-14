@@ -42,7 +42,13 @@ export const bundleJsModules = async ({
         }
       }
       const url = fileUrlConverter.asFileUrl(id)
-      const meta = URL_META.applyAssociations({ url, associations })
+      const urlObject = new URL(url)
+      urlObject.search = ""
+      const urlWithoutSearch = urlObject.href
+      const meta = URL_META.applyAssociations({
+        url: urlWithoutSearch,
+        associations,
+      })
       const chunkName = Object.keys(meta).find((key) => meta[key])
       return chunkName || null
     }
