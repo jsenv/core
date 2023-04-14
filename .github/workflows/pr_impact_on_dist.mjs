@@ -15,7 +15,7 @@ await reportFileSizeImpactInGitHubPullRequest({
   logLevel: "debug",
   buildCommand: "npm run build",
   fileSizeReportUrl: new URL(
-    "../../../scripts/file_size/file_size.mjs#fileSizeReport",
+    "../../scripts/build/build_file_size.mjs#fileSizeReport",
     import.meta.url,
   ),
 })
