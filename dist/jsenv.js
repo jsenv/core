@@ -23468,7 +23468,9 @@ const assertAndNormalizeWebServer = async webServer => {
   }
   const {
     headers
-  } = await basicFetch(webServer.origin);
+  } = await basicFetch(webServer.origin, {
+    rejectUnauthorized: false
+  });
   if (headers["x-server-name"] === "jsenv_dev_server") {
     webServer.isJsenvDevServer = true;
     const {
