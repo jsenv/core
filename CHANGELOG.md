@@ -1,3 +1,7 @@
+# 34.1.4
+
+- Fix resource hint warning when transpiling to systemjs
+
 # 34.1.3
 
 - Fix error 500 when url not in url graph is modified

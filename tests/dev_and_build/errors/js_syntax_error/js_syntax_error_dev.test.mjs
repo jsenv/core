@@ -10,7 +10,7 @@ const test = async (params) => {
     keepProcessAlive: false,
     ...params,
   })
-  const { returnValue, pageLogs, pageErrors } = await executeInChromium({
+  const { returnValue, pageErrors, consoleOutput } = await executeInChromium({
     url: `${devServer.origin}/main.html`,
     collectConsole: true,
     collectErrors: true,
@@ -20,18 +20,18 @@ const test = async (params) => {
   })
   const errorText = returnValue.executionResults["/main.js"].exception.text
   const actual = {
-    pageLogs,
     pageErrors,
     errorText,
+    consoleOutputRaw: consoleOutput.raw,
   }
   const expected = {
-    pageLogs: [],
     pageErrors: [
       Object.assign(new Error("Unexpected end of input"), {
         name: "SyntaxError",
       }),
     ],
     errorText: "Unexpected end of input",
+    consoleOutputRaw: "",
   }
   assert({ actual, expected })
 }

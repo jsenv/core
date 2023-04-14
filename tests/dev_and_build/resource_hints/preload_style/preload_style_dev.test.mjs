@@ -9,18 +9,19 @@ const devServer = await startDevServer({
   keepProcessAlive: false,
   port: 0,
 })
-const { pageLogs, pageErrors } = await executeInChromium({
+const { consoleOutput, pageErrors } = await executeInChromium({
   url: `${devServer.origin}/main.html`,
   /* eslint-disable no-undef */
   pageFunction: () => window.namespacePromise,
   /* eslint-enable no-undef */
+  collectConsole: true,
 })
 const actual = {
-  pageLogs,
+  consoleOutputRaw: consoleOutput.raw,
   pageErrors,
 }
 const expected = {
-  pageLogs: [], // ensure there is no warning about preload link not used
+  consoleOutputRaw: "", // ensure there is no warning about preload link not used
   pageErrors: [],
 }
 assert({ actual, expected })

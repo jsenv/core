@@ -22330,7 +22330,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   const buildSpecifierBeforeRedirect = findKey(buildUrls, buildUrlFormatted);
                   mutations.push(() => {
                     setHtmlNodeAttributes(node, {
-                      href: buildSpecifierBeforeRedirect
+                      href: buildSpecifierBeforeRedirect,
+                      ...(buildUrlInfo.type === "js_classic" ? {
+                        crossorigin: undefined
+                      } : {})
                     });
                   });
                   for (const dependencyUrl of buildUrlInfo.dependencies) {

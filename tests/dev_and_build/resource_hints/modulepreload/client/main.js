@@ -1,7 +1,5 @@
 // Let browser time to log an eventual warning about preload link not used
 await new Promise((resolve) => {
-  setTimeout(resolve, 5000)
+  setTimeout(resolve, 5_000)
 })
-window.resolveResultPromise({
-  answer: 42,
-})
+window.resolveResultPromise(42)

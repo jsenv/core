@@ -19,26 +19,27 @@ const test = async (params) => {
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
   })
-  const { returnValue, pageLogs } = await executeInChromium({
+  const { returnValue, consoleOutput } = await executeInChromium({
     url: `${server.origin}/main.html`,
     /* eslint-disable no-undef */
     pageFunction: () => window.resultPromise,
     /* eslint-enable no-undef */
+    collectConsole: true,
   })
   const actual = {
     returnValue,
-    pageLogs,
+    consoleOutputRaw: consoleOutput.raw,
   }
   const expected = {
     returnValue: "20px",
-    pageLogs: [],
+    consoleOutputRaw: "",
   }
   assert({ actual, expected })
 }
 
 // support for <script type="module">
 await test({
-  runtimeCompat: { chrome: "64" },
+  runtimeCompat: { chrome: "89" },
   plugins: [jsenvPluginBundling()],
 })
 // no support for <script type="module"> + no bundling

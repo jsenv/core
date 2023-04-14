@@ -19,7 +19,7 @@ try {
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
   })
-  const { pageLogs } = await executeInChromium({
+  const { consoleOutput } = await executeInChromium({
     url: `${devServer.origin}/main.html`,
     collectConsole: true,
     headless: false,
@@ -31,15 +31,12 @@ try {
   })
   const actual = {
     warnCalls,
-    pageLogs,
+    consoleErrors: consoleOutput.errors,
   }
   const expected = {
     warnCalls: [],
-    pageLogs: [
-      {
-        type: "error",
-        text: `Failed to load resource: the server responded with a status of 404 (no entry on filesystem)`,
-      },
+    consoleErrors: [
+      `Failed to load resource: the server responded with a status of 404 (no entry on filesystem)`,
     ],
   }
   assert({ actual, expected })

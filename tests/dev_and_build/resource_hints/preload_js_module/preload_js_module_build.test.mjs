@@ -8,36 +8,39 @@ const test = async (params) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
       "./main.html": "main.html",
     },
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
   })
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
   })
-  const { returnValue, pageLogs } = await executeInChromium({
+  const { returnValue, consoleOutput } = await executeInChromium({
     url: `${server.origin}/main.html`,
     /* eslint-disable no-undef */
     pageFunction: () => window.resultPromise,
     /* eslint-enable no-undef */
+    collectConsole: true,
   })
   const actual = {
     returnValue,
-    pageLogs,
+    consoleLogs: consoleOutput.logs,
+    consoleWarnings: consoleOutput.warnings,
   }
   const expected = {
     returnValue: 42,
-    pageLogs: [],
+    consoleLogs: ["Window", "Window"],
+    consoleWarnings: [],
   }
   assert({ actual, expected })
 }
 
-// support for <script type="module">
-// await test({ runtimeCompat: { chrome: "64" } })
+// support for top level await and <script type="module">
+await test({ runtimeCompat: { chrome: "89" } })
 // no support for <script type="module">
-// await test({ runtimeCompat: { chrome: "60" } })
+await test({ runtimeCompat: { chrome: "60" } })
 // no support + no versioning
 await test({ runtimeCompat: { chrome: "60" }, versioning: false })

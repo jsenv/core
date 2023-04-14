@@ -16,7 +16,7 @@ try {
     keepProcessAlive: false,
     port: 0,
   })
-  const { returnValue, pageLogs, pageErrors } = await executeInChromium({
+  const { returnValue, pageErrors, consoleOutput } = await executeInChromium({
     url: `${devServer.origin}/main.html`,
     collectConsole: true,
     collectErrors: true,
@@ -27,8 +27,9 @@ try {
 
   const actual = {
     serverWarnOutput: warnCalls.join("\n"),
-    pageLogs,
     pageErrors,
+    consoleLogs: consoleOutput.logs,
+    consoleErrors: consoleOutput.errors,
     errorMessage: returnValue.executionResults["/main.js"].exception.message,
   }
   const expected = {
@@ -46,13 +47,11 @@ try {
     3 | 
   --- plugin name ---
   "jsenv:file_url_fetching"`,
-    pageLogs: [
-      {
-        type: "error",
-        text: `Failed to load resource: the server responded with a status of 404 (no entry on filesystem)`,
-      },
-    ],
     pageErrors: [],
+    consoleLogs: [],
+    consoleErrors: [
+      `Failed to load resource: the server responded with a status of 404 (no entry on filesystem)`,
+    ],
     errorMessage: `Error while loading module: ${devServer.origin}/main.js`,
   }
   assert({ actual, expected })

@@ -1429,6 +1429,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   mutations.push(() => {
                     setHtmlNodeAttributes(node, {
                       href: buildSpecifierBeforeRedirect,
+                      ...(buildUrlInfo.type === "js_classic"
+                        ? { crossorigin: undefined }
+                        : {}),
                     })
                   })
                   for (const dependencyUrl of buildUrlInfo.dependencies) {

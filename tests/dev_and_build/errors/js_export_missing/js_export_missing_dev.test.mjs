@@ -10,20 +10,20 @@ const test = async (params) => {
     keepProcessAlive: false,
     ...params,
   })
-  const { returnValue, pageLogs, pageErrors } = await executeInChromium({
+  const { returnValue, pageErrors, consoleOutput } = await executeInChromium({
     collectErrors: true,
+    collectConsole: true,
     url: `${devServer.origin}/main.html`,
     /* eslint-disable no-undef */
     pageFunction: () => window.__supervisor__.getDocumentExecutionResult(),
     /* eslint-enable no-undef */
   })
   const actual = {
-    pageLogs,
     pageErrors,
     errorMessage: returnValue.executionResults["/main.js"].exception.message,
+    consoleOutputRaw: consoleOutput.raw,
   }
   const expected = {
-    pageLogs: [],
     pageErrors: [
       Object.assign(
         new Error(
@@ -35,6 +35,7 @@ const test = async (params) => {
       ),
     ],
     errorMessage: `Uncaught SyntaxError: The requested module '/file.js' does not provide an export named 'answer'`,
+    consoleOutputRaw: "",
   }
   assert({ actual, expected })
 }

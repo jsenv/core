@@ -14,10 +14,28 @@ export const executeInChromium = async ({
   const browser = await chromium.launch({ headless })
   const page = await browser.newPage({ ignoreHTTPSErrors: true })
 
-  const pageLogs = []
+  const consoleOutput = {
+    raw: "",
+    logs: [],
+    debugs: [],
+    warnings: [],
+    errors: [],
+    infos: [],
+  }
+
+  const logTypes = {
+    log: consoleOutput.logs,
+    debug: consoleOutput.debugs,
+    info: consoleOutput.infos,
+    warning: consoleOutput.warnings,
+    error: consoleOutput.errors,
+  }
   page.on("console", (message) => {
     if (collectConsole) {
-      pageLogs.push({ type: message.type(), text: message.text() })
+      const type = message.type()
+      const text = message.text()
+      logTypes[type].push(text)
+      consoleOutput.raw += text
     } else if (message.type() === "error") {
       console.error(message.text())
     }
@@ -44,7 +62,7 @@ export const executeInChromium = async ({
     return {
       returnValue,
       pageErrors,
-      pageLogs,
+      consoleOutput,
     }
   } finally {
     if (autoStop) {
