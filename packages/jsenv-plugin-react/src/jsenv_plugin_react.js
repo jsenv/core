@@ -19,19 +19,28 @@ export const jsenvPluginReact = ({
       name: "jsenv:react_commonjs",
       logLevel: asJsModuleLogLevel,
       include: {
-        "/**/node_modules/react/": true,
-        "/**/node_modules/react-dom/": { external: ["react"] },
-        "/**/node_modules/react/jsx-runtime/": { external: ["react"] },
-        "/**/node_modules/react/jsx-dev-runtime": { external: ["react"] },
-        "/**/react-refresh/": { external: ["react"] },
+        "file:///**/node_modules/react/": true,
+        "file:///**/node_modules/react-dom/": { external: ["react"] },
+        "file:///**/node_modules/react/jsx-runtime/": { external: ["react"] },
+        "file:///**/node_modules/react/jsx-dev-runtime": {
+          external: ["react"],
+        },
+        "file:///**/react-refresh/": { external: ["react"] },
         // in case redux is used
-        "/**/node_modules/react-is/": true,
-        "/**/node_modules/use-sync-external-store/": { external: ["react"] },
-        "/**/node_modules/hoist-non-react-statics/": { external: ["react-is"] },
+        "file:///**/node_modules/react-is/": true,
+        "file:///**/node_modules/use-sync-external-store/": {
+          external: ["react"],
+        },
+        "file:///**/node_modules/hoist-non-react-statics/": {
+          external: ["react-is"],
+        },
       },
     }),
     jsenvPluginReactRefreshPreamble(),
-    jsenvPluginJsxAndRefresh({ jsxTranspilation, refreshInstrumentation }),
+    jsenvPluginJsxAndRefresh({
+      jsxTranspilation,
+      refreshInstrumentation,
+    }),
   ]
 }
 
