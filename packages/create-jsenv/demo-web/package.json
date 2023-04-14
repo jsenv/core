@@ -9,9 +9,8 @@
     "test": "node ./scripts/test.mjs",
     "test:coverage": "npm run test -- --coverage",
     "build": "node ./scripts/build.mjs",
-    "build:watch": "npm run build -- --watch",
     "build:serve": "node ./scripts/build_serve.mjs --open",
-    "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",
+    "eslint": "npx eslint . --ext=.html,.js,.mjs,.cjs",
     "prettier": "prettier --write ."
   },
   "devDependencies": {

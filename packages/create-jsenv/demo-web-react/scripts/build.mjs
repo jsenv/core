@@ -11,20 +11,19 @@ import { jsenvPluginMinification } from "@jsenv/plugin-minification";
 
 await build({
   sourceDirectoryUrl: new URL("../src/", import.meta.url),
+  buildDirectoryUrl: new URL("../dist/", import.meta.url),
   entryPoints: {
     "./main.html": "index.html",
   },
-  buildDirectoryUrl: new URL("../dist/", import.meta.url),
   plugins: [
     jsenvPluginReact(),
     jsenvPluginBundling({
       js_module: {
         chunks: {
-          vendors: { "file://**/node_modules/": true },
+          vendors: { "file:///**/node_modules/": true },
         },
       },
     }),
     jsenvPluginMinification(),
   ],
-  watch: process.argv.includes("--watch"),
 });

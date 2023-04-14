@@ -10,7 +10,7 @@ await executeTestPlan({
   rootDirectoryUrl: new URL("../", import.meta.url),
   testPlan: {
     "./src/**/*.test.html": {
-      firefox: {
+      chromium: {
         runtime: chromium,
       },
     },
@@ -20,5 +20,4 @@ await executeTestPlan({
     moduleUrl: new URL("./dev.mjs", import.meta.url),
   },
   coverageEnabled: process.argv.includes("--coverage"),
-  coverageMethodForBrowsers: "istanbul",
 });

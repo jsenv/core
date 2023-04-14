@@ -9,8 +9,9 @@
     "test": "node ./scripts/test.mjs",
     "test:coverage": "npm run test -- --coverage",
     "build": "node ./scripts/build.mjs",
-    "build:watch": "npm run build -- --watch",
-    "build:serve": "node ./scripts/build_serve.mjs --open"
+    "build:serve": "node ./scripts/build_serve.mjs --open",
+    "eslint": "npx eslint . --ext=.html,.js,.jsx,.mjs,.cjs",
+    "prettier": "prettier --write ."
   },
   "dependencies": {
     "react": "18.2.0",
