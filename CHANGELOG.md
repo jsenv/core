@@ -1,3 +1,9 @@
+# 34.2.0
+
+- "?as_js_classic" renamed "?js_module_fallback"
+- Introduce @jsenv/plugin-as-js-classic
+  - Remove dependency between @jsenv/core and @jsenv/plugin-bundling
+
 # 34.1.4
 
 - Fix resource hint warning when transpiling to systemjs
