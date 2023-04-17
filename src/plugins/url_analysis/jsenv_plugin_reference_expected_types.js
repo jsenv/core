@@ -11,7 +11,7 @@ export const jsenvPluginReferenceExpectedTypes = () => {
     if (searchParams.has("js_classic")) {
       reference.expectedType = "js_classic"
     } else if (
-      searchParams.has("as_js_classic") ||
+      searchParams.has("as_js_module_fallback") ||
       searchParams.has("as_js_classic_library")
     ) {
       reference.expectedType = "js_classic"

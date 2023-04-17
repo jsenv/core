@@ -11,7 +11,7 @@ const test = async (params) => {
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     entryPoints: {
-      "./main.js": "main.js?as_js_classic",
+      "./main.js": "main.js?as_js_module_fallback",
     },
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
@@ -34,7 +34,7 @@ const test = async (params) => {
   const expected = {
     typeofCurrentScript: "object",
     answer: 42,
-    url: `${server.origin}/main.js?as_js_classic`,
+    url: `${server.origin}/main.js?as_js_module_fallback`,
   }
   assert({ actual, expected })
 }

@@ -1,6 +1,6 @@
 /*
  * when <script type="module"> cannot be used:
- * - ?as_js_classic is injected into the src of <script type="module">
+ * - ?as_js_module_fallback is injected into the src of <script type="module">
  * - js inside <script type="module"> is transformed into classic js
  * - <link rel="modulepreload"> are converted to <link rel="preload">
  */
@@ -19,16 +19,16 @@ import {
 import { injectQueryParams, urlToRelativeUrl } from "@jsenv/urls"
 import { SOURCEMAP } from "@jsenv/sourcemap"
 
-export const jsenvPluginAsJsClassicHtml = ({
+export const jsenvPluginJsModuleFallbackOnHtml = ({
   systemJsInjection,
   systemJsClientFileUrl,
 }) => {
   const turnIntoJsClassicProxy = (reference) => {
-    return injectQueryParams(reference.url, { as_js_classic: "" })
+    return injectQueryParams(reference.url, { as_js_module_fallback: "" })
   }
 
   return {
-    name: "jsenv:as_js_classic_html",
+    name: "jsenv:js_module_fallback_on_html",
     appliesDuring: "*",
     redirectUrl: {
       link_href: (reference, context) => {
@@ -236,7 +236,7 @@ const isOrWasExpectingJsModule = (reference) => {
 const isExpectingJsModule = (reference) => {
   return (
     reference.expectedType === "js_module" ||
-    reference.searchParams.has("as_js_classic") ||
+    reference.searchParams.has("as_js_module_fallback") ||
     reference.searchParams.has("as_js_classic_library")
   )
 }

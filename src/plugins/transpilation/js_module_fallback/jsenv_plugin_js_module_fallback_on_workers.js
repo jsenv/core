@@ -13,7 +13,7 @@
 
 import { injectQueryParams } from "@jsenv/urls"
 
-export const jsenvPluginAsJsClassicWorkers = () => {
+export const jsenvPluginJsModuleFallbackOnWorkers = () => {
   const turnIntoJsClassicProxy = (reference) => {
     reference.mutation = (magicSource) => {
       magicSource.replace({
@@ -22,11 +22,11 @@ export const jsenvPluginAsJsClassicWorkers = () => {
         replacement: JSON.stringify("classic"),
       })
     }
-    return injectQueryParams(reference.url, { as_js_classic: "" })
+    return injectQueryParams(reference.url, { as_js_module_fallback: "" })
   }
 
   return {
-    name: "jsenv:as_js_classic_workers",
+    name: "jsenv:js_module_fallback_on_workers",
     appliesDuring: "*",
     redirectUrl: {
       js_url: (reference, context) => {

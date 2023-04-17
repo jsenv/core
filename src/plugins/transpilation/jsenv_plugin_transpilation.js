@@ -9,7 +9,7 @@
 
 import { jsenvPluginCssTranspilation } from "./css/jsenv_plugin_css_transpilation.js"
 import { jsenvPluginImportAssertions } from "./import_assertions/jsenv_plugin_import_assertions.js"
-import { jsenvPluginAsJsClassic } from "./as_js_classic/jsenv_plugin_as_js_classic.js"
+import { jsenvPluginJsModuleFallback } from "./js_module_fallback/jsenv_plugin_js_module_fallback.js"
 import { jsenvPluginAsJsModule } from "./as_js_module/jsenv_plugin_as_js_module.js"
 import { jsenvPluginBabel } from "./babel/jsenv_plugin_babel.js"
 import { jsenvPluginTopLevelAwait } from "./jsenv_plugin_top_level_await.js"
@@ -19,10 +19,10 @@ export const jsenvPluginTranspilation = ({
   importAssertions = true,
   css = true,
   jsClassicLibrary = true,
-  // build sets jsClassicFallback: false during first step of the build
+  // build sets jsModuleFallbackOnJsClassic: false during first step of the build
   // and re-enable it in the second phase (when performing the bundling)
   // so that bundling is applied on js modules THEN it is converted to js classic if needed
-  jsClassicFallback = true,
+  jsModuleFallbackOnJsClassic = true,
   systemJsInjection = true,
   topLevelAwait = true,
   importMetaResolve = true,
@@ -43,9 +43,9 @@ export const jsenvPluginTranspilation = ({
       getCustomBabelPlugins,
       babelHelpersAsImport,
     }),
-    jsenvPluginAsJsClassic({
+    jsenvPluginJsModuleFallback({
       jsClassicLibrary,
-      jsClassicFallback,
+      jsModuleFallbackOnJsClassic,
       systemJsInjection,
     }),
     jsenvPluginAsJsModule(),

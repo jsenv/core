@@ -66,7 +66,7 @@ import {
 } from "../kitchen/web_workers.js"
 import { jsenvPluginUrlAnalysis } from "../plugins/url_analysis/jsenv_plugin_url_analysis.js"
 import { jsenvPluginInline } from "../plugins/inline/jsenv_plugin_inline.js"
-import { jsenvPluginAsJsClassic } from "../plugins/transpilation/as_js_classic/jsenv_plugin_as_js_classic.js"
+import { jsenvPluginJsModuleFallback } from "../plugins/transpilation/js_module_fallback/jsenv_plugin_js_module_fallback.js"
 import { getCorePlugins } from "../plugins/plugins.js"
 import { jsenvPluginLineBreakNormalization } from "./jsenv_plugin_line_break_normalization.js"
 
@@ -275,7 +275,7 @@ build "${entryPointKeys[0]}"`)
 build ${entryPointKeys.length} entry points`)
     }
     const useExplicitJsClassicConversion = entryPointKeys.some((key) =>
-      entryPoints[key].includes("?as_js_classic"),
+      entryPoints[key].includes("?as_js_module_fallback"),
     )
     const rawRedirections = new Map()
     const bundleRedirections = new Map()
@@ -345,7 +345,7 @@ build ${entryPointKeys.length} entry points`)
           transpilation: {
             ...transpilation,
             babelHelpersAsImport: !useExplicitJsClassicConversion,
-            jsClassicFallback: false,
+            jsModuleFallbackOnJsClassic: false,
           },
           scenarioPlaceholders,
         }),
@@ -393,9 +393,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         ...(lineBreakNormalization
           ? [jsenvPluginLineBreakNormalization()]
           : []),
-        jsenvPluginAsJsClassic({
+        jsenvPluginJsModuleFallback({
           jsClassicLibrary: false,
-          jsClassicFallback: true,
+          jsModuleFallbackOnJsClassic: true,
           systemJsInjection: true,
         }),
         jsenvPluginInline({
@@ -471,9 +471,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               )
               return buildUrl
             }
-            // from "js_module_as_js_classic":
-            //   - injecting "?as_js_classic" for the first time
-            //   - injecting "?as_js_classic" because the parentUrl has it
+            // from "as_js_module_fallback":
+            //   - injecting "?as_js_module_fallback" for the first time
+            //   - injecting "?as_js_module_fallback" because the parentUrl has it
             if (reference.original) {
               const urlBeforeRedirect = reference.original.url
               const urlAfterRedirect = reference.url
@@ -511,7 +511,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               )
               return buildUrl
             }
-            // from "js_module_as_js_classic":
+            // from "as_js_module_fallback":
             //   - to inject "s.js"
             if (reference.injected) {
               const buildUrl = buildUrlsGenerator.generate(reference.url, {
@@ -584,7 +584,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             const generatedUrlObject = new URL(reference.generatedUrl)
             generatedUrlObject.searchParams.delete("js_classic")
             generatedUrlObject.searchParams.delete("js_module")
-            generatedUrlObject.searchParams.delete("as_js_classic")
+            generatedUrlObject.searchParams.delete("as_js_module_fallback")
             generatedUrlObject.searchParams.delete("as_js_classic_library")
             generatedUrlObject.searchParams.delete("as_js_module")
             generatedUrlObject.searchParams.delete("as_json_module")
@@ -632,7 +632,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             }
             const { reference } = context
             // reference injected during "postbuild":
-            // - happens for "as_js_classic" injecting "s.js"
+            // - happens for "as_js_module_fallback" injecting "s.js"
             if (reference.injected) {
               const [ref, rawUrlInfo] = rawGraphKitchen.injectReference({
                 ...reference,
@@ -645,7 +645,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               return fromBundleOrRawGraph(reference.url)
             }
             // reference updated during "postbuild":
-            // - happens for "as_js_classic"
+            // - happens for "as_js_module_fallback"
             if (reference.original) {
               return fromBundleOrRawGraph(reference.original.url)
             }
@@ -1126,9 +1126,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               }
               versionMap.set(urlInfo.url, version)
               const buildUrlObject = new URL(urlInfo.url)
-              // remove ?as_js_classic as
+              // remove ?as_js_module_fallback
               // this information is already hold into ".nomodule"
-              buildUrlObject.searchParams.delete("as_js_classic")
+              buildUrlObject.searchParams.delete("as_js_module_fallback")
               buildUrlObject.searchParams.delete("as_js_classic_library")
               buildUrlObject.searchParams.delete("as_js_module")
               buildUrlObject.searchParams.delete("as_json_module")
@@ -1599,7 +1599,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     const buildInlineRelativeUrls = []
     const getBuildRelativeUrl = (url) => {
       const urlObject = new URL(url)
-      urlObject.searchParams.delete("as_js_classic")
+      urlObject.searchParams.delete("as_js_module_fallback")
       urlObject.searchParams.delete("as_css_module")
       urlObject.searchParams.delete("as_json_module")
       urlObject.searchParams.delete("as_text_module")
