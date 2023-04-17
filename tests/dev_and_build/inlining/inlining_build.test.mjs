@@ -6,8 +6,15 @@ import { assert } from "@jsenv/assert"
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
 import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
+import {
+  readSnapshotsFromDirectory,
+  writeSnapshotsIntoDirectory,
+} from "@jsenv/core/tests/snapshots_directory.js"
 
 const test = async (params) => {
+  const snapshotDirectoryContent = readSnapshotsFromDirectory(
+    new URL("./snapshots/", import.meta.url),
+  )
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -20,6 +27,13 @@ const test = async (params) => {
     versioning: false,
     ...params,
   })
+  const distDirectoryContent = readSnapshotsFromDirectory(
+    new URL("./dist/", import.meta.url),
+  )
+  writeSnapshotsIntoDirectory(
+    new URL("./snapshots/", import.meta.url),
+    distDirectoryContent,
+  )
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
   })
@@ -29,8 +43,14 @@ const test = async (params) => {
     pageFunction: () => window.resultPromise,
     /* eslint-enable no-undef */
   })
-  const actual = returnValue
-  const expected = 42
+  const actual = {
+    returnValue,
+    snapshots: distDirectoryContent,
+  }
+  const expected = {
+    returnValue: 42,
+    snapshots: snapshotDirectoryContent,
+  }
   assert({ actual, expected })
 }
 

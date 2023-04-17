@@ -66,22 +66,34 @@ export const jsenvPluginInliningIntoHtml = () => {
             })
           })
         }
-        const onScriptWithSrc = (scriptNode, { type, src }) => {
-          const urlObject = new URL(src, urlInfo.url)
-          if (!urlObject.searchParams.has("inline")) {
+        const onScriptWithSrc = (scriptNode, { src }) => {
+          const scriptReference = context.referenceUtils.find(
+            (ref) => ref.generatedSpecifier === src && ref.type === "script",
+          )
+          if (
+            !scriptReference.original ||
+            !scriptReference.original.searchParams.has("inline")
+          ) {
             return
           }
-          const scriptUrlInfo = context.urlGraph.getUrlInfo(urlObject.href)
-          const [withoutParamReference, withoutParamUrlInfo] =
-            context.getWithoutSearchParam({
-              urlInfo: scriptUrlInfo,
-              context,
-              searchParam: "inline",
-              expectedType: type,
-            })
+          const scriptUrlInfo = context.urlGraph.getUrlInfo(scriptReference.url)
           actions.push(async () => {
-            await context.cook(withoutParamUrlInfo, {
-              reference: withoutParamReference,
+            await context.cook(scriptUrlInfo, {
+              reference: scriptReference,
+            })
+            const { line, column, isOriginal } = getHtmlNodePosition(
+              scriptNode,
+              {
+                preferOriginal: true,
+              },
+            )
+            context.referenceUtils.becomesInline(scriptReference, {
+              line: line - 1,
+              column,
+              isOriginal,
+              specifier: scriptReference.generatedSpecifier,
+              content: scriptUrlInfo.content,
+              contentType: scriptUrlInfo.contentType,
             })
             mutations.push(() => {
               setHtmlNodeAttributes(scriptNode, {
@@ -89,8 +101,9 @@ export const jsenvPluginInliningIntoHtml = () => {
                 "src": undefined,
                 "crossorigin": undefined,
                 "integrity": undefined,
+                "jsenv-inlined-by": "jsenv:inlining_into_html",
               })
-              setHtmlNodeText(scriptNode, withoutParamUrlInfo.content)
+              setHtmlNodeText(scriptNode, scriptUrlInfo.content)
             })
           })
         }

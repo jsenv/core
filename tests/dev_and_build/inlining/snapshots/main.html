@@ -1,0 +1,23 @@
+<!DOCTYPE html><html><head>
+    <title>Title</title>
+    <meta charset="utf-8">
+    <style>body {
+  background: red url(/other/jsenv.png);
+}
+</style>
+  </head>
+
+  <body>
+    
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve
+      })
+    </script>
+    <script type="module">window.resolveResultPromise(42)
+</script>
+    <script>console.log("here")
+</script>
+  
+
+</body></html>
