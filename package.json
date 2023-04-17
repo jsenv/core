@@ -105,6 +105,7 @@
     "@jsenv/plugin-globals": "./packages/jsenv-plugin-globals/",
     "@jsenv/plugin-minification": "./packages/jsenv-plugin-minification/",
     "@jsenv/plugin-placeholders": "./packages/jsenv-plugin-placeholders/",
+    "@jsenv/plugin-as-js-classic": "./packages/jsenv-plugin-as-js-classic/",
     "eslint": "8.38.0",
     "eslint-plugin-html": "7.1.0",
     "eslint-plugin-import": "2.27.5",

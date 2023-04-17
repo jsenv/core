@@ -15,9 +15,14 @@ import { babelPluginTransformImportMetaResolve } from "./helpers/babel_plugin_tr
 // because of https://github.com/rpetrich/babel-plugin-transform-async-to-promises/issues/84
 import customAsyncToPromises from "./async-to-promises.js"
 
+export const systemJsClientFileUrlDefault = new URL(
+  "./client/s.js",
+  import.meta.url,
+).href
+
 export const convertJsModuleToJsClassic = async ({
   systemJsInjection,
-  systemJsClientFileUrl,
+  systemJsClientFileUrl = systemJsClientFileUrlDefault,
   urlInfo,
   jsModuleUrlInfo,
 }) => {

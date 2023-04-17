@@ -394,8 +394,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           ? [jsenvPluginLineBreakNormalization()]
           : []),
         jsenvPluginJsModuleFallback({
-          jsClassicLibrary: false,
-          jsModuleFallbackOnJsClassic: true,
           systemJsInjection: true,
         }),
         jsenvPluginInline({

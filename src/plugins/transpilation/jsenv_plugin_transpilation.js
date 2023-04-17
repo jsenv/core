@@ -22,7 +22,6 @@ export const jsenvPluginTranspilation = ({
   // and re-enable it in the second phase (when performing the bundling)
   // so that bundling is applied on js modules THEN it is converted to js classic if needed
   jsModuleFallbackOnJsClassic = true,
-  systemJsInjection = true,
   topLevelAwait = true,
   importMetaResolve = true,
   babelHelpersAsImport = true,
@@ -30,6 +29,9 @@ export const jsenvPluginTranspilation = ({
 }) => {
   if (importAssertions === true) {
     importAssertions = {}
+  }
+  if (jsModuleFallbackOnJsClassic === true) {
+    jsModuleFallbackOnJsClassic = {}
   }
   return [
     ...(importMetaResolve ? [jsenvPluginImportMetaResolve()] : []),
@@ -42,10 +44,9 @@ export const jsenvPluginTranspilation = ({
       getCustomBabelPlugins,
       babelHelpersAsImport,
     }),
-    jsenvPluginJsModuleFallback({
-      jsModuleFallbackOnJsClassic,
-      systemJsInjection,
-    }),
+    ...(jsModuleFallbackOnJsClassic
+      ? [jsenvPluginJsModuleFallback(jsModuleFallbackOnJsClassic)]
+      : []),
     jsenvPluginAsJsModule(),
     // topLevelAwait must come after jsModuleFallback because it's related to the module format
     // so we want to wait to know the module format before transforming things related to top level await

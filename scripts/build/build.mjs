@@ -1,5 +1,6 @@
 import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
 import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs"
+import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic"
 import { build } from "@jsenv/core"
 
 const jsenvRootDirectoryUrl = new URL("../../", import.meta.url)
@@ -48,7 +49,7 @@ await build({
   plugins: [
     jsenvPluginCommonJs({
       include: {
-        "/**/node_modules/ws/": true,
+        "file:///**/node_modules/ws/": true,
       },
     }),
     jsenvPluginBundling(),
@@ -65,6 +66,7 @@ await build({
     "./plugins/transpilation/js_module_fallback/client/s.js?as_js_classic":
       "s.js",
   },
+  plugins: [jsenvPluginAsJsClassic()],
   directoryToClean: false,
   runtimeCompat: {
     chrome: "0",

@@ -5,10 +5,10 @@ import { createUrlGraphLoader } from "@jsenv/core/src/kitchen/url_graph/url_grap
 import { convertJsModuleToJsClassic } from "@jsenv/core/src/plugins/transpilation/js_module_fallback/convert_js_module_to_js_classic.js"
 
 export const jsenvPluginAsJsClassic = ({
-  systemJsInjection,
+  systemJsInjection = true,
   systemJsClientFileUrl,
 } = {}) => {
-  const markAsJsClassicLibraryProxy = (reference) => {
+  const markAsJsClassicProxy = (reference) => {
     reference.expectedType = "js_classic"
     reference.filename = generateJsClassicFilename(reference.url)
   }
@@ -18,7 +18,7 @@ export const jsenvPluginAsJsClassic = ({
     appliesDuring: "*",
     redirectUrl: (reference) => {
       if (reference.searchParams.has("as_js_classic")) {
-        markAsJsClassicLibraryProxy(reference)
+        markAsJsClassicProxy(reference)
       }
     },
     fetchUrlContent: async (urlInfo, context) => {
