@@ -1,3 +1,4 @@
+import { urlToFilename } from "@jsenv/urls"
 import { bundleJsModules } from "@jsenv/plugin-bundling"
 
 import { createUrlGraphLoader } from "@jsenv/core/src/kitchen/url_graph/url_graph_loader.js"
@@ -6,8 +7,7 @@ import { convertJsModuleToJsClassic } from "@jsenv/core/src/plugins/transpilatio
 export const jsenvPluginAsJsClassic = ({
   systemJsInjection,
   systemJsClientFileUrl,
-  generateJsClassicFilename,
-}) => {
+} = {}) => {
   const markAsJsClassicLibraryProxy = (reference) => {
     reference.expectedType = "js_classic"
     reference.filename = generateJsClassicFilename(reference.url)
@@ -17,7 +17,7 @@ export const jsenvPluginAsJsClassic = ({
     name: "jsenv:as_js_classic",
     appliesDuring: "*",
     redirectUrl: (reference) => {
-      if (reference.searchParams.has("as_js_classic_library")) {
+      if (reference.searchParams.has("as_js_classic")) {
         markAsJsClassicLibraryProxy(reference)
       }
     },
@@ -26,9 +26,9 @@ export const jsenvPluginAsJsClassic = ({
         context.getWithoutSearchParam({
           urlInfo,
           context,
-          searchParam: "as_js_classic_library",
+          searchParam: "as_js_classic",
           // override the expectedType to "js_module"
-          // because when there is ?as_js_classic_library it means the underlying resource
+          // because when there is ?as_js_classic it means the underlying resource
           // is a js_module
           expectedType: "js_module",
         })
@@ -40,7 +40,7 @@ export const jsenvPluginAsJsClassic = ({
       const loader = createUrlGraphLoader(context)
       loader.loadReferencedUrlInfos(jsModuleUrlInfo, {
         // we ignore dynamic import to cook lazyly (as browser request the server)
-        // these dynamic imports must inherit "?as_js_classic_library"
+        // these dynamic imports must inherit "?as_js_classic"
         // This is done inside rollup for convenience
         ignoreDynamicImport: true,
       })
@@ -88,4 +88,26 @@ export const jsenvPluginAsJsClassic = ({
       }
     },
   }
+}
+
+const generateJsClassicFilename = (url) => {
+  const filename = urlToFilename(url)
+  let [basename, extension] = splitFileExtension(filename)
+  const { searchParams } = new URL(url)
+  if (
+    searchParams.has("as_json_module") ||
+    searchParams.has("as_css_module") ||
+    searchParams.has("as_text_module")
+  ) {
+    extension = ".js"
+  }
+  return `${basename}.nomodule${extension}`
+}
+
+const splitFileExtension = (filename) => {
+  const dotLastIndex = filename.lastIndexOf(".")
+  if (dotLastIndex === -1) {
+    return [filename, ""]
+  }
+  return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)]
 }

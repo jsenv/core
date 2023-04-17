@@ -48,7 +48,7 @@ try {
     await page.reload()
     const responseForJsFile = responses.find(
       (response) =>
-        response.url() === `${devServer.origin}/main.js?as_js_classic_library`,
+        response.url() === `${devServer.origin}/main.js?as_js_classic`,
     )
     const jsFileResponseStatus = responseForJsFile.status()
     const answer = await getResult()

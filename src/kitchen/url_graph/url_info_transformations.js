@@ -87,9 +87,9 @@ export const createUrlInfoTransformer = ({
     //   during build it's urlInfo.url to be inside the build
     //   but otherwise it's generatedUrl to be inside .jsenv/ directory
     const generatedUrlObject = new URL(urlInfo.generatedUrl)
-    generatedUrlObject.searchParams.delete("as_js_module")
     generatedUrlObject.searchParams.delete("js_module_fallback")
-    generatedUrlObject.searchParams.delete("as_js_classic_library")
+    generatedUrlObject.searchParams.delete("as_js_module")
+    generatedUrlObject.searchParams.delete("as_js_classic")
     const urlForSourcemap = generatedUrlObject.href
     urlInfo.sourcemapGeneratedUrl = generateSourcemapFileUrl(urlForSourcemap)
 

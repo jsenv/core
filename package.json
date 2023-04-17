@@ -72,7 +72,6 @@
     "@jsenv/integrity": "0.0.1",
     "@jsenv/log": "3.3.4",
     "@jsenv/node-esm-resolution": "1.0.1",
-    "@jsenv/plugin-bundling": "2.1.5",
     "@jsenv/server": "15.0.2",
     "@jsenv/sourcemap": "1.0.10",
     "@jsenv/uneval": "1.6.0",

@@ -237,6 +237,6 @@ const isExpectingJsModule = (reference) => {
   return (
     reference.expectedType === "js_module" ||
     reference.searchParams.has("js_module_fallback") ||
-    reference.searchParams.has("as_js_classic_library")
+    reference.searchParams.has("as_js_classic")
   )
 }

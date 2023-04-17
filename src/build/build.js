@@ -533,7 +533,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             // files from root directory but not given to rollup nor postcss
             if (rawUrlInfo) {
               const referencedUrlObject = new URL(reference.url)
-              referencedUrlObject.searchParams.delete("as_js_classic_library")
+              referencedUrlObject.searchParams.delete("as_js_classic")
               const buildUrl = buildUrlsGenerator.generate(
                 referencedUrlObject.href,
                 {
@@ -585,7 +585,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             generatedUrlObject.searchParams.delete("js_classic")
             generatedUrlObject.searchParams.delete("js_module")
             generatedUrlObject.searchParams.delete("js_module_fallback")
-            generatedUrlObject.searchParams.delete("as_js_classic_library")
+            generatedUrlObject.searchParams.delete("as_js_classic")
             generatedUrlObject.searchParams.delete("as_js_module")
             generatedUrlObject.searchParams.delete("as_json_module")
             generatedUrlObject.searchParams.delete("as_css_module")
@@ -750,7 +750,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           // cleanup unused urls (avoid bundling things that are not actually used)
           // happens for:
           // - js import assertions
-          // - as_js_classic_library
+          // - as_js_classic
           if (!isUsed(rawUrlInfo)) {
             rawGraph.deleteUrlInfo(rawUrlInfo.url)
             return
@@ -1129,7 +1129,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               // remove ?js_module_fallback
               // this information is already hold into ".nomodule"
               buildUrlObject.searchParams.delete("js_module_fallback")
-              buildUrlObject.searchParams.delete("as_js_classic_library")
+              buildUrlObject.searchParams.delete("as_js_classic")
               buildUrlObject.searchParams.delete("as_js_module")
               buildUrlObject.searchParams.delete("as_json_module")
               buildUrlObject.searchParams.delete("as_css_module")

@@ -23,7 +23,10 @@
   "scripts": {
     "test": "node --conditions=development ./scripts/test.mjs"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@jsenv/core": "34.1.5",
+    "@jsenv/plugin-bundling": "2.1.5"
+  },
   "devDependencies": {
     "@jsenv/core": "../../"
   }

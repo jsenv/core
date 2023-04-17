@@ -1,5 +1,5 @@
+import { copyFileSync } from "node:fs"
 import { assert } from "@jsenv/assert"
-import { jsenvPluginMinification } from "@jsenv/plugin-minification"
 
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
@@ -10,13 +10,17 @@ const test = async (params) => {
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     entryPoints: {
-      "./main.html": "main.html",
+      "./main.js?as_js_classic": "main.js",
     },
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
+    assetsDirectory: "foo/",
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-    plugins: [jsenvPluginMinification()],
     ...params,
   })
+  copyFileSync(
+    new URL("./main.html", import.meta.url),
+    new URL("./dist/main.html", import.meta.url),
+  )
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
   })
@@ -27,9 +31,9 @@ const test = async (params) => {
     /* eslint-enable no-undef */
   })
   const actual = returnValue
-  const expected = `${server.origin}/js/main.nomodule.js?v=5337168f`
+  const expected = `${server.origin}/foo/other/file.txt?v=e3b0c442`
   assert({ actual, expected })
 }
 
-// no support for <script type="module">
-await test({ runtimeCompat: { chrome: "60" } })
+// support for <script type="module">
+await test({ runtimeCompat: { chrome: "66" } })

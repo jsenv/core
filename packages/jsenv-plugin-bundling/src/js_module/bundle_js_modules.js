@@ -298,7 +298,7 @@ const rollupPluginJsenv = ({
           }
           urlObject = new URL(specifier, importer)
         }
-        urlObject.searchParams.set("as_js_classic_library", "")
+        urlObject.searchParams.set("as_js_classic", "")
         return { external: true, id: urlObject.href }
       }
       return null

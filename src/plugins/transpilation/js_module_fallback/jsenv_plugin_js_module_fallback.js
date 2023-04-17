@@ -6,28 +6,6 @@ import { jsenvPluginJsModuleFallbackOnWorkers } from "./jsenv_plugin_js_module_f
 export const jsenvPluginJsModuleFallback = ({ systemJsInjection }) => {
   const systemJsClientFileUrl = new URL("./client/s.js", import.meta.url).href
 
-  const generateJsClassicFilename = (url) => {
-    const filename = urlToFilename(url)
-    let [basename, extension] = splitFileExtension(filename)
-    const { searchParams } = new URL(url)
-    if (
-      searchParams.has("as_json_module") ||
-      searchParams.has("as_css_module") ||
-      searchParams.has("as_text_module")
-    ) {
-      extension = ".js"
-    }
-    return `${basename}.nomodule${extension}`
-  }
-
-  const splitFileExtension = (filename) => {
-    const dotLastIndex = filename.lastIndexOf(".")
-    if (dotLastIndex === -1) {
-      return [filename, ""]
-    }
-    return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)]
-  }
-
   return [
     jsenvPluginJsModuleFallbackInsideHtml({
       systemJsInjection,
@@ -40,4 +18,26 @@ export const jsenvPluginJsModuleFallback = ({ systemJsInjection }) => {
       generateJsClassicFilename,
     }),
   ]
+}
+
+const generateJsClassicFilename = (url) => {
+  const filename = urlToFilename(url)
+  let [basename, extension] = splitFileExtension(filename)
+  const { searchParams } = new URL(url)
+  if (
+    searchParams.has("as_json_module") ||
+    searchParams.has("as_css_module") ||
+    searchParams.has("as_text_module")
+  ) {
+    extension = ".js"
+  }
+  return `${basename}.nomodule${extension}`
+}
+
+const splitFileExtension = (filename) => {
+  const dotLastIndex = filename.lastIndexOf(".")
+  if (dotLastIndex === -1) {
+    return [filename, ""]
+  }
+  return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)]
 }

@@ -10,7 +10,7 @@ const test = async (params) => {
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     entryPoints: {
-      "./main.js?as_js_classic_library": "main.js",
+      "./main.js?as_js_classic": "main.js",
     },
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
