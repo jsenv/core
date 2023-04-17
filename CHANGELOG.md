@@ -1,3 +1,7 @@
+# 34.2.2
+
+- Update deps
+
 # 34.2.0
 
 - "?as_js_classic" renamed "?js_module_fallback"
