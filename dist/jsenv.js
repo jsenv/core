@@ -23134,20 +23134,12 @@ const startDevServer = async ({
     port,
     requestWaitingMs: 60_000,
     services: [{
-      injectResponseHeaders: () => {
-        return {
-          "x-server-name": "jsenv_dev_server"
-        };
-      }
-    }, jsenvServiceCORS({
-      accessControlAllowRequestOrigin: true,
-      accessControlAllowRequestMethod: true,
-      accessControlAllowRequestHeaders: true,
-      accessControlAllowedRequestHeaders: [...jsenvAccessControlAllowedHeaders, "x-jsenv-execution-id"],
-      accessControlAllowCredentials: true,
-      timingAllowOrigin: true
-    }), {
       handleRequest: request => {
+        if (request.headers["x-server-inspect"]) {
+          return {
+            status: 200
+          };
+        }
         if (request.pathname === "/__params__.json") {
           const json = JSON.stringify({
             sourceDirectoryUrl
@@ -23162,8 +23154,20 @@ const startDevServer = async ({
           };
         }
         return null;
+      },
+      injectResponseHeaders: () => {
+        return {
+          server: "jsenv_dev_server/1"
+        };
       }
-    }, ...services, {
+    }, jsenvServiceCORS({
+      accessControlAllowRequestOrigin: true,
+      accessControlAllowRequestMethod: true,
+      accessControlAllowRequestHeaders: true,
+      accessControlAllowedRequestHeaders: [...jsenvAccessControlAllowedHeaders, "x-jsenv-execution-id"],
+      accessControlAllowCredentials: true,
+      timingAllowOrigin: true
+    }), ...services, {
       name: "jsenv:omega_file_service",
       handleRequest: createFileService({
         signal,
@@ -23382,9 +23386,13 @@ const assertAndNormalizeWebServer = async webServer => {
   const {
     headers
   } = await basicFetch(webServer.origin, {
-    rejectUnauthorized: false
+    method: "GET",
+    rejectUnauthorized: false,
+    headers: {
+      "x-server-inspect": "1"
+    }
   });
-  if (headers["x-server-name"] === "jsenv_dev_server") {
+  if (String(headers["server"]).includes("jsenv_dev_server")) {
     webServer.isJsenvDevServer = true;
     const {
       json

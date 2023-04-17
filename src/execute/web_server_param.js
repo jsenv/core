@@ -45,9 +45,13 @@ export const assertAndNormalizeWebServer = async (webServer) => {
     }
   }
   const { headers } = await basicFetch(webServer.origin, {
+    method: "GET",
     rejectUnauthorized: false,
+    headers: {
+      "x-server-inspect": "1",
+    },
   })
-  if (headers["x-server-name"] === "jsenv_dev_server") {
+  if (String(headers["server"]).includes("jsenv_dev_server")) {
     webServer.isJsenvDevServer = true
     const { json } = await basicFetch(`${webServer.origin}/__params__.json`, {
       rejectUnauthorized: false,

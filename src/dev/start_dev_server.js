@@ -135,23 +135,10 @@ export const startDevServer = async ({
     requestWaitingMs: 60_000,
     services: [
       {
-        injectResponseHeaders: () => {
-          return { "x-server-name": "jsenv_dev_server" }
-        },
-      },
-      jsenvServiceCORS({
-        accessControlAllowRequestOrigin: true,
-        accessControlAllowRequestMethod: true,
-        accessControlAllowRequestHeaders: true,
-        accessControlAllowedRequestHeaders: [
-          ...jsenvAccessControlAllowedHeaders,
-          "x-jsenv-execution-id",
-        ],
-        accessControlAllowCredentials: true,
-        timingAllowOrigin: true,
-      }),
-      {
         handleRequest: (request) => {
+          if (request.headers["x-server-inspect"]) {
+            return { status: 200 }
+          }
           if (request.pathname === "/__params__.json") {
             const json = JSON.stringify({
               sourceDirectoryUrl,
@@ -167,7 +154,21 @@ export const startDevServer = async ({
           }
           return null
         },
+        injectResponseHeaders: () => {
+          return { server: "jsenv_dev_server/1" }
+        },
       },
+      jsenvServiceCORS({
+        accessControlAllowRequestOrigin: true,
+        accessControlAllowRequestMethod: true,
+        accessControlAllowRequestHeaders: true,
+        accessControlAllowedRequestHeaders: [
+          ...jsenvAccessControlAllowedHeaders,
+          "x-jsenv-execution-id",
+        ],
+        accessControlAllowCredentials: true,
+        timingAllowOrigin: true,
+      }),
       ...services,
       {
         name: "jsenv:omega_file_service",
