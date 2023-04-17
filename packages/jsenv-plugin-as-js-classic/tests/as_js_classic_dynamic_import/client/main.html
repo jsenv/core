@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <script src="./main.js?as_js_classic"></script>
+    <script>
+      // playwright could directly call window.ask() but the goal is to ensure
+      // the api exposed on window can be consumed by the next script immediatly.
+      // so we re-expose the result of window.ask() and tests this instead
+      window.askPromise = window.ask()
+    </script>
+  </body>
+</html>

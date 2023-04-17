@@ -3,13 +3,13 @@
   "sources": [
     "../../packages/babel-plugins/src/babel_helpers/arrayWithHoles/arrayWithHoles.js",
     "../../packages/babel-plugins/src/babel_helpers/iterableToArrayLimit/iterableToArrayLimit.js",
-    "../../src/plugins/transpilation/as_js_classic/client/s.js",
+    "../../src/plugins/transpilation/js_module_fallback/client/s.js",
     "../../packages/babel-plugins/src/babel_helpers/arrayLikeToArray/arrayLikeToArray.js",
     "../../packages/babel-plugins/src/babel_helpers/unsupportedIterableToArray/unsupportedIterableToArray.js",
     "../../packages/babel-plugins/src/babel_helpers/nonIterableRest/nonIterableRest.js",
     "../../packages/babel-plugins/src/babel_helpers/slicedToArray/slicedToArray.js",
     "../../packages/babel-plugins/src/babel_helpers/typeof/typeof.js",
-    "../../src/plugins/transpilation/as_js_classic/client/s.js?as_js_classic_library"
+    "../../src/plugins/transpilation/js_module_fallback/client/s.js?as_js_classic"
   ],
   "names": [
     "arr",

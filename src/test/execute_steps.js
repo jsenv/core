@@ -309,7 +309,7 @@ export const executeSteps = async (
           failFast &&
           executionResult.status !== "completed" &&
           counters.done < counters.total
-        if (isLastExecutionLog) {
+        if (isLastExecutionLog && logger.levels.info) {
           executionLog.write("\n")
         }
 

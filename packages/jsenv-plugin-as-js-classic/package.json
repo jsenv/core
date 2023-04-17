@@ -1,0 +1,33 @@
+{
+  "name": "@jsenv/plugin-as-js-classic",
+  "version": "1.0.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/jsenv-core",
+    "directory": "packages/jsenv-plugin-as-js-classic"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/main.js"
+    },
+    "./*": "./*"
+  },
+  "files": [
+    "/src/"
+  ],
+  "scripts": {
+    "test": "node --conditions=development ./scripts/test.mjs"
+  },
+  "dependencies": {
+    "@jsenv/core": "34.2.0",
+    "@jsenv/plugin-bundling": "2.1.5"
+  },
+  "devDependencies": {
+    "@jsenv/core": "../../"
+  }
+}

@@ -116,7 +116,7 @@ ${e.traceMessage}`)
             if (
               !analyzeConvertedScripts &&
               getHtmlNodeAttribute(scriptNode, "jsenv-injected-by") ===
-                "jsenv:as_js_classic_html"
+                "jsenv:js_module_fallback"
             ) {
               return
             }

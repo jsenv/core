@@ -370,7 +370,7 @@ export const createFileService = ({
       if (code === "PARSE_ERROR") {
         // when possible let browser re-throw the syntax error
         // it's not possible to do that when url info content is not available
-        // (happens for as_js_classic library for instance)
+        // (happens for as_js_classic for instance)
         if (urlInfo.content !== undefined) {
           return {
             url: reference.url,
