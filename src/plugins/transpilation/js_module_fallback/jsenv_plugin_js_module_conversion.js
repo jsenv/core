@@ -1,6 +1,6 @@
 /*
- * - propagate "?as_js_module_fallback" query string param on urls
- * - perform conversion from js module to js classic when url uses "?as_js_module_fallback"
+ * - propagate "?js_module_fallback" query string param on urls
+ * - perform conversion from js module to js classic when url uses "?js_module_fallback"
  */
 
 import { injectQueryParams } from "@jsenv/urls"
@@ -32,7 +32,7 @@ export const jsenvPluginJsModuleConversion = ({
         return false
       }
       const parentGotAsJsClassic = new URL(parentUrlInfo.url).searchParams.has(
-        "as_js_module_fallback",
+        "js_module_fallback",
       )
       return parentGotAsJsClassic
     }
@@ -46,7 +46,7 @@ export const jsenvPluginJsModuleConversion = ({
 
   const turnIntoJsClassicProxy = (reference) => {
     const urlTransformed = injectQueryParams(reference.url, {
-      as_js_module_fallback: "",
+      js_module_fallback: "",
     })
     markAsJsClassicProxy(reference)
     return urlTransformed
@@ -56,7 +56,7 @@ export const jsenvPluginJsModuleConversion = ({
     name: "jsenv:js_module_conversion",
     appliesDuring: "*",
     redirectUrl: (reference, context) => {
-      if (reference.searchParams.has("as_js_module_fallback")) {
+      if (reference.searchParams.has("js_module_fallback")) {
         markAsJsClassicProxy(reference)
         return null
       }
@@ -76,9 +76,9 @@ export const jsenvPluginJsModuleConversion = ({
         context.getWithoutSearchParam({
           urlInfo,
           context,
-          searchParam: "as_js_module_fallback",
+          searchParam: "js_module_fallback",
           // override the expectedType to "js_module"
-          // because when there is ?as_js_module_fallback it means the underlying resource
+          // because when there is ?js_module_fallback it means the underlying resource
           // is a js_module
           expectedType: "js_module",
         })

@@ -22,7 +22,7 @@ export const jsenvPluginJsModuleFallbackOnWorkers = () => {
         replacement: JSON.stringify("classic"),
       })
     }
-    return injectQueryParams(reference.url, { as_js_module_fallback: "" })
+    return injectQueryParams(reference.url, { js_module_fallback: "" })
   }
 
   return {

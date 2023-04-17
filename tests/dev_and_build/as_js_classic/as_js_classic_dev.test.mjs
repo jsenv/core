@@ -18,6 +18,6 @@ const actual = returnValue
 const expected = {
   typeofCurrentScript: "object",
   answer: 42,
-  url: `${devServer.origin}/main.js?as_js_module_fallback`,
+  url: `${devServer.origin}/main.js?js_module_fallback`,
 }
 assert({ actual, expected })

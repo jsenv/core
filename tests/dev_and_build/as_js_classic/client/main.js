@@ -7,7 +7,7 @@ const typeofCurrentScript = typeof document.currentScript
  * 1. do not use anything requiring babel helpers (painful and hard to predict)
  * 2. put babel helpers on window/self instead of separate file to share them without having to load a js
  * (that would be great but it's hard to make it work right now)
- * 3. inline babel helpers when using ?as_js_module_fallback (or at least be able to force inline them)
+ * 3. inline babel helpers when using ?js_module_fallback (or at least be able to force inline them)
  * in this scenario
  *
  * SOLUTION FOR NOW: 3

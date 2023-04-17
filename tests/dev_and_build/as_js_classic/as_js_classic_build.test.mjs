@@ -11,7 +11,7 @@ const test = async (params) => {
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     entryPoints: {
-      "./main.js": "main.js?as_js_module_fallback",
+      "./main.js": "main.js?js_module_fallback",
     },
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
@@ -34,18 +34,20 @@ const test = async (params) => {
   const expected = {
     typeofCurrentScript: "object",
     answer: 42,
-    url: `${server.origin}/main.js?as_js_module_fallback`,
+    url: `${server.origin}/main.js?js_module_fallback`,
   }
   assert({ actual, expected })
 }
 
 // support for <script type="module">
 await test({
-  runtimeCompat: { chrome: "64" },
+  runtimeCompat: { chrome: "89" },
   plugins: [jsenvPluginBundling()],
 })
 // support for <script type="module"> + no bundling
-await test({ runtimeCompat: { chrome: "64" } })
+await test({
+  runtimeCompat: { chrome: "89" },
+})
 // without support for <script type="module">
 await test({
   runtimeCompat: { chrome: "55" },

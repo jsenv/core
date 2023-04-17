@@ -1,6 +1,6 @@
 import { urlToFilename } from "@jsenv/urls"
 import { jsenvPluginJsModuleConversion } from "./jsenv_plugin_js_module_conversion.js"
-import { jsenvPluginJsModuleFallbackOnHtml } from "./jsenv_plugin_js_module_fallback_on_html.js"
+import { jsenvPluginJsModuleFallbackInsideHtml } from "./jsenv_plugin_js_module_fallback_inside_html.js"
 import { jsenvPluginJsModuleFallbackOnWorkers } from "./jsenv_plugin_js_module_fallback_on_workers.js"
 import { jsenvPluginAsJsClassicLibrary } from "./jsenv_plugin_as_js_classic_library.js"
 
@@ -45,7 +45,7 @@ export const jsenvPluginJsModuleFallback = ({
       : []),
     ...(jsModuleFallbackOnJsClassic
       ? [
-          jsenvPluginJsModuleFallbackOnHtml({
+          jsenvPluginJsModuleFallbackInsideHtml({
             systemJsInjection,
             systemJsClientFileUrl,
           }),
