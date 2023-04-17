@@ -208,7 +208,7 @@ const visitHtmlUrls = ({ url, htmlAst }) => {
       if (type === "text") {
         // ignore <script type="whatever" src="./file.js">
         // per HTML spec https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#attr-type
-        // this will be handled by jsenv_plugin_html_inline_content
+        // this will be handled by jsenv_plugin_html_inlined_content
         return
       }
       visitAttributeAsUrlSpecifier({

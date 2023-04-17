@@ -1,16 +1,10 @@
 import { DATA_URL } from "@jsenv/urls"
 
-export const jsenvPluginInlineQueryParam = () => {
+export const jsenvPluginInliningAsDataUrl = () => {
   return {
-    name: "jsenv:inline_query_param",
+    name: "jsenv:inlining_as_data_url",
     appliesDuring: "*",
     formatUrl: {
-      // <link> and <script> can be inlined in the html
-      // this should be done during dev and postbuild but not build
-      // so that the bundled file gets inlined and not the entry point
-      "link_href": () => null,
-      "style": () => null,
-      "script": () => null,
       // if the referenced url is a worker we could use
       // https://www.oreilly.com/library/view/web-workers/9781449322120/ch04.html
       // but maybe we should rather use ?object_url
@@ -21,7 +15,20 @@ export const jsenvPluginInlineQueryParam = () => {
       // in any case the recommended way is to use an url
       // to benefit from shared worker and reuse worker between tabs
       "*": (reference, context) => {
-        if (!reference.searchParams.has("inline")) {
+        if (
+          !reference.original ||
+          !reference.original.searchParams.has("inline")
+        ) {
+          return null
+        }
+        // <link rel="stylesheet"> and <script> can be inlined in the html
+        if (
+          reference.type === "link_href" &&
+          reference.subtype === "stylesheet"
+        ) {
+          return null
+        }
+        if (reference.type === "script") {
           return null
         }
         return (async () => {

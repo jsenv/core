@@ -1,5 +1,5 @@
 // rename import to mimic what tersed does
-import { InlineContent as InlineContentRenamed } from "@jsenv/core/src/plugins/inline/client/inline_content.js"
+import { InlineContent as InlineContentRenamed } from "@jsenv/core/src/plugins/inline_content/client/inline_content.js"
 
 // prettier-ignore
 export const singleQuoteEscaped =  new InlineContentRenamed('\'', { type: "text/plain" }).text

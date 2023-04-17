@@ -1,25 +1,23 @@
-import { jsenvPluginHtmlInlineContent } from "./jsenv_plugin_html_inline_content.js"
-import { jsenvPluginJsInlineContent } from "./jsenv_plugin_js_inline_content.js"
+import { jsenvPluginHtmlInlineContentAnalysis } from "./jsenv_plugin_html_inline_content_analysis.js"
+import { jsenvPluginJsInlineContentAnalysis } from "./jsenv_plugin_js_inline_content_analysis.js"
 import { jsenvPluginDataUrls } from "./jsenv_plugin_data_urls.js"
-import { jsenvPluginInlineQueryParam } from "./jsenv_plugin_inline_query_param.js"
 
-export const jsenvPluginInline = ({
+export const jsenvPluginInlineContentAnalysis = ({
   fetchInlineUrls = true,
   analyzeConvertedScripts = false,
   allowEscapeForVersioning = false,
 } = {}) => {
   return [
-    ...(fetchInlineUrls ? [jsenvPluginInlineUrls()] : []),
-    jsenvPluginHtmlInlineContent({ analyzeConvertedScripts }),
-    jsenvPluginJsInlineContent({ allowEscapeForVersioning }),
+    ...(fetchInlineUrls ? [jsenvPluginInlineContentFetcher()] : []),
+    jsenvPluginHtmlInlineContentAnalysis({ analyzeConvertedScripts }),
+    jsenvPluginJsInlineContentAnalysis({ allowEscapeForVersioning }),
     jsenvPluginDataUrls(),
-    jsenvPluginInlineQueryParam(),
   ]
 }
 
-const jsenvPluginInlineUrls = () => {
+const jsenvPluginInlineContentFetcher = () => {
   return {
-    name: "jsenv:inline_urls",
+    name: "jsenv:inline_content_fetcher",
     appliesDuring: "*",
     fetchUrlContent: (urlInfo) => {
       if (!urlInfo.isInline) {

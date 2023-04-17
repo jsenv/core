@@ -65,7 +65,8 @@ import {
   isWebWorkerUrlInfo,
 } from "../kitchen/web_workers.js"
 import { jsenvPluginUrlAnalysis } from "../plugins/url_analysis/jsenv_plugin_url_analysis.js"
-import { jsenvPluginInline } from "../plugins/inline/jsenv_plugin_inline.js"
+import { jsenvPluginInlining } from "../plugins/inlining/jsenv_plugin_inlining.js"
+import { jsenvPluginInlineContentAnalysis } from "../plugins/inline_content_analysis/jsenv_plugin_inline_content_analysis.js"
 import { jsenvPluginJsModuleFallback } from "../plugins/transpilation/js_module_fallback/jsenv_plugin_js_module_fallback.js"
 import { getCorePlugins } from "../plugins/plugins.js"
 import { jsenvPluginLineBreakNormalization } from "./jsenv_plugin_line_break_normalization.js"
@@ -347,6 +348,7 @@ build ${entryPointKeys.length} entry points`)
             babelHelpersAsImport: !explicitJsModuleFallback,
             jsModuleFallbackOnJsClassic: false,
           },
+          inlining: false,
           scenarioPlaceholders,
         }),
       ],
@@ -396,9 +398,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         jsenvPluginJsModuleFallback({
           systemJsInjection: true,
         }),
-        jsenvPluginInline({
+        jsenvPluginInlineContentAnalysis({
           fetchInlineUrls: false,
         }),
+        jsenvPluginInlining(),
         {
           name: "jsenv:build",
           appliesDuring: "build",
@@ -1162,7 +1165,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             ...contextSharedDuringBuild,
             plugins: [
               urlAnalysisPlugin,
-              jsenvPluginInline({
+              jsenvPluginInlineContentAnalysis({
                 fetchInlineUrls: false,
                 analyzeConvertedScripts: true, // to be able to version their urls
                 allowEscapeForVersioning: true,

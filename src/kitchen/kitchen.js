@@ -720,6 +720,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 
   const getWithoutSearchParam = ({
     urlInfo,
+    reference,
     context,
     searchParam,
     expectedType,
@@ -730,14 +731,15 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       return [null, null]
     }
     searchParams.delete(searchParam)
-    const originalRef = context.reference.original || context.reference
+    const originalRef =
+      reference || context.reference.original || context.reference
     const referenceWithoutSearchParam = {
       ...originalRef,
       original: originalRef,
       searchParams,
       data: { ...originalRef.data },
       expectedType,
-      specifier: context.reference.specifier
+      specifier: originalRef.specifier
         .replace(`?${searchParam}`, "")
         .replace(`&${searchParam}`, ""),
       url: urlObject.href,
