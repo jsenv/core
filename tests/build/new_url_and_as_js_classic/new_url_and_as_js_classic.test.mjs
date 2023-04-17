@@ -1,5 +1,6 @@
 import { copyFileSync } from "node:fs"
 import { assert } from "@jsenv/assert"
+import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic"
 
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
@@ -9,11 +10,12 @@ const test = async (params) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
       "./main.js?as_js_classic": "main.js",
     },
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     assetsDirectory: "foo/",
+    plugins: [jsenvPluginAsJsClassic()],
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
   })
