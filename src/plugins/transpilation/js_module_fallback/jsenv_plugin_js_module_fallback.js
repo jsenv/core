@@ -2,13 +2,8 @@ import { urlToFilename } from "@jsenv/urls"
 import { jsenvPluginJsModuleConversion } from "./jsenv_plugin_js_module_conversion.js"
 import { jsenvPluginJsModuleFallbackInsideHtml } from "./jsenv_plugin_js_module_fallback_inside_html.js"
 import { jsenvPluginJsModuleFallbackOnWorkers } from "./jsenv_plugin_js_module_fallback_on_workers.js"
-import { jsenvPluginAsJsClassicLibrary } from "./jsenv_plugin_as_js_classic_library.js"
 
-export const jsenvPluginJsModuleFallback = ({
-  jsClassicLibrary,
-  jsModuleFallbackOnJsClassic,
-  systemJsInjection,
-}) => {
+export const jsenvPluginJsModuleFallback = ({ systemJsInjection }) => {
   const systemJsClientFileUrl = new URL("./client/s.js", import.meta.url).href
 
   const generateJsClassicFilename = (url) => {
@@ -34,28 +29,15 @@ export const jsenvPluginJsModuleFallback = ({
   }
 
   return [
-    ...(jsClassicLibrary
-      ? [
-          jsenvPluginAsJsClassicLibrary({
-            systemJsInjection,
-            systemJsClientFileUrl,
-            generateJsClassicFilename,
-          }),
-        ]
-      : []),
-    ...(jsModuleFallbackOnJsClassic
-      ? [
-          jsenvPluginJsModuleFallbackInsideHtml({
-            systemJsInjection,
-            systemJsClientFileUrl,
-          }),
-          jsenvPluginJsModuleFallbackOnWorkers(),
-          jsenvPluginJsModuleConversion({
-            systemJsInjection,
-            systemJsClientFileUrl,
-            generateJsClassicFilename,
-          }),
-        ]
-      : []),
+    jsenvPluginJsModuleFallbackInsideHtml({
+      systemJsInjection,
+      systemJsClientFileUrl,
+    }),
+    jsenvPluginJsModuleFallbackOnWorkers(),
+    jsenvPluginJsModuleConversion({
+      systemJsInjection,
+      systemJsClientFileUrl,
+      generateJsClassicFilename,
+    }),
   ]
 }
