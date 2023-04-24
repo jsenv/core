@@ -62,7 +62,9 @@ export const jsenvPluginInliningIntoHtml = () => {
               })
               linkNode.nodeName = "style"
               linkNode.tagName = "style"
-              setHtmlNodeText(linkNode, linkUrlInfo.content)
+              setHtmlNodeText(linkNode, linkUrlInfo.content, {
+                indentation: "auto",
+              })
             })
           })
         }
@@ -103,7 +105,9 @@ export const jsenvPluginInliningIntoHtml = () => {
                 "integrity": undefined,
                 "jsenv-inlined-by": "jsenv:inlining_into_html",
               })
-              setHtmlNodeText(scriptNode, scriptUrlInfo.content)
+              setHtmlNodeText(scriptNode, scriptUrlInfo.content, {
+                indentation: "auto",
+              })
             })
           })
         }

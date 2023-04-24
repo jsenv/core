@@ -204,6 +204,10 @@ export const injectSupervisorIntoHTML = async (
         }
         const src = getHtmlNodeAttribute(scriptNode, "src")
         if (src) {
+          const urlObject = new URL(src, "http://example.com")
+          if (urlObject.searchParams.has("inline")) {
+            return
+          }
           handleScriptWithSrc(scriptNode, { type, src })
           return
         }

@@ -16,8 +16,6 @@ self.resourcesFromJsenvBuild = {
     "versionedUrl": "/js/b.nomodule.js?v=8f3fa8a4"
   }
 };
-
-
 ;(function() {
   var __versionMappings__ = {
   "/js/a.nomodule.js": "/js/a.nomodule.js?v=8345fcfc",

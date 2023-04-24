@@ -24,7 +24,9 @@ self.resourcesFromJsenvBuild = {
   self.__v__ = function (specifier) {
     return __versionMappings__[specifier] || specifier
   };
-})();/* globals importScripts */
+})();
+
+/* globals importScripts */
 
 self.order = [];
 self.order.push("before-a");
