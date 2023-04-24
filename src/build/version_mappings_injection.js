@@ -88,21 +88,17 @@ export const injectVersionMappingsAsImportmap = async ({
   // jsenv_plugin_importmap.js is removing importmap during build
   // it means at this point we know HTML has no importmap in it
   // we can safely inject one
-  const importmapNode = createHtmlNode({
-    tagName: "script",
-    type: "importmap",
-    textContent: kitchen.kitchenContext.minification
-      ? JSON.stringify({ imports: versionMappings })
-      : `  
-      {
-        "imports": {${JSON.stringify(versionMappings, null, "          ").slice(
-          1,
-          -1,
-        )}        }
-      }
-    `,
-  })
-  injectHtmlNodeAsEarlyAsPossible(htmlAst, importmapNode, "jsenv:versioning")
+  injectHtmlNodeAsEarlyAsPossible(
+    htmlAst,
+    createHtmlNode({
+      tagName: "script",
+      type: "importmap",
+      textContent: kitchen.kitchenContext.minification
+        ? JSON.stringify({ imports: versionMappings })
+        : JSON.stringify({ imports: versionMappings }, null, "  "),
+    }),
+    "jsenv:versioning",
+  )
   kitchen.urlInfoTransformer.applyFinalTransformations(urlInfo, {
     content: stringifyHtmlAst(htmlAst),
   })
