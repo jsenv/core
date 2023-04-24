@@ -22,17 +22,23 @@ export const removeHtmlNodeText = (htmlNode) => {
   }
 }
 
-export const setHtmlNodeText = (htmlNode, textContent) => {
-  const contentIndentedAttribute = getHtmlNodeAttribute(
-    htmlNode,
-    "content-indented",
-  )
-  if (contentIndentedAttribute === undefined) {
-    const indentation = getIndentation(htmlNode)
-    textContent = setIndentation(textContent, indentation)
-    setHtmlNodeAttributes(htmlNode, {
-      "content-indented": "",
-    })
+export const setHtmlNodeText = (
+  htmlNode,
+  textContent,
+  { indentation } = {},
+) => {
+  if (indentation === "auto") {
+    const contentIndentedAttribute = getHtmlNodeAttribute(
+      htmlNode,
+      "content-indented",
+    )
+    if (contentIndentedAttribute === undefined) {
+      const indentation = getIndentation(htmlNode)
+      textContent = setIndentation(textContent, indentation)
+      setHtmlNodeAttributes(htmlNode, {
+        "content-indented": "",
+      })
+    }
   }
   const textNode = getTextNode(htmlNode)
   if (textNode) {

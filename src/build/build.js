@@ -451,17 +451,17 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 const { inlineUrlSite } = rawUrlInfo
                 // not inline
                 if (!inlineUrlSite) return false
-                // not the same parent
-                if (inlineUrlSite.url !== parentRawUrl) return false
-                // exact same position? it's the same
                 if (
+                  inlineUrlSite.url === parentRawUrl &&
                   inlineUrlSite.line === reference.specifierLine &&
                   inlineUrlSite.column === reference.specifierColumn
-                )
+                ) {
                   return true
-                // at this stage it's still possible to have a match
-                // but it becomes hard, let's see
+                }
                 if (rawUrlInfo.content === reference.content) {
+                  return true
+                }
+                if (rawUrlInfo.originalContent === reference.content) {
                   return true
                 }
                 return false

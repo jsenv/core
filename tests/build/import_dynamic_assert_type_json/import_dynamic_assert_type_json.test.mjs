@@ -12,7 +12,6 @@ const test = async (options) => {
       "./main.html": "main.html",
     },
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
-    // bundling: false,
     versioning: false,
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...options,
@@ -27,13 +26,11 @@ const test = async (options) => {
     /* eslint-enable no-undef */
   })
   const actual = returnValue
-  const expected = {
-    data: { answer: 42 },
-  }
+  const expected = { answer: 42 }
   assert({ actual, expected })
 }
 
 // support for <script type="module">
-await test({ runtimeCompat: { chrome: "64" } })
+await test({ runtimeCompat: { chrome: "69" } })
 // no support for <script type="module">
 await test({ runtimeCompat: { chrome: "60" } })

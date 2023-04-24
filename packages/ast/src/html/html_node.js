@@ -161,7 +161,7 @@ const injectWithWhitespaces = (nodeToInsert, futureParentNode, futureIndex) => {
   // update indentation when node contains text
   const text = getHtmlNodeText(nodeToInsert)
   if (text) {
-    setHtmlNodeText(nodeToInsert, text)
+    setHtmlNodeText(nodeToInsert, text, { indentation: "auto" })
   }
 }
 
