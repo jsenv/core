@@ -36,10 +36,25 @@ export const jsenvPluginImportAssertions = ({
   }
   const turnIntoJsModuleProxy = (reference, type) => {
     reference.mutation = (magicSource) => {
-      magicSource.remove({
-        start: reference.assertNode.start,
-        end: reference.assertNode.end,
-      })
+      const { assertNode } = reference
+      if (reference.subtype === "import_dynamic") {
+        const assertPropertyNode = assertNode.properties.find(
+          (prop) => prop.key.name === "assert",
+        )
+        const assertPropertyValue = assertPropertyNode.value
+        const typePropertyNode = assertPropertyValue.properties.find(
+          (prop) => prop.key.name === "type",
+        )
+        magicSource.remove({
+          start: typePropertyNode.start,
+          end: typePropertyNode.end,
+        })
+      } else {
+        magicSource.remove({
+          start: assertNode.start,
+          end: assertNode.end,
+        })
+      }
     }
     const newUrl = injectQueryParams(reference.url, {
       [`as_${type}_module`]: "",
