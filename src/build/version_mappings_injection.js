@@ -52,12 +52,11 @@ const injectors = {
 }
 const jsInjector = (urlInfo, { versionMappings, minification }) => {
   const magicSource = createMagicSource(urlInfo.content)
-  magicSource.prepend(
-    generateClientCodeForVersionMappings(versionMappings, {
-      globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window",
-      minification,
-    }),
-  )
+  const code = generateClientCodeForVersionMappings(versionMappings, {
+    globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window",
+    minification,
+  })
+  magicSource.prepend(`\n\n${code}\n\n`)
   return magicSource.toContentAndSourcemap()
 }
 const generateClientCodeForVersionMappings = (

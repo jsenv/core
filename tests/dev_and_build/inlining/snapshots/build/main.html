@@ -1,11 +1,10 @@
 <!DOCTYPE html><html><head>
     <title>Title</title>
     <meta charset="utf-8">
-    <style>
-      body {
-        background: red url(/other/jsenv.png);
-      }
-    </style>
+    <style>body {
+  background: red url(/other/jsenv.png);
+}
+</style>
   </head>
 
   <body>
@@ -15,12 +14,7 @@
         window.resolveResultPromise = resolve
       })
     </script>
-    <script type="module">
-      window.resolveResultPromise(42)
-    </script>
-    <script>
-      console.log("here")
-    </script>
-  
-
-</body></html>
+    <script type="module">window.resolveResultPromise(42)
+</script>
+    <script>console.log("here")
+</script></body></html>
