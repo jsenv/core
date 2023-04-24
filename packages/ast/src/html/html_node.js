@@ -3,7 +3,11 @@ import { parseFragment } from "parse5"
 import { setHtmlNodeAttributes } from "./html_node_attributes.js"
 import { findHtmlNode } from "./html_search.js"
 import { analyzeScriptNode } from "./html_analysis.js"
-import { getHtmlNodeText, setHtmlNodeText } from "./html_node_text.js"
+import {
+  getIndentation,
+  getHtmlNodeText,
+  setHtmlNodeText,
+} from "./html_node_text.js"
 
 export const removeHtmlNode = (htmlNode) => {
   const { childNodes } = htmlNode.parentNode
@@ -22,9 +26,20 @@ export const injectHtmlNode = (htmlAst, node, jsenvPluginName = "jsenv") => {
   setHtmlNodeAttributes(node, {
     "jsenv-injected-by": jsenvPluginName,
   })
-  const htmlHtmlNode = findChild(htmlAst, (node) => node.nodeName === "html")
-  const bodyNode = findChild(htmlHtmlNode, (node) => node.nodeName === "body")
-  insertHtmlNodeAfter(node, bodyNode)
+  const htmlNode = findChild(htmlAst, (node) => node.nodeName === "html")
+  const bodyNode = findChild(htmlNode, (node) => node.nodeName === "body")
+  let after
+  if (node.nodeName !== "#text") {
+    // last child that is not a text
+    for (const child of bodyNode.childNodes) {
+      if (child.nodeName !== "#text") {
+        after = child
+        break
+      }
+      after = child
+    }
+  }
+  insertHtmlNodeAfter(node, bodyNode, after)
 }
 
 export const injectHtmlNodeAsEarlyAsPossible = (
@@ -83,9 +98,7 @@ export const injectHtmlNodeAsEarlyAsPossible = (
     return
   }
 
-  const bodyNode = findChild(htmlAst, (node) => node.nodeName === "html")
-    .childNodes[1]
-  insertHtmlNodeAfter(node, bodyNode)
+  injectHtmlNode(htmlAst, node)
   return
 }
 
@@ -118,14 +131,15 @@ const injectWithWhitespaces = (nodeToInsert, futureParentNode, futureIndex) => {
   const previousSiblings = childNodes.slice(0, futureIndex)
   const nextSiblings = childNodes.slice(futureIndex)
   const futureChildNodes = []
-  const previousSibling = previousSiblings[previousSiblings.length - 1]
-  if (previousSibling) {
+
+  if (previousSiblings.length) {
     futureChildNodes.push(...previousSiblings)
   }
+  const previousSibling = previousSiblings[previousSiblings.length - 1]
   if (!previousSibling || !isWhitespaceNode(previousSibling)) {
     futureChildNodes.push({
       nodeName: "#text",
-      value: "\n    ",
+      value: previousSibling ? `\n${getIndentation(previousSibling)}` : "\n",
       parentNode: futureParentNode,
     })
   }
@@ -134,11 +148,11 @@ const injectWithWhitespaces = (nodeToInsert, futureParentNode, futureIndex) => {
   if (!nextSibling || !isWhitespaceNode(nextSibling)) {
     futureChildNodes.push({
       nodeName: "#text",
-      value: "\n    ",
+      value: nextSibling ? `\n${getIndentation(nextSibling)}` : "\n",
       parentNode: futureParentNode,
     })
   }
-  if (nextSibling) {
+  if (nextSiblings.length) {
     futureChildNodes.push(...nextSiblings)
   }
   futureParentNode.childNodes = futureChildNodes

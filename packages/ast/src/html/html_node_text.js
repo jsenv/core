@@ -33,7 +33,7 @@ export const setHtmlNodeText = (htmlNode, textContent) => {
   }
 }
 
-const getIndentation = (htmlNode) => {
+export const getIndentation = (htmlNode) => {
   const parentNode = htmlNode.parentNode
   if (!parentNode) {
     return ""
@@ -45,12 +45,21 @@ const getIndentation = (htmlNode) => {
     return ""
   }
 
-  const previousSibling = siblings[index - 1]
-  if (previousSibling.nodeName !== "#text") {
+  let textNodeIndex = 0
+  let textNode
+  while (textNodeIndex !== index) {
+    const previousSibling = siblings[textNodeIndex]
+    textNodeIndex++
+    if (previousSibling.nodeName === "#text") {
+      textNode = previousSibling
+      break
+    }
+  }
+  if (!textNode) {
     return ""
   }
 
-  const text = previousSibling.value
+  const text = textNode.value
   const lines = text.split(/\r?\n/)
   const lastLine = lines[lines.length - 1]
   if (lastLine.match(/^[\t ]+$/)) {

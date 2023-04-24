@@ -7,6 +7,7 @@ import {
   parseHtmlString,
   stringifyHtmlAst,
   injectHtmlNodeAsEarlyAsPossible,
+  injectHtmlNode,
   createHtmlNode,
 } from "@jsenv/ast"
 import { writeSnapshotsIntoDirectory } from "@jsenv/core/tests/snapshots_directory.js"
@@ -22,6 +23,15 @@ const transformFixtureFile = async (fixtureFilename) => {
     createHtmlNode({
       tagName: "script",
       textContent: `console.log('Hello world');`,
+    }),
+    "jsenv:test",
+  )
+  injectHtmlNode(
+    htmlAst,
+    createHtmlNode({
+      tagName: "script",
+      type: "module",
+      textContent: `console.log('Hello again');`,
     }),
     "jsenv:test",
   )
