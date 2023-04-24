@@ -135,7 +135,7 @@ const injectWithWhitespaces = (nodeToInsert, futureParentNode, futureIndex) => {
   if (previousSiblings.length) {
     futureChildNodes.push(...previousSiblings)
   }
-  const previousSibling = previousSiblings[previousSiblings.length - 1]
+  const previousSibling = childNodes[futureIndex - 1]
   if (!previousSibling || !isWhitespaceNode(previousSibling)) {
     futureChildNodes.push({
       nodeName: "#text",
@@ -144,7 +144,7 @@ const injectWithWhitespaces = (nodeToInsert, futureParentNode, futureIndex) => {
     })
   }
   futureChildNodes.push(nodeToInsert)
-  const nextSibling = nextSiblings[0]
+  const nextSibling = childNodes[futureIndex + 1]
   if (!nextSibling || !isWhitespaceNode(nextSibling)) {
     futureChildNodes.push({
       nodeName: "#text",
