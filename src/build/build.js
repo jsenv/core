@@ -445,19 +445,28 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               return reference.url
             }
             if (reference.isInline) {
-              const parentRawUrl = buildDirectoryRedirections.get(
-                reference.parentUrl,
-              )
+              const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
+              const parentRawUrl = parentUrlInfo.originalUrl
               const rawUrlInfo = GRAPH.find(rawGraph, (rawUrlInfo) => {
                 const { inlineUrlSite } = rawUrlInfo
-                return (
-                  inlineUrlSite &&
-                  inlineUrlSite.url === parentRawUrl &&
+                // not inline
+                if (!inlineUrlSite) return false
+                // not the same parent
+                if (inlineUrlSite.url !== parentRawUrl) return false
+                // exact same position? it's the same
+                if (
                   inlineUrlSite.line === reference.specifierLine &&
                   inlineUrlSite.column === reference.specifierColumn
                 )
+                  return true
+                // at this stage it's still possible to have a match
+                // but it becomes hard, let's see
+                if (rawUrlInfo.content === reference.content) {
+                  return true
+                }
+                return false
               })
-              const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
+
               if (!rawUrlInfo) {
                 // generated during final graph
                 // (happens for JSON.parse injected for import assertions for instance)
