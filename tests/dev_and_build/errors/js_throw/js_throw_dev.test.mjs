@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert"
 
 import { startDevServer } from "@jsenv/core"
-import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
+import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js"
 
 const test = async (params) => {
   const devServer = await startDevServer({
@@ -10,7 +10,7 @@ const test = async (params) => {
     keepProcessAlive: false,
     ...params,
   })
-  const { returnValue, pageErrors, consoleOutput } = await executeInChromium({
+  const { returnValue, pageErrors, consoleOutput } = await executeInBrowser({
     url: `${devServer.origin}/main.html`,
     /* eslint-disable no-undef */
     pageFunction: () => window.__supervisor__.getDocumentExecutionResult(),

@@ -3,7 +3,7 @@ import { jsenvPluginMinification } from "@jsenv/plugin-minification"
 
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
-import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
+import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js"
 
 const { buildInlineContents } = await build({
   logLevel: "warn",
@@ -19,7 +19,7 @@ const { buildInlineContents } = await build({
 const server = await startFileServer({
   rootDirectoryUrl: new URL("./dist/", import.meta.url),
 })
-const { returnValue } = await executeInChromium({
+const { returnValue } = await executeInBrowser({
   url: `${server.origin}/main.html`,
   /* eslint-disable no-undef */
   pageFunction: async (jsRelativeUrl) => {

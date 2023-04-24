@@ -11,7 +11,7 @@ import {
   writeSnapshotsIntoDirectory,
 } from "@jsenv/core/tests/snapshots_directory.js"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
-import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
+import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js"
 
 const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
   const { buildFileContents } = await build({
@@ -37,7 +37,7 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
   })
-  const { returnValue } = await executeInChromium({
+  const { returnValue } = await executeInBrowser({
     url: `${server.origin}/main.html`,
     /* eslint-disable no-undef */
     pageFunction: () => window.resultPromise,

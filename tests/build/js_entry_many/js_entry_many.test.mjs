@@ -3,7 +3,7 @@ import { assert } from "@jsenv/assert"
 
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
-import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
+import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js"
 
 await build({
   logLevel: "warn",
@@ -25,13 +25,13 @@ copyFileSync(
 const server = await startFileServer({
   rootDirectoryUrl: new URL("./dist/", import.meta.url),
 })
-const aExecution = await executeInChromium({
+const aExecution = await executeInBrowser({
   url: `${server.origin}/a.html`,
   /* eslint-disable no-undef */
   pageFunction: () => window.resultPromise,
   /* eslint-enable no-undef */
 })
-const bExecution = await executeInChromium({
+const bExecution = await executeInBrowser({
   url: `${server.origin}/b.html`,
   /* eslint-disable no-undef */
   pageFunction: () => window.resultPromise,

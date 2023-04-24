@@ -1,6 +1,7 @@
 import { chromium } from "playwright"
 
-export const executeInChromium = async ({
+export const executeInBrowser = async ({
+  browserLauncher = chromium,
   url,
   headScriptUrl,
   pageFunction,
@@ -11,7 +12,7 @@ export const executeInChromium = async ({
   headless = !debug,
   autoStop = !debug,
 }) => {
-  const browser = await chromium.launch({ headless })
+  const browser = await browserLauncher.launch({ headless })
   const page = await browser.newPage({ ignoreHTTPSErrors: true })
 
   const consoleOutput = {
