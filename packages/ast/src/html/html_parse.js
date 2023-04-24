@@ -41,11 +41,15 @@ export const parseHtmlString = (
     }
   }
   const htmlNode = htmlAst.childNodes.find((node) => node.nodeName === "html")
-  const bodyNode = htmlNode.childNodes.find((node) => node.nodeName === "body")
-  const lastBodyNode = bodyNode.childNodes[bodyNode.childNodes.length - 1]
-  if (lastBodyNode.nodeName === "#text") {
-    // for some reason "parse5" adds "\n\n" to the last text node of <body>
-    lastBodyNode.value = lastBodyNode.value.slice(0, -2)
+  if (htmlNode) {
+    const bodyNode = htmlNode.childNodes.find(
+      (node) => node.nodeName === "body",
+    )
+    const lastBodyNode = bodyNode.childNodes[bodyNode.childNodes.length - 1]
+    if (lastBodyNode && lastBodyNode.nodeName === "#text") {
+      // for some reason "parse5" adds "\n\n" to the last text node of <body>
+      lastBodyNode.value = lastBodyNode.value.slice(0, -2)
+    }
   }
   return htmlAst
 }
