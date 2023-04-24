@@ -445,14 +445,17 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               return reference.url
             }
             if (reference.isInline) {
+              const parentRawUrl = buildDirectoryRedirections.get(
+                reference.parentUrl,
+              )
               const rawUrlInfo = GRAPH.find(rawGraph, (rawUrlInfo) => {
-                if (!rawUrlInfo.isInline) {
-                  return false
-                }
-                if (rawUrlInfo.content === reference.content) {
-                  return true
-                }
-                return rawUrlInfo.originalContent === reference.content
+                const { inlineUrlSite } = rawUrlInfo
+                return (
+                  inlineUrlSite &&
+                  inlineUrlSite.url === parentRawUrl &&
+                  inlineUrlSite.line === reference.specifierLine &&
+                  inlineUrlSite.column === reference.specifierColumn
+                )
               })
               const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
               if (!rawUrlInfo) {
