@@ -3,6 +3,7 @@ import { parseFragment } from "parse5"
 import { setHtmlNodeAttributes } from "./html_node_attributes.js"
 import { findHtmlNode } from "./html_search.js"
 import { analyzeScriptNode } from "./html_analysis.js"
+import { getHtmlNodeText, setHtmlNodeText } from "./html_node_text.js"
 
 export const removeHtmlNode = (htmlNode) => {
   const { childNodes } = htmlNode.parentNode
@@ -34,6 +35,14 @@ export const injectScriptNodeAsEarlyAsPossible = (
   setHtmlNodeAttributes(scriptNode, {
     "jsenv-injected-by": jsenvPluginName,
   })
+  const onInserted = () => {
+    // in order to respect indentation
+    const text = getHtmlNodeText(scriptNode)
+    if (text !== undefined) {
+      setHtmlNodeText(scriptNode, text)
+    }
+  }
+
   const isJsModule = analyzeScriptNode(scriptNode).type === "js_module"
   if (isJsModule) {
     const firstImportmapScript = findHtmlNode(htmlAst, (node) => {
@@ -52,13 +61,17 @@ export const injectScriptNodeAsEarlyAsPossible = (
       let after = firstImportmapScript
       for (const nextSibling of nextSiblings) {
         if (nextSibling.nodeName === "script") {
-          return insertHtmlNodeBefore(scriptNode, importmapParent, nextSibling)
+          insertHtmlNodeBefore(scriptNode, importmapParent, nextSibling)
+          onInserted()
+          return
         }
         if (nextSibling.nodeName === "link") {
           after = nextSibling
         }
       }
-      return insertHtmlNodeAfter(scriptNode, importmapParent, after)
+      insertHtmlNodeAfter(scriptNode, importmapParent, after)
+      onInserted()
+      return
     }
   }
   const headNode = findChild(htmlAst, (node) => node.nodeName === "html")
@@ -66,13 +79,17 @@ export const injectScriptNodeAsEarlyAsPossible = (
   let after = headNode.childNodes[0]
   for (const child of headNode.childNodes) {
     if (child.nodeName === "script") {
-      return insertHtmlNodeBefore(scriptNode, headNode, child)
+      insertHtmlNodeBefore(scriptNode, headNode, child)
+      onInserted()
+      return
     }
     if (child.nodeName === "link") {
       after = child
     }
   }
-  return insertHtmlNodeAfter(scriptNode, headNode, after)
+  insertHtmlNodeAfter(scriptNode, headNode, after)
+  onInserted()
+  return
 }
 
 export const insertHtmlNodeBefore = (

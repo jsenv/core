@@ -10,7 +10,7 @@ import {
 
 const test = async (params) => {
   const snapshotDirectoryContent = readSnapshotsFromDirectory(
-    new URL("./snapshots/", import.meta.url),
+    new URL("./snapshots/build/", import.meta.url),
   )
   await build({
     logLevel: "warn",
@@ -28,7 +28,7 @@ const test = async (params) => {
     new URL("./dist/", import.meta.url),
   )
   writeSnapshotsIntoDirectory(
-    new URL("./snapshots/", import.meta.url),
+    new URL("./snapshots/build/", import.meta.url),
     distDirectoryContent,
   )
   const server = await startFileServer({

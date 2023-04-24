@@ -83,9 +83,7 @@ export const jsenvPluginPreact = ({
           createHtmlNode({
             tagName: "script",
             type: "module",
-            textContent: `
-import ${preactDevtoolsReference.generatedSpecifier}
-`,
+            textContent: `import ${preactDevtoolsReference.generatedSpecifier}`,
           }),
           "jsenv:preact",
         )

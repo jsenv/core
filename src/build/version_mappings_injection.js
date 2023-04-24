@@ -69,14 +69,12 @@ const generateClientCodeForVersionMappings = (
       versionMappings,
     )}; ${globalName}.__v__ = function (s) { return m[s] || s }; })();`
   }
-  return `
-;(function() {
+  return `;(function() {
   var __versionMappings__ = ${JSON.stringify(versionMappings, null, "  ")};
   ${globalName}.__v__ = function (specifier) {
     return __versionMappings__[specifier] || specifier
   };
-})();
-`
+})();`
 }
 
 export const injectVersionMappingsAsImportmap = async ({

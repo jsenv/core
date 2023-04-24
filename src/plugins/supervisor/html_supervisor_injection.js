@@ -225,11 +225,7 @@ export const injectSupervisorIntoHTML = async (
       htmlAst,
       createHtmlNode({
         tagName: "script",
-        textContent: `
-      window.__supervisor__.setup({
-        ${setupParamsSource}
-      })
-      `,
+        textContent: `window.__supervisor__.setup({${setupParamsSource}})`,
       }),
       "jsenv:supervisor",
     )
@@ -268,14 +264,9 @@ const stringifyParams = (params, prefix = "") => {
 }
 
 const generateCodeToSuperviseScriptWithSrc = ({ type, src }) => {
+  const srcEncoded = JSON.stringify(src)
   if (type === "js_module") {
-    return `
-        window.__supervisor__.superviseScriptTypeModule(${JSON.stringify(
-          src,
-        )}, (url) => import(url));
-    `
+    return `window.__supervisor__.superviseScriptTypeModule(${srcEncoded}, (url) => import(url));`
   }
-  return `
-        window.__supervisor__.superviseScript(${JSON.stringify(src)});
-    `
+  return `window.__supervisor__.superviseScript(${srcEncoded});`
 }
