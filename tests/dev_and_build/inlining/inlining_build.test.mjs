@@ -1,6 +1,3 @@
-// TODO: use snapshots too
-// main.css should not be written as it becomes inline
-
 import { assert } from "@jsenv/assert"
 
 import { build } from "@jsenv/core"

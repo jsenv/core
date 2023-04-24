@@ -22,6 +22,8 @@ export const setHtmlNodeText = (htmlNode, textContent) => {
   if (textNode) {
     textNode.value = textContent
   } else {
+    const indentation = getIndentation(htmlNode)
+    textContent = setIndentation(textContent, indentation)
     const newTextNode = {
       nodeName: "#text",
       value: textContent,
@@ -29,4 +31,49 @@ export const setHtmlNodeText = (htmlNode, textContent) => {
     }
     htmlNode.childNodes.splice(0, 0, newTextNode)
   }
+}
+
+const getIndentation = (htmlNode) => {
+  const parentNode = htmlNode.parentNode
+  if (!parentNode) {
+    return ""
+  }
+
+  const siblings = parentNode.childNodes
+  const index = siblings.indexOf(htmlNode)
+  if (index === 0) {
+    return ""
+  }
+
+  const previousSibling = siblings[index - 1]
+  if (previousSibling.nodeName !== "#text") {
+    return ""
+  }
+
+  const text = previousSibling.value
+  const lines = text.split(/\r?\n/)
+  const lastLine = lines[lines.length - 1]
+  if (lastLine.match(/^[\t ]+$/)) {
+    return lastLine
+  }
+  return ""
+}
+
+const setIndentation = (htmlNodeText, indentation) => {
+  const contentIdentation = increaseIndentation(indentation, 2)
+  const lines = htmlNodeText.trimEnd().split(/\r?\n/)
+  let result = `\n`
+  let i = 0
+  while (i < lines.length) {
+    const line = lines[i]
+    i++
+    result += `${contentIdentation}${line}\n`
+  }
+  result += `${indentation}`
+  return result
+}
+
+const increaseIndentation = (indentation, size) => {
+  const char = indentation[0]
+  return `${indentation}${char.repeat(size)}`
 }
