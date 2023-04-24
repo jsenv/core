@@ -6,13 +6,15 @@
 
   <body>
     <script>
-      window.namespacePromise = new Promise(resolve => {
-        window.resolveNamespacePromise = resolve;
-      });
+      window.namespacePromise = new Promise((resolve) => {
+        window.resolveNamespacePromise = resolve
+      })
     </script>
     <script type="module">
-      const bodyBackgroundColor = getComputedStyle(document.body).backgroundColor;
+      const bodyBackgroundColor = getComputedStyle(
+        document.body,
+      ).backgroundColor
       window.resolveNamespacePromise({
-        bodyBackgroundColor
-      });
+        bodyBackgroundColor,
+      })
     </script></body></html>

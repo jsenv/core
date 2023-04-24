@@ -51,5 +51,10 @@ const test = async (name, params) => {
   assert({ actual, expected })
 }
 
-await test("default")
-await test("no_versioning", { versioning: false })
+await test("default", {
+  runtimeCompat: { chrome: "89" },
+})
+await test("no_versioning", {
+  versioning: false,
+  runtimeCompat: { chrome: "89" },
+})

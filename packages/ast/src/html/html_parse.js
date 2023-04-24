@@ -85,6 +85,7 @@ export const stringifyHtmlAst = (
                   "jsenv-inlined-by": undefined,
                   "jsenv-injected-by": undefined,
                   "jsenv-debug": undefined,
+                  "content-indented": undefined,
                 }
               : {}),
           })

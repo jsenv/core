@@ -1,3 +1,8 @@
+import {
+  getHtmlNodeAttribute,
+  setHtmlNodeAttributes,
+} from "./html_node_attributes.js"
+
 export const getHtmlNodeText = (htmlNode) => {
   const textNode = getTextNode(htmlNode)
   return textNode ? textNode.value : undefined
@@ -18,9 +23,18 @@ export const removeHtmlNodeText = (htmlNode) => {
 }
 
 export const setHtmlNodeText = (htmlNode, textContent) => {
+  const contentIndentedAttribute = getHtmlNodeAttribute(
+    htmlNode,
+    "content-indented",
+  )
+  if (contentIndentedAttribute === undefined) {
+    const indentation = getIndentation(htmlNode)
+    textContent = setIndentation(textContent, indentation)
+    setHtmlNodeAttributes(htmlNode, {
+      "content-indented": "",
+    })
+  }
   const textNode = getTextNode(htmlNode)
-  const indentation = getIndentation(htmlNode)
-  textContent = setIndentation(textContent, indentation)
   if (textNode) {
     textNode.value = textContent
   } else {
