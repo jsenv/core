@@ -65,7 +65,7 @@ export const jsenvPluginJsInlineContentAnalysis = ({
   }
 
   return {
-    name: "jsenv:js_inline_content",
+    name: "jsenv:js_inline_content_analysis",
     appliesDuring: "*",
     transformUrlContent: {
       js_classic: parseAndTransformInlineContentCalls,

@@ -50,7 +50,7 @@ ${e.traceMessage}`)
   }
 
   return {
-    name: "jsenv:html_inline_content",
+    name: "jsenv:html_inline_content_analysis",
     appliesDuring: "*",
     transformUrlContent: {
       html: async (urlInfo, context) => {
@@ -103,7 +103,7 @@ ${e.traceMessage}`)
             mutations.push(() => {
               setHtmlNodeText(styleNode, inlineStyleUrlInfo.content)
               setHtmlNodeAttributes(styleNode, {
-                "jsenv-cooked-by": "jsenv:html_inlined_content",
+                "jsenv-cooked-by": "jsenv:html_inline_content_analysis",
               })
             })
           },
@@ -165,7 +165,7 @@ ${e.traceMessage}`)
               })
               mutations.push(() => {
                 const attributes = {
-                  "jsenv-cooked-by": "jsenv:html_inlined_content",
+                  "jsenv-cooked-by": "jsenv:html_inline_content_analysis",
                   // 1. <script type="jsx"> becomes <script>
                   // 2. <script type="module/jsx"> becomes <script type="module">
                   ...(extension
