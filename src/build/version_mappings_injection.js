@@ -56,7 +56,7 @@ const jsInjector = (urlInfo, { versionMappings, minification }) => {
     globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window",
     minification,
   })
-  magicSource.prepend(`\n\n${code}\n\n`)
+  magicSource.prepend(`${code}\n\n`)
   return magicSource.toContentAndSourcemap()
 }
 const generateClientCodeForVersionMappings = (
