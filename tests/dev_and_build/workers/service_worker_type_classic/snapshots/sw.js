@@ -1,7 +1,7 @@
 
 self.resourcesFromJsenvBuild = {
   "/main.html": {
-    "version": "f78edba7"
+    "version": "1c2fc353"
   },
   "/css/style.css": {
     "version": "0e312da1",
@@ -16,7 +16,6 @@ self.resourcesFromJsenvBuild = {
     "versionedUrl": "/js/b.js?v=2cc2d9e4"
   }
 };
-
 ;(function() {
   var __versionMappings__ = {
   "/js/a.js": "/js/a.js?v=766d14d0",
@@ -25,8 +24,7 @@ self.resourcesFromJsenvBuild = {
   self.__v__ = function (specifier) {
     return __versionMappings__[specifier] || specifier
   };
-})();
-/* globals importScripts */
+})();/* globals importScripts */
 
 self.order = [];
 self.order.push("before-a");
