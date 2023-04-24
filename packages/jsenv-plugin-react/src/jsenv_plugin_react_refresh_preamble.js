@@ -1,7 +1,7 @@
 import {
   parseHtmlString,
   stringifyHtmlAst,
-  injectScriptNodeAsEarlyAsPossible,
+  injectHtmlNodeAsEarlyAsPossible,
   createHtmlNode,
 } from "@jsenv/ast"
 
@@ -23,7 +23,7 @@ export const jsenvPluginReactRefreshPreamble = () => {
           expectedType: "js_module",
           specifier: reactRefreshPreambleClientFileUrl,
         })
-        injectScriptNodeAsEarlyAsPossible(
+        injectHtmlNodeAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
             tagName: "script",

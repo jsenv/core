@@ -3,7 +3,7 @@
 import { createMagicSource } from "@jsenv/sourcemap"
 import {
   parseHtmlString,
-  injectScriptNodeAsEarlyAsPossible,
+  injectHtmlNodeAsEarlyAsPossible,
   createHtmlNode,
   stringifyHtmlAst,
 } from "@jsenv/ast"
@@ -32,7 +32,7 @@ const injectors = {
     const htmlAst = parseHtmlString(urlInfo.content, {
       storeOriginalPositions: false,
     })
-    injectScriptNodeAsEarlyAsPossible(
+    injectHtmlNodeAsEarlyAsPossible(
       htmlAst,
       createHtmlNode({
         tagName: "script",
@@ -102,7 +102,7 @@ export const injectVersionMappingsAsImportmap = async ({
       }
     `,
   })
-  injectScriptNodeAsEarlyAsPossible(htmlAst, importmapNode, "jsenv:versioning")
+  injectHtmlNodeAsEarlyAsPossible(htmlAst, importmapNode, "jsenv:versioning")
   kitchen.urlInfoTransformer.applyFinalTransformations(urlInfo, {
     content: stringifyHtmlAst(htmlAst),
   })

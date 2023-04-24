@@ -1,7 +1,7 @@
 import {
   parseHtmlString,
   stringifyHtmlAst,
-  injectScriptNodeAsEarlyAsPossible,
+  injectHtmlNodeAsEarlyAsPossible,
   createHtmlNode,
 } from "@jsenv/ast"
 
@@ -23,7 +23,7 @@ export const jsenvPluginAutoreloadClient = () => {
           expectedType: "js_module",
           specifier: autoreloadClientFileUrl,
         })
-        injectScriptNodeAsEarlyAsPossible(
+        injectHtmlNodeAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
             tagName: "script",

@@ -45,9 +45,9 @@ export const parseHtmlString = (
 
 export const stringifyHtmlAst = (
   htmlAst,
-  { cleanupJsenvAttributes = false } = {},
+  { cleanupJsenvAttributes = false, cleanupPositionAttributes = false } = {},
 ) => {
-  if (cleanupJsenvAttributes) {
+  if (cleanupJsenvAttributes || cleanupPositionAttributes) {
     const htmlNode = findHtmlChildNode(
       htmlAst,
       (node) => node.nodeName === "html",
@@ -66,12 +66,16 @@ export const stringifyHtmlAst = (
             "original-position": undefined,
             "original-src-position": undefined,
             "original-href-position": undefined,
-            "inlined-from-src": undefined,
-            "inlined-from-href": undefined,
-            "jsenv-cooked-by": undefined,
-            "jsenv-inlined-by": undefined,
-            "jsenv-injected-by": undefined,
-            "jsenv-debug": undefined,
+            ...(cleanupJsenvAttributes
+              ? {
+                  "inlined-from-src": undefined,
+                  "inlined-from-href": undefined,
+                  "jsenv-cooked-by": undefined,
+                  "jsenv-inlined-by": undefined,
+                  "jsenv-injected-by": undefined,
+                  "jsenv-debug": undefined,
+                }
+              : {}),
           })
         },
       })

@@ -6,7 +6,7 @@
 import {
   parseHtmlString,
   stringifyHtmlAst,
-  injectScriptNodeAsEarlyAsPossible,
+  injectHtmlNodeAsEarlyAsPossible,
   createHtmlNode,
 } from "@jsenv/ast"
 
@@ -30,7 +30,7 @@ export const jsenvPluginServerEventsClientInjection = () => {
             specifier: serverEventsClientFileUrl,
           },
         )
-        injectScriptNodeAsEarlyAsPossible(
+        injectHtmlNodeAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
             tagName: "script",

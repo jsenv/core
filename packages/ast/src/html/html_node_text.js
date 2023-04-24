@@ -19,11 +19,11 @@ export const removeHtmlNodeText = (htmlNode) => {
 
 export const setHtmlNodeText = (htmlNode, textContent) => {
   const textNode = getTextNode(htmlNode)
+  const indentation = getIndentation(htmlNode)
+  textContent = setIndentation(textContent, indentation)
   if (textNode) {
     textNode.value = textContent
   } else {
-    const indentation = getIndentation(htmlNode)
-    textContent = setIndentation(textContent, indentation)
     const newTextNode = {
       nodeName: "#text",
       value: textContent,
@@ -75,5 +75,5 @@ const setIndentation = (htmlNodeText, indentation) => {
 
 const increaseIndentation = (indentation, size) => {
   const char = indentation[0]
-  return `${indentation}${char.repeat(size)}`
+  return char ? `${indentation}${char.repeat(size)}` : " ".repeat(size)
 }

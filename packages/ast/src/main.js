@@ -21,7 +21,7 @@ export {
   removeHtmlNode,
   createHtmlNode,
   injectHtmlNode,
-  injectScriptNodeAsEarlyAsPossible,
+  injectHtmlNodeAsEarlyAsPossible,
   insertHtmlNodeAfter,
 } from "./html/html_node.js"
 export {

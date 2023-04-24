@@ -52,7 +52,7 @@ import {
   getHtmlNodeAttribute,
   setHtmlNodeAttributes,
   analyzeScriptNode,
-  injectScriptNodeAsEarlyAsPossible,
+  injectHtmlNodeAsEarlyAsPossible,
   createHtmlNode,
   getHtmlNodePosition,
   getHtmlNodeText,
@@ -219,9 +219,9 @@ export const injectSupervisorIntoHTML = async (
         rootDirectoryUrl: webServer.rootDirectoryUrl,
         scriptInfos,
       },
-      "        ",
+      "  ",
     )
-    injectScriptNodeAsEarlyAsPossible(
+    injectHtmlNodeAsEarlyAsPossible(
       htmlAst,
       createHtmlNode({
         tagName: "script",
@@ -229,13 +229,12 @@ export const injectSupervisorIntoHTML = async (
       }),
       "jsenv:supervisor",
     )
-    const supervisorScript = createHtmlNode({
-      tagName: "script",
-      src: supervisorScriptSrc,
-    })
-    injectScriptNodeAsEarlyAsPossible(
+    injectHtmlNodeAsEarlyAsPossible(
       htmlAst,
-      supervisorScript,
+      createHtmlNode({
+        tagName: "script",
+        src: supervisorScriptSrc,
+      }),
       "jsenv:supervisor",
     )
   }

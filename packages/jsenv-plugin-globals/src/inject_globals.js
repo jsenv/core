@@ -1,7 +1,7 @@
 import { createMagicSource } from "@jsenv/sourcemap"
 import {
   parseHtmlString,
-  injectScriptNodeAsEarlyAsPossible,
+  injectHtmlNodeAsEarlyAsPossible,
   createHtmlNode,
   stringifyHtmlAst,
 } from "@jsenv/ast"
@@ -28,7 +28,7 @@ const globalInjectorOnHtml = async (urlInfo, globals) => {
     globals,
     isWebWorker: false,
   })
-  injectScriptNodeAsEarlyAsPossible(
+  injectHtmlNodeAsEarlyAsPossible(
     htmlAst,
     createHtmlNode({
       tagName: "script",

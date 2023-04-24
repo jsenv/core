@@ -13,7 +13,7 @@ import {
   getHtmlNodeAttribute,
   setHtmlNodeAttributes,
   analyzeScriptNode,
-  injectScriptNodeAsEarlyAsPossible,
+  injectHtmlNodeAsEarlyAsPossible,
   createHtmlNode,
 } from "@jsenv/ast"
 import { injectQueryParams, urlToRelativeUrl } from "@jsenv/urls"
@@ -202,7 +202,7 @@ export const jsenvPluginJsModuleFallbackInsideHtml = ({
               await context.cook(systemJsUrlInfo, {
                 reference: systemJsReference,
               })
-              injectScriptNodeAsEarlyAsPossible(
+              injectHtmlNodeAsEarlyAsPossible(
                 htmlAst,
                 createHtmlNode({
                   tagName: "script",
