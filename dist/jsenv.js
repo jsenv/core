@@ -15,7 +15,7 @@ import { Readable, Stream, Writable } from "node:stream";
 import { Http2ServerResponse } from "node:http2";
 import { lookup } from "node:dns";
 import { SOURCEMAP, generateSourcemapFileUrl, composeTwoSourcemaps, generateSourcemapDataUrl, createMagicSource, getOriginalPosition } from "@jsenv/sourcemap";
-import { parseHtmlString, stringifyHtmlAst, getHtmlNodeAttribute, visitHtmlNodes, analyzeScriptNode, setHtmlNodeAttributes, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, parseCssUrls, parseJsUrls, getHtmlNodeText, setHtmlNodeText, removeHtmlNodeText, applyBabelPlugins, injectScriptNodeAsEarlyAsPossible, createHtmlNode, findHtmlNode, removeHtmlNode, injectJsImport, analyzeLinkNode, injectHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
+import { parseHtmlString, stringifyHtmlAst, getHtmlNodeAttribute, visitHtmlNodes, analyzeScriptNode, setHtmlNodeAttributes, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, parseCssUrls, parseJsUrls, getHtmlNodeText, setHtmlNodeText, removeHtmlNodeText, applyBabelPlugins, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, findHtmlNode, removeHtmlNode, injectJsImport, analyzeLinkNode, injectHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
 import { createRequire } from "node:module";
 import babelParser from "@babel/parser";
 import v8, { takeCoverage } from "node:v8";
@@ -9372,6 +9372,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   kitchenContext.injectReference = injectReference;
   const getWithoutSearchParam = ({
     urlInfo,
+    reference,
     context,
     searchParam,
     expectedType
@@ -9384,7 +9385,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       return [null, null];
     }
     searchParams.delete(searchParam);
-    const originalRef = context.reference.original || context.reference;
+    const originalRef = reference || context.reference.original || context.reference;
     const referenceWithoutSearchParam = {
       ...originalRef,
       original: originalRef,
@@ -9393,7 +9394,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         ...originalRef.data
       },
       expectedType,
-      specifier: context.reference.specifier.replace(`?${searchParam}`, "").replace(`&${searchParam}`, ""),
+      specifier: originalRef.specifier.replace(`?${searchParam}`, "").replace(`&${searchParam}`, ""),
       url: urlObject.href,
       generatedSpecifier: null,
       generatedUrl: null,
@@ -10109,7 +10110,7 @@ const visitHtmlUrls = ({
       if (type === "text") {
         // ignore <script type="whatever" src="./file.js">
         // per HTML spec https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#attr-type
-        // this will be handled by jsenv_plugin_html_inline_content
+        // this will be handled by jsenv_plugin_html_inline_content_analysis
         return;
       }
       visitAttributeAsUrlSpecifier({
@@ -10426,12 +10427,211 @@ const findOriginalDirectoryReference = (urlInfo, context) => {
   return ref;
 };
 
+const jsenvPluginInliningAsDataUrl = () => {
+  return {
+    name: "jsenv:inlining_as_data_url",
+    appliesDuring: "*",
+    formatUrl: {
+      // if the referenced url is a worker we could use
+      // https://www.oreilly.com/library/view/web-workers/9781449322120/ch04.html
+      // but maybe we should rather use ?object_url
+      // or people could do this:
+      // import workerText from './worker.js?text'
+      // const blob = new Blob(workerText, { type: 'text/javascript' })
+      // window.URL.createObjectURL(blob)
+      // in any case the recommended way is to use an url
+      // to benefit from shared worker and reuse worker between tabs
+      "*": (reference, context) => {
+        if (!reference.original || !reference.original.searchParams.has("inline")) {
+          return null;
+        }
+        // <link rel="stylesheet"> and <script> can be inlined in the html
+        if (reference.type === "link_href" && reference.subtype === "stylesheet") {
+          return null;
+        }
+        if (reference.type === "script") {
+          return null;
+        }
+        return (async () => {
+          const urlInfo = context.urlGraph.getUrlInfo(reference.url);
+          await context.cook(urlInfo, {
+            reference
+          });
+          const specifier = DATA_URL.stringify({
+            mediaType: urlInfo.contentType,
+            base64Flag: true,
+            data: Buffer.from(urlInfo.content).toString("base64")
+          });
+          return specifier;
+        })();
+      }
+    }
+  };
+};
+
+const jsenvPluginInliningIntoHtml = () => {
+  return {
+    name: "jsenv:inlining_into_html",
+    appliesDuring: "*",
+    finalizeUrlContent: {
+      html: async (urlInfo, context) => {
+        const htmlAst = parseHtmlString(urlInfo.content);
+        const mutations = [];
+        const actions = [];
+        const onStyleSheet = (linkNode, {
+          href
+        }) => {
+          const linkReference = context.referenceUtils.find(ref => ref.generatedSpecifier === href && ref.type === "link_href" && ref.subtype === "stylesheet");
+          if (!linkReference.original || !linkReference.original.searchParams.has("inline")) {
+            return;
+          }
+          const linkUrlInfo = context.urlGraph.getUrlInfo(linkReference.url);
+          actions.push(async () => {
+            await context.cook(linkUrlInfo, {
+              reference: linkReference
+            });
+            const {
+              line,
+              column,
+              isOriginal
+            } = getHtmlNodePosition(linkNode, {
+              preferOriginal: true
+            });
+            context.referenceUtils.becomesInline(linkReference, {
+              line: line - 1,
+              column,
+              isOriginal,
+              specifier: linkReference.generatedSpecifier,
+              content: linkUrlInfo.content,
+              contentType: linkUrlInfo.contentType
+            });
+            mutations.push(() => {
+              setHtmlNodeAttributes(linkNode, {
+                "inlined-from-href": href,
+                "href": undefined,
+                "rel": undefined,
+                "type": undefined,
+                "as": undefined,
+                "crossorigin": undefined,
+                "integrity": undefined,
+                "jsenv-inlined-by": "jsenv:inlining_into_html"
+              });
+              linkNode.nodeName = "style";
+              linkNode.tagName = "style";
+              setHtmlNodeText(linkNode, linkUrlInfo.content, {
+                indentation: "auto"
+              });
+            });
+          });
+        };
+        const onScriptWithSrc = (scriptNode, {
+          src
+        }) => {
+          const scriptReference = context.referenceUtils.find(ref => ref.generatedSpecifier === src && ref.type === "script");
+          if (!scriptReference.original || !scriptReference.original.searchParams.has("inline")) {
+            return;
+          }
+          const scriptUrlInfo = context.urlGraph.getUrlInfo(scriptReference.url);
+          actions.push(async () => {
+            await context.cook(scriptUrlInfo, {
+              reference: scriptReference
+            });
+            const {
+              line,
+              column,
+              isOriginal
+            } = getHtmlNodePosition(scriptNode, {
+              preferOriginal: true
+            });
+            context.referenceUtils.becomesInline(scriptReference, {
+              line: line - 1,
+              column,
+              isOriginal,
+              specifier: scriptReference.generatedSpecifier,
+              content: scriptUrlInfo.content,
+              contentType: scriptUrlInfo.contentType
+            });
+            mutations.push(() => {
+              setHtmlNodeAttributes(scriptNode, {
+                "inlined-from-src": src,
+                "src": undefined,
+                "crossorigin": undefined,
+                "integrity": undefined,
+                "jsenv-inlined-by": "jsenv:inlining_into_html"
+              });
+              setHtmlNodeText(scriptNode, scriptUrlInfo.content, {
+                indentation: "auto"
+              });
+            });
+          });
+        };
+        visitHtmlNodes(htmlAst, {
+          link: linkNode => {
+            const rel = getHtmlNodeAttribute(linkNode, "rel");
+            if (rel !== "stylesheet") {
+              return;
+            }
+            const href = getHtmlNodeAttribute(linkNode, "href");
+            if (!href) {
+              return;
+            }
+            onStyleSheet(linkNode, {
+              href
+            });
+          },
+          script: scriptNode => {
+            const {
+              type
+            } = analyzeScriptNode(scriptNode);
+            const scriptNodeText = getHtmlNodeText(scriptNode);
+            if (scriptNodeText) {
+              return;
+            }
+            const src = getHtmlNodeAttribute(scriptNode, "src");
+            if (!src) {
+              return;
+            }
+            onScriptWithSrc(scriptNode, {
+              type,
+              src
+            });
+          }
+        });
+        if (actions.length > 0) {
+          await Promise.all(actions.map(action => action()));
+        }
+        mutations.forEach(mutation => mutation());
+        const htmlModified = stringifyHtmlAst(htmlAst);
+        return htmlModified;
+      }
+    }
+  };
+};
+
+const jsenvPluginInlining = () => {
+  return [{
+    name: "jsenv:inlining",
+    appliesDuring: "*",
+    redirectUrl: reference => {
+      const {
+        searchParams
+      } = reference;
+      if (searchParams.has("inline")) {
+        const urlObject = new URL(reference.url);
+        urlObject.searchParams.delete("inline");
+        return urlObject.href;
+      }
+      return null;
+    }
+  }, jsenvPluginInliningAsDataUrl(), jsenvPluginInliningIntoHtml()];
+};
+
 /*
  * This plugin ensure content inlined inside HTML is cooked (inline <script> for instance)
  * For <script hot-accept> the script content will be moved to a virtual file
  * to enable hot reloading
  */
-const jsenvPluginHtmlInlineContent = ({
+const jsenvPluginHtmlInlineContentAnalysis = ({
   analyzeConvertedScripts
 }) => {
   const cookInlineContent = async ({
@@ -10457,7 +10657,7 @@ ${e.traceMessage}`);
     }
   };
   return {
-    name: "jsenv:html_inline_content",
+    name: "jsenv:html_inline_content_analysis",
     appliesDuring: "*",
     transformUrlContent: {
       html: async (urlInfo, context) => {
@@ -10511,9 +10711,12 @@ ${e.traceMessage}`);
               });
             });
             mutations.push(() => {
-              setHtmlNodeText(styleNode, inlineStyleUrlInfo.content);
+              setHtmlNodeText(styleNode, inlineStyleUrlInfo.content, {
+                indentation: false // indentation would decrease strack trace precision
+              });
+
               setHtmlNodeAttributes(styleNode, {
-                "jsenv-cooked-by": "jsenv:html_inline_content"
+                "jsenv-cooked-by": "jsenv:html_inline_content_analysis"
               });
             });
           },
@@ -10575,7 +10778,7 @@ ${e.traceMessage}`);
               });
               mutations.push(() => {
                 const attributes = {
-                  "jsenv-cooked-by": "jsenv:html_inline_content",
+                  "jsenv-cooked-by": "jsenv:html_inline_content_analysis",
                   // 1. <script type="jsx"> becomes <script>
                   // 2. <script type="module/jsx"> becomes <script type="module">
                   ...(extension ? {
@@ -10588,7 +10791,10 @@ ${e.traceMessage}`);
                     ...attributes
                   });
                 } else {
-                  setHtmlNodeText(scriptNode, inlineScriptUrlInfo.content);
+                  setHtmlNodeText(scriptNode, inlineScriptUrlInfo.content, {
+                    indentation: false // indentation would decrease stack trace precision
+                  });
+
                   setHtmlNodeAttributes(scriptNode, {
                     ...attributes
                   });
@@ -10721,7 +10927,7 @@ const JS_QUOTE_REPLACEMENTS = {
   }
 };
 
-const jsenvPluginJsInlineContent = ({
+const jsenvPluginJsInlineContentAnalysis = ({
   allowEscapeForVersioning
 }) => {
   const parseAndTransformInlineContentCalls = async (urlInfo, context) => {
@@ -10783,7 +10989,7 @@ const jsenvPluginJsInlineContent = ({
     return magicSource.toContentAndSourcemap();
   };
   return {
-    name: "jsenv:js_inline_content",
+    name: "jsenv:js_inline_content_analysis",
     appliesDuring: "*",
     transformUrlContent: {
       js_classic: parseAndTransformInlineContentCalls,
@@ -11099,61 +11305,20 @@ const base64ToBuffer = base64String => Buffer.from(base64String, "base64");
 const base64ToString = base64String => Buffer.from(base64String, "base64").toString("utf8");
 const dataToBase64 = data => Buffer.from(data).toString("base64");
 
-const jsenvPluginInlineQueryParam = () => {
-  return {
-    name: "jsenv:inline_query_param",
-    appliesDuring: "*",
-    formatUrl: {
-      // <link> and <script> can be inlined in the html
-      // this should be done during dev and postbuild but not build
-      // so that the bundled file gets inlined and not the entry point
-      "link_href": () => null,
-      "style": () => null,
-      "script": () => null,
-      // if the referenced url is a worker we could use
-      // https://www.oreilly.com/library/view/web-workers/9781449322120/ch04.html
-      // but maybe we should rather use ?object_url
-      // or people could do this:
-      // import workerText from './worker.js?text'
-      // const blob = new Blob(workerText, { type: 'text/javascript' })
-      // window.URL.createObjectURL(blob)
-      // in any case the recommended way is to use an url
-      // to benefit from shared worker and reuse worker between tabs
-      "*": (reference, context) => {
-        if (!reference.searchParams.has("inline")) {
-          return null;
-        }
-        return (async () => {
-          const urlInfo = context.urlGraph.getUrlInfo(reference.url);
-          await context.cook(urlInfo, {
-            reference
-          });
-          const specifier = DATA_URL.stringify({
-            mediaType: urlInfo.contentType,
-            base64Flag: true,
-            data: Buffer.from(urlInfo.content).toString("base64")
-          });
-          return specifier;
-        })();
-      }
-    }
-  };
-};
-
-const jsenvPluginInline = ({
+const jsenvPluginInlineContentAnalysis = ({
   fetchInlineUrls = true,
   analyzeConvertedScripts = false,
   allowEscapeForVersioning = false
 } = {}) => {
-  return [...(fetchInlineUrls ? [jsenvPluginInlineUrls()] : []), jsenvPluginHtmlInlineContent({
+  return [...(fetchInlineUrls ? [jsenvPluginInlineContentFetcher()] : []), jsenvPluginHtmlInlineContentAnalysis({
     analyzeConvertedScripts
-  }), jsenvPluginJsInlineContent({
+  }), jsenvPluginJsInlineContentAnalysis({
     allowEscapeForVersioning
-  }), jsenvPluginDataUrls(), jsenvPluginInlineQueryParam()];
+  }), jsenvPluginDataUrls()];
 };
-const jsenvPluginInlineUrls = () => {
+const jsenvPluginInlineContentFetcher = () => {
   return {
-    name: "jsenv:inline_urls",
+    name: "jsenv:inline_content_fetcher",
     appliesDuring: "*",
     fetchUrlContent: urlInfo => {
       if (!urlInfo.isInline) {
@@ -15176,7 +15341,7 @@ const jsenvPluginJsModuleFallbackInsideHtml = ({
               await context.cook(systemJsUrlInfo, {
                 reference: systemJsReference
               });
-              injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
+              injectHtmlNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
                 tagName: "script",
                 textContent: systemJsUrlInfo.content
               }), "jsenv:js_module_fallback");
@@ -16003,7 +16168,9 @@ const jsenvPluginImportmap = () => {
           await context.cook(inlineImportmapUrlInfo, {
             reference: inlineImportmapReference
           });
-          setHtmlNodeText(importmap, inlineImportmapUrlInfo.content);
+          setHtmlNodeText(importmap, inlineImportmapUrlInfo.content, {
+            indentation: "auto"
+          });
           setHtmlNodeAttributes(importmap, {
             "jsenv-cooked-by": "jsenv:importmap"
           });
@@ -16021,7 +16188,9 @@ const jsenvPluginImportmap = () => {
             reference: importmapReference
           });
           onHtmlImportmapParsed(JSON.parse(importmapUrlInfo.content), htmlUrlInfo.url);
-          setHtmlNodeText(importmap, importmapUrlInfo.content);
+          setHtmlNodeText(importmap, importmapUrlInfo.content, {
+            indentation: "auto"
+          });
           setHtmlNodeAttributes(importmap, {
             "src": undefined,
             "jsenv-inlined-by": "jsenv:importmap",
@@ -17796,7 +17965,9 @@ const injectSupervisorIntoHTML = async ({
           src: inlineScriptSrc
         });
         mutations.push(() => {
-          setHtmlNodeText(scriptNode, remoteJsSupervised);
+          setHtmlNodeText(scriptNode, remoteJsSupervised, {
+            indentation: "auto"
+          });
           setHtmlNodeAttributes(scriptNode, {
             "jsenv-cooked-by": "jsenv:supervisor",
             "src": undefined,
@@ -17819,7 +17990,9 @@ const injectSupervisorIntoHTML = async ({
               inlineSrc: inlineScriptSrc
             });
             mutations.push(() => {
-              setHtmlNodeText(scriptNode, inlineJsSupervised);
+              setHtmlNodeText(scriptNode, inlineJsSupervised, {
+                indentation: "auto"
+              });
               setHtmlNodeAttributes(scriptNode, {
                 "jsenv-cooked-by": "jsenv:supervisor"
               });
@@ -17852,7 +18025,9 @@ const injectSupervisorIntoHTML = async ({
         src
       });
       mutations.push(() => {
-        setHtmlNodeText(scriptNode, remoteJsSupervised);
+        setHtmlNodeText(scriptNode, remoteJsSupervised, {
+          indentation: "auto"
+        });
         setHtmlNodeAttributes(scriptNode, {
           "jsenv-cooked-by": "jsenv:supervisor",
           "src": undefined,
@@ -17887,6 +18062,10 @@ const injectSupervisorIntoHTML = async ({
         }
         const src = getHtmlNodeAttribute(scriptNode, "src");
         if (src) {
+          const urlObject = new URL(src, "http://example.com");
+          if (urlObject.searchParams.has("inline")) {
+            return;
+          }
           handleScriptWithSrc(scriptNode, {
             type,
             src
@@ -17903,20 +18082,15 @@ const injectSupervisorIntoHTML = async ({
       serverIsJsenvDevServer: webServer.isJsenvDevServer,
       rootDirectoryUrl: webServer.rootDirectoryUrl,
       scriptInfos
-    }, "        ");
-    injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
+    }, "  ");
+    injectHtmlNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
       tagName: "script",
-      textContent: `
-      window.__supervisor__.setup({
-        ${setupParamsSource}
-      })
-      `
+      textContent: `window.__supervisor__.setup({${setupParamsSource}})`
     }), "jsenv:supervisor");
-    const supervisorScript = createHtmlNode({
+    injectHtmlNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
       tagName: "script",
       src: supervisorScriptSrc
-    });
-    injectScriptNodeAsEarlyAsPossible(htmlAst, supervisorScript, "jsenv:supervisor");
+    }), "jsenv:supervisor");
   }
   // 3. Perform actions (transforming inline script content) and html mutations
   if (actions.length > 0) {
@@ -17944,14 +18118,11 @@ const generateCodeToSuperviseScriptWithSrc = ({
   type,
   src
 }) => {
+  const srcEncoded = JSON.stringify(src);
   if (type === "js_module") {
-    return `
-        window.__supervisor__.superviseScriptTypeModule(${JSON.stringify(src)}, (url) => import(url));
-    `;
+    return `window.__supervisor__.superviseScriptTypeModule(${srcEncoded}, (url) => import(url));`;
   }
-  return `
-        window.__supervisor__.superviseScript(${JSON.stringify(src)});
-    `;
+  return `window.__supervisor__.superviseScript(${srcEncoded});`;
 };
 
 /*
@@ -18556,10 +18727,23 @@ const jsenvPluginImportAssertions = ({
   };
   const turnIntoJsModuleProxy = (reference, type) => {
     reference.mutation = magicSource => {
-      magicSource.remove({
-        start: reference.assertNode.start,
-        end: reference.assertNode.end
-      });
+      const {
+        assertNode
+      } = reference;
+      if (reference.subtype === "import_dynamic") {
+        const assertPropertyNode = assertNode.properties.find(prop => prop.key.name === "assert");
+        const assertPropertyValue = assertPropertyNode.value;
+        const typePropertyNode = assertPropertyValue.properties.find(prop => prop.key.name === "type");
+        magicSource.remove({
+          start: typePropertyNode.start,
+          end: typePropertyNode.end
+        });
+      } else {
+        magicSource.remove({
+          start: assertNode.start,
+          end: assertNode.end
+        });
+      }
     };
     const newUrl = injectQueryParams(reference.url, {
       [`as_${type}_module`]: ""
@@ -20300,7 +20484,7 @@ const jsenvPluginAutoreloadClient = () => {
           expectedType: "js_module",
           specifier: autoreloadClientFileUrl
         });
-        injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
+        injectHtmlNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
           tagName: "script",
           type: "module",
           src: autoreloadClientReference.generatedSpecifier
@@ -20668,16 +20852,13 @@ const jsenvPluginRibbon = ({
         const paramsJson = JSON.stringify({
           text: context.dev ? "DEV" : "BUILD"
         }, null, "  ");
-        const scriptNode = createHtmlNode({
+        injectHtmlNode(htmlAst, createHtmlNode({
           tagName: "script",
           type: "module",
-          textContent: `
-  import { injectRibbon } from "${ribbonClientFileReference.generatedSpecifier}"
-  
-  injectRibbon(${paramsJson})
-`
-        });
-        injectHtmlNode(htmlAst, scriptNode, "jsenv:ribbon");
+          textContent: `import { injectRibbon } from "${ribbonClientFileReference.generatedSpecifier}"
+
+injectRibbon(${paramsJson});`
+        }), "jsenv:ribbon");
         return stringifyHtmlAst(htmlAst);
       }
     }
@@ -20694,6 +20875,7 @@ const getCorePlugins = ({
   directoryReferenceAllowed,
   supervisor,
   transpilation = true,
+  inlining = true,
   clientAutoreload = false,
   clientFileChangeCallbackList,
   clientFilesPruneCallbackList,
@@ -20726,9 +20908,9 @@ const getCorePlugins = ({
   }), jsenvPluginTranspilation(transpilation), jsenvPluginImportmap(),
   // before node esm to handle bare specifiers
   // + before node esm to handle importmap before inline content
-  jsenvPluginInline(),
+  jsenvPluginInlineContentAnalysis(),
   // before "file urls" to resolve and load inline urls
-  ...(supervisor ? [jsenvPluginSupervisor(supervisor)] : []),
+  ...(inlining ? [jsenvPluginInlining()] : []), ...(supervisor ? [jsenvPluginSupervisor(supervisor)] : []),
   // after inline as it needs inline script to be cooked
   jsenvPluginFileUrls({
     directoryReferenceAllowed,
@@ -20983,7 +21165,7 @@ const injectors = {
     const htmlAst = parseHtmlString(urlInfo.content, {
       storeOriginalPositions: false
     });
-    injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
+    injectHtmlNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
       tagName: "script",
       textContent: generateClientCodeForVersionMappings(versionMappings, {
         globalName: "window",
@@ -21002,10 +21184,11 @@ const jsInjector = (urlInfo, {
   minification
 }) => {
   const magicSource = createMagicSource(urlInfo.content);
-  magicSource.prepend(generateClientCodeForVersionMappings(versionMappings, {
+  const code = generateClientCodeForVersionMappings(versionMappings, {
     globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window",
     minification
-  }));
+  });
+  magicSource.prepend(`${code}\n\n`);
   return magicSource.toContentAndSourcemap();
 };
 const generateClientCodeForVersionMappings = (versionMappings, {
@@ -21015,14 +21198,12 @@ const generateClientCodeForVersionMappings = (versionMappings, {
   if (minification) {
     return `;(function(){var m = ${JSON.stringify(versionMappings)}; ${globalName}.__v__ = function (s) { return m[s] || s }; })();`;
   }
-  return `
-;(function() {
+  return `;(function() {
   var __versionMappings__ = ${JSON.stringify(versionMappings, null, "  ")};
   ${globalName}.__v__ = function (specifier) {
     return __versionMappings__[specifier] || specifier
   };
-})();
-`;
+})();`;
 };
 const injectVersionMappingsAsImportmap = async ({
   urlInfo,
@@ -21035,18 +21216,15 @@ const injectVersionMappingsAsImportmap = async ({
   // jsenv_plugin_importmap.js is removing importmap during build
   // it means at this point we know HTML has no importmap in it
   // we can safely inject one
-  const importmapNode = createHtmlNode({
+  injectHtmlNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
     tagName: "script",
     type: "importmap",
     textContent: kitchen.kitchenContext.minification ? JSON.stringify({
       imports: versionMappings
-    }) : `  
-      {
-        "imports": {${JSON.stringify(versionMappings, null, "          ").slice(1, -1)}        }
-      }
-    `
-  });
-  injectScriptNodeAsEarlyAsPossible(htmlAst, importmapNode, "jsenv:versioning");
+    }) : JSON.stringify({
+      imports: versionMappings
+    }, null, "  ")
+  }), "jsenv:versioning");
   kitchen.urlInfoTransformer.applyFinalTransformations(urlInfo, {
     content: stringifyHtmlAst(htmlAst)
   });
@@ -21305,6 +21483,7 @@ build ${entryPointKeys.length} entry points`);
           babelHelpersAsImport: !explicitJsModuleFallback,
           jsModuleFallbackOnJsClassic: false
         },
+        inlining: false,
         scenarioPlaceholders
       })],
       sourcemaps,
@@ -21343,9 +21522,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       ...contextSharedDuringBuild,
       plugins: [urlAnalysisPlugin, ...(lineBreakNormalization ? [jsenvPluginLineBreakNormalization()] : []), jsenvPluginJsModuleFallback({
         systemJsInjection: true
-      }), jsenvPluginInline({
+      }), jsenvPluginInlineContentAnalysis({
         fetchInlineUrls: false
-      }), {
+      }), jsenvPluginInlining(), {
         name: "jsenv:build",
         appliesDuring: "build",
         resolveUrl: reference => {
@@ -21382,16 +21561,25 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             return reference.url;
           }
           if (reference.isInline) {
+            const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl);
+            const parentRawUrl = parentUrlInfo.originalUrl;
             const rawUrlInfo = GRAPH.find(rawGraph, rawUrlInfo => {
-              if (!rawUrlInfo.isInline) {
-                return false;
+              const {
+                inlineUrlSite
+              } = rawUrlInfo;
+              // not inline
+              if (!inlineUrlSite) return false;
+              if (inlineUrlSite.url === parentRawUrl && inlineUrlSite.line === reference.specifierLine && inlineUrlSite.column === reference.specifierColumn) {
+                return true;
               }
               if (rawUrlInfo.content === reference.content) {
                 return true;
               }
-              return rawUrlInfo.originalContent === reference.content;
+              if (rawUrlInfo.originalContent === reference.content) {
+                return true;
+              }
+              return false;
             });
-            const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl);
             if (!rawUrlInfo) {
               // generated during final graph
               // (happens for JSON.parse injected for import assertions for instance)
@@ -22007,7 +22195,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             build: true,
             runtimeCompat,
             ...contextSharedDuringBuild,
-            plugins: [urlAnalysisPlugin, jsenvPluginInline({
+            plugins: [urlAnalysisPlugin, jsenvPluginInlineContentAnalysis({
               fetchInlineUrls: false,
               analyzeConvertedScripts: true,
               // to be able to version their urls
@@ -22591,7 +22779,7 @@ const jsenvPluginServerEventsClientInjection = () => {
           expectedType: "js_module",
           specifier: serverEventsClientFileUrl
         });
-        injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
+        injectHtmlNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
           tagName: "script",
           type: "module",
           src: serverEventsClientFileReference.generatedSpecifier

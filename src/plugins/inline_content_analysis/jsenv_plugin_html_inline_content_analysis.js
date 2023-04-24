@@ -101,7 +101,9 @@ ${e.traceMessage}`)
               })
             })
             mutations.push(() => {
-              setHtmlNodeText(styleNode, inlineStyleUrlInfo.content)
+              setHtmlNodeText(styleNode, inlineStyleUrlInfo.content, {
+                indentation: false, // indentation would decrease strack trace precision
+              })
               setHtmlNodeAttributes(styleNode, {
                 "jsenv-cooked-by": "jsenv:html_inline_content_analysis",
               })
@@ -178,7 +180,9 @@ ${e.traceMessage}`)
                     ...attributes,
                   })
                 } else {
-                  setHtmlNodeText(scriptNode, inlineScriptUrlInfo.content)
+                  setHtmlNodeText(scriptNode, inlineScriptUrlInfo.content, {
+                    indentation: false, // indentation would decrease stack trace precision
+                  })
                   setHtmlNodeAttributes(scriptNode, {
                     ...attributes,
                   })

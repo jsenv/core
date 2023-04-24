@@ -125,7 +125,9 @@ export const injectSupervisorIntoHTML = async (
           src: inlineScriptSrc,
         })
         mutations.push(() => {
-          setHtmlNodeText(scriptNode, remoteJsSupervised)
+          setHtmlNodeText(scriptNode, remoteJsSupervised, {
+            indentation: "auto",
+          })
           setHtmlNodeAttributes(scriptNode, {
             "jsenv-cooked-by": "jsenv:supervisor",
             "src": undefined,
@@ -144,7 +146,9 @@ export const injectSupervisorIntoHTML = async (
               inlineSrc: inlineScriptSrc,
             })
             mutations.push(() => {
-              setHtmlNodeText(scriptNode, inlineJsSupervised)
+              setHtmlNodeText(scriptNode, inlineJsSupervised, {
+                indentation: "auto",
+              })
               setHtmlNodeAttributes(scriptNode, {
                 "jsenv-cooked-by": "jsenv:supervisor",
               })
@@ -171,7 +175,7 @@ export const injectSupervisorIntoHTML = async (
         src,
       })
       mutations.push(() => {
-        setHtmlNodeText(scriptNode, remoteJsSupervised)
+        setHtmlNodeText(scriptNode, remoteJsSupervised, { indentation: "auto" })
         setHtmlNodeAttributes(scriptNode, {
           "jsenv-cooked-by": "jsenv:supervisor",
           "src": undefined,
