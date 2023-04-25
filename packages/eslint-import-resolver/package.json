@@ -4,7 +4,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/jsenv/jsenv-core",
+    "url": "https://github.com/jsenv/core",
     "directory": "packages/eslint-import-resolver"
   },
   "publishConfig": {

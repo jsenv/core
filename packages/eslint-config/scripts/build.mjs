@@ -4,7 +4,7 @@
  * into commonjs and write them into dist/
  *
  * read more at
- * https://github.com/jsenv/jsenv-core/blob/master/docs/building/readme.md#node-package-build
+ * https://github.com/jsenv/core/blob/master/docs/building/readme.md#node-package-build
  *
  */
 

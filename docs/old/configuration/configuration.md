@@ -11,7 +11,7 @@ The presence of a jsenv configuration file is **optional**.
  * scripts/test.mjs
  * scripts/build.mjs
  *
- * Read more at https://github.com/jsenv/jsenv-core#configuration
+ * Read more at https://github.com/jsenv/core#configuration
  */
 
 export const rootDirectoryUrl = new URL("./", import.meta.url)

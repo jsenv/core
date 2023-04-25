@@ -159,7 +159,7 @@
 
 # 30.3.0
 
-- Use importmap or systemjs to prevent hash cascading https://github.com/jsenv/jsenv-core/pull/341
+- Use importmap or systemjs to prevent hash cascading https://github.com/jsenv/core/pull/341
 
 # 30.2.0
 
@@ -406,7 +406,7 @@
 
 - **breaking change**: introduce urlResolution
   - replace nodeEsmResolution
-  - new way to disable node esm resolution visible here https://github.com/jsenv/jsenv-core/pull/309/files#diff-f1264f171aeba6139f3338d6682b28e466ef796ab84760d608ed8c69b3d80073R34-R36
+  - new way to disable node esm resolution visible here https://github.com/jsenv/core/pull/309/files#diff-f1264f171aeba6139f3338d6682b28e466ef796ab84760d608ed8c69b3d80073R34-R36
 - **breaking change**: rename fileSystemMagicResolution in fileSystemMagicRedirection
 - fix explorer.html not served anymore after sarting dev server
 
@@ -639,7 +639,7 @@
 
 # 27.1.0
 
-- Add console repartition in logs (see https://github.com/jsenv/jsenv-core/issues/224)
+- Add console repartition in logs (see https://github.com/jsenv/core/issues/224)
 
 # 27.0.3
 

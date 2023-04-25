@@ -10,7 +10,7 @@ document.querySelector("#root").innerHTML = `
   <p>
     Edit <code>jsenv_logo.svg</code> and save to test HMR updates.
   </p>
-  <a href="https://github.com/jsenv/jsenv-core" target="_blank">Documentation</a>
+  <a href="https://github.com/jsenv/core" target="_blank">Documentation</a>
 `;
 
 if (import.meta.hot) {

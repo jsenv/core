@@ -157,7 +157,7 @@ const eslintConfig = composeEslintConfig(
 module.exports = eslintConfig
 ```
 
-The above configuration uses [@jsenv/eslint-import-resolver](https://github.com/jsenv/jsenv-core/tree/main/packages/eslint-import-resolver) to resolve import so it needs to be installed.
+The above configuration uses [@jsenv/eslint-import-resolver](https://github.com/jsenv/core/tree/main/packages/eslint-import-resolver) to resolve import so it needs to be installed.
 
 ```console
 npm install --save-dev @jsenv/eslint-import-resolver

@@ -37,7 +37,7 @@ export const App = () => {
         <p>
           <a
             className="app_link"
-            href="https://github.com/jsenv/jsenv-core"
+            href="https://github.com/jsenv/core"
             target="_blank"
             rel="noopener noreferrer"
           >
