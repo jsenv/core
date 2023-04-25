@@ -42,10 +42,10 @@ export const resolve = (specifier, context, nextResolve) => {
     }
   } catch (e) {
     if (e.message.includes("bare specifier")) {
-      return nextResolve(specifier)
+      return nextResolve(specifier, context)
     }
     console.error(e)
-    return nextResolve(specifier)
+    return nextResolve(specifier, context)
   }
   return nextResolve(specifier, context)
 }

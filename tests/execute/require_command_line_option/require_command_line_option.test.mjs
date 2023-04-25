@@ -1,5 +1,5 @@
 import { assert } from "@jsenv/assert"
-import { execute, nodeChildProcess } from "@jsenv/core"
+import { execute, nodeChildProcess, nodeWorkerThread } from "@jsenv/core"
 
 const test = async (params) => {
   const result = await execute({
@@ -19,9 +19,19 @@ const test = async (params) => {
 await test({
   runtime: nodeChildProcess,
 })
-
 await test({
   runtime: nodeChildProcess,
+  runtimeParams: {
+    commandLineOptions: [`--require=./required.cjs`],
+  },
+})
+
+await test({
+  runtime: nodeWorkerThread,
+})
+
+await test({
+  runtime: nodeWorkerThread,
   runtimeParams: {
     commandLineOptions: [`--require=./required.cjs`],
   },
