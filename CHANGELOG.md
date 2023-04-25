@@ -1,3 +1,15 @@
+# 34.3.0
+
+- Add ability to inline file with "?inline"
+  It can also be used to obtain js classic from js module with "?as_js_classic&inline"
+- Add importMap to Node.js runtimeParams (both child process and worker thread)
+  Allow to redirect import to other files during tests (mocking)
+- Muliple `--require=` and `--experimental-loader=` passed to commandLineOptions are now preserved
+  (Before the last one wins)
+- Prevent generating trailing comma on dynamic import during import assertion transpilation
+- Better indentation in html generated during dev and build
+- Internal dev experience improvements on file/directory snapshots
+
 # 34.2.2
 
 - Update deps
