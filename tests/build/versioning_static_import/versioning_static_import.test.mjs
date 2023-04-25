@@ -19,10 +19,7 @@ import { assert } from "@jsenv/assert"
 import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
 
 import { build } from "@jsenv/core"
-import {
-  readSnapshotsFromDirectory,
-  writeSnapshotsIntoDirectory,
-} from "@jsenv/core/tests/snapshots_directory.js"
+import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js"
 
@@ -54,7 +51,11 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
   }
 
   // 1. Generate a first build
-  const initialBuild = await generateDist()
+  await generateDist()
+  takeDirectorySnapshot(
+    new URL("./dist/", import.meta.url),
+    new URL("./initial/", snapshotsDirectoryUrl),
+  )
 
   // 2. Ensure file executes properly
   const serverRequests = []
@@ -92,7 +93,11 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
   // rebuild
   try {
     jsFileContent.update(`export const answer = 43`)
-    const modifiedBuild = await generateDist()
+    await generateDist()
+    takeDirectorySnapshot(
+      new URL("./dist/", import.meta.url),
+      new URL("./modified/", snapshotsDirectoryUrl),
+    )
 
     // reload then ensure the browser did not re-fetch app.js
     serverRequests.length = 0
@@ -106,32 +111,14 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
       /* eslint-enable no-undef */
     )
 
-    const snapshotsInitialUrl = new URL("./initial/", snapshotsDirectoryUrl)
-    const snapshotsInitialContent =
-      readSnapshotsFromDirectory(snapshotsInitialUrl)
-    const snapshotsModifiedUrl = new URL("./modified/", snapshotsDirectoryUrl)
-    const snapshotsModifiedContent =
-      readSnapshotsFromDirectory(snapshotsModifiedUrl)
-    writeSnapshotsIntoDirectory(
-      snapshotsInitialUrl,
-      initialBuild.buildFileContents,
-    )
-    writeSnapshotsIntoDirectory(
-      snapshotsModifiedUrl,
-      modifiedBuild.buildFileContents,
-    )
     assert({
       actual: {
-        initial: initialBuild.buildFileContents,
         initialReturnValue,
-        modified: modifiedBuild.buildFileContents,
         modifiedReturnValue,
         responseForAppJs,
       },
       expected: {
-        initial: snapshotsInitialContent,
         initialReturnValue: 42,
-        modified: snapshotsModifiedContent,
         modifiedReturnValue: 43,
         responseForAppJs: undefined,
       },
