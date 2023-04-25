@@ -9,7 +9,10 @@ export const jsenvPluginAsJsClassic = ({
   systemJsClientFileUrl,
 } = {}) => {
   const markAsJsClassicProxy = (reference) => {
-    reference.isEntryPoint = true
+    if (reference.searchParams.has("dynamic_import")) {
+    } else {
+      reference.isEntryPoint = true
+    }
     reference.expectedType = "js_classic"
     reference.filename = generateJsClassicFilename(reference.url)
   }
@@ -53,6 +56,12 @@ export const jsenvPluginAsJsClassic = ({
           buildDirectoryUrl: new URL("./", import.meta.url),
         },
         preserveDynamicImport: true,
+        augmentDynamicImportUrlSearchParams: () => {
+          return {
+            as_js_classic: "",
+            dynamic_import: "",
+          }
+        },
       })
       const jsModuleBundledUrlInfo = bundleUrlInfos[jsModuleUrlInfo.url]
       if (context.dev) {

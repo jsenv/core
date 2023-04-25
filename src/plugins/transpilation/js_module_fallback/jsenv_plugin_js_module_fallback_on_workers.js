@@ -2,13 +2,13 @@
  * when {type: "module"} cannot be used on web workers:
  * - new Worker("worker.js", { type: "module" })
  *   transformed into
- *   new Worker("worker.js?as_js_classic", { type: " lassic" })
+ *   new Worker("worker.js?js_module_fallback", { type: " lassic" })
  * - navigator.serviceWorker.register("service_worker.js", { type: "module" })
  *   transformed into
- *   navigator.serviceWorker.register("service_worker.js?as_js_classic", { type: "classic" })
+ *   navigator.serviceWorker.register("service_worker.js?js_module_fallback", { type: "classic" })
  * - new SharedWorker("shared_worker.js", { type: "module" })
  *   transformed into
- *   new SharedWorker("shared_worker.js?as_js_classic", { type: "classic" })
+ *   new SharedWorker("shared_worker.js?js_module_fallback", { type: "classic" })
  */
 
 import { injectQueryParams } from "@jsenv/urls"

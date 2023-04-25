@@ -15,6 +15,7 @@ export const bundleJsModules = async ({
   chunks = {},
   strictExports = false,
   preserveDynamicImport = false,
+  augmentDynamicImportUrlSearchParams = () => {},
   rollup,
   rollupInput = {},
   rollupOutput = {},
@@ -73,6 +74,7 @@ export const bundleJsModules = async ({
           sourcemaps,
           include,
           preserveDynamicImport,
+          augmentDynamicImportUrlSearchParams,
           strictExports,
           resultRef,
         }),
@@ -141,6 +143,7 @@ const rollupPluginJsenv = ({
 
   include,
   preserveDynamicImport,
+  augmentDynamicImportUrlSearchParams,
   strictExports,
 
   resultRef,
@@ -298,7 +301,17 @@ const rollupPluginJsenv = ({
           }
           urlObject = new URL(specifier, importer)
         }
-        urlObject.searchParams.set("as_js_classic", "")
+        const searchParamsToAdd = augmentDynamicImportUrlSearchParams(urlObject)
+        if (searchParamsToAdd) {
+          Object.keys(searchParamsToAdd).forEach((key) => {
+            const value = searchParamsToAdd[key]
+            if (value === undefined) {
+              urlObject.searchParams.delete(key)
+            } else {
+              urlObject.searchParams.set(key, value)
+            }
+          })
+        }
         return { external: true, id: urlObject.href }
       }
       return null
