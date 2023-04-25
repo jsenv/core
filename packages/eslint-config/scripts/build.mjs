@@ -23,5 +23,5 @@ await build({
   plugins: [jsenvPluginBundling()],
   versioning: false,
   assetManifest: false,
-  sourcemaps: true,
+  sourcemaps: "file",
 })

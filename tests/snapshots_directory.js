@@ -57,7 +57,7 @@ export const writeSnapshotsIntoDirectory = (directoryUrl, fileContents) => {
 export const takeFileSnapshot = (fileUrl, snapshotFileUrl) => {
   const fileContent = readFileSync(fileUrl, "utf8")
   const snapshotFileContent = readFileSync(snapshotFileUrl, "utf8")
-  writeFileSync(fileUrl, fileContent)
+  writeFileSync(snapshotFileUrl, fileContent)
   assertSnapshots({
     content: fileContent,
     snapshotContent: snapshotFileContent,

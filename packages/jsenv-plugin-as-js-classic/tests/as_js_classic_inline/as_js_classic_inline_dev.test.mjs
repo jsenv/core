@@ -16,6 +16,7 @@ const devServer = await startDevServer({
   plugins: [jsenvPluginAsJsClassic()],
   outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
   ribbon: false,
+  sourcemaps: "none",
 })
 const browser = await chromium.launch({ headless: !debug })
 try {

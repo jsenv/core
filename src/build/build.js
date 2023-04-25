@@ -113,7 +113,7 @@ export const defaultRuntimeCompat = {
  *        Controls if url in build file contents are versioned
  * @param {('search_param'|'filename')} [buildParameters.versioningMethod="search_param"]
  *        Controls how url are versioned
- * @param {boolean|string} [buildParameters.sourcemaps=false]
+ * @param {('none'|'inline'|'file'|'programmatic'} [buildParameters.sourcemaps="none"]
  *        Generate sourcemaps in the build directory
  * @return {Object} buildReturnValue
  * @return {Object} buildReturnValue.buildFileContents
@@ -135,7 +135,7 @@ export const build = async ({
   runtimeCompat = defaultRuntimeCompat,
   base = runtimeCompat.node ? "./" : "/",
   plugins = [],
-  sourcemaps = false,
+  sourcemaps = "none",
   sourcemapsSourcesContent,
   urlAnalysis = {},
   urlResolution,
