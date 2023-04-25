@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url"
 import { assert } from "@jsenv/assert"
 import { execute, nodeChildProcess, nodeWorkerThread } from "@jsenv/core"
 
@@ -29,10 +30,12 @@ await test({
 await test({
   runtime: nodeWorkerThread,
 })
-
 await test({
   runtime: nodeWorkerThread,
   runtimeParams: {
-    commandLineOptions: [`--require=./required.cjs`],
+    commandLineOptions: [
+      // worker thread needs absolute path, see https://github.com/nodejs/node/issues/41673
+      `--require=${fileURLToPath(new URL("./required.cjs", import.meta.url))}`,
+    ],
   },
 })
