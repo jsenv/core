@@ -7,15 +7,6 @@ await executeTestPlan({
     "./tests/**/*.test.mjs": {
       node: {
         runtime: nodeWorkerThread,
-        runtimeParams: {
-          importMap: process.argv.includes("--no-snapshot-assertion")
-            ? {
-                imports: {
-                  "@jsenv/assert": "./tests/jsenv_assert_mock.js",
-                },
-              }
-            : null,
-        },
         allocatedMs: ({ fileRelativeUrl }) => {
           if (fileRelativeUrl.endsWith("_snapshots.test.mjs")) {
             return 180_000

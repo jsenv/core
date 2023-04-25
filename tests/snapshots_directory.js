@@ -7,6 +7,7 @@ import {
 import { urlToRelativeUrl } from "@jsenv/urls"
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js"
 import { ensureUnixLineBreaks } from "@jsenv/core/src/build/line_break_unix.js"
+import { assert } from "@jsenv/assert"
 
 export const readSnapshotsFromDirectory = (directoryUrl) => {
   directoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl)
@@ -51,4 +52,11 @@ export const writeSnapshotsIntoDirectory = (directoryUrl, fileContents) => {
     const contentUrl = new URL(relativeUrl, directoryUrl)
     writeFileSync(contentUrl, fileContents[relativeUrl])
   })
+}
+
+export const assertSnapshots = ({ snapshotsDirectoryUrl, directoryUrl }) => {
+  const actual = readSnapshotsFromDirectory(snapshotsDirectoryUrl)
+  const expected = readSnapshotsFromDirectory(directoryUrl)
+  writeSnapshotsIntoDirectory(snapshotsDirectoryUrl, expected)
+  assert({ actual, expected })
 }
