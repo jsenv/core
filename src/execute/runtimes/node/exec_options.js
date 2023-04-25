@@ -5,7 +5,14 @@ export const ExecOptions = {
     while (i < execArgv.length) {
       const execArg = execArgv[i]
       const option = execOptionFromExecArg(execArg)
-      execOptions[option.name] = option.value
+      const existing = execOptions[option.name]
+      if (existing) {
+        execOptions[option.name] = Array.isArray(existing)
+          ? [...existing, option.value]
+          : [existing, option.value]
+      } else {
+        execOptions[option.name] = option.value
+      }
       i++
     }
     return execOptions
@@ -21,7 +28,13 @@ export const ExecOptions = {
         execArgv.push(optionName)
         return
       }
-      execArgv.push(`${optionName}=${optionValue}`)
+      if (Array.isArray(optionValue)) {
+        optionValue.forEach((subValue) => {
+          execArgv.push(`${optionName}=${subValue}`)
+        })
+      } else {
+        execArgv.push(`${optionName}=${optionValue}`)
+      }
     })
     return execArgv
   },

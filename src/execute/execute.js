@@ -23,6 +23,7 @@ export const execute = async ({
   logLevel,
   rootDirectoryUrl,
   webServer,
+  importMap,
 
   fileRelativeUrl,
   allocatedMs,
@@ -65,6 +66,7 @@ export const execute = async ({
     rootDirectoryUrl,
     webServer,
     fileRelativeUrl,
+    importMap,
     ...runtimeParams,
   }
 
