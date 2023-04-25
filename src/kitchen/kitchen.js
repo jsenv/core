@@ -742,7 +742,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       specifier: originalRef.specifier
         .replace(`?${searchParam}`, "")
         .replace(`&${searchParam}`, ""),
-      url: urlObject.href,
+      url: normalizeUrl(urlObject.href),
       generatedSpecifier: null,
       generatedUrl: null,
       filename: null,

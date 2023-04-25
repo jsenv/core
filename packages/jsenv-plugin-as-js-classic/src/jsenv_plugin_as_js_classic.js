@@ -9,6 +9,7 @@ export const jsenvPluginAsJsClassic = ({
   systemJsClientFileUrl,
 } = {}) => {
   const markAsJsClassicProxy = (reference) => {
+    reference.isEntryPoint = true
     reference.expectedType = "js_classic"
     reference.filename = generateJsClassicFilename(reference.url)
   }

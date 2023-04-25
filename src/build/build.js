@@ -655,6 +655,13 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               return rawUrlInfo
             }
             if (reference.isInline) {
+              if (reference.prev && !reference.prev.isInline) {
+                const urlBeforeRedirect = findKey(
+                  finalRedirections,
+                  reference.prev.url,
+                )
+                return fromBundleOrRawGraph(urlBeforeRedirect)
+              }
               return fromBundleOrRawGraph(reference.url)
             }
             // reference updated during "postbuild":

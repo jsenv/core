@@ -14,7 +14,7 @@ export const jsenvPluginInliningIntoHtml = () => {
   return {
     name: "jsenv:inlining_into_html",
     appliesDuring: "*",
-    finalizeUrlContent: {
+    transformUrlContent: {
       html: async (urlInfo, context) => {
         const htmlAst = parseHtmlString(urlInfo.content)
         const mutations = []
