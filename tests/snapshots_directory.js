@@ -64,15 +64,21 @@ export const takeFileSnapshot = (fileUrl, snapshotFileUrl) => {
   })
 }
 
-export const takeDirectorySnapshot = (directoryUrl, snapshotDirectoryUrl) => {
+export const takeDirectorySnapshot = (
+  directoryUrl,
+  snapshotDirectoryUrl,
+  callAssert = true,
+) => {
   const snapshotDirectoryContent =
     readSnapshotsFromDirectory(snapshotDirectoryUrl)
   const directoryContent = readSnapshotsFromDirectory(directoryUrl)
   writeSnapshotsIntoDirectory(snapshotDirectoryUrl, directoryContent)
-  assertSnapshots({
-    content: directoryContent,
-    snapshotContent: snapshotDirectoryContent,
-  })
+  if (callAssert) {
+    assertSnapshots({
+      content: directoryContent,
+      snapshotContent: snapshotDirectoryContent,
+    })
+  }
 }
 
 export const assertSnapshots = ({ content, snapshotContent }) => {

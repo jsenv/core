@@ -71,6 +71,7 @@ try {
     takeDirectorySnapshot(
       new URL(`./.jsenv/${runtimeId}/`, import.meta.url),
       new URL(`./snapshots/${name}/`, import.meta.url),
+      false,
     )
   }
 
