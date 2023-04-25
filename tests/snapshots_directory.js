@@ -59,6 +59,19 @@ export const takeDirectorySnapshot = (directoryUrl, snapshotDirectoryUrl) => {
     readSnapshotsFromDirectory(snapshotDirectoryUrl)
   const directoryContent = readSnapshotsFromDirectory(directoryUrl)
   writeSnapshotsIntoDirectory(snapshotDirectoryUrl, directoryContent)
+  assertSnapshots({
+    directoryContent,
+    snapshotDirectoryContent,
+  })
+}
+
+export const assertSnapshots = ({
+  directoryContent,
+  snapshotDirectoryContent,
+}) => {
+  if (process.env.NO_SNAPSHOT_ASSERTION) {
+    return
+  }
   assert({
     actual: directoryContent,
     expected: snapshotDirectoryContent,
