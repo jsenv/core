@@ -9,10 +9,7 @@ import { assert } from "@jsenv/assert"
 
 import { startDevServer } from "@jsenv/core"
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js"
-import {
-  readSnapshotsFromDirectory,
-  writeSnapshotsIntoDirectory,
-} from "@jsenv/core/tests/snapshots_directory.js"
+import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js"
 
 const debug = false // true to have browser UI + keep it open after test
 const fooPackageFileUrl = new URL(
@@ -71,12 +68,9 @@ try {
   }
   const takeDevFilesSnapshot = (name) => {
     const runtimeId = Array.from(devServer.contextCache.keys())[0]
-    const devFileContents = readSnapshotsFromDirectory(
+    takeDirectorySnapshot(
       new URL(`./.jsenv/${runtimeId}/`, import.meta.url),
-    )
-    writeSnapshotsIntoDirectory(
       new URL(`./snapshots/${name}/`, import.meta.url),
-      devFileContents,
     )
   }
 

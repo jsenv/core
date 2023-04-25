@@ -3,15 +3,9 @@ import { assert } from "@jsenv/assert"
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js"
-import {
-  readSnapshotsFromDirectory,
-  writeSnapshotsIntoDirectory,
-} from "@jsenv/core/tests/snapshots_directory.js"
+import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js"
 
 const test = async (params) => {
-  const snapshotDirectoryContent = readSnapshotsFromDirectory(
-    new URL("./snapshots/build/", import.meta.url),
-  )
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -24,12 +18,9 @@ const test = async (params) => {
     versioning: false,
     ...params,
   })
-  const distDirectoryContent = readSnapshotsFromDirectory(
+  takeDirectorySnapshot(
     new URL("./dist/", import.meta.url),
-  )
-  writeSnapshotsIntoDirectory(
     new URL("./snapshots/build/", import.meta.url),
-    distDirectoryContent,
   )
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
@@ -40,14 +31,8 @@ const test = async (params) => {
     pageFunction: () => window.resultPromise,
     /* eslint-enable no-undef */
   })
-  const actual = {
-    returnValue,
-    snapshots: distDirectoryContent,
-  }
-  const expected = {
-    returnValue: 42,
-    snapshots: snapshotDirectoryContent,
-  }
+  const actual = returnValue
+  const expected = 42
   assert({ actual, expected })
 }
 

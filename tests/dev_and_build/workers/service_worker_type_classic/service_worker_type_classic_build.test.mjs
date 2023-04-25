@@ -4,13 +4,10 @@ import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js"
-import {
-  readSnapshotsFromDirectory,
-  writeSnapshotsIntoDirectory,
-} from "@jsenv/core/tests/snapshots_directory.js"
+import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js"
 
 const test = async (params) => {
-  const { buildFileContents } = await build({
+  await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     entryPoints: {
@@ -30,16 +27,14 @@ const test = async (params) => {
     /* eslint-enable no-undef */
   })
   const { order, resourcesFromJsenvBuild } = returnValue.inspectResponse
-  const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url)
-  const expectedBuildFileContents = readSnapshotsFromDirectory(
-    snapshotsDirectoryUrl,
+  takeDirectorySnapshot(
+    new URL("./dist/", import.meta.url),
+    new URL("./snapshots/", import.meta.url),
   )
-  writeSnapshotsIntoDirectory(snapshotsDirectoryUrl, buildFileContents)
 
   const actual = {
     order,
     resourcesFromJsenvBuild,
-    buildFileContents,
   }
   const expected = {
     order: ["before-a", "before-b", "b", "after-b", "after-a"],
@@ -58,7 +53,6 @@ const test = async (params) => {
         versionedUrl: "/js/b.js?v=2cc2d9e4",
       },
     },
-    buildFileContents: expectedBuildFileContents,
   }
   assert({ actual, expected })
 }

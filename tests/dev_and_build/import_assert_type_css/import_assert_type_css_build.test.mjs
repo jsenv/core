@@ -5,13 +5,10 @@ import { jsenvPluginMinification } from "@jsenv/plugin-minification"
 import { build } from "@jsenv/core"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js"
-import {
-  readSnapshotsFromDirectory,
-  writeSnapshotsIntoDirectory,
-} from "@jsenv/core/tests/snapshots_directory.js"
+import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js"
 
 const test = async ({ snapshotsDirectoryName, ...rest }) => {
-  const { buildFileContents, buildManifest } = await build({
+  const { buildManifest } = await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     entryPoints: {
@@ -30,24 +27,16 @@ const test = async ({ snapshotsDirectoryName, ...rest }) => {
     pageFunction: () => window.resultPromise,
     /* eslint-enable no-undef */
   })
-  const snapshotsDirectoryUrl = new URL(
-    `./snapshots/${snapshotsDirectoryName}/`,
-    import.meta.url,
+  takeDirectorySnapshot(
+    new URL("./dist/", import.meta.url),
+    new URL(`./snapshots/${snapshotsDirectoryName}/`, import.meta.url),
   )
-  const snapshotsFileContent = readSnapshotsFromDirectory(snapshotsDirectoryUrl)
-  writeSnapshotsIntoDirectory(snapshotsDirectoryUrl, buildFileContents)
-  const actual = {
-    snapshotsFileContent,
-    returnValue,
-  }
+  const actual = returnValue
   const expected = {
-    snapshotsFileContent: buildFileContents,
-    returnValue: {
-      bodyBackgroundColor: "rgb(255, 0, 0)",
-      bodyBackgroundImage: `url("${server.origin}/${buildManifest["other/jsenv.png"]}")`,
-    },
+    bodyBackgroundColor: "rgb(255, 0, 0)",
+    bodyBackgroundImage: `url("${server.origin}/${buildManifest["other/jsenv.png"]}")`,
   }
-  assert({ actual, expected, context: snapshotsDirectoryName })
+  assert({ actual, expected })
 }
 
 // chrome 60 cannot use <script type="module"> nor constructable stylesheet

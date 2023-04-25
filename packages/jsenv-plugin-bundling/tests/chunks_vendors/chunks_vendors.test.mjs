@@ -1,5 +1,5 @@
 import { build } from "@jsenv/core"
-import { assertSnapshots } from "@jsenv/core/tests/snapshots_directory.js"
+import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js"
 
 import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
 
@@ -15,10 +15,10 @@ const test = async ({ name, ...rest }) => {
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...rest,
   })
-  assertSnapshots({
-    snapshotsDirectoryUrl: new URL(`./snapshots/${name}/`, import.meta.url),
-    directoryUrl: new URL("./dist/", import.meta.url),
-  })
+  takeDirectorySnapshot(
+    new URL("./dist/", import.meta.url),
+    new URL(`./snapshots/${name}/`, import.meta.url),
+  )
 }
 
 await test({

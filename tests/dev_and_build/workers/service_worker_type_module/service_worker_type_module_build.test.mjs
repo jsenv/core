@@ -1,14 +1,10 @@
-import { assert } from "@jsenv/assert"
 import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
 
 import { build } from "@jsenv/core"
-import {
-  readSnapshotsFromDirectory,
-  writeSnapshotsIntoDirectory,
-} from "@jsenv/core/tests/snapshots_directory.js"
+import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js"
 
 const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
-  const { buildFileContents } = await build({
+  await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     entryPoints: {
@@ -18,14 +14,10 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
     ...rest,
     plugins: [...(rest.plugins || [])],
   })
-  const expectedBuildFileContents = readSnapshotsFromDirectory(
+  takeDirectorySnapshot(
+    new URL("./dist/", import.meta.url),
     snapshotsDirectoryUrl,
   )
-  writeSnapshotsIntoDirectory(snapshotsDirectoryUrl, buildFileContents)
-  assert({
-    actual: buildFileContents,
-    expected: expectedBuildFileContents,
-  })
 }
 
 if (process.platform === "darwin") {

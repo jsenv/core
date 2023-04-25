@@ -54,9 +54,13 @@ export const writeSnapshotsIntoDirectory = (directoryUrl, fileContents) => {
   })
 }
 
-export const assertSnapshots = ({ snapshotsDirectoryUrl, directoryUrl }) => {
-  const actual = readSnapshotsFromDirectory(snapshotsDirectoryUrl)
-  const expected = readSnapshotsFromDirectory(directoryUrl)
-  writeSnapshotsIntoDirectory(snapshotsDirectoryUrl, expected)
-  assert({ actual, expected })
+export const takeDirectorySnapshot = (directoryUrl, snapshotDirectoryUrl) => {
+  const snapshotDirectoryContent =
+    readSnapshotsFromDirectory(snapshotDirectoryUrl)
+  const directoryContent = readSnapshotsFromDirectory(directoryUrl)
+  writeSnapshotsIntoDirectory(snapshotDirectoryUrl, directoryContent)
+  assert({
+    actual: directoryContent,
+    expected: snapshotDirectoryContent,
+  })
 }
