@@ -54,26 +54,33 @@ export const writeSnapshotsIntoDirectory = (directoryUrl, fileContents) => {
   })
 }
 
+export const takeFileSnapshot = (fileUrl, snapshotFileUrl) => {
+  const fileContent = readFileSync(fileUrl, "utf8")
+  const snapshotFileContent = readFileSync(snapshotFileUrl, "utf8")
+  writeFileSync(fileUrl, fileContent)
+  assertSnapshots({
+    content: fileContent,
+    snapshotContent: snapshotFileContent,
+  })
+}
+
 export const takeDirectorySnapshot = (directoryUrl, snapshotDirectoryUrl) => {
   const snapshotDirectoryContent =
     readSnapshotsFromDirectory(snapshotDirectoryUrl)
   const directoryContent = readSnapshotsFromDirectory(directoryUrl)
   writeSnapshotsIntoDirectory(snapshotDirectoryUrl, directoryContent)
   assertSnapshots({
-    directoryContent,
-    snapshotDirectoryContent,
+    content: directoryContent,
+    snapshotContent: snapshotDirectoryContent,
   })
 }
 
-export const assertSnapshots = ({
-  directoryContent,
-  snapshotDirectoryContent,
-}) => {
+export const assertSnapshots = ({ content, snapshotContent }) => {
   if (process.env.NO_SNAPSHOT_ASSERTION) {
     return
   }
   assert({
-    actual: directoryContent,
-    expected: snapshotDirectoryContent,
+    actual: content,
+    expected: snapshotContent,
   })
 }

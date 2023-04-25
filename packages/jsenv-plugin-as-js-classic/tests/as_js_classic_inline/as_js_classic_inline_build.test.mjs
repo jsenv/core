@@ -19,7 +19,7 @@ const test = async (params) => {
   })
   takeDirectorySnapshot(
     new URL("./dist/", import.meta.url),
-    new URL("./snapshots/", import.meta.url),
+    new URL("./snapshots/build/", import.meta.url),
   )
 }
 
