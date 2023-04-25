@@ -18,6 +18,7 @@ import { SOURCEMAP, generateSourcemapFileUrl, composeTwoSourcemaps, generateSour
 import { parseHtmlString, stringifyHtmlAst, getHtmlNodeAttribute, visitHtmlNodes, analyzeScriptNode, setHtmlNodeAttributes, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, parseCssUrls, parseJsUrls, getHtmlNodeText, setHtmlNodeText, removeHtmlNodeText, applyBabelPlugins, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, findHtmlNode, removeHtmlNode, injectJsImport, analyzeLinkNode, injectHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
 import { createRequire } from "node:module";
 import babelParser from "@babel/parser";
+import { assertImportMap, resolveUrl as resolveUrl$1, normalizeImportMap, resolveImport } from "./js/resolveImport.js";
 import v8, { takeCoverage } from "node:v8";
 import stripAnsi from "strip-ansi";
 import { createId } from "@paralleldrive/cuid2";
@@ -77,7 +78,7 @@ const DATA_URL = {
   }
 };
 
-const urlToScheme$1 = url => {
+const urlToScheme = url => {
   const urlString = String(url);
   const colonIndex = urlString.indexOf(":");
   if (colonIndex === -1) {
@@ -88,7 +89,7 @@ const urlToScheme$1 = url => {
 };
 
 const urlToResource = url => {
-  const scheme = urlToScheme$1(url);
+  const scheme = urlToScheme(url);
   if (scheme === "file") {
     const urlAsStringWithoutFileProtocol = String(url).slice("file://".length);
     return urlAsStringWithoutFileProtocol;
@@ -104,7 +105,7 @@ const urlToResource = url => {
   return urlAsStringWithoutProtocol;
 };
 
-const urlToPathname$1 = url => {
+const urlToPathname = url => {
   const resource = urlToResource(url);
   const pathname = resourceToPathname(resource);
   return pathname;
@@ -122,7 +123,7 @@ const resourceToPathname = resource => {
 };
 
 const urlToFilename$1 = url => {
-  const pathname = urlToPathname$1(url);
+  const pathname = urlToPathname(url);
   const pathnameBeforeLastSlash = pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
   const slashLastIndex = pathnameBeforeLastSlash.lastIndexOf("/");
   const filename = slashLastIndex === -1 ? pathnameBeforeLastSlash : pathnameBeforeLastSlash.slice(slashLastIndex + 1);
@@ -319,10 +320,10 @@ const lineRangeWithinLines = ({
 };
 
 const urlToExtension$1 = url => {
-  const pathname = urlToPathname$1(url);
-  return pathnameToExtension$1(pathname);
+  const pathname = urlToPathname(url);
+  return pathnameToExtension(pathname);
 };
-const pathnameToExtension$1 = pathname => {
+const pathnameToExtension = pathname => {
   const slashLastIndex = pathname.lastIndexOf("/");
   if (slashLastIndex !== -1) {
     pathname = pathname.slice(slashLastIndex + 1);
@@ -446,7 +447,7 @@ const getCallerPosition = () => {
   };
 };
 
-const resolveUrl$1 = (specifier, baseUrl) => {
+const resolveUrl = (specifier, baseUrl) => {
   if (typeof baseUrl === "undefined") {
     throw new TypeError(`baseUrl missing to resolve ${specifier}`);
   }
@@ -519,7 +520,7 @@ const urlToRelativeUrl = (url, baseUrl) => {
   const specificPathname = pathname.slice(commonPathname.length);
   const baseSpecificPathname = basePathname.slice(commonPathname.length);
   if (baseSpecificPathname.includes("/")) {
-    const baseSpecificParentPathname = pathnameToParentPathname$1(baseSpecificPathname);
+    const baseSpecificParentPathname = pathnameToParentPathname(baseSpecificPathname);
     const relativeDirectoriesNotation = baseSpecificParentPathname.replace(/.*?\//g, "../");
     const relativeUrl = `${relativeDirectoriesNotation}${specificPathname}${search}${hash}`;
     return relativeUrl;
@@ -527,7 +528,7 @@ const urlToRelativeUrl = (url, baseUrl) => {
   const relativeUrl = `${specificPathname}${search}${hash}`;
   return relativeUrl;
 };
-const pathnameToParentPathname$1 = pathname => {
+const pathnameToParentPathname = pathname => {
   const slashLastIndex = pathname.lastIndexOf("/");
   if (slashLastIndex === -1) {
     return "/";
@@ -1674,7 +1675,7 @@ const removeDirectory = async (rootDirectoryUrl, {
     removeDirectoryOperation.throwIfAborted();
     const names = await readDirectory(directoryUrl);
     await Promise.all(names.map(async name => {
-      const url = resolveUrl$1(name, directoryUrl);
+      const url = resolveUrl(name, directoryUrl);
       await visit(url);
     }));
   };
@@ -2634,7 +2635,7 @@ const UNICODE = {
   supported: canUseUnicode
 };
 
-const createDetailedMessage$1 = (message, details = {}) => {
+const createDetailedMessage = (message, details = {}) => {
   let string = `${message}`;
   Object.keys(details).forEach(key => {
     const value = details[key];
@@ -4967,7 +4968,7 @@ const startServer = async ({
     warn,
     requestWaitingMs
   }) => {
-    warn(createDetailedMessage$1(`still no response found for request after ${requestWaitingMs} ms`, {
+    warn(createDetailedMessage(`still no response found for request after ${requestWaitingMs} ms`, {
       "request url": request.url,
       "request headers": JSON.stringify(request.headers, null, "  ")
     }));
@@ -5352,7 +5353,7 @@ const startServer = async ({
         if (error.message === "aborted") {
           addRequestLog(rootRequestNode, {
             type: "debug",
-            value: createDetailedMessage$1(`request aborted by client`, {
+            value: createDetailedMessage(`request aborted by client`, {
               "error message": error.message
             })
           });
@@ -5360,7 +5361,7 @@ const startServer = async ({
           // I'm not sure this can happen but it's here in case
           addRequestLog(rootRequestNode, {
             type: "error",
-            value: createDetailedMessage$1(`"error" event emitted on request`, {
+            value: createDetailedMessage(`"error" event emitted on request`, {
               "error stack": error.stack
             })
           });
@@ -5379,7 +5380,7 @@ const startServer = async ({
         const onPushStreamError = e => {
           addRequestLog(requestNode, {
             type: "error",
-            value: createDetailedMessage$1(`An error occured while pushing a stream to the response for ${request.resource}`, {
+            value: createDetailedMessage(`An error occured while pushing a stream to the response for ${request.resource}`, {
               "error stack": e.stack
             })
           });
@@ -5610,7 +5611,7 @@ const startServer = async ({
             }
             addRequestLog(requestNode, {
               type: "error",
-              value: createDetailedMessage$1(`internal error while handling request`, {
+              value: createDetailedMessage(`internal error while handling request`, {
                 "error stack": errorWhileHandlingRequest.stack
               })
             });
@@ -5704,7 +5705,7 @@ const startServer = async ({
           onError: error => {
             addRequestLog(requestNode, {
               type: "error",
-              value: createDetailedMessage$1(`An error occured while sending response`, {
+              value: createDetailedMessage(`An error occured while sending response`, {
                 "error stack": error.stack
               })
             });
@@ -8373,7 +8374,7 @@ const createResolveUrlError = ({
     reason,
     ...details
   }) => {
-    const resolveError = new Error(createDetailedMessage$1(`Failed to resolve url reference`, {
+    const resolveError = new Error(createDetailedMessage(`Failed to resolve url reference`, {
       reason,
       ...details,
       "specifier": `"${reference.specifier}"`,
@@ -8392,7 +8393,7 @@ const createResolveUrlError = ({
     });
   }
   if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
-    error.message = createDetailedMessage$1(error.message, {
+    error.message = createDetailedMessage(error.message, {
       "reference trace": reference.trace.message
     });
     return error;
@@ -8413,7 +8414,7 @@ const createFetchUrlContentError = ({
     reason,
     ...details
   }) => {
-    const fetchError = new Error(createDetailedMessage$1(`Failed to fetch url content`, {
+    const fetchError = new Error(createDetailedMessage(`Failed to fetch url content`, {
       reason,
       ...details,
       "url": urlInfo.url,
@@ -8483,7 +8484,7 @@ const createTransformUrlContentError = ({
     reason,
     ...details
   }) => {
-    const transformError = new Error(createDetailedMessage$1(`"transformUrlContent" error on "${urlInfo.type}"`, {
+    const transformError = new Error(createDetailedMessage(`"transformUrlContent" error on "${urlInfo.type}"`, {
       reason,
       ...details,
       "url": urlInfo.url,
@@ -8536,7 +8537,7 @@ const createFinalizeUrlContentError = ({
   urlInfo,
   error
 }) => {
-  const finalizeError = new Error(createDetailedMessage$1(`"finalizeUrlContent" error on "${urlInfo.type}"`, {
+  const finalizeError = new Error(createDetailedMessage(`"finalizeUrlContent" error on "${urlInfo.type}"`, {
     ...detailsFromValueThrown(error),
     "url": urlInfo.url,
     "url reference trace": reference.trace.message,
@@ -9048,7 +9049,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     try {
       const fetchUrlContentReturnValue = await pluginController.callAsyncHooksUntil("fetchUrlContent", urlInfo, contextDuringFetch);
       if (!fetchUrlContentReturnValue) {
-        logger.warn(createDetailedMessage$1(`no plugin has handled url during "fetchUrlContent" hook -> url will be ignored`, {
+        logger.warn(createDetailedMessage(`no plugin has handled url during "fetchUrlContent" hook -> url will be ignored`, {
           "url": urlInfo.url,
           "url reference trace": reference.trace.message
         }));
@@ -9395,7 +9396,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       },
       expectedType,
       specifier: originalRef.specifier.replace(`?${searchParam}`, "").replace(`&${searchParam}`, ""),
-      url: urlObject.href,
+      url: normalizeUrl(urlObject.href),
       generatedSpecifier: null,
       generatedUrl: null,
       filename: null
@@ -10473,7 +10474,7 @@ const jsenvPluginInliningIntoHtml = () => {
   return {
     name: "jsenv:inlining_into_html",
     appliesDuring: "*",
-    finalizeUrlContent: {
+    transformUrlContent: {
       html: async (urlInfo, context) => {
         const htmlAst = parseHtmlString(urlInfo.content);
         const mutations = [];
@@ -15459,306 +15460,6 @@ const splitFileExtension$2 = filename => {
   return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)];
 };
 
-// duplicated from @jsenv/log to avoid the dependency
-const createDetailedMessage = (message, details = {}) => {
-  let string = `${message}`;
-  Object.keys(details).forEach(key => {
-    const value = details[key];
-    string += `
-    --- ${key} ---
-    ${Array.isArray(value) ? value.join(`
-    `) : value}`;
-  });
-  return string;
-};
-
-const assertImportMap = value => {
-  if (value === null) {
-    throw new TypeError(`an importMap must be an object, got null`);
-  }
-  const type = typeof value;
-  if (type !== "object") {
-    throw new TypeError(`an importMap must be an object, received ${value}`);
-  }
-  if (Array.isArray(value)) {
-    throw new TypeError(`an importMap must be an object, received array ${value}`);
-  }
-};
-
-const hasScheme = string => {
-  return /^[a-zA-Z]{2,}:/.test(string);
-};
-
-const urlToScheme = urlString => {
-  const colonIndex = urlString.indexOf(":");
-  if (colonIndex === -1) return "";
-  return urlString.slice(0, colonIndex);
-};
-
-const urlToPathname = urlString => {
-  return ressourceToPathname(urlToRessource(urlString));
-};
-const urlToRessource = urlString => {
-  const scheme = urlToScheme(urlString);
-  if (scheme === "file") {
-    return urlString.slice("file://".length);
-  }
-  if (scheme === "https" || scheme === "http") {
-    // remove origin
-    const afterProtocol = urlString.slice(scheme.length + "://".length);
-    const pathnameSlashIndex = afterProtocol.indexOf("/", "://".length);
-    return afterProtocol.slice(pathnameSlashIndex);
-  }
-  return urlString.slice(scheme.length + 1);
-};
-const ressourceToPathname = ressource => {
-  const searchSeparatorIndex = ressource.indexOf("?");
-  return searchSeparatorIndex === -1 ? ressource : ressource.slice(0, searchSeparatorIndex);
-};
-
-const urlToOrigin = urlString => {
-  const scheme = urlToScheme(urlString);
-  if (scheme === "file") {
-    return "file://";
-  }
-  if (scheme === "http" || scheme === "https") {
-    const secondProtocolSlashIndex = scheme.length + "://".length;
-    const pathnameSlashIndex = urlString.indexOf("/", secondProtocolSlashIndex);
-    if (pathnameSlashIndex === -1) return urlString;
-    return urlString.slice(0, pathnameSlashIndex);
-  }
-  return urlString.slice(0, scheme.length + 1);
-};
-
-const pathnameToParentPathname = pathname => {
-  const slashLastIndex = pathname.lastIndexOf("/");
-  if (slashLastIndex === -1) {
-    return "/";
-  }
-  return pathname.slice(0, slashLastIndex + 1);
-};
-
-// could be useful: https://url.spec.whatwg.org/#url-miscellaneous
-const resolveUrl = (specifier, baseUrl) => {
-  if (baseUrl) {
-    if (typeof baseUrl !== "string") {
-      throw new TypeError(writeBaseUrlMustBeAString({
-        baseUrl,
-        specifier
-      }));
-    }
-    if (!hasScheme(baseUrl)) {
-      throw new Error(writeBaseUrlMustBeAbsolute({
-        baseUrl,
-        specifier
-      }));
-    }
-  }
-  if (hasScheme(specifier)) {
-    return specifier;
-  }
-  if (!baseUrl) {
-    throw new Error(writeBaseUrlRequired({
-      baseUrl,
-      specifier
-    }));
-  }
-
-  // scheme relative
-  if (specifier.slice(0, 2) === "//") {
-    return `${urlToScheme(baseUrl)}:${specifier}`;
-  }
-
-  // origin relative
-  if (specifier[0] === "/") {
-    return `${urlToOrigin(baseUrl)}${specifier}`;
-  }
-  const baseOrigin = urlToOrigin(baseUrl);
-  const basePathname = urlToPathname(baseUrl);
-  if (specifier === ".") {
-    const baseDirectoryPathname = pathnameToParentPathname(basePathname);
-    return `${baseOrigin}${baseDirectoryPathname}`;
-  }
-
-  // pathname relative inside
-  if (specifier.slice(0, 2) === "./") {
-    const baseDirectoryPathname = pathnameToParentPathname(basePathname);
-    return `${baseOrigin}${baseDirectoryPathname}${specifier.slice(2)}`;
-  }
-
-  // pathname relative outside
-  if (specifier.slice(0, 3) === "../") {
-    let unresolvedPathname = specifier;
-    const importerFolders = basePathname.split("/");
-    importerFolders.pop();
-    while (unresolvedPathname.slice(0, 3) === "../") {
-      unresolvedPathname = unresolvedPathname.slice(3);
-      // when there is no folder left to resolved
-      // we just ignore '../'
-      if (importerFolders.length) {
-        importerFolders.pop();
-      }
-    }
-    const resolvedPathname = `${importerFolders.join("/")}/${unresolvedPathname}`;
-    return `${baseOrigin}${resolvedPathname}`;
-  }
-
-  // bare
-  if (basePathname === "") {
-    return `${baseOrigin}/${specifier}`;
-  }
-  if (basePathname[basePathname.length] === "/") {
-    return `${baseOrigin}${basePathname}${specifier}`;
-  }
-  return `${baseOrigin}${pathnameToParentPathname(basePathname)}${specifier}`;
-};
-const writeBaseUrlMustBeAString = ({
-  baseUrl,
-  specifier
-}) => `baseUrl must be a string.
---- base url ---
-${baseUrl}
---- specifier ---
-${specifier}`;
-const writeBaseUrlMustBeAbsolute = ({
-  baseUrl,
-  specifier
-}) => `baseUrl must be absolute.
---- base url ---
-${baseUrl}
---- specifier ---
-${specifier}`;
-const writeBaseUrlRequired = ({
-  baseUrl,
-  specifier
-}) => `baseUrl required to resolve relative specifier.
---- base url ---
-${baseUrl}
---- specifier ---
-${specifier}`;
-
-const tryUrlResolution = (string, url) => {
-  const result = resolveUrl(string, url);
-  return hasScheme(result) ? result : null;
-};
-
-const resolveSpecifier = (specifier, importer) => {
-  if (specifier === "." || specifier[0] === "/" || specifier.startsWith("./") || specifier.startsWith("../")) {
-    return resolveUrl(specifier, importer);
-  }
-  if (hasScheme(specifier)) {
-    return specifier;
-  }
-  return null;
-};
-
-const applyImportMap = ({
-  importMap,
-  specifier,
-  importer,
-  createBareSpecifierError = ({
-    specifier,
-    importer
-  }) => {
-    return new Error(createDetailedMessage(`Unmapped bare specifier.`, {
-      specifier,
-      importer
-    }));
-  },
-  onImportMapping = () => {}
-}) => {
-  assertImportMap(importMap);
-  if (typeof specifier !== "string") {
-    throw new TypeError(createDetailedMessage("specifier must be a string.", {
-      specifier,
-      importer
-    }));
-  }
-  if (importer) {
-    if (typeof importer !== "string") {
-      throw new TypeError(createDetailedMessage("importer must be a string.", {
-        importer,
-        specifier
-      }));
-    }
-    if (!hasScheme(importer)) {
-      throw new Error(createDetailedMessage(`importer must be an absolute url.`, {
-        importer,
-        specifier
-      }));
-    }
-  }
-  const specifierUrl = resolveSpecifier(specifier, importer);
-  const specifierNormalized = specifierUrl || specifier;
-  const {
-    scopes
-  } = importMap;
-  if (scopes && importer) {
-    const scopeSpecifierMatching = Object.keys(scopes).find(scopeSpecifier => {
-      return scopeSpecifier === importer || specifierIsPrefixOf(scopeSpecifier, importer);
-    });
-    if (scopeSpecifierMatching) {
-      const scopeMappings = scopes[scopeSpecifierMatching];
-      const mappingFromScopes = applyMappings(scopeMappings, specifierNormalized, scopeSpecifierMatching, onImportMapping);
-      if (mappingFromScopes !== null) {
-        return mappingFromScopes;
-      }
-    }
-  }
-  const {
-    imports
-  } = importMap;
-  if (imports) {
-    const mappingFromImports = applyMappings(imports, specifierNormalized, undefined, onImportMapping);
-    if (mappingFromImports !== null) {
-      return mappingFromImports;
-    }
-  }
-  if (specifierUrl) {
-    return specifierUrl;
-  }
-  throw createBareSpecifierError({
-    specifier,
-    importer
-  });
-};
-const applyMappings = (mappings, specifierNormalized, scope, onImportMapping) => {
-  const specifierCandidates = Object.keys(mappings);
-  let i = 0;
-  while (i < specifierCandidates.length) {
-    const specifierCandidate = specifierCandidates[i];
-    i++;
-    if (specifierCandidate === specifierNormalized) {
-      const address = mappings[specifierCandidate];
-      onImportMapping({
-        scope,
-        from: specifierCandidate,
-        to: address,
-        before: specifierNormalized,
-        after: address
-      });
-      return address;
-    }
-    if (specifierIsPrefixOf(specifierCandidate, specifierNormalized)) {
-      const address = mappings[specifierCandidate];
-      const afterSpecifier = specifierNormalized.slice(specifierCandidate.length);
-      const addressFinal = tryUrlResolution(afterSpecifier, address);
-      onImportMapping({
-        scope,
-        from: specifierCandidate,
-        to: address,
-        before: specifierNormalized,
-        after: addressFinal
-      });
-      return addressFinal;
-    }
-  }
-  return null;
-};
-const specifierIsPrefixOf = (specifierHref, href) => {
-  return specifierHref[specifierHref.length - 1] === "/" && href.startsWith(specifierHref);
-};
-
 // https://github.com/systemjs/systemjs/blob/89391f92dfeac33919b0223bbf834a1f4eea5750/src/common.js#L136
 const composeTwoImportMaps = (leftImportMap, rightImportMap) => {
   assertImportMap(leftImportMap);
@@ -15816,8 +15517,8 @@ const composeTwoMappings = (leftMappings, rightMappings) => {
 };
 const objectHasKey = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
 const compareAddressAndSpecifier = (address, specifier) => {
-  const addressUrl = resolveUrl(address, "file:///");
-  const specifierUrl = resolveUrl(specifier, "file:///");
+  const addressUrl = resolveUrl$1(address, "file:///");
+  const specifierUrl = resolveUrl$1(specifier, "file:///");
   return addressUrl === specifierUrl;
 };
 const composeTwoScopes = (leftScopes, rightScopes, imports) => {
@@ -15847,209 +15548,6 @@ const composeTwoScopes = (leftScopes, rightScopes, imports) => {
     }
   });
   return scopes;
-};
-
-const sortImports = imports => {
-  const mappingsSorted = {};
-  Object.keys(imports).sort(compareLengthOrLocaleCompare).forEach(name => {
-    mappingsSorted[name] = imports[name];
-  });
-  return mappingsSorted;
-};
-const sortScopes = scopes => {
-  const scopesSorted = {};
-  Object.keys(scopes).sort(compareLengthOrLocaleCompare).forEach(scopeSpecifier => {
-    scopesSorted[scopeSpecifier] = sortImports(scopes[scopeSpecifier]);
-  });
-  return scopesSorted;
-};
-const compareLengthOrLocaleCompare = (a, b) => {
-  return b.length - a.length || a.localeCompare(b);
-};
-
-const normalizeImportMap = (importMap, baseUrl) => {
-  assertImportMap(importMap);
-  if (!isStringOrUrl(baseUrl)) {
-    throw new TypeError(formulateBaseUrlMustBeStringOrUrl({
-      baseUrl
-    }));
-  }
-  const {
-    imports,
-    scopes
-  } = importMap;
-  return {
-    imports: imports ? normalizeMappings(imports, baseUrl) : undefined,
-    scopes: scopes ? normalizeScopes(scopes, baseUrl) : undefined
-  };
-};
-const isStringOrUrl = value => {
-  if (typeof value === "string") {
-    return true;
-  }
-  if (typeof URL === "function" && value instanceof URL) {
-    return true;
-  }
-  return false;
-};
-const normalizeMappings = (mappings, baseUrl) => {
-  const mappingsNormalized = {};
-  Object.keys(mappings).forEach(specifier => {
-    const address = mappings[specifier];
-    if (typeof address !== "string") {
-      console.warn(formulateAddressMustBeAString({
-        address,
-        specifier
-      }));
-      return;
-    }
-    const specifierResolved = resolveSpecifier(specifier, baseUrl) || specifier;
-    const addressUrl = tryUrlResolution(address, baseUrl);
-    if (addressUrl === null) {
-      console.warn(formulateAdressResolutionFailed({
-        address,
-        baseUrl,
-        specifier
-      }));
-      return;
-    }
-    if (specifier.endsWith("/") && !addressUrl.endsWith("/")) {
-      console.warn(formulateAddressUrlRequiresTrailingSlash({
-        addressUrl,
-        address,
-        specifier
-      }));
-      return;
-    }
-    mappingsNormalized[specifierResolved] = addressUrl;
-  });
-  return sortImports(mappingsNormalized);
-};
-const normalizeScopes = (scopes, baseUrl) => {
-  const scopesNormalized = {};
-  Object.keys(scopes).forEach(scopeSpecifier => {
-    const scopeMappings = scopes[scopeSpecifier];
-    const scopeUrl = tryUrlResolution(scopeSpecifier, baseUrl);
-    if (scopeUrl === null) {
-      console.warn(formulateScopeResolutionFailed({
-        scope: scopeSpecifier,
-        baseUrl
-      }));
-      return;
-    }
-    const scopeValueNormalized = normalizeMappings(scopeMappings, baseUrl);
-    scopesNormalized[scopeUrl] = scopeValueNormalized;
-  });
-  return sortScopes(scopesNormalized);
-};
-const formulateBaseUrlMustBeStringOrUrl = ({
-  baseUrl
-}) => `baseUrl must be a string or an url.
---- base url ---
-${baseUrl}`;
-const formulateAddressMustBeAString = ({
-  specifier,
-  address
-}) => `Address must be a string.
---- address ---
-${address}
---- specifier ---
-${specifier}`;
-const formulateAdressResolutionFailed = ({
-  address,
-  baseUrl,
-  specifier
-}) => `Address url resolution failed.
---- address ---
-${address}
---- base url ---
-${baseUrl}
---- specifier ---
-${specifier}`;
-const formulateAddressUrlRequiresTrailingSlash = ({
-  addressURL,
-  address,
-  specifier
-}) => `Address must end with /.
---- address url ---
-${addressURL}
---- address ---
-${address}
---- specifier ---
-${specifier}`;
-const formulateScopeResolutionFailed = ({
-  scope,
-  baseUrl
-}) => `Scope url resolution failed.
---- scope ---
-${scope}
---- base url ---
-${baseUrl}`;
-
-const pathnameToExtension = pathname => {
-  const slashLastIndex = pathname.lastIndexOf("/");
-  if (slashLastIndex !== -1) {
-    pathname = pathname.slice(slashLastIndex + 1);
-  }
-  const dotLastIndex = pathname.lastIndexOf(".");
-  if (dotLastIndex === -1) return "";
-  // if (dotLastIndex === pathname.length - 1) return ""
-  return pathname.slice(dotLastIndex);
-};
-
-const resolveImport = ({
-  specifier,
-  importer,
-  importMap,
-  defaultExtension = false,
-  createBareSpecifierError,
-  onImportMapping = () => {}
-}) => {
-  let url;
-  if (importMap) {
-    url = applyImportMap({
-      importMap,
-      specifier,
-      importer,
-      createBareSpecifierError,
-      onImportMapping
-    });
-  } else {
-    url = resolveUrl(specifier, importer);
-  }
-  if (defaultExtension) {
-    url = applyDefaultExtension({
-      url,
-      importer,
-      defaultExtension
-    });
-  }
-  return url;
-};
-const applyDefaultExtension = ({
-  url,
-  importer,
-  defaultExtension
-}) => {
-  if (urlToPathname(url).endsWith("/")) {
-    return url;
-  }
-  if (typeof defaultExtension === "string") {
-    const extension = pathnameToExtension(url);
-    if (extension === "") {
-      return `${url}${defaultExtension}`;
-    }
-    return url;
-  }
-  if (defaultExtension === true) {
-    const extension = pathnameToExtension(url);
-    if (extension === "" && importer) {
-      const importerPathname = urlToPathname(importer);
-      const importerExtension = pathnameToExtension(importerPathname);
-      return `${url}${importerExtension}`;
-    }
-  }
-  return url;
 };
 
 /*
@@ -21709,7 +21207,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             const rawUrl = buildDirectoryRedirections.get(url) || url;
             const rawUrlInfo = rawGraph.getUrlInfo(rawUrl);
             if (!rawUrlInfo) {
-              throw new Error(createDetailedMessage$1(`Cannot find url`, {
+              throw new Error(createDetailedMessage(`Cannot find url`, {
                 url,
                 "raw urls": Array.from(buildDirectoryRedirections.values()),
                 "build urls": Array.from(buildDirectoryRedirections.keys())
@@ -21747,6 +21245,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             return rawUrlInfo;
           }
           if (reference.isInline) {
+            if (reference.prev && !reference.prev.isInline) {
+              const urlBeforeRedirect = findKey(finalRedirections, reference.prev.url);
+              return fromBundleOrRawGraph(urlBeforeRedirect);
+            }
             return fromBundleOrRawGraph(reference.url);
           }
           // reference updated during "postbuild":
@@ -22468,7 +21970,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     type: getHtmlNodeAttribute(hintNode, "type"),
                     crossorigin: getHtmlNodeAttribute(hintNode, "crossorigin")
                   });
-                  insertHtmlNodeAfter(nodeToInsert, hintNode.parentNode, hintNode);
+                  insertHtmlNodeAfter(nodeToInsert, hintNode);
                 });
               }
             });
@@ -23711,7 +23213,7 @@ const generateFileExecutionSteps = ({
       return;
     }
     if (typeof stepConfig !== "object") {
-      throw new TypeError(createDetailedMessage$1(`found unexpected value in plan, they must be object`, {
+      throw new TypeError(createDetailedMessage(`found unexpected value in plan, they must be object`, {
         ["file relative path"]: fileRelativeUrl,
         ["execution name"]: executionName,
         ["value"]: stepConfig
@@ -23778,7 +23280,7 @@ const readNodeV8CoverageDirectory = async ({
             timeSpentTrying += 200;
             return tryReadJsonFile();
           }
-          console.warn(createDetailedMessage$1(`Error while reading coverage file`, {
+          console.warn(createDetailedMessage(`Error while reading coverage file`, {
             "error stack": e.stack,
             "file": dirEntryUrl
           }));
@@ -23939,7 +23441,7 @@ const composeV8AndIstanbul = (v8FileByFileCoverage, istanbulFileByFileCoverage, 
     const v8Coverage = v8FileByFileCoverage[key];
     if (v8Coverage) {
       if (coverageV8ConflictWarning) {
-        console.warn(createDetailedMessage$1(`Coverage conflict on "${key}", found two coverage that cannot be merged together: v8 and istanbul. The istanbul coverage will be ignored.`, {
+        console.warn(createDetailedMessage(`Coverage conflict on "${key}", found two coverage that cannot be merged together: v8 and istanbul. The istanbul coverage will be ignored.`, {
           details: `This happens when a file is executed on a runtime using v8 coverage (node or chromium) and on runtime using istanbul coverage (firefox or webkit)`,
           suggestion: "You can disable this warning with coverageV8ConflictWarning: false"
         }));
@@ -24044,7 +23546,7 @@ const relativeUrlToEmptyCoverage = async (relativeUrl, {
   const operation = Abort.startOperation();
   operation.addAbortSignal(signal);
   try {
-    const fileUrl = resolveUrl$1(relativeUrl, rootDirectoryUrl);
+    const fileUrl = resolveUrl(relativeUrl, rootDirectoryUrl);
     const content = await readFile(fileUrl, {
       as: "string"
     });
@@ -25325,7 +24827,7 @@ const executeTestPlan = async ({
         });
         if (patternsMatchingCoverAndExecute.length) {
           // It would be strange, for a given file to be both covered and executed
-          throw new Error(createDetailedMessage$1(`some file will be both covered and executed`, {
+          throw new Error(createDetailedMessage(`some file will be both covered and executed`, {
             patterns: patternsMatchingCoverAndExecute
           }));
         }
@@ -25354,7 +24856,7 @@ const executeTestPlan = async ({
   const logger = createLogger({
     logLevel
   });
-  logger.debug(createDetailedMessage$1(`Prepare executing plan`, {
+  logger.debug(createDetailedMessage(`Prepare executing plan`, {
     runtimes: JSON.stringify(runtimes, null, "  ")
   }));
 
@@ -25370,7 +24872,7 @@ const executeTestPlan = async ({
           await ensureEmptyDirectory(process.env.NODE_V8_COVERAGE);
         } else {
           coverageMethodForNodeJs = "Profiler";
-          logger.warn(createDetailedMessage$1(`process.env.NODE_V8_COVERAGE is required to generate coverage for Node.js subprocesses`, {
+          logger.warn(createDetailedMessage(`process.env.NODE_V8_COVERAGE is required to generate coverage for Node.js subprocesses`, {
             "suggestion": `set process.env.NODE_V8_COVERAGE`,
             "suggestion 2": `use coverageMethodForNodeJs: "Profiler". But it means coverage for child_process and worker_thread cannot be collected`
           }));
@@ -26087,7 +25589,7 @@ const importPlaywright = async ({
     return namespace;
   } catch (e) {
     if (e.code === "ERR_MODULE_NOT_FOUND") {
-      throw new Error(createDetailedMessage$1(`"playwright" not found. You need playwright in your dependencies to use "${browserName}"`, {
+      throw new Error(createDetailedMessage(`"playwright" not found. You need playwright in your dependencies to use "${browserName}"`, {
         suggestion: `npm install --save-dev playwright`
       }), {
         cause: e
@@ -26198,7 +25700,12 @@ const ExecOptions = {
     while (i < execArgv.length) {
       const execArg = execArgv[i];
       const option = execOptionFromExecArg(execArg);
-      execOptions[option.name] = option.value;
+      const existing = execOptions[option.name];
+      if (existing) {
+        execOptions[option.name] = Array.isArray(existing) ? [...existing, option.value] : [existing, option.value];
+      } else {
+        execOptions[option.name] = option.value;
+      }
       i++;
     }
     return execOptions;
@@ -26214,7 +25721,13 @@ const ExecOptions = {
         execArgv.push(optionName);
         return;
       }
-      execArgv.push(`${optionName}=${optionValue}`);
+      if (Array.isArray(optionValue)) {
+        optionValue.forEach(subValue => {
+          execArgv.push(`${optionName}=${subValue}`);
+        });
+      } else {
+        execArgv.push(`${optionName}=${optionValue}`);
+      }
     });
     return execArgv;
   }
@@ -26245,7 +25758,7 @@ const createChildExecOptions = async ({
   debugModeInheritBreak = true
 } = {}) => {
   if (typeof debugMode === "string" && AVAILABLE_DEBUG_MODE.indexOf(debugMode) === -1) {
-    throw new TypeError(createDetailedMessage$1(`unexpected debug mode.`, {
+    throw new TypeError(createDetailedMessage(`unexpected debug mode.`, {
       ["debug mode"]: debugMode,
       ["allowed debug mode"]: AVAILABLE_DEBUG_MODE
     }));
@@ -26442,6 +25955,10 @@ const EXIT_CODES = {
   SIGTERM: 128 + SIGTERM_SIGNAL_NUMBER
 };
 
+const IMPORTMAP_NODE_LOADER_FILE_URL = new URL("./importmap_node_loader.mjs?entry_point=", import.meta.url).href;
+
+const NO_EXPERIMENTAL_WARNING_FILE_URL = new URL("./no_experimental_warnings.cjs?entry_point=", import.meta.url).href;
+
 const CONTROLLABLE_CHILD_PROCESS_URL = new URL("./controllable_child_process.mjs?entry_point=", import.meta.url).href;
 const nodeChildProcess = {
   type: "node",
@@ -26454,6 +25971,7 @@ nodeChildProcess.run = async ({
   logProcessCommand = false,
   rootDirectoryUrl,
   fileRelativeUrl,
+  importMap,
   keepRunning,
   gracefulStopAllocatedMs = 4000,
   stopSignal,
@@ -26484,6 +26002,12 @@ nodeChildProcess.run = async ({
     env.NODE_V8_COVERAGE = "";
   }
   commandLineOptions = ["--experimental-import-meta-resolve", ...commandLineOptions];
+  if (importMap) {
+    env.IMPORT_MAP = JSON.stringify(importMap);
+    env.IMPORT_MAP_BASE_URL = rootDirectoryUrl;
+    commandLineOptions.push(`--experimental-loader=${fileURLToPath(IMPORTMAP_NODE_LOADER_FILE_URL)}`);
+    commandLineOptions.push(`--require=${fileURLToPath(NO_EXPERIMENTAL_WARNING_FILE_URL)}`);
+  }
   const cleanupCallbackList = createCallbackListNotifiedOnce();
   const cleanup = async reason => {
     await cleanupCallbackList.notify({
@@ -26509,9 +26033,10 @@ nodeChildProcess.run = async ({
     execArgv,
     // silent: true
     stdio: ["pipe", "pipe", "pipe", "ipc"],
-    env: envForChildProcess
+    env: envForChildProcess,
+    cwd: new URL(rootDirectoryUrl)
   });
-  logger.debug(createDetailedMessage$1(`child process forked (pid ${childProcess.pid})`, {
+  logger.debug(createDetailedMessage(`child process forked (pid ${childProcess.pid})`, {
     "custom env": JSON.stringify(env, null, "  ")
   }));
   // if we pass stream, pipe them https://github.com/sindresorhus/execa/issues/81
@@ -26772,6 +26297,7 @@ nodeWorkerThread.run = async ({
   // logger,
   rootDirectoryUrl,
   fileRelativeUrl,
+  importMap,
   keepRunning,
   stopSignal,
   onConsole,
@@ -26797,6 +26323,12 @@ nodeWorkerThread.run = async ({
   };
   if (coverageMethodForNodeJs !== "NODE_V8_COVERAGE") {
     env.NODE_V8_COVERAGE = "";
+  }
+  if (importMap) {
+    env.IMPORT_MAP = JSON.stringify(importMap);
+    env.IMPORT_MAP_BASE_URL = rootDirectoryUrl;
+    commandLineOptions.push(`--experimental-loader=${fileURLToPath(IMPORTMAP_NODE_LOADER_FILE_URL)}`);
+    commandLineOptions.push(`--require=${fileURLToPath(NO_EXPERIMENTAL_WARNING_FILE_URL)}`);
   }
   const workerThreadExecOptions = await createChildExecOptions({
     signal,
@@ -27183,6 +26715,7 @@ const execute = async ({
   logLevel,
   rootDirectoryUrl,
   webServer,
+  importMap,
   fileRelativeUrl,
   allocatedMs,
   mirrorConsole = true,
@@ -27216,6 +26749,7 @@ const execute = async ({
     rootDirectoryUrl,
     webServer,
     fileRelativeUrl,
+    importMap,
     ...runtimeParams
   };
   let result = await run({
