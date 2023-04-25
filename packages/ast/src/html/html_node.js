@@ -39,7 +39,7 @@ export const injectHtmlNode = (htmlAst, node, jsenvPluginName = "jsenv") => {
       after = child
     }
   }
-  insertHtmlNodeAfter(node, bodyNode, after)
+  insertHtmlNodeAfter(node, after)
 }
 
 export const injectHtmlNodeAsEarlyAsPossible = (
@@ -71,14 +71,14 @@ export const injectHtmlNodeAsEarlyAsPossible = (
         let after = firstImportmapScript
         for (const nextSibling of nextSiblings) {
           if (nextSibling.nodeName === "script") {
-            insertHtmlNodeBefore(node, importmapParent, nextSibling)
+            insertHtmlNodeBefore(node, nextSibling)
             return
           }
           if (nextSibling.nodeName === "link") {
             after = nextSibling
           }
         }
-        insertHtmlNodeAfter(node, importmapParent, after)
+        insertHtmlNodeAfter(node, after)
         return
       }
     }
@@ -87,14 +87,14 @@ export const injectHtmlNodeAsEarlyAsPossible = (
     let after = headNode.childNodes[0]
     for (const child of headNode.childNodes) {
       if (child.nodeName === "script") {
-        insertHtmlNodeBefore(node, headNode, child)
+        insertHtmlNodeBefore(node, child)
         return
       }
       if (child.nodeName === "link") {
         after = child
       }
     }
-    insertHtmlNodeAfter(node, headNode, after)
+    insertHtmlNodeAfter(node, after)
     return
   }
 
@@ -102,27 +102,17 @@ export const injectHtmlNodeAsEarlyAsPossible = (
   return
 }
 
-export const insertHtmlNodeBefore = (
-  nodeToInsert,
-  futureParentNode,
-  futureNextSibling,
-) => {
+export const insertHtmlNodeBefore = (nodeToInsert, futureNextSibling) => {
+  const futureParentNode = futureNextSibling.parentNode
   const { childNodes = [] } = futureParentNode
-  const futureIndex = futureNextSibling
-    ? childNodes.indexOf(futureNextSibling)
-    : 0
+  const futureIndex = childNodes.indexOf(futureNextSibling)
   injectWithWhitespaces(nodeToInsert, futureParentNode, futureIndex)
 }
 
-export const insertHtmlNodeAfter = (
-  nodeToInsert,
-  futureParentNode,
-  futurePrevSibling,
-) => {
+export const insertHtmlNodeAfter = (nodeToInsert, futurePrevSibling) => {
+  const futureParentNode = futurePrevSibling.parentNode
   const { childNodes = [] } = futureParentNode
-  const futureIndex = futurePrevSibling
-    ? childNodes.indexOf(futurePrevSibling) + 1
-    : childNodes.length
+  const futureIndex = childNodes.indexOf(futurePrevSibling) + 1
   injectWithWhitespaces(nodeToInsert, futureParentNode, futureIndex)
 }
 
@@ -136,7 +126,10 @@ const injectWithWhitespaces = (nodeToInsert, futureParentNode, futureIndex) => {
     futureChildNodes.push(...previousSiblings)
   }
   const previousSibling = childNodes[futureIndex - 1]
-  if (!previousSibling || !isWhitespaceNode(previousSibling)) {
+  if (
+    nodeToInsert.nodeName !== "#text" &&
+    (!previousSibling || !isWhitespaceNode(previousSibling))
+  ) {
     futureChildNodes.push({
       nodeName: "#text",
       value: previousSibling ? `\n${getIndentation(previousSibling)}` : "\n",
@@ -145,7 +138,10 @@ const injectWithWhitespaces = (nodeToInsert, futureParentNode, futureIndex) => {
   }
   futureChildNodes.push(nodeToInsert)
   const nextSibling = childNodes[futureIndex + 1]
-  if (!nextSibling || !isWhitespaceNode(nextSibling)) {
+  if (
+    nodeToInsert.nodeName !== "#text" &&
+    (!nextSibling || !isWhitespaceNode(nextSibling))
+  ) {
     futureChildNodes.push({
       nodeName: "#text",
       value: nextSibling ? `\n${getIndentation(nextSibling)}` : "\n",

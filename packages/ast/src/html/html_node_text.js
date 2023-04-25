@@ -9,6 +9,9 @@ export const getHtmlNodeText = (htmlNode) => {
 }
 
 const getTextNode = (htmlNode) => {
+  if (htmlNode.nodeName === "#text") {
+    return null
+  }
   const firstChild = htmlNode.childNodes[0]
   const textNode =
     firstChild && firstChild.nodeName === "#text" ? firstChild : null
