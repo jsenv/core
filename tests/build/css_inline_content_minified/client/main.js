@@ -1,4 +1,4 @@
-import { InlineContent } from "@jsenv/core/src/plugins/inline/client/inline_content.js"
+import { InlineContent } from "@jsenv/core/src/plugins/inline_content_analysis/client/inline_content.js"
 
 const content = new InlineContent(
   `@font-face {

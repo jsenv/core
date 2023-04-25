@@ -19,7 +19,9 @@ import {
 } from "@jsenv/ast"
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js"
 
-export const jsenvPluginHtmlInlineContent = ({ analyzeConvertedScripts }) => {
+export const jsenvPluginHtmlInlineContentAnalysis = ({
+  analyzeConvertedScripts,
+}) => {
   const cookInlineContent = async ({
     context,
     inlineContentUrlInfo,
@@ -48,7 +50,7 @@ ${e.traceMessage}`)
   }
 
   return {
-    name: "jsenv:html_inline_content",
+    name: "jsenv:html_inline_content_analysis",
     appliesDuring: "*",
     transformUrlContent: {
       html: async (urlInfo, context) => {
@@ -99,9 +101,11 @@ ${e.traceMessage}`)
               })
             })
             mutations.push(() => {
-              setHtmlNodeText(styleNode, inlineStyleUrlInfo.content)
+              setHtmlNodeText(styleNode, inlineStyleUrlInfo.content, {
+                indentation: false, // indentation would decrease strack trace precision
+              })
               setHtmlNodeAttributes(styleNode, {
-                "jsenv-cooked-by": "jsenv:html_inline_content",
+                "jsenv-cooked-by": "jsenv:html_inline_content_analysis",
               })
             })
           },
@@ -163,7 +167,7 @@ ${e.traceMessage}`)
               })
               mutations.push(() => {
                 const attributes = {
-                  "jsenv-cooked-by": "jsenv:html_inline_content",
+                  "jsenv-cooked-by": "jsenv:html_inline_content_analysis",
                   // 1. <script type="jsx"> becomes <script>
                   // 2. <script type="module/jsx"> becomes <script type="module">
                   ...(extension
@@ -176,7 +180,9 @@ ${e.traceMessage}`)
                     ...attributes,
                   })
                 } else {
-                  setHtmlNodeText(scriptNode, inlineScriptUrlInfo.content)
+                  setHtmlNodeText(scriptNode, inlineScriptUrlInfo.content, {
+                    indentation: false, // indentation would decrease stack trace precision
+                  })
                   setHtmlNodeAttributes(scriptNode, {
                     ...attributes,
                   })

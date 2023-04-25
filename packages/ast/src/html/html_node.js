@@ -3,6 +3,12 @@ import { parseFragment } from "parse5"
 import { setHtmlNodeAttributes } from "./html_node_attributes.js"
 import { findHtmlNode } from "./html_search.js"
 import { analyzeScriptNode } from "./html_analysis.js"
+import {
+  getIndentation,
+  increaseIndentation,
+  getHtmlNodeText,
+  setHtmlNodeText,
+} from "./html_node_text.js"
 
 export const removeHtmlNode = (htmlNode) => {
   const { childNodes } = htmlNode.parentNode
@@ -21,81 +27,93 @@ export const injectHtmlNode = (htmlAst, node, jsenvPluginName = "jsenv") => {
   setHtmlNodeAttributes(node, {
     "jsenv-injected-by": jsenvPluginName,
   })
-  const htmlHtmlNode = findChild(htmlAst, (node) => node.nodeName === "html")
-  const bodyNode = findChild(htmlHtmlNode, (node) => node.nodeName === "body")
-  return insertHtmlNodeAfter(node, bodyNode)
-}
-
-export const injectScriptNodeAsEarlyAsPossible = (
-  htmlAst,
-  scriptNode,
-  jsenvPluginName = "jsenv",
-) => {
-  setHtmlNodeAttributes(scriptNode, {
-    "jsenv-injected-by": jsenvPluginName,
-  })
-  const isJsModule = analyzeScriptNode(scriptNode).type === "js_module"
-  if (isJsModule) {
-    const firstImportmapScript = findHtmlNode(htmlAst, (node) => {
-      return (
-        node.nodeName === "script" &&
-        analyzeScriptNode(node).type === "importmap"
-      )
-    })
-
-    if (firstImportmapScript) {
-      const importmapParent = firstImportmapScript.parentNode
-      const importmapSiblings = importmapParent.childNodes
-      const nextSiblings = importmapSiblings.slice(
-        importmapSiblings.indexOf(firstImportmapScript) + 1,
-      )
-      let after = firstImportmapScript
-      for (const nextSibling of nextSiblings) {
-        if (nextSibling.nodeName === "script") {
-          return insertHtmlNodeBefore(scriptNode, importmapParent, nextSibling)
-        }
-        if (nextSibling.nodeName === "link") {
-          after = nextSibling
-        }
+  const htmlNode = findChild(htmlAst, (node) => node.nodeName === "html")
+  const bodyNode = findChild(htmlNode, (node) => node.nodeName === "body")
+  let after
+  if (node.nodeName !== "#text") {
+    // last child that is not a text
+    for (const child of bodyNode.childNodes) {
+      if (child.nodeName !== "#text") {
+        after = child
+        break
       }
-      return insertHtmlNodeAfter(scriptNode, importmapParent, after)
-    }
-  }
-  const headNode = findChild(htmlAst, (node) => node.nodeName === "html")
-    .childNodes[0]
-  let after = headNode.childNodes[0]
-  for (const child of headNode.childNodes) {
-    if (child.nodeName === "script") {
-      return insertHtmlNodeBefore(scriptNode, headNode, child)
-    }
-    if (child.nodeName === "link") {
       after = child
     }
   }
-  return insertHtmlNodeAfter(scriptNode, headNode, after)
+  insertHtmlNodeAfter(node, after)
 }
 
-export const insertHtmlNodeBefore = (
-  nodeToInsert,
-  futureParentNode,
-  futureNextSibling,
+export const injectHtmlNodeAsEarlyAsPossible = (
+  htmlAst,
+  node,
+  jsenvPluginName = "jsenv",
 ) => {
+  setHtmlNodeAttributes(node, {
+    "jsenv-injected-by": jsenvPluginName,
+  })
+  const isScript = node.nodeName === "script"
+
+  if (isScript) {
+    const isJsModule = analyzeScriptNode(node).type === "js_module"
+    if (isJsModule) {
+      const firstImportmapScript = findHtmlNode(htmlAst, (node) => {
+        return (
+          node.nodeName === "script" &&
+          analyzeScriptNode(node).type === "importmap"
+        )
+      })
+
+      if (firstImportmapScript) {
+        const importmapParent = firstImportmapScript.parentNode
+        const importmapSiblings = importmapParent.childNodes
+        const nextSiblings = importmapSiblings.slice(
+          importmapSiblings.indexOf(firstImportmapScript) + 1,
+        )
+        let after = firstImportmapScript
+        for (const nextSibling of nextSiblings) {
+          if (nextSibling.nodeName === "script") {
+            insertHtmlNodeBefore(node, nextSibling)
+            return
+          }
+          if (nextSibling.nodeName === "link") {
+            after = nextSibling
+          }
+        }
+        insertHtmlNodeAfter(node, after)
+        return
+      }
+    }
+    const headNode = findChild(htmlAst, (node) => node.nodeName === "html")
+      .childNodes[0]
+    let after = headNode.childNodes[0]
+    for (const child of headNode.childNodes) {
+      if (child.nodeName === "script") {
+        insertHtmlNodeBefore(node, child)
+        return
+      }
+      if (child.nodeName === "link") {
+        after = child
+      }
+    }
+    insertHtmlNodeAfter(node, after)
+    return
+  }
+
+  injectHtmlNode(htmlAst, node)
+  return
+}
+
+export const insertHtmlNodeBefore = (nodeToInsert, futureNextSibling) => {
+  const futureParentNode = futureNextSibling.parentNode
   const { childNodes = [] } = futureParentNode
-  const futureIndex = futureNextSibling
-    ? childNodes.indexOf(futureNextSibling)
-    : 0
+  const futureIndex = childNodes.indexOf(futureNextSibling)
   injectWithWhitespaces(nodeToInsert, futureParentNode, futureIndex)
 }
 
-export const insertHtmlNodeAfter = (
-  nodeToInsert,
-  futureParentNode,
-  futurePrevSibling,
-) => {
+export const insertHtmlNodeAfter = (nodeToInsert, futurePrevSibling) => {
+  const futureParentNode = futurePrevSibling.parentNode
   const { childNodes = [] } = futureParentNode
-  const futureIndex = futurePrevSibling
-    ? childNodes.indexOf(futurePrevSibling) + 1
-    : childNodes.length
+  const futureIndex = childNodes.indexOf(futurePrevSibling) + 1
   injectWithWhitespaces(nodeToInsert, futureParentNode, futureIndex)
 }
 
@@ -104,30 +122,40 @@ const injectWithWhitespaces = (nodeToInsert, futureParentNode, futureIndex) => {
   const previousSiblings = childNodes.slice(0, futureIndex)
   const nextSiblings = childNodes.slice(futureIndex)
   const futureChildNodes = []
-  const previousSibling = previousSiblings[previousSiblings.length - 1]
-  if (previousSibling) {
+
+  if (previousSiblings.length) {
     futureChildNodes.push(...previousSiblings)
   }
-  if (!previousSibling || !isWhitespaceNode(previousSibling)) {
+  const previousSibling = childNodes[futureIndex - 1]
+  if (
+    nodeToInsert.nodeName !== "#text" &&
+    (!previousSibling || !isWhitespaceNode(previousSibling))
+  ) {
+    let indentation
+    if (childNodes.length) {
+      indentation = getIndentation(childNodes[childNodes.length - 1])
+    } else {
+      const parentIndentation = getIndentation(futureParentNode)
+      indentation = increaseIndentation(parentIndentation, 2)
+    }
     futureChildNodes.push({
       nodeName: "#text",
-      value: "\n    ",
+      value: `\n${indentation}`,
       parentNode: futureParentNode,
     })
   }
   futureChildNodes.push(nodeToInsert)
-  const nextSibling = nextSiblings[0]
-  if (!nextSibling || !isWhitespaceNode(nextSibling)) {
-    futureChildNodes.push({
-      nodeName: "#text",
-      value: "\n    ",
-      parentNode: futureParentNode,
-    })
-  }
-  if (nextSibling) {
+  nodeToInsert.parentNode = futureParentNode
+  if (nextSiblings.length) {
     futureChildNodes.push(...nextSiblings)
   }
   futureParentNode.childNodes = futureChildNodes
+
+  // update indentation when node contains text
+  const text = getHtmlNodeText(nodeToInsert)
+  if (text) {
+    setHtmlNodeText(nodeToInsert, text, { indentation: "auto" })
+  }
 }
 
 const isWhitespaceNode = (node) => {

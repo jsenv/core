@@ -1,4 +1,3 @@
-
 ;(function() {
   var __versionMappings__ = {
   "/js/ping.nomodule.js": "/js/ping.nomodule.js?v=f198598d"
@@ -7,6 +6,7 @@
     return __versionMappings__[specifier] || specifier
   };
 })();
+
 /*
  * This file is a modified version of https://github.com/systemjs/systemjs/blob/main/dist/s.js
  * with the following changes:

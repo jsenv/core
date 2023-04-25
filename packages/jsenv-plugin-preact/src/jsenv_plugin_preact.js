@@ -9,7 +9,7 @@ import {
   applyBabelPlugins,
   parseHtmlString,
   stringifyHtmlAst,
-  injectScriptNodeAsEarlyAsPossible,
+  injectHtmlNodeAsEarlyAsPossible,
   createHtmlNode,
 } from "@jsenv/ast"
 
@@ -78,14 +78,12 @@ export const jsenvPluginPreact = ({
           expectedType: "js_module",
           specifier: context.dev ? "preact/debug" : "preact/devtools",
         })
-        injectScriptNodeAsEarlyAsPossible(
+        injectHtmlNodeAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
             tagName: "script",
             type: "module",
-            textContent: `
-import ${preactDevtoolsReference.generatedSpecifier}
-`,
+            textContent: `import ${preactDevtoolsReference.generatedSpecifier}`,
           }),
           "jsenv:preact",
         )

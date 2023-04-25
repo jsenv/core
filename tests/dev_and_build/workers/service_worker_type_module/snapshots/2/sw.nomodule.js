@@ -1,7 +1,7 @@
 
 self.resourcesFromJsenvBuild = {
   "/main.html": {
-    "version": "f5eb87e5"
+    "version": "14e95083"
   },
   "/css/style.css": {
     "version": "0e312da1",
@@ -16,7 +16,6 @@ self.resourcesFromJsenvBuild = {
     "versionedUrl": "/js/b.nomodule.js?v=8f3fa8a4"
   }
 };
-
 ;(function() {
   var __versionMappings__ = {
   "/js/a.nomodule.js": "/js/a.nomodule.js?v=8345fcfc",
@@ -26,6 +25,7 @@ self.resourcesFromJsenvBuild = {
     return __versionMappings__[specifier] || specifier
   };
 })();
+
 /*
  * This file is a modified version of https://github.com/systemjs/systemjs/blob/main/dist/s.js
  * with the following changes:

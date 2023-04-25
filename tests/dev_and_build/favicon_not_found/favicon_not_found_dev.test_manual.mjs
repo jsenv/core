@@ -5,7 +5,7 @@
 import { assert } from "@jsenv/assert"
 
 import { startDevServer } from "@jsenv/core"
-import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
+import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js"
 
 let warnCalls = []
 const warn = console.warn
@@ -19,7 +19,7 @@ try {
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
   })
-  const { consoleOutput } = await executeInChromium({
+  const { consoleOutput } = await executeInBrowser({
     url: `${devServer.origin}/main.html`,
     collectConsole: true,
     headless: false,

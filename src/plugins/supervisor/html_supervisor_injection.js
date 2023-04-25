@@ -52,7 +52,7 @@ import {
   getHtmlNodeAttribute,
   setHtmlNodeAttributes,
   analyzeScriptNode,
-  injectScriptNodeAsEarlyAsPossible,
+  injectHtmlNodeAsEarlyAsPossible,
   createHtmlNode,
   getHtmlNodePosition,
   getHtmlNodeText,
@@ -125,7 +125,9 @@ export const injectSupervisorIntoHTML = async (
           src: inlineScriptSrc,
         })
         mutations.push(() => {
-          setHtmlNodeText(scriptNode, remoteJsSupervised)
+          setHtmlNodeText(scriptNode, remoteJsSupervised, {
+            indentation: "auto",
+          })
           setHtmlNodeAttributes(scriptNode, {
             "jsenv-cooked-by": "jsenv:supervisor",
             "src": undefined,
@@ -144,7 +146,9 @@ export const injectSupervisorIntoHTML = async (
               inlineSrc: inlineScriptSrc,
             })
             mutations.push(() => {
-              setHtmlNodeText(scriptNode, inlineJsSupervised)
+              setHtmlNodeText(scriptNode, inlineJsSupervised, {
+                indentation: "auto",
+              })
               setHtmlNodeAttributes(scriptNode, {
                 "jsenv-cooked-by": "jsenv:supervisor",
               })
@@ -171,7 +175,7 @@ export const injectSupervisorIntoHTML = async (
         src,
       })
       mutations.push(() => {
-        setHtmlNodeText(scriptNode, remoteJsSupervised)
+        setHtmlNodeText(scriptNode, remoteJsSupervised, { indentation: "auto" })
         setHtmlNodeAttributes(scriptNode, {
           "jsenv-cooked-by": "jsenv:supervisor",
           "src": undefined,
@@ -204,6 +208,10 @@ export const injectSupervisorIntoHTML = async (
         }
         const src = getHtmlNodeAttribute(scriptNode, "src")
         if (src) {
+          const urlObject = new URL(src, "http://example.com")
+          if (urlObject.searchParams.has("inline")) {
+            return
+          }
           handleScriptWithSrc(scriptNode, { type, src })
           return
         }
@@ -219,27 +227,22 @@ export const injectSupervisorIntoHTML = async (
         rootDirectoryUrl: webServer.rootDirectoryUrl,
         scriptInfos,
       },
-      "        ",
+      "  ",
     )
-    injectScriptNodeAsEarlyAsPossible(
+    injectHtmlNodeAsEarlyAsPossible(
       htmlAst,
       createHtmlNode({
         tagName: "script",
-        textContent: `
-      window.__supervisor__.setup({
-        ${setupParamsSource}
-      })
-      `,
+        textContent: `window.__supervisor__.setup({${setupParamsSource}})`,
       }),
       "jsenv:supervisor",
     )
-    const supervisorScript = createHtmlNode({
-      tagName: "script",
-      src: supervisorScriptSrc,
-    })
-    injectScriptNodeAsEarlyAsPossible(
+    injectHtmlNodeAsEarlyAsPossible(
       htmlAst,
-      supervisorScript,
+      createHtmlNode({
+        tagName: "script",
+        src: supervisorScriptSrc,
+      }),
       "jsenv:supervisor",
     )
   }
@@ -268,14 +271,9 @@ const stringifyParams = (params, prefix = "") => {
 }
 
 const generateCodeToSuperviseScriptWithSrc = ({ type, src }) => {
+  const srcEncoded = JSON.stringify(src)
   if (type === "js_module") {
-    return `
-        window.__supervisor__.superviseScriptTypeModule(${JSON.stringify(
-          src,
-        )}, (url) => import(url));
-    `
+    return `window.__supervisor__.superviseScriptTypeModule(${srcEncoded}, (url) => import(url));`
   }
-  return `
-        window.__supervisor__.superviseScript(${JSON.stringify(src)});
-    `
+  return `window.__supervisor__.superviseScript(${srcEncoded});`
 }

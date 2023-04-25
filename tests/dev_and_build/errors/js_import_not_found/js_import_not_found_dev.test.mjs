@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert"
 
 import { startDevServer } from "@jsenv/core"
-import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
+import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js"
 
 let warnCalls = []
 const warn = console.warn
@@ -16,7 +16,7 @@ try {
     keepProcessAlive: false,
     port: 0,
   })
-  const { returnValue, pageErrors, consoleOutput } = await executeInChromium({
+  const { returnValue, pageErrors, consoleOutput } = await executeInBrowser({
     url: `${devServer.origin}/main.html`,
     collectConsole: true,
     collectErrors: true,

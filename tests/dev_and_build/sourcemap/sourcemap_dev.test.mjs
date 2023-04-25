@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert"
 
 import { startDevServer } from "@jsenv/core"
-import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
+import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js"
 
 const test = async (params) => {
   const consoleErrorMessages = []
@@ -20,7 +20,7 @@ const test = async (params) => {
       outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
       ...params,
     })
-    await executeInChromium({
+    await executeInBrowser({
       url: `${devServer.origin}/main.html`,
       /* eslint-disable no-undef */
       pageFunction: () => {

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="/css/main.css?v=3a77baf8">
+  </head>
+
+  <body>
+    <script>
+      window.namespacePromise = new Promise((resolve) => {
+        window.resolveNamespacePromise = resolve
+      })
+    </script>
+    <script type="module">
+      const bodyBackgroundColor = getComputedStyle(
+        document.body,
+      ).backgroundColor
+      window.resolveNamespacePromise({
+        bodyBackgroundColor,
+      })
+    </script>
+  </body>
+</html>

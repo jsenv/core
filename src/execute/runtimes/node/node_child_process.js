@@ -12,6 +12,8 @@ import { createChildExecOptions } from "./child_exec_options.js"
 import { ExecOptions } from "./exec_options.js"
 import { killProcessTree } from "./kill_process_tree.js"
 import { EXIT_CODES } from "./exit_codes.js"
+import { IMPORTMAP_NODE_LOADER_FILE_URL } from "./importmap_node_loader_file_url.js"
+import { NO_EXPERIMENTAL_WARNING_FILE_URL } from "./no_experimental_warnings_file_url.js"
 
 const CONTROLLABLE_CHILD_PROCESS_URL = new URL(
   "./controllable_child_process.mjs?entry_point",
@@ -30,6 +32,7 @@ nodeChildProcess.run = async ({
   logProcessCommand = false,
   rootDirectoryUrl,
   fileRelativeUrl,
+  importMap,
 
   keepRunning,
   gracefulStopAllocatedMs = 4000,
@@ -67,6 +70,17 @@ nodeChildProcess.run = async ({
     ...commandLineOptions,
   ]
 
+  if (importMap) {
+    env.IMPORT_MAP = JSON.stringify(importMap)
+    env.IMPORT_MAP_BASE_URL = rootDirectoryUrl
+    commandLineOptions.push(
+      `--experimental-loader=${fileURLToPath(IMPORTMAP_NODE_LOADER_FILE_URL)}`,
+    )
+    commandLineOptions.push(
+      `--require=${fileURLToPath(NO_EXPERIMENTAL_WARNING_FILE_URL)}`,
+    )
+  }
+
   const cleanupCallbackList = createCallbackListNotifiedOnce()
   const cleanup = async (reason) => {
     await cleanupCallbackList.notify({ reason })
@@ -96,6 +110,7 @@ nodeChildProcess.run = async ({
     // silent: true
     stdio: ["pipe", "pipe", "pipe", "ipc"],
     env: envForChildProcess,
+    cwd: new URL(rootDirectoryUrl),
   })
   logger.debug(
     createDetailedMessage(`child process forked (pid ${childProcess.pid})`, {

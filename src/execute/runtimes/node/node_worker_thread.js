@@ -13,6 +13,8 @@ import { memoize } from "@jsenv/utils/src/memoize/memoize.js"
 import { createChildExecOptions } from "./child_exec_options.js"
 import { ExecOptions } from "./exec_options.js"
 import { EXIT_CODES } from "./exit_codes.js"
+import { IMPORTMAP_NODE_LOADER_FILE_URL } from "./importmap_node_loader_file_url.js"
+import { NO_EXPERIMENTAL_WARNING_FILE_URL } from "./no_experimental_warnings_file_url.js"
 
 const CONTROLLABLE_WORKER_THREAD_URL = new URL(
   "./controllable_worker_thread.mjs?entry_point",
@@ -30,6 +32,7 @@ nodeWorkerThread.run = async ({
   // logger,
   rootDirectoryUrl,
   fileRelativeUrl,
+  importMap,
 
   keepRunning,
   stopSignal,
@@ -58,6 +61,16 @@ nodeWorkerThread.run = async ({
   }
   if (coverageMethodForNodeJs !== "NODE_V8_COVERAGE") {
     env.NODE_V8_COVERAGE = ""
+  }
+  if (importMap) {
+    env.IMPORT_MAP = JSON.stringify(importMap)
+    env.IMPORT_MAP_BASE_URL = rootDirectoryUrl
+    commandLineOptions.push(
+      `--experimental-loader=${fileURLToPath(IMPORTMAP_NODE_LOADER_FILE_URL)}`,
+    )
+    commandLineOptions.push(
+      `--require=${fileURLToPath(NO_EXPERIMENTAL_WARNING_FILE_URL)}`,
+    )
   }
 
   const workerThreadExecOptions = await createChildExecOptions({

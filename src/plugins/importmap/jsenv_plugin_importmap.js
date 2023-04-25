@@ -132,7 +132,9 @@ export const jsenvPluginImportmap = () => {
           await context.cook(inlineImportmapUrlInfo, {
             reference: inlineImportmapReference,
           })
-          setHtmlNodeText(importmap, inlineImportmapUrlInfo.content)
+          setHtmlNodeText(importmap, inlineImportmapUrlInfo.content, {
+            indentation: "auto",
+          })
           setHtmlNodeAttributes(importmap, {
             "jsenv-cooked-by": "jsenv:importmap",
           })
@@ -160,7 +162,9 @@ export const jsenvPluginImportmap = () => {
             JSON.parse(importmapUrlInfo.content),
             htmlUrlInfo.url,
           )
-          setHtmlNodeText(importmap, importmapUrlInfo.content)
+          setHtmlNodeText(importmap, importmapUrlInfo.content, {
+            indentation: "auto",
+          })
           setHtmlNodeAttributes(importmap, {
             "src": undefined,
             "jsenv-inlined-by": "jsenv:importmap",

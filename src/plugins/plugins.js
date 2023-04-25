@@ -4,7 +4,8 @@ import { jsenvPluginUrlResolution } from "./url_resolution/jsenv_plugin_url_reso
 import { jsenvPluginUrlVersion } from "./url_version/jsenv_plugin_url_version.js"
 import { jsenvPluginFileUrls } from "./file_urls/jsenv_plugin_file_urls.js"
 import { jsenvPluginHttpUrls } from "./http_urls/jsenv_plugin_http_urls.js"
-import { jsenvPluginInline } from "./inline/jsenv_plugin_inline.js"
+import { jsenvPluginInlineContentAnalysis } from "./inline_content_analysis/jsenv_plugin_inline_content_analysis.js"
+import { jsenvPluginInlining } from "./inlining/jsenv_plugin_inlining.js"
 import { jsenvPluginSupervisor } from "./supervisor/jsenv_plugin_supervisor.js"
 import { jsenvPluginCommonJsGlobals } from "./commonjs_globals/jsenv_plugin_commonjs_globals.js"
 import { jsenvPluginImportMetaScenarios } from "./import_meta_scenarios/jsenv_plugin_import_meta_scenarios.js"
@@ -31,6 +32,7 @@ export const getCorePlugins = ({
   directoryReferenceAllowed,
   supervisor,
   transpilation = true,
+  inlining = true,
 
   clientAutoreload = false,
   clientFileChangeCallbackList,
@@ -66,7 +68,8 @@ export const getCorePlugins = ({
     jsenvPluginImportmap(),
     // before node esm to handle bare specifiers
     // + before node esm to handle importmap before inline content
-    jsenvPluginInline(), // before "file urls" to resolve and load inline urls
+    jsenvPluginInlineContentAnalysis(), // before "file urls" to resolve and load inline urls
+    ...(inlining ? [jsenvPluginInlining()] : []),
     ...(supervisor ? [jsenvPluginSupervisor(supervisor)] : []), // after inline as it needs inline script to be cooked
     jsenvPluginFileUrls({
       directoryReferenceAllowed,

@@ -65,7 +65,8 @@ import {
   isWebWorkerUrlInfo,
 } from "../kitchen/web_workers.js"
 import { jsenvPluginUrlAnalysis } from "../plugins/url_analysis/jsenv_plugin_url_analysis.js"
-import { jsenvPluginInline } from "../plugins/inline/jsenv_plugin_inline.js"
+import { jsenvPluginInlining } from "../plugins/inlining/jsenv_plugin_inlining.js"
+import { jsenvPluginInlineContentAnalysis } from "../plugins/inline_content_analysis/jsenv_plugin_inline_content_analysis.js"
 import { jsenvPluginJsModuleFallback } from "../plugins/transpilation/js_module_fallback/jsenv_plugin_js_module_fallback.js"
 import { getCorePlugins } from "../plugins/plugins.js"
 import { jsenvPluginLineBreakNormalization } from "./jsenv_plugin_line_break_normalization.js"
@@ -112,7 +113,7 @@ export const defaultRuntimeCompat = {
  *        Controls if url in build file contents are versioned
  * @param {('search_param'|'filename')} [buildParameters.versioningMethod="search_param"]
  *        Controls how url are versioned
- * @param {boolean|string} [buildParameters.sourcemaps=false]
+ * @param {('none'|'inline'|'file'|'programmatic'} [buildParameters.sourcemaps="none"]
  *        Generate sourcemaps in the build directory
  * @return {Object} buildReturnValue
  * @return {Object} buildReturnValue.buildFileContents
@@ -134,7 +135,7 @@ export const build = async ({
   runtimeCompat = defaultRuntimeCompat,
   base = runtimeCompat.node ? "./" : "/",
   plugins = [],
-  sourcemaps = false,
+  sourcemaps = "none",
   sourcemapsSourcesContent,
   urlAnalysis = {},
   urlResolution,
@@ -347,6 +348,7 @@ build ${entryPointKeys.length} entry points`)
             babelHelpersAsImport: !explicitJsModuleFallback,
             jsModuleFallbackOnJsClassic: false,
           },
+          inlining: false,
           scenarioPlaceholders,
         }),
       ],
@@ -396,9 +398,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         jsenvPluginJsModuleFallback({
           systemJsInjection: true,
         }),
-        jsenvPluginInline({
+        jsenvPluginInlineContentAnalysis({
           fetchInlineUrls: false,
         }),
+        jsenvPluginInlining(),
         {
           name: "jsenv:build",
           appliesDuring: "build",
@@ -442,16 +445,28 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               return reference.url
             }
             if (reference.isInline) {
+              const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
+              const parentRawUrl = parentUrlInfo.originalUrl
               const rawUrlInfo = GRAPH.find(rawGraph, (rawUrlInfo) => {
-                if (!rawUrlInfo.isInline) {
-                  return false
+                const { inlineUrlSite } = rawUrlInfo
+                // not inline
+                if (!inlineUrlSite) return false
+                if (
+                  inlineUrlSite.url === parentRawUrl &&
+                  inlineUrlSite.line === reference.specifierLine &&
+                  inlineUrlSite.column === reference.specifierColumn
+                ) {
+                  return true
                 }
                 if (rawUrlInfo.content === reference.content) {
                   return true
                 }
-                return rawUrlInfo.originalContent === reference.content
+                if (rawUrlInfo.originalContent === reference.content) {
+                  return true
+                }
+                return false
               })
-              const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl)
+
               if (!rawUrlInfo) {
                 // generated during final graph
                 // (happens for JSON.parse injected for import assertions for instance)
@@ -640,6 +655,13 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               return rawUrlInfo
             }
             if (reference.isInline) {
+              if (reference.prev && !reference.prev.isInline) {
+                const urlBeforeRedirect = findKey(
+                  finalRedirections,
+                  reference.prev.url,
+                )
+                return fromBundleOrRawGraph(urlBeforeRedirect)
+              }
               return fromBundleOrRawGraph(reference.url)
             }
             // reference updated during "postbuild":
@@ -1162,7 +1184,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             ...contextSharedDuringBuild,
             plugins: [
               urlAnalysisPlugin,
-              jsenvPluginInline({
+              jsenvPluginInlineContentAnalysis({
                 fetchInlineUrls: false,
                 analyzeConvertedScripts: true, // to be able to version their urls
                 allowEscapeForVersioning: true,
@@ -1485,11 +1507,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     type: getHtmlNodeAttribute(hintNode, "type"),
                     crossorigin: getHtmlNodeAttribute(hintNode, "crossorigin"),
                   })
-                  insertHtmlNodeAfter(
-                    nodeToInsert,
-                    hintNode.parentNode,
-                    hintNode,
-                  )
+                  insertHtmlNodeAfter(nodeToInsert, hintNode)
                 })
               }
             })

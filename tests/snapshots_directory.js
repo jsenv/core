@@ -7,6 +7,7 @@ import {
 import { urlToRelativeUrl } from "@jsenv/urls"
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js"
 import { ensureUnixLineBreaks } from "@jsenv/core/src/build/line_break_unix.js"
+import { assert } from "@jsenv/assert"
 
 export const readSnapshotsFromDirectory = (directoryUrl) => {
   directoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl)
@@ -50,5 +51,42 @@ export const writeSnapshotsIntoDirectory = (directoryUrl, fileContents) => {
   Object.keys(fileContents).forEach((relativeUrl) => {
     const contentUrl = new URL(relativeUrl, directoryUrl)
     writeFileSync(contentUrl, fileContents[relativeUrl])
+  })
+}
+
+export const takeFileSnapshot = (fileUrl, snapshotFileUrl) => {
+  const fileContent = readFileSync(fileUrl, "utf8")
+  const snapshotFileContent = readFileSync(snapshotFileUrl, "utf8")
+  writeFileSync(snapshotFileUrl, fileContent)
+  assertSnapshots({
+    content: fileContent,
+    snapshotContent: snapshotFileContent,
+  })
+}
+
+export const takeDirectorySnapshot = (
+  directoryUrl,
+  snapshotDirectoryUrl,
+  callAssert = true,
+) => {
+  const snapshotDirectoryContent =
+    readSnapshotsFromDirectory(snapshotDirectoryUrl)
+  const directoryContent = readSnapshotsFromDirectory(directoryUrl)
+  writeSnapshotsIntoDirectory(snapshotDirectoryUrl, directoryContent)
+  if (callAssert) {
+    assertSnapshots({
+      content: directoryContent,
+      snapshotContent: snapshotDirectoryContent,
+    })
+  }
+}
+
+export const assertSnapshots = ({ content, snapshotContent }) => {
+  if (process.env.NO_SNAPSHOT_ASSERTION) {
+    return
+  }
+  assert({
+    actual: content,
+    expected: snapshotContent,
   })
 }

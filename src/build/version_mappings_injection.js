@@ -3,7 +3,7 @@
 import { createMagicSource } from "@jsenv/sourcemap"
 import {
   parseHtmlString,
-  injectScriptNodeAsEarlyAsPossible,
+  injectHtmlNodeAsEarlyAsPossible,
   createHtmlNode,
   stringifyHtmlAst,
 } from "@jsenv/ast"
@@ -32,7 +32,7 @@ const injectors = {
     const htmlAst = parseHtmlString(urlInfo.content, {
       storeOriginalPositions: false,
     })
-    injectScriptNodeAsEarlyAsPossible(
+    injectHtmlNodeAsEarlyAsPossible(
       htmlAst,
       createHtmlNode({
         tagName: "script",
@@ -52,12 +52,11 @@ const injectors = {
 }
 const jsInjector = (urlInfo, { versionMappings, minification }) => {
   const magicSource = createMagicSource(urlInfo.content)
-  magicSource.prepend(
-    generateClientCodeForVersionMappings(versionMappings, {
-      globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window",
-      minification,
-    }),
-  )
+  const code = generateClientCodeForVersionMappings(versionMappings, {
+    globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window",
+    minification,
+  })
+  magicSource.prepend(`${code}\n\n`)
   return magicSource.toContentAndSourcemap()
 }
 const generateClientCodeForVersionMappings = (
@@ -69,14 +68,12 @@ const generateClientCodeForVersionMappings = (
       versionMappings,
     )}; ${globalName}.__v__ = function (s) { return m[s] || s }; })();`
   }
-  return `
-;(function() {
+  return `;(function() {
   var __versionMappings__ = ${JSON.stringify(versionMappings, null, "  ")};
   ${globalName}.__v__ = function (specifier) {
     return __versionMappings__[specifier] || specifier
   };
-})();
-`
+})();`
 }
 
 export const injectVersionMappingsAsImportmap = async ({
@@ -90,21 +87,17 @@ export const injectVersionMappingsAsImportmap = async ({
   // jsenv_plugin_importmap.js is removing importmap during build
   // it means at this point we know HTML has no importmap in it
   // we can safely inject one
-  const importmapNode = createHtmlNode({
-    tagName: "script",
-    type: "importmap",
-    textContent: kitchen.kitchenContext.minification
-      ? JSON.stringify({ imports: versionMappings })
-      : `  
-      {
-        "imports": {${JSON.stringify(versionMappings, null, "          ").slice(
-          1,
-          -1,
-        )}        }
-      }
-    `,
-  })
-  injectScriptNodeAsEarlyAsPossible(htmlAst, importmapNode, "jsenv:versioning")
+  injectHtmlNodeAsEarlyAsPossible(
+    htmlAst,
+    createHtmlNode({
+      tagName: "script",
+      type: "importmap",
+      textContent: kitchen.kitchenContext.minification
+        ? JSON.stringify({ imports: versionMappings })
+        : JSON.stringify({ imports: versionMappings }, null, "  "),
+    }),
+    "jsenv:versioning",
+  )
   kitchen.urlInfoTransformer.applyFinalTransformations(urlInfo, {
     content: stringifyHtmlAst(htmlAst),
   })

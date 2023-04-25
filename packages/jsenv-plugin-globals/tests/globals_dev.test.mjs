@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert"
 import { startDevServer } from "@jsenv/core"
-import { executeInChromium } from "@jsenv/core/tests/execute_in_chromium.js"
+import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js"
 
 import { jsenvPluginGlobals } from "@jsenv/plugin-globals"
 
@@ -20,7 +20,7 @@ const test = async (params) => {
     ],
     ...params,
   })
-  const { returnValue } = await executeInChromium({
+  const { returnValue } = await executeInBrowser({
     url: `${devServer.origin}/main.html`,
     /* eslint-disable no-undef */
     pageFunction: () => window.resultPromise,

@@ -4,7 +4,9 @@ import { applyBabelPlugins } from "@jsenv/ast"
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js"
 import { JS_QUOTES } from "@jsenv/utils/src/string/js_quotes.js"
 
-export const jsenvPluginJsInlineContent = ({ allowEscapeForVersioning }) => {
+export const jsenvPluginJsInlineContentAnalysis = ({
+  allowEscapeForVersioning,
+}) => {
   const parseAndTransformInlineContentCalls = async (urlInfo, context) => {
     const inlineContentInfos = await parseJsInlineContentInfos({
       js: urlInfo.content,
@@ -63,7 +65,7 @@ export const jsenvPluginJsInlineContent = ({ allowEscapeForVersioning }) => {
   }
 
   return {
-    name: "jsenv:js_inline_content",
+    name: "jsenv:js_inline_content_analysis",
     appliesDuring: "*",
     transformUrlContent: {
       js_classic: parseAndTransformInlineContentCalls,

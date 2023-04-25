@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "34.2.2",
+  "version": "34.3.0",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "author": {
@@ -43,6 +43,7 @@
     "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",
     "dev": "node --conditions=development ./scripts/dev/dev.mjs",
     "test": "node --conditions=development ./scripts/test/test.mjs",
+    "test:no_snapshot_assertion": "npm run test -- --no-snapshot-assertion",
     "test:dev_errors_snapshots": "node --conditions=development ./tests/dev_server/errors/generate_snapshot_files.mjs",
     "test:workspace": "npm run test --workspaces --if-present -- --workspace",
     "build": "node --conditions=development ./scripts/build/build.mjs",
