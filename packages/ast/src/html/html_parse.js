@@ -46,13 +46,13 @@ export const parseHtmlString = (
     const bodyNode = htmlNode.childNodes.find(
       (node) => node.nodeName === "body",
     )
+    // for some reason "parse5" adds "\n\n" to the last text node of <body>
     const lastBodyNode = bodyNode.childNodes[bodyNode.childNodes.length - 1]
     if (
       lastBodyNode &&
       lastBodyNode.nodeName === "#text" &&
-      lastBodyNode.value === "\n\n"
+      lastBodyNode.value.endsWith("\n\n")
     ) {
-      // for some reason "parse5" adds "\n\n" to the last text node of <body>
       lastBodyNode.value = lastBodyNode.value.slice(0, -2)
     }
   }
@@ -125,9 +125,6 @@ const ensureLineBreaksBetweenHtmlNodes = (rootNode) => {
       const body = html.childNodes.find((node) => node.nodeName === "body")
       if (body) {
         const bodyLastChild = body.childNodes[body.childNodes.length - 1]
-        if (bodyLastChild.nodeName === "#text" && bodyLastChild.value === "") {
-          debugger
-        }
         if (bodyLastChild.nodeName !== "#text") {
           mutations.push(() => {
             insertHtmlNodeAfter(
@@ -135,6 +132,12 @@ const ensureLineBreaksBetweenHtmlNodes = (rootNode) => {
               bodyLastChild,
             )
           })
+        }
+        if (
+          bodyLastChild.nodeName === "#text" &&
+          bodyLastChild.value[bodyLastChild.value.length - 1] === "\n"
+        ) {
+          bodyLastChild.value = bodyLastChild.value.slice(0, -1)
         }
       }
 
