@@ -47,7 +47,11 @@ export const parseHtmlString = (
       (node) => node.nodeName === "body",
     )
     const lastBodyNode = bodyNode.childNodes[bodyNode.childNodes.length - 1]
-    if (lastBodyNode && lastBodyNode.nodeName === "#text") {
+    if (
+      lastBodyNode &&
+      lastBodyNode.nodeName === "#text" &&
+      lastBodyNode.value === "\n\n"
+    ) {
       // for some reason "parse5" adds "\n\n" to the last text node of <body>
       lastBodyNode.value = lastBodyNode.value.slice(0, -2)
     }
@@ -121,6 +125,9 @@ const ensureLineBreaksBetweenHtmlNodes = (rootNode) => {
       const body = html.childNodes.find((node) => node.nodeName === "body")
       if (body) {
         const bodyLastChild = body.childNodes[body.childNodes.length - 1]
+        if (bodyLastChild.nodeName === "#text" && bodyLastChild.value === "") {
+          debugger
+        }
         if (bodyLastChild.nodeName !== "#text") {
           mutations.push(() => {
             insertHtmlNodeAfter(

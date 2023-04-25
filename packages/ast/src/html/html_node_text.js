@@ -65,6 +65,9 @@ export const getIndentation = (htmlNode) => {
   const siblings = parentNode.childNodes
   const index = siblings.indexOf(htmlNode)
   if (index === 0) {
+    if (htmlNode.nodeName === "#text") {
+      return extractIndentation(htmlNode)
+    }
     return ""
   }
 
@@ -82,6 +85,10 @@ export const getIndentation = (htmlNode) => {
     return ""
   }
 
+  return extractIndentation(textNode)
+}
+
+const extractIndentation = (textNode) => {
   const text = textNode.value
   const lines = text.split(/\r?\n/)
   const lastLine = lines[lines.length - 1]
@@ -105,7 +112,7 @@ const setIndentation = (htmlNodeText, indentation) => {
   return result
 }
 
-const increaseIndentation = (indentation, size) => {
+export const increaseIndentation = (indentation, size) => {
   const char = indentation[0]
   return char ? `${indentation}${char.repeat(size)}` : " ".repeat(size)
 }

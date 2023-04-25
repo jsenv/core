@@ -5,6 +5,7 @@ import { findHtmlNode } from "./html_search.js"
 import { analyzeScriptNode } from "./html_analysis.js"
 import {
   getIndentation,
+  increaseIndentation,
   getHtmlNodeText,
   setHtmlNodeText,
 } from "./html_node_text.js"
@@ -130,29 +131,25 @@ const injectWithWhitespaces = (nodeToInsert, futureParentNode, futureIndex) => {
     nodeToInsert.nodeName !== "#text" &&
     (!previousSibling || !isWhitespaceNode(previousSibling))
   ) {
+    let indentation
+    if (childNodes.length) {
+      indentation = getIndentation(childNodes[childNodes.length - 1])
+    } else {
+      const parentIndentation = getIndentation(futureParentNode)
+      indentation = increaseIndentation(parentIndentation, 2)
+    }
     futureChildNodes.push({
       nodeName: "#text",
-      value: previousSibling ? `\n${getIndentation(previousSibling)}` : "\n",
+      value: `\n${indentation}`,
       parentNode: futureParentNode,
     })
   }
   futureChildNodes.push(nodeToInsert)
-  const nextSibling = childNodes[futureIndex + 1]
-  if (
-    nodeToInsert.nodeName !== "#text" &&
-    (!nextSibling || !isWhitespaceNode(nextSibling))
-  ) {
-    futureChildNodes.push({
-      nodeName: "#text",
-      value: nextSibling ? `\n${getIndentation(nextSibling)}` : "\n",
-      parentNode: futureParentNode,
-    })
-  }
+  nodeToInsert.parentNode = futureParentNode
   if (nextSiblings.length) {
     futureChildNodes.push(...nextSiblings)
   }
   futureParentNode.childNodes = futureChildNodes
-  nodeToInsert.parentNode = futureParentNode
 
   // update indentation when node contains text
   const text = getHtmlNodeText(nodeToInsert)

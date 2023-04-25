@@ -1500,11 +1500,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     type: getHtmlNodeAttribute(hintNode, "type"),
                     crossorigin: getHtmlNodeAttribute(hintNode, "crossorigin"),
                   })
-                  insertHtmlNodeAfter(
-                    nodeToInsert,
-                    hintNode.parentNode,
-                    hintNode,
-                  )
+                  insertHtmlNodeAfter(nodeToInsert, hintNode)
                 })
               }
             })

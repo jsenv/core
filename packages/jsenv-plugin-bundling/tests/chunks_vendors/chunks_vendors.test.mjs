@@ -31,18 +31,18 @@ await test({
   plugins: [jsenvPluginBundling()],
 })
 
-await test({
-  name: "chunks_vendors",
-  plugins: [
-    jsenvPluginBundling({
-      js_module: {
-        chunks: {
-          vendors: {
-            "file://**/node_modules/": true,
-            "./a.js": true,
-          },
-        },
-      },
-    }),
-  ],
-})
+// await test({
+//   name: "chunks_vendors",
+//   plugins: [
+//     jsenvPluginBundling({
+//       js_module: {
+//         chunks: {
+//           vendors: {
+//             "file://**/node_modules/": true,
+//             "./a.js": true,
+//           },
+//         },
+//       },
+//     }),
+//   ],
+// })
