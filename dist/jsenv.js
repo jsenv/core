@@ -26005,7 +26005,7 @@ nodeChildProcess.run = async ({
   if (importMap) {
     env.IMPORT_MAP = JSON.stringify(importMap);
     env.IMPORT_MAP_BASE_URL = rootDirectoryUrl;
-    commandLineOptions.push(`--experimental-loader=${fileURLToPath(IMPORTMAP_NODE_LOADER_FILE_URL)}`);
+    commandLineOptions.push(`--experimental-loader=${IMPORTMAP_NODE_LOADER_FILE_URL}`);
     commandLineOptions.push(`--require=${fileURLToPath(NO_EXPERIMENTAL_WARNING_FILE_URL)}`);
   }
   const cleanupCallbackList = createCallbackListNotifiedOnce();
@@ -26033,8 +26033,7 @@ nodeChildProcess.run = async ({
     execArgv,
     // silent: true
     stdio: ["pipe", "pipe", "pipe", "ipc"],
-    env: envForChildProcess,
-    cwd: new URL(rootDirectoryUrl)
+    env: envForChildProcess
   });
   logger.debug(createDetailedMessage(`child process forked (pid ${childProcess.pid})`, {
     "custom env": JSON.stringify(env, null, "  ")
@@ -26327,7 +26326,7 @@ nodeWorkerThread.run = async ({
   if (importMap) {
     env.IMPORT_MAP = JSON.stringify(importMap);
     env.IMPORT_MAP_BASE_URL = rootDirectoryUrl;
-    commandLineOptions.push(`--experimental-loader=${fileURLToPath(IMPORTMAP_NODE_LOADER_FILE_URL)}`);
+    commandLineOptions.push(`--experimental-loader=${IMPORTMAP_NODE_LOADER_FILE_URL}`);
     commandLineOptions.push(`--require=${fileURLToPath(NO_EXPERIMENTAL_WARNING_FILE_URL)}`);
   }
   const workerThreadExecOptions = await createChildExecOptions({

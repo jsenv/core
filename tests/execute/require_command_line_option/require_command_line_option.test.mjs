@@ -23,7 +23,9 @@ await test({
 await test({
   runtime: nodeChildProcess,
   runtimeParams: {
-    commandLineOptions: [`--require=./required.cjs`],
+    commandLineOptions: [
+      `--require=${fileURLToPath(new URL("./required.cjs", import.meta.url))}`,
+    ],
   },
 })
 

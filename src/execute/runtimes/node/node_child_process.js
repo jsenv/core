@@ -74,7 +74,7 @@ nodeChildProcess.run = async ({
     env.IMPORT_MAP = JSON.stringify(importMap)
     env.IMPORT_MAP_BASE_URL = rootDirectoryUrl
     commandLineOptions.push(
-      `--experimental-loader=${fileURLToPath(IMPORTMAP_NODE_LOADER_FILE_URL)}`,
+      `--experimental-loader=${IMPORTMAP_NODE_LOADER_FILE_URL}`,
     )
     commandLineOptions.push(
       `--require=${fileURLToPath(NO_EXPERIMENTAL_WARNING_FILE_URL)}`,
@@ -110,7 +110,6 @@ nodeChildProcess.run = async ({
     // silent: true
     stdio: ["pipe", "pipe", "pipe", "ipc"],
     env: envForChildProcess,
-    cwd: new URL(rootDirectoryUrl),
   })
   logger.debug(
     createDetailedMessage(`child process forked (pid ${childProcess.pid})`, {
