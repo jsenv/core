@@ -6,8 +6,7 @@ await executeTestPlan({
   testPlan: {
     "./tests/**/*.test.mjs": {
       node: {
-        runtime: nodeWorkerThread,
-        runtimeParams: {
+        runtime: nodeWorkerThread({
           env: {
             NO_SNAPSHOT_ASSERTION: process.argv.includes(
               "--no-snapshot-assertion",
@@ -15,7 +14,7 @@ await executeTestPlan({
               ? "1"
               : "",
           },
-        },
+        }),
         allocatedMs: ({ fileRelativeUrl }) => {
           if (fileRelativeUrl.endsWith("_snapshots.test.mjs")) {
             return 180_000

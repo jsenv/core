@@ -5,7 +5,7 @@ await executeTestPlan({
   testPlan: {
     "./tests/**/*.test.mjs": {
       node: {
-        runtime: nodeWorkerThread,
+        runtime: nodeWorkerThread(),
       },
     },
   },

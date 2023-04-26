@@ -29,21 +29,21 @@ await executeTestPlan({
   testPlan: {
     "./animals.test.html": {
       chromium: {
-        runtime: chromium,
+        runtime: chromium(),
         captureConsole: false,
       },
       firefox: {
-        runtime: firefox,
+        runtime: firefox(),
         captureConsole: false,
       },
       webkit: {
-        runtime: webkit,
+        runtime: webkit(),
         captureConsole: false,
       },
     },
     "./animals.test.js": {
       node: {
-        runtime: nodeWorkerThread,
+        runtime: nodeWorkerThread(),
         captureConsole: false,
       },
     },

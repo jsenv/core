@@ -6,7 +6,7 @@ await executeTestPlan({
   testPlan: {
     "*.spec.js": {
       node: {
-        runtime: nodeChildProcess,
+        runtime: nodeChildProcess(),
         captureConsole: true,
       },
     },

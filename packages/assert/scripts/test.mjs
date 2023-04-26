@@ -11,20 +11,20 @@ await executeTestPlan({
   testPlan: {
     "./src/**/*.test.mjs": {
       node: {
-        runtime: nodeWorkerThread,
+        runtime: nodeWorkerThread(),
       },
     },
     "./src/**/*.test.html": {
       chromium: {
-        runtime: chromium,
+        runtime: chromium(),
         allocatedMs: 90_000,
       },
       firefox: {
-        runtime: firefox,
+        runtime: firefox(),
         allocatedMs: 90_000,
       },
       webkit: {
-        runtime: webkit,
+        runtime: webkit(),
         allocatedMs: 90_000,
       },
     },

@@ -5,15 +5,14 @@ await executeTestPlan({
   testPlan: {
     "./tests/**/*.test.mjs": {
       node: {
-        runtime: nodeWorkerThread,
+        runtime: nodeWorkerThread(),
       },
     },
     "./tests/**/with_signal_warnings.test.mjs": {
       node: {
-        runtime: nodeWorkerThread,
-        runtimeParams: {
+        runtime: nodeWorkerThread({
           commandLineOptions: ["--no-warnings"],
-        },
+        }),
       },
     },
   },

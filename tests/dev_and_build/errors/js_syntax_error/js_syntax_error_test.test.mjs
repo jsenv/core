@@ -24,15 +24,15 @@ const { testPlanCoverage } = await executeTestPlan({
   testPlan: {
     "./client/main.html": {
       chromium: {
-        runtime: chromium,
+        runtime: chromium(),
       },
     },
     "./client/main.js": {
       node_child_process: {
-        runtime: nodeChildProcess,
+        runtime: nodeChildProcess(),
       },
       node_worker_thread: {
-        runtime: nodeWorkerThread,
+        runtime: nodeWorkerThread(),
       },
     },
   },
