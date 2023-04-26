@@ -1,6 +1,7 @@
 import { assert } from "@jsenv/assert"
+import { startDevServer } from "@jsenv/core"
 
-import { startDevServer, execute, chromium, firefox, webkit } from "@jsenv/core"
+import { execute, chromium, firefox, webkit } from "@jsenv/test"
 
 const test = async ({ runtime }) => {
   const devServer = await startDevServer({
@@ -40,8 +41,8 @@ const test = async ({ runtime }) => {
   }
 }
 
-await test({ runtime: chromium })
+await test({ runtime: chromium() })
 if (process.platform !== "win32") {
-  await test({ runtime: firefox })
+  await test({ runtime: firefox() })
 }
-await test({ runtime: webkit })
+await test({ runtime: webkit() })

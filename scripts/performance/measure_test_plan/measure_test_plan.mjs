@@ -6,14 +6,9 @@ const measures = startMeasures({
   filesystem: true,
 })
 
-const {
-  startDevServer,
-  executeTestPlan,
-  chromium,
-  firefox,
-  webkit,
-  nodeWorkerThread,
-} = await import("@jsenv/core")
+const { startDevServer } = await import("@jsenv/core")
+const { executeTestPlan, chromium, firefox, webkit, nodeWorkerThread } =
+  await import("@jsenv/test")
 
 const devServer = await startDevServer({
   logLevel: "warn",
@@ -29,21 +24,21 @@ await executeTestPlan({
   testPlan: {
     "./animals.test.html": {
       chromium: {
-        runtime: chromium,
+        runtime: chromium(),
         captureConsole: false,
       },
       firefox: {
-        runtime: firefox,
+        runtime: firefox(),
         captureConsole: false,
       },
       webkit: {
-        runtime: webkit,
+        runtime: webkit(),
         captureConsole: false,
       },
     },
     "./animals.test.js": {
       node: {
-        runtime: nodeWorkerThread,
+        runtime: nodeWorkerThread(),
         captureConsole: false,
       },
     },

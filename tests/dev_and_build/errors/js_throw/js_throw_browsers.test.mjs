@@ -1,6 +1,7 @@
 import { assert } from "@jsenv/assert"
+import { startDevServer } from "@jsenv/core"
 
-import { startDevServer, execute, chromium, firefox, webkit } from "@jsenv/core"
+import { execute, chromium, firefox, webkit } from "@jsenv/test"
 
 const test = async ({ runtime }) => {
   const devServer = await startDevServer({
@@ -63,6 +64,6 @@ module code@${devServer.origin}/main.js:3:13`
   }
 }
 
-await test({ runtime: chromium })
-await test({ runtime: firefox })
-await test({ runtime: webkit })
+await test({ runtime: chromium() })
+await test({ runtime: firefox() })
+await test({ runtime: webkit() })

@@ -4,26 +4,26 @@ import {
   firefox,
   webkit,
   nodeWorkerThread,
-} from "@jsenv/core"
+} from "@jsenv/test"
 
 await executeTestPlan({
   rootDirectoryUrl: new URL("../src/", import.meta.url),
   testPlan: {
     "./**/*.test.js": {
       node: {
-        runtime: nodeWorkerThread,
+        runtime: nodeWorkerThread(),
       },
     },
     "./**/*.test.html": {
       chromium: {
-        runtime: chromium,
+        runtime: chromium(),
       },
       firefox: {
-        runtime: firefox,
+        runtime: firefox(),
         allocatedMs: process.platform === "win32" ? 60_000 : 30_000,
       },
       webkit: {
-        runtime: webkit,
+        runtime: webkit(),
       },
     },
   },

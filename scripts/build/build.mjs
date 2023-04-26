@@ -3,14 +3,12 @@ import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs"
 import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic"
 import { build } from "@jsenv/core"
 
-const jsenvRootDirectoryUrl = new URL("../../", import.meta.url)
-
 await build({
-  sourceDirectoryUrl: new URL("./src/", jsenvRootDirectoryUrl),
+  sourceDirectoryUrl: new URL("../../src/", import.meta.url),
+  buildDirectoryUrl: new URL("../../dist/", import.meta.url),
   entryPoints: {
-    "./main.js": "jsenv.js",
+    "./main.js": "jsenv_core.js",
   },
-  buildDirectoryUrl: new URL("./dist/", jsenvRootDirectoryUrl),
   versioning: false,
   assetManifest: false,
   runtimeCompat: {
@@ -36,14 +34,13 @@ await build({
       "file://**/node_modules/@jsenv/server/": true,
       "file://**/node_modules/@jsenv/plugin-placeholders/": true,
       "file://**/node_modules/@jsenv/sourcemap/": false, // cannot inline "source-map"
-      "file://**/node_modules/@jsenv/uneval/": true,
       "file://**/node_modules/@jsenv/url-meta/": true,
       "file://**/node_modules/@jsenv/urls/": true,
       "file://**/node_modules/@jsenv/utils/": true,
+      "file://**/node_modules/ws/": true,
       "file://**/node_modules/ansi-escapes/": true,
       "file://**/node_modules/is-unicode-supported/": true,
       "file://**/node_modules/supports-color/": true,
-      "file://**/node_modules/ws/": true,
     },
   },
   plugins: [
@@ -60,8 +57,8 @@ await build({
 // so we convert async/await, arrow function, ... to be compatible with
 // old browsers
 await build({
-  sourceDirectoryUrl: new URL("./src/", jsenvRootDirectoryUrl),
-  buildDirectoryUrl: new URL("./dist/js/", jsenvRootDirectoryUrl),
+  sourceDirectoryUrl: new URL("../../src/", import.meta.url),
+  buildDirectoryUrl: new URL("../../dist/js/", import.meta.url),
   entryPoints: {
     "./plugins/transpilation/js_module_fallback/client/s.js?as_js_classic":
       "s.js",

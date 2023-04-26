@@ -7,7 +7,7 @@ import {
 } from "@jsenv/sourcemap"
 import { applyBabelPlugins } from "@jsenv/ast"
 
-import { requireFromJsenv } from "@jsenv/core/src/require_from_jsenv.js"
+import { requireFromJsenv } from "@jsenv/core/src/helpers/require_from_jsenv.js"
 import { requireBabelPlugin } from "../babel/require_babel_plugin.js"
 import { babelPluginTransformImportMetaUrl } from "./helpers/babel_plugin_transform_import_meta_url.js"
 import { babelPluginTransformImportMetaResolve } from "./helpers/babel_plugin_transform_import_meta_resolve.js"

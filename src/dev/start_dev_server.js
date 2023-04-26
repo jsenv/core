@@ -9,9 +9,9 @@ import {
 } from "@jsenv/server"
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js"
 
-import { lookupPackageDirectory } from "../lookup_package_directory.js"
-import { createServerEventsDispatcher } from "@jsenv/core/src/plugins/server_events/server_events_dispatcher.js"
-import { defaultRuntimeCompat } from "@jsenv/core/src/build/build.js"
+import { lookupPackageDirectory } from "../helpers/lookup_package_directory.js"
+import { createServerEventsDispatcher } from "../plugins/server_events/server_events_dispatcher.js"
+import { defaultRuntimeCompat } from "../build/build.js"
 import { createFileService } from "./file_service.js"
 
 /**

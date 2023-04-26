@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "34.3.0",
+  "version": "35.0.0",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "author": {
@@ -25,7 +25,7 @@
     ".": {
       "import": {
         "development": "./src/main.js",
-        "default": "./dist/jsenv.js"
+        "default": "./dist/jsenv_core.js"
       }
     },
     "./*": "./*"
@@ -56,14 +56,10 @@
     "certificate:install": "node ./scripts/dev/install_certificate_authority.mjs",
     "prepublishOnly": "npm run build"
   },
-  "optionalDependencies": {
-    "playwright": "1.x"
-  },
   "dependencies": {
     "@babel/plugin-proposal-dynamic-import": "7.18.6",
     "@babel/plugin-transform-modules-systemjs": "7.20.11",
     "@babel/plugin-transform-modules-umd": "7.18.6",
-    "@c88/v8-coverage": "0.1.1",
     "@financial-times/polyfill-useragent-normaliser": "1.10.2",
     "@jsenv/abort": "4.2.4",
     "@jsenv/ast": "3.0.6",
@@ -75,24 +71,12 @@
     "@jsenv/node-esm-resolution": "1.0.1",
     "@jsenv/server": "15.0.2",
     "@jsenv/sourcemap": "1.0.10",
-    "@jsenv/uneval": "1.6.0",
     "@jsenv/url-meta": "8.1.0",
     "@jsenv/urls": "2.0.0",
     "@jsenv/utils": "2.0.1",
-    "@paralleldrive/cuid2": "2.2.0",
     "construct-style-sheets-polyfill": "3.1.0",
-    "istanbul-lib-coverage": "3.2.0",
-    "istanbul-lib-instrument": "5.2.1",
-    "istanbul-lib-report": "3.0.0",
-    "istanbul-reports": "3.1.5",
     "launch-editor": "2.6.0",
-    "lightningcss": "1.19.0",
-    "pidtree": "0.6.0",
-    "string-width": "5.1.2",
-    "strip-ansi": "7.0.1",
-    "v8-to-istanbul": "9.1.0",
-    "webidl2": "24.2.2",
-    "wrap-ansi": "8.1.0"
+    "lightningcss": "1.19.0"
   },
   "devDependencies": {
     "@babel/eslint-parser": "7.21.3",
@@ -107,6 +91,7 @@
     "@jsenv/plugin-minification": "./packages/jsenv-plugin-minification/",
     "@jsenv/plugin-placeholders": "./packages/jsenv-plugin-placeholders/",
     "@jsenv/plugin-as-js-classic": "./packages/jsenv-plugin-as-js-classic/",
+    "@jsenv/test": "./packages/test/",
     "eslint": "8.38.0",
     "eslint-plugin-html": "7.1.0",
     "eslint-plugin-import": "2.27.5",
