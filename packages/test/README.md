@@ -12,22 +12,7 @@ Let's see how to write tests for the following code
 export const add = (a, b) => a + b
 ```
 
-## 1.1 Testing on Node.js
-
-```js
-// add.test.mjs
-import { add } from "./add.js"
-
-const actual = add(1, 2)
-const expected = 3
-if (actual !== expected) {
-  throw new Error(`add(1,2) should return 3, got ${actual}`)
-}
-```
-
-The following file would be a test file meant to be executed on a web browser
-
-## 1.2 Testing on web browser
+## 1.1 Testing on web browser
 
 ```html
 <!-- add.test.html -->
@@ -53,7 +38,22 @@ The following file would be a test file meant to be executed on a web browser
 </html>
 ```
 
-In a more complex test it's recommended to use an assertion library. The diff below shows how the test would be written in that case.
+## 1.2 Testing on Node.js
+
+```js
+// add.test.mjs
+import { add } from "./add.js"
+
+const actual = add(1, 2)
+const expected = 3
+if (actual !== expected) {
+  throw new Error(`add(1,2) should return 3, got ${actual}`)
+}
+```
+
+## 1.3 Assertion library
+
+To keep example very basic no assertion library is used. In practice test would likely use one. The diff below shows how the test would be written in that case.
 
 ```diff
 + import { assert } from "@jsenv/assert"
@@ -69,9 +69,9 @@ const expected = 3
 
 ☝️ Code uses [@jsenv/assert](../packages/assert) but any other assertion library is ok.
 
-# 1. JavaScript API
+# 2. JavaScript API
 
-## 1.1 Executing tests on browsers
+## 2.1 Executing tests on browsers
 
 Code below execute all files endings by `".test.html"` on chromium.  
 [playwright](https://github.com/microsoft/playwright)<sup>↗</sup> is used to start a headless chromium.
@@ -134,7 +134,7 @@ project/
 This way the web server can serve test files alongside with source files.  
 It's best to configure `webServer` to lead to jsenv dev server but it does not have to; Any server serving files from a directory can be used.
 
-## 1.2 Executing on more browsers
+## 2.2 Executing on more browsers
 
 ```js
 import { executeTestPlan, chromium, firefox, webkit } from "@jsenv/core"
@@ -156,7 +156,7 @@ await executeTestPlan({
 })
 ```
 
-## 1.3 Executing tests on Node.js
+## 2.3 Executing tests on Node.js
 
 With Node.js there is no server involved so test files can be anywhere and only rootDirectoryUrl and testPlan parameters are **required**.
 
@@ -173,7 +173,7 @@ await executeTestPlan({
 })
 ```
 
-## 1.4 Allocated time
+## 2.4 Allocated time
 
 Each file is given 30s to execute.
 If this duration is exceeded the browser tab (or node process/worker thread) is closed and executiong is considered as failed.
@@ -194,7 +194,7 @@ await executeTestPlan({
 
 ☝️ Code above changes the default allocated time to 60s.
 
-# 2. Installation
+# 3. Installation
 
 ```console
 npm install --save-dev @jsenv/test
