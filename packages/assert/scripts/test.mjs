@@ -4,7 +4,7 @@ import {
   firefox,
   webkit,
   nodeWorkerThread,
-} from "@jsenv/core"
+} from "@jsenv/test"
 
 await executeTestPlan({
   rootDirectoryUrl: new URL("../", import.meta.url),

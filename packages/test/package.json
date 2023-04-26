@@ -1,0 +1,45 @@
+{
+  "name": "@jsenv/test",
+  "version": "1.0.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/test"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "exports": {
+    ".": "./src/main.js",
+    "./*": "./*"
+  },
+  "scripts": {
+    "test": "node --conditions=development ./scripts/test.mjs"
+  },
+  "optionalDependencies": {
+    "playwright": "1.x"
+  },
+  "dependencies": {
+    "@jsenv/core": "34.3.0",
+    "@jsenv/abort": "4.2.4",
+    "@jsenv/ast": "3.0.6",
+    "@jsenv/filesystem": "4.2.3",
+    "@jsenv/log": "3.3.4",
+    "@jsenv/urls": "2.0.0",
+    "@jsenv/url-meta": "8.1.0",
+    "@jsenv/uneval": "1.6.0",
+    "@jsenv/utils": "2.0.1",
+    "v8-to-istanbul": "9.1.0",
+    "istanbul-lib-coverage": "3.2.0",
+    "istanbul-lib-instrument": "5.2.1",
+    "istanbul-lib-report": "3.0.0",
+    "istanbul-reports": "3.1.5",
+    "@paralleldrive/cuid2": "2.2.0",
+    "@c88/v8-coverage": "0.1.1",
+    "strip-ansi": "7.0.1",
+    "wrap-ansi": "8.1.0",
+    "pidtree": "0.6.0"
+  }
+}

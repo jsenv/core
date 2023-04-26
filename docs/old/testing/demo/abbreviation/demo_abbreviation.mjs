@@ -1,4 +1,4 @@
-import { executeTestPlan, nodeChildProcess } from "@jsenv/core"
+import { executeTestPlan, nodeChildProcess } from "@jsenv/test"
 
 await executeTestPlan({
   logLevel: "info",

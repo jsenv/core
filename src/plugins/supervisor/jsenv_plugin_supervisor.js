@@ -7,7 +7,7 @@ import { getOriginalPosition } from "@jsenv/sourcemap"
 import { stringifyUrlSite } from "@jsenv/urls"
 
 import { injectSupervisorIntoHTML } from "./html_supervisor_injection.js"
-import { requireFromJsenv } from "@jsenv/core/src/require_from_jsenv.js"
+import { requireFromJsenv } from "@jsenv/core/src/helpers/require_from_jsenv.js"
 
 export const supervisorFileUrl = new URL(
   "./client/supervisor.js",

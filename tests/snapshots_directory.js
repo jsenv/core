@@ -6,8 +6,8 @@ import {
 } from "@jsenv/filesystem"
 import { urlToRelativeUrl } from "@jsenv/urls"
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js"
-import { ensureUnixLineBreaks } from "@jsenv/core/src/build/line_break_unix.js"
 import { assert } from "@jsenv/assert"
+import { ensureUnixLineBreaks } from "@jsenv/core/src/build/line_break_unix.js"
 
 export const readSnapshotsFromDirectory = (directoryUrl) => {
   directoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl)

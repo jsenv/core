@@ -1,12 +1,12 @@
 import { assert } from "@jsenv/assert"
+import { startDevServer } from "@jsenv/core"
 
 import {
-  startDevServer,
   executeTestPlan,
   chromium,
   nodeChildProcess,
   nodeWorkerThread,
-} from "@jsenv/core"
+} from "@jsenv/test"
 
 const devServer = await startDevServer({
   logLevel: "warn",
