@@ -34,11 +34,11 @@
     "@rollup/plugin-replace": "5.0.2",
     "cjs-module-lexer": "1.2.2",
     "is-valid-identifier": "2.0.2",
-    "resolve": "1.22.3",
-    "rollup": "3.20.4",
+    "resolve": "1.22.2",
+    "rollup": "3.21.0",
     "rollup-plugin-node-globals": "1.4.0",
     "rollup-plugin-polyfill-node": "0.12.0",
-    "vm2": "3.9.16"
+    "vm2": "3.9.17"
   },
   "devDependencies": {
     "@jsenv/core": "../../"

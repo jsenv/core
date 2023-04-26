@@ -33,7 +33,7 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "ansi-escapes": "6.1.0",
+    "ansi-escapes": "6.2.0",
     "is-unicode-supported": "1.3.0",
     "string-width": "5.1.2",
     "supports-color": "9.3.1"

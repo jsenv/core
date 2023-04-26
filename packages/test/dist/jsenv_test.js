@@ -2081,6 +2081,8 @@ ansiEscapes.clearTerminal = isWindows ? `${ansiEscapes.eraseScreen}${ESC}0f`
 // 3. Moves cursor to the top-left position
 // More info: https://www.real-world-systems.com/docs/ANSIcode.html
 : `${ansiEscapes.eraseScreen}${ESC}3J${ESC}H`;
+ansiEscapes.enterAlternativeScreen = ESC + '?1049h';
+ansiEscapes.exitAlternativeScreen = ESC + '?1049l';
 ansiEscapes.beep = BEL;
 ansiEscapes.link = (text, url) => [OSC, '8', SEP, SEP, url, BEL, text, OSC, '8', SEP, SEP, BEL].join('');
 ansiEscapes.image = (buffer, options = {}) => {

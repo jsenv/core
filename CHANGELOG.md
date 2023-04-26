@@ -1,3 +1,7 @@
+# 35.0.1
+
+- Update dependencies
+
 # 35.0.0
 
 - Introduce `@jsenv/test` and update how runtimes are configured
