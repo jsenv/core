@@ -3791,7 +3791,10 @@ const executeSteps = async (executionSteps, {
             coverageEnabled,
             coverageTempDirectoryUrl,
             runtime: executionParams.runtime,
-            runtimeParams
+            runtimeParams: {
+              ...runtimeParams,
+              ...executionParams.runtimeParams
+            }
           });
         } else {
           executionResult = {

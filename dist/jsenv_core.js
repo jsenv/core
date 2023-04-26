@@ -2,17 +2,16 @@ import { pathToFileURL, fileURLToPath } from "node:url";
 import { chmod, stat, lstat, readdir, promises, unlink, openSync, closeSync, rmdir, readFileSync as readFileSync$1, watch, readdirSync, statSync, writeFileSync as writeFileSync$1, mkdirSync, createReadStream, readFile, existsSync, realpathSync } from "node:fs";
 import crypto, { createHash } from "node:crypto";
 import { extname } from "node:path";
-import { createSupportsColor } from "supports-color";
-import isUnicodeSupported from "is-unicode-supported";
+import process$1 from "node:process";
+import os, { networkInterfaces } from "node:os";
+import tty from "node:tty";
 import stringWidth from "string-width";
-import ansiEscapes from "ansi-escapes";
 import net, { createServer, isIP } from "node:net";
 import cluster from "node:cluster";
 import { performance as performance$1 } from "node:perf_hooks";
 import http from "node:http";
 import { Readable, Stream, Writable } from "node:stream";
 import { Http2ServerResponse } from "node:http2";
-import { networkInterfaces } from "node:os";
 import { lookup } from "node:dns";
 import { SOURCEMAP, generateSourcemapFileUrl, composeTwoSourcemaps, generateSourcemapDataUrl, createMagicSource, getOriginalPosition } from "@jsenv/sourcemap";
 import { parseHtmlString, stringifyHtmlAst, getHtmlNodeAttribute, visitHtmlNodes, analyzeScriptNode, setHtmlNodeAttributes, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, parseCssUrls, parseJsUrls, getHtmlNodeText, setHtmlNodeText, removeHtmlNodeText, applyBabelPlugins, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, findHtmlNode, removeHtmlNode, injectJsImport, analyzeLinkNode, injectHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
@@ -792,7 +791,7 @@ const getPermissionOrComputeDefault = (action, subject, permissions) => {
  * - stats object documentation on Node.js
  *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
  */
-const isWindows$2 = process.platform === "win32";
+const isWindows$3 = process.platform === "win32";
 const readEntryStat = async (source, {
   nullIfNotFound = false,
   followLink = true
@@ -806,7 +805,7 @@ const readEntryStat = async (source, {
   return readStat(sourcePath, {
     followLink,
     ...handleNotFoundOption,
-    ...(isWindows$2 ? {
+    ...(isWindows$3 ? {
       // Windows can EPERM on stat
       handlePermissionDeniedError: async error => {
         console.error(`trying to fix windows EPERM after stats on ${sourcePath}`);
@@ -2223,7 +2222,7 @@ const ensureEmptyDirectory = async source => {
   throw new Error(`ensureEmptyDirectory expect directory at ${sourcePath}, found ${sourceType} instead`);
 };
 
-const isWindows$1 = process.platform === "win32";
+const isWindows$2 = process.platform === "win32";
 const baseUrlFallback = fileSystemPathToUrl$1(process.cwd());
 
 /**
@@ -2245,7 +2244,7 @@ const ensureWindowsDriveLetter = (url, baseUrl) => {
   } catch (e) {
     throw new Error(`absolute url expected but got ${url}`);
   }
-  if (!isWindows$1) {
+  if (!isWindows$2) {
     return url;
   }
   try {
@@ -2317,10 +2316,10 @@ const guardTooFastSecondCallPerFile = (callback, cooldownBetweenFileEvents = 40)
   };
 };
 
-const isWindows = process.platform === "win32";
+const isWindows$1 = process.platform === "win32";
 const createWatcher = (sourcePath, options) => {
   const watcher = watch(sourcePath, options);
-  if (isWindows) {
+  if (isWindows$1) {
     watcher.on("error", async error => {
       // https://github.com/joyent/node/issues/4337
       if (error.code === "EPERM") {
@@ -2824,6 +2823,147 @@ const warnDisabled = () => {};
 const error = (...args) => console.error(...args);
 const errorDisabled = () => {};
 
+// From: https://github.com/sindresorhus/has-flag/blob/main/index.js
+/// function hasFlag(flag, argv = globalThis.Deno?.args ?? process.argv) {
+function hasFlag(flag, argv = globalThis.Deno ? globalThis.Deno.args : process$1.argv) {
+  const prefix = flag.startsWith('-') ? '' : flag.length === 1 ? '-' : '--';
+  const position = argv.indexOf(prefix + flag);
+  const terminatorPosition = argv.indexOf('--');
+  return position !== -1 && (terminatorPosition === -1 || position < terminatorPosition);
+}
+const {
+  env
+} = process$1;
+let flagForceColor;
+if (hasFlag('no-color') || hasFlag('no-colors') || hasFlag('color=false') || hasFlag('color=never')) {
+  flagForceColor = 0;
+} else if (hasFlag('color') || hasFlag('colors') || hasFlag('color=true') || hasFlag('color=always')) {
+  flagForceColor = 1;
+}
+function envForceColor() {
+  if ('FORCE_COLOR' in env) {
+    if (env.FORCE_COLOR === 'true') {
+      return 1;
+    }
+    if (env.FORCE_COLOR === 'false') {
+      return 0;
+    }
+    return env.FORCE_COLOR.length === 0 ? 1 : Math.min(Number.parseInt(env.FORCE_COLOR, 10), 3);
+  }
+}
+function translateLevel(level) {
+  if (level === 0) {
+    return false;
+  }
+  return {
+    level,
+    hasBasic: true,
+    has256: level >= 2,
+    has16m: level >= 3
+  };
+}
+function _supportsColor(haveStream, {
+  streamIsTTY,
+  sniffFlags = true
+} = {}) {
+  const noFlagForceColor = envForceColor();
+  if (noFlagForceColor !== undefined) {
+    flagForceColor = noFlagForceColor;
+  }
+  const forceColor = sniffFlags ? flagForceColor : noFlagForceColor;
+  if (forceColor === 0) {
+    return 0;
+  }
+  if (sniffFlags) {
+    if (hasFlag('color=16m') || hasFlag('color=full') || hasFlag('color=truecolor')) {
+      return 3;
+    }
+    if (hasFlag('color=256')) {
+      return 2;
+    }
+  }
+
+  // Check for Azure DevOps pipelines.
+  // Has to be above the `!streamIsTTY` check.
+  if ('TF_BUILD' in env && 'AGENT_NAME' in env) {
+    return 1;
+  }
+  if (haveStream && !streamIsTTY && forceColor === undefined) {
+    return 0;
+  }
+  const min = forceColor || 0;
+  if (env.TERM === 'dumb') {
+    return min;
+  }
+  if (process$1.platform === 'win32') {
+    // Windows 10 build 10586 is the first Windows release that supports 256 colors.
+    // Windows 10 build 14931 is the first release that supports 16m/TrueColor.
+    const osRelease = os.release().split('.');
+    if (Number(osRelease[0]) >= 10 && Number(osRelease[2]) >= 10_586) {
+      return Number(osRelease[2]) >= 14_931 ? 3 : 2;
+    }
+    return 1;
+  }
+  if ('CI' in env) {
+    if ('GITHUB_ACTIONS' in env) {
+      return 3;
+    }
+    if (['TRAVIS', 'CIRCLECI', 'APPVEYOR', 'GITLAB_CI', 'BUILDKITE', 'DRONE'].some(sign => sign in env) || env.CI_NAME === 'codeship') {
+      return 1;
+    }
+    return min;
+  }
+  if ('TEAMCITY_VERSION' in env) {
+    return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env.TEAMCITY_VERSION) ? 1 : 0;
+  }
+  if (env.COLORTERM === 'truecolor') {
+    return 3;
+  }
+  if (env.TERM === 'xterm-kitty') {
+    return 3;
+  }
+  if ('TERM_PROGRAM' in env) {
+    const version = Number.parseInt((env.TERM_PROGRAM_VERSION || '').split('.')[0], 10);
+    switch (env.TERM_PROGRAM) {
+      case 'iTerm.app':
+        {
+          return version >= 3 ? 3 : 2;
+        }
+      case 'Apple_Terminal':
+        {
+          return 2;
+        }
+      // No default
+    }
+  }
+
+  if (/-256(color)?$/i.test(env.TERM)) {
+    return 2;
+  }
+  if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env.TERM)) {
+    return 1;
+  }
+  if ('COLORTERM' in env) {
+    return 1;
+  }
+  return min;
+}
+function createSupportsColor(stream, options = {}) {
+  const level = _supportsColor(stream, {
+    streamIsTTY: stream && stream.isTTY,
+    ...options
+  });
+  return translateLevel(level);
+}
+({
+  stdout: createSupportsColor({
+    isTTY: tty.isatty(1)
+  }),
+  stderr: createSupportsColor({
+    isTTY: tty.isatty(2)
+  })
+});
+
 const processSupportsBasicColor = createSupportsColor(process.stdout).hasBasic;
 let canUseColors = processSupportsBasicColor;
 
@@ -2858,6 +2998,17 @@ const ANSI = {
   RESET,
   color: setANSIColor
 };
+
+function isUnicodeSupported() {
+  if (process$1.platform !== 'win32') {
+    return process$1.env.TERM !== 'linux'; // Linux console (kernel)
+  }
+
+  return Boolean(process$1.env.CI) || Boolean(process$1.env.WT_SESSION) // Windows Terminal
+  || Boolean(process$1.env.TERMINUS_SUBLIME) // Terminus (<0.2.27)
+  || process$1.env.ConEmuTask === '{cmd::Cmder}' // ConEmu and cmder
+  || process$1.env.TERM_PROGRAM === 'Terminus-Sublime' || process$1.env.TERM_PROGRAM === 'vscode' || process$1.env.TERM === 'xterm-256color' || process$1.env.TERM === 'alacritty' || process$1.env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
+}
 
 // see also https://github.com/sindresorhus/figures
 const canUseUnicode = isUnicodeSupported();
@@ -3130,6 +3281,117 @@ const distributePercentages = (namedNumbers, {
     decimals: precision
   });
   return percentages;
+};
+
+const ESC = '\u001B[';
+const OSC = '\u001B]';
+const BEL = '\u0007';
+const SEP = ';';
+
+/* global window */
+const isBrowser = typeof window !== 'undefined' && typeof window.document !== 'undefined';
+const isTerminalApp = !isBrowser && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
+const isWindows = !isBrowser && process$1.platform === 'win32';
+const cwdFunction = isBrowser ? () => {
+  throw new Error('`process.cwd()` only works in Node.js, not the browser.');
+} : process$1.cwd;
+const ansiEscapes = {};
+ansiEscapes.cursorTo = (x, y) => {
+  if (typeof x !== 'number') {
+    throw new TypeError('The `x` argument is required');
+  }
+  if (typeof y !== 'number') {
+    return ESC + (x + 1) + 'G';
+  }
+  return ESC + (y + 1) + SEP + (x + 1) + 'H';
+};
+ansiEscapes.cursorMove = (x, y) => {
+  if (typeof x !== 'number') {
+    throw new TypeError('The `x` argument is required');
+  }
+  let returnValue = '';
+  if (x < 0) {
+    returnValue += ESC + -x + 'D';
+  } else if (x > 0) {
+    returnValue += ESC + x + 'C';
+  }
+  if (y < 0) {
+    returnValue += ESC + -y + 'A';
+  } else if (y > 0) {
+    returnValue += ESC + y + 'B';
+  }
+  return returnValue;
+};
+ansiEscapes.cursorUp = (count = 1) => ESC + count + 'A';
+ansiEscapes.cursorDown = (count = 1) => ESC + count + 'B';
+ansiEscapes.cursorForward = (count = 1) => ESC + count + 'C';
+ansiEscapes.cursorBackward = (count = 1) => ESC + count + 'D';
+ansiEscapes.cursorLeft = ESC + 'G';
+ansiEscapes.cursorSavePosition = isTerminalApp ? '\u001B7' : ESC + 's';
+ansiEscapes.cursorRestorePosition = isTerminalApp ? '\u001B8' : ESC + 'u';
+ansiEscapes.cursorGetPosition = ESC + '6n';
+ansiEscapes.cursorNextLine = ESC + 'E';
+ansiEscapes.cursorPrevLine = ESC + 'F';
+ansiEscapes.cursorHide = ESC + '?25l';
+ansiEscapes.cursorShow = ESC + '?25h';
+ansiEscapes.eraseLines = count => {
+  let clear = '';
+  for (let i = 0; i < count; i++) {
+    clear += ansiEscapes.eraseLine + (i < count - 1 ? ansiEscapes.cursorUp() : '');
+  }
+  if (count) {
+    clear += ansiEscapes.cursorLeft;
+  }
+  return clear;
+};
+ansiEscapes.eraseEndLine = ESC + 'K';
+ansiEscapes.eraseStartLine = ESC + '1K';
+ansiEscapes.eraseLine = ESC + '2K';
+ansiEscapes.eraseDown = ESC + 'J';
+ansiEscapes.eraseUp = ESC + '1J';
+ansiEscapes.eraseScreen = ESC + '2J';
+ansiEscapes.scrollUp = ESC + 'S';
+ansiEscapes.scrollDown = ESC + 'T';
+ansiEscapes.clearScreen = '\u001Bc';
+ansiEscapes.clearTerminal = isWindows ? `${ansiEscapes.eraseScreen}${ESC}0f`
+// 1. Erases the screen (Only done in case `2` is not supported)
+// 2. Erases the whole screen including scrollback buffer
+// 3. Moves cursor to the top-left position
+// More info: https://www.real-world-systems.com/docs/ANSIcode.html
+: `${ansiEscapes.eraseScreen}${ESC}3J${ESC}H`;
+ansiEscapes.beep = BEL;
+ansiEscapes.link = (text, url) => [OSC, '8', SEP, SEP, url, BEL, text, OSC, '8', SEP, SEP, BEL].join('');
+ansiEscapes.image = (buffer, options = {}) => {
+  let returnValue = `${OSC}1337;File=inline=1`;
+  if (options.width) {
+    returnValue += `;width=${options.width}`;
+  }
+  if (options.height) {
+    returnValue += `;height=${options.height}`;
+  }
+  if (options.preserveAspectRatio === false) {
+    returnValue += ';preserveAspectRatio=0';
+  }
+  return returnValue + ':' + buffer.toString('base64') + BEL;
+};
+ansiEscapes.iTerm = {
+  setCwd: (cwd = cwdFunction()) => `${OSC}50;CurrentDir=${cwd}${BEL}`,
+  annotation(message, options = {}) {
+    let returnValue = `${OSC}1337;`;
+    const hasX = typeof options.x !== 'undefined';
+    const hasY = typeof options.y !== 'undefined';
+    if ((hasX || hasY) && !(hasX && hasY && typeof options.length !== 'undefined')) {
+      throw new Error('`x`, `y` and `length` must be defined when `x` or `y` is defined');
+    }
+    message = message.replace(/\|/g, '');
+    returnValue += options.isHidden ? 'AddHiddenAnnotation=' : 'AddAnnotation=';
+    if (options.length > 0) {
+      returnValue += (hasX ? [message, options.length, options.x, options.y] : [options.length, message]).join('|');
+    } else {
+      returnValue += message;
+    }
+    return returnValue + BEL;
+  }
 };
 
 /*

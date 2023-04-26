@@ -38,6 +38,9 @@ await build({
       "file://**/node_modules/@jsenv/urls/": true,
       "file://**/node_modules/@jsenv/utils/": true,
       "file://**/node_modules/ws/": true,
+      "file://**/node_modules/ansi-escapes/": true,
+      "file://**/node_modules/is-unicode-supported/": true,
+      "file://**/node_modules/supports-color/": true,
     },
   },
   plugins: [
