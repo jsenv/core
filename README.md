@@ -4,7 +4,7 @@ Jsenv was created to provide a tool that can be used both for the web and Node.j
 It has naturally evolved to cover the core needs of a JavaScript project: developement, testing and building for production.
 
 - :ok_hand: Seamless integration with standard HTML, CSS and JS.
-- :sparkles: Same tooling for dev, tests and build.
+- :sparkles: Same developer experience on source files and test files.
 - :exploding_head: Can execute tests on Chrome, Firefox, Safari and Node.js.
 
 [Documentation](<https://github.com/jsenv/core/wiki/A)-Getting-started>)
@@ -30,10 +30,3 @@ One of the circle is web browsers, the other is Node.js.
 It represents the two JavaScript runtimes supported by jsenv.
 
 ![jsenv logo with legend](./docs/jsenv_logo_legend.png)
-
-# See also
-
-| Link                                                                                              | Description                                             |
-| ------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| [@jsenv/assert](./packages/assert)                                                                | NPM package to write assertions                         |
-| [I am too lazy for a test framework](https://dev.to/dmail/i-am-too-lazy-for-a-test-framework-92f) | Article presenting a straightforward testing experience |
