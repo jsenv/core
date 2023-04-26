@@ -3,7 +3,7 @@ import { assert } from "@jsenv/assert"
 
 import { execute, nodeChildProcess, nodeWorkerThread } from "@jsenv/test"
 
-const test = async (params) => {
+const test = async ({ remapped, ...params }) => {
   const result = await execute({
     logLevel: "warn",
     rootDirectoryUrl: new URL("./", import.meta.url),
@@ -11,42 +11,52 @@ const test = async (params) => {
     allocatedMs: Infinity,
     mirrorConsole: true,
     collectConsole: true,
-    runtimeParams: {
-      commandLineOptions: [
-        // worker thread needs absolute path, see https://github.com/nodejs/node/issues/41673
-        `--require=${fileURLToPath(
-          new URL("./required.cjs", import.meta.url),
-        )}`,
-      ],
-    },
     ...params,
   })
   const actual = result.namespace.answer
-  const expected = params.importMap ? 42 : 43
+  const expected = remapped ? 42 : 43
   assert({ actual, expected })
 }
 
 // child process
 await test({
-  runtime: nodeChildProcess,
+  runtime: nodeChildProcess({
+    commandLineOptions: [
+      `--require=${fileURLToPath(new URL("./required.cjs", import.meta.url))}`,
+    ],
+  }),
 })
 await test({
-  runtime: nodeChildProcess,
-  importMap: {
-    imports: {
-      "./answer.js": "./answer_2.js",
+  runtime: nodeChildProcess({
+    commandLineOptions: [
+      `--require=${fileURLToPath(new URL("./required.cjs", import.meta.url))}`,
+    ],
+    importMap: {
+      imports: {
+        "./answer.js": "./answer_2.js",
+      },
     },
-  },
+  }),
+  remapped: true,
 })
 await test({
-  runtime: nodeChildProcess,
+  runtime: nodeWorkerThread({
+    commandLineOptions: [
+      `--require=${fileURLToPath(new URL("./required.cjs", import.meta.url))}`,
+    ],
+  }),
 })
 // worker thread
 await test({
-  runtime: nodeWorkerThread,
-  importMap: {
-    imports: {
-      "./answer.js": "./answer_2.js",
+  runtime: nodeWorkerThread({
+    commandLineOptions: [
+      `--require=${fileURLToPath(new URL("./required.cjs", import.meta.url))}`,
+    ],
+    importMap: {
+      imports: {
+        "./answer.js": "./answer_2.js",
+      },
     },
-  },
+  }),
+  remapped: true,
 })

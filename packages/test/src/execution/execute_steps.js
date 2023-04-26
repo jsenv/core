@@ -113,7 +113,7 @@ export const executeSteps = async (
       })
     }
 
-    let runtimeParams = {
+    const runtimeParams = {
       rootDirectoryUrl,
       webServer,
 
@@ -226,10 +226,7 @@ export const executeSteps = async (
             coverageEnabled,
             coverageTempDirectoryUrl,
             runtime: executionParams.runtime,
-            runtimeParams: {
-              ...runtimeParams,
-              ...executionParams.runtimeParams,
-            },
+            runtimeParams,
           })
         } else {
           executionResult = {

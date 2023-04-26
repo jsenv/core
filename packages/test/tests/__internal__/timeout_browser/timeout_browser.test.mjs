@@ -8,7 +8,7 @@ import {
   webkit,
 } from "@jsenv/test"
 
-const test = async ({ runtime }) => {
+const test = async (params) => {
   const devServer = await startDevServer({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -23,10 +23,10 @@ const test = async ({ runtime }) => {
       rootDirectoryUrl: new URL("./client/", import.meta.url),
     },
     fileRelativeUrl: `./main.html`,
-    runtime,
     allocatedMs: 5_000,
     mirrorConsole: false,
     collectConsole: true,
+    ...params,
   })
   devServer.stop()
   const actual = {
@@ -49,6 +49,6 @@ const test = async ({ runtime }) => {
   assert({ actual, expected })
 }
 
-await test({ runtime: chromium })
+await test({ runtime: chromium() })
 // await test({ runtime: firefox })
-await test({ runtime: webkit })
+await test({ runtime: webkit() })

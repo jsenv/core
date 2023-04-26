@@ -15,14 +15,20 @@ import { composeTwoFileByFileIstanbulCoverages } from "../coverage/istanbul_cove
 import { initJsSupervisorMiddleware } from "./middleware_js_supervisor.js"
 import { initIstanbulMiddleware } from "./middleware_istanbul.js"
 
-export const createRuntimeFromPlaywright = ({
+const browserPromiseCache = new Map()
+
+export const createRuntimeUsingPlaywright = ({
   browserName,
   browserVersion,
   coveragePlaywrightAPIAvailable = false,
   shouldIgnoreError = () => false,
   transformErrorHook = (error) => error,
   isolatedTab = false,
+  headful,
+  playwrightLaunchOptions = {},
+  ignoreHTTPSErrors = true,
 }) => {
+  const label = `${browserName}${browserVersion}`
   const runtime = {
     type: "browser",
     name: browserName,
@@ -31,7 +37,7 @@ export const createRuntimeFromPlaywright = ({
       coverageV8: coveragePlaywrightAPIAvailable,
     },
   }
-  let browserAndContextPromise
+
   runtime.run = async ({
     signal = new AbortController().signal,
     logger,
@@ -50,18 +56,14 @@ export const createRuntimeFromPlaywright = ({
     stopSignal,
     keepRunning,
     onConsole,
-
-    headful = keepRunning,
-    playwrightLaunchOptions = {},
-    ignoreHTTPSErrors = true,
   }) => {
     const fileUrl = new URL(fileRelativeUrl, rootDirectoryUrl).href
     if (!urlIsInsideOf(fileUrl, webServer.rootDirectoryUrl)) {
       throw new Error(`Cannot execute file that is outside web server root directory
---- file --- 
-${fileUrl}
---- web server root directory url ---
-${webServer.rootDirectoryUrl}`)
+  --- file --- 
+  ${fileUrl}
+  --- web server root directory url ---
+  ${webServer.rootDirectoryUrl}`)
     }
     const fileServerUrl = WEB_URL_CONVERTER.asWebUrl(fileUrl, webServer)
     const cleanupCallbackList = createCallbackListNotifiedOnce()
@@ -70,7 +72,10 @@ ${webServer.rootDirectoryUrl}`)
     })
 
     const isBrowserDedicatedToExecution = isolatedTab || !stopAfterAllSignal
-    if (isBrowserDedicatedToExecution || !browserAndContextPromise) {
+    let browserAndContextPromise = isBrowserDedicatedToExecution
+      ? null
+      : browserPromiseCache.get(label)
+    if (!browserAndContextPromise) {
       browserAndContextPromise = (async () => {
         const browser = await launchBrowserUsingPlaywright({
           signal,
@@ -87,6 +92,12 @@ ${webServer.rootDirectoryUrl}`)
         const browserContext = await browser.newContext({ ignoreHTTPSErrors })
         return { browser, browserContext }
       })()
+      if (!isBrowserDedicatedToExecution) {
+        browserPromiseCache.set(label, browserAndContextPromise)
+        cleanupCallbackList.add(() => {
+          browserPromiseCache.delete(label)
+        })
+      }
     }
     const { browser, browserContext } = await browserAndContextPromise
     const closeBrowser = async () => {
@@ -246,8 +257,7 @@ ${webServer.rootDirectoryUrl}`)
       callback: async (consoleMessage) => {
         onConsole({
           type: consoleMessage.type(),
-          text: `${extractTextFromConsoleMessage(consoleMessage)}
-    `,
+          text: `${extractTextFromConsoleMessage(consoleMessage)}\n`,
         })
       },
     })
@@ -428,17 +438,6 @@ ${webServer.rootDirectoryUrl}`)
       await cleanup("execution done")
     }
     return result
-  }
-
-  if (!isolatedTab) {
-    runtime.isolatedTab = createRuntimeFromPlaywright({
-      browserName,
-      browserVersion,
-      coveragePlaywrightAPIAvailable,
-      shouldIgnoreError,
-      transformErrorHook,
-      isolatedTab: true,
-    })
   }
   return runtime
 }

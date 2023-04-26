@@ -3,7 +3,7 @@ import { startDevServer } from "@jsenv/core"
 
 import { execute, chromium, firefox, webkit } from "@jsenv/test"
 
-const test = async ({ runtime }) => {
+const test = async (params) => {
   const devServer = await startDevServer({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -18,13 +18,10 @@ const test = async ({ runtime }) => {
       rootDirectoryUrl: new URL("./client/", import.meta.url),
     },
     fileRelativeUrl: `./main.html`,
-    runtime,
-    // runtimeParams: {
-    //   headful: true,
-    // },
     // keepRunning: true,
     mirrorConsole: false,
     collectConsole: true,
+    ...params,
   })
   devServer.stop()
   const actual = {
@@ -47,19 +44,17 @@ const test = async ({ runtime }) => {
     consoleCalls: [
       {
         type: "log",
-        text: `foo
-    `,
+        text: `foo\n`,
       },
       {
         type: "log",
-        text: `bar
-    `,
+        text: `bar\n`,
       },
     ],
   }
   assert({ actual, expected })
 }
 
-await test({ runtime: chromium })
-await test({ runtime: firefox })
-await test({ runtime: webkit })
+await test({ runtime: chromium() })
+await test({ runtime: firefox() })
+await test({ runtime: webkit() })

@@ -8,7 +8,6 @@ const test = async (params) => {
     logLevel: "warn",
     rootDirectoryUrl: new URL("./", import.meta.url),
     fileRelativeUrl: `./main.js`,
-    allocatedMs: 5_000,
     mirrorConsole: false,
     collectConsole: true,
     ...params,
@@ -27,5 +26,11 @@ const test = async (params) => {
   assert({ actual, expected })
 }
 
-await test({ runtime: nodeChildProcess })
-await test({ runtime: nodeWorkerThread })
+await test({
+  runtime: nodeChildProcess(),
+  allocatedMs: 5_000,
+})
+await test({
+  runtime: nodeWorkerThread(),
+  allocatedMs: 5_000,
+})

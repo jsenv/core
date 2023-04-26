@@ -24,7 +24,6 @@ export const run = async ({
   coverageEnabled = false,
   coverageTempDirectoryUrl,
   collectPerformance = false,
-
   runtime,
   runtimeParams,
 }) => {

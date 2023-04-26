@@ -19,10 +19,10 @@ const result = await executeTestPlan({
   testPlan: {
     "./client/*.html": {
       a: {
-        runtime: chromium,
+        runtime: chromium(),
       },
       b: {
-        runtime: chromium,
+        runtime: chromium(),
       },
     },
   },

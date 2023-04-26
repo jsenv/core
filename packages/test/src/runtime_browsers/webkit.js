@@ -1,6 +1,6 @@
-import { createRuntimeFromPlaywright } from "./from_playwright.js"
+import { createRuntimeUsingPlaywright } from "./using_playwright.js"
 
-export const webkit = createRuntimeFromPlaywright({
+const webkitParams = {
   browserName: "webkit",
   // browserVersion will be set by "browser._initializer.version"
   // see also https://github.com/microsoft/playwright/releases
@@ -22,5 +22,19 @@ export const webkit = createRuntimeFromPlaywright({
     at ${error.stack}`
     return error
   },
-})
-export const webkitIsolatedTab = webkit.isolatedTab
+}
+
+export const webkit = (params) => {
+  return createRuntimeUsingPlaywright({
+    ...webkitParams,
+    ...params,
+  })
+}
+
+export const webkitIsolatedTab = (params) => {
+  return createRuntimeUsingPlaywright({
+    ...webkitParams,
+    isolatedTab: true,
+    ...params,
+  })
+}
