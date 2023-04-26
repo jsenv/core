@@ -5,14 +5,14 @@ This tool enforce test files to be written as **standard** files, without any so
 
 # 1. Example
 
-Let's see how to write tests for the following code 
+Writing tests for the following "add" function:
 
 ```js
 // add.js
 export const add = (a, b) => a + b
 ```
 
-## 1.1 Testing on web browser
+## 1.1 Testing "add" on web browser
 
 ```html
 <!-- add.test.html -->
@@ -38,7 +38,7 @@ export const add = (a, b) => a + b
 </html>
 ```
 
-## 1.2 Testing on Node.js
+## 1.2 Testing "add" on Node.js
 
 ```js
 // add.test.mjs
