@@ -1,16 +1,80 @@
 # @jsenv/test [![npm package](https://img.shields.io/npm/v/@jsenv/test.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/test)
 
-A tool to execute files in web browsers and/or Node.js
+A tool to execute files in web browsers and/or Node.js.
+
+This tool enforce test files to be written as standard file without any sort of complexity.
+Let's see an example where test files are written for a simple `add` function exported by `add.js`
+
+**add.js**
+
+```js
+export const add = (a, b) => a + b
+```
+
+The following file would be a test file meant to be executed by Node.js
+
+**add.test.mjs**
+
+```js
+import { add } from "./add.js"
+
+const actual = add(1, 2)
+const expected = 3
+if (actual !== expected) {
+  throw new Error(`add(1,2) should return 3, got ${actual}`)
+}
+```
+
+The following file would be a test file meant to be executed on a web browser
+
+**add.test.html**
+
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <script type="module">
+      import { add } from "./add.js"
+
+      const actual = add(1, 2)
+      const expected = 3
+      if (actual !== expected) {
+        throw new Error(`add(1,2) should return 3, got ${actual}`)
+      }
+    </script>
+  </body>
+</html>
+```
+
+Note that an assertion library can be used to cover more complex comparison. [@jsenv/assert](../packages/assert) is recommended but other libraries can be used.
+
+```diff
++ import { assert } from "@jsenv/assert"
+import { add } from "./add.js"
+
+const actual = add(1, 2)
+const expected = 3
+- if (actual !== expected) {
+-   throw new Error(`add(1,2) should return 3, got ${actual}`)
+- }
++ assert({ actual, expected })
+```
 
 # 1. JavaScript API
 
 ## 1.1 Executing tests on browsers
 
-Code below execute all files endings by `".test.html"` on chromium.
+Code below execute all files endings by `".test.html"` on chromium.  
 [playwright](https://github.com/microsoft/playwright)<sup>↗</sup> is used to start a headless chromium.
 
 ```js
-import { executeTestPlan, chromium } from "@jsenv/core"
+import { executeTestPlan, chromium } from "@jsenv/test"
 
 await executeTestPlan({
   rootDirectoryUrl: new URL("../", import.meta.url),
