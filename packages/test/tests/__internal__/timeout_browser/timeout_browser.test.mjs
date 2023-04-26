@@ -1,12 +1,12 @@
 import { assert } from "@jsenv/assert"
+import { startDevServer } from "@jsenv/core"
 
 import {
-  startDevServer,
   execute,
   chromium,
   // firefox,
   webkit,
-} from "@jsenv/core"
+} from "@jsenv/test"
 
 const test = async ({ runtime }) => {
   const devServer = await startDevServer({
