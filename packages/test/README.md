@@ -53,13 +53,26 @@ if (actual !== expected) {
 
 ## 1.3 Assertion library
 
-The test above is split in 3 steps, called arrange, act, assert
+A test is usually split in 3 blocks: arrange, act, assert.
 
-- arrange: import the function to test
-- act: calls that function with some params
-- assert: compare actual with expected and throw an error if it fails 
+```js
+/* ARRANGE_START */
+import { add } from "./add.js"
+/* ARRANGE_END */
 
-In the example no assertion library was used during the "assert" step. The code below shows how the test would be written with the help of [@jsenv/assert](../packages/assert). Note that any other assertion library would work.
+/* ACT_START */
+const actual = add(1, 2)
+const expected = 3
+/* ACT_END */
+/* ASSERT_START */
+if (actual !== expected) {
+  throw new Error(`add(1,2) should return 3, got ${actual}`)
+}
+/* ASSERT_END */
+```
+
+To keep example very basic "assert" block do not use an assertion library.  
+In pratice test likely needs one. The diff below showns how the "assert" block can be written using [@jsenv/assert](../packages/assert). Note that any other assertion library would work.
 
 ```diff
 + import { assert } from "@jsenv/assert"
