@@ -3686,7 +3686,7 @@ const executeSteps = async (executionSteps, {
         }
       });
     }
-    let runtimeParams = {
+    const runtimeParams = {
       rootDirectoryUrl,
       webServer,
       coverageEnabled,
@@ -3791,10 +3791,7 @@ const executeSteps = async (executionSteps, {
             coverageEnabled,
             coverageTempDirectoryUrl,
             runtime: executionParams.runtime,
-            runtimeParams: {
-              ...runtimeParams,
-              ...executionParams.runtimeParams
-            }
+            runtimeParams
           });
         } else {
           executionResult = {
@@ -4440,14 +4437,19 @@ const initIstanbulMiddleware = async (page, {
   });
 };
 
-const createRuntimeFromPlaywright = ({
+const browserPromiseCache = new Map();
+const createRuntimeUsingPlaywright = ({
   browserName,
   browserVersion,
   coveragePlaywrightAPIAvailable = false,
   shouldIgnoreError = () => false,
   transformErrorHook = error => error,
-  isolatedTab = false
+  isolatedTab = false,
+  headful,
+  playwrightLaunchOptions = {},
+  ignoreHTTPSErrors = true
 }) => {
+  const label = `${browserName}${browserVersion}`;
   const runtime = {
     type: "browser",
     name: browserName,
@@ -4456,7 +4458,6 @@ const createRuntimeFromPlaywright = ({
       coverageV8: coveragePlaywrightAPIAvailable
     }
   };
-  let browserAndContextPromise;
   runtime.run = async ({
     signal = new AbortController().signal,
     logger,
@@ -4472,18 +4473,15 @@ const createRuntimeFromPlaywright = ({
     stopAfterAllSignal,
     stopSignal,
     keepRunning,
-    onConsole,
-    headful = keepRunning,
-    playwrightLaunchOptions = {},
-    ignoreHTTPSErrors = true
+    onConsole
   }) => {
     const fileUrl = new URL(fileRelativeUrl, rootDirectoryUrl).href;
     if (!urlIsInsideOf(fileUrl, webServer.rootDirectoryUrl)) {
       throw new Error(`Cannot execute file that is outside web server root directory
---- file --- 
-${fileUrl}
---- web server root directory url ---
-${webServer.rootDirectoryUrl}`);
+  --- file --- 
+  ${fileUrl}
+  --- web server root directory url ---
+  ${webServer.rootDirectoryUrl}`);
     }
     const fileServerUrl = WEB_URL_CONVERTER.asWebUrl(fileUrl, webServer);
     const cleanupCallbackList = createCallbackListNotifiedOnce();
@@ -4493,7 +4491,8 @@ ${webServer.rootDirectoryUrl}`);
       });
     });
     const isBrowserDedicatedToExecution = isolatedTab || !stopAfterAllSignal;
-    if (isBrowserDedicatedToExecution || !browserAndContextPromise) {
+    let browserAndContextPromise = isBrowserDedicatedToExecution ? null : browserPromiseCache.get(label);
+    if (!browserAndContextPromise) {
       browserAndContextPromise = (async () => {
         const browser = await launchBrowserUsingPlaywright({
           signal,
@@ -4515,6 +4514,12 @@ ${webServer.rootDirectoryUrl}`);
           browserContext
         };
       })();
+      if (!isBrowserDedicatedToExecution) {
+        browserPromiseCache.set(label, browserAndContextPromise);
+        cleanupCallbackList.add(() => {
+          browserPromiseCache.delete(label);
+        });
+      }
     }
     const {
       browser,
@@ -4653,8 +4658,7 @@ ${webServer.rootDirectoryUrl}`);
       callback: async consoleMessage => {
         onConsole({
           type: consoleMessage.type(),
-          text: `${extractTextFromConsoleMessage(consoleMessage)}
-    `
+          text: `${extractTextFromConsoleMessage(consoleMessage)}\n`
         });
       }
     });
@@ -4829,16 +4833,6 @@ ${webServer.rootDirectoryUrl}`);
     }
     return result;
   };
-  if (!isolatedTab) {
-    runtime.isolatedTab = createRuntimeFromPlaywright({
-      browserName,
-      browserVersion,
-      coveragePlaywrightAPIAvailable,
-      shouldIgnoreError,
-      transformErrorHook,
-      isolatedTab: true
-    });
-  }
   return runtime;
 };
 const generateCoverageForPage = scriptExecutionResults => {
@@ -4963,24 +4957,48 @@ const registerEvent = ({
   };
 };
 
-const chromium = createRuntimeFromPlaywright({
+const chromiumParams = {
   browserName: "chromium",
   // browserVersion will be set by "browser._initializer.version"
   // see also https://github.com/microsoft/playwright/releases
   browserVersion: "unset",
   coveragePlaywrightAPIAvailable: true
-});
-const chromiumIsolatedTab = chromium.isolatedTab;
+};
+const chromium = params => {
+  return createRuntimeUsingPlaywright({
+    ...chromiumParams,
+    ...params
+  });
+};
+const chromiumIsolatedTab = params => {
+  return createRuntimeUsingPlaywright({
+    ...chromiumParams,
+    isolatedTab: true,
+    ...params
+  });
+};
 
-const firefox = createRuntimeFromPlaywright({
+const firefoxParams = {
   browserName: "firefox",
   // browserVersion will be set by "browser._initializer.version"
   // see also https://github.com/microsoft/playwright/releases
   browserVersion: "unset"
-});
-const firefoxIsolatedTab = firefox.isolatedTab;
+};
+const firefox = params => {
+  return createRuntimeUsingPlaywright({
+    ...firefoxParams,
+    ...params
+  });
+};
+const firefoxIsolatedTab = params => {
+  return createRuntimeUsingPlaywright({
+    ...firefoxParams,
+    isolatedTab: true,
+    ...params
+  });
+};
 
-const webkit = createRuntimeFromPlaywright({
+const webkitParams = {
   browserName: "webkit",
   // browserVersion will be set by "browser._initializer.version"
   // see also https://github.com/microsoft/playwright/releases
@@ -5002,8 +5020,20 @@ const webkit = createRuntimeFromPlaywright({
     at ${error.stack}`;
     return error;
   }
-});
-const webkitIsolatedTab = webkit.isolatedTab;
+};
+const webkit = params => {
+  return createRuntimeUsingPlaywright({
+    ...webkitParams,
+    ...params
+  });
+};
+const webkitIsolatedTab = params => {
+  return createRuntimeUsingPlaywright({
+    ...webkitParams,
+    isolatedTab: true,
+    ...params
+  });
+};
 
 const ExecOptions = {
   fromExecArgv: execArgv => {
@@ -5272,27 +5302,10 @@ const IMPORTMAP_NODE_LOADER_FILE_URL = new URL("./importmap_node_loader.mjs?entr
 const NO_EXPERIMENTAL_WARNING_FILE_URL = new URL("./no_experimental_warnings.cjs?entry_point=", import.meta.url).href;
 
 const CONTROLLABLE_CHILD_PROCESS_URL = new URL("./controllable_child_process.mjs?entry_point=", import.meta.url).href;
-const nodeChildProcess = {
-  type: "node",
-  name: "node_child_process",
-  version: process.version.slice(1)
-};
-nodeChildProcess.run = async ({
-  signal = new AbortController().signal,
-  logger,
+const nodeChildProcess = ({
   logProcessCommand = false,
-  rootDirectoryUrl,
-  fileRelativeUrl,
   importMap,
-  keepRunning,
   gracefulStopAllocatedMs = 4000,
-  stopSignal,
-  onConsole,
-  coverageEnabled = false,
-  coverageConfig,
-  coverageMethodForNodeJs,
-  coverageFileUrl,
-  collectPerformance,
   env,
   debugPort,
   debugMode,
@@ -5302,7 +5315,7 @@ nodeChildProcess.run = async ({
   stdin = "pipe",
   stdout = "pipe",
   stderr = "pipe"
-}) => {
+} = {}) => {
   if (env !== undefined && typeof env !== "object") {
     throw new TypeError(`env must be an object, got ${env}`);
   }
@@ -5310,224 +5323,244 @@ nodeChildProcess.run = async ({
     ...env,
     JSENV: true
   };
-  if (coverageMethodForNodeJs !== "NODE_V8_COVERAGE") {
-    env.NODE_V8_COVERAGE = "";
-  }
-  commandLineOptions = ["--experimental-import-meta-resolve", ...commandLineOptions];
-  if (importMap) {
-    env.IMPORT_MAP = JSON.stringify(importMap);
-    env.IMPORT_MAP_BASE_URL = rootDirectoryUrl;
-    commandLineOptions.push(`--experimental-loader=${IMPORTMAP_NODE_LOADER_FILE_URL}`);
-    commandLineOptions.push(`--require=${fileURLToPath(NO_EXPERIMENTAL_WARNING_FILE_URL)}`);
-  }
-  const cleanupCallbackList = createCallbackListNotifiedOnce();
-  const cleanup = async reason => {
-    await cleanupCallbackList.notify({
-      reason
-    });
-  };
-  const childExecOptions = await createChildExecOptions({
-    signal,
-    debugPort,
-    debugMode,
-    debugModeInheritBreak
-  });
-  const execArgv = ExecOptions.toExecArgv({
-    ...childExecOptions,
-    ...ExecOptions.fromExecArgv(commandLineOptions)
-  });
-  const envForChildProcess = {
-    ...(inheritProcessEnv ? process.env : {}),
-    ...env
-  };
-  logger[logProcessCommand ? "info" : "debug"](`${process.argv[0]} ${execArgv.join(" ")} ${fileURLToPath(CONTROLLABLE_CHILD_PROCESS_URL)}`);
-  const childProcess = fork(fileURLToPath(CONTROLLABLE_CHILD_PROCESS_URL), {
-    execArgv,
-    // silent: true
-    stdio: ["pipe", "pipe", "pipe", "ipc"],
-    env: envForChildProcess
-  });
-  logger.debug(createDetailedMessage(`child process forked (pid ${childProcess.pid})`, {
-    "custom env": JSON.stringify(env, null, "  ")
-  }));
-  // if we pass stream, pipe them https://github.com/sindresorhus/execa/issues/81
-  if (typeof stdin === "object") {
-    stdin.pipe(childProcess.stdin);
-  }
-  if (typeof stdout === "object") {
-    childProcess.stdout.pipe(stdout);
-  }
-  if (typeof stderr === "object") {
-    childProcess.stderr.pipe(stderr);
-  }
-  const childProcessReadyPromise = new Promise(resolve => {
-    onceChildProcessMessage(childProcess, "ready", resolve);
-  });
-  const removeOutputListener = installChildProcessOutputListener(childProcess, ({
-    type,
-    text
-  }) => {
-    onConsole({
-      type,
-      text
-    });
-  });
-  const stop = memoize(async ({
-    gracefulStopAllocatedMs
-  } = {}) => {
-    // all libraries are facing problem on windows when trying
-    // to kill a process spawning other processes.
-    // "killProcessTree" is theorically correct but sometimes keep process handing forever.
-    // Inside GitHub workflow the whole Virtual machine gets unresponsive and ends up being killed
-    // There is no satisfying solution to this problem so we stick to the basic
-    // childProcess.kill()
-    if (process.platform === "win32") {
-      childProcess.kill();
-      return;
-    }
-    if (gracefulStopAllocatedMs) {
-      try {
-        await killProcessTree(childProcess.pid, {
-          signal: GRACEFUL_STOP_SIGNAL,
-          timeout: gracefulStopAllocatedMs
+  return {
+    type: "node",
+    name: "node_child_process",
+    version: process.version.slice(1),
+    run: async ({
+      signal = new AbortController().signal,
+      logger,
+      rootDirectoryUrl,
+      fileRelativeUrl,
+      keepRunning,
+      stopSignal,
+      onConsole,
+      coverageEnabled = false,
+      coverageConfig,
+      coverageMethodForNodeJs,
+      coverageFileUrl,
+      collectPerformance
+    }) => {
+      if (coverageMethodForNodeJs !== "NODE_V8_COVERAGE") {
+        env.NODE_V8_COVERAGE = "";
+      }
+      commandLineOptions = ["--experimental-import-meta-resolve", ...commandLineOptions];
+      if (importMap) {
+        env.IMPORT_MAP = JSON.stringify(importMap);
+        env.IMPORT_MAP_BASE_URL = rootDirectoryUrl;
+        commandLineOptions.push(`--experimental-loader=${IMPORTMAP_NODE_LOADER_FILE_URL}`);
+        commandLineOptions.push(`--require=${fileURLToPath(NO_EXPERIMENTAL_WARNING_FILE_URL)}`);
+      }
+      const cleanupCallbackList = createCallbackListNotifiedOnce();
+      const cleanup = async reason => {
+        await cleanupCallbackList.notify({
+          reason
         });
-        return;
-      } catch (e) {
-        if (e.code === "TIMEOUT") {
-          logger.debug(`kill with SIGTERM because gracefulStop still pending after ${gracefulStopAllocatedMs}ms`);
-          await killProcessTree(childProcess.pid, {
-            signal: GRACEFUL_STOP_FAILED_SIGNAL
-          });
+      };
+      const childExecOptions = await createChildExecOptions({
+        signal,
+        debugPort,
+        debugMode,
+        debugModeInheritBreak
+      });
+      const execArgv = ExecOptions.toExecArgv({
+        ...childExecOptions,
+        ...ExecOptions.fromExecArgv(commandLineOptions)
+      });
+      const envForChildProcess = {
+        ...(inheritProcessEnv ? process.env : {}),
+        ...env
+      };
+      logger[logProcessCommand ? "info" : "debug"](`${process.argv[0]} ${execArgv.join(" ")} ${fileURLToPath(CONTROLLABLE_CHILD_PROCESS_URL)}`);
+      const childProcess = fork(fileURLToPath(CONTROLLABLE_CHILD_PROCESS_URL), {
+        execArgv,
+        // silent: true
+        stdio: ["pipe", "pipe", "pipe", "ipc"],
+        env: envForChildProcess
+      });
+      logger.debug(createDetailedMessage(`child process forked (pid ${childProcess.pid})`, {
+        "custom env": JSON.stringify(env, null, "  ")
+      }));
+      // if we pass stream, pipe them https://github.com/sindresorhus/execa/issues/81
+      if (typeof stdin === "object") {
+        stdin.pipe(childProcess.stdin);
+      }
+      if (typeof stdout === "object") {
+        childProcess.stdout.pipe(stdout);
+      }
+      if (typeof stderr === "object") {
+        childProcess.stderr.pipe(stderr);
+      }
+      const childProcessReadyPromise = new Promise(resolve => {
+        onceChildProcessMessage(childProcess, "ready", resolve);
+      });
+      const removeOutputListener = installChildProcessOutputListener(childProcess, ({
+        type,
+        text
+      }) => {
+        onConsole({
+          type,
+          text
+        });
+      });
+      const stop = memoize(async ({
+        gracefulStopAllocatedMs
+      } = {}) => {
+        // all libraries are facing problem on windows when trying
+        // to kill a process spawning other processes.
+        // "killProcessTree" is theorically correct but sometimes keep process handing forever.
+        // Inside GitHub workflow the whole Virtual machine gets unresponsive and ends up being killed
+        // There is no satisfying solution to this problem so we stick to the basic
+        // childProcess.kill()
+        if (process.platform === "win32") {
+          childProcess.kill();
           return;
         }
-        throw e;
-      }
-    }
-    await killProcessTree(childProcess.pid, {
-      signal: STOP_SIGNAL
-    });
-    return;
-  });
-  const actionOperation = Abort.startOperation();
-  actionOperation.addAbortSignal(signal);
-  const winnerPromise = new Promise(resolve => {
-    raceCallbacks({
-      aborted: cb => {
-        return actionOperation.addAbortCallback(cb);
-      },
-      // https://nodejs.org/api/child_process.html#child_process_event_disconnect
-      // disconnect: (cb) => {
-      //   return onceProcessEvent(childProcess, "disconnect", cb)
-      // },
-      // https://nodejs.org/api/child_process.html#child_process_event_error
-      error: cb => {
-        return onceChildProcessEvent(childProcess, "error", cb);
-      },
-      exit: cb => {
-        return onceChildProcessEvent(childProcess, "exit", (code, signal) => {
-          cb({
-            code,
-            signal
-          });
-        });
-      },
-      response: cb => {
-        return onceChildProcessMessage(childProcess, "action-result", cb);
-      }
-    }, resolve);
-  });
-  const result = {
-    status: "executing",
-    errors: [],
-    namespace: null
-  };
-  const writeResult = async () => {
-    actionOperation.throwIfAborted();
-    await childProcessReadyPromise;
-    actionOperation.throwIfAborted();
-    await sendToChildProcess(childProcess, {
-      type: "action",
-      data: {
-        actionType: "execute-using-dynamic-import",
-        actionParams: {
-          rootDirectoryUrl,
-          fileUrl: new URL(fileRelativeUrl, rootDirectoryUrl).href,
-          collectPerformance,
-          coverageEnabled,
-          coverageConfig,
-          coverageMethodForNodeJs,
-          coverageFileUrl,
-          exitAfterAction: true
+        if (gracefulStopAllocatedMs) {
+          try {
+            await killProcessTree(childProcess.pid, {
+              signal: GRACEFUL_STOP_SIGNAL,
+              timeout: gracefulStopAllocatedMs
+            });
+            return;
+          } catch (e) {
+            if (e.code === "TIMEOUT") {
+              logger.debug(`kill with SIGTERM because gracefulStop still pending after ${gracefulStopAllocatedMs}ms`);
+              await killProcessTree(childProcess.pid, {
+                signal: GRACEFUL_STOP_FAILED_SIGNAL
+              });
+              return;
+            }
+            throw e;
+          }
         }
-      }
-    });
-    const winner = await winnerPromise;
-    if (winner.name === "aborted") {
-      result.status = "aborted";
-      return;
-    }
-    if (winner.name === "error") {
-      const error = winner.data;
-      removeOutputListener();
-      result.status = "failed";
-      result.errors.push(error);
-      return;
-    }
-    if (winner.name === "exit") {
-      const {
-        code
-      } = winner.data;
-      await cleanup("process exit");
-      if (code === 12) {
-        result.status = "failed";
-        result.errors.push(new Error(`node process exited with 12 (the forked child process wanted to use a non-available port for debug)`));
+        await killProcessTree(childProcess.pid, {
+          signal: STOP_SIGNAL
+        });
         return;
-      }
-      if (code === null || code === 0 || code === EXIT_CODES.SIGINT || code === EXIT_CODES.SIGTERM || code === EXIT_CODES.SIGABORT) {
+      });
+      const actionOperation = Abort.startOperation();
+      actionOperation.addAbortSignal(signal);
+      const winnerPromise = new Promise(resolve => {
+        raceCallbacks({
+          aborted: cb => {
+            return actionOperation.addAbortCallback(cb);
+          },
+          // https://nodejs.org/api/child_process.html#child_process_event_disconnect
+          // disconnect: (cb) => {
+          //   return onceProcessEvent(childProcess, "disconnect", cb)
+          // },
+          // https://nodejs.org/api/child_process.html#child_process_event_error
+          error: cb => {
+            return onceChildProcessEvent(childProcess, "error", cb);
+          },
+          exit: cb => {
+            return onceChildProcessEvent(childProcess, "exit", (code, signal) => {
+              cb({
+                code,
+                signal
+              });
+            });
+          },
+          response: cb => {
+            return onceChildProcessMessage(childProcess, "action-result", cb);
+          }
+        }, resolve);
+      });
+      const result = {
+        status: "executing",
+        errors: [],
+        namespace: null
+      };
+      const writeResult = async () => {
+        actionOperation.throwIfAborted();
+        await childProcessReadyPromise;
+        actionOperation.throwIfAborted();
+        await sendToChildProcess(childProcess, {
+          type: "action",
+          data: {
+            actionType: "execute-using-dynamic-import",
+            actionParams: {
+              rootDirectoryUrl,
+              fileUrl: new URL(fileRelativeUrl, rootDirectoryUrl).href,
+              collectPerformance,
+              coverageEnabled,
+              coverageConfig,
+              coverageMethodForNodeJs,
+              coverageFileUrl,
+              exitAfterAction: true
+            }
+          }
+        });
+        const winner = await winnerPromise;
+        if (winner.name === "aborted") {
+          result.status = "aborted";
+          return;
+        }
+        if (winner.name === "error") {
+          const error = winner.data;
+          removeOutputListener();
+          result.status = "failed";
+          result.errors.push(error);
+          return;
+        }
+        if (winner.name === "exit") {
+          const {
+            code
+          } = winner.data;
+          await cleanup("process exit");
+          if (code === 12) {
+            result.status = "failed";
+            result.errors.push(new Error(`node process exited with 12 (the forked child process wanted to use a non-available port for debug)`));
+            return;
+          }
+          if (code === null || code === 0 || code === EXIT_CODES.SIGINT || code === EXIT_CODES.SIGTERM || code === EXIT_CODES.SIGABORT) {
+            result.status = "failed";
+            result.errors.push(new Error(`node process exited during execution`));
+            return;
+          }
+          // process.exit(1) in child process or process.exitCode = 1 + process.exit()
+          // means there was an error even if we don't know exactly what.
+          result.status = "failed";
+          result.errors.push(new Error(`node process exited with code ${code} during execution`));
+          return;
+        }
+        const {
+          status,
+          value
+        } = winner.data;
+        if (status === "action-failed") {
+          result.status = "failed";
+          result.errors.push(value);
+          return;
+        }
+        const {
+          namespace,
+          performance,
+          coverage
+        } = value;
+        result.status = "completed";
+        result.namespace = namespace;
+        result.performance = performance;
+        result.coverage = coverage;
+      };
+      try {
+        await writeResult();
+      } catch (e) {
         result.status = "failed";
-        result.errors.push(new Error(`node process exited during execution`));
-        return;
+        result.errors.push(e);
       }
-      // process.exit(1) in child process or process.exitCode = 1 + process.exit()
-      // means there was an error even if we don't know exactly what.
-      result.status = "failed";
-      result.errors.push(new Error(`node process exited with code ${code} during execution`));
-      return;
+      if (keepRunning) {
+        stopSignal.notify = stop;
+      } else {
+        await stop({
+          gracefulStopAllocatedMs
+        });
+      }
+      await actionOperation.end();
+      return result;
     }
-    const {
-      status,
-      value
-    } = winner.data;
-    if (status === "action-failed") {
-      result.status = "failed";
-      result.errors.push(value);
-      return;
-    }
-    const {
-      namespace,
-      performance,
-      coverage
-    } = value;
-    result.status = "completed";
-    result.namespace = namespace;
-    result.performance = performance;
-    result.coverage = coverage;
   };
-  try {
-    await writeResult();
-  } catch (e) {
-    result.status = "failed";
-    result.errors.push(e);
-  }
-  if (keepRunning) {
-    stopSignal.notify = stop;
-  } else {
-    await stop({
-      gracefulStopAllocatedMs
-    });
-  }
-  await actionOperation.end();
-  return result;
 };
 
 // http://man7.org/linux/man-pages/man7/signal.7.html
@@ -5598,33 +5631,15 @@ const onceChildProcessEvent = (childProcess, type, callback) => {
 
 // https://github.com/avajs/ava/blob/576f534b345259055c95fa0c2b33bef10847a2af/lib/fork.js#L23
 const CONTROLLABLE_WORKER_THREAD_URL = new URL("./controllable_worker_thread.mjs?entry_point=", import.meta.url).href;
-const nodeWorkerThread = {
-  type: "node",
-  name: "node_worker_thread",
-  version: process.version.slice(1)
-};
-nodeWorkerThread.run = async ({
-  signal = new AbortController().signal,
-  // logger,
-  rootDirectoryUrl,
-  fileRelativeUrl,
+const nodeWorkerThread = ({
   importMap,
-  keepRunning,
-  stopSignal,
-  onConsole,
-  collectConsole = false,
-  collectPerformance,
-  coverageEnabled = false,
-  coverageConfig,
-  coverageMethodForNodeJs,
-  coverageFileUrl,
   env,
   debugPort,
   debugMode,
   debugModeInheritBreak,
   inheritProcessEnv = true,
   commandLineOptions = []
-}) => {
+} = {}) => {
   if (env !== undefined && typeof env !== "object") {
     throw new TypeError(`env must be an object, got ${env}`);
   }
@@ -5632,179 +5647,200 @@ nodeWorkerThread.run = async ({
     ...env,
     JSENV: true
   };
-  if (coverageMethodForNodeJs !== "NODE_V8_COVERAGE") {
-    env.NODE_V8_COVERAGE = "";
-  }
-  if (importMap) {
-    env.IMPORT_MAP = JSON.stringify(importMap);
-    env.IMPORT_MAP_BASE_URL = rootDirectoryUrl;
-    commandLineOptions.push(`--experimental-loader=${IMPORTMAP_NODE_LOADER_FILE_URL}`);
-    commandLineOptions.push(`--require=${fileURLToPath(NO_EXPERIMENTAL_WARNING_FILE_URL)}`);
-  }
-  const workerThreadExecOptions = await createChildExecOptions({
-    signal,
-    debugPort,
-    debugMode,
-    debugModeInheritBreak
-  });
-  const execArgvForWorkerThread = ExecOptions.toExecArgv({
-    ...workerThreadExecOptions,
-    ...ExecOptions.fromExecArgv(commandLineOptions)
-  });
-  const envForWorkerThread = {
-    ...(inheritProcessEnv ? process.env : {}),
-    ...env
-  };
-  const cleanupCallbackList = createCallbackListNotifiedOnce();
-  const cleanup = async reason => {
-    await cleanupCallbackList.notify({
-      reason
-    });
-  };
-  const actionOperation = Abort.startOperation();
-  actionOperation.addAbortSignal(signal);
-  // https://nodejs.org/api/worker_threads.html#new-workerfilename-options
-  const workerThread = new Worker(fileURLToPath(CONTROLLABLE_WORKER_THREAD_URL), {
-    env: envForWorkerThread,
-    execArgv: execArgvForWorkerThread,
-    // workerData: { options },
-    stdin: true,
-    stdout: true,
-    stderr: true
-  });
-  const removeOutputListener = installWorkerThreadOutputListener(workerThread, ({
-    type,
-    text
-  }) => {
-    onConsole({
-      type,
-      text
-    });
-  });
-  const workerThreadReadyPromise = new Promise(resolve => {
-    onceWorkerThreadMessage(workerThread, "ready", resolve);
-  });
-  const stop = memoize(async () => {
-    // read all stdout before terminating
-    // (no need for stderr because it's sync)
-    if (collectConsole) {
-      while (workerThread.stdout.read() !== null) {}
-      await new Promise(resolve => {
-        setTimeout(resolve, 50);
+  return {
+    type: "node",
+    name: "node_worker_thread",
+    version: process.version.slice(1),
+    run: async ({
+      signal = new AbortController().signal,
+      // logger,
+      rootDirectoryUrl,
+      fileRelativeUrl,
+      keepRunning,
+      stopSignal,
+      onConsole,
+      collectConsole = false,
+      collectPerformance,
+      coverageEnabled = false,
+      coverageConfig,
+      coverageMethodForNodeJs,
+      coverageFileUrl
+    }) => {
+      if (coverageMethodForNodeJs !== "NODE_V8_COVERAGE") {
+        env.NODE_V8_COVERAGE = "";
+      }
+      if (importMap) {
+        env.IMPORT_MAP = JSON.stringify(importMap);
+        env.IMPORT_MAP_BASE_URL = rootDirectoryUrl;
+        commandLineOptions.push(`--experimental-loader=${IMPORTMAP_NODE_LOADER_FILE_URL}`);
+        commandLineOptions.push(`--require=${fileURLToPath(NO_EXPERIMENTAL_WARNING_FILE_URL)}`);
+      }
+      const workerThreadExecOptions = await createChildExecOptions({
+        signal,
+        debugPort,
+        debugMode,
+        debugModeInheritBreak
       });
-    }
-    await workerThread.terminate();
-  });
-  const winnerPromise = new Promise(resolve => {
-    raceCallbacks({
-      aborted: cb => {
-        return actionOperation.addAbortCallback(cb);
-      },
-      error: cb => {
-        return onceWorkerThreadEvent(workerThread, "error", cb);
-      },
-      exit: cb => {
-        return onceWorkerThreadEvent(workerThread, "exit", (code, signal) => {
-          cb({
-            code,
-            signal
-          });
+      const execArgvForWorkerThread = ExecOptions.toExecArgv({
+        ...workerThreadExecOptions,
+        ...ExecOptions.fromExecArgv(commandLineOptions)
+      });
+      const envForWorkerThread = {
+        ...(inheritProcessEnv ? process.env : {}),
+        ...env
+      };
+      const cleanupCallbackList = createCallbackListNotifiedOnce();
+      const cleanup = async reason => {
+        await cleanupCallbackList.notify({
+          reason
         });
-      },
-      response: cb => {
-        return onceWorkerThreadMessage(workerThread, "action-result", cb);
-      }
-    }, resolve);
-  });
-  const result = {
-    status: "executing",
-    errors: [],
-    namespace: null
-  };
-  const writeResult = async () => {
-    actionOperation.throwIfAborted();
-    await workerThreadReadyPromise;
-    actionOperation.throwIfAborted();
-    await sendToWorkerThread(workerThread, {
-      type: "action",
-      data: {
-        actionType: "execute-using-dynamic-import",
-        actionParams: {
-          rootDirectoryUrl,
-          fileUrl: new URL(fileRelativeUrl, rootDirectoryUrl).href,
-          collectPerformance,
-          coverageEnabled,
-          coverageConfig,
-          coverageMethodForNodeJs,
-          coverageFileUrl,
-          exitAfterAction: true
+      };
+      const actionOperation = Abort.startOperation();
+      actionOperation.addAbortSignal(signal);
+      // https://nodejs.org/api/worker_threads.html#new-workerfilename-options
+      const workerThread = new Worker(fileURLToPath(CONTROLLABLE_WORKER_THREAD_URL), {
+        env: envForWorkerThread,
+        execArgv: execArgvForWorkerThread,
+        // workerData: { options },
+        stdin: true,
+        stdout: true,
+        stderr: true
+      });
+      const removeOutputListener = installWorkerThreadOutputListener(workerThread, ({
+        type,
+        text
+      }) => {
+        onConsole({
+          type,
+          text
+        });
+      });
+      const workerThreadReadyPromise = new Promise(resolve => {
+        onceWorkerThreadMessage(workerThread, "ready", resolve);
+      });
+      const stop = memoize(async () => {
+        // read all stdout before terminating
+        // (no need for stderr because it's sync)
+        if (collectConsole) {
+          while (workerThread.stdout.read() !== null) {}
+          await new Promise(resolve => {
+            setTimeout(resolve, 50);
+          });
         }
-      }
-    });
-    const winner = await winnerPromise;
-    if (winner.name === "aborted") {
-      result.status = "aborted";
-      return;
-    }
-    if (winner.name === "error") {
-      const error = winner.data;
-      removeOutputListener();
-      result.status = "failed";
-      result.errors.push(error);
-      return;
-    }
-    if (winner.name === "exit") {
-      const {
-        code
-      } = winner.data;
-      await cleanup("process exit");
-      if (code === 12) {
+        await workerThread.terminate();
+      });
+      const winnerPromise = new Promise(resolve => {
+        raceCallbacks({
+          aborted: cb => {
+            return actionOperation.addAbortCallback(cb);
+          },
+          error: cb => {
+            return onceWorkerThreadEvent(workerThread, "error", cb);
+          },
+          exit: cb => {
+            return onceWorkerThreadEvent(workerThread, "exit", (code, signal) => {
+              cb({
+                code,
+                signal
+              });
+            });
+          },
+          response: cb => {
+            return onceWorkerThreadMessage(workerThread, "action-result", cb);
+          }
+        }, resolve);
+      });
+      const result = {
+        status: "executing",
+        errors: [],
+        namespace: null
+      };
+      const writeResult = async () => {
+        actionOperation.throwIfAborted();
+        await workerThreadReadyPromise;
+        actionOperation.throwIfAborted();
+        await sendToWorkerThread(workerThread, {
+          type: "action",
+          data: {
+            actionType: "execute-using-dynamic-import",
+            actionParams: {
+              rootDirectoryUrl,
+              fileUrl: new URL(fileRelativeUrl, rootDirectoryUrl).href,
+              collectPerformance,
+              coverageEnabled,
+              coverageConfig,
+              coverageMethodForNodeJs,
+              coverageFileUrl,
+              exitAfterAction: true
+            }
+          }
+        });
+        const winner = await winnerPromise;
+        if (winner.name === "aborted") {
+          result.status = "aborted";
+          return;
+        }
+        if (winner.name === "error") {
+          const error = winner.data;
+          removeOutputListener();
+          result.status = "failed";
+          result.errors.push(error);
+          return;
+        }
+        if (winner.name === "exit") {
+          const {
+            code
+          } = winner.data;
+          await cleanup("process exit");
+          if (code === 12) {
+            result.status = "failed";
+            result.errors.push(new Error(`node process exited with 12 (the forked child process wanted to use a non-available port for debug)`));
+            return;
+          }
+          if (code === null || code === 0 || code === EXIT_CODES.SIGINT || code === EXIT_CODES.SIGTERM || code === EXIT_CODES.SIGABORT) {
+            result.status = "failed";
+            result.errors.push(new Error(`node worker thread exited during execution`));
+            return;
+          }
+          // process.exit(1) in child process or process.exitCode = 1 + process.exit()
+          // means there was an error even if we don't know exactly what.
+          result.status = "failed";
+          result.errors.push(new Error(`node worker thread exited with code ${code} during execution`));
+        }
+        const {
+          status,
+          value
+        } = winner.data;
+        if (status === "action-failed") {
+          result.status = "failed";
+          result.errors.push(value);
+          return;
+        }
+        const {
+          namespace,
+          performance,
+          coverage
+        } = value;
+        result.status = "completed";
+        result.namespace = namespace;
+        result.performance = performance;
+        result.coverage = coverage;
+      };
+      try {
+        await writeResult();
+      } catch (e) {
         result.status = "failed";
-        result.errors.push(new Error(`node process exited with 12 (the forked child process wanted to use a non-available port for debug)`));
-        return;
+        result.errors.push(e);
       }
-      if (code === null || code === 0 || code === EXIT_CODES.SIGINT || code === EXIT_CODES.SIGTERM || code === EXIT_CODES.SIGABORT) {
-        result.status = "failed";
-        result.errors.push(new Error(`node worker thread exited during execution`));
-        return;
+      if (keepRunning) {
+        stopSignal.notify = stop;
+      } else {
+        await stop();
       }
-      // process.exit(1) in child process or process.exitCode = 1 + process.exit()
-      // means there was an error even if we don't know exactly what.
-      result.status = "failed";
-      result.errors.push(new Error(`node worker thread exited with code ${code} during execution`));
+      await actionOperation.end();
+      return result;
     }
-    const {
-      status,
-      value
-    } = winner.data;
-    if (status === "action-failed") {
-      result.status = "failed";
-      result.errors.push(value);
-      return;
-    }
-    const {
-      namespace,
-      performance,
-      coverage
-    } = value;
-    result.status = "completed";
-    result.namespace = namespace;
-    result.performance = performance;
-    result.coverage = coverage;
   };
-  try {
-    await writeResult();
-  } catch (e) {
-    result.status = "failed";
-    result.errors.push(e);
-  }
-  if (keepRunning) {
-    stopSignal.notify = stop;
-  } else {
-    await stop();
-  }
-  await actionOperation.end();
-  return result;
 };
 const installWorkerThreadOutputListener = (workerThread, callback) => {
   // beware that we may receive ansi output here, should not be a problem but keep that in mind

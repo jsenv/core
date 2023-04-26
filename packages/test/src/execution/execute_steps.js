@@ -226,7 +226,10 @@ export const executeSteps = async (
             coverageEnabled,
             coverageTempDirectoryUrl,
             runtime: executionParams.runtime,
-            runtimeParams,
+            runtimeParams: {
+              ...runtimeParams,
+              ...executionParams.runtimeParams,
+            },
           })
         } else {
           executionResult = {

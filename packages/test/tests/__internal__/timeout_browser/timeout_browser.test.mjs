@@ -42,7 +42,7 @@ const test = async (params) => {
         : [
             {
               type: "log",
-              text: `foo\n    `,
+              text: `foo\n`,
             },
           ],
   }

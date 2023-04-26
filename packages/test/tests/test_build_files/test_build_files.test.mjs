@@ -19,7 +19,7 @@ const result = await executeTestPlan({
   testPlan: {
     "./public/**/*.test.html": {
       chromium: {
-        runtime: chromium,
+        runtime: chromium(),
       },
     },
   },

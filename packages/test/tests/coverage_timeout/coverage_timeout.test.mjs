@@ -5,12 +5,11 @@ import { executeTestPlan, nodeWorkerThread } from "@jsenv/test"
 const testPlan = {
   "main.js": {
     node: {
-      runtime: nodeWorkerThread,
-      runtimeParams: {
+      runtime: nodeWorkerThread({
+        gracefulStopAllocatedMs: 1000,
         env: { AWAIT_FOREVER: true },
-      },
+      }),
       allocatedMs: 5000,
-      gracefulStopAllocatedMs: 1000,
     },
   },
 }

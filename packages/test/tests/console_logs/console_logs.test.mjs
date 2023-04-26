@@ -7,7 +7,7 @@ const getLogs = async (params) => {
   const result = await execute({
     logLevel: "warn",
     rootDirectoryUrl: new URL("./", import.meta.url),
-    runtime: nodeWorkerThread,
+    runtime: nodeWorkerThread(),
     collectConsole: true,
     mirrorConsole: false,
     ...params,

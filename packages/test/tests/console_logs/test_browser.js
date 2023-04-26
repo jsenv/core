@@ -16,7 +16,7 @@ await executeTestPlan({
   testPlan: {
     "./client/main.html": {
       chrome: {
-        runtime: chromium,
+        runtime: chromium(),
         collectConsole: true,
       },
     },

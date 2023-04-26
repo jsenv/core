@@ -9,7 +9,7 @@ await executeTestPlan({
   testPlan: {
     "./client/main.js": {
       node: {
-        runtime: nodeWorkerThread,
+        runtime: nodeWorkerThread(),
         collectConsole: true,
       },
     },

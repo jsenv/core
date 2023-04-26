@@ -13,16 +13,12 @@ const { testPlanCoverage } = await executeTestPlan({
   testPlan: {
     "./main.js": {
       node: {
-        runtime: nodeWorkerThread,
-        runtimeParams: {
-          env: {
-            FOO: true,
-          },
-        },
+        runtime: nodeWorkerThread({
+          env: { FOO: true },
+        }),
       },
       node2: {
-        runtime: nodeWorkerThread,
-        runtimeParams: {},
+        runtime: nodeWorkerThread(),
       },
     },
   },

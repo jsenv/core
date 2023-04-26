@@ -24,13 +24,13 @@ const { testPlanCoverage } = await executeTestPlan({
   testPlan: {
     "./client/main.test.html": {
       chromium: {
-        runtime: chromium,
+        runtime: chromium(),
       },
       firefox: {
-        runtime: firefox,
+        runtime: firefox(),
       },
       webkit: {
-        runtime: webkit,
+        runtime: webkit(),
       },
     },
   },

@@ -49,8 +49,8 @@ const test = async (params) => {
 }
 
 await test({
-  runtime: nodeChildProcess,
+  runtime: nodeChildProcess(),
 })
 await test({
-  runtime: nodeWorkerThread,
+  runtime: nodeWorkerThread(),
 })

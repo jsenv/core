@@ -11,7 +11,7 @@ const getLogs = async () => {
   const result = await execute({
     logLevel: "warn",
     rootDirectoryUrl: new URL("./", import.meta.url),
-    runtime: nodeWorkerThread,
+    runtime: nodeWorkerThread(),
     fileRelativeUrl: "./project/execute_test_plan.js",
     collectConsole: true,
     mirrorConsole: false,

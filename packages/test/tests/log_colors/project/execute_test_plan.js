@@ -8,7 +8,7 @@ await executeTestPlan({
   testPlan: {
     "./file.js": {
       node: {
-        runtime: nodeWorkerThread,
+        runtime: nodeWorkerThread(),
         collectConsole: false,
       },
     },

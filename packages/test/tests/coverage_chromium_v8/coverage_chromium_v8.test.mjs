@@ -18,10 +18,9 @@ const { testPlanCoverage } = await executeTestPlan({
   testPlan: {
     "./client/tests/main.test.html": {
       chrome: {
-        runtime: chromium,
-        runtimeParams: {
-          // headful: true,
-        },
+        runtime: chromium({
+          // headful: true
+        }),
         collectConsole: false,
       },
     },
