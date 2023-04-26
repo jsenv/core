@@ -1,3 +1,9 @@
+/*
+ * Execute all test files
+ * - npm test
+ * Read more in https://github.com/jsenv/core/tree/main/packages/test#jsenvtest-
+ */
+
 import { executeTestPlan, nodeWorkerThread } from "@jsenv/test"
 
 await executeTestPlan({
