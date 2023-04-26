@@ -25,7 +25,7 @@
     ".": {
       "import": {
         "development": "./src/main.js",
-        "default": "./dist/jsenv.js"
+        "default": "./dist/jsenv_core.js"
       }
     },
     "./*": "./*"
