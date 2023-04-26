@@ -3,7 +3,7 @@ import { startDevServer } from "@jsenv/core"
 
 import { execute, chromium, firefox, webkit } from "@jsenv/test"
 
-const test = async ({ runtime }) => {
+const test = async (params) => {
   const devServer = await startDevServer({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -18,23 +18,23 @@ const test = async ({ runtime }) => {
       rootDirectoryUrl: new URL("./client/", import.meta.url),
     },
     fileRelativeUrl: `./main.html`,
-    runtime,
     mirrorConsole: false,
     collectConsole: true,
     ignoreError: true,
+    ...params,
   })
   devServer.stop()
-  if (runtime === chromium) {
+  if (params.runtime.name === "chromium") {
     const actual = errors[0].reason
     const expected = "SyntaxError: Unexpected end of input"
     assert({ actual, expected })
   }
-  if (runtime === firefox) {
+  if (params.runtime.name === "firefox") {
     const actual = errors[0].reason
     const expected = "SyntaxError: expected expression, got end of script\n"
     assert({ actual, expected })
   }
-  if (runtime === webkit) {
+  if (params.runtime.name === "webkit") {
     const actual = errors[0].reason
     const expected = `SyntaxError: Unexpected end of script\nundefined`
     assert({ actual, expected })

@@ -3,7 +3,7 @@ import { startDevServer } from "@jsenv/core"
 
 import { execute, chromium, firefox, webkit } from "@jsenv/test"
 
-const test = async ({ runtime }) => {
+const test = async (params) => {
   const devServer = await startDevServer({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -18,14 +18,11 @@ const test = async ({ runtime }) => {
       rootDirectoryUrl: new URL("./client/", import.meta.url),
     },
     fileRelativeUrl: `./main.html`,
-    runtime,
-    // runtimeParams: {
-    //   headful: true,
-    // },
     // keepRunning: true,
     mirrorConsole: false,
     collectConsole: true,
     ignoreError: true,
+    ...params,
   })
   devServer.stop()
 
@@ -43,20 +40,20 @@ const test = async ({ runtime }) => {
   assert({ actual, expected })
 
   // error stack
-  if (runtime === chromium) {
+  if (params.runtime.name === "chromium") {
     const actual = error.originalStack
     const expected = `    at triggerError (${devServer.origin}/trigger_error.js:2:9)
     at ${devServer.origin}/main.js:3:1`
     assert({ actual, expected, context: "chromium" })
   }
-  if (runtime === firefox) {
+  if (params.runtime.name === "firefox") {
     const actual = error.originalStack
     const expected = `  triggerError@${devServer.origin}/trigger_error.js:2:9
 @${devServer.origin}/main.js:3:1
 `
     assert({ actual, expected, context: "firefox" })
   }
-  if (runtime === webkit) {
+  if (params.runtime.name === "webkit") {
     const expected = `  triggerError@${devServer.origin}/trigger_error.js:2:18
 module code@${devServer.origin}/main.js:3:13`
     const actual = error.originalStack.slice(0, expected.length)

@@ -26,9 +26,7 @@ await executeTestPlan({
             return 90_000
           }
           if (
-            fileRelativeUrl.endsWith("coverage_universal.test.mjs") ||
             fileRelativeUrl.endsWith("preload_js_module_build.test.mjs") ||
-            fileRelativeUrl.endsWith("_browsers.test.mjs") ||
             fileRelativeUrl.endsWith("import_assert_type_css_dev.test.mjs") ||
             fileRelativeUrl.endsWith("preload_local_font_build.test.mjs")
           ) {
