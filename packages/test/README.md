@@ -53,24 +53,6 @@ if (actual !== expected) {
 
 ## 1.3 Assertion library
 
-A test is usually split in 3 blocks: arrange, act, assert.
-
-```js
-/* ARRANGE_START */
-import { add } from "./add.js"
-/* ARRANGE_END */
-
-/* ACT_START */
-const actual = add(1, 2)
-const expected = 3
-/* ACT_END */
-/* ASSERT_START */
-if (actual !== expected) {
-  throw new Error(`add(1,2) should return 3, got ${actual}`)
-}
-/* ASSERT_END */
-```
-
 To keep example very basic "assert" block do not use an assertion library.  
 In pratice test likely needs one. The diff below showns how the "assert" block can be written using [@jsenv/assert](../assert). Note that any other assertion library would work.
 
