@@ -1,21 +1,21 @@
 # @jsenv/test [![npm package](https://img.shields.io/npm/v/@jsenv/test.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/test)
 
-A tool to execute files in web browsers and/or Node.js.
+Executing test files in web browsers and/or Node.js.  
+This tool enforce test files to be written as **standard** files, without any sort of complexity.
 
-This tool enforce test files to be written as standard file without any sort of complexity.
-Let's see an example where test files are written for a simple `add` function exported by `add.js`
+# 1. Example
 
-**add.js**
+Let's see how to write tests for the following code 
 
 ```js
+// add.js
 export const add = (a, b) => a + b
 ```
 
-The following file would be a test file meant to be executed by Node.js
-
-**add.test.mjs**
+## 1.1 Testing on Node.js
 
 ```js
+// add.test.mjs
 import { add } from "./add.js"
 
 const actual = add(1, 2)
@@ -27,9 +27,10 @@ if (actual !== expected) {
 
 The following file would be a test file meant to be executed on a web browser
 
-**add.test.html**
+## 1.2 Testing on web browser
 
 ```html
+<!-- add.test.html -->
 <!DOCTYPE html>
 <html>
   <head>
@@ -52,7 +53,7 @@ The following file would be a test file meant to be executed on a web browser
 </html>
 ```
 
-Note that an assertion library can be used to cover more complex comparison. [@jsenv/assert](../packages/assert) is recommended but other libraries can be used.
+In a more complex test it's recommended to use an assertion library. The diff below shows how the test would be written in that case.
 
 ```diff
 + import { assert } from "@jsenv/assert"
@@ -65,6 +66,8 @@ const expected = 3
 - }
 + assert({ actual, expected })
 ```
+
+☝️ Code uses [@jsenv/assert](../packages/assert) but any other assertion library is ok.
 
 # 1. JavaScript API
 
