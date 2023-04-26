@@ -1,31 +1,23 @@
 import { pathToFileURL, fileURLToPath } from "node:url";
-import { chmod, stat, lstat, readdir, promises, unlink, openSync, closeSync, rmdir, readFile as readFile$1, readFileSync as readFileSync$1, watch, readdirSync, statSync, writeFile as writeFile$1, writeFileSync as writeFileSync$1, mkdirSync, createReadStream, existsSync, realpathSync } from "node:fs";
+import { chmod, stat, lstat, readdir, promises, unlink, openSync, closeSync, rmdir, readFileSync as readFileSync$1, watch, readdirSync, statSync, writeFileSync as writeFileSync$1, mkdirSync, createReadStream, readFile, existsSync, realpathSync } from "node:fs";
 import crypto, { createHash } from "node:crypto";
-import { dirname, extname } from "node:path";
-import { URL_META, filterV8Coverage } from "./js/v8_coverage.js";
-import process$1, { memoryUsage } from "node:process";
-import os, { networkInterfaces } from "node:os";
-import tty from "node:tty";
+import { extname } from "node:path";
+import { createSupportsColor } from "supports-color";
+import isUnicodeSupported from "is-unicode-supported";
 import stringWidth from "string-width";
+import ansiEscapes from "ansi-escapes";
 import net, { createServer, isIP } from "node:net";
 import cluster from "node:cluster";
 import { performance as performance$1 } from "node:perf_hooks";
 import http from "node:http";
 import { Readable, Stream, Writable } from "node:stream";
 import { Http2ServerResponse } from "node:http2";
+import { networkInterfaces } from "node:os";
 import { lookup } from "node:dns";
 import { SOURCEMAP, generateSourcemapFileUrl, composeTwoSourcemaps, generateSourcemapDataUrl, createMagicSource, getOriginalPosition } from "@jsenv/sourcemap";
 import { parseHtmlString, stringifyHtmlAst, getHtmlNodeAttribute, visitHtmlNodes, analyzeScriptNode, setHtmlNodeAttributes, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, parseCssUrls, parseJsUrls, getHtmlNodeText, setHtmlNodeText, removeHtmlNodeText, applyBabelPlugins, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, findHtmlNode, removeHtmlNode, injectJsImport, analyzeLinkNode, injectHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
 import { createRequire } from "node:module";
 import babelParser from "@babel/parser";
-import { assertImportMap, resolveUrl as resolveUrl$1, normalizeImportMap, resolveImport } from "./js/resolveImport.js";
-import v8, { takeCoverage } from "node:v8";
-import stripAnsi from "strip-ansi";
-import { createId } from "@paralleldrive/cuid2";
-import { runInNewContext } from "node:vm";
-import wrapAnsi from "wrap-ansi";
-import { fork } from "node:child_process";
-import { Worker } from "node:worker_threads";
 
 /*
  * data:[<mediatype>][;base64],<data>
@@ -78,7 +70,7 @@ const DATA_URL = {
   }
 };
 
-const urlToScheme = url => {
+const urlToScheme$1 = url => {
   const urlString = String(url);
   const colonIndex = urlString.indexOf(":");
   if (colonIndex === -1) {
@@ -89,7 +81,7 @@ const urlToScheme = url => {
 };
 
 const urlToResource = url => {
-  const scheme = urlToScheme(url);
+  const scheme = urlToScheme$1(url);
   if (scheme === "file") {
     const urlAsStringWithoutFileProtocol = String(url).slice("file://".length);
     return urlAsStringWithoutFileProtocol;
@@ -105,7 +97,7 @@ const urlToResource = url => {
   return urlAsStringWithoutProtocol;
 };
 
-const urlToPathname = url => {
+const urlToPathname$1 = url => {
   const resource = urlToResource(url);
   const pathname = resourceToPathname(resource);
   return pathname;
@@ -123,7 +115,7 @@ const resourceToPathname = resource => {
 };
 
 const urlToFilename$1 = url => {
-  const pathname = urlToPathname(url);
+  const pathname = urlToPathname$1(url);
   const pathnameBeforeLastSlash = pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
   const slashLastIndex = pathnameBeforeLastSlash.lastIndexOf("/");
   const filename = slashLastIndex === -1 ? pathnameBeforeLastSlash : pathnameBeforeLastSlash.slice(slashLastIndex + 1);
@@ -320,10 +312,10 @@ const lineRangeWithinLines = ({
 };
 
 const urlToExtension$1 = url => {
-  const pathname = urlToPathname(url);
-  return pathnameToExtension(pathname);
+  const pathname = urlToPathname$1(url);
+  return pathnameToExtension$1(pathname);
 };
-const pathnameToExtension = pathname => {
+const pathnameToExtension$1 = pathname => {
   const slashLastIndex = pathname.lastIndexOf("/");
   if (slashLastIndex !== -1) {
     pathname = pathname.slice(slashLastIndex + 1);
@@ -447,7 +439,7 @@ const getCallerPosition = () => {
   };
 };
 
-const resolveUrl = (specifier, baseUrl) => {
+const resolveUrl$1 = (specifier, baseUrl) => {
   if (typeof baseUrl === "undefined") {
     throw new TypeError(`baseUrl missing to resolve ${specifier}`);
   }
@@ -520,7 +512,7 @@ const urlToRelativeUrl = (url, baseUrl) => {
   const specificPathname = pathname.slice(commonPathname.length);
   const baseSpecificPathname = basePathname.slice(commonPathname.length);
   if (baseSpecificPathname.includes("/")) {
-    const baseSpecificParentPathname = pathnameToParentPathname(baseSpecificPathname);
+    const baseSpecificParentPathname = pathnameToParentPathname$1(baseSpecificPathname);
     const relativeDirectoriesNotation = baseSpecificParentPathname.replace(/.*?\//g, "../");
     const relativeUrl = `${relativeDirectoriesNotation}${specificPathname}${search}${hash}`;
     return relativeUrl;
@@ -528,7 +520,7 @@ const urlToRelativeUrl = (url, baseUrl) => {
   const relativeUrl = `${specificPathname}${search}${hash}`;
   return relativeUrl;
 };
-const pathnameToParentPathname = pathname => {
+const pathnameToParentPathname$1 = pathname => {
   const slashLastIndex = pathname.lastIndexOf("/");
   if (slashLastIndex === -1) {
     return "/";
@@ -800,7 +792,7 @@ const getPermissionOrComputeDefault = (action, subject, permissions) => {
  * - stats object documentation on Node.js
  *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
  */
-const isWindows$3 = process.platform === "win32";
+const isWindows$2 = process.platform === "win32";
 const readEntryStat = async (source, {
   nullIfNotFound = false,
   followLink = true
@@ -814,7 +806,7 @@ const readEntryStat = async (source, {
   return readStat(sourcePath, {
     followLink,
     ...handleNotFoundOption,
-    ...(isWindows$3 ? {
+    ...(isWindows$2 ? {
       // Windows can EPERM on stat
       handlePermissionDeniedError: async error => {
         console.error(`trying to fix windows EPERM after stats on ${sourcePath}`);
@@ -1329,6 +1321,485 @@ const SIGINT_CALLBACK = {
   }
 };
 
+const assertUrlLike = (value, name = "url") => {
+  if (typeof value !== "string") {
+    throw new TypeError(`${name} must be a url string, got ${value}`);
+  }
+  if (isWindowsPathnameSpecifier(value)) {
+    throw new TypeError(`${name} must be a url but looks like a windows pathname, got ${value}`);
+  }
+  if (!hasScheme$1(value)) {
+    throw new TypeError(`${name} must be a url and no scheme found, got ${value}`);
+  }
+};
+const isPlainObject = value => {
+  if (value === null) {
+    return false;
+  }
+  if (typeof value === "object") {
+    if (Array.isArray(value)) {
+      return false;
+    }
+    return true;
+  }
+  return false;
+};
+const isWindowsPathnameSpecifier = specifier => {
+  const firstChar = specifier[0];
+  if (!/[a-zA-Z]/.test(firstChar)) return false;
+  const secondChar = specifier[1];
+  if (secondChar !== ":") return false;
+  const thirdChar = specifier[2];
+  return thirdChar === "/" || thirdChar === "\\";
+};
+const hasScheme$1 = specifier => /^[a-zA-Z]+:/.test(specifier);
+
+const resolveAssociations = (associations, baseUrl) => {
+  assertUrlLike(baseUrl, "baseUrl");
+  const associationsResolved = {};
+  Object.keys(associations).forEach(key => {
+    const value = associations[key];
+    if (typeof value === "object" && value !== null) {
+      const valueMapResolved = {};
+      Object.keys(value).forEach(pattern => {
+        const valueAssociated = value[pattern];
+        const patternResolved = normalizeUrlPattern(pattern, baseUrl);
+        valueMapResolved[patternResolved] = valueAssociated;
+      });
+      associationsResolved[key] = valueMapResolved;
+    } else {
+      associationsResolved[key] = value;
+    }
+  });
+  return associationsResolved;
+};
+const normalizeUrlPattern = (urlPattern, baseUrl) => {
+  try {
+    return String(new URL(urlPattern, baseUrl));
+  } catch (e) {
+    // it's not really an url, no need to perform url resolution nor encoding
+    return urlPattern;
+  }
+};
+
+const asFlatAssociations = associations => {
+  if (!isPlainObject(associations)) {
+    throw new TypeError(`associations must be a plain object, got ${associations}`);
+  }
+  const flatAssociations = {};
+  Object.keys(associations).forEach(associationName => {
+    const associationValue = associations[associationName];
+    if (isPlainObject(associationValue)) {
+      Object.keys(associationValue).forEach(pattern => {
+        const patternValue = associationValue[pattern];
+        const previousValue = flatAssociations[pattern];
+        if (isPlainObject(previousValue)) {
+          flatAssociations[pattern] = {
+            ...previousValue,
+            [associationName]: patternValue
+          };
+        } else {
+          flatAssociations[pattern] = {
+            [associationName]: patternValue
+          };
+        }
+      });
+    }
+  });
+  return flatAssociations;
+};
+
+/*
+ * Link to things doing pattern matching:
+ * https://git-scm.com/docs/gitignore
+ * https://github.com/kaelzhang/node-ignore
+ */
+
+/** @module jsenv_url_meta **/
+/**
+ * An object representing the result of applying a pattern to an url
+ * @typedef {Object} MatchResult
+ * @property {boolean} matched Indicates if url matched pattern
+ * @property {number} patternIndex Index where pattern stopped matching url, otherwise pattern.length
+ * @property {number} urlIndex Index where url stopped matching pattern, otherwise url.length
+ * @property {Array} matchGroups Array of strings captured during pattern matching
+ */
+
+/**
+ * Apply a pattern to an url
+ * @param {Object} applyPatternMatchingParams
+ * @param {string} applyPatternMatchingParams.pattern "*", "**" and trailing slash have special meaning
+ * @param {string} applyPatternMatchingParams.url a string representing an url
+ * @return {MatchResult}
+ */
+const applyPatternMatching = ({
+  url,
+  pattern
+}) => {
+  assertUrlLike(pattern, "pattern");
+  assertUrlLike(url, "url");
+  const {
+    matched,
+    patternIndex,
+    index,
+    groups
+  } = applyMatching(pattern, url);
+  const matchGroups = [];
+  let groupIndex = 0;
+  groups.forEach(group => {
+    if (group.name) {
+      matchGroups[group.name] = group.string;
+    } else {
+      matchGroups[groupIndex] = group.string;
+      groupIndex++;
+    }
+  });
+  return {
+    matched,
+    patternIndex,
+    urlIndex: index,
+    matchGroups
+  };
+};
+const applyMatching = (pattern, string) => {
+  const groups = [];
+  let patternIndex = 0;
+  let index = 0;
+  let remainingPattern = pattern;
+  let remainingString = string;
+  let restoreIndexes = true;
+  const consumePattern = count => {
+    const subpattern = remainingPattern.slice(0, count);
+    remainingPattern = remainingPattern.slice(count);
+    patternIndex += count;
+    return subpattern;
+  };
+  const consumeString = count => {
+    const substring = remainingString.slice(0, count);
+    remainingString = remainingString.slice(count);
+    index += count;
+    return substring;
+  };
+  const consumeRemainingString = () => {
+    return consumeString(remainingString.length);
+  };
+  let matched;
+  const iterate = () => {
+    const patternIndexBefore = patternIndex;
+    const indexBefore = index;
+    matched = matchOne();
+    if (matched === undefined) {
+      consumePattern(1);
+      consumeString(1);
+      iterate();
+      return;
+    }
+    if (matched === false && restoreIndexes) {
+      patternIndex = patternIndexBefore;
+      index = indexBefore;
+    }
+  };
+  const matchOne = () => {
+    // pattern consumed and string consumed
+    if (remainingPattern === "" && remainingString === "") {
+      return true; // string fully matched pattern
+    }
+    // pattern consumed, string not consumed
+    if (remainingPattern === "" && remainingString !== "") {
+      return false; // fails because string longer than expected
+    }
+    // -- from this point pattern is not consumed --
+    // string consumed, pattern not consumed
+    if (remainingString === "") {
+      if (remainingPattern === "**") {
+        // trailing "**" is optional
+        consumePattern(2);
+        return true;
+      }
+      if (remainingPattern === "*") {
+        groups.push({
+          string: ""
+        });
+      }
+      return false; // fail because string shorter than expected
+    }
+    // -- from this point pattern and string are not consumed --
+    // fast path trailing slash
+    if (remainingPattern === "/") {
+      if (remainingString[0] === "/") {
+        // trailing slash match remaining
+        consumePattern(1);
+        groups.push({
+          string: consumeRemainingString()
+        });
+        return true;
+      }
+      return false;
+    }
+    // fast path trailing '**'
+    if (remainingPattern === "**") {
+      consumePattern(2);
+      consumeRemainingString();
+      return true;
+    }
+    // pattern leading **
+    if (remainingPattern.slice(0, 2) === "**") {
+      consumePattern(2); // consumes "**"
+      let skipAllowed = true;
+      if (remainingPattern[0] === "/") {
+        consumePattern(1); // consumes "/"
+        // when remainingPattern was preceeded by "**/"
+        // and remainingString have no "/"
+        // then skip is not allowed, a regular match will be performed
+        if (!remainingString.includes("/")) {
+          skipAllowed = false;
+        }
+      }
+      // pattern ending with "**" or "**/" match remaining string
+      if (remainingPattern === "") {
+        consumeRemainingString();
+        return true;
+      }
+      if (skipAllowed) {
+        const skipResult = skipUntilMatch({
+          pattern: remainingPattern,
+          string: remainingString,
+          canSkipSlash: true
+        });
+        groups.push(...skipResult.groups);
+        consumePattern(skipResult.patternIndex);
+        consumeRemainingString();
+        restoreIndexes = false;
+        return skipResult.matched;
+      }
+    }
+    if (remainingPattern[0] === "*") {
+      consumePattern(1); // consumes "*"
+      if (remainingPattern === "") {
+        // matches everything except "/"
+        const slashIndex = remainingString.indexOf("/");
+        if (slashIndex === -1) {
+          groups.push({
+            string: consumeRemainingString()
+          });
+          return true;
+        }
+        groups.push({
+          string: consumeString(slashIndex)
+        });
+        return false;
+      }
+      // the next char must not the one expected by remainingPattern[0]
+      // because * is greedy and expect to skip at least one char
+      if (remainingPattern[0] === remainingString[0]) {
+        groups.push({
+          string: ""
+        });
+        patternIndex = patternIndex - 1;
+        return false;
+      }
+      const skipResult = skipUntilMatch({
+        pattern: remainingPattern,
+        string: remainingString,
+        canSkipSlash: false
+      });
+      groups.push(skipResult.group, ...skipResult.groups);
+      consumePattern(skipResult.patternIndex);
+      consumeString(skipResult.index);
+      restoreIndexes = false;
+      return skipResult.matched;
+    }
+    if (remainingPattern[0] !== remainingString[0]) {
+      return false;
+    }
+    return undefined;
+  };
+  iterate();
+  return {
+    matched,
+    patternIndex,
+    index,
+    groups
+  };
+};
+const skipUntilMatch = ({
+  pattern,
+  string,
+  canSkipSlash
+}) => {
+  let index = 0;
+  let remainingString = string;
+  let longestAttemptRange = null;
+  let isLastAttempt = false;
+  const failure = () => {
+    return {
+      matched: false,
+      patternIndex: longestAttemptRange.patternIndex,
+      index: longestAttemptRange.index + longestAttemptRange.length,
+      groups: longestAttemptRange.groups,
+      group: {
+        string: string.slice(0, longestAttemptRange.index)
+      }
+    };
+  };
+  const tryToMatch = () => {
+    const matchAttempt = applyMatching(pattern, remainingString);
+    if (matchAttempt.matched) {
+      return {
+        matched: true,
+        patternIndex: matchAttempt.patternIndex,
+        index: index + matchAttempt.index,
+        groups: matchAttempt.groups,
+        group: {
+          string: remainingString === "" ? string : string.slice(0, -remainingString.length)
+        }
+      };
+    }
+    const attemptIndex = matchAttempt.index;
+    const attemptRange = {
+      patternIndex: matchAttempt.patternIndex,
+      index,
+      length: attemptIndex,
+      groups: matchAttempt.groups
+    };
+    if (!longestAttemptRange || longestAttemptRange.length < attemptRange.length) {
+      longestAttemptRange = attemptRange;
+    }
+    if (isLastAttempt) {
+      return failure();
+    }
+    const nextIndex = attemptIndex + 1;
+    if (nextIndex >= remainingString.length) {
+      return failure();
+    }
+    if (remainingString[0] === "/") {
+      if (!canSkipSlash) {
+        return failure();
+      }
+      // when it's the last slash, the next attempt is the last
+      if (remainingString.indexOf("/", 1) === -1) {
+        isLastAttempt = true;
+      }
+    }
+    // search against the next unattempted string
+    index += nextIndex;
+    remainingString = remainingString.slice(nextIndex);
+    return tryToMatch();
+  };
+  return tryToMatch();
+};
+
+const applyAssociations = ({
+  url,
+  associations
+}) => {
+  assertUrlLike(url);
+  const flatAssociations = asFlatAssociations(associations);
+  return Object.keys(flatAssociations).reduce((previousValue, pattern) => {
+    const {
+      matched
+    } = applyPatternMatching({
+      pattern,
+      url
+    });
+    if (matched) {
+      const value = flatAssociations[pattern];
+      if (isPlainObject(previousValue) && isPlainObject(value)) {
+        return {
+          ...previousValue,
+          ...value
+        };
+      }
+      return value;
+    }
+    return previousValue;
+  }, {});
+};
+
+const applyAliases = ({
+  url,
+  aliases
+}) => {
+  let aliasFullMatchResult;
+  const aliasMatchingKey = Object.keys(aliases).find(key => {
+    const aliasMatchResult = applyPatternMatching({
+      pattern: key,
+      url
+    });
+    if (aliasMatchResult.matched) {
+      aliasFullMatchResult = aliasMatchResult;
+      return true;
+    }
+    return false;
+  });
+  if (!aliasMatchingKey) {
+    return url;
+  }
+  const {
+    matchGroups
+  } = aliasFullMatchResult;
+  const alias = aliases[aliasMatchingKey];
+  const parts = alias.split("*");
+  const newUrl = parts.reduce((previous, value, index) => {
+    return `${previous}${value}${index === parts.length - 1 ? "" : matchGroups[index]}`;
+  }, "");
+  return newUrl;
+};
+
+const urlChildMayMatch = ({
+  url,
+  associations,
+  predicate
+}) => {
+  assertUrlLike(url, "url");
+  // the function was meants to be used on url ending with '/'
+  if (!url.endsWith("/")) {
+    throw new Error(`url should end with /, got ${url}`);
+  }
+  if (typeof predicate !== "function") {
+    throw new TypeError(`predicate must be a function, got ${predicate}`);
+  }
+  const flatAssociations = asFlatAssociations(associations);
+  // for full match we must create an object to allow pattern to override previous ones
+  let fullMatchMeta = {};
+  let someFullMatch = false;
+  // for partial match, any meta satisfying predicate will be valid because
+  // we don't know for sure if pattern will still match for a file inside pathname
+  const partialMatchMetaArray = [];
+  Object.keys(flatAssociations).forEach(pattern => {
+    const value = flatAssociations[pattern];
+    const matchResult = applyPatternMatching({
+      pattern,
+      url
+    });
+    if (matchResult.matched) {
+      someFullMatch = true;
+      if (isPlainObject(fullMatchMeta) && isPlainObject(value)) {
+        fullMatchMeta = {
+          ...fullMatchMeta,
+          ...value
+        };
+      } else {
+        fullMatchMeta = value;
+      }
+    } else if (someFullMatch === false && matchResult.urlIndex >= url.length) {
+      partialMatchMetaArray.push(value);
+    }
+  });
+  if (someFullMatch) {
+    return Boolean(predicate(fullMatchMeta));
+  }
+  return partialMatchMetaArray.some(partialMatchMeta => predicate(partialMatchMeta));
+};
+
+const URL_META = {
+  resolveAssociations,
+  applyAssociations,
+  urlChildMayMatch,
+  applyPatternMatching,
+  applyAliases
+};
+
 const readDirectory = async (url, {
   emfileMaxWait = 1000
 } = {}) => {
@@ -1675,7 +2146,7 @@ const removeDirectory = async (rootDirectoryUrl, {
     removeDirectoryOperation.throwIfAborted();
     const names = await readDirectory(directoryUrl);
     await Promise.all(names.map(async name => {
-      const url = resolveUrl(name, directoryUrl);
+      const url = resolveUrl$1(name, directoryUrl);
       await visit(url);
     }));
   };
@@ -1752,17 +2223,7 @@ const ensureEmptyDirectory = async source => {
   throw new Error(`ensureEmptyDirectory expect directory at ${sourcePath}, found ${sourceType} instead`);
 };
 
-const ensureParentDirectories = async destination => {
-  const destinationUrl = assertAndNormalizeFileUrl(destination);
-  const destinationPath = urlToFileSystemPath(destinationUrl);
-  const destinationParentPath = dirname(destinationPath);
-  return writeDirectory(destinationParentPath, {
-    recursive: true,
-    allowUseless: true
-  });
-};
-
-const isWindows$2 = process.platform === "win32";
+const isWindows$1 = process.platform === "win32";
 const baseUrlFallback = fileSystemPathToUrl$1(process.cwd());
 
 /**
@@ -1784,7 +2245,7 @@ const ensureWindowsDriveLetter = (url, baseUrl) => {
   } catch (e) {
     throw new Error(`absolute url expected but got ${url}`);
   }
-  if (!isWindows$2) {
+  if (!isWindows$1) {
     return url;
   }
   try {
@@ -1818,31 +2279,6 @@ const extractDriveLetter = resource => {
 };
 
 process.platform === "win32";
-
-const readFile = async (value, {
-  as = "buffer"
-} = {}) => {
-  const fileUrl = assertAndNormalizeFileUrl(value);
-  const buffer = await new Promise((resolve, reject) => {
-    readFile$1(new URL(fileUrl), (error, buffer) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve(buffer);
-      }
-    });
-  });
-  if (as === "buffer") {
-    return buffer;
-  }
-  if (as === "string") {
-    return buffer.toString();
-  }
-  if (as === "json") {
-    return JSON.parse(buffer.toString());
-  }
-  throw new Error(`"as" must be one of "buffer","string","json" received "${as}"`);
-};
 
 const readFileSync = (value, {
   as = "buffer"
@@ -1881,10 +2317,10 @@ const guardTooFastSecondCallPerFile = (callback, cooldownBetweenFileEvents = 40)
   };
 };
 
-const isWindows$1 = process.platform === "win32";
+const isWindows = process.platform === "win32";
 const createWatcher = (sourcePath, options) => {
   const watcher = watch(sourcePath, options);
-  if (isWindows$1) {
+  if (isWindows) {
     watcher.on("error", async error => {
       // https://github.com/joyent/node/issues/4337
       if (error.code === "EPERM") {
@@ -2268,32 +2704,6 @@ const fileSystemPathToDirectoryRelativeUrlAndFilename = path => {
   };
 };
 
-const writeFile = async (destination, content = "") => {
-  const destinationUrl = assertAndNormalizeFileUrl(destination);
-  const destinationUrlObject = new URL(destinationUrl);
-  try {
-    await writeFileNaive(destinationUrlObject, content);
-  } catch (error) {
-    if (error.code === "ENOENT") {
-      await ensureParentDirectories(destinationUrl);
-      await writeFileNaive(destinationUrlObject, content);
-      return;
-    }
-    throw error;
-  }
-};
-const writeFileNaive = (urlObject, content) => {
-  return new Promise((resolve, reject) => {
-    writeFile$1(urlObject, content, error => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve();
-      }
-    });
-  });
-};
-
 const writeFileSync = (destination, content = "") => {
   const destinationUrl = assertAndNormalizeFileUrl(destination);
   const destinationUrlObject = new URL(destinationUrl);
@@ -2414,147 +2824,6 @@ const warnDisabled = () => {};
 const error = (...args) => console.error(...args);
 const errorDisabled = () => {};
 
-// From: https://github.com/sindresorhus/has-flag/blob/main/index.js
-/// function hasFlag(flag, argv = globalThis.Deno?.args ?? process.argv) {
-function hasFlag(flag, argv = globalThis.Deno ? globalThis.Deno.args : process$1.argv) {
-  const prefix = flag.startsWith('-') ? '' : flag.length === 1 ? '-' : '--';
-  const position = argv.indexOf(prefix + flag);
-  const terminatorPosition = argv.indexOf('--');
-  return position !== -1 && (terminatorPosition === -1 || position < terminatorPosition);
-}
-const {
-  env
-} = process$1;
-let flagForceColor;
-if (hasFlag('no-color') || hasFlag('no-colors') || hasFlag('color=false') || hasFlag('color=never')) {
-  flagForceColor = 0;
-} else if (hasFlag('color') || hasFlag('colors') || hasFlag('color=true') || hasFlag('color=always')) {
-  flagForceColor = 1;
-}
-function envForceColor() {
-  if ('FORCE_COLOR' in env) {
-    if (env.FORCE_COLOR === 'true') {
-      return 1;
-    }
-    if (env.FORCE_COLOR === 'false') {
-      return 0;
-    }
-    return env.FORCE_COLOR.length === 0 ? 1 : Math.min(Number.parseInt(env.FORCE_COLOR, 10), 3);
-  }
-}
-function translateLevel(level) {
-  if (level === 0) {
-    return false;
-  }
-  return {
-    level,
-    hasBasic: true,
-    has256: level >= 2,
-    has16m: level >= 3
-  };
-}
-function _supportsColor(haveStream, {
-  streamIsTTY,
-  sniffFlags = true
-} = {}) {
-  const noFlagForceColor = envForceColor();
-  if (noFlagForceColor !== undefined) {
-    flagForceColor = noFlagForceColor;
-  }
-  const forceColor = sniffFlags ? flagForceColor : noFlagForceColor;
-  if (forceColor === 0) {
-    return 0;
-  }
-  if (sniffFlags) {
-    if (hasFlag('color=16m') || hasFlag('color=full') || hasFlag('color=truecolor')) {
-      return 3;
-    }
-    if (hasFlag('color=256')) {
-      return 2;
-    }
-  }
-
-  // Check for Azure DevOps pipelines.
-  // Has to be above the `!streamIsTTY` check.
-  if ('TF_BUILD' in env && 'AGENT_NAME' in env) {
-    return 1;
-  }
-  if (haveStream && !streamIsTTY && forceColor === undefined) {
-    return 0;
-  }
-  const min = forceColor || 0;
-  if (env.TERM === 'dumb') {
-    return min;
-  }
-  if (process$1.platform === 'win32') {
-    // Windows 10 build 10586 is the first Windows release that supports 256 colors.
-    // Windows 10 build 14931 is the first release that supports 16m/TrueColor.
-    const osRelease = os.release().split('.');
-    if (Number(osRelease[0]) >= 10 && Number(osRelease[2]) >= 10_586) {
-      return Number(osRelease[2]) >= 14_931 ? 3 : 2;
-    }
-    return 1;
-  }
-  if ('CI' in env) {
-    if ('GITHUB_ACTIONS' in env) {
-      return 3;
-    }
-    if (['TRAVIS', 'CIRCLECI', 'APPVEYOR', 'GITLAB_CI', 'BUILDKITE', 'DRONE'].some(sign => sign in env) || env.CI_NAME === 'codeship') {
-      return 1;
-    }
-    return min;
-  }
-  if ('TEAMCITY_VERSION' in env) {
-    return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env.TEAMCITY_VERSION) ? 1 : 0;
-  }
-  if (env.COLORTERM === 'truecolor') {
-    return 3;
-  }
-  if (env.TERM === 'xterm-kitty') {
-    return 3;
-  }
-  if ('TERM_PROGRAM' in env) {
-    const version = Number.parseInt((env.TERM_PROGRAM_VERSION || '').split('.')[0], 10);
-    switch (env.TERM_PROGRAM) {
-      case 'iTerm.app':
-        {
-          return version >= 3 ? 3 : 2;
-        }
-      case 'Apple_Terminal':
-        {
-          return 2;
-        }
-      // No default
-    }
-  }
-
-  if (/-256(color)?$/i.test(env.TERM)) {
-    return 2;
-  }
-  if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env.TERM)) {
-    return 1;
-  }
-  if ('COLORTERM' in env) {
-    return 1;
-  }
-  return min;
-}
-function createSupportsColor(stream, options = {}) {
-  const level = _supportsColor(stream, {
-    streamIsTTY: stream && stream.isTTY,
-    ...options
-  });
-  return translateLevel(level);
-}
-({
-  stdout: createSupportsColor({
-    isTTY: tty.isatty(1)
-  }),
-  stderr: createSupportsColor({
-    isTTY: tty.isatty(2)
-  })
-});
-
 const processSupportsBasicColor = createSupportsColor(process.stdout).hasBasic;
 let canUseColors = processSupportsBasicColor;
 
@@ -2590,17 +2859,6 @@ const ANSI = {
   color: setANSIColor
 };
 
-function isUnicodeSupported() {
-  if (process$1.platform !== 'win32') {
-    return process$1.env.TERM !== 'linux'; // Linux console (kernel)
-  }
-
-  return Boolean(process$1.env.CI) || Boolean(process$1.env.WT_SESSION) // Windows Terminal
-  || Boolean(process$1.env.TERMINUS_SUBLIME) // Terminus (<0.2.27)
-  || process$1.env.ConEmuTask === '{cmd::Cmder}' // ConEmu and cmder
-  || process$1.env.TERM_PROGRAM === 'Terminus-Sublime' || process$1.env.TERM_PROGRAM === 'vscode' || process$1.env.TERM === 'xterm-256color' || process$1.env.TERM === 'alacritty' || process$1.env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
-}
-
 // see also https://github.com/sindresorhus/figures
 const canUseUnicode = isUnicodeSupported();
 const COMMAND_RAW = canUseUnicode ? `❯` : `>`;
@@ -2635,7 +2893,7 @@ const UNICODE = {
   supported: canUseUnicode
 };
 
-const createDetailedMessage = (message, details = {}) => {
+const createDetailedMessage$1 = (message, details = {}) => {
   let string = `${message}`;
   Object.keys(details).forEach(key => {
     const value = details[key];
@@ -2706,26 +2964,6 @@ const setDecimalsPrecision = (number, {
 //   return numberTruncated
 // }
 
-const msAsEllapsedTime = ms => {
-  if (ms < 1000) {
-    return "0 second";
-  }
-  const {
-    primary,
-    remaining
-  } = parseMs(ms);
-  if (!remaining) {
-    return formatEllapsedUnit(primary);
-  }
-  return `${formatEllapsedUnit(primary)} and ${formatEllapsedUnit(remaining)}`;
-};
-const formatEllapsedUnit = unit => {
-  const count = unit.name === "second" ? Math.floor(unit.count) : Math.round(unit.count);
-  if (count <= 1) {
-    return `${count} ${unit.name}`;
-  }
-  return `${count} ${unit.name}s`;
-};
 const msAsDuration = ms => {
   // ignore ms below meaningfulMs so that:
   // msAsDuration(0.5) -> "0 second"
@@ -2821,11 +3059,6 @@ const parseMs = ms => {
 const byteAsFileSize = numberOfBytes => {
   return formatBytes(numberOfBytes);
 };
-const byteAsMemoryUsage = metricValue => {
-  return formatBytes(metricValue, {
-    fixedDecimals: true
-  });
-};
 const formatBytes = (number, {
   fixedDecimals = false
 } = {}) => {
@@ -2897,117 +3130,6 @@ const distributePercentages = (namedNumbers, {
     decimals: precision
   });
   return percentages;
-};
-
-const ESC = '\u001B[';
-const OSC = '\u001B]';
-const BEL = '\u0007';
-const SEP = ';';
-
-/* global window */
-const isBrowser = typeof window !== 'undefined' && typeof window.document !== 'undefined';
-const isTerminalApp = !isBrowser && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
-const isWindows = !isBrowser && process$1.platform === 'win32';
-const cwdFunction = isBrowser ? () => {
-  throw new Error('`process.cwd()` only works in Node.js, not the browser.');
-} : process$1.cwd;
-const ansiEscapes = {};
-ansiEscapes.cursorTo = (x, y) => {
-  if (typeof x !== 'number') {
-    throw new TypeError('The `x` argument is required');
-  }
-  if (typeof y !== 'number') {
-    return ESC + (x + 1) + 'G';
-  }
-  return ESC + (y + 1) + SEP + (x + 1) + 'H';
-};
-ansiEscapes.cursorMove = (x, y) => {
-  if (typeof x !== 'number') {
-    throw new TypeError('The `x` argument is required');
-  }
-  let returnValue = '';
-  if (x < 0) {
-    returnValue += ESC + -x + 'D';
-  } else if (x > 0) {
-    returnValue += ESC + x + 'C';
-  }
-  if (y < 0) {
-    returnValue += ESC + -y + 'A';
-  } else if (y > 0) {
-    returnValue += ESC + y + 'B';
-  }
-  return returnValue;
-};
-ansiEscapes.cursorUp = (count = 1) => ESC + count + 'A';
-ansiEscapes.cursorDown = (count = 1) => ESC + count + 'B';
-ansiEscapes.cursorForward = (count = 1) => ESC + count + 'C';
-ansiEscapes.cursorBackward = (count = 1) => ESC + count + 'D';
-ansiEscapes.cursorLeft = ESC + 'G';
-ansiEscapes.cursorSavePosition = isTerminalApp ? '\u001B7' : ESC + 's';
-ansiEscapes.cursorRestorePosition = isTerminalApp ? '\u001B8' : ESC + 'u';
-ansiEscapes.cursorGetPosition = ESC + '6n';
-ansiEscapes.cursorNextLine = ESC + 'E';
-ansiEscapes.cursorPrevLine = ESC + 'F';
-ansiEscapes.cursorHide = ESC + '?25l';
-ansiEscapes.cursorShow = ESC + '?25h';
-ansiEscapes.eraseLines = count => {
-  let clear = '';
-  for (let i = 0; i < count; i++) {
-    clear += ansiEscapes.eraseLine + (i < count - 1 ? ansiEscapes.cursorUp() : '');
-  }
-  if (count) {
-    clear += ansiEscapes.cursorLeft;
-  }
-  return clear;
-};
-ansiEscapes.eraseEndLine = ESC + 'K';
-ansiEscapes.eraseStartLine = ESC + '1K';
-ansiEscapes.eraseLine = ESC + '2K';
-ansiEscapes.eraseDown = ESC + 'J';
-ansiEscapes.eraseUp = ESC + '1J';
-ansiEscapes.eraseScreen = ESC + '2J';
-ansiEscapes.scrollUp = ESC + 'S';
-ansiEscapes.scrollDown = ESC + 'T';
-ansiEscapes.clearScreen = '\u001Bc';
-ansiEscapes.clearTerminal = isWindows ? `${ansiEscapes.eraseScreen}${ESC}0f`
-// 1. Erases the screen (Only done in case `2` is not supported)
-// 2. Erases the whole screen including scrollback buffer
-// 3. Moves cursor to the top-left position
-// More info: https://www.real-world-systems.com/docs/ANSIcode.html
-: `${ansiEscapes.eraseScreen}${ESC}3J${ESC}H`;
-ansiEscapes.beep = BEL;
-ansiEscapes.link = (text, url) => [OSC, '8', SEP, SEP, url, BEL, text, OSC, '8', SEP, SEP, BEL].join('');
-ansiEscapes.image = (buffer, options = {}) => {
-  let returnValue = `${OSC}1337;File=inline=1`;
-  if (options.width) {
-    returnValue += `;width=${options.width}`;
-  }
-  if (options.height) {
-    returnValue += `;height=${options.height}`;
-  }
-  if (options.preserveAspectRatio === false) {
-    returnValue += ';preserveAspectRatio=0';
-  }
-  return returnValue + ':' + buffer.toString('base64') + BEL;
-};
-ansiEscapes.iTerm = {
-  setCwd: (cwd = cwdFunction()) => `${OSC}50;CurrentDir=${cwd}${BEL}`,
-  annotation(message, options = {}) {
-    let returnValue = `${OSC}1337;`;
-    const hasX = typeof options.x !== 'undefined';
-    const hasY = typeof options.y !== 'undefined';
-    if ((hasX || hasY) && !(hasX && hasY && typeof options.length !== 'undefined')) {
-      throw new Error('`x`, `y` and `length` must be defined when `x` or `y` is defined');
-    }
-    message = message.replace(/\|/g, '');
-    returnValue += options.isHidden ? 'AddHiddenAnnotation=' : 'AddAnnotation=';
-    if (options.length > 0) {
-      returnValue += (hasX ? [message, options.length, options.x, options.y] : [options.length, message]).join('|');
-    } else {
-      returnValue += message;
-    }
-    return returnValue + BEL;
-  }
 };
 
 /*
@@ -4968,7 +5090,7 @@ const startServer = async ({
     warn,
     requestWaitingMs
   }) => {
-    warn(createDetailedMessage(`still no response found for request after ${requestWaitingMs} ms`, {
+    warn(createDetailedMessage$1(`still no response found for request after ${requestWaitingMs} ms`, {
       "request url": request.url,
       "request headers": JSON.stringify(request.headers, null, "  ")
     }));
@@ -5353,7 +5475,7 @@ const startServer = async ({
         if (error.message === "aborted") {
           addRequestLog(rootRequestNode, {
             type: "debug",
-            value: createDetailedMessage(`request aborted by client`, {
+            value: createDetailedMessage$1(`request aborted by client`, {
               "error message": error.message
             })
           });
@@ -5361,7 +5483,7 @@ const startServer = async ({
           // I'm not sure this can happen but it's here in case
           addRequestLog(rootRequestNode, {
             type: "error",
-            value: createDetailedMessage(`"error" event emitted on request`, {
+            value: createDetailedMessage$1(`"error" event emitted on request`, {
               "error stack": error.stack
             })
           });
@@ -5380,7 +5502,7 @@ const startServer = async ({
         const onPushStreamError = e => {
           addRequestLog(requestNode, {
             type: "error",
-            value: createDetailedMessage(`An error occured while pushing a stream to the response for ${request.resource}`, {
+            value: createDetailedMessage$1(`An error occured while pushing a stream to the response for ${request.resource}`, {
               "error stack": e.stack
             })
           });
@@ -5611,7 +5733,7 @@ const startServer = async ({
             }
             addRequestLog(requestNode, {
               type: "error",
-              value: createDetailedMessage(`internal error while handling request`, {
+              value: createDetailedMessage$1(`internal error while handling request`, {
                 "error stack": errorWhileHandlingRequest.stack
               })
             });
@@ -5705,7 +5827,7 @@ const startServer = async ({
           onError: error => {
             addRequestLog(requestNode, {
               type: "error",
-              value: createDetailedMessage(`An error occured while sending response`, {
+              value: createDetailedMessage$1(`An error occured while sending response`, {
                 "error stack": error.stack
               })
             });
@@ -6617,7 +6739,7 @@ const computeEtag = async ({
     }
   }
   const fileContentAsBuffer = await new Promise((resolve, reject) => {
-    readFile$1(new URL(sourceUrl), (error, buffer) => {
+    readFile(new URL(sourceUrl), (error, buffer) => {
       if (error) {
         reject(error);
       } else {
@@ -8374,7 +8496,7 @@ const createResolveUrlError = ({
     reason,
     ...details
   }) => {
-    const resolveError = new Error(createDetailedMessage(`Failed to resolve url reference`, {
+    const resolveError = new Error(createDetailedMessage$1(`Failed to resolve url reference`, {
       reason,
       ...details,
       "specifier": `"${reference.specifier}"`,
@@ -8393,7 +8515,7 @@ const createResolveUrlError = ({
     });
   }
   if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
-    error.message = createDetailedMessage(error.message, {
+    error.message = createDetailedMessage$1(error.message, {
       "reference trace": reference.trace.message
     });
     return error;
@@ -8414,7 +8536,7 @@ const createFetchUrlContentError = ({
     reason,
     ...details
   }) => {
-    const fetchError = new Error(createDetailedMessage(`Failed to fetch url content`, {
+    const fetchError = new Error(createDetailedMessage$1(`Failed to fetch url content`, {
       reason,
       ...details,
       "url": urlInfo.url,
@@ -8484,7 +8606,7 @@ const createTransformUrlContentError = ({
     reason,
     ...details
   }) => {
-    const transformError = new Error(createDetailedMessage(`"transformUrlContent" error on "${urlInfo.type}"`, {
+    const transformError = new Error(createDetailedMessage$1(`"transformUrlContent" error on "${urlInfo.type}"`, {
       reason,
       ...details,
       "url": urlInfo.url,
@@ -8537,7 +8659,7 @@ const createFinalizeUrlContentError = ({
   urlInfo,
   error
 }) => {
-  const finalizeError = new Error(createDetailedMessage(`"finalizeUrlContent" error on "${urlInfo.type}"`, {
+  const finalizeError = new Error(createDetailedMessage$1(`"finalizeUrlContent" error on "${urlInfo.type}"`, {
     ...detailsFromValueThrown(error),
     "url": urlInfo.url,
     "url reference trace": reference.trace.message,
@@ -9049,7 +9171,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     try {
       const fetchUrlContentReturnValue = await pluginController.callAsyncHooksUntil("fetchUrlContent", urlInfo, contextDuringFetch);
       if (!fetchUrlContentReturnValue) {
-        logger.warn(createDetailedMessage(`no plugin has handled url during "fetchUrlContent" hook -> url will be ignored`, {
+        logger.warn(createDetailedMessage$1(`no plugin has handled url during "fetchUrlContent" hook -> url will be ignored`, {
           "url": urlInfo.url,
           "url reference trace": reference.trace.message
         }));
@@ -15460,6 +15582,306 @@ const splitFileExtension$2 = filename => {
   return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)];
 };
 
+// duplicated from @jsenv/log to avoid the dependency
+const createDetailedMessage = (message, details = {}) => {
+  let string = `${message}`;
+  Object.keys(details).forEach(key => {
+    const value = details[key];
+    string += `
+    --- ${key} ---
+    ${Array.isArray(value) ? value.join(`
+    `) : value}`;
+  });
+  return string;
+};
+
+const assertImportMap = value => {
+  if (value === null) {
+    throw new TypeError(`an importMap must be an object, got null`);
+  }
+  const type = typeof value;
+  if (type !== "object") {
+    throw new TypeError(`an importMap must be an object, received ${value}`);
+  }
+  if (Array.isArray(value)) {
+    throw new TypeError(`an importMap must be an object, received array ${value}`);
+  }
+};
+
+const hasScheme = string => {
+  return /^[a-zA-Z]{2,}:/.test(string);
+};
+
+const urlToScheme = urlString => {
+  const colonIndex = urlString.indexOf(":");
+  if (colonIndex === -1) return "";
+  return urlString.slice(0, colonIndex);
+};
+
+const urlToPathname = urlString => {
+  return ressourceToPathname(urlToRessource(urlString));
+};
+const urlToRessource = urlString => {
+  const scheme = urlToScheme(urlString);
+  if (scheme === "file") {
+    return urlString.slice("file://".length);
+  }
+  if (scheme === "https" || scheme === "http") {
+    // remove origin
+    const afterProtocol = urlString.slice(scheme.length + "://".length);
+    const pathnameSlashIndex = afterProtocol.indexOf("/", "://".length);
+    return afterProtocol.slice(pathnameSlashIndex);
+  }
+  return urlString.slice(scheme.length + 1);
+};
+const ressourceToPathname = ressource => {
+  const searchSeparatorIndex = ressource.indexOf("?");
+  return searchSeparatorIndex === -1 ? ressource : ressource.slice(0, searchSeparatorIndex);
+};
+
+const urlToOrigin = urlString => {
+  const scheme = urlToScheme(urlString);
+  if (scheme === "file") {
+    return "file://";
+  }
+  if (scheme === "http" || scheme === "https") {
+    const secondProtocolSlashIndex = scheme.length + "://".length;
+    const pathnameSlashIndex = urlString.indexOf("/", secondProtocolSlashIndex);
+    if (pathnameSlashIndex === -1) return urlString;
+    return urlString.slice(0, pathnameSlashIndex);
+  }
+  return urlString.slice(0, scheme.length + 1);
+};
+
+const pathnameToParentPathname = pathname => {
+  const slashLastIndex = pathname.lastIndexOf("/");
+  if (slashLastIndex === -1) {
+    return "/";
+  }
+  return pathname.slice(0, slashLastIndex + 1);
+};
+
+// could be useful: https://url.spec.whatwg.org/#url-miscellaneous
+const resolveUrl = (specifier, baseUrl) => {
+  if (baseUrl) {
+    if (typeof baseUrl !== "string") {
+      throw new TypeError(writeBaseUrlMustBeAString({
+        baseUrl,
+        specifier
+      }));
+    }
+    if (!hasScheme(baseUrl)) {
+      throw new Error(writeBaseUrlMustBeAbsolute({
+        baseUrl,
+        specifier
+      }));
+    }
+  }
+  if (hasScheme(specifier)) {
+    return specifier;
+  }
+  if (!baseUrl) {
+    throw new Error(writeBaseUrlRequired({
+      baseUrl,
+      specifier
+    }));
+  }
+
+  // scheme relative
+  if (specifier.slice(0, 2) === "//") {
+    return `${urlToScheme(baseUrl)}:${specifier}`;
+  }
+
+  // origin relative
+  if (specifier[0] === "/") {
+    return `${urlToOrigin(baseUrl)}${specifier}`;
+  }
+  const baseOrigin = urlToOrigin(baseUrl);
+  const basePathname = urlToPathname(baseUrl);
+  if (specifier === ".") {
+    const baseDirectoryPathname = pathnameToParentPathname(basePathname);
+    return `${baseOrigin}${baseDirectoryPathname}`;
+  }
+
+  // pathname relative inside
+  if (specifier.slice(0, 2) === "./") {
+    const baseDirectoryPathname = pathnameToParentPathname(basePathname);
+    return `${baseOrigin}${baseDirectoryPathname}${specifier.slice(2)}`;
+  }
+
+  // pathname relative outside
+  if (specifier.slice(0, 3) === "../") {
+    let unresolvedPathname = specifier;
+    const importerFolders = basePathname.split("/");
+    importerFolders.pop();
+    while (unresolvedPathname.slice(0, 3) === "../") {
+      unresolvedPathname = unresolvedPathname.slice(3);
+      // when there is no folder left to resolved
+      // we just ignore '../'
+      if (importerFolders.length) {
+        importerFolders.pop();
+      }
+    }
+    const resolvedPathname = `${importerFolders.join("/")}/${unresolvedPathname}`;
+    return `${baseOrigin}${resolvedPathname}`;
+  }
+
+  // bare
+  if (basePathname === "") {
+    return `${baseOrigin}/${specifier}`;
+  }
+  if (basePathname[basePathname.length] === "/") {
+    return `${baseOrigin}${basePathname}${specifier}`;
+  }
+  return `${baseOrigin}${pathnameToParentPathname(basePathname)}${specifier}`;
+};
+const writeBaseUrlMustBeAString = ({
+  baseUrl,
+  specifier
+}) => `baseUrl must be a string.
+--- base url ---
+${baseUrl}
+--- specifier ---
+${specifier}`;
+const writeBaseUrlMustBeAbsolute = ({
+  baseUrl,
+  specifier
+}) => `baseUrl must be absolute.
+--- base url ---
+${baseUrl}
+--- specifier ---
+${specifier}`;
+const writeBaseUrlRequired = ({
+  baseUrl,
+  specifier
+}) => `baseUrl required to resolve relative specifier.
+--- base url ---
+${baseUrl}
+--- specifier ---
+${specifier}`;
+
+const tryUrlResolution = (string, url) => {
+  const result = resolveUrl(string, url);
+  return hasScheme(result) ? result : null;
+};
+
+const resolveSpecifier = (specifier, importer) => {
+  if (specifier === "." || specifier[0] === "/" || specifier.startsWith("./") || specifier.startsWith("../")) {
+    return resolveUrl(specifier, importer);
+  }
+  if (hasScheme(specifier)) {
+    return specifier;
+  }
+  return null;
+};
+
+const applyImportMap = ({
+  importMap,
+  specifier,
+  importer,
+  createBareSpecifierError = ({
+    specifier,
+    importer
+  }) => {
+    return new Error(createDetailedMessage(`Unmapped bare specifier.`, {
+      specifier,
+      importer
+    }));
+  },
+  onImportMapping = () => {}
+}) => {
+  assertImportMap(importMap);
+  if (typeof specifier !== "string") {
+    throw new TypeError(createDetailedMessage("specifier must be a string.", {
+      specifier,
+      importer
+    }));
+  }
+  if (importer) {
+    if (typeof importer !== "string") {
+      throw new TypeError(createDetailedMessage("importer must be a string.", {
+        importer,
+        specifier
+      }));
+    }
+    if (!hasScheme(importer)) {
+      throw new Error(createDetailedMessage(`importer must be an absolute url.`, {
+        importer,
+        specifier
+      }));
+    }
+  }
+  const specifierUrl = resolveSpecifier(specifier, importer);
+  const specifierNormalized = specifierUrl || specifier;
+  const {
+    scopes
+  } = importMap;
+  if (scopes && importer) {
+    const scopeSpecifierMatching = Object.keys(scopes).find(scopeSpecifier => {
+      return scopeSpecifier === importer || specifierIsPrefixOf(scopeSpecifier, importer);
+    });
+    if (scopeSpecifierMatching) {
+      const scopeMappings = scopes[scopeSpecifierMatching];
+      const mappingFromScopes = applyMappings(scopeMappings, specifierNormalized, scopeSpecifierMatching, onImportMapping);
+      if (mappingFromScopes !== null) {
+        return mappingFromScopes;
+      }
+    }
+  }
+  const {
+    imports
+  } = importMap;
+  if (imports) {
+    const mappingFromImports = applyMappings(imports, specifierNormalized, undefined, onImportMapping);
+    if (mappingFromImports !== null) {
+      return mappingFromImports;
+    }
+  }
+  if (specifierUrl) {
+    return specifierUrl;
+  }
+  throw createBareSpecifierError({
+    specifier,
+    importer
+  });
+};
+const applyMappings = (mappings, specifierNormalized, scope, onImportMapping) => {
+  const specifierCandidates = Object.keys(mappings);
+  let i = 0;
+  while (i < specifierCandidates.length) {
+    const specifierCandidate = specifierCandidates[i];
+    i++;
+    if (specifierCandidate === specifierNormalized) {
+      const address = mappings[specifierCandidate];
+      onImportMapping({
+        scope,
+        from: specifierCandidate,
+        to: address,
+        before: specifierNormalized,
+        after: address
+      });
+      return address;
+    }
+    if (specifierIsPrefixOf(specifierCandidate, specifierNormalized)) {
+      const address = mappings[specifierCandidate];
+      const afterSpecifier = specifierNormalized.slice(specifierCandidate.length);
+      const addressFinal = tryUrlResolution(afterSpecifier, address);
+      onImportMapping({
+        scope,
+        from: specifierCandidate,
+        to: address,
+        before: specifierNormalized,
+        after: addressFinal
+      });
+      return addressFinal;
+    }
+  }
+  return null;
+};
+const specifierIsPrefixOf = (specifierHref, href) => {
+  return specifierHref[specifierHref.length - 1] === "/" && href.startsWith(specifierHref);
+};
+
 // https://github.com/systemjs/systemjs/blob/89391f92dfeac33919b0223bbf834a1f4eea5750/src/common.js#L136
 const composeTwoImportMaps = (leftImportMap, rightImportMap) => {
   assertImportMap(leftImportMap);
@@ -15517,8 +15939,8 @@ const composeTwoMappings = (leftMappings, rightMappings) => {
 };
 const objectHasKey = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
 const compareAddressAndSpecifier = (address, specifier) => {
-  const addressUrl = resolveUrl$1(address, "file:///");
-  const specifierUrl = resolveUrl$1(specifier, "file:///");
+  const addressUrl = resolveUrl(address, "file:///");
+  const specifierUrl = resolveUrl(specifier, "file:///");
   return addressUrl === specifierUrl;
 };
 const composeTwoScopes = (leftScopes, rightScopes, imports) => {
@@ -15548,6 +15970,209 @@ const composeTwoScopes = (leftScopes, rightScopes, imports) => {
     }
   });
   return scopes;
+};
+
+const sortImports = imports => {
+  const mappingsSorted = {};
+  Object.keys(imports).sort(compareLengthOrLocaleCompare).forEach(name => {
+    mappingsSorted[name] = imports[name];
+  });
+  return mappingsSorted;
+};
+const sortScopes = scopes => {
+  const scopesSorted = {};
+  Object.keys(scopes).sort(compareLengthOrLocaleCompare).forEach(scopeSpecifier => {
+    scopesSorted[scopeSpecifier] = sortImports(scopes[scopeSpecifier]);
+  });
+  return scopesSorted;
+};
+const compareLengthOrLocaleCompare = (a, b) => {
+  return b.length - a.length || a.localeCompare(b);
+};
+
+const normalizeImportMap = (importMap, baseUrl) => {
+  assertImportMap(importMap);
+  if (!isStringOrUrl(baseUrl)) {
+    throw new TypeError(formulateBaseUrlMustBeStringOrUrl({
+      baseUrl
+    }));
+  }
+  const {
+    imports,
+    scopes
+  } = importMap;
+  return {
+    imports: imports ? normalizeMappings(imports, baseUrl) : undefined,
+    scopes: scopes ? normalizeScopes(scopes, baseUrl) : undefined
+  };
+};
+const isStringOrUrl = value => {
+  if (typeof value === "string") {
+    return true;
+  }
+  if (typeof URL === "function" && value instanceof URL) {
+    return true;
+  }
+  return false;
+};
+const normalizeMappings = (mappings, baseUrl) => {
+  const mappingsNormalized = {};
+  Object.keys(mappings).forEach(specifier => {
+    const address = mappings[specifier];
+    if (typeof address !== "string") {
+      console.warn(formulateAddressMustBeAString({
+        address,
+        specifier
+      }));
+      return;
+    }
+    const specifierResolved = resolveSpecifier(specifier, baseUrl) || specifier;
+    const addressUrl = tryUrlResolution(address, baseUrl);
+    if (addressUrl === null) {
+      console.warn(formulateAdressResolutionFailed({
+        address,
+        baseUrl,
+        specifier
+      }));
+      return;
+    }
+    if (specifier.endsWith("/") && !addressUrl.endsWith("/")) {
+      console.warn(formulateAddressUrlRequiresTrailingSlash({
+        addressUrl,
+        address,
+        specifier
+      }));
+      return;
+    }
+    mappingsNormalized[specifierResolved] = addressUrl;
+  });
+  return sortImports(mappingsNormalized);
+};
+const normalizeScopes = (scopes, baseUrl) => {
+  const scopesNormalized = {};
+  Object.keys(scopes).forEach(scopeSpecifier => {
+    const scopeMappings = scopes[scopeSpecifier];
+    const scopeUrl = tryUrlResolution(scopeSpecifier, baseUrl);
+    if (scopeUrl === null) {
+      console.warn(formulateScopeResolutionFailed({
+        scope: scopeSpecifier,
+        baseUrl
+      }));
+      return;
+    }
+    const scopeValueNormalized = normalizeMappings(scopeMappings, baseUrl);
+    scopesNormalized[scopeUrl] = scopeValueNormalized;
+  });
+  return sortScopes(scopesNormalized);
+};
+const formulateBaseUrlMustBeStringOrUrl = ({
+  baseUrl
+}) => `baseUrl must be a string or an url.
+--- base url ---
+${baseUrl}`;
+const formulateAddressMustBeAString = ({
+  specifier,
+  address
+}) => `Address must be a string.
+--- address ---
+${address}
+--- specifier ---
+${specifier}`;
+const formulateAdressResolutionFailed = ({
+  address,
+  baseUrl,
+  specifier
+}) => `Address url resolution failed.
+--- address ---
+${address}
+--- base url ---
+${baseUrl}
+--- specifier ---
+${specifier}`;
+const formulateAddressUrlRequiresTrailingSlash = ({
+  addressURL,
+  address,
+  specifier
+}) => `Address must end with /.
+--- address url ---
+${addressURL}
+--- address ---
+${address}
+--- specifier ---
+${specifier}`;
+const formulateScopeResolutionFailed = ({
+  scope,
+  baseUrl
+}) => `Scope url resolution failed.
+--- scope ---
+${scope}
+--- base url ---
+${baseUrl}`;
+
+const pathnameToExtension = pathname => {
+  const slashLastIndex = pathname.lastIndexOf("/");
+  if (slashLastIndex !== -1) {
+    pathname = pathname.slice(slashLastIndex + 1);
+  }
+  const dotLastIndex = pathname.lastIndexOf(".");
+  if (dotLastIndex === -1) return "";
+  // if (dotLastIndex === pathname.length - 1) return ""
+  return pathname.slice(dotLastIndex);
+};
+
+const resolveImport = ({
+  specifier,
+  importer,
+  importMap,
+  defaultExtension = false,
+  createBareSpecifierError,
+  onImportMapping = () => {}
+}) => {
+  let url;
+  if (importMap) {
+    url = applyImportMap({
+      importMap,
+      specifier,
+      importer,
+      createBareSpecifierError,
+      onImportMapping
+    });
+  } else {
+    url = resolveUrl(specifier, importer);
+  }
+  if (defaultExtension) {
+    url = applyDefaultExtension({
+      url,
+      importer,
+      defaultExtension
+    });
+  }
+  return url;
+};
+const applyDefaultExtension = ({
+  url,
+  importer,
+  defaultExtension
+}) => {
+  if (urlToPathname(url).endsWith("/")) {
+    return url;
+  }
+  if (typeof defaultExtension === "string") {
+    const extension = pathnameToExtension(url);
+    if (extension === "") {
+      return `${url}${defaultExtension}`;
+    }
+    return url;
+  }
+  if (defaultExtension === true) {
+    const extension = pathnameToExtension(url);
+    if (extension === "" && importer) {
+      const importerPathname = urlToPathname(importer);
+      const importerExtension = pathnameToExtension(importerPathname);
+      return `${url}${importerExtension}`;
+    }
+  }
+  return url;
 };
 
 /*
@@ -21207,7 +21832,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             const rawUrl = buildDirectoryRedirections.get(url) || url;
             const rawUrlInfo = rawGraph.getUrlInfo(rawUrl);
             if (!rawUrlInfo) {
-              throw new Error(createDetailedMessage(`Cannot find url`, {
+              throw new Error(createDetailedMessage$1(`Cannot find url`, {
                 url,
                 "raw urls": Array.from(buildDirectoryRedirections.values()),
                 "build urls": Array.from(buildDirectoryRedirections.keys())
@@ -22957,3596 +23582,6 @@ const startDevServer = async ({
   };
 };
 
-const pingServer = async url => {
-  const server = createServer();
-  const {
-    hostname,
-    port
-  } = new URL(url);
-  try {
-    await new Promise((resolve, reject) => {
-      server.on("error", reject);
-      server.on("listening", () => {
-        resolve();
-      });
-      server.listen(port, hostname);
-    });
-  } catch (error) {
-    if (error && error.code === "EADDRINUSE") {
-      return true;
-    }
-    if (error && error.code === "EACCES") {
-      return true;
-    }
-    throw error;
-  }
-  await new Promise((resolve, reject) => {
-    server.on("error", reject);
-    server.on("close", resolve);
-    server.close();
-  });
-  return false;
-};
-
-const basicFetch = async (url, {
-  rejectUnauthorized = true,
-  method = "GET",
-  headers = {}
-} = {}) => {
-  let requestModule;
-  if (url.startsWith("http:")) {
-    requestModule = await import("node:http");
-  } else {
-    requestModule = await import("node:https");
-  }
-  const {
-    request
-  } = requestModule;
-  const urlObject = new URL(url);
-  return new Promise((resolve, reject) => {
-    const req = request({
-      rejectUnauthorized,
-      hostname: urlObject.hostname,
-      port: urlObject.port,
-      path: urlObject.pathname,
-      method,
-      headers
-    });
-    req.on("response", response => {
-      resolve({
-        status: response.statusCode,
-        headers: response.headers,
-        json: () => {
-          req.setTimeout(0);
-          req.destroy();
-          return new Promise(resolve => {
-            if (response.headers["content-type"] !== "application/json") {
-              console.warn("not json");
-            }
-            let responseBody = "";
-            response.setEncoding("utf8");
-            response.on("data", chunk => {
-              responseBody += chunk;
-            });
-            response.on("end", () => {
-              resolve(JSON.parse(responseBody));
-            });
-            response.on("error", e => {
-              reject(e);
-            });
-          });
-        }
-      });
-    });
-    req.on("error", reject);
-    req.end();
-  });
-};
-
-const assertAndNormalizeWebServer = async webServer => {
-  if (!webServer) {
-    throw new TypeError(`webServer is required when running tests on browser(s)`);
-  }
-  const unexpectedParamNames = Object.keys(webServer).filter(key => {
-    return !["origin", "moduleUrl", "rootDirectoryUrl"].includes(key);
-  });
-  if (unexpectedParamNames.length > 0) {
-    throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param to webServer`);
-  }
-  let aServerIsListening = await pingServer(webServer.origin);
-  if (!aServerIsListening) {
-    if (!webServer.moduleUrl) {
-      throw new TypeError(`webServer.moduleUrl is required as there is no server listening "${webServer.origin}"`);
-    }
-    try {
-      process.env.IMPORTED_BY_TEST_PLAN = "1";
-      await import(webServer.moduleUrl);
-      delete process.env.IMPORTED_BY_TEST_PLAN;
-    } catch (e) {
-      if (e.code === "ERR_MODULE_NOT_FOUND") {
-        throw new Error(`webServer.moduleUrl does not lead to a file at "${webServer.moduleUrl}"`);
-      }
-      throw e;
-    }
-    aServerIsListening = await pingServer(webServer.origin);
-    if (!aServerIsListening) {
-      throw new Error(`webServer.moduleUrl did not start a server listening at "${webServer.origin}", check file at "${webServer.moduleUrl}"`);
-    }
-  }
-  const {
-    headers
-  } = await basicFetch(webServer.origin, {
-    method: "GET",
-    rejectUnauthorized: false,
-    headers: {
-      "x-server-inspect": "1"
-    }
-  });
-  if (String(headers["server"]).includes("jsenv_dev_server")) {
-    webServer.isJsenvDevServer = true;
-    const {
-      json
-    } = await basicFetch(`${webServer.origin}/__params__.json`, {
-      rejectUnauthorized: false
-    });
-    if (webServer.rootDirectoryUrl === undefined) {
-      const jsenvDevServerParams = await json();
-      webServer.rootDirectoryUrl = jsenvDevServerParams.sourceDirectoryUrl;
-    } else {
-      webServer.rootDirectoryUrl = assertAndNormalizeDirectoryUrl(webServer.rootDirectoryUrl, "webServer.rootDirectoryUrl");
-    }
-  } else {
-    webServer.rootDirectoryUrl = assertAndNormalizeDirectoryUrl(webServer.rootDirectoryUrl, "webServer.rootDirectoryUrl");
-  }
-};
-
-const generateCoverageJsonFile = async ({
-  coverage,
-  coverageJsonFileUrl,
-  logger
-}) => {
-  const coverageAsText = JSON.stringify(coverage, null, "  ");
-  logger.info(`-> ${urlToFileSystemPath(coverageJsonFileUrl)} (${byteAsFileSize(Buffer.byteLength(coverageAsText))})`);
-  await writeFile(coverageJsonFileUrl, coverageAsText);
-};
-
-const istanbulCoverageMapFromCoverage = coverage => {
-  const {
-    createCoverageMap
-  } = requireFromJsenv("istanbul-lib-coverage");
-  const coverageAdjusted = {};
-  Object.keys(coverage).forEach(key => {
-    coverageAdjusted[key.slice(2)] = {
-      ...coverage[key],
-      path: key.slice(2)
-    };
-  });
-  const coverageMap = createCoverageMap(coverageAdjusted);
-  return coverageMap;
-};
-
-const generateCoverageHtmlDirectory = async (coverage, {
-  rootDirectoryUrl,
-  coverageHtmlDirectoryRelativeUrl,
-  coverageReportSkipEmpty,
-  coverageReportSkipFull
-}) => {
-  const libReport = requireFromJsenv("istanbul-lib-report");
-  const reports = requireFromJsenv("istanbul-reports");
-  const context = libReport.createContext({
-    dir: fileURLToPath(rootDirectoryUrl),
-    coverageMap: istanbulCoverageMapFromCoverage(coverage),
-    sourceFinder: path => readFileSync$1(new URL(path, rootDirectoryUrl), "utf8")
-  });
-  const report = reports.create("html", {
-    skipEmpty: coverageReportSkipEmpty,
-    skipFull: coverageReportSkipFull,
-    subdir: coverageHtmlDirectoryRelativeUrl
-  });
-  report.execute(context);
-};
-
-const generateCoverageTextLog = (coverage, {
-  coverageReportSkipEmpty,
-  coverageReportSkipFull
-}) => {
-  const libReport = requireFromJsenv("istanbul-lib-report");
-  const reports = requireFromJsenv("istanbul-reports");
-  const context = libReport.createContext({
-    coverageMap: istanbulCoverageMapFromCoverage(coverage)
-  });
-  const report = reports.create("text", {
-    skipEmpty: coverageReportSkipEmpty,
-    skipFull: coverageReportSkipFull
-  });
-  report.execute(context);
-};
-
-const executionStepsFromTestPlan = async ({
-  signal,
-  rootDirectoryUrl,
-  testPlan
-}) => {
-  try {
-    const fileResultArray = await collectFiles({
-      signal,
-      directoryUrl: rootDirectoryUrl,
-      associations: {
-        testPlan
-      },
-      predicate: ({
-        testPlan
-      }) => testPlan
-    });
-    const executionSteps = [];
-    fileResultArray.forEach(({
-      relativeUrl,
-      meta
-    }) => {
-      const fileExecutionSteps = generateFileExecutionSteps({
-        fileRelativeUrl: relativeUrl,
-        filePlan: meta.testPlan
-      });
-      executionSteps.push(...fileExecutionSteps);
-    });
-    return executionSteps;
-  } catch (e) {
-    if (Abort.isAbortError(e)) {
-      return {
-        aborted: true,
-        planSummary: {},
-        planReport: {},
-        planCoverage: null
-      };
-    }
-    throw e;
-  }
-};
-const generateFileExecutionSteps = ({
-  fileRelativeUrl,
-  filePlan
-}) => {
-  const fileExecutionSteps = [];
-  Object.keys(filePlan).forEach(executionName => {
-    const stepConfig = filePlan[executionName];
-    if (stepConfig === null || stepConfig === undefined) {
-      return;
-    }
-    if (typeof stepConfig !== "object") {
-      throw new TypeError(createDetailedMessage(`found unexpected value in plan, they must be object`, {
-        ["file relative path"]: fileRelativeUrl,
-        ["execution name"]: executionName,
-        ["value"]: stepConfig
-      }));
-    }
-    fileExecutionSteps.push({
-      executionName,
-      fileRelativeUrl,
-      ...stepConfig
-    });
-  });
-  return fileExecutionSteps;
-};
-
-const readNodeV8CoverageDirectory = async ({
-  logger,
-  signal,
-  onV8Coverage,
-  maxMsWaitingForNodeToWriteCoverageFile = 2000
-}) => {
-  const NODE_V8_COVERAGE = process.env.NODE_V8_COVERAGE;
-  const operation = Abort.startOperation();
-  operation.addAbortSignal(signal);
-  let timeSpentTrying = 0;
-  const tryReadDirectory = async () => {
-    const dirContent = readdirSync(NODE_V8_COVERAGE);
-    if (dirContent.length > 0) {
-      return dirContent;
-    }
-    if (timeSpentTrying < maxMsWaitingForNodeToWriteCoverageFile) {
-      await new Promise(resolve => setTimeout(resolve, 200));
-      timeSpentTrying += 200;
-      logger.debug("retry to read coverage directory");
-      return tryReadDirectory();
-    }
-    logger.warn(`v8 coverage directory is empty at ${NODE_V8_COVERAGE}`);
-    return dirContent;
-  };
-  try {
-    operation.throwIfAborted();
-    const dirContent = await tryReadDirectory();
-    const coverageDirectoryUrl = assertAndNormalizeDirectoryUrl(NODE_V8_COVERAGE, "NODE_V8_COVERAGE");
-    await dirContent.reduce(async (previous, dirEntry) => {
-      operation.throwIfAborted();
-      await previous;
-      const dirEntryUrl = new URL(dirEntry, coverageDirectoryUrl);
-      const tryReadJsonFile = async () => {
-        const fileContent = String(readFileSync$1(dirEntryUrl));
-        if (fileContent === "") {
-          if (timeSpentTrying < maxMsWaitingForNodeToWriteCoverageFile) {
-            await new Promise(resolve => setTimeout(resolve, 200));
-            timeSpentTrying += 200;
-            return tryReadJsonFile();
-          }
-          console.warn(`Coverage JSON file is empty at ${dirEntryUrl}`);
-          return null;
-        }
-        try {
-          const fileAsJson = JSON.parse(fileContent);
-          return fileAsJson;
-        } catch (e) {
-          if (timeSpentTrying < maxMsWaitingForNodeToWriteCoverageFile) {
-            await new Promise(resolve => setTimeout(resolve, 200));
-            timeSpentTrying += 200;
-            return tryReadJsonFile();
-          }
-          console.warn(createDetailedMessage(`Error while reading coverage file`, {
-            "error stack": e.stack,
-            "file": dirEntryUrl
-          }));
-          return null;
-        }
-      };
-      const fileContent = await tryReadJsonFile();
-      if (fileContent) {
-        await onV8Coverage(fileContent);
-      }
-    }, Promise.resolve());
-  } finally {
-    await operation.end();
-  }
-};
-
-const composeTwoV8Coverages = (firstV8Coverage, secondV8Coverage) => {
-  if (secondV8Coverage.result.length === 0) {
-    return firstV8Coverage;
-  }
-
-  // eslint-disable-next-line import/no-unresolved
-  const {
-    mergeProcessCovs
-  } = requireFromJsenv("@c88/v8-coverage");
-  // "mergeProcessCovs" do not preserves source-map-cache during the merge
-  // so we store sourcemap cache now
-  const sourceMapCache = {};
-  const visit = coverageReport => {
-    if (coverageReport["source-map-cache"]) {
-      Object.assign(sourceMapCache, coverageReport["source-map-cache"]);
-    }
-  };
-  visit(firstV8Coverage);
-  visit(secondV8Coverage);
-  const v8Coverage = mergeProcessCovs([firstV8Coverage, secondV8Coverage]);
-  v8Coverage["source-map-cache"] = sourceMapCache;
-  return v8Coverage;
-};
-
-const composeTwoFileByFileIstanbulCoverages = (firstFileByFileIstanbulCoverage, secondFileByFileIstanbulCoverage) => {
-  const fileByFileIstanbulCoverage = {};
-  Object.keys(firstFileByFileIstanbulCoverage).forEach(key => {
-    fileByFileIstanbulCoverage[key] = firstFileByFileIstanbulCoverage[key];
-  });
-  Object.keys(secondFileByFileIstanbulCoverage).forEach(key => {
-    const firstCoverage = firstFileByFileIstanbulCoverage[key];
-    const secondCoverage = secondFileByFileIstanbulCoverage[key];
-    fileByFileIstanbulCoverage[key] = firstCoverage ? merge(firstCoverage, secondCoverage) : secondCoverage;
-  });
-  return fileByFileIstanbulCoverage;
-};
-const merge = (firstIstanbulCoverage, secondIstanbulCoverage) => {
-  const {
-    createFileCoverage
-  } = requireFromJsenv("istanbul-lib-coverage");
-  const istanbulFileCoverageObject = createFileCoverage(firstIstanbulCoverage);
-  istanbulFileCoverageObject.merge(secondIstanbulCoverage);
-  const istanbulCoverage = istanbulFileCoverageObject.toJSON();
-  return istanbulCoverage;
-};
-
-const v8CoverageToIstanbul = async (v8Coverage, {
-  signal
-}) => {
-  const operation = Abort.startOperation();
-  operation.addAbortSignal(signal);
-  try {
-    const v8ToIstanbul = requireFromJsenv("v8-to-istanbul");
-    const sourcemapCache = v8Coverage["source-map-cache"];
-    let istanbulCoverageComposed = null;
-    await v8Coverage.result.reduce(async (previous, fileV8Coverage) => {
-      operation.throwIfAborted();
-      await previous;
-      const {
-        source
-      } = fileV8Coverage;
-      let sources;
-      // when v8 coverage comes from playwright (chromium) v8Coverage.source is set
-      if (typeof source === "string") {
-        sources = {
-          source
-        };
-      }
-      // when v8 coverage comes from Node.js, the source can be read from sourcemapCache
-      else if (sourcemapCache) {
-        sources = sourcesFromSourceMapCache(fileV8Coverage.url, sourcemapCache);
-      }
-      const path = urlToFileSystemPath(fileV8Coverage.url);
-      const converter = v8ToIstanbul(path,
-      // wrapperLength is undefined we don't need it
-      // https://github.com/istanbuljs/v8-to-istanbul/blob/2b54bc97c5edf8a37b39a171ec29134ba9bfd532/lib/v8-to-istanbul.js#L27
-      undefined, sources);
-      await converter.load();
-      converter.applyCoverage(fileV8Coverage.functions);
-      const istanbulCoverage = converter.toIstanbul();
-      istanbulCoverageComposed = istanbulCoverageComposed ? composeTwoFileByFileIstanbulCoverages(istanbulCoverageComposed, istanbulCoverage) : istanbulCoverage;
-    }, Promise.resolve());
-    if (!istanbulCoverageComposed) {
-      return {};
-    }
-    istanbulCoverageComposed = markAsConvertedFromV8(istanbulCoverageComposed);
-    return istanbulCoverageComposed;
-  } finally {
-    await operation.end();
-  }
-};
-const markAsConvertedFromV8 = fileByFileCoverage => {
-  const fileByFileMarked = {};
-  Object.keys(fileByFileCoverage).forEach(key => {
-    const fileCoverage = fileByFileCoverage[key];
-    fileByFileMarked[key] = {
-      ...fileCoverage,
-      fromV8: true
-    };
-  });
-  return fileByFileMarked;
-};
-const sourcesFromSourceMapCache = (url, sourceMapCache) => {
-  const sourceMapAndLineLengths = sourceMapCache[url];
-  if (!sourceMapAndLineLengths) {
-    return {};
-  }
-  const {
-    data,
-    lineLengths
-  } = sourceMapAndLineLengths;
-  // See: https://github.com/nodejs/node/pull/34305
-  if (!data) {
-    return undefined;
-  }
-  const sources = {
-    sourcemap: data,
-    ...(lineLengths ? {
-      source: sourcesFromLineLengths(lineLengths)
-    } : {})
-  };
-  return sources;
-};
-const sourcesFromLineLengths = lineLengths => {
-  let source = "";
-  lineLengths.forEach(length => {
-    source += `${"".padEnd(length, ".")}\n`;
-  });
-  return source;
-};
-
-const composeV8AndIstanbul = (v8FileByFileCoverage, istanbulFileByFileCoverage, {
-  coverageV8ConflictWarning
-}) => {
-  const fileByFileCoverage = {};
-  const v8Files = Object.keys(v8FileByFileCoverage);
-  const istanbulFiles = Object.keys(istanbulFileByFileCoverage);
-  v8Files.forEach(key => {
-    fileByFileCoverage[key] = v8FileByFileCoverage[key];
-  });
-  istanbulFiles.forEach(key => {
-    const v8Coverage = v8FileByFileCoverage[key];
-    if (v8Coverage) {
-      if (coverageV8ConflictWarning) {
-        console.warn(createDetailedMessage(`Coverage conflict on "${key}", found two coverage that cannot be merged together: v8 and istanbul. The istanbul coverage will be ignored.`, {
-          details: `This happens when a file is executed on a runtime using v8 coverage (node or chromium) and on runtime using istanbul coverage (firefox or webkit)`,
-          suggestion: "You can disable this warning with coverageV8ConflictWarning: false"
-        }));
-      }
-      fileByFileCoverage[key] = v8Coverage;
-    } else {
-      fileByFileCoverage[key] = istanbulFileByFileCoverage[key];
-    }
-  });
-  return fileByFileCoverage;
-};
-
-const normalizeFileByFileCoveragePaths = (fileByFileCoverage, rootDirectoryUrl) => {
-  const fileByFileNormalized = {};
-  Object.keys(fileByFileCoverage).forEach(key => {
-    const fileCoverage = fileByFileCoverage[key];
-    const {
-      path
-    } = fileCoverage;
-    const url = isFileSystemPath$1(path) ? fileSystemPathToUrl$1(path) : new URL(path, rootDirectoryUrl).href;
-    const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
-    fileByFileNormalized[`./${relativeUrl}`] = {
-      ...fileCoverage,
-      path: `./${relativeUrl}`
-    };
-  });
-  return fileByFileNormalized;
-};
-
-const listRelativeFileUrlToCover = async ({
-  signal,
-  rootDirectoryUrl,
-  coverageConfig
-}) => {
-  const matchingFileResultArray = await collectFiles({
-    signal,
-    directoryUrl: rootDirectoryUrl,
-    associations: {
-      cover: coverageConfig
-    },
-    predicate: ({
-      cover
-    }) => cover
-  });
-  return matchingFileResultArray.map(({
-    relativeUrl
-  }) => relativeUrl);
-};
-
-// https://github.com/istanbuljs/babel-plugin-istanbul/blob/321740f7b25d803f881466ea819d870f7ed6a254/src/index.js
-
-const babelPluginInstrument = (api, {
-  useInlineSourceMaps = false
-}) => {
-  const {
-    programVisitor
-  } = requireFromJsenv("istanbul-lib-instrument");
-  const {
-    types
-  } = api;
-  return {
-    name: "transform-instrument",
-    visitor: {
-      Program: {
-        enter(path) {
-          const {
-            file
-          } = this;
-          const {
-            opts
-          } = file;
-          let inputSourceMap;
-          if (useInlineSourceMaps) {
-            // https://github.com/istanbuljs/babel-plugin-istanbul/commit/a9e15643d249a2985e4387e4308022053b2cd0ad#diff-1fdf421c05c1140f6d71444ea2b27638R65
-            inputSourceMap = opts.inputSourceMap || file.inputMap ? file.inputMap.sourcemap : null;
-          } else {
-            inputSourceMap = opts.inputSourceMap;
-          }
-          this.__dv__ = programVisitor(types, opts.filenameRelative || opts.filename, {
-            coverageVariable: "__coverage__",
-            inputSourceMap
-          });
-          this.__dv__.enter(path);
-        },
-        exit(path) {
-          if (!this.__dv__) {
-            return;
-          }
-          const object = this.__dv__.exit(path);
-          // object got two properties: fileCoverage and sourceMappingURL
-          this.file.metadata.coverage = object.fileCoverage;
-        }
-      }
-    }
-  };
-};
-
-const relativeUrlToEmptyCoverage = async (relativeUrl, {
-  signal,
-  rootDirectoryUrl
-}) => {
-  const operation = Abort.startOperation();
-  operation.addAbortSignal(signal);
-  try {
-    const fileUrl = resolveUrl(relativeUrl, rootDirectoryUrl);
-    const content = await readFile(fileUrl, {
-      as: "string"
-    });
-    operation.throwIfAborted();
-    const {
-      metadata
-    } = await applyBabelPlugins({
-      babelPlugins: [babelPluginInstrument],
-      urlInfo: {
-        originalUrl: fileUrl,
-        content
-      }
-    });
-    const {
-      coverage
-    } = metadata;
-    if (!coverage) {
-      throw new Error(`missing coverage for file`);
-    }
-    // https://github.com/gotwarlost/istanbul/blob/bc84c315271a5dd4d39bcefc5925cfb61a3d174a/lib/command/common/run-with-cover.js#L229
-    Object.keys(coverage.s).forEach(function (key) {
-      coverage.s[key] = 0;
-    });
-    return coverage;
-  } catch (e) {
-    if (e && e.code === "PARSE_ERROR") {
-      // return an empty coverage for that file when
-      // it contains a syntax error
-      return createEmptyCoverage(relativeUrl);
-    }
-    throw e;
-  } finally {
-    await operation.end();
-  }
-};
-const createEmptyCoverage = relativeUrl => {
-  const {
-    createFileCoverage
-  } = requireFromJsenv("istanbul-lib-coverage");
-  return createFileCoverage(relativeUrl).toJSON();
-};
-
-const getMissingFileByFileCoverage = async ({
-  signal,
-  rootDirectoryUrl,
-  coverageConfig,
-  fileByFileCoverage
-}) => {
-  const relativeUrlsToCover = await listRelativeFileUrlToCover({
-    signal,
-    rootDirectoryUrl,
-    coverageConfig
-  });
-  const relativeUrlsMissing = relativeUrlsToCover.filter(relativeUrlToCover => Object.keys(fileByFileCoverage).every(key => {
-    return key !== `./${relativeUrlToCover}`;
-  }));
-  const operation = Abort.startOperation();
-  operation.addAbortSignal(signal);
-  const missingFileByFileCoverage = {};
-  await relativeUrlsMissing.reduce(async (previous, relativeUrlMissing) => {
-    operation.throwIfAborted();
-    await previous;
-    await operation.withSignal(async signal => {
-      const emptyCoverage = await relativeUrlToEmptyCoverage(relativeUrlMissing, {
-        signal,
-        rootDirectoryUrl
-      });
-      missingFileByFileCoverage[`./${relativeUrlMissing}`] = emptyCoverage;
-    });
-  }, Promise.resolve());
-  return missingFileByFileCoverage;
-};
-
-const reportToCoverage = async (report, {
-  signal,
-  logger,
-  rootDirectoryUrl,
-  coverageConfig,
-  coverageIncludeMissing,
-  coverageMethodForNodeJs,
-  coverageV8ConflictWarning
-}) => {
-  // collect v8 and istanbul coverage from executions
-  let {
-    v8Coverage,
-    fileByFileIstanbulCoverage
-  } = await getCoverageFromReport({
-    signal,
-    report,
-    onMissing: ({
-      file,
-      executionResult,
-      executionName
-    }) => {
-      // several reasons not to have coverage here:
-      // 1. the file we executed did not import an instrumented file.
-      // - a test file without import
-      // - a test file importing only file excluded from coverage
-      // - a coverDescription badly configured so that we don't realize
-      // a file should be covered
-
-      // 2. the file we wanted to executed timedout
-      // - infinite loop
-      // - too extensive operation
-      // - a badly configured or too low allocatedMs for that execution.
-
-      // 3. the file we wanted to execute contains syntax-error
-
-      // in any scenario we are fine because
-      // coverDescription will generate empty coverage for files
-      // that were suppose to be coverage but were not.
-      if (executionResult.status === "completed" && executionResult.type === "node" && coverageMethodForNodeJs !== "NODE_V8_COVERAGE") {
-        logger.warn(`"${executionName}" execution of ${file} did not properly write coverage into ${executionResult.coverageFileUrl}`);
-      }
-    }
-  });
-  if (coverageMethodForNodeJs === "NODE_V8_COVERAGE") {
-    await readNodeV8CoverageDirectory({
-      logger,
-      signal,
-      onV8Coverage: async nodeV8Coverage => {
-        const nodeV8CoverageLight = await filterV8Coverage(nodeV8Coverage, {
-          rootDirectoryUrl,
-          coverageConfig
-        });
-        v8Coverage = v8Coverage ? composeTwoV8Coverages(v8Coverage, nodeV8CoverageLight) : nodeV8CoverageLight;
-      }
-    });
-  }
-
-  // try to merge v8 with istanbul, if any
-  let fileByFileCoverage;
-  if (v8Coverage) {
-    let v8FileByFileCoverage = await v8CoverageToIstanbul(v8Coverage, {
-      signal
-    });
-    v8FileByFileCoverage = normalizeFileByFileCoveragePaths(v8FileByFileCoverage, rootDirectoryUrl);
-    if (fileByFileIstanbulCoverage) {
-      fileByFileIstanbulCoverage = normalizeFileByFileCoveragePaths(fileByFileIstanbulCoverage, rootDirectoryUrl);
-      fileByFileCoverage = composeV8AndIstanbul(v8FileByFileCoverage, fileByFileIstanbulCoverage, {
-        coverageV8ConflictWarning
-      });
-    } else {
-      fileByFileCoverage = v8FileByFileCoverage;
-    }
-  }
-  // get istanbul only
-  else if (fileByFileIstanbulCoverage) {
-    fileByFileCoverage = normalizeFileByFileCoveragePaths(fileByFileIstanbulCoverage, rootDirectoryUrl);
-  }
-  // no coverage found in execution (or zero file where executed)
-  else {
-    fileByFileCoverage = {};
-  }
-
-  // now add coverage for file not covered
-  if (coverageIncludeMissing) {
-    const missingFileByFileCoverage = await getMissingFileByFileCoverage({
-      signal,
-      rootDirectoryUrl,
-      coverageConfig,
-      fileByFileCoverage
-    });
-    Object.assign(fileByFileCoverage, normalizeFileByFileCoveragePaths(missingFileByFileCoverage, rootDirectoryUrl));
-  }
-  return fileByFileCoverage;
-};
-const getCoverageFromReport = async ({
-  signal,
-  report,
-  onMissing
-}) => {
-  const operation = Abort.startOperation();
-  operation.addAbortSignal(signal);
-  try {
-    let v8Coverage;
-    let fileByFileIstanbulCoverage;
-
-    // collect v8 and istanbul coverage from executions
-    await Object.keys(report).reduce(async (previous, file) => {
-      operation.throwIfAborted();
-      await previous;
-      const executionResultForFile = report[file];
-      await Object.keys(executionResultForFile).reduce(async (previous, executionName) => {
-        operation.throwIfAborted();
-        await previous;
-        const executionResultForFileOnRuntime = executionResultForFile[executionName];
-        const {
-          coverageFileUrl
-        } = executionResultForFileOnRuntime;
-        let executionCoverage;
-        try {
-          executionCoverage = JSON.parse(String(readFileSync$1(new URL(coverageFileUrl))));
-        } catch (e) {
-          if (e.code === "ENOENT" || e.name === "SyntaxError") {
-            onMissing({
-              executionName,
-              file,
-              executionResult: executionResultForFileOnRuntime
-            });
-            return;
-          }
-          throw e;
-        }
-        if (isV8Coverage(executionCoverage)) {
-          v8Coverage = v8Coverage ? composeTwoV8Coverages(v8Coverage, executionCoverage) : executionCoverage;
-        } else {
-          fileByFileIstanbulCoverage = fileByFileIstanbulCoverage ? composeTwoFileByFileIstanbulCoverages(fileByFileIstanbulCoverage, executionCoverage) : executionCoverage;
-        }
-      }, Promise.resolve());
-    }, Promise.resolve());
-    return {
-      v8Coverage,
-      fileByFileIstanbulCoverage
-    };
-  } finally {
-    await operation.end();
-  }
-};
-const isV8Coverage = coverage => Boolean(coverage.result);
-
-/*
- * Export a function capable to run a file on a runtime.
- *
- * - Used internally by "executeTestPlan" part of the documented API
- * - Used internally by "execute" an advanced API not documented
- * - logs generated during file execution can be collected
- * - logs generated during file execution can be mirrored (re-logged to the console)
- * - File is given allocatedMs to complete
- * - Errors are collected
- * - File execution result is returned, it contains status/errors/namespace/consoleCalls
- */
-const run = async ({
-  signal = new AbortController().signal,
-  logger,
-  allocatedMs,
-  keepRunning = false,
-  mirrorConsole = false,
-  collectConsole = false,
-  coverageEnabled = false,
-  coverageTempDirectoryUrl,
-  collectPerformance = false,
-  runtime,
-  runtimeParams
-}) => {
-  const result = {
-    status: "pending",
-    errors: [],
-    namespace: null
-  };
-  const callbacks = [];
-  const onConsoleRef = {
-    current: () => {}
-  };
-  const stopSignal = {
-    notify: () => {}
-  };
-  const runtimeLabel = `${runtime.name}/${runtime.version}`;
-  const runOperation = Abort.startOperation();
-  runOperation.addAbortSignal(signal);
-  let timeoutAbortSource;
-  if (
-  // ideally we would rather log than the timeout is ignored
-  // when keepRunning is true
-  !keepRunning && typeof allocatedMs === "number" && allocatedMs !== Infinity) {
-    timeoutAbortSource = runOperation.timeout(allocatedMs);
-  }
-  const consoleCalls = [];
-  onConsoleRef.current = ({
-    type,
-    text
-  }) => {
-    if (mirrorConsole) {
-      if (type === "error") {
-        process.stderr.write(text);
-      } else {
-        process.stdout.write(text);
-      }
-    }
-    if (collectConsole) {
-      consoleCalls.push({
-        type,
-        text
-      });
-    }
-  };
-  if (collectConsole) {
-    result.consoleCalls = consoleCalls;
-  }
-
-  // we do not keep coverage in memory, it can grow very big
-  // instead we store it on the filesystem
-  // and they can be read later at "coverageFileUrl"
-  let coverageFileUrl;
-  if (coverageEnabled) {
-    coverageFileUrl = new URL(`./${runtime.name}/${createId()}.json`, coverageTempDirectoryUrl).href;
-    await ensureParentDirectories(coverageFileUrl);
-    if (coverageEnabled) {
-      result.coverageFileUrl = coverageFileUrl;
-      // written within the child_process/worker_thread or during runtime.run()
-      // for browsers
-      // (because it takes time to serialize and transfer the coverage object)
-    }
-  }
-
-  const startMs = Date.now();
-  callbacks.push(() => {
-    result.duration = Date.now() - startMs;
-  });
-  try {
-    logger.debug(`run() ${runtimeLabel}`);
-    runOperation.throwIfAborted();
-    const winnerPromise = new Promise(resolve => {
-      raceCallbacks({
-        aborted: cb => {
-          runOperation.signal.addEventListener("abort", cb);
-          return () => {
-            runOperation.signal.removeEventListener("abort", cb);
-          };
-        },
-        runned: async cb => {
-          try {
-            const runResult = await runtime.run({
-              signal: runOperation.signal,
-              logger,
-              ...runtimeParams,
-              collectConsole,
-              collectPerformance,
-              coverageFileUrl,
-              keepRunning,
-              stopSignal,
-              onConsole: log => onConsoleRef.current(log)
-            });
-            cb(runResult);
-          } catch (e) {
-            cb({
-              status: "failed",
-              errors: [e]
-            });
-          }
-        }
-      }, resolve);
-    });
-    const winner = await winnerPromise;
-    if (winner.name === "aborted") {
-      runOperation.throwIfAborted();
-    }
-    const {
-      status,
-      namespace,
-      errors,
-      performance
-    } = winner.data;
-    result.status = status;
-    result.errors.push(...errors);
-    result.namespace = namespace;
-    if (collectPerformance) {
-      result.performance = performance;
-    }
-  } catch (e) {
-    if (Abort.isAbortError(e)) {
-      if (timeoutAbortSource && timeoutAbortSource.signal.aborted) {
-        result.status = "timedout";
-      } else {
-        result.status = "aborted";
-      }
-    } else {
-      result.status = "failed";
-      result.errors.push(e);
-    }
-  } finally {
-    await runOperation.end();
-  }
-  callbacks.forEach(callback => {
-    callback();
-  });
-  return result;
-};
-
-const ensureGlobalGc = () => {
-  if (!global.gc) {
-    v8.setFlagsFromString("--expose_gc");
-    global.gc = runInNewContext("gc");
-  }
-};
-
-const EXECUTION_COLORS = {
-  executing: ANSI.BLUE,
-  aborted: ANSI.MAGENTA,
-  timedout: ANSI.MAGENTA,
-  failed: ANSI.RED,
-  completed: ANSI.GREEN,
-  cancelled: ANSI.GREY
-};
-
-const createExecutionLog = ({
-  executionIndex,
-  fileRelativeUrl,
-  runtimeName,
-  runtimeVersion,
-  executionParams,
-  executionResult,
-  startMs,
-  endMs
-}, {
-  completedExecutionLogAbbreviation,
-  counters,
-  logRuntime,
-  logEachDuration,
-  timeEllapsed,
-  memoryHeap
-}) => {
-  const {
-    status
-  } = executionResult;
-  const descriptionFormatter = descriptionFormatters[status];
-  const description = descriptionFormatter({
-    index: executionIndex,
-    total: counters.total,
-    executionParams
-  });
-  const summary = createIntermediateSummary({
-    executionIndex,
-    counters,
-    timeEllapsed,
-    memoryHeap
-  });
-  let log;
-  if (completedExecutionLogAbbreviation && status === "completed") {
-    log = `${description}${summary}`;
-  } else {
-    const {
-      consoleCalls = [],
-      errors = []
-    } = executionResult;
-    const consoleOutput = formatConsoleCalls(consoleCalls);
-    const errorsOutput = formatErrors(errors);
-    log = formatExecution({
-      label: `${description}${summary}`,
-      details: {
-        file: fileRelativeUrl,
-        ...(logRuntime ? {
-          runtime: `${runtimeName}/${runtimeVersion}`
-        } : {}),
-        ...(logEachDuration ? {
-          duration: status === "executing" ? msAsEllapsedTime(Date.now() - startMs) : msAsDuration(endMs - startMs)
-        } : {})
-      },
-      consoleOutput,
-      errorsOutput
-    });
-  }
-  const {
-    columns = 80
-  } = process.stdout;
-  log = wrapAnsi(log, columns, {
-    trim: false,
-    hard: true,
-    wordWrap: false
-  });
-  if (endMs) {
-    if (completedExecutionLogAbbreviation) {
-      return `${log}\n`;
-    }
-    if (executionIndex === counters.total - 1) {
-      return `${log}\n`;
-    }
-    return `${log}\n\n`;
-  }
-  return log;
-};
-const formatErrors = errors => {
-  if (errors.length === 0) {
-    return "";
-  }
-  const formatError = error => error.stack || error.message || error;
-  if (errors.length === 1) {
-    return `${ANSI.color(`-------- error --------`, ANSI.RED)}
-${formatError(errors[0])}
-${ANSI.color(`-------------------------`, ANSI.RED)}`;
-  }
-  let output = [];
-  errors.forEach(error => {
-    output.push(prefixFirstAndIndentRemainingLines({
-      prefix: `${UNICODE.CIRCLE_CROSS} `,
-      indentation: "   ",
-      text: formatError(error)
-    }));
-  });
-  return `${ANSI.color(`-------- errors (${errors.length}) --------`, ANSI.RED)}
-${output.join(`\n`)}
-${ANSI.color(`-------------------------`, ANSI.RED)}`;
-};
-const createSummaryLog = summary => `-------------- summary -----------------
-${createAllExecutionsSummary(summary)}
-total duration: ${msAsDuration(summary.duration)}
-----------------------------------------`;
-const createAllExecutionsSummary = ({
-  counters
-}) => {
-  if (counters.total === 0) {
-    return `no execution`;
-  }
-  const executionLabel = counters.total === 1 ? `1 execution` : `${counters.total} executions`;
-  return `${executionLabel}: ${createStatusSummary({
-    counters
-  })}`;
-};
-const createIntermediateSummary = ({
-  executionIndex,
-  counters,
-  memoryHeap,
-  timeEllapsed
-}) => {
-  const parts = [];
-  if (executionIndex > 0 || counters.done > 0) {
-    parts.push(createStatusSummary({
-      counters: {
-        ...counters,
-        total: executionIndex + 1
-      }
-    }));
-  }
-  if (timeEllapsed) {
-    parts.push(`duration: ${msAsEllapsedTime(timeEllapsed)}`);
-  }
-  if (memoryHeap) {
-    parts.push(`memory heap: ${byteAsMemoryUsage(memoryHeap)}`);
-  }
-  if (parts.length === 0) {
-    return "";
-  }
-  return ` (${parts.join(` / `)})`;
-};
-const createStatusSummary = ({
-  counters
-}) => {
-  if (counters.aborted === counters.total) {
-    return `all ${ANSI.color(`aborted`, EXECUTION_COLORS.aborted)}`;
-  }
-  if (counters.timedout === counters.total) {
-    return `all ${ANSI.color(`timed out`, EXECUTION_COLORS.timedout)}`;
-  }
-  if (counters.failed === counters.total) {
-    return `all ${ANSI.color(`failed`, EXECUTION_COLORS.failed)}`;
-  }
-  if (counters.completed === counters.total) {
-    return `all ${ANSI.color(`completed`, EXECUTION_COLORS.completed)}`;
-  }
-  if (counters.cancelled === counters.total) {
-    return `all ${ANSI.color(`cancelled`, EXECUTION_COLORS.cancelled)}`;
-  }
-  return createMixedDetails({
-    counters
-  });
-};
-const createMixedDetails = ({
-  counters
-}) => {
-  const parts = [];
-  if (counters.timedout) {
-    parts.push(`${counters.timedout} ${ANSI.color(`timed out`, EXECUTION_COLORS.timedout)}`);
-  }
-  if (counters.failed) {
-    parts.push(`${counters.failed} ${ANSI.color(`failed`, EXECUTION_COLORS.failed)}`);
-  }
-  if (counters.completed) {
-    parts.push(`${counters.completed} ${ANSI.color(`completed`, EXECUTION_COLORS.completed)}`);
-  }
-  if (counters.aborted) {
-    parts.push(`${counters.aborted} ${ANSI.color(`aborted`, EXECUTION_COLORS.aborted)}`);
-  }
-  if (counters.cancelled) {
-    parts.push(`${counters.cancelled} ${ANSI.color(`cancelled`, EXECUTION_COLORS.cancelled)}`);
-  }
-  return `${parts.join(", ")}`;
-};
-const descriptionFormatters = {
-  executing: ({
-    index,
-    total
-  }) => {
-    return ANSI.color(`executing ${padNumber(index, total)} of ${total}`, EXECUTION_COLORS.executing);
-  },
-  aborted: ({
-    index,
-    total
-  }) => {
-    return ANSI.color(`${UNICODE.FAILURE_RAW} execution ${padNumber(index, total)} of ${total} aborted`, EXECUTION_COLORS.aborted);
-  },
-  timedout: ({
-    index,
-    total,
-    executionParams
-  }) => {
-    return ANSI.color(`${UNICODE.FAILURE_RAW} execution ${padNumber(index, total)} of ${total} timeout after ${executionParams.allocatedMs}ms`, EXECUTION_COLORS.timedout);
-  },
-  failed: ({
-    index,
-    total
-  }) => {
-    return ANSI.color(`${UNICODE.FAILURE_RAW} execution ${padNumber(index, total)} of ${total} failed`, EXECUTION_COLORS.failed);
-  },
-  completed: ({
-    index,
-    total
-  }) => {
-    return ANSI.color(`${UNICODE.OK_RAW} execution ${padNumber(index, total)} of ${total} completed`, EXECUTION_COLORS.completed);
-  },
-  cancelled: ({
-    index,
-    total
-  }) => {
-    return ANSI.color(`${UNICODE.FAILURE_RAW} execution ${padNumber(index, total)} of ${total} cancelled`, EXECUTION_COLORS.cancelled);
-  }
-};
-const padNumber = (index, total) => {
-  const number = index + 1;
-  const numberWidth = String(number).length;
-  const totalWith = String(total).length;
-  let missingWidth = totalWith - numberWidth;
-  let padded = "";
-  while (missingWidth--) {
-    padded += "0";
-  }
-  padded += number;
-  return padded;
-};
-const formatConsoleCalls = consoleCalls => {
-  if (consoleCalls.length === 0) {
-    return "";
-  }
-  const repartition = {
-    debug: 0,
-    info: 0,
-    warning: 0,
-    error: 0,
-    log: 0
-  };
-  consoleCalls.forEach(consoleCall => {
-    repartition[consoleCall.type]++;
-  });
-  const consoleOutput = formatConsoleOutput(consoleCalls);
-  return `${ANSI.color(`-------- ${formatConsoleSummary(repartition)} --------`, ANSI.GREY)}
-${consoleOutput}
-${ANSI.color(`-------------------------`, ANSI.GREY)}`;
-};
-const formatConsoleOutput = consoleCalls => {
-  // inside Node.js you can do process.stdout.write()
-  // and in that case the consoleCall is not suffixed with "\n"
-  // we want to keep these calls together in the output
-  const regroupedCalls = [];
-  consoleCalls.forEach((consoleCall, index) => {
-    if (index === 0) {
-      regroupedCalls.push(consoleCall);
-      return;
-    }
-    const previousCall = consoleCalls[index - 1];
-    if (previousCall.type !== consoleCall.type) {
-      regroupedCalls.push(consoleCall);
-      return;
-    }
-    if (previousCall.text.endsWith("\n")) {
-      regroupedCalls.push(consoleCall);
-      return;
-    }
-    if (previousCall.text.endsWith("\r")) {
-      regroupedCalls.push(consoleCall);
-      return;
-    }
-    const previousRegroupedCallIndex = regroupedCalls.length - 1;
-    const previousRegroupedCall = regroupedCalls[previousRegroupedCallIndex];
-    previousRegroupedCall.text = `${previousRegroupedCall.text}${consoleCall.text}`;
-  });
-  let consoleOutput = ``;
-  regroupedCalls.forEach((regroupedCall, index) => {
-    const text = regroupedCall.text;
-    const textFormatted = prefixFirstAndIndentRemainingLines({
-      prefix: CONSOLE_ICONS[regroupedCall.type],
-      text,
-      trimLines: true,
-      trimLastLine: index === regroupedCalls.length - 1
-    });
-    consoleOutput += textFormatted;
-  });
-  return consoleOutput;
-};
-const prefixFirstAndIndentRemainingLines = ({
-  prefix,
-  indentation = "  ",
-  text,
-  trimLines,
-  trimLastLine
-}) => {
-  const lines = text.split(/\r?\n/);
-  const firstLine = lines.shift();
-  let result = `${prefix} ${firstLine}`;
-  let i = 0;
-  while (i < lines.length) {
-    const line = trimLines ? lines[i].trim() : lines[i];
-    i++;
-    result += line.length ? `\n${indentation}${line}` : trimLastLine && i === lines.length ? "" : `\n`;
-  }
-  return result;
-};
-const CONSOLE_ICONS = {
-  debug: UNICODE.DEBUG,
-  info: UNICODE.INFO,
-  warning: UNICODE.WARNING,
-  error: UNICODE.FAILURE,
-  log: " "
-};
-const formatConsoleSummary = repartition => {
-  const {
-    debug,
-    info,
-    warning,
-    error
-  } = repartition;
-  const parts = [];
-  if (error) {
-    parts.push(`${CONSOLE_ICONS.error} ${error}`);
-  }
-  if (warning) {
-    parts.push(`${CONSOLE_ICONS.warning} ${warning}`);
-  }
-  if (info) {
-    parts.push(`${CONSOLE_ICONS.info} ${info}`);
-  }
-  if (debug) {
-    parts.push(`${CONSOLE_ICONS.debug} ${debug}`);
-  }
-  if (parts.length === 0) {
-    return `console`;
-  }
-  return `console (${parts.join(" ")})`;
-};
-const formatExecution = ({
-  label,
-  details = {},
-  consoleOutput,
-  errorsOutput
-}) => {
-  let message = ``;
-  message += label;
-  Object.keys(details).forEach(key => {
-    message += `
-${key}: ${details[key]}`;
-  });
-  if (consoleOutput) {
-    message += `\n${consoleOutput}`;
-  }
-  if (errorsOutput) {
-    message += `\n${errorsOutput}`;
-  }
-  return message;
-};
-
-const executeSteps = async (executionSteps, {
-  signal,
-  handleSIGINT,
-  logger,
-  logRefresh,
-  logRuntime,
-  logEachDuration,
-  logSummary,
-  logTimeUsage,
-  logMemoryHeapUsage,
-  logFileRelativeUrl,
-  completedExecutionLogMerging,
-  completedExecutionLogAbbreviation,
-  rootDirectoryUrl,
-  webServer,
-  keepRunning,
-  defaultMsAllocatedPerExecution,
-  maxExecutionsInParallel,
-  failFast,
-  gcBetweenExecutions,
-  cooldownBetweenExecutions,
-  coverageEnabled,
-  coverageConfig,
-  coverageIncludeMissing,
-  coverageMethodForBrowsers,
-  coverageMethodForNodeJs,
-  coverageV8ConflictWarning,
-  coverageTempDirectoryUrl,
-  beforeExecutionCallback = () => {},
-  afterExecutionCallback = () => {}
-} = {}) => {
-  const executePlanReturnValue = {};
-  const report = {};
-  const callbacks = [];
-  const stopAfterAllSignal = {
-    notify: () => {}
-  };
-  const multipleExecutionsOperation = Abort.startOperation();
-  multipleExecutionsOperation.addAbortSignal(signal);
-  if (handleSIGINT) {
-    multipleExecutionsOperation.addAbortSource(abort => {
-      return raceProcessTeardownEvents({
-        SIGINT: true
-      }, () => {
-        logger.debug(`SIGINT abort`);
-        abort();
-      });
-    });
-  }
-  const failFastAbortController = new AbortController();
-  if (failFast) {
-    multipleExecutionsOperation.addAbortSignal(failFastAbortController.signal);
-  }
-  try {
-    if (gcBetweenExecutions) {
-      ensureGlobalGc();
-    }
-    if (coverageEnabled) {
-      // when runned multiple times, we don't want to keep previous files in this directory
-      await ensureEmptyDirectory(coverageTempDirectoryUrl);
-      callbacks.push(async () => {
-        if (multipleExecutionsOperation.signal.aborted) {
-          // don't try to do the coverage stuff
-          return;
-        }
-        try {
-          if (coverageMethodForNodeJs === "NODE_V8_COVERAGE") {
-            takeCoverage();
-            // conceptually we don't need coverage anymore so it would be
-            // good to call v8.stopCoverage()
-            // but it logs a strange message about "result is not an object"
-          }
-
-          const planCoverage = await reportToCoverage(report, {
-            signal: multipleExecutionsOperation.signal,
-            logger,
-            rootDirectoryUrl,
-            coverageConfig,
-            coverageIncludeMissing,
-            coverageMethodForBrowsers,
-            coverageV8ConflictWarning
-          });
-          executePlanReturnValue.planCoverage = planCoverage;
-        } catch (e) {
-          if (Abort.isAbortError(e)) {
-            return;
-          }
-          throw e;
-        }
-      });
-    }
-    let runtimeParams = {
-      rootDirectoryUrl,
-      webServer,
-      coverageEnabled,
-      coverageConfig,
-      coverageMethodForBrowsers,
-      coverageMethodForNodeJs,
-      stopAfterAllSignal
-    };
-    if (completedExecutionLogMerging && !process.stdout.isTTY) {
-      completedExecutionLogMerging = false;
-      logger.debug(`Force completedExecutionLogMerging to false because process.stdout.isTTY is false`);
-    }
-    const debugLogsEnabled = logger.levels.debug;
-    const executionLogsEnabled = logger.levels.info;
-    const executionSpinner = logRefresh && !debugLogsEnabled && executionLogsEnabled && process.stdout.isTTY &&
-    // if there is an error during execution npm will mess up the output
-    // (happens when npm runs several command in a workspace)
-    // so we enable spinner only when !process.exitCode (no error so far)
-    process.exitCode !== 1;
-    const startMs = Date.now();
-    let rawOutput = "";
-    let executionLog = createLog({
-      newLine: ""
-    });
-    const counters = {
-      total: executionSteps.length,
-      aborted: 0,
-      timedout: 0,
-      failed: 0,
-      completed: 0,
-      done: 0
-    };
-    await executeInParallel({
-      multipleExecutionsOperation,
-      maxExecutionsInParallel,
-      cooldownBetweenExecutions,
-      executionSteps,
-      start: async paramsFromStep => {
-        const executionIndex = executionSteps.indexOf(paramsFromStep);
-        const {
-          executionName,
-          fileRelativeUrl,
-          runtime
-        } = paramsFromStep;
-        const runtimeType = runtime.type;
-        const runtimeName = runtime.name;
-        const runtimeVersion = runtime.version;
-        const executionParams = {
-          measurePerformance: false,
-          collectPerformance: false,
-          collectConsole: true,
-          allocatedMs: defaultMsAllocatedPerExecution,
-          ...paramsFromStep,
-          runtimeParams: {
-            fileRelativeUrl,
-            ...paramsFromStep.runtimeParams
-          }
-        };
-        const beforeExecutionInfo = {
-          fileRelativeUrl,
-          runtimeType,
-          runtimeName,
-          runtimeVersion,
-          executionIndex,
-          executionParams,
-          startMs: Date.now(),
-          executionResult: {
-            status: "executing"
-          }
-        };
-        let spinner;
-        if (executionSpinner) {
-          spinner = startSpinner({
-            log: executionLog,
-            render: () => {
-              return createExecutionLog(beforeExecutionInfo, {
-                counters,
-                logRuntime,
-                logEachDuration,
-                ...(logTimeUsage ? {
-                  timeEllapsed: Date.now() - startMs
-                } : {}),
-                ...(logMemoryHeapUsage ? {
-                  memoryHeap: memoryUsage().heapUsed
-                } : {})
-              });
-            }
-          });
-        }
-        beforeExecutionCallback(beforeExecutionInfo);
-        const fileUrl = `${rootDirectoryUrl}${fileRelativeUrl}`;
-        let executionResult;
-        if (existsSync(new URL(fileUrl))) {
-          executionResult = await run({
-            signal: multipleExecutionsOperation.signal,
-            logger,
-            allocatedMs: typeof executionParams.allocatedMs === "function" ? executionParams.allocatedMs(beforeExecutionInfo) : executionParams.allocatedMs,
-            keepRunning,
-            mirrorConsole: false,
-            // file are executed in parallel, log would be a mess to read
-            collectConsole: executionParams.collectConsole,
-            coverageEnabled,
-            coverageTempDirectoryUrl,
-            runtime: executionParams.runtime,
-            runtimeParams: {
-              ...runtimeParams,
-              ...executionParams.runtimeParams
-            }
-          });
-        } else {
-          executionResult = {
-            status: "failed",
-            errors: [new Error(`No file at ${fileRelativeUrl} for execution "${executionName}"`)]
-          };
-        }
-        counters.done++;
-        const fileReport = report[fileRelativeUrl];
-        if (fileReport) {
-          fileReport[executionName] = executionResult;
-        } else {
-          report[fileRelativeUrl] = {
-            [executionName]: executionResult
-          };
-        }
-        const afterExecutionInfo = {
-          ...beforeExecutionInfo,
-          runtimeVersion: runtime.version,
-          endMs: Date.now(),
-          executionResult
-        };
-        afterExecutionCallback(afterExecutionInfo);
-        if (executionResult.status === "aborted") {
-          counters.aborted++;
-        } else if (executionResult.status === "timedout") {
-          counters.timedout++;
-        } else if (executionResult.status === "failed") {
-          counters.failed++;
-        } else if (executionResult.status === "completed") {
-          counters.completed++;
-        }
-        if (gcBetweenExecutions) {
-          global.gc();
-        }
-        if (executionLogsEnabled) {
-          const log = createExecutionLog(afterExecutionInfo, {
-            completedExecutionLogAbbreviation,
-            counters,
-            logRuntime,
-            logEachDuration,
-            ...(logTimeUsage ? {
-              timeEllapsed: Date.now() - startMs
-            } : {}),
-            ...(logMemoryHeapUsage ? {
-              memoryHeap: memoryUsage().heapUsed
-            } : {})
-          });
-          // replace spinner with this execution result
-          if (spinner) spinner.stop();
-          executionLog.write(log);
-          rawOutput += stripAnsi(log);
-          const canOverwriteLog = canOverwriteLogGetter({
-            completedExecutionLogMerging,
-            executionResult
-          });
-          if (canOverwriteLog) {
-            // nothing to do, we reuse the current executionLog object
-          } else {
-            executionLog.destroy();
-            executionLog = createLog({
-              newLine: ""
-            });
-          }
-        }
-        const isLastExecutionLog = executionIndex === executionSteps.length - 1;
-        const cancelRemaining = failFast && executionResult.status !== "completed" && counters.done < counters.total;
-        if (isLastExecutionLog && logger.levels.info) {
-          executionLog.write("\n");
-        }
-        if (cancelRemaining) {
-          logger.info(`"failFast" enabled -> cancel remaining executions`);
-          failFastAbortController.abort();
-        }
-      }
-    });
-    if (!keepRunning) {
-      logger.debug("stopAfterAllSignal.notify()");
-      await stopAfterAllSignal.notify();
-    }
-    counters.cancelled = counters.total - counters.done;
-    const summary = {
-      counters,
-      // when execution is aborted, the remaining executions are "cancelled"
-      duration: Date.now() - startMs
-    };
-    if (logSummary) {
-      const summaryLog = createSummaryLog(summary);
-      rawOutput += stripAnsi(summaryLog);
-      logger.info(summaryLog);
-    }
-    if (summary.counters.total !== summary.counters.completed) {
-      const logFileUrl = new URL(logFileRelativeUrl, rootDirectoryUrl).href;
-      writeFileSync(logFileUrl, rawOutput);
-      logger.info(`-> ${urlToFileSystemPath(logFileUrl)}`);
-    }
-    executePlanReturnValue.aborted = multipleExecutionsOperation.signal.aborted;
-    executePlanReturnValue.planSummary = summary;
-    executePlanReturnValue.planReport = report;
-    await callbacks.reduce(async (previous, callback) => {
-      await previous;
-      await callback();
-    }, Promise.resolve());
-    return executePlanReturnValue;
-  } finally {
-    await multipleExecutionsOperation.end();
-  }
-};
-const canOverwriteLogGetter = ({
-  completedExecutionLogMerging,
-  executionResult
-}) => {
-  if (!completedExecutionLogMerging) {
-    return false;
-  }
-  if (executionResult.status === "aborted") {
-    return true;
-  }
-  if (executionResult.status !== "completed") {
-    return false;
-  }
-  const {
-    consoleCalls = []
-  } = executionResult;
-  if (consoleCalls.length > 0) {
-    return false;
-  }
-  return true;
-};
-const executeInParallel = async ({
-  multipleExecutionsOperation,
-  maxExecutionsInParallel,
-  cooldownBetweenExecutions,
-  executionSteps,
-  start
-}) => {
-  const executionResults = [];
-  let progressionIndex = 0;
-  let remainingExecutionCount = executionSteps.length;
-  const nextChunk = async () => {
-    if (multipleExecutionsOperation.signal.aborted) {
-      return;
-    }
-    const outputPromiseArray = [];
-    while (remainingExecutionCount > 0 && outputPromiseArray.length < maxExecutionsInParallel) {
-      remainingExecutionCount--;
-      const outputPromise = executeOne(progressionIndex);
-      progressionIndex++;
-      outputPromiseArray.push(outputPromise);
-    }
-    if (outputPromiseArray.length) {
-      await Promise.all(outputPromiseArray);
-      if (remainingExecutionCount > 0) {
-        await nextChunk();
-      }
-    }
-  };
-  const executeOne = async index => {
-    const input = executionSteps[index];
-    const output = await start(input);
-    if (!multipleExecutionsOperation.signal.aborted) {
-      executionResults[index] = output;
-    }
-    if (cooldownBetweenExecutions) {
-      await new Promise(resolve => setTimeout(resolve, cooldownBetweenExecutions));
-    }
-  };
-  await nextChunk();
-  return executionResults;
-};
-
-/**
- * Execute a list of files and log how it goes.
- * @param {Object} testPlanParameters
- * @param {string|url} testPlanParameters.rootDirectoryUrl Directory containing test files;
- * @param {Object} [testPlanParameters.webServer] Web server info; required when executing test on browsers
- * @param {Object} testPlanParameters.testPlan Object associating files with runtimes where they will be executed
- * @param {boolean} [testPlanParameters.completedExecutionLogAbbreviation=false] Abbreviate completed execution information to shorten terminal output
- * @param {boolean} [testPlanParameters.completedExecutionLogMerging=false] Merge completed execution logs to shorten terminal output
- * @param {number} [testPlanParameters.maxExecutionsInParallel=1] Maximum amount of execution in parallel
- * @param {number} [testPlanParameters.defaultMsAllocatedPerExecution=30000] Milliseconds after which execution is aborted and considered as failed by timeout
- * @param {boolean} [testPlanParameters.failFast=false] Fails immediatly when a test execution fails
- * @param {number} [testPlanParameters.cooldownBetweenExecutions=0] Millisecond to wait between each execution
- * @param {boolean} [testPlanParameters.logMemoryHeapUsage=false] Add memory heap usage during logs
- * @param {boolean} [testPlanParameters.coverageEnabled=false] Controls if coverage is collected during files executions
- * @param {boolean} [testPlanParameters.coverageV8ConflictWarning=true] Warn when coverage from 2 executions cannot be merged
- * @return {Object} An object containing the result of all file executions
- */
-const executeTestPlan = async ({
-  signal = new AbortController().signal,
-  handleSIGINT = true,
-  logLevel = "info",
-  logRefresh = true,
-  logRuntime = true,
-  logEachDuration = true,
-  logSummary = true,
-  logTimeUsage = false,
-  logMemoryHeapUsage = false,
-  logFileRelativeUrl = ".jsenv/test_plan_debug.txt",
-  completedExecutionLogAbbreviation = false,
-  completedExecutionLogMerging = false,
-  rootDirectoryUrl,
-  webServer,
-  testPlan,
-  updateProcessExitCode = true,
-  maxExecutionsInParallel = 1,
-  defaultMsAllocatedPerExecution = 30_000,
-  failFast = false,
-  // keepRunning: false to ensure runtime is stopped once executed
-  // because we have what we wants: execution is completed and
-  // we have associated coverage and console output
-  // passsing true means all node process and browsers launched stays opened
-  // (can eventually be used for debug)
-  keepRunning = false,
-  cooldownBetweenExecutions = 0,
-  gcBetweenExecutions = logMemoryHeapUsage,
-  coverageEnabled = process.argv.includes("--coverage"),
-  coverageConfig = {
-    "file:///**/node_modules/": false,
-    "./**/.*": false,
-    "./**/.*/": false,
-    "./**/src/**/*.js": true,
-    "./**/src/**/*.ts": true,
-    "./**/src/**/*.jsx": true,
-    "./**/src/**/*.tsx": true,
-    "./**/tests/": false,
-    "./**/*.test.html": false,
-    "./**/*.test.js": false,
-    "./**/*.test.mjs": false
-  },
-  coverageIncludeMissing = true,
-  coverageAndExecutionAllowed = false,
-  coverageMethodForNodeJs = process.env.NODE_V8_COVERAGE ? "NODE_V8_COVERAGE" : "Profiler",
-  // - When chromium only -> coverage generated by v8
-  // - When chromium + node -> coverage generated by v8 are merged
-  // - When firefox only -> coverage generated by babel+istanbul
-  // - When chromium + firefox
-  //   -> by default only coverage from chromium is used
-  //   and a warning is logged according to coverageV8ConflictWarning
-  //   -> to collect coverage from both browsers, pass coverageMethodForBrowsers: "istanbul"
-  coverageMethodForBrowsers,
-  // undefined | "playwright" | "istanbul"
-  coverageV8ConflictWarning = true,
-  coverageTempDirectoryUrl,
-  // skip empty means empty files won't appear in the coverage reports (json and html)
-  coverageReportSkipEmpty = false,
-  // skip full means file with 100% coverage won't appear in coverage reports (json and html)
-  coverageReportSkipFull = false,
-  coverageReportTextLog = true,
-  coverageReportJson = process.env.CI,
-  coverageReportJsonFileUrl,
-  coverageReportHtml = !process.env.CI,
-  coverageReportHtmlDirectoryUrl,
-  ...rest
-}) => {
-  let someNeedsServer = false;
-  let someHasCoverageV8 = false;
-  let someNodeRuntime = false;
-  const runtimes = {};
-  // param validation
-  {
-    const unexpectedParamNames = Object.keys(rest);
-    if (unexpectedParamNames.length > 0) {
-      throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param`);
-    }
-    rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl, "rootDirectoryUrl");
-    if (!existsSync(new URL(rootDirectoryUrl))) {
-      throw new Error(`ENOENT on rootDirectoryUrl at ${rootDirectoryUrl}`);
-    }
-    if (typeof testPlan !== "object") {
-      throw new Error(`testPlan must be an object, got ${testPlan}`);
-    }
-    Object.keys(testPlan).forEach(filePattern => {
-      const filePlan = testPlan[filePattern];
-      if (!filePlan) return;
-      Object.keys(filePlan).forEach(executionName => {
-        const executionConfig = filePlan[executionName];
-        const {
-          runtime
-        } = executionConfig;
-        if (runtime) {
-          runtimes[runtime.name] = runtime.version;
-          if (runtime.type === "browser") {
-            if (runtime.capabilities && runtime.capabilities.coverageV8) {
-              someHasCoverageV8 = true;
-            }
-            someNeedsServer = true;
-          }
-          if (runtime.type === "node") {
-            someNodeRuntime = true;
-          }
-        }
-      });
-    });
-    if (someNeedsServer) {
-      await assertAndNormalizeWebServer(webServer);
-    }
-    if (coverageEnabled) {
-      if (coverageMethodForBrowsers === undefined) {
-        coverageMethodForBrowsers = someHasCoverageV8 ? "playwright" : "istanbul";
-      }
-      if (typeof coverageConfig !== "object") {
-        throw new TypeError(`coverageConfig must be an object, got ${coverageConfig}`);
-      }
-      if (!coverageAndExecutionAllowed) {
-        const associationsForExecute = URL_META.resolveAssociations({
-          execute: testPlan
-        }, "file:///");
-        const associationsForCover = URL_META.resolveAssociations({
-          cover: coverageConfig
-        }, "file:///");
-        const patternsMatchingCoverAndExecute = Object.keys(associationsForExecute.execute).filter(testPlanPattern => {
-          const {
-            cover
-          } = URL_META.applyAssociations({
-            url: testPlanPattern,
-            associations: associationsForCover
-          });
-          return cover;
-        });
-        if (patternsMatchingCoverAndExecute.length) {
-          // It would be strange, for a given file to be both covered and executed
-          throw new Error(createDetailedMessage(`some file will be both covered and executed`, {
-            patterns: patternsMatchingCoverAndExecute
-          }));
-        }
-      }
-      if (coverageTempDirectoryUrl === undefined) {
-        coverageTempDirectoryUrl = new URL("./.coverage/tmp/", rootDirectoryUrl);
-      } else {
-        coverageTempDirectoryUrl = assertAndNormalizeDirectoryUrl(coverageTempDirectoryUrl, "coverageTempDirectoryUrl");
-      }
-      if (coverageReportJson) {
-        if (coverageReportJsonFileUrl === undefined) {
-          coverageReportJsonFileUrl = new URL("./.coverage/coverage.json", rootDirectoryUrl);
-        } else {
-          coverageReportJsonFileUrl = assertAndNormalizeFileUrl(coverageReportJsonFileUrl, "coverageReportJsonFileUrl");
-        }
-      }
-      if (coverageReportHtml) {
-        if (coverageReportHtmlDirectoryUrl === undefined) {
-          coverageReportHtmlDirectoryUrl = new URL("./.coverage/", rootDirectoryUrl);
-        } else {
-          coverageReportHtmlDirectoryUrl = assertAndNormalizeDirectoryUrl(coverageReportHtmlDirectoryUrl, "coverageReportHtmlDirectoryUrl");
-        }
-      }
-    }
-  }
-  const logger = createLogger({
-    logLevel
-  });
-  logger.debug(createDetailedMessage(`Prepare executing plan`, {
-    runtimes: JSON.stringify(runtimes, null, "  ")
-  }));
-
-  // param normalization
-  {
-    if (coverageEnabled) {
-      if (Object.keys(coverageConfig).length === 0) {
-        logger.warn(`coverageConfig is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`);
-      }
-      if (someNodeRuntime && coverageEnabled && coverageMethodForNodeJs === "NODE_V8_COVERAGE") {
-        if (process.env.NODE_V8_COVERAGE) {
-          // when runned multiple times, we don't want to keep previous files in this directory
-          await ensureEmptyDirectory(process.env.NODE_V8_COVERAGE);
-        } else {
-          coverageMethodForNodeJs = "Profiler";
-          logger.warn(createDetailedMessage(`process.env.NODE_V8_COVERAGE is required to generate coverage for Node.js subprocesses`, {
-            "suggestion": `set process.env.NODE_V8_COVERAGE`,
-            "suggestion 2": `use coverageMethodForNodeJs: "Profiler". But it means coverage for child_process and worker_thread cannot be collected`
-          }));
-        }
-      }
-    }
-  }
-  testPlan = {
-    "file:///**/node_modules/": null,
-    "**/*./": null,
-    ...testPlan,
-    "**/.jsenv/": null
-  };
-  logger.debug(`Generate executions`);
-  const executionSteps = await executionStepsFromTestPlan({
-    signal,
-    testPlan,
-    rootDirectoryUrl
-  });
-  logger.debug(`${executionSteps.length} executions planned`);
-  const result = await executeSteps(executionSteps, {
-    signal,
-    handleSIGINT,
-    logger,
-    logRefresh,
-    logSummary,
-    logRuntime,
-    logEachDuration,
-    logTimeUsage,
-    logMemoryHeapUsage,
-    logFileRelativeUrl,
-    completedExecutionLogMerging,
-    completedExecutionLogAbbreviation,
-    rootDirectoryUrl,
-    webServer,
-    maxExecutionsInParallel,
-    defaultMsAllocatedPerExecution,
-    failFast,
-    keepRunning,
-    cooldownBetweenExecutions,
-    gcBetweenExecutions,
-    coverageEnabled,
-    coverageConfig,
-    coverageIncludeMissing,
-    coverageMethodForBrowsers,
-    coverageMethodForNodeJs,
-    coverageV8ConflictWarning,
-    coverageTempDirectoryUrl
-  });
-  if (updateProcessExitCode && result.planSummary.counters.total !== result.planSummary.counters.completed) {
-    process.exitCode = 1;
-  }
-  const planCoverage = result.planCoverage;
-  // planCoverage can be null when execution is aborted
-  if (planCoverage) {
-    const promises = [];
-    // keep this one first because it does ensureEmptyDirectory
-    // and in case coverage json file gets written in the same directory
-    // it must be done before
-    if (coverageEnabled && coverageReportHtml) {
-      await ensureEmptyDirectory(coverageReportHtmlDirectoryUrl);
-      const htmlCoverageDirectoryIndexFileUrl = `${coverageReportHtmlDirectoryUrl}index.html`;
-      logger.info(`-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`);
-      promises.push(generateCoverageHtmlDirectory(planCoverage, {
-        rootDirectoryUrl,
-        coverageHtmlDirectoryRelativeUrl: urlToRelativeUrl(coverageReportHtmlDirectoryUrl, rootDirectoryUrl),
-        coverageReportSkipEmpty,
-        coverageReportSkipFull
-      }));
-    }
-    if (coverageEnabled && coverageReportJson) {
-      promises.push(generateCoverageJsonFile({
-        coverage: result.planCoverage,
-        coverageJsonFileUrl: coverageReportJsonFileUrl,
-        logger
-      }));
-    }
-    if (coverageEnabled && coverageReportTextLog) {
-      promises.push(generateCoverageTextLog(result.planCoverage, {
-        coverageReportSkipEmpty,
-        coverageReportSkipFull
-      }));
-    }
-    await Promise.all(promises);
-  }
-  return {
-    testPlanAborted: result.aborted,
-    testPlanSummary: result.planSummary,
-    testPlanReport: result.planReport,
-    testPlanCoverage: planCoverage
-  };
-};
-
-const initJsSupervisorMiddleware = async (page, {
-  webServer,
-  fileUrl,
-  fileServerUrl
-}) => {
-  const inlineScriptContents = new Map();
-  const interceptHtmlToExecute = async ({
-    route
-  }) => {
-    const response = await route.fetch();
-    const originalBody = await response.text();
-    const injectionResult = await injectSupervisorIntoHTML({
-      content: originalBody,
-      url: fileUrl
-    }, {
-      supervisorScriptSrc: `/@fs/${supervisorFileUrl$1.slice("file:///".length)}`,
-      supervisorOptions: {},
-      inlineAsRemote: true,
-      webServer,
-      onInlineScript: ({
-        src,
-        textContent
-      }) => {
-        const inlineScriptWebUrl = new URL(src, `${webServer.origin}/`).href;
-        inlineScriptContents.set(inlineScriptWebUrl, textContent);
-      }
-    });
-    route.fulfill({
-      response,
-      body: injectionResult.content,
-      headers: {
-        ...response.headers(),
-        "content-length": Buffer.byteLength(injectionResult.content)
-      }
-    });
-  };
-  const interceptInlineScript = ({
-    url,
-    route
-  }) => {
-    const inlineScriptContent = inlineScriptContents.get(url);
-    route.fulfill({
-      status: 200,
-      body: inlineScriptContent,
-      headers: {
-        "content-type": "text/javascript",
-        "content-length": Buffer.byteLength(inlineScriptContent)
-      }
-    });
-  };
-  const interceptFileSystemUrl = ({
-    url,
-    route
-  }) => {
-    const relativeUrl = url.slice(webServer.origin.length);
-    const fsPath = relativeUrl.slice("/@fs/".length);
-    const fsUrl = `file:///${fsPath}`;
-    const fileContent = readFileSync$1(new URL(fsUrl), "utf8");
-    route.fulfill({
-      status: 200,
-      body: fileContent,
-      headers: {
-        "content-type": "text/javascript",
-        "content-length": Buffer.byteLength(fileContent)
-      }
-    });
-  };
-  await page.route("**", async route => {
-    const request = route.request();
-    const url = request.url();
-    if (url === fileServerUrl && urlToExtension$1(url) === ".html") {
-      interceptHtmlToExecute({
-        url,
-        request,
-        route
-      });
-      return;
-    }
-    if (inlineScriptContents.has(url)) {
-      interceptInlineScript({
-        url,
-        request,
-        route
-      });
-      return;
-    }
-    const fsServerUrl = new URL("/@fs/", webServer.origin);
-    if (url.startsWith(fsServerUrl)) {
-      interceptFileSystemUrl({
-        url,
-        request,
-        route
-      });
-      return;
-    }
-    route.fallback();
-  });
-};
-
-const initIstanbulMiddleware = async (page, {
-  webServer,
-  rootDirectoryUrl,
-  coverageConfig
-}) => {
-  const associations = URL_META.resolveAssociations({
-    cover: coverageConfig
-  }, rootDirectoryUrl);
-  await page.route("**", async route => {
-    const request = route.request();
-    const url = request.url(); // transform into a local url
-    const fileUrl = WEB_URL_CONVERTER.asFileUrl(url, webServer);
-    const needsInstrumentation = URL_META.applyAssociations({
-      url: fileUrl,
-      associations
-    }).cover;
-    if (!needsInstrumentation) {
-      route.fallback();
-      return;
-    }
-    const response = await route.fetch();
-    const originalBody = await response.text();
-    try {
-      const result = await applyBabelPlugins({
-        babelPlugins: [babelPluginInstrument],
-        urlInfo: {
-          originalUrl: fileUrl,
-          // jsenv server could send info to know it's a js module or js classic
-          // but in the end it's not super important
-          // - it's ok to parse js classic as js module considering it's only for istanbul instrumentation
-          type: "js_module",
-          content: originalBody
-        }
-      });
-      let code = result.code;
-      code = SOURCEMAP.writeComment({
-        contentType: "text/javascript",
-        content: code,
-        specifier: generateSourcemapDataUrl(result.map)
-      });
-      route.fulfill({
-        response,
-        body: code,
-        headers: {
-          ...response.headers(),
-          "content-length": Buffer.byteLength(code)
-        }
-      });
-    } catch (e) {
-      if (e.code === "PARSE_ERROR") {
-        route.fulfill({
-          response
-        });
-      } else {
-        console.error(e);
-        route.fulfill({
-          response
-        });
-      }
-    }
-  });
-};
-
-const createRuntimeFromPlaywright = ({
-  browserName,
-  browserVersion,
-  coveragePlaywrightAPIAvailable = false,
-  shouldIgnoreError = () => false,
-  transformErrorHook = error => error,
-  isolatedTab = false
-}) => {
-  const runtime = {
-    type: "browser",
-    name: browserName,
-    version: browserVersion,
-    capabilities: {
-      coverageV8: coveragePlaywrightAPIAvailable
-    }
-  };
-  let browserAndContextPromise;
-  runtime.run = async ({
-    signal = new AbortController().signal,
-    logger,
-    rootDirectoryUrl,
-    webServer,
-    fileRelativeUrl,
-    // measurePerformance,
-    collectPerformance,
-    coverageEnabled = false,
-    coverageConfig,
-    coverageMethodForBrowsers,
-    coverageFileUrl,
-    stopAfterAllSignal,
-    stopSignal,
-    keepRunning,
-    onConsole,
-    headful = keepRunning,
-    playwrightLaunchOptions = {},
-    ignoreHTTPSErrors = true
-  }) => {
-    const fileUrl = new URL(fileRelativeUrl, rootDirectoryUrl).href;
-    if (!urlIsInsideOf(fileUrl, webServer.rootDirectoryUrl)) {
-      throw new Error(`Cannot execute file that is outside web server root directory
---- file --- 
-${fileUrl}
---- web server root directory url ---
-${webServer.rootDirectoryUrl}`);
-    }
-    const fileServerUrl = WEB_URL_CONVERTER.asWebUrl(fileUrl, webServer);
-    const cleanupCallbackList = createCallbackListNotifiedOnce();
-    const cleanup = memoize(async reason => {
-      await cleanupCallbackList.notify({
-        reason
-      });
-    });
-    const isBrowserDedicatedToExecution = isolatedTab || !stopAfterAllSignal;
-    if (isBrowserDedicatedToExecution || !browserAndContextPromise) {
-      browserAndContextPromise = (async () => {
-        const browser = await launchBrowserUsingPlaywright({
-          signal,
-          browserName,
-          stopOnExit: true,
-          playwrightLaunchOptions: {
-            ...playwrightLaunchOptions,
-            headless: !headful
-          }
-        });
-        if (browser._initializer.version) {
-          runtime.version = browser._initializer.version;
-        }
-        const browserContext = await browser.newContext({
-          ignoreHTTPSErrors
-        });
-        return {
-          browser,
-          browserContext
-        };
-      })();
-    }
-    const {
-      browser,
-      browserContext
-    } = await browserAndContextPromise;
-    const closeBrowser = async () => {
-      const disconnected = browser.isConnected() ? new Promise(resolve => {
-        const disconnectedCallback = () => {
-          browser.removeListener("disconnected", disconnectedCallback);
-          resolve();
-        };
-        browser.on("disconnected", disconnectedCallback);
-      }) : Promise.resolve();
-      // for some reason without this 150ms timeout
-      // browser.close() never resolves (playwright does not like something)
-      await new Promise(resolve => setTimeout(resolve, 150));
-      try {
-        await browser.close();
-      } catch (e) {
-        if (isTargetClosedError(e)) {
-          return;
-        }
-        throw e;
-      }
-      await disconnected;
-    };
-    const page = await browserContext.newPage();
-    const istanbulInstrumentationEnabled = coverageEnabled && (!runtime.capabilities.coverageV8 || coverageMethodForBrowsers === "istanbul");
-    if (istanbulInstrumentationEnabled) {
-      await initIstanbulMiddleware(page, {
-        webServer,
-        rootDirectoryUrl,
-        coverageConfig
-      });
-    }
-    if (!webServer.isJsenvDevServer) {
-      await initJsSupervisorMiddleware(page, {
-        webServer,
-        fileUrl,
-        fileServerUrl
-      });
-    }
-    const closePage = async () => {
-      try {
-        await page.close();
-      } catch (e) {
-        if (isTargetClosedError(e)) {
-          return;
-        }
-        throw e;
-      }
-    };
-    const result = {
-      status: "pending",
-      namespace: null,
-      errors: []
-    };
-    const callbacks = [];
-    if (coverageEnabled) {
-      if (runtime.capabilities.coverageV8 && coverageMethodForBrowsers === "playwright") {
-        await page.coverage.startJSCoverage({
-          // reportAnonymousScripts: true,
-        });
-        callbacks.push(async () => {
-          const v8CoveragesWithWebUrls = await page.coverage.stopJSCoverage();
-          // we convert urls starting with http:// to file:// because we later
-          // convert the url to filesystem path in istanbulCoverageFromV8Coverage function
-          const v8CoveragesWithFsUrls = v8CoveragesWithWebUrls.map(v8CoveragesWithWebUrl => {
-            const fsUrl = WEB_URL_CONVERTER.asFileUrl(v8CoveragesWithWebUrl.url, webServer);
-            return {
-              ...v8CoveragesWithWebUrl,
-              url: fsUrl
-            };
-          });
-          const coverage = await filterV8Coverage({
-            result: v8CoveragesWithFsUrls
-          }, {
-            rootDirectoryUrl,
-            coverageConfig
-          });
-          writeFileSync$1(new URL(coverageFileUrl), JSON.stringify(coverage, null, "  "));
-        });
-      } else {
-        callbacks.push(() => {
-          const scriptExecutionResults = result.namespace;
-          if (scriptExecutionResults) {
-            const coverage = generateCoverageForPage(scriptExecutionResults) || {};
-            writeFileSync$1(new URL(coverageFileUrl), JSON.stringify(coverage, null, "  "));
-          }
-        });
-      }
-    } else {
-      callbacks.push(() => {
-        const scriptExecutionResults = result.namespace;
-        if (scriptExecutionResults) {
-          Object.keys(scriptExecutionResults).forEach(fileRelativeUrl => {
-            delete scriptExecutionResults[fileRelativeUrl].coverage;
-          });
-        }
-      });
-    }
-    if (collectPerformance) {
-      callbacks.push(async () => {
-        const performance = await page.evaluate( /* eslint-disable no-undef */
-        /* istanbul ignore next */
-        () => {
-          const {
-            performance
-          } = window;
-          if (!performance) {
-            return null;
-          }
-          const measures = {};
-          const measurePerfEntries = performance.getEntriesByType("measure");
-          measurePerfEntries.forEach(measurePerfEntry => {
-            measures[measurePerfEntry.name] = measurePerfEntry.duration;
-          });
-          return {
-            timeOrigin: performance.timeOrigin,
-            timing: performance.timing.toJSON(),
-            navigation: performance.navigation.toJSON(),
-            measures
-          };
-        }
-        /* eslint-enable no-undef */);
-
-        result.performance = performance;
-      });
-    }
-
-    // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-console
-    const removeConsoleListener = registerEvent({
-      object: page,
-      eventType: "console",
-      // https://github.com/microsoft/playwright/blob/master/docs/api.md#event-console
-      callback: async consoleMessage => {
-        onConsole({
-          type: consoleMessage.type(),
-          text: `${extractTextFromConsoleMessage(consoleMessage)}
-    `
-        });
-      }
-    });
-    cleanupCallbackList.add(removeConsoleListener);
-    const actionOperation = Abort.startOperation();
-    actionOperation.addAbortSignal(signal);
-    const winnerPromise = new Promise((resolve, reject) => {
-      raceCallbacks({
-        aborted: cb => {
-          return actionOperation.addAbortCallback(cb);
-        },
-        // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-error
-        error: cb => {
-          return registerEvent({
-            object: page,
-            eventType: "error",
-            callback: error => {
-              if (shouldIgnoreError(error, "error")) {
-                return;
-              }
-              cb(transformErrorHook(error));
-            }
-          });
-        },
-        // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
-        // pageerror: () => {
-        //   return registerEvent({
-        //     object: page,
-        //     eventType: "pageerror",
-        //     callback: (error) => {
-        //       if (
-        //         webServer.isJsenvDevServer ||
-        //         shouldIgnoreError(error, "pageerror")
-        //       ) {
-        //         return
-        //       }
-        //       result.errors.push(transformErrorHook(error))
-        //     },
-        //   })
-        // },
-        closed: cb => {
-          // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
-          if (isBrowserDedicatedToExecution) {
-            browser.on("disconnected", async () => {
-              cb({
-                reason: "browser disconnected"
-              });
-            });
-            cleanupCallbackList.add(closePage);
-            cleanupCallbackList.add(closeBrowser);
-          } else {
-            const disconnectedCallback = async () => {
-              throw new Error("browser disconnected during execution");
-            };
-            browser.on("disconnected", disconnectedCallback);
-            page.on("close", () => {
-              cb({
-                reason: "page closed"
-              });
-            });
-            cleanupCallbackList.add(closePage);
-            cleanupCallbackList.add(() => {
-              browser.removeListener("disconnected", disconnectedCallback);
-            });
-            const notifyPrevious = stopAfterAllSignal.notify;
-            stopAfterAllSignal.notify = async () => {
-              await notifyPrevious();
-              browser.removeListener("disconnected", disconnectedCallback);
-              logger.debug(`stopAfterAllSignal notified -> closing ${browserName}`);
-              await closeBrowser();
-            };
-          }
-        },
-        response: async cb => {
-          try {
-            await page.goto(fileServerUrl, {
-              timeout: 0
-            });
-            const returnValue = await page.evaluate( /* eslint-disable no-undef */
-            /* istanbul ignore next */
-            async () => {
-              let startTime;
-              try {
-                startTime = window.performance.timing.navigationStart;
-              } catch (e) {
-                startTime = Date.now();
-              }
-              if (!window.__supervisor__) {
-                throw new Error("window.__supervisor__ is undefined");
-              }
-              const executionResultFromJsenvSupervisor = await window.__supervisor__.getDocumentExecutionResult();
-              return {
-                type: "window_supervisor",
-                startTime,
-                endTime: Date.now(),
-                executionResults: executionResultFromJsenvSupervisor.executionResults
-              };
-            }
-            /* eslint-enable no-undef */);
-
-            cb(returnValue);
-          } catch (e) {
-            reject(e);
-          }
-        }
-      }, resolve);
-    });
-    const writeResult = async () => {
-      const winner = await winnerPromise;
-      if (winner.name === "aborted") {
-        result.status = "aborted";
-        return;
-      }
-      if (winner.name === "error") {
-        let error = winner.data;
-        result.status = "failed";
-        result.errors.push(error);
-        return;
-      }
-      if (winner.name === "pageerror") {
-        let error = winner.data;
-        result.status = "failed";
-        result.errors.push(error);
-        return;
-      }
-      if (winner.name === "closed") {
-        result.status = "failed";
-        result.errors.push(isBrowserDedicatedToExecution ? new Error(`browser disconnected during execution`) : new Error(`page closed during execution`));
-        return;
-      }
-      // winner.name === "response"
-      const {
-        executionResults
-      } = winner.data;
-      result.status = "completed";
-      result.namespace = executionResults;
-      Object.keys(executionResults).forEach(key => {
-        const executionResult = executionResults[key];
-        if (executionResult.status === "failed") {
-          result.status = "failed";
-          if (executionResult.exception) {
-            result.errors.push({
-              ...executionResult.exception,
-              stack: executionResult.exception.text
-            });
-          } else {
-            result.errors.push({
-              ...executionResult.error,
-              stack: executionResult.error.stack
-            });
-          }
-        }
-      });
-    };
-    try {
-      await writeResult();
-      if (collectPerformance) {
-        result.performance = performance;
-      }
-      await callbacks.reduce(async (previous, callback) => {
-        await previous;
-        await callback();
-      }, Promise.resolve());
-    } catch (e) {
-      result.status = "failed";
-      result.errors = [e];
-    }
-    if (keepRunning) {
-      stopSignal.notify = cleanup;
-    } else {
-      await cleanup("execution done");
-    }
-    return result;
-  };
-  if (!isolatedTab) {
-    runtime.isolatedTab = createRuntimeFromPlaywright({
-      browserName,
-      browserVersion,
-      coveragePlaywrightAPIAvailable,
-      shouldIgnoreError,
-      transformErrorHook,
-      isolatedTab: true
-    });
-  }
-  return runtime;
-};
-const generateCoverageForPage = scriptExecutionResults => {
-  let istanbulCoverageComposed = null;
-  Object.keys(scriptExecutionResults).forEach(fileRelativeUrl => {
-    const istanbulCoverage = scriptExecutionResults[fileRelativeUrl].coverage;
-    istanbulCoverageComposed = istanbulCoverageComposed ? composeTwoFileByFileIstanbulCoverages(istanbulCoverageComposed, istanbulCoverage) : istanbulCoverage;
-  });
-  return istanbulCoverageComposed;
-};
-const launchBrowserUsingPlaywright = async ({
-  signal,
-  browserName,
-  stopOnExit,
-  playwrightLaunchOptions
-}) => {
-  const launchBrowserOperation = Abort.startOperation();
-  launchBrowserOperation.addAbortSignal(signal);
-  const playwright = await importPlaywright({
-    browserName
-  });
-  if (stopOnExit) {
-    launchBrowserOperation.addAbortSource(abort => {
-      return raceProcessTeardownEvents({
-        SIGHUP: true,
-        SIGTERM: true,
-        SIGINT: true,
-        beforeExit: true,
-        exit: true
-      }, abort);
-    });
-  }
-  const browserClass = playwright[browserName];
-  try {
-    const browser = await browserClass.launch({
-      ...playwrightLaunchOptions,
-      // let's handle them to close properly browser + remove listener
-      // instead of relying on playwright to do so
-      handleSIGINT: false,
-      handleSIGTERM: false,
-      handleSIGHUP: false
-    });
-    launchBrowserOperation.throwIfAborted();
-    return browser;
-  } catch (e) {
-    if (launchBrowserOperation.signal.aborted && isTargetClosedError(e)) {
-      // rethrow the abort error
-      launchBrowserOperation.throwIfAborted();
-    }
-    throw e;
-  } finally {
-    await launchBrowserOperation.end();
-  }
-};
-const importPlaywright = async ({
-  browserName
-}) => {
-  try {
-    const namespace = await import("playwright");
-    return namespace;
-  } catch (e) {
-    if (e.code === "ERR_MODULE_NOT_FOUND") {
-      throw new Error(createDetailedMessage(`"playwright" not found. You need playwright in your dependencies to use "${browserName}"`, {
-        suggestion: `npm install --save-dev playwright`
-      }), {
-        cause: e
-      });
-    }
-    throw e;
-  }
-};
-const isTargetClosedError = error => {
-  if (error.message.match(/Protocol error \(.*?\): Target closed/)) {
-    return true;
-  }
-  if (error.message.match(/Protocol error \(.*?\): Browser.*?closed/)) {
-    return true;
-  }
-  return error.message.includes("browserContext.close: Browser closed");
-};
-const extractTextFromConsoleMessage = consoleMessage => {
-  return consoleMessage.text();
-  // ensure we use a string so that istanbul won't try
-  // to put any coverage statement inside it
-  // ideally we should use uneval no ?
-  // eslint-disable-next-line no-new-func
-  //   const functionEvaluatedBrowserSide = new Function(
-  //     "value",
-  //     `if (value instanceof Error) {
-  //   return value.stack
-  // }
-  // return value`,
-  //   )
-  //   const argValues = await Promise.all(
-  //     message.args().map(async (arg) => {
-  //       const jsHandle = arg
-  //       try {
-  //         return await jsHandle.executionContext().evaluate(functionEvaluatedBrowserSide, jsHandle)
-  //       } catch (e) {
-  //         return String(jsHandle)
-  //       }
-  //     }),
-  //   )
-  //   const text = argValues.reduce((previous, value, index) => {
-  //     let string
-  //     if (typeof value === "object") string = JSON.stringify(value, null, "  ")
-  //     else string = String(value)
-  //     if (index === 0) return `${previous}${string}`
-  //     return `${previous} ${string}`
-  //   }, "")
-  //   return text
-};
-
-const registerEvent = ({
-  object,
-  eventType,
-  callback
-}) => {
-  object.on(eventType, callback);
-  return () => {
-    object.removeListener(eventType, callback);
-  };
-};
-
-const chromium = createRuntimeFromPlaywright({
-  browserName: "chromium",
-  // browserVersion will be set by "browser._initializer.version"
-  // see also https://github.com/microsoft/playwright/releases
-  browserVersion: "unset",
-  coveragePlaywrightAPIAvailable: true
-});
-const chromiumIsolatedTab = chromium.isolatedTab;
-
-const firefox = createRuntimeFromPlaywright({
-  browserName: "firefox",
-  // browserVersion will be set by "browser._initializer.version"
-  // see also https://github.com/microsoft/playwright/releases
-  browserVersion: "unset"
-});
-const firefoxIsolatedTab = firefox.isolatedTab;
-
-const webkit = createRuntimeFromPlaywright({
-  browserName: "webkit",
-  // browserVersion will be set by "browser._initializer.version"
-  // see also https://github.com/microsoft/playwright/releases
-  browserVersion: "unset",
-  shouldIgnoreError: error => {
-    // we catch error during execution but safari throw unhandled rejection
-    // in a non-deterministic way.
-    // I suppose it's due to some race condition to decide if the promise is catched or not
-    // for now we'll ignore unhandled rejection on wekbkit
-    if (error.name === "Unhandled Promise Rejection") {
-      return true;
-    }
-    return false;
-  },
-  transformErrorHook: error => {
-    // Force error stack to contain the error message
-    // because it's not the case on webkit
-    error.stack = `${error.message}
-    at ${error.stack}`;
-    return error;
-  }
-});
-const webkitIsolatedTab = webkit.isolatedTab;
-
-const ExecOptions = {
-  fromExecArgv: execArgv => {
-    const execOptions = {};
-    let i = 0;
-    while (i < execArgv.length) {
-      const execArg = execArgv[i];
-      const option = execOptionFromExecArg(execArg);
-      const existing = execOptions[option.name];
-      if (existing) {
-        execOptions[option.name] = Array.isArray(existing) ? [...existing, option.value] : [existing, option.value];
-      } else {
-        execOptions[option.name] = option.value;
-      }
-      i++;
-    }
-    return execOptions;
-  },
-  toExecArgv: execOptions => {
-    const execArgv = [];
-    Object.keys(execOptions).forEach(optionName => {
-      const optionValue = execOptions[optionName];
-      if (optionValue === "unset") {
-        return;
-      }
-      if (optionValue === "") {
-        execArgv.push(optionName);
-        return;
-      }
-      if (Array.isArray(optionValue)) {
-        optionValue.forEach(subValue => {
-          execArgv.push(`${optionName}=${subValue}`);
-        });
-      } else {
-        execArgv.push(`${optionName}=${optionValue}`);
-      }
-    });
-    return execArgv;
-  }
-};
-const execOptionFromExecArg = execArg => {
-  const equalCharIndex = execArg.indexOf("=");
-  if (equalCharIndex === -1) {
-    return {
-      name: execArg,
-      value: ""
-    };
-  }
-  const name = execArg.slice(0, equalCharIndex);
-  const value = execArg.slice(equalCharIndex + 1);
-  return {
-    name,
-    value
-  };
-};
-
-const createChildExecOptions = async ({
-  signal = new AbortController().signal,
-  // https://code.visualstudio.com/docs/nodejs/nodejs-debugging#_automatically-attach-debugger-to-nodejs-subprocesses
-  processExecArgv = process.execArgv,
-  processDebugPort = process.debugPort,
-  debugPort = 0,
-  debugMode = "inherit",
-  debugModeInheritBreak = true
-} = {}) => {
-  if (typeof debugMode === "string" && AVAILABLE_DEBUG_MODE.indexOf(debugMode) === -1) {
-    throw new TypeError(createDetailedMessage(`unexpected debug mode.`, {
-      ["debug mode"]: debugMode,
-      ["allowed debug mode"]: AVAILABLE_DEBUG_MODE
-    }));
-  }
-  const childExecOptions = ExecOptions.fromExecArgv(processExecArgv);
-  await mutateDebuggingOptions(childExecOptions, {
-    signal,
-    processDebugPort,
-    debugMode,
-    debugPort,
-    debugModeInheritBreak
-  });
-  return childExecOptions;
-};
-const AVAILABLE_DEBUG_MODE = ["none", "inherit", "inspect", "inspect-brk", "debug", "debug-brk"];
-const mutateDebuggingOptions = async (childExecOptions, {
-  // ensure multiline
-  signal,
-  processDebugPort,
-  debugMode,
-  debugPort,
-  debugModeInheritBreak
-}) => {
-  const parentDebugInfo = getDebugInfo(childExecOptions);
-  const parentDebugModeOptionName = parentDebugInfo.debugModeOptionName;
-  const parentDebugPortOptionName = parentDebugInfo.debugPortOptionName;
-  const childDebugModeOptionName = getChildDebugModeOptionName({
-    parentDebugModeOptionName,
-    debugMode,
-    debugModeInheritBreak
-  });
-  if (!childDebugModeOptionName) {
-    // remove debug mode and debug port fron child options
-    if (parentDebugModeOptionName) {
-      delete childExecOptions[parentDebugModeOptionName];
-    }
-    if (parentDebugPortOptionName) {
-      delete childExecOptions[parentDebugPortOptionName];
-    }
-    return;
-  }
-
-  // replace child debug mode
-  if (parentDebugModeOptionName && parentDebugModeOptionName !== childDebugModeOptionName) {
-    delete childExecOptions[parentDebugModeOptionName];
-  }
-  childExecOptions[childDebugModeOptionName] = "";
-
-  // this is required because vscode does not
-  // support assigning a child spawned without a specific port
-  const childDebugPortOptionValue = debugPort === 0 ? await findFreePort(processDebugPort + 37, {
-    signal
-  }) : debugPort;
-  // replace child debug port
-  if (parentDebugPortOptionName) {
-    delete childExecOptions[parentDebugPortOptionName];
-  }
-  childExecOptions[childDebugModeOptionName] = portToArgValue(childDebugPortOptionValue);
-};
-const getChildDebugModeOptionName = ({
-  parentDebugModeOptionName,
-  debugMode,
-  debugModeInheritBreak
-}) => {
-  if (debugMode === "none") {
-    return undefined;
-  }
-  if (debugMode !== "inherit") {
-    return `--${debugMode}`;
-  }
-  if (!parentDebugModeOptionName) {
-    return undefined;
-  }
-  if (!debugModeInheritBreak && parentDebugModeOptionName === "--inspect-brk") {
-    return "--inspect";
-  }
-  if (!debugModeInheritBreak && parentDebugModeOptionName === "--debug-brk") {
-    return "--debug";
-  }
-  return parentDebugModeOptionName;
-};
-const portToArgValue = port => {
-  if (typeof port !== "number") return "";
-  if (port === 0) return "";
-  return port;
-};
-
-// https://nodejs.org/en/docs/guides/debugging-getting-started/
-const getDebugInfo = processOptions => {
-  const inspectOption = processOptions["--inspect"];
-  if (inspectOption !== undefined) {
-    return {
-      debugModeOptionName: "--inspect",
-      debugPortOptionName: "--inspect-port"
-    };
-  }
-  const inspectBreakOption = processOptions["--inspect-brk"];
-  if (inspectBreakOption !== undefined) {
-    return {
-      debugModeOptionName: "--inspect-brk",
-      debugPortOptionName: "--inspect-port"
-    };
-  }
-  const debugOption = processOptions["--debug"];
-  if (debugOption !== undefined) {
-    return {
-      debugModeOptionName: "--debug",
-      debugPortOptionName: "--debug-port"
-    };
-  }
-  const debugBreakOption = processOptions["--debug-brk"];
-  if (debugBreakOption !== undefined) {
-    return {
-      debugModeOptionName: "--debug-brk",
-      debugPortOptionName: "--debug-port"
-    };
-  }
-  return {};
-};
-
-// export const processIsExecutedByVSCode = () => {
-//   return typeof process.env.VSCODE_PID === "string"
-// }
-
-// see also https://github.com/sindresorhus/execa/issues/96
-const killProcessTree = async (processId, {
-  signal,
-  timeout = 2000
-}) => {
-  const pidtree = requireFromJsenv("pidtree");
-  let descendantProcessIds;
-  try {
-    descendantProcessIds = await pidtree(processId);
-  } catch (e) {
-    if (e.message === "No matching pid found") {
-      descendantProcessIds = [];
-    } else {
-      throw e;
-    }
-  }
-  descendantProcessIds.forEach(descendantProcessId => {
-    try {
-      process.kill(descendantProcessId, signal);
-    } catch (error) {
-      // ignore
-    }
-  });
-  try {
-    process.kill(processId, signal);
-  } catch (e) {
-    if (e.code !== "ESRCH") {
-      throw e;
-    }
-  }
-  let remainingIds = [...descendantProcessIds, processId];
-  const updateRemainingIds = () => {
-    remainingIds = remainingIds.filter(remainingId => {
-      try {
-        process.kill(remainingId, 0);
-        return true;
-      } catch (e) {
-        return false;
-      }
-    });
-  };
-  let timeSpentWaiting = 0;
-  const check = async () => {
-    updateRemainingIds();
-    if (remainingIds.length === 0) {
-      return;
-    }
-    if (timeSpentWaiting > timeout) {
-      const timeoutError = new Error(`timed out waiting for ${remainingIds.length} process to exit (${remainingIds.join(" ")})`);
-      timeoutError.code = "TIMEOUT";
-      throw timeoutError;
-    }
-    await new Promise(resolve => setTimeout(resolve, 400));
-    timeSpentWaiting += 400;
-    await check();
-  };
-  await new Promise(resolve => {
-    setTimeout(resolve, 0);
-  });
-  await check();
-};
-
-// https://nodejs.org/api/process.html#process_signal_events
-const SIGINT_SIGNAL_NUMBER = 2;
-const SIGABORT_SIGNAL_NUMBER = 6;
-const SIGTERM_SIGNAL_NUMBER = 15;
-const EXIT_CODES = {
-  SIGINT: 128 + SIGINT_SIGNAL_NUMBER,
-  SIGABORT: 128 + SIGABORT_SIGNAL_NUMBER,
-  SIGTERM: 128 + SIGTERM_SIGNAL_NUMBER
-};
-
-const IMPORTMAP_NODE_LOADER_FILE_URL = new URL("./importmap_node_loader.mjs?entry_point=", import.meta.url).href;
-
-const NO_EXPERIMENTAL_WARNING_FILE_URL = new URL("./no_experimental_warnings.cjs?entry_point=", import.meta.url).href;
-
-const CONTROLLABLE_CHILD_PROCESS_URL = new URL("./controllable_child_process.mjs?entry_point=", import.meta.url).href;
-const nodeChildProcess = {
-  type: "node",
-  name: "node_child_process",
-  version: process.version.slice(1)
-};
-nodeChildProcess.run = async ({
-  signal = new AbortController().signal,
-  logger,
-  logProcessCommand = false,
-  rootDirectoryUrl,
-  fileRelativeUrl,
-  importMap,
-  keepRunning,
-  gracefulStopAllocatedMs = 4000,
-  stopSignal,
-  onConsole,
-  coverageEnabled = false,
-  coverageConfig,
-  coverageMethodForNodeJs,
-  coverageFileUrl,
-  collectPerformance,
-  env,
-  debugPort,
-  debugMode,
-  debugModeInheritBreak,
-  inheritProcessEnv = true,
-  commandLineOptions = [],
-  stdin = "pipe",
-  stdout = "pipe",
-  stderr = "pipe"
-}) => {
-  if (env !== undefined && typeof env !== "object") {
-    throw new TypeError(`env must be an object, got ${env}`);
-  }
-  env = {
-    ...env,
-    JSENV: true
-  };
-  if (coverageMethodForNodeJs !== "NODE_V8_COVERAGE") {
-    env.NODE_V8_COVERAGE = "";
-  }
-  commandLineOptions = ["--experimental-import-meta-resolve", ...commandLineOptions];
-  if (importMap) {
-    env.IMPORT_MAP = JSON.stringify(importMap);
-    env.IMPORT_MAP_BASE_URL = rootDirectoryUrl;
-    commandLineOptions.push(`--experimental-loader=${IMPORTMAP_NODE_LOADER_FILE_URL}`);
-    commandLineOptions.push(`--require=${fileURLToPath(NO_EXPERIMENTAL_WARNING_FILE_URL)}`);
-  }
-  const cleanupCallbackList = createCallbackListNotifiedOnce();
-  const cleanup = async reason => {
-    await cleanupCallbackList.notify({
-      reason
-    });
-  };
-  const childExecOptions = await createChildExecOptions({
-    signal,
-    debugPort,
-    debugMode,
-    debugModeInheritBreak
-  });
-  const execArgv = ExecOptions.toExecArgv({
-    ...childExecOptions,
-    ...ExecOptions.fromExecArgv(commandLineOptions)
-  });
-  const envForChildProcess = {
-    ...(inheritProcessEnv ? process.env : {}),
-    ...env
-  };
-  logger[logProcessCommand ? "info" : "debug"](`${process.argv[0]} ${execArgv.join(" ")} ${fileURLToPath(CONTROLLABLE_CHILD_PROCESS_URL)}`);
-  const childProcess = fork(fileURLToPath(CONTROLLABLE_CHILD_PROCESS_URL), {
-    execArgv,
-    // silent: true
-    stdio: ["pipe", "pipe", "pipe", "ipc"],
-    env: envForChildProcess
-  });
-  logger.debug(createDetailedMessage(`child process forked (pid ${childProcess.pid})`, {
-    "custom env": JSON.stringify(env, null, "  ")
-  }));
-  // if we pass stream, pipe them https://github.com/sindresorhus/execa/issues/81
-  if (typeof stdin === "object") {
-    stdin.pipe(childProcess.stdin);
-  }
-  if (typeof stdout === "object") {
-    childProcess.stdout.pipe(stdout);
-  }
-  if (typeof stderr === "object") {
-    childProcess.stderr.pipe(stderr);
-  }
-  const childProcessReadyPromise = new Promise(resolve => {
-    onceChildProcessMessage(childProcess, "ready", resolve);
-  });
-  const removeOutputListener = installChildProcessOutputListener(childProcess, ({
-    type,
-    text
-  }) => {
-    onConsole({
-      type,
-      text
-    });
-  });
-  const stop = memoize(async ({
-    gracefulStopAllocatedMs
-  } = {}) => {
-    // all libraries are facing problem on windows when trying
-    // to kill a process spawning other processes.
-    // "killProcessTree" is theorically correct but sometimes keep process handing forever.
-    // Inside GitHub workflow the whole Virtual machine gets unresponsive and ends up being killed
-    // There is no satisfying solution to this problem so we stick to the basic
-    // childProcess.kill()
-    if (process.platform === "win32") {
-      childProcess.kill();
-      return;
-    }
-    if (gracefulStopAllocatedMs) {
-      try {
-        await killProcessTree(childProcess.pid, {
-          signal: GRACEFUL_STOP_SIGNAL,
-          timeout: gracefulStopAllocatedMs
-        });
-        return;
-      } catch (e) {
-        if (e.code === "TIMEOUT") {
-          logger.debug(`kill with SIGTERM because gracefulStop still pending after ${gracefulStopAllocatedMs}ms`);
-          await killProcessTree(childProcess.pid, {
-            signal: GRACEFUL_STOP_FAILED_SIGNAL
-          });
-          return;
-        }
-        throw e;
-      }
-    }
-    await killProcessTree(childProcess.pid, {
-      signal: STOP_SIGNAL
-    });
-    return;
-  });
-  const actionOperation = Abort.startOperation();
-  actionOperation.addAbortSignal(signal);
-  const winnerPromise = new Promise(resolve => {
-    raceCallbacks({
-      aborted: cb => {
-        return actionOperation.addAbortCallback(cb);
-      },
-      // https://nodejs.org/api/child_process.html#child_process_event_disconnect
-      // disconnect: (cb) => {
-      //   return onceProcessEvent(childProcess, "disconnect", cb)
-      // },
-      // https://nodejs.org/api/child_process.html#child_process_event_error
-      error: cb => {
-        return onceChildProcessEvent(childProcess, "error", cb);
-      },
-      exit: cb => {
-        return onceChildProcessEvent(childProcess, "exit", (code, signal) => {
-          cb({
-            code,
-            signal
-          });
-        });
-      },
-      response: cb => {
-        return onceChildProcessMessage(childProcess, "action-result", cb);
-      }
-    }, resolve);
-  });
-  const result = {
-    status: "executing",
-    errors: [],
-    namespace: null
-  };
-  const writeResult = async () => {
-    actionOperation.throwIfAborted();
-    await childProcessReadyPromise;
-    actionOperation.throwIfAborted();
-    await sendToChildProcess(childProcess, {
-      type: "action",
-      data: {
-        actionType: "execute-using-dynamic-import",
-        actionParams: {
-          rootDirectoryUrl,
-          fileUrl: new URL(fileRelativeUrl, rootDirectoryUrl).href,
-          collectPerformance,
-          coverageEnabled,
-          coverageConfig,
-          coverageMethodForNodeJs,
-          coverageFileUrl,
-          exitAfterAction: true
-        }
-      }
-    });
-    const winner = await winnerPromise;
-    if (winner.name === "aborted") {
-      result.status = "aborted";
-      return;
-    }
-    if (winner.name === "error") {
-      const error = winner.data;
-      removeOutputListener();
-      result.status = "failed";
-      result.errors.push(error);
-      return;
-    }
-    if (winner.name === "exit") {
-      const {
-        code
-      } = winner.data;
-      await cleanup("process exit");
-      if (code === 12) {
-        result.status = "failed";
-        result.errors.push(new Error(`node process exited with 12 (the forked child process wanted to use a non-available port for debug)`));
-        return;
-      }
-      if (code === null || code === 0 || code === EXIT_CODES.SIGINT || code === EXIT_CODES.SIGTERM || code === EXIT_CODES.SIGABORT) {
-        result.status = "failed";
-        result.errors.push(new Error(`node process exited during execution`));
-        return;
-      }
-      // process.exit(1) in child process or process.exitCode = 1 + process.exit()
-      // means there was an error even if we don't know exactly what.
-      result.status = "failed";
-      result.errors.push(new Error(`node process exited with code ${code} during execution`));
-      return;
-    }
-    const {
-      status,
-      value
-    } = winner.data;
-    if (status === "action-failed") {
-      result.status = "failed";
-      result.errors.push(value);
-      return;
-    }
-    const {
-      namespace,
-      performance,
-      coverage
-    } = value;
-    result.status = "completed";
-    result.namespace = namespace;
-    result.performance = performance;
-    result.coverage = coverage;
-  };
-  try {
-    await writeResult();
-  } catch (e) {
-    result.status = "failed";
-    result.errors.push(e);
-  }
-  if (keepRunning) {
-    stopSignal.notify = stop;
-  } else {
-    await stop({
-      gracefulStopAllocatedMs
-    });
-  }
-  await actionOperation.end();
-  return result;
-};
-
-// http://man7.org/linux/man-pages/man7/signal.7.html
-// https:// github.com/nodejs/node/blob/1d9511127c419ec116b3ddf5fc7a59e8f0f1c1e4/lib/internal/child_process.js#L472
-const GRACEFUL_STOP_SIGNAL = "SIGTERM";
-const STOP_SIGNAL = "SIGKILL";
-// it would be more correct if GRACEFUL_STOP_FAILED_SIGNAL was SIGHUP instead of SIGKILL.
-// but I'm not sure and it changes nothing so just use SIGKILL
-const GRACEFUL_STOP_FAILED_SIGNAL = "SIGKILL";
-const sendToChildProcess = async (childProcess, {
-  type,
-  data
-}) => {
-  return new Promise((resolve, reject) => {
-    childProcess.send({
-      jsenv: true,
-      type,
-      data
-    }, error => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve();
-      }
-    });
-  });
-};
-const installChildProcessOutputListener = (childProcess, callback) => {
-  // beware that we may receive ansi output here, should not be a problem but keep that in mind
-  const stdoutDataCallback = chunk => {
-    callback({
-      type: "log",
-      text: String(chunk)
-    });
-  };
-  childProcess.stdout.on("data", stdoutDataCallback);
-  const stdErrorDataCallback = chunk => {
-    callback({
-      type: "error",
-      text: String(chunk)
-    });
-  };
-  childProcess.stderr.on("data", stdErrorDataCallback);
-  return () => {
-    childProcess.stdout.removeListener("data", stdoutDataCallback);
-    childProcess.stderr.removeListener("data", stdoutDataCallback);
-  };
-};
-const onceChildProcessMessage = (childProcess, type, callback) => {
-  const onmessage = message => {
-    if (message && message.jsenv && message.type === type) {
-      childProcess.removeListener("message", onmessage);
-      // eslint-disable-next-line no-eval
-      callback(message.data ? eval(`(${message.data})`) : "");
-    }
-  };
-  childProcess.on("message", onmessage);
-  return () => {
-    childProcess.removeListener("message", onmessage);
-  };
-};
-const onceChildProcessEvent = (childProcess, type, callback) => {
-  childProcess.once(type, callback);
-  return () => {
-    childProcess.removeListener(type, callback);
-  };
-};
-
-// https://github.com/avajs/ava/blob/576f534b345259055c95fa0c2b33bef10847a2af/lib/fork.js#L23
-const CONTROLLABLE_WORKER_THREAD_URL = new URL("./controllable_worker_thread.mjs?entry_point=", import.meta.url).href;
-const nodeWorkerThread = {
-  type: "node",
-  name: "node_worker_thread",
-  version: process.version.slice(1)
-};
-nodeWorkerThread.run = async ({
-  signal = new AbortController().signal,
-  // logger,
-  rootDirectoryUrl,
-  fileRelativeUrl,
-  importMap,
-  keepRunning,
-  stopSignal,
-  onConsole,
-  collectConsole = false,
-  collectPerformance,
-  coverageEnabled = false,
-  coverageConfig,
-  coverageMethodForNodeJs,
-  coverageFileUrl,
-  env,
-  debugPort,
-  debugMode,
-  debugModeInheritBreak,
-  inheritProcessEnv = true,
-  commandLineOptions = []
-}) => {
-  if (env !== undefined && typeof env !== "object") {
-    throw new TypeError(`env must be an object, got ${env}`);
-  }
-  env = {
-    ...env,
-    JSENV: true
-  };
-  if (coverageMethodForNodeJs !== "NODE_V8_COVERAGE") {
-    env.NODE_V8_COVERAGE = "";
-  }
-  if (importMap) {
-    env.IMPORT_MAP = JSON.stringify(importMap);
-    env.IMPORT_MAP_BASE_URL = rootDirectoryUrl;
-    commandLineOptions.push(`--experimental-loader=${IMPORTMAP_NODE_LOADER_FILE_URL}`);
-    commandLineOptions.push(`--require=${fileURLToPath(NO_EXPERIMENTAL_WARNING_FILE_URL)}`);
-  }
-  const workerThreadExecOptions = await createChildExecOptions({
-    signal,
-    debugPort,
-    debugMode,
-    debugModeInheritBreak
-  });
-  const execArgvForWorkerThread = ExecOptions.toExecArgv({
-    ...workerThreadExecOptions,
-    ...ExecOptions.fromExecArgv(commandLineOptions)
-  });
-  const envForWorkerThread = {
-    ...(inheritProcessEnv ? process.env : {}),
-    ...env
-  };
-  const cleanupCallbackList = createCallbackListNotifiedOnce();
-  const cleanup = async reason => {
-    await cleanupCallbackList.notify({
-      reason
-    });
-  };
-  const actionOperation = Abort.startOperation();
-  actionOperation.addAbortSignal(signal);
-  // https://nodejs.org/api/worker_threads.html#new-workerfilename-options
-  const workerThread = new Worker(fileURLToPath(CONTROLLABLE_WORKER_THREAD_URL), {
-    env: envForWorkerThread,
-    execArgv: execArgvForWorkerThread,
-    // workerData: { options },
-    stdin: true,
-    stdout: true,
-    stderr: true
-  });
-  const removeOutputListener = installWorkerThreadOutputListener(workerThread, ({
-    type,
-    text
-  }) => {
-    onConsole({
-      type,
-      text
-    });
-  });
-  const workerThreadReadyPromise = new Promise(resolve => {
-    onceWorkerThreadMessage(workerThread, "ready", resolve);
-  });
-  const stop = memoize(async () => {
-    // read all stdout before terminating
-    // (no need for stderr because it's sync)
-    if (collectConsole) {
-      while (workerThread.stdout.read() !== null) {}
-      await new Promise(resolve => {
-        setTimeout(resolve, 50);
-      });
-    }
-    await workerThread.terminate();
-  });
-  const winnerPromise = new Promise(resolve => {
-    raceCallbacks({
-      aborted: cb => {
-        return actionOperation.addAbortCallback(cb);
-      },
-      error: cb => {
-        return onceWorkerThreadEvent(workerThread, "error", cb);
-      },
-      exit: cb => {
-        return onceWorkerThreadEvent(workerThread, "exit", (code, signal) => {
-          cb({
-            code,
-            signal
-          });
-        });
-      },
-      response: cb => {
-        return onceWorkerThreadMessage(workerThread, "action-result", cb);
-      }
-    }, resolve);
-  });
-  const result = {
-    status: "executing",
-    errors: [],
-    namespace: null
-  };
-  const writeResult = async () => {
-    actionOperation.throwIfAborted();
-    await workerThreadReadyPromise;
-    actionOperation.throwIfAborted();
-    await sendToWorkerThread(workerThread, {
-      type: "action",
-      data: {
-        actionType: "execute-using-dynamic-import",
-        actionParams: {
-          rootDirectoryUrl,
-          fileUrl: new URL(fileRelativeUrl, rootDirectoryUrl).href,
-          collectPerformance,
-          coverageEnabled,
-          coverageConfig,
-          coverageMethodForNodeJs,
-          coverageFileUrl,
-          exitAfterAction: true
-        }
-      }
-    });
-    const winner = await winnerPromise;
-    if (winner.name === "aborted") {
-      result.status = "aborted";
-      return;
-    }
-    if (winner.name === "error") {
-      const error = winner.data;
-      removeOutputListener();
-      result.status = "failed";
-      result.errors.push(error);
-      return;
-    }
-    if (winner.name === "exit") {
-      const {
-        code
-      } = winner.data;
-      await cleanup("process exit");
-      if (code === 12) {
-        result.status = "failed";
-        result.errors.push(new Error(`node process exited with 12 (the forked child process wanted to use a non-available port for debug)`));
-        return;
-      }
-      if (code === null || code === 0 || code === EXIT_CODES.SIGINT || code === EXIT_CODES.SIGTERM || code === EXIT_CODES.SIGABORT) {
-        result.status = "failed";
-        result.errors.push(new Error(`node worker thread exited during execution`));
-        return;
-      }
-      // process.exit(1) in child process or process.exitCode = 1 + process.exit()
-      // means there was an error even if we don't know exactly what.
-      result.status = "failed";
-      result.errors.push(new Error(`node worker thread exited with code ${code} during execution`));
-    }
-    const {
-      status,
-      value
-    } = winner.data;
-    if (status === "action-failed") {
-      result.status = "failed";
-      result.errors.push(value);
-      return;
-    }
-    const {
-      namespace,
-      performance,
-      coverage
-    } = value;
-    result.status = "completed";
-    result.namespace = namespace;
-    result.performance = performance;
-    result.coverage = coverage;
-  };
-  try {
-    await writeResult();
-  } catch (e) {
-    result.status = "failed";
-    result.errors.push(e);
-  }
-  if (keepRunning) {
-    stopSignal.notify = stop;
-  } else {
-    await stop();
-  }
-  await actionOperation.end();
-  return result;
-};
-const installWorkerThreadOutputListener = (workerThread, callback) => {
-  // beware that we may receive ansi output here, should not be a problem but keep that in mind
-  const stdoutDataCallback = chunk => {
-    const text = String(chunk);
-    callback({
-      type: "log",
-      text
-    });
-  };
-  workerThread.stdout.on("data", stdoutDataCallback);
-  const stdErrorDataCallback = chunk => {
-    const text = String(chunk);
-    callback({
-      type: "error",
-      text
-    });
-  };
-  workerThread.stderr.on("data", stdErrorDataCallback);
-  return () => {
-    workerThread.stdout.removeListener("data", stdoutDataCallback);
-    workerThread.stderr.removeListener("data", stdErrorDataCallback);
-  };
-};
-const sendToWorkerThread = (worker, {
-  type,
-  data
-}) => {
-  worker.postMessage({
-    jsenv: true,
-    type,
-    data
-  });
-};
-const onceWorkerThreadMessage = (workerThread, type, callback) => {
-  const onmessage = message => {
-    if (message && message.jsenv && message.type === type) {
-      workerThread.removeListener("message", onmessage);
-      // eslint-disable-next-line no-eval
-      callback(message.data ? eval(`(${message.data})`) : undefined);
-    }
-  };
-  workerThread.on("message", onmessage);
-  return () => {
-    workerThread.removeListener("message", onmessage);
-  };
-};
-const onceWorkerThreadEvent = (worker, type, callback) => {
-  worker.once(type, callback);
-  return () => {
-    worker.removeListener(type, callback);
-  };
-};
-
 /*
  * startBuildServer is mean to interact with the build files;
  * files that will be deployed to production server(s).
@@ -26697,96 +23732,4 @@ const createBuildFilesService = ({
 };
 const SECONDS_IN_30_DAYS = 60 * 60 * 24 * 30;
 
-/*
- * Export a function capable to execute a file on a runtime (browser or node) and return how it goes.
- *
- * - can be useful to execute a file in a browser/node.js programmatically
- * - not documented
- * - the most importants parts:
- *   - fileRelativeUrl: the file to execute inside rootDirectoryUrl
- *   - runtime: an object with a "run" method.
- *   The run method will start a browser/node process and execute file in it
- * - Most of the logic lives in "./run.js" used by executeTestPlan to run tests
- */
-const execute = async ({
-  signal = new AbortController().signal,
-  handleSIGINT = true,
-  logLevel,
-  rootDirectoryUrl,
-  webServer,
-  importMap,
-  fileRelativeUrl,
-  allocatedMs,
-  mirrorConsole = true,
-  keepRunning = false,
-  collectConsole,
-  collectCoverage,
-  coverageTempDirectoryUrl,
-  collectPerformance = false,
-  runtime,
-  runtimeParams,
-  ignoreError = false
-}) => {
-  const logger = createLogger({
-    logLevel
-  });
-  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl, "rootDirectoryUrl");
-  const executeOperation = Abort.startOperation();
-  executeOperation.addAbortSignal(signal);
-  if (handleSIGINT) {
-    executeOperation.addAbortSource(abort => {
-      return raceProcessTeardownEvents({
-        SIGINT: true
-      }, abort);
-    });
-  }
-  if (runtime.type === "browser") {
-    await assertAndNormalizeWebServer(webServer);
-  }
-  let resultTransformer = result => result;
-  runtimeParams = {
-    rootDirectoryUrl,
-    webServer,
-    fileRelativeUrl,
-    importMap,
-    ...runtimeParams
-  };
-  let result = await run({
-    signal: executeOperation.signal,
-    logger,
-    allocatedMs,
-    keepRunning,
-    mirrorConsole,
-    collectConsole,
-    collectCoverage,
-    coverageTempDirectoryUrl,
-    collectPerformance,
-    runtime,
-    runtimeParams
-  });
-  result = resultTransformer(result);
-  try {
-    if (result.status === "failed") {
-      if (ignoreError) {
-        return result;
-      }
-      /*
-      Warning: when node launched with --unhandled-rejections=strict, despites
-      this promise being rejected by throw result.error node will completely ignore it.
-      The error can be logged by doing
-      ```js
-      process.setUncaughtExceptionCaptureCallback((error) => {
-      console.error(error.stack)
-      })
-      ```
-      But it feels like a hack.
-      */
-      throw result.errors[result.errors.length - 1];
-    }
-    return result;
-  } finally {
-    await executeOperation.end();
-  }
-};
-
-export { build, chromium, chromiumIsolatedTab, execute, executeTestPlan, firefox, firefoxIsolatedTab, nodeChildProcess, nodeWorkerThread, pingServer, startBuildServer, startDevServer, webkit, webkitIsolatedTab };
+export { build, startBuildServer, startDevServer };
