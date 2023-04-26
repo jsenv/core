@@ -6,14 +6,9 @@ const measures = startMeasures({
   filesystem: true,
 })
 
-const {
-  startDevServer,
-  executeTestPlan,
-  chromium,
-  firefox,
-  webkit,
-  nodeWorkerThread,
-} = await import("@jsenv/core")
+const { startDevServer } = await import("@jsenv/core")
+const { executeTestPlan, chromium, firefox, webkit, nodeWorkerThread } =
+  await import("@jsenv/test")
 
 const devServer = await startDevServer({
   logLevel: "warn",

@@ -1,3 +1,36 @@
+# 35.0.0
+
+- Introduce `@jsenv/test` and update how runtimes are configured
+
+**version 34.0**
+
+```js
+import { executeTestPlan, chromium } from "@jsenv/core"
+
+await executeTestPlan({
+  testPlan: {
+    "**/*.test.html": {
+      runtime: chromium,
+      runtimeParams: { headful: true },
+    },
+  },
+})
+```
+
+**version 35.0**
+
+```js
+import { executeTestPlan, chromium } from "@jsenv/test"
+
+await executeTestPlan({
+  testPlan: {
+    "**/*.test.html": {
+      runtime: chromium({ headful: true }),
+    },
+  },
+})
+```
+
 # 34.3.0
 
 - Add ability to inline file with "?inline"

@@ -5,7 +5,7 @@ const measures = startMeasures({
   memoryHeap: true,
   filesystem: true,
 })
-await import("../../../dist/jsenv.js?v=1")
+await import("../../../dist/jsenv_core.js?v=1")
 const { duration, memoryHeapTotal, memoryHeapUsed, fsRead } = measures.stop()
 
 export const importMetrics = {
