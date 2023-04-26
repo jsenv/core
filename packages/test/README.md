@@ -72,7 +72,7 @@ if (actual !== expected) {
 ```
 
 To keep example very basic "assert" block do not use an assertion library.  
-In pratice test likely needs one. The diff below showns how the "assert" block can be written using [@jsenv/assert](../packages/assert). Note that any other assertion library would work.
+In pratice test likely needs one. The diff below showns how the "assert" block can be written using [@jsenv/assert](../assert). Note that any other assertion library would work.
 
 ```diff
 + import { assert } from "@jsenv/assert"
@@ -154,7 +154,7 @@ It's best to configure `webServer` to lead to jsenv dev server but it does not h
 ## 2.2 Executing on more browsers
 
 ```js
-import { executeTestPlan, chromium, firefox, webkit } from "@jsenv/core"
+import { executeTestPlan, chromium, firefox, webkit } from "@jsenv/test"
 
 await executeTestPlan({
   rootDirectoryUrl: new URL("../", import.meta.url),
@@ -178,7 +178,7 @@ await executeTestPlan({
 With Node.js there is no server involved so test files can be anywhere and only rootDirectoryUrl and testPlan parameters are **required**.
 
 ```js
-import { executeTestPlan, nodeWorkerThread } from "@jsenv/core"
+import { executeTestPlan, nodeWorkerThread } from "@jsenv/test"
 
 await executeTestPlan({
   rootDirectoryUrl: new URL("../", import.meta.url),
@@ -197,7 +197,7 @@ If this duration is exceeded the browser tab (or node process/worker thread) is 
 This duration can be configured as shown below:
 
 ```js
-import { executeTestPlan, nodeWorkerThread } from "@jsenv/core"
+import { executeTestPlan, nodeWorkerThread } from "@jsenv/test"
 
 await executeTestPlan({
   rootDirectoryUrl: new URL("../", import.meta.url),
