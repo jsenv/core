@@ -53,7 +53,13 @@ if (actual !== expected) {
 
 ## 1.3 Assertion library
 
-To keep example very basic no assertion library is used. In practice test would likely use one. The diff below shows how the test would be written in that case.
+The test above is split in 3 steps, called arrange, act, assert
+
+- arrange: import the function to test
+- act: calls that function with some params
+- assert: compare actual with expected and throw an error if it fails 
+
+In the example no assertion library was used during the "assert" step. The code below shows how the test would be written with the help of [@jsenv/assert](../packages/assert). Note that any other assertion library would work.
 
 ```diff
 + import { assert } from "@jsenv/assert"
@@ -66,8 +72,6 @@ const expected = 3
 - }
 + assert({ actual, expected })
 ```
-
-☝️ Code uses [@jsenv/assert](../packages/assert) but any other assertion library is ok.
 
 # 2. JavaScript API
 
