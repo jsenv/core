@@ -53,8 +53,8 @@ if (actual !== expected) {
 
 ## 1.3 Assertion library
 
-To keep example very basic "assert" block do not use an assertion library.  
-In pratice test likely needs one. The diff below showns how the "assert" block can be written using [@jsenv/assert](../assert). Note that any other assertion library would work.
+To have a basic example, the part of the code comparing `actual` and `expected` was done without an assertion library.  
+In pratice a test would likely use one. The diff below shows how the assertion can be written using [@jsenv/assert](../assert). Note that any other assertion library would work.
 
 ```diff
 + import { assert } from "@jsenv/assert"
