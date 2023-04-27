@@ -8,14 +8,14 @@ This tool enforce test files to be written as **standard** files, without any so
 Writing tests for the following "add" function:
 
 ```js
-// add.js
 export const add = (a, b) => a + b
 ```
 
 ## 1.1 Testing "add" on web browser
 
+In a file named "add.test.html":
+
 ```html
-<!-- add.test.html -->
 <!DOCTYPE html>
 <html>
   <head>
@@ -40,8 +40,9 @@ export const add = (a, b) => a + b
 
 ## 1.2 Testing "add" on Node.js
 
+In a file named "add.test.mjs"
+
 ```js
-// add.test.mjs
 import { add } from "./add.js"
 
 const actual = add(1, 2)
@@ -72,7 +73,7 @@ const expected = 3
 
 ## 2.1 Executing tests on browsers
 
-Code below execute all files endings by `".test.html"` on chromium.  
+Code below execute all files endings by `.test.html` on chromium.  
 [playwright](https://github.com/microsoft/playwright)<sup>↗</sup> is used to start a headless chromium.
 
 ```js
@@ -81,7 +82,7 @@ import { executeTestPlan, chromium } from "@jsenv/test"
 await executeTestPlan({
   rootDirectoryUrl: new URL("../", import.meta.url),
   testPlan: {
-    "./**/*.test.html": {
+    "./src/**/*.test.html": {
       chromium: { runtime: chromium() },
     },
   },
@@ -131,7 +132,7 @@ project/
 </pre>
 
 This way the web server can serve test files alongside with source files.  
-It's best to configure `webServer` to lead to jsenv dev server but it does not have to; Any server serving files from a directory can be used.
+`webServer` must be a server capable to all files within a directory, jsenv dev server or a basic file server would work.
 
 ## 2.2 Executing on more browsers
 
