@@ -73,12 +73,12 @@ const expected = 3
 
 ## 2.1 Executing tests on browsers
 
-The following is required:
+Requirements:
 
-1. A directory containing, source files, test files and the scripts
-2. [playwright](https://github.com/microsoft/playwright)<sup>↗</sup> that will be used to start a web browser 
-3. A script capable to start a web server
-4. A script executing test files
+- A directory containing source and test files
+- [playwright](https://github.com/microsoft/playwright)<sup>↗</sup> in your `devDependencies`
+- A script starting a web server
+- A script executing test files
 
 1. File structure
 
@@ -102,9 +102,7 @@ npm i --save-dev playwright
 
 3. "scripts/dev.mjs"
 
-A server is required to run tests in a browser, it must serve source and test files.
-If the server is not started, jsenv import the file configured by `webServer.moduleUrl` to start it.
-
+A server is required to run tests in a browser, it must serve source and test files. 
 
 ```console
 npm i --save-dev @jsenv/core
@@ -143,20 +141,13 @@ await executeTestPlan({
 })
 ```
 
-Note that it's possible to use an other web server than jsenv dev server:
+The tests can now be executed with the following command
 
 ```console
-npm i --save-dev local-web-server
-``
-
-```js
-import LocalWebServer from "local-web-server"
-
-const ws = await LocalWebServer.create({
-  port: 3456,
-  directory: "../src",
-})
+node ./scripts/test.mjs
 ```
+
+:point_up: If the server is not started `executeTestPlan` will start it by importing the file configured by `webServer.moduleUrl`.  
 
 ## 2.2 Executing on more browsers
 
