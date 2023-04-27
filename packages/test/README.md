@@ -95,7 +95,41 @@ await executeTestPlan({
 
 There is a few things to ensure:
 
-### 2.1.1 Install playwright 
+### 2.1.1 File structure
+
+Test files must be visible by the web server, they must be inside `webServer.rootDirectoryUrl`.  
+This way the web server can serve test files alongside with source files.  
+
+<pre>
+project/
+  scripts/
+    dev.mjs
+    test.mjs
+  src/
+    bar.js
+    <strong>bar.test.html</strong>
+    foo.js
+    <strong>foo.test.html</strong>
+    index.html
+</pre>
+
+It's also possible to create a directory dedicated to tests
+
+<pre>
+project/
+  scripts/
+    dev.mjs
+    test.mjs
+  src/
+    tests/
+       <strong>bar.test.html</strong>
+       <strong>foo.test.html</strong>
+    bar.js
+    foo.js
+    index.html
+</pre>
+
+### 2.1.2 Install playwright 
 
 [playwright](https://github.com/microsoft/playwright)<sup>↗</sup> is used to start chromium in headless mode.
 
@@ -103,7 +137,7 @@ There is a few things to ensure:
 npm i playwright --save-dev
 ```
 
-### 2.1.2 A web server
+### 2.1.3 A web server
 
 A server is required to run tests in a browser, it must serve source and test files.
 If the server is not started, jsenv import the file configured by `webServer.moduleUrl` to start it.
@@ -137,34 +171,6 @@ const ws = await LocalWebServer.create({
   directory: "../src",
 })
 ```
-
-### 2.1.3 Test files structure
-
-Test files must be visible by the web server, they must be inside `webServer.rootDirectoryUrl`.  
-This way the web server can serve test files alongside with source files.  
-
-<pre>
-project/
-  src/
-    bar.js
-    <strong>bar.test.html</strong>
-    foo.js
-    <strong>foo.test.html</strong>
-    index.html
-</pre>
-
-It's also possible to create a directory dedicated to tests
-
-<pre>
-project/
-  src/
-    tests/
-       <strong>bar.test.html</strong>
-       <strong>foo.test.html</strong>
-    bar.js
-    foo.js
-    index.html
-</pre>
 
 ## 2.2 Executing on more browsers
 
