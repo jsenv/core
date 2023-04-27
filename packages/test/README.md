@@ -13,7 +13,7 @@ export const add = (a, b) => a + b
 
 ## 1.1 Testing "add" on web browser
 
-In a file named "add.test.html":
+In "add.test.html":
 
 ```html
 <!DOCTYPE html>
@@ -40,7 +40,7 @@ In a file named "add.test.html":
 
 ## 1.2 Testing "add" on Node.js
 
-In a file named "add.test.mjs"
+In "add.test.mjs":
 
 ```js
 import { add } from "./add.js"
@@ -74,7 +74,6 @@ const expected = 3
 ## 2.1 Executing tests on browsers
 
 Code below execute all files endings by `.test.html` on chromium.  
-[playwright](https://github.com/microsoft/playwright)<sup>↗</sup> is used to start a headless chromium.
 
 ```js
 import { executeTestPlan, chromium } from "@jsenv/test"
@@ -94,19 +93,47 @@ await executeTestPlan({
 })
 ```
 
-When executing tests on browsers there is a few things to ensure:
+There is a few things to ensure:
 
-1. `"playwright"` must be in package.json dependencies (`npm i playwright --save-dev`)
+### 2.1.1 Install playwright 
 
-2. `webServer` parameter must be used:
+[playwright](https://github.com/microsoft/playwright)<sup>↗</sup> is used to start chromium in headless mode.
 
-| Param                      | Description                                       | Example                                 |
-| -------------------------- | ------------------------------------------------- | --------------------------------------- |
-| webServer.origin           | url listened by a web server                      | `"http://localhost:3456"`               |
-| webServer.rootDirectoryUrl | url of directory served by the web server         | `new URL("../src/", import.meta.url)`   |
-| webServer.moduleUrl        | url of the file responsible to start a web server | `new URL("./dev.mjs", import.meta.url)` |
+```console
+npm i playwright --save-dev
+```
 
-Test files must be inside `webServer.rootDirectoryUrl`:
+### 2.1.2 Have a web server
+
+A file must be able to start a web server that will be used to execute tests.  
+In the example `webServer.moduleUrl` is configured to `dev.mjs`.   
+So `dev.mjs` must be capable to start a web serverm see 2 examples below.
+
+Using jsenv dev server:
+
+```js
+import { startDevServer } from "@jsenv/core"
+
+await startDevServer({
+  sourceDirectoryUrl: new URL("../src/", import.meta.url),
+  port: 3456,
+})
+```
+
+Using an other web server:
+
+```js
+import LocalWebServer from "local-web-server"
+
+const ws = await LocalWebServer.create({
+  port: 3456,
+  directory: '../src',
+})
+```
+
+### 2.1.3 Test files must be visible to the web server
+
+Test files must be inside `webServer.rootDirectoryUrl`. This way the web server can serve test files alongside with source files.  
 
 <pre>
 project/
@@ -130,9 +157,6 @@ project/
     foo.js
     index.html
 </pre>
-
-This way the web server can serve test files alongside with source files.  
-`webServer` must be a server capable to all files within a directory, jsenv dev server or a basic file server would work.
 
 ## 2.2 Executing on more browsers
 
