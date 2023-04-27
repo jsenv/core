@@ -73,7 +73,57 @@ const expected = 3
 
 ## 2.1 Executing tests on browsers
 
-Code below execute all files endings by `.test.html` on chromium.  
+The following is required:
+
+1. A directory containing, source files, test files and the scripts
+2. [playwright](https://github.com/microsoft/playwright)<sup>↗</sup> that will be used to start a web browser 
+3. A script capable to start a web server
+4. A script executing test files
+
+1. File structure
+
+<pre>
+project/
+  scripts/
+    dev.mjs
+    test.mjs
+  src/
+    add.js
+    <strong>add.test.html</strong>
+    index.html
+  package.json
+</pre>
+
+2. Installing playwright
+
+```console
+npm i --save-dev playwright
+```
+
+3. "scripts/dev.mjs"
+
+A server is required to run tests in a browser, it must serve source and test files.
+If the server is not started, jsenv import the file configured by `webServer.moduleUrl` to start it.
+
+
+```console
+npm i --save-dev @jsenv/core
+```
+
+```js
+import { startDevServer } from "@jsenv/core"
+
+await startDevServer({
+  sourceDirectoryUrl: new URL("../src/", import.meta.url),
+  port: 3456,
+})
+```
+
+4. "scripts/test.mjs"
+
+```console
+npm i --save-dev @jsenv/test
+```
 
 ```js
 import { executeTestPlan, chromium } from "@jsenv/test"
@@ -93,71 +143,7 @@ await executeTestPlan({
 })
 ```
 
-There is a few things to ensure:
-
-### 2.1.1 File structure
-
-Test files must be visible by the web server, they must be inside `webServer.rootDirectoryUrl`.  
-This way the web server can serve test files alongside with source files.  
-
-<pre>
-project/
-  scripts/
-    dev.mjs
-    test.mjs
-  src/
-    bar.js
-    <strong>bar.test.html</strong>
-    foo.js
-    <strong>foo.test.html</strong>
-    index.html
-</pre>
-
-It's also possible to create a directory dedicated to tests
-
-<pre>
-project/
-  scripts/
-    dev.mjs
-    test.mjs
-  src/
-    tests/
-       <strong>bar.test.html</strong>
-       <strong>foo.test.html</strong>
-    bar.js
-    foo.js
-    index.html
-</pre>
-
-### 2.1.2 Install playwright 
-
-[playwright](https://github.com/microsoft/playwright)<sup>↗</sup> is used to start chromium in headless mode.
-
-```console
-npm i playwright --save-dev
-```
-
-### 2.1.3 A web server
-
-A server is required to run tests in a browser, it must serve source and test files.
-If the server is not started, jsenv import the file configured by `webServer.moduleUrl` to start it.
-
-```console
-npm i --save-dev @jsenv/core
-```
-
-In "dev.mjs":
-
-```js
-import { startDevServer } from "@jsenv/core"
-
-await startDevServer({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
-  port: 3456,
-})
-```
-
-It's possible to use an other server than jsenv dev server:
+Note that it's possible to use an other web server than jsenv dev server:
 
 ```console
 npm i --save-dev local-web-server
