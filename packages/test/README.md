@@ -106,11 +106,7 @@ npm i playwright --save-dev
 ### 2.1.2 A web server
 
 A server is required to run tests in a browser.  
-If the web server is not already started, jsenv import `webServer.moduleUrl` to start it.  
-
-The server must serve files from a directory, check 2 examples below.
-
-jsenv dev server:
+If the web server is not already started, jsenv import "dev.mjs" (`webServer.moduleUrl`) to start it.  
 
 ```js
 import { startDevServer } from "@jsenv/core"
@@ -121,7 +117,8 @@ await startDevServer({
 })
 ```
 
-An other web server called "local-web-server":
+Any web server is fine as long as it serve source and test files.
+For the web server could be started using "local-web-server":
 
 ```js
 import LocalWebServer from "local-web-server"
