@@ -103,13 +103,14 @@ There is a few things to ensure:
 npm i playwright --save-dev
 ```
 
-### 2.1.2 Have a web server
+### 2.1.2 A web server
 
-A file must be able to start a web server that will be used to execute tests.  
-In the example `webServer.moduleUrl` is configured to `dev.mjs`.   
-So `dev.mjs` must be capable to start a web serverm see 2 examples below.
+A server is required to run tests in a browser.  
+If the web server is not already started, jsenv import `webServer.moduleUrl` to start it.  
 
-Using jsenv dev server:
+The server must serve files from a directory, check 2 examples below.
+
+jsenv dev server:
 
 ```js
 import { startDevServer } from "@jsenv/core"
@@ -120,20 +121,21 @@ await startDevServer({
 })
 ```
 
-Using an other web server:
+An other web server called "local-web-server":
 
 ```js
 import LocalWebServer from "local-web-server"
 
 const ws = await LocalWebServer.create({
   port: 3456,
-  directory: '../src',
+  directory: "../src",
 })
 ```
 
-### 2.1.3 Test files must be visible to the web server
+### 2.1.3 Test files structure
 
-Test files must be inside `webServer.rootDirectoryUrl`. This way the web server can serve test files alongside with source files.  
+Test files must be visible by the web server, they must be inside `webServer.rootDirectoryUrl`.  
+This way the web server can serve test files alongside with source files.  
 
 <pre>
 project/
