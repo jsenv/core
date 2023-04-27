@@ -75,12 +75,14 @@ const expected = 3
 
 Requirements:
 
-- A directory containing source and test files
-- [playwright](https://github.com/microsoft/playwright)<sup>↗</sup> in your `devDependencies`
-- A script starting a web server
-- A script executing test files
+- File structure
+- Playwright
+- Web server
+- Test script
 
 1. File structure
+
+The following file structure is used in this documentation.
 
 <pre>
 project/
@@ -94,15 +96,17 @@ project/
   package.json
 </pre>
 
-2. Installing playwright
+2. Playwright
+
+A browser will be used to execute tests, [playwright](https://github.com/microsoft/playwright)<sup>↗</sup> will be used and should be added to your "devDependencies".
 
 ```console
 npm i --save-dev playwright
 ```
 
-3. "scripts/dev.mjs"
+3. Web server
 
-A server is required to run tests in a browser, it must serve source and test files. 
+A web server is needed to execute test in the browser. It must serve source and test files.
 
 ```console
 npm i --save-dev @jsenv/core
@@ -117,7 +121,9 @@ await startDevServer({
 })
 ```
 
-4. "scripts/test.mjs"
+4. Test script
+
+The test script is the file that will orchestrate all this to execute all test files in a web browser (chromium in that example).
 
 ```console
 npm i --save-dev @jsenv/test
@@ -208,9 +214,3 @@ await executeTestPlan({
 ```
 
 ☝️ Code above changes the default allocated time to 60s.
-
-# 3. Installation
-
-```console
-npm install --save-dev @jsenv/test
-```
