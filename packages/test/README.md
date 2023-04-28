@@ -6,13 +6,7 @@ This tool enforce test files to be written as **standard** files, without any so
 # 1. Writing tests for web browsers 
 
 This section demonstrates how to write a test that will be executed in a web browser.  
-The function to test is the one below:
-
-```js
-export const add = (a, b) => a + b
-```
-
-And this code is inside "add.js" in the following file structure
+The function to test is exported by "add.js" in the following file structure:
 
 <pre>
 project/
@@ -21,6 +15,10 @@ project/
     index.html
   package.json
 </pre>
+
+```js
+export const add = (a, b) => a + b
+```
 
 ## 1.1 Writing test
 
