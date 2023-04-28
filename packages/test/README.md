@@ -66,7 +66,7 @@ project/
 
 ## 1.2 Executing the test file
 
-*scripts/dev.mjs*, will start a web server that is needed to executed "add.test.html" in a browser. 
+*scripts/dev.mjs*: will start a web server that is needed to executed "add.test.html" in a browser. 
 
 ```js
 import { startDevServer } from "@jsenv/core"
@@ -77,7 +77,7 @@ await startDevServer({
 })
 ```
 
-*scripts/test.mjs* will start a web browser and use it to execute all test files.
+*scripts/test.mjs*: will start a web browser and use it to execute all test files.
 
 ```js
 import { executeTestPlan, chromium } from "@jsenv/test"
