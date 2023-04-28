@@ -83,7 +83,7 @@ export const createRuntimeUsingPlaywright = ({
           stopOnExit: true,
           playwrightLaunchOptions: {
             ...playwrightLaunchOptions,
-            headless: !headful,
+            headless: headful === undefined ? !keepRunning : !headful,
           },
         })
         if (browser._initializer.version) {
