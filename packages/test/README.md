@@ -69,10 +69,6 @@ project/
 A web server is needed to execute "add.test.html" in a browser.  
 It must serve source and test files.
 
-```console
-npm i --save-dev @jsenv/core
-```
-
 *scripts/dev.mjs*
 
 ```js
@@ -84,23 +80,7 @@ await startDevServer({
 })
 ```
 
-The web server can be started as follow:
-
-```console
-node ./scripts/dev.mjs
-```
-
 Finally let's create the script that will start a web browser and execute test file in it.
-
-```console
-npm i --save-dev @jsenv/test
-```
-
-`@jsenv/test` will use [playwright](https://github.com/microsoft/playwright)<sup>↗</sup> to start a web browser. It must be installed as well.
-
-```console
-npm i --save-dev playwright
-```
 
 *scripts/test.mjs*
 
@@ -124,7 +104,23 @@ await executeTestPlan({
 })
 ```
 
-The tests can now be executed with the following command
+Before executing tests, be sure to install dependencies
+
+```console
+npm i --save-dev @jsenv/core
+npm i --save-dev @jsenv/test
+npm i --save-dev playwright
+```
+
+☝️ `@jsenv/test` uses [playwright](https://github.com/microsoft/playwright)<sup>↗</sup> to start a web browser
+
+Web server can be started with the following command
+
+```console
+node ./scripts/dev.mjs
+```
+
+And tests can be executed with the following command
 
 ```console
 node ./scripts/test.mjs
