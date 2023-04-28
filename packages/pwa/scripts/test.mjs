@@ -9,6 +9,6 @@ await executeTestPlan({
       },
     },
   },
-  completedExecutionLogAbbreviation: true,
+  logShortForCompletedExecutions: true,
   failFast: process.argv.includes("--workspace"),
 })

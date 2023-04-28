@@ -21,8 +21,8 @@ import { executeSteps } from "./execute_steps.js"
  * @param {string|url} testPlanParameters.rootDirectoryUrl Directory containing test files;
  * @param {Object} [testPlanParameters.webServer] Web server info; required when executing test on browsers
  * @param {Object} testPlanParameters.testPlan Object associating files with runtimes where they will be executed
- * @param {boolean} [testPlanParameters.completedExecutionLogAbbreviation=false] Abbreviate completed execution information to shorten terminal output
- * @param {boolean} [testPlanParameters.completedExecutionLogMerging=false] Merge completed execution logs to shorten terminal output
+ * @param {boolean} [testPlanParameters.logShortForCompletedExecutions=false] Abbreviate completed execution information to shorten terminal output
+ * @param {boolean} [testPlanParameters.logMergeForCompletedExecutions=false] Merge completed execution logs to shorten terminal output
  * @param {number} [testPlanParameters.maxExecutionsInParallel=1] Maximum amount of execution in parallel
  * @param {number} [testPlanParameters.defaultMsAllocatedPerExecution=30000] Milliseconds after which execution is aborted and considered as failed by timeout
  * @param {boolean} [testPlanParameters.failFast=false] Fails immediatly when a test execution fails
@@ -43,8 +43,8 @@ export const executeTestPlan = async ({
   logTimeUsage = false,
   logMemoryHeapUsage = false,
   logFileRelativeUrl = ".jsenv/test_plan_debug.txt",
-  completedExecutionLogAbbreviation = false,
-  completedExecutionLogMerging = false,
+  logShortForCompletedExecutions = false,
+  logMergeForCompletedExecutions = true,
 
   rootDirectoryUrl,
   webServer,
@@ -293,8 +293,8 @@ export const executeTestPlan = async ({
     logTimeUsage,
     logMemoryHeapUsage,
     logFileRelativeUrl,
-    completedExecutionLogMerging,
-    completedExecutionLogAbbreviation,
+    logShortForCompletedExecutions,
+    logMergeForCompletedExecutions,
     rootDirectoryUrl,
     webServer,
 

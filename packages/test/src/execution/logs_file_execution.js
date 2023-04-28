@@ -21,7 +21,7 @@ export const createExecutionLog = (
     endMs,
   },
   {
-    completedExecutionLogAbbreviation,
+    logShortForCompletedExecutions,
     counters,
     logRuntime,
     logEachDuration,
@@ -43,7 +43,7 @@ export const createExecutionLog = (
     memoryHeap,
   })
   let log
-  if (completedExecutionLogAbbreviation && status === "completed") {
+  if (logShortForCompletedExecutions && status === "completed") {
     log = `${description}${summary}`
   } else {
     const { consoleCalls = [], errors = [] } = executionResult
@@ -75,7 +75,7 @@ export const createExecutionLog = (
     wordWrap: false,
   })
   if (endMs) {
-    if (completedExecutionLogAbbreviation) {
+    if (logShortForCompletedExecutions) {
       return `${log}\n`
     }
     if (executionIndex === counters.total - 1) {

@@ -44,5 +44,5 @@ await executeTestPlan({
     },
   },
   logMemoryHeapUsage: true,
-  completedExecutionLogAbbreviation: process.env.CI,
+  logShortForCompletedExecutions: process.env.CI,
 })

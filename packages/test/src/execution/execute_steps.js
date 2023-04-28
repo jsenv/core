@@ -25,8 +25,8 @@ export const executeSteps = async (
     logTimeUsage,
     logMemoryHeapUsage,
     logFileRelativeUrl,
-    completedExecutionLogMerging,
-    completedExecutionLogAbbreviation,
+    logMergeForCompletedExecutions,
+    logShortForCompletedExecutions,
     rootDirectoryUrl,
     webServer,
 
@@ -124,10 +124,10 @@ export const executeSteps = async (
       stopAfterAllSignal,
     }
 
-    if (completedExecutionLogMerging && !process.stdout.isTTY) {
-      completedExecutionLogMerging = false
+    if (logMergeForCompletedExecutions && !process.stdout.isTTY) {
+      logMergeForCompletedExecutions = false
       logger.debug(
-        `Force completedExecutionLogMerging to false because process.stdout.isTTY is false`,
+        `Force logMergeForCompletedExecutions to false because process.stdout.isTTY is false`,
       )
     }
     const debugLogsEnabled = logger.levels.debug
@@ -273,7 +273,7 @@ export const executeSteps = async (
         }
         if (executionLogsEnabled) {
           const log = createExecutionLog(afterExecutionInfo, {
-            completedExecutionLogAbbreviation,
+            logShortForCompletedExecutions,
             counters,
             logRuntime,
             logEachDuration,
@@ -292,7 +292,7 @@ export const executeSteps = async (
           rawOutput += stripAnsi(log)
 
           const canOverwriteLog = canOverwriteLogGetter({
-            completedExecutionLogMerging,
+            logMergeForCompletedExecutions,
             executionResult,
           })
           if (canOverwriteLog) {
@@ -352,10 +352,10 @@ export const executeSteps = async (
 }
 
 const canOverwriteLogGetter = ({
-  completedExecutionLogMerging,
+  logMergeForCompletedExecutions,
   executionResult,
 }) => {
-  if (!completedExecutionLogMerging) {
+  if (!logMergeForCompletedExecutions) {
     return false
   }
   if (executionResult.status === "aborted") {

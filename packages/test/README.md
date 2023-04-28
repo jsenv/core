@@ -3,9 +3,9 @@
 Executing test files in web browsers and/or Node.js.  
 This tool enforce test files to be written as **standard** files, without any sort of complexity.
 
-# 1. Writing tests on web browsers 
+# 1. Writing tests on web browsers
 
-This section demonstrates how to write a test that will be executed in a web browser. 
+This section demonstrates how to write a test that will be executed in a web browser.
 
 The function that will be tested is inside "add.js" file:
 
@@ -39,7 +39,7 @@ project/
 
 ## 1.1 Writing the test file
 
-*src/add.test.html*
+_src/add.test.html_
 
 ```html
 <!DOCTYPE html>
@@ -66,7 +66,7 @@ project/
 
 ## 1.2 Executing the test file
 
-*scripts/dev.mjs*: will start a web server that is needed to executed "add.test.html" in a browser. 
+_scripts/dev.mjs_: will start a web server that is needed to executed "add.test.html" in a browser.
 
 ```js
 import { startDevServer } from "@jsenv/core"
@@ -77,7 +77,7 @@ await startDevServer({
 })
 ```
 
-*scripts/test.mjs*: will start a web browser and use it to execute all test files.
+_scripts/test.mjs_: will start a web browser and use it to execute all test files.
 
 ```js
 import { executeTestPlan, chromium } from "@jsenv/test"
@@ -87,7 +87,7 @@ await executeTestPlan({
   testPlan: {
     "./src/**/*.test.html": {
       chromium: {
-        runtime: chromium()
+        runtime: chromium(),
       },
     },
   },
@@ -118,25 +118,20 @@ node ./scripts/test.mjs
 ### 1.3 Executing on more browsers
 
 ```js
-import {
-  executeTestPlan,
-  chromium,
-  firefox,
-  webkit,
-} from "@jsenv/test"
+import { executeTestPlan, chromium, firefox, webkit } from "@jsenv/test"
 
 await executeTestPlan({
   rootDirectoryUrl: new URL("../", import.meta.url),
   testPlan: {
     "./src/**/*.test.html": {
       chromium: {
-        runtime: chromium()
+        runtime: chromium(),
       },
       firefox: {
-        runtime: firefox()
+        runtime: firefox(),
       },
       webkit: {
-        runtime: webkit()
+        runtime: webkit(),
       },
     },
   },
@@ -150,7 +145,7 @@ await executeTestPlan({
 
 # 2. Writing tests on Node.js
 
-This section demonstrates how to write a test that will be executed in Node.js. 
+This section demonstrates how to write a test that will be executed in Node.js.
 
 The function that will be tested is inside "add.js" file:
 
@@ -182,7 +177,7 @@ project/
 
 ## 2.1 Writing the test file
 
-*add.test.mjs*
+_add.test.mjs_
 
 ```js
 import { add } from "./add.js"
@@ -196,7 +191,7 @@ if (actual !== expected) {
 
 ## 2.2 Executing the test file
 
-*scripts/test.mjs*
+_scripts/test.mjs_
 
 ```js
 import { executeTestPlan, nodeWorkerThread } from "@jsenv/test"
@@ -206,7 +201,7 @@ await executeTestPlan({
   testPlan: {
     "./tests/**/*.test.mjs": {
       node: {
-        runtime: nodeWorkerThread()
+        runtime: nodeWorkerThread(),
       },
     },
   },
@@ -247,11 +242,46 @@ const expected = 3
 ## 4.1 executeTestPlan
 
 ```js
-import { executeTestPlan } from "@jsenv/test"
+import {
+  executeTestPlan,
+  chromium,
+  firefox,
+  webkit,
+  nodeWorkerThread,
+  nodeChildProcess,
+} from "@jsenv/test"
 
 const report = await executeTestPlan({
-  keepRunning: false, // true would keep process alive and all browsers opened even when tests are done 
-  coverageEnabled: false, // collect code coverage while executing tests
+  rootDirectoryUrl: new URL("../", import.meta.url),
+  testPlan: {
+    "./src/**/*.test.html": {
+      chromium: {
+        runtime: chromium(),
+      },
+      firefox: {
+        runtime: firefox(),
+      },
+      webkit: {
+        runtime: webkit(),
+      },
+    },
+    "./src/**/*.test.mjs": {
+      node_worker: {
+        runtime: nodeWorkerThread(),
+      },
+      node_process: {
+        runtime: nodeChildProcess(),
+      },
+    },
+  },
+  webServer: {
+    origin: "http://localhost:3456",
+    rootDirectoryUrl: new URL("../src/", import.meta.url),
+    moduleUrl: new URL("./dev.mjs", import.meta.url),
+  },
+  keepRunning: true,
+  coverageEnabled: true,
+  logShortForCompletedExecutions,
 })
 report // contains many information about test executions
 ```
@@ -260,10 +290,10 @@ report // contains many information about test executions
 
 chromium, firefox and webkit can be configured, they use the same parameters listed in the table below:
 
-Parameter               | Description
------------------------ | ------------------------------------
-headful                 | browser UI would be displayed while running tests
-playwrightLaunchOptions | Will be forwarded to playwright launch, see https://playwright.dev/docs/api/class-browsertype#browser-type-launch
+| Parameter               | Description                                                                                                       |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| headful                 | browser UI would be displayed while running tests                                                                 |
+| playwrightLaunchOptions | Will be forwarded to playwright launch, see https://playwright.dev/docs/api/class-browsertype#browser-type-launch |
 
 ```js
 import { executeTestPlan, chromium } from "@jsenv/test"
@@ -275,7 +305,7 @@ await executeTestPlan({
       chromium: {
         runtime: chromium({
           headful: true,
-        })
+        }),
       },
     },
   },
@@ -291,17 +321,14 @@ await executeTestPlan({
 
 nodeWorkerThread and nodeChildProcess can be configured, they use the same parameters listed in the table below:
 
-Parameter           | Description
-------------------- | ----------------------------------------------------------
-commandLineOptions  | Command line options for node, see https://nodejs.org/api/cli.html#options
-env                 | Becomes `process.env`, see "env" in https://nodejs.org/api/child_process.html#child_processexeccommand-options-callback
-importMap           | Can be used to override import resolution (redirect to other files during test)
+| Parameter          | Description                                                                                                             |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| commandLineOptions | Command line options for node, see https://nodejs.org/api/cli.html#options                                              |
+| env                | Becomes `process.env`, see "env" in https://nodejs.org/api/child_process.html#child_processexeccommand-options-callback |
+| importMap          | Can be used to override import resolution (redirect to other files during test)                                         |
 
 ```js
-import {
-  executeTestPlan,
-  nodeWorkerThread
-} from "@jsenv/test"
+import { executeTestPlan, nodeWorkerThread } from "@jsenv/test"
 
 await executeTestPlan({
   rootDirectoryUrl: new URL("../", import.meta.url),
@@ -313,7 +340,7 @@ await executeTestPlan({
           env: { TEST: "1" },
           importMap: {
             imports: {
-              "foo": "./foo.mock.js"
+              foo: "./foo.mock.js",
             },
           },
         }),
@@ -330,10 +357,7 @@ If this duration is exceeded the browser tab (or node process/worker thread) is 
 This duration can be configured as shown below:
 
 ```js
-import {
-  executeTestPlan,
-  nodeWorkerThread
-} from "@jsenv/test"
+import { executeTestPlan, nodeWorkerThread } from "@jsenv/test"
 
 await executeTestPlan({
   rootDirectoryUrl: new URL("../", import.meta.url),
@@ -341,7 +365,7 @@ await executeTestPlan({
     "./tests/**/*.test.mjs": {
       node: {
         runtime: nodeWorkerThread(),
-        allocatedMs: 60_000
+        allocatedMs: 60_000,
       },
     },
   },
@@ -349,5 +373,3 @@ await executeTestPlan({
 ```
 
 ☝️ Code above changes the default allocated time to 60s.
-
-

@@ -10,8 +10,7 @@ await executeTestPlan({
       },
     },
   },
-  completedExecutionLogAbbreviation: true,
   failFast: process.argv.includes("--workspace"),
-  completedExecutionLogMerging: process.argv.includes("--workspace"),
-  coverageEnabled: process.argv.includes("--coverage"),
+  logShortForCompletedExecutions: true,
+  logMergeForCompletedExecutions: process.argv.includes("--workspace"),
 })

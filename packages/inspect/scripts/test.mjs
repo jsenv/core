@@ -31,7 +31,7 @@ await executeTestPlan({
     origin: "http://localhost:3456",
     moduleUrl: new URL("./dev.mjs", import.meta.url),
   },
-  completedExecutionLogAbbreviation: true,
   failFast: process.argv.includes("--workspace"),
-  completedExecutionLogMerging: process.argv.includes("--workspace"),
+  logShortForCompletedExecutions: true,
+  logMergeForCompletedExecutions: process.argv.includes("--workspace"),
 })
