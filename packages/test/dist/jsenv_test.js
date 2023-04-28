@@ -3997,7 +3997,7 @@ const executeTestPlan = async ({
   logMemoryHeapUsage = false,
   logFileRelativeUrl = ".jsenv/test_plan_debug.txt",
   logShortForCompletedExecutions = false,
-  logMergeForCompletedExecutions = true,
+  logMergeForCompletedExecutions = false,
   rootDirectoryUrl,
   webServer,
   testPlan,
