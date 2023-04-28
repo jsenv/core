@@ -51,19 +51,10 @@ Create file `src/add.test.html` with the following content:
 
 In order to execute "add.test.html" the following is required:
 
-- Installing playwright
 - A script starting a web server
 - A script using `@jsenv/test`
 
-### 1.2.1 Installing playwright
-
-`@jsenv/test` uses [playwright](https://github.com/microsoft/playwright)<sup>↗</sup> to start a web browser. It must be added to your project
-
-```console
-npm i --save-dev playwright
-```
-
-### 1.2.2 A script starting a web server
+**A script starting a web server**
 
 A web server is needed to execute test in the browser.  
 It must serve source and test files.
@@ -89,12 +80,18 @@ The web server can be started as follow:
 node ./scripts/dev.mjs
 ```
 
-### 1.2.3 A script using `@jsenv/test`
+**A script using `@jsenv/test`**
 
 The test script is the file that will orchestrate all this to execute all test files in a web browser (chromium in that example).
 
 ```console
 npm i --save-dev @jsenv/test
+```
+
+`@jsenv/test` will use [playwright](https://github.com/microsoft/playwright)<sup>↗</sup> to start a web browser. It must be installed as well.
+
+```console
+npm i --save-dev playwright
 ```
 
 Create file `scripts/test.mjs` with the following content:
