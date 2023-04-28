@@ -258,13 +258,12 @@ report // contains many information about test executions
 
 ## 4.2 chromium/firefox/webkit
 
-Params can be used to configure how the browser runtime is started.  
-chromium, firefox and webkit uses the same parameters.
+chromium, firefox and webkit can be configured, they use the same parameters listed in the table below:
 
-Parameter           | Description
-------------------- | ------------------------------------
-headful             | browser UI would be displayed while running tests
-
+Parameter               | Description
+----------------------- | ------------------------------------
+headful                 | browser UI would be displayed while running tests
+playwrightLaunchOptions | Will be forwarded to playwright launch, see https://playwright.dev/docs/api/class-browsertype#browser-type-launch
 
 ```js
 import { executeTestPlan, chromium } from "@jsenv/test"
@@ -290,8 +289,7 @@ await executeTestPlan({
 
 ## 4.3 nodeWorkerThread/nodeChildProcess
 
-Params can be used to configure how node child process or node worker thread is started.  
-nodeWorkerThread and nodeChildProcess uses the same parameters.
+nodeWorkerThread and nodeChildProcess can be configured, they use the same parameters listed in the table below:
 
 Parameter           | Description
 ------------------- | ----------------------------------------------------------
