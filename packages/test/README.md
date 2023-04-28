@@ -3,17 +3,29 @@
 Executing test files in web browsers and/or Node.js.  
 This tool enforce test files to be written as **standard** files, without any sort of complexity.
 
-# 1. Example
+# 1. Writing tests for web browsers 
 
-Writing tests for the following "add" function:
+This section demonstrates how to write a test for a function.  
+The test file will be executed in a web browser.
+The function to test is the one below:
 
 ```js
 export const add = (a, b) => a + b
 ```
 
-## 1.1 Testing "add" on web browser
+And this code is inside "add.js" in the following file structure
 
-In "add.test.html":
+<pre>
+project/
+  src/
+    <strong>add.js</strong>
+    index.html
+  package.json
+</pre>
+
+## 1.1 Writing test
+
+Create a file `src/add.test.html` with the following content:
 
 ```html
 <!DOCTYPE html>
@@ -37,6 +49,73 @@ In "add.test.html":
   </body>
 </html>
 ```
+
+## 1.2 Executing test
+
+In order to execute the test the following is required:
+
+- Installing playwright
+- A script starting a web server
+- A script using `@jsenv/test`
+
+### 1.2.1 Installing playwright
+
+`@jsenv/test` uses [playwright](https://github.com/microsoft/playwright)<sup>↗</sup> to start a web browser. This tool should be added to your project
+
+```console
+npm i --save-dev playwright
+```
+
+### 1.2.2 A script starting a web server
+
+A web server is needed to execute test in the browser. It must serve source and test files.
+
+```console
+npm i --save-dev @jsenv/core
+```
+
+```js
+import { startDevServer } from "@jsenv/core"
+
+await startDevServer({
+  sourceDirectoryUrl: new URL("../src/", import.meta.url),
+  port: 3456,
+})
+```
+
+### 1.2.3 A script using `@jsenv/test`
+
+The test script is the file that will orchestrate all this to execute all test files in a web browser (chromium in that example).
+
+```console
+npm i --save-dev @jsenv/test
+```
+
+```js
+import { executeTestPlan, chromium } from "@jsenv/test"
+
+await executeTestPlan({
+  rootDirectoryUrl: new URL("../", import.meta.url),
+  testPlan: {
+    "./src/**/*.test.html": {
+      chromium: { runtime: chromium() },
+    },
+  },
+  webServer: {
+    origin: "http://localhost:3456",
+    rootDirectoryUrl: new URL("../src/", import.meta.url),
+    moduleUrl: new URL("./dev.mjs", import.meta.url),
+  },
+})
+```
+
+The tests can now be executed with the following command
+
+```console
+node ./scripts/test.mjs
+```
+
+:point_up: If the server is not started `executeTestPlan` will start it by importing the file configured by `webServer.moduleUrl`.  
 
 ## 1.2 Testing "add" on Node.js
 
@@ -80,80 +159,8 @@ Requirements:
 - Web server
 - Test script
 
-1. File structure
 
-The following file structure is used in this documentation.
 
-<pre>
-project/
-  scripts/
-    dev.mjs
-    test.mjs
-  src/
-    add.js
-    <strong>add.test.html</strong>
-    index.html
-  package.json
-</pre>
-
-2. Playwright
-
-A browser will be used to execute tests, [playwright](https://github.com/microsoft/playwright)<sup>↗</sup> will be used and should be added to your "devDependencies".
-
-```console
-npm i --save-dev playwright
-```
-
-3. Web server
-
-A web server is needed to execute test in the browser. It must serve source and test files.
-
-```console
-npm i --save-dev @jsenv/core
-```
-
-```js
-import { startDevServer } from "@jsenv/core"
-
-await startDevServer({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
-  port: 3456,
-})
-```
-
-4. Test script
-
-The test script is the file that will orchestrate all this to execute all test files in a web browser (chromium in that example).
-
-```console
-npm i --save-dev @jsenv/test
-```
-
-```js
-import { executeTestPlan, chromium } from "@jsenv/test"
-
-await executeTestPlan({
-  rootDirectoryUrl: new URL("../", import.meta.url),
-  testPlan: {
-    "./src/**/*.test.html": {
-      chromium: { runtime: chromium() },
-    },
-  },
-  webServer: {
-    origin: "http://localhost:3456",
-    rootDirectoryUrl: new URL("../src/", import.meta.url),
-    moduleUrl: new URL("./dev.mjs", import.meta.url),
-  },
-})
-```
-
-The tests can now be executed with the following command
-
-```console
-node ./scripts/test.mjs
-```
-
-:point_up: If the server is not started `executeTestPlan` will start it by importing the file configured by `webServer.moduleUrl`.  
 
 ## 2.2 Executing on more browsers
 
