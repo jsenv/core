@@ -5,8 +5,15 @@ This tool enforce test files to be written as **standard** files, without any so
 
 # 1. Writing tests for web browsers 
 
-This section demonstrates how to write a test that will be executed in a web browser.  
-The function to test is exported by "add.js" in the following file structure:
+This section demonstrates how to write a test that will be executed in a web browser. 
+
+The function that will be tested is inside "add.js" file:
+
+```js
+export const add = (a, b) => a + b
+```
+
+The demonstration uses the following file structure:
 
 <pre>
 project/
@@ -16,13 +23,23 @@ project/
   package.json
 </pre>
 
-```js
-export const add = (a, b) => a + b
-```
+At the end of the demo, the file structure will be like this:
+
+<pre>
+project/
+  scripts/
+    dev.mjs
+    test.mjs
+  src/
+    <strong>add.js</strong>
+    <strong>add.test.html</strong>
+    index.html
+  package.json
+</pre>
 
 ## 1.1 Writing the test file
 
-Create file `src/add.test.html` with the following content:
+`src/add.test.html`:
 
 ```html
 <!DOCTYPE html>
@@ -49,21 +66,14 @@ Create file `src/add.test.html` with the following content:
 
 ## 1.2 Executing the test file
 
-In order to execute "add.test.html" the following is required:
-
-- A script starting a web server
-- A script using `@jsenv/test`
-
-**A script starting a web server**
-
-A web server is needed to execute test in the browser.  
+A web server is needed to execute "add.test.html" in a browser.  
 It must serve source and test files.
 
 ```console
 npm i --save-dev @jsenv/core
 ```
 
-Create file `scripts/dev.mjs` with the following content:
+`scripts/dev.mjs`:
 
 ```js
 import { startDevServer } from "@jsenv/core"
@@ -80,9 +90,7 @@ The web server can be started as follow:
 node ./scripts/dev.mjs
 ```
 
-**A script using `@jsenv/test`**
-
-The test script is the file that will orchestrate all this to execute all test files in a web browser (chromium in that example).
+Finally let's create the script that will start a web browser and execute test file in it.
 
 ```console
 npm i --save-dev @jsenv/test
@@ -94,7 +102,7 @@ npm i --save-dev @jsenv/test
 npm i --save-dev playwright
 ```
 
-Create file `scripts/test.mjs` with the following content:
+`scripts/test.mjs`:
 
 ```js
 import { executeTestPlan, chromium } from "@jsenv/test"
