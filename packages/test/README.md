@@ -28,10 +28,10 @@ At the end of the demo, the file structure will be like this:
 <pre>
 project/
   scripts/
-    dev.mjs
-    test.mjs
+    <strong>dev.mjs</strong>
+    <strong>test.mjs</strong>
   src/
-    <strong>add.js</strong>
+    add.js
     <strong>add.test.html</strong>
     index.html
   package.json
