@@ -148,7 +148,7 @@ await executeTestPlan({
 })
 ```
 
-## 2 Writing tests on Node.js
+## 2. Writing tests on Node.js
 
 This section demonstrates how to write a test that will be executed in Node.js. 
 
@@ -225,7 +225,7 @@ Command to execute tests:
 node ./scripts/test.mjs
 ```
 
-## 3 Assertion library
+## 3. Assertion library
 
 To have a basic example, the part of the code comparing `actual` and `expected` was done without an assertion library.  
 In pratice a test would likely use one. The diff below shows how the assertion can be written using [@jsenv/assert](../assert). Note that any other assertion library would work.
@@ -242,7 +242,49 @@ const expected = 3
 + assert({ actual, expected })
 ```
 
-## 4 Allocated time
+## 4. API
+
+## 4.1 executeTestPlan
+
+```js
+import { executeTestPlan } from "@jsenv/test"
+
+const report = await executeTestPlan({
+  keepRunning: false, // true would keep process alive and all browsers opened even when tests are done 
+  coverageEnabled: false, // collect code coverage while executing tests
+})
+report // contains many information about test executions
+```
+
+## 4.2 chromium/firefox/webkit
+
+Params can be used to configure how the browser runtime is started
+
+```js
+chromium({
+  headful: true // browser UI would be displayed while running tests
+})
+```
+
+## 4.3 nodeWorkerThread/nodeChildProcess
+
+Params can be used to configure how node child process or node worker thread is started.
+Both runtime share the same arguments.
+
+```js
+import {
+  nodeWorkerThread,
+  nodeChildProcess
+} from "@jsenv/test"
+
+nodeWorkerThread({
+  commandLineOptions: [], // see https://nodejs.org/api/cli.html#options
+  env: null // will be written on process.env, see https://nodejs.org/api/child_process.html#child_processexeccommand-options-callback
+  importMap: null, // can be used to override import resolution (redirect to other files during test)
+})
+```
+
+## 4.4 Allocated time
 
 Each file is given 30s to execute.
 If this duration is exceeded the browser tab (or node process/worker thread) is closed and execution is considered as failed.
