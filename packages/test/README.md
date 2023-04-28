@@ -239,8 +239,6 @@ const expected = 3
 
 # 4. API
 
-## 4.1 executeTestPlan
-
 ```js
 import {
   executeTestPlan,
@@ -270,7 +268,13 @@ const report = await executeTestPlan({
         runtime: nodeWorkerThread(),
       },
       node_process: {
-        runtime: nodeChildProcess(),
+        runtime: nodeChildProcess({
+          commandLineOptions: ["--no-warnings"],
+          env: { TEST: "1" },
+          importMap: {
+            imports: { foo: "./foo_mock.js" },
+          },
+        }),
       },
     },
   },
@@ -280,75 +284,55 @@ const report = await executeTestPlan({
     moduleUrl: new URL("./dev.mjs", import.meta.url),
   },
   keepRunning: true,
+  logShortForCompletedExecutions: true,
+  logMergeForCompletedExecutions: true,
   coverageEnabled: true,
-  logShortForCompletedExecutions,
+  coverageConfig: {
+    "./src/**/*.js": true,
+    "./src/**/*.test.mjs": false,
+  },
 })
 report // contains many information about test executions
 ```
 
+| Parameter                      | Description                                                                                           |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| rootDirectoryUrl               | Url used to resolve relative urls in other parameters (like testPlan)                                 |
+| testPlan                       | Object listing the files to execute and configuring where they will be executed                       |
+| keepRunning                    | Boolean that can be used to keep browser/node process alive after all executions are done             |
+| logShortForCompletedExecutions | Boolean, when enabled completed execution logs will be shorter                                        |
+| logMergeForCompletedExecutions | Boolean, when enabled, as long as executions are completed, logs are overridden to shorten the output |
+| coverageEnabled                | Boolean controlling if code coverage will be collected while executing test files                     |
+| coverageConfig                 | Object describing the files that should be covered                                                    |
+| coverageReportHtml             | Boolean controlling if a code coverage report will be written as HTML files                           |
+| coverageReportHtmlDirectoryUrl | String or url where html files composing the code coverage report will be written                     |
+
+# 4.1 webServer
+
+| Parameter                  | Description                                                                                                       |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| webServer.origin           | Url listened by the web server                                                                                    |
+| webServer.rootDirectoryUrl | Url leading to the root directory for the web server                                                              |
+| webServer.moduleUrl        | `executeTestPlan` does a dynamic import on `webServer.moduleUrl` if there is nothing listening `webServer.origin` |
+
 ## 4.2 chromium/firefox/webkit
 
-chromium, firefox and webkit can be configured, they use the same parameters listed in the table below:
+chromium, firefox and webkit runtimes can be configured, they use the parameters listed in the table below:
 
 | Parameter               | Description                                                                                                       |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | headful                 | browser UI would be displayed while running tests                                                                 |
 | playwrightLaunchOptions | Will be forwarded to playwright launch, see https://playwright.dev/docs/api/class-browsertype#browser-type-launch |
 
-```js
-import { executeTestPlan, chromium } from "@jsenv/test"
-
-await executeTestPlan({
-  rootDirectoryUrl: new URL("../", import.meta.url),
-  testPlan: {
-    "./src/**/*.test.html": {
-      chromium: {
-        runtime: chromium({
-          headful: true,
-        }),
-      },
-    },
-  },
-  webServer: {
-    origin: "http://localhost:3456",
-    rootDirectoryUrl: new URL("../src/", import.meta.url),
-    moduleUrl: new URL("./dev.mjs", import.meta.url),
-  },
-})
-```
-
 ## 4.3 nodeWorkerThread/nodeChildProcess
 
-nodeWorkerThread and nodeChildProcess can be configured, they use the same parameters listed in the table below:
+nodeWorkerThread and nodeChildProcess can be configured, they use the parameters listed in the table below:
 
 | Parameter          | Description                                                                                                             |
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------- |
 | commandLineOptions | Command line options for node, see https://nodejs.org/api/cli.html#options                                              |
 | env                | Becomes `process.env`, see "env" in https://nodejs.org/api/child_process.html#child_processexeccommand-options-callback |
 | importMap          | Can be used to override import resolution (redirect to other files during test)                                         |
-
-```js
-import { executeTestPlan, nodeWorkerThread } from "@jsenv/test"
-
-await executeTestPlan({
-  rootDirectoryUrl: new URL("../", import.meta.url),
-  testPlan: {
-    "./tests/**/*.test.mjs": {
-      node: {
-        runtime: nodeWorkerThread({
-          commandLineOptions: ["--no-warnings"],
-          env: { TEST: "1" },
-          importMap: {
-            imports: {
-              foo: "./foo.mock.js",
-            },
-          },
-        }),
-      },
-    },
-  },
-})
-```
 
 ## 4.4 Allocated time
 

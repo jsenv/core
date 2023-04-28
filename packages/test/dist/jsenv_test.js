@@ -3244,7 +3244,7 @@ const createExecutionLog = ({
   startMs,
   endMs
 }, {
-  completedExecutionLogAbbreviation,
+  logShortForCompletedExecutions,
   counters,
   logRuntime,
   logEachDuration,
@@ -3267,7 +3267,7 @@ const createExecutionLog = ({
     memoryHeap
   });
   let log;
-  if (completedExecutionLogAbbreviation && status === "completed") {
+  if (logShortForCompletedExecutions && status === "completed") {
     log = `${description}${summary}`;
   } else {
     const {
@@ -3300,7 +3300,7 @@ const createExecutionLog = ({
     wordWrap: false
   });
   if (endMs) {
-    if (completedExecutionLogAbbreviation) {
+    if (logShortForCompletedExecutions) {
       return `${log}\n`;
     }
     if (executionIndex === counters.total - 1) {
@@ -3608,8 +3608,8 @@ const executeSteps = async (executionSteps, {
   logTimeUsage,
   logMemoryHeapUsage,
   logFileRelativeUrl,
-  completedExecutionLogMerging,
-  completedExecutionLogAbbreviation,
+  logMergeForCompletedExecutions,
+  logShortForCompletedExecutions,
   rootDirectoryUrl,
   webServer,
   keepRunning,
@@ -3697,9 +3697,9 @@ const executeSteps = async (executionSteps, {
       coverageMethodForNodeJs,
       stopAfterAllSignal
     };
-    if (completedExecutionLogMerging && !process.stdout.isTTY) {
-      completedExecutionLogMerging = false;
-      logger.debug(`Force completedExecutionLogMerging to false because process.stdout.isTTY is false`);
+    if (logMergeForCompletedExecutions && !process.stdout.isTTY) {
+      logMergeForCompletedExecutions = false;
+      logger.debug(`Force logMergeForCompletedExecutions to false because process.stdout.isTTY is false`);
     }
     const debugLogsEnabled = logger.levels.debug;
     const executionLogsEnabled = logger.levels.info;
@@ -3834,7 +3834,7 @@ const executeSteps = async (executionSteps, {
         }
         if (executionLogsEnabled) {
           const log = createExecutionLog(afterExecutionInfo, {
-            completedExecutionLogAbbreviation,
+            logShortForCompletedExecutions,
             counters,
             logRuntime,
             logEachDuration,
@@ -3850,7 +3850,7 @@ const executeSteps = async (executionSteps, {
           executionLog.write(log);
           rawOutput += stripAnsi(log);
           const canOverwriteLog = canOverwriteLogGetter({
-            completedExecutionLogMerging,
+            logMergeForCompletedExecutions,
             executionResult
           });
           if (canOverwriteLog) {
@@ -3906,10 +3906,10 @@ const executeSteps = async (executionSteps, {
   }
 };
 const canOverwriteLogGetter = ({
-  completedExecutionLogMerging,
+  logMergeForCompletedExecutions,
   executionResult
 }) => {
-  if (!completedExecutionLogMerging) {
+  if (!logMergeForCompletedExecutions) {
     return false;
   }
   if (executionResult.status === "aborted") {
@@ -3974,8 +3974,8 @@ const executeInParallel = async ({
  * @param {string|url} testPlanParameters.rootDirectoryUrl Directory containing test files;
  * @param {Object} [testPlanParameters.webServer] Web server info; required when executing test on browsers
  * @param {Object} testPlanParameters.testPlan Object associating files with runtimes where they will be executed
- * @param {boolean} [testPlanParameters.completedExecutionLogAbbreviation=false] Abbreviate completed execution information to shorten terminal output
- * @param {boolean} [testPlanParameters.completedExecutionLogMerging=false] Merge completed execution logs to shorten terminal output
+ * @param {boolean} [testPlanParameters.logShortForCompletedExecutions=false] Abbreviate completed execution information to shorten terminal output
+ * @param {boolean} [testPlanParameters.logMergeForCompletedExecutions=false] Merge completed execution logs to shorten terminal output
  * @param {number} [testPlanParameters.maxExecutionsInParallel=1] Maximum amount of execution in parallel
  * @param {number} [testPlanParameters.defaultMsAllocatedPerExecution=30000] Milliseconds after which execution is aborted and considered as failed by timeout
  * @param {boolean} [testPlanParameters.failFast=false] Fails immediatly when a test execution fails
@@ -3996,8 +3996,8 @@ const executeTestPlan = async ({
   logTimeUsage = false,
   logMemoryHeapUsage = false,
   logFileRelativeUrl = ".jsenv/test_plan_debug.txt",
-  completedExecutionLogAbbreviation = false,
-  completedExecutionLogMerging = false,
+  logShortForCompletedExecutions = false,
+  logMergeForCompletedExecutions = true,
   rootDirectoryUrl,
   webServer,
   testPlan,
@@ -4196,8 +4196,8 @@ const executeTestPlan = async ({
     logTimeUsage,
     logMemoryHeapUsage,
     logFileRelativeUrl,
-    completedExecutionLogMerging,
-    completedExecutionLogAbbreviation,
+    logShortForCompletedExecutions,
+    logMergeForCompletedExecutions,
     rootDirectoryUrl,
     webServer,
     maxExecutionsInParallel,
