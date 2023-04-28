@@ -270,7 +270,6 @@ const testPlanReport = await executeTestPlan({
     "./src/**/*.test.mjs": {
       node_worker: {
         runtime: nodeWorkerThread(),
-        
       },
       node_process: {
         runtime: nodeChildProcess({
@@ -319,7 +318,7 @@ const testPlanReport = await executeTestPlan({
 | -------------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | webServer.origin           | Url listened by the web server                                                                                    |
 | webServer.rootDirectoryUrl | Url leading to the root directory for the web server                                                              |
-| webServer.moduleUrl        | `executeTestPlan` does a dynamic import on `webServer.moduleUrl` if there is nothing listening `webServer.origin` |
+| webServer.moduleUrl        | `executeTestPlan` does a dynamic import on `webServer.moduleUrl` if server is not started at `webServer.origin`   |
 
 ## 4.2 chromium/firefox/webkit
 
