@@ -258,29 +258,70 @@ report // contains many information about test executions
 
 ## 4.2 chromium/firefox/webkit
 
-Params can be used to configure how the browser runtime is started
+Params can be used to configure how the browser runtime is started.  
+chromium, firefox and webkit uses the same parameters.
+
+Parameter           | Description
+------------------- | ------------------------------------
+headful             | browser UI would be displayed while running tests
+
 
 ```js
-chromium({
-  headful: true // browser UI would be displayed while running tests
+import { executeTestPlan, chromium } from "@jsenv/test"
+
+await executeTestPlan({
+  rootDirectoryUrl: new URL("../", import.meta.url),
+  testPlan: {
+    "./src/**/*.test.html": {
+      chromium: {
+        runtime: chromium({
+          headful: true,
+        })
+      },
+    },
+  },
+  webServer: {
+    origin: "http://localhost:3456",
+    rootDirectoryUrl: new URL("../src/", import.meta.url),
+    moduleUrl: new URL("./dev.mjs", import.meta.url),
+  },
 })
 ```
 
 ## 4.3 nodeWorkerThread/nodeChildProcess
 
-Params can be used to configure how node child process or node worker thread is started.
-Both runtime share the same arguments.
+Params can be used to configure how node child process or node worker thread is started.  
+nodeWorkerThread and nodeChildProcess uses the same parameters.
+
+Parameter           | Description
+------------------- | ----------------------------------------------------------
+commandLineOptions  | Command line options for node, see https://nodejs.org/api/cli.html#options
+env                 | Becomes `process.env`, see "env" in https://nodejs.org/api/child_process.html#child_processexeccommand-options-callback
+importMap           | Can be used to override import resolution (redirect to other files during test)
 
 ```js
 import {
-  nodeWorkerThread,
-  nodeChildProcess
+  executeTestPlan,
+  nodeWorkerThread
 } from "@jsenv/test"
 
-nodeWorkerThread({
-  commandLineOptions: [], // see https://nodejs.org/api/cli.html#options
-  env: null // will be written on process.env, see https://nodejs.org/api/child_process.html#child_processexeccommand-options-callback
-  importMap: null, // can be used to override import resolution (redirect to other files during test)
+await executeTestPlan({
+  rootDirectoryUrl: new URL("../", import.meta.url),
+  testPlan: {
+    "./tests/**/*.test.mjs": {
+      node: {
+        runtime: nodeWorkerThread({
+          commandLineOptions: ["--no-warnings"],
+          env: { TEST: "1" },
+          importMap: {
+            imports: {
+              "foo": "./foo.mock.js"
+            },
+          },
+        }),
+      },
+    },
+  },
 })
 ```
 
