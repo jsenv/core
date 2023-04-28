@@ -239,6 +239,8 @@ const expected = 3
 
 # 4. API
 
+The following code demonstrates all the parameters of `executeTestPlan`:
+
 ```js
 import {
   executeTestPlan,
@@ -249,7 +251,7 @@ import {
   nodeChildProcess,
 } from "@jsenv/test"
 
-const report = await executeTestPlan({
+const testPlanReport = await executeTestPlan({
   rootDirectoryUrl: new URL("../", import.meta.url),
   testPlan: {
     "./src/**/*.test.html": {
@@ -258,14 +260,17 @@ const report = await executeTestPlan({
       },
       firefox: {
         runtime: firefox(),
+        allocatedMs: 60_000,
       },
       webkit: {
         runtime: webkit(),
+        allocatedMs: 40_000,
       },
     },
     "./src/**/*.test.mjs": {
       node_worker: {
         runtime: nodeWorkerThread(),
+        
       },
       node_process: {
         runtime: nodeChildProcess({
@@ -291,8 +296,9 @@ const report = await executeTestPlan({
     "./src/**/*.js": true,
     "./src/**/*.test.mjs": false,
   },
+  coverageReportHtml: true,
+  coverageReportHtmlDirectoryUrl: new URL("./.coverage/", import.meta.url),
 })
-report // contains many information about test executions
 ```
 
 | Parameter                      | Description                                                                                           |
@@ -334,7 +340,7 @@ nodeWorkerThread and nodeChildProcess can be configured, they use the parameters
 | env                | Becomes `process.env`, see "env" in https://nodejs.org/api/child_process.html#child_processexeccommand-options-callback |
 | importMap          | Can be used to override import resolution (redirect to other files during test)                                         |
 
-## 4.4 Allocated time
+## 4.4 allocatedMs
 
 Each file is given 30s to execute.
 If this duration is exceeded the browser tab (or node process/worker thread) is closed and execution is considered as failed.
@@ -356,4 +362,7 @@ await executeTestPlan({
 })
 ```
 
-☝️ Code above changes the default allocated time to 60s.
+## 4.5 testPlanReport
+
+The value returned by `executeTestPlan` is an object called `testPlanReport`.  
+It contains all execution results and a few more infos
