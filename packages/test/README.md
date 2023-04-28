@@ -5,8 +5,7 @@ This tool enforce test files to be written as **standard** files, without any so
 
 # 1. Writing tests for web browsers 
 
-This section demonstrates how to write a test for a function.  
-The test file will be executed in a web browser.
+This section demonstrates how to write a test that will be executed in a web browser.  
 The function to test is the one below:
 
 ```js
