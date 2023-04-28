@@ -3,7 +3,7 @@
 Executing test files in web browsers and/or Node.js.  
 This tool enforce test files to be written as **standard** files, without any sort of complexity.
 
-# 1. Writing tests for web browsers 
+# 1. Writing tests on web browsers 
 
 This section demonstrates how to write a test that will be executed in a web browser. 
 
@@ -111,7 +111,9 @@ await executeTestPlan({
   rootDirectoryUrl: new URL("../", import.meta.url),
   testPlan: {
     "./src/**/*.test.html": {
-      chromium: { runtime: chromium() },
+      chromium: {
+        runtime: chromium()
+      },
     },
   },
   webServer: {
@@ -130,7 +132,40 @@ node ./scripts/test.mjs
 
 :point_up: If the server is not started `executeTestPlan` will start it by importing "scripts/dev.mjs" (configured in `webServer.moduleUrl`).  
 
-## 1.2 Testing "add" on Node.js
+### 1.2.1 Executing on more browsers
+
+```js
+import {
+  executeTestPlan,
+  chromium,
+  firefox,
+  webkit,
+} from "@jsenv/test"
+
+await executeTestPlan({
+  rootDirectoryUrl: new URL("../", import.meta.url),
+  testPlan: {
+    "./src/**/*.test.html": {
+      chromium: {
+        runtime: chromium()
+      },
+      firefox: {
+        runtime: firefox()
+      },
+      webkit: {
+        runtime: webkit()
+      },
+    },
+  },
+  webServer: {
+    origin: "http://localhost:3456",
+    rootDirectoryUrl: new URL("../src/", import.meta.url),
+    moduleUrl: new URL("./dev.mjs", import.meta.url),
+  },
+})
+```
+
+## 2 Writing tests on Node.js
 
 In "add.test.mjs":
 
@@ -163,39 +198,8 @@ const expected = 3
 
 # 2. JavaScript API
 
-## 2.1 Executing tests on browsers
-
-Requirements:
-
-- File structure
-- Playwright
-- Web server
-- Test script
 
 
-
-
-## 2.2 Executing on more browsers
-
-```js
-import { executeTestPlan, chromium, firefox, webkit } from "@jsenv/test"
-
-await executeTestPlan({
-  rootDirectoryUrl: new URL("../", import.meta.url),
-  testPlan: {
-    "./src/**/*.test.html": {
-      chromium: { runtime: chromium() },
-      firefox: { runtime: firefox() },
-      webkit: { runtime: webkit() },
-    },
-  },
-  webServer: {
-    origin: "http://localhost:3456",
-    rootDirectoryUrl: new URL("../src/", import.meta.url),
-    moduleUrl: new URL("./dev.mjs", import.meta.url),
-  },
-})
-```
 
 ## 2.3 Executing tests on Node.js
 
