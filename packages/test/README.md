@@ -291,7 +291,10 @@ If this duration is exceeded the browser tab (or node process/worker thread) is 
 This duration can be configured as shown below:
 
 ```js
-import { executeTestPlan, nodeWorkerThread } from "@jsenv/test"
+import {
+  executeTestPlan,
+  nodeWorkerThread
+} from "@jsenv/test"
 
 await executeTestPlan({
   rootDirectoryUrl: new URL("../", import.meta.url),
