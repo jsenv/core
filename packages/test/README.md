@@ -66,8 +66,7 @@ project/
 
 ## 1.2 Executing the test file
 
-A web server is needed to execute "add.test.html" in a browser.  
-It must serve source and test files.
+A web server is needed to execute "add.test.html" in a browser. 
 
 *scripts/dev.mjs*
 
@@ -80,7 +79,7 @@ await startDevServer({
 })
 ```
 
-Finally let's create the script that will start a web browser and execute test file in it.
+The script that will start a web browser and use it to execute all test files.
 
 *scripts/test.mjs*
 
@@ -104,7 +103,7 @@ await executeTestPlan({
 })
 ```
 
-Before executing tests, be sure to install dependencies
+Before running these scripts, install their dependencies:
 
 ```console
 npm i --save-dev @jsenv/core
@@ -112,7 +111,7 @@ npm i --save-dev @jsenv/test
 npm i --save-dev playwright
 ```
 
-☝️ `@jsenv/test` uses [playwright](https://github.com/microsoft/playwright)<sup>↗</sup> to start a web browser
+☝️ Playwright is used by `@jsenv/test` to start a web browser, see [playwright website](https://github.com/microsoft/playwright)<sup>↗</sup>.
 
 Web server can be started with the following command
 
@@ -126,7 +125,7 @@ And tests can be executed with the following command
 node ./scripts/test.mjs
 ```
 
-:point_up: If the server is not started `executeTestPlan` will start it by importing "scripts/dev.mjs" (configured in `webServer.moduleUrl`).  
+:point_up: You don't have to start the web server before executing tests, if not started `executeTestPlan` imports "scripts/dev.mjs" (configured by `webServer.moduleUrl`).  
 
 ### 1.2.1 Executing on more browsers
 
