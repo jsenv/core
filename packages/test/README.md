@@ -20,9 +20,9 @@ project/
 export const add = (a, b) => a + b
 ```
 
-## 1.1 Writing test
+## 1.1 Writing the test file
 
-Create a file `src/add.test.html` with the following content:
+Create file `src/add.test.html` with the following content:
 
 ```html
 <!DOCTYPE html>
@@ -47,9 +47,9 @@ Create a file `src/add.test.html` with the following content:
 </html>
 ```
 
-## 1.2 Executing test
+## 1.2 Executing the test file
 
-In order to execute the test the following is required:
+In order to execute "add.test.html" the following is required:
 
 - Installing playwright
 - A script starting a web server
@@ -57,7 +57,7 @@ In order to execute the test the following is required:
 
 ### 1.2.1 Installing playwright
 
-`@jsenv/test` uses [playwright](https://github.com/microsoft/playwright)<sup>↗</sup> to start a web browser. This tool should be added to your project
+`@jsenv/test` uses [playwright](https://github.com/microsoft/playwright)<sup>↗</sup> to start a web browser. It must be added to your project
 
 ```console
 npm i --save-dev playwright
@@ -65,11 +65,14 @@ npm i --save-dev playwright
 
 ### 1.2.2 A script starting a web server
 
-A web server is needed to execute test in the browser. It must serve source and test files.
+A web server is needed to execute test in the browser.  
+It must serve source and test files.
 
 ```console
 npm i --save-dev @jsenv/core
 ```
+
+Create file `scripts/dev.mjs` with the following content:
 
 ```js
 import { startDevServer } from "@jsenv/core"
@@ -80,6 +83,12 @@ await startDevServer({
 })
 ```
 
+The web server can be started as follow:
+
+```console
+node ./scripts/dev.mjs
+```
+
 ### 1.2.3 A script using `@jsenv/test`
 
 The test script is the file that will orchestrate all this to execute all test files in a web browser (chromium in that example).
@@ -87,6 +96,8 @@ The test script is the file that will orchestrate all this to execute all test f
 ```console
 npm i --save-dev @jsenv/test
 ```
+
+Create file `scripts/test.mjs` with the following content:
 
 ```js
 import { executeTestPlan, chromium } from "@jsenv/test"
@@ -112,7 +123,7 @@ The tests can now be executed with the following command
 node ./scripts/test.mjs
 ```
 
-:point_up: If the server is not started `executeTestPlan` will start it by importing the file configured by `webServer.moduleUrl`.  
+:point_up: If the server is not started `executeTestPlan` will start it by importing "scripts/dev.mjs" (configured in `webServer.moduleUrl`).  
 
 ## 1.2 Testing "add" on Node.js
 
