@@ -39,7 +39,7 @@ project/
 
 ## 1.1 Writing the test file
 
-`src/add.test.html`:
+*src/add.test.html*
 
 ```html
 <!DOCTYPE html>
@@ -73,7 +73,7 @@ It must serve source and test files.
 npm i --save-dev @jsenv/core
 ```
 
-`scripts/dev.mjs`:
+*scripts/dev.mjs*
 
 ```js
 import { startDevServer } from "@jsenv/core"
@@ -102,7 +102,7 @@ npm i --save-dev @jsenv/test
 npm i --save-dev playwright
 ```
 
-`scripts/test.mjs`:
+*scripts/test.mjs*
 
 ```js
 import { executeTestPlan, chromium } from "@jsenv/test"
