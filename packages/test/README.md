@@ -245,7 +245,7 @@ const expected = 3
 ## 4 Allocated time
 
 Each file is given 30s to execute.
-If this duration is exceeded the browser tab (or node process/worker thread) is closed and executiong is considered as failed.
+If this duration is exceeded the browser tab (or node process/worker thread) is closed and execution is considered as failed.
 This duration can be configured as shown below:
 
 ```js
