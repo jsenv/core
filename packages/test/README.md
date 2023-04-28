@@ -225,7 +225,7 @@ Command to execute tests:
 node ./scripts/test.mjs
 ```
 
-## 3. Assertion library
+# 3. Assertion library
 
 To have a basic example, the part of the code comparing `actual` and `expected` was done without an assertion library.  
 In pratice a test would likely use one. The diff below shows how the assertion can be written using [@jsenv/assert](../assert). Note that any other assertion library would work.
@@ -242,7 +242,7 @@ const expected = 3
 + assert({ actual, expected })
 ```
 
-## 4. API
+# 4. API
 
 ## 4.1 executeTestPlan
 
