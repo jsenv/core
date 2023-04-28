@@ -148,7 +148,7 @@ await executeTestPlan({
 })
 ```
 
-## 2. Writing tests on Node.js
+# 2. Writing tests on Node.js
 
 This section demonstrates how to write a test that will be executed in Node.js. 
 
