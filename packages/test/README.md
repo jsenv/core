@@ -1,9 +1,9 @@
 # @jsenv/test [![npm package](https://img.shields.io/npm/v/@jsenv/test.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/test)
 
-Executing test files in web browsers and/or Node.js.  
+Executing test files in web browsers or Node.js.  
 This tool enforce test files to be written as **standard** files, without any sort of complexity.
 
-# 1. Writing tests on web browsers
+# 1. Test for the web
 
 This section demonstrates how to write a test that will be executed in a web browser.
 
@@ -143,7 +143,7 @@ await executeTestPlan({
 })
 ```
 
-# 2. Writing tests on Node.js
+# 2. Test for Node.js
 
 This section demonstrates how to write a test that will be executed in Node.js.
 
@@ -239,7 +239,7 @@ const expected = 3
 
 # 4. API
 
-The following code demonstrates all the parameters of `executeTestPlan`:
+The following code illustrates all the parameters of `executeTestPlan`:
 
 ```js
 import {
