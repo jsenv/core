@@ -109,7 +109,7 @@ npm i --save-dev playwright
 
 ☝️ Playwright is used by `@jsenv/test` to start a web browser. See [playwright website](https://github.com/microsoft/playwright)<sup>↗</sup>.
 
-Test can be executed with the following command:
+Everything is ready, test can be executed with the following command:
 
 ```console
 node ./scripts/test.mjs
