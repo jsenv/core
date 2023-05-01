@@ -99,7 +99,7 @@ await executeTestPlan({
 })
 ```
 
-Command to install dependencies:
+Before executing test, install dependencies with the following commands
 
 ```console
 npm i --save-dev @jsenv/core
@@ -107,9 +107,9 @@ npm i --save-dev @jsenv/test
 npm i --save-dev playwright
 ```
 
-☝️ Playwright is used by `@jsenv/test` to start a web browser, see [playwright website](https://github.com/microsoft/playwright)<sup>↗</sup>.
+☝️ Playwright is used by `@jsenv/test` to start a web browser. See [playwright website](https://github.com/microsoft/playwright)<sup>↗</sup>.
 
-Command to execute tests:
+Test can be executed with the following command:
 
 ```console
 node ./scripts/test.mjs
