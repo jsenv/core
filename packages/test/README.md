@@ -13,7 +13,7 @@ The function that will be tested is inside "add.js" file:
 export const add = (a, b) => a + b
 ```
 
-The demonstration uses the following file structure:
+"add.js" is part of the following file structure:
 
 <pre>
 project/
@@ -77,7 +77,7 @@ await startDevServer({
 })
 ```
 
-_scripts/test.mjs_: will start a web browser and use it to execute all test files.
+_scripts/test.mjs_: start a web browser and use it to execute test files.
 
 ```js
 import { executeTestPlan, chromium } from "@jsenv/test"
