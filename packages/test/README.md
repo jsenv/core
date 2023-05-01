@@ -23,19 +23,19 @@ project/
   package.json
 </pre>
 
-At the end of the demo, the file structure will be like this:
+In order to test "add.js" a few files will be needed. The impacts on the file structure are described below:
 
-<pre>
+```diff
 project/
-  scripts/
-    <strong>dev.mjs</strong>
-    <strong>test.mjs</strong>
++ scripts/
++   dev.mjs
++   test.mjs
   src/
     add.js
-    <strong>add.test.html</strong>
++   add.test.html
     index.html
   package.json
-</pre>
+```
 
 ## 1.1 Writing the test file
 
