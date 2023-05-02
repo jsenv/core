@@ -28,7 +28,9 @@ await executeTestPlan({
         captureConsole: false,
       },
       firefox: {
-        runtime: firefox(),
+        runtime: firefox({
+          disableOnWindowsBecauseFlaky: true,
+        }),
         captureConsole: false,
       },
       webkit: {

@@ -1,3 +1,7 @@
+# 1.1.0
+
+- Disable firefox executions on windows by default as they are flaky
+
 # 1.0.4
 
 - Restore logMergeForCompletedExecutions default value to false

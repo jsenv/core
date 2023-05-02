@@ -55,6 +55,14 @@ const test = async (params) => {
   assert({ actual, expected })
 }
 
-await test({ runtime: chromium() })
-await test({ runtime: firefox() })
-await test({ runtime: webkit() })
+await test({
+  runtime: chromium(),
+})
+await test({
+  runtime: firefox({
+    disableOnWindowsBecauseFlaky: false,
+  }),
+})
+await test({
+  runtime: webkit(),
+})

@@ -62,5 +62,9 @@ module code@${devServer.origin}/main.js:3:13`
 }
 
 await test({ runtime: chromium() })
-await test({ runtime: firefox() })
+await test({
+  runtime: firefox({
+    disableOnWindowsBecauseFlaky: false,
+  }),
+})
 await test({ runtime: webkit() })

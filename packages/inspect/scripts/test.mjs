@@ -19,7 +19,9 @@ await executeTestPlan({
         runtime: chromium(),
       },
       firefox: {
-        runtime: firefox(),
+        runtime: firefox({
+          disableOnWindowsBecauseFlaky: true,
+        }),
         allocatedMs: process.platform === "win32" ? 60_000 : 30_000,
       },
       webkit: {

@@ -27,7 +27,9 @@ const { testPlanCoverage } = await executeTestPlan({
         runtime: chromium(),
       },
       firefox: {
-        runtime: firefox(),
+        runtime: firefox({
+          disableOnWindowsBecauseFlaky: false,
+        }),
       },
       webkit: {
         runtime: webkit(),

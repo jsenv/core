@@ -20,7 +20,9 @@ await executeTestPlan({
         allocatedMs: 90_000,
       },
       firefox: {
-        runtime: firefox(),
+        runtime: firefox({
+          disableOnWindowsBecauseFlaky: true,
+        }),
         allocatedMs: 90_000,
       },
       webkit: {

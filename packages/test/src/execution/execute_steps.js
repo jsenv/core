@@ -49,6 +49,10 @@ export const executeSteps = async (
     afterExecutionCallback = () => {},
   } = {},
 ) => {
+  executionSteps = executionSteps.filter(
+    (executionStep) => !executionStep.runtime?.disabled,
+  )
+
   const executePlanReturnValue = {}
   const report = {}
   const callbacks = []
