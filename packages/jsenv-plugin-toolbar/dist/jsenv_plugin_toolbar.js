@@ -1,4 +1,4 @@
-import { parseHtmlString, injectScriptNodeAsEarlyAsPossible, createHtmlNode, stringifyHtmlAst } from "@jsenv/ast";
+import { parseHtmlString, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHtmlAst } from "@jsenv/ast";
 
 const jsenvPluginToolbar = ({
   logLevel = "warn",
@@ -30,20 +30,19 @@ const jsenvPluginToolbar = ({
           expectedType: "html",
           specifier: toolbarHtmlClientFileUrl
         });
-        injectScriptNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
+        injectHtmlNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
           tagName: "script",
           type: "module",
-          textContent: `
-import { injectToolbar } from ${toolbarInjectorReference.generatedSpecifier}
-injectToolbar(${JSON.stringify({
-            toolbarUrl: toolbarClientFileReference.generatedSpecifier,
+          textContent: generateCodeToInjectToolbar({
+            toolbarInjectorReference,
+            toolbarClientFileReference,
             logLevel,
             theme,
             opened,
             autoreload,
             animationsEnabled,
             notificationsEnabled
-          }, null, "  ")})`
+          })
         }), "jsenv:toolbar");
         const htmlModified = stringifyHtmlAst(htmlAst);
         return {
@@ -52,6 +51,30 @@ injectToolbar(${JSON.stringify({
       }
     }
   };
+};
+const generateCodeToInjectToolbar = ({
+  toolbarInjectorReference,
+  toolbarClientFileReference,
+  logLevel,
+  theme,
+  opened,
+  autoreload,
+  animationsEnabled,
+  notificationsEnabled
+}) => {
+  const from = toolbarInjectorReference.generatedSpecifier;
+  const paramsSource = JSON.stringify({
+    toolbarUrl: toolbarClientFileReference.generatedSpecifier,
+    logLevel,
+    theme,
+    opened,
+    autoreload,
+    animationsEnabled,
+    notificationsEnabled
+  }, null, "  ");
+  return `import { injectToolbar } from ${from}
+
+injectToolbar(${paramsSource});`;
 };
 
 export { jsenvPluginToolbar };
