@@ -7351,6 +7351,8 @@ const generateAccessControlHeaders = ({
   };
 };
 
+new Map();
+
 const lookupPackageDirectory = currentUrl => {
   if (currentUrl === "file:///") {
     return null;

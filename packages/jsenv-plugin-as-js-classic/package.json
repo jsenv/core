@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-as-js-classic",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -24,8 +24,8 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "@jsenv/core": "35.0.1",
-    "@jsenv/plugin-bundling": "2.1.6"
+    "@jsenv/core": "35.0.2",
+    "@jsenv/plugin-bundling": "2.1.7"
   },
   "devDependencies": {
     "@jsenv/core": "../../"

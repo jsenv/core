@@ -3628,6 +3628,7 @@ const executeSteps = async (executionSteps, {
   beforeExecutionCallback = () => {},
   afterExecutionCallback = () => {}
 } = {}) => {
+  executionSteps = executionSteps.filter(executionStep => !executionStep.runtime?.disabled);
   const executePlanReturnValue = {};
   const report = {};
   const callbacks = [];
@@ -4962,80 +4963,95 @@ const registerEvent = ({
   };
 };
 
-const chromiumParams = {
-  browserName: "chromium",
-  // browserVersion will be set by "browser._initializer.version"
-  // see also https://github.com/microsoft/playwright/releases
-  browserVersion: "unset",
-  coveragePlaywrightAPIAvailable: true
-};
 const chromium = params => {
-  return createRuntimeUsingPlaywright({
-    ...chromiumParams,
-    ...params
-  });
+  return createChromiumRuntine(params);
 };
 const chromiumIsolatedTab = params => {
+  return createChromiumRuntine({
+    ...params,
+    isolatedTab: true
+  });
+};
+const createChromiumRuntine = params => {
   return createRuntimeUsingPlaywright({
-    ...chromiumParams,
-    isolatedTab: true,
+    browserName: "chromium",
+    // browserVersion will be set by "browser._initializer.version"
+    // see also https://github.com/microsoft/playwright/releases
+    browserVersion: "unset",
+    coveragePlaywrightAPIAvailable: true,
     ...params
   });
 };
 
-const firefoxParams = {
-  browserName: "firefox",
-  // browserVersion will be set by "browser._initializer.version"
-  // see also https://github.com/microsoft/playwright/releases
-  browserVersion: "unset"
-};
 const firefox = params => {
-  return createRuntimeUsingPlaywright({
-    ...firefoxParams,
-    ...params
-  });
+  return createFirefoxRuntime(params);
 };
 const firefoxIsolatedTab = params => {
   return createRuntimeUsingPlaywright({
-    ...firefoxParams,
+    ...params,
+    isolatedTab: true
+  });
+};
+const createFirefoxRuntime = ({
+  disableOnWindowsBecauseFlaky,
+  ...params
+} = {}) => {
+  if (process.platform === "win32") {
+    if (disableOnWindowsBecauseFlaky === undefined) {
+      // https://github.com/microsoft/playwright/issues/1396
+      console.warn(`Windows + firefox detected: executions on firefox will be ignored  (firefox is flaky on windows).
+To disable this warning, use disableOnWindowsBecauseFlaky: true
+To ignore potential flakyness, use disableOnWindowsBecauseFlaky: false`);
+      disableOnWindowsBecauseFlaky = true;
+    }
+    if (disableOnWindowsBecauseFlaky) {
+      return {
+        disabled: true
+      };
+    }
+  }
+  return createRuntimeUsingPlaywright({
+    browserName: "firefox",
+    // browserVersion will be set by "browser._initializer.version"
+    // see also https://github.com/microsoft/playwright/releases
+    browserVersion: "unset",
     isolatedTab: true,
     ...params
   });
 };
 
-const webkitParams = {
-  browserName: "webkit",
-  // browserVersion will be set by "browser._initializer.version"
-  // see also https://github.com/microsoft/playwright/releases
-  browserVersion: "unset",
-  shouldIgnoreError: error => {
-    // we catch error during execution but safari throw unhandled rejection
-    // in a non-deterministic way.
-    // I suppose it's due to some race condition to decide if the promise is catched or not
-    // for now we'll ignore unhandled rejection on wekbkit
-    if (error.name === "Unhandled Promise Rejection") {
-      return true;
-    }
-    return false;
-  },
-  transformErrorHook: error => {
-    // Force error stack to contain the error message
-    // because it's not the case on webkit
-    error.stack = `${error.message}
-    at ${error.stack}`;
-    return error;
-  }
-};
 const webkit = params => {
-  return createRuntimeUsingPlaywright({
-    ...webkitParams,
-    ...params
-  });
+  return createWekbitRuntime(params);
 };
 const webkitIsolatedTab = params => {
+  return createWekbitRuntime({
+    ...params,
+    isolatedTab: true
+  });
+};
+const createWekbitRuntime = params => {
   return createRuntimeUsingPlaywright({
-    ...webkitParams,
-    isolatedTab: true,
+    browserName: "webkit",
+    // browserVersion will be set by "browser._initializer.version"
+    // see also https://github.com/microsoft/playwright/releases
+    browserVersion: "unset",
+    shouldIgnoreError: error => {
+      // we catch error during execution but safari throw unhandled rejection
+      // in a non-deterministic way.
+      // I suppose it's due to some race condition to decide if the promise is catched or not
+      // for now we'll ignore unhandled rejection on wekbkit
+      if (error.name === "Unhandled Promise Rejection") {
+        return true;
+      }
+      return false;
+    },
+    transformErrorHook: error => {
+      // Force error stack to contain the error message
+      // because it's not the case on webkit
+      error.stack = `${error.message}
+    at ${error.stack}`;
+      return error;
+    },
     ...params
   });
 };
