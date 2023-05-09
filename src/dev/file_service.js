@@ -93,14 +93,15 @@ export const createFileService = ({
     })
     const clientRuntimeCompat = { [runtimeName]: runtimeVersion }
 
-    let mainFileUrl
-    if (sourceMainFilePath === undefined) {
-      mainFileUrl = explorer
-        ? String(explorerHtmlFileUrl)
-        : String(new URL("./index.html", sourceDirectoryUrl))
+    let defaultFileUrl
+    if (explorer) {
+      defaultFileUrl = String(explorerHtmlFileUrl)
+    } else if (sourceMainFilePath) {
+      defaultFileUrl = String(new URL(sourceMainFilePath, sourceDirectoryUrl))
     } else {
-      mainFileUrl = String(new URL(sourceMainFilePath, sourceDirectoryUrl))
+      defaultFileUrl = String(new URL("./index.html", sourceDirectoryUrl))
     }
+
     const kitchen = createKitchen({
       signal,
       logLevel,
@@ -120,7 +121,7 @@ export const createFileService = ({
         ...plugins,
         ...getCorePlugins({
           rootDirectoryUrl: sourceDirectoryUrl,
-          mainFileUrl,
+          defaultFileUrl,
           runtimeCompat,
 
           urlAnalysis,

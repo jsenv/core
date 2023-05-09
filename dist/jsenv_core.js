@@ -17713,7 +17713,7 @@ const addRelationshipWithPackageJson = ({
  */
 const jsenvPluginUrlResolution = ({
   runtimeCompat,
-  mainFileUrl,
+  defaultFileUrl,
   urlResolution
 }) => {
   const resolveUrlUsingWebResolution = reference => {
@@ -17781,7 +17781,7 @@ const jsenvPluginUrlResolution = ({
     appliesDuring: "*",
     resolveUrl: (reference, context) => {
       if (reference.specifier === "/") {
-        return String(mainFileUrl);
+        return String(defaultFileUrl);
       }
       if (reference.specifier[0] === "/") {
         return new URL(reference.specifier.slice(1), context.rootDirectoryUrl).href;
@@ -21137,7 +21137,7 @@ const jsenvPluginCacheControl = ({
 };
 const SECONDS_IN_30_DAYS$1 = 60 * 60 * 24 * 30;
 
-const explorerHtmlFileUrl = new URL("./html/explorer.html", import.meta.url);
+const explorerHtmlFileUrl = String(new URL("./html/explorer.html", import.meta.url));
 const jsenvPluginExplorer = ({
   groups = {
     src: {
@@ -21147,8 +21147,7 @@ const jsenvPluginExplorer = ({
     tests: {
       "./**/*.test.html": true
     }
-  },
-  mainFileUrl
+  }
 }) => {
   const faviconClientFileUrl = new URL("./other/jsenv.png", import.meta.url);
   return {
@@ -21156,7 +21155,7 @@ const jsenvPluginExplorer = ({
     appliesDuring: "dev",
     transformUrlContent: {
       html: async (urlInfo, context) => {
-        if (urlInfo.url !== mainFileUrl) {
+        if (urlInfo.url !== explorerHtmlFileUrl) {
           return null;
         }
         let html = urlInfo.content;
@@ -21256,7 +21255,7 @@ injectRibbon(${paramsJson});`
 
 const getCorePlugins = ({
   rootDirectoryUrl,
-  mainFileUrl,
+  defaultFileUrl,
   runtimeCompat,
   urlAnalysis = {},
   urlResolution = {},
@@ -21306,7 +21305,7 @@ const getCorePlugins = ({
     ...fileSystemMagicRedirection
   }), jsenvPluginHttpUrls(), jsenvPluginUrlResolution({
     runtimeCompat,
-    mainFileUrl,
+    defaultFileUrl,
     urlResolution
   }), jsenvPluginUrlVersion(), jsenvPluginCommonJsGlobals(), jsenvPluginImportMetaScenarios(), ...(scenarioPlaceholders ? [jsenvPluginGlobalScenarios()] : []), jsenvPluginNodeRuntime({
     runtimeCompat
@@ -21314,10 +21313,7 @@ const getCorePlugins = ({
     ...clientAutoreload,
     clientFileChangeCallbackList,
     clientFilesPruneCallbackList
-  })] : []), ...(cacheControl ? [jsenvPluginCacheControl(cacheControl)] : []), ...(explorer ? [jsenvPluginExplorer({
-    ...explorer,
-    mainFileUrl
-  })] : []), ...(ribbon ? [jsenvPluginRibbon({
+  })] : []), ...(cacheControl ? [jsenvPluginCacheControl(cacheControl)] : []), ...(explorer ? [jsenvPluginExplorer(explorer)] : []), ...(ribbon ? [jsenvPluginRibbon({
     rootDirectoryUrl,
     ...ribbon
   })] : [])];
@@ -23286,11 +23282,13 @@ const createFileService = ({
     const clientRuntimeCompat = {
       [runtimeName]: runtimeVersion
     };
-    let mainFileUrl;
-    if (sourceMainFilePath === undefined) {
-      mainFileUrl = explorer ? String(explorerHtmlFileUrl) : String(new URL("./index.html", sourceDirectoryUrl));
+    let defaultFileUrl;
+    if (explorer) {
+      defaultFileUrl = String(explorerHtmlFileUrl);
+    } else if (sourceMainFilePath) {
+      defaultFileUrl = String(new URL(sourceMainFilePath, sourceDirectoryUrl));
     } else {
-      mainFileUrl = String(new URL(sourceMainFilePath, sourceDirectoryUrl));
+      defaultFileUrl = String(new URL("./index.html", sourceDirectoryUrl));
     }
     const kitchen = createKitchen({
       signal,
@@ -23303,7 +23301,7 @@ const createFileService = ({
       systemJsTranspilation: !RUNTIME_COMPAT.isSupported(clientRuntimeCompat, "script_type_module") || !RUNTIME_COMPAT.isSupported(clientRuntimeCompat, "import_dynamic") || !RUNTIME_COMPAT.isSupported(clientRuntimeCompat, "import_meta"),
       plugins: [...plugins, ...getCorePlugins({
         rootDirectoryUrl: sourceDirectoryUrl,
-        mainFileUrl,
+        defaultFileUrl,
         runtimeCompat,
         urlAnalysis,
         urlResolution,

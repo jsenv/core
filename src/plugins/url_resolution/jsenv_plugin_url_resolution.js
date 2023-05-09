@@ -33,7 +33,7 @@ import { createNodeEsmResolver } from "./node_esm_resolver.js"
 
 export const jsenvPluginUrlResolution = ({
   runtimeCompat,
-  mainFileUrl,
+  defaultFileUrl,
   urlResolution,
 }) => {
   const resolveUrlUsingWebResolution = (reference) => {
@@ -105,7 +105,7 @@ export const jsenvPluginUrlResolution = ({
     appliesDuring: "*",
     resolveUrl: (reference, context) => {
       if (reference.specifier === "/") {
-        return String(mainFileUrl)
+        return String(defaultFileUrl)
       }
       if (reference.specifier[0] === "/") {
         return new URL(reference.specifier.slice(1), context.rootDirectoryUrl)

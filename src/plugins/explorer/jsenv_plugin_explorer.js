@@ -3,9 +3,8 @@ import { DATA_URL } from "@jsenv/urls"
 import { collectFiles } from "@jsenv/filesystem"
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js"
 
-export const explorerHtmlFileUrl = new URL(
-  "./client/explorer.html",
-  import.meta.url,
+export const explorerHtmlFileUrl = String(
+  new URL("./client/explorer.html", import.meta.url),
 )
 
 export const jsenvPluginExplorer = ({
@@ -18,7 +17,6 @@ export const jsenvPluginExplorer = ({
       "./**/*.test.html": true,
     },
   },
-  mainFileUrl,
 }) => {
   const faviconClientFileUrl = new URL("./client/jsenv.png", import.meta.url)
 
@@ -27,7 +25,7 @@ export const jsenvPluginExplorer = ({
     appliesDuring: "dev",
     transformUrlContent: {
       html: async (urlInfo, context) => {
-        if (urlInfo.url !== mainFileUrl) {
+        if (urlInfo.url !== explorerHtmlFileUrl) {
           return null
         }
         let html = urlInfo.content

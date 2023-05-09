@@ -1,3 +1,7 @@
+# 35.0.3
+
+- Ensure explorer and sourceMainFilePath work as documented
+
 # 35.0.1
 
 - Update dependencies

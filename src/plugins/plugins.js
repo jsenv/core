@@ -23,7 +23,7 @@ import { jsenvPluginRibbon } from "./ribbon/jsenv_plugin_ribbon.js"
 
 export const getCorePlugins = ({
   rootDirectoryUrl,
-  mainFileUrl,
+  defaultFileUrl,
   runtimeCompat,
 
   urlAnalysis = {},
@@ -78,7 +78,7 @@ export const getCorePlugins = ({
     jsenvPluginHttpUrls(),
     jsenvPluginUrlResolution({
       runtimeCompat,
-      mainFileUrl,
+      defaultFileUrl,
       urlResolution,
     }),
     jsenvPluginUrlVersion(),
@@ -99,7 +99,7 @@ export const getCorePlugins = ({
         ]
       : []),
     ...(cacheControl ? [jsenvPluginCacheControl(cacheControl)] : []),
-    ...(explorer ? [jsenvPluginExplorer({ ...explorer, mainFileUrl })] : []),
+    ...(explorer ? [jsenvPluginExplorer(explorer)] : []),
     ...(ribbon ? [jsenvPluginRibbon({ rootDirectoryUrl, ...ribbon })] : []),
   ]
 }
