@@ -1,3 +1,7 @@
+# 1.1.3
+
+- Restore semicolons, update a warning message
+
 # 1.1.0
 
 - Disable firefox executions on windows by default as they are flaky

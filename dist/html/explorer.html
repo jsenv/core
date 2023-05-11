@@ -319,7 +319,7 @@ h4 {
     </div>
     <script no-supervisor="">
       // eslint-disable-next-line no-undef
-      const { rootDirectoryUrl, groups, files } = SERVER_PARAMS
+      const { rootDirectoryUrl, groups, files } = SERVER_PARAMS;
 
       const groupPreference = {
         has: () => localStorage.hasOwnProperty("explorer_active_group"),
@@ -329,30 +329,30 @@ h4 {
             : undefined,
         set: (value) =>
           localStorage.setItem("explorer_active_group", JSON.stringify(value)),
-      }
+      };
       const directoryNameFromUrl = (directoryUrl) => {
         const slashLastIndex = directoryUrl.lastIndexOf(
           "/",
           // ignore last slash
           directoryUrl.length - 2,
-        )
-        if (slashLastIndex === -1) return ""
-        return directoryUrl.slice(slashLastIndex + 1)
-      }
+        );
+        if (slashLastIndex === -1) return "";
+        return directoryUrl.slice(slashLastIndex + 1);
+      };
       const urlToVisitFromRelativeUrl = (relativeUrl) => {
-        return `${window.origin}/${relativeUrl}`
-      }
+        return `${window.origin}/${relativeUrl}`;
+      };
 
       const fileListElement = document
         .querySelector(`[data-page="file-list"]`)
-        .cloneNode(true)
-      const directoryName = directoryNameFromUrl(rootDirectoryUrl)
-      const span = fileListElement.querySelector("#directory_relative_url")
-      span.title = rootDirectoryUrl
-      span.textContent = directoryName
+        .cloneNode(true);
+      const directoryName = directoryNameFromUrl(rootDirectoryUrl);
+      const span = fileListElement.querySelector("#directory_relative_url");
+      span.title = rootDirectoryUrl;
+      span.textContent = directoryName;
 
-      const h4 = fileListElement.querySelector("h4")
-      const ul = fileListElement.querySelector("ul")
+      const h4 = fileListElement.querySelector("h4");
+      const ul = fileListElement.querySelector("ul");
       ul.innerHTML = files
         .map(
           (file) =>
@@ -366,10 +366,10 @@ h4 {
         </a>
       </li>`,
         )
-        .join("")
+        .join("");
 
-      const groupFieldset = fileListElement.querySelector("#filter-group-set")
-      const groupNames = Object.keys(groups)
+      const groupFieldset = fileListElement.querySelector("#filter-group-set");
+      const groupNames = Object.keys(groups);
       groupFieldset.innerHTML = groupNames
         .map(
           (key) => `<label data-contains-hidden-input class="item">
@@ -377,45 +377,45 @@ h4 {
         <span>${key}</span>
       </label>`,
         )
-        .join("")
+        .join("");
 
-      const groupFromLocalStorage = groupPreference.get()
+      const groupFromLocalStorage = groupPreference.get();
       const currentGroup =
         groupFromLocalStorage && groupNames.includes(groupFromLocalStorage)
           ? groupFromLocalStorage
-          : groupNames[0]
+          : groupNames[0];
       Array.from(groupFieldset.querySelectorAll("input")).forEach(
         (inputRadio) => {
-          inputRadio.checked = inputRadio.value === currentGroup
+          inputRadio.checked = inputRadio.value === currentGroup;
           inputRadio.onchange = () => {
             if (inputRadio.checked) {
-              groupPreference.set(inputRadio.value)
-              enableGroup(inputRadio.value)
+              groupPreference.set(inputRadio.value);
+              enableGroup(inputRadio.value);
             }
-          }
+          };
         },
-      )
+      );
 
       const enableGroup = (groupName) => {
-        const arrayOfElementToShow = []
-        const arrayOfElementToHide = []
+        const arrayOfElementToShow = [];
+        const arrayOfElementToHide = [];
         files.forEach((file) => {
           const fileLink = fileListElement.querySelector(
             `a[data-relative-url="${file.relativeUrl}"]`,
-          )
-          const fileLi = fileLink.parentNode
+          );
+          const fileLi = fileLink.parentNode;
           if (file.meta[groupName]) {
-            arrayOfElementToShow.push(fileLi)
+            arrayOfElementToShow.push(fileLi);
           } else {
-            arrayOfElementToHide.push(fileLi)
+            arrayOfElementToHide.push(fileLi);
           }
-        })
+        });
         arrayOfElementToShow.forEach((element) => {
-          element.removeAttribute("data-force-hide")
-        })
+          element.removeAttribute("data-force-hide");
+        });
         arrayOfElementToHide.forEach((element) => {
-          element.setAttribute("data-force-hide", "")
-        })
+          element.setAttribute("data-force-hide", "");
+        });
 
         h4.innerHTML =
           arrayOfElementToShow.length === 0
@@ -425,65 +425,65 @@ h4 {
         null,
         "  ",
       )}</pre>`
-            : `${arrayOfElementToShow.length} files found. Click on the one you want to execute`
-      }
-      enableGroup(currentGroup)
+            : `${arrayOfElementToShow.length} files found. Click on the one you want to execute`;
+      };
+      enableGroup(currentGroup);
 
-      document.querySelector("main").appendChild(fileListElement)
+      document.querySelector("main").appendChild(fileListElement);
     </script>
     <script no-supervisor="">
       // make menu scrollable
       const getMenuWrapperSize = () => {
         return document.querySelector(".menu-wrapper").getBoundingClientRect()
-          .width
-      }
+          .width;
+      };
       const getMenuSize = () => {
-        return document.querySelector(".menu").getBoundingClientRect().width
-      }
+        return document.querySelector(".menu").getBoundingClientRect().width;
+      };
       const getMenuPosition = () => {
-        return document.querySelector(".menu-wrapper").scrollLeft
-      }
+        return document.querySelector(".menu-wrapper").scrollLeft;
+      };
 
-      let menuWrapperSize = getMenuWrapperSize()
-      let menuSize = getMenuSize()
-      const menuVisibleSize = menuWrapperSize
-      let menuInvisibleSize = menuSize - menuVisibleSize
-      const scrollDuration = 300
-      const leftPaddle = document.querySelector(".left-paddle")
-      const rightPaddle = document.querySelector(".right-paddle")
+      let menuWrapperSize = getMenuWrapperSize();
+      let menuSize = getMenuSize();
+      const menuVisibleSize = menuWrapperSize;
+      let menuInvisibleSize = menuSize - menuVisibleSize;
+      const scrollDuration = 300;
+      const leftPaddle = document.querySelector(".left-paddle");
+      const rightPaddle = document.querySelector(".right-paddle");
 
       const handleMenuScroll = () => {
-        menuInvisibleSize = menuSize - menuWrapperSize
-        const menuPosition = getMenuPosition()
-        const menuEndOffset = menuInvisibleSize
+        menuInvisibleSize = menuSize - menuWrapperSize;
+        const menuPosition = getMenuPosition();
+        const menuEndOffset = menuInvisibleSize;
         // show & hide the paddles, depending on scroll position
         if (menuPosition <= 0 && menuEndOffset <= 0) {
           // hide both paddles if the window is large enough to display all tabs
-          leftPaddle.classList.add("hidden")
-          rightPaddle.classList.add("hidden")
+          leftPaddle.classList.add("hidden");
+          rightPaddle.classList.add("hidden");
         } else if (menuPosition <= 0) {
-          leftPaddle.classList.add("hidden")
-          rightPaddle.classList.remove("hidden")
+          leftPaddle.classList.add("hidden");
+          rightPaddle.classList.remove("hidden");
         } else if (menuPosition < Math.floor(menuEndOffset)) {
           // show both paddles in the middle
-          leftPaddle.classList.remove("hidden")
-          rightPaddle.classList.remove("hidden")
+          leftPaddle.classList.remove("hidden");
+          rightPaddle.classList.remove("hidden");
         } else if (menuPosition >= Math.floor(menuEndOffset)) {
-          leftPaddle.classList.remove("hidden")
-          rightPaddle.classList.add("hidden")
+          leftPaddle.classList.remove("hidden");
+          rightPaddle.classList.add("hidden");
         }
-      }
-      handleMenuScroll()
+      };
+      handleMenuScroll();
 
       window.onresize = () => {
-        menuWrapperSize = getMenuWrapperSize()
-        menuSize = getMenuSize()
-        handleMenuScroll()
-      }
+        menuWrapperSize = getMenuWrapperSize();
+        menuSize = getMenuSize();
+        handleMenuScroll();
+      };
       // finally, what happens when we are actually scrolling the menu
       document.querySelector(".menu-wrapper").onscroll = () => {
-        handleMenuScroll()
-      }
+        handleMenuScroll();
+      };
 
       const startJavaScriptAnimation = ({
         duration = 300,
@@ -492,68 +492,68 @@ h4 {
         onCancel = () => {},
         onComplete = () => {},
       }) => {
-        duration = parseInt(duration, 10)
-        const startMs = performance.now()
-        let currentRequestAnimationFrameId
-        let done = false
-        let rawProgress = 0
-        let progress = 0
+        duration = parseInt(duration, 10);
+        const startMs = performance.now();
+        let currentRequestAnimationFrameId;
+        let done = false;
+        let rawProgress = 0;
+        let progress = 0;
         const handler = () => {
-          currentRequestAnimationFrameId = null
-          const nowMs = performance.now()
-          rawProgress = Math.min((nowMs - startMs) / duration, 1)
-          progress = timingFunction(rawProgress)
-          done = rawProgress === 1
+          currentRequestAnimationFrameId = null;
+          const nowMs = performance.now();
+          rawProgress = Math.min((nowMs - startMs) / duration, 1);
+          progress = timingFunction(rawProgress);
+          done = rawProgress === 1;
           onProgress({
             done,
             rawProgress,
             progress,
-          })
+          });
           if (done) {
-            onComplete()
+            onComplete();
           } else {
             currentRequestAnimationFrameId =
-              window.requestAnimationFrame(handler)
+              window.requestAnimationFrame(handler);
           }
-        }
-        handler()
+        };
+        handler();
         const stop = () => {
           if (currentRequestAnimationFrameId) {
-            window.cancelAnimationFrame(currentRequestAnimationFrameId)
-            currentRequestAnimationFrameId = null
+            window.cancelAnimationFrame(currentRequestAnimationFrameId);
+            currentRequestAnimationFrameId = null;
           }
           if (!done) {
-            done = true
+            done = true;
             onCancel({
               rawProgress,
               progress,
-            })
+            });
           }
-        }
-        return stop
-      }
+        };
+        return stop;
+      };
       rightPaddle.onclick = () => {
-        const scrollStart = document.querySelector(".menu-wrapper").scrollLeft
-        const scrollEnd = scrollStart + menuWrapperSize
+        const scrollStart = document.querySelector(".menu-wrapper").scrollLeft;
+        const scrollEnd = scrollStart + menuWrapperSize;
         startJavaScriptAnimation({
           duration: scrollDuration,
           onProgress: ({ progress }) => {
             document.querySelector(".menu-wrapper").scrollLeft =
-              scrollStart + (scrollEnd - scrollStart) * progress
+              scrollStart + (scrollEnd - scrollStart) * progress;
           },
-        })
-      }
+        });
+      };
       leftPaddle.onclick = () => {
-        const scrollStart = document.querySelector(".menu-wrapper").scrollLeft
-        const scrollEnd = scrollStart - menuWrapperSize
+        const scrollStart = document.querySelector(".menu-wrapper").scrollLeft;
+        const scrollEnd = scrollStart - menuWrapperSize;
         startJavaScriptAnimation({
           duration: scrollDuration,
           onProgress: ({ progress }) => {
             document.querySelector(".menu-wrapper").scrollLeft =
-              scrollStart + (scrollEnd - scrollStart) * progress
+              scrollStart + (scrollEnd - scrollStart) * progress;
           },
-        })
-      }
+        });
+      };
     </script>
   </body>
 </html>
