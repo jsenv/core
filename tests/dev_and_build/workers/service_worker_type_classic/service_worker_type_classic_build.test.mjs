@@ -39,7 +39,9 @@ const test = async (params) => {
   const expected = {
     order: ["before-a", "before-b", "b", "after-b", "after-a"],
     resourcesFromJsenvBuild: {
-      "/main.html": { version: "afe0bee5" },
+      "/main.html": {
+        version: "5496fe4a",
+      },
       "/css/style.css": {
         version: "0e312da1",
         versionedUrl: "/css/style.css?v=0e312da1",

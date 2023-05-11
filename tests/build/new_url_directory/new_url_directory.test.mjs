@@ -34,10 +34,9 @@ const test = async (params) => {
   };
   const expected = {
     returnValue: {
-      directoryUrl: `${server.origin}/src/?v=4ab9eae5`,
+      directoryUrl: `${server.origin}/src/?v=774fbd8c`,
     },
-    jsFileContent: `console.log("Hello")
-`,
+    jsFileContent: `console.log("Hello");\n`,
   };
   assert({ actual, expected });
 };
@@ -52,7 +51,7 @@ try {
 --- reference trace ---
 ${new URL("./client/main.html", import.meta.url)}:15:40
   14 |     <script type="module">
-> 15 |       const directoryUrl = new URL("./src/", import.meta.url).href
+> 15 |       const directoryUrl = new URL("./src/", import.meta.url).href;
                                               ^
   16 | `;
   assert({ actual, expected });

@@ -42,7 +42,7 @@ try {
   --- url reference trace ---
   ${new URL("./client/intermediate.js", import.meta.url)}:2:7
     1 | // eslint-disable-next-line import/no-unresolved
-  > 2 | import "./not_found.js"
+  > 2 | import "./not_found.js";
               ^
     3 | 
   --- plugin name ---

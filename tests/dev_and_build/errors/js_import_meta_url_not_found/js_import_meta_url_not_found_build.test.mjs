@@ -21,7 +21,7 @@ no entry on filesystem
 ${new URL("./client/style.css", import.meta.url).href}
 --- url reference trace ---
 ${new URL("./client/main.js", import.meta.url).href}:1:23
-> 1 | const cssUrl = new URL("./style.css", import.meta.url)
+> 1 | const cssUrl = new URL("./style.css", import.meta.url);
                             ^
   2 | 
 --- plugin name ---
