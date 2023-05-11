@@ -1,4 +1,4 @@
-import { executeTestPlan, chromium } from "@jsenv/test";
+import { executeTestPlan, chromium, firefox, webkit } from "@jsenv/test";
 
 await executeTestPlan({
   rootDirectoryUrl: new URL("../", import.meta.url),
@@ -6,6 +6,12 @@ await executeTestPlan({
     "./src/**/*.test.html": {
       chromium: {
         runtime: chromium(),
+      },
+      firefox: {
+        runtime: firefox(),
+      },
+      webkit: {
+        runtime: webkit(),
       },
     },
   },
@@ -16,6 +22,7 @@ await executeTestPlan({
   },
   coverageEnabled: true,
   coverageReportJson: true,
+  coverageMethodForBrowsers: "istanbul",
   coverageReportJsonFileUrl: new URL(
     "../.coverage/coverage.json",
     import.meta.url,

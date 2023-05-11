@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <script type="module">
+      import { sum } from "./sum.js";
+
+      const actual = sum(1, 2);
+      const expected = 3;
+      if (actual !== expected) {
+        throw new Error(`sum(1,2) should return 3, got ${actual}`);
+      }
+    </script>
+  </body>
+</html>
