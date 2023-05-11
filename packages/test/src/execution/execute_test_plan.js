@@ -73,6 +73,7 @@ export const executeTestPlan = async ({
     "./**/src/**/*.tsx": true,
     "./**/tests/": false,
     "./**/*.test.html": false,
+    "./**/*.test.html@*.js": false,
     "./**/*.test.js": false,
     "./**/*.test.mjs": false,
   },

@@ -20,9 +20,10 @@ export const composeV8AndIstanbul = (
           createDetailedMessage(
             `Coverage conflict on "${key}", found two coverage that cannot be merged together: v8 and istanbul. The istanbul coverage will be ignored.`,
             {
-              details: `This happens when a file is executed on a runtime using v8 coverage (node or chromium) and on runtime using istanbul coverage (firefox or webkit)`,
-              suggestion:
-                "You can disable this warning with coverageV8ConflictWarning: false",
+              "details": `This happens when a file is executed on a runtime using v8 coverage (node or chromium) and on runtime using istanbul coverage (firefox or webkit)`,
+              "suggestion":
+                "disable this warning with coverageV8ConflictWarning: false",
+              "suggestion 2": `force coverage using istanbul with coverageMethodForBrowsers: "istanbul"`,
             },
           ),
         )
