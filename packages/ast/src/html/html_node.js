@@ -40,7 +40,11 @@ export const injectHtmlNode = (htmlAst, node, jsenvPluginName = "jsenv") => {
       after = child;
     }
   }
-  insertHtmlNodeAfter(node, after);
+  if (after) {
+    insertHtmlNodeAfter(node, after);
+  } else {
+    injectWithWhitespaces(node, bodyNode, 0);
+  }
 };
 
 export const injectHtmlNodeAsEarlyAsPossible = (
@@ -95,7 +99,9 @@ export const injectHtmlNodeAsEarlyAsPossible = (
         after = child;
       }
     }
-    insertHtmlNodeAfter(node, after);
+    if (after) {
+      insertHtmlNodeAfter(node, after);
+    }
     return;
   }
 
