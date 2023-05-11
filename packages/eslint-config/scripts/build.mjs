@@ -8,8 +8,8 @@
  *
  */
 
-import { build } from "@jsenv/core"
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
+import { build } from "@jsenv/core";
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 
 await build({
   sourceDirectoryUrl: new URL("../src/", import.meta.url),
@@ -24,4 +24,4 @@ await build({
   versioning: false,
   assetManifest: false,
   sourcemaps: "file",
-})
+});

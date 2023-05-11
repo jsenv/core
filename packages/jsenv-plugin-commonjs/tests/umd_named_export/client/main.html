@@ -9,13 +9,13 @@
   <body>
     <script>
       window.resultPromise = new Promise((resolve) => {
-        window.resolveResultPromise = resolve
-      })
+        window.resolveResultPromise = resolve;
+      });
     </script>
     <script type="module">
-      import { answer } from "./lib.js"
+      import { answer } from "./lib.js";
 
-      window.resolveResultPromise(answer)
+      window.resolveResultPromise(answer);
     </script>
   </body>
 </html>

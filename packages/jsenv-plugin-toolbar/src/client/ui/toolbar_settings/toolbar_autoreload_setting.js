@@ -1,46 +1,46 @@
-import { effect } from "@preact/signals"
+import { effect } from "@preact/signals";
 
-import { autoreloadEnabledSignal } from "../../core/parent_window_signals.js"
+import { autoreloadEnabledSignal } from "../../core/parent_window_signals.js";
 import {
   disableAutoreload,
   enableAutoreload,
-} from "../../core/parent_window_actions.js"
+} from "../../core/parent_window_actions.js";
 
 export const renderToolbarAutoreloadSetting = () => {
-  const parentWindowReloader = window.parent.__reloader__
+  const parentWindowReloader = window.parent.__reloader__;
   if (!parentWindowReloader) {
-    disableAutoreloadSetting()
-    return
+    disableAutoreloadSetting();
+    return;
   }
 
-  const autoreloadCheckbox = document.querySelector("#toggle_autoreload")
+  const autoreloadCheckbox = document.querySelector("#toggle_autoreload");
   effect(() => {
-    const autoreloadEnabled = autoreloadEnabledSignal.value
+    const autoreloadEnabled = autoreloadEnabledSignal.value;
     if (autoreloadEnabled) {
-      autoreloadCheckbox.checked = true
+      autoreloadCheckbox.checked = true;
     } else {
-      autoreloadCheckbox.checked = false
+      autoreloadCheckbox.checked = false;
     }
-  })
+  });
 
   autoreloadCheckbox.onchange = () => {
     if (autoreloadCheckbox.checked) {
-      enableAutoreload()
+      enableAutoreload();
     } else {
-      disableAutoreload()
+      disableAutoreload();
     }
-  }
-}
+  };
+};
 
 const disableAutoreloadSetting = () => {
   document
     .querySelector(".settings_autoreload")
-    .setAttribute("data-disabled", "true")
+    .setAttribute("data-disabled", "true");
   document
     .querySelector(".settings_autoreload")
-    .setAttribute("title", `Autoreload not enabled on server`)
-  document.querySelector("#toggle_autoreload").disabled = true
-}
+    .setAttribute("title", `Autoreload not enabled on server`);
+  document.querySelector("#toggle_autoreload").disabled = true;
+};
 
 // const changeLink = variantNode.querySelector(".eventsource-changes-link")
 // changeLink.innerHTML = reloadMessageCount

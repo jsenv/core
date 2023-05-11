@@ -10,29 +10,29 @@
   <body>
     <script>
       window.resultPromise = new Promise((resolve) => {
-        window.resolveResultPromise = resolve
-      })
+        window.resolveResultPromise = resolve;
+      });
     </script>
     <script type="module">
       const testServiceWorker = async (serviceWorker) => {
         const inspectResponse = await new Promise((resolve) => {
-          const { port1, port2 } = new MessageChannel()
+          const { port1, port2 } = new MessageChannel();
           port1.onmessage = function (event) {
-            resolve(event.data)
-          }
-          serviceWorker.postMessage("inspect", [port2])
-        })
-        return inspectResponse
-      }
+            resolve(event.data);
+          };
+          serviceWorker.postMessage("inspect", [port2]);
+        });
+        return inspectResponse;
+      };
       const serviceWorker = await window.navigator.serviceWorker
         .register(new URL("./sw.js", import.meta.url), { type: "module" })
         .then((registration) => {
-          const { installing, waiting, active } = registration
-          return installing || waiting || active
-        })
+          const { installing, waiting, active } = registration;
+          return installing || waiting || active;
+        });
       window.resolveResultPromise({
         inspectResponse: await testServiceWorker(serviceWorker),
-      })
+      });
     </script>
   </body>
 </html>

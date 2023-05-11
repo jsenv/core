@@ -1,12 +1,12 @@
 /* eslint-env browser */
-import { swFacade } from "./sw_facade.js"
+import { swFacade } from "./sw_facade.js";
 
-const animalUrl = new URL("./animal.svg", import.meta.url)
-const imageHotUpdateCheckbox = document.querySelector("#image_hot_update")
+const animalUrl = new URL("./animal.svg", import.meta.url);
+const imageHotUpdateCheckbox = document.querySelector("#image_hot_update");
 
-const img = document.querySelector("img")
+const img = document.querySelector("img");
 
-document.querySelector("img").src = animalUrl
+document.querySelector("img").src = animalUrl;
 
 /*
  * In theory it's possible to hot replace resources used by a service worker
@@ -21,25 +21,25 @@ document.querySelector("img").src = animalUrl
 swFacade.defineResourceUpdateHandler(import.meta.url, () => {
   return {
     replace: () => {},
-  }
-})
+  };
+});
 swFacade.defineResourceUpdateHandler(animalUrl, () => {
   if (!imageHotUpdateCheckbox.checked) {
-    return null
+    return null;
   }
   return {
     replace: async ({ toUrl }) => {
-      const src = img.src
+      const src = img.src;
       if (src && src.startsWith("blob:")) {
-        URL.revokeObjectURL(src)
+        URL.revokeObjectURL(src);
       }
-      img.src = ""
-      const response = await window.fetch(toUrl)
-      const blob = await response.blob()
-      const urlAsBlobString = URL.createObjectURL(blob)
-      await new Promise((resolve) => setTimeout(resolve, 150))
-      img.src = urlAsBlobString
+      img.src = "";
+      const response = await window.fetch(toUrl);
+      const blob = await response.blob();
+      const urlAsBlobString = URL.createObjectURL(blob);
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      img.src = urlAsBlobString;
     },
     remove: () => URL.revokeObjectURL(img.src),
-  }
-})
+  };
+});

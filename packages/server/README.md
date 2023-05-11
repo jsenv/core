@@ -3,7 +3,7 @@
 `@jsenv/server` helps to write flexible server code with a declarative API.
 
 ```js
-import { startServer } from "@jsenv/server"
+import { startServer } from "@jsenv/server";
 
 await startServer({
   port: 8080,
@@ -16,11 +16,11 @@ await startServer({
             "content-type": "text/plain",
           },
           body: "Hello world",
-        }
+        };
       },
     },
   ],
-})
+});
 ```
 
 # Examples
@@ -35,7 +35,7 @@ _Code starting a server with 2 request handlers:_
  * - otherwise
  *   -> respond with 404
  */
-import { startServer, composeServices } from "@jsenv/server"
+import { startServer, composeServices } from "@jsenv/server";
 
 const server = await startServer({
   services: [
@@ -43,33 +43,33 @@ const server = await startServer({
       name: "index",
       handleRequest: (request) => {
         if (request.resource === "/") {
-          return { status: 200 }
+          return { status: 200 };
         }
-        return null
+        return null;
       },
     },
     {
       name: "otherwise",
       handleRequest: () => {
-        return { status: 404 }
+        return { status: 404 };
       },
     },
   ],
-})
+});
 
-const fetch = await import("node-fetch")
-const responseForOrigin = await fetch(server.origin)
-responseForOrigin.status // 200
+const fetch = await import("node-fetch");
+const responseForOrigin = await fetch(server.origin);
+responseForOrigin.status; // 200
 
-const responseForFoo = await fetch(`${server.origin}/foo`)
-responseForFoo.status // 404
+const responseForFoo = await fetch(`${server.origin}/foo`);
+responseForFoo.status; // 404
 ```
 
 _Code starting a server in https:_
 
 ```js
-import { readFileSync } from "node:fs"
-import { startServer } from "@jsenv/server"
+import { readFileSync } from "node:fs";
+import { startServer } from "@jsenv/server";
 
 await startServer({
   https: {
@@ -80,7 +80,7 @@ await startServer({
   services: [
     {
       handleRequest: (request) => {
-        const clientUsesHttp = request.origin.startsWith("http:")
+        const clientUsesHttp = request.origin.startsWith("http:");
 
         return {
           status: 200,
@@ -88,29 +88,29 @@ await startServer({
             "content-type": "text/plain",
           },
           body: clientUsesHttp ? `Welcome http user` : `Welcome https user`,
-        }
+        };
       },
     },
   ],
-})
+});
 ```
 
 _Code starting a server for static files:_
 
 ```js
-import { startServer, fetchFileSystem } from "@jsenv/server"
+import { startServer, fetchFileSystem } from "@jsenv/server";
 
 await startServer({
   services: [
     {
       handleRequest: async (request) => {
-        const fileUrl = new URL(request.resource.slice(1), import.meta.url)
-        const response = await fetchFileSystem(fileUrl, request)
-        return response
+        const fileUrl = new URL(request.resource.slice(1), import.meta.url);
+        const response = await fetchFileSystem(fileUrl, request);
+        return response;
       },
     },
   ],
-})
+});
 ```
 
 # Documentation

@@ -19,7 +19,7 @@ N8wxU9DFM+r2EXz8GjnLAdxkONU+9g8LGzb35QrA5BdA2C3j8gPAifaSEsP3hNhn
 unN40dWJl3CsckM9X+YyulFR3xknMjtY/5uR/6cKU3cBlaPHWrRSyUKEU9XbxCMz
 72p8rZCsdqGB5zrF65OFmYUy662Jalsf1tAsfibhkPA2F//NfR6ye2hBPYG+Ef+/
 2EbHiuz/ZJEvu2aGC0j91zlA6scqw1Y8MUiyeCfVQoYqMko=
------END CERTIFICATE-----`
+-----END CERTIFICATE-----`;
 
 export const testServerCertificate = `-----BEGIN CERTIFICATE-----
 MIIECjCCAvKgAwIBAgIBATANBgkqhkiG9w0BAQsFADCBkTEuMCwGA1UEAxMlaHR0
@@ -44,7 +44,7 @@ PTwoqxX0ymAbVTwnulxLiaJqu0z3rQkSogIdeo4InPxqqTA1gYAakMZPkS5JNFgz
 aSlzvxK6rKXD+b2PxclMBvD9CL5eq9StHppD9rYgY39islxRcaQPazXSCTNhU/TN
 Y1gUngqE7PJoBgjJjsVp4MmIjDv9snR12RbIVpm+o2szg2rSN0D0SamjW2hH3MtN
 si/Ce9UYvwS3Bijm/CuxxZX5JKMAGQzLvGhMu1KT
------END CERTIFICATE-----`
+-----END CERTIFICATE-----`;
 
 export const testServerCertificatePrivateKey = `-----BEGIN RSA PRIVATE KEY-----
 MIIEpAIBAAKCAQEAw2iS1wksi5uc1ovydr3Da4UXx6Q3AZ8nUTMRKqpnPs2s3fNK
@@ -72,7 +72,7 @@ f79d16WNeW4WXtf4Rm+uMudzOum0Pg+UovXaDLgN4hrXQXtgI0g6y4MNbt0Z78cv
 XYJAMQKBgQCXjfNHXZ3XHaT+lrHlfDOfEyRh7oRQ5CJVgzfRBQMI4bW5M0OzvMie
 O0EugYcoCtdxyMCUWg/CurbHFQ49lSHASYQnTRgLdyq0825vhxVzj+1kYFK1I6vP
 B8FHFiUWjsgrqNgBAC/PhIDbZ4VtPrdlPBQjWwdSNpEHIL6b+rP7hA==
------END RSA PRIVATE KEY-----`
+-----END RSA PRIVATE KEY-----`;
 
 export const testServerCertificatePublicKey = `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAw2iS1wksi5uc1ovydr3D
@@ -82,4 +82,4 @@ a1nq9xRcgN1uET9elIbWAgzcDuFnh768hOGwZGCJ2KOgik01Ed6b9AQfaDXUHYkh
 g4A8vyV+p/wxdsukH8s5yAltK7SExudhoDSwEv9EmP/8ZhO7AKb/33cvCB7WdVge
 7W72T46cHE8uCEgJsVG0rPK2rXAg/CRITzkilsm6dthBbLHQ7hfJkQKSeOlm7vlV
 qwIDAQAB
------END PUBLIC KEY-----`
+-----END PUBLIC KEY-----`;

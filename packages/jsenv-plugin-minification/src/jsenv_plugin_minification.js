@@ -1,7 +1,7 @@
-import { minifyHtml } from "./html/html_minification.js"
-import { minifyCss } from "./css/css_minification.js"
-import { minifyJs } from "./js/js_minification.js"
-import { minifyJson } from "./json/json_minification.js"
+import { minifyHtml } from "./html/html_minification.js";
+import { minifyCss } from "./css/css_minification.js";
+import { minifyJs } from "./js/js_minification.js";
+import { minifyJson } from "./json/json_minification.js";
 
 export const jsenvPluginMinification = ({
   html = {},
@@ -18,7 +18,7 @@ export const jsenvPluginMinification = ({
           context,
           options: html === true ? {} : html,
         })
-    : null
+    : null;
   const svgMinifier = svg
     ? (urlInfo, context) =>
         minifyHtml({
@@ -26,7 +26,7 @@ export const jsenvPluginMinification = ({
           context,
           options: svg === true ? {} : svg,
         })
-    : null
+    : null;
   const cssMinifier = css
     ? (urlInfo, context) =>
         minifyCss({
@@ -34,7 +34,7 @@ export const jsenvPluginMinification = ({
           context,
           options: css === true ? {} : css,
         })
-    : null
+    : null;
   const jsClassicMinifier = js_classic
     ? (urlInfo, context) =>
         minifyJs({
@@ -42,7 +42,7 @@ export const jsenvPluginMinification = ({
           context,
           options: js_classic === true ? {} : js_classic,
         })
-    : null
+    : null;
   const jsModuleMinifier = js_module
     ? (urlInfo, context) =>
         minifyJs({
@@ -50,7 +50,7 @@ export const jsenvPluginMinification = ({
           context,
           options: js_module === true ? {} : js_module,
         })
-    : null
+    : null;
   const jsonMinifier = json
     ? (urlInfo, context) =>
         minifyJson({
@@ -58,7 +58,7 @@ export const jsenvPluginMinification = ({
           context,
           options: json === true ? {} : html,
         })
-    : null
+    : null;
 
   return {
     name: "jsenv:minification",
@@ -73,5 +73,5 @@ export const jsenvPluginMinification = ({
       importmap: jsonMinifier,
       webmanifest: jsonMinifier,
     },
-  }
-}
+  };
+};

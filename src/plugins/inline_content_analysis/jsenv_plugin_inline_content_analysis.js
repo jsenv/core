@@ -1,6 +1,6 @@
-import { jsenvPluginHtmlInlineContentAnalysis } from "./jsenv_plugin_html_inline_content_analysis.js"
-import { jsenvPluginJsInlineContentAnalysis } from "./jsenv_plugin_js_inline_content_analysis.js"
-import { jsenvPluginDataUrls } from "./jsenv_plugin_data_urls.js"
+import { jsenvPluginHtmlInlineContentAnalysis } from "./jsenv_plugin_html_inline_content_analysis.js";
+import { jsenvPluginJsInlineContentAnalysis } from "./jsenv_plugin_js_inline_content_analysis.js";
+import { jsenvPluginDataUrls } from "./jsenv_plugin_data_urls.js";
 
 export const jsenvPluginInlineContentAnalysis = ({
   fetchInlineUrls = true,
@@ -12,8 +12,8 @@ export const jsenvPluginInlineContentAnalysis = ({
     jsenvPluginHtmlInlineContentAnalysis({ analyzeConvertedScripts }),
     jsenvPluginJsInlineContentAnalysis({ allowEscapeForVersioning }),
     jsenvPluginDataUrls(),
-  ]
-}
+  ];
+};
 
 const jsenvPluginInlineContentFetcher = () => {
   return {
@@ -21,14 +21,14 @@ const jsenvPluginInlineContentFetcher = () => {
     appliesDuring: "*",
     fetchUrlContent: (urlInfo) => {
       if (!urlInfo.isInline) {
-        return null
+        return null;
       }
       return {
         // we want to fetch the original content otherwise we might re-cook
         // content already cooked
         content: urlInfo.originalContent,
         contentType: urlInfo.contentType,
-      }
+      };
     },
-  }
-}
+  };
+};

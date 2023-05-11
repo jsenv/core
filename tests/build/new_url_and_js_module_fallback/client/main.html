@@ -9,13 +9,13 @@
   <body>
     <script>
       window.resultPromise = new Promise((resolve) => {
-        window.resolveResultPromise = resolve
-      })
+        window.resolveResultPromise = resolve;
+      });
     </script>
     <script type="module">
-      const urlObject = new URL("./main.js", import.meta.url)
+      const urlObject = new URL("./main.js", import.meta.url);
 
-      window.resolveResultPromise(urlObject.href)
+      window.resolveResultPromise(urlObject.href);
     </script>
   </body>
 </html>

@@ -19,7 +19,7 @@ _Screenshot server timing in chrome devtools:_
 Use _serverTiming_ to measure time taken by each service.
 
 ```js
-import { startServer, composeServices } from "@jsenv/server"
+import { startServer, composeServices } from "@jsenv/server";
 
 await startServer({
   serverTiming: true,
@@ -27,19 +27,19 @@ await startServer({
     {
       name: "service:nocontent",
       handleRequest: (request) => {
-        if (request.pathname !== "/") return null
-        return { status: 204 }
+        if (request.pathname !== "/") return null;
+        return { status: 204 };
       },
     },
     {
       name: "service:ok",
       handleRequest: (request) => {
-        if (request.pathname !== "/whatever") return null
-        return { status: 200 }
+        if (request.pathname !== "/whatever") return null;
+        return { status: 200 };
       },
     },
   ],
-})
+});
 ```
 
 Code above generates a server timing response header that looks like this:
@@ -51,23 +51,23 @@ server-timing: a;desc="service:nocontent.handleRequest";dur=0.007546901, b;desc=
 It is also possible to put more timing information by returning a _timing_ property as shown below:
 
 ```js
-import { startServer, pluginServerTimings } from "@jsenv/server"
+import { startServer, pluginServerTimings } from "@jsenv/server";
 
 await startServer({
   serverTiming: true,
   services: [
     {
       handleRequest: async () => {
-        const timeoutStart = performance.now()
+        const timeoutStart = performance.now();
         const [waitTiming] = await timeFunction("waiting 50ms", async () => {
           await new Promise((resolve) => {
-            setTimeout(resolve, 50)
-          })
-        })
-        const timeoutDuration = performance.now() - timeoutStart
-        const additionStart = performance.now()
-        1 + 1
-        const additionDuration = performance.now() - additionStart
+            setTimeout(resolve, 50);
+          });
+        });
+        const timeoutDuration = performance.now() - timeoutStart;
+        const additionStart = performance.now();
+        1 + 1;
+        const additionDuration = performance.now() - additionStart;
         return {
           status: 200,
           headers: {
@@ -78,11 +78,11 @@ await startServer({
             "setTimeout(50)": timeoutDuration,
             "1+1": additionDuration,
           },
-        }
+        };
       },
     },
   ],
-})
+});
 ```
 
 Code aboves generates a server timing response headers that looks as below

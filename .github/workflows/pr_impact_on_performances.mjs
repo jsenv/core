@@ -1,7 +1,7 @@
 import {
   reportPerformanceImpact,
   readGitHubWorkflowEnv,
-} from "@jsenv/performance-impact"
+} from "@jsenv/performance-impact";
 
 await reportPerformanceImpact({
   ...readGitHubWorkflowEnv(),
@@ -11,4 +11,4 @@ await reportPerformanceImpact({
     "../../scripts/performance/generate_performance_report.mjs#performanceReport",
     import.meta.url,
   ),
-})
+});

@@ -1,3 +1,3 @@
-import { signal } from "@preact/signals"
+import { signal } from "@preact/signals";
 
-export const changesTooltipOpenedSignal = signal(false)
+export const changesTooltipOpenedSignal = signal(false);

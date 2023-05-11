@@ -1,8 +1,8 @@
-import { requestCertificate } from "@jsenv/https-local"
-import { startDevServer } from "@jsenv/core"
+import { requestCertificate } from "@jsenv/https-local";
+import { startDevServer } from "@jsenv/core";
 
 export const startTestServer = async (rest) => {
-  const { certificate, privateKey } = requestCertificate()
+  const { certificate, privateKey } = requestCertificate();
   const testServer = await startDevServer({
     logLevel: "warn",
     https: { certificate, privateKey },
@@ -10,6 +10,6 @@ export const startTestServer = async (rest) => {
     clientAutoreload: false,
     supervisor: false,
     ...rest,
-  })
-  return testServer
-}
+  });
+  return testServer;
+};

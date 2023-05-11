@@ -1,30 +1,30 @@
-import { assertUrlLike } from "./assertions.js"
+import { assertUrlLike } from "./assertions.js";
 
 export const resolveAssociations = (associations, baseUrl) => {
-  assertUrlLike(baseUrl, "baseUrl")
-  const associationsResolved = {}
+  assertUrlLike(baseUrl, "baseUrl");
+  const associationsResolved = {};
   Object.keys(associations).forEach((key) => {
-    const value = associations[key]
+    const value = associations[key];
     if (typeof value === "object" && value !== null) {
-      const valueMapResolved = {}
+      const valueMapResolved = {};
       Object.keys(value).forEach((pattern) => {
-        const valueAssociated = value[pattern]
-        const patternResolved = normalizeUrlPattern(pattern, baseUrl)
-        valueMapResolved[patternResolved] = valueAssociated
-      })
-      associationsResolved[key] = valueMapResolved
+        const valueAssociated = value[pattern];
+        const patternResolved = normalizeUrlPattern(pattern, baseUrl);
+        valueMapResolved[patternResolved] = valueAssociated;
+      });
+      associationsResolved[key] = valueMapResolved;
     } else {
-      associationsResolved[key] = value
+      associationsResolved[key] = value;
     }
-  })
-  return associationsResolved
-}
+  });
+  return associationsResolved;
+};
 
 const normalizeUrlPattern = (urlPattern, baseUrl) => {
   try {
-    return String(new URL(urlPattern, baseUrl))
+    return String(new URL(urlPattern, baseUrl));
   } catch (e) {
     // it's not really an url, no need to perform url resolution nor encoding
-    return urlPattern
+    return urlPattern;
   }
-}
+};

@@ -3,13 +3,13 @@
 _applyPatternMatching_ is a function returning a _matchResult_ indicating if and how a _pattern_ matches an _url_.
 
 ```js
-import { URL_META } from "@jsenv/url-meta"
+import { URL_META } from "@jsenv/url-meta";
 
 const matchResult = URL_META.applyPatternMatching({
   pattern: "file:///**/*",
   url: "file://Users/directory/file.js",
-})
-matchResult.matched // true
+});
+matchResult.matched; // true
 ```
 
 ## pattern
@@ -31,13 +31,13 @@ _matchResult_ represents if and how a _pattern_ matches an _url_.
 ### Matching example
 
 ```js
-import { URL_META } from "@jsenv/url-meta"
+import { URL_META } from "@jsenv/url-meta";
 
 const fullMatch = URL_META.applyPatternMatching({
   pattern: "file:///**/*",
   url: "file:///Users/directory/file.js",
-})
-console.log(JSON.stringify(fullMatch, null, "  "))
+});
+console.log(JSON.stringify(fullMatch, null, "  "));
 ```
 
 ```json
@@ -52,13 +52,13 @@ console.log(JSON.stringify(fullMatch, null, "  "))
 ### Partial matching example
 
 ```js
-import { applyPatternMatching } from "@jsenv/urlss"
+import { applyPatternMatching } from "@jsenv/urlss";
 
 const partialMatch = URL_META.applyPatternMatching({
   pattern: "file:///*.js",
   url: "file:///file.jsx",
-})
-console.log(JSON.stringify(partialMatch, null, "  "))
+});
+console.log(JSON.stringify(partialMatch, null, "  "));
 ```
 
 ```json

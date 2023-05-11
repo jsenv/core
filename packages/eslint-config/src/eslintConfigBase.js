@@ -12,4 +12,4 @@ export const eslintConfigBase = {
   settings: {
     extensions: [".js", ".mjs"],
   },
-}
+};

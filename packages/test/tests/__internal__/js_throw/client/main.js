@@ -1,3 +1,3 @@
-import { triggerError } from "./trigger_error.js"
+import { triggerError } from "./trigger_error.js";
 
-triggerError()
+triggerError();

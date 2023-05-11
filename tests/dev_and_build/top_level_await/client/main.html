@@ -8,12 +8,12 @@
   <body>
     <script>
       window.resultPromise = new Promise((resolve) => {
-        window.resolveResultPromise = resolve
-      })
+        window.resolveResultPromise = resolve;
+      });
     </script>
     <script type="module">
-      const answer = await 42
-      window.resolveResultPromise({ answer })
+      const answer = await 42;
+      window.resolveResultPromise({ answer });
     </script>
   </body>
 </html>

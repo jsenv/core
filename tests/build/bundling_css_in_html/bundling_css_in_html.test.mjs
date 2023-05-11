@@ -1,7 +1,7 @@
-import { assert } from "@jsenv/assert"
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
+import { assert } from "@jsenv/assert";
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 
-import { build } from "@jsenv/core"
+import { build } from "@jsenv/core";
 
 const { buildFileContents } = await build({
   logLevel: "warn",
@@ -11,13 +11,13 @@ const { buildFileContents } = await build({
   },
   buildDirectoryUrl: new URL("./dist/", import.meta.url),
   plugins: [jsenvPluginBundling()],
-})
+});
 const actual = {
   numberOfCssFiles: Object.keys(buildFileContents).filter((key) =>
     key.startsWith("css/"),
   ).length,
-}
+};
 const expected = {
   numberOfCssFiles: 1,
-}
-assert({ actual, expected })
+};
+assert({ actual, expected });

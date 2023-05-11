@@ -1,7 +1,7 @@
-import { inspectConstructor } from "./constructor.js"
+import { inspectConstructor } from "./constructor.js";
 
 export const inspectError = (error, { nestedInspect, useNew, parenthesis }) => {
-  const messageSource = nestedInspect(error.message)
+  const messageSource = nestedInspect(error.message);
 
   const errorSource = inspectConstructor(
     `${errorToConstructorName(error)}(${messageSource})`,
@@ -9,16 +9,16 @@ export const inspectError = (error, { nestedInspect, useNew, parenthesis }) => {
       useNew,
       parenthesis,
     },
-  )
-  return errorSource
-}
+  );
+  return errorSource;
+};
 
 const errorToConstructorName = ({ name }) => {
   if (derivedErrorNameArray.includes(name)) {
-    return name
+    return name;
   }
-  return "Error"
-}
+  return "Error";
+};
 
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error#Error_types
 const derivedErrorNameArray = [
@@ -28,4 +28,4 @@ const derivedErrorNameArray = [
   "SyntaxError",
   "TypeError",
   "URIError",
-]
+];

@@ -1,17 +1,17 @@
 export const findSelfOrAncestorComparison = (comparison, predicate) => {
-  let current = comparison
-  let foundComparison
+  let current = comparison;
+  let foundComparison;
   while (current) {
     if (current && predicate(current)) {
-      foundComparison = current
-      current = foundComparison.parent
+      foundComparison = current;
+      current = foundComparison.parent;
       while (current) {
-        if (predicate(current)) foundComparison = current
-        current = current.parent
+        if (predicate(current)) foundComparison = current;
+        current = current.parent;
       }
-      return foundComparison
+      return foundComparison;
     }
-    current = current.parent
+    current = current.parent;
   }
-  return null
-}
+  return null;
+};

@@ -1,3 +1,3 @@
-import "./file.js?as_js_module"
+import "./file.js?as_js_module";
 
-window.resolveResultPromise(window.__answer__)
+window.resolveResultPromise(window.__answer__);

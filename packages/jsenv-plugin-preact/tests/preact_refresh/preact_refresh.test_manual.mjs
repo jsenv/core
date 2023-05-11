@@ -1,5 +1,5 @@
-import { startDevServer } from "@jsenv/core"
-import { jsenvPluginPreact } from "@jsenv/plugin-preact"
+import { startDevServer } from "@jsenv/core";
+import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 
 startDevServer({
   port: 5678,
@@ -20,4 +20,4 @@ startDevServer({
       },
     },
   },
-})
+});

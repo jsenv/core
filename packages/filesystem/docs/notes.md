@@ -40,8 +40,8 @@ An url is better than a filesystem path because it does not care about the under
 There is a deliberate preference for url string over url object in the documentation and codebase.
 
 ```js
-const urlString = "file:///directory/file.js"
-const urlObject = new URL("file:///directory/file.js")
+const urlString = "file:///directory/file.js";
+const urlObject = new URL("file:///directory/file.js");
 ```
 
 A string is a simpler primitive than an url object and it becomes important while debugging.
@@ -63,15 +63,15 @@ _Screenshot of an url string while debugging_
 Passing an url string to a function from `fs` will always throw [ENOENT](https://nodejs.org/api/errors.html#errors_common_system_errors) error.
 
 ```js
-import { readFileSync } from "fs"
+import { readFileSync } from "fs";
 
-readFileSync(import.meta.url) // throw ENOENT
+readFileSync(import.meta.url); // throw ENOENT
 ```
 
 ```js
-const { readFileSync } = require("fs")
+const { readFileSync } = require("fs");
 
-readFileSync(`file://${__filename}`) // throw ENOENT
+readFileSync(`file://${__filename}`); // throw ENOENT
 ```
 
 > Node.js made this choice for performance reasons but it hurts my productivity.

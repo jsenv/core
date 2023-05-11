@@ -1,34 +1,34 @@
-import { assert } from "@jsenv/assert"
-import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js"
+import { assert } from "@jsenv/assert";
+import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js";
 
 {
-  const symbola = Symbol("a")
-  const symbolb = Symbol("b")
+  const symbola = Symbol("a");
+  const symbolb = Symbol("b");
   const actual = {
     [symbola]: true,
     [symbolb]: true,
-  }
+  };
   const expected = {
     [symbola]: true,
     [symbolb]: true,
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }
 
 {
-  const symbola = Symbol("a")
-  const symbolb = Symbol("b")
+  const symbola = Symbol("a");
+  const symbolb = Symbol("b");
 
   const actual = {
     [symbolb]: true,
     [symbola]: true,
-  }
+  };
   const expected = {
     [symbola]: true,
     [symbolb]: true,
-  }
+  };
   try {
-    assert({ actual, expected })
+    assert({ actual, expected });
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
@@ -41,6 +41,6 @@ Symbol("a")
 Symbol("b")
 --- path ---
 actual`,
-    )
+    );
   }
 }

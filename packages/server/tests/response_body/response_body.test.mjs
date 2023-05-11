@@ -1,8 +1,8 @@
-import { promises } from "node:fs"
-import { assert } from "@jsenv/assert"
-import { fetchUrl } from "@jsenv/fetch"
+import { promises } from "node:fs";
+import { assert } from "@jsenv/assert";
+import { fetchUrl } from "@jsenv/fetch";
 
-import { startServer, fromFetchResponse } from "@jsenv/server"
+import { startServer, fromFetchResponse } from "@jsenv/server";
 
 // file handle
 {
@@ -19,17 +19,17 @@ import { startServer, fromFetchResponse } from "@jsenv/server"
               new URL("./file.txt", import.meta.url),
               "r",
             ),
-          }
-          return response
+          };
+          return response;
         },
       },
     ],
-  })
-  const response = await fetchUrl(server.origin)
+  });
+  const response = await fetchUrl(server.origin);
 
-  const actual = await response.text()
-  const expected = "Hello"
-  assert({ actual, expected })
+  const actual = await response.text();
+  const expected = "Hello";
+  assert({ actual, expected });
 
   // node-fetch response
   {
@@ -39,15 +39,15 @@ import { startServer, fromFetchResponse } from "@jsenv/server"
       services: [
         {
           handleRequest: async () => {
-            const response = await fetchUrl(server.origin)
-            return fromFetchResponse(response)
+            const response = await fetchUrl(server.origin);
+            return fromFetchResponse(response);
           },
         },
       ],
-    })
-    const response = await fetchUrl(serverB.origin)
-    const actual = await response.text()
-    const expected = "Hello"
-    assert({ actual, expected })
+    });
+    const response = await fetchUrl(serverB.origin);
+    const actual = await response.text();
+    const expected = "Hello";
+    assert({ actual, expected });
   }
 }

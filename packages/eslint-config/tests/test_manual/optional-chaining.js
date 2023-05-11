@@ -3,6 +3,6 @@ const adventurer = {
   cat: {
     name: "Dinah",
   },
-}
+};
 
-export const name = adventurer.dog?.name
+export const name = adventurer.dog?.name;

@@ -1,1 +1,1 @@
-export const inspectNull = () => "null"
+export const inspectNull = () => "null";

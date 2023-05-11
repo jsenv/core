@@ -1,29 +1,29 @@
-import { assert } from "@jsenv/assert"
-import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js"
+import { assert } from "@jsenv/assert";
+import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js";
 
 {
   const actual = {
     foo: true,
     bar: true,
-  }
+  };
   const expected = {
     foo: true,
     bar: true,
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }
 
 {
   const actual = {
     foo: true,
     bar: true,
-  }
+  };
   const expected = {
     bar: true,
     foo: true,
-  }
+  };
   try {
-    assert({ actual, expected })
+    assert({ actual, expected });
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
@@ -36,7 +36,7 @@ import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMess
 "foo"
 --- path ---
 actual`,
-    )
+    );
   }
 }
 
@@ -48,11 +48,11 @@ actual`,
 // or
 // ["length", "name", "prototype"]
 {
-  const actual = {}
-  Object.defineProperty(actual, "bar", { enumerable: false })
-  Object.defineProperty(actual, "foo", { enumerable: false })
-  const expected = {}
-  Object.defineProperty(expected, "foo", { enumerable: false })
-  Object.defineProperty(expected, "bar", { enumerable: false })
-  assert({ actual, expected })
+  const actual = {};
+  Object.defineProperty(actual, "bar", { enumerable: false });
+  Object.defineProperty(actual, "foo", { enumerable: false });
+  const expected = {};
+  Object.defineProperty(expected, "foo", { enumerable: false });
+  Object.defineProperty(expected, "bar", { enumerable: false });
+  assert({ actual, expected });
 }

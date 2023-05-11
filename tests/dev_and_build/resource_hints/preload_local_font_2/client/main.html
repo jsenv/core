@@ -20,18 +20,18 @@
     <h1>Hello world</h1>
     <script>
       window.resultPromise = new Promise((resolve) => {
-        window.resolveResultPromise = resolve
-      })
+        window.resolveResultPromise = resolve;
+      });
     </script>
     <script type="module">
       // Let browser time to log an eventual warning about preload link not used
       await new Promise((resolve) => {
-        setTimeout(resolve, 5000)
-      })
-      await document.fonts.ready
+        setTimeout(resolve, 5000);
+      });
+      await document.fonts.ready;
       window.resolveResultPromise({
         fontFamily: getComputedStyle(document.body).fontFamily,
-      })
+      });
     </script>
   </body>
 </html>

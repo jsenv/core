@@ -1,57 +1,57 @@
 export const getToolbarIframe = () => {
-  const iframes = Array.from(window.parent.document.querySelectorAll("iframe"))
-  return iframes.find((iframe) => iframe.contentWindow === window)
-}
+  const iframes = Array.from(window.parent.document.querySelectorAll("iframe"));
+  return iframes.find((iframe) => iframe.contentWindow === window);
+};
 
 export const forceHideElement = (element) => {
-  element.setAttribute("data-force-hide", "")
-}
+  element.setAttribute("data-force-hide", "");
+};
 
 export const removeForceHideElement = (element) => {
-  element.removeAttribute("data-force-hide")
-}
+  element.removeAttribute("data-force-hide");
+};
 
 export const setStyles = (element, styles) => {
-  const elementStyle = element.style
+  const elementStyle = element.style;
   const restoreStyles = Object.keys(styles).map((styleName) => {
-    let restore
+    let restore;
     if (styleName in elementStyle) {
-      const currentStyle = elementStyle[styleName]
+      const currentStyle = elementStyle[styleName];
       restore = () => {
-        elementStyle[styleName] = currentStyle
-      }
+        elementStyle[styleName] = currentStyle;
+      };
     } else {
       restore = () => {
-        delete elementStyle[styleName]
-      }
+        delete elementStyle[styleName];
+      };
     }
 
-    elementStyle[styleName] = styles[styleName]
+    elementStyle[styleName] = styles[styleName];
 
-    return restore
-  })
+    return restore;
+  });
   return () => {
-    restoreStyles.forEach((restore) => restore())
-  }
-}
+    restoreStyles.forEach((restore) => restore());
+  };
+};
 
 export const setAttributes = (element, attributes) => {
   Object.keys(attributes).forEach((name) => {
-    element.setAttribute(name, attributes[name])
-  })
-}
+    element.setAttribute(name, attributes[name]);
+  });
+};
 
 export const getDocumentScroll = () => {
   return {
     x: document.documentElement.scrollLeft,
     y: document.documentElement.scrollTop,
-  }
-}
+  };
+};
 
 export const activateToolbarSection = (element) => {
-  element.setAttribute("data-active", "")
-}
+  element.setAttribute("data-active", "");
+};
 
 export const deactivateToolbarSection = (element) => {
-  element.removeAttribute("data-active")
-}
+  element.removeAttribute("data-active");
+};

@@ -1,34 +1,34 @@
 export const GRAPH = {
   map: (graph, callback) => {
-    const array = []
+    const array = [];
     graph.urlInfoMap.forEach((urlInfo) => {
-      array.push(callback(urlInfo))
-    })
-    return array
+      array.push(callback(urlInfo));
+    });
+    return array;
   },
 
   forEach: (graph, callback) => {
-    graph.urlInfoMap.forEach(callback)
+    graph.urlInfoMap.forEach(callback);
   },
 
   filter: (graph, callback) => {
-    const urlInfos = []
+    const urlInfos = [];
     graph.urlInfoMap.forEach((urlInfo) => {
       if (callback(urlInfo)) {
-        urlInfos.push(urlInfo)
+        urlInfos.push(urlInfo);
       }
-    })
-    return urlInfos
+    });
+    return urlInfos;
   },
 
   find: (graph, callback) => {
-    let found = null
+    let found = null;
     for (const urlInfo of graph.urlInfoMap.values()) {
       if (callback(urlInfo)) {
-        found = urlInfo
-        break
+        found = urlInfo;
+        break;
       }
     }
-    return found
+    return found;
   },
-}
+};

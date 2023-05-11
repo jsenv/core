@@ -1,6 +1,6 @@
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-import { setHtmlNodeAttributes, getHtmlNodeAttribute } from "@jsenv/ast"
+import { setHtmlNodeAttributes, getHtmlNodeAttribute } from "@jsenv/ast";
 
 {
   const htmlNode = {
@@ -10,11 +10,11 @@ import { setHtmlNodeAttributes, getHtmlNodeAttribute } from "@jsenv/ast"
         value: "1",
       },
     ],
-  }
+  };
   setHtmlNodeAttributes(htmlNode, {
     foo: undefined,
-  })
-  const actual = getHtmlNodeAttribute(htmlNode, "foo")
-  const expected = undefined
-  assert({ actual, expected })
+  });
+  const actual = getHtmlNodeAttribute(htmlNode, "foo");
+  const expected = undefined;
+  assert({ actual, expected });
 }

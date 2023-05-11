@@ -1,17 +1,17 @@
-import { assert } from "@jsenv/assert"
-import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js"
+import { assert } from "@jsenv/assert";
+import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js";
 
 {
-  const actual = new Date(10)
-  const expected = new Date(10)
-  assert({ actual, expected })
+  const actual = new Date(10);
+  const expected = new Date(10);
+  assert({ actual, expected });
 }
 
 {
-  const actual = new Date(10)
-  const expected = new Date(11)
+  const actual = new Date(10);
+  const expected = new Date(11);
   try {
-    assert({ actual, expected })
+    assert({ actual, expected });
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
@@ -22,6 +22,6 @@ import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMess
 11
 --- path ---
 actual.valueOf()`,
-    )
+    );
   }
 }

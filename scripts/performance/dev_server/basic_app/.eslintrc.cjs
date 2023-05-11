@@ -1,4 +1,4 @@
-const { composeEslintConfig } = require("@jsenv/eslint-config")
+const { composeEslintConfig } = require("@jsenv/eslint-config");
 
 const eslintConfig = composeEslintConfig(
   // package is "type": "module" so:
@@ -14,6 +14,6 @@ const eslintConfig = composeEslintConfig(
       },
     ],
   },
-)
+);
 
-module.exports = eslintConfig
+module.exports = eslintConfig;

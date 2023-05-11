@@ -12,88 +12,88 @@
  * like analysing logs to find what cause process to die, ping a log server, ...
 */
 
-const exceptionHandlerSet = new Set()
+const exceptionHandlerSet = new Set();
 
 export const addProcessExceptionHandler = (exceptionHandler) => {
   if (exceptionHandlerSet.size === 0) {
-    install()
+    install();
   }
-  exceptionHandlerSet.add(exceptionHandler)
+  exceptionHandlerSet.add(exceptionHandler);
   return () => {
-    exceptionHandlerSet.remove(exceptionHandler)
+    exceptionHandlerSet.remove(exceptionHandler);
     if (exceptionHandlerSet.size === 0) {
-      uninstall()
+      uninstall();
     }
-  }
-}
+  };
+};
 
 const uncaughtExceptionEventCallback = (error) =>
-  triggerUncaughtException(error)
+  triggerUncaughtException(error);
 
 const unhandledRejectionEventCallback = (value, promise) =>
-  triggerUnhandledRejection(value, promise)
+  triggerUnhandledRejection(value, promise);
 
 const rejectionHandledEventCallback = (promise) =>
-  recoverExceptionMatching((exception) => exception.promise === promise)
+  recoverExceptionMatching((exception) => exception.promise === promise);
 
 const install = () => {
-  process.on("unhandledRejection", unhandledRejectionEventCallback)
-  process.on("rejectionHandled", rejectionHandledEventCallback)
-  process.on("uncaughtException", uncaughtExceptionEventCallback)
-}
+  process.on("unhandledRejection", unhandledRejectionEventCallback);
+  process.on("rejectionHandled", rejectionHandledEventCallback);
+  process.on("uncaughtException", uncaughtExceptionEventCallback);
+};
 
 const uninstall = () => {
-  process.removeListener("unhandledRejection", unhandledRejectionEventCallback)
-  process.removeListener("rejectionHandled", rejectionHandledEventCallback)
-  process.removeListener("uncaughtException", uncaughtExceptionEventCallback)
-}
+  process.removeListener("unhandledRejection", unhandledRejectionEventCallback);
+  process.removeListener("rejectionHandled", rejectionHandledEventCallback);
+  process.removeListener("uncaughtException", uncaughtExceptionEventCallback);
+};
 
 const triggerUncaughtException = (error) =>
-  crash({ type: "uncaughtException", value: error })
+  crash({ type: "uncaughtException", value: error });
 
 const triggerUnhandledRejection = (value, promise) =>
-  crash({ type: "unhandledRejection", value, promise })
+  crash({ type: "unhandledRejection", value, promise });
 
-let isCrashing = false
-let crashReason
-let resolveRecovering
+let isCrashing = false;
+let crashReason;
+let resolveRecovering;
 
 const crash = async (reason) => {
   if (isCrashing) {
-    console.log(`cannot recover due to ${crashReason.type} during recover`)
-    console.error(crashReason.value)
-    resolveRecovering(false)
-    return
+    console.log(`cannot recover due to ${crashReason.type} during recover`);
+    console.error(crashReason.value);
+    resolveRecovering(false);
+    return;
   }
 
-  console.log(`process starts crashing due to ${crashReason.type}`)
-  console.log(`trying to recover`)
+  console.log(`process starts crashing due to ${crashReason.type}`);
+  console.log(`trying to recover`);
 
-  isCrashing = true
-  crashReason = reason
+  isCrashing = true;
+  crashReason = reason;
 
   const externalRecoverPromise = new Promise((resolve) => {
-    resolveRecovering = resolve
-  })
+    resolveRecovering = resolve;
+  });
   const callbackRecoverPromise = firstOperationMatching({
     array: Array.from(exceptionHandlerSet.values()),
     start: (exceptionHandler) => exceptionHandler(reason),
     predicate: (recovered) => typeof recovered === "boolean",
-  })
+  });
   const recoverPromise = Promise.race([
     externalRecoverPromise,
     callbackRecoverPromise,
-  ])
+  ]);
 
   try {
-    const recovered = await recoverPromise
-    if (recovered) return
+    const recovered = await recoverPromise;
+    if (recovered) return;
   } catch (error) {
-    console.error(`cannot recover due to internal recover error`)
-    console.error(error)
+    console.error(`cannot recover due to internal recover error`);
+    console.error(error);
   }
 
-  crashReason = undefined
+  crashReason = undefined;
   // uninstall() prevent catching of the next throw
   // else the following would create an infinite loop
   // process.on('uncaughtException', function() {
@@ -101,36 +101,36 @@ const crash = async (reason) => {
   //         throw 'yo';
   //     });
   // });
-  uninstall()
-  throw reason.value // this mess up the stack trace :'(
+  uninstall();
+  throw reason.value; // this mess up the stack trace :'(
   /* eslint-disable no-unreachable */
   // the throw above may be catched by other mecanics
   // so we may arrive there
-  install()
-}
+  install();
+};
 
 const recoverExceptionMatching = (predicate) => {
   if (isCrashing && predicate(crashReason)) {
-    resolveRecovering(true)
+    resolveRecovering(true);
   }
-}
+};
 
 const firstOperationMatching = ({ array, start, predicate }) => {
   return new Promise((resolve, reject) => {
     const visit = (index) => {
       if (index >= array.length) {
-        return resolve()
+        return resolve();
       }
-      const input = array[index]
-      const returnValue = start(input)
+      const input = array[index];
+      const returnValue = start(input);
       return Promise.resolve(returnValue).then((output) => {
         if (predicate(output)) {
-          return resolve(output)
+          return resolve(output);
         }
-        return visit(index + 1)
-      }, reject)
-    }
+        return visit(index + 1);
+      }, reject);
+    };
 
-    visit(0)
-  })
-}
+    visit(0);
+  });
+};

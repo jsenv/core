@@ -1,9 +1,9 @@
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-import { findFreePort } from "@jsenv/server"
+import { findFreePort } from "@jsenv/server";
 
-const port = await findFreePort()
+const port = await findFreePort();
 
-const actual = typeof port
-const expected = "number"
-assert({ actual, expected })
+const actual = typeof port;
+const expected = "number";
+assert({ actual, expected });

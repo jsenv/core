@@ -1,21 +1,21 @@
-import { writeFileSync } from "node:fs"
-import { createDetailedMessage } from "@jsenv/log"
+import { writeFileSync } from "node:fs";
+import { createDetailedMessage } from "@jsenv/log";
 import {
   Abort,
   createCallbackListNotifiedOnce,
   raceProcessTeardownEvents,
   raceCallbacks,
-} from "@jsenv/abort"
-import { urlIsInsideOf } from "@jsenv/urls"
-import { memoize } from "@jsenv/utils/src/memoize/memoize.js"
-import { WEB_URL_CONVERTER } from "@jsenv/core/src/helpers/web_url_converter.js"
+} from "@jsenv/abort";
+import { urlIsInsideOf } from "@jsenv/urls";
+import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
+import { WEB_URL_CONVERTER } from "@jsenv/core/src/helpers/web_url_converter.js";
 
-import { filterV8Coverage } from "../coverage/v8_coverage.js"
-import { composeTwoFileByFileIstanbulCoverages } from "../coverage/istanbul_coverage_composition.js"
-import { initJsSupervisorMiddleware } from "./middleware_js_supervisor.js"
-import { initIstanbulMiddleware } from "./middleware_istanbul.js"
+import { filterV8Coverage } from "../coverage/v8_coverage.js";
+import { composeTwoFileByFileIstanbulCoverages } from "../coverage/istanbul_coverage_composition.js";
+import { initJsSupervisorMiddleware } from "./middleware_js_supervisor.js";
+import { initIstanbulMiddleware } from "./middleware_istanbul.js";
 
-const browserPromiseCache = new Map()
+const browserPromiseCache = new Map();
 
 export const createRuntimeUsingPlaywright = ({
   browserName,
@@ -28,7 +28,7 @@ export const createRuntimeUsingPlaywright = ({
   playwrightLaunchOptions = {},
   ignoreHTTPSErrors = true,
 }) => {
-  const label = `${browserName}${browserVersion}`
+  const label = `${browserName}${browserVersion}`;
   const runtime = {
     type: "browser",
     name: browserName,
@@ -36,7 +36,7 @@ export const createRuntimeUsingPlaywright = ({
     capabilities: {
       coverageV8: coveragePlaywrightAPIAvailable,
     },
-  }
+  };
 
   runtime.run = async ({
     signal = new AbortController().signal,
@@ -57,24 +57,24 @@ export const createRuntimeUsingPlaywright = ({
     keepRunning,
     onConsole,
   }) => {
-    const fileUrl = new URL(fileRelativeUrl, rootDirectoryUrl).href
+    const fileUrl = new URL(fileRelativeUrl, rootDirectoryUrl).href;
     if (!urlIsInsideOf(fileUrl, webServer.rootDirectoryUrl)) {
       throw new Error(`Cannot execute file that is outside web server root directory
   --- file --- 
   ${fileUrl}
   --- web server root directory url ---
-  ${webServer.rootDirectoryUrl}`)
+  ${webServer.rootDirectoryUrl}`);
     }
-    const fileServerUrl = WEB_URL_CONVERTER.asWebUrl(fileUrl, webServer)
-    const cleanupCallbackList = createCallbackListNotifiedOnce()
+    const fileServerUrl = WEB_URL_CONVERTER.asWebUrl(fileUrl, webServer);
+    const cleanupCallbackList = createCallbackListNotifiedOnce();
     const cleanup = memoize(async (reason) => {
-      await cleanupCallbackList.notify({ reason })
-    })
+      await cleanupCallbackList.notify({ reason });
+    });
 
-    const isBrowserDedicatedToExecution = isolatedTab || !stopAfterAllSignal
+    const isBrowserDedicatedToExecution = isolatedTab || !stopAfterAllSignal;
     let browserAndContextPromise = isBrowserDedicatedToExecution
       ? null
-      : browserPromiseCache.get(label)
+      : browserPromiseCache.get(label);
     if (!browserAndContextPromise) {
       browserAndContextPromise = (async () => {
         const browser = await launchBrowserUsingPlaywright({
@@ -85,82 +85,82 @@ export const createRuntimeUsingPlaywright = ({
             ...playwrightLaunchOptions,
             headless: headful === undefined ? !keepRunning : !headful,
           },
-        })
+        });
         if (browser._initializer.version) {
-          runtime.version = browser._initializer.version
+          runtime.version = browser._initializer.version;
         }
-        const browserContext = await browser.newContext({ ignoreHTTPSErrors })
-        return { browser, browserContext }
-      })()
+        const browserContext = await browser.newContext({ ignoreHTTPSErrors });
+        return { browser, browserContext };
+      })();
       if (!isBrowserDedicatedToExecution) {
-        browserPromiseCache.set(label, browserAndContextPromise)
+        browserPromiseCache.set(label, browserAndContextPromise);
         cleanupCallbackList.add(() => {
-          browserPromiseCache.delete(label)
-        })
+          browserPromiseCache.delete(label);
+        });
       }
     }
-    const { browser, browserContext } = await browserAndContextPromise
+    const { browser, browserContext } = await browserAndContextPromise;
     const closeBrowser = async () => {
       const disconnected = browser.isConnected()
         ? new Promise((resolve) => {
             const disconnectedCallback = () => {
-              browser.removeListener("disconnected", disconnectedCallback)
-              resolve()
-            }
-            browser.on("disconnected", disconnectedCallback)
+              browser.removeListener("disconnected", disconnectedCallback);
+              resolve();
+            };
+            browser.on("disconnected", disconnectedCallback);
           })
-        : Promise.resolve()
+        : Promise.resolve();
       // for some reason without this 150ms timeout
       // browser.close() never resolves (playwright does not like something)
-      await new Promise((resolve) => setTimeout(resolve, 150))
+      await new Promise((resolve) => setTimeout(resolve, 150));
       try {
-        await browser.close()
+        await browser.close();
       } catch (e) {
         if (isTargetClosedError(e)) {
-          return
+          return;
         }
-        throw e
+        throw e;
       }
-      await disconnected
-    }
+      await disconnected;
+    };
 
-    const page = await browserContext.newPage()
+    const page = await browserContext.newPage();
 
     const istanbulInstrumentationEnabled =
       coverageEnabled &&
       (!runtime.capabilities.coverageV8 ||
-        coverageMethodForBrowsers === "istanbul")
+        coverageMethodForBrowsers === "istanbul");
     if (istanbulInstrumentationEnabled) {
       await initIstanbulMiddleware(page, {
         webServer,
         rootDirectoryUrl,
         coverageConfig,
-      })
+      });
     }
     if (!webServer.isJsenvDevServer) {
       await initJsSupervisorMiddleware(page, {
         webServer,
         fileUrl,
         fileServerUrl,
-      })
+      });
     }
     const closePage = async () => {
       try {
-        await page.close()
+        await page.close();
       } catch (e) {
         if (isTargetClosedError(e)) {
-          return
+          return;
         }
-        throw e
+        throw e;
       }
-    }
+    };
 
     const result = {
       status: "pending",
       namespace: null,
       errors: [],
-    }
-    const callbacks = []
+    };
+    const callbacks = [];
     if (coverageEnabled) {
       if (
         runtime.capabilities.coverageV8 &&
@@ -168,9 +168,9 @@ export const createRuntimeUsingPlaywright = ({
       ) {
         await page.coverage.startJSCoverage({
           // reportAnonymousScripts: true,
-        })
+        });
         callbacks.push(async () => {
-          const v8CoveragesWithWebUrls = await page.coverage.stopJSCoverage()
+          const v8CoveragesWithWebUrls = await page.coverage.stopJSCoverage();
           // we convert urls starting with http:// to file:// because we later
           // convert the url to filesystem path in istanbulCoverageFromV8Coverage function
           const v8CoveragesWithFsUrls = v8CoveragesWithWebUrls.map(
@@ -178,47 +178,47 @@ export const createRuntimeUsingPlaywright = ({
               const fsUrl = WEB_URL_CONVERTER.asFileUrl(
                 v8CoveragesWithWebUrl.url,
                 webServer,
-              )
+              );
               return {
                 ...v8CoveragesWithWebUrl,
                 url: fsUrl,
-              }
+              };
             },
-          )
+          );
           const coverage = await filterV8Coverage(
             { result: v8CoveragesWithFsUrls },
             {
               rootDirectoryUrl,
               coverageConfig,
             },
-          )
+          );
           writeFileSync(
             new URL(coverageFileUrl),
             JSON.stringify(coverage, null, "  "),
-          )
-        })
+          );
+        });
       } else {
         callbacks.push(() => {
-          const scriptExecutionResults = result.namespace
+          const scriptExecutionResults = result.namespace;
           if (scriptExecutionResults) {
             const coverage =
-              generateCoverageForPage(scriptExecutionResults) || {}
+              generateCoverageForPage(scriptExecutionResults) || {};
             writeFileSync(
               new URL(coverageFileUrl),
               JSON.stringify(coverage, null, "  "),
-            )
+            );
           }
-        })
+        });
       }
     } else {
       callbacks.push(() => {
-        const scriptExecutionResults = result.namespace
+        const scriptExecutionResults = result.namespace;
         if (scriptExecutionResults) {
           Object.keys(scriptExecutionResults).forEach((fileRelativeUrl) => {
-            delete scriptExecutionResults[fileRelativeUrl].coverage
-          })
+            delete scriptExecutionResults[fileRelativeUrl].coverage;
+          });
         }
-      })
+      });
     }
 
     if (collectPerformance) {
@@ -227,26 +227,26 @@ export const createRuntimeUsingPlaywright = ({
           /* eslint-disable no-undef */
           /* istanbul ignore next */
           () => {
-            const { performance } = window
+            const { performance } = window;
             if (!performance) {
-              return null
+              return null;
             }
-            const measures = {}
-            const measurePerfEntries = performance.getEntriesByType("measure")
+            const measures = {};
+            const measurePerfEntries = performance.getEntriesByType("measure");
             measurePerfEntries.forEach((measurePerfEntry) => {
-              measures[measurePerfEntry.name] = measurePerfEntry.duration
-            })
+              measures[measurePerfEntry.name] = measurePerfEntry.duration;
+            });
             return {
               timeOrigin: performance.timeOrigin,
               timing: performance.timing.toJSON(),
               navigation: performance.navigation.toJSON(),
               measures,
-            }
+            };
           },
           /* eslint-enable no-undef */
-        )
-        result.performance = performance
-      })
+        );
+        result.performance = performance;
+      });
     }
 
     // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-console
@@ -258,18 +258,18 @@ export const createRuntimeUsingPlaywright = ({
         onConsole({
           type: consoleMessage.type(),
           text: `${extractTextFromConsoleMessage(consoleMessage)}\n`,
-        })
+        });
       },
-    })
-    cleanupCallbackList.add(removeConsoleListener)
-    const actionOperation = Abort.startOperation()
-    actionOperation.addAbortSignal(signal)
+    });
+    cleanupCallbackList.add(removeConsoleListener);
+    const actionOperation = Abort.startOperation();
+    actionOperation.addAbortSignal(signal);
 
     const winnerPromise = new Promise((resolve, reject) => {
       raceCallbacks(
         {
           aborted: (cb) => {
-            return actionOperation.addAbortCallback(cb)
+            return actionOperation.addAbortCallback(cb);
           },
           // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-error
           error: (cb) => {
@@ -278,11 +278,11 @@ export const createRuntimeUsingPlaywright = ({
               eventType: "error",
               callback: (error) => {
                 if (shouldIgnoreError(error, "error")) {
-                  return
+                  return;
                 }
-                cb(transformErrorHook(error))
+                cb(transformErrorHook(error));
               },
-            })
+            });
           },
           // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
           // pageerror: () => {
@@ -304,157 +304,157 @@ export const createRuntimeUsingPlaywright = ({
             // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
             if (isBrowserDedicatedToExecution) {
               browser.on("disconnected", async () => {
-                cb({ reason: "browser disconnected" })
-              })
-              cleanupCallbackList.add(closePage)
-              cleanupCallbackList.add(closeBrowser)
+                cb({ reason: "browser disconnected" });
+              });
+              cleanupCallbackList.add(closePage);
+              cleanupCallbackList.add(closeBrowser);
             } else {
               const disconnectedCallback = async () => {
-                throw new Error("browser disconnected during execution")
-              }
-              browser.on("disconnected", disconnectedCallback)
+                throw new Error("browser disconnected during execution");
+              };
+              browser.on("disconnected", disconnectedCallback);
               page.on("close", () => {
-                cb({ reason: "page closed" })
-              })
-              cleanupCallbackList.add(closePage)
+                cb({ reason: "page closed" });
+              });
+              cleanupCallbackList.add(closePage);
               cleanupCallbackList.add(() => {
-                browser.removeListener("disconnected", disconnectedCallback)
-              })
-              const notifyPrevious = stopAfterAllSignal.notify
+                browser.removeListener("disconnected", disconnectedCallback);
+              });
+              const notifyPrevious = stopAfterAllSignal.notify;
               stopAfterAllSignal.notify = async () => {
-                await notifyPrevious()
-                browser.removeListener("disconnected", disconnectedCallback)
+                await notifyPrevious();
+                browser.removeListener("disconnected", disconnectedCallback);
                 logger.debug(
                   `stopAfterAllSignal notified -> closing ${browserName}`,
-                )
-                await closeBrowser()
-              }
+                );
+                await closeBrowser();
+              };
             }
           },
           response: async (cb) => {
             try {
-              await page.goto(fileServerUrl, { timeout: 0 })
+              await page.goto(fileServerUrl, { timeout: 0 });
               const returnValue = await page.evaluate(
                 /* eslint-disable no-undef */
                 /* istanbul ignore next */
                 async () => {
-                  let startTime
+                  let startTime;
                   try {
-                    startTime = window.performance.timing.navigationStart
+                    startTime = window.performance.timing.navigationStart;
                   } catch (e) {
-                    startTime = Date.now()
+                    startTime = Date.now();
                   }
                   if (!window.__supervisor__) {
-                    throw new Error("window.__supervisor__ is undefined")
+                    throw new Error("window.__supervisor__ is undefined");
                   }
                   const executionResultFromJsenvSupervisor =
-                    await window.__supervisor__.getDocumentExecutionResult()
+                    await window.__supervisor__.getDocumentExecutionResult();
                   return {
                     type: "window_supervisor",
                     startTime,
                     endTime: Date.now(),
                     executionResults:
                       executionResultFromJsenvSupervisor.executionResults,
-                  }
+                  };
                 },
                 /* eslint-enable no-undef */
-              )
-              cb(returnValue)
+              );
+              cb(returnValue);
             } catch (e) {
-              reject(e)
+              reject(e);
             }
           },
         },
         resolve,
-      )
-    })
+      );
+    });
 
     const writeResult = async () => {
-      const winner = await winnerPromise
+      const winner = await winnerPromise;
       if (winner.name === "aborted") {
-        result.status = "aborted"
-        return
+        result.status = "aborted";
+        return;
       }
       if (winner.name === "error") {
-        let error = winner.data
-        result.status = "failed"
-        result.errors.push(error)
-        return
+        let error = winner.data;
+        result.status = "failed";
+        result.errors.push(error);
+        return;
       }
       if (winner.name === "pageerror") {
-        let error = winner.data
-        result.status = "failed"
-        result.errors.push(error)
-        return
+        let error = winner.data;
+        result.status = "failed";
+        result.errors.push(error);
+        return;
       }
       if (winner.name === "closed") {
-        result.status = "failed"
+        result.status = "failed";
         result.errors.push(
           isBrowserDedicatedToExecution
             ? new Error(`browser disconnected during execution`)
             : new Error(`page closed during execution`),
-        )
-        return
+        );
+        return;
       }
       // winner.name === "response"
-      const { executionResults } = winner.data
-      result.status = "completed"
-      result.namespace = executionResults
+      const { executionResults } = winner.data;
+      result.status = "completed";
+      result.namespace = executionResults;
       Object.keys(executionResults).forEach((key) => {
-        const executionResult = executionResults[key]
+        const executionResult = executionResults[key];
         if (executionResult.status === "failed") {
-          result.status = "failed"
+          result.status = "failed";
           if (executionResult.exception) {
             result.errors.push({
               ...executionResult.exception,
               stack: executionResult.exception.text,
-            })
+            });
           } else {
             result.errors.push({
               ...executionResult.error,
               stack: executionResult.error.stack,
-            })
+            });
           }
         }
-      })
-    }
+      });
+    };
 
     try {
-      await writeResult()
+      await writeResult();
       if (collectPerformance) {
-        result.performance = performance
+        result.performance = performance;
       }
       await callbacks.reduce(async (previous, callback) => {
-        await previous
-        await callback()
-      }, Promise.resolve())
+        await previous;
+        await callback();
+      }, Promise.resolve());
     } catch (e) {
-      result.status = "failed"
-      result.errors = [e]
+      result.status = "failed";
+      result.errors = [e];
     }
     if (keepRunning) {
-      stopSignal.notify = cleanup
+      stopSignal.notify = cleanup;
     } else {
-      await cleanup("execution done")
+      await cleanup("execution done");
     }
-    return result
-  }
-  return runtime
-}
+    return result;
+  };
+  return runtime;
+};
 
 const generateCoverageForPage = (scriptExecutionResults) => {
-  let istanbulCoverageComposed = null
+  let istanbulCoverageComposed = null;
   Object.keys(scriptExecutionResults).forEach((fileRelativeUrl) => {
-    const istanbulCoverage = scriptExecutionResults[fileRelativeUrl].coverage
+    const istanbulCoverage = scriptExecutionResults[fileRelativeUrl].coverage;
     istanbulCoverageComposed = istanbulCoverageComposed
       ? composeTwoFileByFileIstanbulCoverages(
           istanbulCoverageComposed,
           istanbulCoverage,
         )
-      : istanbulCoverage
-  })
-  return istanbulCoverageComposed
-}
+      : istanbulCoverage;
+  });
+  return istanbulCoverageComposed;
+};
 
 const launchBrowserUsingPlaywright = async ({
   signal,
@@ -462,9 +462,9 @@ const launchBrowserUsingPlaywright = async ({
   stopOnExit,
   playwrightLaunchOptions,
 }) => {
-  const launchBrowserOperation = Abort.startOperation()
-  launchBrowserOperation.addAbortSignal(signal)
-  const playwright = await importPlaywright({ browserName })
+  const launchBrowserOperation = Abort.startOperation();
+  launchBrowserOperation.addAbortSignal(signal);
+  const playwright = await importPlaywright({ browserName });
   if (stopOnExit) {
     launchBrowserOperation.addAbortSource((abort) => {
       return raceProcessTeardownEvents(
@@ -476,10 +476,10 @@ const launchBrowserUsingPlaywright = async ({
           exit: true,
         },
         abort,
-      )
-    })
+      );
+    });
   }
-  const browserClass = playwright[browserName]
+  const browserClass = playwright[browserName];
   try {
     const browser = await browserClass.launch({
       ...playwrightLaunchOptions,
@@ -488,24 +488,24 @@ const launchBrowserUsingPlaywright = async ({
       handleSIGINT: false,
       handleSIGTERM: false,
       handleSIGHUP: false,
-    })
-    launchBrowserOperation.throwIfAborted()
-    return browser
+    });
+    launchBrowserOperation.throwIfAborted();
+    return browser;
   } catch (e) {
     if (launchBrowserOperation.signal.aborted && isTargetClosedError(e)) {
       // rethrow the abort error
-      launchBrowserOperation.throwIfAborted()
+      launchBrowserOperation.throwIfAborted();
     }
-    throw e
+    throw e;
   } finally {
-    await launchBrowserOperation.end()
+    await launchBrowserOperation.end();
   }
-}
+};
 
 const importPlaywright = async ({ browserName }) => {
   try {
-    const namespace = await import("playwright")
-    return namespace
+    const namespace = await import("playwright");
+    return namespace;
   } catch (e) {
     if (e.code === "ERR_MODULE_NOT_FOUND") {
       throw new Error(
@@ -516,24 +516,24 @@ const importPlaywright = async ({ browserName }) => {
           },
         ),
         { cause: e },
-      )
+      );
     }
-    throw e
+    throw e;
   }
-}
+};
 
 const isTargetClosedError = (error) => {
   if (error.message.match(/Protocol error \(.*?\): Target closed/)) {
-    return true
+    return true;
   }
   if (error.message.match(/Protocol error \(.*?\): Browser.*?closed/)) {
-    return true
+    return true;
   }
-  return error.message.includes("browserContext.close: Browser closed")
-}
+  return error.message.includes("browserContext.close: Browser closed");
+};
 
 const extractTextFromConsoleMessage = (consoleMessage) => {
-  return consoleMessage.text()
+  return consoleMessage.text();
   // ensure we use a string so that istanbul won't try
   // to put any coverage statement inside it
   // ideally we should use uneval no ?
@@ -563,11 +563,11 @@ const extractTextFromConsoleMessage = (consoleMessage) => {
   //     return `${previous} ${string}`
   //   }, "")
   //   return text
-}
+};
 
 const registerEvent = ({ object, eventType, callback }) => {
-  object.on(eventType, callback)
+  object.on(eventType, callback);
   return () => {
-    object.removeListener(eventType, callback)
-  }
-}
+    object.removeListener(eventType, callback);
+  };
+};

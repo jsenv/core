@@ -1,7 +1,7 @@
 export const headersToObject = (headers) => {
-  const headersObject = {}
+  const headersObject = {};
   headers.forEach((value, name) => {
-    headersObject[name] = value
-  })
-  return headersObject
-}
+    headersObject[name] = value;
+  });
+  return headersObject;
+};

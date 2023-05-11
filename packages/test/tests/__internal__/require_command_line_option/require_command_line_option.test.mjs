@@ -1,7 +1,7 @@
-import { fileURLToPath } from "node:url"
-import { assert } from "@jsenv/assert"
+import { fileURLToPath } from "node:url";
+import { assert } from "@jsenv/assert";
 
-import { execute, nodeChildProcess, nodeWorkerThread } from "@jsenv/test"
+import { execute, nodeChildProcess, nodeWorkerThread } from "@jsenv/test";
 
 const test = async ({ requireEnabled, ...params }) => {
   const result = await execute({
@@ -12,15 +12,15 @@ const test = async ({ requireEnabled, ...params }) => {
     mirrorConsole: true,
     collectConsole: true,
     ...params,
-  })
-  const actual = result.namespace.answer
-  const expected = requireEnabled ? "42" : undefined
-  assert({ actual, expected })
-}
+  });
+  const actual = result.namespace.answer;
+  const expected = requireEnabled ? "42" : undefined;
+  assert({ actual, expected });
+};
 
 await test({
   runtime: nodeChildProcess(),
-})
+});
 await test({
   runtime: nodeChildProcess({
     commandLineOptions: [
@@ -28,11 +28,11 @@ await test({
     ],
   }),
   requireEnabled: true,
-})
+});
 
 await test({
   runtime: nodeWorkerThread(),
-})
+});
 await test({
   runtime: nodeWorkerThread({
     commandLineOptions: [
@@ -41,4 +41,4 @@ await test({
     ],
   }),
   requireEnabled: true,
-})
+});

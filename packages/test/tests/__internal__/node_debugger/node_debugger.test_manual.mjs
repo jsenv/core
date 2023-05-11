@@ -1,6 +1,6 @@
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-import { execute, nodeWorkerThread } from "@jsenv/test"
+import { execute, nodeWorkerThread } from "@jsenv/test";
 
 const result = await execute({
   rootDirectoryUrl: new URL("./", import.meta.url),
@@ -9,12 +9,12 @@ const result = await execute({
   runtime: nodeWorkerThread(),
   mirrorConsole: false,
   keepRunning: true, // node will naturally exit
-})
-const actual = result
+});
+const actual = result;
 const expected = {
   status: "completed",
   errors: [],
   namespace: {},
   duration: assert.any(Number),
-}
-assert({ actual, expected })
+};
+assert({ actual, expected });

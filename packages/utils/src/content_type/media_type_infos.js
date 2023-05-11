@@ -103,4 +103,4 @@ export const mediaTypeInfos = {
   "video/webm": {
     extensions: ["webm"],
   },
-}
+};

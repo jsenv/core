@@ -1,3 +1,3 @@
-;(function (root) {
-  root.__answer__ = 42
-})(this)
+(function (root) {
+  root.__answer__ = 42;
+})(this);

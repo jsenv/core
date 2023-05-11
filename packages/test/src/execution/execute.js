@@ -10,12 +10,12 @@
  * - Most of the logic lives in "./run.js" used by executeTestPlan to run tests
  */
 
-import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
-import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem"
-import { createLogger } from "@jsenv/log"
+import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
+import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem";
+import { createLogger } from "@jsenv/log";
 
-import { assertAndNormalizeWebServer } from "./web_server_param.js"
-import { run } from "./run.js"
+import { assertAndNormalizeWebServer } from "./web_server_param.js";
+import { run } from "./run.js";
 
 export const execute = async ({
   signal = new AbortController().signal,
@@ -39,13 +39,13 @@ export const execute = async ({
 
   ignoreError = false,
 }) => {
-  const logger = createLogger({ logLevel })
+  const logger = createLogger({ logLevel });
   rootDirectoryUrl = assertAndNormalizeDirectoryUrl(
     rootDirectoryUrl,
     "rootDirectoryUrl",
-  )
-  const executeOperation = Abort.startOperation()
-  executeOperation.addAbortSignal(signal)
+  );
+  const executeOperation = Abort.startOperation();
+  executeOperation.addAbortSignal(signal);
   if (handleSIGINT) {
     executeOperation.addAbortSource((abort) => {
       return raceProcessTeardownEvents(
@@ -53,22 +53,22 @@ export const execute = async ({
           SIGINT: true,
         },
         abort,
-      )
-    })
+      );
+    });
   }
 
   if (runtime.type === "browser") {
-    await assertAndNormalizeWebServer(webServer)
+    await assertAndNormalizeWebServer(webServer);
   }
 
-  let resultTransformer = (result) => result
+  let resultTransformer = (result) => result;
   runtimeParams = {
     rootDirectoryUrl,
     webServer,
     fileRelativeUrl,
     importMap,
     ...runtimeParams,
-  }
+  };
 
   let result = await run({
     signal: executeOperation.signal,
@@ -82,13 +82,13 @@ export const execute = async ({
     collectPerformance,
     runtime,
     runtimeParams,
-  })
-  result = resultTransformer(result)
+  });
+  result = resultTransformer(result);
 
   try {
     if (result.status === "failed") {
       if (ignoreError) {
-        return result
+        return result;
       }
       /*
   Warning: when node launched with --unhandled-rejections=strict, despites
@@ -102,10 +102,10 @@ export const execute = async ({
   ```
   But it feels like a hack.
   */
-      throw result.errors[result.errors.length - 1]
+      throw result.errors[result.errors.length - 1];
     }
-    return result
+    return result;
   } finally {
-    await executeOperation.end()
+    await executeOperation.end();
   }
-}
+};

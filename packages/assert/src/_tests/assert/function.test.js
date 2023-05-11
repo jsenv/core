@@ -1,34 +1,34 @@
-import { assert } from "@jsenv/assert"
-import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js"
+import { assert } from "@jsenv/assert";
+import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js";
 
 // anonymous funciton
 {
   const actual = (function () {
-    return function () {}
-  })()
+    return function () {};
+  })();
   const expected = (function () {
-    return function () {}
-  })()
-  assert({ actual, expected })
+    return function () {};
+  })();
+  assert({ actual, expected });
 }
 
 // anonymous arrow function
 {
   const actual = (function () {
-    return () => {}
-  })()
+    return () => {};
+  })();
   const expected = (function () {
-    return () => {}
-  })()
-  assert({ actual, expected })
+    return () => {};
+  })();
+  assert({ actual, expected });
 }
 
 // named arrow function
 {
-  const actual = () => {}
-  const expected = () => {}
+  const actual = () => {};
+  const expected = () => {};
   try {
-    assert({ actual, expected })
+    assert({ actual, expected });
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
@@ -41,6 +41,6 @@ import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMess
 actual.name
 --- details ---
 unexpected character at index 0, "a" was found instead of "e"`,
-    )
+    );
   }
 }

@@ -8,19 +8,19 @@
   <body>
     <script>
       window.resultPromise = new Promise((resolve) => {
-        window.resolveResultPromise = resolve
-      })
+        window.resolveResultPromise = resolve;
+      });
     </script>
     <script type="module" jsenv-debug>
-      import { answer } from "./file.js"
+      import { answer } from "./file.js";
 
       setTimeout(() => {
-        const url = import.meta.url
+        const url = import.meta.url;
         window.resolveResultPromise({
           answer,
           url,
-        })
-      }, 100)
+        });
+      }, 100);
     </script>
   </body>
 </html>

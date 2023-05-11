@@ -11,12 +11,12 @@ The native browser API around service worker update is hard to implement. There 
 An async function asking to the navigator to check if there is an update available for the service worker. It returns true if there is one and false otherwise.
 
 ```js
-import { createServiceWorkerScript } from "@jsenv/pwa"
+import { createServiceWorkerScript } from "@jsenv/pwa";
 
-const script = createServiceWorkerScript()
-script.setRegisterPromise(window.navigator.serviceWorker.register("./sw.js"))
-const updateFound = await script.checkForUpdates()
-console.log(updateFound)
+const script = createServiceWorkerScript();
+script.setRegisterPromise(window.navigator.serviceWorker.register("./sw.js"));
+const updateFound = await script.checkForUpdates();
+console.log(updateFound);
 ```
 
 ### addUpdateCallback
@@ -24,13 +24,13 @@ console.log(updateFound)
 _addUpdateCallback_ is a function that will call a callback when a service worker update becomes available or unavailable. An update is always detected by the navigator either periodically or because your called _checkForUpdates_.
 
 ```js
-import { createServiceWorkerScript } from "@jsenv/pwa"
+import { createServiceWorkerScript } from "@jsenv/pwa";
 
-const script = createServiceWorkerScript()
+const script = createServiceWorkerScript();
 script.addUpdateCallback((update) => {
   // an update for this service worker script becomes available
   // or unavailable (the new version is installed or discarded)
-})
+});
 ```
 
 _update_ is `null` if there is no update available. Otherwise it is an object like
@@ -89,7 +89,7 @@ It is possible to to control how the outdated resources gets updated using _auto
 - You want to let user control when tabs are reloaded. Maybe display a message like "Update done. Reload all active tabs to enable the new version"
 
 ```js
-import { createServiceWorkerScript } from "@jsenv/pwa"
+import { createServiceWorkerScript } from "@jsenv/pwa";
 
-const script = createServiceWorkerScript({ autoReloadAfterUpdate: false })
+const script = createServiceWorkerScript({ autoReloadAfterUpdate: false });
 ```

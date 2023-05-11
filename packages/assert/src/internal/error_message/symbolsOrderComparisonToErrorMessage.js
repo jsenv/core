@@ -1,19 +1,19 @@
-import { inspect } from "@jsenv/inspect"
-import { comparisonToPath } from "../comparisonToPath.js"
+import { inspect } from "@jsenv/inspect";
+import { comparisonToPath } from "../comparisonToPath.js";
 
 export const symbolsOrderComparisonToErrorMessage = (comparison) => {
-  if (comparison.type !== "symbols-order") return undefined
+  if (comparison.type !== "symbols-order") return undefined;
 
-  const path = comparisonToPath(comparison)
-  const expected = comparison.expected
-  const actual = comparison.actual
+  const path = comparisonToPath(comparison);
+  const expected = comparison.expected;
+  const actual = comparison.actual;
 
   return createUnexpectedSymbolsOrderMessage({
     path,
     expectedSymbolsOrder: symbolArrayToString(expected),
     actualSymbolsOrder: symbolArrayToString(actual),
-  })
-}
+  });
+};
 
 const createUnexpectedSymbolsOrderMessage = ({
   path,
@@ -27,8 +27,8 @@ ${actualSymbolsOrder.join(`
 ${expectedSymbolsOrder.join(`
 `)}
 --- path ---
-${path}`
+${path}`;
 
 const symbolArrayToString = (symbolArray) => {
-  return symbolArray.map((symbol) => inspect(symbol))
-}
+  return symbolArray.map((symbol) => inspect(symbol));
+};

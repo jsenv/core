@@ -1,4 +1,4 @@
-import { logElementName } from "../util/util.js"
-import { name } from "./name.js"
+import { logElementName } from "../util/util.js";
+import { name } from "./name.js";
 
-logElementName(name)
+logElementName(name);

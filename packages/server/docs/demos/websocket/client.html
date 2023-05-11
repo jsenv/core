@@ -7,10 +7,10 @@
 
   <body>
     <script>
-      const websocket = new WebSocket("ws://localhost:3000")
+      const websocket = new WebSocket("ws://localhost:3000");
       websocket.onmessage = (message) => {
-        document.body.appendChild(document.createTextNode(message.data))
-      }
+        document.body.appendChild(document.createTextNode(message.data));
+      };
     </script>
   </body>
 </html>

@@ -1,6 +1,6 @@
-import { getBabelHelperFileUrl } from "@jsenv/babel-plugins"
-import { requireBabelPlugin } from "../require_babel_plugin.js"
-import { babelPluginCompatMap } from "./babel_plugins_compatibility.js"
+import { getBabelHelperFileUrl } from "@jsenv/babel-plugins";
+import { requireBabelPlugin } from "../require_babel_plugin.js";
+import { babelPluginCompatMap } from "./babel_plugins_compatibility.js";
 
 export const getBaseBabelPluginStructure = ({
   url,
@@ -9,32 +9,32 @@ export const getBaseBabelPluginStructure = ({
   // getImportSpecifier,
 }) => {
   const isBabelPluginNeeded = (babelPluginName) => {
-    return !isSupported(babelPluginCompatMap[babelPluginName])
-  }
+    return !isSupported(babelPluginCompatMap[babelPluginName]);
+  };
 
-  const babelPluginStructure = {}
+  const babelPluginStructure = {};
   if (isBabelPluginNeeded("proposal-numeric-separator")) {
     babelPluginStructure["proposal-numeric-separator"] = requireBabelPlugin(
       "@babel/plugin-proposal-numeric-separator",
-    )
+    );
   }
   if (isBabelPluginNeeded("proposal-json-strings")) {
     babelPluginStructure["proposal-json-strings"] = requireBabelPlugin(
       "@babel/plugin-proposal-json-strings",
-    )
+    );
   }
   if (isBabelPluginNeeded("proposal-object-rest-spread")) {
     babelPluginStructure["proposal-object-rest-spread"] = requireBabelPlugin(
       "@babel/plugin-proposal-object-rest-spread",
-    )
+    );
   }
   if (isBabelPluginNeeded("proposal-optional-catch-binding")) {
     babelPluginStructure["proposal-optional-catch-binding"] =
-      requireBabelPlugin("@babel/plugin-proposal-optional-catch-binding")
+      requireBabelPlugin("@babel/plugin-proposal-optional-catch-binding");
   }
   if (isBabelPluginNeeded("proposal-unicode-property-regex")) {
     babelPluginStructure["proposal-unicode-property-regex"] =
-      requireBabelPlugin("@babel/plugin-proposal-unicode-property-regex")
+      requireBabelPlugin("@babel/plugin-proposal-unicode-property-regex");
   }
   if (isBabelPluginNeeded("transform-async-to-promises")) {
     babelPluginStructure["transform-async-to-promises"] = [
@@ -48,80 +48,80 @@ export const getBaseBabelPluginStructure = ({
         //     "babel-plugin-transform-async-to-promises/helpers.mjs",
         //   ) : null
       },
-    ]
+    ];
   }
   if (isBabelPluginNeeded("transform-arrow-functions")) {
     babelPluginStructure["transform-arrow-functions"] = requireBabelPlugin(
       "@babel/plugin-transform-arrow-functions",
-    )
+    );
   }
   if (isBabelPluginNeeded("transform-block-scoped-functions")) {
     babelPluginStructure["transform-block-scoped-functions"] =
-      requireBabelPlugin("@babel/plugin-transform-block-scoped-functions")
+      requireBabelPlugin("@babel/plugin-transform-block-scoped-functions");
   }
   if (isBabelPluginNeeded("transform-block-scoping")) {
     babelPluginStructure["transform-block-scoping"] = requireBabelPlugin(
       "@babel/plugin-transform-block-scoping",
-    )
+    );
   }
   if (isBabelPluginNeeded("transform-classes")) {
     babelPluginStructure["transform-classes"] = requireBabelPlugin(
       "@babel/plugin-transform-classes",
-    )
+    );
   }
   if (isBabelPluginNeeded("transform-computed-properties")) {
     babelPluginStructure["transform-computed-properties"] = requireBabelPlugin(
       "@babel/plugin-transform-computed-properties",
-    )
+    );
   }
   if (isBabelPluginNeeded("transform-destructuring")) {
     babelPluginStructure["transform-destructuring"] = requireBabelPlugin(
       "@babel/plugin-transform-destructuring",
-    )
+    );
   }
   if (isBabelPluginNeeded("transform-dotall-regex")) {
     babelPluginStructure["transform-dotall-regex"] = requireBabelPlugin(
       "@babel/plugin-transform-dotall-regex",
-    )
+    );
   }
   if (isBabelPluginNeeded("transform-duplicate-keys")) {
     babelPluginStructure["transform-duplicate-keys"] = requireBabelPlugin(
       "@babel/plugin-transform-duplicate-keys",
-    )
+    );
   }
   if (isBabelPluginNeeded("transform-exponentiation-operator")) {
     babelPluginStructure["transform-exponentiation-operator"] =
-      requireBabelPlugin("@babel/plugin-transform-exponentiation-operator")
+      requireBabelPlugin("@babel/plugin-transform-exponentiation-operator");
   }
   if (isBabelPluginNeeded("transform-for-of")) {
     babelPluginStructure["transform-for-of"] = requireBabelPlugin(
       "@babel/plugin-transform-for-of",
-    )
+    );
   }
   if (isBabelPluginNeeded("transform-function-name")) {
     babelPluginStructure["transform-function-name"] = requireBabelPlugin(
       "@babel/plugin-transform-function-name",
-    )
+    );
   }
   if (isBabelPluginNeeded("transform-literals")) {
     babelPluginStructure["transform-literals"] = requireBabelPlugin(
       "@babel/plugin-transform-literals",
-    )
+    );
   }
   if (isBabelPluginNeeded("transform-new-target")) {
     babelPluginStructure["transform-new-target"] = requireBabelPlugin(
       "@babel/plugin-transform-new-target",
-    )
+    );
   }
   if (isBabelPluginNeeded("transform-object-super")) {
     babelPluginStructure["transform-object-super"] = requireBabelPlugin(
       "@babel/plugin-transform-object-super",
-    )
+    );
   }
   if (isBabelPluginNeeded("transform-parameters")) {
     babelPluginStructure["transform-parameters"] = requireBabelPlugin(
       "@babel/plugin-transform-parameters",
-    )
+    );
   }
   if (isBabelPluginNeeded("transform-regenerator")) {
     babelPluginStructure["transform-regenerator"] = [
@@ -131,27 +131,27 @@ export const getBaseBabelPluginStructure = ({
         generators: true,
         async: false,
       },
-    ]
+    ];
   }
   if (isBabelPluginNeeded("transform-shorthand-properties")) {
     babelPluginStructure["transform-shorthand-properties"] = [
       requireBabelPlugin("@babel/plugin-transform-shorthand-properties"),
-    ]
+    ];
   }
   if (isBabelPluginNeeded("transform-spread")) {
     babelPluginStructure["transform-spread"] = [
       requireBabelPlugin("@babel/plugin-transform-spread"),
-    ]
+    ];
   }
   if (isBabelPluginNeeded("transform-sticky-regex")) {
     babelPluginStructure["transform-sticky-regex"] = [
       requireBabelPlugin("@babel/plugin-transform-sticky-regex"),
-    ]
+    ];
   }
   if (isBabelPluginNeeded("transform-template-literals")) {
     babelPluginStructure["transform-template-literals"] = [
       requireBabelPlugin("@babel/plugin-transform-template-literals"),
-    ]
+    ];
   }
   if (
     isBabelPluginNeeded("transform-typeof-symbol") &&
@@ -162,12 +162,12 @@ export const getBaseBabelPluginStructure = ({
   ) {
     babelPluginStructure["transform-typeof-symbol"] = [
       requireBabelPlugin("@babel/plugin-transform-typeof-symbol"),
-    ]
+    ];
   }
   if (isBabelPluginNeeded("transform-unicode-regex")) {
     babelPluginStructure["transform-unicode-regex"] = [
       requireBabelPlugin("@babel/plugin-transform-unicode-regex"),
-    ]
+    ];
   }
-  return babelPluginStructure
-}
+  return babelPluginStructure;
+};

@@ -1,10 +1,10 @@
-import { URL_META } from "@jsenv/url-meta"
-import { injectQueryParams, urlToExtension } from "@jsenv/urls"
-import { defaultLookupPackageScope } from "@jsenv/node-esm-resolution"
+import { URL_META } from "@jsenv/url-meta";
+import { injectQueryParams, urlToExtension } from "@jsenv/urls";
+import { defaultLookupPackageScope } from "@jsenv/node-esm-resolution";
 
-import { commonJsToJsModule } from "./cjs_to_esm.js"
+import { commonJsToJsModule } from "./cjs_to_esm.js";
 
-const compileCacheDirectoryUrl = new URL("../.cache/", import.meta.url)
+const compileCacheDirectoryUrl = new URL("../.cache/", import.meta.url);
 
 export const jsenvPluginCommonJs = ({
   name = "jsenv:commonjs",
@@ -12,23 +12,23 @@ export const jsenvPluginCommonJs = ({
   include,
 }) => {
   const markAsJsModuleProxy = (reference) => {
-    reference.expectedType = "js_module"
-    const packageFileUrl = defaultLookupPackageScope(reference.url)
+    reference.expectedType = "js_module";
+    const packageFileUrl = defaultLookupPackageScope(reference.url);
     if (packageFileUrl) {
       reference.filename = `${reference.specifier}${urlToExtension(
         reference.parentUrl,
-      )}`
+      )}`;
     }
-  }
+  };
   const turnIntoJsModuleProxy = (reference) => {
     const urlTransformed = injectQueryParams(reference.url, {
       cjs_as_js_module: "",
-    })
-    markAsJsModuleProxy(reference)
-    return urlTransformed
-  }
+    });
+    markAsJsModuleProxy(reference);
+    return urlTransformed;
+  };
 
-  let associations
+  let associations;
 
   return {
     name,
@@ -39,22 +39,22 @@ export const jsenvPluginCommonJs = ({
           commonjs: include,
         },
         rootDirectoryUrl,
-      )
+      );
     },
     redirectUrl: (reference) => {
       if (reference.searchParams.has("cjs_as_js_module")) {
-        markAsJsModuleProxy(reference)
-        return null
+        markAsJsModuleProxy(reference);
+        return null;
       }
       const { commonjs } = URL_META.applyAssociations({
         url: reference.url,
         associations,
-      })
+      });
       if (!commonjs) {
-        return null
+        return null;
       }
-      reference.data.commonjs = commonjs
-      return turnIntoJsModuleProxy(reference)
+      reference.data.commonjs = commonjs;
+      return turnIntoJsModuleProxy(reference);
     },
     fetchUrlContent: async (urlInfo, context) => {
       const [commonJsReference, commonJsUrlInfo] =
@@ -65,16 +65,16 @@ export const jsenvPluginCommonJs = ({
           // during this fetch we don't want to alter the original file
           // so we consider it as text
           expectedType: "text",
-        })
+        });
       if (!commonJsReference) {
-        return null
+        return null;
       }
       await context.fetchUrlContent(commonJsUrlInfo, {
         reference: commonJsReference,
-      })
+      });
       const nodeRuntimeEnabled = Object.keys(context.runtimeCompat).includes(
         "node",
-      )
+      );
       const { content, sourcemap, isValid } = await commonJsToJsModule({
         logLevel,
         compileCacheDirectoryUrl,
@@ -82,9 +82,9 @@ export const jsenvPluginCommonJs = ({
         browsers: !nodeRuntimeEnabled,
         processEnvNodeEnv: context.dev ? "development" : "production",
         ...urlInfo.data.commonjs,
-      })
+      });
       if (isValid) {
-        urlInfo.isValid = isValid
+        urlInfo.isValid = isValid;
       }
       return {
         content,
@@ -94,7 +94,7 @@ export const jsenvPluginCommonJs = ({
         originalContent: commonJsUrlInfo.originalContent,
         sourcemap,
         data: commonJsUrlInfo.data,
-      }
+      };
     },
-  }
-}
+  };
+};

@@ -1,4 +1,4 @@
-import { startDevServer } from "@jsenv/core"
+import { startDevServer } from "@jsenv/core";
 
 export const devServer = await startDevServer({
   logLevel: process.env.GENERATING_SNAPSHOTS ? "off" : undefined,
@@ -18,17 +18,17 @@ export const devServer = await startDevServer({
           parentUrl.includes("plugin_error_resolve/main.js") &&
           specifier === "./file.js"
         ) {
-          throw new Error("error_during_resolve")
+          throw new Error("error_during_resolve");
         }
       },
       fetchUrlContent: ({ url }) => {
         if (url.includes("plugin_error_load/main.js")) {
-          throw new Error("error_during_load")
+          throw new Error("error_during_load");
         }
       },
       transformUrlContent: ({ url }) => {
         if (url.includes("plugin_error_transform/main.js")) {
-          throw new Error("error_during_transform")
+          throw new Error("error_during_transform");
         }
       },
     },
@@ -45,4 +45,4 @@ export const devServer = await startDevServer({
   },
   ribbon: false,
   clientAutoreload: false,
-})
+});

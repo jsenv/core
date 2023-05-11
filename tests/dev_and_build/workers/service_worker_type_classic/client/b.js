@@ -1,1 +1,1 @@
-self.order.push("b")
+self.order.push("b");

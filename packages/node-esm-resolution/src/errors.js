@@ -1,5 +1,5 @@
 // https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/tools/node_modules/eslint/node_modules/%40babel/core/lib/vendor/import-meta-resolve.js#L2473
-import { fileURLToPath } from "node:url"
+import { fileURLToPath } from "node:url";
 
 export const createInvalidModuleSpecifierError = (
   reason,
@@ -10,59 +10,59 @@ export const createInvalidModuleSpecifierError = (
     `Invalid module "${specifier}" ${reason} imported from ${fileURLToPath(
       parentUrl,
     )}`,
-  )
-  error.code = "INVALID_MODULE_SPECIFIER"
-  return error
-}
+  );
+  error.code = "INVALID_MODULE_SPECIFIER";
+  return error;
+};
 
 export const createInvalidPackageTargetError = (
   reason,
   target,
   { parentUrl, packageDirectoryUrl, key, isImport },
 ) => {
-  let message
+  let message;
   if (key === ".") {
     message = `Invalid "exports" main target defined in ${fileURLToPath(
       packageDirectoryUrl,
-    )}package.json imported from ${fileURLToPath(parentUrl)}; ${reason}`
+    )}package.json imported from ${fileURLToPath(parentUrl)}; ${reason}`;
   } else {
     message = `Invalid "${
       isImport ? "imports" : "exports"
     }" target ${JSON.stringify(target)} defined for "${key}" in ${fileURLToPath(
       packageDirectoryUrl,
-    )}package.json imported from ${fileURLToPath(parentUrl)}; ${reason}`
+    )}package.json imported from ${fileURLToPath(parentUrl)}; ${reason}`;
   }
-  const error = new Error(message)
-  error.code = "INVALID_PACKAGE_TARGET"
-  return error
-}
+  const error = new Error(message);
+  error.code = "INVALID_PACKAGE_TARGET";
+  return error;
+};
 
 export const createPackagePathNotExportedError = (
   subpath,
   { parentUrl, packageDirectoryUrl },
 ) => {
-  let message
+  let message;
   if (subpath === ".") {
     message = `No "exports" main defined in ${fileURLToPath(
       packageDirectoryUrl,
-    )}package.json imported from ${fileURLToPath(parentUrl)}`
+    )}package.json imported from ${fileURLToPath(parentUrl)}`;
   } else {
     message = `Package subpath "${subpath}" is not defined by "exports" in ${fileURLToPath(
       packageDirectoryUrl,
-    )}package.json imported from ${fileURLToPath(parentUrl)}`
+    )}package.json imported from ${fileURLToPath(parentUrl)}`;
   }
-  const error = new Error(message)
-  error.code = "PACKAGE_PATH_NOT_EXPORTED"
-  return error
-}
+  const error = new Error(message);
+  error.code = "PACKAGE_PATH_NOT_EXPORTED";
+  return error;
+};
 
 export const createModuleNotFoundError = (specifier, { parentUrl }) => {
   const error = new Error(
     `Cannot find "${specifier}" imported from ${fileURLToPath(parentUrl)}`,
-  )
-  error.code = "MODULE_NOT_FOUND"
-  return error
-}
+  );
+  error.code = "MODULE_NOT_FOUND";
+  return error;
+};
 
 export const createPackageImportNotDefinedError = (
   specifier,
@@ -72,7 +72,7 @@ export const createPackageImportNotDefinedError = (
     `Package import specifier "${specifier}" is not defined in ${fileURLToPath(
       packageDirectoryUrl,
     )}package.json imported from ${fileURLToPath(parentUrl)}`,
-  )
-  error.code = "PACKAGE_IMPORT_NOT_DEFINED"
-  return error
-}
+  );
+  error.code = "PACKAGE_IMPORT_NOT_DEFINED";
+  return error;
+};

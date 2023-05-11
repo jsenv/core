@@ -1,48 +1,48 @@
-import { assert } from "@jsenv/assert"
-import { fetchUrl } from "@jsenv/fetch"
+import { assert } from "@jsenv/assert";
+import { fetchUrl } from "@jsenv/fetch";
 
-import { startServer, readRequestBody } from "@jsenv/server"
+import { startServer, readRequestBody } from "@jsenv/server";
 
 // read request body as string
 {
-  let requestBody
+  let requestBody;
   const { origin } = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
     services: [
       {
         handleRequest: async (request) => {
-          requestBody = await readRequestBody(request)
+          requestBody = await readRequestBody(request);
           return {
             status: 200,
             headers: {
               "Content-Type": "text/plain",
             },
             body: "",
-          }
+          };
         },
       },
     ],
-  })
+  });
   await fetchUrl(origin, {
     method: "POST",
     body: "toto",
-  })
-  const actual = requestBody
-  const expected = "toto"
-  assert({ actual, expected })
+  });
+  const actual = requestBody;
+  const expected = "toto";
+  assert({ actual, expected });
 }
 
 // read request body as json
 {
-  let requestBody
+  let requestBody;
   const { origin } = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
     services: [
       {
         handleRequest: async (request) => {
-          requestBody = await readRequestBody(request, { as: "json" })
+          requestBody = await readRequestBody(request, { as: "json" });
 
           return {
             status: 200,
@@ -50,31 +50,31 @@ import { startServer, readRequestBody } from "@jsenv/server"
               "Content-Type": "text/plain",
             },
             body: "",
-          }
+          };
         },
       },
     ],
-  })
+  });
 
   await fetchUrl(origin, {
     method: "PUT",
     body: JSON.stringify({ foo: true }),
-  })
-  const actual = requestBody
-  const expected = { foo: true }
-  assert({ actual, expected })
+  });
+  const actual = requestBody;
+  const expected = { foo: true };
+  assert({ actual, expected });
 }
 
 // read request body as buffer
 {
-  let requestBody
+  let requestBody;
   const { origin } = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
     services: [
       {
         handleRequest: async (request) => {
-          requestBody = await readRequestBody(request, { as: "buffer" })
+          requestBody = await readRequestBody(request, { as: "buffer" });
 
           return {
             status: 200,
@@ -82,55 +82,55 @@ import { startServer, readRequestBody } from "@jsenv/server"
               "Content-Type": "text/plain",
             },
             body: "",
-          }
+          };
         },
       },
     ],
-  })
+  });
   await fetchUrl(origin, {
     method: "PATCH",
     body: "toto",
-  })
-  const actual = requestBody
-  const expected = Buffer.from("toto")
-  assert({ actual, expected })
+  });
+  const actual = requestBody;
+  const expected = Buffer.from("toto");
+  assert({ actual, expected });
 }
 
 // read request body a bit late
 {
-  let requestBody
-  let resolveReadPromise
+  let requestBody;
+  let resolveReadPromise;
   const readPromise = new Promise((resolve) => {
-    resolveReadPromise = resolve
-  })
+    resolveReadPromise = resolve;
+  });
   const { origin } = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
     services: [
       {
         handleRequest: async (request) => {
-          await readPromise
-          requestBody = await readRequestBody(request, { as: "string" })
+          await readPromise;
+          requestBody = await readRequestBody(request, { as: "string" });
           return {
             status: 200,
             headers: {
               "Content-Type": "text/plain",
             },
             body: "",
-          }
+          };
         },
       },
     ],
-  })
+  });
   const responsePromise = fetchUrl(origin, {
     method: "POST",
     body: "toto",
-  })
+  });
   // wait Xms before reading the request body
-  await new Promise((resolve) => setTimeout(resolve, 200))
-  resolveReadPromise()
-  await responsePromise
-  const actual = requestBody
-  const expected = "toto"
-  assert({ actual, expected })
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  resolveReadPromise();
+  await responsePromise;
+  const actual = requestBody;
+  const expected = "toto";
+  assert({ actual, expected });
 }

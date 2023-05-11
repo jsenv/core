@@ -1,5 +1,5 @@
-import { startDevServer } from "@jsenv/core"
-import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs"
+import { startDevServer } from "@jsenv/core";
+import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
 
 await startDevServer({
   logLevel: "info",
@@ -14,4 +14,4 @@ await startDevServer({
   ],
   clientAutoreload: false,
   supervisor: false,
-})
+});

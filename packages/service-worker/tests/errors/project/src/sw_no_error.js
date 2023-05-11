@@ -1,6 +1,6 @@
 /* eslint-env serviceworker */
 
-self.importScripts("../../../../src/jsenv_service_worker.js")
+self.importScripts("../../../../src/jsenv_service_worker.js");
 
 self.__sw__.init({
   logLevel: "debug",
@@ -9,4 +9,4 @@ self.__sw__.init({
     "/": {},
     ...(self.resourcesFromJsenvBuild || {}),
   },
-})
+});

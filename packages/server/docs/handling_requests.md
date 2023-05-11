@@ -3,7 +3,7 @@
 Request are handled by the first service returning something in a "handleRequest" function.
 
 ```js
-import { startServer } from "@jsenv/server"
+import { startServer } from "@jsenv/server";
 
 await startServer({
   services: [
@@ -13,11 +13,11 @@ await startServer({
           status: 200,
           headers: { "content-type": "text/plain" },
           body: "Hello world",
-        }
+        };
       },
     },
   ],
-})
+});
 ```
 
 ## handleRequest
@@ -49,23 +49,23 @@ const request = {
   method: "GET",
   headers: { accept: "text/html" },
   body,
-}
+};
 ```
 
 ### Reading request search params
 
 ```js
-import { startServer } from "@jsenv/server"
+import { startServer } from "@jsenv/server";
 
 await startServer({
   services: [
     {
       handleRequest: async (request) => {
-        const page = new URL(request.url).searchParams.get("page")
+        const page = new URL(request.url).searchParams.get("page");
       },
     },
   ],
-})
+});
 ```
 
 Read more at https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams.
@@ -73,21 +73,23 @@ Read more at https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams.
 ### Reading request body
 
 ```js
-import { startServer, readRequestBody } from "@jsenv/server"
+import { startServer, readRequestBody } from "@jsenv/server";
 
 await startServer({
   services: [
     {
       handleRequest: async (request) => {
-        const requestBodyAsString = await readRequestBody(request)
-        const requestBodyAsJson = await readRequestBody(request, { as: "json" })
+        const requestBodyAsString = await readRequestBody(request);
+        const requestBodyAsJson = await readRequestBody(request, {
+          as: "json",
+        });
         const requestBodyAsBuffer = await readRequestBody(request, {
           as: "buffer",
-        })
+        });
       },
     },
   ],
-})
+});
 ```
 
 ## response
@@ -97,7 +99,7 @@ _response_ is an object describing a server response. See below some examples th
 _response body declared with a string_
 
 ```js
-import { startServer } from "@jsenv/server"
+import { startServer } from "@jsenv/server";
 
 await startServer({
   services: [
@@ -107,18 +109,18 @@ await startServer({
           status: 200,
           headers: { "content-type": "text/plain" },
           body: "Hello world",
-        }
-        return response
+        };
+        return response;
       },
     },
   ],
-})
+});
 ```
 
 _response body declared with a buffer_
 
 ```js
-import { startServer } from "@jsenv/server"
+import { startServer } from "@jsenv/server";
 
 await startServer({
   services: [
@@ -128,19 +130,19 @@ await startServer({
           status: 200,
           headers: { "content-type": "text/plain" },
           body: Buffer.from("Hello world"),
-        }
-        return response
+        };
+        return response;
       },
     },
   ],
-})
+});
 ```
 
 _response body declared with a readable stream_
 
 ```js
-import { createReadStream } from "node:fs"
-import { startServer } from "@jsenv/server"
+import { createReadStream } from "node:fs";
+import { startServer } from "@jsenv/server";
 
 await startServer({
   services: [
@@ -150,18 +152,18 @@ await startServer({
           status: 200,
           headers: { "content-type": "text/plain" },
           body: createReadStream("/User/you/folder/file.txt"),
-        }
-        return response
+        };
+        return response;
       },
     },
   ],
-})
+});
 ```
 
 _response body declared with an observable_
 
 ```js
-import { startServer } from "@jsenv/server"
+import { startServer } from "@jsenv/server";
 
 await startServer({
   services: [
@@ -174,18 +176,18 @@ await startServer({
             [Symbol.observable]: () => {
               return {
                 subscribe: ({ next, complete }) => {
-                  next("Hello world")
-                  complete()
+                  next("Hello world");
+                  complete();
                 },
-              }
+              };
             },
           },
-        }
-        return response
+        };
+        return response;
       },
     },
   ],
-})
+});
 ```
 
 ## Services and composition
@@ -201,7 +203,7 @@ The following code is an example of composition where a server logic is split in
  * - otherwise
  *   -> respond with 404
  */
-import { startServer, composeServices } from "@jsenv/server"
+import { startServer, composeServices } from "@jsenv/server";
 
 await startServer({
   services: [
@@ -209,19 +211,19 @@ await startServer({
       name: "index",
       handleRequest: (request) => {
         if (request.resource === "/") {
-          return { status: 200 }
+          return { status: 200 };
         }
-        return null // means "I don't handle that request"
+        return null; // means "I don't handle that request"
       },
     },
     {
       name: "otherwise",
       handleRequest: () => {
-        return { status: 404 }
+        return { status: 404 };
       },
     },
   ],
-})
+});
 ```
 
 <!-- > Code above implement a server that could be described as follow:

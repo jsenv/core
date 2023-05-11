@@ -1,1 +1,1 @@
-import "./intermediate.js"
+import "./intermediate.js";

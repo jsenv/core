@@ -1,4 +1,4 @@
-import { startDevServer } from "@jsenv/core"
+import { startDevServer } from "@jsenv/core";
 
 await startDevServer({
   logLevel: "info",
@@ -8,4 +8,4 @@ await startDevServer({
   ribbon: false,
   clientAutoreload: false,
   supervisor: false,
-})
+});

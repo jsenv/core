@@ -1,1 +1,1 @@
-import "#fire/fire.js"
+import "#fire/fire.js";

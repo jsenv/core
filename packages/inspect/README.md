@@ -3,7 +3,7 @@
 `@jsenv/inspect` turns a JavaScript value into a string meant to be read by a human. It is written in ES6 and compatible with browsers and Node.js.
 
 ```js
-import { inspect } from "@jsenv/inspect"
+import { inspect } from "@jsenv/inspect";
 
 console.log(
   inspect({
@@ -11,7 +11,7 @@ console.log(
     number: 10,
     string: "hello world",
   }),
-)
+);
 ```
 
 ```console

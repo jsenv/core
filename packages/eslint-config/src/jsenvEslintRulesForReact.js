@@ -28,4 +28,4 @@ export const jsenvEslintRulesForReact = {
   "react/prop-types": ["off"],
   "react/react-in-jsx-scope": ["error"],
   "react/require-render-return": ["off"],
-}
+};

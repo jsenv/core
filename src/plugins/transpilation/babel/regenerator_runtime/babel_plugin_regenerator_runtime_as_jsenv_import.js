@@ -1,10 +1,10 @@
-import { pathToFileURL } from "node:url"
-import { injectJsImport } from "@jsenv/ast"
+import { pathToFileURL } from "node:url";
+import { injectJsImport } from "@jsenv/ast";
 
 export const regeneratorRuntimeClientFileUrl = new URL(
   "./client/regenerator_runtime.js",
   import.meta.url,
-).href
+).href;
 
 export const babelPluginRegeneratorRuntimeAsJsenvImport = (
   babel,
@@ -14,20 +14,20 @@ export const babelPluginRegeneratorRuntimeAsJsenvImport = (
     name: "regenerator-runtime-as-jsenv-import",
     visitor: {
       Identifier(path, opts) {
-        const { filename } = opts
-        const fileUrl = pathToFileURL(filename).href
+        const { filename } = opts;
+        const fileUrl = pathToFileURL(filename).href;
         if (fileUrl === regeneratorRuntimeClientFileUrl) {
-          return
+          return;
         }
-        const { node } = path
+        const { node } = path;
         if (node.name === "regeneratorRuntime") {
           injectJsImport({
             programPath: path.scope.getProgramParent().path,
             from: getImportSpecifier(regeneratorRuntimeClientFileUrl),
             sideEffect: true,
-          })
+          });
         }
       },
     },
-  }
-}
+  };
+};

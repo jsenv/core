@@ -1,8 +1,8 @@
-import { useEffect } from "react"
+import { useEffect } from "react";
 
 export const Root = ({ onRender }) => {
   useEffect(() => {
-    onRender()
-  }, [])
-  return <span>Hello world</span>
-}
+    onRender();
+  }, []);
+  return <span>Hello world</span>;
+};

@@ -1,18 +1,18 @@
-import { assert } from "@jsenv/assert"
-import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js"
+import { assert } from "@jsenv/assert";
+import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js";
 
 try {
-  const actual = Object.preventExtensions({ foo: true })
-  const expected = Object.preventExtensions({ foo: true })
-  assert({ actual, expected })
+  const actual = Object.preventExtensions({ foo: true });
+  const expected = Object.preventExtensions({ foo: true });
+  assert({ actual, expected });
 } catch (e) {
-  throw new Error(`should not throw`)
+  throw new Error(`should not throw`);
 }
 
 try {
-  const actual = { foo: true }
-  const expected = Object.preventExtensions({ foo: true })
-  assert({ actual, expected })
+  const actual = { foo: true };
+  const expected = Object.preventExtensions({ foo: true });
+  assert({ actual, expected });
 } catch (e) {
   ensureAssertionErrorWithMessage(
     e,
@@ -23,13 +23,13 @@ try {
 "non-extensible"
 --- path ---
 actual[[Extensible]]`,
-  )
+  );
 }
 
 try {
-  const actual = Object.preventExtensions({ foo: true })
-  const expected = { foo: true }
-  assert({ actual, expected })
+  const actual = Object.preventExtensions({ foo: true });
+  const expected = { foo: true };
+  assert({ actual, expected });
 } catch (e) {
   ensureAssertionErrorWithMessage(
     e,
@@ -40,5 +40,5 @@ try {
 "extensible"
 --- path ---
 actual[[Extensible]]`,
-  )
+  );
 }

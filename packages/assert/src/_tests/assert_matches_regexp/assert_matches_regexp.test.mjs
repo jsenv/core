@@ -1,17 +1,17 @@
-import { assert } from "@jsenv/assert"
-import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js"
+import { assert } from "@jsenv/assert";
+import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js";
 
 {
-  const actual = "expired 3 seconds ago"
-  const expected = assert.matchesRegExp(/expired \d seconds ago/)
-  assert({ actual, expected })
+  const actual = "expired 3 seconds ago";
+  const expected = assert.matchesRegExp(/expired \d seconds ago/);
+  assert({ actual, expected });
 }
 
 {
-  const actual = "expired n seconds ago"
-  const expected = assert.matchesRegExp(/expired \d seconds ago/)
+  const actual = "expired n seconds ago";
+  const expected = assert.matchesRegExp(/expired \d seconds ago/);
   try {
-    assert({ actual, expected })
+    assert({ actual, expected });
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
@@ -22,6 +22,6 @@ import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMess
 matchesRegExp(/expired \\\d seconds ago/)
 --- path ---
 actual`,
-    )
+    );
   }
 }

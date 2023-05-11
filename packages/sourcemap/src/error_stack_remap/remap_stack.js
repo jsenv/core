@@ -1,8 +1,8 @@
-import { DATA_URL } from "@jsenv/urls"
+import { DATA_URL } from "@jsenv/urls";
 
-import { SOURCEMAP } from "../sourcemap_comment.js"
-import { createDetailedMessage } from "./detailed_message.js"
-import { remapCallSite } from "./remap_call_site.js"
+import { SOURCEMAP } from "../sourcemap_comment.js";
+import { createDetailedMessage } from "./detailed_message.js";
+import { remapCallSite } from "./remap_call_site.js";
 
 export const remapStack = async ({
   stack,
@@ -15,17 +15,17 @@ export const remapStack = async ({
   const urlToSourcemapConsumer = memoizeByFirstArgStringValue(
     async (stackTraceFileUrl) => {
       if (stackTraceFileUrl.startsWith("node:")) {
-        return null
+        return null;
       }
 
       try {
-        let text
+        let text;
         try {
-          const fileResponse = await fetchFile(stackTraceFileUrl)
-          const { status } = fileResponse
+          const fileResponse = await fetchFile(stackTraceFileUrl);
+          const { status } = fileResponse;
           if (status !== 200) {
             if (status === 404) {
-              onFailure(`stack trace file not found at ${stackTraceFileUrl}`)
+              onFailure(`stack trace file not found at ${stackTraceFileUrl}`);
             } else {
               onFailure(
                 createDetailedMessage(
@@ -36,46 +36,46 @@ export const remapStack = async ({
                     ["stack trace file"]: stackTraceFileUrl,
                   },
                 ),
-              )
+              );
             }
-            return null
+            return null;
           }
-          text = await fileResponse.text()
+          text = await fileResponse.text();
         } catch (e) {
           onFailure(
             createDetailedMessage(`error while fetching stack trace file.`, {
               ["fetch error stack"]: readErrorStack(e),
               ["stack trace file"]: stackTraceFileUrl,
             }),
-          )
+          );
 
-          return null
+          return null;
         }
 
         const jsSourcemapComment = SOURCEMAP.readComment({
           contentType: "text/javascript",
           content: text,
-        })
+        });
         if (!jsSourcemapComment) {
-          return null
+          return null;
         }
-        const jsSourcemapUrl = jsSourcemapComment.specifier
-        let sourcemapUrl
-        let sourcemapString
+        const jsSourcemapUrl = jsSourcemapComment.specifier;
+        let sourcemapUrl;
+        let sourcemapString;
         if (jsSourcemapUrl.startsWith("data:")) {
-          sourcemapUrl = stackTraceFileUrl
-          sourcemapString = DATA_URL.parse(jsSourcemapUrl, { as: "string" })
+          sourcemapUrl = stackTraceFileUrl;
+          sourcemapString = DATA_URL.parse(jsSourcemapUrl, { as: "string" });
         } else {
           sourcemapUrl = resolveFile(jsSourcemapUrl, stackTraceFileUrl, {
             type: "source-map",
-          })
+          });
 
           try {
-            const sourcemapResponse = await fetchFile(sourcemapUrl)
-            const { status } = sourcemapResponse
+            const sourcemapResponse = await fetchFile(sourcemapUrl);
+            const { status } = sourcemapResponse;
             if (status !== 200) {
               if (status === 404) {
-                onFailure(`sourcemap file not found at ${sourcemapUrl}`)
+                onFailure(`sourcemap file not found at ${sourcemapUrl}`);
               } else {
                 onFailure(
                   createDetailedMessage(
@@ -86,56 +86,56 @@ export const remapStack = async ({
                       ["sourcemap url"]: sourcemapUrl,
                     },
                   ),
-                )
+                );
               }
-              return null
+              return null;
             }
-            sourcemapString = await sourcemapResponse.text()
+            sourcemapString = await sourcemapResponse.text();
           } catch (e) {
             onFailure(
               createDetailedMessage(`error while fetching sourcemap.`, {
                 ["fetch error stack"]: readErrorStack(e),
                 ["sourcemap url"]: sourcemapUrl,
               }),
-            )
-            return null
+            );
+            return null;
           }
         }
 
-        let sourceMap
+        let sourceMap;
         try {
-          sourceMap = JSON.parse(sourcemapString)
+          sourceMap = JSON.parse(sourcemapString);
         } catch (e) {
           onFailure(
             createDetailedMessage(`error while parsing sourcemap.`, {
               ["parse error stack"]: readErrorStack(e),
               ["sourcemap url"]: sourcemapUrl,
             }),
-          )
-          return null
+          );
+          return null;
         }
 
-        let { sourcesContent } = sourceMap
+        let { sourcesContent } = sourceMap;
 
         if (!sourcesContent) {
-          sourcesContent = []
-          sourceMap.sourcesContent = sourcesContent
+          sourcesContent = [];
+          sourceMap.sourcesContent = sourcesContent;
         }
 
-        let firstSourceMapSourceFailure = null
+        let firstSourceMapSourceFailure = null;
 
         await Promise.all(
           sourceMap.sources.map(async (source, index) => {
-            if (index in sourcesContent) return
+            if (index in sourcesContent) return;
 
             const sourcemapSourceUrl = resolveFile(source, sourcemapUrl, {
               type: "source",
-            })
+            });
             try {
-              const sourceResponse = await fetchFile(sourcemapSourceUrl)
-              const { status } = sourceResponse
+              const sourceResponse = await fetchFile(sourcemapSourceUrl);
+              const { status } = sourceResponse;
               if (status !== 200) {
-                if (firstSourceMapSourceFailure) return
+                if (firstSourceMapSourceFailure) return;
 
                 if (status === 404) {
                   firstSourceMapSourceFailure = createDetailedMessage(
@@ -144,8 +144,8 @@ export const remapStack = async ({
                       ["sourcemap source url"]: sourcemapSourceUrl,
                       ["sourcemap url"]: sourcemapUrl,
                     },
-                  )
-                  return
+                  );
+                  return;
                 }
                 firstSourceMapSourceFailure = createDetailedMessage(
                   `unexpected response for sourcemap source.`,
@@ -155,14 +155,14 @@ export const remapStack = async ({
                     ["sourcemap source url"]: sourcemapSourceUrl,
                     ["sourcemap url"]: sourcemapUrl,
                   },
-                )
-                return
+                );
+                return;
               }
 
-              const sourceString = await sourceResponse.text()
-              sourcesContent[index] = sourceString
+              const sourceString = await sourceResponse.text();
+              sourcesContent[index] = sourceString;
             } catch (e) {
-              if (firstSourceMapSourceFailure) return
+              if (firstSourceMapSourceFailure) return;
               firstSourceMapSourceFailure = createDetailedMessage(
                 `error while fetching sourcemap source.`,
                 {
@@ -170,17 +170,17 @@ export const remapStack = async ({
                   ["sourcemap source url"]: sourcemapSourceUrl,
                   ["sourcemap url"]: sourcemapUrl,
                 },
-              )
+              );
             }
           }),
-        )
+        );
 
         if (firstSourceMapSourceFailure) {
-          onFailure(firstSourceMapSourceFailure)
-          return null
+          onFailure(firstSourceMapSourceFailure);
+          return null;
         }
 
-        return new SourceMapConsumer(sourceMap)
+        return new SourceMapConsumer(sourceMap);
       } catch (e) {
         onFailure(
           createDetailedMessage(
@@ -190,11 +190,11 @@ export const remapStack = async ({
               ["stack trace file"]: stackTraceFileUrl,
             },
           ),
-        )
-        return null
+        );
+        return null;
       }
     },
-  )
+  );
   const originalCallsites = await Promise.all(
     stack.map((callSite) =>
       remapCallSite(callSite, {
@@ -204,17 +204,17 @@ export const remapStack = async ({
         onFailure,
       }),
     ),
-  )
-  return originalCallsites
-}
+  );
+  return originalCallsites;
+};
 
 const memoizeByFirstArgStringValue = (fn) => {
-  const stringValueCache = {}
+  const stringValueCache = {};
   return (firstArgValue) => {
     if (firstArgValue in stringValueCache)
-      return stringValueCache[firstArgValue]
-    const value = fn(firstArgValue)
-    stringValueCache[firstArgValue] = value
-    return value
-  }
-}
+      return stringValueCache[firstArgValue];
+    const value = fn(firstArgValue);
+    stringValueCache[firstArgValue] = value;
+    return value;
+  };
+};

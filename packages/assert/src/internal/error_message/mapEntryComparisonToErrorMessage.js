@@ -1,23 +1,24 @@
-import { comparisonToPath } from "../comparisonToPath.js"
-import { valueToString } from "../valueToString.js"
-import { findSelfOrAncestorComparison } from "../findSelfOrAncestorComparison.js"
+import { comparisonToPath } from "../comparisonToPath.js";
+import { valueToString } from "../valueToString.js";
+import { findSelfOrAncestorComparison } from "../findSelfOrAncestorComparison.js";
 
 export const mapEntryComparisonToErrorMessage = (comparison) => {
   const mapEntryComparison = findSelfOrAncestorComparison(
     comparison,
     ({ type }) => type === "map-entry",
-  )
-  if (!mapEntryComparison) return null
+  );
+  if (!mapEntryComparison) return null;
 
-  const isUnexpected = !mapEntryComparison.expected && mapEntryComparison.actual
+  const isUnexpected =
+    !mapEntryComparison.expected && mapEntryComparison.actual;
   if (isUnexpected)
-    return createUnexpectedMapEntryErrorMessage(mapEntryComparison)
+    return createUnexpectedMapEntryErrorMessage(mapEntryComparison);
 
-  const isMissing = mapEntryComparison.expected && !mapEntryComparison.actual
-  if (isMissing) return createMissingMapEntryErrorMessage(mapEntryComparison)
+  const isMissing = mapEntryComparison.expected && !mapEntryComparison.actual;
+  if (isMissing) return createMissingMapEntryErrorMessage(mapEntryComparison);
 
-  return null
-}
+  return null;
+};
 
 const createUnexpectedMapEntryErrorMessage = (
   comparison,
@@ -27,7 +28,7 @@ ${valueToString(comparison.actual.key)}
 --- unexpected entry value ---
 ${valueToString(comparison.actual.value)}
 --- path ---
-${comparisonToPath(comparison.parent)}`
+${comparisonToPath(comparison.parent)}`;
 
 const createMissingMapEntryErrorMessage = (comparison) => `an entry is missing
 --- missing entry key ---
@@ -35,4 +36,4 @@ ${valueToString(comparison.expected.key)}
 --- missing entry value ---
 ${valueToString(comparison.expected.value)}
 --- path ---
-${comparisonToPath(comparison.parent)}`
+${comparisonToPath(comparison.parent)}`;

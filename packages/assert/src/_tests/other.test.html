@@ -8,16 +8,16 @@
 
   <body>
     <script type="module">
-      import { addWellKnownComposite } from "../internal/wellKnownValue.js"
+      import { addWellKnownComposite } from "../internal/wellKnownValue.js";
 
       if (typeof window === "object") {
-        const iframe = document.createElement("iframe")
-        iframe.setAttribute("sandbox", "")
-        document.body.appendChild(iframe)
+        const iframe = document.createElement("iframe");
+        iframe.setAttribute("sandbox", "");
+        document.body.appendChild(iframe);
         try {
-          addWellKnownComposite(iframe.contentWindow)
+          addWellKnownComposite(iframe.contentWindow);
         } finally {
-          document.body.removeChild(iframe)
+          document.body.removeChild(iframe);
         }
       }
     </script>

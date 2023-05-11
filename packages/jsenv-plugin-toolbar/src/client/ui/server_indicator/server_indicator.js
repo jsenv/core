@@ -1,62 +1,62 @@
-import { effect } from "@preact/signals"
+import { effect } from "@preact/signals";
 
 import {
   serverConnectionSignal,
   serverTooltipOpenedSignal,
-} from "../../core/server_signals.js"
+} from "../../core/server_signals.js";
 import {
   openServerTooltip,
   closeServerTooltip,
-} from "../../core/server_actions.js"
-import { removeForceHideElement } from "../util/dom.js"
-import { enableVariant } from "../variant.js"
+} from "../../core/server_actions.js";
+import { removeForceHideElement } from "../util/dom.js";
+import { enableVariant } from "../variant.js";
 
-const parentServerEvents = window.parent.__server_events__
-const serverEvents = window.__server_events__
-const serverIndicator = document.querySelector("#server_indicator")
+const parentServerEvents = window.parent.__server_events__;
+const serverEvents = window.__server_events__;
+const serverIndicator = document.querySelector("#server_indicator");
 
 export const renderServerIndicator = () => {
-  removeForceHideElement(document.querySelector("#server_indicator"))
+  removeForceHideElement(document.querySelector("#server_indicator"));
   effect(() => {
-    const serverConnection = serverConnectionSignal.value
-    updateServerIndicator(serverConnection)
-  })
+    const serverConnection = serverConnectionSignal.value;
+    updateServerIndicator(serverConnection);
+  });
   effect(() => {
-    const serverTooltipOpened = serverTooltipOpenedSignal.value
+    const serverTooltipOpened = serverTooltipOpenedSignal.value;
     if (serverTooltipOpened) {
-      serverIndicator.setAttribute("data-tooltip-visible", "")
+      serverIndicator.setAttribute("data-tooltip-visible", "");
     } else {
-      serverIndicator.removeAttribute("data-tooltip-visible")
+      serverIndicator.removeAttribute("data-tooltip-visible");
     }
-  })
-}
+  });
+};
 
 const updateServerIndicator = (connectionState) => {
-  enableVariant(serverIndicator, { connectionState })
+  enableVariant(serverIndicator, { connectionState });
   const variantNode = document.querySelector(
     "#server_indicator > [data-when-active]",
-  )
+  );
   variantNode.querySelector("button").onclick = () => {
-    const serverTooltipOpened = serverTooltipOpenedSignal.value
+    const serverTooltipOpened = serverTooltipOpenedSignal.value;
     if (serverTooltipOpened) {
-      closeServerTooltip()
+      closeServerTooltip();
     } else {
-      openServerTooltip()
+      openServerTooltip();
     }
-  }
+  };
   if (connectionState === "connecting") {
     variantNode.querySelector("a").onclick = () => {
       if (parentServerEvents) {
-        parentServerEvents.disconnect()
+        parentServerEvents.disconnect();
       }
-      serverEvents.disconnect()
-    }
+      serverEvents.disconnect();
+    };
   } else if (connectionState === "closed") {
     variantNode.querySelector("a").onclick = () => {
       if (parentServerEvents) {
-        parentServerEvents.connect()
+        parentServerEvents.connect();
       }
-      serverEvents.connect()
-    }
+      serverEvents.connect();
+    };
   }
-}
+};

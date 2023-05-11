@@ -1,8 +1,8 @@
-import { fileURLToPath } from "node:url"
-import { readFileSync } from "@jsenv/filesystem"
-import { normalizeImportMap } from "@jsenv/importmap"
+import { fileURLToPath } from "node:url";
+import { readFileSync } from "@jsenv/filesystem";
+import { normalizeImportMap } from "@jsenv/importmap";
 
-import { applyUrlResolution } from "./url_resolution.js"
+import { applyUrlResolution } from "./url_resolution.js";
 
 export const readImportmap = ({
   logger,
@@ -10,48 +10,48 @@ export const readImportmap = ({
   importmapFileRelativeUrl,
 }) => {
   if (typeof importmapFileRelativeUrl === "undefined") {
-    return null
+    return null;
   }
   if (typeof importmapFileRelativeUrl !== "string") {
     throw new TypeError(
       `importmapFileRelativeUrl must be a string, got ${importmapFileRelativeUrl}`,
-    )
+    );
   }
   const importmapFileUrl = applyUrlResolution(
     importmapFileRelativeUrl,
     rootDirectoryUrl,
-  )
+  );
   if (!importmapFileUrl.startsWith(`${rootDirectoryUrl}`)) {
     logger.warn(`import map file is outside root directory.
 --- import map file ---
 ${fileURLToPath(importmapFileUrl)}
 --- root directory ---
-${fileURLToPath(rootDirectoryUrl)}`)
+${fileURLToPath(rootDirectoryUrl)}`);
   }
-  let importmapFileBuffer
+  let importmapFileBuffer;
   try {
-    importmapFileBuffer = readFileSync(importmapFileUrl)
+    importmapFileBuffer = readFileSync(importmapFileUrl);
   } catch (e) {
     if (e && e.code === "ENOENT") {
-      logger.error(`importmap file not found at ${importmapFileUrl}`)
-      return null
+      logger.error(`importmap file not found at ${importmapFileUrl}`);
+      return null;
     }
-    throw e
+    throw e;
   }
-  let importMap
+  let importMap;
   try {
-    const importmapFileString = String(importmapFileBuffer)
-    importMap = JSON.parse(importmapFileString)
+    const importmapFileString = String(importmapFileBuffer);
+    importMap = JSON.parse(importmapFileString);
   } catch (e) {
     if (e && e.code === "SyntaxError") {
       logger.error(`syntax error in importmap file
 --- error stack ---
 ${e.stack}
 --- importmap file ---
-${importmapFileUrl}`)
-      return null
+${importmapFileUrl}`);
+      return null;
     }
-    throw e
+    throw e;
   }
-  return normalizeImportMap(importMap, importmapFileUrl)
-}
+  return normalizeImportMap(importMap, importmapFileUrl);
+};

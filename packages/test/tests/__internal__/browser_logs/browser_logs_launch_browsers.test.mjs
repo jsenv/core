@@ -1,7 +1,7 @@
-import { assert } from "@jsenv/assert"
-import { startDevServer } from "@jsenv/core"
+import { assert } from "@jsenv/assert";
+import { startDevServer } from "@jsenv/core";
 
-import { execute, chromium, firefox, webkit } from "@jsenv/test"
+import { execute, chromium, firefox, webkit } from "@jsenv/test";
 
 const test = async (params) => {
   const devServer = await startDevServer({
@@ -9,7 +9,7 @@ const test = async (params) => {
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
     port: 0,
-  })
+  });
   const { status, namespace, consoleCalls } = await execute({
     // logLevel: "debug",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
@@ -22,13 +22,13 @@ const test = async (params) => {
     mirrorConsole: false,
     collectConsole: true,
     ...params,
-  })
-  devServer.stop()
+  });
+  devServer.stop();
   const actual = {
     status,
     namespace,
     consoleCalls,
-  }
+  };
   const expected = {
     status: "completed",
     namespace: {
@@ -51,18 +51,18 @@ const test = async (params) => {
         text: `bar\n`,
       },
     ],
-  }
-  assert({ actual, expected })
-}
+  };
+  assert({ actual, expected });
+};
 
 await test({
   runtime: chromium(),
-})
+});
 await test({
   runtime: firefox({
     disableOnWindowsBecauseFlaky: false,
   }),
-})
+});
 await test({
   runtime: webkit(),
-})
+});

@@ -10,7 +10,7 @@
  * their ease to compose, reuse and/or garbage collect
  */
 
-export const Signal = {}
+export const Signal = {};
 
 const createFrozenSignal = ({ transmitted, value }) => {
   return {
@@ -18,26 +18,26 @@ const createFrozenSignal = ({ transmitted, value }) => {
     value,
     effect: effectNoop,
     addCallback: addCallbackNoop,
-  }
-}
+  };
+};
 const addCallbackNoop = () => {
-  return () => {}
-}
-const effectNoop = () => {}
+  return () => {};
+};
+const effectNoop = () => {};
 
-Signal.dormant = () => SIGNAL_DORMANT
-const SIGNAL_DORMANT = createFrozenSignal({ transmitted: false })
+Signal.dormant = () => SIGNAL_DORMANT;
+const SIGNAL_DORMANT = createFrozenSignal({ transmitted: false });
 Signal.transmit = (value) => {
   // Just perf optim to reuse same signals when value is undefined
   return value === undefined
     ? SIGNAL_TRANSMITTED_UNDEFINED
-    : createFrozenSignal({ transmitted: true, value })
-}
-const SIGNAL_TRANSMITTED_UNDEFINED = createFrozenSignal({ transmitted: true })
+    : createFrozenSignal({ transmitted: true, value });
+};
+const SIGNAL_TRANSMITTED_UNDEFINED = createFrozenSignal({ transmitted: true });
 
 Signal.create = () => {
-  let callbacks = []
-  let cleanupEffect = null
+  let callbacks = [];
+  let cleanupEffect = null;
 
   const signal = {
     transmitted: false,
@@ -45,64 +45,64 @@ Signal.create = () => {
     effect: effectNoop,
     addCallback: (callback) => {
       if (typeof callback !== "function") {
-        throw new Error(`callback must be a function, got ${callback}`)
+        throw new Error(`callback must be a function, got ${callback}`);
       }
 
       // don't register twice
       // this test can be defeated by Signal.map
       // so do not rely on it, it's just here to help avoiding mistake, not prevent them entirely
       const existingCallback = callbacks.find((callbackCandidate) => {
-        return callbackCandidate === callback
-      })
+        return callbackCandidate === callback;
+      });
       if (existingCallback) {
         if (typeof process.emitWarning === "object") {
           process.emitWarning(`Trying to register same callback twice`, {
             CODE: "CALLBACK_DUPLICATION",
             detail: `It's often the sign that code is executd more than once`,
-          })
+          });
         } else {
-          console.warn(`Trying to add same callback twice`)
+          console.warn(`Trying to add same callback twice`);
         }
       } else {
-        callbacks = [...callbacks, callback]
+        callbacks = [...callbacks, callback];
       }
 
       if (callbacks.length === 0) {
-        cleanupEffect = signal.listenEffect()
+        cleanupEffect = signal.listenEffect();
       }
 
       return () => {
-        callbacks = arrayWithout(callbacks, callback)
+        callbacks = arrayWithout(callbacks, callback);
         if (callbacks.length === 0 && typeof cleanupEffect === "function") {
-          cleanupEffect()
-          cleanupEffect = null
+          cleanupEffect();
+          cleanupEffect = null;
         }
-      }
+      };
     },
-  }
+  };
 
   const transmitSignal = (value) => {
-    const callbacksCopy = callbacks.slice()
-    callbacks.length = 0
+    const callbacksCopy = callbacks.slice();
+    callbacks.length = 0;
     if (typeof cleanupEffect === "function") {
-      cleanupEffect()
-      cleanupEffect = null
+      cleanupEffect();
+      cleanupEffect = null;
     }
     callbacksCopy.forEach((callback) => {
-      callback(value)
-    })
-  }
+      callback(value);
+    });
+  };
 
-  return [transmitSignal, signal]
-}
+  return [transmitSignal, signal];
+};
 
 Signal.composeTwoSignals = (firstSignal, secondSignal) => {
   if (firstSignal.transmitted) {
-    return firstSignal
+    return firstSignal;
   }
 
   if (secondSignal.transmitted) {
-    return secondSignal
+    return secondSignal;
   }
 
   const compositeSignal = {
@@ -116,79 +116,79 @@ Signal.composeTwoSignals = (firstSignal, secondSignal) => {
     effect: effectNoop,
     addCallback: (callback) => {
       const removeFirstSignalCallback = firstSignal.addCallback((value) => {
-        removeSecondSignalCallback()
-        markSignalAsTransmitted(compositeSignal, value)
-        callback(value)
-      })
+        removeSecondSignalCallback();
+        markSignalAsTransmitted(compositeSignal, value);
+        callback(value);
+      });
       const removeSecondSignalCallback = secondSignal.addCallback((value) => {
-        removeFirstSignalCallback()
-        markSignalAsTransmitted(compositeSignal, value)
-        callback(value)
-      })
+        removeFirstSignalCallback();
+        markSignalAsTransmitted(compositeSignal, value);
+        callback(value);
+      });
       return () => {
-        removeFirstSignalCallback()
-        removeSecondSignalCallback()
-      }
+        removeFirstSignalCallback();
+        removeSecondSignalCallback();
+      };
     },
-  }
+  };
 
-  return compositeSignal
-}
+  return compositeSignal;
+};
 
 Signal.from = (value) => {
   if (value instanceof global.AbortSignal) {
-    const [transmit, signal] = Signal.create()
+    const [transmit, signal] = Signal.create();
     const abortEventCallback = () => {
-      value.removeEventListener("abort", abortEventCallback)
-      transmit("aborted")
-    }
-    value.addEventListener("abort", abortEventCallback)
-    return signal
+      value.removeEventListener("abort", abortEventCallback);
+      transmit("aborted");
+    };
+    value.addEventListener("abort", abortEventCallback);
+    return signal;
   }
   if (typeof value === "function") {
-    const [transmit, signal] = Signal.create()
-    signal.effect = () => value(transmit)
-    return signal
+    const [transmit, signal] = Signal.create();
+    signal.effect = () => value(transmit);
+    return signal;
   }
-  return SIGNAL_DORMANT
-}
+  return SIGNAL_DORMANT;
+};
 
 Signal.map = (signal, transform) => {
-  const addCallback = signal.addCallback
+  const addCallback = signal.addCallback;
   return {
     ...signal,
     addCallback: (callback) => {
       return addCallback((value) => {
-        callback(transform(value))
-      })
+        callback(transform(value));
+      });
     },
-  }
-}
+  };
+};
 
 Signal.asPromise = (signal) => {
   return new Promise((resolve) => {
-    signal.addCallback(resolve)
-  })
-}
+    signal.addCallback(resolve);
+  });
+};
 
 const markSignalAsTransmitted = (signal, value) => {
-  signal.transmitted = true
-  signal.value = value
-  signal.effect = effectNoop
-  signal.addCallback = addCallbackNoop
-}
+  signal.transmitted = true;
+  signal.value = value;
+  signal.effect = effectNoop;
+  signal.addCallback = addCallbackNoop;
+};
 
 const arrayWithout = (array, item) => {
-  if (array.length === 0) return array
-  const arrayWithoutItem = []
-  let i = 0
+  if (array.length === 0) return array;
+  const arrayWithoutItem = [];
+  let i = 0;
   while (i < array.length) {
-    const value = array[i]
-    i++
+    const value = array[i];
+    i++;
     if (value === item) {
-      continue
+      continue;
     }
-    arrayWithoutItem.push(value)
+    arrayWithoutItem.push(value);
   }
-  return arrayWithoutItem
-}
+  return arrayWithoutItem;
+};

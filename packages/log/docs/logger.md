@@ -11,23 +11,23 @@ You want to use `@jsenv/log` when you have many logs with different purposes and
 `createLogger` is a function receiving a `logLevel` and returning a `logger` object.
 
 ```js
-import { createLogger } from "@jsenv/log"
+import { createLogger } from "@jsenv/log";
 
 const functionWithLogs = ({ logLevel }) => {
-  const logger = createLogger({ logLevel })
+  const logger = createLogger({ logLevel });
 
-  logger.debug("start doing whetevr")
-  logger.info("some useful info")
-  logger.debug("doing whatever is done")
-  logger.warn("be careful about blah-blah")
-  logger.error("oops an error occured while doing whatever")
-}
+  logger.debug("start doing whetevr");
+  logger.info("some useful info");
+  logger.debug("doing whatever is done");
+  logger.warn("be careful about blah-blah");
+  logger.error("oops an error occured while doing whatever");
+};
 
-functionWithLogs({ logLevel: "debug" })
-functionWithLogs({ logLevel: "info" })
-functionWithLogs({ logLevel: "warn" })
-functionWithLogs({ logLevel: "error" })
-functionWithLogs({ logLevel: "off" })
+functionWithLogs({ logLevel: "debug" });
+functionWithLogs({ logLevel: "info" });
+functionWithLogs({ logLevel: "warn" });
+functionWithLogs({ logLevel: "error" });
+functionWithLogs({ logLevel: "off" });
 ```
 
 ### logLevel
@@ -45,9 +45,9 @@ The possible logLevel values are:
 If you are rigorous, each logLevel value is exported as a constant that you can use like this:
 
 ```js
-import { createLogger, LOG_LEVEL_INFO } from "@jsenv/log"
+import { createLogger, LOG_LEVEL_INFO } from "@jsenv/log";
 
-createLogger({ logLevel: LOG_LEVEL_INFO })
+createLogger({ logLevel: LOG_LEVEL_INFO });
 ```
 
 ## logger
@@ -56,19 +56,19 @@ createLogger({ logLevel: LOG_LEVEL_INFO })
 It is returned by `createLogger`, and has the following shape: `{ debug, info, warn, error }`. Each method calls the corresponding console method or do nothing depending on the `logLevel`.
 
 ```js
-import { createLogger } from "@jsenv/log"
+import { createLogger } from "@jsenv/log";
 
-const logger = createLogger({ logLevel: "info" })
-logger.debug("hello")
+const logger = createLogger({ logLevel: "info" });
+logger.debug("hello");
 ```
 
 Logs nothing
 
 ```js
-import { createLogger } from "@jsenv/log"
+import { createLogger } from "@jsenv/log";
 
-const logger = createLogger({ logLevel: "info" })
-logger.info("hello")
+const logger = createLogger({ logLevel: "info" });
+logger.info("hello");
 ```
 
 Logs `Hello`

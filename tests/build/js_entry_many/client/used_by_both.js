@@ -1,1 +1,1 @@
-export const usedByBoth = "shared"
+export const usedByBoth = "shared";

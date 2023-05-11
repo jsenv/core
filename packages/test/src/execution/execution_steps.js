@@ -1,6 +1,6 @@
-import { Abort } from "@jsenv/abort"
-import { collectFiles } from "@jsenv/filesystem"
-import { createDetailedMessage } from "@jsenv/log"
+import { Abort } from "@jsenv/abort";
+import { collectFiles } from "@jsenv/filesystem";
+import { createDetailedMessage } from "@jsenv/log";
 
 export const executionStepsFromTestPlan = async ({
   signal,
@@ -13,16 +13,16 @@ export const executionStepsFromTestPlan = async ({
       directoryUrl: rootDirectoryUrl,
       associations: { testPlan },
       predicate: ({ testPlan }) => testPlan,
-    })
-    const executionSteps = []
+    });
+    const executionSteps = [];
     fileResultArray.forEach(({ relativeUrl, meta }) => {
       const fileExecutionSteps = generateFileExecutionSteps({
         fileRelativeUrl: relativeUrl,
         filePlan: meta.testPlan,
-      })
-      executionSteps.push(...fileExecutionSteps)
-    })
-    return executionSteps
+      });
+      executionSteps.push(...fileExecutionSteps);
+    });
+    return executionSteps;
   } catch (e) {
     if (Abort.isAbortError(e)) {
       return {
@@ -30,18 +30,18 @@ export const executionStepsFromTestPlan = async ({
         planSummary: {},
         planReport: {},
         planCoverage: null,
-      }
+      };
     }
-    throw e
+    throw e;
   }
-}
+};
 
 export const generateFileExecutionSteps = ({ fileRelativeUrl, filePlan }) => {
-  const fileExecutionSteps = []
+  const fileExecutionSteps = [];
   Object.keys(filePlan).forEach((executionName) => {
-    const stepConfig = filePlan[executionName]
+    const stepConfig = filePlan[executionName];
     if (stepConfig === null || stepConfig === undefined) {
-      return
+      return;
     }
     if (typeof stepConfig !== "object") {
       throw new TypeError(
@@ -53,13 +53,13 @@ export const generateFileExecutionSteps = ({ fileRelativeUrl, filePlan }) => {
             ["value"]: stepConfig,
           },
         ),
-      )
+      );
     }
     fileExecutionSteps.push({
       executionName,
       fileRelativeUrl,
       ...stepConfig,
-    })
-  })
-  return fileExecutionSteps
-}
+    });
+  });
+  return fileExecutionSteps;
+};

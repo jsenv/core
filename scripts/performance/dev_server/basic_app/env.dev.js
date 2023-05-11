@@ -8,4 +8,4 @@
  * See https://github.com/jsenv/jsenv-template-pwa/blob/main/docs/production_mode/production_mode.md#production-mode
  */
 
-export const DEV = true
+export const DEV = true;

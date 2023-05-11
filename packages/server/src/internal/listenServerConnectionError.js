@@ -1,11 +1,11 @@
-import { listenEvent } from "./listenEvent.js"
+import { listenEvent } from "./listenEvent.js";
 
 export const listenServerConnectionError = (
   nodeServer,
   connectionErrorCallback,
   { ignoreErrorAfterConnectionIsDestroyed = true } = {},
 ) => {
-  const cleanupSet = new Set()
+  const cleanupSet = new Set();
 
   const removeConnectionListener = listenEvent(
     nodeServer,
@@ -16,34 +16,34 @@ export const listenServerConnectionError = (
         "error",
         (error) => {
           if (ignoreErrorAfterConnectionIsDestroyed && socket.destroyed) {
-            return
+            return;
           }
-          connectionErrorCallback(error, socket)
+          connectionErrorCallback(error, socket);
         },
-      )
+      );
       const removeOnceSocketCloseListener = listenEvent(
         socket,
         "close",
         () => {
-          removeSocketErrorListener()
-          cleanupSet.delete(cleanup)
+          removeSocketErrorListener();
+          cleanupSet.delete(cleanup);
         },
         {
           once: true,
         },
-      )
+      );
       const cleanup = () => {
-        removeSocketErrorListener()
-        removeOnceSocketCloseListener()
-      }
-      cleanupSet.add(cleanup)
+        removeSocketErrorListener();
+        removeOnceSocketCloseListener();
+      };
+      cleanupSet.add(cleanup);
     },
-  )
+  );
   return () => {
-    removeConnectionListener()
+    removeConnectionListener();
     cleanupSet.forEach((cleanup) => {
-      cleanup()
-    })
-    cleanupSet.clear()
-  }
-}
+      cleanup();
+    });
+    cleanupSet.clear();
+  };
+};

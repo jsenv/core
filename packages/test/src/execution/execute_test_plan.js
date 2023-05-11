@@ -1,19 +1,19 @@
-import { existsSync } from "node:fs"
-import { URL_META } from "@jsenv/url-meta"
-import { urlToFileSystemPath, urlToRelativeUrl } from "@jsenv/urls"
+import { existsSync } from "node:fs";
+import { URL_META } from "@jsenv/url-meta";
+import { urlToFileSystemPath, urlToRelativeUrl } from "@jsenv/urls";
 import {
   ensureEmptyDirectory,
   assertAndNormalizeDirectoryUrl,
   assertAndNormalizeFileUrl,
-} from "@jsenv/filesystem"
-import { createLogger, createDetailedMessage } from "@jsenv/log"
+} from "@jsenv/filesystem";
+import { createLogger, createDetailedMessage } from "@jsenv/log";
 
-import { generateCoverageJsonFile } from "../coverage/coverage_reporter_json_file.js"
-import { generateCoverageHtmlDirectory } from "../coverage/coverage_reporter_html_directory.js"
-import { generateCoverageTextLog } from "../coverage/coverage_reporter_text_log.js"
-import { assertAndNormalizeWebServer } from "./web_server_param.js"
-import { executionStepsFromTestPlan } from "./execution_steps.js"
-import { executeSteps } from "./execute_steps.js"
+import { generateCoverageJsonFile } from "../coverage/coverage_reporter_json_file.js";
+import { generateCoverageHtmlDirectory } from "../coverage/coverage_reporter_html_directory.js";
+import { generateCoverageTextLog } from "../coverage/coverage_reporter_text_log.js";
+import { assertAndNormalizeWebServer } from "./web_server_param.js";
+import { executionStepsFromTestPlan } from "./execution_steps.js";
+import { executeSteps } from "./execute_steps.js";
 
 /**
  * Execute a list of files and log how it goes.
@@ -103,83 +103,83 @@ export const executeTestPlan = async ({
   coverageReportHtmlDirectoryUrl,
   ...rest
 }) => {
-  let someNeedsServer = false
-  let someHasCoverageV8 = false
-  let someNodeRuntime = false
-  const runtimes = {}
+  let someNeedsServer = false;
+  let someHasCoverageV8 = false;
+  let someNodeRuntime = false;
+  const runtimes = {};
   // param validation
   {
-    const unexpectedParamNames = Object.keys(rest)
+    const unexpectedParamNames = Object.keys(rest);
     if (unexpectedParamNames.length > 0) {
       throw new TypeError(
         `${unexpectedParamNames.join(",")}: there is no such param`,
-      )
+      );
     }
     rootDirectoryUrl = assertAndNormalizeDirectoryUrl(
       rootDirectoryUrl,
       "rootDirectoryUrl",
-    )
+    );
     if (!existsSync(new URL(rootDirectoryUrl))) {
-      throw new Error(`ENOENT on rootDirectoryUrl at ${rootDirectoryUrl}`)
+      throw new Error(`ENOENT on rootDirectoryUrl at ${rootDirectoryUrl}`);
     }
     if (typeof testPlan !== "object") {
-      throw new Error(`testPlan must be an object, got ${testPlan}`)
+      throw new Error(`testPlan must be an object, got ${testPlan}`);
     }
 
     Object.keys(testPlan).forEach((filePattern) => {
-      const filePlan = testPlan[filePattern]
-      if (!filePlan) return
+      const filePlan = testPlan[filePattern];
+      if (!filePlan) return;
       Object.keys(filePlan).forEach((executionName) => {
-        const executionConfig = filePlan[executionName]
-        const { runtime } = executionConfig
+        const executionConfig = filePlan[executionName];
+        const { runtime } = executionConfig;
         if (runtime) {
-          runtimes[runtime.name] = runtime.version
+          runtimes[runtime.name] = runtime.version;
           if (runtime.type === "browser") {
             if (runtime.capabilities && runtime.capabilities.coverageV8) {
-              someHasCoverageV8 = true
+              someHasCoverageV8 = true;
             }
-            someNeedsServer = true
+            someNeedsServer = true;
           }
           if (runtime.type === "node") {
-            someNodeRuntime = true
+            someNodeRuntime = true;
           }
         }
-      })
-    })
+      });
+    });
 
     if (someNeedsServer) {
-      await assertAndNormalizeWebServer(webServer)
+      await assertAndNormalizeWebServer(webServer);
     }
 
     if (coverageEnabled) {
       if (coverageMethodForBrowsers === undefined) {
         coverageMethodForBrowsers = someHasCoverageV8
           ? "playwright"
-          : "istanbul"
+          : "istanbul";
       }
       if (typeof coverageConfig !== "object") {
         throw new TypeError(
           `coverageConfig must be an object, got ${coverageConfig}`,
-        )
+        );
       }
       if (!coverageAndExecutionAllowed) {
         const associationsForExecute = URL_META.resolveAssociations(
           { execute: testPlan },
           "file:///",
-        )
+        );
         const associationsForCover = URL_META.resolveAssociations(
           { cover: coverageConfig },
           "file:///",
-        )
+        );
         const patternsMatchingCoverAndExecute = Object.keys(
           associationsForExecute.execute,
         ).filter((testPlanPattern) => {
           const { cover } = URL_META.applyAssociations({
             url: testPlanPattern,
             associations: associationsForCover,
-          })
-          return cover
-        })
+          });
+          return cover;
+        });
         if (patternsMatchingCoverAndExecute.length) {
           // It would be strange, for a given file to be both covered and executed
           throw new Error(
@@ -189,29 +189,32 @@ export const executeTestPlan = async ({
                 patterns: patternsMatchingCoverAndExecute,
               },
             ),
-          )
+          );
         }
       }
 
       if (coverageTempDirectoryUrl === undefined) {
-        coverageTempDirectoryUrl = new URL("./.coverage/tmp/", rootDirectoryUrl)
+        coverageTempDirectoryUrl = new URL(
+          "./.coverage/tmp/",
+          rootDirectoryUrl,
+        );
       } else {
         coverageTempDirectoryUrl = assertAndNormalizeDirectoryUrl(
           coverageTempDirectoryUrl,
           "coverageTempDirectoryUrl",
-        )
+        );
       }
       if (coverageReportJson) {
         if (coverageReportJsonFileUrl === undefined) {
           coverageReportJsonFileUrl = new URL(
             "./.coverage/coverage.json",
             rootDirectoryUrl,
-          )
+          );
         } else {
           coverageReportJsonFileUrl = assertAndNormalizeFileUrl(
             coverageReportJsonFileUrl,
             "coverageReportJsonFileUrl",
-          )
+          );
         }
       }
       if (coverageReportHtml) {
@@ -219,23 +222,23 @@ export const executeTestPlan = async ({
           coverageReportHtmlDirectoryUrl = new URL(
             "./.coverage/",
             rootDirectoryUrl,
-          )
+          );
         } else {
           coverageReportHtmlDirectoryUrl = assertAndNormalizeDirectoryUrl(
             coverageReportHtmlDirectoryUrl,
             "coverageReportHtmlDirectoryUrl",
-          )
+          );
         }
       }
     }
   }
 
-  const logger = createLogger({ logLevel })
+  const logger = createLogger({ logLevel });
   logger.debug(
     createDetailedMessage(`Prepare executing plan`, {
       runtimes: JSON.stringify(runtimes, null, "  "),
     }),
-  )
+  );
 
   // param normalization
   {
@@ -243,7 +246,7 @@ export const executeTestPlan = async ({
       if (Object.keys(coverageConfig).length === 0) {
         logger.warn(
           `coverageConfig is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`,
-        )
+        );
       }
       if (
         someNodeRuntime &&
@@ -252,9 +255,9 @@ export const executeTestPlan = async ({
       ) {
         if (process.env.NODE_V8_COVERAGE) {
           // when runned multiple times, we don't want to keep previous files in this directory
-          await ensureEmptyDirectory(process.env.NODE_V8_COVERAGE)
+          await ensureEmptyDirectory(process.env.NODE_V8_COVERAGE);
         } else {
-          coverageMethodForNodeJs = "Profiler"
+          coverageMethodForNodeJs = "Profiler";
           logger.warn(
             createDetailedMessage(
               `process.env.NODE_V8_COVERAGE is required to generate coverage for Node.js subprocesses`,
@@ -263,7 +266,7 @@ export const executeTestPlan = async ({
                 "suggestion 2": `use coverageMethodForNodeJs: "Profiler". But it means coverage for child_process and worker_thread cannot be collected`,
               },
             ),
-          )
+          );
         }
       }
     }
@@ -274,14 +277,14 @@ export const executeTestPlan = async ({
     "**/*./": null,
     ...testPlan,
     "**/.jsenv/": null,
-  }
-  logger.debug(`Generate executions`)
+  };
+  logger.debug(`Generate executions`);
   const executionSteps = await executionStepsFromTestPlan({
     signal,
     testPlan,
     rootDirectoryUrl,
-  })
-  logger.debug(`${executionSteps.length} executions planned`)
+  });
+  logger.debug(`${executionSteps.length} executions planned`);
 
   const result = await executeSteps(executionSteps, {
     signal,
@@ -313,26 +316,26 @@ export const executeTestPlan = async ({
     coverageMethodForNodeJs,
     coverageV8ConflictWarning,
     coverageTempDirectoryUrl,
-  })
+  });
   if (
     updateProcessExitCode &&
     result.planSummary.counters.total !== result.planSummary.counters.completed
   ) {
-    process.exitCode = 1
+    process.exitCode = 1;
   }
-  const planCoverage = result.planCoverage
+  const planCoverage = result.planCoverage;
   // planCoverage can be null when execution is aborted
   if (planCoverage) {
-    const promises = []
+    const promises = [];
     // keep this one first because it does ensureEmptyDirectory
     // and in case coverage json file gets written in the same directory
     // it must be done before
     if (coverageEnabled && coverageReportHtml) {
-      await ensureEmptyDirectory(coverageReportHtmlDirectoryUrl)
-      const htmlCoverageDirectoryIndexFileUrl = `${coverageReportHtmlDirectoryUrl}index.html`
+      await ensureEmptyDirectory(coverageReportHtmlDirectoryUrl);
+      const htmlCoverageDirectoryIndexFileUrl = `${coverageReportHtmlDirectoryUrl}index.html`;
       logger.info(
         `-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`,
-      )
+      );
       promises.push(
         generateCoverageHtmlDirectory(planCoverage, {
           rootDirectoryUrl,
@@ -343,7 +346,7 @@ export const executeTestPlan = async ({
           coverageReportSkipEmpty,
           coverageReportSkipFull,
         }),
-      )
+      );
     }
     if (coverageEnabled && coverageReportJson) {
       promises.push(
@@ -352,7 +355,7 @@ export const executeTestPlan = async ({
           coverageJsonFileUrl: coverageReportJsonFileUrl,
           logger,
         }),
-      )
+      );
     }
     if (coverageEnabled && coverageReportTextLog) {
       promises.push(
@@ -360,14 +363,14 @@ export const executeTestPlan = async ({
           coverageReportSkipEmpty,
           coverageReportSkipFull,
         }),
-      )
+      );
     }
-    await Promise.all(promises)
+    await Promise.all(promises);
   }
   return {
     testPlanAborted: result.aborted,
     testPlanSummary: result.planSummary,
     testPlanReport: result.planReport,
     testPlanCoverage: planCoverage,
-  }
-}
+  };
+};

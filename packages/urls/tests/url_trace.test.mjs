@@ -18,9 +18,9 @@
  *
  */
 
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-import { showSourceLocation } from "@jsenv/urls"
+import { showSourceLocation } from "@jsenv/urls";
 
 {
   const actual = showSourceLocation({
@@ -32,13 +32,13 @@ const e = false;
 `,
     column: 1,
     line: 3,
-  })
+  });
   const expected = `
   2 | const b = true;
 > 3 | const c = true;
       ^
-  4 | const d = true;`.slice(1)
-  assert({ actual, expected })
+  4 | const d = true;`.slice(1);
+  assert({ actual, expected });
 }
 
 {
@@ -51,15 +51,15 @@ const e = false;`,
     column: 7,
     line: 3,
     numberOfSurroundingLinesToShow: 10,
-  })
+  });
   const expected = `
   1 | const a = false;
   2 | const b = true;
 > 3 | const c = true;
             ^
   4 | const d = true;
-  5 | const e = false;`.slice(1)
-  assert({ actual, expected })
+  5 | const e = false;`.slice(1);
+  assert({ actual, expected });
 }
 
 // empty last line is shown
@@ -74,7 +74,7 @@ const e = false;
     column: 1,
     line: 3,
     numberOfSurroundingLinesToShow: 10,
-  })
+  });
   const expected = `
   1 | const a = false;
   2 | const b = true;
@@ -82,8 +82,8 @@ const e = false;
       ^
   4 | const d = true;
   5 | const e = false;
-  6 | `.slice(1)
-  assert({ actual, expected })
+  6 | `.slice(1);
+  assert({ actual, expected });
 }
 
 // no column given
@@ -96,12 +96,12 @@ const d = true;
 const e = false;
 `,
     line: 3,
-  })
+  });
   const expected = `
   2 | const b = true;
 > 3 | const c = true;
-  4 | const d = true;`.slice(1)
-  assert({ actual, expected })
+  4 | const d = true;`.slice(1);
+  assert({ actual, expected });
 }
 
 // line number goes from 1 digit to 2 digits
@@ -120,12 +120,12 @@ const j = true;
 const k = true;
 const l = true;`,
     line: 10,
-  })
+  });
   const expected = `
   9  | const i = true;
 > 10 | const j = true;
-  11 | const k = true;`.slice(1)
-  assert({ actual, expected })
+  11 | const k = true;`.slice(1);
+  assert({ actual, expected });
 }
 
 // line is too long and column is undefined
@@ -139,12 +139,12 @@ const e = false;
 `,
     line: 3,
     lineMaxLength: 15,
-  })
+  });
   const expected = `
   2 | const b = true;
 > 3 | const thisVari…
-  4 | const d = true;`.slice(1)
-  assert({ actual, expected })
+  4 | const d = true;`.slice(1);
+  assert({ actual, expected });
 }
 
 // line is too long and column is near beginning
@@ -159,13 +159,13 @@ const e = false;
     line: 3,
     column: 4,
     lineMaxLength: 15,
-  })
+  });
   const expected = `
   2 | const b = true;
 > 3 | const thisVari…
          ^
-  4 | const d = true;`.slice(1)
-  assert({ actual, expected })
+  4 | const d = true;`.slice(1);
+  assert({ actual, expected });
 }
 
 // line is too long and column is near middle
@@ -180,13 +180,13 @@ const e = false;
     line: 3,
     column: 20,
     lineMaxLength: 15,
-  })
+  });
   const expected = `
   2 |${" "}
 > 3 | …ableNameisQui…
             ^
-  4 |${" "}`.slice(1)
-  assert({ actual, expected })
+  4 |${" "}`.slice(1);
+  assert({ actual, expected });
 }
 
 // line is too long and column is near end
@@ -201,13 +201,13 @@ const e = false;
     line: 3,
     column: 35,
     lineMaxLength: 15,
-  })
+  });
   const expected = `
   2 |${" "}
 > 3 | …Long = true;
             ^
-  4 |${" "}`.slice(1)
-  assert({ actual, expected })
+  4 |${" "}`.slice(1);
+  assert({ actual, expected });
 }
 
 // line and column being 0
@@ -216,9 +216,9 @@ const e = false;
     content: `const a = false;`,
     line: 0,
     column: 0,
-  })
+  });
   const expected = `
 > 1 | const a = false;
-      ^`.slice(1)
-  assert({ actual, expected })
+      ^`.slice(1);
+  assert({ actual, expected });
 }

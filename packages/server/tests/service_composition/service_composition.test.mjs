@@ -1,18 +1,18 @@
-import { assert } from "@jsenv/assert"
-import { fetchUrl } from "@jsenv/fetch"
+import { assert } from "@jsenv/assert";
+import { fetchUrl } from "@jsenv/fetch";
 
-import { startServer } from "@jsenv/server"
-import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js"
+import { startServer } from "@jsenv/server";
+import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
 
 const noContentService = (request) => {
-  if (request.pathname !== "/") return null
-  return { status: 204 }
-}
+  if (request.pathname !== "/") return null;
+  return { status: 204 };
+};
 
 const okService = (request) => {
-  if (request.pathname !== "/whatever") return null
-  return { status: 200 }
-}
+  if (request.pathname !== "/whatever") return null;
+  return { status: 200 };
+};
 
 const { origin } = await startServer({
   keepProcessAlive: false,
@@ -27,17 +27,17 @@ const { origin } = await startServer({
       handleRequest: okService,
     },
   ],
-})
+});
 
 {
-  const response = await fetchUrl(origin)
+  const response = await fetchUrl(origin);
   const actual = {
     url: response.url,
     status: response.status,
     statusText: response.statusText,
     headers: headersToObject(response.headers),
     body: await response.text(),
-  }
+  };
   const expected = {
     url: `${origin}/`,
     status: 204,
@@ -47,19 +47,19 @@ const { origin } = await startServer({
       date: actual.headers.date,
     },
     body: "",
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }
 
 {
-  const response = await fetchUrl(`${origin}/whatever`)
+  const response = await fetchUrl(`${origin}/whatever`);
   const actual = {
     url: response.url,
     status: response.status,
     statusText: response.statusText,
     headers: headersToObject(response.headers),
     body: await response.text(),
-  }
+  };
   const expected = {
     url: `${origin}/whatever`,
     status: 200,
@@ -70,6 +70,6 @@ const { origin } = await startServer({
       "transfer-encoding": "chunked",
     },
     body: "",
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }

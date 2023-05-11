@@ -1,6 +1,6 @@
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-import { URL_META } from "@jsenv/url-meta"
+import { URL_META } from "@jsenv/url-meta";
 
 {
   const actual = URL_META.applyAssociations({
@@ -11,9 +11,9 @@ import { URL_META } from "@jsenv/url-meta"
         "file:///.git/": false,
       },
     },
-  })
-  const expected = { whatever: true }
-  assert({ actual, expected })
+  });
+  const expected = { whatever: true };
+  assert({ actual, expected });
 }
 
 {
@@ -25,9 +25,9 @@ import { URL_META } from "@jsenv/url-meta"
         "file:///.git/": false,
       },
     },
-  })
-  const expected = { whatever: false }
-  assert({ actual, expected })
+  });
+  const expected = { whatever: false };
+  assert({ actual, expected });
 }
 
 {
@@ -39,9 +39,9 @@ import { URL_META } from "@jsenv/url-meta"
         "file:///*": true,
       },
     },
-  })
-  const expected = { whatever: true }
-  assert({ actual, expected })
+  });
+  const expected = { whatever: true };
+  assert({ actual, expected });
 }
 
 {
@@ -53,7 +53,7 @@ import { URL_META } from "@jsenv/url-meta"
         "file:///*": true,
       },
     },
-  })
-  const expected = { whatever: false }
-  assert({ actual, expected })
+  });
+  const expected = { whatever: false };
+  assert({ actual, expected });
 }

@@ -3,11 +3,11 @@
  * https://modern-web.dev/docs/dev-server/plugins/hmr/
  */
 
-export const urlHotMetas = {}
+export const urlHotMetas = {};
 
 export const createImportMetaHot = (importMetaUrl) => {
-  const data = {}
-  const url = asUrlWithoutHmrQuery(importMetaUrl)
+  const data = {};
+  const url = asUrlWithoutHmrQuery(importMetaUrl);
 
   return {
     data,
@@ -16,67 +16,67 @@ export const createImportMetaHot = (importMetaUrl) => {
         addUrlMeta(url, {
           dependencies: [url],
           acceptCallback: () => {},
-        })
-        return
+        });
+        return;
       }
       if (typeof firstArg === "function") {
         addUrlMeta(url, {
           dependencies: [url],
           acceptCallback: firstArg,
-        })
-        return
+        });
+        return;
       }
       if (typeof firstArg === "string") {
         addUrlMeta(url, {
           dependencies: [firstArg],
           acceptCallback: secondArg,
-        })
-        return
+        });
+        return;
       }
       if (Array.isArray(firstArg)) {
         addUrlMeta(url, {
           dependencies: firstArg,
           acceptCallback: secondArg,
-        })
-        return
+        });
+        return;
       }
       throw new Error(
         `invalid call to import.meta.hot.accept(), received ${firstArg}`,
-      )
+      );
     },
     dispose: (callback) => {
       addUrlMeta(url, {
         disposeCallback: () => {
-          return callback(data)
+          return callback(data);
         },
-      })
+      });
     },
     decline: () => {
       addUrlMeta(url, {
         declined: true,
-      })
+      });
     },
     invalidate: () => {
       addUrlMeta(url, {
         invalidated: true,
-      })
+      });
     },
-  }
-}
+  };
+};
 
 const addUrlMeta = (url, meta) => {
   urlHotMetas[url] = {
     ...urlHotMetas[url],
     ...meta,
-  }
-}
+  };
+};
 
 const asUrlWithoutHmrQuery = (url) => {
-  const urlObject = new URL(url)
+  const urlObject = new URL(url);
   if (urlObject.searchParams.has("hmr")) {
-    urlObject.searchParams.delete("hmr")
-    urlObject.searchParams.delete("v")
-    return urlObject.href
+    urlObject.searchParams.delete("hmr");
+    urlObject.searchParams.delete("v");
+    return urlObject.href;
   }
-  return url
-}
+  return url;
+};

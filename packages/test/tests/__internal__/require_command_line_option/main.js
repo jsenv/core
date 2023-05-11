@@ -1,1 +1,1 @@
-export const answer = process.env.ANSWER
+export const answer = process.env.ANSWER;

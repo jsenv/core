@@ -1,3 +1,3 @@
-import { message } from "./greet.js"
+import { message } from "./greet.js";
 
-console.log(message)
+console.log(message);

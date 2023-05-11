@@ -1,1 +1,1 @@
-self.pingResponse = "pong"
+self.pingResponse = "pong";

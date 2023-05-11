@@ -1,7 +1,7 @@
-import { assert } from "@jsenv/assert"
-import { startDevServer } from "@jsenv/core"
+import { assert } from "@jsenv/assert";
+import { startDevServer } from "@jsenv/core";
 
-import { execute, chromium, firefox, webkit } from "@jsenv/test"
+import { execute, chromium, firefox, webkit } from "@jsenv/test";
 
 const test = async ({ runtime }) => {
   const devServer = await startDevServer({
@@ -9,7 +9,7 @@ const test = async ({ runtime }) => {
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
     port: 0,
-  })
+  });
   const { status, namespace, performance } = await execute({
     rootDirectoryUrl: new URL("./client/", import.meta.url),
     webServer: {
@@ -21,13 +21,13 @@ const test = async ({ runtime }) => {
     mirrorConsole: false,
     collectConsole: true,
     collectPerformance: true,
-  })
-  devServer.stop()
+  });
+  devServer.stop();
   const actual = {
     status,
     namespace,
     performance,
-  }
+  };
   const expected = {
     status: "completed",
     namespace: {
@@ -49,12 +49,12 @@ const test = async ({ runtime }) => {
         "a to b": assert.any(Number),
       },
     },
-  }
-  assert({ actual, expected })
-}
+  };
+  assert({ actual, expected });
+};
 
 if (process.platform !== "win32") {
-  await test({ runtime: chromium() })
-  await test({ runtime: firefox() })
-  await test({ runtime: webkit() })
+  await test({ runtime: chromium() });
+  await test({ runtime: firefox() });
+  await test({ runtime: webkit() });
 }

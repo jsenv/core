@@ -1,5 +1,5 @@
-import { assert } from "@jsenv/assert"
-import { build } from "@jsenv/core"
+import { assert } from "@jsenv/assert";
+import { build } from "@jsenv/core";
 
 const test = async (params) => {
   await build({
@@ -11,22 +11,22 @@ const test = async (params) => {
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
-  })
-}
+  });
+};
 
 try {
   await test({
     runtimeCompat: { chrome: "64" },
-  })
-  throw new Error("should throw")
+  });
+  throw new Error("should throw");
 } catch (e) {
   const actual = {
     stackStartsWithUnexpectedToken: e.stack.startsWith(
       "Error: Unexpected token (9:15)",
     ),
-  }
+  };
   const expected = {
     stackStartsWithUnexpectedToken: true,
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }

@@ -8,7 +8,7 @@ import {
   setHtmlNodeAttributes,
   setHtmlNodeText,
   getHtmlNodePosition,
-} from "@jsenv/ast"
+} from "@jsenv/ast";
 
 export const jsenvPluginInliningIntoHtml = () => {
   return {
@@ -16,9 +16,9 @@ export const jsenvPluginInliningIntoHtml = () => {
     appliesDuring: "*",
     transformUrlContent: {
       html: async (urlInfo, context) => {
-        const htmlAst = parseHtmlString(urlInfo.content)
-        const mutations = []
-        const actions = []
+        const htmlAst = parseHtmlString(urlInfo.content);
+        const mutations = [];
+        const actions = [];
 
         const onStyleSheet = (linkNode, { href }) => {
           const linkReference = context.referenceUtils.find(
@@ -26,21 +26,21 @@ export const jsenvPluginInliningIntoHtml = () => {
               ref.generatedSpecifier === href &&
               ref.type === "link_href" &&
               ref.subtype === "stylesheet",
-          )
+          );
           if (
             !linkReference.original ||
             !linkReference.original.searchParams.has("inline")
           ) {
-            return
+            return;
           }
-          const linkUrlInfo = context.urlGraph.getUrlInfo(linkReference.url)
+          const linkUrlInfo = context.urlGraph.getUrlInfo(linkReference.url);
           actions.push(async () => {
             await context.cook(linkUrlInfo, {
               reference: linkReference,
-            })
+            });
             const { line, column, isOriginal } = getHtmlNodePosition(linkNode, {
               preferOriginal: true,
-            })
+            });
             context.referenceUtils.becomesInline(linkReference, {
               line: line - 1,
               column,
@@ -48,7 +48,7 @@ export const jsenvPluginInliningIntoHtml = () => {
               specifier: linkReference.generatedSpecifier,
               content: linkUrlInfo.content,
               contentType: linkUrlInfo.contentType,
-            })
+            });
             mutations.push(() => {
               setHtmlNodeAttributes(linkNode, {
                 "inlined-from-href": href,
@@ -59,36 +59,38 @@ export const jsenvPluginInliningIntoHtml = () => {
                 "crossorigin": undefined,
                 "integrity": undefined,
                 "jsenv-inlined-by": "jsenv:inlining_into_html",
-              })
-              linkNode.nodeName = "style"
-              linkNode.tagName = "style"
+              });
+              linkNode.nodeName = "style";
+              linkNode.tagName = "style";
               setHtmlNodeText(linkNode, linkUrlInfo.content, {
                 indentation: "auto",
-              })
-            })
-          })
-        }
+              });
+            });
+          });
+        };
         const onScriptWithSrc = (scriptNode, { src }) => {
           const scriptReference = context.referenceUtils.find(
             (ref) => ref.generatedSpecifier === src && ref.type === "script",
-          )
+          );
           if (
             !scriptReference.original ||
             !scriptReference.original.searchParams.has("inline")
           ) {
-            return
+            return;
           }
-          const scriptUrlInfo = context.urlGraph.getUrlInfo(scriptReference.url)
+          const scriptUrlInfo = context.urlGraph.getUrlInfo(
+            scriptReference.url,
+          );
           actions.push(async () => {
             await context.cook(scriptUrlInfo, {
               reference: scriptReference,
-            })
+            });
             const { line, column, isOriginal } = getHtmlNodePosition(
               scriptNode,
               {
                 preferOriginal: true,
               },
-            )
+            );
             context.referenceUtils.becomesInline(scriptReference, {
               line: line - 1,
               column,
@@ -96,7 +98,7 @@ export const jsenvPluginInliningIntoHtml = () => {
               specifier: scriptReference.generatedSpecifier,
               content: scriptUrlInfo.content,
               contentType: scriptUrlInfo.contentType,
-            })
+            });
             mutations.push(() => {
               setHtmlNodeAttributes(scriptNode, {
                 "inlined-from-src": src,
@@ -104,46 +106,46 @@ export const jsenvPluginInliningIntoHtml = () => {
                 "crossorigin": undefined,
                 "integrity": undefined,
                 "jsenv-inlined-by": "jsenv:inlining_into_html",
-              })
+              });
               setHtmlNodeText(scriptNode, scriptUrlInfo.content, {
                 indentation: "auto",
-              })
-            })
-          })
-        }
+              });
+            });
+          });
+        };
 
         visitHtmlNodes(htmlAst, {
           link: (linkNode) => {
-            const rel = getHtmlNodeAttribute(linkNode, "rel")
+            const rel = getHtmlNodeAttribute(linkNode, "rel");
             if (rel !== "stylesheet") {
-              return
+              return;
             }
-            const href = getHtmlNodeAttribute(linkNode, "href")
+            const href = getHtmlNodeAttribute(linkNode, "href");
             if (!href) {
-              return
+              return;
             }
-            onStyleSheet(linkNode, { href })
+            onStyleSheet(linkNode, { href });
           },
           script: (scriptNode) => {
-            const { type } = analyzeScriptNode(scriptNode)
-            const scriptNodeText = getHtmlNodeText(scriptNode)
+            const { type } = analyzeScriptNode(scriptNode);
+            const scriptNodeText = getHtmlNodeText(scriptNode);
             if (scriptNodeText) {
-              return
+              return;
             }
-            const src = getHtmlNodeAttribute(scriptNode, "src")
+            const src = getHtmlNodeAttribute(scriptNode, "src");
             if (!src) {
-              return
+              return;
             }
-            onScriptWithSrc(scriptNode, { type, src })
+            onScriptWithSrc(scriptNode, { type, src });
           },
-        })
+        });
         if (actions.length > 0) {
-          await Promise.all(actions.map((action) => action()))
+          await Promise.all(actions.map((action) => action()));
         }
-        mutations.forEach((mutation) => mutation())
-        const htmlModified = stringifyHtmlAst(htmlAst)
-        return htmlModified
+        mutations.forEach((mutation) => mutation());
+        const htmlModified = stringifyHtmlAst(htmlAst);
+        return htmlModified;
       },
     },
-  }
-}
+  };
+};

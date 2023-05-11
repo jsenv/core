@@ -1,5 +1,5 @@
-import { createConnectionManager } from "./connection_manager.js"
-import { createEventsManager } from "./events_manager.js"
+import { createConnectionManager } from "./connection_manager.js";
+import { createEventsManager } from "./events_manager.js";
 
 export const createEventSourceConnection = (
   eventSourceUrl,
@@ -12,72 +12,72 @@ export const createEventSourceConnection = (
     retryAllocatedMs = Infinity,
   } = {},
 ) => {
-  const eventSourceOrigin = new URL(eventSourceUrl).origin
+  const eventSourceOrigin = new URL(eventSourceUrl).origin;
   const attemptConnection = ({ onOpen, onClosed }) => {
     const url = lastEventId
       ? addLastEventIdIntoUrlSearchParams(eventSourceUrl, lastEventId)
-      : eventSourceUrl
-    let eventSource = new EventSource(url, { withCredentials })
+      : eventSourceUrl;
+    let eventSource = new EventSource(url, { withCredentials });
     eventSource.onerror = () => {
-      eventSource.onerror = null
-      eventSource.onopen = null
-      eventSource.onmessage = null
-      eventSource = null
-      onClosed()
-    }
+      eventSource.onerror = null;
+      eventSource.onopen = null;
+      eventSource.onmessage = null;
+      eventSource = null;
+      onClosed();
+    };
     eventSource.onopen = () => {
-      eventSource.onopen = null
-      onOpen()
-    }
+      eventSource.onopen = null;
+      onOpen();
+    };
     eventSource.onmessage = (messageEvent) => {
       if (messageEvent.origin === eventSourceOrigin) {
         if (messageEvent.lastEventId) {
-          lastEventId = messageEvent.lastEventId
+          lastEventId = messageEvent.lastEventId;
         }
-        const event = JSON.parse(messageEvent.data)
-        eventsManager.triggerCallbacks(event)
+        const event = JSON.parse(messageEvent.data);
+        eventsManager.triggerCallbacks(event);
       }
-    }
+    };
     return () => {
       if (eventSource) {
-        eventSource.close()
+        eventSource.close();
       }
-    }
-  }
+    };
+  };
   const connectionManager = createConnectionManager(attemptConnection, {
     retry,
     retryMaxAttempt,
     retryAllocatedMs,
-  })
+  });
   const eventsManager = createEventsManager({
     effect: () => {
       if (useEventsToManageConnection) {
-        connectionManager.connect()
+        connectionManager.connect();
         return () => {
-          connectionManager.disconnect()
-        }
+          connectionManager.disconnect();
+        };
       }
-      return null
+      return null;
     },
-  })
+  });
 
   return {
     readyState: connectionManager.readyState,
     listenEvents: (namedCallbacks) => {
-      return eventsManager.addCallbacks(namedCallbacks)
+      return eventsManager.addCallbacks(namedCallbacks);
     },
     destroy: () => {
-      connectionManager.destroy()
-      eventsManager.destroy()
+      connectionManager.destroy();
+      eventsManager.destroy();
     },
-  }
-}
+  };
+};
 
 const addLastEventIdIntoUrlSearchParams = (url, lastEventId) => {
   if (url.indexOf("?") === -1) {
-    url += "?"
+    url += "?";
   } else {
-    url += "&"
+    url += "&";
   }
-  return `${url}last-event-id=${encodeURIComponent(lastEventId)}`
-}
+  return `${url}last-event-id=${encodeURIComponent(lastEventId)}`;
+};

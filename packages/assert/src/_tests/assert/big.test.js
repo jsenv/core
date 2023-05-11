@@ -1,4 +1,4 @@
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
 const actual = [
   {
@@ -411,7 +411,7 @@ const actual = [
     greeting: "Hello, Rhonda! You have 9 unread messages.",
     favoriteFruit: "strawberry",
   },
-]
+];
 const expected = [
   {
     _id: "5d0a53ced3cf3aa714a32490",
@@ -823,6 +823,6 @@ const expected = [
     greeting: "Hello, Rhonda! You have 9 unread messages.",
     favoriteFruit: "strawberry",
   },
-]
+];
 
-assert({ actual, expected })
+assert({ actual, expected });

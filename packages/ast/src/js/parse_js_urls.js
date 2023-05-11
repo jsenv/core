@@ -1,16 +1,16 @@
-import { ancestor } from "acorn-walk"
+import { ancestor } from "acorn-walk";
 
-import { parseJsWithAcorn } from "./parse_js_with_acorn.js"
+import { parseJsWithAcorn } from "./parse_js_with_acorn.js";
 import {
   analyzeImportExpression,
   analyzeImportDeclaration,
   analyzeExportNamedDeclaration,
   analyzeExportAllDeclaration,
-} from "./js_static_analysis/import_export.js"
+} from "./js_static_analysis/import_export.js";
 import {
   isImportMetaResolveCall,
   analyzeImportMetaResolveCall,
-} from "./js_static_analysis/import_meta_resolve.js"
+} from "./js_static_analysis/import_meta_resolve.js";
 import {
   isNewWorkerCall,
   analyzeNewWorkerCall,
@@ -18,15 +18,15 @@ import {
   analyzeNewSharedWorkerCall,
   isServiceWorkerRegisterCall,
   analyzeServiceWorkerRegisterCall,
-} from "./js_static_analysis/web_worker_entry_point.js"
+} from "./js_static_analysis/web_worker_entry_point.js";
 import {
   isImportScriptsCall,
   analyzeImportScriptCalls,
-} from "./js_static_analysis/web_worker.js"
+} from "./js_static_analysis/web_worker.js";
 import {
   isNewUrlCall,
   analyzeNewUrlCall,
-} from "./js_static_analysis/new_url.js"
+} from "./js_static_analysis/new_url.js";
 import {
   isSystemRegisterCall,
   analyzeSystemRegisterCall,
@@ -34,7 +34,7 @@ import {
   analyzeSystemImportCall,
   isSystemResolveCall,
   analyzeSystemResolveCall,
-} from "./js_static_analysis/system.js"
+} from "./js_static_analysis/system.js";
 
 export const parseJsUrls = async ({
   js,
@@ -42,63 +42,63 @@ export const parseJsUrls = async ({
   isJsModule = false,
   isWebWorker = false,
 } = {}) => {
-  const jsUrls = []
+  const jsUrls = [];
   const jsAst = await parseJsWithAcorn({
     js,
     url,
     isJsModule,
-  })
+  });
   const onUrl = (jsUrl) => {
-    jsUrls.push(jsUrl)
-  }
+    jsUrls.push(jsUrl);
+  };
   ancestor(jsAst, {
     ImportDeclaration: (node) => {
-      analyzeImportDeclaration(node, { onUrl })
+      analyzeImportDeclaration(node, { onUrl });
     },
     ImportExpression: (node) => {
-      analyzeImportExpression(node, { onUrl })
+      analyzeImportExpression(node, { onUrl });
     },
     ExportNamedDeclaration: (node) => {
-      analyzeExportNamedDeclaration(node, { onUrl })
+      analyzeExportNamedDeclaration(node, { onUrl });
     },
     ExportAllDeclaration: (node) => {
-      analyzeExportAllDeclaration(node, { onUrl })
+      analyzeExportAllDeclaration(node, { onUrl });
     },
     CallExpression: (node) => {
       if (isJsModule && isImportMetaResolveCall(node)) {
-        analyzeImportMetaResolveCall(node, { onUrl })
-        return
+        analyzeImportMetaResolveCall(node, { onUrl });
+        return;
       }
       if (isServiceWorkerRegisterCall(node)) {
         analyzeServiceWorkerRegisterCall(node, {
           isJsModule,
           onUrl,
-        })
-        return
+        });
+        return;
       }
       if (isWebWorker && isImportScriptsCall(node)) {
         analyzeImportScriptCalls(node, {
           onUrl,
-        })
-        return
+        });
+        return;
       }
       if (!isJsModule && isSystemRegisterCall(node)) {
         analyzeSystemRegisterCall(node, {
           onUrl,
-        })
-        return
+        });
+        return;
       }
       if (!isJsModule && isSystemImportCall(node)) {
         analyzeSystemImportCall(node, {
           onUrl,
-        })
-        return
+        });
+        return;
       }
       if (!isJsModule && isSystemResolveCall(node)) {
         analyzeSystemResolveCall(node, {
           onUrl,
-        })
-        return
+        });
+        return;
       }
     },
     NewExpression: (node, ancestors) => {
@@ -106,33 +106,33 @@ export const parseJsUrls = async ({
         analyzeNewWorkerCall(node, {
           isJsModule,
           onUrl,
-        })
-        return
+        });
+        return;
       }
       if (isNewSharedWorkerCall(node)) {
         analyzeNewSharedWorkerCall(node, {
           isJsModule,
           onUrl,
-        })
-        return
+        });
+        return;
       }
       if (isNewUrlCall(node)) {
-        const parent = ancestors[ancestors.length - 2]
+        const parent = ancestors[ancestors.length - 2];
         if (
           parent &&
           (isNewWorkerCall(parent) ||
             isNewSharedWorkerCall(parent) ||
             isServiceWorkerRegisterCall(parent))
         ) {
-          return
+          return;
         }
         analyzeNewUrlCall(node, {
           isJsModule,
           onUrl,
-        })
-        return
+        });
+        return;
       }
     },
-  })
-  return jsUrls
-}
+  });
+  return jsUrls;
+};

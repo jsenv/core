@@ -1,19 +1,19 @@
-import { inspect } from "@jsenv/inspect"
-import { comparisonToPath } from "../comparisonToPath.js"
+import { inspect } from "@jsenv/inspect";
+import { comparisonToPath } from "../comparisonToPath.js";
 
 export const propertiesOrderComparisonToErrorMessage = (comparison) => {
-  if (comparison.type !== "properties-order") return undefined
+  if (comparison.type !== "properties-order") return undefined;
 
-  const path = comparisonToPath(comparison)
-  const expected = comparison.expected
-  const actual = comparison.actual
+  const path = comparisonToPath(comparison);
+  const expected = comparison.expected;
+  const actual = comparison.actual;
 
   return createUnexpectedPropertiesOrderMessage({
     path,
     expectedPropertiesOrder: propertyNameArrayToString(expected),
     actualPropertiesOrder: propertyNameArrayToString(actual),
-  })
-}
+  });
+};
 
 const createUnexpectedPropertiesOrderMessage = ({
   path,
@@ -27,8 +27,8 @@ ${actualPropertiesOrder.join(`
 ${expectedPropertiesOrder.join(`
 `)}
 --- path ---
-${path}`
+${path}`;
 
 const propertyNameArrayToString = (propertyNameArray) => {
-  return propertyNameArray.map((propertyName) => inspect(propertyName))
-}
+  return propertyNameArray.map((propertyName) => inspect(propertyName));
+};

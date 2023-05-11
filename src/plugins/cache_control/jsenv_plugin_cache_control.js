@@ -15,11 +15,11 @@ export const jsenvPluginCacheControl = ({
           headers: {
             "cache-control": `private,max-age=${maxAge},immutable`,
           },
-        }
+        };
       }
-      return null
+      return null;
     },
-  }
-}
+  };
+};
 
-const SECONDS_IN_30_DAYS = 60 * 60 * 24 * 30
+const SECONDS_IN_30_DAYS = 60 * 60 * 24 * 30;

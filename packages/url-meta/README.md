@@ -3,7 +3,7 @@
 Associate value to urls using pattern matching.
 
 ```js
-import { URL_META } from "@jsenv/url-meta"
+import { URL_META } from "@jsenv/url-meta";
 
 // conditionally associates url and values
 const associations = {
@@ -11,13 +11,13 @@ const associations = {
     "file:///*": "black",
     "file:///*.js": "red",
   },
-}
+};
 const getUrlColor = (url) => {
-  const { color } = URL_META.applyAssociations({ url, associations })
-  return color
-}
-console.log(`file.json color is ${getUrlColor("file:///file.json")}`)
-console.log(`file.js color is ${getUrlColor("file:///file.js")}`)
+  const { color } = URL_META.applyAssociations({ url, associations });
+  return color;
+};
+console.log(`file.json color is ${getUrlColor("file:///file.json")}`);
+console.log(`file.js color is ${getUrlColor("file:///file.js")}`);
 ```
 
 _Code above logs_
@@ -53,7 +53,7 @@ const associations = {
     "**/*/": true,
     "**/.git/": false,
   },
-}
+};
 ```
 
 _associations_ allows to group patterns per property which are easy to read and compose.
@@ -64,7 +64,7 @@ All keys in _associations_ must be absolute urls, this can be done with [resolve
 _resolveAssociations_ is a function resolving _associations_ keys that may contain relative urls against an _url_.
 
 ```js
-import { URL_META } from "@jsenv/url-meta"
+import { URL_META } from "@jsenv/url-meta";
 
 const associations = URL_META.resolveAssociations(
   {
@@ -74,8 +74,8 @@ const associations = URL_META.resolveAssociations(
     },
   },
   "file:///Users/directory/",
-)
-console.log(JSON.stringify(associations, null, "  "))
+);
+console.log(JSON.stringify(associations, null, "  "));
 ```
 
 ```json

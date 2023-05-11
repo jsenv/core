@@ -1,6 +1,6 @@
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-import { executeTestPlan, nodeWorkerThread } from "@jsenv/test"
+import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
 
 const testPlan = {
   "main.js": {
@@ -12,7 +12,7 @@ const testPlan = {
       allocatedMs: 5000,
     },
   },
-}
+};
 const { testPlanCoverage } = await executeTestPlan({
   logLevel: "error",
   rootDirectoryUrl: new URL("./", import.meta.url),
@@ -23,12 +23,12 @@ const { testPlanCoverage } = await executeTestPlan({
   coverageConfig: {
     "main.js": true,
   },
-})
-const actual = testPlanCoverage
+});
+const actual = testPlanCoverage;
 const expected = {
   "./main.js": {
     ...actual["./main.js"],
     s: { 0: 0, 1: 0, 2: 0 },
   },
-}
-assert({ actual, expected })
+};
+assert({ actual, expected });

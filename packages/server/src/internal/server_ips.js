@@ -1,49 +1,49 @@
-import { networkInterfaces } from "node:os"
+import { networkInterfaces } from "node:os";
 
 export const createIpGetters = () => {
-  const networkAddresses = []
-  const networkInterfaceMap = networkInterfaces()
+  const networkAddresses = [];
+  const networkInterfaceMap = networkInterfaces();
   for (const key of Object.keys(networkInterfaceMap)) {
     for (const networkAddress of networkInterfaceMap[key]) {
-      networkAddresses.push(networkAddress)
+      networkAddresses.push(networkAddress);
     }
   }
   return {
     getFirstInternalIp: ({ preferIpv6 }) => {
-      const isPref = preferIpv6 ? isIpV6 : isIpV4
-      let firstInternalIp
+      const isPref = preferIpv6 ? isIpV6 : isIpV4;
+      let firstInternalIp;
       for (const networkAddress of networkAddresses) {
         if (networkAddress.internal) {
-          firstInternalIp = networkAddress.address
+          firstInternalIp = networkAddress.address;
           if (isPref(networkAddress)) {
-            break
+            break;
           }
         }
       }
-      return firstInternalIp
+      return firstInternalIp;
     },
     getFirstExternalIp: ({ preferIpv6 }) => {
-      const isPref = preferIpv6 ? isIpV6 : isIpV4
-      let firstExternalIp
+      const isPref = preferIpv6 ? isIpV6 : isIpV4;
+      let firstExternalIp;
       for (const networkAddress of networkAddresses) {
         if (!networkAddress.internal) {
-          firstExternalIp = networkAddress.address
+          firstExternalIp = networkAddress.address;
           if (isPref(networkAddress)) {
-            break
+            break;
           }
         }
       }
-      return firstExternalIp
+      return firstExternalIp;
     },
-  }
-}
+  };
+};
 
 const isIpV4 = (networkAddress) => {
   // node 18.5
   if (typeof networkAddress.family === "number") {
-    return networkAddress.family === 4
+    return networkAddress.family === 4;
   }
-  return networkAddress.family === "IPv4"
-}
+  return networkAddress.family === "IPv4";
+};
 
-const isIpV6 = (networkAddress) => !isIpV4(networkAddress)
+const isIpV6 = (networkAddress) => !isIpV4(networkAddress);

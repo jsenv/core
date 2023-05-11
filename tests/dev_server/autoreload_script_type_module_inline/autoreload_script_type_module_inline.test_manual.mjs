@@ -1,4 +1,4 @@
-import { startDevServer } from "@jsenv/core"
+import { startDevServer } from "@jsenv/core";
 
 await startDevServer({
   rootDirectoryUrl: new URL("./client/", import.meta.url),
@@ -9,4 +9,4 @@ await startDevServer({
   supervisor: {
     logs: true,
   },
-})
+});

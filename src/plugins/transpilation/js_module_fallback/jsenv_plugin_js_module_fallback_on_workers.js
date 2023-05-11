@@ -11,7 +11,7 @@
  *   new SharedWorker("shared_worker.js?js_module_fallback", { type: "classic" })
  */
 
-import { injectQueryParams } from "@jsenv/urls"
+import { injectQueryParams } from "@jsenv/urls";
 
 export const jsenvPluginJsModuleFallbackOnWorkers = () => {
   const turnIntoJsClassicProxy = (reference) => {
@@ -20,10 +20,10 @@ export const jsenvPluginJsModuleFallbackOnWorkers = () => {
         start: reference.typePropertyNode.value.start,
         end: reference.typePropertyNode.value.end,
         replacement: JSON.stringify("classic"),
-      })
-    }
-    return injectQueryParams(reference.url, { js_module_fallback: "" })
-  }
+      });
+    };
+    return injectQueryParams(reference.url, { js_module_fallback: "" });
+  };
 
   return {
     name: "jsenv:js_module_fallback_on_workers",
@@ -31,32 +31,32 @@ export const jsenvPluginJsModuleFallbackOnWorkers = () => {
     redirectUrl: {
       js_url: (reference, context) => {
         if (reference.expectedType !== "js_module") {
-          return null
+          return null;
         }
         if (reference.expectedSubtype === "worker") {
           if (context.isSupportedOnCurrentClients("worker_type_module")) {
-            return null
+            return null;
           }
-          return turnIntoJsClassicProxy(reference)
+          return turnIntoJsClassicProxy(reference);
         }
         if (reference.expectedSubtype === "service_worker") {
           if (
             context.isSupportedOnCurrentClients("service_worker_type_module")
           ) {
-            return null
+            return null;
           }
-          return turnIntoJsClassicProxy(reference)
+          return turnIntoJsClassicProxy(reference);
         }
         if (reference.expectedSubtype === "shared_worker") {
           if (
             context.isSupportedOnCurrentClients("shared_worker_type_module")
           ) {
-            return null
+            return null;
           }
-          return turnIntoJsClassicProxy(reference)
+          return turnIntoJsClassicProxy(reference);
         }
-        return null
+        return null;
       },
     },
-  }
-}
+  };
+};

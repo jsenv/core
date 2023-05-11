@@ -1,14 +1,14 @@
-import { promises, constants } from "node:fs"
+import { promises, constants } from "node:fs";
 
-import { assertAndNormalizeFileUrl } from "./file_url_validation.js"
+import { assertAndNormalizeFileUrl } from "./file_url_validation.js";
 
-const { access } = promises
+const { access } = promises;
 const {
   // F_OK,
   R_OK,
   W_OK,
   X_OK,
-} = constants
+} = constants;
 
 export const testEntryPermissions = async (
   source,
@@ -19,24 +19,24 @@ export const testEntryPermissions = async (
     allowedIfNotFound = false,
   } = {},
 ) => {
-  const sourceUrl = assertAndNormalizeFileUrl(source)
-  let binaryFlags = 0
+  const sourceUrl = assertAndNormalizeFileUrl(source);
+  let binaryFlags = 0;
 
   // if (visible) binaryFlags |= F_OK
-  if (read) binaryFlags |= R_OK
-  if (write) binaryFlags |= W_OK
-  if (execute) binaryFlags |= X_OK
+  if (read) binaryFlags |= R_OK;
+  if (write) binaryFlags |= W_OK;
+  if (execute) binaryFlags |= X_OK;
 
   try {
-    await access(new URL(sourceUrl), binaryFlags)
-    return true
+    await access(new URL(sourceUrl), binaryFlags);
+    return true;
   } catch (error) {
     if (error.code === "ENOENT") {
       if (allowedIfNotFound) {
-        return true
+        return true;
       }
-      throw error
+      throw error;
     }
-    return false
+    return false;
   }
-}
+};

@@ -11,37 +11,37 @@ hence sourcemap cannot point the original source location
 
 */
 
-import { pathToFileURL } from "node:url"
-import { createRequire } from "node:module"
+import { pathToFileURL } from "node:url";
+import { createRequire } from "node:module";
 
-const require = createRequire(import.meta.url)
+const require = createRequire(import.meta.url);
 
 export const postCssPluginUrlVisitor = ({ urlVisitor = () => null }) => {
-  const parseCssValue = require("postcss-value-parser")
-  const stringifyCssNodes = parseCssValue.stringify
+  const parseCssValue = require("postcss-value-parser");
+  const stringifyCssNodes = parseCssValue.stringify;
 
   return {
     postcssPlugin: "url_visitor",
     prepare: (result) => {
-      const { from } = result.opts
-      const fromUrl = String(pathToFileURL(from))
-      const mutations = []
+      const { from } = result.opts;
+      const fromUrl = String(pathToFileURL(from));
+      const mutations = [];
       return {
         AtRule: {
           import: (atImportNode, { AtRule }) => {
             if (atImportNode.parent.type !== "root") {
-              atImportNode.warn(result, "`@import` should be top level")
-              return
+              atImportNode.warn(result, "`@import` should be top level");
+              return;
             }
             if (atImportNode.nodes) {
               atImportNode.warn(
                 result,
                 "`@import` was not terminated correctly",
-              )
-              return
+              );
+              return;
             }
-            const parsed = parseCssValue(atImportNode.params)
-            let [urlNode] = parsed.nodes
+            const parsed = parseCssValue(atImportNode.params);
+            let [urlNode] = parsed.nodes;
             if (
               !urlNode ||
               (urlNode.type !== "string" && urlNode.type !== "function")
@@ -49,62 +49,63 @@ export const postCssPluginUrlVisitor = ({ urlVisitor = () => null }) => {
               atImportNode.warn(
                 result,
                 `No URL in \`${atImportNode.toString()}\``,
-              )
-              return
+              );
+              return;
             }
-            let url = ""
+            let url = "";
             if (urlNode.type === "string") {
-              url = urlNode.value
+              url = urlNode.value;
             } else if (urlNode.type === "function") {
               // Invalid function
               if (!/^url$/i.test(urlNode.value)) {
                 atImportNode.warn(
                   result,
                   `Invalid \`url\` function in \`${atImportNode.toString()}\``,
-                )
-                return
+                );
+                return;
               }
-              const firstNode = urlNode.nodes[0]
+              const firstNode = urlNode.nodes[0];
               if (firstNode && firstNode.type === "string") {
-                urlNode = firstNode
-                url = urlNode.value
+                urlNode = firstNode;
+                url = urlNode.value;
               } else {
-                urlNode = urlNode.nodes
-                url = stringifyCssNodes(urlNode.nodes)
+                urlNode = urlNode.nodes;
+                url = stringifyCssNodes(urlNode.nodes);
               }
             }
 
-            url = url.trim()
+            url = url.trim();
             if (url.length === 0) {
               atImportNode.warn(
                 result,
                 `Empty URL in \`${atImportNode.toString()}\``,
-              )
-              return
+              );
+              return;
             }
 
-            const specifier = url
-            url = new URL(specifier, fromUrl).href
+            const specifier = url;
+            url = new URL(specifier, fromUrl).href;
             if (url === fromUrl) {
               atImportNode.warn(
                 result,
                 `\`@import\` loop in \`${atImportNode.toString()}\``,
-              )
-              return
+              );
+              return;
             }
 
-            const atRuleStart = atImportNode.source.start.offset
-            const atRuleEnd = atImportNode.source.end.offset + 1 // for the ";"
+            const atRuleStart = atImportNode.source.start.offset;
+            const atRuleEnd = atImportNode.source.end.offset + 1; // for the ";"
             const atRuleRaw = atImportNode.source.input.css.slice(
               atRuleStart,
               atRuleEnd,
-            )
-            const specifierIndex = atRuleRaw.indexOf(atImportNode.params)
-            const specifierStart = atRuleStart + specifierIndex
-            const specifierEnd = specifierStart + parsed.nodes[0].sourceEndIndex
-            const specifierLine = atImportNode.source.start.line
+            );
+            const specifierIndex = atRuleRaw.indexOf(atImportNode.params);
+            const specifierStart = atRuleStart + specifierIndex;
+            const specifierEnd =
+              specifierStart + parsed.nodes[0].sourceEndIndex;
+            const specifierLine = atImportNode.source.start.line;
             const specifierColumn =
-              atImportNode.source.start.column + specifierIndex
+              atImportNode.source.start.column + specifierIndex;
             urlVisitor({
               declarationNode: atImportNode,
               type: "@import",
@@ -117,23 +118,23 @@ export const postCssPluginUrlVisitor = ({ urlVisitor = () => null }) => {
               specifierEnd,
               replace: (newUrlSpecifier) => {
                 if (newUrlSpecifier === urlNode.value) {
-                  return
+                  return;
                 }
-                urlNode.value = newUrlSpecifier
-                const newParams = parsed.toString()
+                urlNode.value = newUrlSpecifier;
+                const newParams = parsed.toString();
                 const newAtImportRule = new AtRule({
                   name: "import",
                   params: newParams,
                   source: atImportNode.source,
-                })
-                atImportNode.replaceWith(newAtImportRule)
+                });
+                atImportNode.replaceWith(newAtImportRule);
               },
-            })
+            });
           },
         },
         Declaration: (declarationNode) => {
-          const parsed = parseCssValue(declarationNode.value)
-          const urlMutations = []
+          const parsed = parseCssValue(declarationNode.value);
+          const urlMutations = [];
           walkUrls(parsed, {
             stringifyCssNodes,
             visitor: ({ url, urlNode }) => {
@@ -142,37 +143,37 @@ export const postCssPluginUrlVisitor = ({ urlVisitor = () => null }) => {
                 declarationNode.warn(
                   result,
                   `Empty URL in \`${declarationNode.toString()}\``,
-                )
-                return
+                );
+                return;
               }
               // Skip Data URI
               if (isDataUrl(url)) {
-                return
+                return;
               }
-              const specifier = url
-              url = new URL(specifier, pathToFileURL(from))
+              const specifier = url;
+              url = new URL(specifier, pathToFileURL(from));
 
-              const declarationNodeStart = declarationNode.source.start.offset
+              const declarationNodeStart = declarationNode.source.start.offset;
               const afterDeclarationNode =
-                declarationNode.source.input.css.slice(declarationNodeStart)
+                declarationNode.source.input.css.slice(declarationNodeStart);
               const valueIndex = afterDeclarationNode.indexOf(
                 declarationNode.value,
-              )
-              const valueStart = declarationNodeStart + valueIndex
-              const specifierStart = valueStart + urlNode.sourceIndex
+              );
+              const valueStart = declarationNodeStart + valueIndex;
+              const specifierStart = valueStart + urlNode.sourceIndex;
               const specifierEnd =
                 specifierStart +
                 (urlNode.type === "word"
                   ? urlNode.value.length
-                  : urlNode.value.length + 2) // the quotes
+                  : urlNode.value.length + 2); // the quotes
               // value raw
               // declarationNode.source.input.css.slice(valueStart)
               // specifier raw
               // declarationNode.source.input.css.slice(specifierStart, specifierEnd)
-              const specifierLine = declarationNode.source.start.line
+              const specifierLine = declarationNode.source.start.line;
               const specifierColumn =
                 declarationNode.source.start.column +
-                (specifierStart - declarationNodeStart)
+                (specifierStart - declarationNodeStart);
 
               urlVisitor({
                 declarationNode,
@@ -186,61 +187,61 @@ export const postCssPluginUrlVisitor = ({ urlVisitor = () => null }) => {
                   urlMutations.push(() => {
                     // the specifier desires to be inside double quotes
                     if (newUrlSpecifier[0] === `"`) {
-                      urlNode.type = "word"
-                      urlNode.value = newUrlSpecifier
-                      return
+                      urlNode.type = "word";
+                      urlNode.value = newUrlSpecifier;
+                      return;
                     }
                     // the specifier desires to be inside simple quotes
                     if (newUrlSpecifier[0] === `'`) {
-                      urlNode.type = "word"
-                      urlNode.value = newUrlSpecifier
-                      return
+                      urlNode.type = "word";
+                      urlNode.value = newUrlSpecifier;
+                      return;
                     }
                     // the specifier desired to be just a word
                     // for the "word" type so that newUrlSpecifier can opt-out of being between quotes
                     // useful to inject __v__ calls for css inside js
-                    urlNode.type = "word"
-                    urlNode.value = newUrlSpecifier
-                  })
+                    urlNode.type = "word";
+                    urlNode.value = newUrlSpecifier;
+                  });
                 },
-              })
+              });
             },
-          })
+          });
           if (urlMutations.length) {
             mutations.push(() => {
               urlMutations.forEach((urlMutation) => {
-                urlMutation()
-              })
-              declarationNode.value = parsed.toString()
-            })
+                urlMutation();
+              });
+              declarationNode.value = parsed.toString();
+            });
           }
         },
         OnceExit: () => {
           mutations.forEach((mutation) => {
-            mutation()
-          })
+            mutation();
+          });
         },
-      }
+      };
     },
-  }
-}
-postCssPluginUrlVisitor.postcss = true
+  };
+};
+postCssPluginUrlVisitor.postcss = true;
 
 const walkUrls = (parsed, { stringifyCssNodes, visitor }) => {
   parsed.walk((node) => {
     // https://github.com/andyjansson/postcss-functions
     if (isUrlFunctionNode(node)) {
-      const { nodes } = node
-      const [urlNode] = nodes
+      const { nodes } = node;
+      const [urlNode] = nodes;
       const url =
         urlNode && urlNode.type === "string"
           ? urlNode.value
-          : stringifyCssNodes(nodes)
+          : stringifyCssNodes(nodes);
       visitor({
         url: url.trim(),
         urlNode,
-      })
-      return
+      });
+      return;
     }
 
     if (isImageSetFunctionNode(node)) {
@@ -249,40 +250,40 @@ const walkUrls = (parsed, { stringifyCssNodes, visitor }) => {
           visitor({
             url: childNode.value.trim(),
             urlNode: childNode,
-          })
-          return
+          });
+          return;
         }
 
         if (isUrlFunctionNode(node)) {
-          const { nodes } = childNode
-          const [urlNode] = nodes
+          const { nodes } = childNode;
+          const [urlNode] = nodes;
           const url =
             urlNode && urlNode.type === "string"
               ? urlNode.value
-              : stringifyCssNodes(nodes)
+              : stringifyCssNodes(nodes);
           visitor({
             url: url.trim(),
             urlNode,
-          })
-          return
+          });
+          return;
         }
-      })
+      });
     }
-  })
-}
+  });
+};
 
 const isUrlFunctionNode = (node) => {
-  return node.type === "function" && /^url$/i.test(node.value)
-}
+  return node.type === "function" && /^url$/i.test(node.value);
+};
 
 const isImageSetFunctionNode = (node) => {
   return (
     node.type === "function" && /^(?:-webkit-)?image-set$/i.test(node.value)
-  )
-}
+  );
+};
 
 const isDataUrl = (url) => {
   return /data:[^\n\r;]+?(?:;charset=[^\n\r;]+?)?;base64,([\d+/A-Za-z]+={0,2})/.test(
     url,
-  )
-}
+  );
+};

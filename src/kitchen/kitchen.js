@@ -5,23 +5,23 @@ import {
   stringifyUrlSite,
   normalizeUrl,
   setUrlFilename,
-} from "@jsenv/urls"
-import { writeFileSync, ensureWindowsDriveLetter } from "@jsenv/filesystem"
-import { createLogger, createDetailedMessage, ANSI } from "@jsenv/log"
-import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js"
+} from "@jsenv/urls";
+import { writeFileSync, ensureWindowsDriveLetter } from "@jsenv/filesystem";
+import { createLogger, createDetailedMessage, ANSI } from "@jsenv/log";
+import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 
-import { createPluginController } from "../plugins/plugin_controller.js"
-import { urlSpecifierEncoding } from "./url_specifier_encoding.js"
-import { createUrlInfoTransformer } from "./url_graph/url_info_transformations.js"
-import { RUNTIME_COMPAT } from "./compat/runtime_compat.js"
+import { createPluginController } from "../plugins/plugin_controller.js";
+import { urlSpecifierEncoding } from "./url_specifier_encoding.js";
+import { createUrlInfoTransformer } from "./url_graph/url_info_transformations.js";
+import { RUNTIME_COMPAT } from "./compat/runtime_compat.js";
 import {
   createResolveUrlError,
   createFetchUrlContentError,
   createTransformUrlContentError,
   createFinalizeUrlContentError,
-} from "./errors.js"
-import { assertFetchedContentCompliance } from "./fetched_content_compliance.js"
-import { isWebWorkerEntryPointReference } from "./web_workers.js"
+} from "./errors.js";
+import { assertFetchedContentCompliance } from "./fetched_content_compliance.js";
+import { isWebWorkerEntryPointReference } from "./web_workers.js";
 
 export const createKitchen = ({
   signal,
@@ -44,7 +44,7 @@ export const createKitchen = ({
   sourcemapsSourcesRelative,
   outDirectoryUrl,
 }) => {
-  const logger = createLogger({ logLevel })
+  const logger = createLogger({ logLevel });
   const kitchenContext = {
     signal,
     logger,
@@ -56,26 +56,26 @@ export const createKitchen = ({
     clientRuntimeCompat,
     systemJsTranspilation,
     isSupportedOnCurrentClients: (feature) => {
-      return RUNTIME_COMPAT.isSupported(clientRuntimeCompat, feature)
+      return RUNTIME_COMPAT.isSupported(clientRuntimeCompat, feature);
     },
     isSupportedOnFutureClients: (feature) => {
-      return RUNTIME_COMPAT.isSupported(runtimeCompat, feature)
+      return RUNTIME_COMPAT.isSupported(runtimeCompat, feature);
     },
     minification,
     sourcemaps,
     outDirectoryUrl,
-  }
-  const pluginController = createPluginController(kitchenContext)
+  };
+  const pluginController = createPluginController(kitchenContext);
   const pushPlugins = (plugins) => {
     plugins.forEach((pluginEntry) => {
       if (Array.isArray(pluginEntry)) {
-        pushPlugins(pluginEntry)
+        pushPlugins(pluginEntry);
       } else {
-        pluginController.pushPlugin(pluginEntry)
+        pluginController.pushPlugin(pluginEntry);
       }
-    })
-  }
-  pushPlugins(plugins)
+    });
+  };
+  pushPlugins(plugins);
 
   const createReference = ({
     data = {},
@@ -114,9 +114,9 @@ export const createKitchen = ({
   }) => {
     if (typeof specifier !== "string") {
       if (specifier instanceof URL) {
-        specifier = specifier.href
+        specifier = specifier.href;
       } else {
-        throw new TypeError(`"specifier" must be a string, got ${specifier}`)
+        throw new TypeError(`"specifier" must be a string, got ${specifier}`);
       }
     }
     const reference = {
@@ -166,44 +166,44 @@ export const createKitchen = ({
       leadsToADirectory,
       mutation: null,
       debug,
-    }
+    };
     // Object.preventExtensions(reference) // useful to ensure all properties are declared here
-    return reference
-  }
+    return reference;
+  };
   const updateReference = (reference, newReference) => {
-    reference.next = newReference
-    newReference.original = reference.original || reference
+    reference.next = newReference;
+    newReference.original = reference.original || reference;
 
-    newReference.prev = reference
-  }
+    newReference.prev = reference;
+  };
   const resolveReference = (reference, context = kitchenContext) => {
     const referenceContext = {
       ...context,
       resolveReference: (reference, context = referenceContext) =>
         resolveReference(reference, context),
-    }
+    };
     try {
       let resolvedUrl = pluginController.callHooksUntil(
         "resolveUrl",
         reference,
         referenceContext,
-      )
+      );
       if (!resolvedUrl) {
-        throw new Error(`NO_RESOLVE`)
+        throw new Error(`NO_RESOLVE`);
       }
       if (resolvedUrl.includes("?debug")) {
-        reference.debug = true
+        reference.debug = true;
       }
-      resolvedUrl = normalizeUrl(resolvedUrl)
-      let referencedUrlObject
-      let searchParams
+      resolvedUrl = normalizeUrl(resolvedUrl);
+      let referencedUrlObject;
+      let searchParams;
       const onReferenceUrlChange = (referenceUrl) => {
-        referencedUrlObject = new URL(referenceUrl)
-        searchParams = referencedUrlObject.searchParams
-        reference.url = referenceUrl
-        reference.searchParams = searchParams
-      }
-      onReferenceUrlChange(resolvedUrl)
+        referencedUrlObject = new URL(referenceUrl);
+        searchParams = referencedUrlObject.searchParams;
+        reference.url = referenceUrl;
+        reference.searchParams = searchParams;
+      };
+      onReferenceUrlChange(resolvedUrl);
 
       if (reference.debug) {
         logger.debug(`url resolved by "${
@@ -211,16 +211,16 @@ export const createKitchen = ({
         }"
 ${ANSI.color(reference.specifier, ANSI.GREY)} ->
 ${ANSI.color(reference.url, ANSI.YELLOW)}
-`)
+`);
       }
       pluginController.callHooks(
         "redirectUrl",
         reference,
         referenceContext,
         (returnValue, plugin) => {
-          const normalizedReturnValue = normalizeUrl(returnValue)
+          const normalizedReturnValue = normalizeUrl(returnValue);
           if (normalizedReturnValue === reference.url) {
-            return
+            return;
           }
           if (reference.debug) {
             logger.debug(
@@ -228,17 +228,17 @@ ${ANSI.color(reference.url, ANSI.YELLOW)}
 ${ANSI.color(reference.url, ANSI.GREY)} ->
 ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 `,
-            )
+            );
           }
-          const prevReference = { ...reference }
-          updateReference(prevReference, reference)
-          onReferenceUrlChange(normalizedReturnValue)
+          const prevReference = { ...reference };
+          updateReference(prevReference, reference);
+          onReferenceUrlChange(normalizedReturnValue);
         },
-      )
-      reference.generatedUrl = reference.url
+      );
+      reference.generatedUrl = reference.url;
 
-      const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url)
-      applyReferenceEffectsOnUrlInfo(reference, urlInfo, context)
+      const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url);
+      applyReferenceEffectsOnUrlInfo(reference, urlInfo, context);
 
       // This hook must touch reference.generatedUrl, NOT reference.url
       // And this is because this hook inject query params used to:
@@ -252,28 +252,28 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         referenceContext,
         (returnValue) => {
           Object.keys(returnValue).forEach((key) => {
-            searchParams.set(key, returnValue[key])
-          })
-          reference.generatedUrl = normalizeUrl(referencedUrlObject.href)
+            searchParams.set(key, returnValue[key]);
+          });
+          reference.generatedUrl = normalizeUrl(referencedUrlObject.href);
         },
-      )
+      );
       const returnValue = pluginController.callHooksUntil(
         "formatUrl",
         reference,
         referenceContext,
-      )
-      reference.generatedSpecifier = returnValue || reference.generatedUrl
-      reference.generatedSpecifier = urlSpecifierEncoding.encode(reference)
-      return [reference, urlInfo]
+      );
+      reference.generatedSpecifier = returnValue || reference.generatedUrl;
+      reference.generatedSpecifier = urlSpecifierEncoding.encode(reference);
+      return [reference, urlInfo];
     } catch (error) {
       throw createResolveUrlError({
         pluginController,
         reference,
         error,
-      })
+      });
     }
-  }
-  kitchenContext.resolveReference = resolveReference
+  };
+  kitchenContext.resolveReference = resolveReference;
 
   const urlInfoTransformer = createUrlInfoTransformer({
     logger,
@@ -296,9 +296,9 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           parentUrl: urlInfo.url,
           specifier,
         }),
-      )
-      sourcemapUrlInfo.type = "sourcemap"
-      return [sourcemapReference, sourcemapUrlInfo]
+      );
+      sourcemapUrlInfo.type = "sourcemap";
+      return [sourcemapReference, sourcemapUrlInfo];
     },
     foundSourcemap: ({
       urlInfo,
@@ -312,7 +312,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         url: urlInfo.url,
         line: specifierLine,
         column: specifierColumn,
-      })
+      });
       const [sourcemapReference, sourcemapUrlInfo] = resolveReference(
         createReference({
           trace: traceFromUrlSite(sourcemapUrlSite),
@@ -323,14 +323,14 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           specifierLine,
           specifierColumn,
         }),
-      )
+      );
       if (sourcemapReference.isInline) {
-        sourcemapUrlInfo.isInline = true
+        sourcemapUrlInfo.isInline = true;
       }
-      sourcemapUrlInfo.type = "sourcemap"
-      return [sourcemapReference, sourcemapUrlInfo]
+      sourcemapUrlInfo.type = "sourcemap";
+      return [sourcemapReference, sourcemapUrlInfo];
     },
-  })
+  });
 
   const fetchUrlContent = async (
     urlInfo,
@@ -342,7 +342,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           "fetchUrlContent",
           urlInfo,
           contextDuringFetch,
-        )
+        );
       if (!fetchUrlContentReturnValue) {
         logger.warn(
           createDetailedMessage(
@@ -352,8 +352,8 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
               "url reference trace": reference.trace.message,
             },
           ),
-        )
-        return
+        );
+        return;
       }
       let {
         content,
@@ -370,83 +370,84 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         headers = {},
         body,
         isEntryPoint,
-      } = fetchUrlContentReturnValue
+      } = fetchUrlContentReturnValue;
       if (status !== 200) {
-        throw new Error(`unexpected status, ${status}`)
+        throw new Error(`unexpected status, ${status}`);
       }
       if (content === undefined) {
-        content = body
+        content = body;
       }
       if (contentType === undefined) {
-        contentType = headers["content-type"] || "application/octet-stream"
+        contentType = headers["content-type"] || "application/octet-stream";
       }
-      urlInfo.contentType = contentType
-      urlInfo.headers = headers
-      urlInfo.type = type || reference.expectedType || inferUrlInfoType(urlInfo)
+      urlInfo.contentType = contentType;
+      urlInfo.headers = headers;
+      urlInfo.type =
+        type || reference.expectedType || inferUrlInfoType(urlInfo);
       urlInfo.subtype =
-        subtype || reference.expectedSubtype || urlInfo.subtypeHint || ""
+        subtype || reference.expectedSubtype || urlInfo.subtypeHint || "";
       // during build urls info are reused and load returns originalUrl/originalContent
-      urlInfo.originalUrl = originalUrl || urlInfo.originalUrl
+      urlInfo.originalUrl = originalUrl || urlInfo.originalUrl;
       if (originalContent !== urlInfo.originalContent) {
-        urlInfo.originalContentEtag = undefined // set by "initTransformations"
+        urlInfo.originalContentEtag = undefined; // set by "initTransformations"
       }
       if (content !== urlInfo.content) {
-        urlInfo.contentEtag = undefined // set by "applyFinalTransformations"
+        urlInfo.contentEtag = undefined; // set by "applyFinalTransformations"
       }
-      urlInfo.originalContent = originalContent
-      urlInfo.content = content
-      urlInfo.sourcemap = sourcemap
+      urlInfo.originalContent = originalContent;
+      urlInfo.content = content;
+      urlInfo.sourcemap = sourcemap;
       if (data) {
-        Object.assign(urlInfo.data, data)
+        Object.assign(urlInfo.data, data);
       }
       if (typeof isEntryPoint === "boolean") {
-        urlInfo.isEntryPoint = isEntryPoint
+        urlInfo.isEntryPoint = isEntryPoint;
       }
       if (filename) {
-        urlInfo.filename = filename
+        urlInfo.filename = filename;
       }
       assertFetchedContentCompliance({
         reference,
         urlInfo,
-      })
+      });
     } catch (error) {
       throw createFetchUrlContentError({
         pluginController,
         urlInfo,
         reference,
         error,
-      })
+      });
     }
     urlInfo.generatedUrl = determineFileUrlForOutDirectory({
       urlInfo,
       context: contextDuringFetch,
-    })
-    await urlInfoTransformer.initTransformations(urlInfo, contextDuringFetch)
-  }
-  kitchenContext.fetchUrlContent = fetchUrlContent
+    });
+    await urlInfoTransformer.initTransformations(urlInfo, contextDuringFetch);
+  };
+  kitchenContext.fetchUrlContent = fetchUrlContent;
 
   const _cook = async (urlInfo, dishContext) => {
     const context = {
       ...kitchenContext,
       ...dishContext,
-    }
-    const { cookDuringCook = cook } = dishContext
+    };
+    const { cookDuringCook = cook } = dishContext;
     context.cook = (urlInfo, nestedDishContext) => {
       return cookDuringCook(urlInfo, {
         ...dishContext,
         ...nestedDishContext,
-      })
-    }
+      });
+    };
     context.fetchUrlContent = (urlInfo, { reference }) => {
       return fetchUrlContent(urlInfo, {
         reference,
         contextDuringFetch: context,
-      })
-    }
+      });
+    };
 
     if (urlInfo.shouldHandle) {
       // references
-      const references = []
+      const references = [];
       context.referenceUtils = {
         _references: references,
         find: (predicate) => references.find(predicate),
@@ -458,9 +459,9 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
               ...props,
             }),
             context,
-          )
-          references.push(reference)
-          return [reference, referencedUrlInfo]
+          );
+          references.push(reference);
+          return [reference, referencedUrlInfo];
         },
         found: ({ trace, ...rest }) => {
           if (trace === undefined) {
@@ -471,13 +472,13 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
                 line: rest.specifierLine,
                 column: rest.specifierColumn,
               }),
-            )
+            );
           }
           // console.log(trace.message)
           return context.referenceUtils.add({
             trace,
             ...rest,
-          })
+          });
         },
         foundInline: ({
           isOriginalPosition,
@@ -487,10 +488,10 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         }) => {
           const parentUrl = isOriginalPosition
             ? urlInfo.url
-            : urlInfo.generatedUrl
+            : urlInfo.generatedUrl;
           const parentContent = isOriginalPosition
             ? urlInfo.originalContent
-            : urlInfo.content
+            : urlInfo.content;
           return context.referenceUtils.add({
             trace: traceFromUrlSite({
               url: parentUrl,
@@ -503,12 +504,12 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
             specifierColumn,
             isInline: true,
             ...rest,
-          })
+          });
         },
         update: (currentReference, newReferenceParams) => {
-          const index = references.indexOf(currentReference)
+          const index = references.indexOf(currentReference);
           if (index === -1) {
-            throw new Error(`reference do not exists`)
+            throw new Error(`reference do not exists`);
           }
           const [newReference, newUrlInfo] = resolveReference(
             createReference({
@@ -516,35 +517,35 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
               ...newReferenceParams,
             }),
             context,
-          )
-          updateReference(currentReference, newReference)
-          references[index] = newReference
+          );
+          updateReference(currentReference, newReference);
+          references[index] = newReference;
           const currentUrlInfo = context.urlGraph.getUrlInfo(
             currentReference.url,
-          )
+          );
           if (
             currentUrlInfo &&
             currentUrlInfo !== newUrlInfo &&
             currentUrlInfo.dependents.size === 0
           ) {
-            context.urlGraph.deleteUrlInfo(currentReference.url)
+            context.urlGraph.deleteUrlInfo(currentReference.url);
           }
-          return [newReference, newUrlInfo]
+          return [newReference, newUrlInfo];
         },
         inject: ({ trace, ...rest }) => {
           if (trace === undefined) {
-            const { url, line, column } = getCallerPosition()
+            const { url, line, column } = getCallerPosition();
             trace = traceFromUrlSite({
               url,
               line,
               column,
-            })
+            });
           }
           return context.referenceUtils.add({
             trace,
             injected: true,
             ...rest,
-          })
+          });
         },
         becomesInline: (
           reference,
@@ -559,10 +560,10 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         ) => {
           const parentUrl = isOriginalPosition
             ? urlInfo.url
-            : urlInfo.generatedUrl
+            : urlInfo.generatedUrl;
           const parentContent = isOriginalPosition
             ? urlInfo.originalContent
-            : urlInfo.content
+            : urlInfo.content;
           return context.referenceUtils.update(reference, {
             trace: traceFromUrlSite({
               url: parentUrl,
@@ -577,18 +578,18 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
             specifierColumn,
             contentType,
             content,
-          })
+          });
         },
         becomesExternal: () => {
-          throw new Error("not implemented yet")
+          throw new Error("not implemented yet");
         },
-      }
+      };
 
       // "fetchUrlContent" hook
       await fetchUrlContent(urlInfo, {
         reference: context.reference,
         contextDuringFetch: context,
-      })
+      });
 
       // "transform" hook
       try {
@@ -600,23 +601,23 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
             await urlInfoTransformer.applyIntermediateTransformations(
               urlInfo,
               transformReturnValue,
-            )
+            );
           },
-        )
+        );
       } catch (error) {
-        urlGraph.updateReferences(urlInfo, references) // ensure reference are updated even in case of error
+        urlGraph.updateReferences(urlInfo, references); // ensure reference are updated even in case of error
         const transformError = createTransformUrlContentError({
           pluginController,
           reference: context.reference,
           urlInfo,
           error,
-        })
-        urlInfo.error = transformError
-        throw transformError
+        });
+        urlInfo.error = transformError;
+        throw transformError;
       }
       // after "transform" all references from originalContent
       // and the one injected by plugin are known
-      urlGraph.updateReferences(urlInfo, references)
+      urlGraph.updateReferences(urlInfo, references);
 
       // "finalize" hook
       try {
@@ -624,18 +625,18 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           "finalizeUrlContent",
           urlInfo,
           context,
-        )
+        );
         await urlInfoTransformer.applyFinalTransformations(
           urlInfo,
           finalizeReturnValue,
-        )
+        );
       } catch (error) {
         throw createFinalizeUrlContentError({
           pluginController,
           reference: context.reference,
           urlInfo,
           error,
-        })
+        });
       }
     }
 
@@ -650,27 +651,27 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
             ({ prunedUrlInfos, firstUrlInfo }) => {
               const pruned = prunedUrlInfos.find(
                 (prunedUrlInfo) => prunedUrlInfo.url === urlInfo.url,
-              )
+              );
               if (pruned) {
-                removePrunedCallback()
-                cookedReturnValue(firstUrlInfo)
+                removePrunedCallback();
+                cookedReturnValue(firstUrlInfo);
               }
             },
-          )
+          );
         }
       },
-    )
-  }
+    );
+  };
   const cook = memoizeCook(async (urlInfo, context) => {
     if (!outDirectoryUrl) {
-      await _cook(urlInfo, context)
-      return
+      await _cook(urlInfo, context);
+      return;
     }
     // writing result inside ".jsenv" directory (debug purposes)
     try {
-      await _cook(urlInfo, context)
+      await _cook(urlInfo, context);
     } finally {
-      const { generatedUrl } = urlInfo
+      const { generatedUrl } = urlInfo;
       if (generatedUrl && generatedUrl.startsWith("file:")) {
         if (urlInfo.type === "directory") {
           // no need to write the directory
@@ -679,29 +680,29 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           // (error hapenning before urlInfo.content can be set, or 404 for instance)
           // in that case we can't write anything
         } else {
-          let contentIsInlined = urlInfo.isInline
+          let contentIsInlined = urlInfo.isInline;
           if (
             contentIsInlined &&
             context.supervisor &&
             urlGraph.getUrlInfo(urlInfo.inlineUrlSite.url).type === "html"
           ) {
-            contentIsInlined = false
+            contentIsInlined = false;
           }
           if (!contentIsInlined) {
-            writeFileSync(new URL(generatedUrl), urlInfo.content)
+            writeFileSync(new URL(generatedUrl), urlInfo.content);
           }
-          const { sourcemapGeneratedUrl, sourcemap } = urlInfo
+          const { sourcemapGeneratedUrl, sourcemap } = urlInfo;
           if (sourcemapGeneratedUrl && sourcemap) {
             writeFileSync(
               new URL(sourcemapGeneratedUrl),
               JSON.stringify(sourcemap, null, "  "),
-            )
+            );
           }
         }
       }
     }
-  })
-  kitchenContext.cook = cook
+  });
+  kitchenContext.cook = cook;
 
   const prepareEntryPoint = (params) => {
     return resolveReference(
@@ -709,14 +710,14 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         ...params,
         isEntryPoint: true,
       }),
-    )
-  }
-  kitchenContext.prepareEntryPoint = prepareEntryPoint
+    );
+  };
+  kitchenContext.prepareEntryPoint = prepareEntryPoint;
 
   const injectReference = (params) => {
-    return resolveReference(createReference(params))
-  }
-  kitchenContext.injectReference = injectReference
+    return resolveReference(createReference(params));
+  };
+  kitchenContext.injectReference = injectReference;
 
   const getWithoutSearchParam = ({
     urlInfo,
@@ -725,14 +726,14 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     searchParam,
     expectedType,
   }) => {
-    const urlObject = new URL(urlInfo.url)
-    const { searchParams } = urlObject
+    const urlObject = new URL(urlInfo.url);
+    const { searchParams } = urlObject;
     if (!searchParams.has(searchParam)) {
-      return [null, null]
+      return [null, null];
     }
-    searchParams.delete(searchParam)
+    searchParams.delete(searchParam);
     const originalRef =
-      reference || context.reference.original || context.reference
+      reference || context.reference.original || context.reference;
     const referenceWithoutSearchParam = {
       ...originalRef,
       original: originalRef,
@@ -746,20 +747,20 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       generatedSpecifier: null,
       generatedUrl: null,
       filename: null,
-    }
+    };
     const urlInfoWithoutSearchParam = context.urlGraph.reuseOrCreateUrlInfo(
       referenceWithoutSearchParam.url,
-    )
+    );
     if (urlInfoWithoutSearchParam.originalUrl === undefined) {
       applyReferenceEffectsOnUrlInfo(
         referenceWithoutSearchParam,
         urlInfoWithoutSearchParam,
         context,
-      )
+      );
     }
-    return [referenceWithoutSearchParam, urlInfoWithoutSearchParam]
-  }
-  kitchenContext.getWithoutSearchParam = getWithoutSearchParam
+    return [referenceWithoutSearchParam, urlInfoWithoutSearchParam];
+  };
+  kitchenContext.getWithoutSearchParam = getWithoutSearchParam;
 
   return {
     pluginController,
@@ -769,8 +770,8 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     cook,
     createReference,
     injectReference,
-  }
-}
+  };
+};
 
 // "formatReferencedUrl" can be async BUT this is an exception
 // for most cases it will be sync. We want to favor the sync signature to keep things simpler
@@ -782,42 +783,42 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 const readGeneratedSpecifier = (reference) => {
   if (reference.generatedSpecifier.then) {
     return reference.generatedSpecifier.then((value) => {
-      reference.generatedSpecifier = value
-      return value
-    })
+      reference.generatedSpecifier = value;
+      return value;
+    });
   }
-  return reference.generatedSpecifier
-}
+  return reference.generatedSpecifier;
+};
 
 const memoizeCook = (cook) => {
-  const pendingDishes = new Map()
+  const pendingDishes = new Map();
   return async (urlInfo, context) => {
-    const { url, modifiedTimestamp } = urlInfo
-    const pendingDish = pendingDishes.get(url)
+    const { url, modifiedTimestamp } = urlInfo;
+    const pendingDish = pendingDishes.get(url);
     if (pendingDish) {
       if (!modifiedTimestamp) {
-        await pendingDish.promise
-        return
+        await pendingDish.promise;
+        return;
       }
       if (pendingDish.timestamp > modifiedTimestamp) {
-        await pendingDish.promise
-        return
+        await pendingDish.promise;
+        return;
       }
-      pendingDishes.delete(url)
+      pendingDishes.delete(url);
     }
-    const timestamp = Date.now()
-    const promise = cook(urlInfo, context)
+    const timestamp = Date.now();
+    const promise = cook(urlInfo, context);
     pendingDishes.set(url, {
       timestamp,
       promise,
-    })
+    });
     try {
-      await promise
+      await promise;
     } finally {
-      pendingDishes.delete(url)
+      pendingDishes.delete(url);
     }
-  }
-}
+  };
+};
 
 const traceFromUrlSite = (urlSite) => {
   return {
@@ -825,32 +826,32 @@ const traceFromUrlSite = (urlSite) => {
     url: urlSite.url,
     line: urlSite.line,
     column: urlSite.column,
-  }
-}
+  };
+};
 
 const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
   if (reference.shouldHandle) {
-    urlInfo.shouldHandle = true
+    urlInfo.shouldHandle = true;
   } else {
-    urlInfo.shouldHandle = false
+    urlInfo.shouldHandle = false;
   }
-  urlInfo.originalUrl = urlInfo.originalUrl || reference.url
+  urlInfo.originalUrl = urlInfo.originalUrl || reference.url;
 
   if (reference.isEntryPoint || isWebWorkerEntryPointReference(reference)) {
-    urlInfo.isEntryPoint = true
+    urlInfo.isEntryPoint = true;
   }
 
-  Object.assign(urlInfo.data, reference.data)
-  Object.assign(urlInfo.timing, reference.timing)
+  Object.assign(urlInfo.data, reference.data);
+  Object.assign(urlInfo.timing, reference.timing);
   if (reference.injected) {
-    urlInfo.injected = true
+    urlInfo.injected = true;
   }
   if (reference.filename && !urlInfo.filename) {
-    urlInfo.filename = reference.filename
+    urlInfo.filename = reference.filename;
   }
   if (reference.isInline) {
-    urlInfo.isInline = true
-    const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl)
+    urlInfo.isInline = true;
+    const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl);
     urlInfo.inlineUrlSite = {
       url: parentUrlInfo.url,
       content: reference.isOriginalPosition
@@ -858,38 +859,38 @@ const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
         : parentUrlInfo.content,
       line: reference.specifierLine,
       column: reference.specifierColumn,
-    }
-    urlInfo.contentType = reference.contentType
+    };
+    urlInfo.contentType = reference.contentType;
     urlInfo.originalContent = context.build
       ? urlInfo.originalContent === undefined
         ? reference.content
         : urlInfo.originalContent
-      : reference.content
-    urlInfo.content = reference.content
+      : reference.content;
+    urlInfo.content = reference.content;
   }
 
   if (reference.debug) {
-    urlInfo.debug = true
+    urlInfo.debug = true;
   }
   if (reference.expectedType) {
-    urlInfo.typeHint = reference.expectedType
+    urlInfo.typeHint = reference.expectedType;
   }
   if (reference.expectedSubtype) {
-    urlInfo.subtypeHint = reference.expectedSubtype
+    urlInfo.subtypeHint = reference.expectedSubtype;
   }
-}
+};
 
 const adjustUrlSite = (urlInfo, { urlGraph, url, line, column }) => {
-  const isOriginal = url === urlInfo.url
+  const isOriginal = url === urlInfo.url;
   const adjust = (urlSite, urlInfo) => {
     if (!urlSite.isOriginal) {
-      return urlSite
+      return urlSite;
     }
-    const inlineUrlSite = urlInfo.inlineUrlSite
+    const inlineUrlSite = urlInfo.inlineUrlSite;
     if (!inlineUrlSite) {
-      return urlSite
+      return urlSite;
     }
-    const parentUrlInfo = urlGraph.getUrlInfo(inlineUrlSite.url)
+    const parentUrlInfo = urlGraph.getUrlInfo(inlineUrlSite.url);
     return adjust(
       {
         isOriginal: true,
@@ -905,8 +906,8 @@ const adjustUrlSite = (urlInfo, { urlGraph, url, line, column }) => {
             : inlineUrlSite.column + urlSite.column,
       },
       parentUrlInfo,
-    )
-  }
+    );
+  };
   return adjust(
     {
       isOriginal,
@@ -916,61 +917,61 @@ const adjustUrlSite = (urlInfo, { urlGraph, url, line, column }) => {
       column,
     },
     urlInfo,
-  )
-}
+  );
+};
 
 const inferUrlInfoType = (urlInfo) => {
-  const { type } = urlInfo
+  const { type } = urlInfo;
   if (type === "sourcemap") {
-    return "sourcemap"
+    return "sourcemap";
   }
-  const { contentType } = urlInfo
+  const { contentType } = urlInfo;
   if (contentType === "text/html") {
-    return "html"
+    return "html";
   }
   if (contentType === "text/css") {
-    return "css"
+    return "css";
   }
   if (contentType === "text/javascript") {
-    if (urlInfo.typeHint === "js_classic") return "js_classic"
-    return "js_module"
+    if (urlInfo.typeHint === "js_classic") return "js_classic";
+    return "js_module";
   }
   if (contentType === "application/importmap+json") {
-    return "importmap"
+    return "importmap";
   }
   if (contentType === "application/manifest+json") {
-    return "webmanifest"
+    return "webmanifest";
   }
   if (contentType === "image/svg+xml") {
-    return "svg"
+    return "svg";
   }
   if (CONTENT_TYPE.isJson(contentType)) {
-    return "json"
+    return "json";
   }
   if (CONTENT_TYPE.isTextual(contentType)) {
-    return "text"
+    return "text";
   }
-  return "other"
-}
+  return "other";
+};
 
 const determineFileUrlForOutDirectory = ({ urlInfo, context }) => {
   if (!context.outDirectoryUrl) {
-    return urlInfo.url
+    return urlInfo.url;
   }
   if (!urlInfo.url.startsWith("file:")) {
-    return urlInfo.url
+    return urlInfo.url;
   }
-  let url = urlInfo.url
+  let url = urlInfo.url;
   if (!urlIsInsideOf(urlInfo.url, context.rootDirectoryUrl)) {
-    const fsRootUrl = ensureWindowsDriveLetter("file:///", urlInfo.url)
-    url = `${context.rootDirectoryUrl}@fs/${url.slice(fsRootUrl.length)}`
+    const fsRootUrl = ensureWindowsDriveLetter("file:///", urlInfo.url);
+    url = `${context.rootDirectoryUrl}@fs/${url.slice(fsRootUrl.length)}`;
   }
   if (urlInfo.filename) {
-    url = setUrlFilename(url, urlInfo.filename)
+    url = setUrlFilename(url, urlInfo.filename);
   }
   return moveUrl({
     url,
     from: context.rootDirectoryUrl,
     to: context.outDirectoryUrl,
-  })
-}
+  });
+};

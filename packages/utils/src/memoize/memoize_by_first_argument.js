@@ -1,19 +1,19 @@
 export const memoizeByFirstArgument = (compute) => {
-  const urlCache = new Map()
+  const urlCache = new Map();
 
   const fnWithMemoization = (url, ...args) => {
-    const valueFromCache = urlCache.get(url)
+    const valueFromCache = urlCache.get(url);
     if (valueFromCache) {
-      return valueFromCache
+      return valueFromCache;
     }
-    const value = compute(url, ...args)
-    urlCache.set(url, value)
-    return value
-  }
+    const value = compute(url, ...args);
+    urlCache.set(url, value);
+    return value;
+  };
 
   fnWithMemoization.forget = () => {
-    urlCache.clear()
-  }
+    urlCache.clear();
+  };
 
-  return fnWithMemoization
-}
+  return fnWithMemoization;
+};

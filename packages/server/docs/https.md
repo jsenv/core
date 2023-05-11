@@ -3,10 +3,10 @@
 The default server protocol is "http".
 
 ```js
-import { startServer } from "@jsenv/server"
+import { startServer } from "@jsenv/server";
 
-const server = await startServer()
-server.origin.startsWith("http://") // true
+const server = await startServer();
+server.origin.startsWith("http://"); // true
 ```
 
 Server can be started in "https" as shown in the code below
@@ -29,14 +29,14 @@ If you don't have these certificate files you can use [@jsenv/https-local](https
 to generate a certificate dynamically.
 
 ```js
-import { requestCertificate } from "@jsenv/https-local"
-import { startServer } from "@jsenv/server"
+import { requestCertificate } from "@jsenv/https-local";
+import { startServer } from "@jsenv/server";
 
-const { certificate, privateKey } = requestCertificate()
+const { certificate, privateKey } = requestCertificate();
 const server = await startServer({
   https: { certificate, privateKey },
-})
-server.origin.startsWith("https://") // true
+});
+server.origin.startsWith("https://"); // true
 ```
 
 ## Http redirection
@@ -46,23 +46,23 @@ By default, a server started in https will redirect http requests to https.
 You can disable this behaviour using _redirectHttpToHttps_ parameter.
 
 ```js
-import { requestCertificate } from "@jsenv/https-local"
-import { startServer } from "@jsenv/server"
+import { requestCertificate } from "@jsenv/https-local";
+import { startServer } from "@jsenv/server";
 
-const { certificate, privateKey } = requestCertificate()
+const { certificate, privateKey } = requestCertificate();
 await startServer({
   https: { certificate, privateKey },
   redirectHttpToHttps: false,
-})
+});
 ```
 
 When "http to https redirection" is disabled, the server ignores http request. If you want to do something special for request made in "http" while your server is "https", you can use _allowHttpRequestOnHttps_ parameter.
 
 ```js
-import { requestCertificate } from "@jsenv/https-local"
-import { startServer } from "@jsenv/server"
+import { requestCertificate } from "@jsenv/https-local";
+import { startServer } from "@jsenv/server";
 
-const { certificate, privateKey } = requestCertificate()
+const { certificate, privateKey } = requestCertificate();
 await startServer({
   https: { certificate, privateKey },
   redirectHttpToHttps: false,
@@ -70,7 +70,7 @@ await startServer({
   services: [
     {
       handleRequest: (request) => {
-        const clientUsesHttp = request.origin.startsWith("http:")
+        const clientUsesHttp = request.origin.startsWith("http:");
 
         return {
           status: 200,
@@ -78,11 +78,11 @@ await startServer({
             "content-type": "text/plain",
           },
           body: clientUsesHttp ? `Welcome http user` : `Welcome https user`,
-        }
+        };
       },
     },
   ],
-})
+});
 ```
 
 ## http2 (experimental)
@@ -90,29 +90,29 @@ await startServer({
 You can enable http2 using _http2_ parameter
 
 ```js
-import { requestCertificate } from "@jsenv/https-local"
-import { startServer } from "@jsenv/server"
+import { requestCertificate } from "@jsenv/https-local";
+import { startServer } from "@jsenv/server";
 
-const { certificate, privateKey } = requestCertificate()
+const { certificate, privateKey } = requestCertificate();
 await startServer({
   https: { certificate, privateKey },
   http2: true,
-})
+});
 ```
 
 When http2 is enabled, server still accepts requests made using http1.
 You can disable http1 fallback using _http1Allowed_ parameter.
 
 ```js
-import { requestCertificate } from "@jsenv/https-local"
-import { startServer } from "@jsenv/server"
+import { requestCertificate } from "@jsenv/https-local";
+import { startServer } from "@jsenv/server";
 
-const { certificate, privateKey } = requestCertificate()
+const { certificate, privateKey } = requestCertificate();
 await startServer({
   https: { certificate, privateKey },
   http2: true,
   http1Allowed: false,
-})
+});
 ```
 
 see [allowHTTP1 documentation on Node.js](https://nodejs.org/dist/latest-v13.x/docs/api/http2.html#http2_http2_createsecureserver_options_onrequesthandler)

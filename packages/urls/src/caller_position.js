@@ -1,15 +1,15 @@
-import { isFileSystemPath } from "./is_filesystem_path.js"
-import { fileSystemPathToUrl } from "./filesystem_path_to_url.js"
+import { isFileSystemPath } from "./is_filesystem_path.js";
+import { fileSystemPathToUrl } from "./filesystem_path_to_url.js";
 
 export const getCallerPosition = () => {
-  const { prepareStackTrace } = Error
+  const { prepareStackTrace } = Error;
   Error.prepareStackTrace = (error, stack) => {
-    Error.prepareStackTrace = prepareStackTrace
-    return stack
-  }
-  const { stack } = new Error()
-  const callerCallsite = stack[2]
-  const fileName = callerCallsite.getFileName()
+    Error.prepareStackTrace = prepareStackTrace;
+    return stack;
+  };
+  const { stack } = new Error();
+  const callerCallsite = stack[2];
+  const fileName = callerCallsite.getFileName();
   return {
     url:
       fileName && isFileSystemPath(fileName)
@@ -17,5 +17,5 @@ export const getCallerPosition = () => {
         : fileName,
     line: callerCallsite.getLineNumber(),
     column: callerCallsite.getColumnNumber(),
-  }
-}
+  };
+};

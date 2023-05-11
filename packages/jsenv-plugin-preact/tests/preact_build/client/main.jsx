@@ -1,9 +1,9 @@
-import { render } from "preact"
+import { render } from "preact";
 
-const { App } = await import("./app.jsx")
+const { App } = await import("./app.jsx");
 
-render(<App />, document.querySelector("#app"))
+render(<App />, document.querySelector("#app"));
 
 window.resolveResultPromise({
   spanContent: document.querySelector("#app span").innerHTML,
-})
+});

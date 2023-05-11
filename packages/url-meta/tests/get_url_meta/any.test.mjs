@@ -1,6 +1,6 @@
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-import { URL_META } from "@jsenv/url-meta"
+import { URL_META } from "@jsenv/url-meta";
 
 {
   const actual = URL_META.applyAssociations({
@@ -10,9 +10,9 @@ import { URL_META } from "@jsenv/url-meta"
         "file:///**/*": true,
       },
     },
-  })
-  const expected = { a: true }
-  assert({ actual, expected })
+  });
+  const expected = { a: true };
+  assert({ actual, expected });
 }
 
 {
@@ -23,9 +23,9 @@ import { URL_META } from "@jsenv/url-meta"
         "file:///**/*": true,
       },
     },
-  })
-  const expected = { a: true }
-  assert({ actual, expected })
+  });
+  const expected = { a: true };
+  assert({ actual, expected });
 }
 
 {
@@ -36,9 +36,9 @@ import { URL_META } from "@jsenv/url-meta"
         "file:///a/**/*.test.js": true,
       },
     },
-  })
-  const expected = {}
-  assert({ actual, expected })
+  });
+  const expected = {};
+  assert({ actual, expected });
 }
 
 {
@@ -49,9 +49,9 @@ import { URL_META } from "@jsenv/url-meta"
         "file:///a/**/*.test.js": true,
       },
     },
-  })
-  const expected = { a: true }
-  assert({ actual, expected })
+  });
+  const expected = { a: true };
+  assert({ actual, expected });
 }
 
 {
@@ -62,9 +62,9 @@ import { URL_META } from "@jsenv/url-meta"
         "file:///a/**/*.test.js": true,
       },
     },
-  })
-  const expected = {}
-  assert({ actual, expected })
+  });
+  const expected = {};
+  assert({ actual, expected });
 }
 
 {
@@ -75,9 +75,9 @@ import { URL_META } from "@jsenv/url-meta"
         "file:///a/**/*.test.js": true,
       },
     },
-  })
-  const expected = { a: true }
-  assert({ actual, expected })
+  });
+  const expected = { a: true };
+  assert({ actual, expected });
 }
 
 {
@@ -88,7 +88,7 @@ import { URL_META } from "@jsenv/url-meta"
         "file:///**/*.js": true,
       },
     },
-  })
-  const expected = { a: true }
-  assert({ actual, expected })
+  });
+  const expected = { a: true };
+  assert({ actual, expected });
 }

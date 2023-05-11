@@ -1,16 +1,16 @@
-import "./file.js"
+import "./file.js";
 
-const textFileUrl = new URL("./file.txt", import.meta.url).href
-console.log(textFileUrl)
+const textFileUrl = new URL("./file.txt", import.meta.url).href;
+console.log(textFileUrl);
 const absoluteUrl = new URL("http://example.com/file.txt", "https://jsenv.dev")
-  .href
-console.log(absoluteUrl)
+  .href;
+console.log(absoluteUrl);
 
 const windowLocationRelativeUrl = {
   toto: new URL("./file.txt", window.location).href,
-}.toto
-const windowOriginRelativeUrl = new URL("./src/file.txt", window.origin).href
-const absoluteBaseUrl = new URL("./file.txt", "http://jsenv.dev").href
+}.toto;
+const windowOriginRelativeUrl = new URL("./src/file.txt", window.origin).href;
+const absoluteBaseUrl = new URL("./file.txt", "http://jsenv.dev").href;
 
 window.resolveResultPromise({
   textFileUrl,
@@ -18,4 +18,4 @@ window.resolveResultPromise({
   windowLocationRelativeUrl,
   windowOriginRelativeUrl,
   absoluteBaseUrl,
-})
+});

@@ -1,18 +1,18 @@
-import { readFileSync } from "node:fs"
-import { serveDirectory, composeTwoResponses } from "@jsenv/server"
-import { bufferToEtag } from "@jsenv/filesystem"
-import { asUrlWithoutSearch } from "@jsenv/urls"
-import { URL_META } from "@jsenv/url-meta"
+import { readFileSync } from "node:fs";
+import { serveDirectory, composeTwoResponses } from "@jsenv/server";
+import { bufferToEtag } from "@jsenv/filesystem";
+import { asUrlWithoutSearch } from "@jsenv/urls";
+import { URL_META } from "@jsenv/url-meta";
 
-import { WEB_URL_CONVERTER } from "../helpers/web_url_converter.js"
-import { watchSourceFiles } from "../helpers/watch_source_files.js"
-import { createUrlGraph } from "../kitchen/url_graph.js"
-import { createKitchen } from "../kitchen/kitchen.js"
-import { RUNTIME_COMPAT } from "../kitchen/compat/runtime_compat.js"
-import { getCorePlugins } from "../plugins/plugins.js"
-import { explorerHtmlFileUrl } from "../plugins/explorer/jsenv_plugin_explorer.js"
-import { jsenvPluginServerEventsClientInjection } from "../plugins/server_events/jsenv_plugin_server_events_client_injection.js"
-import { parseUserAgentHeader } from "./user_agent.js"
+import { WEB_URL_CONVERTER } from "../helpers/web_url_converter.js";
+import { watchSourceFiles } from "../helpers/watch_source_files.js";
+import { createUrlGraph } from "../kitchen/url_graph.js";
+import { createKitchen } from "../kitchen/kitchen.js";
+import { RUNTIME_COMPAT } from "../kitchen/compat/runtime_compat.js";
+import { getCorePlugins } from "../plugins/plugins.js";
+import { explorerHtmlFileUrl } from "../plugins/explorer/jsenv_plugin_explorer.js";
+import { jsenvPluginServerEventsClientInjection } from "../plugins/server_events/jsenv_plugin_server_events_client_injection.js";
+import { parseUserAgentHeader } from "./user_agent.js";
 
 export const createFileService = ({
   signal,
@@ -42,64 +42,64 @@ export const createFileService = ({
   sourcemapsSourcesContent,
   outDirectoryUrl,
 }) => {
-  const clientFileChangeCallbackList = []
-  const clientFilesPruneCallbackList = []
+  const clientFileChangeCallbackList = [];
+  const clientFilesPruneCallbackList = [];
   const stopWatchingSourceFiles = watchSourceFiles(
     sourceDirectoryUrl,
     (fileInfo) => {
       clientFileChangeCallbackList.forEach((callback) => {
-        callback(fileInfo)
-      })
+        callback(fileInfo);
+      });
     },
     {
       sourceFilesConfig,
       keepProcessAlive: false,
       cooldownBetweenFileEvents,
     },
-  )
-  serverStopCallbacks.push(stopWatchingSourceFiles)
+  );
+  serverStopCallbacks.push(stopWatchingSourceFiles);
 
   const getOrCreateContext = (request) => {
     const { runtimeName, runtimeVersion } = parseUserAgentHeader(
       request.headers["user-agent"] || "",
-    )
-    const runtimeId = `${runtimeName}@${runtimeVersion}`
-    const existingContext = contextCache.get(runtimeId)
+    );
+    const runtimeId = `${runtimeName}@${runtimeVersion}`;
+    const existingContext = contextCache.get(runtimeId);
     if (existingContext) {
-      return existingContext
+      return existingContext;
     }
     const watchAssociations = URL_META.resolveAssociations(
       { watch: stopWatchingSourceFiles.watchPatterns },
       sourceDirectoryUrl,
-    )
+    );
     const urlGraph = createUrlGraph({
       name: runtimeId,
-    })
+    });
     clientFileChangeCallbackList.push(({ url }) => {
       const onUrlInfo = (urlInfo) => {
-        urlGraph.considerModified(urlInfo)
-      }
-      const exactUrlInfo = urlGraph.getUrlInfo(url)
+        urlGraph.considerModified(urlInfo);
+      };
+      const exactUrlInfo = urlGraph.getUrlInfo(url);
       if (exactUrlInfo) {
-        onUrlInfo(exactUrlInfo)
+        onUrlInfo(exactUrlInfo);
       }
       urlGraph.urlInfoMap.forEach((urlInfo) => {
-        if (urlInfo === exactUrlInfo) return
-        const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url)
-        if (urlWithoutSearch !== url) return
-        if (exactUrlInfo && exactUrlInfo.dependents.has(urlInfo.url)) return
-        onUrlInfo(urlInfo)
-      })
-    })
-    const clientRuntimeCompat = { [runtimeName]: runtimeVersion }
+        if (urlInfo === exactUrlInfo) return;
+        const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
+        if (urlWithoutSearch !== url) return;
+        if (exactUrlInfo && exactUrlInfo.dependents.has(urlInfo.url)) return;
+        onUrlInfo(urlInfo);
+      });
+    });
+    const clientRuntimeCompat = { [runtimeName]: runtimeVersion };
 
-    let defaultFileUrl
+    let defaultFileUrl;
     if (explorer) {
-      defaultFileUrl = String(explorerHtmlFileUrl)
+      defaultFileUrl = String(explorerHtmlFileUrl);
     } else if (sourceMainFilePath) {
-      defaultFileUrl = String(new URL(sourceMainFilePath, sourceDirectoryUrl))
+      defaultFileUrl = String(new URL(sourceMainFilePath, sourceDirectoryUrl));
     } else {
-      defaultFileUrl = String(new URL("./index.html", sourceDirectoryUrl))
+      defaultFileUrl = String(new URL("./index.html", sourceDirectoryUrl));
     }
 
     const kitchen = createKitchen({
@@ -146,77 +146,77 @@ export const createFileService = ({
       outDirectoryUrl: outDirectoryUrl
         ? new URL(`${runtimeName}@${runtimeVersion}/`, outDirectoryUrl)
         : undefined,
-    })
+    });
     urlGraph.createUrlInfoCallbackRef.current = (urlInfo) => {
       const { watch } = URL_META.applyAssociations({
         url: urlInfo.url,
         associations: watchAssociations,
-      })
-      urlInfo.isWatched = watch
+      });
+      urlInfo.isWatched = watch;
       // si une urlInfo dépends de pleins d'autres alors
       // on voudrait check chacune de ces url infos (package.json dans mon cas)
       urlInfo.isValid = () => {
         if (!urlInfo.url.startsWith("file:")) {
-          return false
+          return false;
         }
         if (watch && urlInfo.contentEtag === undefined) {
           // we trust the watching mecanism
           // doing urlInfo.contentEtag = undefined
           // when file is modified
-          return false
+          return false;
         }
         if (!watch && urlInfo.contentEtag) {
           // file is not watched, check the filesystem
-          let fileContentAsBuffer
+          let fileContentAsBuffer;
           try {
-            fileContentAsBuffer = readFileSync(new URL(urlInfo.url))
+            fileContentAsBuffer = readFileSync(new URL(urlInfo.url));
           } catch (e) {
             if (e.code === "ENOENT") {
               // we should consider calling urlGraph.deleteUrlInfo(urlInfo)
-              urlInfo.originalContentEtag = undefined
-              urlInfo.contentEtag = undefined
-              return false
+              urlInfo.originalContentEtag = undefined;
+              urlInfo.contentEtag = undefined;
+              return false;
             }
-            return false
+            return false;
           }
-          const fileContentEtag = bufferToEtag(fileContentAsBuffer)
+          const fileContentEtag = bufferToEtag(fileContentAsBuffer);
           if (fileContentEtag !== urlInfo.originalContentEtag) {
             // we should consider calling urlGraph.considerModified(urlInfo)
-            urlInfo.originalContentEtag = undefined
-            urlInfo.contentEtag = undefined
-            return false
+            urlInfo.originalContentEtag = undefined;
+            urlInfo.contentEtag = undefined;
+            return false;
           }
         }
         for (const implicitUrl of urlInfo.implicitUrls) {
-          const implicitUrlInfo = context.urlGraph.getUrlInfo(implicitUrl)
+          const implicitUrlInfo = context.urlGraph.getUrlInfo(implicitUrl);
           if (implicitUrlInfo && !implicitUrlInfo.isValid()) {
-            return false
+            return false;
           }
         }
-        return true
-      }
-    }
+        return true;
+      };
+    };
     urlGraph.prunedUrlInfosCallbackRef.current = (urlInfos, firstUrlInfo) => {
       clientFilesPruneCallbackList.forEach((callback) => {
-        callback(urlInfos, firstUrlInfo)
-      })
-    }
+        callback(urlInfos, firstUrlInfo);
+      });
+    };
     serverStopCallbacks.push(() => {
-      kitchen.pluginController.callHooks("destroy", kitchen.kitchenContext)
-    })
+      kitchen.pluginController.callHooks("destroy", kitchen.kitchenContext);
+    });
     server_events: {
-      const allServerEvents = {}
+      const allServerEvents = {};
       kitchen.pluginController.plugins.forEach((plugin) => {
-        const { serverEvents } = plugin
+        const { serverEvents } = plugin;
         if (serverEvents) {
           Object.keys(serverEvents).forEach((serverEventName) => {
             // we could throw on serverEvent name conflict
             // we could throw if serverEvents[serverEventName] is not a function
-            allServerEvents[serverEventName] = serverEvents[serverEventName]
-          })
+            allServerEvents[serverEventName] = serverEvents[serverEventName];
+          });
         }
-      })
-      const serverEventNames = Object.keys(allServerEvents)
+      });
+      const serverEventNames = Object.keys(allServerEvents);
       if (serverEventNames.length > 0) {
         Object.keys(allServerEvents).forEach((serverEventName) => {
           allServerEvents[serverEventName]({
@@ -227,14 +227,14 @@ export const createFileService = ({
               serverEventsDispatcher.dispatch({
                 type: serverEventName,
                 data,
-              })
+              });
             },
-          })
-        })
+          });
+        });
         // "pushPlugin" so that event source client connection can be put as early as possible in html
         kitchen.pluginController.pushPlugin(
           jsenvPluginServerEventsClientInjection(),
-        )
+        );
       }
     }
 
@@ -245,26 +245,26 @@ export const createFileService = ({
       runtimeVersion,
       urlGraph,
       kitchen,
-    }
-    contextCache.set(runtimeId, context)
-    return context
-  }
+    };
+    contextCache.set(runtimeId, context);
+    return context;
+  };
 
   return async (request) => {
-    const { urlGraph, kitchen } = getOrCreateContext(request)
+    const { urlGraph, kitchen } = getOrCreateContext(request);
     const responseFromPlugin =
       await kitchen.pluginController.callAsyncHooksUntil(
         "serve",
         request,
         kitchen.kitchenContext,
-      )
+      );
     if (responseFromPlugin) {
-      return responseFromPlugin
+      return responseFromPlugin;
     }
-    let reference
-    const parentUrl = inferParentFromRequest(request, sourceDirectoryUrl)
+    let reference;
+    const parentUrl = inferParentFromRequest(request, sourceDirectoryUrl);
     if (parentUrl) {
-      reference = urlGraph.inferReference(request.resource, parentUrl)
+      reference = urlGraph.inferReference(request.resource, parentUrl);
     }
     if (!reference) {
       const entryPoint = kitchen.injectReference({
@@ -272,17 +272,17 @@ export const createFileService = ({
         parentUrl: parentUrl || sourceDirectoryUrl,
         type: "http_request",
         specifier: request.resource,
-      })
-      reference = entryPoint[0]
+      });
+      reference = entryPoint[0];
     }
-    const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url)
-    const ifNoneMatch = request.headers["if-none-match"]
-    const urlInfoTargetedByCache = urlGraph.getParentIfInline(urlInfo)
+    const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url);
+    const ifNoneMatch = request.headers["if-none-match"];
+    const urlInfoTargetedByCache = urlGraph.getParentIfInline(urlInfo);
 
     try {
       if (ifNoneMatch) {
         const [clientOriginalContentEtag, clientContentEtag] =
-          ifNoneMatch.split("_")
+          ifNoneMatch.split("_");
         if (
           urlInfoTargetedByCache.originalContentEtag ===
             clientOriginalContentEtag &&
@@ -291,16 +291,16 @@ export const createFileService = ({
         ) {
           const headers = {
             "cache-control": `private,max-age=0,must-revalidate`,
-          }
+          };
           Object.keys(urlInfo.headers).forEach((key) => {
             if (key !== "content-length") {
-              headers[key] = urlInfo.headers[key]
+              headers[key] = urlInfo.headers[key];
             }
-          })
+          });
           return {
             status: 304,
             headers,
-          }
+          };
         }
       }
 
@@ -310,23 +310,23 @@ export const createFileService = ({
         !urlInfo.isInline &&
         urlInfo.type !== "sourcemap"
       ) {
-        urlInfo.error = null
-        urlInfo.sourcemap = null
-        urlInfo.sourcemapIsWrong = null
-        urlInfo.sourcemapReference = null
-        urlInfo.content = null
-        urlInfo.originalContent = null
-        urlInfo.type = null
-        urlInfo.subtype = null
-        urlInfo.timing = {}
+        urlInfo.error = null;
+        urlInfo.sourcemap = null;
+        urlInfo.sourcemapIsWrong = null;
+        urlInfo.sourcemapReference = null;
+        urlInfo.content = null;
+        urlInfo.originalContent = null;
+        urlInfo.type = null;
+        urlInfo.subtype = null;
+        urlInfo.timing = {};
       }
       await kitchen.cook(urlInfo, {
         request,
         reference,
-      })
-      let { response } = urlInfo
+      });
+      let { response } = urlInfo;
       if (response) {
-        return response
+        return response;
       }
       response = {
         url: reference.url,
@@ -351,23 +351,23 @@ export const createFileService = ({
         },
         body: urlInfo.content,
         timing: urlInfo.timing,
-      }
+      };
       kitchen.pluginController.callHooks(
         "augmentResponse",
         { reference, urlInfo },
         kitchen.kitchenContext,
         (returnValue) => {
-          response = composeTwoResponses(response, returnValue)
+          response = composeTwoResponses(response, returnValue);
         },
-      )
-      return response
+      );
+      return response;
     } catch (e) {
-      urlInfo.error = e
-      const originalError = e ? e.cause || e : e
+      urlInfo.error = e;
+      const originalError = e ? e.cause || e : e;
       if (originalError.asResponse) {
-        return originalError.asResponse()
+        return originalError.asResponse();
       }
-      const code = originalError.code
+      const code = originalError.code;
       if (code === "PARSE_ERROR") {
         // when possible let browser re-throw the syntax error
         // it's not possible to do that when url info content is not available
@@ -386,7 +386,7 @@ export const createFileService = ({
               "cache-control": "no-store",
             },
             body: urlInfo.content,
-          }
+          };
         }
         return {
           url: reference.url,
@@ -397,7 +397,7 @@ export const createFileService = ({
             "cache-control": "no-store",
           },
           body: urlInfo.content,
-        }
+        };
       }
       if (code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
         return serveDirectory(reference.url, {
@@ -406,14 +406,14 @@ export const createFileService = ({
           },
           canReadDirectory: true,
           rootDirectoryUrl: sourceDirectoryUrl,
-        })
+        });
       }
       if (code === "NOT_ALLOWED") {
         return {
           url: reference.url,
           status: 403,
           statusText: originalError.reason,
-        }
+        };
       }
       if (code === "NOT_FOUND") {
         return {
@@ -421,28 +421,28 @@ export const createFileService = ({
           status: 404,
           statusText: originalError.reason,
           statusMessage: originalError.message,
-        }
+        };
       }
       return {
         url: reference.url,
         status: 500,
         statusText: e.reason,
         statusMessage: e.stack,
-      }
+      };
     }
-  }
-}
+  };
+};
 
 const inferParentFromRequest = (request, sourceDirectoryUrl) => {
-  const { referer } = request.headers
+  const { referer } = request.headers;
   if (!referer) {
-    return null
+    return null;
   }
-  const refererUrlObject = new URL(referer)
-  refererUrlObject.searchParams.delete("hmr")
-  refererUrlObject.searchParams.delete("v")
+  const refererUrlObject = new URL(referer);
+  refererUrlObject.searchParams.delete("hmr");
+  refererUrlObject.searchParams.delete("v");
   return WEB_URL_CONVERTER.asFileUrl(referer, {
     origin: request.origin,
     rootDirectoryUrl: sourceDirectoryUrl,
-  })
-}
+  });
+};

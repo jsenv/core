@@ -2,61 +2,61 @@
  * https://github.com/mozilla/source-map#sourcemapgenerator
  */
 
-import { requireSourcemap } from "./require_sourcemap.js"
+import { requireSourcemap } from "./require_sourcemap.js";
 
-const { SourceMapConsumer, SourceMapGenerator } = requireSourcemap()
+const { SourceMapConsumer, SourceMapGenerator } = requireSourcemap();
 
 export const composeTwoSourcemaps = (firstSourcemap, secondSourcemap) => {
   if (!firstSourcemap && !secondSourcemap) {
-    return null
+    return null;
   }
   if (!firstSourcemap) {
-    return secondSourcemap
+    return secondSourcemap;
   }
   if (!secondSourcemap) {
-    return firstSourcemap
+    return firstSourcemap;
   }
-  const sourcemapGenerator = new SourceMapGenerator()
-  const firstSourcemapConsumer = new SourceMapConsumer(firstSourcemap)
-  const secondSourcemapConsumer = new SourceMapConsumer(secondSourcemap)
-  const firstMappings = readMappings(firstSourcemapConsumer)
+  const sourcemapGenerator = new SourceMapGenerator();
+  const firstSourcemapConsumer = new SourceMapConsumer(firstSourcemap);
+  const secondSourcemapConsumer = new SourceMapConsumer(secondSourcemap);
+  const firstMappings = readMappings(firstSourcemapConsumer);
   firstMappings.forEach((mapping) => {
-    sourcemapGenerator.addMapping(mapping)
-  })
-  const secondMappings = readMappings(secondSourcemapConsumer)
+    sourcemapGenerator.addMapping(mapping);
+  });
+  const secondMappings = readMappings(secondSourcemapConsumer);
   secondMappings.forEach((mapping) => {
-    sourcemapGenerator.addMapping(mapping)
-  })
-  const sourcemap = sourcemapGenerator.toJSON()
-  const sources = []
-  const sourcesContent = []
-  const firstSourcesContent = firstSourcemap.sourcesContent
-  const secondSourcesContent = secondSourcemap.sourcesContent
+    sourcemapGenerator.addMapping(mapping);
+  });
+  const sourcemap = sourcemapGenerator.toJSON();
+  const sources = [];
+  const sourcesContent = [];
+  const firstSourcesContent = firstSourcemap.sourcesContent;
+  const secondSourcesContent = secondSourcemap.sourcesContent;
   sourcemap.sources.forEach((source) => {
-    sources.push(source)
+    sources.push(source);
     if (secondSourcesContent) {
-      const secondSourceIndex = secondSourcemap.sources.indexOf(source)
+      const secondSourceIndex = secondSourcemap.sources.indexOf(source);
       if (secondSourceIndex > -1) {
-        sourcesContent.push(secondSourcesContent[secondSourceIndex])
-        return
+        sourcesContent.push(secondSourcesContent[secondSourceIndex]);
+        return;
       }
     }
     if (firstSourcesContent) {
-      const firstSourceIndex = firstSourcemap.sources.indexOf(source)
+      const firstSourceIndex = firstSourcemap.sources.indexOf(source);
       if (firstSourceIndex > -1) {
-        sourcesContent.push(firstSourcesContent[firstSourceIndex])
-        return
+        sourcesContent.push(firstSourcesContent[firstSourceIndex]);
+        return;
       }
     }
-    sourcesContent.push(null)
-  })
-  sourcemap.sources = sources
-  sourcemap.sourcesContent = sourcesContent
-  return sourcemap
-}
+    sourcesContent.push(null);
+  });
+  sourcemap.sources = sources;
+  sourcemap.sourcesContent = sourcesContent;
+  return sourcemap;
+};
 
 const readMappings = (consumer) => {
-  const mappings = []
+  const mappings = [];
   consumer.eachMapping(
     ({
       originalColumn,
@@ -80,8 +80,8 @@ const readMappings = (consumer) => {
         },
         source: typeof originalColumn === "number" ? source : undefined,
         name,
-      })
+      });
     },
-  )
-  return mappings
-}
+  );
+  return mappings;
+};

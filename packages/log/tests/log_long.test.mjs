@@ -3,9 +3,9 @@
 // either the whole log can be rewritten (updated)
 // or it will be kept and second log appended at the bottom
 
-import { createLog } from "@jsenv/log"
+import { createLog } from "@jsenv/log";
 
-const log = createLog()
+const log = createLog();
 log.write(`1
 2
 3
@@ -23,14 +23,14 @@ log.write(`1
 15
 16
 17
-18`)
+18`);
 log.write(`a
 b
 c
 d
 e
 f
-g`)
+g`);
 log.write(`alpha
 beta
-gamma`)
+gamma`);

@@ -13,7 +13,7 @@ npm i --save-dev @jsenv/assert
 ```
 
 ```js
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 ```
 
 ## Using _@jsenv/assert_ in a browser
@@ -22,7 +22,7 @@ import { assert } from "@jsenv/assert"
 
 ```html
 <script type="module">
-  import { assert } from "https://unpkg.com/@jsenv/assert@latest/src/main.js"
+  import { assert } from "https://unpkg.com/@jsenv/assert@latest/src/main.js";
 </script>
 ```
 
@@ -34,12 +34,12 @@ npm i --save-dev @jsenv/assert
 
 ```html
 <script type="module">
-  import { assert } from "@jsenv/assert"
+  import { assert } from "@jsenv/assert";
 
   assert({
     actual: true,
     expected: false,
-  })
+  });
 </script>
 ```
 
@@ -78,25 +78,27 @@ export const getCircleArea = (circleRadius) => {
   if (isNaN(circleRadius)) {
     throw new TypeError(
       `circleRadius must be a number, received ${circleRadius}`,
-    )
+    );
   }
-  return circleRadius * circleRadius * Math.PI
-}
+  return circleRadius * circleRadius * Math.PI;
+};
 ```
 
 _circle.test.js_
 
 ```js
-import { assert } from "@jsenv/assert"
-import { getCircleArea } from "./circle.js"
+import { assert } from "@jsenv/assert";
+import { getCircleArea } from "./circle.js";
 
 try {
-  getCircleArea("toto")
-  throw new Error("should throw") // this line throw if getCircleArea does not throw as it should
+  getCircleArea("toto");
+  throw new Error("should throw"); // this line throw if getCircleArea does not throw as it should
 } catch (error) {
-  const actual = error
-  const expected = new TypeError(`circleRadius must be a number, received toto`)
-  assert({ actual, expected })
+  const actual = error;
+  const expected = new TypeError(
+    `circleRadius must be a number, received toto`,
+  );
+  assert({ actual, expected });
 }
 ```
 
@@ -121,35 +123,35 @@ export const createAbortSignal = () => {
   const abortSignal = {
     onabort: () => {},
     abort: () => {
-      abortSignal.onabort()
+      abortSignal.onabort();
     },
-  }
+  };
 
-  return abortSignal
-}
+  return abortSignal;
+};
 ```
 
 _abort_signal.test.js_
 
 ```js
 // This test ensures calling abortSignal.abort is calling abortSignal.onabort()
-import { assert } from "@jsenv/assert"
-import { createAbortSignal } from "./abort_signal.js"
+import { assert } from "@jsenv/assert";
+import { createAbortSignal } from "./abort_signal.js";
 
 // arrange
-const abortSignal = createAbortSignal()
-let called = false
+const abortSignal = createAbortSignal();
+let called = false;
 abortSignal.onabort = () => {
-  called = true
-}
+  called = true;
+};
 
 // act
-abortSignal.abort()
+abortSignal.abort();
 
 // assert
-const actual = called
-const expected = true
-assert({ actual, expected })
+const actual = called;
+const expected = true;
+assert({ actual, expected });
 ```
 
 > Code above is a great example of [the AAA pattern](#The-AAA-pattern).
@@ -160,27 +162,27 @@ _call_me_maybe.js_
 
 ```js
 export const callAfter50Ms = (callback) => {
-  setTimeout(callback, 50)
-}
+  setTimeout(callback, 50);
+};
 ```
 
 _call_me_maybe.test.js_
 
 ```js
-import { assert } from "@jsenv/assert"
-import { callAfter50Ms } from "./call_me_maybe.js"
+import { assert } from "@jsenv/assert";
+import { callAfter50Ms } from "./call_me_maybe.js";
 
-let called = false
+let called = false;
 callAfter50Ms(() => {
-  called = true
-})
+  called = true;
+});
 
 // Wait 80ms, then assert callback was called
-await new Promise((resolve) => setTimeout(resolve, 80))
+await new Promise((resolve) => setTimeout(resolve, 80));
 
-const actual = called
-const expected = true
-assert({ actual, expected })
+const actual = called;
+const expected = true;
+assert({ actual, expected });
 ```
 
 ### Assert any value of a given type
@@ -192,23 +194,23 @@ export const createUser = () => {
   return {
     name: "sam",
     creationTime: Date.now(),
-  }
-}
+  };
+};
 ```
 
 _user.test.js_
 
 ```js
-import { assert } from "@jsenv/assert"
-import { createUser } from "./user.js"
+import { assert } from "@jsenv/assert";
+import { createUser } from "./user.js";
 
-const user = createUser()
-const actual = user
+const user = createUser();
+const actual = user;
 const expected = {
   name: "sam",
   creationTime: assert.any(Number),
-}
-assert({ actual, expected })
+};
+assert({ actual, expected });
 ```
 
 ### Assert an other value
@@ -217,24 +219,24 @@ _randomize_user_name.js_
 
 ```js
 export const getRandomDifferentUserName = (user) => {
-  const randomName = getRandomName()
+  const randomName = getRandomName();
   if (randomName === user.name) {
-    return getRandomDifferentUserName(user)
+    return getRandomDifferentUserName(user);
   }
-  return randomName
-}
+  return randomName;
+};
 
 const getRandomName = () => {
   return Array.from({ length: 4 })
     .map(() => getRandomLetter())
-    .join("")
-}
+    .join("");
+};
 
 const getRandomLetter = () => {
-  return ALPHABET.charAt(Math.floor(Math.random() * ALPHABET.length))
-}
+  return ALPHABET.charAt(Math.floor(Math.random() * ALPHABET.length));
+};
 
-const ALPHABET = "abcdefghijklmnopqrstuvwxyz"
+const ALPHABET = "abcdefghijklmnopqrstuvwxyz";
 ```
 
 _randomize_user_name.test.js_
@@ -242,13 +244,13 @@ _randomize_user_name.test.js_
 ```js
 // Here we want to ensure the value returned by getRandomDifferentUserName
 // is not the curent user name, the value itself is not important
-import { assert } from "@jsenv/assert"
-import { getRandomDifferentUserName } from "./_randomize_user_name.js"
+import { assert } from "@jsenv/assert";
+import { getRandomDifferentUserName } from "./_randomize_user_name.js";
 
-const name = getRandomDifferentUserName({ name: "toto" })
-const actual = name
-const expected = assert.not("toto")
-assert({ actual, expected })
+const name = getRandomDifferentUserName({ name: "toto" });
+const actual = name;
+const expected = assert.not("toto");
+assert({ actual, expected });
 ```
 
 ### Assert subset of properties
@@ -261,8 +263,8 @@ export const getUser = () => {
     name: "sam",
     age: 32,
     friends: [], // poor sam :(
-  }
-}
+  };
+};
 ```
 
 _user.test.js_
@@ -270,13 +272,13 @@ _user.test.js_
 ```js
 // Here it is assumed that the important thing to tests are
 // the user "name" and "age", the user object is allowed to have more properties
-import { assert } from "@jsenv/assert"
-import { getUser } from "./user.js"
+import { assert } from "@jsenv/assert";
+import { getUser } from "./user.js";
 
-const user = getUser()
-const actual = { name: user.name, age: user.age }
-const expected = { name: "sam", age: 32 }
-assert({ actual, expected })
+const user = getUser();
+const actual = { name: user.name, age: user.age };
+const expected = { name: "sam", age: 32 };
+assert({ actual, expected });
 ```
 
 ### Assert without property order constraint
@@ -288,19 +290,19 @@ export const getUser = () => {
   return {
     name: "sam",
     age: 32,
-  }
-}
+  };
+};
 ```
 
 _user.test.js_
 
 ```js
 // Here it is assumed that user object properties order is not important
-import { assert } from "@jsenv/assert"
-import { getUser } from "./user.js"
+import { assert } from "@jsenv/assert";
+import { getUser } from "./user.js";
 
-const user = getUser()
-const actual = { age: user.age, name: user.name }
-const expected = { age: 32, name: "sam" }
-assert({ actual, expected })
+const user = getUser();
+const actual = { age: user.age, name: user.name };
+const expected = { age: 32, name: "sam" };
+assert({ actual, expected });
 ```

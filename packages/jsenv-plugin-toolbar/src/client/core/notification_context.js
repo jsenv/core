@@ -1,1 +1,2 @@
-export const notificationAPIDetected = typeof window.Notification === "function"
+export const notificationAPIDetected =
+  typeof window.Notification === "function";

@@ -1,9 +1,9 @@
-import { writeFile, ensureEmptyDirectory } from "@jsenv/filesystem"
-import { fetchUrl } from "@jsenv/fetch"
+import { writeFile, ensureEmptyDirectory } from "@jsenv/filesystem";
+import { fetchUrl } from "@jsenv/fetch";
 
-import { startServer, jsenvServiceErrorHandler } from "@jsenv/server"
+import { startServer, jsenvServiceErrorHandler } from "@jsenv/server";
 
-const htmlFilesDirectoryUrl = new URL("./snapshots/", import.meta.url).href
+const htmlFilesDirectoryUrl = new URL("./snapshots/", import.meta.url).href;
 
 // we need a deterministic stack trace, otherwise
 // test would fail in CI
@@ -15,39 +15,39 @@ const deterministicStackTrace = `Error: test
     at Server.requestCallback (file:///Users/d.maillard/Dev/Github/jsenv-server/src/startServer.js:302:17)
     at Server.emit (events.js:326:22)
     at parserOnIncoming (_http_server.js:777:12)
-    at HTTPParser.parserOnHeadersComplete (_http_common.js:119:17)`
+    at HTTPParser.parserOnHeadersComplete (_http_common.js:119:17)`;
 
 const generateInternalErrorHtmlFile = async (htmlFilename, serverParams) => {
   const { origin, stop } = await startServer({
     logLevel: "off",
     keepProcessAlive: false,
     ...serverParams,
-  })
+  });
   {
     const response = await fetchUrl(origin, {
       headers: {
         accept: "text/html",
       },
-    })
-    stop()
-    const htmlFileUrl = new URL(htmlFilename, htmlFilesDirectoryUrl).href
-    await writeFile(htmlFileUrl, await response.text())
+    });
+    stop();
+    const htmlFileUrl = new URL(htmlFilename, htmlFilesDirectoryUrl).href;
+    await writeFile(htmlFileUrl, await response.text());
   }
-}
+};
 
-await ensureEmptyDirectory(htmlFilesDirectoryUrl)
+await ensureEmptyDirectory(htmlFilesDirectoryUrl);
 
 await generateInternalErrorHtmlFile("basic.html", {
   services: [
     jsenvServiceErrorHandler(),
     {
       handleRequest: () => {
-        const error = new Error("test")
-        throw error
+        const error = new Error("test");
+        throw error;
       },
     },
   ],
-})
+});
 
 await generateInternalErrorHtmlFile("basic_with_details.html", {
   services: [
@@ -56,13 +56,13 @@ await generateInternalErrorHtmlFile("basic_with_details.html", {
     }),
     {
       handleRequest: () => {
-        const error = new Error("test")
-        error.stack = deterministicStackTrace
-        throw error
+        const error = new Error("test");
+        error.stack = deterministicStackTrace;
+        throw error;
       },
     },
   ],
-})
+});
 
 // only error.stack is shown in the html page.
 // any extra property (like error.code) are not available.
@@ -75,35 +75,35 @@ await generateInternalErrorHtmlFile("basic_with_code_and_details.html", {
     }),
     {
       handleRequest: () => {
-        const error = new Error("test")
-        error.code = "TEST_CODE"
-        error.stack = deterministicStackTrace
-        throw error
+        const error = new Error("test");
+        error.code = "TEST_CODE";
+        error.stack = deterministicStackTrace;
+        throw error;
       },
     },
   ],
-})
+});
 
 await generateInternalErrorHtmlFile("literal.html", {
   services: [
     jsenvServiceErrorHandler(),
     {
       handleRequest: () => {
-        const error = "a string"
-        throw error
+        const error = "a string";
+        throw error;
       },
     },
   ],
-})
+});
 
 await generateInternalErrorHtmlFile("literal_with_details.html", {
   services: [
     jsenvServiceErrorHandler({ sendErrorDetails: true }),
     {
       handleRequest: () => {
-        const error = "a string"
-        throw error
+        const error = "a string";
+        throw error;
       },
     },
   ],
-})
+});

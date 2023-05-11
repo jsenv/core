@@ -4,13 +4,13 @@
   <body>
     <script>
       window.resultPromise = new Promise((resolve) => {
-        window.resolveResultPromise = resolve
-      })
+        window.resolveResultPromise = resolve;
+      });
     </script>
     <script type="module">
-      import { value } from "./b.js"
+      import { value } from "./b.js";
 
-      window.resolveResultPromise(value)
+      window.resolveResultPromise(value);
     </script>
   </body>
 </html>

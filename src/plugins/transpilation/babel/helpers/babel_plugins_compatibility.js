@@ -421,12 +421,12 @@ export const babelPluginCompatMap = {
     samsung: "1",
     electron: "0.20",
   },
-}
+};
 
 // copy of transform-async-to-generator
 // so that async is not transpiled when supported
 babelPluginCompatMap["transform-async-to-promises"] =
-  babelPluginCompatMap["transform-async-to-generator"]
+  babelPluginCompatMap["transform-async-to-generator"];
 
 babelPluginCompatMap["regenerator-transform"] =
-  babelPluginCompatMap["transform-regenerator"]
+  babelPluginCompatMap["transform-regenerator"];

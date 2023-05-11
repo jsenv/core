@@ -1,6 +1,6 @@
-import { applyBabelPlugins } from "@jsenv/ast"
+import { applyBabelPlugins } from "@jsenv/ast";
 
-import { requireBabelPlugin } from "./babel/require_babel_plugin.js"
+import { requireBabelPlugin } from "./babel/require_babel_plugin.js";
 
 export const jsenvPluginTopLevelAwait = () => {
   return {
@@ -8,19 +8,19 @@ export const jsenvPluginTopLevelAwait = () => {
     appliesDuring: "*",
     init: (context) => {
       if (context.isSupportedOnCurrentClients("top_level_await")) {
-        return false
+        return false;
       }
       // keep it untouched, systemjs will handle it
       if (context.systemJsTranspilation) {
-        return false
+        return false;
       }
-      return true
+      return true;
     },
     transformUrlContent: {
       js_module: async (urlInfo) => {
-        const usesTLA = await usesTopLevelAwait(urlInfo)
+        const usesTLA = await usesTopLevelAwait(urlInfo);
         if (!usesTLA) {
-          return null
+          return null;
         }
         const { code, map } = await applyBabelPlugins({
           urlInfo,
@@ -44,44 +44,44 @@ export const jsenvPluginTopLevelAwait = () => {
               },
             ],
           ],
-        })
+        });
         return {
           content: code,
           sourcemap: map,
-        }
+        };
       },
     },
-  }
-}
+  };
+};
 
 const usesTopLevelAwait = async (urlInfo) => {
   if (!urlInfo.content.includes("await ")) {
-    return false
+    return false;
   }
   const { metadata } = await applyBabelPlugins({
     urlInfo,
     babelPlugins: [babelPluginMetadataUsesTopLevelAwait],
-  })
-  return metadata.usesTopLevelAwait
-}
+  });
+  return metadata.usesTopLevelAwait;
+};
 
 const babelPluginMetadataUsesTopLevelAwait = () => {
   return {
     name: "metadata-uses-top-level-await",
     visitor: {
       Program: (programPath, state) => {
-        let usesTopLevelAwait = false
+        let usesTopLevelAwait = false;
         programPath.traverse({
           AwaitExpression: (path) => {
-            const closestFunction = path.getFunctionParent()
+            const closestFunction = path.getFunctionParent();
             if (!closestFunction || closestFunction.type === "Program") {
-              usesTopLevelAwait = true
-              path.stop()
+              usesTopLevelAwait = true;
+              path.stop();
             }
           },
-        })
-        state.file.metadata.usesTopLevelAwait = usesTopLevelAwait
+        });
+        state.file.metadata.usesTopLevelAwait = usesTopLevelAwait;
       },
     },
-  }
-}
+  };
+};

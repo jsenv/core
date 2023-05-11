@@ -9,15 +9,15 @@
 import {
   installCertificateAuthority,
   verifyHostsFile,
-} from "@jsenv/https-local"
+} from "@jsenv/https-local";
 
 await installCertificateAuthority({
   tryToTrust: true,
   NSSDynamicInstall: true,
-})
+});
 await verifyHostsFile({
   ipMappings: {
     "127.0.0.1": ["localhost", "local"],
   },
   tryToUpdatesHostsFile: true,
-})
+});

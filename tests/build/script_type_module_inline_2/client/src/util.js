@@ -1,3 +1,3 @@
 export const util = () => {
-  console.log("util")
-}
+  console.log("util");
+};

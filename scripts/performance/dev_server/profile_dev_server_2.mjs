@@ -9,23 +9,23 @@
  *    It will trigger the http requests, populating the server performances
  */
 
-import { startServer, fetchFileSystem } from "@jsenv/server"
-import { requestCertificate } from "@jsenv/https-local"
-import { urlToRelativeUrl, resolveUrl } from "@jsenv/urls"
-import { ensureEmptyDirectory } from "@jsenv/filesystem"
+import { startServer, fetchFileSystem } from "@jsenv/server";
+import { requestCertificate } from "@jsenv/https-local";
+import { urlToRelativeUrl, resolveUrl } from "@jsenv/urls";
+import { ensureEmptyDirectory } from "@jsenv/filesystem";
 
-const { certificate, privateKey } = requestCertificate()
-const projectDirectoryUrl = new URL("../../../", import.meta.url)
+const { certificate, privateKey } = requestCertificate();
+const projectDirectoryUrl = new URL("../../../", import.meta.url);
 const directoryRelativeUrl = urlToRelativeUrl(
   new URL("./", import.meta.url),
   projectDirectoryUrl,
-)
-const jsenvDirectoryRelativeUrl = `${directoryRelativeUrl}.jsenv/`
+);
+const jsenvDirectoryRelativeUrl = `${directoryRelativeUrl}.jsenv/`;
 const jsenvDirectoryUrl = resolveUrl(
   jsenvDirectoryRelativeUrl,
   projectDirectoryUrl,
-)
-await ensureEmptyDirectory(jsenvDirectoryUrl)
+);
+await ensureEmptyDirectory(jsenvDirectoryUrl);
 
 await startServer({
   projectDirectoryUrl,
@@ -43,8 +43,8 @@ await startServer({
           {
             headers: request.headers,
           },
-        )
+        );
       },
     },
   ],
-})
+});

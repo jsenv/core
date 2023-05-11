@@ -1,6 +1,6 @@
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-import { URL_META } from "@jsenv/url-meta"
+import { URL_META } from "@jsenv/url-meta";
 
 {
   const actual = URL_META.urlChildMayMatch({
@@ -12,9 +12,9 @@ import { URL_META } from "@jsenv/url-meta"
       },
     },
     predicate: ({ whatever }) => whatever === 42,
-  })
-  const expected = true
-  assert({ actual, expected })
+  });
+  const expected = true;
+  assert({ actual, expected });
 }
 
 {
@@ -27,9 +27,9 @@ import { URL_META } from "@jsenv/url-meta"
       },
     },
     predicate: ({ whatever }) => whatever === 42,
-  })
-  const expected = false
-  assert({ actual, expected })
+  });
+  const expected = false;
+  assert({ actual, expected });
 }
 
 try {
@@ -42,12 +42,12 @@ try {
       },
     },
     predicate: ({ whatever }) => whatever === 42,
-  })
-  throw new Error("shoud crash")
+  });
+  throw new Error("shoud crash");
 } catch (error) {
-  const actual = error
-  const expected = new Error(`url should end with /, got file:///.git`)
-  assert({ actual, expected })
+  const actual = error;
+  const expected = new Error(`url should end with /, got file:///.git`);
+  assert({ actual, expected });
 }
 
 try {
@@ -60,12 +60,12 @@ try {
       },
     },
     predicate: "I'm a string",
-  })
-  throw new Error("shoud crash")
+  });
+  throw new Error("shoud crash");
 } catch (error) {
-  const actual = error
+  const actual = error;
   const expected = new TypeError(
     `predicate must be a function, got I'm a string`,
-  )
-  assert({ actual, expected })
+  );
+  assert({ actual, expected });
 }

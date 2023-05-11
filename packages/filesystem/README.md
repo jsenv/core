@@ -5,7 +5,7 @@ Collection of functions to interact with filesystem in Node.js
 ## List files using pattern matching
 
 ```js
-import { listFilesMatching } from "@jsenv/filesystem"
+import { listFilesMatching } from "@jsenv/filesystem";
 
 const jsFiles = await listFilesMatching({
   directoryUrl: new URL("./", import.meta.url),
@@ -13,7 +13,7 @@ const jsFiles = await listFilesMatching({
     "./**/*.js": true,
     "./**/*.test.js": false,
   },
-})
+});
 ```
 
 ```console
@@ -26,45 +26,45 @@ const jsFiles = await listFilesMatching({
 ## Watch a specific file changes
 
 ```js
-import { readFileSync } from "node:fs"
-import { registerFileLifecycle } from "@jsenv/filesystem"
+import { readFileSync } from "node:fs";
+import { registerFileLifecycle } from "@jsenv/filesystem";
 
-const packageJSONFileUrl = new URL("./package.json", import.meta.url)
-let packageJSON = null
+const packageJSONFileUrl = new URL("./package.json", import.meta.url);
+let packageJSON = null;
 const unregister = registerFileLifecycle(packageJSONFileUrl, {
   added: () => {
-    packageJSON = JSON.parse(String(readFileSync(packageJSONFileUrl)))
+    packageJSON = JSON.parse(String(readFileSync(packageJSONFileUrl)));
   },
   updated: () => {
-    packageJSON = JSON.parse(String(readFileSync(packageJSONFileUrl)))
+    packageJSON = JSON.parse(String(readFileSync(packageJSONFileUrl)));
   },
   removed: () => {
-    packageJSON = null
+    packageJSON = null;
   },
   notifyExistent: true,
-})
-unregister() // stop watching the file changes
+});
+unregister(); // stop watching the file changes
 ```
 
 ## Watch many files changes
 
 ```js
-import { registerDirectoryLifecycle } from "@jsenv/filesystem"
+import { registerDirectoryLifecycle } from "@jsenv/filesystem";
 
-const directoryContentDescription = {}
+const directoryContentDescription = {};
 const unregister = registerDirectoryLifecycle("file:///directory/", {
   watchPatterns: {
     "./**/*": true,
     "./node_modules/": false,
   },
   added: ({ relativeUrl, type }) => {
-    directoryContentDescription[relativeUrl] = type
+    directoryContentDescription[relativeUrl] = type;
   },
   removed: ({ relativeUrl }) => {
-    delete directoryContentDescription[relativeUrl]
+    delete directoryContentDescription[relativeUrl];
   },
-})
-unregister() // stop watching the directory changes
+});
+unregister(); // stop watching the directory changes
 ```
 
 # API

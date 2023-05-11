@@ -1,24 +1,24 @@
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-import { formatConsoleOutput } from "./logs_file_execution.js"
+import { formatConsoleOutput } from "./logs_file_execution.js";
 
 {
   const actual = formatConsoleOutput([
     { type: "log", text: "a\n" },
     { type: "log", text: "b\n" },
-  ])
+  ]);
   const expected = `  a
-  b`
-  assert({ actual, expected })
+  b`;
+  assert({ actual, expected });
 }
 
 {
   const actual = formatConsoleOutput([
     { type: "log", text: "a" },
     { type: "log", text: "b" },
-  ])
-  const expected = `  ab`
-  assert({ actual, expected })
+  ]);
+  const expected = `  ab`;
+  assert({ actual, expected });
 }
 
 {
@@ -33,9 +33,9 @@ import { formatConsoleOutput } from "./logs_file_execution.js"
       text: `alpha
 beta`,
     },
-  ])
+  ]);
   const expected = `  1
   2alpha
-  beta`
-  assert({ actual, expected })
+  beta`;
+  assert({ actual, expected });
 }

@@ -3,26 +3,26 @@ import {
   stringifyHtmlAst,
   injectHtmlNodeAsEarlyAsPossible,
   createHtmlNode,
-} from "@jsenv/ast"
+} from "@jsenv/ast";
 
 export const jsenvPluginAutoreloadClient = () => {
   const autoreloadClientFileUrl = new URL(
     "./client/autoreload.js",
     import.meta.url,
-  ).href
+  ).href;
 
   return {
     name: "jsenv:autoreload_client",
     appliesDuring: "dev",
     transformUrlContent: {
       html: (htmlUrlInfo, context) => {
-        const htmlAst = parseHtmlString(htmlUrlInfo.content)
+        const htmlAst = parseHtmlString(htmlUrlInfo.content);
         const [autoreloadClientReference] = context.referenceUtils.inject({
           type: "script",
           subtype: "js_module",
           expectedType: "js_module",
           specifier: autoreloadClientFileUrl,
-        })
+        });
         injectHtmlNodeAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
@@ -31,12 +31,12 @@ export const jsenvPluginAutoreloadClient = () => {
             src: autoreloadClientReference.generatedSpecifier,
           }),
           "jsenv:autoreload_client",
-        )
-        const htmlModified = stringifyHtmlAst(htmlAst)
+        );
+        const htmlModified = stringifyHtmlAst(htmlAst);
         return {
           content: htmlModified,
-        }
+        };
       },
     },
-  }
-}
+  };
+};

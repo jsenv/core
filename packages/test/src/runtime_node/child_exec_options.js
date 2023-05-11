@@ -1,7 +1,7 @@
-import { findFreePort } from "@jsenv/server"
+import { findFreePort } from "@jsenv/server";
 
-import { createDetailedMessage } from "@jsenv/log"
-import { ExecOptions } from "./exec_options.js"
+import { createDetailedMessage } from "@jsenv/log";
+import { ExecOptions } from "./exec_options.js";
 
 export const createChildExecOptions = async ({
   signal = new AbortController().signal,
@@ -22,18 +22,18 @@ export const createChildExecOptions = async ({
         ["debug mode"]: debugMode,
         ["allowed debug mode"]: AVAILABLE_DEBUG_MODE,
       }),
-    )
+    );
   }
-  const childExecOptions = ExecOptions.fromExecArgv(processExecArgv)
+  const childExecOptions = ExecOptions.fromExecArgv(processExecArgv);
   await mutateDebuggingOptions(childExecOptions, {
     signal,
     processDebugPort,
     debugMode,
     debugPort,
     debugModeInheritBreak,
-  })
-  return childExecOptions
-}
+  });
+  return childExecOptions;
+};
 
 const AVAILABLE_DEBUG_MODE = [
   "none",
@@ -42,7 +42,7 @@ const AVAILABLE_DEBUG_MODE = [
   "inspect-brk",
   "debug",
   "debug-brk",
-]
+];
 
 const mutateDebuggingOptions = async (
   childExecOptions,
@@ -55,24 +55,24 @@ const mutateDebuggingOptions = async (
     debugModeInheritBreak,
   },
 ) => {
-  const parentDebugInfo = getDebugInfo(childExecOptions)
-  const parentDebugModeOptionName = parentDebugInfo.debugModeOptionName
-  const parentDebugPortOptionName = parentDebugInfo.debugPortOptionName
+  const parentDebugInfo = getDebugInfo(childExecOptions);
+  const parentDebugModeOptionName = parentDebugInfo.debugModeOptionName;
+  const parentDebugPortOptionName = parentDebugInfo.debugPortOptionName;
   const childDebugModeOptionName = getChildDebugModeOptionName({
     parentDebugModeOptionName,
     debugMode,
     debugModeInheritBreak,
-  })
+  });
 
   if (!childDebugModeOptionName) {
     // remove debug mode and debug port fron child options
     if (parentDebugModeOptionName) {
-      delete childExecOptions[parentDebugModeOptionName]
+      delete childExecOptions[parentDebugModeOptionName];
     }
     if (parentDebugPortOptionName) {
-      delete childExecOptions[parentDebugPortOptionName]
+      delete childExecOptions[parentDebugPortOptionName];
     }
-    return
+    return;
   }
 
   // replace child debug mode
@@ -80,24 +80,24 @@ const mutateDebuggingOptions = async (
     parentDebugModeOptionName &&
     parentDebugModeOptionName !== childDebugModeOptionName
   ) {
-    delete childExecOptions[parentDebugModeOptionName]
+    delete childExecOptions[parentDebugModeOptionName];
   }
-  childExecOptions[childDebugModeOptionName] = ""
+  childExecOptions[childDebugModeOptionName] = "";
 
   // this is required because vscode does not
   // support assigning a child spawned without a specific port
   const childDebugPortOptionValue =
     debugPort === 0
       ? await findFreePort(processDebugPort + 37, { signal })
-      : debugPort
+      : debugPort;
   // replace child debug port
   if (parentDebugPortOptionName) {
-    delete childExecOptions[parentDebugPortOptionName]
+    delete childExecOptions[parentDebugPortOptionName];
   }
   childExecOptions[childDebugModeOptionName] = portToArgValue(
     childDebugPortOptionValue,
-  )
-}
+  );
+};
 
 const getChildDebugModeOptionName = ({
   parentDebugModeOptionName,
@@ -105,61 +105,61 @@ const getChildDebugModeOptionName = ({
   debugModeInheritBreak,
 }) => {
   if (debugMode === "none") {
-    return undefined
+    return undefined;
   }
   if (debugMode !== "inherit") {
-    return `--${debugMode}`
+    return `--${debugMode}`;
   }
   if (!parentDebugModeOptionName) {
-    return undefined
+    return undefined;
   }
   if (!debugModeInheritBreak && parentDebugModeOptionName === "--inspect-brk") {
-    return "--inspect"
+    return "--inspect";
   }
   if (!debugModeInheritBreak && parentDebugModeOptionName === "--debug-brk") {
-    return "--debug"
+    return "--debug";
   }
-  return parentDebugModeOptionName
-}
+  return parentDebugModeOptionName;
+};
 
 const portToArgValue = (port) => {
-  if (typeof port !== "number") return ""
-  if (port === 0) return ""
-  return port
-}
+  if (typeof port !== "number") return "";
+  if (port === 0) return "";
+  return port;
+};
 
 // https://nodejs.org/en/docs/guides/debugging-getting-started/
 const getDebugInfo = (processOptions) => {
-  const inspectOption = processOptions["--inspect"]
+  const inspectOption = processOptions["--inspect"];
   if (inspectOption !== undefined) {
     return {
       debugModeOptionName: "--inspect",
       debugPortOptionName: "--inspect-port",
-    }
+    };
   }
-  const inspectBreakOption = processOptions["--inspect-brk"]
+  const inspectBreakOption = processOptions["--inspect-brk"];
   if (inspectBreakOption !== undefined) {
     return {
       debugModeOptionName: "--inspect-brk",
       debugPortOptionName: "--inspect-port",
-    }
+    };
   }
-  const debugOption = processOptions["--debug"]
+  const debugOption = processOptions["--debug"];
   if (debugOption !== undefined) {
     return {
       debugModeOptionName: "--debug",
       debugPortOptionName: "--debug-port",
-    }
+    };
   }
-  const debugBreakOption = processOptions["--debug-brk"]
+  const debugBreakOption = processOptions["--debug-brk"];
   if (debugBreakOption !== undefined) {
     return {
       debugModeOptionName: "--debug-brk",
       debugPortOptionName: "--debug-port",
-    }
+    };
   }
-  return {}
-}
+  return {};
+};
 
 // export const processIsExecutedByVSCode = () => {
 //   return typeof process.env.VSCODE_PID === "string"

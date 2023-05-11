@@ -1,8 +1,8 @@
-import { requestCertificate } from "@jsenv/https-local"
+import { requestCertificate } from "@jsenv/https-local";
 
-import { startServer, fetchFileSystem } from "@jsenv/server"
+import { startServer, fetchFileSystem } from "@jsenv/server";
 
-const { certificate, privateKey } = requestCertificate()
+const { certificate, privateKey } = requestCertificate();
 await startServer({
   logLevel: "info",
   https: { certificate, privateKey },
@@ -12,8 +12,8 @@ await startServer({
     {
       handleRequest: (request, { pushResponse }) => {
         if (request.pathname === "/main.html") {
-          pushResponse({ path: "/script.js" })
-          pushResponse({ path: "/style.css" })
+          pushResponse({ path: "/script.js" });
+          pushResponse({ path: "/style.css" });
         }
         return fetchFileSystem(
           new URL(request.resource.slice(1), import.meta.url),
@@ -22,8 +22,8 @@ await startServer({
             canReadDirectory: true,
             mtimeEnabled: true,
           },
-        )
+        );
       },
     },
   ],
-})
+});

@@ -1,69 +1,69 @@
-import http from "node:http"
+import http from "node:http";
 
-import { Abort } from "@jsenv/abort"
+import { Abort } from "@jsenv/abort";
 
 export const startServer = async ({
   signal = new AbortController().signal,
 } = {}) => {
-  const startServerOperation = Abort.startOperation()
+  const startServerOperation = Abort.startOperation();
   try {
-    startServerOperation.addAbortSignal(signal)
+    startServerOperation.addAbortSignal(signal);
 
-    const server = http.createServer()
-    startServerOperation.throwIfAborted()
+    const server = http.createServer();
+    startServerOperation.throwIfAborted();
     const port = await new Promise((resolve, reject) => {
-      server.on("error", reject)
+      server.on("error", reject);
       server.on("listening", () => {
-        resolve(server.address().port)
-      })
-      server.listen(0, "127.0.0.1")
-    })
+        resolve(server.address().port);
+      });
+      server.listen(0, "127.0.0.1");
+    });
     const stop = async (reason) => {
       await new Promise((resolve, reject) => {
         server.once("close", (error) => {
           if (error) {
-            reject(error)
+            reject(error);
           } else {
-            resolve(`server closed because ${reason}`)
+            resolve(`server closed because ${reason}`);
           }
-        })
-        server.close()
-      })
-    }
-    startServerOperation.addAbortCallback(stop)
-    startServerOperation.throwIfAborted()
+        });
+        server.close();
+      });
+    };
+    startServerOperation.addAbortCallback(stop);
+    startServerOperation.throwIfAborted();
 
-    process.on("exit", stop)
+    process.on("exit", stop);
 
     server.on("request", (request, response) => {
-      response.writeHead(200)
-      response.end()
-    })
+      response.writeHead(200);
+      response.end();
+    });
 
-    return { server, port }
+    return { server, port };
   } finally {
-    await startServerOperation.end()
+    await startServerOperation.end();
   }
-}
+};
 
 export const requestServer = async ({
   signal = new AbortController().signal,
   port,
 }) => {
-  const fetchOperation = Abort.startOperation()
+  const fetchOperation = Abort.startOperation();
   try {
-    fetchOperation.addAbortSignal(signal)
-    fetchOperation.throwIfAborted()
+    fetchOperation.addAbortSignal(signal);
+    fetchOperation.throwIfAborted();
 
     const request = http.request({
       port,
       hostname: "127.0.0.1",
-    })
+    });
 
-    let aborting = false
+    let aborting = false;
 
     const response = await new Promise((resolve, reject) => {
-      request.on("response", resolve)
+      request.on("response", resolve);
       request.on("error", (error) => {
         // abort may trigger a ECONNRESET error
         if (
@@ -72,18 +72,18 @@ export const requestServer = async ({
           error.code === "ECONNRESET" &&
           error.message === "socket hang up"
         ) {
-          return
+          return;
         }
-        reject(error)
-      })
+        reject(error);
+      });
 
-      request.end()
-    })
+      request.end();
+    });
 
-    fetchOperation.throwIfAborted()
+    fetchOperation.throwIfAborted();
 
-    return response
+    return response;
   } finally {
-    await fetchOperation.end()
+    await fetchOperation.end();
   }
-}
+};

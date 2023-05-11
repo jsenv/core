@@ -1,6 +1,6 @@
-import { util } from "./util.js"
+import { util } from "./util.js";
 
-util()
-console.log("Hello world")
+util();
+console.log("Hello world");
 
-export const answer = 42
+export const answer = 42;

@@ -36,16 +36,16 @@ export const injectRibbon = ({ text }) => {
         text-align: center;
         user-select: none;
       }
-    `
+    `;
 
   const html = /* html */ `<div id="jsenv_ribbon_container">
       <style>${css}</style>
       <div id="jsenv_ribbon">
         <div id="jsenv_ribbon_text">${text}</div>
       </div>
-    </div>`
+    </div>`;
 
-  const node = document.createElement("div")
-  node.innerHTML = html
-  document.body.appendChild(node.firstChild)
-}
+  const node = document.createElement("div");
+  node.innerHTML = html;
+  document.body.appendChild(node.firstChild);
+};

@@ -1,4 +1,4 @@
-import { URL_META } from "@jsenv/url-meta"
+import { URL_META } from "@jsenv/url-meta";
 
 const associations = {
   insideSrc: {
@@ -7,21 +7,21 @@ const associations = {
   extensionIsJs: {
     "file:///**/*.js": true,
   },
-}
+};
 
-const urlA = "file:///src/file.js"
-const urlB = "file:///src/file.json"
+const urlA = "file:///src/file.js";
+const urlB = "file:///src/file.json";
 console.log(
   `${urlA}: ${JSON.stringify(
     URL_META.applyAssociations({ url: urlA, associations }),
     null,
     "  ",
   )}`,
-)
+);
 console.log(
   `${urlB}: ${JSON.stringify(
     URL_META.applyAssociations({ url: urlB, associations }),
     null,
     "  ",
   )}`,
-)
+);

@@ -1,4 +1,4 @@
-import { InlineContent } from "@jsenv/core/src/plugins/inline_content_analysis/client/inline_content.js"
+import { InlineContent } from "@jsenv/core/src/plugins/inline_content_analysis/client/inline_content.js";
 
 const content = new InlineContent(
   `@font-face {
@@ -9,5 +9,5 @@ const content = new InlineContent(
     font-display: swap;
   }`,
   { type: "text/css" },
-)
-console.log(content)
+);
+console.log(content);

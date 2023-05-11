@@ -1,18 +1,18 @@
-import { assert } from "@jsenv/assert"
-import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js"
+import { assert } from "@jsenv/assert";
+import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js";
 
 try {
-  const actual = Object.defineProperty({}, "foo", { writable: true })
-  const expected = Object.defineProperty({}, "foo", { writable: true })
-  assert({ actual, expected })
+  const actual = Object.defineProperty({}, "foo", { writable: true });
+  const expected = Object.defineProperty({}, "foo", { writable: true });
+  assert({ actual, expected });
 } catch (e) {
-  throw new Error(`should not throw`)
+  throw new Error(`should not throw`);
 }
 
 try {
-  const actual = Object.defineProperty({}, "foo", { writable: false })
-  const expected = Object.defineProperty({}, "foo", { writable: true })
-  assert({ actual, expected })
+  const actual = Object.defineProperty({}, "foo", { writable: false });
+  const expected = Object.defineProperty({}, "foo", { writable: true });
+  assert({ actual, expected });
 } catch (e) {
   ensureAssertionErrorWithMessage(
     e,
@@ -23,13 +23,13 @@ try {
 "writable"
 --- path ---
 actual.foo[[Writable]]`,
-  )
+  );
 }
 
 try {
-  const actual = Object.defineProperty({}, "foo", { writable: true })
-  const expected = Object.defineProperty({}, "foo", { writable: false })
-  assert({ actual, expected })
+  const actual = Object.defineProperty({}, "foo", { writable: true });
+  const expected = Object.defineProperty({}, "foo", { writable: false });
+  assert({ actual, expected });
 } catch (e) {
   ensureAssertionErrorWithMessage(
     e,
@@ -40,5 +40,5 @@ try {
 "non-writable"
 --- path ---
 actual.foo[[Writable]]`,
-  )
+  );
 }

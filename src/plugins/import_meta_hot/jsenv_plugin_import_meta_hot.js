@@ -1,14 +1,14 @@
-import { createMagicSource } from "@jsenv/sourcemap"
-import { parseHtmlString, applyBabelPlugins } from "@jsenv/ast"
+import { createMagicSource } from "@jsenv/sourcemap";
+import { parseHtmlString, applyBabelPlugins } from "@jsenv/ast";
 
-import { collectHotDataFromHtmlAst } from "./html_hot_dependencies.js"
-import { babelPluginMetadataImportMetaHot } from "./babel_plugin_metadata_import_meta_hot.js"
+import { collectHotDataFromHtmlAst } from "./html_hot_dependencies.js";
+import { babelPluginMetadataImportMetaHot } from "./babel_plugin_metadata_import_meta_hot.js";
 
 export const jsenvPluginImportMetaHot = () => {
   const importMetaHotClientFileUrl = new URL(
     "./client/import_meta_hot.js",
     import.meta.url,
-  ).href
+  ).href;
 
   return {
     name: "jsenv:import_meta_hot",
@@ -17,12 +17,12 @@ export const jsenvPluginImportMetaHot = () => {
       html: (htmlUrlInfo, context) => {
         // during build we don't really care to parse html hot dependencies
         if (context.build) {
-          return
+          return;
         }
-        const htmlAst = parseHtmlString(htmlUrlInfo.content)
-        const hotReferences = collectHotDataFromHtmlAst(htmlAst)
-        htmlUrlInfo.data.hotDecline = false
-        htmlUrlInfo.data.hotAcceptSelf = false
+        const htmlAst = parseHtmlString(htmlUrlInfo.content);
+        const hotReferences = collectHotDataFromHtmlAst(htmlAst);
+        htmlUrlInfo.data.hotDecline = false;
+        htmlUrlInfo.data.hotAcceptSelf = false;
         htmlUrlInfo.data.hotAcceptDependencies = hotReferences.map(
           ({ type, specifier }) => {
             const existingReference = context.referenceUtils.find(
@@ -30,65 +30,69 @@ export const jsenvPluginImportMetaHot = () => {
                 return (
                   existingReference.type === type &&
                   existingReference.specifier === specifier
-                )
+                );
               },
-            )
+            );
             if (existingReference) {
-              return existingReference.url
+              return existingReference.url;
             }
             const [reference] = context.referenceUtils.found({
               type,
               specifier,
-            })
-            return reference.url
+            });
+            return reference.url;
           },
-        )
+        );
       },
       css: (cssUrlInfo) => {
-        cssUrlInfo.data.hotDecline = false
-        cssUrlInfo.data.hotAcceptSelf = false
-        cssUrlInfo.data.hotAcceptDependencies = []
+        cssUrlInfo.data.hotDecline = false;
+        cssUrlInfo.data.hotAcceptSelf = false;
+        cssUrlInfo.data.hotAcceptDependencies = [];
       },
       js_module: async (urlInfo, context) => {
         if (!urlInfo.content.includes("import.meta.hot")) {
-          return null
+          return null;
         }
         const { metadata } = await applyBabelPlugins({
           babelPlugins: [babelPluginMetadataImportMetaHot],
           urlInfo,
-        })
+        });
         const {
           importMetaHotPaths,
           hotDecline,
           hotAcceptSelf,
           hotAcceptDependencies,
-        } = metadata
-        urlInfo.data.hotDecline = hotDecline
-        urlInfo.data.hotAcceptSelf = hotAcceptSelf
-        urlInfo.data.hotAcceptDependencies = hotAcceptDependencies
+        } = metadata;
+        urlInfo.data.hotDecline = hotDecline;
+        urlInfo.data.hotAcceptSelf = hotAcceptSelf;
+        urlInfo.data.hotAcceptDependencies = hotAcceptDependencies;
         if (importMetaHotPaths.length === 0) {
-          return null
+          return null;
         }
         if (context.build) {
-          return removeImportMetaHots(urlInfo, importMetaHotPaths)
+          return removeImportMetaHots(urlInfo, importMetaHotPaths);
         }
-        return injectImportMetaHot(urlInfo, context, importMetaHotClientFileUrl)
+        return injectImportMetaHot(
+          urlInfo,
+          context,
+          importMetaHotClientFileUrl,
+        );
       },
     },
-  }
-}
+  };
+};
 
 const removeImportMetaHots = (urlInfo, importMetaHotPaths) => {
-  const magicSource = createMagicSource(urlInfo.content)
+  const magicSource = createMagicSource(urlInfo.content);
   importMetaHotPaths.forEach((path) => {
     magicSource.replace({
       start: path.node.start,
       end: path.node.end,
       replacement: "undefined",
-    })
-  })
-  return magicSource.toContentAndSourcemap()
-}
+    });
+  });
+  return magicSource.toContentAndSourcemap();
+};
 
 // For some reason using magic source here produce
 // better sourcemap than doing the equivalent with babel
@@ -100,12 +104,12 @@ const injectImportMetaHot = (urlInfo, context, importMetaHotClientFileUrl) => {
     type: "js_import",
     expectedType: "js_module",
     specifier: importMetaHotClientFileUrl,
-  })
-  const magicSource = createMagicSource(urlInfo.content)
+  });
+  const magicSource = createMagicSource(urlInfo.content);
   magicSource.prepend(
     `import { createImportMetaHot } from ${importMetaHotClientFileReference.generatedSpecifier}
 import.meta.hot = createImportMetaHot(import.meta.url)
 `,
-  )
-  return magicSource.toContentAndSourcemap()
-}
+  );
+  return magicSource.toContentAndSourcemap();
+};

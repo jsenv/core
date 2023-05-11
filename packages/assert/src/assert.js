@@ -3,36 +3,36 @@ import {
   createNotExpectation,
   createAnyExpectation,
   createMatchesRegExpExpectation,
-} from "./internal/compare.js"
-import { errorMessageFromComparison } from "./internal/errorMessageFromComparison.js"
-import { createAssertionError } from "./assertionError.js"
+} from "./internal/compare.js";
+import { errorMessageFromComparison } from "./internal/errorMessageFromComparison.js";
+import { createAssertionError } from "./assertionError.js";
 
 export const assert = (...args) => {
   if (args.length === 0) {
     throw new Error(
       `assert must be called with { actual, expected }, missing first argument`,
-    )
+    );
   }
   if (args.length > 1) {
     throw new Error(
       `assert must be called with { actual, expected }, received too many arguments`,
-    )
+    );
   }
-  const firstArg = args[0]
+  const firstArg = args[0];
   if (typeof firstArg !== "object" || firstArg === null) {
     throw new Error(
       `assert must be called with { actual, expected }, received ${firstArg} as first argument instead of object`,
-    )
+    );
   }
   if ("actual" in firstArg === false) {
     throw new Error(
       `assert must be called with { actual, expected }, missing actual property on first argument`,
-    )
+    );
   }
   if ("expected" in firstArg === false) {
     throw new Error(
       `assert must be called with { actual, expected }, missing expected property on first argument`,
-    )
+    );
   }
   const {
     actual,
@@ -44,44 +44,44 @@ export const assert = (...args) => {
     // const expected = assert.sortProperties({ foo: true, bar: true })
     checkPropertiesOrder = true,
     context,
-  } = firstArg
+  } = firstArg;
   const expectation = {
     actual,
     expected,
-  }
-  const comparison = compare(expectation, { checkPropertiesOrder })
+  };
+  const comparison = compare(expectation, { checkPropertiesOrder });
   if (comparison.failed) {
-    let errorMessage = message || errorMessageFromComparison(comparison)
+    let errorMessage = message || errorMessageFromComparison(comparison);
     if (context) {
       errorMessage += `
 --- context ---
-${context}`
+${context}`;
     }
-    const error = createAssertionError(errorMessage)
+    const error = createAssertionError(errorMessage);
     if (Error.captureStackTrace) {
-      Error.captureStackTrace(error, assert)
+      Error.captureStackTrace(error, assert);
     }
-    throw error
+    throw error;
   }
-}
+};
 
 assert.not = (value) => {
-  return createNotExpectation(value)
-}
+  return createNotExpectation(value);
+};
 assert.any = (Constructor) => {
-  return createAnyExpectation(Constructor)
-}
+  return createAnyExpectation(Constructor);
+};
 assert.matchesRegExp = (regexp) => {
-  const isRegExp = regexp instanceof RegExp
+  const isRegExp = regexp instanceof RegExp;
   if (!isRegExp) {
     throw new TypeError(
       `assert.matchesRegExp must be called with a regexp, received ${regexp}`,
-    )
+    );
   }
-  return createMatchesRegExpExpectation(regexp)
-}
+  return createMatchesRegExpExpectation(regexp);
+};
 assert.asObjectWithoutPrototype = (object) => {
-  const objectWithoutPrototype = Object.create(null)
-  Object.assign(objectWithoutPrototype, object)
-  return objectWithoutPrototype
-}
+  const objectWithoutPrototype = Object.create(null);
+  Object.assign(objectWithoutPrototype, object);
+  return objectWithoutPrototype;
+};

@@ -2,23 +2,23 @@ import {
   isFileSystemPath,
   fileSystemPathToUrl,
   urlToFileSystemPath,
-} from "@jsenv/urls"
+} from "@jsenv/urls";
 
 export const sourcemapConverter = {
   toFileUrls: (sourcemap) => {
     return {
       ...sourcemap,
       sources: sourcemap.sources.map((source) => {
-        return isFileSystemPath(source) ? fileSystemPathToUrl(source) : source
+        return isFileSystemPath(source) ? fileSystemPathToUrl(source) : source;
       }),
-    }
+    };
   },
   toFilePaths: (sourcemap) => {
     return {
       ...sourcemap,
       sources: sourcemap.sources.map((source) => {
-        return urlToFileSystemPath(source)
+        return urlToFileSystemPath(source);
       }),
-    }
+    };
   },
-}
+};

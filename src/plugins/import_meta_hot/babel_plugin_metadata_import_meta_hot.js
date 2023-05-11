@@ -10,82 +10,82 @@ export const babelPluginMetadataImportMetaHot = () => {
         Object.assign(
           state.file.metadata,
           collectImportMetaProperties(programPath),
-        )
+        );
       },
     },
-  }
-}
+  };
+};
 const collectImportMetaProperties = (programPath) => {
-  const importMetaHotPaths = []
-  let hotDecline = false
-  let hotAcceptSelf = false
-  let hotAcceptDependencies = []
+  const importMetaHotPaths = [];
+  let hotDecline = false;
+  let hotAcceptSelf = false;
+  let hotAcceptDependencies = [];
   programPath.traverse({
     MemberExpression(path) {
-      const { node } = path
-      const { object } = node
+      const { node } = path;
+      const { object } = node;
       if (object.type !== "MetaProperty") {
-        return
+        return;
       }
-      const { property: objectProperty } = object
+      const { property: objectProperty } = object;
       if (objectProperty.name !== "meta") {
-        return
+        return;
       }
-      const { property } = node
-      const { name } = property
+      const { property } = node;
+      const { name } = property;
       if (name === "hot") {
-        importMetaHotPaths.push(path)
+        importMetaHotPaths.push(path);
       }
     },
     CallExpression(path) {
       if (isImportMetaHotMethodCall(path, "accept")) {
-        const callNode = path.node
-        const args = callNode.arguments
+        const callNode = path.node;
+        const args = callNode.arguments;
         if (args.length === 0) {
-          hotAcceptSelf = true
-          return
+          hotAcceptSelf = true;
+          return;
         }
-        const firstArg = args[0]
+        const firstArg = args[0];
         if (firstArg.type === "StringLiteral") {
           hotAcceptDependencies = [
             {
               specifierPath: path.get("arguments")[0],
             },
-          ]
-          return
+          ];
+          return;
         }
         if (firstArg.type === "ArrayExpression") {
-          const firstArgPath = path.get("arguments")[0]
+          const firstArgPath = path.get("arguments")[0];
           hotAcceptDependencies = firstArg.elements.map((arrayNode, index) => {
             if (arrayNode.type !== "StringLiteral") {
               throw new Error(
                 `all array elements must be strings in "import.meta.hot.accept(array)"`,
-              )
+              );
             }
             return {
               specifierPath: firstArgPath.get(String(index)),
-            }
-          })
-          return
+            };
+          });
+          return;
         }
         // accept first arg can be "anything" such as
         // `const cb = () => {}; import.meta.accept(cb)`
-        hotAcceptSelf = true
+        hotAcceptSelf = true;
       }
       if (isImportMetaHotMethodCall(path, "decline")) {
-        hotDecline = true
+        hotDecline = true;
       }
     },
-  })
+  });
   return {
     importMetaHotPaths,
     hotDecline,
     hotAcceptSelf,
     hotAcceptDependencies,
-  }
-}
+  };
+};
 const isImportMetaHotMethodCall = (path, methodName) => {
-  const { property, object } = path.node.callee
+  const { property, object } = path.node.callee;
   return (
     property &&
     property.name === methodName &&
@@ -93,5 +93,5 @@ const isImportMetaHotMethodCall = (path, methodName) => {
     object.property &&
     object.property.name === "hot" &&
     object.object.type === "MetaProperty"
-  )
-}
+  );
+};

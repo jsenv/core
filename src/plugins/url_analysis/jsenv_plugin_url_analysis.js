@@ -1,11 +1,11 @@
-import { URL_META } from "@jsenv/url-meta"
-import { urlToRelativeUrl } from "@jsenv/urls"
+import { URL_META } from "@jsenv/url-meta";
+import { urlToRelativeUrl } from "@jsenv/urls";
 
-import { jsenvPluginReferenceExpectedTypes } from "./jsenv_plugin_reference_expected_types.js"
-import { parseAndTransformHtmlUrls } from "./html/html_urls.js"
-import { parseAndTransformCssUrls } from "./css/css_urls.js"
-import { parseAndTransformJsUrls } from "./js/js_urls.js"
-import { parseAndTransformWebmanifestUrls } from "./webmanifest/webmanifest_urls.js"
+import { jsenvPluginReferenceExpectedTypes } from "./jsenv_plugin_reference_expected_types.js";
+import { parseAndTransformHtmlUrls } from "./html/html_urls.js";
+import { parseAndTransformCssUrls } from "./css/css_urls.js";
+import { parseAndTransformJsUrls } from "./js/js_urls.js";
+import { parseAndTransformWebmanifestUrls } from "./webmanifest/webmanifest_urls.js";
 
 export const jsenvPluginUrlAnalysis = ({
   rootDirectoryUrl,
@@ -13,16 +13,16 @@ export const jsenvPluginUrlAnalysis = ({
   supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"],
 }) => {
   // eslint-disable-next-line no-unused-vars
-  let getIncludeInfo = (url) => undefined
+  let getIncludeInfo = (url) => undefined;
   if (include) {
     const associations = URL_META.resolveAssociations(
       { include },
       rootDirectoryUrl,
-    )
+    );
     getIncludeInfo = (url) => {
-      const { include } = URL_META.applyAssociations({ url, associations })
-      return include
-    }
+      const { include } = URL_META.applyAssociations({ url, associations });
+      return include;
+    };
   }
 
   return [
@@ -31,7 +31,7 @@ export const jsenvPluginUrlAnalysis = ({
       appliesDuring: "*",
       redirectUrl: (reference) => {
         if (reference.shouldHandle !== undefined) {
-          return
+          return;
         }
         if (
           reference.specifier[0] === "#" &&
@@ -41,24 +41,24 @@ export const jsenvPluginUrlAnalysis = ({
           // to resolve them (https://nodejs.org/api/packages.html#imports for instance)
           reference.type !== "js_import"
         ) {
-          reference.shouldHandle = false
-          return
+          reference.shouldHandle = false;
+          return;
         }
-        const includeInfo = getIncludeInfo(reference.url)
+        const includeInfo = getIncludeInfo(reference.url);
         if (includeInfo === true) {
-          reference.shouldHandle = true
-          return
+          reference.shouldHandle = true;
+          return;
         }
         if (includeInfo === false) {
-          reference.shouldHandle = false
-          return
+          reference.shouldHandle = false;
+          return;
         }
-        const { protocol } = new URL(reference.url)
+        const { protocol } = new URL(reference.url);
         const protocolIsSupported = supportedProtocols.some(
           (supportedProtocol) => protocol === supportedProtocol,
-        )
+        );
         if (protocolIsSupported) {
-          reference.shouldHandle = true
+          reference.shouldHandle = true;
         }
       },
       transformUrlContent: {
@@ -71,11 +71,11 @@ export const jsenvPluginUrlAnalysis = ({
           const originalDirectoryReference = findOriginalDirectoryReference(
             urlInfo,
             context,
-          )
+          );
           const directoryRelativeUrl = urlToRelativeUrl(
             urlInfo.url,
             context.rootDirectoryUrl,
-          )
+          );
           JSON.parse(urlInfo.content).forEach((directoryEntryName) => {
             context.referenceUtils.found({
               type: "filesystem",
@@ -84,33 +84,33 @@ export const jsenvPluginUrlAnalysis = ({
               trace: {
                 message: `"${directoryRelativeUrl}${directoryEntryName}" entry in directory referenced by ${originalDirectoryReference.trace.message}`,
               },
-            })
-          })
+            });
+          });
         },
       },
     },
     jsenvPluginReferenceExpectedTypes(),
-  ]
-}
+  ];
+};
 
 const findOriginalDirectoryReference = (urlInfo, context) => {
   const findNonFileSystemAncestor = (urlInfo) => {
     for (const dependentUrl of urlInfo.dependents) {
-      const dependentUrlInfo = context.urlGraph.getUrlInfo(dependentUrl)
+      const dependentUrlInfo = context.urlGraph.getUrlInfo(dependentUrl);
       if (dependentUrlInfo.type !== "directory") {
-        return [dependentUrlInfo, urlInfo]
+        return [dependentUrlInfo, urlInfo];
       }
-      const found = findNonFileSystemAncestor(dependentUrlInfo)
+      const found = findNonFileSystemAncestor(dependentUrlInfo);
       if (found) {
-        return found
+        return found;
       }
     }
-    return []
-  }
-  const [ancestor, child] = findNonFileSystemAncestor(urlInfo)
+    return [];
+  };
+  const [ancestor, child] = findNonFileSystemAncestor(urlInfo);
   if (!ancestor) {
-    return null
+    return null;
   }
-  const ref = ancestor.references.find((ref) => ref.url === child.url)
-  return ref
-}
+  const ref = ancestor.references.find((ref) => ref.url === child.url);
+  return ref;
+};

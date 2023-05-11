@@ -1,10 +1,10 @@
-import { assert } from "@jsenv/assert"
-import { fetchUrl } from "@jsenv/fetch"
+import { assert } from "@jsenv/assert";
+import { fetchUrl } from "@jsenv/fetch";
 
-import { startServer, fetchFileSystem } from "@jsenv/server"
-import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js"
+import { startServer, fetchFileSystem } from "@jsenv/server";
+import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
 
-const testDirectoryUrl = new URL("./", import.meta.url).href
+const testDirectoryUrl = new URL("./", import.meta.url).href;
 
 const server = await startServer({
   logLevel: "warn",
@@ -19,24 +19,24 @@ const server = await startServer({
             canReadDirectory: true,
             rootDirectoryUrl: testDirectoryUrl,
           },
-        )
+        );
       },
     },
   ],
-})
+});
 
-const directoryUrl = new URL("./dir/", testDirectoryUrl).href
-const requestUrl = new URL("/dir/", server.origin).href
+const directoryUrl = new URL("./dir/", testDirectoryUrl).href;
+const requestUrl = new URL("/dir/", server.origin).href;
 const response = await fetchUrl(requestUrl, {
   headers: { accept: "text/html" },
-})
+});
 const actual = {
   url: response.url,
   status: response.status,
   statusText: response.statusText,
   headers: headersToObject(response.headers),
   body: await response.text(),
-}
+};
 const expectedBody = `<!DOCTYPE html>
 <html>
   <head>
@@ -53,7 +53,7 @@ const expectedBody = `<!DOCTYPE html>
       </li>
     </ul>
   </body>
-</html>`
+</html>`;
 const expected = {
   url: requestUrl,
   status: 200,
@@ -65,5 +65,5 @@ const expected = {
     "date": actual.headers.date,
   },
   body: expectedBody,
-}
-assert({ actual, expected })
+};
+assert({ actual, expected });

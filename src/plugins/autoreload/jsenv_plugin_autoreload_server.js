@@ -2,7 +2,7 @@ import {
   urlIsInsideOf,
   urlToRelativeUrl,
   asUrlWithoutSearch,
-} from "@jsenv/urls"
+} from "@jsenv/urls";
 
 export const jsenvPluginAutoreloadServer = ({
   clientFileChangeCallbackList,
@@ -15,13 +15,13 @@ export const jsenvPluginAutoreloadServer = ({
       reload: ({ sendServerEvent, rootDirectoryUrl, urlGraph }) => {
         const formatUrlForClient = (url) => {
           if (urlIsInsideOf(url, rootDirectoryUrl)) {
-            return urlToRelativeUrl(url, rootDirectoryUrl)
+            return urlToRelativeUrl(url, rootDirectoryUrl);
           }
           if (url.startsWith("file:")) {
-            return `/@fs/${url.slice("file:///".length)}`
+            return `/@fs/${url.slice("file:///".length)}`;
           }
-          return url
-        }
+          return url;
+        };
 
         const notifyDeclined = ({ cause, reason, declinedBy }) => {
           sendServerEvent({
@@ -29,22 +29,22 @@ export const jsenvPluginAutoreloadServer = ({
             type: "full",
             typeReason: reason,
             declinedBy,
-          })
-        }
+          });
+        };
         const notifyAccepted = ({ cause, reason, instructions }) => {
           sendServerEvent({
             cause,
             type: "hot",
             typeReason: reason,
             hotInstructions: instructions,
-          })
-        }
+          });
+        };
         const propagateUpdate = (firstUrlInfo) => {
           if (!urlGraph.getUrlInfo(firstUrlInfo.url)) {
             return {
               declined: true,
               reason: `url not in the url graph`,
-            }
+            };
           }
           const iterate = (urlInfo, seen) => {
             if (urlInfo.data.hotAcceptSelf) {
@@ -61,48 +61,48 @@ export const jsenvPluginAutoreloadServer = ({
                     acceptedBy: formatUrlForClient(urlInfo.url),
                   },
                 ],
-              }
+              };
             }
-            const { dependents } = urlInfo
-            const instructions = []
+            const { dependents } = urlInfo;
+            const instructions = [];
             for (const dependentUrl of dependents) {
-              const dependentUrlInfo = urlGraph.getUrlInfo(dependentUrl)
+              const dependentUrlInfo = urlGraph.getUrlInfo(dependentUrl);
               if (dependentUrlInfo.data.hotDecline) {
                 return {
                   declined: true,
                   reason: `a dependent file declines hot reload`,
                   declinedBy: dependentUrl,
-                }
+                };
               }
-              const { hotAcceptDependencies = [] } = dependentUrlInfo.data
+              const { hotAcceptDependencies = [] } = dependentUrlInfo.data;
               if (hotAcceptDependencies.includes(urlInfo.url)) {
                 instructions.push({
                   type: dependentUrlInfo.type,
                   boundary: formatUrlForClient(dependentUrl),
                   acceptedBy: formatUrlForClient(urlInfo.url),
-                })
-                continue
+                });
+                continue;
               }
               if (seen.includes(dependentUrl)) {
                 return {
                   declined: true,
                   reason: "circular dependency",
                   declinedBy: formatUrlForClient(dependentUrl),
-                }
+                };
               }
               const dependentPropagationResult = iterate(dependentUrlInfo, [
                 ...seen,
                 dependentUrl,
-              ])
+              ]);
               if (dependentPropagationResult.accepted) {
-                instructions.push(...dependentPropagationResult.instructions)
-                continue
+                instructions.push(...dependentPropagationResult.instructions);
+                continue;
               }
               if (
                 // declined explicitely by an other file, it must decline the whole update
                 dependentPropagationResult.declinedBy
               ) {
-                return dependentPropagationResult
+                return dependentPropagationResult;
               }
               // declined by absence of boundary, we can keep searching
             }
@@ -110,52 +110,53 @@ export const jsenvPluginAutoreloadServer = ({
               return {
                 declined: true,
                 reason: `there is no file accepting hot reload while propagating update`,
-              }
+              };
             }
             return {
               accepted: true,
               reason: `${instructions.length} dependent file(s) accepts hot reload`,
               instructions,
-            }
-          }
-          const seen = []
-          return iterate(firstUrlInfo, seen)
-        }
+            };
+          };
+          const seen = [];
+          return iterate(firstUrlInfo, seen);
+        };
         clientFileChangeCallbackList.push(({ url, event }) => {
           const onUrlInfo = (urlInfo) => {
-            const relativeUrl = formatUrlForClient(urlInfo.url)
-            const hotUpdate = propagateUpdate(urlInfo)
+            const relativeUrl = formatUrlForClient(urlInfo.url);
+            const hotUpdate = propagateUpdate(urlInfo);
             if (hotUpdate.declined) {
               notifyDeclined({
                 cause: `${relativeUrl} ${event}`,
                 reason: hotUpdate.reason,
                 declinedBy: hotUpdate.declinedBy,
-              })
+              });
             } else {
               notifyAccepted({
                 cause: `${relativeUrl} ${event}`,
                 reason: hotUpdate.reason,
                 instructions: hotUpdate.instructions,
-              })
+              });
             }
-          }
-          const exactUrlInfo = urlGraph.getUrlInfo(url)
+          };
+          const exactUrlInfo = urlGraph.getUrlInfo(url);
           if (exactUrlInfo) {
-            onUrlInfo(exactUrlInfo)
+            onUrlInfo(exactUrlInfo);
           }
           urlGraph.urlInfoMap.forEach((urlInfo) => {
-            if (urlInfo === exactUrlInfo) return
-            const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url)
-            if (urlWithoutSearch !== url) return
-            if (exactUrlInfo && exactUrlInfo.dependents.has(urlInfo.url)) return
-            onUrlInfo(urlInfo)
-          })
-        })
+            if (urlInfo === exactUrlInfo) return;
+            const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
+            if (urlWithoutSearch !== url) return;
+            if (exactUrlInfo && exactUrlInfo.dependents.has(urlInfo.url))
+              return;
+            onUrlInfo(urlInfo);
+          });
+        });
         clientFilesPruneCallbackList.push((prunedUrlInfos, firstUrlInfo) => {
-          const mainHotUpdate = propagateUpdate(firstUrlInfo)
+          const mainHotUpdate = propagateUpdate(firstUrlInfo);
           const cause = `following files are no longer referenced: ${prunedUrlInfos.map(
             (prunedUrlInfo) => formatUrlForClient(prunedUrlInfo.url),
-          )}`
+          )}`;
           // now check if we can hot update the main resource
           // then if we can hot update all dependencies
           if (mainHotUpdate.declined) {
@@ -163,39 +164,39 @@ export const jsenvPluginAutoreloadServer = ({
               cause,
               reason: mainHotUpdate.reason,
               declinedBy: mainHotUpdate.declinedBy,
-            })
-            return
+            });
+            return;
           }
           // main can hot update
-          let i = 0
-          const instructions = []
+          let i = 0;
+          const instructions = [];
           while (i < prunedUrlInfos.length) {
-            const prunedUrlInfo = prunedUrlInfos[i++]
+            const prunedUrlInfo = prunedUrlInfos[i++];
             if (prunedUrlInfo.data.hotDecline) {
               notifyDeclined({
                 cause,
                 reason: `a pruned file declines hot reload`,
                 declinedBy: formatUrlForClient(prunedUrlInfo.url),
-              })
-              return
+              });
+              return;
             }
             instructions.push({
               type: "prune",
               boundary: formatUrlForClient(prunedUrlInfo.url),
               acceptedBy: formatUrlForClient(firstUrlInfo.url),
-            })
+            });
           }
           notifyAccepted({
             cause,
             reason: mainHotUpdate.reason,
             instructions,
-          })
-        })
+          });
+        });
       },
     },
     serve: (request, { rootDirectoryUrl, urlGraph }) => {
       if (request.pathname === "/__graph__") {
-        const graphJson = JSON.stringify(urlGraph.toJSON(rootDirectoryUrl))
+        const graphJson = JSON.stringify(urlGraph.toJSON(rootDirectoryUrl));
         return {
           status: 200,
           headers: {
@@ -203,9 +204,9 @@ export const jsenvPluginAutoreloadServer = ({
             "content-length": Buffer.byteLength(graphJson),
           },
           body: graphJson,
-        }
+        };
       }
-      return null
+      return null;
     },
-  }
-}
+  };
+};

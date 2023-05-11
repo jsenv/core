@@ -1,190 +1,190 @@
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-import { createCallbackListNotifiedOnce } from "@jsenv/abort"
+import { createCallbackListNotifiedOnce } from "@jsenv/abort";
 
 // remove before use
 {
-  const callbackList = createCallbackListNotifiedOnce()
-  let callCount = 0
+  const callbackList = createCallbackListNotifiedOnce();
+  let callCount = 0;
   const remove = callbackList.add(() => {
-    callCount++
-  })
-  remove()
-  callbackList.notify()
+    callCount++;
+  });
+  remove();
+  callbackList.notify();
   const actual = {
     callCount,
-  }
+  };
   const expected = {
     callCount: 0,
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }
 
 // remove 2 while calling 1
 {
-  const callbackList = createCallbackListNotifiedOnce()
-  let firstCallbackCallCount = 0
-  let secondCallbackCallCount = 0
+  const callbackList = createCallbackListNotifiedOnce();
+  let firstCallbackCallCount = 0;
+  let secondCallbackCallCount = 0;
   callbackList.add(() => {
-    firstCallbackCallCount++
-    remove2()
-  })
+    firstCallbackCallCount++;
+    remove2();
+  });
   const remove2 = callbackList.add(() => {
-    secondCallbackCallCount++
-  })
-  callbackList.notify()
+    secondCallbackCallCount++;
+  });
+  callbackList.notify();
   const actual = {
     firstCallbackCallCount,
     secondCallbackCallCount,
-  }
+  };
   const expected = {
     firstCallbackCallCount: 1,
     secondCallbackCallCount: 0,
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }
 
 // remove 1 while calling 1 and there is 3
 {
-  const callbackList = createCallbackListNotifiedOnce()
-  let firstCallbackCallCount = 0
-  let secondCallbackCallCount = 0
-  let thridCallbackCallCount = 0
+  const callbackList = createCallbackListNotifiedOnce();
+  let firstCallbackCallCount = 0;
+  let secondCallbackCallCount = 0;
+  let thridCallbackCallCount = 0;
   const removeFirst = callbackList.add(() => {
-    firstCallbackCallCount++
-    removeFirst()
-  })
+    firstCallbackCallCount++;
+    removeFirst();
+  });
   callbackList.add(() => {
-    secondCallbackCallCount++
-  })
+    secondCallbackCallCount++;
+  });
   callbackList.add(() => {
-    thridCallbackCallCount++
-  })
-  callbackList.notify()
+    thridCallbackCallCount++;
+  });
+  callbackList.notify();
   const actual = {
     firstCallbackCallCount,
     secondCallbackCallCount,
     thridCallbackCallCount,
-  }
+  };
   const expected = {
     firstCallbackCallCount: 1,
     secondCallbackCallCount: 1,
     thridCallbackCallCount: 1,
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }
 
 // remove 2 while calling 1 and there is 3
 {
-  const callbackList = createCallbackListNotifiedOnce()
-  let firstCallbackCallCount = 0
-  let secondCallbackCallCount = 0
-  let thridCallbackCallCount = 0
+  const callbackList = createCallbackListNotifiedOnce();
+  let firstCallbackCallCount = 0;
+  let secondCallbackCallCount = 0;
+  let thridCallbackCallCount = 0;
   callbackList.add(() => {
-    firstCallbackCallCount++
-    removeSecond()
-  })
+    firstCallbackCallCount++;
+    removeSecond();
+  });
   const removeSecond = callbackList.add(() => {
-    secondCallbackCallCount++
-  })
+    secondCallbackCallCount++;
+  });
   callbackList.add(() => {
-    thridCallbackCallCount++
-  })
-  callbackList.notify()
+    thridCallbackCallCount++;
+  });
+  callbackList.notify();
   const actual = {
     firstCallbackCallCount,
     secondCallbackCallCount,
     thridCallbackCallCount,
-  }
+  };
   const expected = {
     firstCallbackCallCount: 1,
     secondCallbackCallCount: 0,
     thridCallbackCallCount: 1,
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }
 
 // remove 1 and 2 while calling 1 and there is 3
 {
-  const callbackList = createCallbackListNotifiedOnce()
-  let firstCallbackCallCount = 0
-  let secondCallbackCallCount = 0
-  let thridCallbackCallCount = 0
+  const callbackList = createCallbackListNotifiedOnce();
+  let firstCallbackCallCount = 0;
+  let secondCallbackCallCount = 0;
+  let thridCallbackCallCount = 0;
   const removeFirst = callbackList.add(() => {
-    firstCallbackCallCount++
-    removeFirst()
-    removeSecond()
-  })
+    firstCallbackCallCount++;
+    removeFirst();
+    removeSecond();
+  });
   const removeSecond = callbackList.add(() => {
-    secondCallbackCallCount++
-  })
+    secondCallbackCallCount++;
+  });
   callbackList.add(() => {
-    thridCallbackCallCount++
-  })
-  callbackList.notify()
+    thridCallbackCallCount++;
+  });
+  callbackList.notify();
   const actual = {
     firstCallbackCallCount,
     secondCallbackCallCount,
     thridCallbackCallCount,
-  }
+  };
   const expected = {
     firstCallbackCallCount: 1,
     secondCallbackCallCount: 0,
     thridCallbackCallCount: 1,
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }
 
 // remove 1 and 2 while calling 2 and there is 3
 {
-  const callbackList = createCallbackListNotifiedOnce()
-  let firstCallbackCallCount = 0
-  let secondCallbackCallCount = 0
-  let thridCallbackCallCount = 0
+  const callbackList = createCallbackListNotifiedOnce();
+  let firstCallbackCallCount = 0;
+  let secondCallbackCallCount = 0;
+  let thridCallbackCallCount = 0;
   const removeFirst = callbackList.add(() => {
-    firstCallbackCallCount++
-  })
+    firstCallbackCallCount++;
+  });
   const removeSecond = callbackList.add(() => {
-    secondCallbackCallCount++
-    removeFirst()
-    removeSecond()
-  })
+    secondCallbackCallCount++;
+    removeFirst();
+    removeSecond();
+  });
   callbackList.add(() => {
-    thridCallbackCallCount++
-  })
-  callbackList.notify()
+    thridCallbackCallCount++;
+  });
+  callbackList.notify();
   const actual = {
     firstCallbackCallCount,
     secondCallbackCallCount,
     thridCallbackCallCount,
-  }
+  };
   const expected = {
     firstCallbackCallCount: 1,
     secondCallbackCallCount: 1,
     thridCallbackCallCount: 1,
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }
 
 // call many
 {
-  const callbackList = createCallbackListNotifiedOnce()
-  let firstCallbackCallCount = 0
-  let secondCallbackCallCount = 0
+  const callbackList = createCallbackListNotifiedOnce();
+  let firstCallbackCallCount = 0;
+  let secondCallbackCallCount = 0;
   callbackList.add(() => {
-    firstCallbackCallCount++
-  })
+    firstCallbackCallCount++;
+  });
   callbackList.add(() => {
-    secondCallbackCallCount++
-  })
-  callbackList.notify()
+    secondCallbackCallCount++;
+  });
+  callbackList.notify();
   const actual = {
     firstCallbackCallCount,
     secondCallbackCallCount,
-  }
+  };
   const expected = {
     firstCallbackCallCount: 1,
     secondCallbackCallCount: 1,
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }

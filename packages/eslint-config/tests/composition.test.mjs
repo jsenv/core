@@ -1,6 +1,6 @@
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-import { composeEslintConfig } from "@jsenv/eslint-config"
+import { composeEslintConfig } from "@jsenv/eslint-config";
 
 // overrides array composition
 {
@@ -19,7 +19,7 @@ import { composeEslintConfig } from "@jsenv/eslint-config"
         },
       ],
     },
-  )
+  );
   const expected = {
     overrides: [
       {
@@ -29,8 +29,8 @@ import { composeEslintConfig } from "@jsenv/eslint-config"
         files: ["**/*.mjs"],
       },
     ],
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }
 
 // settings extension

@@ -1,7 +1,7 @@
-import { fileURLToPath } from "node:url"
-import { assert } from "@jsenv/assert"
+import { fileURLToPath } from "node:url";
+import { assert } from "@jsenv/assert";
 
-import { execute, nodeChildProcess, nodeWorkerThread } from "@jsenv/test"
+import { execute, nodeChildProcess, nodeWorkerThread } from "@jsenv/test";
 
 const test = async ({ remapped, ...params }) => {
   const result = await execute({
@@ -12,11 +12,11 @@ const test = async ({ remapped, ...params }) => {
     mirrorConsole: true,
     collectConsole: true,
     ...params,
-  })
-  const actual = result.namespace.answer
-  const expected = remapped ? 42 : 43
-  assert({ actual, expected })
-}
+  });
+  const actual = result.namespace.answer;
+  const expected = remapped ? 42 : 43;
+  assert({ actual, expected });
+};
 
 // child process
 await test({
@@ -25,7 +25,7 @@ await test({
       `--require=${fileURLToPath(new URL("./required.cjs", import.meta.url))}`,
     ],
   }),
-})
+});
 await test({
   runtime: nodeChildProcess({
     commandLineOptions: [
@@ -38,14 +38,14 @@ await test({
     },
   }),
   remapped: true,
-})
+});
 await test({
   runtime: nodeWorkerThread({
     commandLineOptions: [
       `--require=${fileURLToPath(new URL("./required.cjs", import.meta.url))}`,
     ],
   }),
-})
+});
 // worker thread
 await test({
   runtime: nodeWorkerThread({
@@ -59,4 +59,4 @@ await test({
     },
   }),
   remapped: true,
-})
+});

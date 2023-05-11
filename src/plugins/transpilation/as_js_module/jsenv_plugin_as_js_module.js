@@ -9,9 +9,9 @@
  * and can be used like this for instance import("hls?as_js_module")
  */
 
-import { urlToFilename } from "@jsenv/urls"
+import { urlToFilename } from "@jsenv/urls";
 
-import { convertJsClassicToJsModule } from "./convert_js_classic_to_js_module.js"
+import { convertJsClassicToJsModule } from "./convert_js_classic_to_js_module.js";
 
 export const jsenvPluginAsJsModule = () => {
   return {
@@ -19,10 +19,10 @@ export const jsenvPluginAsJsModule = () => {
     appliesDuring: "*",
     redirectUrl: (reference) => {
       if (reference.searchParams.has("as_js_module")) {
-        reference.expectedType = "js_module"
-        const filename = urlToFilename(reference.url)
-        const [basename] = splitFileExtension(filename)
-        reference.filename = `${basename}.mjs`
+        reference.expectedType = "js_module";
+        const filename = urlToFilename(reference.url);
+        const [basename] = splitFileExtension(filename);
+        reference.filename = `${basename}.mjs`;
       }
     },
     fetchUrlContent: async (urlInfo, context) => {
@@ -35,27 +35,27 @@ export const jsenvPluginAsJsModule = () => {
           // because when there is ?as_js_module it means the underlying resource
           // is js_classic
           expectedType: "js_classic",
-        })
+        });
       if (!jsClassicReference) {
-        return null
+        return null;
       }
       await context.fetchUrlContent(jsClassicUrlInfo, {
         reference: jsClassicReference,
-      })
+      });
       if (context.dev) {
         context.referenceUtils.found({
           type: "js_import",
           subtype: jsClassicReference.subtype,
           specifier: jsClassicReference.url,
           expectedType: "js_classic",
-        })
+        });
       } else if (context.build && jsClassicUrlInfo.dependents.size === 0) {
-        context.urlGraph.deleteUrlInfo(jsClassicUrlInfo.url)
+        context.urlGraph.deleteUrlInfo(jsClassicUrlInfo.url);
       }
       const { content, sourcemap } = await convertJsClassicToJsModule({
         urlInfo,
         jsClassicUrlInfo,
-      })
+      });
       return {
         content,
         contentType: "text/javascript",
@@ -64,15 +64,15 @@ export const jsenvPluginAsJsModule = () => {
         originalContent: jsClassicUrlInfo.originalContent,
         sourcemap,
         data: jsClassicUrlInfo.data,
-      }
+      };
     },
-  }
-}
+  };
+};
 
 const splitFileExtension = (filename) => {
-  const dotLastIndex = filename.lastIndexOf(".")
+  const dotLastIndex = filename.lastIndexOf(".");
   if (dotLastIndex === -1) {
-    return [filename, ""]
+    return [filename, ""];
   }
-  return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)]
-}
+  return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)];
+};

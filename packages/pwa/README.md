@@ -31,18 +31,18 @@ The following html displays a button enabled when add to home screen is availabl
   <body>
     <button id="add-to-home-screen" disabled>Add to home screen</button>
     <script type="module">
-      import { addToHomescreen } from "@jsenv/pwa"
+      import { addToHomescreen } from "@jsenv/pwa";
 
-      const button = document.querySelector("button#add-to-home-screen")
+      const button = document.querySelector("button#add-to-home-screen");
 
-      button.disabled = !addToHomescreen.isAvailable()
+      button.disabled = !addToHomescreen.isAvailable();
       addToHomescreen.listenAvailabilityChange(() => {
         document.querySelector("button#add-to-home-screen").disabled =
-          !addToHomescreen.isAvailable()
-      })
+          !addToHomescreen.isAvailable();
+      });
       button.onclick = () => {
-        addToHomescreen.prompt()
-      }
+        addToHomescreen.prompt();
+      };
     </script>
     <!--
     "beforeinstallprompt" event might be dispatched very quickly by the navigator, before
@@ -54,10 +54,10 @@ The following html displays a button enabled when add to home screen is availabl
       window.addEventListener(
         "beforeinstallprompt",
         (beforeinstallpromptEvent) => {
-          beforeinstallpromptEvent.preventDefault()
-          window.beforeinstallpromptEvent = beforeinstallpromptEvent
+          beforeinstallpromptEvent.preventDefault();
+          window.beforeinstallpromptEvent = beforeinstallpromptEvent;
         },
-      )
+      );
     </script>
   </body>
 </html>
@@ -84,13 +84,13 @@ It can be called many times but always inside a user interaction event handler, 
 _displayModeStandalone_ is an object that can be used to know if display mode is standalone or be notified when this changes. The standalone display mode is true when your web page is runned as an application (navigator ui is mostly/fully hidden).
 
 ```js
-import { displayModeStandalone } from "@jsenv/pwa"
+import { displayModeStandalone } from "@jsenv/pwa";
 
-displayModeStandalone.get() // true or false
+displayModeStandalone.get(); // true or false
 
 displayModeStandalone.listen(() => {
-  displayModeStandalone.get() // true or false
-})
+  displayModeStandalone.get(); // true or false
+});
 ```
 
 # Service worker
@@ -127,35 +127,35 @@ The raw service worker api offered by navigators is complex to implement. Especi
 _demo.js_
 
 ```js
-import { createServiceWorkerFacade } from "@jsenv/pwa"
+import { createServiceWorkerFacade } from "@jsenv/pwa";
 
-const swFacade = createServiceWorkerFacade()
+const swFacade = createServiceWorkerFacade();
 
-const registrationPromise = window.navigator.serviceWorker.register("./sw.js")
-swFacade.setRegistrationPromise(registrationPromise)
+const registrationPromise = window.navigator.serviceWorker.register("./sw.js");
+swFacade.setRegistrationPromise(registrationPromise);
 
-const updateCheckButton = document.querySelector("#update_check_button")
-updateCheckButton.disabled = false
+const updateCheckButton = document.querySelector("#update_check_button");
+updateCheckButton.disabled = false;
 updateCheckButton.onclick = async () => {
-  const found = await swFacade.checkForUpdates()
+  const found = await swFacade.checkForUpdates();
   if (!found) {
-    alert("no update found")
+    alert("no update found");
   }
-}
-const updateAvailableText = document.querySelector("#update_available_text")
-const updateActivateButton = document.querySelector("#update_activate_button")
+};
+const updateAvailableText = document.querySelector("#update_available_text");
+const updateActivateButton = document.querySelector("#update_activate_button");
 swFacade.subscribe(() => {
-  const { update } = swFacade.state
+  const { update } = swFacade.state;
   if (update) {
-    updateAvailableText.innerHTML = "An update is available !"
-    updateActivateButton.disabled = false
+    updateAvailableText.innerHTML = "An update is available !";
+    updateActivateButton.disabled = false;
     updateActivateButton.onclick = () => {
-      updateActivateButton.disabled = true
-      update.activate()
-    }
+      updateActivateButton.disabled = true;
+      update.activate();
+    };
   } else {
-    updateAvailableText.innerHTML = ""
-    buttonActivateUpdate.disabled = true
+    updateAvailableText.innerHTML = "";
+    buttonActivateUpdate.disabled = true;
   }
-})
+});
 ```

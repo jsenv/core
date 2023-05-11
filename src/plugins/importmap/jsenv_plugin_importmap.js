@@ -21,8 +21,8 @@ import {
   resolveImport,
   composeTwoImportMaps,
   normalizeImportMap,
-} from "@jsenv/importmap"
-import { generateInlineContentUrl } from "@jsenv/urls"
+} from "@jsenv/importmap";
+import { generateInlineContentUrl } from "@jsenv/urls";
 import {
   parseHtmlString,
   stringifyHtmlAst,
@@ -33,26 +33,26 @@ import {
   getHtmlNodeText,
   setHtmlNodeText,
   removeHtmlNode,
-} from "@jsenv/ast"
+} from "@jsenv/ast";
 
 export const jsenvPluginImportmap = () => {
-  let finalImportmap = null
-  const importmaps = {}
+  let finalImportmap = null;
+  const importmaps = {};
   const onHtmlImportmapParsed = (importmap, htmlUrl) => {
     importmaps[htmlUrl] = importmap
       ? normalizeImportMap(importmap, htmlUrl)
-      : null
+      : null;
     finalImportmap = Object.keys(importmaps).reduce((previous, url) => {
-      const importmap = importmaps[url]
+      const importmap = importmaps[url];
       if (!previous) {
-        return importmap
+        return importmap;
       }
       if (!importmap) {
-        return previous
+        return previous;
       }
-      return composeTwoImportMaps(previous, importmap)
-    }, null)
-  }
+      return composeTwoImportMaps(previous, importmap);
+    }, null);
+  };
 
   return {
     name: "jsenv:importmap",
@@ -60,22 +60,22 @@ export const jsenvPluginImportmap = () => {
     resolveUrl: {
       js_import: (reference) => {
         if (!finalImportmap) {
-          return null
+          return null;
         }
         try {
-          let fromMapping = false
+          let fromMapping = false;
           const result = resolveImport({
             specifier: reference.specifier,
             importer: reference.parentUrl,
             importMap: finalImportmap,
             onImportMapping: () => {
-              fromMapping = true
+              fromMapping = true;
             },
-          })
+          });
           if (fromMapping) {
-            return result
+            return result;
           }
-          return null
+          return null;
         } catch (e) {
           if (e.message.includes("bare specifier")) {
             // in theory we should throw to be compliant with web behaviour
@@ -83,34 +83,34 @@ export const jsenvPluginImportmap = () => {
             // and let a chance to other plugins to handle the bare specifier
             // (node esm resolution)
             // and we want importmap to be prio over node esm so we cannot put this plugin after
-            return null
+            return null;
           }
-          throw e
+          throw e;
         }
       },
     },
     transformUrlContent: {
       html: async (htmlUrlInfo, context) => {
-        const htmlAst = parseHtmlString(htmlUrlInfo.content)
+        const htmlAst = parseHtmlString(htmlUrlInfo.content);
         const importmap = findHtmlNode(htmlAst, (node) => {
           if (node.nodeName !== "script") {
-            return false
+            return false;
           }
-          const type = getHtmlNodeAttribute(node, "type")
+          const type = getHtmlNodeAttribute(node, "type");
           if (type === undefined || type !== "importmap") {
-            return false
+            return false;
           }
-          return true
-        })
+          return true;
+        });
         if (!importmap) {
-          onHtmlImportmapParsed(null, htmlUrlInfo.url)
-          return null
+          onHtmlImportmapParsed(null, htmlUrlInfo.url);
+          return null;
         }
         const handleInlineImportmap = async (importmap, htmlNodeText) => {
           const { line, column, lineEnd, columnEnd, isOriginal } =
             getHtmlNodePosition(importmap, {
               preferOriginal: true,
-            })
+            });
           const inlineImportmapUrl = generateInlineContentUrl({
             url: htmlUrlInfo.url,
             extension: ".importmap",
@@ -118,7 +118,7 @@ export const jsenvPluginImportmap = () => {
             column,
             lineEnd,
             columnEnd,
-          })
+          });
           const [inlineImportmapReference, inlineImportmapUrlInfo] =
             context.referenceUtils.foundInline({
               type: "script",
@@ -128,21 +128,21 @@ export const jsenvPluginImportmap = () => {
               specifier: inlineImportmapUrl,
               contentType: "application/importmap+json",
               content: htmlNodeText,
-            })
+            });
           await context.cook(inlineImportmapUrlInfo, {
             reference: inlineImportmapReference,
-          })
+          });
           setHtmlNodeText(importmap, inlineImportmapUrlInfo.content, {
             indentation: "auto",
-          })
+          });
           setHtmlNodeAttributes(importmap, {
             "jsenv-cooked-by": "jsenv:importmap",
-          })
+          });
           onHtmlImportmapParsed(
             JSON.parse(inlineImportmapUrlInfo.content),
             htmlUrlInfo.url,
-          )
-        }
+          );
+        };
         const handleImportmapWithSrc = async (importmap, src) => {
           // Browser would throw on remote importmap
           // and won't sent a request to the server for it
@@ -151,30 +151,30 @@ export const jsenvPluginImportmap = () => {
           // when parsing the HTML
           const importmapReference = context.referenceUtils.find(
             (ref) => ref.generatedSpecifier === src,
-          )
+          );
           const importmapUrlInfo = context.urlGraph.getUrlInfo(
             importmapReference.url,
-          )
+          );
           await context.cook(importmapUrlInfo, {
             reference: importmapReference,
-          })
+          });
           onHtmlImportmapParsed(
             JSON.parse(importmapUrlInfo.content),
             htmlUrlInfo.url,
-          )
+          );
           setHtmlNodeText(importmap, importmapUrlInfo.content, {
             indentation: "auto",
-          })
+          });
           setHtmlNodeAttributes(importmap, {
             "src": undefined,
             "jsenv-inlined-by": "jsenv:importmap",
             "inlined-from-src": src,
-          })
+          });
 
           const { line, column, lineEnd, columnEnd, isOriginal } =
             getHtmlNodePosition(importmap, {
               preferOriginal: true,
-            })
+            });
           const inlineImportmapUrl = generateInlineContentUrl({
             url: htmlUrlInfo.url,
             extension: ".importmap",
@@ -182,7 +182,7 @@ export const jsenvPluginImportmap = () => {
             column,
             lineEnd,
             columnEnd,
-          })
+          });
           context.referenceUtils.becomesInline(importmapReference, {
             line: line - 1,
             column,
@@ -190,16 +190,16 @@ export const jsenvPluginImportmap = () => {
             specifier: inlineImportmapUrl,
             contentType: "application/importmap+json",
             content: importmapUrlInfo.content,
-          })
-        }
+          });
+        };
 
-        const src = getHtmlNodeAttribute(importmap, "src")
+        const src = getHtmlNodeAttribute(importmap, "src");
         if (src) {
-          await handleImportmapWithSrc(importmap, src)
+          await handleImportmapWithSrc(importmap, src);
         } else {
-          const htmlNodeText = getHtmlNodeText(importmap)
+          const htmlNodeText = getHtmlNodeText(importmap);
           if (htmlNodeText) {
-            await handleInlineImportmap(importmap, htmlNodeText)
+            await handleInlineImportmap(importmap, htmlNodeText);
           }
         }
         // once this plugin knows the importmap, it will use it
@@ -208,12 +208,12 @@ export const jsenvPluginImportmap = () => {
         // In dev/test we keep importmap into the HTML to see it even if useless
         // Duing build we get rid of it
         if (context.build) {
-          removeHtmlNode(importmap)
+          removeHtmlNode(importmap);
         }
         return {
           content: stringifyHtmlAst(htmlAst),
-        }
+        };
       },
     },
-  }
-}
+  };
+};

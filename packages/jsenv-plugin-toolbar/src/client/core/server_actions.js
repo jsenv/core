@@ -1,9 +1,9 @@
-import { serverTooltipOpenedSignal } from "./server_signals.js"
+import { serverTooltipOpenedSignal } from "./server_signals.js";
 
 export const openServerTooltip = () => {
-  serverTooltipOpenedSignal.value = true
-}
+  serverTooltipOpenedSignal.value = true;
+};
 
 export const closeServerTooltip = () => {
-  serverTooltipOpenedSignal.value = false
-}
+  serverTooltipOpenedSignal.value = false;
+};

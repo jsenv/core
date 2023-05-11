@@ -6,22 +6,22 @@ export const isWebWorkerEntryPointReference = (reference) => {
   if (reference.subtype === "new_url_first_arg") {
     return ["worker", "service_worker", "shared_worker"].includes(
       reference.expectedSubtype,
-    )
+    );
   }
   return [
     "new_worker_first_arg",
     "new_shared_worker_first_arg",
     "service_worker_register_first_arg",
-  ].includes(reference.subtype)
-}
+  ].includes(reference.subtype);
+};
 
 export const isWebWorkerUrlInfo = (urlInfo) => {
   return (
     urlInfo.subtype === "worker" ||
     urlInfo.subtype === "service_worker" ||
     urlInfo.subtype === "shared_worker"
-  )
-}
+  );
+};
 
 // export const isEntryPoint = (urlInfo, urlGraph) => {
 //   if (urlInfo.data.isEntryPoint) {

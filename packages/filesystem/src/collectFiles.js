@@ -1,11 +1,11 @@
-import { Abort } from "@jsenv/abort"
-import { URL_META } from "@jsenv/url-meta"
-import { urlToRelativeUrl } from "@jsenv/urls"
+import { Abort } from "@jsenv/abort";
+import { URL_META } from "@jsenv/url-meta";
+import { urlToRelativeUrl } from "@jsenv/urls";
 
-import { assertAndNormalizeDirectoryUrl } from "./directory_url_validation.js"
-import { readDirectory } from "./readDirectory.js"
-import { readEntryStat } from "./readEntryStat.js"
-import { comparePathnames } from "./comparePathnames.js"
+import { assertAndNormalizeDirectoryUrl } from "./directory_url_validation.js";
+import { readDirectory } from "./readDirectory.js";
+import { readEntryStat } from "./readEntryStat.js";
+import { comparePathnames } from "./comparePathnames.js";
 
 export const collectFiles = async ({
   signal = new AbortController().signal,
@@ -13,24 +13,24 @@ export const collectFiles = async ({
   associations,
   predicate,
 }) => {
-  const rootDirectoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl)
+  const rootDirectoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl);
   if (typeof predicate !== "function") {
-    throw new TypeError(`predicate must be a function, got ${predicate}`)
+    throw new TypeError(`predicate must be a function, got ${predicate}`);
   }
-  associations = URL_META.resolveAssociations(associations, rootDirectoryUrl)
+  associations = URL_META.resolveAssociations(associations, rootDirectoryUrl);
 
-  const collectOperation = Abort.startOperation()
-  collectOperation.addAbortSignal(signal)
+  const collectOperation = Abort.startOperation();
+  collectOperation.addAbortSignal(signal);
 
-  const matchingFileResultArray = []
+  const matchingFileResultArray = [];
   const visitDirectory = async (directoryUrl) => {
-    collectOperation.throwIfAborted()
-    const directoryItems = await readDirectory(directoryUrl)
+    collectOperation.throwIfAborted();
+    const directoryItems = await readDirectory(directoryUrl);
 
     await Promise.all(
       directoryItems.map(async (directoryItem) => {
-        const directoryChildNodeUrl = `${directoryUrl}${directoryItem}`
-        collectOperation.throwIfAborted()
+        const directoryChildNodeUrl = `${directoryUrl}${directoryItem}`;
+        collectOperation.throwIfAborted();
         const directoryChildNodeStats = await readEntryStat(
           directoryChildNodeUrl,
           {
@@ -42,10 +42,10 @@ export const collectFiles = async ({
             // because directoryPath is recursively traversed
             followLink: false,
           },
-        )
+        );
 
         if (directoryChildNodeStats.isDirectory()) {
-          const subDirectoryUrl = `${directoryChildNodeUrl}/`
+          const subDirectoryUrl = `${directoryChildNodeUrl}/`;
           if (
             !URL_META.urlChildMayMatch({
               url: subDirectoryUrl,
@@ -53,47 +53,47 @@ export const collectFiles = async ({
               predicate,
             })
           ) {
-            return
+            return;
           }
-          await visitDirectory(subDirectoryUrl)
-          return
+          await visitDirectory(subDirectoryUrl);
+          return;
         }
 
         if (directoryChildNodeStats.isFile()) {
           const meta = URL_META.applyAssociations({
             url: directoryChildNodeUrl,
             associations,
-          })
-          if (!predicate(meta)) return
+          });
+          if (!predicate(meta)) return;
 
           const relativeUrl = urlToRelativeUrl(
             directoryChildNodeUrl,
             rootDirectoryUrl,
-          )
+          );
           matchingFileResultArray.push({
             url: new URL(relativeUrl, rootDirectoryUrl).href,
             relativeUrl: decodeURIComponent(relativeUrl),
             meta,
             fileStats: directoryChildNodeStats,
-          })
-          return
+          });
+          return;
         }
       }),
-    )
-  }
+    );
+  };
 
   try {
-    await visitDirectory(rootDirectoryUrl)
+    await visitDirectory(rootDirectoryUrl);
 
     // When we operate on thoose files later it feels more natural
     // to perform operation in the same order they appear in the filesystem.
     // It also allow to get a predictable return value.
     // For that reason we sort matchingFileResultArray
     matchingFileResultArray.sort((leftFile, rightFile) => {
-      return comparePathnames(leftFile.relativeUrl, rightFile.relativeUrl)
-    })
-    return matchingFileResultArray
+      return comparePathnames(leftFile.relativeUrl, rightFile.relativeUrl);
+    });
+    return matchingFileResultArray;
   } finally {
-    await collectOperation.end()
+    await collectOperation.end();
   }
-}
+};

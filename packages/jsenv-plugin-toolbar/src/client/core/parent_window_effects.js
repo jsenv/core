@@ -1,20 +1,20 @@
 import {
   addExternalCommandCallback,
   sendEventToParent,
-} from "./parent_window_actions.js"
-import { animationsEnabledSignal } from "./animation_signals.js"
-import { initToolbarUI } from "../ui/toolbar_ui.js"
+} from "./parent_window_actions.js";
+import { animationsEnabledSignal } from "./animation_signals.js";
+import { initToolbarUI } from "../ui/toolbar_ui.js";
 
 addExternalCommandCallback("initToolbar", () => {
   // for the first render, force disable animations
-  const animationsEnabled = animationsEnabledSignal.value
+  const animationsEnabled = animationsEnabledSignal.value;
   if (animationsEnabled) {
-    animationsEnabledSignal.value = false
+    animationsEnabledSignal.value = false;
   }
-  initToolbarUI()
+  initToolbarUI();
   if (animationsEnabled) {
-    animationsEnabledSignal.value = true
+    animationsEnabledSignal.value = true;
   }
-})
+});
 
-sendEventToParent("toolbar_ready")
+sendEventToParent("toolbar_ready");

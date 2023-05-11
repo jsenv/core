@@ -1,10 +1,10 @@
-import { pathToFileURL } from "node:url"
-import { injectJsImport } from "@jsenv/ast"
+import { pathToFileURL } from "node:url";
+import { injectJsImport } from "@jsenv/ast";
 
 export const newStylesheetClientFileUrl = new URL(
   "./client/new_stylesheet.js",
   import.meta.url,
-).href
+).href;
 
 export const babelPluginNewStylesheetAsJsenvImport = (
   babel,
@@ -15,58 +15,58 @@ export const babelPluginNewStylesheetAsJsenvImport = (
     visitor: {
       Program: (programPath, babelState) => {
         if (babelState.filename) {
-          const fileUrl = pathToFileURL(babelState.filename).href
+          const fileUrl = pathToFileURL(babelState.filename).href;
           if (fileUrl === newStylesheetClientFileUrl) {
-            return
+            return;
           }
         }
-        let usesNewStylesheet = false
+        let usesNewStylesheet = false;
         programPath.traverse({
           NewExpression: (path) => {
-            usesNewStylesheet = isNewCssStyleSheetCall(path.node)
+            usesNewStylesheet = isNewCssStyleSheetCall(path.node);
             if (usesNewStylesheet) {
-              path.stop()
+              path.stop();
             }
           },
           MemberExpression: (path) => {
-            usesNewStylesheet = isDocumentAdoptedStyleSheets(path.node)
+            usesNewStylesheet = isDocumentAdoptedStyleSheets(path.node);
             if (usesNewStylesheet) {
-              path.stop()
+              path.stop();
             }
           },
           CallExpression: (path) => {
             if (path.node.callee.type !== "Import") {
               // Some other function call, not import();
-              return
+              return;
             }
             if (path.node.arguments[0].type !== "StringLiteral") {
               // Non-string argument, probably a variable or expression, e.g.
               // import(moduleId)
               // import('./' + moduleName)
-              return
+              return;
             }
-            const sourcePath = path.get("arguments")[0]
+            const sourcePath = path.get("arguments")[0];
             usesNewStylesheet =
               hasCssModuleQueryParam(sourcePath) ||
-              hasImportTypeCssAssertion(path)
+              hasImportTypeCssAssertion(path);
             if (usesNewStylesheet) {
-              path.stop()
+              path.stop();
             }
           },
           ImportDeclaration: (path) => {
-            const sourcePath = path.get("source")
+            const sourcePath = path.get("source");
             usesNewStylesheet =
               hasCssModuleQueryParam(sourcePath) ||
-              hasImportTypeCssAssertion(path)
+              hasImportTypeCssAssertion(path);
             if (usesNewStylesheet) {
-              path.stop()
+              path.stop();
             }
           },
           ExportAllDeclaration: (path) => {
-            const sourcePath = path.get("source")
-            usesNewStylesheet = hasCssModuleQueryParam(sourcePath)
+            const sourcePath = path.get("source");
+            usesNewStylesheet = hasCssModuleQueryParam(sourcePath);
             if (usesNewStylesheet) {
-              path.stop()
+              path.stop();
             }
           },
           ExportNamedDeclaration: (path) => {
@@ -76,34 +76,34 @@ export const babelPluginNewStylesheetAsJsenvImport = (
               // export { varName }
               // export const constName = ...
               // export function funcName() {}
-              return
+              return;
             }
-            const sourcePath = path.get("source")
-            usesNewStylesheet = hasCssModuleQueryParam(sourcePath)
+            const sourcePath = path.get("source");
+            usesNewStylesheet = hasCssModuleQueryParam(sourcePath);
             if (usesNewStylesheet) {
-              path.stop()
+              path.stop();
             }
           },
-        })
+        });
         if (usesNewStylesheet) {
           injectJsImport({
             programPath,
             from: getImportSpecifier(newStylesheetClientFileUrl),
             sideEffect: true,
-          })
+          });
         }
       },
     },
-  }
-}
+  };
+};
 
 const isNewCssStyleSheetCall = (node) => {
   return (
     node.type === "NewExpression" &&
     node.callee.type === "Identifier" &&
     node.callee.name === "CSSStyleSheet"
-  )
-}
+  );
+};
 
 const isDocumentAdoptedStyleSheets = (node) => {
   return (
@@ -112,31 +112,31 @@ const isDocumentAdoptedStyleSheets = (node) => {
     node.object.name === "document" &&
     node.property.type === "Identifier" &&
     node.property.name === "adoptedStyleSheets"
-  )
-}
+  );
+};
 
 const hasCssModuleQueryParam = (path) => {
-  const { node } = path
+  const { node } = path;
   return (
     node.type === "StringLiteral" &&
     new URL(node.value, "https://jsenv.dev").searchParams.has(`css_module`)
-  )
-}
+  );
+};
 
 const hasImportTypeCssAssertion = (path) => {
   const importAssertionsDescriptor = getImportAssertionsDescriptor(
     path.node.assertions,
-  )
-  return Boolean(importAssertionsDescriptor.type === "css")
-}
+  );
+  return Boolean(importAssertionsDescriptor.type === "css");
+};
 
 const getImportAssertionsDescriptor = (importAssertions) => {
-  const importAssertionsDescriptor = {}
+  const importAssertionsDescriptor = {};
   if (importAssertions) {
     importAssertions.forEach((importAssertion) => {
       importAssertionsDescriptor[importAssertion.key.name] =
-        importAssertion.value.value
-    })
+        importAssertion.value.value;
+    });
   }
-  return importAssertionsDescriptor
-}
+  return importAssertionsDescriptor;
+};

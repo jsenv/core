@@ -1,88 +1,88 @@
-import { effect } from "@preact/signals"
+import { effect } from "@preact/signals";
 
 import {
   notificationsEnabledSignal,
   notificationPermissionSignal,
-} from "../../core/notification_signals.js"
-import { notificationAPIDetected } from "../../core/notification_context.js"
+} from "../../core/notification_signals.js";
+import { notificationAPIDetected } from "../../core/notification_context.js";
 import {
   enableNotifications,
   disableNotifications,
   requestPermission,
-} from "../../core/notification_actions.js"
-import { enableVariant } from "../variant.js"
+} from "../../core/notification_actions.js";
+import { enableVariant } from "../variant.js";
 
-const notifCheckbox = document.querySelector("#toggle_notifs")
+const notifCheckbox = document.querySelector("#toggle_notifs");
 
 export const renderToolbarNotificationSetting = () => {
   effect(() => {
-    const notificationsEnabled = notificationsEnabledSignal.value
-    notifCheckbox.checked = notificationsEnabled
-  })
+    const notificationsEnabled = notificationsEnabledSignal.value;
+    notifCheckbox.checked = notificationsEnabled;
+  });
 
   effect(() => {
-    const notificationPermission = notificationPermissionSignal.value
+    const notificationPermission = notificationPermissionSignal.value;
     if (!notificationAPIDetected) {
-      applyNotificationNotAvailableEffects()
-      return
+      applyNotificationNotAvailableEffects();
+      return;
     }
     if (notificationPermission === "default") {
-      applyNotificationDefaultEffects()
-      return
+      applyNotificationDefaultEffects();
+      return;
     }
     if (notificationPermission === "denied") {
-      applyNotificationDeniedEffects()
-      return
+      applyNotificationDeniedEffects();
+      return;
     }
     if (notificationPermission === "granted") {
-      applyNotificationGrantedEffects()
-      return
+      applyNotificationGrantedEffects();
+      return;
     }
-  })
-}
+  });
+};
 
 const applyNotificationNotAvailableEffects = () => {
-  const notifSetting = document.querySelector(".settings_notification")
-  notifSetting.setAttribute("data-disabled", "true")
+  const notifSetting = document.querySelector(".settings_notification");
+  notifSetting.setAttribute("data-disabled", "true");
   notifSetting.setAttribute(
     "title",
     `Notification not available in the browser`,
-  )
-  notifCheckbox.disabled = true
-}
+  );
+  notifCheckbox.disabled = true;
+};
 const applyNotificationDefaultEffects = () => {
-  applyNotificationNOTGrantedEffects()
-  const notifSetting = document.querySelector(".settings_notification")
-  notifSetting.removeAttribute("data-disabled")
-  notifSetting.removeAttribute("title")
-}
+  applyNotificationNOTGrantedEffects();
+  const notifSetting = document.querySelector(".settings_notification");
+  notifSetting.removeAttribute("data-disabled");
+  notifSetting.removeAttribute("title");
+};
 const applyNotificationDeniedEffects = () => {
-  applyNotificationNOTGrantedEffects()
-  const notifSetting = document.querySelector(".settings_notification")
-  notifSetting.setAttribute("data-disabled", "true")
-  notifSetting.setAttribute("title", `Notification denied`)
-}
+  applyNotificationNOTGrantedEffects();
+  const notifSetting = document.querySelector(".settings_notification");
+  notifSetting.setAttribute("data-disabled", "true");
+  notifSetting.setAttribute("title", `Notification denied`);
+};
 const applyNotificationGrantedEffects = () => {
   enableVariant(document.querySelector(".notification_text"), {
     notif_granted: "yes",
-  })
-  notifCheckbox.disabled = false
+  });
+  notifCheckbox.disabled = false;
   notifCheckbox.onchange = () => {
     if (notifCheckbox.checked) {
-      enableNotifications()
+      enableNotifications();
     } else {
-      disableNotifications()
+      disableNotifications();
     }
-  }
-}
+  };
+};
 
 const applyNotificationNOTGrantedEffects = () => {
   enableVariant(document.querySelector(".notification_text"), {
     notif_granted: "no",
-  })
-  notifCheckbox.disabled = true
-  notifCheckbox.checked = false
+  });
+  notifCheckbox.disabled = true;
+  notifCheckbox.checked = false;
   document.querySelector("a.request_notification_permission").onclick = () => {
-    requestPermission()
-  }
-}
+    requestPermission();
+  };
+};

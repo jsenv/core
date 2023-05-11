@@ -1,16 +1,16 @@
-import { readdirSync, statSync } from "node:fs"
-import { URL_META } from "@jsenv/url-meta"
-import { urlToFileSystemPath, urlToRelativeUrl } from "@jsenv/urls"
+import { readdirSync, statSync } from "node:fs";
+import { URL_META } from "@jsenv/url-meta";
+import { urlToFileSystemPath, urlToRelativeUrl } from "@jsenv/urls";
 
-import { assertAndNormalizeDirectoryUrl } from "./directory_url_validation.js"
-import { statsToType } from "./internal/statsToType.js"
-import { guardTooFastSecondCallPerFile } from "./internal/guard_second_call.js"
-import { createWatcher } from "./internal/createWatcher.js"
-import { trackResources } from "./internal/track_resources.js"
+import { assertAndNormalizeDirectoryUrl } from "./directory_url_validation.js";
+import { statsToType } from "./internal/statsToType.js";
+import { guardTooFastSecondCallPerFile } from "./internal/guard_second_call.js";
+import { createWatcher } from "./internal/createWatcher.js";
+import { trackResources } from "./internal/track_resources.js";
 
-const isLinux = process.platform === "linux"
+const isLinux = process.platform === "linux";
 // linux does not support recursive option
-const fsWatchSupportsRecursive = !isLinux
+const fsWatchSupportsRecursive = !isLinux;
 
 export const registerDirectoryLifecycle = (
   source,
@@ -33,71 +33,71 @@ export const registerDirectoryLifecycle = (
     cooldownBetweenFileEvents = 0,
   },
 ) => {
-  const sourceUrl = assertAndNormalizeDirectoryUrl(source)
+  const sourceUrl = assertAndNormalizeDirectoryUrl(source);
   if (!undefinedOrFunction(added)) {
-    throw new TypeError(`added must be a function or undefined, got ${added}`)
+    throw new TypeError(`added must be a function or undefined, got ${added}`);
   }
   if (!undefinedOrFunction(updated)) {
     throw new TypeError(
       `updated must be a function or undefined, got ${updated}`,
-    )
+    );
   }
   if (!undefinedOrFunction(removed)) {
     throw new TypeError(
       `removed must be a function or undefined, got ${removed}`,
-    )
+    );
   }
   if (cooldownBetweenFileEvents) {
     if (added) {
-      added = guardTooFastSecondCallPerFile(added, cooldownBetweenFileEvents)
+      added = guardTooFastSecondCallPerFile(added, cooldownBetweenFileEvents);
     }
     if (updated) {
       updated = guardTooFastSecondCallPerFile(
         updated,
         cooldownBetweenFileEvents,
-      )
+      );
     }
     if (removed) {
       removed = guardTooFastSecondCallPerFile(
         removed,
         cooldownBetweenFileEvents,
-      )
+      );
     }
   }
 
   const associations = URL_META.resolveAssociations(
     { watch: watchPatterns },
     sourceUrl,
-  )
+  );
   const getWatchPatternValue = ({ url, type }) => {
     if (type === "directory") {
-      let firstMeta = false
+      let firstMeta = false;
       URL_META.urlChildMayMatch({
         url: `${url}/`,
         associations,
         predicate: ({ watch }) => {
           if (watch) {
-            firstMeta = watch
+            firstMeta = watch;
           }
-          return watch
+          return watch;
         },
-      })
-      return firstMeta
+      });
+      return firstMeta;
     }
-    const { watch } = URL_META.applyAssociations({ url, associations })
-    return watch
-  }
-  const tracker = trackResources()
-  const infoMap = new Map()
+    const { watch } = URL_META.applyAssociations({ url, associations });
+    return watch;
+  };
+  const tracker = trackResources();
+  const infoMap = new Map();
   const readEntryInfo = (url) => {
     try {
-      const relativeUrl = urlToRelativeUrl(url, source)
-      const previousInfo = infoMap.get(relativeUrl)
-      const stats = statSync(new URL(url))
-      const type = statsToType(stats)
+      const relativeUrl = urlToRelativeUrl(url, source);
+      const previousInfo = infoMap.get(relativeUrl);
+      const stats = statSync(new URL(url));
+      const type = statsToType(stats);
       const patternValue = previousInfo
         ? previousInfo.patternValue
-        : getWatchPatternValue({ url, type })
+        : getWatchPatternValue({ url, type });
       return {
         previousInfo,
         url,
@@ -106,14 +106,14 @@ export const registerDirectoryLifecycle = (
         atimeMs: stats.atimeMs,
         mtimeMs: stats.mtimeMs,
         patternValue,
-      }
+      };
     } catch (e) {
       if (e.code === "ENOENT") {
-        return null
+        return null;
       }
-      throw e
+      throw e;
     }
-  }
+  };
 
   const handleDirectoryEvent = ({
     directoryRelativeUrl,
@@ -122,101 +122,101 @@ export const registerDirectoryLifecycle = (
   }) => {
     if (filename) {
       if (directoryRelativeUrl) {
-        handleChange(`${directoryRelativeUrl}/${filename}`)
-        return
+        handleChange(`${directoryRelativeUrl}/${filename}`);
+        return;
       }
-      handleChange(`${filename}`)
-      return
+      handleChange(`${filename}`);
+      return;
     }
     if (eventType === "rename") {
       if (!removed && !added) {
-        return
+        return;
       }
       // we might receive `rename` without filename
       // in that case we try to find ourselves which file was removed.
-      let relativeUrlCandidateArray = Array.from(infoMap.keys())
+      let relativeUrlCandidateArray = Array.from(infoMap.keys());
       if (recursive && !fsWatchSupportsRecursive) {
         relativeUrlCandidateArray = relativeUrlCandidateArray.filter(
           (relativeUrlCandidate) => {
             if (!directoryRelativeUrl) {
               // ensure entry is top level
               if (relativeUrlCandidate.includes("/")) {
-                return false
+                return false;
               }
-              return true
+              return true;
             }
             // entry not inside this directory
             if (!relativeUrlCandidate.startsWith(directoryRelativeUrl)) {
-              return false
+              return false;
             }
             const afterDirectory = relativeUrlCandidate.slice(
               directoryRelativeUrl.length + 1,
-            )
+            );
             // deep inside this directory
             if (afterDirectory.includes("/")) {
-              return false
+              return false;
             }
-            return true
+            return true;
           },
-        )
+        );
       }
       const removedEntryRelativeUrl = relativeUrlCandidateArray.find(
         (relativeUrlCandidate) => {
           try {
-            statSync(new URL(relativeUrlCandidate, sourceUrl))
-            return false
+            statSync(new URL(relativeUrlCandidate, sourceUrl));
+            return false;
           } catch (e) {
             if (e.code === "ENOENT") {
-              return true
+              return true;
             }
-            throw e
+            throw e;
           }
         },
-      )
+      );
       if (removedEntryRelativeUrl) {
-        handleEntryLost(infoMap.get(removedEntryRelativeUrl))
+        handleEntryLost(infoMap.get(removedEntryRelativeUrl));
       }
     }
-  }
+  };
 
   const handleChange = (relativeUrl) => {
-    const entryUrl = new URL(relativeUrl, sourceUrl).href
-    const entryInfo = readEntryInfo(entryUrl)
+    const entryUrl = new URL(relativeUrl, sourceUrl).href;
+    const entryInfo = readEntryInfo(entryUrl);
     if (!entryInfo) {
-      const previousEntryInfo = infoMap.get(relativeUrl)
+      const previousEntryInfo = infoMap.get(relativeUrl);
       if (!previousEntryInfo) {
         // on MacOS it's possible to receive a "rename" event for
         // a file that does not exists...
-        return
+        return;
       }
       if (debug) {
-        console.debug(`"${relativeUrl}" removed`)
+        console.debug(`"${relativeUrl}" removed`);
       }
-      handleEntryLost(previousEntryInfo)
-      return
+      handleEntryLost(previousEntryInfo);
+      return;
     }
-    const { previousInfo } = entryInfo
+    const { previousInfo } = entryInfo;
     if (!previousInfo) {
       if (debug) {
-        console.debug(`"${relativeUrl}" added`)
+        console.debug(`"${relativeUrl}" added`);
       }
-      handleEntryFound(entryInfo)
-      return
+      handleEntryFound(entryInfo);
+      return;
     }
     if (entryInfo.type !== previousInfo.type) {
       // it existed and was replaced by something else
       // we don't handle this as an update. We rather say the resource
       // is lost and something else is found (call removed() then added())
-      handleEntryLost(previousInfo)
-      handleEntryFound(entryInfo)
-      return
+      handleEntryLost(previousInfo);
+      handleEntryFound(entryInfo);
+      return;
     }
     if (entryInfo.type === "directory") {
       // a directory cannot really be updated in way that matters for us
       // filesystem is trying to tell us the directory content have changed
       // but we don't care about that
       // we'll already be notified about what has changed
-      return
+      return;
     }
     // something has changed at this relativeUrl (the file existed and was not deleted)
     // it's possible to get there without a real update
@@ -231,29 +231,29 @@ export const registerDirectoryLifecycle = (
     // maybe we should exclude some stuff as done in
     // https://github.com/paulmillr/chokidar/blob/b2c4f249b6cfa98c703f0066fb4a56ccd83128b5/lib/nodefs-handler.js#L366
     if (debug) {
-      console.debug(`"${relativeUrl}" modified`)
+      console.debug(`"${relativeUrl}" modified`);
     }
-    handleEntryUpdated(entryInfo)
-  }
+    handleEntryUpdated(entryInfo);
+  };
   const handleEntryFound = (entryInfo, { notify = true } = {}) => {
-    infoMap.set(entryInfo.relativeUrl, entryInfo)
+    infoMap.set(entryInfo.relativeUrl, entryInfo);
     if (entryInfo.type === "directory") {
-      const directoryUrl = `${entryInfo.url}/`
+      const directoryUrl = `${entryInfo.url}/`;
       readdirSync(new URL(directoryUrl)).forEach((entryName) => {
-        const childEntryUrl = new URL(entryName, directoryUrl).href
-        const childEntryInfo = readEntryInfo(childEntryUrl)
+        const childEntryUrl = new URL(entryName, directoryUrl).href;
+        const childEntryInfo = readEntryInfo(childEntryUrl);
         if (childEntryInfo && childEntryInfo.patternValue) {
-          handleEntryFound(childEntryInfo, { notify })
+          handleEntryFound(childEntryInfo, { notify });
         }
-      })
+      });
       // we must watch manually every directory we find
       if (!fsWatchSupportsRecursive) {
         const watcher = createWatcher(urlToFileSystemPath(entryInfo.url), {
           persistent: keepProcessAlive,
-        })
+        });
         tracker.registerCleanupCallback(() => {
-          watcher.close()
-        })
+          watcher.close();
+        });
         watcher.on("change", (eventType, filename) => {
           handleDirectoryEvent({
             directoryRelativeUrl: entryInfo.relativeUrl,
@@ -262,8 +262,8 @@ export const registerDirectoryLifecycle = (
                 filename.replace(/\\/g, "/")
               : "",
             eventType,
-          })
-        })
+          });
+        });
       }
     }
     if (added && entryInfo.patternValue && notify) {
@@ -272,22 +272,22 @@ export const registerDirectoryLifecycle = (
         type: entryInfo.type,
         patternValue: entryInfo.patternValue,
         mtime: entryInfo.mtimeMs,
-      })
+      });
     }
-  }
+  };
   const handleEntryLost = (entryInfo) => {
-    infoMap.delete(entryInfo.relativeUrl)
+    infoMap.delete(entryInfo.relativeUrl);
     if (removed && entryInfo.patternValue) {
       removed({
         relativeUrl: entryInfo.relativeUrl,
         type: entryInfo.type,
         patternValue: entryInfo.patternValue,
         mtime: entryInfo.mtimeMs,
-      })
+      });
     }
-  }
+  };
   const handleEntryUpdated = (entryInfo) => {
-    infoMap.set(entryInfo.relativeUrl, entryInfo)
+    infoMap.set(entryInfo.relativeUrl, entryInfo);
     if (updated && entryInfo.patternValue) {
       updated({
         relativeUrl: entryInfo.relativeUrl,
@@ -295,72 +295,72 @@ export const registerDirectoryLifecycle = (
         patternValue: entryInfo.patternValue,
         mtime: entryInfo.mtimeMs,
         previousMtime: entryInfo.previousInfo.mtimeMs,
-      })
+      });
     }
-  }
+  };
 
   readdirSync(new URL(sourceUrl)).forEach((entry) => {
-    const entryUrl = new URL(entry, sourceUrl).href
-    const entryInfo = readEntryInfo(entryUrl)
+    const entryUrl = new URL(entry, sourceUrl).href;
+    const entryInfo = readEntryInfo(entryUrl);
     if (entryInfo && entryInfo.patternValue) {
       handleEntryFound(entryInfo, {
         notify: notifyExistent,
-      })
+      });
     }
-  })
+  });
   if (debug) {
-    const relativeUrls = Array.from(infoMap.keys())
+    const relativeUrls = Array.from(infoMap.keys());
     if (relativeUrls.length === 0) {
-      console.debug(`No file found`)
+      console.debug(`No file found`);
     } else {
       console.debug(
         `${relativeUrls.length} file found: 
 ${relativeUrls.join("\n")}`,
-      )
+      );
     }
   }
   const watcher = createWatcher(urlToFileSystemPath(sourceUrl), {
     recursive: recursive && fsWatchSupportsRecursive,
     persistent: keepProcessAlive,
-  })
+  });
   tracker.registerCleanupCallback(() => {
-    watcher.close()
-  })
+    watcher.close();
+  });
   watcher.on("change", (eventType, fileSystemPath) => {
     handleDirectoryEvent({
       ...fileSystemPathToDirectoryRelativeUrlAndFilename(fileSystemPath),
       eventType,
-    })
-  })
+    });
+  });
 
-  return tracker.cleanup
-}
+  return tracker.cleanup;
+};
 
 const undefinedOrFunction = (value) => {
-  return typeof value === "undefined" || typeof value === "function"
-}
+  return typeof value === "undefined" || typeof value === "function";
+};
 
 const fileSystemPathToDirectoryRelativeUrlAndFilename = (path) => {
   if (!path) {
     return {
       directoryRelativeUrl: "",
       filename: "",
-    }
+    };
   }
 
-  const normalizedPath = path.replace(/\\/g, "/") // replace back slashes with slashes
-  const slashLastIndex = normalizedPath.lastIndexOf("/")
+  const normalizedPath = path.replace(/\\/g, "/"); // replace back slashes with slashes
+  const slashLastIndex = normalizedPath.lastIndexOf("/");
   if (slashLastIndex === -1) {
     return {
       directoryRelativeUrl: "",
       filename: normalizedPath,
-    }
+    };
   }
 
-  const directoryRelativeUrl = normalizedPath.slice(0, slashLastIndex)
-  const filename = normalizedPath.slice(slashLastIndex + 1)
+  const directoryRelativeUrl = normalizedPath.slice(0, slashLastIndex);
+  const filename = normalizedPath.slice(slashLastIndex + 1);
   return {
     directoryRelativeUrl,
     filename,
-  }
-}
+  };
+};

@@ -3,68 +3,68 @@
 
 export const findPreviousComparison = (comparison, predicate) => {
   const createPreviousIterator = () => {
-    let current = comparison
+    let current = comparison;
     const next = () => {
-      const previous = getPrevious(current)
-      current = previous
+      const previous = getPrevious(current);
+      current = previous;
       return {
         done: !previous,
         value: previous,
-      }
-    }
+      };
+    };
     return {
       next,
-    }
-  }
+    };
+  };
 
-  const iterator = createPreviousIterator()
-  let next = iterator.next()
+  const iterator = createPreviousIterator();
+  let next = iterator.next();
   while (!next.done) {
-    const value = next.value
+    const value = next.value;
     if (predicate(value)) {
-      return value
+      return value;
     }
-    next = iterator.next()
+    next = iterator.next();
   }
-  return null
-}
+  return null;
+};
 
 const getLastChild = (comparison) => {
-  return comparison.children[comparison.children.length - 1]
-}
+  return comparison.children[comparison.children.length - 1];
+};
 
 const getDeepestChild = (comparison) => {
-  let deepest = getLastChild(comparison)
+  let deepest = getLastChild(comparison);
   while (deepest) {
-    const lastChild = getLastChild(deepest)
+    const lastChild = getLastChild(deepest);
     if (lastChild) {
-      deepest = lastChild
+      deepest = lastChild;
     } else {
-      break
+      break;
     }
   }
-  return deepest
-}
+  return deepest;
+};
 
 const getPreviousSibling = (comparison) => {
-  const { parent } = comparison
-  if (!parent) return null
-  const { children } = parent
-  const index = children.indexOf(comparison)
-  if (index === 0) return null
-  return children[index - 1]
-}
+  const { parent } = comparison;
+  if (!parent) return null;
+  const { children } = parent;
+  const index = children.indexOf(comparison);
+  if (index === 0) return null;
+  return children[index - 1];
+};
 
 const getPrevious = (comparison) => {
-  const previousSibling = getPreviousSibling(comparison)
+  const previousSibling = getPreviousSibling(comparison);
   if (previousSibling) {
-    const deepestChild = getDeepestChild(previousSibling)
+    const deepestChild = getDeepestChild(previousSibling);
 
     if (deepestChild) {
-      return deepestChild
+      return deepestChild;
     }
-    return previousSibling
+    return previousSibling;
   }
-  const parent = comparison.parent
-  return parent
-}
+  const parent = comparison.parent;
+  return parent;
+};

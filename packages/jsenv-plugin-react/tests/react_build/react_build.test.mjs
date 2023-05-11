@@ -1,10 +1,10 @@
-import { assert } from "@jsenv/assert"
-import { jsenvPluginMinification } from "@jsenv/plugin-minification"
-import { build } from "@jsenv/core"
-import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
-import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js"
+import { assert } from "@jsenv/assert";
+import { jsenvPluginMinification } from "@jsenv/plugin-minification";
+import { build } from "@jsenv/core";
+import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
+import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
-import { jsenvPluginReact } from "@jsenv/plugin-react"
+import { jsenvPluginReact } from "@jsenv/plugin-react";
 
 const test = async (params) => {
   await build({
@@ -21,23 +21,23 @@ const test = async (params) => {
       }),
       ...(params.plugins || []),
     ],
-  })
+  });
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
-  })
+  });
   const { returnValue } = await executeInBrowser({
     url: `${server.origin}/main.html`,
     /* eslint-disable no-undef */
     pageFunction: () => window.resultPromise,
     /* eslint-enable no-undef */
-  })
-  const actual = returnValue
-  const expected = { spanContent: "Hello world" }
-  assert({ actual, expected })
-}
+  });
+  const actual = returnValue;
+  const expected = { spanContent: "Hello world" };
+  assert({ actual, expected });
+};
 
 // support for <script type="module">
-await test({ runtimeCompat: { chrome: "64" } })
+await test({ runtimeCompat: { chrome: "64" } });
 // no support for <script type="module">
 await test({
   runtimeCompat: {
@@ -46,7 +46,7 @@ await test({
     firefox: "52",
     safari: "11",
   },
-})
+});
 await test({
   runtimeCompat: {
     chrome: "55",
@@ -55,4 +55,4 @@ await test({
     safari: "11",
   },
   plugins: [jsenvPluginMinification()],
-})
+});

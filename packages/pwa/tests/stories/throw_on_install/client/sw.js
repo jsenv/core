@@ -12,4 +12,4 @@ self.addEventListener("install", () => {
   //       })
   //     }),
   //   )
-})
+});

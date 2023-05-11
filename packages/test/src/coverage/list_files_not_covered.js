@@ -1,4 +1,4 @@
-import { collectFiles } from "@jsenv/filesystem"
+import { collectFiles } from "@jsenv/filesystem";
 
 export const listRelativeFileUrlToCover = async ({
   signal,
@@ -10,6 +10,6 @@ export const listRelativeFileUrlToCover = async ({
     directoryUrl: rootDirectoryUrl,
     associations: { cover: coverageConfig },
     predicate: ({ cover }) => cover,
-  })
-  return matchingFileResultArray.map(({ relativeUrl }) => relativeUrl)
-}
+  });
+  return matchingFileResultArray.map(({ relativeUrl }) => relativeUrl);
+};

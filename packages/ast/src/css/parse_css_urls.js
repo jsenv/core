@@ -1,8 +1,8 @@
-import { applyPostCss } from "./apply_post_css.js"
-import { postCssPluginUrlVisitor } from "./postcss_plugin_url_visitor.js"
+import { applyPostCss } from "./apply_post_css.js";
+import { postCssPluginUrlVisitor } from "./postcss_plugin_url_visitor.js";
 
 export const parseCssUrls = async ({ css, url }) => {
-  const cssUrls = []
+  const cssUrls = [];
   await applyPostCss({
     content: css,
     url,
@@ -24,10 +24,10 @@ export const parseCssUrls = async ({ css, url }) => {
             end: specifierEnd,
             line: specifierLine,
             column: specifierColumn,
-          })
+          });
         },
       }),
     ],
-  })
-  return cssUrls
-}
+  });
+  return cssUrls;
+};

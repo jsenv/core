@@ -1,7 +1,7 @@
-import { fileSystemPathToUrl } from "@jsenv/urls"
+import { fileSystemPathToUrl } from "@jsenv/urls";
 
-const isWindows = process.platform === "win32"
-const baseUrlFallback = fileSystemPathToUrl(process.cwd())
+const isWindows = process.platform === "win32";
+const baseUrlFallback = fileSystemPathToUrl(process.cwd());
 
 /**
  * Some url might be resolved or remapped to url without the windows drive letter.
@@ -18,51 +18,51 @@ const baseUrlFallback = fileSystemPathToUrl(process.cwd())
 
 export const ensureWindowsDriveLetter = (url, baseUrl) => {
   try {
-    url = String(new URL(url))
+    url = String(new URL(url));
   } catch (e) {
-    throw new Error(`absolute url expected but got ${url}`)
+    throw new Error(`absolute url expected but got ${url}`);
   }
 
   if (!isWindows) {
-    return url
+    return url;
   }
 
   try {
-    baseUrl = String(new URL(baseUrl))
+    baseUrl = String(new URL(baseUrl));
   } catch (e) {
     throw new Error(
       `absolute baseUrl expected but got ${baseUrl} to ensure windows drive letter on ${url}`,
-    )
+    );
   }
 
   if (!url.startsWith("file://")) {
-    return url
+    return url;
   }
-  const afterProtocol = url.slice("file://".length)
+  const afterProtocol = url.slice("file://".length);
   // we still have the windows drive letter
   if (extractDriveLetter(afterProtocol)) {
-    return url
+    return url;
   }
 
   // drive letter was lost, restore it
   const baseUrlOrFallback = baseUrl.startsWith("file://")
     ? baseUrl
-    : baseUrlFallback
+    : baseUrlFallback;
   const driveLetter = extractDriveLetter(
     baseUrlOrFallback.slice("file://".length),
-  )
+  );
   if (!driveLetter) {
     throw new Error(
       `drive letter expected on baseUrl but got ${baseUrl} to ensure windows drive letter on ${url}`,
-    )
+    );
   }
-  return `file:///${driveLetter}:${afterProtocol}`
-}
+  return `file:///${driveLetter}:${afterProtocol}`;
+};
 
 const extractDriveLetter = (resource) => {
   // we still have the windows drive letter
   if (/[a-zA-Z]/.test(resource[1]) && resource[2] === ":") {
-    return resource[1]
+    return resource[1];
   }
-  return null
-}
+  return null;
+};

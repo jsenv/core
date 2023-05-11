@@ -13,7 +13,7 @@
 **version 34.0**
 
 ```js
-import { executeTestPlan, chromium } from "@jsenv/core"
+import { executeTestPlan, chromium } from "@jsenv/core";
 
 await executeTestPlan({
   testPlan: {
@@ -22,13 +22,13 @@ await executeTestPlan({
       runtimeParams: { headful: true },
     },
   },
-})
+});
 ```
 
 **version 35.0**
 
 ```js
-import { executeTestPlan, chromium } from "@jsenv/test"
+import { executeTestPlan, chromium } from "@jsenv/test";
 
 await executeTestPlan({
   testPlan: {
@@ -36,7 +36,7 @@ await executeTestPlan({
       runtime: chromium({ headful: true }),
     },
   },
-})
+});
 ```
 
 # 34.3.0
@@ -274,7 +274,7 @@ await executeTestPlan({
         preservesSymlink: false,
       },
     },
-  })
+  });
   ```
 - Preserve symlinks by default during node esm resolution
 - Ensure css and js is bundled when referenced by html itself referenced by js

@@ -9,16 +9,16 @@
   <body>
     <script>
       window.resultPromise = new Promise((resolve) => {
-        window.resolveResultPromise = resolve
-      })
+        window.resolveResultPromise = resolve;
+      });
     </script>
     <script type="module">
-      import { util } from "./src/util.js"
+      import { util } from "./src/util.js";
 
-      util()
+      util();
 
-      const dynamicImportNamespace = await import("./src/main.js")
-      window.resolveResultPromise(dynamicImportNamespace)
+      const dynamicImportNamespace = await import("./src/main.js");
+      window.resolveResultPromise(dynamicImportNamespace);
     </script>
   </body>
 </html>

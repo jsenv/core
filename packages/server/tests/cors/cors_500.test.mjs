@@ -1,12 +1,12 @@
-import { assert } from "@jsenv/assert"
-import { fetchUrl } from "@jsenv/fetch"
+import { assert } from "@jsenv/assert";
+import { fetchUrl } from "@jsenv/fetch";
 
 import {
   startServer,
   jsenvServiceCORS,
   jsenvServiceErrorHandler,
-} from "@jsenv/server"
-import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js"
+} from "@jsenv/server";
+import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
 
 const server = await startServer({
   logLevel: "off",
@@ -23,11 +23,11 @@ const server = await startServer({
     jsenvServiceErrorHandler(),
     {
       handleRequest: () => {
-        throw new Error("here")
+        throw new Error("here");
       },
     },
   ],
-})
+});
 
 const response = await fetchUrl(server.origin, {
   method: "GET",
@@ -37,15 +37,15 @@ const response = await fetchUrl(server.origin, {
     "access-control-request-method": "GET",
     "access-control-request-headers": "x-whatever",
   },
-})
+});
 const actual = {
   url: response.url,
   status: response.status,
   statusText: response.statusText,
   headers: headersToObject(response.headers),
   body: await response.text(),
-}
-const body = JSON.stringify({ code: "UNKNOWN_ERROR" })
+};
+const body = JSON.stringify({ code: "UNKNOWN_ERROR" });
 const expected = {
   url: `${server.origin}/`,
   status: 500,
@@ -65,5 +65,5 @@ const expected = {
       "origin, access-control-request-method, access-control-request-headers",
   },
   body,
-}
-assert({ actual, expected })
+};
+assert({ actual, expected });

@@ -1,3 +1,3 @@
-import { small } from "./small.js"
+import { small } from "./small.js";
 
-console.log(`b: ${small}`)
+console.log(`b: ${small}`);

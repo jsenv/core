@@ -1,13 +1,13 @@
-const meta = import.meta
+const meta = import.meta;
 
-const url = import.meta.url
+const url = import.meta.url;
 
-const { url: urlDestructured } = import.meta
+const { url: urlDestructured } = import.meta;
 
 if (import.meta.hot) {
-  import.meta.hot.accept(() => {})
-  import.meta.hot.accept("file.js", () => {})
-  import.meta.hot.accept(["a.js", "b.js"], () => {})
+  import.meta.hot.accept(() => {});
+  import.meta.hot.accept("file.js", () => {});
+  import.meta.hot.accept(["a.js", "b.js"], () => {});
 }
 
 window.resolveResultPromise({
@@ -17,4 +17,4 @@ window.resolveResultPromise({
   importMetaDev: import.meta.dev,
   importMetaTest: import.meta.test,
   importMetaBuild: import.meta.build,
-})
+});

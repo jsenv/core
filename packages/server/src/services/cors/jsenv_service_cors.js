@@ -1,4 +1,4 @@
-export const jsenvAccessControlAllowedHeaders = ["x-requested-with"]
+export const jsenvAccessControlAllowedHeaders = ["x-requested-with"];
 
 export const jsenvAccessControlAllowedMethods = [
   "GET",
@@ -6,7 +6,7 @@ export const jsenvAccessControlAllowedMethods = [
   "PUT",
   "DELETE",
   "OPTIONS",
-]
+];
 
 export const jsenvServiceCORS = ({
   accessControlAllowedOrigins = [],
@@ -24,10 +24,10 @@ export const jsenvServiceCORS = ({
   // TODO: we should check access control params to throw or warn if we find strange values
 
   const corsEnabled =
-    accessControlAllowRequestOrigin || accessControlAllowedOrigins.length
+    accessControlAllowRequestOrigin || accessControlAllowedOrigins.length;
 
   if (!corsEnabled) {
-    return []
+    return [];
   }
 
   return {
@@ -42,9 +42,9 @@ export const jsenvServiceCORS = ({
           headers: {
             "content-length": 0,
           },
-        }
+        };
       }
-      return null
+      return null;
     },
 
     injectResponseHeaders: (response, { request }) => {
@@ -59,11 +59,11 @@ export const jsenvServiceCORS = ({
         accessControlAllowCredentials,
         accessControlMaxAge,
         timingAllowOrigin,
-      })
-      return accessControlHeaders
+      });
+      return accessControlHeaders;
     },
-  }
-}
+  };
+};
 
 // https://www.w3.org/TR/cors/
 // https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
@@ -81,49 +81,49 @@ const generateAccessControlHeaders = ({
   accessControlMaxAge = 600,
   timingAllowOrigin,
 } = {}) => {
-  const vary = []
+  const vary = [];
 
-  const allowedOriginArray = [...accessControlAllowedOrigins]
+  const allowedOriginArray = [...accessControlAllowedOrigins];
   if (accessControlAllowRequestOrigin) {
     if ("origin" in headers && headers.origin !== "null") {
-      allowedOriginArray.push(headers.origin)
-      vary.push("origin")
+      allowedOriginArray.push(headers.origin);
+      vary.push("origin");
     } else if ("referer" in headers) {
-      allowedOriginArray.push(new URL(headers.referer).origin)
-      vary.push("referer")
+      allowedOriginArray.push(new URL(headers.referer).origin);
+      vary.push("referer");
     } else {
-      allowedOriginArray.push("*")
+      allowedOriginArray.push("*");
     }
   }
 
-  const allowedMethodArray = [...accessControlAllowedMethods]
+  const allowedMethodArray = [...accessControlAllowedMethods];
   if (
     accessControlAllowRequestMethod &&
     "access-control-request-method" in headers
   ) {
-    const requestMethodName = headers["access-control-request-method"]
+    const requestMethodName = headers["access-control-request-method"];
     if (!allowedMethodArray.includes(requestMethodName)) {
-      allowedMethodArray.push(requestMethodName)
-      vary.push("access-control-request-method")
+      allowedMethodArray.push(requestMethodName);
+      vary.push("access-control-request-method");
     }
   }
 
-  const allowedHeaderArray = [...accessControlAllowedHeaders]
+  const allowedHeaderArray = [...accessControlAllowedHeaders];
   if (
     accessControlAllowRequestHeaders &&
     "access-control-request-headers" in headers
   ) {
     const requestHeaderNameArray =
-      headers["access-control-request-headers"].split(", ")
+      headers["access-control-request-headers"].split(", ");
     requestHeaderNameArray.forEach((headerName) => {
-      const headerNameLowerCase = headerName.toLowerCase()
+      const headerNameLowerCase = headerName.toLowerCase();
       if (!allowedHeaderArray.includes(headerNameLowerCase)) {
-        allowedHeaderArray.push(headerNameLowerCase)
+        allowedHeaderArray.push(headerNameLowerCase);
         if (!vary.includes("access-control-request-headers")) {
-          vary.push("access-control-request-headers")
+          vary.push("access-control-request-headers");
         }
       }
-    })
+    });
   }
 
   return {
@@ -138,5 +138,5 @@ const generateAccessControlHeaders = ({
       ? { "timing-allow-origin": allowedOriginArray.join(", ") }
       : {}),
     ...(vary.length ? { vary: vary.join(", ") } : {}),
-  }
-}
+  };
+};

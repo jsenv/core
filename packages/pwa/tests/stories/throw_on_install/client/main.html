@@ -29,56 +29,57 @@
     </div>
     <script>
       window.SW_SCRIPT_PROMISE = new Promise((resolve) => {
-        window.resolveSwScriptPromise = resolve
-      })
+        window.resolveSwScriptPromise = resolve;
+      });
     </script>
     <script type="module">
-      import { pwaLogger, createServiceWorkerFacade } from "@jsenv/pwa"
+      import { pwaLogger, createServiceWorkerFacade } from "@jsenv/pwa";
 
       pwaLogger.setOptions({
         logLevel: "debug",
-      })
-      const swFacade = createServiceWorkerFacade()
+      });
+      const swFacade = createServiceWorkerFacade();
 
-      const registerButton = document.querySelector("#register")
-      const unregisterButton = document.querySelector("#unregister")
+      const registerButton = document.querySelector("#register");
+      const unregisterButton = document.querySelector("#unregister");
 
-      registerButton.disabled = false
+      registerButton.disabled = false;
       registerButton.onclick = () => {
         swFacade.setRegistrationPromise(
           window.navigator.serviceWorker.register("./sw.js"),
-        )
-      }
+        );
+      };
       swFacade.subscribe(({ readyState }) => {
-        unregisterButton.disabled = readyState === ""
-      })
+        unregisterButton.disabled = readyState === "";
+      });
       unregisterButton.onclick = () => {
-        swFacade.unregister()
-      }
+        swFacade.unregister();
+      };
 
-      const statusText = document.querySelector("#status")
+      const statusText = document.querySelector("#status");
       swFacade.subscribe(({ error, readyState }) => {
-        const text = error ? `error` : readyState
-        statusText.innerHTML = text
-      })
+        const text = error ? `error` : readyState;
+        statusText.innerHTML = text;
+      });
 
-      const updateStatusText = document.querySelector("#update_status")
+      const updateStatusText = document.querySelector("#update_status");
       swFacade.subscribe(({ update }) => {
         updateStatusText.innerHTML = update.error
           ? `An error occured ${update.error.message}`
-          : update.readyState
-      })
+          : update.readyState;
+      });
 
-      const checkForUpdatesButton = document.querySelector("#check_for_updates")
+      const checkForUpdatesButton =
+        document.querySelector("#check_for_updates");
       checkForUpdatesButton.onclick = async () => {
-        checkForUpdatesButton.disabled = true
-        const updateFound = await swFacade.checkForUpdates()
-        checkForUpdatesButton.disabled = false
+        checkForUpdatesButton.disabled = true;
+        const updateFound = await swFacade.checkForUpdates();
+        checkForUpdatesButton.disabled = false;
         if (!updateFound) {
           // eslint-disable-next-line no-alert
-          window.alert("no update found")
+          window.alert("no update found");
         }
-      }
+      };
     </script>
   </body>
 </html>

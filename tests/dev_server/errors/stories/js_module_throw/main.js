@@ -1,7 +1,7 @@
-import "./file.js"
+import "./file.js";
 
 // if (import.meta.hot) {
 //   import.meta.hot.accept()
 // }
 
-throw new Error("here")
+throw new Error("here");

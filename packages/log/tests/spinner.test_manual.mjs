@@ -1,15 +1,15 @@
-import { createLog, startSpinner } from "@jsenv/log"
+import { createLog, startSpinner } from "@jsenv/log";
 
-const log = createLog()
+const log = createLog();
 const spinner = startSpinner({
   log,
   render: () => "Loading and I would say event more",
   stopOnWriteFromOutside: true,
-})
+});
 
-await new Promise((resolve) => setTimeout(resolve, 2500))
+await new Promise((resolve) => setTimeout(resolve, 2500));
 
-log.write("Hey")
-spinner.stop()
+log.write("Hey");
+spinner.stop();
 
-await new Promise((resolve) => setTimeout(resolve, 500))
+await new Promise((resolve) => setTimeout(resolve, 500));

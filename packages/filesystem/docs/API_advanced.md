@@ -7,12 +7,12 @@ _grantPermissionsOnEntry_ is an async function granting permission on a given fi
 > Do not use on Windows because of [file permissions caveat](#file-permissions-and-windows)
 
 ```js
-import { grantPermissionsOnEntry } from "@jsenv/filesystem"
+import { grantPermissionsOnEntry } from "@jsenv/filesystem";
 
 const restorePermissions = await grantPermissionsOnEntry("file:///file.js", {
   execute: true,
-})
-await restorePermissions()
+});
+await restorePermissions();
 ```
 
 # readEntryPermissions
@@ -22,9 +22,9 @@ _readEntryPermissions_ is an async function returning an object representing the
 > Do not use on Windows because of [file permissions caveat](#file-permissions-and-windows)
 
 ```js
-import { readEntryPermissions } from "@jsenv/filesystem"
+import { readEntryPermissions } from "@jsenv/filesystem";
 
-const permissions = await readEntryPermissions("file:///directory/file.js")
+const permissions = await readEntryPermissions("file:///directory/file.js");
 ```
 
 # testEntryPermissions
@@ -34,11 +34,11 @@ _testEntryPermissions_ is an async function returning a boolean indicating if cu
 > Do not use on Windows because of [file permissions caveat](#file-permissions-and-windows)
 
 ```js
-import { testEntryPermissions } from "@jsenv/filesystem"
+import { testEntryPermissions } from "@jsenv/filesystem";
 
 const allowed = await testEntryPermissions("file:///file.js", {
   execute: true,
-})
+});
 ```
 
 # writeEntryPermissions
@@ -48,13 +48,13 @@ _writeEntryPermissions_ is an async function setting the permissions of a filesy
 > Do not use on Windows because of [file permissions caveat](#file-permissions-and-windows)
 
 ```js
-import { writeEntryPermissions } from "@jsenv/filesystem"
+import { writeEntryPermissions } from "@jsenv/filesystem";
 
 await writeEntryPermissions("file:///directory/file.js", {
   owner: { read: true, write: true, execute: true },
   group: { read: true, write: true, execute: false },
   others: { read: true, write: false, execute: false },
-})
+});
 ```
 
 # File permissions and Windows

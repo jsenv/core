@@ -5,7 +5,7 @@ const {
   eslintConfigToPreferExplicitGlobals,
   jsenvEslintRules,
   jsenvEslintRulesForImport,
-} = require("@jsenv/eslint-config")
+} = require("@jsenv/eslint-config");
 
 const eslintConfig = composeEslintConfig(
   eslintConfigBase,
@@ -140,6 +140,6 @@ const eslintConfig = composeEslintConfig(
   // We are using prettier, disable all eslint rules
   // already handled by prettier.
   eslintConfigForPrettier,
-)
+);
 
-module.exports = eslintConfig
+module.exports = eslintConfig;

@@ -1,12 +1,12 @@
-import { getCommonPathname } from "./common_pathname.js"
+import { getCommonPathname } from "./common_pathname.js";
 
 export const urlToRelativeUrl = (url, baseUrl) => {
-  const urlObject = new URL(url)
-  const baseUrlObject = new URL(baseUrl)
+  const urlObject = new URL(url);
+  const baseUrlObject = new URL(baseUrl);
 
   if (urlObject.protocol !== baseUrlObject.protocol) {
-    const urlAsString = String(url)
-    return urlAsString
+    const urlAsString = String(url);
+    return urlAsString;
   }
 
   if (
@@ -14,43 +14,43 @@ export const urlToRelativeUrl = (url, baseUrl) => {
     urlObject.password !== baseUrlObject.password ||
     urlObject.host !== baseUrlObject.host
   ) {
-    const afterUrlScheme = String(url).slice(urlObject.protocol.length)
-    return afterUrlScheme
+    const afterUrlScheme = String(url).slice(urlObject.protocol.length);
+    return afterUrlScheme;
   }
 
-  const { pathname, hash, search } = urlObject
+  const { pathname, hash, search } = urlObject;
   if (pathname === "/") {
-    const baseUrlResourceWithoutLeadingSlash = baseUrlObject.pathname.slice(1)
-    return baseUrlResourceWithoutLeadingSlash
+    const baseUrlResourceWithoutLeadingSlash = baseUrlObject.pathname.slice(1);
+    return baseUrlResourceWithoutLeadingSlash;
   }
 
-  const basePathname = baseUrlObject.pathname
-  const commonPathname = getCommonPathname(pathname, basePathname)
+  const basePathname = baseUrlObject.pathname;
+  const commonPathname = getCommonPathname(pathname, basePathname);
   if (!commonPathname) {
-    const urlAsString = String(url)
-    return urlAsString
+    const urlAsString = String(url);
+    return urlAsString;
   }
-  const specificPathname = pathname.slice(commonPathname.length)
-  const baseSpecificPathname = basePathname.slice(commonPathname.length)
+  const specificPathname = pathname.slice(commonPathname.length);
+  const baseSpecificPathname = basePathname.slice(commonPathname.length);
   if (baseSpecificPathname.includes("/")) {
     const baseSpecificParentPathname =
-      pathnameToParentPathname(baseSpecificPathname)
+      pathnameToParentPathname(baseSpecificPathname);
     const relativeDirectoriesNotation = baseSpecificParentPathname.replace(
       /.*?\//g,
       "../",
-    )
-    const relativeUrl = `${relativeDirectoriesNotation}${specificPathname}${search}${hash}`
-    return relativeUrl
+    );
+    const relativeUrl = `${relativeDirectoriesNotation}${specificPathname}${search}${hash}`;
+    return relativeUrl;
   }
 
-  const relativeUrl = `${specificPathname}${search}${hash}`
-  return relativeUrl
-}
+  const relativeUrl = `${specificPathname}${search}${hash}`;
+  return relativeUrl;
+};
 
 const pathnameToParentPathname = (pathname) => {
-  const slashLastIndex = pathname.lastIndexOf("/")
+  const slashLastIndex = pathname.lastIndexOf("/");
   if (slashLastIndex === -1) {
-    return "/"
+    return "/";
   }
-  return pathname.slice(0, slashLastIndex + 1)
-}
+  return pathname.slice(0, slashLastIndex + 1);
+};

@@ -1,4 +1,4 @@
-import { lookup } from "node:dns"
+import { lookup } from "node:dns";
 
 export const applyDnsResolution = async (
   hostname,
@@ -7,11 +7,11 @@ export const applyDnsResolution = async (
   const dnsResolution = await new Promise((resolve, reject) => {
     lookup(hostname, { verbatim }, (error, address, family) => {
       if (error) {
-        reject(error)
+        reject(error);
       } else {
-        resolve({ address, family })
+        resolve({ address, family });
       }
-    })
-  })
-  return dnsResolution
-}
+    });
+  });
+  return dnsResolution;
+};

@@ -1,4 +1,4 @@
-import { getHtmlNodeAttribute, analyzeLinkNode, parseSrcSet } from "@jsenv/ast"
+import { getHtmlNodeAttribute, analyzeLinkNode, parseSrcSet } from "@jsenv/ast";
 
 // Some "smart" default applied to decide what should hot reload / fullreload:
 // By default:
@@ -8,7 +8,7 @@ import { getHtmlNodeAttribute, analyzeLinkNode, parseSrcSet } from "@jsenv/ast"
 //   - fullreload on <img src="./image.png" hot-decline />
 //   - hot reload on <script src="./file.js" hot-accept />
 export const collectHotDataFromHtmlAst = (htmlAst) => {
-  const hotReferences = []
+  const hotReferences = [];
 
   const onSpecifier = ({ specifier, node, attributeName, hotAccepted }) => {
     if (
@@ -19,115 +19,115 @@ export const collectHotDataFromHtmlAst = (htmlAst) => {
       hotReferences.push({
         type: `${node.nodeName}_${attributeName}`,
         specifier,
-      })
+      });
     }
-  }
+  };
 
   const visitUrlSpecifierAttribute = ({ node, attributeName, hotAccepted }) => {
-    const value = getHtmlNodeAttribute(node, attributeName)
+    const value = getHtmlNodeAttribute(node, attributeName);
     if (value) {
       onSpecifier({
         specifier: value,
         node,
         attributeName,
         hotAccepted,
-      })
+      });
     }
-  }
+  };
 
   const onNode = (node, { hotAccepted }) => {
     // explicitely disabled with [hot-decline] attribute
     if (hotAccepted === false) {
-      return
+      return;
     }
     if (nodeNamesWithHref.includes(node.nodeName)) {
       visitUrlSpecifierAttribute({
         node,
         attributeName: "href",
         hotAccepted,
-      })
+      });
       visitUrlSpecifierAttribute({
         node,
         attributeName: "inlined-from-href",
         hotAccepted,
-      })
+      });
     }
     if (nodeNamesWithSrc.includes(node.nodeName)) {
       visitUrlSpecifierAttribute({
         node,
         attributeName: "src",
         hotAccepted,
-      })
+      });
       visitUrlSpecifierAttribute({
         node,
         attributeName: "inlined-from-src",
         hotAccepted,
-      })
+      });
     }
     if (nodeNamesWithSrcset.includes(node.nodeName)) {
-      const srcset = getHtmlNodeAttribute(node, "srcset")
+      const srcset = getHtmlNodeAttribute(node, "srcset");
       if (srcset) {
-        const srcCandidates = parseSrcSet(srcset)
+        const srcCandidates = parseSrcSet(srcset);
         srcCandidates.forEach((srcCandidate) => {
           onSpecifier({
             node,
             specifier: srcCandidate.specifier,
             attributeName: "srcset",
             hotAccepted,
-          })
-        })
+          });
+        });
       }
     }
-  }
+  };
 
   const iterate = (node, context) => {
     context = {
       ...context,
       ...getNodeContext(node),
-    }
-    onNode(node, context)
-    const { childNodes } = node
+    };
+    onNode(node, context);
+    const { childNodes } = node;
     if (childNodes) {
-      let i = 0
+      let i = 0;
       while (i < childNodes.length) {
-        const childNode = childNodes[i++]
-        iterate(childNode, context)
+        const childNode = childNodes[i++];
+        iterate(childNode, context);
       }
     }
-  }
-  iterate(htmlAst, {})
+  };
+  iterate(htmlAst, {});
 
-  return hotReferences
-}
+  return hotReferences;
+};
 
-const nodeNamesWithHref = ["link", "a", "image", "use"]
-const nodeNamesWithSrc = ["script", "iframe", "img"]
-const nodeNamesWithSrcset = ["img", "source"]
+const nodeNamesWithHref = ["link", "a", "image", "use"];
+const nodeNamesWithSrc = ["script", "iframe", "img"];
+const nodeNamesWithSrcset = ["img", "source"];
 
 const getNodeContext = (node) => {
-  const context = {}
-  const hotAccept = getHtmlNodeAttribute(node, "hot-accept")
+  const context = {};
+  const hotAccept = getHtmlNodeAttribute(node, "hot-accept");
   if (hotAccept !== undefined) {
-    context.hotAccepted = true
+    context.hotAccepted = true;
   }
-  const hotDecline = getHtmlNodeAttribute(node, "hot-decline")
+  const hotDecline = getHtmlNodeAttribute(node, "hot-decline");
   if (hotDecline !== undefined) {
-    context.hotAccepted = false
+    context.hotAccepted = false;
   }
-  return context
-}
+  return context;
+};
 
 const htmlNodeCanHotReload = (node) => {
   if (node.nodeName === "link") {
-    const { isStylesheet, isResourceHint, rel } = analyzeLinkNode(node)
+    const { isStylesheet, isResourceHint, rel } = analyzeLinkNode(node);
     if (isStylesheet) {
       // stylesheets can be hot replaced by default
-      return true
+      return true;
     }
     if (isResourceHint) {
-      return false
+      return false;
     }
-    return rel === "icon"
+    return rel === "icon";
   }
   return [
     // "script", // script cannot hot reload
@@ -144,5 +144,5 @@ const htmlNodeCanHotReload = (node) => {
     "source",
     "image",
     "use",
-  ].includes(node.nodeName)
-}
+  ].includes(node.nodeName);
+};

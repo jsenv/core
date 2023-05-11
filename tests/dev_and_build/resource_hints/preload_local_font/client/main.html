@@ -25,20 +25,20 @@
     <h1>Hello world</h1>
     <script>
       window.resultPromise = new Promise((resolve) => {
-        window.resolveResultPromise = resolve
-      })
+        window.resolveResultPromise = resolve;
+      });
     </script>
     <script type="module">
-      import style from "./style.css" assert { type: "css" }
+      import style from "./style.css" assert { type: "css" };
 
-      document.adoptedStyleSheets = [...document.adoptedStyleSheets, style]
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, style];
 
       // Let browser time to log an eventual warning about preload link not used
       await new Promise((resolve) => {
-        setTimeout(resolve, 5000)
-      })
-      await document.fonts.ready
-      window.resolveResultPromise(getComputedStyle(document.body).fontFamily)
+        setTimeout(resolve, 5000);
+      });
+      await document.fonts.ready;
+      window.resolveResultPromise(getComputedStyle(document.body).fontFamily);
     </script>
   </body>
 </html>

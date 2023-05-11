@@ -8,15 +8,15 @@
   <body>
     <script>
       window.resultPromise = new Promise((resolve) => {
-        window.resolveResultPromise = resolve
-      })
+        window.resolveResultPromise = resolve;
+      });
     </script>
     <script type="module">
-      const directoryUrl = new URL("./src/", import.meta.url).href
+      const directoryUrl = new URL("./src/", import.meta.url).href;
 
       window.resolveResultPromise({
         directoryUrl,
-      })
+      });
     </script>
   </body>
 </html>

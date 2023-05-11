@@ -2,8 +2,8 @@ export const isSpecifierForNodeBuiltin = (specifier) => {
   return (
     specifier.startsWith("node:") ||
     NODE_BUILTIN_MODULE_SPECIFIERS.includes(specifier)
-  )
-}
+  );
+};
 
 const NODE_BUILTIN_MODULE_SPECIFIERS = [
   "assert",
@@ -81,4 +81,4 @@ const NODE_BUILTIN_MODULE_SPECIFIERS = [
   "zlib",
   // global is special
   "global",
-]
+];

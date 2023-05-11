@@ -1,3 +1,3 @@
-import { answer } from "./file.cjs"
+import { answer } from "./file.cjs";
 
-window.resolveResultPromise(answer)
+window.resolveResultPromise(answer);

@@ -1,4 +1,4 @@
-import babelParser from "@babel/parser"
+import babelParser from "@babel/parser";
 
 export const babelPluginTransformImportMetaUrl = (babel) => {
   return {
@@ -6,12 +6,12 @@ export const babelPluginTransformImportMetaUrl = (babel) => {
     visitor: {
       Program: (programPath) => {
         const currentUrlIdentifier =
-          programPath.scope.generateUidIdentifier("currentUrl")
-        let used = false
+          programPath.scope.generateUidIdentifier("currentUrl");
+        let used = false;
 
         programPath.traverse({
           MemberExpression: (path) => {
-            const node = path.node
+            const node = path.node;
             if (
               node.object.type === "MetaProperty" &&
               node.object.property.name === "meta" &&
@@ -20,28 +20,28 @@ export const babelPluginTransformImportMetaUrl = (babel) => {
               // const node = babel.types.valueToNode(10)
               const identifier = babel.types.identifier(
                 currentUrlIdentifier.name,
-              )
+              );
               const expressionStatement =
-                babel.types.expressionStatement(identifier)
-              path.replaceWith(expressionStatement)
-              used = true
+                babel.types.expressionStatement(identifier);
+              path.replaceWith(expressionStatement);
+              used = true;
             }
           },
-        })
+        });
         if (used) {
-          const ast = generateExpressionAst(`document.currentScript.src`)
+          const ast = generateExpressionAst(`document.currentScript.src`);
           programPath.scope.push({
             id: currentUrlIdentifier,
             init: ast,
-          })
+          });
         }
       },
     },
-  }
-}
+  };
+};
 
 const generateExpressionAst = (expression, options) => {
-  const { parseExpression } = babelParser
-  const ast = parseExpression(expression, options)
-  return ast
-}
+  const { parseExpression } = babelParser;
+  const ast = parseExpression(expression, options);
+  return ast;
+};

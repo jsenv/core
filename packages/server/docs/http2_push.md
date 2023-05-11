@@ -74,16 +74,16 @@ body {
 _script.js:_
 
 ```js
-console.log("Hello world")
+console.log("Hello world");
 ```
 
 _start_server.mjs:_
 
 ```js
-import { requestCertificate } from "@jsenv/https-local"
-import { startServer, fetchFileSystem } from "@jsenv/server"
+import { requestCertificate } from "@jsenv/https-local";
+import { startServer, fetchFileSystem } from "@jsenv/server";
 
-const { certificate, privateKey } = requestCertificate()
+const { certificate, privateKey } = requestCertificate();
 await startServer({
   logLevel: "info",
   https: { certificate, privateKey },
@@ -98,11 +98,11 @@ await startServer({
             headers: request.headers,
             canReadDirectory: true,
           },
-        )
+        );
       },
     },
   ],
-})
+});
 ```
 
 The following diff shows how http2 push can be added to the server:

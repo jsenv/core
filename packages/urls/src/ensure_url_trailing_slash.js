@@ -1,3 +1,3 @@
 export const ensureUrlTrailingSlash = (url) => {
-  return url.endsWith("/") ? url : `${url}/`
-}
+  return url.endsWith("/") ? url : `${url}/`;
+};

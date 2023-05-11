@@ -1,1 +1,1 @@
-export const inspectBoolean = (value) => value.toString()
+export const inspectBoolean = (value) => value.toString();

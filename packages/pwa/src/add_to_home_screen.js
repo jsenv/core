@@ -23,49 +23,49 @@
   To avoid that we store the event on window.beforeinstallpromptEvent.
 */
 
-import { sigref } from "@jsenv/sigi"
+import { sigref } from "@jsenv/sigi";
 
-import { listenEvent } from "./internal/listenEvent.js"
-import { listenAppInstalled } from "./listen_app_installed.js"
-import { displayModeStandaloneRef } from "./display_mode_standalone_ref.js"
+import { listenEvent } from "./internal/listenEvent.js";
+import { listenAppInstalled } from "./listen_app_installed.js";
+import { displayModeStandaloneRef } from "./display_mode_standalone_ref.js";
 
-let appInstalledEvent = false
+let appInstalledEvent = false;
 
 const listenBeforeInstallPrompt = (callback) =>
-  listenEvent(window, "beforeinstallprompt", callback)
+  listenEvent(window, "beforeinstallprompt", callback);
 
 const isAvailable = () => {
   if (!window.beforeinstallpromptEvent) {
-    return false
+    return false;
   }
   if (displayModeStandaloneRef.value) {
-    return false
+    return false;
   }
   if (appInstalledEvent) {
-    return false
+    return false;
   }
-  return true
-}
-const [availableRef, availableSetter] = sigref(isAvailable())
+  return true;
+};
+const [availableRef, availableSetter] = sigref(isAvailable());
 const checkAvailabilityChange = () => {
-  availableSetter(isAvailable())
-}
+  availableSetter(isAvailable());
+};
 
 listenAppInstalled(() => {
   // prompt "becomes" unavailable if user installs app
   // it can happen if user installs app manually from browser toolbar
   // in that case there is no point showing the install
   // button in the ui
-  appInstalledEvent = true
-  checkAvailabilityChange()
-})
+  appInstalledEvent = true;
+  checkAvailabilityChange();
+});
 listenBeforeInstallPrompt((beforeinstallpromptEvent) => {
-  window.beforeinstallpromptEvent = beforeinstallpromptEvent
-  checkAvailabilityChange()
-})
+  window.beforeinstallpromptEvent = beforeinstallpromptEvent;
+  checkAvailabilityChange();
+});
 displayModeStandaloneRef.subscribe(() => {
-  checkAvailabilityChange()
-})
+  checkAvailabilityChange();
+});
 
 export const addToHomescreen = {
   availableRef,
@@ -73,14 +73,14 @@ export const addToHomescreen = {
     if (!window.beforeinstallpromptEvent) {
       console.warn(
         `cannot prompt add to home screen: window.beforeinstallpromptEvent is missing`,
-      )
-      return false
+      );
+      return false;
     }
-    window.beforeinstallpromptEvent.prompt()
-    const choiceResult = await window.beforeinstallpromptEvent.userChoice
+    window.beforeinstallpromptEvent.prompt();
+    const choiceResult = await window.beforeinstallpromptEvent.userChoice;
     if (choiceResult.outcome === "accepted") {
-      return true
+      return true;
     }
-    return false
+    return false;
   },
-}
+};

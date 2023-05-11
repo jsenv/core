@@ -1,9 +1,9 @@
-import { URL_META } from "@jsenv/url-meta"
-import { applyBabelPlugins } from "@jsenv/ast"
-import { SOURCEMAP, generateSourcemapDataUrl } from "@jsenv/sourcemap"
-import { WEB_URL_CONVERTER } from "@jsenv/core/src/helpers/web_url_converter.js"
+import { URL_META } from "@jsenv/url-meta";
+import { applyBabelPlugins } from "@jsenv/ast";
+import { SOURCEMAP, generateSourcemapDataUrl } from "@jsenv/sourcemap";
+import { WEB_URL_CONVERTER } from "@jsenv/core/src/helpers/web_url_converter.js";
 
-import { babelPluginInstrument } from "../coverage/babel_plugin_instrument.js"
+import { babelPluginInstrument } from "../coverage/babel_plugin_instrument.js";
 
 export const initIstanbulMiddleware = async (
   page,
@@ -12,21 +12,21 @@ export const initIstanbulMiddleware = async (
   const associations = URL_META.resolveAssociations(
     { cover: coverageConfig },
     rootDirectoryUrl,
-  )
+  );
   await page.route("**", async (route) => {
-    const request = route.request()
-    const url = request.url() // transform into a local url
-    const fileUrl = WEB_URL_CONVERTER.asFileUrl(url, webServer)
+    const request = route.request();
+    const url = request.url(); // transform into a local url
+    const fileUrl = WEB_URL_CONVERTER.asFileUrl(url, webServer);
     const needsInstrumentation = URL_META.applyAssociations({
       url: fileUrl,
       associations,
-    }).cover
+    }).cover;
     if (!needsInstrumentation) {
-      route.fallback()
-      return
+      route.fallback();
+      return;
     }
-    const response = await route.fetch()
-    const originalBody = await response.text()
+    const response = await route.fetch();
+    const originalBody = await response.text();
     try {
       const result = await applyBabelPlugins({
         babelPlugins: [babelPluginInstrument],
@@ -38,13 +38,13 @@ export const initIstanbulMiddleware = async (
           type: "js_module",
           content: originalBody,
         },
-      })
-      let code = result.code
+      });
+      let code = result.code;
       code = SOURCEMAP.writeComment({
         contentType: "text/javascript",
         content: code,
         specifier: generateSourcemapDataUrl(result.map),
-      })
+      });
       route.fulfill({
         response,
         body: code,
@@ -52,14 +52,14 @@ export const initIstanbulMiddleware = async (
           ...response.headers(),
           "content-length": Buffer.byteLength(code),
         },
-      })
+      });
     } catch (e) {
       if (e.code === "PARSE_ERROR") {
-        route.fulfill({ response })
+        route.fulfill({ response });
       } else {
-        console.error(e)
-        route.fulfill({ response })
+        console.error(e);
+        route.fulfill({ response });
       }
     }
-  })
-}
+  });
+};

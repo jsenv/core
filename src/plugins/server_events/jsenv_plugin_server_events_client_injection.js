@@ -8,12 +8,12 @@ import {
   stringifyHtmlAst,
   injectHtmlNodeAsEarlyAsPossible,
   createHtmlNode,
-} from "@jsenv/ast"
+} from "@jsenv/ast";
 
 const serverEventsClientFileUrl = new URL(
   "./client/server_events_client.js",
   import.meta.url,
-).href
+).href;
 
 export const jsenvPluginServerEventsClientInjection = () => {
   return {
@@ -21,7 +21,7 @@ export const jsenvPluginServerEventsClientInjection = () => {
     appliesDuring: "*",
     transformUrlContent: {
       html: (htmlUrlInfo, context) => {
-        const htmlAst = parseHtmlString(htmlUrlInfo.content)
+        const htmlAst = parseHtmlString(htmlUrlInfo.content);
         const [serverEventsClientFileReference] = context.referenceUtils.inject(
           {
             type: "script",
@@ -29,7 +29,7 @@ export const jsenvPluginServerEventsClientInjection = () => {
             expectedType: "js_module",
             specifier: serverEventsClientFileUrl,
           },
-        )
+        );
         injectHtmlNodeAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
@@ -38,12 +38,12 @@ export const jsenvPluginServerEventsClientInjection = () => {
             src: serverEventsClientFileReference.generatedSpecifier,
           }),
           "jsenv:server_events",
-        )
-        const htmlModified = stringifyHtmlAst(htmlAst)
+        );
+        const htmlModified = stringifyHtmlAst(htmlAst);
         return {
           content: htmlModified,
-        }
+        };
       },
     },
-  }
-}
+  };
+};

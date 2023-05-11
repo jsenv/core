@@ -6,10 +6,10 @@ The strongest contraints is that actual and expected must have the same properti
 Object.keys({
   foo: true,
   bar: true,
-})[0] // "foo"
+})[0]; // "foo"
 
 Object.keys({
   bar: true,
   foo: true,
-})[0] // "bar"
+})[0]; // "bar"
 ```

@@ -2,17 +2,17 @@
  * The goal is to ensure test plan execution in browser tabs works without errors
  */
 
-import { assert } from "@jsenv/assert"
-import { startDevServer } from "@jsenv/core"
+import { assert } from "@jsenv/assert";
+import { startDevServer } from "@jsenv/core";
 
-import { executeTestPlan, chromium } from "@jsenv/test"
+import { executeTestPlan, chromium } from "@jsenv/test";
 
 const devServer = await startDevServer({
   logLevel: "warn",
   sourceDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
   port: 0,
-})
+});
 const result = await executeTestPlan({
   logLevel: "warn",
   rootDirectoryUrl: new URL("./", import.meta.url),
@@ -30,8 +30,8 @@ const result = await executeTestPlan({
     origin: devServer.origin,
     rootDirectoryUrl: new URL("./client/", import.meta.url),
   },
-})
-const actual = result
+});
+const actual = result;
 const expected = {
   testPlanAborted: false,
   testPlanSummary: {
@@ -53,5 +53,5 @@ const expected = {
     },
   },
   testPlanCoverage: undefined,
-}
-assert({ actual, expected })
+};
+assert({ actual, expected });

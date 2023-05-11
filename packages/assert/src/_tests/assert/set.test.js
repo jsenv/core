@@ -1,26 +1,26 @@
-import { assert } from "@jsenv/assert"
-import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js"
+import { assert } from "@jsenv/assert";
+import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js";
 
 try {
-  const actual = new Set()
-  const expected = new Set()
-  assert({ actual, expected })
+  const actual = new Set();
+  const expected = new Set();
+  assert({ actual, expected });
 } catch (e) {
-  throw new Error(`should not throw`)
+  throw new Error(`should not throw`);
 }
 
 try {
-  const actual = new Set([0])
-  const expected = new Set([0])
-  assert({ actual, expected })
+  const actual = new Set([0]);
+  const expected = new Set([0]);
+  assert({ actual, expected });
 } catch (e) {
-  throw new Error(`should not throw`)
+  throw new Error(`should not throw`);
 }
 
 try {
-  const actual = new Set([{ foo: true }])
-  const expected = new Set([{ foo: false }])
-  assert({ actual, expected })
+  const actual = new Set([{ foo: true }]);
+  const expected = new Set([{ foo: false }]);
+  assert({ actual, expected });
 } catch (e) {
   ensureAssertionErrorWithMessage(
     e,
@@ -31,13 +31,13 @@ true
 false
 --- path ---
 actual[[setEntry:0]].foo`,
-  )
+  );
 }
 
 try {
-  const actual = new Set()
-  const expected = new Set([1, 2])
-  assert({ actual, expected })
+  const actual = new Set();
+  const expected = new Set([1, 2]);
+  assert({ actual, expected });
 } catch (e) {
   ensureAssertionErrorWithMessage(
     e,
@@ -48,13 +48,13 @@ try {
 2
 --- path ---
 actual`,
-  )
+  );
 }
 
 try {
-  const actual = new Set([1, 2])
-  const expected = new Set()
-  assert({ actual, expected })
+  const actual = new Set([1, 2]);
+  const expected = new Set();
+  assert({ actual, expected });
 } catch (e) {
   ensureAssertionErrorWithMessage(
     e,
@@ -65,5 +65,5 @@ try {
 0
 --- path ---
 actual`,
-  )
+  );
 }

@@ -1,15 +1,15 @@
-import { createRuntimeUsingPlaywright } from "./using_playwright.js"
+import { createRuntimeUsingPlaywright } from "./using_playwright.js";
 
 export const chromium = (params) => {
-  return createChromiumRuntine(params)
-}
+  return createChromiumRuntine(params);
+};
 
 export const chromiumIsolatedTab = (params) => {
   return createChromiumRuntine({
     ...params,
     isolatedTab: true,
-  })
-}
+  });
+};
 
 const createChromiumRuntine = (params) => {
   return createRuntimeUsingPlaywright({
@@ -19,5 +19,5 @@ const createChromiumRuntine = (params) => {
     browserVersion: "unset",
     coveragePlaywrightAPIAvailable: true,
     ...params,
-  })
-}
+  });
+};

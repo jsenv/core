@@ -13,17 +13,17 @@
  * we want to be in the user shoes and we should not alter build files.
  */
 
-import { existsSync } from "node:fs"
+import { existsSync } from "node:fs";
 import {
   jsenvAccessControlAllowedHeaders,
   startServer,
   fetchFileSystem,
   jsenvServiceCORS,
   jsenvServiceErrorHandler,
-} from "@jsenv/server"
-import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem"
-import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
-import { createLogger, createTaskLog } from "@jsenv/log"
+} from "@jsenv/server";
+import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem";
+import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
+import { createLogger, createTaskLog } from "@jsenv/log";
 
 /**
  * Start a server for build files.
@@ -51,44 +51,44 @@ export const startBuildServer = async ({
 }) => {
   // params validation
   {
-    const unexpectedParamNames = Object.keys(rest)
+    const unexpectedParamNames = Object.keys(rest);
     if (unexpectedParamNames.length > 0) {
       throw new TypeError(
         `${unexpectedParamNames.join(",")}: there is no such param`,
-      )
+      );
     }
     buildDirectoryUrl = assertAndNormalizeDirectoryUrl(
       buildDirectoryUrl,
       "buildDirectoryUrl",
-    )
+    );
 
     if (buildMainFilePath) {
       if (typeof buildMainFilePath !== "string") {
         throw new TypeError(
           `buildMainFilePath must be a string, got ${buildMainFilePath}`,
-        )
+        );
       }
       if (buildMainFilePath[0] === "/") {
-        buildMainFilePath = buildMainFilePath.slice(1)
+        buildMainFilePath = buildMainFilePath.slice(1);
       } else {
         const buildMainFileUrl = new URL(buildMainFilePath, buildDirectoryUrl)
-          .href
+          .href;
         if (!buildMainFileUrl.startsWith(buildDirectoryUrl)) {
           throw new Error(
             `buildMainFilePath must be relative, got ${buildMainFilePath}`,
-          )
+          );
         }
-        buildMainFilePath = buildMainFileUrl.slice(buildDirectoryUrl.length)
+        buildMainFilePath = buildMainFileUrl.slice(buildDirectoryUrl.length);
       }
       if (!existsSync(new URL(buildMainFilePath, buildDirectoryUrl))) {
-        buildMainFilePath = null
+        buildMainFilePath = null;
       }
     }
   }
 
-  const logger = createLogger({ logLevel })
-  const operation = Abort.startOperation()
-  operation.addAbortSignal(signal)
+  const logger = createLogger({ logLevel });
+  const operation = Abort.startOperation();
+  operation.addAbortSignal(signal);
   if (handleSIGINT) {
     operation.addAbortSource((abort) => {
       return raceProcessTeardownEvents(
@@ -96,13 +96,13 @@ export const startBuildServer = async ({
           SIGINT: true,
         },
         abort,
-      )
-    })
+      );
+    });
   }
 
   const startBuildServerTask = createTaskLog("start build server", {
     disabled: !logger.levels.info,
-  })
+  });
   const server = await startServer({
     signal,
     stopOnExit: false,
@@ -142,33 +142,33 @@ export const startBuildServer = async ({
         sendErrorDetails: true,
       }),
     ],
-  })
-  startBuildServerTask.done()
+  });
+  startBuildServerTask.done();
   if (hostname) {
-    delete server.origins.localip
-    delete server.origins.externalip
+    delete server.origins.localip;
+    delete server.origins.externalip;
   }
-  logger.info(``)
+  logger.info(``);
   Object.keys(server.origins).forEach((key) => {
-    logger.info(`- ${server.origins[key]}`)
-  })
-  logger.info(``)
+    logger.info(`- ${server.origins[key]}`);
+  });
+  logger.info(``);
   return {
     origin: server.origin,
     stop: () => {
-      server.stop()
+      server.stop();
     },
-  }
-}
+  };
+};
 
 const createBuildFilesService = ({ buildDirectoryUrl, buildMainFilePath }) => {
   return (request) => {
-    const urlIsVersioned = new URL(request.url).searchParams.has("v")
+    const urlIsVersioned = new URL(request.url).searchParams.has("v");
     if (buildMainFilePath && request.resource === "/") {
       request = {
         ...request,
         resource: `/${buildMainFilePath}`,
-      }
+      };
     }
     return fetchFileSystem(
       new URL(request.resource.slice(1), buildDirectoryUrl),
@@ -182,8 +182,8 @@ const createBuildFilesService = ({ buildDirectoryUrl, buildMainFilePath }) => {
         rootDirectoryUrl: buildDirectoryUrl,
         canReadDirectory: true,
       },
-    )
-  }
-}
+    );
+  };
+};
 
-const SECONDS_IN_30_DAYS = 60 * 60 * 24 * 30
+const SECONDS_IN_30_DAYS = 60 * 60 * 24 * 30;

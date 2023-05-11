@@ -3,7 +3,7 @@
 A server often needs to serve file without routing logic. Either the file is there and server sends it, or it responds with a 404 status code. You can use _fetchFileSystem_ for that, an async function that will search for a file on the filesystem and produce a response for it.
 
 ```js
-import { startServer, fetchFileSystem } from "@jsenv/server"
+import { startServer, fetchFileSystem } from "@jsenv/server";
 
 await startServer({
   services: [
@@ -14,11 +14,11 @@ await startServer({
           {
             headers: request.headers,
           },
-        )
+        );
       },
     },
   ],
-})
+});
 ```
 
 When request.method is not `"HEAD"` or `"GET"` the returned response correspond to _501 not implemented_.
@@ -36,7 +36,7 @@ By default _fetchFileSystem_ will always respond with 200. You can unlock 304 re
 ### etagEnabled
 
 ```js
-import { startServer, fetchFileSystem } from "@jsenv/server"
+import { startServer, fetchFileSystem } from "@jsenv/server";
 
 await startServer({
   services: [
@@ -48,11 +48,11 @@ await startServer({
             headers: request.headers,
             etagEnabled: true,
           },
-        )
+        );
       },
     },
   ],
-})
+});
 ```
 
 When _etagEnabled_ is true, _fetchFileSystem_ will try to return 304 when request headers contains _if-none-match_.
@@ -61,7 +61,7 @@ When etag generated from the file content equals the one found in request header
 ### mtimeEnabled
 
 ```js
-import { startServer, fetchFileSystem } from "@jsenv/server"
+import { startServer, fetchFileSystem } from "@jsenv/server";
 
 await startServer({
   services: [
@@ -73,11 +73,11 @@ await startServer({
             headers: request.headers,
             mtimeEnabled: true,
           },
-        )
+        );
       },
     },
   ],
-})
+});
 ```
 
 When mtimeEnabled is true, _fetchFileSystem_ will to return 304 when request headers contains _if-modified-since_.
@@ -91,7 +91,7 @@ Things to know:
 ### cacheControl
 
 ```js
-import { startServer, fetchFileSystem } from "@jsenv/server"
+import { startServer, fetchFileSystem } from "@jsenv/server";
 
 await startServer({
   services: [
@@ -106,11 +106,11 @@ await startServer({
                 ? `private,max-age=0,must-revalidate`
                 : `private,max-age=3600,immutable`,
           },
-        )
+        );
       },
     },
   ],
-})
+});
 ```
 
 _cacheControl_ parameter will become the response _cache-control_ header.
@@ -125,7 +125,7 @@ The available compression formats are _gzip_, _brotli_ and _deflate_. One (or no
 To enable compression, use _compressionEnabled_ and _compressionSizeThreshold_ parameter.
 
 ```js
-import { startServer, fetchFileSystem } from "@jsenv/server"
+import { startServer, fetchFileSystem } from "@jsenv/server";
 
 await startServer({
   services: [
@@ -138,9 +138,9 @@ await startServer({
             compressionEnabled: true,
             compressionSizeThreshold: 1024,
           },
-        )
+        );
       },
     },
   ],
-})
+});
 ```

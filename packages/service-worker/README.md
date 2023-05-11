@@ -26,7 +26,7 @@ npm install @jsenv/worker
 2. Create _service_worker.js_
 
 ```js
-self.importScripts("@jsenv/service-worker/src/jsenv_service_worker.js")
+self.importScripts("@jsenv/service-worker/src/jsenv_service_worker.js");
 
 self.__sw__.init({
   name: "product-name",
@@ -35,13 +35,13 @@ self.__sw__.init({
     "/": {},
     "https://fonts.googleapis.com/css2?family=Roboto": {},
   },
-})
+});
 ```
 
 3. Register service worker
 
 ```js
-window.navigator.serviceWorker.register("./service_worker.js")
+window.navigator.serviceWorker.register("./service_worker.js");
 ```
 
 At this point your website will use jsenv service worker. By default jsenv service worker cache only the root url: `"/"`. It must be configured to cache more urls.
@@ -72,7 +72,7 @@ self.__sw__.init({
 During build jsenv injects urls to cache at the top of service worker file(s) under a global variable: `self.resourcesFromJsenvBuild`.
 
 ```js
-self.importScripts("@jsenv/service-worker/src/jsenv_service_worker.js")
+self.importScripts("@jsenv/service-worker/src/jsenv_service_worker.js");
 
 self.__sw__.init({
   name: "product-name",
@@ -80,7 +80,7 @@ self.__sw__.init({
     "/": true,
     ...(self.resourcesFromJsenvBuild || {}),
   },
-})
+});
 ```
 
 ## Jsenv url detection
@@ -98,7 +98,7 @@ body {
 ```
 
 ```js
-new URL("./src/img.png", import.meta.url)
+new URL("./src/img.png", import.meta.url);
 ```
 
 Urls detected during build will be in `self.generatedUrlsConfig`.

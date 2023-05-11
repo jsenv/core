@@ -1,4 +1,4 @@
-import { ANSI } from "@jsenv/log"
+import { ANSI } from "@jsenv/log";
 
 export const EXECUTION_COLORS = {
   executing: ANSI.BLUE,
@@ -7,4 +7,4 @@ export const EXECUTION_COLORS = {
   failed: ANSI.RED,
   completed: ANSI.GREEN,
   cancelled: ANSI.GREY,
-}
+};

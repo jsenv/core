@@ -15,60 +15,60 @@ Let's take the code from the previous part on [Composition](#Composition) and wr
 _server.js:_
 
 ```js
-import { startServer, composeServices } from "@jsenv/server"
+import { startServer, composeServices } from "@jsenv/server";
 
 const noContentService = (request) => {
-  if (request.pathname !== "/") return null
-  return { status: 204 }
-}
+  if (request.pathname !== "/") return null;
+  return { status: 204 };
+};
 
 const okService = (request) => {
-  if (request.pathname !== "/whatever") return null
-  return { status: 200 }
-}
+  if (request.pathname !== "/whatever") return null;
+  return { status: 200 };
+};
 
 startServer({
   requestToResponse: composeServices({
     noContentService,
     okService,
   }),
-})
+});
 
 // unit test exports
-export { noContentService, okService }
+export { noContentService, okService };
 ```
 
 _server.test.js:_
 
 ```js
-import { noContentService, okService } from "./server.js"
-import assert from "assert"
+import { noContentService, okService } from "./server.js";
+import assert from "assert";
 
 // okService returns 200 on /whatever
 {
-  const actual = okService({ pathname: "/whatever" })
-  const expected = { status: 200 }
-  assert.equal(actual, expected)
+  const actual = okService({ pathname: "/whatever" });
+  const expected = { status: 200 };
+  assert.equal(actual, expected);
 }
 
 // okService returns 200 only on /whatever
 {
-  const actual = okService({ pathname: "/" })
-  const expected = null
-  assert.equal(actual, expected)
+  const actual = okService({ pathname: "/" });
+  const expected = null;
+  assert.equal(actual, expected);
 }
 
 // noContentService returns 204 on /
 {
-  const actual = noContentService({ pathname: "/" })
-  const expected = { status: 204 }
-  assert.equal(actual, expected)
+  const actual = noContentService({ pathname: "/" });
+  const expected = { status: 204 };
+  assert.equal(actual, expected);
 }
 
 // noContentService returns 204 only on /
 {
-  const actual = noContentService({ pathname: "/toto" })
-  const expected = null
-  assert.equal(actual, expected)
+  const actual = noContentService({ pathname: "/toto" });
+  const expected = null;
+  assert.equal(actual, expected);
 }
 ```

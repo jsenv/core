@@ -1,9 +1,9 @@
-import style from "./style.css" assert { type: "css" }
+import style from "./style.css" assert { type: "css" };
 
-document.adoptedStyleSheets = [...document.adoptedStyleSheets, style]
+document.adoptedStyleSheets = [...document.adoptedStyleSheets, style];
 
 // Let browser time to log an eventual warning about preload link not used
 await new Promise((resolve) => {
-  setTimeout(resolve, 5000)
-})
-window.resolveResultPromise(getComputedStyle(document.body).fontSize)
+  setTimeout(resolve, 5000);
+});
+window.resolveResultPromise(getComputedStyle(document.body).fontSize);

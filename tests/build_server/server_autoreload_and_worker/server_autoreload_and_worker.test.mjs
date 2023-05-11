@@ -6,10 +6,10 @@
  * to ensure there is no regression on that
  */
 
-import { assert } from "@jsenv/assert"
-import { fetchUrl } from "@jsenv/fetch"
+import { assert } from "@jsenv/assert";
+import { fetchUrl } from "@jsenv/fetch";
 
-import { startBuildServer } from "@jsenv/core"
+import { startBuildServer } from "@jsenv/core";
 
 if (process.platform !== "win32") {
   const buildServer = await startBuildServer({
@@ -18,15 +18,15 @@ if (process.platform !== "win32") {
     buildDirectoryUrl: new URL("./build/", import.meta.url),
     buildMainFilePath: "./main.html",
     keepProcessAlive: false,
-  })
-  const response = await fetchUrl(buildServer.origin)
+  });
+  const response = await fetchUrl(buildServer.origin);
   const actual = {
     status: response.status,
     contentType: response.headers.get("content-type"),
-  }
+  };
   const expected = {
     status: 200,
     contentType: "text/html",
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }

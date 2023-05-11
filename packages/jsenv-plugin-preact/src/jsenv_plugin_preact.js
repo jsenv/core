@@ -3,15 +3,15 @@
  * - https://github.com/preactjs/prefresh/blob/main/packages/vite/src/index.js
  */
 
-import { URL_META } from "@jsenv/url-meta"
-import { createMagicSource, composeTwoSourcemaps } from "@jsenv/sourcemap"
+import { URL_META } from "@jsenv/url-meta";
+import { createMagicSource, composeTwoSourcemaps } from "@jsenv/sourcemap";
 import {
   applyBabelPlugins,
   parseHtmlString,
   stringifyHtmlAst,
   injectHtmlNodeAsEarlyAsPossible,
   createHtmlNode,
-} from "@jsenv/ast"
+} from "@jsenv/ast";
 
 export const jsenvPluginPreact = ({
   jsxTranspilation = true,
@@ -23,22 +23,22 @@ export const jsenvPluginPreact = ({
     jsxTranspilation = {
       "./**/*.jsx": true,
       "./**/*.tsx": true,
-    }
+    };
   } else if (jsxTranspilation === false) {
-    jsxTranspilation = {}
+    jsxTranspilation = {};
   }
   if (refreshInstrumentation === true) {
     refreshInstrumentation = {
       "./**/*.jsx": true,
       "./**/*.tsx": true,
-    }
+    };
   } else if (refreshInstrumentation === false) {
-    refreshInstrumentation = {}
+    refreshInstrumentation = {};
   }
   if (hookNamesInstrumentation === true) {
-    hookNamesInstrumentation = { "./**": true }
+    hookNamesInstrumentation = { "./**": true };
   } else {
-    hookNamesInstrumentation = {}
+    hookNamesInstrumentation = {};
   }
   const associations = URL_META.resolveAssociations(
     {
@@ -47,7 +47,7 @@ export const jsenvPluginPreact = ({
       hookNamesInstrumentation,
     },
     "file://",
-  )
+  );
 
   return {
     name: "jsenv:preact",
@@ -58,26 +58,26 @@ export const jsenvPluginPreact = ({
           reference.specifier === "react" ||
           reference.specifier === "react-dom"
         ) {
-          reference.specifier = "preact/compat"
-          return context.resolveReference(reference)[0].url
+          reference.specifier = "preact/compat";
+          return context.resolveReference(reference)[0].url;
         }
-        return null
+        return null;
       },
     },
     transformUrlContent: {
       html: (urlInfo, context) => {
         if (!preactDevtools) {
-          return null
+          return null;
         }
         if (context.build && preactDevtools !== "dev_and_build") {
-          return null
+          return null;
         }
-        const htmlAst = parseHtmlString(urlInfo.content)
+        const htmlAst = parseHtmlString(urlInfo.content);
         const [preactDevtoolsReference] = context.referenceUtils.inject({
           type: "js_import",
           expectedType: "js_module",
           specifier: context.dev ? "preact/debug" : "preact/devtools",
-        })
+        });
         injectHtmlNodeAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
@@ -86,27 +86,27 @@ export const jsenvPluginPreact = ({
             textContent: `import ${preactDevtoolsReference.generatedSpecifier}`,
           }),
           "jsenv:preact",
-        )
-        const htmlModified = stringifyHtmlAst(htmlAst)
-        return { content: htmlModified }
+        );
+        const htmlModified = stringifyHtmlAst(htmlAst);
+        return { content: htmlModified };
       },
       js_module: async (urlInfo, context) => {
         const urlMeta = URL_META.applyAssociations({
           url: urlInfo.url,
           associations,
-        })
-        const jsxEnabled = urlMeta.jsxTranspilation
+        });
+        const jsxEnabled = urlMeta.jsxTranspilation;
         const refreshEnabled = context.dev
           ? urlMeta.refreshInstrumentation &&
             !urlInfo.content.includes("import.meta.hot.decline()")
-          : false
+          : false;
         const hookNamesEnabled =
           context.dev &&
           urlMeta.hookNamesInstrumentation &&
           (urlInfo.content.includes("useState") ||
             urlInfo.content.includes("useReducer") ||
             urlInfo.content.includes("useRef") ||
-            urlInfo.content.includes("useMemo"))
+            urlInfo.content.includes("useMemo"));
         const { code, map } = await applyBabelPlugins({
           babelPlugins: [
             ...(jsxEnabled
@@ -126,8 +126,8 @@ export const jsenvPluginPreact = ({
             ...(refreshEnabled ? ["@prefresh/babel-plugin"] : []),
           ],
           urlInfo,
-        })
-        const magicSource = createMagicSource(code)
+        });
+        const magicSource = createMagicSource(code);
         if (jsxEnabled) {
           // "@babel/plugin-transform-react-jsx" is injecting some of these 3 imports into the code:
           // 1. import { jsx } from "preact/jsx-runtime"
@@ -141,50 +141,50 @@ export const jsenvPluginPreact = ({
             `"preact"`,
             `"preact/jsx-dev-runtime"`,
             `"preact/jsx-runtime"`,
-          ]
+          ];
           for (const importSpecifier of injectedSpecifiers) {
-            let index = code.indexOf(importSpecifier)
+            let index = code.indexOf(importSpecifier);
             while (index > -1) {
-              const specifier = importSpecifier.slice(1, -1)
+              const specifier = importSpecifier.slice(1, -1);
               const [injectedReference] = context.referenceUtils.inject({
                 type: "js_import",
                 expectedType: "js_module",
                 specifier,
-              })
+              });
               magicSource.replace({
                 start: index,
                 end: index + importSpecifier.length,
                 replacement: injectedReference.generatedSpecifier,
-              })
-              index = code.indexOf(importSpecifier, index + 1)
+              });
+              index = code.indexOf(importSpecifier, index + 1);
             }
           }
         }
         if (refreshEnabled) {
-          const hasReg = /\$RefreshReg\$\(/.test(code)
-          const hasSig = /\$RefreshSig\$\(/.test(code)
+          const hasReg = /\$RefreshReg\$\(/.test(code);
+          const hasSig = /\$RefreshSig\$\(/.test(code);
           if (hasReg || hasSig) {
             const [preactRefreshClientReference] =
               context.referenceUtils.inject({
                 type: "js_import",
                 expectedType: "js_module",
                 specifier: "@jsenv/plugin-preact/src/client/preact_refresh.js",
-              })
+              });
             magicSource.prepend(`import { installPreactRefresh } from ${
               preactRefreshClientReference.generatedSpecifier
             }
 const __preact_refresh__ = installPreactRefresh(${JSON.stringify(urlInfo.url)})
-`)
+`);
             if (hasReg) {
               magicSource.append(`
 __preact_refresh__.end()
-import.meta.hot.accept(__preact_refresh__.acceptCallback)`)
+import.meta.hot.accept(__preact_refresh__.acceptCallback)`);
             }
           }
         }
         const result = magicSource.toContentAndSourcemap({
           source: "jsenv_preact",
-        })
+        });
         return {
           content: result.content,
           sourcemap: await composeTwoSourcemaps(map, result.sourcemap),
@@ -192,8 +192,8 @@ import.meta.hot.accept(__preact_refresh__.acceptCallback)`)
           // I don't know exactly what is resulting in bad sourcemaps
           // but I suspect hooknames or prefresh to be responsible
           sourcemapIsWrong: jsxEnabled && refreshEnabled,
-        }
+        };
       },
     },
-  }
-}
+  };
+};

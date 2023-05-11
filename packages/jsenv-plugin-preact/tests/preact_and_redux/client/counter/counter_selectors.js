@@ -1,3 +1,3 @@
 export const counterValueSelector = (state) => {
-  return state.counter.value
-}
+  return state.counter.value;
+};

@@ -1,3 +1,3 @@
-import { answer } from "./answer.js"
+import { answer } from "./answer.js";
 
-export { answer }
+export { answer };

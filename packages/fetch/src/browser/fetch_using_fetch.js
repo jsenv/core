@@ -5,7 +5,7 @@ export const fetchUsingFetch = async (
   const response = await window.fetch(url, {
     mode,
     ...options,
-  })
+  });
   return {
     url: response.url,
     status: response.status,
@@ -16,13 +16,13 @@ export const fetchUsingFetch = async (
     blob: () => response.blob(),
     arrayBuffer: () => response.arrayBuffer(),
     formData: () => response.formData(),
-  }
-}
+  };
+};
 
 const responseToHeaders = (response) => {
-  const headers = {}
+  const headers = {};
   response.headers.forEach((value, name) => {
-    headers[name] = value
-  })
-  return headers
-}
+    headers[name] = value;
+  });
+  return headers;
+};

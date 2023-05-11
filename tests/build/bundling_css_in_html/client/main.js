@@ -1,3 +1,3 @@
-const htmlUrl = new URL("./main.html", import.meta.url)
+const htmlUrl = new URL("./main.html", import.meta.url);
 
-console.log(htmlUrl)
+console.log(htmlUrl);

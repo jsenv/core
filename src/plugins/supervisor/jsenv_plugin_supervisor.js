@@ -2,17 +2,17 @@
  * This plugin provides a way for jsenv to know when js execution is done
  */
 
-import { fileURLToPath } from "node:url"
-import { getOriginalPosition } from "@jsenv/sourcemap"
-import { stringifyUrlSite } from "@jsenv/urls"
+import { fileURLToPath } from "node:url";
+import { getOriginalPosition } from "@jsenv/sourcemap";
+import { stringifyUrlSite } from "@jsenv/urls";
 
-import { injectSupervisorIntoHTML } from "./html_supervisor_injection.js"
-import { requireFromJsenv } from "@jsenv/core/src/helpers/require_from_jsenv.js"
+import { injectSupervisorIntoHTML } from "./html_supervisor_injection.js";
+import { requireFromJsenv } from "@jsenv/core/src/helpers/require_from_jsenv.js";
 
 export const supervisorFileUrl = new URL(
   "./client/supervisor.js",
   import.meta.url,
-).href
+).href;
 
 export const jsenvPluginSupervisor = ({
   logs = false,
@@ -26,42 +26,44 @@ export const jsenvPluginSupervisor = ({
     appliesDuring: "dev",
     serve: async (request, context) => {
       if (request.pathname.startsWith("/__get_code_frame__/")) {
-        const { pathname, searchParams } = new URL(request.url)
-        let urlWithLineAndColumn = pathname.slice("/__get_code_frame__/".length)
-        urlWithLineAndColumn = decodeURIComponent(urlWithLineAndColumn)
-        const match = urlWithLineAndColumn.match(/:([0-9]+):([0-9]+)$/)
+        const { pathname, searchParams } = new URL(request.url);
+        let urlWithLineAndColumn = pathname.slice(
+          "/__get_code_frame__/".length,
+        );
+        urlWithLineAndColumn = decodeURIComponent(urlWithLineAndColumn);
+        const match = urlWithLineAndColumn.match(/:([0-9]+):([0-9]+)$/);
         if (!match) {
           return {
             status: 400,
             body: "Missing line and column in url",
-          }
+          };
         }
-        const file = urlWithLineAndColumn.slice(0, match.index)
-        let line = parseInt(match[1])
-        let column = parseInt(match[2])
-        const urlInfo = context.urlGraph.getUrlInfo(file)
+        const file = urlWithLineAndColumn.slice(0, match.index);
+        let line = parseInt(match[1]);
+        let column = parseInt(match[2]);
+        const urlInfo = context.urlGraph.getUrlInfo(file);
         if (!urlInfo) {
           return {
             status: 204,
             headers: {
               "cache-control": "no-store",
             },
-          }
+          };
         }
-        const remap = searchParams.has("remap")
+        const remap = searchParams.has("remap");
         if (remap) {
-          const sourcemap = urlInfo.sourcemap
+          const sourcemap = urlInfo.sourcemap;
           if (sourcemap) {
             const original = getOriginalPosition({
               sourcemap,
               url: file,
               line,
               column,
-            })
+            });
             if (original.line !== null) {
-              line = original.line
+              line = original.line;
               if (original.column !== null) {
-                column = original.column
+                column = original.column;
               }
             }
           }
@@ -71,7 +73,7 @@ export const jsenvPluginSupervisor = ({
           line,
           column,
           content: urlInfo.originalContent,
-        })
+        });
         return {
           status: 200,
           headers: {
@@ -80,37 +82,38 @@ export const jsenvPluginSupervisor = ({
             "content-length": Buffer.byteLength(codeFrame),
           },
           body: codeFrame,
-        }
+        };
       }
       if (request.pathname.startsWith("/__get_error_cause__/")) {
-        let file = request.pathname.slice("/__get_error_cause__/".length)
-        file = decodeURIComponent(file)
+        let file = request.pathname.slice("/__get_error_cause__/".length);
+        file = decodeURIComponent(file);
         if (!file) {
           return {
             status: 400,
             body: "Missing file in url",
-          }
+          };
         }
         const getErrorCauseInfo = () => {
-          const urlInfo = context.urlGraph.getUrlInfo(file)
+          const urlInfo = context.urlGraph.getUrlInfo(file);
           if (!urlInfo) {
-            return null
+            return null;
           }
-          const { error } = urlInfo
+          const { error } = urlInfo;
           if (error) {
-            return error
+            return error;
           }
           // search in direct dependencies (404 or 500)
-          const { dependencies } = urlInfo
+          const { dependencies } = urlInfo;
           for (const dependencyUrl of dependencies) {
-            const dependencyUrlInfo = context.urlGraph.getUrlInfo(dependencyUrl)
+            const dependencyUrlInfo =
+              context.urlGraph.getUrlInfo(dependencyUrl);
             if (dependencyUrlInfo.error) {
-              return dependencyUrlInfo.error
+              return dependencyUrlInfo.error;
             }
           }
-          return null
-        }
-        const causeInfo = getErrorCauseInfo()
+          return null;
+        };
+        const causeInfo = getErrorCauseInfo();
         const body = JSON.stringify(
           causeInfo
             ? {
@@ -125,7 +128,7 @@ export const jsenvPluginSupervisor = ({
             : null,
           null,
           "  ",
-        )
+        );
         return {
           status: 200,
           headers: {
@@ -134,29 +137,29 @@ export const jsenvPluginSupervisor = ({
             "content-length": Buffer.byteLength(body),
           },
           body,
-        }
+        };
       }
       if (request.pathname.startsWith("/__open_in_editor__/")) {
-        let file = request.pathname.slice("/__open_in_editor__/".length)
-        file = decodeURIComponent(file)
+        let file = request.pathname.slice("/__open_in_editor__/".length);
+        file = decodeURIComponent(file);
         if (!file) {
           return {
             status: 400,
             body: "Missing file in url",
-          }
+          };
         }
-        const launch = requireFromJsenv("launch-editor")
+        const launch = requireFromJsenv("launch-editor");
         launch(fileURLToPath(file), () => {
           // ignore error for now
-        })
+        });
         return {
           status: 200,
           headers: {
             "cache-control": "no-store",
           },
-        }
+        };
       }
-      return null
+      return null;
     },
     transformUrlContent: {
       html: ({ url, content }, context) => {
@@ -164,7 +167,7 @@ export const jsenvPluginSupervisor = ({
           type: "script",
           expectedType: "js_classic",
           specifier: supervisorFileUrl,
-        })
+        });
 
         return injectSupervisorIntoHTML(
           {
@@ -204,12 +207,12 @@ export const jsenvPluginSupervisor = ({
                   specifier: inlineScriptUrl,
                   contentType: "text/javascript",
                   content: textContent,
-                })
-              return inlineScriptReference.generatedSpecifier
+                });
+              return inlineScriptReference.generatedSpecifier;
             },
           },
-        )
+        );
       },
     },
-  }
-}
+  };
+};

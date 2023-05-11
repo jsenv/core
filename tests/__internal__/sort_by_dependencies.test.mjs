@@ -1,6 +1,6 @@
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-import { sortByDependencies } from "@jsenv/core/src/kitchen/url_graph/sort_by_dependencies.js"
+import { sortByDependencies } from "@jsenv/core/src/kitchen/url_graph/sort_by_dependencies.js";
 
 // when both have dependencies, but one depends an an other, the other must come first
 {
@@ -14,10 +14,10 @@ import { sortByDependencies } from "@jsenv/core/src/kitchen/url_graph/sort_by_de
     "img.png": {
       dependencies: [],
     },
-  })
-  const expected = ["img.png", "b.js", "a.js"]
-  expected.circular = []
-  assert({ actual, expected })
+  });
+  const expected = ["img.png", "b.js", "a.js"];
+  expected.circular = [];
+  assert({ actual, expected });
 }
 
 {
@@ -31,8 +31,8 @@ import { sortByDependencies } from "@jsenv/core/src/kitchen/url_graph/sort_by_de
     "img.png": {
       dependencies: [],
     },
-  })
-  const expected = ["img.png", "b.js", "a.js"]
-  expected.circular = []
-  assert({ actual, expected })
+  });
+  const expected = ["img.png", "b.js", "a.js"];
+  expected.circular = [];
+  assert({ actual, expected });
 }

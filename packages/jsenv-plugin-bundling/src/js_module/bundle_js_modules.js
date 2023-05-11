@@ -1,12 +1,12 @@
-import { pathToFileURL } from "node:url"
+import { pathToFileURL } from "node:url";
 
-import { URL_META } from "@jsenv/url-meta"
-import { isFileSystemPath } from "@jsenv/urls"
-import { createDetailedMessage } from "@jsenv/log"
-import { sourcemapConverter } from "@jsenv/sourcemap"
-import { globalThisClientFileUrl } from "@jsenv/core/src/plugins/transpilation/babel/global_this/babel_plugin_global_this_as_jsenv_import.js"
+import { URL_META } from "@jsenv/url-meta";
+import { isFileSystemPath } from "@jsenv/urls";
+import { createDetailedMessage } from "@jsenv/log";
+import { sourcemapConverter } from "@jsenv/sourcemap";
+import { globalThisClientFileUrl } from "@jsenv/core/src/plugins/transpilation/babel/global_this/babel_plugin_global_this_as_jsenv_import.js";
 
-import { fileUrlConverter } from "./file_url_converter.js"
+import { fileUrlConverter } from "./file_url_converter.js";
 
 export const bundleJsModules = async ({
   jsModuleUrlInfos,
@@ -30,32 +30,32 @@ export const bundleJsModules = async ({
     urlGraph,
     runtimeCompat,
     sourcemaps,
-  } = context
+  } = context;
 
-  let manualChunks
+  let manualChunks;
   if (Object.keys(chunks).length) {
-    const associations = URL_META.resolveAssociations(chunks, rootDirectoryUrl)
+    const associations = URL_META.resolveAssociations(chunks, rootDirectoryUrl);
     manualChunks = (id) => {
       if (rollupOutput.manualChunks) {
-        const manualChunkName = rollupOutput.manualChunks(id)
+        const manualChunkName = rollupOutput.manualChunks(id);
         if (manualChunkName) {
-          return manualChunkName
+          return manualChunkName;
         }
       }
-      const url = fileUrlConverter.asFileUrl(id)
-      const urlObject = new URL(url)
-      urlObject.search = ""
-      const urlWithoutSearch = urlObject.href
+      const url = fileUrlConverter.asFileUrl(id);
+      const urlObject = new URL(url);
+      urlObject.search = "";
+      const urlWithoutSearch = urlObject.href;
       const meta = URL_META.applyAssociations({
         url: urlWithoutSearch,
         associations,
-      })
-      const chunkName = Object.keys(meta).find((key) => meta[key])
-      return chunkName || null
-    }
+      });
+      const chunkName = Object.keys(meta).find((key) => meta[key]);
+      return chunkName || null;
+    };
   }
 
-  const resultRef = { current: null }
+  const resultRef = { current: null };
   try {
     await applyRollupPlugins({
       rollup,
@@ -83,19 +83,19 @@ export const bundleJsModules = async ({
         input: [],
         onwarn: (warning) => {
           if (warning.code === "CIRCULAR_DEPENDENCY") {
-            return
+            return;
           }
           if (warning.code === "THIS_IS_UNDEFINED") {
-            const fileUrl = pathToFileURL(warning.id).href
+            const fileUrl = pathToFileURL(warning.id).href;
             if (fileUrl === globalThisClientFileUrl) {
-              return
+              return;
             }
           }
           if (warning.code === "EVAL") {
             // ideally we should disable only for jsenv files
-            return
+            return;
           }
-          logger.warn(String(warning))
+          logger.warn(String(warning));
         },
         ...rollupInput,
       },
@@ -119,18 +119,18 @@ export const bundleJsModules = async ({
         ...rollupOutput,
         manualChunks,
       },
-    })
-    return resultRef.current.jsModuleBundleUrlInfos
+    });
+    return resultRef.current.jsModuleBundleUrlInfos;
   } catch (e) {
     if (e.code === "MISSING_EXPORT") {
       const detailedMessage = createDetailedMessage(e.message, {
         frame: e.frame,
-      })
-      throw new Error(detailedMessage, { cause: e })
+      });
+      throw new Error(detailedMessage, { cause: e });
     }
-    throw e
+    throw e;
   }
-}
+};
 
 const rollupPluginJsenv = ({
   // logger,
@@ -149,43 +149,43 @@ const rollupPluginJsenv = ({
   resultRef,
 }) => {
   let _rollupEmitFile = () => {
-    throw new Error("not implemented")
-  }
+    throw new Error("not implemented");
+  };
   const format = jsModuleUrlInfos.some((jsModuleUrlInfo) =>
     jsModuleUrlInfo.filename.endsWith(".cjs"),
   )
     ? "cjs"
-    : "esm"
+    : "esm";
   const emitChunk = (chunk) => {
     return _rollupEmitFile({
       type: "chunk",
       ...chunk,
-    })
-  }
-  let importCanBeBundled = () => true
+    });
+  };
+  let importCanBeBundled = () => true;
   if (include) {
     const associations = URL_META.resolveAssociations(
       { bundle: include },
       rootDirectoryUrl,
-    )
+    );
     importCanBeBundled = (url) => {
-      return URL_META.applyAssociations({ url, associations }).bundle
-    }
+      return URL_META.applyAssociations({ url, associations }).bundle;
+    };
   }
-  const urlImporters = {}
+  const urlImporters = {};
 
   return {
     name: "jsenv",
     async buildStart() {
-      _rollupEmitFile = (...args) => this.emitFile(...args)
-      let previousNonEntryPointModuleId
+      _rollupEmitFile = (...args) => this.emitFile(...args);
+      let previousNonEntryPointModuleId;
       jsModuleUrlInfos.forEach((jsModuleUrlInfo) => {
-        const id = jsModuleUrlInfo.url
+        const id = jsModuleUrlInfo.url;
         if (jsModuleUrlInfo.isEntryPoint) {
           emitChunk({
             id,
-          })
-          return
+          });
+          return;
         }
         emitChunk({
           id,
@@ -197,33 +197,33 @@ const rollupPluginJsenv = ({
             : jsModuleUrlInfo.dependents.size < 2
             ? "allow-extension"
             : "strict",
-        })
-        previousNonEntryPointModuleId = id
-      })
+        });
+        previousNonEntryPointModuleId = id;
+      });
     },
     async generateBundle(outputOptions, rollupResult) {
-      _rollupEmitFile = (...args) => this.emitFile(...args)
+      _rollupEmitFile = (...args) => this.emitFile(...args);
 
-      const jsModuleBundleUrlInfos = {}
+      const jsModuleBundleUrlInfos = {};
       Object.keys(rollupResult).forEach((fileName) => {
-        const rollupFileInfo = rollupResult[fileName]
+        const rollupFileInfo = rollupResult[fileName];
         // there is 3 types of file: "placeholder", "asset", "chunk"
         if (rollupFileInfo.type === "chunk") {
           const sourceUrls = Object.keys(rollupFileInfo.modules).map((id) =>
             fileUrlConverter.asFileUrl(id),
-          )
+          );
 
-          let url
-          let originalUrl
+          let url;
+          let originalUrl;
           if (rollupFileInfo.facadeModuleId) {
-            url = fileUrlConverter.asFileUrl(rollupFileInfo.facadeModuleId)
-            originalUrl = url
+            url = fileUrlConverter.asFileUrl(rollupFileInfo.facadeModuleId);
+            originalUrl = url;
           } else {
-            url = new URL(rollupFileInfo.fileName, buildDirectoryUrl).href
+            url = new URL(rollupFileInfo.fileName, buildDirectoryUrl).href;
             if (rollupFileInfo.isDynamicEntry) {
-              originalUrl = sourceUrls[sourceUrls.length - 1]
+              originalUrl = sourceUrls[sourceUrls.length - 1];
             } else {
-              originalUrl = url
+              originalUrl = url;
             }
           }
 
@@ -243,13 +243,13 @@ const rollupPluginJsenv = ({
             contentType: "text/javascript",
             content: rollupFileInfo.code,
             sourcemap: rollupFileInfo.map,
-          }
-          jsModuleBundleUrlInfos[url] = jsModuleBundleUrlInfo
+          };
+          jsModuleBundleUrlInfos[url] = jsModuleBundleUrlInfo;
         }
-      })
+      });
       resultRef.current = {
         jsModuleBundleUrlInfos,
-      }
+      };
     },
     outputOptions: (outputOptions) => {
       // const sourcemapFile = buildDirectoryUrl
@@ -259,97 +259,98 @@ const rollupPluginJsenv = ({
         sourcemap: sourcemaps === "file" || sourcemaps === "inline",
         // sourcemapFile,
         sourcemapPathTransform: (relativePath) => {
-          return new URL(relativePath, buildDirectoryUrl).href
+          return new URL(relativePath, buildDirectoryUrl).href;
         },
         entryFileNames: () => {
-          return `[name].js`
+          return `[name].js`;
         },
         chunkFileNames: (chunkInfo) => {
           const insideJs = willBeInsideJsDirectory({
             chunkInfo,
             fileUrlConverter,
             jsModuleUrlInfos,
-          })
-          let nameFromUrlInfo
+          });
+          let nameFromUrlInfo;
           if (chunkInfo.facadeModuleId) {
-            const url = fileUrlConverter.asFileUrl(chunkInfo.facadeModuleId)
+            const url = fileUrlConverter.asFileUrl(chunkInfo.facadeModuleId);
             const urlInfo = jsModuleUrlInfos.find(
               (jsModuleUrlInfo) => jsModuleUrlInfo.url === url,
-            )
+            );
             if (urlInfo) {
-              nameFromUrlInfo = urlInfo.filename
+              nameFromUrlInfo = urlInfo.filename;
             }
           }
-          const name = nameFromUrlInfo || `${chunkInfo.name}.js`
-          return insideJs ? `${assetsDirectory}js/${name}` : `${name}`
+          const name = nameFromUrlInfo || `${chunkInfo.name}.js`;
+          return insideJs ? `${assetsDirectory}js/${name}` : `${name}`;
         },
         // https://rollupjs.org/guide/en/#outputpaths
         // paths: (id) => {
         //   return id
         // },
-      })
+      });
     },
     // https://rollupjs.org/guide/en/#resolvedynamicimport
     resolveDynamicImport: (specifier, importer) => {
       if (preserveDynamicImport) {
-        let urlObject
+        let urlObject;
         if (specifier[0] === "/") {
-          urlObject = new URL(specifier.slice(1), rootDirectoryUrl)
+          urlObject = new URL(specifier.slice(1), rootDirectoryUrl);
         } else {
           if (isFileSystemPath(importer)) {
-            importer = fileUrlConverter.asFileUrl(importer)
+            importer = fileUrlConverter.asFileUrl(importer);
           }
-          urlObject = new URL(specifier, importer)
+          urlObject = new URL(specifier, importer);
         }
-        const searchParamsToAdd = augmentDynamicImportUrlSearchParams(urlObject)
+        const searchParamsToAdd =
+          augmentDynamicImportUrlSearchParams(urlObject);
         if (searchParamsToAdd) {
           Object.keys(searchParamsToAdd).forEach((key) => {
-            const value = searchParamsToAdd[key]
+            const value = searchParamsToAdd[key];
             if (value === undefined) {
-              urlObject.searchParams.delete(key)
+              urlObject.searchParams.delete(key);
             } else {
-              urlObject.searchParams.set(key, value)
+              urlObject.searchParams.set(key, value);
             }
-          })
+          });
         }
-        return { external: true, id: urlObject.href }
+        return { external: true, id: urlObject.href };
       }
-      return null
+      return null;
     },
     resolveId: (specifier, importer = rootDirectoryUrl) => {
       if (isFileSystemPath(importer)) {
-        importer = fileUrlConverter.asFileUrl(importer)
+        importer = fileUrlConverter.asFileUrl(importer);
       }
-      let url
+      let url;
       if (specifier[0] === "/") {
-        url = new URL(specifier.slice(1), rootDirectoryUrl).href
+        url = new URL(specifier.slice(1), rootDirectoryUrl).href;
       } else {
-        url = new URL(specifier, importer).href
+        url = new URL(specifier, importer).href;
       }
-      const existingImporter = urlImporters[url]
+      const existingImporter = urlImporters[url];
       if (!existingImporter) {
-        urlImporters[url] = importer
+        urlImporters[url] = importer;
       }
       if (!url.startsWith("file:")) {
-        return { id: url, external: true }
+        return { id: url, external: true };
       }
       if (!importCanBeBundled(url)) {
-        return { id: url, external: true }
+        return { id: url, external: true };
       }
-      const urlInfo = urlGraph.getUrlInfo(url)
+      const urlInfo = urlGraph.getUrlInfo(url);
       if (!urlInfo) {
         // happen when excluded by urlAnalysis.include
-        return { id: url, external: true }
+        return { id: url, external: true };
       }
       if (!urlInfo.shouldHandle) {
-        return { id: url, external: true }
+        return { id: url, external: true };
       }
-      const filePath = fileUrlConverter.asFilePath(url)
-      return filePath
+      const filePath = fileUrlConverter.asFilePath(url);
+      return filePath;
     },
     async load(rollupId) {
-      const fileUrl = fileUrlConverter.asFileUrl(rollupId)
-      const urlInfo = urlGraph.getUrlInfo(fileUrl)
+      const fileUrl = fileUrlConverter.asFileUrl(rollupId);
+      const urlInfo = urlGraph.getUrlInfo(fileUrl);
       return {
         code: urlInfo.content,
         map:
@@ -357,10 +358,10 @@ const rollupPluginJsenv = ({
           urlInfo.sourcemap
             ? sourcemapConverter.toFilePaths(urlInfo.sourcemap)
             : null,
-      }
+      };
     },
-  }
-}
+  };
+};
 
 const applyRollupPlugins = async ({
   rollup,
@@ -369,10 +370,10 @@ const applyRollupPlugins = async ({
   rollupOutput,
 }) => {
   if (!rollup) {
-    const rollupModule = await import("rollup")
-    rollup = rollupModule.rollup
+    const rollupModule = await import("rollup");
+    rollup = rollupModule.rollup;
   }
-  const { importAssertions } = await import("acorn-import-assertions")
+  const { importAssertions } = await import("acorn-import-assertions");
   const rollupReturnValue = await rollup({
     ...rollupInput,
     plugins: rollupPlugins,
@@ -380,10 +381,10 @@ const applyRollupPlugins = async ({
       importAssertions,
       ...(rollupInput.acornInjectPlugins || []),
     ],
-  })
-  const rollupOutputArray = await rollupReturnValue.generate(rollupOutput)
-  return rollupOutputArray
-}
+  });
+  const rollupOutputArray = await rollupReturnValue.generate(rollupOutput);
+  return rollupOutputArray;
+};
 
 const willBeInsideJsDirectory = ({
   chunkInfo,
@@ -396,19 +397,19 @@ const willBeInsideJsDirectory = ({
   // both will be inside the js/ directory
   if (!chunkInfo.facadeModuleId) {
     // generated by rollup
-    return true
+    return true;
   }
-  const url = fileUrlConverter.asFileUrl(chunkInfo.facadeModuleId)
+  const url = fileUrlConverter.asFileUrl(chunkInfo.facadeModuleId);
   const jsModuleUrlInfo = jsModuleUrlInfos.find(
     (jsModuleUrlInfo) => jsModuleUrlInfo.url === url,
-  )
+  );
   if (!jsModuleUrlInfo) {
     // generated by rollup
-    return true
+    return true;
   }
   if (!jsModuleUrlInfo.isEntryPoint) {
     // not an entry point, jsenv will put it inside js/ directory
-    return true
+    return true;
   }
-  return false
-}
+  return false;
+};

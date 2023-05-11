@@ -1,1 +1,1 @@
-import "@jsenv/toto"
+import "@jsenv/toto";

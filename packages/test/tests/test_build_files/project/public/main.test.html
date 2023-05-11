@@ -8,11 +8,11 @@
 
   <body>
     <script type="module">
-      import { getAnswer } from "./main.js"
+      import { getAnswer } from "./main.js";
 
-      const answer = await getAnswer()
+      const answer = await getAnswer();
       if (answer !== 42) {
-        throw new Error(`answer should be 42, got ${answer}`)
+        throw new Error(`answer should be 42, got ${answer}`);
       }
     </script>
   </body>

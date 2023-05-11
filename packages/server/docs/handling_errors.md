@@ -3,16 +3,16 @@
 Errors are handled by the first service returning something in a "handleError" function.
 
 ```js
-import { startServer } from "@jsenv/server"
+import { startServer } from "@jsenv/server";
 
 await startServer({
   services: [
     {
       handleRequest: () => {
-        throw new Error("toto")
+        throw new Error("toto");
       },
       handleError: (error, { request }) => {
-        const body = `An error occured: ${error.message}`
+        const body = `An error occured: ${error.message}`;
         return {
           status: 500,
           headers: {
@@ -20,11 +20,11 @@ await startServer({
             "content-length": Buffer.byteLength(body),
           },
           body,
-        }
+        };
       },
     },
   ],
-})
+});
 ```
 
 ## handleError
@@ -43,18 +43,18 @@ When there is no service handling the error it is thrown leading to process exit
 _jsenvServiceErrorHandler_ is a generic error handler. It can be used to catch errors and display a generic message.
 
 ```js
-import { startServer, jsenvServiceErrorHandler } from "@jsenv/server"
+import { startServer, jsenvServiceErrorHandler } from "@jsenv/server";
 
 await startServer({
   services: [
     {
       handleRequest: () => {
-        throw new Error("toto")
+        throw new Error("toto");
       },
     },
     jsenvServiceErrorHandler(),
   ],
-})
+});
 ```
 
 ![screenshot of internal error page](./screenshots/500.png)
@@ -69,7 +69,7 @@ When used this error handler should be the last service implementing "handleErro
 Any service catching a subset of error should be placed before this one as in the example below:
 
 ```js
-import { startServer, jsenvServiceErrorHandler } from "@jsenv/server"
+import { startServer, jsenvServiceErrorHandler } from "@jsenv/server";
 
 await startServer({
   services: [
@@ -82,11 +82,11 @@ await startServer({
               "content-type": "text/plain",
             },
             body: 'Custom response for error with code "FOO"',
-          }
+          };
         }
       },
     },
     jsenvServiceErrorHandler(),
   ],
-})
+});
 ```

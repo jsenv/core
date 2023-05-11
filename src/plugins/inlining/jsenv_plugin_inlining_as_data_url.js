@@ -1,4 +1,4 @@
-import { DATA_URL } from "@jsenv/urls"
+import { DATA_URL } from "@jsenv/urls";
 
 export const jsenvPluginInliningAsDataUrl = () => {
   return {
@@ -19,29 +19,29 @@ export const jsenvPluginInliningAsDataUrl = () => {
           !reference.original ||
           !reference.original.searchParams.has("inline")
         ) {
-          return null
+          return null;
         }
         // <link rel="stylesheet"> and <script> can be inlined in the html
         if (
           reference.type === "link_href" &&
           reference.subtype === "stylesheet"
         ) {
-          return null
+          return null;
         }
         if (reference.type === "script") {
-          return null
+          return null;
         }
         return (async () => {
-          const urlInfo = context.urlGraph.getUrlInfo(reference.url)
-          await context.cook(urlInfo, { reference })
+          const urlInfo = context.urlGraph.getUrlInfo(reference.url);
+          await context.cook(urlInfo, { reference });
           const specifier = DATA_URL.stringify({
             mediaType: urlInfo.contentType,
             base64Flag: true,
             data: Buffer.from(urlInfo.content).toString("base64"),
-          })
-          return specifier
-        })()
+          });
+          return specifier;
+        })();
       },
     },
-  }
-}
+  };
+};

@@ -1,5 +1,5 @@
-import { build } from "@jsenv/core"
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
+import { build } from "@jsenv/core";
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 
 await build({
   sourceDirectoryUrl: new URL("../src/", import.meta.url),
@@ -33,4 +33,4 @@ await build({
     },
   },
   plugins: [jsenvPluginBundling()],
-})
+});

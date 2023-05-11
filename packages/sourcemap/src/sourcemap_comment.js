@@ -1,36 +1,36 @@
 export const SOURCEMAP = {
   enabledOnContentType: (contentType) => {
-    return ["text/javascript", "text/css"].includes(contentType)
+    return ["text/javascript", "text/css"].includes(contentType);
   },
 
   readComment: ({ contentType, content }) => {
     const read = {
       "text/javascript": parseJavaScriptSourcemapComment,
       "text/css": parseCssSourcemapComment,
-    }[contentType]
-    return read ? read(content) : null
+    }[contentType];
+    return read ? read(content) : null;
   },
 
   writeComment: ({ contentType, content, specifier }) => {
     const write = {
       "text/javascript": setJavaScriptSourceMappingUrl,
       "text/css": setCssSourceMappingUrl,
-    }[contentType]
-    return write ? write(content, specifier) : content
+    }[contentType];
+    return write ? write(content, specifier) : content;
   },
-}
+};
 
 const parseJavaScriptSourcemapComment = (javaScriptSource) => {
-  let sourceMappingUrl
+  let sourceMappingUrl;
   replaceSourceMappingUrl(
     javaScriptSource,
     javascriptSourceMappingUrlCommentRegexp,
     (value) => {
-      sourceMappingUrl = value
+      sourceMappingUrl = value;
     },
-  )
+  );
   if (!sourceMappingUrl) {
-    return null
+    return null;
   }
   return {
     type: "sourcemap_comment",
@@ -40,46 +40,46 @@ const parseJavaScriptSourcemapComment = (javaScriptSource) => {
     // ${"//#"} is to avoid static analysis to think there is a sourceMappingUrl for this file
     column: `${"//#"} sourceMappingURL=`.length + 1,
     specifier: sourceMappingUrl,
-  }
-}
+  };
+};
 
 const setJavaScriptSourceMappingUrl = (
   javaScriptSource,
   sourceMappingFileUrl,
 ) => {
-  let replaced
+  let replaced;
   const sourceAfterReplace = replaceSourceMappingUrl(
     javaScriptSource,
     javascriptSourceMappingUrlCommentRegexp,
     () => {
-      replaced = true
+      replaced = true;
       return sourceMappingFileUrl
         ? writeJavaScriptSourceMappingURL(sourceMappingFileUrl)
-        : ""
+        : "";
     },
-  )
+  );
   if (replaced) {
-    return sourceAfterReplace
+    return sourceAfterReplace;
   }
 
   return sourceMappingFileUrl
     ? `${javaScriptSource}
 ${writeJavaScriptSourceMappingURL(sourceMappingFileUrl)}
 `
-    : javaScriptSource
-}
+    : javaScriptSource;
+};
 
 const parseCssSourcemapComment = (cssSource) => {
-  let sourceMappingUrl
+  let sourceMappingUrl;
   replaceSourceMappingUrl(
     cssSource,
     cssSourceMappingUrlCommentRegExp,
     (value) => {
-      sourceMappingUrl = value
+      sourceMappingUrl = value;
     },
-  )
+  );
   if (!sourceMappingUrl) {
-    return null
+    return null;
   }
   return {
     type: "sourcemap_comment",
@@ -89,55 +89,55 @@ const parseCssSourcemapComment = (cssSource) => {
     // ${"//*#"} is to avoid static analysis to think there is a sourceMappingUrl for this file
     column: `${"//*#"} sourceMappingURL=`.length + 1,
     specifier: sourceMappingUrl,
-  }
-}
+  };
+};
 
 const setCssSourceMappingUrl = (cssSource, sourceMappingFileUrl) => {
-  let replaced
+  let replaced;
   const sourceAfterReplace = replaceSourceMappingUrl(
     cssSource,
     cssSourceMappingUrlCommentRegExp,
     () => {
-      replaced = true
+      replaced = true;
       return sourceMappingFileUrl
         ? writeCssSourceMappingUrl(sourceMappingFileUrl)
-        : ""
+        : "";
     },
-  )
+  );
   if (replaced) {
-    return sourceAfterReplace
+    return sourceAfterReplace;
   }
   return sourceMappingFileUrl
     ? `${cssSource}
 ${writeCssSourceMappingUrl(sourceMappingFileUrl)}
 `
-    : cssSource
-}
+    : cssSource;
+};
 
 const javascriptSourceMappingUrlCommentRegexp =
-  /\/\/ ?# ?sourceMappingURL=([^\s'"]+)/g
+  /\/\/ ?# ?sourceMappingURL=([^\s'"]+)/g;
 const cssSourceMappingUrlCommentRegExp =
-  /\/\*# ?sourceMappingURL=([^\s'"]+) \*\//g
+  /\/\*# ?sourceMappingURL=([^\s'"]+) \*\//g;
 
 // ${"//#"} is to avoid a parser thinking there is a sourceMappingUrl for this file
 const writeJavaScriptSourceMappingURL = (value) =>
-  `${"//#"} sourceMappingURL=${value}`
-const writeCssSourceMappingUrl = (value) => `/*# sourceMappingURL=${value} */`
+  `${"//#"} sourceMappingURL=${value}`;
+const writeCssSourceMappingUrl = (value) => `/*# sourceMappingURL=${value} */`;
 
 const replaceSourceMappingUrl = (source, regexp, callback) => {
-  let lastSourceMappingUrl
-  let matchSourceMappingUrl
+  let lastSourceMappingUrl;
+  let matchSourceMappingUrl;
   while ((matchSourceMappingUrl = regexp.exec(source))) {
-    lastSourceMappingUrl = matchSourceMappingUrl
+    lastSourceMappingUrl = matchSourceMappingUrl;
   }
   if (lastSourceMappingUrl) {
-    const index = lastSourceMappingUrl.index
-    const before = source.slice(0, index)
-    const after = source.slice(index)
+    const index = lastSourceMappingUrl.index;
+    const before = source.slice(0, index);
+    const after = source.slice(index);
     const mappedAfter = after.replace(regexp, (match, firstGroup) => {
-      return callback(firstGroup)
-    })
-    return `${before}${mappedAfter}`
+      return callback(firstGroup);
+    });
+    return `${before}${mappedAfter}`;
   }
-  return source
-}
+  return source;
+};

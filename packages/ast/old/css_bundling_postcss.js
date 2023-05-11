@@ -6,19 +6,19 @@
  *   It can be quite challenging, see "bundle_sourcemap.js"
  */
 
-import { createMagicSource } from "@jsenv/sourcemap"
+import { createMagicSource } from "@jsenv/sourcemap";
 
-import { applyPostCss } from "../src/css/apply_post_css.js"
-import { postCssPluginUrlVisitor } from "../src/css/postcss_plugin_url_visitor.js"
+import { applyPostCss } from "../src/css/apply_post_css.js";
+import { postCssPluginUrlVisitor } from "../src/css/postcss_plugin_url_visitor.js";
 
-import { sortByDependencies } from "./sort_by_dependencies.js"
+import { sortByDependencies } from "./sort_by_dependencies.js";
 
 export const bundleCss = async ({ cssUrlInfos, context }) => {
-  const bundledCssUrlInfos = {}
+  const bundledCssUrlInfos = {};
   const cssBundleInfos = await performCssBundling({
     cssEntryUrlInfos: cssUrlInfos,
     context,
-  })
+  });
   cssUrlInfos.forEach((cssUrlInfo) => {
     bundledCssUrlInfos[cssUrlInfo.url] = {
       data: {
@@ -26,37 +26,37 @@ export const bundleCss = async ({ cssUrlInfos, context }) => {
       },
       contentType: "text/css",
       content: cssBundleInfos[cssUrlInfo.url].bundleContent,
-    }
-  })
-  return bundledCssUrlInfos
-}
+    };
+  });
+  return bundledCssUrlInfos;
+};
 
 const performCssBundling = async ({ cssEntryUrlInfos, context }) => {
   const cssBundleInfos = await loadCssUrls({
     cssEntryUrlInfos,
     context,
-  })
-  const cssUrlsSorted = sortByDependencies(cssBundleInfos)
+  });
+  const cssUrlsSorted = sortByDependencies(cssBundleInfos);
   cssUrlsSorted.forEach((cssUrl) => {
-    const cssBundleInfo = cssBundleInfos[cssUrl]
-    const magicSource = createMagicSource(cssBundleInfo.content)
+    const cssBundleInfo = cssBundleInfos[cssUrl];
+    const magicSource = createMagicSource(cssBundleInfo.content);
     cssBundleInfo.cssUrls.forEach((cssUrl) => {
       if (cssUrl.type === "@import") {
         magicSource.replace({
           start: cssUrl.atRuleStart,
           end: cssUrl.atRuleEnd,
           replacement: cssBundleInfos[cssUrl.url].bundleContent,
-        })
+        });
       }
-    })
-    const { content } = magicSource.toContentAndSourcemap()
-    cssBundleInfo.bundleContent = content.trim()
-  })
-  return cssBundleInfos
-}
+    });
+    const { content } = magicSource.toContentAndSourcemap();
+    cssBundleInfo.bundleContent = content.trim();
+  });
+  return cssBundleInfos;
+};
 
 const parseCssUrls = async ({ css, url }) => {
-  const cssUrls = []
+  const cssUrls = [];
   await applyPostCss({
     sourcemaps: false,
     plugins: [
@@ -76,66 +76,66 @@ const parseCssUrls = async ({ css, url }) => {
             specifierEnd,
             atRuleStart,
             atRuleEnd,
-          })
+          });
         },
       }),
     ],
     url,
     content: css,
-  })
+  });
 
-  return cssUrls
-}
+  return cssUrls;
+};
 
 const loadCssUrls = async ({ cssEntryUrlInfos, context }) => {
-  const cssBundleInfos = {}
-  const promises = []
-  const promiseMap = new Map()
+  const cssBundleInfos = {};
+  const promises = [];
+  const promiseMap = new Map();
 
   const load = (cssUrlInfo) => {
-    const promiseFromData = promiseMap.get(cssUrlInfo.url)
-    if (promiseFromData) return promiseFromData
-    const promise = _load(cssUrlInfo)
-    promises.push(promise)
-    promiseMap.set(cssUrlInfo.url, promise)
-    return promise
-  }
+    const promiseFromData = promiseMap.get(cssUrlInfo.url);
+    if (promiseFromData) return promiseFromData;
+    const promise = _load(cssUrlInfo);
+    promises.push(promise);
+    promiseMap.set(cssUrlInfo.url, promise);
+    return promise;
+  };
 
   const _load = async (cssUrlInfo) => {
     const cssUrls = await parseCssUrls({
       css: cssUrlInfo.content,
       url: cssUrlInfo.url,
-    })
+    });
     const cssBundleInfo = {
       content: cssUrlInfo.content,
       cssUrls,
       dependencies: [],
-    }
-    cssBundleInfos[cssUrlInfo.url] = cssBundleInfo
+    };
+    cssBundleInfos[cssUrlInfo.url] = cssBundleInfo;
     cssUrls.forEach((cssUrl) => {
       if (cssUrl.type === "@import") {
-        cssBundleInfo.dependencies.push(cssUrl.url)
-        const importedCssUrlInfo = context.urlGraph.getUrlInfo(cssUrl.url)
-        load(importedCssUrlInfo)
+        cssBundleInfo.dependencies.push(cssUrl.url);
+        const importedCssUrlInfo = context.urlGraph.getUrlInfo(cssUrl.url);
+        load(importedCssUrlInfo);
       }
-    })
-  }
+    });
+  };
 
   cssEntryUrlInfos.forEach((cssEntryUrlInfo) => {
-    load(cssEntryUrlInfo)
-  })
+    load(cssEntryUrlInfo);
+  });
 
   const waitAll = async () => {
     if (promises.length === 0) {
-      return
+      return;
     }
-    const promisesToWait = promises.slice()
-    promises.length = 0
-    await Promise.all(promisesToWait)
-    await waitAll()
-  }
-  await waitAll()
-  promiseMap.clear()
+    const promisesToWait = promises.slice();
+    promises.length = 0;
+    await Promise.all(promisesToWait);
+    await waitAll();
+  };
+  await waitAll();
+  promiseMap.clear();
 
-  return cssBundleInfos
-}
+  return cssBundleInfos;
+};

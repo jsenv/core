@@ -1,6 +1,6 @@
-import { resolveImport } from "@jsenv/importmap"
+import { resolveImport } from "@jsenv/importmap";
 
-import { readImportmap } from "./read_importmap.js"
+import { readImportmap } from "./read_importmap.js";
 
 export const applyImportmapResolution = (
   specifier,
@@ -16,7 +16,7 @@ export const applyImportmapResolution = (
     logger,
     rootDirectoryUrl,
     importmapFileRelativeUrl,
-  })
+  });
   try {
     return resolveImport({
       specifier,
@@ -28,12 +28,12 @@ export const applyImportmapResolution = (
       // even if there is no importmap file
       importMap: importmap || {},
       defaultExtension: importDefaultExtension,
-    })
+    });
   } catch (e) {
     if (e.message.includes("bare specifier")) {
-      logger.debug("unmapped bare specifier")
-      return null
+      logger.debug("unmapped bare specifier");
+      return null;
     }
-    throw e
+    throw e;
   }
-}
+};

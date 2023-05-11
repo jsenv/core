@@ -1,20 +1,20 @@
-import { comparisonToPath } from "../comparisonToPath.js"
-import { valueToString } from "../valueToString.js"
+import { comparisonToPath } from "../comparisonToPath.js";
+import { valueToString } from "../valueToString.js";
 
 export const referenceComparisonToErrorMessage = (comparison) => {
-  if (comparison.type !== "reference") return undefined
+  if (comparison.type !== "reference") return undefined;
 
-  const { actual, expected } = comparison
-  const isMissing = expected && !actual
-  const isExtra = !expected && actual
-  const path = comparisonToPath(comparison)
+  const { actual, expected } = comparison;
+  const isMissing = expected && !actual;
+  const isExtra = !expected && actual;
+  const path = comparisonToPath(comparison);
 
   if (isExtra) {
     return createUnexpectedReferenceMessage({
       path,
       expectedValue: valueToString(comparison.parent.expected),
       unexpectedReferencePath: comparisonToPath(actual, "actual"),
-    })
+    });
   }
 
   if (isMissing) {
@@ -22,15 +22,15 @@ export const referenceComparisonToErrorMessage = (comparison) => {
       path,
       expectedReferencePath: comparisonToPath(expected, "expected"),
       actualValue: valueToString(comparison.parent.actual),
-    })
+    });
   }
 
   return createUnequalRefencesMessage({
     path,
     expectedReferencePath: comparisonToPath(expected, "expected"),
     actualReferencePath: comparisonToPath(actual, "actual"),
-  })
-}
+  });
+};
 
 const createUnexpectedReferenceMessage = ({
   path,
@@ -42,7 +42,7 @@ ${unexpectedReferencePath}
 --- value expected ---
 ${expectedValue}
 --- path ---
-${path}`
+${path}`;
 
 const createMissingReferenceMessage = ({
   path,
@@ -54,7 +54,7 @@ ${actualValue}
 --- reference expected to ---
 ${expectedReferencePath}
 --- path ---
-${path}`
+${path}`;
 
 const createUnequalRefencesMessage = ({
   path,
@@ -66,4 +66,4 @@ ${actualReferencePath}
 --- reference expected to ---
 ${expectedReferencePath}
 --- path ---
-${path}`
+${path}`;

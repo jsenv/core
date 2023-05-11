@@ -3,41 +3,41 @@
  */
 
 export const raceCallbacks = (raceDescription, winnerCallback) => {
-  let cleanCallbacks = []
-  let status = "racing"
+  let cleanCallbacks = [];
+  let status = "racing";
 
   const clean = () => {
     cleanCallbacks.forEach((clean) => {
-      clean()
-    })
-    cleanCallbacks = null
-  }
+      clean();
+    });
+    cleanCallbacks = null;
+  };
 
   const cancel = () => {
     if (status !== "racing") {
-      return
+      return;
     }
-    status = "cancelled"
-    clean()
-  }
+    status = "cancelled";
+    clean();
+  };
 
   Object.keys(raceDescription).forEach((candidateName) => {
-    const register = raceDescription[candidateName]
+    const register = raceDescription[candidateName];
     const returnValue = register((data) => {
       if (status !== "racing") {
-        return
+        return;
       }
-      status = "done"
-      clean()
+      status = "done";
+      clean();
       winnerCallback({
         name: candidateName,
         data,
-      })
-    })
+      });
+    });
     if (typeof returnValue === "function") {
-      cleanCallbacks.push(returnValue)
+      cleanCallbacks.push(returnValue);
     }
-  })
+  });
 
-  return cancel
-}
+  return cancel;
+};

@@ -1,29 +1,29 @@
-import { assert } from "@jsenv/assert"
-import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js"
+import { assert } from "@jsenv/assert";
+import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js";
 
 {
-  const actual = 10
-  const expected = 10
-  assert({ actual, expected })
+  const actual = 10;
+  const expected = 10;
+  assert({ actual, expected });
 }
 
 {
-  const actual = Infinity
-  const expected = Infinity
-  assert({ actual, expected })
+  const actual = Infinity;
+  const expected = Infinity;
+  assert({ actual, expected });
 }
 
 {
-  const actual = -0
-  const expected = -0
-  assert({ actual, expected })
+  const actual = -0;
+  const expected = -0;
+  assert({ actual, expected });
 }
 
 {
-  const actual = 1
-  const expected = 10
+  const actual = 1;
+  const expected = 10;
   try {
-    assert({ actual, expected })
+    assert({ actual, expected });
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
@@ -34,15 +34,15 @@ import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMess
 10
 --- path ---
 actual`,
-    )
+    );
   }
 }
 
 {
-  const actual = Infinity
-  const expected = 1
+  const actual = Infinity;
+  const expected = 1;
   try {
-    assert({ actual, expected })
+    assert({ actual, expected });
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
@@ -53,15 +53,15 @@ Infinity
 1
 --- path ---
 actual`,
-    )
+    );
   }
 }
 
 {
-  const actual = NaN
-  const expected = 1
+  const actual = NaN;
+  const expected = 1;
   try {
-    assert({ actual, expected })
+    assert({ actual, expected });
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
@@ -72,15 +72,15 @@ NaN
 1
 --- path ---
 actual`,
-    )
+    );
   }
 }
 
 {
-  const actual = -0
-  const expected = 0
+  const actual = -0;
+  const expected = 0;
   try {
-    assert({ actual, expected })
+    assert({ actual, expected });
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
@@ -91,15 +91,15 @@ actual`,
 0
 --- path ---
 actual`,
-    )
+    );
   }
 }
 
 {
-  const actual = 0
-  const expected = -0
+  const actual = 0;
+  const expected = -0;
   try {
-    assert({ actual, expected })
+    assert({ actual, expected });
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
@@ -110,15 +110,15 @@ actual`,
 -0
 --- path ---
 actual`,
-    )
+    );
   }
 }
 
 {
-  const actual = 1
-  const expected = -1
+  const actual = 1;
+  const expected = -1;
   try {
-    assert({ actual, expected })
+    assert({ actual, expected });
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
@@ -129,6 +129,6 @@ actual`,
 -1
 --- path ---
 actual`,
-    )
+    );
   }
 }

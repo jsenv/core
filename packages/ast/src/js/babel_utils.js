@@ -1,4 +1,4 @@
-import { require } from "../require.js"
+import { require } from "../require.js";
 
 // https://github.com/babel/babel/tree/master/packages/babel-helper-module-imports
 export const injectJsImport = ({
@@ -14,30 +14,30 @@ export const injectJsImport = ({
     addDefault,
     addNamed,
     addSideEffect,
-  } = require("@babel/helper-module-imports")
+  } = require("@babel/helper-module-imports");
 
   if (namespace) {
     return addNamespace(programPath, from, {
       nameHint,
-    })
+    });
   }
   if (name) {
-    return addNamed(programPath, name, from)
+    return addNamed(programPath, name, from);
   }
   if (sideEffect) {
-    return addSideEffect(programPath, from)
+    return addSideEffect(programPath, from);
   }
   return addDefault(programPath, from, {
     nameHint,
-  })
-}
+  });
+};
 
 const generateExpressionAst = (expression, options) => {
-  const { parseExpression } = require("@babel/parser")
+  const { parseExpression } = require("@babel/parser");
 
-  const ast = parseExpression(expression, options)
-  return ast
-}
+  const ast = parseExpression(expression, options);
+  return ast;
+};
 
 export const generateValueAst = (value) => {
   const valueAst = generateExpressionAst(
@@ -46,19 +46,19 @@ export const generateValueAst = (value) => {
       : value === null
       ? "null"
       : JSON.stringify(value),
-  )
-  return valueAst
-}
+  );
+  return valueAst;
+};
 
 export const injectAstAfterImport = (programPath, ast) => {
-  const bodyNodePaths = programPath.get("body")
+  const bodyNodePaths = programPath.get("body");
   const notAnImportIndex = bodyNodePaths.findIndex(
     (bodyNodePath) => bodyNodePath.node.type !== "ImportDeclaration",
-  )
-  const notAnImportNodePath = bodyNodePaths[notAnImportIndex]
+  );
+  const notAnImportNodePath = bodyNodePaths[notAnImportIndex];
   if (notAnImportNodePath) {
-    notAnImportNodePath.insertBefore(ast)
+    notAnImportNodePath.insertBefore(ast);
   } else {
-    bodyNodePaths[0].insertBefore(ast)
+    bodyNodePaths[0].insertBefore(ast);
   }
-}
+};

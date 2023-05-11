@@ -1,3 +1,3 @@
 export const inspectBigInt = (value) => {
-  return `${value}n`
-}
+  return `${value}n`;
+};

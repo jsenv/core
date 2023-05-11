@@ -1,7 +1,7 @@
-import { signal } from "@preact/signals"
+import { signal } from "@preact/signals";
 
-import { paramsFromParentWindow } from "./parent_window_context.js"
-import { stateFromLocalStorage } from "./toolbar_state_context.js"
+import { paramsFromParentWindow } from "./parent_window_context.js";
+import { stateFromLocalStorage } from "./toolbar_state_context.js";
 
 export const animationsEnabledSignal = signal(
   typeof stateFromLocalStorage.animationsEnabled === "boolean"
@@ -9,4 +9,4 @@ export const animationsEnabledSignal = signal(
     : typeof paramsFromParentWindow.animationsEnabled === "boolean"
     ? paramsFromParentWindow.animationsEnabled
     : false,
-)
+);

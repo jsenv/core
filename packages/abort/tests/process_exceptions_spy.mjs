@@ -29,42 +29,44 @@
  */
 
 export const spyProcessExceptions = () => {
-  let exceptions = []
+  let exceptions = [];
 
   const unhandledRejectionEventCallback = (unhandledRejection, promise) => {
     exceptions = [
       ...exceptions,
       { origin: "unhandledRejection", exception: unhandledRejection, promise },
-    ]
-  }
+    ];
+  };
 
   const rejectionHandledEventCallback = (promise) => {
-    exceptions = exceptions.filter((exception) => exception.promise !== promise)
-  }
+    exceptions = exceptions.filter(
+      (exception) => exception.promise !== promise,
+    );
+  };
 
   const uncaughtExceptionEventCallback = (uncaughtException, origin) => {
     // since node 12.4 https://nodejs.org/docs/latest-v12.x/api/process.html#process_event_uncaughtexception
-    if (origin === "unhandledRejection") return
+    if (origin === "unhandledRejection") return;
 
     exceptions = [
       ...exceptions,
       { origin: "uncaughtException", exception: uncaughtException },
-    ]
-  }
+    ];
+  };
 
-  process.on("unhandledRejection", unhandledRejectionEventCallback)
-  process.on("rejectionHandled", rejectionHandledEventCallback)
-  process.on("uncaughtException", uncaughtExceptionEventCallback)
+  process.on("unhandledRejection", unhandledRejectionEventCallback);
+  process.on("rejectionHandled", rejectionHandledEventCallback);
+  process.on("uncaughtException", uncaughtExceptionEventCallback);
 
   return () => {
     process.removeListener(
       "unhandledRejection",
       unhandledRejectionEventCallback,
-    )
-    process.removeListener("rejectionHandled", rejectionHandledEventCallback)
-    process.removeListener("uncaughtException", uncaughtExceptionEventCallback)
-    const exceptionsArrayCopy = exceptions.slice()
-    exceptions = null
-    return exceptionsArrayCopy
-  }
-}
+    );
+    process.removeListener("rejectionHandled", rejectionHandledEventCallback);
+    process.removeListener("uncaughtException", uncaughtExceptionEventCallback);
+    const exceptionsArrayCopy = exceptions.slice();
+    exceptions = null;
+    return exceptionsArrayCopy;
+  };
+};

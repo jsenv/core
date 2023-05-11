@@ -1,19 +1,19 @@
-import { assert } from "@jsenv/assert"
-import { startDevServer } from "@jsenv/core"
+import { assert } from "@jsenv/assert";
+import { startDevServer } from "@jsenv/core";
 
 import {
   executeTestPlan,
   chromium,
   nodeChildProcess,
   nodeWorkerThread,
-} from "@jsenv/test"
+} from "@jsenv/test";
 
 const devServer = await startDevServer({
   logLevel: "warn",
   sourceDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
   port: 0,
-})
+});
 const { testPlanCoverage } = await executeTestPlan({
   logLevel: "off",
   rootDirectoryUrl: new URL("./", import.meta.url),
@@ -42,12 +42,12 @@ const { testPlanCoverage } = await executeTestPlan({
   },
   coverageReportTextLog: false,
   coverageReportHtml: false,
-})
-const actual = testPlanCoverage
+});
+const actual = testPlanCoverage;
 const expected = {
   "./client/js_syntax_error.js": {
     ...actual["./client/js_syntax_error.js"],
     s: {},
   },
-}
-assert({ actual, expected })
+};
+assert({ actual, expected });

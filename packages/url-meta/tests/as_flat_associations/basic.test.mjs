@@ -1,6 +1,6 @@
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-import { asFlatAssociations } from "@jsenv/url-meta/src/as_flat_associations.js"
+import { asFlatAssociations } from "@jsenv/url-meta/src/as_flat_associations.js";
 
 {
   const actual = asFlatAssociations({
@@ -8,7 +8,7 @@ import { asFlatAssociations } from "@jsenv/url-meta/src/as_flat_associations.js"
       "file:///a.js": true,
       "file:///b.js": false,
     },
-  })
+  });
   const expected = {
     "file:///a.js": {
       visible: true,
@@ -16,8 +16,8 @@ import { asFlatAssociations } from "@jsenv/url-meta/src/as_flat_associations.js"
     "file:///b.js": {
       visible: false,
     },
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }
 
 {
@@ -28,23 +28,25 @@ import { asFlatAssociations } from "@jsenv/url-meta/src/as_flat_associations.js"
     whatever: {
       "file:///a.js": true,
     },
-  })
+  });
   const expected = {
     "file:///a.js": {
       visible: true,
       whatever: true,
     },
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }
 
 try {
-  asFlatAssociations("foo")
-  throw new Error("shoud crash")
+  asFlatAssociations("foo");
+  throw new Error("shoud crash");
 } catch (error) {
-  const actual = error
-  const expected = new TypeError(`associations must be a plain object, got foo`)
-  assert({ actual, expected })
+  const actual = error;
+  const expected = new TypeError(
+    `associations must be a plain object, got foo`,
+  );
+  assert({ actual, expected });
 }
 
 {
@@ -53,9 +55,9 @@ try {
     whatever: {
       "file:///a.js": true,
     },
-  })
+  });
   const expected = {
     "file:///a.js": { whatever: true },
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }

@@ -8,7 +8,7 @@
 import {
   reportFileSizeImpactInGitHubPullRequest,
   readGitHubWorkflowEnv,
-} from "@jsenv/file-size-impact"
+} from "@jsenv/file-size-impact";
 
 await reportFileSizeImpactInGitHubPullRequest({
   ...readGitHubWorkflowEnv(),
@@ -18,4 +18,4 @@ await reportFileSizeImpactInGitHubPullRequest({
     "../../scripts/build/build_file_size.mjs#fileSizeReport",
     import.meta.url,
   ),
-})
+});

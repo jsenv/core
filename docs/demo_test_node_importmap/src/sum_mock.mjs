@@ -1,1 +1,1 @@
-export const sum = () => 42
+export const sum = () => 42;

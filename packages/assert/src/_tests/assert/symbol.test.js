@@ -1,26 +1,26 @@
-import { assert } from "@jsenv/assert"
-import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js"
+import { assert } from "@jsenv/assert";
+import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js";
 
 try {
-  const actual = Symbol()
-  const expected = actual
-  assert({ actual, expected })
+  const actual = Symbol();
+  const expected = actual;
+  assert({ actual, expected });
 } catch (e) {
-  throw new Error(`should not throw`)
+  throw new Error(`should not throw`);
 }
 
 try {
-  const actual = Symbol.for("foo")
-  const expected = Symbol.for("foo")
-  assert({ actual, expected })
+  const actual = Symbol.for("foo");
+  const expected = Symbol.for("foo");
+  assert({ actual, expected });
 } catch (e) {
-  throw new Error(`should not throw`)
+  throw new Error(`should not throw`);
 }
 
 try {
-  const actual = Symbol()
-  const expected = Symbol()
-  assert({ actual, expected })
+  const actual = Symbol();
+  const expected = Symbol();
+  assert({ actual, expected });
 } catch (e) {
   ensureAssertionErrorWithMessage(
     e,
@@ -31,13 +31,13 @@ Symbol()
 Symbol()
 --- path ---
 actual`,
-  )
+  );
 }
 
 try {
-  const actual = Symbol("foo")
-  const expected = Symbol("bar")
-  assert({ actual, expected })
+  const actual = Symbol("foo");
+  const expected = Symbol("bar");
+  assert({ actual, expected });
 } catch (e) {
   ensureAssertionErrorWithMessage(
     e,
@@ -48,22 +48,22 @@ Symbol("foo")
 Symbol("bar")
 --- path ---
 actual`,
-  )
+  );
 }
 
 // ensure unequal symbols is checked before unexpected symbol
 // (because it gives more helpful error message)
 try {
-  const symbola = Symbol("a")
-  const symbolb = Symbol("b")
+  const symbola = Symbol("a");
+  const symbolb = Symbol("b");
   const actual = {
     [symbola]: true,
-  }
+  };
   const expected = {
     [symbola]: false,
     [symbolb]: true,
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 } catch (e) {
   ensureAssertionErrorWithMessage(
     e,
@@ -74,5 +74,5 @@ true
 false
 --- path ---
 actual[Symbol("a")]`,
-  )
+  );
 }

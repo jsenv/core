@@ -1,8 +1,8 @@
 export const getPrecision = (number) => {
-  if (Math.floor(number) === number) return 0
-  const [, decimals] = number.toString().split(".")
-  return decimals.length || 0
-}
+  if (Math.floor(number) === number) return 0;
+  const [, decimals] = number.toString().split(".");
+  return decimals.length || 0;
+};
 
 export const setRoundedPrecision = (
   number,
@@ -12,8 +12,8 @@ export const setRoundedPrecision = (
     decimals,
     decimalsWhenSmall,
     transform: Math.round,
-  })
-}
+  });
+};
 
 export const setFlooredPrecision = (
   number,
@@ -23,8 +23,8 @@ export const setFlooredPrecision = (
     decimals,
     decimalsWhenSmall,
     transform: Math.floor,
-  })
-}
+  });
+};
 
 export const setCeiledPrecision = (
   number,
@@ -34,8 +34,8 @@ export const setCeiledPrecision = (
     decimals,
     decimalsWhenSmall,
     transform: Math.ceil,
-  })
-}
+  });
+};
 
 export const setPrecision = (
   number,
@@ -45,8 +45,8 @@ export const setPrecision = (
     decimals,
     decimalsWhenSmall,
     transform: parseInt,
-  })
-}
+  });
+};
 
 const setDecimalsPrecision = (
   number,
@@ -57,26 +57,26 @@ const setDecimalsPrecision = (
   } = {},
 ) => {
   if (number === 0) {
-    return 0
+    return 0;
   }
-  let numberCandidate = Math.abs(number)
+  let numberCandidate = Math.abs(number);
   if (numberCandidate < 1) {
-    const integerGoal = Math.pow(10, decimalsWhenSmall - 1)
-    let i = 1
+    const integerGoal = Math.pow(10, decimalsWhenSmall - 1);
+    let i = 1;
     while (numberCandidate < integerGoal) {
-      numberCandidate *= 10
-      i *= 10
+      numberCandidate *= 10;
+      i *= 10;
     }
-    const asInteger = transform(numberCandidate)
-    const asFloat = asInteger / i
-    return number < 0 ? -asFloat : asFloat
+    const asInteger = transform(numberCandidate);
+    const asFloat = asInteger / i;
+    return number < 0 ? -asFloat : asFloat;
   }
-  const coef = Math.pow(10, decimals)
-  const numberMultiplied = (number + Number.EPSILON) * coef
-  const asInteger = transform(numberMultiplied)
-  const asFloat = asInteger / coef
-  return number < 0 ? -asFloat : asFloat
-}
+  const coef = Math.pow(10, decimals);
+  const numberMultiplied = (number + Number.EPSILON) * coef;
+  const asInteger = transform(numberMultiplied);
+  const asFloat = asInteger / coef;
+  return number < 0 ? -asFloat : asFloat;
+};
 
 // https://www.codingem.com/javascript-how-to-limit-decimal-places/
 // export const roundNumber = (number, maxDecimals) => {

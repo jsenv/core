@@ -1,8 +1,8 @@
-import { requestCertificate } from "@jsenv/https-local"
+import { requestCertificate } from "@jsenv/https-local";
 
-import { startDevServer } from "@jsenv/core"
+import { startDevServer } from "@jsenv/core";
 
-const { certificate, privateKey } = requestCertificate()
+const { certificate, privateKey } = requestCertificate();
 await startDevServer({
   sourceDirectoryUrl: new URL("../../", import.meta.url),
   // babelPluginMap: {},
@@ -34,4 +34,4 @@ await startDevServer({
       },
     },
   },
-})
+});

@@ -1,5 +1,5 @@
 if (process.env.FOO) {
-  console.log("foo")
+  console.log("foo");
 } else {
-  console.log("bar")
+  console.log("bar");
 }

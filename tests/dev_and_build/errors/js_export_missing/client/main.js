@@ -1,4 +1,4 @@
 // eslint-disable-next-line import/named
-import { answer } from "./file.js"
+import { answer } from "./file.js";
 
-console.log(answer)
+console.log(answer);

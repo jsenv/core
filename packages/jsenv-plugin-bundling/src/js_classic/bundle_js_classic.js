@@ -8,5 +8,5 @@
 // import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
 
 export const bundleJsClassic = () => {
-  return {}
-}
+  return {};
+};

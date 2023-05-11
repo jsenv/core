@@ -1,5 +1,5 @@
-import { answer } from "./file.js"
+import { answer } from "./file.js";
 
-console.log(answer)
+console.log(answer);
 
-window.resolveResultPromise(answer)
+window.resolveResultPromise(answer);

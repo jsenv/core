@@ -1,57 +1,57 @@
-import { requireFromJsenv } from "@jsenv/core/src/helpers/require_from_jsenv.js"
+import { requireFromJsenv } from "@jsenv/core/src/helpers/require_from_jsenv.js";
 
 // see also https://github.com/sindresorhus/execa/issues/96
 export const killProcessTree = async (
   processId,
   { signal, timeout = 2000 },
 ) => {
-  const pidtree = requireFromJsenv("pidtree")
+  const pidtree = requireFromJsenv("pidtree");
 
-  let descendantProcessIds
+  let descendantProcessIds;
   try {
-    descendantProcessIds = await pidtree(processId)
+    descendantProcessIds = await pidtree(processId);
   } catch (e) {
     if (e.message === "No matching pid found") {
-      descendantProcessIds = []
+      descendantProcessIds = [];
     } else {
-      throw e
+      throw e;
     }
   }
   descendantProcessIds.forEach((descendantProcessId) => {
     try {
-      process.kill(descendantProcessId, signal)
+      process.kill(descendantProcessId, signal);
     } catch (error) {
       // ignore
     }
-  })
+  });
 
   try {
-    process.kill(processId, signal)
+    process.kill(processId, signal);
   } catch (e) {
     if (e.code !== "ESRCH") {
-      throw e
+      throw e;
     }
   }
 
-  let remainingIds = [...descendantProcessIds, processId]
+  let remainingIds = [...descendantProcessIds, processId];
 
   const updateRemainingIds = () => {
     remainingIds = remainingIds.filter((remainingId) => {
       try {
-        process.kill(remainingId, 0)
-        return true
+        process.kill(remainingId, 0);
+        return true;
       } catch (e) {
-        return false
+        return false;
       }
-    })
-  }
+    });
+  };
 
-  let timeSpentWaiting = 0
+  let timeSpentWaiting = 0;
 
   const check = async () => {
-    updateRemainingIds()
+    updateRemainingIds();
     if (remainingIds.length === 0) {
-      return
+      return;
     }
 
     if (timeSpentWaiting > timeout) {
@@ -59,18 +59,18 @@ export const killProcessTree = async (
         `timed out waiting for ${
           remainingIds.length
         } process to exit (${remainingIds.join(" ")})`,
-      )
-      timeoutError.code = "TIMEOUT"
-      throw timeoutError
+      );
+      timeoutError.code = "TIMEOUT";
+      throw timeoutError;
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 400))
-    timeSpentWaiting += 400
-    await check()
-  }
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    timeSpentWaiting += 400;
+    await check();
+  };
 
   await new Promise((resolve) => {
-    setTimeout(resolve, 0)
-  })
-  await check()
-}
+    setTimeout(resolve, 0);
+  });
+  await check();
+};

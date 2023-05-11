@@ -1,8 +1,8 @@
-import { generateInlineContentUrl } from "@jsenv/urls"
-import { createMagicSource } from "@jsenv/sourcemap"
-import { applyBabelPlugins } from "@jsenv/ast"
-import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js"
-import { JS_QUOTES } from "@jsenv/utils/src/string/js_quotes.js"
+import { generateInlineContentUrl } from "@jsenv/urls";
+import { createMagicSource } from "@jsenv/sourcemap";
+import { applyBabelPlugins } from "@jsenv/ast";
+import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
+import { JS_QUOTES } from "@jsenv/utils/src/string/js_quotes.js";
 
 export const jsenvPluginJsInlineContentAnalysis = ({
   allowEscapeForVersioning,
@@ -12,13 +12,13 @@ export const jsenvPluginJsInlineContentAnalysis = ({
       js: urlInfo.content,
       url: urlInfo.originalUrl,
       isJsModule: urlInfo.type === "js_module",
-    })
+    });
     if (inlineContentInfos.length === 0) {
-      return null
+      return null;
     }
-    const magicSource = createMagicSource(urlInfo.content)
+    const magicSource = createMagicSource(urlInfo.content);
     await inlineContentInfos.reduce(async (previous, inlineContentInfo) => {
-      await previous
+      await previous;
       const inlineUrl = generateInlineContentUrl({
         url: urlInfo.url,
         extension: CONTENT_TYPE.asFileExtension(inlineContentInfo.contentType),
@@ -26,8 +26,8 @@ export const jsenvPluginJsInlineContentAnalysis = ({
         column: inlineContentInfo.column,
         lineEnd: inlineContentInfo.lineEnd,
         columnEnd: inlineContentInfo.columnEnd,
-      })
-      let { quote } = inlineContentInfo
+      });
+      let { quote } = inlineContentInfo;
       if (
         quote === "`" &&
         !context.isSupportedOnCurrentClients("template_literals")
@@ -35,7 +35,7 @@ export const jsenvPluginJsInlineContentAnalysis = ({
         // if quote is "`" and template literals are not supported
         // we'll use a regular string (single or double quote)
         // when rendering the string
-        quote = JS_QUOTES.pickBest(inlineContentInfo.content)
+        quote = JS_QUOTES.pickBest(inlineContentInfo.content);
       }
       const [inlineReference, inlineUrlInfo] =
         context.referenceUtils.foundInline({
@@ -47,11 +47,11 @@ export const jsenvPluginJsInlineContentAnalysis = ({
           specifier: inlineUrl,
           contentType: inlineContentInfo.contentType,
           content: inlineContentInfo.content,
-        })
-      inlineUrlInfo.jsQuote = quote
+        });
+      inlineUrlInfo.jsQuote = quote;
       inlineReference.escape = (value) =>
-        JS_QUOTES.escapeSpecialChars(value.slice(1, -1), { quote })
-      await context.cook(inlineUrlInfo, { reference: inlineReference })
+        JS_QUOTES.escapeSpecialChars(value.slice(1, -1), { quote });
+      await context.cook(inlineUrlInfo, { reference: inlineReference });
       magicSource.replace({
         start: inlineContentInfo.start,
         end: inlineContentInfo.end,
@@ -59,10 +59,10 @@ export const jsenvPluginJsInlineContentAnalysis = ({
           quote,
           allowEscapeForVersioning,
         }),
-      })
-    }, Promise.resolve())
-    return magicSource.toContentAndSourcemap()
-  }
+      });
+    }, Promise.resolve());
+    return magicSource.toContentAndSourcemap();
+  };
 
   return {
     name: "jsenv:js_inline_content_analysis",
@@ -71,8 +71,8 @@ export const jsenvPluginJsInlineContentAnalysis = ({
       js_classic: parseAndTransformInlineContentCalls,
       js_module: parseAndTransformInlineContentCalls,
     },
-  }
-}
+  };
+};
 
 const parseJsInlineContentInfos = async ({ js, url, isJsModule }) => {
   if (
@@ -80,7 +80,7 @@ const parseJsInlineContentInfos = async ({ js, url, isJsModule }) => {
     !js.includes("new Blob(") &&
     !js.includes("JSON.parse(")
   ) {
-    return []
+    return [];
   }
   const { metadata } = await applyBabelPlugins({
     babelPlugins: [babelPluginMetadataInlineContents],
@@ -89,92 +89,92 @@ const parseJsInlineContentInfos = async ({ js, url, isJsModule }) => {
       type: isJsModule ? "js_module" : "js_classic",
       content: js,
     },
-  })
-  return metadata.inlineContentInfos
-}
+  });
+  return metadata.inlineContentInfos;
+};
 
 const babelPluginMetadataInlineContents = () => {
   return {
     name: "metadata-inline-contents",
     visitor: {
       Program: (programPath, state) => {
-        const inlineContentInfos = []
+        const inlineContentInfos = [];
         const onInlineContentInfo = (inlineContentInfo) => {
-          inlineContentInfos.push(inlineContentInfo)
-        }
+          inlineContentInfos.push(inlineContentInfo);
+        };
         programPath.traverse({
           NewExpression: (path) => {
             if (isNewInlineContentCall(path)) {
               analyzeNewInlineContentCall(path.node, {
                 onInlineContentInfo,
-              })
-              return
+              });
+              return;
             }
             if (isNewBlobCall(path.node)) {
               analyzeNewBlobCall(path.node, {
                 onInlineContentInfo,
-              })
-              return
+              });
+              return;
             }
           },
           CallExpression: (path) => {
-            const node = path.node
+            const node = path.node;
             if (isJSONParseCall(node)) {
               analyzeJsonParseCall(node, {
                 onInlineContentInfo,
-              })
+              });
             }
           },
-        })
-        state.file.metadata.inlineContentInfos = inlineContentInfos
+        });
+        state.file.metadata.inlineContentInfos = inlineContentInfos;
       },
     },
-  }
-}
+  };
+};
 
 const isNewInlineContentCall = (path) => {
-  const node = path.node
+  const node = path.node;
   if (node.callee.type === "Identifier") {
     // terser rename import to use a shorter name
-    const name = getOriginalName(path, node.callee.name)
-    return name === "InlineContent"
+    const name = getOriginalName(path, node.callee.name);
+    return name === "InlineContent";
   }
   if (node.callee.id && node.callee.id.type === "Identifier") {
-    const name = getOriginalName(path, node.callee.id.name)
-    return name === "InlineContent"
+    const name = getOriginalName(path, node.callee.id.name);
+    return name === "InlineContent";
   }
-  return false
-}
+  return false;
+};
 const analyzeNewInlineContentCall = (node, { onInlineContentInfo }) => {
   analyzeArguments({
     node,
     onInlineContentInfo,
     nodeHoldingContent: node.arguments[0],
     type: "new_inline_content_first_arg",
-  })
-}
+  });
+};
 
 const isNewBlobCall = (node) => {
-  return node.callee.type === "Identifier" && node.callee.name === "Blob"
-}
+  return node.callee.type === "Identifier" && node.callee.name === "Blob";
+};
 const analyzeNewBlobCall = (node, { onInlineContentInfo }) => {
-  const firstArg = node.arguments[0]
+  const firstArg = node.arguments[0];
   if (!firstArg) {
-    return
+    return;
   }
   if (firstArg.type !== "ArrayExpression") {
-    return
+    return;
   }
   if (firstArg.elements.length !== 1) {
-    return
+    return;
   }
   analyzeArguments({
     node,
     onInlineContentInfo,
     nodeHoldingContent: firstArg.elements[0],
     type: "new_blob_first_arg",
-  })
-}
+  });
+};
 
 const analyzeArguments = ({
   node,
@@ -183,19 +183,19 @@ const analyzeArguments = ({
   type,
 }) => {
   if (node.arguments.length !== 2) {
-    return
+    return;
   }
-  const [, secondArg] = node.arguments
-  const typePropertyNode = getTypePropertyNode(secondArg)
+  const [, secondArg] = node.arguments;
+  const typePropertyNode = getTypePropertyNode(secondArg);
   if (!typePropertyNode) {
-    return
+    return;
   }
-  const typePropertyValueNode = typePropertyNode.value
+  const typePropertyValueNode = typePropertyNode.value;
   if (typePropertyValueNode.type !== "StringLiteral") {
-    return
+    return;
   }
-  const contentType = typePropertyValueNode.value
-  const contentDetails = extractContentDetails(nodeHoldingContent)
+  const contentType = typePropertyValueNode.value;
+  const contentDetails = extractContentDetails(nodeHoldingContent);
   if (contentDetails) {
     onInlineContentInfo({
       node: nodeHoldingContent,
@@ -203,45 +203,45 @@ const analyzeArguments = ({
       type,
       contentType,
       ...contentDetails,
-    })
+    });
   }
-}
+};
 const extractContentDetails = (node) => {
   if (node.type === "StringLiteral") {
     return {
       nodeType: "StringLiteral",
       quote: node.extra.raw[0],
       content: node.value,
-    }
+    };
   }
   if (node.type === "TemplateLiteral") {
-    const quasis = node.quasis
+    const quasis = node.quasis;
     if (quasis.length !== 1) {
-      return null
+      return null;
     }
-    const templateElementNode = quasis[0]
+    const templateElementNode = quasis[0];
     return {
       nodeType: "TemplateLiteral",
       quote: "`",
       content: templateElementNode.value.cooked,
-    }
+    };
   }
-  return null
-}
+  return null;
+};
 
 const isJSONParseCall = (node) => {
-  const callee = node.callee
+  const callee = node.callee;
   return (
     callee.type === "MemberExpression" &&
     callee.object.type === "Identifier" &&
     callee.object.name === "JSON" &&
     callee.property.type === "Identifier" &&
     callee.property.name === "parse"
-  )
-}
+  );
+};
 const analyzeJsonParseCall = (node, { onInlineContentInfo }) => {
-  const firstArgNode = node.arguments[0]
-  const contentDetails = extractContentDetails(firstArgNode)
+  const firstArgNode = node.arguments[0];
+  const contentDetails = extractContentDetails(firstArgNode);
   if (contentDetails) {
     onInlineContentInfo({
       node: firstArgNode,
@@ -249,9 +249,9 @@ const analyzeJsonParseCall = (node, { onInlineContentInfo }) => {
       type: "json_parse_first_arg",
       contentType: "application/json",
       ...contentDetails,
-    })
+    });
   }
-}
+};
 
 const getNodePosition = (node) => {
   return {
@@ -261,54 +261,54 @@ const getNodePosition = (node) => {
     column: node.loc.start.column,
     lineEnd: node.loc.end.line,
     columnEnd: node.loc.end.column,
-  }
-}
+  };
+};
 const getOriginalName = (path, name) => {
-  const binding = path.scope.getBinding(name)
+  const binding = path.scope.getBinding(name);
   if (!binding) {
-    return name
+    return name;
   }
   if (binding.path.type === "ImportSpecifier") {
-    const importedName = binding.path.node.imported.name
+    const importedName = binding.path.node.imported.name;
     if (name === importedName) {
-      return name
+      return name;
     }
-    return getOriginalName(path, importedName)
+    return getOriginalName(path, importedName);
   }
   if (binding.path.type === "VariableDeclarator") {
-    const { node } = binding.path
-    const { init } = node
+    const { node } = binding.path;
+    const { init } = node;
     if (init && init.type === "Identifier") {
-      const previousName = init.name
-      return getOriginalName(path, previousName)
+      const previousName = init.name;
+      return getOriginalName(path, previousName);
     }
     if (node.id && node.id.type === "Identifier") {
-      const { constantViolations } = binding
+      const { constantViolations } = binding;
       if (constantViolations && constantViolations.length > 0) {
-        const lastViolation = constantViolations[constantViolations.length - 1]
+        const lastViolation = constantViolations[constantViolations.length - 1];
         if (
           lastViolation &&
           lastViolation.node.type === "AssignmentExpression" &&
           lastViolation.node.right.type === "MemberExpression" &&
           lastViolation.node.right.property.type === "Identifier"
         ) {
-          return lastViolation.node.right.property.name
+          return lastViolation.node.right.property.name;
         }
       }
     }
   }
-  return name
-}
+  return name;
+};
 const getTypePropertyNode = (node) => {
   if (node.type !== "ObjectExpression") {
-    return null
+    return null;
   }
-  const { properties } = node
+  const { properties } = node;
   return properties.find((property) => {
     return (
       property.type === "ObjectProperty" &&
       property.key.type === "Identifier" &&
       property.key.name === "type"
-    )
-  })
-}
+    );
+  });
+};

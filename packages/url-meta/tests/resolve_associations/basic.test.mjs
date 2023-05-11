@@ -1,6 +1,6 @@
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-import { URL_META } from "@jsenv/url-meta"
+import { URL_META } from "@jsenv/url-meta";
 
 {
   const actual = URL_META.resolveAssociations(
@@ -11,14 +11,14 @@ import { URL_META } from "@jsenv/url-meta"
       },
     },
     "file:///User/name/directory/",
-  )
+  );
   const expected = {
     whatever: {
       "file:///User/name/directory/a.js": true,
       "http://example.com/file.js": true,
     },
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }
 
 {
@@ -30,12 +30,12 @@ import { URL_META } from "@jsenv/url-meta"
       whatever: null,
     },
     "file:///",
-  )
+  );
   const expected = {
     a: { "file:///a.js": true },
     whatever: null,
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }
 
 // ensure resolveAssociations does not sort by length
@@ -48,14 +48,14 @@ import { URL_META } from "@jsenv/url-meta"
       },
     },
     "file:///",
-  )
+  );
   const expected = {
     whatever: {
       "file:///a.js": 42,
       "file:///long.js": 42,
     },
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }
 
 {
@@ -69,23 +69,23 @@ import { URL_META } from "@jsenv/url-meta"
       },
     },
     "file:///src/",
-  )
+  );
   const test = (url) =>
     URL_META.applyAssociations({
       url,
       associations,
-    })
+    });
   const actual = {
     jsFile: test("file:///src/a.js"),
     gitignore: test("file:///src/.gitignore"),
     nodeModuleFile: test("file:///src/node_modules/a.js"),
     insideGitDirectory: test("file:///src/.git/a.js"),
-  }
+  };
   const expected = {
     jsFile: { whatever: true },
     gitignore: { whatever: false },
     nodeModuleFile: { whatever: false },
     insideGitDirectory: { whatever: false },
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }

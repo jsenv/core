@@ -1,21 +1,21 @@
-import { composeTwoObjects } from "./object_composition.js"
+import { composeTwoObjects } from "./object_composition.js";
 
 export const composeTwoHeaders = (firstHeaders, secondHeaders) => {
   return composeTwoObjects(firstHeaders, secondHeaders, {
     keysComposition: HEADER_NAMES_COMPOSITION,
     forceLowerCase: true,
-  })
-}
+  });
+};
 
 const composeHeaderValues = (value, nextValue) => {
-  const headerValues = value.split(", ")
+  const headerValues = value.split(", ");
   nextValue.split(", ").forEach((value) => {
     if (!headerValues.includes(value)) {
-      headerValues.push(value)
+      headerValues.push(value);
     }
-  })
-  return headerValues.join(", ")
-}
+  });
+  return headerValues.join(", ");
+};
 
 const HEADER_NAMES_COMPOSITION = {
   "accept": composeHeaderValues,
@@ -29,4 +29,4 @@ const HEADER_NAMES_COMPOSITION = {
   "server-timing": composeHeaderValues,
   // 'content-type', // https://github.com/ninenines/cowboy/issues/1230
   "vary": composeHeaderValues,
-}
+};

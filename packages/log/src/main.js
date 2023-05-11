@@ -5,26 +5,26 @@
  *   discover codebase progressively
  */
 
-export { createLogger } from "./logger.js"
+export { createLogger } from "./logger.js";
 
 // color and symbols
-export { ANSI } from "./ansi.js"
-export { UNICODE } from "./unicode.js"
+export { ANSI } from "./ansi.js";
+export { UNICODE } from "./unicode.js";
 
 // formatting messages
-export { createDetailedMessage } from "./detailed_message.js"
-export { msAsEllapsedTime, msAsDuration } from "./duration_log.js"
-export { byteAsFileSize, byteAsMemoryUsage } from "./size_log.js"
-export { distributePercentages } from "./percentage_distribution.js"
+export { createDetailedMessage } from "./detailed_message.js";
+export { msAsEllapsedTime, msAsDuration } from "./duration_log.js";
+export { byteAsFileSize, byteAsMemoryUsage } from "./size_log.js";
+export { distributePercentages } from "./percentage_distribution.js";
 export {
   getPrecision,
   setRoundedPrecision,
   setFlooredPrecision,
   setCeiledPrecision,
   setPrecision,
-} from "./decimals.js"
+} from "./decimals.js";
 
 // dynamic logs (log that can update themselves in the terminal)
-export { createLog } from "./log.js"
-export { startSpinner } from "./spinner.js"
-export { createTaskLog } from "./task_log.js"
+export { createLog } from "./log.js";
+export { startSpinner } from "./spinner.js";
+export { createTaskLog } from "./task_log.js";

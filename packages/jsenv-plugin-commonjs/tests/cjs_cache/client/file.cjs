@@ -1,1 +1,1 @@
-module.exports.answer = require("./dep.cjs")
+module.exports.answer = require("./dep.cjs");

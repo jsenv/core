@@ -1,9 +1,9 @@
-import { performance } from "node:perf_hooks"
+import { performance } from "node:perf_hooks";
 
-performance.mark("a")
+performance.mark("a");
 // eslint-disable-next-line no-self-compare, no-unused-expressions
-1 === 1
-performance.mark("b")
-performance.measure("a to b", "a", "b")
+1 === 1;
+performance.mark("b");
+performance.measure("a to b", "a", "b");
 
-export const answer = 42
+export const answer = 42;

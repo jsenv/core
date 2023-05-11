@@ -1,13 +1,13 @@
-import { comparisonToPath } from "../comparisonToPath.js"
+import { comparisonToPath } from "../comparisonToPath.js";
 
 export const setSizeComparisonToMessage = (comparison) => {
-  if (comparison.type !== "set-size") return undefined
+  if (comparison.type !== "set-size") return undefined;
 
   if (comparison.actual > comparison.expected)
-    return createBiggerThanExpectedMessage(comparison)
+    return createBiggerThanExpectedMessage(comparison);
 
-  return createSmallerThanExpectedMessage(comparison)
-}
+  return createSmallerThanExpectedMessage(comparison);
+};
 
 const createBiggerThanExpectedMessage = (
   comparison,
@@ -17,7 +17,7 @@ ${comparison.actual}
 --- set size expected ---
 ${comparison.expected}
 --- path ---
-${comparisonToPath(comparison.parent)}`
+${comparisonToPath(comparison.parent)}`;
 
 const createSmallerThanExpectedMessage = (
   comparison,
@@ -27,4 +27,4 @@ ${comparison.actual}
 --- set size expected ---
 ${comparison.expected}
 --- path ---
-${comparisonToPath(comparison.parent)}`
+${comparisonToPath(comparison.parent)}`;

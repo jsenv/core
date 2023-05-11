@@ -1,8 +1,8 @@
-import { animationsEnabledSignal } from "./animation_signals.js"
+import { animationsEnabledSignal } from "./animation_signals.js";
 
 export const enableAnimations = () => {
-  animationsEnabledSignal.value = true
-}
+  animationsEnabledSignal.value = true;
+};
 export const disableAnimations = () => {
-  animationsEnabledSignal.value = false
-}
+  animationsEnabledSignal.value = false;
+};

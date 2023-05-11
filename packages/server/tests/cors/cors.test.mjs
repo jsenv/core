@@ -1,8 +1,8 @@
-import { assert } from "@jsenv/assert"
-import { fetchUrl } from "@jsenv/fetch"
+import { assert } from "@jsenv/assert";
+import { fetchUrl } from "@jsenv/fetch";
 
-import { startServer, jsenvServiceCORS } from "@jsenv/server"
-import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js"
+import { startServer, jsenvServiceCORS } from "@jsenv/server";
+import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
 
 const server = await startServer({
   logLevel: "warn",
@@ -23,11 +23,11 @@ const server = await startServer({
             "Content-Type": "text/plain",
           },
           body: "ok",
-        }
+        };
       },
     },
   ],
-})
+});
 
 const response = await fetchUrl(server.origin, {
   method: "OPTIONS",
@@ -36,14 +36,14 @@ const response = await fetchUrl(server.origin, {
     "access-control-request-method": "GET",
     "access-control-request-headers": "x-whatever",
   },
-})
+});
 const actual = {
   url: response.url,
   status: response.status,
   statusText: response.statusText,
   headers: headersToObject(response.headers),
   body: await response.text(),
-}
+};
 const expected = {
   url: `${server.origin}/`,
   status: 200,
@@ -60,5 +60,5 @@ const expected = {
       "origin, access-control-request-method, access-control-request-headers",
   },
   body: "",
-}
-assert({ actual, expected })
+};
+assert({ actual, expected });

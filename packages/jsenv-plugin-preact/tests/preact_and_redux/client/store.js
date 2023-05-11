@@ -1,6 +1,6 @@
-import { createStore, combineReducers, compose } from "redux"
+import { createStore, combineReducers, compose } from "redux";
 
-import { counterReducer } from "./counter/counter_reducer.js"
+import { counterReducer } from "./counter/counter_reducer.js";
 
 const composeEnhancers =
   (typeof window !== "undefined" &&
@@ -8,13 +8,13 @@ const composeEnhancers =
     window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__({
       trace: true,
     })) ||
-  compose
+  compose;
 
 const initialState = {
   counter: {
     value: 0,
   },
-}
+};
 
 export const store = createStore(
   combineReducers({
@@ -22,4 +22,4 @@ export const store = createStore(
   }),
   initialState,
   composeEnhancers(),
-)
+);

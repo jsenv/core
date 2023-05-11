@@ -1,59 +1,59 @@
 export const inspectServiceWorker = async (serviceWorker) => {
-  let serviceWorkerResponse
+  let serviceWorkerResponse;
   const inspectPromise = postMessageToServiceWorker(serviceWorker, {
     action: "inspect",
   }).then((info) => {
     if (typeof info !== "object") {
       throw new TypeError(
         `service worker script must send an object in response to inspect`,
-      )
+      );
     }
-    serviceWorkerResponse = info
-  })
-  let timeout
-  let timeoutReached = false
+    serviceWorkerResponse = info;
+  });
+  let timeout;
+  let timeoutReached = false;
   const timeoutPromise = new Promise((resolve) => {
     timeout = setTimeout(() => {
-      timeoutReached = true
-      resolve()
-    }, 1000)
-  })
-  await Promise.race([inspectPromise, timeoutPromise])
-  clearTimeout(timeout)
+      timeoutReached = true;
+      resolve();
+    }, 1000);
+  });
+  await Promise.race([inspectPromise, timeoutPromise]);
+  clearTimeout(timeout);
   if (timeoutReached) {
-    return {}
+    return {};
   }
-  return serviceWorkerResponse
-}
+  return serviceWorkerResponse;
+};
 
 export const requestSkipWaitingOnServiceWorker = (serviceWorker) => {
-  return postMessageToServiceWorker(serviceWorker, { action: "skipWaiting" })
-}
+  return postMessageToServiceWorker(serviceWorker, { action: "skipWaiting" });
+};
 
 export const requestClaimOnServiceWorker = (serviceWorker) => {
-  return postMessageToServiceWorker(serviceWorker, { action: "claim" })
-}
+  return postMessageToServiceWorker(serviceWorker, { action: "claim" });
+};
 
 // https://felixgerschau.com/how-to-communicate-with-service-workers/
 export const postMessageToServiceWorker = (serviceWorker, message) => {
-  const { port1, port2 } = new MessageChannel()
+  const { port1, port2 } = new MessageChannel();
   return new Promise((resolve, reject) => {
     port1.onmessage = (messageEvent) => {
-      const { data } = messageEvent
+      const { data } = messageEvent;
       if (
         data &&
         typeof data === "object" &&
         typeof data.actionResultStatus === "string"
       ) {
         if (data.actionResultStatus === "rejected") {
-          reject(data.actionResultValue)
+          reject(data.actionResultValue);
         } else {
-          resolve(data.actionResultValue)
+          resolve(data.actionResultValue);
         }
       } else {
-        resolve(data)
+        resolve(data);
       }
-    }
-    serviceWorker.postMessage(message, [port2])
-  })
-}
+    };
+    serviceWorker.postMessage(message, [port2]);
+  });
+};

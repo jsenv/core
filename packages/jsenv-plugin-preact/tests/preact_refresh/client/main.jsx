@@ -1,11 +1,11 @@
-import { render } from "preact"
+import { render } from "preact";
 
-const { App } = await import("./app.jsx")
+const { App } = await import("./app.jsx");
 
-render(<App />, document.querySelector("#app"))
+render(<App />, document.querySelector("#app"));
 
 if (import.meta.hot) {
-  import.meta.hot.accept()
+  import.meta.hot.accept();
 }
 
-window.resolveReadyPromise()
+window.resolveReadyPromise();

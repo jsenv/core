@@ -1,4 +1,4 @@
-import { build } from "@jsenv/core"
+import { build } from "@jsenv/core";
 
 await build({
   sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -7,4 +7,4 @@ await build({
   },
   buildDirectoryUrl: new URL("./dist/", import.meta.url),
   watch: true,
-})
+});

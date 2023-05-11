@@ -3,7 +3,7 @@ import {
   stringifyHtmlAst,
   injectHtmlNodeAsEarlyAsPossible,
   createHtmlNode,
-} from "@jsenv/ast"
+} from "@jsenv/ast";
 
 export const jsenvPluginToolbar = ({
   logLevel = "warn",
@@ -16,11 +16,11 @@ export const jsenvPluginToolbar = ({
   const toolbarInjectorClientFileUrl = new URL(
     "./client/toolbar_injector.js",
     import.meta.url,
-  ).href
+  ).href;
   const toolbarHtmlClientFileUrl = new URL(
     "./client/toolbar.html",
     import.meta.url,
-  ).href
+  ).href;
 
   return {
     name: "jsenv:toolbar",
@@ -28,20 +28,20 @@ export const jsenvPluginToolbar = ({
     transformUrlContent: {
       html: (urlInfo, context) => {
         if (urlInfo.url.startsWith(toolbarHtmlClientFileUrl)) {
-          urlInfo.data.isJsenvToolbar = true
-          return null
+          urlInfo.data.isJsenvToolbar = true;
+          return null;
         }
-        const htmlAst = parseHtmlString(urlInfo.content)
+        const htmlAst = parseHtmlString(urlInfo.content);
         const [toolbarInjectorReference] = context.referenceUtils.inject({
           type: "js_import",
           expectedType: "js_module",
           specifier: toolbarInjectorClientFileUrl,
-        })
+        });
         const [toolbarClientFileReference] = context.referenceUtils.inject({
           type: "iframe_src",
           expectedType: "html",
           specifier: toolbarHtmlClientFileUrl,
-        })
+        });
         injectHtmlNodeAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
@@ -59,15 +59,15 @@ export const jsenvPluginToolbar = ({
             }),
           }),
           "jsenv:toolbar",
-        )
-        const htmlModified = stringifyHtmlAst(htmlAst)
+        );
+        const htmlModified = stringifyHtmlAst(htmlAst);
         return {
           content: htmlModified,
-        }
+        };
       },
     },
-  }
-}
+  };
+};
 
 const generateCodeToInjectToolbar = ({
   toolbarInjectorReference,
@@ -79,7 +79,7 @@ const generateCodeToInjectToolbar = ({
   animationsEnabled,
   notificationsEnabled,
 }) => {
-  const from = toolbarInjectorReference.generatedSpecifier
+  const from = toolbarInjectorReference.generatedSpecifier;
   const paramsSource = JSON.stringify(
     {
       toolbarUrl: toolbarClientFileReference.generatedSpecifier,
@@ -92,9 +92,9 @@ const generateCodeToInjectToolbar = ({
     },
     null,
     "  ",
-  )
+  );
 
   return `import { injectToolbar } from ${from}
 
-injectToolbar(${paramsSource});`
-}
+injectToolbar(${paramsSource});`;
+};

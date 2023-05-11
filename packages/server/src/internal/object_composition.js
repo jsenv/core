@@ -7,14 +7,14 @@ export const composeTwoObjects = (
     return applyCompositionForcingLowerCase(firstObject, secondObject, {
       keysComposition,
       strict,
-    })
+    });
   }
 
   return applyCaseSensitiveComposition(firstObject, secondObject, {
     keysComposition,
     strict,
-  })
-}
+  });
+};
 
 const applyCaseSensitiveComposition = (
   firstObject,
@@ -22,7 +22,7 @@ const applyCaseSensitiveComposition = (
   { keysComposition, strict },
 ) => {
   if (strict) {
-    const composed = {}
+    const composed = {};
     Object.keys(keysComposition).forEach((key) => {
       composed[key] = composeValueAtKey({
         firstObject,
@@ -31,15 +31,15 @@ const applyCaseSensitiveComposition = (
         key,
         firstKey: keyExistsIn(key, firstObject) ? key : null,
         secondKey: keyExistsIn(key, secondObject) ? key : null,
-      })
-    })
-    return composed
+      });
+    });
+    return composed;
   }
 
-  const composed = {}
+  const composed = {};
   Object.keys(firstObject).forEach((key) => {
-    composed[key] = firstObject[key]
-  })
+    composed[key] = firstObject[key];
+  });
   Object.keys(secondObject).forEach((key) => {
     composed[key] = composeValueAtKey({
       firstObject,
@@ -48,10 +48,10 @@ const applyCaseSensitiveComposition = (
       key,
       firstKey: keyExistsIn(key, firstObject) ? key : null,
       secondKey: keyExistsIn(key, secondObject) ? key : null,
-    })
-  })
-  return composed
-}
+    });
+  });
+  return composed;
+};
 
 const applyCompositionForcingLowerCase = (
   firstObject,
@@ -59,14 +59,14 @@ const applyCompositionForcingLowerCase = (
   { keysComposition, strict },
 ) => {
   if (strict) {
-    const firstObjectKeyMapping = {}
+    const firstObjectKeyMapping = {};
     Object.keys(firstObject).forEach((key) => {
-      firstObjectKeyMapping[key.toLowerCase()] = key
-    })
-    const secondObjectKeyMapping = {}
+      firstObjectKeyMapping[key.toLowerCase()] = key;
+    });
+    const secondObjectKeyMapping = {};
     Object.keys(secondObject).forEach((key) => {
-      secondObjectKeyMapping[key.toLowerCase()] = key
-    })
+      secondObjectKeyMapping[key.toLowerCase()] = key;
+    });
     Object.keys(keysComposition).forEach((key) => {
       composed[key] = composeValueAtKey({
         firstObject,
@@ -75,16 +75,16 @@ const applyCompositionForcingLowerCase = (
         key,
         firstKey: firstObjectKeyMapping[key] || null,
         secondKey: secondObjectKeyMapping[key] || null,
-      })
-    })
+      });
+    });
   }
 
-  const composed = {}
+  const composed = {};
   Object.keys(firstObject).forEach((key) => {
-    composed[key.toLowerCase()] = firstObject[key]
-  })
+    composed[key.toLowerCase()] = firstObject[key];
+  });
   Object.keys(secondObject).forEach((key) => {
-    const keyLowercased = key.toLowerCase()
+    const keyLowercased = key.toLowerCase();
 
     composed[key.toLowerCase()] = composeValueAtKey({
       firstObject,
@@ -101,10 +101,10 @@ const applyCompositionForcingLowerCase = (
         : keyExistsIn(key, secondObject)
         ? key
         : null,
-    })
-  })
-  return composed
-}
+    });
+  });
+  return composed;
+};
 
 const composeValueAtKey = ({
   firstObject,
@@ -115,22 +115,24 @@ const composeValueAtKey = ({
   keysComposition,
 }) => {
   if (!firstKey) {
-    return secondObject[secondKey]
+    return secondObject[secondKey];
   }
 
   if (!secondKey) {
-    return firstObject[firstKey]
+    return firstObject[firstKey];
   }
 
-  const keyForCustomComposition = keyExistsIn(key, keysComposition) ? key : null
+  const keyForCustomComposition = keyExistsIn(key, keysComposition)
+    ? key
+    : null;
   if (!keyForCustomComposition) {
-    return secondObject[secondKey]
+    return secondObject[secondKey];
   }
 
-  const composeTwoValues = keysComposition[keyForCustomComposition]
-  return composeTwoValues(firstObject[firstKey], secondObject[secondKey])
-}
+  const composeTwoValues = keysComposition[keyForCustomComposition];
+  return composeTwoValues(firstObject[firstKey], secondObject[secondKey]);
+};
 
 const keyExistsIn = (key, object) => {
-  return Object.prototype.hasOwnProperty.call(object, key)
-}
+  return Object.prototype.hasOwnProperty.call(object, key);
+};

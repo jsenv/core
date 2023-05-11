@@ -1,1 +1,1 @@
-export const label = "toto"
+export const label = "toto";

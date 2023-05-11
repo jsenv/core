@@ -1,18 +1,18 @@
-import { existsSync } from "node:fs"
+import { existsSync } from "node:fs";
 
-import { getParentUrl, asDirectoryUrl } from "./url_utils.js"
+import { getParentUrl, asDirectoryUrl } from "./url_utils.js";
 
 export const defaultLookupPackageScope = (url) => {
-  let scopeUrl = asDirectoryUrl(url)
+  let scopeUrl = asDirectoryUrl(url);
   while (scopeUrl !== "file:///") {
     if (scopeUrl.endsWith("node_modules/")) {
-      return null
+      return null;
     }
-    const packageJsonUrlObject = new URL("package.json", scopeUrl)
+    const packageJsonUrlObject = new URL("package.json", scopeUrl);
     if (existsSync(packageJsonUrlObject)) {
-      return scopeUrl
+      return scopeUrl;
     }
-    scopeUrl = getParentUrl(scopeUrl)
+    scopeUrl = getParentUrl(scopeUrl);
   }
-  return null
-}
+  return null;
+};

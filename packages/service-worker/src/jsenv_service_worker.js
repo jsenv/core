@@ -15,38 +15,38 @@
  * ./file.js would be resolved against the project root
 */
 
-self.__sw__ = {}
+self.__sw__ = {};
 
-const sw = self.__sw__
+const sw = self.__sw__;
 // define self.__sw__.registerActions()
 {
-  const actions = {}
+  const actions = {};
   self.addEventListener("message", async (messageEvent) => {
-    const { data, ports } = messageEvent
+    const { data, ports } = messageEvent;
     if (typeof data !== "object") {
-      return
+      return;
     }
-    const { action } = data
-    const actionFn = actions[action]
+    const { action } = data;
+    const actionFn = actions[action];
     if (!actionFn) {
-      return
+      return;
     }
-    const { payload } = data
-    let actionResultStatus
-    let actionResultValue
+    const { payload } = data;
+    let actionResultStatus;
+    let actionResultValue;
     try {
-      const actionFnReturnValue = await actionFn(payload)
-      actionResultStatus = "resolved"
-      actionResultValue = actionFnReturnValue
+      const actionFnReturnValue = await actionFn(payload);
+      actionResultStatus = "resolved";
+      actionResultValue = actionFnReturnValue;
     } catch (e) {
-      actionResultStatus = "rejected"
-      actionResultValue = e
+      actionResultStatus = "rejected";
+      actionResultValue = e;
     }
-    ports[0].postMessage({ actionResultStatus, actionResultValue })
-  })
+    ports[0].postMessage({ actionResultStatus, actionResultValue });
+  });
   sw.registerActions = (value) => {
-    Object.assign(actions, value)
-  }
+    Object.assign(actions, value);
+  };
 }
 
 // define self.__sw__.init()
@@ -91,34 +91,34 @@ const sw = self.__sw__
     activate = () => {},
   } = {}) => {
     if (typeof resources !== "object") {
-      throw new TypeError(`resources should be an object, got ${resources}`)
+      throw new TypeError(`resources should be an object, got ${resources}`);
     }
     if (typeof name !== "string") {
-      throw new TypeError(`name should be a string, got ${name}`)
+      throw new TypeError(`name should be a string, got ${name}`);
     }
     if (name.length === 0) {
-      throw new TypeError(`name must not be empty`)
+      throw new TypeError(`name must not be empty`);
     }
     if (typeof logLevel !== "string") {
-      throw new TypeError(`logLevel should be a boolean, got ${logLevel}`)
+      throw new TypeError(`logLevel should be a boolean, got ${logLevel}`);
     }
     if (typeof logBackgroundColor !== "string") {
       throw new TypeError(
         `logBackgroundColor should be a string, got ${logBackgroundColor}`,
-      )
+      );
     }
     if (typeof logColor !== "string") {
-      throw new TypeError(`logColor should be a string, got ${logColor}`)
+      throw new TypeError(`logColor should be a string, got ${logColor}`);
     }
 
-    const cacheName = createCacheName(name)
-    const label = cacheName
-    const logger = createLogger({ logLevel, logBackgroundColor, logColor })
-    resources = resolveResources(resources)
+    const cacheName = createCacheName(name);
+    const label = cacheName;
+    const logger = createLogger({ logLevel, logBackgroundColor, logColor });
+    resources = resolveResources(resources);
 
     // --- init phase ---
     {
-      logger.info(`init (${label})`)
+      logger.info(`init (${label})`);
       sw.registerActions({
         inspect: () => {
           return {
@@ -126,231 +126,231 @@ const sw = self.__sw__
             version,
             resources,
             ...meta,
-          }
+          };
         },
         refreshCacheKey: async (url) => {
-          url = asAbsoluteUrl(url)
-          const cache = await self.caches.open(cacheName)
-          const request = new Request(url, { cache: "reload" })
-          return fetchAndPutInCache(request, cache)
+          url = asAbsoluteUrl(url);
+          const cache = await self.caches.open(cacheName);
+          const request = new Request(url, { cache: "reload" });
+          return fetchAndPutInCache(request, cache);
         },
         addCacheKey: async (url) => {
-          url = asAbsoluteUrl(url)
-          const cache = await self.caches.open(cacheName)
-          const request = new Request(url)
-          return fetchAndPutInCache(request, cache)
+          url = asAbsoluteUrl(url);
+          const cache = await self.caches.open(cacheName);
+          const request = new Request(url);
+          return fetchAndPutInCache(request, cache);
         },
         removeCacheKey: async (url) => {
-          url = asAbsoluteUrl(url)
-          const cache = await self.caches.open(cacheName)
-          const deleted = await cache.delete(url)
-          return deleted
+          url = asAbsoluteUrl(url);
+          const cache = await self.caches.open(cacheName);
+          const deleted = await cache.delete(url);
+          return deleted;
         },
         ...actions,
-      })
+      });
     }
 
     // --- installation phase ---
     {
       sw.registerActions({
         skipWaiting: () => {
-          self.skipWaiting()
+          self.skipWaiting();
         },
-      })
+      });
       self.addEventListener("install", (installEvent) => {
-        logger.info(`install (${label})`)
+        logger.info(`install (${label})`);
         const installPromise = Promise.all([
           handleInstallEvent(installEvent),
           install(installEvent),
-        ])
-        installEvent.waitUntil(installPromise)
-      })
+        ]);
+        installEvent.waitUntil(installPromise);
+      });
       const handleInstallEvent = async () => {
-        logger.debug(`open cache`)
-        const cache = await self.caches.open(cacheName)
-        const urlsToCache = Object.keys(resources)
-        const total = urlsToCache.length
-        let installed = 0
+        logger.debug(`open cache`);
+        const cache = await self.caches.open(cacheName);
+        const urlsToCache = Object.keys(resources);
+        const total = urlsToCache.length;
+        let installed = 0;
         await Promise.all(
           urlsToCache.map(async (url) => {
-            const resource = resources[url]
+            const resource = resources[url];
             const request = resource.versionedUrl
               ? new Request(resource.versionedUrl)
               : // A non versioned url must ignore navigator cache
                 // otherwise we might (99% chances) hit previous worker cache
                 // and miss the new version
-                new Request(url, { cache: "reload" })
+                new Request(url, { cache: "reload" });
             try {
-              const response = await fetchAndPutInCache(request, cache)
+              const response = await fetchAndPutInCache(request, cache);
               if (response.status === 200) {
-                logger.info(`put "${asRelativeUrl(request.url)}" into cache`)
-                installed += 1
+                logger.info(`put "${asRelativeUrl(request.url)}" into cache`);
+                installed += 1;
               } else {
                 logger.warn(
                   `cannot put ${request.url} into cache due to response status (${response.status})`,
-                )
+                );
               }
             } catch (e) {
               logger.warn(
                 `cannot put ${request.url} in cache due to error while fetching: ${e.stack}`,
-              )
+              );
             }
           }),
-        )
+        );
         if (installed === total) {
-          logger.info(`install done (${total} resources added in cache)`)
+          logger.info(`install done (${total} resources added in cache)`);
         } else {
           logger.info(
             `install done (${installed}/${total} resources added in cache)`,
-          )
+          );
         }
-      }
+      };
     }
 
     // --- activation phase ---
     {
       self.addEventListener("activate", (activateEvent) => {
-        logger.info(`activate (${label})`)
+        logger.info(`activate (${label})`);
         const activatePromise = Promise.all([
           handleActivateEvent(activateEvent),
           activate(activateEvent),
-        ])
-        activateEvent.waitUntil(activatePromise)
-      })
+        ]);
+        activateEvent.waitUntil(activatePromise);
+      });
       sw.registerActions({
         claim: async () => {
-          await self.clients.claim()
+          await self.clients.claim();
         },
         postReloadAfterUpdateToClients: async () => {
-          const matchingClients = await self.clients.matchAll()
+          const matchingClients = await self.clients.matchAll();
           matchingClients.forEach((matchingClient) => {
-            matchingClient.postMessage("reload_after_update")
-          })
+            matchingClient.postMessage("reload_after_update");
+          });
         },
-      })
+      });
       const handleActivateEvent = async () => {
-        const cacheKeys = await self.caches.keys()
+        const cacheKeys = await self.caches.keys();
         await Promise.all(
           cacheKeys.map(async (cacheKey) => {
             if (cacheKey !== cacheName && cacheKey.startsWith(`${name}_`)) {
-              logger.info(`delete old cache "${cacheKey}"`)
-              await self.caches.delete(cacheKey)
+              logger.info(`delete old cache "${cacheKey}"`);
+              await self.caches.delete(cacheKey);
             }
           }),
-        )
-      }
+        );
+      };
     }
 
     // --- fetch implementation ---
     {
       self.addEventListener("fetch", (fetchEvent) => {
-        fetchEvent.waitUntil(handleFetchEvent(fetchEvent))
-      })
+        fetchEvent.waitUntil(handleFetchEvent(fetchEvent));
+      });
       const handleFetchEvent = async (fetchEvent) => {
-        const request = fetchEvent.request
+        const request = fetchEvent.request;
         if (request.method !== "GET" && request.method !== "HEAD") {
-          return self.fetch(request)
+          return self.fetch(request);
         }
-        let requestWasCachedOnInstall = false
-        const resource = resources[request.url]
+        let requestWasCachedOnInstall = false;
+        const resource = resources[request.url];
         if (resource) {
-          requestWasCachedOnInstall = true
+          requestWasCachedOnInstall = true;
         } else {
           for (const url of Object.keys(resources)) {
             if (resources[url].versionedUrl === request.url) {
-              requestWasCachedOnInstall = true
-              break
+              requestWasCachedOnInstall = true;
+              break;
             }
           }
         }
         if (!requestWasCachedOnInstall) {
-          return self.fetch(request)
+          return self.fetch(request);
         }
-        const relativeUrl = asRelativeUrl(request.url)
-        logger.debug(`fetch "${relativeUrl}" (${label})`)
+        const relativeUrl = asRelativeUrl(request.url);
+        logger.debug(`fetch "${relativeUrl}" (${label})`);
         if (request.mode === "navigate") {
-          const preloadResponsePromise = fetchEvent.preloadResponse
+          const preloadResponsePromise = fetchEvent.preloadResponse;
           if (preloadResponsePromise) {
             logger.debug(
               "preloadResponse available on navigation request, try to use it",
-            )
+            );
             const preloadResponse = await getPreloadResponse(
               preloadResponsePromise,
-            )
+            );
             if (preloadResponse) {
-              logger.info(`${relativeUrl} -> use preloaded response`)
-              return preloadResponse
+              logger.info(`${relativeUrl} -> use preloaded response`);
+              return preloadResponse;
             }
-            logger.debug("cannot use preloadResponse")
+            logger.debug("cannot use preloadResponse");
           }
         }
         try {
-          const request = fetchEvent.request
-          logger.debug(`open ${cacheName} cache`)
-          const cache = await self.caches.open(cacheName)
-          logger.debug(`search response matching this request in cache`)
-          const responseFromCache = await cache.match(request)
+          const request = fetchEvent.request;
+          logger.debug(`open ${cacheName} cache`);
+          const cache = await self.caches.open(cacheName);
+          logger.debug(`search response matching this request in cache`);
+          const responseFromCache = await cache.match(request);
           if (responseFromCache) {
-            logger.info(`${relativeUrl} -> use cache`)
-            return responseFromCache
+            logger.info(`${relativeUrl} -> use cache`);
+            return responseFromCache;
           }
-          logger.info(`${relativeUrl} -> delegate to navigator`)
-          return self.fetch(request)
+          logger.info(`${relativeUrl} -> delegate to navigator`);
+          return self.fetch(request);
         } catch (e) {
           logger.warn(
             `error while trying to use cache for ${relativeUrl} -> delegate to navigator`,
             e.stack,
-          )
-          return self.fetch(request)
+          );
+          return self.fetch(request);
         }
-      }
+      };
       const getPreloadResponse = async (preloadResponse) => {
         // see https://github.com/GoogleChrome/workbox/issues/3134
         try {
-          const response = await preloadResponse
+          const response = await preloadResponse;
           if (response && response.type === "error") {
-            return null
+            return null;
           }
-          return response
+          return response;
         } catch (e) {
-          return null
+          return null;
         }
-      }
+      };
     }
-  }
+  };
 }
 
 const createCacheName = (() => {
-  const base = 36
-  const blockSize = 4
-  const discreteValues = Math.pow(base, blockSize)
+  const base = 36;
+  const blockSize = 4;
+  const discreteValues = Math.pow(base, blockSize);
   const pad = (number, size) => {
-    var s = `000000000${number}`
-    return s.substr(s.length - size)
-  }
+    var s = `000000000${number}`;
+    return s.substr(s.length - size);
+  };
   const getRandomValue = (() => {
-    const { crypto } = self
+    const { crypto } = self;
     if (crypto) {
-      const lim = Math.pow(2, 32) - 1
+      const lim = Math.pow(2, 32) - 1;
       return () => {
-        return Math.abs(crypto.getRandomValues(new Uint32Array(1))[0] / lim)
-      }
+        return Math.abs(crypto.getRandomValues(new Uint32Array(1))[0] / lim);
+      };
     }
-    return Math.random
-  })()
+    return Math.random;
+  })();
   const randomBlock = () => {
     return pad(
       ((getRandomValue() * discreteValues) << 0).toString(base),
       blockSize,
-    )
-  }
+    );
+  };
 
   return (cachePrefix) => {
-    const timestamp = new Date().getTime().toString(base)
-    const random = `${randomBlock()}${randomBlock()}`
-    return `${cachePrefix}_${timestamp}${random}`
-  }
-})()
+    const timestamp = new Date().getTime().toString(base);
+    const random = `${randomBlock()}${randomBlock()}`;
+    return `${cachePrefix}_${timestamp}${random}`;
+  };
+})();
 
 const createLogger = ({ logLevel, logBackgroundColor, logColor }) => {
   const injectLogStyles = (args) => {
@@ -359,23 +359,23 @@ const createLogger = ({ logLevel, logBackgroundColor, logColor }) => {
       `background: orange; color: rgb(55, 7, 7); padding: 1px 3px; margin: 0 1px`,
       `background: ${logBackgroundColor}; color: ${logColor}; padding: 1px 3px; margin: 0 1px`,
       ...args,
-    ]
-  }
+    ];
+  };
 
   const logger = {
     debug: (...args) => {
       if (logLevel === "debug") {
-        console.info(...injectLogStyles(args))
+        console.info(...injectLogStyles(args));
       }
     },
     info: (...args) => {
       if (logLevel === "debug" || logLevel === "info") {
-        console.info(...injectLogStyles(args))
+        console.info(...injectLogStyles(args));
       }
     },
     warn: (...args) => {
       if (logLevel === "debug" || logLevel === "info" || logLevel === "warn") {
-        console.info(...injectLogStyles(args))
+        console.info(...injectLogStyles(args));
       }
     },
     error: (...args) => {
@@ -385,55 +385,55 @@ const createLogger = ({ logLevel, logBackgroundColor, logColor }) => {
         logLevel === "warn" ||
         logLevel === "error"
       ) {
-        console.info(...injectLogStyles(args))
+        console.info(...injectLogStyles(args));
       }
     },
     debugGroupCollapsed: (...args) => {
       if (logLevel === "debug") {
-        console.groupCollapsed(...injectLogStyles(args))
+        console.groupCollapsed(...injectLogStyles(args));
       }
     },
     infoGroupCollapsed: (...args) => {
       if (logLevel === "debug" || logLevel === "info") {
-        console.groupCollapsed(...injectLogStyles(args))
+        console.groupCollapsed(...injectLogStyles(args));
       }
     },
     groupEnd: () => console.groupEnd(),
-  }
-  return logger
-}
+  };
+  return logger;
+};
 
 const asAbsoluteUrl = (relativeUrl) =>
-  String(new URL(relativeUrl, self.location))
+  String(new URL(relativeUrl, self.location));
 
-const asRelativeUrl = (url) => url.slice(self.location.origin.length)
+const asRelativeUrl = (url) => url.slice(self.location.origin.length);
 
 const resolveResources = (resources) => {
-  const resourcesResolved = {}
+  const resourcesResolved = {};
   Object.keys(resources).forEach((url) => {
-    const info = resources[url]
-    const urlResolved = asAbsoluteUrl(url)
+    const info = resources[url];
+    const urlResolved = asAbsoluteUrl(url);
     if (info.versionedUrl) {
-      info.versionedUrl = asAbsoluteUrl(info.versionedUrl)
+      info.versionedUrl = asAbsoluteUrl(info.versionedUrl);
     }
-    resourcesResolved[urlResolved] = info
-  })
-  return resourcesResolved
-}
+    resourcesResolved[urlResolved] = info;
+  });
+  return resourcesResolved;
+};
 
 const fetchAndPutInCache = async (request, cache) => {
-  const response = await self.fetch(request)
+  const response = await self.fetch(request);
   if (response.status === 200) {
-    const responseToCache = await asResponseToPutInCache(response)
-    await cache.put(request, responseToCache)
+    const responseToCache = await asResponseToPutInCache(response);
+    await cache.put(request, responseToCache);
   }
-  return response
-}
+  return response;
+};
 
 const asResponseToPutInCache = async (response) => {
-  const responseClone = response.clone()
+  const responseClone = response.clone();
   if (!response.redirected) {
-    return responseClone
+    return responseClone;
   }
   // When passed a redirected response, this will create a new, "clean" response
   // that can be used to respond to a navigation request.
@@ -444,12 +444,12 @@ const asResponseToPutInCache = async (response) => {
   const bodyPromise =
     "body" in responseClone
       ? Promise.resolve(responseClone.body)
-      : responseClone.blob()
-  const body = await bodyPromise
+      : responseClone.blob();
+  const body = await bodyPromise;
   // new Response() is happy when passed either a stream or a Blob.
   return new Response(body, {
     headers: responseClone.headers,
     status: responseClone.status,
     statusText: responseClone.statusText,
-  })
-}
+  });
+};

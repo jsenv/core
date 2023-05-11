@@ -1,5 +1,5 @@
-import { jsenvPluginPreact } from "@jsenv/plugin-preact"
-import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs"
+import { jsenvPluginPreact } from "@jsenv/plugin-preact";
+import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
 
 export const plugins = [
   jsenvPluginPreact(),
@@ -14,4 +14,4 @@ export const plugins = [
       },
     },
   }),
-]
+];

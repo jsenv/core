@@ -1,4 +1,4 @@
-import { isStringLiteralNode } from "./helpers.js"
+import { isStringLiteralNode } from "./helpers.js";
 
 export const isImportMetaResolveCall = (node) => {
   return (
@@ -7,11 +7,11 @@ export const isImportMetaResolveCall = (node) => {
     node.callee.object.type === "MetaProperty" &&
     node.callee.property.type === "Identifier" &&
     node.callee.property.name === "resolve"
-  )
-}
+  );
+};
 
 export const analyzeImportMetaResolveCall = (node, { onUrl }) => {
-  const firstArg = node.arguments[0]
+  const firstArg = node.arguments[0];
   if (firstArg && isStringLiteralNode(firstArg)) {
     onUrl({
       node,
@@ -22,6 +22,6 @@ export const analyzeImportMetaResolveCall = (node, { onUrl }) => {
       end: firstArg.end,
       line: firstArg.loc.start.line,
       column: firstArg.loc.start.column,
-    })
+    });
   }
-}
+};

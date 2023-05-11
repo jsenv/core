@@ -30,7 +30,7 @@ module.exports = {
       },
     },
   },
-}
+};
 ```
 
 See also https://github.com/jsenv/eslint-config#advanced-configuration-example

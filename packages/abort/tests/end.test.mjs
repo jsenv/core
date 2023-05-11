@@ -1,80 +1,80 @@
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-import { Abort } from "@jsenv/abort"
+import { Abort } from "@jsenv/abort";
 
 // operation.end() cleanup abort sources
 {
-  const operation = Abort.startOperation()
+  const operation = Abort.startOperation();
 
-  let timeoutCleared = false
+  let timeoutCleared = false;
   operation.addAbortSource((abort) => {
-    setTimeout(abort, 200)
+    setTimeout(abort, 200);
     return () => {
-      timeoutCleared = true
-      clearTimeout(abort)
-    }
-  })
+      timeoutCleared = true;
+      clearTimeout(abort);
+    };
+  });
 
-  operation.end()
+  operation.end();
   const actual = {
     timeoutCleared,
-  }
+  };
   const expected = {
     timeoutCleared: true,
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }
 
 // operation.end() await end callbacks
 {
-  const operation = Abort.startOperation()
+  const operation = Abort.startOperation();
 
-  let endCallbackResolved
+  let endCallbackResolved;
   operation.addEndCallback(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 50))
-    endCallbackResolved = true
-  })
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    endCallbackResolved = true;
+  });
   operation.addAbortSource((abort) => {
-    abort()
-  })
+    abort();
+  });
 
-  await operation.end()
+  await operation.end();
 
   const actual = {
     endCallbackResolved,
-  }
+  };
   const expected = {
     endCallbackResolved: true,
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }
 
 // operation.end({ abortAfterEnd: true }) and was not aborted
 {
-  const operation = Abort.startOperation()
+  const operation = Abort.startOperation();
 
-  let abortEventCallbackCallCount = 0
+  let abortEventCallbackCallCount = 0;
   operation.signal.addEventListener(
     "abort",
     () => {
-      abortEventCallbackCallCount++
+      abortEventCallbackCallCount++;
     },
     { once: true },
-  )
-  let abortCallbackCallCount = 0
+  );
+  let abortCallbackCallCount = 0;
   operation.addAbortCallback(() => {
-    abortCallbackCallCount++
-  })
+    abortCallbackCallCount++;
+  });
   await operation.end({
     abortAfterEnd: true,
-  })
+  });
   const actual = {
     abortEventCallbackCallCount,
     abortCallbackCallCount,
-  }
+  };
   const expected = {
     abortEventCallbackCallCount: 1,
     abortCallbackCallCount: 1,
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }

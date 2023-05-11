@@ -1,6 +1,6 @@
-import { startServer, fetchFileSystem, jsenvServiceCORS } from "@jsenv/server"
+import { startServer, fetchFileSystem, jsenvServiceCORS } from "@jsenv/server";
 
-const serverDirectoryUrl = new URL("./client/", import.meta.url)
+const serverDirectoryUrl = new URL("./client/", import.meta.url);
 
 export const localServer = await startServer({
   logLevel: "warn",
@@ -16,12 +16,12 @@ export const localServer = await startServer({
     }),
     {
       handleRequest: async (request) => {
-        const fileUrl = new URL(request.resource.slice(1), serverDirectoryUrl)
+        const fileUrl = new URL(request.resource.slice(1), serverDirectoryUrl);
         const response = await fetchFileSystem(fileUrl, {
           ...request,
-        })
-        return response
+        });
+        return response;
       },
     },
   ],
-})
+});

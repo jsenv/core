@@ -1,4 +1,4 @@
-import { executeTestPlan, chromium, firefox, webkit } from "@jsenv/test"
+import { executeTestPlan, chromium, firefox, webkit } from "@jsenv/test";
 
 await executeTestPlan({
   rootDirectoryUrl: new URL("../", import.meta.url),
@@ -23,6 +23,6 @@ await executeTestPlan({
   coverageEnabled: true,
   coverageMethodForBrowsers: "istanbul",
   coverageReportHtmlDirectoryUrl: new URL("../.coverage/", import.meta.url),
-})
+});
 
 // now open a chromium + take screenshot

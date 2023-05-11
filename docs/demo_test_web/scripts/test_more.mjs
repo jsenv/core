@@ -1,4 +1,4 @@
-import { executeTestPlan, chromium, firefox, webkit } from "@jsenv/test"
+import { executeTestPlan, chromium, firefox, webkit } from "@jsenv/test";
 
 await executeTestPlan({
   rootDirectoryUrl: new URL("../", import.meta.url),
@@ -20,4 +20,4 @@ await executeTestPlan({
     rootDirectoryUrl: new URL("../src/", import.meta.url),
     moduleUrl: new URL("./dev.mjs", import.meta.url),
   },
-})
+});

@@ -1,12 +1,12 @@
-import { assert } from "@jsenv/assert"
-import { startDevServer } from "@jsenv/core"
+import { assert } from "@jsenv/assert";
+import { startDevServer } from "@jsenv/core";
 
 import {
   execute,
   chromium,
   // firefox,
   webkit,
-} from "@jsenv/test"
+} from "@jsenv/test";
 
 const test = async (params) => {
   const devServer = await startDevServer({
@@ -14,7 +14,7 @@ const test = async (params) => {
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
     port: 0,
-  })
+  });
   const result = await execute({
     logLevel: "warn",
     rootDirectoryUrl: new URL("./client/", import.meta.url),
@@ -27,12 +27,12 @@ const test = async (params) => {
     mirrorConsole: false,
     collectConsole: true,
     ...params,
-  })
-  devServer.stop()
+  });
+  devServer.stop();
   const actual = {
     status: result.status,
     consoleCalls: result.consoleCalls,
-  }
+  };
   const expected = {
     status: "timedout",
     consoleCalls:
@@ -45,10 +45,10 @@ const test = async (params) => {
               text: `foo\n`,
             },
           ],
-  }
-  assert({ actual, expected })
-}
+  };
+  assert({ actual, expected });
+};
 
-await test({ runtime: chromium() })
+await test({ runtime: chromium() });
 // await test({ runtime: firefox })
-await test({ runtime: webkit() })
+await test({ runtime: webkit() });

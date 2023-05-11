@@ -1,4 +1,4 @@
-import { inspect } from "@jsenv/inspect"
+import { inspect } from "@jsenv/inspect";
 
 console.log(
   inspect({
@@ -6,4 +6,4 @@ console.log(
     number: 10,
     string: "hello world",
   }),
-)
+);

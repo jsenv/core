@@ -1,9 +1,9 @@
-import { isStringLiteralNode } from "./helpers.js"
+import { isStringLiteralNode } from "./helpers.js";
 
 export const isImportScriptsCall = (node) => {
-  const callee = node.callee
+  const callee = node.callee;
   if (callee.type === "Identifier" && callee.name === "importScripts") {
-    return true
+    return true;
   }
   return (
     callee.type === "MemberExpression" &&
@@ -11,12 +11,12 @@ export const isImportScriptsCall = (node) => {
     callee.object.name === "self" &&
     callee.property.type === "Identifier" &&
     callee.property.name === "importScripts"
-  )
-}
+  );
+};
 export const analyzeImportScriptCalls = (node, { onUrl }) => {
   node.arguments.forEach((arg) => {
     if (isStringLiteralNode(arg)) {
-      const specifierNode = arg
+      const specifierNode = arg;
       onUrl({
         type: "js_url",
         subtype: "self_import_scripts_arg",
@@ -26,7 +26,7 @@ export const analyzeImportScriptCalls = (node, { onUrl }) => {
         end: specifierNode.end,
         line: specifierNode.loc.start.line,
         column: specifierNode.loc.start.column,
-      })
+      });
     }
-  })
-}
+  });
+};

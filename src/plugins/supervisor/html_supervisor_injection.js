@@ -57,15 +57,15 @@ import {
   getHtmlNodePosition,
   getHtmlNodeText,
   setHtmlNodeText,
-} from "@jsenv/ast"
-import { generateInlineContentUrl, urlToRelativeUrl } from "@jsenv/urls"
+} from "@jsenv/ast";
+import { generateInlineContentUrl, urlToRelativeUrl } from "@jsenv/urls";
 
-import { injectSupervisorIntoJs } from "./js_supervisor_injection.js"
+import { injectSupervisorIntoJs } from "./js_supervisor_injection.js";
 
 export const supervisorFileUrl = new URL(
   "./client/supervisor.js",
   import.meta.url,
-).href
+).href;
 
 export const injectSupervisorIntoHTML = async (
   { content, url },
@@ -79,11 +79,11 @@ export const injectSupervisorIntoHTML = async (
     inlineAsRemote,
   },
 ) => {
-  const htmlAst = parseHtmlString(content)
-  const mutations = []
-  const actions = []
+  const htmlAst = parseHtmlString(content);
+  const mutations = [];
+  const actions = [];
 
-  const scriptInfos = []
+  const scriptInfos = [];
   // 1. Find inline and remote scripts
   {
     const handleInlineScript = (
@@ -91,7 +91,7 @@ export const injectSupervisorIntoHTML = async (
       { type, extension, textContent },
     ) => {
       const { line, column, lineEnd, columnEnd, isOriginal } =
-        getHtmlNodePosition(scriptNode, { preferOriginal: true })
+        getHtmlNodePosition(scriptNode, { preferOriginal: true });
       const inlineScriptUrl = generateInlineContentUrl({
         url,
         extension: extension || ".js",
@@ -99,7 +99,7 @@ export const injectSupervisorIntoHTML = async (
         column,
         lineEnd,
         columnEnd,
-      })
+      });
       const inlineScriptSrc = generateInlineScriptSrc({
         type,
         textContent,
@@ -107,7 +107,7 @@ export const injectSupervisorIntoHTML = async (
         isOriginal,
         line,
         column,
-      })
+      });
       onInlineScript({
         type,
         textContent,
@@ -116,26 +116,26 @@ export const injectSupervisorIntoHTML = async (
         line,
         column,
         src: inlineScriptSrc,
-      })
+      });
       if (inlineAsRemote) {
         // prefere la version src
-        scriptInfos.push({ type, src: inlineScriptSrc })
+        scriptInfos.push({ type, src: inlineScriptSrc });
         const remoteJsSupervised = generateCodeToSuperviseScriptWithSrc({
           type,
           src: inlineScriptSrc,
-        })
+        });
         mutations.push(() => {
           setHtmlNodeText(scriptNode, remoteJsSupervised, {
             indentation: "auto",
-          })
+          });
           setHtmlNodeAttributes(scriptNode, {
             "jsenv-cooked-by": "jsenv:supervisor",
             "src": undefined,
             "inlined-from-src": inlineScriptSrc,
-          })
-        })
+          });
+        });
       } else {
-        scriptInfos.push({ type, src: inlineScriptSrc, isInline: true })
+        scriptInfos.push({ type, src: inlineScriptSrc, isInline: true });
         actions.push(async () => {
           try {
             const inlineJsSupervised = await injectSupervisorIntoJs({
@@ -144,15 +144,15 @@ export const injectSupervisorIntoHTML = async (
               url: inlineScriptUrl,
               type,
               inlineSrc: inlineScriptSrc,
-            })
+            });
             mutations.push(() => {
               setHtmlNodeText(scriptNode, inlineJsSupervised, {
                 indentation: "auto",
-              })
+              });
               setHtmlNodeAttributes(scriptNode, {
                 "jsenv-cooked-by": "jsenv:supervisor",
-              })
-            })
+              });
+            });
           } catch (e) {
             if (e.code === "PARSE_ERROR") {
               // mutations.push(() => {
@@ -161,62 +161,64 @@ export const injectSupervisorIntoHTML = async (
               //   })
               // })
               // on touche a rien
-              return
+              return;
             }
-            throw e
+            throw e;
           }
-        })
+        });
       }
-    }
+    };
     const handleScriptWithSrc = (scriptNode, { type, src }) => {
-      scriptInfos.push({ type, src })
+      scriptInfos.push({ type, src });
       const remoteJsSupervised = generateCodeToSuperviseScriptWithSrc({
         type,
         src,
-      })
+      });
       mutations.push(() => {
-        setHtmlNodeText(scriptNode, remoteJsSupervised, { indentation: "auto" })
+        setHtmlNodeText(scriptNode, remoteJsSupervised, {
+          indentation: "auto",
+        });
         setHtmlNodeAttributes(scriptNode, {
           "jsenv-cooked-by": "jsenv:supervisor",
           "src": undefined,
           "inlined-from-src": src,
-        })
-      })
-    }
+        });
+      });
+    };
     visitHtmlNodes(htmlAst, {
       script: (scriptNode) => {
-        const { type, extension } = analyzeScriptNode(scriptNode)
+        const { type, extension } = analyzeScriptNode(scriptNode);
         if (type !== "js_classic" && type !== "js_module") {
-          return
+          return;
         }
         if (getHtmlNodeAttribute(scriptNode, "jsenv-injected-by")) {
-          return
+          return;
         }
-        const noSupervisor = getHtmlNodeAttribute(scriptNode, "no-supervisor")
+        const noSupervisor = getHtmlNodeAttribute(scriptNode, "no-supervisor");
         if (noSupervisor !== undefined) {
-          return
+          return;
         }
 
-        const scriptNodeText = getHtmlNodeText(scriptNode)
+        const scriptNodeText = getHtmlNodeText(scriptNode);
         if (scriptNodeText) {
           handleInlineScript(scriptNode, {
             type,
             extension,
             textContent: scriptNodeText,
-          })
-          return
+          });
+          return;
         }
-        const src = getHtmlNodeAttribute(scriptNode, "src")
+        const src = getHtmlNodeAttribute(scriptNode, "src");
         if (src) {
-          const urlObject = new URL(src, "http://example.com")
+          const urlObject = new URL(src, "http://example.com");
           if (urlObject.searchParams.has("inline")) {
-            return
+            return;
           }
-          handleScriptWithSrc(scriptNode, { type, src })
-          return
+          handleScriptWithSrc(scriptNode, { type, src });
+          return;
         }
       },
-    })
+    });
   }
   // 2. Inject supervisor js file + setup call
   {
@@ -228,7 +230,7 @@ export const injectSupervisorIntoHTML = async (
         scriptInfos,
       },
       "  ",
-    )
+    );
     injectHtmlNodeAsEarlyAsPossible(
       htmlAst,
       createHtmlNode({
@@ -236,7 +238,7 @@ export const injectSupervisorIntoHTML = async (
         textContent: `window.__supervisor__.setup({${setupParamsSource}})`,
       }),
       "jsenv:supervisor",
-    )
+    );
     injectHtmlNodeAsEarlyAsPossible(
       htmlAst,
       createHtmlNode({
@@ -244,36 +246,36 @@ export const injectSupervisorIntoHTML = async (
         src: supervisorScriptSrc,
       }),
       "jsenv:supervisor",
-    )
+    );
   }
   // 3. Perform actions (transforming inline script content) and html mutations
   if (actions.length > 0) {
-    await Promise.all(actions.map((action) => action()))
+    await Promise.all(actions.map((action) => action()));
   }
-  mutations.forEach((mutation) => mutation())
-  const htmlModified = stringifyHtmlAst(htmlAst)
+  mutations.forEach((mutation) => mutation());
+  const htmlModified = stringifyHtmlAst(htmlAst);
   return {
     content: htmlModified,
-  }
-}
+  };
+};
 
 const stringifyParams = (params, prefix = "") => {
-  const source = JSON.stringify(params, null, prefix)
+  const source = JSON.stringify(params, null, prefix);
   if (prefix.length) {
     // remove leading "{\n"
     // remove leading prefix
     // remove trailing "\n}"
-    return source.slice(2 + prefix.length, -2)
+    return source.slice(2 + prefix.length, -2);
   }
   // remove leading "{"
   // remove trailing "}"
-  return source.slice(1, -1)
-}
+  return source.slice(1, -1);
+};
 
 const generateCodeToSuperviseScriptWithSrc = ({ type, src }) => {
-  const srcEncoded = JSON.stringify(src)
+  const srcEncoded = JSON.stringify(src);
   if (type === "js_module") {
-    return `window.__supervisor__.superviseScriptTypeModule(${srcEncoded}, (url) => import(url));`
+    return `window.__supervisor__.superviseScriptTypeModule(${srcEncoded}, (url) => import(url));`;
   }
-  return `window.__supervisor__.superviseScript(${srcEncoded});`
-}
+  return `window.__supervisor__.superviseScript(${srcEncoded});`;
+};

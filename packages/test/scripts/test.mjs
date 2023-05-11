@@ -1,4 +1,4 @@
-import { executeTestPlan, nodeWorkerThread } from "@jsenv/test"
+import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
 
 await executeTestPlan({
   rootDirectoryUrl: new URL("../", import.meta.url),
@@ -11,9 +11,9 @@ await executeTestPlan({
             fileRelativeUrl.endsWith("coverage_browsers_and_node.test.mjs") ||
             fileRelativeUrl.endsWith("_browsers.test.mjs")
           ) {
-            return 60_000
+            return 60_000;
           }
-          return 30_000
+          return 30_000;
         },
       },
     },
@@ -21,4 +21,4 @@ await executeTestPlan({
   failFast: process.argv.includes("--workspace"),
   logShortForCompletedExecutions: true,
   logMergeForCompletedExecutions: process.argv.includes("--workspace"),
-})
+});

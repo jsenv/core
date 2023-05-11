@@ -1,18 +1,18 @@
-import { isStringLiteralNode } from "./helpers.js"
+import { isStringLiteralNode } from "./helpers.js";
 
 export const isNewUrlCall = (node) => {
   return (
     node.type === "NewExpression" &&
     node.callee.type === "Identifier" &&
     node.callee.name === "URL"
-  )
-}
+  );
+};
 export const analyzeNewUrlCall = (node, { isJsModule, onUrl }) => {
   if (node.arguments.length === 1) {
-    const firstArgNode = node.arguments[0]
-    const urlType = analyzeUrlNodeType(firstArgNode, { isJsModule })
+    const firstArgNode = node.arguments[0];
+    const urlType = analyzeUrlNodeType(firstArgNode, { isJsModule });
     if (urlType === "StringLiteral") {
-      const specifierNode = firstArgNode
+      const specifierNode = firstArgNode;
       onUrl({
         type: "js_url",
         subtype: "new_url_first_arg",
@@ -21,14 +21,14 @@ export const analyzeNewUrlCall = (node, { isJsModule, onUrl }) => {
         end: specifierNode.end,
         line: specifierNode.loc.start.line,
         column: specifierNode.loc.start.column,
-      })
+      });
     }
-    return
+    return;
   }
   if (node.arguments.length === 2) {
-    const firstArgNode = node.arguments[0]
-    const secondArgNode = node.arguments[1]
-    const baseUrlType = analyzeUrlNodeType(secondArgNode, { isJsModule })
+    const firstArgNode = node.arguments[0];
+    const secondArgNode = node.arguments[1];
+    const baseUrlType = analyzeUrlNodeType(secondArgNode, { isJsModule });
     if (baseUrlType) {
       // we can understand the second argument
       if (
@@ -36,12 +36,12 @@ export const analyzeNewUrlCall = (node, { isJsModule, onUrl }) => {
         secondArgNode.value === "file:///"
       ) {
         // ignore new URL(specifier, "file:///")
-        return
+        return;
       }
-      const urlType = analyzeUrlNodeType(firstArgNode, { isJsModule })
+      const urlType = analyzeUrlNodeType(firstArgNode, { isJsModule });
       if (urlType === "StringLiteral") {
         // we can understand the first argument
-        const specifierNode = firstArgNode
+        const specifierNode = firstArgNode;
         onUrl({
           type: "js_url",
           subtype: "new_url_first_arg",
@@ -53,10 +53,10 @@ export const analyzeNewUrlCall = (node, { isJsModule, onUrl }) => {
           baseUrlType,
           baseUrl:
             baseUrlType === "StringLiteral" ? secondArgNode.value : undefined,
-        })
+        });
       }
       if (baseUrlType === "StringLiteral") {
-        const specifierNode = secondArgNode
+        const specifierNode = secondArgNode;
         onUrl({
           type: "js_url",
           subtype: "new_url_second_arg",
@@ -65,31 +65,31 @@ export const analyzeNewUrlCall = (node, { isJsModule, onUrl }) => {
           end: specifierNode.end,
           line: specifierNode.loc.start.line,
           column: specifierNode.loc.start.column,
-        })
+        });
       }
     }
   }
-}
+};
 
 const analyzeUrlNodeType = (secondArgNode, { isJsModule }) => {
   if (isStringLiteralNode(secondArgNode)) {
-    return "StringLiteral"
+    return "StringLiteral";
   }
   if (isImportMetaUrl(secondArgNode)) {
-    return "import.meta.url"
+    return "import.meta.url";
   }
   if (isWindowLocation(secondArgNode)) {
-    return "window.location"
+    return "window.location";
   }
   if (isWindowOrigin(secondArgNode)) {
-    return "window.origin"
+    return "window.origin";
   }
   if (!isJsModule && isContextMetaUrlFromSystemJs(secondArgNode)) {
-    return "context.meta.url"
+    return "context.meta.url";
   }
   if (!isJsModule) {
     if (isDocumentCurrentScriptSrc(secondArgNode)) {
-      return "document.currentScript.src"
+      return "document.currentScript.src";
     }
     // new URL('specifier', document.currentScript.src)
     // becomes
@@ -97,11 +97,11 @@ const analyzeUrlNodeType = (secondArgNode, { isJsModule }) => {
     // new URL('specifier', currentUrl)
     // (search for scope.generateUidIdentifier("currentUrl")
     if (secondArgNode.type === "Identifier") {
-      return "document.currentScript.src"
+      return "document.currentScript.src";
     }
   }
-  return null
-}
+  return null;
+};
 
 const isImportMetaUrl = (node) => {
   return (
@@ -109,8 +109,8 @@ const isImportMetaUrl = (node) => {
     node.object.type === "MetaProperty" &&
     node.property.type === "Identifier" &&
     node.property.name === "url"
-  )
-}
+  );
+};
 
 const isWindowLocation = (node) => {
   return (
@@ -119,8 +119,8 @@ const isWindowLocation = (node) => {
     node.object.name === "window" &&
     node.property.type === "Identifier" &&
     node.property.name === "location"
-  )
-}
+  );
+};
 
 const isWindowOrigin = (node) => {
   return (
@@ -129,8 +129,8 @@ const isWindowOrigin = (node) => {
     node.object.name === "window" &&
     node.property.type === "Identifier" &&
     node.property.name === "origin"
-  )
-}
+  );
+};
 
 const isContextMetaUrlFromSystemJs = (node) => {
   return (
@@ -145,8 +145,8 @@ const isContextMetaUrlFromSystemJs = (node) => {
     node.object.property.name === "meta" &&
     node.property.type === "Identifier" &&
     node.property.name === "url"
-  )
-}
+  );
+};
 
 const isDocumentCurrentScriptSrc = (node) => {
   return (
@@ -158,5 +158,5 @@ const isDocumentCurrentScriptSrc = (node) => {
     node.object.property.name === "currentScript" &&
     node.property.type === "Identifier" &&
     node.property.name === "src"
-  )
-}
+  );
+};

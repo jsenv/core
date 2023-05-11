@@ -1,6 +1,6 @@
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-import { collectFiles } from "@jsenv/filesystem"
+import { collectFiles } from "@jsenv/filesystem";
 
 const files = await collectFiles({
   directoryUrl: new URL("./root/dir with spaces", import.meta.url),
@@ -8,7 +8,7 @@ const files = await collectFiles({
     any: { "**/*": true },
   },
   predicate: ({ any }) => any,
-})
-const actual = files.map((file) => file.relativeUrl)
-const expected = ["subdir with spaces/a b.js", "file.js"]
-assert({ actual, expected })
+});
+const actual = files.map((file) => file.relativeUrl);
+const expected = ["subdir with spaces/a b.js", "file.js"];
+assert({ actual, expected });

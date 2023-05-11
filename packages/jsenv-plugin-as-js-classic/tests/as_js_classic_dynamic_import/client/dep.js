@@ -1,1 +1,1 @@
-export { answer } from "./file.js"
+export { answer } from "./file.js";

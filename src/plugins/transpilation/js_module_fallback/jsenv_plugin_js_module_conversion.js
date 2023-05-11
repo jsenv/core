@@ -3,8 +3,8 @@
  * - perform conversion from js module to js classic when url uses "?js_module_fallback"
  */
 
-import { injectQueryParams } from "@jsenv/urls"
-import { convertJsModuleToJsClassic } from "./convert_js_module_to_js_classic.js"
+import { injectQueryParams } from "@jsenv/urls";
+import { convertJsModuleToJsClassic } from "./convert_js_module_to_js_classic.js";
 
 export const jsenvPluginJsModuleConversion = ({
   systemJsInjection,
@@ -17,48 +17,48 @@ export const jsenvPluginJsModuleConversion = ({
       reference.subtype === "system_register_arg" ||
       reference.subtype === "system_import_arg"
     ) {
-      return true
+      return true;
     }
     if (reference.type === "js_url" && reference.expectedType === "js_module") {
-      return true
+      return true;
     }
-    return false
-  }
+    return false;
+  };
 
   const shouldPropagateJsModuleConversion = (reference, context) => {
     if (isReferencingJsModule(reference, context)) {
-      const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl)
+      const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl);
       if (!parentUrlInfo) {
-        return false
+        return false;
       }
       const parentGotAsJsClassic = new URL(parentUrlInfo.url).searchParams.has(
         "js_module_fallback",
-      )
-      return parentGotAsJsClassic
+      );
+      return parentGotAsJsClassic;
     }
-    return false
-  }
+    return false;
+  };
 
   const markAsJsClassicProxy = (reference) => {
-    reference.expectedType = "js_classic"
-    reference.filename = generateJsClassicFilename(reference.url)
-  }
+    reference.expectedType = "js_classic";
+    reference.filename = generateJsClassicFilename(reference.url);
+  };
 
   const turnIntoJsClassicProxy = (reference) => {
     const urlTransformed = injectQueryParams(reference.url, {
       js_module_fallback: "",
-    })
-    markAsJsClassicProxy(reference)
-    return urlTransformed
-  }
+    });
+    markAsJsClassicProxy(reference);
+    return urlTransformed;
+  };
 
   return {
     name: "jsenv:js_module_conversion",
     appliesDuring: "*",
     redirectUrl: (reference, context) => {
       if (reference.searchParams.has("js_module_fallback")) {
-        markAsJsClassicProxy(reference)
-        return null
+        markAsJsClassicProxy(reference);
+        return null;
       }
       // We want to propagate transformation of js module to js classic to:
       // - import specifier (static/dynamic import + re-export)
@@ -67,9 +67,9 @@ export const jsenvPluginJsModuleConversion = ({
       // And not other references otherwise we could try to transform inline resources
       // or specifiers inside new URL()...
       if (shouldPropagateJsModuleConversion(reference, context)) {
-        return turnIntoJsClassicProxy(reference, context)
+        return turnIntoJsClassicProxy(reference, context);
       }
-      return null
+      return null;
     },
     fetchUrlContent: async (urlInfo, context) => {
       const [jsModuleReference, jsModuleUrlInfo] =
@@ -81,22 +81,22 @@ export const jsenvPluginJsModuleConversion = ({
           // because when there is ?js_module_fallback it means the underlying resource
           // is a js_module
           expectedType: "js_module",
-        })
+        });
       if (!jsModuleReference) {
-        return null
+        return null;
       }
       await context.fetchUrlContent(jsModuleUrlInfo, {
         reference: jsModuleReference,
-      })
+      });
       if (context.dev) {
         context.referenceUtils.found({
           type: "js_import",
           subtype: jsModuleReference.subtype,
           specifier: jsModuleReference.url,
           expectedType: "js_module",
-        })
+        });
       } else if (context.build && jsModuleUrlInfo.dependents.size === 0) {
-        context.urlGraph.deleteUrlInfo(jsModuleUrlInfo.url)
+        context.urlGraph.deleteUrlInfo(jsModuleUrlInfo.url);
       }
       const { content, sourcemap } = await convertJsModuleToJsClassic({
         rootDirectoryUrl: context.rootDirectoryUrl,
@@ -104,7 +104,7 @@ export const jsenvPluginJsModuleConversion = ({
         systemJsClientFileUrl,
         urlInfo,
         jsModuleUrlInfo,
-      })
+      });
       return {
         content,
         contentType: "text/javascript",
@@ -113,7 +113,7 @@ export const jsenvPluginJsModuleConversion = ({
         originalContent: jsModuleUrlInfo.originalContent,
         sourcemap,
         data: jsModuleUrlInfo.data,
-      }
+      };
     },
-  }
-}
+  };
+};

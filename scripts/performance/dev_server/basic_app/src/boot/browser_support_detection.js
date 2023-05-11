@@ -7,57 +7,57 @@
  * -> The JS used must be as compatible as possible (no const, no arrow function etc)
  */
 
-var userAgent = window.navigator.userAgent
+var userAgent = window.navigator.userAgent;
 
 function browserIsSupported() {
-  var isIE = typeof document.documentMode !== "undefined"
+  var isIE = typeof document.documentMode !== "undefined";
   if (isIE) {
-    return false
+    return false;
   }
 
   var chromeVersion = versionFromUserAgent(
     /(?:chrome|chromium|crios|crmo)\/(\d+)/i,
-  )
+  );
   if (chromeVersion && chromeVersion < 55) {
-    return false
+    return false;
   }
 
   var edgeVersion = versionFromUserAgent(
     /(?:edge|edgea|edgios)\/(\d+)/i,
     userAgent,
-  )
+  );
   if (edgeVersion && edgeVersion < 14) {
-    return false
+    return false;
   }
 
   var firefoxVersion = versionFromUserAgent(
     /(?:firefox|iceweasel|fxios)[\s/](\d+)/i,
-  )
+  );
   if (firefoxVersion && firefoxVersion < 52) {
-    return false
+    return false;
   }
 
   var safariVersion =
     !chromeVersion && /safari|applewebkit/i.test(userAgent)
       ? versionFromUserAgent(/version\/(\d+)/i)
-      : undefined
+      : undefined;
   if (safariVersion && safariVersion < 11) {
-    return false
+    return false;
   }
 
-  return true
+  return true;
 }
 
 function versionFromUserAgent(regexp) {
-  var match = userAgent.match(regexp)
-  if (!match || match.length === 0) return undefined
-  var firstMatch = match[1]
-  var version = parseInt(firstMatch)
-  return version
+  var match = userAgent.match(regexp);
+  if (!match || match.length === 0) return undefined;
+  var firstMatch = match[1];
+  var version = parseInt(firstMatch);
+  return version;
 }
 
-window.browserIsSupported = browserIsSupported()
+window.browserIsSupported = browserIsSupported();
 
 if (!window.browserIsSupported) {
-  document.getElementById("browser_not_supported").style.display = "block"
+  document.getElementById("browser_not_supported").style.display = "block";
 }

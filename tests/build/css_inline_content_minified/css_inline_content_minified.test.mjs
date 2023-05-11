@@ -1,10 +1,10 @@
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
-import { jsenvPluginMinification } from "@jsenv/plugin-minification"
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
+import { jsenvPluginMinification } from "@jsenv/plugin-minification";
 
-import { build } from "@jsenv/core"
-import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js"
+import { build } from "@jsenv/core";
+import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 
-const jsenvSrcDirectoryUrl = new URL("../../../src/", import.meta.url)
+const jsenvSrcDirectoryUrl = new URL("../../../src/", import.meta.url);
 await build({
   logLevel: "warn",
   sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -31,8 +31,8 @@ await build({
     }),
     jsenvPluginMinification(),
   ],
-})
+});
 takeDirectorySnapshot(
   new URL("./dist/", import.meta.url),
   new URL("./snapshots/", import.meta.url),
-)
+);

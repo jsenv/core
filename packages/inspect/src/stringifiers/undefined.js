@@ -1,1 +1,1 @@
-export const inspectUndefined = () => "undefined"
+export const inspectUndefined = () => "undefined";

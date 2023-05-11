@@ -1,14 +1,14 @@
-import { unlink, rmdir, openSync, closeSync } from "node:fs"
-import { Abort } from "@jsenv/abort"
+import { unlink, rmdir, openSync, closeSync } from "node:fs";
+import { Abort } from "@jsenv/abort";
 import {
   ensurePathnameTrailingSlash,
   urlToFileSystemPath,
   resolveUrl,
-} from "@jsenv/urls"
+} from "@jsenv/urls";
 
-import { assertAndNormalizeFileUrl } from "./file_url_validation.js"
-import { readEntryStat } from "./readEntryStat.js"
-import { readDirectory } from "./readDirectory.js"
+import { assertAndNormalizeFileUrl } from "./file_url_validation.js";
+import { readEntryStat } from "./readEntryStat.js";
+import { readDirectory } from "./readDirectory.js";
 
 export const removeEntry = async (
   source,
@@ -21,22 +21,22 @@ export const removeEntry = async (
     onlyContent = false,
   } = {},
 ) => {
-  const sourceUrl = assertAndNormalizeFileUrl(source)
+  const sourceUrl = assertAndNormalizeFileUrl(source);
 
-  const removeOperation = Abort.startOperation()
-  removeOperation.addAbortSignal(signal)
+  const removeOperation = Abort.startOperation();
+  removeOperation.addAbortSignal(signal);
 
   try {
-    removeOperation.throwIfAborted()
+    removeOperation.throwIfAborted();
     const sourceStats = await readEntryStat(sourceUrl, {
       nullIfNotFound: true,
       followLink: false,
-    })
+    });
     if (!sourceStats) {
       if (allowUseless) {
-        return
+        return;
       }
-      throw new Error(`nothing to remove at ${urlToFileSystemPath(sourceUrl)}`)
+      throw new Error(`nothing to remove at ${urlToFileSystemPath(sourceUrl)}`);
     }
 
     // https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_class_fs_stats
@@ -54,7 +54,7 @@ export const removeEntry = async (
           maxRetries,
           retryDelay,
         },
-      )
+      );
     } else if (sourceStats.isDirectory()) {
       await removeDirectory(ensurePathnameTrailingSlash(sourceUrl), {
         signal: removeOperation.signal,
@@ -62,42 +62,42 @@ export const removeEntry = async (
         maxRetries,
         retryDelay,
         onlyContent,
-      })
+      });
     }
   } finally {
-    await removeOperation.end()
+    await removeOperation.end();
   }
-}
+};
 
 const removeNonDirectory = (sourceUrl, { maxRetries, retryDelay }) => {
-  const sourcePath = urlToFileSystemPath(sourceUrl)
+  const sourcePath = urlToFileSystemPath(sourceUrl);
 
-  let retryCount = 0
+  let retryCount = 0;
   const attempt = () => {
     return unlinkNaive(sourcePath, {
       ...(retryCount >= maxRetries
         ? {}
         : {
             handleTemporaryError: async () => {
-              retryCount++
+              retryCount++;
               return new Promise((resolve) => {
                 setTimeout(() => {
-                  resolve(attempt())
-                }, retryCount * retryDelay)
-              })
+                  resolve(attempt());
+                }, retryCount * retryDelay);
+              });
             },
           }),
-    })
-  }
-  return attempt()
-}
+    });
+  };
+  return attempt();
+};
 
 const unlinkNaive = (sourcePath, { handleTemporaryError = null } = {}) => {
   return new Promise((resolve, reject) => {
     unlink(sourcePath, (error) => {
       if (error) {
         if (error.code === "ENOENT") {
-          resolve()
+          resolve();
         } else if (
           handleTemporaryError &&
           (error.code === "EBUSY" ||
@@ -105,34 +105,34 @@ const unlinkNaive = (sourcePath, { handleTemporaryError = null } = {}) => {
             error.code === "ENFILE" ||
             error.code === "ENOENT")
         ) {
-          resolve(handleTemporaryError(error))
+          resolve(handleTemporaryError(error));
         } else {
-          reject(error)
+          reject(error);
         }
       } else {
-        resolve()
+        resolve();
       }
-    })
-  })
-}
+    });
+  });
+};
 
 const removeDirectory = async (
   rootDirectoryUrl,
   { signal, maxRetries, retryDelay, recursive, onlyContent },
 ) => {
-  const removeDirectoryOperation = Abort.startOperation()
-  removeDirectoryOperation.addAbortSignal(signal)
+  const removeDirectoryOperation = Abort.startOperation();
+  removeDirectoryOperation.addAbortSignal(signal);
 
   const visit = async (sourceUrl) => {
-    removeDirectoryOperation.throwIfAborted()
+    removeDirectoryOperation.throwIfAborted();
     const sourceStats = await readEntryStat(sourceUrl, {
       nullIfNotFound: true,
       followLink: false,
-    })
+    });
 
     // file/directory not found
     if (sourceStats === null) {
-      return
+      return;
     }
 
     if (
@@ -140,25 +140,25 @@ const removeDirectory = async (
       sourceStats.isCharacterDevice() ||
       sourceStats.isBlockDevice()
     ) {
-      await visitFile(sourceUrl)
+      await visitFile(sourceUrl);
     } else if (sourceStats.isSymbolicLink()) {
-      await visitSymbolicLink(sourceUrl)
+      await visitSymbolicLink(sourceUrl);
     } else if (sourceStats.isDirectory()) {
-      await visitDirectory(`${sourceUrl}/`)
+      await visitDirectory(`${sourceUrl}/`);
     }
-  }
+  };
 
   const visitDirectory = async (directoryUrl) => {
-    const directoryPath = urlToFileSystemPath(directoryUrl)
+    const directoryPath = urlToFileSystemPath(directoryUrl);
     const optionsFromRecursive = recursive
       ? {
           handleNotEmptyError: async () => {
-            await removeDirectoryContent(directoryUrl)
-            await visitDirectory(directoryUrl)
+            await removeDirectoryContent(directoryUrl);
+            await visitDirectory(directoryUrl);
           },
         }
-      : {}
-    removeDirectoryOperation.throwIfAborted()
+      : {};
+    removeDirectoryOperation.throwIfAborted();
     await removeDirectoryNaive(directoryPath, {
       ...optionsFromRecursive,
       // Workaround for https://github.com/joyent/node/issues/4337
@@ -167,64 +167,64 @@ const removeDirectory = async (
             handlePermissionError: async (error) => {
               console.error(
                 `trying to fix windows EPERM after readir on ${directoryPath}`,
-              )
+              );
 
-              let openOrCloseError
+              let openOrCloseError;
               try {
-                const fd = openSync(directoryPath)
-                closeSync(fd)
+                const fd = openSync(directoryPath);
+                closeSync(fd);
               } catch (e) {
-                openOrCloseError = e
+                openOrCloseError = e;
               }
 
               if (openOrCloseError) {
                 if (openOrCloseError.code === "ENOENT") {
-                  return
+                  return;
                 }
                 console.error(
                   `error while trying to fix windows EPERM after readir on ${directoryPath}: ${openOrCloseError.stack}`,
-                )
-                throw error
+                );
+                throw error;
               }
 
               await removeDirectoryNaive(directoryPath, {
                 ...optionsFromRecursive,
-              })
+              });
             },
           }
         : {}),
-    })
-  }
+    });
+  };
 
   const removeDirectoryContent = async (directoryUrl) => {
-    removeDirectoryOperation.throwIfAborted()
-    const names = await readDirectory(directoryUrl)
+    removeDirectoryOperation.throwIfAborted();
+    const names = await readDirectory(directoryUrl);
     await Promise.all(
       names.map(async (name) => {
-        const url = resolveUrl(name, directoryUrl)
-        await visit(url)
+        const url = resolveUrl(name, directoryUrl);
+        await visit(url);
       }),
-    )
-  }
+    );
+  };
 
   const visitFile = async (fileUrl) => {
-    await removeNonDirectory(fileUrl, { maxRetries, retryDelay })
-  }
+    await removeNonDirectory(fileUrl, { maxRetries, retryDelay });
+  };
 
   const visitSymbolicLink = async (symbolicLinkUrl) => {
-    await removeNonDirectory(symbolicLinkUrl, { maxRetries, retryDelay })
-  }
+    await removeNonDirectory(symbolicLinkUrl, { maxRetries, retryDelay });
+  };
 
   try {
     if (onlyContent) {
-      await removeDirectoryContent(rootDirectoryUrl)
+      await removeDirectoryContent(rootDirectoryUrl);
     } else {
-      await visitDirectory(rootDirectoryUrl)
+      await visitDirectory(rootDirectoryUrl);
     }
   } finally {
-    await removeDirectoryOperation.end()
+    await removeDirectoryOperation.end();
   }
-}
+};
 
 const removeDirectoryNaive = (
   directoryPath,
@@ -234,9 +234,9 @@ const removeDirectoryNaive = (
     rmdir(directoryPath, (error, lstatObject) => {
       if (error) {
         if (handlePermissionError && error.code === "EPERM") {
-          resolve(handlePermissionError(error))
+          resolve(handlePermissionError(error));
         } else if (error.code === "ENOENT") {
-          resolve()
+          resolve();
         } else if (
           handleNotEmptyError &&
           // linux os
@@ -244,13 +244,13 @@ const removeDirectoryNaive = (
             // SunOS
             error.code === "EEXIST")
         ) {
-          resolve(handleNotEmptyError(error))
+          resolve(handleNotEmptyError(error));
         } else {
-          reject(error)
+          reject(error);
         }
       } else {
-        resolve(lstatObject)
+        resolve(lstatObject);
       }
-    })
-  })
-}
+    });
+  });
+};

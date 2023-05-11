@@ -1,1 +1,1 @@
-import "./js_syntax_error.js"
+import "./js_syntax_error.js";

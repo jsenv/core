@@ -1,47 +1,47 @@
 export const fetchAndEvalUsingScript = async (src) => {
   return new Promise((resolve, reject) => {
-    const script = document.createElement("script")
+    const script = document.createElement("script");
 
     const onwindowerror = (errorEvent) => {
       if (errorEvent.filename === src) {
-        cleanup()
-        reject(errorEvent.error)
+        cleanup();
+        reject(errorEvent.error);
       }
-    }
+    };
 
     const onscripterror = () => {
-      cleanup()
-      reject(new Error(`Error loading ${src}`))
-    }
+      cleanup();
+      reject(new Error(`Error loading ${src}`));
+    };
 
     const onscriptload = () => {
-      cleanup()
-      resolve()
-    }
+      cleanup();
+      resolve();
+    };
 
     const cleanup = () => {
-      removeOnWindowError()
-      removeOnScriptError()
-      removeOnScriptLoad()
-      document.head.removeChild(script)
-    }
+      removeOnWindowError();
+      removeOnScriptError();
+      removeOnScriptLoad();
+      document.head.removeChild(script);
+    };
 
     const removeOnWindowError = () =>
-      window.removeEventListener("error", onwindowerror)
+      window.removeEventListener("error", onwindowerror);
 
     const removeOnScriptError = () =>
-      script.removeEventListener("error", onscripterror)
+      script.removeEventListener("error", onscripterror);
 
     const removeOnScriptLoad = () =>
-      script.removeEventListener("load", onscriptload)
+      script.removeEventListener("load", onscriptload);
 
-    window.addEventListener("error", onwindowerror)
-    script.addEventListener("error", onscripterror)
-    script.addEventListener("load", onscriptload)
-    script.charset = "utf-8"
-    script.crossOrigin = "anonymous"
-    script.src = src
+    window.addEventListener("error", onwindowerror);
+    script.addEventListener("error", onscripterror);
+    script.addEventListener("load", onscriptload);
+    script.charset = "utf-8";
+    script.crossOrigin = "anonymous";
+    script.src = src;
 
-    document.head.appendChild(script)
-  })
-}
+    document.head.appendChild(script);
+  });
+};

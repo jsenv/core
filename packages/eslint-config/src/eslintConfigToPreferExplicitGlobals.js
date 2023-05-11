@@ -44,4 +44,4 @@ export const eslintConfigToPreferExplicitGlobals = {
     unescape: "off",
     valueOf: "off",
   },
-}
+};

@@ -1,12 +1,12 @@
-const { resolve } = require("path")
+const { resolve } = require("path");
 const {
   composeEslintConfig,
   eslintConfigForPrettier,
   jsenvEslintRules,
   eslintConfigBase,
-} = require("@jsenv/eslint-config")
+} = require("@jsenv/eslint-config");
 
-const babelConfigFilePath = resolve(__dirname, "./babel.config.cjs")
+const babelConfigFilePath = resolve(__dirname, "./babel.config.cjs");
 
 const eslintConfig = composeEslintConfig(
   eslintConfigBase,
@@ -22,6 +22,6 @@ const eslintConfig = composeEslintConfig(
     rules: jsenvEslintRules,
   },
   eslintConfigForPrettier,
-)
+);
 
-module.exports = eslintConfig
+module.exports = eslintConfig;

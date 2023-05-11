@@ -1,14 +1,14 @@
-import { ANSI, byteAsFileSize, distributePercentages } from "@jsenv/log"
+import { ANSI, byteAsFileSize, distributePercentages } from "@jsenv/log";
 
 export const createUrlGraphSummary = (
   urlGraph,
   { title = "graph summary" } = {},
 ) => {
-  const graphReport = createUrlGraphReport(urlGraph)
+  const graphReport = createUrlGraphReport(urlGraph);
   return `--- ${title} ---  
 ${createRepartitionMessage(graphReport)}
---------------------`
-}
+--------------------`;
+};
 
 const createUrlGraphReport = (urlGraph) => {
   const countGroups = {
@@ -19,7 +19,7 @@ const createUrlGraphReport = (urlGraph) => {
     json: 0,
     other: 0,
     total: 0,
-  }
+  };
   const sizeGroups = {
     sourcemaps: 0,
     html: 0,
@@ -28,70 +28,70 @@ const createUrlGraphReport = (urlGraph) => {
     json: 0,
     other: 0,
     total: 0,
-  }
+  };
   urlGraph.urlInfoMap.forEach((urlInfo) => {
     if (urlInfo.url.startsWith("data:")) {
-      return
+      return;
     }
     // ignore:
     // - inline files: they are already taken into account in the file where they appear
     // - ignored files: we don't know their content
     if (urlInfo.isInline || !urlInfo.shouldHandle) {
-      return
+      return;
     }
     // file loaded via import assertion are already inside the graph
     // their js module equivalent are ignored to avoid counting it twice
     // in the build graph the file targeted by import assertion will likely be gone
     // and only the js module remain (likely bundled)
-    const urlObject = new URL(urlInfo.url)
+    const urlObject = new URL(urlInfo.url);
     if (
       urlObject.searchParams.has("as_json_module") ||
       urlObject.searchParams.has("as_css_module") ||
       urlObject.searchParams.has("as_text_module")
     ) {
-      return
+      return;
     }
-    const urlContentSize = Buffer.byteLength(urlInfo.content)
-    const category = determineCategory(urlInfo)
+    const urlContentSize = Buffer.byteLength(urlInfo.content);
+    const category = determineCategory(urlInfo);
     if (category === "sourcemap") {
-      countGroups.sourcemaps++
-      sizeGroups.sourcemaps += urlContentSize
-      return
+      countGroups.sourcemaps++;
+      sizeGroups.sourcemaps += urlContentSize;
+      return;
     }
-    countGroups.total++
-    sizeGroups.total += urlContentSize
+    countGroups.total++;
+    sizeGroups.total += urlContentSize;
     if (category === "html") {
-      countGroups.html++
-      sizeGroups.html += urlContentSize
-      return
+      countGroups.html++;
+      sizeGroups.html += urlContentSize;
+      return;
     }
     if (category === "css") {
-      countGroups.css++
-      sizeGroups.css += urlContentSize
-      return
+      countGroups.css++;
+      sizeGroups.css += urlContentSize;
+      return;
     }
     if (category === "js") {
-      countGroups.js++
-      sizeGroups.js += urlContentSize
-      return
+      countGroups.js++;
+      sizeGroups.js += urlContentSize;
+      return;
     }
     if (category === "json") {
-      countGroups.json++
-      sizeGroups.json += urlContentSize
-      return
+      countGroups.json++;
+      sizeGroups.json += urlContentSize;
+      return;
     }
-    countGroups.other++
-    sizeGroups.other += urlContentSize
-    return
-  })
+    countGroups.other++;
+    sizeGroups.other += urlContentSize;
+    return;
+  });
 
-  const sizesToDistribute = {}
+  const sizesToDistribute = {};
   Object.keys(sizeGroups).forEach((groupName) => {
     if (groupName !== "sourcemaps" && groupName !== "total") {
-      sizesToDistribute[groupName] = sizeGroups[groupName]
+      sizesToDistribute[groupName] = sizeGroups[groupName];
     }
-  })
-  const percentageGroups = distributePercentages(sizesToDistribute)
+  });
+  const percentageGroups = distributePercentages(sizesToDistribute);
 
   return {
     // sourcemaps are special, there size are ignored
@@ -132,27 +132,27 @@ const createUrlGraphReport = (urlGraph) => {
       size: sizeGroups.total,
       percentage: 100,
     },
-  }
-}
+  };
+};
 
 const determineCategory = (urlInfo) => {
   if (urlInfo.type === "sourcemap") {
-    return "sourcemap"
+    return "sourcemap";
   }
   if (urlInfo.type === "html") {
-    return "html"
+    return "html";
   }
   if (urlInfo.type === "css") {
-    return "css"
+    return "css";
   }
   if (urlInfo.type === "js_module" || urlInfo.type === "js_classic") {
-    return "js"
+    return "js";
   }
   if (urlInfo.type === "json") {
-    return "json"
+    return "json";
   }
-  return "other"
-}
+  return "other";
+};
 
 const createRepartitionMessage = ({ html, css, js, json, other, total }) => {
   const addPart = (name, { count, size, percentage }) => {
@@ -160,10 +160,10 @@ const createRepartitionMessage = ({ html, css, js, json, other, total }) => {
       `${ANSI.color(`${name}:`, ANSI.GREY)} ${count} (${byteAsFileSize(
         size,
       )} / ${percentage} %)`,
-    )
-  }
+    );
+  };
 
-  const parts = []
+  const parts = [];
   // if (sourcemaps.count) {
   //   parts.push(
   //     `${ANSI.color(`sourcemaps:`, ANSI.GREY)} ${
@@ -172,21 +172,21 @@ const createRepartitionMessage = ({ html, css, js, json, other, total }) => {
   //   )
   // }
   if (html.count) {
-    addPart("html ", html)
+    addPart("html ", html);
   }
   if (css.count) {
-    addPart("css  ", css)
+    addPart("css  ", css);
   }
   if (js.count) {
-    addPart("js   ", js)
+    addPart("js   ", js);
   }
   if (json.count) {
-    addPart("json ", json)
+    addPart("json ", json);
   }
   if (other.count) {
-    addPart("other", other)
+    addPart("other", other);
   }
-  addPart("total", total)
+  addPart("total", total);
   return `- ${parts.join(`
-- `)}`
-}
+- `)}`;
+};

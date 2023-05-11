@@ -1,8 +1,8 @@
 import {
   preNewLineAndIndentation,
   wrapNewLineAndIndentation,
-} from "../utils.js"
-import { inspectConstructor } from "./constructor.js"
+} from "../utils.js";
+import { inspectConstructor } from "./constructor.js";
 
 export const inspectObject = (
   value,
@@ -17,34 +17,34 @@ export const inspectObject = (
     useNew,
   },
 ) => {
-  if (seen.indexOf(value) > -1) return "Symbol.for('circular')"
+  if (seen.indexOf(value) > -1) return "Symbol.for('circular')";
 
-  seen.push(value)
+  seen.push(value);
 
-  const propertySourceArray = []
+  const propertySourceArray = [];
   Object.getOwnPropertyNames(value).forEach((propertyName) => {
-    const propertyNameAsNumber = parseInt(propertyName, 10)
+    const propertyNameAsNumber = parseInt(propertyName, 10);
     const propertyNameSource = nestedInspect(
       Number.isInteger(propertyNameAsNumber)
         ? propertyNameAsNumber
         : propertyName,
-    )
+    );
     propertySourceArray.push({
       nameOrSymbolSource: propertyNameSource,
       valueSource: nestedInspect(value[propertyName], { seen }),
-    })
-  })
+    });
+  });
   Object.getOwnPropertySymbols(value).forEach((symbol) => {
     propertySourceArray.push({
       nameOrSymbolSource: `[${nestedInspect(symbol)}]`,
       valueSource: nestedInspect(value[symbol], { seen }),
-    })
-  })
+    });
+  });
 
-  let propertiesSource = ""
+  let propertiesSource = "";
   propertySourceArray.forEach(({ nameOrSymbolSource, valueSource }, index) => {
     if (index === 0) {
-      propertiesSource += `${nameOrSymbolSource}: ${valueSource}`
+      propertiesSource += `${nameOrSymbolSource}: ${valueSource}`;
     } else {
       propertiesSource += `,${preNewLineAndIndentation(
         `${nameOrSymbolSource}: ${valueSource}`,
@@ -53,26 +53,26 @@ export const inspectObject = (
           indentUsingTab,
           indentSize,
         },
-      )}`
+      )}`;
     }
-  })
+  });
 
-  let objectSource
+  let objectSource;
   if (propertiesSource.length) {
     objectSource = `${wrapNewLineAndIndentation(propertiesSource, {
       depth,
       indentUsingTab,
       indentSize,
-    })}`
+    })}`;
   } else {
-    objectSource = ""
+    objectSource = "";
   }
 
   if (objectConstructor) {
-    objectSource = `Object({${objectSource}})`
+    objectSource = `Object({${objectSource}})`;
   } else {
-    objectSource = `{${objectSource}}`
+    objectSource = `{${objectSource}}`;
   }
 
-  return inspectConstructor(objectSource, { parenthesis, useNew })
-}
+  return inspectConstructor(objectSource, { parenthesis, useNew });
+};

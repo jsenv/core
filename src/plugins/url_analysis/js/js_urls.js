@@ -1,7 +1,7 @@
-import { createMagicSource } from "@jsenv/sourcemap"
-import { parseJsUrls } from "@jsenv/ast"
+import { createMagicSource } from "@jsenv/sourcemap";
+import { parseJsUrls } from "@jsenv/ast";
 
-import { isWebWorkerUrlInfo } from "@jsenv/core/src/kitchen/web_workers.js"
+import { isWebWorkerUrlInfo } from "@jsenv/core/src/kitchen/web_workers.js";
 
 export const parseAndTransformJsUrls = async (urlInfo, context) => {
   const jsMentions = await parseJsUrls({
@@ -9,15 +9,15 @@ export const parseAndTransformJsUrls = async (urlInfo, context) => {
     url: urlInfo.originalUrl,
     isJsModule: urlInfo.type === "js_module",
     isWebWorker: isWebWorkerUrlInfo(urlInfo),
-  })
-  const actions = []
-  const magicSource = createMagicSource(urlInfo.content)
+  });
+  const actions = [];
+  const magicSource = createMagicSource(urlInfo.content);
   for (const jsMention of jsMentions) {
     if (
       jsMention.subtype === "import_static" ||
       jsMention.subtype === "import_dynamic"
     ) {
-      urlInfo.data.usesImport = true
+      urlInfo.data.usesImport = true;
     }
     const [reference] = context.referenceUtils.found({
       node: jsMention.node,
@@ -42,24 +42,24 @@ export const parseAndTransformJsUrls = async (urlInfo, context) => {
       assert: jsMention.assert,
       assertNode: jsMention.assertNode,
       typePropertyNode: jsMention.typePropertyNode,
-    })
+    });
     actions.push(async () => {
       const replacement = await context.referenceUtils.readGeneratedSpecifier(
         reference,
-      )
+      );
       magicSource.replace({
         start: jsMention.start,
         end: jsMention.end,
         replacement,
-      })
+      });
       if (reference.mutation) {
-        reference.mutation(magicSource)
+        reference.mutation(magicSource);
       }
-    })
+    });
   }
   if (actions.length > 0) {
-    await Promise.all(actions.map((action) => action()))
+    await Promise.all(actions.map((action) => action()));
   }
-  const { content, sourcemap } = magicSource.toContentAndSourcemap()
-  return { content, sourcemap }
-}
+  const { content, sourcemap } = magicSource.toContentAndSourcemap();
+  return { content, sourcemap };
+};

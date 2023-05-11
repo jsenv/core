@@ -1,4 +1,4 @@
-import { ANSI } from "./ansi.js"
+import { ANSI } from "./ansi.js";
 
 export const startSpinner = ({
   log,
@@ -10,63 +10,63 @@ export const startSpinner = ({
   render = () => "",
   effect = () => {},
 }) => {
-  let frameIndex = 0
-  let interval
-  let running = true
+  let frameIndex = 0;
+  let interval;
+  let running = true;
 
   const spinner = {
     message: undefined,
-  }
+  };
 
   const update = (message) => {
-    spinner.message = running ? `${frames[frameIndex]} ${message}` : message
-    return spinner.message
-  }
-  spinner.update = update
+    spinner.message = running ? `${frames[frameIndex]} ${message}` : message;
+    return spinner.message;
+  };
+  spinner.update = update;
 
-  let cleanup
+  let cleanup;
   if (ANSI.supported) {
-    running = true
-    cleanup = effect()
-    log.write(update(render()))
+    running = true;
+    cleanup = effect();
+    log.write(update(render()));
 
     interval = setInterval(() => {
-      frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1
+      frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
       log.dynamicWrite(({ outputFromOutside }) => {
         if (outputFromOutside && stopOnWriteFromOutside) {
-          stop()
-          return ""
+          stop();
+          return "";
         }
-        return update(render())
-      })
-    }, 1000 / fps)
+        return update(render());
+      });
+    }, 1000 / fps);
     if (!keepProcessAlive) {
-      interval.unref()
+      interval.unref();
     }
   } else {
-    log.write(update(render()))
+    log.write(update(render()));
   }
 
   const stop = (message) => {
-    running = false
+    running = false;
     if (interval) {
-      clearInterval(interval)
-      interval = null
+      clearInterval(interval);
+      interval = null;
     }
     if (cleanup) {
-      cleanup()
-      cleanup = null
+      cleanup();
+      cleanup = null;
     }
     if (log && message) {
-      log.write(update(message))
-      log = null
+      log.write(update(message));
+      log = null;
     }
-  }
-  spinner.stop = stop
+  };
+  spinner.stop = stop;
 
   if (stopOnVerticalOverflow) {
-    log.onVerticalOverflow = stop
+    log.onVerticalOverflow = stop;
   }
 
-  return spinner
-}
+  return spinner;
+};

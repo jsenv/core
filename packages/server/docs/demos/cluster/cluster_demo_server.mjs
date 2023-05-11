@@ -1,4 +1,4 @@
-import { startServer, fetchFileSystem } from "@jsenv/server"
+import { startServer, fetchFileSystem } from "@jsenv/server";
 
 await startServer({
   services: [
@@ -6,8 +6,8 @@ await startServer({
       handleRequest: (request) => {
         return fetchFileSystem(
           new URL(request.resource.slice(1), import.meta.url),
-        )
+        );
       },
     },
   ],
-})
+});

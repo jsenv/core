@@ -1,26 +1,26 @@
-import crypto from "node:crypto"
+import crypto from "node:crypto";
 
 export const isSupportedAlgorithm = (algo) => {
-  return SUPPORTED_ALGORITHMS.includes(algo)
-}
+  return SUPPORTED_ALGORITHMS.includes(algo);
+};
 
 // https://www.w3.org/TR/SRI/#priority
 export const getPrioritizedHashFunction = (firstAlgo, secondAlgo) => {
-  const firstIndex = SUPPORTED_ALGORITHMS.indexOf(firstAlgo)
-  const secondIndex = SUPPORTED_ALGORITHMS.indexOf(secondAlgo)
+  const firstIndex = SUPPORTED_ALGORITHMS.indexOf(firstAlgo);
+  const secondIndex = SUPPORTED_ALGORITHMS.indexOf(secondAlgo);
   if (firstIndex === secondIndex) {
-    return ""
+    return "";
   }
   if (firstIndex < secondIndex) {
-    return secondAlgo
+    return secondAlgo;
   }
-  return firstAlgo
-}
+  return firstAlgo;
+};
 
 export const applyAlgoToRepresentationData = (algo, data) => {
-  const base64Value = crypto.createHash(algo).update(data).digest("base64")
-  return base64Value
-}
+  const base64Value = crypto.createHash(algo).update(data).digest("base64");
+  return base64Value;
+};
 
 // keep this ordered by collision resistance as it is also used by "getPrioritizedHashFunction"
-const SUPPORTED_ALGORITHMS = ["sha256", "sha384", "sha512"]
+const SUPPORTED_ALGORITHMS = ["sha256", "sha384", "sha512"];

@@ -1,4 +1,4 @@
-import { executeTestPlan, nodeWorkerThread } from "@jsenv/test"
+import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
 
 await executeTestPlan({
   logLevel: "info",
@@ -13,4 +13,4 @@ await executeTestPlan({
       },
     },
   },
-})
+});

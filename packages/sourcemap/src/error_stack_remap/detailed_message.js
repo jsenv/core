@@ -1,9 +1,9 @@
 // duplicated from @jsenv/log to avoid the dependency
 export const createDetailedMessage = (message, details = {}) => {
-  let string = `${message}`
+  let string = `${message}`;
 
   Object.keys(details).forEach((key) => {
-    const value = details[key]
+    const value = details[key];
     string += `
   --- ${key} ---
   ${
@@ -11,8 +11,8 @@ export const createDetailedMessage = (message, details = {}) => {
       ? value.join(`
   `)
       : value
-  }`
-  })
+  }`;
+  });
 
-  return string
-}
+  return string;
+};

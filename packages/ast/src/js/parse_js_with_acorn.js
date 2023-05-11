@@ -1,10 +1,10 @@
-import { createJsParseError } from "./js_parse_error.js"
+import { createJsParseError } from "./js_parse_error.js";
 
-let AcornParser
-let _getLineInfo
+let AcornParser;
+let _getLineInfo;
 
 export const parseJsWithAcorn = async ({ js, url, isJsModule }) => {
-  await initAcornParser()
+  await initAcornParser();
   try {
     // https://github.com/acornjs/acorn/tree/master/acorn#interface
     const jsAst = AcornParser.parse(js, {
@@ -12,30 +12,30 @@ export const parseJsWithAcorn = async ({ js, url, isJsModule }) => {
       allowAwaitOutsideFunction: true,
       sourceType: isJsModule ? "module" : "script",
       ecmaVersion: 2022,
-    })
-    return jsAst
+    });
+    return jsAst;
   } catch (e) {
     if (e && e.name === "SyntaxError") {
-      const { line, column } = _getLineInfo(js, e.raisedAt)
+      const { line, column } = _getLineInfo(js, e.raisedAt);
       throw createJsParseError({
         message: e.message,
         reasonCode: e.message,
         url,
         line,
         column,
-      })
+      });
     }
-    throw e
+    throw e;
   }
-}
+};
 
 const initAcornParser = async () => {
   if (AcornParser) {
-    return
+    return;
   }
-  const { Parser, getLineInfo } = await import("acorn")
-  const { importAssertions } = await import("acorn-import-assertions")
+  const { Parser, getLineInfo } = await import("acorn");
+  const { importAssertions } = await import("acorn-import-assertions");
 
-  AcornParser = Parser.extend(importAssertions)
-  _getLineInfo = getLineInfo
-}
+  AcornParser = Parser.extend(importAssertions);
+  _getLineInfo = getLineInfo;
+};

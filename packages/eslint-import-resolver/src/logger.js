@@ -1,8 +1,8 @@
-const LOG_LEVEL_OFF = "off"
-const LOG_LEVEL_DEBUG = "debug"
-const LOG_LEVEL_INFO = "info"
-const LOG_LEVEL_WARN = "warn"
-const LOG_LEVEL_ERROR = "error"
+const LOG_LEVEL_OFF = "off";
+const LOG_LEVEL_DEBUG = "debug";
+const LOG_LEVEL_INFO = "info";
+const LOG_LEVEL_WARN = "warn";
+const LOG_LEVEL_ERROR = "error";
 
 export const createLogger = ({ logLevel = LOG_LEVEL_INFO } = {}) => {
   if (logLevel === LOG_LEVEL_DEBUG) {
@@ -13,7 +13,7 @@ export const createLogger = ({ logLevel = LOG_LEVEL_INFO } = {}) => {
       info,
       warn,
       error,
-    }
+    };
   }
   if (logLevel === LOG_LEVEL_INFO) {
     return {
@@ -23,7 +23,7 @@ export const createLogger = ({ logLevel = LOG_LEVEL_INFO } = {}) => {
       info,
       warn,
       error,
-    }
+    };
   }
   if (logLevel === LOG_LEVEL_WARN) {
     return {
@@ -33,7 +33,7 @@ export const createLogger = ({ logLevel = LOG_LEVEL_INFO } = {}) => {
       info: infoDisabled,
       warn,
       error,
-    }
+    };
   }
   if (logLevel === LOG_LEVEL_ERROR) {
     return {
@@ -43,7 +43,7 @@ export const createLogger = ({ logLevel = LOG_LEVEL_INFO } = {}) => {
       info: infoDisabled,
       warn: warnDisabled,
       error,
-    }
+    };
   }
   if (logLevel === LOG_LEVEL_OFF) {
     return {
@@ -53,7 +53,7 @@ export const createLogger = ({ logLevel = LOG_LEVEL_INFO } = {}) => {
       info: infoDisabled,
       warn: warnDisabled,
       error: errorDisabled,
-    }
+    };
   }
   throw new Error(`unexpected logLevel.
 --- logLevel ---
@@ -63,21 +63,21 @@ ${LOG_LEVEL_OFF}
 ${LOG_LEVEL_ERROR}
 ${LOG_LEVEL_WARN}
 ${LOG_LEVEL_INFO}
-${LOG_LEVEL_DEBUG}`)
-}
+${LOG_LEVEL_DEBUG}`);
+};
 
-const debug = (...args) => console.debug(...args)
+const debug = (...args) => console.debug(...args);
 
-const debugDisabled = () => {}
+const debugDisabled = () => {};
 
-const info = (...args) => console.info(...args)
+const info = (...args) => console.info(...args);
 
-const infoDisabled = () => {}
+const infoDisabled = () => {};
 
-const warn = (...args) => console.warn(...args)
+const warn = (...args) => console.warn(...args);
 
-const warnDisabled = () => {}
+const warnDisabled = () => {};
 
-const error = (...args) => console.error(...args)
+const error = (...args) => console.error(...args);
 
-const errorDisabled = () => {}
+const errorDisabled = () => {};

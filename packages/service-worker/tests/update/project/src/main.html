@@ -124,12 +124,12 @@
     </div>
     <script>
       window.readyPromise = new Promise((resolve) => {
-        window.resolveReadyPromise = resolve
-      })
+        window.resolveReadyPromise = resolve;
+      });
     </script>
     <script type="module">
-      await import("./main.js")
-      window.resolveReadyPromise()
+      await import("./main.js");
+      window.resolveReadyPromise();
     </script>
   </body>
 </html>

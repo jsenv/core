@@ -1,23 +1,23 @@
-import { assert } from "@jsenv/assert"
-import { resolveUrl, urlToFileSystemPath } from "@jsenv/urls"
+import { assert } from "@jsenv/assert";
+import { resolveUrl, urlToFileSystemPath } from "@jsenv/urls";
 import {
   ensureEmptyDirectory,
   writeFile,
   writeSymbolicLink,
-} from "@jsenv/filesystem"
+} from "@jsenv/filesystem";
 
-import * as resolver from "@jsenv/eslint-import-resolver"
+import * as resolver from "@jsenv/eslint-import-resolver";
 
-const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url)
+const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url);
 
 // basic
 {
-  await ensureEmptyDirectory(tempDirectoryUrl)
-  const importerFileUrl = resolveUrl("project/importer", tempDirectoryUrl)
-  const resolvedFileUrl = resolveUrl("project/file.js", tempDirectoryUrl)
-  const rootDirectoryUrl = resolveUrl("project", tempDirectoryUrl)
-  await writeFile(importerFileUrl)
-  await writeFile(resolvedFileUrl)
+  await ensureEmptyDirectory(tempDirectoryUrl);
+  const importerFileUrl = resolveUrl("project/importer", tempDirectoryUrl);
+  const resolvedFileUrl = resolveUrl("project/file.js", tempDirectoryUrl);
+  const rootDirectoryUrl = resolveUrl("project", tempDirectoryUrl);
+  await writeFile(importerFileUrl);
+  await writeFile(resolvedFileUrl);
 
   const actual = resolver.resolve(
     "./File.js",
@@ -26,7 +26,7 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url)
       rootDirectoryUrl,
       logLevel: "error",
     },
-  )
+  );
   const expected = {
     found: false,
     path: urlToFileSystemPath(
@@ -35,23 +35,23 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url)
         tempDirectoryUrl,
       ),
     ),
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }
 
 // symlink
 {
-  await ensureEmptyDirectory(tempDirectoryUrl)
-  const rootDirectoryUrl = resolveUrl("project", tempDirectoryUrl)
-  const importerFileUrl = resolveUrl("project/src/file.js", tempDirectoryUrl)
-  const fileUrl = resolveUrl("project/packages/NAME/Dep.js", tempDirectoryUrl)
-  const linkUrl = resolveUrl("project/node_modules/NAME", tempDirectoryUrl)
-  await writeFile(importerFileUrl)
-  await writeFile(fileUrl)
+  await ensureEmptyDirectory(tempDirectoryUrl);
+  const rootDirectoryUrl = resolveUrl("project", tempDirectoryUrl);
+  const importerFileUrl = resolveUrl("project/src/file.js", tempDirectoryUrl);
+  const fileUrl = resolveUrl("project/packages/NAME/Dep.js", tempDirectoryUrl);
+  const linkUrl = resolveUrl("project/node_modules/NAME", tempDirectoryUrl);
+  await writeFile(importerFileUrl);
+  await writeFile(fileUrl);
   await writeSymbolicLink({
     from: linkUrl,
     to: resolveUrl("project/packages/NAME", tempDirectoryUrl),
-  })
+  });
 
   const actual = resolver.resolve(
     "../node_modules/name/dep.js",
@@ -60,7 +60,7 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url)
       rootDirectoryUrl,
       logLevel: "error",
     },
-  )
+  );
   const expected = {
     found: false,
     path: urlToFileSystemPath(
@@ -71,6 +71,6 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url)
         tempDirectoryUrl,
       ),
     ),
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }

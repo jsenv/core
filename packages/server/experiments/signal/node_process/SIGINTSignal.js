@@ -4,11 +4,11 @@
  * may also be sent by vscode https://github.com/Microsoft/vscode-node-debug/issues/1#issuecomment-405185642
  */
 
-import { Signal } from "../signal.js"
+import { Signal } from "../signal.js";
 
 export const SIGINTSignal = Signal.from((sigint) => {
-  process.once("SIGINT", sigint)
+  process.once("SIGINT", sigint);
   return () => {
-    process.removeListener("SIGINT", sigint)
-  }
-})
+    process.removeListener("SIGINT", sigint);
+  };
+});

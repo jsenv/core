@@ -1,8 +1,8 @@
-import { Signal } from "../signal.js"
+import { Signal } from "../signal.js";
 
 export const exitSignal = Signal.from((exit) => {
-  process.on("exit", exit)
+  process.on("exit", exit);
   return () => {
-    process.removeListener("exit", exit)
-  }
-})
+    process.removeListener("exit", exit);
+  };
+});

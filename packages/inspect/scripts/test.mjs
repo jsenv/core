@@ -4,7 +4,7 @@ import {
   firefox,
   webkit,
   nodeWorkerThread,
-} from "@jsenv/test"
+} from "@jsenv/test";
 
 await executeTestPlan({
   rootDirectoryUrl: new URL("../src/", import.meta.url),
@@ -36,4 +36,4 @@ await executeTestPlan({
   failFast: process.argv.includes("--workspace"),
   logShortForCompletedExecutions: true,
   logMergeForCompletedExecutions: process.argv.includes("--workspace"),
-})
+});

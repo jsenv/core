@@ -1,16 +1,16 @@
-import { assert } from "@jsenv/assert"
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
-import { ensureEmptyDirectory } from "@jsenv/filesystem"
-import { build } from "@jsenv/core"
-import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
-import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js"
+import { assert } from "@jsenv/assert";
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
+import { ensureEmptyDirectory } from "@jsenv/filesystem";
+import { build } from "@jsenv/core";
+import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
+import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
-import { plugins } from "./jsenv_config.mjs"
+import { plugins } from "./jsenv_config.mjs";
 
 const test = async (params) => {
   await ensureEmptyDirectory(
     new URL("./client/.jsenv/cjs_to_esm", import.meta.url),
-  )
+  );
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -21,28 +21,28 @@ const test = async (params) => {
     plugins: [...plugins, jsenvPluginBundling()],
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
-  })
+  });
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
-  })
+  });
   const { returnValue } = await executeInBrowser({
     url: `${server.origin}/main.html`,
     /* eslint-disable no-undef */
     pageFunction: () => window.resultPromise,
     /* eslint-enable no-undef */
-  })
-  const actual = returnValue
+  });
+  const actual = returnValue;
   const expected = {
     spanContentAfterIncrement: "1",
     spanContentAfterDecrement: "0",
-  }
-  assert({ actual, expected })
-}
+  };
+  assert({ actual, expected });
+};
 
 // sometimes timeout on windows
 if (process.platform !== "win32") {
   // support for <script type="module">
-  await test({ runtimeCompat: { chrome: "64" } })
+  await test({ runtimeCompat: { chrome: "64" } });
   // no support for <script type="module">
-  await test({ runtimeCompat: { chrome: "62" } })
+  await test({ runtimeCompat: { chrome: "62" } });
 }

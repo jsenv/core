@@ -1,4 +1,4 @@
-const jsenvLogoSvgUrl = new URL("./ui/jsenv_logo.svg", import.meta.url)
+const jsenvLogoSvgUrl = new URL("./ui/jsenv_logo.svg", import.meta.url);
 
 export const injectToolbar = async ({
   toolbarUrl,
@@ -11,21 +11,21 @@ export const injectToolbar = async ({
 }) => {
   if (document.readyState !== "complete") {
     await new Promise((resolve) => {
-      window.addEventListener("load", resolve)
-    })
+      window.addEventListener("load", resolve);
+    });
   }
   await new Promise((resolve) => {
     if (window.requestIdleCallback) {
-      window.requestIdleCallback(resolve, { timeout: 400 })
+      window.requestIdleCallback(resolve, { timeout: 400 });
     } else {
-      window.requestAnimationFrame(resolve)
+      window.requestAnimationFrame(resolve);
     }
-  })
-  const placeholder = getToolbarPlaceholder()
+  });
+  const placeholder = getToolbarPlaceholder();
 
-  const iframe = document.createElement("iframe")
-  iframe.setAttribute("tabindex", -1)
-  iframe.setAttribute("allowtransparency", true)
+  const iframe = document.createElement("iframe");
+  iframe.setAttribute("tabindex", -1);
+  iframe.setAttribute("allowtransparency", true);
   // sandbox: "allow-forms allow-modals allow-pointer-lock allow-popups allow-presentation allow-same-origin allow-scripts allow-top-navigation-by-user-activation",
   // allow: "accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; microphone; midi; payment; vr",
   Object.assign(iframe.style, {
@@ -40,51 +40,51 @@ export const injectToolbar = async ({
     "transition-duration": "0",
     "transition-property": "height, visibility",
     "border": "none",
-  })
-  const iframeLoadedPromise = iframeToLoadedPromise(iframe)
-  const toolbarUrlObject = new URL(toolbarUrl, window.location.href)
-  toolbarUrlObject.searchParams.set("logLevel", logLevel)
-  toolbarUrlObject.searchParams.set("theme", theme)
+  });
+  const iframeLoadedPromise = iframeToLoadedPromise(iframe);
+  const toolbarUrlObject = new URL(toolbarUrl, window.location.href);
+  toolbarUrlObject.searchParams.set("logLevel", logLevel);
+  toolbarUrlObject.searchParams.set("theme", theme);
   if (opened) {
-    toolbarUrlObject.searchParams.set("opened", "")
+    toolbarUrlObject.searchParams.set("opened", "");
   }
   if (autoreload) {
-    toolbarUrlObject.searchParams.set("autoreload", "")
+    toolbarUrlObject.searchParams.set("autoreload", "");
   }
   if (animationsEnabled) {
-    toolbarUrlObject.searchParams.set("animationsEnabled", "")
+    toolbarUrlObject.searchParams.set("animationsEnabled", "");
   }
   if (notificationsEnabled) {
-    toolbarUrlObject.searchParams.set("notificationsEnabled", "")
+    toolbarUrlObject.searchParams.set("notificationsEnabled", "");
   }
   // set iframe src BEFORE putting it into the DOM (prevent firefox adding an history entry)
-  iframe.setAttribute("src", toolbarUrlObject.href)
-  iframe.name = "jsenv toolbar"
-  placeholder.parentNode.replaceChild(iframe, placeholder)
+  iframe.setAttribute("src", toolbarUrlObject.href);
+  iframe.name = "jsenv toolbar";
+  placeholder.parentNode.replaceChild(iframe, placeholder);
 
   const listenToolbarStateChange = (callback) => {
-    return addToolbarEventCallback(iframe, "toolbar_state_change", callback)
-  }
+    return addToolbarEventCallback(iframe, "toolbar_state_change", callback);
+  };
 
   const cleanupInitOnReady = addToolbarEventCallback(
     iframe,
     "toolbar_ready",
     () => {
-      cleanupInitOnReady()
-      sendCommandToToolbar(iframe, "initToolbar")
+      cleanupInitOnReady();
+      sendCommandToToolbar(iframe, "initToolbar");
       setTimeout(() => {
         listenToolbarStateChange(({ animationsEnabled }) => {
           if (animationsEnabled) {
-            iframe.style.transitionDuration = "300ms"
+            iframe.style.transitionDuration = "300ms";
           } else {
-            iframe.style.transitionDuration = "0s"
+            iframe.style.transitionDuration = "0s";
           }
-        })
-      })
+        });
+      });
     },
-  )
+  );
 
-  const div = document.createElement("div")
+  const div = document.createElement("div");
   div.innerHTML = `
 <div id="jsenv_toolbar_trigger" style="display:none">
   <svg id="jsenv_toolbar_trigger_icon">
@@ -130,82 +130,82 @@ export const injectToolbar = async ({
       opacity: 1;
     }
   </style>
-</div>`
-  const toolbarTrigger = div.firstElementChild
-  iframe.parentNode.appendChild(toolbarTrigger)
+</div>`;
+  const toolbarTrigger = div.firstElementChild;
+  iframe.parentNode.appendChild(toolbarTrigger);
 
-  let timer
+  let timer;
   toolbarTrigger.onmouseenter = () => {
-    toolbarTrigger.setAttribute("data-animate", "")
-    timer = setTimeout(expandToolbarTrigger, 500)
-  }
+    toolbarTrigger.setAttribute("data-animate", "");
+    timer = setTimeout(expandToolbarTrigger, 500);
+  };
   toolbarTrigger.onmouseleave = () => {
-    clearTimeout(timer)
-    collapseToolbarTrigger()
-  }
+    clearTimeout(timer);
+    collapseToolbarTrigger();
+  };
   toolbarTrigger.onfocus = () => {
-    toolbarTrigger.removeAttribute("data-animate")
-    expandToolbarTrigger()
-  }
+    toolbarTrigger.removeAttribute("data-animate");
+    expandToolbarTrigger();
+  };
   toolbarTrigger.onblur = () => {
-    toolbarTrigger.removeAttribute("data-animate")
-    clearTimeout(timer)
-    collapseToolbarTrigger()
-  }
+    toolbarTrigger.removeAttribute("data-animate");
+    clearTimeout(timer);
+    collapseToolbarTrigger();
+  };
   toolbarTrigger.onclick = () => {
-    sendCommandToToolbar(iframe, "openToolbar")
-  }
+    sendCommandToToolbar(iframe, "openToolbar");
+  };
 
   const showToolbarTrigger = () => {
-    toolbarTrigger.style.display = "block"
-  }
+    toolbarTrigger.style.display = "block";
+  };
 
   const hideToolbarTrigger = () => {
-    toolbarTrigger.style.display = "none"
-  }
+    toolbarTrigger.style.display = "none";
+  };
 
   const expandToolbarTrigger = () => {
-    toolbarTrigger.setAttribute("data-expanded", "")
-  }
+    toolbarTrigger.setAttribute("data-expanded", "");
+  };
 
   const collapseToolbarTrigger = () => {
-    toolbarTrigger.removeAttribute("data-expanded", "")
-  }
+    toolbarTrigger.removeAttribute("data-expanded", "");
+  };
 
   listenToolbarStateChange(({ opened }) => {
     if (opened) {
-      hideToolbarTrigger()
+      hideToolbarTrigger();
     } else {
-      showToolbarTrigger()
+      showToolbarTrigger();
     }
-  })
+  });
 
-  await iframeLoadedPromise
-  iframe.removeAttribute("tabindex")
+  await iframeLoadedPromise;
+  iframe.removeAttribute("tabindex");
 
-  return iframe
-}
+  return iframe;
+};
 
 const addToolbarEventCallback = (iframe, eventName, callback) => {
   const messageEventCallback = (messageEvent) => {
-    const { data } = messageEvent
+    const { data } = messageEvent;
     if (typeof data !== "object") {
-      return
+      return;
     }
-    const { __jsenv__ } = data
+    const { __jsenv__ } = data;
     if (!__jsenv__) {
-      return
+      return;
     }
     if (__jsenv__.event !== eventName) {
-      return
+      return;
     }
-    callback(__jsenv__.data)
-  }
-  window.addEventListener("message", messageEventCallback, false)
+    callback(__jsenv__.data);
+  };
+  window.addEventListener("message", messageEventCallback, false);
   return () => {
-    window.removeEventListener("message", messageEventCallback, false)
-  }
-}
+    window.removeEventListener("message", messageEventCallback, false);
+  };
+};
 
 const sendCommandToToolbar = (iframe, command, ...args) => {
   iframe.contentWindow.postMessage(
@@ -216,40 +216,40 @@ const sendCommandToToolbar = (iframe, command, ...args) => {
       },
     },
     window.origin,
-  )
-}
+  );
+};
 
 const getToolbarPlaceholder = () => {
-  const placeholder = queryPlaceholder()
+  const placeholder = queryPlaceholder();
   if (placeholder) {
     if (document.body.contains(placeholder)) {
-      return placeholder
+      return placeholder;
     }
     // otherwise iframe would not be visible because in <head>
     console.warn(
       "element with [data-jsenv-toolbar-placeholder] must be inside document.body",
-    )
-    return createTooolbarPlaceholder()
+    );
+    return createTooolbarPlaceholder();
   }
-  return createTooolbarPlaceholder()
-}
+  return createTooolbarPlaceholder();
+};
 
 const queryPlaceholder = () => {
-  return document.querySelector("[data-jsenv-toolbar-placeholder]")
-}
+  return document.querySelector("[data-jsenv-toolbar-placeholder]");
+};
 
 const createTooolbarPlaceholder = () => {
-  const placeholder = document.createElement("span")
-  document.body.appendChild(placeholder)
-  return placeholder
-}
+  const placeholder = document.createElement("span");
+  document.body.appendChild(placeholder);
+  return placeholder;
+};
 
 const iframeToLoadedPromise = (iframe) => {
   return new Promise((resolve) => {
     const onload = () => {
-      iframe.removeEventListener("load", onload, true)
-      resolve()
-    }
-    iframe.addEventListener("load", onload, true)
-  })
-}
+      iframe.removeEventListener("load", onload, true);
+      resolve();
+    };
+    iframe.addEventListener("load", onload, true);
+  });
+};

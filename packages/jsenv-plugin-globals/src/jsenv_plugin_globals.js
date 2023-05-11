@@ -1,10 +1,10 @@
-import { URL_META } from "@jsenv/url-meta"
-import { asUrlWithoutSearch } from "@jsenv/urls"
+import { URL_META } from "@jsenv/url-meta";
+import { asUrlWithoutSearch } from "@jsenv/urls";
 
-import { injectGlobals } from "./inject_globals.js"
+import { injectGlobals } from "./inject_globals.js";
 
 export const jsenvPluginGlobals = (rawAssociations) => {
-  let resolvedAssociations
+  let resolvedAssociations;
 
   return {
     name: "jsenv:globals",
@@ -13,24 +13,24 @@ export const jsenvPluginGlobals = (rawAssociations) => {
       resolvedAssociations = URL_META.resolveAssociations(
         { injector: rawAssociations },
         context.rootDirectoryUrl,
-      )
+      );
     },
     transformUrlContent: async (urlInfo, context) => {
       const { injector } = URL_META.applyAssociations({
         url: asUrlWithoutSearch(urlInfo.url),
         associations: resolvedAssociations,
-      })
+      });
       if (!injector) {
-        return null
+        return null;
       }
       if (typeof injector !== "function") {
-        throw new TypeError("injector must be a function")
+        throw new TypeError("injector must be a function");
       }
-      const globals = await injector(urlInfo, context)
+      const globals = await injector(urlInfo, context);
       if (!globals || Object.keys(globals).length === 0) {
-        return null
+        return null;
       }
-      return injectGlobals(urlInfo, globals)
+      return injectGlobals(urlInfo, globals);
     },
-  }
-}
+  };
+};

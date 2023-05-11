@@ -3,10 +3,10 @@
 ## Service worker registration
 
 ```js
-import { createServiceWorkerScript } from "@jsenv/pwa"
+import { createServiceWorkerScript } from "@jsenv/pwa";
 
-const script = createServiceWorkerScript()
-script.setRegisterPromise(window.navigator.serviceWorker.register("./sw.js"))
+const script = createServiceWorkerScript();
+script.setRegisterPromise(window.navigator.serviceWorker.register("./sw.js"));
 ```
 
 This enables service worker on your navigator.
@@ -22,22 +22,22 @@ _Inside service_worker.js:_
 ```js
 self.addEventListener("message", async ({ data, ports }) => {
   if (data === "ping") {
-    ports[0].postMessage({ status: "resolved", value: "pong" })
+    ports[0].postMessage({ status: "resolved", value: "pong" });
   }
-})
+});
 ```
 
 _Inside your website:_
 
 ```js
-import { createServiceWorkerScript } from "@jsenv/pwa"
+import { createServiceWorkerScript } from "@jsenv/pwa";
 
-const script = createServiceWorkerScript()
+const script = createServiceWorkerScript();
 await script.setRegisterPromise(
   window.navigator.serviceWorker.register("./sw.js"),
-)
-const value = await script.sendMessage("ping")
-console.log(value) // "pong"
+);
+const value = await script.sendMessage("ping");
+console.log(value); // "pong"
 ```
 
 You can use _sendMessage_ while service worker is installing, activating or activated. When a new version of the service worker scripts starts to activate, _sendMessage_ communicates with it and it's no longer possible to communicate with the old version.

@@ -1,34 +1,34 @@
-import { isStringLiteralNode } from "./helpers.js"
+import { isStringLiteralNode } from "./helpers.js";
 
 export const isSystemRegisterCall = (node) => {
-  const callee = node.callee
+  const callee = node.callee;
   return (
     callee.type === "MemberExpression" &&
     callee.object.type === "Identifier" &&
     callee.object.name === "System" &&
     callee.property.type === "Identifier" &&
     callee.property.name === "register"
-  )
-}
+  );
+};
 export const analyzeSystemRegisterCall = (node, { onUrl }) => {
-  const firstArgNode = node.arguments[0]
+  const firstArgNode = node.arguments[0];
   if (firstArgNode.type === "ArrayExpression") {
-    analyzeSystemRegisterDeps(firstArgNode, { onUrl })
-    return
+    analyzeSystemRegisterDeps(firstArgNode, { onUrl });
+    return;
   }
   if (isStringLiteralNode(firstArgNode)) {
-    const secondArgNode = node.arguments[1]
+    const secondArgNode = node.arguments[1];
     if (secondArgNode.type === "ArrayExpression") {
-      analyzeSystemRegisterDeps(secondArgNode, { onUrl })
-      return
+      analyzeSystemRegisterDeps(secondArgNode, { onUrl });
+      return;
     }
   }
-}
+};
 const analyzeSystemRegisterDeps = (node, { onUrl }) => {
-  const elements = node.elements
+  const elements = node.elements;
   elements.forEach((element) => {
     if (isStringLiteralNode(element)) {
-      const specifierNode = element
+      const specifierNode = element;
       onUrl({
         type: "js_url",
         subtype: "system_register_arg",
@@ -38,13 +38,13 @@ const analyzeSystemRegisterDeps = (node, { onUrl }) => {
         end: specifierNode.end,
         line: specifierNode.loc.start.line,
         column: specifierNode.loc.start.column,
-      })
+      });
     }
-  })
-}
+  });
+};
 
 export const isSystemImportCall = (node) => {
-  const callee = node.callee
+  const callee = node.callee;
   return (
     callee.type === "MemberExpression" &&
     callee.object.type === "Identifier" &&
@@ -54,12 +54,12 @@ export const isSystemImportCall = (node) => {
     // callee.object.name === "_context" &&
     callee.property.type === "Identifier" &&
     callee.property.name === "import"
-  )
-}
+  );
+};
 export const analyzeSystemImportCall = (node, { onUrl }) => {
-  const firstArgNode = node.arguments[0]
+  const firstArgNode = node.arguments[0];
   if (isStringLiteralNode(firstArgNode)) {
-    const specifierNode = firstArgNode
+    const specifierNode = firstArgNode;
     onUrl({
       type: "js_url",
       subtype: "system_import_arg",
@@ -69,12 +69,12 @@ export const analyzeSystemImportCall = (node, { onUrl }) => {
       end: specifierNode.end,
       line: specifierNode.loc.start.line,
       column: specifierNode.loc.start.column,
-    })
+    });
   }
-}
+};
 
 export const isSystemResolveCall = (node) => {
-  const callee = node.callee
+  const callee = node.callee;
   return (
     callee.type === "MemberExpression" &&
     callee.object.type === "MemberExpression" &&
@@ -87,12 +87,12 @@ export const isSystemResolveCall = (node) => {
     callee.object.property.name === "meta" &&
     callee.property.type === "Identifier" &&
     callee.property.name === "resolve"
-  )
-}
+  );
+};
 export const analyzeSystemResolveCall = (node, { onUrl }) => {
-  const firstArgNode = node.arguments[0]
+  const firstArgNode = node.arguments[0];
   if (isStringLiteralNode(firstArgNode)) {
-    const specifierNode = firstArgNode
+    const specifierNode = firstArgNode;
     onUrl({
       type: "js_url",
       subtype: "system_resolve_arg",
@@ -101,6 +101,6 @@ export const analyzeSystemResolveCall = (node, { onUrl }) => {
       end: specifierNode.end,
       line: specifierNode.loc.start.line,
       column: specifierNode.loc.start.column,
-    })
+    });
   }
-}
+};

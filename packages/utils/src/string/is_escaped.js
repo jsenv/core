@@ -1,12 +1,12 @@
 export const isEscaped = (i, string) => {
-  let backslashBeforeCount = 0
+  let backslashBeforeCount = 0;
   while (i--) {
-    const previousChar = string[i]
+    const previousChar = string[i];
     if (previousChar === "\\") {
-      backslashBeforeCount++
+      backslashBeforeCount++;
     }
-    break
+    break;
   }
-  const isEven = backslashBeforeCount % 2 === 0
-  return !isEven
-}
+  const isEven = backslashBeforeCount % 2 === 0;
+  return !isEven;
+};

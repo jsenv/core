@@ -1,4 +1,4 @@
-import { isIP } from "node:net"
+import { isIP } from "node:net";
 
 export const parseHostname = (hostname) => {
   if (hostname === "0.0.0.0") {
@@ -6,7 +6,7 @@ export const parseHostname = (hostname) => {
       type: "ip",
       label: "unspecified",
       version: 4,
-    }
+    };
   }
   if (
     hostname === "::" ||
@@ -16,14 +16,14 @@ export const parseHostname = (hostname) => {
       type: "ip",
       label: "unspecified",
       version: 6,
-    }
+    };
   }
   if (hostname === "127.0.0.1") {
     return {
       type: "ip",
       label: "loopback",
       version: 4,
-    }
+    };
   }
   if (
     hostname === "::1" ||
@@ -33,16 +33,16 @@ export const parseHostname = (hostname) => {
       type: "ip",
       label: "loopback",
       version: 6,
-    }
+    };
   }
-  const ipVersion = isIP(hostname)
+  const ipVersion = isIP(hostname);
   if (ipVersion === 0) {
     return {
       type: "hostname",
-    }
+    };
   }
   return {
     type: "ip",
     version: ipVersion,
-  }
-}
+  };
+};

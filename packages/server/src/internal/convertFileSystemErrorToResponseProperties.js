@@ -4,19 +4,19 @@ export const convertFileSystemErrorToResponseProperties = (error) => {
     return {
       status: 403,
       statusText: `EACCES: No permission to read file at ${error.path}`,
-    }
+    };
   }
   if (isErrorWithCode(error, "EPERM")) {
     return {
       status: 403,
       statusText: `EPERM: No permission to read file at ${error.path}`,
-    }
+    };
   }
   if (isErrorWithCode(error, "ENOENT")) {
     return {
       status: 404,
       statusText: `ENOENT: File not found at ${error.path}`,
-    }
+    };
   }
   // file access may be temporarily blocked
   // (by an antivirus scanning it because recently modified for instance)
@@ -27,7 +27,7 @@ export const convertFileSystemErrorToResponseProperties = (error) => {
       headers: {
         "retry-after": 0.01, // retry in 10ms
       },
-    }
+    };
   }
   // emfile means there is too many files currently opened
   if (isErrorWithCode(error, "EMFILE")) {
@@ -37,17 +37,17 @@ export const convertFileSystemErrorToResponseProperties = (error) => {
       headers: {
         "retry-after": 0.1, // retry in 100ms
       },
-    }
+    };
   }
   if (isErrorWithCode(error, "EISDIR")) {
     return {
       status: 500,
       statusText: `EISDIR: Unexpected directory operation at ${error.path}`,
-    }
+    };
   }
-  return null
-}
+  return null;
+};
 
 const isErrorWithCode = (error, code) => {
-  return typeof error === "object" && error.code === code
-}
+  return typeof error === "object" && error.code === code;
+};

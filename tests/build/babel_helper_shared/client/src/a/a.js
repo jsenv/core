@@ -1,10 +1,10 @@
 const getResponse = () => {
-  return [42]
-}
-const [answer] = getResponse()
+  return [42];
+};
+const [answer] = getResponse();
 
 console.log({
   ...{ answer },
-})
+});
 
-export const a = "a"
+export const a = "a";

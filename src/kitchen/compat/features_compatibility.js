@@ -217,4 +217,4 @@ export const featuresCompatMap = {
     samsung: "4",
     node: "0.12",
   },
-}
+};

@@ -1,1 +1,1 @@
-window.resolveResultPromise(42)
+window.resolveResultPromise(42);

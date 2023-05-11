@@ -8,8 +8,8 @@
  * - replaced by undefined (import.meta.dev but it's build; the goal is to ensure it's tree-shaked)
  */
 
-import { createMagicSource } from "@jsenv/sourcemap"
-import { applyBabelPlugins } from "@jsenv/ast"
+import { createMagicSource } from "@jsenv/sourcemap";
+import { applyBabelPlugins } from "@jsenv/ast";
 
 export const jsenvPluginImportMetaScenarios = () => {
   return {
@@ -22,80 +22,80 @@ export const jsenvPluginImportMetaScenarios = () => {
           !urlInfo.content.includes("import.meta.test") &&
           !urlInfo.content.includes("import.meta.build")
         ) {
-          return null
+          return null;
         }
         const { metadata } = await applyBabelPlugins({
           babelPlugins: [babelPluginMetadataImportMetaScenarios],
           urlInfo,
-        })
-        const { dev = [], build = [] } = metadata.importMetaScenarios
-        const replacements = []
+        });
+        const { dev = [], build = [] } = metadata.importMetaScenarios;
+        const replacements = [];
         const replace = (path, value) => {
-          replacements.push({ path, value })
-        }
+          replacements.push({ path, value });
+        };
         if (context.build) {
           // during build ensure replacement for tree-shaking
           dev.forEach((path) => {
-            replace(path, "undefined")
-          })
+            replace(path, "undefined");
+          });
           build.forEach((path) => {
-            replace(path, "true")
-          })
+            replace(path, "true");
+          });
         } else {
           // during dev we can let "import.meta.build" untouched
           // it will be evaluated to undefined.
           // Moreover it can be surprising to see some "undefined"
           // when source file contains "import.meta.build"
           dev.forEach((path) => {
-            replace(path, "true")
-          })
+            replace(path, "true");
+          });
         }
-        const magicSource = createMagicSource(urlInfo.content)
+        const magicSource = createMagicSource(urlInfo.content);
         replacements.forEach(({ path, value }) => {
           magicSource.replace({
             start: path.node.start,
             end: path.node.end,
             replacement: value,
-          })
-        })
-        return magicSource.toContentAndSourcemap()
+          });
+        });
+        return magicSource.toContentAndSourcemap();
       },
     },
-  }
-}
+  };
+};
 
 const babelPluginMetadataImportMetaScenarios = () => {
   return {
     name: "metadata-import-meta-scenarios",
     visitor: {
       Program(programPath, state) {
-        const importMetas = {}
+        const importMetas = {};
         programPath.traverse({
           MemberExpression(path) {
-            const { node } = path
-            const { object } = node
+            const { node } = path;
+            const { object } = node;
             if (object.type !== "MetaProperty") {
-              return
+              return;
             }
-            const { property: objectProperty } = object
+            const { property: objectProperty } = object;
             if (objectProperty.name !== "meta") {
-              return
+              return;
             }
-            const { property } = node
-            const { name } = property
-            const importMetaPaths = importMetas[name]
+            const { property } = node;
+            const { name } = property;
+            const importMetaPaths = importMetas[name];
             if (importMetaPaths) {
-              importMetaPaths.push(path)
+              importMetaPaths.push(path);
             } else {
-              importMetas[name] = [path]
+              importMetas[name] = [path];
             }
           },
-        })
+        });
         state.file.metadata.importMetaScenarios = {
           dev: importMetas.dev,
           build: importMetas.build,
-        }
+        };
       },
     },
-  }
-}
+  };
+};

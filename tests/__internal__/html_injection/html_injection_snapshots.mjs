@@ -1,7 +1,7 @@
-import { readFileSync } from "node:fs"
+import { readFileSync } from "node:fs";
 
-import { urlToRelativeUrl } from "@jsenv/urls"
-import { comparePathnames } from "@jsenv/filesystem"
+import { urlToRelativeUrl } from "@jsenv/urls";
+import { comparePathnames } from "@jsenv/filesystem";
 
 import {
   parseHtmlString,
@@ -9,14 +9,14 @@ import {
   injectHtmlNodeAsEarlyAsPossible,
   injectHtmlNode,
   createHtmlNode,
-} from "@jsenv/ast"
-import { writeSnapshotsIntoDirectory } from "@jsenv/core/tests/snapshots_directory.js"
+} from "@jsenv/ast";
+import { writeSnapshotsIntoDirectory } from "@jsenv/core/tests/snapshots_directory.js";
 
-let files = {}
+let files = {};
 const transformFixtureFile = async (fixtureFilename) => {
-  const url = new URL(`./fixtures/${fixtureFilename}`, import.meta.url)
-  const originalContent = readFileSync(url, "utf8")
-  const htmlAst = parseHtmlString(originalContent)
+  const url = new URL(`./fixtures/${fixtureFilename}`, import.meta.url);
+  const originalContent = readFileSync(url, "utf8");
+  const htmlAst = parseHtmlString(originalContent);
 
   injectHtmlNodeAsEarlyAsPossible(
     htmlAst,
@@ -25,7 +25,7 @@ const transformFixtureFile = async (fixtureFilename) => {
       textContent: `console.log('Hello world');`,
     }),
     "jsenv:test",
-  )
+  );
   injectHtmlNode(
     htmlAst,
     createHtmlNode({
@@ -34,23 +34,25 @@ const transformFixtureFile = async (fixtureFilename) => {
       textContent: `console.log('Hello again');`,
     }),
     "jsenv:test",
-  )
-  const content = stringifyHtmlAst(htmlAst, { cleanupPositionAttributes: true })
+  );
+  const content = stringifyHtmlAst(htmlAst, {
+    cleanupPositionAttributes: true,
+  });
   const relativeUrl = urlToRelativeUrl(
     url,
     new URL("./fixtures/", import.meta.url),
-  )
+  );
 
-  files[relativeUrl] = content
-  const filesSorted = {}
+  files[relativeUrl] = content;
+  const filesSorted = {};
   Object.keys(files)
     .sort(comparePathnames)
     .forEach((relativeUrl) => {
-      filesSorted[relativeUrl] = files[relativeUrl]
-    })
-  files = filesSorted
-}
+      filesSorted[relativeUrl] = files[relativeUrl];
+    });
+  files = filesSorted;
+};
 
-await transformFixtureFile("a.html")
+await transformFixtureFile("a.html");
 
-writeSnapshotsIntoDirectory(new URL("./snapshots/", import.meta.url), files)
+writeSnapshotsIntoDirectory(new URL("./snapshots/", import.meta.url), files);

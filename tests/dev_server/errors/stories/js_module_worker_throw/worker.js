@@ -1,1 +1,1 @@
-throw new Error("toto")
+throw new Error("toto");

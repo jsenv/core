@@ -1,1 +1,1 @@
-export { jsenvPluginReact } from "./jsenv_plugin_react.js"
+export { jsenvPluginReact } from "./jsenv_plugin_react.js";

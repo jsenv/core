@@ -59,9 +59,9 @@ _requestWaitingMs_ parameter is a number of milliseconds after which the request
 ## startServer return value
 
 ```js
-import { startServer } from "@jsenv/server"
+import { startServer } from "@jsenv/server";
 
-const { origin, nodeServer, stop, stoppedPromise } = await startServer()
+const { origin, nodeServer, stop, stoppedPromise } = await startServer();
 ```
 
 ## origin
@@ -99,18 +99,18 @@ import {
   STOP_REASON_PROCESS_BEFORE_EXIT,
   STOP_REASON_PROCESS_EXIT,
   STOP_REASON_NOT_SPECIFIED,
-} from "@jsenv/server"
+} from "@jsenv/server";
 ```
 
 _reason_ might also be a value you passed yourself.
 
 ```js
-import { startServer } from "@jsenv/server"
+import { startServer } from "@jsenv/server";
 
-const { stop, stoppedPromise } = await startServer()
-stop(42)
-const reason = await stoppedPromise
-reason === 42 // true
+const { stop, stoppedPromise } = await startServer();
+stop(42);
+const reason = await stoppedPromise;
+reason === 42; // true
 ```
 
 If you call stop without passing any argument, _reason_ will be `STOP_REASON_NOT_SPECIFIED`.

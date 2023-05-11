@@ -1,8 +1,8 @@
 /* eslint-env browser */
 if (typeof window === "object") {
-  console.log("browser")
+  console.log("browser");
 } else if (typeof process === "object") {
-  console.log("node")
+  console.log("node");
 } else {
-  console.log("other")
+  console.log("other");
 }

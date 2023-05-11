@@ -1,14 +1,14 @@
-import { assert } from "@jsenv/assert"
-import { startDevServer } from "@jsenv/core"
+import { assert } from "@jsenv/assert";
+import { startDevServer } from "@jsenv/core";
 
-import { executeTestPlan, chromium } from "@jsenv/test"
+import { executeTestPlan, chromium } from "@jsenv/test";
 
 const devServer = await startDevServer({
   logLevel: "warn",
   sourceDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
   port: 0,
-})
+});
 const { testPlanCoverage } = await executeTestPlan({
   logLevel: "warn",
   rootDirectoryUrl: new URL("./", import.meta.url),
@@ -32,8 +32,8 @@ const { testPlanCoverage } = await executeTestPlan({
   },
   coverageReportTextLog: false,
   coverageReportHtml: false,
-})
-const actual = testPlanCoverage
+});
+const actual = testPlanCoverage;
 const expected = {
   "./client/file.js": {
     ...actual["./client/file.js"],
@@ -49,5 +49,5 @@ const expected = {
       7: 0,
     },
   },
-}
-assert({ actual, expected })
+};
+assert({ actual, expected });

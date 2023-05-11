@@ -1,96 +1,96 @@
-import { urlToRelativeUrl } from "@jsenv/urls"
+import { urlToRelativeUrl } from "@jsenv/urls";
 
-import { urlSpecifierEncoding } from "./url_specifier_encoding.js"
+import { urlSpecifierEncoding } from "./url_specifier_encoding.js";
 
 export const createUrlGraph = ({ name = "anonymous" } = {}) => {
-  const createUrlInfoCallbackRef = { current: () => {} }
-  const prunedUrlInfosCallbackRef = { current: () => {} }
+  const createUrlInfoCallbackRef = { current: () => {} };
+  const prunedUrlInfosCallbackRef = { current: () => {} };
 
-  const urlInfoMap = new Map()
-  const getUrlInfo = (url) => urlInfoMap.get(url)
+  const urlInfoMap = new Map();
+  const getUrlInfo = (url) => urlInfoMap.get(url);
   const deleteUrlInfo = (url) => {
-    const urlInfo = urlInfoMap.get(url)
+    const urlInfo = urlInfoMap.get(url);
     if (urlInfo) {
-      urlInfoMap.delete(url)
+      urlInfoMap.delete(url);
       urlInfo.dependencies.forEach((dependencyUrl) => {
-        getUrlInfo(dependencyUrl).dependents.delete(url)
-      })
+        getUrlInfo(dependencyUrl).dependents.delete(url);
+      });
       if (urlInfo.sourcemapReference) {
-        deleteUrlInfo(urlInfo.sourcemapReference.url)
+        deleteUrlInfo(urlInfo.sourcemapReference.url);
       }
     }
-  }
+  };
   const reuseOrCreateUrlInfo = (url) => {
-    const existingUrlInfo = getUrlInfo(url)
-    if (existingUrlInfo) return existingUrlInfo
-    const urlInfo = createUrlInfo(url)
-    urlInfoMap.set(url, urlInfo)
-    createUrlInfoCallbackRef.current(urlInfo)
-    return urlInfo
-  }
+    const existingUrlInfo = getUrlInfo(url);
+    if (existingUrlInfo) return existingUrlInfo;
+    const urlInfo = createUrlInfo(url);
+    urlInfoMap.set(url, urlInfo);
+    createUrlInfoCallbackRef.current(urlInfo);
+    return urlInfo;
+  };
   const getParentIfInline = (urlInfo) => {
-    return urlInfo.isInline ? getUrlInfo(urlInfo.inlineUrlSite.url) : urlInfo
-  }
+    return urlInfo.isInline ? getUrlInfo(urlInfo.inlineUrlSite.url) : urlInfo;
+  };
 
   const inferReference = (specifier, parentUrl) => {
-    const parentUrlInfo = getUrlInfo(parentUrl)
+    const parentUrlInfo = getUrlInfo(parentUrl);
     if (!parentUrlInfo) {
-      return null
+      return null;
     }
-    const seen = []
+    const seen = [];
     const search = (urlInfo) => {
       const firstReferenceFound = urlInfo.references.find((reference) => {
-        return urlSpecifierEncoding.decode(reference) === specifier
-      })
+        return urlSpecifierEncoding.decode(reference) === specifier;
+      });
       if (firstReferenceFound) {
-        return firstReferenceFound
+        return firstReferenceFound;
       }
       for (const dependencyUrl of parentUrlInfo.dependencies) {
         if (seen.includes(dependencyUrl)) {
-          continue
+          continue;
         }
-        seen.push(dependencyUrl)
-        const dependencyUrlInfo = getUrlInfo(dependencyUrl)
+        seen.push(dependencyUrl);
+        const dependencyUrlInfo = getUrlInfo(dependencyUrl);
         if (dependencyUrlInfo.isInline) {
-          const firstRef = search(dependencyUrlInfo)
+          const firstRef = search(dependencyUrlInfo);
           if (firstRef) {
-            return firstRef
+            return firstRef;
           }
         }
       }
-      return null
-    }
-    return search(parentUrlInfo)
-  }
+      return null;
+    };
+    return search(parentUrlInfo);
+  };
   const findDependent = (urlInfo, visitor) => {
-    const seen = [urlInfo.url]
-    let found = null
+    const seen = [urlInfo.url];
+    let found = null;
     const iterate = (currentUrlInfo) => {
       for (const dependentUrl of currentUrlInfo.dependents) {
         if (seen.includes(dependentUrl)) {
-          continue
+          continue;
         }
         if (found) {
-          break
+          break;
         }
-        seen.push(dependentUrl)
-        const dependentUrlInfo = getUrlInfo(dependentUrl)
+        seen.push(dependentUrl);
+        const dependentUrlInfo = getUrlInfo(dependentUrl);
         if (visitor(dependentUrlInfo)) {
-          found = dependentUrlInfo
+          found = dependentUrlInfo;
         }
         if (found) {
-          break
+          break;
         }
-        iterate(dependentUrlInfo)
+        iterate(dependentUrlInfo);
       }
-    }
-    iterate(urlInfo)
-    return found
-  }
+    };
+    iterate(urlInfo);
+    return found;
+  };
 
   const updateReferences = (urlInfo, references) => {
-    const setOfDependencyUrls = new Set()
-    const setOfImplicitUrls = new Set()
+    const setOfDependencyUrls = new Set();
+    const setOfImplicitUrls = new Set();
     references.forEach((reference) => {
       if (reference.isResourceHint) {
         // resource hint are a special kind of reference.
@@ -99,113 +99,113 @@ export const createUrlGraph = ({ name = "anonymous" } = {}) => {
         // have url.dependents.size === 0 and can be considered as not used
         // It means html won't consider url referenced solely
         // by <link> as dependency and it's fine
-        return
+        return;
       }
-      const dependencyUrl = reference.url
-      setOfDependencyUrls.add(dependencyUrl)
+      const dependencyUrl = reference.url;
+      setOfDependencyUrls.add(dependencyUrl);
       // an implicit reference do not appear in the file but a non-explicited file have an impact on it
       // (package.json on import resolution for instance)
       // in that case:
       // - file depends on the implicit file (it must autoreload if package.json is modified)
       // - cache validity for the file depends on the implicit file (it must be re-cooked in package.json is modified)
       if (reference.isImplicit) {
-        setOfImplicitUrls.add(dependencyUrl)
+        setOfImplicitUrls.add(dependencyUrl);
       }
-    })
+    });
     setOfDependencyUrls.forEach((dependencyUrl) => {
-      urlInfo.dependencies.add(dependencyUrl)
-      const dependencyUrlInfo = reuseOrCreateUrlInfo(dependencyUrl)
-      dependencyUrlInfo.dependents.add(urlInfo.url)
-    })
+      urlInfo.dependencies.add(dependencyUrl);
+      const dependencyUrlInfo = reuseOrCreateUrlInfo(dependencyUrl);
+      dependencyUrlInfo.dependents.add(urlInfo.url);
+    });
     setOfImplicitUrls.forEach((implicitUrl) => {
-      urlInfo.implicitUrls.add(implicitUrl)
+      urlInfo.implicitUrls.add(implicitUrl);
       if (urlInfo.isInline) {
-        const parentUrlInfo = getUrlInfo(urlInfo.inlineUrlSite.url)
-        parentUrlInfo.implicitUrls.add(implicitUrl)
+        const parentUrlInfo = getUrlInfo(urlInfo.inlineUrlSite.url);
+        parentUrlInfo.implicitUrls.add(implicitUrl);
       }
-    })
-    const prunedUrlInfos = []
+    });
+    const prunedUrlInfos = [];
     const pruneDependency = (urlInfo, urlToClean) => {
-      urlInfo.dependencies.delete(urlToClean)
-      const dependencyUrlInfo = getUrlInfo(urlToClean)
+      urlInfo.dependencies.delete(urlToClean);
+      const dependencyUrlInfo = getUrlInfo(urlToClean);
       if (!dependencyUrlInfo) {
-        return
+        return;
       }
-      dependencyUrlInfo.dependents.delete(urlInfo.url)
+      dependencyUrlInfo.dependents.delete(urlInfo.url);
       if (dependencyUrlInfo.dependents.size === 0) {
         dependencyUrlInfo.dependencies.forEach((dependencyUrl) => {
-          pruneDependency(dependencyUrlInfo, dependencyUrl)
-        })
-        prunedUrlInfos.push(dependencyUrlInfo)
+          pruneDependency(dependencyUrlInfo, dependencyUrl);
+        });
+        prunedUrlInfos.push(dependencyUrlInfo);
       }
-    }
+    };
     urlInfo.dependencies.forEach((dependencyUrl) => {
       if (!setOfDependencyUrls.has(dependencyUrl)) {
-        pruneDependency(urlInfo, dependencyUrl)
+        pruneDependency(urlInfo, dependencyUrl);
       }
-    })
+    });
     if (prunedUrlInfos.length) {
       prunedUrlInfos.forEach((prunedUrlInfo) => {
-        prunedUrlInfo.modifiedTimestamp = Date.now()
+        prunedUrlInfo.modifiedTimestamp = Date.now();
         if (prunedUrlInfo.isInline) {
           // should we always delete?
-          deleteUrlInfo(prunedUrlInfo.url)
+          deleteUrlInfo(prunedUrlInfo.url);
         }
-      })
-      prunedUrlInfosCallbackRef.current(prunedUrlInfos, urlInfo)
+      });
+      prunedUrlInfosCallbackRef.current(prunedUrlInfos, urlInfo);
     }
     urlInfo.implicitUrls.forEach((implicitUrl) => {
       if (!setOfDependencyUrls.has(implicitUrl)) {
-        let implicitUrlComesFromInlineContent = false
+        let implicitUrlComesFromInlineContent = false;
         for (const dependencyUrl of urlInfo.dependencies) {
-          const dependencyUrlInfo = getUrlInfo(dependencyUrl)
+          const dependencyUrlInfo = getUrlInfo(dependencyUrl);
           if (
             dependencyUrlInfo.isInline &&
             dependencyUrlInfo.implicitUrls.has(implicitUrl)
           ) {
-            implicitUrlComesFromInlineContent = true
-            break
+            implicitUrlComesFromInlineContent = true;
+            break;
           }
         }
         if (!implicitUrlComesFromInlineContent) {
-          urlInfo.implicitUrls.delete(implicitUrl)
+          urlInfo.implicitUrls.delete(implicitUrl);
         }
         if (urlInfo.isInline) {
-          const parentUrlInfo = getUrlInfo(urlInfo.inlineUrlSite.url)
-          parentUrlInfo.implicitUrls.delete(implicitUrl)
+          const parentUrlInfo = getUrlInfo(urlInfo.inlineUrlSite.url);
+          parentUrlInfo.implicitUrls.delete(implicitUrl);
         }
       }
-    })
-    urlInfo.references = references
-    return urlInfo
-  }
+    });
+    urlInfo.references = references;
+    return urlInfo;
+  };
 
   const considerModified = (urlInfo, modifiedTimestamp = Date.now()) => {
-    const seen = []
+    const seen = [];
     const iterate = (urlInfo) => {
       if (seen.includes(urlInfo.url)) {
-        return
+        return;
       }
-      seen.push(urlInfo.url)
-      urlInfo.modifiedTimestamp = modifiedTimestamp
-      urlInfo.originalContentEtag = undefined
-      urlInfo.contentEtag = undefined
+      seen.push(urlInfo.url);
+      urlInfo.modifiedTimestamp = modifiedTimestamp;
+      urlInfo.originalContentEtag = undefined;
+      urlInfo.contentEtag = undefined;
       urlInfo.dependents.forEach((dependentUrl) => {
-        const dependentUrlInfo = getUrlInfo(dependentUrl)
-        const { hotAcceptDependencies = [] } = dependentUrlInfo.data
+        const dependentUrlInfo = getUrlInfo(dependentUrl);
+        const { hotAcceptDependencies = [] } = dependentUrlInfo.data;
         if (!hotAcceptDependencies.includes(urlInfo.url)) {
-          iterate(dependentUrlInfo)
+          iterate(dependentUrlInfo);
         }
-      })
+      });
       urlInfo.dependencies.forEach((dependencyUrl) => {
-        const dependencyUrlInfo = getUrlInfo(dependencyUrl)
+        const dependencyUrlInfo = getUrlInfo(dependencyUrl);
         if (dependencyUrlInfo.isInline) {
-          iterate(dependencyUrlInfo)
+          iterate(dependencyUrlInfo);
         }
-      })
-    }
-    iterate(urlInfo)
-  }
+      });
+    };
+    iterate(urlInfo);
+  };
 
   return {
     name,
@@ -224,27 +224,27 @@ export const createUrlGraph = ({ name = "anonymous" } = {}) => {
     findDependent,
 
     toObject: () => {
-      const data = {}
+      const data = {};
       urlInfoMap.forEach((urlInfo) => {
-        data[urlInfo.url] = urlInfo
-      })
-      return data
+        data[urlInfo.url] = urlInfo;
+      });
+      return data;
     },
     toJSON: (rootDirectoryUrl) => {
-      const data = {}
+      const data = {};
       urlInfoMap.forEach((urlInfo) => {
-        const dependencyUrls = Array.from(urlInfo.dependencies)
+        const dependencyUrls = Array.from(urlInfo.dependencies);
         if (dependencyUrls.length) {
-          const relativeUrl = urlToRelativeUrl(urlInfo.url, rootDirectoryUrl)
+          const relativeUrl = urlToRelativeUrl(urlInfo.url, rootDirectoryUrl);
           data[relativeUrl] = dependencyUrls.map((dependencyUrl) =>
             urlToRelativeUrl(dependencyUrl, rootDirectoryUrl),
-          )
+          );
         }
-      })
-      return data
+      });
+      return data;
     },
-  }
-}
+  };
+};
 
 const createUrlInfo = (url) => {
   const urlInfo = {
@@ -287,7 +287,7 @@ const createUrlInfo = (url) => {
     timing: {},
     headers: {},
     debug: false,
-  }
+  };
   // Object.preventExtensions(urlInfo) // useful to ensure all properties are declared here
-  return urlInfo
-}
+  return urlInfo;
+};

@@ -1,7 +1,7 @@
-import { inspect } from "@jsenv/inspect"
+import { inspect } from "@jsenv/inspect";
 
-import { valueToWellKnown } from "./wellKnownValue.js"
+import { valueToWellKnown } from "./wellKnownValue.js";
 
 export const valueToString = (value) => {
-  return valueToWellKnown(value) || inspect(value)
-}
+  return valueToWellKnown(value) || inspect(value);
+};

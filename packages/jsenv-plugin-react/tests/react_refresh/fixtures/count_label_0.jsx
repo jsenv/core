@@ -3,5 +3,5 @@ export const CountLabel = ({ count }) => {
     <span id="count_label" style={{ color: "black" }}>
       toto: {count}
     </span>
-  )
-}
+  );
+};

@@ -1,5 +1,5 @@
-import { exec } from "node:child_process"
-import { createDetailedMessage, createLogger, UNICODE } from "@jsenv/log"
+import { exec } from "node:child_process";
+import { createDetailedMessage, createLogger, UNICODE } from "@jsenv/log";
 
 export const executeCommand = (
   command,
@@ -13,10 +13,10 @@ export const executeCommand = (
     timeout,
   } = {},
 ) => {
-  const logger = createLogger({ logLevel })
+  const logger = createLogger({ logLevel });
 
   return new Promise((resolve, reject) => {
-    logger.debug(`${UNICODE.COMMAND} ${command}`)
+    logger.debug(`${UNICODE.COMMAND} ${command}`);
     const commandProcess = exec(command, {
       signal,
       cwd:
@@ -26,35 +26,35 @@ export const executeCommand = (
       env,
       timeout,
       silent: true,
-    })
+    });
     commandProcess.on("error", (error) => {
       if (error && error.code === "ETIMEDOUT") {
-        logger.error(`timeout after ${timeout} ms`)
-        reject(error)
+        logger.error(`timeout after ${timeout} ms`);
+        reject(error);
       } else {
-        reject(error)
+        reject(error);
       }
-    })
-    const stdoutDatas = []
+    });
+    const stdoutDatas = [];
     commandProcess.stdout.on("data", (data) => {
-      stdoutDatas.push(data)
-      logger.debug(data)
-      onStderr(data)
-    })
-    let stderrDatas = []
+      stdoutDatas.push(data);
+      logger.debug(data);
+      onStderr(data);
+    });
+    let stderrDatas = [];
     commandProcess.stderr.on("data", (data) => {
-      stderrDatas.push(data)
-      logger.debug(data)
-      onStdout(data)
-    })
+      stderrDatas.push(data);
+      logger.debug(data);
+      onStdout(data);
+    });
     if (commandProcess.stdin) {
       commandProcess.stdin.on("error", (error) => {
-        reject(error)
-      })
+        reject(error);
+      });
     }
     commandProcess.on("exit", (exitCode, signal) => {
       if (signal) {
-        reject(new Error(`killed with ${signal}`))
+        reject(new Error(`killed with ${signal}`));
       }
       if (exitCode) {
         reject(
@@ -64,10 +64,10 @@ export const executeCommand = (
               // "command stdout": stdoutDatas.join(""),
             }),
           ),
-        )
-        return
+        );
+        return;
       }
-      resolve({ exitCode, signal })
-    })
-  })
-}
+      resolve({ exitCode, signal });
+    });
+  });
+};

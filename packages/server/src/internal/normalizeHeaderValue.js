@@ -1,3 +1,3 @@
 export const normalizeHeaderValue = (headerValue) => {
-  return String(headerValue)
-}
+  return String(headerValue);
+};

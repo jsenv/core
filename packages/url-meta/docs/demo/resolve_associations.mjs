@@ -1,4 +1,4 @@
-import { URL_META } from "@jsenv/url-meta"
+import { URL_META } from "@jsenv/url-meta";
 
 const associations = URL_META.resolveAssociations(
   {
@@ -8,5 +8,5 @@ const associations = URL_META.resolveAssociations(
     },
   },
   "file:///Users/directory/",
-)
-console.log(JSON.stringify(associations, null, "  "))
+);
+console.log(JSON.stringify(associations, null, "  "));

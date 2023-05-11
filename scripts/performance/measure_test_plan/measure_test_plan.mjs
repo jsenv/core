@@ -1,20 +1,20 @@
-import { startMeasures } from "@jsenv/performance-impact"
+import { startMeasures } from "@jsenv/performance-impact";
 
 const measures = startMeasures({
   gc: true,
   memoryHeap: true,
   filesystem: true,
-})
+});
 
-const { startDevServer } = await import("@jsenv/core")
+const { startDevServer } = await import("@jsenv/core");
 const { executeTestPlan, chromium, firefox, webkit, nodeWorkerThread } =
-  await import("@jsenv/test")
+  await import("@jsenv/test");
 
 const devServer = await startDevServer({
   logLevel: "warn",
   sourceDirectoryUrl: new URL("./", import.meta.url),
   keepProcessAlive: false,
-})
+});
 
 await executeTestPlan({
   webServer: {
@@ -54,10 +54,10 @@ await executeTestPlan({
   coverageV8ConflictWarning: false,
   coverageReportTextLog: false,
   coverageReportHtml: false,
-})
+});
 
 const { duration, memoryHeapUsed, memoryHeapTotal, fsRead, fsWrite } =
-  measures.stop()
+  measures.stop();
 
 export const testPlanMetrics = {
   "test plan duration": { value: duration, unit: "ms" },
@@ -65,4 +65,4 @@ export const testPlanMetrics = {
   "test plan memory heap total": { value: memoryHeapTotal, unit: "byte" },
   "number of fs read operation": { value: fsRead },
   "number of fs write operation": { value: fsWrite },
-}
+};

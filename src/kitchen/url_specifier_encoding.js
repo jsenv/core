@@ -1,33 +1,33 @@
 export const urlSpecifierEncoding = {
   encode: (reference) => {
-    const { generatedSpecifier } = reference
+    const { generatedSpecifier } = reference;
     if (generatedSpecifier.then) {
       return generatedSpecifier.then((value) => {
-        reference.generatedSpecifier = value
-        return urlSpecifierEncoding.encode(reference)
-      })
+        reference.generatedSpecifier = value;
+        return urlSpecifierEncoding.encode(reference);
+      });
     }
     // allow plugin to return a function to bypas default formatting
     // (which is to use JSON.stringify when url is referenced inside js)
     if (typeof generatedSpecifier === "function") {
-      return generatedSpecifier()
+      return generatedSpecifier();
     }
-    const formatter = formatters[reference.type]
+    const formatter = formatters[reference.type];
     const value = formatter
       ? formatter.encode(generatedSpecifier)
-      : generatedSpecifier
+      : generatedSpecifier;
     if (reference.escape) {
-      return reference.escape(value)
+      return reference.escape(value);
     }
-    return value
+    return value;
   },
   decode: (reference) => {
-    const formatter = formatters[reference.type]
+    const formatter = formatters[reference.type];
     return formatter
       ? formatter.decode(reference.generatedSpecifier)
-      : reference.generatedSpecifier
+      : reference.generatedSpecifier;
   },
-}
+};
 const formatters = {
   "js_import": { encode: JSON.stringify, decode: JSON.parse },
   "js_url": { encode: JSON.stringify, decode: JSON.parse },
@@ -36,24 +36,24 @@ const formatters = {
   "css_url": {
     encode: (url) => {
       // If url is already wrapped in quotes, remove them
-      url = formatters.css_url.decode(url)
+      url = formatters.css_url.decode(url);
       // Should url be wrapped?
       // See https://drafts.csswg.org/css-values-3/#urls
       if (/["'() \t\n]/.test(url)) {
-        return `"${url.replace(/"/g, '\\"').replace(/\n/g, "\\n")}"`
+        return `"${url.replace(/"/g, '\\"').replace(/\n/g, "\\n")}"`;
       }
-      return url
+      return url;
     },
     decode: (url) => {
-      const firstChar = url[0]
-      const lastChar = url[url.length - 1]
+      const firstChar = url[0];
+      const lastChar = url[url.length - 1];
       if (firstChar === `"` && lastChar === `"`) {
-        return url.slice(1, -1)
+        return url.slice(1, -1);
       }
       if (firstChar === `'` && lastChar === `'`) {
-        return url.slice(1, -1)
+        return url.slice(1, -1);
       }
-      return url
+      return url;
     },
   },
-}
+};

@@ -1,44 +1,44 @@
-import { Stream, Writable, Readable } from "node:stream"
-import { createReadStream } from "node:fs"
+import { Stream, Writable, Readable } from "node:stream";
+import { createReadStream } from "node:fs";
 
-import { isObservable, observableFromValue } from "./observable.js"
-import { observableFromNodeStream } from "./observable_from_node_stream.js"
+import { isObservable, observableFromValue } from "./observable.js";
+import { observableFromNodeStream } from "./observable_from_node_stream.js";
 
 export const normalizeBodyMethods = (body) => {
   if (isObservable(body)) {
     return {
       asObservable: () => body,
       destroy: () => {},
-    }
+    };
   }
 
   if (isFileHandle(body)) {
     return {
       asObservable: () => fileHandleToObservable(body),
       destroy: () => {
-        body.close()
+        body.close();
       },
-    }
+    };
   }
 
   if (isNodeStream(body)) {
     return {
       asObservable: () => observableFromNodeStream(body),
       destroy: () => {
-        body.destroy()
+        body.destroy();
       },
-    }
+    };
   }
 
   return {
     asObservable: () => observableFromValue(body),
     destroy: () => {},
-  }
-}
+  };
+};
 
 export const isFileHandle = (value) => {
-  return value && value.constructor && value.constructor.name === "FileHandle"
-}
+  return value && value.constructor && value.constructor.name === "FileHandle";
+};
 
 export const fileHandleToReadableStream = (fileHandle) => {
   const fileReadableStream =
@@ -51,22 +51,22 @@ export const fileHandleToReadableStream = (fileHandle) => {
             emitClose: true,
             // autoClose: true
           },
-        )
+        );
   // I suppose it's required only when doing fs.createReadStream()
   // and not fileHandle.createReadStream()
   // fileReadableStream.on("end", () => {
   //   fileHandle.close()
   // })
-  return fileReadableStream
-}
+  return fileReadableStream;
+};
 
 const fileHandleToObservable = (fileHandle) => {
-  return observableFromNodeStream(fileHandleToReadableStream(fileHandle))
-}
+  return observableFromNodeStream(fileHandleToReadableStream(fileHandle));
+};
 
 const isNodeStream = (value) => {
   if (value === undefined) {
-    return false
+    return false;
   }
 
   if (
@@ -74,8 +74,8 @@ const isNodeStream = (value) => {
     value instanceof Writable ||
     value instanceof Readable
   ) {
-    return true
+    return true;
   }
 
-  return false
-}
+  return false;
+};

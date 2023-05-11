@@ -1,6 +1,6 @@
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-import { pickContentType } from "@jsenv/server"
+import { pickContentType } from "@jsenv/server";
 
 {
   const actual = pickContentType(
@@ -10,9 +10,9 @@ import { pickContentType } from "@jsenv/server"
       },
     },
     ["text/html"],
-  )
-  const expected = "text/html"
-  assert({ actual, expected })
+  );
+  const expected = "text/html";
+  assert({ actual, expected });
 }
 
 {
@@ -23,9 +23,9 @@ import { pickContentType } from "@jsenv/server"
       },
     },
     ["text/plain"],
-  )
-  const expected = null
-  assert({ actual, expected })
+  );
+  const expected = null;
+  assert({ actual, expected });
 }
 
 {
@@ -36,9 +36,9 @@ import { pickContentType } from "@jsenv/server"
       },
     },
     ["text/plain"],
-  )
-  const expected = "text/plain"
-  assert({ actual, expected })
+  );
+  const expected = "text/plain";
+  assert({ actual, expected });
 }
 
 {
@@ -49,9 +49,9 @@ import { pickContentType } from "@jsenv/server"
       },
     },
     ["text/plain"],
-  )
-  const expected = null
-  assert({ actual, expected })
+  );
+  const expected = null;
+  assert({ actual, expected });
 }
 
 {
@@ -62,9 +62,9 @@ import { pickContentType } from "@jsenv/server"
       },
     },
     ["text/plain"],
-  )
-  const expected = "text/plain"
-  assert({ actual, expected })
+  );
+  const expected = "text/plain";
+  assert({ actual, expected });
 }
 
 {
@@ -75,9 +75,9 @@ import { pickContentType } from "@jsenv/server"
       },
     },
     ["text/javascript"],
-  )
-  const expected = "text/javascript"
-  assert({ actual, expected })
+  );
+  const expected = "text/javascript";
+  assert({ actual, expected });
 }
 
 {
@@ -88,9 +88,9 @@ import { pickContentType } from "@jsenv/server"
       },
     },
     ["application/pdf"],
-  )
-  const expected = null
-  assert({ actual, expected })
+  );
+  const expected = null;
+  assert({ actual, expected });
 }
 
 {
@@ -101,9 +101,9 @@ import { pickContentType } from "@jsenv/server"
       },
     },
     ["text/javascript"],
-  )
-  const expected = "text/javascript"
-  assert({ actual, expected })
+  );
+  const expected = "text/javascript";
+  assert({ actual, expected });
 }
 
 {
@@ -114,7 +114,7 @@ import { pickContentType } from "@jsenv/server"
       },
     },
     ["text/javascript"],
-  )
-  const expected = "text/javascript"
-  assert({ actual, expected })
+  );
+  const expected = "text/javascript";
+  assert({ actual, expected });
 }

@@ -1,6 +1,6 @@
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-import { build } from "@jsenv/core"
+import { build } from "@jsenv/core";
 
 const { buildFileContents } = await build({
   logLevel: "warn",
@@ -10,14 +10,14 @@ const { buildFileContents } = await build({
   },
   buildDirectoryUrl: new URL("./dist/", import.meta.url),
   outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-})
+});
 const { start_url, icons } = JSON.parse(
   buildFileContents["other/manifest.webmanifest"],
-)
+);
 const actual = {
   start_url,
   icons,
-}
+};
 const expected = {
   start_url: "/",
   icons: [
@@ -27,5 +27,5 @@ const expected = {
       type: "image/png",
     },
   ],
-}
-assert({ actual, expected })
+};
+assert({ actual, expected });

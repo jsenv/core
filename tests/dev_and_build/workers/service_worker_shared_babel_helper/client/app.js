@@ -3,4 +3,4 @@ window.navigator.serviceWorker.register(
   {
     type: "module",
   },
-)
+);

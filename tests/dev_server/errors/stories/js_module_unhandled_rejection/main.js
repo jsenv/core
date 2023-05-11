@@ -1,1 +1,1 @@
-Promise.reject(new Error("toto"))
+Promise.reject(new Error("toto"));

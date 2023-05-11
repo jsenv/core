@@ -1,13 +1,13 @@
-import wrapAnsi from "wrap-ansi"
+import wrapAnsi from "wrap-ansi";
 import {
   ANSI,
   UNICODE,
   msAsEllapsedTime,
   msAsDuration,
   byteAsMemoryUsage,
-} from "@jsenv/log"
+} from "@jsenv/log";
 
-import { EXECUTION_COLORS } from "./execution_colors.js"
+import { EXECUTION_COLORS } from "./execution_colors.js";
 
 export const createExecutionLog = (
   {
@@ -29,26 +29,26 @@ export const createExecutionLog = (
     memoryHeap,
   },
 ) => {
-  const { status } = executionResult
-  const descriptionFormatter = descriptionFormatters[status]
+  const { status } = executionResult;
+  const descriptionFormatter = descriptionFormatters[status];
   const description = descriptionFormatter({
     index: executionIndex,
     total: counters.total,
     executionParams,
-  })
+  });
   const summary = createIntermediateSummary({
     executionIndex,
     counters,
     timeEllapsed,
     memoryHeap,
-  })
-  let log
+  });
+  let log;
   if (logShortForCompletedExecutions && status === "completed") {
-    log = `${description}${summary}`
+    log = `${description}${summary}`;
   } else {
-    const { consoleCalls = [], errors = [] } = executionResult
-    const consoleOutput = formatConsoleCalls(consoleCalls)
-    const errorsOutput = formatErrors(errors)
+    const { consoleCalls = [], errors = [] } = executionResult;
+    const consoleOutput = formatConsoleCalls(consoleCalls);
+    const errorsOutput = formatErrors(errors);
     log = formatExecution({
       label: `${description}${summary}`,
       details: {
@@ -65,40 +65,40 @@ export const createExecutionLog = (
       },
       consoleOutput,
       errorsOutput,
-    })
+    });
   }
 
-  const { columns = 80 } = process.stdout
+  const { columns = 80 } = process.stdout;
   log = wrapAnsi(log, columns, {
     trim: false,
     hard: true,
     wordWrap: false,
-  })
+  });
   if (endMs) {
     if (logShortForCompletedExecutions) {
-      return `${log}\n`
+      return `${log}\n`;
     }
     if (executionIndex === counters.total - 1) {
-      return `${log}\n`
+      return `${log}\n`;
     }
-    return `${log}\n\n`
+    return `${log}\n\n`;
   }
-  return log
-}
+  return log;
+};
 
 const formatErrors = (errors) => {
   if (errors.length === 0) {
-    return ""
+    return "";
   }
-  const formatError = (error) => error.stack || error.message || error
+  const formatError = (error) => error.stack || error.message || error;
 
   if (errors.length === 1) {
     return `${ANSI.color(`-------- error --------`, ANSI.RED)}
 ${formatError(errors[0])}
-${ANSI.color(`-------------------------`, ANSI.RED)}`
+${ANSI.color(`-------------------------`, ANSI.RED)}`;
   }
 
-  let output = []
+  let output = [];
   errors.forEach((error) => {
     output.push(
       prefixFirstAndIndentRemainingLines({
@@ -106,30 +106,30 @@ ${ANSI.color(`-------------------------`, ANSI.RED)}`
         indentation: "   ",
         text: formatError(error),
       }),
-    )
-  })
+    );
+  });
   return `${ANSI.color(`-------- errors (${errors.length}) --------`, ANSI.RED)}
 ${output.join(`\n`)}
-${ANSI.color(`-------------------------`, ANSI.RED)}`
-}
+${ANSI.color(`-------------------------`, ANSI.RED)}`;
+};
 
 export const createSummaryLog = (
   summary,
 ) => `-------------- summary -----------------
 ${createAllExecutionsSummary(summary)}
 total duration: ${msAsDuration(summary.duration)}
-----------------------------------------`
+----------------------------------------`;
 
 const createAllExecutionsSummary = ({ counters }) => {
   if (counters.total === 0) {
-    return `no execution`
+    return `no execution`;
   }
   const executionLabel =
-    counters.total === 1 ? `1 execution` : `${counters.total} executions`
+    counters.total === 1 ? `1 execution` : `${counters.total} executions`;
   return `${executionLabel}: ${createStatusSummary({
     counters,
-  })}`
-}
+  })}`;
+};
 
 const createIntermediateSummary = ({
   executionIndex,
@@ -137,7 +137,7 @@ const createIntermediateSummary = ({
   memoryHeap,
   timeEllapsed,
 }) => {
-  const parts = []
+  const parts = [];
   if (executionIndex > 0 || counters.done > 0) {
     parts.push(
       createStatusSummary({
@@ -146,55 +146,55 @@ const createIntermediateSummary = ({
           total: executionIndex + 1,
         },
       }),
-    )
+    );
   }
   if (timeEllapsed) {
-    parts.push(`duration: ${msAsEllapsedTime(timeEllapsed)}`)
+    parts.push(`duration: ${msAsEllapsedTime(timeEllapsed)}`);
   }
   if (memoryHeap) {
-    parts.push(`memory heap: ${byteAsMemoryUsage(memoryHeap)}`)
+    parts.push(`memory heap: ${byteAsMemoryUsage(memoryHeap)}`);
   }
   if (parts.length === 0) {
-    return ""
+    return "";
   }
-  return ` (${parts.join(` / `)})`
-}
+  return ` (${parts.join(` / `)})`;
+};
 
 const createStatusSummary = ({ counters }) => {
   if (counters.aborted === counters.total) {
-    return `all ${ANSI.color(`aborted`, EXECUTION_COLORS.aborted)}`
+    return `all ${ANSI.color(`aborted`, EXECUTION_COLORS.aborted)}`;
   }
   if (counters.timedout === counters.total) {
-    return `all ${ANSI.color(`timed out`, EXECUTION_COLORS.timedout)}`
+    return `all ${ANSI.color(`timed out`, EXECUTION_COLORS.timedout)}`;
   }
   if (counters.failed === counters.total) {
-    return `all ${ANSI.color(`failed`, EXECUTION_COLORS.failed)}`
+    return `all ${ANSI.color(`failed`, EXECUTION_COLORS.failed)}`;
   }
   if (counters.completed === counters.total) {
-    return `all ${ANSI.color(`completed`, EXECUTION_COLORS.completed)}`
+    return `all ${ANSI.color(`completed`, EXECUTION_COLORS.completed)}`;
   }
   if (counters.cancelled === counters.total) {
-    return `all ${ANSI.color(`cancelled`, EXECUTION_COLORS.cancelled)}`
+    return `all ${ANSI.color(`cancelled`, EXECUTION_COLORS.cancelled)}`;
   }
   return createMixedDetails({
     counters,
-  })
-}
+  });
+};
 
 const createMixedDetails = ({ counters }) => {
-  const parts = []
+  const parts = [];
   if (counters.timedout) {
     parts.push(
       `${counters.timedout} ${ANSI.color(
         `timed out`,
         EXECUTION_COLORS.timedout,
       )}`,
-    )
+    );
   }
   if (counters.failed) {
     parts.push(
       `${counters.failed} ${ANSI.color(`failed`, EXECUTION_COLORS.failed)}`,
-    )
+    );
   }
   if (counters.completed) {
     parts.push(
@@ -202,12 +202,12 @@ const createMixedDetails = ({ counters }) => {
         `completed`,
         EXECUTION_COLORS.completed,
       )}`,
-    )
+    );
   }
   if (counters.aborted) {
     parts.push(
       `${counters.aborted} ${ANSI.color(`aborted`, EXECUTION_COLORS.aborted)}`,
-    )
+    );
   }
   if (counters.cancelled) {
     parts.push(
@@ -215,17 +215,17 @@ const createMixedDetails = ({ counters }) => {
         `cancelled`,
         EXECUTION_COLORS.cancelled,
       )}`,
-    )
+    );
   }
-  return `${parts.join(", ")}`
-}
+  return `${parts.join(", ")}`;
+};
 
 const descriptionFormatters = {
   executing: ({ index, total }) => {
     return ANSI.color(
       `executing ${padNumber(index, total)} of ${total}`,
       EXECUTION_COLORS.executing,
-    )
+    );
   },
   aborted: ({ index, total }) => {
     return ANSI.color(
@@ -234,7 +234,7 @@ const descriptionFormatters = {
         total,
       )} of ${total} aborted`,
       EXECUTION_COLORS.aborted,
-    )
+    );
   },
   timedout: ({ index, total, executionParams }) => {
     return ANSI.color(
@@ -243,7 +243,7 @@ const descriptionFormatters = {
         total,
       )} of ${total} timeout after ${executionParams.allocatedMs}ms`,
       EXECUTION_COLORS.timedout,
-    )
+    );
   },
   failed: ({ index, total }) => {
     return ANSI.color(
@@ -252,7 +252,7 @@ const descriptionFormatters = {
         total,
       )} of ${total} failed`,
       EXECUTION_COLORS.failed,
-    )
+    );
   },
   completed: ({ index, total }) => {
     return ANSI.color(
@@ -261,7 +261,7 @@ const descriptionFormatters = {
         total,
       )} of ${total} completed`,
       EXECUTION_COLORS.completed,
-    )
+    );
   },
   cancelled: ({ index, total }) => {
     return ANSI.color(
@@ -270,26 +270,26 @@ const descriptionFormatters = {
         total,
       )} of ${total} cancelled`,
       EXECUTION_COLORS.cancelled,
-    )
+    );
   },
-}
+};
 
 const padNumber = (index, total) => {
-  const number = index + 1
-  const numberWidth = String(number).length
-  const totalWith = String(total).length
-  let missingWidth = totalWith - numberWidth
-  let padded = ""
+  const number = index + 1;
+  const numberWidth = String(number).length;
+  const totalWith = String(total).length;
+  let missingWidth = totalWith - numberWidth;
+  let padded = "";
   while (missingWidth--) {
-    padded += "0"
+    padded += "0";
   }
-  padded += number
-  return padded
-}
+  padded += number;
+  return padded;
+};
 
 const formatConsoleCalls = (consoleCalls) => {
   if (consoleCalls.length === 0) {
-    return ""
+    return "";
   }
   const repartition = {
     debug: 0,
@@ -297,61 +297,61 @@ const formatConsoleCalls = (consoleCalls) => {
     warning: 0,
     error: 0,
     log: 0,
-  }
+  };
   consoleCalls.forEach((consoleCall) => {
-    repartition[consoleCall.type]++
-  })
-  const consoleOutput = formatConsoleOutput(consoleCalls)
+    repartition[consoleCall.type]++;
+  });
+  const consoleOutput = formatConsoleOutput(consoleCalls);
 
   return `${ANSI.color(
     `-------- ${formatConsoleSummary(repartition)} --------`,
     ANSI.GREY,
   )}
 ${consoleOutput}
-${ANSI.color(`-------------------------`, ANSI.GREY)}`
-}
+${ANSI.color(`-------------------------`, ANSI.GREY)}`;
+};
 
 export const formatConsoleOutput = (consoleCalls) => {
   // inside Node.js you can do process.stdout.write()
   // and in that case the consoleCall is not suffixed with "\n"
   // we want to keep these calls together in the output
-  const regroupedCalls = []
+  const regroupedCalls = [];
   consoleCalls.forEach((consoleCall, index) => {
     if (index === 0) {
-      regroupedCalls.push(consoleCall)
-      return
+      regroupedCalls.push(consoleCall);
+      return;
     }
-    const previousCall = consoleCalls[index - 1]
+    const previousCall = consoleCalls[index - 1];
     if (previousCall.type !== consoleCall.type) {
-      regroupedCalls.push(consoleCall)
-      return
+      regroupedCalls.push(consoleCall);
+      return;
     }
     if (previousCall.text.endsWith("\n")) {
-      regroupedCalls.push(consoleCall)
-      return
+      regroupedCalls.push(consoleCall);
+      return;
     }
     if (previousCall.text.endsWith("\r")) {
-      regroupedCalls.push(consoleCall)
-      return
+      regroupedCalls.push(consoleCall);
+      return;
     }
-    const previousRegroupedCallIndex = regroupedCalls.length - 1
-    const previousRegroupedCall = regroupedCalls[previousRegroupedCallIndex]
-    previousRegroupedCall.text = `${previousRegroupedCall.text}${consoleCall.text}`
-  })
+    const previousRegroupedCallIndex = regroupedCalls.length - 1;
+    const previousRegroupedCall = regroupedCalls[previousRegroupedCallIndex];
+    previousRegroupedCall.text = `${previousRegroupedCall.text}${consoleCall.text}`;
+  });
 
-  let consoleOutput = ``
+  let consoleOutput = ``;
   regroupedCalls.forEach((regroupedCall, index) => {
-    const text = regroupedCall.text
+    const text = regroupedCall.text;
     const textFormatted = prefixFirstAndIndentRemainingLines({
       prefix: CONSOLE_ICONS[regroupedCall.type],
       text,
       trimLines: true,
       trimLastLine: index === regroupedCalls.length - 1,
-    })
-    consoleOutput += textFormatted
-  })
-  return consoleOutput
-}
+    });
+    consoleOutput += textFormatted;
+  });
+  return consoleOutput;
+};
 
 const prefixFirstAndIndentRemainingLines = ({
   prefix,
@@ -360,21 +360,21 @@ const prefixFirstAndIndentRemainingLines = ({
   trimLines,
   trimLastLine,
 }) => {
-  const lines = text.split(/\r?\n/)
-  const firstLine = lines.shift()
-  let result = `${prefix} ${firstLine}`
-  let i = 0
+  const lines = text.split(/\r?\n/);
+  const firstLine = lines.shift();
+  let result = `${prefix} ${firstLine}`;
+  let i = 0;
   while (i < lines.length) {
-    const line = trimLines ? lines[i].trim() : lines[i]
-    i++
+    const line = trimLines ? lines[i].trim() : lines[i];
+    i++;
     result += line.length
       ? `\n${indentation}${line}`
       : trimLastLine && i === lines.length
       ? ""
-      : `\n`
+      : `\n`;
   }
-  return result
-}
+  return result;
+};
 
 const CONSOLE_ICONS = {
   debug: UNICODE.DEBUG,
@@ -382,28 +382,28 @@ const CONSOLE_ICONS = {
   warning: UNICODE.WARNING,
   error: UNICODE.FAILURE,
   log: " ",
-}
+};
 
 const formatConsoleSummary = (repartition) => {
-  const { debug, info, warning, error } = repartition
-  const parts = []
+  const { debug, info, warning, error } = repartition;
+  const parts = [];
   if (error) {
-    parts.push(`${CONSOLE_ICONS.error} ${error}`)
+    parts.push(`${CONSOLE_ICONS.error} ${error}`);
   }
   if (warning) {
-    parts.push(`${CONSOLE_ICONS.warning} ${warning}`)
+    parts.push(`${CONSOLE_ICONS.warning} ${warning}`);
   }
   if (info) {
-    parts.push(`${CONSOLE_ICONS.info} ${info}`)
+    parts.push(`${CONSOLE_ICONS.info} ${info}`);
   }
   if (debug) {
-    parts.push(`${CONSOLE_ICONS.debug} ${debug}`)
+    parts.push(`${CONSOLE_ICONS.debug} ${debug}`);
   }
   if (parts.length === 0) {
-    return `console`
+    return `console`;
   }
-  return `console (${parts.join(" ")})`
-}
+  return `console (${parts.join(" ")})`;
+};
 
 const formatExecution = ({
   label,
@@ -411,17 +411,17 @@ const formatExecution = ({
   consoleOutput,
   errorsOutput,
 }) => {
-  let message = ``
-  message += label
+  let message = ``;
+  message += label;
   Object.keys(details).forEach((key) => {
     message += `
-${key}: ${details[key]}`
-  })
+${key}: ${details[key]}`;
+  });
   if (consoleOutput) {
-    message += `\n${consoleOutput}`
+    message += `\n${consoleOutput}`;
   }
   if (errorsOutput) {
-    message += `\n${errorsOutput}`
+    message += `\n${errorsOutput}`;
   }
-  return message
-}
+  return message;
+};

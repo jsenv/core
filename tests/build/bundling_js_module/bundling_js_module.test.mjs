@@ -1,7 +1,7 @@
-import { assert } from "@jsenv/assert"
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
+import { assert } from "@jsenv/assert";
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 
-import { build } from "@jsenv/core"
+import { build } from "@jsenv/core";
 
 const test = async (params) => {
   const { buildFileContents } = await build({
@@ -13,10 +13,10 @@ const test = async (params) => {
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
     plugins: [jsenvPluginBundling()],
     ...params,
-  })
-  const actual = buildFileContents
-  const expected = actual
-  assert({ actual, expected })
-}
+  });
+  const actual = buildFileContents;
+  const expected = actual;
+  assert({ actual, expected });
+};
 
-await test()
+await test();

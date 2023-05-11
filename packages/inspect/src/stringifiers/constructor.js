@@ -1,10 +1,10 @@
 export const inspectConstructor = (value, { parenthesis, useNew }) => {
-  let formattedString = value
+  let formattedString = value;
   if (parenthesis) {
-    formattedString = `(${value})`
+    formattedString = `(${value})`;
   }
   if (useNew) {
-    formattedString = `new ${formattedString}`
+    formattedString = `new ${formattedString}`;
   }
-  return formattedString
-}
+  return formattedString;
+};

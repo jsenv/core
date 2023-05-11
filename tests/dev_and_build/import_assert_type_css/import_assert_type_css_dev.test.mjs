@@ -1,37 +1,37 @@
-import { chromium, firefox, webkit } from "playwright"
-import { assert } from "@jsenv/assert"
+import { chromium, firefox, webkit } from "playwright";
+import { assert } from "@jsenv/assert";
 
-import { startDevServer } from "@jsenv/core"
-import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js"
+import { startDevServer } from "@jsenv/core";
+import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
 
 const devServer = await startDevServer({
   logLevel: "warn",
   keepProcessAlive: false,
   sourceDirectoryUrl: new URL("./client/", import.meta.url),
   port: 0,
-})
+});
 const test = async ({ browserLauncher }) => {
-  const browser = await browserLauncher.launch({ headless: true })
+  const browser = await browserLauncher.launch({ headless: true });
   try {
-    const page = await launchBrowserPage(browser)
-    await page.goto(`${devServer.origin}/main.html`)
+    const page = await launchBrowserPage(browser);
+    await page.goto(`${devServer.origin}/main.html`);
 
     const result = await page.evaluate(
       /* eslint-disable no-undef */
       () => window.resultPromise,
       /* eslint-enable no-undef */
-    )
-    const actual = result
+    );
+    const actual = result;
     const expected = {
       bodyBackgroundColor: "rgb(255, 0, 0)",
       bodyBackgroundImage: `url("${devServer.origin}/src/jsenv.png")`,
-    }
-    assert({ actual, expected })
+    };
+    assert({ actual, expected });
   } finally {
-    browser.close()
+    browser.close();
   }
-}
+};
 
-await test({ browserLauncher: chromium })
-await test({ browserLauncher: firefox })
-await test({ browserLauncher: webkit })
+await test({ browserLauncher: chromium });
+await test({ browserLauncher: firefox });
+await test({ browserLauncher: webkit });

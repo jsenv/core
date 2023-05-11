@@ -1,3 +1,3 @@
-import { createRequire } from "node:module"
+import { createRequire } from "node:module";
 
-export const requireFromJsenv = createRequire(import.meta.url)
+export const requireFromJsenv = createRequire(import.meta.url);

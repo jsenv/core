@@ -9,20 +9,23 @@
     <button>Load file</button>
     <script>
       window.resultPromise = new Promise((resolve) => {
-        window.resolveResultPromise = resolve
-      })
+        window.resolveResultPromise = resolve;
+      });
     </script>
     <script>
-      const url = new URL("./feature/nested/nested_feature.js", window.location)
-      window.nestedFeatureUrl = url.href
+      const url = new URL(
+        "./feature/nested/nested_feature.js",
+        window.location,
+      );
+      window.nestedFeatureUrl = url.href;
     </script>
     <script type="module">
-      import { loadFeature } from "./main.js"
+      import { loadFeature } from "./main.js";
 
       document.querySelector("button").onclick = () => {
-        loadFeature()
-      }
-      document.querySelector("button").click()
+        loadFeature();
+      };
+      document.querySelector("button").click();
     </script>
   </body>
 </html>

@@ -3,9 +3,9 @@
  * - https://astexplorer.net/
  * - https://bvaughn.github.io/babel-repl
  */
-import { fileURLToPath } from "node:url"
+import { fileURLToPath } from "node:url";
 
-import { createJsParseError } from "./js_parse_error.js"
+import { createJsParseError } from "./js_parse_error.js";
 
 export const applyBabelPlugins = async ({
   babelPlugins,
@@ -17,18 +17,18 @@ export const applyBabelPlugins = async ({
     [urlInfo.type]: undefined,
     js_module: "module",
     js_classic: "classic",
-  }[urlInfo.type]
-  const url = urlInfo.originalUrl
-  const generatedUrl = urlInfo.generatedUrl
-  const content = urlInfo.content
+  }[urlInfo.type];
+  const url = urlInfo.originalUrl;
+  const generatedUrl = urlInfo.generatedUrl;
+  const content = urlInfo.content;
 
   if (babelPlugins.length === 0) {
-    return { code: content }
+    return { code: content };
   }
-  const { transformAsync, transformFromAstAsync } = await import("@babel/core")
+  const { transformAsync, transformFromAstAsync } = await import("@babel/core");
   const sourceFileName = url.startsWith("file:")
     ? fileURLToPath(url)
-    : undefined
+    : undefined;
   options = {
     ast: false,
     // https://babeljs.io/docs/en/options#source-map-options
@@ -67,14 +67,14 @@ export const applyBabelPlugins = async ({
     },
     plugins: babelPlugins,
     ...options,
-  }
+  };
   try {
     if (ast) {
-      const result = await transformFromAstAsync(ast, content, options)
-      return result
+      const result = await transformFromAstAsync(ast, content, options);
+      return result;
     }
-    const result = await transformAsync(content, options)
-    return result
+    const result = await transformAsync(content, options);
+    return result;
   } catch (error) {
     if (error && error.code === "BABEL_PARSE_ERROR") {
       throw createJsParseError({
@@ -84,16 +84,16 @@ export const applyBabelPlugins = async ({
         url,
         line: error.loc.line,
         column: error.loc.column,
-      })
+      });
     }
-    throw error
+    throw error;
   }
-}
+};
 
 const useTypeScriptExtension = (url) => {
-  const { pathname } = new URL(url)
-  return pathname.endsWith(".ts") || pathname.endsWith(".tsx")
-}
+  const { pathname } = new URL(url);
+  return pathname.endsWith(".ts") || pathname.endsWith(".tsx");
+};
 
 // const pattern = [
 //   "[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?\\u0007)",

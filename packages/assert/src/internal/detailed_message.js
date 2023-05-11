@@ -1,8 +1,8 @@
 export const createDetailedMessage = (message, details = {}) => {
-  let string = `${message}`
+  let string = `${message}`;
 
   Object.keys(details).forEach((key) => {
-    const value = details[key]
+    const value = details[key];
     string += `
 --- ${key} ---
 ${
@@ -10,8 +10,8 @@ ${
     ? value.join(`
 `)
     : value
-}`
-  })
+}`;
+  });
 
-  return string
-}
+  return string;
+};

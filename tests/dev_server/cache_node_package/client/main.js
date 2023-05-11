@@ -1,4 +1,4 @@
-import { answer } from "foo"
+import { answer } from "foo";
 
-document.querySelector("#app").innerHTML = answer
-window.resolveResultPromise(answer)
+document.querySelector("#app").innerHTML = answer;
+window.resolveResultPromise(answer);

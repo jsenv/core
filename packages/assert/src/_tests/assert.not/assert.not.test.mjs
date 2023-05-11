@@ -1,29 +1,29 @@
-import { assert } from "@jsenv/assert"
-import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js"
+import { assert } from "@jsenv/assert";
+import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js";
 
 {
-  const actual = 41
-  const expected = assert.not(42)
-  assert({ actual, expected })
+  const actual = 41;
+  const expected = assert.not(42);
+  assert({ actual, expected });
 }
 
 {
-  const actual = -0
-  const expected = assert.not(0)
-  assert({ actual, expected })
+  const actual = -0;
+  const expected = assert.not(0);
+  assert({ actual, expected });
 }
 
 {
-  const actual = 0
-  const expected = assert.not(-0)
-  assert({ actual, expected })
+  const actual = 0;
+  const expected = assert.not(-0);
+  assert({ actual, expected });
 }
 
 {
-  const actual = -0
-  const expected = assert.not(-0)
+  const actual = -0;
+  const expected = assert.not(-0);
   try {
-    assert({ actual, expected })
+    assert({ actual, expected });
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
@@ -34,15 +34,15 @@ import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMess
 an other value
 --- path ---
 actual`,
-    )
+    );
   }
 }
 
 {
-  const actual = 42
-  const expected = assert.not(42)
+  const actual = 42;
+  const expected = assert.not(42);
   try {
-    assert({ actual, expected })
+    assert({ actual, expected });
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
@@ -53,6 +53,6 @@ actual`,
 an other value
 --- path ---
 actual`,
-    )
+    );
   }
 }

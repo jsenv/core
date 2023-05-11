@@ -1,1 +1,1 @@
-await Promise.resolve(10)
+await Promise.resolve(10);

@@ -1,8 +1,8 @@
 // https://github.com/nodejs/node/issues/22088
-console.log("foo")
+console.log("foo");
 await new Promise((resolve) => {
-  const id = setTimeout(resolve, 30000)
+  const id = setTimeout(resolve, 30000);
   process.on("SIGTERM", () => {
-    clearTimeout(id)
-  })
-})
+    clearTimeout(id);
+  });
+});

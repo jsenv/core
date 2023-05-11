@@ -1,4 +1,4 @@
-const typeofCurrentScript = typeof document.currentScript
+const typeofCurrentScript = typeof document.currentScript;
 
 /*
  * using spread + destructuring generate a dependency to babel helpers
@@ -14,22 +14,22 @@ const typeofCurrentScript = typeof document.currentScript
  */
 
 const getResponse = () => {
-  return [42]
-}
-const [answer] = getResponse()
+  return [42];
+};
+const [answer] = getResponse();
 console.log({
   ...{ answer },
-})
+});
 
 window.getResult = async () => {
-  const { answer } = await import("./file.js")
+  const { answer } = await import("./file.js");
   await new Promise((resolve) => {
-    setTimeout(resolve, 100)
-  })
-  const url = import.meta.url
+    setTimeout(resolve, 100);
+  });
+  const url = import.meta.url;
   return {
     typeofCurrentScript,
     answer,
     url,
-  }
-}
+  };
+};

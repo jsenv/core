@@ -48,4 +48,4 @@ export const eslintConfigForPrettier = {
     "wrap-iife": ["off"],
     "yield-star-spacing": ["off"],
   },
-}
+};

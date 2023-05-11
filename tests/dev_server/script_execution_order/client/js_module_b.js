@@ -1,1 +1,1 @@
-window.order.push("js_module_b")
+window.order.push("js_module_b");

@@ -4,16 +4,19 @@
  * It is meant to be used inside "requestToResponse"
  */
 
-import { createReadStream, statSync, readFile } from "node:fs"
-import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js"
+import { createReadStream, statSync, readFile } from "node:fs";
+import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 
-import { isFileSystemPath, fileSystemPathToUrl } from "./internal/filesystem.js"
-import { bufferToEtag } from "./internal/etag.js"
-import { composeTwoResponses } from "./internal/response_composition.js"
-import { convertFileSystemErrorToResponseProperties } from "./internal/convertFileSystemErrorToResponseProperties.js"
-import { timeFunction } from "./server_timing/timing_measure.js"
-import { pickContentEncoding } from "./content_negotiation/pick_content_encoding.js"
-import { serveDirectory } from "./serve_directory.js"
+import {
+  isFileSystemPath,
+  fileSystemPathToUrl,
+} from "./internal/filesystem.js";
+import { bufferToEtag } from "./internal/etag.js";
+import { composeTwoResponses } from "./internal/response_composition.js";
+import { convertFileSystemErrorToResponseProperties } from "./internal/convertFileSystemErrorToResponseProperties.js";
+import { timeFunction } from "./server_timing/timing_measure.js";
+import { pickContentEncoding } from "./content_negotiation/pick_content_encoding.js";
+import { serveDirectory } from "./serve_directory.js";
 
 export const fetchFileSystem = async (
   filesystemUrl,
@@ -34,33 +37,33 @@ export const fetchFileSystem = async (
     rootDirectoryUrl, //  = `${pathToFileURL(process.cwd())}/`,
   } = {},
 ) => {
-  const urlString = asUrlString(filesystemUrl)
+  const urlString = asUrlString(filesystemUrl);
   if (!urlString) {
     return create500Response(
       `fetchFileSystem first parameter must be a file url, got ${filesystemUrl}`,
-    )
+    );
   }
   if (!urlString.startsWith("file://")) {
     return create500Response(
       `fetchFileSystem url must use "file://" scheme, got ${filesystemUrl}`,
-    )
+    );
   }
   if (rootDirectoryUrl) {
-    let rootDirectoryUrlString = asUrlString(rootDirectoryUrl)
+    let rootDirectoryUrlString = asUrlString(rootDirectoryUrl);
     if (!rootDirectoryUrlString) {
       return create500Response(
         `rootDirectoryUrl must be a string or an url, got ${rootDirectoryUrl}`,
-      )
+      );
     }
     if (!rootDirectoryUrlString.endsWith("/")) {
-      rootDirectoryUrlString = `${rootDirectoryUrlString}/`
+      rootDirectoryUrlString = `${rootDirectoryUrlString}/`;
     }
     if (!urlString.startsWith(rootDirectoryUrlString)) {
       return create500Response(
         `fetchFileSystem url must be inside root directory, got ${urlString}`,
-      )
+      );
     }
-    rootDirectoryUrl = rootDirectoryUrlString
+    rootDirectoryUrl = rootDirectoryUrlString;
   }
 
   // here you might be tempted to add || cacheControl === 'no-cache'
@@ -68,52 +71,52 @@ export const fetchFileSystem = async (
   // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#Cacheability
   if (cacheControl === "no-store") {
     if (etagEnabled) {
-      console.warn(`cannot enable etag when cache-control is ${cacheControl}`)
-      etagEnabled = false
+      console.warn(`cannot enable etag when cache-control is ${cacheControl}`);
+      etagEnabled = false;
     }
     if (mtimeEnabled) {
-      console.warn(`cannot enable mtime when cache-control is ${cacheControl}`)
-      mtimeEnabled = false
+      console.warn(`cannot enable mtime when cache-control is ${cacheControl}`);
+      mtimeEnabled = false;
     }
   }
   if (etagEnabled && mtimeEnabled) {
     console.warn(
       `cannot enable both etag and mtime, mtime disabled in favor of etag.`,
-    )
-    mtimeEnabled = false
+    );
+    mtimeEnabled = false;
   }
 
   if (method !== "GET" && method !== "HEAD") {
     return {
       status: 501,
-    }
+    };
   }
 
-  const sourceUrl = `file://${new URL(urlString).pathname}`
+  const sourceUrl = `file://${new URL(urlString).pathname}`;
   try {
     const [readStatTiming, sourceStat] = await timeFunction(
       "file service>read file stat",
       () => statSync(new URL(sourceUrl)),
-    )
+    );
     if (sourceStat.isDirectory()) {
       if (canReadDirectory) {
         return serveDirectory(urlString, {
           headers,
           canReadDirectory,
           rootDirectoryUrl,
-        })
+        });
       }
       return {
         status: 403,
         statusText: "not allowed to read directory",
-      }
+      };
     }
     // not a file, give up
     if (!sourceStat.isFile()) {
       return {
         status: 404,
         timing: readStatTiming,
-      }
+      };
     }
 
     const clientCacheResponse = await getClientCacheResponse({
@@ -124,7 +127,7 @@ export const fetchFileSystem = async (
       mtimeEnabled,
       sourceStat,
       sourceUrl,
-    })
+    });
 
     // send 304 (redirect response to client cache)
     // because the response body does not have to be transmitted
@@ -137,24 +140,24 @@ export const fetchFileSystem = async (
           },
         },
         clientCacheResponse,
-      )
+      );
     }
 
-    let response
+    let response;
     if (compressionEnabled && sourceStat.size >= compressionSizeThreshold) {
       const compressedResponse = await getCompressedResponse({
         headers,
         sourceUrl,
-      })
+      });
       if (compressedResponse) {
-        response = compressedResponse
+        response = compressedResponse;
       }
     }
     if (!response) {
       response = await getRawResponse({
         sourceStat,
         sourceUrl,
-      })
+      });
     }
 
     const intermediateResponse = composeTwoResponses(
@@ -171,8 +174,8 @@ export const fetchFileSystem = async (
         },
       },
       response,
-    )
-    return composeTwoResponses(intermediateResponse, clientCacheResponse)
+    );
+    return composeTwoResponses(intermediateResponse, clientCacheResponse);
   } catch (e) {
     return composeTwoResponses(
       {
@@ -181,9 +184,9 @@ export const fetchFileSystem = async (
         },
       },
       convertFileSystemErrorToResponseProperties(e) || {},
-    )
+    );
   }
-}
+};
 
 const create500Response = (message) => {
   return {
@@ -193,8 +196,8 @@ const create500Response = (message) => {
       "content-length": Buffer.byteLength(message),
     },
     body: message,
-  }
-}
+  };
+};
 
 const getClientCacheResponse = async ({
   headers,
@@ -214,7 +217,7 @@ const getClientCacheResponse = async ({
     // let's disable it on no-cache too
     headers["cache-control"] === "no-cache"
   ) {
-    return { status: 200 }
+    return { status: 200 };
   }
 
   if (etagEnabled) {
@@ -224,18 +227,18 @@ const getClientCacheResponse = async ({
       etagMemoryMaxSize,
       sourceStat,
       sourceUrl,
-    })
+    });
   }
 
   if (mtimeEnabled) {
     return getMtimeResponse({
       headers,
       sourceStat,
-    })
+    });
   }
 
-  return { status: 200 }
-}
+  return { status: 200 };
+};
 
 const getEtagResponse = async ({
   headers,
@@ -253,9 +256,9 @@ const getEtagResponse = async ({
         sourceUrl,
         sourceStat,
       }),
-  )
+  );
 
-  const requestHasIfNoneMatchHeader = "if-none-match" in headers
+  const requestHasIfNoneMatchHeader = "if-none-match" in headers;
   if (
     requestHasIfNoneMatchHeader &&
     headers["if-none-match"] === fileContentEtag
@@ -263,7 +266,7 @@ const getEtagResponse = async ({
     return {
       status: 304,
       timing: computeEtagTiming,
-    }
+    };
   }
 
   return {
@@ -272,10 +275,10 @@ const getEtagResponse = async ({
       etag: fileContentEtag,
     },
     timing: computeEtagTiming,
-  }
-}
+  };
+};
 
-const ETAG_MEMORY_MAP = new Map()
+const ETAG_MEMORY_MAP = new Map();
 const computeEtag = async ({
   etagMemory,
   etagMemoryMaxSize,
@@ -283,42 +286,42 @@ const computeEtag = async ({
   sourceStat,
 }) => {
   if (etagMemory) {
-    const etagMemoryEntry = ETAG_MEMORY_MAP.get(sourceUrl)
+    const etagMemoryEntry = ETAG_MEMORY_MAP.get(sourceUrl);
     if (
       etagMemoryEntry &&
       fileStatAreTheSame(etagMemoryEntry.sourceStat, sourceStat)
     ) {
-      return etagMemoryEntry.eTag
+      return etagMemoryEntry.eTag;
     }
   }
   const fileContentAsBuffer = await new Promise((resolve, reject) => {
     readFile(new URL(sourceUrl), (error, buffer) => {
       if (error) {
-        reject(error)
+        reject(error);
       } else {
-        resolve(buffer)
+        resolve(buffer);
       }
-    })
-  })
-  const eTag = bufferToEtag(fileContentAsBuffer)
+    });
+  });
+  const eTag = bufferToEtag(fileContentAsBuffer);
   if (etagMemory) {
     if (ETAG_MEMORY_MAP.size >= etagMemoryMaxSize) {
-      const firstKey = Array.from(ETAG_MEMORY_MAP.keys())[0]
-      ETAG_MEMORY_MAP.delete(firstKey)
+      const firstKey = Array.from(ETAG_MEMORY_MAP.keys())[0];
+      ETAG_MEMORY_MAP.delete(firstKey);
     }
-    ETAG_MEMORY_MAP.set(sourceUrl, { sourceStat, eTag })
+    ETAG_MEMORY_MAP.set(sourceUrl, { sourceStat, eTag });
   }
-  return eTag
-}
+  return eTag;
+};
 
 // https://nodejs.org/api/fs.html#fs_class_fs_stats
 const fileStatAreTheSame = (leftFileStat, rightFileStat) => {
   return fileStatKeysToCompare.every((keyToCompare) => {
-    const leftValue = leftFileStat[keyToCompare]
-    const rightValue = rightFileStat[keyToCompare]
-    return leftValue === rightValue
-  })
-}
+    const leftValue = leftFileStat[keyToCompare];
+    const rightValue = rightFileStat[keyToCompare];
+    return leftValue === rightValue;
+  });
+};
 const fileStatKeysToCompare = [
   // mtime the the most likely to change, check it first
   "mtimeMs",
@@ -329,25 +332,25 @@ const fileStatKeysToCompare = [
   "uid",
   "gid",
   "blksize",
-]
+];
 
 const getMtimeResponse = async ({ headers, sourceStat }) => {
   if ("if-modified-since" in headers) {
-    let cachedModificationDate
+    let cachedModificationDate;
     try {
-      cachedModificationDate = new Date(headers["if-modified-since"])
+      cachedModificationDate = new Date(headers["if-modified-since"]);
     } catch (e) {
       return {
         status: 400,
         statusText: "if-modified-since header is not a valid date",
-      }
+      };
     }
 
-    const actualModificationDate = dateToSecondsPrecision(sourceStat.mtime)
+    const actualModificationDate = dateToSecondsPrecision(sourceStat.mtime);
     if (Number(cachedModificationDate) >= Number(actualModificationDate)) {
       return {
         status: 304,
-      }
+      };
     }
   }
 
@@ -356,22 +359,22 @@ const getMtimeResponse = async ({ headers, sourceStat }) => {
     headers: {
       "last-modified": dateToUTCString(sourceStat.mtime),
     },
-  }
-}
+  };
+};
 
 const getCompressedResponse = async ({ sourceUrl, headers }) => {
   const acceptedCompressionFormat = pickContentEncoding(
     { headers },
     Object.keys(availableCompressionFormats),
-  )
+  );
   if (!acceptedCompressionFormat) {
-    return null
+    return null;
   }
 
-  const fileReadableStream = fileUrlToReadableStream(sourceUrl)
+  const fileReadableStream = fileUrlToReadableStream(sourceUrl);
   const body = await availableCompressionFormats[acceptedCompressionFormat](
     fileReadableStream,
-  )
+  );
 
   return {
     status: 200,
@@ -381,30 +384,30 @@ const getCompressedResponse = async ({ sourceUrl, headers }) => {
       "vary": "accept-encoding",
     },
     body,
-  }
-}
+  };
+};
 
 const fileUrlToReadableStream = (fileUrl) => {
   return createReadStream(new URL(fileUrl), {
     emitClose: true,
     autoClose: true,
-  })
-}
+  });
+};
 
 const availableCompressionFormats = {
   br: async (fileReadableStream) => {
-    const { createBrotliCompress } = await import("node:zlib")
-    return fileReadableStream.pipe(createBrotliCompress())
+    const { createBrotliCompress } = await import("node:zlib");
+    return fileReadableStream.pipe(createBrotliCompress());
   },
   deflate: async (fileReadableStream) => {
-    const { createDeflate } = await import("node:zlib")
-    return fileReadableStream.pipe(createDeflate())
+    const { createDeflate } = await import("node:zlib");
+    return fileReadableStream.pipe(createDeflate());
   },
   gzip: async (fileReadableStream) => {
-    const { createGzip } = await import("node:zlib")
-    return fileReadableStream.pipe(createGzip())
+    const { createGzip } = await import("node:zlib");
+    return fileReadableStream.pipe(createGzip());
   },
-}
+};
 
 const getRawResponse = async ({ sourceUrl, sourceStat }) => {
   return {
@@ -414,32 +417,32 @@ const getRawResponse = async ({ sourceUrl, sourceStat }) => {
       "content-length": sourceStat.size,
     },
     body: fileUrlToReadableStream(sourceUrl),
-  }
-}
+  };
+};
 
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toUTCString
-const dateToUTCString = (date) => date.toUTCString()
+const dateToUTCString = (date) => date.toUTCString();
 
 const dateToSecondsPrecision = (date) => {
-  const dateWithSecondsPrecision = new Date(date)
-  dateWithSecondsPrecision.setMilliseconds(0)
-  return dateWithSecondsPrecision
-}
+  const dateWithSecondsPrecision = new Date(date);
+  dateWithSecondsPrecision.setMilliseconds(0);
+  return dateWithSecondsPrecision;
+};
 
 const asUrlString = (value) => {
   if (value instanceof URL) {
-    return value.href
+    return value.href;
   }
   if (typeof value === "string") {
     if (isFileSystemPath(value)) {
-      return fileSystemPathToUrl(value)
+      return fileSystemPathToUrl(value);
     }
     try {
-      const urlObject = new URL(value)
-      return String(urlObject)
+      const urlObject = new URL(value);
+      return String(urlObject);
     } catch (e) {
-      return null
+      return null;
     }
   }
-  return null
-}
+  return null;
+};

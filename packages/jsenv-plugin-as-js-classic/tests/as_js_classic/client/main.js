@@ -1,8 +1,8 @@
-import { answer } from "./dep.js"
+import { answer } from "./dep.js";
 
-window.ask = () => answer
+window.ask = () => answer;
 
-const [value] = [answer]
+const [value] = [answer];
 console.log({
   ...{ value },
-})
+});

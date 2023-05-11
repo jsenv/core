@@ -5,27 +5,27 @@ Taking different code paths based on different inputs is messy and code oftens f
 "raceCallbacks" helps to do both properly with the following API
 
 ```js
-import { raceCallbacks } from "somewhere"
+import { raceCallbacks } from "somewhere";
 
 raceCallbacks(
   {
     timeout: (cb) => {
-      const timeout = setTimeout(cb, 1000)
+      const timeout = setTimeout(cb, 1000);
       return () => {
-        clearTimeout(timeout)
-      }
+        clearTimeout(timeout);
+      };
     },
     error: () => {
-      something.on("error", cb)
+      something.on("error", cb);
       return () => {
-        return something.removeListener("error", cb)
-      }
+        return something.removeListener("error", cb);
+      };
     },
     end: () => {
-      something.on("end", cb)
+      something.on("end", cb);
       return () => {
-        return something.removeListener("end", cb)
-      }
+        return something.removeListener("end", cb);
+      };
     },
   },
   (winner) => {
@@ -33,8 +33,8 @@ raceCallbacks(
       timeout: () => console.log("timeout after 1000ms"),
       error: (e) => console.error("error", e),
       end: (value) => console.log("end", value),
-    }
-    raceEffects[winner.name](winner.data)
+    };
+    raceEffects[winner.name](winner.data);
   },
-)
+);
 ```

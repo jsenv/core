@@ -9,37 +9,37 @@
  * 2. How to use "withSignal" to avoid the warning
  */
 
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-import { Abort } from "@jsenv/abort"
-import { spyProcessWarnings } from "@jsenv/abort/tests/process_warnings_spy.mjs"
+import { Abort } from "@jsenv/abort";
+import { spyProcessWarnings } from "@jsenv/abort/tests/process_warnings_spy.mjs";
 
 const fakeFetch = async ({ signal }) => {
   return new Promise((resolve, reject) => {
     const abortEventListener = () => {
-      reject(new Error("Operation aborted"))
-    }
-    signal.addEventListener("abort", abortEventListener)
+      reject(new Error("Operation aborted"));
+    };
+    signal.addEventListener("abort", abortEventListener);
 
     setTimeout(() => {
-      signal.removeEventListener("abort", abortEventListener)
-      resolve()
-    }, 100)
-  })
-}
+      signal.removeEventListener("abort", abortEventListener);
+      resolve();
+    }, 100);
+  });
+};
 
 // Node.js emits a warning when more than 10 listeners on "abort"
 {
-  const getProcessWarnings = spyProcessWarnings()
-  const abortController = new AbortController()
+  const getProcessWarnings = spyProcessWarnings();
+  const abortController = new AbortController();
 
   await Promise.all(
     new Array(11).fill("").map(async () => {
-      await fakeFetch({ signal: abortController.signal })
+      await fakeFetch({ signal: abortController.signal });
     }),
-  )
+  );
 
-  const actual = getProcessWarnings()
+  const actual = getProcessWarnings();
   const expected = [
     Object.assign(
       new Error(
@@ -52,8 +52,8 @@ const fakeFetch = async ({ signal }) => {
         count: 11,
       },
     ),
-  ]
-  assert({ actual, expected })
+  ];
+  assert({ actual, expected });
 }
 
 // withSignal can be called any amount of time without trigerring a warning
@@ -62,18 +62,18 @@ const fakeFetch = async ({ signal }) => {
 // we know what we are doing, and preserves it for code not wrapped by
 // "withSignal" which ensure the listener is removed
 {
-  const getProcessWarnings = spyProcessWarnings()
-  const operation = Abort.startOperation()
+  const getProcessWarnings = spyProcessWarnings();
+  const operation = Abort.startOperation();
 
   await Promise.all(
     new Array(11).fill("").map(async () => {
       await operation.withSignal(async (signal) => {
-        await fakeFetch({ signal })
-      })
+        await fakeFetch({ signal });
+      });
     }),
-  )
+  );
 
-  const actual = getProcessWarnings()
-  const expected = []
-  assert({ actual, expected })
+  const actual = getProcessWarnings();
+  const expected = [];
+  assert({ actual, expected });
 }

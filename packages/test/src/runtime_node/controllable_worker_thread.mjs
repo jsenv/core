@@ -1,19 +1,19 @@
-import { parentPort } from "node:worker_threads"
-import { uneval } from "@jsenv/uneval"
+import { parentPort } from "node:worker_threads";
+import { uneval } from "@jsenv/uneval";
 
-import { executeUsingDynamicImport } from "./execute_using_dynamic_import.js"
+import { executeUsingDynamicImport } from "./execute_using_dynamic_import.js";
 
 const ACTIONS_AVAILABLE = {
   "execute-using-dynamic-import": executeUsingDynamicImport,
-}
-const ACTION_REQUEST_EVENT_NAME = "action"
-const ACTION_RESPONSE_EVENT_NAME = "action-result"
-const ACTION_RESPONSE_STATUS_FAILED = "action-failed"
-const ACTION_RESPONSE_STATUS_COMPLETED = "action-completed"
+};
+const ACTION_REQUEST_EVENT_NAME = "action";
+const ACTION_RESPONSE_EVENT_NAME = "action-result";
+const ACTION_RESPONSE_STATUS_FAILED = "action-failed";
+const ACTION_RESPONSE_STATUS_COMPLETED = "action-completed";
 
 const sendActionFailed = (error) => {
   if (error.hasOwnProperty("toString")) {
-    delete error.toString
+    delete error.toString;
   }
   sendToParent(
     ACTION_RESPONSE_EVENT_NAME,
@@ -26,8 +26,8 @@ const sendActionFailed = (error) => {
       },
       { ignoreSymbols: true },
     ),
-  )
-}
+  );
+};
 
 const sendActionCompleted = (value) => {
   sendToParent(
@@ -40,8 +40,8 @@ const sendActionCompleted = (value) => {
       status: ACTION_RESPONSE_STATUS_COMPLETED,
       value,
     }),
-  )
-}
+  );
+};
 
 const sendToParent = (type, data) => {
   // this can keep process alive longer than expected
@@ -52,52 +52,52 @@ const sendToParent = (type, data) => {
     jsenv: true,
     type,
     data,
-  })
-}
+  });
+};
 
 const onceParentMessage = (type, callback) => {
   const listener = (message) => {
     if (message && message.jsenv && message.type === type) {
-      removeListener() // commenting this line keep this worker alive
-      callback(message.data)
+      removeListener(); // commenting this line keep this worker alive
+      callback(message.data);
     }
-  }
+  };
   const removeListener = () => {
-    parentPort.removeListener("message", listener)
-  }
-  parentPort.on("message", listener)
-  return removeListener
-}
+    parentPort.removeListener("message", listener);
+  };
+  parentPort.on("message", listener);
+  return removeListener;
+};
 
 const removeActionRequestListener = onceParentMessage(
   ACTION_REQUEST_EVENT_NAME,
   async ({ actionType, actionParams }) => {
-    const action = ACTIONS_AVAILABLE[actionType]
+    const action = ACTIONS_AVAILABLE[actionType];
     if (!action) {
-      sendActionFailed(new Error(`unknown action ${actionType}`))
-      return
+      sendActionFailed(new Error(`unknown action ${actionType}`));
+      return;
     }
 
-    let value
-    let failed = false
+    let value;
+    let failed = false;
     try {
-      value = await action(actionParams)
+      value = await action(actionParams);
     } catch (e) {
-      failed = true
-      value = e
+      failed = true;
+      value = e;
     }
 
     if (failed) {
-      sendActionFailed(value)
+      sendActionFailed(value);
     } else {
-      sendActionCompleted(value)
+      sendActionCompleted(value);
     }
     if (actionParams.exitAfterAction) {
-      removeActionRequestListener()
+      removeActionRequestListener();
     }
   },
-)
+);
 
 setTimeout(() => {
-  sendToParent("ready")
-})
+  sendToParent("ready");
+});

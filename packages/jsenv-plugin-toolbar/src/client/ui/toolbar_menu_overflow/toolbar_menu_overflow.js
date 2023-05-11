@@ -1,97 +1,97 @@
-import { closeAllTooltips } from "../../core/tooltip_actions.js"
+import { closeAllTooltips } from "../../core/tooltip_actions.js";
 import {
   forceHideElement,
   removeForceHideElement,
   deactivateToolbarSection,
-} from "../util/dom.js"
-import { createHorizontalBreakpoint } from "../util/responsive.js"
+} from "../util/dom.js";
+import { createHorizontalBreakpoint } from "../util/responsive.js";
 
-const WINDOW_SMALL_WIDTH = 420
+const WINDOW_SMALL_WIDTH = 420;
 
 export const initToolbarMenuOverflow = () => {
   // apply responsive design on toolbar icons if needed + add listener on resize screen
   // ideally we should listen breakpoint once, for now restore toolbar
-  const overflowMenuBreakpoint = createHorizontalBreakpoint(WINDOW_SMALL_WIDTH)
+  const overflowMenuBreakpoint = createHorizontalBreakpoint(WINDOW_SMALL_WIDTH);
   const handleOverflowMenuBreakpoint = () => {
-    responsiveToolbar(overflowMenuBreakpoint)
-  }
-  handleOverflowMenuBreakpoint()
-  overflowMenuBreakpoint.changed.listen(handleOverflowMenuBreakpoint)
+    responsiveToolbar(overflowMenuBreakpoint);
+  };
+  handleOverflowMenuBreakpoint();
+  overflowMenuBreakpoint.changed.listen(handleOverflowMenuBreakpoint);
 
   document.querySelector("#menu_overflow_button").onclick = () => {
     if (overflowMenuIsOpened()) {
-      closeOverflowMenu()
+      closeOverflowMenu();
     } else {
-      openOverflowMenu()
+      openOverflowMenu();
     }
-  }
-}
+  };
+};
 
 const responsiveToolbar = (overflowMenuBreakpoint) => {
   // close all tooltips in case opened
-  closeAllTooltips()
+  closeAllTooltips();
   // close settings box in case opened
-  deactivateToolbarSection(document.querySelector("#settings"))
+  deactivateToolbarSection(document.querySelector("#settings"));
 
   if (overflowMenuBreakpoint.isBelow()) {
-    enableOverflow()
+    enableOverflow();
   } else {
-    disableOverflow()
+    disableOverflow();
   }
-}
+};
 
-let moves = []
+let moves = [];
 
 const enableOverflow = () => {
   // move elements from toolbar to overflow menu
   const responsiveToolbarElements = document.querySelectorAll(
     "[data-responsive-toolbar-element]",
-  )
-  const overflowMenu = document.querySelector("#menu_overflow")
+  );
+  const overflowMenu = document.querySelector("#menu_overflow");
 
   // keep a placeholder element to know where to move them back
   moves = Array.from(responsiveToolbarElements).map((element) => {
-    const placeholder = document.createElement("div")
-    placeholder.style.display = "none"
-    placeholder.setAttribute("data-placeholder", "")
-    element.parentNode.replaceChild(placeholder, element)
-    overflowMenu.appendChild(element)
-    return { element, placeholder }
-  })
+    const placeholder = document.createElement("div");
+    placeholder.style.display = "none";
+    placeholder.setAttribute("data-placeholder", "");
+    element.parentNode.replaceChild(placeholder, element);
+    overflowMenu.appendChild(element);
+    return { element, placeholder };
+  });
 
   document
     .querySelector("#toolbar")
-    .setAttribute("data-menu-overflow-enabled", "")
-  removeForceHideElement(document.querySelector("#menu_overflow_button"))
-}
+    .setAttribute("data-menu-overflow-enabled", "");
+  removeForceHideElement(document.querySelector("#menu_overflow_button"));
+};
 
 const disableOverflow = () => {
   // close overflow menu in case it's open & unselect toggleOverflowMenu button in case it's selected
-  closeOverflowMenu()
-  deactivateToolbarSection(document.querySelector("#menu_overflow"))
+  closeOverflowMenu();
+  deactivateToolbarSection(document.querySelector("#menu_overflow"));
   moves.forEach(({ element, placeholder }) => {
-    placeholder.parentNode.replaceChild(element, placeholder)
-  })
-  moves = []
+    placeholder.parentNode.replaceChild(element, placeholder);
+  });
+  moves = [];
   document
     .querySelector("#toolbar")
-    .removeAttribute("data-menu-overflow-enabled")
-  forceHideElement(document.querySelector("#menu_overflow_button"))
-}
+    .removeAttribute("data-menu-overflow-enabled");
+  forceHideElement(document.querySelector("#menu_overflow_button"));
+};
 
 const overflowMenuIsOpened = () => {
-  const toolbar = document.querySelector("#toolbar")
-  return toolbar.hasAttribute("data-menu-overflow-opened")
-}
+  const toolbar = document.querySelector("#toolbar");
+  return toolbar.hasAttribute("data-menu-overflow-opened");
+};
 
 const openOverflowMenu = () => {
-  const toolbar = document.querySelector("#toolbar")
-  document.querySelector("#menu_overflow").setAttribute("data-animate", "")
-  toolbar.setAttribute("data-menu-overflow-opened", "")
-}
+  const toolbar = document.querySelector("#toolbar");
+  document.querySelector("#menu_overflow").setAttribute("data-animate", "");
+  toolbar.setAttribute("data-menu-overflow-opened", "");
+};
 
 const closeOverflowMenu = () => {
-  const toolbar = document.querySelector("#toolbar")
-  toolbar.removeAttribute("data-menu-overflow-opened")
-  document.querySelector("#menu_overflow").removeAttribute("data-animate")
-}
+  const toolbar = document.querySelector("#toolbar");
+  toolbar.removeAttribute("data-menu-overflow-opened");
+  document.querySelector("#menu_overflow").removeAttribute("data-animate");
+};

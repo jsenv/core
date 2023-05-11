@@ -1,7 +1,7 @@
-import { closeExecutionTooltip } from "./execution_actions.js"
-import { closeServerTooltip } from "./server_actions.js"
+import { closeExecutionTooltip } from "./execution_actions.js";
+import { closeServerTooltip } from "./server_actions.js";
 
 export const closeAllTooltips = () => {
-  closeExecutionTooltip()
-  closeServerTooltip()
-}
+  closeExecutionTooltip();
+  closeServerTooltip();
+};

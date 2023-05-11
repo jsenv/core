@@ -1,11 +1,11 @@
 export const comparisonToRootComparison = (comparison) => {
-  let current = comparison
+  let current = comparison;
   while (current) {
     if (current.parent) {
-      current = current.parent
+      current = current.parent;
     } else {
-      break
+      break;
     }
   }
-  return current
-}
+  return current;
+};

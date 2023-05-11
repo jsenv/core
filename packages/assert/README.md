@@ -11,11 +11,11 @@ It can be resumed by the following quote:
 ## Example
 
 ```js
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-const actual = { foo: false }
-const expected = { foo: true }
-assert({ actual, expected })
+const actual = { foo: false };
+const expected = { foo: true };
+assert({ actual, expected });
 ```
 
 ```console
@@ -38,15 +38,15 @@ To illustrates when a comparison fails, check the list of examples below
 ### Type failure
 
 ```js
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-const actual = 10
-const expected = "10"
+const actual = 10;
+const expected = "10";
 
 try {
-  assert({ actual, expected })
+  assert({ actual, expected });
 } catch (e) {
-  console.log(e.message)
+  console.log(e.message);
 }
 ```
 
@@ -63,15 +63,15 @@ actual
 ### Prototype failure
 
 ```js
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-const actual = new TypeError()
-const expected = new Error()
+const actual = new TypeError();
+const expected = new Error();
 
 try {
-  assert({ actual, expected })
+  assert({ actual, expected });
 } catch (e) {
-  console.log(e.message)
+  console.log(e.message);
 }
 ```
 
@@ -88,15 +88,15 @@ actual[[Prototype]]
 ### Properties order failure
 
 ```js
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-const actual = { foo: true, bar: true }
-const expected = { bar: true, foo: true }
+const actual = { foo: true, bar: true };
+const expected = { bar: true, foo: true };
 
 try {
-  assert({ actual, expected })
+  assert({ actual, expected });
 } catch (e) {
-  console.log(e.message)
+  console.log(e.message);
 }
 ```
 

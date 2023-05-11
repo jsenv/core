@@ -1,19 +1,19 @@
-import { createDetailedMessage } from "@jsenv/log"
+import { createDetailedMessage } from "@jsenv/log";
 
 export const composeV8AndIstanbul = (
   v8FileByFileCoverage,
   istanbulFileByFileCoverage,
   { coverageV8ConflictWarning },
 ) => {
-  const fileByFileCoverage = {}
-  const v8Files = Object.keys(v8FileByFileCoverage)
-  const istanbulFiles = Object.keys(istanbulFileByFileCoverage)
+  const fileByFileCoverage = {};
+  const v8Files = Object.keys(v8FileByFileCoverage);
+  const istanbulFiles = Object.keys(istanbulFileByFileCoverage);
 
   v8Files.forEach((key) => {
-    fileByFileCoverage[key] = v8FileByFileCoverage[key]
-  })
+    fileByFileCoverage[key] = v8FileByFileCoverage[key];
+  });
   istanbulFiles.forEach((key) => {
-    const v8Coverage = v8FileByFileCoverage[key]
+    const v8Coverage = v8FileByFileCoverage[key];
     if (v8Coverage) {
       if (coverageV8ConflictWarning) {
         console.warn(
@@ -26,13 +26,13 @@ export const composeV8AndIstanbul = (
               "suggestion 2": `force coverage using istanbul with coverageMethodForBrowsers: "istanbul"`,
             },
           ),
-        )
+        );
       }
-      fileByFileCoverage[key] = v8Coverage
+      fileByFileCoverage[key] = v8Coverage;
     } else {
-      fileByFileCoverage[key] = istanbulFileByFileCoverage[key]
+      fileByFileCoverage[key] = istanbulFileByFileCoverage[key];
     }
-  })
+  });
 
-  return fileByFileCoverage
-}
+  return fileByFileCoverage;
+};

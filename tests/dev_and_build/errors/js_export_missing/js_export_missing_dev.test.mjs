@@ -1,7 +1,7 @@
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-import { startDevServer } from "@jsenv/core"
-import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js"
+import { startDevServer } from "@jsenv/core";
+import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
 const test = async (params) => {
   const devServer = await startDevServer({
@@ -9,7 +9,7 @@ const test = async (params) => {
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
     ...params,
-  })
+  });
   const { returnValue, pageErrors, consoleOutput } = await executeInBrowser({
     collectErrors: true,
     collectConsole: true,
@@ -17,12 +17,12 @@ const test = async (params) => {
     /* eslint-disable no-undef */
     pageFunction: () => window.__supervisor__.getDocumentExecutionResult(),
     /* eslint-enable no-undef */
-  })
+  });
   const actual = {
     pageErrors,
     errorMessage: returnValue.executionResults["/main.js"].exception.message,
     consoleOutputRaw: consoleOutput.raw,
-  }
+  };
   const expected = {
     pageErrors: [
       Object.assign(
@@ -36,8 +36,8 @@ const test = async (params) => {
     ],
     errorMessage: `Uncaught SyntaxError: The requested module '/file.js' does not provide an export named 'answer'`,
     consoleOutputRaw: "",
-  }
-  assert({ actual, expected })
-}
+  };
+  assert({ actual, expected });
+};
 
-await test()
+await test();

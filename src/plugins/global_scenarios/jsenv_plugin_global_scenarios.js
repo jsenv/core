@@ -5,15 +5,15 @@
  * A global will be injected with true/false when needed
  */
 
-import { replacePlaceholders } from "@jsenv/plugin-placeholders"
+import { replacePlaceholders } from "@jsenv/plugin-placeholders";
 
 export const jsenvPluginGlobalScenarios = () => {
   const transformIfNeeded = (urlInfo, context) => {
     return replacePlaceholders(urlInfo, {
       __DEV__: context.dev,
       __BUILD__: context.build,
-    })
-  }
+    });
+  };
 
   return {
     name: "jsenv:global_scenario",
@@ -23,5 +23,5 @@ export const jsenvPluginGlobalScenarios = () => {
       js_module: transformIfNeeded,
       html: transformIfNeeded,
     },
-  }
-}
+  };
+};

@@ -1,7 +1,7 @@
-import { assert } from "@jsenv/assert"
-import { fetchUrl } from "@jsenv/fetch"
+import { assert } from "@jsenv/assert";
+import { fetchUrl } from "@jsenv/fetch";
 
-import { startServer } from "@jsenv/server"
+import { startServer } from "@jsenv/server";
 
 const { origin } = await startServer({
   logLevel: "warn",
@@ -15,7 +15,7 @@ const { origin } = await startServer({
         // that will be used for services coming after a given service
         return {
           pathname: "/toto.js",
-        }
+        };
       },
     },
     {
@@ -27,12 +27,12 @@ const { origin } = await startServer({
             "Content-Type": "text/plain",
           },
           body: request.resource,
-        }
+        };
       },
     },
   ],
-})
-const response = await fetchUrl(origin)
-const actual = await response.text()
-const expected = "/toto.js"
-assert({ actual, expected })
+});
+const response = await fetchUrl(origin);
+const actual = await response.text();
+const expected = "/toto.js";
+assert({ actual, expected });

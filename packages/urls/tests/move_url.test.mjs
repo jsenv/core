@@ -1,13 +1,13 @@
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-import { moveUrl } from "@jsenv/urls"
+import { moveUrl } from "@jsenv/urls";
 
 {
   const actual = moveUrl({
     url: "http://localhost:3452/file.js",
     from: "http://localhost_alias:3452/",
     to: "file:///dir/",
-  })
-  const expected = "http://localhost:3452/file.js"
-  assert({ actual, expected })
+  });
+  const expected = "http://localhost:3452/file.js";
+  assert({ actual, expected });
 }

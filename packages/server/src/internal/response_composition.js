@@ -1,12 +1,12 @@
-import { composeTwoObjects } from "./object_composition.js"
-import { composeTwoHeaders } from "./headers_composition.js"
+import { composeTwoObjects } from "./object_composition.js";
+import { composeTwoHeaders } from "./headers_composition.js";
 
 export const composeTwoResponses = (firstResponse, secondResponse) => {
   return composeTwoObjects(firstResponse, secondResponse, {
     keysComposition: RESPONSE_KEYS_COMPOSITION,
     strict: true,
-  })
-}
+  });
+};
 
 const RESPONSE_KEYS_COMPOSITION = {
   status: (prevStatus, status) => status,
@@ -16,6 +16,6 @@ const RESPONSE_KEYS_COMPOSITION = {
   body: (prevBody, body) => body,
   bodyEncoding: (prevEncoding, encoding) => encoding,
   timing: (prevTiming, timing) => {
-    return { ...prevTiming, ...timing }
+    return { ...prevTiming, ...timing };
   },
-}
+};

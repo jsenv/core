@@ -1,7 +1,7 @@
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
-import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs"
-import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic"
-import { build } from "@jsenv/core"
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
+import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
+import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
+import { build } from "@jsenv/core";
 
 await build({
   sourceDirectoryUrl: new URL("../../src/", import.meta.url),
@@ -15,7 +15,7 @@ await build({
     node: "16.14",
   },
   directoryReferenceAllowed: (reference) => {
-    return reference.url.includes("/babel_helpers/")
+    return reference.url.includes("/babel_helpers/");
   },
   scenarioPlaceholders: false,
   urlAnalysis: {
@@ -51,7 +51,7 @@ await build({
     }),
     jsenvPluginBundling(),
   ],
-})
+});
 
 // "s.js" is used in the build files, it must be compatible as much as possible
 // so we convert async/await, arrow function, ... to be compatible with
@@ -73,4 +73,4 @@ await build({
   sourcemapsSourcesContent: true,
   versioning: false,
   assetManifest: false,
-})
+});

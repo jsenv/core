@@ -1,4 +1,4 @@
-import { build } from "@jsenv/core"
+import { build } from "@jsenv/core";
 
 await build({
   logLevel: "warn",
@@ -9,4 +9,4 @@ await build({
   buildDirectoryUrl: new URL("./dist/", import.meta.url),
   // bundling: false,
   // versioning: true,
-})
+});

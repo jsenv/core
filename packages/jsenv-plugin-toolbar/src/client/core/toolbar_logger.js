@@ -1,23 +1,23 @@
-import { paramsFromParentWindow } from "./parent_window_context.js"
+import { paramsFromParentWindow } from "./parent_window_context.js";
 
-const logLevel = paramsFromParentWindow.logLevel
+const logLevel = paramsFromParentWindow.logLevel;
 
 export const logger = {
   info: (...args) => {
     if (logLevel === "warn" || logLevel === "info" || logLevel === "debug") {
-      console.info(...prefixArgs(...args))
+      console.info(...prefixArgs(...args));
     }
   },
 
   debug: (...args) => {
     if (logLevel === "debug") {
-      console.debug(...prefixArgs(...args))
+      console.debug(...prefixArgs(...args));
     }
   },
-}
+};
 
 // a nice yellow:ffdc00
-const backgroundColor = "#F7931E" // jsenv logo color
+const backgroundColor = "#F7931E"; // jsenv logo color
 
 // eslint-disable-next-line no-unused-vars
 const prefixArgs = (...args) => {
@@ -25,5 +25,5 @@ const prefixArgs = (...args) => {
     `%cjsenv`,
     `background: ${backgroundColor}; color: black; padding: 1px 3px; margin: 0 1px`,
     ...args,
-  ]
-}
+  ];
+};

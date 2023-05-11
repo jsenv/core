@@ -5,54 +5,54 @@ Code below shows how server can accept event source clients(s) and send data to 
 _server.js_
 
 ```js
-import { startServer, createSSERoom } from "@jsenv/server"
+import { startServer, createSSERoom } from "@jsenv/server";
 
-const room = createSSERoom()
+const room = createSSERoom();
 setInterval(() => {
   room.sendEventToAllClients({
     type: "ping",
-  })
-}, 1000)
+  });
+}, 1000);
 
 startServer({
   port: 3456,
   services: [
     {
       handleRequest: (request) => {
-        const { accept = "" } = request.headers
+        const { accept = "" } = request.headers;
         if (!accept.includes("text/event-stream")) {
-          return null
+          return null;
         }
-        return room.join(request)
+        return room.join(request);
       },
     },
   ],
-})
+});
 ```
 
 _client.js_
 
 ```js
-import { createRequire } from "module"
+import { createRequire } from "module";
 
-const require = createRequire(import.meta.url)
+const require = createRequire(import.meta.url);
 
-const EventSource = require("eventsource")
+const EventSource = require("eventsource");
 
 const eventSource = new EventSource("https://localhost:3456", {
   https: { rejectUnauthorized: false },
-})
+});
 
 eventSource.addEventListener("ping", ({ lastEventId }) => {
-  console.log("> ping from server", { lastEventId })
-})
+  console.log("> ping from server", { lastEventId });
+});
 ```
 
 _run.js_
 
 ```js
-import("./server.js")
-import("./client.js")
+import("./server.js");
+import("./client.js");
 ```
 
 ![Screencast of server sent events execution in a terminal](./screenshots/sse-screencast.gif)

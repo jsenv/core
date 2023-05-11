@@ -1,23 +1,23 @@
-import { assert } from "@jsenv/assert"
-import { fetchUrl } from "@jsenv/fetch"
+import { assert } from "@jsenv/assert";
+import { fetchUrl } from "@jsenv/fetch";
 
-import { startServer } from "@jsenv/server"
-import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js"
+import { startServer } from "@jsenv/server";
+import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
 
 const { origin, stop } = await startServer({
   logLevel: "off",
   keepProcessAlive: false,
-})
+});
 
 {
-  const response = await fetchUrl(origin)
+  const response = await fetchUrl(origin);
   const actual = {
     url: response.url,
     status: response.status,
     statusText: response.statusText,
     headers: headersToObject(response.headers),
     body: await response.text(),
-  }
+  };
   const expected = {
     url: `${origin}/`,
     status: 501,
@@ -28,8 +28,8 @@ const { origin, stop } = await startServer({
       "transfer-encoding": "chunked",
     },
     body: "",
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }
 
-stop()
+stop();

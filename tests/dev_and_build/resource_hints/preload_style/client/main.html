@@ -10,21 +10,21 @@
   <body>
     <script>
       window.namespacePromise = new Promise((resolve) => {
-        window.resolveNamespacePromise = resolve
-      })
+        window.resolveNamespacePromise = resolve;
+      });
     </script>
     <script type="module">
-      const cssUrl = new URL("./style.css", import.meta.url)
-      const link = document.createElement("link")
-      link.rel = "stylesheet"
-      link.href = cssUrl
-      document.head.appendChild(link)
+      const cssUrl = new URL("./style.css", import.meta.url);
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = cssUrl;
+      document.head.appendChild(link);
 
       // Let browser time to log an eventual warning about preload link not used
       await new Promise((resolve) => {
-        setTimeout(resolve, 5000)
-      })
-      window.resolveNamespacePromise()
+        setTimeout(resolve, 5000);
+      });
+      window.resolveNamespacePromise();
     </script>
   </body>
 </html>

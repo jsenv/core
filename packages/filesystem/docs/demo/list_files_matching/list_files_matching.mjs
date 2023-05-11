@@ -1,4 +1,4 @@
-import { listFilesMatching } from "@jsenv/filesystem"
+import { listFilesMatching } from "@jsenv/filesystem";
 
 const jsFiles = await listFilesMatching({
   directoryUrl: new URL("./", import.meta.url),
@@ -6,6 +6,6 @@ const jsFiles = await listFilesMatching({
     "./**/*.js": true,
     "./**/*.test.js": false,
   },
-})
+});
 
-console.log(jsFiles)
+console.log(jsFiles);

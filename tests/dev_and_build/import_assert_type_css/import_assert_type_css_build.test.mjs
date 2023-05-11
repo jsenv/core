@@ -1,11 +1,11 @@
-import { assert } from "@jsenv/assert"
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
-import { jsenvPluginMinification } from "@jsenv/plugin-minification"
+import { assert } from "@jsenv/assert";
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
+import { jsenvPluginMinification } from "@jsenv/plugin-minification";
 
-import { build } from "@jsenv/core"
-import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
-import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js"
-import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js"
+import { build } from "@jsenv/core";
+import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
+import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
+import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 
 const test = async ({ snapshotsDirectoryName, ...rest }) => {
   const { buildManifest } = await build({
@@ -17,40 +17,40 @@ const test = async ({ snapshotsDirectoryName, ...rest }) => {
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...rest,
-  })
+  });
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
-  })
+  });
   const { returnValue } = await executeInBrowser({
     url: `${server.origin}/main.html`,
     /* eslint-disable no-undef */
     pageFunction: () => window.resultPromise,
     /* eslint-enable no-undef */
-  })
+  });
   takeDirectorySnapshot(
     new URL("./dist/", import.meta.url),
     new URL(`./snapshots/${snapshotsDirectoryName}/`, import.meta.url),
-  )
-  const actual = returnValue
+  );
+  const actual = returnValue;
   const expected = {
     bodyBackgroundColor: "rgb(255, 0, 0)",
     bodyBackgroundImage: `url("${server.origin}/${buildManifest["other/jsenv.png"]}")`,
-  }
-  assert({ actual, expected })
-}
+  };
+  assert({ actual, expected });
+};
 
 // chrome 60 cannot use <script type="module"> nor constructable stylesheet
 await test({
   snapshotsDirectoryName: "chrome_60",
   runtimeCompat: { chrome: "60" },
   plugins: [jsenvPluginBundling()],
-})
+});
 // chrome 60 + no bundling
 await test({
   snapshotsDirectoryName: "chrome_60_no_bundling",
   runtimeCompat: { chrome: "60" },
   plugins: [],
-})
+});
 // chrome 88 has constructables stylesheet
 // but cannot use js modules due to versioning via importmap (as it does not have importmap)
 await test({
@@ -64,10 +64,10 @@ await test({
       css: true,
     }),
   ],
-})
+});
 // chrome 89 can use js modules
 await test({
   snapshotsDirectoryName: "chrome_89",
   runtimeCompat: { chrome: "89" },
   plugins: [jsenvPluginBundling()],
-})
+});

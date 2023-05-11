@@ -1,5 +1,5 @@
-import "./file.js"
+import "./file.js";
 
 if (import.meta.hot) {
-  import.meta.hot.accept()
+  import.meta.hot.accept();
 }

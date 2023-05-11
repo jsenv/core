@@ -1,8 +1,8 @@
-import { assert } from "@jsenv/assert"
-import { fetchUrl } from "@jsenv/fetch"
+import { assert } from "@jsenv/assert";
+import { fetchUrl } from "@jsenv/fetch";
 
-import { startServer } from "@jsenv/server"
-import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js"
+import { startServer } from "@jsenv/server";
+import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
 
 {
   const server = await startServer({
@@ -18,20 +18,20 @@ import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js"
               "Content-Type": "text/plain",
             },
             body: "ok",
-          }
+          };
         },
       },
     ],
-  })
+  });
 
-  const response = await fetchUrl(server.origin)
+  const response = await fetchUrl(server.origin);
   const actual = {
     url: response.url,
     status: response.status,
     statusText: response.statusText,
     headers: headersToObject(response.headers),
     body: await response.text(),
-  }
+  };
   const expected = {
     url: `${server.origin}/`,
     status: 200,
@@ -43,23 +43,23 @@ import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js"
       "transfer-encoding": "chunked",
     },
     body: "ok",
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }
 
 // can be calld without arg, returns 501
 {
   const server = await startServer({
     logLevel: "off",
-  })
+  });
   try {
-    const response = await fetchUrl(server.origin)
+    const response = await fetchUrl(server.origin);
     const actual = {
       status: response.status,
       statusText: response.statusText,
       headers: headersToObject(response.headers),
       size: response.size,
-    }
+    };
     const expected = {
       status: 501,
       statusText: "Not Implemented",
@@ -69,9 +69,9 @@ import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js"
         "transfer-encoding": "chunked",
       },
       size: 0,
-    }
-    assert({ actual, expected })
+    };
+    assert({ actual, expected });
   } finally {
-    await server.stop()
+    await server.stop();
   }
 }

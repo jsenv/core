@@ -1,3 +1,3 @@
 export const logElementName = (name) => {
-  console.log(name)
-}
+  console.log(name);
+};

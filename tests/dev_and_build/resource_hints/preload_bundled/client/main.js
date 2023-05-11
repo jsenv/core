@@ -1,3 +1,3 @@
-import "./file.js"
+import "./file.js";
 
-window.resolveResultPromise(42)
+window.resolveResultPromise(42);

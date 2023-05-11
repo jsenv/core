@@ -3,7 +3,7 @@
 Cross origin resource sharing, also called CORS are disabled by default. They can be enabled using [jsenvServiceCORS](#jsenvServiceCORS)
 
 ```js
-import { startServer, jsenvServiceCORS } from "@jsenv/server"
+import { startServer, jsenvServiceCORS } from "@jsenv/server";
 
 await startServer({
   services: [
@@ -14,7 +14,7 @@ await startServer({
       accessControlAllowCredentials: true,
     }),
   ],
-})
+});
 ```
 
 ## jsenvServiceCORS
@@ -23,12 +23,12 @@ This service ensure CORS headers **are always set**.
 It's important to always set CORS headers, even on unexpected errors (500), or browser agents rightfully assumes CORS are disabled.
 
 ```js
-import fetch from "node-fetch"
+import fetch from "node-fetch";
 import {
   startServer,
   jsenvServiceCORS,
   jsenvServiceErrorHandler,
-} from "@jsenv/server"
+} from "@jsenv/server";
 
 const server = await startServer({
   services: [
@@ -41,14 +41,14 @@ const server = await startServer({
     }),
     {
       handleRequest: () => {
-        throw new Error("test")
+        throw new Error("test");
       },
     },
   ],
-})
+});
 
-const response = await fetch(server.origin)
-response.headers.has("access-control-allow-origin") // true
+const response = await fetch(server.origin);
+response.headers.has("access-control-allow-origin"); // true
 ```
 
 ## accessControlAllowedOrigins

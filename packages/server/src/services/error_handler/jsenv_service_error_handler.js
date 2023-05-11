@@ -1,4 +1,4 @@
-import { pickContentType } from "../../content_negotiation/pick_content_type.js"
+import { pickContentType } from "../../content_negotiation/pick_content_type.js";
 
 export const jsenvServiceErrorHandler = ({ sendErrorDetails = false } = {}) => {
   return {
@@ -7,9 +7,9 @@ export const jsenvServiceErrorHandler = ({ sendErrorDetails = false } = {}) => {
       const serverInternalErrorIsAPrimitive =
         serverInternalError === null ||
         (typeof serverInternalError !== "object" &&
-          typeof serverInternalError !== "function")
+          typeof serverInternalError !== "function");
       if (!serverInternalErrorIsAPrimitive && serverInternalError.asResponse) {
-        return serverInternalError.asResponse()
+        return serverInternalError.asResponse();
       }
       const dataToSend = serverInternalErrorIsAPrimitive
         ? {
@@ -24,13 +24,13 @@ export const jsenvServiceErrorHandler = ({ sendErrorDetails = false } = {}) => {
                   ...serverInternalError,
                 }
               : {}),
-          }
+          };
 
       const availableContentTypes = {
         "text/html": () => {
           const renderHtmlForErrorWithoutDetails = () => {
-            return `<p>Details not available: to enable them use jsenvServiceErrorHandler({ sendErrorDetails: true }).</p>`
-          }
+            return `<p>Details not available: to enable them use jsenvServiceErrorHandler({ sendErrorDetails: true }).</p>`;
+          };
 
           const renderHtmlForErrorWithDetails = () => {
             if (serverInternalErrorIsAPrimitive) {
@@ -38,10 +38,10 @@ export const jsenvServiceErrorHandler = ({ sendErrorDetails = false } = {}) => {
                 serverInternalError,
                 null,
                 "  ",
-              )}</pre>`
+              )}</pre>`;
             }
-            return `<pre>${serverInternalError.stack}</pre>`
-          }
+            return `<pre>${serverInternalError.stack}</pre>`;
+          };
 
           const body = `<!DOCTYPE html>
 <html>
@@ -67,7 +67,7 @@ export const jsenvServiceErrorHandler = ({ sendErrorDetails = false } = {}) => {
       }
     </details>
   </body>
-</html>`
+</html>`;
 
           return {
             headers: {
@@ -75,24 +75,24 @@ export const jsenvServiceErrorHandler = ({ sendErrorDetails = false } = {}) => {
               "content-length": Buffer.byteLength(body),
             },
             body,
-          }
+          };
         },
         "application/json": () => {
-          const body = JSON.stringify(dataToSend)
+          const body = JSON.stringify(dataToSend);
           return {
             headers: {
               "content-type": "application/json",
               "content-length": Buffer.byteLength(body),
             },
             body,
-          }
+          };
         },
-      }
+      };
       const bestContentType = pickContentType(
         request,
         Object.keys(availableContentTypes),
-      )
-      return availableContentTypes[bestContentType || "application/json"]()
+      );
+      return availableContentTypes[bestContentType || "application/json"]();
     },
-  }
-}
+  };
+};

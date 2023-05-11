@@ -1,12 +1,12 @@
 // https://github.com/terser-js/terser#minify-options
 
 export const minifyJs = async ({ jsUrlInfo, options }) => {
-  const url = jsUrlInfo.url
-  const content = jsUrlInfo.content
-  const sourcemap = jsUrlInfo.sourcemap
-  const isJsModule = jsUrlInfo.type === "js_module"
+  const url = jsUrlInfo.url;
+  const content = jsUrlInfo.content;
+  const sourcemap = jsUrlInfo.sourcemap;
+  const isJsModule = jsUrlInfo.type === "js_module";
 
-  const { minify } = await import("terser")
+  const { minify } = await import("terser");
   const terserResult = await minify(
     {
       [url]: content,
@@ -23,9 +23,9 @@ export const minifyJs = async ({ jsUrlInfo, options }) => {
       keep_fnames: /InlineContent/,
       ...options,
     },
-  )
+  );
   return {
     content: terserResult.code,
     sourcemap: terserResult.map,
-  }
-}
+  };
+};

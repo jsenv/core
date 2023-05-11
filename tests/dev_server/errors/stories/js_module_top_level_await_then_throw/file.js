@@ -1,3 +1,3 @@
-await new Promise((resolve) => setTimeout(resolve, 1000))
+await new Promise((resolve) => setTimeout(resolve, 1000));
 
-throw new Error("here")
+throw new Error("here");

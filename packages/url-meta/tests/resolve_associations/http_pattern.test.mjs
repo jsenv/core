@@ -1,6 +1,6 @@
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-import { URL_META } from "@jsenv/url-meta"
+import { URL_META } from "@jsenv/url-meta";
 
 const associations = URL_META.resolveAssociations(
   {
@@ -10,20 +10,20 @@ const associations = URL_META.resolveAssociations(
     },
   },
   "file:///User/name/directory/",
-)
+);
 const fileUrlMeta = URL_META.applyAssociations({
   url: "file:///dir/file.js",
   associations,
-})
+});
 const httpUrlMeta = URL_META.applyAssociations({
   url: "http://example.com",
   associations,
-})
+});
 
 const actual = {
   fileUrlMeta,
   httpUrlMeta,
-}
+};
 const expected = {
   fileUrlMeta: {
     whatever: false,
@@ -31,5 +31,5 @@ const expected = {
   httpUrlMeta: {
     whatever: true,
   },
-}
-assert({ actual, expected })
+};
+assert({ actual, expected });

@@ -1,4 +1,4 @@
-import { inspectValue } from "./inspect_value.js"
+import { inspectValue } from "./inspect_value.js";
 
 export const inspect = (
   value,
@@ -22,11 +22,11 @@ export const inspect = (
           ...scopedOptions,
           depth: scopedOptions.depth + 1,
           ...nestedOptions,
-        })
+        });
       },
-    }
-    return inspectValue(scopedValue, options)
-  }
+    };
+    return inspectValue(scopedValue, options);
+  };
 
   return scopedInspect(value, {
     parenthesis,
@@ -39,5 +39,5 @@ export const inspect = (
     indentSize,
     numericSeparator,
     depth: 0,
-  })
-}
+  });
+};

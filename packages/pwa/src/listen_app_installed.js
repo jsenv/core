@@ -7,11 +7,11 @@
  */
 
 export const listenAppInstalled = (callback) => {
-  window.addEventListener("appinstalled", callback)
+  window.addEventListener("appinstalled", callback);
   return () => {
-    window.removeEventListener("appinstalled", callback)
-  }
-}
+    window.removeEventListener("appinstalled", callback);
+  };
+};
 
 // listenAppInstalled(() => {
 //   document.querySelector("#install").disabled = true

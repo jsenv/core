@@ -1,1 +1,1 @@
-export const inspectRegExp = (value) => value.toString()
+export const inspectRegExp = (value) => value.toString();

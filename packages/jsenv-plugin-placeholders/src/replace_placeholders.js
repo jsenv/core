@@ -1,13 +1,13 @@
-import { createMagicSource } from "@jsenv/sourcemap"
+import { createMagicSource } from "@jsenv/sourcemap";
 
 export const replacePlaceholders = (urlInfo, replacements) => {
-  const content = urlInfo.content
-  const magicSource = createMagicSource(content)
+  const content = urlInfo.content;
+  const magicSource = createMagicSource(content);
   Object.keys(replacements).forEach((key) => {
-    let index = content.indexOf(key)
+    let index = content.indexOf(key);
     while (index !== -1) {
-      const start = index
-      const end = index + key.length
+      const start = index;
+      const end = index + key.length;
       magicSource.replace({
         start,
         end,
@@ -17,9 +17,9 @@ export const replacePlaceholders = (urlInfo, replacements) => {
           urlInfo.type === "html"
             ? JSON.stringify(replacements[key], null, "  ")
             : replacements[key],
-      })
-      index = content.indexOf(key, end)
+      });
+      index = content.indexOf(key, end);
     }
-  })
-  return magicSource.toContentAndSourcemap()
-}
+  });
+  return magicSource.toContentAndSourcemap();
+};

@@ -1,15 +1,15 @@
-import { createRuntimeUsingPlaywright } from "./using_playwright.js"
+import { createRuntimeUsingPlaywright } from "./using_playwright.js";
 
 export const firefox = (params) => {
-  return createFirefoxRuntime(params)
-}
+  return createFirefoxRuntime(params);
+};
 
 export const firefoxIsolatedTab = (params) => {
   return createRuntimeUsingPlaywright({
     ...params,
     isolatedTab: true,
-  })
-}
+  });
+};
 
 const createFirefoxRuntime = ({
   disableOnWindowsBecauseFlaky,
@@ -22,13 +22,13 @@ const createFirefoxRuntime = ({
         `Windows + firefox detected: executions on firefox will be ignored  (firefox is flaky on windows).
 To disable this warning, use disableOnWindowsBecauseFlaky: true
 To ignore potential flakyness, use disableOnWindowsBecauseFlaky: false`,
-      )
-      disableOnWindowsBecauseFlaky = true
+      );
+      disableOnWindowsBecauseFlaky = true;
     }
     if (disableOnWindowsBecauseFlaky) {
       return {
         disabled: true,
-      }
+      };
     }
   }
 
@@ -39,5 +39,5 @@ To ignore potential flakyness, use disableOnWindowsBecauseFlaky: false`,
     browserVersion: "unset",
     isolatedTab: true,
     ...params,
-  })
-}
+  });
+};

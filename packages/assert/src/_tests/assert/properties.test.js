@@ -1,26 +1,26 @@
-import { assert } from "@jsenv/assert"
-import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js"
+import { assert } from "@jsenv/assert";
+import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js";
 
 try {
   const actual = {
     foo: true,
     bar: true,
-  }
+  };
   const expected = {
     foo: true,
     bar: true,
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 } catch (e) {
-  throw new Error(`should not throw`)
+  throw new Error(`should not throw`);
 }
 
 try {
   const actual = {
     a: true,
-  }
-  const expected = {}
-  assert({ actual, expected })
+  };
+  const expected = {};
+  assert({ actual, expected });
 } catch (e) {
   ensureAssertionErrorWithMessage(
     e,
@@ -31,16 +31,16 @@ try {
 }
 --- path ---
 actual`,
-  )
+  );
 }
 
 try {
   const actual = {
     a: true,
     b: true,
-  }
-  const expected = {}
-  assert({ actual, expected })
+  };
+  const expected = {};
+  assert({ actual, expected });
 } catch (e) {
   ensureAssertionErrorWithMessage(
     e,
@@ -52,15 +52,15 @@ try {
 }
 --- path ---
 actual`,
-  )
+  );
 }
 
 try {
-  const actual = {}
+  const actual = {};
   const expected = {
     a: true,
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 } catch (e) {
   ensureAssertionErrorWithMessage(
     e,
@@ -71,16 +71,16 @@ try {
 }
 --- path ---
 actual`,
-  )
+  );
 }
 
 try {
-  const actual = {}
+  const actual = {};
   const expected = {
     a: true,
     b: true,
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 } catch (e) {
   ensureAssertionErrorWithMessage(
     e,
@@ -92,7 +92,7 @@ try {
 }
 --- path ---
 actual`,
-  )
+  );
 }
 
 try {
@@ -100,13 +100,13 @@ try {
     a: true,
     d: true,
     e: true,
-  }
+  };
   const expected = {
     a: true,
     b: true,
     c: true,
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 } catch (e) {
   ensureAssertionErrorWithMessage(
     e,
@@ -123,7 +123,7 @@ try {
 }
 --- path ---
 actual`,
-  )
+  );
 }
 
 try {
@@ -131,12 +131,12 @@ try {
     a: true,
     d: true,
     e: true,
-  }
+  };
   const expected = {
     a: true,
     b: true,
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 } catch (e) {
   ensureAssertionErrorWithMessage(
     e,
@@ -152,20 +152,20 @@ try {
 }
 --- path ---
 actual`,
-  )
+  );
 }
 
 try {
   const actual = {
     a: true,
     d: true,
-  }
+  };
   const expected = {
     a: true,
     b: true,
     c: true,
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 } catch (e) {
   ensureAssertionErrorWithMessage(
     e,
@@ -181,19 +181,19 @@ try {
 }
 --- path ---
 actual`,
-  )
+  );
 }
 
 try {
   const actual = {
     a: true,
     d: true,
-  }
+  };
   const expected = {
     a: true,
     b: true,
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 } catch (e) {
   ensureAssertionErrorWithMessage(
     e,
@@ -208,7 +208,7 @@ try {
 }
 --- path ---
 actual`,
-  )
+  );
 }
 
 // ensure unequal properties is checked before unexpected property
@@ -217,12 +217,12 @@ try {
   const actual = {
     a: true,
     c: false,
-  }
+  };
   const expected = {
     a: false,
     b: true,
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 } catch (e) {
   ensureAssertionErrorWithMessage(
     e,
@@ -233,5 +233,5 @@ true
 false
 --- path ---
 actual.a`,
-  )
+  );
 }

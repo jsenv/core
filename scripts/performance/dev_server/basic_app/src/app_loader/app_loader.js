@@ -2,7 +2,7 @@
  * This is where you can orchestrate the loading of your application
  */
 
-import { loadCSSAndFonts } from "./app_loader_utils.js"
+import { loadCSSAndFonts } from "./app_loader_utils.js";
 
 export const loadApp = async () => {
   // try to load CSS + get the main fonts before displaying any text
@@ -15,31 +15,31 @@ export const loadApp = async () => {
       onCssReady: () => {},
       onFontsReady: () => {},
     },
-  )
+  );
   // start importing app right away
   const appPromise = importApp({
     onJsReady: () => {},
-  })
+  });
   const appCSSPromise = loadCSSAndFonts(
     new URL("../app/app.css", import.meta.url),
     {
       onCssReady: () => {},
     },
-  )
+  );
 
-  await appLoaderCssPromise
+  await appLoaderCssPromise;
 
-  const app = await appPromise
-  app.render()
-  await appCSSPromise
+  const app = await appPromise;
+  app.render();
+  await appCSSPromise;
   // app.render() can be very expensive so we wait a bit
   // to let navigator an opportunity to cooldown
   // This should help to save battery power and RAM
   // await nextIDLEPromise()
-}
+};
 
 const importApp = async ({ onJsReady = () => {} }) => {
-  const app = await import("../app/app.js")
-  onJsReady()
-  return app
-}
+  const app = await import("../app/app.js");
+  onJsReady();
+  return app;
+};

@@ -3,9 +3,9 @@
  * https://github.com/SimenB/jest/blob/917efc3398577c205f33c1c2f9a1aeabfaad6f7d/packages/jest-coverage/src/index.ts
  */
 
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-import { executeTestPlan, nodeWorkerThread } from "@jsenv/test"
+import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
 
 const { testPlanCoverage } = await executeTestPlan({
   logLevel: "warn",
@@ -30,8 +30,8 @@ const { testPlanCoverage } = await executeTestPlan({
   coverageMethodForNodeJs: "Profiler",
   coverageReportTextLog: false,
   coverageReportHtml: false,
-})
-const actual = testPlanCoverage
+});
+const actual = testPlanCoverage;
 const expected = {
   "./file.js": {
     ...actual["./file.js"],
@@ -48,5 +48,5 @@ const expected = {
       4: 1,
     },
   },
-}
-assert({ actual, expected })
+};
+assert({ actual, expected });

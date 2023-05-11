@@ -1,6 +1,6 @@
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-import { replacePlaceholders } from "@jsenv/plugin-placeholders/src/replace_placeholders.js"
+import { replacePlaceholders } from "@jsenv/plugin-placeholders/src/replace_placeholders.js";
 
 const result = replacePlaceholders(
   {
@@ -13,9 +13,9 @@ const bar = __BAR__`,
     __FOO__: "hello",
     __BAR__: "world",
   },
-)
-const actual = result.content
+);
+const actual = result.content;
 const expected = `const foo = "hello"
 const t = "hello"
-const bar = "world"`
-assert({ actual, expected })
+const bar = "world"`;
+assert({ actual, expected });

@@ -1,4 +1,4 @@
-import { registerDirectoryLifecycle } from "@jsenv/filesystem"
+import { registerDirectoryLifecycle } from "@jsenv/filesystem";
 
 export const watchSourceFiles = (
   sourceDirectoryUrl,
@@ -19,7 +19,7 @@ export const watchSourceFiles = (
     "**/.*/": false, // directory starting with a dot -> do not watch
     "**/node_modules/": false, // node_modules directory -> do not watch
     ...sourceFileConfig,
-  }
+  };
   const stopWatchingSourceFiles = registerDirectoryLifecycle(
     sourceDirectoryUrl,
     {
@@ -31,22 +31,22 @@ export const watchSourceFiles = (
         callback({
           url: new URL(relativeUrl, sourceDirectoryUrl).href,
           event: "added",
-        })
+        });
       },
       updated: ({ relativeUrl }) => {
         callback({
           url: new URL(relativeUrl, sourceDirectoryUrl).href,
           event: "modified",
-        })
+        });
       },
       removed: ({ relativeUrl }) => {
         callback({
           url: new URL(relativeUrl, sourceDirectoryUrl).href,
           event: "removed",
-        })
+        });
       },
     },
-  )
-  stopWatchingSourceFiles.watchPatterns = watchPatterns
-  return stopWatchingSourceFiles
-}
+  );
+  stopWatchingSourceFiles.watchPatterns = watchPatterns;
+  return stopWatchingSourceFiles;
+};

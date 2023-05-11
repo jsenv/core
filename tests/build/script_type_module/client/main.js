@@ -1,9 +1,9 @@
-import { answer } from "./file.js"
+import { answer } from "./file.js";
 
 setTimeout(() => {
-  const url = import.meta.url
+  const url = import.meta.url;
   window.resolveResultPromise({
     answer,
     url,
-  })
-}, 100)
+  });
+}, 100);

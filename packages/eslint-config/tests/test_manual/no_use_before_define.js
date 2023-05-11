@@ -1,11 +1,11 @@
 export const ask = () => {
-  return answer
-}
+  return answer;
+};
 
 function test() {
-  return answer
+  return answer;
 }
-console.log(test())
+console.log(test());
 
 // console.log(answer + 1)
-const answer = true
+const answer = true;

@@ -1,4 +1,4 @@
-import { listenEvent } from "./listenEvent.js"
+import { listenEvent } from "./listenEvent.js";
 
 export const listenRequest = (nodeServer, requestCallback) => {
   if (nodeServer._httpServer) {
@@ -6,16 +6,16 @@ export const listenRequest = (nodeServer, requestCallback) => {
       nodeServer._httpServer,
       "request",
       requestCallback,
-    )
+    );
     const removeTlsRequestListener = listenEvent(
       nodeServer._tlsServer,
       "request",
       requestCallback,
-    )
+    );
     return () => {
-      removeHttpRequestListener()
-      removeTlsRequestListener()
-    }
+      removeHttpRequestListener();
+      removeTlsRequestListener();
+    };
   }
-  return listenEvent(nodeServer, "request", requestCallback)
-}
+  return listenEvent(nodeServer, "request", requestCallback);
+};

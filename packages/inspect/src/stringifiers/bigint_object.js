@@ -1,5 +1,5 @@
 export const inspectBigIntObject = (value, { nestedInspect }) => {
-  const bigIntSource = nestedInspect(value.valueOf())
+  const bigIntSource = nestedInspect(value.valueOf());
 
-  return `BigInt(${bigIntSource})`
-}
+  return `BigInt(${bigIntSource})`;
+};

@@ -1,1 +1,1 @@
-export const name = "water"
+export const name = "water";

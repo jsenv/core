@@ -1,3 +1,3 @@
-const cssUrl = new URL("./style.css", import.meta.url)
+const cssUrl = new URL("./style.css", import.meta.url);
 
-console.log(cssUrl)
+console.log(cssUrl);

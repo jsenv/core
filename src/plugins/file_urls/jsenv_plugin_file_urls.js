@@ -1,16 +1,16 @@
-import { readFileSync, readdirSync, realpathSync, statSync } from "node:fs"
-import { pathToFileURL } from "node:url"
+import { readFileSync, readdirSync, realpathSync, statSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 import {
   urlIsInsideOf,
   urlToRelativeUrl,
   urlToFilename,
   ensurePathnameTrailingSlash,
-} from "@jsenv/urls"
+} from "@jsenv/urls";
 import {
   applyFileSystemMagicResolution,
   getExtensionsToTry,
-} from "@jsenv/node-esm-resolution"
-import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js"
+} from "@jsenv/node-esm-resolution";
+import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 
 export const jsenvPluginFileUrls = ({
   magicExtensions = ["inherit", ".js"],
@@ -25,38 +25,38 @@ export const jsenvPluginFileUrls = ({
       redirectUrl: (reference) => {
         // http, https, data, about, ...
         if (!reference.url.startsWith("file:")) {
-          return null
+          return null;
         }
         if (reference.isInline) {
-          return null
+          return null;
         }
-        const urlObject = new URL(reference.url)
-        let stat
+        const urlObject = new URL(reference.url);
+        let stat;
         try {
-          stat = statSync(urlObject)
+          stat = statSync(urlObject);
         } catch (e) {
           if (e.code === "ENOENT") {
-            stat = null
+            stat = null;
           } else {
-            throw e
+            throw e;
           }
         }
-        const { search, hash } = urlObject
-        let { pathname } = urlObject
-        const pathnameUsesTrailingSlash = pathname.endsWith("/")
-        urlObject.search = ""
-        urlObject.hash = ""
+        const { search, hash } = urlObject;
+        let { pathname } = urlObject;
+        const pathnameUsesTrailingSlash = pathname.endsWith("/");
+        urlObject.search = "";
+        urlObject.hash = "";
         // force trailing slash on directories
         if (stat && stat.isDirectory() && !pathnameUsesTrailingSlash) {
-          urlObject.pathname = `${pathname}/`
+          urlObject.pathname = `${pathname}/`;
         }
         // otherwise remove trailing slash if any
         if (stat && !stat.isDirectory() && pathnameUsesTrailingSlash) {
           // a warning here? (because it's strange to reference a file with a trailing slash)
-          urlObject.pathname = pathname.slice(0, -1)
+          urlObject.pathname = pathname.slice(0, -1);
         }
 
-        let url = urlObject.href
+        let url = urlObject.href;
         const shouldPreserve =
           stat &&
           stat.isDirectory() &&
@@ -65,13 +65,13 @@ export const jsenvPluginFileUrls = ({
             // ignore root file url
             reference.url === "file:///" ||
             (reference.subtype === "new_url_first_arg" &&
-              reference.specifier === "./"))
+              reference.specifier === "./"));
 
         if (shouldPreserve) {
-          reference.shouldHandle = false
+          reference.shouldHandle = false;
         } else {
           const shouldApplyDilesystemMagicResolution =
-            reference.type === "js_import"
+            reference.type === "js_import";
           if (shouldApplyDilesystemMagicResolution) {
             const filesystemResolution = applyFileSystemMagicResolution(url, {
               fileStat: stat,
@@ -80,10 +80,10 @@ export const jsenvPluginFileUrls = ({
                 magicExtensions,
                 reference.parentUrl,
               ),
-            })
+            });
             if (filesystemResolution.stat) {
-              stat = filesystemResolution.stat
-              url = filesystemResolution.url
+              stat = filesystemResolution.stat;
+              url = filesystemResolution.url;
             }
           }
           if (stat && stat.isDirectory()) {
@@ -91,21 +91,21 @@ export const jsenvPluginFileUrls = ({
               reference.type === "filesystem" ||
               (typeof directoryReferenceAllowed === "function" &&
                 directoryReferenceAllowed(reference)) ||
-              directoryReferenceAllowed
+              directoryReferenceAllowed;
             if (!directoryAllowed) {
-              const error = new Error("Reference leads to a directory")
-              error.code = "DIRECTORY_REFERENCE_NOT_ALLOWED"
-              throw error
+              const error = new Error("Reference leads to a directory");
+              error.code = "DIRECTORY_REFERENCE_NOT_ALLOWED";
+              throw error;
             }
           }
         }
-        reference.leadsToADirectory = stat && stat.isDirectory()
+        reference.leadsToADirectory = stat && stat.isDirectory();
         if (stat) {
-          const urlRaw = preserveSymlinks ? url : resolveSymlink(url)
-          const resolvedUrl = `${urlRaw}${search}${hash}`
-          return resolvedUrl
+          const urlRaw = preserveSymlinks ? url : resolveSymlink(url);
+          const resolvedUrl = `${urlRaw}${search}${hash}`;
+          return resolvedUrl;
         }
-        return null
+        return null;
       },
     },
     {
@@ -113,13 +113,13 @@ export const jsenvPluginFileUrls = ({
       appliesDuring: "*",
       resolveUrl: {
         filesystem: (reference, context) => {
-          const { parentUrl } = reference
-          const parentUrlInfo = context.urlGraph.getUrlInfo(parentUrl)
+          const { parentUrl } = reference;
+          const parentUrlInfo = context.urlGraph.getUrlInfo(parentUrl);
           const baseUrl =
             parentUrlInfo && parentUrlInfo.type === "directory"
               ? ensurePathnameTrailingSlash(parentUrl)
-              : parentUrl
-          return new URL(reference.specifier, baseUrl).href
+              : parentUrl;
+          return new URL(reference.specifier, baseUrl).href;
         },
       },
     },
@@ -131,22 +131,22 @@ export const jsenvPluginFileUrls = ({
       appliesDuring: "dev",
       resolveUrl: (reference) => {
         if (reference.specifier.startsWith("/@fs/")) {
-          const fsRootRelativeUrl = reference.specifier.slice("/@fs/".length)
-          return `file:///${fsRootRelativeUrl}`
+          const fsRootRelativeUrl = reference.specifier.slice("/@fs/".length);
+          return `file:///${fsRootRelativeUrl}`;
         }
-        return null
+        return null;
       },
       formatUrl: (reference, context) => {
         if (!reference.generatedUrl.startsWith("file:")) {
-          return null
+          return null;
         }
         if (urlIsInsideOf(reference.generatedUrl, context.rootDirectoryUrl)) {
           return `/${urlToRelativeUrl(
             reference.generatedUrl,
             context.rootDirectoryUrl,
-          )}`
+          )}`;
         }
-        return `/@fs/${reference.generatedUrl.slice("file:///".length)}`
+        return `/@fs/${reference.generatedUrl.slice("file:///".length)}`;
       },
     },
     {
@@ -154,40 +154,40 @@ export const jsenvPluginFileUrls = ({
       appliesDuring: "*",
       fetchUrlContent: (urlInfo, context) => {
         if (!urlInfo.url.startsWith("file:")) {
-          return null
+          return null;
         }
-        const urlObject = new URL(urlInfo.url)
+        const urlObject = new URL(urlInfo.url);
         if (context.reference.leadsToADirectory) {
-          const directoryEntries = readdirSync(urlObject)
-          let filename
+          const directoryEntries = readdirSync(urlObject);
+          let filename;
           if (context.reference.type === "filesystem") {
             const parentUrlInfo = context.urlGraph.getUrlInfo(
               context.reference.parentUrl,
-            )
-            filename = `${parentUrlInfo.filename}${context.reference.specifier}/`
+            );
+            filename = `${parentUrlInfo.filename}${context.reference.specifier}/`;
           } else {
-            filename = `${urlToFilename(urlInfo.url)}/`
+            filename = `${urlToFilename(urlInfo.url)}/`;
           }
           return {
             type: "directory",
             contentType: "application/json",
             content: JSON.stringify(directoryEntries, null, "  "),
             filename,
-          }
+          };
         }
-        const fileBuffer = readFileSync(urlObject)
-        const contentType = CONTENT_TYPE.fromUrlExtension(urlInfo.url)
+        const fileBuffer = readFileSync(urlObject);
+        const contentType = CONTENT_TYPE.fromUrlExtension(urlInfo.url);
         return {
           content: CONTENT_TYPE.isTextual(contentType)
             ? String(fileBuffer)
             : fileBuffer,
           contentType,
-        }
+        };
       },
     },
-  ]
-}
+  ];
+};
 
 const resolveSymlink = (fileUrl) => {
-  return pathToFileURL(realpathSync(new URL(fileUrl))).href
-}
+  return pathToFileURL(realpathSync(new URL(fileUrl))).href;
+};

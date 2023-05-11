@@ -15,54 +15,54 @@ export const parseMultipleHeader = (
   multipleHeaderString,
   { validateName = () => true, validateProperty = () => true } = {},
 ) => {
-  const values = multipleHeaderString.split(",")
-  const multipleHeader = {}
+  const values = multipleHeaderString.split(",");
+  const multipleHeader = {};
   values.forEach((value) => {
-    const valueTrimmed = value.trim()
-    const valueParts = valueTrimmed.split(";")
-    const name = valueParts[0]
-    const nameValidation = validateName(name)
+    const valueTrimmed = value.trim();
+    const valueParts = valueTrimmed.split(";");
+    const name = valueParts[0];
+    const nameValidation = validateName(name);
     if (!nameValidation) {
-      return
+      return;
     }
 
     const properties = parseHeaderProperties(valueParts.slice(1), {
       validateProperty,
-    })
-    multipleHeader[name] = properties
-  })
-  return multipleHeader
-}
+    });
+    multipleHeader[name] = properties;
+  });
+  return multipleHeader;
+};
 
 const parseHeaderProperties = (headerProperties, { validateProperty }) => {
   const properties = headerProperties.reduce((previous, valuePart) => {
-    const [propertyName, propertyValueString] = valuePart.split("=")
-    const propertyValue = parseHeaderPropertyValue(propertyValueString)
-    const property = { name: propertyName, value: propertyValue }
-    const propertyValidation = validateProperty(property)
+    const [propertyName, propertyValueString] = valuePart.split("=");
+    const propertyValue = parseHeaderPropertyValue(propertyValueString);
+    const property = { name: propertyName, value: propertyValue };
+    const propertyValidation = validateProperty(property);
     if (!propertyValidation) {
-      return previous
+      return previous;
     }
     return {
       ...previous,
       [property.name]: property.value,
-    }
-  }, {})
-  return properties
-}
+    };
+  }, {});
+  return properties;
+};
 
 const parseHeaderPropertyValue = (headerPropertyValueString) => {
-  const firstChar = headerPropertyValueString[0]
+  const firstChar = headerPropertyValueString[0];
   const lastChar =
-    headerPropertyValueString[headerPropertyValueString.length - 1]
+    headerPropertyValueString[headerPropertyValueString.length - 1];
   if (firstChar === '"' && lastChar === '"') {
-    return headerPropertyValueString.slice(1, -1)
+    return headerPropertyValueString.slice(1, -1);
   }
   if (isNaN(headerPropertyValueString)) {
-    return headerPropertyValueString
+    return headerPropertyValueString;
   }
-  return parseFloat(headerPropertyValueString)
-}
+  return parseFloat(headerPropertyValueString);
+};
 
 export const stringifyMultipleHeader = (
   multipleHeader,
@@ -70,34 +70,34 @@ export const stringifyMultipleHeader = (
 ) => {
   return Object.keys(multipleHeader)
     .filter((name) => {
-      const headerProperties = multipleHeader[name]
+      const headerProperties = multipleHeader[name];
       if (!headerProperties) {
-        return false
+        return false;
       }
       if (typeof headerProperties !== "object") {
-        return false
+        return false;
       }
-      const nameValidation = validateName(name)
+      const nameValidation = validateName(name);
       if (!nameValidation) {
-        return false
+        return false;
       }
-      return true
+      return true;
     })
     .map((name) => {
-      const headerProperties = multipleHeader[name]
+      const headerProperties = multipleHeader[name];
       const headerPropertiesString = stringifyHeaderProperties(
         headerProperties,
         {
           validateProperty,
         },
-      )
+      );
       if (headerPropertiesString.length) {
-        return `${name};${headerPropertiesString}`
+        return `${name};${headerPropertiesString}`;
       }
-      return name
+      return name;
     })
-    .join(", ")
-}
+    .join(", ");
+};
 
 const stringifyHeaderProperties = (headerProperties, { validateProperty }) => {
   const headerPropertiesString = Object.keys(headerProperties)
@@ -105,24 +105,24 @@ const stringifyHeaderProperties = (headerProperties, { validateProperty }) => {
       const property = {
         name,
         value: headerProperties[name],
-      }
-      return property
+      };
+      return property;
     })
     .filter((property) => {
-      const propertyValidation = validateProperty(property)
+      const propertyValidation = validateProperty(property);
       if (!propertyValidation) {
-        return false
+        return false;
       }
-      return true
+      return true;
     })
     .map(stringifyHeaderProperty)
-    .join(";")
-  return headerPropertiesString
-}
+    .join(";");
+  return headerPropertiesString;
+};
 
 const stringifyHeaderProperty = ({ name, value }) => {
   if (typeof value === "string") {
-    return `${name}="${value}"`
+    return `${name}="${value}"`;
   }
-  return `${name}=${value}`
-}
+  return `${name}=${value}`;
+};

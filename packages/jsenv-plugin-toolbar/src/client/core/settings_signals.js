@@ -1,3 +1,3 @@
-import { signal } from "@preact/signals"
+import { signal } from "@preact/signals";
 
-export const settingsOpenedSignal = signal(false)
+export const settingsOpenedSignal = signal(false);

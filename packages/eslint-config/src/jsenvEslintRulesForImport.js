@@ -44,4 +44,4 @@ export const jsenvEslintRulesForImport = {
   "import/no-cycle": ["error"],
   "import/no-useless-path-segments": ["error"],
   "import/no-default-export": ["error"],
-}
+};

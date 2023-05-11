@@ -1,21 +1,21 @@
-import { createMagicSource } from "@jsenv/sourcemap"
+import { createMagicSource } from "@jsenv/sourcemap";
 import {
   parseHtmlString,
   injectHtmlNodeAsEarlyAsPossible,
   createHtmlNode,
   stringifyHtmlAst,
-} from "@jsenv/ast"
+} from "@jsenv/ast";
 
 export const injectGlobals = (urlInfo, globals) => {
-  if (Object.keys(globals).length === 0) return null
+  if (Object.keys(globals).length === 0) return null;
   if (urlInfo.type === "html") {
-    return globalInjectorOnHtml(urlInfo, globals)
+    return globalInjectorOnHtml(urlInfo, globals);
   }
   if (urlInfo.type === "js_classic" || urlInfo.type === "js_module") {
-    return globalsInjectorOnJs(urlInfo, globals)
+    return globalsInjectorOnJs(urlInfo, globals);
   }
-  throw new Error(`cannot inject globals into "${urlInfo.type}"`)
-}
+  throw new Error(`cannot inject globals into "${urlInfo.type}"`);
+};
 
 const globalInjectorOnHtml = async (urlInfo, globals) => {
   // ideally we would inject an importmap but browser support is too low
@@ -23,11 +23,11 @@ const globalInjectorOnHtml = async (urlInfo, globals) => {
   // so for now we inject code into entry points
   const htmlAst = parseHtmlString(urlInfo.content, {
     storeOriginalPositions: false,
-  })
+  });
   const clientCode = generateClientCodeForGlobals({
     globals,
     isWebWorker: false,
-  })
+  });
   injectHtmlNodeAsEarlyAsPossible(
     htmlAst,
     createHtmlNode({
@@ -35,9 +35,9 @@ const globalInjectorOnHtml = async (urlInfo, globals) => {
       textContent: clientCode,
     }),
     "jsenv:inject_globals",
-  )
-  return stringifyHtmlAst(htmlAst)
-}
+  );
+  return stringifyHtmlAst(htmlAst);
+};
 
 const globalsInjectorOnJs = async (urlInfo, globals) => {
   const clientCode = generateClientCodeForGlobals({
@@ -46,13 +46,17 @@ const globalsInjectorOnJs = async (urlInfo, globals) => {
       urlInfo.subtype === "worker" ||
       urlInfo.subtype === "service_worker" ||
       urlInfo.subtype === "shared_worker",
-  })
-  const magicSource = createMagicSource(urlInfo.content)
-  magicSource.prepend(clientCode)
-  return magicSource.toContentAndSourcemap()
-}
+  });
+  const magicSource = createMagicSource(urlInfo.content);
+  magicSource.prepend(clientCode);
+  return magicSource.toContentAndSourcemap();
+};
 
 const generateClientCodeForGlobals = ({ isWebWorker = false, globals }) => {
-  const globalName = isWebWorker ? "self" : "window"
-  return `Object.assign(${globalName}, ${JSON.stringify(globals, null, "  ")});`
-}
+  const globalName = isWebWorker ? "self" : "window";
+  return `Object.assign(${globalName}, ${JSON.stringify(
+    globals,
+    null,
+    "  ",
+  )});`;
+};

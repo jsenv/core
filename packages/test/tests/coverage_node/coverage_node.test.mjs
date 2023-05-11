@@ -1,10 +1,10 @@
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
 import {
   executeTestPlan,
   nodeChildProcess,
   nodeWorkerThread,
-} from "@jsenv/test"
+} from "@jsenv/test";
 
 const test = async (params) => {
   const { testPlanCoverage } = await executeTestPlan({
@@ -27,8 +27,8 @@ const test = async (params) => {
     coverageIncludeMissing: false,
     coverageReportTextLog: false,
     coverageReportHtml: false,
-  })
-  const actual = testPlanCoverage
+  });
+  const actual = testPlanCoverage;
   const expected = {
     "./node_client/file.js": {
       ...actual["./node_client/file.js"],
@@ -44,13 +44,13 @@ const test = async (params) => {
         7: 0,
       },
     },
-  }
-  assert({ actual, expected })
-}
+  };
+  assert({ actual, expected });
+};
 
 await test({
   runtime: nodeChildProcess(),
-})
+});
 await test({
   runtime: nodeWorkerThread(),
-})
+});

@@ -1,36 +1,36 @@
-import { assert } from "@jsenv/assert"
-import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js"
-import { executeInNewContext } from "../executeInNewContext.js"
+import { assert } from "@jsenv/assert";
+import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js";
+import { executeInNewContext } from "../executeInNewContext.js";
 
 {
-  const actual = new Error()
-  const expected = new Error()
-  assert({ actual, expected })
+  const actual = new Error();
+  const expected = new Error();
+  assert({ actual, expected });
 }
 
 {
-  const actual = await executeInNewContext("new Error()")
-  const expected = await executeInNewContext("new Error()")
-  assert({ actual, expected })
+  const actual = await executeInNewContext("new Error()");
+  const expected = await executeInNewContext("new Error()");
+  assert({ actual, expected });
 }
 
 {
-  const actual = await executeInNewContext("new Error()")
-  const expected = new Error()
-  assert({ actual, expected })
+  const actual = await executeInNewContext("new Error()");
+  const expected = new Error();
+  assert({ actual, expected });
 }
 
 {
-  const actual = new Error()
-  const expected = await executeInNewContext("new Error()")
-  assert({ actual, expected })
+  const actual = new Error();
+  const expected = await executeInNewContext("new Error()");
+  assert({ actual, expected });
 }
 
 {
-  const actual = new Error("foo")
-  const expected = new Error("bar")
+  const actual = new Error("foo");
+  const expected = new Error("bar");
   try {
-    assert({ actual, expected })
+    assert({ actual, expected });
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
@@ -43,15 +43,15 @@ import { executeInNewContext } from "../executeInNewContext.js"
 actual.message
 --- details ---
 unexpected character at index 0, "f" was found instead of "b"`,
-    )
+    );
   }
 }
 
 if (typeof global === "object") {
-  const actual = new Error()
-  const expected = new TypeError()
+  const actual = new Error();
+  const expected = new TypeError();
   try {
-    assert({ actual, expected })
+    assert({ actual, expected });
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
@@ -62,7 +62,7 @@ global.Error.prototype
 global.TypeError.prototype
 --- path ---
 actual[[Prototype]]`,
-    )
+    );
   }
 }
 
@@ -71,10 +71,10 @@ actual[[Prototype]]`,
 // might differ. For instance node 8.5 returns name before constructor
 // and node 8.9.0 returns constructor before name
 if (typeof global === "object") {
-  const actual = new Error()
-  const expected = await executeInNewContext("new TypeError()")
+  const actual = new Error();
+  const expected = await executeInNewContext("new TypeError()");
   try {
-    assert({ actual, expected })
+    assert({ actual, expected });
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
@@ -89,6 +89,6 @@ TypeError({
 })
 --- path ---
 actual[[Prototype]]`,
-    )
+    );
   }
 }

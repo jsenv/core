@@ -1,6 +1,6 @@
-import { startServer, fetchFileSystem } from "@jsenv/server"
+import { startServer, fetchFileSystem } from "@jsenv/server";
 
-const publicDirectoryUrl = new URL("./public/", import.meta.url)
+const publicDirectoryUrl = new URL("./public/", import.meta.url);
 
 startServer({
   requestToResponse: (request) => {
@@ -13,6 +13,6 @@ startServer({
         compressionEnabled: true,
         compressionSizeThreshold: 1,
       },
-    )
+    );
   },
-})
+});

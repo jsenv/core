@@ -1,3 +1,3 @@
-console.log("before")
-undefined()
-console.log("after")
+console.log("before");
+undefined();
+console.log("after");

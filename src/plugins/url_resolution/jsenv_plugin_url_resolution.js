@@ -29,7 +29,7 @@
  * - "package_json"
  */
 
-import { createNodeEsmResolver } from "./node_esm_resolver.js"
+import { createNodeEsmResolver } from "./node_esm_resolver.js";
 
 export const jsenvPluginUrlResolution = ({
   runtimeCompat,
@@ -42,62 +42,62 @@ export const jsenvPluginUrlResolution = ({
       // baseUrl happens second argument to new URL() is different from
       // import.meta.url or document.currentScript.src
       reference.baseUrl || reference.parentUrl,
-    ).href
-  }
+    ).href;
+  };
 
-  const resolvers = {}
+  const resolvers = {};
   Object.keys(urlResolution).forEach((urlType) => {
-    const resolver = urlResolution[urlType]
+    const resolver = urlResolution[urlType];
     if (typeof resolver !== "object") {
       throw new Error(
         `urlResolution values must be objects, got ${resolver} on "${urlType}"`,
-      )
+      );
     }
-    let { web, node_esm, ...rest } = resolver
-    const unexpectedKeys = Object.keys(rest)
+    let { web, node_esm, ...rest } = resolver;
+    const unexpectedKeys = Object.keys(rest);
     if (unexpectedKeys.length) {
       throw new TypeError(
         `${unexpectedKeys.join(
           ",",
         )}: there is no such configuration on "${urlType}"`,
-      )
+      );
     }
     if (node_esm === undefined) {
-      node_esm = urlType === "js_import"
+      node_esm = urlType === "js_import";
     }
     if (web === undefined) {
-      web = true
+      web = true;
     }
     if (node_esm) {
-      if (node_esm === true) node_esm = {}
-      const { packageConditions, preservesSymlink } = node_esm
+      if (node_esm === true) node_esm = {};
+      const { packageConditions, preservesSymlink } = node_esm;
       resolvers[urlType] = createNodeEsmResolver({
         runtimeCompat,
         packageConditions,
         preservesSymlink,
-      })
+      });
     } else if (web) {
-      resolvers[urlType] = resolveUrlUsingWebResolution
+      resolvers[urlType] = resolveUrlUsingWebResolution;
     }
-  })
+  });
 
   const nodeEsmResolverDefault = createNodeEsmResolver({
     runtimeCompat,
     preservesSymlink: true,
-  })
+  });
   if (!resolvers.js_module) {
-    resolvers.js_module = nodeEsmResolverDefault
+    resolvers.js_module = nodeEsmResolverDefault;
   }
   if (!resolvers.js_classic) {
     resolvers.js_classic = (reference, context) => {
       if (reference.subtype === "self_import_scripts_arg") {
-        return nodeEsmResolverDefault(reference, context)
+        return nodeEsmResolverDefault(reference, context);
       }
-      return resolveUrlUsingWebResolution(reference, context)
-    }
+      return resolveUrlUsingWebResolution(reference, context);
+    };
   }
   if (!resolvers["*"]) {
-    resolvers["*"] = resolveUrlUsingWebResolution
+    resolvers["*"] = resolveUrlUsingWebResolution;
   }
 
   return {
@@ -105,24 +105,24 @@ export const jsenvPluginUrlResolution = ({
     appliesDuring: "*",
     resolveUrl: (reference, context) => {
       if (reference.specifier === "/") {
-        return String(defaultFileUrl)
+        return String(defaultFileUrl);
       }
       if (reference.specifier[0] === "/") {
         return new URL(reference.specifier.slice(1), context.rootDirectoryUrl)
-          .href
+          .href;
       }
       if (reference.type === "sourcemap_comment") {
-        return resolveUrlUsingWebResolution(reference, context)
+        return resolveUrlUsingWebResolution(reference, context);
       }
-      let urlType
+      let urlType;
       if (reference.injected) {
-        urlType = reference.expectedType
+        urlType = reference.expectedType;
       } else {
-        const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl)
-        urlType = parentUrlInfo ? parentUrlInfo.type : "entry_point"
+        const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl);
+        urlType = parentUrlInfo ? parentUrlInfo.type : "entry_point";
       }
-      const resolver = resolvers[urlType] || resolvers["*"]
-      return resolver(reference, context)
+      const resolver = resolvers[urlType] || resolvers["*"];
+      return resolver(reference, context);
     },
     // when specifier is prefixed by "file:///@ignore/"
     // we return an empty js module (used by node esm)
@@ -132,9 +132,9 @@ export const jsenvPluginUrlResolution = ({
           content: "export default {}",
           contentType: "text/javascript",
           type: "js_module",
-        }
+        };
       }
-      return null
+      return null;
     },
-  }
-}
+  };
+};

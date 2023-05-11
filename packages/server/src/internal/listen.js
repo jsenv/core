@@ -1,5 +1,5 @@
-import { createServer } from "node:net"
-import { Abort } from "@jsenv/abort"
+import { createServer } from "node:net";
+import { Abort } from "@jsenv/abort";
 
 const listen = async ({
   signal = new AbortController().signal,
@@ -8,28 +8,28 @@ const listen = async ({
   portHint,
   hostname,
 }) => {
-  const listeningOperation = Abort.startOperation()
+  const listeningOperation = Abort.startOperation();
 
   try {
-    listeningOperation.addAbortSignal(signal)
+    listeningOperation.addAbortSignal(signal);
 
     if (portHint) {
-      listeningOperation.throwIfAborted()
+      listeningOperation.throwIfAborted();
       port = await findFreePort(portHint, {
         signal: listeningOperation.signal,
         hostname,
-      })
+      });
     }
-    listeningOperation.throwIfAborted()
-    port = await startListening({ server, port, hostname })
-    listeningOperation.addAbortCallback(() => stopListening(server))
-    listeningOperation.throwIfAborted()
+    listeningOperation.throwIfAborted();
+    port = await startListening({ server, port, hostname });
+    listeningOperation.addAbortCallback(() => stopListening(server));
+    listeningOperation.throwIfAborted();
 
-    return port
+    return port;
   } finally {
-    await listeningOperation.end()
+    await listeningOperation.end();
   }
-}
+};
 
 export const findFreePort = async (
   initialPort = 1,
@@ -41,75 +41,75 @@ export const findFreePort = async (
     next = (port) => port + 1,
   } = {},
 ) => {
-  const findFreePortOperation = Abort.startOperation()
+  const findFreePortOperation = Abort.startOperation();
   try {
-    findFreePortOperation.addAbortSignal(signal)
-    findFreePortOperation.throwIfAborted()
+    findFreePortOperation.addAbortSignal(signal);
+    findFreePortOperation.throwIfAborted();
 
     const testUntil = async (port, host) => {
-      findFreePortOperation.throwIfAborted()
-      const free = await portIsFree(port, host)
+      findFreePortOperation.throwIfAborted();
+      const free = await portIsFree(port, host);
       if (free) {
-        return port
+        return port;
       }
 
-      const nextPort = next(port)
+      const nextPort = next(port);
       if (nextPort > max) {
         throw new Error(
           `${hostname} has no available port between ${min} and ${max}`,
-        )
+        );
       }
-      return testUntil(nextPort, hostname)
-    }
-    const freePort = await testUntil(initialPort, hostname)
-    return freePort
+      return testUntil(nextPort, hostname);
+    };
+    const freePort = await testUntil(initialPort, hostname);
+    return freePort;
   } finally {
-    await findFreePortOperation.end()
+    await findFreePortOperation.end();
   }
-}
+};
 
 const portIsFree = async (port, hostname) => {
-  const server = createServer()
+  const server = createServer();
 
   try {
     await startListening({
       server,
       port,
       hostname,
-    })
+    });
   } catch (error) {
     if (error && error.code === "EADDRINUSE") {
-      return false
+      return false;
     }
     if (error && error.code === "EACCES") {
-      return false
+      return false;
     }
-    throw error
+    throw error;
   }
 
-  await stopListening(server)
-  return true
-}
+  await stopListening(server);
+  return true;
+};
 
 const startListening = ({ server, port, hostname }) => {
   return new Promise((resolve, reject) => {
-    server.on("error", reject)
+    server.on("error", reject);
     server.on("listening", () => {
       // in case port is 0 (randomly assign an available port)
       // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
-      resolve(server.address().port)
-    })
-    server.listen(port, hostname)
-  })
-}
+      resolve(server.address().port);
+    });
+    server.listen(port, hostname);
+  });
+};
 
 export const stopListening = (server) => {
   return new Promise((resolve, reject) => {
-    server.on("error", reject)
-    server.on("close", resolve)
-    server.close()
-  })
-}
+    server.on("error", reject);
+    server.on("close", resolve);
+    server.close();
+  });
+};
 
 // unit test exports
-export { listen, portIsFree }
+export { listen, portIsFree };

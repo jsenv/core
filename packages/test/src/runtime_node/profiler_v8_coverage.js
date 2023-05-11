@@ -13,44 +13,44 @@
  * - https://vanilla.aslushnikov.com/?Profiler.startPreciseCoverage
  */
 
-import { Session } from "node:inspector"
+import { Session } from "node:inspector";
 
 export const startJsCoverage = async ({
   callCount = true,
   detailed = true,
 } = {}) => {
-  const session = new Session()
-  session.connect()
+  const session = new Session();
+  session.connect();
   const postSession = (action, options) => {
     const promise = new Promise((resolve, reject) => {
       session.post(action, options, (error, data) => {
         if (error) {
-          reject(error)
+          reject(error);
         } else {
-          resolve(data)
+          resolve(data);
         }
-      })
-    })
-    return promise
-  }
+      });
+    });
+    return promise;
+  };
 
-  await postSession("Profiler.enable")
-  await postSession("Profiler.startPreciseCoverage", { callCount, detailed })
+  await postSession("Profiler.enable");
+  await postSession("Profiler.startPreciseCoverage", { callCount, detailed });
 
   const takeJsCoverage = async () => {
-    const coverage = await postSession("Profiler.takePreciseCoverage")
-    return coverage
-  }
+    const coverage = await postSession("Profiler.takePreciseCoverage");
+    return coverage;
+  };
 
   const stopJsCoverage = async () => {
-    const coverage = await takeJsCoverage()
-    await postSession("Profiler.stopPreciseCoverage")
-    await postSession("Profiler.disable")
-    return coverage
-  }
+    const coverage = await takeJsCoverage();
+    await postSession("Profiler.stopPreciseCoverage");
+    await postSession("Profiler.disable");
+    return coverage;
+  };
 
   return {
     takeJsCoverage,
     stopJsCoverage,
-  }
-}
+  };
+};

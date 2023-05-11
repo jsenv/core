@@ -1,4 +1,4 @@
-import { startDevServer } from "@jsenv/core"
+import { startDevServer } from "@jsenv/core";
 
 await startDevServer({
   sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -8,4 +8,4 @@ await startDevServer({
       css: true,
     },
   },
-})
+});

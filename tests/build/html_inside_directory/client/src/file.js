@@ -1,2 +1,2 @@
-console.log("Hello world")
-window.resolveResultPromise(42)
+console.log("Hello world");
+window.resolveResultPromise(42);

@@ -1,7 +1,7 @@
-import { assert } from "@jsenv/assert"
-import { startDevServer } from "@jsenv/core"
+import { assert } from "@jsenv/assert";
+import { startDevServer } from "@jsenv/core";
 
-import { execute, chromium, firefox, webkit } from "@jsenv/test"
+import { execute, chromium, firefox, webkit } from "@jsenv/test";
 
 const test = async (params) => {
   const devServer = await startDevServer({
@@ -9,7 +9,7 @@ const test = async (params) => {
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
     port: 0,
-  })
+  });
   const { errors } = await execute({
     // logLevel: "debug"
     rootDirectoryUrl: new URL("./client/", import.meta.url),
@@ -22,27 +22,27 @@ const test = async (params) => {
     collectConsole: true,
     ignoreError: true,
     ...params,
-  })
-  devServer.stop()
+  });
+  devServer.stop();
   if (params.runtime.name === "chromium") {
-    const actual = errors[0].reason
-    const expected = "SyntaxError: Unexpected end of input"
-    assert({ actual, expected })
+    const actual = errors[0].reason;
+    const expected = "SyntaxError: Unexpected end of input";
+    assert({ actual, expected });
   }
   if (params.runtime.name === "firefox") {
-    const actual = errors[0].reason
-    const expected = "SyntaxError: expected expression, got end of script\n"
-    assert({ actual, expected })
+    const actual = errors[0].reason;
+    const expected = "SyntaxError: expected expression, got end of script\n";
+    assert({ actual, expected });
   }
   if (params.runtime.name === "webkit") {
-    const actual = errors[0].reason
-    const expected = `SyntaxError: Unexpected end of script\nundefined`
-    assert({ actual, expected })
+    const actual = errors[0].reason;
+    const expected = `SyntaxError: Unexpected end of script\nundefined`;
+    assert({ actual, expected });
   }
-}
+};
 
-await test({ runtime: chromium() })
+await test({ runtime: chromium() });
 if (process.platform !== "win32") {
-  await test({ runtime: firefox() })
+  await test({ runtime: firefox() });
 }
-await test({ runtime: webkit() })
+await test({ runtime: webkit() });

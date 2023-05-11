@@ -1,7 +1,7 @@
-self.importScripts("foo")
+self.importScripts("foo");
 
 self.addEventListener("message", (e) => {
   if (e.data === "ping") {
-    self.postMessage(self.answer)
+    self.postMessage(self.answer);
   }
-})
+});

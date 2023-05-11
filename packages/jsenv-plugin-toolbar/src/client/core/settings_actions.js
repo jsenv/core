@@ -1,9 +1,9 @@
-import { settingsOpenedSignal } from "./settings_signals.js"
+import { settingsOpenedSignal } from "./settings_signals.js";
 
 export const openSettings = () => {
-  settingsOpenedSignal.value = true
-}
+  settingsOpenedSignal.value = true;
+};
 
 export const closeSettings = () => {
-  settingsOpenedSignal.value = false
-}
+  settingsOpenedSignal.value = false;
+};

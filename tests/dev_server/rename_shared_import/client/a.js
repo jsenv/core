@@ -1,1 +1,1 @@
-import "./helper.js"
+import "./helper.js";

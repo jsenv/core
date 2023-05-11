@@ -1,11 +1,11 @@
-import { Abort } from "@jsenv/abort"
+import { Abort } from "@jsenv/abort";
 
-import { URL_META } from "@jsenv/url-meta"
-import { urlToRelativeUrl } from "@jsenv/urls"
-import { assertAndNormalizeDirectoryUrl } from "./directory_url_validation.js"
-import { readDirectory } from "./readDirectory.js"
-import { readEntryStat } from "./readEntryStat.js"
-import { comparePathnames } from "./comparePathnames.js"
+import { URL_META } from "@jsenv/url-meta";
+import { urlToRelativeUrl } from "@jsenv/urls";
+import { assertAndNormalizeDirectoryUrl } from "./directory_url_validation.js";
+import { readDirectory } from "./readDirectory.js";
+import { readEntryStat } from "./readEntryStat.js";
+import { comparePathnames } from "./comparePathnames.js";
 
 export const collectDirectoryMatchReport = async ({
   signal = new AbortController().signal,
@@ -13,31 +13,31 @@ export const collectDirectoryMatchReport = async ({
   associations,
   predicate,
 }) => {
-  const matchingArray = []
-  const ignoredArray = []
+  const matchingArray = [];
+  const ignoredArray = [];
 
-  const rootDirectoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl)
+  const rootDirectoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl);
   if (typeof predicate !== "function") {
-    throw new TypeError(`predicate must be a function, got ${predicate}`)
+    throw new TypeError(`predicate must be a function, got ${predicate}`);
   }
-  associations = URL_META.resolveAssociations(associations, rootDirectoryUrl)
+  associations = URL_META.resolveAssociations(associations, rootDirectoryUrl);
 
-  const collectOperation = Abort.startOperation()
-  collectOperation.addAbortSignal(signal)
+  const collectOperation = Abort.startOperation();
+  collectOperation.addAbortSignal(signal);
 
   const visitDirectory = async (directoryUrl) => {
-    collectOperation.throwIfAborted()
-    const directoryItems = await readDirectory(directoryUrl)
+    collectOperation.throwIfAborted();
+    const directoryItems = await readDirectory(directoryUrl);
 
     await Promise.all(
       directoryItems.map(async (directoryItem) => {
-        const directoryChildNodeUrl = `${directoryUrl}${directoryItem}`
+        const directoryChildNodeUrl = `${directoryUrl}${directoryItem}`;
         const relativeUrl = urlToRelativeUrl(
           directoryChildNodeUrl,
           rootDirectoryUrl,
-        )
+        );
 
-        collectOperation.throwIfAborted()
+        collectOperation.throwIfAborted();
         const directoryChildNodeStats = await readEntryStat(
           directoryChildNodeUrl,
           {
@@ -49,10 +49,10 @@ export const collectDirectoryMatchReport = async ({
             // because directoryPath is recursively traversed
             followLink: false,
           },
-        )
+        );
 
         if (directoryChildNodeStats.isDirectory()) {
-          const subDirectoryUrl = `${directoryChildNodeUrl}/`
+          const subDirectoryUrl = `${directoryChildNodeUrl}/`;
 
           if (
             !URL_META.urlChildMayMatch({
@@ -66,53 +66,53 @@ export const collectDirectoryMatchReport = async ({
                 ? relativeUrl
                 : `${relativeUrl}/`,
               fileStats: directoryChildNodeStats,
-            })
+            });
 
-            return
+            return;
           }
 
-          await visitDirectory(subDirectoryUrl)
-          return
+          await visitDirectory(subDirectoryUrl);
+          return;
         }
 
         if (directoryChildNodeStats.isFile()) {
           const meta = URL_META.applyAssociations({
             url: directoryChildNodeUrl,
             associations,
-          })
+          });
           if (!predicate(meta)) {
             ignoredArray.push({
               relativeUrl,
               meta,
               fileStats: directoryChildNodeStats,
-            })
-            return
+            });
+            return;
           }
 
           matchingArray.push({
             relativeUrl,
             meta,
             fileStats: directoryChildNodeStats,
-          })
-          return
+          });
+          return;
         }
       }),
-    )
-  }
+    );
+  };
 
   try {
-    await visitDirectory(rootDirectoryUrl)
+    await visitDirectory(rootDirectoryUrl);
 
     return {
       matchingArray: sortByRelativeUrl(matchingArray),
       ignoredArray: sortByRelativeUrl(ignoredArray),
-    }
+    };
   } finally {
-    await collectOperation.end()
+    await collectOperation.end();
   }
-}
+};
 
 const sortByRelativeUrl = (array) =>
   array.sort((left, right) => {
-    return comparePathnames(left.relativeUrl, right.relativeUrl)
-  })
+    return comparePathnames(left.relativeUrl, right.relativeUrl);
+  });

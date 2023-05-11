@@ -1,7 +1,7 @@
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-import { startDevServer } from "@jsenv/core"
-import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js"
+import { startDevServer } from "@jsenv/core";
+import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
 const test = async (params) => {
   const devServer = await startDevServer({
@@ -9,7 +9,7 @@ const test = async (params) => {
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
     ...params,
-  })
+  });
   const { returnValue, pageErrors, consoleOutput } = await executeInBrowser({
     url: `${devServer.origin}/main.html`,
     /* eslint-disable no-undef */
@@ -17,14 +17,14 @@ const test = async (params) => {
     /* eslint-enable no-undef */
     collectConsole: true,
     collectErrors: true,
-  })
+  });
   const errorStack =
-    returnValue.executionResults["/main.js"].exception.originalStack
+    returnValue.executionResults["/main.js"].exception.originalStack;
   const actual = {
     errorStack,
     pageErrors,
     consoleOutputRaw: consoleOutput.raw,
-  }
+  };
   const expected = {
     errorStack: `    at triggerError (${devServer.origin}/trigger_error.js:2:9)
     at ${devServer.origin}/main.js:3:1`,
@@ -34,8 +34,8 @@ const test = async (params) => {
       }),
     ],
     consoleOutputRaw: "",
-  }
-  assert({ actual, expected })
-}
+  };
+  assert({ actual, expected });
+};
 
-await test()
+await test();

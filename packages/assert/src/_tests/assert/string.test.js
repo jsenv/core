@@ -1,11 +1,11 @@
-import { assert } from "@jsenv/assert"
-import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js"
+import { assert } from "@jsenv/assert";
+import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js";
 
 {
-  const actual = String.fromCharCode(127)
-  const expected = ""
+  const actual = String.fromCharCode(127);
+  const expected = "";
   try {
-    assert({ actual, expected })
+    assert({ actual, expected });
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
@@ -18,15 +18,15 @@ import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMess
 actual
 --- details ---
 string found is too long, it has 1 extra character`,
-    )
+    );
   }
 }
 
 {
-  const actual = `	`
-  const expected = ` `
+  const actual = `	`;
+  const expected = ` `;
   try {
-    assert({ actual, expected })
+    assert({ actual, expected });
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
@@ -39,15 +39,15 @@ string found is too long, it has 1 extra character`,
 actual
 --- details ---
 unexpected character at index 0, "\\t" was found instead of " "`,
-    )
+    );
   }
 }
 
 {
-  const actual = `aa`
-  const expected = ``
+  const actual = `aa`;
+  const expected = ``;
   try {
-    assert({ actual, expected })
+    assert({ actual, expected });
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
@@ -60,15 +60,15 @@ unexpected character at index 0, "\\t" was found instead of " "`,
 actual
 --- details ---
 string found is too long, it has 2 extra characters`,
-    )
+    );
   }
 }
 
 {
-  const actual = ``
-  const expected = `a`
+  const actual = ``;
+  const expected = `a`;
   try {
-    assert({ actual, expected })
+    assert({ actual, expected });
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
@@ -81,15 +81,15 @@ string found is too long, it has 2 extra characters`,
 actual
 --- details ---
 string found is too short, 1 character is missing`,
-    )
+    );
   }
 }
 
 {
-  const actual = ``
-  const expected = `aa`
+  const actual = ``;
+  const expected = `aa`;
   try {
-    assert({ actual, expected })
+    assert({ actual, expected });
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
@@ -102,6 +102,6 @@ string found is too short, 1 character is missing`,
 actual
 --- details ---
 string found is too short, 2 characters are missing`,
-    )
+    );
   }
 }

@@ -1,18 +1,18 @@
 export const parseSrcSet = (srcset) => {
-  const srcCandidates = []
+  const srcCandidates = [];
   srcset.split(",").forEach((set) => {
-    const [specifier, descriptor] = set.trim().split(" ")
+    const [specifier, descriptor] = set.trim().split(" ");
     srcCandidates.push({
       specifier,
       descriptor,
-    })
-  })
-  return srcCandidates
-}
+    });
+  });
+  return srcCandidates;
+};
 
 export const stringifySrcSet = (srcCandidates) => {
   const srcset = srcCandidates
     .map(({ specifier, descriptor }) => `${specifier} ${descriptor}`)
-    .join(", ")
-  return srcset
-}
+    .join(", ");
+  return srcset;
+};

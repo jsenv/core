@@ -1,18 +1,18 @@
-import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem"
-import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
-import { createLogger, createTaskLog } from "@jsenv/log"
+import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem";
+import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
+import { createLogger, createTaskLog } from "@jsenv/log";
 import {
   jsenvAccessControlAllowedHeaders,
   startServer,
   jsenvServiceCORS,
   jsenvServiceErrorHandler,
-} from "@jsenv/server"
-import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js"
+} from "@jsenv/server";
+import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js";
 
-import { lookupPackageDirectory } from "../helpers/lookup_package_directory.js"
-import { createServerEventsDispatcher } from "../plugins/server_events/server_events_dispatcher.js"
-import { defaultRuntimeCompat } from "../build/build.js"
-import { createFileService } from "./file_service.js"
+import { lookupPackageDirectory } from "../helpers/lookup_package_directory.js";
+import { createServerEventsDispatcher } from "../plugins/server_events/server_events_dispatcher.js";
+import { defaultRuntimeCompat } from "../build/build.js";
+import { createFileService } from "./file_service.js";
 
 /**
  * Start a server for source files:
@@ -68,34 +68,34 @@ export const startDevServer = async ({
 }) => {
   // params type checking
   {
-    const unexpectedParamNames = Object.keys(rest)
+    const unexpectedParamNames = Object.keys(rest);
     if (unexpectedParamNames.length > 0) {
       throw new TypeError(
         `${unexpectedParamNames.join(",")}: there is no such param`,
-      )
+      );
     }
     sourceDirectoryUrl = assertAndNormalizeDirectoryUrl(
       sourceDirectoryUrl,
       "sourceDirectoryUrl",
-    )
+    );
     if (outDirectoryUrl === undefined) {
       if (!process.env.CI) {
-        const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl)
+        const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);
         if (packageDirectoryUrl) {
-          outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`
+          outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`;
         }
       }
     } else if (outDirectoryUrl !== null && outDirectoryUrl !== false) {
       outDirectoryUrl = assertAndNormalizeDirectoryUrl(
         outDirectoryUrl,
         "outDirectoryUrl",
-      )
+      );
     }
   }
 
-  const logger = createLogger({ logLevel })
-  const operation = Abort.startOperation()
-  operation.addAbortSignal(signal)
+  const logger = createLogger({ logLevel });
+  const operation = Abort.startOperation();
+  operation.addAbortSignal(signal);
   if (handleSIGINT) {
     operation.addAbortSource((abort) => {
       return raceProcessTeardownEvents(
@@ -103,19 +103,19 @@ export const startDevServer = async ({
           SIGINT: true,
         },
         abort,
-      )
-    })
+      );
+    });
   }
   const startDevServerTask = createTaskLog("start dev server", {
     disabled: !logger.levels.info,
-  })
+  });
 
-  const serverStopCallbacks = []
-  const serverEventsDispatcher = createServerEventsDispatcher()
+  const serverStopCallbacks = [];
+  const serverEventsDispatcher = createServerEventsDispatcher();
   serverStopCallbacks.push(() => {
-    serverEventsDispatcher.destroy()
-  })
-  const contextCache = new Map()
+    serverEventsDispatcher.destroy();
+  });
+  const contextCache = new Map();
   const server = await startServer({
     signal,
     stopOnExit: false,
@@ -137,12 +137,12 @@ export const startDevServer = async ({
       {
         handleRequest: (request) => {
           if (request.headers["x-server-inspect"]) {
-            return { status: 200 }
+            return { status: 200 };
           }
           if (request.pathname === "/__params__.json") {
             const json = JSON.stringify({
               sourceDirectoryUrl,
-            })
+            });
             return {
               status: 200,
               headers: {
@@ -150,12 +150,12 @@ export const startDevServer = async ({
                 "content-length": Buffer.byteLength(json),
               },
               body: json,
-            }
+            };
           }
-          return null
+          return null;
         },
         injectResponseHeaders: () => {
-          return { server: "jsenv_dev_server/1" }
+          return { server: "jsenv_dev_server/1" };
         },
       },
       jsenvServiceCORS({
@@ -202,7 +202,7 @@ export const startDevServer = async ({
         }),
         handleWebsocket: (websocket, { request }) => {
           if (request.headers["sec-websocket-protocol"] === "jsenv") {
-            serverEventsDispatcher.addWebsocket(websocket, request)
+            serverEventsDispatcher.addWebsocket(websocket, request);
           }
         },
       },
@@ -211,7 +211,7 @@ export const startDevServer = async ({
         handleError: (error) => {
           const getResponseForError = () => {
             if (error && error.asResponse) {
-              return error.asResponse()
+              return error.asResponse();
             }
             if (
               error &&
@@ -219,20 +219,20 @@ export const startDevServer = async ({
             ) {
               return {
                 status: 403,
-              }
+              };
             }
-            return convertFileSystemErrorToResponseProperties(error)
-          }
-          const response = getResponseForError()
+            return convertFileSystemErrorToResponseProperties(error);
+          };
+          const response = getResponseForError();
           if (!response) {
-            return null
+            return null;
           }
           const body = JSON.stringify({
             status: response.status,
             statusText: response.statusText,
             headers: response.headers,
             body: response.body,
-          })
+          });
           return {
             status: 200,
             headers: {
@@ -240,7 +240,7 @@ export const startDevServer = async ({
               "content-length": Buffer.byteLength(body),
             },
             body,
-          }
+          };
         },
       },
       // default error handling
@@ -248,29 +248,29 @@ export const startDevServer = async ({
         sendErrorDetails: true,
       }),
     ],
-  })
+  });
   server.stoppedPromise.then((reason) => {
-    onStop()
+    onStop();
     serverStopCallbacks.forEach((serverStopCallback) => {
-      serverStopCallback(reason)
-    })
-    serverStopCallbacks.length = 0
-  })
-  startDevServerTask.done()
+      serverStopCallback(reason);
+    });
+    serverStopCallbacks.length = 0;
+  });
+  startDevServerTask.done();
   if (hostname) {
-    delete server.origins.localip
-    delete server.origins.externalip
+    delete server.origins.localip;
+    delete server.origins.externalip;
   }
-  logger.info(``)
+  logger.info(``);
   Object.keys(server.origins).forEach((key) => {
-    logger.info(`- ${server.origins[key]}`)
-  })
-  logger.info(``)
+    logger.info(`- ${server.origins[key]}`);
+  });
+  logger.info(``);
   return {
     origin: server.origin,
     stop: () => {
-      server.stop()
+      server.stop();
     },
     contextCache,
-  }
-}
+  };
+};

@@ -1,6 +1,6 @@
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-import { URL_META } from "@jsenv/url-meta"
+import { URL_META } from "@jsenv/url-meta";
 
 {
   const actual = URL_META.applyAliases({
@@ -8,9 +8,9 @@ import { URL_META } from "@jsenv/url-meta"
     aliases: {
       "file:///alias.json": "file:///data.json",
     },
-  })
-  const expected = "file:///data.json"
-  assert({ actual, expected })
+  });
+  const expected = "file:///data.json";
+  assert({ actual, expected });
 }
 
 {
@@ -19,9 +19,9 @@ import { URL_META } from "@jsenv/url-meta"
     aliases: {
       "file:///*.js": "file:///file.js",
     },
-  })
-  const expected = "file:///file.js"
-  assert({ actual, expected })
+  });
+  const expected = "file:///file.js";
+  assert({ actual, expected });
 }
 
 {
@@ -30,9 +30,9 @@ import { URL_META } from "@jsenv/url-meta"
     aliases: {
       "file:///dir/*": "file:///dir/a.txt",
     },
-  })
-  const expected = "file:///dir/a.txt"
-  assert({ actual, expected })
+  });
+  const expected = "file:///dir/a.txt";
+  assert({ actual, expected });
 }
 
 {
@@ -41,7 +41,7 @@ import { URL_META } from "@jsenv/url-meta"
     aliases: {
       "file:///*/deep/*.js": "file:///*/deep/file.js",
     },
-  })
-  const expected = "file:///foo/deep/file.js"
-  assert({ actual, expected })
+  });
+  const expected = "file:///foo/deep/file.js";
+  assert({ actual, expected });
 }

@@ -1,11 +1,11 @@
-import { readFileSync } from "node:fs"
-import { DATA_URL } from "@jsenv/urls"
-import { collectFiles } from "@jsenv/filesystem"
-import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js"
+import { readFileSync } from "node:fs";
+import { DATA_URL } from "@jsenv/urls";
+import { collectFiles } from "@jsenv/filesystem";
+import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 
 export const explorerHtmlFileUrl = String(
   new URL("./client/explorer.html", import.meta.url),
-)
+);
 
 export const jsenvPluginExplorer = ({
   groups = {
@@ -18,7 +18,7 @@ export const jsenvPluginExplorer = ({
     },
   },
 }) => {
-  const faviconClientFileUrl = new URL("./client/jsenv.png", import.meta.url)
+  const faviconClientFileUrl = new URL("./client/jsenv.png", import.meta.url);
 
   return {
     name: "jsenv:explorer",
@@ -26,9 +26,9 @@ export const jsenvPluginExplorer = ({
     transformUrlContent: {
       html: async (urlInfo, context) => {
         if (urlInfo.url !== explorerHtmlFileUrl) {
-          return null
+          return null;
         }
-        let html = urlInfo.content
+        let html = urlInfo.content;
         if (html.includes("ignore:FAVICON_HREF")) {
           html = html.replace(
             "ignore:FAVICON_HREF",
@@ -39,29 +39,29 @@ export const jsenvPluginExplorer = ({
                 "base64",
               ),
             }),
-          )
+          );
         }
         if (html.includes("SERVER_PARAMS")) {
-          const associationsForExplorable = {}
+          const associationsForExplorable = {};
           Object.keys(groups).forEach((groupName) => {
-            const groupConfig = groups[groupName]
+            const groupConfig = groups[groupName];
             associationsForExplorable[groupName] = {
               "**/.jsenv/": false, // avoid visting .jsenv directory in jsenv itself
               ...groupConfig,
-            }
-          })
+            };
+          });
           const matchingFileResultArray = await collectFiles({
             directoryUrl: context.rootDirectoryUrl,
             associations: associationsForExplorable,
             predicate: (meta) =>
               Object.keys(meta).some((group) => Boolean(meta[group])),
-          })
+          });
           const files = matchingFileResultArray.map(
             ({ relativeUrl, meta }) => ({
               relativeUrl,
               meta,
             }),
-          )
+          );
 
           html = html.replace(
             "SERVER_PARAMS",
@@ -74,13 +74,13 @@ export const jsenvPluginExplorer = ({
               null,
               "  ",
             ),
-          )
+          );
           Object.assign(urlInfo.headers, {
             "cache-control": "no-store",
-          })
+          });
         }
-        return html
+        return html;
       },
     },
-  }
-}
+  };
+};

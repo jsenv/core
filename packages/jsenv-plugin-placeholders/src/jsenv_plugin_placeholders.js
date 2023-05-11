@@ -1,10 +1,10 @@
-import { URL_META } from "@jsenv/url-meta"
-import { asUrlWithoutSearch } from "@jsenv/urls"
+import { URL_META } from "@jsenv/url-meta";
+import { asUrlWithoutSearch } from "@jsenv/urls";
 
-import { replacePlaceholders } from "./replace_placeholders.js"
+import { replacePlaceholders } from "./replace_placeholders.js";
 
 export const jsenvPluginPlaceholders = (rawAssociations) => {
-  let resolvedAssociations
+  let resolvedAssociations;
 
   return {
     name: "jsenv:placeholders",
@@ -13,24 +13,24 @@ export const jsenvPluginPlaceholders = (rawAssociations) => {
       resolvedAssociations = URL_META.resolveAssociations(
         { replacer: rawAssociations },
         context.rootDirectoryUrl,
-      )
+      );
     },
     transformUrlContent: async (urlInfo, context) => {
       const { replacer } = URL_META.applyAssociations({
         url: asUrlWithoutSearch(urlInfo.url),
         associations: resolvedAssociations,
-      })
+      });
       if (!replacer) {
-        return null
+        return null;
       }
       if (typeof replacer !== "function") {
-        throw new TypeError("replacer must be a function")
+        throw new TypeError("replacer must be a function");
       }
-      const replacements = await replacer(urlInfo, context)
+      const replacements = await replacer(urlInfo, context);
       if (!replacements || Object.keys(replacements).length === 0) {
-        return null
+        return null;
       }
-      return replacePlaceholders(urlInfo, replacements)
+      return replacePlaceholders(urlInfo, replacements);
     },
-  }
-}
+  };
+};

@@ -1,6 +1,6 @@
 // eslint-disable-next-line import/no-unresolved
-import "./not_found.js"
+import "./not_found.js";
 
 if (import.meta.hot) {
-  import.meta.hot.accept()
+  import.meta.hot.accept();
 }

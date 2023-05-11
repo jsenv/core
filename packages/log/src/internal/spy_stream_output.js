@@ -7,26 +7,26 @@
 // is that node.js will later throw error if stream gets closed
 // while something listening data on it
 export const spyStreamOutput = (stream) => {
-  const originalWrite = stream.write
+  const originalWrite = stream.write;
 
-  let output = ""
-  let installed = true
+  let output = "";
+  let installed = true;
 
   stream.write = function (...args /* chunk, encoding, callback */) {
-    output += args
-    return originalWrite.call(stream, ...args)
-  }
+    output += args;
+    return originalWrite.call(stream, ...args);
+  };
 
   const uninstall = () => {
     if (!installed) {
-      return
+      return;
     }
-    stream.write = originalWrite
-    installed = false
-  }
+    stream.write = originalWrite;
+    installed = false;
+  };
 
   return () => {
-    uninstall()
-    return output
-  }
-}
+    uninstall();
+    return output;
+  };
+};

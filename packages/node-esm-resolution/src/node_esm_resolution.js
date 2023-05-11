@@ -9,21 +9,21 @@
  *   maintain symlink as facade url when it's outside project directory
  *   or use the real path when inside
  */
-import { pathToFileURL } from "node:url"
-import { existsSync, readFileSync, realpathSync } from "node:fs"
+import { pathToFileURL } from "node:url";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 
-import { isSpecifierForNodeBuiltin } from "./node_builtin_specifiers.js"
-import { defaultLookupPackageScope } from "./default_lookup_package_scope.js"
-import { defaultReadPackageJson } from "./default_read_package_json.js"
-import { getParentUrl, isValidUrl } from "./url_utils.js"
+import { isSpecifierForNodeBuiltin } from "./node_builtin_specifiers.js";
+import { defaultLookupPackageScope } from "./default_lookup_package_scope.js";
+import { defaultReadPackageJson } from "./default_read_package_json.js";
+import { getParentUrl, isValidUrl } from "./url_utils.js";
 import {
   createInvalidModuleSpecifierError,
   createModuleNotFoundError,
   createPackageImportNotDefinedError,
   createPackagePathNotExportedError,
   createInvalidPackageTargetError,
-} from "./errors.js"
-import { readCustomConditionsFromProcessArgs } from "./custom_conditions.js"
+} from "./errors.js";
+import { readCustomConditionsFromProcessArgs } from "./custom_conditions.js";
 
 export const applyNodeEsmResolution = ({
   specifier,
@@ -39,8 +39,8 @@ export const applyNodeEsmResolution = ({
     lookupPackageScope,
     readPackageJson,
     preservesSymlink,
-  })
-  const { url } = resolution
+  });
+  const { url } = resolution;
   if (url.startsWith("file:")) {
     if (url.includes("%2F") || url.includes("%5C")) {
       throw createInvalidModuleSpecifierError(
@@ -49,15 +49,15 @@ export const applyNodeEsmResolution = ({
         {
           parentUrl,
         },
-      )
+      );
     }
-    return resolution
+    return resolution;
   }
-  return resolution
-}
+  return resolution;
+};
 
 const applyPackageSpecifierResolution = (specifier, resolutionContext) => {
-  const { parentUrl } = resolutionContext
+  const { parentUrl } = resolutionContext;
   // relative specifier
   if (
     specifier[0] === "/" ||
@@ -68,88 +68,88 @@ const applyPackageSpecifierResolution = (specifier, resolutionContext) => {
       const browserFieldResolution = applyBrowserFieldResolution(
         specifier,
         resolutionContext,
-      )
+      );
       if (browserFieldResolution) {
-        return browserFieldResolution
+        return browserFieldResolution;
       }
     }
     return {
       type: "relative_specifier",
       url: new URL(specifier, parentUrl).href,
-    }
+    };
   }
   if (specifier[0] === "#") {
-    return applyPackageImportsResolution(specifier, resolutionContext)
+    return applyPackageImportsResolution(specifier, resolutionContext);
   }
   try {
-    const urlObject = new URL(specifier)
+    const urlObject = new URL(specifier);
     if (specifier.startsWith("node:")) {
       return {
         type: "node_builtin_specifier",
         url: specifier,
-      }
+      };
     }
     return {
       type: "absolute_specifier",
       url: urlObject.href,
-    }
+    };
   } catch (e) {
     // bare specifier
     const browserFieldResolution = applyBrowserFieldResolution(
       specifier,
       resolutionContext,
-    )
+    );
     if (browserFieldResolution) {
-      return browserFieldResolution
+      return browserFieldResolution;
     }
-    const packageResolution = applyPackageResolve(specifier, resolutionContext)
-    const search = new URL(specifier, "file://").search
+    const packageResolution = applyPackageResolve(specifier, resolutionContext);
+    const search = new URL(specifier, "file://").search;
     if (search) {
-      packageResolution.url = `${packageResolution.url}${search}`
+      packageResolution.url = `${packageResolution.url}${search}`;
     }
-    return packageResolution
+    return packageResolution;
   }
-}
+};
 
 const applyBrowserFieldResolution = (specifier, resolutionContext) => {
   const { parentUrl, conditions, lookupPackageScope, readPackageJson } =
-    resolutionContext
-  const browserCondition = conditions.includes("browser")
+    resolutionContext;
+  const browserCondition = conditions.includes("browser");
   if (!browserCondition) {
-    return null
+    return null;
   }
-  const packageDirectoryUrl = lookupPackageScope(parentUrl)
+  const packageDirectoryUrl = lookupPackageScope(parentUrl);
   if (!packageDirectoryUrl) {
-    return null
+    return null;
   }
-  const packageJson = readPackageJson(packageDirectoryUrl)
+  const packageJson = readPackageJson(packageDirectoryUrl);
   if (!packageJson) {
-    return null
+    return null;
   }
-  const { browser } = packageJson
+  const { browser } = packageJson;
   if (!browser) {
-    return null
+    return null;
   }
   if (typeof browser !== "object") {
-    return null
+    return null;
   }
-  let url
+  let url;
   if (specifier.startsWith(".")) {
-    const specifierUrl = new URL(specifier, parentUrl).href
-    const specifierRelativeUrl = specifierUrl.slice(packageDirectoryUrl.length)
-    const secifierRelativeNotation = `./${specifierRelativeUrl}`
-    const browserMapping = browser[secifierRelativeNotation]
+    const specifierUrl = new URL(specifier, parentUrl).href;
+    const specifierRelativeUrl = specifierUrl.slice(packageDirectoryUrl.length);
+    const secifierRelativeNotation = `./${specifierRelativeUrl}`;
+    const browserMapping = browser[secifierRelativeNotation];
     if (typeof browserMapping === "string") {
-      url = new URL(browserMapping, packageDirectoryUrl).href
+      url = new URL(browserMapping, packageDirectoryUrl).href;
     } else if (browserMapping === false) {
-      url = `file:///@ignore/${specifierUrl.slice("file:///")}`
+      url = `file:///@ignore/${specifierUrl.slice("file:///")}`;
     }
   } else {
-    const browserMapping = browser[specifier]
+    const browserMapping = browser[specifier];
     if (typeof browserMapping === "string") {
-      url = new URL(browserMapping, packageDirectoryUrl).href
+      url = new URL(browserMapping, packageDirectoryUrl).href;
     } else if (browserMapping === false) {
-      url = `file:///@ignore/${specifier}`
+      url = `file:///@ignore/${specifier}`;
     }
   }
   if (url) {
@@ -158,50 +158,50 @@ const applyBrowserFieldResolution = (specifier, resolutionContext) => {
       packageDirectoryUrl,
       packageJson,
       url,
-    }
+    };
   }
-  return null
-}
+  return null;
+};
 
 const applyPackageImportsResolution = (
   internalSpecifier,
   resolutionContext,
 ) => {
-  const { parentUrl, lookupPackageScope, readPackageJson } = resolutionContext
+  const { parentUrl, lookupPackageScope, readPackageJson } = resolutionContext;
   if (internalSpecifier === "#" || internalSpecifier.startsWith("#/")) {
     throw createInvalidModuleSpecifierError(
       "not a valid internal imports specifier name",
       internalSpecifier,
       resolutionContext,
-    )
+    );
   }
-  const packageDirectoryUrl = lookupPackageScope(parentUrl)
+  const packageDirectoryUrl = lookupPackageScope(parentUrl);
   if (packageDirectoryUrl !== null) {
-    const packageJson = readPackageJson(packageDirectoryUrl)
-    const { imports } = packageJson
+    const packageJson = readPackageJson(packageDirectoryUrl);
+    const { imports } = packageJson;
     if (imports !== null && typeof imports === "object") {
       const resolved = applyPackageImportsExportsResolution(internalSpecifier, {
         ...resolutionContext,
         packageDirectoryUrl,
         packageJson,
         isImport: true,
-      })
+      });
       if (resolved) {
-        return resolved
+        return resolved;
       }
     }
   }
   throw createPackageImportNotDefinedError(internalSpecifier, {
     ...resolutionContext,
     packageDirectoryUrl,
-  })
-}
+  });
+};
 
 const applyPackageResolve = (packageSpecifier, resolutionContext) => {
   const { parentUrl, conditions, readPackageJson, preservesSymlink } =
-    resolutionContext
+    resolutionContext;
   if (packageSpecifier === "") {
-    throw new Error("invalid module specifier")
+    throw new Error("invalid module specifier");
   }
   if (
     conditions.includes("node") &&
@@ -210,9 +210,9 @@ const applyPackageResolve = (packageSpecifier, resolutionContext) => {
     return {
       type: "node_builtin_specifier",
       url: `node:${packageSpecifier}`,
-    }
+    };
   }
-  let { packageName, packageSubpath } = parsePackageSpecifier(packageSpecifier)
+  let { packageName, packageSubpath } = parsePackageSpecifier(packageSpecifier);
   if (
     packageName[0] === "." ||
     packageName.includes("\\") ||
@@ -222,106 +222,109 @@ const applyPackageResolve = (packageSpecifier, resolutionContext) => {
       `is not a valid package name`,
       packageName,
       resolutionContext,
-    )
+    );
   }
   if (packageSubpath.endsWith("/")) {
-    throw new Error("invalid module specifier")
+    throw new Error("invalid module specifier");
   }
-  const questionCharIndex = packageName.indexOf("?")
+  const questionCharIndex = packageName.indexOf("?");
   if (questionCharIndex > -1) {
-    packageName = packageName.slice(0, questionCharIndex)
+    packageName = packageName.slice(0, questionCharIndex);
   }
   const selfResolution = applyPackageSelfResolution(packageSubpath, {
     ...resolutionContext,
     packageName,
-  })
+  });
   if (selfResolution) {
-    return selfResolution
+    return selfResolution;
   }
-  let currentUrl = parentUrl
+  let currentUrl = parentUrl;
   while (currentUrl !== "file:///") {
     const packageDirectoryFacadeUrl = new URL(
       `node_modules/${packageName}/`,
       currentUrl,
-    ).href
+    ).href;
     if (!existsSync(new URL(packageDirectoryFacadeUrl))) {
-      currentUrl = getParentUrl(currentUrl)
-      continue
+      currentUrl = getParentUrl(currentUrl);
+      continue;
     }
     const packageDirectoryUrl = preservesSymlink
       ? packageDirectoryFacadeUrl
-      : resolvePackageSymlink(packageDirectoryFacadeUrl)
-    const packageJson = readPackageJson(packageDirectoryUrl)
+      : resolvePackageSymlink(packageDirectoryFacadeUrl);
+    const packageJson = readPackageJson(packageDirectoryUrl);
     if (packageJson !== null) {
-      const { exports } = packageJson
+      const { exports } = packageJson;
       if (exports !== null && exports !== undefined) {
         return applyPackageExportsResolution(packageSubpath, {
           ...resolutionContext,
           packageDirectoryUrl,
           packageJson,
           exports,
-        })
+        });
       }
     }
     return applyLegacySubpathResolution(packageSubpath, {
       ...resolutionContext,
       packageDirectoryUrl,
       packageJson,
-    })
+    });
   }
-  throw createModuleNotFoundError(packageName, resolutionContext)
-}
+  throw createModuleNotFoundError(packageName, resolutionContext);
+};
 
 const applyPackageSelfResolution = (packageSubpath, resolutionContext) => {
   const { parentUrl, packageName, lookupPackageScope, readPackageJson } =
-    resolutionContext
-  const packageDirectoryUrl = lookupPackageScope(parentUrl)
+    resolutionContext;
+  const packageDirectoryUrl = lookupPackageScope(parentUrl);
   if (!packageDirectoryUrl) {
-    return undefined
+    return undefined;
   }
-  const packageJson = readPackageJson(packageDirectoryUrl)
+  const packageJson = readPackageJson(packageDirectoryUrl);
   if (!packageJson) {
-    return undefined
+    return undefined;
   }
   if (packageJson.name !== packageName) {
-    return undefined
+    return undefined;
   }
-  const { exports } = packageJson
+  const { exports } = packageJson;
   if (!exports) {
     const subpathResolution = applyLegacySubpathResolution(packageSubpath, {
       ...resolutionContext,
       packageDirectoryUrl,
       packageJson,
-    })
+    });
     if (subpathResolution && subpathResolution.type !== "subpath") {
-      return subpathResolution
+      return subpathResolution;
     }
-    return undefined
+    return undefined;
   }
   return applyPackageExportsResolution(packageSubpath, {
     ...resolutionContext,
     packageDirectoryUrl,
     packageJson,
-  })
-}
+  });
+};
 
 // https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/lib/internal/modules/esm/resolve.js#L642
 const applyPackageExportsResolution = (packageSubpath, resolutionContext) => {
   if (packageSubpath === ".") {
-    const mainExport = applyMainExportResolution(resolutionContext)
+    const mainExport = applyMainExportResolution(resolutionContext);
     if (!mainExport) {
-      throw createPackagePathNotExportedError(packageSubpath, resolutionContext)
+      throw createPackagePathNotExportedError(
+        packageSubpath,
+        resolutionContext,
+      );
     }
     const resolved = applyPackageTargetResolution(mainExport, {
       ...resolutionContext,
       key: ".",
-    })
+    });
     if (resolved) {
-      return resolved
+      return resolved;
     }
-    throw createPackagePathNotExportedError(packageSubpath, resolutionContext)
+    throw createPackagePathNotExportedError(packageSubpath, resolutionContext);
   }
-  const packageExportsInfo = readExports(resolutionContext)
+  const packageExportsInfo = readExports(resolutionContext);
   if (
     packageExportsInfo.type === "object" &&
     packageExportsInfo.allKeysAreRelative
@@ -329,52 +332,52 @@ const applyPackageExportsResolution = (packageSubpath, resolutionContext) => {
     const resolved = applyPackageImportsExportsResolution(packageSubpath, {
       ...resolutionContext,
       isImport: false,
-    })
+    });
     if (resolved) {
-      return resolved
+      return resolved;
     }
   }
-  throw createPackagePathNotExportedError(packageSubpath, resolutionContext)
-}
+  throw createPackagePathNotExportedError(packageSubpath, resolutionContext);
+};
 
 const applyPackageImportsExportsResolution = (matchKey, resolutionContext) => {
-  const { packageJson, isImport } = resolutionContext
-  const matchObject = isImport ? packageJson.imports : packageJson.exports
+  const { packageJson, isImport } = resolutionContext;
+  const matchObject = isImport ? packageJson.imports : packageJson.exports;
 
   if (!matchKey.includes("*") && matchObject.hasOwnProperty(matchKey)) {
-    const target = matchObject[matchKey]
+    const target = matchObject[matchKey];
     return applyPackageTargetResolution(target, {
       ...resolutionContext,
       key: matchKey,
       isImport,
-    })
+    });
   }
   const expansionKeys = Object.keys(matchObject)
     .filter((key) => key.split("*").length === 2)
-    .sort(comparePatternKeys)
+    .sort(comparePatternKeys);
   for (const expansionKey of expansionKeys) {
-    const [patternBase, patternTrailer] = expansionKey.split("*")
-    if (matchKey === patternBase) continue
-    if (!matchKey.startsWith(patternBase)) continue
+    const [patternBase, patternTrailer] = expansionKey.split("*");
+    if (matchKey === patternBase) continue;
+    if (!matchKey.startsWith(patternBase)) continue;
     if (patternTrailer.length > 0) {
-      if (!matchKey.endsWith(patternTrailer)) continue
-      if (matchKey.length < expansionKey.length) continue
+      if (!matchKey.endsWith(patternTrailer)) continue;
+      if (matchKey.length < expansionKey.length) continue;
     }
-    const target = matchObject[expansionKey]
+    const target = matchObject[expansionKey];
     const subpath = matchKey.slice(
       patternBase.length,
       matchKey.length - patternTrailer.length,
-    )
+    );
     return applyPackageTargetResolution(target, {
       ...resolutionContext,
       key: matchKey,
       subpath,
       pattern: true,
       isImport,
-    })
+    });
   }
-  return null
-}
+  return null;
+};
 
 const applyPackageTargetResolution = (target, resolutionContext) => {
   const {
@@ -385,20 +388,20 @@ const applyPackageTargetResolution = (target, resolutionContext) => {
     subpath = "",
     pattern = false,
     isImport = false,
-  } = resolutionContext
+  } = resolutionContext;
 
   if (typeof target === "string") {
     if (pattern === false && subpath !== "" && !target.endsWith("/")) {
-      throw new Error("invalid module specifier")
+      throw new Error("invalid module specifier");
     }
     if (target.startsWith("./")) {
-      const targetUrl = new URL(target, packageDirectoryUrl).href
+      const targetUrl = new URL(target, packageDirectoryUrl).href;
       if (!targetUrl.startsWith(packageDirectoryUrl)) {
         throw createInvalidPackageTargetError(
           `target must be inside package`,
           target,
           resolutionContext,
-        )
+        );
       }
       return {
         type: isImport ? "field:imports" : "field:exports",
@@ -407,14 +410,14 @@ const applyPackageTargetResolution = (target, resolutionContext) => {
         url: pattern
           ? targetUrl.replaceAll("*", subpath)
           : new URL(subpath, targetUrl).href,
-      }
+      };
     }
     if (!isImport || target.startsWith("../") || isValidUrl(target)) {
       throw createInvalidPackageTargetError(
         `target must starst with "./"`,
         target,
         resolutionContext,
-      )
+      );
     }
     return applyPackageResolve(
       pattern ? target.replaceAll("*", subpath) : `${target}${subpath}`,
@@ -422,17 +425,17 @@ const applyPackageTargetResolution = (target, resolutionContext) => {
         ...resolutionContext,
         parentUrl: packageDirectoryUrl,
       },
-    )
+    );
   }
   if (Array.isArray(target)) {
     if (target.length === 0) {
-      return null
+      return null;
     }
-    let lastResult
-    let i = 0
+    let lastResult;
+    let i = 0;
     while (i < target.length) {
-      const targetValue = target[i]
-      i++
+      const targetValue = target[i];
+      i++;
       try {
         const resolved = applyPackageTargetResolution(targetValue, {
           ...resolutionContext,
@@ -440,77 +443,77 @@ const applyPackageTargetResolution = (target, resolutionContext) => {
           subpath,
           pattern,
           isImport,
-        })
+        });
         if (resolved) {
-          return resolved
+          return resolved;
         }
-        lastResult = resolved
+        lastResult = resolved;
       } catch (e) {
         if (e.code === "INVALID_PACKAGE_TARGET") {
-          continue
+          continue;
         }
-        lastResult = e
+        lastResult = e;
       }
     }
     if (lastResult) {
-      throw lastResult
+      throw lastResult;
     }
-    return null
+    return null;
   }
   if (target === null) {
-    return null
+    return null;
   }
   if (typeof target === "object") {
-    const keys = Object.keys(target)
+    const keys = Object.keys(target);
     for (const key of keys) {
       if (Number.isInteger(key)) {
-        throw new Error("Invalid package configuration")
+        throw new Error("Invalid package configuration");
       }
       if (key === "default" || conditions.includes(key)) {
-        const targetValue = target[key]
+        const targetValue = target[key];
         const resolved = applyPackageTargetResolution(targetValue, {
           ...resolutionContext,
           key,
           subpath,
           pattern,
           isImport,
-        })
+        });
         if (resolved) {
-          return resolved
+          return resolved;
         }
       }
     }
-    return null
+    return null;
   }
   throw createInvalidPackageTargetError(
     `target must be a string, array, object or null`,
     target,
     resolutionContext,
-  )
-}
+  );
+};
 
 const readExports = ({ packageDirectoryUrl, packageJson }) => {
-  const packageExports = packageJson.exports
+  const packageExports = packageJson.exports;
   if (Array.isArray(packageExports)) {
     return {
       type: "array",
-    }
+    };
   }
   if (packageExports === null) {
-    return {}
+    return {};
   }
   if (typeof packageExports === "object") {
-    const keys = Object.keys(packageExports)
-    const relativeKeys = []
-    const conditionalKeys = []
+    const keys = Object.keys(packageExports);
+    const relativeKeys = [];
+    const conditionalKeys = [];
     keys.forEach((availableKey) => {
       if (availableKey.startsWith(".")) {
-        relativeKeys.push(availableKey)
+        relativeKeys.push(availableKey);
       } else {
-        conditionalKeys.push(availableKey)
+        conditionalKeys.push(availableKey);
       }
-    })
-    const hasRelativeKey = relativeKeys.length > 0
+    });
+    const hasRelativeKey = relativeKeys.length > 0;
     if (hasRelativeKey && conditionalKeys.length > 0) {
       throw new Error(
         `Invalid package configuration: cannot mix relative and conditional keys in package.exports
@@ -518,113 +521,113 @@ const readExports = ({ packageDirectoryUrl, packageJson }) => {
 ${conditionalKeys.map((key) => `"${key}"`).join("\n")}
 --- package directory url ---
 ${packageDirectoryUrl}`,
-      )
+      );
     }
     return {
       type: "object",
       hasRelativeKey,
       allKeysAreRelative: relativeKeys.length === keys.length,
-    }
+    };
   }
   if (typeof packageExports === "string") {
-    return { type: "string" }
+    return { type: "string" };
   }
-  return {}
-}
+  return {};
+};
 
 const parsePackageSpecifier = (packageSpecifier) => {
   if (packageSpecifier[0] === "@") {
-    const firstSlashIndex = packageSpecifier.indexOf("/")
+    const firstSlashIndex = packageSpecifier.indexOf("/");
     if (firstSlashIndex === -1) {
-      throw new Error("invalid module specifier")
+      throw new Error("invalid module specifier");
     }
-    const secondSlashIndex = packageSpecifier.indexOf("/", firstSlashIndex + 1)
+    const secondSlashIndex = packageSpecifier.indexOf("/", firstSlashIndex + 1);
     if (secondSlashIndex === -1) {
       return {
         packageName: packageSpecifier,
         packageSubpath: ".",
         isScoped: true,
-      }
+      };
     }
-    const packageName = packageSpecifier.slice(0, secondSlashIndex)
-    const afterSecondSlash = packageSpecifier.slice(secondSlashIndex + 1)
-    const packageSubpath = `./${afterSecondSlash}`
+    const packageName = packageSpecifier.slice(0, secondSlashIndex);
+    const afterSecondSlash = packageSpecifier.slice(secondSlashIndex + 1);
+    const packageSubpath = `./${afterSecondSlash}`;
     return {
       packageName,
       packageSubpath,
       isScoped: true,
-    }
+    };
   }
-  const firstSlashIndex = packageSpecifier.indexOf("/")
+  const firstSlashIndex = packageSpecifier.indexOf("/");
   if (firstSlashIndex === -1) {
     return {
       packageName: packageSpecifier,
       packageSubpath: ".",
-    }
+    };
   }
-  const packageName = packageSpecifier.slice(0, firstSlashIndex)
-  const afterFirstSlash = packageSpecifier.slice(firstSlashIndex + 1)
-  const packageSubpath = `./${afterFirstSlash}`
+  const packageName = packageSpecifier.slice(0, firstSlashIndex);
+  const afterFirstSlash = packageSpecifier.slice(firstSlashIndex + 1);
+  const packageSubpath = `./${afterFirstSlash}`;
   return {
     packageName,
     packageSubpath,
-  }
-}
+  };
+};
 
 const applyMainExportResolution = (resolutionContext) => {
-  const { packageJson } = resolutionContext
-  const packageExportsInfo = readExports(resolutionContext)
+  const { packageJson } = resolutionContext;
+  const packageExportsInfo = readExports(resolutionContext);
   if (
     packageExportsInfo.type === "array" ||
     packageExportsInfo.type === "string"
   ) {
-    return packageJson.exports
+    return packageJson.exports;
   }
   if (packageExportsInfo.type === "object") {
     if (packageExportsInfo.hasRelativeKey) {
-      return packageJson.exports["."]
+      return packageJson.exports["."];
     }
-    return packageJson.exports
+    return packageJson.exports;
   }
-  return undefined
-}
+  return undefined;
+};
 
 const applyLegacySubpathResolution = (packageSubpath, resolutionContext) => {
-  const { packageDirectoryUrl, packageJson } = resolutionContext
+  const { packageDirectoryUrl, packageJson } = resolutionContext;
 
   if (packageSubpath === ".") {
-    return applyLegacyMainResolution(packageSubpath, resolutionContext)
+    return applyLegacyMainResolution(packageSubpath, resolutionContext);
   }
   const browserFieldResolution = applyBrowserFieldResolution(
     packageSubpath,
     resolutionContext,
-  )
+  );
   if (browserFieldResolution) {
-    return browserFieldResolution
+    return browserFieldResolution;
   }
   return {
     type: "subpath",
     packageDirectoryUrl,
     packageJson,
     url: new URL(packageSubpath, packageDirectoryUrl).href,
-  }
-}
+  };
+};
 
 const applyLegacyMainResolution = (packageSubpath, resolutionContext) => {
-  const { conditions, packageDirectoryUrl, packageJson } = resolutionContext
+  const { conditions, packageDirectoryUrl, packageJson } = resolutionContext;
   for (const condition of conditions) {
-    const conditionResolver = mainLegacyResolvers[condition]
+    const conditionResolver = mainLegacyResolvers[condition];
     if (!conditionResolver) {
-      continue
+      continue;
     }
-    const resolved = conditionResolver(resolutionContext)
+    const resolved = conditionResolver(resolutionContext);
     if (resolved) {
       return {
         type: resolved.type,
         packageDirectoryUrl,
         packageJson,
         url: new URL(resolved.path, packageDirectoryUrl).href,
-      }
+      };
     }
   }
   return {
@@ -632,43 +635,43 @@ const applyLegacyMainResolution = (packageSubpath, resolutionContext) => {
     packageDirectoryUrl,
     packageJson,
     url: new URL("index.js", packageDirectoryUrl).href,
-  }
-}
+  };
+};
 const mainLegacyResolvers = {
   import: ({ packageJson }) => {
     if (typeof packageJson.module === "string") {
-      return { type: "field:module", path: packageJson.module }
+      return { type: "field:module", path: packageJson.module };
     }
     if (typeof packageJson.jsnext === "string") {
-      return { type: "field:jsnext", path: packageJson.jsnext }
+      return { type: "field:jsnext", path: packageJson.jsnext };
     }
     if (typeof packageJson.main === "string") {
-      return { type: "field:main", path: packageJson.main }
+      return { type: "field:main", path: packageJson.main };
     }
-    return null
+    return null;
   },
   browser: ({ packageDirectoryUrl, packageJson }) => {
     const browserMain = (() => {
       if (typeof packageJson.browser === "string") {
-        return packageJson.browser
+        return packageJson.browser;
       }
       if (
         typeof packageJson.browser === "object" &&
         packageJson.browser !== null
       ) {
-        return packageJson.browser["."]
+        return packageJson.browser["."];
       }
-      return ""
-    })()
+      return "";
+    })();
 
     if (!browserMain) {
       if (typeof packageJson.module === "string") {
         return {
           type: "field:module",
           path: packageJson.module,
-        }
+        };
       }
-      return null
+      return null;
     }
     if (
       typeof packageJson.module !== "string" ||
@@ -677,10 +680,10 @@ const mainLegacyResolvers = {
       return {
         type: "field:browser",
         path: browserMain,
-      }
+      };
     }
-    const browserMainUrlObject = new URL(browserMain, packageDirectoryUrl)
-    const content = readFileSync(browserMainUrlObject, "utf-8")
+    const browserMainUrlObject = new URL(browserMain, packageDirectoryUrl);
+    const content = readFileSync(browserMainUrlObject, "utf-8");
     if (
       (/typeof exports\s*==/.test(content) &&
         /typeof module\s*==/.test(content)) ||
@@ -689,58 +692,58 @@ const mainLegacyResolvers = {
       return {
         type: "field:module",
         path: packageJson.module,
-      }
+      };
     }
     return {
       type: "field:browser",
       path: browserMain,
-    }
+    };
   },
   node: ({ packageJson }) => {
     if (typeof packageJson.main === "string") {
       return {
         type: "field:main",
         path: packageJson.main,
-      }
+      };
     }
-    return null
+    return null;
   },
-}
+};
 
 const comparePatternKeys = (keyA, keyB) => {
   if (!keyA.endsWith("/") && !keyA.includes("*")) {
-    throw new Error("Invalid package configuration")
+    throw new Error("Invalid package configuration");
   }
   if (!keyB.endsWith("/") && !keyB.includes("*")) {
-    throw new Error("Invalid package configuration")
+    throw new Error("Invalid package configuration");
   }
-  const aStarIndex = keyA.indexOf("*")
-  const baseLengthA = aStarIndex > -1 ? aStarIndex + 1 : keyA.length
-  const bStarIndex = keyB.indexOf("*")
-  const baseLengthB = bStarIndex > -1 ? bStarIndex + 1 : keyB.length
+  const aStarIndex = keyA.indexOf("*");
+  const baseLengthA = aStarIndex > -1 ? aStarIndex + 1 : keyA.length;
+  const bStarIndex = keyB.indexOf("*");
+  const baseLengthB = bStarIndex > -1 ? bStarIndex + 1 : keyB.length;
   if (baseLengthA > baseLengthB) {
-    return -1
+    return -1;
   }
   if (baseLengthB > baseLengthA) {
-    return 1
+    return 1;
   }
   if (aStarIndex === -1) {
-    return 1
+    return 1;
   }
   if (bStarIndex === -1) {
-    return -1
+    return -1;
   }
   if (keyA.length > keyB.length) {
-    return -1
+    return -1;
   }
   if (keyB.length > keyA.length) {
-    return 1
+    return 1;
   }
-  return 0
-}
+  return 0;
+};
 
 const resolvePackageSymlink = (packageDirectoryUrl) => {
-  const packageDirectoryPath = realpathSync(new URL(packageDirectoryUrl))
-  const packageDirectoryResolvedUrl = pathToFileURL(packageDirectoryPath).href
-  return `${packageDirectoryResolvedUrl}/`
-}
+  const packageDirectoryPath = realpathSync(new URL(packageDirectoryUrl));
+  const packageDirectoryResolvedUrl = pathToFileURL(packageDirectoryPath).href;
+  return `${packageDirectoryResolvedUrl}/`;
+};

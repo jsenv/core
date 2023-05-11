@@ -2,7 +2,7 @@ import {
   startServer,
   fetchFileSystem,
   jsenvServiceErrorHandler,
-} from "@jsenv/server"
+} from "@jsenv/server";
 
 export const startFileServer = ({
   rootDirectoryUrl,
@@ -34,5 +34,5 @@ export const startFileServer = ({
       },
     ],
     ...rest,
-  })
-}
+  });
+};

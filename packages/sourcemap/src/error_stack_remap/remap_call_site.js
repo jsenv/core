@@ -1,20 +1,20 @@
-import { remapSourcePosition } from "./remap_source_position.js"
+import { remapSourcePosition } from "./remap_source_position.js";
 
 export const remapCallSite = async (
   callSite,
   { urlToSourcemapConsumer, resolveFile, readErrorStack, onFailure },
 ) => {
   if (callSite.isNative()) {
-    return callSite
+    return callSite;
   }
 
   // Most call sites will return the source file from getFileName(), but code
   // passed to eval() ending in "//# sourceURL=..." will return the source file
   // from getScriptNameOrSourceURL() instead
-  const source = callSite.getFileName() || callSite.getScriptNameOrSourceURL()
+  const source = callSite.getFileName() || callSite.getScriptNameOrSourceURL();
   if (source) {
-    const line = callSite.getLineNumber()
-    const column = callSite.getColumnNumber() - 1
+    const line = callSite.getLineNumber();
+    const column = callSite.getColumnNumber() - 1;
     const originalPosition = await remapSourcePosition({
       url: resolveFile(source),
       line,
@@ -22,50 +22,50 @@ export const remapCallSite = async (
       resolveFile,
       urlToSourcemapConsumer,
       readErrorStack,
-    })
+    });
 
-    const callSiteClone = cloneCallSite(callSite)
+    const callSiteClone = cloneCallSite(callSite);
 
     callSiteClone.getFunctionName = () =>
-      originalPosition.name || callSite.getFunctionName()
-    callSiteClone.getFileName = () => originalPosition.source
-    callSiteClone.getLineNumber = () => originalPosition.line
-    callSiteClone.getColumnNumber = () => originalPosition.column + 1
-    callSiteClone.getScriptNameOrSourceURL = () => originalPosition.source
+      originalPosition.name || callSite.getFunctionName();
+    callSiteClone.getFileName = () => originalPosition.source;
+    callSiteClone.getLineNumber = () => originalPosition.line;
+    callSiteClone.getColumnNumber = () => originalPosition.column + 1;
+    callSiteClone.getScriptNameOrSourceURL = () => originalPosition.source;
 
-    return callSiteClone
+    return callSiteClone;
   }
 
   // Code called using eval() needs special handling
   if (callSite.isEval()) {
-    const origin = callSite.getEvalOrigin()
+    const origin = callSite.getEvalOrigin();
     if (origin) {
-      const callSiteClone = cloneCallSite(callSite)
+      const callSiteClone = cloneCallSite(callSite);
       const originalEvalOrigin = await remapEvalOrigin(origin, {
         resolveFile,
         urlToSourcemapConsumer,
         readErrorStack,
         onFailure,
-      })
-      callSiteClone.getEvalOrigin = () => originalEvalOrigin
-      return callSiteClone
+      });
+      callSiteClone.getEvalOrigin = () => originalEvalOrigin;
+      return callSiteClone;
     }
-    return callSite
+    return callSite;
   }
 
   // If we get here then we were unable to change the source position
-  return callSite
-}
+  return callSite;
+};
 
 const cloneCallSite = (callSite) => {
-  const callSiteClone = {}
+  const callSiteClone = {};
   methods.forEach((name) => {
-    callSiteClone[name] = () => callSite[name]()
-  })
-  callSiteClone.toString = () => callSiteToFunctionCall(callSiteClone)
+    callSiteClone[name] = () => callSite[name]();
+  });
+  callSiteClone.toString = () => callSiteToFunctionCall(callSiteClone);
 
-  return callSiteClone
-}
+  return callSiteClone;
+};
 
 const methods = [
   "getColumnNumber",
@@ -84,99 +84,99 @@ const methods = [
   "isNative",
   "isToplevel",
   "toString",
-]
+];
 
 const callSiteToFunctionCall = (callSite) => {
-  const fileLocation = callSiteToFileLocation(callSite)
-  const isConstructor = callSite.isConstructor()
-  const isMethodCall = !callSite.isToplevel() && !isConstructor
+  const fileLocation = callSiteToFileLocation(callSite);
+  const isConstructor = callSite.isConstructor();
+  const isMethodCall = !callSite.isToplevel() && !isConstructor;
 
   if (isMethodCall) {
-    return `${callSiteToMethodCall(callSite)} (${fileLocation})`
+    return `${callSiteToMethodCall(callSite)} (${fileLocation})`;
   }
 
-  const functionName = callSite.getFunctionName()
+  const functionName = callSite.getFunctionName();
   if (isConstructor) {
-    return `new ${functionName || "<anonymous>"} (${fileLocation})`
+    return `new ${functionName || "<anonymous>"} (${fileLocation})`;
   }
 
   if (functionName) {
-    return `${functionName} (${fileLocation})`
+    return `${functionName} (${fileLocation})`;
   }
 
-  return `${fileLocation}`
-}
+  return `${fileLocation}`;
+};
 
 const callSiteToMethodCall = (callSite) => {
-  const functionName = callSite.getFunctionName()
-  const typeName = callSiteToType(callSite)
+  const functionName = callSite.getFunctionName();
+  const typeName = callSiteToType(callSite);
 
   if (!functionName) {
-    return `${typeName}.<anonymous>`
+    return `${typeName}.<anonymous>`;
   }
 
-  const methodName = callSite.getMethodName()
-  const as = generateAs({ methodName, functionName })
+  const methodName = callSite.getMethodName();
+  const as = generateAs({ methodName, functionName });
 
   if (typeName && !functionName.startsWith(typeName)) {
-    return `${typeName}.${functionName}${as}`
+    return `${typeName}.${functionName}${as}`;
   }
 
-  return `${functionName}${as}`
-}
+  return `${functionName}${as}`;
+};
 
 const generateAs = ({ methodName, functionName }) => {
-  if (!methodName) return ""
+  if (!methodName) return "";
   if (
     functionName.indexOf(`.${methodName}`) ===
     functionName.length - methodName.length - 1
   )
-    return ""
-  return ` [as ${methodName}]`
-}
+    return "";
+  return ` [as ${methodName}]`;
+};
 
 const callSiteToType = (callSite) => {
-  const typeName = callSite.getTypeName()
+  const typeName = callSite.getTypeName();
   // Fixes shim to be backward compatible with Node v0 to v4
   if (typeName === "[object Object]") {
-    return "null"
+    return "null";
   }
-  return typeName
-}
+  return typeName;
+};
 
 const callSiteToFileLocation = (callSite) => {
-  if (callSite.isNative()) return "native"
+  if (callSite.isNative()) return "native";
 
-  const sourceFile = callSiteToSourceFile(callSite)
-  const lineNumber = callSite.getLineNumber()
+  const sourceFile = callSiteToSourceFile(callSite);
+  const lineNumber = callSite.getLineNumber();
   if (lineNumber === null) {
-    return sourceFile
+    return sourceFile;
   }
 
-  const columnNumber = callSite.getColumnNumber()
+  const columnNumber = callSite.getColumnNumber();
   if (!columnNumber) {
-    return `${sourceFile}:${lineNumber}`
+    return `${sourceFile}:${lineNumber}`;
   }
 
-  return `${sourceFile}:${lineNumber}:${columnNumber}`
-}
+  return `${sourceFile}:${lineNumber}:${columnNumber}`;
+};
 
 const callSiteToSourceFile = (callSite) => {
-  const fileName = callSite.getScriptNameOrSourceURL()
+  const fileName = callSite.getScriptNameOrSourceURL();
 
   if (fileName) {
-    return fileName
+    return fileName;
   }
 
   // Source code does not originate from a file and is not native, but we
   // can still get the source position inside the source string, e.g. in
   // an eval string.
   if (callSite.isEval()) {
-    return `${callSite.getEvalOrigin()}, <anonymous>`
+    return `${callSite.getEvalOrigin()}, <anonymous>`;
   }
 
-  return "<anonymous>"
-}
+  return "<anonymous>";
+};
 
 // Parses code generated by FormatEvalOrigin(), a function inside V8:
 // https://code.google.com/p/v8/source/browse/trunk/src/messages.js
@@ -187,34 +187,34 @@ const remapEvalOrigin = async (
   // Most eval() calls are in this format
   const topLevelEvalMatch = /^eval at ([^(]+) \((.+):(\d+):(\d+)\)$/.exec(
     origin,
-  )
+  );
   if (topLevelEvalMatch) {
-    const source = topLevelEvalMatch[2]
-    const line = Number(topLevelEvalMatch[3])
-    const column = topLevelEvalMatch[4] - 1
+    const source = topLevelEvalMatch[2];
+    const line = Number(topLevelEvalMatch[3]);
+    const column = topLevelEvalMatch[4] - 1;
     const originalPosition = await remapSourcePosition({
       url: resolveFile(source),
       line,
       column,
       resolveFile,
       urlToSourcemapConsumer,
-    })
+    });
     return `eval at ${topLevelEvalMatch[1]} (${originalPosition.source}:${
       originalPosition.line
-    }:${originalPosition.column + 1})`
+    }:${originalPosition.column + 1})`;
   }
 
   // Parse nested eval() calls using recursion
-  const nestedEvalMatch = /^eval at ([^(]+) \((.+)\)$/.exec(origin)
+  const nestedEvalMatch = /^eval at ([^(]+) \((.+)\)$/.exec(origin);
   if (nestedEvalMatch) {
     const originalEvalOrigin = await remapEvalOrigin(nestedEvalMatch[2], {
       resolveFile,
       urlToSourcemapConsumer,
       onFailure,
-    })
-    return `eval at ${nestedEvalMatch[1]} (${originalEvalOrigin})`
+    });
+    return `eval at ${nestedEvalMatch[1]} (${originalEvalOrigin})`;
   }
 
   // Make sure we still return useful information if we didn't find anything
-  return origin
-}
+  return origin;
+};

@@ -1,68 +1,68 @@
-import { readdirSync, statSync, readFileSync, rmSync } from "node:fs"
+import { readdirSync, statSync, readFileSync, rmSync } from "node:fs";
 import {
   assertAndNormalizeDirectoryUrl,
   writeFileSync,
   comparePathnames,
-} from "@jsenv/filesystem"
-import { urlToRelativeUrl } from "@jsenv/urls"
-import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js"
-import { assert } from "@jsenv/assert"
-import { ensureUnixLineBreaks } from "@jsenv/core/src/build/line_break_unix.js"
+} from "@jsenv/filesystem";
+import { urlToRelativeUrl } from "@jsenv/urls";
+import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
+import { assert } from "@jsenv/assert";
+import { ensureUnixLineBreaks } from "@jsenv/core/src/build/line_break_unix.js";
 
 export const readSnapshotsFromDirectory = (directoryUrl) => {
-  directoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl)
-  const fileContents = {}
-  directoryUrl = new URL(directoryUrl)
+  directoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl);
+  const fileContents = {};
+  directoryUrl = new URL(directoryUrl);
   const visitDirectory = (url) => {
-    const directoryContent = readdirSync(url)
+    const directoryContent = readdirSync(url);
     directoryContent.forEach((filename) => {
-      const contentUrl = new URL(filename, url)
-      const stat = statSync(contentUrl)
+      const contentUrl = new URL(filename, url);
+      const stat = statSync(contentUrl);
       if (stat.isDirectory()) {
-        visitDirectory(new URL(`${contentUrl}/`))
+        visitDirectory(new URL(`${contentUrl}/`));
       } else {
         const isTextual = CONTENT_TYPE.isTextual(
           CONTENT_TYPE.fromUrlExtension(contentUrl),
-        )
-        const content = readFileSync(contentUrl, isTextual ? "utf8" : null)
-        const relativeUrl = urlToRelativeUrl(contentUrl, directoryUrl)
+        );
+        const content = readFileSync(contentUrl, isTextual ? "utf8" : null);
+        const relativeUrl = urlToRelativeUrl(contentUrl, directoryUrl);
         fileContents[relativeUrl] =
           isTextual && process.platform === "win32"
             ? ensureUnixLineBreaks(content)
-            : content
+            : content;
       }
-    })
-  }
-  visitDirectory(directoryUrl)
-  const sortedFileContents = {}
+    });
+  };
+  visitDirectory(directoryUrl);
+  const sortedFileContents = {};
   Object.keys(fileContents)
     .sort(comparePathnames)
     .forEach((relativeUrl) => {
-      sortedFileContents[relativeUrl] = fileContents[relativeUrl]
-    })
-  return sortedFileContents
-}
+      sortedFileContents[relativeUrl] = fileContents[relativeUrl];
+    });
+  return sortedFileContents;
+};
 
 export const writeSnapshotsIntoDirectory = (directoryUrl, fileContents) => {
   rmSync(new URL(directoryUrl), {
     recursive: true,
     force: true,
-  })
+  });
   Object.keys(fileContents).forEach((relativeUrl) => {
-    const contentUrl = new URL(relativeUrl, directoryUrl)
-    writeFileSync(contentUrl, fileContents[relativeUrl])
-  })
-}
+    const contentUrl = new URL(relativeUrl, directoryUrl);
+    writeFileSync(contentUrl, fileContents[relativeUrl]);
+  });
+};
 
 export const takeFileSnapshot = (fileUrl, snapshotFileUrl) => {
-  const fileContent = readFileSync(fileUrl, "utf8")
-  const snapshotFileContent = readFileSync(snapshotFileUrl, "utf8")
-  writeFileSync(snapshotFileUrl, fileContent)
+  const fileContent = readFileSync(fileUrl, "utf8");
+  const snapshotFileContent = readFileSync(snapshotFileUrl, "utf8");
+  writeFileSync(snapshotFileUrl, fileContent);
   assertSnapshots({
     content: fileContent,
     snapshotContent: snapshotFileContent,
-  })
-}
+  });
+};
 
 export const takeDirectorySnapshot = (
   directoryUrl,
@@ -70,23 +70,23 @@ export const takeDirectorySnapshot = (
   callAssert = true,
 ) => {
   const snapshotDirectoryContent =
-    readSnapshotsFromDirectory(snapshotDirectoryUrl)
-  const directoryContent = readSnapshotsFromDirectory(directoryUrl)
-  writeSnapshotsIntoDirectory(snapshotDirectoryUrl, directoryContent)
+    readSnapshotsFromDirectory(snapshotDirectoryUrl);
+  const directoryContent = readSnapshotsFromDirectory(directoryUrl);
+  writeSnapshotsIntoDirectory(snapshotDirectoryUrl, directoryContent);
   if (callAssert) {
     assertSnapshots({
       content: directoryContent,
       snapshotContent: snapshotDirectoryContent,
-    })
+    });
   }
-}
+};
 
 export const assertSnapshots = ({ content, snapshotContent }) => {
   if (process.env.NO_SNAPSHOT_ASSERTION) {
-    return
+    return;
   }
   assert({
     actual: content,
     expected: snapshotContent,
-  })
-}
+  });
+};

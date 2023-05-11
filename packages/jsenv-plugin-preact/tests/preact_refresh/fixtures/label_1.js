@@ -1,1 +1,1 @@
-export const label = "tata"
+export const label = "tata";

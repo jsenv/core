@@ -1,8 +1,8 @@
-import { isStringLiteralNode } from "./helpers.js"
+import { isStringLiteralNode } from "./helpers.js";
 
 export const analyzeImportDeclaration = (node, { onUrl }) => {
-  const specifierNode = node.source
-  const assertionInfo = extractImportAssertionsInfo(node)
+  const specifierNode = node.source;
+  const assertionInfo = extractImportAssertionsInfo(node);
   onUrl({
     type: "js_import",
     subtype: "import_static",
@@ -13,14 +13,14 @@ export const analyzeImportDeclaration = (node, { onUrl }) => {
     column: specifierNode.loc.start.column,
     expectedType: assertionInfo ? assertionInfo.assert.type : "js_module",
     ...assertionInfo,
-  })
-}
+  });
+};
 export const analyzeImportExpression = (node, { onUrl }) => {
-  const specifierNode = node.source
+  const specifierNode = node.source;
   if (!isStringLiteralNode(specifierNode)) {
-    return
+    return;
   }
-  const assertionInfo = extractImportAssertionsInfo(node)
+  const assertionInfo = extractImportAssertionsInfo(node);
 
   onUrl({
     type: "js_import",
@@ -32,17 +32,17 @@ export const analyzeImportExpression = (node, { onUrl }) => {
     column: specifierNode.loc.start.column,
     expectedType: assertionInfo ? assertionInfo.assert.type : "js_module",
     ...assertionInfo,
-  })
-}
+  });
+};
 export const analyzeExportNamedDeclaration = (node, { onUrl }) => {
-  const specifierNode = node.source
+  const specifierNode = node.source;
   if (!specifierNode) {
     // This export has no "source", so it's probably
     // a local variable or function, e.g.
     // export { varName }
     // export const constName = ...
     // export function funcName() {}
-    return
+    return;
   }
   onUrl({
     type: "js_import",
@@ -52,10 +52,10 @@ export const analyzeExportNamedDeclaration = (node, { onUrl }) => {
     end: specifierNode.end,
     line: specifierNode.loc.start.line,
     column: specifierNode.loc.start.column,
-  })
-}
+  });
+};
 export const analyzeExportAllDeclaration = (node, { onUrl }) => {
-  const specifierNode = node.source
+  const specifierNode = node.source;
   onUrl({
     type: "js_import",
     subtype: "export_all",
@@ -64,72 +64,72 @@ export const analyzeExportAllDeclaration = (node, { onUrl }) => {
     end: specifierNode.end,
     line: specifierNode.loc.start.line,
     column: specifierNode.loc.start.column,
-  })
-}
+  });
+};
 
 const extractImportAssertionsInfo = (node) => {
   if (node.type === "ImportDeclaration") {
     // static import
-    const { assertions } = node
+    const { assertions } = node;
     if (!assertions) {
-      return null
+      return null;
     }
     if (assertions.length === 0) {
-      return null
+      return null;
     }
     const typeAssertionNode = assertions.find(
       (assertion) => assertion.key.name === "type",
-    )
+    );
     if (!typeAssertionNode) {
-      return null
+      return null;
     }
-    const typeNode = typeAssertionNode.value
+    const typeNode = typeAssertionNode.value;
     if (!isStringLiteralNode(typeNode)) {
-      return null
+      return null;
     }
     return {
       assertNode: typeAssertionNode,
       assert: {
         type: typeNode.value,
       },
-    }
+    };
   }
   // dynamic import
-  const args = node.arguments
+  const args = node.arguments;
   if (!args) {
     // acorn keeps node.arguments undefined for dynamic import without a second argument
-    return null
+    return null;
   }
-  const firstArgNode = args[0]
+  const firstArgNode = args[0];
   if (!firstArgNode) {
-    return null
+    return null;
   }
-  const { properties } = firstArgNode
+  const { properties } = firstArgNode;
   const assertProperty = properties.find((property) => {
-    return property.key.name === "assert"
-  })
+    return property.key.name === "assert";
+  });
   if (!assertProperty) {
-    return null
+    return null;
   }
-  const assertValueNode = assertProperty.value
+  const assertValueNode = assertProperty.value;
   if (assertValueNode.type !== "ObjectExpression") {
-    return null
+    return null;
   }
-  const assertValueProperties = assertValueNode.properties
+  const assertValueProperties = assertValueNode.properties;
   const typePropertyNode = assertValueProperties.find((property) => {
-    return property.key.name === "type"
-  })
+    return property.key.name === "type";
+  });
   if (!typePropertyNode) {
-    return null
+    return null;
   }
-  const typePropertyValue = typePropertyNode.value
+  const typePropertyValue = typePropertyNode.value;
   if (!isStringLiteralNode(typePropertyValue)) {
-    return null
+    return null;
   }
   return {
     assertNode: firstArgNode,
     assert: {
       type: typePropertyValue.value,
     },
-  }
-}
+  };
+};

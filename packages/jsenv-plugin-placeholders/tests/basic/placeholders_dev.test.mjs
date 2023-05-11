@@ -1,8 +1,8 @@
-import { assert } from "@jsenv/assert"
-import { startDevServer } from "@jsenv/core"
-import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js"
+import { assert } from "@jsenv/assert";
+import { startDevServer } from "@jsenv/core";
+import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
-import { jsenvPluginPlaceholders } from "@jsenv/plugin-placeholders"
+import { jsenvPluginPlaceholders } from "@jsenv/plugin-placeholders";
 
 const test = async (params) => {
   const devServer = await startDevServer({
@@ -14,22 +14,22 @@ const test = async (params) => {
         "./main.js": (urlInfo, context) => {
           return {
             __DEMO__: context.dev ? "dev" : "build",
-          }
+          };
         },
       }),
     ],
     ...params,
-  })
+  });
   const { returnValue } = await executeInBrowser({
     url: `${devServer.origin}/main.html`,
     /* eslint-disable no-undef */
     pageFunction: () => window.resultPromise,
     /* eslint-enable no-undef */
-  })
+  });
 
-  const actual = returnValue
-  const expected = "dev"
-  assert({ actual, expected })
-}
+  const actual = returnValue;
+  const expected = "dev";
+  assert({ actual, expected });
+};
 
-await test()
+await test();

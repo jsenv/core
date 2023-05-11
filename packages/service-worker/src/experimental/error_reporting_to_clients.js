@@ -12,41 +12,41 @@
 
 error_reporting_to_clients: {
   const postMessageToClients = async (message) => {
-    const matchingClients = await self.clients.matchAll()
+    const matchingClients = await self.clients.matchAll();
     matchingClients.forEach((matchingClient) => {
-      matchingClient.postMessage(message)
-    })
-  }
+      matchingClient.postMessage(message);
+    });
+  };
   const errorAsTransferable = (error) => {
     const errorAsObject = {
       name: Object.getPrototypeOf(error).name,
       message: error.message,
       stack: error.stack || new Error().stack,
-    }
-    return errorAsObject
-  }
+    };
+    return errorAsObject;
+  };
   self.addEventListener("error", (event) => {
     postMessageToClients({
       action: "report_error",
       payload: errorAsTransferable(event.error),
-    })
-  })
+    });
+  });
   self.addEventListener("unhandledrejection", ({ reason, detail }) => {
     if (!reason && detail) {
-      reason = detail.reason
+      reason = detail.reason;
     }
     if (reason && reason.stack && reason.message) {
       postMessageToClients({
         action: "report_unhandled_rejection",
         payload: errorAsTransferable(reason),
-      })
+      });
     } else {
       postMessageToClients({
         action: "report_unhandled_rejection",
         payload: reason,
-      })
+      });
     }
-  })
+  });
 }
 
 /*

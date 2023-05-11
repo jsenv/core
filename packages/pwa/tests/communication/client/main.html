@@ -9,18 +9,18 @@
   <body>
     <script>
       window.resultPromise = new Promise((resolve) => {
-        window.resolveResultPromise = resolve
-      })
+        window.resolveResultPromise = resolve;
+      });
     </script>
     <script type="module">
-      import { createServiceWorkerFacade } from "@jsenv/pwa"
+      import { createServiceWorkerFacade } from "@jsenv/pwa";
 
-      const swFacade = createServiceWorkerFacade()
+      const swFacade = createServiceWorkerFacade();
       await swFacade.setRegistrationPromise(
         window.navigator.serviceWorker.register("./sw.js"),
-      )
-      const value = await swFacade.sendMessage("ping")
-      window.resolveResultPromise(value)
+      );
+      const value = await swFacade.sendMessage("ping");
+      window.resolveResultPromise(value);
     </script>
   </body>
 </html>

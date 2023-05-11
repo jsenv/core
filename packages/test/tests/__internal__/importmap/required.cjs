@@ -1,1 +1,1 @@
-process.env.REQUIRED = "1"
+process.env.REQUIRED = "1";

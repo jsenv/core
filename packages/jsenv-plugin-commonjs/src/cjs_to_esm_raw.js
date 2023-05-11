@@ -1,7 +1,7 @@
-import { fileURLToPath } from "node:url"
-import { createLogger } from "@jsenv/log"
+import { fileURLToPath } from "node:url";
+import { createLogger } from "@jsenv/log";
 
-import { rollupPluginCommonJsNamedExports } from "./rollup_plugin_commonjs_named_exports.js"
+import { rollupPluginCommonJsNamedExports } from "./rollup_plugin_commonjs_named_exports.js";
 
 export const commonJsToJsModuleRaw = async ({
   logLevel,
@@ -20,17 +20,17 @@ export const commonJsToJsModuleRaw = async ({
   external = [],
   sourcemapExcludeSources,
 } = {}) => {
-  const logger = createLogger({ logLevel })
+  const logger = createLogger({ logLevel });
   if (!sourceFileUrl.startsWith("file:///")) {
     // it's possible to make rollup compatible with http:// for instance
     // however it's an exotic use case for now
     throw new Error(
       `compatible only with file:// protocol, got ${sourceFileUrl}`,
-    )
+    );
   }
-  const sourceFilePath = fileURLToPath(sourceFileUrl)
+  const sourceFilePath = fileURLToPath(sourceFileUrl);
 
-  const { nodeResolve } = await import("@rollup/plugin-node-resolve")
+  const { nodeResolve } = await import("@rollup/plugin-node-resolve");
   const nodeResolveRollupPlugin = nodeResolve({
     mainFields: browsers
       ? [
@@ -45,21 +45,21 @@ export const commonJsToJsModuleRaw = async ({
     extensions: [".mjs", ".cjs", ".js", ".json"],
     preferBuiltins: false,
     exportConditions: [],
-  })
+  });
 
   const { default: createJSONRollupPlugin } = await import(
     "@rollup/plugin-json"
-  )
+  );
   const jsonRollupPlugin = createJSONRollupPlugin({
     preferConst: true,
     indent: "  ",
     compact: false,
     namedExports: true,
-  })
+  });
 
   const { default: createReplaceRollupPlugin } = await import(
     "@rollup/plugin-replace"
-  )
+  );
   const replaceRollupPlugin = createReplaceRollupPlugin({
     preventAssignment: true,
     values: {
@@ -71,9 +71,9 @@ export const commonJsToJsModuleRaw = async ({
       ...(replaceGlobalDirname ? { __dirname: __dirnameReplacement } : {}),
       ...replaceMap,
     },
-  })
+  });
 
-  const { default: commonjs } = await import("@rollup/plugin-commonjs")
+  const { default: commonjs } = await import("@rollup/plugin-commonjs");
   // https://github.com/rollup/plugins/tree/master/packages/commonjs
   const commonJsRollupPlugin = commonjs({
     extensions: [".js", ".cjs"],
@@ -81,20 +81,20 @@ export const commonJsToJsModuleRaw = async ({
     // defaultIsModuleExports: true,
     // requireReturnsDefault: "namespace",
     requireReturnsDefault: "auto",
-  })
+  });
 
   const { default: createNodeGlobalRollupPlugin } = await import(
     "rollup-plugin-node-globals"
-  )
+  );
 
   const commonJsNamedExportsRollupPlugin = rollupPluginCommonJsNamedExports({
     logger,
-  })
+  });
   const { default: rollupPluginNodePolyfills } = await import(
     "rollup-plugin-polyfill-node"
-  )
+  );
 
-  const { rollup } = await import("rollup")
+  const { rollup } = await import("rollup");
   const rollupBuild = await rollup({
     input: sourceFilePath,
     external,
@@ -128,13 +128,13 @@ export const commonJsToJsModuleRaw = async ({
         warning.code === "UNRESOLVED_IMPORT" &&
         warning.id.endsWith("?commonjs-external")
       ) {
-        return
+        return;
       }
 
-      const { loc, message } = warning
+      const { loc, message } = warning;
       const logMessage = loc
         ? `${loc.file}:${loc.line}:${loc.column} ${message}`
-        : message
+        : message;
 
       // These warnings are usually harmless in packages, so don't show them by default
       if (
@@ -144,13 +144,13 @@ export const commonJsToJsModuleRaw = async ({
         warning.code === "EMPTY_BUNDLE" ||
         warning.code === "UNUSED_EXTERNAL_IMPORT"
       ) {
-        logger.debug(logMessage)
+        logger.debug(logMessage);
       } else {
-        logger.warn(logMessage)
+        logger.warn(logMessage);
       }
     },
-  })
-  const abstractDirUrl = new URL("./dist/", sourceFileUrl) // to help rollup generate property sourcemap paths
+  });
+  const abstractDirUrl = new URL("./dist/", sourceFileUrl); // to help rollup generate property sourcemap paths
   const generateOptions = {
     inlineDynamicImports: true,
     // https://rollupjs.org/guide/en#output-format
@@ -162,19 +162,19 @@ export const commonJsToJsModuleRaw = async ({
     exports: "named",
     dir: fileURLToPath(abstractDirUrl),
     sourcemapPathTransform: (relativePath) => {
-      const sourceUrl = new URL(relativePath, abstractDirUrl).href
-      return sourceUrl
+      const sourceUrl = new URL(relativePath, abstractDirUrl).href;
+      return sourceUrl;
     },
-  }
+  };
 
-  const { output } = await rollupBuild.generate(generateOptions)
-  const { code, map } = output[0]
+  const { output } = await rollupBuild.generate(generateOptions);
+  const { code, map } = output[0];
   return {
     content: code,
     sourcemap: map,
-  }
-}
+  };
+};
 
-const __filenameReplacement = `import.meta.url.slice('file:///'.length)`
+const __filenameReplacement = `import.meta.url.slice('file:///'.length)`;
 
-const __dirnameReplacement = `import.meta.url.slice('file:///'.length).replace(/[\\\/\\\\][^\\\/\\\\]*$/, '')`
+const __dirnameReplacement = `import.meta.url.slice('file:///'.length).replace(/[\\\/\\\\][^\\\/\\\\]*$/, '')`;

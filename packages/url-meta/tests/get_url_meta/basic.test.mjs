@@ -1,6 +1,6 @@
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-import { URL_META } from "@jsenv/url-meta"
+import { URL_META } from "@jsenv/url-meta";
 
 // associate "foo.js" to { a: true }
 {
@@ -12,16 +12,16 @@ import { URL_META } from "@jsenv/url-meta"
           "file:///foo.js": true,
         },
       },
-    })
+    });
   const actual = {
     fooJs: test("file:///foo.js"),
     fileJs: test("file:///file.js"),
-  }
+  };
   const expected = {
     fooJs: { a: true },
     fileJs: {},
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }
 
 // associate "*.js" to {whatever: true}
@@ -36,18 +36,18 @@ import { URL_META } from "@jsenv/url-meta"
           "file:///file.js": null,
         },
       },
-    })
+    });
   const actual = {
     file: test("file:///file"),
     fooJs: test("file:///foo.js"),
     fileJs: test("file:///file.js"),
-  }
+  };
   const expected = {
     file: {},
     fooJs: { whatever: true },
     fileJs: { whatever: null },
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }
 
 // ignore associations that are not plain object
@@ -58,10 +58,10 @@ import { URL_META } from "@jsenv/url-meta"
       associations: {
         whatever: null,
       },
-    })
-  const actual = test("file:///file.js")
-  const expected = {}
-  assert({ actual, expected })
+    });
+  const actual = test("file:///file.js");
+  const expected = {};
+  assert({ actual, expected });
 }
 
 // ensure getUrlMeta overrides in order (without sorting specifier keys by length)
@@ -74,9 +74,9 @@ import { URL_META } from "@jsenv/url-meta"
         "file:///abcd/": 42,
       },
     },
-  })
-  const expected = { whatever: 42 }
-  assert({ actual, expected })
+  });
+  const expected = { whatever: 42 };
+  assert({ actual, expected });
 }
 
 {
@@ -91,20 +91,20 @@ import { URL_META } from "@jsenv/url-meta"
           "file:///**/node_modules/": false,
         },
       },
-    })
+    });
   const actual = {
     jsFile: test("file:///a.js"),
     gitignore: test("file:///.gitignore"),
     nodeModuleFile: test("file:///node_modules/a.js"),
     insideGitDirectory: test("file:///.git/a.js"),
-  }
+  };
   const expected = {
     jsFile: { whatever: true },
     gitignore: { whatever: false },
     nodeModuleFile: { whatever: false },
     insideGitDirectory: { whatever: false },
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }
 
 {
@@ -116,10 +116,10 @@ import { URL_META } from "@jsenv/url-meta"
           "file:///foo": true,
         },
       },
-    })
-  const actual = test("file:///")
-  const expected = {}
-  assert({ actual, expected })
+    });
+  const actual = test("file:///");
+  const expected = {};
+  assert({ actual, expected });
 }
 
 {
@@ -130,9 +130,9 @@ import { URL_META } from "@jsenv/url-meta"
         "file:///a": true,
       },
     },
-  })
-  const expected = { a: true }
-  assert({ actual, expected })
+  });
+  const expected = { a: true };
+  assert({ actual, expected });
 }
 
 {
@@ -143,9 +143,9 @@ import { URL_META } from "@jsenv/url-meta"
         "file:///a": true,
       },
     },
-  })
-  const expected = {}
-  assert({ actual, expected })
+  });
+  const expected = {};
+  assert({ actual, expected });
 }
 
 {
@@ -156,9 +156,9 @@ import { URL_META } from "@jsenv/url-meta"
         "file:///a": true,
       },
     },
-  })
-  const expected = {}
-  assert({ actual, expected })
+  });
+  const expected = {};
+  assert({ actual, expected });
 }
 
 {
@@ -169,9 +169,9 @@ import { URL_META } from "@jsenv/url-meta"
         "file:///a": true,
       },
     },
-  })
-  const expected = {}
-  assert({ actual, expected })
+  });
+  const expected = {};
+  assert({ actual, expected });
 }
 
 {
@@ -182,9 +182,9 @@ import { URL_META } from "@jsenv/url-meta"
         "file:///b/a": true,
       },
     },
-  })
-  const expected = { a: true }
-  assert({ actual, expected })
+  });
+  const expected = { a: true };
+  assert({ actual, expected });
 }
 
 {
@@ -195,9 +195,9 @@ import { URL_META } from "@jsenv/url-meta"
         "file:///b/a": true,
       },
     },
-  })
-  const expected = {}
-  assert({ actual, expected })
+  });
+  const expected = {};
+  assert({ actual, expected });
 }
 
 {
@@ -208,9 +208,9 @@ import { URL_META } from "@jsenv/url-meta"
         "file:///b/a": true,
       },
     },
-  })
-  const expected = {}
-  assert({ actual, expected })
+  });
+  const expected = {};
+  assert({ actual, expected });
 }
 
 {
@@ -221,9 +221,9 @@ import { URL_META } from "@jsenv/url-meta"
         "file:///b/a": true,
       },
     },
-  })
-  const expected = {}
-  assert({ actual, expected })
+  });
+  const expected = {};
+  assert({ actual, expected });
 }
 
 {
@@ -234,9 +234,9 @@ import { URL_META } from "@jsenv/url-meta"
         "file:///dist": 0,
       },
     },
-  })
-  const expected = { a: 0 }
-  assert({ actual, expected })
+  });
+  const expected = { a: 0 };
+  assert({ actual, expected });
 }
 
 {
@@ -247,9 +247,9 @@ import { URL_META } from "@jsenv/url-meta"
         "file:///dist": 0,
       },
     },
-  })
-  const expected = {}
-  assert({ actual, expected })
+  });
+  const expected = {};
+  assert({ actual, expected });
 }
 
 {
@@ -262,14 +262,14 @@ import { URL_META } from "@jsenv/url-meta"
           "file:///**/.*": false,
         },
       },
-    })
+    });
   const actual = {
     jsFile: test("file:///main.js"),
     gitIgnore: test("file:///.gitignore"),
-  }
+  };
   const expected = {
     jsFile: { a: true },
     gitIgnore: { a: false },
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }

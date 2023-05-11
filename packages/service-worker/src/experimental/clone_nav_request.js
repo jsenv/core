@@ -1,7 +1,7 @@
 /* eslint-env serviceworker */
 
 export const cloneNavRequest = async (request) => {
-  const requestClone = request.clone()
+  const requestClone = request.clone();
   const {
     method,
     body,
@@ -10,7 +10,7 @@ export const cloneNavRequest = async (request) => {
     integrity,
     referrer,
     referrerPolicy,
-  } = requestClone
+  } = requestClone;
   if (method === "GET" || method === "HEAD") {
     return new Request(request.url, {
       credentials,
@@ -20,10 +20,10 @@ export const cloneNavRequest = async (request) => {
       referrerPolicy,
       mode: "same-origin",
       redirect: "manual",
-    })
+    });
   }
-  const bodyPromise = body ? Promise.resolve(body) : requestClone.blob()
-  const bodyValue = await bodyPromise
+  const bodyPromise = body ? Promise.resolve(body) : requestClone.blob();
+  const bodyValue = await bodyPromise;
   return new Request(request.url, {
     body: bodyValue,
     credentials,
@@ -33,5 +33,5 @@ export const cloneNavRequest = async (request) => {
     referrerPolicy,
     mode: "same-origin",
     redirect: "manual",
-  })
-}
+  });
+};

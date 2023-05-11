@@ -3,15 +3,15 @@ import {
   stringifyHtmlAst,
   createHtmlNode,
   injectHtmlNode,
-} from "@jsenv/ast"
-import { URL_META } from "@jsenv/url-meta"
-import { asUrlWithoutSearch } from "@jsenv/urls"
+} from "@jsenv/ast";
+import { URL_META } from "@jsenv/url-meta";
+import { asUrlWithoutSearch } from "@jsenv/urls";
 
 export const jsenvPluginRibbon = ({
   rootDirectoryUrl,
   htmlInclude = "/**/*.html",
 }) => {
-  const ribbonClientFileUrl = new URL("./client/ribbon.js", import.meta.url)
+  const ribbonClientFileUrl = new URL("./client/ribbon.js", import.meta.url);
   const associations = URL_META.resolveAssociations(
     {
       ribbon: {
@@ -19,34 +19,34 @@ export const jsenvPluginRibbon = ({
       },
     },
     rootDirectoryUrl,
-  )
+  );
   return {
     name: "jsenv:ribbon",
     appliesDuring: "dev",
     transformUrlContent: {
       html: (urlInfo, context) => {
         if (urlInfo.data.isJsenvToolbar || urlInfo.data.noribbon) {
-          return null
+          return null;
         }
         const { ribbon } = URL_META.applyAssociations({
           url: asUrlWithoutSearch(urlInfo.url),
           associations,
-        })
+        });
         if (!ribbon) {
-          return null
+          return null;
         }
-        const htmlAst = parseHtmlString(urlInfo.content)
+        const htmlAst = parseHtmlString(urlInfo.content);
         const [ribbonClientFileReference] = context.referenceUtils.inject({
           type: "script",
           subtype: "js_module",
           expectedType: "js_module",
           specifier: ribbonClientFileUrl.href,
-        })
+        });
         const paramsJson = JSON.stringify(
           { text: context.dev ? "DEV" : "BUILD" },
           null,
           "  ",
-        )
+        );
         injectHtmlNode(
           htmlAst,
           createHtmlNode({
@@ -57,9 +57,9 @@ export const jsenvPluginRibbon = ({
 injectRibbon(${paramsJson});`,
           }),
           "jsenv:ribbon",
-        )
-        return stringifyHtmlAst(htmlAst)
+        );
+        return stringifyHtmlAst(htmlAst);
       },
     },
-  }
-}
+  };
+};

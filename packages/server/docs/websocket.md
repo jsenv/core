@@ -5,7 +5,7 @@ Code below shows how server can accept web socket clients(s) and send data to th
 _server.js:_
 
 ```js
-import { startServer, fetchFileSystem } from "@jsenv/server"
+import { startServer, fetchFileSystem } from "@jsenv/server";
 
 await startServer({
   port: 3000,
@@ -15,14 +15,14 @@ await startServer({
         return fetchFileSystem(
           new URL(request.resource.slice(1), import.meta.url),
           request,
-        )
+        );
       },
       handleWebsocket: (websocket) => {
-        websocket.send("Hello world")
+        websocket.send("Hello world");
       },
     },
   ],
-})
+});
 ```
 
 _client.html_
@@ -37,10 +37,10 @@ _client.html_
 
   <body>
     <script>
-      const websocket = new WebSocket("ws://localhost:3000")
+      const websocket = new WebSocket("ws://localhost:3000");
       websocket.onmessage = (message) => {
-        document.body.appendChild(document.createTextNode(message.data))
-      }
+        document.body.appendChild(document.createTextNode(message.data));
+      };
     </script>
   </body>
 </html>

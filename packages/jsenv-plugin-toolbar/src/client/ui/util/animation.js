@@ -1,27 +1,27 @@
-import { setStyles } from "./dom.js"
+import { setStyles } from "./dom.js";
 
 const animateFallback = () => {
-  return Promise.resolve()
-}
+  return Promise.resolve();
+};
 
 const animateNative = (node, keyframes, { signal, ...options } = {}) => {
-  const animation = node.animate(keyframes, options)
+  const animation = node.animate(keyframes, options);
   if (signal) {
     signal.addEventListener("abort", () => {
-      animation.cancel()
-    })
+      animation.cancel();
+    });
   }
   return new Promise((resolve) => {
-    animation.onfinish = resolve
-  })
-}
+    animation.onfinish = resolve;
+  });
+};
 
 export const canUseAnimation = () =>
-  typeof HTMLElement.prototype.animate === "function"
+  typeof HTMLElement.prototype.animate === "function";
 
 export const animateElement = canUseAnimation()
   ? animateNative
-  : animateFallback
+  : animateFallback;
 
 export const fadeIn = (node, options) =>
   animateElement(
@@ -35,7 +35,7 @@ export const fadeIn = (node, options) =>
       },
     ],
     options,
-  )
+  );
 
 export const fadeOut = (node, options) =>
   animateElement(
@@ -49,51 +49,51 @@ export const fadeOut = (node, options) =>
       },
     ],
     options,
-  )
+  );
 
 export const move = (fromNode, toNode, options) => {
-  const fromComputedStyle = window.getComputedStyle(fromNode)
-  const toComputedStyle = window.getComputedStyle(toNode)
+  const fromComputedStyle = window.getComputedStyle(fromNode);
+  const toComputedStyle = window.getComputedStyle(toNode);
   // get positions of input in toolbar and aElement
-  const fromPosition = fromNode.getBoundingClientRect()
-  const toPosition = toNode.getBoundingClientRect()
+  const fromPosition = fromNode.getBoundingClientRect();
+  const toPosition = toNode.getBoundingClientRect();
 
   // we'll do the animation in a div preventing overflow and pointer events
-  const div = document.createElement("div")
-  div.style.position = "absolute"
-  div.style.left = 0
-  div.style.top = 0
-  div.style.width = `${document.documentElement.scrollWidth}px`
-  div.style.height = `${document.documentElement.scrollHeight}px`
-  div.style.overflow = "hidden"
-  div.style.pointerEvents = "none"
+  const div = document.createElement("div");
+  div.style.position = "absolute";
+  div.style.left = 0;
+  div.style.top = 0;
+  div.style.width = `${document.documentElement.scrollWidth}px`;
+  div.style.height = `${document.documentElement.scrollHeight}px`;
+  div.style.overflow = "hidden";
+  div.style.pointerEvents = "none";
 
   const documentScroll = {
     left: window.pageXOffset || document.documentElement.scrollLeft,
     top: window.pageYOffset || document.documentElement.scrollTop,
-  }
+  };
 
   // clone node and style it
-  const copy = fromNode.cloneNode(true)
-  copy.style.position = "absolute"
-  copy.style.left = `${documentScroll.left + fromPosition.left}px`
-  copy.style.top = `${documentScroll.top + fromPosition.top}px`
-  copy.style.maxWidth = `${fromPosition.right - fromPosition.left}px`
-  copy.style.overflow = toComputedStyle.overflow
-  copy.style.textOverflow = toComputedStyle.textOverflow
-  div.appendChild(copy)
-  document.body.appendChild(div)
+  const copy = fromNode.cloneNode(true);
+  copy.style.position = "absolute";
+  copy.style.left = `${documentScroll.left + fromPosition.left}px`;
+  copy.style.top = `${documentScroll.top + fromPosition.top}px`;
+  copy.style.maxWidth = `${fromPosition.right - fromPosition.left}px`;
+  copy.style.overflow = toComputedStyle.overflow;
+  copy.style.textOverflow = toComputedStyle.textOverflow;
+  div.appendChild(copy);
+  document.body.appendChild(div);
 
   const left =
     toPosition.left -
     fromPosition.left -
-    (parseInt(fromComputedStyle.paddingLeft) || 0)
+    (parseInt(fromComputedStyle.paddingLeft) || 0);
   const top =
     toPosition.top -
     fromPosition.top -
-    (parseInt(fromComputedStyle.paddingTop) || 0)
+    (parseInt(fromComputedStyle.paddingTop) || 0);
   // define final position of new element and the duration
-  const translate = `translate(${left}px, ${top}px)`
+  const translate = `translate(${left}px, ${top}px)`;
 
   // animate new element
   return animateElement(
@@ -123,9 +123,9 @@ export const move = (fromNode, toNode, options) => {
     ],
     options,
   ).then(() => {
-    div.parentNode.removeChild(div)
-  })
-}
+    div.parentNode.removeChild(div);
+  });
+};
 
 // the whole point of this toolbar animation wass to flight a visual imperfection when it's done by css transition.
 // This imperfection is a white line sometimes flickering at the bottom of the page.
@@ -138,66 +138,66 @@ export const createToolbarAnimation = () => {
     "#page": { paddingBottom: 0 },
     "footer": { height: 0 },
     "#toolbar": { visibility: "hidden" },
-  }
+  };
   const expandedState = {
     "#page": { paddingBottom: "40px" },
     "footer": { height: "40px" },
     "#toolbar": { visibility: "visible" },
-  }
+  };
   const expandTransition = transit(collapsedState, expandedState, {
     duration: 300,
-  })
+  });
 
   const expand = () => {
-    expandTransition.play()
-  }
+    expandTransition.play();
+  };
 
   const collapse = () => {
-    expandTransition.reverse()
-  }
+    expandTransition.reverse();
+  };
 
-  return { expand, collapse }
-}
+  return { expand, collapse };
+};
 
 export const transit = (
   fromState,
   toState,
   { commitStyles = true, fill = "both", duration = 300 } = {},
 ) => {
-  const steps = []
+  const steps = [];
   Object.keys(fromState).forEach((selector) => {
-    const fromStyles = {}
-    const toStyles = {}
-    const element = document.querySelector(selector)
+    const fromStyles = {};
+    const toStyles = {};
+    const element = document.querySelector(selector);
 
-    const keyframes = []
-    const fromProperties = fromState[selector]
-    const toProperties = toState[selector]
+    const keyframes = [];
+    const fromProperties = fromState[selector];
+    const toProperties = toState[selector];
     Object.keys(fromProperties).forEach((propertyName) => {
-      const from = fromProperties[propertyName]
-      const to = toProperties[propertyName]
-      fromStyles[propertyName] = from
-      toStyles[propertyName] = to
-    })
-    keyframes.push(fromStyles, toStyles)
+      const from = fromProperties[propertyName];
+      const to = toProperties[propertyName];
+      fromStyles[propertyName] = from;
+      toStyles[propertyName] = to;
+    });
+    keyframes.push(fromStyles, toStyles);
 
-    let animation
+    let animation;
     if (canUseAnimation()) {
-      const effect = new KeyframeEffect(element, keyframes, { fill, duration })
-      animation = new Animation(effect)
+      const effect = new KeyframeEffect(element, keyframes, { fill, duration });
+      animation = new Animation(effect);
     } else {
       animation = {
         playbackRate: 1,
         play: () => {
-          animation.onfinish()
+          animation.onfinish();
         },
         reverse: () => {
-          animation.playbackRate = -1
-          animation.onfinish()
+          animation.playbackRate = -1;
+          animation.onfinish();
         },
         finish: () => {},
         onfinish: () => {},
-      }
+      };
     }
 
     steps.push({
@@ -205,8 +205,8 @@ export const transit = (
       animation,
       fromStyles,
       toStyles,
-    })
-  })
+    });
+  });
 
   const play = async () => {
     await Promise.all(
@@ -214,19 +214,19 @@ export const transit = (
         return new Promise((resolve) => {
           animation.onfinish = () => {
             if (commitStyles) {
-              setStyles(element, toStyles)
+              setStyles(element, toStyles);
             }
-            resolve()
-          }
+            resolve();
+          };
           if (animation.playbackRate === -1) {
-            animation.reverse()
+            animation.reverse();
           } else {
-            animation.play()
+            animation.play();
           }
-        })
+        });
       }),
-    )
-  }
+    );
+  };
 
   const reverse = async () => {
     await Promise.all(
@@ -234,24 +234,24 @@ export const transit = (
         return new Promise((resolve) => {
           animation.onfinish = () => {
             if (commitStyles) {
-              setStyles(element, fromStyles)
+              setStyles(element, fromStyles);
             }
-            resolve()
-          }
-          animation.reverse()
-        })
+            resolve();
+          };
+          animation.reverse();
+        });
       }),
-    )
-  }
+    );
+  };
 
   const finish = async () => {
     steps.forEach(({ animation }) => {
-      animation.finish()
-    })
-  }
+      animation.finish();
+    });
+  };
 
-  return { play, reverse, finish }
-}
+  return { play, reverse, finish };
+};
 
 export const startJavaScriptAnimation = ({
   duration = 300,
@@ -262,44 +262,44 @@ export const startJavaScriptAnimation = ({
 }) => {
   if (isNaN(duration)) {
     // console.warn(`duration must be a number, received ${duration}`)
-    return () => {}
+    return () => {};
   }
-  duration = parseInt(duration, 10)
-  const startMs = performance.now()
-  let currentRequestAnimationFrameId
-  let done = false
-  let rawProgress = 0
-  let progress = 0
+  duration = parseInt(duration, 10);
+  const startMs = performance.now();
+  let currentRequestAnimationFrameId;
+  let done = false;
+  let rawProgress = 0;
+  let progress = 0;
   const handler = () => {
-    currentRequestAnimationFrameId = null
-    const nowMs = performance.now()
-    rawProgress = Math.min((nowMs - startMs) / duration, 1)
-    progress = timingFunction(rawProgress)
-    done = rawProgress === 1
+    currentRequestAnimationFrameId = null;
+    const nowMs = performance.now();
+    rawProgress = Math.min((nowMs - startMs) / duration, 1);
+    progress = timingFunction(rawProgress);
+    done = rawProgress === 1;
     onProgress({
       done,
       rawProgress,
       progress,
-    })
+    });
     if (done) {
-      onComplete()
+      onComplete();
     } else {
-      currentRequestAnimationFrameId = window.requestAnimationFrame(handler)
+      currentRequestAnimationFrameId = window.requestAnimationFrame(handler);
     }
-  }
-  handler()
+  };
+  handler();
   const stop = () => {
     if (currentRequestAnimationFrameId) {
-      window.cancelAnimationFrame(currentRequestAnimationFrameId)
-      currentRequestAnimationFrameId = null
+      window.cancelAnimationFrame(currentRequestAnimationFrameId);
+      currentRequestAnimationFrameId = null;
     }
     if (!done) {
-      done = true
+      done = true;
       onCancel({
         rawProgress,
         progress,
-      })
+      });
     }
-  }
-  return stop
-}
+  };
+  return stop;
+};

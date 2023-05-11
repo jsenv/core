@@ -1,5 +1,5 @@
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-const actual = { foo: false }
-const expected = { foo: true }
-assert({ actual, expected })
+const actual = { foo: false };
+const expected = { foo: true };
+assert({ actual, expected });

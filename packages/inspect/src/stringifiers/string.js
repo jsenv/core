@@ -1,8 +1,8 @@
-import { escapeTemplateStringSpecialCharacters } from "../utils.js"
+import { escapeTemplateStringSpecialCharacters } from "../utils.js";
 
-const DOUBLE_QUOTE = `"`
-const SINGLE_QUOTE = `'`
-const BACKTICK = "`"
+const DOUBLE_QUOTE = `"`;
+const SINGLE_QUOTE = `'`;
+const BACKTICK = "`";
 
 export const inspectString = (
   value,
@@ -15,43 +15,43 @@ export const inspectString = (
   quote =
     quote === "auto"
       ? determineQuote(value, canUseTemplateString) || fallback
-      : quote
+      : quote;
   if (quote === BACKTICK) {
-    return `\`${escapeTemplateStringSpecialCharacters(value)}\``
+    return `\`${escapeTemplateStringSpecialCharacters(value)}\``;
   }
-  return surroundStringWith(value, quote)
-}
+  return surroundStringWith(value, quote);
+};
 
 const determineQuote = (string, canUseTemplateString) => {
-  const containsDoubleQuote = string.includes(DOUBLE_QUOTE)
+  const containsDoubleQuote = string.includes(DOUBLE_QUOTE);
   if (!containsDoubleQuote) {
-    return DOUBLE_QUOTE
+    return DOUBLE_QUOTE;
   }
-  const containsSimpleQuote = string.includes(SINGLE_QUOTE)
+  const containsSimpleQuote = string.includes(SINGLE_QUOTE);
   if (!containsSimpleQuote) {
-    return SINGLE_QUOTE
+    return SINGLE_QUOTE;
   }
   if (canUseTemplateString) {
-    const containsBackTick = string.includes(BACKTICK)
+    const containsBackTick = string.includes(BACKTICK);
     if (!containsBackTick) {
-      return BACKTICK
+      return BACKTICK;
     }
   }
-  return null
-}
+  return null;
+};
 
 // https://github.com/jsenv/jsenv-uneval/blob/6c97ef9d8f2e9425a66f2c88347e0a118d427f3a/src/internal/escapeString.js#L3
 // https://github.com/jsenv/jsenv-inspect/blob/bb11de3adf262b68f71ed82b0a37d4528dd42229/src/internal/string.js#L3
 // https://github.com/joliss/js-string-escape/blob/master/index.js
 // http://javascript.crockford.com/remedial.html
 const surroundStringWith = (string, quote) => {
-  let result = ""
-  let last = 0
-  const lastIndex = string.length
-  let i = 0
+  let result = "";
+  let last = 0;
+  const lastIndex = string.length;
+  let i = 0;
   while (i < lastIndex) {
-    const charAt = string[i]
-    const point = string.charCodeAt(i)
+    const charAt = string[i];
+    const point = string.charCodeAt(i);
     if (
       charAt === quote ||
       point === 92 ||
@@ -68,21 +68,21 @@ const surroundStringWith = (string, quote) => {
           ? "\\u2028"
           : point === 8233
           ? "\\u2029"
-          : meta[point]
+          : meta[point];
       if (last === i) {
-        result += replacement
+        result += replacement;
       } else {
-        result += `${string.slice(last, i)}${replacement}`
+        result += `${string.slice(last, i)}${replacement}`;
       }
-      last = i + 1
+      last = i + 1;
     }
-    i++
+    i++;
   }
   if (last !== lastIndex) {
-    result += string.slice(last)
+    result += string.slice(last);
   }
-  return `${quote}${result}${quote}`
-}
+  return `${quote}${result}${quote}`;
+};
 
 // prettier-ignore
 const meta = [

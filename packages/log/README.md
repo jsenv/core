@@ -17,12 +17,12 @@ This package helps to:
 Code used to produce these logs:
 
 ```js
-import { createTaskLog } from "@jsenv/log"
+import { createTaskLog } from "@jsenv/log";
 
-const task = createTaskLog("Doing something")
+const task = createTaskLog("Doing something");
 setTimeout(() => {
-  task.done()
-}, 1_000)
+  task.done();
+}, 1_000);
 ```
 
 # Unicode example
@@ -32,14 +32,14 @@ setTimeout(() => {
 Code used to produce these logs:
 
 ```js
-import { UNICODE } from "@jsenv/log"
+import { UNICODE } from "@jsenv/log";
 
-console.log(`${UNICODE.COMMAND} cd dir/`)
-console.log(`${UNICODE.DEBUG} debug`)
-console.log(`${UNICODE.INFO} info`)
-console.log(`${UNICODE.WARNING} warning`)
-console.log(`${UNICODE.FAILURE} failure`)
-console.log(`${UNICODE.OK} ok`)
+console.log(`${UNICODE.COMMAND} cd dir/`);
+console.log(`${UNICODE.DEBUG} debug`);
+console.log(`${UNICODE.INFO} info`);
+console.log(`${UNICODE.WARNING} warning`);
+console.log(`${UNICODE.FAILURE} failure`);
+console.log(`${UNICODE.OK} ok`);
 ```
 
 # Installation

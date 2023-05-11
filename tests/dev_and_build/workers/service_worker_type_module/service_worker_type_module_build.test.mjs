@@ -1,7 +1,7 @@
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling"
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 
-import { build } from "@jsenv/core"
-import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js"
+import { build } from "@jsenv/core";
+import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 
 const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
   await build({
@@ -13,12 +13,12 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
     ...rest,
     plugins: [...(rest.plugins || [])],
-  })
+  });
   takeDirectorySnapshot(
     new URL("./dist/", import.meta.url),
     snapshotsDirectoryUrl,
-  )
-}
+  );
+};
 
 if (process.platform === "darwin") {
   // support + bundling
@@ -26,21 +26,21 @@ if (process.platform === "darwin") {
     runtimeCompat: { chrome: "80" },
     plugins: [jsenvPluginBundling()],
     snapshotsDirectoryUrl: new URL("./snapshots/1/", import.meta.url),
-  })
+  });
   // support + no bundling
   await test({
     runtimeCompat: { chrome: "80" },
     snapshotsDirectoryUrl: new URL("./snapshots/2/", import.meta.url),
-  })
+  });
   // no support for { type: "module" } on service worker
   await test({
     runtimeCompat: { chrome: "79" },
     plugins: [jsenvPluginBundling()],
     snapshotsDirectoryUrl: new URL("./snapshots/3/", import.meta.url),
-  })
+  });
   // no support for { type: "module" } on service worker + no bundling
   await test({
     runtimeCompat: { chrome: "79" },
     snapshotsDirectoryUrl: new URL("./snapshots/4/", import.meta.url),
-  })
+  });
 }

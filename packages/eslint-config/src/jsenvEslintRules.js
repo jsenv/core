@@ -344,4 +344,4 @@ export const jsenvEslintRules = {
   "wrap-iife": ["error", "inside"],
   "yield-star-spacing": ["error", "both"],
   "yoda": ["error"],
-}
+};

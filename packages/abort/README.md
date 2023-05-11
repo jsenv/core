@@ -14,14 +14,14 @@ Help to write code accepting an [abortSignal](https://nodejs.org/api/globals.htm
 _fetch_demo.mjs_
 
 ```js
-import { customFetch } from "./fetch_custom.mjs"
+import { customFetch } from "./fetch_custom.mjs";
 
-const abortController = new AbortController()
-const signal = abortController.signal
+const abortController = new AbortController();
+const signal = abortController.signal;
 process.on("warning", () => {
-  abortController.abort()
-})
-await customFetch("http://example.com", { signal })
+  abortController.abort();
+});
+await customFetch("http://example.com", { signal });
 ```
 
 Code above pass an abort signal to `customFetch`.

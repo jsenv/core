@@ -8,7 +8,7 @@
 export const babelHelperClientDirectoryUrl = new URL(
   "./babel_helpers/",
   import.meta.url,
-).href
+).href;
 
 // we cannot use "@jsenv/core/src/*" because babel helper might be injected
 // into node_modules not depending on "@jsenv/core"
@@ -16,20 +16,20 @@ export const getBabelHelperFileUrl = (babelHelperName) => {
   const babelHelperFileUrl = new URL(
     `./${babelHelperName}/${babelHelperName}.js`,
     babelHelperClientDirectoryUrl,
-  ).href
-  return babelHelperFileUrl
-}
+  ).href;
+  return babelHelperFileUrl;
+};
 
 export const babelHelperNameFromUrl = (url) => {
   if (!url.startsWith(babelHelperClientDirectoryUrl)) {
-    return null
+    return null;
   }
   const afterBabelHelperDirectory = url.slice(
     babelHelperClientDirectoryUrl.length,
-  )
+  );
   const babelHelperName = afterBabelHelperDirectory.slice(
     0,
     afterBabelHelperDirectory.indexOf("/"),
-  )
-  return babelHelperName
-}
+  );
+  return babelHelperName;
+};

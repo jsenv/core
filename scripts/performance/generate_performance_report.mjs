@@ -11,7 +11,7 @@
  * See https://github.com/jsenv/performance-impact
  */
 
-import { importMetricFromFiles } from "@jsenv/performance-impact"
+import { importMetricFromFiles } from "@jsenv/performance-impact";
 
 const {
   tarballMetrics,
@@ -48,7 +48,7 @@ const {
       msToWaitBetweenEachIteration: 500,
     },
   },
-})
+});
 
 export const performanceReport = {
   "package metrics": {
@@ -64,4 +64,4 @@ export const performanceReport = {
   "test metrics": {
     ...testPlanMetrics,
   },
-}
+};

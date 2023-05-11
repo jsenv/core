@@ -1,9 +1,9 @@
-import { startServer } from "./test_helpers.mjs"
+import { startServer } from "./test_helpers.mjs";
 
-const abortController = new AbortController()
+const abortController = new AbortController();
 
-const serverPromise = startServer({ signal: abortController.signal })
-const { server } = await serverPromise
+const serverPromise = startServer({ signal: abortController.signal });
+const { server } = await serverPromise;
 
-abortController.abort() // has no effect
-server.unref()
+abortController.abort(); // has no effect
+server.unref();

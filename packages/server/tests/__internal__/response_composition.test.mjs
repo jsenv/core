@@ -1,6 +1,6 @@
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-import { composeTwoResponses } from "@jsenv/server/src/internal/response_composition.js"
+import { composeTwoResponses } from "@jsenv/server/src/internal/response_composition.js";
 
 {
   const actual = composeTwoResponses(
@@ -10,7 +10,7 @@ import { composeTwoResponses } from "@jsenv/server/src/internal/response_composi
     {
       headers: { foo: false },
     },
-  )
+  );
   const expected = {
     status: undefined,
     statusText: undefined,
@@ -21,8 +21,8 @@ import { composeTwoResponses } from "@jsenv/server/src/internal/response_composi
     body: undefined,
     bodyEncoding: undefined,
     timing: undefined,
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }
 
 {
@@ -38,7 +38,7 @@ import { composeTwoResponses } from "@jsenv/server/src/internal/response_composi
         "content-type": "text/javascript",
       },
     },
-  )
+  );
   const expected = {
     status: undefined,
     statusText: undefined,
@@ -50,8 +50,8 @@ import { composeTwoResponses } from "@jsenv/server/src/internal/response_composi
     body: undefined,
     bodyEncoding: undefined,
     timing: undefined,
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }
 
 {
@@ -64,12 +64,12 @@ import { composeTwoResponses } from "@jsenv/server/src/internal/response_composi
     {
       headers: {},
     },
-  )
-  const actual = response.headers
+  );
+  const actual = response.headers;
   const expected = {
     etag: "toto",
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }
 
 {
@@ -84,12 +84,12 @@ import { composeTwoResponses } from "@jsenv/server/src/internal/response_composi
         eTag: "bar",
       },
     },
-  )
-  const actual = response.headers
+  );
+  const actual = response.headers;
   const expected = {
     etag: "bar",
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }
 
 {
@@ -104,10 +104,10 @@ import { composeTwoResponses } from "@jsenv/server/src/internal/response_composi
         etag: "bar",
       },
     },
-  )
-  const actual = response.headers
+  );
+  const actual = response.headers;
   const expected = {
     etag: "bar",
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }

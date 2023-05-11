@@ -3,7 +3,7 @@ const READY_STATES = {
   OPEN: "open",
   CLOSING: "closing",
   CLOSED: "closed",
-}
+};
 
 export const createConnectionManager = (
   attemptConnection,
@@ -13,74 +13,74 @@ export const createConnectionManager = (
     value: READY_STATES.CLOSED,
     goTo: (value) => {
       if (value === readyState.value) {
-        return
+        return;
       }
-      readyState.value = value
-      readyState.onchange()
+      readyState.value = value;
+      readyState.onchange();
     },
     onchange: () => {},
-  }
+  };
 
-  let _disconnect = () => {}
+  let _disconnect = () => {};
   const connect = () => {
     if (
       readyState.value === READY_STATES.CONNECTING ||
       readyState.value === READY_STATES.OPEN
     ) {
-      return
+      return;
     }
 
-    let retryCount = 0
-    let msSpent = 0
+    let retryCount = 0;
+    let msSpent = 0;
     const attempt = () => {
-      readyState.goTo(READY_STATES.CONNECTING)
-      let timeout
+      readyState.goTo(READY_STATES.CONNECTING);
+      let timeout;
       const cancelAttempt = attemptConnection({
         onClosed: () => {
           if (!retry) {
-            readyState.goTo(READY_STATES.CLOSED)
-            console.info(`[jsenv] failed to connect to server`)
-            return
+            readyState.goTo(READY_STATES.CLOSED);
+            console.info(`[jsenv] failed to connect to server`);
+            return;
           }
           if (retryCount > retryMaxAttempt) {
-            readyState.goTo(READY_STATES.CLOSED)
+            readyState.goTo(READY_STATES.CLOSED);
             console.info(
               `[jsenv] could not connect to server after ${retryMaxAttempt} attempt`,
-            )
-            return
+            );
+            return;
           }
           if (retryAllocatedMs && msSpent > retryAllocatedMs) {
-            readyState.goTo(READY_STATES.CLOSED)
+            readyState.goTo(READY_STATES.CLOSED);
             console.info(
               `[jsenv] could not connect to server in less than ${retryAllocatedMs}ms`,
-            )
-            return
+            );
+            return;
           }
           // if closed while open -> connection lost
           // otherwise it's the attempt to connect for the first time
           // or to reconnect
           if (readyState.value === READY_STATES.OPEN) {
-            console.info(`[jsenv] server connection lost; retrying to connect`)
+            console.info(`[jsenv] server connection lost; retrying to connect`);
           }
-          retryCount++
+          retryCount++;
           timeout = setTimeout(() => {
-            msSpent += retryAfter
-            attempt()
-          }, retryAfter)
+            msSpent += retryAfter;
+            attempt();
+          }, retryAfter);
         },
         onOpen: () => {
-          readyState.goTo(READY_STATES.OPEN)
+          readyState.goTo(READY_STATES.OPEN);
           // console.info(`[jsenv] connected to server`)
         },
-      })
+      });
       _disconnect = () => {
-        cancelAttempt()
-        clearTimeout(timeout)
-        readyState.goTo(READY_STATES.CLOSED)
-      }
-    }
-    attempt()
-  }
+        cancelAttempt();
+        clearTimeout(timeout);
+        readyState.goTo(READY_STATES.CLOSED);
+      };
+    };
+    attempt();
+  };
 
   const disconnect = () => {
     if (
@@ -89,31 +89,31 @@ export const createConnectionManager = (
     ) {
       console.warn(
         `disconnect() ignored because connection is ${readyState.value}`,
-      )
-      return null
+      );
+      return null;
     }
-    return _disconnect()
-  }
+    return _disconnect();
+  };
 
   const removePageUnloadListener = listenPageUnload(() => {
     if (
       readyState.value === READY_STATES.CONNECTING ||
       readyState.value === READY_STATES.OPEN
     ) {
-      _disconnect()
+      _disconnect();
     }
-  })
+  });
 
   return {
     readyState,
     connect,
     disconnect,
     destroy: () => {
-      removePageUnloadListener()
-      disconnect()
+      removePageUnloadListener();
+      disconnect();
     },
-  }
-}
+  };
+};
 
 // const listenPageMightFreeze = (callback) => {
 //   const removePageHideListener = listenEvent(window, "pagehide", (pageHideEvent) => {
@@ -155,16 +155,16 @@ const listenPageUnload = (callback) => {
     "pagehide",
     (pageHideEvent) => {
       if (pageHideEvent.persisted !== true) {
-        callback(pageHideEvent)
+        callback(pageHideEvent);
       }
     },
-  )
-  return removePageHideListener
-}
+  );
+  return removePageHideListener;
+};
 
 const listenEvent = (emitter, event, callback) => {
-  emitter.addEventListener(event, callback)
+  emitter.addEventListener(event, callback);
   return () => {
-    emitter.removeEventListener(event, callback)
-  }
-}
+    emitter.removeEventListener(event, callback);
+  };
+};

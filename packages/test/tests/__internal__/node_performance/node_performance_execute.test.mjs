@@ -1,6 +1,6 @@
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-import { execute, nodeChildProcess, nodeWorkerThread } from "@jsenv/test"
+import { execute, nodeChildProcess, nodeWorkerThread } from "@jsenv/test";
 
 const test = async (params) => {
   const { namespace, performance } = await execute({
@@ -11,11 +11,11 @@ const test = async (params) => {
     collectPerformance: true,
     keepRunning: true, // node will naturally exit
     ...params,
-  })
+  });
   const actual = {
     namespace,
     performance,
-  }
+  };
   const expected = {
     namespace: { answer: 42 },
     performance: {
@@ -26,16 +26,16 @@ const test = async (params) => {
         "a to b": assert.any(Number),
       },
     },
-  }
-  assert({ actual, expected })
-}
+  };
+  assert({ actual, expected });
+};
 
 // nodeChildProcess
 await test({
   runtime: nodeChildProcess(),
-})
+});
 
 // nodeWorkerThread
 await test({
   runtime: nodeWorkerThread(),
-})
+});

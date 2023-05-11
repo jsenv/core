@@ -1,54 +1,56 @@
-import { findHighestVersion } from "@jsenv/utils/src/semantic_versioning/highest_version.js"
+import { findHighestVersion } from "@jsenv/utils/src/semantic_versioning/highest_version.js";
 
-import { featuresCompatMap } from "./features_compatibility.js"
+import { featuresCompatMap } from "./features_compatibility.js";
 
 export const RUNTIME_COMPAT = {
   featuresCompatMap,
 
   add: (originalRuntimeCompat, feature) => {
-    const featureCompat = getFeatureCompat(feature)
+    const featureCompat = getFeatureCompat(feature);
     const runtimeCompat = {
       ...originalRuntimeCompat,
-    }
+    };
     Object.keys(originalRuntimeCompat).forEach((runtimeName) => {
-      const secondVersion = featureCompat[runtimeName] // the version supported by the feature
+      const secondVersion = featureCompat[runtimeName]; // the version supported by the feature
       if (secondVersion) {
-        const firstVersion = originalRuntimeCompat[runtimeName]
+        const firstVersion = originalRuntimeCompat[runtimeName];
         runtimeCompat[runtimeName] = findHighestVersion(
           firstVersion,
           secondVersion,
-        )
+        );
       }
-    })
-    return runtimeCompat
+    });
+    return runtimeCompat;
   },
 
   isSupported: (runtimeCompat, feature) => {
-    const featureCompat = getFeatureCompat(feature)
-    const runtimeNames = Object.keys(runtimeCompat)
+    const featureCompat = getFeatureCompat(feature);
+    const runtimeNames = Object.keys(runtimeCompat);
     const runtimeWithoutCompat = runtimeNames.find((runtimeName) => {
-      const runtimeVersion = runtimeCompat[runtimeName]
-      const runtimeVersionCompatible = featureCompat[runtimeName] || "Infinity"
+      const runtimeVersion = runtimeCompat[runtimeName];
+      const runtimeVersionCompatible = featureCompat[runtimeName] || "Infinity";
       const highestVersion = findHighestVersion(
         runtimeVersion,
         runtimeVersionCompatible,
-      )
-      return highestVersion !== runtimeVersion
-    })
-    return !runtimeWithoutCompat
+      );
+      return highestVersion !== runtimeVersion;
+    });
+    return !runtimeWithoutCompat;
   },
-}
+};
 
 const getFeatureCompat = (feature) => {
   if (typeof feature === "string") {
-    const compat = featuresCompatMap[feature]
+    const compat = featuresCompatMap[feature];
     if (!compat) {
-      throw new Error(`"${feature}" feature is unknown`)
+      throw new Error(`"${feature}" feature is unknown`);
     }
-    return compat
+    return compat;
   }
   if (typeof feature !== "object") {
-    throw new TypeError(`feature must be a string or an object, got ${feature}`)
+    throw new TypeError(
+      `feature must be a string or an object, got ${feature}`,
+    );
   }
-  return feature
-}
+  return feature;
+};

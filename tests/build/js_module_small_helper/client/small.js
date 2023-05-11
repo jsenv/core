@@ -1,1 +1,1 @@
-export const small = "1"
+export const small = "1";

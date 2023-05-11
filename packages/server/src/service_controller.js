@@ -1,4 +1,4 @@
-import { timeStart } from "./server_timing/timing_measure.js"
+import { timeStart } from "./server_timing/timing_measure.js";
 
 const HOOK_NAMES = [
   "serverListening",
@@ -10,136 +10,136 @@ const HOOK_NAMES = [
   "injectResponseHeaders",
   "responseReady",
   "serverStopped",
-]
+];
 
 export const createServiceController = (services) => {
-  const flatServices = flattenAndFilterServices(services)
-  const hookGroups = {}
+  const flatServices = flattenAndFilterServices(services);
+  const hookGroups = {};
 
   const addService = (service) => {
     Object.keys(service).forEach((key) => {
-      if (key === "name") return
-      const isHook = HOOK_NAMES.includes(key)
+      if (key === "name") return;
+      const isHook = HOOK_NAMES.includes(key);
       if (!isHook) {
         console.warn(
           `Unexpected "${key}" property on "${service.name}" service`,
-        )
+        );
       }
-      const hookName = key
-      const hookValue = service[hookName]
+      const hookName = key;
+      const hookValue = service[hookName];
       if (hookValue) {
-        const group = hookGroups[hookName] || (hookGroups[hookName] = [])
+        const group = hookGroups[hookName] || (hookGroups[hookName] = []);
         group.push({
           service,
           name: hookName,
           value: hookValue,
-        })
+        });
       }
-    })
-  }
+    });
+  };
   flatServices.forEach((service) => {
-    addService(service)
-  })
+    addService(service);
+  });
 
-  let currentService = null
-  let currentHookName = null
+  let currentService = null;
+  let currentHookName = null;
   const callHook = (hook, info, context) => {
-    const hookFn = hook.value
+    const hookFn = hook.value;
     if (!hookFn) {
-      return null
+      return null;
     }
-    currentService = hook.service
-    currentHookName = hook.name
-    let timeEnd
+    currentService = hook.service;
+    currentHookName = hook.name;
+    let timeEnd;
     if (context && context.timing) {
       timeEnd = timeStart(
         `${currentService.name.replace("jsenv:", "")}.${currentHookName}`,
-      )
+      );
     }
-    let valueReturned = hookFn(info, context)
+    let valueReturned = hookFn(info, context);
     if (context && context.timing) {
-      Object.assign(context.timing, timeEnd())
+      Object.assign(context.timing, timeEnd());
     }
-    currentService = null
-    currentHookName = null
-    return valueReturned
-  }
+    currentService = null;
+    currentHookName = null;
+    return valueReturned;
+  };
   const callAsyncHook = async (hook, info, context) => {
-    const hookFn = hook.value
+    const hookFn = hook.value;
     if (!hookFn) {
-      return null
+      return null;
     }
-    currentService = hook.service
-    currentHookName = hook.name
-    let timeEnd
+    currentService = hook.service;
+    currentHookName = hook.name;
+    let timeEnd;
     if (context && context.timing) {
       timeEnd = timeStart(
         `${currentService.name.replace("jsenv:", "")}.${currentHookName}`,
-      )
+      );
     }
-    let valueReturned = await hookFn(info, context)
+    let valueReturned = await hookFn(info, context);
     if (context && context.timing) {
-      Object.assign(context.timing, timeEnd())
+      Object.assign(context.timing, timeEnd());
     }
-    currentService = null
-    currentHookName = null
-    return valueReturned
-  }
+    currentService = null;
+    currentHookName = null;
+    return valueReturned;
+  };
 
   const callHooks = (hookName, info, context, callback = () => {}) => {
-    const hooks = hookGroups[hookName]
+    const hooks = hookGroups[hookName];
     if (hooks) {
       for (const hook of hooks) {
-        const returnValue = callHook(hook, info, context)
+        const returnValue = callHook(hook, info, context);
         if (returnValue) {
-          callback(returnValue)
+          callback(returnValue);
         }
       }
     }
-  }
+  };
   const callHooksUntil = (
     hookName,
     info,
     context,
     until = (returnValue) => returnValue,
   ) => {
-    const hooks = hookGroups[hookName]
+    const hooks = hookGroups[hookName];
     if (hooks) {
       for (const hook of hooks) {
-        const returnValue = callHook(hook, info, context)
-        const untilReturnValue = until(returnValue)
+        const returnValue = callHook(hook, info, context);
+        const untilReturnValue = until(returnValue);
         if (untilReturnValue) {
-          return untilReturnValue
+          return untilReturnValue;
         }
       }
     }
-    return null
-  }
+    return null;
+  };
   const callAsyncHooksUntil = (hookName, info, context) => {
-    const hooks = hookGroups[hookName]
+    const hooks = hookGroups[hookName];
     if (!hooks) {
-      return null
+      return null;
     }
     if (hooks.length === 0) {
-      return null
+      return null;
     }
     return new Promise((resolve, reject) => {
       const visit = (index) => {
         if (index >= hooks.length) {
-          return resolve()
+          return resolve();
         }
-        const hook = hooks[index]
-        const returnValue = callAsyncHook(hook, info, context)
+        const hook = hooks[index];
+        const returnValue = callAsyncHook(hook, info, context);
         return Promise.resolve(returnValue).then((output) => {
           if (output) {
-            return resolve(output)
+            return resolve(output);
           }
-          return visit(index + 1)
-        }, reject)
-      }
-      visit(0)
-    })
-  }
+          return visit(index + 1);
+        }, reject);
+      };
+      visit(0);
+    });
+  };
 
   return {
     services: flatServices,
@@ -150,25 +150,25 @@ export const createServiceController = (services) => {
 
     getCurrentService: () => currentService,
     getCurrentHookName: () => currentHookName,
-  }
-}
+  };
+};
 
 const flattenAndFilterServices = (services) => {
-  const flatServices = []
+  const flatServices = [];
   const visitServiceEntry = (serviceEntry) => {
     if (Array.isArray(serviceEntry)) {
-      serviceEntry.forEach((value) => visitServiceEntry(value))
-      return
+      serviceEntry.forEach((value) => visitServiceEntry(value));
+      return;
     }
     if (typeof serviceEntry === "object" && serviceEntry !== null) {
       if (!serviceEntry.name) {
-        serviceEntry.name = "anonymous"
+        serviceEntry.name = "anonymous";
       }
-      flatServices.push(serviceEntry)
-      return
+      flatServices.push(serviceEntry);
+      return;
     }
-    throw new Error(`services must be objects, got ${serviceEntry}`)
-  }
-  services.forEach((serviceEntry) => visitServiceEntry(serviceEntry))
-  return flatServices
-}
+    throw new Error(`services must be objects, got ${serviceEntry}`);
+  };
+  services.forEach((serviceEntry) => visitServiceEntry(serviceEntry));
+  return flatServices;
+};

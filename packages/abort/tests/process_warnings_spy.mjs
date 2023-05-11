@@ -29,18 +29,18 @@
  */
 
 export const spyProcessWarnings = () => {
-  let warnings = []
+  let warnings = [];
 
   const processWarningEventCallback = (warning) => {
-    warnings.push(warning)
-  }
+    warnings.push(warning);
+  };
 
-  process.on("warning", processWarningEventCallback)
+  process.on("warning", processWarningEventCallback);
 
   return () => {
-    process.removeListener("warning", processWarningEventCallback)
-    const warningsCopy = warnings.slice()
-    warnings = null
-    return warningsCopy
-  }
-}
+    process.removeListener("warning", processWarningEventCallback);
+    const warningsCopy = warnings.slice();
+    warnings = null;
+    return warningsCopy;
+  };
+};

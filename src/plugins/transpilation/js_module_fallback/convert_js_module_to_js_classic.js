@@ -1,24 +1,24 @@
-import { urlToRelativeUrl } from "@jsenv/urls"
-import { readFileSync } from "@jsenv/filesystem"
+import { urlToRelativeUrl } from "@jsenv/urls";
+import { readFileSync } from "@jsenv/filesystem";
 import {
   createMagicSource,
   composeTwoSourcemaps,
   SOURCEMAP,
-} from "@jsenv/sourcemap"
-import { applyBabelPlugins } from "@jsenv/ast"
+} from "@jsenv/sourcemap";
+import { applyBabelPlugins } from "@jsenv/ast";
 
-import { requireFromJsenv } from "@jsenv/core/src/helpers/require_from_jsenv.js"
-import { requireBabelPlugin } from "../babel/require_babel_plugin.js"
-import { babelPluginTransformImportMetaUrl } from "./helpers/babel_plugin_transform_import_meta_url.js"
-import { babelPluginTransformImportMetaResolve } from "./helpers/babel_plugin_transform_import_meta_resolve.js"
+import { requireFromJsenv } from "@jsenv/core/src/helpers/require_from_jsenv.js";
+import { requireBabelPlugin } from "../babel/require_babel_plugin.js";
+import { babelPluginTransformImportMetaUrl } from "./helpers/babel_plugin_transform_import_meta_url.js";
+import { babelPluginTransformImportMetaResolve } from "./helpers/babel_plugin_transform_import_meta_resolve.js";
 
 // because of https://github.com/rpetrich/babel-plugin-transform-async-to-promises/issues/84
-import customAsyncToPromises from "./async-to-promises.js"
+import customAsyncToPromises from "./async-to-promises.js";
 
 export const systemJsClientFileUrlDefault = new URL(
   "./client/s.js",
   import.meta.url,
-).href
+).href;
 
 export const convertJsModuleToJsClassic = async ({
   systemJsInjection,
@@ -26,19 +26,19 @@ export const convertJsModuleToJsClassic = async ({
   urlInfo,
   jsModuleUrlInfo,
 }) => {
-  let jsClassicFormat
+  let jsClassicFormat;
   if (urlInfo.isEntryPoint && !jsModuleUrlInfo.data.usesImport) {
     // if it's an entry point without dependency (it does not use import)
     // then we can use UMD
-    jsClassicFormat = "umd"
+    jsClassicFormat = "umd";
   } else {
     // otherwise we have to use system in case it's imported
     // by an other file (for entry points)
     // or to be able to import when it uses import
-    jsClassicFormat = "system"
+    jsClassicFormat = "system";
   }
 
-  urlInfo.data.jsClassicFormat = jsClassicFormat
+  urlInfo.data.jsClassicFormat = jsClassicFormat;
   const { code, map } = await applyBabelPlugins({
     babelPlugins: [
       ...(jsClassicFormat === "system"
@@ -71,22 +71,22 @@ export const convertJsModuleToJsClassic = async ({
           ]),
     ],
     urlInfo: jsModuleUrlInfo,
-  })
-  let sourcemap = jsModuleUrlInfo.sourcemap
-  sourcemap = await composeTwoSourcemaps(sourcemap, map)
+  });
+  let sourcemap = jsModuleUrlInfo.sourcemap;
+  sourcemap = await composeTwoSourcemaps(sourcemap, map);
   if (
     systemJsInjection &&
     jsClassicFormat === "system" &&
     urlInfo.isEntryPoint
   ) {
-    const magicSource = createMagicSource(code)
+    const magicSource = createMagicSource(code);
     let systemJsFileContent = readFileSync(systemJsClientFileUrl, {
       as: "string",
-    })
+    });
     const sourcemapFound = SOURCEMAP.readComment({
       contentType: "text/javascript",
       content: systemJsFileContent,
-    })
+    });
     if (sourcemapFound) {
       // for now let's remove s.js sourcemap
       // because it would likely mess the sourcemap of the entry point itself
@@ -94,21 +94,21 @@ export const convertJsModuleToJsClassic = async ({
         contentType: "text/javascript",
         content: systemJsFileContent,
         specifier: "",
-      })
+      });
     }
-    magicSource.prepend(`${systemJsFileContent}\n\n`)
-    const magicResult = magicSource.toContentAndSourcemap()
-    sourcemap = await composeTwoSourcemaps(sourcemap, magicResult.sourcemap)
+    magicSource.prepend(`${systemJsFileContent}\n\n`);
+    const magicResult = magicSource.toContentAndSourcemap();
+    sourcemap = await composeTwoSourcemaps(sourcemap, magicResult.sourcemap);
     return {
       content: magicResult.content,
       sourcemap,
-    }
+    };
   }
   return {
     content: code,
     sourcemap,
-  }
-}
+  };
+};
 
 /*
  * When systemjs or umd format is used by babel, it will generated UID based on
@@ -119,15 +119,15 @@ export const convertJsModuleToJsClassic = async ({
  * But to fix this issue once and for all there is babelPluginRelativeImports below
  */
 const babelPluginRelativeImports = (babel) => {
-  const t = babel.types
+  const t = babel.types;
 
   const replaceSpecifierAtPath = (path, state) => {
-    const specifier = path.node.value
+    const specifier = path.node.value;
     if (specifier.startsWith("file://")) {
-      const specifierRelative = urlToRelativeUrl(specifier, state.opts.rootUrl)
-      path.replaceWith(t.stringLiteral(specifierRelative))
+      const specifierRelative = urlToRelativeUrl(specifier, state.opts.rootUrl);
+      path.replaceWith(t.stringLiteral(specifierRelative));
     }
-  }
+  };
 
   return {
     name: "relative-imports",
@@ -135,26 +135,26 @@ const babelPluginRelativeImports = (babel) => {
       CallExpression: (path, state) => {
         if (path.node.callee.type !== "Import") {
           // Some other function call, not import();
-          return
+          return;
         }
         if (path.node.arguments[0].type !== "StringLiteral") {
           // Non-string argument, probably a variable or expression, e.g.
           // import(moduleId)
           // import('./' + moduleName)
-          return
+          return;
         }
-        const sourcePath = path.get("arguments")[0]
+        const sourcePath = path.get("arguments")[0];
         if (sourcePath.node.type === "StringLiteral") {
-          replaceSpecifierAtPath(sourcePath, state)
+          replaceSpecifierAtPath(sourcePath, state);
         }
       },
       ImportDeclaration: (path, state) => {
-        const sourcePath = path.get("source")
-        replaceSpecifierAtPath(sourcePath, state)
+        const sourcePath = path.get("source");
+        replaceSpecifierAtPath(sourcePath, state);
       },
       ExportAllDeclaration: (path, state) => {
-        const sourcePath = path.get("source")
-        replaceSpecifierAtPath(sourcePath, state)
+        const sourcePath = path.get("source");
+        replaceSpecifierAtPath(sourcePath, state);
       },
       ExportNamedDeclaration: (path, state) => {
         if (!path.node.source) {
@@ -163,13 +163,13 @@ const babelPluginRelativeImports = (babel) => {
           // export { varName }
           // export const constName = ...
           // export function funcName() {}
-          return
+          return;
         }
-        const sourcePath = path.get("source")
+        const sourcePath = path.get("source");
         if (sourcePath.node.type === "StringLiteral") {
-          replaceSpecifierAtPath(sourcePath, state)
+          replaceSpecifierAtPath(sourcePath, state);
         }
       },
     },
-  }
-}
+  };
+};

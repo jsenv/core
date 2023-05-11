@@ -1,6 +1,6 @@
-import { assert } from "@jsenv/assert"
+import { assert } from "@jsenv/assert";
 
-import { build } from "@jsenv/core"
+import { build } from "@jsenv/core";
 
 try {
   await build({
@@ -10,10 +10,10 @@ try {
       "./main.html": "main.html",
     },
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
-  })
-  throw new Error("should throw")
+  });
+  throw new Error("should throw");
 } catch (e) {
-  const actual = e.message
+  const actual = e.message;
   const expected = `Failed to fetch url content
 --- reason ---
 no entry on filesystem
@@ -25,6 +25,6 @@ ${new URL("./client/main.js", import.meta.url).href}:1:23
                             ^
   2 | 
 --- plugin name ---
-"jsenv:file_url_fetching"`
-  assert({ actual, expected })
+"jsenv:file_url_fetching"`;
+  assert({ actual, expected });
 }

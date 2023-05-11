@@ -1,29 +1,29 @@
-import { assert } from "@jsenv/assert"
-import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js"
+import { assert } from "@jsenv/assert";
+import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js";
 
 try {
-  const symbola = Symbol("a")
-  const symbolb = Symbol("b")
+  const symbola = Symbol("a");
+  const symbolb = Symbol("b");
   const actual = {
     [symbola]: true,
     [symbolb]: true,
-  }
+  };
   const expected = {
     [symbola]: true,
     [symbolb]: true,
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 } catch (e) {
-  throw new Error(`should not throw`)
+  throw new Error(`should not throw`);
 }
 
 try {
-  const symbola = Symbol("a")
+  const symbola = Symbol("a");
   const actual = {
     [symbola]: true,
-  }
-  const expected = {}
-  assert({ actual, expected })
+  };
+  const expected = {};
+  assert({ actual, expected });
 } catch (e) {
   ensureAssertionErrorWithMessage(
     e,
@@ -32,16 +32,16 @@ try {
 Symbol("a")
 --- path ---
 actual`,
-  )
+  );
 }
 
 try {
-  const symbola = Symbol("a")
-  const actual = {}
+  const symbola = Symbol("a");
+  const actual = {};
   const expected = {
     [symbola]: true,
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 } catch (e) {
   ensureAssertionErrorWithMessage(
     e,
@@ -50,26 +50,26 @@ try {
 Symbol("a")
 --- path ---
 actual`,
-  )
+  );
 }
 
 try {
-  const symbola = Symbol("a")
-  const symbolb = Symbol("b")
-  const symbolc = Symbol("c")
-  const symbold = Symbol("d")
-  const symbole = Symbol("e")
+  const symbola = Symbol("a");
+  const symbolb = Symbol("b");
+  const symbolc = Symbol("c");
+  const symbold = Symbol("d");
+  const symbole = Symbol("e");
   const actual = {
     [symbola]: true,
     [symbold]: true,
     [symbole]: true,
-  }
+  };
   const expected = {
     [symbola]: true,
     [symbolb]: true,
     [symbolc]: true,
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 } catch (e) {
   ensureAssertionErrorWithMessage(
     e,
@@ -82,5 +82,5 @@ Symbol("b")
 Symbol("c")
 --- path ---
 actual`,
-  )
+  );
 }

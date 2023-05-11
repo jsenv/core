@@ -1,14 +1,14 @@
 // https://github.com/node-fetch/node-fetch/blob/8c197f8982a238b3c345c64b17bfa92e16b4f7c4/src/response.js#L1
 
-import { Agent } from "node:https"
-import nodeFetch, { Response } from "node-fetch"
+import { Agent } from "node:https";
+import nodeFetch, { Response } from "node-fetch";
 
-import { DATA_URL } from "@jsenv/urls"
-import { fetchFileSystem } from "@jsenv/server"
+import { DATA_URL } from "@jsenv/urls";
+import { fetchFileSystem } from "@jsenv/server";
 import {
   isFileHandle,
   fileHandleToReadableStream,
-} from "@jsenv/server/src/interfacing_with_node/body.js"
+} from "@jsenv/server/src/interfacing_with_node/body.js";
 
 export const fetchUrl = async (
   url,
@@ -24,11 +24,11 @@ export const fetchUrl = async (
   } = {},
 ) => {
   try {
-    url = String(new URL(url))
+    url = String(new URL(url));
   } catch (e) {
     throw new Error(
       `fetchUrl first argument must be an absolute url, received ${url}`,
-    )
+    );
   }
 
   if (url.startsWith("file://")) {
@@ -41,8 +41,8 @@ export const fetchUrl = async (
       canReadDirectory,
       contentTypeMap,
       ...rest,
-    })
-    const responseBody = responseProperties.body
+    });
+    const responseBody = responseProperties.body;
 
     const response = new Response(
       typeof responseBody === "string"
@@ -56,21 +56,21 @@ export const fetchUrl = async (
         statusText: responseProperties.statusText,
         headers: responseProperties.headers,
       },
-    )
-    return response
+    );
+    return response;
   }
 
   if (url.startsWith("data:")) {
-    const { contentType, base64Flag, data } = DATA_URL.parse(url)
-    const body = base64Flag ? Buffer.from(data, "base64") : Buffer.from(data)
+    const { contentType, base64Flag, data } = DATA_URL.parse(url);
+    const body = base64Flag ? Buffer.from(data, "base64") : Buffer.from(data);
     const response = new Response(body, {
       url,
       status: 200,
       headers: {
         "content-type": contentType,
       },
-    })
-    return response
+    });
+    return response;
   }
 
   const response = await nodeFetch(url, {
@@ -82,12 +82,12 @@ export const fetchUrl = async (
           agent: () => {
             return new Agent({
               rejectUnauthorized: false,
-            })
+            });
           },
         }
       : {}),
     ...rest,
-  })
+  });
 
-  return response
-}
+  return response;
+};

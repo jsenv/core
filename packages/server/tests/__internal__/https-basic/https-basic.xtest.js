@@ -1,13 +1,13 @@
-import { createRequire } from "node:smodule"
-import { assert } from "@jsenv/assert"
+import { createRequire } from "node:smodule";
+import { assert } from "@jsenv/assert";
 
-import { startServer, fetchFileSystem } from "@jsenv/server"
+import { startServer, fetchFileSystem } from "@jsenv/server";
 
-const require = createRequire(import.meta.url)
-const testDirectoryUrl = new URL("./", import.meta.url).href
+const require = createRequire(import.meta.url);
+const testDirectoryUrl = new URL("./", import.meta.url).href;
 
 // eslint-disable-next-line import/no-unresolved
-const { chromium } = require("playwright-chromium")
+const { chromium } = require("playwright-chromium");
 
 const server = await startServer({
   logLevel: "warn",
@@ -21,17 +21,17 @@ const server = await startServer({
         headers: request.headers,
         rootDirectoryUrl: testDirectoryUrl,
       },
-    )
+    );
   },
-})
+});
 const browser = await chromium.launch({
   // headless: false,
-})
+});
 const page = await browser.newPage({
   ignoreHTTPSErrors: true,
-})
-await page.goto(`${server.origin}/index.html`)
-const actual = await page.evaluate(`window.ask()`)
-const expected = 42
-assert({ actual, expected })
-browser.close()
+});
+await page.goto(`${server.origin}/index.html`);
+const actual = await page.evaluate(`window.ask()`);
+const expected = 42;
+assert({ actual, expected });
+browser.close();

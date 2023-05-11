@@ -1,1 +1,1 @@
-import "foo.js?test"
+import "foo.js?test";

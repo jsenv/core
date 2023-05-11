@@ -1,38 +1,38 @@
-import { applyBabelPlugins } from "@jsenv/ast"
+import { applyBabelPlugins } from "@jsenv/ast";
 
-import { RUNTIME_COMPAT } from "@jsenv/core/src/kitchen/compat/runtime_compat.js"
-import { getBaseBabelPluginStructure } from "./helpers/babel_plugin_structure.js"
-import { babelPluginBabelHelpersAsJsenvImports } from "./helpers/babel_plugin_babel_helpers_as_jsenv_imports.js"
-import { babelPluginNewStylesheetAsJsenvImport } from "./new_stylesheet/babel_plugin_new_stylesheet_as_jsenv_import.js"
-import { babelPluginGlobalThisAsJsenvImport } from "./global_this/babel_plugin_global_this_as_jsenv_import.js"
-import { babelPluginRegeneratorRuntimeAsJsenvImport } from "./regenerator_runtime/babel_plugin_regenerator_runtime_as_jsenv_import.js"
+import { RUNTIME_COMPAT } from "@jsenv/core/src/kitchen/compat/runtime_compat.js";
+import { getBaseBabelPluginStructure } from "./helpers/babel_plugin_structure.js";
+import { babelPluginBabelHelpersAsJsenvImports } from "./helpers/babel_plugin_babel_helpers_as_jsenv_imports.js";
+import { babelPluginNewStylesheetAsJsenvImport } from "./new_stylesheet/babel_plugin_new_stylesheet_as_jsenv_import.js";
+import { babelPluginGlobalThisAsJsenvImport } from "./global_this/babel_plugin_global_this_as_jsenv_import.js";
+import { babelPluginRegeneratorRuntimeAsJsenvImport } from "./regenerator_runtime/babel_plugin_regenerator_runtime_as_jsenv_import.js";
 
 export const jsenvPluginBabel = ({
   getCustomBabelPlugins,
   babelHelpersAsImport = true,
 } = {}) => {
   const transformWithBabel = async (urlInfo, context) => {
-    const isJsModule = urlInfo.type === "js_module"
+    const isJsModule = urlInfo.type === "js_module";
 
     const isSupported = (feature) =>
-      RUNTIME_COMPAT.isSupported(context.clientRuntimeCompat, feature)
+      RUNTIME_COMPAT.isSupported(context.clientRuntimeCompat, feature);
     const getImportSpecifier = (clientFileUrl) => {
       const [reference] = context.referenceUtils.inject({
         type: "js_import",
         expectedType: "js_module",
         specifier: clientFileUrl,
-      })
-      return JSON.parse(reference.generatedSpecifier)
-    }
+      });
+      return JSON.parse(reference.generatedSpecifier);
+    };
 
     const babelPluginStructure = getBaseBabelPluginStructure({
       url: urlInfo.url,
       isSupported,
       isJsModule,
       getImportSpecifier,
-    })
+    });
     if (getCustomBabelPlugins) {
-      Object.assign(babelPluginStructure, getCustomBabelPlugins(context))
+      Object.assign(babelPluginStructure, getCustomBabelPlugins(context));
     }
 
     if (isJsModule && babelHelpersAsImport) {
@@ -42,7 +42,7 @@ export const jsenvPluginBabel = ({
           {
             getImportSpecifier,
           },
-        ]
+        ];
       }
       if (!isSupported("async_generator_function")) {
         babelPluginStructure["regenerator-runtime-as-jsenv-import"] = [
@@ -50,7 +50,7 @@ export const jsenvPluginBabel = ({
           {
             getImportSpecifier,
           },
-        ]
+        ];
       }
       if (!isSupported("new_stylesheet")) {
         babelPluginStructure["new-stylesheet-as-jsenv-import"] = [
@@ -58,7 +58,7 @@ export const jsenvPluginBabel = ({
           {
             getImportSpecifier,
           },
-        ]
+        ];
       }
       if (Object.keys(babelPluginStructure).length > 0) {
         babelPluginStructure["babel-helper-as-jsenv-import"] = [
@@ -66,7 +66,7 @@ export const jsenvPluginBabel = ({
           {
             getImportSpecifier,
           },
-        ]
+        ];
       }
     }
     // otherwise, concerning global_this, and new_stylesheet we must inject the code
@@ -74,7 +74,7 @@ export const jsenvPluginBabel = ({
 
     const babelPlugins = Object.keys(babelPluginStructure).map(
       (babelPluginName) => babelPluginStructure[babelPluginName],
-    )
+    );
     const { code, map } = await applyBabelPlugins({
       babelPlugins,
       urlInfo,
@@ -83,12 +83,12 @@ export const jsenvPluginBabel = ({
           retainLines: context.dev,
         },
       },
-    })
+    });
     return {
       content: code,
       sourcemap: map,
-    }
-  }
+    };
+  };
   return {
     name: "jsenv:babel",
     appliesDuring: "*",
@@ -96,5 +96,5 @@ export const jsenvPluginBabel = ({
       js_classic: transformWithBabel,
       js_module: transformWithBabel,
     },
-  }
-}
+  };
+};

@@ -11,7 +11,7 @@
  * See https://github.com/jsenv/file-size-impact
  */
 
-import { generateFileSizeReport, raw, gzip } from "@jsenv/file-size-impact"
+import { generateFileSizeReport, raw, gzip } from "@jsenv/file-size-impact";
 
 const dist = {
   "./dist/**/*.html": true,
@@ -20,7 +20,7 @@ const dist = {
   "./dist/**/*.png": true,
   "./dist/**/*.jpg": true,
   "./dist/**/*.css": true,
-}
+};
 
 export const fileSizeReport = await generateFileSizeReport({
   log: process.argv.includes("--log"),
@@ -30,4 +30,4 @@ export const fileSizeReport = await generateFileSizeReport({
   manifestConfig: {
     "./dist/**/asset-manifest.json": true,
   },
-})
+});

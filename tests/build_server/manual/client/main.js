@@ -1,14 +1,14 @@
-import { answer } from "./question.js"
+import { answer } from "./question.js";
 
-console.log(answer)
+console.log(answer);
 
 if (import.meta.hot) {
-  import.meta.hot.accept()
+  import.meta.hot.accept();
 }
 
 if (import.meta.dev) {
-  console.log("dev")
+  console.log("dev");
 }
 if (import.meta.build) {
-  console.log("build")
+  console.log("build");
 }

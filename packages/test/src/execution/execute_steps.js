@@ -1,16 +1,16 @@
-import { existsSync } from "node:fs"
-import { memoryUsage } from "node:process"
-import { takeCoverage } from "node:v8"
-import stripAnsi from "strip-ansi"
-import { urlToFileSystemPath } from "@jsenv/urls"
-import { createLog, startSpinner } from "@jsenv/log"
-import { Abort, raceProcessTeardownEvents } from "@jsenv/abort"
-import { ensureEmptyDirectory, writeFileSync } from "@jsenv/filesystem"
+import { existsSync } from "node:fs";
+import { memoryUsage } from "node:process";
+import { takeCoverage } from "node:v8";
+import stripAnsi from "strip-ansi";
+import { urlToFileSystemPath } from "@jsenv/urls";
+import { createLog, startSpinner } from "@jsenv/log";
+import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
+import { ensureEmptyDirectory, writeFileSync } from "@jsenv/filesystem";
 
-import { reportToCoverage } from "../coverage/report_to_coverage.js"
-import { run } from "./run.js"
-import { ensureGlobalGc } from "./gc.js"
-import { createExecutionLog, createSummaryLog } from "./logs_file_execution.js"
+import { reportToCoverage } from "../coverage/report_to_coverage.js";
+import { run } from "./run.js";
+import { ensureGlobalGc } from "./gc.js";
+import { createExecutionLog, createSummaryLog } from "./logs_file_execution.js";
 
 export const executeSteps = async (
   executionSteps,
@@ -51,15 +51,15 @@ export const executeSteps = async (
 ) => {
   executionSteps = executionSteps.filter(
     (executionStep) => !executionStep.runtime?.disabled,
-  )
+  );
 
-  const executePlanReturnValue = {}
-  const report = {}
-  const callbacks = []
-  const stopAfterAllSignal = { notify: () => {} }
+  const executePlanReturnValue = {};
+  const report = {};
+  const callbacks = [];
+  const stopAfterAllSignal = { notify: () => {} };
 
-  const multipleExecutionsOperation = Abort.startOperation()
-  multipleExecutionsOperation.addAbortSignal(signal)
+  const multipleExecutionsOperation = Abort.startOperation();
+  multipleExecutionsOperation.addAbortSignal(signal);
   if (handleSIGINT) {
     multipleExecutionsOperation.addAbortSource((abort) => {
       return raceProcessTeardownEvents(
@@ -67,33 +67,33 @@ export const executeSteps = async (
           SIGINT: true,
         },
         () => {
-          logger.debug(`SIGINT abort`)
-          abort()
+          logger.debug(`SIGINT abort`);
+          abort();
         },
-      )
-    })
+      );
+    });
   }
-  const failFastAbortController = new AbortController()
+  const failFastAbortController = new AbortController();
   if (failFast) {
-    multipleExecutionsOperation.addAbortSignal(failFastAbortController.signal)
+    multipleExecutionsOperation.addAbortSignal(failFastAbortController.signal);
   }
 
   try {
     if (gcBetweenExecutions) {
-      ensureGlobalGc()
+      ensureGlobalGc();
     }
 
     if (coverageEnabled) {
       // when runned multiple times, we don't want to keep previous files in this directory
-      await ensureEmptyDirectory(coverageTempDirectoryUrl)
+      await ensureEmptyDirectory(coverageTempDirectoryUrl);
       callbacks.push(async () => {
         if (multipleExecutionsOperation.signal.aborted) {
           // don't try to do the coverage stuff
-          return
+          return;
         }
         try {
           if (coverageMethodForNodeJs === "NODE_V8_COVERAGE") {
-            takeCoverage()
+            takeCoverage();
             // conceptually we don't need coverage anymore so it would be
             // good to call v8.stopCoverage()
             // but it logs a strange message about "result is not an object"
@@ -106,15 +106,15 @@ export const executeSteps = async (
             coverageIncludeMissing,
             coverageMethodForBrowsers,
             coverageV8ConflictWarning,
-          })
-          executePlanReturnValue.planCoverage = planCoverage
+          });
+          executePlanReturnValue.planCoverage = planCoverage;
         } catch (e) {
           if (Abort.isAbortError(e)) {
-            return
+            return;
           }
-          throw e
+          throw e;
         }
-      })
+      });
     }
 
     const runtimeParams = {
@@ -126,16 +126,16 @@ export const executeSteps = async (
       coverageMethodForBrowsers,
       coverageMethodForNodeJs,
       stopAfterAllSignal,
-    }
+    };
 
     if (logMergeForCompletedExecutions && !process.stdout.isTTY) {
-      logMergeForCompletedExecutions = false
+      logMergeForCompletedExecutions = false;
       logger.debug(
         `Force logMergeForCompletedExecutions to false because process.stdout.isTTY is false`,
-      )
+      );
     }
-    const debugLogsEnabled = logger.levels.debug
-    const executionLogsEnabled = logger.levels.info
+    const debugLogsEnabled = logger.levels.debug;
+    const executionLogsEnabled = logger.levels.info;
     const executionSpinner =
       logRefresh &&
       !debugLogsEnabled &&
@@ -144,11 +144,11 @@ export const executeSteps = async (
       // if there is an error during execution npm will mess up the output
       // (happens when npm runs several command in a workspace)
       // so we enable spinner only when !process.exitCode (no error so far)
-      process.exitCode !== 1
+      process.exitCode !== 1;
 
-    const startMs = Date.now()
-    let rawOutput = ""
-    let executionLog = createLog({ newLine: "" })
+    const startMs = Date.now();
+    let rawOutput = "";
+    let executionLog = createLog({ newLine: "" });
     const counters = {
       total: executionSteps.length,
       aborted: 0,
@@ -156,18 +156,18 @@ export const executeSteps = async (
       failed: 0,
       completed: 0,
       done: 0,
-    }
+    };
     await executeInParallel({
       multipleExecutionsOperation,
       maxExecutionsInParallel,
       cooldownBetweenExecutions,
       executionSteps,
       start: async (paramsFromStep) => {
-        const executionIndex = executionSteps.indexOf(paramsFromStep)
-        const { executionName, fileRelativeUrl, runtime } = paramsFromStep
-        const runtimeType = runtime.type
-        const runtimeName = runtime.name
-        const runtimeVersion = runtime.version
+        const executionIndex = executionSteps.indexOf(paramsFromStep);
+        const { executionName, fileRelativeUrl, runtime } = paramsFromStep;
+        const runtimeType = runtime.type;
+        const runtimeName = runtime.name;
+        const runtimeVersion = runtime.version;
         const executionParams = {
           measurePerformance: false,
           collectPerformance: false,
@@ -178,7 +178,7 @@ export const executeSteps = async (
             fileRelativeUrl,
             ...paramsFromStep.runtimeParams,
           },
-        }
+        };
         const beforeExecutionInfo = {
           fileRelativeUrl,
           runtimeType,
@@ -190,8 +190,8 @@ export const executeSteps = async (
           executionResult: {
             status: "executing",
           },
-        }
-        let spinner
+        };
+        let spinner;
         if (executionSpinner) {
           spinner = startSpinner({
             log: executionLog,
@@ -208,14 +208,14 @@ export const executeSteps = async (
                 ...(logMemoryHeapUsage
                   ? { memoryHeap: memoryUsage().heapUsed }
                   : {}),
-              })
+              });
             },
-          })
+          });
         }
-        beforeExecutionCallback(beforeExecutionInfo)
+        beforeExecutionCallback(beforeExecutionInfo);
 
-        const fileUrl = `${rootDirectoryUrl}${fileRelativeUrl}`
-        let executionResult
+        const fileUrl = `${rootDirectoryUrl}${fileRelativeUrl}`;
+        let executionResult;
         if (existsSync(new URL(fileUrl))) {
           executionResult = await run({
             signal: multipleExecutionsOperation.signal,
@@ -234,7 +234,7 @@ export const executeSteps = async (
               ...runtimeParams,
               ...executionParams.runtimeParams,
             },
-          })
+          });
         } else {
           executionResult = {
             status: "failed",
@@ -243,16 +243,16 @@ export const executeSteps = async (
                 `No file at ${fileRelativeUrl} for execution "${executionName}"`,
               ),
             ],
-          }
+          };
         }
-        counters.done++
-        const fileReport = report[fileRelativeUrl]
+        counters.done++;
+        const fileReport = report[fileRelativeUrl];
         if (fileReport) {
-          fileReport[executionName] = executionResult
+          fileReport[executionName] = executionResult;
         } else {
           report[fileRelativeUrl] = {
             [executionName]: executionResult,
-          }
+          };
         }
 
         const afterExecutionInfo = {
@@ -260,20 +260,20 @@ export const executeSteps = async (
           runtimeVersion: runtime.version,
           endMs: Date.now(),
           executionResult,
-        }
-        afterExecutionCallback(afterExecutionInfo)
+        };
+        afterExecutionCallback(afterExecutionInfo);
 
         if (executionResult.status === "aborted") {
-          counters.aborted++
+          counters.aborted++;
         } else if (executionResult.status === "timedout") {
-          counters.timedout++
+          counters.timedout++;
         } else if (executionResult.status === "failed") {
-          counters.failed++
+          counters.failed++;
         } else if (executionResult.status === "completed") {
-          counters.completed++
+          counters.completed++;
         }
         if (gcBetweenExecutions) {
-          global.gc()
+          global.gc();
         }
         if (executionLogsEnabled) {
           const log = createExecutionLog(afterExecutionInfo, {
@@ -289,91 +289,91 @@ export const executeSteps = async (
             ...(logMemoryHeapUsage
               ? { memoryHeap: memoryUsage().heapUsed }
               : {}),
-          })
+          });
           // replace spinner with this execution result
-          if (spinner) spinner.stop()
-          executionLog.write(log)
-          rawOutput += stripAnsi(log)
+          if (spinner) spinner.stop();
+          executionLog.write(log);
+          rawOutput += stripAnsi(log);
 
           const canOverwriteLog = canOverwriteLogGetter({
             logMergeForCompletedExecutions,
             executionResult,
-          })
+          });
           if (canOverwriteLog) {
             // nothing to do, we reuse the current executionLog object
           } else {
-            executionLog.destroy()
-            executionLog = createLog({ newLine: "" })
+            executionLog.destroy();
+            executionLog = createLog({ newLine: "" });
           }
         }
-        const isLastExecutionLog = executionIndex === executionSteps.length - 1
+        const isLastExecutionLog = executionIndex === executionSteps.length - 1;
         const cancelRemaining =
           failFast &&
           executionResult.status !== "completed" &&
-          counters.done < counters.total
+          counters.done < counters.total;
         if (isLastExecutionLog && logger.levels.info) {
-          executionLog.write("\n")
+          executionLog.write("\n");
         }
 
         if (cancelRemaining) {
-          logger.info(`"failFast" enabled -> cancel remaining executions`)
-          failFastAbortController.abort()
+          logger.info(`"failFast" enabled -> cancel remaining executions`);
+          failFastAbortController.abort();
         }
       },
-    })
+    });
     if (!keepRunning) {
-      logger.debug("stopAfterAllSignal.notify()")
-      await stopAfterAllSignal.notify()
+      logger.debug("stopAfterAllSignal.notify()");
+      await stopAfterAllSignal.notify();
     }
 
-    counters.cancelled = counters.total - counters.done
+    counters.cancelled = counters.total - counters.done;
     const summary = {
       counters,
       // when execution is aborted, the remaining executions are "cancelled"
       duration: Date.now() - startMs,
-    }
+    };
     if (logSummary) {
-      const summaryLog = createSummaryLog(summary)
-      rawOutput += stripAnsi(summaryLog)
-      logger.info(summaryLog)
+      const summaryLog = createSummaryLog(summary);
+      rawOutput += stripAnsi(summaryLog);
+      logger.info(summaryLog);
     }
     if (summary.counters.total !== summary.counters.completed) {
-      const logFileUrl = new URL(logFileRelativeUrl, rootDirectoryUrl).href
-      writeFileSync(logFileUrl, rawOutput)
-      logger.info(`-> ${urlToFileSystemPath(logFileUrl)}`)
+      const logFileUrl = new URL(logFileRelativeUrl, rootDirectoryUrl).href;
+      writeFileSync(logFileUrl, rawOutput);
+      logger.info(`-> ${urlToFileSystemPath(logFileUrl)}`);
     }
-    executePlanReturnValue.aborted = multipleExecutionsOperation.signal.aborted
-    executePlanReturnValue.planSummary = summary
-    executePlanReturnValue.planReport = report
+    executePlanReturnValue.aborted = multipleExecutionsOperation.signal.aborted;
+    executePlanReturnValue.planSummary = summary;
+    executePlanReturnValue.planReport = report;
     await callbacks.reduce(async (previous, callback) => {
-      await previous
-      await callback()
-    }, Promise.resolve())
-    return executePlanReturnValue
+      await previous;
+      await callback();
+    }, Promise.resolve());
+    return executePlanReturnValue;
   } finally {
-    await multipleExecutionsOperation.end()
+    await multipleExecutionsOperation.end();
   }
-}
+};
 
 const canOverwriteLogGetter = ({
   logMergeForCompletedExecutions,
   executionResult,
 }) => {
   if (!logMergeForCompletedExecutions) {
-    return false
+    return false;
   }
   if (executionResult.status === "aborted") {
-    return true
+    return true;
   }
   if (executionResult.status !== "completed") {
-    return false
+    return false;
   }
-  const { consoleCalls = [] } = executionResult
+  const { consoleCalls = [] } = executionResult;
   if (consoleCalls.length > 0) {
-    return false
+    return false;
   }
-  return true
-}
+  return true;
+};
 
 const executeInParallel = async ({
   multipleExecutionsOperation,
@@ -382,46 +382,46 @@ const executeInParallel = async ({
   executionSteps,
   start,
 }) => {
-  const executionResults = []
-  let progressionIndex = 0
-  let remainingExecutionCount = executionSteps.length
+  const executionResults = [];
+  let progressionIndex = 0;
+  let remainingExecutionCount = executionSteps.length;
 
   const nextChunk = async () => {
     if (multipleExecutionsOperation.signal.aborted) {
-      return
+      return;
     }
-    const outputPromiseArray = []
+    const outputPromiseArray = [];
     while (
       remainingExecutionCount > 0 &&
       outputPromiseArray.length < maxExecutionsInParallel
     ) {
-      remainingExecutionCount--
-      const outputPromise = executeOne(progressionIndex)
-      progressionIndex++
-      outputPromiseArray.push(outputPromise)
+      remainingExecutionCount--;
+      const outputPromise = executeOne(progressionIndex);
+      progressionIndex++;
+      outputPromiseArray.push(outputPromise);
     }
     if (outputPromiseArray.length) {
-      await Promise.all(outputPromiseArray)
+      await Promise.all(outputPromiseArray);
       if (remainingExecutionCount > 0) {
-        await nextChunk()
+        await nextChunk();
       }
     }
-  }
+  };
 
   const executeOne = async (index) => {
-    const input = executionSteps[index]
-    const output = await start(input)
+    const input = executionSteps[index];
+    const output = await start(input);
     if (!multipleExecutionsOperation.signal.aborted) {
-      executionResults[index] = output
+      executionResults[index] = output;
     }
     if (cooldownBetweenExecutions) {
       await new Promise((resolve) =>
         setTimeout(resolve, cooldownBetweenExecutions),
-      )
+      );
     }
-  }
+  };
 
-  await nextChunk()
+  await nextChunk();
 
-  return executionResults
-}
+  return executionResults;
+};

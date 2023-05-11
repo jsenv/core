@@ -15,7 +15,7 @@ _composeEslintConfig_ is a function returning an eslint config object being the 
 const {
   composeEslintConfig,
   eslintConfigBase,
-} = require("@jsenv/eslint-config")
+} = require("@jsenv/eslint-config");
 
 const eslintConfig = composeEslintConfig(
   eslintConfigBase,
@@ -33,9 +33,9 @@ const eslintConfig = composeEslintConfig(
       extensions: [".jsx"],
     },
   },
-)
+);
 
-module.exports = eslintConfig
+module.exports = eslintConfig;
 ```
 
 # Composable eslint configs
@@ -65,7 +65,7 @@ const {
   jsenvEslintRulesForImport,
   eslintConfigToPreferExplicitGlobals,
   eslintConfigForPrettier,
-} = require("@jsenv/eslint-config")
+} = require("@jsenv/eslint-config");
 
 const eslintConfig = composeEslintConfig(
   eslintConfigBase,
@@ -152,9 +152,9 @@ const eslintConfig = composeEslintConfig(
   // We are using prettier, disable all eslint rules
   // already handled by prettier.
   eslintConfigForPrettier,
-)
+);
 
-module.exports = eslintConfig
+module.exports = eslintConfig;
 ```
 
 The above configuration uses [@jsenv/eslint-import-resolver](https://github.com/jsenv/core/tree/main/packages/eslint-import-resolver) to resolve import so it needs to be installed.
@@ -191,7 +191,7 @@ _.eslintrc.cjs:_
 const {
   composeEslintConfig,
   eslintConfigBase,
-} = require("@jsenv/eslint-config")
+} = require("@jsenv/eslint-config");
 
 const eslintConfig = composeEslintConfig(
   eslintConfigBase,
@@ -202,9 +202,9 @@ const eslintConfig = composeEslintConfig(
       requireConfigFile: false,
     },
   },
-)
+);
 
-module.exports = eslintConfig
+module.exports = eslintConfig;
 ```
 
 ## React
@@ -214,7 +214,7 @@ const {
   composeEslintConfig,
   eslintConfigBase,
   jsenvEslintRulesForReact,
-} = require("@jsenv/eslint-config")
+} = require("@jsenv/eslint-config");
 
 const eslintConfig = composeEslintConfig(
   eslintConfigBase,
@@ -228,9 +228,9 @@ const eslintConfig = composeEslintConfig(
     },
     rules: jsenvEslintRulesForReact,
   },
-)
+);
 
-module.exports = eslintConfig
+module.exports = eslintConfig;
 ```
 
 ## JSX
@@ -247,7 +247,7 @@ npm install --save-dev @babel/plugin-syntax-jsx
 _babel.config.cjs:_
 
 ```js
-const babelPluginSyntaxJSX = require("@babel/plugin-syntax-jsx")
+const babelPluginSyntaxJSX = require("@babel/plugin-syntax-jsx");
 
 module.exports = {
   plugins: [
@@ -259,7 +259,7 @@ module.exports = {
       },
     ],
   ],
-}
+};
 ```
 
 _.eslintrc.cjs:_
@@ -269,7 +269,7 @@ const {
   composeEslintConfig,
   eslintConfigBase,
   jsenvEslintRulesForReact,
-} = require("@jsenv/eslint-config")
+} = require("@jsenv/eslint-config");
 
 const eslintConfig = composeEslintConfig(
   eslintConfigBase,
@@ -285,9 +285,9 @@ const eslintConfig = composeEslintConfig(
       extensions: [".jsx"],
     },
   },
-)
+);
 
-module.exports = eslintConfig
+module.exports = eslintConfig;
 ```
 
 ## HTML in VSCode
