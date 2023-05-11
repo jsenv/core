@@ -9,16 +9,16 @@
   <body>
     <script>
       window.namespacePromise = new Promise((resolve) => {
-        window.resolveNamespacePromise = resolve
-      })
+        window.resolveNamespacePromise = resolve;
+      });
     </script>
     <script type="module">
       const bodyBackgroundColor = getComputedStyle(
         document.body,
-      ).backgroundColor
+      ).backgroundColor;
       window.resolveNamespacePromise({
         bodyBackgroundColor,
-      })
+      });
     </script>
   </body>
 </html>

@@ -1,1 +1,1 @@
-export const ping = "pong"
+export const ping = "pong";
