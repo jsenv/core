@@ -33,7 +33,7 @@
     "playwright": "1.x"
   },
   "dependencies": {
-    "@jsenv/core": "35.0.3",
+    "@jsenv/core": "35.0.4",
     "@jsenv/abort": "4.2.4",
     "@jsenv/ast": "3.0.7",
     "@jsenv/filesystem": "4.2.3",
