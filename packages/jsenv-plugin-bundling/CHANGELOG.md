@@ -1,3 +1,7 @@
+# 2.1.8
+
+- Fix error when bundling css when reference uses search param(s)
+
 # 2.1.0
 
 - Disable exports minification by rollup (it breaks inline content static analysis)
