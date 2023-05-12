@@ -1,15 +1,13 @@
 import { build } from "@jsenv/core";
 import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 
-build({
+await build({
   sourceDirectoryUrl: new URL("../src/", import.meta.url),
+  buildDirectoryUrl: new URL("../dist/", import.meta.url),
   entryPoints: {
     "./jsenv_plugin_toolbar.js": "jsenv_plugin_toolbar.js",
   },
-  buildDirectoryUrl: new URL("../dist/", import.meta.url),
-  runtimeCompat: {
-    node: "16.14",
-  },
+  base: "./",
   urlAnalysis: {
     include: {
       "/**/*": true,

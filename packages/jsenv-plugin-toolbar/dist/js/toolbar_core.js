@@ -1,5 +1,5 @@
-var l$2;
-l$2 = {
+var l$3;
+l$3 = {
   __e: function (n, l, u, i) {
     for (var t, r, o; l = l.__;) if ((t = l.__c) && !t.__) try {
       if ((r = t.constructor) && null != r.getDerivedStateFromError && (t.setState(r.getDerivedStateFromError(n)), o = t.__d), null != t.componentDidCatch && (t.componentDidCatch(n, i || {}), o = t.__d), o) return t.__E = t;
@@ -14,22 +14,22 @@ var t$1,
   r$1,
   u$1,
   i$1,
-  o$1 = 0,
+  o = 0,
   f$1 = [],
-  c$2 = [],
-  e$1 = l$2.__b,
-  a$2 = l$2.__r,
-  v$1 = l$2.diffed,
-  l$1 = l$2.__c,
-  m = l$2.unmount;
+  c$1 = [],
+  e$1 = l$3.__b,
+  a$1 = l$3.__r,
+  v$2 = l$3.diffed,
+  l$2 = l$3.__c,
+  m = l$3.unmount;
 function d$2(t, u) {
-  l$2.__h && l$2.__h(r$1, t, o$1 || u), o$1 = 0;
+  l$3.__h && l$3.__h(r$1, t, o || u), o = 0;
   var i = r$1.__H || (r$1.__H = {
     __: [],
     __h: []
   });
   return t >= i.__.length && i.__.push({
-    __V: c$2
+    __V: c$1
   }), i.__[t];
 }
 function F(n, r) {
@@ -40,24 +40,24 @@ function b$1() {
   for (var t; t = f$1.shift();) if (t.__P && t.__H) try {
     t.__H.__h.forEach(k), t.__H.__h.forEach(w$1), t.__H.__h = [];
   } catch (r) {
-    t.__H.__h = [], l$2.__e(r, t.__v);
+    t.__H.__h = [], l$3.__e(r, t.__v);
   }
 }
-l$2.__b = function (n) {
+l$3.__b = function (n) {
   r$1 = null, e$1 && e$1(n);
-}, l$2.__r = function (n) {
-  a$2 && a$2(n), t$1 = 0;
+}, l$3.__r = function (n) {
+  a$1 && a$1(n), t$1 = 0;
   var i = (r$1 = n.__c).__H;
   i && (u$1 === r$1 ? (i.__h = [], r$1.__h = [], i.__.forEach(function (n) {
-    n.__N && (n.__ = n.__N), n.__V = c$2, n.__N = n.i = void 0;
+    n.__N && (n.__ = n.__N), n.__V = c$1, n.__N = n.i = void 0;
   })) : (i.__h.forEach(k), i.__h.forEach(w$1), i.__h = [])), u$1 = r$1;
-}, l$2.diffed = function (t) {
-  v$1 && v$1(t);
+}, l$3.diffed = function (t) {
+  v$2 && v$2(t);
   var o = t.__c;
-  o && o.__H && (o.__H.__h.length && (1 !== f$1.push(o) && i$1 === l$2.requestAnimationFrame || ((i$1 = l$2.requestAnimationFrame) || j)(b$1)), o.__H.__.forEach(function (n) {
-    n.i && (n.__H = n.i), n.__V !== c$2 && (n.__ = n.__V), n.i = void 0, n.__V = c$2;
+  o && o.__H && (o.__H.__h.length && (1 !== f$1.push(o) && i$1 === l$3.requestAnimationFrame || ((i$1 = l$3.requestAnimationFrame) || j)(b$1)), o.__H.__.forEach(function (n) {
+    n.i && (n.__H = n.i), n.__V !== c$1 && (n.__ = n.__V), n.i = void 0, n.__V = c$1;
   })), u$1 = r$1 = null;
-}, l$2.__c = function (t, r) {
+}, l$3.__c = function (t, r) {
   r.some(function (t) {
     try {
       t.__h.forEach(k), t.__h = t.__h.filter(function (n) {
@@ -66,10 +66,10 @@ l$2.__b = function (n) {
     } catch (u) {
       r.some(function (n) {
         n.__h && (n.__h = []);
-      }), r = [], l$2.__e(u, t.__v);
+      }), r = [], l$3.__e(u, t.__v);
     }
-  }), l$1 && l$1(t, r);
-}, l$2.unmount = function (t) {
+  }), l$2 && l$2(t, r);
+}, l$3.unmount = function (t) {
   m && m(t);
   var r,
     u = t.__c;
@@ -79,7 +79,7 @@ l$2.__b = function (n) {
     } catch (n) {
       r = n;
     }
-  }), u.__H = void 0, r && l$2.__e(r, u.__v));
+  }), u.__H = void 0, r && l$3.__e(r, u.__v));
 };
 var g$1 = "function" == typeof requestAnimationFrame;
 function j(n) {
@@ -109,146 +109,145 @@ function i() {
   throw new Error("Cycle detected");
 }
 function t() {
-  if (h$1 > 1) {
-    h$1--;
-    return;
-  }
-  let i,
-    t = !1;
-  while (void 0 !== s) {
-    let n = s;
-    s = void 0;
-    f++;
+  if (!(h > 1)) {
+    var i,
+      t = !1;
     while (void 0 !== n) {
-      const o = n.o;
-      n.o = void 0;
-      n.f &= -3;
-      if (!(8 & n.f) && d$1(n)) try {
-        n.c();
-      } catch (n) {
-        if (!t) {
-          i = n;
-          t = !0;
+      var o = n;
+      n = void 0;
+      s$1++;
+      while (void 0 !== o) {
+        var r = o.o;
+        o.o = void 0;
+        o.f &= -3;
+        if (!(8 & o.f) && c(o)) try {
+          o.c();
+        } catch (o) {
+          if (!t) {
+            i = o;
+            t = !0;
+          }
         }
+        o = r;
       }
-      n = o;
     }
-  }
+    s$1 = 0;
+    h--;
+    if (t) throw i;
+  } else h--;
+}
+var r = void 0,
+  n = void 0,
+  h = 0,
+  s$1 = 0,
   f = 0;
-  h$1--;
-  if (t) throw i;
-}
-let o,
-  s,
-  h$1 = 0,
-  f = 0,
-  r = 0;
-function e(i) {
-  if (void 0 === o) return;
-  let t = i.n;
-  if (void 0 === t || t.t !== o) {
-    t = {
-      i: 0,
-      S: i,
-      p: o.s,
-      n: void 0,
-      t: o,
-      e: void 0,
-      x: void 0,
-      r: t
-    };
-    if (void 0 !== o.s) o.s.n = t;
-    o.s = t;
-    i.n = t;
-    if (32 & o.f) i.S(t);
-    return t;
-  } else if (-1 === t.i) {
-    t.i = 0;
-    if (void 0 !== t.n) {
-      t.n.p = t.p;
-      if (void 0 !== t.p) t.p.n = t.n;
-      t.p = o.s;
-      t.n = void 0;
-      o.s.n = t;
-      o.s = t;
+function v$1(i) {
+  if (void 0 !== r) {
+    var t = i.n;
+    if (void 0 === t || t.t !== r) {
+      t = {
+        i: 0,
+        S: i,
+        p: r.s,
+        n: void 0,
+        t: r,
+        e: void 0,
+        x: void 0,
+        r: t
+      };
+      if (void 0 !== r.s) r.s.n = t;
+      r.s = t;
+      i.n = t;
+      if (32 & r.f) i.S(t);
+      return t;
+    } else if (-1 === t.i) {
+      t.i = 0;
+      if (void 0 !== t.n) {
+        t.n.p = t.p;
+        if (void 0 !== t.p) t.p.n = t.n;
+        t.p = r.s;
+        t.n = void 0;
+        r.s.n = t;
+        r.s = t;
+      }
+      return t;
     }
-    return t;
   }
 }
-function c$1(i) {
+function e(i) {
   this.v = i;
   this.i = 0;
   this.n = void 0;
   this.t = void 0;
 }
-c$1.prototype.h = function () {
+e.prototype.h = function () {
   return !0;
 };
-c$1.prototype.S = function (i) {
+e.prototype.S = function (i) {
   if (this.t !== i && void 0 === i.e) {
     i.x = this.t;
     if (void 0 !== this.t) this.t.e = i;
     this.t = i;
   }
 };
-c$1.prototype.U = function (i) {
+e.prototype.U = function (i) {
   if (void 0 !== this.t) {
-    const t = i.e,
-      n = i.x;
+    var t = i.e,
+      o = i.x;
     if (void 0 !== t) {
-      t.x = n;
+      t.x = o;
       i.e = void 0;
     }
-    if (void 0 !== n) {
-      n.e = t;
+    if (void 0 !== o) {
+      o.e = t;
       i.x = void 0;
     }
-    if (i === this.t) this.t = n;
+    if (i === this.t) this.t = o;
   }
 };
-c$1.prototype.subscribe = function (i) {
-  const t = this;
+e.prototype.subscribe = function (i) {
+  var t = this;
   return b(function () {
-    const n = t.value,
-      o = 32 & this.f;
+    var o = t.value,
+      r = 32 & this.f;
     this.f &= -33;
     try {
-      i(n);
+      i(o);
     } finally {
-      this.f |= o;
+      this.f |= r;
     }
   });
 };
-c$1.prototype.valueOf = function () {
+e.prototype.valueOf = function () {
   return this.value;
 };
-c$1.prototype.toString = function () {
+e.prototype.toString = function () {
   return this.value + "";
 };
-c$1.prototype.toJSON = function () {
+e.prototype.toJSON = function () {
   return this.value;
 };
-c$1.prototype.peek = function () {
+e.prototype.peek = function () {
   return this.v;
 };
-Object.defineProperty(c$1.prototype, "value", {
-  get() {
-    const i = e(this);
+Object.defineProperty(e.prototype, "value", {
+  get: function () {
+    var i = v$1(this);
     if (void 0 !== i) i.i = this.i;
     return this.v;
   },
-  set(n) {
-    if (o instanceof a$1) !function () {
+  set: function (o) {
+    if (r instanceof l$1) !function () {
       throw new Error("Computed cannot have side-effects");
     }();
-    if (n !== this.v) {
-      if (f > 100) i();
-      this.v = n;
+    if (o !== this.v) {
+      if (s$1 > 100) i();
+      this.v = o;
       this.i++;
-      r++;
-      h$1++;
+      f++;
+      h++;
       try {
-        for (let i = this.t; void 0 !== i; i = i.x) i.t.N();
+        for (var n = this.t; void 0 !== n; n = n.x) n.t.N();
       } finally {
         t();
       }
@@ -256,16 +255,16 @@ Object.defineProperty(c$1.prototype, "value", {
   }
 });
 function u(i) {
-  return new c$1(i);
+  return new e(i);
 }
-function d$1(i) {
-  for (let t = i.s; void 0 !== t; t = t.n) if (t.S.i !== t.i || !t.S.h() || t.S.i !== t.i) return !0;
+function c(i) {
+  for (var t = i.s; void 0 !== t; t = t.n) if (t.S.i !== t.i || !t.S.h() || t.S.i !== t.i) return !0;
   return !1;
 }
-function v(i) {
-  for (let t = i.s; void 0 !== t; t = t.n) {
-    const n = t.S.n;
-    if (void 0 !== n) t.r = n;
+function d$1(i) {
+  for (var t = i.s; void 0 !== t; t = t.n) {
+    var o = t.S.n;
+    if (void 0 !== o) t.r = o;
     t.S.n = t;
     t.i = -1;
     if (void 0 === t.n) {
@@ -274,48 +273,48 @@ function v(i) {
     }
   }
 }
-function l(i) {
-  let t,
-    n = i.s;
-  while (void 0 !== n) {
-    const i = n.p;
-    if (-1 === n.i) {
-      n.S.U(n);
-      if (void 0 !== i) i.n = n.n;
-      if (void 0 !== n.n) n.n.p = i;
-    } else t = n;
-    n.S.n = n.r;
-    if (void 0 !== n.r) n.r = void 0;
-    n = i;
+function a(i) {
+  var t = i.s,
+    o = void 0;
+  while (void 0 !== t) {
+    var r = t.p;
+    if (-1 === t.i) {
+      t.S.U(t);
+      if (void 0 !== r) r.n = t.n;
+      if (void 0 !== t.n) t.n.p = r;
+    } else o = t;
+    t.S.n = t.r;
+    if (void 0 !== t.r) t.r = void 0;
+    t = r;
   }
-  i.s = t;
+  i.s = o;
 }
-function a$1(i) {
-  c$1.call(this, void 0);
+function l$1(i) {
+  e.call(this, void 0);
   this.x = i;
   this.s = void 0;
-  this.g = r - 1;
+  this.g = f - 1;
   this.f = 4;
 }
-(a$1.prototype = new c$1()).h = function () {
+(l$1.prototype = new e()).h = function () {
   this.f &= -3;
   if (1 & this.f) return !1;
   if (32 == (36 & this.f)) return !0;
   this.f &= -5;
-  if (this.g === r) return !0;
-  this.g = r;
+  if (this.g === f) return !0;
+  this.g = f;
   this.f |= 1;
-  if (this.i > 0 && !d$1(this)) {
+  if (this.i > 0 && !c(this)) {
     this.f &= -2;
     return !0;
   }
-  const i = o;
+  var i = r;
   try {
-    v(this);
-    o = this;
-    const i = this.x();
-    if (16 & this.f || this.v !== i || 0 === this.i) {
-      this.v = i;
+    d$1(this);
+    r = this;
+    var t = this.x();
+    if (16 & this.f || this.v !== t || 0 === this.i) {
+      this.v = t;
       this.f &= -17;
       this.i++;
     }
@@ -324,42 +323,42 @@ function a$1(i) {
     this.f |= 16;
     this.i++;
   }
-  o = i;
-  l(this);
+  r = i;
+  a(this);
   this.f &= -2;
   return !0;
 };
-a$1.prototype.S = function (i) {
+l$1.prototype.S = function (i) {
   if (void 0 === this.t) {
     this.f |= 36;
-    for (let i = this.s; void 0 !== i; i = i.n) i.S.S(i);
+    for (var t = this.s; void 0 !== t; t = t.n) t.S.S(t);
   }
-  c$1.prototype.S.call(this, i);
+  e.prototype.S.call(this, i);
 };
-a$1.prototype.U = function (i) {
+l$1.prototype.U = function (i) {
   if (void 0 !== this.t) {
-    c$1.prototype.U.call(this, i);
+    e.prototype.U.call(this, i);
     if (void 0 === this.t) {
       this.f &= -33;
-      for (let i = this.s; void 0 !== i; i = i.n) i.S.U(i);
+      for (var t = this.s; void 0 !== t; t = t.n) t.S.U(t);
     }
   }
 };
-a$1.prototype.N = function () {
+l$1.prototype.N = function () {
   if (!(2 & this.f)) {
     this.f |= 6;
-    for (let i = this.t; void 0 !== i; i = i.x) i.t.N();
+    for (var i = this.t; void 0 !== i; i = i.x) i.t.N();
   }
 };
-a$1.prototype.peek = function () {
+l$1.prototype.peek = function () {
   if (!this.h()) i();
   if (16 & this.f) throw this.v;
   return this.v;
 };
-Object.defineProperty(a$1.prototype, "value", {
-  get() {
+Object.defineProperty(l$1.prototype, "value", {
+  get: function () {
     if (1 & this.f) i();
-    const t = e(this);
+    var t = v$1(this);
     this.h();
     if (void 0 !== t) t.i = this.i;
     if (16 & this.f) throw this.v;
@@ -367,38 +366,38 @@ Object.defineProperty(a$1.prototype, "value", {
   }
 });
 function w(i) {
-  return new a$1(i);
+  return new l$1(i);
 }
 function y(i) {
-  const n = i.u;
+  var o = i.u;
   i.u = void 0;
-  if ("function" == typeof n) {
-    h$1++;
-    const s = o;
-    o = void 0;
+  if ("function" == typeof o) {
+    h++;
+    var n = r;
+    r = void 0;
     try {
-      n();
+      o();
     } catch (t) {
       i.f &= -2;
       i.f |= 8;
       _(i);
       throw t;
     } finally {
-      o = s;
+      r = n;
       t();
     }
   }
 }
 function _(i) {
-  for (let t = i.s; void 0 !== t; t = t.n) t.S.U(t);
+  for (var t = i.s; void 0 !== t; t = t.n) t.S.U(t);
   i.x = void 0;
   i.s = void 0;
   y(i);
 }
 function p$1(i) {
-  if (o !== this) throw new Error("Out-of-order effect");
-  l(this);
-  o = i;
+  if (r !== this) throw new Error("Out-of-order effect");
+  a(this);
+  r = i;
   this.f &= -2;
   if (8 & this.f) _(this);
   t();
@@ -411,11 +410,11 @@ function g(i) {
   this.f = 32;
 }
 g.prototype.c = function () {
-  const i = this.S();
+  var i = this.S();
   try {
     if (8 & this.f) return;
     if (void 0 === this.x) return;
-    const t = this.x();
+    var t = this.x();
     if ("function" == typeof t) this.u = t;
   } finally {
     i();
@@ -426,17 +425,17 @@ g.prototype.S = function () {
   this.f |= 1;
   this.f &= -9;
   y(this);
-  v(this);
-  h$1++;
-  const t = o;
-  o = this;
+  d$1(this);
+  h++;
+  var t = r;
+  r = this;
   return p$1.bind(this, t);
 };
 g.prototype.N = function () {
   if (!(2 & this.f)) {
     this.f |= 2;
-    this.o = s;
-    s = this;
+    this.o = n;
+    n = this;
   }
 };
 g.prototype.d = function () {
@@ -444,7 +443,7 @@ g.prototype.d = function () {
   if (!(1 & this.f)) _(this);
 };
 function b(i) {
-  const t = new g(i);
+  var t = new g(i);
   try {
     t.c();
   } catch (i) {
@@ -454,48 +453,48 @@ function b(i) {
   return t.d.bind(t);
 }
 
-function c(t, e) {
-  l$2[t] = e.bind(null, l$2[t] || (() => {}));
+var v;
+function s(n, i) {
+  l$3[n] = i.bind(null, l$3[n] || function () {});
 }
-let a;
-function d(t) {
-  if (a) a();
-  a = t && t.S();
+function l(n) {
+  if (v) v();
+  v = n && n.S();
 }
-function p({
-  data: t
-}) {
-  const i = useSignal(t);
-  i.value = t;
-  const n = F(() => {
-    let t = this.__v;
-    while (t = t.__) if (t.__c) {
-      t.__c.__$f |= 4;
+function d(n) {
+  var r = this,
+    t = n.data,
+    f = useSignal(t);
+  f.value = t;
+  var o = F(function () {
+    var n = r.__v;
+    while (n = n.__) if (n.__c) {
+      n.__c.__$f |= 4;
       break;
     }
-    this.__$u.c = () => {
-      this.base.data = n.peek();
+    r.__$u.c = function () {
+      r.base.data = o.peek();
     };
-    return w(() => {
-      let t = i.value.value;
-      return 0 === t ? 0 : !0 === t ? "" : t || "";
+    return w(function () {
+      var n = f.value.value;
+      return 0 === n ? 0 : !0 === n ? "" : n || "";
     });
   }, []);
-  return n.value;
+  return o.value;
 }
-p.displayName = "_st";
-Object.defineProperties(c$1.prototype, {
+d.displayName = "_st";
+Object.defineProperties(e.prototype, {
   constructor: {
     configurable: !0,
     value: void 0
   },
   type: {
     configurable: !0,
-    value: p
+    value: d
   },
   props: {
     configurable: !0,
-    get() {
+    get: function () {
       return {
         data: this
       };
@@ -506,126 +505,123 @@ Object.defineProperties(c$1.prototype, {
     value: 1
   }
 });
-c("__b", (t, i) => {
-  if ("string" == typeof i.type) {
-    let t,
-      e = i.props;
-    for (let n in e) {
-      if ("children" === n) continue;
-      let o = e[n];
-      if (o instanceof c$1) {
-        if (!t) i.__np = t = {};
-        t[n] = o;
-        e[n] = o.peek();
+s("__b", function (n, r) {
+  if ("string" == typeof r.type) {
+    var i,
+      t = r.props;
+    for (var f in t) if ("children" !== f) {
+      var e$1 = t[f];
+      if (e$1 instanceof e) {
+        if (!i) r.__np = i = {};
+        i[f] = e$1;
+        t[f] = e$1.peek();
       }
     }
   }
-  t(i);
+  n(r);
 });
-c("__r", (t, i) => {
-  d();
-  let e,
-    n = i.__c;
-  if (n) {
-    n.__$f &= -2;
-    e = n.__$u;
-    if (void 0 === e) n.__$u = e = function (t) {
-      let i;
+s("__r", function (n, r) {
+  l();
+  var i,
+    t = r.__c;
+  if (t) {
+    t.__$f &= -2;
+    if (void 0 === (i = t.__$u)) t.__$u = i = function (n) {
+      var r;
       b(function () {
-        i = this;
+        r = this;
       });
-      i.c = () => {
-        n.__$f |= 1;
-        n.setState({});
+      r.c = function () {
+        t.__$f |= 1;
+        t.setState({});
       };
-      return i;
+      return r;
     }();
   }
-  d(e);
-  t(i);
+  l(i);
+  n(r);
 });
-c("__e", (t, i, e, n) => {
-  d();
-  t(i, e, n);
+s("__e", function (n, r, i, t) {
+  l();
+  n(r, i, t);
 });
-c("diffed", (t, i) => {
-  d();
-  let e;
-  if ("string" == typeof i.type && (e = i.__e)) {
-    let t = i.__np,
-      n = i.props;
+s("diffed", function (n, r) {
+  l();
+  var i;
+  if ("string" == typeof r.type && (i = r.__e)) {
+    var t = r.__np,
+      f = r.props;
     if (t) {
-      let i = e.U;
-      if (i) for (let e in i) {
-        let n = i[e];
-        if (void 0 !== n && !(e in t)) {
-          n.d();
-          i[e] = void 0;
+      var o = i.U;
+      if (o) for (var e in o) {
+        var u = o[e];
+        if (void 0 !== u && !(e in t)) {
+          u.d();
+          o[e] = void 0;
         }
-      } else {
-        i = {};
-        e.U = i;
-      }
-      for (let o in t) {
-        let r = i[o],
-          f = t[o];
-        if (void 0 === r) {
-          r = h(e, o, f, n);
-          i[o] = r;
-        } else r.o(f, n);
+      } else i.U = o = {};
+      for (var a in t) {
+        var v = o[a],
+          s = t[a];
+        if (void 0 === v) {
+          v = p(i, a, s, f);
+          o[a] = v;
+        } else v.o(s, f);
       }
     }
   }
-  t(i);
+  n(r);
 });
-function h(t, i, e, n) {
-  const o = i in t && void 0 === t.ownerSVGElement,
-    r = u(e);
+function p(n, r, i, t) {
+  var f = r in n && void 0 === n.ownerSVGElement,
+    o = u(i);
   return {
-    o: (t, i) => {
-      r.value = t;
-      n = i;
+    o: function (n, r) {
+      o.value = n;
+      t = r;
     },
-    d: b(() => {
-      const e = r.value.value;
-      if (n[i] !== e) {
-        n[i] = e;
-        if (o) t[i] = e;else if (e) t.setAttribute(i, e);else t.removeAttribute(i);
+    d: b(function () {
+      var i = o.value.value;
+      if (t[r] !== i) {
+        t[r] = i;
+        if (f) n[r] = i;else if (i) n.setAttribute(r, i);else n.removeAttribute(r);
       }
     })
   };
 }
-c("unmount", (t, i) => {
-  if ("string" == typeof i.type) {
-    let t = i.__e;
-    if (t) {
-      const i = t.U;
-      if (i) {
-        t.U = void 0;
-        for (let t in i) {
-          let e = i[t];
-          if (e) e.d();
+s("unmount", function (n, r) {
+  if ("string" == typeof r.type) {
+    var i = r.__e;
+    if (i) {
+      var t = i.U;
+      if (t) {
+        i.U = void 0;
+        for (var f in t) {
+          var o = t[f];
+          if (o) o.d();
         }
       }
     }
   } else {
-    let t = i.__c;
-    if (t) {
-      const i = t.__$u;
-      if (i) {
-        t.__$u = void 0;
-        i.d();
+    var e = r.__c;
+    if (e) {
+      var u = e.__$u;
+      if (u) {
+        e.__$u = void 0;
+        u.d();
       }
     }
   }
-  t(i);
+  n(r);
 });
-c("__h", (t, i, e, n) => {
-  if (n < 3) i.__$f |= 2;
-  t(i, e, n);
+s("__h", function (n, r, i, t) {
+  if (t < 3) r.__$f |= 2;
+  n(r, i, t);
 });
-function useSignal(t) {
-  return F(() => u(t), []);
+function useSignal(n) {
+  return F(function () {
+    return u(n);
+  }, []);
 }
 
 const paramsFromParentWindow = {};
@@ -748,24 +744,24 @@ const notifyExecutionResult = (execution, previousExecution) => {
       if (previousExecution.status === "completed") {
         notify("Broken", {
           ...notificationOptions,
-          body: `${executedFileRelativeUrl} execution now failing.`
+          body: "".concat(executedFileRelativeUrl, " execution now failing.")
         });
       } else {
         notify("Still failing", {
           ...notificationOptions,
-          body: `${executedFileRelativeUrl} execution still failing.`
+          body: "".concat(executedFileRelativeUrl, " execution still failing.")
         });
       }
     } else {
       notify("Failing", {
         ...notificationOptions,
-        body: `${executedFileRelativeUrl} execution failed.`
+        body: "".concat(executedFileRelativeUrl, " execution failed.")
       });
     }
   } else if (previousExecution && previousExecution.status === "failed") {
     notify("Fixed", {
       ...notificationOptions,
-      body: `${executedFileRelativeUrl} execution fixed.`
+      body: "".concat(executedFileRelativeUrl, " execution fixed.")
     });
   }
 };
@@ -1279,7 +1275,7 @@ const renderDocumentIndexLink = () => {
 };
 
 const enableVariant = (rootNode, variables) => {
-  const nodesNotMatching = Array.from(rootNode.querySelectorAll(`[${attributeIndicatingACondition}]`));
+  const nodesNotMatching = Array.from(rootNode.querySelectorAll("[".concat(attributeIndicatingACondition, "]")));
   nodesNotMatching.forEach(nodeNotMatching => {
     const conditionAttributeValue = nodeNotMatching.getAttribute(attributeIndicatingACondition);
     const matches = testCondition(conditionAttributeValue, variables);
@@ -1287,7 +1283,7 @@ const enableVariant = (rootNode, variables) => {
       renameAttribute(nodeNotMatching, attributeIndicatingACondition, attributeIndicatingAMatch);
     }
   });
-  const nodesMatching = Array.from(rootNode.querySelectorAll(`[${attributeIndicatingAMatch}]`));
+  const nodesMatching = Array.from(rootNode.querySelectorAll("[".concat(attributeIndicatingAMatch, "]")));
   nodesMatching.forEach(nodeMatching => {
     const conditionAttributeValue = nodeMatching.getAttribute(attributeIndicatingAMatch);
     const matches = testCondition(conditionAttributeValue, variables);
@@ -1325,8 +1321,8 @@ const parseCondition = conditionAttributeValue => {
     value: conditionAttributeValue.slice(colonIndex + 1)
   };
 };
-const attributeIndicatingACondition = `data-when`;
-const attributeIndicatingAMatch = `data-when-active`;
+const attributeIndicatingACondition = "data-when";
+const attributeIndicatingAMatch = "data-when-active";
 const renameAttribute = (node, name, newName) => {
   node.setAttribute(newName, node.getAttribute(name));
   node.removeAttribute(name);
@@ -1379,10 +1375,10 @@ const computeText = ({
   endTime
 }) => {
   if (status === "completed") {
-    return `Execution completed in ${endTime - startTime}ms`;
+    return "Execution completed in ".concat(endTime - startTime, "ms");
   }
   if (status === "failed") {
-    return `Execution failed in ${endTime - startTime}ms`;
+    return "Execution failed in ".concat(endTime - startTime, "ms");
   }
   if (status === "running") {
     return "Executing...";
@@ -1468,9 +1464,9 @@ const computeTooltipText = ({
 }) => {
   const changesCount = changes.length;
   if (changesCount === 1) {
-    return `There is <a href="javascript:void(0)">1</a> change to apply`;
+    return "There is <a href=\"javascript:void(0)\">1</a> change to apply";
   }
-  return `There is  <a href="javascript:void(0)">${changesCount}<a> changes to apply`;
+  return "There is  <a href=\"javascript:void(0)\">".concat(changesCount, "<a> changes to apply");
 };
 
 const parentServerEvents = window.parent.__server_events__;
@@ -1546,7 +1542,7 @@ const renderToolbarAutoreloadSetting = () => {
 };
 const disableAutoreloadSetting = () => {
   document.querySelector(".settings_autoreload").setAttribute("data-disabled", "true");
-  document.querySelector(".settings_autoreload").setAttribute("title", `Autoreload not enabled on server`);
+  document.querySelector(".settings_autoreload").setAttribute("title", "Autoreload not enabled on server");
   document.querySelector("#toggle_autoreload").disabled = true;
 };
 
@@ -1641,7 +1637,7 @@ const renderToolbarNotificationSetting = () => {
 const applyNotificationNotAvailableEffects = () => {
   const notifSetting = document.querySelector(".settings_notification");
   notifSetting.setAttribute("data-disabled", "true");
-  notifSetting.setAttribute("title", `Notification not available in the browser`);
+  notifSetting.setAttribute("title", "Notification not available in the browser");
   notifCheckbox.disabled = true;
 };
 const applyNotificationDefaultEffects = () => {
@@ -1654,7 +1650,7 @@ const applyNotificationDeniedEffects = () => {
   applyNotificationNOTGrantedEffects();
   const notifSetting = document.querySelector(".settings_notification");
   notifSetting.setAttribute("data-disabled", "true");
-  notifSetting.setAttribute("title", `Notification denied`);
+  notifSetting.setAttribute("title", "Notification denied");
 };
 const applyNotificationGrantedEffects = () => {
   enableVariant(document.querySelector(".notification_text"), {
