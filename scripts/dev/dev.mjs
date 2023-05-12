@@ -1,4 +1,5 @@
 import { requestCertificate } from "@jsenv/https-local";
+import { jsenvPluginExplorer } from "@jsenv/plugin-explorer";
 
 import { startDevServer } from "@jsenv/core";
 
@@ -15,23 +16,25 @@ await startDevServer({
   supervisor: {
     logs: true,
   },
-  explorer: {
-    groups: {
-      main: {
-        "./dev_exploring/main/**/*.html": true,
+  plugins: [
+    jsenvPluginExplorer({
+      groups: {
+        main: {
+          "./dev_exploring/main/**/*.html": true,
+        },
+        autoreload: {
+          "./dev_exploring/autoreload/**/*.html": true,
+        },
+        errors: {
+          "./dev_exploring/errors/**/*.html": true,
+        },
+        other: {
+          "./dev_exploring/other/**/*.html": true,
+        },
+        tests: {
+          "./tests/**/client/main.html": true,
+        },
       },
-      autoreload: {
-        "./dev_exploring/autoreload/**/*.html": true,
-      },
-      errors: {
-        "./dev_exploring/errors/**/*.html": true,
-      },
-      other: {
-        "./dev_exploring/other/**/*.html": true,
-      },
-      tests: {
-        "./tests/**/client/main.html": true,
-      },
-    },
-  },
+    }),
+  ],
 });
