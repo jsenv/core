@@ -80,52 +80,7 @@ const injectToolbar = async ({
     });
   });
   const div = document.createElement("div");
-  div.innerHTML = `
-<div id="jsenv_toolbar_trigger" style="display:none">
-  <svg id="jsenv_toolbar_trigger_icon">
-    <use xlink:href="${jsenvLogoSvgUrl}#jsenv_logo"></use>
-  </svg>
-  <style>
-    #jsenv_toolbar_trigger {
-      display: block;
-      overflow: hidden;
-      position: fixed;
-      z-index: 1000;
-      bottom: -32px;
-      right: 20px;
-      height: 40px;
-      width: 40px;
-      padding: 0;
-      margin: 0;
-      border-radius: 5px 5px 0 0;
-      border: 1px solid rgba(0, 0, 0, 0.33);
-      border-bottom: none;
-      box-shadow: 0px 0px 6px 2px rgba(0, 0, 0, 0.46);
-      background: transparent;
-      text-align: center;
-      transition: 600ms;
-    }
-
-    #jsenv_toolbar_trigger:hover {
-      cursor: pointer;
-    }
-
-    #jsenv_toolbar_trigger[data-expanded] {
-      bottom: 0;
-    }
-
-    #jsenv_toolbar_trigger_icon {
-      width: 35px;
-      height: 35px;
-      opacity: 0;
-      transition: 600ms;
-    }
-
-    #jsenv_toolbar_trigger[data-expanded] #jsenv_toolbar_trigger_icon {
-      opacity: 1;
-    }
-  </style>
-</div>`;
+  div.innerHTML = "\n<div id=\"jsenv_toolbar_trigger\" style=\"display:none\">\n  <svg id=\"jsenv_toolbar_trigger_icon\">\n    <use xlink:href=\"".concat(jsenvLogoSvgUrl, "#jsenv_logo\"></use>\n  </svg>\n  <style>\n    #jsenv_toolbar_trigger {\n      display: block;\n      overflow: hidden;\n      position: fixed;\n      z-index: 1000;\n      bottom: -32px;\n      right: 20px;\n      height: 40px;\n      width: 40px;\n      padding: 0;\n      margin: 0;\n      border-radius: 5px 5px 0 0;\n      border: 1px solid rgba(0, 0, 0, 0.33);\n      border-bottom: none;\n      box-shadow: 0px 0px 6px 2px rgba(0, 0, 0, 0.46);\n      background: transparent;\n      text-align: center;\n      transition: 600ms;\n    }\n\n    #jsenv_toolbar_trigger:hover {\n      cursor: pointer;\n    }\n\n    #jsenv_toolbar_trigger[data-expanded] {\n      bottom: 0;\n    }\n\n    #jsenv_toolbar_trigger_icon {\n      width: 35px;\n      height: 35px;\n      opacity: 0;\n      transition: 600ms;\n    }\n\n    #jsenv_toolbar_trigger[data-expanded] #jsenv_toolbar_trigger_icon {\n      opacity: 1;\n    }\n  </style>\n</div>");
   const toolbarTrigger = div.firstElementChild;
   iframe.parentNode.appendChild(toolbarTrigger);
   let timer;

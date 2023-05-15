@@ -1,4 +1,5 @@
 import { startDevServer } from "@jsenv/core";
+import { jsenvPluginExplorer } from "@jsenv/plugin-explorer";
 
 export const devServer = await startDevServer({
   logLevel: process.env.GENERATING_SNAPSHOTS ? "off" : undefined,
@@ -32,17 +33,17 @@ export const devServer = await startDevServer({
         }
       },
     },
+    jsenvPluginExplorer({
+      groups: {
+        stories: {
+          "./**/*.html": true,
+        },
+      },
+    }),
   ],
   outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
   // sourcemaps: "file",
   // sourcemapsSourcesProtocol: "source-maps://",
-  explorer: {
-    groups: {
-      stories: {
-        "./**/*.html": true,
-      },
-    },
-  },
   ribbon: false,
   clientAutoreload: false,
 });

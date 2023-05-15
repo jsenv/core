@@ -16,8 +16,6 @@ import { jsenvPluginNodeRuntime } from "./node_runtime/jsenv_plugin_node_runtime
 import { jsenvPluginImportMetaHot } from "./import_meta_hot/jsenv_plugin_import_meta_hot.js";
 import { jsenvPluginAutoreload } from "./autoreload/jsenv_plugin_autoreload.js";
 import { jsenvPluginCacheControl } from "./cache_control/jsenv_plugin_cache_control.js";
-// dev only
-import { jsenvPluginExplorer } from "./explorer/jsenv_plugin_explorer.js";
 // other
 import { jsenvPluginRibbon } from "./ribbon/jsenv_plugin_ribbon.js";
 
@@ -37,14 +35,10 @@ export const getCorePlugins = ({
   clientAutoreload = false,
   clientFileChangeCallbackList,
   clientFilesPruneCallbackList,
-  explorer,
   cacheControl,
   scenarioPlaceholders = true,
   ribbon = true,
 } = {}) => {
-  if (explorer === true) {
-    explorer = {};
-  }
   if (cacheControl === true) {
     cacheControl = {};
   }
@@ -99,7 +93,6 @@ export const getCorePlugins = ({
         ]
       : []),
     ...(cacheControl ? [jsenvPluginCacheControl(cacheControl)] : []),
-    ...(explorer ? [jsenvPluginExplorer(explorer)] : []),
     ...(ribbon ? [jsenvPluginRibbon({ rootDirectoryUrl, ...ribbon })] : []),
   ];
 };

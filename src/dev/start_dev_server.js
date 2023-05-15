@@ -55,7 +55,6 @@ export const startDevServer = async ({
   supervisor = true,
   fileSystemMagicRedirection,
   transpilation,
-  explorer = true, // see jsenv_plugin_explorer.js
   cacheControl = true,
   ribbon = true,
   // toolbar = false,
@@ -192,7 +191,6 @@ export const startDevServer = async ({
           transpilation,
           clientAutoreload,
           cooldownBetweenFileEvents,
-          explorer,
           cacheControl,
           ribbon,
           sourcemaps,

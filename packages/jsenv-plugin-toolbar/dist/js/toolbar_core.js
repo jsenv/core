@@ -748,24 +748,24 @@ const notifyExecutionResult = (execution, previousExecution) => {
       if (previousExecution.status === "completed") {
         notify("Broken", {
           ...notificationOptions,
-          body: `${executedFileRelativeUrl} execution now failing.`
+          body: "".concat(executedFileRelativeUrl, " execution now failing.")
         });
       } else {
         notify("Still failing", {
           ...notificationOptions,
-          body: `${executedFileRelativeUrl} execution still failing.`
+          body: "".concat(executedFileRelativeUrl, " execution still failing.")
         });
       }
     } else {
       notify("Failing", {
         ...notificationOptions,
-        body: `${executedFileRelativeUrl} execution failed.`
+        body: "".concat(executedFileRelativeUrl, " execution failed.")
       });
     }
   } else if (previousExecution && previousExecution.status === "failed") {
     notify("Fixed", {
       ...notificationOptions,
-      body: `${executedFileRelativeUrl} execution fixed.`
+      body: "".concat(executedFileRelativeUrl, " execution fixed.")
     });
   }
 };
@@ -1279,7 +1279,7 @@ const renderDocumentIndexLink = () => {
 };
 
 const enableVariant = (rootNode, variables) => {
-  const nodesNotMatching = Array.from(rootNode.querySelectorAll(`[${attributeIndicatingACondition}]`));
+  const nodesNotMatching = Array.from(rootNode.querySelectorAll("[".concat(attributeIndicatingACondition, "]")));
   nodesNotMatching.forEach(nodeNotMatching => {
     const conditionAttributeValue = nodeNotMatching.getAttribute(attributeIndicatingACondition);
     const matches = testCondition(conditionAttributeValue, variables);
@@ -1287,7 +1287,7 @@ const enableVariant = (rootNode, variables) => {
       renameAttribute(nodeNotMatching, attributeIndicatingACondition, attributeIndicatingAMatch);
     }
   });
-  const nodesMatching = Array.from(rootNode.querySelectorAll(`[${attributeIndicatingAMatch}]`));
+  const nodesMatching = Array.from(rootNode.querySelectorAll("[".concat(attributeIndicatingAMatch, "]")));
   nodesMatching.forEach(nodeMatching => {
     const conditionAttributeValue = nodeMatching.getAttribute(attributeIndicatingAMatch);
     const matches = testCondition(conditionAttributeValue, variables);
@@ -1325,8 +1325,8 @@ const parseCondition = conditionAttributeValue => {
     value: conditionAttributeValue.slice(colonIndex + 1)
   };
 };
-const attributeIndicatingACondition = `data-when`;
-const attributeIndicatingAMatch = `data-when-active`;
+const attributeIndicatingACondition = "data-when";
+const attributeIndicatingAMatch = "data-when-active";
 const renameAttribute = (node, name, newName) => {
   node.setAttribute(newName, node.getAttribute(name));
   node.removeAttribute(name);
@@ -1379,10 +1379,10 @@ const computeText = ({
   endTime
 }) => {
   if (status === "completed") {
-    return `Execution completed in ${endTime - startTime}ms`;
+    return "Execution completed in ".concat(endTime - startTime, "ms");
   }
   if (status === "failed") {
-    return `Execution failed in ${endTime - startTime}ms`;
+    return "Execution failed in ".concat(endTime - startTime, "ms");
   }
   if (status === "running") {
     return "Executing...";
@@ -1468,9 +1468,9 @@ const computeTooltipText = ({
 }) => {
   const changesCount = changes.length;
   if (changesCount === 1) {
-    return `There is <a href="javascript:void(0)">1</a> change to apply`;
+    return "There is <a href=\"javascript:void(0)\">1</a> change to apply";
   }
-  return `There is  <a href="javascript:void(0)">${changesCount}<a> changes to apply`;
+  return "There is  <a href=\"javascript:void(0)\">".concat(changesCount, "<a> changes to apply");
 };
 
 const parentServerEvents = window.parent.__server_events__;
@@ -1546,7 +1546,7 @@ const renderToolbarAutoreloadSetting = () => {
 };
 const disableAutoreloadSetting = () => {
   document.querySelector(".settings_autoreload").setAttribute("data-disabled", "true");
-  document.querySelector(".settings_autoreload").setAttribute("title", `Autoreload not enabled on server`);
+  document.querySelector(".settings_autoreload").setAttribute("title", "Autoreload not enabled on server");
   document.querySelector("#toggle_autoreload").disabled = true;
 };
 
@@ -1641,7 +1641,7 @@ const renderToolbarNotificationSetting = () => {
 const applyNotificationNotAvailableEffects = () => {
   const notifSetting = document.querySelector(".settings_notification");
   notifSetting.setAttribute("data-disabled", "true");
-  notifSetting.setAttribute("title", `Notification not available in the browser`);
+  notifSetting.setAttribute("title", "Notification not available in the browser");
   notifCheckbox.disabled = true;
 };
 const applyNotificationDefaultEffects = () => {
@@ -1654,7 +1654,7 @@ const applyNotificationDeniedEffects = () => {
   applyNotificationNOTGrantedEffects();
   const notifSetting = document.querySelector(".settings_notification");
   notifSetting.setAttribute("data-disabled", "true");
-  notifSetting.setAttribute("title", `Notification denied`);
+  notifSetting.setAttribute("title", "Notification denied");
 };
 const applyNotificationGrantedEffects = () => {
   enableVariant(document.querySelector(".notification_text"), {

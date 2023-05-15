@@ -128,8 +128,8 @@ export const build = async ({
   handleSIGINT = true,
   logLevel = "info",
   sourceDirectoryUrl,
-  entryPoints = {},
   buildDirectoryUrl,
+  entryPoints = {},
   assetsDirectory = "",
 
   runtimeCompat = defaultRuntimeCompat,

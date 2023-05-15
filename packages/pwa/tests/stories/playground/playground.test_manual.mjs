@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { startTestServer } from "@jsenv/pwa/tests/start_test_server.mjs";
+import { jsenvPluginExplorer } from "@jsenv/plugin-explorer";
 
 await startTestServer({
   logLevel: "info",
@@ -13,13 +14,15 @@ await startTestServer({
   },
   clientAutoreload: false,
   cacheControl: false,
-  explorer: {
-    groups: {
-      client: {
-        "./*.html": true,
+  plugins: [
+    jsenvPluginExplorer({
+      groups: {
+        client: {
+          "./*.html": true,
+        },
       },
-    },
-  },
+    }),
+  ],
   services: [
     {
       name: "test",

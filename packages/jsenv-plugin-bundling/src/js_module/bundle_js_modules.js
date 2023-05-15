@@ -6,7 +6,7 @@ import { createDetailedMessage } from "@jsenv/log";
 import { sourcemapConverter } from "@jsenv/sourcemap";
 import { globalThisClientFileUrl } from "@jsenv/core/src/plugins/transpilation/babel/global_this/babel_plugin_global_this_as_jsenv_import.js";
 
-import { fileUrlConverter } from "./file_url_converter.js";
+import { fileUrlConverter } from "../file_url_converter.js";
 
 export const bundleJsModules = async ({
   jsModuleUrlInfos,
