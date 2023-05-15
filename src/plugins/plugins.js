@@ -52,7 +52,6 @@ export const getCorePlugins = ({
   if (clientAutoreload === true) {
     clientAutoreload = {};
   }
-
   if (ribbon === true) {
     ribbon = {};
   }

@@ -137,8 +137,9 @@ export const build = async ({
   plugins = [],
   sourcemaps = "none",
   sourcemapsSourcesContent,
+  nodeEsmResolution,
+  webResolution,
   urlAnalysis = {},
-  urlResolution,
   fileSystemMagicRedirection,
   directoryReferenceAllowed,
   scenarioPlaceholders,
@@ -339,8 +340,9 @@ build ${entryPointKeys.length} entry points`);
           urlGraph: rawGraph,
           runtimeCompat,
 
+          nodeEsmResolution,
+          webResolution,
           urlAnalysis,
-          urlResolution,
           fileSystemMagicRedirection,
           directoryReferenceAllowed,
           transpilation: {
