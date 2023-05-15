@@ -53,7 +53,7 @@ export const jsenvPluginNodeEsmResolution = (resolutionConfig = {}) => {
         };
       }
     },
-    resolveUrl: (reference, context) => {
+    resolveReference: (reference, context) => {
       const urlType = urlTypeFromReference(reference, context);
       const resolver = resolvers[urlType];
       return resolver ? resolver(reference, context) : null;

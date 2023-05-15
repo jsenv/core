@@ -5,28 +5,13 @@ export const jsenvPluginDataUrls = () => {
   return {
     name: "jsenv:data_urls",
     appliesDuring: "*",
-    resolveUrl: (reference) => {
+    resolveReference: (reference) => {
       if (!reference.specifier.startsWith("data:")) {
         return null;
       }
       return reference.specifier;
     },
-    fetchUrlContent: (urlInfo) => {
-      if (!urlInfo.url.startsWith("data:")) {
-        return null;
-      }
-      const {
-        contentType,
-        base64Flag,
-        data: urlData,
-      } = DATA_URL.parse(urlInfo.url);
-      urlInfo.data.base64Flag = base64Flag;
-      return {
-        content: contentFromUrlData({ contentType, base64Flag, urlData }),
-        contentType,
-      };
-    },
-    formatUrl: (reference, context) => {
+    formatReference: (reference, context) => {
       if (!reference.generatedUrl.startsWith("data:")) {
         return null;
       }
@@ -48,6 +33,21 @@ export const jsenvPluginDataUrls = () => {
         });
         return specifier;
       })();
+    },
+    fetchUrlContent: (urlInfo) => {
+      if (!urlInfo.url.startsWith("data:")) {
+        return null;
+      }
+      const {
+        contentType,
+        base64Flag,
+        data: urlData,
+      } = DATA_URL.parse(urlInfo.url);
+      urlInfo.data.base64Flag = base64Flag;
+      return {
+        content: contentFromUrlData({ contentType, base64Flag, urlData }),
+        contentType,
+      };
     },
   };
 };

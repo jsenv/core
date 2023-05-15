@@ -57,7 +57,7 @@ export const jsenvPluginImportmap = () => {
   return {
     name: "jsenv:importmap",
     appliesDuring: "*",
-    resolveUrl: {
+    resolveReference: {
       js_import: (reference) => {
         if (!finalImportmap) {
           return null;

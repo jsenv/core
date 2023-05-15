@@ -111,7 +111,7 @@ export const jsenvPluginFileUrls = ({
     {
       name: "jsenv:filesystem_resolution",
       appliesDuring: "*",
-      resolveUrl: {
+      resolveReference: {
         filesystem: (reference, context) => {
           const { parentUrl } = reference;
           const parentUrlInfo = context.urlGraph.getUrlInfo(parentUrl);
@@ -129,14 +129,14 @@ export const jsenvPluginFileUrls = ({
       // so absolute file urls needs to be relativized
       // during build it's fine to use file:// urls
       appliesDuring: "dev",
-      resolveUrl: (reference) => {
+      resolveReference: (reference) => {
         if (reference.specifier.startsWith("/@fs/")) {
           const fsRootRelativeUrl = reference.specifier.slice("/@fs/".length);
           return `file:///${fsRootRelativeUrl}`;
         }
         return null;
       },
-      formatUrl: (reference, context) => {
+      formatReference: (reference, context) => {
         if (!reference.generatedUrl.startsWith("file:")) {
           return null;
         }

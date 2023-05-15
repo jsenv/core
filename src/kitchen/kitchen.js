@@ -209,18 +209,18 @@ export const createKitchen = ({
         resolveReference(reference, context),
     };
     try {
-      let resolvedUrl = pluginController.callHooksUntil(
-        "resolveUrl",
+      let url = pluginController.callHooksUntil(
+        "resolveReference",
         reference,
         referenceContext,
       );
-      if (!resolvedUrl) {
+      if (!url) {
         throw new Error(`NO_RESOLVE`);
       }
-      if (resolvedUrl.includes("?debug")) {
+      if (url.includes("?debug")) {
         reference.debug = true;
       }
-      resolvedUrl = normalizeUrl(resolvedUrl);
+      url = normalizeUrl(url);
       let referencedUrlObject;
       let searchParams;
       const onReferenceUrlChange = (referenceUrl) => {
@@ -229,7 +229,7 @@ export const createKitchen = ({
         reference.url = referenceUrl;
         reference.searchParams = searchParams;
       };
-      onReferenceUrlChange(resolvedUrl);
+      onReferenceUrlChange(url);
 
       if (reference.debug) {
         logger.debug(`url resolved by "${
@@ -240,7 +240,7 @@ ${ANSI.color(reference.url, ANSI.YELLOW)}
 `);
       }
       pluginController.callHooks(
-        "redirectUrl",
+        "redirectReference",
         reference,
         referenceContext,
         (returnValue, plugin) => {
@@ -273,7 +273,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       // But do not represent an other resource, it is considered as
       // the same resource under the hood
       pluginController.callHooks(
-        "transformUrlSearchParams",
+        "transformReferenceSearchParams",
         reference,
         referenceContext,
         (returnValue) => {
@@ -284,7 +284,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         },
       );
       const returnValue = pluginController.callHooksUntil(
-        "formatUrl",
+        "formatReference",
         reference,
         referenceContext,
       );

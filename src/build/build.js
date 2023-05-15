@@ -407,7 +407,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         {
           name: "jsenv:build",
           appliesDuring: "build",
-          resolveUrl: (reference) => {
+          resolveReference: (reference) => {
             const getUrl = () => {
               if (reference.type === "filesystem") {
                 const parentRawUrl = buildDirectoryRedirections.get(
@@ -431,8 +431,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             url = bundleInternalRedirections.get(url) || url;
             return url;
           },
-          // redirecting urls into the build directory
-          redirectUrl: (reference) => {
+          // redirecting references into the build directory
+          redirectReference: (reference) => {
             if (!reference.url.startsWith("file:")) {
               return null;
             }
@@ -581,7 +581,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             });
             return buildUrl;
           },
-          formatUrl: (reference) => {
+          formatReference: (reference) => {
             if (!reference.generatedUrl.startsWith("file:")) {
               if (!versioning && reference.generatedUrl.startsWith("ignore:")) {
                 return reference.generatedUrl.slice("ignore:".length);
@@ -1194,7 +1194,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               {
                 name: "jsenv:versioning",
                 appliesDuring: "build",
-                resolveUrl: (reference) => {
+                resolveReference: (reference) => {
                   const buildUrl = buildUrls.get(reference.specifier);
                   if (buildUrl) {
                     return buildUrl;
@@ -1220,7 +1220,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   }
                   return url;
                 },
-                formatUrl: (reference) => {
+                formatReference: (reference) => {
                   if (!reference.shouldHandle) {
                     if (reference.generatedUrl.startsWith("ignore:")) {
                       return reference.generatedUrl.slice("ignore:".length);

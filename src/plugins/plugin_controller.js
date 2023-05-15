@@ -3,12 +3,12 @@ import { performance } from "node:perf_hooks";
 const HOOK_NAMES = [
   "init",
   "serve", // is called only during dev/tests
-  "resolveUrl",
-  "redirectUrl",
+  "resolveReference",
+  "redirectReference",
+  "transformReferenceSearchParams",
+  "formatReference",
   "fetchUrlContent",
   "transformUrlContent",
-  "transformUrlSearchParams",
-  "formatUrl",
   "finalizeUrlContent",
   "bundle", // is called only during build
   "optimizeUrlContent", // is called only during build

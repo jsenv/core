@@ -34,7 +34,7 @@ export const jsenvPluginWebResolution = (resolutionConfig = {}) => {
   return {
     name: "jsenv:web_resolution",
     appliesDuring: "*",
-    resolveUrl: (reference, context) => {
+    resolveReference: (reference, context) => {
       const urlType = urlTypeFromReference(reference, context);
       const resolver = resolvers[urlType];
       return resolver
