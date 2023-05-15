@@ -7,9 +7,12 @@ await build({
   entryPoints: {
     "./jsenv_plugin_explorer.js": "jsenv_plugin_explorer.js",
   },
-  base: "./",
   runtimeCompat: {
     node: "16.2.0",
+    chrome: "64",
+    edge: "79",
+    firefox: "67",
+    safari: "11.3",
   },
   urlAnalysis: {
     include: {
@@ -19,9 +22,4 @@ await build({
   },
   plugins: [jsenvPluginBundling()],
   versioning: false,
-  subbuild: {
-    "./client/explorer.html": () => {
-      return {};
-    },
-  },
 });

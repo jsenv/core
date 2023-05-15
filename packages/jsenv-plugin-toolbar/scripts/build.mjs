@@ -7,7 +7,13 @@ await build({
   entryPoints: {
     "./jsenv_plugin_toolbar.js": "jsenv_plugin_toolbar.js",
   },
-  base: "./",
+  runtimeCompat: {
+    node: "16.2.0",
+    chrome: "64",
+    edge: "79",
+    firefox: "67",
+    safari: "11.3",
+  },
   urlAnalysis: {
     include: {
       "/**/*": true,

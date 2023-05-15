@@ -16,7 +16,6 @@
  *  - injecting urls into service workers
  */
 
-import { URL_META } from "@jsenv/url-meta";
 import {
   injectQueryParams,
   setUrlFilename,
@@ -79,7 +78,6 @@ import {
   injectVersionMappingsAsImportmap,
 } from "./version_mappings_injection.js";
 import { createVersionGenerator } from "./version_generator.js";
-import { urlToFilename } from "@jsenv/core/packages/node-esm-resolution/src/url_utils.js";
 
 // default runtimeCompat corresponds to
 // "we can keep <script type="module"> intact":
@@ -133,7 +131,6 @@ export const build = async ({
   buildDirectoryUrl,
   entryPoints = {},
   assetsDirectory = "",
-  subbuild = {},
 
   runtimeCompat = defaultRuntimeCompat,
   base = runtimeCompat.node ? "./" : "/",
@@ -245,56 +242,6 @@ export const build = async ({
     }
   }
 
-  let jsenvPluginSubbuild;
-  {
-    const associations = URL_META.resolveAssociations(
-      {
-        subbuildParamsGetter: subbuild,
-      },
-      sourceDirectoryUrl,
-    );
-    jsenvPluginSubbuild = {
-      name: "jsenv:subbuild",
-      appliesDuring: "build",
-      transformUrlContent: async (urlInfo) => {
-        const { subbuildParamsGetter } = URL_META.applyAssociations({
-          url: urlInfo.url,
-          associations,
-        });
-        if (subbuildParamsGetter) {
-          const subbuildParams = subbuildParamsGetter(urlInfo);
-          if (subbuildParams) {
-            const sourceRelativeUrl = urlToRelativeUrl(
-              urlInfo.url,
-              sourceDirectoryUrl,
-            );
-            const filename = urlToFilename(urlInfo.url);
-            const { buildFileContents } = await build({
-              sourceDirectoryUrl,
-              buildDirectoryUrl,
-              writeOnFileSystem: false,
-              entryPoints: {
-                [`./${sourceRelativeUrl}`]: filename,
-              },
-              ...subbuildParams,
-            });
-            // When building for Node.js referencing html files
-            // html files will be "rebuilt" during the Node.js build
-            // ideally we should keep them separated so that is skips the build
-            // phase, maybe a flag like builded: true
-            // for now it's fine because the second pass on html files with
-            // build configured for Node.js will have no effect
-            return {
-              content: buildFileContents[filename],
-              contentType: urlInfo.contentType,
-            };
-          }
-        }
-        return null;
-      },
-    };
-  }
-
   const asFormattedBuildUrl = (generatedUrl, reference) => {
     if (base === "./") {
       const urlRelativeToParent = urlToRelativeUrl(
@@ -370,7 +317,6 @@ build ${entryPointKeys.length} entry points`);
       ...contextSharedDuringBuild,
       plugins: [
         ...plugins,
-        jsenvPluginSubbuild,
         {
           appliesDuring: "build",
           fetchUrlContent: (urlInfo, context) => {

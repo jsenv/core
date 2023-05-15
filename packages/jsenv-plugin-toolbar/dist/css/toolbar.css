@@ -60,7 +60,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, [data-contains-hidde
   width: 100%;
   height: 100%;
   filter: url(#better-blur);
-  background-color: rgba(0, 0, 0, .2);
+  background-color: #0003;
   position: fixed;
   top: 0;
   left: 0;
@@ -223,9 +223,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, [data-contains-hidde
 }
 
 .server_indicator_ring {
-  stroke: rgba(206, 206, 206, .46);
+  stroke: #cecece75;
   stroke-width: 4px;
-  fill: rgba(0, 0, 0, 0);
+  fill: #0000;
   transform-origin: center;
   animation: 1.2s ease-out infinite pulse;
 }
@@ -312,7 +312,7 @@ html[data-theme="light"] .tooltip_action {
 }
 
 html[data-theme="light"] .tooltip:after {
-  border-color: #8a919a rgba(0, 0, 0, 0) rgba(0, 0, 0, 0);
+  border-color: #8a919a #0000 #0000;
 }
 
 html[data-theme="light"] #menu_overflow_button {
@@ -528,7 +528,7 @@ label {
 .switch input + * {
   width: 100%;
   height: 100%;
-  border: 1px solid rgba(0, 0, 0, 0);
+  border: 1px solid #0000;
   position: relative;
 }
 
@@ -543,7 +543,7 @@ label {
 
 .settings_box_item[data-disabled] {
   cursor: default;
-  background-color: rgba(12, 17, 27, .4);
+  background-color: #0c111b66;
 }
 
 .settings_box_item[data-disabled] .category_title, .settings_box_item[data-disabled] .switch, .settings_box_item[data-disabled] .category_subtitle {
@@ -635,7 +635,7 @@ label {
 
 .tooltip:after {
   content: "";
-  border: 5px solid rgba(0, 0, 0, 0);
+  border: 5px solid #0000;
   border-top-color: #5e5e5e;
   position: absolute;
   top: 100%;
@@ -723,7 +723,7 @@ label {
 }
 
 #file[data-active] {
-  background: rgba(31, 38, 44, .72);
+  background: #1f262cb8;
 }
 
 #settings[data-active] button {
