@@ -4,6 +4,7 @@ import { jsenvPluginReferenceExpectedTypes } from "./jsenv_plugin_reference_expe
 import { jsenvPluginDirectoryReferenceAnalysis } from "./directory/jsenv_plugin_directory_reference_analysis.js";
 import { jsenvPluginDataUrlsAnalysis } from "./data_urls/jsenv_plugin_data_urls_analysis.js";
 import { jsenvPluginHtmlReferenceAnalysis } from "./html/jsenv_plugin_html_reference_analysis.js";
+import { jsenvPluginWebmanifestReferenceAnalysis } from "./webmanifest/jsenv_plugin_webmanifest_reference_analysis.js";
 import { jsenvPluginCssReferenceAnalysis } from "./css/jsenv_plugin_css_reference_analysis.js";
 import { jsenvPluginJsReferenceAnalysis } from "./js/jsenv_plugin_js_reference_analysis.js";
 
@@ -23,6 +24,7 @@ export const jsenvPluginReferenceAnalysis = ({
       inlineContent,
       inlineConvertedScript,
     }),
+    jsenvPluginWebmanifestReferenceAnalysis(),
     jsenvPluginCssReferenceAnalysis(),
     jsenvPluginJsReferenceAnalysis({
       inlineContent,
