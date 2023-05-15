@@ -28,6 +28,7 @@ export const createKitchen = ({
   logLevel,
 
   rootDirectoryUrl,
+  mainFilePath,
   urlGraph,
   dev = false,
   build = false,
@@ -49,6 +50,7 @@ export const createKitchen = ({
     signal,
     logger,
     rootDirectoryUrl,
+    mainFilePath,
     urlGraph,
     dev,
     build,
@@ -77,6 +79,30 @@ export const createKitchen = ({
   };
   pushPlugins(plugins);
 
+  /*
+   *  * - "http_request"
+   * - "entry_point"
+   * - "link_href"
+   * - "style"
+   * - "script"
+   * - "a_href"
+   * - "iframe_src
+   * - "img_src"
+   * - "img_srcset"
+   * - "source_src"
+   * - "source_srcset"
+   * - "image_href"
+   * - "use_href"
+   * - "css_@import"
+   * - "css_url"
+   * - "js_import"
+   * - "js_import_script"
+   * - "js_url"
+   * - "js_inline_content"
+   * - "sourcemap_comment"
+   * - "webmanifest_icon_src"
+   * - "package_json"
+   * */
   const createReference = ({
     data = {},
     node,

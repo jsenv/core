@@ -98,11 +98,11 @@ export const defaultRuntimeCompat = {
  * @param {Object} buildParameters
  * @param {string|url} buildParameters.sourceDirectoryUrl
  *        Directory containing source files
+ * @param {string|url} buildParameters.buildDirectoryUrl
+ *        Directory where optimized files will be written
  * @param {object} buildParameters.entryPoints
  *        Object where keys are paths to source files and values are their future name in the build directory.
  *        Keys are relative to sourceDirectoryUrl
- * @param {string|url} buildParameters.buildDirectoryUrl
- *        Directory where optimized files will be written
  * @param {object} buildParameters.runtimeCompat
  *        Code generated will be compatible with these runtimes
  * @param {string} [buildParameters.assetsDirectory=""]

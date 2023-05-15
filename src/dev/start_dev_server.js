@@ -24,7 +24,7 @@ import { createFileService } from "./file_service.js";
  */
 export const startDevServer = async ({
   sourceDirectoryUrl,
-  sourceMainFilePath,
+  sourceMainFilePath = "./index.html",
   port = 3456,
   hostname,
   acceptAnyIp,
@@ -77,6 +77,11 @@ export const startDevServer = async ({
       sourceDirectoryUrl,
       "sourceDirectoryUrl",
     );
+    if (typeof sourceMainFilePath !== "string") {
+      throw new TypeError(
+        `sourceMainFilePath must be a string, got ${sourceMainFilePath}`,
+      );
+    }
     if (outDirectoryUrl === undefined) {
       if (!process.env.CI) {
         const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);

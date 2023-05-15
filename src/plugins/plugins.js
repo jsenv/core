@@ -1,6 +1,7 @@
 import { jsenvPluginUrlAnalysis } from "./url_analysis/jsenv_plugin_url_analysis.js";
 import { jsenvPluginImportmap } from "./importmap/jsenv_plugin_importmap.js";
-import { jsenvPluginUrlResolution } from "./url_resolution/jsenv_plugin_url_resolution.js";
+import { jsenvPluginNodeEsmResolution } from "./resolution_node_esm/jsenv_plugin_node_esm_resolution.js";
+import { jsenvPluginWebResolution } from "./resolution_web/jsenv_plugin_web_resolution.js";
 import { jsenvPluginUrlVersion } from "./url_version/jsenv_plugin_url_version.js";
 import { jsenvPluginFileUrls } from "./file_urls/jsenv_plugin_file_urls.js";
 import { jsenvPluginHttpUrls } from "./http_urls/jsenv_plugin_http_urls.js";
@@ -21,11 +22,11 @@ import { jsenvPluginRibbon } from "./ribbon/jsenv_plugin_ribbon.js";
 
 export const getCorePlugins = ({
   rootDirectoryUrl,
-  defaultFileUrl,
   runtimeCompat,
 
+  nodeEsmResolution = {},
+  webResolution = {},
   urlAnalysis = {},
-  urlResolution = {},
   fileSystemMagicRedirection,
   directoryReferenceAllowed,
   supervisor,
@@ -65,16 +66,23 @@ export const getCorePlugins = ({
     jsenvPluginInlineContentAnalysis(), // before "file urls" to resolve and load inline urls
     ...(inlining ? [jsenvPluginInlining()] : []),
     ...(supervisor ? [jsenvPluginSupervisor(supervisor)] : []), // after inline as it needs inline script to be cooked
+
+    /* When resolving references the following applies by default:
+       - http urls are resolved by jsenvPluginHttpUrls
+       - reference.type === "filesystem" -> resolved by jsenv_plugin_file_urls.js
+       - reference inside a js module -> resolved by node esm
+       - All the rest uses web standard url resolution
+     */
     jsenvPluginFileUrls({
       directoryReferenceAllowed,
       ...fileSystemMagicRedirection,
     }),
     jsenvPluginHttpUrls(),
-    jsenvPluginUrlResolution({
-      runtimeCompat,
-      defaultFileUrl,
-      urlResolution,
-    }),
+    ...(nodeEsmResolution
+      ? [jsenvPluginNodeEsmResolution(nodeEsmResolution)]
+      : []),
+    jsenvPluginWebResolution(webResolution),
+
     jsenvPluginUrlVersion(),
     jsenvPluginCommonJsGlobals(),
     jsenvPluginImportMetaScenarios(),
