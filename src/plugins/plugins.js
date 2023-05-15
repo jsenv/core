@@ -2,7 +2,7 @@ import { jsenvPluginUrlAnalysis } from "./url_analysis/jsenv_plugin_url_analysis
 import { jsenvPluginImportmap } from "./importmap/jsenv_plugin_importmap.js";
 import { jsenvPluginNodeEsmResolution } from "./resolution_node_esm/jsenv_plugin_node_esm_resolution.js";
 import { jsenvPluginWebResolution } from "./resolution_web/jsenv_plugin_web_resolution.js";
-import { jsenvPluginUrlVersion } from "./url_version/jsenv_plugin_url_version.js";
+import { jsenvPluginVersionSearchParam } from "./version_search_param/jsenv_plugin_version_search_param.js";
 import { jsenvPluginFileUrls } from "./file_urls/jsenv_plugin_file_urls.js";
 import { jsenvPluginHttpUrls } from "./http_urls/jsenv_plugin_http_urls.js";
 import { jsenvPluginInlineContentAnalysis } from "./inline_content_analysis/jsenv_plugin_inline_content_analysis.js";
@@ -82,7 +82,7 @@ export const getCorePlugins = ({
       : []),
     jsenvPluginWebResolution(webResolution),
 
-    jsenvPluginUrlVersion(),
+    jsenvPluginVersionSearchParam(),
     jsenvPluginCommonJsGlobals(),
     jsenvPluginImportMetaScenarios(),
     ...(scenarioPlaceholders ? [jsenvPluginGlobalScenarios()] : []),
