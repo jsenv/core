@@ -9132,7 +9132,7 @@ const createKitchen = ({
   pushPlugins(plugins);
 
   /*
-   *  * - "http_request"
+   * - "http_request"
    * - "entry_point"
    * - "link_href"
    * - "style"
@@ -17579,6 +17579,16 @@ const createNodeEsmResolver = ({
     if (reference.type === "package_json") {
       return reference.specifier;
     }
+    if (reference.specifier === "/") {
+      const {
+        mainFilePath,
+        rootDirectoryUrl
+      } = context;
+      return String(new URL(mainFilePath, rootDirectoryUrl));
+    }
+    if (reference.specifier[0] === "/") {
+      return new URL(reference.specifier.slice(1), context.rootDirectoryUrl).href;
+    }
     const parentUrl = reference.baseUrl || reference.parentUrl;
     if (!parentUrl.startsWith("file:")) {
       return new URL(reference.specifier, parentUrl).href;
@@ -17688,6 +17698,7 @@ const jsenvPluginNodeEsmResolution = (resolutionConfig = {}) => {
   });
   return {
     name: "jsenv:node_esm_resolution",
+    appliesDuring: "*",
     init: ({
       runtimeCompat
     }) => {
@@ -17758,15 +17769,10 @@ const jsenvPluginWebResolution = (resolutionConfig = {}) => {
   return {
     name: "jsenv:web_resolution",
     appliesDuring: "*",
-    init: () => {
-      if (!resolvers["*"]) {
-        resolvers["*"] = resolveUsingWebResolution;
-      }
-    },
     resolveUrl: (reference, context) => {
       const urlType = urlTypeFromReference(reference, context);
-      const resolver = resolvers[urlType] || resolvers["*"];
-      return resolver(reference, context);
+      const resolver = resolvers[urlType];
+      return resolver ? resolver(reference, context) : resolveUsingWebResolution(reference, context);
     }
   };
 };
@@ -21595,10 +21601,9 @@ const build = async ({
   runtimeCompat = defaultRuntimeCompat,
   base = runtimeCompat.node ? "./" : "/",
   plugins = [],
-  sourcemaps = "none",
-  sourcemapsSourcesContent,
   urlAnalysis = {},
-  urlResolution,
+  nodeEsmResolution,
+  webResolution,
   fileSystemMagicRedirection,
   directoryReferenceAllowed,
   scenarioPlaceholders,
@@ -21612,6 +21617,8 @@ const build = async ({
   cooldownBetweenFileEvents,
   watch = false,
   directoryToClean,
+  sourcemaps = "none",
+  sourcemapsSourcesContent,
   writeOnFileSystem = true,
   outDirectoryUrl,
   assetManifest = versioningMethod === "filename",
@@ -21750,7 +21757,8 @@ build ${entryPointKeys.length} entry points`);
         urlGraph: rawGraph,
         runtimeCompat,
         urlAnalysis,
-        urlResolution,
+        nodeEsmResolution,
+        webResolution,
         fileSystemMagicRedirection,
         directoryReferenceAllowed,
         transpilation: {
@@ -23109,7 +23117,8 @@ const createFileService = ({
   runtimeCompat,
   plugins,
   urlAnalysis,
-  urlResolution,
+  nodeEsmResolution,
+  webResolution,
   fileSystemMagicRedirection,
   supervisor,
   transpilation,
@@ -23185,7 +23194,8 @@ const createFileService = ({
         rootDirectoryUrl: sourceDirectoryUrl,
         runtimeCompat,
         urlAnalysis,
-        urlResolution,
+        nodeEsmResolution,
+        webResolution,
         fileSystemMagicRedirection,
         supervisor,
         transpilation,
@@ -23523,7 +23533,8 @@ const startDevServer = async ({
   runtimeCompat = defaultRuntimeCompat,
   plugins = [],
   urlAnalysis = {},
-  urlResolution,
+  nodeEsmResolution,
+  webResolution,
   supervisor = true,
   fileSystemMagicRedirection,
   transpilation,
@@ -23641,7 +23652,8 @@ const startDevServer = async ({
         runtimeCompat,
         plugins,
         urlAnalysis,
-        urlResolution,
+        nodeEsmResolution,
+        webResolution,
         fileSystemMagicRedirection,
         supervisor,
         transpilation,
