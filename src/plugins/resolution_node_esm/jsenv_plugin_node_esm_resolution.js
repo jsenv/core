@@ -35,6 +35,7 @@ export const jsenvPluginNodeEsmResolution = (resolutionConfig = {}) => {
 
   return {
     name: "jsenv:node_esm_resolution",
+    appliesDuring: "*",
     init: ({ runtimeCompat }) => {
       nodeEsmResolverDefault = createNodeEsmResolver({
         runtimeCompat,

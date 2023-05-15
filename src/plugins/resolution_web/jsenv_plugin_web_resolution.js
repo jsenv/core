@@ -34,15 +34,12 @@ export const jsenvPluginWebResolution = (resolutionConfig = {}) => {
   return {
     name: "jsenv:web_resolution",
     appliesDuring: "*",
-    init: () => {
-      if (!resolvers["*"]) {
-        resolvers["*"] = resolveUsingWebResolution;
-      }
-    },
     resolveUrl: (reference, context) => {
       const urlType = urlTypeFromReference(reference, context);
-      const resolver = resolvers[urlType] || resolvers["*"];
-      return resolver(reference, context);
+      const resolver = resolvers[urlType];
+      return resolver
+        ? resolver(reference, context)
+        : resolveUsingWebResolution(reference, context);
     },
   };
 };

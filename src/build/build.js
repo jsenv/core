@@ -135,11 +135,9 @@ export const build = async ({
   runtimeCompat = defaultRuntimeCompat,
   base = runtimeCompat.node ? "./" : "/",
   plugins = [],
-  sourcemaps = "none",
-  sourcemapsSourcesContent,
+  urlAnalysis = {},
   nodeEsmResolution,
   webResolution,
-  urlAnalysis = {},
   fileSystemMagicRedirection,
   directoryReferenceAllowed,
   scenarioPlaceholders,
@@ -154,6 +152,8 @@ export const build = async ({
   watch = false,
 
   directoryToClean,
+  sourcemaps = "none",
+  sourcemapsSourcesContent,
   writeOnFileSystem = true,
   outDirectoryUrl,
   assetManifest = versioningMethod === "filename",
@@ -340,9 +340,9 @@ build ${entryPointKeys.length} entry points`);
           urlGraph: rawGraph,
           runtimeCompat,
 
+          urlAnalysis,
           nodeEsmResolution,
           webResolution,
-          urlAnalysis,
           fileSystemMagicRedirection,
           directoryReferenceAllowed,
           transpilation: {

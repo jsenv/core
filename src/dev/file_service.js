@@ -26,9 +26,9 @@ export const createFileService = ({
   runtimeCompat,
 
   plugins,
+  urlAnalysis,
   nodeEsmResolution,
   webResolution,
-  urlAnalysis,
   fileSystemMagicRedirection,
   supervisor,
   transpilation,
@@ -114,9 +114,9 @@ export const createFileService = ({
           rootDirectoryUrl: sourceDirectoryUrl,
           runtimeCompat,
 
+          urlAnalysis,
           nodeEsmResolution,
           webResolution,
-          urlAnalysis,
           fileSystemMagicRedirection,
           supervisor,
           transpilation,
