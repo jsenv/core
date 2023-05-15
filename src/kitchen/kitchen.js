@@ -68,16 +68,9 @@ export const createKitchen = ({
     outDirectoryUrl,
   };
   const pluginController = createPluginController(kitchenContext);
-  const pushPlugins = (plugins) => {
-    plugins.forEach((pluginEntry) => {
-      if (Array.isArray(pluginEntry)) {
-        pushPlugins(pluginEntry);
-      } else {
-        pluginController.pushPlugin(pluginEntry);
-      }
-    });
-  };
-  pushPlugins(plugins);
+  plugins.forEach((pluginEntry) => {
+    pluginController.pushPlugin(pluginEntry);
+  });
 
   /*
    * - "http_request"

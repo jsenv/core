@@ -5,7 +5,7 @@ import { isWebWorkerUrlInfo } from "@jsenv/core/src/kitchen/web_workers.js";
 import { jsenvPluginJsInlineContentAnalysis } from "./jsenv_plugin_js_inline_content_analysis.js";
 
 export const jsenvPluginJsReferenceAnalysis = ({
-  inlineContentAnalysis,
+  inlineContent,
   allowEscapeForVersioning,
 }) => {
   return [
@@ -17,7 +17,7 @@ export const jsenvPluginJsReferenceAnalysis = ({
         js_module: parseAndTransformJsUrls,
       },
     },
-    ...(inlineContentAnalysis
+    ...(inlineContent
       ? [jsenvPluginJsInlineContentAnalysis({ allowEscapeForVersioning })]
       : []),
   ];

@@ -13,7 +13,7 @@ import {
 import { jsenvPluginHtmlInlineContentAnalysis } from "./jsenv_plugin_html_inline_content_analysis.js";
 
 export const jsenvPluginHtmlReferenceAnalysis = ({
-  inlineContentAnalysis,
+  inlineContent,
   inlineConvertedScriptAnalysis,
 }) => {
   return [
@@ -24,7 +24,7 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
         html: parseAndTransformHtmlUrls,
       },
     },
-    ...(inlineContentAnalysis
+    ...(inlineContent
       ? [
           jsenvPluginHtmlInlineContentAnalysis({
             inlineConvertedScriptAnalysis,

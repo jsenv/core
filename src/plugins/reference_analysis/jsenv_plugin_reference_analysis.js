@@ -16,61 +16,8 @@ export const jsenvPluginReferenceAnalysis = ({
   fetchInlineUrls = true,
   allowEscapeForVersioning = false,
 }) => {
-  // eslint-disable-next-line no-unused-vars
-  let getIncludeInfo = (url) => undefined;
-
   return [
-    {
-      name: "jsenv:reference_analysis",
-      appliesDuring: "*",
-      init: ({ rootDirectoryUrl }) => {
-        if (include) {
-          const associations = URL_META.resolveAssociations(
-            { include },
-            rootDirectoryUrl,
-          );
-          getIncludeInfo = (url) => {
-            const { include } = URL_META.applyAssociations({
-              url,
-              associations,
-            });
-            return include;
-          };
-        }
-      },
-      redirectReference: (reference) => {
-        if (reference.shouldHandle !== undefined) {
-          return;
-        }
-        if (
-          reference.specifier[0] === "#" &&
-          // For Html, css and in general "#" refer to a resource in the page
-          // so that urls must be kept intact
-          // However for js import specifiers they have a different meaning and we want
-          // to resolve them (https://nodejs.org/api/packages.html#imports for instance)
-          reference.type !== "js_import"
-        ) {
-          reference.shouldHandle = false;
-          return;
-        }
-        const includeInfo = getIncludeInfo(reference.url);
-        if (includeInfo === true) {
-          reference.shouldHandle = true;
-          return;
-        }
-        if (includeInfo === false) {
-          reference.shouldHandle = false;
-          return;
-        }
-        const { protocol } = new URL(reference.url);
-        const protocolIsSupported = supportedProtocols.some(
-          (supportedProtocol) => protocol === supportedProtocol,
-        );
-        if (protocolIsSupported) {
-          reference.shouldHandle = true;
-        }
-      },
-    },
+    jsenvPluginReferenceAnalysisInclude({ include, supportedProtocols }),
     jsenvPluginDirectoryReferenceAnalysis(),
     jsenvPluginHtmlReferenceAnalysis({
       inlineContent,
@@ -87,6 +34,66 @@ export const jsenvPluginReferenceAnalysis = ({
       : []),
     jsenvPluginReferenceExpectedTypes(),
   ];
+};
+
+const jsenvPluginReferenceAnalysisInclude = ({
+  include,
+  supportedProtocols,
+}) => {
+  // eslint-disable-next-line no-unused-vars
+  let getIncludeInfo = (url) => undefined;
+
+  return {
+    name: "jsenv:reference_analysis_include",
+    appliesDuring: "*",
+    init: ({ rootDirectoryUrl }) => {
+      if (include) {
+        const associations = URL_META.resolveAssociations(
+          { include },
+          rootDirectoryUrl,
+        );
+        getIncludeInfo = (url) => {
+          const { include } = URL_META.applyAssociations({
+            url,
+            associations,
+          });
+          return include;
+        };
+      }
+    },
+    redirectReference: (reference) => {
+      if (reference.shouldHandle !== undefined) {
+        return;
+      }
+      if (
+        reference.specifier[0] === "#" &&
+        // For Html, css and in general "#" refer to a resource in the page
+        // so that urls must be kept intact
+        // However for js import specifiers they have a different meaning and we want
+        // to resolve them (https://nodejs.org/api/packages.html#imports for instance)
+        reference.type !== "js_import"
+      ) {
+        reference.shouldHandle = false;
+        return;
+      }
+      const includeInfo = getIncludeInfo(reference.url);
+      if (includeInfo === true) {
+        reference.shouldHandle = true;
+        return;
+      }
+      if (includeInfo === false) {
+        reference.shouldHandle = false;
+        return;
+      }
+      const { protocol } = new URL(reference.url);
+      const protocolIsSupported = supportedProtocols.some(
+        (supportedProtocol) => protocol === supportedProtocol,
+      );
+      if (protocolIsSupported) {
+        reference.shouldHandle = true;
+      }
+    },
+  };
 };
 
 const jsenvPluginInlineContentFetcher = () => {
