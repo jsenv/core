@@ -1,9 +1,9 @@
 import { DATA_URL } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 
-export const jsenvPluginDataUrls = () => {
+export const jsenvPluginDataUrlsAnalysis = () => {
   return {
-    name: "jsenv:data_urls",
+    name: "jsenv:data_urls_analysis",
     appliesDuring: "*",
     resolveReference: (reference) => {
       if (!reference.specifier.startsWith("data:")) {

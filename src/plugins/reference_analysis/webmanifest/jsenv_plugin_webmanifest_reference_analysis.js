@@ -1,4 +1,16 @@
-export const parseAndTransformWebmanifestUrls = async (urlInfo, context) => {
+// css: parseAndTransformCssUrls,
+
+export const jsenvPluginWebmanifestReferenceAnalysis = () => {
+  return {
+    name: "jsenv:webmanifest_reference_analysis",
+    appliesDuring: "*",
+    transformUrlContent: {
+      webmanifest: parseAndTransformWebmanifestUrls,
+    },
+  };
+};
+
+const parseAndTransformWebmanifestUrls = async (urlInfo, context) => {
   const content = urlInfo.content;
   const manifest = JSON.parse(content);
   const actions = [];

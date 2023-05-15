@@ -5,7 +5,6 @@ import { jsenvPluginWebResolution } from "./resolution_web/jsenv_plugin_web_reso
 import { jsenvPluginVersionSearchParam } from "./version_search_param/jsenv_plugin_version_search_param.js";
 import { jsenvPluginFileUrls } from "./file_urls/jsenv_plugin_file_urls.js";
 import { jsenvPluginHttpUrls } from "./http_urls/jsenv_plugin_http_urls.js";
-import { jsenvPluginInlineContentAnalysis } from "./inline_content_analysis/jsenv_plugin_inline_content_analysis.js";
 import { jsenvPluginInlining } from "./inlining/jsenv_plugin_inlining.js";
 import { jsenvPluginSupervisor } from "./supervisor/jsenv_plugin_supervisor.js";
 import { jsenvPluginCommonJsGlobals } from "./commonjs_globals/jsenv_plugin_commonjs_globals.js";
@@ -57,15 +56,9 @@ export const getCorePlugins = ({
   }
 
   return [
-    jsenvPluginReferenceAnalysis({
-      rootDirectoryUrl,
-      ...referenceAnalysis,
-    }),
+    jsenvPluginReferenceAnalysis(referenceAnalysis),
     jsenvPluginTranspilation(transpilation),
     jsenvPluginImportmap(),
-    // before node esm to handle bare specifiers
-    // + before node esm to handle importmap before inline content
-    jsenvPluginInlineContentAnalysis(), // before "file urls" to resolve and load inline urls
     ...(inlining ? [jsenvPluginInlining()] : []),
     ...(supervisor ? [jsenvPluginSupervisor(supervisor)] : []), // after inline as it needs inline script to be cooked
 

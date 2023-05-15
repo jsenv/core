@@ -2,8 +2,28 @@ import { createMagicSource } from "@jsenv/sourcemap";
 import { parseJsUrls } from "@jsenv/ast";
 
 import { isWebWorkerUrlInfo } from "@jsenv/core/src/kitchen/web_workers.js";
+import { jsenvPluginJsInlineContentAnalysis } from "./jsenv_plugin_js_inline_content_analysis.js";
 
-export const parseAndTransformJsUrls = async (urlInfo, context) => {
+export const jsenvPluginJsReferenceAnalysis = ({
+  inlineContentAnalysis,
+  allowEscapeForVersioning,
+}) => {
+  return [
+    {
+      name: "jsenv:js_reference_analysis",
+      appliesDuring: "*",
+      transformUrlContent: {
+        js_classic: parseAndTransformJsUrls,
+        js_module: parseAndTransformJsUrls,
+      },
+    },
+    ...(inlineContentAnalysis
+      ? [jsenvPluginJsInlineContentAnalysis({ allowEscapeForVersioning })]
+      : []),
+  ];
+};
+
+const parseAndTransformJsUrls = async (urlInfo, context) => {
   const jsMentions = await parseJsUrls({
     js: urlInfo.content,
     url: urlInfo.originalUrl,

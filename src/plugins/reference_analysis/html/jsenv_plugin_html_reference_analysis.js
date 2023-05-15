@@ -10,7 +10,31 @@ import {
   stringifyHtmlAst,
 } from "@jsenv/ast";
 
-export const parseAndTransformHtmlUrls = async (urlInfo, context) => {
+import { jsenvPluginHtmlInlineContentAnalysis } from "./jsenv_plugin_html_inline_content_analysis.js";
+
+export const jsenvPluginHtmlReferenceAnalysis = ({
+  inlineContentAnalysis,
+  inlineConvertedScriptAnalysis,
+}) => {
+  return [
+    {
+      name: "jsenv:html_reference_analysis",
+      appliesDuring: "*",
+      transformUrlContent: {
+        html: parseAndTransformHtmlUrls,
+      },
+    },
+    ...(inlineContentAnalysis
+      ? [
+          jsenvPluginHtmlInlineContentAnalysis({
+            inlineConvertedScriptAnalysis,
+          }),
+        ]
+      : []),
+  ];
+};
+
+const parseAndTransformHtmlUrls = async (urlInfo, context) => {
   const url = urlInfo.originalUrl;
   const content = urlInfo.content;
   const htmlAst = parseHtmlString(content, {

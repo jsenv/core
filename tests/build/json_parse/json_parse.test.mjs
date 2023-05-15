@@ -8,10 +8,10 @@ import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 const { buildInlineContents } = await build({
   logLevel: "warn",
   sourceDirectoryUrl: new URL("./client/", import.meta.url),
+  buildDirectoryUrl: new URL("./dist/", import.meta.url),
   entryPoints: {
     "./main.html": "main.html",
   },
-  buildDirectoryUrl: new URL("./dist/", import.meta.url),
   versioning: false,
   runtimeCompat: { chrome: "89" },
   plugins: [jsenvPluginMinification()],

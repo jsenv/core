@@ -66,7 +66,6 @@ import {
 } from "../kitchen/web_workers.js";
 import { jsenvPluginReferenceAnalysis } from "../plugins/reference_analysis/jsenv_plugin_reference_analysis.js";
 import { jsenvPluginInlining } from "../plugins/inlining/jsenv_plugin_inlining.js";
-import { jsenvPluginInlineContentAnalysis } from "../plugins/inline_content_analysis/jsenv_plugin_inline_content_analysis.js";
 import { jsenvPluginJsModuleFallback } from "../plugins/transpilation/js_module_fallback/jsenv_plugin_js_module_fallback.js";
 import { getCorePlugins } from "../plugins/plugins.js";
 import { jsenvPluginLineBreakNormalization } from "./jsenv_plugin_line_break_normalization.js";
@@ -381,10 +380,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     const bundleUrlInfos = {};
     const bundlers = {};
     const finalGraph = createUrlGraph();
-    const referenceAnalysisPlugin = jsenvPluginReferenceAnalysis({
-      rootDirectoryUrl: sourceDirectoryUrl,
-      ...referenceAnalysis,
-    });
     const finalGraphKitchen = createKitchen({
       logLevel,
       rootDirectoryUrl: buildDirectoryUrl,
@@ -393,15 +388,15 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       runtimeCompat,
       ...contextSharedDuringBuild,
       plugins: [
-        referenceAnalysisPlugin,
+        jsenvPluginReferenceAnalysis({
+          ...referenceAnalysis,
+          fetchInlineUrls: false,
+        }),
         ...(lineBreakNormalization
           ? [jsenvPluginLineBreakNormalization()]
           : []),
         jsenvPluginJsModuleFallback({
           systemJsInjection: true,
-        }),
-        jsenvPluginInlineContentAnalysis({
-          fetchInlineUrls: false,
         }),
         jsenvPluginInlining(),
         {
@@ -1185,10 +1180,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             runtimeCompat,
             ...contextSharedDuringBuild,
             plugins: [
-              referenceAnalysisPlugin,
-              jsenvPluginInlineContentAnalysis({
+              jsenvPluginReferenceAnalysis({
+                ...referenceAnalysis,
                 fetchInlineUrls: false,
-                analyzeConvertedScripts: true, // to be able to version their urls
+                inlineConvertedScript: true, // to be able to version their urls
                 allowEscapeForVersioning: true,
               }),
               {

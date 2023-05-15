@@ -103,7 +103,7 @@ export const jsenvPluginImportAssertions = ({
 
 const jsenvPluginAsModules = () => {
   const inlineContentClientFileUrl = new URL(
-    "../../inline_content_analysis/client/inline_content.js",
+    "../../reference_analysis/inline_content.js",
     import.meta.url,
   ).href;
 

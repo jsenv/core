@@ -1,34 +1,43 @@
 import { URL_META } from "@jsenv/url-meta";
-import { urlToRelativeUrl } from "@jsenv/urls";
 
 import { jsenvPluginReferenceExpectedTypes } from "./jsenv_plugin_reference_expected_types.js";
-import { parseAndTransformHtmlUrls } from "./html/html_urls.js";
-import { parseAndTransformCssUrls } from "./css/css_urls.js";
-import { parseAndTransformJsUrls } from "./js/js_urls.js";
-import { parseAndTransformWebmanifestUrls } from "./webmanifest/webmanifest_urls.js";
+import { jsenvPluginDirectoryReferenceAnalysis } from "./directory/jsenv_plugin_directory_reference_analysis.js";
+import { jsenvPluginDataUrlsAnalysis } from "./data_urls/jsenv_plugin_data_urls_analysis.js";
+import { jsenvPluginHtmlReferenceAnalysis } from "./html/jsenv_plugin_html_reference_analysis.js";
+import { jsenvPluginCssReferenceAnalysis } from "./css/jsenv_plugin_css_reference_analysis.js";
+import { jsenvPluginJsReferenceAnalysis } from "./js/jsenv_plugin_js_reference_analysis.js";
 
 export const jsenvPluginReferenceAnalysis = ({
-  rootDirectoryUrl,
   include,
   supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"],
+
+  inlineContent = true,
+  inlineConvertedScript = false,
+  fetchInlineUrls = true,
+  allowEscapeForVersioning = false,
 }) => {
   // eslint-disable-next-line no-unused-vars
   let getIncludeInfo = (url) => undefined;
-  if (include) {
-    const associations = URL_META.resolveAssociations(
-      { include },
-      rootDirectoryUrl,
-    );
-    getIncludeInfo = (url) => {
-      const { include } = URL_META.applyAssociations({ url, associations });
-      return include;
-    };
-  }
 
   return [
     {
       name: "jsenv:reference_analysis",
       appliesDuring: "*",
+      init: ({ rootDirectoryUrl }) => {
+        if (include) {
+          const associations = URL_META.resolveAssociations(
+            { include },
+            rootDirectoryUrl,
+          );
+          getIncludeInfo = (url) => {
+            const { include } = URL_META.applyAssociations({
+              url,
+              associations,
+            });
+            return include;
+          };
+        }
+      },
       redirectReference: (reference) => {
         if (reference.shouldHandle !== undefined) {
           return;
@@ -61,56 +70,39 @@ export const jsenvPluginReferenceAnalysis = ({
           reference.shouldHandle = true;
         }
       },
-      transformUrlContent: {
-        html: parseAndTransformHtmlUrls,
-        css: parseAndTransformCssUrls,
-        js_classic: parseAndTransformJsUrls,
-        js_module: parseAndTransformJsUrls,
-        webmanifest: parseAndTransformWebmanifestUrls,
-        directory: (urlInfo, context) => {
-          const originalDirectoryReference = findOriginalDirectoryReference(
-            urlInfo,
-            context,
-          );
-          const directoryRelativeUrl = urlToRelativeUrl(
-            urlInfo.url,
-            context.rootDirectoryUrl,
-          );
-          JSON.parse(urlInfo.content).forEach((directoryEntryName) => {
-            context.referenceUtils.found({
-              type: "filesystem",
-              subtype: "directory_entry",
-              specifier: directoryEntryName,
-              trace: {
-                message: `"${directoryRelativeUrl}${directoryEntryName}" entry in directory referenced by ${originalDirectoryReference.trace.message}`,
-              },
-            });
-          });
-        },
-      },
     },
+    jsenvPluginDirectoryReferenceAnalysis(),
+    jsenvPluginHtmlReferenceAnalysis({
+      inlineContent,
+      inlineConvertedScript,
+    }),
+    jsenvPluginCssReferenceAnalysis(),
+    jsenvPluginJsReferenceAnalysis({
+      inlineContent,
+      allowEscapeForVersioning,
+    }),
+    ...(inlineContent ? [jsenvPluginDataUrlsAnalysis()] : []),
+    ...(inlineContent && fetchInlineUrls
+      ? [jsenvPluginInlineContentFetcher()]
+      : []),
     jsenvPluginReferenceExpectedTypes(),
   ];
 };
 
-const findOriginalDirectoryReference = (urlInfo, context) => {
-  const findNonFileSystemAncestor = (urlInfo) => {
-    for (const dependentUrl of urlInfo.dependents) {
-      const dependentUrlInfo = context.urlGraph.getUrlInfo(dependentUrl);
-      if (dependentUrlInfo.type !== "directory") {
-        return [dependentUrlInfo, urlInfo];
+const jsenvPluginInlineContentFetcher = () => {
+  return {
+    name: "jsenv:inline_content_fetcher",
+    appliesDuring: "*",
+    fetchUrlContent: (urlInfo) => {
+      if (!urlInfo.isInline) {
+        return null;
       }
-      const found = findNonFileSystemAncestor(dependentUrlInfo);
-      if (found) {
-        return found;
-      }
-    }
-    return [];
+      return {
+        // we want to fetch the original content otherwise we might re-cook
+        // content already cooked
+        content: urlInfo.originalContent,
+        contentType: urlInfo.contentType,
+      };
+    },
   };
-  const [ancestor, child] = findNonFileSystemAncestor(urlInfo);
-  if (!ancestor) {
-    return null;
-  }
-  const ref = ancestor.references.find((ref) => ref.url === child.url);
-  return ref;
 };

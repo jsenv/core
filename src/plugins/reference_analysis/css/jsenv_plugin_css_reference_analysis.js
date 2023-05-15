@@ -5,7 +5,17 @@
 import { parseCssUrls } from "@jsenv/ast";
 import { createMagicSource } from "@jsenv/sourcemap";
 
-export const parseAndTransformCssUrls = async (urlInfo, context) => {
+export const jsenvPluginCssReferenceAnalysis = () => {
+  return {
+    name: "jsenv:css_reference_analysis",
+    appliesDuring: "*",
+    transformUrlContent: {
+      css: parseAndTransformCssUrls,
+    },
+  };
+};
+
+const parseAndTransformCssUrls = async (urlInfo, context) => {
   const cssUrls = await parseCssUrls({
     css: urlInfo.content,
     url: urlInfo.originalUrl,
