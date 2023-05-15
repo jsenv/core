@@ -10,13 +10,6 @@ export const jsenvPluginReferenceExpectedTypes = () => {
     }
     if (searchParams.has("js_classic")) {
       reference.expectedType = "js_classic";
-    } else if (
-      searchParams.has("js_module_fallback") ||
-      searchParams.has("as_js_classic")
-    ) {
-      reference.expectedType = "js_classic";
-    } else if (searchParams.has("as_js_module")) {
-      reference.expectedType = "js_module";
     } else if (searchParams.has("js_module")) {
       reference.expectedType = "js_module";
     } else if (

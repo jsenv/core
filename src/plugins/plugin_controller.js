@@ -25,7 +25,7 @@ export const createPluginController = (kitchenContext) => {
   const hookGroups = {};
   const addPlugin = (plugin, { position = "end" }) => {
     if (Array.isArray(plugin)) {
-      if (position === "end") {
+      if (position === "start") {
         plugin = plugin.slice().reverse();
       }
       plugin.forEach((plugin) => {
