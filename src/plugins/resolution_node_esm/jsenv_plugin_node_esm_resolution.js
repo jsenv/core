@@ -54,8 +54,8 @@ export const jsenvPluginNodeEsmResolution = (resolutionConfig = {}) => {
     },
     resolveUrl: (reference, context) => {
       const urlType = urlTypeFromReference(reference, context);
-      const resolver = resolvers[urlType] || resolvers["*"];
-      return resolver(reference, context);
+      const resolver = resolvers[urlType];
+      return resolver ? resolver(reference, context) : null;
     },
     // when specifier is prefixed by "file:///@ignore/"
     // we return an empty js module

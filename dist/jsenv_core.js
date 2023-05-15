@@ -1881,80 +1881,6 @@ const comparePathnames = (leftPathame, rightPathname) => {
   return 0;
 };
 
-const collectFiles = async ({
-  signal = new AbortController().signal,
-  directoryUrl,
-  associations,
-  predicate
-}) => {
-  const rootDirectoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl);
-  if (typeof predicate !== "function") {
-    throw new TypeError(`predicate must be a function, got ${predicate}`);
-  }
-  associations = URL_META.resolveAssociations(associations, rootDirectoryUrl);
-  const collectOperation = Abort.startOperation();
-  collectOperation.addAbortSignal(signal);
-  const matchingFileResultArray = [];
-  const visitDirectory = async directoryUrl => {
-    collectOperation.throwIfAborted();
-    const directoryItems = await readDirectory(directoryUrl);
-    await Promise.all(directoryItems.map(async directoryItem => {
-      const directoryChildNodeUrl = `${directoryUrl}${directoryItem}`;
-      collectOperation.throwIfAborted();
-      const directoryChildNodeStats = await readEntryStat(directoryChildNodeUrl, {
-        // we ignore symlink because recursively traversed
-        // so symlinked file will be discovered.
-        // Moreover if they lead outside of directoryPath it can become a problem
-        // like infinite recursion of whatever.
-        // that we could handle using an object of pathname already seen but it will be useless
-        // because directoryPath is recursively traversed
-        followLink: false
-      });
-      if (directoryChildNodeStats.isDirectory()) {
-        const subDirectoryUrl = `${directoryChildNodeUrl}/`;
-        if (!URL_META.urlChildMayMatch({
-          url: subDirectoryUrl,
-          associations,
-          predicate
-        })) {
-          return;
-        }
-        await visitDirectory(subDirectoryUrl);
-        return;
-      }
-      if (directoryChildNodeStats.isFile()) {
-        const meta = URL_META.applyAssociations({
-          url: directoryChildNodeUrl,
-          associations
-        });
-        if (!predicate(meta)) return;
-        const relativeUrl = urlToRelativeUrl(directoryChildNodeUrl, rootDirectoryUrl);
-        matchingFileResultArray.push({
-          url: new URL(relativeUrl, rootDirectoryUrl).href,
-          relativeUrl: decodeURIComponent(relativeUrl),
-          meta,
-          fileStats: directoryChildNodeStats
-        });
-        return;
-      }
-    }));
-  };
-  try {
-    await visitDirectory(rootDirectoryUrl);
-
-    // When we operate on thoose files later it feels more natural
-    // to perform operation in the same order they appear in the filesystem.
-    // It also allow to get a predictable return value.
-    // For that reason we sort matchingFileResultArray
-    matchingFileResultArray.sort((leftFile, rightFile) => {
-      return comparePathnames(leftFile.relativeUrl, rightFile.relativeUrl);
-    });
-    return matchingFileResultArray;
-  } finally {
-    await collectOperation.end();
-  }
-};
-
 // https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_fspromises_mkdir_path_options
 const {
   mkdir
@@ -7856,7 +7782,7 @@ const createUrlInfo = url => {
     dependents: new Set(),
     implicitUrls: new Set(),
     type: undefined,
-    // "html", "css", "js_classic", "js_module", "importmap", "json", "webmanifest", ...
+    // "html", "css", "js_classic", "js_module", "importmap", "sourcemap", "json", "webmanifest", ...
     subtype: undefined,
     // "worker", "service_worker", "shared_worker" for js, otherwise undefined
     typeHint: undefined,
@@ -9151,6 +9077,7 @@ const createKitchen = ({
   signal,
   logLevel,
   rootDirectoryUrl,
+  mainFilePath,
   urlGraph,
   dev = false,
   build = false,
@@ -9175,6 +9102,7 @@ const createKitchen = ({
     signal,
     logger,
     rootDirectoryUrl,
+    mainFilePath,
     urlGraph,
     dev,
     build,
@@ -9202,6 +9130,31 @@ const createKitchen = ({
     });
   };
   pushPlugins(plugins);
+
+  /*
+   *  * - "http_request"
+   * - "entry_point"
+   * - "link_href"
+   * - "style"
+   * - "script"
+   * - "a_href"
+   * - "iframe_src
+   * - "img_src"
+   * - "img_srcset"
+   * - "source_src"
+   * - "source_srcset"
+   * - "image_href"
+   * - "use_href"
+   * - "css_@import"
+   * - "css_url"
+   * - "js_import"
+   * - "js_import_script"
+   * - "js_url"
+   * - "js_inline_content"
+   * - "sourcemap_comment"
+   * - "webmanifest_icon_src"
+   * - "package_json"
+   * */
   const createReference = ({
     data = {},
     node,
@@ -10846,10 +10799,19 @@ const jsenvPluginInliningAsDataUrl = () => {
           await context.cook(urlInfo, {
             reference
           });
+          const contentAsBase64 = Buffer.from(urlInfo.content).toString("base64");
           const specifier = DATA_URL.stringify({
             mediaType: urlInfo.contentType,
             base64Flag: true,
-            data: Buffer.from(urlInfo.content).toString("base64")
+            data: contentAsBase64
+          });
+          context.referenceUtils.becomesInline(reference, {
+            line: reference.line,
+            column: reference.column,
+            isOriginal: reference.isOriginal,
+            specifier,
+            content: contentAsBase64,
+            contentType: urlInfo.contentType
           });
           return specifier;
         })();
@@ -16636,6 +16598,20 @@ const jsenvPluginImportmap = () => {
   };
 };
 
+const urlTypeFromReference = (reference, context) => {
+  if (reference.type === "sourcemap_comment") {
+    return "sourcemap";
+  }
+  if (reference.injected) {
+    return reference.expectedType;
+  }
+  const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl);
+  if (parentUrlInfo) {
+    return parentUrlInfo.type;
+  }
+  return "entry_point";
+};
+
 const isSpecifierForNodeBuiltin = specifier => {
   return specifier.startsWith("node:") || NODE_BUILTIN_MODULE_SPECIFIERS.includes(specifier);
 };
@@ -17681,126 +17657,63 @@ const addRelationshipWithPackageJson = ({
   }
 };
 
-/*
- * This plugin is responsible to resolve urls except for a few cases:
- * - A custom plugin implements a resolveUrl hook returning something
- * - The reference.type is "filesystem" -> it is handled by jsenv_plugin_file_urls.js
- *
- * By default node esm resolution applies inside js modules
- * and the rest uses the web standard url resolution (new URL):
- * - "http_request"
- * - "entry_point"
- * - "link_href"
- * - "style"
- * - "script"
- * - "a_href"
- * - "iframe_src
- * - "img_src"
- * - "img_srcset"
- * - "source_src"
- * - "source_srcset"
- * - "image_href"
- * - "use_href"
- * - "css_@import"
- * - "css_url"
- * - "js_import"
- * - "js_import_script"
- * - "js_url"
- * - "js_inline_content"
- * - "sourcemap_comment"
- * - "webmanifest_icon_src"
- * - "package_json"
- */
-const jsenvPluginUrlResolution = ({
-  runtimeCompat,
-  defaultFileUrl,
-  urlResolution
-}) => {
-  const resolveUrlUsingWebResolution = reference => {
-    return new URL(reference.specifier,
-    // baseUrl happens second argument to new URL() is different from
-    // import.meta.url or document.currentScript.src
-    reference.baseUrl || reference.parentUrl).href;
-  };
+const jsenvPluginNodeEsmResolution = (resolutionConfig = {}) => {
+  let nodeEsmResolverDefault;
   const resolvers = {};
-  Object.keys(urlResolution).forEach(urlType => {
-    const resolver = urlResolution[urlType];
-    if (typeof resolver !== "object") {
-      throw new Error(`urlResolution values must be objects, got ${resolver} on "${urlType}"`);
-    }
-    let {
-      web,
-      node_esm,
-      ...rest
-    } = resolver;
-    const unexpectedKeys = Object.keys(rest);
-    if (unexpectedKeys.length) {
-      throw new TypeError(`${unexpectedKeys.join(",")}: there is no such configuration on "${urlType}"`);
-    }
-    if (node_esm === undefined) {
-      node_esm = urlType === "js_import";
-    }
-    if (web === undefined) {
-      web = true;
-    }
-    if (node_esm) {
-      if (node_esm === true) node_esm = {};
+  Object.keys(resolutionConfig).forEach(urlType => {
+    const config = resolutionConfig[urlType];
+    if (config === true) {
+      resolvers[urlType] = (...args) => nodeEsmResolverDefault(...args);
+    } else if (config === false) {
+      resolvers[urlType] = () => null;
+    } else if (typeof config === "object") {
       const {
+        runtimeCompat,
         packageConditions,
-        preservesSymlink
-      } = node_esm;
+        preservesSymlink,
+        ...rest
+      } = config;
+      const unexpectedKeys = Object.keys(rest);
+      if (unexpectedKeys.length) {
+        throw new TypeError(`${unexpectedKeys.join(",")}: there is no such configuration on "${urlType}"`);
+      }
       resolvers[urlType] = createNodeEsmResolver({
         runtimeCompat,
         packageConditions,
         preservesSymlink
       });
-    } else if (web) {
-      resolvers[urlType] = resolveUrlUsingWebResolution;
+    } else {
+      throw new TypeError(`config must be true, false or an object, got ${config} on "${urlType}"`);
     }
   });
-  const nodeEsmResolverDefault = createNodeEsmResolver({
-    runtimeCompat,
-    preservesSymlink: true
-  });
-  if (!resolvers.js_module) {
-    resolvers.js_module = nodeEsmResolverDefault;
-  }
-  if (!resolvers.js_classic) {
-    resolvers.js_classic = (reference, context) => {
-      if (reference.subtype === "self_import_scripts_arg") {
-        return nodeEsmResolverDefault(reference, context);
-      }
-      return resolveUrlUsingWebResolution(reference);
-    };
-  }
-  if (!resolvers["*"]) {
-    resolvers["*"] = resolveUrlUsingWebResolution;
-  }
   return {
-    name: "jsenv:url_resolution",
-    appliesDuring: "*",
+    name: "jsenv:node_esm_resolution",
+    init: ({
+      runtimeCompat
+    }) => {
+      nodeEsmResolverDefault = createNodeEsmResolver({
+        runtimeCompat,
+        preservesSymlink: true
+      });
+      if (!resolvers.js_module) {
+        resolvers.js_module = nodeEsmResolverDefault;
+      }
+      if (!resolvers.js_classic) {
+        resolvers.js_classic = (reference, context) => {
+          if (reference.subtype === "self_import_scripts_arg") {
+            return nodeEsmResolverDefault(reference, context);
+          }
+          return null;
+        };
+      }
+    },
     resolveUrl: (reference, context) => {
-      if (reference.specifier === "/") {
-        return String(defaultFileUrl);
-      }
-      if (reference.specifier[0] === "/") {
-        return new URL(reference.specifier.slice(1), context.rootDirectoryUrl).href;
-      }
-      if (reference.type === "sourcemap_comment") {
-        return resolveUrlUsingWebResolution(reference);
-      }
-      let urlType;
-      if (reference.injected) {
-        urlType = reference.expectedType;
-      } else {
-        const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl);
-        urlType = parentUrlInfo ? parentUrlInfo.type : "entry_point";
-      }
-      const resolver = resolvers[urlType] || resolvers["*"];
-      return resolver(reference, context);
+      const urlType = urlTypeFromReference(reference, context);
+      const resolver = resolvers[urlType];
+      return resolver ? resolver(reference, context) : null;
     },
     // when specifier is prefixed by "file:///@ignore/"
-    // we return an empty js module (used by node esm)
+    // we return an empty js module
     fetchUrlContent: urlInfo => {
       if (urlInfo.url.startsWith("file:///@ignore/")) {
         return {
@@ -17810,6 +17723,50 @@ const jsenvPluginUrlResolution = ({
         };
       }
       return null;
+    }
+  };
+};
+
+const jsenvPluginWebResolution = (resolutionConfig = {}) => {
+  const resolvers = {};
+  const resolveUsingWebResolution = (reference, context) => {
+    if (reference.specifier === "/") {
+      const {
+        mainFilePath,
+        rootDirectoryUrl
+      } = context;
+      return String(new URL(mainFilePath, rootDirectoryUrl));
+    }
+    if (reference.specifier[0] === "/") {
+      return new URL(reference.specifier.slice(1), context.rootDirectoryUrl).href;
+    }
+    return new URL(reference.specifier,
+    // baseUrl happens second argument to new URL() is different from
+    // import.meta.url or document.currentScript.src
+    reference.baseUrl || reference.parentUrl).href;
+  };
+  Object.keys(resolutionConfig).forEach(urlType => {
+    const config = resolutionConfig[urlType];
+    if (config === true) {
+      resolvers[urlType] = resolveUsingWebResolution;
+    } else if (config === false) {
+      resolvers[urlType] = () => null;
+    } else {
+      throw new TypeError(`config must be true or false, got ${config} on "${urlType}"`);
+    }
+  });
+  return {
+    name: "jsenv:web_resolution",
+    appliesDuring: "*",
+    init: () => {
+      if (!resolvers["*"]) {
+        resolvers["*"] = resolveUsingWebResolution;
+      }
+    },
+    resolveUrl: (reference, context) => {
+      const urlType = urlTypeFromReference(reference, context);
+      const resolver = resolvers[urlType] || resolvers["*"];
+      return resolver(reference, context);
     }
   };
 };
@@ -21137,72 +21094,6 @@ const jsenvPluginCacheControl = ({
 };
 const SECONDS_IN_30_DAYS$1 = 60 * 60 * 24 * 30;
 
-const explorerHtmlFileUrl = String(new URL("./html/explorer.html", import.meta.url));
-const jsenvPluginExplorer = ({
-  groups = {
-    src: {
-      "./**/*.html": true,
-      "./**/*.test.html": false
-    },
-    tests: {
-      "./**/*.test.html": true
-    }
-  }
-}) => {
-  const faviconClientFileUrl = new URL("./other/jsenv.png", import.meta.url);
-  return {
-    name: "jsenv:explorer",
-    appliesDuring: "dev",
-    transformUrlContent: {
-      html: async (urlInfo, context) => {
-        if (urlInfo.url !== explorerHtmlFileUrl) {
-          return null;
-        }
-        let html = urlInfo.content;
-        if (html.includes("ignore:FAVICON_HREF")) {
-          html = html.replace("ignore:FAVICON_HREF", DATA_URL.stringify({
-            contentType: CONTENT_TYPE.fromUrlExtension(faviconClientFileUrl),
-            base64Flag: true,
-            data: readFileSync$1(new URL(faviconClientFileUrl)).toString("base64")
-          }));
-        }
-        if (html.includes("SERVER_PARAMS")) {
-          const associationsForExplorable = {};
-          Object.keys(groups).forEach(groupName => {
-            const groupConfig = groups[groupName];
-            associationsForExplorable[groupName] = {
-              "**/.jsenv/": false,
-              // avoid visting .jsenv directory in jsenv itself
-              ...groupConfig
-            };
-          });
-          const matchingFileResultArray = await collectFiles({
-            directoryUrl: context.rootDirectoryUrl,
-            associations: associationsForExplorable,
-            predicate: meta => Object.keys(meta).some(group => Boolean(meta[group]))
-          });
-          const files = matchingFileResultArray.map(({
-            relativeUrl,
-            meta
-          }) => ({
-            relativeUrl,
-            meta
-          }));
-          html = html.replace("SERVER_PARAMS", JSON.stringify({
-            rootDirectoryUrl: context.rootDirectoryUrl,
-            groups,
-            files
-          }, null, "  "));
-          Object.assign(urlInfo.headers, {
-            "cache-control": "no-store"
-          });
-        }
-        return html;
-      }
-    }
-  };
-};
-
 const jsenvPluginRibbon = ({
   rootDirectoryUrl,
   htmlInclude = "/**/*.html"
@@ -21255,10 +21146,10 @@ injectRibbon(${paramsJson});`
 
 const getCorePlugins = ({
   rootDirectoryUrl,
-  defaultFileUrl,
   runtimeCompat,
+  nodeEsmResolution = {},
+  webResolution = {},
   urlAnalysis = {},
-  urlResolution = {},
   fileSystemMagicRedirection,
   directoryReferenceAllowed,
   supervisor,
@@ -21267,14 +21158,10 @@ const getCorePlugins = ({
   clientAutoreload = false,
   clientFileChangeCallbackList,
   clientFilesPruneCallbackList,
-  explorer,
   cacheControl,
   scenarioPlaceholders = true,
   ribbon = true
 } = {}) => {
-  if (explorer === true) {
-    explorer = {};
-  }
   if (cacheControl === true) {
     cacheControl = {};
   }
@@ -21300,20 +21187,23 @@ const getCorePlugins = ({
   // before "file urls" to resolve and load inline urls
   ...(inlining ? [jsenvPluginInlining()] : []), ...(supervisor ? [jsenvPluginSupervisor(supervisor)] : []),
   // after inline as it needs inline script to be cooked
+
+  /* When resolving references the following applies by default:
+     - http urls are resolved by jsenvPluginHttpUrls
+     - reference.type === "filesystem" -> resolved by jsenv_plugin_file_urls.js
+     - reference inside a js module -> resolved by node esm
+     - All the rest uses web standard url resolution
+   */
   jsenvPluginFileUrls({
     directoryReferenceAllowed,
     ...fileSystemMagicRedirection
-  }), jsenvPluginHttpUrls(), jsenvPluginUrlResolution({
-    runtimeCompat,
-    defaultFileUrl,
-    urlResolution
-  }), jsenvPluginUrlVersion(), jsenvPluginCommonJsGlobals(), jsenvPluginImportMetaScenarios(), ...(scenarioPlaceholders ? [jsenvPluginGlobalScenarios()] : []), jsenvPluginNodeRuntime({
+  }), jsenvPluginHttpUrls(), ...(nodeEsmResolution ? [jsenvPluginNodeEsmResolution(nodeEsmResolution)] : []), jsenvPluginWebResolution(webResolution), jsenvPluginUrlVersion(), jsenvPluginCommonJsGlobals(), jsenvPluginImportMetaScenarios(), ...(scenarioPlaceholders ? [jsenvPluginGlobalScenarios()] : []), jsenvPluginNodeRuntime({
     runtimeCompat
   }), jsenvPluginImportMetaHot(), ...(clientAutoreload ? [jsenvPluginAutoreload({
     ...clientAutoreload,
     clientFileChangeCallbackList,
     clientFilesPruneCallbackList
-  })] : []), ...(cacheControl ? [jsenvPluginCacheControl(cacheControl)] : []), ...(explorer ? [jsenvPluginExplorer(explorer)] : []), ...(ribbon ? [jsenvPluginRibbon({
+  })] : []), ...(cacheControl ? [jsenvPluginCacheControl(cacheControl)] : []), ...(ribbon ? [jsenvPluginRibbon({
     rootDirectoryUrl,
     ...ribbon
   })] : [])];
@@ -21669,11 +21559,11 @@ const defaultRuntimeCompat = {
  * @param {Object} buildParameters
  * @param {string|url} buildParameters.sourceDirectoryUrl
  *        Directory containing source files
+ * @param {string|url} buildParameters.buildDirectoryUrl
+ *        Directory where optimized files will be written
  * @param {object} buildParameters.entryPoints
  *        Object where keys are paths to source files and values are their future name in the build directory.
  *        Keys are relative to sourceDirectoryUrl
- * @param {string|url} buildParameters.buildDirectoryUrl
- *        Directory where optimized files will be written
  * @param {object} buildParameters.runtimeCompat
  *        Code generated will be compatible with these runtimes
  * @param {string} [buildParameters.assetsDirectory=""]
@@ -21699,8 +21589,8 @@ const build = async ({
   handleSIGINT = true,
   logLevel = "info",
   sourceDirectoryUrl,
-  entryPoints = {},
   buildDirectoryUrl,
+  entryPoints = {},
   assetsDirectory = "",
   runtimeCompat = defaultRuntimeCompat,
   base = runtimeCompat.node ? "./" : "/",
@@ -23225,7 +23115,6 @@ const createFileService = ({
   transpilation,
   clientAutoreload,
   cooldownBetweenFileEvents,
-  explorer,
   cacheControl,
   ribbon,
   sourcemaps,
@@ -23282,18 +23171,11 @@ const createFileService = ({
     const clientRuntimeCompat = {
       [runtimeName]: runtimeVersion
     };
-    let defaultFileUrl;
-    if (explorer) {
-      defaultFileUrl = String(explorerHtmlFileUrl);
-    } else if (sourceMainFilePath) {
-      defaultFileUrl = String(new URL(sourceMainFilePath, sourceDirectoryUrl));
-    } else {
-      defaultFileUrl = String(new URL("./index.html", sourceDirectoryUrl));
-    }
     const kitchen = createKitchen({
       signal,
       logLevel,
       rootDirectoryUrl: sourceDirectoryUrl,
+      mainFilePath: sourceMainFilePath,
       urlGraph,
       dev: true,
       runtimeCompat,
@@ -23301,7 +23183,6 @@ const createFileService = ({
       systemJsTranspilation: !RUNTIME_COMPAT.isSupported(clientRuntimeCompat, "script_type_module") || !RUNTIME_COMPAT.isSupported(clientRuntimeCompat, "import_dynamic") || !RUNTIME_COMPAT.isSupported(clientRuntimeCompat, "import_meta"),
       plugins: [...plugins, ...getCorePlugins({
         rootDirectoryUrl: sourceDirectoryUrl,
-        defaultFileUrl,
         runtimeCompat,
         urlAnalysis,
         urlResolution,
@@ -23311,7 +23192,6 @@ const createFileService = ({
         clientAutoreload,
         clientFileChangeCallbackList,
         clientFilesPruneCallbackList,
-        explorer,
         cacheControl,
         ribbon
       })],
@@ -23619,7 +23499,7 @@ const inferParentFromRequest = (request, sourceDirectoryUrl) => {
  */
 const startDevServer = async ({
   sourceDirectoryUrl,
-  sourceMainFilePath,
+  sourceMainFilePath = "./index.html",
   port = 3456,
   hostname,
   acceptAnyIp,
@@ -23647,8 +23527,6 @@ const startDevServer = async ({
   supervisor = true,
   fileSystemMagicRedirection,
   transpilation,
-  explorer = true,
-  // see jsenv_plugin_explorer.js
   cacheControl = true,
   ribbon = true,
   // toolbar = false,
@@ -23666,6 +23544,9 @@ const startDevServer = async ({
       throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param`);
     }
     sourceDirectoryUrl = assertAndNormalizeDirectoryUrl(sourceDirectoryUrl, "sourceDirectoryUrl");
+    if (typeof sourceMainFilePath !== "string") {
+      throw new TypeError(`sourceMainFilePath must be a string, got ${sourceMainFilePath}`);
+    }
     if (outDirectoryUrl === undefined) {
       if (!process.env.CI) {
         const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);
@@ -23766,7 +23647,6 @@ const startDevServer = async ({
         transpilation,
         clientAutoreload,
         cooldownBetweenFileEvents,
-        explorer,
         cacheControl,
         ribbon,
         sourcemaps,
