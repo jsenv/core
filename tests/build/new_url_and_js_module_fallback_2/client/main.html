@@ -3,7 +3,7 @@
   <head>
     <title>Title</title>
     <meta charset="utf-8" />
-    <link rel="preload" href="./file.txt" as="fetch" crossorigin="" />
+    <link rel="preload" href="./main.js" as="script" crossorigin="" />
   </head>
 
   <body>
@@ -13,7 +13,7 @@
       });
     </script>
     <script type="module">
-      const urlObject = new URL("./file.txt", import.meta.url);
+      const urlObject = new URL("./main.js", import.meta.url);
 
       window.resolveResultPromise(urlObject.href);
     </script>

@@ -1,4 +1,5 @@
 import { assert } from "@jsenv/assert";
+import { jsenvPluginMinification } from "@jsenv/plugin-minification";
 
 import { build } from "@jsenv/core";
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
@@ -14,6 +15,7 @@ const test = async (params) => {
       "./main.html": "main.html",
     },
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
+    plugins: [jsenvPluginMinification()],
     ...params,
   });
   const server = await startFileServer({
@@ -27,10 +29,10 @@ const test = async (params) => {
   });
   takeDirectorySnapshot(
     new URL("./dist/", import.meta.url),
-    new URL("./snapshots/", import.meta.url),
+    new URL("./snapshots/s", import.meta.url),
   );
   const actual = returnValue;
-  const expected = `${server.origin}/other/file.txt?v=e3b0c442`;
+  const expected = `${server.origin}/js/main.nomodule.js?v=5337168f`;
   assert({ actual, expected });
 };
 
