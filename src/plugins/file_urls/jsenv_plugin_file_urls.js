@@ -22,7 +22,7 @@ export const jsenvPluginFileUrls = ({
     {
       name: "jsenv:file_url_resolution",
       appliesDuring: "*",
-      redirectUrl: (reference) => {
+      redirectReference: (reference) => {
         // http, https, data, about, ...
         if (!reference.url.startsWith("file:")) {
           return null;

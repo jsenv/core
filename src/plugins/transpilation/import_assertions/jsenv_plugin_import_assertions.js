@@ -78,7 +78,7 @@ export const jsenvPluginImportAssertions = ({
         transpilations.text = true;
       }
     },
-    redirectUrl: (reference, context) => {
+    redirectReference: (reference, context) => {
       if (!reference.assert) {
         return null;
       }

@@ -320,6 +320,12 @@ build ${entryPointKeys.length} entry points`);
         ...plugins,
         {
           appliesDuring: "build",
+          formatReference: (reference) => {
+            if (!reference.shouldHandle) {
+              return `ignore:${reference.specifier}`;
+            }
+            return null;
+          },
           fetchUrlContent: (urlInfo, context) => {
             if (context.reference.original) {
               rawRedirections.set(
@@ -327,12 +333,6 @@ build ${entryPointKeys.length} entry points`);
                 context.reference.url,
               );
             }
-          },
-          formatUrl: (reference) => {
-            if (!reference.shouldHandle) {
-              return `ignore:${reference.specifier}`;
-            }
-            return null;
           },
         },
         ...getCorePlugins({
@@ -495,7 +495,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               const isEntryPoint =
                 reference.isEntryPoint ||
                 isWebWorkerEntryPointReference(reference);
-              // the url info do not exists yet (it will be created after this "redirectUrl" hook)
+              // the url info do not exists yet (it will be created after this "redirectReference" hook)
               // And the content will be generated when url is cooked by url graph loader.
               // Here we just want to reserve an url for that file
               const urlInfo = {

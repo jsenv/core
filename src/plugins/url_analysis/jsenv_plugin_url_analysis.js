@@ -29,7 +29,7 @@ export const jsenvPluginUrlAnalysis = ({
     {
       name: "jsenv:url_analysis",
       appliesDuring: "*",
-      redirectUrl: (reference) => {
+      redirectReference: (reference) => {
         if (reference.shouldHandle !== undefined) {
           return;
         }

@@ -1,7 +1,7 @@
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 
 export const jsenvPluginReferenceExpectedTypes = () => {
-  const redirectJsUrls = (reference) => {
+  const redirectJsReference = (reference) => {
     const urlObject = new URL(reference.url);
     const { searchParams } = urlObject;
 
@@ -43,10 +43,10 @@ export const jsenvPluginReferenceExpectedTypes = () => {
   return {
     name: "jsenv:reference_expected_types",
     appliesDuring: "*",
-    redirectUrl: {
-      script: redirectJsUrls,
-      js_url: redirectJsUrls,
-      js_import: redirectJsUrls,
+    redirectReference: {
+      script: redirectJsReference,
+      js_url: redirectJsReference,
+      js_import: redirectJsReference,
     },
   };
 };

@@ -4,7 +4,7 @@ export const jsenvPluginInliningAsDataUrl = () => {
   return {
     name: "jsenv:inlining_as_data_url",
     appliesDuring: "*",
-    formatUrl: {
+    formatReference: {
       // if the referenced url is a worker we could use
       // https://www.oreilly.com/library/view/web-workers/9781449322120/ch04.html
       // but maybe we should rather use ?object_url

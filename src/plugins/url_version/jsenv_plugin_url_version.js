@@ -2,7 +2,7 @@ export const jsenvPluginUrlVersion = () => {
   return {
     name: "jsenv:url_version",
     appliesDuring: "dev",
-    redirectUrl: (reference) => {
+    redirectReference: (reference) => {
       // "v" search param goal is to enable long-term cache
       // for server response headers
       // it is also used by hmr to bypass browser cache
@@ -18,7 +18,7 @@ export const jsenvPluginUrlVersion = () => {
       }
       return null;
     },
-    transformUrlSearchParams: (reference) => {
+    transformReferenceSearchParams: (reference) => {
       if (!reference.version) {
         return null;
       }

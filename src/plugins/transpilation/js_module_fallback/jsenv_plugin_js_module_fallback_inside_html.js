@@ -30,7 +30,7 @@ export const jsenvPluginJsModuleFallbackInsideHtml = ({
   return {
     name: "jsenv:js_module_fallback_inside_html",
     appliesDuring: "*",
-    redirectUrl: {
+    redirectReference: {
       link_href: (reference, context) => {
         if (
           context.systemJsTranspilation &&

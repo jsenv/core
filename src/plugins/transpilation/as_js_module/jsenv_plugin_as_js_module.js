@@ -17,7 +17,7 @@ export const jsenvPluginAsJsModule = () => {
   return {
     name: "jsenv:as_js_module",
     appliesDuring: "*",
-    redirectUrl: (reference) => {
+    redirectReference: (reference) => {
       if (reference.searchParams.has("as_js_module")) {
         reference.expectedType = "js_module";
         const filename = urlToFilename(reference.url);
