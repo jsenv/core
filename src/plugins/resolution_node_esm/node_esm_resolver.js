@@ -33,6 +33,14 @@ export const createNodeEsmResolver = ({
     if (reference.type === "package_json") {
       return reference.specifier;
     }
+    if (reference.specifier === "/") {
+      const { mainFilePath, rootDirectoryUrl } = context;
+      return String(new URL(mainFilePath, rootDirectoryUrl));
+    }
+    if (reference.specifier[0] === "/") {
+      return new URL(reference.specifier.slice(1), context.rootDirectoryUrl)
+        .href;
+    }
     const parentUrl = reference.baseUrl || reference.parentUrl;
     if (!parentUrl.startsWith("file:")) {
       return new URL(reference.specifier, parentUrl).href;

@@ -80,7 +80,7 @@ export const createKitchen = ({
   pushPlugins(plugins);
 
   /*
-   *  * - "http_request"
+   * - "http_request"
    * - "entry_point"
    * - "link_href"
    * - "style"
