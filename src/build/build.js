@@ -981,6 +981,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         if (!versioning) {
           break inject_version_in_urls;
         }
+        logger.debug("versioning start");
         const versioningTask = createTaskLog("inject version in urls", {
           disabled: logger.levels.debug || !logger.levels.info,
         });
@@ -1194,10 +1195,18 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   if (buildUrl) {
                     return buildUrl;
                   }
-                  const urlObject = new URL(
-                    reference.specifier,
-                    reference.baseUrl || reference.parentUrl,
-                  );
+                  let urlObject;
+                  if (reference.specifier[0] === "/") {
+                    urlObject = new URL(
+                      reference.specifier.slice(1),
+                      buildDirectoryUrl,
+                    );
+                  } else {
+                    urlObject = new URL(
+                      reference.specifier,
+                      reference.baseUrl || reference.parentUrl,
+                    );
+                  }
                   const url = urlObject.href;
                   // during versioning we revisit the deps
                   // but the code used to enforce trailing slash on directories
