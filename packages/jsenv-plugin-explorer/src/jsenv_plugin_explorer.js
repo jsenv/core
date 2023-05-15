@@ -5,6 +5,7 @@ export const explorerHtmlFileUrl = String(
 );
 
 export const jsenvPluginExplorer = ({
+  pathname = "/",
   groups = {
     src: {
       "./**/*.html": true,
@@ -14,10 +15,21 @@ export const jsenvPluginExplorer = ({
       "./**/*.test.html": true,
     },
   },
-}) => {
+} = {}) => {
   return {
     name: "jsenv:explorer",
     appliesDuring: "dev",
+    resolveUrl: {
+      http_request: (reference) => {
+        if (
+          reference.specifier === pathname ||
+          reference.specifier === "__explorer__"
+        ) {
+          return explorerHtmlFileUrl;
+        }
+        return null;
+      },
+    },
     transformUrlContent: {
       html: async (urlInfo, context) => {
         if (urlInfo.url !== explorerHtmlFileUrl) {
