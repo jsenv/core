@@ -34,10 +34,21 @@ export const jsenvPluginInliningAsDataUrl = () => {
         return (async () => {
           const urlInfo = context.urlGraph.getUrlInfo(reference.url);
           await context.cook(urlInfo, { reference });
+          const contentAsBase64 = Buffer.from(urlInfo.content).toString(
+            "base64",
+          );
           const specifier = DATA_URL.stringify({
             mediaType: urlInfo.contentType,
             base64Flag: true,
-            data: Buffer.from(urlInfo.content).toString("base64"),
+            data: contentAsBase64,
+          });
+          context.referenceUtils.becomesInline(reference, {
+            line: reference.line,
+            column: reference.column,
+            isOriginal: reference.isOriginal,
+            specifier,
+            content: contentAsBase64,
+            contentType: urlInfo.contentType,
           });
           return specifier;
         })();

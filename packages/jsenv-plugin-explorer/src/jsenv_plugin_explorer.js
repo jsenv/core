@@ -1,7 +1,4 @@
-import { readFileSync } from "node:fs";
-import { DATA_URL } from "@jsenv/urls";
 import { collectFiles } from "@jsenv/filesystem";
-import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 
 export const explorerHtmlFileUrl = String(
   new URL("./client/explorer.html", import.meta.url),
@@ -18,8 +15,6 @@ export const jsenvPluginExplorer = ({
     },
   },
 }) => {
-  const faviconClientFileUrl = new URL("./client/jsenv.png", import.meta.url);
-
   return {
     name: "jsenv:explorer",
     appliesDuring: "dev",
@@ -29,18 +24,6 @@ export const jsenvPluginExplorer = ({
           return null;
         }
         let html = urlInfo.content;
-        if (html.includes("ignore:FAVICON_HREF")) {
-          html = html.replace(
-            "ignore:FAVICON_HREF",
-            DATA_URL.stringify({
-              contentType: CONTENT_TYPE.fromUrlExtension(faviconClientFileUrl),
-              base64Flag: true,
-              data: readFileSync(new URL(faviconClientFileUrl)).toString(
-                "base64",
-              ),
-            }),
-          );
-        }
         if (html.includes("SERVER_PARAMS")) {
           const associationsForExplorable = {};
           Object.keys(groups).forEach((groupName) => {
