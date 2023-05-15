@@ -18,7 +18,7 @@ await build({
     return reference.url.includes("/babel_helpers/");
   },
   scenarioPlaceholders: false,
-  urlAnalysis: {
+  referenceAnalysis: {
     include: {
       "file://**/*": true,
       "file://**/node_modules/": false,

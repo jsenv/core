@@ -26,7 +26,7 @@ export const createFileService = ({
   runtimeCompat,
 
   plugins,
-  urlAnalysis,
+  referenceAnalysis,
   nodeEsmResolution,
   webResolution,
   fileSystemMagicRedirection,
@@ -114,7 +114,7 @@ export const createFileService = ({
           rootDirectoryUrl: sourceDirectoryUrl,
           runtimeCompat,
 
-          urlAnalysis,
+          referenceAnalysis,
           nodeEsmResolution,
           webResolution,
           fileSystemMagicRedirection,

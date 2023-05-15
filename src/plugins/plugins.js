@@ -1,4 +1,4 @@
-import { jsenvPluginUrlAnalysis } from "./url_analysis/jsenv_plugin_url_analysis.js";
+import { jsenvPluginReferenceAnalysis } from "./reference_analysis/jsenv_plugin_reference_analysis.js";
 import { jsenvPluginImportmap } from "./importmap/jsenv_plugin_importmap.js";
 import { jsenvPluginNodeEsmResolution } from "./resolution_node_esm/jsenv_plugin_node_esm_resolution.js";
 import { jsenvPluginWebResolution } from "./resolution_web/jsenv_plugin_web_resolution.js";
@@ -24,9 +24,9 @@ export const getCorePlugins = ({
   rootDirectoryUrl,
   runtimeCompat,
 
+  referenceAnalysis = {},
   nodeEsmResolution = {},
   webResolution = {},
-  urlAnalysis = {},
   fileSystemMagicRedirection,
   directoryReferenceAllowed,
   supervisor,
@@ -57,7 +57,10 @@ export const getCorePlugins = ({
   }
 
   return [
-    jsenvPluginUrlAnalysis({ rootDirectoryUrl, ...urlAnalysis }),
+    jsenvPluginReferenceAnalysis({
+      rootDirectoryUrl,
+      ...referenceAnalysis,
+    }),
     jsenvPluginTranspilation(transpilation),
     jsenvPluginImportmap(),
     // before node esm to handle bare specifiers

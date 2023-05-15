@@ -7,7 +7,7 @@ import { parseAndTransformCssUrls } from "./css/css_urls.js";
 import { parseAndTransformJsUrls } from "./js/js_urls.js";
 import { parseAndTransformWebmanifestUrls } from "./webmanifest/webmanifest_urls.js";
 
-export const jsenvPluginUrlAnalysis = ({
+export const jsenvPluginReferenceAnalysis = ({
   rootDirectoryUrl,
   include,
   supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"],
@@ -27,7 +27,7 @@ export const jsenvPluginUrlAnalysis = ({
 
   return [
     {
-      name: "jsenv:url_analysis",
+      name: "jsenv:reference_analysis",
       appliesDuring: "*",
       redirectReference: (reference) => {
         if (reference.shouldHandle !== undefined) {

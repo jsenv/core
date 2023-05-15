@@ -64,7 +64,7 @@ import {
   isWebWorkerEntryPointReference,
   isWebWorkerUrlInfo,
 } from "../kitchen/web_workers.js";
-import { jsenvPluginUrlAnalysis } from "../plugins/url_analysis/jsenv_plugin_url_analysis.js";
+import { jsenvPluginReferenceAnalysis } from "../plugins/reference_analysis/jsenv_plugin_reference_analysis.js";
 import { jsenvPluginInlining } from "../plugins/inlining/jsenv_plugin_inlining.js";
 import { jsenvPluginInlineContentAnalysis } from "../plugins/inline_content_analysis/jsenv_plugin_inline_content_analysis.js";
 import { jsenvPluginJsModuleFallback } from "../plugins/transpilation/js_module_fallback/jsenv_plugin_js_module_fallback.js";
@@ -135,7 +135,7 @@ export const build = async ({
   runtimeCompat = defaultRuntimeCompat,
   base = runtimeCompat.node ? "./" : "/",
   plugins = [],
-  urlAnalysis = {},
+  referenceAnalysis = {},
   nodeEsmResolution,
   webResolution,
   fileSystemMagicRedirection,
@@ -340,7 +340,7 @@ build ${entryPointKeys.length} entry points`);
           urlGraph: rawGraph,
           runtimeCompat,
 
-          urlAnalysis,
+          referenceAnalysis,
           nodeEsmResolution,
           webResolution,
           fileSystemMagicRedirection,
@@ -381,9 +381,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     const bundleUrlInfos = {};
     const bundlers = {};
     const finalGraph = createUrlGraph();
-    const urlAnalysisPlugin = jsenvPluginUrlAnalysis({
+    const referenceAnalysisPlugin = jsenvPluginReferenceAnalysis({
       rootDirectoryUrl: sourceDirectoryUrl,
-      ...urlAnalysis,
+      ...referenceAnalysis,
     });
     const finalGraphKitchen = createKitchen({
       logLevel,
@@ -393,7 +393,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       runtimeCompat,
       ...contextSharedDuringBuild,
       plugins: [
-        urlAnalysisPlugin,
+        referenceAnalysisPlugin,
         ...(lineBreakNormalization
           ? [jsenvPluginLineBreakNormalization()]
           : []),
@@ -1185,7 +1185,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             runtimeCompat,
             ...contextSharedDuringBuild,
             plugins: [
-              urlAnalysisPlugin,
+              referenceAnalysisPlugin,
               jsenvPluginInlineContentAnalysis({
                 fetchInlineUrls: false,
                 analyzeConvertedScripts: true, // to be able to version their urls

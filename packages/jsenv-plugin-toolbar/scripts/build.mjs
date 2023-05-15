@@ -14,7 +14,7 @@ await build({
     firefox: "67",
     safari: "11.3",
   },
-  urlAnalysis: {
+  referenceAnalysis: {
     include: {
       "/**/*": true,
       "/**/node_modules/@jsenv/ast/": false, // cannot inline "parse5", "@babel/core" and "postcss"

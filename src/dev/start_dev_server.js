@@ -50,7 +50,7 @@ export const startDevServer = async ({
   // code would be supported during dev but not after build
   runtimeCompat = defaultRuntimeCompat,
   plugins = [],
-  urlAnalysis = {},
+  referenceAnalysis = {},
   nodeEsmResolution,
   webResolution,
   supervisor = true,
@@ -190,7 +190,7 @@ export const startDevServer = async ({
           runtimeCompat,
 
           plugins,
-          urlAnalysis,
+          referenceAnalysis,
           nodeEsmResolution,
           webResolution,
           fileSystemMagicRedirection,
