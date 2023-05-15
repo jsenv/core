@@ -4,6 +4,7 @@ import { jsenvPluginMinification } from "@jsenv/plugin-minification";
 import { build } from "@jsenv/core";
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
+import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 
 const { buildInlineContents } = await build({
   logLevel: "warn",
@@ -29,6 +30,10 @@ const { returnValue } = await executeInBrowser({
   /* eslint-enable no-undef */
   pageArguments: ["./js/main.js"],
 });
+takeDirectorySnapshot(
+  new URL("./dist/", import.meta.url),
+  new URL("./snapshots/", import.meta.url),
+);
 const actual = {
   returnValue,
   buildInlineContents,

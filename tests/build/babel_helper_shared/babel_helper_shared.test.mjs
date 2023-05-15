@@ -9,10 +9,10 @@ const test = async (params) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
       "./main.html": "main.html",
     },
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     plugins: [jsenvPluginBundling()],
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
