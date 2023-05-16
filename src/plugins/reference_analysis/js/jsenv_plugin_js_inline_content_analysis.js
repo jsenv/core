@@ -76,7 +76,7 @@ export const jsenvPluginJsInlineContentAnalysis = ({
 
 const parseJsInlineContentInfos = async ({ js, url, isJsModule }) => {
   if (
-    !js.includes("InlineContent") &&
+    !js.includes("__InlineContent__") &&
     !js.includes("new Blob(") &&
     !js.includes("JSON.parse(")
   ) {
@@ -137,11 +137,11 @@ const isNewInlineContentCall = (path) => {
   if (node.callee.type === "Identifier") {
     // terser rename import to use a shorter name
     const name = getOriginalName(path, node.callee.name);
-    return name === "InlineContent";
+    return name === "__InlineContent__";
   }
   if (node.callee.id && node.callee.id.type === "Identifier") {
     const name = getOriginalName(path, node.callee.id.name);
-    return name === "InlineContent";
+    return name === "__InlineContent__";
   }
   return false;
 };

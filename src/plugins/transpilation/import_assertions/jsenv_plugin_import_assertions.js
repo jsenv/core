@@ -181,11 +181,9 @@ const jsenvPluginAsModules = () => {
         canUseTemplateString: true,
       });
       return {
-        content: `import { InlineContent } from ${JSON.stringify(
-          inlineContentClientFileUrl,
-        )}
+        content: `import ${JSON.stringify(inlineContentClientFileUrl)}
   
-  const inlineContent = new InlineContent(${cssText}, { type: "text/css" })
+  const inlineContent = new __InlineContent__(${cssText}, { type: "text/css" })
   const stylesheet = new CSSStyleSheet()
   stylesheet.replaceSync(inlineContent.text)
   export default stylesheet`,

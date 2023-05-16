@@ -22,17 +22,19 @@ function _await(value, then, direct) {
 System.register([], function (_export, _context) {
   "use strict";
 
-  var inlineContent, stylesheet, bodyBackgroundColor, bodyBackgroundImage;
-  function InlineContent(content, {
-    type = "text/plain"
-  }) {
-    this.text = content;
-    this.type = type;
-  }
+  var globalObject, inlineContent, stylesheet, bodyBackgroundColor, bodyBackgroundImage;
   return {
     setters: [],
     execute: async function () {
-      inlineContent = new InlineContent('body{background-color:red;background-image:url('+__v__("/other/jsenv.png")+')}', {
+      /* eslint-env browser,node */
+      globalObject = typeof self === "object" ? self : process;
+      globalObject.__InlineContent__ = function (content, {
+        type = "text/plain"
+      }) {
+        this.text = content;
+        this.type = type;
+      };
+      inlineContent = new __InlineContent__('body{background-color:red;background-image:url('+__v__("/other/jsenv.png")+')}', {
         type: "text/css"
       });
       stylesheet = new CSSStyleSheet();

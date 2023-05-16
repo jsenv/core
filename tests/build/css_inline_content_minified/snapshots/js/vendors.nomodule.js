@@ -1,1 +1,1 @@
-System.register([],(function(t,e){"use strict";return t("InlineContent",(function InlineContent(t,{type:e="text/plain"}){this.text=t,this.type=e})),{setters:[],execute:function(){}}}));
+System.register([],(function(t,e){"use strict";return{setters:[],execute:function(){("object"==typeof self?self:process).__InlineContent__=function(t,{type:e="text/plain"}){this.text=t,this.type=e}}}}));
