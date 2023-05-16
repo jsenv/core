@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html original-position-stored="">
+<html>
   <head>
     <title>Import dynamic</title>
     <meta charset="utf8">
-    <link rel="icon" href="data:," original-href-position="6:22;6:35">
-    <script jsenv-injected-by="jsenv:js_module_fallback" content-indented="">
+    <link rel="icon" href="data:,">
+    <script>
       /*
        * This file is a modified version of https://github.com/systemjs/systemjs/blob/main/dist/s.js
        * with the following changes:
@@ -417,12 +417,12 @@
   </head>
   <body>
     <button>Load file</button>
-    <script original-position="10:5;14:14" jsenv-cooked-by="jsenv:html_inline_content_analysis">window.resultPromise = new Promise(resolve => {
+    <script>window.resultPromise = new Promise(resolve => {
   window.resolveResultPromise = resolve;
 });</script>
-    <script original-position="15:5;21:14" jsenv-cooked-by="jsenv:html_inline_content_analysis">const url = new URL("/js/nested_feature.nomodule.js", window.location);
+    <script>const url = new URL("/js/nested_feature.nomodule.js", window.location);
 window.nestedFeatureUrl = url.href;</script>
-    <script original-position="22:5;29:14" jsenv-cooked-by="jsenv:html_inline_content_analysis">System.register(["/js/main.nomodule.js"], function (_export, _context) {
+    <script>System.register(["/js/main.nomodule.js"], function (_export, _context) {
   "use strict";
 
   var loadFeature;
