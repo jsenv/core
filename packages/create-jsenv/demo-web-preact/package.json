@@ -14,21 +14,21 @@
     "prettier": "prettier --write ."
   },
   "dependencies": {
-    "preact": "10.13.2"
+    "preact": "10.14.0"
   },
   "devDependencies": {
     "@babel/eslint-parser": "7.21.8",
     "@babel/plugin-syntax-import-assertions": "7.20.0",
     "@babel/plugin-transform-react-jsx": "7.21.5",
     "@jsenv/assert": "2.8.1",
-    "@jsenv/core": "35.0.5",
-    "@jsenv/plugin-preact": "1.2.27",
-    "@jsenv/plugin-bundling": "2.1.7",
-    "@jsenv/plugin-minification": "1.2.2",
+    "@jsenv/core": "36.0.0",
+    "@jsenv/plugin-preact": "1.2.28",
+    "@jsenv/plugin-bundling": "2.1.9",
+    "@jsenv/plugin-minification": "1.2.3",
     "@jsenv/eslint-config": "16.3.9",
     "@jsenv/eslint-import-resolver": "0.4.10",
-    "@jsenv/test": "1.1.4",
-    "eslint": "8.39.0",
+    "@jsenv/test": "1.1.5",
+    "eslint": "8.40.0",
     "eslint-plugin-html": "7.1.0",
     "eslint-plugin-import": "2.27.5",
     "eslint-plugin-react": "7.32.2",

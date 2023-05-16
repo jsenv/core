@@ -139,6 +139,10 @@ const generateInlineContentUrl = ({
 };
 
 // consider switching to https://babeljs.io/docs/en/babel-code-frame
+// https://github.com/postcss/postcss/blob/fd30d3df5abc0954a0ec642a3cdc644ab2aacf9c/lib/css-syntax-error.js#L43
+// https://github.com/postcss/postcss/blob/fd30d3df5abc0954a0ec642a3cdc644ab2aacf9c/lib/terminal-highlight.js#L50
+// https://github.com/babel/babel/blob/eea156b2cb8deecfcf82d52aa1b71ba4995c7d68/packages/babel-code-frame/src/index.js#L1
+
 const stringifyUrlSite = ({
   url,
   line,
@@ -791,6 +795,7 @@ const getPermissionOrComputeDefault = (action, subject, permissions) => {
  * - stats object documentation on Node.js
  *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
  */
+
 const isWindows$3 = process.platform === "win32";
 const readEntryStat = async (source, {
   nullIfNotFound = false,
@@ -861,6 +866,7 @@ const readStat = (sourcePath, {
  * - eTag documentation on MDN
  *   https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag
  */
+
 const ETAG_FOR_EMPTY_CONTENT$1 = '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
 const bufferToEtag$1 = buffer => {
   if (!Buffer.isBuffer(buffer)) {
@@ -1023,6 +1029,7 @@ const removeNoop = () => {};
 /*
  * https://github.com/whatwg/dom/issues/920
  */
+
 const Abort = {
   isAbortError: error => {
     return error && error.name === "AbortError";
@@ -1413,6 +1420,7 @@ const asFlatAssociations = associations => {
  * https://git-scm.com/docs/gitignore
  * https://github.com/kaelzhang/node-ignore
  */
+
 
 /** @module jsenv_url_meta **/
 /**
@@ -2937,6 +2945,7 @@ function isUnicodeSupported() {
 }
 
 // see also https://github.com/sindresorhus/figures
+
 const canUseUnicode = isUnicodeSupported();
 const COMMAND_RAW = canUseUnicode ? `❯` : `>`;
 const OK_RAW = canUseUnicode ? `✔` : `√`;
@@ -3354,6 +3363,7 @@ const spyStreamOutput = stream => {
 /*
  * see also https://github.com/vadimdemedes/ink
  */
+
 const createLog = ({
   stream = process.stdout,
   newLine = "after"
@@ -3948,6 +3958,7 @@ const listenEvent = (objectWithEventEmitter, eventName, callback, {
 https://stackoverflow.com/a/42019773/2634179
 
 */
+
 const createPolyglotServer = async ({
   http2 = false,
   http1Allowed = true,
@@ -4407,6 +4418,7 @@ const normalizeHeaderValue = headerValue => {
 https://developer.mozilla.org/en-US/docs/Web/API/Headers
 https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
 */
+
 const headersFromObject = headersObject => {
   const headers = {};
   Object.keys(headersObject).forEach(headerName => {
@@ -6695,6 +6707,7 @@ const serveDirectory = (url, {
  * { status: 200, body: "Hello world" }.
  * It is meant to be used inside "requestToResponse"
  */
+
 const fetchFileSystem = async (filesystemUrl, {
   // signal,
   method = "GET",
@@ -10794,6 +10807,7 @@ const parseAndTransformWebmanifestUrls = async (urlInfo, context) => {
 /*
  * https://github.com/parcel-bundler/parcel/blob/v2/packages/transformers/css/src/CSSTransformer.js
  */
+
 const jsenvPluginCssReferenceAnalysis = () => {
   return {
     name: "jsenv:css_reference_analysis",
@@ -15132,6 +15146,7 @@ const babelPluginRelativeImports = babel => {
  * - propagate "?js_module_fallback" query string param on urls
  * - perform conversion from js module to js classic when url uses "?js_module_fallback"
  */
+
 const jsenvPluginJsModuleConversion = ({
   systemJsInjection,
   systemJsClientFileUrl,
@@ -15242,6 +15257,7 @@ const jsenvPluginJsModuleConversion = ({
  * - js inside <script type="module"> is transformed into classic js
  * - <link rel="modulepreload"> are converted to <link rel="preload">
  */
+
 const jsenvPluginJsModuleFallbackInsideHtml = ({
   systemJsInjection,
   systemJsClientFileUrl
@@ -15443,6 +15459,7 @@ const isExpectingJsModule = reference => {
  *   transformed into
  *   new SharedWorker("shared_worker.js?js_module_fallback", { type: "classic" })
  */
+
 const jsenvPluginJsModuleFallbackOnWorkers = () => {
   const turnIntoJsClassicProxy = reference => {
     reference.mutation = magicSource => {
@@ -15600,6 +15617,7 @@ const pathnameToParentPathname = pathname => {
 };
 
 // could be useful: https://url.spec.whatwg.org/#url-miscellaneous
+
 const resolveUrl = (specifier, baseUrl) => {
   if (baseUrl) {
     if (typeof baseUrl !== "string") {
@@ -16131,6 +16149,7 @@ const applyDefaultExtension = ({
  * -> The importmap resolution implemented here takes a shortcut and does the following:
  * - All importmap found are merged into a single one that is applied to every import specifiers
  */
+
 const jsenvPluginImportmap = () => {
   let finalImportmap = null;
   const importmaps = {};
@@ -17277,6 +17296,7 @@ const getExtensionsToTry = (magicExtensions, importer) => {
  *   if that comes from node resolution or anything else (not even magic resolution)
  *   it should likely be an other plugin happening after the others
  */
+
 const createNodeEsmResolver = ({
   runtimeCompat,
   packageConditions,
@@ -17729,6 +17749,7 @@ const jsenvPluginHttpUrls = () => {
  * While dynamic import will work just fine
  * and create a variable named "undefined"
  */
+
 const injectSupervisorIntoJs = async ({
   webServer,
   content,
@@ -17957,6 +17978,7 @@ const createSupervisionCall = ({
  * -> No changes required on js source code, it's only the HTML that is modified
  *   - Also allow to catch syntax errors and export missing
  */
+
 const supervisorFileUrl$1 = new URL("./js/supervisor.js", import.meta.url).href;
 const injectSupervisorIntoHTML = async ({
   content,
@@ -18190,6 +18212,7 @@ const generateCodeToSuperviseScriptWithSrc = ({
 /*
  * This plugin provides a way for jsenv to know when js execution is done
  */
+
 const supervisorFileUrl = new URL("./js/supervisor.js", import.meta.url).href;
 const jsenvPluginSupervisor = ({
   logs = false,
@@ -18396,6 +18419,7 @@ const jsenvPluginSupervisor = ({
  * - __dirname
  * - global
  */
+
 const jsenvPluginCommonJsGlobals = () => {
   const transformCommonJsGlobals = async (urlInfo, context) => {
     if (!urlInfo.content.includes("process.env.NODE_ENV") && !urlInfo.content.includes("__filename") && !urlInfo.content.includes("__dirname")) {
@@ -18547,6 +18571,7 @@ const babelPluginMetadataExpressionPaths = (babel, {
  * - left as is to be evaluated to undefined (import.meta.build but it's the dev server)
  * - replaced by undefined (import.meta.dev but it's build; the goal is to ensure it's tree-shaked)
  */
+
 const jsenvPluginImportMetaScenarios = () => {
   return {
     name: "jsenv:import_meta_scenario",
@@ -18677,6 +18702,7 @@ const replacePlaceholders = (urlInfo, replacements) => {
  * - __build__
  * A global will be injected with true/false when needed
  */
+
 const jsenvPluginGlobalScenarios = () => {
   const transformIfNeeded = (urlInfo, context) => {
     return replacePlaceholders(urlInfo, {
@@ -18763,6 +18789,7 @@ const versionToBits = version => {
  * do not support import assertions
  * But for now (as it is simpler) we let the browser throw the error
  */
+
 const jsenvPluginImportAssertions = ({
   json = "auto",
   css = "auto",
@@ -19035,6 +19062,7 @@ const babelPluginReplaceTopLevelThis = () => {
  * This plugin fix this issue by rewriting top level this into window
  * and can be used like this for instance import("hls?as_js_module")
  */
+
 const jsenvPluginAsJsModule = () => {
   return {
     name: "jsenv:as_js_module",
@@ -20100,6 +20128,7 @@ const jsenvPluginImportMetaResolve = () => {
  * Anything that is not standard (import.meta.dev for instance) is outside the scope
  * of this plugin
  */
+
 const jsenvPluginTranspilation = ({
   importAssertions = true,
   css = true,
@@ -21120,6 +21149,7 @@ const determineDirectoryPath = ({
 };
 
 // https://bundlers.tooling.report/hashing/avoid-cascade/
+
 const injectVersionMappingsAsGlobal = async ({
   urlInfo,
   kitchen,
@@ -21247,6 +21277,7 @@ const createVersionGenerator = () => {
  *  - ressource hints
  *  - injecting urls into service workers
  */
+
 
 // default runtimeCompat corresponds to
 // "we can keep <script type="module"> intact":
@@ -22758,6 +22789,7 @@ const WEB_URL_CONVERTER = {
  * This plugin is very special because it is here
  * to provide "serverEvents" used by other plugins
  */
+
 const serverEventsClientFileUrl = new URL("./js/server_events_client.js", import.meta.url).href;
 const jsenvPluginServerEventsClientInjection = () => {
   return {
@@ -23458,6 +23490,7 @@ const startDevServer = async ({
  * "startBuildServer" must be as close as possible from a static file server because
  * we want to be in the user shoes and we should not alter build files.
  */
+
 
 /**
  * Start a server for build files.

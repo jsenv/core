@@ -457,6 +457,7 @@ const getPermissionOrComputeDefault = (action, subject, permissions) => {
  * - stats object documentation on Node.js
  *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
  */
+
 const isWindows$1 = process.platform === "win32";
 const readEntryStat = async (source, {
   nullIfNotFound = false,
@@ -667,6 +668,7 @@ const removeNoop = () => {};
 /*
  * https://github.com/whatwg/dom/issues/920
  */
+
 const Abort = {
   isAbortError: error => {
     return error && error.name === "AbortError";
@@ -1765,6 +1767,7 @@ function isUnicodeSupported() {
 }
 
 // see also https://github.com/sindresorhus/figures
+
 const canUseUnicode = isUnicodeSupported();
 const COMMAND_RAW = canUseUnicode ? `❯` : `>`;
 const OK_RAW = canUseUnicode ? `✔` : `√`;
@@ -2150,6 +2153,7 @@ const spyStreamOutput = stream => {
 /*
  * see also https://github.com/vadimdemedes/ink
  */
+
 const createLog = ({
   stream = process.stdout,
   newLine = "after"
@@ -3072,6 +3076,7 @@ const isV8Coverage = coverage => Boolean(coverage.result);
  * - Errors are collected
  * - File execution result is returned, it contains status/errors/namespace/consoleCalls
  */
+
 const run = async ({
   signal = new AbortController().signal,
   logger,
@@ -5653,6 +5658,8 @@ const onceChildProcessEvent = (childProcess, type, callback) => {
 };
 
 // https://github.com/avajs/ava/blob/576f534b345259055c95fa0c2b33bef10847a2af/lib/fork.js#L23
+// https://nodejs.org/api/worker_threads.html
+// https://github.com/avajs/ava/blob/576f534b345259055c95fa0c2b33bef10847a2af/lib/worker/base.js
 const CONTROLLABLE_WORKER_THREAD_URL = new URL("./controllable_worker_thread.mjs?entry_point=", import.meta.url).href;
 const nodeWorkerThread = ({
   importMap,
@@ -5929,6 +5936,7 @@ const onceWorkerThreadEvent = (worker, type, callback) => {
  *   The run method will start a browser/node process and execute file in it
  * - Most of the logic lives in "./run.js" used by executeTestPlan to run tests
  */
+
 const execute = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,

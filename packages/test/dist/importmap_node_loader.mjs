@@ -81,6 +81,7 @@ const pathnameToParentPathname = pathname => {
 };
 
 // could be useful: https://url.spec.whatwg.org/#url-miscellaneous
+
 const resolveUrl = (specifier, baseUrl) => {
   if (baseUrl) {
     if (typeof baseUrl !== "string") {

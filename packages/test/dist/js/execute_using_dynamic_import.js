@@ -69,6 +69,7 @@ if (typeof global === "object") visitGlobalObject(global);
  * transforms a javascript value into an object describing it.
  *
  */
+
 const decompose = (mainValue, {
   functionAllowed,
   prototypeStrict,
@@ -702,6 +703,7 @@ function safeDefineProperty(object, propertyNameOrSymbol, descriptor) {
  * - https://github.com/nodejs/node/issues/28283
  * - https://vanilla.aslushnikov.com/?Profiler.startPreciseCoverage
  */
+
 const startJsCoverage = async ({
   callCount = true,
   detailed = true

@@ -92,6 +92,7 @@ const asFlatAssociations = associations => {
  * https://github.com/kaelzhang/node-ignore
  */
 
+
 /** @module jsenv_url_meta **/
 /**
  * An object representing the result of applying a pattern to an url
