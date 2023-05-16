@@ -40,26 +40,49 @@ const parseAndTransformHtmlUrls = async (urlInfo, context) => {
   const htmlAst = parseHtmlString(content, {
     storeOriginalPositions: context.dev,
   });
-  const mentions = visitHtmlUrls({
-    url,
-    htmlAst,
-  });
+
   const mutations = [];
   const actions = [];
-  for (const mention of mentions) {
+  const finalizeCallbacks = [];
+
+  const createReference = (node, attributeName, attributeValue, props) => {
+    let position;
+    if (getHtmlNodeAttribute(node, "jsenv-cooked-by")) {
+      // when generated from inline content,
+      // line, column is not "src" nor "inlined-from-src" but "original-position"
+      position = getHtmlNodePosition(node);
+    } else {
+      position = getHtmlNodeAttributePosition(node, attributeName);
+    }
     const {
-      type,
-      subtype,
-      expectedType,
       line,
       column,
-      originalLine,
-      originalColumn,
+      // originalLine, originalColumn
+    } = position;
+    const debug = getHtmlNodeAttribute(node, "jsenv-debug") !== undefined;
+    return onExternalReference({
+      ...props,
+      specifier: attributeValue,
       node,
       attributeName,
+      line,
+      column,
       debug,
-      specifier,
-    } = mention;
+    });
+  };
+  const onExternalReference = ({
+    type,
+    subtype,
+    expectedType,
+    line,
+    column,
+    originalLine,
+    originalColumn,
+    node,
+    attributeName,
+    debug,
+    specifier,
+  }) => {
     const { crossorigin, integrity } = readFetchMetas(node);
     const isResourceHint = [
       "preconnect",
@@ -90,7 +113,135 @@ const parseAndTransformHtmlUrls = async (urlInfo, context) => {
         });
       });
     });
-  }
+  };
+  const visitHref = (node, referenceProps) => {
+    const href = getHtmlNodeAttribute(node, "href");
+    if (href) {
+      return createReference(node, "href", href, referenceProps);
+    }
+    const inlinedFromHref = getHtmlNodeAttribute(node, "inlined-from-href");
+    if (inlinedFromHref) {
+      return createReference(
+        node,
+        "inlined-from-href",
+        new URL(inlinedFromHref, url).href,
+        referenceProps,
+      );
+    }
+    return null;
+  };
+  const visitSrc = (node, referenceProps) => {
+    const src = getHtmlNodeAttribute(node, "src");
+    if (src) {
+      return createReference(node, "src", src, referenceProps);
+    }
+    const inlinedFromSrc = getHtmlNodeAttribute(node, "inlined-from-src");
+    if (inlinedFromSrc) {
+      return createReference(
+        node,
+        "inlined-from-src",
+        new URL(inlinedFromSrc, url).href,
+        referenceProps,
+      );
+    }
+    return null;
+  };
+  const visitSrcset = (node, referenceProps) => {
+    const srcset = getHtmlNodeAttribute(node, "srcset");
+    if (srcset) {
+      const srcCandidates = parseSrcSet(srcset);
+      return srcCandidates.map((srcCandidate) => {
+        return createReference(
+          node,
+          "srcset",
+          srcCandidate.specifier,
+          referenceProps,
+        );
+      });
+    }
+    return null;
+  };
+
+  visitHtmlNodes(htmlAst, {
+    link: (node) => {
+      const rel = getHtmlNodeAttribute(node, "rel");
+      const type = getHtmlNodeAttribute(node, "type");
+      const ref = visitHref(node, {
+        type: "link_href",
+        subtype: rel,
+        // https://developer.mozilla.org/en-US/docs/Web/HTML/Link_types/preload#including_a_mime_type
+        expectedContentType: type,
+      });
+      if (ref) {
+        finalizeCallbacks.push(() => {
+          ref.expectedType = decideLinkExpectedType(ref, context);
+        });
+      }
+    },
+    // style: () => {},
+    script: (node) => {
+      if (
+        getHtmlNodeAttribute(node, "jsenv-inlined-by") === "jsenv:importmap"
+      ) {
+        // during build the importmap is inlined
+        // and shoud not be considered as a dependency anymore
+        return;
+      }
+      const { type } = analyzeScriptNode(node);
+      if (type === "text") {
+        // ignore <script type="whatever" src="./file.js">
+        // per HTML spec https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#attr-type
+        // this will be handled by jsenv_plugin_html_inline_content_analysis
+        return;
+      }
+      visitSrc(node, {
+        type: "script",
+        subtype: type,
+        expectedType: type,
+      });
+    },
+    a: (node) => {
+      visitHref(node, {
+        type: "a_href",
+      });
+    },
+    iframe: (node) => {
+      visitSrc(node, {
+        type: "iframe_src",
+      });
+    },
+    img: (node) => {
+      visitSrc(node, {
+        type: "img_src",
+      });
+      visitSrcset(node, {
+        type: "img_srcset",
+      });
+    },
+    source: (node) => {
+      visitSrc(node, {
+        type: "source_src",
+      });
+      visitSrcset(node, {
+        type: "source_srcset",
+      });
+    },
+    // svg <image> tag
+    image: (node) => {
+      visitHref(node, {
+        type: "image_href",
+      });
+    },
+    use: (node) => {
+      visitHref(node, {
+        type: "use_href",
+      });
+    },
+  });
+  finalizeCallbacks.forEach((finalizeCallback) => {
+    finalizeCallback();
+  });
+
   if (actions.length > 0) {
     await Promise.all(actions.map((action) => action()));
   }
@@ -116,193 +267,8 @@ const readFetchMetas = (node) => {
   return meta;
 };
 
-const visitHtmlUrls = ({ url, htmlAst }) => {
-  const mentions = [];
-  const finalizeCallbacks = [];
-  const addMention = ({
-    type,
-    subtype,
-    expectedType,
-    node,
-    attributeName,
-    specifier,
-  }) => {
-    let position;
-    if (getHtmlNodeAttribute(node, "jsenv-cooked-by")) {
-      // when generated from inline content,
-      // line, column is not "src" nor "inlined-from-src" but "original-position"
-      position = getHtmlNodePosition(node);
-    } else {
-      position = getHtmlNodeAttributePosition(node, attributeName);
-    }
-    const {
-      line,
-      column,
-      // originalLine, originalColumn
-    } = position;
-    const debug = getHtmlNodeAttribute(node, "jsenv-debug") !== undefined;
-    const mention = {
-      type,
-      subtype,
-      expectedType,
-      line,
-      column,
-      // originalLine, originalColumn
-      specifier,
-      node,
-      attributeName,
-      debug,
-    };
-    mentions.push(mention);
-    return mention;
-  };
-  const visitAttributeAsUrlSpecifier = ({ node, attributeName, ...rest }) => {
-    const value = getHtmlNodeAttribute(node, attributeName);
-    if (value) {
-      if (
-        getHtmlNodeAttribute(node, "jsenv-inlined-by") === "jsenv:importmap"
-      ) {
-        // during build the importmap is inlined
-        // and shoud not be considered as a dependency anymore
-        return null;
-      }
-      return addMention({
-        ...rest,
-        node,
-        attributeName,
-        specifier:
-          attributeName === "inlined-from-src" ||
-          attributeName === "inlined-from-href"
-            ? new URL(value, url).href
-            : value,
-      });
-    }
-    if (attributeName === "src") {
-      return visitAttributeAsUrlSpecifier({
-        ...rest,
-        node,
-        attributeName: "inlined-from-src",
-      });
-    }
-    if (attributeName === "href") {
-      return visitAttributeAsUrlSpecifier({
-        ...rest,
-        node,
-        attributeName: "inlined-from-href",
-      });
-    }
-    return null;
-  };
-  const visitSrcset = ({ type, node }) => {
-    const srcset = getHtmlNodeAttribute(node, "srcset");
-    if (srcset) {
-      const srcCandidates = parseSrcSet(srcset);
-      srcCandidates.forEach((srcCandidate) => {
-        addMention({
-          type,
-          node,
-          attributeName: "srcset",
-          specifier: srcCandidate.specifier,
-        });
-      });
-    }
-  };
-  visitHtmlNodes(htmlAst, {
-    link: (node) => {
-      const rel = getHtmlNodeAttribute(node, "rel");
-      const type = getHtmlNodeAttribute(node, "type");
-      const mention = visitAttributeAsUrlSpecifier({
-        type: "link_href",
-        subtype: rel,
-        node,
-        attributeName: "href",
-        // https://developer.mozilla.org/en-US/docs/Web/HTML/Link_types/preload#including_a_mime_type
-        expectedContentType: type,
-      });
-
-      if (mention) {
-        finalizeCallbacks.push(() => {
-          mention.expectedType = decideLinkExpectedType(mention, mentions);
-        });
-      }
-    },
-    // style: () => {},
-    script: (node) => {
-      const { type } = analyzeScriptNode(node);
-      if (type === "text") {
-        // ignore <script type="whatever" src="./file.js">
-        // per HTML spec https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#attr-type
-        // this will be handled by jsenv_plugin_html_inline_content_analysis
-        return;
-      }
-      visitAttributeAsUrlSpecifier({
-        type: "script",
-        subtype: type,
-        expectedType: type,
-        node,
-        attributeName: "src",
-      });
-    },
-    a: (node) => {
-      visitAttributeAsUrlSpecifier({
-        type: "a_href",
-        node,
-        attributeName: "href",
-      });
-    },
-    iframe: (node) => {
-      visitAttributeAsUrlSpecifier({
-        type: "iframe_src",
-        node,
-        attributeName: "src",
-      });
-    },
-    img: (node) => {
-      visitAttributeAsUrlSpecifier({
-        type: "img_src",
-        node,
-        attributeName: "src",
-      });
-      visitSrcset({
-        type: "img_srcset",
-        node,
-      });
-    },
-    source: (node) => {
-      visitAttributeAsUrlSpecifier({
-        type: "source_src",
-        node,
-        attributeName: "src",
-      });
-      visitSrcset({
-        type: "source_srcset",
-        node,
-      });
-    },
-    // svg <image> tag
-    image: (node) => {
-      visitAttributeAsUrlSpecifier({
-        type: "image_href",
-        node,
-        attributeName: "href",
-      });
-    },
-    use: (node) => {
-      visitAttributeAsUrlSpecifier({
-        type: "use_href",
-        node,
-        attributeName: "href",
-      });
-    },
-  });
-  finalizeCallbacks.forEach((finalizeCallback) => {
-    finalizeCallback();
-  });
-  return mentions;
-};
-
-const decideLinkExpectedType = (linkMention, mentions) => {
-  const rel = getHtmlNodeAttribute(linkMention.node, "rel");
+const decideLinkExpectedType = (linkReference, context) => {
+  const rel = getHtmlNodeAttribute(linkReference.node, "rel");
   if (rel === "webmanifest") {
     return "webmanifest";
   }
@@ -314,7 +280,7 @@ const decideLinkExpectedType = (linkMention, mentions) => {
   }
   if (rel === "preload") {
     // https://developer.mozilla.org/en-US/docs/Web/HTML/Link_types/preload#what_types_of_content_can_be_preloaded
-    const as = getHtmlNodeAttribute(linkMention.node, "as");
+    const as = getHtmlNodeAttribute(linkReference.node, "as");
     if (as === "document") {
       return "html";
     }
@@ -322,10 +288,10 @@ const decideLinkExpectedType = (linkMention, mentions) => {
       return "css";
     }
     if (as === "script") {
-      const firstScriptOnThisUrl = mentions.find(
-        (mentionCandidate) =>
-          mentionCandidate.url === linkMention.url &&
-          mentionCandidate.type === "script",
+      const firstScriptOnThisUrl = context.referenceUtils.find(
+        (refCandidate) =>
+          refCandidate.url === linkReference.url &&
+          refCandidate.type === "script",
       );
       if (firstScriptOnThisUrl) {
         return firstScriptOnThisUrl.expectedType;
