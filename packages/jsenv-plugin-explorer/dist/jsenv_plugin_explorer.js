@@ -2,6 +2,7 @@ import { collectFiles } from "@jsenv/filesystem";
 
 const explorerHtmlFileUrl = String(new URL("./html/explorer.html", import.meta.url));
 const jsenvPluginExplorer = ({
+  pathname = "/",
   groups = {
     src: {
       "./**/*.html": true,
@@ -11,10 +12,18 @@ const jsenvPluginExplorer = ({
       "./**/*.test.html": true
     }
   }
-}) => {
+} = {}) => {
   return {
     name: "jsenv:explorer",
     appliesDuring: "dev",
+    resolveReference: {
+      http_request: reference => {
+        if (reference.specifier === pathname || reference.specifier === "__explorer__") {
+          return explorerHtmlFileUrl;
+        }
+        return null;
+      }
+    },
     transformUrlContent: {
       html: async (urlInfo, context) => {
         if (urlInfo.url !== explorerHtmlFileUrl) {
