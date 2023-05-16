@@ -35,12 +35,25 @@ import {
   isSystemResolveCall,
   analyzeSystemResolveCall,
 } from "./js_static_analysis/system.js";
+import {
+  isNewBlobCall,
+  analyzeNewBlobCall,
+} from "./js_static_analysis/new_blob.js";
+import {
+  isNewInlineContentCall,
+  analyzeNewInlineContentCall,
+} from "./js_static_analysis/new_inline_content.js";
+import {
+  isJSONParseCall,
+  analyzeJSONParseCall,
+} from "./js_static_analysis/json_parse.js";
 
 export const parseJsUrls = async ({
   js,
   url,
   isJsModule = false,
   isWebWorker = false,
+  inlineContent = true,
 } = {}) => {
   const jsUrls = [];
   const jsAst = await parseJsWithAcorn({
@@ -50,6 +63,12 @@ export const parseJsUrls = async ({
   });
   const onUrl = (jsUrl) => {
     jsUrls.push(jsUrl);
+  };
+  const onInlineContent = (inlineContentInfo) => {
+    jsUrls.push({
+      isInline: true,
+      ...inlineContentInfo,
+    });
   };
   ancestor(jsAst, {
     ImportDeclaration: (node) => {
@@ -100,6 +119,12 @@ export const parseJsUrls = async ({
         });
         return;
       }
+      if (inlineContent && isJSONParseCall(node)) {
+        analyzeJSONParseCall(node, {
+          onInlineContent,
+        });
+        return;
+      }
     },
     NewExpression: (node, ancestors) => {
       if (isNewWorkerCall(node)) {
@@ -129,6 +154,18 @@ export const parseJsUrls = async ({
         analyzeNewUrlCall(node, {
           isJsModule,
           onUrl,
+        });
+        return;
+      }
+      if (inlineContent && isNewInlineContentCall(node)) {
+        analyzeNewInlineContentCall(node, {
+          onInlineContent,
+        });
+        return;
+      }
+      if (inlineContent && isNewBlobCall(node)) {
+        analyzeNewBlobCall(node, {
+          onInlineContent,
         });
         return;
       }
