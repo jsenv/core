@@ -3,8 +3,8 @@ System.register([__v__("/js/new_stylesheet.nomodule.js"), __v__("/js/inline_cont
 
   var InlineContent, inlineContent, stylesheet;
   return {
-    setters: [function (_srcPluginsTranspilationBabelNew_stylesheetClientNew_stylesheetJs) {}, function (_srcPluginsInline_content_analysisClientInline_contentJs) {
-      InlineContent = _srcPluginsInline_content_analysisClientInline_contentJs.InlineContent;
+    setters: [function (_srcPluginsTranspilationBabelNew_stylesheetClientNew_stylesheetJs) {}, function (_srcPluginsReference_analysisInline_contentJs) {
+      InlineContent = _srcPluginsReference_analysisInline_contentJs.InlineContent;
     }],
     execute: function () {
       inlineContent = new InlineContent('body {\n  background-color: red;\n  background-image: url('+__v__("/other/jsenv.png")+');\n}\n', {
