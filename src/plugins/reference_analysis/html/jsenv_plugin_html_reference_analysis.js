@@ -1,6 +1,9 @@
 import {
   parseHtmlString,
   visitHtmlNodes,
+  getHtmlNodeText,
+  setHtmlNodeText,
+  removeHtmlNodeText,
   getHtmlNodeAttribute,
   getHtmlNodePosition,
   setHtmlNodeAttributes,
@@ -9,43 +12,45 @@ import {
   parseSrcSet,
   stringifyHtmlAst,
 } from "@jsenv/ast";
-
-import { jsenvPluginHtmlInlineContentAnalysis } from "./jsenv_plugin_html_inline_content_analysis.js";
+import { generateInlineContentUrl } from "@jsenv/urls";
+import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 
 export const jsenvPluginHtmlReferenceAnalysis = ({
   inlineContent,
   inlineConvertedScript,
 }) => {
-  return [
-    {
-      name: "jsenv:html_reference_analysis",
-      appliesDuring: "*",
-      transformUrlContent: {
-        html: parseAndTransformHtmlUrls,
-      },
+  return {
+    name: "jsenv:html_reference_analysis",
+    appliesDuring: "*",
+    transformUrlContent: {
+      html: (urlInfo, context) =>
+        parseAndTransformHtmlReferences(urlInfo, context, {
+          inlineContent,
+          inlineConvertedScript,
+        }),
     },
-    ...(inlineContent
-      ? [
-          jsenvPluginHtmlInlineContentAnalysis({
-            inlineConvertedScript,
-          }),
-        ]
-      : []),
-  ];
+  };
 };
 
-const parseAndTransformHtmlUrls = async (urlInfo, context) => {
+const parseAndTransformHtmlReferences = async (
+  urlInfo,
+  context,
+  { inlineContent, inlineConvertedScript },
+) => {
   const url = urlInfo.originalUrl;
   const content = urlInfo.content;
-  const htmlAst = parseHtmlString(content, {
-    storeOriginalPositions: context.dev,
-  });
+  const htmlAst = parseHtmlString(content);
 
   const mutations = [];
   const actions = [];
   const finalizeCallbacks = [];
 
-  const createReference = (node, attributeName, attributeValue, props) => {
+  const createExternalReference = (
+    node,
+    attributeName,
+    attributeValue,
+    { type, subtype, expectedType },
+  ) => {
     let position;
     if (getHtmlNodeAttribute(node, "jsenv-cooked-by")) {
       // when generated from inline content,
@@ -60,29 +65,7 @@ const parseAndTransformHtmlUrls = async (urlInfo, context) => {
       // originalLine, originalColumn
     } = position;
     const debug = getHtmlNodeAttribute(node, "jsenv-debug") !== undefined;
-    return onExternalReference({
-      ...props,
-      specifier: attributeValue,
-      node,
-      attributeName,
-      line,
-      column,
-      debug,
-    });
-  };
-  const onExternalReference = ({
-    type,
-    subtype,
-    expectedType,
-    line,
-    column,
-    originalLine,
-    originalColumn,
-    node,
-    attributeName,
-    debug,
-    specifier,
-  }) => {
+
     const { crossorigin, integrity } = readFetchMetas(node);
     const isResourceHint = [
       "preconnect",
@@ -95,9 +78,7 @@ const parseAndTransformHtmlUrls = async (urlInfo, context) => {
       type,
       subtype,
       expectedType,
-      originalLine,
-      originalColumn,
-      specifier,
+      specifier: attributeValue,
       specifierLine: line,
       specifierColumn: column,
       isResourceHint,
@@ -117,11 +98,11 @@ const parseAndTransformHtmlUrls = async (urlInfo, context) => {
   const visitHref = (node, referenceProps) => {
     const href = getHtmlNodeAttribute(node, "href");
     if (href) {
-      return createReference(node, "href", href, referenceProps);
+      return createExternalReference(node, "href", href, referenceProps);
     }
     const inlinedFromHref = getHtmlNodeAttribute(node, "inlined-from-href");
     if (inlinedFromHref) {
-      return createReference(
+      return createExternalReference(
         node,
         "inlined-from-href",
         new URL(inlinedFromHref, url).href,
@@ -133,11 +114,11 @@ const parseAndTransformHtmlUrls = async (urlInfo, context) => {
   const visitSrc = (node, referenceProps) => {
     const src = getHtmlNodeAttribute(node, "src");
     if (src) {
-      return createReference(node, "src", src, referenceProps);
+      return createExternalReference(node, "src", src, referenceProps);
     }
     const inlinedFromSrc = getHtmlNodeAttribute(node, "inlined-from-src");
     if (inlinedFromSrc) {
-      return createReference(
+      return createExternalReference(
         node,
         "inlined-from-src",
         new URL(inlinedFromSrc, url).href,
@@ -151,7 +132,7 @@ const parseAndTransformHtmlUrls = async (urlInfo, context) => {
     if (srcset) {
       const srcCandidates = parseSrcSet(srcset);
       return srcCandidates.map((srcCandidate) => {
-        return createReference(
+        return createExternalReference(
           node,
           "srcset",
           srcCandidate.specifier,
@@ -162,11 +143,86 @@ const parseAndTransformHtmlUrls = async (urlInfo, context) => {
     return null;
   };
 
+  const createInlineReference = (
+    node,
+    inlineContent,
+    { extension, type, expectedType, contentType },
+  ) => {
+    const hotAccept = getHtmlNodeAttribute(node, "hot-accept") !== undefined;
+    const { line, column, lineEnd, columnEnd, isOriginal } =
+      getHtmlNodePosition(node, { preferOriginal: true });
+    const inlineContentUrl = generateInlineContentUrl({
+      url: urlInfo.url,
+      extension,
+      line,
+      column,
+      lineEnd,
+      columnEnd,
+    });
+    const debug = getHtmlNodeAttribute(node, "jsenv-debug") !== undefined;
+    const [inlineReference, inlineUrlInfo] = context.referenceUtils.foundInline(
+      {
+        node,
+        type,
+        expectedType,
+        isOriginalPosition: isOriginal,
+        // we remove 1 to the line because imagine the following html:
+        // <style>body { color: red; }</style>
+        // -> content starts same line as <style> (same for <script>)
+        specifierLine: line - 1,
+        specifierColumn: column,
+        specifier: inlineContentUrl,
+        contentType,
+        content: inlineContent,
+        debug,
+      },
+    );
+    actions.push(async () => {
+      await cookInlineContent({
+        context,
+        inlineContentUrlInfo: inlineUrlInfo,
+        inlineContentReference: inlineReference,
+      });
+      mutations.push(() => {
+        if (hotAccept) {
+          removeHtmlNodeText(node);
+          setHtmlNodeAttributes(node, {
+            "jsenv-cooked-by": "jsenv:html_inline_content_analysis",
+          });
+        } else {
+          setHtmlNodeText(node, inlineUrlInfo.content, {
+            indentation: false, // indentation would decrease stack trace precision
+          });
+          setHtmlNodeAttributes(node, {
+            "jsenv-cooked-by": "jsenv:html_inline_content_analysis",
+          });
+        }
+      });
+    });
+
+    return inlineReference;
+  };
+  const visitTextContent = (
+    node,
+    { extension, type, expectedType, contentType },
+  ) => {
+    const inlineContent = getHtmlNodeText(node);
+    if (!inlineContent) {
+      return null;
+    }
+    return createInlineReference(node, inlineContent, {
+      extension,
+      type,
+      expectedType,
+      contentType,
+    });
+  };
+
   visitHtmlNodes(htmlAst, {
-    link: (node) => {
-      const rel = getHtmlNodeAttribute(node, "rel");
-      const type = getHtmlNodeAttribute(node, "type");
-      const ref = visitHref(node, {
+    link: (linkNode) => {
+      const rel = getHtmlNodeAttribute(linkNode, "rel");
+      const type = getHtmlNodeAttribute(linkNode, "type");
+      const ref = visitHref(linkNode, {
         type: "link_href",
         subtype: rel,
         // https://developer.mozilla.org/en-US/docs/Web/HTML/Link_types/preload#including_a_mime_type
@@ -178,62 +234,105 @@ const parseAndTransformHtmlUrls = async (urlInfo, context) => {
         });
       }
     },
-    // style: () => {},
-    script: (node) => {
+    style: inlineContent
+      ? (styleNode) => {
+          visitTextContent(styleNode, {
+            extension: ".css",
+            type: "style",
+            expectedType: "css",
+            contentType: "text/css",
+          });
+        }
+      : null,
+    script: (scriptNode) => {
+      // during build the importmap is inlined
+      // and shoud not be considered as a dependency anymore
       if (
-        getHtmlNodeAttribute(node, "jsenv-inlined-by") === "jsenv:importmap"
+        getHtmlNodeAttribute(scriptNode, "jsenv-inlined-by") ===
+        "jsenv:importmap"
       ) {
-        // during build the importmap is inlined
-        // and shoud not be considered as a dependency anymore
         return;
       }
-      const { type } = analyzeScriptNode(node);
-      if (type === "text") {
-        // ignore <script type="whatever" src="./file.js">
-        // per HTML spec https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#attr-type
-        // this will be handled by jsenv_plugin_html_inline_content_analysis
+
+      const { type, contentType, extension } = analyzeScriptNode(scriptNode);
+      // ignore <script type="whatever">foobar</script>
+      // per HTML spec https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#attr-type
+      if (type !== "text") {
+        const externalRef = visitSrc(scriptNode, {
+          type: "script",
+          subtype: type,
+          expectedType: type,
+        });
+        if (externalRef) {
+          return;
+        }
+      }
+
+      // now visit the content, if any
+      if (!inlineContent) {
         return;
       }
-      visitSrc(node, {
+      // If the inline script was already handled by an other plugin, ignore it
+      // - we want to preserve inline scripts generated by html supervisor during dev
+      // - we want to avoid cooking twice a script during build
+      if (
+        !inlineConvertedScript &&
+        getHtmlNodeAttribute(scriptNode, "jsenv-injected-by") ===
+          "jsenv:js_module_fallback"
+      ) {
+        return;
+      }
+
+      const inlineRef = visitTextContent(scriptNode, {
+        extension: extension || CONTENT_TYPE.asFileExtension(contentType),
         type: "script",
-        subtype: type,
         expectedType: type,
+        contentType,
       });
+      if (inlineRef && extension) {
+        // 1. <script type="jsx"> becomes <script>
+        // 2. <script type="module/jsx"> becomes <script type="module">
+        mutations.push(() => {
+          setHtmlNodeAttributes(scriptNode, {
+            type: type === "js_module" ? "module" : undefined,
+          });
+        });
+      }
     },
-    a: (node) => {
-      visitHref(node, {
+    a: (aNode) => {
+      visitHref(aNode, {
         type: "a_href",
       });
     },
-    iframe: (node) => {
-      visitSrc(node, {
+    iframe: (iframeNode) => {
+      visitSrc(iframeNode, {
         type: "iframe_src",
       });
     },
-    img: (node) => {
-      visitSrc(node, {
+    img: (imgNode) => {
+      visitSrc(imgNode, {
         type: "img_src",
       });
-      visitSrcset(node, {
+      visitSrcset(imgNode, {
         type: "img_srcset",
       });
     },
-    source: (node) => {
-      visitSrc(node, {
+    source: (sourceNode) => {
+      visitSrc(sourceNode, {
         type: "source_src",
       });
-      visitSrcset(node, {
+      visitSrcset(sourceNode, {
         type: "source_srcset",
       });
     },
     // svg <image> tag
-    image: (node) => {
-      visitHref(node, {
+    image: (imageNode) => {
+      visitHref(imageNode, {
         type: "image_href",
       });
     },
-    use: (node) => {
-      visitHref(node, {
+    use: (useNode) => {
+      visitHref(useNode, {
         type: "use_href",
       });
     },
@@ -250,6 +349,33 @@ const parseAndTransformHtmlUrls = async (urlInfo, context) => {
   }
   mutations.forEach((mutation) => mutation());
   return stringifyHtmlAst(htmlAst);
+};
+
+const cookInlineContent = async ({
+  context,
+  inlineContentUrlInfo,
+  inlineContentReference,
+}) => {
+  try {
+    await context.cook(inlineContentUrlInfo, {
+      reference: inlineContentReference,
+    });
+  } catch (e) {
+    if (e.code === "PARSE_ERROR") {
+      // When something like <style> or <script> contains syntax error
+      // the HTML in itself it still valid
+      // keep the syntax error and continue with the HTML
+      const messageStart =
+        inlineContentUrlInfo.type === "css"
+          ? `Syntax error on css declared inside <style>`
+          : `Syntax error on js declared inside <script>`;
+
+      context.logger.error(`${messageStart}: ${e.cause.reasonCode}
+${e.traceMessage}`);
+    } else {
+      throw e;
+    }
+  }
 };
 
 const crossOriginCompatibleTagNames = ["script", "link", "img", "source"];

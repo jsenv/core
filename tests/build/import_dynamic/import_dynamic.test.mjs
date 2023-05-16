@@ -3,8 +3,9 @@ import { assert } from "@jsenv/assert";
 import { build } from "@jsenv/core";
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
+import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 
-const test = async ({ expectedFilename, ...params }) => {
+const test = async ({ name, expectedFilename, ...params }) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -15,6 +16,10 @@ const test = async ({ expectedFilename, ...params }) => {
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
   });
+  takeDirectorySnapshot(
+    new URL("./dist/", import.meta.url),
+    new URL(`./snapshots/${name}/`, import.meta.url),
+  );
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
   });
@@ -34,12 +39,14 @@ const test = async ({ expectedFilename, ...params }) => {
 
 // can use <script type="module">
 await test({
+  name: "module",
   runtimeCompat: { chrome: "89" },
   versioning: false,
   expectedFilename: `nested_feature.js`,
 });
 // cannot use <script type="module">
 await test({
+  name: "nomodule",
   runtimeCompat: { chrome: "62" },
   versioning: false,
   expectedFilename: `nested_feature.nomodule.js`,
