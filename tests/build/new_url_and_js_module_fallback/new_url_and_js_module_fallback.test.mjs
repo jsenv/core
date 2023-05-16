@@ -1,20 +1,19 @@
 import { assert } from "@jsenv/assert";
-import { jsenvPluginMinification } from "@jsenv/plugin-minification";
 
 import { build } from "@jsenv/core";
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
+import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 
 const test = async (params) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
       "./main.html": "main.html",
     },
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-    plugins: [jsenvPluginMinification()],
     ...params,
   });
   const server = await startFileServer({
@@ -26,8 +25,12 @@ const test = async (params) => {
     pageFunction: () => window.resultPromise,
     /* eslint-enable no-undef */
   });
+  takeDirectorySnapshot(
+    new URL("./dist/", import.meta.url),
+    new URL("./snapshots/", import.meta.url),
+  );
   const actual = returnValue;
-  const expected = `${server.origin}/js/main.nomodule.js?v=5337168f`;
+  const expected = `${server.origin}/other/file.txt?v=e3b0c442`;
   assert({ actual, expected });
 };
 

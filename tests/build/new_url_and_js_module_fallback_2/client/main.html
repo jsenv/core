@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="preload" href="./main.js" as="script" crossorigin="" />
+  </head>
+
+  <body>
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve;
+      });
+    </script>
+    <script type="module">
+      const urlObject = new URL("./main.js", import.meta.url);
+
+      window.resolveResultPromise(urlObject.href);
+    </script>
+  </body>
+</html>

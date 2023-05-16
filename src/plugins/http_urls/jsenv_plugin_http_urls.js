@@ -2,7 +2,7 @@ export const jsenvPluginHttpUrls = () => {
   return {
     name: "jsenv:http_urls",
     appliesDuring: "*",
-    redirectUrl: (reference) => {
+    redirectReference: (reference) => {
       if (
         reference.url.startsWith("http:") ||
         reference.url.startsWith("https:")

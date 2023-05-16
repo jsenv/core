@@ -339,7 +339,7 @@ const rollupPluginJsenv = ({
       }
       const urlInfo = urlGraph.getUrlInfo(url);
       if (!urlInfo) {
-        // happen when excluded by urlAnalysis.include
+        // happen when excluded by referenceAnalysis.include
         return { id: url, external: true };
       }
       if (!urlInfo.shouldHandle) {

@@ -28,7 +28,7 @@ export const jsenvPluginJsModuleFallbackOnWorkers = () => {
   return {
     name: "jsenv:js_module_fallback_on_workers",
     appliesDuring: "*",
-    redirectUrl: {
+    redirectReference: {
       js_url: (reference, context) => {
         if (reference.expectedType !== "js_module") {
           return null;

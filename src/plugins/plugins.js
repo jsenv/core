@@ -1,10 +1,10 @@
-import { jsenvPluginUrlAnalysis } from "./url_analysis/jsenv_plugin_url_analysis.js";
+import { jsenvPluginReferenceAnalysis } from "./reference_analysis/jsenv_plugin_reference_analysis.js";
 import { jsenvPluginImportmap } from "./importmap/jsenv_plugin_importmap.js";
-import { jsenvPluginUrlResolution } from "./url_resolution/jsenv_plugin_url_resolution.js";
-import { jsenvPluginUrlVersion } from "./url_version/jsenv_plugin_url_version.js";
+import { jsenvPluginNodeEsmResolution } from "./resolution_node_esm/jsenv_plugin_node_esm_resolution.js";
+import { jsenvPluginWebResolution } from "./resolution_web/jsenv_plugin_web_resolution.js";
+import { jsenvPluginVersionSearchParam } from "./version_search_param/jsenv_plugin_version_search_param.js";
 import { jsenvPluginFileUrls } from "./file_urls/jsenv_plugin_file_urls.js";
 import { jsenvPluginHttpUrls } from "./http_urls/jsenv_plugin_http_urls.js";
-import { jsenvPluginInlineContentAnalysis } from "./inline_content_analysis/jsenv_plugin_inline_content_analysis.js";
 import { jsenvPluginInlining } from "./inlining/jsenv_plugin_inlining.js";
 import { jsenvPluginSupervisor } from "./supervisor/jsenv_plugin_supervisor.js";
 import { jsenvPluginCommonJsGlobals } from "./commonjs_globals/jsenv_plugin_commonjs_globals.js";
@@ -21,11 +21,11 @@ import { jsenvPluginRibbon } from "./ribbon/jsenv_plugin_ribbon.js";
 
 export const getCorePlugins = ({
   rootDirectoryUrl,
-  defaultFileUrl,
   runtimeCompat,
 
-  urlAnalysis = {},
-  urlResolution = {},
+  referenceAnalysis = {},
+  nodeEsmResolution = {},
+  webResolution = {},
   fileSystemMagicRedirection,
   directoryReferenceAllowed,
   supervisor,
@@ -51,31 +51,34 @@ export const getCorePlugins = ({
   if (clientAutoreload === true) {
     clientAutoreload = {};
   }
-
   if (ribbon === true) {
     ribbon = {};
   }
 
   return [
-    jsenvPluginUrlAnalysis({ rootDirectoryUrl, ...urlAnalysis }),
+    jsenvPluginReferenceAnalysis(referenceAnalysis),
     jsenvPluginTranspilation(transpilation),
     jsenvPluginImportmap(),
-    // before node esm to handle bare specifiers
-    // + before node esm to handle importmap before inline content
-    jsenvPluginInlineContentAnalysis(), // before "file urls" to resolve and load inline urls
     ...(inlining ? [jsenvPluginInlining()] : []),
     ...(supervisor ? [jsenvPluginSupervisor(supervisor)] : []), // after inline as it needs inline script to be cooked
+
+    /* When resolving references the following applies by default:
+       - http urls are resolved by jsenvPluginHttpUrls
+       - reference.type === "filesystem" -> resolved by jsenv_plugin_file_urls.js
+       - reference inside a js module -> resolved by node esm
+       - All the rest uses web standard url resolution
+     */
     jsenvPluginFileUrls({
       directoryReferenceAllowed,
       ...fileSystemMagicRedirection,
     }),
     jsenvPluginHttpUrls(),
-    jsenvPluginUrlResolution({
-      runtimeCompat,
-      defaultFileUrl,
-      urlResolution,
-    }),
-    jsenvPluginUrlVersion(),
+    ...(nodeEsmResolution
+      ? [jsenvPluginNodeEsmResolution(nodeEsmResolution)]
+      : []),
+    jsenvPluginWebResolution(webResolution),
+
+    jsenvPluginVersionSearchParam(),
     jsenvPluginCommonJsGlobals(),
     jsenvPluginImportMetaScenarios(),
     ...(scenarioPlaceholders ? [jsenvPluginGlobalScenarios()] : []),

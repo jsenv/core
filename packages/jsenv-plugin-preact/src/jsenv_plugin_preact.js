@@ -52,7 +52,7 @@ export const jsenvPluginPreact = ({
   return {
     name: "jsenv:preact",
     appliesDuring: "*",
-    resolveUrl: {
+    resolveReference: {
       js_import: (reference, context) => {
         if (
           reference.specifier === "react" ||

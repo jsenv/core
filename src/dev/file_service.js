@@ -26,8 +26,9 @@ export const createFileService = ({
   runtimeCompat,
 
   plugins,
-  urlAnalysis,
-  urlResolution,
+  referenceAnalysis,
+  nodeEsmResolution,
+  webResolution,
   fileSystemMagicRedirection,
   supervisor,
   transpilation,
@@ -91,17 +92,11 @@ export const createFileService = ({
     });
     const clientRuntimeCompat = { [runtimeName]: runtimeVersion };
 
-    let defaultFileUrl;
-    if (sourceMainFilePath) {
-      defaultFileUrl = String(new URL(sourceMainFilePath, sourceDirectoryUrl));
-    } else {
-      defaultFileUrl = String(new URL("./index.html", sourceDirectoryUrl));
-    }
-
     const kitchen = createKitchen({
       signal,
       logLevel,
       rootDirectoryUrl: sourceDirectoryUrl,
+      mainFilePath: sourceMainFilePath,
       urlGraph,
       dev: true,
       runtimeCompat,
@@ -117,11 +112,11 @@ export const createFileService = ({
         ...plugins,
         ...getCorePlugins({
           rootDirectoryUrl: sourceDirectoryUrl,
-          defaultFileUrl,
           runtimeCompat,
 
-          urlAnalysis,
-          urlResolution,
+          referenceAnalysis,
+          nodeEsmResolution,
+          webResolution,
           fileSystemMagicRedirection,
           supervisor,
           transpilation,

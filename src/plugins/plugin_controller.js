@@ -3,12 +3,12 @@ import { performance } from "node:perf_hooks";
 const HOOK_NAMES = [
   "init",
   "serve", // is called only during dev/tests
-  "resolveUrl",
-  "redirectUrl",
+  "resolveReference",
+  "redirectReference",
+  "transformReferenceSearchParams",
+  "formatReference",
   "fetchUrlContent",
   "transformUrlContent",
-  "transformUrlSearchParams",
-  "formatUrl",
   "finalizeUrlContent",
   "bundle", // is called only during build
   "optimizeUrlContent", // is called only during build
@@ -23,7 +23,16 @@ export const createPluginController = (kitchenContext) => {
   // - When debugging, there is less iteration
   // also it should increase perf as there is less work to do
   const hookGroups = {};
-  const addPlugin = (plugin, { position = "start" }) => {
+  const addPlugin = (plugin, { position = "end" }) => {
+    if (Array.isArray(plugin)) {
+      if (position === "start") {
+        plugin = plugin.slice().reverse();
+      }
+      plugin.forEach((plugin) => {
+        addPlugin(plugin, { position });
+      });
+      return;
+    }
     if (plugin === null || typeof plugin !== "object") {
       throw new TypeError(`plugin must be objects, got ${plugin}`);
     }
@@ -60,9 +69,9 @@ export const createPluginController = (kitchenContext) => {
           value: hookValue,
         };
         if (position === "start") {
-          group.push(hook);
-        } else {
           group.unshift(hook);
+        } else {
+          group.push(hook);
         }
       }
     });
@@ -116,10 +125,10 @@ export const createPluginController = (kitchenContext) => {
     return true;
   };
   const pushPlugin = (plugin) => {
-    addPlugin(plugin, { position: "start" });
+    addPlugin(plugin, { position: "end" });
   };
   const unshiftPlugin = (plugin) => {
-    addPlugin(plugin, { position: "end" });
+    addPlugin(plugin, { position: "start" });
   };
 
   let lastPluginUsed = null;
@@ -290,7 +299,7 @@ const assertAndNormalizeReturnValue = (hookName, returnValue) => {
 const returnValueAssertions = [
   {
     name: "url_assertion",
-    appliesTo: ["resolveUrl", "redirectUrl"],
+    appliesTo: ["resolveReference", "redirectReference"],
     assertion: (valueReturned) => {
       if (valueReturned instanceof URL) {
         return valueReturned.href;

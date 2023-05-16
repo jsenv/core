@@ -64,9 +64,8 @@ import {
   isWebWorkerEntryPointReference,
   isWebWorkerUrlInfo,
 } from "../kitchen/web_workers.js";
-import { jsenvPluginUrlAnalysis } from "../plugins/url_analysis/jsenv_plugin_url_analysis.js";
+import { jsenvPluginReferenceAnalysis } from "../plugins/reference_analysis/jsenv_plugin_reference_analysis.js";
 import { jsenvPluginInlining } from "../plugins/inlining/jsenv_plugin_inlining.js";
-import { jsenvPluginInlineContentAnalysis } from "../plugins/inline_content_analysis/jsenv_plugin_inline_content_analysis.js";
 import { jsenvPluginJsModuleFallback } from "../plugins/transpilation/js_module_fallback/jsenv_plugin_js_module_fallback.js";
 import { getCorePlugins } from "../plugins/plugins.js";
 import { jsenvPluginLineBreakNormalization } from "./jsenv_plugin_line_break_normalization.js";
@@ -98,11 +97,11 @@ export const defaultRuntimeCompat = {
  * @param {Object} buildParameters
  * @param {string|url} buildParameters.sourceDirectoryUrl
  *        Directory containing source files
+ * @param {string|url} buildParameters.buildDirectoryUrl
+ *        Directory where optimized files will be written
  * @param {object} buildParameters.entryPoints
  *        Object where keys are paths to source files and values are their future name in the build directory.
  *        Keys are relative to sourceDirectoryUrl
- * @param {string|url} buildParameters.buildDirectoryUrl
- *        Directory where optimized files will be written
  * @param {object} buildParameters.runtimeCompat
  *        Code generated will be compatible with these runtimes
  * @param {string} [buildParameters.assetsDirectory=""]
@@ -135,10 +134,9 @@ export const build = async ({
   runtimeCompat = defaultRuntimeCompat,
   base = runtimeCompat.node ? "./" : "/",
   plugins = [],
-  sourcemaps = "none",
-  sourcemapsSourcesContent,
-  urlAnalysis = {},
-  urlResolution,
+  referenceAnalysis = {},
+  nodeEsmResolution,
+  webResolution,
   fileSystemMagicRedirection,
   directoryReferenceAllowed,
   scenarioPlaceholders,
@@ -153,6 +151,8 @@ export const build = async ({
   watch = false,
 
   directoryToClean,
+  sourcemaps = "none",
+  sourcemapsSourcesContent,
   writeOnFileSystem = true,
   outDirectoryUrl,
   assetManifest = versioningMethod === "filename",
@@ -319,6 +319,12 @@ build ${entryPointKeys.length} entry points`);
         ...plugins,
         {
           appliesDuring: "build",
+          formatReference: (reference) => {
+            if (!reference.shouldHandle) {
+              return `ignore:${reference.specifier}`;
+            }
+            return null;
+          },
           fetchUrlContent: (urlInfo, context) => {
             if (context.reference.original) {
               rawRedirections.set(
@@ -327,20 +333,15 @@ build ${entryPointKeys.length} entry points`);
               );
             }
           },
-          formatUrl: (reference) => {
-            if (!reference.shouldHandle) {
-              return `ignore:${reference.specifier}`;
-            }
-            return null;
-          },
         },
         ...getCorePlugins({
           rootDirectoryUrl: sourceDirectoryUrl,
           urlGraph: rawGraph,
           runtimeCompat,
 
-          urlAnalysis,
-          urlResolution,
+          referenceAnalysis,
+          nodeEsmResolution,
+          webResolution,
           fileSystemMagicRedirection,
           directoryReferenceAllowed,
           transpilation: {
@@ -379,10 +380,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     const bundleUrlInfos = {};
     const bundlers = {};
     const finalGraph = createUrlGraph();
-    const urlAnalysisPlugin = jsenvPluginUrlAnalysis({
-      rootDirectoryUrl: sourceDirectoryUrl,
-      ...urlAnalysis,
-    });
     const finalGraphKitchen = createKitchen({
       logLevel,
       rootDirectoryUrl: buildDirectoryUrl,
@@ -391,21 +388,21 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       runtimeCompat,
       ...contextSharedDuringBuild,
       plugins: [
-        urlAnalysisPlugin,
+        jsenvPluginReferenceAnalysis({
+          ...referenceAnalysis,
+          fetchInlineUrls: false,
+        }),
         ...(lineBreakNormalization
           ? [jsenvPluginLineBreakNormalization()]
           : []),
         jsenvPluginJsModuleFallback({
           systemJsInjection: true,
         }),
-        jsenvPluginInlineContentAnalysis({
-          fetchInlineUrls: false,
-        }),
         jsenvPluginInlining(),
         {
           name: "jsenv:build",
           appliesDuring: "build",
-          resolveUrl: (reference) => {
+          resolveReference: (reference) => {
             const getUrl = () => {
               if (reference.type === "filesystem") {
                 const parentRawUrl = buildDirectoryRedirections.get(
@@ -429,8 +426,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             url = bundleInternalRedirections.get(url) || url;
             return url;
           },
-          // redirecting urls into the build directory
-          redirectUrl: (reference) => {
+          // redirecting references into the build directory
+          redirectReference: (reference) => {
             if (!reference.url.startsWith("file:")) {
               return null;
             }
@@ -493,7 +490,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               const isEntryPoint =
                 reference.isEntryPoint ||
                 isWebWorkerEntryPointReference(reference);
-              // the url info do not exists yet (it will be created after this "redirectUrl" hook)
+              // the url info do not exists yet (it will be created after this "redirectReference" hook)
               // And the content will be generated when url is cooked by url graph loader.
               // Here we just want to reserve an url for that file
               const urlInfo = {
@@ -579,7 +576,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             });
             return buildUrl;
           },
-          formatUrl: (reference) => {
+          formatReference: (reference) => {
             if (!reference.generatedUrl.startsWith("file:")) {
               if (!versioning && reference.generatedUrl.startsWith("ignore:")) {
                 return reference.generatedUrl.slice("ignore:".length);
@@ -984,6 +981,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         if (!versioning) {
           break inject_version_in_urls;
         }
+        logger.debug("versioning start");
         const versioningTask = createTaskLog("inject version in urls", {
           disabled: logger.levels.debug || !logger.levels.info,
         });
@@ -1183,24 +1181,32 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             runtimeCompat,
             ...contextSharedDuringBuild,
             plugins: [
-              urlAnalysisPlugin,
-              jsenvPluginInlineContentAnalysis({
+              jsenvPluginReferenceAnalysis({
+                ...referenceAnalysis,
                 fetchInlineUrls: false,
-                analyzeConvertedScripts: true, // to be able to version their urls
+                inlineConvertedScript: true, // to be able to version their urls
                 allowEscapeForVersioning: true,
               }),
               {
                 name: "jsenv:versioning",
                 appliesDuring: "build",
-                resolveUrl: (reference) => {
+                resolveReference: (reference) => {
                   const buildUrl = buildUrls.get(reference.specifier);
                   if (buildUrl) {
                     return buildUrl;
                   }
-                  const urlObject = new URL(
-                    reference.specifier,
-                    reference.baseUrl || reference.parentUrl,
-                  );
+                  let urlObject;
+                  if (reference.specifier[0] === "/") {
+                    urlObject = new URL(
+                      reference.specifier.slice(1),
+                      buildDirectoryUrl,
+                    );
+                  } else {
+                    urlObject = new URL(
+                      reference.specifier,
+                      reference.baseUrl || reference.parentUrl,
+                    );
+                  }
                   const url = urlObject.href;
                   // during versioning we revisit the deps
                   // but the code used to enforce trailing slash on directories
@@ -1218,7 +1224,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   }
                   return url;
                 },
-                formatUrl: (reference) => {
+                formatReference: (reference) => {
                   if (!reference.shouldHandle) {
                     if (reference.generatedUrl.startsWith("ignore:")) {
                       return reference.generatedUrl.slice("ignore:".length);

@@ -13,7 +13,7 @@ await build({
     node: "16.14",
   },
   scenarioPlaceholders: false,
-  urlAnalysis: {
+  referenceAnalysis: {
     include: {
       "file://**/*": true,
       "file://**/node_modules/": false,

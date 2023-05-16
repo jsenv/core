@@ -19,7 +19,7 @@ export const jsenvPluginExplorer = ({
   return {
     name: "jsenv:explorer",
     appliesDuring: "dev",
-    resolveUrl: {
+    resolveReference: {
       http_request: (reference) => {
         if (
           reference.specifier === pathname ||

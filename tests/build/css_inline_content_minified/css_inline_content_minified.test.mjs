@@ -8,10 +8,10 @@ const jsenvSrcDirectoryUrl = new URL("../../../src/", import.meta.url);
 await build({
   logLevel: "warn",
   sourceDirectoryUrl: new URL("./client/", import.meta.url),
+  buildDirectoryUrl: new URL("./dist/", import.meta.url),
   entryPoints: {
     "./main.html": "main.html",
   },
-  buildDirectoryUrl: new URL("./dist/", import.meta.url),
   runtimeCompat: {
     chrome: "64",
     edge: "79",

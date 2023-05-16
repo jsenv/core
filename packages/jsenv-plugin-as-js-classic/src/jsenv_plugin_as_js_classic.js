@@ -20,7 +20,7 @@ export const jsenvPluginAsJsClassic = ({
   return {
     name: "jsenv:as_js_classic",
     appliesDuring: "*",
-    redirectUrl: (reference) => {
+    redirectReference: (reference) => {
       if (reference.searchParams.has("as_js_classic")) {
         markAsJsClassicProxy(reference);
       }

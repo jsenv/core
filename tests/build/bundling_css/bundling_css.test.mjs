@@ -6,10 +6,10 @@ import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js"
 await build({
   logLevel: "warn",
   sourceDirectoryUrl: new URL("./client/", import.meta.url),
+  buildDirectoryUrl: new URL("./dist/", import.meta.url),
   entryPoints: {
     "./elements.css": "elements.css",
   },
-  buildDirectoryUrl: new URL("./dist/", import.meta.url),
   plugins: [jsenvPluginBundling()],
 });
 takeDirectorySnapshot(

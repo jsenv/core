@@ -55,7 +55,7 @@ export const jsenvPluginJsModuleConversion = ({
   return {
     name: "jsenv:js_module_conversion",
     appliesDuring: "*",
-    redirectUrl: (reference, context) => {
+    redirectReference: (reference, context) => {
       if (reference.searchParams.has("js_module_fallback")) {
         markAsJsClassicProxy(reference);
         return null;
