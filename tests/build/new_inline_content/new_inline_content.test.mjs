@@ -8,10 +8,10 @@ const test = async (params) => {
   const { buildManifest } = await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
       "./main.html": "main.html",
     },
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     transpilation: { css: false },
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
@@ -62,8 +62,6 @@ body {
     lineEnding2: `\n`,
     singleQuote: `'`,
     singleQuoteEscaped: `'`,
-    whenInlined: `body { background-image: url(/other/jsenv.png?v=25e95a00); }`,
-    whenRenamed: `body { background-image: url(/other/jsenv.png?v=25e95a00); }`,
     bodyBackgroundImage: `url("${server.origin}/other/jsenv.png?v=25e95a00")`,
   };
   assert({ actual, expected });

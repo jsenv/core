@@ -18,7 +18,10 @@ export const jsenvPluginReferenceAnalysis = ({
   allowEscapeForVersioning = false,
 }) => {
   return [
-    jsenvPluginReferenceAnalysisInclude({ include, supportedProtocols }),
+    jsenvPluginReferenceAnalysisInclude({
+      include,
+      supportedProtocols,
+    }),
     jsenvPluginDirectoryReferenceAnalysis(),
     jsenvPluginHtmlReferenceAnalysis({
       inlineContent,

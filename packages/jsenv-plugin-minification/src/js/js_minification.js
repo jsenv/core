@@ -18,9 +18,9 @@ export const minifyJs = async ({ jsUrlInfo, options }) => {
         includeSources: true,
       },
       module: isJsModule,
-      // We need to preserve "new InlineContent()" calls to be able to recognize them
+      // We need to preserve "new __InlineContent__()" calls to be able to recognize them
       // after minification in order to version urls inside inline content text
-      keep_fnames: /InlineContent/,
+      keep_fnames: /__InlineContent__/,
       ...options,
     },
   );

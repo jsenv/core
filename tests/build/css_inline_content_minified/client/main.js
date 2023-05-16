@@ -1,6 +1,7 @@
-import { InlineContent } from "@jsenv/core/src/plugins/reference_analysis/inline_content.js";
+/* globals __InlineContent__ */
+import "@jsenv/core/src/plugins/reference_analysis/inline_content.js";
 
-const content = new InlineContent(
+const content = new __InlineContent__(
   `@font-face {
     font-family: "Roboto";
     font-style: normal;

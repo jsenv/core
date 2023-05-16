@@ -1,22 +1,10 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Title</title>
-    <meta charset="utf-8">
+    <title>Import dynamic</title>
+    <meta charset="utf8">
     <link rel="icon" href="data:,">
     <script>
-      ;(function() {
-        var __versionMappings__ = {
-        "/js/new_stylesheet.nomodule.js": "/js/new_stylesheet.nomodule.js?v=a013400a",
-        "/js/main.nomodule2.js": "/js/main.nomodule2.js?v=933ce281",
-        "/js/inline_content.nomodule.js": "/js/inline_content.nomodule.js?v=1a772a7e",
-        "/other/jsenv.png": "/other/jsenv.png?v=25e95a00"
-      };
-        window.__v__ = function (specifier) {
-          return __versionMappings__[specifier] || specifier
-        };
-      })();
-    </script><script>
       /*
        * This file is a modified version of https://github.com/systemjs/systemjs/blob/main/dist/s.js
        * with the following changes:
@@ -427,11 +415,28 @@
       })();
     </script>
   </head>
-
   <body>
-    <script no-html-supervisor="">window.resultPromise = new Promise(resolve => {
+    <button>Load file</button>
+    <script>window.resultPromise = new Promise(resolve => {
   window.resolveResultPromise = resolve;
 });</script>
-    <script src="/js/main.nomodule.js?v=c735df2d"></script>
+    <script>const url = new URL("/js/nested_feature.nomodule.js", window.location);
+window.nestedFeatureUrl = url.href;</script>
+    <script>System.register(["/js/main.nomodule.js"], function (_export, _context) {
+  "use strict";
+
+  var loadFeature;
+  return {
+    setters: [function (_clientMainJs) {
+      loadFeature = _clientMainJs.loadFeature;
+    }],
+    execute: function () {
+      document.querySelector("button").onclick = () => {
+        loadFeature();
+      };
+      document.querySelector("button").click();
+    }
+  };
+});</script>
   </body>
 </html>
