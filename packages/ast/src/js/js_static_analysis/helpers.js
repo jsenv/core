@@ -17,10 +17,10 @@ export const isStringLiteralNode = (node) => {
 };
 
 export const extractContentInfo = (node) => {
-  if (node.type === "StringLiteral") {
+  if (isStringLiteralNode(node)) {
     return {
       nodeType: "StringLiteral",
-      quote: node.extra.raw[0],
+      quote: node.raw[0],
       content: node.value,
     };
   }

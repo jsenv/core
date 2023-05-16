@@ -58,20 +58,6 @@ body {
   { type: "text/css" },
 ).text;
 
-// mimic what terser might do during minification
-export const whenInlined = new (function __InlineContent__(
-  e,
-  { type: t = "text/plain" },
-) {
-  this.text = e;
-  this.type = t;
-})(`body { background-image: url(./jsenv.png); }`, { type: "text/css" }).text;
-
-export const whenRenamed = new __InlineContent__(
-  `body { background-image: url(./jsenv.png); }`,
-  { type: "text/css" },
-).text;
-
 const blob = new Blob([`body { background-image: url(./jsenv.png); }`], {
   type: "text/css",
 });

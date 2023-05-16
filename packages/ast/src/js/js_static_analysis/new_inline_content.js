@@ -1,4 +1,8 @@
-import { getTypePropertyNode, extractContentInfo } from "./helpers.js";
+import {
+  isStringLiteralNode,
+  getTypePropertyNode,
+  extractContentInfo,
+} from "./helpers.js";
 
 export const isNewInlineContentCall = (node) => {
   return (
@@ -20,7 +24,7 @@ export const analyzeNewInlineContentCall = (node, { onInlineContent }) => {
     return;
   }
   const typePropertyValueNode = typePropertyNode.value;
-  if (typePropertyValueNode.type !== "StringLiteral") {
+  if (!isStringLiteralNode(typePropertyValueNode)) {
     return;
   }
   const nodeHoldingContent = firstArg;
