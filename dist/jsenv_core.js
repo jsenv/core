@@ -14,7 +14,7 @@ import { Readable, Stream, Writable } from "node:stream";
 import { Http2ServerResponse } from "node:http2";
 import { lookup } from "node:dns";
 import { SOURCEMAP, generateSourcemapFileUrl, composeTwoSourcemaps, generateSourcemapDataUrl, createMagicSource, getOriginalPosition } from "@jsenv/sourcemap";
-import { parseHtmlString, visitHtmlNodes, getHtmlNodeText, getHtmlNodePosition, getHtmlNodeAttribute, analyzeScriptNode, stringifyHtmlAst, setHtmlNodeText, setHtmlNodeAttributes, removeHtmlNodeText, parseSrcSet, getHtmlNodeAttributePosition, parseCssUrls, applyBabelPlugins, parseJsUrls, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, findHtmlNode, removeHtmlNode, injectJsImport, analyzeLinkNode, injectHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
+import { parseHtmlString, visitHtmlNodes, getHtmlNodeAttribute, analyzeScriptNode, stringifyHtmlAst, parseSrcSet, getHtmlNodeText, setHtmlNodeAttributes, getHtmlNodePosition, getHtmlNodeAttributePosition, removeHtmlNodeText, setHtmlNodeText, parseCssUrls, parseJsUrls, applyBabelPlugins, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, findHtmlNode, removeHtmlNode, injectJsImport, analyzeLinkNode, injectHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
 import { createRequire } from "node:module";
 import babelParser from "@babel/parser";
 
@@ -8092,7 +8092,7 @@ const assertAndNormalizeReturnValue = (hookName, returnValue) => {
 };
 const returnValueAssertions = [{
   name: "url_assertion",
-  appliesTo: ["resolveUrl", "redirectUrl"],
+  appliesTo: ["resolveReference", "redirectReference"],
   assertion: valueReturned => {
     if (valueReturned instanceof URL) {
       return valueReturned.href;
@@ -10382,301 +10382,35 @@ const base64ToBuffer = base64String => Buffer.from(base64String, "base64");
 const base64ToString = base64String => Buffer.from(base64String, "base64").toString("utf8");
 const dataToBase64 = data => Buffer.from(data).toString("base64");
 
-/*
- * This plugin ensure content inlined inside HTML is cooked (inline <script> for instance)
- * For <script hot-accept> the script content will be moved to a virtual file
- * to enable hot reloading
- */
-const jsenvPluginHtmlInlineContentAnalysis = ({
-  inlineConvertedScript
-}) => {
-  const cookInlineContent = async ({
-    context,
-    inlineContentUrlInfo,
-    inlineContentReference
-  }) => {
-    try {
-      await context.cook(inlineContentUrlInfo, {
-        reference: inlineContentReference
-      });
-    } catch (e) {
-      if (e.code === "PARSE_ERROR") {
-        // When something like <style> or <script> contains syntax error
-        // the HTML in itself it still valid
-        // keep the syntax error and continue with the HTML
-        const messageStart = inlineContentUrlInfo.type === "css" ? `Syntax error on css declared inside <style>` : `Syntax error on js declared inside <script>`;
-        context.logger.error(`${messageStart}: ${e.cause.reasonCode}
-${e.traceMessage}`);
-      } else {
-        throw e;
-      }
-    }
-  };
-  return {
-    name: "jsenv:html_inline_content_analysis",
-    appliesDuring: "*",
-    transformUrlContent: {
-      html: async (urlInfo, context) => {
-        const htmlAst = parseHtmlString(urlInfo.content);
-        const mutations = [];
-        const actions = [];
-        visitHtmlNodes(htmlAst, {
-          style: styleNode => {
-            const styleNodeText = getHtmlNodeText(styleNode);
-            if (!styleNodeText) {
-              return;
-            }
-            const {
-              line,
-              column,
-              lineEnd,
-              columnEnd,
-              isOriginal
-            } = getHtmlNodePosition(styleNode, {
-              preferOriginal: true
-            });
-            const inlineStyleUrl = generateInlineContentUrl({
-              url: urlInfo.url,
-              extension: ".css",
-              line,
-              column,
-              lineEnd,
-              columnEnd
-            });
-            const debug = getHtmlNodeAttribute(styleNode, "jsenv-debug") !== undefined;
-            const [inlineStyleReference, inlineStyleUrlInfo] = context.referenceUtils.foundInline({
-              node: styleNode,
-              type: "style",
-              expectedType: "css",
-              isOriginalPosition: isOriginal,
-              // we remove 1 to the line because imagine the following html:
-              // <style>body { color: red; }</style>
-              // -> content starts same line as <style>
-              specifierLine: line - 1,
-              specifierColumn: column,
-              specifier: inlineStyleUrl,
-              contentType: "text/css",
-              content: styleNodeText,
-              debug
-            });
-            actions.push(async () => {
-              await cookInlineContent({
-                context,
-                inlineContentUrlInfo: inlineStyleUrlInfo,
-                inlineContentReference: inlineStyleReference
-              });
-            });
-            mutations.push(() => {
-              setHtmlNodeText(styleNode, inlineStyleUrlInfo.content, {
-                indentation: false // indentation would decrease strack trace precision
-              });
-
-              setHtmlNodeAttributes(styleNode, {
-                "jsenv-cooked-by": "jsenv:html_inline_content_analysis"
-              });
-            });
-          },
-          script: scriptNode => {
-            const scriptNodeText = getHtmlNodeText(scriptNode);
-            if (!scriptNodeText) {
-              return;
-            }
-            // If the inline script was already handled by an other plugin, ignore it
-            // - we want to preserve inline scripts generated by html supervisor during dev
-            // - we want to avoid cooking twice a script during build
-            if (!inlineConvertedScript && getHtmlNodeAttribute(scriptNode, "jsenv-injected-by") === "jsenv:js_module_fallback") {
-              return;
-            }
-            const hotAccept = getHtmlNodeAttribute(scriptNode, "hot-accept") !== undefined;
-            const {
-              type,
-              contentType,
-              extension
-            } = analyzeScriptNode(scriptNode);
-            const {
-              line,
-              column,
-              lineEnd,
-              columnEnd,
-              isOriginal
-            } = getHtmlNodePosition(scriptNode, {
-              preferOriginal: true
-            });
-            let inlineScriptUrl = generateInlineContentUrl({
-              url: urlInfo.url,
-              extension: extension || CONTENT_TYPE.asFileExtension(contentType),
-              line,
-              column,
-              lineEnd,
-              columnEnd
-            });
-            const debug = getHtmlNodeAttribute(scriptNode, "jsenv-debug") !== undefined;
-            const [inlineScriptReference, inlineScriptUrlInfo] = context.referenceUtils.foundInline({
-              node: scriptNode,
-              type: "script",
-              expectedType: type,
-              // we remove 1 to the line because imagine the following html:
-              // <script>console.log('ok')</script>
-              // -> content starts same line as <script>
-              specifierLine: line - 1,
-              specifierColumn: column,
-              isOriginalPosition: isOriginal,
-              specifier: inlineScriptUrl,
-              contentType,
-              content: scriptNodeText,
-              debug
-            });
-            actions.push(async () => {
-              await cookInlineContent({
-                context,
-                inlineContentUrlInfo: inlineScriptUrlInfo,
-                inlineContentReference: inlineScriptReference
-              });
-              mutations.push(() => {
-                const attributes = {
-                  "jsenv-cooked-by": "jsenv:html_inline_content_analysis",
-                  // 1. <script type="jsx"> becomes <script>
-                  // 2. <script type="module/jsx"> becomes <script type="module">
-                  ...(extension ? {
-                    type: type === "js_module" ? "module" : undefined
-                  } : {})
-                };
-                if (hotAccept) {
-                  removeHtmlNodeText(scriptNode);
-                  setHtmlNodeAttributes(scriptNode, {
-                    ...attributes
-                  });
-                } else {
-                  setHtmlNodeText(scriptNode, inlineScriptUrlInfo.content, {
-                    indentation: false // indentation would decrease stack trace precision
-                  });
-
-                  setHtmlNodeAttributes(scriptNode, {
-                    ...attributes
-                  });
-                }
-              });
-            });
-          }
-        });
-        if (actions.length > 0) {
-          await Promise.all(actions.map(action => action()));
-        }
-        if (mutations.length === 0) {
-          return null;
-        }
-        mutations.forEach(mutation => mutation());
-        const htmlModified = stringifyHtmlAst(htmlAst);
-        return htmlModified;
-      }
-    }
-  };
-};
-
 const jsenvPluginHtmlReferenceAnalysis = ({
   inlineContent,
   inlineConvertedScript
 }) => {
-  return [{
+  return {
     name: "jsenv:html_reference_analysis",
     appliesDuring: "*",
     transformUrlContent: {
-      html: parseAndTransformHtmlUrls
+      html: (urlInfo, context) => parseAndTransformHtmlReferences(urlInfo, context, {
+        inlineContent,
+        inlineConvertedScript
+      })
     }
-  }, ...(inlineContent ? [jsenvPluginHtmlInlineContentAnalysis({
-    inlineConvertedScript
-  })] : [])];
+  };
 };
-const parseAndTransformHtmlUrls = async (urlInfo, context) => {
+const parseAndTransformHtmlReferences = async (urlInfo, context, {
+  inlineContent,
+  inlineConvertedScript
+}) => {
   const url = urlInfo.originalUrl;
   const content = urlInfo.content;
-  const htmlAst = parseHtmlString(content, {
-    storeOriginalPositions: context.dev
-  });
-  const mentions = visitHtmlUrls({
-    url,
-    htmlAst
-  });
+  const htmlAst = parseHtmlString(content);
   const mutations = [];
   const actions = [];
-  for (const mention of mentions) {
-    const {
-      type,
-      subtype,
-      expectedType,
-      line,
-      column,
-      originalLine,
-      originalColumn,
-      node,
-      attributeName,
-      debug,
-      specifier
-    } = mention;
-    const {
-      crossorigin,
-      integrity
-    } = readFetchMetas(node);
-    const isResourceHint = ["preconnect", "dns-prefetch", "prefetch", "preload", "modulepreload"].includes(subtype);
-    const [reference] = context.referenceUtils.found({
-      type,
-      subtype,
-      expectedType,
-      originalLine,
-      originalColumn,
-      specifier,
-      specifierLine: line,
-      specifierColumn: column,
-      isResourceHint,
-      crossorigin,
-      integrity,
-      debug
-    });
-    actions.push(async () => {
-      await context.referenceUtils.readGeneratedSpecifier(reference);
-      mutations.push(() => {
-        setHtmlNodeAttributes(node, {
-          [attributeName]: reference.generatedSpecifier
-        });
-      });
-    });
-  }
-  if (actions.length > 0) {
-    await Promise.all(actions.map(action => action()));
-  }
-  if (mutations.length === 0) {
-    return null;
-  }
-  mutations.forEach(mutation => mutation());
-  return stringifyHtmlAst(htmlAst);
-};
-const crossOriginCompatibleTagNames = ["script", "link", "img", "source"];
-const integrityCompatibleTagNames = ["script", "link", "img", "source"];
-const readFetchMetas = node => {
-  const meta = {};
-  if (crossOriginCompatibleTagNames.includes(node.nodeName)) {
-    const crossorigin = getHtmlNodeAttribute(node, "crossorigin") !== undefined;
-    meta.crossorigin = crossorigin;
-  }
-  if (integrityCompatibleTagNames.includes(node.nodeName)) {
-    const integrity = getHtmlNodeAttribute(node, "integrity");
-    meta.integrity = integrity;
-  }
-  return meta;
-};
-const visitHtmlUrls = ({
-  url,
-  htmlAst
-}) => {
-  const mentions = [];
   const finalizeCallbacks = [];
-  const addMention = ({
+  const createExternalReference = (node, attributeName, attributeValue, {
     type,
     subtype,
-    expectedType,
-    node,
-    attributeName,
-    specifier
+    expectedType
   }) => {
     let position;
     if (getHtmlNodeAttribute(node, "jsenv-cooked-by")) {
@@ -10692,169 +10426,308 @@ const visitHtmlUrls = ({
       // originalLine, originalColumn
     } = position;
     const debug = getHtmlNodeAttribute(node, "jsenv-debug") !== undefined;
-    const mention = {
+    const {
+      crossorigin,
+      integrity
+    } = readFetchMetas(node);
+    const isResourceHint = ["preconnect", "dns-prefetch", "prefetch", "preload", "modulepreload"].includes(subtype);
+    const [reference] = context.referenceUtils.found({
       type,
       subtype,
       expectedType,
-      line,
-      column,
-      // originalLine, originalColumn
-      specifier,
-      node,
-      attributeName,
+      specifier: attributeValue,
+      specifierLine: line,
+      specifierColumn: column,
+      isResourceHint,
+      crossorigin,
+      integrity,
       debug
-    };
-    mentions.push(mention);
-    return mention;
+    });
+    actions.push(async () => {
+      await context.referenceUtils.readGeneratedSpecifier(reference);
+      mutations.push(() => {
+        setHtmlNodeAttributes(node, {
+          [attributeName]: reference.generatedSpecifier
+        });
+      });
+    });
   };
-  const visitAttributeAsUrlSpecifier = ({
-    node,
-    attributeName,
-    ...rest
-  }) => {
-    const value = getHtmlNodeAttribute(node, attributeName);
-    if (value) {
-      if (getHtmlNodeAttribute(node, "jsenv-inlined-by") === "jsenv:importmap") {
-        // during build the importmap is inlined
-        // and shoud not be considered as a dependency anymore
-        return null;
-      }
-      return addMention({
-        ...rest,
-        node,
-        attributeName,
-        specifier: attributeName === "inlined-from-src" || attributeName === "inlined-from-href" ? new URL(value, url).href : value
-      });
+  const visitHref = (node, referenceProps) => {
+    const href = getHtmlNodeAttribute(node, "href");
+    if (href) {
+      return createExternalReference(node, "href", href, referenceProps);
     }
-    if (attributeName === "src") {
-      return visitAttributeAsUrlSpecifier({
-        ...rest,
-        node,
-        attributeName: "inlined-from-src"
-      });
+    const inlinedFromHref = getHtmlNodeAttribute(node, "inlined-from-href");
+    if (inlinedFromHref) {
+      return createExternalReference(node, "inlined-from-href", new URL(inlinedFromHref, url).href, referenceProps);
     }
-    if (attributeName === "href") {
-      return visitAttributeAsUrlSpecifier({
-        ...rest,
-        node,
-        attributeName: "inlined-from-href"
+    return null;
+  };
+  const visitSrc = (node, referenceProps) => {
+    const src = getHtmlNodeAttribute(node, "src");
+    if (src) {
+      return createExternalReference(node, "src", src, referenceProps);
+    }
+    const inlinedFromSrc = getHtmlNodeAttribute(node, "inlined-from-src");
+    if (inlinedFromSrc) {
+      return createExternalReference(node, "inlined-from-src", new URL(inlinedFromSrc, url).href, referenceProps);
+    }
+    return null;
+  };
+  const visitSrcset = (node, referenceProps) => {
+    const srcset = getHtmlNodeAttribute(node, "srcset");
+    if (srcset) {
+      const srcCandidates = parseSrcSet(srcset);
+      return srcCandidates.map(srcCandidate => {
+        return createExternalReference(node, "srcset", srcCandidate.specifier, referenceProps);
       });
     }
     return null;
   };
-  const visitSrcset = ({
+  const createInlineReference = (node, inlineContent, {
+    extension,
     type,
-    node
+    expectedType,
+    contentType
   }) => {
-    const srcset = getHtmlNodeAttribute(node, "srcset");
-    if (srcset) {
-      const srcCandidates = parseSrcSet(srcset);
-      srcCandidates.forEach(srcCandidate => {
-        addMention({
-          type,
-          node,
-          attributeName: "srcset",
-          specifier: srcCandidate.specifier
-        });
+    const hotAccept = getHtmlNodeAttribute(node, "hot-accept") !== undefined;
+    const {
+      line,
+      column,
+      lineEnd,
+      columnEnd,
+      isOriginal
+    } = getHtmlNodePosition(node, {
+      preferOriginal: true
+    });
+    const inlineContentUrl = generateInlineContentUrl({
+      url: urlInfo.url,
+      extension,
+      line,
+      column,
+      lineEnd,
+      columnEnd
+    });
+    const debug = getHtmlNodeAttribute(node, "jsenv-debug") !== undefined;
+    const [inlineReference, inlineUrlInfo] = context.referenceUtils.foundInline({
+      node,
+      type,
+      expectedType,
+      isOriginalPosition: isOriginal,
+      // we remove 1 to the line because imagine the following html:
+      // <style>body { color: red; }</style>
+      // -> content starts same line as <style> (same for <script>)
+      specifierLine: line - 1,
+      specifierColumn: column,
+      specifier: inlineContentUrl,
+      contentType,
+      content: inlineContent,
+      debug
+    });
+    actions.push(async () => {
+      await cookInlineContent({
+        context,
+        inlineContentUrlInfo: inlineUrlInfo,
+        inlineContentReference: inlineReference
       });
+      mutations.push(() => {
+        if (hotAccept) {
+          removeHtmlNodeText(node);
+          setHtmlNodeAttributes(node, {
+            "jsenv-cooked-by": "jsenv:html_inline_content_analysis"
+          });
+        } else {
+          setHtmlNodeText(node, inlineUrlInfo.content, {
+            indentation: false // indentation would decrease stack trace precision
+          });
+
+          setHtmlNodeAttributes(node, {
+            "jsenv-cooked-by": "jsenv:html_inline_content_analysis"
+          });
+        }
+      });
+    });
+    return inlineReference;
+  };
+  const visitTextContent = (node, {
+    extension,
+    type,
+    expectedType,
+    contentType
+  }) => {
+    const inlineContent = getHtmlNodeText(node);
+    if (!inlineContent) {
+      return null;
     }
+    return createInlineReference(node, inlineContent, {
+      extension,
+      type,
+      expectedType,
+      contentType
+    });
   };
   visitHtmlNodes(htmlAst, {
-    link: node => {
-      const rel = getHtmlNodeAttribute(node, "rel");
-      const type = getHtmlNodeAttribute(node, "type");
-      const mention = visitAttributeAsUrlSpecifier({
+    link: linkNode => {
+      const rel = getHtmlNodeAttribute(linkNode, "rel");
+      const type = getHtmlNodeAttribute(linkNode, "type");
+      const ref = visitHref(linkNode, {
         type: "link_href",
         subtype: rel,
-        node,
-        attributeName: "href",
         // https://developer.mozilla.org/en-US/docs/Web/HTML/Link_types/preload#including_a_mime_type
         expectedContentType: type
       });
-      if (mention) {
+      if (ref) {
         finalizeCallbacks.push(() => {
-          mention.expectedType = decideLinkExpectedType(mention, mentions);
+          ref.expectedType = decideLinkExpectedType(ref, context);
         });
       }
     },
-    // style: () => {},
-    script: node => {
-      const {
-        type
-      } = analyzeScriptNode(node);
-      if (type === "text") {
-        // ignore <script type="whatever" src="./file.js">
-        // per HTML spec https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#attr-type
-        // this will be handled by jsenv_plugin_html_inline_content_analysis
+    style: inlineContent ? styleNode => {
+      visitTextContent(styleNode, {
+        extension: ".css",
+        type: "style",
+        expectedType: "css",
+        contentType: "text/css"
+      });
+    } : null,
+    script: scriptNode => {
+      // during build the importmap is inlined
+      // and shoud not be considered as a dependency anymore
+      if (getHtmlNodeAttribute(scriptNode, "jsenv-inlined-by") === "jsenv:importmap") {
         return;
       }
-      visitAttributeAsUrlSpecifier({
+      const {
+        type,
+        contentType,
+        extension
+      } = analyzeScriptNode(scriptNode);
+      // ignore <script type="whatever">foobar</script>
+      // per HTML spec https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#attr-type
+      if (type !== "text") {
+        const externalRef = visitSrc(scriptNode, {
+          type: "script",
+          subtype: type,
+          expectedType: type
+        });
+        if (externalRef) {
+          return;
+        }
+      }
+
+      // now visit the content, if any
+      if (!inlineContent) {
+        return;
+      }
+      // If the inline script was already handled by an other plugin, ignore it
+      // - we want to preserve inline scripts generated by html supervisor during dev
+      // - we want to avoid cooking twice a script during build
+      if (!inlineConvertedScript && getHtmlNodeAttribute(scriptNode, "jsenv-injected-by") === "jsenv:js_module_fallback") {
+        return;
+      }
+      const inlineRef = visitTextContent(scriptNode, {
+        extension: extension || CONTENT_TYPE.asFileExtension(contentType),
         type: "script",
-        subtype: type,
         expectedType: type,
-        node,
-        attributeName: "src"
+        contentType
+      });
+      if (inlineRef && extension) {
+        // 1. <script type="jsx"> becomes <script>
+        // 2. <script type="module/jsx"> becomes <script type="module">
+        mutations.push(() => {
+          setHtmlNodeAttributes(scriptNode, {
+            type: type === "js_module" ? "module" : undefined
+          });
+        });
+      }
+    },
+    a: aNode => {
+      visitHref(aNode, {
+        type: "a_href"
       });
     },
-    a: node => {
-      visitAttributeAsUrlSpecifier({
-        type: "a_href",
-        node,
-        attributeName: "href"
+    iframe: iframeNode => {
+      visitSrc(iframeNode, {
+        type: "iframe_src"
       });
     },
-    iframe: node => {
-      visitAttributeAsUrlSpecifier({
-        type: "iframe_src",
-        node,
-        attributeName: "src"
+    img: imgNode => {
+      visitSrc(imgNode, {
+        type: "img_src"
+      });
+      visitSrcset(imgNode, {
+        type: "img_srcset"
       });
     },
-    img: node => {
-      visitAttributeAsUrlSpecifier({
-        type: "img_src",
-        node,
-        attributeName: "src"
+    source: sourceNode => {
+      visitSrc(sourceNode, {
+        type: "source_src"
       });
-      visitSrcset({
-        type: "img_srcset",
-        node
-      });
-    },
-    source: node => {
-      visitAttributeAsUrlSpecifier({
-        type: "source_src",
-        node,
-        attributeName: "src"
-      });
-      visitSrcset({
-        type: "source_srcset",
-        node
+      visitSrcset(sourceNode, {
+        type: "source_srcset"
       });
     },
     // svg <image> tag
-    image: node => {
-      visitAttributeAsUrlSpecifier({
-        type: "image_href",
-        node,
-        attributeName: "href"
+    image: imageNode => {
+      visitHref(imageNode, {
+        type: "image_href"
       });
     },
-    use: node => {
-      visitAttributeAsUrlSpecifier({
-        type: "use_href",
-        node,
-        attributeName: "href"
+    use: useNode => {
+      visitHref(useNode, {
+        type: "use_href"
       });
     }
   });
   finalizeCallbacks.forEach(finalizeCallback => {
     finalizeCallback();
   });
-  return mentions;
+  if (actions.length > 0) {
+    await Promise.all(actions.map(action => action()));
+  }
+  if (mutations.length === 0) {
+    return null;
+  }
+  mutations.forEach(mutation => mutation());
+  return stringifyHtmlAst(htmlAst);
 };
-const decideLinkExpectedType = (linkMention, mentions) => {
-  const rel = getHtmlNodeAttribute(linkMention.node, "rel");
+const cookInlineContent = async ({
+  context,
+  inlineContentUrlInfo,
+  inlineContentReference
+}) => {
+  try {
+    await context.cook(inlineContentUrlInfo, {
+      reference: inlineContentReference
+    });
+  } catch (e) {
+    if (e.code === "PARSE_ERROR") {
+      // When something like <style> or <script> contains syntax error
+      // the HTML in itself it still valid
+      // keep the syntax error and continue with the HTML
+      const messageStart = inlineContentUrlInfo.type === "css" ? `Syntax error on css declared inside <style>` : `Syntax error on js declared inside <script>`;
+      context.logger.error(`${messageStart}: ${e.cause.reasonCode}
+${e.traceMessage}`);
+    } else {
+      throw e;
+    }
+  }
+};
+const crossOriginCompatibleTagNames = ["script", "link", "img", "source"];
+const integrityCompatibleTagNames = ["script", "link", "img", "source"];
+const readFetchMetas = node => {
+  const meta = {};
+  if (crossOriginCompatibleTagNames.includes(node.nodeName)) {
+    const crossorigin = getHtmlNodeAttribute(node, "crossorigin") !== undefined;
+    meta.crossorigin = crossorigin;
+  }
+  if (integrityCompatibleTagNames.includes(node.nodeName)) {
+    const integrity = getHtmlNodeAttribute(node, "integrity");
+    meta.integrity = integrity;
+  }
+  return meta;
+};
+const decideLinkExpectedType = (linkReference, context) => {
+  const rel = getHtmlNodeAttribute(linkReference.node, "rel");
   if (rel === "webmanifest") {
     return "webmanifest";
   }
@@ -10866,7 +10739,7 @@ const decideLinkExpectedType = (linkMention, mentions) => {
   }
   if (rel === "preload") {
     // https://developer.mozilla.org/en-US/docs/Web/HTML/Link_types/preload#what_types_of_content_can_be_preloaded
-    const as = getHtmlNodeAttribute(linkMention.node, "as");
+    const as = getHtmlNodeAttribute(linkReference.node, "as");
     if (as === "document") {
       return "html";
     }
@@ -10874,7 +10747,7 @@ const decideLinkExpectedType = (linkMention, mentions) => {
       return "css";
     }
     if (as === "script") {
-      const firstScriptOnThisUrl = mentions.find(mentionCandidate => mentionCandidate.url === linkMention.url && mentionCandidate.type === "script");
+      const firstScriptOnThisUrl = context.referenceUtils.find(refCandidate => refCandidate.url === linkReference.url && refCandidate.type === "script");
       if (firstScriptOnThisUrl) {
         return firstScriptOnThisUrl.expectedType;
       }
@@ -11071,310 +10944,6 @@ const JS_QUOTE_REPLACEMENTS = {
   }
 };
 
-const jsenvPluginJsInlineContentAnalysis = ({
-  allowEscapeForVersioning
-}) => {
-  const parseAndTransformInlineContentCalls = async (urlInfo, context) => {
-    const inlineContentInfos = await parseJsInlineContentInfos({
-      js: urlInfo.content,
-      url: urlInfo.originalUrl,
-      isJsModule: urlInfo.type === "js_module"
-    });
-    if (inlineContentInfos.length === 0) {
-      return null;
-    }
-    const magicSource = createMagicSource(urlInfo.content);
-    await inlineContentInfos.reduce(async (previous, inlineContentInfo) => {
-      await previous;
-      const inlineUrl = generateInlineContentUrl({
-        url: urlInfo.url,
-        extension: CONTENT_TYPE.asFileExtension(inlineContentInfo.contentType),
-        line: inlineContentInfo.line,
-        column: inlineContentInfo.column,
-        lineEnd: inlineContentInfo.lineEnd,
-        columnEnd: inlineContentInfo.columnEnd
-      });
-      let {
-        quote
-      } = inlineContentInfo;
-      if (quote === "`" && !context.isSupportedOnCurrentClients("template_literals")) {
-        // if quote is "`" and template literals are not supported
-        // we'll use a regular string (single or double quote)
-        // when rendering the string
-        quote = JS_QUOTES.pickBest(inlineContentInfo.content);
-      }
-      const [inlineReference, inlineUrlInfo] = context.referenceUtils.foundInline({
-        type: "js_inline_content",
-        subtype: inlineContentInfo.type,
-        // "new_blob_first_arg", "new_inline_content_first_arg", "json_parse_first_arg"
-        isOriginalPosition: urlInfo.content === urlInfo.originalContent,
-        specifierLine: inlineContentInfo.line,
-        specifierColumn: inlineContentInfo.column,
-        specifier: inlineUrl,
-        contentType: inlineContentInfo.contentType,
-        content: inlineContentInfo.content
-      });
-      inlineUrlInfo.jsQuote = quote;
-      inlineReference.escape = value => JS_QUOTES.escapeSpecialChars(value.slice(1, -1), {
-        quote
-      });
-      await context.cook(inlineUrlInfo, {
-        reference: inlineReference
-      });
-      magicSource.replace({
-        start: inlineContentInfo.start,
-        end: inlineContentInfo.end,
-        replacement: JS_QUOTES.escapeSpecialChars(inlineUrlInfo.content, {
-          quote,
-          allowEscapeForVersioning
-        })
-      });
-    }, Promise.resolve());
-    return magicSource.toContentAndSourcemap();
-  };
-  return {
-    name: "jsenv:js_inline_content_analysis",
-    appliesDuring: "*",
-    transformUrlContent: {
-      js_classic: parseAndTransformInlineContentCalls,
-      js_module: parseAndTransformInlineContentCalls
-    }
-  };
-};
-const parseJsInlineContentInfos = async ({
-  js,
-  url,
-  isJsModule
-}) => {
-  if (!js.includes("InlineContent") && !js.includes("new Blob(") && !js.includes("JSON.parse(")) {
-    return [];
-  }
-  const {
-    metadata
-  } = await applyBabelPlugins({
-    babelPlugins: [babelPluginMetadataInlineContents],
-    urlInfo: {
-      originalUrl: url,
-      type: isJsModule ? "js_module" : "js_classic",
-      content: js
-    }
-  });
-  return metadata.inlineContentInfos;
-};
-const babelPluginMetadataInlineContents = () => {
-  return {
-    name: "metadata-inline-contents",
-    visitor: {
-      Program: (programPath, state) => {
-        const inlineContentInfos = [];
-        const onInlineContentInfo = inlineContentInfo => {
-          inlineContentInfos.push(inlineContentInfo);
-        };
-        programPath.traverse({
-          NewExpression: path => {
-            if (isNewInlineContentCall(path)) {
-              analyzeNewInlineContentCall(path.node, {
-                onInlineContentInfo
-              });
-              return;
-            }
-            if (isNewBlobCall(path.node)) {
-              analyzeNewBlobCall(path.node, {
-                onInlineContentInfo
-              });
-              return;
-            }
-          },
-          CallExpression: path => {
-            const node = path.node;
-            if (isJSONParseCall(node)) {
-              analyzeJsonParseCall(node, {
-                onInlineContentInfo
-              });
-            }
-          }
-        });
-        state.file.metadata.inlineContentInfos = inlineContentInfos;
-      }
-    }
-  };
-};
-const isNewInlineContentCall = path => {
-  const node = path.node;
-  if (node.callee.type === "Identifier") {
-    // terser rename import to use a shorter name
-    const name = getOriginalName(path, node.callee.name);
-    return name === "InlineContent";
-  }
-  if (node.callee.id && node.callee.id.type === "Identifier") {
-    const name = getOriginalName(path, node.callee.id.name);
-    return name === "InlineContent";
-  }
-  return false;
-};
-const analyzeNewInlineContentCall = (node, {
-  onInlineContentInfo
-}) => {
-  analyzeArguments({
-    node,
-    onInlineContentInfo,
-    nodeHoldingContent: node.arguments[0],
-    type: "new_inline_content_first_arg"
-  });
-};
-const isNewBlobCall = node => {
-  return node.callee.type === "Identifier" && node.callee.name === "Blob";
-};
-const analyzeNewBlobCall = (node, {
-  onInlineContentInfo
-}) => {
-  const firstArg = node.arguments[0];
-  if (!firstArg) {
-    return;
-  }
-  if (firstArg.type !== "ArrayExpression") {
-    return;
-  }
-  if (firstArg.elements.length !== 1) {
-    return;
-  }
-  analyzeArguments({
-    node,
-    onInlineContentInfo,
-    nodeHoldingContent: firstArg.elements[0],
-    type: "new_blob_first_arg"
-  });
-};
-const analyzeArguments = ({
-  node,
-  onInlineContentInfo,
-  nodeHoldingContent,
-  type
-}) => {
-  if (node.arguments.length !== 2) {
-    return;
-  }
-  const [, secondArg] = node.arguments;
-  const typePropertyNode = getTypePropertyNode(secondArg);
-  if (!typePropertyNode) {
-    return;
-  }
-  const typePropertyValueNode = typePropertyNode.value;
-  if (typePropertyValueNode.type !== "StringLiteral") {
-    return;
-  }
-  const contentType = typePropertyValueNode.value;
-  const contentDetails = extractContentDetails(nodeHoldingContent);
-  if (contentDetails) {
-    onInlineContentInfo({
-      node: nodeHoldingContent,
-      ...getNodePosition(nodeHoldingContent),
-      type,
-      contentType,
-      ...contentDetails
-    });
-  }
-};
-const extractContentDetails = node => {
-  if (node.type === "StringLiteral") {
-    return {
-      nodeType: "StringLiteral",
-      quote: node.extra.raw[0],
-      content: node.value
-    };
-  }
-  if (node.type === "TemplateLiteral") {
-    const quasis = node.quasis;
-    if (quasis.length !== 1) {
-      return null;
-    }
-    const templateElementNode = quasis[0];
-    return {
-      nodeType: "TemplateLiteral",
-      quote: "`",
-      content: templateElementNode.value.cooked
-    };
-  }
-  return null;
-};
-const isJSONParseCall = node => {
-  const callee = node.callee;
-  return callee.type === "MemberExpression" && callee.object.type === "Identifier" && callee.object.name === "JSON" && callee.property.type === "Identifier" && callee.property.name === "parse";
-};
-const analyzeJsonParseCall = (node, {
-  onInlineContentInfo
-}) => {
-  const firstArgNode = node.arguments[0];
-  const contentDetails = extractContentDetails(firstArgNode);
-  if (contentDetails) {
-    onInlineContentInfo({
-      node: firstArgNode,
-      ...getNodePosition(firstArgNode),
-      type: "json_parse_first_arg",
-      contentType: "application/json",
-      ...contentDetails
-    });
-  }
-};
-const getNodePosition = node => {
-  return {
-    start: node.start,
-    end: node.end,
-    line: node.loc.start.line,
-    column: node.loc.start.column,
-    lineEnd: node.loc.end.line,
-    columnEnd: node.loc.end.column
-  };
-};
-const getOriginalName = (path, name) => {
-  const binding = path.scope.getBinding(name);
-  if (!binding) {
-    return name;
-  }
-  if (binding.path.type === "ImportSpecifier") {
-    const importedName = binding.path.node.imported.name;
-    if (name === importedName) {
-      return name;
-    }
-    return getOriginalName(path, importedName);
-  }
-  if (binding.path.type === "VariableDeclarator") {
-    const {
-      node
-    } = binding.path;
-    const {
-      init
-    } = node;
-    if (init && init.type === "Identifier") {
-      const previousName = init.name;
-      return getOriginalName(path, previousName);
-    }
-    if (node.id && node.id.type === "Identifier") {
-      const {
-        constantViolations
-      } = binding;
-      if (constantViolations && constantViolations.length > 0) {
-        const lastViolation = constantViolations[constantViolations.length - 1];
-        if (lastViolation && lastViolation.node.type === "AssignmentExpression" && lastViolation.node.right.type === "MemberExpression" && lastViolation.node.right.property.type === "Identifier") {
-          return lastViolation.node.right.property.name;
-        }
-      }
-    }
-  }
-  return name;
-};
-const getTypePropertyNode = node => {
-  if (node.type !== "ObjectExpression") {
-    return null;
-  }
-  const {
-    properties
-  } = node;
-  return properties.find(property => {
-    return property.type === "ObjectProperty" && property.key.type === "Identifier" && property.key.name === "type";
-  });
-};
-
 const jsenvPluginJsReferenceAnalysis = ({
   inlineContent,
   allowEscapeForVersioning
@@ -11383,64 +10952,134 @@ const jsenvPluginJsReferenceAnalysis = ({
     name: "jsenv:js_reference_analysis",
     appliesDuring: "*",
     transformUrlContent: {
-      js_classic: parseAndTransformJsUrls,
-      js_module: parseAndTransformJsUrls
+      js_classic: (urlInfo, context) => parseAndTransformJsReferences(urlInfo, context, {
+        inlineContent,
+        allowEscapeForVersioning
+      }),
+      js_module: (urlInfo, context) => parseAndTransformJsReferences(urlInfo, context, {
+        inlineContent,
+        allowEscapeForVersioning
+      })
     }
-  }, ...(inlineContent ? [jsenvPluginJsInlineContentAnalysis({
-    allowEscapeForVersioning
-  })] : [])];
+  }];
 };
-const parseAndTransformJsUrls = async (urlInfo, context) => {
-  const jsMentions = await parseJsUrls({
-    js: urlInfo.content,
-    url: urlInfo.originalUrl,
-    isJsModule: urlInfo.type === "js_module",
-    isWebWorker: isWebWorkerUrlInfo(urlInfo)
-  });
-  const actions = [];
+const parseAndTransformJsReferences = async (urlInfo, context, {
+  inlineContent,
+  allowEscapeForVersioning
+}) => {
   const magicSource = createMagicSource(urlInfo.content);
-  for (const jsMention of jsMentions) {
-    if (jsMention.subtype === "import_static" || jsMention.subtype === "import_dynamic") {
+  const parallelActions = [];
+  const sequentialActions = [];
+  const onInlineReference = inlineReferenceInfo => {
+    const inlineUrl = generateInlineContentUrl({
+      url: urlInfo.url,
+      extension: CONTENT_TYPE.asFileExtension(inlineReferenceInfo.contentType),
+      line: inlineReferenceInfo.line,
+      column: inlineReferenceInfo.column,
+      lineEnd: inlineReferenceInfo.lineEnd,
+      columnEnd: inlineReferenceInfo.columnEnd
+    });
+    let {
+      quote
+    } = inlineReferenceInfo;
+    if (quote === "`" && !context.isSupportedOnCurrentClients("template_literals")) {
+      // if quote is "`" and template literals are not supported
+      // we'll use a regular string (single or double quote)
+      // when rendering the string
+      quote = JS_QUOTES.pickBest(inlineReferenceInfo.content);
+    }
+    const [inlineReference, inlineUrlInfo] = context.referenceUtils.foundInline({
+      type: "js_inline_content",
+      subtype: inlineReferenceInfo.type,
+      // "new_blob_first_arg", "new_inline_content_first_arg", "json_parse_first_arg"
+      isOriginalPosition: urlInfo.content === urlInfo.originalContent,
+      specifierLine: inlineReferenceInfo.line,
+      specifierColumn: inlineReferenceInfo.column,
+      specifier: inlineUrl,
+      contentType: inlineReferenceInfo.contentType,
+      content: inlineReferenceInfo.content
+    });
+    inlineUrlInfo.jsQuote = quote;
+    inlineReference.escape = value => JS_QUOTES.escapeSpecialChars(value.slice(1, -1), {
+      quote
+    });
+    sequentialActions.push(async () => {
+      await context.cook(inlineUrlInfo, {
+        reference: inlineReference
+      });
+      const replacement = JS_QUOTES.escapeSpecialChars(inlineUrlInfo.content, {
+        quote,
+        allowEscapeForVersioning
+      });
+      magicSource.replace({
+        start: inlineReferenceInfo.start,
+        end: inlineReferenceInfo.end,
+        replacement
+      });
+    });
+  };
+  const onExternalReference = externalReferenceInfo => {
+    if (externalReferenceInfo.subtype === "import_static" || externalReferenceInfo.subtype === "import_dynamic") {
       urlInfo.data.usesImport = true;
     }
     const [reference] = context.referenceUtils.found({
-      node: jsMention.node,
-      type: jsMention.type,
-      subtype: jsMention.subtype,
-      expectedType: jsMention.expectedType,
-      expectedSubtype: jsMention.expectedSubtype || urlInfo.subtype,
-      specifier: jsMention.specifier,
-      specifierStart: jsMention.start,
-      specifierEnd: jsMention.end,
-      specifierLine: jsMention.line,
-      specifierColumn: jsMention.column,
-      data: jsMention.data,
+      node: externalReferenceInfo.node,
+      type: externalReferenceInfo.type,
+      subtype: externalReferenceInfo.subtype,
+      expectedType: externalReferenceInfo.expectedType,
+      expectedSubtype: externalReferenceInfo.expectedSubtype || urlInfo.subtype,
+      specifier: externalReferenceInfo.specifier,
+      specifierStart: externalReferenceInfo.start,
+      specifierEnd: externalReferenceInfo.end,
+      specifierLine: externalReferenceInfo.line,
+      specifierColumn: externalReferenceInfo.column,
+      data: externalReferenceInfo.data,
       baseUrl: {
-        "StringLiteral": jsMention.baseUrl,
+        "StringLiteral": externalReferenceInfo.baseUrl,
         "window.location": urlInfo.url,
         "window.origin": context.rootDirectoryUrl,
         "import.meta.url": urlInfo.url,
         "context.meta.url": urlInfo.url,
         "document.currentScript.src": urlInfo.url
-      }[jsMention.baseUrlType],
-      assert: jsMention.assert,
-      assertNode: jsMention.assertNode,
-      typePropertyNode: jsMention.typePropertyNode
+      }[externalReferenceInfo.baseUrlType],
+      assert: externalReferenceInfo.assert,
+      assertNode: externalReferenceInfo.assertNode,
+      typePropertyNode: externalReferenceInfo.typePropertyNode
     });
-    actions.push(async () => {
+    parallelActions.push(async () => {
       const replacement = await context.referenceUtils.readGeneratedSpecifier(reference);
       magicSource.replace({
-        start: jsMention.start,
-        end: jsMention.end,
+        start: externalReferenceInfo.start,
+        end: externalReferenceInfo.end,
         replacement
       });
       if (reference.mutation) {
         reference.mutation(magicSource);
       }
     });
+  };
+  const jsReferenceInfos = await parseJsUrls({
+    js: urlInfo.content,
+    url: urlInfo.originalUrl,
+    isJsModule: urlInfo.type === "js_module",
+    isWebWorker: isWebWorkerUrlInfo(urlInfo),
+    inlineContent
+  });
+  for (const jsReferenceInfo of jsReferenceInfos) {
+    if (jsReferenceInfo.isInline) {
+      onInlineReference(jsReferenceInfo);
+    } else {
+      onExternalReference(jsReferenceInfo);
+    }
   }
-  if (actions.length > 0) {
-    await Promise.all(actions.map(action => action()));
+  if (parallelActions.length > 0) {
+    await Promise.all(parallelActions.map(action => action()));
+  }
+  if (sequentialActions.length > 0) {
+    await sequentialActions.reduce(async (previous, action) => {
+      await previous;
+      await action();
+    }, Promise.resolve());
   }
   const {
     content,
@@ -19284,9 +18923,9 @@ const jsenvPluginAsModules = () => {
         canUseTemplateString: true
       });
       return {
-        content: `import { InlineContent } from ${JSON.stringify(inlineContentClientFileUrl)}
+        content: `import ${JSON.stringify(inlineContentClientFileUrl)}
   
-  const inlineContent = new InlineContent(${cssText}, { type: "text/css" })
+  const inlineContent = new __InlineContent__(${cssText}, { type: "text/css" })
   const stylesheet = new CSSStyleSheet()
   stylesheet.replaceSync(inlineContent.text)
   export default stylesheet`,
