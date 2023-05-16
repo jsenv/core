@@ -1,4 +1,8 @@
-import { getTypePropertyNode, extractContentInfo } from "./helpers.js";
+import {
+  isStringLiteralNode,
+  getTypePropertyNode,
+  extractContentInfo,
+} from "./helpers.js";
 
 export const isNewBlobCall = (node) => {
   return (
@@ -12,13 +16,13 @@ export const analyzeNewBlobCall = (node, { onInlineContent }) => {
   if (!firstArg) {
     return;
   }
+  if (!secondArg) {
+    return;
+  }
   if (firstArg.type !== "ArrayExpression") {
     return;
   }
   if (firstArg.elements.length !== 1) {
-    return;
-  }
-  if (!secondArg) {
     return;
   }
   const typePropertyNode = getTypePropertyNode(secondArg);
@@ -26,7 +30,7 @@ export const analyzeNewBlobCall = (node, { onInlineContent }) => {
     return;
   }
   const typePropertyValueNode = typePropertyNode.value;
-  if (typePropertyValueNode.type !== "StringLiteral") {
+  if (!isStringLiteralNode(typePropertyValueNode)) {
     return;
   }
   const nodeHoldingContent = firstArg.elements[0];
