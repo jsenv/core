@@ -24,7 +24,7 @@ import { createFileService } from "./file_service.js";
  */
 export const startDevServer = async ({
   sourceDirectoryUrl,
-  sourceMainFilePath,
+  sourceMainFilePath = "./index.html",
   port = 3456,
   hostname,
   acceptAnyIp,
@@ -50,12 +50,12 @@ export const startDevServer = async ({
   // code would be supported during dev but not after build
   runtimeCompat = defaultRuntimeCompat,
   plugins = [],
-  urlAnalysis = {},
-  urlResolution,
+  referenceAnalysis = {},
+  nodeEsmResolution,
+  webResolution,
   supervisor = true,
   fileSystemMagicRedirection,
   transpilation,
-  explorer = true, // see jsenv_plugin_explorer.js
   cacheControl = true,
   ribbon = true,
   // toolbar = false,
@@ -78,6 +78,11 @@ export const startDevServer = async ({
       sourceDirectoryUrl,
       "sourceDirectoryUrl",
     );
+    if (typeof sourceMainFilePath !== "string") {
+      throw new TypeError(
+        `sourceMainFilePath must be a string, got ${sourceMainFilePath}`,
+      );
+    }
     if (outDirectoryUrl === undefined) {
       if (!process.env.CI) {
         const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);
@@ -185,14 +190,14 @@ export const startDevServer = async ({
           runtimeCompat,
 
           plugins,
-          urlAnalysis,
-          urlResolution,
+          referenceAnalysis,
+          nodeEsmResolution,
+          webResolution,
           fileSystemMagicRedirection,
           supervisor,
           transpilation,
           clientAutoreload,
           cooldownBetweenFileEvents,
-          explorer,
           cacheControl,
           ribbon,
           sourcemaps,

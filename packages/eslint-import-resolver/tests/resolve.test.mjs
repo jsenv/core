@@ -390,4 +390,5 @@ const spyConsoleWarn = () => {
     path: urlToFileSystemPath(resolvedFileUrl),
   };
   assert({ actual, expected });
+  await ensureEmptyDirectory(tempDirectoryUrl);
 }

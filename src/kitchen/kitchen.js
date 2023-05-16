@@ -28,6 +28,7 @@ export const createKitchen = ({
   logLevel,
 
   rootDirectoryUrl,
+  mainFilePath,
   urlGraph,
   dev = false,
   build = false,
@@ -49,6 +50,7 @@ export const createKitchen = ({
     signal,
     logger,
     rootDirectoryUrl,
+    mainFilePath,
     urlGraph,
     dev,
     build,
@@ -66,17 +68,34 @@ export const createKitchen = ({
     outDirectoryUrl,
   };
   const pluginController = createPluginController(kitchenContext);
-  const pushPlugins = (plugins) => {
-    plugins.forEach((pluginEntry) => {
-      if (Array.isArray(pluginEntry)) {
-        pushPlugins(pluginEntry);
-      } else {
-        pluginController.pushPlugin(pluginEntry);
-      }
-    });
-  };
-  pushPlugins(plugins);
+  plugins.forEach((pluginEntry) => {
+    pluginController.pushPlugin(pluginEntry);
+  });
 
+  /*
+   * - "http_request"
+   * - "entry_point"
+   * - "link_href"
+   * - "style"
+   * - "script"
+   * - "a_href"
+   * - "iframe_src
+   * - "img_src"
+   * - "img_srcset"
+   * - "source_src"
+   * - "source_srcset"
+   * - "image_href"
+   * - "use_href"
+   * - "css_@import"
+   * - "css_url"
+   * - "js_import"
+   * - "js_import_script"
+   * - "js_url"
+   * - "js_inline_content"
+   * - "sourcemap_comment"
+   * - "webmanifest_icon_src"
+   * - "package_json"
+   * */
   const createReference = ({
     data = {},
     node,
@@ -183,18 +202,18 @@ export const createKitchen = ({
         resolveReference(reference, context),
     };
     try {
-      let resolvedUrl = pluginController.callHooksUntil(
-        "resolveUrl",
+      let url = pluginController.callHooksUntil(
+        "resolveReference",
         reference,
         referenceContext,
       );
-      if (!resolvedUrl) {
+      if (!url) {
         throw new Error(`NO_RESOLVE`);
       }
-      if (resolvedUrl.includes("?debug")) {
+      if (url.includes("?debug")) {
         reference.debug = true;
       }
-      resolvedUrl = normalizeUrl(resolvedUrl);
+      url = normalizeUrl(url);
       let referencedUrlObject;
       let searchParams;
       const onReferenceUrlChange = (referenceUrl) => {
@@ -203,7 +222,7 @@ export const createKitchen = ({
         reference.url = referenceUrl;
         reference.searchParams = searchParams;
       };
-      onReferenceUrlChange(resolvedUrl);
+      onReferenceUrlChange(url);
 
       if (reference.debug) {
         logger.debug(`url resolved by "${
@@ -214,7 +233,7 @@ ${ANSI.color(reference.url, ANSI.YELLOW)}
 `);
       }
       pluginController.callHooks(
-        "redirectUrl",
+        "redirectReference",
         reference,
         referenceContext,
         (returnValue, plugin) => {
@@ -247,7 +266,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       // But do not represent an other resource, it is considered as
       // the same resource under the hood
       pluginController.callHooks(
-        "transformUrlSearchParams",
+        "transformReferenceSearchParams",
         reference,
         referenceContext,
         (returnValue) => {
@@ -258,7 +277,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         },
       );
       const returnValue = pluginController.callHooksUntil(
-        "formatUrl",
+        "formatReference",
         reference,
         referenceContext,
       );

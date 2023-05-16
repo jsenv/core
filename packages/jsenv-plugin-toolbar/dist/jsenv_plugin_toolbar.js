@@ -72,9 +72,7 @@ const generateCodeToInjectToolbar = ({
     animationsEnabled,
     notificationsEnabled
   }, null, "  ");
-  return `import { injectToolbar } from ${from}
-
-injectToolbar(${paramsSource});`;
+  return "import { injectToolbar } from ".concat(from, "\n\ninjectToolbar(").concat(paramsSource, ");");
 };
 
 export { jsenvPluginToolbar };

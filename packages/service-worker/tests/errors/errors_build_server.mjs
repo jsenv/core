@@ -15,7 +15,7 @@ const buildStory = async (story) => {
     plugins: [
       jsenvPluginBundling(),
       {
-        resolveUrl: (reference) => {
+        resolveReference: (reference) => {
           if (reference.specifier.includes("sw.js")) {
             reference.filename = "sw.js";
             return new URL(`./project/src/sw_${story}.js`, import.meta.url);

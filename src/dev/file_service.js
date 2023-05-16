@@ -10,7 +10,6 @@ import { createUrlGraph } from "../kitchen/url_graph.js";
 import { createKitchen } from "../kitchen/kitchen.js";
 import { RUNTIME_COMPAT } from "../kitchen/compat/runtime_compat.js";
 import { getCorePlugins } from "../plugins/plugins.js";
-import { explorerHtmlFileUrl } from "../plugins/explorer/jsenv_plugin_explorer.js";
 import { jsenvPluginServerEventsClientInjection } from "../plugins/server_events/jsenv_plugin_server_events_client_injection.js";
 import { parseUserAgentHeader } from "./user_agent.js";
 
@@ -27,14 +26,14 @@ export const createFileService = ({
   runtimeCompat,
 
   plugins,
-  urlAnalysis,
-  urlResolution,
+  referenceAnalysis,
+  nodeEsmResolution,
+  webResolution,
   fileSystemMagicRedirection,
   supervisor,
   transpilation,
   clientAutoreload,
   cooldownBetweenFileEvents,
-  explorer,
   cacheControl,
   ribbon,
   sourcemaps,
@@ -93,19 +92,11 @@ export const createFileService = ({
     });
     const clientRuntimeCompat = { [runtimeName]: runtimeVersion };
 
-    let defaultFileUrl;
-    if (explorer) {
-      defaultFileUrl = String(explorerHtmlFileUrl);
-    } else if (sourceMainFilePath) {
-      defaultFileUrl = String(new URL(sourceMainFilePath, sourceDirectoryUrl));
-    } else {
-      defaultFileUrl = String(new URL("./index.html", sourceDirectoryUrl));
-    }
-
     const kitchen = createKitchen({
       signal,
       logLevel,
       rootDirectoryUrl: sourceDirectoryUrl,
+      mainFilePath: sourceMainFilePath,
       urlGraph,
       dev: true,
       runtimeCompat,
@@ -121,11 +112,11 @@ export const createFileService = ({
         ...plugins,
         ...getCorePlugins({
           rootDirectoryUrl: sourceDirectoryUrl,
-          defaultFileUrl,
           runtimeCompat,
 
-          urlAnalysis,
-          urlResolution,
+          referenceAnalysis,
+          nodeEsmResolution,
+          webResolution,
           fileSystemMagicRedirection,
           supervisor,
           transpilation,
@@ -133,7 +124,6 @@ export const createFileService = ({
           clientAutoreload,
           clientFileChangeCallbackList,
           clientFilesPruneCallbackList,
-          explorer,
           cacheControl,
           ribbon,
         }),

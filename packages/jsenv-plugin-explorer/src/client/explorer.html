@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Exploring</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8" />
+    <link rel="icon" href="./explorer_favicon.png?inline" />
+    <link rel="stylesheet" href="./explorer.css?inline" />
+  </head>
+
+  <body>
+    <main></main>
+    <div style="display: none">
+      <article data-page="file-list">
+        <!--
+        <section id="main_html_file">
+          <h2>
+            <svg id="main_file_icon" viewBox="0 0 16 16" width="25px" height="25px">
+              <path
+                d="M15.45,7L14,5.551V2c0-0.55-0.45-1-1-1h-1c-0.55,0-1,0.45-1,1v0.553L9,0.555C8.727,0.297,8.477,0,8,0S7.273,0.297,7,0.555  L0.55,7C0.238,7.325,0,7.562,0,8c0,0.563,0.432,1,1,1h1v6c0,0.55,0.45,1,1,1h3v-5c0-0.55,0.45-1,1-1h2c0.55,0,1,0.45,1,1v5h3  c0.55,0,1-0.45,1-1V9h1c0.568,0,1-0.437,1-1C16,7.562,15.762,7.325,15.45,7z"
+              />
+            </svg>
+            <span
+              >Main html file:
+              <a id="main_file_link" href="javascript:void(0)">${mainFileRelativeUrl}</a></span
+            >
+          </h2>
+          <div>
+            <iframe id="main_file_iframe" src="about:blank"></iframe>
+          </div>
+        </section>
+        <hr />
+        !-->
+        <section id="explorables">
+          <div id="explorables-header">
+            <div id="explorables_header_and_menu">
+              <h2>
+                <svg
+                  id="explorables_icon"
+                  viewBox="0 0 24 24"
+                  width="32"
+                  height="32"
+                >
+                  <path d="M0 0h24v24H0V0z" fill="none" />
+                  <path
+                    d="M8 16h8v2H8zm0-4h8v2H8zm6-10H6c-1.1 0-2 .9-2 2v16c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"
+                  />
+                </svg>
+                <span
+                  >File(s) to explore in
+                  <span id="directory_relative_url" title="${directoryUrl}"
+                    >${directoryName}</span
+                  ></span
+                >
+              </h2>
+              <div class="menu-wrapper">
+                <fieldset id="filter-group-set" class="menu"></fieldset>
+              </div>
+              <div class="paddles">
+                <button class="left-paddle paddle hidden">&#60;</button>
+                <button class="right-paddle paddle">&#62;</button>
+              </div>
+            </div>
+            <div id="explorables_header_bottom_spacing"></div>
+          </div>
+          <div>
+            <div id="explorables-message">
+              <h4 style="margin-top: 0">${message}</h4>
+            </div>
+            <nav>
+              <ul></ul>
+            </nav>
+          </div>
+        </section>
+      </article>
+    </div>
+    <script no-supervisor>
+      // eslint-disable-next-line no-undef
+      const { rootDirectoryUrl, groups, files } = SERVER_PARAMS;
+
+      const groupPreference = {
+        has: () => localStorage.hasOwnProperty("explorer_active_group"),
+        get: () =>
+          localStorage.hasOwnProperty("explorer_active_group")
+            ? JSON.parse(localStorage.getItem("explorer_active_group"))
+            : undefined,
+        set: (value) =>
+          localStorage.setItem("explorer_active_group", JSON.stringify(value)),
+      };
+      const directoryNameFromUrl = (directoryUrl) => {
+        const slashLastIndex = directoryUrl.lastIndexOf(
+          "/",
+          // ignore last slash
+          directoryUrl.length - 2,
+        );
+        if (slashLastIndex === -1) return "";
+        return directoryUrl.slice(slashLastIndex + 1);
+      };
+      const urlToVisitFromRelativeUrl = (relativeUrl) => {
+        return `${window.origin}/${relativeUrl}`;
+      };
+
+      const fileListElement = document
+        .querySelector(`[data-page="file-list"]`)
+        .cloneNode(true);
+      const directoryName = directoryNameFromUrl(rootDirectoryUrl);
+      const span = fileListElement.querySelector("#directory_relative_url");
+      span.title = rootDirectoryUrl;
+      span.textContent = directoryName;
+
+      const h4 = fileListElement.querySelector("h4");
+      const ul = fileListElement.querySelector("ul");
+      ul.innerHTML = files
+        .map(
+          (file) =>
+            `<li>
+        <a
+          class="execution-link"
+          data-relative-url=${file.relativeUrl}
+          href=${urlToVisitFromRelativeUrl(file.relativeUrl)}
+        >
+          ${file.relativeUrl}
+        </a>
+      </li>`,
+        )
+        .join("");
+
+      const groupFieldset = fileListElement.querySelector("#filter-group-set");
+      const groupNames = Object.keys(groups);
+      groupFieldset.innerHTML = groupNames
+        .map(
+          (key) => `<label data-contains-hidden-input class="item">
+        <input type="radio" name="filter-group" value="${key}"/>
+        <span>${key}</span>
+      </label>`,
+        )
+        .join("");
+
+      const groupFromLocalStorage = groupPreference.get();
+      const currentGroup =
+        groupFromLocalStorage && groupNames.includes(groupFromLocalStorage)
+          ? groupFromLocalStorage
+          : groupNames[0];
+      Array.from(groupFieldset.querySelectorAll("input")).forEach(
+        (inputRadio) => {
+          inputRadio.checked = inputRadio.value === currentGroup;
+          inputRadio.onchange = () => {
+            if (inputRadio.checked) {
+              groupPreference.set(inputRadio.value);
+              enableGroup(inputRadio.value);
+            }
+          };
+        },
+      );
+
+      const enableGroup = (groupName) => {
+        const arrayOfElementToShow = [];
+        const arrayOfElementToHide = [];
+        files.forEach((file) => {
+          const fileLink = fileListElement.querySelector(
+            `a[data-relative-url="${file.relativeUrl}"]`,
+          );
+          const fileLi = fileLink.parentNode;
+          if (file.meta[groupName]) {
+            arrayOfElementToShow.push(fileLi);
+          } else {
+            arrayOfElementToHide.push(fileLi);
+          }
+        });
+        arrayOfElementToShow.forEach((element) => {
+          element.removeAttribute("data-force-hide");
+        });
+        arrayOfElementToHide.forEach((element) => {
+          element.setAttribute("data-force-hide", "");
+        });
+
+        h4.innerHTML =
+          arrayOfElementToShow.length === 0
+            ? `No file found.
+      Config for this section: <pre>${JSON.stringify(
+        groups[groupName],
+        null,
+        "  ",
+      )}</pre>`
+            : `${arrayOfElementToShow.length} files found. Click on the one you want to execute`;
+      };
+      enableGroup(currentGroup);
+
+      document.querySelector("main").appendChild(fileListElement);
+    </script>
+    <script no-supervisor>
+      // make menu scrollable
+      const getMenuWrapperSize = () => {
+        return document.querySelector(".menu-wrapper").getBoundingClientRect()
+          .width;
+      };
+      const getMenuSize = () => {
+        return document.querySelector(".menu").getBoundingClientRect().width;
+      };
+      const getMenuPosition = () => {
+        return document.querySelector(".menu-wrapper").scrollLeft;
+      };
+
+      let menuWrapperSize = getMenuWrapperSize();
+      let menuSize = getMenuSize();
+      const menuVisibleSize = menuWrapperSize;
+      let menuInvisibleSize = menuSize - menuVisibleSize;
+      const scrollDuration = 300;
+      const leftPaddle = document.querySelector(".left-paddle");
+      const rightPaddle = document.querySelector(".right-paddle");
+
+      const handleMenuScroll = () => {
+        menuInvisibleSize = menuSize - menuWrapperSize;
+        const menuPosition = getMenuPosition();
+        const menuEndOffset = menuInvisibleSize;
+        // show & hide the paddles, depending on scroll position
+        if (menuPosition <= 0 && menuEndOffset <= 0) {
+          // hide both paddles if the window is large enough to display all tabs
+          leftPaddle.classList.add("hidden");
+          rightPaddle.classList.add("hidden");
+        } else if (menuPosition <= 0) {
+          leftPaddle.classList.add("hidden");
+          rightPaddle.classList.remove("hidden");
+        } else if (menuPosition < Math.floor(menuEndOffset)) {
+          // show both paddles in the middle
+          leftPaddle.classList.remove("hidden");
+          rightPaddle.classList.remove("hidden");
+        } else if (menuPosition >= Math.floor(menuEndOffset)) {
+          leftPaddle.classList.remove("hidden");
+          rightPaddle.classList.add("hidden");
+        }
+      };
+      handleMenuScroll();
+
+      window.onresize = () => {
+        menuWrapperSize = getMenuWrapperSize();
+        menuSize = getMenuSize();
+        handleMenuScroll();
+      };
+      // finally, what happens when we are actually scrolling the menu
+      document.querySelector(".menu-wrapper").onscroll = () => {
+        handleMenuScroll();
+      };
+
+      const startJavaScriptAnimation = ({
+        duration = 300,
+        timingFunction = (t) => t,
+        onProgress = () => {},
+        onCancel = () => {},
+        onComplete = () => {},
+      }) => {
+        duration = parseInt(duration, 10);
+        const startMs = performance.now();
+        let currentRequestAnimationFrameId;
+        let done = false;
+        let rawProgress = 0;
+        let progress = 0;
+        const handler = () => {
+          currentRequestAnimationFrameId = null;
+          const nowMs = performance.now();
+          rawProgress = Math.min((nowMs - startMs) / duration, 1);
+          progress = timingFunction(rawProgress);
+          done = rawProgress === 1;
+          onProgress({
+            done,
+            rawProgress,
+            progress,
+          });
+          if (done) {
+            onComplete();
+          } else {
+            currentRequestAnimationFrameId =
+              window.requestAnimationFrame(handler);
+          }
+        };
+        handler();
+        const stop = () => {
+          if (currentRequestAnimationFrameId) {
+            window.cancelAnimationFrame(currentRequestAnimationFrameId);
+            currentRequestAnimationFrameId = null;
+          }
+          if (!done) {
+            done = true;
+            onCancel({
+              rawProgress,
+              progress,
+            });
+          }
+        };
+        return stop;
+      };
+      rightPaddle.onclick = () => {
+        const scrollStart = document.querySelector(".menu-wrapper").scrollLeft;
+        const scrollEnd = scrollStart + menuWrapperSize;
+        startJavaScriptAnimation({
+          duration: scrollDuration,
+          onProgress: ({ progress }) => {
+            document.querySelector(".menu-wrapper").scrollLeft =
+              scrollStart + (scrollEnd - scrollStart) * progress;
+          },
+        });
+      };
+      leftPaddle.onclick = () => {
+        const scrollStart = document.querySelector(".menu-wrapper").scrollLeft;
+        const scrollEnd = scrollStart - menuWrapperSize;
+        startJavaScriptAnimation({
+          duration: scrollDuration,
+          onProgress: ({ progress }) => {
+            document.querySelector(".menu-wrapper").scrollLeft =
+              scrollStart + (scrollEnd - scrollStart) * progress;
+          },
+        });
+      };
+    </script>
+  </body>
+</html>

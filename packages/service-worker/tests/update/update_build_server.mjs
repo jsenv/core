@@ -15,7 +15,7 @@ const buildStory = async (name) => {
     plugins: [
       jsenvPluginBundling(),
       {
-        resolveUrl: (reference) => {
+        resolveReference: (reference) => {
           if (reference.specifier.includes("animal.svg")) {
             reference.filename = "animal.svg";
             return new URL(`./project/src/${name}.svg`, import.meta.url);

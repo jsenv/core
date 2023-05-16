@@ -1,6 +1,7 @@
 import { requestCertificate } from "@jsenv/https-local";
-
+import { jsenvPluginExplorer } from "@jsenv/plugin-explorer";
 import { startDevServer } from "@jsenv/core";
+
 import { jsenvPluginReact } from "@jsenv/plugin-react";
 
 const { certificate, privateKey } = requestCertificate({ altNames: ["local"] });
@@ -9,14 +10,16 @@ await startDevServer({
   https: { certificate, privateKey },
   acceptAnyIp: true,
   rootDirectoryUrl: new URL("./client/", import.meta.url),
-  plugins: [jsenvPluginReact({ refreshInstrumentation: true })],
-  explorer: {
-    groups: {
-      main: {
-        "./main.html": true,
+  plugins: [
+    jsenvPluginExplorer({
+      groups: {
+        main: {
+          "./main.html": true,
+        },
       },
-    },
-  },
+    }),
+    jsenvPluginReact({ refreshInstrumentation: true }),
+  ],
   clientFiles: {
     "./**": true,
   },

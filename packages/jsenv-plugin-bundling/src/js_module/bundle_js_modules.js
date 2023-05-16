@@ -6,7 +6,7 @@ import { createDetailedMessage } from "@jsenv/log";
 import { sourcemapConverter } from "@jsenv/sourcemap";
 import { globalThisClientFileUrl } from "@jsenv/core/src/plugins/transpilation/babel/global_this/babel_plugin_global_this_as_jsenv_import.js";
 
-import { fileUrlConverter } from "./file_url_converter.js";
+import { fileUrlConverter } from "../file_url_converter.js";
 
 export const bundleJsModules = async ({
   jsModuleUrlInfos,
@@ -101,11 +101,7 @@ export const bundleJsModules = async ({
       },
       rollupOutput: {
         compact: context.minification,
-        // cannot be enabled otherwise:
-        // - rollup rename InlineContent export into one letter export like "n"
-        // - inline content detection cannot detect new InlineContent() calls
-        // -> inline content is not detected, among other things url are not versioned
-        minifyInternalExports: false, // context.minification,
+        minifyInternalExports: context.minification,
         generatedCode: {
           arrowFunctions: context.isSupportedOnCurrentClients("arrow_function"),
           constBindings: context.isSupportedOnCurrentClients("const_bindings"),
@@ -339,7 +335,7 @@ const rollupPluginJsenv = ({
       }
       const urlInfo = urlGraph.getUrlInfo(url);
       if (!urlInfo) {
-        // happen when excluded by urlAnalysis.include
+        // happen when excluded by referenceAnalysis.include
         return { id: url, external: true };
       }
       if (!urlInfo.shouldHandle) {

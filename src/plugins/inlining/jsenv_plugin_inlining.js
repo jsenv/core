@@ -6,7 +6,7 @@ export const jsenvPluginInlining = () => {
     {
       name: "jsenv:inlining",
       appliesDuring: "*",
-      redirectUrl: (reference) => {
+      redirectReference: (reference) => {
         const { searchParams } = reference;
         if (searchParams.has("inline")) {
           const urlObject = new URL(reference.url);

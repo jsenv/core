@@ -259,7 +259,7 @@ const createUrlInfo = (url) => {
     dependencies: new Set(),
     dependents: new Set(),
     implicitUrls: new Set(),
-    type: undefined, // "html", "css", "js_classic", "js_module", "importmap", "json", "webmanifest", ...
+    type: undefined, // "html", "css", "js_classic", "js_module", "importmap", "sourcemap", "json", "webmanifest", ...
     subtype: undefined, // "worker", "service_worker", "shared_worker" for js, otherwise undefined
     typeHint: undefined,
     subtypeHint: undefined,

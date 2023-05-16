@@ -2,7 +2,7 @@ export const jsenvPluginHmr = () => {
   return {
     name: "jsenv:hmr",
     appliesDuring: "dev",
-    redirectUrl: (reference) => {
+    redirectReference: (reference) => {
       if (!reference.searchParams.has("hmr")) {
         reference.data.hmr = false;
         return null;
@@ -17,7 +17,7 @@ export const jsenvPluginHmr = () => {
       urlObject.searchParams.delete("v");
       return urlObject.href;
     },
-    transformUrlSearchParams: (reference, context) => {
+    transformReferenceSearchParams: (reference, context) => {
       if (reference.type === "package_json") {
         // maybe the if above shoulb be .isImplicit but it's just a detail anyway
         return null;

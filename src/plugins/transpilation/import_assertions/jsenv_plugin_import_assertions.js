@@ -78,7 +78,7 @@ export const jsenvPluginImportAssertions = ({
         transpilations.text = true;
       }
     },
-    redirectUrl: (reference, context) => {
+    redirectReference: (reference, context) => {
       if (!reference.assert) {
         return null;
       }
@@ -103,7 +103,7 @@ export const jsenvPluginImportAssertions = ({
 
 const jsenvPluginAsModules = () => {
   const inlineContentClientFileUrl = new URL(
-    "../../inline_content_analysis/client/inline_content.js",
+    "../../reference_analysis/inline_content.js",
     import.meta.url,
   ).href;
 
@@ -181,11 +181,9 @@ const jsenvPluginAsModules = () => {
         canUseTemplateString: true,
       });
       return {
-        content: `import { InlineContent } from ${JSON.stringify(
-          inlineContentClientFileUrl,
-        )}
+        content: `import ${JSON.stringify(inlineContentClientFileUrl)}
   
-  const inlineContent = new InlineContent(${cssText}, { type: "text/css" })
+  const inlineContent = new __InlineContent__(${cssText}, { type: "text/css" })
   const stylesheet = new CSSStyleSheet()
   stylesheet.replaceSync(inlineContent.text)
   export default stylesheet`,

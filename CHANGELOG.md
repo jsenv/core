@@ -1,3 +1,10 @@
+# 36.0.0
+
+- Move dev server explorer to `@jsenv/plugin-explorer`
+- Rename several plugin hook like `resolveUrl` -> `resolveReference`
+- Rename `urlAnalysis` param into `referenceAnalysis`
+- Split `urlResolution` param into `nodeEsmResolution` and `webResolution`
+
 # 35.0.4
 
 - Restore semicolons
