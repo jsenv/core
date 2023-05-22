@@ -15425,11 +15425,10 @@ const jsenvPluginJsModuleFallbackInsideHtml = ({
             });
           }
         }
-        if (mutations.length === 0) {
-          return null;
-        }
         await Promise.all(mutations.map(mutation => mutation()));
-        return stringifyHtmlAst(htmlAst);
+        return stringifyHtmlAst(htmlAst, {
+          cleanupPositionAttributes: context.dev
+        });
       }
     }
   };
@@ -19986,7 +19985,7 @@ const jsenvPluginBabel = ({
   return {
     name: "jsenv:babel",
     appliesDuring: "*",
-    finalizeUrlContent: {
+    transformUrlContent: {
       js_classic: transformWithBabel,
       js_module: transformWithBabel
     }
@@ -21776,7 +21775,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       }, {
         name: "jsenv:optimize",
         appliesDuring: "build",
-        finalizeUrlContent: async (urlInfo, context) => {
+        transformUrlContent: async (urlInfo, context) => {
           await rawGraphKitchen.pluginController.callAsyncHooks("optimizeUrlContent", urlInfo, context, async optimizeReturnValue => {
             await finalGraphKitchen.urlInfoTransformer.applyFinalTransformations(urlInfo, optimizeReturnValue);
           });

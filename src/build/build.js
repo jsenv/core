@@ -672,7 +672,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         {
           name: "jsenv:optimize",
           appliesDuring: "build",
-          finalizeUrlContent: async (urlInfo, context) => {
+          transformUrlContent: async (urlInfo, context) => {
             await rawGraphKitchen.pluginController.callAsyncHooks(
               "optimizeUrlContent",
               urlInfo,
@@ -1090,7 +1090,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     parseHtmlString(urlInfo.content, {
                       storeOriginalPositions: false,
                     }),
-                    { cleanupJsenvAttributes: true },
+                    {
+                      cleanupJsenvAttributes: true,
+                    },
                   )
                 : urlInfo.content;
             const contentVersionGenerator = createVersionGenerator();

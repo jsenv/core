@@ -61,7 +61,11 @@ export const parseHtmlString = (
 
 export const stringifyHtmlAst = (
   htmlAst,
-  { cleanupJsenvAttributes = false, cleanupPositionAttributes = false } = {},
+  {
+    preserveLineBreaks = true,
+    cleanupJsenvAttributes = false,
+    cleanupPositionAttributes = false,
+  } = {},
 ) => {
   if (cleanupJsenvAttributes || cleanupPositionAttributes) {
     const htmlNode = findHtmlChildNode(
@@ -98,8 +102,10 @@ export const stringifyHtmlAst = (
       });
     }
   }
-  // ensure body and html have \n
-  ensureLineBreaksBetweenHtmlNodes(htmlAst);
+  if (preserveLineBreaks) {
+    // ensure body and html have \n
+    ensureLineBreaksBetweenHtmlNodes(htmlAst);
+  }
   const htmlString = serialize(htmlAst);
   return htmlString;
 };

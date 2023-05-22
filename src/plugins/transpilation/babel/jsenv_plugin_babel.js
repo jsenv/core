@@ -92,7 +92,7 @@ export const jsenvPluginBabel = ({
   return {
     name: "jsenv:babel",
     appliesDuring: "*",
-    finalizeUrlContent: {
+    transformUrlContent: {
       js_classic: transformWithBabel,
       js_module: transformWithBabel,
     },

@@ -1,3 +1,7 @@
+# 36.0.1
+
+- Remove jsenv internal position attributes from HTML during dev
+
 # 36.0.0
 
 - Move dev server explorer to `@jsenv/plugin-explorer`
