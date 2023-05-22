@@ -135,7 +135,6 @@ export const jsenvPluginJsModuleFallbackInsideHtml = ({
             }
           },
         });
-
         if (systemJsInjection) {
           let needsSystemJs = false;
           for (const reference of urlInfo.references) {
@@ -213,11 +212,10 @@ export const jsenvPluginJsModuleFallbackInsideHtml = ({
             });
           }
         }
-        if (mutations.length === 0) {
-          return null;
-        }
         await Promise.all(mutations.map((mutation) => mutation()));
-        return stringifyHtmlAst(htmlAst);
+        return stringifyHtmlAst(htmlAst, {
+          cleanupPositionAttributes: context.dev,
+        });
       },
     },
   };
