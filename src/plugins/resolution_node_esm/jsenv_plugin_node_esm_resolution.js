@@ -1,4 +1,4 @@
-import { urlTypeFromReference } from "../url_type_from_reference.js";
+import { urlTypeFromReference } from "./url_type_from_reference.js";
 import { createNodeEsmResolver } from "./node_esm_resolver.js";
 
 export const jsenvPluginNodeEsmResolution = (resolutionConfig = {}) => {
