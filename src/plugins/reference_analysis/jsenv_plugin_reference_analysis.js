@@ -109,7 +109,11 @@ const jsenvPluginReferenceAnalysisInclude = ({
       }
     },
     formatReference: (reference) => {
-      if (ignoreProtocol === "inject" && reference.mustIgnore) {
+      if (
+        ignoreProtocol === "inject" &&
+        reference.mustIgnore &&
+        !reference.url.startsWith("ignore:")
+      ) {
         reference.specifier = `ignore:${reference.specifier}`;
       }
     },

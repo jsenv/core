@@ -11197,7 +11197,7 @@ const jsenvPluginReferenceAnalysisInclude = ({
       }
     },
     formatReference: reference => {
-      if (ignoreProtocol === "inject" && reference.mustIgnore) {
+      if (ignoreProtocol === "inject" && reference.mustIgnore && !reference.url.startsWith("ignore:")) {
         reference.specifier = `ignore:${reference.specifier}`;
       }
     }
@@ -21539,7 +21539,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         // - no plugin putting reference.mustIgnore on https urls
         // At this stage it's only about redirecting urls to the build directory
         // consequently only a subset or urls are supported
-        supportedProtocols: ["file:", "data:", "virtual:"],
+        supportedProtocols: ["file:", "data:", "virtual:", "ignore:"],
         fetchInlineUrls: false,
         ignoreProtocol: versioning ? "keep" : "remove"
       }), ...(lineBreakNormalization ? [jsenvPluginLineBreakNormalization()] : []), jsenvPluginJsModuleFallback({
