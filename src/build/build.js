@@ -136,7 +136,6 @@ export const build = async ({
   plugins = [],
   referenceAnalysis = {},
   nodeEsmResolution,
-  webResolution,
   fileSystemMagicRedirection,
   directoryReferenceAllowed,
   scenarioPlaceholders,
@@ -341,7 +340,6 @@ build ${entryPointKeys.length} entry points`);
 
           referenceAnalysis,
           nodeEsmResolution,
-          webResolution,
           fileSystemMagicRedirection,
           directoryReferenceAllowed,
           transpilation: {

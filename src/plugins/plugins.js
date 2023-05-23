@@ -25,7 +25,6 @@ export const getCorePlugins = ({
 
   referenceAnalysis = {},
   nodeEsmResolution = {},
-  webResolution = {},
   fileSystemMagicRedirection,
   directoryReferenceAllowed,
   supervisor,
@@ -76,7 +75,7 @@ export const getCorePlugins = ({
     ...(nodeEsmResolution
       ? [jsenvPluginNodeEsmResolution(nodeEsmResolution)]
       : []),
-    jsenvPluginWebResolution(webResolution),
+    jsenvPluginWebResolution(),
 
     jsenvPluginVersionSearchParam(),
     jsenvPluginCommonJsGlobals(),
