@@ -116,7 +116,7 @@ export const createKitchen = ({
     specifierColumn,
     baseUrl,
     isOriginalPosition,
-    shouldHandle,
+    mustIgnore,
     isEntryPoint = false,
     isResourceHint = false,
     isImplicit = false,
@@ -165,7 +165,7 @@ export const createKitchen = ({
       specifierColumn,
       isOriginalPosition,
       baseUrl,
-      shouldHandle,
+      mustIgnore,
       isEntryPoint,
       isResourceHint,
       isImplicit,
@@ -259,35 +259,30 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url);
       applyReferenceEffectsOnUrlInfo(reference, urlInfo, context);
 
-      if (reference.shouldHandle) {
-        // This hook must touch reference.generatedUrl, NOT reference.url
-        // And this is because this hook inject query params used to:
-        // - bypass browser cache (?v)
-        // - convey information (?hmr)
-        // But do not represent an other resource, it is considered as
-        // the same resource under the hood
-        pluginController.callHooks(
-          "transformReferenceSearchParams",
-          reference,
-          referenceContext,
-          (returnValue) => {
-            Object.keys(returnValue).forEach((key) => {
-              searchParams.set(key, returnValue[key]);
-            });
-            reference.generatedUrl = normalizeUrl(referencedUrlObject.href);
-          },
-        );
-
-        const returnValue = pluginController.callHooksUntil(
-          "formatReference",
-          reference,
-          referenceContext,
-        );
-        reference.generatedSpecifier = returnValue || reference.generatedUrl;
-        reference.generatedSpecifier = urlSpecifierEncoding.encode(reference);
-      } else {
-        reference.generatedSpecifier = reference.specifier;
-      }
+      // This hook must touch reference.generatedUrl, NOT reference.url
+      // And this is because this hook inject query params used to:
+      // - bypass browser cache (?v)
+      // - convey information (?hmr)
+      // But do not represent an other resource, it is considered as
+      // the same resource under the hood
+      pluginController.callHooks(
+        "transformReferenceSearchParams",
+        reference,
+        referenceContext,
+        (returnValue) => {
+          Object.keys(returnValue).forEach((key) => {
+            searchParams.set(key, returnValue[key]);
+          });
+          reference.generatedUrl = normalizeUrl(referencedUrlObject.href);
+        },
+      );
+      const returnValue = pluginController.callHooksUntil(
+        "formatReference",
+        reference,
+        referenceContext,
+      );
+      reference.generatedSpecifier = returnValue || reference.generatedUrl;
+      reference.generatedSpecifier = urlSpecifierEncoding.encode(reference);
       return [reference, urlInfo];
     } catch (error) {
       throw createResolveUrlError({
@@ -469,7 +464,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       });
     };
 
-    if (urlInfo.shouldHandle) {
+    if (!urlInfo.mustIgnore) {
       // references
       const references = [];
       context.referenceUtils = {
@@ -854,10 +849,10 @@ const traceFromUrlSite = (urlSite) => {
 };
 
 const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
-  if (reference.shouldHandle) {
-    urlInfo.shouldHandle = true;
+  if (reference.mustIgnore) {
+    urlInfo.mustIgnore = true;
   } else {
-    urlInfo.shouldHandle = false;
+    urlInfo.mustIgnore = false;
   }
   urlInfo.originalUrl = urlInfo.originalUrl || reference.url;
 
