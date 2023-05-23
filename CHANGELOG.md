@@ -1,3 +1,8 @@
+# 36.0.2
+
+- Fix code preventing node esm resolution to be disabled
+- remove `webResolution` param, it's useless
+
 # 36.0.1
 
 - Remove jsenv internal position attributes from HTML during dev
