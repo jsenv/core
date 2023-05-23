@@ -335,7 +335,9 @@ build ${entryPointKeys.length} entry points`);
 
           referenceAnalysis: {
             ...referenceAnalysis,
-            ignoreProtocolRemoval: false,
+            // during first pass (craft) we inject "ignore:" when a reference must be ignored
+            // so that the second pass (shape) properly ignore those urls
+            ignoreProtocol: "inject",
           },
           nodeEsmResolution,
           magicExtensions,
@@ -395,7 +397,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           // consequently only a subset or urls are supported
           supportedProtocols: ["file:", "data:", "virtual:"],
           fetchInlineUrls: false,
-          ignoreProtocolRemoval: !versioning,
+          ignoreProtocol: versioning ? "keep" : "remove",
         }),
         ...(lineBreakNormalization
           ? [jsenvPluginLineBreakNormalization()]
@@ -1193,8 +1195,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               jsenvPluginReferenceAnalysis({
                 ...referenceAnalysis,
                 supportedProtocols: ["file:", "data:", "virtual:"],
+                ignoreProtocol: "remove",
                 fetchInlineUrls: false,
-                ignoreProtocolRemoval: true,
                 inlineConvertedScript: true, // to be able to version their urls
                 allowEscapeForVersioning: true,
               }),

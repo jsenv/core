@@ -47,6 +47,10 @@ const injectRibbon = ({
     </div>`;
   const node = document.createElement("div");
   node.innerHTML = html;
+  const toolbarStateInLocalStorage = localStorage.hasOwnProperty("jsenv_toolbar") ? JSON.parse(localStorage.getItem("jsenv_toolbar")) : {};
+  if (toolbarStateInLocalStorage.ribbonDisplayed === false) {
+    node.querySelector("#jsenv_ribbon_container").style.display = "none";
+  }
   document.body.appendChild(node.firstChild);
 };
 

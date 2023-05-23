@@ -12,7 +12,7 @@ export const jsenvPluginReferenceAnalysis = ({
   include,
   supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"],
 
-  ignoreProtocolRemoval = true,
+  ignoreProtocol = "remove",
   inlineContent = true,
   inlineConvertedScript = false,
   fetchInlineUrls = true,
@@ -22,7 +22,7 @@ export const jsenvPluginReferenceAnalysis = ({
     jsenvPluginReferenceAnalysisInclude({
       include,
       supportedProtocols,
-      ignoreProtocolRemoval,
+      ignoreProtocol,
     }),
     jsenvPluginDirectoryReferenceAnalysis(),
     jsenvPluginHtmlReferenceAnalysis({
@@ -46,7 +46,7 @@ export const jsenvPluginReferenceAnalysis = ({
 const jsenvPluginReferenceAnalysisInclude = ({
   include,
   supportedProtocols,
-  ignoreProtocolRemoval,
+  ignoreProtocol,
 }) => {
   // eslint-disable-next-line no-unused-vars
   let getIncludeInfo = (url) => undefined;
@@ -86,7 +86,7 @@ const jsenvPluginReferenceAnalysisInclude = ({
       }
       if (reference.url.startsWith("ignore:")) {
         reference.mustIgnore = true;
-        if (ignoreProtocolRemoval) {
+        if (ignoreProtocol === "remove") {
           reference.specifier = reference.specifier.slice("ignore:".length);
         }
         return;
@@ -106,6 +106,11 @@ const jsenvPluginReferenceAnalysisInclude = ({
       );
       if (!protocolIsSupported) {
         reference.mustIgnore = true;
+      }
+    },
+    formatReference: (reference) => {
+      if (ignoreProtocol === "inject" && reference.mustIgnore) {
+        reference.specifier = `ignore:${reference.specifier}`;
       }
     },
   };

@@ -7806,7 +7806,7 @@ const createUrlInfo = url => {
     originalUrl: undefined,
     filename: "",
     isEntryPoint: false,
-    shouldHandle: undefined,
+    mustIgnore: undefined,
     originalContent: undefined,
     content: undefined,
     sourcemap: null,
@@ -8126,11 +8126,11 @@ const returnValueAssertions = [{
     }
     if (typeof valueReturned === "object") {
       const {
-        shouldHandle,
+        mustIgnore,
         content,
         body
       } = valueReturned;
-      if (shouldHandle === false) {
+      if (mustIgnore) {
         return undefined;
       }
       if (typeof content !== "string" && !Buffer.isBuffer(content) && !body) {
@@ -9192,7 +9192,7 @@ const createKitchen = ({
     specifierColumn,
     baseUrl,
     isOriginalPosition,
-    shouldHandle,
+    mustIgnore,
     isEntryPoint = false,
     isResourceHint = false,
     isImplicit = false,
@@ -9241,7 +9241,7 @@ const createKitchen = ({
       specifierColumn,
       isOriginalPosition,
       baseUrl,
-      shouldHandle,
+      mustIgnore,
       isEntryPoint,
       isResourceHint,
       isImplicit,
@@ -9333,8 +9333,13 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         reference.generatedUrl = normalizeUrl(referencedUrlObject.href);
       });
       const returnValue = pluginController.callHooksUntil("formatReference", reference, referenceContext);
-      reference.generatedSpecifier = returnValue || reference.generatedUrl;
-      reference.generatedSpecifier = urlSpecifierEncoding.encode(reference);
+      if (reference.mustIgnore) {
+        reference.generatedSpecifier = reference.specifier;
+        reference.generatedSpecifier = urlSpecifierEncoding.encode(reference);
+      } else {
+        reference.generatedSpecifier = returnValue || reference.generatedUrl;
+        reference.generatedSpecifier = urlSpecifierEncoding.encode(reference);
+      }
       return [reference, urlInfo];
     } catch (error) {
       throw createResolveUrlError({
@@ -9504,7 +9509,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         contextDuringFetch: context
       });
     };
-    if (urlInfo.shouldHandle) {
+    if (!urlInfo.mustIgnore) {
       // references
       const references = [];
       context.referenceUtils = {
@@ -9834,10 +9839,10 @@ const traceFromUrlSite = urlSite => {
   };
 };
 const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
-  if (reference.shouldHandle) {
-    urlInfo.shouldHandle = true;
+  if (reference.mustIgnore) {
+    urlInfo.mustIgnore = true;
   } else {
-    urlInfo.shouldHandle = false;
+    urlInfo.mustIgnore = false;
   }
   urlInfo.originalUrl = urlInfo.originalUrl || reference.url;
   if (reference.isEntryPoint || isWebWorkerEntryPointReference(reference)) {
@@ -10076,7 +10081,7 @@ const createUrlGraphReport = urlGraph => {
     // ignore:
     // - inline files: they are already taken into account in the file where they appear
     // - ignored files: we don't know their content
-    if (urlInfo.isInline || !urlInfo.shouldHandle) {
+    if (urlInfo.isInline || urlInfo.mustIgnore) {
       return;
     }
     // file loaded via import assertion are already inside the graph
@@ -11108,6 +11113,7 @@ const parseAndTransformJsReferences = async (urlInfo, context, {
 const jsenvPluginReferenceAnalysis = ({
   include,
   supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"],
+  ignoreProtocol = "remove",
   inlineContent = true,
   inlineConvertedScript = false,
   fetchInlineUrls = true,
@@ -11115,7 +11121,8 @@ const jsenvPluginReferenceAnalysis = ({
 }) => {
   return [jsenvPluginReferenceAnalysisInclude({
     include,
-    supportedProtocols
+    supportedProtocols,
+    ignoreProtocol
   }), jsenvPluginDirectoryReferenceAnalysis(), jsenvPluginHtmlReferenceAnalysis({
     inlineContent,
     inlineConvertedScript
@@ -11126,7 +11133,8 @@ const jsenvPluginReferenceAnalysis = ({
 };
 const jsenvPluginReferenceAnalysisInclude = ({
   include,
-  supportedProtocols
+  supportedProtocols,
+  ignoreProtocol
 }) => {
   // eslint-disable-next-line no-unused-vars
   let getIncludeInfo = url => undefined;
@@ -11152,7 +11160,7 @@ const jsenvPluginReferenceAnalysisInclude = ({
       }
     },
     redirectReference: reference => {
-      if (reference.shouldHandle !== undefined) {
+      if (reference.mustIgnore !== undefined) {
         return;
       }
       if (reference.specifier[0] === "#" &&
@@ -11161,24 +11169,36 @@ const jsenvPluginReferenceAnalysisInclude = ({
       // However for js import specifiers they have a different meaning and we want
       // to resolve them (https://nodejs.org/api/packages.html#imports for instance)
       reference.type !== "js_import") {
-        reference.shouldHandle = false;
+        reference.mustIgnore = true;
+        return;
+      }
+      if (reference.url.startsWith("ignore:")) {
+        reference.mustIgnore = true;
+        if (ignoreProtocol === "remove") {
+          reference.specifier = reference.specifier.slice("ignore:".length);
+        }
         return;
       }
       const includeInfo = getIncludeInfo(reference.url);
       if (includeInfo === true) {
-        reference.shouldHandle = true;
+        reference.mustIgnore = false;
         return;
       }
       if (includeInfo === false) {
-        reference.shouldHandle = false;
+        reference.mustIgnore = true;
         return;
       }
       const {
         protocol
       } = new URL(reference.url);
       const protocolIsSupported = supportedProtocols.some(supportedProtocol => protocol === supportedProtocol);
-      if (protocolIsSupported) {
-        reference.shouldHandle = true;
+      if (!protocolIsSupported) {
+        reference.mustIgnore = true;
+      }
+    },
+    formatReference: reference => {
+      if (ignoreProtocol === "inject" && reference.mustIgnore) {
+        reference.specifier = `ignore:${reference.specifier}`;
       }
     }
   };
@@ -17435,10 +17455,10 @@ const jsenvPluginNodeEsmResolution = (resolutionConfig = {}) => {
         runtimeCompat,
         preservesSymlink: true
       });
-      if (!resolvers.js_module) {
+      if (resolvers.js_module === undefined) {
         resolvers.js_module = nodeEsmResolverDefault;
       }
-      if (!resolvers.js_classic) {
+      if (resolvers.js_classic === undefined) {
         resolvers.js_classic = (reference, context) => {
           if (reference.subtype === "self_import_scripts_arg") {
             return nodeEsmResolverDefault(reference, context);
@@ -17467,41 +17487,25 @@ const jsenvPluginNodeEsmResolution = (resolutionConfig = {}) => {
   };
 };
 
-const jsenvPluginWebResolution = (resolutionConfig = {}) => {
-  const resolvers = {};
-  const resolveUsingWebResolution = (reference, context) => {
-    if (reference.specifier === "/") {
-      const {
-        mainFilePath,
-        rootDirectoryUrl
-      } = context;
-      return String(new URL(mainFilePath, rootDirectoryUrl));
-    }
-    if (reference.specifier[0] === "/") {
-      return new URL(reference.specifier.slice(1), context.rootDirectoryUrl).href;
-    }
-    return new URL(reference.specifier,
-    // baseUrl happens second argument to new URL() is different from
-    // import.meta.url or document.currentScript.src
-    reference.baseUrl || reference.parentUrl).href;
-  };
-  Object.keys(resolutionConfig).forEach(urlType => {
-    const config = resolutionConfig[urlType];
-    if (config === true) {
-      resolvers[urlType] = resolveUsingWebResolution;
-    } else if (config === false) {
-      resolvers[urlType] = () => null;
-    } else {
-      throw new TypeError(`config must be true or false, got ${config} on "${urlType}"`);
-    }
-  });
+const jsenvPluginWebResolution = () => {
   return {
     name: "jsenv:web_resolution",
     appliesDuring: "*",
     resolveReference: (reference, context) => {
-      const urlType = urlTypeFromReference(reference, context);
-      const resolver = resolvers[urlType];
-      return resolver ? resolver(reference, context) : resolveUsingWebResolution(reference, context);
+      if (reference.specifier === "/") {
+        const {
+          mainFilePath,
+          rootDirectoryUrl
+        } = context;
+        return String(new URL(mainFilePath, rootDirectoryUrl));
+      }
+      if (reference.specifier[0] === "/") {
+        return new URL(reference.specifier.slice(1), context.rootDirectoryUrl).href;
+      }
+      return new URL(reference.specifier,
+      // baseUrl happens second argument to new URL() is different from
+      // import.meta.url or document.currentScript.src
+      reference.baseUrl || reference.parentUrl).href;
     }
   };
 };
@@ -17540,14 +17544,14 @@ const jsenvPluginVersionSearchParam = () => {
   };
 };
 
-const jsenvPluginFileUrls = ({
+const jsenvPluginProtocolFile = ({
   magicExtensions = ["inherit", ".js"],
   magicDirectoryIndex = true,
   preserveSymlinks = false,
   directoryReferenceAllowed = false
 }) => {
   return [{
-    name: "jsenv:file_url_resolution",
+    name: "jsenv:fs_redirection",
     appliesDuring: "*",
     redirectReference: reference => {
       // http, https, data, about, ...
@@ -17588,13 +17592,13 @@ const jsenvPluginFileUrls = ({
         urlObject.pathname = pathname.slice(0, -1);
       }
       let url = urlObject.href;
-      const shouldPreserve = stat && stat.isDirectory() && (
+      const mustIgnore = stat && stat.isDirectory() && (
       // ignore new URL second arg
       reference.subtype === "new_url_second_arg" ||
       // ignore root file url
       reference.url === "file:///" || reference.subtype === "new_url_first_arg" && reference.specifier === "./");
-      if (shouldPreserve) {
-        reference.shouldHandle = false;
+      if (mustIgnore) {
+        reference.mustIgnore = true;
       } else {
         const shouldApplyDilesystemMagicResolution = reference.type === "js_import";
         if (shouldApplyDilesystemMagicResolution) {
@@ -17626,7 +17630,7 @@ const jsenvPluginFileUrls = ({
       return null;
     }
   }, {
-    name: "jsenv:filesystem_resolution",
+    name: "jsenv:fs_resolution",
     appliesDuring: "*",
     resolveReference: {
       filesystem: (reference, context) => {
@@ -17639,10 +17643,10 @@ const jsenvPluginFileUrls = ({
       }
     }
   }, {
-    name: "jsenv:@fs_resolution",
-    // during dev and test it's a browser running the code
+    name: "jsenv:@fs",
+    // during build it's fine to use "file://"" urls
+    // but during dev it's a browser running the code
     // so absolute file urls needs to be relativized
-    // during build it's fine to use file:// urls
     appliesDuring: "dev",
     resolveReference: reference => {
       if (reference.specifier.startsWith("/@fs/")) {
@@ -17697,13 +17701,13 @@ const resolveSymlink = fileUrl => {
   return pathToFileURL(realpathSync(new URL(fileUrl))).href;
 };
 
-const jsenvPluginHttpUrls = () => {
+const jsenvPluginProtocolHttp = () => {
   return {
-    name: "jsenv:http_urls",
+    name: "jsenv:protocol_http",
     appliesDuring: "*",
     redirectReference: reference => {
       if (reference.url.startsWith("http:") || reference.url.startsWith("https:")) {
-        reference.shouldHandle = false;
+        reference.mustIgnore = true;
       }
       // TODO: according to some pattern matching jsenv could be allowed
       // to fetch and transform http urls
@@ -20893,8 +20897,8 @@ const getCorePlugins = ({
   runtimeCompat,
   referenceAnalysis = {},
   nodeEsmResolution = {},
-  webResolution = {},
-  fileSystemMagicRedirection,
+  magicExtensions,
+  magicDirectoryIndex,
   directoryReferenceAllowed,
   supervisor,
   transpilation = true,
@@ -20912,9 +20916,6 @@ const getCorePlugins = ({
   if (supervisor === true) {
     supervisor = {};
   }
-  if (fileSystemMagicRedirection === true) {
-    fileSystemMagicRedirection = {};
-  }
   if (clientAutoreload === true) {
     clientAutoreload = {};
   }
@@ -20930,10 +20931,11 @@ const getCorePlugins = ({
      - reference inside a js module -> resolved by node esm
      - All the rest uses web standard url resolution
    */
-  jsenvPluginFileUrls({
+  jsenvPluginProtocolFile({
     directoryReferenceAllowed,
-    ...fileSystemMagicRedirection
-  }), jsenvPluginHttpUrls(), ...(nodeEsmResolution ? [jsenvPluginNodeEsmResolution(nodeEsmResolution)] : []), jsenvPluginWebResolution(webResolution), jsenvPluginVersionSearchParam(), jsenvPluginCommonJsGlobals(), jsenvPluginImportMetaScenarios(), ...(scenarioPlaceholders ? [jsenvPluginGlobalScenarios()] : []), jsenvPluginNodeRuntime({
+    magicExtensions,
+    magicDirectoryIndex
+  }), jsenvPluginProtocolHttp(), ...(nodeEsmResolution ? [jsenvPluginNodeEsmResolution(nodeEsmResolution)] : []), jsenvPluginWebResolution(), jsenvPluginVersionSearchParam(), jsenvPluginCommonJsGlobals(), jsenvPluginImportMetaScenarios(), ...(scenarioPlaceholders ? [jsenvPluginGlobalScenarios()] : []), jsenvPluginNodeRuntime({
     runtimeCompat
   }), jsenvPluginImportMetaHot(), ...(clientAutoreload ? [jsenvPluginAutoreload({
     ...clientAutoreload,
@@ -21335,8 +21337,8 @@ const build = async ({
   plugins = [],
   referenceAnalysis = {},
   nodeEsmResolution,
-  webResolution,
-  fileSystemMagicRedirection,
+  magicExtensions,
+  magicDirectoryIndex,
   directoryReferenceAllowed,
   scenarioPlaceholders,
   transpilation = {},
@@ -21473,12 +21475,6 @@ build ${entryPointKeys.length} entry points`);
       ...contextSharedDuringBuild,
       plugins: [...plugins, {
         appliesDuring: "build",
-        formatReference: reference => {
-          if (!reference.shouldHandle) {
-            return `ignore:${reference.specifier}`;
-          }
-          return null;
-        },
         fetchUrlContent: (urlInfo, context) => {
           if (context.reference.original) {
             rawRedirections.set(context.reference.original.url, context.reference.url);
@@ -21488,10 +21484,15 @@ build ${entryPointKeys.length} entry points`);
         rootDirectoryUrl: sourceDirectoryUrl,
         urlGraph: rawGraph,
         runtimeCompat,
-        referenceAnalysis,
+        referenceAnalysis: {
+          ...referenceAnalysis,
+          // during first pass (craft) we inject "ignore:" when a reference must be ignored
+          // so that the second pass (shape) properly ignore those urls
+          ignoreProtocol: "inject"
+        },
         nodeEsmResolution,
-        webResolution,
-        fileSystemMagicRedirection,
+        magicExtensions,
+        magicDirectoryIndex,
         directoryReferenceAllowed,
         transpilation: {
           ...transpilation,
@@ -21533,7 +21534,14 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       ...contextSharedDuringBuild,
       plugins: [jsenvPluginReferenceAnalysis({
         ...referenceAnalysis,
-        fetchInlineUrls: false
+        // here most plugins are not there
+        // - no external plugin
+        // - no plugin putting reference.mustIgnore on https urls
+        // At this stage it's only about redirecting urls to the build directory
+        // consequently only a subset or urls are supported
+        supportedProtocols: ["file:", "data:", "virtual:"],
+        fetchInlineUrls: false,
+        ignoreProtocol: versioning ? "keep" : "remove"
       }), ...(lineBreakNormalization ? [jsenvPluginLineBreakNormalization()] : []), jsenvPluginJsModuleFallback({
         systemJsInjection: true
       }), jsenvPluginInlining(), {
@@ -21685,9 +21693,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         },
         formatReference: reference => {
           if (!reference.generatedUrl.startsWith("file:")) {
-            if (!versioning && reference.generatedUrl.startsWith("ignore:")) {
-              return reference.generatedUrl.slice("ignore:".length);
-            }
             return null;
           }
           if (reference.isResourceHint) {
@@ -22123,7 +22128,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             if (urlInfo.isInline) {
               return;
             }
-            if (!urlInfo.shouldHandle) {
+            if (urlInfo.mustIgnore) {
               return;
             }
             if (urlInfo.dependents.size === 0 && !urlInfo.isEntryPoint) {
@@ -22149,7 +22154,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   const dependencyContentVersion = contentVersionMap.get(reference.url);
                   if (!dependencyContentVersion) {
                     // no content generated for this dependency
-                    // (inline, data:, sourcemap, shouldHandle is false, ...)
+                    // (inline, data:, sourcemap, mustIgnore is true, ...)
                     return null;
                   }
                   if (preferWithoutVersioning(reference)) {
@@ -22212,8 +22217,16 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             build: true,
             runtimeCompat,
             ...contextSharedDuringBuild,
-            plugins: [jsenvPluginReferenceAnalysis({
+            plugins: [
+            // here most plugins are not there
+            // - no external plugin
+            // - no plugin putting reference.mustIgnore on https urls
+            // At this stage it's only about versioning urls
+            // consequently only a subset or urls are supported
+            jsenvPluginReferenceAnalysis({
               ...referenceAnalysis,
+              supportedProtocols: ["file:", "data:", "virtual:"],
+              ignoreProtocol: "remove",
               fetchInlineUrls: false,
               inlineConvertedScript: true,
               // to be able to version their urls
@@ -22247,10 +22260,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 return url;
               },
               formatReference: reference => {
-                if (!reference.shouldHandle) {
-                  if (reference.generatedUrl.startsWith("ignore:")) {
-                    return reference.generatedUrl.slice("ignore:".length);
-                  }
+                if (reference.mustIgnore) {
                   return null;
                 }
                 if (reference.isInline || reference.url.startsWith("data:")) {
@@ -22265,7 +22275,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 if (!canUseVersionedUrl(referencedUrlInfo)) {
                   return reference.specifier;
                 }
-                if (!referencedUrlInfo.shouldHandle) {
+                if (referencedUrlInfo.mustIgnore) {
                   return null;
                 }
                 const versionedUrl = versionedUrlMap.get(reference.url);
@@ -22375,7 +22385,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       }
       {
         GRAPH.forEach(finalGraph, urlInfo => {
-          if (!urlInfo.shouldHandle) {
+          if (urlInfo.mustIgnore) {
             return;
           }
           if (!urlInfo.url.startsWith("file:")) {
@@ -22524,7 +22534,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         if (serviceWorkerEntryUrlInfos.length > 0) {
           const serviceWorkerResources = {};
           GRAPH.forEach(finalGraph, urlInfo => {
-            if (urlInfo.isInline || !urlInfo.shouldHandle) {
+            if (urlInfo.isInline || urlInfo.mustIgnore) {
               return;
             }
             if (!urlInfo.url.startsWith("file:")) {
@@ -22583,7 +22593,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       return buildRelativeUrl;
     };
     GRAPH.forEach(finalGraph, urlInfo => {
-      if (!urlInfo.shouldHandle) {
+      if (urlInfo.mustIgnore) {
         return;
       }
       if (!urlInfo.url.startsWith("file:")) {
@@ -22855,8 +22865,8 @@ const createFileService = ({
   plugins,
   referenceAnalysis,
   nodeEsmResolution,
-  webResolution,
-  fileSystemMagicRedirection,
+  magicExtensions,
+  magicDirectoryIndex,
   supervisor,
   transpilation,
   clientAutoreload,
@@ -22932,8 +22942,8 @@ const createFileService = ({
         runtimeCompat,
         referenceAnalysis,
         nodeEsmResolution,
-        webResolution,
-        fileSystemMagicRedirection,
+        magicExtensions,
+        magicDirectoryIndex,
         supervisor,
         transpilation,
         clientAutoreload,
@@ -23271,9 +23281,9 @@ const startDevServer = async ({
   plugins = [],
   referenceAnalysis = {},
   nodeEsmResolution,
-  webResolution,
   supervisor = true,
-  fileSystemMagicRedirection,
+  magicExtensions,
+  magicDirectoryIndex,
   transpilation,
   cacheControl = true,
   ribbon = true,
@@ -23390,8 +23400,8 @@ const startDevServer = async ({
         plugins,
         referenceAnalysis,
         nodeEsmResolution,
-        webResolution,
-        fileSystemMagicRedirection,
+        magicExtensions,
+        magicDirectoryIndex,
         supervisor,
         transpilation,
         clientAutoreload,
