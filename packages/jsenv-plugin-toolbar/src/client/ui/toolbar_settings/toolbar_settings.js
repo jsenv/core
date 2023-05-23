@@ -11,6 +11,7 @@ import { renderToolbarAutoreloadSetting } from "./toolbar_autoreload_setting.js"
 import { renderToolbarAnimationSetting } from "./toolbar_animation_setting.js";
 import { renderToolbarNotificationSetting } from "./toolbar_notification_setting.js";
 import { renderToolbarThemeSetting } from "./toolbar_theme_setting.js";
+import { renderToolbarRibbonSetting } from "./toolbar_ribbon_setting.js";
 
 export const renderToolbarSettings = () => {
   document.querySelector("#settings_open_button").onclick = toggleSettings;
@@ -21,6 +22,7 @@ export const renderToolbarSettings = () => {
   renderToolbarAnimationSetting();
   renderToolbarNotificationSetting();
   renderToolbarThemeSetting();
+  renderToolbarRibbonSetting();
 
   effect(() => {
     const settingsOpened = settingsOpenedSignal.value;
