@@ -41,10 +41,10 @@ export const jsenvPluginNodeEsmResolution = (resolutionConfig = {}) => {
         runtimeCompat,
         preservesSymlink: true,
       });
-      if (!resolvers.js_module) {
+      if (resolvers.js_module === undefined) {
         resolvers.js_module = nodeEsmResolverDefault;
       }
-      if (!resolvers.js_classic) {
+      if (resolvers.js_classic === undefined) {
         resolvers.js_classic = (reference, context) => {
           if (reference.subtype === "self_import_scripts_arg") {
             return nodeEsmResolverDefault(reference, context);
