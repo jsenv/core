@@ -104,7 +104,9 @@ const jsenvPluginReferenceAnalysisInclude = ({
       const protocolIsSupported = supportedProtocols.some(
         (supportedProtocol) => protocol === supportedProtocol,
       );
-      reference.mustIgnore = !protocolIsSupported;
+      if (!protocolIsSupported) {
+        reference.mustIgnore = true;
+      }
     },
   };
 };

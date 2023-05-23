@@ -388,6 +388,12 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       plugins: [
         jsenvPluginReferenceAnalysis({
           ...referenceAnalysis,
+          // here most plugins are not there
+          // - no external plugin
+          // - no plugin putting reference.mustIgnore on https urls
+          // At this stage it's only about redirecting urls to the build directory
+          // consequently only a subset or urls are supported
+          supportedProtocols: ["file:", "data:", "virtual:"],
           fetchInlineUrls: false,
           ignoreProtocolRemoval: !versioning,
         }),
@@ -1179,8 +1185,14 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             runtimeCompat,
             ...contextSharedDuringBuild,
             plugins: [
+              // here most plugins are not there
+              // - no external plugin
+              // - no plugin putting reference.mustIgnore on https urls
+              // At this stage it's only about versioning urls
+              // consequently only a subset or urls are supported
               jsenvPluginReferenceAnalysis({
                 ...referenceAnalysis,
+                supportedProtocols: ["file:", "data:", "virtual:"],
                 fetchInlineUrls: false,
                 ignoreProtocolRemoval: true,
                 inlineConvertedScript: true, // to be able to version their urls

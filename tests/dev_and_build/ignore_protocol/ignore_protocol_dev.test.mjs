@@ -17,7 +17,10 @@ const test = async (params) => {
     /* eslint-enable no-undef */
   });
   const actual = returnValue;
-  const expected = `${devServer.origin}/main.html#toto`;
+  const expected = {
+    ignoreAJsHref: `${devServer.origin}/a.js`,
+    ignoreIgnoreBJsHref: `ignore:b.js`,
+  };
   assert({ actual, expected });
 };
 

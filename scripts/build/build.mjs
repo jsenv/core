@@ -9,6 +9,7 @@ await build({
   entryPoints: {
     "./main.js": "jsenv_core.js",
   },
+  outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
   versioning: false,
   assetManifest: false,
   runtimeCompat: {
