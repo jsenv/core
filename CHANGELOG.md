@@ -2,6 +2,7 @@
 
 - Fix code preventing node esm resolution to be disabled
 - remove `webResolution` param, it's useless
+- preserve references sarting with `#`
 
 # 36.0.1
 

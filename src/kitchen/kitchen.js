@@ -259,30 +259,35 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url);
       applyReferenceEffectsOnUrlInfo(reference, urlInfo, context);
 
-      // This hook must touch reference.generatedUrl, NOT reference.url
-      // And this is because this hook inject query params used to:
-      // - bypass browser cache (?v)
-      // - convey information (?hmr)
-      // But do not represent an other resource, it is considered as
-      // the same resource under the hood
-      pluginController.callHooks(
-        "transformReferenceSearchParams",
-        reference,
-        referenceContext,
-        (returnValue) => {
-          Object.keys(returnValue).forEach((key) => {
-            searchParams.set(key, returnValue[key]);
-          });
-          reference.generatedUrl = normalizeUrl(referencedUrlObject.href);
-        },
-      );
-      const returnValue = pluginController.callHooksUntil(
-        "formatReference",
-        reference,
-        referenceContext,
-      );
-      reference.generatedSpecifier = returnValue || reference.generatedUrl;
-      reference.generatedSpecifier = urlSpecifierEncoding.encode(reference);
+      if (reference.shouldHandle) {
+        // This hook must touch reference.generatedUrl, NOT reference.url
+        // And this is because this hook inject query params used to:
+        // - bypass browser cache (?v)
+        // - convey information (?hmr)
+        // But do not represent an other resource, it is considered as
+        // the same resource under the hood
+        pluginController.callHooks(
+          "transformReferenceSearchParams",
+          reference,
+          referenceContext,
+          (returnValue) => {
+            Object.keys(returnValue).forEach((key) => {
+              searchParams.set(key, returnValue[key]);
+            });
+            reference.generatedUrl = normalizeUrl(referencedUrlObject.href);
+          },
+        );
+
+        const returnValue = pluginController.callHooksUntil(
+          "formatReference",
+          reference,
+          referenceContext,
+        );
+        reference.generatedSpecifier = returnValue || reference.generatedUrl;
+        reference.generatedSpecifier = urlSpecifierEncoding.encode(reference);
+      } else {
+        reference.generatedSpecifier = reference.specifier;
+      }
       return [reference, urlInfo];
     } catch (error) {
       throw createResolveUrlError({
