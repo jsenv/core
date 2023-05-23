@@ -136,7 +136,8 @@ export const build = async ({
   plugins = [],
   referenceAnalysis = {},
   nodeEsmResolution,
-  fileSystemMagicRedirection,
+  magicExtensions,
+  magicDirectoryIndex,
   directoryReferenceAllowed,
   scenarioPlaceholders,
   transpilation = {},
@@ -318,12 +319,6 @@ build ${entryPointKeys.length} entry points`);
         ...plugins,
         {
           appliesDuring: "build",
-          formatReference: (reference) => {
-            if (!reference.shouldHandle) {
-              return `ignore:${reference.specifier}`;
-            }
-            return null;
-          },
           fetchUrlContent: (urlInfo, context) => {
             if (context.reference.original) {
               rawRedirections.set(
@@ -340,7 +335,8 @@ build ${entryPointKeys.length} entry points`);
 
           referenceAnalysis,
           nodeEsmResolution,
-          fileSystemMagicRedirection,
+          magicExtensions,
+          magicDirectoryIndex,
           directoryReferenceAllowed,
           transpilation: {
             ...transpilation,
@@ -576,9 +572,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           },
           formatReference: (reference) => {
             if (!reference.generatedUrl.startsWith("file:")) {
-              if (!versioning && reference.generatedUrl.startsWith("ignore:")) {
-                return reference.generatedUrl.slice("ignore:".length);
-              }
               return null;
             }
             if (reference.isResourceHint) {
@@ -1076,7 +1069,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             if (urlInfo.isInline) {
               return;
             }
-            if (!urlInfo.shouldHandle) {
+            if (urlInfo.mustIgnore) {
               return;
             }
             if (urlInfo.dependents.size === 0 && !urlInfo.isEntryPoint) {
@@ -1110,7 +1103,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   );
                   if (!dependencyContentVersion) {
                     // no content generated for this dependency
-                    // (inline, data:, sourcemap, shouldHandle is false, ...)
+                    // (inline, data:, sourcemap, mustIgnore is true, ...)
                     return null;
                   }
                   if (preferWithoutVersioning(reference)) {
@@ -1225,10 +1218,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   return url;
                 },
                 formatReference: (reference) => {
-                  if (!reference.shouldHandle) {
-                    if (reference.generatedUrl.startsWith("ignore:")) {
-                      return reference.generatedUrl.slice("ignore:".length);
-                    }
+                  if (reference.mustIgnore) {
                     return null;
                   }
                   if (reference.isInline || reference.url.startsWith("data:")) {
@@ -1245,7 +1235,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   if (!canUseVersionedUrl(referencedUrlInfo)) {
                     return reference.specifier;
                   }
-                  if (!referencedUrlInfo.shouldHandle) {
+                  if (referencedUrlInfo.mustIgnore) {
                     return null;
                   }
                   const versionedUrl = versionedUrlMap.get(reference.url);
@@ -1374,7 +1364,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       }
       cleanup_jsenv_attributes_from_html: {
         GRAPH.forEach(finalGraph, (urlInfo) => {
-          if (!urlInfo.shouldHandle) {
+          if (urlInfo.mustIgnore) {
             return;
           }
           if (!urlInfo.url.startsWith("file:")) {
@@ -1559,7 +1549,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         if (serviceWorkerEntryUrlInfos.length > 0) {
           const serviceWorkerResources = {};
           GRAPH.forEach(finalGraph, (urlInfo) => {
-            if (urlInfo.isInline || !urlInfo.shouldHandle) {
+            if (urlInfo.isInline || urlInfo.mustIgnore) {
               return;
             }
             if (!urlInfo.url.startsWith("file:")) {
@@ -1632,7 +1622,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       return buildRelativeUrl;
     };
     GRAPH.forEach(finalGraph, (urlInfo) => {
-      if (!urlInfo.shouldHandle) {
+      if (urlInfo.mustIgnore) {
         return;
       }
       if (!urlInfo.url.startsWith("file:")) {

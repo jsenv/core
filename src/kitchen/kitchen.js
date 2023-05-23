@@ -281,8 +281,13 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         reference,
         referenceContext,
       );
-      reference.generatedSpecifier = returnValue || reference.generatedUrl;
-      reference.generatedSpecifier = urlSpecifierEncoding.encode(reference);
+      if (reference.mustIgnore) {
+        reference.generatedSpecifier = reference.specifier;
+        reference.generatedSpecifier = urlSpecifierEncoding.encode(reference);
+      } else {
+        reference.generatedSpecifier = returnValue || reference.generatedUrl;
+        reference.generatedSpecifier = urlSpecifierEncoding.encode(reference);
+      }
       return [reference, urlInfo];
     } catch (error) {
       throw createResolveUrlError({

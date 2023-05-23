@@ -67,7 +67,7 @@ const jsenvPluginReferenceAnalysisInclude = ({
       }
     },
     redirectReference: (reference) => {
-      if (reference.shouldHandle !== undefined) {
+      if (reference.mustIgnore !== undefined) {
         return;
       }
       if (
@@ -78,25 +78,29 @@ const jsenvPluginReferenceAnalysisInclude = ({
         // to resolve them (https://nodejs.org/api/packages.html#imports for instance)
         reference.type !== "js_import"
       ) {
-        reference.shouldHandle = false;
+        reference.mustIgnore = true;
         return;
       }
       const includeInfo = getIncludeInfo(reference.url);
       if (includeInfo === true) {
-        reference.shouldHandle = true;
+        reference.mustIgnore = false;
         return;
       }
       if (includeInfo === false) {
-        reference.shouldHandle = false;
+        reference.mustIgnore = true;
         return;
       }
       const { protocol } = new URL(reference.url);
       const protocolIsSupported = supportedProtocols.some(
         (supportedProtocol) => protocol === supportedProtocol,
       );
-      if (protocolIsSupported) {
-        reference.shouldHandle = true;
+      reference.mustIgnore = !protocolIsSupported;
+    },
+    formatReference: (reference) => {
+      if (reference.generatedUrl.startsWith("ignore:")) {
+        return reference.generatedUrl.slice("ignore:".length);
       }
+      return null;
     },
   };
 };

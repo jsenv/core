@@ -12,7 +12,7 @@ import {
 } from "@jsenv/node-esm-resolution";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 
-export const jsenvPluginFileUrls = ({
+export const jsenvPluginProtocolFile = ({
   magicExtensions = ["inherit", ".js"],
   magicDirectoryIndex = true,
   preserveSymlinks = false,
@@ -20,7 +20,7 @@ export const jsenvPluginFileUrls = ({
 }) => {
   return [
     {
-      name: "jsenv:file_url_resolution",
+      name: "jsenv:fs_redirection",
       appliesDuring: "*",
       redirectReference: (reference) => {
         // http, https, data, about, ...
@@ -57,7 +57,7 @@ export const jsenvPluginFileUrls = ({
         }
 
         let url = urlObject.href;
-        const shouldPreserve =
+        const mustIgnore =
           stat &&
           stat.isDirectory() &&
           // ignore new URL second arg
@@ -67,8 +67,8 @@ export const jsenvPluginFileUrls = ({
             (reference.subtype === "new_url_first_arg" &&
               reference.specifier === "./"));
 
-        if (shouldPreserve) {
-          reference.shouldHandle = false;
+        if (mustIgnore) {
+          reference.mustIgnore = true;
         } else {
           const shouldApplyDilesystemMagicResolution =
             reference.type === "js_import";
@@ -109,7 +109,7 @@ export const jsenvPluginFileUrls = ({
       },
     },
     {
-      name: "jsenv:filesystem_resolution",
+      name: "jsenv:fs_resolution",
       appliesDuring: "*",
       resolveReference: {
         filesystem: (reference, context) => {
@@ -124,10 +124,10 @@ export const jsenvPluginFileUrls = ({
       },
     },
     {
-      name: "jsenv:@fs_resolution",
-      // during dev and test it's a browser running the code
+      name: "jsenv:@fs",
+      // during build it's fine to use "file://"" urls
+      // but during dev it's a browser running the code
       // so absolute file urls needs to be relativized
-      // during build it's fine to use file:// urls
       appliesDuring: "dev",
       resolveReference: (reference) => {
         if (reference.specifier.startsWith("/@fs/")) {

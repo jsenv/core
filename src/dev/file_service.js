@@ -28,7 +28,8 @@ export const createFileService = ({
   plugins,
   referenceAnalysis,
   nodeEsmResolution,
-  fileSystemMagicRedirection,
+  magicExtensions,
+  magicDirectoryIndex,
   supervisor,
   transpilation,
   clientAutoreload,
@@ -115,7 +116,8 @@ export const createFileService = ({
 
           referenceAnalysis,
           nodeEsmResolution,
-          fileSystemMagicRedirection,
+          magicExtensions,
+          magicDirectoryIndex,
           supervisor,
           transpilation,
 

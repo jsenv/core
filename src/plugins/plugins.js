@@ -3,8 +3,8 @@ import { jsenvPluginImportmap } from "./importmap/jsenv_plugin_importmap.js";
 import { jsenvPluginNodeEsmResolution } from "./resolution_node_esm/jsenv_plugin_node_esm_resolution.js";
 import { jsenvPluginWebResolution } from "./resolution_web/jsenv_plugin_web_resolution.js";
 import { jsenvPluginVersionSearchParam } from "./version_search_param/jsenv_plugin_version_search_param.js";
-import { jsenvPluginFileUrls } from "./file_urls/jsenv_plugin_file_urls.js";
-import { jsenvPluginHttpUrls } from "./http_urls/jsenv_plugin_http_urls.js";
+import { jsenvPluginProtocolFile } from "./protocol_file/jsenv_plugin_protocol_file.js";
+import { jsenvPluginProtocolHttp } from "./protocol_http/jsenv_plugin_protocol_http.js";
 import { jsenvPluginInlining } from "./inlining/jsenv_plugin_inlining.js";
 import { jsenvPluginSupervisor } from "./supervisor/jsenv_plugin_supervisor.js";
 import { jsenvPluginCommonJsGlobals } from "./commonjs_globals/jsenv_plugin_commonjs_globals.js";
@@ -25,7 +25,8 @@ export const getCorePlugins = ({
 
   referenceAnalysis = {},
   nodeEsmResolution = {},
-  fileSystemMagicRedirection,
+  magicExtensions,
+  magicDirectoryIndex,
   directoryReferenceAllowed,
   supervisor,
   transpilation = true,
@@ -43,9 +44,6 @@ export const getCorePlugins = ({
   }
   if (supervisor === true) {
     supervisor = {};
-  }
-  if (fileSystemMagicRedirection === true) {
-    fileSystemMagicRedirection = {};
   }
   if (clientAutoreload === true) {
     clientAutoreload = {};
@@ -67,11 +65,12 @@ export const getCorePlugins = ({
        - reference inside a js module -> resolved by node esm
        - All the rest uses web standard url resolution
      */
-    jsenvPluginFileUrls({
+    jsenvPluginProtocolFile({
       directoryReferenceAllowed,
-      ...fileSystemMagicRedirection,
+      magicExtensions,
+      magicDirectoryIndex,
     }),
-    jsenvPluginHttpUrls(),
+    jsenvPluginProtocolHttp(),
     ...(nodeEsmResolution
       ? [jsenvPluginNodeEsmResolution(nodeEsmResolution)]
       : []),
