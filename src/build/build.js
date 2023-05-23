@@ -333,7 +333,10 @@ build ${entryPointKeys.length} entry points`);
           urlGraph: rawGraph,
           runtimeCompat,
 
-          referenceAnalysis,
+          referenceAnalysis: {
+            ...referenceAnalysis,
+            ignoreProtocolRemoval: false,
+          },
           nodeEsmResolution,
           magicExtensions,
           magicDirectoryIndex,
@@ -343,6 +346,7 @@ build ${entryPointKeys.length} entry points`);
             babelHelpersAsImport: !explicitJsModuleFallback,
             jsModuleFallbackOnJsClassic: false,
           },
+
           inlining: false,
           scenarioPlaceholders,
         }),
@@ -385,6 +389,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         jsenvPluginReferenceAnalysis({
           ...referenceAnalysis,
           fetchInlineUrls: false,
+          ignoreProtocolRemoval: !versioning,
         }),
         ...(lineBreakNormalization
           ? [jsenvPluginLineBreakNormalization()]
@@ -1177,6 +1182,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               jsenvPluginReferenceAnalysis({
                 ...referenceAnalysis,
                 fetchInlineUrls: false,
+                ignoreProtocolRemoval: true,
                 inlineConvertedScript: true, // to be able to version their urls
                 allowEscapeForVersioning: true,
               }),

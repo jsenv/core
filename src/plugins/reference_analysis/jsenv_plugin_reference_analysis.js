@@ -12,6 +12,7 @@ export const jsenvPluginReferenceAnalysis = ({
   include,
   supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"],
 
+  ignoreProtocolRemoval = true,
   inlineContent = true,
   inlineConvertedScript = false,
   fetchInlineUrls = true,
@@ -21,6 +22,7 @@ export const jsenvPluginReferenceAnalysis = ({
     jsenvPluginReferenceAnalysisInclude({
       include,
       supportedProtocols,
+      ignoreProtocolRemoval,
     }),
     jsenvPluginDirectoryReferenceAnalysis(),
     jsenvPluginHtmlReferenceAnalysis({
@@ -44,6 +46,7 @@ export const jsenvPluginReferenceAnalysis = ({
 const jsenvPluginReferenceAnalysisInclude = ({
   include,
   supportedProtocols,
+  ignoreProtocolRemoval,
 }) => {
   // eslint-disable-next-line no-unused-vars
   let getIncludeInfo = (url) => undefined;
@@ -81,6 +84,13 @@ const jsenvPluginReferenceAnalysisInclude = ({
         reference.mustIgnore = true;
         return;
       }
+      if (reference.url.startsWith("ignore:")) {
+        reference.mustIgnore = true;
+        if (ignoreProtocolRemoval) {
+          reference.specifier = reference.specifier.slice("ignore:".length);
+        }
+        return;
+      }
       const includeInfo = getIncludeInfo(reference.url);
       if (includeInfo === true) {
         reference.mustIgnore = false;
@@ -95,12 +105,6 @@ const jsenvPluginReferenceAnalysisInclude = ({
         (supportedProtocol) => protocol === supportedProtocol,
       );
       reference.mustIgnore = !protocolIsSupported;
-    },
-    formatReference: (reference) => {
-      if (reference.generatedUrl.startsWith("ignore:")) {
-        return reference.generatedUrl.slice("ignore:".length);
-      }
-      return null;
     },
   };
 };

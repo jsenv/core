@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf8" />
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve;
+      });
+    </script>
+    <a id="link_1" href="ignore:a.js"></a>
+    <a id="link_2" href="ignore:ignore:b.js"></a>
+    <script>
+      const link1 = document.querySelector("#link_1");
+      const link2 = document.querySelector("#link_2");
+      window.resolveResultPromise({
+        ignoreAJsHref: link1.href,
+        ignoreIgnoreBJsHref: link2.href,
+      });
+    </script>
+  </body>
+</html>
