@@ -7,18 +7,15 @@ await build({
   entryPoints: {
     "./jsenv_plugin_explorer.js": "jsenv_plugin_explorer.js",
   },
+  ignore: {
+    "/**/node_modules/": true,
+  },
   runtimeCompat: {
     node: "16.2.0",
     chrome: "64",
     edge: "79",
     firefox: "67",
     safari: "11.3",
-  },
-  referenceAnalysis: {
-    include: {
-      "/**/*": true,
-      "/**/node_modules/": false,
-    },
   },
   plugins: [jsenvPluginBundling()],
   versioning: false,

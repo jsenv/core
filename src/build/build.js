@@ -130,6 +130,7 @@ export const build = async ({
   buildDirectoryUrl,
   entryPoints = {},
   assetsDirectory = "",
+  ignore,
 
   runtimeCompat = defaultRuntimeCompat,
   base = runtimeCompat.node ? "./" : "/",
@@ -311,11 +312,12 @@ build ${entryPointKeys.length} entry points`);
       signal,
       logLevel,
       rootDirectoryUrl: sourceDirectoryUrl,
-      urlGraph: rawGraph,
-      build: true,
+      ignore,
       // during first pass (craft) we keep "ignore:" when a reference is ignored
       // so that the second pass (shape) properly ignore those urls
       ignoreProtocol: "keep",
+      urlGraph: rawGraph,
+      build: true,
       runtimeCompat,
       ...contextSharedDuringBuild,
       plugins: [
@@ -380,10 +382,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     const finalGraphKitchen = createKitchen({
       logLevel,
       rootDirectoryUrl: buildDirectoryUrl,
-      urlGraph: finalGraph,
-      build: true,
-      runtimeCompat,
-      ...contextSharedDuringBuild,
       // here most plugins are not there
       // - no external plugin
       // - no plugin putting reference.mustIgnore on https urls
@@ -391,6 +389,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       // consequently only a subset or urls are supported
       supportedProtocols: ["file:", "data:", "virtual:", "ignore:"],
       ignoreProtocol: versioning ? "keep" : "remove",
+      urlGraph: finalGraph,
+      build: true,
+      runtimeCompat,
+      ...contextSharedDuringBuild,
       plugins: [
         jsenvPluginReferenceAnalysis({
           ...referenceAnalysis,
@@ -1179,9 +1181,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           const versioningKitchen = createKitchen({
             logLevel: logger.level,
             rootDirectoryUrl: buildDirectoryUrl,
+            ignoreProtocol: "remove",
             urlGraph: finalGraph,
             build: true,
-            ignoreProtocol: "remove",
             runtimeCompat,
             ...contextSharedDuringBuild,
             plugins: [

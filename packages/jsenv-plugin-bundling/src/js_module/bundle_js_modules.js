@@ -338,7 +338,7 @@ const rollupPluginJsenv = ({
         // happen when excluded by referenceAnalysis.include
         return { id: url, external: true };
       }
-      if (urlInfo.startsWith("ignore:")) {
+      if (urlInfo.url.startsWith("ignore:")) {
         return { id: url, external: true };
       }
       const filePath = fileUrlConverter.asFilePath(url);

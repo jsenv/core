@@ -28,12 +28,11 @@ export const createKitchen = ({
   signal,
   logLevel,
 
-  supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"],
-  ignore,
-  ignoreProtocol = "remove",
-
   rootDirectoryUrl,
   mainFilePath,
+  ignore,
+  ignoreProtocol = "remove",
+  supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"],
   urlGraph,
   dev = false,
   build = false,
@@ -90,11 +89,15 @@ export const createKitchen = ({
       { ignore },
       rootDirectoryUrl,
     );
+    const cache = new Map();
     isIgnoredByParam = (url) => {
+      const fromCache = cache.get(url);
+      if (fromCache) return fromCache;
       const { ignore } = URL_META.applyAssociations({
         url,
         associations,
       });
+      cache.set(url, ignore);
       return ignore;
     };
   }

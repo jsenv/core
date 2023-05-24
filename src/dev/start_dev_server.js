@@ -25,6 +25,7 @@ import { createFileService } from "./file_service.js";
 export const startDevServer = async ({
   sourceDirectoryUrl,
   sourceMainFilePath = "./index.html",
+  ignore,
   port = 3456,
   hostname,
   acceptAnyIp,
@@ -186,6 +187,7 @@ export const startDevServer = async ({
 
           sourceDirectoryUrl,
           sourceMainFilePath,
+          ignore,
           sourceFilesConfig,
           runtimeCompat,
 

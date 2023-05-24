@@ -22,6 +22,7 @@ export const createFileService = ({
 
   sourceDirectoryUrl,
   sourceMainFilePath,
+  ignore,
   sourceFilesConfig,
   runtimeCompat,
 
@@ -97,6 +98,7 @@ export const createFileService = ({
       logLevel,
       rootDirectoryUrl: sourceDirectoryUrl,
       mainFilePath: sourceMainFilePath,
+      ignore,
       urlGraph,
       dev: true,
       runtimeCompat,
