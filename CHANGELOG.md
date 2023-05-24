@@ -1,3 +1,7 @@
+# 36.1.0
+
+- Introduce `ignore` param to `build` and `startDevServer`
+
 # 36.0.2
 
 - Fix code preventing node esm resolution to be disabled
