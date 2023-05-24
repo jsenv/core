@@ -388,6 +388,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       // At this stage it's only about redirecting urls to the build directory
       // consequently only a subset or urls are supported
       supportedProtocols: ["file:", "data:", "virtual:", "ignore:"],
+      ignore,
       ignoreProtocol: versioning ? "keep" : "remove",
       urlGraph: finalGraph,
       build: true,
@@ -1181,6 +1182,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           const versioningKitchen = createKitchen({
             logLevel: logger.level,
             rootDirectoryUrl: buildDirectoryUrl,
+            ignore,
             ignoreProtocol: "remove",
             urlGraph: finalGraph,
             build: true,

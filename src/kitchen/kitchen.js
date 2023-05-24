@@ -248,14 +248,11 @@ export const createKitchen = ({
       let referencedUrlObject;
       let searchParams;
       const setReferenceUrl = (referenceUrl) => {
-        if (referenceUrl.startsWith("ignore:")) {
-          // nothing to do
-        }
         // ignored urls are prefixed with "ignore:" so that reference are associated
         // to a dedicated urlInfo that is ignored.
         // this way it's only once a resource is referenced by reference that is not ignored
         // that the resource is cooked
-        else if (
+        if (
           reference.specifier[0] === "#" &&
           // For Html, css and "#" refer to a resource in the page, reference must be preserved
           // However for js import specifiers they have a different meaning and we want
@@ -266,6 +263,14 @@ export const createKitchen = ({
         } else if (isIgnored(referenceUrl)) {
           referenceUrl = `ignore:${referenceUrl}`;
         }
+
+        if (
+          referenceUrl.startsWith("ignore:") &&
+          !reference.specifier.startsWith("ignore:")
+        ) {
+          reference.specifier = `ignore:${reference.specifier}`;
+        }
+
         referencedUrlObject = new URL(referenceUrl);
         searchParams = referencedUrlObject.searchParams;
         reference.url = referenceUrl;
