@@ -11,7 +11,7 @@ await build({
   },
   ignore: {
     "file://**/node_modules/": true,
-    // selectively allow some node_modules
+    // selectively unignore some node_modules
     "file://**/node_modules/@jsenv/abort/": false,
     "file://**/node_modules/@jsenv/ast/": true, // cannot inline "parse5", "@babel/core" and "postcss"
     "file://**/node_modules/@jsenv/babel-plugins/": false,

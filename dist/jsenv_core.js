@@ -13,10 +13,11 @@ import http from "node:http";
 import { Readable, Stream, Writable } from "node:stream";
 import { Http2ServerResponse } from "node:http2";
 import { lookup } from "node:dns";
-import { SOURCEMAP, generateSourcemapFileUrl, composeTwoSourcemaps, generateSourcemapDataUrl, createMagicSource, getOriginalPosition } from "@jsenv/sourcemap";
+import { SOURCEMAP, generateSourcemapFileUrl, composeTwoSourcemaps, generateSourcemapDataUrl, createMagicSource } from "@jsenv/sourcemap";
 import { parseHtmlString, visitHtmlNodes, getHtmlNodeAttribute, analyzeScriptNode, stringifyHtmlAst, parseSrcSet, getHtmlNodeText, setHtmlNodeAttributes, getHtmlNodePosition, getHtmlNodeAttributePosition, removeHtmlNodeText, setHtmlNodeText, parseCssUrls, parseJsUrls, applyBabelPlugins, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, findHtmlNode, removeHtmlNode, injectJsImport, analyzeLinkNode, injectHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
 import { createRequire } from "node:module";
 import babelParser from "@babel/parser";
+import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
 
 /*
  * data:[<mediatype>][;base64],<data>
@@ -7806,7 +7807,6 @@ const createUrlInfo = url => {
     originalUrl: undefined,
     filename: "",
     isEntryPoint: false,
-    mustIgnore: undefined,
     originalContent: undefined,
     content: undefined,
     sourcemap: null,
@@ -7972,7 +7972,7 @@ const createPluginController = kitchenContext => {
     if (info.timing) {
       info.timing[`${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`] = performance$1.now() - startTimestamp;
     }
-    valueReturned = assertAndNormalizeReturnValue(hook.name, valueReturned);
+    valueReturned = assertAndNormalizeReturnValue(hook.name, valueReturned, info);
     return valueReturned;
   };
   const callAsyncHook = async (hook, info, context) => {
@@ -7993,7 +7993,7 @@ const createPluginController = kitchenContext => {
     if (info.timing) {
       info.timing[`${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`] = performance$1.now() - startTimestamp;
     }
-    valueReturned = assertAndNormalizeReturnValue(hook.name, valueReturned);
+    valueReturned = assertAndNormalizeReturnValue(hook.name, valueReturned, info);
     return valueReturned;
   };
   const callHooks = (hookName, info, context, callback) => {
@@ -8085,7 +8085,7 @@ info = {}) => {
   }
   return hookValue;
 };
-const assertAndNormalizeReturnValue = (hookName, returnValue) => {
+const assertAndNormalizeReturnValue = (hookName, returnValue, info) => {
   // all hooks are allowed to return null/undefined as a signal of "I don't do anything"
   if (returnValue === null || returnValue === undefined) {
     return returnValue;
@@ -8094,7 +8094,7 @@ const assertAndNormalizeReturnValue = (hookName, returnValue) => {
     if (!returnValueAssertion.appliesTo.includes(hookName)) {
       continue;
     }
-    const assertionResult = returnValueAssertion.assertion(returnValue);
+    const assertionResult = returnValueAssertion.assertion(returnValue, info);
     if (assertionResult !== undefined) {
       // normalization
       returnValue = assertionResult;
@@ -8118,7 +8118,7 @@ const returnValueAssertions = [{
 }, {
   name: "content_assertion",
   appliesTo: ["fetchUrlContent", "transformUrlContent", "finalizeUrlContent", "optimizeUrlContent"],
-  assertion: valueReturned => {
+  assertion: (valueReturned, urlInfo) => {
     if (typeof valueReturned === "string" || Buffer.isBuffer(valueReturned)) {
       return {
         content: valueReturned
@@ -8126,11 +8126,10 @@ const returnValueAssertions = [{
     }
     if (typeof valueReturned === "object") {
       const {
-        mustIgnore,
         content,
         body
       } = valueReturned;
-      if (mustIgnore) {
+      if (urlInfo.url.startsWith("ignore:")) {
         return undefined;
       }
       if (typeof content !== "string" && !Buffer.isBuffer(content) && !body) {
@@ -9102,6 +9101,9 @@ const createKitchen = ({
   logLevel,
   rootDirectoryUrl,
   mainFilePath,
+  ignore,
+  ignoreProtocol = "remove",
+  supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"],
   urlGraph,
   dev = false,
   build = false,
@@ -9147,6 +9149,35 @@ const createKitchen = ({
   plugins.forEach(pluginEntry => {
     pluginController.pushPlugin(pluginEntry);
   });
+  const isIgnoredByProtocol = url => {
+    const {
+      protocol
+    } = new URL(url);
+    const protocolIsSupported = supportedProtocols.some(supportedProtocol => protocol === supportedProtocol);
+    return !protocolIsSupported;
+  };
+  let isIgnoredByParam = () => false;
+  if (ignore) {
+    const associations = URL_META.resolveAssociations({
+      ignore
+    }, rootDirectoryUrl);
+    const cache = new Map();
+    isIgnoredByParam = url => {
+      const fromCache = cache.get(url);
+      if (fromCache) return fromCache;
+      const {
+        ignore
+      } = URL_META.applyAssociations({
+        url,
+        associations
+      });
+      cache.set(url, ignore);
+      return ignore;
+    };
+  }
+  const isIgnored = url => {
+    return isIgnoredByProtocol(url) || isIgnoredByParam(url);
+  };
 
   /*
    * - "http_request"
@@ -9192,7 +9223,6 @@ const createKitchen = ({
     specifierColumn,
     baseUrl,
     isOriginalPosition,
-    mustIgnore,
     isEntryPoint = false,
     isResourceHint = false,
     isImplicit = false,
@@ -9241,7 +9271,6 @@ const createKitchen = ({
       specifierColumn,
       isOriginalPosition,
       baseUrl,
-      mustIgnore,
       isEntryPoint,
       isResourceHint,
       isImplicit,
@@ -9286,13 +9315,29 @@ const createKitchen = ({
       url = normalizeUrl(url);
       let referencedUrlObject;
       let searchParams;
-      const onReferenceUrlChange = referenceUrl => {
+      const setReferenceUrl = referenceUrl => {
+        // ignored urls are prefixed with "ignore:" so that reference are associated
+        // to a dedicated urlInfo that is ignored.
+        // this way it's only once a resource is referenced by reference that is not ignored
+        // that the resource is cooked
+        if (reference.specifier[0] === "#" &&
+        // For Html, css and "#" refer to a resource in the page, reference must be preserved
+        // However for js import specifiers they have a different meaning and we want
+        // to resolve them (https://nodejs.org/api/packages.html#imports for instance)
+        reference.type !== "js_import") {
+          referenceUrl = `ignore:${referenceUrl}`;
+        } else if (isIgnored(referenceUrl)) {
+          referenceUrl = `ignore:${referenceUrl}`;
+        }
+        if (referenceUrl.startsWith("ignore:") && !reference.specifier.startsWith("ignore:")) {
+          reference.specifier = `ignore:${reference.specifier}`;
+        }
         referencedUrlObject = new URL(referenceUrl);
         searchParams = referencedUrlObject.searchParams;
         reference.url = referenceUrl;
         reference.searchParams = searchParams;
       };
-      onReferenceUrlChange(url);
+      setReferenceUrl(url);
       if (reference.debug) {
         logger.debug(`url resolved by "${pluginController.getLastPluginUsed().name}"
 ${ANSI.color(reference.specifier, ANSI.GREY)} ->
@@ -9314,7 +9359,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           ...reference
         };
         updateReference(prevReference, reference);
-        onReferenceUrlChange(normalizedReturnValue);
+        setReferenceUrl(normalizedReturnValue);
       });
       reference.generatedUrl = reference.url;
       const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url);
@@ -9333,7 +9378,10 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         reference.generatedUrl = normalizeUrl(referencedUrlObject.href);
       });
       const returnValue = pluginController.callHooksUntil("formatReference", reference, referenceContext);
-      if (reference.mustIgnore) {
+      if (reference.url.startsWith("ignore:")) {
+        if (ignoreProtocol === "remove") {
+          reference.specifier = reference.specifier.slice("ignore:".length);
+        }
         reference.generatedSpecifier = reference.specifier;
         reference.generatedSpecifier = urlSpecifierEncoding.encode(reference);
       } else {
@@ -9509,7 +9557,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         contextDuringFetch: context
       });
     };
-    if (!urlInfo.mustIgnore) {
+    if (!urlInfo.url.startsWith("ignore:")) {
       // references
       const references = [];
       context.referenceUtils = {
@@ -9839,11 +9887,6 @@ const traceFromUrlSite = urlSite => {
   };
 };
 const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
-  if (reference.mustIgnore) {
-    urlInfo.mustIgnore = true;
-  } else {
-    urlInfo.mustIgnore = false;
-  }
   urlInfo.originalUrl = urlInfo.originalUrl || reference.url;
   if (reference.isEntryPoint || isWebWorkerEntryPointReference(reference)) {
     urlInfo.isEntryPoint = true;
@@ -10075,15 +10118,19 @@ const createUrlGraphReport = urlGraph => {
     total: 0
   };
   urlGraph.urlInfoMap.forEach(urlInfo => {
+    // ignore:
+    // - ignored files: we don't know their content
+    // - inline files and data files: they are already taken into account in the file where they appear
+    if (urlInfo.url.startsWith("ignore:")) {
+      return;
+    }
+    if (urlInfo.isInline) {
+      return;
+    }
     if (urlInfo.url.startsWith("data:")) {
       return;
     }
-    // ignore:
-    // - inline files: they are already taken into account in the file where they appear
-    // - ignored files: we don't know their content
-    if (urlInfo.isInline || urlInfo.mustIgnore) {
-      return;
-    }
+
     // file loaded via import assertion are already inside the graph
     // their js module equivalent are ignored to avoid counting it twice
     // in the build graph the file targeted by import assertion will likely be gone
@@ -11111,97 +11158,18 @@ const parseAndTransformJsReferences = async (urlInfo, context, {
 };
 
 const jsenvPluginReferenceAnalysis = ({
-  include,
-  supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"],
-  ignoreProtocol = "remove",
   inlineContent = true,
   inlineConvertedScript = false,
   fetchInlineUrls = true,
   allowEscapeForVersioning = false
 }) => {
-  return [jsenvPluginReferenceAnalysisInclude({
-    include,
-    supportedProtocols,
-    ignoreProtocol
-  }), jsenvPluginDirectoryReferenceAnalysis(), jsenvPluginHtmlReferenceAnalysis({
+  return [jsenvPluginDirectoryReferenceAnalysis(), jsenvPluginHtmlReferenceAnalysis({
     inlineContent,
     inlineConvertedScript
   }), jsenvPluginWebmanifestReferenceAnalysis(), jsenvPluginCssReferenceAnalysis(), jsenvPluginJsReferenceAnalysis({
     inlineContent,
     allowEscapeForVersioning
   }), ...(inlineContent ? [jsenvPluginDataUrlsAnalysis()] : []), ...(inlineContent && fetchInlineUrls ? [jsenvPluginInlineContentFetcher()] : []), jsenvPluginReferenceExpectedTypes()];
-};
-const jsenvPluginReferenceAnalysisInclude = ({
-  include,
-  supportedProtocols,
-  ignoreProtocol
-}) => {
-  // eslint-disable-next-line no-unused-vars
-  let getIncludeInfo = url => undefined;
-  return {
-    name: "jsenv:reference_analysis_include",
-    appliesDuring: "*",
-    init: ({
-      rootDirectoryUrl
-    }) => {
-      if (include) {
-        const associations = URL_META.resolveAssociations({
-          include
-        }, rootDirectoryUrl);
-        getIncludeInfo = url => {
-          const {
-            include
-          } = URL_META.applyAssociations({
-            url,
-            associations
-          });
-          return include;
-        };
-      }
-    },
-    redirectReference: reference => {
-      if (reference.mustIgnore !== undefined) {
-        return;
-      }
-      if (reference.specifier[0] === "#" &&
-      // For Html, css and in general "#" refer to a resource in the page
-      // so that urls must be kept intact
-      // However for js import specifiers they have a different meaning and we want
-      // to resolve them (https://nodejs.org/api/packages.html#imports for instance)
-      reference.type !== "js_import") {
-        reference.mustIgnore = true;
-        return;
-      }
-      if (reference.url.startsWith("ignore:")) {
-        reference.mustIgnore = true;
-        if (ignoreProtocol === "remove") {
-          reference.specifier = reference.specifier.slice("ignore:".length);
-        }
-        return;
-      }
-      const includeInfo = getIncludeInfo(reference.url);
-      if (includeInfo === true) {
-        reference.mustIgnore = false;
-        return;
-      }
-      if (includeInfo === false) {
-        reference.mustIgnore = true;
-        return;
-      }
-      const {
-        protocol
-      } = new URL(reference.url);
-      const protocolIsSupported = supportedProtocols.some(supportedProtocol => protocol === supportedProtocol);
-      if (!protocolIsSupported) {
-        reference.mustIgnore = true;
-      }
-    },
-    formatReference: reference => {
-      if (ignoreProtocol === "inject" && reference.mustIgnore && !reference.url.startsWith("ignore:")) {
-        reference.specifier = `ignore:${reference.specifier}`;
-      }
-    }
-  };
 };
 const jsenvPluginInlineContentFetcher = () => {
   return {
@@ -17561,6 +17529,19 @@ const jsenvPluginProtocolFile = ({
       if (reference.isInline) {
         return null;
       }
+      // ignore root file url
+      if (reference.url === "file:///" || reference.url === "file://") {
+        reference.leadsToADirectory = true;
+        return `ignore:file:///`;
+      }
+      // ignore "./" on new URL("./")
+      if (reference.subtype === "new_url_first_arg" && reference.specifier === "./") {
+        return `ignore:${reference.url}`;
+      }
+      // ignore all new URL second arg
+      if (reference.subtype === "new_url_second_arg") {
+        return `ignore:${reference.url}`;
+      }
       const urlObject = new URL(reference.url);
       let stat;
       try {
@@ -17582,6 +17563,7 @@ const jsenvPluginProtocolFile = ({
       const pathnameUsesTrailingSlash = pathname.endsWith("/");
       urlObject.search = "";
       urlObject.hash = "";
+
       // force trailing slash on directories
       if (stat && stat.isDirectory() && !pathnameUsesTrailingSlash) {
         urlObject.pathname = `${pathname}/`;
@@ -17592,33 +17574,24 @@ const jsenvPluginProtocolFile = ({
         urlObject.pathname = pathname.slice(0, -1);
       }
       let url = urlObject.href;
-      const mustIgnore = stat && stat.isDirectory() && (
-      // ignore new URL second arg
-      reference.subtype === "new_url_second_arg" ||
-      // ignore root file url
-      reference.url === "file:///" || reference.subtype === "new_url_first_arg" && reference.specifier === "./");
-      if (mustIgnore) {
-        reference.mustIgnore = true;
-      } else {
-        const shouldApplyDilesystemMagicResolution = reference.type === "js_import";
-        if (shouldApplyDilesystemMagicResolution) {
-          const filesystemResolution = applyFileSystemMagicResolution(url, {
-            fileStat: stat,
-            magicDirectoryIndex,
-            magicExtensions: getExtensionsToTry(magicExtensions, reference.parentUrl)
-          });
-          if (filesystemResolution.stat) {
-            stat = filesystemResolution.stat;
-            url = filesystemResolution.url;
-          }
+      const shouldApplyDilesystemMagicResolution = reference.type === "js_import";
+      if (shouldApplyDilesystemMagicResolution) {
+        const filesystemResolution = applyFileSystemMagicResolution(url, {
+          fileStat: stat,
+          magicDirectoryIndex,
+          magicExtensions: getExtensionsToTry(magicExtensions, reference.parentUrl)
+        });
+        if (filesystemResolution.stat) {
+          stat = filesystemResolution.stat;
+          url = filesystemResolution.url;
         }
-        if (stat && stat.isDirectory()) {
-          const directoryAllowed = reference.type === "filesystem" || typeof directoryReferenceAllowed === "function" && directoryReferenceAllowed(reference) || directoryReferenceAllowed;
-          if (!directoryAllowed) {
-            const error = new Error("Reference leads to a directory");
-            error.code = "DIRECTORY_REFERENCE_NOT_ALLOWED";
-            throw error;
-          }
+      }
+      if (stat && stat.isDirectory()) {
+        const directoryAllowed = reference.type === "filesystem" || typeof directoryReferenceAllowed === "function" && directoryReferenceAllowed(reference) || directoryReferenceAllowed;
+        if (!directoryAllowed) {
+          const error = new Error("Reference leads to a directory");
+          error.code = "DIRECTORY_REFERENCE_NOT_ALLOWED";
+          throw error;
         }
       }
       reference.leadsToADirectory = stat && stat.isDirectory();
@@ -17706,710 +17679,12 @@ const jsenvPluginProtocolHttp = () => {
     name: "jsenv:protocol_http",
     appliesDuring: "*",
     redirectReference: reference => {
-      if (reference.url.startsWith("http:") || reference.url.startsWith("https:")) {
-        reference.mustIgnore = true;
-      }
       // TODO: according to some pattern matching jsenv could be allowed
       // to fetch and transform http urls
-    }
-  };
-};
-
-/*
- * ```js
- * console.log(42)
- * ```
- * becomes
- * ```js
- * window.__supervisor__.jsClassicStart('main.html@L10-L13.js')
- * try {
- *   console.log(42)
- *   window.__supervisor__.jsClassicEnd('main.html@L10-L13.js')
- * } catch(e) {
- *   window.__supervisor__.jsClassicError('main.html@L10-L13.js', e)
- * }
- * ```
- *
- * ```js
- * import value from "./file.js"
- * console.log(value)
- * ```
- * becomes
- * ```js
- * window.__supervisor__.jsModuleStart('main.html@L10-L13.js')
- * try {
- *   const value = await import("./file.js")
- *   console.log(value)
- *   window.__supervisor__.jsModuleEnd('main.html@L10-L13.js')
- * } catch(e) {
- *   window.__supervisor__.jsModuleError('main.html@L10-L13.js', e)
- * }
- * ```
- *
- * -> TO KEEP IN MIND:
- * Static import can throw errors like
- * The requested module '/js_module_export_not_found/foo.js' does not provide an export named 'answerr'
- * While dynamic import will work just fine
- * and create a variable named "undefined"
- */
-
-const injectSupervisorIntoJs = async ({
-  webServer,
-  content,
-  url,
-  type,
-  inlineSrc
-}) => {
-  const babelPluginJsSupervisor = type === "js_module" ? babelPluginJsModuleSupervisor : babelPluginJsClassicSupervisor;
-  const result = await applyBabelPlugins({
-    urlInfo: {
-      content,
-      originalUrl: url,
-      type
-    },
-    babelPlugins: [[babelPluginJsSupervisor, {
-      inlineSrc
-    }]]
-  });
-  let code = result.code;
-  let map = result.map;
-  const sourcemapDataUrl = generateSourcemapDataUrl(map);
-  code = SOURCEMAP.writeComment({
-    contentType: "text/javascript",
-    content: code,
-    specifier: sourcemapDataUrl
-  });
-  code = `${code}
-//# sourceURL=${urlToRelativeUrl(url, webServer.rootDirectoryUrl)}`;
-  return code;
-};
-const babelPluginJsModuleSupervisor = babel => {
-  const t = babel.types;
-  return {
-    name: "js-module-supervisor",
-    visitor: {
-      Program: (programPath, state) => {
-        const {
-          inlineSrc
-        } = state.opts;
-        if (state.file.metadata.jsExecutionInstrumented) return;
-        state.file.metadata.jsExecutionInstrumented = true;
-        const urlNode = t.stringLiteral(inlineSrc);
-        const startCallNode = createSupervisionCall({
-          t,
-          urlNode,
-          methodName: "jsModuleStart"
-        });
-        const endCallNode = createSupervisionCall({
-          t,
-          urlNode,
-          methodName: "jsModuleEnd"
-        });
-        const errorCallNode = createSupervisionCall({
-          t,
-          urlNode,
-          methodName: "jsModuleError",
-          args: [t.identifier("e")]
-        });
-        const bodyPath = programPath.get("body");
-        const importNodes = [];
-        const topLevelNodes = [];
-        for (const topLevelNodePath of bodyPath) {
-          const topLevelNode = topLevelNodePath.node;
-          if (t.isImportDeclaration(topLevelNode)) {
-            importNodes.push(topLevelNode);
-          } else {
-            topLevelNodes.push(topLevelNode);
-          }
-        }
-
-        // replace all import nodes with dynamic imports
-        const dynamicImports = [];
-        importNodes.forEach(importNode => {
-          const dynamicImportConversion = convertStaticImportIntoDynamicImport(importNode, t);
-          if (Array.isArray(dynamicImportConversion)) {
-            dynamicImports.push(...dynamicImportConversion);
-          } else {
-            dynamicImports.push(dynamicImportConversion);
-          }
-        });
-        const tryCatchNode = t.tryStatement(t.blockStatement([...dynamicImports, ...topLevelNodes, endCallNode]), t.catchClause(t.identifier("e"), t.blockStatement([errorCallNode])));
-        programPath.replaceWith(t.program([startCallNode, tryCatchNode]));
-      }
-    }
-  };
-};
-const convertStaticImportIntoDynamicImport = (staticImportNode, t) => {
-  const awaitExpression = t.awaitExpression(t.callExpression(t.import(), [t.stringLiteral(staticImportNode.source.value)]));
-
-  // import "./file.js" -> await import("./file.js")
-  if (staticImportNode.specifiers.length === 0) {
-    return t.expressionStatement(awaitExpression);
-  }
-  if (staticImportNode.specifiers.length === 1) {
-    const [firstSpecifier] = staticImportNode.specifiers;
-    if (firstSpecifier.type === "ImportNamespaceSpecifier") {
-      return t.variableDeclaration("const", [t.variableDeclarator(t.identifier(firstSpecifier.local.name), awaitExpression)]);
-    }
-  }
-  if (staticImportNode.specifiers.length === 2) {
-    const [first, second] = staticImportNode.specifiers;
-    if (first.type === "ImportDefaultSpecifier" && second.type === "ImportNamespaceSpecifier") {
-      const namespaceDeclaration = t.variableDeclaration("const", [t.variableDeclarator(t.identifier(second.local.name), awaitExpression)]);
-      const defaultDeclaration = t.variableDeclaration("const", [t.variableDeclarator(t.identifier(first.local.name), t.memberExpression(t.identifier(second.local.name), t.identifier("default")))]);
-      return [namespaceDeclaration, defaultDeclaration];
-    }
-  }
-
-  // import { name } from "./file.js" -> const { name } = await import("./file.js")
-  // import toto, { name } from "./file.js" -> const { name, default as toto } = await import("./file.js")
-  const objectPattern = t.objectPattern(staticImportNode.specifiers.map(specifier => {
-    if (specifier.type === "ImportDefaultSpecifier") {
-      return t.objectProperty(t.identifier("default"), t.identifier(specifier.local.name), false,
-      // computed
-      false // shorthand
-      );
-    }
-    // if (specifier.type === "ImportNamespaceSpecifier") {
-    //   return t.restElement(t.identifier(specifier.local.name))
-    // }
-    const isRenamed = specifier.imported.name !== specifier.local.name;
-    if (isRenamed) {
-      return t.objectProperty(t.identifier(specifier.imported.name), t.identifier(specifier.local.name), false,
-      // computed
-      false // shorthand
-      );
-    }
-    // shorthand must be true
-    return t.objectProperty(t.identifier(specifier.local.name), t.identifier(specifier.local.name), false,
-    // computed
-    true // shorthand
-    );
-  }));
-
-  const variableDeclarator = t.variableDeclarator(objectPattern, awaitExpression);
-  const variableDeclaration = t.variableDeclaration("const", [variableDeclarator]);
-  return variableDeclaration;
-};
-const babelPluginJsClassicSupervisor = babel => {
-  const t = babel.types;
-  return {
-    name: "js-classic-supervisor",
-    visitor: {
-      Program: (programPath, state) => {
-        const {
-          inlineSrc
-        } = state.opts;
-        if (state.file.metadata.jsExecutionInstrumented) return;
-        state.file.metadata.jsExecutionInstrumented = true;
-        const urlNode = t.stringLiteral(inlineSrc);
-        const startCallNode = createSupervisionCall({
-          t,
-          urlNode,
-          methodName: "jsClassicStart"
-        });
-        const endCallNode = createSupervisionCall({
-          t,
-          urlNode,
-          methodName: "jsClassicEnd"
-        });
-        const errorCallNode = createSupervisionCall({
-          t,
-          urlNode,
-          methodName: "jsClassicError",
-          args: [t.identifier("e")]
-        });
-        const topLevelNodes = programPath.node.body;
-        const tryCatchNode = t.tryStatement(t.blockStatement([...topLevelNodes, endCallNode]), t.catchClause(t.identifier("e"), t.blockStatement([errorCallNode])));
-        programPath.replaceWith(t.program([startCallNode, tryCatchNode]));
-      }
-    }
-  };
-};
-const createSupervisionCall = ({
-  t,
-  methodName,
-  urlNode,
-  args = []
-}) => {
-  return t.expressionStatement(t.callExpression(t.memberExpression(t.memberExpression(t.identifier("window"), t.identifier("__supervisor__")), t.identifier(methodName)), [urlNode, ...args]), [], null);
-};
-
-/*
- * Jsenv needs to track js execution in order to:
- * 1. report errors
- * 2. wait for all js execution inside an HTML page before killing the browser
- *
- * A naive approach would rely on "load" events on window but:
- * scenario                                    | covered by window "load"
- * ------------------------------------------- | -------------------------
- * js referenced by <script src>               | yes
- * js inlined into <script>                    | yes
- * js referenced by <script type="module" src> | partially (not for import and top level await)
- * js inlined into <script type="module">      | not at all
- * Same for "error" event on window who is not enough
- *
- * <script src="file.js">
- * becomes
- * <script>
- *   window.__supervisor__.superviseScript('file.js')
- * </script>
- *
- * <script>
- *    console.log(42)
- * </script>
- * becomes
- * <script inlined-from-src="main.html@L10-C5.js">
- *   window.__supervisor.__superviseScript("main.html@L10-C5.js")
- * </script>
- *
- * <script type="module" src="module.js"></script>
- * becomes
- * <script type="module">
- *   window.__supervisor__.superviseScriptTypeModule('module.js')
- * </script>
- *
- * <script type="module">
- *   console.log(42)
- * </script>
- * becomes
- * <script type="module" inlined-from-src="main.html@L10-C5.js">
- *   window.__supervisor__.superviseScriptTypeModule('main.html@L10-C5.js')
- * </script>
- *
- * Why Inline scripts are converted to files dynamically?
- * -> No changes required on js source code, it's only the HTML that is modified
- *   - Also allow to catch syntax errors and export missing
- */
-
-const supervisorFileUrl$1 = new URL("./js/supervisor.js", import.meta.url).href;
-const injectSupervisorIntoHTML = async ({
-  content,
-  url
-}, {
-  supervisorScriptSrc = supervisorFileUrl$1,
-  supervisorOptions,
-  webServer,
-  onInlineScript = () => {},
-  generateInlineScriptSrc = ({
-    inlineScriptUrl
-  }) => urlToRelativeUrl(inlineScriptUrl, webServer.rootDirectoryUrl),
-  inlineAsRemote
-}) => {
-  const htmlAst = parseHtmlString(content);
-  const mutations = [];
-  const actions = [];
-  const scriptInfos = [];
-  // 1. Find inline and remote scripts
-  {
-    const handleInlineScript = (scriptNode, {
-      type,
-      extension,
-      textContent
-    }) => {
-      const {
-        line,
-        column,
-        lineEnd,
-        columnEnd,
-        isOriginal
-      } = getHtmlNodePosition(scriptNode, {
-        preferOriginal: true
-      });
-      const inlineScriptUrl = generateInlineContentUrl({
-        url,
-        extension: extension || ".js",
-        line,
-        column,
-        lineEnd,
-        columnEnd
-      });
-      const inlineScriptSrc = generateInlineScriptSrc({
-        type,
-        textContent,
-        inlineScriptUrl,
-        isOriginal,
-        line,
-        column
-      });
-      onInlineScript({
-        type,
-        textContent,
-        url: inlineScriptUrl,
-        isOriginal,
-        line,
-        column,
-        src: inlineScriptSrc
-      });
-      if (inlineAsRemote) {
-        // prefere la version src
-        scriptInfos.push({
-          type,
-          src: inlineScriptSrc
-        });
-        const remoteJsSupervised = generateCodeToSuperviseScriptWithSrc({
-          type,
-          src: inlineScriptSrc
-        });
-        mutations.push(() => {
-          setHtmlNodeText(scriptNode, remoteJsSupervised, {
-            indentation: "auto"
-          });
-          setHtmlNodeAttributes(scriptNode, {
-            "jsenv-cooked-by": "jsenv:supervisor",
-            "src": undefined,
-            "inlined-from-src": inlineScriptSrc
-          });
-        });
-      } else {
-        scriptInfos.push({
-          type,
-          src: inlineScriptSrc,
-          isInline: true
-        });
-        actions.push(async () => {
-          try {
-            const inlineJsSupervised = await injectSupervisorIntoJs({
-              webServer,
-              content: textContent,
-              url: inlineScriptUrl,
-              type,
-              inlineSrc: inlineScriptSrc
-            });
-            mutations.push(() => {
-              setHtmlNodeText(scriptNode, inlineJsSupervised, {
-                indentation: "auto"
-              });
-              setHtmlNodeAttributes(scriptNode, {
-                "jsenv-cooked-by": "jsenv:supervisor"
-              });
-            });
-          } catch (e) {
-            if (e.code === "PARSE_ERROR") {
-              // mutations.push(() => {
-              //   setHtmlNodeAttributes(scriptNode, {
-              //     "jsenv-cooked-by": "jsenv:supervisor",
-              //   })
-              // })
-              // on touche a rien
-              return;
-            }
-            throw e;
-          }
-        });
-      }
-    };
-    const handleScriptWithSrc = (scriptNode, {
-      type,
-      src
-    }) => {
-      scriptInfos.push({
-        type,
-        src
-      });
-      const remoteJsSupervised = generateCodeToSuperviseScriptWithSrc({
-        type,
-        src
-      });
-      mutations.push(() => {
-        setHtmlNodeText(scriptNode, remoteJsSupervised, {
-          indentation: "auto"
-        });
-        setHtmlNodeAttributes(scriptNode, {
-          "jsenv-cooked-by": "jsenv:supervisor",
-          "src": undefined,
-          "inlined-from-src": src
-        });
-      });
-    };
-    visitHtmlNodes(htmlAst, {
-      script: scriptNode => {
-        const {
-          type,
-          extension
-        } = analyzeScriptNode(scriptNode);
-        if (type !== "js_classic" && type !== "js_module") {
-          return;
-        }
-        if (getHtmlNodeAttribute(scriptNode, "jsenv-injected-by")) {
-          return;
-        }
-        const noSupervisor = getHtmlNodeAttribute(scriptNode, "no-supervisor");
-        if (noSupervisor !== undefined) {
-          return;
-        }
-        const scriptNodeText = getHtmlNodeText(scriptNode);
-        if (scriptNodeText) {
-          handleInlineScript(scriptNode, {
-            type,
-            extension,
-            textContent: scriptNodeText
-          });
-          return;
-        }
-        const src = getHtmlNodeAttribute(scriptNode, "src");
-        if (src) {
-          const urlObject = new URL(src, "http://example.com");
-          if (urlObject.searchParams.has("inline")) {
-            return;
-          }
-          handleScriptWithSrc(scriptNode, {
-            type,
-            src
-          });
-          return;
-        }
-      }
-    });
-  }
-  // 2. Inject supervisor js file + setup call
-  {
-    const setupParamsSource = stringifyParams({
-      ...supervisorOptions,
-      serverIsJsenvDevServer: webServer.isJsenvDevServer,
-      rootDirectoryUrl: webServer.rootDirectoryUrl,
-      scriptInfos
-    }, "  ");
-    injectHtmlNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
-      tagName: "script",
-      textContent: `window.__supervisor__.setup({${setupParamsSource}})`
-    }), "jsenv:supervisor");
-    injectHtmlNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
-      tagName: "script",
-      src: supervisorScriptSrc
-    }), "jsenv:supervisor");
-  }
-  // 3. Perform actions (transforming inline script content) and html mutations
-  if (actions.length > 0) {
-    await Promise.all(actions.map(action => action()));
-  }
-  mutations.forEach(mutation => mutation());
-  const htmlModified = stringifyHtmlAst(htmlAst);
-  return {
-    content: htmlModified
-  };
-};
-const stringifyParams = (params, prefix = "") => {
-  const source = JSON.stringify(params, null, prefix);
-  if (prefix.length) {
-    // remove leading "{\n"
-    // remove leading prefix
-    // remove trailing "\n}"
-    return source.slice(2 + prefix.length, -2);
-  }
-  // remove leading "{"
-  // remove trailing "}"
-  return source.slice(1, -1);
-};
-const generateCodeToSuperviseScriptWithSrc = ({
-  type,
-  src
-}) => {
-  const srcEncoded = JSON.stringify(src);
-  if (type === "js_module") {
-    return `window.__supervisor__.superviseScriptTypeModule(${srcEncoded}, (url) => import(url));`;
-  }
-  return `window.__supervisor__.superviseScript(${srcEncoded});`;
-};
-
-/*
- * This plugin provides a way for jsenv to know when js execution is done
- */
-
-const supervisorFileUrl = new URL("./js/supervisor.js", import.meta.url).href;
-const jsenvPluginSupervisor = ({
-  logs = false,
-  measurePerf = false,
-  errorOverlay = true,
-  openInEditor = true,
-  errorBaseUrl
-}) => {
-  return {
-    name: "jsenv:supervisor",
-    appliesDuring: "dev",
-    serve: async (request, context) => {
-      if (request.pathname.startsWith("/__get_code_frame__/")) {
-        const {
-          pathname,
-          searchParams
-        } = new URL(request.url);
-        let urlWithLineAndColumn = pathname.slice("/__get_code_frame__/".length);
-        urlWithLineAndColumn = decodeURIComponent(urlWithLineAndColumn);
-        const match = urlWithLineAndColumn.match(/:([0-9]+):([0-9]+)$/);
-        if (!match) {
-          return {
-            status: 400,
-            body: "Missing line and column in url"
-          };
-        }
-        const file = urlWithLineAndColumn.slice(0, match.index);
-        let line = parseInt(match[1]);
-        let column = parseInt(match[2]);
-        const urlInfo = context.urlGraph.getUrlInfo(file);
-        if (!urlInfo) {
-          return {
-            status: 204,
-            headers: {
-              "cache-control": "no-store"
-            }
-          };
-        }
-        const remap = searchParams.has("remap");
-        if (remap) {
-          const sourcemap = urlInfo.sourcemap;
-          if (sourcemap) {
-            const original = getOriginalPosition({
-              sourcemap,
-              url: file,
-              line,
-              column
-            });
-            if (original.line !== null) {
-              line = original.line;
-              if (original.column !== null) {
-                column = original.column;
-              }
-            }
-          }
-        }
-        const codeFrame = stringifyUrlSite({
-          url: file,
-          line,
-          column,
-          content: urlInfo.originalContent
-        });
-        return {
-          status: 200,
-          headers: {
-            "cache-control": "no-store",
-            "content-type": "text/plain",
-            "content-length": Buffer.byteLength(codeFrame)
-          },
-          body: codeFrame
-        };
-      }
-      if (request.pathname.startsWith("/__get_error_cause__/")) {
-        let file = request.pathname.slice("/__get_error_cause__/".length);
-        file = decodeURIComponent(file);
-        if (!file) {
-          return {
-            status: 400,
-            body: "Missing file in url"
-          };
-        }
-        const getErrorCauseInfo = () => {
-          const urlInfo = context.urlGraph.getUrlInfo(file);
-          if (!urlInfo) {
-            return null;
-          }
-          const {
-            error
-          } = urlInfo;
-          if (error) {
-            return error;
-          }
-          // search in direct dependencies (404 or 500)
-          const {
-            dependencies
-          } = urlInfo;
-          for (const dependencyUrl of dependencies) {
-            const dependencyUrlInfo = context.urlGraph.getUrlInfo(dependencyUrl);
-            if (dependencyUrlInfo.error) {
-              return dependencyUrlInfo.error;
-            }
-          }
-          return null;
-        };
-        const causeInfo = getErrorCauseInfo();
-        const body = JSON.stringify(causeInfo ? {
-          code: causeInfo.code,
-          message: causeInfo.message,
-          reason: causeInfo.reason,
-          stack: errorBaseUrl ? `stack mocked for snapshot` : causeInfo.stack,
-          codeFrame: causeInfo.traceMessage
-        } : null, null, "  ");
-        return {
-          status: 200,
-          headers: {
-            "cache-control": "no-store",
-            "content-type": "application/json",
-            "content-length": Buffer.byteLength(body)
-          },
-          body
-        };
-      }
-      if (request.pathname.startsWith("/__open_in_editor__/")) {
-        let file = request.pathname.slice("/__open_in_editor__/".length);
-        file = decodeURIComponent(file);
-        if (!file) {
-          return {
-            status: 400,
-            body: "Missing file in url"
-          };
-        }
-        const launch = requireFromJsenv("launch-editor");
-        launch(fileURLToPath(file), () => {
-          // ignore error for now
-        });
-        return {
-          status: 200,
-          headers: {
-            "cache-control": "no-store"
-          }
-        };
+      if (reference.url.startsWith("http:") || reference.url.startsWith("https:")) {
+        return `ignore:${reference.url}`;
       }
       return null;
-    },
-    transformUrlContent: {
-      html: ({
-        url,
-        content
-      }, context) => {
-        const [supervisorFileReference] = context.referenceUtils.inject({
-          type: "script",
-          expectedType: "js_classic",
-          specifier: supervisorFileUrl
-        });
-        return injectSupervisorIntoHTML({
-          content,
-          url
-        }, {
-          supervisorScriptSrc: supervisorFileReference.generatedSpecifier,
-          supervisorOptions: {
-            errorBaseUrl,
-            logs,
-            measurePerf,
-            errorOverlay,
-            openInEditor
-          },
-          webServer: {
-            rootDirectoryUrl: context.rootDirectoryUrl,
-            isJsenvDevServer: true
-          },
-          inlineAsRemote: true,
-          generateInlineScriptSrc: ({
-            type,
-            textContent,
-            inlineScriptUrl,
-            isOriginal,
-            line,
-            column
-          }) => {
-            const [inlineScriptReference] = context.referenceUtils.foundInline({
-              type: "script",
-              subtype: "inline",
-              expectedType: type,
-              isOriginalPosition: isOriginal,
-              specifierLine: line - 1,
-              specifierColumn: column,
-              specifier: inlineScriptUrl,
-              contentType: "text/javascript",
-              content: textContent
-            });
-            return inlineScriptReference.generatedSpecifier;
-          }
-        });
-      }
     }
   };
 };
@@ -21332,6 +20607,7 @@ const build = async ({
   buildDirectoryUrl,
   entryPoints = {},
   assetsDirectory = "",
+  ignore,
   runtimeCompat = defaultRuntimeCompat,
   base = runtimeCompat.node ? "./" : "/",
   plugins = [],
@@ -21469,6 +20745,10 @@ build ${entryPointKeys.length} entry points`);
       signal,
       logLevel,
       rootDirectoryUrl: sourceDirectoryUrl,
+      ignore,
+      // during first pass (craft) we keep "ignore:" when a reference is ignored
+      // so that the second pass (shape) properly ignore those urls
+      ignoreProtocol: "keep",
       urlGraph: rawGraph,
       build: true,
       runtimeCompat,
@@ -21484,12 +20764,7 @@ build ${entryPointKeys.length} entry points`);
         rootDirectoryUrl: sourceDirectoryUrl,
         urlGraph: rawGraph,
         runtimeCompat,
-        referenceAnalysis: {
-          ...referenceAnalysis,
-          // during first pass (craft) we inject "ignore:" when a reference must be ignored
-          // so that the second pass (shape) properly ignore those urls
-          ignoreProtocol: "inject"
-        },
+        referenceAnalysis,
         nodeEsmResolution,
         magicExtensions,
         magicDirectoryIndex,
@@ -21528,20 +20803,21 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     const finalGraphKitchen = createKitchen({
       logLevel,
       rootDirectoryUrl: buildDirectoryUrl,
+      // here most plugins are not there
+      // - no external plugin
+      // - no plugin putting reference.mustIgnore on https urls
+      // At this stage it's only about redirecting urls to the build directory
+      // consequently only a subset or urls are supported
+      supportedProtocols: ["file:", "data:", "virtual:", "ignore:"],
+      ignore,
+      ignoreProtocol: versioning ? "keep" : "remove",
       urlGraph: finalGraph,
       build: true,
       runtimeCompat,
       ...contextSharedDuringBuild,
       plugins: [jsenvPluginReferenceAnalysis({
         ...referenceAnalysis,
-        // here most plugins are not there
-        // - no external plugin
-        // - no plugin putting reference.mustIgnore on https urls
-        // At this stage it's only about redirecting urls to the build directory
-        // consequently only a subset or urls are supported
-        supportedProtocols: ["file:", "data:", "virtual:", "ignore:"],
-        fetchInlineUrls: false,
-        ignoreProtocol: versioning ? "keep" : "remove"
+        fetchInlineUrls: false
       }), ...(lineBreakNormalization ? [jsenvPluginLineBreakNormalization()] : []), jsenvPluginJsModuleFallback({
         systemJsInjection: true
       }), jsenvPluginInlining(), {
@@ -22109,14 +21385,11 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           const contentVersionMap = new Map();
           const hashCallbacks = [];
           GRAPH.forEach(finalGraph, urlInfo => {
-            if (urlInfo.url.startsWith("data:")) {
-              return;
-            }
             if (urlInfo.type === "sourcemap") {
               return;
             }
             // ignore:
-            // - inline files:
+            // - inline files and data files:
             //   they are already taken into account in the file where they appear
             // - ignored files:
             //   we don't know their content
@@ -22128,7 +21401,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             if (urlInfo.isInline) {
               return;
             }
-            if (urlInfo.mustIgnore) {
+            if (urlInfo.url.startsWith("data:")) {
+              return;
+            }
+            if (urlInfo.url.startsWith("ignore:")) {
               return;
             }
             if (urlInfo.dependents.size === 0 && !urlInfo.isEntryPoint) {
@@ -22154,7 +21430,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   const dependencyContentVersion = contentVersionMap.get(reference.url);
                   if (!dependencyContentVersion) {
                     // no content generated for this dependency
-                    // (inline, data:, sourcemap, mustIgnore is true, ...)
+                    // (inline, data:, ignore:, sourcemap, ...)
                     return null;
                   }
                   if (preferWithoutVersioning(reference)) {
@@ -22213,20 +21489,14 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           const versioningKitchen = createKitchen({
             logLevel: logger.level,
             rootDirectoryUrl: buildDirectoryUrl,
+            ignore,
+            ignoreProtocol: "remove",
             urlGraph: finalGraph,
             build: true,
             runtimeCompat,
             ...contextSharedDuringBuild,
-            plugins: [
-            // here most plugins are not there
-            // - no external plugin
-            // - no plugin putting reference.mustIgnore on https urls
-            // At this stage it's only about versioning urls
-            // consequently only a subset or urls are supported
-            jsenvPluginReferenceAnalysis({
+            plugins: [jsenvPluginReferenceAnalysis({
               ...referenceAnalysis,
-              supportedProtocols: ["file:", "data:", "virtual:"],
-              ignoreProtocol: "remove",
               fetchInlineUrls: false,
               inlineConvertedScript: true,
               // to be able to version their urls
@@ -22260,10 +21530,13 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 return url;
               },
               formatReference: reference => {
-                if (reference.mustIgnore) {
+                if (reference.url.startsWith("ignore:")) {
                   return null;
                 }
-                if (reference.isInline || reference.url.startsWith("data:")) {
+                if (reference.isInline) {
+                  return null;
+                }
+                if (reference.url.startsWith("data:")) {
                   return null;
                 }
                 if (reference.isResourceHint) {
@@ -22274,9 +21547,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 const referencedUrlInfo = finalGraph.getUrlInfo(reference.url);
                 if (!canUseVersionedUrl(referencedUrlInfo)) {
                   return reference.specifier;
-                }
-                if (referencedUrlInfo.mustIgnore) {
-                  return null;
                 }
                 const versionedUrl = versionedUrlMap.get(reference.url);
                 if (!versionedUrl) {
@@ -22385,9 +21655,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       }
       {
         GRAPH.forEach(finalGraph, urlInfo => {
-          if (urlInfo.mustIgnore) {
-            return;
-          }
           if (!urlInfo.url.startsWith("file:")) {
             return;
           }
@@ -22534,10 +21801,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         if (serviceWorkerEntryUrlInfos.length > 0) {
           const serviceWorkerResources = {};
           GRAPH.forEach(finalGraph, urlInfo => {
-            if (urlInfo.isInline || urlInfo.mustIgnore) {
+            if (!urlInfo.url.startsWith("file:")) {
               return;
             }
-            if (!urlInfo.url.startsWith("file:")) {
+            if (urlInfo.isInline) {
               return;
             }
             if (!canUseVersionedUrl(urlInfo)) {
@@ -22593,9 +21860,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       return buildRelativeUrl;
     };
     GRAPH.forEach(finalGraph, urlInfo => {
-      if (urlInfo.mustIgnore) {
-        return;
-      }
       if (!urlInfo.url.startsWith("file:")) {
         return;
       }
@@ -22860,6 +22124,7 @@ const createFileService = ({
   contextCache,
   sourceDirectoryUrl,
   sourceMainFilePath,
+  ignore,
   sourceFilesConfig,
   runtimeCompat,
   plugins,
@@ -22932,6 +22197,7 @@ const createFileService = ({
       logLevel,
       rootDirectoryUrl: sourceDirectoryUrl,
       mainFilePath: sourceMainFilePath,
+      ignore,
       urlGraph,
       dev: true,
       runtimeCompat,
@@ -23257,6 +22523,7 @@ const inferParentFromRequest = (request, sourceDirectoryUrl) => {
 const startDevServer = async ({
   sourceDirectoryUrl,
   sourceMainFilePath = "./index.html",
+  ignore,
   port = 3456,
   hostname,
   acceptAnyIp,
@@ -23395,6 +22662,7 @@ const startDevServer = async ({
         contextCache,
         sourceDirectoryUrl,
         sourceMainFilePath,
+        ignore,
         sourceFilesConfig,
         runtimeCompat,
         plugins,
