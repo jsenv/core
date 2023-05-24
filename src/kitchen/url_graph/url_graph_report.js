@@ -30,15 +30,19 @@ const createUrlGraphReport = (urlGraph) => {
     total: 0,
   };
   urlGraph.urlInfoMap.forEach((urlInfo) => {
+    // ignore:
+    // - ignored files: we don't know their content
+    // - inline files and data files: they are already taken into account in the file where they appear
+    if (urlInfo.url.startsWith("ignore:")) {
+      return;
+    }
+    if (urlInfo.isInline) {
+      return;
+    }
     if (urlInfo.url.startsWith("data:")) {
       return;
     }
-    // ignore:
-    // - inline files: they are already taken into account in the file where they appear
-    // - ignored files: we don't know their content
-    if (urlInfo.isInline || urlInfo.mustIgnore) {
-      return;
-    }
+
     // file loaded via import assertion are already inside the graph
     // their js module equivalent are ignored to avoid counting it twice
     // in the build graph the file targeted by import assertion will likely be gone

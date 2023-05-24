@@ -313,6 +313,9 @@ build ${entryPointKeys.length} entry points`);
       rootDirectoryUrl: sourceDirectoryUrl,
       urlGraph: rawGraph,
       build: true,
+      // during first pass (craft) we keep "ignore:" when a reference is ignored
+      // so that the second pass (shape) properly ignore those urls
+      ignoreProtocol: "keep",
       runtimeCompat,
       ...contextSharedDuringBuild,
       plugins: [
@@ -332,13 +335,7 @@ build ${entryPointKeys.length} entry points`);
           rootDirectoryUrl: sourceDirectoryUrl,
           urlGraph: rawGraph,
           runtimeCompat,
-
-          referenceAnalysis: {
-            ...referenceAnalysis,
-            // during first pass (craft) we inject "ignore:" when a reference must be ignored
-            // so that the second pass (shape) properly ignore those urls
-            ignoreProtocol: "inject",
-          },
+          referenceAnalysis,
           nodeEsmResolution,
           magicExtensions,
           magicDirectoryIndex,
@@ -387,17 +384,17 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       build: true,
       runtimeCompat,
       ...contextSharedDuringBuild,
+      // here most plugins are not there
+      // - no external plugin
+      // - no plugin putting reference.mustIgnore on https urls
+      // At this stage it's only about redirecting urls to the build directory
+      // consequently only a subset or urls are supported
+      supportedProtocols: ["file:", "data:", "virtual:", "ignore:"],
+      ignoreProtocol: versioning ? "keep" : "remove",
       plugins: [
         jsenvPluginReferenceAnalysis({
           ...referenceAnalysis,
-          // here most plugins are not there
-          // - no external plugin
-          // - no plugin putting reference.mustIgnore on https urls
-          // At this stage it's only about redirecting urls to the build directory
-          // consequently only a subset or urls are supported
-          supportedProtocols: ["file:", "data:", "virtual:", "ignore:"],
           fetchInlineUrls: false,
-          ignoreProtocol: versioning ? "keep" : "remove",
         }),
         ...(lineBreakNormalization
           ? [jsenvPluginLineBreakNormalization()]
@@ -1063,14 +1060,11 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           const contentVersionMap = new Map();
           const hashCallbacks = [];
           GRAPH.forEach(finalGraph, (urlInfo) => {
-            if (urlInfo.url.startsWith("data:")) {
-              return;
-            }
             if (urlInfo.type === "sourcemap") {
               return;
             }
             // ignore:
-            // - inline files:
+            // - inline files and data files:
             //   they are already taken into account in the file where they appear
             // - ignored files:
             //   we don't know their content
@@ -1082,7 +1076,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             if (urlInfo.isInline) {
               return;
             }
-            if (urlInfo.mustIgnore) {
+            if (urlInfo.url.startsWith("data:")) {
+              return;
+            }
+            if (urlInfo.url.startsWith("ignore:")) {
               return;
             }
             if (urlInfo.dependents.size === 0 && !urlInfo.isEntryPoint) {
@@ -1116,7 +1113,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   );
                   if (!dependencyContentVersion) {
                     // no content generated for this dependency
-                    // (inline, data:, sourcemap, mustIgnore is true, ...)
+                    // (inline, data:, ignore:, sourcemap, ...)
                     return null;
                   }
                   if (preferWithoutVersioning(reference)) {
@@ -1184,18 +1181,12 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             rootDirectoryUrl: buildDirectoryUrl,
             urlGraph: finalGraph,
             build: true,
+            ignoreProtocol: "remove",
             runtimeCompat,
             ...contextSharedDuringBuild,
             plugins: [
-              // here most plugins are not there
-              // - no external plugin
-              // - no plugin putting reference.mustIgnore on https urls
-              // At this stage it's only about versioning urls
-              // consequently only a subset or urls are supported
               jsenvPluginReferenceAnalysis({
                 ...referenceAnalysis,
-                supportedProtocols: ["file:", "data:", "virtual:"],
-                ignoreProtocol: "remove",
                 fetchInlineUrls: false,
                 inlineConvertedScript: true, // to be able to version their urls
                 allowEscapeForVersioning: true,
@@ -1238,10 +1229,13 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   return url;
                 },
                 formatReference: (reference) => {
-                  if (reference.mustIgnore) {
+                  if (reference.url.startsWith("ignore:")) {
                     return null;
                   }
-                  if (reference.isInline || reference.url.startsWith("data:")) {
+                  if (reference.isInline) {
+                    return null;
+                  }
+                  if (reference.url.startsWith("data:")) {
                     return null;
                   }
                   if (reference.isResourceHint) {
@@ -1254,9 +1248,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   );
                   if (!canUseVersionedUrl(referencedUrlInfo)) {
                     return reference.specifier;
-                  }
-                  if (referencedUrlInfo.mustIgnore) {
-                    return null;
                   }
                   const versionedUrl = versionedUrlMap.get(reference.url);
                   if (!versionedUrl) {
@@ -1384,9 +1375,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       }
       cleanup_jsenv_attributes_from_html: {
         GRAPH.forEach(finalGraph, (urlInfo) => {
-          if (urlInfo.mustIgnore) {
-            return;
-          }
           if (!urlInfo.url.startsWith("file:")) {
             return;
           }
@@ -1569,10 +1557,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         if (serviceWorkerEntryUrlInfos.length > 0) {
           const serviceWorkerResources = {};
           GRAPH.forEach(finalGraph, (urlInfo) => {
-            if (urlInfo.isInline || urlInfo.mustIgnore) {
+            if (!urlInfo.url.startsWith("file:")) {
               return;
             }
-            if (!urlInfo.url.startsWith("file:")) {
+            if (urlInfo.isInline) {
               return;
             }
             if (!canUseVersionedUrl(urlInfo)) {
@@ -1642,9 +1630,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       return buildRelativeUrl;
     };
     GRAPH.forEach(finalGraph, (urlInfo) => {
-      if (urlInfo.mustIgnore) {
-        return;
-      }
       if (!urlInfo.url.startsWith("file:")) {
         return;
       }
