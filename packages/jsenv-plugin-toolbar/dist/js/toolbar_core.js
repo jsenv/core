@@ -1701,6 +1701,33 @@ const renderToolbarThemeSetting = () => {
   };
 };
 
+const ribbonDisplayedSignal = u(typeof stateFromLocalStorage.ribbonDisplayed === "boolean" ? stateFromLocalStorage.ribbonDisplayed : true);
+
+const ribbonBox = document.querySelector("#ribbon_box");
+const ribbonCheckbox = ribbonBox.querySelector("input");
+const renderToolbarRibbonSetting = () => {
+  const ribbonContainer = window.parent.document.querySelector("#jsenv_ribbon_container");
+  if (ribbonContainer) {
+    ribbonBox.style.display = "block";
+    b(() => {
+      const ribbonDisplayed = ribbonDisplayedSignal.value;
+      ribbonCheckbox.checked = ribbonDisplayed;
+      if (ribbonDisplayed) {
+        ribbonContainer.style.display = "block";
+      } else {
+        ribbonContainer.style.display = "none";
+      }
+    });
+    ribbonCheckbox.onchange = () => {
+      if (ribbonCheckbox.checked) {
+        ribbonDisplayedSignal.value = true;
+      } else {
+        ribbonDisplayedSignal.value = false;
+      }
+    };
+  }
+};
+
 const renderToolbarSettings = () => {
   document.querySelector("#settings_open_button").onclick = toggleSettings;
   document.querySelector("#settings_close_button").onclick = toggleSettings;
@@ -1709,6 +1736,7 @@ const renderToolbarSettings = () => {
   renderToolbarAnimationSetting();
   renderToolbarNotificationSetting();
   renderToolbarThemeSetting();
+  renderToolbarRibbonSetting();
   b(() => {
     const settingsOpened = settingsOpenedSignal.value;
     if (settingsOpened) {
@@ -1797,11 +1825,13 @@ const toolbarStateSignal = w(() => {
   const theme = themeSignal.value;
   const animationsEnabled = animationsEnabledSignal.value;
   const notificationsEnabled = notificationsEnabledSignal.value;
+  const ribbonDisplayed = ribbonDisplayedSignal.value;
   return {
     opened,
     theme,
     animationsEnabled,
-    notificationsEnabled
+    notificationsEnabled,
+    ribbonDisplayed
   };
 });
 

@@ -2,12 +2,12 @@
  * This plugin provides a way for jsenv to know when js execution is done
  */
 
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { getOriginalPosition } from "@jsenv/sourcemap";
 import { stringifyUrlSite } from "@jsenv/urls";
 
 import { injectSupervisorIntoHTML } from "./html_supervisor_injection.js";
-import { requireFromJsenv } from "@jsenv/core/src/helpers/require_from_jsenv.js";
 
 export const supervisorFileUrl = new URL(
   "./client/supervisor.js",
@@ -148,7 +148,8 @@ export const jsenvPluginSupervisor = ({
             body: "Missing file in url",
           };
         }
-        const launch = requireFromJsenv("launch-editor");
+        const require = createRequire(import.meta.url);
+        const launch = require("launch-editor");
         launch(fileURLToPath(file), () => {
           // ignore error for now
         });

@@ -153,7 +153,11 @@ export const createPluginController = (kitchenContext) => {
       info.timing[`${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`] =
         performance.now() - startTimestamp;
     }
-    valueReturned = assertAndNormalizeReturnValue(hook.name, valueReturned);
+    valueReturned = assertAndNormalizeReturnValue(
+      hook.name,
+      valueReturned,
+      info,
+    );
     return valueReturned;
   };
   const callAsyncHook = async (hook, info, context) => {
@@ -176,7 +180,11 @@ export const createPluginController = (kitchenContext) => {
       info.timing[`${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`] =
         performance.now() - startTimestamp;
     }
-    valueReturned = assertAndNormalizeReturnValue(hook.name, valueReturned);
+    valueReturned = assertAndNormalizeReturnValue(
+      hook.name,
+      valueReturned,
+      info,
+    );
     return valueReturned;
   };
 
@@ -277,7 +285,7 @@ const getHookFunction = (
   return hookValue;
 };
 
-const assertAndNormalizeReturnValue = (hookName, returnValue) => {
+const assertAndNormalizeReturnValue = (hookName, returnValue, info) => {
   // all hooks are allowed to return null/undefined as a signal of "I don't do anything"
   if (returnValue === null || returnValue === undefined) {
     return returnValue;
@@ -286,7 +294,7 @@ const assertAndNormalizeReturnValue = (hookName, returnValue) => {
     if (!returnValueAssertion.appliesTo.includes(hookName)) {
       continue;
     }
-    const assertionResult = returnValueAssertion.assertion(returnValue);
+    const assertionResult = returnValueAssertion.assertion(returnValue, info);
     if (assertionResult !== undefined) {
       // normalization
       returnValue = assertionResult;
@@ -320,13 +328,13 @@ const returnValueAssertions = [
       "finalizeUrlContent",
       "optimizeUrlContent",
     ],
-    assertion: (valueReturned) => {
+    assertion: (valueReturned, urlInfo) => {
       if (typeof valueReturned === "string" || Buffer.isBuffer(valueReturned)) {
         return { content: valueReturned };
       }
       if (typeof valueReturned === "object") {
-        const { mustIgnore, content, body } = valueReturned;
-        if (mustIgnore) {
+        const { content, body } = valueReturned;
+        if (urlInfo.url.startsWith("ignore:")) {
           return undefined;
         }
         if (typeof content !== "string" && !Buffer.isBuffer(content) && !body) {

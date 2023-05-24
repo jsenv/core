@@ -1,6 +1,7 @@
 import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem";
-import { pingServer } from "@jsenv/core/src/helpers/ping_server.js";
-import { basicFetch } from "@jsenv/core/src/helpers/basic_fetch.js";
+
+import { pingServer } from "../helpers/ping_server.js";
+import { basicFetch } from "../helpers/basic_fetch.js";
 
 export const assertAndNormalizeWebServer = async (webServer) => {
   if (!webServer) {

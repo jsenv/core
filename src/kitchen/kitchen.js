@@ -6,6 +6,7 @@ import {
   normalizeUrl,
   setUrlFilename,
 } from "@jsenv/urls";
+import { URL_META } from "@jsenv/url-meta";
 import { writeFileSync, ensureWindowsDriveLetter } from "@jsenv/filesystem";
 import { createLogger, createDetailedMessage, ANSI } from "@jsenv/log";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
@@ -29,6 +30,9 @@ export const createKitchen = ({
 
   rootDirectoryUrl,
   mainFilePath,
+  ignore,
+  ignoreProtocol = "remove",
+  supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"],
   urlGraph,
   dev = false,
   build = false,
@@ -71,6 +75,35 @@ export const createKitchen = ({
   plugins.forEach((pluginEntry) => {
     pluginController.pushPlugin(pluginEntry);
   });
+
+  const isIgnoredByProtocol = (url) => {
+    const { protocol } = new URL(url);
+    const protocolIsSupported = supportedProtocols.some(
+      (supportedProtocol) => protocol === supportedProtocol,
+    );
+    return !protocolIsSupported;
+  };
+  let isIgnoredByParam = () => false;
+  if (ignore) {
+    const associations = URL_META.resolveAssociations(
+      { ignore },
+      rootDirectoryUrl,
+    );
+    const cache = new Map();
+    isIgnoredByParam = (url) => {
+      const fromCache = cache.get(url);
+      if (fromCache) return fromCache;
+      const { ignore } = URL_META.applyAssociations({
+        url,
+        associations,
+      });
+      cache.set(url, ignore);
+      return ignore;
+    };
+  }
+  const isIgnored = (url) => {
+    return isIgnoredByProtocol(url) || isIgnoredByParam(url);
+  };
 
   /*
    * - "http_request"
@@ -116,7 +149,6 @@ export const createKitchen = ({
     specifierColumn,
     baseUrl,
     isOriginalPosition,
-    mustIgnore,
     isEntryPoint = false,
     isResourceHint = false,
     isImplicit = false,
@@ -165,7 +197,6 @@ export const createKitchen = ({
       specifierColumn,
       isOriginalPosition,
       baseUrl,
-      mustIgnore,
       isEntryPoint,
       isResourceHint,
       isImplicit,
@@ -216,13 +247,36 @@ export const createKitchen = ({
       url = normalizeUrl(url);
       let referencedUrlObject;
       let searchParams;
-      const onReferenceUrlChange = (referenceUrl) => {
+      const setReferenceUrl = (referenceUrl) => {
+        // ignored urls are prefixed with "ignore:" so that reference are associated
+        // to a dedicated urlInfo that is ignored.
+        // this way it's only once a resource is referenced by reference that is not ignored
+        // that the resource is cooked
+        if (
+          reference.specifier[0] === "#" &&
+          // For Html, css and "#" refer to a resource in the page, reference must be preserved
+          // However for js import specifiers they have a different meaning and we want
+          // to resolve them (https://nodejs.org/api/packages.html#imports for instance)
+          reference.type !== "js_import"
+        ) {
+          referenceUrl = `ignore:${referenceUrl}`;
+        } else if (isIgnored(referenceUrl)) {
+          referenceUrl = `ignore:${referenceUrl}`;
+        }
+
+        if (
+          referenceUrl.startsWith("ignore:") &&
+          !reference.specifier.startsWith("ignore:")
+        ) {
+          reference.specifier = `ignore:${reference.specifier}`;
+        }
+
         referencedUrlObject = new URL(referenceUrl);
         searchParams = referencedUrlObject.searchParams;
         reference.url = referenceUrl;
         reference.searchParams = searchParams;
       };
-      onReferenceUrlChange(url);
+      setReferenceUrl(url);
 
       if (reference.debug) {
         logger.debug(`url resolved by "${
@@ -251,7 +305,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           }
           const prevReference = { ...reference };
           updateReference(prevReference, reference);
-          onReferenceUrlChange(normalizedReturnValue);
+          setReferenceUrl(normalizedReturnValue);
         },
       );
       reference.generatedUrl = reference.url;
@@ -276,12 +330,16 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           reference.generatedUrl = normalizeUrl(referencedUrlObject.href);
         },
       );
+
       const returnValue = pluginController.callHooksUntil(
         "formatReference",
         reference,
         referenceContext,
       );
-      if (reference.mustIgnore) {
+      if (reference.url.startsWith("ignore:")) {
+        if (ignoreProtocol === "remove") {
+          reference.specifier = reference.specifier.slice("ignore:".length);
+        }
         reference.generatedSpecifier = reference.specifier;
         reference.generatedSpecifier = urlSpecifierEncoding.encode(reference);
       } else {
@@ -469,7 +527,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       });
     };
 
-    if (!urlInfo.mustIgnore) {
+    if (!urlInfo.url.startsWith("ignore:")) {
       // references
       const references = [];
       context.referenceUtils = {
@@ -854,11 +912,6 @@ const traceFromUrlSite = (urlSite) => {
 };
 
 const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
-  if (reference.mustIgnore) {
-    urlInfo.mustIgnore = true;
-  } else {
-    urlInfo.mustIgnore = false;
-  }
   urlInfo.originalUrl = urlInfo.originalUrl || reference.url;
 
   if (reference.isEntryPoint || isWebWorkerEntryPointReference(reference)) {

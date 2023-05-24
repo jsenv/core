@@ -1,6 +1,6 @@
 window.__supervisor__ = (() => {
   const notImplemented = () => {
-    throw new Error(`window.__supervisor__.setup() not called`);
+    throw new Error("window.__supervisor__.setup() not called");
   };
   const supervisor = {
     reportException: notImplemented,
@@ -92,7 +92,7 @@ window.__supervisor__ = (() => {
         result.status = "started";
         result.exception = null;
         if (logs) {
-          console.group(`[jsenv] ${src} execution started (${type})`);
+          console.group("[jsenv] ".concat(src, " execution started (").concat(type, ")"));
         }
       };
       const end = () => {
@@ -101,7 +101,7 @@ window.__supervisor__ = (() => {
         result.duration = now - documentExecutionStartTime;
         result.coverage = window.__coverage__;
         if (logs) {
-          console.log(`execution ${result.status}`);
+          console.log("execution ".concat(result.status));
           console.groupEnd();
         }
         if (remainingScriptCount === 0) {
@@ -170,7 +170,7 @@ window.__supervisor__ = (() => {
             reportErrorBackToBrowser(error);
           }
           fail(error, {
-            message: `Error while loading script: ${urlObject.href}`,
+            message: "Error while loading script: ".concat(urlObject.href),
             reportedBy: "script_error_event",
             url: urlObject.href
           });
@@ -219,7 +219,7 @@ window.__supervisor__ = (() => {
       let currentScript;
       const init = _importFn => {
         importFn = _importFn;
-        currentScript = document.querySelector(`script[type="module"][inlined-from-src="${src}"]`);
+        currentScript = document.querySelector("script[type=\"module\"][inlined-from-src=\"".concat(src, "\"]"));
         executions[src].async = currentScript.async;
       };
       const execute = async ({
@@ -235,7 +235,7 @@ window.__supervisor__ = (() => {
           return result;
         } catch (e) {
           fail(e, {
-            message: `Error while importing module: ${urlObject.href}`,
+            message: "Error while importing module: ".concat(urlObject.href),
             reportedBy: "dynamic_import",
             url: urlObject.href
           });
@@ -265,7 +265,7 @@ window.__supervisor__ = (() => {
       let currentScriptClone;
       const init = _importFn => {
         importFn = _importFn;
-        currentScript = document.querySelector(`script[type="module"][inlined-from-src="${src}"]`);
+        currentScript = document.querySelector("script[type=\"module\"][inlined-from-src=\"".concat(src, "\"]"));
         parentNode = currentScript.parentNode;
         executions[src].async = currentScript.async;
       };
@@ -295,7 +295,7 @@ window.__supervisor__ = (() => {
           //   reportErrorBackToBrowser(error)
           // }
           fail(error, {
-            message: `Error while loading module: ${urlObject.href}`,
+            message: "Error while loading module: ".concat(urlObject.href),
             reportedBy: "script_error_event",
             url: urlObject.href
           });
@@ -307,7 +307,7 @@ window.__supervisor__ = (() => {
         onExecuting();
         result.status = "executing";
         if (logs) {
-          console.log(`load ended`);
+          console.log("load ended");
         }
         try {
           const namespace = await importFn(urlObject.href);
@@ -315,7 +315,7 @@ window.__supervisor__ = (() => {
           return result;
         } catch (e) {
           fail(e, {
-            message: `Error while importing module: ${urlObject.href}`,
+            message: "Error while importing module: ".concat(urlObject.href),
             reportedBy: "dynamic_import",
             url: urlObject.href
           });
@@ -407,10 +407,10 @@ window.__supervisor__ = (() => {
     supervisor.reloadSupervisedScript = src => {
       const execution = executions[src];
       if (!execution) {
-        throw new Error(`no execution for ${src}`);
+        throw new Error("no execution for ".concat(src));
       }
       if (execution.isInline) {
-        throw new Error(`cannot reload inline script ${src}`);
+        throw new Error("cannot reload inline script ".concat(src));
       }
       return execution.execute({
         isReload: true
@@ -499,7 +499,7 @@ window.__supervisor__ = (() => {
             exception.stackSourcemapped = true;
           } else {
             exception.message = message;
-            exception.stack = error.stack ? `  ${error.stack}` : null;
+            exception.stack = error.stack ? "  ".concat(error.stack) : null;
             exception.stackFormatIsV8 = false;
             exception.stackSourcemapped = false;
           }
@@ -598,7 +598,7 @@ window.__supervisor__ = (() => {
       stack
     }) => {
       if (message && stack) {
-        return `${message}\n${stack}`;
+        return "".concat(message, "\n").concat(stack);
       }
       if (stack) {
         return stack;
@@ -611,10 +611,10 @@ window.__supervisor__ = (() => {
       column
     }) => {
       if (typeof line === "number" && typeof column === "number") {
-        return `${url}:${line}:${column}`;
+        return "".concat(url, ":").concat(line, ":").concat(column);
       }
       if (typeof line === "number") {
-        return `${url}:${line}`;
+        return "".concat(url, ":").concat(line);
       }
       return url;
     };
@@ -639,7 +639,7 @@ window.__supervisor__ = (() => {
         return {
           isInline: true,
           serverUrl: url,
-          originalUrl: `${fileUrl}@L${tagLineStart}C${tagColumnStart}-L${tagLineEnd}C${tagColumnEnd}${extension}`,
+          originalUrl: "".concat(fileUrl, "@L").concat(tagLineStart, "C").concat(tagColumnStart, "-L").concat(tagLineEnd, "C").concat(tagColumnEnd).concat(extension),
           url: fileUrl,
           line,
           column
@@ -656,7 +656,7 @@ window.__supervisor__ = (() => {
     const getErrorStackWithoutErrorMessage = error => {
       let stack = error.stack;
       if (!stack) return "";
-      const messageInStack = `${error.name}: ${error.message}`;
+      const messageInStack = "".concat(error.name, ": ").concat(error.message);
       if (stack.startsWith(messageInStack)) {
         stack = stack.slice(messageInStack.length);
       }
@@ -669,7 +669,7 @@ window.__supervisor__ = (() => {
     const resolveFileUrl = url => {
       let urlObject = new URL(url, window.origin);
       if (urlObject.origin === window.origin) {
-        urlObject = new URL(`${urlObject.pathname.slice(1)}${urlObject.search}`, rootDirectoryUrl);
+        urlObject = new URL("".concat(urlObject.pathname.slice(1)).concat(urlObject.search), rootDirectoryUrl);
       }
       if (urlObject.href.startsWith("file:")) {
         const atFsIndex = urlObject.pathname.indexOf("/@fs/");
@@ -725,7 +725,7 @@ window.__supervisor__ = (() => {
           }
         }
         if (endsWithSeparationChar) {
-          return `${replacement}${lastChar}`;
+          return "".concat(replacement).concat(lastChar);
         }
         return replacement;
       });
@@ -742,7 +742,7 @@ window.__supervisor__ = (() => {
         };
         const tips = [];
         tips.push("Click outside to close.");
-        errorParts.tip = tips.join(`\n    <br />\n    `);
+        errorParts.tip = tips.join("\n    <br />\n    ");
         const generateClickableText = text => {
           const textWithHtmlLinks = makeLinksClickable(text, {
             createLink: ({
@@ -757,14 +757,14 @@ window.__supervisor__ = (() => {
               });
               if (errorBaseUrl) {
                 if (urlSite.url.startsWith(rootDirectoryUrl)) {
-                  urlSite.url = `${errorBaseUrl}${urlSite.url.slice(rootDirectoryUrl.length)}`;
+                  urlSite.url = "".concat(errorBaseUrl).concat(urlSite.url.slice(rootDirectoryUrl.length));
                 } else {
                   urlSite.url = "file:///mocked_for_snapshots";
                 }
               }
               const urlWithLineAndColumn = stringifyUrlSite(urlSite);
               return {
-                href: urlSite.url.startsWith("file:") && openInEditor ? `javascript:window.fetch('/__open_in_editor__/${encodeURIComponent(urlWithLineAndColumn)}')` : urlSite.url,
+                href: urlSite.url.startsWith("file:") && openInEditor ? "javascript:window.fetch('/__open_in_editor__/".concat(encodeURIComponent(urlWithLineAndColumn), "')") : urlSite.url,
                 text: urlWithLineAndColumn
               };
             }
@@ -782,7 +782,7 @@ window.__supervisor__ = (() => {
             }
             try {
               if (exceptionInfo.code === DYNAMIC_IMPORT_FETCH_ERROR || exceptionInfo.reportedBy === "script_error_event") {
-                const response = await window.fetch(`/__get_error_cause__/${encodeURIComponent(exceptionInfo.site.isInline ? exceptionInfo.site.originalUrl : exceptionInfo.site.url)}`);
+                const response = await window.fetch("/__get_error_cause__/".concat(encodeURIComponent(exceptionInfo.site.isInline ? exceptionInfo.site.originalUrl : exceptionInfo.site.url)));
                 if (response.status !== 200) {
                   return null;
                 }
@@ -802,7 +802,7 @@ window.__supervisor__ = (() => {
                 };
               }
               if (exceptionInfo.site.line !== undefined) {
-                const urlToFetch = new URL(`/__get_code_frame__/${encodeURIComponent(stringifyUrlSite(exceptionInfo.site))}`, window.origin);
+                const urlToFetch = new URL("/__get_code_frame__/".concat(encodeURIComponent(stringifyUrlSite(exceptionInfo.site))), window.origin);
                 if (!exceptionInfo.stackSourcemapped) {
                   urlToFetch.searchParams.set("remap", "");
                 }
@@ -859,7 +859,7 @@ window.__supervisor__ = (() => {
       const link = ({
         href,
         text = href
-      }) => `<a href="${href}">${text}</a>`;
+      }) => "<a href=\"".concat(href, "\">").concat(text, "</a>");
     }
     let displayErrorNotification;
     {
@@ -915,20 +915,7 @@ window.__supervisor__ = (() => {
           this.root = this.attachShadow({
             mode: "open"
           });
-          this.root.innerHTML = `
-<style>
-  ${overlayCSS}
-</style>
-<div class="backdrop"></div>
-<div class="overlay" data-theme=${theme}>
-  <h1 class="title">
-    ${title}
-  </h1>
-  <pre class="text">${text}</pre>
-  <div class="tip">
-    ${tip}
-  </div>
-</div>`;
+          this.root.innerHTML = "\n<style>\n  ".concat(overlayCSS, "\n</style>\n<div class=\"backdrop\"></div>\n<div class=\"overlay\" data-theme=").concat(theme, ">\n  <h1 class=\"title\">\n    ").concat(title, "\n  </h1>\n  <pre class=\"text\">").concat(text, "</pre>\n  <div class=\"tip\">\n    ").concat(tip, "\n  </div>\n</div>");
           this.root.querySelector(".backdrop").onclick = () => {
             if (!this.parentNode) {
               // not in document anymore
@@ -947,11 +934,11 @@ window.__supervisor__ = (() => {
                 cause
               } = errorDetails;
               if (codeFrame) {
-                this.root.querySelector(".text").innerHTML += `\n\n${codeFrame}`;
+                this.root.querySelector(".text").innerHTML += "\n\n".concat(codeFrame);
               }
               if (cause) {
                 const causeIndented = prefixRemainingLines(cause, "  ");
-                this.root.querySelector(".text").innerHTML += `\n  [cause]: ${causeIndented}`;
+                this.root.querySelector(".text").innerHTML += "\n  [cause]: ".concat(causeIndented);
               }
             });
           }
@@ -965,88 +952,14 @@ window.__supervisor__ = (() => {
         while (i < lines.length) {
           const line = lines[i];
           i++;
-          result += line.length ? `\n${prefix}${line}` : `\n`;
+          result += line.length ? "\n".concat(prefix).concat(line) : "\n";
         }
         return result;
       };
       if (customElements && !customElements.get(JSENV_ERROR_OVERLAY_TAGNAME)) {
         customElements.define(JSENV_ERROR_OVERLAY_TAGNAME, JsenvErrorOverlay);
       }
-      const overlayCSS = `
-  :host {
-    position: fixed;
-    z-index: 99999;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    overflow-y: scroll;
-    margin: 0;
-    background: rgba(0, 0, 0, 0.66);
-  }
-  
-  .backdrop {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    bottom: 0;
-  }
-  
-  .overlay {
-    position: relative;
-    background: rgba(0, 0, 0, 0.95);
-    width: 800px;
-    margin: 30px auto;
-    padding: 25px 40px;
-    padding-top: 0;
-    overflow: hidden; /* for h1 margins */
-    border-radius: 4px 8px;
-    box-shadow: 0 20px 40px rgb(0 0 0 / 30%), 0 15px 12px rgb(0 0 0 / 20%);
-    box-sizing: border-box;
-    font-family: monospace;
-    direction: ltr;
-  }
-  
-  h1 {
-    color: red;
-    text-align: center;
-  }
-  
-  pre {
-    overflow: auto;
-    max-width: 100%;
-    /* padding is nice + prevents scrollbar from hiding the text behind it */
-    /* does not work nicely on firefox though https://bugzilla.mozilla.org/show_bug.cgi?id=748518 */
-    padding: 20px; 
-  }
-  
-  .tip {
-    border-top: 1px solid #999;
-    padding-top: 12px;
-  }
-  
-  [data-theme="dark"] {
-    color: #999;
-  }
-  [data-theme="dark"] pre {
-    background: #111;
-    border: 1px solid #333;
-    color: #eee;
-  }
-  
-  [data-theme="light"] {
-    color: #EEEEEE;
-  }
-  [data-theme="light"] pre {
-    background: #1E1E1E;
-    border: 1px solid white;
-    color: #EEEEEE;
-  }
-  
-  pre a {
-    color: inherit;
-  }`;
+      const overlayCSS = "\n  :host {\n    position: fixed;\n    z-index: 99999;\n    top: 0;\n    left: 0;\n    width: 100%;\n    height: 100%;\n    overflow-y: scroll;\n    margin: 0;\n    background: rgba(0, 0, 0, 0.66);\n  }\n  \n  .backdrop {\n    position: absolute;\n    left: 0;\n    right: 0;\n    top: 0;\n    bottom: 0;\n  }\n  \n  .overlay {\n    position: relative;\n    background: rgba(0, 0, 0, 0.95);\n    width: 800px;\n    margin: 30px auto;\n    padding: 25px 40px;\n    padding-top: 0;\n    overflow: hidden; /* for h1 margins */\n    border-radius: 4px 8px;\n    box-shadow: 0 20px 40px rgb(0 0 0 / 30%), 0 15px 12px rgb(0 0 0 / 20%);\n    box-sizing: border-box;\n    font-family: monospace;\n    direction: ltr;\n  }\n  \n  h1 {\n    color: red;\n    text-align: center;\n  }\n  \n  pre {\n    overflow: auto;\n    max-width: 100%;\n    /* padding is nice + prevents scrollbar from hiding the text behind it */\n    /* does not work nicely on firefox though https://bugzilla.mozilla.org/show_bug.cgi?id=748518 */\n    padding: 20px; \n  }\n  \n  .tip {\n    border-top: 1px solid #999;\n    padding-top: 12px;\n  }\n  \n  [data-theme=\"dark\"] {\n    color: #999;\n  }\n  [data-theme=\"dark\"] pre {\n    background: #111;\n    border: 1px solid #333;\n    color: #eee;\n  }\n  \n  [data-theme=\"light\"] {\n    color: #EEEEEE;\n  }\n  [data-theme=\"light\"] pre {\n    background: #1E1E1E;\n    border: 1px solid white;\n    color: #EEEEEE;\n  }\n  \n  pre a {\n    color: inherit;\n  }";
     }
     supervisor.createException = createException;
     supervisor.reportException = exception => {

@@ -1,3 +1,7 @@
+# 1.2.0
+
+- Replace dependency to "@jsenv/core" with "@jsenv/plugin-supervisor"
+
 # 1.1.3
 
 - Restore semicolons, update a warning message

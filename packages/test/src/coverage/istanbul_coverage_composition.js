@@ -1,5 +1,4 @@
-import { requireFromJsenv } from "@jsenv/core/src/helpers/require_from_jsenv.js";
-
+import { importWithRequire } from "../helpers/import_with_require.js";
 export const composeTwoFileByFileIstanbulCoverages = (
   firstFileByFileIstanbulCoverage,
   secondFileByFileIstanbulCoverage,
@@ -20,7 +19,7 @@ export const composeTwoFileByFileIstanbulCoverages = (
 };
 
 const merge = (firstIstanbulCoverage, secondIstanbulCoverage) => {
-  const { createFileCoverage } = requireFromJsenv("istanbul-lib-coverage");
+  const { createFileCoverage } = importWithRequire("istanbul-lib-coverage");
   const istanbulFileCoverageObject = createFileCoverage(firstIstanbulCoverage);
   istanbulFileCoverageObject.merge(secondIstanbulCoverage);
   const istanbulCoverage = istanbulFileCoverageObject.toJSON();

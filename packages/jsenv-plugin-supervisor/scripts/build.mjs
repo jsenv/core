@@ -5,7 +5,7 @@ await build({
   sourceDirectoryUrl: new URL("../src/", import.meta.url),
   buildDirectoryUrl: new URL("../dist/", import.meta.url),
   entryPoints: {
-    "./jsenv_plugin_toolbar.js": "jsenv_plugin_toolbar.js",
+    "./jsenv_plugin_supervisor.js": "jsenv_plugin_supervisor.js",
   },
   ignore: {
     "/**/node_modules/@jsenv/ast/": true, // cannot inline "parse5", "@babel/core" and "postcss"

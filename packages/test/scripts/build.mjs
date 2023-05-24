@@ -7,30 +7,27 @@ await build({
   entryPoints: {
     "./main.js": "jsenv_test.js",
   },
+  ignore: {
+    "file://**/node_modules/": true,
+    // selectively allow some node_modules
+    "file://**/node_modules/@jsenv/abort/": false,
+    "file://**/node_modules/@jsenv/filesystem/": false,
+    "file://**/node_modules/@jsenv/importmap/": false,
+    "file://**/node_modules/@jsenv/integrity/": false,
+    "file://**/node_modules/@jsenv/log/": false,
+    "file://**/node_modules/@jsenv/url-meta/": false,
+    "file://**/node_modules/@jsenv/urls/": false,
+    "file://**/node_modules/@jsenv/utils/": false,
+    "file://**/node_modules/@jsenv/uneval/": false,
+    "file://**/node_modules/ansi-escapes/": false,
+    "file://**/node_modules/is-unicode-supported/": false,
+    "file://**/node_modules/supports-color/": false,
+  },
   versioning: false,
   assetManifest: false,
   runtimeCompat: {
     node: "16.14",
   },
   scenarioPlaceholders: false,
-  referenceAnalysis: {
-    include: {
-      "file://**/*": true,
-      "file://**/node_modules/": false,
-      // selectively allow some node_modules
-      "file://**/node_modules/@jsenv/abort/": true,
-      "file://**/node_modules/@jsenv/filesystem/": true,
-      "file://**/node_modules/@jsenv/importmap/": true,
-      "file://**/node_modules/@jsenv/integrity/": true,
-      "file://**/node_modules/@jsenv/log/": true,
-      "file://**/node_modules/@jsenv/url-meta/": true,
-      "file://**/node_modules/@jsenv/urls/": true,
-      "file://**/node_modules/@jsenv/utils/": true,
-      "file://**/node_modules/@jsenv/uneval/": true,
-      "file://**/node_modules/ansi-escapes/": true,
-      "file://**/node_modules/is-unicode-supported/": true,
-      "file://**/node_modules/supports-color/": true,
-    },
-  },
   plugins: [jsenvPluginBundling()],
 });

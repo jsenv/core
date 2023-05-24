@@ -7,17 +7,15 @@ import process$1, { memoryUsage } from "node:process";
 import os from "node:os";
 import tty from "node:tty";
 import stringWidth from "string-width";
-import { requireFromJsenv } from "@jsenv/core/src/helpers/require_from_jsenv.js";
-import { pingServer } from "@jsenv/core/src/helpers/ping_server.js";
-import { basicFetch } from "@jsenv/core/src/helpers/basic_fetch.js";
+import { createRequire } from "node:module";
+import { createServer } from "node:net";
 import v8, { takeCoverage } from "node:v8";
 import stripAnsi from "strip-ansi";
 import { applyBabelPlugins } from "@jsenv/ast";
 import { createId } from "@paralleldrive/cuid2";
 import { runInNewContext } from "node:vm";
 import wrapAnsi from "wrap-ansi";
-import { WEB_URL_CONVERTER } from "@jsenv/core/src/helpers/web_url_converter.js";
-import { injectSupervisorIntoHTML, supervisorFileUrl } from "@jsenv/core/src/plugins/supervisor/html_supervisor_injection.js";
+import { injectSupervisorIntoHTML, supervisorFileUrl } from "@jsenv/plugin-supervisor/src/html_supervisor_injection.js";
 import { SOURCEMAP, generateSourcemapDataUrl } from "@jsenv/sourcemap";
 import { fork } from "node:child_process";
 import { findFreePort } from "@jsenv/server";
@@ -216,6 +214,24 @@ const pathnameToParentPathname = pathname => {
     return "/";
   }
   return pathname.slice(0, slashLastIndex + 1);
+};
+
+const moveUrl = ({
+  url,
+  from,
+  to,
+  preferRelative
+}) => {
+  let relativeUrl = urlToRelativeUrl(url, from);
+  if (relativeUrl.slice(0, 2) === "//") {
+    // restore the protocol
+    relativeUrl = new URL(relativeUrl, url).href;
+  }
+  const absoluteUrl = new URL(relativeUrl, to).href;
+  if (preferRelative) {
+    return urlToRelativeUrl(absoluteUrl, to);
+  }
+  return absoluteUrl;
 };
 
 const urlIsInsideOf = (url, otherUrl) => {
@@ -458,7 +474,7 @@ const getPermissionOrComputeDefault = (action, subject, permissions) => {
  *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
  */
 
-const isWindows$1 = process.platform === "win32";
+const isWindows$2 = process.platform === "win32";
 const readEntryStat = async (source, {
   nullIfNotFound = false,
   followLink = true
@@ -472,7 +488,7 @@ const readEntryStat = async (source, {
   return readStat(sourcePath, {
     followLink,
     ...handleNotFoundOption,
-    ...(isWindows$1 ? {
+    ...(isWindows$2 ? {
       // Windows can EPERM on stat
       handlePermissionDeniedError: async error => {
         console.error(`trying to fix windows EPERM after stats on ${sourcePath}`);
@@ -1399,8 +1415,60 @@ const ensureParentDirectories = async destination => {
   });
 };
 
-process.platform === "win32";
-fileSystemPathToUrl(process.cwd());
+const isWindows$1 = process.platform === "win32";
+const baseUrlFallback = fileSystemPathToUrl(process.cwd());
+
+/**
+ * Some url might be resolved or remapped to url without the windows drive letter.
+ * For instance
+ * new URL('/foo.js', 'file:///C:/dir/file.js')
+ * resolves to
+ * 'file:///foo.js'
+ *
+ * But on windows it becomes a problem because we need the drive letter otherwise
+ * url cannot be converted to a filesystem path.
+ *
+ * ensureWindowsDriveLetter ensure a resolved url still contains the drive letter.
+ */
+
+const ensureWindowsDriveLetter = (url, baseUrl) => {
+  try {
+    url = String(new URL(url));
+  } catch (e) {
+    throw new Error(`absolute url expected but got ${url}`);
+  }
+  if (!isWindows$1) {
+    return url;
+  }
+  try {
+    baseUrl = String(new URL(baseUrl));
+  } catch (e) {
+    throw new Error(`absolute baseUrl expected but got ${baseUrl} to ensure windows drive letter on ${url}`);
+  }
+  if (!url.startsWith("file://")) {
+    return url;
+  }
+  const afterProtocol = url.slice("file://".length);
+  // we still have the windows drive letter
+  if (extractDriveLetter(afterProtocol)) {
+    return url;
+  }
+
+  // drive letter was lost, restore it
+  const baseUrlOrFallback = baseUrl.startsWith("file://") ? baseUrl : baseUrlFallback;
+  const driveLetter = extractDriveLetter(baseUrlOrFallback.slice("file://".length));
+  if (!driveLetter) {
+    throw new Error(`drive letter expected on baseUrl but got ${baseUrl} to ensure windows drive letter on ${url}`);
+  }
+  return `file:///${driveLetter}:${afterProtocol}`;
+};
+const extractDriveLetter = resource => {
+  // we still have the windows drive letter
+  if (/[a-zA-Z]/.test(resource[1]) && resource[2] === ":") {
+    return resource[1];
+  }
+  return null;
+};
 
 process.platform === "win32";
 
@@ -2349,10 +2417,12 @@ const generateCoverageJsonFile = async ({
   await writeFile(coverageJsonFileUrl, coverageAsText);
 };
 
+const importWithRequire = createRequire(import.meta.url);
+
 const istanbulCoverageMapFromCoverage = coverage => {
   const {
     createCoverageMap
-  } = requireFromJsenv("istanbul-lib-coverage");
+  } = importWithRequire("istanbul-lib-coverage");
   const coverageAdjusted = {};
   Object.keys(coverage).forEach(key => {
     coverageAdjusted[key.slice(2)] = {
@@ -2370,8 +2440,8 @@ const generateCoverageHtmlDirectory = async (coverage, {
   coverageReportSkipEmpty,
   coverageReportSkipFull
 }) => {
-  const libReport = requireFromJsenv("istanbul-lib-report");
-  const reports = requireFromJsenv("istanbul-reports");
+  const libReport = importWithRequire("istanbul-lib-report");
+  const reports = importWithRequire("istanbul-reports");
   const context = libReport.createContext({
     dir: fileURLToPath(rootDirectoryUrl),
     coverageMap: istanbulCoverageMapFromCoverage(coverage),
@@ -2389,8 +2459,8 @@ const generateCoverageTextLog = (coverage, {
   coverageReportSkipEmpty,
   coverageReportSkipFull
 }) => {
-  const libReport = requireFromJsenv("istanbul-lib-report");
-  const reports = requireFromJsenv("istanbul-reports");
+  const libReport = importWithRequire("istanbul-lib-report");
+  const reports = importWithRequire("istanbul-reports");
   const context = libReport.createContext({
     coverageMap: istanbulCoverageMapFromCoverage(coverage)
   });
@@ -2399,6 +2469,92 @@ const generateCoverageTextLog = (coverage, {
     skipFull: coverageReportSkipFull
   });
   report.execute(context);
+};
+
+const pingServer = async url => {
+  const server = createServer();
+  const {
+    hostname,
+    port
+  } = new URL(url);
+  try {
+    await new Promise((resolve, reject) => {
+      server.on("error", reject);
+      server.on("listening", () => {
+        resolve();
+      });
+      server.listen(port, hostname);
+    });
+  } catch (error) {
+    if (error && error.code === "EADDRINUSE") {
+      return true;
+    }
+    if (error && error.code === "EACCES") {
+      return true;
+    }
+    throw error;
+  }
+  await new Promise((resolve, reject) => {
+    server.on("error", reject);
+    server.on("close", resolve);
+    server.close();
+  });
+  return false;
+};
+
+const basicFetch = async (url, {
+  rejectUnauthorized = true,
+  method = "GET",
+  headers = {}
+} = {}) => {
+  let requestModule;
+  if (url.startsWith("http:")) {
+    requestModule = await import("node:http");
+  } else {
+    requestModule = await import("node:https");
+  }
+  const {
+    request
+  } = requestModule;
+  const urlObject = new URL(url);
+  return new Promise((resolve, reject) => {
+    const req = request({
+      rejectUnauthorized,
+      hostname: urlObject.hostname,
+      port: urlObject.port,
+      path: urlObject.pathname,
+      method,
+      headers
+    });
+    req.on("response", response => {
+      resolve({
+        status: response.statusCode,
+        headers: response.headers,
+        json: () => {
+          req.setTimeout(0);
+          req.destroy();
+          return new Promise(resolve => {
+            if (response.headers["content-type"] !== "application/json") {
+              console.warn("not json");
+            }
+            let responseBody = "";
+            response.setEncoding("utf8");
+            response.on("data", chunk => {
+              responseBody += chunk;
+            });
+            response.on("end", () => {
+              resolve(JSON.parse(responseBody));
+            });
+            response.on("error", e => {
+              reject(e);
+            });
+          });
+        }
+      });
+    });
+    req.on("error", reject);
+    req.end();
+  });
 };
 
 const assertAndNormalizeWebServer = async webServer => {
@@ -2601,7 +2757,7 @@ const composeTwoV8Coverages = (firstV8Coverage, secondV8Coverage) => {
   // eslint-disable-next-line import/no-unresolved
   const {
     mergeProcessCovs
-  } = requireFromJsenv("@c88/v8-coverage");
+  } = importWithRequire("@c88/v8-coverage");
   // "mergeProcessCovs" do not preserves source-map-cache during the merge
   // so we store sourcemap cache now
   const sourceMapCache = {};
@@ -2632,7 +2788,7 @@ const composeTwoFileByFileIstanbulCoverages = (firstFileByFileIstanbulCoverage, 
 const merge = (firstIstanbulCoverage, secondIstanbulCoverage) => {
   const {
     createFileCoverage
-  } = requireFromJsenv("istanbul-lib-coverage");
+  } = importWithRequire("istanbul-lib-coverage");
   const istanbulFileCoverageObject = createFileCoverage(firstIstanbulCoverage);
   istanbulFileCoverageObject.merge(secondIstanbulCoverage);
   const istanbulCoverage = istanbulFileCoverageObject.toJSON();
@@ -2645,7 +2801,7 @@ const v8CoverageToIstanbul = async (v8Coverage, {
   const operation = Abort.startOperation();
   operation.addAbortSignal(signal);
   try {
-    const v8ToIstanbul = requireFromJsenv("v8-to-istanbul");
+    const v8ToIstanbul = importWithRequire("v8-to-istanbul");
     const sourcemapCache = v8Coverage["source-map-cache"];
     let istanbulCoverageComposed = null;
     await v8Coverage.result.reduce(async (previous, fileV8Coverage) => {
@@ -2795,7 +2951,7 @@ const babelPluginInstrument = (api, {
 }) => {
   const {
     programVisitor
-  } = requireFromJsenv("istanbul-lib-instrument");
+  } = importWithRequire("istanbul-lib-instrument");
   const {
     types
   } = api;
@@ -2882,7 +3038,7 @@ const relativeUrlToEmptyCoverage = async (relativeUrl, {
 const createEmptyCoverage = relativeUrl => {
   const {
     createFileCoverage
-  } = requireFromJsenv("istanbul-lib-coverage");
+  } = importWithRequire("istanbul-lib-coverage");
   return createFileCoverage(relativeUrl).toJSON();
 };
 
@@ -4288,6 +4444,35 @@ const memoize = compute => {
   return fnWithMemoization;
 };
 
+const WEB_URL_CONVERTER = {
+  asWebUrl: (fileUrl, webServer) => {
+    if (urlIsInsideOf(fileUrl, webServer.rootDirectoryUrl)) {
+      return moveUrl({
+        url: fileUrl,
+        from: webServer.rootDirectoryUrl,
+        to: `${webServer.origin}/`
+      });
+    }
+    const fsRootUrl = ensureWindowsDriveLetter("file:///", fileUrl);
+    return `${webServer.origin}/@fs/${fileUrl.slice(fsRootUrl.length)}`;
+  },
+  asFileUrl: (webUrl, webServer) => {
+    const {
+      pathname,
+      search
+    } = new URL(webUrl);
+    if (pathname.startsWith("/@fs/")) {
+      const fsRootRelativeUrl = pathname.slice("/@fs/".length);
+      return `file:///${fsRootRelativeUrl}${search}`;
+    }
+    return moveUrl({
+      url: webUrl,
+      from: `${webServer.origin}/`,
+      to: webServer.rootDirectoryUrl
+    });
+  }
+};
+
 const initJsSupervisorMiddleware = async (page, {
   webServer,
   fileUrl,
@@ -5258,7 +5443,7 @@ const killProcessTree = async (processId, {
   signal,
   timeout = 2000
 }) => {
-  const pidtree = requireFromJsenv("pidtree");
+  const pidtree = importWithRequire("pidtree");
   let descendantProcessIds;
   try {
     descendantProcessIds = await pidtree(processId);

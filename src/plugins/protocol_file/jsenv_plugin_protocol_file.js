@@ -30,6 +30,23 @@ export const jsenvPluginProtocolFile = ({
         if (reference.isInline) {
           return null;
         }
+        // ignore root file url
+        if (reference.url === "file:///" || reference.url === "file://") {
+          reference.leadsToADirectory = true;
+          return `ignore:file:///`;
+        }
+        // ignore "./" on new URL("./")
+        if (
+          reference.subtype === "new_url_first_arg" &&
+          reference.specifier === "./"
+        ) {
+          return `ignore:${reference.url}`;
+        }
+        // ignore all new URL second arg
+        if (reference.subtype === "new_url_second_arg") {
+          return `ignore:${reference.url}`;
+        }
+
         const urlObject = new URL(reference.url);
         let stat;
         try {
@@ -41,11 +58,13 @@ export const jsenvPluginProtocolFile = ({
             throw e;
           }
         }
+
         const { search, hash } = urlObject;
         let { pathname } = urlObject;
         const pathnameUsesTrailingSlash = pathname.endsWith("/");
         urlObject.search = "";
         urlObject.hash = "";
+
         // force trailing slash on directories
         if (stat && stat.isDirectory() && !pathnameUsesTrailingSlash) {
           urlObject.pathname = `${pathname}/`;
@@ -57,46 +76,32 @@ export const jsenvPluginProtocolFile = ({
         }
 
         let url = urlObject.href;
-        const mustIgnore =
-          stat &&
-          stat.isDirectory() &&
-          // ignore new URL second arg
-          (reference.subtype === "new_url_second_arg" ||
-            // ignore root file url
-            reference.url === "file:///" ||
-            (reference.subtype === "new_url_first_arg" &&
-              reference.specifier === "./"));
-
-        if (mustIgnore) {
-          reference.mustIgnore = true;
-        } else {
-          const shouldApplyDilesystemMagicResolution =
-            reference.type === "js_import";
-          if (shouldApplyDilesystemMagicResolution) {
-            const filesystemResolution = applyFileSystemMagicResolution(url, {
-              fileStat: stat,
-              magicDirectoryIndex,
-              magicExtensions: getExtensionsToTry(
-                magicExtensions,
-                reference.parentUrl,
-              ),
-            });
-            if (filesystemResolution.stat) {
-              stat = filesystemResolution.stat;
-              url = filesystemResolution.url;
-            }
+        const shouldApplyDilesystemMagicResolution =
+          reference.type === "js_import";
+        if (shouldApplyDilesystemMagicResolution) {
+          const filesystemResolution = applyFileSystemMagicResolution(url, {
+            fileStat: stat,
+            magicDirectoryIndex,
+            magicExtensions: getExtensionsToTry(
+              magicExtensions,
+              reference.parentUrl,
+            ),
+          });
+          if (filesystemResolution.stat) {
+            stat = filesystemResolution.stat;
+            url = filesystemResolution.url;
           }
-          if (stat && stat.isDirectory()) {
-            const directoryAllowed =
-              reference.type === "filesystem" ||
-              (typeof directoryReferenceAllowed === "function" &&
-                directoryReferenceAllowed(reference)) ||
-              directoryReferenceAllowed;
-            if (!directoryAllowed) {
-              const error = new Error("Reference leads to a directory");
-              error.code = "DIRECTORY_REFERENCE_NOT_ALLOWED";
-              throw error;
-            }
+        }
+        if (stat && stat.isDirectory()) {
+          const directoryAllowed =
+            reference.type === "filesystem" ||
+            (typeof directoryReferenceAllowed === "function" &&
+              directoryReferenceAllowed(reference)) ||
+            directoryReferenceAllowed;
+          if (!directoryAllowed) {
+            const error = new Error("Reference leads to a directory");
+            error.code = "DIRECTORY_REFERENCE_NOT_ALLOWED";
+            throw error;
           }
         }
         reference.leadsToADirectory = stat && stat.isDirectory();
