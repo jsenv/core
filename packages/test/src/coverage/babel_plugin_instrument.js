@@ -1,9 +1,9 @@
-import { requireFromJsenv } from "@jsenv/core/src/helpers/require_from_jsenv.js";
+import { importWithRequire } from "../helpers/import_with_require.js";
 
 // https://github.com/istanbuljs/babel-plugin-istanbul/blob/321740f7b25d803f881466ea819d870f7ed6a254/src/index.js
 
 export const babelPluginInstrument = (api, { useInlineSourceMaps = false }) => {
-  const { programVisitor } = requireFromJsenv("istanbul-lib-instrument");
+  const { programVisitor } = importWithRequire("istanbul-lib-instrument");
   const { types } = api;
 
   return {

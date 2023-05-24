@@ -8,8 +8,8 @@ import {
 } from "@jsenv/abort";
 import { urlIsInsideOf } from "@jsenv/urls";
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
-import { WEB_URL_CONVERTER } from "@jsenv/core/src/helpers/web_url_converter.js";
 
+import { WEB_URL_CONVERTER } from "../helpers/web_url_converter.js";
 import { filterV8Coverage } from "../coverage/v8_coverage.js";
 import { composeTwoFileByFileIstanbulCoverages } from "../coverage/istanbul_coverage_composition.js";
 import { initJsSupervisorMiddleware } from "./middleware_js_supervisor.js";

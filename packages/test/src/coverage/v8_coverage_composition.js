@@ -1,12 +1,11 @@
-import { requireFromJsenv } from "@jsenv/core/src/helpers/require_from_jsenv.js";
-
+import { importWithRequire } from "../helpers/import_with_require.js";
 export const composeTwoV8Coverages = (firstV8Coverage, secondV8Coverage) => {
   if (secondV8Coverage.result.length === 0) {
     return firstV8Coverage;
   }
 
   // eslint-disable-next-line import/no-unresolved
-  const { mergeProcessCovs } = requireFromJsenv("@c88/v8-coverage");
+  const { mergeProcessCovs } = importWithRequire("@c88/v8-coverage");
   // "mergeProcessCovs" do not preserves source-map-cache during the merge
   // so we store sourcemap cache now
   const sourceMapCache = {};

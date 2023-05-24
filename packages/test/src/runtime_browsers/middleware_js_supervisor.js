@@ -3,7 +3,7 @@ import { urlToExtension } from "@jsenv/urls";
 import {
   injectSupervisorIntoHTML,
   supervisorFileUrl,
-} from "@jsenv/core/src/plugins/supervisor/html_supervisor_injection.js";
+} from "@jsenv/plugin-supervisor/src/html_supervisor_injection.js";
 
 export const initJsSupervisorMiddleware = async (
   page,

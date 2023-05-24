@@ -1,3 +1,5 @@
+import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
+
 import { jsenvPluginReferenceAnalysis } from "./reference_analysis/jsenv_plugin_reference_analysis.js";
 import { jsenvPluginImportmap } from "./importmap/jsenv_plugin_importmap.js";
 import { jsenvPluginNodeEsmResolution } from "./resolution_node_esm/jsenv_plugin_node_esm_resolution.js";
@@ -6,7 +8,6 @@ import { jsenvPluginVersionSearchParam } from "./version_search_param/jsenv_plug
 import { jsenvPluginProtocolFile } from "./protocol_file/jsenv_plugin_protocol_file.js";
 import { jsenvPluginProtocolHttp } from "./protocol_http/jsenv_plugin_protocol_http.js";
 import { jsenvPluginInlining } from "./inlining/jsenv_plugin_inlining.js";
-import { jsenvPluginSupervisor } from "./supervisor/jsenv_plugin_supervisor.js";
 import { jsenvPluginCommonJsGlobals } from "./commonjs_globals/jsenv_plugin_commonjs_globals.js";
 import { jsenvPluginImportMetaScenarios } from "./import_meta_scenarios/jsenv_plugin_import_meta_scenarios.js";
 import { jsenvPluginGlobalScenarios } from "./global_scenarios/jsenv_plugin_global_scenarios.js";

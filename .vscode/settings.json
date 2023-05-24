@@ -2,7 +2,6 @@
   "search.exclude": {
     "**/.jsenv/**": true,
     "**/dist/**": true,
-    "**/helpers/**": true,
     "**/experiments/**": true,
     "package-lock.json": true
   },

@@ -1,7 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { readFileSync } from "node:fs";
 
-import { requireFromJsenv } from "@jsenv/core/src/helpers/require_from_jsenv.js";
+import { importWithRequire } from "../helpers/import_with_require.js";
 import { istanbulCoverageMapFromCoverage } from "./istanbul_coverage_map_from_coverage.js";
 
 export const generateCoverageHtmlDirectory = async (
@@ -13,8 +13,8 @@ export const generateCoverageHtmlDirectory = async (
     coverageReportSkipFull,
   },
 ) => {
-  const libReport = requireFromJsenv("istanbul-lib-report");
-  const reports = requireFromJsenv("istanbul-reports");
+  const libReport = importWithRequire("istanbul-lib-report");
+  const reports = importWithRequire("istanbul-reports");
 
   const context = libReport.createContext({
     dir: fileURLToPath(rootDirectoryUrl),
