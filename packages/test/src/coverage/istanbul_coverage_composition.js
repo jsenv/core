@@ -1,4 +1,5 @@
 import { importWithRequire } from "../helpers/import_with_require.js";
+
 export const composeTwoFileByFileIstanbulCoverages = (
   firstFileByFileIstanbulCoverage,
   secondFileByFileIstanbulCoverage,

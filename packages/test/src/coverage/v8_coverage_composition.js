@@ -1,4 +1,5 @@
 import { importWithRequire } from "../helpers/import_with_require.js";
+
 export const composeTwoV8Coverages = (firstV8Coverage, secondV8Coverage) => {
   if (secondV8Coverage.result.length === 0) {
     return firstV8Coverage;
