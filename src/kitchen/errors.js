@@ -1,3 +1,4 @@
+import { pathToFileURL } from "node:url";
 import { createDetailedMessage } from "@jsenv/log";
 import { stringifyUrlSite } from "@jsenv/urls";
 
@@ -95,10 +96,16 @@ export const createFetchUrlContentError = ({
     });
   }
   if (error.code === "ENOENT") {
-    return createFailedToFetchUrlContentError({
-      code: "NOT_FOUND",
-      reason: "no entry on filesystem",
-    });
+    const urlTried = pathToFileURL(error.path).href;
+    // ensure ENOENT is caused by trying to read the urlInfo.url
+    // any ENOENT trying to read an other file should display the error.stack
+    // because it means some side logic has failed
+    if (urlInfo.url.startsWith(urlTried)) {
+      return createFailedToFetchUrlContentError({
+        code: "NOT_FOUND",
+        reason: "no entry on filesystem",
+      });
+    }
   }
   if (error.code === "PARSE_ERROR") {
     return createFailedToFetchUrlContentError({

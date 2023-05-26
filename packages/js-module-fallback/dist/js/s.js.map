@@ -1,15 +1,15 @@
 {
   "version": 3,
   "sources": [
-    "../../packages/babel-plugins/src/babel_helpers/arrayWithHoles/arrayWithHoles.js",
-    "../../packages/babel-plugins/src/babel_helpers/iterableToArrayLimit/iterableToArrayLimit.js",
-    "../../src/plugins/transpilation/js_module_fallback/client/s.js",
-    "../../packages/babel-plugins/src/babel_helpers/arrayLikeToArray/arrayLikeToArray.js",
-    "../../packages/babel-plugins/src/babel_helpers/unsupportedIterableToArray/unsupportedIterableToArray.js",
-    "../../packages/babel-plugins/src/babel_helpers/nonIterableRest/nonIterableRest.js",
-    "../../packages/babel-plugins/src/babel_helpers/slicedToArray/slicedToArray.js",
-    "../../packages/babel-plugins/src/babel_helpers/typeof/typeof.js",
-    "../../src/plugins/transpilation/js_module_fallback/client/s.js?as_js_classic"
+    "../../../babel-plugins/src/babel_helpers/arrayWithHoles/arrayWithHoles.js",
+    "../../../babel-plugins/src/babel_helpers/iterableToArrayLimit/iterableToArrayLimit.js",
+    "../../src/client/s.js",
+    "../../../babel-plugins/src/babel_helpers/arrayLikeToArray/arrayLikeToArray.js",
+    "../../../babel-plugins/src/babel_helpers/unsupportedIterableToArray/unsupportedIterableToArray.js",
+    "../../../babel-plugins/src/babel_helpers/nonIterableRest/nonIterableRest.js",
+    "../../../babel-plugins/src/babel_helpers/slicedToArray/slicedToArray.js",
+    "../../../babel-plugins/src/babel_helpers/typeof/typeof.js",
+    "../../src/client/s.js?as_js_classic"
   ],
   "names": [
     "arr",

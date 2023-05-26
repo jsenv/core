@@ -1,4 +1,4 @@
-import babelParser from "@babel/parser";
+import { parseExpression } from "@babel/parser";
 
 export const babelPluginTransformImportMetaUrl = (babel) => {
   return {
@@ -41,7 +41,6 @@ export const babelPluginTransformImportMetaUrl = (babel) => {
 };
 
 const generateExpressionAst = (expression, options) => {
-  const { parseExpression } = babelParser;
   const ast = parseExpression(expression, options);
   return ast;
 };

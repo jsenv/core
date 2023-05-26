@@ -1,3 +1,7 @@
+# 36.1.2
+
+- Introduce `@jsenv/js-module-fallback` to remove direct dependency between `@jsenv/core` and `@jsenv/plugin-as-js-classic`
+
 # 36.1.1
 
 - Better error traces when error happens in sourceMainFilePath

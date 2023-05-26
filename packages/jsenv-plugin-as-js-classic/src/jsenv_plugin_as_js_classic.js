@@ -1,8 +1,8 @@
 import { urlToFilename } from "@jsenv/urls";
+import { convertJsModuleToJsClassic } from "@jsenv/js-module-fallback";
 import { bundleJsModules } from "@jsenv/plugin-bundling";
 
-import { createUrlGraphLoader } from "@jsenv/core/src/kitchen/url_graph/url_graph_loader.js";
-import { convertJsModuleToJsClassic } from "@jsenv/core/src/plugins/transpilation/js_module_fallback/convert_js_module_to_js_classic.js";
+import { createUrlGraphLoader } from "./url_graph_loader.js";
 
 export const jsenvPluginAsJsClassic = ({
   systemJsInjection = true,

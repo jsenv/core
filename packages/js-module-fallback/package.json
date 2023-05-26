@@ -1,0 +1,40 @@
+{
+  "name": "@jsenv/js-module-fallback",
+  "version": "1.0.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/js-module-fallback"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": {
+        "development": "./src/main.js",
+        "default": "./dist/jsenv_js_module_fallback.js"
+      }
+    },
+    "./*": "./*"
+  },
+  "main": "./src/main.js",
+  "files": [
+    "/src/"
+  ],
+  "dependencies": {
+    "@babel/parser": "7.21.9",
+    "@babel/plugin-proposal-dynamic-import": "7.18.6",
+    "@babel/plugin-transform-modules-umd": "7.18.6",
+    "@babel/plugin-transform-modules-systemjs": "7.20.11",
+    "@jsenv/ast": "4.0.0",
+    "@jsenv/babel-plugins": "1.1.6",
+    "@jsenv/sourcemap": "1.0.10",
+    "@jsenv/urls": "2.0.0"
+  },
+  "scripts": {
+    "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html"
+  }
+}

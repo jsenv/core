@@ -407,7 +407,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         }),
         jsenvPluginInlining(),
         {
-          name: "jsenv:build",
+          name: "jsenv:build_shape",
           appliesDuring: "build",
           resolveReference: (reference) => {
             const getUrl = () => {

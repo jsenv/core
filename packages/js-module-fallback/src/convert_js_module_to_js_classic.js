@@ -1,5 +1,6 @@
+import { createRequire } from "node:module";
+import { readFileSync } from "node:fs";
 import { urlToRelativeUrl } from "@jsenv/urls";
-import { readFileSync } from "@jsenv/filesystem";
 import {
   createMagicSource,
   composeTwoSourcemaps,
@@ -7,13 +8,13 @@ import {
 } from "@jsenv/sourcemap";
 import { applyBabelPlugins } from "@jsenv/ast";
 
-import { requireFromJsenv } from "@jsenv/core/src/helpers/require_from_jsenv.js";
-import { requireBabelPlugin } from "../babel/require_babel_plugin.js";
-import { babelPluginTransformImportMetaUrl } from "./helpers/babel_plugin_transform_import_meta_url.js";
-import { babelPluginTransformImportMetaResolve } from "./helpers/babel_plugin_transform_import_meta_resolve.js";
-
+import { requireBabelPlugin } from "./internal/require_babel_plugin.js";
+import { babelPluginTransformImportMetaUrl } from "./internal/babel_plugin_transform_import_meta_url.js";
+import { babelPluginTransformImportMetaResolve } from "./internal/babel_plugin_transform_import_meta_resolve.js";
 // because of https://github.com/rpetrich/babel-plugin-transform-async-to-promises/issues/84
-import customAsyncToPromises from "./async-to-promises.js";
+import customAsyncToPromises from "./internal/async-to-promises.js";
+
+const require = createRequire(import.meta.url);
 
 export const systemJsClientFileUrlDefault = new URL(
   "./client/s.js",
@@ -45,8 +46,8 @@ export const convertJsModuleToJsClassic = async ({
         ? [
             // proposal-dynamic-import required with systemjs for babel8:
             // https://github.com/babel/babel/issues/10746
-            requireFromJsenv("@babel/plugin-proposal-dynamic-import"),
-            requireFromJsenv("@babel/plugin-transform-modules-systemjs"),
+            require("@babel/plugin-proposal-dynamic-import"),
+            require("@babel/plugin-transform-modules-systemjs"),
             [babelPluginRelativeImports, { rootUrl: jsModuleUrlInfo.url }],
             [
               customAsyncToPromises,
@@ -66,7 +67,7 @@ export const convertJsModuleToJsClassic = async ({
             ],
             babelPluginTransformImportMetaUrl,
             babelPluginTransformImportMetaResolve,
-            requireFromJsenv("@babel/plugin-transform-modules-umd"),
+            require("@babel/plugin-transform-modules-umd"),
             [babelPluginRelativeImports, { rootUrl: jsModuleUrlInfo.url }],
           ]),
     ],
@@ -80,9 +81,10 @@ export const convertJsModuleToJsClassic = async ({
     urlInfo.isEntryPoint
   ) {
     const magicSource = createMagicSource(code);
-    let systemJsFileContent = readFileSync(systemJsClientFileUrl, {
-      as: "string",
-    });
+    let systemJsFileContent = readFileSync(
+      new URL(systemJsClientFileUrl),
+      "utf8",
+    );
     const sourcemapFound = SOURCEMAP.readComment({
       contentType: "text/javascript",
       content: systemJsFileContent,

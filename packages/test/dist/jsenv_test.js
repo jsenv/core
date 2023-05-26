@@ -2577,7 +2577,7 @@ const assertAndNormalizeWebServer = async webServer => {
       await import(webServer.moduleUrl);
       delete process.env.IMPORTED_BY_TEST_PLAN;
     } catch (e) {
-      if (e.code === "ERR_MODULE_NOT_FOUND") {
+      if (e.code === "ERR_MODULE_NOT_FOUND" && e.message.includes(fileURLToPath(webServer.moduleUrl))) {
         throw new Error(`webServer.moduleUrl does not lead to a file at "${webServer.moduleUrl}"`);
       }
       throw e;

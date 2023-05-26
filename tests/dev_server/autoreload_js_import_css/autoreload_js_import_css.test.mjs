@@ -133,6 +133,7 @@ const test = async ({
 if (import.meta.hot) {
   import.meta.hot.accept()
 }`);
+    // wait for partial reload effect to be done
     await new Promise((resolve) => setTimeout(resolve, 1_000));
     {
       const actual = {

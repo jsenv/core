@@ -1,4 +1,5 @@
-import { createRequire} from 'node:module'
+import { createRequire} from 'node:module';
+
 import helpers_string_1 from "./helpers-string.js";
 
 const require = createRequire(import.meta.url);

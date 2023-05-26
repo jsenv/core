@@ -1,5 +1,6 @@
 import { urlToFilename } from "@jsenv/urls";
-import { systemJsClientFileUrlDefault } from "./convert_js_module_to_js_classic.js";
+import { systemJsClientFileUrlDefault } from "@jsenv/js-module-fallback";
+
 import { jsenvPluginJsModuleConversion } from "./jsenv_plugin_js_module_conversion.js";
 import { jsenvPluginJsModuleFallbackInsideHtml } from "./jsenv_plugin_js_module_fallback_inside_html.js";
 import { jsenvPluginJsModuleFallbackOnWorkers } from "./jsenv_plugin_js_module_fallback_on_workers.js";

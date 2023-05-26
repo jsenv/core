@@ -439,13 +439,10 @@ const inferParentFromRequest = (
     return null;
   }
   const refererUrlObject = new URL(referer);
-  refererUrlObject.searchParams.delete("hmr");
-  refererUrlObject.searchParams.delete("v");
-
-  let refererUrl = refererUrlObject.href;
-  if (refererUrl === `${request.origin}/`) {
-    refererUrl = new URL(sourceMainFilePath, request.origin).href;
-  }
+  const refererUrl =
+    refererUrlObject.pathname === `/`
+      ? new URL(sourceMainFilePath, request.origin).href
+      : referer;
   return WEB_URL_CONVERTER.asFileUrl(refererUrl, {
     origin: request.origin,
     rootDirectoryUrl: sourceDirectoryUrl,

@@ -1,6 +1,6 @@
 import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
-import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
+
 import { build } from "@jsenv/core";
 
 await build({
@@ -50,26 +50,4 @@ await build({
   ],
   // for debug
   outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-});
-
-// "s.js" is used in the build files, it must be compatible as much as possible
-// so we convert async/await, arrow function, ... to be compatible with
-// old browsers
-await build({
-  sourceDirectoryUrl: new URL("../../src/", import.meta.url),
-  buildDirectoryUrl: new URL("../../dist/js/", import.meta.url),
-  entryPoints: {
-    "./plugins/transpilation/js_module_fallback/client/s.js?as_js_classic":
-      "s.js",
-  },
-  plugins: [jsenvPluginAsJsClassic()],
-  directoryToClean: false,
-  runtimeCompat: {
-    chrome: "0",
-    firefox: "0",
-  },
-  sourcemaps: "file",
-  sourcemapsSourcesContent: true,
-  versioning: false,
-  assetManifest: false,
 });
