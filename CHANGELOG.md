@@ -1,3 +1,7 @@
+# 36.1.1
+
+- Better error traces when error happens in sourceMainFilePath
+
 # 36.1.0
 
 - Introduce `ignore` param to `build` and `startDevServer`
