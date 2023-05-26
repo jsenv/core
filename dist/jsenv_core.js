@@ -22336,7 +22336,7 @@ const createFileService = ({
       return responseFromPlugin;
     }
     let reference;
-    const parentUrl = inferParentFromRequest(request, sourceDirectoryUrl);
+    const parentUrl = inferParentFromRequest(request, sourceDirectoryUrl, sourceMainFilePath);
     if (parentUrl) {
       reference = urlGraph.inferReference(request.resource, parentUrl);
     }
@@ -22494,7 +22494,7 @@ const createFileService = ({
     }
   };
 };
-const inferParentFromRequest = (request, sourceDirectoryUrl) => {
+const inferParentFromRequest = (request, sourceDirectoryUrl, sourceMainFilePath) => {
   const {
     referer
   } = request.headers;
@@ -22504,7 +22504,11 @@ const inferParentFromRequest = (request, sourceDirectoryUrl) => {
   const refererUrlObject = new URL(referer);
   refererUrlObject.searchParams.delete("hmr");
   refererUrlObject.searchParams.delete("v");
-  return WEB_URL_CONVERTER.asFileUrl(referer, {
+  let refererUrl = refererUrlObject.href;
+  if (refererUrl === `${request.origin}/`) {
+    refererUrl = new URL(sourceMainFilePath, request.origin).href;
+  }
+  return WEB_URL_CONVERTER.asFileUrl(refererUrl, {
     origin: request.origin,
     rootDirectoryUrl: sourceDirectoryUrl
   });
