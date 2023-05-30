@@ -30,9 +30,6 @@
   "files": [
     "/src/"
   ],
-  "workspaces": [
-    "./packages/*"
-  ],
   "scripts": {
     "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",
     "test": "node ./scripts/test.mjs",

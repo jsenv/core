@@ -16,8 +16,7 @@
     "node": ">=18.5.0"
   },
   "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org"
+    "access": "public"
   },
   "type": "module",
   "imports": {},
@@ -36,10 +35,41 @@
     "/src/"
   ],
   "workspaces": [
-    "./packages/internal/*",
-    "./packages/internal/create-jsenv/",
-    "./packages/plugins/*",
-    "./packages/rest/*"
+    "./packages/internal/babel-plugins",
+    "./packages/internal/create-jsenv",
+    "./packages/internal/create-jsenv/*",
+    "./packages/internal/js-module-fallback",
+    "./packages/internal/jsenv-plugin-supervisor",
+    "./packages/plugins/jsenv-plugin-as-js-classic",
+    "./packages/plugins/jsenv-plugin-bundling",
+    "./packages/plugins/jsenv-plugin-commonjs",
+    "./packages/plugins/jsenv-plugin-explorer",
+    "./packages/plugins/jsenv-plugin-globals",
+    "./packages/plugins/jsenv-plugin-minification",
+    "./packages/plugins/jsenv-plugin-placeholders",
+    "./packages/plugins/jsenv-plugin-preact",
+    "./packages/plugins/jsenv-plugin-react",
+    "./packages/plugins/jsenv-plugin-toolbar",
+    "./packages/rest/abort",
+    "./packages/rest/assert",
+    "./packages/rest/ast",
+    "./packages/rest/eslint-config",
+    "./packages/rest/eslint-import-resolver",
+    "./packages/rest/fetch",
+    "./packages/rest/filesystem",
+    "./packages/rest/inspect",
+    "./packages/rest/integrity",
+    "./packages/rest/log",
+    "./packages/rest/node-esm-resolution",
+    "./packages/rest/pwa",
+    "./packages/rest/server",
+    "./packages/rest/service-worker",
+    "./packages/rest/sigi",
+    "./packages/rest/sourcemap",
+    "./packages/rest/test",
+    "./packages/rest/url-meta",
+    "./packages/rest/urls",
+    "./packages/rest/utils"
   ],
   "scripts": {
     "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",
@@ -84,6 +114,7 @@
     "@jsenv/assert": "./packages/rest/assert/",
     "@jsenv/eslint-config": "./packages/rest/eslint-config/",
     "@jsenv/file-size-impact": "14.1.1",
+    "@jsenv/core": "./",
     "@jsenv/https-local": "3.0.6",
     "@jsenv/package-workspace": "0.5.2",
     "@jsenv/performance-impact": "4.1.1",
@@ -96,6 +127,7 @@
     "eslint-plugin-html": "7.1.0",
     "eslint-plugin-import": "2.27.5",
     "eslint-plugin-react": "7.32.2",
+    "open": "9.1.0",
     "playwright": "1.34.2",
     "prettier": "2.8.8"
   }

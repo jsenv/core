@@ -35,6 +35,5 @@
   },
   "dependencies": {
     "@preact/signals": "1.1.3"
-  },
-  "devDependencies": {}
+  }
 }
