@@ -1,12 +1,12 @@
 {
   "name": "create-jsenv",
-  "version": "1.7.34",
+  "version": "1.7.36",
   "description": "npm initializer for jsenv",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
-    "directory": "packages/internal/create-jsenv"
+    "directory": "packages/rest/create-jsenv"
   },
   "publishConfig": {
     "access": "public"
