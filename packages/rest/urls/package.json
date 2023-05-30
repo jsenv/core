@@ -1,0 +1,32 @@
+{
+  "name": "@jsenv/urls",
+  "version": "2.0.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/rest/urls"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "author": {
+    "name": "dmail",
+    "email": "dmaillard06@gmail.com",
+    "url": "https://twitter.com/damienmaillard"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/main.js"
+    },
+    "./*": "./*"
+  },
+  "files": [
+    "/src/"
+  ],
+  "scripts": {
+    "test": "node --conditions=development ./scripts/test.mjs"
+  },
+  "dependencies": {}
+}
