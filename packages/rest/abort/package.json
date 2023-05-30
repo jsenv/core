@@ -31,9 +31,5 @@
   ],
   "scripts": {
     "test": "node --conditions=development ./scripts/test.mjs"
-  },
-  "dependencies": {},
-  "devDependencies": {
-    "@jsenv/core": "../../"
   }
 }

@@ -35,8 +35,5 @@
   },
   "peerDependencies": {
     "@jsenv/core": "*"
-  },
-  "devDependencies": {
-    "@jsenv/core": "../../"
   }
 }

@@ -38,7 +38,6 @@
     "@jsenv/core": "*"
   },
   "devDependencies": {
-    "@jsenv/core": "../../",
     "preact": "10.15.0",
     "react-redux": "8.0.5",
     "redux": "4.2.1"
