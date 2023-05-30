@@ -50,7 +50,7 @@ l$2.__b = function (n) {
   var i = (r$1 = n.__c).__H;
   i && (u$1 === r$1 ? (i.__h = [], r$1.__h = [], i.__.forEach(function (n) {
     n.__N && (n.__ = n.__N), n.__V = c$2, n.__N = n.i = void 0;
-  })) : (i.__h.forEach(k), i.__h.forEach(w$1), i.__h = [])), u$1 = r$1;
+  })) : (i.__h.forEach(k), i.__h.forEach(w$1), i.__h = [], t$1 = 0)), u$1 = r$1;
 }, l$2.diffed = function (t) {
   v$1 && v$1(t);
   var o = t.__c;
