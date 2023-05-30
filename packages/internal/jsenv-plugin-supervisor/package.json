@@ -1,0 +1,38 @@
+{
+  "name": "@jsenv/plugin-supervisor",
+  "version": "1.0.1",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/internal/jsenv-plugin-supervisor"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": {
+        "development": "./src/jsenv_plugin_supervisor.js",
+        "default": "./dist/jsenv_plugin_supervisor.js"
+      }
+    },
+    "./*": "./*"
+  },
+  "main": "./src/main.js",
+  "files": [
+    "/src/"
+  ],
+  "dependencies": {
+    "@jsenv/ast": "4.0.2",
+    "@jsenv/urls": "2.0.0",
+    "@jsenv/sourcemap": "1.0.10",
+    "launch-editor": "2.6.0"
+  },
+  "scripts": {
+    "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",
+    "build": "node ./scripts/build.mjs",
+    "prepublishOnly": "npm run build"
+  }
+}

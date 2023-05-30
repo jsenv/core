@@ -102,7 +102,7 @@ const eslintConfig = composeEslintConfig(
           "**/browser/**/*.js",
           "**/babel_helpers/**/*.js",
           "test/dev_server/**/*.js",
-          "./packages/pwa/**/*.js",
+          "./packages/rest/pwa/**/*.js",
           "**/jsenv_service_worker.js",
         ],
         env: {
@@ -126,7 +126,7 @@ const eslintConfig = composeEslintConfig(
   {
     overrides: [
       {
-        files: ["./packages/assert/**/*.js"],
+        files: ["./packages/rest/assert/**/*.js"],
         env: {
           browser: true,
           node: true,

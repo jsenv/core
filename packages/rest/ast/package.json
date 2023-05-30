@@ -1,0 +1,44 @@
+{
+  "name": "@jsenv/ast",
+  "version": "4.0.2",
+  "description": "Parse and transform HTML,CSS and JS",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/rest/ast"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "author": {
+    "name": "dmail",
+    "email": "dmaillard06@gmail.com",
+    "url": "https://twitter.com/damienmaillard"
+  },
+  "engines": {
+    "node": ">=16.14.0"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/main.js"
+    },
+    "./*": "./*"
+  },
+  "files": [
+    "/src/"
+  ],
+  "scripts": {
+    "test": "node --conditions=development ./scripts/test.mjs"
+  },
+  "dependencies": {
+    "@babel/parser": "7.21.8",
+    "acorn": "8.8.2",
+    "acorn-import-assertions": "1.9.0",
+    "acorn-walk": "8.2.0",
+    "parse5": "7.1.2",
+    "postcss": "8.4.23",
+    "postcss-value-parser": "4.2.0"
+  }
+}
