@@ -1,6 +1,9 @@
-import { requireBabelPlugin } from "../require_babel_plugin.js";
+import { createRequire } from "node:module";
+
 import { getBabelHelperFileUrl } from "./babel_helper_directory/babel_helper_directory.js";
 import { babelPluginCompatMap } from "./babel_plugins_compatibility.js";
+
+const requireBabelPlugin = createRequire(import.meta.url);
 
 export const getBaseBabelPluginStructure = ({
   url,

@@ -7,7 +7,6 @@ import {
   SOURCEMAP,
 } from "@jsenv/sourcemap";
 import { applyBabelPlugins } from "@jsenv/ast";
-import { requireBabelPlugin } from "@jsenv/js-transpilation";
 
 import { babelPluginTransformImportMetaUrl } from "./internal/babel_plugin_transform_import_meta_url.js";
 import { babelPluginTransformImportMetaResolve } from "./internal/babel_plugin_transform_import_meta_resolve.js";
@@ -51,7 +50,7 @@ export const convertJsModuleToJsClassic = async ({
           ]
         : [
             [
-              requireBabelPlugin("babel-plugin-transform-async-to-promises"),
+              require("babel-plugin-transform-async-to-promises"),
               {
                 asyncAwait: false, // already handled + we might not needs it at all
                 topLevelAwait: "simple",

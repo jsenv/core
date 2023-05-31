@@ -1,6 +1,7 @@
+import { createRequire } from "node:module";
 import { applyBabelPlugins } from "@jsenv/ast";
 
-import { requireBabelPlugin } from "@jsenv/js-transpilation";
+const require = createRequire(import.meta.url);
 
 export const jsenvPluginTopLevelAwait = () => {
   return {
@@ -25,7 +26,7 @@ export const jsenvPluginTopLevelAwait = () => {
         const { code, map } = await applyBabelPlugins({
           babelPlugins: [
             [
-              requireBabelPlugin("babel-plugin-transform-async-to-promises"),
+              require("babel-plugin-transform-async-to-promises"),
               {
                 // Maybe we could pass target: "es6" when we support arrow function
                 // https://github.com/rpetrich/babel-plugin-transform-async-to-promises/blob/92755ff8c943c97596523e586b5fa515c2e99326/async-to-promises.ts#L55
