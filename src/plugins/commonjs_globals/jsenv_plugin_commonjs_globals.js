@@ -42,10 +42,10 @@ export const jsenvPluginCommonJsGlobals = () => {
           },
         ],
       ],
-      source: urlInfo.content,
-      sourceType: urlInfo.type === "js_module" ? "module" : "classic",
-      sourceUrl: urlInfo.originalUrl,
-      generatedUrl: urlInfo.generatedUrl,
+      input: urlInfo.content,
+      inputIsJsModule: urlInfo.type === "js_module",
+      inputUrl: urlInfo.originalUrl,
+      outputUrl: urlInfo.generatedUrl,
     });
     const { expressionPaths } = metadata;
     const keys = Object.keys(expressionPaths);

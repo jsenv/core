@@ -43,10 +43,10 @@ export const jsenvPluginTopLevelAwait = () => {
               },
             ],
           ],
-          source: urlInfo.content,
-          sourceType: "module",
-          sourceUrl: urlInfo.url,
-          generatedUrl: urlInfo.generatedUrl,
+          input: urlInfo.content,
+          inputIsJsModule: true,
+          inputUrl: urlInfo.originalUrl,
+          outputUrl: urlInfo.generatedUrl,
         });
         return {
           content: code,
@@ -63,10 +63,10 @@ const usesTopLevelAwait = async (urlInfo) => {
   }
   const { metadata } = await applyBabelPlugins({
     babelPlugins: [babelPluginMetadataUsesTopLevelAwait],
-    source: urlInfo.content,
-    sourceType: "module",
-    sourceUrl: urlInfo.url,
-    generatedUrl: urlInfo.generatedUrl,
+    input: urlInfo.content,
+    inputIsJsModule: true,
+    inputUrl: urlInfo.originalUrl,
+    outputUrl: urlInfo.generatedUrl,
   });
   return metadata.usesTopLevelAwait;
 };

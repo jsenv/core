@@ -15,10 +15,10 @@ export const convertJsClassicToJsModule = async ({
         },
       ],
     ],
-    source: jsClassicUrlInfo.content,
-    sourceType: "classic",
-    sourceUrl: jsClassicUrlInfo.url,
-    generatedUrl: jsClassicUrlInfo.generatedUrl,
+    input: jsClassicUrlInfo.content,
+    inputIsJsModule: false,
+    inputUrl: jsClassicUrlInfo.url,
+    outputUrl: jsClassicUrlInfo.generatedUrl,
   });
   const sourcemap = await composeTwoSourcemaps(jsClassicUrlInfo.sourcemap, map);
   return {

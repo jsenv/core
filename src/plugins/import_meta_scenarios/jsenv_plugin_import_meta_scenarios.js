@@ -26,10 +26,10 @@ export const jsenvPluginImportMetaScenarios = () => {
         }
         const { metadata } = await applyBabelPlugins({
           babelPlugins: [babelPluginMetadataImportMetaScenarios],
-          source: urlInfo.content,
-          sourceType: "module",
-          sourceUrl: urlInfo.originalUrl,
-          generatedUrl: urlInfo.generatedUrl,
+          input: urlInfo.content,
+          inputIsJsModule: true,
+          inputUrl: urlInfo.originalUrl,
+          outputUrl: urlInfo.generatedUrl,
         });
         const { dev = [], build = [] } = metadata.importMetaScenarios;
         const replacements = [];

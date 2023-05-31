@@ -52,10 +52,10 @@ export const injectSupervisorIntoJs = async ({
       ? babelPluginJsModuleSupervisor
       : babelPluginJsClassicSupervisor;
   const result = await applyBabelPlugins({
-    source: content,
-    sourceType: type === "js_module" ? "module" : "classic",
-    sourceUrl: url,
     babelPlugins: [[babelPluginJsSupervisor, { inlineSrc }]],
+    input: content,
+    inputIsJsModule: type === "js_module",
+    inputUrl: url,
   });
   let code = result.code;
   let map = result.map;
