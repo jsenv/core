@@ -52,7 +52,6 @@ import {
   insertHtmlNodeAfter,
   findHtmlNode,
 } from "@jsenv/ast";
-import { jsenvPluginJsModuleFallback } from "@jsenv/plugin-transpilation";
 import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 
 import { lookupPackageDirectory } from "../helpers/lookup_package_directory.js";
@@ -65,9 +64,10 @@ import {
   isWebWorkerEntryPointReference,
   isWebWorkerUrlInfo,
 } from "../kitchen/web_workers.js";
+import { getCorePlugins } from "../plugins/plugins.js";
+import { jsenvPluginJsModuleFallback } from "../plugins/transpilation/js_module_fallback/jsenv_plugin_js_module_fallback.js";
 import { jsenvPluginReferenceAnalysis } from "../plugins/reference_analysis/jsenv_plugin_reference_analysis.js";
 import { jsenvPluginInlining } from "../plugins/inlining/jsenv_plugin_inlining.js";
-import { getCorePlugins } from "../plugins/plugins.js";
 import { jsenvPluginLineBreakNormalization } from "./jsenv_plugin_line_break_normalization.js";
 
 import { GRAPH } from "./graph_utils.js";
