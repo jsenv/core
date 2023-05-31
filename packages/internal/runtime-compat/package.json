@@ -1,12 +1,12 @@
 {
-  "name": "@jsenv/css-transpilation",
+  "name": "@jsenv/runtime-compat",
   "version": "1.0.0",
   "description": "TODO",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
-    "directory": "packages/internal/css-transpilation"
+    "directory": "packages/internal/runtime-compat"
   },
   "engines": {
     "node": ">=16.13.0"
@@ -20,6 +20,6 @@
     "/src/"
   ],
   "dependencies": {
-    "lightningcss": "1.20.0"
+    "@jsenv/utils": "2.0.1"
   }
 }

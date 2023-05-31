@@ -68,14 +68,15 @@
     "@jsenv/node-esm-resolution": "1.0.1",
     "@jsenv/html-supervisor": "1.0.0",
     "@jsenv/js-module-fallback": "1.0.1",
+    "@jsenv/runtime-compat": "1.0.0",
     "@jsenv/server": "15.0.3",
     "@jsenv/sourcemap": "1.0.10",
-    "@jsenv/transpilation": "1.0.0",
+    "@jsenv/js-transpilation": "1.0.0",
+    "@jsenv/css-transpilation": "1.0.0",
     "@jsenv/url-meta": "8.1.0",
     "@jsenv/urls": "2.0.0",
     "@jsenv/utils": "2.0.1",
-    "construct-style-sheets-polyfill": "3.1.0",
-    "lightningcss": "1.20.0"
+    "construct-style-sheets-polyfill": "3.1.0"
   },
   "devDependencies": {
     "@babel/eslint-parser": "7.21.8",

@@ -3,12 +3,12 @@ import { serveDirectory, composeTwoResponses } from "@jsenv/server";
 import { bufferToEtag } from "@jsenv/filesystem";
 import { asUrlWithoutSearch } from "@jsenv/urls";
 import { URL_META } from "@jsenv/url-meta";
+import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 
 import { WEB_URL_CONVERTER } from "../helpers/web_url_converter.js";
 import { watchSourceFiles } from "../helpers/watch_source_files.js";
 import { createUrlGraph } from "../kitchen/url_graph.js";
 import { createKitchen } from "../kitchen/kitchen.js";
-import { RUNTIME_COMPAT } from "../kitchen/compat/runtime_compat.js";
 import { getCorePlugins } from "../plugins/plugins.js";
 import { jsenvPluginServerEventsClientInjection } from "../plugins/server_events/jsenv_plugin_server_events_client_injection.js";
 import { parseUserAgentHeader } from "./user_agent.js";

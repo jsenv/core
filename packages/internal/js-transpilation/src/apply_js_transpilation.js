@@ -1,4 +1,5 @@
 import { applyBabelPlugins } from "@jsenv/ast";
+import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 
 import { getBaseBabelPluginStructure } from "./internal/babel_plugin_structure.js";
 import { babelPluginBabelHelpersAsJsenvImports } from "./internal/babel_plugin_babel_helpers_as_jsenv_imports.js";
@@ -11,11 +12,14 @@ export const applyJsTranspilation = async ({
   inputIsJsModule = false,
   inputUrl,
   outputUrl,
+  runtimeCompat,
   babelHelpersAsImport = true,
   babelOptions,
-  isSupported,
   getImportSpecifier,
 }) => {
+  const isSupported = (feature) => {
+    return RUNTIME_COMPAT.isSupported(runtimeCompat, feature);
+  };
   const babelPluginStructure = getBaseBabelPluginStructure({
     url: inputUrl,
     isSupported,

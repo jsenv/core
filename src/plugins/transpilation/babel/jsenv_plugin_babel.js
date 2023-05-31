@@ -1,24 +1,19 @@
-import { applysJsTranspilation } from "@jsenv/js-transpilation";
-
-import { RUNTIME_COMPAT } from "../../../kitchen/compat/runtime_compat.js";
+import { applyJsTranspilation } from "@jsenv/js-transpilation";
 
 export const jsenvPluginBabel = ({ babelHelpersAsImport = true } = {}) => {
   const transformWithBabel = async (urlInfo, context) => {
-    return applysJsTranspilation({
+    return applyJsTranspilation({
       input: urlInfo.content,
       inputIsJsModule: urlInfo.type === "js_module",
       inputUrl: urlInfo.originalUrl,
       outputUrl: urlInfo.generatedUrl,
-
       babelHelpersAsImport,
       babelOptions: {
         generatorOpts: {
           retainLines: context.dev,
         },
       },
-      isSupported: (feature) => {
-        return RUNTIME_COMPAT.isSupported(context.clientRuntimeCompat, feature);
-      },
+      runtimeCompat: context.clientRuntimeCompat,
       getImportSpecifier: (clientFileUrl) => {
         const [reference] = context.referenceUtils.inject({
           type: "js_import",
