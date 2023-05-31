@@ -10,8 +10,8 @@
  */
 
 import { urlToFilename } from "@jsenv/urls";
-import { convertJsClassicToJsModule } from "@jsenv/js-transpilation";
 
+import { convertJsClassicToJsModule } from "./convert_js_classic_to_js_module.js";
 import { isWebWorkerUrlInfo } from "../../../kitchen/web_workers.js";
 
 export const jsenvPluginAsJsModule = () => {

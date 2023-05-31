@@ -24,31 +24,23 @@ export const systemJsClientFileUrlDefault = new URL(
 export const convertJsModuleToJsClassic = async ({
   systemJsInjection,
   systemJsClientFileUrl = systemJsClientFileUrlDefault,
-  urlInfo,
-  jsModuleUrlInfo,
-}) => {
-  let jsClassicFormat;
-  if (urlInfo.isEntryPoint && !jsModuleUrlInfo.data.usesImport) {
-    // if it's an entry point without dependency (it does not use import)
-    // then we can use UMD
-    jsClassicFormat = "umd";
-  } else {
-    // otherwise we have to use system in case it's imported
-    // by an other file (for entry points)
-    // or to be able to import when it uses import
-    jsClassicFormat = "system";
-  }
 
-  urlInfo.data.jsClassicFormat = jsClassicFormat;
+  input,
+  inputIsEntryPoint,
+  inputSourcemap,
+  inputUrl,
+  outputUrl,
+  outputFormat = "system", // "systemjs" or "umd"
+}) => {
   const { code, map } = await applyBabelPlugins({
     babelPlugins: [
-      ...(jsClassicFormat === "system"
+      ...(outputFormat === "system"
         ? [
             // proposal-dynamic-import required with systemjs for babel8:
             // https://github.com/babel/babel/issues/10746
             require("@babel/plugin-proposal-dynamic-import"),
             require("@babel/plugin-transform-modules-systemjs"),
-            [babelPluginRelativeImports, { rootUrl: jsModuleUrlInfo.url }],
+            [babelPluginRelativeImports, { rootUrl: inputUrl }],
             [
               customAsyncToPromises,
               {
@@ -68,21 +60,17 @@ export const convertJsModuleToJsClassic = async ({
             babelPluginTransformImportMetaUrl,
             babelPluginTransformImportMetaResolve,
             require("@babel/plugin-transform-modules-umd"),
-            [babelPluginRelativeImports, { rootUrl: jsModuleUrlInfo.url }],
+            [babelPluginRelativeImports, { rootUrl: inputUrl }],
           ]),
     ],
-    input: jsModuleUrlInfo.content,
+    input,
     inputIsJsModule: true,
-    inputUrl: jsModuleUrlInfo.url,
-    outputUrl: jsModuleUrlInfo.generatedUrl,
+    inputUrl,
+    outputUrl,
   });
-  let sourcemap = jsModuleUrlInfo.sourcemap;
+  let sourcemap = inputSourcemap;
   sourcemap = await composeTwoSourcemaps(sourcemap, map);
-  if (
-    systemJsInjection &&
-    jsClassicFormat === "system" &&
-    urlInfo.isEntryPoint
-  ) {
+  if (systemJsInjection && outputFormat === "system" && inputIsEntryPoint) {
     const magicSource = createMagicSource(code);
     let systemJsFileContent = readFileSync(
       new URL(systemJsClientFileUrl),

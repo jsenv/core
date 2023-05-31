@@ -1,4 +1,4 @@
-import { applCssTranspilation } from "@jsenv/css-transpilation";
+import { applyCssTranspilation } from "@jsenv/css-transpilation";
 
 export const jsenvPluginCssTranspilation = () => {
   return {

@@ -98,12 +98,29 @@ export const jsenvPluginJsModuleConversion = ({
       } else if (context.build && jsModuleUrlInfo.dependents.size === 0) {
         context.urlGraph.deleteUrlInfo(jsModuleUrlInfo.url);
       }
+
+      let outputFormat;
+      if (urlInfo.isEntryPoint && !jsModuleUrlInfo.data.usesImport) {
+        // if it's an entry point without dependency (it does not use import)
+        // then we can use UMD
+        outputFormat = "umd";
+      } else {
+        // otherwise we have to use system in case it's imported
+        // by an other file (for entry points)
+        // or to be able to import when it uses import
+        outputFormat = "system";
+      }
+      urlInfo.data.jsClassicFormat = outputFormat;
       const { content, sourcemap } = await convertJsModuleToJsClassic({
         rootDirectoryUrl: context.rootDirectoryUrl,
         systemJsInjection,
         systemJsClientFileUrl,
-        urlInfo,
-        jsModuleUrlInfo,
+        input: jsModuleUrlInfo.content,
+        inputIsEntryPoint: urlInfo.isEntryPoint,
+        inputSourcemap: jsModuleUrlInfo.sourcemap,
+        inputUrl: jsModuleUrlInfo.url,
+        outputUrl: jsModuleUrlInfo.generatedUrl,
+        outputFormat,
       });
       return {
         content,

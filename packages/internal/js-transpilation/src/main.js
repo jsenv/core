@@ -1,1 +1,1 @@
-export { convertJsClassicToJsModule } from "./internal/convert_js_classic_to_js_module.js";
+export { applyJsTranspilation } from "./apply_js_transpilation.js";
