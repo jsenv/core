@@ -1,26 +1,21 @@
 import { applyBabelPlugins } from "@jsenv/ast";
 import { composeTwoSourcemaps } from "@jsenv/sourcemap";
-import { isWebWorkerUrlInfo } from "@jsenv/core/src/kitchen/web_workers.js";
 
 export const convertJsClassicToJsModule = async ({
-  urlInfo,
-  jsClassicUrlInfo,
+  isWebWorker,
+  input,
+  inputSourcemap,
+  inputUrl,
+  outputUrl,
 }) => {
   const { code, map } = await applyBabelPlugins({
-    babelPlugins: [
-      [
-        babelPluginReplaceTopLevelThis,
-        {
-          isWebWorker: isWebWorkerUrlInfo(urlInfo),
-        },
-      ],
-    ],
-    input: jsClassicUrlInfo.content,
+    babelPlugins: [[babelPluginReplaceTopLevelThis, { isWebWorker }]],
+    input,
     inputIsJsModule: false,
-    inputUrl: jsClassicUrlInfo.url,
-    outputUrl: jsClassicUrlInfo.generatedUrl,
+    inputUrl,
+    outputUrl,
   });
-  const sourcemap = await composeTwoSourcemaps(jsClassicUrlInfo.sourcemap, map);
+  const sourcemap = await composeTwoSourcemaps(inputSourcemap, map);
   return {
     content: code,
     sourcemap,

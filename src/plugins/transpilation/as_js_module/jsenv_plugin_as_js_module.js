@@ -12,6 +12,8 @@
 import { urlToFilename } from "@jsenv/urls";
 import { convertJsClassicToJsModule } from "@jsenv/js-transpilation";
 
+import { isWebWorkerUrlInfo } from "../../../kitchen/web_workers.js";
+
 export const jsenvPluginAsJsModule = () => {
   return {
     name: "jsenv:as_js_module",
@@ -52,8 +54,11 @@ export const jsenvPluginAsJsModule = () => {
         context.urlGraph.deleteUrlInfo(jsClassicUrlInfo.url);
       }
       const { content, sourcemap } = await convertJsClassicToJsModule({
-        urlInfo,
-        jsClassicUrlInfo,
+        input: jsClassicUrlInfo.content,
+        inputSourcemap: jsClassicUrlInfo.sourcemap,
+        inputUrl: jsClassicUrlInfo.url,
+        outputUrl: jsClassicUrlInfo.generatedUrl,
+        isWebWorker: isWebWorkerUrlInfo(urlInfo),
       });
       return {
         content,
