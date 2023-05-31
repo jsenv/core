@@ -16,7 +16,6 @@ import { lookup } from "node:dns";
 import { SOURCEMAP, generateSourcemapFileUrl, composeTwoSourcemaps, generateSourcemapDataUrl, createMagicSource } from "@jsenv/sourcemap";
 import { parseHtmlString, visitHtmlNodes, getHtmlNodeAttribute, analyzeScriptNode, stringifyHtmlAst, parseSrcSet, getHtmlNodeText, setHtmlNodeAttributes, getHtmlNodePosition, getHtmlNodeAttributePosition, removeHtmlNodeText, setHtmlNodeText, parseCssUrls, parseJsUrls, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, findHtmlNode, removeHtmlNode, applyBabelPlugins, injectJsImport, analyzeLinkNode, injectHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
 import { convertJsModuleToJsClassic, systemJsClientFileUrlDefault } from "@jsenv/js-module-fallback";
-import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
 import { createRequire } from "node:module";
 
 /*

@@ -1,48 +1,6 @@
-import { createRequire } from "node:module";
-import { fileURLToPath } from "node:url";
 import { applyBabelPlugins, parseHtmlString, visitHtmlNodes, analyzeScriptNode, getHtmlNodeAttribute, getHtmlNodeText, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHtmlAst, getHtmlNodePosition, setHtmlNodeText, setHtmlNodeAttributes } from "@jsenv/ast";
-
-const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-const intToChar = new Uint8Array(64); // 64 possible chars.
-const charToInt = new Uint8Array(128); // z is 122 in ASCII
-for (let i = 0; i < chars.length; i++) {
-  const c = chars.charCodeAt(i);
-  intToChar[i] = c;
-  charToInt[c] = i;
-}
-
-const require = createRequire(import.meta.url);
-// consider using https://github.com/7rulnik/source-map-js
-
-const requireSourcemap = () => {
-  const namespace = require("source-map-js");
-  return namespace;
-};
-
-/*
- * https://github.com/mozilla/source-map#sourcemapgenerator
- */
-
-requireSourcemap();
-
-// https://github.com/mozilla/source-map#sourcemapconsumerprototypeoriginalpositionforgeneratedposition
-const getOriginalPosition = ({
-  sourcemap,
-  line,
-  column,
-  bias
-}) => {
-  const {
-    SourceMapConsumer
-  } = requireSourcemap();
-  const sourceMapConsumer = new SourceMapConsumer(sourcemap);
-  const originalPosition = sourceMapConsumer.originalPositionFor({
-    line,
-    column,
-    bias
-  });
-  return originalPosition;
-};
+import "node:url";
+import { createRequire } from "node:module";
 
 const urlToScheme = url => {
   const urlString = String(url);
@@ -111,179 +69,6 @@ const generateInlineContentUrl = ({
   // maybe we could use a custom scheme like "inline:"
   const inlineContentUrl = new URL(filename, url).href;
   return inlineContentUrl;
-};
-
-// consider switching to https://babeljs.io/docs/en/babel-code-frame
-// https://github.com/postcss/postcss/blob/fd30d3df5abc0954a0ec642a3cdc644ab2aacf9c/lib/css-syntax-error.js#L43
-// https://github.com/postcss/postcss/blob/fd30d3df5abc0954a0ec642a3cdc644ab2aacf9c/lib/terminal-highlight.js#L50
-// https://github.com/babel/babel/blob/eea156b2cb8deecfcf82d52aa1b71ba4995c7d68/packages/babel-code-frame/src/index.js#L1
-
-const stringifyUrlSite = ({
-  url,
-  line,
-  column,
-  content
-}, {
-  showCodeFrame = true,
-  numberOfSurroundingLinesToShow,
-  lineMaxLength,
-  color
-} = {}) => {
-  let string = url;
-  if (typeof line === "number") {
-    string += ":".concat(line);
-    if (typeof column === "number") {
-      string += ":".concat(column);
-    }
-  }
-  if (!showCodeFrame || typeof line !== "number" || !content) {
-    return string;
-  }
-  const sourceLoc = showSourceLocation({
-    content,
-    line,
-    column,
-    numberOfSurroundingLinesToShow,
-    lineMaxLength,
-    color
-  });
-  return "".concat(string, "\n").concat(sourceLoc);
-};
-const showSourceLocation = ({
-  content,
-  line,
-  column,
-  numberOfSurroundingLinesToShow = 1,
-  lineMaxLength = 120
-} = {}) => {
-  let mark = string => string;
-  let aside = string => string;
-  // if (color) {
-  //   mark = (string) => ANSI.color(string, ANSI.RED)
-  //   aside = (string) => ANSI.color(string, ANSI.GREY)
-  // }
-
-  const lines = content.split(/\r?\n/);
-  if (line === 0) line = 1;
-  let lineRange = {
-    start: line - 1,
-    end: line
-  };
-  lineRange = moveLineRangeUp(lineRange, numberOfSurroundingLinesToShow);
-  lineRange = moveLineRangeDown(lineRange, numberOfSurroundingLinesToShow);
-  lineRange = lineRangeWithinLines(lineRange, lines);
-  const linesToShow = lines.slice(lineRange.start, lineRange.end);
-  const endLineNumber = lineRange.end;
-  const lineNumberMaxWidth = String(endLineNumber).length;
-  if (column === 0) column = 1;
-  const columnRange = {};
-  if (column === undefined) {
-    columnRange.start = 0;
-    columnRange.end = lineMaxLength;
-  } else if (column > lineMaxLength) {
-    columnRange.start = column - Math.floor(lineMaxLength / 2);
-    columnRange.end = column + Math.ceil(lineMaxLength / 2);
-  } else {
-    columnRange.start = 0;
-    columnRange.end = lineMaxLength;
-  }
-  return linesToShow.map((lineSource, index) => {
-    const lineNumber = lineRange.start + index + 1;
-    const isMainLine = lineNumber === line;
-    const lineSourceTruncated = applyColumnRange(columnRange, lineSource);
-    const lineNumberWidth = String(lineNumber).length;
-    // ensure if line moves from 7,8,9 to 10 the display is still great
-    const lineNumberRightSpacing = " ".repeat(lineNumberMaxWidth - lineNumberWidth);
-    const asideSource = "".concat(lineNumber).concat(lineNumberRightSpacing, " |");
-    const lineFormatted = "".concat(aside(asideSource), " ").concat(lineSourceTruncated);
-    if (isMainLine) {
-      if (column === undefined) {
-        return "".concat(mark(">"), " ").concat(lineFormatted);
-      }
-      const spacing = stringToSpaces("".concat(asideSource, " ").concat(lineSourceTruncated.slice(0, column - columnRange.start - 1)));
-      return "".concat(mark(">"), " ").concat(lineFormatted, "\n  ").concat(spacing).concat(mark("^"));
-    }
-    return "  ".concat(lineFormatted);
-  }).join("\n");
-};
-const applyColumnRange = ({
-  start,
-  end
-}, line) => {
-  if (typeof start !== "number") {
-    throw new TypeError("start must be a number, received ".concat(start));
-  }
-  if (typeof end !== "number") {
-    throw new TypeError("end must be a number, received ".concat(end));
-  }
-  if (end < start) {
-    throw new Error("end must be greater than start, but ".concat(end, " is smaller than ").concat(start));
-  }
-  const prefix = "…";
-  const suffix = "…";
-  const lastIndex = line.length;
-  if (line.length === 0) {
-    // don't show any ellipsis if the line is empty
-    // because it's not truncated in that case
-    return "";
-  }
-  const startTruncated = start > 0;
-  const endTruncated = lastIndex > end;
-  let from = startTruncated ? start + prefix.length : start;
-  let to = endTruncated ? end - suffix.length : end;
-  if (to > lastIndex) to = lastIndex;
-  if (start >= lastIndex || from === to) {
-    return "";
-  }
-  let result = "";
-  while (from < to) {
-    result += line[from];
-    from++;
-  }
-  if (result.length === 0) {
-    return "";
-  }
-  if (startTruncated && endTruncated) {
-    return "".concat(prefix).concat(result).concat(suffix);
-  }
-  if (startTruncated) {
-    return "".concat(prefix).concat(result);
-  }
-  if (endTruncated) {
-    return "".concat(result).concat(suffix);
-  }
-  return result;
-};
-const stringToSpaces = string => string.replace(/[^\t]/g, " ");
-
-// const getLineRangeLength = ({ start, end }) => end - start
-
-const moveLineRangeUp = ({
-  start,
-  end
-}, number) => {
-  return {
-    start: start - number,
-    end
-  };
-};
-const moveLineRangeDown = ({
-  start,
-  end
-}, number) => {
-  return {
-    start,
-    end: end + number
-  };
-};
-const lineRangeWithinLines = ({
-  start,
-  end
-}, lines) => {
-  return {
-    start: start < 0 ? 0 : start,
-    end: end > lines.length ? lines.length : end
-  };
 };
 
 const getCommonPathname = (pathname, otherPathname) => {
@@ -367,6 +152,29 @@ const pathnameToParentPathname = pathname => {
   }
   return pathname.slice(0, slashLastIndex + 1);
 };
+
+const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+const intToChar = new Uint8Array(64); // 64 possible chars.
+const charToInt = new Uint8Array(128); // z is 122 in ASCII
+for (let i = 0; i < chars.length; i++) {
+  const c = chars.charCodeAt(i);
+  intToChar[i] = c;
+  charToInt[c] = i;
+}
+
+const require = createRequire(import.meta.url);
+// consider using https://github.com/7rulnik/source-map-js
+
+const requireSourcemap = () => {
+  const namespace = require("source-map-js");
+  return namespace;
+};
+
+/*
+ * https://github.com/mozilla/source-map#sourcemapgenerator
+ */
+
+requireSourcemap();
 
 const generateSourcemapDataUrl = sourcemap => {
   const asBase64 = Buffer.from(JSON.stringify(sourcemap)).toString("base64");
@@ -747,12 +555,12 @@ const createSupervisionCall = ({
  *   - Also allow to catch syntax errors and export missing
  */
 
-const supervisorFileUrl$1 = new URL("./js/supervisor.js", import.meta.url).href;
+const supervisorFileUrl = new URL("./js/supervisor.js", import.meta.url).href;
 const injectSupervisorIntoHTML = async ({
   content,
   url
 }, {
-  supervisorScriptSrc = supervisorFileUrl$1,
+  supervisorScriptSrc = supervisorFileUrl,
   supervisorOptions,
   webServer,
   onInlineScript = () => {},
@@ -977,207 +785,4 @@ const generateCodeToSuperviseScriptWithSrc = ({
   return "window.__supervisor__.superviseScript(".concat(srcEncoded, ");");
 };
 
-/*
- * This plugin provides a way for jsenv to know when js execution is done
- */
-
-const supervisorFileUrl = new URL("./js/supervisor.js", import.meta.url).href;
-const jsenvPluginSupervisor = ({
-  logs = false,
-  measurePerf = false,
-  errorOverlay = true,
-  openInEditor = true,
-  errorBaseUrl
-}) => {
-  return {
-    name: "jsenv:supervisor",
-    appliesDuring: "dev",
-    serve: async (request, context) => {
-      if (request.pathname.startsWith("/__get_code_frame__/")) {
-        const {
-          pathname,
-          searchParams
-        } = new URL(request.url);
-        let urlWithLineAndColumn = pathname.slice("/__get_code_frame__/".length);
-        urlWithLineAndColumn = decodeURIComponent(urlWithLineAndColumn);
-        const match = urlWithLineAndColumn.match(/:([0-9]+):([0-9]+)$/);
-        if (!match) {
-          return {
-            status: 400,
-            body: "Missing line and column in url"
-          };
-        }
-        const file = urlWithLineAndColumn.slice(0, match.index);
-        let line = parseInt(match[1]);
-        let column = parseInt(match[2]);
-        const urlInfo = context.urlGraph.getUrlInfo(file);
-        if (!urlInfo) {
-          return {
-            status: 204,
-            headers: {
-              "cache-control": "no-store"
-            }
-          };
-        }
-        const remap = searchParams.has("remap");
-        if (remap) {
-          const sourcemap = urlInfo.sourcemap;
-          if (sourcemap) {
-            const original = getOriginalPosition({
-              sourcemap,
-              url: file,
-              line,
-              column
-            });
-            if (original.line !== null) {
-              line = original.line;
-              if (original.column !== null) {
-                column = original.column;
-              }
-            }
-          }
-        }
-        const codeFrame = stringifyUrlSite({
-          url: file,
-          line,
-          column,
-          content: urlInfo.originalContent
-        });
-        return {
-          status: 200,
-          headers: {
-            "cache-control": "no-store",
-            "content-type": "text/plain",
-            "content-length": Buffer.byteLength(codeFrame)
-          },
-          body: codeFrame
-        };
-      }
-      if (request.pathname.startsWith("/__get_error_cause__/")) {
-        let file = request.pathname.slice("/__get_error_cause__/".length);
-        file = decodeURIComponent(file);
-        if (!file) {
-          return {
-            status: 400,
-            body: "Missing file in url"
-          };
-        }
-        const getErrorCauseInfo = () => {
-          const urlInfo = context.urlGraph.getUrlInfo(file);
-          if (!urlInfo) {
-            return null;
-          }
-          const {
-            error
-          } = urlInfo;
-          if (error) {
-            return error;
-          }
-          // search in direct dependencies (404 or 500)
-          const {
-            dependencies
-          } = urlInfo;
-          for (const dependencyUrl of dependencies) {
-            const dependencyUrlInfo = context.urlGraph.getUrlInfo(dependencyUrl);
-            if (dependencyUrlInfo.error) {
-              return dependencyUrlInfo.error;
-            }
-          }
-          return null;
-        };
-        const causeInfo = getErrorCauseInfo();
-        const body = JSON.stringify(causeInfo ? {
-          code: causeInfo.code,
-          message: causeInfo.message,
-          reason: causeInfo.reason,
-          stack: errorBaseUrl ? "stack mocked for snapshot" : causeInfo.stack,
-          codeFrame: causeInfo.traceMessage
-        } : null, null, "  ");
-        return {
-          status: 200,
-          headers: {
-            "cache-control": "no-store",
-            "content-type": "application/json",
-            "content-length": Buffer.byteLength(body)
-          },
-          body
-        };
-      }
-      if (request.pathname.startsWith("/__open_in_editor__/")) {
-        let file = request.pathname.slice("/__open_in_editor__/".length);
-        file = decodeURIComponent(file);
-        if (!file) {
-          return {
-            status: 400,
-            body: "Missing file in url"
-          };
-        }
-        const require = createRequire(import.meta.url);
-        const launch = require("launch-editor");
-        launch(fileURLToPath(file), () => {
-          // ignore error for now
-        });
-        return {
-          status: 200,
-          headers: {
-            "cache-control": "no-store"
-          }
-        };
-      }
-      return null;
-    },
-    transformUrlContent: {
-      html: ({
-        url,
-        content
-      }, context) => {
-        const [supervisorFileReference] = context.referenceUtils.inject({
-          type: "script",
-          expectedType: "js_classic",
-          specifier: supervisorFileUrl
-        });
-        return injectSupervisorIntoHTML({
-          content,
-          url
-        }, {
-          supervisorScriptSrc: supervisorFileReference.generatedSpecifier,
-          supervisorOptions: {
-            errorBaseUrl,
-            logs,
-            measurePerf,
-            errorOverlay,
-            openInEditor
-          },
-          webServer: {
-            rootDirectoryUrl: context.rootDirectoryUrl,
-            isJsenvDevServer: true
-          },
-          inlineAsRemote: true,
-          generateInlineScriptSrc: ({
-            type,
-            textContent,
-            inlineScriptUrl,
-            isOriginal,
-            line,
-            column
-          }) => {
-            const [inlineScriptReference] = context.referenceUtils.foundInline({
-              type: "script",
-              subtype: "inline",
-              expectedType: type,
-              isOriginalPosition: isOriginal,
-              specifierLine: line - 1,
-              specifierColumn: column,
-              specifier: inlineScriptUrl,
-              contentType: "text/javascript",
-              content: textContent
-            });
-            return inlineScriptReference.generatedSpecifier;
-          }
-        });
-      }
-    }
-  };
-};
-
-export { jsenvPluginSupervisor, supervisorFileUrl };
+export { injectSupervisorIntoHTML, supervisorFileUrl };
