@@ -1,41 +1,33 @@
 import { applyBabelPlugins } from "@jsenv/ast";
-import { RUNTIME_COMPAT } from "@jsenv/core/src/kitchen/compat/runtime_compat.js";
 
-import { getBaseBabelPluginStructure } from "./babel_plugin_structure.js";
-import { babelPluginBabelHelpersAsJsenvImports } from "./babel_plugin_babel_helpers_as_jsenv_imports.js";
-import { babelPluginNewStylesheetAsJsenvImport } from "./new_stylesheet/babel_plugin_new_stylesheet_as_jsenv_import.js";
-import { babelPluginGlobalThisAsJsenvImport } from "./global_this/babel_plugin_global_this_as_jsenv_import.js";
-import { babelPluginRegeneratorRuntimeAsJsenvImport } from "./regenerator_runtime/babel_plugin_regenerator_runtime_as_jsenv_import.js";
+import { getBaseBabelPluginStructure } from "./internal/babel_plugin_structure.js";
+import { babelPluginBabelHelpersAsJsenvImports } from "./internal/babel_plugin_babel_helpers_as_jsenv_imports.js";
+import { babelPluginNewStylesheetAsJsenvImport } from "./internal/new_stylesheet/babel_plugin_new_stylesheet_as_jsenv_import.js";
+import { babelPluginGlobalThisAsJsenvImport } from "./internal/global_this/babel_plugin_global_this_as_jsenv_import.js";
+import { babelPluginRegeneratorRuntimeAsJsenvImport } from "./internal/regenerator_runtime/babel_plugin_regenerator_runtime_as_jsenv_import.js";
 
-export const transpileWithBabel = async ({
-  isJsModule,
-  url,
-  context,
+export const applyJsTranspilation = async ({
+  source,
+  sourceType,
+  sourceUrl,
+  generatedUrl,
   getCustomBabelPlugins,
   babelHelpersAsImport = true,
+  babelOptions,
+  isSupported,
+  getImportSpecifier,
 }) => {
-  const isSupported = (feature) =>
-    RUNTIME_COMPAT.isSupported(context.clientRuntimeCompat, feature);
-  const getImportSpecifier = (clientFileUrl) => {
-    const [reference] = context.referenceUtils.inject({
-      type: "js_import",
-      expectedType: "js_module",
-      specifier: clientFileUrl,
-    });
-    return JSON.parse(reference.generatedSpecifier);
-  };
-
   const babelPluginStructure = getBaseBabelPluginStructure({
-    url,
+    url: sourceUrl,
     isSupported,
-    isJsModule,
+    isJsModule: sourceType === "module",
     getImportSpecifier,
   });
   if (getCustomBabelPlugins) {
     Object.assign(babelPluginStructure, getCustomBabelPlugins(context));
   }
 
-  if (isJsModule && babelHelpersAsImport) {
+  if (sourceType === "module" && babelHelpersAsImport) {
     if (!isSupported("global_this")) {
       babelPluginStructure["global-this-as-jsenv-import"] = [
         babelPluginGlobalThisAsJsenvImport,
@@ -77,12 +69,11 @@ export const transpileWithBabel = async ({
   );
   const { code, map } = await applyBabelPlugins({
     babelPlugins,
-    urlInfo: {},
-    options: {
-      generatorOpts: {
-        retainLines: context.dev,
-      },
-    },
+    options: babelOptions,
+    sourceType,
+    source,
+    sourceUrl,
+    generatedUrl,
   });
   return {
     content: code,
