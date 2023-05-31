@@ -1,6 +1,6 @@
 import { applyBabelPlugins } from "@jsenv/ast";
 
-import { requireBabelPlugin } from "../jsenv_plugin_babel/require_babel_plugin.js";
+import { requireBabelPlugin } from "@jsenv/js-transpilation";
 
 export const jsenvPluginTopLevelAwait = () => {
   return {

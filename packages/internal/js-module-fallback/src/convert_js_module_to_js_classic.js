@@ -7,8 +7,8 @@ import {
   SOURCEMAP,
 } from "@jsenv/sourcemap";
 import { applyBabelPlugins } from "@jsenv/ast";
+import { requireBabelPlugin } from "@jsenv/js-transpilation";
 
-import { requireBabelPlugin } from "./internal/require_babel_plugin.js";
 import { babelPluginTransformImportMetaUrl } from "./internal/babel_plugin_transform_import_meta_url.js";
 import { babelPluginTransformImportMetaResolve } from "./internal/babel_plugin_transform_import_meta_resolve.js";
 // because of https://github.com/rpetrich/babel-plugin-transform-async-to-promises/issues/84
