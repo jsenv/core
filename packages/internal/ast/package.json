@@ -6,7 +6,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
-    "directory": "packages/independent/ast"
+    "directory": "packages/internal/ast"
   },
   "publishConfig": {
     "access": "public"
