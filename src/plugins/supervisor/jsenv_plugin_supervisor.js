@@ -6,13 +6,10 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { getOriginalPosition } from "@jsenv/sourcemap";
 import { stringifyUrlSite } from "@jsenv/urls";
-
-import { injectSupervisorIntoHTML } from "./html_supervisor_injection.js";
-
-export const supervisorFileUrl = new URL(
-  "./client/supervisor.js",
-  import.meta.url,
-).href;
+import {
+  supervisorFileUrl,
+  injectSupervisorIntoHTML,
+} from "@jsenv/html-supervisor";
 
 export const jsenvPluginSupervisor = ({
   logs = false,

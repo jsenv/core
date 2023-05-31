@@ -67,7 +67,7 @@
     "@jsenv/integrity": "0.0.1",
     "@jsenv/log": "3.3.5",
     "@jsenv/node-esm-resolution": "1.0.1",
-    "@jsenv/plugin-supervisor": "1.0.1",
+    "@jsenv/html-supervisor": "1.0.0",
     "@jsenv/js-module-fallback": "1.0.1",
     "@jsenv/server": "15.0.3",
     "@jsenv/sourcemap": "1.0.10",

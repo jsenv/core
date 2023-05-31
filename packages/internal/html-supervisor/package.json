@@ -1,11 +1,11 @@
 {
-  "name": "@jsenv/plugin-supervisor",
-  "version": "1.0.1",
+  "name": "@jsenv/html-supervisor",
+  "version": "1.0.0",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
-    "directory": "packages/internal/jsenv-plugin-supervisor"
+    "directory": "packages/internal/html-supervisor"
   },
   "publishConfig": {
     "access": "public"
@@ -14,13 +14,13 @@
   "exports": {
     ".": {
       "import": {
-        "development": "./src/jsenv_plugin_supervisor.js",
-        "default": "./dist/jsenv_plugin_supervisor.js"
+        "development": "./src/html_supervisor.js",
+        "default": "./dist/html_supervisor.js"
       }
     },
     "./*": "./*"
   },
-  "main": "./src/main.js",
+  "main": "./src/html_supervisor.js",
   "files": [
     "/src/"
   ],
@@ -33,6 +33,7 @@
   "scripts": {
     "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",
     "build": "node ./scripts/build.mjs",
+    "test": "node ./scripts/test.mjs",
     "prepublishOnly": "npm run build"
   }
 }

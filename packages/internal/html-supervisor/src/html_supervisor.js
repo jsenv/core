@@ -60,7 +60,7 @@ import {
 } from "@jsenv/ast";
 import { generateInlineContentUrl, urlToRelativeUrl } from "@jsenv/urls";
 
-import { injectSupervisorIntoJs } from "./js_supervisor_injection.js";
+import { injectSupervisorIntoJs } from "./js_supervisor.js";
 
 export const supervisorFileUrl = new URL(
   "./client/supervisor.js",

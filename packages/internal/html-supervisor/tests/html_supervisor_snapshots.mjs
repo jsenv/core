@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { urlToRelativeUrl } from "@jsenv/urls";
 import { comparePathnames } from "@jsenv/filesystem";
-import { injectSupervisorIntoHTML } from "@jsenv/plugin-supervisor/src/html_supervisor_injection.js";
+import { injectSupervisorIntoHTML } from "@jsenv/html-supervisor";
 import { writeSnapshotsIntoDirectory } from "@jsenv/core/tests/snapshots_directory.js";
 
 let files = {};

@@ -1,5 +1,3 @@
-import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
-
 import { jsenvPluginReferenceAnalysis } from "./reference_analysis/jsenv_plugin_reference_analysis.js";
 import { jsenvPluginImportmap } from "./importmap/jsenv_plugin_importmap.js";
 import { jsenvPluginNodeEsmResolution } from "./resolution_node_esm/jsenv_plugin_node_esm_resolution.js";

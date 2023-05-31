@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html original-position-stored="">
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8">
+    <link rel="icon" href="data:," original-href-position="6:22;6:35">
+    <script src="file:///Users/d.maillard/dev/jsenv/jsenv-core/packages/internal/html-supervisor/src/client/supervisor.js" jsenv-injected-by="jsenv:supervisor"></script><script jsenv-injected-by="jsenv:supervisor" content-indented="">
+      window.__supervisor__.setup({"rootDirectoryUrl": "file:///Users/d.maillard/dev/jsenv/jsenv-core/packages/internal/html-supervisor/tests/fixtures/",
+        "scriptInfos": [
+          {
+            "type": "js_module",
+            "src": "script_type_module_inline.html@L10C5-L34C14.js",
+            "isInline": true
+          }
+        ]})
+    </script>
+  </head>
+
+  <body>
+    <script type="module" original-position="10:5;34:14" content-indented="" jsenv-cooked-by="jsenv:supervisor">
+      window.__supervisor__.jsModuleStart("script_type_module_inline.html@L10C5-L34C14.js");
+      try {
+        await import("./answer.js");
+        const {
+          getAnswer
+        } = await import("./answer.js");
+        const {
+          getAnswer: getAnswerAlias
+        } = await import("./answer.js");
+        const {
+          default: toto
+        } = await import("./answer.js");
+        const namespace = await import("./answer.js");
+        const {
+          default: toto2,
+          getAnswer: getAnswerAlias2
+        } = await import("./answer.js");
+        const namespace2 = await import("./answer.js");
+        const toto3 = namespace2.default;
+        /* eslint-enable import/no-duplicates */
+      
+        window.toto = toto;
+        window.getAnswerAlias = getAnswerAlias;
+        window.namespace = namespace;
+        window.toto2 = toto2;
+        window.getAnswerAlias2 = getAnswerAlias2;
+        window.toto3 = toto3;
+        window.namespace2 = namespace2;
+        const actual = await getAnswer();
+        const expected = 42;
+        if (actual !== expected) {
+          throw new Error(`getAnswer should return 42, got ${actual}`);
+        }
+        window.__supervisor__.jsModuleEnd("script_type_module_inline.html@L10C5-L34C14.js");
+      } catch (e) {
+        window.__supervisor__.jsModuleError("script_type_module_inline.html@L10C5-L34C14.js", e);
+      }
+      //# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJuYW1lcyI6WyJ3aW5kb3ciLCJ0b3RvIiwiZ2V0QW5zd2VyQWxpYXMiLCJuYW1lc3BhY2UiLCJ0b3RvMiIsImdldEFuc3dlckFsaWFzMiIsInRvdG8zIiwibmFtZXNwYWNlMiIsImFjdHVhbCIsImdldEFuc3dlciIsImV4cGVjdGVkIiwiRXJyb3IiLCJfX3N1cGVydmlzb3JfXyIsImpzTW9kdWxlRW5kIiwiZSIsImpzTW9kdWxlRXJyb3IiXSwic291cmNlcyI6WyIvVXNlcnMvZC5tYWlsbGFyZC9kZXYvanNlbnYvanNlbnYtY29yZS9wYWNrYWdlcy9pbnRlcm5hbC9odG1sLXN1cGVydmlzb3IvdGVzdHMvZml4dHVyZXMvc2NyaXB0X3R5cGVfbW9kdWxlX2lubGluZS5odG1sQEwxMEM1LUwzNEMxNC5qcyJdLCJzb3VyY2VzQ29udGVudCI6WyJcbiAgICAgIC8qIGVzbGludC1kaXNhYmxlIGltcG9ydC9uby1kdXBsaWNhdGVzICovXG4gICAgICBpbXBvcnQgXCIuL2Fuc3dlci5qc1wiO1xuICAgICAgaW1wb3J0IHsgZ2V0QW5zd2VyIH0gZnJvbSBcIi4vYW5zd2VyLmpzXCI7XG4gICAgICBpbXBvcnQgeyBnZXRBbnN3ZXIgYXMgZ2V0QW5zd2VyQWxpYXMgfSBmcm9tIFwiLi9hbnN3ZXIuanNcIjtcbiAgICAgIGltcG9ydCB0b3RvIGZyb20gXCIuL2Fuc3dlci5qc1wiO1xuICAgICAgaW1wb3J0ICogYXMgbmFtZXNwYWNlIGZyb20gXCIuL2Fuc3dlci5qc1wiO1xuICAgICAgaW1wb3J0IHRvdG8yLCB7IGdldEFuc3dlciBhcyBnZXRBbnN3ZXJBbGlhczIgfSBmcm9tIFwiLi9hbnN3ZXIuanNcIjtcbiAgICAgIGltcG9ydCB0b3RvMywgKiBhcyBuYW1lc3BhY2UyIGZyb20gXCIuL2Fuc3dlci5qc1wiO1xuICAgICAgLyogZXNsaW50LWVuYWJsZSBpbXBvcnQvbm8tZHVwbGljYXRlcyAqL1xuXG4gICAgICB3aW5kb3cudG90byA9IHRvdG87XG4gICAgICB3aW5kb3cuZ2V0QW5zd2VyQWxpYXMgPSBnZXRBbnN3ZXJBbGlhcztcbiAgICAgIHdpbmRvdy5uYW1lc3BhY2UgPSBuYW1lc3BhY2U7XG4gICAgICB3aW5kb3cudG90bzIgPSB0b3RvMjtcbiAgICAgIHdpbmRvdy5nZXRBbnN3ZXJBbGlhczIgPSBnZXRBbnN3ZXJBbGlhczI7XG4gICAgICB3aW5kb3cudG90bzMgPSB0b3RvMztcbiAgICAgIHdpbmRvdy5uYW1lc3BhY2UyID0gbmFtZXNwYWNlMjtcblxuICAgICAgY29uc3QgYWN0dWFsID0gYXdhaXQgZ2V0QW5zd2VyKCk7XG4gICAgICBjb25zdCBleHBlY3RlZCA9IDQyO1xuICAgICAgaWYgKGFjdHVhbCAhPT0gZXhwZWN0ZWQpIHtcbiAgICAgICAgdGhyb3cgbmV3IEVycm9yKGBnZXRBbnN3ZXIgc2hvdWxkIHJldHVybiA0MiwgZ290ICR7YWN0dWFsfWApO1xuICAgICAgfVxuICAgICJdLCJtYXBwaW5ncyI6Ijs7Ozs7Ozs7Ozs7Ozs7Ozs7OztFQVNNOztFQUVBQSxNQUFNLENBQUNDLElBQUksR0FBR0EsSUFBSTtFQUNsQkQsTUFBTSxDQUFDRSxjQUFjLEdBQUdBLGNBQWM7RUFDdENGLE1BQU0sQ0FBQ0csU0FBUyxHQUFHQSxTQUFTO0VBQzVCSCxNQUFNLENBQUNJLEtBQUssR0FBR0EsS0FBSztFQUNwQkosTUFBTSxDQUFDSyxlQUFlLEdBQUdBLGVBQWU7RUFDeENMLE1BQU0sQ0FBQ00sS0FBSyxHQUFHQSxLQUFLO0VBQ3BCTixNQUFNLENBQUNPLFVBQVUsR0FBR0EsVUFBVTtFQUU5QixNQUFNQyxNQUFNLEdBQUcsTUFBTUMsU0FBUyxDQUFDLENBQUM7RUFDaEMsTUFBTUMsUUFBUSxHQUFHLEVBQUU7RUFDbkIsSUFBSUYsTUFBTSxLQUFLRSxRQUFRLEVBQUU7SUFDdkIsTUFBTSxJQUFJQyxLQUFLLENBQUUsbUNBQWtDSCxNQUFPLEVBQUMsQ0FBQztFQUM5RDtFQUFDUixNQUFBLENBQUFZLGNBQUEsQ0FBQUMsV0FBQTtBQUFBLFNBQUFDLENBQUE7RUFBQWQsTUFBQSxDQUFBWSxjQUFBLENBQUFHLGFBQUEsbURBQUFELENBQUE7QUFBQSJ9
+      
+      //# sourceURL=script_type_module_inline.html@L10C5-L34C14.js
+    </script>
+  </body>
+</html>
