@@ -11,7 +11,6 @@ export const applyJsTranspilation = async ({
   inputIsJsModule = false,
   inputUrl,
   outputUrl,
-  getCustomBabelPlugins,
   babelHelpersAsImport = true,
   babelOptions,
   isSupported,
@@ -23,9 +22,6 @@ export const applyJsTranspilation = async ({
     isJsModule: inputIsJsModule,
     getImportSpecifier,
   });
-  if (getCustomBabelPlugins) {
-    Object.assign(babelPluginStructure, getCustomBabelPlugins());
-  }
 
   if (inputIsJsModule && babelHelpersAsImport) {
     if (!isSupported("global_this")) {

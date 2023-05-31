@@ -10,7 +10,7 @@ import { jsenvPluginSupervisor } from "./supervisor/jsenv_plugin_supervisor.js";
 import { jsenvPluginCommonJsGlobals } from "./commonjs_globals/jsenv_plugin_commonjs_globals.js";
 import { jsenvPluginImportMetaScenarios } from "./import_meta_scenarios/jsenv_plugin_import_meta_scenarios.js";
 import { jsenvPluginGlobalScenarios } from "./global_scenarios/jsenv_plugin_global_scenarios.js";
-import { jsenvPluginTranspilation } from "@jsenv/plugin-transpilation";
+import { jsenvPluginTranspilation } from "./transpilation/jsenv_plugin_transpilation.js";
 import { jsenvPluginNodeRuntime } from "./node_runtime/jsenv_plugin_node_runtime.js";
 // autoreload
 import { jsenvPluginImportMetaHot } from "./import_meta_hot/jsenv_plugin_import_meta_hot.js";

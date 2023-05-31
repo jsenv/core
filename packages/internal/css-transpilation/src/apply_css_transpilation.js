@@ -1,29 +1,16 @@
 import { fileURLToPath } from "node:url";
 
-export const jsenvPluginCssTranspilation = () => {
-  return {
-    name: "jsenv:css_transpilation",
-    appliesDuring: "*",
-    transformUrlContent: {
-      css: async (urlInfo, context) => {
-        const { code, map } = await transpileCss(urlInfo, context);
-        return {
-          content: String(code),
-          sourcemap: map,
-        };
-      },
-    },
-  };
-};
-
-const transpileCss = async (urlInfo, context) => {
+export const applyCssTranspilation = async ({
+  input,
+  inputUrl,
+  runtimeCompat,
+}) => {
   // https://lightningcss.dev/docs.html
   const { transform } = await import("lightningcss");
-
-  const targets = runtimeCompatToTargets(context.runtimeCompat);
+  const targets = runtimeCompatToTargets(runtimeCompat);
   const { code, map } = transform({
-    filename: fileURLToPath(urlInfo.originalUrl),
-    code: Buffer.from(urlInfo.content),
+    filename: fileURLToPath(inputUrl),
+    code: Buffer.from(input),
     targets,
     minify: false,
     drafts: {
@@ -31,7 +18,7 @@ const transpileCss = async (urlInfo, context) => {
       customMedia: true,
     },
   });
-  return { code, map };
+  return { content: String(code), sourcemap: map };
 };
 
 const runtimeCompatToTargets = (runtimeCompat) => {
