@@ -1,12 +1,12 @@
 {
-  "name": "@jsenv/transpilation",
+  "name": "@jsenv/js-transpilation",
   "version": "1.0.0",
   "description": "TODO",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
-    "directory": "packages/internal/transpilation"
+    "directory": "packages/internal/js-transpilation"
   },
   "engines": {
     "node": ">=16.13.0"

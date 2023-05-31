@@ -4,7 +4,7 @@ import { URL_META } from "@jsenv/url-meta";
 import { isFileSystemPath } from "@jsenv/urls";
 import { createDetailedMessage } from "@jsenv/log";
 import { sourcemapConverter } from "@jsenv/sourcemap";
-import { globalThisClientFileUrl } from "@jsenv/core/src/plugins/transpilation/babel/global_this/babel_plugin_global_this_as_jsenv_import.js";
+import { globalThisClientFileUrl } from "@jsenv/transpilation";
 
 import { fileUrlConverter } from "../file_url_converter.js";
 

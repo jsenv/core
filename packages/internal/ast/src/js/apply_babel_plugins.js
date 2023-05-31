@@ -9,19 +9,13 @@ import { createJsParseError } from "./js_parse_error.js";
 
 export const applyBabelPlugins = async ({
   babelPlugins,
-  urlInfo,
+  sourceType,
+  url,
+  generatedUrl,
+  content,
   ast,
   options = {},
 }) => {
-  const sourceType = {
-    [urlInfo.type]: undefined,
-    js_module: "module",
-    js_classic: "classic",
-  }[urlInfo.type];
-  const url = urlInfo.originalUrl;
-  const generatedUrl = urlInfo.generatedUrl;
-  const content = urlInfo.content;
-
   if (babelPlugins.length === 0) {
     return { code: content };
   }

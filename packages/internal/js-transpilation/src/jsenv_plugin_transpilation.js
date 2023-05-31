@@ -7,7 +7,6 @@
  * of this plugin
  */
 
-import { jsenvPluginCssTranspilation } from "./jsenv_plugin_css_transpilation/jsenv_plugin_css_transpilation.js";
 import { jsenvPluginImportAssertions } from "./jsenv_plugin_import_assertions/jsenv_plugin_import_assertions.js";
 import { jsenvPluginJsModuleFallback } from "./jsenv_plugin_js_module_fallback/jsenv_plugin_js_module_fallback.js";
 import { jsenvPluginAsJsModule } from "./jsenv_plugin_as_js_module/jsenv_plugin_as_js_module.js";

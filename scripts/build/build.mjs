@@ -14,7 +14,7 @@ await build({
     // selectively unignore some node_modules
     "file://**/node_modules/@jsenv/abort/": false,
     "file://**/node_modules/@jsenv/ast/": true, // cannot inline "parse5", "@babel/core" and "postcss"
-    "file://**/node_modules/@jsenv/babel-plugins/": false,
+    "file://**/node_modules/@jsenv/transpilation/": false,
     "file://**/node_modules/@jsenv/filesystem/": false,
     "file://**/node_modules/@jsenv/importmap/": false,
     "file://**/node_modules/@jsenv/integrity/": false,
