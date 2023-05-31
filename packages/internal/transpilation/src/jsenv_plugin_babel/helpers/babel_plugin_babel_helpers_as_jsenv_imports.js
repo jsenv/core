@@ -3,7 +3,7 @@ import { injectJsImport } from "@jsenv/ast";
 import {
   getBabelHelperFileUrl,
   babelHelperNameFromUrl,
-} from "@jsenv/babel-plugins";
+} from "@jsenv/transpilation";
 
 // named import approach found here:
 // https://github.com/rollup/rollup-plugin-babel/blob/18e4232a450f320f44c651aa8c495f21c74d59ac/src/helperPlugin.js#L1

@@ -7,13 +7,13 @@
  * of this plugin
  */
 
-import { jsenvPluginCssTranspilation } from "./css/jsenv_plugin_css_transpilation.js";
-import { jsenvPluginImportAssertions } from "./import_assertions/jsenv_plugin_import_assertions.js";
-import { jsenvPluginJsModuleFallback } from "./js_module_fallback/jsenv_plugin_js_module_fallback.js";
-import { jsenvPluginAsJsModule } from "./as_js_module/jsenv_plugin_as_js_module.js";
-import { jsenvPluginBabel } from "./babel/jsenv_plugin_babel.js";
-import { jsenvPluginTopLevelAwait } from "./jsenv_plugin_top_level_await.js";
-import { jsenvPluginImportMetaResolve } from "./jsenv_plugin_import_meta_resolve.js";
+import { jsenvPluginCssTranspilation } from "./jsenv_plugin_css_transpilation/jsenv_plugin_css_transpilation.js";
+import { jsenvPluginImportAssertions } from "./jsenv_plugin_import_assertions/jsenv_plugin_import_assertions.js";
+import { jsenvPluginJsModuleFallback } from "./jsenv_plugin_js_module_fallback/jsenv_plugin_js_module_fallback.js";
+import { jsenvPluginAsJsModule } from "./jsenv_plugin_as_js_module/jsenv_plugin_as_js_module.js";
+import { jsenvPluginBabel } from "./jsenv_plugin_babel/jsenv_plugin_babel.js";
+import { jsenvPluginTopLevelAwait } from "./jsenv_plugin_top_level_await/jsenv_plugin_top_level_await.js";
+import { jsenvPluginImportMetaResolve } from "./jsenv_plugin_import_meta_resolve/jsenv_plugin_import_meta_resolve.js";
 
 export const jsenvPluginTranspilation = ({
   importAssertions = true,

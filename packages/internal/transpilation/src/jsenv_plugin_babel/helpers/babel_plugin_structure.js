@@ -1,4 +1,4 @@
-import { getBabelHelperFileUrl } from "@jsenv/babel-plugins";
+import { getBabelHelperFileUrl } from "../../babel_helper_directory/babel_helper_directory.js";
 import { requireBabelPlugin } from "../require_babel_plugin.js";
 import { babelPluginCompatMap } from "./babel_plugins_compatibility.js";
 
