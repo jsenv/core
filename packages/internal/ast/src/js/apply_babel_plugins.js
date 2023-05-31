@@ -9,28 +9,28 @@ import { createJsParseError } from "./js_parse_error.js";
 
 export const applyBabelPlugins = async ({
   babelPlugins,
-  sourceType,
-  url,
-  generatedUrl,
-  content,
+  input,
+  inputIsJsModule,
+  inputUrl,
+  outputUrl,
   ast,
   options = {},
 }) => {
   if (babelPlugins.length === 0) {
-    return { code: content };
+    return { code: input };
   }
   const { transformAsync, transformFromAstAsync } = await import("@babel/core");
-  const sourceFileName = url.startsWith("file:")
-    ? fileURLToPath(url)
+  const sourceFileName = inputUrl.startsWith("file:")
+    ? fileURLToPath(inputUrl)
     : undefined;
   options = {
     ast: false,
     // https://babeljs.io/docs/en/options#source-map-options
     sourceMaps: true,
     sourceFileName,
-    filename: generatedUrl
-      ? generatedUrl.startsWith("file:")
-        ? fileURLToPath(url)
+    filename: outputUrl
+      ? outputUrl.startsWith("file:")
+        ? fileURLToPath(inputUrl)
         : undefined
       : sourceFileName,
     configFile: false,
@@ -39,19 +39,17 @@ export const applyBabelPlugins = async ({
     // consider using startColumn and startLine for inline scripts?
     // see https://github.com/babel/babel/blob/3ee9db7afe741f4d2f7933c519d8e7672fccb08d/packages/babel-parser/src/options.js#L36-L39
     parserOpts: {
-      sourceType,
+      sourceType: inputIsJsModule ? "module" : "classic",
       // allowAwaitOutsideFunction: true,
       plugins: [
         // "importMeta",
         // "topLevelAwait",
-        ...(sourceType === "module"
-          ? ["dynamicImport", "importAssertions"]
-          : []),
+        ...(inputIsJsModule ? ["dynamicImport", "importAssertions"] : []),
         "jsx",
         "classProperties",
         "classPrivateProperties",
         "classPrivateMethods",
-        ...(useTypeScriptExtension(url) ? ["typescript"] : []),
+        ...(useTypeScriptExtension(inputUrl) ? ["typescript"] : []),
         ...(options.parserPlugins || []),
       ].filter(Boolean),
     },
@@ -64,18 +62,18 @@ export const applyBabelPlugins = async ({
   };
   try {
     if (ast) {
-      const result = await transformFromAstAsync(ast, content, options);
+      const result = await transformFromAstAsync(ast, input, options);
       return result;
     }
-    const result = await transformAsync(content, options);
+    const result = await transformAsync(input, options);
     return result;
   } catch (error) {
     if (error && error.code === "BABEL_PARSE_ERROR") {
       throw createJsParseError({
         message: error.message,
         reasonCode: error.reasonCode,
-        content,
-        url,
+        content: input,
+        url: inputUrl,
         line: error.loc.line,
         column: error.loc.column,
       });
