@@ -15,7 +15,7 @@ import { applyBabelPlugins } from "@jsenv/ast";
 import { createId } from "@paralleldrive/cuid2";
 import { runInNewContext } from "node:vm";
 import wrapAnsi from "wrap-ansi";
-import { injectSupervisorIntoHTML, supervisorFileUrl } from "@jsenv/plugin-supervisor/src/html_supervisor_injection.js";
+import { injectSupervisorIntoHTML, supervisorFileUrl } from "@jsenv/html-supervisor";
 import { SOURCEMAP, generateSourcemapDataUrl } from "@jsenv/sourcemap";
 import { fork } from "node:child_process";
 import { findFreePort } from "@jsenv/server";
