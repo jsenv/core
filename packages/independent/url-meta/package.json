@@ -1,0 +1,32 @@
+{
+  "name": "@jsenv/url-meta",
+  "version": "8.1.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/independent/url-meta"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "author": {
+    "name": "dmail",
+    "email": "dmaillard06@gmail.com",
+    "url": "https://twitter.com/damienmaillard"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/url_meta.js"
+    },
+    "./*": "./*"
+  },
+  "files": [
+    "/src/"
+  ],
+  "scripts": {
+    "test": "node --conditions=development ./scripts/test.mjs"
+  },
+  "dependencies": {}
+}

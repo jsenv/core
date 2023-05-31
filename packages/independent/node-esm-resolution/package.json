@@ -1,0 +1,29 @@
+{
+  "name": "@jsenv/node-esm-resolution",
+  "version": "1.0.1",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/independent/node-esm-resolution"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./main.js"
+    },
+    "./*": "./*"
+  },
+  "main": "./main.js",
+  "files": [
+    "/dist/",
+    "/src/",
+    "/main.js"
+  ],
+  "scripts": {
+    "test": "node --conditions=development ./tests/test.mjs"
+  }
+}

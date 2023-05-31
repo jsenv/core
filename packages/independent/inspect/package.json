@@ -1,0 +1,33 @@
+{
+  "name": "@jsenv/inspect",
+  "version": "1.7.3",
+  "description": "Convert a value into a readable string",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/independent/inspect"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=14.7.0"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/main.js"
+    },
+    "./*": "./*"
+  },
+  "files": [
+    "/src/"
+  ],
+  "scripts": {
+    "dev": "node ./scripts/dev.mjs",
+    "test": "node ./scripts/test.mjs"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

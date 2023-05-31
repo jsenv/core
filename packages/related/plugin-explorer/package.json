@@ -1,0 +1,36 @@
+{
+  "name": "@jsenv/plugin-explorer",
+  "version": "1.0.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/related/plugin-explorer"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": {
+        "development": "./src/jsenv_plugin_explorer.js",
+        "default": "./dist/jsenv_plugin_explorer.js"
+      }
+    },
+    "./*": "./*"
+  },
+  "main": "./src/main.js",
+  "files": [
+    "/dist/",
+    "/src/"
+  ],
+  "dependencies": {
+    "@jsenv/filesystem": "4.2.3"
+  },
+  "scripts": {
+    "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",
+    "build": "node ./scripts/build.mjs",
+    "prepublishOnly": "npm run build"
+  }
+}

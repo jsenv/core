@@ -1,0 +1,39 @@
+{
+  "name": "@jsenv/plugin-bundling",
+  "version": "2.1.10",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/related/plugin-bundling"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/main.js"
+    },
+    "./*": "./*"
+  },
+  "files": [
+    "/src/"
+  ],
+  "scripts": {
+    "test": "node --conditions=development ./scripts/test.mjs"
+  },
+  "dependencies": {
+    "@jsenv/babel-plugins": "1.1.6",
+    "@jsenv/log": "3.3.5",
+    "@jsenv/url-meta": "8.1.0",
+    "@jsenv/urls": "2.0.0",
+    "@jsenv/sourcemap": "1.0.10",
+    "acorn-import-assertions": "1.9.0",
+    "lightningcss": "1.20.0",
+    "rollup": "3.23.0"
+  },
+  "peerDependencies": {
+    "@jsenv/core": "*"
+  }
+}

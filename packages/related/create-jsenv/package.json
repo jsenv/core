@@ -1,0 +1,35 @@
+{
+  "name": "create-jsenv",
+  "version": "1.7.36",
+  "description": "npm initializer for jsenv",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/related/create-jsenv"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "author": {
+    "name": "dmail",
+    "email": "dmaillard06@gmail.com",
+    "url": "https://twitter.com/damienmaillard"
+  },
+  "engines": {
+    "node": ">=16.13.0"
+  },
+  "type": "module",
+  "exports": "./main.js",
+  "bin": {
+    "create-jsenv": "main.js"
+  },
+  "files": [
+    "./main.js",
+    "./demo-*/**"
+  ],
+  "dependencies": {
+    "prompts": "2.4.2",
+    "@jsenv/log": "3.3.5"
+  }
+}

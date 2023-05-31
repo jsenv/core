@@ -13,7 +13,7 @@ node_modules/
 **/async-to-promises.js
 
 /tests/**/js_syntax_error.js
-/packages/rest/server/tests/internal_error/snapshots/
+/packages/**/server/tests/internal_error/snapshots/
 /**/dist/**
 
 /**/*.nomodule.js
