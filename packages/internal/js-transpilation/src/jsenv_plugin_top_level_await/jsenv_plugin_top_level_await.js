@@ -23,7 +23,6 @@ export const jsenvPluginTopLevelAwait = () => {
           return null;
         }
         const { code, map } = await applyBabelPlugins({
-          urlInfo,
           babelPlugins: [
             [
               requireBabelPlugin("babel-plugin-transform-async-to-promises"),
@@ -44,6 +43,10 @@ export const jsenvPluginTopLevelAwait = () => {
               },
             ],
           ],
+          source: urlInfo.content,
+          sourceType: "module",
+          sourceUrl: urlInfo.url,
+          generatedUrl: urlInfo.generatedUrl,
         });
         return {
           content: code,
@@ -59,8 +62,11 @@ const usesTopLevelAwait = async (urlInfo) => {
     return false;
   }
   const { metadata } = await applyBabelPlugins({
-    urlInfo,
     babelPlugins: [babelPluginMetadataUsesTopLevelAwait],
+    source: urlInfo.content,
+    sourceType: "module",
+    sourceUrl: urlInfo.url,
+    generatedUrl: urlInfo.generatedUrl,
   });
   return metadata.usesTopLevelAwait;
 };

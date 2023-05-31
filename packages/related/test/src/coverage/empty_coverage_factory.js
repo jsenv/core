@@ -20,10 +20,9 @@ export const relativeUrlToEmptyCoverage = async (
     operation.throwIfAborted();
     const { metadata } = await applyBabelPlugins({
       babelPlugins: [babelPluginInstrument],
-      urlInfo: {
-        originalUrl: fileUrl,
-        content,
-      },
+      source: content,
+      sourceType: undefined,
+      sourceUrl: fileUrl,
     });
     const { coverage } = metadata;
     if (!coverage) {

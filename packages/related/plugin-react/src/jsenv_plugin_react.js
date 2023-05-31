@@ -106,7 +106,10 @@ const jsenvPluginJsxAndRefresh = ({
         ];
         const { code, map } = await applyBabelPlugins({
           babelPlugins,
-          urlInfo,
+          source: urlInfo.content,
+          sourceType: "module",
+          sourceUrl: urlInfo.url,
+          generatedUrl: urlInfo.generatedUrl,
         });
         const magicSource = createMagicSource(code);
         if (jsxEnabled) {

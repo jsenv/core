@@ -71,9 +71,10 @@ export const convertJsModuleToJsClassic = async ({
             [babelPluginRelativeImports, { rootUrl: jsModuleUrlInfo.url }],
           ]),
     ],
-    url: jsModuleUrlInfo.url,
+    source: jsModuleUrlInfo.content,
+    sourceType: "module",
+    sourceUrl: jsModuleUrlInfo.url,
     generatedUrl: jsModuleUrlInfo.generatedUrl,
-    content: jsModuleUrlInfo.content,
   });
   let sourcemap = jsModuleUrlInfo.sourcemap;
   sourcemap = await composeTwoSourcemaps(sourcemap, map);
