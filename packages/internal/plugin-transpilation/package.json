@@ -1,12 +1,12 @@
 {
-  "name": "@jsenv/js-transpilation",
+  "name": "@jsenv/plugin-transpilation",
   "version": "1.0.0",
   "description": "TODO",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
-    "directory": "packages/internal/js-transpilation"
+    "directory": "packages/internal/plugin-transpilation"
   },
   "engines": {
     "node": ">=16.13.0"
@@ -54,6 +54,7 @@
     "babel-plugin-transform-async-to-promises": "0.8.18",
     "construct-style-sheets-polyfill": "3.1.0",
     "@jsenv/ast": "4.0.2",
-    "@jsenv/runtime-compat": "1.0.0"
+    "@jsenv/runtime-compat": "1.0.0",
+    "lightningcss": "1.20.0"
   }
 }
