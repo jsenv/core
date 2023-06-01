@@ -6,7 +6,7 @@ let globalObject;
 if (typeof globalThis === "object") {
   globalObject = globalThis;
 } else {
-  if (this) {
+  if (typeof this === "object") {
     globalObject = this;
   } else {
     // eslint-disable-next-line no-extend-native
