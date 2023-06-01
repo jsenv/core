@@ -29,6 +29,7 @@ export const babelPluginGlobalThisInjector = (
             Identifier(path) {
               const { node } = path;
               if (node.name === "globalThis") {
+                // TODO: ideally do not inject if part of UMD module wrapper
                 globalThisDetected = true;
                 path.stop();
               }
