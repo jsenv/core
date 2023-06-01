@@ -10,11 +10,11 @@ import { URL_META } from "@jsenv/url-meta";
 import { writeFileSync, ensureWindowsDriveLetter } from "@jsenv/filesystem";
 import { createLogger, createDetailedMessage, ANSI } from "@jsenv/log";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
+import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 
 import { createPluginController } from "../plugins/plugin_controller.js";
 import { urlSpecifierEncoding } from "./url_specifier_encoding.js";
 import { createUrlInfoTransformer } from "./url_graph/url_info_transformations.js";
-import { RUNTIME_COMPAT } from "./compat/runtime_compat.js";
 import {
   createResolveUrlError,
   createFetchUrlContentError,
@@ -23,6 +23,11 @@ import {
 } from "./errors.js";
 import { assertFetchedContentCompliance } from "./fetched_content_compliance.js";
 import { isWebWorkerEntryPointReference } from "./web_workers.js";
+
+const inlineContentClientFileUrl = new URL(
+  "./client/inline_content.js",
+  import.meta.url,
+).href;
 
 export const createKitchen = ({
   signal,
@@ -531,6 +536,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       // references
       const references = [];
       context.referenceUtils = {
+        inlineContentClientFileUrl,
         _references: references,
         find: (predicate) => references.find(predicate),
         readGeneratedSpecifier,

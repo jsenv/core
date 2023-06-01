@@ -10,8 +10,8 @@ export const babelPluginInstrument = (api, { useInlineSourceMaps = false }) => {
     name: "transform-instrument",
     visitor: {
       Program: {
-        enter(path) {
-          const { file } = this;
+        enter(path, state) {
+          const { file } = state;
           const { opts } = file;
           let inputSourceMap;
           if (useInlineSourceMaps) {
@@ -23,7 +23,7 @@ export const babelPluginInstrument = (api, { useInlineSourceMaps = false }) => {
           } else {
             inputSourceMap = opts.inputSourceMap;
           }
-          this.__dv__ = programVisitor(
+          const __dv__ = programVisitor(
             types,
             opts.filenameRelative || opts.filename,
             {
@@ -31,16 +31,18 @@ export const babelPluginInstrument = (api, { useInlineSourceMaps = false }) => {
               inputSourceMap,
             },
           );
-          this.__dv__.enter(path);
+          __dv__.enter(path);
+          file.metadata.__dv__ = __dv__;
         },
 
-        exit(path) {
-          if (!this.__dv__) {
+        exit(path, state) {
+          const { __dv__ } = state.file.metadata;
+          if (!__dv__) {
             return;
           }
-          const object = this.__dv__.exit(path);
+          const object = __dv__.exit(path);
           // object got two properties: fileCoverage and sourceMappingURL
-          this.file.metadata.coverage = object.fileCoverage;
+          state.file.metadata.coverage = object.fileCoverage;
         },
       },
     },

@@ -14,7 +14,6 @@ await build({
     // selectively unignore some node_modules
     "file://**/node_modules/@jsenv/abort/": false,
     "file://**/node_modules/@jsenv/ast/": true, // cannot inline "parse5", "@babel/core" and "postcss"
-    "file://**/node_modules/@jsenv/babel-plugins/": false,
     "file://**/node_modules/@jsenv/filesystem/": false,
     "file://**/node_modules/@jsenv/importmap/": false,
     "file://**/node_modules/@jsenv/integrity/": false,
@@ -22,6 +21,7 @@ await build({
     "file://**/node_modules/@jsenv/node-esm-resolution/": false,
     "file://**/node_modules/@jsenv/server/": false,
     "file://**/node_modules/@jsenv/plugin-placeholders/": false,
+    "file://**/node_modules/@jsenv/plugin-transpilation/": false,
     "file://**/node_modules/@jsenv/sourcemap/": true, // cannot inline "source-map"
     "file://**/node_modules/@jsenv/url-meta/": false,
     "file://**/node_modules/@jsenv/urls/": false,

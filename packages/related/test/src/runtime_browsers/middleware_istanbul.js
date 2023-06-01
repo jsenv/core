@@ -30,14 +30,12 @@ export const initIstanbulMiddleware = async (
     try {
       const result = await applyBabelPlugins({
         babelPlugins: [babelPluginInstrument],
-        urlInfo: {
-          originalUrl: fileUrl,
-          // jsenv server could send info to know it's a js module or js classic
-          // but in the end it's not super important
-          // - it's ok to parse js classic as js module considering it's only for istanbul instrumentation
-          type: "js_module",
-          content: originalBody,
-        },
+        input: originalBody,
+        // jsenv server could send info to know it's a js module or js classic
+        // but in the end it's not super important
+        // - it's ok to parse js classic as js module considering it's only for istanbul instrumentation
+        inputIsJsModule: true,
+        inputUrl: fileUrl,
       });
       let code = result.code;
       code = SOURCEMAP.writeComment({

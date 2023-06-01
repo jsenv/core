@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/test",
-  "version": "1.2.2",
+  "version": "1.2.4",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -34,10 +34,10 @@
   },
   "dependencies": {
     "@jsenv/abort": "4.2.4",
-    "@jsenv/ast": "4.0.2",
+    "@jsenv/ast": "4.0.3",
     "@jsenv/filesystem": "4.2.3",
     "@jsenv/log": "3.3.5",
-    "@jsenv/plugin-supervisor": "1.0.1",
+    "@jsenv/plugin-supervisor": "1.1.0",
     "@jsenv/urls": "2.0.0",
     "@jsenv/url-meta": "8.1.0",
     "@jsenv/uneval": "1.6.0",
@@ -49,7 +49,7 @@
     "istanbul-reports": "3.1.5",
     "@paralleldrive/cuid2": "2.2.0",
     "@c88/v8-coverage": "0.1.1",
-    "strip-ansi": "7.0.1",
+    "strip-ansi": "7.1.0",
     "wrap-ansi": "8.1.0",
     "pidtree": "0.6.0"
   }

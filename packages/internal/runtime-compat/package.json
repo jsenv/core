@@ -1,0 +1,25 @@
+{
+  "name": "@jsenv/runtime-compat",
+  "version": "1.0.0",
+  "description": "TODO",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/internal/runtime-compat"
+  },
+  "engines": {
+    "node": ">=16.13.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "main": "./src/main.js",
+  "files": [
+    "/src/"
+  ],
+  "dependencies": {
+    "@jsenv/utils": "2.0.1"
+  }
+}

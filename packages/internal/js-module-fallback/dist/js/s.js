@@ -1,4 +1,28 @@
 function _typeof2(obj) { "@babel/helpers - typeof"; return _typeof2 = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof2(obj); }
+// https://mathiasbynens.be/notes/globalthis
+
+/* eslint-disable no-redeclare */
+/* global globalThis */
+var globalObject;
+if ((typeof globalThis === "undefined" ? "undefined" : _typeof2(globalThis)) === "object") {
+  globalObject = globalThis;
+} else {
+  if (_typeof2(this) === "object") {
+    globalObject = this;
+  } else {
+    // eslint-disable-next-line no-extend-native
+    Object.defineProperty(Object.prototype, "__global__", {
+      get: function get() {
+        return this;
+      },
+      configurable: true
+    });
+    // eslint-disable-next-line no-undef
+    globalObject = __global__;
+    delete Object.prototype.__global__;
+  }
+  globalObject.globalThis = globalObject;
+}
 (function (global, factory) {
   if (typeof define === "function" && define.amd) {
     define([], factory);

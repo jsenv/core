@@ -55,7 +55,10 @@ export const jsenvPluginImportMetaHot = () => {
         }
         const { metadata } = await applyBabelPlugins({
           babelPlugins: [babelPluginMetadataImportMetaHot],
-          urlInfo,
+          input: urlInfo.content,
+          inputIsJsModule: true,
+          inputUrl: urlInfo.originalUrl,
+          outputUrl: urlInfo.generatedUrl,
         });
         const {
           importMetaHotPaths,

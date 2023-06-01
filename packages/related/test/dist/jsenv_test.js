@@ -15,7 +15,7 @@ import { applyBabelPlugins } from "@jsenv/ast";
 import { createId } from "@paralleldrive/cuid2";
 import { runInNewContext } from "node:vm";
 import wrapAnsi from "wrap-ansi";
-import { injectSupervisorIntoHTML, supervisorFileUrl } from "@jsenv/plugin-supervisor/src/html_supervisor_injection.js";
+import { injectSupervisorIntoHTML, supervisorFileUrl } from "@jsenv/plugin-supervisor";
 import { SOURCEMAP, generateSourcemapDataUrl } from "@jsenv/sourcemap";
 import { fork } from "node:child_process";
 import { findFreePort } from "@jsenv/server";
@@ -2959,10 +2959,10 @@ const babelPluginInstrument = (api, {
     name: "transform-instrument",
     visitor: {
       Program: {
-        enter(path) {
+        enter(path, state) {
           const {
             file
-          } = this;
+          } = state;
           const {
             opts
           } = file;
@@ -2973,19 +2973,23 @@ const babelPluginInstrument = (api, {
           } else {
             inputSourceMap = opts.inputSourceMap;
           }
-          this.__dv__ = programVisitor(types, opts.filenameRelative || opts.filename, {
+          const __dv__ = programVisitor(types, opts.filenameRelative || opts.filename, {
             coverageVariable: "__coverage__",
             inputSourceMap
           });
-          this.__dv__.enter(path);
+          __dv__.enter(path);
+          file.metadata.__dv__ = __dv__;
         },
-        exit(path) {
-          if (!this.__dv__) {
+        exit(path, state) {
+          const {
+            __dv__
+          } = state.file.metadata;
+          if (!__dv__) {
             return;
           }
-          const object = this.__dv__.exit(path);
+          const object = __dv__.exit(path);
           // object got two properties: fileCoverage and sourceMappingURL
-          this.file.metadata.coverage = object.fileCoverage;
+          state.file.metadata.coverage = object.fileCoverage;
         }
       }
     }
@@ -3008,10 +3012,9 @@ const relativeUrlToEmptyCoverage = async (relativeUrl, {
       metadata
     } = await applyBabelPlugins({
       babelPlugins: [babelPluginInstrument],
-      urlInfo: {
-        originalUrl: fileUrl,
-        content
-      }
+      input: content,
+      inputIsJsModule: false,
+      inputUrl: fileUrl
     });
     const {
       coverage
@@ -4597,14 +4600,12 @@ const initIstanbulMiddleware = async (page, {
     try {
       const result = await applyBabelPlugins({
         babelPlugins: [babelPluginInstrument],
-        urlInfo: {
-          originalUrl: fileUrl,
-          // jsenv server could send info to know it's a js module or js classic
-          // but in the end it's not super important
-          // - it's ok to parse js classic as js module considering it's only for istanbul instrumentation
-          type: "js_module",
-          content: originalBody
-        }
+        input: originalBody,
+        // jsenv server could send info to know it's a js module or js classic
+        // but in the end it's not super important
+        // - it's ok to parse js classic as js module considering it's only for istanbul instrumentation
+        inputIsJsModule: true,
+        inputUrl: fileUrl
       });
       let code = result.code;
       code = SOURCEMAP.writeComment({

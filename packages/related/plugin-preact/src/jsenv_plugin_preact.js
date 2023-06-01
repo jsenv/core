@@ -125,7 +125,10 @@ export const jsenvPluginPreact = ({
             ...(hookNamesEnabled ? ["babel-plugin-transform-hook-names"] : []),
             ...(refreshEnabled ? ["@prefresh/babel-plugin"] : []),
           ],
-          urlInfo,
+          input: urlInfo.content,
+          inputIsJsModule: true,
+          inputUrl: urlInfo.url,
+          outputUrl: urlInfo.generatedUrl,
         });
         const magicSource = createMagicSource(code);
         if (jsxEnabled) {

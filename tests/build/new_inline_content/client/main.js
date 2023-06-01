@@ -1,5 +1,5 @@
 /* globals __InlineContent__ */
-import "@jsenv/core/src/plugins/reference_analysis/inline_content.js";
+import "@jsenv/core/src/kitchen/client/inline_content.js";
 
 // prettier-ignore
 export const singleQuoteEscaped =  new __InlineContent__('\'', { type: "text/plain" }).text

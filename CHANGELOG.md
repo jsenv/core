@@ -1,3 +1,8 @@
+# 36.2.0
+
+- Change internal packages structure
+- Ensure `document.adoptedStyleSheets`, `globalThis` and `regeneratorRuntime` polyfill injection in js classic
+
 # 36.1.2
 
 - Introduce `@jsenv/js-module-fallback` to remove direct dependency between `@jsenv/core` and `@jsenv/plugin-as-js-classic`

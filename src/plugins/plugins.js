@@ -1,4 +1,5 @@
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
+import { jsenvPluginTranspilation } from "@jsenv/plugin-transpilation";
 
 import { jsenvPluginReferenceAnalysis } from "./reference_analysis/jsenv_plugin_reference_analysis.js";
 import { jsenvPluginImportmap } from "./importmap/jsenv_plugin_importmap.js";
@@ -11,7 +12,6 @@ import { jsenvPluginInlining } from "./inlining/jsenv_plugin_inlining.js";
 import { jsenvPluginCommonJsGlobals } from "./commonjs_globals/jsenv_plugin_commonjs_globals.js";
 import { jsenvPluginImportMetaScenarios } from "./import_meta_scenarios/jsenv_plugin_import_meta_scenarios.js";
 import { jsenvPluginGlobalScenarios } from "./global_scenarios/jsenv_plugin_global_scenarios.js";
-import { jsenvPluginTranspilation } from "./transpilation/jsenv_plugin_transpilation.js";
 import { jsenvPluginNodeRuntime } from "./node_runtime/jsenv_plugin_node_runtime.js";
 // autoreload
 import { jsenvPluginImportMetaHot } from "./import_meta_hot/jsenv_plugin_import_meta_hot.js";

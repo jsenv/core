@@ -3,13 +3,7 @@ import { readFileSync } from "node:fs";
 import { urlToRelativeUrl } from "@jsenv/urls";
 import { composeTwoSourcemaps, createMagicSource, SOURCEMAP } from "@jsenv/sourcemap";
 import { applyBabelPlugins } from "@jsenv/ast";
-import { pathToFileURL } from "node:url";
 import { parseExpression } from "@babel/parser";
-
-const require$2 = createRequire(import.meta.url);
-const babelPluginPackagePath = require$2.resolve("@jsenv/babel-plugins");
-const babelPluginPackageUrl = pathToFileURL(babelPluginPackagePath);
-const requireBabelPlugin = createRequire(babelPluginPackageUrl);
 
 const babelPluginTransformImportMetaUrl = babel => {
   return {
@@ -3603,46 +3597,41 @@ const systemJsClientFileUrlDefault = new URL("./js/s.js", import.meta.url).href;
 const convertJsModuleToJsClassic = async ({
   systemJsInjection,
   systemJsClientFileUrl = systemJsClientFileUrlDefault,
-  urlInfo,
-  jsModuleUrlInfo
+  input,
+  inputIsEntryPoint,
+  inputSourcemap,
+  inputUrl,
+  outputUrl,
+  outputFormat = "system" // "systemjs" or "umd"
 }) => {
-  let jsClassicFormat;
-  if (urlInfo.isEntryPoint && !jsModuleUrlInfo.data.usesImport) {
-    // if it's an entry point without dependency (it does not use import)
-    // then we can use UMD
-    jsClassicFormat = "umd";
-  } else {
-    // otherwise we have to use system in case it's imported
-    // by an other file (for entry points)
-    // or to be able to import when it uses import
-    jsClassicFormat = "system";
-  }
-  urlInfo.data.jsClassicFormat = jsClassicFormat;
   const {
     code,
     map
   } = await applyBabelPlugins({
-    babelPlugins: [...(jsClassicFormat === "system" ? [
+    babelPlugins: [...(outputFormat === "system" ? [
     // proposal-dynamic-import required with systemjs for babel8:
     // https://github.com/babel/babel/issues/10746
     require("@babel/plugin-proposal-dynamic-import"), require("@babel/plugin-transform-modules-systemjs"), [babelPluginRelativeImports, {
-      rootUrl: jsModuleUrlInfo.url
+      rootUrl: inputUrl
     }], [default_1, {
       asyncAwait: false,
       // already handled + we might not needs it at all
       topLevelAwait: "return"
-    }]] : [[requireBabelPlugin("babel-plugin-transform-async-to-promises"), {
+    }]] : [[require("babel-plugin-transform-async-to-promises"), {
       asyncAwait: false,
       // already handled + we might not needs it at all
       topLevelAwait: "simple"
     }], babelPluginTransformImportMetaUrl, babelPluginTransformImportMetaResolve, require("@babel/plugin-transform-modules-umd"), [babelPluginRelativeImports, {
-      rootUrl: jsModuleUrlInfo.url
+      rootUrl: inputUrl
     }]])],
-    urlInfo: jsModuleUrlInfo
+    input,
+    inputIsJsModule: true,
+    inputUrl,
+    outputUrl
   });
-  let sourcemap = jsModuleUrlInfo.sourcemap;
+  let sourcemap = inputSourcemap;
   sourcemap = await composeTwoSourcemaps(sourcemap, map);
-  if (systemJsInjection && jsClassicFormat === "system" && urlInfo.isEntryPoint) {
+  if (systemJsInjection && outputFormat === "system" && inputIsEntryPoint) {
     const magicSource = createMagicSource(code);
     let systemJsFileContent = readFileSync(new URL(systemJsClientFileUrl), "utf8");
     const sourcemapFound = SOURCEMAP.readComment({
