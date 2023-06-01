@@ -3,9 +3,9 @@ import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 
 import { getBaseBabelPluginStructure } from "./babel_plugin_structure.js";
 import { babelPluginBabelHelpersAsJsenvImports } from "./babel_plugin_babel_helpers_as_jsenv_imports.js";
-import { babelPluginNewStylesheetAsJsenvImport } from "./new_stylesheet/babel_plugin_new_stylesheet_as_jsenv_import.js";
-import { babelPluginGlobalThisPolyfillInjector } from "./global_this/babel_plugin_global_this_polyfill_injector.js";
-import { babelPluginRegeneratorRuntimeAsJsenvImport } from "./regenerator_runtime/babel_plugin_regenerator_runtime_as_jsenv_import.js";
+import { babelPluginNewStylesheetInjector } from "./new_stylesheet/babel_plugin_new_stylesheet_injector.js";
+import { babelPluginGlobalThisInjector } from "./global_this/babel_plugin_global_this_injector.js";
+import { babelPluginRegeneratorRuntimeInjector } from "./regenerator_runtime/babel_plugin_regenerator_runtime_injector.js";
 
 export const applyJsTranspilation = async ({
   input,
@@ -28,20 +28,20 @@ export const applyJsTranspilation = async ({
   });
 
   if (!isSupported("global_this")) {
-    babelPluginStructure["global-this-as-jsenv-import"] = [
-      babelPluginGlobalThisPolyfillInjector,
+    babelPluginStructure["global-this-injector"] = [
+      babelPluginGlobalThisInjector,
       { babelHelpersAsImport, getImportSpecifier },
     ];
   }
   if (!isSupported("async_generator_function")) {
-    babelPluginStructure["regenerator-runtime-as-jsenv-import"] = [
-      babelPluginRegeneratorRuntimeAsJsenvImport,
+    babelPluginStructure["regenerator-runtime-injector"] = [
+      babelPluginRegeneratorRuntimeInjector,
       { babelHelpersAsImport, getImportSpecifier },
     ];
   }
   if (!isSupported("new_stylesheet")) {
-    babelPluginStructure["new-stylesheet-as-jsenv-import"] = [
-      babelPluginNewStylesheetAsJsenvImport,
+    babelPluginStructure["new-stylesheet-injector"] = [
+      babelPluginNewStylesheetInjector,
       { babelHelpersAsImport, getImportSpecifier },
     ];
   }

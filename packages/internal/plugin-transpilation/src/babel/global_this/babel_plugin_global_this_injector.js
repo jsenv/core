@@ -10,16 +10,21 @@ const globalThisJsClassicClientFileUrl = new URL(
   import.meta.url,
 ).href;
 
-export const babelPluginGlobalThisPolyfillInjector = (
+export const babelPluginGlobalThisInjector = (
   babel,
   { babelHelpersAsImport, getImportSpecifier },
 ) => {
   return {
-    name: "global-this-polyfill-injector",
+    name: "global-this-injector",
     visitor: {
       Program: {
         enter: (path, state) => {
           state.file.metadata.globalThisDetected = false;
+          const { filename } = state;
+          const fileUrl = pathToFileURL(filename).href;
+          if (fileUrl === globalThisJsModuleClientFileUrl) {
+            path.stop();
+          }
         },
         exit: (path, state) => {
           if (!state.file.metadata.globalThisDetected) return;
@@ -38,14 +43,10 @@ export const babelPluginGlobalThisPolyfillInjector = (
         },
       },
       Identifier(path, state) {
-        const { filename } = state;
-        const fileUrl = pathToFileURL(filename).href;
-        if (fileUrl === globalThisJsModuleClientFileUrl) {
-          return;
-        }
         const { node } = path;
         if (node.name === "globalThis") {
           state.file.metadata.globalThisDetected = true;
+          path.stop();
         }
       },
     },
