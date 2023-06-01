@@ -1,11 +1,11 @@
 import { applyBabelPlugins } from "@jsenv/ast";
 import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 
-import { getBaseBabelPluginStructure } from "./internal/babel_plugin_structure.js";
-import { babelPluginBabelHelpersAsJsenvImports } from "./internal/babel_plugin_babel_helpers_as_jsenv_imports.js";
-import { babelPluginNewStylesheetAsJsenvImport } from "./internal/new_stylesheet/babel_plugin_new_stylesheet_as_jsenv_import.js";
-import { babelPluginGlobalThisAsJsenvImport } from "./internal/global_this/babel_plugin_global_this_as_jsenv_import.js";
-import { babelPluginRegeneratorRuntimeAsJsenvImport } from "./internal/regenerator_runtime/babel_plugin_regenerator_runtime_as_jsenv_import.js";
+import { getBaseBabelPluginStructure } from "./babel_plugin_structure.js";
+import { babelPluginBabelHelpersAsJsenvImports } from "./babel_plugin_babel_helpers_as_jsenv_imports.js";
+import { babelPluginNewStylesheetAsJsenvImport } from "./new_stylesheet/babel_plugin_new_stylesheet_as_jsenv_import.js";
+import { babelPluginGlobalThisAsJsenvImport } from "./global_this/babel_plugin_global_this_as_jsenv_import.js";
+import { babelPluginRegeneratorRuntimeAsJsenvImport } from "./regenerator_runtime/babel_plugin_regenerator_runtime_as_jsenv_import.js";
 
 export const applyJsTranspilation = async ({
   input,

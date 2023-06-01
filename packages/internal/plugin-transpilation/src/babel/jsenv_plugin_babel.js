@@ -1,4 +1,4 @@
-import { applyJsTranspilation } from "@jsenv/js-transpilation";
+import { applyJsTranspilation } from "./apply_js_transpilation.js";
 
 export const jsenvPluginBabel = ({ babelHelpersAsImport = true } = {}) => {
   const transformWithBabel = async (urlInfo, context) => {

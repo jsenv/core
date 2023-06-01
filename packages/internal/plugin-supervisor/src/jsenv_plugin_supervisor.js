@@ -1,15 +1,17 @@
 /*
- * This plugin provides a way for jsenv to know when js execution is done
+ * This plugin provides a way for jsenv to supervisor js execution:
+ * - Know how many js are executed, when they are done, collect errors, etc...
  */
 
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { getOriginalPosition } from "@jsenv/sourcemap";
 import { stringifyUrlSite } from "@jsenv/urls";
+
 import {
   supervisorFileUrl,
   injectSupervisorIntoHTML,
-} from "@jsenv/html-supervisor";
+} from "./html_supervisor.js";
 
 export const jsenvPluginSupervisor = ({
   logs = false,
