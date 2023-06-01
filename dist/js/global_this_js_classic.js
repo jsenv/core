@@ -6,8 +6,8 @@ let globalObject;
 if (typeof globalThis === "object") {
   globalObject = globalThis;
 } else {
-  if (typeof undefined === "object") {
-    globalObject = undefined;
+  if (typeof this === "object") {
+    globalObject = this;
   } else {
     // eslint-disable-next-line no-extend-native
     Object.defineProperty(Object.prototype, "__global__", {

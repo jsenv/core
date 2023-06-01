@@ -6,7 +6,7 @@ const globalThisJsModuleClientFileUrl = new URL(
   import.meta.url,
 ).href;
 const globalThisJsClassicClientFileUrl = new URL(
-  "./client/global_this_js_classic.js",
+  "./client/global_this_js_classic.js?js_classic",
   import.meta.url,
 ).href;
 

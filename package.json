@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "36.1.4",
+  "version": "36.2.0",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "author": {
@@ -60,7 +60,7 @@
   "dependencies": {
     "@financial-times/polyfill-useragent-normaliser": "1.10.2",
     "@jsenv/abort": "4.2.4",
-    "@jsenv/ast": "4.0.2",
+    "@jsenv/ast": "4.0.3",
     "@jsenv/filesystem": "4.2.3",
     "@jsenv/importmap": "1.2.1",
     "@jsenv/integrity": "0.0.1",

@@ -8359,31 +8359,69 @@ const babelPluginBabelHelpersAsJsenvImports = (babel, {
   };
 };
 
+const injectPolyfillIntoBabelAst = ({
+  programPath,
+  polyfillFileUrl,
+  getPolyfillImportSpecifier,
+  babel,
+  isJsModule,
+  asImport = true
+}) => {
+  if (isJsModule && asImport) {
+    injectJsImport({
+      programPath,
+      from: getPolyfillImportSpecifier(polyfillFileUrl),
+      sideEffect: true
+    });
+    return;
+  }
+  const polyfillFileContent = readFileSync(new URL(polyfillFileUrl), "utf8");
+  const polyfillAst = babel.parse(polyfillFileContent);
+  if (isJsModule) {
+    injectAstAfterImport(programPath, polyfillAst);
+    return;
+  }
+  const bodyNodePaths = programPath.get("body");
+  bodyNodePaths[0].insertBefore(polyfillAst.program.body);
+};
+const injectAstAfterImport = (programPath, ast) => {
+  const bodyNodePaths = programPath.get("body");
+  const notAnImportIndex = bodyNodePaths.findIndex(bodyNodePath => bodyNodePath.node.type !== "ImportDeclaration");
+  const notAnImportNodePath = bodyNodePaths[notAnImportIndex];
+  if (notAnImportNodePath) {
+    notAnImportNodePath.insertBefore(ast.program.body);
+  } else {
+    bodyNodePaths[0].insertBefore(ast.program.body);
+  }
+};
+
 const newStylesheetClientFileUrl = new URL("./js/new_stylesheet.js", import.meta.url).href;
-const babelPluginNewStylesheetAsJsenvImport = (babel, {
+const babelPluginNewStylesheetInjector = (babel, {
+  babelHelpersAsImport,
   getImportSpecifier
 }) => {
   return {
-    name: "new-stylesheet-as-jsenv-import",
+    name: "new-stylesheet-injector",
     visitor: {
-      Program: (programPath, babelState) => {
-        if (babelState.filename) {
-          const fileUrl = pathToFileURL(babelState.filename).href;
-          if (fileUrl === newStylesheetClientFileUrl) {
-            return;
-          }
+      Program: (path, state) => {
+        const {
+          filename
+        } = state;
+        const fileUrl = pathToFileURL(filename).href;
+        if (fileUrl === newStylesheetClientFileUrl) {
+          return;
         }
-        let usesNewStylesheet = false;
-        programPath.traverse({
+        let newStyleSheetDetected = false;
+        path.traverse({
           NewExpression: path => {
-            usesNewStylesheet = isNewCssStyleSheetCall(path.node);
-            if (usesNewStylesheet) {
+            if (isNewCssStyleSheetCall(path.node)) {
+              newStyleSheetDetected = true;
               path.stop();
             }
           },
           MemberExpression: path => {
-            usesNewStylesheet = isDocumentAdoptedStyleSheets(path.node);
-            if (usesNewStylesheet) {
+            if (isDocumentAdoptedStyleSheets(path.node)) {
+              newStyleSheetDetected = true;
               path.stop();
             }
           },
@@ -8399,22 +8437,22 @@ const babelPluginNewStylesheetAsJsenvImport = (babel, {
               return;
             }
             const sourcePath = path.get("arguments")[0];
-            usesNewStylesheet = hasCssModuleQueryParam(sourcePath) || hasImportTypeCssAssertion(path);
-            if (usesNewStylesheet) {
+            if (hasCssModuleQueryParam(sourcePath) || hasImportTypeCssAssertion(path)) {
+              newStyleSheetDetected = true;
               path.stop();
             }
           },
           ImportDeclaration: path => {
             const sourcePath = path.get("source");
-            usesNewStylesheet = hasCssModuleQueryParam(sourcePath) || hasImportTypeCssAssertion(path);
-            if (usesNewStylesheet) {
+            if (hasCssModuleQueryParam(sourcePath) || hasImportTypeCssAssertion(path)) {
+              newStyleSheetDetected = true;
               path.stop();
             }
           },
           ExportAllDeclaration: path => {
             const sourcePath = path.get("source");
-            usesNewStylesheet = hasCssModuleQueryParam(sourcePath);
-            if (usesNewStylesheet) {
+            if (hasCssModuleQueryParam(sourcePath)) {
+              newStyleSheetDetected = true;
               path.stop();
             }
           },
@@ -8428,17 +8466,25 @@ const babelPluginNewStylesheetAsJsenvImport = (babel, {
               return;
             }
             const sourcePath = path.get("source");
-            usesNewStylesheet = hasCssModuleQueryParam(sourcePath);
-            if (usesNewStylesheet) {
+            if (hasCssModuleQueryParam(sourcePath)) {
+              newStyleSheetDetected = true;
               path.stop();
             }
           }
         });
-        if (usesNewStylesheet) {
-          injectJsImport({
-            programPath,
-            from: getImportSpecifier(newStylesheetClientFileUrl),
-            sideEffect: true
+        state.file.metadata.newStyleSheetDetected = newStyleSheetDetected;
+        if (newStyleSheetDetected) {
+          const {
+            sourceType
+          } = state.file.opts.parserOpts;
+          const isJsModule = sourceType === "module";
+          injectPolyfillIntoBabelAst({
+            programPath: path,
+            isJsModule,
+            asImport: babelHelpersAsImport,
+            polyfillFileUrl: newStylesheetClientFileUrl,
+            getPolyfillImportSpecifier: getImportSpecifier,
+            babel
           });
         }
       }
@@ -8471,31 +8517,51 @@ const getImportAssertionsDescriptor = importAssertions => {
   return importAssertionsDescriptor;
 };
 
-const globalThisClientFileUrl = new URL("./js/global_this.js", import.meta.url).href;
-const babelPluginGlobalThisAsJsenvImport = (babel, {
+const globalThisJsModuleClientFileUrl = new URL("./js/global_this_js_module.js", import.meta.url).href;
+const globalThisJsClassicClientFileUrl = new URL("./js/global_this_js_classic.js", import.meta.url).href;
+const babelPluginGlobalThisInjector = (babel, {
+  babelHelpersAsImport,
   getImportSpecifier
 }) => {
   return {
-    name: "global-this-as-jsenv-import",
+    name: "global-this-injector",
     visitor: {
-      Identifier(path, opts) {
-        const {
-          filename
-        } = opts;
-        const fileUrl = pathToFileURL(filename).href;
-        if (fileUrl === globalThisClientFileUrl) {
-          return;
-        }
-        const {
-          node
-        } = path;
-        // we should do this once, tree shaking will remote it but still
-        if (node.name === "globalThis") {
-          injectJsImport({
-            programPath: path.scope.getProgramParent().path,
-            from: getImportSpecifier(globalThisClientFileUrl),
-            sideEffect: true
+      Program: {
+        enter: (path, state) => {
+          let globalThisDetected = false;
+          const {
+            filename
+          } = state;
+          const fileUrl = pathToFileURL(filename).href;
+          if (fileUrl === globalThisJsModuleClientFileUrl) {
+            return;
+          }
+          path.traverse({
+            Identifier(path) {
+              const {
+                node
+              } = path;
+              if (node.name === "globalThis") {
+                globalThisDetected = true;
+                path.stop();
+              }
+            }
           });
+          state.file.metadata.globalThisDetected = globalThisDetected;
+          if (globalThisDetected) {
+            const {
+              sourceType
+            } = state.file.opts.parserOpts;
+            const isJsModule = sourceType === "module";
+            injectPolyfillIntoBabelAst({
+              programPath: path,
+              isJsModule,
+              asImport: babelHelpersAsImport,
+              polyfillFileUrl: isJsModule ? globalThisJsModuleClientFileUrl : globalThisJsClassicClientFileUrl,
+              getPolyfillImportSpecifier: getImportSpecifier,
+              babel
+            });
+          }
         }
       }
     }
@@ -8503,28 +8569,46 @@ const babelPluginGlobalThisAsJsenvImport = (babel, {
 };
 
 const regeneratorRuntimeClientFileUrl = new URL("./js/regenerator_runtime.js", import.meta.url).href;
-const babelPluginRegeneratorRuntimeAsJsenvImport = (babel, {
+const babelPluginRegeneratorRuntimeInjector = (babel, {
+  babelHelpersAsImport,
   getImportSpecifier
 }) => {
   return {
-    name: "regenerator-runtime-as-jsenv-import",
+    name: "regenerator-runtime-injector",
     visitor: {
-      Identifier(path, opts) {
+      Program: (path, state) => {
+        let regeneratorRuntimeDetected = false;
         const {
           filename
-        } = opts;
+        } = state;
         const fileUrl = pathToFileURL(filename).href;
         if (fileUrl === regeneratorRuntimeClientFileUrl) {
           return;
         }
-        const {
-          node
-        } = path;
-        if (node.name === "regeneratorRuntime") {
-          injectJsImport({
-            programPath: path.scope.getProgramParent().path,
-            from: getImportSpecifier(regeneratorRuntimeClientFileUrl),
-            sideEffect: true
+        path.traverse({
+          Identifier(path) {
+            const {
+              node
+            } = path;
+            if (node.name === "regeneratorRuntime") {
+              regeneratorRuntimeDetected = true;
+              path.stop();
+            }
+          }
+        });
+        state.file.metadata.regeneratorRuntimeDetected = regeneratorRuntimeDetected;
+        if (regeneratorRuntimeDetected) {
+          const {
+            sourceType
+          } = state.file.opts.parserOpts;
+          const isJsModule = sourceType === "module";
+          injectPolyfillIntoBabelAst({
+            programPath: path,
+            isJsModule,
+            asImport: babelHelpersAsImport,
+            polyfillFileUrl: regeneratorRuntimeClientFileUrl,
+            getPolyfillImportSpecifier: getImportSpecifier,
+            babel
           });
         }
       }
@@ -8551,31 +8635,29 @@ const applyJsTranspilation = async ({
     isJsModule: inputIsJsModule,
     getImportSpecifier
   });
-  if (inputIsJsModule && babelHelpersAsImport) {
-    if (!isSupported("global_this")) {
-      babelPluginStructure["global-this-as-jsenv-import"] = [babelPluginGlobalThisAsJsenvImport, {
-        getImportSpecifier
-      }];
-    }
-    if (!isSupported("async_generator_function")) {
-      babelPluginStructure["regenerator-runtime-as-jsenv-import"] = [babelPluginRegeneratorRuntimeAsJsenvImport, {
-        getImportSpecifier
-      }];
-    }
-    if (!isSupported("new_stylesheet")) {
-      babelPluginStructure["new-stylesheet-as-jsenv-import"] = [babelPluginNewStylesheetAsJsenvImport, {
-        getImportSpecifier
-      }];
-    }
-    if (Object.keys(babelPluginStructure).length > 0) {
-      babelPluginStructure["babel-helper-as-jsenv-import"] = [babelPluginBabelHelpersAsJsenvImports, {
-        getImportSpecifier
-      }];
-    }
+  if (!isSupported("global_this")) {
+    babelPluginStructure["global-this-injector"] = [babelPluginGlobalThisInjector, {
+      babelHelpersAsImport,
+      getImportSpecifier
+    }];
   }
-  // otherwise, concerning global_this, and new_stylesheet we must inject the code
-  // (we cannot inject an import)
-
+  if (!isSupported("async_generator_function")) {
+    babelPluginStructure["regenerator-runtime-injector"] = [babelPluginRegeneratorRuntimeInjector, {
+      babelHelpersAsImport,
+      getImportSpecifier
+    }];
+  }
+  if (!isSupported("new_stylesheet")) {
+    babelPluginStructure["new-stylesheet-injector"] = [babelPluginNewStylesheetInjector, {
+      babelHelpersAsImport,
+      getImportSpecifier
+    }];
+  }
+  if (inputIsJsModule && babelHelpersAsImport && Object.keys(babelPluginStructure).length > 0) {
+    babelPluginStructure["babel-helper-as-jsenv-import"] = [babelPluginBabelHelpersAsJsenvImports, {
+      getImportSpecifier
+    }];
+  }
   const babelPlugins = Object.keys(babelPluginStructure).map(babelPluginName => babelPluginStructure[babelPluginName]);
   const {
     code,
@@ -16750,8 +16832,8 @@ build ${entryPointKeys.length} entry points`);
         magicDirectoryIndex,
         directoryReferenceAllowed,
         transpilation: {
-          ...transpilation,
           babelHelpersAsImport: !explicitJsModuleFallback,
+          ...transpilation,
           jsModuleFallbackOnJsClassic: false
         },
         inlining: false,
