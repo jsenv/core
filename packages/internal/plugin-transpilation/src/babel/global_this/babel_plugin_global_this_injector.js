@@ -19,35 +19,37 @@ export const babelPluginGlobalThisInjector = (
     visitor: {
       Program: {
         enter: (path, state) => {
-          state.file.metadata.globalThisDetected = false;
+          let globalThisDetected = false;
           const { filename } = state;
           const fileUrl = pathToFileURL(filename).href;
           if (fileUrl === globalThisJsModuleClientFileUrl) {
-            path.stop();
+            return;
+          }
+          path.traverse({
+            Identifier(path) {
+              const { node } = path;
+              if (node.name === "globalThis") {
+                globalThisDetected = true;
+                path.stop();
+              }
+            },
+          });
+          state.file.metadata.globalThisDetected = globalThisDetected;
+          if (globalThisDetected) {
+            const { sourceType } = state.file.opts.parserOpts;
+            const isJsModule = sourceType === "module";
+            injectPolyfillIntoBabelAst({
+              programPath: path,
+              isJsModule,
+              asImport: babelHelpersAsImport,
+              polyfillFileUrl: isJsModule
+                ? globalThisJsModuleClientFileUrl
+                : globalThisJsClassicClientFileUrl,
+              getPolyfillImportSpecifier: getImportSpecifier,
+              babel,
+            });
           }
         },
-        exit: (path, state) => {
-          if (!state.file.metadata.globalThisDetected) return;
-          const { sourceType } = state.file.opts.parserOpts;
-          const isJsModule = sourceType === "module";
-          injectPolyfillIntoBabelAst({
-            programPath: path,
-            isJsModule,
-            asImport: babelHelpersAsImport,
-            polyfillFileUrl: isJsModule
-              ? globalThisJsModuleClientFileUrl
-              : globalThisJsClassicClientFileUrl,
-            getPolyfillImportSpecifier: getImportSpecifier,
-            babel,
-          });
-        },
-      },
-      Identifier(path, state) {
-        const { node } = path;
-        if (node.name === "globalThis") {
-          state.file.metadata.globalThisDetected = true;
-          path.stop();
-        }
       },
     },
   };

@@ -13,17 +13,81 @@ export const babelPluginNewStylesheetInjector = (
   return {
     name: "new-stylesheet-injector",
     visitor: {
-      Program: {
-        enter: (path, state) => {
-          state.file.metadata.newStyleSheetDetected = false;
-          const { filename } = state;
-          const fileUrl = pathToFileURL(filename).href;
-          if (fileUrl === newStylesheetClientFileUrl) {
-            path.stop();
-          }
-        },
-        exit: (path, state) => {
-          if (!state.file.metadata.newStyleSheetDetected) return;
+      Program: (path, state) => {
+        const { filename } = state;
+        const fileUrl = pathToFileURL(filename).href;
+        if (fileUrl === newStylesheetClientFileUrl) {
+          return;
+        }
+        let newStyleSheetDetected = false;
+        path.traverse({
+          NewExpression: (path) => {
+            if (isNewCssStyleSheetCall(path.node)) {
+              newStyleSheetDetected = true;
+              path.stop();
+            }
+          },
+          MemberExpression: (path) => {
+            if (isDocumentAdoptedStyleSheets(path.node)) {
+              newStyleSheetDetected = true;
+              path.stop();
+            }
+          },
+          CallExpression: (path) => {
+            if (path.node.callee.type !== "Import") {
+              // Some other function call, not import();
+              return;
+            }
+            if (path.node.arguments[0].type !== "StringLiteral") {
+              // Non-string argument, probably a variable or expression, e.g.
+              // import(moduleId)
+              // import('./' + moduleName)
+              return;
+            }
+            const sourcePath = path.get("arguments")[0];
+            if (
+              hasCssModuleQueryParam(sourcePath) ||
+              hasImportTypeCssAssertion(path)
+            ) {
+              newStyleSheetDetected = true;
+              path.stop();
+            }
+          },
+          ImportDeclaration: (path) => {
+            const sourcePath = path.get("source");
+            if (
+              hasCssModuleQueryParam(sourcePath) ||
+              hasImportTypeCssAssertion(path)
+            ) {
+              newStyleSheetDetected = true;
+              path.stop();
+            }
+          },
+          ExportAllDeclaration: (path) => {
+            const sourcePath = path.get("source");
+            if (hasCssModuleQueryParam(sourcePath)) {
+              newStyleSheetDetected = true;
+              path.stop();
+            }
+          },
+          ExportNamedDeclaration: (path) => {
+            if (!path.node.source) {
+              // This export has no "source", so it's probably
+              // a local variable or function, e.g.
+              // export { varName }
+              // export const constName = ...
+              // export function funcName() {}
+              return;
+            }
+            const sourcePath = path.get("source");
+            if (hasCssModuleQueryParam(sourcePath)) {
+              newStyleSheetDetected = true;
+              path.stop();
+            }
+          },
+        });
+        state.file.metadata.newStyleSheetDetected = newStyleSheetDetected;
+        if (newStyleSheetDetected) {
           const { sourceType } = state.file.opts.parserOpts;
           const isJsModule = sourceType === "module";
           injectPolyfillIntoBabelAst({
@@ -34,72 +98,6 @@ export const babelPluginNewStylesheetInjector = (
             getPolyfillImportSpecifier: getImportSpecifier,
             babel,
           });
-        },
-      },
-      NewExpression: (path, state) => {
-        state.file.metadata.newStyleSheetDetected = isNewCssStyleSheetCall(
-          path.node,
-        );
-        if (state.file.metadata.newStyleSheetDetected) {
-          state.file.metadata.newStyleSheetDetected = true;
-          path.stop();
-        }
-      },
-      MemberExpression: (path, state) => {
-        state.file.metadata.newStyleSheetDetected =
-          isDocumentAdoptedStyleSheets(path.node);
-        if (state.file.metadata.newStyleSheetDetected) {
-          path.stop();
-        }
-      },
-      CallExpression: (path, state) => {
-        if (path.node.callee.type !== "Import") {
-          // Some other function call, not import();
-          return;
-        }
-        if (path.node.arguments[0].type !== "StringLiteral") {
-          // Non-string argument, probably a variable or expression, e.g.
-          // import(moduleId)
-          // import('./' + moduleName)
-          return;
-        }
-        const sourcePath = path.get("arguments")[0];
-        state.file.metadata.newStyleSheetDetected =
-          hasCssModuleQueryParam(sourcePath) || hasImportTypeCssAssertion(path);
-        if (state.file.metadata.newStyleSheetDetected) {
-          path.stop();
-        }
-      },
-      ImportDeclaration: (path, state) => {
-        const sourcePath = path.get("source");
-        state.file.metadata.newStyleSheetDetected =
-          hasCssModuleQueryParam(sourcePath) || hasImportTypeCssAssertion(path);
-        if (state.file.metadata.newStyleSheetDetected) {
-          path.stop();
-        }
-      },
-      ExportAllDeclaration: (path, state) => {
-        const sourcePath = path.get("source");
-        state.file.metadata.newStyleSheetDetected =
-          hasCssModuleQueryParam(sourcePath);
-        if (state.file.metadata.newStyleSheetDetected) {
-          path.stop();
-        }
-      },
-      ExportNamedDeclaration: (path, state) => {
-        if (!path.node.source) {
-          // This export has no "source", so it's probably
-          // a local variable or function, e.g.
-          // export { varName }
-          // export const constName = ...
-          // export function funcName() {}
-          return;
-        }
-        const sourcePath = path.get("source");
-        state.file.metadata.newStyleSheetDetected =
-          hasCssModuleQueryParam(sourcePath);
-        if (state.file.metadata.newStyleSheetDetected) {
-          path.stop();
         }
       },
     },

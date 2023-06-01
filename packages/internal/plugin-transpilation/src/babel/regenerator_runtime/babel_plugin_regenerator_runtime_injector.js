@@ -13,17 +13,25 @@ export const babelPluginRegeneratorRuntimeInjector = (
   return {
     name: "regenerator-runtime-injector",
     visitor: {
-      Program: {
-        enter: (path, state) => {
-          state.file.metadata.regeneratorRuntimeDetected = false;
-          const { filename } = state;
-          const fileUrl = pathToFileURL(filename).href;
-          if (fileUrl === regeneratorRuntimeClientFileUrl) {
-            path.stop();
-          }
-        },
-        exit: (path, state) => {
-          if (!state.file.metadata.regeneratorRuntimeDetected) return;
+      Program: (path, state) => {
+        let regeneratorRuntimeDetected = false;
+        const { filename } = state;
+        const fileUrl = pathToFileURL(filename).href;
+        if (fileUrl === regeneratorRuntimeClientFileUrl) {
+          return;
+        }
+        path.traverse({
+          Identifier(path) {
+            const { node } = path;
+            if (node.name === "regeneratorRuntime") {
+              regeneratorRuntimeDetected = true;
+              path.stop();
+            }
+          },
+        });
+        state.file.metadata.regeneratorRuntimeDetected =
+          regeneratorRuntimeDetected;
+        if (regeneratorRuntimeDetected) {
           const { sourceType } = state.file.opts.parserOpts;
           const isJsModule = sourceType === "module";
           injectPolyfillIntoBabelAst({
@@ -34,13 +42,6 @@ export const babelPluginRegeneratorRuntimeInjector = (
             getPolyfillImportSpecifier: getImportSpecifier,
             babel,
           });
-        },
-      },
-      Identifier(path, state) {
-        const { node } = path;
-        if (node.name === "regeneratorRuntime") {
-          state.file.metadata.regeneratorRuntimeDetected = true;
-          path.stop();
         }
       },
     },
