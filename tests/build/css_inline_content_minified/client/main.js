@@ -1,5 +1,5 @@
 /* globals __InlineContent__ */
-import "@jsenv/core/src/plugins/reference_analysis/inline_content.js";
+import "@jsenv/core/src/kitchen/client/inline_content.js";
 
 const content = new __InlineContent__(
   `@font-face {
