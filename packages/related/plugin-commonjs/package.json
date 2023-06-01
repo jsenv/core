@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-commonjs",
-  "version": "2.0.7",
+  "version": "2.0.8",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -30,7 +30,7 @@
     "@jsenv/urls": "2.0.0",
     "@rollup/plugin-commonjs": "25.0.0",
     "@rollup/plugin-json": "6.0.0",
-    "@rollup/plugin-node-resolve": "15.0.2",
+    "@rollup/plugin-node-resolve": "15.1.0",
     "@rollup/plugin-replace": "5.0.2",
     "cjs-module-lexer": "1.2.2",
     "is-valid-identifier": "2.0.2",
