@@ -14,13 +14,13 @@
   "exports": {
     ".": {
       "import": {
-        "development": "./src/jsenv_plugin_supervisor.js",
+        "development": "./src/main.js",
         "default": "./dist/jsenv_plugin_supervisor.js"
       }
     },
     "./*": "./*"
   },
-  "main": "./src/jsenv_plugin_supervisor.js",
+  "main": "./src/main.js",
   "files": [
     "/src/"
   ],

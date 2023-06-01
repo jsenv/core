@@ -12,7 +12,6 @@
 import { urlToFilename } from "@jsenv/urls";
 
 import { convertJsClassicToJsModule } from "./convert_js_classic_to_js_module.js";
-import { isWebWorkerUrlInfo } from "../../../kitchen/web_workers.js";
 
 export const jsenvPluginAsJsModule = () => {
   return {
@@ -71,6 +70,14 @@ export const jsenvPluginAsJsModule = () => {
       };
     },
   };
+};
+
+const isWebWorkerUrlInfo = (urlInfo) => {
+  return (
+    urlInfo.subtype === "worker" ||
+    urlInfo.subtype === "service_worker" ||
+    urlInfo.subtype === "shared_worker"
+  );
 };
 
 const splitFileExtension = (filename) => {
