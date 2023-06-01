@@ -18,7 +18,7 @@ self.resourcesFromJsenvBuild = {
       exports: {}
     };
     factory();
-    global.sw = mod.exports;
+    global.swNomodule = mod.exports;
   }
 })(typeof globalThis !== "undefined" ? globalThis : typeof self !== "undefined" ? self : this, function () {
   "use strict";

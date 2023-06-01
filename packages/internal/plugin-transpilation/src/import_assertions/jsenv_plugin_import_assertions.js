@@ -225,7 +225,7 @@ export default stylesheet;`,
         canUseTemplateString: true,
       });
       return {
-        content: `import { InlineContent } from ${JSON.stringify(
+        content: `import ${JSON.stringify(
           context.referenceUtils.inlineContentClientFileUrl,
         )};
 
