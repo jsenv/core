@@ -24,6 +24,11 @@ import {
 import { assertFetchedContentCompliance } from "./fetched_content_compliance.js";
 import { isWebWorkerEntryPointReference } from "./web_workers.js";
 
+const inlineContentClientFileUrl = new URL(
+  "./client/inline_content.js",
+  import.meta.url,
+).href;
+
 export const createKitchen = ({
   signal,
   logLevel,
@@ -531,6 +536,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       // references
       const references = [];
       context.referenceUtils = {
+        inlineContentClientFileUrl,
         _references: references,
         find: (predicate) => references.find(predicate),
         readGeneratedSpecifier,

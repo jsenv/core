@@ -7,8 +7,8 @@ globalObject.__InlineContent__ = function (content, { type = "text/plain" }) {
 };
 
 const inlineContent = new __InlineContent__('body {\n  background-color: red;\n  background-image: url('+__v__("/other/jsenv.png")+');\n}\n', { type: "text/css" });
-  const stylesheet = new CSSStyleSheet();
-  stylesheet.replaceSync(inlineContent.text);
+const stylesheet = new CSSStyleSheet();
+stylesheet.replaceSync(inlineContent.text);
 
 document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
 

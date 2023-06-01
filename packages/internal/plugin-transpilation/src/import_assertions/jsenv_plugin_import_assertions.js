@@ -101,11 +101,6 @@ export const jsenvPluginImportAssertions = ({
 };
 
 const jsenvPluginAsModules = () => {
-  const inlineContentClientFileUrl = new URL(
-    "../../reference_analysis/inline_content.js",
-    import.meta.url,
-  ).href;
-
   const asJsonModule = {
     name: `jsenv:as_json_module`,
     appliesDuring: "*",
@@ -180,12 +175,14 @@ const jsenvPluginAsModules = () => {
         canUseTemplateString: true,
       });
       return {
-        content: `import ${JSON.stringify(inlineContentClientFileUrl)}
-  
-  const inlineContent = new __InlineContent__(${cssText}, { type: "text/css" })
-  const stylesheet = new CSSStyleSheet()
-  stylesheet.replaceSync(inlineContent.text)
-  export default stylesheet`,
+        content: `import ${JSON.stringify(
+          context.referenceUtils.inlineContentClientFileUrl,
+        )};
+
+const inlineContent = new __InlineContent__(${cssText}, { type: "text/css" });
+const stylesheet = new CSSStyleSheet();
+stylesheet.replaceSync(inlineContent.text);
+export default stylesheet;`,
         contentType: "text/javascript",
         type: "js_module",
         originalUrl: cssUrlInfo.originalUrl,
@@ -229,11 +226,11 @@ const jsenvPluginAsModules = () => {
       });
       return {
         content: `import { InlineContent } from ${JSON.stringify(
-          inlineContentClientFileUrl,
-        )}
-  
-const inlineContent = new InlineContent(${textPlain}, { type: "text/plain" })
-export default inlineContent.text`,
+          context.referenceUtils.inlineContentClientFileUrl,
+        )};
+
+const inlineContent = new InlineContent(${textPlain}, { type: "text/plain" });
+export default inlineContent.text;`,
         contentType: "text/javascript",
         type: "js_module",
         originalUrl: textUrlInfo.originalUrl,
