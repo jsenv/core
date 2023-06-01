@@ -13,11 +13,12 @@ import http from "node:http";
 import { Readable, Stream, Writable } from "node:stream";
 import { Http2ServerResponse } from "node:http2";
 import { lookup } from "node:dns";
-import { SOURCEMAP, generateSourcemapFileUrl, composeTwoSourcemaps, generateSourcemapDataUrl, createMagicSource, getOriginalPosition } from "@jsenv/sourcemap";
-import { parseHtmlString, visitHtmlNodes, getHtmlNodeAttribute, analyzeScriptNode, stringifyHtmlAst, parseSrcSet, getHtmlNodeText, setHtmlNodeAttributes, getHtmlNodePosition, getHtmlNodeAttributePosition, removeHtmlNodeText, setHtmlNodeText, parseCssUrls, parseJsUrls, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, findHtmlNode, removeHtmlNode, applyBabelPlugins, injectJsImport, analyzeLinkNode, injectHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
-import { convertJsModuleToJsClassic, systemJsClientFileUrlDefault } from "@jsenv/js-module-fallback";
+import { SOURCEMAP, composeTwoSourcemaps, createMagicSource, generateSourcemapFileUrl, generateSourcemapDataUrl } from "@jsenv/sourcemap";
+import { injectJsImport, applyBabelPlugins, parseHtmlString, visitHtmlNodes, getHtmlNodeAttribute, analyzeScriptNode, stringifyHtmlAst, setHtmlNodeAttributes, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, parseSrcSet, getHtmlNodeText, getHtmlNodePosition, getHtmlNodeAttributePosition, removeHtmlNodeText, setHtmlNodeText, parseCssUrls, parseJsUrls, findHtmlNode, removeHtmlNode, analyzeLinkNode, injectHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
+import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 import { createRequire } from "node:module";
-import { supervisorFileUrl, injectSupervisorIntoHTML } from "@jsenv/html-supervisor";
+import { convertJsModuleToJsClassic, systemJsClientFileUrlDefault } from "@jsenv/js-module-fallback";
+import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
 
 /*
  * data:[<mediatype>][;base64],<data>
@@ -7399,6 +7400,2005 @@ const createServerEventsDispatcher = () => {
   };
 };
 
+const isEscaped = (i, string) => {
+  let backslashBeforeCount = 0;
+  while (i--) {
+    const previousChar = string[i];
+    if (previousChar === "\\") {
+      backslashBeforeCount++;
+    }
+    break;
+  }
+  const isEven = backslashBeforeCount % 2 === 0;
+  return !isEven;
+};
+
+const JS_QUOTES = {
+  pickBest: (string, {
+    canUseTemplateString,
+    defaultQuote = DOUBLE
+  } = {}) => {
+    // check default first, once tested do no re-test it
+    if (!string.includes(defaultQuote)) {
+      return defaultQuote;
+    }
+    if (defaultQuote !== DOUBLE && !string.includes(DOUBLE)) {
+      return DOUBLE;
+    }
+    if (defaultQuote !== SINGLE && !string.includes(SINGLE)) {
+      return SINGLE;
+    }
+    if (canUseTemplateString && defaultQuote !== BACKTICK && !string.includes(BACKTICK)) {
+      return BACKTICK;
+    }
+    return defaultQuote;
+  },
+  escapeSpecialChars: (string, {
+    quote = "pickBest",
+    canUseTemplateString,
+    defaultQuote,
+    allowEscapeForVersioning = false
+  }) => {
+    quote = quote === "pickBest" ? JS_QUOTES.pickBest(string, {
+      canUseTemplateString,
+      defaultQuote
+    }) : quote;
+    const replacements = JS_QUOTE_REPLACEMENTS[quote];
+    let result = "";
+    let last = 0;
+    let i = 0;
+    while (i < string.length) {
+      const char = string[i];
+      i++;
+      if (isEscaped(i - 1, string)) continue;
+      const replacement = replacements[char];
+      if (replacement) {
+        if (allowEscapeForVersioning && char === quote && string.slice(i, i + 6) === "+__v__") {
+          let isVersioningConcatenation = false;
+          let j = i + 6; // start after the +
+          while (j < string.length) {
+            const lookAheadChar = string[j];
+            j++;
+            if (lookAheadChar === "+" && string[j] === quote && !isEscaped(j - 1, string)) {
+              isVersioningConcatenation = true;
+              break;
+            }
+          }
+          if (isVersioningConcatenation) {
+            // it's a concatenation
+            // skip until the end of concatenation (the second +)
+            // and resume from there
+            i = j + 1;
+            continue;
+          }
+        }
+        if (last === i - 1) {
+          result += replacement;
+        } else {
+          result += `${string.slice(last, i - 1)}${replacement}`;
+        }
+        last = i;
+      }
+    }
+    if (last !== string.length) {
+      result += string.slice(last);
+    }
+    return `${quote}${result}${quote}`;
+  }
+};
+const DOUBLE = `"`;
+const SINGLE = `'`;
+const BACKTICK = "`";
+const lineEndingEscapes = {
+  "\n": "\\n",
+  "\r": "\\r",
+  "\u2028": "\\u2028",
+  "\u2029": "\\u2029"
+};
+const JS_QUOTE_REPLACEMENTS = {
+  [DOUBLE]: {
+    '"': '\\"',
+    ...lineEndingEscapes
+  },
+  [SINGLE]: {
+    "'": "\\'",
+    ...lineEndingEscapes
+  },
+  [BACKTICK]: {
+    "`": "\\`",
+    "$": "\\$"
+  }
+};
+
+/*
+ * Jsenv wont touch code where "specifier" or "type" is dynamic (see code below)
+ * ```js
+ * const file = "./style.css"
+ * const type = "css"
+ * import(file, { assert: { type }})
+ * ```
+ * Jsenv could throw an error when it knows some browsers in runtimeCompat
+ * do not support import assertions
+ * But for now (as it is simpler) we let the browser throw the error
+ */
+
+const jsenvPluginImportAssertions = ({
+  json = "auto",
+  css = "auto",
+  text = "auto"
+}) => {
+  const transpilations = {
+    json,
+    css,
+    text
+  };
+  const shouldTranspileImportAssertion = (context, type) => {
+    const transpilation = transpilations[type];
+    if (transpilation === true) {
+      return true;
+    }
+    if (transpilation === "auto") {
+      return !context.isSupportedOnCurrentClients(`import_type_${type}`);
+    }
+    return false;
+  };
+  const markAsJsModuleProxy = reference => {
+    reference.expectedType = "js_module";
+    reference.filename = `${urlToFilename$1(reference.url)}.js`;
+  };
+  const turnIntoJsModuleProxy = (reference, type) => {
+    reference.mutation = magicSource => {
+      const {
+        assertNode
+      } = reference;
+      if (reference.subtype === "import_dynamic") {
+        const assertPropertyNode = assertNode.properties.find(prop => prop.key.name === "assert");
+        const assertPropertyValue = assertPropertyNode.value;
+        const typePropertyNode = assertPropertyValue.properties.find(prop => prop.key.name === "type");
+        magicSource.remove({
+          start: typePropertyNode.start,
+          end: typePropertyNode.end
+        });
+      } else {
+        magicSource.remove({
+          start: assertNode.start,
+          end: assertNode.end
+        });
+      }
+    };
+    const newUrl = injectQueryParams(reference.url, {
+      [`as_${type}_module`]: ""
+    });
+    markAsJsModuleProxy(reference);
+    return newUrl;
+  };
+  const importAssertions = {
+    name: "jsenv:import_assertions",
+    appliesDuring: "*",
+    init: context => {
+      // transpilation is forced during build so that
+      //   - avoid rollup to see import assertions
+      //     We would have to tell rollup to ignore import with assertion
+      //   - means rollup can bundle more js file together
+      //   - means url versioning can work for css inlined in js
+      if (context.build) {
+        transpilations.json = true;
+        transpilations.css = true;
+        transpilations.text = true;
+      }
+    },
+    redirectReference: (reference, context) => {
+      if (!reference.assert) {
+        return null;
+      }
+      const {
+        searchParams
+      } = reference;
+      if (searchParams.has("as_json_module") || searchParams.has("as_css_module") || searchParams.has("as_text_module")) {
+        markAsJsModuleProxy(reference);
+        return null;
+      }
+      const type = reference.assert.type;
+      if (shouldTranspileImportAssertion(context, type)) {
+        return turnIntoJsModuleProxy(reference, type);
+      }
+      return null;
+    }
+  };
+  return [importAssertions, ...jsenvPluginAsModules()];
+};
+const jsenvPluginAsModules = () => {
+  const asJsonModule = {
+    name: `jsenv:as_json_module`,
+    appliesDuring: "*",
+    fetchUrlContent: async (urlInfo, context) => {
+      const [jsonReference, jsonUrlInfo] = context.getWithoutSearchParam({
+        urlInfo,
+        context,
+        searchParam: "as_json_module",
+        expectedType: "json"
+      });
+      if (!jsonReference) {
+        return null;
+      }
+      await context.fetchUrlContent(jsonUrlInfo, {
+        reference: jsonReference
+      });
+      if (context.dev) {
+        context.referenceUtils.found({
+          type: "js_import",
+          subtype: jsonReference.subtype,
+          specifier: jsonReference.url,
+          expectedType: "js_module"
+        });
+      } else if (context.build && jsonUrlInfo.dependents.size === 0) {
+        context.urlGraph.deleteUrlInfo(jsonUrlInfo.url);
+      }
+      const jsonText = JSON.stringify(jsonUrlInfo.content.trim());
+      return {
+        // here we could `export default ${jsonText}`:
+        // but js engine are optimized to recognize JSON.parse
+        // and use a faster parsing strategy
+        content: `export default JSON.parse(${jsonText})`,
+        contentType: "text/javascript",
+        type: "js_module",
+        originalUrl: jsonUrlInfo.originalUrl,
+        originalContent: jsonUrlInfo.originalContent,
+        data: jsonUrlInfo.data
+      };
+    }
+  };
+  const asCssModule = {
+    name: `jsenv:as_css_module`,
+    appliesDuring: "*",
+    fetchUrlContent: async (urlInfo, context) => {
+      const [cssReference, cssUrlInfo] = context.getWithoutSearchParam({
+        urlInfo,
+        context,
+        searchParam: "as_css_module",
+        expectedType: "css"
+      });
+      if (!cssReference) {
+        return null;
+      }
+      await context.fetchUrlContent(cssUrlInfo, {
+        reference: cssReference
+      });
+      if (context.dev) {
+        context.referenceUtils.found({
+          type: "js_import",
+          subtype: cssReference.subtype,
+          specifier: cssReference.url,
+          expectedType: "js_module"
+        });
+      } else if (context.build && cssUrlInfo.dependents.size === 0) {
+        context.urlGraph.deleteUrlInfo(cssUrlInfo.url);
+      }
+      const cssText = JS_QUOTES.escapeSpecialChars(cssUrlInfo.content, {
+        // If template string is choosen and runtime do not support template literals
+        // it's ok because "jsenv:new_inline_content" plugin executes after this one
+        // and convert template strings into raw strings
+        canUseTemplateString: true
+      });
+      return {
+        content: `import ${JSON.stringify(context.referenceUtils.inlineContentClientFileUrl)};
+
+const inlineContent = new __InlineContent__(${cssText}, { type: "text/css" });
+const stylesheet = new CSSStyleSheet();
+stylesheet.replaceSync(inlineContent.text);
+export default stylesheet;`,
+        contentType: "text/javascript",
+        type: "js_module",
+        originalUrl: cssUrlInfo.originalUrl,
+        originalContent: cssUrlInfo.originalContent,
+        data: cssUrlInfo.data
+      };
+    }
+  };
+  const asTextModule = {
+    name: `jsenv:as_text_module`,
+    appliesDuring: "*",
+    fetchUrlContent: async (urlInfo, context) => {
+      const [textReference, textUrlInfo] = context.getWithoutSearchParam({
+        urlInfo,
+        context,
+        searchParam: "as_text_module",
+        expectedType: "text"
+      });
+      if (!textReference) {
+        return null;
+      }
+      await context.fetchUrlContent(textUrlInfo, {
+        reference: textReference
+      });
+      if (context.dev) {
+        context.referenceUtils.found({
+          type: "js_import",
+          subtype: textReference.subtype,
+          specifier: textReference.url,
+          expectedType: "js_module"
+        });
+      } else if (context.build && textUrlInfo.dependents.size === 0) {
+        context.urlGraph.deleteUrlInfo(textUrlInfo.url);
+      }
+      const textPlain = JS_QUOTES.escapeSpecialChars(urlInfo.content, {
+        // If template string is choosen and runtime do not support template literals
+        // it's ok because "jsenv:new_inline_content" plugin executes after this one
+        // and convert template strings into raw strings
+        canUseTemplateString: true
+      });
+      return {
+        content: `import ${JSON.stringify(context.referenceUtils.inlineContentClientFileUrl)};
+
+const inlineContent = new InlineContent(${textPlain}, { type: "text/plain" });
+export default inlineContent.text;`,
+        contentType: "text/javascript",
+        type: "js_module",
+        originalUrl: textUrlInfo.originalUrl,
+        originalContent: textUrlInfo.originalContent,
+        data: textUrlInfo.data
+      };
+    }
+  };
+  return [asJsonModule, asCssModule, asTextModule];
+};
+
+/*
+ * Generated helpers
+ * - https://github.com/babel/babel/commits/main/packages/babel-helpers/src/helpers.ts
+ * File helpers
+ * - https://github.com/babel/babel/tree/main/packages/babel-helpers/src/helpers
+ *
+ */
+const babelHelperClientDirectoryUrl = new URL("./babel_helpers/", import.meta.url).href;
+
+// we cannot use "@jsenv/core/src/*" because babel helper might be injected
+// into node_modules not depending on "@jsenv/core"
+const getBabelHelperFileUrl = babelHelperName => {
+  const babelHelperFileUrl = new URL(`./${babelHelperName}/${babelHelperName}.js`, babelHelperClientDirectoryUrl).href;
+  return babelHelperFileUrl;
+};
+const babelHelperNameFromUrl = url => {
+  if (!url.startsWith(babelHelperClientDirectoryUrl)) {
+    return null;
+  }
+  const afterBabelHelperDirectory = url.slice(babelHelperClientDirectoryUrl.length);
+  const babelHelperName = afterBabelHelperDirectory.slice(0, afterBabelHelperDirectory.indexOf("/"));
+  return babelHelperName;
+};
+
+/* eslint-disable camelcase */
+// copied from
+// https://github.com/babel/babel/blob/e498bee10f0123bb208baa228ce6417542a2c3c4/packages/babel-compat-data/data/plugins.json#L1
+// https://github.com/babel/babel/blob/master/packages/babel-compat-data/data/plugins.json#L1
+// Because this is an hidden implementation detail of @babel/preset-env
+// it could be deprecated or moved anytime.
+// For that reason it makes more sens to have it inlined here
+// than importing it from an undocumented location.
+// Ideally it would be documented or a separate module
+
+const babelPluginCompatMap = {
+  "proposal-numeric-separator": {
+    chrome: "75",
+    opera: "62",
+    edge: "79",
+    firefox: "70",
+    safari: "13",
+    node: "12.5",
+    ios: "13",
+    samsung: "11",
+    electron: "6"
+  },
+  "proposal-class-properties": {
+    chrome: "74",
+    opera: "61",
+    edge: "79",
+    node: "12",
+    electron: "6.1"
+  },
+  "proposal-private-methods": {
+    chrome: "84",
+    opera: "71"
+  },
+  "proposal-nullish-coalescing-operator": {
+    chrome: "80",
+    opera: "67",
+    edge: "80",
+    firefox: "72",
+    safari: "13.1",
+    node: "14",
+    electron: "8.1"
+  },
+  "proposal-optional-chaining": {
+    chrome: "80",
+    opera: "67",
+    edge: "80",
+    firefox: "74",
+    safari: "13.1",
+    node: "14",
+    electron: "8.1"
+  },
+  "proposal-json-strings": {
+    chrome: "66",
+    opera: "53",
+    edge: "79",
+    firefox: "62",
+    safari: "12",
+    node: "10",
+    ios: "12",
+    samsung: "9",
+    electron: "3"
+  },
+  "proposal-optional-catch-binding": {
+    chrome: "66",
+    opera: "53",
+    edge: "79",
+    firefox: "58",
+    safari: "11.1",
+    node: "10",
+    ios: "11.3",
+    samsung: "9",
+    electron: "3"
+  },
+  "transform-parameters": {
+    chrome: "49",
+    opera: "36",
+    edge: "18",
+    firefox: "53",
+    safari: "10",
+    node: "6",
+    ios: "10",
+    samsung: "5",
+    electron: "0.37"
+  },
+  "proposal-async-generator-functions": {
+    chrome: "63",
+    opera: "50",
+    edge: "79",
+    firefox: "57",
+    safari: "12",
+    node: "10",
+    ios: "12",
+    samsung: "8",
+    electron: "3"
+  },
+  "proposal-object-rest-spread": {
+    chrome: "60",
+    opera: "47",
+    edge: "79",
+    firefox: "55",
+    safari: "11.1",
+    node: "8.3",
+    ios: "11.3",
+    samsung: "8",
+    electron: "2"
+  },
+  "transform-dotall-regex": {
+    chrome: "62",
+    opera: "49",
+    edge: "79",
+    firefox: "78",
+    safari: "11.1",
+    node: "8.10",
+    ios: "11.3",
+    samsung: "8",
+    electron: "3"
+  },
+  "proposal-unicode-property-regex": {
+    chrome: "64",
+    opera: "51",
+    edge: "79",
+    firefox: "78",
+    safari: "11.1",
+    node: "10",
+    ios: "11.3",
+    samsung: "9",
+    electron: "3"
+  },
+  "transform-named-capturing-groups-regex": {
+    chrome: "64",
+    opera: "51",
+    edge: "79",
+    safari: "11.1",
+    node: "10",
+    ios: "11.3",
+    samsung: "9",
+    electron: "3"
+  },
+  "transform-async-to-generator": {
+    chrome: "55",
+    opera: "42",
+    edge: "15",
+    firefox: "52",
+    safari: "11",
+    node: "7.6",
+    ios: "11",
+    samsung: "6",
+    electron: "1.6"
+  },
+  "transform-exponentiation-operator": {
+    chrome: "52",
+    opera: "39",
+    edge: "14",
+    firefox: "52",
+    safari: "10.1",
+    node: "7",
+    ios: "10.3",
+    samsung: "6",
+    electron: "1.3"
+  },
+  "transform-template-literals": {
+    chrome: "41",
+    opera: "28",
+    edge: "13",
+    electron: "0.22",
+    firefox: "34",
+    safari: "13",
+    node: "4",
+    ios: "13",
+    samsung: "3.4"
+  },
+  "transform-literals": {
+    chrome: "44",
+    opera: "31",
+    edge: "12",
+    firefox: "53",
+    safari: "9",
+    node: "4",
+    ios: "9",
+    samsung: "4",
+    electron: "0.30"
+  },
+  "transform-function-name": {
+    chrome: "51",
+    opera: "38",
+    edge: "79",
+    firefox: "53",
+    safari: "10",
+    node: "6.5",
+    ios: "10",
+    samsung: "5",
+    electron: "1.2"
+  },
+  "transform-arrow-functions": {
+    chrome: "47",
+    opera: "34",
+    edge: "13",
+    firefox: "45",
+    safari: "10",
+    node: "6",
+    ios: "10",
+    samsung: "5",
+    electron: "0.36"
+  },
+  "transform-block-scoped-functions": {
+    chrome: "41",
+    opera: "28",
+    edge: "12",
+    firefox: "46",
+    safari: "10",
+    node: "4",
+    ie: "11",
+    ios: "10",
+    samsung: "3.4",
+    electron: "0.22"
+  },
+  "transform-classes": {
+    chrome: "46",
+    opera: "33",
+    edge: "13",
+    firefox: "45",
+    safari: "10",
+    node: "5",
+    ios: "10",
+    samsung: "5",
+    electron: "0.36"
+  },
+  "transform-object-super": {
+    chrome: "46",
+    opera: "33",
+    edge: "13",
+    firefox: "45",
+    safari: "10",
+    node: "5",
+    ios: "10",
+    samsung: "5",
+    electron: "0.36"
+  },
+  "transform-shorthand-properties": {
+    chrome: "43",
+    opera: "30",
+    edge: "12",
+    firefox: "33",
+    safari: "9",
+    node: "4",
+    ios: "9",
+    samsung: "4",
+    electron: "0.28"
+  },
+  "transform-duplicate-keys": {
+    chrome: "42",
+    opera: "29",
+    edge: "12",
+    firefox: "34",
+    safari: "9",
+    node: "4",
+    ios: "9",
+    samsung: "3.4",
+    electron: "0.25"
+  },
+  "transform-computed-properties": {
+    chrome: "44",
+    opera: "31",
+    edge: "12",
+    firefox: "34",
+    safari: "7.1",
+    node: "4",
+    ios: "8",
+    samsung: "4",
+    electron: "0.30"
+  },
+  "transform-for-of": {
+    chrome: "51",
+    opera: "38",
+    edge: "15",
+    firefox: "53",
+    safari: "10",
+    node: "6.5",
+    ios: "10",
+    samsung: "5",
+    electron: "1.2"
+  },
+  "transform-sticky-regex": {
+    chrome: "49",
+    opera: "36",
+    edge: "13",
+    firefox: "3",
+    safari: "10",
+    node: "6",
+    ios: "10",
+    samsung: "5",
+    electron: "0.37"
+  },
+  "transform-unicode-escapes": {
+    chrome: "44",
+    opera: "31",
+    edge: "12",
+    firefox: "53",
+    safari: "9",
+    node: "4",
+    ios: "9",
+    samsung: "4",
+    electron: "0.30"
+  },
+  "transform-unicode-regex": {
+    chrome: "50",
+    opera: "37",
+    edge: "13",
+    firefox: "46",
+    safari: "12",
+    node: "6",
+    ios: "12",
+    samsung: "5",
+    electron: "1.1"
+  },
+  "transform-spread": {
+    chrome: "46",
+    opera: "33",
+    edge: "13",
+    firefox: "36",
+    safari: "10",
+    node: "5",
+    ios: "10",
+    samsung: "5",
+    electron: "0.36"
+  },
+  "transform-destructuring": {
+    chrome: "51",
+    opera: "38",
+    edge: "15",
+    firefox: "53",
+    safari: "10",
+    node: "6.5",
+    ios: "10",
+    samsung: "5",
+    electron: "1.2"
+  },
+  "transform-block-scoping": {
+    chrome: "49",
+    opera: "36",
+    edge: "14",
+    firefox: "51",
+    safari: "11",
+    node: "6",
+    ios: "11",
+    samsung: "5",
+    electron: "0.37"
+  },
+  "transform-typeof-symbol": {
+    chrome: "38",
+    opera: "25",
+    edge: "12",
+    firefox: "36",
+    safari: "9",
+    node: "0.12",
+    ios: "9",
+    samsung: "3",
+    electron: "0.20"
+  },
+  "transform-new-target": {
+    chrome: "46",
+    opera: "33",
+    edge: "14",
+    firefox: "41",
+    safari: "10",
+    node: "5",
+    ios: "10",
+    samsung: "5",
+    electron: "0.36"
+  },
+  "transform-regenerator": {
+    chrome: "50",
+    opera: "37",
+    edge: "13",
+    firefox: "53",
+    safari: "10",
+    node: "6",
+    ios: "10",
+    samsung: "5",
+    electron: "1.1"
+  },
+  "transform-member-expression-literals": {
+    chrome: "7",
+    opera: "12",
+    edge: "12",
+    firefox: "2",
+    safari: "5.1",
+    node: "0.10",
+    ie: "9",
+    android: "4",
+    ios: "6",
+    phantom: "2",
+    samsung: "1",
+    electron: "0.20"
+  },
+  "transform-property-literals": {
+    chrome: "7",
+    opera: "12",
+    edge: "12",
+    firefox: "2",
+    safari: "5.1",
+    node: "0.10",
+    ie: "9",
+    android: "4",
+    ios: "6",
+    phantom: "2",
+    samsung: "1",
+    electron: "0.20"
+  },
+  "transform-reserved-words": {
+    chrome: "13",
+    opera: "10.50",
+    edge: "12",
+    firefox: "2",
+    safari: "3.1",
+    node: "0.10",
+    ie: "9",
+    android: "4.4",
+    ios: "6",
+    phantom: "2",
+    samsung: "1",
+    electron: "0.20"
+  }
+};
+
+// copy of transform-async-to-generator
+// so that async is not transpiled when supported
+babelPluginCompatMap["transform-async-to-promises"] = babelPluginCompatMap["transform-async-to-generator"];
+babelPluginCompatMap["regenerator-transform"] = babelPluginCompatMap["transform-regenerator"];
+
+const requireBabelPlugin = createRequire(import.meta.url);
+const getBaseBabelPluginStructure = ({
+  url,
+  isSupported
+  // isJsModule,
+  // getImportSpecifier,
+}) => {
+  const isBabelPluginNeeded = babelPluginName => {
+    return !isSupported(babelPluginCompatMap[babelPluginName]);
+  };
+  const babelPluginStructure = {};
+  if (isBabelPluginNeeded("proposal-numeric-separator")) {
+    babelPluginStructure["proposal-numeric-separator"] = requireBabelPlugin("@babel/plugin-proposal-numeric-separator");
+  }
+  if (isBabelPluginNeeded("proposal-json-strings")) {
+    babelPluginStructure["proposal-json-strings"] = requireBabelPlugin("@babel/plugin-proposal-json-strings");
+  }
+  if (isBabelPluginNeeded("proposal-object-rest-spread")) {
+    babelPluginStructure["proposal-object-rest-spread"] = requireBabelPlugin("@babel/plugin-proposal-object-rest-spread");
+  }
+  if (isBabelPluginNeeded("proposal-optional-catch-binding")) {
+    babelPluginStructure["proposal-optional-catch-binding"] = requireBabelPlugin("@babel/plugin-proposal-optional-catch-binding");
+  }
+  if (isBabelPluginNeeded("proposal-unicode-property-regex")) {
+    babelPluginStructure["proposal-unicode-property-regex"] = requireBabelPlugin("@babel/plugin-proposal-unicode-property-regex");
+  }
+  if (isBabelPluginNeeded("transform-async-to-promises")) {
+    babelPluginStructure["transform-async-to-promises"] = [requireBabelPlugin("babel-plugin-transform-async-to-promises"), {
+      topLevelAwait: "ignore",
+      // will be handled by "jsenv:top_level_await" plugin
+      externalHelpers: false
+      // enable once https://github.com/rpetrich/babel-plugin-transform-async-to-promises/pull/83
+      // externalHelpers: isJsModule,
+      // externalHelpersPath: isJsModule ? getImportSpecifier(
+      //     "babel-plugin-transform-async-to-promises/helpers.mjs",
+      //   ) : null
+    }];
+  }
+
+  if (isBabelPluginNeeded("transform-arrow-functions")) {
+    babelPluginStructure["transform-arrow-functions"] = requireBabelPlugin("@babel/plugin-transform-arrow-functions");
+  }
+  if (isBabelPluginNeeded("transform-block-scoped-functions")) {
+    babelPluginStructure["transform-block-scoped-functions"] = requireBabelPlugin("@babel/plugin-transform-block-scoped-functions");
+  }
+  if (isBabelPluginNeeded("transform-block-scoping")) {
+    babelPluginStructure["transform-block-scoping"] = requireBabelPlugin("@babel/plugin-transform-block-scoping");
+  }
+  if (isBabelPluginNeeded("transform-classes")) {
+    babelPluginStructure["transform-classes"] = requireBabelPlugin("@babel/plugin-transform-classes");
+  }
+  if (isBabelPluginNeeded("transform-computed-properties")) {
+    babelPluginStructure["transform-computed-properties"] = requireBabelPlugin("@babel/plugin-transform-computed-properties");
+  }
+  if (isBabelPluginNeeded("transform-destructuring")) {
+    babelPluginStructure["transform-destructuring"] = requireBabelPlugin("@babel/plugin-transform-destructuring");
+  }
+  if (isBabelPluginNeeded("transform-dotall-regex")) {
+    babelPluginStructure["transform-dotall-regex"] = requireBabelPlugin("@babel/plugin-transform-dotall-regex");
+  }
+  if (isBabelPluginNeeded("transform-duplicate-keys")) {
+    babelPluginStructure["transform-duplicate-keys"] = requireBabelPlugin("@babel/plugin-transform-duplicate-keys");
+  }
+  if (isBabelPluginNeeded("transform-exponentiation-operator")) {
+    babelPluginStructure["transform-exponentiation-operator"] = requireBabelPlugin("@babel/plugin-transform-exponentiation-operator");
+  }
+  if (isBabelPluginNeeded("transform-for-of")) {
+    babelPluginStructure["transform-for-of"] = requireBabelPlugin("@babel/plugin-transform-for-of");
+  }
+  if (isBabelPluginNeeded("transform-function-name")) {
+    babelPluginStructure["transform-function-name"] = requireBabelPlugin("@babel/plugin-transform-function-name");
+  }
+  if (isBabelPluginNeeded("transform-literals")) {
+    babelPluginStructure["transform-literals"] = requireBabelPlugin("@babel/plugin-transform-literals");
+  }
+  if (isBabelPluginNeeded("transform-new-target")) {
+    babelPluginStructure["transform-new-target"] = requireBabelPlugin("@babel/plugin-transform-new-target");
+  }
+  if (isBabelPluginNeeded("transform-object-super")) {
+    babelPluginStructure["transform-object-super"] = requireBabelPlugin("@babel/plugin-transform-object-super");
+  }
+  if (isBabelPluginNeeded("transform-parameters")) {
+    babelPluginStructure["transform-parameters"] = requireBabelPlugin("@babel/plugin-transform-parameters");
+  }
+  if (isBabelPluginNeeded("transform-regenerator")) {
+    babelPluginStructure["transform-regenerator"] = [requireBabelPlugin("@babel/plugin-transform-regenerator"), {
+      asyncGenerators: true,
+      generators: true,
+      async: false
+    }];
+  }
+  if (isBabelPluginNeeded("transform-shorthand-properties")) {
+    babelPluginStructure["transform-shorthand-properties"] = [requireBabelPlugin("@babel/plugin-transform-shorthand-properties")];
+  }
+  if (isBabelPluginNeeded("transform-spread")) {
+    babelPluginStructure["transform-spread"] = [requireBabelPlugin("@babel/plugin-transform-spread")];
+  }
+  if (isBabelPluginNeeded("transform-sticky-regex")) {
+    babelPluginStructure["transform-sticky-regex"] = [requireBabelPlugin("@babel/plugin-transform-sticky-regex")];
+  }
+  if (isBabelPluginNeeded("transform-template-literals")) {
+    babelPluginStructure["transform-template-literals"] = [requireBabelPlugin("@babel/plugin-transform-template-literals")];
+  }
+  if (isBabelPluginNeeded("transform-typeof-symbol") &&
+  // prevent "typeof" to be injected into itself:
+  // - not needed
+  // - would create infinite attempt to transform typeof
+  url !== getBabelHelperFileUrl("typeof")) {
+    babelPluginStructure["transform-typeof-symbol"] = [requireBabelPlugin("@babel/plugin-transform-typeof-symbol")];
+  }
+  if (isBabelPluginNeeded("transform-unicode-regex")) {
+    babelPluginStructure["transform-unicode-regex"] = [requireBabelPlugin("@babel/plugin-transform-unicode-regex")];
+  }
+  return babelPluginStructure;
+};
+
+// named import approach found here:
+// https://github.com/rollup/rollup-plugin-babel/blob/18e4232a450f320f44c651aa8c495f21c74d59ac/src/helperPlugin.js#L1
+
+// for reference this is how it's done to reference
+// a global babel helper object instead of using
+// a named import
+// https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-plugin-external-helpers/src/index.js
+
+const babelPluginBabelHelpersAsJsenvImports = (babel, {
+  getImportSpecifier
+}) => {
+  return {
+    name: "babel-helper-as-jsenv-import",
+    pre: file => {
+      const cachedHelpers = {};
+      file.set("helperGenerator", name => {
+        // the list of possible helpers name
+        // https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-helpers/src/helpers.js#L13
+        if (!file.availableHelper(name)) {
+          return undefined;
+        }
+        if (cachedHelpers[name]) {
+          return cachedHelpers[name];
+        }
+        const filePath = file.opts.filename;
+        const fileUrl = pathToFileURL(filePath).href;
+        if (babelHelperNameFromUrl(fileUrl) === name) {
+          return undefined;
+        }
+        const babelHelperImportSpecifier = getBabelHelperFileUrl(name);
+        const helper = injectJsImport({
+          programPath: file.path,
+          from: getImportSpecifier(babelHelperImportSpecifier),
+          nameHint: `_${name}`,
+          // disable interop, useless as we work only with js modules
+          importedType: "es6"
+          // importedInterop: "uncompiled",
+        });
+
+        cachedHelpers[name] = helper;
+        return helper;
+      });
+    }
+  };
+};
+
+const newStylesheetClientFileUrl = new URL("./js/new_stylesheet.js", import.meta.url).href;
+const babelPluginNewStylesheetAsJsenvImport = (babel, {
+  getImportSpecifier
+}) => {
+  return {
+    name: "new-stylesheet-as-jsenv-import",
+    visitor: {
+      Program: (programPath, babelState) => {
+        if (babelState.filename) {
+          const fileUrl = pathToFileURL(babelState.filename).href;
+          if (fileUrl === newStylesheetClientFileUrl) {
+            return;
+          }
+        }
+        let usesNewStylesheet = false;
+        programPath.traverse({
+          NewExpression: path => {
+            usesNewStylesheet = isNewCssStyleSheetCall(path.node);
+            if (usesNewStylesheet) {
+              path.stop();
+            }
+          },
+          MemberExpression: path => {
+            usesNewStylesheet = isDocumentAdoptedStyleSheets(path.node);
+            if (usesNewStylesheet) {
+              path.stop();
+            }
+          },
+          CallExpression: path => {
+            if (path.node.callee.type !== "Import") {
+              // Some other function call, not import();
+              return;
+            }
+            if (path.node.arguments[0].type !== "StringLiteral") {
+              // Non-string argument, probably a variable or expression, e.g.
+              // import(moduleId)
+              // import('./' + moduleName)
+              return;
+            }
+            const sourcePath = path.get("arguments")[0];
+            usesNewStylesheet = hasCssModuleQueryParam(sourcePath) || hasImportTypeCssAssertion(path);
+            if (usesNewStylesheet) {
+              path.stop();
+            }
+          },
+          ImportDeclaration: path => {
+            const sourcePath = path.get("source");
+            usesNewStylesheet = hasCssModuleQueryParam(sourcePath) || hasImportTypeCssAssertion(path);
+            if (usesNewStylesheet) {
+              path.stop();
+            }
+          },
+          ExportAllDeclaration: path => {
+            const sourcePath = path.get("source");
+            usesNewStylesheet = hasCssModuleQueryParam(sourcePath);
+            if (usesNewStylesheet) {
+              path.stop();
+            }
+          },
+          ExportNamedDeclaration: path => {
+            if (!path.node.source) {
+              // This export has no "source", so it's probably
+              // a local variable or function, e.g.
+              // export { varName }
+              // export const constName = ...
+              // export function funcName() {}
+              return;
+            }
+            const sourcePath = path.get("source");
+            usesNewStylesheet = hasCssModuleQueryParam(sourcePath);
+            if (usesNewStylesheet) {
+              path.stop();
+            }
+          }
+        });
+        if (usesNewStylesheet) {
+          injectJsImport({
+            programPath,
+            from: getImportSpecifier(newStylesheetClientFileUrl),
+            sideEffect: true
+          });
+        }
+      }
+    }
+  };
+};
+const isNewCssStyleSheetCall = node => {
+  return node.type === "NewExpression" && node.callee.type === "Identifier" && node.callee.name === "CSSStyleSheet";
+};
+const isDocumentAdoptedStyleSheets = node => {
+  return node.type === "MemberExpression" && node.object.type === "Identifier" && node.object.name === "document" && node.property.type === "Identifier" && node.property.name === "adoptedStyleSheets";
+};
+const hasCssModuleQueryParam = path => {
+  const {
+    node
+  } = path;
+  return node.type === "StringLiteral" && new URL(node.value, "https://jsenv.dev").searchParams.has(`css_module`);
+};
+const hasImportTypeCssAssertion = path => {
+  const importAssertionsDescriptor = getImportAssertionsDescriptor(path.node.assertions);
+  return Boolean(importAssertionsDescriptor.type === "css");
+};
+const getImportAssertionsDescriptor = importAssertions => {
+  const importAssertionsDescriptor = {};
+  if (importAssertions) {
+    importAssertions.forEach(importAssertion => {
+      importAssertionsDescriptor[importAssertion.key.name] = importAssertion.value.value;
+    });
+  }
+  return importAssertionsDescriptor;
+};
+
+const globalThisClientFileUrl = new URL("./js/global_this.js", import.meta.url).href;
+const babelPluginGlobalThisAsJsenvImport = (babel, {
+  getImportSpecifier
+}) => {
+  return {
+    name: "global-this-as-jsenv-import",
+    visitor: {
+      Identifier(path, opts) {
+        const {
+          filename
+        } = opts;
+        const fileUrl = pathToFileURL(filename).href;
+        if (fileUrl === globalThisClientFileUrl) {
+          return;
+        }
+        const {
+          node
+        } = path;
+        // we should do this once, tree shaking will remote it but still
+        if (node.name === "globalThis") {
+          injectJsImport({
+            programPath: path.scope.getProgramParent().path,
+            from: getImportSpecifier(globalThisClientFileUrl),
+            sideEffect: true
+          });
+        }
+      }
+    }
+  };
+};
+
+const regeneratorRuntimeClientFileUrl = new URL("./js/regenerator_runtime.js", import.meta.url).href;
+const babelPluginRegeneratorRuntimeAsJsenvImport = (babel, {
+  getImportSpecifier
+}) => {
+  return {
+    name: "regenerator-runtime-as-jsenv-import",
+    visitor: {
+      Identifier(path, opts) {
+        const {
+          filename
+        } = opts;
+        const fileUrl = pathToFileURL(filename).href;
+        if (fileUrl === regeneratorRuntimeClientFileUrl) {
+          return;
+        }
+        const {
+          node
+        } = path;
+        if (node.name === "regeneratorRuntime") {
+          injectJsImport({
+            programPath: path.scope.getProgramParent().path,
+            from: getImportSpecifier(regeneratorRuntimeClientFileUrl),
+            sideEffect: true
+          });
+        }
+      }
+    }
+  };
+};
+
+const applyJsTranspilation = async ({
+  input,
+  inputIsJsModule = false,
+  inputUrl,
+  outputUrl,
+  runtimeCompat,
+  babelHelpersAsImport = true,
+  babelOptions,
+  getImportSpecifier
+}) => {
+  const isSupported = feature => {
+    return RUNTIME_COMPAT.isSupported(runtimeCompat, feature);
+  };
+  const babelPluginStructure = getBaseBabelPluginStructure({
+    url: inputUrl,
+    isSupported,
+    isJsModule: inputIsJsModule,
+    getImportSpecifier
+  });
+  if (inputIsJsModule && babelHelpersAsImport) {
+    if (!isSupported("global_this")) {
+      babelPluginStructure["global-this-as-jsenv-import"] = [babelPluginGlobalThisAsJsenvImport, {
+        getImportSpecifier
+      }];
+    }
+    if (!isSupported("async_generator_function")) {
+      babelPluginStructure["regenerator-runtime-as-jsenv-import"] = [babelPluginRegeneratorRuntimeAsJsenvImport, {
+        getImportSpecifier
+      }];
+    }
+    if (!isSupported("new_stylesheet")) {
+      babelPluginStructure["new-stylesheet-as-jsenv-import"] = [babelPluginNewStylesheetAsJsenvImport, {
+        getImportSpecifier
+      }];
+    }
+    if (Object.keys(babelPluginStructure).length > 0) {
+      babelPluginStructure["babel-helper-as-jsenv-import"] = [babelPluginBabelHelpersAsJsenvImports, {
+        getImportSpecifier
+      }];
+    }
+  }
+  // otherwise, concerning global_this, and new_stylesheet we must inject the code
+  // (we cannot inject an import)
+
+  const babelPlugins = Object.keys(babelPluginStructure).map(babelPluginName => babelPluginStructure[babelPluginName]);
+  const {
+    code,
+    map
+  } = await applyBabelPlugins({
+    babelPlugins,
+    options: babelOptions,
+    input,
+    inputIsJsModule,
+    inputUrl,
+    outputUrl
+  });
+  return {
+    content: code,
+    sourcemap: map
+  };
+};
+
+const jsenvPluginBabel = ({
+  babelHelpersAsImport = true
+} = {}) => {
+  const transformWithBabel = async (urlInfo, context) => {
+    return applyJsTranspilation({
+      input: urlInfo.content,
+      inputIsJsModule: urlInfo.type === "js_module",
+      inputUrl: urlInfo.originalUrl,
+      outputUrl: urlInfo.generatedUrl,
+      babelHelpersAsImport,
+      babelOptions: {
+        generatorOpts: {
+          retainLines: context.dev
+        }
+      },
+      runtimeCompat: context.clientRuntimeCompat,
+      getImportSpecifier: clientFileUrl => {
+        const [reference] = context.referenceUtils.inject({
+          type: "js_import",
+          expectedType: "js_module",
+          specifier: clientFileUrl
+        });
+        return JSON.parse(reference.generatedSpecifier);
+      }
+    });
+  };
+  return {
+    name: "jsenv:babel",
+    appliesDuring: "*",
+    transformUrlContent: {
+      js_classic: transformWithBabel,
+      js_module: transformWithBabel
+    }
+  };
+};
+
+/*
+ * - propagate "?js_module_fallback" query string param on urls
+ * - perform conversion from js module to js classic when url uses "?js_module_fallback"
+ */
+
+const jsenvPluginJsModuleConversion = ({
+  systemJsInjection,
+  systemJsClientFileUrl,
+  generateJsClassicFilename
+}) => {
+  const isReferencingJsModule = reference => {
+    if (reference.type === "js_import" || reference.subtype === "system_register_arg" || reference.subtype === "system_import_arg") {
+      return true;
+    }
+    if (reference.type === "js_url" && reference.expectedType === "js_module") {
+      return true;
+    }
+    return false;
+  };
+  const shouldPropagateJsModuleConversion = (reference, context) => {
+    if (isReferencingJsModule(reference)) {
+      const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl);
+      if (!parentUrlInfo) {
+        return false;
+      }
+      const parentGotAsJsClassic = new URL(parentUrlInfo.url).searchParams.has("js_module_fallback");
+      return parentGotAsJsClassic;
+    }
+    return false;
+  };
+  const markAsJsClassicProxy = reference => {
+    reference.expectedType = "js_classic";
+    reference.filename = generateJsClassicFilename(reference.url);
+  };
+  const turnIntoJsClassicProxy = reference => {
+    const urlTransformed = injectQueryParams(reference.url, {
+      js_module_fallback: ""
+    });
+    markAsJsClassicProxy(reference);
+    return urlTransformed;
+  };
+  return {
+    name: "jsenv:js_module_conversion",
+    appliesDuring: "*",
+    redirectReference: (reference, context) => {
+      if (reference.searchParams.has("js_module_fallback")) {
+        markAsJsClassicProxy(reference);
+        return null;
+      }
+      // We want to propagate transformation of js module to js classic to:
+      // - import specifier (static/dynamic import + re-export)
+      // - url specifier when inside System.register/_context.import()
+      //   (because it's the transpiled equivalent of static and dynamic imports)
+      // And not other references otherwise we could try to transform inline resources
+      // or specifiers inside new URL()...
+      if (shouldPropagateJsModuleConversion(reference, context)) {
+        return turnIntoJsClassicProxy(reference);
+      }
+      return null;
+    },
+    fetchUrlContent: async (urlInfo, context) => {
+      const [jsModuleReference, jsModuleUrlInfo] = context.getWithoutSearchParam({
+        urlInfo,
+        context,
+        searchParam: "js_module_fallback",
+        // override the expectedType to "js_module"
+        // because when there is ?js_module_fallback it means the underlying resource
+        // is a js_module
+        expectedType: "js_module"
+      });
+      if (!jsModuleReference) {
+        return null;
+      }
+      await context.fetchUrlContent(jsModuleUrlInfo, {
+        reference: jsModuleReference
+      });
+      if (context.dev) {
+        context.referenceUtils.found({
+          type: "js_import",
+          subtype: jsModuleReference.subtype,
+          specifier: jsModuleReference.url,
+          expectedType: "js_module"
+        });
+      } else if (context.build && jsModuleUrlInfo.dependents.size === 0) {
+        context.urlGraph.deleteUrlInfo(jsModuleUrlInfo.url);
+      }
+      let outputFormat;
+      if (urlInfo.isEntryPoint && !jsModuleUrlInfo.data.usesImport) {
+        // if it's an entry point without dependency (it does not use import)
+        // then we can use UMD
+        outputFormat = "umd";
+      } else {
+        // otherwise we have to use system in case it's imported
+        // by an other file (for entry points)
+        // or to be able to import when it uses import
+        outputFormat = "system";
+      }
+      urlInfo.data.jsClassicFormat = outputFormat;
+      const {
+        content,
+        sourcemap
+      } = await convertJsModuleToJsClassic({
+        rootDirectoryUrl: context.rootDirectoryUrl,
+        systemJsInjection,
+        systemJsClientFileUrl,
+        input: jsModuleUrlInfo.content,
+        inputIsEntryPoint: urlInfo.isEntryPoint,
+        inputSourcemap: jsModuleUrlInfo.sourcemap,
+        inputUrl: jsModuleUrlInfo.url,
+        outputUrl: jsModuleUrlInfo.generatedUrl,
+        outputFormat
+      });
+      return {
+        content,
+        contentType: "text/javascript",
+        type: "js_classic",
+        originalUrl: jsModuleUrlInfo.originalUrl,
+        originalContent: jsModuleUrlInfo.originalContent,
+        sourcemap,
+        data: jsModuleUrlInfo.data
+      };
+    }
+  };
+};
+
+/*
+ * when <script type="module"> cannot be used:
+ * - ?js_module_fallback is injected into the src of <script type="module">
+ * - js inside <script type="module"> is transformed into classic js
+ * - <link rel="modulepreload"> are converted to <link rel="preload">
+ */
+
+const jsenvPluginJsModuleFallbackInsideHtml = ({
+  systemJsInjection,
+  systemJsClientFileUrl
+}) => {
+  const turnIntoJsClassicProxy = reference => {
+    return injectQueryParams(reference.url, {
+      js_module_fallback: ""
+    });
+  };
+  return {
+    name: "jsenv:js_module_fallback_inside_html",
+    appliesDuring: "*",
+    redirectReference: {
+      link_href: (reference, context) => {
+        if (context.systemJsTranspilation && reference.subtype === "modulepreload") {
+          return turnIntoJsClassicProxy(reference);
+        }
+        if (context.systemJsTranspilation && reference.subtype === "preload" && reference.expectedType === "js_module") {
+          return turnIntoJsClassicProxy(reference);
+        }
+        return null;
+      },
+      script: (reference, context) => {
+        if (context.systemJsTranspilation && reference.expectedType === "js_module") {
+          return turnIntoJsClassicProxy(reference);
+        }
+        return null;
+      },
+      js_url: (reference, context) => {
+        if (context.systemJsTranspilation && reference.expectedType === "js_module") {
+          return turnIntoJsClassicProxy(reference);
+        }
+        return null;
+      }
+    },
+    finalizeUrlContent: {
+      html: async (urlInfo, context) => {
+        const htmlAst = parseHtmlString(urlInfo.content);
+        const mutations = [];
+        visitHtmlNodes(htmlAst, {
+          link: node => {
+            const rel = getHtmlNodeAttribute(node, "rel");
+            if (rel !== "modulepreload" && rel !== "preload") {
+              return;
+            }
+            const href = getHtmlNodeAttribute(node, "href");
+            if (!href) {
+              return;
+            }
+            const reference = context.referenceUtils.find(ref => ref.generatedSpecifier === href && ref.type === "link_href" && ref.subtype === rel);
+            if (!isOrWasExpectingJsModule(reference)) {
+              return;
+            }
+            if (rel === "modulepreload" && reference.expectedType === "js_classic") {
+              mutations.push(() => {
+                setHtmlNodeAttributes(node, {
+                  rel: "preload",
+                  as: "script",
+                  crossorigin: undefined
+                });
+              });
+            }
+            if (rel === "preload" && reference.expectedType === "js_classic") {
+              mutations.push(() => {
+                setHtmlNodeAttributes(node, {
+                  crossorigin: undefined
+                });
+              });
+            }
+          },
+          script: node => {
+            const {
+              type
+            } = analyzeScriptNode(node);
+            if (type !== "js_module") {
+              return;
+            }
+            const src = getHtmlNodeAttribute(node, "src");
+            if (src) {
+              const reference = context.referenceUtils.find(ref => ref.generatedSpecifier === src && ref.type === "script" && ref.subtype === "js_module");
+              if (!reference) {
+                return;
+              }
+              if (reference.expectedType === "js_classic") {
+                mutations.push(() => {
+                  setHtmlNodeAttributes(node, {
+                    type: undefined
+                  });
+                });
+              }
+            } else if (context.systemJsTranspilation) {
+              mutations.push(() => {
+                setHtmlNodeAttributes(node, {
+                  type: undefined
+                });
+              });
+            }
+          }
+        });
+        if (systemJsInjection) {
+          let needsSystemJs = false;
+          for (const reference of urlInfo.references) {
+            if (reference.isResourceHint) {
+              // we don't cook resource hints
+              // because they might refer to resource that will be modified during build
+              // It also means something else HAVE to reference that url in order to cook it
+              // so that the preload is deleted by "resync_resource_hints.js" otherwise
+              continue;
+            }
+            if (isOrWasExpectingJsModule(reference)) {
+              const dependencyUrlInfo = context.urlGraph.getUrlInfo(reference.url);
+              try {
+                await context.cook(dependencyUrlInfo, {
+                  reference
+                });
+                if (dependencyUrlInfo.data.jsClassicFormat === "system") {
+                  needsSystemJs = true;
+                  break;
+                }
+              } catch (e) {
+                if (context.dev && e.code !== "PARSE_ERROR") {
+                  needsSystemJs = true;
+                  // ignore cooking error, the browser will trigger it again on fetch
+                  // + disable cache for this html file because when browser will reload
+                  // the error might be gone and we might need to inject systemjs
+                  urlInfo.headers["cache-control"] = "no-store";
+                } else {
+                  throw e;
+                }
+              }
+            }
+          }
+          if (needsSystemJs) {
+            mutations.push(async () => {
+              let systemJsFileContent = readFileSync(new URL(systemJsClientFileUrl), {
+                encoding: "utf8"
+              });
+              const sourcemapFound = SOURCEMAP.readComment({
+                contentType: "text/javascript",
+                content: systemJsFileContent
+              });
+              if (sourcemapFound) {
+                const sourcemapFileUrl = new URL(sourcemapFound.specifier, systemJsClientFileUrl);
+                systemJsFileContent = SOURCEMAP.writeComment({
+                  contentType: "text/javascript",
+                  content: systemJsFileContent,
+                  specifier: urlToRelativeUrl(sourcemapFileUrl, urlInfo.url)
+                });
+              }
+              const [systemJsReference, systemJsUrlInfo] = context.referenceUtils.inject({
+                type: "script",
+                expectedType: "js_classic",
+                isInline: true,
+                contentType: "text/javascript",
+                content: systemJsFileContent,
+                specifier: "s.js"
+              });
+              await context.cook(systemJsUrlInfo, {
+                reference: systemJsReference
+              });
+              injectHtmlNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
+                tagName: "script",
+                textContent: systemJsUrlInfo.content
+              }), "jsenv:js_module_fallback");
+            });
+          }
+        }
+        await Promise.all(mutations.map(mutation => mutation()));
+        return stringifyHtmlAst(htmlAst, {
+          cleanupPositionAttributes: context.dev
+        });
+      }
+    }
+  };
+};
+const isOrWasExpectingJsModule = reference => {
+  if (isExpectingJsModule(reference)) {
+    return true;
+  }
+  if (reference.original && isExpectingJsModule(reference.original)) {
+    return true;
+  }
+  return false;
+};
+const isExpectingJsModule = reference => {
+  return reference.expectedType === "js_module" || reference.searchParams.has("js_module_fallback") || reference.searchParams.has("as_js_classic");
+};
+
+/*
+ * when {type: "module"} cannot be used on web workers:
+ * - new Worker("worker.js", { type: "module" })
+ *   transformed into
+ *   new Worker("worker.js?js_module_fallback", { type: " lassic" })
+ * - navigator.serviceWorker.register("service_worker.js", { type: "module" })
+ *   transformed into
+ *   navigator.serviceWorker.register("service_worker.js?js_module_fallback", { type: "classic" })
+ * - new SharedWorker("shared_worker.js", { type: "module" })
+ *   transformed into
+ *   new SharedWorker("shared_worker.js?js_module_fallback", { type: "classic" })
+ */
+
+const jsenvPluginJsModuleFallbackOnWorkers = () => {
+  const turnIntoJsClassicProxy = reference => {
+    reference.mutation = magicSource => {
+      magicSource.replace({
+        start: reference.typePropertyNode.value.start,
+        end: reference.typePropertyNode.value.end,
+        replacement: JSON.stringify("classic")
+      });
+    };
+    return injectQueryParams(reference.url, {
+      js_module_fallback: ""
+    });
+  };
+  return {
+    name: "jsenv:js_module_fallback_on_workers",
+    appliesDuring: "*",
+    redirectReference: {
+      js_url: (reference, context) => {
+        if (reference.expectedType !== "js_module") {
+          return null;
+        }
+        if (reference.expectedSubtype === "worker") {
+          if (context.isSupportedOnCurrentClients("worker_type_module")) {
+            return null;
+          }
+          return turnIntoJsClassicProxy(reference);
+        }
+        if (reference.expectedSubtype === "service_worker") {
+          if (context.isSupportedOnCurrentClients("service_worker_type_module")) {
+            return null;
+          }
+          return turnIntoJsClassicProxy(reference);
+        }
+        if (reference.expectedSubtype === "shared_worker") {
+          if (context.isSupportedOnCurrentClients("shared_worker_type_module")) {
+            return null;
+          }
+          return turnIntoJsClassicProxy(reference);
+        }
+        return null;
+      }
+    }
+  };
+};
+
+const jsenvPluginJsModuleFallback = ({
+  systemJsInjection = true,
+  systemJsClientFileUrl = systemJsClientFileUrlDefault
+}) => {
+  return [jsenvPluginJsModuleFallbackInsideHtml({
+    systemJsInjection,
+    systemJsClientFileUrl
+  }), jsenvPluginJsModuleFallbackOnWorkers(), jsenvPluginJsModuleConversion({
+    systemJsInjection,
+    systemJsClientFileUrl,
+    generateJsClassicFilename
+  })];
+};
+const generateJsClassicFilename = url => {
+  const filename = urlToFilename$1(url);
+  let [basename, extension] = splitFileExtension$2(filename);
+  const {
+    searchParams
+  } = new URL(url);
+  if (searchParams.has("as_json_module") || searchParams.has("as_css_module") || searchParams.has("as_text_module")) {
+    extension = ".js";
+  }
+  return `${basename}.nomodule${extension}`;
+};
+const splitFileExtension$2 = filename => {
+  const dotLastIndex = filename.lastIndexOf(".");
+  if (dotLastIndex === -1) {
+    return [filename, ""];
+  }
+  return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)];
+};
+
+const convertJsClassicToJsModule = async ({
+  isWebWorker,
+  input,
+  inputSourcemap,
+  inputUrl,
+  outputUrl
+}) => {
+  const {
+    code,
+    map
+  } = await applyBabelPlugins({
+    babelPlugins: [[babelPluginReplaceTopLevelThis, {
+      isWebWorker
+    }]],
+    input,
+    inputIsJsModule: false,
+    inputUrl,
+    outputUrl
+  });
+  const sourcemap = await composeTwoSourcemaps(inputSourcemap, map);
+  return {
+    content: code,
+    sourcemap
+  };
+};
+const babelPluginReplaceTopLevelThis = () => {
+  return {
+    name: "replace-top-level-this",
+    visitor: {
+      Program: (programPath, state) => {
+        const {
+          isWebWorker
+        } = state.opts;
+        programPath.traverse({
+          ThisExpression: path => {
+            const closestFunction = path.getFunctionParent();
+            if (!closestFunction) {
+              path.replaceWithSourceString(isWebWorker ? "self" : "window");
+            }
+          }
+        });
+      }
+    }
+  };
+};
+
+/*
+ * Js modules might not be able to import js meant to be loaded by <script>
+ * Among other things this happens for a top level this:
+ * - With <script> this is window
+ * - With an import this is undefined
+ * Example of this: https://github.com/video-dev/hls.js/issues/2911
+ *
+ * This plugin fix this issue by rewriting top level this into window
+ * and can be used like this for instance import("hls?as_js_module")
+ */
+
+const jsenvPluginAsJsModule = () => {
+  return {
+    name: "jsenv:as_js_module",
+    appliesDuring: "*",
+    redirectReference: reference => {
+      if (reference.searchParams.has("as_js_module")) {
+        reference.expectedType = "js_module";
+        const filename = urlToFilename$1(reference.url);
+        const [basename] = splitFileExtension$1(filename);
+        reference.filename = `${basename}.mjs`;
+      }
+    },
+    fetchUrlContent: async (urlInfo, context) => {
+      const [jsClassicReference, jsClassicUrlInfo] = context.getWithoutSearchParam({
+        urlInfo,
+        context,
+        searchParam: "as_js_module",
+        // override the expectedType to "js_classic"
+        // because when there is ?as_js_module it means the underlying resource
+        // is js_classic
+        expectedType: "js_classic"
+      });
+      if (!jsClassicReference) {
+        return null;
+      }
+      await context.fetchUrlContent(jsClassicUrlInfo, {
+        reference: jsClassicReference
+      });
+      if (context.dev) {
+        context.referenceUtils.found({
+          type: "js_import",
+          subtype: jsClassicReference.subtype,
+          specifier: jsClassicReference.url,
+          expectedType: "js_classic"
+        });
+      } else if (context.build && jsClassicUrlInfo.dependents.size === 0) {
+        context.urlGraph.deleteUrlInfo(jsClassicUrlInfo.url);
+      }
+      const {
+        content,
+        sourcemap
+      } = await convertJsClassicToJsModule({
+        input: jsClassicUrlInfo.content,
+        inputSourcemap: jsClassicUrlInfo.sourcemap,
+        inputUrl: jsClassicUrlInfo.url,
+        outputUrl: jsClassicUrlInfo.generatedUrl,
+        isWebWorker: isWebWorkerUrlInfo$1(urlInfo)
+      });
+      return {
+        content,
+        contentType: "text/javascript",
+        type: "js_module",
+        originalUrl: jsClassicUrlInfo.originalUrl,
+        originalContent: jsClassicUrlInfo.originalContent,
+        sourcemap,
+        data: jsClassicUrlInfo.data
+      };
+    }
+  };
+};
+const isWebWorkerUrlInfo$1 = urlInfo => {
+  return urlInfo.subtype === "worker" || urlInfo.subtype === "service_worker" || urlInfo.subtype === "shared_worker";
+};
+const splitFileExtension$1 = filename => {
+  const dotLastIndex = filename.lastIndexOf(".");
+  if (dotLastIndex === -1) {
+    return [filename, ""];
+  }
+  return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)];
+};
+
+const require = createRequire(import.meta.url);
+const jsenvPluginTopLevelAwait = () => {
+  return {
+    name: "jsenv:top_level_await",
+    appliesDuring: "*",
+    init: context => {
+      if (context.isSupportedOnCurrentClients("top_level_await")) {
+        return false;
+      }
+      // keep it untouched, systemjs will handle it
+      if (context.systemJsTranspilation) {
+        return false;
+      }
+      return true;
+    },
+    transformUrlContent: {
+      js_module: async urlInfo => {
+        const usesTLA = await usesTopLevelAwait(urlInfo);
+        if (!usesTLA) {
+          return null;
+        }
+        const {
+          code,
+          map
+        } = await applyBabelPlugins({
+          babelPlugins: [[require("babel-plugin-transform-async-to-promises"), {
+            // Maybe we could pass target: "es6" when we support arrow function
+            // https://github.com/rpetrich/babel-plugin-transform-async-to-promises/blob/92755ff8c943c97596523e586b5fa515c2e99326/async-to-promises.ts#L55
+            topLevelAwait: "simple"
+            // enable once https://github.com/rpetrich/babel-plugin-transform-async-to-promises/pull/83
+            // externalHelpers: true,
+            // externalHelpersPath: JSON.parse(
+            //   context.referenceUtils.inject({
+            //     type: "js_import",
+            //     expectedType: "js_module",
+            //     specifier:
+            //       "babel-plugin-transform-async-to-promises/helpers.mjs",
+            //   })[0],
+            // ),
+          }]],
+
+          input: urlInfo.content,
+          inputIsJsModule: true,
+          inputUrl: urlInfo.originalUrl,
+          outputUrl: urlInfo.generatedUrl
+        });
+        return {
+          content: code,
+          sourcemap: map
+        };
+      }
+    }
+  };
+};
+const usesTopLevelAwait = async urlInfo => {
+  if (!urlInfo.content.includes("await ")) {
+    return false;
+  }
+  const {
+    metadata
+  } = await applyBabelPlugins({
+    babelPlugins: [babelPluginMetadataUsesTopLevelAwait],
+    input: urlInfo.content,
+    inputIsJsModule: true,
+    inputUrl: urlInfo.originalUrl,
+    outputUrl: urlInfo.generatedUrl
+  });
+  return metadata.usesTopLevelAwait;
+};
+const babelPluginMetadataUsesTopLevelAwait = () => {
+  return {
+    name: "metadata-uses-top-level-await",
+    visitor: {
+      Program: (programPath, state) => {
+        let usesTopLevelAwait = false;
+        programPath.traverse({
+          AwaitExpression: path => {
+            const closestFunction = path.getFunctionParent();
+            if (!closestFunction || closestFunction.type === "Program") {
+              usesTopLevelAwait = true;
+              path.stop();
+            }
+          }
+        });
+        state.file.metadata.usesTopLevelAwait = usesTopLevelAwait;
+      }
+    }
+  };
+};
+
+const jsenvPluginImportMetaResolve = () => {
+  return {
+    name: "jsenv:import_meta_resolve",
+    appliesDuring: "*",
+    init: context => {
+      if (context.isSupportedOnCurrentClients("import_meta_resolve")) {
+        return false;
+      }
+      // keep it untouched, systemjs will handle it
+      if (context.systemJsTranspilation) {
+        return false;
+      }
+      return true;
+    },
+    transformUrlContent: {
+      js_module: async (urlInfo, context) => {
+        const magicSource = createMagicSource(urlInfo.content);
+        context.referenceUtils._references.forEach(ref => {
+          if (ref.subtype === "import_meta_resolve") {
+            const originalSpecifierLength = Buffer.byteLength(ref.specifier);
+            const specifierLength = Buffer.byteLength(ref.generatedSpecifier.slice(1, -1) // remove `"` around
+            );
+
+            const specifierLengthDiff = specifierLength - originalSpecifierLength;
+            const end = ref.node.end + specifierLengthDiff;
+            magicSource.replace({
+              start: ref.node.start,
+              end,
+              replacement: `new URL(${ref.generatedSpecifier}, import.meta.url).href`
+            });
+            const currentLengthBeforeSpecifier = "import.meta.resolve(".length;
+            const newLengthBeforeSpecifier = "new URL(".length;
+            const lengthDiff = currentLengthBeforeSpecifier - newLengthBeforeSpecifier;
+            ref.specifierColumn -= lengthDiff;
+            ref.specifierStart -= lengthDiff;
+            ref.specifierEnd = ref.specifierStart + Buffer.byteLength(ref.generatedSpecifier);
+          }
+        });
+        return magicSource.toContentAndSourcemap();
+      }
+    }
+  };
+};
+
+const applyCssTranspilation = async ({
+  input,
+  inputUrl,
+  runtimeCompat
+}) => {
+  // https://lightningcss.dev/docs.html
+  const {
+    transform
+  } = await import("lightningcss");
+  const targets = runtimeCompatToTargets(runtimeCompat);
+  const {
+    code,
+    map
+  } = transform({
+    filename: fileURLToPath(inputUrl),
+    code: Buffer.from(input),
+    targets,
+    minify: false,
+    drafts: {
+      nesting: true,
+      customMedia: true
+    }
+  });
+  return {
+    content: String(code),
+    sourcemap: map
+  };
+};
+const runtimeCompatToTargets = runtimeCompat => {
+  const targets = {};
+  ["chrome", "firefox", "ie", "opera", "safari"].forEach(runtimeName => {
+    const version = runtimeCompat[runtimeName];
+    if (version) {
+      targets[runtimeName] = versionToBits(version);
+    }
+  });
+  return targets;
+};
+const versionToBits = version => {
+  const [major, minor = 0, patch = 0] = version.split("-")[0].split(".").map(v => parseInt(v, 10));
+  return major << 16 | minor << 8 | patch;
+};
+
+const jsenvPluginCssTranspilation = () => {
+  return {
+    name: "jsenv:css_transpilation",
+    appliesDuring: "*",
+    transformUrlContent: {
+      css: async (urlInfo, context) => {
+        return applyCssTranspilation({
+          input: urlInfo.content,
+          inputUrl: urlInfo.originalUrl,
+          runtimeCompat: context.runtimeCompat
+        });
+      }
+    }
+  };
+};
+
+/*
+ * Transforms code to make it compatible with browser that would not be able to
+ * run it otherwise. For instance:
+ * - const -> var
+ * - async/await -> promises
+ * Anything that is not standard (import.meta.dev for instance) is outside the scope
+ * of this plugin
+ */
+
+const jsenvPluginTranspilation = ({
+  importAssertions = true,
+  css = true,
+  // TODO
+  // build sets jsModuleFallbackOnJsClassic: false during first step of the build
+  // and re-enable it in the second phase (when performing the bundling)
+  // so that bundling is applied on js modules THEN it is converted to js classic if needed
+  jsModuleFallbackOnJsClassic = true,
+  topLevelAwait = true,
+  importMetaResolve = true,
+  babelHelpersAsImport = true
+}) => {
+  if (importAssertions === true) {
+    importAssertions = {};
+  }
+  if (jsModuleFallbackOnJsClassic === true) {
+    jsModuleFallbackOnJsClassic = {};
+  }
+  return [...(importMetaResolve ? [jsenvPluginImportMetaResolve()] : []), ...(importAssertions ? [jsenvPluginImportAssertions(importAssertions)] : []),
+  // babel also so that rollup can bundle babel helpers for instance
+  jsenvPluginBabel({
+    topLevelAwait,
+    babelHelpersAsImport
+  }), ...(jsModuleFallbackOnJsClassic ? [jsenvPluginJsModuleFallback(jsModuleFallbackOnJsClassic)] : []), jsenvPluginAsJsModule(),
+  // topLevelAwait must come after jsModuleFallback because it's related to the module format
+  // so we want to wait to know the module format before transforming things related to top level await
+  ...(topLevelAwait ? [jsenvPluginTopLevelAwait()] : []), ...(css ? [jsenvPluginCssTranspilation()] : [])];
+};
+
 const watchSourceFiles = (sourceDirectoryUrl, callback, {
   sourceFileConfig = {},
   keepProcessAlive,
@@ -8339,349 +10339,6 @@ const createUrlInfoTransformer = ({
   };
 };
 
-const versionFromValue = value => {
-  if (typeof value === "number") {
-    return numberToVersion(value);
-  }
-  if (typeof value === "string") {
-    return stringToVersion(value);
-  }
-  throw new TypeError(`version must be a number or a string, got ${value}`);
-};
-const numberToVersion = number => {
-  return {
-    major: number,
-    minor: 0,
-    patch: 0
-  };
-};
-const stringToVersion = string => {
-  if (string.indexOf(".") > -1) {
-    const parts = string.split(".");
-    return {
-      major: Number(parts[0]),
-      minor: parts[1] ? Number(parts[1]) : 0,
-      patch: parts[2] ? Number(parts[2]) : 0
-    };
-  }
-  if (isNaN(string)) {
-    return {
-      major: 0,
-      minor: 0,
-      patch: 0
-    };
-  }
-  return {
-    major: Number(string),
-    minor: 0,
-    patch: 0
-  };
-};
-
-const compareTwoVersions = (versionA, versionB) => {
-  const semanticVersionA = versionFromValue(versionA);
-  const semanticVersionB = versionFromValue(versionB);
-  const majorDiff = semanticVersionA.major - semanticVersionB.major;
-  if (majorDiff > 0) {
-    return majorDiff;
-  }
-  if (majorDiff < 0) {
-    return majorDiff;
-  }
-  const minorDiff = semanticVersionA.minor - semanticVersionB.minor;
-  if (minorDiff > 0) {
-    return minorDiff;
-  }
-  if (minorDiff < 0) {
-    return minorDiff;
-  }
-  const patchDiff = semanticVersionA.patch - semanticVersionB.patch;
-  if (patchDiff > 0) {
-    return patchDiff;
-  }
-  if (patchDiff < 0) {
-    return patchDiff;
-  }
-  return 0;
-};
-
-const versionIsBelow = (versionSupposedBelow, versionSupposedAbove) => {
-  return compareTwoVersions(versionSupposedBelow, versionSupposedAbove) < 0;
-};
-
-const findHighestVersion = (...values) => {
-  if (values.length === 0) throw new Error(`missing argument`);
-  return values.reduce((highestVersion, value) => {
-    if (versionIsBelow(highestVersion, value)) {
-      return value;
-    }
-    return highestVersion;
-  });
-};
-
-const featuresCompatMap = {
-  script_type_module: {
-    edge: "16",
-    firefox: "60",
-    chrome: "61",
-    safari: "10.1",
-    opera: "48",
-    ios: "10.3",
-    android: "61",
-    samsung: "8.2"
-  },
-  document_current_script: {
-    edge: "12",
-    firefox: "4",
-    chrome: "29",
-    safari: "8",
-    opera: "16",
-    android: "4.4",
-    samsung: "4"
-  },
-  // https://caniuse.com/?search=import.meta
-  import_meta: {
-    android: "9",
-    chrome: "64",
-    edge: "79",
-    firefox: "62",
-    ios: "12",
-    opera: "51",
-    safari: "11.1",
-    samsung: "9.2"
-  },
-  import_meta_resolve: {
-    chrome: "107",
-    edge: "105",
-    firefox: "106"
-  },
-  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import#browser_compatibility
-  import_dynamic: {
-    android: "8",
-    chrome: "63",
-    edge: "79",
-    firefox: "67",
-    ios: "11.3",
-    opera: "50",
-    safari: "11.3",
-    samsung: "8.0",
-    node: "13.2"
-  },
-  top_level_await: {
-    edge: "89",
-    chrome: "89",
-    firefox: "89",
-    opera: "75",
-    safari: "15",
-    samsung: "15",
-    ios: "15",
-    node: "14.8"
-  },
-  // https://caniuse.com/import-maps
-  importmap: {
-    edge: "89",
-    chrome: "89",
-    opera: "76",
-    samsung: "15",
-    firefox: "108",
-    safari: "16.4"
-  },
-  import_type_json: {
-    chrome: "91",
-    edge: "91"
-  },
-  import_type_css: {
-    chrome: "93",
-    edge: "93"
-  },
-  import_type_text: {},
-  // https://developer.mozilla.org/en-US/docs/Web/API/CSSStyleSheet#browser_compatibility
-  new_stylesheet: {
-    chrome: "73",
-    edge: "79",
-    opera: "53",
-    android: "73"
-  },
-  // https://caniuse.com/?search=worker
-  worker: {
-    ie: "10",
-    edge: "12",
-    firefox: "3.5",
-    chrome: "4",
-    opera: "11.5",
-    safari: "4",
-    ios: "5",
-    android: "4.4"
-  },
-  // https://developer.mozilla.org/en-US/docs/Web/API/Worker/Worker#browser_compatibility
-  worker_type_module: {
-    chrome: "80",
-    edge: "80",
-    opera: "67",
-    android: "80"
-  },
-  worker_importmap: {},
-  service_worker: {
-    edge: "17",
-    firefox: "44",
-    chrome: "40",
-    safari: "11.1",
-    opera: "27",
-    ios: "11.3",
-    android: "12.12"
-  },
-  service_worker_type_module: {
-    chrome: "80",
-    edge: "80",
-    opera: "67",
-    android: "80"
-  },
-  shared_worker: {
-    chrome: "4",
-    edge: "79",
-    firefox: "29",
-    opera: "10.6"
-  },
-  shared_worker_type_module: {
-    chrome: "80",
-    edge: "80",
-    opera: "67"
-  },
-  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/globalThis#browser_compatibility
-  global_this: {
-    edge: "79",
-    firefox: "65",
-    chrome: "71",
-    safari: "12.1",
-    opera: "58",
-    ios: "12.2",
-    android: "94",
-    node: "12"
-  },
-  async_generator_function: {
-    chrome: "63",
-    opera: "50",
-    edge: "79",
-    firefox: "57",
-    safari: "12",
-    node: "10",
-    ios: "12",
-    samsung: "8",
-    electron: "3"
-  },
-  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals#browser_compatibility
-  template_literals: {
-    chrome: "41",
-    edge: "12",
-    firefox: "34",
-    opera: "28",
-    safari: "9",
-    ios: "9",
-    android: "4",
-    node: "4"
-  },
-  arrow_function: {
-    chrome: "47",
-    opera: "34",
-    edge: "13",
-    firefox: "45",
-    safari: "10",
-    node: "6",
-    ios: "10",
-    samsung: "5",
-    electron: "0.36"
-  },
-  const_bindings: {
-    chrome: "41",
-    opera: "28",
-    edge: "12",
-    firefox: "46",
-    safari: "10",
-    node: "4",
-    ie: "11",
-    ios: "10",
-    samsung: "3.4",
-    electron: "0.22"
-  },
-  object_properties_shorthand: {
-    chrome: "43",
-    opera: "30",
-    edge: "12",
-    firefox: "33",
-    safari: "9",
-    node: "4",
-    ios: "9",
-    samsung: "4",
-    electron: "0.28"
-  },
-  reserved_words: {
-    chrome: "13",
-    opera: "10.50",
-    edge: "12",
-    firefox: "2",
-    safari: "3.1",
-    node: "0.10",
-    ie: "9",
-    android: "4.4",
-    ios: "6",
-    phantom: "2",
-    samsung: "1",
-    electron: "0.20"
-  },
-  symbols: {
-    chrome: "38",
-    opera: "25",
-    edge: "12",
-    firefox: "36",
-    safari: "9",
-    ios: "9",
-    samsung: "4",
-    node: "0.12"
-  }
-};
-
-const RUNTIME_COMPAT = {
-  featuresCompatMap,
-  add: (originalRuntimeCompat, feature) => {
-    const featureCompat = getFeatureCompat(feature);
-    const runtimeCompat = {
-      ...originalRuntimeCompat
-    };
-    Object.keys(originalRuntimeCompat).forEach(runtimeName => {
-      const secondVersion = featureCompat[runtimeName]; // the version supported by the feature
-      if (secondVersion) {
-        const firstVersion = originalRuntimeCompat[runtimeName];
-        runtimeCompat[runtimeName] = findHighestVersion(firstVersion, secondVersion);
-      }
-    });
-    return runtimeCompat;
-  },
-  isSupported: (runtimeCompat, feature) => {
-    const featureCompat = getFeatureCompat(feature);
-    const runtimeNames = Object.keys(runtimeCompat);
-    const runtimeWithoutCompat = runtimeNames.find(runtimeName => {
-      const runtimeVersion = runtimeCompat[runtimeName];
-      const runtimeVersionCompatible = featureCompat[runtimeName] || "Infinity";
-      const highestVersion = findHighestVersion(runtimeVersion, runtimeVersionCompatible);
-      return highestVersion !== runtimeVersion;
-    });
-    return !runtimeWithoutCompat;
-  }
-};
-const getFeatureCompat = feature => {
-  if (typeof feature === "string") {
-    const compat = featuresCompatMap[feature];
-    if (!compat) {
-      throw new Error(`"${feature}" feature is unknown`);
-    }
-    return compat;
-  }
-  if (typeof feature !== "object") {
-    throw new TypeError(`feature must be a string or an object, got ${feature}`);
-  }
-  return feature;
-};
-
 const createResolveUrlError = ({
   pluginController,
   reference,
@@ -9083,6 +10740,7 @@ const isWebWorkerUrlInfo = urlInfo => {
 //   return false
 // }
 
+const inlineContentClientFileUrl = new URL("./js/inline_content.js", import.meta.url).href;
 const createKitchen = ({
   signal,
   logLevel,
@@ -9548,6 +11206,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       // references
       const references = [];
       context.referenceUtils = {
+        inlineContentClientFileUrl,
         _references: references,
         find: predicate => references.find(predicate),
         readGeneratedSpecifier,
@@ -10887,116 +12546,6 @@ const parseAndTransformCssUrls = async (urlInfo, context) => {
   return magicSource.toContentAndSourcemap();
 };
 
-const isEscaped = (i, string) => {
-  let backslashBeforeCount = 0;
-  while (i--) {
-    const previousChar = string[i];
-    if (previousChar === "\\") {
-      backslashBeforeCount++;
-    }
-    break;
-  }
-  const isEven = backslashBeforeCount % 2 === 0;
-  return !isEven;
-};
-
-const JS_QUOTES = {
-  pickBest: (string, {
-    canUseTemplateString,
-    defaultQuote = DOUBLE
-  } = {}) => {
-    // check default first, once tested do no re-test it
-    if (!string.includes(defaultQuote)) {
-      return defaultQuote;
-    }
-    if (defaultQuote !== DOUBLE && !string.includes(DOUBLE)) {
-      return DOUBLE;
-    }
-    if (defaultQuote !== SINGLE && !string.includes(SINGLE)) {
-      return SINGLE;
-    }
-    if (canUseTemplateString && defaultQuote !== BACKTICK && !string.includes(BACKTICK)) {
-      return BACKTICK;
-    }
-    return defaultQuote;
-  },
-  escapeSpecialChars: (string, {
-    quote = "pickBest",
-    canUseTemplateString,
-    defaultQuote,
-    allowEscapeForVersioning = false
-  }) => {
-    quote = quote === "pickBest" ? JS_QUOTES.pickBest(string, {
-      canUseTemplateString,
-      defaultQuote
-    }) : quote;
-    const replacements = JS_QUOTE_REPLACEMENTS[quote];
-    let result = "";
-    let last = 0;
-    let i = 0;
-    while (i < string.length) {
-      const char = string[i];
-      i++;
-      if (isEscaped(i - 1, string)) continue;
-      const replacement = replacements[char];
-      if (replacement) {
-        if (allowEscapeForVersioning && char === quote && string.slice(i, i + 6) === "+__v__") {
-          let isVersioningConcatenation = false;
-          let j = i + 6; // start after the +
-          while (j < string.length) {
-            const lookAheadChar = string[j];
-            j++;
-            if (lookAheadChar === "+" && string[j] === quote && !isEscaped(j - 1, string)) {
-              isVersioningConcatenation = true;
-              break;
-            }
-          }
-          if (isVersioningConcatenation) {
-            // it's a concatenation
-            // skip until the end of concatenation (the second +)
-            // and resume from there
-            i = j + 1;
-            continue;
-          }
-        }
-        if (last === i - 1) {
-          result += replacement;
-        } else {
-          result += `${string.slice(last, i - 1)}${replacement}`;
-        }
-        last = i;
-      }
-    }
-    if (last !== string.length) {
-      result += string.slice(last);
-    }
-    return `${quote}${result}${quote}`;
-  }
-};
-const DOUBLE = `"`;
-const SINGLE = `'`;
-const BACKTICK = "`";
-const lineEndingEscapes = {
-  "\n": "\\n",
-  "\r": "\\r",
-  "\u2028": "\\u2028",
-  "\u2029": "\\u2029"
-};
-const JS_QUOTE_REPLACEMENTS = {
-  [DOUBLE]: {
-    '"': '\\"',
-    ...lineEndingEscapes
-  },
-  [SINGLE]: {
-    "'": "\\'",
-    ...lineEndingEscapes
-  },
-  [BACKTICK]: {
-    "`": "\\`",
-    "$": "\\$"
-  }
-};
-
 const jsenvPluginJsReferenceAnalysis = ({
   inlineContent,
   allowEscapeForVersioning
@@ -11174,608 +12723,6 @@ const jsenvPluginInlineContentFetcher = () => {
       };
     }
   };
-};
-
-const jsenvPluginInliningAsDataUrl = () => {
-  return {
-    name: "jsenv:inlining_as_data_url",
-    appliesDuring: "*",
-    formatReference: {
-      // if the referenced url is a worker we could use
-      // https://www.oreilly.com/library/view/web-workers/9781449322120/ch04.html
-      // but maybe we should rather use ?object_url
-      // or people could do this:
-      // import workerText from './worker.js?text'
-      // const blob = new Blob(workerText, { type: 'text/javascript' })
-      // window.URL.createObjectURL(blob)
-      // in any case the recommended way is to use an url
-      // to benefit from shared worker and reuse worker between tabs
-      "*": (reference, context) => {
-        if (!reference.original || !reference.original.searchParams.has("inline")) {
-          return null;
-        }
-        // <link rel="stylesheet"> and <script> can be inlined in the html
-        if (reference.type === "link_href" && reference.subtype === "stylesheet") {
-          return null;
-        }
-        if (reference.type === "script") {
-          return null;
-        }
-        return (async () => {
-          const urlInfo = context.urlGraph.getUrlInfo(reference.url);
-          await context.cook(urlInfo, {
-            reference
-          });
-          const contentAsBase64 = Buffer.from(urlInfo.content).toString("base64");
-          const specifier = DATA_URL.stringify({
-            mediaType: urlInfo.contentType,
-            base64Flag: true,
-            data: contentAsBase64
-          });
-          context.referenceUtils.becomesInline(reference, {
-            line: reference.line,
-            column: reference.column,
-            isOriginal: reference.isOriginal,
-            specifier,
-            content: contentAsBase64,
-            contentType: urlInfo.contentType
-          });
-          return specifier;
-        })();
-      }
-    }
-  };
-};
-
-const jsenvPluginInliningIntoHtml = () => {
-  return {
-    name: "jsenv:inlining_into_html",
-    appliesDuring: "*",
-    transformUrlContent: {
-      html: async (urlInfo, context) => {
-        const htmlAst = parseHtmlString(urlInfo.content);
-        const mutations = [];
-        const actions = [];
-        const onStyleSheet = (linkNode, {
-          href
-        }) => {
-          const linkReference = context.referenceUtils.find(ref => ref.generatedSpecifier === href && ref.type === "link_href" && ref.subtype === "stylesheet");
-          if (!linkReference.original || !linkReference.original.searchParams.has("inline")) {
-            return;
-          }
-          const linkUrlInfo = context.urlGraph.getUrlInfo(linkReference.url);
-          actions.push(async () => {
-            await context.cook(linkUrlInfo, {
-              reference: linkReference
-            });
-            const {
-              line,
-              column,
-              isOriginal
-            } = getHtmlNodePosition(linkNode, {
-              preferOriginal: true
-            });
-            context.referenceUtils.becomesInline(linkReference, {
-              line: line - 1,
-              column,
-              isOriginal,
-              specifier: linkReference.generatedSpecifier,
-              content: linkUrlInfo.content,
-              contentType: linkUrlInfo.contentType
-            });
-            mutations.push(() => {
-              setHtmlNodeAttributes(linkNode, {
-                "inlined-from-href": href,
-                "href": undefined,
-                "rel": undefined,
-                "type": undefined,
-                "as": undefined,
-                "crossorigin": undefined,
-                "integrity": undefined,
-                "jsenv-inlined-by": "jsenv:inlining_into_html"
-              });
-              linkNode.nodeName = "style";
-              linkNode.tagName = "style";
-              setHtmlNodeText(linkNode, linkUrlInfo.content, {
-                indentation: "auto"
-              });
-            });
-          });
-        };
-        const onScriptWithSrc = (scriptNode, {
-          src
-        }) => {
-          const scriptReference = context.referenceUtils.find(ref => ref.generatedSpecifier === src && ref.type === "script");
-          if (!scriptReference.original || !scriptReference.original.searchParams.has("inline")) {
-            return;
-          }
-          const scriptUrlInfo = context.urlGraph.getUrlInfo(scriptReference.url);
-          actions.push(async () => {
-            await context.cook(scriptUrlInfo, {
-              reference: scriptReference
-            });
-            const {
-              line,
-              column,
-              isOriginal
-            } = getHtmlNodePosition(scriptNode, {
-              preferOriginal: true
-            });
-            context.referenceUtils.becomesInline(scriptReference, {
-              line: line - 1,
-              column,
-              isOriginal,
-              specifier: scriptReference.generatedSpecifier,
-              content: scriptUrlInfo.content,
-              contentType: scriptUrlInfo.contentType
-            });
-            mutations.push(() => {
-              setHtmlNodeAttributes(scriptNode, {
-                "inlined-from-src": src,
-                "src": undefined,
-                "crossorigin": undefined,
-                "integrity": undefined,
-                "jsenv-inlined-by": "jsenv:inlining_into_html"
-              });
-              setHtmlNodeText(scriptNode, scriptUrlInfo.content, {
-                indentation: "auto"
-              });
-            });
-          });
-        };
-        visitHtmlNodes(htmlAst, {
-          link: linkNode => {
-            const rel = getHtmlNodeAttribute(linkNode, "rel");
-            if (rel !== "stylesheet") {
-              return;
-            }
-            const href = getHtmlNodeAttribute(linkNode, "href");
-            if (!href) {
-              return;
-            }
-            onStyleSheet(linkNode, {
-              href
-            });
-          },
-          script: scriptNode => {
-            const {
-              type
-            } = analyzeScriptNode(scriptNode);
-            const scriptNodeText = getHtmlNodeText(scriptNode);
-            if (scriptNodeText) {
-              return;
-            }
-            const src = getHtmlNodeAttribute(scriptNode, "src");
-            if (!src) {
-              return;
-            }
-            onScriptWithSrc(scriptNode, {
-              type,
-              src
-            });
-          }
-        });
-        if (actions.length > 0) {
-          await Promise.all(actions.map(action => action()));
-        }
-        mutations.forEach(mutation => mutation());
-        const htmlModified = stringifyHtmlAst(htmlAst);
-        return htmlModified;
-      }
-    }
-  };
-};
-
-const jsenvPluginInlining = () => {
-  return [{
-    name: "jsenv:inlining",
-    appliesDuring: "*",
-    redirectReference: reference => {
-      const {
-        searchParams
-      } = reference;
-      if (searchParams.has("inline")) {
-        const urlObject = new URL(reference.url);
-        urlObject.searchParams.delete("inline");
-        return urlObject.href;
-      }
-      return null;
-    }
-  }, jsenvPluginInliningAsDataUrl(), jsenvPluginInliningIntoHtml()];
-};
-
-/*
- * - propagate "?js_module_fallback" query string param on urls
- * - perform conversion from js module to js classic when url uses "?js_module_fallback"
- */
-
-const jsenvPluginJsModuleConversion = ({
-  systemJsInjection,
-  systemJsClientFileUrl,
-  generateJsClassicFilename
-}) => {
-  const isReferencingJsModule = reference => {
-    if (reference.type === "js_import" || reference.subtype === "system_register_arg" || reference.subtype === "system_import_arg") {
-      return true;
-    }
-    if (reference.type === "js_url" && reference.expectedType === "js_module") {
-      return true;
-    }
-    return false;
-  };
-  const shouldPropagateJsModuleConversion = (reference, context) => {
-    if (isReferencingJsModule(reference)) {
-      const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl);
-      if (!parentUrlInfo) {
-        return false;
-      }
-      const parentGotAsJsClassic = new URL(parentUrlInfo.url).searchParams.has("js_module_fallback");
-      return parentGotAsJsClassic;
-    }
-    return false;
-  };
-  const markAsJsClassicProxy = reference => {
-    reference.expectedType = "js_classic";
-    reference.filename = generateJsClassicFilename(reference.url);
-  };
-  const turnIntoJsClassicProxy = reference => {
-    const urlTransformed = injectQueryParams(reference.url, {
-      js_module_fallback: ""
-    });
-    markAsJsClassicProxy(reference);
-    return urlTransformed;
-  };
-  return {
-    name: "jsenv:js_module_conversion",
-    appliesDuring: "*",
-    redirectReference: (reference, context) => {
-      if (reference.searchParams.has("js_module_fallback")) {
-        markAsJsClassicProxy(reference);
-        return null;
-      }
-      // We want to propagate transformation of js module to js classic to:
-      // - import specifier (static/dynamic import + re-export)
-      // - url specifier when inside System.register/_context.import()
-      //   (because it's the transpiled equivalent of static and dynamic imports)
-      // And not other references otherwise we could try to transform inline resources
-      // or specifiers inside new URL()...
-      if (shouldPropagateJsModuleConversion(reference, context)) {
-        return turnIntoJsClassicProxy(reference);
-      }
-      return null;
-    },
-    fetchUrlContent: async (urlInfo, context) => {
-      const [jsModuleReference, jsModuleUrlInfo] = context.getWithoutSearchParam({
-        urlInfo,
-        context,
-        searchParam: "js_module_fallback",
-        // override the expectedType to "js_module"
-        // because when there is ?js_module_fallback it means the underlying resource
-        // is a js_module
-        expectedType: "js_module"
-      });
-      if (!jsModuleReference) {
-        return null;
-      }
-      await context.fetchUrlContent(jsModuleUrlInfo, {
-        reference: jsModuleReference
-      });
-      if (context.dev) {
-        context.referenceUtils.found({
-          type: "js_import",
-          subtype: jsModuleReference.subtype,
-          specifier: jsModuleReference.url,
-          expectedType: "js_module"
-        });
-      } else if (context.build && jsModuleUrlInfo.dependents.size === 0) {
-        context.urlGraph.deleteUrlInfo(jsModuleUrlInfo.url);
-      }
-      const {
-        content,
-        sourcemap
-      } = await convertJsModuleToJsClassic({
-        rootDirectoryUrl: context.rootDirectoryUrl,
-        systemJsInjection,
-        systemJsClientFileUrl,
-        urlInfo,
-        jsModuleUrlInfo
-      });
-      return {
-        content,
-        contentType: "text/javascript",
-        type: "js_classic",
-        originalUrl: jsModuleUrlInfo.originalUrl,
-        originalContent: jsModuleUrlInfo.originalContent,
-        sourcemap,
-        data: jsModuleUrlInfo.data
-      };
-    }
-  };
-};
-
-/*
- * when <script type="module"> cannot be used:
- * - ?js_module_fallback is injected into the src of <script type="module">
- * - js inside <script type="module"> is transformed into classic js
- * - <link rel="modulepreload"> are converted to <link rel="preload">
- */
-
-const jsenvPluginJsModuleFallbackInsideHtml = ({
-  systemJsInjection,
-  systemJsClientFileUrl
-}) => {
-  const turnIntoJsClassicProxy = reference => {
-    return injectQueryParams(reference.url, {
-      js_module_fallback: ""
-    });
-  };
-  return {
-    name: "jsenv:js_module_fallback_inside_html",
-    appliesDuring: "*",
-    redirectReference: {
-      link_href: (reference, context) => {
-        if (context.systemJsTranspilation && reference.subtype === "modulepreload") {
-          return turnIntoJsClassicProxy(reference);
-        }
-        if (context.systemJsTranspilation && reference.subtype === "preload" && reference.expectedType === "js_module") {
-          return turnIntoJsClassicProxy(reference);
-        }
-        return null;
-      },
-      script: (reference, context) => {
-        if (context.systemJsTranspilation && reference.expectedType === "js_module") {
-          return turnIntoJsClassicProxy(reference);
-        }
-        return null;
-      },
-      js_url: (reference, context) => {
-        if (context.systemJsTranspilation && reference.expectedType === "js_module") {
-          return turnIntoJsClassicProxy(reference);
-        }
-        return null;
-      }
-    },
-    finalizeUrlContent: {
-      html: async (urlInfo, context) => {
-        const htmlAst = parseHtmlString(urlInfo.content);
-        const mutations = [];
-        visitHtmlNodes(htmlAst, {
-          link: node => {
-            const rel = getHtmlNodeAttribute(node, "rel");
-            if (rel !== "modulepreload" && rel !== "preload") {
-              return;
-            }
-            const href = getHtmlNodeAttribute(node, "href");
-            if (!href) {
-              return;
-            }
-            const reference = context.referenceUtils.find(ref => ref.generatedSpecifier === href && ref.type === "link_href" && ref.subtype === rel);
-            if (!isOrWasExpectingJsModule(reference)) {
-              return;
-            }
-            if (rel === "modulepreload" && reference.expectedType === "js_classic") {
-              mutations.push(() => {
-                setHtmlNodeAttributes(node, {
-                  rel: "preload",
-                  as: "script",
-                  crossorigin: undefined
-                });
-              });
-            }
-            if (rel === "preload" && reference.expectedType === "js_classic") {
-              mutations.push(() => {
-                setHtmlNodeAttributes(node, {
-                  crossorigin: undefined
-                });
-              });
-            }
-          },
-          script: node => {
-            const {
-              type
-            } = analyzeScriptNode(node);
-            if (type !== "js_module") {
-              return;
-            }
-            const src = getHtmlNodeAttribute(node, "src");
-            if (src) {
-              const reference = context.referenceUtils.find(ref => ref.generatedSpecifier === src && ref.type === "script" && ref.subtype === "js_module");
-              if (!reference) {
-                return;
-              }
-              if (reference.expectedType === "js_classic") {
-                mutations.push(() => {
-                  setHtmlNodeAttributes(node, {
-                    type: undefined
-                  });
-                });
-              }
-            } else if (context.systemJsTranspilation) {
-              mutations.push(() => {
-                setHtmlNodeAttributes(node, {
-                  type: undefined
-                });
-              });
-            }
-          }
-        });
-        if (systemJsInjection) {
-          let needsSystemJs = false;
-          for (const reference of urlInfo.references) {
-            if (reference.isResourceHint) {
-              // we don't cook resource hints
-              // because they might refer to resource that will be modified during build
-              // It also means something else HAVE to reference that url in order to cook it
-              // so that the preload is deleted by "resync_resource_hints.js" otherwise
-              continue;
-            }
-            if (isOrWasExpectingJsModule(reference)) {
-              const dependencyUrlInfo = context.urlGraph.getUrlInfo(reference.url);
-              try {
-                await context.cook(dependencyUrlInfo, {
-                  reference
-                });
-                if (dependencyUrlInfo.data.jsClassicFormat === "system") {
-                  needsSystemJs = true;
-                  break;
-                }
-              } catch (e) {
-                if (context.dev && e.code !== "PARSE_ERROR") {
-                  needsSystemJs = true;
-                  // ignore cooking error, the browser will trigger it again on fetch
-                  // + disable cache for this html file because when browser will reload
-                  // the error might be gone and we might need to inject systemjs
-                  urlInfo.headers["cache-control"] = "no-store";
-                } else {
-                  throw e;
-                }
-              }
-            }
-          }
-          if (needsSystemJs) {
-            mutations.push(async () => {
-              let systemJsFileContent = readFileSync(new URL(systemJsClientFileUrl), {
-                encoding: "utf8"
-              });
-              const sourcemapFound = SOURCEMAP.readComment({
-                contentType: "text/javascript",
-                content: systemJsFileContent
-              });
-              if (sourcemapFound) {
-                const sourcemapFileUrl = new URL(sourcemapFound.specifier, systemJsClientFileUrl);
-                systemJsFileContent = SOURCEMAP.writeComment({
-                  contentType: "text/javascript",
-                  content: systemJsFileContent,
-                  specifier: urlToRelativeUrl(sourcemapFileUrl, urlInfo.url)
-                });
-              }
-              const [systemJsReference, systemJsUrlInfo] = context.referenceUtils.inject({
-                type: "script",
-                expectedType: "js_classic",
-                isInline: true,
-                contentType: "text/javascript",
-                content: systemJsFileContent,
-                specifier: "s.js"
-              });
-              await context.cook(systemJsUrlInfo, {
-                reference: systemJsReference
-              });
-              injectHtmlNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
-                tagName: "script",
-                textContent: systemJsUrlInfo.content
-              }), "jsenv:js_module_fallback");
-            });
-          }
-        }
-        await Promise.all(mutations.map(mutation => mutation()));
-        return stringifyHtmlAst(htmlAst, {
-          cleanupPositionAttributes: context.dev
-        });
-      }
-    }
-  };
-};
-const isOrWasExpectingJsModule = reference => {
-  if (isExpectingJsModule(reference)) {
-    return true;
-  }
-  if (reference.original && isExpectingJsModule(reference.original)) {
-    return true;
-  }
-  return false;
-};
-const isExpectingJsModule = reference => {
-  return reference.expectedType === "js_module" || reference.searchParams.has("js_module_fallback") || reference.searchParams.has("as_js_classic");
-};
-
-/*
- * when {type: "module"} cannot be used on web workers:
- * - new Worker("worker.js", { type: "module" })
- *   transformed into
- *   new Worker("worker.js?js_module_fallback", { type: " lassic" })
- * - navigator.serviceWorker.register("service_worker.js", { type: "module" })
- *   transformed into
- *   navigator.serviceWorker.register("service_worker.js?js_module_fallback", { type: "classic" })
- * - new SharedWorker("shared_worker.js", { type: "module" })
- *   transformed into
- *   new SharedWorker("shared_worker.js?js_module_fallback", { type: "classic" })
- */
-
-const jsenvPluginJsModuleFallbackOnWorkers = () => {
-  const turnIntoJsClassicProxy = reference => {
-    reference.mutation = magicSource => {
-      magicSource.replace({
-        start: reference.typePropertyNode.value.start,
-        end: reference.typePropertyNode.value.end,
-        replacement: JSON.stringify("classic")
-      });
-    };
-    return injectQueryParams(reference.url, {
-      js_module_fallback: ""
-    });
-  };
-  return {
-    name: "jsenv:js_module_fallback_on_workers",
-    appliesDuring: "*",
-    redirectReference: {
-      js_url: (reference, context) => {
-        if (reference.expectedType !== "js_module") {
-          return null;
-        }
-        if (reference.expectedSubtype === "worker") {
-          if (context.isSupportedOnCurrentClients("worker_type_module")) {
-            return null;
-          }
-          return turnIntoJsClassicProxy(reference);
-        }
-        if (reference.expectedSubtype === "service_worker") {
-          if (context.isSupportedOnCurrentClients("service_worker_type_module")) {
-            return null;
-          }
-          return turnIntoJsClassicProxy(reference);
-        }
-        if (reference.expectedSubtype === "shared_worker") {
-          if (context.isSupportedOnCurrentClients("shared_worker_type_module")) {
-            return null;
-          }
-          return turnIntoJsClassicProxy(reference);
-        }
-        return null;
-      }
-    }
-  };
-};
-
-const jsenvPluginJsModuleFallback = ({
-  systemJsInjection = true,
-  systemJsClientFileUrl = systemJsClientFileUrlDefault
-}) => {
-  return [jsenvPluginJsModuleFallbackInsideHtml({
-    systemJsInjection,
-    systemJsClientFileUrl
-  }), jsenvPluginJsModuleFallbackOnWorkers(), jsenvPluginJsModuleConversion({
-    systemJsInjection,
-    systemJsClientFileUrl,
-    generateJsClassicFilename
-  })];
-};
-const generateJsClassicFilename = url => {
-  const filename = urlToFilename$1(url);
-  let [basename, extension] = splitFileExtension$2(filename);
-  const {
-    searchParams
-  } = new URL(url);
-  if (searchParams.has("as_json_module") || searchParams.has("as_css_module") || searchParams.has("as_text_module")) {
-    extension = ".js";
-  }
-  return `${basename}.nomodule${extension}`;
-};
-const splitFileExtension$2 = filename => {
-  const dotLastIndex = filename.lastIndexOf(".");
-  if (dotLastIndex === -1) {
-    return [filename, ""];
-  }
-  return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)];
 };
 
 // duplicated from @jsenv/log to avoid the dependency
@@ -13943,206 +14890,212 @@ const jsenvPluginProtocolHttp = () => {
   };
 };
 
-/*
- * This plugin provides a way for jsenv to know when js execution is done
- */
-
-const jsenvPluginSupervisor = ({
-  logs = false,
-  measurePerf = false,
-  errorOverlay = true,
-  openInEditor = true,
-  errorBaseUrl
-}) => {
+const jsenvPluginInliningAsDataUrl = () => {
   return {
-    name: "jsenv:supervisor",
-    appliesDuring: "dev",
-    serve: async (request, context) => {
-      if (request.pathname.startsWith("/__get_code_frame__/")) {
-        const {
-          pathname,
-          searchParams
-        } = new URL(request.url);
-        let urlWithLineAndColumn = pathname.slice("/__get_code_frame__/".length);
-        urlWithLineAndColumn = decodeURIComponent(urlWithLineAndColumn);
-        const match = urlWithLineAndColumn.match(/:([0-9]+):([0-9]+)$/);
-        if (!match) {
-          return {
-            status: 400,
-            body: "Missing line and column in url"
-          };
-        }
-        const file = urlWithLineAndColumn.slice(0, match.index);
-        let line = parseInt(match[1]);
-        let column = parseInt(match[2]);
-        const urlInfo = context.urlGraph.getUrlInfo(file);
-        if (!urlInfo) {
-          return {
-            status: 204,
-            headers: {
-              "cache-control": "no-store"
-            }
-          };
-        }
-        const remap = searchParams.has("remap");
-        if (remap) {
-          const sourcemap = urlInfo.sourcemap;
-          if (sourcemap) {
-            const original = getOriginalPosition({
-              sourcemap,
-              url: file,
-              line,
-              column
-            });
-            if (original.line !== null) {
-              line = original.line;
-              if (original.column !== null) {
-                column = original.column;
-              }
-            }
-          }
-        }
-        const codeFrame = stringifyUrlSite({
-          url: file,
-          line,
-          column,
-          content: urlInfo.originalContent
-        });
-        return {
-          status: 200,
-          headers: {
-            "cache-control": "no-store",
-            "content-type": "text/plain",
-            "content-length": Buffer.byteLength(codeFrame)
-          },
-          body: codeFrame
-        };
-      }
-      if (request.pathname.startsWith("/__get_error_cause__/")) {
-        let file = request.pathname.slice("/__get_error_cause__/".length);
-        file = decodeURIComponent(file);
-        if (!file) {
-          return {
-            status: 400,
-            body: "Missing file in url"
-          };
-        }
-        const getErrorCauseInfo = () => {
-          const urlInfo = context.urlGraph.getUrlInfo(file);
-          if (!urlInfo) {
-            return null;
-          }
-          const {
-            error
-          } = urlInfo;
-          if (error) {
-            return error;
-          }
-          // search in direct dependencies (404 or 500)
-          const {
-            dependencies
-          } = urlInfo;
-          for (const dependencyUrl of dependencies) {
-            const dependencyUrlInfo = context.urlGraph.getUrlInfo(dependencyUrl);
-            if (dependencyUrlInfo.error) {
-              return dependencyUrlInfo.error;
-            }
-          }
+    name: "jsenv:inlining_as_data_url",
+    appliesDuring: "*",
+    formatReference: {
+      // if the referenced url is a worker we could use
+      // https://www.oreilly.com/library/view/web-workers/9781449322120/ch04.html
+      // but maybe we should rather use ?object_url
+      // or people could do this:
+      // import workerText from './worker.js?text'
+      // const blob = new Blob(workerText, { type: 'text/javascript' })
+      // window.URL.createObjectURL(blob)
+      // in any case the recommended way is to use an url
+      // to benefit from shared worker and reuse worker between tabs
+      "*": (reference, context) => {
+        if (!reference.original || !reference.original.searchParams.has("inline")) {
           return null;
-        };
-        const causeInfo = getErrorCauseInfo();
-        const body = JSON.stringify(causeInfo ? {
-          code: causeInfo.code,
-          message: causeInfo.message,
-          reason: causeInfo.reason,
-          stack: errorBaseUrl ? `stack mocked for snapshot` : causeInfo.stack,
-          codeFrame: causeInfo.traceMessage
-        } : null, null, "  ");
-        return {
-          status: 200,
-          headers: {
-            "cache-control": "no-store",
-            "content-type": "application/json",
-            "content-length": Buffer.byteLength(body)
-          },
-          body
-        };
-      }
-      if (request.pathname.startsWith("/__open_in_editor__/")) {
-        let file = request.pathname.slice("/__open_in_editor__/".length);
-        file = decodeURIComponent(file);
-        if (!file) {
-          return {
-            status: 400,
-            body: "Missing file in url"
-          };
         }
-        const require = createRequire(import.meta.url);
-        const launch = require("launch-editor");
-        launch(fileURLToPath(file), () => {
-          // ignore error for now
-        });
-        return {
-          status: 200,
-          headers: {
-            "cache-control": "no-store"
-          }
-        };
-      }
-      return null;
-    },
-    transformUrlContent: {
-      html: ({
-        url,
-        content
-      }, context) => {
-        const [supervisorFileReference] = context.referenceUtils.inject({
-          type: "script",
-          expectedType: "js_classic",
-          specifier: supervisorFileUrl
-        });
-        return injectSupervisorIntoHTML({
-          content,
-          url
-        }, {
-          supervisorScriptSrc: supervisorFileReference.generatedSpecifier,
-          supervisorOptions: {
-            errorBaseUrl,
-            logs,
-            measurePerf,
-            errorOverlay,
-            openInEditor
-          },
-          webServer: {
-            rootDirectoryUrl: context.rootDirectoryUrl,
-            isJsenvDevServer: true
-          },
-          inlineAsRemote: true,
-          generateInlineScriptSrc: ({
-            type,
-            textContent,
-            inlineScriptUrl,
-            isOriginal,
-            line,
-            column
-          }) => {
-            const [inlineScriptReference] = context.referenceUtils.foundInline({
-              type: "script",
-              subtype: "inline",
-              expectedType: type,
-              isOriginalPosition: isOriginal,
-              specifierLine: line - 1,
-              specifierColumn: column,
-              specifier: inlineScriptUrl,
-              contentType: "text/javascript",
-              content: textContent
-            });
-            return inlineScriptReference.generatedSpecifier;
-          }
-        });
+        // <link rel="stylesheet"> and <script> can be inlined in the html
+        if (reference.type === "link_href" && reference.subtype === "stylesheet") {
+          return null;
+        }
+        if (reference.type === "script") {
+          return null;
+        }
+        return (async () => {
+          const urlInfo = context.urlGraph.getUrlInfo(reference.url);
+          await context.cook(urlInfo, {
+            reference
+          });
+          const contentAsBase64 = Buffer.from(urlInfo.content).toString("base64");
+          const specifier = DATA_URL.stringify({
+            mediaType: urlInfo.contentType,
+            base64Flag: true,
+            data: contentAsBase64
+          });
+          context.referenceUtils.becomesInline(reference, {
+            line: reference.line,
+            column: reference.column,
+            isOriginal: reference.isOriginal,
+            specifier,
+            content: contentAsBase64,
+            contentType: urlInfo.contentType
+          });
+          return specifier;
+        })();
       }
     }
   };
+};
+
+const jsenvPluginInliningIntoHtml = () => {
+  return {
+    name: "jsenv:inlining_into_html",
+    appliesDuring: "*",
+    transformUrlContent: {
+      html: async (urlInfo, context) => {
+        const htmlAst = parseHtmlString(urlInfo.content);
+        const mutations = [];
+        const actions = [];
+        const onStyleSheet = (linkNode, {
+          href
+        }) => {
+          const linkReference = context.referenceUtils.find(ref => ref.generatedSpecifier === href && ref.type === "link_href" && ref.subtype === "stylesheet");
+          if (!linkReference.original || !linkReference.original.searchParams.has("inline")) {
+            return;
+          }
+          const linkUrlInfo = context.urlGraph.getUrlInfo(linkReference.url);
+          actions.push(async () => {
+            await context.cook(linkUrlInfo, {
+              reference: linkReference
+            });
+            const {
+              line,
+              column,
+              isOriginal
+            } = getHtmlNodePosition(linkNode, {
+              preferOriginal: true
+            });
+            context.referenceUtils.becomesInline(linkReference, {
+              line: line - 1,
+              column,
+              isOriginal,
+              specifier: linkReference.generatedSpecifier,
+              content: linkUrlInfo.content,
+              contentType: linkUrlInfo.contentType
+            });
+            mutations.push(() => {
+              setHtmlNodeAttributes(linkNode, {
+                "inlined-from-href": href,
+                "href": undefined,
+                "rel": undefined,
+                "type": undefined,
+                "as": undefined,
+                "crossorigin": undefined,
+                "integrity": undefined,
+                "jsenv-inlined-by": "jsenv:inlining_into_html"
+              });
+              linkNode.nodeName = "style";
+              linkNode.tagName = "style";
+              setHtmlNodeText(linkNode, linkUrlInfo.content, {
+                indentation: "auto"
+              });
+            });
+          });
+        };
+        const onScriptWithSrc = (scriptNode, {
+          src
+        }) => {
+          const scriptReference = context.referenceUtils.find(ref => ref.generatedSpecifier === src && ref.type === "script");
+          if (!scriptReference.original || !scriptReference.original.searchParams.has("inline")) {
+            return;
+          }
+          const scriptUrlInfo = context.urlGraph.getUrlInfo(scriptReference.url);
+          actions.push(async () => {
+            await context.cook(scriptUrlInfo, {
+              reference: scriptReference
+            });
+            const {
+              line,
+              column,
+              isOriginal
+            } = getHtmlNodePosition(scriptNode, {
+              preferOriginal: true
+            });
+            context.referenceUtils.becomesInline(scriptReference, {
+              line: line - 1,
+              column,
+              isOriginal,
+              specifier: scriptReference.generatedSpecifier,
+              content: scriptUrlInfo.content,
+              contentType: scriptUrlInfo.contentType
+            });
+            mutations.push(() => {
+              setHtmlNodeAttributes(scriptNode, {
+                "inlined-from-src": src,
+                "src": undefined,
+                "crossorigin": undefined,
+                "integrity": undefined,
+                "jsenv-inlined-by": "jsenv:inlining_into_html"
+              });
+              setHtmlNodeText(scriptNode, scriptUrlInfo.content, {
+                indentation: "auto"
+              });
+            });
+          });
+        };
+        visitHtmlNodes(htmlAst, {
+          link: linkNode => {
+            const rel = getHtmlNodeAttribute(linkNode, "rel");
+            if (rel !== "stylesheet") {
+              return;
+            }
+            const href = getHtmlNodeAttribute(linkNode, "href");
+            if (!href) {
+              return;
+            }
+            onStyleSheet(linkNode, {
+              href
+            });
+          },
+          script: scriptNode => {
+            const {
+              type
+            } = analyzeScriptNode(scriptNode);
+            const scriptNodeText = getHtmlNodeText(scriptNode);
+            if (scriptNodeText) {
+              return;
+            }
+            const src = getHtmlNodeAttribute(scriptNode, "src");
+            if (!src) {
+              return;
+            }
+            onScriptWithSrc(scriptNode, {
+              type,
+              src
+            });
+          }
+        });
+        if (actions.length > 0) {
+          await Promise.all(actions.map(action => action()));
+        }
+        mutations.forEach(mutation => mutation());
+        const htmlModified = stringifyHtmlAst(htmlAst);
+        return htmlModified;
+      }
+    }
+  };
+};
+
+const jsenvPluginInlining = () => {
+  return [{
+    name: "jsenv:inlining",
+    appliesDuring: "*",
+    redirectReference: reference => {
+      const {
+        searchParams
+      } = reference;
+      if (searchParams.has("inline")) {
+        const urlObject = new URL(reference.url);
+        urlObject.searchParams.delete("inline");
+        return urlObject.href;
+      }
+      return null;
+    }
+  }, jsenvPluginInliningAsDataUrl(), jsenvPluginInliningIntoHtml()];
 };
 
 /*
@@ -14173,7 +15126,10 @@ const jsenvPluginCommonJsGlobals = () => {
         replaceMap,
         allowConflictingReplacements: true
       }]],
-      urlInfo
+      input: urlInfo.content,
+      inputIsJsModule: urlInfo.type === "js_module",
+      inputUrl: urlInfo.originalUrl,
+      outputUrl: urlInfo.generatedUrl
     });
     const {
       expressionPaths
@@ -14319,7 +15275,10 @@ const jsenvPluginImportMetaScenarios = () => {
           metadata
         } = await applyBabelPlugins({
           babelPlugins: [babelPluginMetadataImportMetaScenarios],
-          urlInfo
+          input: urlInfo.content,
+          inputIsJsModule: true,
+          inputUrl: urlInfo.originalUrl,
+          outputUrl: urlInfo.generatedUrl
         });
         const {
           dev = [],
@@ -14453,1450 +15412,6 @@ const jsenvPluginGlobalScenarios = () => {
       html: transformIfNeeded
     }
   };
-};
-
-const jsenvPluginCssTranspilation = () => {
-  return {
-    name: "jsenv:css_transpilation",
-    appliesDuring: "*",
-    transformUrlContent: {
-      css: async (urlInfo, context) => {
-        const {
-          code,
-          map
-        } = await transpileCss(urlInfo, context);
-        return {
-          content: String(code),
-          sourcemap: map
-        };
-      }
-    }
-  };
-};
-const transpileCss = async (urlInfo, context) => {
-  // https://lightningcss.dev/docs.html
-  const {
-    transform
-  } = await import("lightningcss");
-  const targets = runtimeCompatToTargets(context.runtimeCompat);
-  const {
-    code,
-    map
-  } = transform({
-    filename: fileURLToPath(urlInfo.originalUrl),
-    code: Buffer.from(urlInfo.content),
-    targets,
-    minify: false,
-    drafts: {
-      nesting: true,
-      customMedia: true
-    }
-  });
-  return {
-    code,
-    map
-  };
-};
-const runtimeCompatToTargets = runtimeCompat => {
-  const targets = {};
-  ["chrome", "firefox", "ie", "opera", "safari"].forEach(runtimeName => {
-    const version = runtimeCompat[runtimeName];
-    if (version) {
-      targets[runtimeName] = versionToBits(version);
-    }
-  });
-  return targets;
-};
-const versionToBits = version => {
-  const [major, minor = 0, patch = 0] = version.split("-")[0].split(".").map(v => parseInt(v, 10));
-  return major << 16 | minor << 8 | patch;
-};
-
-/*
- * Jsenv wont touch code where "specifier" or "type" is dynamic (see code below)
- * ```js
- * const file = "./style.css"
- * const type = "css"
- * import(file, { assert: { type }})
- * ```
- * Jsenv could throw an error when it knows some browsers in runtimeCompat
- * do not support import assertions
- * But for now (as it is simpler) we let the browser throw the error
- */
-
-const jsenvPluginImportAssertions = ({
-  json = "auto",
-  css = "auto",
-  text = "auto"
-}) => {
-  const transpilations = {
-    json,
-    css,
-    text
-  };
-  const shouldTranspileImportAssertion = (context, type) => {
-    const transpilation = transpilations[type];
-    if (transpilation === true) {
-      return true;
-    }
-    if (transpilation === "auto") {
-      return !context.isSupportedOnCurrentClients(`import_type_${type}`);
-    }
-    return false;
-  };
-  const markAsJsModuleProxy = reference => {
-    reference.expectedType = "js_module";
-    reference.filename = `${urlToFilename$1(reference.url)}.js`;
-  };
-  const turnIntoJsModuleProxy = (reference, type) => {
-    reference.mutation = magicSource => {
-      const {
-        assertNode
-      } = reference;
-      if (reference.subtype === "import_dynamic") {
-        const assertPropertyNode = assertNode.properties.find(prop => prop.key.name === "assert");
-        const assertPropertyValue = assertPropertyNode.value;
-        const typePropertyNode = assertPropertyValue.properties.find(prop => prop.key.name === "type");
-        magicSource.remove({
-          start: typePropertyNode.start,
-          end: typePropertyNode.end
-        });
-      } else {
-        magicSource.remove({
-          start: assertNode.start,
-          end: assertNode.end
-        });
-      }
-    };
-    const newUrl = injectQueryParams(reference.url, {
-      [`as_${type}_module`]: ""
-    });
-    markAsJsModuleProxy(reference);
-    return newUrl;
-  };
-  const importAssertions = {
-    name: "jsenv:import_assertions",
-    appliesDuring: "*",
-    init: context => {
-      // transpilation is forced during build so that
-      //   - avoid rollup to see import assertions
-      //     We would have to tell rollup to ignore import with assertion
-      //   - means rollup can bundle more js file together
-      //   - means url versioning can work for css inlined in js
-      if (context.build) {
-        transpilations.json = true;
-        transpilations.css = true;
-        transpilations.text = true;
-      }
-    },
-    redirectReference: (reference, context) => {
-      if (!reference.assert) {
-        return null;
-      }
-      const {
-        searchParams
-      } = reference;
-      if (searchParams.has("as_json_module") || searchParams.has("as_css_module") || searchParams.has("as_text_module")) {
-        markAsJsModuleProxy(reference);
-        return null;
-      }
-      const type = reference.assert.type;
-      if (shouldTranspileImportAssertion(context, type)) {
-        return turnIntoJsModuleProxy(reference, type);
-      }
-      return null;
-    }
-  };
-  return [importAssertions, ...jsenvPluginAsModules()];
-};
-const jsenvPluginAsModules = () => {
-  const inlineContentClientFileUrl = new URL("./js/inline_content.js", import.meta.url).href;
-  const asJsonModule = {
-    name: `jsenv:as_json_module`,
-    appliesDuring: "*",
-    fetchUrlContent: async (urlInfo, context) => {
-      const [jsonReference, jsonUrlInfo] = context.getWithoutSearchParam({
-        urlInfo,
-        context,
-        searchParam: "as_json_module",
-        expectedType: "json"
-      });
-      if (!jsonReference) {
-        return null;
-      }
-      await context.fetchUrlContent(jsonUrlInfo, {
-        reference: jsonReference
-      });
-      if (context.dev) {
-        context.referenceUtils.found({
-          type: "js_import",
-          subtype: jsonReference.subtype,
-          specifier: jsonReference.url,
-          expectedType: "js_module"
-        });
-      } else if (context.build && jsonUrlInfo.dependents.size === 0) {
-        context.urlGraph.deleteUrlInfo(jsonUrlInfo.url);
-      }
-      const jsonText = JSON.stringify(jsonUrlInfo.content.trim());
-      return {
-        // here we could `export default ${jsonText}`:
-        // but js engine are optimized to recognize JSON.parse
-        // and use a faster parsing strategy
-        content: `export default JSON.parse(${jsonText})`,
-        contentType: "text/javascript",
-        type: "js_module",
-        originalUrl: jsonUrlInfo.originalUrl,
-        originalContent: jsonUrlInfo.originalContent,
-        data: jsonUrlInfo.data
-      };
-    }
-  };
-  const asCssModule = {
-    name: `jsenv:as_css_module`,
-    appliesDuring: "*",
-    fetchUrlContent: async (urlInfo, context) => {
-      const [cssReference, cssUrlInfo] = context.getWithoutSearchParam({
-        urlInfo,
-        context,
-        searchParam: "as_css_module",
-        expectedType: "css"
-      });
-      if (!cssReference) {
-        return null;
-      }
-      await context.fetchUrlContent(cssUrlInfo, {
-        reference: cssReference
-      });
-      if (context.dev) {
-        context.referenceUtils.found({
-          type: "js_import",
-          subtype: cssReference.subtype,
-          specifier: cssReference.url,
-          expectedType: "js_module"
-        });
-      } else if (context.build && cssUrlInfo.dependents.size === 0) {
-        context.urlGraph.deleteUrlInfo(cssUrlInfo.url);
-      }
-      const cssText = JS_QUOTES.escapeSpecialChars(cssUrlInfo.content, {
-        // If template string is choosen and runtime do not support template literals
-        // it's ok because "jsenv:new_inline_content" plugin executes after this one
-        // and convert template strings into raw strings
-        canUseTemplateString: true
-      });
-      return {
-        content: `import ${JSON.stringify(inlineContentClientFileUrl)}
-  
-  const inlineContent = new __InlineContent__(${cssText}, { type: "text/css" })
-  const stylesheet = new CSSStyleSheet()
-  stylesheet.replaceSync(inlineContent.text)
-  export default stylesheet`,
-        contentType: "text/javascript",
-        type: "js_module",
-        originalUrl: cssUrlInfo.originalUrl,
-        originalContent: cssUrlInfo.originalContent,
-        data: cssUrlInfo.data
-      };
-    }
-  };
-  const asTextModule = {
-    name: `jsenv:as_text_module`,
-    appliesDuring: "*",
-    fetchUrlContent: async (urlInfo, context) => {
-      const [textReference, textUrlInfo] = context.getWithoutSearchParam({
-        urlInfo,
-        context,
-        searchParam: "as_text_module",
-        expectedType: "text"
-      });
-      if (!textReference) {
-        return null;
-      }
-      await context.fetchUrlContent(textUrlInfo, {
-        reference: textReference
-      });
-      if (context.dev) {
-        context.referenceUtils.found({
-          type: "js_import",
-          subtype: textReference.subtype,
-          specifier: textReference.url,
-          expectedType: "js_module"
-        });
-      } else if (context.build && textUrlInfo.dependents.size === 0) {
-        context.urlGraph.deleteUrlInfo(textUrlInfo.url);
-      }
-      const textPlain = JS_QUOTES.escapeSpecialChars(urlInfo.content, {
-        // If template string is choosen and runtime do not support template literals
-        // it's ok because "jsenv:new_inline_content" plugin executes after this one
-        // and convert template strings into raw strings
-        canUseTemplateString: true
-      });
-      return {
-        content: `import { InlineContent } from ${JSON.stringify(inlineContentClientFileUrl)}
-  
-const inlineContent = new InlineContent(${textPlain}, { type: "text/plain" })
-export default inlineContent.text`,
-        contentType: "text/javascript",
-        type: "js_module",
-        originalUrl: textUrlInfo.originalUrl,
-        originalContent: textUrlInfo.originalContent,
-        data: textUrlInfo.data
-      };
-    }
-  };
-  return [asJsonModule, asCssModule, asTextModule];
-};
-
-const convertJsClassicToJsModule = async ({
-  urlInfo,
-  jsClassicUrlInfo
-}) => {
-  const {
-    code,
-    map
-  } = await applyBabelPlugins({
-    babelPlugins: [[babelPluginReplaceTopLevelThis, {
-      isWebWorker: isWebWorkerUrlInfo(urlInfo)
-    }]],
-    urlInfo: jsClassicUrlInfo
-  });
-  const sourcemap = await composeTwoSourcemaps(jsClassicUrlInfo.sourcemap, map);
-  return {
-    content: code,
-    sourcemap
-  };
-};
-const babelPluginReplaceTopLevelThis = () => {
-  return {
-    name: "replace-top-level-this",
-    visitor: {
-      Program: (programPath, state) => {
-        const {
-          isWebWorker
-        } = state.opts;
-        programPath.traverse({
-          ThisExpression: path => {
-            const closestFunction = path.getFunctionParent();
-            if (!closestFunction) {
-              path.replaceWithSourceString(isWebWorker ? "self" : "window");
-            }
-          }
-        });
-      }
-    }
-  };
-};
-
-/*
- * Js modules might not be able to import js meant to be loaded by <script>
- * Among other things this happens for a top level this:
- * - With <script> this is window
- * - With an import this is undefined
- * Example of this: https://github.com/video-dev/hls.js/issues/2911
- *
- * This plugin fix this issue by rewriting top level this into window
- * and can be used like this for instance import("hls?as_js_module")
- */
-
-const jsenvPluginAsJsModule = () => {
-  return {
-    name: "jsenv:as_js_module",
-    appliesDuring: "*",
-    redirectReference: reference => {
-      if (reference.searchParams.has("as_js_module")) {
-        reference.expectedType = "js_module";
-        const filename = urlToFilename$1(reference.url);
-        const [basename] = splitFileExtension$1(filename);
-        reference.filename = `${basename}.mjs`;
-      }
-    },
-    fetchUrlContent: async (urlInfo, context) => {
-      const [jsClassicReference, jsClassicUrlInfo] = context.getWithoutSearchParam({
-        urlInfo,
-        context,
-        searchParam: "as_js_module",
-        // override the expectedType to "js_classic"
-        // because when there is ?as_js_module it means the underlying resource
-        // is js_classic
-        expectedType: "js_classic"
-      });
-      if (!jsClassicReference) {
-        return null;
-      }
-      await context.fetchUrlContent(jsClassicUrlInfo, {
-        reference: jsClassicReference
-      });
-      if (context.dev) {
-        context.referenceUtils.found({
-          type: "js_import",
-          subtype: jsClassicReference.subtype,
-          specifier: jsClassicReference.url,
-          expectedType: "js_classic"
-        });
-      } else if (context.build && jsClassicUrlInfo.dependents.size === 0) {
-        context.urlGraph.deleteUrlInfo(jsClassicUrlInfo.url);
-      }
-      const {
-        content,
-        sourcemap
-      } = await convertJsClassicToJsModule({
-        urlInfo,
-        jsClassicUrlInfo
-      });
-      return {
-        content,
-        contentType: "text/javascript",
-        type: "js_module",
-        originalUrl: jsClassicUrlInfo.originalUrl,
-        originalContent: jsClassicUrlInfo.originalContent,
-        sourcemap,
-        data: jsClassicUrlInfo.data
-      };
-    }
-  };
-};
-const splitFileExtension$1 = filename => {
-  const dotLastIndex = filename.lastIndexOf(".");
-  if (dotLastIndex === -1) {
-    return [filename, ""];
-  }
-  return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)];
-};
-
-/*
- * Generated helpers
- * - https://github.com/babel/babel/commits/main/packages/babel-helpers/src/helpers.ts
- * File helpers
- * - https://github.com/babel/babel/tree/main/packages/babel-helpers/src/helpers
- *
- */
-const babelHelperClientDirectoryUrl = new URL("./babel_helpers/", import.meta.url).href;
-
-// we cannot use "@jsenv/core/src/*" because babel helper might be injected
-// into node_modules not depending on "@jsenv/core"
-const getBabelHelperFileUrl = babelHelperName => {
-  const babelHelperFileUrl = new URL(`./${babelHelperName}/${babelHelperName}.js`, babelHelperClientDirectoryUrl).href;
-  return babelHelperFileUrl;
-};
-const babelHelperNameFromUrl = url => {
-  if (!url.startsWith(babelHelperClientDirectoryUrl)) {
-    return null;
-  }
-  const afterBabelHelperDirectory = url.slice(babelHelperClientDirectoryUrl.length);
-  const babelHelperName = afterBabelHelperDirectory.slice(0, afterBabelHelperDirectory.indexOf("/"));
-  return babelHelperName;
-};
-
-const requireFromJsenv = createRequire(import.meta.url);
-
-const babelPluginPackagePath = requireFromJsenv.resolve("@jsenv/babel-plugins");
-const babelPluginPackageUrl = pathToFileURL(babelPluginPackagePath);
-const requireBabelPlugin = createRequire(babelPluginPackageUrl);
-
-/* eslint-disable camelcase */
-// copied from
-// https://github.com/babel/babel/blob/e498bee10f0123bb208baa228ce6417542a2c3c4/packages/babel-compat-data/data/plugins.json#L1
-// https://github.com/babel/babel/blob/master/packages/babel-compat-data/data/plugins.json#L1
-// Because this is an hidden implementation detail of @babel/preset-env
-// it could be deprecated or moved anytime.
-// For that reason it makes more sens to have it inlined here
-// than importing it from an undocumented location.
-// Ideally it would be documented or a separate module
-
-const babelPluginCompatMap = {
-  "proposal-numeric-separator": {
-    chrome: "75",
-    opera: "62",
-    edge: "79",
-    firefox: "70",
-    safari: "13",
-    node: "12.5",
-    ios: "13",
-    samsung: "11",
-    electron: "6"
-  },
-  "proposal-class-properties": {
-    chrome: "74",
-    opera: "61",
-    edge: "79",
-    node: "12",
-    electron: "6.1"
-  },
-  "proposal-private-methods": {
-    chrome: "84",
-    opera: "71"
-  },
-  "proposal-nullish-coalescing-operator": {
-    chrome: "80",
-    opera: "67",
-    edge: "80",
-    firefox: "72",
-    safari: "13.1",
-    node: "14",
-    electron: "8.1"
-  },
-  "proposal-optional-chaining": {
-    chrome: "80",
-    opera: "67",
-    edge: "80",
-    firefox: "74",
-    safari: "13.1",
-    node: "14",
-    electron: "8.1"
-  },
-  "proposal-json-strings": {
-    chrome: "66",
-    opera: "53",
-    edge: "79",
-    firefox: "62",
-    safari: "12",
-    node: "10",
-    ios: "12",
-    samsung: "9",
-    electron: "3"
-  },
-  "proposal-optional-catch-binding": {
-    chrome: "66",
-    opera: "53",
-    edge: "79",
-    firefox: "58",
-    safari: "11.1",
-    node: "10",
-    ios: "11.3",
-    samsung: "9",
-    electron: "3"
-  },
-  "transform-parameters": {
-    chrome: "49",
-    opera: "36",
-    edge: "18",
-    firefox: "53",
-    safari: "10",
-    node: "6",
-    ios: "10",
-    samsung: "5",
-    electron: "0.37"
-  },
-  "proposal-async-generator-functions": {
-    chrome: "63",
-    opera: "50",
-    edge: "79",
-    firefox: "57",
-    safari: "12",
-    node: "10",
-    ios: "12",
-    samsung: "8",
-    electron: "3"
-  },
-  "proposal-object-rest-spread": {
-    chrome: "60",
-    opera: "47",
-    edge: "79",
-    firefox: "55",
-    safari: "11.1",
-    node: "8.3",
-    ios: "11.3",
-    samsung: "8",
-    electron: "2"
-  },
-  "transform-dotall-regex": {
-    chrome: "62",
-    opera: "49",
-    edge: "79",
-    firefox: "78",
-    safari: "11.1",
-    node: "8.10",
-    ios: "11.3",
-    samsung: "8",
-    electron: "3"
-  },
-  "proposal-unicode-property-regex": {
-    chrome: "64",
-    opera: "51",
-    edge: "79",
-    firefox: "78",
-    safari: "11.1",
-    node: "10",
-    ios: "11.3",
-    samsung: "9",
-    electron: "3"
-  },
-  "transform-named-capturing-groups-regex": {
-    chrome: "64",
-    opera: "51",
-    edge: "79",
-    safari: "11.1",
-    node: "10",
-    ios: "11.3",
-    samsung: "9",
-    electron: "3"
-  },
-  "transform-async-to-generator": {
-    chrome: "55",
-    opera: "42",
-    edge: "15",
-    firefox: "52",
-    safari: "11",
-    node: "7.6",
-    ios: "11",
-    samsung: "6",
-    electron: "1.6"
-  },
-  "transform-exponentiation-operator": {
-    chrome: "52",
-    opera: "39",
-    edge: "14",
-    firefox: "52",
-    safari: "10.1",
-    node: "7",
-    ios: "10.3",
-    samsung: "6",
-    electron: "1.3"
-  },
-  "transform-template-literals": {
-    chrome: "41",
-    opera: "28",
-    edge: "13",
-    electron: "0.22",
-    firefox: "34",
-    safari: "13",
-    node: "4",
-    ios: "13",
-    samsung: "3.4"
-  },
-  "transform-literals": {
-    chrome: "44",
-    opera: "31",
-    edge: "12",
-    firefox: "53",
-    safari: "9",
-    node: "4",
-    ios: "9",
-    samsung: "4",
-    electron: "0.30"
-  },
-  "transform-function-name": {
-    chrome: "51",
-    opera: "38",
-    edge: "79",
-    firefox: "53",
-    safari: "10",
-    node: "6.5",
-    ios: "10",
-    samsung: "5",
-    electron: "1.2"
-  },
-  "transform-arrow-functions": {
-    chrome: "47",
-    opera: "34",
-    edge: "13",
-    firefox: "45",
-    safari: "10",
-    node: "6",
-    ios: "10",
-    samsung: "5",
-    electron: "0.36"
-  },
-  "transform-block-scoped-functions": {
-    chrome: "41",
-    opera: "28",
-    edge: "12",
-    firefox: "46",
-    safari: "10",
-    node: "4",
-    ie: "11",
-    ios: "10",
-    samsung: "3.4",
-    electron: "0.22"
-  },
-  "transform-classes": {
-    chrome: "46",
-    opera: "33",
-    edge: "13",
-    firefox: "45",
-    safari: "10",
-    node: "5",
-    ios: "10",
-    samsung: "5",
-    electron: "0.36"
-  },
-  "transform-object-super": {
-    chrome: "46",
-    opera: "33",
-    edge: "13",
-    firefox: "45",
-    safari: "10",
-    node: "5",
-    ios: "10",
-    samsung: "5",
-    electron: "0.36"
-  },
-  "transform-shorthand-properties": {
-    chrome: "43",
-    opera: "30",
-    edge: "12",
-    firefox: "33",
-    safari: "9",
-    node: "4",
-    ios: "9",
-    samsung: "4",
-    electron: "0.28"
-  },
-  "transform-duplicate-keys": {
-    chrome: "42",
-    opera: "29",
-    edge: "12",
-    firefox: "34",
-    safari: "9",
-    node: "4",
-    ios: "9",
-    samsung: "3.4",
-    electron: "0.25"
-  },
-  "transform-computed-properties": {
-    chrome: "44",
-    opera: "31",
-    edge: "12",
-    firefox: "34",
-    safari: "7.1",
-    node: "4",
-    ios: "8",
-    samsung: "4",
-    electron: "0.30"
-  },
-  "transform-for-of": {
-    chrome: "51",
-    opera: "38",
-    edge: "15",
-    firefox: "53",
-    safari: "10",
-    node: "6.5",
-    ios: "10",
-    samsung: "5",
-    electron: "1.2"
-  },
-  "transform-sticky-regex": {
-    chrome: "49",
-    opera: "36",
-    edge: "13",
-    firefox: "3",
-    safari: "10",
-    node: "6",
-    ios: "10",
-    samsung: "5",
-    electron: "0.37"
-  },
-  "transform-unicode-escapes": {
-    chrome: "44",
-    opera: "31",
-    edge: "12",
-    firefox: "53",
-    safari: "9",
-    node: "4",
-    ios: "9",
-    samsung: "4",
-    electron: "0.30"
-  },
-  "transform-unicode-regex": {
-    chrome: "50",
-    opera: "37",
-    edge: "13",
-    firefox: "46",
-    safari: "12",
-    node: "6",
-    ios: "12",
-    samsung: "5",
-    electron: "1.1"
-  },
-  "transform-spread": {
-    chrome: "46",
-    opera: "33",
-    edge: "13",
-    firefox: "36",
-    safari: "10",
-    node: "5",
-    ios: "10",
-    samsung: "5",
-    electron: "0.36"
-  },
-  "transform-destructuring": {
-    chrome: "51",
-    opera: "38",
-    edge: "15",
-    firefox: "53",
-    safari: "10",
-    node: "6.5",
-    ios: "10",
-    samsung: "5",
-    electron: "1.2"
-  },
-  "transform-block-scoping": {
-    chrome: "49",
-    opera: "36",
-    edge: "14",
-    firefox: "51",
-    safari: "11",
-    node: "6",
-    ios: "11",
-    samsung: "5",
-    electron: "0.37"
-  },
-  "transform-typeof-symbol": {
-    chrome: "38",
-    opera: "25",
-    edge: "12",
-    firefox: "36",
-    safari: "9",
-    node: "0.12",
-    ios: "9",
-    samsung: "3",
-    electron: "0.20"
-  },
-  "transform-new-target": {
-    chrome: "46",
-    opera: "33",
-    edge: "14",
-    firefox: "41",
-    safari: "10",
-    node: "5",
-    ios: "10",
-    samsung: "5",
-    electron: "0.36"
-  },
-  "transform-regenerator": {
-    chrome: "50",
-    opera: "37",
-    edge: "13",
-    firefox: "53",
-    safari: "10",
-    node: "6",
-    ios: "10",
-    samsung: "5",
-    electron: "1.1"
-  },
-  "transform-member-expression-literals": {
-    chrome: "7",
-    opera: "12",
-    edge: "12",
-    firefox: "2",
-    safari: "5.1",
-    node: "0.10",
-    ie: "9",
-    android: "4",
-    ios: "6",
-    phantom: "2",
-    samsung: "1",
-    electron: "0.20"
-  },
-  "transform-property-literals": {
-    chrome: "7",
-    opera: "12",
-    edge: "12",
-    firefox: "2",
-    safari: "5.1",
-    node: "0.10",
-    ie: "9",
-    android: "4",
-    ios: "6",
-    phantom: "2",
-    samsung: "1",
-    electron: "0.20"
-  },
-  "transform-reserved-words": {
-    chrome: "13",
-    opera: "10.50",
-    edge: "12",
-    firefox: "2",
-    safari: "3.1",
-    node: "0.10",
-    ie: "9",
-    android: "4.4",
-    ios: "6",
-    phantom: "2",
-    samsung: "1",
-    electron: "0.20"
-  }
-};
-
-// copy of transform-async-to-generator
-// so that async is not transpiled when supported
-babelPluginCompatMap["transform-async-to-promises"] = babelPluginCompatMap["transform-async-to-generator"];
-babelPluginCompatMap["regenerator-transform"] = babelPluginCompatMap["transform-regenerator"];
-
-const getBaseBabelPluginStructure = ({
-  url,
-  isSupported
-  // isJsModule,
-  // getImportSpecifier,
-}) => {
-  const isBabelPluginNeeded = babelPluginName => {
-    return !isSupported(babelPluginCompatMap[babelPluginName]);
-  };
-  const babelPluginStructure = {};
-  if (isBabelPluginNeeded("proposal-numeric-separator")) {
-    babelPluginStructure["proposal-numeric-separator"] = requireBabelPlugin("@babel/plugin-proposal-numeric-separator");
-  }
-  if (isBabelPluginNeeded("proposal-json-strings")) {
-    babelPluginStructure["proposal-json-strings"] = requireBabelPlugin("@babel/plugin-proposal-json-strings");
-  }
-  if (isBabelPluginNeeded("proposal-object-rest-spread")) {
-    babelPluginStructure["proposal-object-rest-spread"] = requireBabelPlugin("@babel/plugin-proposal-object-rest-spread");
-  }
-  if (isBabelPluginNeeded("proposal-optional-catch-binding")) {
-    babelPluginStructure["proposal-optional-catch-binding"] = requireBabelPlugin("@babel/plugin-proposal-optional-catch-binding");
-  }
-  if (isBabelPluginNeeded("proposal-unicode-property-regex")) {
-    babelPluginStructure["proposal-unicode-property-regex"] = requireBabelPlugin("@babel/plugin-proposal-unicode-property-regex");
-  }
-  if (isBabelPluginNeeded("transform-async-to-promises")) {
-    babelPluginStructure["transform-async-to-promises"] = [requireBabelPlugin("babel-plugin-transform-async-to-promises"), {
-      topLevelAwait: "ignore",
-      // will be handled by "jsenv:top_level_await" plugin
-      externalHelpers: false
-      // enable once https://github.com/rpetrich/babel-plugin-transform-async-to-promises/pull/83
-      // externalHelpers: isJsModule,
-      // externalHelpersPath: isJsModule ? getImportSpecifier(
-      //     "babel-plugin-transform-async-to-promises/helpers.mjs",
-      //   ) : null
-    }];
-  }
-
-  if (isBabelPluginNeeded("transform-arrow-functions")) {
-    babelPluginStructure["transform-arrow-functions"] = requireBabelPlugin("@babel/plugin-transform-arrow-functions");
-  }
-  if (isBabelPluginNeeded("transform-block-scoped-functions")) {
-    babelPluginStructure["transform-block-scoped-functions"] = requireBabelPlugin("@babel/plugin-transform-block-scoped-functions");
-  }
-  if (isBabelPluginNeeded("transform-block-scoping")) {
-    babelPluginStructure["transform-block-scoping"] = requireBabelPlugin("@babel/plugin-transform-block-scoping");
-  }
-  if (isBabelPluginNeeded("transform-classes")) {
-    babelPluginStructure["transform-classes"] = requireBabelPlugin("@babel/plugin-transform-classes");
-  }
-  if (isBabelPluginNeeded("transform-computed-properties")) {
-    babelPluginStructure["transform-computed-properties"] = requireBabelPlugin("@babel/plugin-transform-computed-properties");
-  }
-  if (isBabelPluginNeeded("transform-destructuring")) {
-    babelPluginStructure["transform-destructuring"] = requireBabelPlugin("@babel/plugin-transform-destructuring");
-  }
-  if (isBabelPluginNeeded("transform-dotall-regex")) {
-    babelPluginStructure["transform-dotall-regex"] = requireBabelPlugin("@babel/plugin-transform-dotall-regex");
-  }
-  if (isBabelPluginNeeded("transform-duplicate-keys")) {
-    babelPluginStructure["transform-duplicate-keys"] = requireBabelPlugin("@babel/plugin-transform-duplicate-keys");
-  }
-  if (isBabelPluginNeeded("transform-exponentiation-operator")) {
-    babelPluginStructure["transform-exponentiation-operator"] = requireBabelPlugin("@babel/plugin-transform-exponentiation-operator");
-  }
-  if (isBabelPluginNeeded("transform-for-of")) {
-    babelPluginStructure["transform-for-of"] = requireBabelPlugin("@babel/plugin-transform-for-of");
-  }
-  if (isBabelPluginNeeded("transform-function-name")) {
-    babelPluginStructure["transform-function-name"] = requireBabelPlugin("@babel/plugin-transform-function-name");
-  }
-  if (isBabelPluginNeeded("transform-literals")) {
-    babelPluginStructure["transform-literals"] = requireBabelPlugin("@babel/plugin-transform-literals");
-  }
-  if (isBabelPluginNeeded("transform-new-target")) {
-    babelPluginStructure["transform-new-target"] = requireBabelPlugin("@babel/plugin-transform-new-target");
-  }
-  if (isBabelPluginNeeded("transform-object-super")) {
-    babelPluginStructure["transform-object-super"] = requireBabelPlugin("@babel/plugin-transform-object-super");
-  }
-  if (isBabelPluginNeeded("transform-parameters")) {
-    babelPluginStructure["transform-parameters"] = requireBabelPlugin("@babel/plugin-transform-parameters");
-  }
-  if (isBabelPluginNeeded("transform-regenerator")) {
-    babelPluginStructure["transform-regenerator"] = [requireBabelPlugin("@babel/plugin-transform-regenerator"), {
-      asyncGenerators: true,
-      generators: true,
-      async: false
-    }];
-  }
-  if (isBabelPluginNeeded("transform-shorthand-properties")) {
-    babelPluginStructure["transform-shorthand-properties"] = [requireBabelPlugin("@babel/plugin-transform-shorthand-properties")];
-  }
-  if (isBabelPluginNeeded("transform-spread")) {
-    babelPluginStructure["transform-spread"] = [requireBabelPlugin("@babel/plugin-transform-spread")];
-  }
-  if (isBabelPluginNeeded("transform-sticky-regex")) {
-    babelPluginStructure["transform-sticky-regex"] = [requireBabelPlugin("@babel/plugin-transform-sticky-regex")];
-  }
-  if (isBabelPluginNeeded("transform-template-literals")) {
-    babelPluginStructure["transform-template-literals"] = [requireBabelPlugin("@babel/plugin-transform-template-literals")];
-  }
-  if (isBabelPluginNeeded("transform-typeof-symbol") &&
-  // prevent "typeof" to be injected into itself:
-  // - not needed
-  // - would create infinite attempt to transform typeof
-  url !== getBabelHelperFileUrl("typeof")) {
-    babelPluginStructure["transform-typeof-symbol"] = [requireBabelPlugin("@babel/plugin-transform-typeof-symbol")];
-  }
-  if (isBabelPluginNeeded("transform-unicode-regex")) {
-    babelPluginStructure["transform-unicode-regex"] = [requireBabelPlugin("@babel/plugin-transform-unicode-regex")];
-  }
-  return babelPluginStructure;
-};
-
-// named import approach found here:
-// https://github.com/rollup/rollup-plugin-babel/blob/18e4232a450f320f44c651aa8c495f21c74d59ac/src/helperPlugin.js#L1
-
-// for reference this is how it's done to reference
-// a global babel helper object instead of using
-// a named import
-// https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-plugin-external-helpers/src/index.js
-
-const babelPluginBabelHelpersAsJsenvImports = (babel, {
-  getImportSpecifier
-}) => {
-  return {
-    name: "babel-helper-as-jsenv-import",
-    pre: file => {
-      const cachedHelpers = {};
-      file.set("helperGenerator", name => {
-        // the list of possible helpers name
-        // https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-helpers/src/helpers.js#L13
-        if (!file.availableHelper(name)) {
-          return undefined;
-        }
-        if (cachedHelpers[name]) {
-          return cachedHelpers[name];
-        }
-        const filePath = file.opts.filename;
-        const fileUrl = pathToFileURL(filePath).href;
-        if (babelHelperNameFromUrl(fileUrl) === name) {
-          return undefined;
-        }
-        const babelHelperImportSpecifier = getBabelHelperFileUrl(name);
-        const helper = injectJsImport({
-          programPath: file.path,
-          from: getImportSpecifier(babelHelperImportSpecifier),
-          nameHint: `_${name}`,
-          // disable interop, useless as we work only with js modules
-          importedType: "es6"
-          // importedInterop: "uncompiled",
-        });
-
-        cachedHelpers[name] = helper;
-        return helper;
-      });
-    }
-  };
-};
-
-const newStylesheetClientFileUrl = new URL("./js/new_stylesheet.js", import.meta.url).href;
-const babelPluginNewStylesheetAsJsenvImport = (babel, {
-  getImportSpecifier
-}) => {
-  return {
-    name: "new-stylesheet-as-jsenv-import",
-    visitor: {
-      Program: (programPath, babelState) => {
-        if (babelState.filename) {
-          const fileUrl = pathToFileURL(babelState.filename).href;
-          if (fileUrl === newStylesheetClientFileUrl) {
-            return;
-          }
-        }
-        let usesNewStylesheet = false;
-        programPath.traverse({
-          NewExpression: path => {
-            usesNewStylesheet = isNewCssStyleSheetCall(path.node);
-            if (usesNewStylesheet) {
-              path.stop();
-            }
-          },
-          MemberExpression: path => {
-            usesNewStylesheet = isDocumentAdoptedStyleSheets(path.node);
-            if (usesNewStylesheet) {
-              path.stop();
-            }
-          },
-          CallExpression: path => {
-            if (path.node.callee.type !== "Import") {
-              // Some other function call, not import();
-              return;
-            }
-            if (path.node.arguments[0].type !== "StringLiteral") {
-              // Non-string argument, probably a variable or expression, e.g.
-              // import(moduleId)
-              // import('./' + moduleName)
-              return;
-            }
-            const sourcePath = path.get("arguments")[0];
-            usesNewStylesheet = hasCssModuleQueryParam(sourcePath) || hasImportTypeCssAssertion(path);
-            if (usesNewStylesheet) {
-              path.stop();
-            }
-          },
-          ImportDeclaration: path => {
-            const sourcePath = path.get("source");
-            usesNewStylesheet = hasCssModuleQueryParam(sourcePath) || hasImportTypeCssAssertion(path);
-            if (usesNewStylesheet) {
-              path.stop();
-            }
-          },
-          ExportAllDeclaration: path => {
-            const sourcePath = path.get("source");
-            usesNewStylesheet = hasCssModuleQueryParam(sourcePath);
-            if (usesNewStylesheet) {
-              path.stop();
-            }
-          },
-          ExportNamedDeclaration: path => {
-            if (!path.node.source) {
-              // This export has no "source", so it's probably
-              // a local variable or function, e.g.
-              // export { varName }
-              // export const constName = ...
-              // export function funcName() {}
-              return;
-            }
-            const sourcePath = path.get("source");
-            usesNewStylesheet = hasCssModuleQueryParam(sourcePath);
-            if (usesNewStylesheet) {
-              path.stop();
-            }
-          }
-        });
-        if (usesNewStylesheet) {
-          injectJsImport({
-            programPath,
-            from: getImportSpecifier(newStylesheetClientFileUrl),
-            sideEffect: true
-          });
-        }
-      }
-    }
-  };
-};
-const isNewCssStyleSheetCall = node => {
-  return node.type === "NewExpression" && node.callee.type === "Identifier" && node.callee.name === "CSSStyleSheet";
-};
-const isDocumentAdoptedStyleSheets = node => {
-  return node.type === "MemberExpression" && node.object.type === "Identifier" && node.object.name === "document" && node.property.type === "Identifier" && node.property.name === "adoptedStyleSheets";
-};
-const hasCssModuleQueryParam = path => {
-  const {
-    node
-  } = path;
-  return node.type === "StringLiteral" && new URL(node.value, "https://jsenv.dev").searchParams.has(`css_module`);
-};
-const hasImportTypeCssAssertion = path => {
-  const importAssertionsDescriptor = getImportAssertionsDescriptor(path.node.assertions);
-  return Boolean(importAssertionsDescriptor.type === "css");
-};
-const getImportAssertionsDescriptor = importAssertions => {
-  const importAssertionsDescriptor = {};
-  if (importAssertions) {
-    importAssertions.forEach(importAssertion => {
-      importAssertionsDescriptor[importAssertion.key.name] = importAssertion.value.value;
-    });
-  }
-  return importAssertionsDescriptor;
-};
-
-const globalThisClientFileUrl = new URL("./js/global_this.js", import.meta.url).href;
-const babelPluginGlobalThisAsJsenvImport = (babel, {
-  getImportSpecifier
-}) => {
-  return {
-    name: "global-this-as-jsenv-import",
-    visitor: {
-      Identifier(path, opts) {
-        const {
-          filename
-        } = opts;
-        const fileUrl = pathToFileURL(filename).href;
-        if (fileUrl === globalThisClientFileUrl) {
-          return;
-        }
-        const {
-          node
-        } = path;
-        // we should do this once, tree shaking will remote it but still
-        if (node.name === "globalThis") {
-          injectJsImport({
-            programPath: path.scope.getProgramParent().path,
-            from: getImportSpecifier(globalThisClientFileUrl),
-            sideEffect: true
-          });
-        }
-      }
-    }
-  };
-};
-
-const regeneratorRuntimeClientFileUrl = new URL("./js/regenerator_runtime.js", import.meta.url).href;
-const babelPluginRegeneratorRuntimeAsJsenvImport = (babel, {
-  getImportSpecifier
-}) => {
-  return {
-    name: "regenerator-runtime-as-jsenv-import",
-    visitor: {
-      Identifier(path, opts) {
-        const {
-          filename
-        } = opts;
-        const fileUrl = pathToFileURL(filename).href;
-        if (fileUrl === regeneratorRuntimeClientFileUrl) {
-          return;
-        }
-        const {
-          node
-        } = path;
-        if (node.name === "regeneratorRuntime") {
-          injectJsImport({
-            programPath: path.scope.getProgramParent().path,
-            from: getImportSpecifier(regeneratorRuntimeClientFileUrl),
-            sideEffect: true
-          });
-        }
-      }
-    }
-  };
-};
-
-const jsenvPluginBabel = ({
-  getCustomBabelPlugins,
-  babelHelpersAsImport = true
-} = {}) => {
-  const transformWithBabel = async (urlInfo, context) => {
-    const isJsModule = urlInfo.type === "js_module";
-    const isSupported = feature => RUNTIME_COMPAT.isSupported(context.clientRuntimeCompat, feature);
-    const getImportSpecifier = clientFileUrl => {
-      const [reference] = context.referenceUtils.inject({
-        type: "js_import",
-        expectedType: "js_module",
-        specifier: clientFileUrl
-      });
-      return JSON.parse(reference.generatedSpecifier);
-    };
-    const babelPluginStructure = getBaseBabelPluginStructure({
-      url: urlInfo.url,
-      isSupported,
-      isJsModule,
-      getImportSpecifier
-    });
-    if (getCustomBabelPlugins) {
-      Object.assign(babelPluginStructure, getCustomBabelPlugins(context));
-    }
-    if (isJsModule && babelHelpersAsImport) {
-      if (!isSupported("global_this")) {
-        babelPluginStructure["global-this-as-jsenv-import"] = [babelPluginGlobalThisAsJsenvImport, {
-          getImportSpecifier
-        }];
-      }
-      if (!isSupported("async_generator_function")) {
-        babelPluginStructure["regenerator-runtime-as-jsenv-import"] = [babelPluginRegeneratorRuntimeAsJsenvImport, {
-          getImportSpecifier
-        }];
-      }
-      if (!isSupported("new_stylesheet")) {
-        babelPluginStructure["new-stylesheet-as-jsenv-import"] = [babelPluginNewStylesheetAsJsenvImport, {
-          getImportSpecifier
-        }];
-      }
-      if (Object.keys(babelPluginStructure).length > 0) {
-        babelPluginStructure["babel-helper-as-jsenv-import"] = [babelPluginBabelHelpersAsJsenvImports, {
-          getImportSpecifier
-        }];
-      }
-    }
-    // otherwise, concerning global_this, and new_stylesheet we must inject the code
-    // (we cannot inject an import)
-
-    const babelPlugins = Object.keys(babelPluginStructure).map(babelPluginName => babelPluginStructure[babelPluginName]);
-    const {
-      code,
-      map
-    } = await applyBabelPlugins({
-      babelPlugins,
-      urlInfo,
-      options: {
-        generatorOpts: {
-          retainLines: context.dev
-        }
-      }
-    });
-    return {
-      content: code,
-      sourcemap: map
-    };
-  };
-  return {
-    name: "jsenv:babel",
-    appliesDuring: "*",
-    transformUrlContent: {
-      js_classic: transformWithBabel,
-      js_module: transformWithBabel
-    }
-  };
-};
-
-const jsenvPluginTopLevelAwait = () => {
-  return {
-    name: "jsenv:top_level_await",
-    appliesDuring: "*",
-    init: context => {
-      if (context.isSupportedOnCurrentClients("top_level_await")) {
-        return false;
-      }
-      // keep it untouched, systemjs will handle it
-      if (context.systemJsTranspilation) {
-        return false;
-      }
-      return true;
-    },
-    transformUrlContent: {
-      js_module: async urlInfo => {
-        const usesTLA = await usesTopLevelAwait(urlInfo);
-        if (!usesTLA) {
-          return null;
-        }
-        const {
-          code,
-          map
-        } = await applyBabelPlugins({
-          urlInfo,
-          babelPlugins: [[requireBabelPlugin("babel-plugin-transform-async-to-promises"), {
-            // Maybe we could pass target: "es6" when we support arrow function
-            // https://github.com/rpetrich/babel-plugin-transform-async-to-promises/blob/92755ff8c943c97596523e586b5fa515c2e99326/async-to-promises.ts#L55
-            topLevelAwait: "simple"
-            // enable once https://github.com/rpetrich/babel-plugin-transform-async-to-promises/pull/83
-            // externalHelpers: true,
-            // externalHelpersPath: JSON.parse(
-            //   context.referenceUtils.inject({
-            //     type: "js_import",
-            //     expectedType: "js_module",
-            //     specifier:
-            //       "babel-plugin-transform-async-to-promises/helpers.mjs",
-            //   })[0],
-            // ),
-          }]]
-        });
-
-        return {
-          content: code,
-          sourcemap: map
-        };
-      }
-    }
-  };
-};
-const usesTopLevelAwait = async urlInfo => {
-  if (!urlInfo.content.includes("await ")) {
-    return false;
-  }
-  const {
-    metadata
-  } = await applyBabelPlugins({
-    urlInfo,
-    babelPlugins: [babelPluginMetadataUsesTopLevelAwait]
-  });
-  return metadata.usesTopLevelAwait;
-};
-const babelPluginMetadataUsesTopLevelAwait = () => {
-  return {
-    name: "metadata-uses-top-level-await",
-    visitor: {
-      Program: (programPath, state) => {
-        let usesTopLevelAwait = false;
-        programPath.traverse({
-          AwaitExpression: path => {
-            const closestFunction = path.getFunctionParent();
-            if (!closestFunction || closestFunction.type === "Program") {
-              usesTopLevelAwait = true;
-              path.stop();
-            }
-          }
-        });
-        state.file.metadata.usesTopLevelAwait = usesTopLevelAwait;
-      }
-    }
-  };
-};
-
-const jsenvPluginImportMetaResolve = () => {
-  return {
-    name: "jsenv:import_meta_resolve",
-    appliesDuring: "*",
-    init: context => {
-      if (context.isSupportedOnCurrentClients("import_meta_resolve")) {
-        return false;
-      }
-      // keep it untouched, systemjs will handle it
-      if (context.systemJsTranspilation) {
-        return false;
-      }
-      return true;
-    },
-    transformUrlContent: {
-      js_module: async (urlInfo, context) => {
-        const magicSource = createMagicSource(urlInfo.content);
-        context.referenceUtils._references.forEach(ref => {
-          if (ref.subtype === "import_meta_resolve") {
-            const originalSpecifierLength = Buffer.byteLength(ref.specifier);
-            const specifierLength = Buffer.byteLength(ref.generatedSpecifier.slice(1, -1) // remove `"` around
-            );
-
-            const specifierLengthDiff = specifierLength - originalSpecifierLength;
-            const end = ref.node.end + specifierLengthDiff;
-            magicSource.replace({
-              start: ref.node.start,
-              end,
-              replacement: `new URL(${ref.generatedSpecifier}, import.meta.url).href`
-            });
-            const currentLengthBeforeSpecifier = "import.meta.resolve(".length;
-            const newLengthBeforeSpecifier = "new URL(".length;
-            const lengthDiff = currentLengthBeforeSpecifier - newLengthBeforeSpecifier;
-            ref.specifierColumn -= lengthDiff;
-            ref.specifierStart -= lengthDiff;
-            ref.specifierEnd = ref.specifierStart + Buffer.byteLength(ref.generatedSpecifier);
-          }
-        });
-        return magicSource.toContentAndSourcemap();
-      }
-    }
-  };
-};
-
-/*
- * Transforms code to make it compatible with browser that would not be able to
- * run it otherwise. For instance:
- * - const -> var
- * - async/await -> promises
- * Anything that is not standard (import.meta.dev for instance) is outside the scope
- * of this plugin
- */
-
-const jsenvPluginTranspilation = ({
-  importAssertions = true,
-  css = true,
-  // build sets jsModuleFallbackOnJsClassic: false during first step of the build
-  // and re-enable it in the second phase (when performing the bundling)
-  // so that bundling is applied on js modules THEN it is converted to js classic if needed
-  jsModuleFallbackOnJsClassic = true,
-  topLevelAwait = true,
-  importMetaResolve = true,
-  babelHelpersAsImport = true,
-  getCustomBabelPlugins
-}) => {
-  if (importAssertions === true) {
-    importAssertions = {};
-  }
-  if (jsModuleFallbackOnJsClassic === true) {
-    jsModuleFallbackOnJsClassic = {};
-  }
-  return [...(importMetaResolve ? [jsenvPluginImportMetaResolve()] : []), ...(importAssertions ? [jsenvPluginImportAssertions(importAssertions)] : []),
-  // babel also so that rollup can bundle babel helpers for instance
-  jsenvPluginBabel({
-    topLevelAwait,
-    getCustomBabelPlugins,
-    babelHelpersAsImport
-  }), ...(jsModuleFallbackOnJsClassic ? [jsenvPluginJsModuleFallback(jsModuleFallbackOnJsClassic)] : []), jsenvPluginAsJsModule(),
-  // topLevelAwait must come after jsModuleFallback because it's related to the module format
-  // so we want to wait to know the module format before transforming things related to top level await
-  ...(topLevelAwait ? [jsenvPluginTopLevelAwait()] : []), ...(css ? [jsenvPluginCssTranspilation()] : [])];
 };
 
 const jsenvPluginNodeRuntime = ({
@@ -16205,7 +15720,10 @@ const jsenvPluginImportMetaHot = () => {
           metadata
         } = await applyBabelPlugins({
           babelPlugins: [babelPluginMetadataImportMetaHot],
-          urlInfo
+          input: urlInfo.content,
+          inputIsJsModule: true,
+          inputUrl: urlInfo.originalUrl,
+          outputUrl: urlInfo.generatedUrl
         });
         const {
           importMetaHotPaths,
@@ -18552,6 +18070,8 @@ const jsenvPluginServerEventsClientInjection = () => {
     }
   };
 };
+
+const requireFromJsenv = createRequire(import.meta.url);
 
 const parseUserAgentHeader = memoizeByFirstArgument(userAgent => {
   if (userAgent.includes("node-fetch/")) {

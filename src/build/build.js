@@ -343,8 +343,8 @@ build ${entryPointKeys.length} entry points`);
           magicDirectoryIndex,
           directoryReferenceAllowed,
           transpilation: {
-            ...transpilation,
             babelHelpersAsImport: !explicitJsModuleFallback,
+            ...transpilation,
             jsModuleFallbackOnJsClassic: false,
           },
 
