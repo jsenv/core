@@ -23,6 +23,7 @@ import {
 } from "./errors.js";
 import { assertFetchedContentCompliance } from "./fetched_content_compliance.js";
 import { isWebWorkerEntryPointReference } from "./web_workers.js";
+import { injectFilesToExecuteBefore } from "./files_to_execute_before.js";
 
 const inlineContentClientFileUrl = new URL(
   "./client/inline_content.js",
@@ -46,6 +47,7 @@ export const createKitchen = ({
   // during build clientRuntimeCompat is runtimeCompat
   clientRuntimeCompat = runtimeCompat,
   systemJsTranspilation,
+  filesToExecuteBeforeInjection = true,
   plugins,
   minification,
   sourcemaps = dev ? "inline" : "none", // "programmatic" and "file" also allowed
@@ -457,6 +459,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         headers = {},
         body,
         isEntryPoint,
+        filesToExecuteBefore,
       } = fetchUrlContentReturnValue;
       if (status !== 200) {
         throw new Error(`unexpected status, ${status}`);
@@ -479,7 +482,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         urlInfo.originalContentEtag = undefined; // set by "initTransformations"
       }
       if (content !== urlInfo.content) {
-        urlInfo.contentEtag = undefined; // set by "applyFinalTransformations"
+        urlInfo.contentEtag = undefined; // set by "applyTransformationsEffects"
       }
       urlInfo.originalContent = originalContent;
       urlInfo.content = content;
@@ -497,6 +500,35 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         reference,
         urlInfo,
       });
+      if (filesToExecuteBefore) {
+        filesToExecuteBefore.forEach((fileUrl) => {
+          // When possible we inject code inside the file in the HTML
+          // -> less duplication
+          // during dev it's not possible as cooking files is incremental
+          // so HTML is already executed by the browser
+          // during build we can do that for js and css
+          if (
+            filesToExecuteBeforeInjection &&
+            build &&
+            ["js_classic", "js_module", "css"].includes(urlInfo.type)
+          ) {
+            // prefer HTML is possible
+            let htmlFound = false;
+            urlGraph.findDependent(urlInfo, (dependentUrlInfo) => {
+              if (dependentUrlInfo.type === "html") {
+                htmlFound = true;
+                dependentUrlInfo.setOfFilesToExecuteBefore.add(fileUrl);
+              }
+            });
+            if (!htmlFound) {
+              urlInfo.setOfFilesToExecuteBefore.add(fileUrl);
+            }
+          } else {
+            // fallback on injecting code on top of the file
+            urlInfo.setOfFilesToExecuteBefore.add(fileUrl);
+          }
+        });
+      }
     } catch (error) {
       throw createFetchUrlContentError({
         pluginController,
@@ -686,7 +718,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           urlInfo,
           context,
           async (transformReturnValue) => {
-            await urlInfoTransformer.applyIntermediateTransformations(
+            await urlInfoTransformer.applyTransformations(
               urlInfo,
               transformReturnValue,
             );
@@ -714,10 +746,17 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           urlInfo,
           context,
         );
-        await urlInfoTransformer.applyFinalTransformations(
+        if (
+          filesToExecuteBeforeInjection &&
+          urlInfo.setOfFilesToExecuteBefore.size
+        ) {
+          await injectFilesToExecuteBefore(urlInfo, context);
+        }
+        await urlInfoTransformer.applyTransformations(
           urlInfo,
           finalizeReturnValue,
         );
+        urlInfoTransformer.applyTransformationsEffects();
       } catch (error) {
         throw createFinalizeUrlContentError({
           pluginController,

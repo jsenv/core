@@ -390,6 +390,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       supportedProtocols: ["file:", "data:", "virtual:", "ignore:"],
       ignore,
       ignoreProtocol: versioning ? "keep" : "remove",
+      filesToExecuteBeforeInjection: true,
       urlGraph: finalGraph,
       build: true,
       runtimeCompat,
@@ -682,7 +683,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               urlInfo,
               context,
               async (optimizeReturnValue) => {
-                await finalGraphKitchen.urlInfoTransformer.applyFinalTransformations(
+                await finalGraphKitchen.urlInfoTransformer.applyTransformations(
                   urlInfo,
                   optimizeReturnValue,
                 );
@@ -1523,7 +1524,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             });
             if (mutations.length > 0) {
               mutations.forEach((mutation) => mutation());
-              await finalGraphKitchen.urlInfoTransformer.applyFinalTransformations(
+              await finalGraphKitchen.urlInfoTransformer.applyTransformations(
                 urlInfo,
                 {
                   content: stringifyHtmlAst(htmlAst),
@@ -1607,7 +1608,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               )};\n`,
             );
             const { content, sourcemap } = magicSource.toContentAndSourcemap();
-            finalGraphKitchen.urlInfoTransformer.applyFinalTransformations(
+            finalGraphKitchen.urlInfoTransformer.applyTransformations(
               serviceWorkerEntryUrlInfo,
               {
                 content,

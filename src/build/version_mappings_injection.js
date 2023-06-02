@@ -21,7 +21,7 @@ export const injectVersionMappingsAsGlobal = async ({
       versionMappings,
       minification: kitchen.kitchenContext.minification,
     });
-    kitchen.urlInfoTransformer.applyFinalTransformations(urlInfo, {
+    kitchen.urlInfoTransformer.applyTransformations(urlInfo, {
       content,
       sourcemap,
     });
@@ -98,7 +98,7 @@ export const injectVersionMappingsAsImportmap = async ({
     }),
     "jsenv:versioning",
   );
-  kitchen.urlInfoTransformer.applyFinalTransformations(urlInfo, {
+  kitchen.urlInfoTransformer.applyTransformations(urlInfo, {
     content: stringifyHtmlAst(htmlAst),
   });
 };

@@ -66,6 +66,7 @@ export const createUrlInfoTransformer = ({
   };
 
   const initTransformations = async (urlInfo, context) => {
+    urlInfo.contentEtag = undefined;
     urlInfo.originalContentEtag =
       urlInfo.originalContentEtag ||
       bufferToEtag(Buffer.from(urlInfo.originalContent));
@@ -139,7 +140,7 @@ export const createUrlInfoTransformer = ({
     }
   };
 
-  const applyIntermediateTransformations = (urlInfo, transformations) => {
+  const applyTransformations = (urlInfo, transformations) => {
     if (!transformations) {
       return;
     }
@@ -176,12 +177,13 @@ export const createUrlInfoTransformer = ({
       // "no sourcemap is better than wrong sourcemap"
       urlInfo.sourcemapIsWrong = urlInfo.sourcemapIsWrong || sourcemapIsWrong;
     }
+
+    if (typeof urlInfo.contentEtag === "string") {
+      applyTransformationsEffects(urlInfo);
+    }
   };
 
-  const applyFinalTransformations = (urlInfo, transformations) => {
-    if (transformations) {
-      applyIntermediateTransformations(urlInfo, transformations);
-    }
+  const applyTransformationsEffects = (urlInfo) => {
     if (urlInfo.sourcemapReference) {
       if (
         sourcemapsEnabled &&
@@ -235,7 +237,6 @@ export const createUrlInfoTransformer = ({
         urlGraph.deleteUrlInfo(urlInfo.sourcemapReference.url);
       }
     }
-
     urlInfo.contentEtag =
       urlInfo.content === urlInfo.originalContent
         ? urlInfo.originalContentEtag
@@ -244,7 +245,7 @@ export const createUrlInfoTransformer = ({
 
   return {
     initTransformations,
-    applyIntermediateTransformations,
-    applyFinalTransformations,
+    applyTransformations,
+    applyTransformationsEffects,
   };
 };
