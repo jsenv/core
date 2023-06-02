@@ -4,8 +4,9 @@ import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 import { build } from "@jsenv/core";
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
+import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 
-const test = async ({ expectedUrl, ...rest }) => {
+const test = async ({ name, expectedUrl, ...rest }) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -17,6 +18,10 @@ const test = async ({ expectedUrl, ...rest }) => {
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...rest,
   });
+  takeDirectorySnapshot(
+    new URL("./dist/", import.meta.url),
+    new URL(`./snapshots/${name}/`, import.meta.url),
+  );
 
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
@@ -37,18 +42,21 @@ const test = async ({ expectedUrl, ...rest }) => {
 
 // can use <script type="module">
 await test({
+  name: "chrome_89",
+  expectedUrl: "/js/main.js",
   runtimeCompat: { chrome: "89" },
   plugins: [jsenvPluginBundling()],
-  expectedUrl: "/js/main.js",
 });
 // cannot use <script type="module">
 await test({
+  name: "chrome_60",
+  expectedUrl: "/js/main.nomodule.js",
   runtimeCompat: { chrome: "60" },
   plugins: [jsenvPluginBundling()],
-  expectedUrl: "/js/main.nomodule.js",
 });
 // cannot use + no bundling
 await test({
-  runtimeCompat: { chrome: "60" },
+  name: "chrome_60_no_bundling",
   expectedUrl: `/js/main.nomodule.js`,
+  runtimeCompat: { chrome: "60" },
 });

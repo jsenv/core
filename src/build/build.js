@@ -287,6 +287,18 @@ build ${entryPointKeys.length} entry points`);
     const entryUrls = [];
     const rawGraph = createUrlGraph();
     const contextSharedDuringBuild = {
+      bannerFileRedirectHook: (bannerFileUrl, urlInfo) => {
+        if (!["js_classic", "js_module", "css"].includes(urlInfo.type)) {
+          return false;
+        }
+        const htmlUrlInfos = [];
+        finalGraph.findDependent(urlInfo, (dependentUrlInfo) => {
+          if (dependentUrlInfo.type === "html") {
+            htmlUrlInfos.push(dependentUrlInfo);
+          }
+        });
+        return htmlUrlInfos;
+      },
       systemJsTranspilation: (() => {
         const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
         if (nodeRuntimeEnabled) return false;
@@ -390,7 +402,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       supportedProtocols: ["file:", "data:", "virtual:", "ignore:"],
       ignore,
       ignoreProtocol: versioning ? "keep" : "remove",
-      filesToExecuteBeforeInjection: true,
       urlGraph: finalGraph,
       build: true,
       runtimeCompat,
@@ -726,6 +737,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           rawUrlGraphLoader.load(entryUrlInfo, { reference: entryReference });
         });
         await rawUrlGraphLoader.getAllLoadDonePromise(buildOperation);
+        rawGraphKitchen.injectRedirectedBannerFiles();
       } catch (e) {
         generateSourceGraph.fail();
         throw e;
@@ -971,6 +983,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             });
           });
           await finalUrlGraphLoader.getAllLoadDonePromise(buildOperation);
+          finalGraphKitchen.injectRedirectedBannerFiles();
         } catch (e) {
           generateBuildGraph.fail();
           throw e;

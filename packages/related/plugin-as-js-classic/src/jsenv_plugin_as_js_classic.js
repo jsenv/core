@@ -1,18 +1,14 @@
 import { urlToFilename } from "@jsenv/urls";
-import { convertJsModuleToJsClassic } from "@jsenv/js-module-fallback";
+import {
+  convertJsModuleToJsClassic,
+  systemJsClientFileUrlDefault,
+} from "@jsenv/js-module-fallback";
 import { bundleJsModules } from "@jsenv/plugin-bundling";
 
 import { createUrlGraphLoader } from "./url_graph_loader.js";
 
-export const jsenvPluginAsJsClassic = ({
-  systemJsInjection = true,
-  systemJsClientFileUrl,
-} = {}) => {
+export const jsenvPluginAsJsClassic = () => {
   const markAsJsClassicProxy = (reference) => {
-    if (reference.searchParams.has("dynamic_import")) {
-    } else {
-      reference.isEntryPoint = true;
-    }
     reference.expectedType = "js_classic";
     reference.filename = generateJsClassicFilename(reference.url);
   };
@@ -82,7 +78,7 @@ export const jsenvPluginAsJsClassic = ({
       }
 
       let outputFormat;
-      if (urlInfo.isEntryPoint && !jsModuleUrlInfo.data.usesImport) {
+      if (urlInfo.isEntryPoint && !jsModuleBundledUrlInfo.data.usesImport) {
         // if it's an entry point without dependency (it does not use import)
         // then we can use UMD
         outputFormat = "umd";
@@ -92,13 +88,9 @@ export const jsenvPluginAsJsClassic = ({
         // or to be able to import when it uses import
         outputFormat = "system";
       }
-      urlInfo.data.jsClassicFormat = outputFormat;
       const { content, sourcemap } = await convertJsModuleToJsClassic({
         rootDirectoryUrl: context.rootDirectoryUrl,
-        systemJsInjection,
-        systemJsClientFileUrl,
         input: jsModuleBundledUrlInfo.content,
-        inputIsEntryPoint: urlInfo.isEntryPoint,
         inputSourcemap: jsModuleBundledUrlInfo.sourcemap,
         inputUrl: jsModuleBundledUrlInfo.url,
         outputUrl: jsModuleBundledUrlInfo.generatedUrl,
@@ -112,6 +104,8 @@ export const jsenvPluginAsJsClassic = ({
         originalContent: jsModuleUrlInfo.originalContent,
         sourcemap,
         data: jsModuleUrlInfo.data,
+        bannerFiles:
+          outputFormat === "system" ? [systemJsClientFileUrlDefault] : [],
       };
     },
   };

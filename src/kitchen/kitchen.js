@@ -23,7 +23,7 @@ import {
 } from "./errors.js";
 import { assertFetchedContentCompliance } from "./fetched_content_compliance.js";
 import { isWebWorkerEntryPointReference } from "./web_workers.js";
-import { injectFilesToExecuteBefore } from "./files_to_execute_before.js";
+import { injectBannerCodeFromFiles } from "./banner_files_injector.js";
 
 const inlineContentClientFileUrl = new URL(
   "./client/inline_content.js",
@@ -47,7 +47,7 @@ export const createKitchen = ({
   // during build clientRuntimeCompat is runtimeCompat
   clientRuntimeCompat = runtimeCompat,
   systemJsTranspilation,
-  filesToExecuteBeforeInjection = true,
+  bannerFileRedirectHook = () => false,
   plugins,
   minification,
   sourcemaps = dev ? "inline" : "none", // "programmatic" and "file" also allowed
@@ -56,6 +56,8 @@ export const createKitchen = ({
   sourcemapsSourcesRelative,
   outDirectoryUrl,
 }) => {
+  const bannerCodeRedirectMap = new Map();
+
   const logger = createLogger({ logLevel });
   const kitchenContext = {
     signal,
@@ -442,7 +444,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
             },
           ),
         );
-        return;
+        return {};
       }
       let {
         content,
@@ -459,7 +461,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         headers = {},
         body,
         isEntryPoint,
-        filesToExecuteBefore,
+        bannerFiles,
       } = fetchUrlContentReturnValue;
       if (status !== 200) {
         throw new Error(`unexpected status, ${status}`);
@@ -500,35 +502,12 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         reference,
         urlInfo,
       });
-      if (filesToExecuteBefore) {
-        filesToExecuteBefore.forEach((fileUrl) => {
-          // When possible we inject code inside the file in the HTML
-          // -> less duplication
-          // during dev it's not possible as cooking files is incremental
-          // so HTML is already executed by the browser
-          // during build we can do that for js and css
-          if (
-            filesToExecuteBeforeInjection &&
-            build &&
-            ["js_classic", "js_module", "css"].includes(urlInfo.type)
-          ) {
-            // prefer HTML is possible
-            let htmlFound = false;
-            urlGraph.findDependent(urlInfo, (dependentUrlInfo) => {
-              if (dependentUrlInfo.type === "html") {
-                htmlFound = true;
-                dependentUrlInfo.setOfFilesToExecuteBefore.add(fileUrl);
-              }
-            });
-            if (!htmlFound) {
-              urlInfo.setOfFilesToExecuteBefore.add(fileUrl);
-            }
-          } else {
-            // fallback on injecting code on top of the file
-            urlInfo.setOfFilesToExecuteBefore.add(fileUrl);
-          }
-        });
-      }
+      urlInfo.generatedUrl = determineFileUrlForOutDirectory({
+        urlInfo,
+        context: contextDuringFetch,
+      });
+      await urlInfoTransformer.initTransformations(urlInfo, contextDuringFetch);
+      return { bannerFiles };
     } catch (error) {
       throw createFetchUrlContentError({
         pluginController,
@@ -537,11 +516,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         error,
       });
     }
-    urlInfo.generatedUrl = determineFileUrlForOutDirectory({
-      urlInfo,
-      context: contextDuringFetch,
-    });
-    await urlInfoTransformer.initTransformations(urlInfo, contextDuringFetch);
   };
   kitchenContext.fetchUrlContent = fetchUrlContent;
 
@@ -563,6 +537,8 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         contextDuringFetch: context,
       });
     };
+
+    const bannerFileSet = new Set();
 
     if (!urlInfo.url.startsWith("ignore:")) {
       // references
@@ -706,10 +682,47 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       };
 
       // "fetchUrlContent" hook
-      await fetchUrlContent(urlInfo, {
+      const { bannerFiles } = await fetchUrlContent(urlInfo, {
         reference: context.reference,
         contextDuringFetch: context,
       });
+      if (bannerFiles) {
+        bannerFiles.forEach((bannerFileUrl) => {
+          // When possible we inject code inside the file in the HTML
+          // -> less duplication
+          // during dev it's not possible as cooking files is incremental
+          // so HTML is already executed by the browser
+          // during build we can do that for js and css
+          const bannerFileRedirectionResult = bannerFileRedirectHook(
+            bannerFileUrl,
+            urlInfo,
+          );
+          if (
+            bannerFileRedirectionResult &&
+            bannerFileRedirectionResult.length
+          ) {
+            // prefer HTML
+            bannerFileRedirectionResult.forEach(
+              (urlInfoReceivingBannerCode) => {
+                const existing = bannerCodeRedirectMap.get(
+                  urlInfoReceivingBannerCode,
+                );
+                if (existing) {
+                  existing.add(bannerFileUrl);
+                } else {
+                  bannerCodeRedirectMap.set(
+                    urlInfoReceivingBannerCode,
+                    new Set([bannerFileUrl]),
+                  );
+                }
+              },
+            );
+          } else {
+            // fallback on injecting code on top of the file
+            bannerFileSet.add(bannerFileUrl);
+          }
+        });
+      }
 
       // "transform" hook
       try {
@@ -746,17 +759,21 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           urlInfo,
           context,
         );
-        if (
-          filesToExecuteBeforeInjection &&
-          urlInfo.setOfFilesToExecuteBefore.size
-        ) {
-          await injectFilesToExecuteBefore(urlInfo, context);
-        }
         await urlInfoTransformer.applyTransformations(
           urlInfo,
           finalizeReturnValue,
         );
-        urlInfoTransformer.applyTransformationsEffects();
+        if (bannerFileSet.size) {
+          const bannerCodeInjection = await injectBannerCodeFromFiles(
+            urlInfo,
+            Array.from(bannerFileSet.values()),
+          );
+          await urlInfoTransformer.applyTransformations(
+            urlInfo,
+            bannerCodeInjection,
+          );
+        }
+        urlInfoTransformer.applyTransformationsEffects(urlInfo);
       } catch (error) {
         throw createFinalizeUrlContentError({
           pluginController,
@@ -897,6 +914,18 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     cook,
     createReference,
     injectReference,
+    injectRedirectedBannerFiles: () => {
+      bannerCodeRedirectMap.forEach((bannerCodeFileUrlSet, htmlUrlInfo) => {
+        const bannerCodeInjection = injectBannerCodeFromFiles(
+          htmlUrlInfo,
+          Array.from(bannerCodeFileUrlSet.values()),
+        );
+        urlInfoTransformer.applyTransformations(
+          htmlUrlInfo,
+          bannerCodeInjection,
+        );
+      });
+    },
   };
 };
 

@@ -4,11 +4,12 @@
  */
 
 import { injectQueryParams } from "@jsenv/urls";
-import { convertJsModuleToJsClassic } from "@jsenv/js-module-fallback";
+import {
+  convertJsModuleToJsClassic,
+  systemJsClientFileUrlDefault,
+} from "@jsenv/js-module-fallback";
 
 export const jsenvPluginJsModuleConversion = ({
-  systemJsInjection,
-  systemJsClientFileUrl,
   generateJsClassicFilename,
 }) => {
   const isReferencingJsModule = (reference) => {
@@ -110,11 +111,8 @@ export const jsenvPluginJsModuleConversion = ({
         // or to be able to import when it uses import
         outputFormat = "system";
       }
-      urlInfo.data.jsClassicFormat = outputFormat;
       const { content, sourcemap } = await convertJsModuleToJsClassic({
         rootDirectoryUrl: context.rootDirectoryUrl,
-        systemJsInjection,
-        systemJsClientFileUrl,
         input: jsModuleUrlInfo.content,
         inputIsEntryPoint: urlInfo.isEntryPoint,
         inputSourcemap: jsModuleUrlInfo.sourcemap,
@@ -130,6 +128,8 @@ export const jsenvPluginJsModuleConversion = ({
         originalContent: jsModuleUrlInfo.originalContent,
         sourcemap,
         data: jsModuleUrlInfo.data,
+        bannerFiles:
+          outputFormat === "system" ? [systemJsClientFileUrlDefault] : [],
       };
     },
   };
