@@ -47,7 +47,7 @@ export const createKitchen = ({
   // during build clientRuntimeCompat is runtimeCompat
   clientRuntimeCompat = runtimeCompat,
   systemJsTranspilation,
-  bannerFileRedirectHook = () => false,
+  bannerFileForwardHook = () => false,
   plugins,
   minification,
   sourcemaps = dev ? "inline" : "none", // "programmatic" and "file" also allowed
@@ -56,7 +56,7 @@ export const createKitchen = ({
   sourcemapsSourcesRelative,
   outDirectoryUrl,
 }) => {
-  const bannerCodeRedirectMap = new Map();
+  const bannerCodeForwardMap = new Map();
 
   const logger = createLogger({ logLevel });
   const kitchenContext = {
@@ -538,8 +538,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       });
     };
 
-    const bannerFileSet = new Set();
-
     if (!urlInfo.url.startsWith("ignore:")) {
       // references
       const references = [];
@@ -686,43 +684,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         reference: context.reference,
         contextDuringFetch: context,
       });
-      if (bannerFiles) {
-        bannerFiles.forEach((bannerFileUrl) => {
-          // When possible we inject code inside the file in the HTML
-          // -> less duplication
-          // during dev it's not possible as cooking files is incremental
-          // so HTML is already executed by the browser
-          // during build we can do that for js and css
-          const bannerFileRedirectionResult = bannerFileRedirectHook(
-            bannerFileUrl,
-            urlInfo,
-          );
-          if (
-            bannerFileRedirectionResult &&
-            bannerFileRedirectionResult.length
-          ) {
-            // prefer HTML
-            bannerFileRedirectionResult.forEach(
-              (urlInfoReceivingBannerCode) => {
-                const existing = bannerCodeRedirectMap.get(
-                  urlInfoReceivingBannerCode,
-                );
-                if (existing) {
-                  existing.add(bannerFileUrl);
-                } else {
-                  bannerCodeRedirectMap.set(
-                    urlInfoReceivingBannerCode,
-                    new Set([bannerFileUrl]),
-                  );
-                }
-              },
-            );
-          } else {
-            // fallback on injecting code on top of the file
-            bannerFileSet.add(bannerFileUrl);
-          }
-        });
-      }
 
       // "transform" hook
       try {
@@ -763,16 +724,51 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           urlInfo,
           finalizeReturnValue,
         );
-        if (bannerFileSet.size) {
-          const bannerCodeInjection = await injectBannerCodeFromFiles(
-            urlInfo,
-            Array.from(bannerFileSet.values()),
-          );
-          await urlInfoTransformer.applyTransformations(
-            urlInfo,
-            bannerCodeInjection,
-          );
+
+        if (bannerFiles) {
+          const bannerFileSet = new Set();
+          bannerFiles.forEach((bannerFileUrl) => {
+            // When possible we inject code inside the file in the HTML
+            // -> less duplication
+            // during dev it's not possible as cooking files is incremental
+            // so HTML is already executed by the browser
+            // during build we can do that for js and css
+            const bannerFileForwardResult = bannerFileForwardHook(
+              bannerFileUrl,
+              urlInfo,
+            );
+            if (bannerFileForwardResult && bannerFileForwardResult.length) {
+              // prefer HTML
+              bannerFileForwardResult.forEach((urlInfoReceivingBannerCode) => {
+                const existing = bannerCodeForwardMap.get(
+                  urlInfoReceivingBannerCode,
+                );
+                if (existing) {
+                  existing.add(bannerFileUrl);
+                } else {
+                  bannerCodeForwardMap.set(
+                    urlInfoReceivingBannerCode,
+                    new Set([bannerFileUrl]),
+                  );
+                }
+              });
+            } else {
+              // fallback on injecting code on top of the file
+              bannerFileSet.add(bannerFileUrl);
+            }
+          });
+          if (bannerFileSet.size) {
+            const bannerCodeInjection = await injectBannerCodeFromFiles(
+              urlInfo,
+              Array.from(bannerFileSet.values()),
+            );
+            await urlInfoTransformer.applyTransformations(
+              urlInfo,
+              bannerCodeInjection,
+            );
+          }
         }
+
         urlInfoTransformer.applyTransformationsEffects(urlInfo);
       } catch (error) {
         throw createFinalizeUrlContentError({
@@ -914,8 +910,8 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     cook,
     createReference,
     injectReference,
-    injectRedirectedBannerFiles: () => {
-      bannerCodeRedirectMap.forEach((bannerCodeFileUrlSet, htmlUrlInfo) => {
+    injectForwardedBannerFiles: () => {
+      bannerCodeForwardMap.forEach((bannerCodeFileUrlSet, htmlUrlInfo) => {
         const bannerCodeInjection = injectBannerCodeFromFiles(
           htmlUrlInfo,
           Array.from(bannerCodeFileUrlSet.values()),
