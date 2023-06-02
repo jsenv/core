@@ -18,8 +18,7 @@ export const jsenvPluginHmr = () => {
       return urlObject.href;
     },
     transformReferenceSearchParams: (reference, context) => {
-      if (reference.type === "package_json") {
-        // maybe the if above shoulb be .isImplicit but it's just a detail anyway
+      if (reference.isImplicit) {
         return null;
       }
       if (context.reference && !context.reference.data.hmr) {

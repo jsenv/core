@@ -23,7 +23,7 @@ import {
 } from "./errors.js";
 import { assertFetchedContentCompliance } from "./fetched_content_compliance.js";
 import { isWebWorkerEntryPointReference } from "./web_workers.js";
-import { injectBannerCodeFromFiles } from "./banner_files_injector.js";
+import { prependContent } from "./prepend_content.js";
 
 const inlineContentClientFileUrl = new URL(
   "./client/inline_content.js",
@@ -56,7 +56,7 @@ export const createKitchen = ({
   sourcemapsSourcesRelative,
   outDirectoryUrl,
 }) => {
-  const bannerCodeForwardMap = new Map();
+  const bannerCodeForwardCallbacks = [];
 
   const logger = createLogger({ logLevel });
   const kitchenContext = {
@@ -137,6 +137,7 @@ export const createKitchen = ({
    * - "sourcemap_comment"
    * - "webmanifest_icon_src"
    * - "package_json"
+   * - "banner"
    * */
   const createReference = ({
     data = {},
@@ -709,6 +710,72 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         urlInfo.error = transformError;
         throw transformError;
       }
+
+      // idéalement on notifierais line et column lorsque bannerFile provient
+      // de l'utilisation d'un mot genre new CssStyleSheet()
+      if (bannerFiles) {
+        for (const bannerFileUrl of bannerFiles) {
+          const [bannerReference, bannerUrlInfo] =
+            context.referenceUtils.inject({
+              type: "banner",
+              isImplicit: true,
+              specifier: bannerFileUrl,
+            });
+          // When possible we inject code inside the file in the HTML
+          // -> less duplication
+          // during dev it's not possible as cooking files is incremental
+          // so HTML is already executed by the browser
+          // during build we can do that for js and css
+          const bannerFileForwardResult = bannerFileForwardHook(
+            bannerFileUrl,
+            urlInfo,
+          );
+          if (bannerFileForwardResult && bannerFileForwardResult.length) {
+            // will be called by injectForwardedBannerFiles
+            bannerFileForwardResult.forEach((urlInfoReceivingBannerCode) => {
+              bannerCodeForwardCallbacks.push(() => {
+                context.referenceUtils.becomesInline(bannerReference, {
+                  specifier: bannerReference.generatedSpecifier,
+                  content: bannerUrlInfo.content,
+                  contentType: bannerUrlInfo.contentType,
+                });
+                // inject once + ensure this url appears in implicitUrls
+                const { implicitUrls } = urlInfoReceivingBannerCode;
+                if (implicitUrls.has(bannerUrlInfo.url)) {
+                  return;
+                }
+                implicitUrls.add(bannerUrlInfo.url);
+
+                const bannerCodeInjection = prependContent(
+                  urlInfoReceivingBannerCode,
+                  bannerUrlInfo,
+                );
+                urlInfoTransformer.applyTransformations(
+                  urlInfoReceivingBannerCode,
+                  bannerCodeInjection,
+                );
+              });
+            });
+          } else {
+            // cook then inject at the top of the file
+            await context.cook(bannerUrlInfo, { reference: bannerReference });
+            const prependTransformation = prependContent(
+              urlInfo,
+              bannerUrlInfo,
+            );
+            context.referenceUtils.becomesInline(bannerReference, {
+              specifier: bannerFileUrl,
+              content: bannerUrlInfo.content,
+              contentType: bannerUrlInfo.contentType,
+            });
+            urlInfoTransformer.applyTransformations(
+              urlInfo,
+              prependTransformation,
+            );
+          }
+        }
+      }
+
       // after "transform" all references from originalContent
       // and the one injected by plugin are known
       urlGraph.updateReferences(urlInfo, references);
@@ -724,51 +791,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           urlInfo,
           finalizeReturnValue,
         );
-
-        if (bannerFiles) {
-          const bannerFileSet = new Set();
-          bannerFiles.forEach((bannerFileUrl) => {
-            // When possible we inject code inside the file in the HTML
-            // -> less duplication
-            // during dev it's not possible as cooking files is incremental
-            // so HTML is already executed by the browser
-            // during build we can do that for js and css
-            const bannerFileForwardResult = bannerFileForwardHook(
-              bannerFileUrl,
-              urlInfo,
-            );
-            if (bannerFileForwardResult && bannerFileForwardResult.length) {
-              // prefer HTML
-              bannerFileForwardResult.forEach((urlInfoReceivingBannerCode) => {
-                const existing = bannerCodeForwardMap.get(
-                  urlInfoReceivingBannerCode,
-                );
-                if (existing) {
-                  existing.add(bannerFileUrl);
-                } else {
-                  bannerCodeForwardMap.set(
-                    urlInfoReceivingBannerCode,
-                    new Set([bannerFileUrl]),
-                  );
-                }
-              });
-            } else {
-              // fallback on injecting code on top of the file
-              bannerFileSet.add(bannerFileUrl);
-            }
-          });
-          if (bannerFileSet.size) {
-            const bannerCodeInjection = await injectBannerCodeFromFiles(
-              urlInfo,
-              Array.from(bannerFileSet.values()),
-            );
-            await urlInfoTransformer.applyTransformations(
-              urlInfo,
-              bannerCodeInjection,
-            );
-          }
-        }
-
         urlInfoTransformer.applyTransformationsEffects(urlInfo);
       } catch (error) {
         throw createFinalizeUrlContentError({
@@ -911,15 +933,8 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     createReference,
     injectReference,
     injectForwardedBannerFiles: () => {
-      bannerCodeForwardMap.forEach((bannerCodeFileUrlSet, htmlUrlInfo) => {
-        const bannerCodeInjection = injectBannerCodeFromFiles(
-          htmlUrlInfo,
-          Array.from(bannerCodeFileUrlSet.values()),
-        );
-        urlInfoTransformer.applyTransformations(
-          htmlUrlInfo,
-          bannerCodeInjection,
-        );
+      bannerCodeForwardCallbacks.forEach((callback) => {
+        callback();
       });
     },
   };
@@ -987,9 +1002,11 @@ const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
   if (reference.isEntryPoint || isWebWorkerEntryPointReference(reference)) {
     urlInfo.isEntryPoint = true;
   }
-
   Object.assign(urlInfo.data, reference.data);
   Object.assign(urlInfo.timing, reference.timing);
+  if (reference.isImplicit) {
+    urlInfo.isImplicit = true;
+  }
   if (reference.injected) {
     urlInfo.injected = true;
   }
