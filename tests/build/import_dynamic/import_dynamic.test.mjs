@@ -39,15 +39,15 @@ const test = async ({ name, expectedFilename, ...params }) => {
 
 // can use <script type="module">
 await test({
-  name: "module",
+  name: "chrome_89",
+  expectedFilename: `nested_feature.js`,
   runtimeCompat: { chrome: "89" },
   versioning: false,
-  expectedFilename: `nested_feature.js`,
 });
 // cannot use <script type="module">
 await test({
-  name: "nomodule",
+  name: "chrome_62",
+  expectedFilename: `nested_feature.nomodule.js`,
   runtimeCompat: { chrome: "62" },
   versioning: false,
-  expectedFilename: `nested_feature.nomodule.js`,
 });

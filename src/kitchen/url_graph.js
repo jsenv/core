@@ -65,21 +65,36 @@ export const createUrlGraph = ({ name = "anonymous" } = {}) => {
   const findDependent = (urlInfo, visitor) => {
     const seen = [urlInfo.url];
     let found = null;
+    const visit = (dependentUrlInfo) => {
+      if (seen.includes(dependentUrlInfo.url)) {
+        return false;
+      }
+      if (found) {
+        return true;
+      }
+      seen.push(dependentUrlInfo.url);
+      if (visitor(dependentUrlInfo)) {
+        found = dependentUrlInfo;
+        return true;
+      }
+      return false;
+    };
     const iterate = (currentUrlInfo) => {
+      // When cookin html inline content, html references are not yet updated
+      // consequently htmlUrlInfo.dependencies is empty
+      // and inlineContentUrlInfo.dependents is empty as well
+      // in that case we resort to isInline + inlineUrlSite to establish the dependency
+      if (currentUrlInfo.isInline) {
+        const parentUrl = currentUrlInfo.inlineUrlSite.url;
+        const parentUrlInfo = getUrlInfo(parentUrl);
+        if (visit(parentUrlInfo)) {
+          return;
+        }
+      }
       for (const dependentUrl of currentUrlInfo.dependents) {
-        if (seen.includes(dependentUrl)) {
-          continue;
-        }
-        if (found) {
-          break;
-        }
-        seen.push(dependentUrl);
         const dependentUrlInfo = getUrlInfo(dependentUrl);
-        if (visitor(dependentUrlInfo)) {
-          found = dependentUrlInfo;
-        }
-        if (found) {
-          break;
+        if (visit(dependentUrlInfo)) {
+          return;
         }
         iterate(dependentUrlInfo);
       }

@@ -291,11 +291,6 @@ build ${entryPointKeys.length} entry points`);
         if (!["js_classic", "js_module", "css"].includes(urlInfo.type)) {
           return false;
         }
-        // lorsque je cook les fichiers inline du HTML
-        // je me retrouve a cook le fichier js inline dans le HTML
-        // avant d'avoir update les refs du HTML
-        // du coup le js ne sait pas encore qu'il est dans le HTML
-        // et donc ne peut pas
         const htmlUrlInfos = [];
         finalGraph.findDependent(urlInfo, (dependentUrlInfo) => {
           if (dependentUrlInfo.type === "html") {
