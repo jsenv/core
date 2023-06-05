@@ -969,10 +969,12 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     cook,
     createReference,
     injectReference,
-    injectForwardedSideEffectFiles: () => {
-      sideEffectForwardCallbacks.forEach((callback) => {
-        callback();
-      });
+    injectForwardedSideEffectFiles: async () => {
+      await Promise.all(
+        sideEffectForwardCallbacks.map(async (callback) => {
+          await callback();
+        }),
+      );
     },
   };
 };

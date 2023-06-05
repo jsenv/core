@@ -725,7 +725,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           rawUrlGraphLoader.load(entryUrlInfo, { reference: entryReference });
         });
         await rawUrlGraphLoader.getAllLoadDonePromise(buildOperation);
-        rawGraphKitchen.injectForwardedSideEffectFiles();
+        await rawGraphKitchen.injectForwardedSideEffectFiles();
       } catch (e) {
         generateSourceGraph.fail();
         throw e;
@@ -735,6 +735,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
 
     shape: {
       bundle: {
+        logger.debug("[start] bundle");
         rawGraphKitchen.pluginController.plugins.forEach((plugin) => {
           const bundle = plugin.bundle;
           if (!bundle) {
@@ -945,8 +946,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           }
           bundleTask.done();
         }, Promise.resolve());
+        logger.debug("[end] bundle");
       }
       reload_in_build_directory: {
+        logger.debug("[start] redirect to build directory");
         const generateBuildGraph = createTaskLog("generate build graph", {
           disabled: logger.levels.debug || !logger.levels.info,
         });
@@ -971,12 +974,13 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             });
           });
           await finalUrlGraphLoader.getAllLoadDonePromise(buildOperation);
-          finalGraphKitchen.injectForwardedSideEffectFiles();
+          await finalGraphKitchen.injectForwardedSideEffectFiles();
         } catch (e) {
           generateBuildGraph.fail();
           throw e;
         }
         generateBuildGraph.done();
+        logger.debug("[end] redirect to build directory");
       }
     }
 
@@ -987,7 +991,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         if (!versioning) {
           break inject_version_in_urls;
         }
-        logger.debug("versioning start");
+        logger.debug("[start] versioning");
         const versioningTask = createTaskLog("inject version in urls", {
           disabled: logger.levels.debug || !logger.levels.info,
         });
@@ -1098,6 +1102,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     }),
                     {
                       cleanupJsenvAttributes: true,
+                      cleanupPositionAttributes: true,
                     },
                   )
                 : urlInfo.content;
@@ -1378,8 +1383,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           throw e;
         }
         versioningTask.done();
+        logger.debug("[end] versioning");
       }
       cleanup_jsenv_attributes_from_html: {
+        logger.debug("[start] cleanup html");
         GRAPH.forEach(finalGraph, (urlInfo) => {
           if (!urlInfo.url.startsWith("file:")) {
             return;
@@ -1390,9 +1397,11 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             });
             urlInfo.content = stringifyHtmlAst(htmlAst, {
               cleanupJsenvAttributes: true,
+              cleanupPositionAttributes: true,
             });
           }
         });
+        logger.debug("[end] cleanup html");
       }
       /*
        * Update <link rel="preload"> and friends after build (once we know everything)
@@ -1401,6 +1410,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
        *   - because of import assertions transpilation (file is inlined into JS)
        */
       resync_resource_hints: {
+        logger.debug("[start] resync resource hints");
         const actions = [];
         GRAPH.forEach(finalGraph, (urlInfo) => {
           if (urlInfo.type !== "html") {
@@ -1525,7 +1535,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             });
             if (mutations.length > 0) {
               mutations.forEach((mutation) => mutation());
-              await finalGraphKitchen.urlInfoTransformer.applyTransformations(
+              finalGraphKitchen.urlInfoTransformer.applyTransformations(
                 urlInfo,
                 {
                   content: stringifyHtmlAst(htmlAst),
@@ -1538,6 +1548,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           actions.map((resourceHintAction) => resourceHintAction()),
         );
         buildOperation.throwIfAborted();
+        logger.debug("[end] resync resource hints");
       }
       delete_unused_urls: {
         const actions = [];
