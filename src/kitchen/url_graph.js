@@ -63,21 +63,18 @@ export const createUrlGraph = ({ name = "anonymous" } = {}) => {
     return search(parentUrlInfo);
   };
   const findDependent = (urlInfo, visitor) => {
-    const seen = [urlInfo.url];
+    const seen = new Set();
+    seen.add(urlInfo.url);
     let found = null;
     const visit = (dependentUrlInfo) => {
-      if (seen.includes(dependentUrlInfo.url)) {
+      if (seen.has(dependentUrlInfo.url)) {
         return false;
       }
-      if (found) {
-        return true;
-      }
-      seen.push(dependentUrlInfo.url);
+      seen.add(dependentUrlInfo.url);
       if (visitor(dependentUrlInfo)) {
         found = dependentUrlInfo;
-        return true;
       }
-      return false;
+      return true;
     };
     const iterate = (currentUrlInfo) => {
       // When cookin html inline content, html references are not yet updated
@@ -87,16 +84,19 @@ export const createUrlGraph = ({ name = "anonymous" } = {}) => {
       if (currentUrlInfo.isInline) {
         const parentUrl = currentUrlInfo.inlineUrlSite.url;
         const parentUrlInfo = getUrlInfo(parentUrl);
-        if (visit(parentUrlInfo)) {
+        visit(parentUrlInfo);
+        if (found) {
           return;
         }
       }
       for (const dependentUrl of currentUrlInfo.dependents) {
         const dependentUrlInfo = getUrlInfo(dependentUrl);
         if (visit(dependentUrlInfo)) {
-          return;
+          if (found) {
+            break;
+          }
+          iterate(dependentUrlInfo);
         }
-        iterate(dependentUrlInfo);
       }
     };
     iterate(urlInfo);
