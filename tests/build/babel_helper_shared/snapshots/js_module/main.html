@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf8">
+    <link rel="icon" href="data:,">
+    <script>
+      ;(function() {
+        var __versionMappings__ = {
+        "/js/a.js": "/js/a.js?v=b4ef0cab",
+        "/js/b.js": "/js/b.js?v=03583fca"
+      };
+        window.__v__ = function (specifier) {
+          return __versionMappings__[specifier] || specifier
+        };
+      })();
+    </script>
+  </head>
+  <body>
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve;
+      });
+    </script>
+    <script type="module" src="/js/main.js?v=2de6c5fd"></script>
+  </body>
+</html>

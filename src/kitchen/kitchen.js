@@ -47,7 +47,6 @@ export const createKitchen = ({
   // during build clientRuntimeCompat is runtimeCompat
   clientRuntimeCompat = runtimeCompat,
   systemJsTranspilation,
-  bannerFileForwardHook = () => false,
   plugins,
   minification,
   sourcemaps = dev ? "inline" : "none", // "programmatic" and "file" also allowed
@@ -56,7 +55,7 @@ export const createKitchen = ({
   sourcemapsSourcesRelative,
   outDirectoryUrl,
 }) => {
-  const bannerCodeForwardCallbacks = [];
+  const sideEffectForwardCallbacks = [];
 
   const logger = createLogger({ logLevel });
   const kitchenContext = {
@@ -137,7 +136,7 @@ export const createKitchen = ({
    * - "sourcemap_comment"
    * - "webmanifest_icon_src"
    * - "package_json"
-   * - "banner"
+   * - "side_effect_file"
    * */
   const createReference = ({
     data = {},
@@ -445,7 +444,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
             },
           ),
         );
-        return {};
+        return;
       }
       let {
         content,
@@ -462,7 +461,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         headers = {},
         body,
         isEntryPoint,
-        bannerFiles,
       } = fetchUrlContentReturnValue;
       if (status !== 200) {
         throw new Error(`unexpected status, ${status}`);
@@ -508,7 +506,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         context: contextDuringFetch,
       });
       await urlInfoTransformer.initTransformations(urlInfo, contextDuringFetch);
-      return { bannerFiles };
     } catch (error) {
       throw createFetchUrlContentError({
         pluginController,
@@ -542,22 +539,23 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     if (!urlInfo.url.startsWith("ignore:")) {
       // references
       const references = [];
+      const addReference = (props) => {
+        const [reference, referencedUrlInfo] = resolveReference(
+          createReference({
+            parentUrl: urlInfo.url,
+            ...props,
+          }),
+          context,
+        );
+        references.push(reference);
+        return [reference, referencedUrlInfo];
+      };
+      const beforeFinalizeCallbacks = [];
       context.referenceUtils = {
         inlineContentClientFileUrl,
         _references: references,
         find: (predicate) => references.find(predicate),
         readGeneratedSpecifier,
-        add: (props) => {
-          const [reference, referencedUrlInfo] = resolveReference(
-            createReference({
-              parentUrl: urlInfo.url,
-              ...props,
-            }),
-            context,
-          );
-          references.push(reference);
-          return [reference, referencedUrlInfo];
-        },
         found: ({ trace, ...rest }) => {
           if (trace === undefined) {
             trace = traceFromUrlSite(
@@ -570,7 +568,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
             );
           }
           // console.log(trace.message)
-          return context.referenceUtils.add({
+          return addReference({
             trace,
             ...rest,
           });
@@ -587,7 +585,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           const parentContent = isOriginalPosition
             ? urlInfo.originalContent
             : urlInfo.content;
-          return context.referenceUtils.add({
+          return addReference({
             trace: traceFromUrlSite({
               url: parentUrl,
               content: parentContent,
@@ -600,6 +598,105 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
             isInline: true,
             ...rest,
           });
+        },
+        foundSideEffectFile: async ({ sideEffectFileUrl, trace, ...rest }) => {
+          if (trace === undefined) {
+            const { url, line, column } = getCallerPosition();
+            trace = traceFromUrlSite({
+              url,
+              line,
+              column,
+            });
+          }
+          const [sideEffectFileReference, sideEffectFileUrlInfo] = addReference(
+            {
+              trace,
+              type: "side_effect_file",
+              isImplicit: true,
+              injected: true,
+              specifier: sideEffectFileUrl,
+              ...rest,
+            },
+          );
+          let injectAsBannerCode = false;
+          if (!["js_classic", "js_module", "css"].includes(urlInfo.type)) {
+            injectAsBannerCode = true;
+          }
+          // When possible we inject code inside the file in the HTML
+          // -> less duplication
+          else if (context.dev) {
+            // during dev cooking files is incremental
+            // so HTML is already executed by the browser
+            // but if we find that ref in a dependent we are good
+            // and it's possible to find it in dependents when using
+            // dynamic import for instance
+            // (in that case we find the side effect file as it was injected in parent)
+            const ancestorUrlInfo = urlGraph.findDependent(
+              urlInfo,
+              (dependentUrlInfo) => {
+                return dependentUrlInfo.references.some((reference) => {
+                  return reference.url === sideEffectFileUrl;
+                });
+              },
+            );
+            if (!ancestorUrlInfo) {
+              injectAsBannerCode = true;
+            }
+          } else {
+            // during build, files are not executed so it's
+            // possible to inject reference when discovering a side effect file
+            const entryPoints = urlGraph.getEntryPoints();
+            for (const entryPointUrlInfo of entryPoints) {
+              sideEffectForwardCallbacks.push(async () => {
+                await context.referenceUtils.readGeneratedSpecifier(
+                  sideEffectFileReference,
+                );
+                context.referenceUtils.becomesInline(sideEffectFileReference, {
+                  specifier: sideEffectFileReference.generatedSpecifier,
+                  content: sideEffectFileUrlInfo.content,
+                  contentType: sideEffectFileUrlInfo.contentType,
+                });
+                // inject once + ensure this url appears in implicitUrls
+                const { implicitUrls } = entryPointUrlInfo;
+                if (implicitUrls.has(entryPointUrlInfo.url)) {
+                  return;
+                }
+                implicitUrls.add(entryPointUrlInfo.url);
+                const sideEffectFileInjection = prependContent(
+                  entryPointUrlInfo,
+                  sideEffectFileUrlInfo,
+                );
+                urlInfoTransformer.applyTransformations(
+                  entryPointUrlInfo,
+                  sideEffectFileInjection,
+                );
+              });
+            }
+          }
+          if (injectAsBannerCode) {
+            beforeFinalizeCallbacks.push(async () => {
+              await context.cook(sideEffectFileUrlInfo, {
+                reference: sideEffectFileReference,
+              });
+              await context.referenceUtils.readGeneratedSpecifier(
+                sideEffectFileReference,
+              );
+              const prependTransformation = prependContent(
+                urlInfo,
+                sideEffectFileUrlInfo,
+              );
+              context.referenceUtils.becomesInline(sideEffectFileReference, {
+                specifier: sideEffectFileReference.generatedSpecifier,
+                content: sideEffectFileUrlInfo.content,
+                contentType: sideEffectFileUrlInfo.contentType,
+              });
+              urlInfoTransformer.applyTransformations(
+                urlInfo,
+                prependTransformation,
+              );
+            });
+          }
+          return [sideEffectFileReference, sideEffectFileUrlInfo];
         },
         update: (currentReference, newReferenceParams) => {
           const index = references.indexOf(currentReference);
@@ -636,7 +733,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
               column,
             });
           }
-          return context.referenceUtils.add({
+          return addReference({
             trace,
             injected: true,
             ...rest,
@@ -681,7 +778,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       };
 
       // "fetchUrlContent" hook
-      const { bannerFiles } = await fetchUrlContent(urlInfo, {
+      await fetchUrlContent(urlInfo, {
         reference: context.reference,
         contextDuringFetch: context,
       });
@@ -711,77 +808,17 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         throw transformError;
       }
 
-      // idéalement on notifierais line et column lorsque bannerFile provient
-      // de l'utilisation d'un mot genre new CssStyleSheet()
-      if (bannerFiles) {
-        for (const bannerFileUrl of bannerFiles) {
-          const [bannerReference, bannerUrlInfo] =
-            context.referenceUtils.inject({
-              type: "banner",
-              isImplicit: true,
-              specifier: bannerFileUrl,
-            });
-          // When possible we inject code inside the file in the HTML
-          // -> less duplication
-          // during dev it's not possible as cooking files is incremental
-          // so HTML is already executed by the browser
-          // during build we can do that for js and css
-          const bannerFileForwardResult = bannerFileForwardHook(
-            bannerFileUrl,
-            urlInfo,
-          );
-          if (bannerFileForwardResult && bannerFileForwardResult.length) {
-            // will be called by injectForwardedBannerFiles
-            bannerFileForwardResult.forEach((urlInfoReceivingBannerCode) => {
-              bannerCodeForwardCallbacks.push(() => {
-                context.referenceUtils.becomesInline(bannerReference, {
-                  specifier: bannerReference.generatedSpecifier,
-                  content: bannerUrlInfo.content,
-                  contentType: bannerUrlInfo.contentType,
-                });
-                // inject once + ensure this url appears in implicitUrls
-                const { implicitUrls } = urlInfoReceivingBannerCode;
-                if (implicitUrls.has(bannerUrlInfo.url)) {
-                  return;
-                }
-                implicitUrls.add(bannerUrlInfo.url);
-
-                const bannerCodeInjection = prependContent(
-                  urlInfoReceivingBannerCode,
-                  bannerUrlInfo,
-                );
-                urlInfoTransformer.applyTransformations(
-                  urlInfoReceivingBannerCode,
-                  bannerCodeInjection,
-                );
-              });
-            });
-          } else {
-            // cook then inject at the top of the file
-            await context.cook(bannerUrlInfo, { reference: bannerReference });
-            const prependTransformation = prependContent(
-              urlInfo,
-              bannerUrlInfo,
-            );
-            context.referenceUtils.becomesInline(bannerReference, {
-              specifier: bannerFileUrl,
-              content: bannerUrlInfo.content,
-              contentType: bannerUrlInfo.contentType,
-            });
-            urlInfoTransformer.applyTransformations(
-              urlInfo,
-              prependTransformation,
-            );
-          }
-        }
-      }
-
       // after "transform" all references from originalContent
       // and the one injected by plugin are known
       urlGraph.updateReferences(urlInfo, references);
 
       // "finalize" hook
       try {
+        for (const beforeFinalizeCallback of beforeFinalizeCallbacks) {
+          await beforeFinalizeCallback();
+        }
+        beforeFinalizeCallbacks.length = 0;
+
         const finalizeReturnValue = await pluginController.callAsyncHooksUntil(
           "finalizeUrlContent",
           urlInfo,
@@ -932,8 +969,8 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     cook,
     createReference,
     injectReference,
-    injectForwardedBannerFiles: () => {
-      bannerCodeForwardCallbacks.forEach((callback) => {
+    injectForwardedSideEffectFiles: () => {
+      sideEffectForwardCallbacks.forEach((callback) => {
         callback();
       });
     },
@@ -946,7 +983,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 // the specifier is a `data:*` url
 // in this case we'll wait for the promise returned by
 // "formatReferencedUrl"
-
 const readGeneratedSpecifier = (reference) => {
   if (reference.generatedSpecifier.then) {
     return reference.generatedSpecifier.then((value) => {

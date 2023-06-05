@@ -87,6 +87,13 @@ export const jsenvPluginAsJsClassic = () => {
         // by an other file (for entry points)
         // or to be able to import when it uses import
         outputFormat = "system";
+        urlInfo.type = "js_classic";
+        context.referenceUtils.foundSideEffectFile({
+          sideEffectFileUrl: systemJsClientFileUrlDefault,
+          expectedType: "js_classic",
+          line: 0,
+          column: 0,
+        });
       }
       const { content, sourcemap } = await convertJsModuleToJsClassic({
         rootDirectoryUrl: context.rootDirectoryUrl,
@@ -104,8 +111,6 @@ export const jsenvPluginAsJsClassic = () => {
         originalContent: jsModuleUrlInfo.originalContent,
         sourcemap,
         data: jsModuleUrlInfo.data,
-        bannerFiles:
-          outputFormat === "system" ? [systemJsClientFileUrlDefault] : [],
       };
     },
   };

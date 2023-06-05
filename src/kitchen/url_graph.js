@@ -222,6 +222,16 @@ export const createUrlGraph = ({ name = "anonymous" } = {}) => {
     iterate(urlInfo);
   };
 
+  const getEntryPoints = () => {
+    const entryPoints = [];
+    urlInfoMap.forEach((urlInfo) => {
+      if (urlInfo.isEntryPoint) {
+        entryPoints.push(urlInfo);
+      }
+    });
+    return entryPoints;
+  };
+
   return {
     name,
     createUrlInfoCallbackRef,
@@ -232,6 +242,7 @@ export const createUrlGraph = ({ name = "anonymous" } = {}) => {
     getUrlInfo,
     deleteUrlInfo,
     getParentIfInline,
+    getEntryPoints,
 
     inferReference,
     updateReferences,
