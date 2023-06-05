@@ -37,7 +37,6 @@ const parseAndTransformHtmlReferences = async (
   context,
   { inlineContent, inlineConvertedScript },
 ) => {
-  const url = urlInfo.originalUrl;
   const content = urlInfo.content;
   const htmlAst = parseHtmlString(content);
 
@@ -105,7 +104,8 @@ const parseAndTransformHtmlReferences = async (
       return createExternalReference(
         node,
         "inlined-from-href",
-        new URL(inlinedFromHref, url).href,
+        inlinedFromHref,
+        // applyWebUrlResolution(inlinedFromHref, urlInfo.originalUrl),
         referenceProps,
       );
     }
@@ -121,7 +121,8 @@ const parseAndTransformHtmlReferences = async (
       return createExternalReference(
         node,
         "inlined-from-src",
-        new URL(inlinedFromSrc, url).href,
+        inlinedFromSrc,
+        // applyWebUrlResolution(inlinedFromSrc, urlInfo.originalUrl),
         referenceProps,
       );
     }
@@ -177,6 +178,10 @@ const parseAndTransformHtmlReferences = async (
         debug,
       },
     );
+    const inlinedFromSrc = getHtmlNodeAttribute(node, "inlined-from-src");
+    if (inlinedFromSrc) {
+      inlineUrlInfo.originalUrl = inlinedFromSrc;
+    }
     actions.push(async () => {
       await cookInlineContent({
         context,
@@ -199,7 +204,6 @@ const parseAndTransformHtmlReferences = async (
         }
       });
     });
-
     return inlineReference;
   };
   const visitTextContent = (
@@ -427,3 +431,10 @@ const decideLinkExpectedType = (linkReference, context) => {
   }
   return undefined;
 };
+
+// const applyWebUrlResolution = (url, baseUrl) => {
+//   if (url[0] === "/") {
+//     return new URL(url.slice(1), baseUrl).href;
+//   }
+//   return new URL(url, baseUrl).href;
+// };

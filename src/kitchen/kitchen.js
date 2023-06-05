@@ -21,6 +21,7 @@ import {
   createTransformUrlContentError,
   createFinalizeUrlContentError,
 } from "./errors.js";
+import { GRAPH_VISITOR } from "./url_graph/url_graph_visitor.js";
 import { assertFetchedContentCompliance } from "./fetched_content_compliance.js";
 import { isWebWorkerEntryPointReference } from "./web_workers.js";
 import { prependContent } from "./prepend_content.js";
@@ -608,72 +609,21 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
               column,
             });
           }
-          const [sideEffectFileReference, sideEffectFileUrlInfo] = addReference(
-            {
+
+          const addRef = () =>
+            addReference({
               trace,
               type: "side_effect_file",
               isImplicit: true,
               injected: true,
               specifier: sideEffectFileUrl,
               ...rest,
-            },
-          );
-          let injectAsBannerCode = false;
-          if (!["js_classic", "js_module", "css"].includes(urlInfo.type)) {
-            injectAsBannerCode = true;
-          }
-          // When possible we inject code inside the file in the HTML
-          // -> less duplication
-          else if (context.dev) {
-            // during dev cooking files is incremental
-            // so HTML is already executed by the browser
-            // but if we find that ref in a dependent we are good
-            // and it's possible to find it in dependents when using
-            // dynamic import for instance
-            // (in that case we find the side effect file as it was injected in parent)
-            const ancestorUrlInfo = urlGraph.findDependent(
-              urlInfo,
-              (dependentUrlInfo) => {
-                return dependentUrlInfo.references.some((reference) => {
-                  return reference.url === sideEffectFileUrl;
-                });
-              },
-            );
-            if (!ancestorUrlInfo) {
-              injectAsBannerCode = true;
-            }
-          } else {
-            // during build, files are not executed so it's
-            // possible to inject reference when discovering a side effect file
-            const entryPoints = urlGraph.getEntryPoints();
-            for (const entryPointUrlInfo of entryPoints) {
-              sideEffectForwardCallbacks.push(async () => {
-                await context.referenceUtils.readGeneratedSpecifier(
-                  sideEffectFileReference,
-                );
-                context.referenceUtils.becomesInline(sideEffectFileReference, {
-                  specifier: sideEffectFileReference.generatedSpecifier,
-                  content: sideEffectFileUrlInfo.content,
-                  contentType: sideEffectFileUrlInfo.contentType,
-                });
-                // inject once + ensure this url appears in implicitUrls
-                const { implicitUrls } = entryPointUrlInfo;
-                if (implicitUrls.has(entryPointUrlInfo.url)) {
-                  return;
-                }
-                implicitUrls.add(entryPointUrlInfo.url);
-                const sideEffectFileInjection = prependContent(
-                  entryPointUrlInfo,
-                  sideEffectFileUrlInfo,
-                );
-                urlInfoTransformer.applyTransformations(
-                  entryPointUrlInfo,
-                  sideEffectFileInjection,
-                );
-              });
-            }
-          }
-          if (injectAsBannerCode) {
+            });
+
+          const injectAsBannerCodeBeforeFinalize = (
+            sideEffectFileReference,
+            sideEffectFileUrlInfo,
+          ) => {
             beforeFinalizeCallbacks.push(async () => {
               await context.cook(sideEffectFileUrlInfo, {
                 reference: sideEffectFileReference,
@@ -685,15 +635,112 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
                 urlInfo,
                 sideEffectFileUrlInfo,
               );
+              urlInfoTransformer.applyTransformations(
+                urlInfo,
+                prependTransformation,
+              );
               context.referenceUtils.becomesInline(sideEffectFileReference, {
                 specifier: sideEffectFileReference.generatedSpecifier,
                 content: sideEffectFileUrlInfo.content,
                 contentType: sideEffectFileUrlInfo.contentType,
               });
-              urlInfoTransformer.applyTransformations(
-                urlInfo,
-                prependTransformation,
+            });
+            return [sideEffectFileReference, sideEffectFileUrlInfo];
+          };
+
+          // When possible we inject code inside the file in the HTML
+          // -> less duplication
+
+          // Case #1: Not possible to inject in other files -> inject as banner code
+          if (!["js_classic", "js_module", "css"].includes(urlInfo.type)) {
+            const [sideEffectFileReference, sideEffectFileUrlInfo] = addRef();
+            return injectAsBannerCodeBeforeFinalize(
+              sideEffectFileReference,
+              sideEffectFileUrlInfo,
+            );
+          }
+
+          // Case #2: During dev
+          // during dev cooking files is incremental
+          // so HTML is already executed by the browser
+          // but if we find that ref in a dependent we are good
+          // and it's possible to find it in dependents when using
+          // dynamic import for instance
+          // (in that case we find the side effect file as it was injected in parent)
+          if (context.dev) {
+            const urlsBeforeInjection = Array.from(urlGraph.keys());
+            const [sideEffectFileReference, sideEffectFileUrlInfo] = addRef();
+            if (!urlsBeforeInjection.includes(sideEffectFileReference.url)) {
+              return injectAsBannerCodeBeforeFinalize(
+                sideEffectFileReference,
+                sideEffectFileUrlInfo,
               );
+            }
+            const isReferencingSideEffectFile = (urlInfo) =>
+              urlInfo.references.some(
+                (ref) => ref.url === sideEffectFileReference.url,
+              );
+            const selfOrAncestorIsReferencingSideEffectFile = (
+              dependentUrl,
+            ) => {
+              const dependentUrlInfo = urlGraph.getUrlInfo(dependentUrl);
+              if (isReferencingSideEffectFile(dependentUrlInfo)) {
+                return true;
+              }
+              const dependentReferencingThatFile = GRAPH_VISITOR.findDependent(
+                urlGraph,
+                urlInfo,
+                (ancestorUrlInfo) =>
+                  isReferencingSideEffectFile(ancestorUrlInfo),
+              );
+              return Boolean(dependentReferencingThatFile);
+            };
+            for (const dependentUrl of urlInfo.dependents) {
+              if (!selfOrAncestorIsReferencingSideEffectFile(dependentUrl)) {
+                return injectAsBannerCodeBeforeFinalize(
+                  sideEffectFileReference,
+                  sideEffectFileUrlInfo,
+                );
+              }
+            }
+            return [sideEffectFileReference, sideEffectFileUrlInfo];
+          }
+
+          // Case #3: During build
+          // during build, files are not executed so it's
+          // possible to inject reference when discovering a side effect file
+          const [sideEffectFileReference, sideEffectFileUrlInfo] = addRef();
+          const entryPoints = urlGraph.getEntryPoints();
+          for (const entryPointUrlInfo of entryPoints) {
+            sideEffectForwardCallbacks.push(async () => {
+              await context.referenceUtils.readGeneratedSpecifier(
+                sideEffectFileReference,
+              );
+              // inject once + ensure this url appears in implicitUrls
+              const { implicitUrls } = entryPointUrlInfo;
+              if (implicitUrls.has(entryPointUrlInfo.url)) {
+                return;
+              }
+              implicitUrls.add(entryPointUrlInfo.url);
+              const sideEffectFileInjection = prependContent(
+                entryPointUrlInfo,
+                sideEffectFileUrlInfo,
+              );
+              urlInfoTransformer.applyTransformations(
+                entryPointUrlInfo,
+                sideEffectFileInjection,
+              );
+              context.referenceUtils.becomesInline(sideEffectFileReference, {
+                specifier: sideEffectFileReference.generatedSpecifier,
+                // ideally get the correct line and column
+                // (for js it's 0, but for html it's different)
+                specifierLine: 0,
+                specifierColumn: 0,
+                content: sideEffectFileUrlInfo.content,
+                contentType: sideEffectFileUrlInfo.contentType,
+                parentUrl: entryPointUrlInfo.url,
+                parentContent: entryPointUrlInfo.content,
+              });
             });
           }
           return [sideEffectFileReference, sideEffectFileUrlInfo];
@@ -748,14 +795,12 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
             specifierColumn,
             contentType,
             content,
+            parentUrl = isOriginalPosition ? urlInfo.url : urlInfo.generatedUrl,
+            parentContent = isOriginalPosition
+              ? urlInfo.originalContent
+              : urlInfo.content,
           },
         ) => {
-          const parentUrl = isOriginalPosition
-            ? urlInfo.url
-            : urlInfo.generatedUrl;
-          const parentContent = isOriginalPosition
-            ? urlInfo.originalContent
-            : urlInfo.content;
           return context.referenceUtils.update(reference, {
             trace: traceFromUrlSite({
               url: parentUrl,
@@ -763,6 +808,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
               line: specifierLine,
               column: specifierColumn,
             }),
+            parentUrl,
             isOriginalPosition,
             isInline: true,
             specifier,

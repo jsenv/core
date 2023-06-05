@@ -28,13 +28,15 @@ const prependContentInHtml = (htmlUrlInfo, urlInfoToPrepend) => {
   injectHtmlNodeAsEarlyAsPossible(
     htmlAst,
     createHtmlNode({
-      tagName: "script",
-      textContent: urlInfoToPrepend.content,
+      "tagName": "script",
+      "textContent": urlInfoToPrepend.content,
+      "inlined-from-src": urlInfoToPrepend.url,
     }),
     "jsenv:core",
   );
+  const content = stringifyHtmlAst(htmlAst);
   return {
-    content: stringifyHtmlAst(htmlAst),
+    content,
   };
 };
 

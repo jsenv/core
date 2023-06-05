@@ -57,6 +57,7 @@ import { jsenvPluginJsModuleFallback } from "@jsenv/plugin-transpilation";
 
 import { lookupPackageDirectory } from "../helpers/lookup_package_directory.js";
 import { watchSourceFiles } from "../helpers/watch_source_files.js";
+import { GRAPH_VISITOR } from "../kitchen/url_graph/url_graph_visitor.js";
 import { createUrlGraph } from "../kitchen/url_graph.js";
 import { createKitchen } from "../kitchen/kitchen.js";
 import { createUrlGraphLoader } from "../kitchen/url_graph/url_graph_loader.js";
@@ -70,7 +71,6 @@ import { jsenvPluginReferenceAnalysis } from "../plugins/reference_analysis/jsen
 import { jsenvPluginInlining } from "../plugins/inlining/jsenv_plugin_inlining.js";
 import { jsenvPluginLineBreakNormalization } from "./jsenv_plugin_line_break_normalization.js";
 
-import { GRAPH } from "./graph_utils.js";
 import { createBuildUrlsGenerator } from "./build_urls_generator.js";
 import {
   injectVersionMappingsAsGlobal,
@@ -451,7 +451,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             if (reference.isInline) {
               const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl);
               const parentRawUrl = parentUrlInfo.originalUrl;
-              const rawUrlInfo = GRAPH.find(rawGraph, (rawUrlInfo) => {
+              const rawUrlInfo = GRAPH_VISITOR.find(rawGraph, (rawUrlInfo) => {
                 const { inlineUrlSite } = rawUrlInfo;
                 // not inline
                 if (!inlineUrlSite) return false;
@@ -663,6 +663,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 );
                 return fromBundleOrRawGraph(urlBeforeRedirect);
               }
+              if (finalUrlInfo.originalUrl !== finalUrlInfo.url) {
+                return fromBundleOrRawGraph(finalUrlInfo.originalUrl);
+              }
               return fromBundleOrRawGraph(reference.url);
             }
             // reference updated during "postbuild":
@@ -769,7 +772,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             bundler.urlInfos.push(rawUrlInfo);
           }
         };
-        GRAPH.forEach(rawGraph, (rawUrlInfo) => {
+        GRAPH_VISITOR.forEach(rawGraph, (rawUrlInfo) => {
           // cleanup unused urls (avoid bundling things that are not actually used)
           // happens for:
           // - js import assertions
@@ -1011,7 +1014,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               return true;
             }
             const urlInfo = graph.getUrlInfo(reference.url);
-            const dependentWorker = graph.findDependent(
+            const dependentWorker = GRAPH_VISITOR.findDependent(
               urlInfo,
               (dependentUrlInfo) => {
                 return isWebWorkerUrlInfo(dependentUrlInfo);
@@ -1068,7 +1071,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           // see also https://github.com/rollup/rollup/pull/4543
           const contentVersionMap = new Map();
           const hashCallbacks = [];
-          GRAPH.forEach(finalGraph, (urlInfo) => {
+          GRAPH_VISITOR.forEach(finalGraph, (urlInfo) => {
             if (urlInfo.type === "sourcemap") {
               return;
             }
@@ -1289,12 +1292,15 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 },
                 fetchUrlContent: (versionedUrlInfo) => {
                   if (versionedUrlInfo.isInline) {
-                    const rawUrlInfo = rawGraph.getUrlInfo(
-                      buildDirectoryRedirections.get(versionedUrlInfo.url),
-                    );
-                    const finalUrlInfo = finalGraph.getUrlInfo(
-                      versionedUrlInfo.url,
-                    );
+                    let versionedUrl = versionedUrlInfo.url;
+                    if (versionedUrlInfo.originalUrl !== versionedUrlInfo.url) {
+                      versionedUrl = `${buildDirectoryUrl}${versionedUrlInfo.originalUrl.slice(
+                        1,
+                      )}`;
+                    }
+                    const rawUrl = buildDirectoryRedirections.get(versionedUrl);
+                    const rawUrlInfo = rawGraph.getUrlInfo(rawUrl);
+                    const finalUrlInfo = finalGraph.getUrlInfo(versionedUrl);
                     return {
                       content: versionedUrlInfo.content,
                       contentType: versionedUrlInfo.contentType,
@@ -1371,7 +1377,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             });
           }
           if (visitors.length) {
-            GRAPH.forEach(finalGraph, (urlInfo) => {
+            GRAPH_VISITOR.forEach(finalGraph, (urlInfo) => {
               visitors.forEach((visitor) => visitor(urlInfo));
             });
             if (actions.length) {
@@ -1387,7 +1393,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       }
       cleanup_jsenv_attributes_from_html: {
         logger.debug("[start] cleanup html");
-        GRAPH.forEach(finalGraph, (urlInfo) => {
+        GRAPH_VISITOR.forEach(finalGraph, (urlInfo) => {
           if (!urlInfo.url.startsWith("file:")) {
             return;
           }
@@ -1412,7 +1418,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       resync_resource_hints: {
         logger.debug("[start] resync resource hints");
         const actions = [];
-        GRAPH.forEach(finalGraph, (urlInfo) => {
+        GRAPH_VISITOR.forEach(finalGraph, (urlInfo) => {
           if (urlInfo.type !== "html") {
             return;
           }
@@ -1552,7 +1558,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       }
       delete_unused_urls: {
         const actions = [];
-        GRAPH.forEach(finalGraph, (urlInfo) => {
+        GRAPH_VISITOR.forEach(finalGraph, (urlInfo) => {
           if (!isUsed(urlInfo)) {
             actions.push(() => {
               finalGraph.deleteUrlInfo(urlInfo.url);
@@ -1562,7 +1568,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         actions.forEach((action) => action());
       }
       inject_urls_in_service_workers: {
-        const serviceWorkerEntryUrlInfos = GRAPH.filter(
+        const serviceWorkerEntryUrlInfos = GRAPH_VISITOR.filter(
           finalGraph,
           (finalUrlInfo) => {
             return (
@@ -1573,7 +1579,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         );
         if (serviceWorkerEntryUrlInfos.length > 0) {
           const serviceWorkerResources = {};
-          GRAPH.forEach(finalGraph, (urlInfo) => {
+          GRAPH_VISITOR.forEach(finalGraph, (urlInfo) => {
             if (!urlInfo.url.startsWith("file:")) {
               return;
             }
@@ -1646,7 +1652,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       const buildRelativeUrl = urlToRelativeUrl(url, buildDirectoryUrl);
       return buildRelativeUrl;
     };
-    GRAPH.forEach(finalGraph, (urlInfo) => {
+    GRAPH_VISITOR.forEach(finalGraph, (urlInfo) => {
       if (!urlInfo.url.startsWith("file:")) {
         return;
       }
