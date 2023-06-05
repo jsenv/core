@@ -3,10 +3,11 @@ import { assert } from "@jsenv/assert";
 import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 
 import { build } from "@jsenv/core";
+import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
-const test = async (params) => {
+const test = async ({ name, ...params }) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -17,6 +18,10 @@ const test = async (params) => {
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
   });
+  takeDirectorySnapshot(
+    new URL("./dist/", import.meta.url),
+    new URL(`./snapshots/build/${name}/`, import.meta.url),
+  );
   writeFileSync(
     new URL("./dist/main.html", import.meta.url),
     readFileSync(new URL("./client/main.html", import.meta.url)),
@@ -41,15 +46,18 @@ const test = async (params) => {
 
 // support for <script type="module">
 await test({
+  name: "supported",
   runtimeCompat: { chrome: "89" },
   plugins: [jsenvPluginBundling()],
 });
 // support for <script type="module"> + no bundling
 await test({
+  name: "supported_no_bundling",
   runtimeCompat: { chrome: "89" },
 });
 // without support for <script type="module">
 await test({
+  name: "not_supported",
   runtimeCompat: { chrome: "55" },
   plugins: [jsenvPluginBundling()],
 });
