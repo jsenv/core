@@ -640,9 +640,13 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
                 prependTransformation,
               );
               context.referenceUtils.becomesInline(sideEffectFileReference, {
+                specifierLine: 0,
+                specifierColumn: 0,
                 specifier: sideEffectFileReference.generatedSpecifier,
                 content: sideEffectFileUrlInfo.content,
                 contentType: sideEffectFileUrlInfo.contentType,
+                parentUrl: urlInfo.url,
+                parentContent: urlInfo.content,
               });
             });
             return [sideEffectFileReference, sideEffectFileUrlInfo];
@@ -668,7 +672,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           // dynamic import for instance
           // (in that case we find the side effect file as it was injected in parent)
           if (context.dev) {
-            const urlsBeforeInjection = Array.from(urlGraph.keys());
+            const urlsBeforeInjection = Array.from(urlGraph.urlInfoMap.keys());
             const [sideEffectFileReference, sideEffectFileUrlInfo] = addRef();
             if (!urlsBeforeInjection.includes(sideEffectFileReference.url)) {
               return injectAsBannerCodeBeforeFinalize(
@@ -717,11 +721,14 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
                 sideEffectFileReference,
               );
               // inject once + ensure this url appears in implicitUrls
-              const { implicitUrls } = entryPointUrlInfo;
-              if (implicitUrls.has(entryPointUrlInfo.url)) {
+              const { implicitUrls, dependencies } = entryPointUrlInfo;
+              if (implicitUrls.has(sideEffectFileUrlInfo.url)) {
                 return;
               }
-              implicitUrls.add(entryPointUrlInfo.url);
+              if (dependencies.has(sideEffectFileUrlInfo.url)) {
+                return;
+              }
+              implicitUrls.add(sideEffectFileUrlInfo.url);
               const sideEffectFileInjection = prependContent(
                 entryPointUrlInfo,
                 sideEffectFileUrlInfo,

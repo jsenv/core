@@ -19,6 +19,10 @@ const test = async (params) => {
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
   });
+  takeDirectorySnapshot(
+    new URL("./dist/", import.meta.url),
+    new URL("./snapshots/", import.meta.url),
+  );
   writeFileSync(
     new URL("./dist/main.html", import.meta.url),
     readFileSync(new URL("./client/main.html", import.meta.url)),
@@ -32,10 +36,6 @@ const test = async (params) => {
     pageFunction: () => window.resultPromise,
     /* eslint-enable no-undef */
   });
-  takeDirectorySnapshot(
-    new URL("./dist/", import.meta.url),
-    new URL("./snapshots/", import.meta.url),
-  );
   const actual = returnValue;
   const expected = {
     typeofCurrentScript: "object",
