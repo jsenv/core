@@ -78,11 +78,12 @@ export const createUrlGraph = ({ name = "anonymous" } = {}) => {
       }
       const dependencyUrl = reference.url;
       setOfDependencyUrls.add(dependencyUrl);
-      // an implicit reference do not appear in the file but a non-explicited file have an impact on it
-      // (package.json on import resolution for instance)
+      // an implicit reference do not appear in the file but the non explicited file
+      // have an impact on it
+      // -> package.json on import resolution for instance
       // in that case:
       // - file depends on the implicit file (it must autoreload if package.json is modified)
-      // - cache validity for the file depends on the implicit file (it must be re-cooked in package.json is modified)
+      // - cache validity for the file depends on the implicit file (it must be re-cooked if package.json is modified)
       if (reference.isImplicit) {
         setOfImplicitUrls.add(dependencyUrl);
       }

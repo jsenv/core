@@ -738,22 +738,16 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           // Case #3: During build
           // during build, files are not executed so it's
           // possible to inject reference when discovering a side effect file
-          const [sideEffectFileReference, sideEffectFileUrlInfo] = addRef();
           const entryPoints = urlGraph.getEntryPoints();
+          const [sideEffectFileReference, sideEffectFileUrlInfo] = addRef();
           for (const entryPointUrlInfo of entryPoints) {
             sideEffectForwardCallbacks.push(async () => {
-              await context.referenceUtils.readGeneratedSpecifier(
-                sideEffectFileReference,
-              );
-              // inject once + ensure this url appears in implicitUrls
-              const { implicitUrls, dependencies } = entryPointUrlInfo;
-              if (implicitUrls.has(sideEffectFileUrlInfo.url)) {
-                return;
-              }
+              // do not inject if already there
+              const { dependencies } = entryPointUrlInfo;
               if (dependencies.has(sideEffectFileUrlInfo.url)) {
                 return;
               }
-              implicitUrls.add(sideEffectFileUrlInfo.url);
+              dependencies.add(sideEffectFileUrlInfo.url);
               const sideEffectFileInjection = prependContent(
                 entryPointUrlInfo,
                 sideEffectFileUrlInfo,
@@ -761,6 +755,9 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
               urlInfoTransformer.applyTransformations(
                 entryPointUrlInfo,
                 sideEffectFileInjection,
+              );
+              await context.referenceUtils.readGeneratedSpecifier(
+                sideEffectFileReference,
               );
               context.referenceUtils.becomesInline(sideEffectFileReference, {
                 specifier: sideEffectFileReference.generatedSpecifier,
