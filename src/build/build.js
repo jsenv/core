@@ -680,8 +680,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               "optimizeUrlContent",
               urlInfo,
               context,
-              async (optimizeReturnValue) => {
-                await finalGraphKitchen.urlInfoTransformer.applyTransformations(
+              (optimizeReturnValue) => {
+                finalGraphKitchen.urlInfoTransformer.applyTransformations(
                   urlInfo,
                   optimizeReturnValue,
                 );

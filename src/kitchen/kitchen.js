@@ -835,8 +835,8 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           "transformUrlContent",
           urlInfo,
           context,
-          async (transformReturnValue) => {
-            await urlInfoTransformer.applyTransformations(
+          (transformReturnValue) => {
+            urlInfoTransformer.applyTransformations(
               urlInfo,
               transformReturnValue,
             );
@@ -870,10 +870,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           urlInfo,
           context,
         );
-        await urlInfoTransformer.applyTransformations(
-          urlInfo,
-          finalizeReturnValue,
-        );
+        urlInfoTransformer.applyTransformations(urlInfo, finalizeReturnValue);
         urlInfoTransformer.applyTransformationsEffects(urlInfo);
       } catch (error) {
         throw createFinalizeUrlContentError({
