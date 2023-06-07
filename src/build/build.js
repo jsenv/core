@@ -1813,9 +1813,6 @@ const isUsed = (urlInfo, urlGraph) => {
   if (urlInfo.type === "sourcemap") {
     return true;
   }
-  if (urlInfo.injected) {
-    return true;
-  }
   // check if there is a valid reference to this urlInfo
   for (const dependentUrl of urlInfo.dependents) {
     const dependentUrlInfo = urlGraph.getUrlInfo(dependentUrl);
