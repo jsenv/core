@@ -74,6 +74,7 @@ const parseAndTransformHtmlReferences = async (
       "modulepreload",
     ].includes(subtype);
     const [reference] = context.referenceUtils.found({
+      node,
       type,
       subtype,
       expectedType,
@@ -93,6 +94,7 @@ const parseAndTransformHtmlReferences = async (
         });
       });
     });
+    return reference;
   };
   const visitHref = (node, referenceProps) => {
     const href = getHtmlNodeAttribute(node, "href");
@@ -141,31 +143,6 @@ const parseAndTransformHtmlReferences = async (
       columnEnd,
     });
     const debug = getHtmlNodeAttribute(node, "jsenv-debug") !== undefined;
-    const externalSpecifierAttributeName =
-      type === "script"
-        ? "inlined-from-src"
-        : type === "style"
-        ? "inlined-from-href"
-        : null;
-    if (externalSpecifierAttributeName) {
-      const externalSpecifier = getHtmlNodeAttribute(
-        node,
-        externalSpecifierAttributeName,
-      );
-      if (externalSpecifier) {
-        // create an external ref
-        // the goal is only to have the url in the graph (and in dependencies/implitic urls for reload)
-        // not to consider the url is actually used (at least during build)
-        // maybe we can just exlcude these urls in a special if during build, we'll see
-        createExternalReference(
-          node,
-          externalSpecifierAttributeName,
-          externalSpecifier,
-          { type, subtype, expectedType },
-        );
-      }
-    }
-
     const [inlineReference, inlineUrlInfo] = context.referenceUtils.foundInline(
       {
         node,
@@ -183,6 +160,33 @@ const parseAndTransformHtmlReferences = async (
         debug,
       },
     );
+
+    const externalSpecifierAttributeName =
+      type === "script"
+        ? "inlined-from-src"
+        : type === "style"
+        ? "inlined-from-href"
+        : null;
+    if (externalSpecifierAttributeName) {
+      const externalSpecifier = getHtmlNodeAttribute(
+        node,
+        externalSpecifierAttributeName,
+      );
+      if (externalSpecifier) {
+        // create an external ref
+        // the goal is only to have the url in the graph (and in dependencies/implitic urls for reload)
+        // not to consider the url is actually used (at least during build)
+        // maybe we can just exlcude these urls in a special if during build, we'll see
+        const externalRef = createExternalReference(
+          node,
+          externalSpecifierAttributeName,
+          externalSpecifier,
+          { type, subtype, expectedType },
+        );
+        inlineReference.prev = externalRef;
+      }
+    }
+
     actions.push(async () => {
       await cookInlineContent({
         context,

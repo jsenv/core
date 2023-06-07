@@ -657,14 +657,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             }
             if (reference.isInline) {
               if (reference.prev && !reference.prev.isInline) {
-                const urlBeforeRedirect = findKey(
-                  finalRedirections,
-                  reference.prev.url,
-                );
+                const urlBeforeRedirect =
+                  findKey(finalRedirections, reference.prev.url) ||
+                  reference.prev.url;
                 return fromBundleOrRawGraph(urlBeforeRedirect);
-              }
-              if (finalUrlInfo.originalUrl !== finalUrlInfo.url) {
-                return fromBundleOrRawGraph(finalUrlInfo.originalUrl);
               }
               return fromBundleOrRawGraph(reference.url);
             }
@@ -1292,12 +1288,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 },
                 fetchUrlContent: (versionedUrlInfo) => {
                   if (versionedUrlInfo.isInline) {
-                    let versionedUrl = versionedUrlInfo.url;
-                    if (versionedUrlInfo.originalUrl !== versionedUrlInfo.url) {
-                      versionedUrl = `${buildDirectoryUrl}${versionedUrlInfo.originalUrl.slice(
-                        1,
-                      )}`;
-                    }
+                    const versionedUrl = versionedUrlInfo.url;
                     const rawUrl = buildDirectoryRedirections.get(versionedUrl);
                     const rawUrlInfo = rawGraph.getUrlInfo(rawUrl);
                     const finalUrlInfo = finalGraph.getUrlInfo(versionedUrl);
