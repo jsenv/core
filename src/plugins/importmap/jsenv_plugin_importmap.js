@@ -184,8 +184,8 @@ export const jsenvPluginImportmap = () => {
             columnEnd,
           });
           context.referenceUtils.becomesInline(importmapReference, {
-            line: line - 1,
-            column,
+            specifierLine: line - 1,
+            specifierColumn: column,
             isOriginal,
             specifier: inlineImportmapUrl,
             contentType: "application/importmap+json",

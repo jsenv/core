@@ -551,6 +551,31 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         references.push(reference);
         return [reference, referencedUrlInfo];
       };
+      const mutateReference = (currentReference, newReferenceParams) => {
+        const index = references.indexOf(currentReference);
+        if (index === -1) {
+          throw new Error(`reference do not exists`);
+        }
+        const ref = createReference({
+          ...currentReference,
+          ...newReferenceParams,
+        });
+        const [newReference, newUrlInfo] = resolveReference(ref, context);
+        updateReference(currentReference, newReference);
+        references[index] = newReference;
+        const currentUrlInfo = context.urlGraph.getUrlInfo(
+          currentReference.url,
+        );
+        if (
+          currentUrlInfo &&
+          currentUrlInfo !== newUrlInfo &&
+          currentUrlInfo.dependents.size === 0
+        ) {
+          context.urlGraph.deleteUrlInfo(currentReference.url);
+        }
+        return [newReference, newUrlInfo];
+      };
+
       const beforeFinalizeCallbacks = [];
       context.referenceUtils = {
         inlineContentClientFileUrl,
@@ -752,32 +777,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           }
           return [sideEffectFileReference, sideEffectFileUrlInfo];
         },
-        update: (currentReference, newReferenceParams) => {
-          const index = references.indexOf(currentReference);
-          if (index === -1) {
-            throw new Error(`reference do not exists`);
-          }
-          const [newReference, newUrlInfo] = resolveReference(
-            createReference({
-              ...currentReference,
-              ...newReferenceParams,
-            }),
-            context,
-          );
-          updateReference(currentReference, newReference);
-          references[index] = newReference;
-          const currentUrlInfo = context.urlGraph.getUrlInfo(
-            currentReference.url,
-          );
-          if (
-            currentUrlInfo &&
-            currentUrlInfo !== newUrlInfo &&
-            currentUrlInfo.dependents.size === 0
-          ) {
-            context.urlGraph.deleteUrlInfo(currentReference.url);
-          }
-          return [newReference, newUrlInfo];
-        },
         inject: ({ trace, ...rest }) => {
           if (trace === undefined) {
             const { url, line, column } = getCallerPosition();
@@ -796,25 +795,34 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         becomesInline: (
           reference,
           {
-            isOriginalPosition,
+            isOriginalPosition = reference.isOriginalPosition,
             specifier,
             specifierLine,
             specifierColumn,
             contentType,
             content,
-            parentUrl = isOriginalPosition ? urlInfo.url : urlInfo.generatedUrl,
-            parentContent = isOriginalPosition
-              ? urlInfo.originalContent
-              : urlInfo.content,
+            parentUrl = reference.parentUrl,
+            parentContent,
           },
         ) => {
-          return context.referenceUtils.update(reference, {
-            trace: traceFromUrlSite({
-              url: parentUrl,
-              content: parentContent,
-              line: specifierLine,
-              column: specifierColumn,
-            }),
+          const trace = traceFromUrlSite({
+            url:
+              parentUrl === undefined
+                ? isOriginalPosition
+                  ? urlInfo.url
+                  : urlInfo.generatedUrl
+                : parentUrl,
+            content:
+              parentContent === undefined
+                ? isOriginalPosition
+                  ? urlInfo.originalContent
+                  : urlInfo.content
+                : parentContent,
+            line: specifierLine,
+            column: specifierColumn,
+          });
+          return mutateReference(reference, {
+            trace,
             parentUrl,
             isOriginalPosition,
             isInline: true,
@@ -1092,9 +1100,6 @@ const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
   }
   Object.assign(urlInfo.data, reference.data);
   Object.assign(urlInfo.timing, reference.timing);
-  if (reference.isImplicit) {
-    urlInfo.isImplicit = true;
-  }
   if (reference.injected) {
     urlInfo.injected = true;
   }
