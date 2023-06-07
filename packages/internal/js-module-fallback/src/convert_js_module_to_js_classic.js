@@ -29,8 +29,8 @@ export const convertJsModuleToJsClassic = async ({
             // proposal-dynamic-import required with systemjs for babel8:
             // https://github.com/babel/babel/issues/10746
             require("@babel/plugin-proposal-dynamic-import"),
-            require("@babel/plugin-transform-modules-systemjs"),
             [babelPluginRelativeImports, { rootUrl: inputUrl }],
+            require("@babel/plugin-transform-modules-systemjs"),
             [
               customAsyncToPromises,
               {
@@ -49,8 +49,8 @@ export const convertJsModuleToJsClassic = async ({
             ],
             babelPluginTransformImportMetaUrl,
             babelPluginTransformImportMetaResolve,
-            require("@babel/plugin-transform-modules-umd"),
             [babelPluginRelativeImports, { rootUrl: inputUrl }],
+            require("@babel/plugin-transform-modules-umd"),
           ]),
     ],
     input,
@@ -77,8 +77,12 @@ const babelPluginRelativeImports = (babel) => {
   const t = babel.types;
 
   const replaceSpecifierAtPath = (path, state) => {
-    const specifier = path.node.value;
+    let specifier = path.node.value;
     if (specifier.startsWith("file://")) {
+      const specifierUrlObject = new URL(specifier);
+      const { searchParams } = specifierUrlObject;
+      searchParams.delete("dynamic_import");
+      specifier = specifierUrlObject.href;
       const specifierRelative = urlToRelativeUrl(specifier, state.opts.rootUrl);
       path.replaceWith(t.stringLiteral(specifierRelative));
     }
