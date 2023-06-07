@@ -184,6 +184,8 @@ const parseAndTransformHtmlReferences = async (
           { type, subtype, expectedType },
         );
         inlineReference.prev = externalRef;
+        inlineReference.original = externalRef;
+        externalRef.next = inlineReference;
       }
     }
 
