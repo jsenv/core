@@ -1011,6 +1011,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             }
             const urlInfo = graph.getUrlInfo(reference.url);
             const dependentWorker = GRAPH_VISITOR.findDependent(
+              graph,
               urlInfo,
               (dependentUrlInfo) => {
                 return isWebWorkerUrlInfo(dependentUrlInfo);
