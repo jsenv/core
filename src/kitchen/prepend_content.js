@@ -12,6 +12,12 @@ export const prependContent = (
   urlInfoReceivingCode,
   urlInfoToPrepend,
 ) => {
+  // we could also implement:
+  // - prepend svg in html
+  // - prepend css in html
+  // - prepend css in css
+  // - maybe more?
+  // but no need for now
   if (
     urlInfoReceivingCode.type === "html" &&
     urlInfoToPrepend.type === "js_classic"
@@ -42,8 +48,6 @@ export const prependContent = (
       urlInfoToPrepend,
     );
   }
-  // ideally we could for css as well
-  // if (urlInfoReceivingCode.type === "css" && urlInfoToPrepend.type === "css") {}
   throw new Error(
     `cannot prepend content from "${urlInfoToPrepend.type}" into "${urlInfoReceivingCode.type}"`,
   );
