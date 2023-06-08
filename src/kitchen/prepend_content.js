@@ -124,7 +124,7 @@ const babelPluginPrependCodeInJsModule = (babel) => {
           bodyNodePath.insertBefore(astToPrepend.program.body);
           return;
         }
-        bodyNodePaths.unshift(...astToPrepend.program.body);
+        bodyNodePaths.unshift(astToPrepend.program.body);
       },
     },
   };
