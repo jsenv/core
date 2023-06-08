@@ -12,14 +12,14 @@ self.resourcesFromJsenvBuild = {
     "versionedUrl": "/js/a.nomodule.js?v=8345fcfc"
   },
   "/js/b.nomodule.js": {
-    "version": "8f3fa8a4",
-    "versionedUrl": "/js/b.nomodule.js?v=8f3fa8a4"
+    "version": "4d5b0641",
+    "versionedUrl": "/js/b.nomodule.js?v=4d5b0641"
   }
 };
 ;(function() {
   var __versionMappings__ = {
   "/js/a.nomodule.js": "/js/a.nomodule.js?v=8345fcfc",
-  "/js/b.nomodule.js": "/js/b.nomodule.js?v=8f3fa8a4"
+  "/js/b.nomodule.js": "/js/b.nomodule.js?v=4d5b0641"
 };
   self.__v__ = function (specifier) {
     return __versionMappings__[specifier] || specifier
