@@ -449,10 +449,8 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       }
       let {
         content,
-        contentAst,
         contentType,
         originalContent = content,
-        originalContentAst = contentAst,
         data,
         type,
         subtype,
@@ -500,14 +498,36 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         urlInfo,
         context: contextDuringFetch,
       });
+
+      // we wait here to read .contentAst and .originalContentAst
+      // so that we don't trigger lazy getters
+      // that would try to parse url too soon (before having urlInfo.type being set)
+      // also we do not want to trigger the getters that would parse url content
+      // too soon
+      const contentAstDescriptor = Object.getOwnPropertyDescriptor(
+        fetchUrlContentReturnValue,
+        "contentAst",
+      );
+      const originalContentAstDescriptor = Object.getOwnPropertyDescriptor(
+        fetchUrlContentReturnValue,
+        "originalContentAst",
+      );
       await urlInfoTransformer.initTransformations(
         urlInfo,
         {
           content,
-          contentAst,
           sourcemap,
           originalContent,
-          originalContentAst,
+          contentAst: contentAstDescriptor
+            ? contentAstDescriptor.get
+              ? undefined
+              : contentAstDescriptor.value
+            : undefined,
+          originalContentAst: originalContentAstDescriptor
+            ? originalContentAstDescriptor.get
+              ? undefined
+              : originalContentAstDescriptor.value
+            : undefined,
         },
         contextDuringFetch,
       );

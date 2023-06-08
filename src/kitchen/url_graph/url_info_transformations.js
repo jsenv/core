@@ -1,4 +1,5 @@
 import { pathToFileURL } from "node:url";
+import { parseJsWithAcorn } from "@jsenv/ast";
 import { bufferToEtag } from "@jsenv/filesystem";
 import { urlToRelativeUrl, isFileSystemPath } from "@jsenv/urls";
 import {
@@ -66,20 +67,29 @@ export const createUrlInfoTransformer = ({
   };
 
   const defineGettersOnPropertiesDerivedFromContent = (urlInfo) => {
-    if (!urlInfo.contentAst) {
+    const contentAstDescriptor = Object.getOwnPropertyDescriptor(
+      urlInfo,
+      "contentAst",
+    );
+    if (contentAstDescriptor.value === undefined) {
       defineVolaliteGetter(urlInfo, "contentAst", () => {
         if (urlInfo.content === urlInfo.originalContent) {
           return urlInfo.originalContentAst;
         }
-        // do it
+        const ast = getContentAst(urlInfo.content, urlInfo.type, urlInfo.url);
+        return ast;
       });
     }
-    if (!urlInfo.contentEtag) {
+    const contentEtagDescriptor = Object.getOwnPropertyDescriptor(
+      urlInfo,
+      "contentEtag",
+    );
+    if (contentEtagDescriptor.value === undefined) {
       defineVolaliteGetter(urlInfo, "contentEtag", () => {
         if (urlInfo.content === urlInfo.originalContent) {
           return urlInfo.originalContentEtag;
         }
-        return bufferToEtag(Buffer.from(urlInfo.content));
+        return getContentEtag(urlInfo.content);
       });
     }
   };
@@ -97,34 +107,38 @@ export const createUrlInfoTransformer = ({
     context,
   ) => {
     urlInfo.contentFinalized = false;
-    if (originalContent === urlInfo.originalContent) {
-      urlInfo.originalContentAst =
-        urlInfo.originalContentAst || originalContentAst;
-      urlInfo.originalContentEtag =
-        urlInfo.originalContentEtag || originalContentEtag;
-    } else {
+    urlInfo.originalContentAst = originalContentAst;
+    urlInfo.originalContentEtag = originalContentEtag;
+    if (originalContent !== urlInfo.originalContent) {
       urlInfo.originalContent = originalContent;
-      urlInfo.originalContentAst = originalContentAst;
-      urlInfo.originalContentEtag = originalContentEtag;
-    }
-    if (!urlInfo.originalContentAst) {
-      defineVolaliteGetter(urlInfo, "originalContentAst", () => {});
-    }
-    if (!urlInfo.originalContentEtag) {
-      defineVolaliteGetter(urlInfo, "originalContentEtag", () => {
-        return bufferToEtag(Buffer.from(urlInfo.originalContent));
-      });
+      const originalContentAstDescriptor = Object.getOwnPropertyDescriptor(
+        urlInfo,
+        "originalContentAst",
+      );
+      if (originalContentAstDescriptor.value === undefined) {
+        defineVolaliteGetter(urlInfo, "originalContentAst", () => {
+          return getContentAst(
+            urlInfo.originalContent,
+            urlInfo.type,
+            urlInfo.url,
+          );
+        });
+      }
+      const originalContentEtagDescriptor = Object.getOwnPropertyDescriptor(
+        urlInfo,
+        "originalContentEtag",
+      );
+      if (originalContentEtagDescriptor.value === undefined) {
+        defineVolaliteGetter(urlInfo, "originalContentEtag", () => {
+          return bufferToEtag(Buffer.from(urlInfo.originalContent));
+        });
+      }
     }
 
-    if (content === urlInfo.content) {
-      urlInfo.contentAst = urlInfo.contentAst || contentAst;
-      urlInfo.contentEtag = urlInfo.contentEtag || contentEtag;
-    } else {
-      urlInfo.content = content;
-      urlInfo.contentAst = contentAst;
-      urlInfo.contentEtag = contentEtag;
-    }
-    defineGettersOnPropertiesDerivedFromContent();
+    urlInfo.contentAst = contentAst;
+    urlInfo.contentEtag = contentEtag;
+    urlInfo.content = content;
+    defineGettersOnPropertiesDerivedFromContent(urlInfo);
 
     if (!sourcemapsEnabled) {
       return;
@@ -217,7 +231,7 @@ export const createUrlInfoTransformer = ({
       urlInfo.content = content;
       urlInfo.contentAst = contentAst;
       urlInfo.contentEtag = contentEtag;
-      defineGettersOnPropertiesDerivedFromContent();
+      defineGettersOnPropertiesDerivedFromContent(urlInfo);
     }
     if (sourcemapsEnabled && sourcemap) {
       const sourcemapNormalized = normalizeSourcemap(urlInfo, sourcemap);
@@ -312,19 +326,44 @@ export const createUrlInfoTransformer = ({
 };
 
 const defineVolaliteGetter = (object, property, getter) => {
+  const restore = (value) => {
+    Object.defineProperty(object, property, {
+      enumerable: true,
+      configurable: true,
+      writable: true,
+      value,
+    });
+  };
+
   Object.defineProperty(object, property, {
     enumerable: true,
     configurable: true,
-    writable: true,
     get: () => {
       const value = getter();
-      Object.defineProperty(object, property, {
-        enumerable: true,
-        configurable: true,
-        writable: true,
-        value,
-      });
+      restore();
       return value;
     },
+    set: restore,
   });
+};
+
+const getContentAst = (content, type, url) => {
+  if (type === "js_module") {
+    return parseJsWithAcorn({
+      js: content,
+      url,
+      isJsModule: true,
+    });
+  }
+  if (type === "js_classic") {
+    return parseJsWithAcorn({
+      js: content,
+      url,
+    });
+  }
+  return null;
+};
+
+const getContentEtag = (content) => {
+  return bufferToEtag(Buffer.from(content));
 };

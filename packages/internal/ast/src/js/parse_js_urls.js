@@ -48,19 +48,22 @@ import {
   analyzeJSONParseCall,
 } from "./js_static_analysis/json_parse.js";
 
-export const parseJsUrls = async ({
+export const parseJsUrls = ({
   js,
   url,
+  ast,
   isJsModule = false,
   isWebWorker = false,
   inlineContent = true,
 } = {}) => {
   const jsUrls = [];
-  const jsAst = await parseJsWithAcorn({
-    js,
-    url,
-    isJsModule,
-  });
+  if (ast === undefined) {
+    ast = parseJsWithAcorn({
+      js,
+      url,
+      isJsModule,
+    });
+  }
   const onUrl = (jsUrl) => {
     jsUrls.push(jsUrl);
   };
@@ -70,7 +73,7 @@ export const parseJsUrls = async ({
       ...inlineContentInfo,
     });
   };
-  ancestor(jsAst, {
+  ancestor(ast, {
     ImportDeclaration: (node) => {
       analyzeImportDeclaration(node, { onUrl });
     },
