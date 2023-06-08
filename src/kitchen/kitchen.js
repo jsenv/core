@@ -680,7 +680,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
               await context.referenceUtils.readGeneratedSpecifier(
                 sideEffectFileReference,
               );
-              prependContent(
+              await prependContent(
                 urlInfoTransformer,
                 urlInfo,
                 sideEffectFileUrlInfo,
@@ -776,7 +776,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
                 return;
               }
               dependencies.add(sideEffectFileUrlInfo.url);
-              prependContent(
+              await prependContent(
                 urlInfoTransformer,
                 entryPointUrlInfo,
                 sideEffectFileUrlInfo,

@@ -4,6 +4,7 @@ import {
   stringifyHtmlAst,
   createHtmlNode,
   injectHtmlNodeAsEarlyAsPossible,
+  applyBabelPlugins,
 } from "@jsenv/ast";
 
 export const prependContent = (
@@ -11,45 +12,48 @@ export const prependContent = (
   urlInfoReceivingCode,
   urlInfoToPrepend,
 ) => {
-  if (urlInfoReceivingCode.type === "html") {
-    const scriptInjection = prependContentInHtml(
+  if (
+    urlInfoReceivingCode.type === "html" &&
+    urlInfoToPrepend.type === "js_classic"
+  ) {
+    return prependJsClassicInHtml(
+      urlInfoTransformer,
       urlInfoReceivingCode,
       urlInfoToPrepend,
     );
-    urlInfoTransformer.applyTransformations(
-      urlInfoReceivingCode,
-      scriptInjection,
-    );
-    return;
   }
   if (
     urlInfoReceivingCode.type === "js_classic" &&
     urlInfoToPrepend.type === "js_classic"
   ) {
-    const jsInjection = prependContentInJsClassic(
+    return prependJsClassicInJsClassic(
+      urlInfoTransformer,
       urlInfoReceivingCode,
       urlInfoToPrepend,
     );
-    urlInfoTransformer.applyTransformations(urlInfoReceivingCode, jsInjection);
-    return;
   }
   if (
     urlInfoReceivingCode.type === "js_module" &&
     urlInfoToPrepend.type === "js_classic"
   ) {
-    const jsInjection = prependContentInJsModule(
+    return prependJsClassicInJsModule(
+      urlInfoTransformer,
       urlInfoReceivingCode,
       urlInfoToPrepend,
     );
-    urlInfoTransformer.applyTransformations(urlInfoReceivingCode, jsInjection);
-    return;
   }
   // ideally we could for css as well
-  // otherwise throw an error
-  return;
+  // if (urlInfoReceivingCode.type === "css" && urlInfoToPrepend.type === "css") {}
+  throw new Error(
+    `cannot prepend content from "${urlInfoToPrepend.type}" into "${urlInfoReceivingCode.type}"`,
+  );
 };
 
-const prependContentInHtml = (htmlUrlInfo, urlInfoToPrepend) => {
+const prependJsClassicInHtml = (
+  urlInfoTransformer,
+  htmlUrlInfo,
+  urlInfoToPrepend,
+) => {
   const htmlAst = parseHtmlString(htmlUrlInfo.content);
   injectHtmlNodeAsEarlyAsPossible(
     htmlAst,
@@ -63,10 +67,14 @@ const prependContentInHtml = (htmlUrlInfo, urlInfoToPrepend) => {
     "jsenv:core",
   );
   const content = stringifyHtmlAst(htmlAst);
-  return { content };
+  urlInfoTransformer.applyTransformations(htmlUrlInfo, { content });
 };
 
-const prependContentInJsClassic = (jsUrlInfo, urlInfoToPrepend) => {
+const prependJsClassicInJsClassic = (
+  urlInfoTransformer,
+  jsUrlInfo,
+  urlInfoToPrepend,
+) => {
   const magicSource = createMagicSource(jsUrlInfo.content);
   magicSource.prepend(`${urlInfoToPrepend.content}\n\n`);
   const magicResult = magicSource.toContentAndSourcemap();
@@ -74,12 +82,50 @@ const prependContentInJsClassic = (jsUrlInfo, urlInfoToPrepend) => {
     jsUrlInfo.sourcemap,
     magicResult.sourcemap,
   );
-  return {
+  urlInfoTransformer.applyTransformations(jsUrlInfo, {
     content: magicResult.content,
     sourcemap,
-  };
+  });
 };
 
-const prependContentInJsModule = (jsUrlInfo, urlInfoToPrepend) => {
-  // TODO: we must use babel to ensure it's injected after import statements
+const prependJsClassicInJsModule = async (
+  urlInfoTransformer,
+  jsUrlInfo,
+  urlInfoToPrepend,
+) => {
+  const { code, map } = await applyBabelPlugins({
+    babelPlugins: [
+      [
+        babelPluginPrependCodeInJsModule,
+        { codeToPrepend: urlInfoToPrepend.content },
+      ],
+    ],
+    input: jsUrlInfo.content,
+    inputIsJsModule: true,
+    inputUrl: jsUrlInfo.originalUrl,
+  });
+  urlInfoTransformer.applyTransformations(jsUrlInfo, {
+    content: code,
+    sourcemap: map,
+  });
+};
+const babelPluginPrependCodeInJsModule = (babel) => {
+  return {
+    name: "prepend-code-in-js-module",
+    visitor: {
+      Program: (programPath, state) => {
+        const { codeToPrepend } = state.opts;
+        const astToPrepend = babel.parse(codeToPrepend);
+        const bodyNodePaths = programPath.get("body");
+        for (const bodyNodePath of bodyNodePaths) {
+          if (bodyNodePath.node.type === "ImportDeclaration") {
+            continue;
+          }
+          bodyNodePath.insertBefore(astToPrepend.program.body);
+          return;
+        }
+        bodyNodePaths.unshift(...astToPrepend.program.body);
+      },
+    },
+  };
 };

@@ -16,25 +16,24 @@ export const injectVersionMappingsAsGlobal = async ({
   versionMappings,
 }) => {
   if (urlInfo.type === "html") {
-    prependContent(kitchen.urlInfoTransformer, urlInfo, {
+    return prependContent(kitchen.urlInfoTransformer, urlInfo, {
       type: "js_classic",
       content: generateClientCodeForVersionMappings(versionMappings, {
         globalName: "window",
         minification: kitchen.kitchenContext.minification,
       }),
     });
-    return;
   }
   if (urlInfo.type === "js_classic" || urlInfo.type === "js_module") {
-    prependContent(kitchen.urlInfoTransformer, urlInfo, {
+    return prependContent(kitchen.urlInfoTransformer, urlInfo, {
       type: "js_classic",
       content: generateClientCodeForVersionMappings(versionMappings, {
         globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window",
         minification: kitchen.kitchenContext.minification,
       }),
     });
-    return;
   }
+  return null;
 };
 
 const generateClientCodeForVersionMappings = (
