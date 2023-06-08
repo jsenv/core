@@ -8,19 +8,47 @@ import {
   injectHtmlNodeAsEarlyAsPossible,
 } from "@jsenv/ast";
 
-export const prependContent = (urlInfoReceivingCode, urlInfoToPrepend) => {
+export const prependContent = (
+  urlInfoTransformer,
+  urlInfoReceivingCode,
+  urlInfoToPrepend,
+) => {
   if (urlInfoReceivingCode.type === "html") {
-    return prependContentInHtml(urlInfoReceivingCode, urlInfoToPrepend);
+    const scriptInjection = prependContentInHtml(
+      urlInfoReceivingCode,
+      urlInfoToPrepend,
+    );
+    urlInfoTransformer.applyTransformations(
+      urlInfoReceivingCode,
+      scriptInjection,
+    );
+    return;
   }
   if (
-    urlInfoReceivingCode.type === "js_module" ||
-    urlInfoReceivingCode.type === "js_classic"
+    urlInfoReceivingCode.type === "js_classic" &&
+    urlInfoToPrepend.type === "js_classic"
   ) {
-    return prependContentInJs(urlInfoReceivingCode, urlInfoToPrepend);
+    const jsInjection = prependContentInJsClassic(
+      urlInfoReceivingCode,
+      urlInfoToPrepend,
+    );
+    urlInfoTransformer.applyTransformations(urlInfoReceivingCode, jsInjection);
+    return;
+  }
+  if (
+    urlInfoReceivingCode.type === "js_module" &&
+    urlInfoToPrepend.type === "js_classic"
+  ) {
+    const jsInjection = prependContentInJsModule(
+      urlInfoReceivingCode,
+      urlInfoToPrepend,
+    );
+    urlInfoTransformer.applyTransformations(urlInfoReceivingCode, jsInjection);
+    return;
   }
   // ideally we could for css as well
   // otherwise throw an error
-  return null;
+  return;
 };
 
 const prependContentInHtml = (htmlUrlInfo, urlInfoToPrepend) => {
@@ -28,19 +56,19 @@ const prependContentInHtml = (htmlUrlInfo, urlInfoToPrepend) => {
   injectHtmlNodeAsEarlyAsPossible(
     htmlAst,
     createHtmlNode({
-      "tagName": "script",
-      "textContent": urlInfoToPrepend.content,
-      "inlined-from-src": urlInfoToPrepend.url,
+      tagName: "script",
+      textContent: urlInfoToPrepend.content,
+      ...(urlInfoToPrepend.url
+        ? { "inlined-from-src": urlInfoToPrepend.url }
+        : {}),
     }),
     "jsenv:core",
   );
   const content = stringifyHtmlAst(htmlAst);
-  return {
-    content,
-  };
+  return { content };
 };
 
-const prependContentInJs = (jsUrlInfo, urlInfoToPrepend) => {
+const prependContentInJsClassic = (jsUrlInfo, urlInfoToPrepend) => {
   const magicSource = createMagicSource(jsUrlInfo.content);
   magicSource.prepend(`${urlInfoToPrepend.content}\n\n`);
   const magicResult = magicSource.toContentAndSourcemap();
@@ -52,4 +80,8 @@ const prependContentInJs = (jsUrlInfo, urlInfoToPrepend) => {
     content: magicResult.content,
     sourcemap,
   };
+};
+
+const prependContentInJsModule = (jsUrlInfo, urlInfoToPrepend) => {
+  // TODO: we must parse to inject after static imports
 };

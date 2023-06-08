@@ -656,13 +656,10 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
               await context.referenceUtils.readGeneratedSpecifier(
                 sideEffectFileReference,
               );
-              const prependTransformation = prependContent(
+              prependContent(
+                urlInfoTransformer,
                 urlInfo,
                 sideEffectFileUrlInfo,
-              );
-              urlInfoTransformer.applyTransformations(
-                urlInfo,
-                prependTransformation,
               );
               context.referenceUtils.becomesInline(sideEffectFileReference, {
                 specifierLine: 0,
@@ -755,13 +752,10 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
                 return;
               }
               dependencies.add(sideEffectFileUrlInfo.url);
-              const sideEffectFileInjection = prependContent(
+              prependContent(
+                urlInfoTransformer,
                 entryPointUrlInfo,
                 sideEffectFileUrlInfo,
-              );
-              urlInfoTransformer.applyTransformations(
-                entryPointUrlInfo,
-                sideEffectFileInjection,
               );
               await context.referenceUtils.readGeneratedSpecifier(
                 sideEffectFileReference,

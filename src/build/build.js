@@ -1344,8 +1344,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               if (urlInfo.type === "html" && urlInfo.isEntryPoint) {
                 actions.push(async () => {
                   await injectVersionMappingsAsImportmap({
-                    urlInfo,
                     kitchen: finalGraphKitchen,
+                    urlInfo,
                     versionMappings: versionMappingsNeeded,
                   });
                 });
@@ -1361,8 +1361,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               if (urlInfo.isEntryPoint) {
                 actions.push(async () => {
                   await injectVersionMappingsAsGlobal({
-                    urlInfo,
                     kitchen: finalGraphKitchen,
+                    urlInfo,
                     versionMappings: versionMappingsNeeded,
                   });
                 });
