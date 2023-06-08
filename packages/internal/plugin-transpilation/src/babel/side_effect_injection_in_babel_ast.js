@@ -1,10 +1,10 @@
 import { readFileSync } from "node:fs";
 import { injectJsImport } from "@jsenv/ast";
 
-export const injectPolyfillIntoBabelAst = ({
+export const injectSideEffectFileIntoBabelAst = ({
   programPath,
-  polyfillFileUrl,
-  getPolyfillImportSpecifier,
+  sideEffectFileUrl,
+  getSideEffectFileSpecifier,
   babel,
   isJsModule,
   asImport = true,
@@ -12,19 +12,19 @@ export const injectPolyfillIntoBabelAst = ({
   if (isJsModule && asImport) {
     injectJsImport({
       programPath,
-      from: getPolyfillImportSpecifier(polyfillFileUrl),
+      from: getSideEffectFileSpecifier(sideEffectFileUrl),
       sideEffect: true,
     });
     return;
   }
-  const polyfillFileContent = readFileSync(new URL(polyfillFileUrl), "utf8");
-  const polyfillAst = babel.parse(polyfillFileContent);
+  const sidEffectFileContent = readFileSync(new URL(sideEffectFileUrl), "utf8");
+  const sideEffectFileContentAst = babel.parse(sidEffectFileContent);
   if (isJsModule) {
-    injectAstAfterImport(programPath, polyfillAst);
+    injectAstAfterImport(programPath, sideEffectFileContentAst);
     return;
   }
   const bodyNodePaths = programPath.get("body");
-  bodyNodePaths[0].insertBefore(polyfillAst.program.body);
+  bodyNodePaths[0].insertBefore(sideEffectFileContentAst.program.body);
 };
 
 const injectAstAfterImport = (programPath, ast) => {

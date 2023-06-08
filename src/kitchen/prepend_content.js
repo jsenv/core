@@ -1,5 +1,3 @@
-// TODO: reuse to inject versioning
-
 import { createMagicSource, composeTwoSourcemaps } from "@jsenv/sourcemap";
 import {
   parseHtmlString,
@@ -83,5 +81,5 @@ const prependContentInJsClassic = (jsUrlInfo, urlInfoToPrepend) => {
 };
 
 const prependContentInJsModule = (jsUrlInfo, urlInfoToPrepend) => {
-  // TODO: we must parse to inject after static imports
+  // TODO: we must use babel to ensure it's injected after import statements
 };
