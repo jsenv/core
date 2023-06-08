@@ -738,6 +738,13 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           // Case #3: During build
           // during build, files are not executed so it's
           // possible to inject reference when discovering a side effect file
+          if (urlInfo.isEntryPoint) {
+            const [sideEffectFileReference, sideEffectFileUrlInfo] = addRef();
+            return injectAsBannerCodeBeforeFinalize(
+              sideEffectFileReference,
+              sideEffectFileUrlInfo,
+            );
+          }
           const entryPoints = urlGraph.getEntryPoints();
           const [sideEffectFileReference, sideEffectFileUrlInfo] = addRef();
           for (const entryPointUrlInfo of entryPoints) {
