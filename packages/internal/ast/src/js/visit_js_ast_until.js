@@ -7,7 +7,7 @@ export const visitJsAstUntil = (ast, visitors) => {
   let returnValue = null;
   Object.keys(visitors).forEach((key) => {
     visitorsMapped[key] = (node, ...args) => {
-      const visitorReturnValue = visitors[key](...args);
+      const visitorReturnValue = visitors[key](node, ...args);
       if (visitorReturnValue === true) {
         returnValue = node;
         throw stop;

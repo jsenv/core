@@ -111,28 +111,28 @@ export const createUrlInfoTransformer = ({
     urlInfo.originalContentEtag = originalContentEtag;
     if (originalContent !== urlInfo.originalContent) {
       urlInfo.originalContent = originalContent;
-      const originalContentAstDescriptor = Object.getOwnPropertyDescriptor(
-        urlInfo,
-        "originalContentAst",
-      );
-      if (originalContentAstDescriptor.value === undefined) {
-        defineVolaliteGetter(urlInfo, "originalContentAst", () => {
-          return getContentAst(
-            urlInfo.originalContent,
-            urlInfo.type,
-            urlInfo.url,
-          );
-        });
-      }
-      const originalContentEtagDescriptor = Object.getOwnPropertyDescriptor(
-        urlInfo,
-        "originalContentEtag",
-      );
-      if (originalContentEtagDescriptor.value === undefined) {
-        defineVolaliteGetter(urlInfo, "originalContentEtag", () => {
-          return bufferToEtag(Buffer.from(urlInfo.originalContent));
-        });
-      }
+    }
+    const originalContentAstDescriptor = Object.getOwnPropertyDescriptor(
+      urlInfo,
+      "originalContentAst",
+    );
+    if (originalContentAstDescriptor.value === undefined) {
+      defineVolaliteGetter(urlInfo, "originalContentAst", () => {
+        return getContentAst(
+          urlInfo.originalContent,
+          urlInfo.type,
+          urlInfo.url,
+        );
+      });
+    }
+    const originalContentEtagDescriptor = Object.getOwnPropertyDescriptor(
+      urlInfo,
+      "originalContentEtag",
+    );
+    if (originalContentEtagDescriptor.value === undefined) {
+      defineVolaliteGetter(urlInfo, "originalContentEtag", () => {
+        return bufferToEtag(Buffer.from(urlInfo.originalContent));
+      });
     }
 
     urlInfo.contentAst = contentAst;
@@ -340,7 +340,7 @@ const defineVolaliteGetter = (object, property, getter) => {
     configurable: true,
     get: () => {
       const value = getter();
-      restore();
+      restore(value);
       return value;
     },
     set: restore,
