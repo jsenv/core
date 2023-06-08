@@ -255,7 +255,10 @@ const createUrlInfo = (url) => {
     filename: "",
     isEntryPoint: false,
     originalContent: undefined,
+    originalContentAst: undefined,
     content: undefined,
+    contentAst: undefined,
+    contentFinalized: false,
 
     sourcemap: null,
     sourcemapReference: null,

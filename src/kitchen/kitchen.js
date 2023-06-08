@@ -449,12 +449,14 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       }
       let {
         content,
+        contentAst,
         contentType,
+        originalContent = content,
+        originalContentAst = contentAst,
         data,
         type,
         subtype,
         originalUrl,
-        originalContent = content,
         sourcemap,
         filename,
 
@@ -480,15 +482,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         subtype || reference.expectedSubtype || urlInfo.subtypeHint || "";
       // during build urls info are reused and load returns originalUrl/originalContent
       urlInfo.originalUrl = originalUrl || urlInfo.originalUrl;
-      if (originalContent !== urlInfo.originalContent) {
-        urlInfo.originalContentEtag = undefined; // set by "initTransformations"
-      }
-      if (content !== urlInfo.content) {
-        urlInfo.contentEtag = undefined; // set by "applyTransformationsEffects"
-      }
-      urlInfo.originalContent = originalContent;
-      urlInfo.content = content;
-      urlInfo.sourcemap = sourcemap;
       if (data) {
         Object.assign(urlInfo.data, data);
       }
@@ -501,12 +494,23 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       assertFetchedContentCompliance({
         reference,
         urlInfo,
+        content,
       });
       urlInfo.generatedUrl = determineFileUrlForOutDirectory({
         urlInfo,
         context: contextDuringFetch,
       });
-      await urlInfoTransformer.initTransformations(urlInfo, contextDuringFetch);
+      await urlInfoTransformer.initTransformations(
+        urlInfo,
+        {
+          content,
+          contentAst,
+          sourcemap,
+          originalContent,
+          originalContentAst,
+        },
+        contextDuringFetch,
+      );
     } catch (error) {
       throw createFetchUrlContentError({
         pluginController,

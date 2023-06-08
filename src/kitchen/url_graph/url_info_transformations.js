@@ -65,11 +65,67 @@ export const createUrlInfoTransformer = ({
     return sourcemap;
   };
 
-  const initTransformations = async (urlInfo, context) => {
-    urlInfo.contentEtag = undefined;
-    urlInfo.originalContentEtag =
-      urlInfo.originalContentEtag ||
-      bufferToEtag(Buffer.from(urlInfo.originalContent));
+  const defineGettersOnPropertiesDerivedFromContent = (urlInfo) => {
+    if (!urlInfo.contentAst) {
+      defineVolaliteGetter(urlInfo, "contentAst", () => {
+        if (urlInfo.content === urlInfo.originalContent) {
+          return urlInfo.originalContentAst;
+        }
+        // do it
+      });
+    }
+    if (!urlInfo.contentEtag) {
+      defineVolaliteGetter(urlInfo, "contentEtag", () => {
+        if (urlInfo.content === urlInfo.originalContent) {
+          return urlInfo.originalContentEtag;
+        }
+        return bufferToEtag(Buffer.from(urlInfo.content));
+      });
+    }
+  };
+
+  const initTransformations = async (
+    urlInfo,
+    {
+      content,
+      contentAst, // most of the time will be undefined
+      contentEtag, // in practice it's always undefined
+      originalContent,
+      originalContentAst, // most of the time will be undefined
+      originalContentEtag, // in practice always undefined
+    },
+    context,
+  ) => {
+    urlInfo.contentFinalized = false;
+    if (originalContent === urlInfo.originalContent) {
+      urlInfo.originalContentAst =
+        urlInfo.originalContentAst || originalContentAst;
+      urlInfo.originalContentEtag =
+        urlInfo.originalContentEtag || originalContentEtag;
+    } else {
+      urlInfo.originalContent = originalContent;
+      urlInfo.originalContentAst = originalContentAst;
+      urlInfo.originalContentEtag = originalContentEtag;
+    }
+    if (!urlInfo.originalContentAst) {
+      defineVolaliteGetter(urlInfo, "originalContentAst", () => {});
+    }
+    if (!urlInfo.originalContentEtag) {
+      defineVolaliteGetter(urlInfo, "originalContentEtag", () => {
+        return bufferToEtag(Buffer.from(urlInfo.originalContent));
+      });
+    }
+
+    if (content === urlInfo.content) {
+      urlInfo.contentAst = urlInfo.contentAst || contentAst;
+      urlInfo.contentEtag = urlInfo.contentEtag || contentEtag;
+    } else {
+      urlInfo.content = content;
+      urlInfo.contentAst = contentAst;
+      urlInfo.contentEtag = contentEtag;
+    }
+    defineGettersOnPropertiesDerivedFromContent();
+
     if (!sourcemapsEnabled) {
       return;
     }
@@ -93,7 +149,6 @@ export const createUrlInfoTransformer = ({
     generatedUrlObject.searchParams.delete("as_js_classic");
     const urlForSourcemap = generatedUrlObject.href;
     urlInfo.sourcemapGeneratedUrl = generateSourcemapFileUrl(urlForSourcemap);
-
     // already loaded during "load" hook (happens during build)
     if (urlInfo.sourcemap) {
       const [sourcemapReference, sourcemapUrlInfo] = injectSourcemapPlaceholder(
@@ -107,7 +162,6 @@ export const createUrlInfoTransformer = ({
       urlInfo.sourcemap = normalizeSourcemap(urlInfo, urlInfo.sourcemap);
       return;
     }
-
     // check for existing sourcemap for this content
     const sourcemapFound = SOURCEMAP.readComment({
       contentType: urlInfo.contentType,
@@ -144,16 +198,26 @@ export const createUrlInfoTransformer = ({
     if (!transformations) {
       return;
     }
-    const { type, contentType, content, sourcemap, sourcemapIsWrong } =
-      transformations;
+    const {
+      type,
+      contentType,
+      content,
+      contentAst, // undefined most of the time
+      contentEtag, // in practice always undefined
+      sourcemap,
+      sourcemapIsWrong,
+    } = transformations;
     if (type) {
       urlInfo.type = type;
     }
     if (contentType) {
       urlInfo.contentType = contentType;
     }
-    if (content) {
+    if (content && content !== urlInfo.content) {
       urlInfo.content = content;
+      urlInfo.contentAst = contentAst;
+      urlInfo.contentEtag = contentEtag;
+      defineGettersOnPropertiesDerivedFromContent();
     }
     if (sourcemapsEnabled && sourcemap) {
       const sourcemapNormalized = normalizeSourcemap(urlInfo, sourcemap);
@@ -178,12 +242,13 @@ export const createUrlInfoTransformer = ({
       urlInfo.sourcemapIsWrong = urlInfo.sourcemapIsWrong || sourcemapIsWrong;
     }
 
-    if (typeof urlInfo.contentEtag === "string") {
+    if (urlInfo.contentFinalized) {
       applyTransformationsEffects(urlInfo);
     }
   };
 
   const applyTransformationsEffects = (urlInfo) => {
+    urlInfo.contentFinalized = true;
     if (urlInfo.sourcemapReference) {
       if (
         sourcemapsEnabled &&
@@ -237,10 +302,6 @@ export const createUrlInfoTransformer = ({
         urlGraph.deleteUrlInfo(urlInfo.sourcemapReference.url);
       }
     }
-    urlInfo.contentEtag =
-      urlInfo.content === urlInfo.originalContent
-        ? urlInfo.originalContentEtag
-        : bufferToEtag(Buffer.from(urlInfo.content));
   };
 
   return {
@@ -248,4 +309,22 @@ export const createUrlInfoTransformer = ({
     applyTransformations,
     applyTransformationsEffects,
   };
+};
+
+const defineVolaliteGetter = (object, property, getter) => {
+  Object.defineProperty(object, property, {
+    enumerable: true,
+    configurable: true,
+    writable: true,
+    get: () => {
+      const value = getter();
+      Object.defineProperty(object, property, {
+        enumerable: true,
+        configurable: true,
+        writable: true,
+        value,
+      });
+      return value;
+    },
+  });
 };
