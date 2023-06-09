@@ -17,9 +17,9 @@
     "preact": "10.15.1"
   },
   "devDependencies": {
-    "@babel/eslint-parser": "7.21.8",
-    "@babel/plugin-syntax-import-assertions": "7.20.0",
-    "@babel/plugin-transform-react-jsx": "7.22.3",
+    "@babel/eslint-parser": "7.22.5",
+    "@babel/plugin-syntax-import-assertions": "7.22.5",
+    "@babel/plugin-transform-react-jsx": "7.22.5",
     "@jsenv/assert": "2.8.1",
     "@jsenv/core": "36.2.1",
     "@jsenv/plugin-preact": "1.2.31",
@@ -28,12 +28,12 @@
     "@jsenv/eslint-config": "16.3.9",
     "@jsenv/eslint-import-resolver": "0.4.10",
     "@jsenv/test": "1.2.4",
-    "eslint": "8.41.0",
+    "eslint": "8.42.0",
     "eslint-plugin-html": "7.1.0",
     "eslint-plugin-import": "2.27.5",
     "eslint-plugin-react": "7.32.2",
     "open": "9.1.0",
-    "playwright": "1.34.3",
+    "playwright": "1.35.0",
     "prettier": "2.8.8"
   }
 }

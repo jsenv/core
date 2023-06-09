@@ -29,8 +29,8 @@
     "@jsenv/urls": "2.0.0",
     "@jsenv/sourcemap": "1.0.10",
     "acorn-import-assertions": "1.9.0",
-    "lightningcss": "1.20.0",
-    "rollup": "3.23.0"
+    "lightningcss": "1.21.0",
+    "rollup": "3.24.0"
   },
   "peerDependencies": {
     "@jsenv/core": "*"
