@@ -1,17 +1,19 @@
-import objectWithoutPropertiesLoose from "../objectWithoutPropertiesLoose/objectWithoutPropertiesLoose.js";
-export default ((source, excluded) => {
-  if (source === null) return {};
-  var target = objectWithoutPropertiesLoose(source, excluded);
-  var key;
-  var i;
+import objectWithoutPropertiesLoose from "../objectWithoutPropertiesLoose/objectWithoutPropertiesLoose.js"
+
+export default (source, excluded) => {
+  if (source === null) return {}
+
+  var target = objectWithoutPropertiesLoose(source, excluded)
+  var key
+  var i
   if (Object.getOwnPropertySymbols) {
-    var sourceSymbolKeys = Object.getOwnPropertySymbols(source);
+    var sourceSymbolKeys = Object.getOwnPropertySymbols(source)
     for (i = 0; i < sourceSymbolKeys.length; i++) {
-      key = sourceSymbolKeys[i];
-      if (excluded.indexOf(key) >= 0) continue;
-      if (!Object.prototype.propertyIsEnumerable.call(source, key)) continue;
-      target[key] = source[key];
+      key = sourceSymbolKeys[i]
+      if (excluded.indexOf(key) >= 0) continue
+      if (!Object.prototype.propertyIsEnumerable.call(source, key)) continue
+      target[key] = source[key]
     }
   }
-  return target;
-});
+  return target
+}

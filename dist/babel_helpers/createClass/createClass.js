@@ -1,4 +1,5 @@
 import toPropertyKey from "../toPropertyKey/toPropertyKey.js";
+
 function _defineProperties(target, props) {
   for (var i = 0; i < props.length; i++) {
     var descriptor = props[i];
@@ -11,8 +12,6 @@ function _defineProperties(target, props) {
 export default function _createClass(Constructor, protoProps, staticProps) {
   if (protoProps) _defineProperties(Constructor.prototype, protoProps);
   if (staticProps) _defineProperties(Constructor, staticProps);
-  Object.defineProperty(Constructor, "prototype", {
-    writable: false
-  });
+  Object.defineProperty(Constructor, "prototype", { writable: false });
   return Constructor;
 }

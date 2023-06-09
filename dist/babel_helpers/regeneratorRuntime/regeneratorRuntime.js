@@ -16,9 +16,11 @@ export default function _regeneratorRuntime() {
   var exports = {};
   var Op = Object.prototype;
   var hasOwn = Op.hasOwnProperty;
-  var defineProperty = Object.defineProperty || function (obj, key, desc) {
-    obj[key] = desc.value;
-  };
+  var defineProperty =
+    Object.defineProperty ||
+    function (obj, key, desc) {
+      obj[key] = desc.value;
+    };
   var undefined; // More compressible than void 0.
   var $Symbol = typeof Symbol === "function" ? Symbol : {};
   var iteratorSymbol = $Symbol.iterator || "@@iterator";
@@ -29,7 +31,7 @@ export default function _regeneratorRuntime() {
       value: value,
       enumerable: true,
       configurable: true,
-      writable: true
+      writable: true,
     });
     return obj[key];
   }
@@ -38,19 +40,20 @@ export default function _regeneratorRuntime() {
     define({}, "");
   } catch (err) {
     define = function (obj, key, value) {
-      return obj[key] = value;
+      return (obj[key] = value);
     };
   }
   function wrap(innerFn, outerFn, self, tryLocsList) {
     // If outerFn provided and outerFn.prototype is a Generator, then outerFn.prototype instanceof Generator.
-    var protoGenerator = outerFn && outerFn.prototype instanceof Generator ? outerFn : Generator;
+    var protoGenerator =
+      outerFn && outerFn.prototype instanceof Generator ? outerFn : Generator;
     var generator = Object.create(protoGenerator.prototype);
     var context = new Context(tryLocsList || []);
 
     // The ._invoke method unifies the implementations of the .next,
     // .throw, and .return methods.
     defineProperty(generator, "_invoke", {
-      value: makeInvokeMethod(innerFn, self, context)
+      value: makeInvokeMethod(innerFn, self, context),
     });
     return generator;
   }
@@ -70,12 +73,12 @@ export default function _regeneratorRuntime() {
     try {
       return {
         type: "normal",
-        arg: fn.call(obj, arg)
+        arg: fn.call(obj, arg),
       };
     } catch (err) {
       return {
         type: "throw",
-        arg: err
+        arg: err,
       };
     }
   }
@@ -104,22 +107,33 @@ export default function _regeneratorRuntime() {
   });
   var getProto = Object.getPrototypeOf;
   var NativeIteratorPrototype = getProto && getProto(getProto(values([])));
-  if (NativeIteratorPrototype && NativeIteratorPrototype !== Op && hasOwn.call(NativeIteratorPrototype, iteratorSymbol)) {
+  if (
+    NativeIteratorPrototype &&
+    NativeIteratorPrototype !== Op &&
+    hasOwn.call(NativeIteratorPrototype, iteratorSymbol)
+  ) {
     // This environment has a native %IteratorPrototype%; use it instead
     // of the polyfill.
     IteratorPrototype = NativeIteratorPrototype;
   }
-  var Gp = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(IteratorPrototype);
+  var Gp =
+    (GeneratorFunctionPrototype.prototype =
+    Generator.prototype =
+      Object.create(IteratorPrototype));
   GeneratorFunction.prototype = GeneratorFunctionPrototype;
   defineProperty(Gp, "constructor", {
     value: GeneratorFunctionPrototype,
-    configurable: true
+    configurable: true,
   });
   defineProperty(GeneratorFunctionPrototype, "constructor", {
     value: GeneratorFunction,
-    configurable: true
+    configurable: true,
   });
-  GeneratorFunction.displayName = define(GeneratorFunctionPrototype, toStringTagSymbol, "GeneratorFunction");
+  GeneratorFunction.displayName = define(
+    GeneratorFunctionPrototype,
+    toStringTagSymbol,
+    "GeneratorFunction",
+  );
 
   // Helper for defining the .next, .throw, and .return methods of the
   // Iterator interface in terms of a single ._invoke method.
@@ -132,10 +146,12 @@ export default function _regeneratorRuntime() {
   }
   exports.isGeneratorFunction = function (genFun) {
     var ctor = typeof genFun === "function" && genFun.constructor;
-    return ctor ? ctor === GeneratorFunction ||
-    // For the native GeneratorFunction constructor, the best we can
-    // do is to check its .name property.
-    (ctor.displayName || ctor.name) === "GeneratorFunction" : false;
+    return ctor
+      ? ctor === GeneratorFunction ||
+          // For the native GeneratorFunction constructor, the best we can
+          // do is to check its .name property.
+          (ctor.displayName || ctor.name) === "GeneratorFunction"
+      : false;
   };
   exports.mark = function (genFun) {
     if (Object.setPrototypeOf) {
@@ -154,7 +170,7 @@ export default function _regeneratorRuntime() {
   // meant to be awaited.
   exports.awrap = function (arg) {
     return {
-      __await: arg
+      __await: arg,
     };
   };
   function AsyncIterator(generator, PromiseImpl) {
@@ -165,24 +181,34 @@ export default function _regeneratorRuntime() {
       } else {
         var result = record.arg;
         var value = result.value;
-        if (value && typeof value === "object" && hasOwn.call(value, "__await")) {
-          return PromiseImpl.resolve(value.__await).then(function (value) {
-            invoke("next", value, resolve, reject);
-          }, function (err) {
-            invoke("throw", err, resolve, reject);
-          });
+        if (
+          value &&
+          typeof value === "object" &&
+          hasOwn.call(value, "__await")
+        ) {
+          return PromiseImpl.resolve(value.__await).then(
+            function (value) {
+              invoke("next", value, resolve, reject);
+            },
+            function (err) {
+              invoke("throw", err, resolve, reject);
+            },
+          );
         }
-        return PromiseImpl.resolve(value).then(function (unwrapped) {
-          // When a yielded Promise is resolved, its final value becomes
-          // the .value of the Promise<{value,done}> result for the
-          // current iteration.
-          result.value = unwrapped;
-          resolve(result);
-        }, function (error) {
-          // If a rejected Promise was yielded, throw the rejection back
-          // into the async generator function so it can be handled there.
-          return invoke("throw", error, resolve, reject);
-        });
+        return PromiseImpl.resolve(value).then(
+          function (unwrapped) {
+            // When a yielded Promise is resolved, its final value becomes
+            // the .value of the Promise<{value,done}> result for the
+            // current iteration.
+            result.value = unwrapped;
+            resolve(result);
+          },
+          function (error) {
+            // If a rejected Promise was yielded, throw the rejection back
+            // into the async generator function so it can be handled there.
+            return invoke("throw", error, resolve, reject);
+          },
+        );
       }
     }
     var previousPromise;
@@ -192,29 +218,33 @@ export default function _regeneratorRuntime() {
           invoke(method, arg, resolve, reject);
         });
       }
-      return previousPromise =
-      // If enqueue has been called before, then we want to wait until
-      // all previous Promises have been resolved before calling invoke,
-      // so that results are always delivered in the correct order. If
-      // enqueue has not been called before, then it is important to
-      // call invoke immediately, without waiting on a callback to fire,
-      // so that the async generator function has the opportunity to do
-      // any necessary setup in a predictable way. This predictability
-      // is why the Promise constructor synchronously invokes its
-      // executor callback, and why async functions synchronously
-      // execute code before the first await. Since we implement simple
-      // async functions in terms of async generators, it is especially
-      // important to get this right, even though it requires care.
-      previousPromise ? previousPromise.then(callInvokeWithMethodAndArg,
-      // Avoid propagating failures to Promises returned by later
-      // invocations of the iterator.
-      callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg();
+      return (previousPromise =
+        // If enqueue has been called before, then we want to wait until
+        // all previous Promises have been resolved before calling invoke,
+        // so that results are always delivered in the correct order. If
+        // enqueue has not been called before, then it is important to
+        // call invoke immediately, without waiting on a callback to fire,
+        // so that the async generator function has the opportunity to do
+        // any necessary setup in a predictable way. This predictability
+        // is why the Promise constructor synchronously invokes its
+        // executor callback, and why async functions synchronously
+        // execute code before the first await. Since we implement simple
+        // async functions in terms of async generators, it is especially
+        // important to get this right, even though it requires care.
+        previousPromise
+          ? previousPromise.then(
+              callInvokeWithMethodAndArg,
+              // Avoid propagating failures to Promises returned by later
+              // invocations of the iterator.
+              callInvokeWithMethodAndArg,
+            )
+          : callInvokeWithMethodAndArg());
     }
 
     // Define the unified helper method that is used to implement .next,
     // .throw, and .return (see defineIteratorMethods).
     defineProperty(this, "_invoke", {
-      value: enqueue
+      value: enqueue,
     });
   }
   defineIteratorMethods(AsyncIterator.prototype);
@@ -228,11 +258,15 @@ export default function _regeneratorRuntime() {
   // the final result produced by the iterator.
   exports.async = function (innerFn, outerFn, self, tryLocsList, PromiseImpl) {
     if (PromiseImpl === void 0) PromiseImpl = Promise;
-    var iter = new AsyncIterator(wrap(innerFn, outerFn, self, tryLocsList), PromiseImpl);
-    return exports.isGeneratorFunction(outerFn) ? iter // If outerFn is a generator, return the full iterator.
-    : iter.next().then(function (result) {
-      return result.done ? result.value : iter.next();
-    });
+    var iter = new AsyncIterator(
+      wrap(innerFn, outerFn, self, tryLocsList),
+      PromiseImpl,
+    );
+    return exports.isGeneratorFunction(outerFn)
+      ? iter // If outerFn is a generator, return the full iterator.
+      : iter.next().then(function (result) {
+          return result.done ? result.value : iter.next();
+        });
   };
   function makeInvokeMethod(innerFn, self, context) {
     var state = GenStateSuspendedStart;
@@ -284,7 +318,7 @@ export default function _regeneratorRuntime() {
           }
           return {
             value: record.arg,
-            done: context.done
+            done: context.done,
           };
         } else if (record.type === "throw") {
           state = GenStateCompleted;
@@ -325,7 +359,9 @@ export default function _regeneratorRuntime() {
       }
       if (methodName !== "return") {
         context.method = "throw";
-        context.arg = new TypeError("The iterator does not provide a '" + methodName + "' method");
+        context.arg = new TypeError(
+          "The iterator does not provide a '" + methodName + "' method",
+        );
       }
       return ContinueSentinel;
     }
@@ -390,7 +426,7 @@ export default function _regeneratorRuntime() {
   });
   function pushTryEntry(locs) {
     var entry = {
-      tryLoc: locs[0]
+      tryLoc: locs[0],
     };
     if (1 in locs) {
       entry.catchLoc = locs[1];
@@ -411,9 +447,11 @@ export default function _regeneratorRuntime() {
     // The root entry object (effectively a try statement without a catch
     // or a finally block) gives us a place to store values thrown from
     // locations where there is no enclosing try statement.
-    this.tryEntries = [{
-      tryLoc: "root"
-    }];
+    this.tryEntries = [
+      {
+        tryLoc: "root",
+      },
+    ];
     tryLocsList.forEach(pushTryEntry, this);
     this.reset(true);
   }
@@ -467,20 +505,20 @@ export default function _regeneratorRuntime() {
             next.done = true;
             return next;
           };
-        return next.next = next;
+        return (next.next = next);
       }
     }
 
     // Return an iterator with no values.
     return {
-      next: doneResult
+      next: doneResult,
     };
   }
   exports.values = values;
   function doneResult() {
     return {
       value: undefined,
-      done: true
+      done: true,
     };
   }
   Context.prototype = {
@@ -499,7 +537,11 @@ export default function _regeneratorRuntime() {
       if (!skipTempReset) {
         for (var name in this) {
           // Not sure about the optimal order of these conditions:
-          if (name.charAt(0) === "t" && hasOwn.call(this, name) && !isNaN(+name.slice(1))) {
+          if (
+            name.charAt(0) === "t" &&
+            hasOwn.call(this, name) &&
+            !isNaN(+name.slice(1))
+          ) {
             this[name] = undefined;
           }
         }
@@ -566,12 +608,21 @@ export default function _regeneratorRuntime() {
     abrupt: function (type, arg) {
       for (var i = this.tryEntries.length - 1; i >= 0; --i) {
         var entry = this.tryEntries[i];
-        if (entry.tryLoc <= this.prev && hasOwn.call(entry, "finallyLoc") && this.prev < entry.finallyLoc) {
+        if (
+          entry.tryLoc <= this.prev &&
+          hasOwn.call(entry, "finallyLoc") &&
+          this.prev < entry.finallyLoc
+        ) {
           var finallyEntry = entry;
           break;
         }
       }
-      if (finallyEntry && (type === "break" || type === "continue") && finallyEntry.tryLoc <= arg && arg <= finallyEntry.finallyLoc) {
+      if (
+        finallyEntry &&
+        (type === "break" || type === "continue") &&
+        finallyEntry.tryLoc <= arg &&
+        arg <= finallyEntry.finallyLoc
+      ) {
         // Ignore the finally entry if control is not jumping to a
         // location outside the try/catch block.
         finallyEntry = null;
@@ -632,7 +683,7 @@ export default function _regeneratorRuntime() {
       this.delegate = {
         iterator: values(iterable),
         resultName: resultName,
-        nextLoc: nextLoc
+        nextLoc: nextLoc,
       };
       if (this.method === "next") {
         // Deliberately forget the last sent value so that we don't
@@ -640,7 +691,7 @@ export default function _regeneratorRuntime() {
         this.arg = undefined;
       }
       return ContinueSentinel;
-    }
+    },
   };
 
   // Regardless of whether this script is executing as a CommonJS module

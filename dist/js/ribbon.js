@@ -1,7 +1,5 @@
-const injectRibbon = ({
-  text
-}) => {
-  const css = /* css */`
+const injectRibbon = ({ text }) => {
+  const css = /* css */ `
       #jsenv_ribbon_container {
         position: absolute;
         z-index: 1001;
@@ -39,15 +37,22 @@ const injectRibbon = ({
         user-select: none;
       }
     `;
-  const html = /* html */`<div id="jsenv_ribbon_container">
+
+  const html = /* html */ `<div id="jsenv_ribbon_container">
       <style>${css}</style>
       <div id="jsenv_ribbon">
         <div id="jsenv_ribbon_text">${text}</div>
       </div>
     </div>`;
+
   const node = document.createElement("div");
   node.innerHTML = html;
-  const toolbarStateInLocalStorage = localStorage.hasOwnProperty("jsenv_toolbar") ? JSON.parse(localStorage.getItem("jsenv_toolbar")) : {};
+
+  const toolbarStateInLocalStorage = localStorage.hasOwnProperty(
+    "jsenv_toolbar",
+  )
+    ? JSON.parse(localStorage.getItem("jsenv_toolbar"))
+    : {};
   if (toolbarStateInLocalStorage.ribbonDisplayed === false) {
     node.querySelector("#jsenv_ribbon_container").style.display = "none";
   }

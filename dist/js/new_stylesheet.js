@@ -7,22 +7,28 @@
   if (typeof document === "undefined" || "adoptedStyleSheets" in document) {
     return;
   }
+
   var hasShadyCss = "ShadyCSS" in window && !ShadyCSS.nativeShadow;
   var bootstrapper = document.implementation.createHTMLDocument("");
   var closedShadowRootRegistry = new WeakMap();
   var _DOMException = typeof DOMException === "object" ? Error : DOMException;
   var defineProperty = Object.defineProperty;
   var forEach = Array.prototype.forEach;
+
   var importPattern = /@import.+?;?$/gm;
   function rejectImports(contents) {
     var _contents = contents.replace(importPattern, "");
     if (_contents !== contents) {
-      console.warn("@import rules are not allowed here. See https://github.com/WICG/construct-stylesheets/issues/119#issuecomment-588352418");
+      console.warn(
+        "@import rules are not allowed here. See https://github.com/WICG/construct-stylesheets/issues/119#issuecomment-588352418",
+      );
     }
     return _contents.trim();
   }
   function isElementConnected(element) {
-    return "isConnected" in element ? element.isConnected : document.contains(element);
+    return "isConnected" in element
+      ? element.isConnected
+      : document.contains(element);
   }
   function unique(arr) {
     return arr.filter(function (value, index) {
@@ -40,20 +46,37 @@
   function getShadowRoot(element) {
     return element.shadowRoot || closedShadowRootRegistry.get(element);
   }
-  var cssStyleSheetMethods = ["addRule", "deleteRule", "insertRule", "removeRule"];
+
+  var cssStyleSheetMethods = [
+    "addRule",
+    "deleteRule",
+    "insertRule",
+    "removeRule",
+  ];
   var NonConstructedStyleSheet = CSSStyleSheet;
   var nonConstructedProto = NonConstructedStyleSheet.prototype;
   nonConstructedProto.replace = function () {
-    return Promise.reject(new _DOMException("Can't call replace on non-constructed CSSStyleSheets."));
+    return Promise.reject(
+      new _DOMException(
+        "Can't call replace on non-constructed CSSStyleSheets.",
+      ),
+    );
   };
   nonConstructedProto.replaceSync = function () {
-    throw new _DOMException("Failed to execute 'replaceSync' on 'CSSStyleSheet': Can't call replaceSync on non-constructed CSSStyleSheets.");
+    throw new _DOMException(
+      "Failed to execute 'replaceSync' on 'CSSStyleSheet': Can't call replaceSync on non-constructed CSSStyleSheets.",
+    );
   };
   function isCSSStyleSheetInstance(instance) {
-    return typeof instance === "object" ? proto$1.isPrototypeOf(instance) || nonConstructedProto.isPrototypeOf(instance) : false;
+    return typeof instance === "object"
+      ? proto$1.isPrototypeOf(instance) ||
+          nonConstructedProto.isPrototypeOf(instance)
+      : false;
   }
   function isNonConstructedStyleSheetInstance(instance) {
-    return typeof instance === "object" ? nonConstructedProto.isPrototypeOf(instance) : false;
+    return typeof instance === "object"
+      ? nonConstructedProto.isPrototypeOf(instance)
+      : false;
   }
   var $basicStyleElement = new WeakMap();
   var $locations = new WeakMap();
@@ -70,9 +93,12 @@
   }
   function removeAdopterLocation(sheet, location) {
     $adoptersByLocation.get(sheet).delete(location);
-    $locations.set(sheet, $locations.get(sheet).filter(function (_location) {
-      return _location !== location;
-    }));
+    $locations.set(
+      sheet,
+      $locations.get(sheet).filter(function (_location) {
+        return _location !== location;
+      }),
+    );
   }
   function restyleAdopter(sheet, adopter) {
     requestAnimationFrame(function () {
@@ -124,7 +150,7 @@
     get: function cssRules() {
       checkInvocationCorrectness(this);
       return $basicStyleElement.get(this).sheet.cssRules;
-    }
+    },
   });
   defineProperty(proto$1, "media", {
     configurable: true,
@@ -132,17 +158,14 @@
     get: function media() {
       checkInvocationCorrectness(this);
       return $basicStyleElement.get(this).sheet.media;
-    }
+    },
   });
   cssStyleSheetMethods.forEach(function (method) {
     proto$1[method] = function () {
       var self = this;
       checkInvocationCorrectness(self);
       var args = arguments;
-      $appliedMethods.get(self).push({
-        method: method,
-        args: args
-      });
+      $appliedMethods.get(self).push({ method: method, args: args });
       $locations.get(self).forEach(function (location) {
         if (location.isConnected()) {
           var sheet = getAdopterByLocation(self, location).sheet;
@@ -155,11 +178,12 @@
   });
   defineProperty(ConstructedStyleSheet, Symbol.hasInstance, {
     configurable: true,
-    value: isCSSStyleSheetInstance
+    value: isCSSStyleSheetInstance,
   });
+
   var defaultObserverOptions = {
     childList: true,
-    subtree: true
+    subtree: true,
   };
   var locations = new WeakMap();
   function getAssociatedLocation(element) {
@@ -179,14 +203,22 @@
       },
       set: function (sheets) {
         getAssociatedLocation(this).update(sheets);
-      }
+      },
     });
   }
   function traverseWebComponents(node, callback) {
-    var iter = document.createNodeIterator(node, NodeFilter.SHOW_ELEMENT, function (foundNode) {
-      return getShadowRoot(foundNode) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-    }, null, false);
-    for (var next = void 0; next = iter.nextNode();) {
+    var iter = document.createNodeIterator(
+      node,
+      NodeFilter.SHOW_ELEMENT,
+      function (foundNode) {
+        return getShadowRoot(foundNode)
+          ? NodeFilter.FILTER_ACCEPT
+          : NodeFilter.FILTER_REJECT;
+      },
+      null,
+      false,
+    );
+    for (var next = void 0; (next = iter.nextNode()); ) {
       callback(getShadowRoot(next));
     }
   }
@@ -194,9 +226,12 @@
   var $uniqueSheets = new WeakMap();
   var $observer = new WeakMap();
   function isExistingAdopter(self, element) {
-    return element instanceof HTMLStyleElement && $uniqueSheets.get(self).some(function (sheet) {
-      return getAdopterByLocation(sheet, self);
-    });
+    return (
+      element instanceof HTMLStyleElement &&
+      $uniqueSheets.get(self).some(function (sheet) {
+        return getAdopterByLocation(sheet, self);
+      })
+    );
   }
   function getAdopterContainer(self) {
     var element = $element.get(self);
@@ -209,7 +244,9 @@
     var container = getAdopterContainer(self);
     observer.disconnect();
     sheets.forEach(function (sheet) {
-      styleList.appendChild(getAdopterByLocation(sheet, self) || addAdopterLocation(sheet, self));
+      styleList.appendChild(
+        getAdopterByLocation(sheet, self) || addAdopterLocation(sheet, self),
+      );
     });
     container.insertBefore(styleList, null);
     observer.observe(container, defaultObserverOptions);
@@ -222,42 +259,47 @@
     self.sheets = [];
     $element.set(self, element);
     $uniqueSheets.set(self, []);
-    $observer.set(self, new MutationObserver(function (mutations, observer) {
-      if (!document) {
-        observer.disconnect();
-        return;
-      }
-      mutations.forEach(function (mutation) {
-        if (!hasShadyCss) {
-          forEach.call(mutation.addedNodes, function (node) {
+    $observer.set(
+      self,
+      new MutationObserver(function (mutations, observer) {
+        if (!document) {
+          observer.disconnect();
+          return;
+        }
+        mutations.forEach(function (mutation) {
+          if (!hasShadyCss) {
+            forEach.call(mutation.addedNodes, function (node) {
+              if (!(node instanceof Element)) {
+                return;
+              }
+              traverseWebComponents(node, function (root) {
+                getAssociatedLocation(root).connect();
+              });
+            });
+          }
+          forEach.call(mutation.removedNodes, function (node) {
             if (!(node instanceof Element)) {
               return;
             }
-            traverseWebComponents(node, function (root) {
-              getAssociatedLocation(root).connect();
-            });
+            if (isExistingAdopter(self, node)) {
+              adopt(self);
+            }
+            if (!hasShadyCss) {
+              traverseWebComponents(node, function (root) {
+                getAssociatedLocation(root).disconnect();
+              });
+            }
           });
-        }
-        forEach.call(mutation.removedNodes, function (node) {
-          if (!(node instanceof Element)) {
-            return;
-          }
-          if (isExistingAdopter(self, node)) {
-            adopt(self);
-          }
-          if (!hasShadyCss) {
-            traverseWebComponents(node, function (root) {
-              getAssociatedLocation(root).disconnect();
-            });
-          }
         });
-      });
-    }));
+      }),
+    );
   }
   Location.prototype = {
     isConnected: function () {
       var element = $element.get(this);
-      return element instanceof Document ? element.readyState !== "loading" : isElementConnected(element.host);
+      return element instanceof Document
+        ? element.readyState !== "loading"
+        : isElementConnected(element.host);
     },
     connect: function () {
       var container = getAdopterContainer(this);
@@ -274,15 +316,28 @@
     },
     update: function (sheets) {
       var self = this;
-      var locationType = $element.get(self) === document ? "Document" : "ShadowRoot";
+      var locationType =
+        $element.get(self) === document ? "Document" : "ShadowRoot";
       if (!Array.isArray(sheets)) {
-        throw new TypeError("Failed to set the 'adoptedStyleSheets' property on " + locationType + ": Iterator getter is not callable.");
+        throw new TypeError(
+          "Failed to set the 'adoptedStyleSheets' property on " +
+            locationType +
+            ": Iterator getter is not callable.",
+        );
       }
       if (!sheets.every(isCSSStyleSheetInstance)) {
-        throw new TypeError("Failed to set the 'adoptedStyleSheets' property on " + locationType + ": Failed to convert value to 'CSSStyleSheet'");
+        throw new TypeError(
+          "Failed to set the 'adoptedStyleSheets' property on " +
+            locationType +
+            ": Failed to convert value to 'CSSStyleSheet'",
+        );
       }
       if (sheets.some(isNonConstructedStyleSheetInstance)) {
-        throw new TypeError("Failed to set the 'adoptedStyleSheets' property on " + locationType + ": Can't adopt non-constructed stylesheets");
+        throw new TypeError(
+          "Failed to set the 'adoptedStyleSheets' property on " +
+            locationType +
+            ": Can't adopt non-constructed stylesheets",
+        );
       }
       self.sheets = sheets;
       var oldUniqueSheets = $uniqueSheets.get(self);
@@ -296,8 +351,9 @@
       if (self.isConnected() && uniqueSheets.length > 0) {
         adopt(self);
       }
-    }
+    },
   };
+
   window.CSSStyleSheet = ConstructedStyleSheet;
   attachAdoptedStyleSheetProperty(Document);
   if ("ShadowRoot" in window) {
@@ -316,6 +372,9 @@
   if (documentLocation.isConnected()) {
     documentLocation.connect();
   } else {
-    document.addEventListener("DOMContentLoaded", documentLocation.connect.bind(documentLocation));
+    document.addEventListener(
+      "DOMContentLoaded",
+      documentLocation.connect.bind(documentLocation),
+    );
   }
 })();
