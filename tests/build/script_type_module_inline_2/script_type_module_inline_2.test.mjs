@@ -1,10 +1,11 @@
 import { assert } from "@jsenv/assert";
 
 import { build } from "@jsenv/core";
+import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
-const test = async (params) => {
+const test = async ({ name, ...params }) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -14,6 +15,10 @@ const test = async (params) => {
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
     ...params,
   });
+  takeDirectorySnapshot(
+    new URL("./dist/", import.meta.url),
+    new URL(`./snapshots/${name}/`, import.meta.url),
+  );
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
   });
@@ -30,10 +35,17 @@ const test = async (params) => {
 
 // support for <script type="module">
 await test({
+  name: "0_supported",
+  runtimeCompat: { chrome: "89" },
+});
+// no support for <script type="module">
+await test({
+  name: "1_not_supported",
   runtimeCompat: { chrome: "64" },
 });
-// no support <script type="module">
+// no support <script type="module"> + sourcemap as file
 await test({
+  name: "2_not_supported_sourcemap_as_file",
   runtimeCompat: { chrome: "60" },
   // At some point generating sourcemap in this scenario was throwing an error
   // because the sourcemap for js module files where not generated

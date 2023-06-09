@@ -37,7 +37,7 @@ export const jsenvPluginInliningAsDataUrl = () => {
           const contentAsBase64 = Buffer.from(urlInfo.content).toString(
             "base64",
           );
-          const specifier = DATA_URL.stringify({
+          let specifier = DATA_URL.stringify({
             mediaType: urlInfo.contentType,
             base64Flag: true,
             data: contentAsBase64,
