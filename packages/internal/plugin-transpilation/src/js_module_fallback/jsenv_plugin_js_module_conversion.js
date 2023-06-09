@@ -96,7 +96,7 @@ export const jsenvPluginJsModuleConversion = ({
           specifier: jsModuleReference.url,
           expectedType: "js_module",
         });
-      } else if (context.build && jsModuleUrlInfo.dependents.size === 0) {
+      } else if (context.build && !context.urlGraph.isUsed(jsModuleUrlInfo)) {
         context.urlGraph.deleteUrlInfo(jsModuleUrlInfo.url);
       }
 

@@ -593,7 +593,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         if (
           currentUrlInfo &&
           currentUrlInfo !== newUrlInfo &&
-          currentUrlInfo.dependents.size === 0
+          !urlGraph.isUsed(currentUrlInfo)
         ) {
           context.urlGraph.deleteUrlInfo(currentReference.url);
         }

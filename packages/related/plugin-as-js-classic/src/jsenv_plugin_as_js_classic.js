@@ -71,7 +71,7 @@ export const jsenvPluginAsJsClassic = () => {
       } else if (context.build) {
         jsModuleBundledUrlInfo.sourceUrls.forEach((sourceUrl) => {
           const sourceUrlInfo = context.urlGraph.getUrlInfo(sourceUrl);
-          if (sourceUrlInfo && sourceUrlInfo.dependents.size === 0) {
+          if (sourceUrlInfo && !context.urlGraph.isUsed(sourceUrlInfo)) {
             context.urlGraph.deleteUrlInfo(sourceUrl);
           }
         });

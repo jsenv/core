@@ -773,7 +773,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           // happens for:
           // - js import assertions
           // - as_js_classic
-          if (!isUsed(rawUrlInfo, rawGraph)) {
+          if (!rawGraph.isUsed(rawUrlInfo)) {
             rawGraph.deleteUrlInfo(rawUrlInfo.url);
             return;
           }
@@ -1552,7 +1552,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       delete_unused_urls: {
         const actions = [];
         GRAPH_VISITOR.forEach(finalGraph, (urlInfo) => {
-          if (!isUsed(urlInfo, finalGraph)) {
+          if (!finalGraph.isUsed(urlInfo)) {
             actions.push(() => {
               finalGraph.deleteUrlInfo(urlInfo.url);
             });
@@ -1801,34 +1801,6 @@ const injectVersionIntoBuildUrl = ({ buildUrl, version, versioningMethod }) => {
   const versionedFilename = `${basename}-${version}${extension}`;
   const versionedUrl = setUrlFilename(buildUrl, versionedFilename);
   return versionedUrl;
-};
-
-const isUsed = (urlInfo, urlGraph) => {
-  // nothing uses this url anymore
-  // - versioning update inline content
-  // - file converted for import assertion or js_classic conversion
-  // - urlInfo for a file that is now inlined
-  if (urlInfo.isEntryPoint) {
-    return true;
-  }
-  if (urlInfo.type === "sourcemap") {
-    return true;
-  }
-  // check if there is a valid reference to this urlInfo
-  for (const dependentUrl of urlInfo.dependents) {
-    const dependentUrlInfo = urlGraph.getUrlInfo(dependentUrl);
-    for (const reference of dependentUrlInfo.references) {
-      if (reference.url === urlInfo.url) {
-        if (!reference.isInline && reference.next && reference.next.isInline) {
-          // the url info was inlined, an other reference is required
-          // to consider the non-inlined urlInfo as used
-          continue;
-        }
-        return true;
-      }
-    }
-  }
-  return false;
 };
 
 const canUseVersionedUrl = (urlInfo) => {

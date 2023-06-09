@@ -193,6 +193,38 @@ export const createUrlGraph = ({ name = "anonymous" } = {}) => {
     return entryPoints;
   };
 
+  const isUsed = (urlInfo) => {
+    // nothing uses this url anymore
+    // - versioning update inline content
+    // - file converted for import assertion or js_classic conversion
+    // - urlInfo for a file that is now inlined
+    if (urlInfo.isEntryPoint) {
+      return true;
+    }
+    // if (urlInfo.type === "sourcemap") {
+    //   return true;
+    // }
+    // check if there is a valid reference to this urlInfo
+    for (const dependentUrl of urlInfo.dependents) {
+      const dependentUrlInfo = getUrlInfo(dependentUrl);
+      for (const reference of dependentUrlInfo.references) {
+        if (reference.url === urlInfo.url) {
+          if (
+            !reference.isInline &&
+            reference.next &&
+            reference.next.isInline
+          ) {
+            // the url info was inlined, an other reference is required
+            // to consider the non-inlined urlInfo as used
+            continue;
+          }
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
   return {
     name,
     createUrlInfoCallbackRef,
@@ -204,6 +236,7 @@ export const createUrlGraph = ({ name = "anonymous" } = {}) => {
     deleteUrlInfo,
     getParentIfInline,
     getEntryPoints,
+    isUsed,
 
     inferReference,
     updateReferences,
