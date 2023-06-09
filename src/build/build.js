@@ -402,9 +402,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         ...(lineBreakNormalization
           ? [jsenvPluginLineBreakNormalization()]
           : []),
-        jsenvPluginJsModuleFallback({
-          systemJsInjection: true,
-        }),
+        jsenvPluginJsModuleFallback(),
         jsenvPluginInlining(),
         {
           name: "jsenv:build_shape",
