@@ -70,6 +70,7 @@ export const createKitchen = ({
     runtimeCompat,
     clientRuntimeCompat,
     systemJsTranspilation,
+    // TODO: memoize both isSupportedOn helpers
     isSupportedOnCurrentClients: (feature) => {
       return RUNTIME_COMPAT.isSupported(clientRuntimeCompat, feature);
     },

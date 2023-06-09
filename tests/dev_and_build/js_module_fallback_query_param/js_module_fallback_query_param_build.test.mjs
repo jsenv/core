@@ -1,6 +1,5 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { assert } from "@jsenv/assert";
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 
 import { build } from "@jsenv/core";
 import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
@@ -9,7 +8,7 @@ import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
 const test = async ({ name, ...params }) => {
   await build({
-    logLevel: "debug",
+    logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
@@ -49,22 +48,19 @@ await test({
   name: "0_supported_no_versioning",
   runtimeCompat: { chrome: "89" },
   versioning: false,
-  plugins: [jsenvPluginBundling()],
 });
 // support for <script type="module">
-// await test({
-//   name: "1_supported",
-//   runtimeCompat: { chrome: "89" },
-//   plugins: [jsenvPluginBundling()],
-// });
-// // support for <script type="module"> + no bundling
-// await test({
-//   name: "2_supported_no_bundling",
-//   runtimeCompat: { chrome: "89" },
-// });
-// // without support for <script type="module">
-// await test({
-//   name: "3_not_supported",
-//   runtimeCompat: { chrome: "55" },
-//   plugins: [jsenvPluginBundling()],
-// });
+await test({
+  name: "1_supported",
+  runtimeCompat: { chrome: "89" },
+});
+// support for <script type="module"> + no bundling
+await test({
+  name: "2_supported_no_bundling",
+  runtimeCompat: { chrome: "89" },
+});
+// without support for <script type="module">
+await test({
+  name: "3_not_supported",
+  runtimeCompat: { chrome: "55" },
+});

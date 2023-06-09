@@ -193,18 +193,7 @@ export const createUrlGraph = ({ name = "anonymous" } = {}) => {
     return entryPoints;
   };
 
-  const isUsed = (urlInfo) => {
-    // nothing uses this url anymore
-    // - versioning update inline content
-    // - file converted for import assertion or js_classic conversion
-    // - urlInfo for a file that is now inlined
-    if (urlInfo.isEntryPoint) {
-      return true;
-    }
-    // if (urlInfo.type === "sourcemap") {
-    //   return true;
-    // }
-    // check if there is a valid reference to this urlInfo
+  const hasDependent = (urlInfo) => {
     for (const dependentUrl of urlInfo.dependents) {
       const dependentUrlInfo = getUrlInfo(dependentUrl);
       for (const reference of dependentUrlInfo.references) {
@@ -225,6 +214,24 @@ export const createUrlGraph = ({ name = "anonymous" } = {}) => {
     return false;
   };
 
+  const isUsed = (urlInfo) => {
+    // nothing uses this url anymore
+    // - versioning update inline content
+    // - file converted for import assertion or js_classic conversion
+    // - urlInfo for a file that is now inlined
+    if (urlInfo.isEntryPoint) {
+      return true;
+    }
+    // if (urlInfo.type === "sourcemap") {
+    //   return true;
+    // }
+    // check if there is a valid reference to this urlInfo
+    if (hasDependent(urlInfo)) {
+      return true;
+    }
+    return false;
+  };
+
   return {
     name,
     createUrlInfoCallbackRef,
@@ -236,6 +243,7 @@ export const createUrlGraph = ({ name = "anonymous" } = {}) => {
     deleteUrlInfo,
     getParentIfInline,
     getEntryPoints,
+    hasDependent,
     isUsed,
 
     inferReference,

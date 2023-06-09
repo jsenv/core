@@ -22,7 +22,7 @@ console.log({
 });
 
 window.getResult = async () => {
-  const { answer } = await import("./file.js");
+  const { answer } = await import("./answer.js");
   await new Promise((resolve) => {
     setTimeout(resolve, 100);
   });

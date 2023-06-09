@@ -386,322 +386,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     const bundleUrlInfos = {};
     const bundlers = {};
     const finalGraph = createUrlGraph();
-    const finalGraphKitchen = createKitchen({
-      logLevel,
-      rootDirectoryUrl: buildDirectoryUrl,
-      // here most plugins are not there
-      // - no external plugin
-      // - no plugin putting reference.mustIgnore on https urls
-      // At this stage it's only about redirecting urls to the build directory
-      // consequently only a subset or urls are supported
-      supportedProtocols: ["file:", "data:", "virtual:", "ignore:"],
-      ignore,
-      ignoreProtocol: versioning ? "keep" : "remove",
-      urlGraph: finalGraph,
-      build: true,
-      runtimeCompat,
-      ...contextSharedDuringBuild,
-      plugins: [
-        jsenvPluginReferenceAnalysis({
-          ...referenceAnalysis,
-          fetchInlineUrls: false,
-        }),
-        ...(lineBreakNormalization
-          ? [jsenvPluginLineBreakNormalization()]
-          : []),
-        jsenvPluginJsModuleFallback(),
-        jsenvPluginInlining(),
-        {
-          name: "jsenv:build_shape",
-          appliesDuring: "build",
-          resolveReference: (reference) => {
-            const getUrl = () => {
-              if (reference.type === "filesystem") {
-                const parentRawUrl = buildDirectoryRedirections.get(
-                  reference.parentUrl,
-                );
-                const parentUrl = ensurePathnameTrailingSlash(parentRawUrl);
-                return new URL(reference.specifier, parentUrl).href;
-              }
-              if (reference.specifier[0] === "/") {
-                return new URL(reference.specifier.slice(1), buildDirectoryUrl)
-                  .href;
-              }
-              return new URL(
-                reference.specifier,
-                reference.baseUrl || reference.parentUrl,
-              ).href;
-            };
-            let url = getUrl();
-            //  url = rawRedirections.get(url) || url
-            url = bundleRedirections.get(url) || url;
-            url = bundleInternalRedirections.get(url) || url;
-            return url;
-          },
-          // redirecting references into the build directory
-          redirectReference: (reference) => {
-            if (!reference.url.startsWith("file:")) {
-              return null;
-            }
-            // referenced by resource hint
-            // -> keep it untouched, it will be handled by "resync_resource_hints"
-            if (reference.isResourceHint) {
-              return reference.original ? reference.original.url : null;
-            }
-            // already a build url
-            const rawUrl = buildDirectoryRedirections.get(reference.url);
-            if (rawUrl) {
-              return reference.url;
-            }
-            if (reference.isInline) {
-              const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl);
-              const parentRawUrl = parentUrlInfo.originalUrl;
-              const rawUrlInfo = GRAPH_VISITOR.find(rawGraph, (rawUrlInfo) => {
-                const { inlineUrlSite } = rawUrlInfo;
-                // not inline
-                if (!inlineUrlSite) return false;
-                if (
-                  inlineUrlSite.url === parentRawUrl &&
-                  inlineUrlSite.line === reference.specifierLine &&
-                  inlineUrlSite.column === reference.specifierColumn
-                ) {
-                  return true;
-                }
-                if (rawUrlInfo.content === reference.content) {
-                  return true;
-                }
-                if (rawUrlInfo.originalContent === reference.content) {
-                  return true;
-                }
-                return false;
-              });
-
-              if (!rawUrlInfo) {
-                // generated during final graph
-                // (happens for JSON.parse injected for import assertions for instance)
-                // throw new Error(`cannot find raw url for "${reference.url}"`)
-                return reference.url;
-              }
-              const buildUrl = buildUrlsGenerator.generate(reference.url, {
-                urlInfo: rawUrlInfo,
-                parentUrlInfo,
-              });
-              associateBuildUrlAndRawUrl(
-                buildUrl,
-                rawUrlInfo.url,
-                "inline content",
-              );
-              return buildUrl;
-            }
-            // from "js_module_fallback":
-            //   - injecting "?js_module_fallback" for the first time
-            //   - injecting "?js_module_fallback" because the parentUrl has it
-            if (reference.original) {
-              const urlBeforeRedirect = reference.original.url;
-              const urlAfterRedirect = reference.url;
-              const isEntryPoint =
-                reference.isEntryPoint ||
-                isWebWorkerEntryPointReference(reference);
-              // the url info do not exists yet (it will be created after this "redirectReference" hook)
-              // And the content will be generated when url is cooked by url graph loader.
-              // Here we just want to reserve an url for that file
-              const urlInfo = {
-                data: reference.data,
-                isEntryPoint,
-                type: reference.expectedType,
-                subtype: reference.expectedSubtype,
-                filename: reference.filename,
-              };
-              if (urlIsInsideOf(urlBeforeRedirect, buildDirectoryUrl)) {
-                // the redirection happened on a build url, happens due to:
-                // 1. bundling
-                const buildUrl = buildUrlsGenerator.generate(urlAfterRedirect, {
-                  urlInfo,
-                });
-                finalRedirections.set(urlBeforeRedirect, buildUrl);
-                return buildUrl;
-              }
-              const rawUrl = urlAfterRedirect;
-              const buildUrl = buildUrlsGenerator.generate(rawUrl, {
-                urlInfo,
-              });
-              finalRedirections.set(urlBeforeRedirect, buildUrl);
-              associateBuildUrlAndRawUrl(
-                buildUrl,
-                rawUrl,
-                "redirected during postbuild",
-              );
-              return buildUrl;
-            }
-            // from "js_module_fallback":
-            //   - to inject "s.js"
-            if (reference.injected) {
-              const buildUrl = buildUrlsGenerator.generate(reference.url, {
-                urlInfo: {
-                  data: {},
-                  type: "js_classic",
-                },
-              });
-              associateBuildUrlAndRawUrl(
-                buildUrl,
-                reference.url,
-                "injected during postbuild",
-              );
-              finalRedirections.set(buildUrl, buildUrl);
-              return buildUrl;
-            }
-            const rawUrlInfo = rawGraph.getUrlInfo(reference.url);
-            const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl);
-            // files from root directory but not given to rollup nor postcss
-            if (rawUrlInfo) {
-              const referencedUrlObject = new URL(reference.url);
-              referencedUrlObject.searchParams.delete("as_js_classic");
-              const buildUrl = buildUrlsGenerator.generate(
-                referencedUrlObject.href,
-                {
-                  urlInfo: rawUrlInfo,
-                  parentUrlInfo,
-                },
-              );
-              associateBuildUrlAndRawUrl(buildUrl, rawUrlInfo.url, "raw file");
-              if (buildUrl.includes("?")) {
-                associateBuildUrlAndRawUrl(
-                  asUrlWithoutSearch(buildUrl),
-                  rawUrlInfo.url,
-                  "raw file",
-                );
-              }
-              return buildUrl;
-            }
-            if (reference.type === "sourcemap_comment") {
-              // inherit parent build url
-              return generateSourcemapFileUrl(reference.parentUrl);
-            }
-            // files generated during the final graph:
-            // - sourcemaps
-            // const finalUrlInfo = finalGraph.getUrlInfo(url)
-            const buildUrl = buildUrlsGenerator.generate(reference.url, {
-              urlInfo: {
-                data: {},
-                type: "asset",
-              },
-            });
-            return buildUrl;
-          },
-          formatReference: (reference) => {
-            if (!reference.generatedUrl.startsWith("file:")) {
-              return null;
-            }
-            if (reference.isResourceHint) {
-              return null;
-            }
-            if (!urlIsInsideOf(reference.generatedUrl, buildDirectoryUrl)) {
-              throw new Error(
-                `urls should be inside build directory at this stage, found "${reference.url}"`,
-              );
-            }
-            const generatedUrlObject = new URL(reference.generatedUrl);
-            generatedUrlObject.searchParams.delete("js_classic");
-            generatedUrlObject.searchParams.delete("js_module");
-            generatedUrlObject.searchParams.delete("js_module_fallback");
-            generatedUrlObject.searchParams.delete("as_js_classic");
-            generatedUrlObject.searchParams.delete("as_js_module");
-            generatedUrlObject.searchParams.delete("as_json_module");
-            generatedUrlObject.searchParams.delete("as_css_module");
-            generatedUrlObject.searchParams.delete("as_text_module");
-            generatedUrlObject.hash = "";
-            const generatedUrl = generatedUrlObject.href;
-            const specifier = asFormattedBuildUrl(generatedUrl, reference);
-            buildUrls.set(specifier, reference.generatedUrl);
-            return specifier;
-          },
-          fetchUrlContent: async (finalUrlInfo, context) => {
-            const fromBundleOrRawGraph = (url) => {
-              const bundleUrlInfo = bundleUrlInfos[url];
-              if (bundleUrlInfo) {
-                return bundleUrlInfo;
-              }
-              const rawUrl = buildDirectoryRedirections.get(url) || url;
-              const rawUrlInfo = rawGraph.getUrlInfo(rawUrl);
-              if (!rawUrlInfo) {
-                throw new Error(
-                  createDetailedMessage(`Cannot find url`, {
-                    url,
-                    "raw urls": Array.from(buildDirectoryRedirections.values()),
-                    "build urls": Array.from(buildDirectoryRedirections.keys()),
-                  }),
-                );
-              }
-              // logger.debug(`fetching from raw graph ${url}`)
-              if (rawUrlInfo.isInline) {
-                // Inline content, such as <script> inside html, is transformed during the previous phase.
-                // If we read the inline content it would be considered as the original content.
-                // - It could be "fixed" by taking into account sourcemap and consider sourcemap sources
-                //   as the original content.
-                //   - But it would not work when sourcemap are not generated
-                //   - would be a bit slower
-                // - So instead of reading the inline content directly, we search into raw graph
-                //   to get "originalContent" and "sourcemap"
-                finalUrlInfo.type = rawUrlInfo.type;
-                finalUrlInfo.subtype = rawUrlInfo.subtype;
-                return rawUrlInfo;
-              }
-              return rawUrlInfo;
-            };
-            const { reference } = context;
-            // reference injected during "postbuild":
-            // - happens for "js_module_fallback" injecting "s.js"
-            if (reference.injected) {
-              const [ref, rawUrlInfo] = rawGraphKitchen.injectReference({
-                ...reference,
-                parentUrl: buildDirectoryRedirections.get(reference.parentUrl),
-              });
-              await rawGraphKitchen.cook(rawUrlInfo, { reference: ref });
-              return rawUrlInfo;
-            }
-            if (reference.isInline) {
-              if (reference.prev && !reference.prev.isInline) {
-                const urlBeforeRedirect =
-                  findKey(finalRedirections, reference.prev.url) ||
-                  reference.prev.url;
-                return fromBundleOrRawGraph(urlBeforeRedirect);
-              }
-              return fromBundleOrRawGraph(reference.url);
-            }
-            // reference updated during "postbuild":
-            // - happens for "js_module_fallback"
-            if (reference.original) {
-              return fromBundleOrRawGraph(reference.original.url);
-            }
-            return fromBundleOrRawGraph(finalUrlInfo.url);
-          },
-        },
-        {
-          name: "jsenv:optimize",
-          appliesDuring: "build",
-          transformUrlContent: async (urlInfo, context) => {
-            await rawGraphKitchen.pluginController.callAsyncHooks(
-              "optimizeUrlContent",
-              urlInfo,
-              context,
-              (optimizeReturnValue) => {
-                finalGraphKitchen.urlInfoTransformer.applyTransformations(
-                  urlInfo,
-                  optimizeReturnValue,
-                );
-              },
-            );
-          },
-        },
-      ],
-      sourcemaps,
-      sourcemapsSourcesContent,
-      sourcemapsSourcesRelative: !versioning,
-      outDirectoryUrl: outDirectoryUrl
-        ? new URL("postbuild/", outDirectoryUrl)
-        : undefined,
-    });
-    const finalEntryUrls = [];
+    let finalGraphKitchen;
+    let finalEntryUrls = [];
 
     craft: {
       const generateSourceGraph = createBuildTask("generate source graph");
@@ -735,6 +421,341 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     }
 
     shape: {
+      finalGraphKitchen = createKitchen({
+        logLevel,
+        rootDirectoryUrl: buildDirectoryUrl,
+        // here most plugins are not there
+        // - no external plugin
+        // - no plugin putting reference.mustIgnore on https urls
+        // At this stage it's only about redirecting urls to the build directory
+        // consequently only a subset or urls are supported
+        supportedProtocols: ["file:", "data:", "virtual:", "ignore:"],
+        ignore,
+        ignoreProtocol: versioning ? "keep" : "remove",
+        urlGraph: finalGraph,
+        build: true,
+        runtimeCompat,
+        ...contextSharedDuringBuild,
+        plugins: [
+          jsenvPluginReferenceAnalysis({
+            ...referenceAnalysis,
+            fetchInlineUrls: false,
+          }),
+          ...(lineBreakNormalization
+            ? [jsenvPluginLineBreakNormalization()]
+            : []),
+          jsenvPluginJsModuleFallback(),
+          jsenvPluginInlining(),
+          {
+            name: "jsenv:build_shape",
+            appliesDuring: "build",
+            resolveReference: (reference) => {
+              const getUrl = () => {
+                if (reference.type === "filesystem") {
+                  const parentRawUrl = buildDirectoryRedirections.get(
+                    reference.parentUrl,
+                  );
+                  const parentUrl = ensurePathnameTrailingSlash(parentRawUrl);
+                  return new URL(reference.specifier, parentUrl).href;
+                }
+                if (reference.specifier[0] === "/") {
+                  return new URL(
+                    reference.specifier.slice(1),
+                    buildDirectoryUrl,
+                  ).href;
+                }
+                return new URL(
+                  reference.specifier,
+                  reference.baseUrl || reference.parentUrl,
+                ).href;
+              };
+              let url = getUrl();
+              //  url = rawRedirections.get(url) || url
+              url = bundleRedirections.get(url) || url;
+              url = bundleInternalRedirections.get(url) || url;
+              return url;
+            },
+            // redirecting references into the build directory
+            redirectReference: (reference) => {
+              if (!reference.url.startsWith("file:")) {
+                return null;
+              }
+              // referenced by resource hint
+              // -> keep it untouched, it will be handled by "resync_resource_hints"
+              if (reference.isResourceHint) {
+                return reference.original ? reference.original.url : null;
+              }
+              // already a build url
+              const rawUrl = buildDirectoryRedirections.get(reference.url);
+              if (rawUrl) {
+                return reference.url;
+              }
+              if (reference.isInline) {
+                const parentUrlInfo = finalGraph.getUrlInfo(
+                  reference.parentUrl,
+                );
+                const parentRawUrl = parentUrlInfo.originalUrl;
+                const rawUrlInfo = GRAPH_VISITOR.find(
+                  rawGraph,
+                  (rawUrlInfo) => {
+                    const { inlineUrlSite } = rawUrlInfo;
+                    // not inline
+                    if (!inlineUrlSite) return false;
+                    if (
+                      inlineUrlSite.url === parentRawUrl &&
+                      inlineUrlSite.line === reference.specifierLine &&
+                      inlineUrlSite.column === reference.specifierColumn
+                    ) {
+                      return true;
+                    }
+                    if (rawUrlInfo.content === reference.content) {
+                      return true;
+                    }
+                    if (rawUrlInfo.originalContent === reference.content) {
+                      return true;
+                    }
+                    return false;
+                  },
+                );
+
+                if (!rawUrlInfo) {
+                  // generated during final graph
+                  // (happens for JSON.parse injected for import assertions for instance)
+                  // throw new Error(`cannot find raw url for "${reference.url}"`)
+                  return reference.url;
+                }
+                const buildUrl = buildUrlsGenerator.generate(reference.url, {
+                  urlInfo: rawUrlInfo,
+                  parentUrlInfo,
+                });
+                associateBuildUrlAndRawUrl(
+                  buildUrl,
+                  rawUrlInfo.url,
+                  "inline content",
+                );
+                return buildUrl;
+              }
+              // from "js_module_fallback":
+              //   - injecting "?js_module_fallback" for the first time
+              //   - injecting "?js_module_fallback" because the parentUrl has it
+              if (reference.original) {
+                const urlBeforeRedirect = reference.original.url;
+                const urlAfterRedirect = reference.url;
+                const isEntryPoint =
+                  reference.isEntryPoint ||
+                  isWebWorkerEntryPointReference(reference);
+                // the url info do not exists yet (it will be created after this "redirectReference" hook)
+                // And the content will be generated when url is cooked by url graph loader.
+                // Here we just want to reserve an url for that file
+                const urlInfo = {
+                  data: reference.data,
+                  isEntryPoint,
+                  type: reference.expectedType,
+                  subtype: reference.expectedSubtype,
+                  filename: reference.filename,
+                };
+                if (urlIsInsideOf(urlBeforeRedirect, buildDirectoryUrl)) {
+                  // the redirection happened on a build url, happens due to:
+                  // 1. bundling
+                  const buildUrl = buildUrlsGenerator.generate(
+                    urlAfterRedirect,
+                    {
+                      urlInfo,
+                    },
+                  );
+                  finalRedirections.set(urlBeforeRedirect, buildUrl);
+                  return buildUrl;
+                }
+                const rawUrl = urlAfterRedirect;
+                const buildUrl = buildUrlsGenerator.generate(rawUrl, {
+                  urlInfo,
+                });
+                finalRedirections.set(urlBeforeRedirect, buildUrl);
+                associateBuildUrlAndRawUrl(
+                  buildUrl,
+                  rawUrl,
+                  "redirected during postbuild",
+                );
+                return buildUrl;
+              }
+              // from "js_module_fallback":
+              //   - to inject "s.js"
+              if (reference.injected) {
+                const buildUrl = buildUrlsGenerator.generate(reference.url, {
+                  urlInfo: {
+                    data: {},
+                    type: "js_classic",
+                  },
+                });
+                associateBuildUrlAndRawUrl(
+                  buildUrl,
+                  reference.url,
+                  "injected during postbuild",
+                );
+                finalRedirections.set(buildUrl, buildUrl);
+                return buildUrl;
+              }
+              const rawUrlInfo = rawGraph.getUrlInfo(reference.url);
+              const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl);
+              // files from root directory but not given to rollup nor postcss
+              if (rawUrlInfo) {
+                const referencedUrlObject = new URL(reference.url);
+                referencedUrlObject.searchParams.delete("as_js_classic");
+                const buildUrl = buildUrlsGenerator.generate(
+                  referencedUrlObject.href,
+                  {
+                    urlInfo: rawUrlInfo,
+                    parentUrlInfo,
+                  },
+                );
+                associateBuildUrlAndRawUrl(
+                  buildUrl,
+                  rawUrlInfo.url,
+                  "raw file",
+                );
+                if (buildUrl.includes("?")) {
+                  associateBuildUrlAndRawUrl(
+                    asUrlWithoutSearch(buildUrl),
+                    rawUrlInfo.url,
+                    "raw file",
+                  );
+                }
+                return buildUrl;
+              }
+              if (reference.type === "sourcemap_comment") {
+                // inherit parent build url
+                return generateSourcemapFileUrl(reference.parentUrl);
+              }
+              // files generated during the final graph:
+              // - sourcemaps
+              // const finalUrlInfo = finalGraph.getUrlInfo(url)
+              const buildUrl = buildUrlsGenerator.generate(reference.url, {
+                urlInfo: {
+                  data: {},
+                  type: "asset",
+                },
+              });
+              return buildUrl;
+            },
+            formatReference: (reference) => {
+              if (!reference.generatedUrl.startsWith("file:")) {
+                return null;
+              }
+              if (reference.isResourceHint) {
+                return null;
+              }
+              if (!urlIsInsideOf(reference.generatedUrl, buildDirectoryUrl)) {
+                throw new Error(
+                  `urls should be inside build directory at this stage, found "${reference.url}"`,
+                );
+              }
+              const generatedUrlObject = new URL(reference.generatedUrl);
+              generatedUrlObject.searchParams.delete("js_classic");
+              generatedUrlObject.searchParams.delete("js_module");
+              generatedUrlObject.searchParams.delete("js_module_fallback");
+              generatedUrlObject.searchParams.delete("as_js_classic");
+              generatedUrlObject.searchParams.delete("as_js_module");
+              generatedUrlObject.searchParams.delete("as_json_module");
+              generatedUrlObject.searchParams.delete("as_css_module");
+              generatedUrlObject.searchParams.delete("as_text_module");
+              generatedUrlObject.hash = "";
+              const generatedUrl = generatedUrlObject.href;
+              const specifier = asFormattedBuildUrl(generatedUrl, reference);
+              buildUrls.set(specifier, reference.generatedUrl);
+              return specifier;
+            },
+            fetchUrlContent: async (finalUrlInfo, context) => {
+              const fromBundleOrRawGraph = (url) => {
+                const bundleUrlInfo = bundleUrlInfos[url];
+                if (bundleUrlInfo) {
+                  return bundleUrlInfo;
+                }
+                const rawUrl = buildDirectoryRedirections.get(url) || url;
+                const rawUrlInfo = rawGraph.getUrlInfo(rawUrl);
+                if (!rawUrlInfo) {
+                  throw new Error(
+                    createDetailedMessage(`Cannot find url`, {
+                      url,
+                      "raw urls": Array.from(
+                        buildDirectoryRedirections.values(),
+                      ),
+                      "build urls": Array.from(
+                        buildDirectoryRedirections.keys(),
+                      ),
+                    }),
+                  );
+                }
+                // logger.debug(`fetching from raw graph ${url}`)
+                if (rawUrlInfo.isInline) {
+                  // Inline content, such as <script> inside html, is transformed during the previous phase.
+                  // If we read the inline content it would be considered as the original content.
+                  // - It could be "fixed" by taking into account sourcemap and consider sourcemap sources
+                  //   as the original content.
+                  //   - But it would not work when sourcemap are not generated
+                  //   - would be a bit slower
+                  // - So instead of reading the inline content directly, we search into raw graph
+                  //   to get "originalContent" and "sourcemap"
+                  finalUrlInfo.type = rawUrlInfo.type;
+                  finalUrlInfo.subtype = rawUrlInfo.subtype;
+                  return rawUrlInfo;
+                }
+                return rawUrlInfo;
+              };
+              const { reference } = context;
+              // reference injected during "postbuild":
+              // - happens for "js_module_fallback" injecting "s.js"
+              if (reference.injected) {
+                const [ref, rawUrlInfo] = rawGraphKitchen.injectReference({
+                  ...reference,
+                  parentUrl: buildDirectoryRedirections.get(
+                    reference.parentUrl,
+                  ),
+                });
+                await rawGraphKitchen.cook(rawUrlInfo, { reference: ref });
+                return rawUrlInfo;
+              }
+              if (reference.isInline) {
+                if (reference.prev && !reference.prev.isInline) {
+                  const urlBeforeRedirect =
+                    findKey(finalRedirections, reference.prev.url) ||
+                    reference.prev.url;
+                  return fromBundleOrRawGraph(urlBeforeRedirect);
+                }
+                return fromBundleOrRawGraph(reference.url);
+              }
+              // reference updated during "postbuild":
+              // - happens for "js_module_fallback"
+              if (reference.original) {
+                return fromBundleOrRawGraph(reference.original.url);
+              }
+              return fromBundleOrRawGraph(finalUrlInfo.url);
+            },
+          },
+          {
+            name: "jsenv:optimize",
+            appliesDuring: "build",
+            transformUrlContent: async (urlInfo, context) => {
+              await rawGraphKitchen.pluginController.callAsyncHooks(
+                "optimizeUrlContent",
+                urlInfo,
+                context,
+                (optimizeReturnValue) => {
+                  finalGraphKitchen.urlInfoTransformer.applyTransformations(
+                    urlInfo,
+                    optimizeReturnValue,
+                  );
+                },
+              );
+            },
+          },
+        ],
+        sourcemaps,
+        sourcemapsSourcesContent,
+        sourcemapsSourcesRelative: !versioning,
+        outDirectoryUrl: outDirectoryUrl
+          ? new URL("postbuild/", outDirectoryUrl)
+          : undefined,
+      });
       bundle: {
         rawGraphKitchen.pluginController.plugins.forEach((plugin) => {
           const bundle = plugin.bundle;
@@ -773,7 +794,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           // cleanup unused urls (avoid bundling things that are not actually used)
           // happens for:
           // - js import assertions
-          // - as_js_classic
+          // - conversion to js classic using ?as_js_classic or ?js_module_fallback
           if (!rawGraph.isUsed(rawUrlInfo)) {
             rawGraph.deleteUrlInfo(rawUrlInfo.url);
             return;
