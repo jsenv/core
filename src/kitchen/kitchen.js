@@ -70,13 +70,8 @@ export const createKitchen = ({
     runtimeCompat,
     clientRuntimeCompat,
     systemJsTranspilation,
-    // TODO: memoize both isSupportedOn helpers
-    isSupportedOnCurrentClients: (feature) => {
-      return RUNTIME_COMPAT.isSupported(clientRuntimeCompat, feature);
-    },
-    isSupportedOnFutureClients: (feature) => {
-      return RUNTIME_COMPAT.isSupported(runtimeCompat, feature);
-    },
+    isSupportedOnCurrentClients: memoizeIsSupported(clientRuntimeCompat),
+    isSupportedOnFutureClients: memoizeIsSupported(runtimeCompat),
     minification,
     sourcemaps,
     outDirectoryUrl,
@@ -1103,6 +1098,19 @@ const memoizeCook = (cook) => {
     } finally {
       pendingDishes.delete(url);
     }
+  };
+};
+
+const memoizeIsSupported = (runtimeCompat) => {
+  const cache = new Map();
+  return (feature) => {
+    const fromCache = cache.get(feature);
+    if (typeof fromCache === "boolean") {
+      return fromCache;
+    }
+    const supported = RUNTIME_COMPAT.isSupported(runtimeCompat, feature);
+    cache.set(feature, supported);
+    return supported;
   };
 };
 
