@@ -1263,7 +1263,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   }
                   const versionedUrl = versionedUrlMap.get(reference.url);
                   if (!versionedUrl) {
-                    // happens for sourcemap
+                    // happens for inline content and sourcemaps
                     return urlToRelativeUrl(
                       referencedUrlInfo.url,
                       reference.parentUrl,

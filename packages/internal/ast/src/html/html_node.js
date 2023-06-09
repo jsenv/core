@@ -59,7 +59,6 @@ export const injectHtmlNodeAsEarlyAsPossible = (
     "jsenv-injected-by": jsenvPluginName,
   });
   const isScript = node.nodeName === "script";
-
   if (isScript) {
     const { type } = analyzeScriptNode(node);
     const headNode = findChild(htmlAst, (node) => node.nodeName === "html")
@@ -71,7 +70,7 @@ export const injectHtmlNodeAsEarlyAsPossible = (
     // - and before <script type="module">
     const isImportmap = type === "importmap";
     if (isImportmap) {
-      let after;
+      let after = headNode.childNodes[0];
       for (const child of headNode.childNodes) {
         if (child.nodeName === "link") {
           if (getHtmlNodeAttribute(child, "rel") === "modulepreload") {
@@ -107,7 +106,7 @@ export const injectHtmlNodeAsEarlyAsPossible = (
       if (firstImportmapScript) {
         return insertHtmlNodeAfter(node, firstImportmapScript);
       }
-      let after;
+      let after = headNode.childNodes[0];
       for (const child of headNode.childNodes) {
         if (child.nodeName === "link") {
           after = child;
@@ -128,7 +127,7 @@ export const injectHtmlNodeAsEarlyAsPossible = (
     // <script> or <script type="text/jsx">, ...
     // - after any <link>
     // - before any <script>
-    let after;
+    let after = headNode.childNodes[0];
     for (const child of headNode.childNodes) {
       if (child.nodeName === "link") {
         after = child;
@@ -143,7 +142,6 @@ export const injectHtmlNodeAsEarlyAsPossible = (
     }
     return injectHtmlNode(htmlAst, node);
   }
-
   return injectHtmlNode(htmlAst, node);
 };
 

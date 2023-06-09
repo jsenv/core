@@ -1,12 +1,12 @@
-;(function() {
+;
+(function () {
   var __versionMappings__ = {
-  "/js/file.nomodule.js": "/js/file.nomodule.js?v=67382087"
-};
+    "/js/file.nomodule.js": "/js/file.nomodule.js?v=67382087"
+  };
   window.__v__ = function (specifier) {
-    return __versionMappings__[specifier] || specifier
+    return __versionMappings__[specifier] || specifier;
   };
 })();
-
 /*
  * This file is a modified version of https://github.com/systemjs/systemjs/blob/main/dist/s.js
  * with the following changes:
@@ -26,24 +26,17 @@
   const registerRegistry = Object.create(null);
   let inlineScriptCount = 0;
   const System = {};
-
   const hasDocument = typeof document === "object";
   const envGlobal = self;
-  const isWorker =
-    !hasDocument &&
-    typeof envGlobal.WorkerGlobalScope === "function" &&
-    envGlobal instanceof envGlobal.WorkerGlobalScope;
+  const isWorker = !hasDocument && typeof envGlobal.WorkerGlobalScope === "function" && envGlobal instanceof envGlobal.WorkerGlobalScope;
   const isServiceWorker = isWorker && typeof self.skipWaiting === "function";
   envGlobal.System = System;
-
   let baseUrl = envGlobal.location.href.split("#")[0].split("?")[0];
   const lastSlashIndex = baseUrl.lastIndexOf("/");
   if (lastSlashIndex !== -1) {
     baseUrl = baseUrl.slice(0, lastSlashIndex + 1);
   }
-
   const resolveUrl = (specifier, baseUrl) => new URL(specifier, baseUrl).href;
-
   if (hasDocument) {
     const baseElement = document.querySelector("base[href]");
     if (baseElement) {
@@ -51,26 +44,22 @@
     }
     System.register = (deps, declare) => {
       if (!document.currentScript) {
-        throw new Error(
-          "unexpected call to System.register (document.currentScript is undefined)",
-        );
+        throw new Error("unexpected call to System.register (document.currentScript is undefined)");
       }
       if (document.currentScript.__s__) {
         registerRegistry[document.currentScript.src] = [deps, declare];
         return null;
       }
-      const url =
-        document.currentScript.src ||
-        `${window.location.href}__inline_script__${++inlineScriptCount}`;
+      const url = document.currentScript.src || `${window.location.href}__inline_script__${++inlineScriptCount}`;
       registerRegistry[url] = [deps, declare];
       return _import(url);
     };
-    System.instantiate = (url) => {
+    System.instantiate = url => {
       const script = createScript(url);
       return new Promise(function (resolve, reject) {
         let lastWindowErrorUrl;
         let lastWindowError;
-        const windowErrorCallback = (event) => {
+        const windowErrorCallback = event => {
           lastWindowErrorUrl = event.filename;
           lastWindowError = event.error;
         };
@@ -93,7 +82,7 @@
         document.head.appendChild(script);
       });
     };
-    const createScript = (url) => {
+    const createScript = url => {
       const script = document.createElement("script");
       script.async = true;
       // Only add cross origin for actual cross origin
@@ -122,12 +111,12 @@
       // and, to get rid of the warning, we override self.addEventListener
       const eventsToCatch = ["message", "install", "activate", "fetch"];
       const eventCallbackProxies = {};
-      const firstImportPromise = new Promise((resolve) => {
+      const firstImportPromise = new Promise(resolve => {
         firstImportCallbacks.push(resolve);
       });
-      eventsToCatch.forEach((eventName) => {
+      eventsToCatch.forEach(eventName => {
         const eventsToDispatch = [];
-        const eventCallback = (event) => {
+        const eventCallback = event => {
           const eventCallbackProxy = eventCallbackProxies[event.type];
           if (eventCallbackProxy) {
             eventCallbackProxy(event);
@@ -139,10 +128,9 @@
         self.addEventListener(eventName, eventCallback);
         firstImportCallbacks.push(() => {
           if (eventsToDispatch.length) {
-            const eventCallbackProxy =
-              eventCallbackProxies[eventsToDispatch[0].type];
+            const eventCallbackProxy = eventCallbackProxies[eventsToDispatch[0].type];
             if (eventCallbackProxy) {
-              eventsToDispatch.forEach((event) => {
+              eventsToDispatch.forEach(event => {
                 eventCallbackProxy(event);
               });
             }
@@ -150,7 +138,6 @@
           }
         });
       });
-
       const addEventListener = self.addEventListener;
       self.addEventListener = function (eventName, callback, options) {
         if (eventsToCatch.indexOf(eventName) > -1) {
@@ -161,9 +148,9 @@
       };
     } else {
       const eventsToCatch = ["message"];
-      eventsToCatch.forEach((eventName) => {
+      eventsToCatch.forEach(eventName => {
         var eventQueue = [];
-        var eventCallback = (event) => {
+        var eventCallback = event => {
           eventQueue.push(event);
         };
         self.addEventListener(eventName, eventCallback);
@@ -176,25 +163,22 @@
         });
       });
     }
-
     System.register = async (deps, declare) => {
       System.register = () => {
-        throw new Error(
-          "unexpected call to System.register (called outside url instantiation)",
-        );
+        throw new Error("unexpected call to System.register (called outside url instantiation)");
       };
       const url = self.location.href;
       registerRegistry[url] = [deps, declare];
       const namespace = await _import(url);
-      firstImportCallbacks.forEach((firstImportCallback) => {
+      firstImportCallbacks.forEach(firstImportCallback => {
         firstImportCallback();
       });
       firstImportCallbacks.length = 0;
       return namespace;
     };
-    System.instantiate = async (url) => {
+    System.instantiate = async url => {
       const response = await self.fetch(url, {
-        credentials: "same-origin",
+        credentials: "same-origin"
       });
       if (!response.ok) {
         throw Error(`Failed to fetch module at ${url}`);
@@ -211,7 +195,6 @@
       System.register = register;
     };
   }
-
   const _import = (specifier, parentUrl) => {
     const url = resolveUrl(specifier, parentUrl);
     const load = getOrCreateLoad(url, parentUrl);
@@ -223,7 +206,6 @@
     }
     return startExecution(load, parentUrl);
   };
-
   const getOrCreateLoad = (url, firstParentUrl) => {
     const existingLoad = loadRegistry[url];
     if (existingLoad) {
@@ -243,28 +225,22 @@
       execute: null,
       error: null,
       hoistedExports: false,
-      namespace,
+      namespace
     };
     loadRegistry[url] = load;
     load.instantiatePromise = (async () => {
       try {
         let registration = registerRegistry[url];
         if (!registration) {
-          const instantiateReturnValue = System.instantiate(
-            url,
-            firstParentUrl,
-          );
+          const instantiateReturnValue = System.instantiate(url, firstParentUrl);
           if (instantiateReturnValue) {
             await instantiateReturnValue;
           }
           registration = registerRegistry[url];
         }
         if (!registration) {
-          throw new Error(
-            `System.register() not called after executing ${url}`,
-          );
+          throw new Error(`System.register() not called after executing ${url}`);
         }
-
         const _export = (firstArg, secondArg) => {
           load.hoistedExports = true;
           let changed = false;
@@ -276,7 +252,7 @@
               changed = true;
             }
           } else {
-            Object.keys(firstArg).forEach((name) => {
+            Object.keys(firstArg).forEach(name => {
               const value = firstArg[name];
               if (!(name in namespace) || namespace[name] !== value) {
                 namespace[name] = value;
@@ -288,7 +264,7 @@
             }
           }
           if (changed) {
-            load.importerSetters.forEach((importerSetter) => {
+            load.importerSetters.forEach(importerSetter => {
               if (importerSetter) {
                 importerSetter(namespace);
               }
@@ -297,9 +273,12 @@
           return secondArg;
         };
         const [deps, declare] = registration;
-        const { setters, execute = () => {} } = declare(_export, {
-          import: (importId) => _import(importId, url),
-          meta: createMeta(url),
+        const {
+          setters,
+          execute = () => {}
+        } = declare(_export, {
+          import: importId => _import(importId, url),
+          meta: createMeta(url)
         });
         load.deps = deps;
         load.setters = setters;
@@ -311,31 +290,25 @@
     })();
     load.linkPromise = (async () => {
       await load.instantiatePromise;
-      const dependencyLoads = await Promise.all(
-        load.deps.map(async (dep, index) => {
-          const setter = load.setters[index];
-          const dependencyUrl = resolveUrl(dep, url);
-          const dependencyLoad = getOrCreateLoad(dependencyUrl, url);
-          if (dependencyLoad.instantiatePromise) {
-            await dependencyLoad.instantiatePromise;
+      const dependencyLoads = await Promise.all(load.deps.map(async (dep, index) => {
+        const setter = load.setters[index];
+        const dependencyUrl = resolveUrl(dep, url);
+        const dependencyLoad = getOrCreateLoad(dependencyUrl, url);
+        if (dependencyLoad.instantiatePromise) {
+          await dependencyLoad.instantiatePromise;
+        }
+        if (setter) {
+          dependencyLoad.importerSetters.push(setter);
+          if (dependencyLoad.hoistedExports || !dependencyLoad.instantiatePromise) {
+            setter(dependencyLoad.namespace);
           }
-          if (setter) {
-            dependencyLoad.importerSetters.push(setter);
-            if (
-              dependencyLoad.hoistedExports ||
-              !dependencyLoad.instantiatePromise
-            ) {
-              setter(dependencyLoad.namespace);
-            }
-          }
-          return dependencyLoad;
-        }),
-      );
+        }
+        return dependencyLoad;
+      }));
       load.dependencyLoads = dependencyLoads;
     })();
     return load;
   };
-
   const startExecution = async (load, importerUrl) => {
     load.completionPromise = (async () => {
       await instantiateAll(load, load, {});
@@ -344,7 +317,6 @@
     })();
     return load.completionPromise;
   };
-
   const instantiateAll = async (load, parent, loaded) => {
     if (loaded[load.url]) {
       return;
@@ -355,11 +327,9 @@
         // load.linkPromise is null once instantiated
         await load.linkPromise;
       }
-      await Promise.all(
-        load.dependencyLoads.map((dependencyLoad) => {
-          return instantiateAll(dependencyLoad, parent, loaded);
-        }),
-      );
+      await Promise.all(load.dependencyLoads.map(dependencyLoad => {
+        return instantiateAll(dependencyLoad, parent, loaded);
+      }));
     } catch (error) {
       if (load.error) {
         throw error;
@@ -368,7 +338,6 @@
       throw error;
     }
   };
-
   const postOrderExec = (load, importStack) => {
     if (importStack.indexOf(load.url) > -1) {
       return undefined;
@@ -387,7 +356,7 @@
     const execute = load.execute;
     load.execute = null;
     const depLoadPromises = [];
-    load.dependencyLoads.forEach((dependencyLoad) => {
+    load.dependencyLoads.forEach(dependencyLoad => {
       try {
         const depImportStack = importStack.slice();
         depImportStack.push(load.url);
@@ -400,27 +369,22 @@
         throw err;
       }
     });
-
     return (async () => {
       if (depLoadPromises.length) {
         const allDepPromise = Promise.all(depLoadPromises);
         await allDepPromise;
       }
-
       try {
         const executeReturnValue = execute.call(nullContext);
         if (executeReturnValue) {
-          load.executePromise = executeReturnValue.then(
-            () => {
-              load.executePromise = null;
-              load.completionPromise = load.namespace;
-            },
-            (error) => {
-              load.executePromise = null;
-              load.error = error;
-              throw error;
-            },
-          );
+          load.executePromise = executeReturnValue.then(() => {
+            load.executePromise = null;
+            load.completionPromise = load.namespace;
+          }, error => {
+            load.executePromise = null;
+            load.error = error;
+            throw error;
+          });
           return;
         }
         load.instantiatePromise = null;
@@ -437,70 +401,55 @@
 
   // the closest we can get to call(undefined)
   const nullContext = Object.freeze(Object.create(null));
-
-  const createMeta = (url) => {
+  const createMeta = url => {
     return {
       url,
-      resolve: (id) => resolveUrl(id, url),
+      resolve: id => resolveUrl(id, url)
     };
   };
-
-  const createNamespace =
-    typeof Symbol !== "undefined" && Symbol.toStringTag
-      ? () => {
-          const namespace = Object.create(null);
-          Object.defineProperty(namespace, Symbol.toStringTag, {
-            value: "Module",
-          });
-          return namespace;
-        }
-      : () => Object.create(null);
+  const createNamespace = typeof Symbol !== "undefined" && Symbol.toStringTag ? () => {
+    const namespace = Object.create(null);
+    Object.defineProperty(namespace, Symbol.toStringTag, {
+      value: "Module"
+    });
+    return namespace;
+  } : () => Object.create(null);
 })();
+const typeofCurrentScript = typeof document.currentScript;
 
+/*
+ * using spread + destructuring generate a dependency to babel helpers
+ * making the code execute async and fails the test
+ * How to fix:
+ * 1. do not use anything requiring babel helpers (painful and hard to predict)
+ * 2. put babel helpers on window/self instead of separate file to share them without having to load a js
+ * (that would be great but it's hard to make it work right now)
+ * 3. inline babel helpers when using ?js_module_fallback (or at least be able to force inline them)
+ * in this scenario
+ *
+ * SOLUTION FOR NOW: 3
+ */
 
-System.register([], function (_export, _context) {
-  "use strict";
-
-  var typeofCurrentScript, getResponse, answer;
-  return {
-    setters: [],
-    execute: function () {
-      typeofCurrentScript = typeof document.currentScript;
-      /*
-       * using spread + destructuring generate a dependency to babel helpers
-       * making the code execute async and fails the test
-       * How to fix:
-       * 1. do not use anything requiring babel helpers (painful and hard to predict)
-       * 2. put babel helpers on window/self instead of separate file to share them without having to load a js
-       * (that would be great but it's hard to make it work right now)
-       * 3. inline babel helpers when using ?js_module_fallback (or at least be able to force inline them)
-       * in this scenario
-       *
-       * SOLUTION FOR NOW: 3
-       */
-      getResponse = () => {
-        return [42];
-      };
-      [answer] = getResponse();
-      console.log({
-        ...{
-          answer
-        }
-      });
-      window.getResult = async () => {
-        const {
-          answer
-        } = await _context.import(__v__("/js/file.nomodule.js"));
-        await new Promise(resolve => {
-          setTimeout(resolve, 100);
-        });
-        const url = _context.meta.url;
-        return {
-          typeofCurrentScript,
-          answer,
-          url
-        };
-      };
-    }
-  };
+const getResponse = () => {
+  return [42];
+};
+const [answer] = getResponse();
+console.log({
+  ...{
+    answer
+  }
 });
+window.getResult = async () => {
+  const {
+    answer
+  } = await import('./js/file.js');
+  await new Promise(resolve => {
+    setTimeout(resolve, 100);
+  });
+  const url = import.meta.url;
+  return {
+    typeofCurrentScript,
+    answer,
+    url
+  };
+};

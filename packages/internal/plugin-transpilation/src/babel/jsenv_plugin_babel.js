@@ -1,5 +1,4 @@
 import { applyBabelPlugins } from "@jsenv/ast";
-import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 
 import { getBaseBabelPluginStructure } from "./babel_plugin_structure.js";
 import { babelPluginBabelHelpersAsJsenvImports } from "./babel_plugin_babel_helpers_as_jsenv_imports.js";
@@ -20,9 +19,7 @@ export const jsenvPluginBabel = ({ babelHelpersAsImport = true } = {}) => {
       });
       return JSON.parse(reference.generatedSpecifier);
     };
-    const isSupported = (feature) => {
-      return RUNTIME_COMPAT.isSupported(context.clientRuntimeCompat, feature);
-    };
+    const isSupported = context.isSupportedOnCurrentClients;
     const babelPluginStructure = getBaseBabelPluginStructure({
       url: urlInfo.originalUrl,
       isSupported,
