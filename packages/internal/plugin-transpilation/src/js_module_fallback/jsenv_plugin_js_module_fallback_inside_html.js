@@ -79,13 +79,10 @@ export const jsenvPluginJsModuleFallbackInsideHtml = () => {
                 ref.type === "link_href" &&
                 ref.subtype === rel,
             );
-            if (!isOrWasExpectingJsModule(reference)) {
+            if (!wasOrWillBeConvertedToJsClassic(reference)) {
               return;
             }
-            if (
-              rel === "modulepreload" &&
-              reference.expectedType === "js_classic"
-            ) {
+            if (rel === "modulepreload") {
               mutations.push(() => {
                 setHtmlNodeAttributes(node, {
                   rel: "preload",
@@ -94,7 +91,7 @@ export const jsenvPluginJsModuleFallbackInsideHtml = () => {
                 });
               });
             }
-            if (rel === "preload" && reference.expectedType === "js_classic") {
+            if (rel === "preload") {
               mutations.push(() => {
                 setHtmlNodeAttributes(node, { crossorigin: undefined });
               });
@@ -137,19 +134,29 @@ export const jsenvPluginJsModuleFallbackInsideHtml = () => {
   };
 };
 
-const isOrWasExpectingJsModule = (reference) => {
-  if (isExpectingJsModule(reference)) {
+const wasOrWillBeConvertedToJsClassic = (reference) => {
+  if (reference.expectedType !== "js_module") {
+    return false;
+  }
+  if (willBeConvertedToJsClassic(reference)) {
     return true;
   }
-  if (reference.original && isExpectingJsModule(reference.original)) {
-    return true;
+  let prev = reference.prev;
+  while (prev) {
+    if (prev.expectedType === "js_classic") {
+      return true;
+    }
+    if (willBeConvertedToJsClassic(prev)) {
+      return true;
+    }
+    prev = prev.prev;
   }
+
   return false;
 };
 
-const isExpectingJsModule = (reference) => {
+const willBeConvertedToJsClassic = (reference) => {
   return (
-    reference.expectedType === "js_module" ||
     reference.searchParams.has("js_module_fallback") ||
     reference.searchParams.has("as_js_classic")
   );
