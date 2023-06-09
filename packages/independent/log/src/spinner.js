@@ -9,6 +9,7 @@ export const startSpinner = ({
   stopOnVerticalOverflow = true,
   render = () => "",
   effect = () => {},
+  animated = true,
 }) => {
   let frameIndex = 0;
   let interval;
@@ -25,7 +26,7 @@ export const startSpinner = ({
   spinner.update = update;
 
   let cleanup;
-  if (ANSI.supported) {
+  if (animated && ANSI.supported) {
     running = true;
     cleanup = effect();
     log.write(update(render()));

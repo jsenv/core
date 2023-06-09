@@ -266,6 +266,13 @@ export const build = async ({
 
   const runBuild = async ({ signal, logLevel }) => {
     const logger = createLogger({ logLevel });
+    const createBuildTask = (label) => {
+      return createTaskLog(label, {
+        disabled: !logger.levels.debug && !logger.levels.info,
+        animated: !logger.levels.debug,
+      });
+    };
+
     const buildOperation = Abort.startOperation();
     buildOperation.addAbortSignal(signal);
     const entryPointKeys = Object.keys(entryPoints);
@@ -612,7 +619,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             const fromBundleOrRawGraph = (url) => {
               const bundleUrlInfo = bundleUrlInfos[url];
               if (bundleUrlInfo) {
-                // logger.debug(`fetching from bundle ${url}`)
                 return bundleUrlInfo;
               }
               const rawUrl = buildDirectoryRedirections.get(url) || url;
@@ -698,9 +704,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     const finalEntryUrls = [];
 
     craft: {
-      const generateSourceGraph = createTaskLog("generate source graph", {
-        disabled: logger.levels.debug || !logger.levels.info,
-      });
+      const generateSourceGraph = createBuildTask("generate source graph");
       try {
         if (outDirectoryUrl) {
           await ensureEmptyDirectory(new URL(`build/`, outDirectoryUrl));
@@ -732,7 +736,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
 
     shape: {
       bundle: {
-        logger.debug("[start] bundle");
         rawGraphKitchen.pluginController.plugins.forEach((plugin) => {
           const bundle = plugin.bundle;
           if (!bundle) {
@@ -853,9 +856,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           if (urlInfosToBundle.length === 0) {
             return;
           }
-          const bundleTask = createTaskLog(`bundle "${type}"`, {
-            disabled: logger.levels.debug || !logger.levels.info,
-          });
+          const bundleTask = createBuildTask(`bundle "${type}"`);
           try {
             const bundlerGeneratedUrlInfos =
               await rawGraphKitchen.pluginController.callAsyncHook(
@@ -943,13 +944,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           }
           bundleTask.done();
         }, Promise.resolve());
-        logger.debug("[end] bundle");
       }
       reload_in_build_directory: {
-        logger.debug("[start] redirect to build directory");
-        const generateBuildGraph = createTaskLog("generate build graph", {
-          disabled: logger.levels.debug || !logger.levels.info,
-        });
+        const generateBuildGraph = createBuildTask("generate build graph");
         try {
           if (outDirectoryUrl) {
             await ensureEmptyDirectory(new URL(`postbuild/`, outDirectoryUrl));
@@ -977,7 +974,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           throw e;
         }
         generateBuildGraph.done();
-        logger.debug("[end] redirect to build directory");
       }
     }
 
@@ -988,10 +984,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         if (!versioning) {
           break inject_version_in_urls;
         }
-        logger.debug("[start] versioning");
-        const versioningTask = createTaskLog("inject version in urls", {
-          disabled: logger.levels.debug || !logger.levels.info,
-        });
+        const versioningTask = createBuildTask("inject version in urls");
         try {
           const canUseImportmap =
             versioningViaImportmap &&
@@ -1380,10 +1373,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           throw e;
         }
         versioningTask.done();
-        logger.debug("[end] versioning");
       }
       cleanup_jsenv_attributes_from_html: {
-        logger.debug("[start] cleanup html");
         GRAPH_VISITOR.forEach(finalGraph, (urlInfo) => {
           if (!urlInfo.url.startsWith("file:")) {
             return;
@@ -1398,7 +1389,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             });
           }
         });
-        logger.debug("[end] cleanup html");
       }
       /*
        * Update <link rel="preload"> and friends after build (once we know everything)
@@ -1407,130 +1397,129 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
        *   - because of import assertions transpilation (file is inlined into JS)
        */
       resync_resource_hints: {
-        logger.debug("[start] resync resource hints");
         const actions = [];
         GRAPH_VISITOR.forEach(finalGraph, (urlInfo) => {
           if (urlInfo.type !== "html") {
             return;
           }
-          actions.push(async () => {
-            const htmlAst = parseHtmlString(urlInfo.content, {
-              storeOriginalPositions: false,
-            });
-            const mutations = [];
-            const hintsToInject = {};
-            visitHtmlNodes(htmlAst, {
-              link: (node) => {
-                const href = getHtmlNodeAttribute(node, "href");
-                if (href === undefined || href.startsWith("data:")) {
-                  return;
-                }
-                const rel = getHtmlNodeAttribute(node, "rel");
-                const isResourceHint = [
-                  "preconnect",
-                  "dns-prefetch",
-                  "prefetch",
-                  "preload",
-                  "modulepreload",
-                ].includes(rel);
-                if (!isResourceHint) {
-                  return;
-                }
-                const onBuildUrl = (buildUrl) => {
-                  const buildUrlInfo = buildUrl
-                    ? finalGraph.getUrlInfo(buildUrl)
-                    : null;
-                  if (!buildUrlInfo) {
-                    logger.warn(
-                      `remove resource hint because cannot find "${href}" in the graph`,
-                    );
-                    mutations.push(() => {
-                      removeHtmlNode(node);
-                    });
-                    return;
-                  }
-                  if (buildUrlInfo.dependents.size === 0) {
-                    logger.warn(
-                      `remove resource hint because "${href}" not used anymore`,
-                    );
-                    mutations.push(() => {
-                      removeHtmlNode(node);
-                    });
-                    return;
-                  }
-                  const buildUrlFormatted =
-                    versioningRedirections.get(buildUrlInfo.url) ||
-                    buildUrlInfo.url;
-                  const buildSpecifierBeforeRedirect = findKey(
-                    buildUrls,
-                    buildUrlFormatted,
+          const htmlAst = parseHtmlString(urlInfo.content, {
+            storeOriginalPositions: false,
+          });
+          const mutations = [];
+          const hintsToInject = {};
+          visitHtmlNodes(htmlAst, {
+            link: (node) => {
+              const href = getHtmlNodeAttribute(node, "href");
+              if (href === undefined || href.startsWith("data:")) {
+                return;
+              }
+              const rel = getHtmlNodeAttribute(node, "rel");
+              const isResourceHint = [
+                "preconnect",
+                "dns-prefetch",
+                "prefetch",
+                "preload",
+                "modulepreload",
+              ].includes(rel);
+              if (!isResourceHint) {
+                return;
+              }
+              const onBuildUrl = (buildUrl) => {
+                const buildUrlInfo = buildUrl
+                  ? finalGraph.getUrlInfo(buildUrl)
+                  : null;
+                if (!buildUrlInfo) {
+                  logger.warn(
+                    `remove resource hint because cannot find "${href}" in the graph`,
                   );
                   mutations.push(() => {
-                    setHtmlNodeAttributes(node, {
-                      href: buildSpecifierBeforeRedirect,
-                      ...(buildUrlInfo.type === "js_classic"
-                        ? { crossorigin: undefined }
-                        : {}),
-                    });
+                    removeHtmlNode(node);
                   });
-                  for (const dependencyUrl of buildUrlInfo.dependencies) {
-                    const dependencyUrlInfo =
-                      finalGraph.urlInfoMap.get(dependencyUrl);
-                    if (dependencyUrlInfo.data.generatedToShareCode) {
-                      hintsToInject[dependencyUrl] = node;
-                    }
-                  }
-                };
-                if (href.startsWith("file:")) {
-                  let url = href;
-                  url = rawRedirections.get(url) || url;
-                  const rawUrlInfo = rawGraph.getUrlInfo(url);
-                  if (rawUrlInfo && rawUrlInfo.data.bundled) {
-                    logger.warn(
-                      `remove resource hint on "${href}" because it was bundled`,
-                    );
-                    mutations.push(() => {
-                      removeHtmlNode(node);
-                    });
-                  } else {
-                    url = bundleRedirections.get(url) || url;
-                    url = bundleInternalRedirections.get(url) || url;
-                    url = finalRedirections.get(url) || url;
-                    url = findKey(buildDirectoryRedirections, url) || url;
-                    onBuildUrl(url);
-                  }
-                } else {
-                  onBuildUrl(null);
+                  return;
                 }
-              },
-            });
-            Object.keys(hintsToInject).forEach((urlToHint) => {
-              const hintNode = hintsToInject[urlToHint];
-              const urlFormatted =
-                versioningRedirections.get(urlToHint) || urlToHint;
-              const specifierBeforeRedirect = findKey(buildUrls, urlFormatted);
-              const found = findHtmlNode(htmlAst, (htmlNode) => {
-                return (
-                  htmlNode.nodeName === "link" &&
-                  getHtmlNodeAttribute(htmlNode, "href") ===
-                    specifierBeforeRedirect
-                );
-              });
-              if (!found) {
-                mutations.push(() => {
-                  const nodeToInsert = createHtmlNode({
-                    tagName: "link",
-                    href: specifierBeforeRedirect,
-                    rel: getHtmlNodeAttribute(hintNode, "rel"),
-                    as: getHtmlNodeAttribute(hintNode, "as"),
-                    type: getHtmlNodeAttribute(hintNode, "type"),
-                    crossorigin: getHtmlNodeAttribute(hintNode, "crossorigin"),
+                if (buildUrlInfo.dependents.size === 0) {
+                  logger.warn(
+                    `remove resource hint because "${href}" not used anymore`,
+                  );
+                  mutations.push(() => {
+                    removeHtmlNode(node);
                   });
-                  insertHtmlNodeAfter(nodeToInsert, hintNode);
+                  return;
+                }
+                const buildUrlFormatted =
+                  versioningRedirections.get(buildUrlInfo.url) ||
+                  buildUrlInfo.url;
+                const buildSpecifierBeforeRedirect = findKey(
+                  buildUrls,
+                  buildUrlFormatted,
+                );
+                mutations.push(() => {
+                  setHtmlNodeAttributes(node, {
+                    href: buildSpecifierBeforeRedirect,
+                    ...(buildUrlInfo.type === "js_classic"
+                      ? { crossorigin: undefined }
+                      : {}),
+                  });
                 });
+                for (const dependencyUrl of buildUrlInfo.dependencies) {
+                  const dependencyUrlInfo =
+                    finalGraph.urlInfoMap.get(dependencyUrl);
+                  if (dependencyUrlInfo.data.generatedToShareCode) {
+                    hintsToInject[dependencyUrl] = node;
+                  }
+                }
+              };
+              if (href.startsWith("file:")) {
+                let url = href;
+                url = rawRedirections.get(url) || url;
+                const rawUrlInfo = rawGraph.getUrlInfo(url);
+                if (rawUrlInfo && rawUrlInfo.data.bundled) {
+                  logger.warn(
+                    `remove resource hint on "${href}" because it was bundled`,
+                  );
+                  mutations.push(() => {
+                    removeHtmlNode(node);
+                  });
+                } else {
+                  url = bundleRedirections.get(url) || url;
+                  url = bundleInternalRedirections.get(url) || url;
+                  url = finalRedirections.get(url) || url;
+                  url = findKey(buildDirectoryRedirections, url) || url;
+                  onBuildUrl(url);
+                }
+              } else {
+                onBuildUrl(null);
               }
+            },
+          });
+          Object.keys(hintsToInject).forEach((urlToHint) => {
+            const hintNode = hintsToInject[urlToHint];
+            const urlFormatted =
+              versioningRedirections.get(urlToHint) || urlToHint;
+            const specifierBeforeRedirect = findKey(buildUrls, urlFormatted);
+            const found = findHtmlNode(htmlAst, (htmlNode) => {
+              return (
+                htmlNode.nodeName === "link" &&
+                getHtmlNodeAttribute(htmlNode, "href") ===
+                  specifierBeforeRedirect
+              );
             });
-            if (mutations.length > 0) {
+            if (!found) {
+              mutations.push(() => {
+                const nodeToInsert = createHtmlNode({
+                  tagName: "link",
+                  href: specifierBeforeRedirect,
+                  rel: getHtmlNodeAttribute(hintNode, "rel"),
+                  as: getHtmlNodeAttribute(hintNode, "as"),
+                  type: getHtmlNodeAttribute(hintNode, "type"),
+                  crossorigin: getHtmlNodeAttribute(hintNode, "crossorigin"),
+                });
+                insertHtmlNodeAfter(nodeToInsert, hintNode);
+              });
+            }
+          });
+          if (mutations.length > 0) {
+            actions.push(() => {
               mutations.forEach((mutation) => mutation());
               finalGraphKitchen.urlInfoTransformer.applyTransformations(
                 urlInfo,
@@ -1538,14 +1527,15 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   content: stringifyHtmlAst(htmlAst),
                 },
               );
-            }
-          });
+            });
+          }
         });
-        await Promise.all(
-          actions.map((resourceHintAction) => resourceHintAction()),
-        );
-        buildOperation.throwIfAborted();
-        logger.debug("[end] resync resource hints");
+        if (actions.length > 0) {
+          const resyncTask = createBuildTask("resync resource hints");
+          actions.map((resourceHintAction) => resourceHintAction());
+          buildOperation.throwIfAborted();
+          resyncTask.done();
+        }
       }
       delete_unused_urls: {
         const actions = [];
@@ -1569,6 +1559,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           },
         );
         if (serviceWorkerEntryUrlInfos.length > 0) {
+          const urlsInjectionInSw = createBuildTask(
+            "inject urls in service worker",
+          );
           const serviceWorkerResources = {};
           GRAPH_VISITOR.forEach(finalGraph, (urlInfo) => {
             if (!urlInfo.url.startsWith("file:")) {
@@ -1625,6 +1618,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               },
             );
           });
+          urlsInjectionInSw.done();
         }
         buildOperation.throwIfAborted();
       }
@@ -1685,6 +1679,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       });
 
     if (writeOnFileSystem) {
+      const writingFiles = createBuildTask("write files in build directory");
       if (directoryToClean) {
         await ensureEmptyDirectory(directoryToClean);
       }
@@ -1701,6 +1696,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           JSON.stringify(buildManifest, null, "  "),
         );
       }
+      writingFiles.done();
     }
     logger.info(createUrlGraphSummary(finalGraph, { title: "build files" }));
     return {
