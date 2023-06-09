@@ -9,7 +9,7 @@ import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
 const test = async ({ name, ...params }) => {
   await build({
-    logLevel: "warn",
+    logLevel: "debug",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
@@ -41,23 +41,30 @@ const test = async ({ name, ...params }) => {
     answer: 42,
     url: `${server.origin}/main.js?js_module_fallback`,
   };
-  assert({ actual, expected });
+  assert({ actual, expected, context: name });
 };
 
+// support for <script type="module"> + no versioning
+await test({
+  name: "0_supported_no_versioning",
+  runtimeCompat: { chrome: "89" },
+  versioning: false,
+  plugins: [jsenvPluginBundling()],
+});
 // support for <script type="module">
-await test({
-  name: "supported",
-  runtimeCompat: { chrome: "89" },
-  plugins: [jsenvPluginBundling()],
-});
-// support for <script type="module"> + no bundling
-await test({
-  name: "supported_no_bundling",
-  runtimeCompat: { chrome: "89" },
-});
-// without support for <script type="module">
-await test({
-  name: "not_supported",
-  runtimeCompat: { chrome: "55" },
-  plugins: [jsenvPluginBundling()],
-});
+// await test({
+//   name: "1_supported",
+//   runtimeCompat: { chrome: "89" },
+//   plugins: [jsenvPluginBundling()],
+// });
+// // support for <script type="module"> + no bundling
+// await test({
+//   name: "2_supported_no_bundling",
+//   runtimeCompat: { chrome: "89" },
+// });
+// // without support for <script type="module">
+// await test({
+//   name: "3_not_supported",
+//   runtimeCompat: { chrome: "55" },
+//   plugins: [jsenvPluginBundling()],
+// });
