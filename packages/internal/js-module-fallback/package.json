@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/js-module-fallback",
-  "version": "1.0.4",
+  "version": "1.1.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -22,7 +22,8 @@
   },
   "main": "./src/main.js",
   "files": [
-    "/src/"
+    "/src/",
+    "/dist/"
   ],
   "dependencies": {
     "@babel/parser": "7.22.5",
@@ -30,7 +31,7 @@
     "@babel/plugin-transform-modules-umd": "7.22.5",
     "@babel/plugin-transform-modules-systemjs": "7.22.5",
     "babel-plugin-transform-async-to-promises": "0.8.18",
-    "@jsenv/ast": "4.0.3",
+    "@jsenv/ast": "4.1.0",
     "@jsenv/sourcemap": "1.0.10",
     "@jsenv/urls": "2.0.0"
   },

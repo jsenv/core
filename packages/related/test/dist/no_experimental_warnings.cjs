@@ -2,7 +2,10 @@
 const originalEmit = process.emit;
 process.emit = (event, error) => {
   if (event === "warning" && error.name === "ExperimentalWarning") {
-    if (error.message.includes("--experimental-loader") || error.message.includes("Custom ESM Loaders is an experimental")) {
+    if (
+      error.message.includes("--experimental-loader") ||
+      error.message.includes("Custom ESM Loaders is an experimental")
+    ) {
       return false;
     }
   }
