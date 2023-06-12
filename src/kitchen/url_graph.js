@@ -3,6 +3,8 @@ import { urlToRelativeUrl } from "@jsenv/urls";
 import { urlSpecifierEncoding } from "./url_specifier_encoding.js";
 
 export const createUrlGraph = ({ name = "anonymous" } = {}) => {
+  const urlGraph = {};
+
   const createUrlInfoCallbackRef = { current: () => {} };
   const prunedUrlInfosCallbackRef = { current: () => {} };
 
@@ -24,6 +26,7 @@ export const createUrlGraph = ({ name = "anonymous" } = {}) => {
     const existingUrlInfo = getUrlInfo(url);
     if (existingUrlInfo) return existingUrlInfo;
     const urlInfo = createUrlInfo(url);
+    urlInfo.graph = urlGraph;
     urlInfoMap.set(url, urlInfo);
     createUrlInfoCallbackRef.current(urlInfo);
     return urlInfo;
@@ -232,7 +235,7 @@ export const createUrlGraph = ({ name = "anonymous" } = {}) => {
     return false;
   };
 
-  return {
+  Object.assign(urlGraph, {
     name,
     createUrlInfoCallbackRef,
     prunedUrlInfosCallbackRef,
@@ -270,11 +273,13 @@ export const createUrlGraph = ({ name = "anonymous" } = {}) => {
       });
       return data;
     },
-  };
+  });
+  return urlGraph;
 };
 
 const createUrlInfo = (url) => {
   const urlInfo = {
+    graph: null,
     error: null,
     modifiedTimestamp: 0,
     originalContentEtag: null,
