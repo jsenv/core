@@ -104,7 +104,7 @@ export const executeSteps = async (
             rootDirectoryUrl,
             coverageConfig,
             coverageIncludeMissing,
-            coverageMethodForBrowsers,
+            coverageMethodForNodeJs,
             coverageV8ConflictWarning,
           });
           executePlanReturnValue.planCoverage = planCoverage;

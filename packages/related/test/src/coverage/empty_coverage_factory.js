@@ -21,7 +21,7 @@ export const relativeUrlToEmptyCoverage = async (
     const { metadata } = await applyBabelPlugins({
       babelPlugins: [babelPluginInstrument],
       input: content,
-      inputIsJsModule: false,
+      inputIsJsModule: true,
       inputUrl: fileUrl,
     });
     const { coverage } = metadata;

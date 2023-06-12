@@ -4,7 +4,7 @@
  * So the best solution remains NODE_V8_COVERAGE
  * This profiler strategy remains useful when:
  * - As fallback when NODE_V8_COVERAGE is not configured
- * - If explicitely enabled with coverageMethodForNodeJs: 'Profiler'
+ * - If explicitely enabled with coverageMethodForNodeJs: "Profiler"
  *   - Used by jsenv during automated tests about coverage
  *   - Anyone prefering this approach over NODE_V8_COVERAGE and assuming
  *     it will not fork subprocess or don't care if coverage is missed for this code

@@ -1,3 +1,14 @@
+# 36.3.1
+
+- Introduce side effect files
+  Side effect files are deduped in entry points when possible
+- Use side effect files to inject _s.js_, `regeneratorRuntime` and `document.adoptedStylesheet`
+- Introduce `urlInfo.contentAst` and `urlInfo.originalContentAst`
+- memoize `context.isSupportedOnCurrentClients`
+- More logs during build
+- Ensure version mappings injection do not break when injected in js module with static imports
+- Update deps
+
 # 36.2.0
 
 - Change internal packages structure
