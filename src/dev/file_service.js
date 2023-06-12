@@ -7,7 +7,6 @@ import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 
 import { WEB_URL_CONVERTER } from "../helpers/web_url_converter.js";
 import { watchSourceFiles } from "../helpers/watch_source_files.js";
-import { createUrlGraph } from "../kitchen/url_graph.js";
 import { createKitchen } from "../kitchen/kitchen.js";
 import { getCorePlugins } from "../plugins/plugins.js";
 import { jsenvPluginServerEventsClientInjection } from "../plugins/server_events/jsenv_plugin_server_events_client_injection.js";
@@ -74,19 +73,16 @@ export const createFileService = ({
     );
     let kitchen;
     clientFileChangeCallbackList.push(({ url }) => {
-      const onUrlInfo = (urlInfo) => {
-        kitchen.graph.considerModified(urlInfo);
-      };
       const exactUrlInfo = kitchen.graph.getUrlInfo(url);
       if (exactUrlInfo) {
-        onUrlInfo(exactUrlInfo);
+        exactUrlInfo.considerModified();
       }
       kitchen.graph.urlInfoMap.forEach((urlInfo) => {
         if (urlInfo === exactUrlInfo) return;
         const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
         if (urlWithoutSearch !== url) return;
         if (exactUrlInfo && exactUrlInfo.dependents.has(urlInfo.url)) return;
-        onUrlInfo(urlInfo);
+        urlInfo.considerModified();
       });
     });
     const clientRuntimeCompat = { [runtimeName]: runtimeVersion };
@@ -137,7 +133,7 @@ export const createFileService = ({
         ? new URL(`${runtimeName}@${runtimeVersion}/`, outDirectoryUrl)
         : undefined,
     });
-    urlGraph.createUrlInfoCallbackRef.current = (urlInfo) => {
+    kitchen.graph.createUrlInfoCallbackRef.current = (urlInfo) => {
       const { watch } = URL_META.applyAssociations({
         url: urlInfo.url,
         associations: watchAssociations,
@@ -186,7 +182,10 @@ export const createFileService = ({
         return true;
       };
     };
-    urlGraph.prunedUrlInfosCallbackRef.current = (urlInfos, firstUrlInfo) => {
+    kitchen.graph.prunedUrlInfosCallbackRef.current = (
+      urlInfos,
+      firstUrlInfo,
+    ) => {
       clientFilesPruneCallbackList.forEach((callback) => {
         callback(urlInfos, firstUrlInfo);
       });
@@ -211,7 +210,7 @@ export const createFileService = ({
         Object.keys(allServerEvents).forEach((serverEventName) => {
           allServerEvents[serverEventName]({
             rootDirectoryUrl: sourceDirectoryUrl,
-            urlGraph,
+            urlGraph: kitchen.graph,
             dev: true,
             sendServerEvent: (data) => {
               serverEventsDispatcher.dispatch({
@@ -233,7 +232,7 @@ export const createFileService = ({
       dev: true,
       runtimeName,
       runtimeVersion,
-      urlGraph,
+      urlGraph: kitchen.graph,
       kitchen,
     };
     contextCache.set(runtimeId, context);
@@ -261,7 +260,7 @@ export const createFileService = ({
       reference = urlGraph.inferReference(request.resource, parentUrl);
     }
     if (!reference) {
-      const entryPoint = kitchen.prepareReference({
+      const entryPoint = kitchen.graph.rootUrlInfo.prepareReference({
         trace: { message: parentUrl || sourceDirectoryUrl },
         parentUrl: parentUrl || sourceDirectoryUrl,
         type: "http_request",

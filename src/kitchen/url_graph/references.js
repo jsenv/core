@@ -3,11 +3,6 @@ import { getCallerPosition, stringifyUrlSite } from "@jsenv/urls";
 import { prependContent } from "../prepend_content.js";
 import { GRAPH_VISITOR } from "./url_graph_visitor.js";
 
-// const inlineContentClientFileUrl = new URL(
-//   "./client/inline_content.js",
-//   import.meta.url,
-// ).href;
-
 export const createReferences = (urlInfo) => {
   let _collecting = false;
   let _context;
@@ -18,13 +13,10 @@ export const createReferences = (urlInfo) => {
     if (!_collecting) {
       throw new Error("reference can be created only while collecting");
     }
-    const [reference, referencedUrlInfo] = _context.resolveReference(
-      createReference({
-        urlInfo,
-        ...props,
-      }),
-      _context,
-    );
+    const [reference, referencedUrlInfo] = _context.prepareReference({
+      urlInfo,
+      ...props,
+    });
     return [reference, referencedUrlInfo];
   };
 
@@ -194,6 +186,69 @@ export const createReferences = (urlInfo) => {
         ...rest,
       });
     },
+    inject: ({ trace, ...rest }) => {
+      if (trace === undefined) {
+        const { url, line, column } = getCallerPosition();
+        trace = traceFromUrlSite({
+          url,
+          line,
+          column,
+        });
+      }
+      return add({
+        trace,
+        injected: true,
+        ...rest,
+      });
+    },
+    // sourcemap
+    // they are not put into urlInfo.references
+    // why?
+    //   - likely because we are unable to delete them if become unused because of placeholder
+    //   - it's no longer going to happen so the'll likely come back to references.current array
+    // instead they are put on urlInfo.sourcemapReference
+    foundSourcemap: ({ type, specifier, specifierLine, specifierColumn }) => {
+      const sourcemapUrlSite = adjustUrlSite(urlInfo, {
+        url: urlInfo.url,
+        line: specifierLine,
+        column: specifierColumn,
+      });
+      const [sourcemapReference, sourcemapUrlInfo] = createAndResolve(
+        {
+          trace: traceFromUrlSite(sourcemapUrlSite),
+          type,
+          expectedType: "sourcemap",
+          parentUrl: urlInfo.url,
+          specifier,
+          specifierLine,
+          specifierColumn,
+        },
+        true,
+      );
+      if (sourcemapReference.isInline) {
+        sourcemapUrlInfo.isInline = true;
+      }
+      sourcemapUrlInfo.type = "sourcemap";
+      return [sourcemapReference, sourcemapUrlInfo];
+    },
+    injectSourcemapPlaceholder: ({ specifier }) => {
+      const [sourcemapReference, sourcemapUrlInfo] = createAndResolve({
+        trace: {
+          message: `sourcemap comment placeholder`,
+          url: urlInfo.url,
+        },
+        type: "sourcemap_comment",
+        expectedType: "sourcemap",
+        subtype: urlInfo.contentType === "text/javascript" ? "js" : "css",
+        parentUrl: urlInfo.url,
+        specifier,
+      });
+      urlInfo.sourcemapReference = sourcemapReference;
+      sourcemapUrlInfo.type = "sourcemap";
+      sourcemapUrlInfo.isInline = _context.sourcemaps === "inline";
+      return [sourcemapReference, sourcemapUrlInfo];
+    },
+    // side effect file
     foundSideEffectFile: async ({ sideEffectFileUrl, trace, ...rest }) => {
       if (trace === undefined) {
         const { url, line, column } = getCallerPosition();
@@ -233,18 +288,16 @@ export const createReferences = (urlInfo) => {
             line: 0,
             column: 0,
           });
-          const sideEffectFileReferenceInlined = createAndResolve({
+          const sideEffectFileReferenceInlined = urlInfo.references.prepare({
             ...inlineProps,
             specifierLine: 0,
             specifierColumn: 0,
             specifier: sideEffectFileReference.generatedSpecifier,
             content: sideEffectFileUrlInfo.content,
             contentType: sideEffectFileUrlInfo.contentType,
+            prev: sideEffectFileReference,
           });
-          urlInfo.references.replace(
-            sideEffectFileReference,
-            sideEffectFileReferenceInlined,
-          );
+          sideEffectFileReference.replace(sideEffectFileReferenceInlined);
         });
         return [sideEffectFileReference, sideEffectFileUrlInfo];
       };
@@ -336,73 +389,19 @@ export const createReferences = (urlInfo) => {
             line: 0,
             column: 0,
           });
-          sideEffectFileReference.movesTo(entryPointUrlInfo, {
-            specifier: sideEffectFileReference.generatedSpecifier,
-            content: sideEffectFileUrlInfo.content,
-            contentType: sideEffectFileUrlInfo.contentType,
-            ...inlineProps,
-          });
+          const sideEffectFileReferenceInlined =
+            entryPointUrlInfo.references.prepare({
+              ...inlineProps,
+              urlInfo: entryPointUrlInfo,
+              specifier: sideEffectFileReference.generatedSpecifier,
+              content: sideEffectFileUrlInfo.content,
+              contentType: sideEffectFileUrlInfo.contentType,
+              prev: sideEffectFileReference,
+            });
+          sideEffectFileReference.movesTo(sideEffectFileReferenceInlined);
         });
       }
       return [sideEffectFileReference, sideEffectFileUrlInfo];
-    },
-    inject: ({ trace, ...rest }) => {
-      if (trace === undefined) {
-        const { url, line, column } = getCallerPosition();
-        trace = traceFromUrlSite({
-          url,
-          line,
-          column,
-        });
-      }
-      return add({
-        trace,
-        injected: true,
-        ...rest,
-      });
-    },
-
-    // sourcemap
-    foundSourcemap: ({ type, specifier, specifierLine, specifierColumn }) => {
-      const sourcemapUrlSite = adjustUrlSite(urlInfo, {
-        url: urlInfo.url,
-        line: specifierLine,
-        column: specifierColumn,
-      });
-      const [sourcemapReference, sourcemapUrlInfo] = createAndResolve(
-        {
-          trace: traceFromUrlSite(sourcemapUrlSite),
-          type,
-          expectedType: "sourcemap",
-          parentUrl: urlInfo.url,
-          specifier,
-          specifierLine,
-          specifierColumn,
-        },
-        true,
-      );
-      if (sourcemapReference.isInline) {
-        sourcemapUrlInfo.isInline = true;
-      }
-      sourcemapUrlInfo.type = "sourcemap";
-      return [sourcemapReference, sourcemapUrlInfo];
-    },
-    injectSourcemapPlaceholder: ({ specifier }) => {
-      const [sourcemapReference, sourcemapUrlInfo] = createAndResolve({
-        trace: {
-          message: `sourcemap comment placeholder`,
-          url: urlInfo.url,
-        },
-        type: "sourcemap_comment",
-        expectedType: "sourcemap",
-        subtype: urlInfo.contentType === "text/javascript" ? "js" : "css",
-        parentUrl: urlInfo.url,
-        specifier,
-      });
-      urlInfo.sourcemapReference = sourcemapReference;
-      sourcemapUrlInfo.type = "sourcemap";
-      sourcemapUrlInfo.isInline = _context.sourcemaps === "inline";
-      return [sourcemapReference, sourcemapUrlInfo];
     },
   };
 

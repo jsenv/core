@@ -10,10 +10,13 @@ import { createLogger, createDetailedMessage, ANSI } from "@jsenv/log";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 
-import { createUrlGraph } from "./url_graph.js";
-import { createReference } from "./url_graph/reference.js";
+import { createUrlGraph } from "./url_graph/url_graph.js";
+import {
+  createReference,
+  storeReferenceTransformation,
+} from "./url_graph/reference.js";
+import { urlSpecifierEncoding } from "./url_graph/url_specifier_encoding.js";
 import { createPluginController } from "../plugins/plugin_controller.js";
-import { urlSpecifierEncoding } from "./url_specifier_encoding.js";
 import { createUrlInfoTransformer } from "./url_graph/url_info_transformations.js";
 import {
   createResolveUrlError,
@@ -185,7 +188,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
             );
           }
           const prevReference = { ...reference };
-          prevReference.becomes(reference);
+          storeReferenceTransformation(prevReference, reference);
           setReferenceUrl(normalizedReturnValue);
         },
       );
@@ -238,9 +241,16 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   };
   kitchenContext.resolveReference = resolveReference;
 
-  kitchenContext.prepareReference = (props) => {
+  const prepareReference = (props) => {
     const ref = createReference(props);
     return resolveReference(ref);
+  };
+
+  const prepareEntryPoint = (...props) => {
+    return urlGraph.rootUrlInfo.references.prepare({
+      isEntryPoint: true,
+      ...props,
+    });
   };
 
   const urlInfoTransformer = createUrlInfoTransformer({
@@ -525,13 +535,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   });
   kitchenContext.cook = cook;
 
-  const prepareEntryPoint = (params) =>
-    kitchenContext.prepareReference({
-      ...params,
-      isEntryPoint: true,
-    });
-  kitchenContext.prepareEntryPoint = prepareEntryPoint;
-
   const getWithoutSearchParam = ({
     urlInfo,
     reference,
@@ -582,7 +585,8 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     rootDirectoryUrl,
     kitchenContext,
     cook,
-    prepareReference: kitchenContext.prepareReference,
+    prepareEntryPoint,
+    prepareReference,
     injectForwardedSideEffectFiles: async () => {
       await Promise.all(
         callbacksToConsiderGraphLoaded.map(async (callback) => {

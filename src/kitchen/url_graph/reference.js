@@ -56,6 +56,7 @@ export const createReference = ({
   typePropertyNode,
   leadsToADirectory = false,
   debug = false,
+  prev = null,
 }) => {
   if (typeof specifier !== "string") {
     if (specifier instanceof URL) {
@@ -67,7 +68,7 @@ export const createReference = ({
   const reference = {
     urlInfo,
     original: null,
-    prev: null,
+    prev,
     next: null,
     data,
     node,
@@ -127,19 +128,13 @@ export const createReference = ({
     return reference.generatedSpecifier;
   };
 
-  reference.becomes = (newReference) => {
-    reference.next = newReference;
-    newReference.original = reference.original || reference;
-    newReference.prev = reference;
-  };
-
   reference.replace = (newReference) => {
     const index = urlInfo.references.current.indexOf(reference);
     if (index === -1) {
       throw new Error(`reference do not exists`);
     }
     urlInfo.references.current[index] = newReference;
-    reference.becomes(newReference);
+    // update dependents + dependencies
     const currentUrlInfo = urlInfo.graph.getUrlInfo(reference.url);
     if (currentUrlInfo) {
       const newUrlInfo = urlInfo.graph.getUrlInfo(newReference.url);
@@ -150,6 +145,7 @@ export const createReference = ({
         urlInfo.graph.deleteUrlInfo(reference.url);
       }
     }
+    storeReferenceTransformation(reference, newReference);
   };
 
   reference.movesTo = (newUrlInfo, newReference) => {
@@ -158,11 +154,17 @@ export const createReference = ({
       throw new Error(`reference do not exists`);
     }
     urlInfo.references.current.splice(index, 1);
-    reference.becomes(newReference);
     newUrlInfo.references.current.push(newReference);
-    // ideally we should update dependents + dependencies
+    // TODO: update dependents + dependencies
+    storeReferenceTransformation(reference, newReference);
   };
 
   // Object.preventExtensions(reference) // useful to ensure all properties are declared here
   return reference;
+};
+
+export const storeReferenceTransformation = (current, next) => {
+  current.next = next;
+  next.original = current.original || current;
+  next.prev = current;
 };
