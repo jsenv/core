@@ -1,7 +1,18 @@
-System.register([], function (_export, _context) {
+(function (global, factory) {
+  if (typeof define === "function" && define.amd) {
+    define([], factory);
+  } else if (typeof exports !== "undefined") {
+    factory();
+  } else {
+    var mod = {
+      exports: {}
+    };
+    factory();
+    global.main = mod.exports;
+  }
+})(typeof globalThis !== "undefined" ? globalThis : typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  var defineProperty, answer, value;
   function toPrimitive(input, hint /* : "default" | "string" | "number" | void */) {
     if (typeof input !== "object" || input === null) return input;
     var prim = input[Symbol.toPrimitive];
@@ -16,6 +27,26 @@ System.register([], function (_export, _context) {
     var key = toPrimitive(arg, "string");
     return typeof key === "symbol" ? key : String(key);
   }
+  const defineProperty = (obj, key, value) => {
+    key = toPropertyKey(key);
+    // Shortcircuit the slow defineProperty path when possible.
+    // We are trying to avoid issues where setters defined on the
+    // prototype cause side effects under the fast path of simple
+    // assignment. By checking for existence of the property with
+    // the in operator, we can optimize most of this overhead away.
+    if (key in obj) {
+      Object.defineProperty(obj, key, {
+        value,
+        enumerable: true,
+        configurable: true,
+        writable: true
+      });
+    } else {
+      obj[key] = value;
+    }
+    return obj;
+  };
+
   // This function is different to "Reflect.ownKeys". The enumerableOnly
   // filters on symbol properties only. Returned string properties are always
   // enumerable. It is good to use in objectSpread.
@@ -50,34 +81,10 @@ System.register([], function (_export, _context) {
     }
     return target;
   }
-  return {
-    setters: [],
-    execute: function () {
-      defineProperty = (obj, key, value) => {
-        key = toPropertyKey(key);
-        // Shortcircuit the slow defineProperty path when possible.
-        // We are trying to avoid issues where setters defined on the
-        // prototype cause side effects under the fast path of simple
-        // assignment. By checking for existence of the property with
-        // the in operator, we can optimize most of this overhead away.
-        if (key in obj) {
-          Object.defineProperty(obj, key, {
-            value,
-            enumerable: true,
-            configurable: true,
-            writable: true
-          });
-        } else {
-          obj[key] = value;
-        }
-        return obj;
-      };
-      answer = 42;
-      window.ask = () => answer;
-      [value] = [answer];
-      console.log(_objectSpread2({}, {
-        value
-      }));
-    }
-  };
+  const answer = 42;
+  window.ask = () => answer;
+  const [value] = [answer];
+  console.log(_objectSpread2({}, {
+    value
+  }));
 });

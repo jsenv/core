@@ -60,6 +60,29 @@ export const jsenvPluginAsJsClassic = () => {
         },
       });
       const jsModuleBundledUrlInfo = bundleUrlInfos[jsModuleUrlInfo.url];
+
+      let outputFormat;
+      // if imported by js, we have to use systemjs
+      // or if import things
+      if (
+        jsModuleBundledUrlInfo.data.usesImport ||
+        isImportedByJs(urlInfo, context.urlGraph)
+      ) {
+        // we have to use system when it uses import
+        outputFormat = "system";
+        urlInfo.type = "js_classic";
+        context.referenceUtils.foundSideEffectFile({
+          sideEffectFileUrl: systemJsClientFileUrlDefault,
+          expectedType: "js_classic",
+          line: 0,
+          column: 0,
+        });
+      } else {
+        // if there is no dependency (it does not use import)
+        // then we can use UMD
+        outputFormat = "umd";
+      }
+
       if (context.dev) {
         jsModuleBundledUrlInfo.sourceUrls.forEach((sourceUrl) => {
           context.referenceUtils.inject({
@@ -77,24 +100,6 @@ export const jsenvPluginAsJsClassic = () => {
         });
       }
 
-      let outputFormat;
-      if (urlInfo.isEntryPoint && !jsModuleBundledUrlInfo.data.usesImport) {
-        // if it's an entry point without dependency (it does not use import)
-        // then we can use UMD
-        outputFormat = "umd";
-      } else {
-        // otherwise we have to use system in case it's imported
-        // by an other file (for entry points)
-        // or to be able to import when it uses import
-        outputFormat = "system";
-        urlInfo.type = "js_classic";
-        context.referenceUtils.foundSideEffectFile({
-          sideEffectFileUrl: systemJsClientFileUrlDefault,
-          expectedType: "js_classic",
-          line: 0,
-          column: 0,
-        });
-      }
       const { content, sourcemap } = await convertJsModuleToJsClassic({
         rootDirectoryUrl: context.rootDirectoryUrl,
         input: jsModuleBundledUrlInfo.content,
@@ -114,6 +119,19 @@ export const jsenvPluginAsJsClassic = () => {
       };
     },
   };
+};
+
+const isImportedByJs = (jsModuleUrlInfo, urlGraph) => {
+  for (const dependentUrl of jsModuleUrlInfo.dependents) {
+    const dependentUrlInfo = urlGraph.getUrlInfo(dependentUrl);
+    if (
+      dependentUrlInfo.type === "js_module" ||
+      dependentUrlInfo.type === "js_classic"
+    ) {
+      return true;
+    }
+  }
+  return false;
 };
 
 const generateJsClassicFilename = (url) => {

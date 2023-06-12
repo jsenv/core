@@ -1,13 +1,19 @@
-System.register([], function (_export, _context) {
+(function (global, factory) {
+  if (typeof define === "function" && define.amd) {
+    define([], factory);
+  } else if (typeof exports !== "undefined") {
+    factory();
+  } else {
+    var mod = {
+      exports: {}
+    };
+    factory();
+    global.b = mod.exports;
+  }
+})(typeof globalThis !== "undefined" ? globalThis : typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  var answer;
-  return {
-    setters: [],
-    execute: function () {
-      answer = 42;
-      console.log(`b: ${answer}`);
-      window.b = answer;
-    }
-  };
+  const answer = 42;
+  console.log(`b: ${answer}`);
+  window.resolveBPromise(answer);
 });

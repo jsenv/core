@@ -28,7 +28,7 @@ const test = async (params) => {
   const { returnValue } = await executeInBrowser({
     url: `${server.origin}/main.html`,
     /* eslint-disable no-undef */
-    pageFunction: () => window.answer,
+    pageFunction: () => window.resultPromise,
     /* eslint-enable no-undef */
   });
   const actual = returnValue;

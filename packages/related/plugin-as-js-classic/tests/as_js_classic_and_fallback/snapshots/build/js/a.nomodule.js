@@ -8,7 +8,7 @@ System.register([__v__("/js/answer.nomodule.js")], function (_export, _context) 
     }],
     execute: function () {
       console.log(`a: ${answer}`);
-      window.a = answer;
+      window.resolveAPromise(answer);
     }
   };
 });
